@@ -44,13 +44,11 @@ export class StripeConfigService {
     return this.apiVersion;
   }
 
-  getPriceId(interval: 'monthly' | 'annual', planKey?: string): string | null {
-    const keyParts = ['STRIPE_PRICE'];
-    if (planKey) {
-      keyParts.push(planKey.toUpperCase().replace(/[^A-Z0-9]+/g, '_'));
-    }
-    keyParts.push(interval.toUpperCase());
-    const envKey = keyParts.join('_');
+  /** Price of a plan for an interval, from `STRIPE_PRICE_<PLAN>_<INTERVAL>`. */
+  getPriceId(interval: 'monthly' | 'annual', planKey: string): string | null {
+    if (!planKey) return null;
+    const plan = planKey.toUpperCase().replace(/[^A-Z0-9]+/g, '_');
+    const envKey = `STRIPE_PRICE_${plan}_${interval.toUpperCase()}`;
     const map = process.env as Record<string, string | undefined>;
     const value = map[envKey];
     return value && value.trim() ? value.trim() : null;

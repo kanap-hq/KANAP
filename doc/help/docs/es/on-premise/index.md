@@ -1,6 +1,6 @@
 # Despliegue local
 
-KANAP puede desplegarse de forma local en **modo de inquilino único**. Usted proporciona su propia base de datos PostgreSQL, almacenamiento compatible con S3 y proxy inverso con TLS. KANAP se encarga de todo lo demás: las migraciones se ejecutan automáticamente, el espacio de trabajo y el usuario administrador se crean en el primer arranque, y un límite generoso de puestos (1.000) viene preconfigurado.
+KANAP puede desplegarse de forma local en **modo de inquilino único**. Usted proporciona su propia base de datos PostgreSQL, almacenamiento compatible con S3 y proxy inverso con TLS. KANAP se encarga de todo lo demás: las migraciones se ejecutan automáticamente, el espacio de trabajo y el usuario administrador se crean en el primer arranque. No hay límite de usuarios.
 
 ## Guías
 

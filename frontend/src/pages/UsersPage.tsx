@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import PageHeader from '../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef } from '../components/ServerDataGrid';
 import { ICellRendererParams } from 'ag-grid-community';
-import { Button, Stack, Box, IconButton, Menu, MenuItem, Typography, useTheme } from '@mui/material';
+import { Button, Stack, Box, IconButton, Menu, MenuItem, useTheme } from '@mui/material';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
@@ -25,7 +25,7 @@ export default function UsersPage() {
   const { t } = useTranslation(['admin', 'common']);
   const dialogs = useKanapDialogs();
   const locale = useLocale();
-  const { hasLevel, subscription, tenantAuth } = useAuth();
+  const { hasLevel, tenantAuth } = useAuth();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'create'|'edit'>('create');
   const [currentId, setCurrentId] = useState<string|number|undefined>();
@@ -441,9 +441,6 @@ export default function UsersPage() {
           onDeleteSuccess={() => setRefreshKey((k) => k + 1)}
           label="Delete"
         />
-      )}
-      {subscription && (
-        <Typography variant="body2" color="text.secondary">{subscription.seat_limit != null ? t('users.seats.limited', { used: subscription.seats_used, limit: subscription.seat_limit }) : t('users.seats.unlimited', { used: subscription.seats_used })}</Typography>
       )}
     </Stack>
   );

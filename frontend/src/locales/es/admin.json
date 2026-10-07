@@ -278,10 +278,7 @@
     "actions": {
       "changePlan": "Cambiar plan",
       "choosePlan": "Elegir plan",
-      "manageSubscription": "Gestionar suscripción"
-    },
-    "customer": {
-      "title": "Información del cliente"
+      "managePayment": "Gestionar el pago"
     },
     "fields": {
       "addressLine1": "Dirección línea 1",
@@ -289,7 +286,6 @@
       "city": "Ciudad",
       "company": "Empresa",
       "country": "País",
-      "customerName": "Nombre del cliente",
       "email": "Correo electrónico",
       "phone": "Teléfono",
       "postalCode": "Código postal",
@@ -298,8 +294,10 @@
       "vatNumber": "Número de IVA"
     },
     "invoiceDetails": {
-      "copyFromCustomer": "Copiar del cliente",
-      "title": "Información de facturación"
+      "emailFormat": "Compruebe el formato de esta dirección de correo electrónico.",
+      "missing": "Obligatorio antes de suscribirse: {{fields}}.",
+      "title": "Información de facturación",
+      "vatNumberFormat": "Compruebe el formato de este número de IVA."
     },
     "invoiceStatuses": {
       "draft": "Borrador",
@@ -311,9 +309,16 @@
     "invoices": {
       "actions": {
         "download": "Descargar",
+        "showAll": "Mostrar todo ({{count}})",
         "showFewer": "Mostrar menos facturas",
-        "showMore": "Mostrar más facturas",
         "view": "Ver"
+      },
+      "columns": {
+        "amount": "Importe",
+        "date": "Fecha",
+        "links": "Documentos",
+        "number": "Número",
+        "status": "Estado"
       },
       "title": "Historial de facturas"
     },
@@ -321,8 +326,20 @@
       "loadFailed": "No se pudieron cargar los detalles de facturación.",
       "portalFailed": "No se pudo abrir el portal de facturación.",
       "portalUnavailable": "El portal de facturación no está disponible.",
-      "saveFailed": "No se pudieron guardar los detalles de facturación.",
-      "updateSuccess": "Detalles de facturación actualizados."
+      "saveFailed": "No se pudieron guardar los detalles de facturación."
+    },
+    "placeholders": {
+      "addressLine1": "p. ej., Calle Mayor 12",
+      "addressLine2": "p. ej., Edificio B",
+      "city": "p. ej., Madrid",
+      "company": "p. ej., Ejemplo S.L.",
+      "country": "p. ej., Francia",
+      "email": "p. ej., facturacion@example.com",
+      "phone": "p. ej., +34 912 345 678",
+      "postalCode": "p. ej., 28001",
+      "recipientName": "p. ej., Contabilidad",
+      "stateProvince": "p. ej., Andalucía",
+      "vatNumber": "p. ej., ESB12345678"
     },
     "statuses": {
       "active": "Activo",
@@ -337,34 +354,19 @@
       "unpaid": "Impago"
     },
     "subscription": {
-      "labels": {
-        "actions": "Acciones",
-        "amountPerPeriod": "Importe por período",
-        "billingFrequency": "Frecuencia de facturación",
-        "collectionMethod": "Método de cobro",
-        "lastStripeSync": "Última sincronización de Stripe",
-        "paymentMethod": "Método de pago",
-        "plan": "Plan",
-        "renewalDate": "Fecha de renovación",
-        "seats": "Puestos",
-        "status": "Estado",
-        "trial": "Prueba",
-        "trialEnds": "Fin de la prueba"
-      },
-      "planLabels": {
-        "freeTrial": "Prueba gratuita"
-      },
       "title": "Suscripción",
       "values": {
+        "amountPerMonth": "{{amount}} / mes",
+        "amountPerYear": "{{amount}} / año",
         "annual": "Anual",
-        "automaticCharge": "Cobro automático",
         "bankTransfer": "Transferencia bancaria",
         "card": "Tarjeta",
         "daysRemaining_one": "{{count}} día restante",
         "daysRemaining_other": "{{count}} días restantes",
-        "invoiceManualPayment": "Factura (pago manual)",
+        "ends": "finaliza el {{date}}",
         "monthly": "Mensual",
-        "unlimitedSeatsUsed": "{{count}} utilizados"
+        "renews": "se renueva el {{date}}",
+        "trialEnded": "prueba finalizada el {{date}}"
       }
     },
     "title": "Facturación"
@@ -643,32 +645,51 @@
       "payByBankTransfer": "Pagar por transferencia",
       "payByCard": "Pagar con tarjeta"
     },
-    "annualSavings": "2 meses gratis",
+    "annualSavings_one": "{{count}} mes gratis",
+    "annualSavings_other": "{{count}} meses gratis",
     "billingCycle": {
       "annual": "Anual",
+      "label": "Periodo de facturación",
       "monthly": "Mensual"
     },
     "errors": {
       "noActiveSubscription": "No se encontró ninguna suscripción activa.",
-      "planNotBankTransferEligible": "Este plan no es elegible para transferencia bancaria."
+      "planNotBankTransferEligible": "Este plan no es elegible para transferencia bancaria.",
+      "vatNumberInvalid": "No se aceptó el número de IVA. Revíselo en la información de facturación."
+    },
+    "invoiceFields": {
+      "addressLine1": "dirección línea 1",
+      "city": "ciudad",
+      "company": "empresa",
+      "country": "país",
+      "email": "correo electrónico",
+      "postalCode": "código postal",
+      "vatNumber": "número de IVA"
     },
     "messages": {
       "checkoutUrlUnavailable": "La URL de pago no está disponible.",
       "invoiceCreated": "Factura creada.",
       "loadFailed": "No se pudieron cargar los planes.",
-      "requestFailed": "La solicitud falló.",
-      "trialExpired": "La prueba expiró.",
-      "trialExpires_one": "La prueba expira en {{count}} día.",
-      "trialExpires_other": "La prueba expira en {{count}} días."
+      "requestFailed": "La solicitud falló."
     },
-    "pricePer": "por {{period}}",
-    "shared": {
-      "month": "mes",
-      "upToSeats_one": "Hasta {{count}} puesto",
-      "upToSeats_other": "Hasta {{count}} puestos",
-      "year": "año"
+    "monthlyEquivalent": "{{amount}} al mes, facturado anualmente",
+    "period": {
+      "month": "al mes",
+      "year": "al año"
+    },
+    "profile": {
+      "complete": "Completar la información de facturación",
+      "incomplete": "Complete la información de facturación antes de suscribirse: {{fields}}."
     },
     "title": "Elegir un plan",
+    "trial": {
+      "daysLeft_one": "queda {{count}} día",
+      "daysLeft_other": "quedan {{count}} días",
+      "ended": "Su prueba ha terminado",
+      "ends": "Su prueba termina el {{date}}",
+      "endsIn_one": "Su prueba termina en {{count}} día",
+      "endsIn_other": "Su prueba termina en {{count}} días"
+    },
     "unlimitedUsers": "Usuarios ilimitados"
   },
   "roles": {
@@ -1059,10 +1080,6 @@
     },
     "exportTitle": "Exportar usuarios",
     "importTitle": "Importar usuarios",
-    "seats": {
-      "limited": "Puestos {{used}}/{{limit}}",
-      "unlimited": "Puestos {{used}} (ilimitado)"
-    },
     "accountType": {
       "entra": "Microsoft Entra",
       "local": "Local"

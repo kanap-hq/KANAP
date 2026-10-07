@@ -6,6 +6,7 @@ import { User } from '../users/user.entity';
 import { Tenant } from '../tenants/tenant.entity';
 import { StripeClientService, StripeConfigService } from './stripe';
 import { computePriceAmount, computeStripePriceAmount, normaliseStripePrice, type NormalisedPrice } from './price.util';
+import { euVatTaxIdValue, missingInvoiceFields, normaliseVatNumber, toIsoCountry } from './billing-profile.util';
 import { withTenant } from '../common/tenant-runner';
 import { Features } from '../config/features';
 import { AuditService } from '../audit/audit.service';
@@ -14,6 +15,7 @@ import {
   HEALTHY_STATUSES,
   FREEZE_GRACE_DAYS,
   BANK_TRANSFER_MIN_AMOUNT_EUR_CENTS,
+  CLOUD_SUBSCRIPTION_QUANTITY,
   getPriceId,
   isBankTransferEligible,
   resolvePlanKeyFromPriceId,
@@ -43,6 +45,15 @@ type BillingContact = {
   vatNumber: string | null;
   address: BillingAddress;
 };
+
+const EMPTY_CONTACT: Readonly<BillingContact> = Object.freeze({
+  name: null,
+  company: null,
+  email: null,
+  phone: null,
+  vatNumber: null,
+  address: Object.freeze({ line1: null, line2: null, city: null, state: null, postalCode: null, country: null }),
+});
 
 type BillingAddressInput = Partial<Omit<BillingAddress, 'postalCode'>> & { postalCode?: string | null };
 
@@ -127,7 +138,7 @@ export class BillingService {
       });
     }
     const seats_used = await this.computeSeatsUsed(mg);
-    const estimated = await this.estimateRecurringAmount(sub, seats_used);
+    const estimated = await this.estimateRecurringAmount(sub);
     const amount = sub.amount ?? estimated?.amount ?? null;
     const currency = sub.currency ?? estimated?.currency ?? null;
 
@@ -215,6 +226,7 @@ export class BillingService {
     return {
       customer: this.contactToResponse(customer),
       invoice: this.contactToResponse(invoice),
+      invoice_missing_fields: missingInvoiceFields(invoice),
       invoices,
     };
   }
@@ -236,7 +248,8 @@ export class BillingService {
     const invoice = this.normaliseContactInput(opts.invoice ?? {}, currentInvoice);
 
     const billingColumns: Partial<Tenant> = {
-      billing_customer_info: this.contactToStorage(customer),
+      // Every invoicing field is written, a cleared one as null: from then on the
+      // invoicing details no longer borrow from the customer contact.
       billing_invoice_info: this.contactToStorage(invoice),
       billing_email: invoice.email,
       billing_company_name: invoice.company ?? invoice.name ?? tenant.name,
@@ -244,6 +257,8 @@ export class BillingService {
       billing_tax_id: invoice.vatNumber,
       billing_address: this.addressToRecord(invoice.address),
     };
+    // The customer contact is kept as stored unless the request changes it.
+    if (opts.customer) billingColumns.billing_customer_info = this.contactToStorage(customer);
     // Only the billing columns: saving the loaded tenant would write back its
     // other columns (metadata, branding) as they were when it was read.
     await manager.getRepository(Tenant).update({ id: tenant.id }, billingColumns);
@@ -268,6 +283,7 @@ export class BillingService {
     return {
       customer: this.contactToResponse(customer),
       invoice: this.contactToResponse(invoice),
+      invoice_missing_fields: missingInvoiceFields(invoice),
       invoices,
     };
   }
@@ -275,51 +291,37 @@ export class BillingService {
   async createCheckoutSession(opts: {
     tenantId: string;
     manager?: EntityManager;
-    subscriptionType?: SubscriptionType;
-    priceId?: string | null;
-    quantity?: number;
-    planKey?: PlanKey;
-    interval?: IntervalKey;
+    planKey: PlanKey;
+    interval: IntervalKey;
     successUrl?: string | null;
     cancelUrl?: string | null;
     metadata?: Record<string, string>;
     allowPromotionCodes?: boolean;
   }) {
-    const client = this.getStripeClientOrThrow();
-    const tenant = await this.requireTenant(opts.tenantId);
-    const manager = opts.manager ?? null;
-    const customerId = await this.ensureStripeCustomerForTenant(tenant, { manager });
-
-    // Resolve plan_key: prefer explicit, then derive from legacy price_id
-    let planKey: PlanKey | null = opts.planKey ?? null;
-    if (!planKey && opts.priceId) {
-      planKey = resolvePlanKeyFromPriceId(opts.priceId);
+    // Only a current plan can be bought, always at its configured price.
+    const planKey = opts.planKey;
+    const interval = opts.interval;
+    if (!planKey || !Object.prototype.hasOwnProperty.call(PLANS, planKey)) {
+      throw new BadRequestException('Unknown plan');
     }
-
-    // Resolve interval from new field, legacy subscriptionType, or default
-    let interval: IntervalKey = opts.interval ?? (opts.subscriptionType === SubscriptionType.ANNUAL ? 'annual' : 'monthly');
-
-    // Resolve price: prefer canonical config lookup, fall back to legacy price_id
-    let priceId: string | null = null;
-    if (planKey) {
-      priceId = getPriceId(this.stripeConfig, interval, planKey);
+    if (interval !== 'monthly' && interval !== 'annual') {
+      throw new BadRequestException('Unknown billing interval');
     }
-    if (!priceId && opts.priceId) {
-      priceId = opts.priceId;
-    }
-    if (!priceId) {
-      // Legacy fallback: interval-only lookup
-      priceId = this.stripeConfig.getPriceId(interval);
-    }
+    const priceId = getPriceId(this.stripeConfig, interval, planKey);
     if (!priceId) {
       throw new BadRequestException('Stripe price not configured for requested plan');
     }
 
+    const client = this.getStripeClientOrThrow();
+    const tenant = await this.requireTenant(opts.tenantId);
+    const invoiceProfile = this.requireCompleteInvoiceProfile(tenant);
+    const manager = opts.manager ?? null;
+    const customerId = await this.ensureStripeCustomerForTenant(tenant, { manager, invoiceProfile });
+
     const successUrl = opts.successUrl ?? this.stripeConfig.getCheckoutSuccessUrl();
     const cancelUrl = opts.cancelUrl ?? this.stripeConfig.getCheckoutCancelUrl();
 
-    // Force quantity=1 for all cloud plans
-    const quantity = 1;
+    const quantity = CLOUD_SUBSCRIPTION_QUANTITY;
 
     // Card-only checkout is enforced for the checkout flow.
     const session = await client.checkout.sessions.create({
@@ -449,11 +451,11 @@ export class BillingService {
     }
 
     const tenant = await this.requireTenant(tenantId);
+    const invoiceContact = this.requireCompleteInvoiceProfile(tenant);
     const mg = manager ?? this.subs.manager;
     const sub = await this.ensureSubscription(mg);
     const before = this.subscriptionAuditSnapshot(sub);
-    const customerId = await this.ensureStripeCustomerForTenant(tenant, { manager: mg });
-    const invoiceContact = this.getInvoiceContact(tenant);
+    const customerId = await this.ensureStripeCustomerForTenant(tenant, { manager: mg, invoiceProfile: invoiceContact });
     const euBankTransferCountry = this.resolveEuBankTransferCountry(invoiceContact.address.country);
     let stripeSubResult: any | null = null;
     let previousLatestInvoiceId: string | null = null;
@@ -485,7 +487,7 @@ export class BillingService {
       const invoicePaymentSettings = this.buildSendInvoicePaymentSettings(invoicePaymentMethodTypes, euBankTransferCountry);
       stripeSubResult = await client.subscriptions.create({
         customer: customerId,
-        items: [{ price: priceId, quantity: 1 }],
+        items: [{ price: priceId, quantity: CLOUD_SUBSCRIPTION_QUANTITY }],
         collection_method: 'send_invoice',
         days_until_due: 30,
         payment_settings: invoicePaymentSettings,
@@ -541,21 +543,39 @@ export class BillingService {
     };
   }
 
+  /**
+   * The invoice details a subscription needs (company, email, address, ISO country,
+   * EU VAT number). Checked before any Stripe call: Stripe refuses a `send_invoice`
+   * subscription without an email, and its invoices must carry the address and VAT.
+   */
+  private requireCompleteInvoiceProfile(tenant: Tenant): BillingContact {
+    const contact = this.getInvoiceContact(tenant);
+    const missing = missingInvoiceFields(contact);
+    if (missing.length) {
+      throw new BadRequestException({ message: 'BILLING_PROFILE_INCOMPLETE', missing });
+    }
+    return contact;
+  }
+
+  /**
+   * The tenant's Stripe customer id, created when missing. With `invoiceProfile`
+   * (subscribe time), the customer also gets the current invoice details and EU VAT
+   * tax id; errors are not swallowed, and a VAT number Stripe refuses becomes
+   * VAT_NUMBER_INVALID.
+   */
   private async ensureStripeCustomerForTenant(
     tenant: Tenant,
-    opts: { manager: EntityManager | null },
+    opts: { manager: EntityManager | null; invoiceProfile?: BillingContact },
   ): Promise<string> {
+    const client = this.getStripeClientOrThrow();
+    const profile = opts.invoiceProfile ?? null;
     if (tenant.stripe_customer_id) {
       // Verify the customer still exists in the current Stripe environment
-      const client = this.getStripeClientOrThrow();
       try {
         const customer = await client.customers.retrieve(tenant.stripe_customer_id);
         if ((customer as any)?.deleted === true) {
           this.logger.warn(`Deleted Stripe customer ${tenant.stripe_customer_id} for tenant ${tenant.id} — creating new customer`);
           tenant.stripe_customer_id = null as any;
-        } else {
-          await this.updateSubscriptionCustomer(tenant.id, tenant.stripe_customer_id, { manager: opts.manager });
-          return tenant.stripe_customer_id;
         }
       } catch (error: any) {
         if (error?.statusCode === 404 || error?.code === 'resource_missing') {
@@ -565,20 +585,29 @@ export class BillingService {
           throw error;
         }
       }
+      if (tenant.stripe_customer_id) {
+        const customerId = tenant.stripe_customer_id;
+        if (profile) {
+          await this.withVatNumberErrors(async () => {
+            await client.customers.update(customerId, this.stripeCustomerDetails(tenant, profile));
+            await this.syncStripeTaxIds(customerId, profile);
+          });
+        }
+        await this.updateSubscriptionCustomer(tenant.id, customerId, { manager: opts.manager });
+        return customerId;
+      }
     }
 
-    const client = this.getStripeClientOrThrow();
-    const invoiceContact = this.getInvoiceContact(tenant);
-    const customer = await client.customers.create({
-      email: invoiceContact.email || undefined,
-      name: invoiceContact.company || invoiceContact.name || tenant.name,
-      phone: invoiceContact.phone || undefined,
+    const invoiceContact = profile ?? this.getInvoiceContact(tenant);
+    const euVat = profile ? euVatTaxIdValue(profile) : null;
+    const customer = await this.withVatNumberErrors<{ id: string }>(() => client.customers.create({
+      ...this.stripeCustomerDetails(tenant, invoiceContact),
       metadata: {
         tenant_id: tenant.id,
         tenant_slug: tenant.slug,
       },
-      address: this.normaliseStripeAddress(this.addressToRecord(invoiceContact.address)),
-    });
+      ...(euVat ? { tax_id_data: [{ type: 'eu_vat' as const, value: euVat }] } : {}),
+    }));
 
     // The tenant was loaded by the caller before the Stripe calls: write the
     // customer id only, never the rest of that copy.
@@ -586,6 +615,56 @@ export class BillingService {
     await this.tenants.update({ id: tenant.id }, { stripe_customer_id: customer.id });
     await this.updateSubscriptionCustomer(tenant.id, customer.id, { manager: opts.manager });
     return customer.id;
+  }
+
+  /** The Stripe customer fields KANAP owns: email, name (company), phone, address. */
+  private stripeCustomerDetails(tenant: Tenant, contact: BillingContact) {
+    return {
+      email: contact.email || undefined,
+      name: contact.company || contact.name || tenant.name,
+      phone: contact.phone || undefined,
+      address: this.normaliseStripeAddress(this.addressToRecord(contact.address)),
+    };
+  }
+
+  /**
+   * Keeps the customer's `eu_vat` tax ids in line with the invoice details: one id
+   * with the normalised EU VAT number, none for a non-EU country or no VAT number.
+   * Other tax id types are left alone.
+   */
+  private async syncStripeTaxIds(customerId: string, contact: BillingContact): Promise<void> {
+    const client = this.getStripeClientOrThrow();
+    const target = euVatTaxIdValue(contact);
+    const existing = await client.customers.listTaxIds(customerId, { limit: 100 });
+    let kept = false;
+    for (const taxId of existing?.data ?? []) {
+      if (taxId?.type !== 'eu_vat') continue;
+      if (target && !kept && normaliseVatNumber(taxId.value) === target) {
+        kept = true;
+        continue;
+      }
+      await client.customers.deleteTaxId(customerId, taxId.id);
+    }
+    if (target && !kept) {
+      await client.customers.createTaxId(customerId, { type: 'eu_vat', value: target });
+    }
+  }
+
+  private async withVatNumberErrors<T>(run: () => Promise<T>): Promise<T> {
+    try {
+      return await run();
+    } catch (error: any) {
+      if (error?.code === 'tax_id_invalid' || error?.raw?.code === 'tax_id_invalid') {
+        this.logger.warn(
+          `Stripe refused the VAT number: code=${error?.code ?? error?.raw?.code ?? 'unknown'} `
+          + `param=${error?.param ?? error?.raw?.param ?? 'unknown'} `
+          + `request=${error?.requestId ?? error?.raw?.requestId ?? 'unknown'} `
+          + `message=${error?.message ?? error?.raw?.message ?? ''}`,
+        );
+        throw new BadRequestException({ message: 'VAT_NUMBER_INVALID' });
+      }
+      throw error;
+    }
   }
 
   private normaliseStripeAddress(address: Record<string, any> | null | undefined) {
@@ -621,13 +700,31 @@ export class BillingService {
     return this.fromStoredContact(tenant.billing_customer_info, fallback);
   }
 
+  /**
+   * The invoicing details, field by field: the saved invoicing value (a field the user
+   * cleared stays empty), else the stored customer contact (the former customer card),
+   * else the tenant billing columns. A tenant who only filled the customer card finds
+   * its values here; the next save writes them as invoicing values.
+   */
   private getInvoiceContact(tenant: Tenant): BillingContact {
-    const fallback = this.defaultInvoiceFallback(tenant);
-    const invoice = this.fromStoredContact(tenant.billing_invoice_info, fallback);
-    if (!invoice.company) {
-      invoice.company = fallback.company;
-    }
-    return invoice;
+    const columns = this.defaultInvoiceFallback(tenant);
+    const customer = this.fromStoredContact(tenant.billing_customer_info, EMPTY_CONTACT);
+    const fallback: BillingContact = {
+      name: customer.name ?? columns.name,
+      company: customer.company ?? columns.company,
+      email: customer.email ?? columns.email,
+      phone: customer.phone ?? columns.phone,
+      vatNumber: customer.vatNumber ?? columns.vatNumber,
+      address: {
+        line1: customer.address.line1 ?? columns.address.line1,
+        line2: customer.address.line2 ?? columns.address.line2,
+        city: customer.address.city ?? columns.address.city,
+        state: customer.address.state ?? columns.address.state,
+        postalCode: customer.address.postalCode ?? columns.address.postalCode,
+        country: customer.address.country ?? columns.address.country,
+      },
+    };
+    return this.fromStoredContact(tenant.billing_invoice_info, fallback);
   }
 
   private defaultContactFallback(tenant: Tenant): BillingContact {
@@ -637,7 +734,7 @@ export class BillingService {
       email: this.toNullableString(tenant.billing_email),
       phone: this.toNullableString(tenant.billing_phone),
       vatNumber: this.toNullableString(tenant.billing_tax_id),
-      address: this.fromStoredAddress(tenant.billing_address),
+      address: this.fromStoredAddress(tenant.billing_address, EMPTY_CONTACT.address),
     };
   }
 
@@ -648,80 +745,82 @@ export class BillingService {
       email: this.toNullableString(tenant.billing_email),
       phone: this.toNullableString(tenant.billing_phone),
       vatNumber: this.toNullableString(tenant.billing_tax_id),
-      address: this.fromStoredAddress(tenant.billing_address),
+      address: this.fromStoredAddress(tenant.billing_address, EMPTY_CONTACT.address),
     };
   }
 
+  /**
+   * A stored contact over its fallback, field by field. A key the record holds wins,
+   * null or empty included (the user cleared it); a key it lacks (never saved) takes
+   * the fallback.
+   */
   private fromStoredContact(value: any, fallback: BillingContact): BillingContact {
-    if (!value || typeof value !== 'object') {
-      return { ...fallback, address: { ...fallback.address } };
+    const data: Record<string, unknown> = value && typeof value === 'object' ? value : {};
+    return {
+      name: this.storedOr(data, ['name'], fallback.name),
+      company: this.storedOr(data, ['company'], fallback.company),
+      email: this.storedOr(data, ['email'], fallback.email),
+      phone: this.storedOr(data, ['phone'], fallback.phone),
+      vatNumber: this.storedOr(data, ['vat_number', 'vatNumber'], fallback.vatNumber),
+      address: this.fromStoredAddress(data.address, fallback.address),
+    };
+  }
+
+  private fromStoredAddress(value: any, fallback: BillingAddress): BillingAddress {
+    const data: Record<string, unknown> = value && typeof value === 'object' ? value : {};
+    const country = data.country !== undefined ? this.toNullableCountry(data.country) : fallback.country;
+    return {
+      line1: this.storedOr(data, ['line1'], fallback.line1),
+      line2: this.storedOr(data, ['line2'], fallback.line2),
+      city: this.storedOr(data, ['city'], fallback.city),
+      state: this.storedOr(data, ['state'], fallback.state),
+      postalCode: this.storedOr(data, ['postal_code', 'postalCode'], fallback.postalCode),
+      country,
+    };
+  }
+
+  /** The first of `keys` the record holds (null when it holds an empty value), else the fallback. */
+  private storedOr(data: Record<string, unknown>, keys: string[], fallback: string | null): string | null {
+    for (const key of keys) {
+      if (data[key] !== undefined) return this.toNullableString(data[key]);
     }
-    const data: any = value;
+    return fallback;
+  }
+
+  /**
+   * A PATCH payload over the current contact: a field the payload holds replaces the
+   * current value, and an empty string or null clears it; a field it lacks stays as
+   * it is. `address: null` leaves the address as it is.
+   */
+  private normaliseContactInput(input: BillingContactInput, current: BillingContact): BillingContact {
+    const data = input as Record<string, unknown>;
     return {
-      name: this.toNullableString(data.name ?? fallback.name),
-      company: this.toNullableString(data.company ?? fallback.company),
-      email: this.toNullableString(data.email ?? fallback.email),
-      phone: this.toNullableString(data.phone ?? fallback.phone),
-      vatNumber: this.toNullableString(data.vat_number ?? data.vatNumber ?? fallback.vatNumber),
-      address: this.fromStoredAddress(data.address ?? fallback.address),
+      name: this.storedOr(data, ['name'], current.name),
+      company: this.storedOr(data, ['company'], current.company),
+      email: this.storedOr(data, ['email'], current.email),
+      phone: this.storedOr(data, ['phone'], current.phone),
+      vatNumber: this.storedOr(data, ['vatNumber'], current.vatNumber),
+      address: input.address ? this.fromStoredAddress(input.address, current.address) : { ...current.address },
     };
   }
 
-  private fromStoredAddress(value: any): BillingAddress {
-    if (!value || typeof value !== 'object') {
-      return {
-        line1: null,
-        line2: null,
-        city: null,
-        state: null,
-        postalCode: null,
-        country: null,
-      };
-    }
-    return {
-      line1: this.toNullableString(value.line1),
-      line2: this.toNullableString(value.line2),
-      city: this.toNullableString(value.city),
-      state: this.toNullableString(value.state),
-      postalCode: this.toNullableString(value.postal_code ?? value.postalCode),
-      country: this.toNullableCountry(value.country),
-    };
-  }
-
-  private normaliseContactInput(input: BillingContactInput, fallback: BillingContact): BillingContact {
-    const address = this.normaliseAddressInput(input.address ?? null, fallback.address);
-    return {
-      name: this.toNullableString(input.name ?? fallback.name),
-      company: this.toNullableString(input.company ?? fallback.company),
-      email: this.toNullableString(input.email ?? fallback.email),
-      phone: this.toNullableString(input.phone ?? fallback.phone),
-      vatNumber: this.toNullableString(input.vatNumber ?? fallback.vatNumber),
-      address,
-    };
-  }
-
-  private normaliseAddressInput(input: BillingAddressInput | null, fallback: BillingAddress): BillingAddress {
-    const src = input ?? {};
-    return {
-      line1: this.toNullableString(src.line1 ?? fallback.line1),
-      line2: this.toNullableString(src.line2 ?? fallback.line2),
-      city: this.toNullableString(src.city ?? fallback.city),
-      state: this.toNullableString(src.state ?? fallback.state),
-      postalCode: this.toNullableString((src as any).postal_code ?? src.postalCode ?? fallback.postalCode),
-      country: this.toNullableCountry(src.country ?? fallback.country),
-    };
-  }
-
+  /** Every field is written, an empty one as null, so a cleared field stays cleared. */
   private contactToStorage(contact: BillingContact): Record<string, any> {
-    const payload: Record<string, any> = {};
-    if (contact.name) payload.name = contact.name;
-    if (contact.company) payload.company = contact.company;
-    if (contact.email) payload.email = contact.email;
-    if (contact.phone) payload.phone = contact.phone;
-    if (contact.vatNumber) payload.vat_number = contact.vatNumber;
-    const addressRecord = this.addressToRecord(contact.address);
-    if (addressRecord) payload.address = addressRecord;
-    return payload;
+    return {
+      name: contact.name,
+      company: contact.company,
+      email: contact.email,
+      phone: contact.phone,
+      vat_number: contact.vatNumber,
+      address: {
+        line1: contact.address.line1,
+        line2: contact.address.line2,
+        city: contact.address.city,
+        state: contact.address.state,
+        postal_code: contact.address.postalCode,
+        country: contact.address.country,
+      },
+    };
   }
 
   private contactToResponse(contact: BillingContact) {
@@ -760,22 +859,19 @@ export class BillingService {
     return str.length ? str : null;
   }
 
+  /** An ISO alpha-2 code is stored uppercase; a legacy free-text value is kept as typed. */
   private toNullableCountry(value: any): string | null {
     const str = this.toNullableString(value);
     if (!str) return null;
-    return str.length <= 3 ? str.toUpperCase() : str;
+    return toIsoCountry(str) ?? str;
   }
 
   private async syncStripeCustomerProfile(tenant: Tenant, invoice: BillingContact): Promise<void> {
     const client = this.stripeClient.getClient();
     if (!client || !tenant.stripe_customer_id) return;
     try {
-      await client.customers.update(tenant.stripe_customer_id, {
-        email: invoice.email || undefined,
-        name: invoice.company || invoice.name || tenant.name,
-        phone: invoice.phone || undefined,
-        address: this.normaliseStripeAddress(this.addressToRecord(invoice.address)),
-      });
+      await client.customers.update(tenant.stripe_customer_id, this.stripeCustomerDetails(tenant, invoice));
+      await this.syncStripeTaxIds(tenant.stripe_customer_id, invoice);
     } catch (error) {
       this.logger.warn(`Failed to sync Stripe customer ${tenant.stripe_customer_id}: ${(error as Error).message}`);
     }
@@ -812,8 +908,8 @@ export class BillingService {
       sub.plan_name = toPlanDisplayName(resolvedPlanKey);
       sub.seat_limit = PLANS[resolvedPlanKey].seatLimit;
     } else {
+      // The Stripe quantity is not a number of users: keep the stored user limit.
       sub.plan_name = stripeSub?.plan?.nickname ?? sub.plan_name;
-      sub.seat_limit = quantity || sub.seat_limit || 1;
     }
     sub.active_seats = quantity;
     sub.subscription_type = this.resolveSubscriptionType(stripeSub?.items?.data?.[0]?.price);
@@ -1095,18 +1191,22 @@ export class BillingService {
     return null;
   }
 
-  private async estimateRecurringAmount(sub: Subscription, seats_used: number): Promise<{ amount: number; currency: string } | null> {
-    const seats = Math.max(seats_used, sub.active_seats ?? 0, sub.seat_limit ?? 0, 1);
+  /**
+   * Amount of one period at the quantity checkout uses: the price does not depend on the
+   * number of users. On-premise has no hosted subscription, so no amount.
+   */
+  private async estimateRecurringAmount(sub: Subscription): Promise<{ amount: number; currency: string } | null> {
+    if (Features.SINGLE_TENANT) return null;
     const priceInfo = await this.resolvePriceInfo(sub);
     if (!priceInfo || !priceInfo.currency) return null;
-    const amount = computePriceAmount(priceInfo, seats);
+    const amount = computePriceAmount(priceInfo, CLOUD_SUBSCRIPTION_QUANTITY);
     if (amount == null) return null;
     return { amount, currency: priceInfo.currency };
   }
 
   private async resolvePriceInfo(sub: Subscription): Promise<NormalisedPrice | null> {
     const client = this.stripeClient.getClient();
-    const priceId = sub.stripe_price_id ?? this.resolveConfiguredPriceId(sub);
+    const priceId = this.resolveConfiguredPriceId(sub);
     if (!priceId) return null;
 
     if (this.priceCache.has(priceId)) {
@@ -1126,10 +1226,17 @@ export class BillingService {
     }
   }
 
+  /**
+   * Configured price of the subscription's current plan for its interval. A plan that is no
+   * longer sold (an old Stripe price, "Starter", "Trial") has no price, so no estimate.
+   */
   private resolveConfiguredPriceId(sub: Subscription): string | null {
-    const planKey = resolvePlanKeyFromLegacyName(sub.plan_name) ?? undefined;
-    const interval = sub.subscription_type === SubscriptionType.ANNUAL ? 'annual' : 'monthly';
-    return this.stripeConfig.getPriceId(interval, planKey);
+    const planKey =
+      (sub.stripe_price_id ? resolvePlanKeyFromPriceId(sub.stripe_price_id) : null)
+      ?? resolvePlanKeyFromLegacyName(sub.plan_name);
+    if (!planKey) return null;
+    const interval: IntervalKey = sub.subscription_type === SubscriptionType.ANNUAL ? 'annual' : 'monthly';
+    return getPriceId(this.stripeConfig, interval, planKey);
   }
 
   private resolveStripeQuantity(subObject: any): number {
@@ -1278,7 +1385,7 @@ export class BillingService {
     let subscription = await repo.findOne({ where: {} });
     if (!subscription) {
       const defaults = Features.SINGLE_TENANT
-        ? { plan_name: 'On-Prem', seat_limit: 1000, active_seats: 0, subscription_type: SubscriptionType.ANNUAL, payment_mode: PaymentMode.CARD, status: SubscriptionStatus.ACTIVE }
+        ? { plan_name: 'On-Prem', seat_limit: null, active_seats: 0, subscription_type: SubscriptionType.ANNUAL, payment_mode: PaymentMode.CARD, status: SubscriptionStatus.ACTIVE }
         : { plan_name: 'Trial', seat_limit: null, active_seats: 0, subscription_type: SubscriptionType.MONTHLY, payment_mode: PaymentMode.CARD };
       subscription = repo.create(defaults);
       subscription = await repo.save(subscription);
@@ -1288,8 +1395,8 @@ export class BillingService {
         subscription.plan_name = 'On-Prem';
         changed = true;
       }
-      if (subscription.seat_limit !== 1000) {
-        subscription.seat_limit = 1000;
+      if (subscription.seat_limit !== null) {
+        subscription.seat_limit = null;
         changed = true;
       }
       if (subscription.subscription_type !== SubscriptionType.ANNUAL) {
@@ -1319,15 +1426,6 @@ export class BillingService {
       .where('user.status = :status', { status: 'enabled' })
       .andWhere('(role.role_name IS NULL OR LOWER(role.role_name) <> :contact)', { contact: 'contact' })
       .getCount();
-  }
-
-  private async resolveCheckoutQuantity(opts: { manager: EntityManager | null }): Promise<number> {
-    if (opts.manager) {
-      const summary = await this.getSubscriptionSummary({ manager: opts.manager });
-      return summary.seats_used || summary.seat_limit || 1;
-    }
-    const summary = await this.getSubscriptionSummary();
-    return summary.seats_used || summary.seat_limit || 1;
   }
 
   private async requireTenant(id: string, manager?: EntityManager): Promise<Tenant> {

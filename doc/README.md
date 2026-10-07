@@ -248,7 +248,7 @@ Shared hooks and components for consistency:
 ✅ Contracts (CRUD, OPEX linking, attachments, tasks)
 ✅ Master data (companies, departments, suppliers, accounts, analytics, contacts)
 ✅ Reporting (Top 10, Delta, Budget Trend (OPEX/CAPEX), Budget Column Comparison, Consolidation, Chargeback)
-✅ RBAC (roles, permissions, seat licensing)
+✅ RBAC (roles, permissions)
 ✅ Budget Operations (freeze, copy columns, copy allocations, reset)
 ✅ Platform Admin (tenant management, freeze/delete, plan updates)
 ✅ CSV import/export (all entities)

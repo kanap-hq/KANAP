@@ -1,6 +1,6 @@
 {
   "files": {
-    "admin.md": "04eae347ad245ad6a07260ce307cec81",
+    "admin.md": "a4b978fd34d2b0ecfab0c41bc301166d",
     "agents-activity.md": "b34017d2899defb00d1a4b0e4455d75d",
     "agents-approvals.md": "425e35673c172a25dd171a49a91a167c",
     "agents-overview.md": "26607a780b60fc9a1ec39f0444ab6853",
@@ -44,8 +44,8 @@
     "master-data-operations.md": "10ea2aead80cfce70d7f699c61928094",
     "my-dashboard.md": "ccac41a19ca4882f38c6492b6f7b1dff",
     "netbox.md": "02e742911ee43ecf4b1282cfa5307aa1",
-    "on-premise/configuration.md": "4888f517dc968a97f37312ba0a0ba1fb",
-    "on-premise/index.md": "ca8113899299b3ac249f0b91636a2cf1",
+    "on-premise/configuration.md": "07e465d67adb622373a0a996aae298d1",
+    "on-premise/index.md": "e840930b452ca0d79b22b3390f604e78",
     "on-premise/installation-ai.md": "c1287475fc3ccfa953ff4aa1e6276ec8",
     "on-premise/installation-example.md": "b328448d88dafd09600c6b38534fb5f0",
     "on-premise/installation.md": "5af4a251fd5be23fec7753cf6c214599",

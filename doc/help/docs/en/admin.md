@@ -189,12 +189,11 @@ Users can be assigned multiple roles. Their effective permissions are the combin
 
 Clearing every role does not delete the account. The user falls back to the **Contact** system role, keeps no access, and shows as **Pending access** in the grid. You cannot remove your own last role, so you cannot lock yourself out.
 
-### Seat Management
+### Enabled and disabled users
 
-The hosted subscription includes **unlimited users** -- there is no seat limit to manage:
+Your subscription includes **unlimited users**. The **Enabled** switch controls who can sign in:
 - **Enabled users**: Can log in and use KANAP
 - **Disabled users**: Keep their data but can no longer log in
-- The counter in the toolbar shows how many enabled users you have
 - Toggle the **Enabled** switch when editing a user to control access
 
 ### Users managed by Microsoft Entra
@@ -385,58 +384,58 @@ The Roles page has a two-panel layout:
 
 ## Billing
 
-Manage your subscription, users, and invoices.
+Manage your subscription, your invoicing information and your invoices.
 
 ### Subscription Overview
 
-The subscription card shows your current plan at a glance:
-- **Plan**: Hosted KANAP (or Free trial). The subscription includes unlimited users -- billed monthly or annually
-- **Seats**: Number of enabled users
-- **Status**: Active, Trialing, Past Due, Canceled, etc.
-- **Renewal date**: When the next billing cycle starts
+The top of the page sums up your subscription in two lines:
+- The plan, the billing frequency and the amount, for example "Hosted KANAP · Annual · €2,490.00 / year". The subscription includes unlimited users, billed monthly or annually.
+- The status (Active, Trialing, Past due, Canceled, etc.), the renewal date and the payment method, for example "Active · renews 7 Oct 2027 · Visa •••• 4242".
 
-For active subscriptions (not local trials), additional details are shown:
-- **Amount per period**: Cost for the current billing cycle
-- **Billing frequency**: Monthly or Annual
-- **Collection method**: Automatic charge or Invoice (manual payment)
-- **Payment method**: Card details or Bank transfer
-- **Last Stripe sync**: When subscription data was last updated from Stripe
-
-If the subscription is in a trial period, the remaining trial days are displayed.
+Without a running subscription (a trial, an expired trial or an ended subscription), only the status is shown. During a trial, it comes with the trial end date and the number of days remaining.
 
 ### Actions
 
 - **Choose plan** / **Change plan**: Open the plan dialog to subscribe or switch between monthly and annual billing. Requires billing admin.
-- **Manage subscription**: Open the Stripe customer portal to update payment methods, cancel, or make other changes. Only available when a Stripe subscription exists.
+- **Manage payment**: Open the Stripe customer portal to update the payment method, cancel, or make other changes. Only available once you have subscribed.
 
 If your subscription is unhealthy (expired trial, past due, etc.), the plan selection dialog opens automatically when you visit the Billing page.
 
-### Invoice History
-
-Past invoices are displayed below the subscription card:
-- Invoice number and date
-- Status (Draft, Open, Paid, Voided, Uncollectible)
-- Amount and currency
-- **View**: Open the invoice in Stripe's hosted viewer
-- **Download**: Download the invoice PDF
-
-By default, the five most recent invoices are shown. Click **Show more invoices** to see the full history.
-
-### Customer Information
-
-Update the contact details associated with your Stripe customer record:
-- **Customer name** and **Company**
-- **Email** and **Phone**
-- **VAT number**
-- **Address** (line 1, line 2, city, state/province, postal code, country)
+To subscribe, by card or by bank transfer, the invoicing information must be complete (see [Invoicing Information](#invoicing-information)). If something is missing, the **Choose a plan** dialog lists the missing fields and the pay buttons stay disabled. Click **Complete invoicing information** to close the dialog and go to the first missing field. Once the details are saved, the pay buttons become available. Changing the plan of a running card subscription does not require this check.
 
 ### Invoicing Information
 
-Separate contact details used specifically on invoices. Click **Copy from customer** to pre-fill from the customer information above.
+These details appear on your invoices. KANAP copies them to your Stripe customer record when you subscribe and each time a field is saved.
 
-Fields match the customer information section: recipient name, company, email, phone, VAT number, and full address.
+The section holds the company, email, recipient name, phone, address (line 1, line 2, postal code, city, state/province), country and VAT number.
 
-Click **Save changes** to update both customer and invoicing details. Use **Reset** to discard unsaved edits.
+Each field is saved on its own, with no save button. A text field is saved when you leave it or press Enter, and the country as soon as you pick it. "Saving..." and then "Saved" appear next to the section title. To remove a value, clear the field and leave it.
+
+The **Country** field is a searchable list. A country entered as free text in an earlier version shows empty until you pick a country from the list.
+
+Required fields are marked with an asterisk:
+- **Company**
+- **Email**
+- **Address line 1**, **Postal code** and **City**
+- **Country**
+- **VAT number**, when the country is in the European Union
+
+You can leave the details incomplete and finish them later. While something is missing, a line under the fields lists it, for example "Required before subscribing: email, city." The details must be complete before you can subscribe.
+
+Earlier versions of KANAP had a separate customer information card. If you filled it in, its values appear in the matching empty invoicing fields, and they are saved as invoicing information the next time you change a field.
+
+For a country in the European Union, the VAT number is sent to Stripe and printed on your invoices. If Stripe does not accept it, KANAP shows "The VAT number was not accepted. Check it in the invoicing information." Correct the number and try again.
+
+### Invoice History
+
+Your invoices are listed in a table below the invoicing information:
+- Invoice number and date
+- Amount
+- Status (Draft, Open, Paid, Void, Uncollectible)
+- **View**: Open the invoice in Stripe's hosted viewer
+- **Download**: Download the invoice PDF
+
+The five most recent invoices are shown first. Click **Show all** to see the others.
 
 ---
 

@@ -53,7 +53,7 @@ Rate limiting (default enabled):
     - `subscription`: `{ plan_name, seat_limit, seats_used }`
   - Notes:
     - Admin safety: users with the `Administrator` role have `admin` across all resources.
-    - `seats_used` counts users with `status='enabled'`.
+    - `seat_limit` is `null` (unlimited) unless a platform administrator set a user limit on the tenant's plan. `seats_used` counts users with `status='enabled'`.
 - POST `/auth/password-reset/request` → `{ email }`
   - Body: `{ email: string }` (case-insensitive). Returns `{ ok: true }` whether or not the account exists.
   - Requires `RESEND_API_KEY` to be configured. Links are built from the configured application address: `APP_BASE_URL` (or `PUBLIC_APP_URL`) in single-tenant mode; in multi-tenant mode, the address of the request's tenant derived from the first of `APP_BASE_URL`, `PUBLIC_APP_URL`, `APP_URL` (for example `https://acme.kanap.net`). `Host` and `X-Forwarded-*` headers are followed only in development mode (`APP_ENV=development`) on a local development host (`lvh.me`, `localhost`, `dev.kanap.net` and their subdomains).
@@ -177,6 +177,21 @@ These endpoints are tenant-scoped and require:
 - POST `/billing/portal` → `{ url }`
   - Opens Stripe Customer Portal for Billing/Global Admins
   - Requires env: `STRIPE_SECRET_KEY` (or `STRIPE_SECRET`) and a `stripe_customer_id` stored in subscription
+- GET `/billing/profile` → `{ subscription, customer, invoice, invoice_missing_fields, invoices }`
+  - `invoice_missing_fields: string[]` lists the invoice details still missing, in the order below (empty when complete). Possible keys: `company`, `email`, `addressLine1`, `postalCode`, `city`, `country`, `vatNumber`.
+  - A malformed email, a country that is not an ISO 3166-1 alpha-2 code, or a malformed EU VAT number counts as missing. `vatNumber` is only reported when the country is in the EU.
+  - `invoice` is read field by field: the saved invoicing value, else the stored customer contact (`customer`, from the former customer card), else the tenant billing columns. A field saved empty stays empty.
+- PATCH `/billing/profile` → `{ customer, invoice, invoice_missing_fields, invoices }`
+  - Body: `{ invoice?: { name?, company?, email?, phone?, vatNumber?, address?: { line1?, line2?, city?, state?, postalCode?, country? } }, customer?: { same fields } }`. The billing page sends one changed field per call, for example `{ "invoice": { "address": { "city": "Lyon" } } }`.
+  - A field present in the body replaces the saved value; an empty string or `null` clears it. A field left out stays as it is, and so does the whole address when `address` is left out or `null`. `email` accepts an empty string or `null` (clearing it); any other value must be an email address (400 otherwise).
+  - Every save writes all invoicing fields, cleared ones as `null`, so values taken from the customer contact become invoicing values. `customer` is written only when the body holds it.
+  - Incomplete details are accepted and saved; the answer reports what is still missing in `invoice_missing_fields`.
+- POST `/billing/checkout` → `{ url, id }`
+  - Body: `{ plan_key, interval, success_url?, cancel_url?, allow_promotion_codes? }`. `plan_key` (a current plan: `max`) and `interval` (`monthly` or `annual`) are required; a missing or unknown value is a 400. The price is always the plan's configured Stripe price (`STRIPE_PRICE_<PLAN>_<INTERVAL>`) and the quantity is always 1. The former `price_id`, `quantity` and `subscription_type` fields are gone: the validation pipe strips them, so they have no effect. A plan without a configured price is a 400.
+  - Refused before any Stripe call when the invoice details are incomplete: 400 `{ "message": "BILLING_PROFILE_INCOMPLETE", "missing": [ ... ] }`. `missing` holds the keys listed above, in that order.
+  - 400 `{ "message": "VAT_NUMBER_INVALID" }` when Stripe does not accept the EU VAT number. The invoice details are copied to the Stripe customer at this point, and an EU VAT number is registered there as a tax id so it appears on invoices.
+- POST `/billing/request-invoice` (bank transfer)
+  - Same 400 answers as `/billing/checkout`: `BILLING_PROFILE_INCOMPLETE` with `missing`, and `VAT_NUMBER_INVALID`.
 
 ## Companies
 - GET `/companies?year=YYYY&status=enabled|disabled&page=1&limit=50&sort=name:ASC`
@@ -1341,7 +1356,7 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
     - For neutral status, item inclusion uses a period-start gate derived from the requested years.
     - For joins/allocations tied to a single report year, the period start is the start of that year.
     - This yields: included through the disabled year and excluded for strictly later years.
-  - Users additionally support `contact|invited`; seat usage only counts `enabled`.
+  - Users additionally support `contact|invited`; a user limit, when a platform administrator has set one on the tenant's plan, only counts `enabled` users.
 
 ## Examples
 
@@ -1382,13 +1397,13 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
 - POST `/users` → create user `{ email, first_name?, last_name?, role_id?, status? }`
   - Password is optional; most flows leave it empty and rely on the invite/password-reset pipeline.
   - `role_id` preferred; falls back to `role_name` (defaults to system `Contact`).
-  - `status` defaults to `enabled`; enforcing seats still happens when saving with `status='enabled'`.
-- POST `/users/:id/enable` → sets user `status='enabled'` (consumes a seat)
+  - `status` defaults to `enabled`; a user limit, when set on the tenant's plan, is enforced when saving with `status='enabled'`.
+- POST `/users/:id/enable` → sets user `status='enabled'`
   - Requires: users:admin level
-  - Enforces seats: fails with 400 when `seats_used >= seat_limit`
-- POST `/users/:id/disable` → sets user `status='disabled'` (frees a seat)
+  - Enforces the user limit only when a platform administrator has set one on the tenant's plan (`seat_limit` not null): fails with 400 when the number of `enabled` users has reached it. No limit applies by default.
+- POST `/users/:id/disable` → sets user `status='disabled'`
   - Requires: users:admin level
-- POST `/users/:id/invite` → sets user `status='invited'` (does not consume a seat)
+- POST `/users/:id/invite` → sets user `status='invited'` (an invited user does not count toward a user limit)
   - Requires: users:admin level
   - Sends a Resend email with a password setup CTA pointing to `/accept-invite#token=...`. The token reuses the password-reset pipeline and automatically enables the user once a password is set.
   - The link uses the same address as password reset links (the tenant's address in multi-tenant mode). Without a configured address: `400` `application URL is not configured: set APP_BASE_URL`.

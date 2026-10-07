@@ -1,6 +1,6 @@
 # Déploiement on-premise
 
-KANAP peut être déployé on-premise en **mode single-tenant**. Vous fournissez votre propre PostgreSQL, stockage compatible S3 et reverse proxy TLS. KANAP gère tout le reste : les migrations s'exécutent automatiquement, le tenant et l'utilisateur administrateur sont créés au premier démarrage, et une limite généreuse de sièges (1 000) est pré-configurée.
+KANAP peut être déployé on-premise en **mode single-tenant**. Vous fournissez votre propre PostgreSQL, stockage compatible S3 et reverse proxy TLS. KANAP gère tout le reste : les migrations s'exécutent automatiquement, le tenant et l'utilisateur administrateur sont créés au premier démarrage. Il n'y a aucune limite d'utilisateurs.
 
 ## Guides
 

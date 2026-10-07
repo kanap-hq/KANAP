@@ -15,15 +15,23 @@ import type { SxProps, Theme } from '@mui/material/styles';
 export type KanapDialogProps = {
   open: boolean;
   title: string;
+  /** Quiet line under the title (13px, secondary text). */
+  subtitle?: React.ReactNode;
   onClose: () => void;
+  /** Called once the dialog has finished closing. */
+  onExited?: () => void;
   children: React.ReactNode;
   footerLeft?: React.ReactNode;
+  /** Extra footer buttons, rendered between Cancel and the main action. */
+  secondaryActions?: React.ReactNode;
   onSave: () => void | Promise<void>;
   saveLabel?: string;
   saveVariant?: ButtonProps['variant'];
   saveColor?: ButtonProps['color'];
   saveDisabled?: boolean;
   saveLoading?: boolean;
+  /** Extra styles for the main action button, merged after the defaults. */
+  saveSx?: SxProps<Theme>;
   /** Defaults to the localized "Cancel"; pass one only for a non-standard label. */
   cancelLabel?: string;
   showCancel?: boolean;
@@ -47,15 +55,19 @@ function isSubmitEnter(event: React.KeyboardEvent<HTMLElement>) {
 export default function KanapDialog({
   open,
   title,
+  subtitle,
   onClose,
+  onExited,
   children,
   footerLeft,
+  secondaryActions,
   onSave,
   saveLabel = 'Save',
   saveVariant = 'contained',
   saveColor = 'primary',
   saveDisabled = false,
   saveLoading = false,
+  saveSx,
   cancelLabel,
   showCancel = true,
   sx,
@@ -74,6 +86,7 @@ export default function KanapDialog({
       onClose={onClose}
       fullWidth
       maxWidth={false}
+      TransitionProps={onExited ? { onExited } : undefined}
       BackdropProps={{
         sx: (theme: Theme) => ({
           bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.65)' : 'rgba(15, 17, 23, 0.45)',
@@ -115,19 +128,31 @@ export default function KanapDialog({
             borderBottom: `1px solid ${theme.palette.kanap.border.default}`,
           })}
         >
-          <Typography
-            component="h2"
-            sx={(theme) => ({
-              flex: 1,
-              minWidth: 0,
-              fontSize: 16,
-              fontWeight: 500,
-              color: theme.palette.kanap.text.primary,
-              m: 0,
-            })}
-          >
-            {title}
-          </Typography>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography
+              component="h2"
+              sx={(theme) => ({
+                fontSize: 16,
+                fontWeight: 500,
+                color: theme.palette.kanap.text.primary,
+                m: 0,
+              })}
+            >
+              {title}
+            </Typography>
+            {subtitle ? (
+              <Typography
+                sx={(theme) => ({
+                  mt: '2px',
+                  fontSize: 13,
+                  lineHeight: 1.4,
+                  color: theme.palette.kanap.text.secondary,
+                })}
+              >
+                {subtitle}
+              </Typography>
+            ) : null}
+          </Box>
           <IconButton aria-label="Close dialog" onClick={onClose} size="small">
             <CloseIcon sx={{ fontSize: 18 }} />
           </IconButton>
@@ -155,13 +180,17 @@ export default function KanapDialog({
               {resolvedCancelLabel}
             </Button>
           ) : null}
+          {secondaryActions}
           <Button
             type="submit"
             variant={saveVariant}
             color={saveColor}
             disabled={saveDisabled || saveLoading}
             startIcon={saveLoading ? <CircularProgress color="inherit" size={14} /> : undefined}
-            sx={{ boxShadow: 'none', '&:hover': { boxShadow: 'none' } }}
+            sx={[
+              { boxShadow: 'none', '&:hover': { boxShadow: 'none' } },
+              ...(Array.isArray(saveSx) ? saveSx : saveSx ? [saveSx] : []),
+            ]}
           >
             {saveLabel}
           </Button>

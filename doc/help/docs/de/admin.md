@@ -189,12 +189,11 @@ Benutzern können mehrere Rollen zugewiesen werden. Ihre effektiven Berechtigung
 
 Das Entfernen aller Rollen löscht das Konto nicht. Der Benutzer fällt auf die Systemrolle **Kontakt** zurück, behält keinen Zugriff und erscheint im Grid mit dem Status **Zugriff ausstehend**. Sie können Ihre eigene letzte Rolle nicht entfernen und sperren sich damit nicht selbst aus.
 
-### Platzverwaltung
+### Aktivierte und deaktivierte Benutzer
 
-Das gehostete Abonnement umfasst **unbegrenzte Nutzer**. Es gibt kein Platzlimit zu verwalten:
+Ihr Abonnement umfasst **unbegrenzte Nutzer**. Der Schalter **Aktiviert** legt fest, wer sich anmelden kann:
 - **Aktivierte Benutzer**: Können sich anmelden und KANAP nutzen
 - **Deaktivierte Benutzer**: Behalten ihre Daten, können sich aber nicht mehr anmelden
-- Der Zähler in der Symbolleiste zeigt die Anzahl der aktivierten Benutzer
 - Schalten Sie den **Aktiviert**-Schalter beim Bearbeiten eines Benutzers um, um den Zugriff zu steuern
 
 ### Von Microsoft Entra verwaltete Benutzer
@@ -385,58 +384,58 @@ Die Rollenseite hat ein zweispaltiges Layout:
 
 ## Abrechnung
 
-Verwalten Sie Ihr Abonnement, Ihre Benutzer und Rechnungen.
+Verwalten Sie Ihr Abonnement, Ihre Rechnungsinformationen und Ihre Rechnungen.
 
 ### Abonnement-Übersicht
 
-Die Abonnementkarte zeigt Ihren aktuellen Tarif auf einen Blick:
-- **Tarif**: Hosted KANAP (oder Kostenlose Testversion). Das Abonnement umfasst unbegrenzte Nutzer, mit monatlicher oder jährlicher Abrechnung
-- **Plätze**: Anzahl der aktivierten Benutzer
-- **Status**: Aktiv, Testphase, Überfällig, Gekündigt usw.
-- **Verlängerungsdatum**: Wann der nächste Abrechnungszeitraum beginnt
+Oben auf der Seite wird Ihr Abonnement in zwei Zeilen zusammengefasst:
+- Der Tarif, die Abrechnungsfrequenz und der Betrag, zum Beispiel „Hosted KANAP · Jährlich · 2.490,00 € / Jahr“. Das Abonnement umfasst unbegrenzte Nutzer, mit monatlicher oder jährlicher Abrechnung.
+- Der Status (Aktiv, Testphase, Überfällig, Gekündigt usw.), das Verlängerungsdatum und die Zahlungsmethode, zum Beispiel „Aktiv · Verlängerung am 7. Okt. 2027 · Visa •••• 4242“.
 
-Für aktive Abonnements (keine lokalen Testversionen) werden zusätzliche Details angezeigt:
-- **Betrag pro Zeitraum**: Kosten für den aktuellen Abrechnungszeitraum
-- **Abrechnungsfrequenz**: Monatlich oder Jährlich
-- **Einzugsverfahren**: Automatische Belastung oder Rechnung (manuelle Zahlung)
-- **Zahlungsmethode**: Kartendetails oder Banküberweisung
-- **Letzte Stripe-Synchronisation**: Wann die Abonnementdaten zuletzt von Stripe aktualisiert wurden
-
-Befindet sich das Abonnement in einer Testphase, werden die verbleibenden Testtage angezeigt.
+Ohne laufendes Abonnement (eine Testphase, eine abgelaufene Testphase oder ein beendetes Abonnement) wird nur der Status angezeigt. Während einer Testphase stehen daneben das Ende der Testphase und die verbleibenden Tage.
 
 ### Aktionen
 
-- **Tarif wählen** / **Tarif ändern**: Öffnet den Tarifdialog zum Abonnieren oder zum Wechsel zwischen monatlicher und jährlicher Abrechnung. Erfordert Abrechnungsadministrator.
-- **Abonnement verwalten**: Öffnet das Stripe-Kundenportal zum Aktualisieren von Zahlungsmethoden, Kündigen oder für andere Änderungen. Nur verfügbar, wenn ein Stripe-Abonnement existiert.
+- **Plan wählen** / **Plan ändern**: Öffnet den Tarifdialog zum Abonnieren oder zum Wechsel zwischen monatlicher und jährlicher Abrechnung. Erfordert Abrechnungsadministrator.
+- **Zahlung verwalten**: Öffnet das Stripe-Kundenportal zum Aktualisieren der Zahlungsmethode, Kündigen oder für andere Änderungen. Nur verfügbar, nachdem Sie ein Abonnement abgeschlossen haben.
 
 Wenn Ihr Abonnement nicht in Ordnung ist (abgelaufene Testversion, überfällig usw.), öffnet sich der Tarifauswahldialog automatisch, wenn Sie die Abrechnungsseite besuchen.
 
-### Rechnungshistorie
-
-Vergangene Rechnungen werden unterhalb der Abonnementkarte angezeigt:
-- Rechnungsnummer und Datum
-- Status (Entwurf, Offen, Bezahlt, Storniert, Uneinbringlich)
-- Betrag und Währung
-- **Ansehen**: Rechnung im gehosteten Stripe-Viewer öffnen
-- **Herunterladen**: Rechnungs-PDF herunterladen
-
-Standardmäßig werden die fünf neuesten Rechnungen angezeigt. Klicken Sie auf **Weitere Rechnungen anzeigen**, um die vollständige Historie zu sehen.
-
-### Kundeninformationen
-
-Aktualisieren Sie die Kontaktdaten, die mit Ihrem Stripe-Kundendatensatz verknüpft sind:
-- **Kundenname** und **Unternehmen**
-- **E-Mail** und **Telefon**
-- **USt-IdNr.**
-- **Adresse** (Zeile 1, Zeile 2, Stadt, Bundesland/Kanton, Postleitzahl, Land)
+Um ein Abonnement abzuschließen, per Karte oder per Überweisung, müssen die Rechnungsinformationen vollständig sein (siehe [Rechnungsinformationen](#rechnungsinformationen)). Fehlt etwas, listet der Dialog **Plan wählen** die fehlenden Felder auf und die Zahlungsschaltflächen bleiben deaktiviert. Klicken Sie auf **Rechnungsinformationen vervollständigen**, um den Dialog zu schließen und zum ersten fehlenden Feld zu wechseln. Sobald die Angaben gespeichert sind, werden die Zahlungsschaltflächen verfügbar. Der Planwechsel eines laufenden Kartenabonnements erfordert diese Prüfung nicht.
 
 ### Rechnungsinformationen
 
-Separate Kontaktdaten, die speziell auf Rechnungen verwendet werden. Klicken Sie auf **Vom Kunden kopieren**, um die Daten aus den obigen Kundeninformationen zu übernehmen.
+Diese Angaben erscheinen auf Ihren Rechnungen. KANAP kopiert sie in Ihren Stripe-Kundendatensatz, wenn Sie ein Abonnement abschließen und jedes Mal, wenn ein Feld gespeichert wird.
 
-Die Felder entsprechen dem Bereich Kundeninformationen: Empfängername, Unternehmen, E-Mail, Telefon, USt-IdNr. und vollständige Adresse.
+Der Bereich enthält Unternehmen, E-Mail, Empfängername, Telefon, Adresse (Zeile 1, Zeile 2, Postleitzahl, Stadt, Bundesland/Kanton), Land und USt-IdNr.
 
-Klicken Sie auf **Änderungen speichern**, um Kunden- und Rechnungsdaten zu aktualisieren. Verwenden Sie **Zurücksetzen**, um nicht gespeicherte Änderungen zu verwerfen.
+Jedes Feld wird einzeln gespeichert, ohne Speichern-Schaltfläche. Ein Textfeld wird gespeichert, wenn Sie es verlassen oder die Eingabetaste drücken, das Land sobald Sie es auswählen. Neben dem Bereichstitel erscheint „Wird gespeichert...“ und dann „Gespeichert“. Um einen Wert zu entfernen, leeren Sie das Feld und verlassen Sie es.
+
+Das Feld **Land** ist eine durchsuchbare Liste. Ein Land, das in einer früheren Version als Freitext eingegeben wurde, erscheint leer, bis Sie ein Land aus der Liste auswählen.
+
+Pflichtfelder sind mit einem Sternchen markiert:
+- **Unternehmen**
+- **E-Mail**
+- **Adresszeile 1**, **Postleitzahl** und **Stadt**
+- **Land**
+- **USt-IdNr.**, wenn das Land zur Europäischen Union gehört
+
+Sie können unvollständige Angaben stehen lassen und später ergänzen. Solange etwas fehlt, listet eine Zeile unter den Feldern es auf, zum Beispiel „Vor dem Abschluss eines Abonnements erforderlich: E-Mail, Stadt.“ Vor dem Abschluss eines Abonnements müssen die Angaben vollständig sein.
+
+Frühere Versionen von KANAP hatten eine separate Karte mit Kundeninformationen. Wenn Sie diese ausgefüllt haben, erscheinen ihre Werte in den entsprechenden leeren Rechnungsfeldern und werden als Rechnungsinformationen gespeichert, sobald Sie das nächste Mal ein Feld ändern.
+
+Bei einem Land der Europäischen Union wird die USt-IdNr. an Stripe übermittelt und auf Ihren Rechnungen ausgewiesen. Wenn Stripe sie nicht akzeptiert, zeigt KANAP „Die USt-IdNr. wurde nicht akzeptiert. Prüfen Sie sie in den Rechnungsinformationen.“ Korrigieren Sie die Nummer und versuchen Sie es erneut.
+
+### Rechnungshistorie
+
+Ihre Rechnungen werden in einer Tabelle unter den Rechnungsinformationen aufgeführt:
+- Rechnungsnummer und Datum
+- Betrag
+- Status (Entwurf, Offen, Bezahlt, Storniert, Uneinbringlich)
+- **Ansehen**: Rechnung im gehosteten Stripe-Viewer öffnen
+- **Herunterladen**: Rechnungs-PDF herunterladen
+
+Die fünf neuesten Rechnungen werden zuerst angezeigt. Klicken Sie auf **Alle anzeigen**, um die übrigen zu sehen.
 
 ---
 

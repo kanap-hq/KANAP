@@ -5,33 +5,17 @@ import { RequireLevel } from '../auth/require-level.decorator';
 import { BillingService } from './billing.service';
 import { Features } from '../config/features';
 import { throwFeatureDisabled } from '../common/feature-gates';
-import { IsBoolean, IsEmail, IsEnum, IsIn, IsInt, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
-import { SubscriptionType } from './subscription.entity';
+import { IsBoolean, IsEmail, IsIn, IsOptional, IsString, ValidateIf, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import type { PlanKey, IntervalKey } from './plans.config';
 import { LongRunningRequest, OUTSIDE_WORK_TIMEOUTS } from '../common/request-db-timeouts';
 
-class CreateCheckoutSessionDto {
-  @IsOptional()
+export class CreateCheckoutSessionDto {
   @IsIn(['max'])
-  plan_key?: PlanKey;
+  plan_key!: PlanKey;
 
-  @IsOptional()
   @IsIn(['monthly', 'annual'])
-  interval?: IntervalKey;
-
-  @IsOptional()
-  @IsEnum(SubscriptionType)
-  subscription_type?: SubscriptionType;
-
-  @IsOptional()
-  @IsString()
-  price_id?: string;
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  quantity?: number;
+  interval!: IntervalKey;
 
   @IsOptional()
   @IsString()
@@ -97,7 +81,8 @@ class BillingContactDto {
   @IsString()
   company?: string | null;
 
-  @IsOptional()
+  // Empty or null clears the email; anything else must be an email address.
+  @ValidateIf((_dto, value) => value !== undefined && value !== null && !(typeof value === 'string' && value.trim() === ''))
   @IsEmail()
   email?: string | null;
 
@@ -121,7 +106,11 @@ class OpenPortalDto {
   returnUrl?: string;
 }
 
-class UpdateBillingProfileDto {
+/**
+ * A field present in `customer` or `invoice` replaces the stored value; an empty string or
+ * null clears it. A field left out stays as it is.
+ */
+export class UpdateBillingProfileDto {
   @IsOptional()
   @ValidateNested()
   @Type(() => BillingContactDto)
@@ -225,9 +214,6 @@ export class BillingController {
       manager: mg,
       planKey: body.plan_key,
       interval: body.interval,
-      subscriptionType: body.subscription_type,
-      priceId: body.price_id,
-      quantity: body.quantity ?? undefined,
       successUrl: body.success_url,
       cancelUrl: body.cancel_url,
       allowPromotionCodes: body.allow_promotion_codes,

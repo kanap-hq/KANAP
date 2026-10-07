@@ -278,10 +278,7 @@
     "actions": {
       "changePlan": "Changer de plan",
       "choosePlan": "Choisir un plan",
-      "manageSubscription": "Gérer l'abonnement"
-    },
-    "customer": {
-      "title": "Informations client"
+      "managePayment": "Gérer le paiement"
     },
     "fields": {
       "addressLine1": "Adresse ligne 1",
@@ -289,7 +286,6 @@
       "city": "Ville",
       "company": "Société",
       "country": "Pays",
-      "customerName": "Nom du client",
       "email": "E-mail",
       "phone": "Téléphone",
       "postalCode": "Code postal",
@@ -298,8 +294,10 @@
       "vatNumber": "Numéro de TVA"
     },
     "invoiceDetails": {
-      "copyFromCustomer": "Copier depuis le client",
-      "title": "Informations de facturation"
+      "emailFormat": "Vérifiez le format de cette adresse e-mail.",
+      "missing": "Requis avant de vous abonner : {{fields}}.",
+      "title": "Informations de facturation",
+      "vatNumberFormat": "Vérifiez le format de ce numéro de TVA."
     },
     "invoiceStatuses": {
       "draft": "Brouillon",
@@ -311,9 +309,16 @@
     "invoices": {
       "actions": {
         "download": "Télécharger",
+        "showAll": "Tout afficher ({{count}})",
         "showFewer": "Afficher moins de factures",
-        "showMore": "Afficher plus de factures",
         "view": "Voir"
+      },
+      "columns": {
+        "amount": "Montant",
+        "date": "Date",
+        "links": "Documents",
+        "number": "Numéro",
+        "status": "Statut"
       },
       "title": "Historique des factures"
     },
@@ -321,8 +326,20 @@
       "loadFailed": "Impossible de charger les détails de facturation.",
       "portalFailed": "Impossible d'ouvrir le portail de facturation.",
       "portalUnavailable": "Le portail de facturation n'est pas disponible.",
-      "saveFailed": "Impossible d'enregistrer les détails de facturation.",
-      "updateSuccess": "Détails de facturation mis à jour."
+      "saveFailed": "Impossible d'enregistrer les détails de facturation."
+    },
+    "placeholders": {
+      "addressLine1": "ex. 12 rue Principale",
+      "addressLine2": "ex. Bâtiment B",
+      "city": "ex. Paris",
+      "company": "ex. Exemple SAS",
+      "country": "ex. France",
+      "email": "ex. facturation@example.com",
+      "phone": "ex. +33 1 23 45 67 89",
+      "postalCode": "ex. 75001",
+      "recipientName": "ex. Service comptabilité",
+      "stateProvince": "ex. Bretagne",
+      "vatNumber": "ex. FR12345678901"
     },
     "statuses": {
       "active": "Actif",
@@ -337,34 +354,19 @@
       "unpaid": "Impayé"
     },
     "subscription": {
-      "labels": {
-        "actions": "Actions",
-        "amountPerPeriod": "Montant par période",
-        "billingFrequency": "Fréquence de facturation",
-        "collectionMethod": "Méthode d'encaissement",
-        "lastStripeSync": "Dernière synchronisation Stripe",
-        "paymentMethod": "Moyen de paiement",
-        "plan": "Plan",
-        "renewalDate": "Date de renouvellement",
-        "seats": "Postes",
-        "status": "Statut",
-        "trial": "Essai",
-        "trialEnds": "Fin de l'essai"
-      },
-      "planLabels": {
-        "freeTrial": "Essai gratuit"
-      },
       "title": "Abonnement",
       "values": {
+        "amountPerMonth": "{{amount}} / mois",
+        "amountPerYear": "{{amount}} / an",
         "annual": "Annuel",
-        "automaticCharge": "Prélèvement automatique",
         "bankTransfer": "Virement bancaire",
         "card": "Carte",
         "daysRemaining_one": "{{count}} jour restant",
         "daysRemaining_other": "{{count}} jours restants",
-        "invoiceManualPayment": "Facture (paiement manuel)",
+        "ends": "se termine le {{date}}",
         "monthly": "Mensuel",
-        "unlimitedSeatsUsed": "{{count}} utilisés"
+        "renews": "renouvellement le {{date}}",
+        "trialEnded": "essai terminé le {{date}}"
       }
     },
     "title": "Facturation"
@@ -643,32 +645,51 @@
       "payByBankTransfer": "Payer par virement",
       "payByCard": "Payer par carte"
     },
-    "annualSavings": "2 mois offerts",
+    "annualSavings_one": "{{count}} mois offert",
+    "annualSavings_other": "{{count}} mois offerts",
     "billingCycle": {
       "annual": "Annuel",
+      "label": "Période de facturation",
       "monthly": "Mensuel"
     },
     "errors": {
       "noActiveSubscription": "Aucun abonnement actif trouvé.",
-      "planNotBankTransferEligible": "Ce plan n'est pas éligible au virement bancaire."
+      "planNotBankTransferEligible": "Ce plan n'est pas éligible au virement bancaire.",
+      "vatNumberInvalid": "Le numéro de TVA n'a pas été accepté. Vérifiez-le dans les informations de facturation."
+    },
+    "invoiceFields": {
+      "addressLine1": "adresse ligne 1",
+      "city": "ville",
+      "company": "société",
+      "country": "pays",
+      "email": "e-mail",
+      "postalCode": "code postal",
+      "vatNumber": "numéro de TVA"
     },
     "messages": {
       "checkoutUrlUnavailable": "L'URL de paiement n'est pas disponible.",
       "invoiceCreated": "Facture créée.",
       "loadFailed": "Impossible de charger les plans.",
-      "requestFailed": "La requête a échoué.",
-      "trialExpired": "La période d'essai a expiré.",
-      "trialExpires_one": "La période d'essai expire dans {{count}} jour.",
-      "trialExpires_other": "La période d'essai expire dans {{count}} jours."
+      "requestFailed": "La requête a échoué."
     },
-    "pricePer": "par {{period}}",
-    "shared": {
-      "month": "mois",
-      "upToSeats_one": "Jusqu'à {{count}} poste",
-      "upToSeats_other": "Jusqu'à {{count}} postes",
-      "year": "an"
+    "monthlyEquivalent": "{{amount}} par mois, facturé annuellement",
+    "period": {
+      "month": "par mois",
+      "year": "par an"
+    },
+    "profile": {
+      "complete": "Compléter les informations de facturation",
+      "incomplete": "Complétez les informations de facturation avant de vous abonner : {{fields}}."
     },
     "title": "Choisir un plan",
+    "trial": {
+      "daysLeft_one": "{{count}} jour restant",
+      "daysLeft_other": "{{count}} jours restants",
+      "ended": "Votre période d'essai est terminée",
+      "ends": "Votre période d'essai se termine le {{date}}",
+      "endsIn_one": "Votre période d'essai se termine dans {{count}} jour",
+      "endsIn_other": "Votre période d'essai se termine dans {{count}} jours"
+    },
     "unlimitedUsers": "Utilisateurs illimités"
   },
   "roles": {
@@ -1059,10 +1080,6 @@
     },
     "exportTitle": "Exporter les utilisateurs",
     "importTitle": "Importer les utilisateurs",
-    "seats": {
-      "limited": "Postes {{used}}/{{limit}}",
-      "unlimited": "Postes {{used}} (illimité)"
-    },
     "accountType": {
       "entra": "Microsoft Entra",
       "local": "Local"
