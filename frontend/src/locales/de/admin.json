@@ -1239,5 +1239,106 @@
         "goToSync": "Synchronisierung einrichten"
       }
     }
+  },
+  "sampleData": {
+    "title": "Beispieldaten",
+    "intro": "Entdecken Sie KANAP mit Fromage & Co, einer fiktiven Käserei. Beispieldaten lassen sich in einen leeren Arbeitsbereich laden und anschließend auf dieser Seite wieder löschen.",
+    "notEmpty": "Beispieldaten lassen sich nur in einen leeren Arbeitsbereich laden. Dieser Arbeitsbereich enthält bereits Daten.",
+    "loadedHint": "Um Ihre eigene Arbeit in einem sauberen Arbeitsbereich zu beginnen, löschen Sie alles. Der Arbeitsbereich kehrt in seinen Ausgangszustand zurück.",
+    "resetting": "Der Inhalt des Arbeitsbereichs wird gelöscht. Das dauert einige Sekunden.",
+    "status": {
+      "idle": "Nicht geladen",
+      "loading": "Wird geladen",
+      "loaded": "Geladen",
+      "failed": "Laden fehlgeschlagen",
+      "resetting": "Wird gelöscht"
+    },
+    "strip": {
+      "status": "Status",
+      "loadedOn": "Geladen am",
+      "startedOn": "Gestartet am",
+      "failedOn": "Fehlgeschlagen am",
+      "by": "Von"
+    },
+    "actions": {
+      "load": "Beispieldaten laden",
+      "retry": "Erneut versuchen",
+      "eraseAndStartOver": "Alles löschen und neu beginnen",
+      "eraseAll": "Alles löschen"
+    },
+    "loading": {
+      "step": "Schritt {{current}} von {{total}}: {{label}}",
+      "preparing": "Laden wird vorbereitet",
+      "concurrentWrites": "Was in der Zwischenzeit im Arbeitsbereich erstellt wird, wird gelöscht, wenn das Laden fehlschlägt."
+    },
+    "steps": {
+      "settings": "Einstellungen",
+      "classification": "Portfolio-Klassifizierung und Analyse",
+      "companies": "Unternehmen",
+      "charts-of-accounts": "Kontenpläne",
+      "master-data": "Lieferanten, Abteilungen und Kontakte",
+      "users": "Benutzer",
+      "budget-setup": "Kostenstellen und Kalender",
+      "applications": "Geschäftsprozesse und Anwendungen",
+      "contracts": "Verträge",
+      "budget": "Budget",
+      "portfolio": "Projekte und Anfragen",
+      "assets": "Standorte und Assets",
+      "tasks": "Aufgaben",
+      "application-links": "Verknüpfungen der Anwendungen",
+      "landscape": "Instanzen, Schnittstellen und Verbindungen",
+      "budget-links": "Budgetverknüpfungen",
+      "portfolio-teams": "Projektteams und Phasen",
+      "allocations": "Zuordnungen zu Unternehmen",
+      "knowledge": "Dokumente"
+    },
+    "failure": {
+      "load_failed": "Die Beispieldaten konnten nicht geladen werden.",
+      "load_timeout": "Das Laden hat zu lange gedauert und wurde abgebrochen.",
+      "load_not_started": "Das Laden konnte auf dem Server nicht gestartet werden.",
+      "load_interrupted": "Das Laden wurde unterbrochen, weil der Server neu gestartet wurde.",
+      "reset_failed": "Das Laden ist fehlgeschlagen, und der Arbeitsbereich konnte nicht in seinen Ausgangszustand zurückversetzt werden. Löschen Sie alles, um es erneut zu versuchen.",
+      "backToStart": "Der Arbeitsbereich wurde in seinen Ausgangszustand zurückversetzt."
+    },
+    "loadDialog": {
+      "title": "Beispieldaten laden",
+      "intro": "KANAP füllt diesen Arbeitsbereich mit Fromage & Co, einer fiktiven Käserei:",
+      "companies": "4 Unternehmen in Frankreich, den Niederlanden, Italien und den Vereinigten Staaten",
+      "users": "18 fiktive Benutzer, die sich nicht anmelden können",
+      "landscape": "Anwendungen und ihre Landschaft: Instanzen, Schnittstellen und Verbindungen",
+      "business": "Verträge, das Budget des laufenden Jahres, Projekte und Aufgaben",
+      "duration": "Das Laden dauert weniger als eine Minute. Sie können später alles unter Administration › Beispieldaten löschen."
+    },
+    "resetDialog": {
+      "title": "Alles löschen und neu beginnen",
+      "warning": "Der gesamte Inhalt dieses Arbeitsbereichs wird gelöscht und lässt sich nicht wiederherstellen. Der Arbeitsbereich kehrt in seinen Ausgangszustand zurück.",
+      "keptTitle": "Beibehalten:",
+      "kept": {
+        "users": "Echte Benutzerkonten und ihre Rollen",
+        "subscription": "Das Abonnement",
+        "identity": "Name, Adresse und Logo des Arbeitsbereichs",
+        "microsoft": "Die Microsoft-Anmeldung",
+        "ai": "Die KI-Einstellungen",
+        "audit": "Das Audit-Protokoll"
+      },
+      "settingsDefaults": "Die im Arbeitsbereich gespeicherten Einstellungen (Währungen, Budgetspalten, Klassifizierungskatalog) werden auf ihre Standardwerte zurückgesetzt.",
+      "createdSinceLoad_one": "{{count}} Element, das seit dem Laden der Beispieldaten erstellt wurde, wird ebenfalls gelöscht.",
+      "createdSinceLoad_other": "{{count}} Elemente, die seit dem Laden der Beispieldaten erstellt wurden, werden ebenfalls gelöscht.",
+      "email": "Die Administratoren erhalten eine E-Mail, sobald der Arbeitsbereich gelöscht ist.",
+      "typeName": "Geben Sie zur Bestätigung den Namen des Arbeitsbereichs ein: <strong>{{name}}</strong>",
+      "nameLabel": "Name des Arbeitsbereichs"
+    },
+    "banner": {
+      "text": "Entdecken Sie KANAP mit Beispieldaten.",
+      "load": "Laden",
+      "hide": "Ausblenden",
+      "loading": "Beispieldaten werden geladen. {{step}}."
+    },
+    "messages": {
+      "statusFailed": "Der Status der Beispieldaten konnte nicht gelesen werden.",
+      "loadFailed": "Die Beispieldaten konnten nicht geladen werden.",
+      "resetFailed": "Der Arbeitsbereich konnte nicht gelöscht werden.",
+      "dismissFailed": "Diese Meldung konnte nicht ausgeblendet werden."
+    }
   }
 }

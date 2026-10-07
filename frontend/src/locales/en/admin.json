@@ -1239,5 +1239,106 @@
         "goToSync": "Set up the synchronisation"
       }
     }
+  },
+  "sampleData": {
+    "title": "Sample data",
+    "intro": "Explore KANAP with Fromage & Co, a fictional cheese maker. Sample data can be loaded into an empty workspace, and erased afterwards from this page.",
+    "notEmpty": "Sample data can only be loaded into an empty workspace. This workspace already holds data.",
+    "loadedHint": "To start your own work from a clean workspace, erase everything. The workspace goes back to its starting state.",
+    "resetting": "Erasing the content of the workspace. This takes a few seconds.",
+    "status": {
+      "idle": "Not loaded",
+      "loading": "Loading",
+      "loaded": "Loaded",
+      "failed": "Load failed",
+      "resetting": "Erasing"
+    },
+    "strip": {
+      "status": "Status",
+      "loadedOn": "Loaded on",
+      "startedOn": "Started on",
+      "failedOn": "Failed on",
+      "by": "By"
+    },
+    "actions": {
+      "load": "Load sample data",
+      "retry": "Try again",
+      "eraseAndStartOver": "Erase everything and start over",
+      "eraseAll": "Erase everything"
+    },
+    "loading": {
+      "step": "Step {{current}} of {{total}}: {{label}}",
+      "preparing": "Preparing the load",
+      "concurrentWrites": "Anything created in the workspace meanwhile is erased if the load fails."
+    },
+    "steps": {
+      "settings": "settings",
+      "classification": "portfolio classification and analytics",
+      "companies": "companies",
+      "charts-of-accounts": "charts of accounts",
+      "master-data": "suppliers, departments and contacts",
+      "users": "users",
+      "budget-setup": "cost centers and calendars",
+      "applications": "business processes and applications",
+      "contracts": "contracts",
+      "budget": "budget",
+      "portfolio": "projects and requests",
+      "assets": "locations and assets",
+      "tasks": "tasks",
+      "application-links": "application links",
+      "landscape": "instances, interfaces and connections",
+      "budget-links": "budget links",
+      "portfolio-teams": "project teams and phases",
+      "allocations": "company allocations",
+      "knowledge": "documents"
+    },
+    "failure": {
+      "load_failed": "The sample data could not be loaded.",
+      "load_timeout": "Loading took too long and was stopped.",
+      "load_not_started": "Loading could not start on the server.",
+      "load_interrupted": "Loading stopped because the server restarted.",
+      "reset_failed": "Loading failed, and the workspace could not be put back in its starting state. Erase everything to try again.",
+      "backToStart": "The workspace was put back in its starting state."
+    },
+    "loadDialog": {
+      "title": "Load sample data",
+      "intro": "KANAP fills this workspace with Fromage & Co, a fictional cheese maker:",
+      "companies": "4 companies in France, the Netherlands, Italy and the United States",
+      "users": "18 fictional users, who cannot sign in",
+      "landscape": "Applications and their landscape: instances, interfaces and connections",
+      "business": "Contracts, the budget of the current year, projects and tasks",
+      "duration": "Loading takes less than a minute. You can erase everything later from Administration › Sample data."
+    },
+    "resetDialog": {
+      "title": "Erase everything and start over",
+      "warning": "All the content of this workspace is erased, with no way back. The workspace returns to its starting state.",
+      "keptTitle": "Kept:",
+      "kept": {
+        "users": "Real user accounts and their roles",
+        "subscription": "The subscription",
+        "identity": "The name, address and logo of the workspace",
+        "microsoft": "The Microsoft sign-in connection",
+        "ai": "AI settings",
+        "audit": "The audit log"
+      },
+      "settingsDefaults": "Settings saved on the workspace (currencies, budget columns, classification catalog) go back to their default values.",
+      "createdSinceLoad_one": "{{count}} item created since the sample data was loaded will also be erased.",
+      "createdSinceLoad_other": "{{count}} items created since the sample data was loaded will also be erased.",
+      "email": "Administrators receive an e-mail once the workspace is erased.",
+      "typeName": "To confirm, type the name of the workspace: <strong>{{name}}</strong>",
+      "nameLabel": "Workspace name"
+    },
+    "banner": {
+      "text": "Discover KANAP with sample data.",
+      "load": "Load",
+      "hide": "Hide",
+      "loading": "Loading sample data. {{step}}."
+    },
+    "messages": {
+      "statusFailed": "The sample data status could not be read.",
+      "loadFailed": "The sample data could not be loaded.",
+      "resetFailed": "The workspace could not be erased.",
+      "dismissFailed": "This could not be hidden."
+    }
   }
 }

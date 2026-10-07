@@ -40,7 +40,9 @@
     "business process": { "fr": "processus métier", "de": "Geschäftsprozess", "es": "proceso de negocio", "note": "Operational process" },
     "document": { "fr": "document", "de": "Dokument", "es": "documento", "note": "Knowledge document" },
     "library": { "fr": "bibliothèque", "de": "Bibliothek", "es": "biblioteca", "note": "Knowledge library" },
-    "tenant": { "fr": "tenant", "de": "Mandant", "es": "espacio de trabajo", "note": "Multi-tenant workspace" }
+    "tenant": { "fr": "tenant", "de": "Mandant", "es": "espacio de trabajo", "note": "Multi-tenant workspace" },
+    "workspace": { "fr": "espace de travail", "de": "Arbeitsbereich", "es": "espacio de trabajo", "note": "User-facing name of a tenant (never 'tenant' in the interface)" },
+    "sample data": { "fr": "données d'exemple", "de": "Beispieldaten", "es": "datos de ejemplo", "note": "The Fromage & Co demonstration set an administrator loads into an empty workspace (Administration > Sample data)" }
   },
 
   "workspaces": {

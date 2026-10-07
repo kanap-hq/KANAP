@@ -30,5 +30,15 @@
   "busy": "Ces données sont occupées par une autre opération. Réessayez dans quelques secondes.",
   "notSavedYet": "Votre dernière modification n'est pas encore enregistrée, car le serveur est occupé. Elle reste sur cette page et sera renvoyée avec votre prochaine modification.",
   "edit_conflict": "Une autre personne a modifié ce champ pendant que vous le modifiiez. Choisissez la valeur à garder.",
-  "edit_conflict_unreadable": "Une autre personne a modifié ce que vous enregistriez, et sa réponse n'a pas pu être lue. Vos valeurs restent à l'écran, pas encore enregistrées."
+  "edit_conflict_unreadable": "Une autre personne a modifié ce que vous enregistriez, et sa réponse n'a pas pu être lue. Vos valeurs restent à l'écran, pas encore enregistrées.",
+  "administrator_required": "Seul un administrateur de cet espace de travail peut faire cela.",
+  "demo_status_conflict": "L'état des données d'exemple a changé entre-temps. Rechargez la page pour voir où il en est.",
+  "demo_load_capacity": "D'autres espaces de travail chargent des données d'exemple en ce moment. Réessayez dans quelques minutes.",
+  "tenant_not_empty": "Les données d'exemple ne se chargent que dans un espace de travail vide. Cet espace de travail contient déjà des données.",
+  "host_mismatch": "Cette requête ne vient pas de l'adresse de cet espace de travail. Ouvrez l'espace de travail à sa propre adresse et réessayez.",
+  "demo_data_unavailable": "Les données d'exemple ne sont pas disponibles sur le serveur pour le moment. Réessayez dans quelques minutes.",
+  "tenant_not_active": "Cet espace de travail n'est pas actif.",
+  "tenant_resetting": "Cet espace de travail est en cours d'effacement et revient à son état initial. Réessayez dans un instant.",
+  "tenant_reset_running": "Cet espace de travail est déjà en cours d'effacement. Réessayez quand ce sera terminé.",
+  "confirmation_mismatch": "Le nom saisi ne correspond pas au nom de l'espace de travail."
 }

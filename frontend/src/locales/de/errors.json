@@ -30,5 +30,15 @@
   "busy": "Diese Daten sind gerade durch einen anderen Vorgang belegt. Bitte versuchen Sie es in einigen Sekunden erneut.",
   "notSavedYet": "Ihre letzte Änderung ist noch nicht gespeichert, weil der Server ausgelastet ist. Sie bleibt auf dieser Seite und wird mit Ihrer nächsten Änderung erneut gesendet.",
   "edit_conflict": "Eine andere Person hat dieses Feld geändert, während Sie es bearbeitet haben. Wählen Sie, welchen Wert Sie behalten.",
-  "edit_conflict_unreadable": "Eine andere Person hat geändert, was Sie gespeichert haben, und die Antwort konnte nicht gelesen werden. Ihre Werte bleiben auf dem Bildschirm, noch nicht gespeichert."
+  "edit_conflict_unreadable": "Eine andere Person hat geändert, was Sie gespeichert haben, und die Antwort konnte nicht gelesen werden. Ihre Werte bleiben auf dem Bildschirm, noch nicht gespeichert.",
+  "administrator_required": "Nur ein Administrator dieses Arbeitsbereichs kann das tun.",
+  "demo_status_conflict": "Der Status der Beispieldaten hat sich inzwischen geändert. Laden Sie die Seite neu, um den aktuellen Stand zu sehen.",
+  "demo_load_capacity": "Andere Arbeitsbereiche laden gerade Beispieldaten. Versuchen Sie es in einigen Minuten erneut.",
+  "tenant_not_empty": "Beispieldaten lassen sich nur in einen leeren Arbeitsbereich laden. Dieser Arbeitsbereich enthält bereits Daten.",
+  "host_mismatch": "Diese Anfrage kommt nicht von der Adresse dieses Arbeitsbereichs. Öffnen Sie den Arbeitsbereich unter seiner eigenen Adresse und versuchen Sie es erneut.",
+  "demo_data_unavailable": "Beispieldaten sind auf dem Server derzeit nicht verfügbar. Versuchen Sie es in einigen Minuten erneut.",
+  "tenant_not_active": "Dieser Arbeitsbereich ist nicht aktiv.",
+  "tenant_resetting": "Dieser Arbeitsbereich wird gerade gelöscht und in seinen Ausgangszustand zurückversetzt. Versuchen Sie es gleich noch einmal.",
+  "tenant_reset_running": "Dieser Arbeitsbereich wird bereits gelöscht. Versuchen Sie es erneut, wenn der Vorgang abgeschlossen ist.",
+  "confirmation_mismatch": "Der eingegebene Name stimmt nicht mit dem Namen des Arbeitsbereichs überein."
 }

@@ -15,6 +15,9 @@ type Level = 'reader' | 'member' | 'admin';
 const access = vi.hoisted(() => ({
   grants: null as Record<string, 'reader' | 'member' | 'admin'> | null,
   rank: { reader: 1, member: 3, admin: 4 } as Record<string, number>,
+  isGlobalAdmin: false,
+  deploymentMode: 'multi-tenant' as 'multi-tenant' | 'single-tenant',
+  sampleData: false,
 }));
 vi.mock('../auth/AuthContext', () => ({
   useAuth: () => ({
@@ -25,7 +28,7 @@ vi.mock('../auth/AuthContext', () => ({
       const granted = access.grants[resource];
       return !!granted && access.rank[granted] >= access.rank[level];
     },
-    claims: { isGlobalAdmin: false, isPlatformAdmin: false, isBillingAdmin: false },
+    claims: { isGlobalAdmin: access.isGlobalAdmin, isPlatformAdmin: false, isBillingAdmin: false },
     profile: { first_name: 'Ada', last_name: 'Lovelace', email: 'ada@example.com' },
     // A trial in progress: the subscription banner shows.
     subscription: { status: 'trialing', is_subscription_healthy: false, trial_days_remaining: 5 },
@@ -39,8 +42,8 @@ vi.mock('../tenant/TenantContext', () => ({
 vi.mock('../config/FeaturesContext', () => ({
   useFeatures: () => ({
     config: {
-      deploymentMode: 'multi-tenant',
-      features: { billing: true, aiChat: false, aiSettings: false, sso: false, email: false },
+      deploymentMode: access.deploymentMode,
+      features: { billing: true, aiChat: false, aiSettings: false, sso: false, email: false, sampleData: access.sampleData },
     },
     isLoading: false,
   }),
@@ -216,5 +219,62 @@ describe('Layout budget management sidebar', () => {
     renderSidebar('/ops/opex');
     expect(screen.getByRole('link', { name: 'nav:sidebar.ops.opex' })).toHaveClass('Mui-selected');
     expect(screen.getByRole('link', { name: 'nav:sidebar.ops.overview' })).not.toHaveClass('Mui-selected');
+  });
+});
+
+describe('Layout administration sidebar: sample data', () => {
+  afterEach(() => {
+    access.isGlobalAdmin = false;
+    access.deploymentMode = 'multi-tenant';
+    access.sampleData = false;
+  });
+
+  function renderAdmin() {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/admin/users']}>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/admin/users" element={<div>users</div>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  }
+
+  it('shows Sample data after Branding to an Administrator of a cloud workspace', () => {
+    access.isGlobalAdmin = true;
+    access.sampleData = true;
+    renderAdmin();
+
+    const entry = screen.getByRole('link', { name: 'nav:sidebar.admin.sampleData' });
+    expect(entry).toHaveAttribute('href', '/admin/sample-data');
+    const branding = screen.getByRole('link', { name: 'nav:sidebar.admin.branding' });
+    expect(branding.compareDocumentPosition(entry) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('hides it from a user who administers users without the Administrator role', () => {
+    access.sampleData = true;
+    renderAdmin();
+    expect(screen.getByRole('link', { name: 'nav:sidebar.admin.branding' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'nav:sidebar.admin.sampleData' })).not.toBeInTheDocument();
+  });
+
+  it('hides it on-premise and when the server does not announce it', () => {
+    access.isGlobalAdmin = true;
+    access.deploymentMode = 'single-tenant';
+    access.sampleData = true;
+    renderAdmin();
+    expect(screen.getByRole('link', { name: 'nav:sidebar.admin.branding' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'nav:sidebar.admin.sampleData' })).not.toBeInTheDocument();
+  });
+
+  it('hides it when the feature flag is off', () => {
+    access.isGlobalAdmin = true;
+    renderAdmin();
+    expect(screen.getByRole('link', { name: 'nav:sidebar.admin.branding' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'nav:sidebar.admin.sampleData' })).not.toBeInTheDocument();
   });
 });
