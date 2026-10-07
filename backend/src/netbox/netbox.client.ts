@@ -154,7 +154,9 @@ const nodeHttpTransport: NetboxHttpLike = (url, request) => new Promise((resolve
     {
       method: 'GET',
       headers: request.headers,
-      ...(request.lookup ? { lookup: request.lookup } : {}),
+      // A bound connection gets an agent of its own (agent: false): the shared
+      // keep-alive pool could hand it a socket opened without this lookup.
+      ...(request.lookup ? { lookup: request.lookup, agent: false } : {}),
       ...(parsed.protocol === 'https:' && request.insecureTls ? { rejectUnauthorized: false } : {}),
     },
     (res) => {

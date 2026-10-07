@@ -13,9 +13,10 @@ export const BUDGET_FILE_MAX_BYTES = 48 * 1024 * 1024;
 export const BUDGET_FILE_TOO_LARGE =
   'This file is too large. A budget file can hold 20,000 lines. Export fewer lines or fewer years.';
 
+// The shared multipart limits, with the budget file's own size.
 export const budgetFileMulterOptions = {
   ...csvImportMulterOptions,
-  limits: { fileSize: BUDGET_FILE_MAX_BYTES },
+  limits: { ...csvImportMulterOptions.limits, fileSize: BUDGET_FILE_MAX_BYTES },
 };
 
 /**

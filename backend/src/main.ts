@@ -14,6 +14,7 @@ import { Request, Response, NextFunction } from 'express';
 import { useRequestPipeline } from './common/request-pipeline';
 import { parseBoolean, parseCorsPatterns, requireEnv, validateStartupEnv } from './common/env';
 import { createCorsMiddlewares, createOriginPolicy } from './common/cors-policy';
+import { createBodyParsers } from './common/body-parsers';
 import { describeTokenPurposePolicy } from './auth/access-token.util';
 import { describeSecretPolicy } from './auth/token-secret.util';
 import { PROCESS_STARTED_AT } from './common/process-start';
@@ -110,8 +111,7 @@ async function bootstrap() {
     }
   };
   app.use('/stripe/webhook', express.raw({ type: '*/*' }));
-  app.use(express.json({ limit: '20mb', verify: rawBodySaver }));
-  app.use(express.urlencoded({ limit: '20mb', verify: rawBodySaver, extended: true }));
+  app.use(...createBodyParsers(rawBodySaver));
   // Ops metrics middleware — must be registered before tenancy so it wraps the full pipeline
   const opsMetricsStore = app.get(OpsMetricsStore);
   app.use(createRequestMetricsMiddleware(opsMetricsStore));

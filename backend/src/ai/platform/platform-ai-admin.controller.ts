@@ -94,6 +94,7 @@ export class PlatformAiAdminController {
         model: model!,
         apiKey,
         endpointUrl,
+        endpointSource: 'platform',
         systemPrompt: 'Respond with a single word: ok.',
         messages: [{ role: 'user', content: 'Reply with ok.' }],
         tools: [],

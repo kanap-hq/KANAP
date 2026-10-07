@@ -14,6 +14,10 @@ import { describeProviderError } from '../providers/provider-http.util';
 // following it, and error messages carry the status and the structured provider
 // message, never the raw response body.
 
+// The stand-in server listens on 127.0.0.1, which the request-time check blocks
+// in multi-tenant mode: allowlisted, so the redirect rule is what is tested.
+process.env.SSRF_ALLOWED_HOSTS = '127.0.0.1';
+
 const RAW_BODY_MARKER = 'raw-body-text-7f3a';
 
 type Mode = 'redirect' | 'html-error' | 'json-error' | 'ok';

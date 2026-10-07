@@ -3,8 +3,8 @@ import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { promisify } from 'node:util';
-import * as AdmZip from 'adm-zip';
 import { BadRequestException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { openBoundedArchive } from './archive-limits';
 import { ExportFormat } from './dto/export.dto';
 import { isDevelopmentEnv, parseBoolean } from './env';
 import { readStreamWithCaps, StreamLimitError } from './bounded-stream';
@@ -603,11 +603,12 @@ export class DocumentExportService {
   }
 
   private async normalizeOdtImageFrames(odtPath: string): Promise<void> {
-    const zip = new AdmZip(odtPath);
+    const archive = openBoundedArchive(odtPath);
+    const zip = archive.zip;
     const entry = zip.getEntry('content.xml');
     if (!entry) return;
 
-    const originalXml: string = entry.getData().toString('utf8');
+    const originalXml: string = archive.readText(entry);
     let changed = false;
     const updatedXml = originalXml.replace(/<draw:frame\b[^>]*>/gi, (tag) => {
       const widthMatch = tag.match(/\bsvg:width="([^"]+)"/i);

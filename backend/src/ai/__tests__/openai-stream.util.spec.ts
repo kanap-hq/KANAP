@@ -1,5 +1,10 @@
 import * as assert from 'node:assert/strict';
 
+// The stream checks a tenant endpoint before the call (multi-tenant mode). The
+// endpoints below are stand-ins for the fake SDK: allowlisted, so none of them
+// is resolved.
+process.env.SSRF_ALLOWED_HOSTS = 'api.deepseek.com,openrouter.ai,local-llm.test,openrouter.example';
+
 const Module = require('node:module');
 const originalLoad = Module._load;
 

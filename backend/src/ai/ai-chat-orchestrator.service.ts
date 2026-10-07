@@ -2502,6 +2502,7 @@ export class AiChatOrchestratorService {
         model,
         apiKey,
         endpointUrl,
+        endpointSource: providerSource === 'builtin' ? 'platform' : 'tenant',
         systemPrompt: systemPromptText,
         messages,
         tools,
