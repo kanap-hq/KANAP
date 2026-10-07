@@ -92,8 +92,8 @@ const MOCK_CATALOGS: Record<TicketReferenceCatalogKind, RefItem[]> = {
     { value: 'finance', label: 'Finance > Requests', metadata: { completename: 'Finance > Requests', parentId: 'finance-root' } },
   ],
   entity: [
-    { value: 'lohr-helpdesk', label: 'LOHR > Helpdesk', metadata: { completename: 'LOHR > Helpdesk', parentId: 'lohr' } },
-    { value: 'finance', label: 'LOHR > Finance', metadata: { completename: 'LOHR > Finance', parentId: 'lohr' } },
+    { value: 'acme-helpdesk', label: 'ACME > Helpdesk', metadata: { completename: 'ACME > Helpdesk', parentId: 'acme' } },
+    { value: 'finance', label: 'ACME > Finance', metadata: { completename: 'ACME > Finance', parentId: 'acme' } },
     { value: 'fromage-helpdesk', label: 'Fromage & Co > IT Helpdesk', metadata: { completename: 'Fromage & Co > IT Helpdesk', parentId: 'fromage' } },
   ],
   group: [
@@ -117,7 +117,7 @@ function isoHoursAgo(hours: number): string {
 // Demo tickets for the Fromage & Co fixture tenant (fixtures/fromage-co).
 // Their answers live in the tenant's "Service Desk Docs" knowledge library, so
 // they exercise the knowledge-search → grounded-reply path end to end. Scoped
-// under a dedicated entity so lohr-helpdesk/finance scope tests are unaffected.
+// under a dedicated entity so acme-helpdesk/finance scope tests are unaffected.
 // Dates are relative to "now" so the tickets always fall inside the ingestion
 // horizon of a freshly configured demo agent.
 function fromageDemoTickets(): TicketRecord[] {
@@ -385,7 +385,7 @@ export class MockTicketingProvider implements TicketingProvider {
         createdAt: '2026-06-09T08:10:00.000Z',
         updatedAt: '2026-06-09T08:10:00.000Z',
         tags: ['vpn'],
-        scope: { entityId: 'lohr-helpdesk', categoryId: 'access' },
+        scope: { entityId: 'acme-helpdesk', categoryId: 'access' },
       },
       {
         id: 'mock-new-ticket-out-of-scope',
@@ -413,7 +413,7 @@ export class MockTicketingProvider implements TicketingProvider {
         createdAt: '2026-06-01T08:10:00.000Z',
         updatedAt: '2026-06-01T08:10:00.000Z',
         tags: ['vpn'],
-        scope: { entityId: 'lohr-helpdesk', categoryId: 'access' },
+        scope: { entityId: 'acme-helpdesk', categoryId: 'access' },
       },
       ...fromageDemoTickets(),
     ];

@@ -534,7 +534,7 @@ async function enableHelpdeskNewTicketsOnly(
     new_tickets_only: {
       enabled: true,
       enabled_at: overrides?.enabledAt ?? '2026-06-09T08:00:00.000Z',
-      entity_id: overrides?.entityId ?? 'lohr-helpdesk',
+      entity_id: overrides?.entityId ?? 'acme-helpdesk',
       category_id: overrides?.categoryId ?? 'access',
       max_tickets_per_cycle: overrides?.maxTicketsPerCycle ?? 5,
       max_provider_requests_per_cycle: overrides?.maxProviderRequestsPerCycle ?? 10,
@@ -5423,7 +5423,7 @@ async function testHelpdeskGlpiNewTicketIngestionScopeHorizonDedupAndTenantIsola
   });
   await enableHelpdeskNewTicketsOnly(tenantTwo, queue, {
     enabledAt: hoursAgo(2),
-    entityId: 'lohr-helpdesk',
+    entityId: 'acme-helpdesk',
     categoryId: 'tenant2-access',
     hardBackfillHorizonHours: 72,
   });
@@ -5444,7 +5444,7 @@ async function testHelpdeskGlpiNewTicketIngestionScopeHorizonDedupAndTenantIsola
                 status: 'new',
                 createdAt: hoursAgo(1),
                 updatedAt: hoursAgo(1),
-                scope: { entityId: 'lohr-helpdesk', categoryId: 'tenant2-access' },
+                scope: { entityId: 'acme-helpdesk', categoryId: 'tenant2-access' },
               },
               {
                 id: 'tenant-1-ticket',
@@ -5452,7 +5452,7 @@ async function testHelpdeskGlpiNewTicketIngestionScopeHorizonDedupAndTenantIsola
                 status: 'new',
                 createdAt: hoursAgo(1),
                 updatedAt: hoursAgo(1),
-                scope: { entityId: 'lohr-helpdesk', categoryId: 'access' },
+                scope: { entityId: 'acme-helpdesk', categoryId: 'access' },
               },
             ]
             : [
@@ -5462,7 +5462,7 @@ async function testHelpdeskGlpiNewTicketIngestionScopeHorizonDedupAndTenantIsola
                 status: 'new',
                 createdAt: hoursAgo(1),
                 updatedAt: hoursAgo(1),
-                scope: { entityId: 'lohr-helpdesk', categoryId: 'access' },
+                scope: { entityId: 'acme-helpdesk', categoryId: 'access' },
               },
               {
                 id: 'out-of-scope-ticket',
@@ -5470,7 +5470,7 @@ async function testHelpdeskGlpiNewTicketIngestionScopeHorizonDedupAndTenantIsola
                 status: 'new',
                 createdAt: hoursAgo(1),
                 updatedAt: hoursAgo(1),
-                scope: { entityId: 'lohr-helpdesk', categoryId: 'finance' },
+                scope: { entityId: 'acme-helpdesk', categoryId: 'finance' },
               },
               {
                 id: 'old-ticket',
@@ -5478,7 +5478,7 @@ async function testHelpdeskGlpiNewTicketIngestionScopeHorizonDedupAndTenantIsola
                 status: 'new',
                 createdAt: hoursAgo(100),
                 updatedAt: hoursAgo(100),
-                scope: { entityId: 'lohr-helpdesk', categoryId: 'access' },
+                scope: { entityId: 'acme-helpdesk', categoryId: 'access' },
               },
             ],
         },
@@ -5497,7 +5497,7 @@ async function testHelpdeskGlpiNewTicketIngestionScopeHorizonDedupAndTenantIsola
   // the watcher was enabled.
   const createdAfterMs = Date.parse(scopes[0].createdAfter);
   assert.ok(Math.abs(createdAfterMs - (nowMs - 72 * 60 * 60 * 1000)) < 5 * 60 * 1000);
-  assert.equal(scopes[0].entityId, 'lohr-helpdesk');
+  assert.equal(scopes[0].entityId, 'acme-helpdesk');
   assert.equal(scopes[0].categoryId, 'access');
 
   const second = await service.pollTenant(tenantOne);
@@ -5569,7 +5569,7 @@ async function testHelpdeskGlpiIngestionPollsMultipleHelpdeskDefinitions() {
                 status: 'new',
                 createdAt: hoursAgo(1),
                 updatedAt: hoursAgo(1),
-                scope: { entityId: 'lohr-helpdesk', categoryId: input.scope.categoryId },
+                scope: { entityId: 'acme-helpdesk', categoryId: input.scope.categoryId },
               },
             ],
           },
@@ -5646,7 +5646,7 @@ async function testHelpdeskGlpiIngestionBudgetStopsProcessingAfterDetectionPass(
                 ...ticket,
                 createdAt: hoursAgo(1),
                 updatedAt: hoursAgo(1),
-                scope: { entityId: 'lohr-helpdesk', categoryId },
+                scope: { entityId: 'acme-helpdesk', categoryId },
               })),
             },
             evidence: [],
@@ -7082,7 +7082,7 @@ async function testUiExecutionSafetyUsesProviderReadiness() {
   await (service as any).assertActionSafeForUiExecution(context, readyMissingTarget);
 }
 
-function testPhase135LegacyTargetingNormalizationWithLohrPreservesConfig() {
+function testPhase135LegacyTargetingNormalizationWithEntityPreservesConfig() {
   const legacyScope = {
     mode: 'agent_involved',
     provider_kind: 'ticketing',
@@ -7090,7 +7090,7 @@ function testPhase135LegacyTargetingNormalizationWithLohrPreservesConfig() {
     target_kind: 'ticket',
     agent_involved: {
       enabled: true,
-      entity_id: 'lohr-helpdesk',
+      entity_id: 'acme-helpdesk',
       category_id: 'access',
       max_tickets_per_cycle: 5,
       max_provider_requests_per_cycle: 8,
@@ -7624,7 +7624,7 @@ async function testPhase136PollerUsesPredicateDerivedScopeInsteadOfLegacyMode() 
               title: 'Predicate all-open ticket',
               createdAt: new Date(nowMs - 30 * 24 * 60 * 60 * 1000).toISOString(),
               updatedAt: new Date(nowMs - 48 * 60 * 60 * 1000).toISOString(),
-              scope: { entityId: 'lohr-helpdesk', categoryId: 'access' },
+              scope: { entityId: 'acme-helpdesk', categoryId: 'access' },
             }],
           },
           evidence: [],
@@ -7656,7 +7656,7 @@ async function testPhase135TargetingPreviewUsesControlPlaneAgentInvolvedAndRejec
     mode: 'agent_involved',
     agent_involved: {
       enabled: true,
-      entity_id: 'lohr-helpdesk',
+      entity_id: 'acme-helpdesk',
       category_id: 'access',
       max_tickets_per_cycle: 2,
       max_provider_requests_per_cycle: 2,
@@ -7708,7 +7708,7 @@ async function testPhase135TargetingPreviewUsesControlPlaneAgentInvolvedAndRejec
           createdAt: '2026-06-10T09:00:00.000Z',
           updatedAt: '2026-06-10T10:00:00.000Z',
           scope: {
-            entityId: 'lohr-helpdesk',
+            entityId: 'acme-helpdesk',
             categoryId: input.ticketId === 'preview-1' ? 'access' : 'finance',
           },
         },
@@ -7776,7 +7776,7 @@ async function testPhase135TargetStateSchedulingWakeOnChangeAndSelfWrite() {
     title: 'Wake ticket',
     createdAt: new Date(Date.now() - 10 * 60_000).toISOString(),
     updatedAt: new Date(Date.now() - 5 * 60_000).toISOString(),
-    scope: { entityId: 'lohr-helpdesk', categoryId: 'access' },
+    scope: { entityId: 'acme-helpdesk', categoryId: 'access' },
   };
 
   const first = await queue.targetReviewReadiness(context, {
@@ -7869,7 +7869,7 @@ async function testPendingProposalOccupancyEmptyRunAndReplaceOnWrite() {
     title: 'Occupy ticket',
     createdAt: new Date(now - 10 * 60_000).toISOString(),
     updatedAt: new Date(now - 5 * 60_000).toISOString(),
-    scope: { entityId: 'lohr-helpdesk', categoryId: 'access' },
+    scope: { entityId: 'acme-helpdesk', categoryId: 'access' },
   };
   const first = await queue.targetReviewReadiness(context, { definition, ticket, now: new Date(now) });
   assert.equal(first.reason, 'first_review');
@@ -8503,7 +8503,7 @@ async function testPhase135StaleExecuteReReviewAndTerminalFreshnessInvariant() {
     title: 'Freshness ticket',
     createdAt: '2026-06-10T09:00:00.000Z',
     updatedAt: '2026-06-10T10:00:00.000Z',
-    scope: { entityId: 'lohr-helpdesk', categoryId: 'access' },
+    scope: { entityId: 'acme-helpdesk', categoryId: 'access' },
   };
   let currentTicket = oldTicket;
   let internalWrites = 0;
@@ -8772,7 +8772,7 @@ async function testPhase135StaleExecuteReReviewAndTerminalFreshnessInvariant() {
     title: 'Terminal ticket changed',
     createdAt: '2026-06-10T09:00:00.000Z',
     updatedAt: '2026-06-10T12:00:00.000Z',
-    scope: { entityId: 'lohr-helpdesk', categoryId: 'access' },
+    scope: { entityId: 'acme-helpdesk', categoryId: 'access' },
   };
   await approvals.approveActionRequest(context, terminalAction.id, { source: 'human_ui', reason: 'terminal invariant approval' });
   const terminalExecuted = await dispatcher.execute(context, {
@@ -8799,7 +8799,7 @@ async function testSameRunApproveAllSiblingWritesDoNotBlockEachOther() {
     title: 'Approve all ticket',
     createdAt: '2026-06-10T09:00:00.000Z',
     updatedAt: '2026-06-10T10:00:00.000Z',
-    scope: { entityId: 'lohr-helpdesk', categoryId: 'access' },
+    scope: { entityId: 'acme-helpdesk', categoryId: 'access' },
   };
   let currentTicket = { ...oldTicket };
   let participants: any[] = [];
@@ -9121,7 +9121,7 @@ async function testBulkApprovePreservesExternalFreshnessReReview() {
     title: 'Bulk stale ticket',
     createdAt: '2026-06-10T09:00:00.000Z',
     updatedAt: '2026-06-10T10:00:00.000Z',
-    scope: { entityId: 'lohr-helpdesk', categoryId: 'access' },
+    scope: { entityId: 'acme-helpdesk', categoryId: 'access' },
   };
   let currentTicket = { ...oldTicket };
   let internalWrites = 0;
@@ -9217,7 +9217,7 @@ async function testSameRunFreshnessToleranceSurvivesProviderClockSkew() {
     title: 'Clock skew ticket',
     createdAt: '2026-06-10 09:00:00',
     updatedAt: preparedUpdatedAt,
-    scope: { entityId: 'lohr-helpdesk', categoryId: 'access' },
+    scope: { entityId: 'acme-helpdesk', categoryId: 'access' },
   };
   let internalWrites = 0;
   const provider = {
@@ -9358,7 +9358,7 @@ async function testQueuedApprovedExecutionClaimIsAtomic() {
     title: 'Atomic claim ticket',
     createdAt: '2026-06-10T09:00:00.000Z',
     updatedAt: '2026-06-10T10:00:00.000Z',
-    scope: { entityId: 'lohr-helpdesk', categoryId: 'access' },
+    scope: { entityId: 'acme-helpdesk', categoryId: 'access' },
   };
   let providerWrites = 0;
   let releaseProvider!: () => void;
@@ -9426,7 +9426,7 @@ async function testQueuedApprovedExecutionFailureBackoffAndDeadLetter() {
     title: 'Retry dead letter ticket',
     createdAt: '2026-06-10T09:00:00.000Z',
     updatedAt: '2026-06-10T10:00:00.000Z',
-    scope: { entityId: 'lohr-helpdesk', categoryId: 'access' },
+    scope: { entityId: 'acme-helpdesk', categoryId: 'access' },
   };
   let providerCalls = 0;
   const provider = {
@@ -9505,7 +9505,7 @@ async function testQueuedApprovedExecutionReclaimsStaleExecutingAction() {
       title: 'Stale executing ticket',
       createdAt: '2026-06-10T09:00:00.000Z',
       updatedAt: '2026-06-10T10:00:00.000Z',
-      scope: { entityId: 'lohr-helpdesk', categoryId: 'access' },
+      scope: { entityId: 'acme-helpdesk', categoryId: 'access' },
     }, evidence: [] }),
     listTicketNotes: async () => ({ ok: true, data: { notes: [] }, evidence: [] }),
     addInternalNote: async () => {
@@ -9566,7 +9566,7 @@ async function testQueuedApprovedExecutionFrozenWhileAgentPaused() {
     title: 'Paused agent ticket',
     createdAt: '2026-06-10T09:00:00.000Z',
     updatedAt: '2026-06-10T10:00:00.000Z',
-    scope: { entityId: 'lohr-helpdesk', categoryId: 'access' },
+    scope: { entityId: 'acme-helpdesk', categoryId: 'access' },
   };
   let providerCalls = 0;
   const provider = {
@@ -9762,7 +9762,7 @@ async function testUpdateAgentDefinitionPersistsHelpdeskIngestionSettings() {
       mode: 'new_tickets_only',
       new_tickets_only: {
         enabled: true,
-        entity_id: 'lohr-helpdesk',
+        entity_id: 'acme-helpdesk',
         category_id: 'access',
         max_tickets_per_cycle: 3,
       },
@@ -9781,7 +9781,7 @@ async function testUpdateAgentDefinitionPersistsHelpdeskIngestionSettings() {
   const queuePolicy = saved.agent_definition.queue_policy_json as Record<string, any>;
   assert.equal(trigger.scheduled_poll.enabled, true);
   assert.equal(scope.new_tickets_only.enabled, true);
-  assert.equal(scope.new_tickets_only.entity_id, 'lohr-helpdesk');
+  assert.equal(scope.new_tickets_only.entity_id, 'acme-helpdesk');
   assert.equal(scope.new_tickets_only.category_id, 'access');
   assert.equal(scope.new_tickets_only.max_tickets_per_cycle, 3);
   assert.equal(queuePolicy.economic_guardrails.daily.max_agent_runs, 2);
@@ -13899,7 +13899,7 @@ async function testGlpiTriageSynthesisRejectsOffTopicKnowledgeAndUsesWeb() {
 // A planner-authored ADMINISTRATIVE reply skips synthesis by design. The internal note must then
 // carry the planner's rationale as the technician brief — not the "AI reply synthesis was
 // unavailable or skipped" boilerplate, which falsely reads as a failure and tells the technician
-// to write a requester answer that already exists (observed on lohr tickets #63/#64).
+// to write a requester answer that already exists (observed on tickets #63/#64).
 async function testGlpiTriageAdministrativeReplyNoteCarriesPlannerRationale() {
   const { manager } = createMemoryManager();
   const context = createContext(manager);
@@ -15706,7 +15706,7 @@ async function testHelpdeskManualCheckRunsWithoutWatching() {
   );
   const manualConfig = queue.resolveScopeIngestionConfig(definition, { trigger: 'manual' });
   assert.equal(manualConfig.mode, 'new_tickets_only');
-  assert.equal(manualConfig.entityId, 'lohr-helpdesk');
+  assert.equal(manualConfig.entityId, 'acme-helpdesk');
 
   const processed: string[] = [];
   const service = createHelpdeskIngestionService({
@@ -15722,7 +15722,7 @@ async function testHelpdeskManualCheckRunsWithoutWatching() {
             status: 'new',
             createdAt: hoursAgo(1),
             updatedAt: hoursAgo(1),
-            scope: { entityId: 'lohr-helpdesk', categoryId: 'access' },
+            scope: { entityId: 'acme-helpdesk', categoryId: 'access' },
           }],
         },
         evidence: [],
@@ -16511,7 +16511,7 @@ async function run() {
   testActionPlannerConsumesProviderProfile();
   testActionPlannerPayloadIncludesImageEvidence();
   await testUiExecutionSafetyUsesProviderReadiness();
-  testPhase135LegacyTargetingNormalizationWithLohrPreservesConfig();
+  testPhase135LegacyTargetingNormalizationWithEntityPreservesConfig();
   await testPhase136PredicateTargetingDrivesFetchScopeAndPriorityAtLeast();
   await testPhase136StaleClosureDerivesFromTargetingAndCapability();
   await testPhase136StaleClosureCloseGateUsesTargetingOnly();
@@ -16616,7 +16616,7 @@ async function testRecursiveCategoryEntityTargetingExpansion() {
     status: 'new',
     createdAt: '2026-06-10T09:00:00.000Z',
     updatedAt: '2026-06-10T10:00:00.000Z',
-    scope: { entityId: 'lohr-helpdesk', categoryId: 'vpn' },
+    scope: { entityId: 'acme-helpdesk', categoryId: 'vpn' },
   };
   // Selecting the parent category now matches tickets filed in its subcategories;
   // the unexpanded model keeps the historical exact-id behavior.
@@ -16642,16 +16642,16 @@ async function testRecursiveCategoryEntityTargetingExpansion() {
   assert.equal(ticketMatchesServiceDeskTargeting(ticketInSubcategory, fallback), false);
   assert.equal(failures.length, 1);
 
-  // Scope listing honors the expanded id set: selecting the parent entity 'lohr'
+  // Scope listing honors the expanded id set: selecting the parent entity 'acme'
   // returns tickets from both child entities, where exact-id matching returned none.
-  const entitySubtree = await provider.resolveReferenceSubtree(context, { kind: 'entity', ids: ['lohr'] });
-  assert.deepEqual((entitySubtree as any).data.ids, ['lohr', 'lohr-helpdesk', 'finance']);
+  const entitySubtree = await provider.resolveReferenceSubtree(context, { kind: 'entity', ids: ['acme'] });
+  assert.deepEqual((entitySubtree as any).data.ids, ['acme', 'acme-helpdesk', 'finance']);
   const listedRecursive = await provider.listTicketsForScope(context, {
     scope: {
       mode: 'new_tickets_only',
       createdAfter: '2026-06-05T00:00:00.000Z',
       maxResults: 20,
-      entityId: 'lohr',
+      entityId: 'acme',
       entityIds: (entitySubtree as any).data.ids,
     },
   });
@@ -16664,7 +16664,7 @@ async function testRecursiveCategoryEntityTargetingExpansion() {
       mode: 'new_tickets_only',
       createdAfter: '2026-06-05T00:00:00.000Z',
       maxResults: 20,
-      entityId: 'lohr',
+      entityId: 'acme',
     },
   });
   assert.deepEqual((listedExact as any).data.tickets, []);

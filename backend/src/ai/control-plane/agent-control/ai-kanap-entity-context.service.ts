@@ -100,8 +100,8 @@ function isIpLiteral(value: string): boolean {
   return IPV4_RE.test(value) || value.includes(':');
 }
 
-// First DNS label of an FQDN-shaped value ("lohr-fr-dc1.lohr-fr.com" ->
-// "lohr-fr-dc1"). Null for IP literals and undotted names: those have no
+// First DNS label of an FQDN-shaped value ("acme-fr-dc1.acme-fr.example" ->
+// "acme-fr-dc1"). Null for IP literals and undotted names: those have no
 // shortname distinct from the value itself.
 function firstDnsLabel(value: string): string | null {
   if (!value || isIpLiteral(value)) {
@@ -166,7 +166,7 @@ function toSourceRef(entity: KanapResolvedEntity): EntitySourceRef {
 // case-insensitive EXACT comparison of the candidate's name/hostname/fqdn against the
 // device name (and against the device host address when it is a DNS name). A value's
 // FIRST DNS LABEL also counts as exact on either side, so a monitoring tool reporting
-// "LOHR-FR-DC1.lohr-fr.com" matches an asset named "lohr-fr-dc1" and a shortname
+// "ACME-FR-DC1.acme-fr.example" matches an asset named "acme-fr-dc1" and a shortname
 // device matches an asset whose name/hostname/fqdn carries the domain. Still no
 // fuzzy matching.
 function candidateMatches(candidate: KanapResolvedEntity, targets: string[]): boolean {

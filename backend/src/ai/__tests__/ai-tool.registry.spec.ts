@@ -1649,7 +1649,7 @@ async function testQueryExecutorNormalizesTaskAssigneeEmailFilter() {
 
   await executor.execute(context, {
     entity_type: 'tasks',
-    filters: { assignee: 'franck.bongay@lohr.group' },
+    filters: { assignee: 'john.smith@example.com' },
     limit: 25,
   });
 
@@ -1779,7 +1779,7 @@ async function testAggregateExecutorNormalizesTaskAssigneeEmailFilter() {
   await executor.execute(context, {
     entity_type: 'tasks',
     group_by: 'status',
-    filters: { assignee: 'franck.bongay@lohr.group' },
+    filters: { assignee: 'john.smith@example.com' },
   });
 }
 

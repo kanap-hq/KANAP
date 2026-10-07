@@ -19,8 +19,7 @@ export type { AmountReading, DateReading, ScreenLanguage } from '../csv/readings
 
 /**
  * The budget file of the OPEX and CAPEX lists: export, preflight and load
- * (`/spend-items/budget-file/*`, `/capex-items/budget-file/*`). Contract:
- * planning/sfr/briefs/csv-c2.md.
+ * (`/spend-items/budget-file/*`, `/capex-items/budget-file/*`).
  */
 
 export type BudgetFileScope = 'opex' | 'capex';

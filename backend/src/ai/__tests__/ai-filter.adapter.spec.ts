@@ -47,7 +47,7 @@ function testUnknownFieldsAreIgnored() {
 
 function testRequestAssigneeFieldIsIgnored() {
   const adapted = adaptFilters(requestsRegistry, {
-    assignee: ['yann.aubert@lohr.fr'],
+    assignee: ['jane.doe@example.com'],
   } as any);
   assert.deepEqual(adapted.filters, {});
   assert.deepEqual(adapted.applied, []);
