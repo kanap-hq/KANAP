@@ -168,3 +168,50 @@ describe('KnowledgeWorkspacePage — document load errors', () => {
     });
   });
 });
+
+describe('KnowledgeWorkspacePage — edit lock', () => {
+  const LOCKS_URL = '/knowledge/DOC-9/locks';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(api.get).mockImplementation(async (url: string) => {
+      if (url === DOC_URL) {
+        return {
+          data: {
+            id: 'doc-9',
+            item_number: 9,
+            title: 'Runbook',
+            content_markdown: 'Body',
+            revision: 1,
+            can_write: true,
+            edit_lock: null,
+          },
+        } as any;
+      }
+      return { data: [] } as any;
+    });
+    vi.mocked(api.post).mockImplementation(async (url: string) => {
+      if (url === LOCKS_URL) return { data: { lock_token: 'tok-1', expires_at: '2099-01-01T00:00:00Z' } } as any;
+      return { data: {} } as any;
+    });
+    vi.mocked(api.delete).mockResolvedValue({ data: {} } as any);
+  });
+
+  it('releases the lock once when leaving edit mode with Done', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0 } } });
+    const view = renderWorkspace(queryClient);
+    const releaseCalls = () => vi.mocked(api.delete).mock.calls.filter(([url]) => url === LOCKS_URL);
+
+    fireEvent.click(await screen.findByText('workspace.actions.edit'));
+    fireEvent.click(await screen.findByText('workspace.actions.done'));
+
+    await screen.findByText('workspace.actions.edit');
+    await waitFor(() => expect(releaseCalls()).toHaveLength(1));
+    expect(releaseCalls()[0][1]).toEqual({ headers: { 'X-Lock-Token': 'tok-1' } });
+
+    // Leaving the page afterwards has no lock left to release.
+    view.unmount();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(releaseCalls()).toHaveLength(1);
+  });
+});

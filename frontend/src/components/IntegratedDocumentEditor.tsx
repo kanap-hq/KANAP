@@ -283,17 +283,21 @@ export const IntegratedDocumentEditor = React.forwardRef<
   }, [endpointBase, entityId, isDraftMode, lockToken]);
 
   const releaseLock = React.useCallback(async () => {
-    if (isDraftMode || !entityId || !lockToken) return;
+    // Claim the token first: a second caller (the unmount cleanup after a
+    // reset) finds nothing left to release.
+    const heldToken = lockTokenRef.current;
+    if (isDraftMode || !entityId || !heldToken) return;
+    lockTokenRef.current = null;
     try {
       await api.delete(`${endpointBase}/locks`, {
-        headers: { 'X-Lock-Token': lockToken },
+        headers: { 'X-Lock-Token': heldToken },
       });
     } catch {
       // Best effort.
     }
     setLockToken(null);
     setLockExpiresAt(null);
-  }, [endpointBase, entityId, isDraftMode, lockToken]);
+  }, [endpointBase, entityId, isDraftMode, setLockToken]);
 
   const startEdit = React.useCallback(async (opts?: {
     silentConflict?: boolean;
