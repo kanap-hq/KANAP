@@ -16,7 +16,7 @@ const content: ChangelogContent = {
     label: 'Am Ball bleiben',
     body: 'Neue Releases erscheinen regelmäßig. Starren Sie das Repository oder beobachten Sie die Releases auf GitHub, um auf dem Laufenden zu bleiben.',
     githubCta: 'Releases auf GitHub beobachten',
-    githubHref: 'https://github.com/kanap-it/kanap/releases',
+    githubHref: 'https://github.com/kanap-hq/kanap/releases',
   },
   entries: [
     {

@@ -24,7 +24,7 @@ const content: FaqContent = {
         },
         {
           q: 'Can I contribute to KANAP?',
-          a: 'Yes, please. The full source is on <a href="https://github.com/kanap-it/kanap" rel="noopener" target="_blank">GitHub</a>. Issues, pull requests and discussions are all welcome. See CONTRIBUTING.md for the guidelines.',
+          a: 'Yes, please. The full source is on <a href="https://github.com/kanap-hq/kanap" rel="noopener" target="_blank">GitHub</a>. Issues, pull requests and discussions are all welcome. See CONTRIBUTING.md for the guidelines.',
         },
       ],
     },

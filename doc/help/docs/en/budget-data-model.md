@@ -201,7 +201,7 @@ The budget file reads and writes the amounts of any column and year, as yearly t
 4. Fill one row per line, leaving `item_number` empty, with one amount column per budget column and year (`budget_2027`), or per month (`budget_2027_03`).
 5. Import the files. The check reports the errors by line of the file, and nothing is written until you load.
 
-A consistent set of sample files, with one fictional company and its reference data, is in the [KANAP repository](https://github.com/kanap-it/KANAP/tree/main/doc/samples).
+A consistent set of sample files, with one fictional company and its reference data, is in the [KANAP repository](https://github.com/kanap-hq/KANAP/tree/main/doc/samples).
 
 ## Reading the data directly
 

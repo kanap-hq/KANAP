@@ -26,7 +26,7 @@ const content: FaqContent = {
         },
         {
           q: '¿Puedo contribuir a KANAP?',
-          a: 'Sí, por favor. Todo el código fuente está en <a href="https://github.com/kanap-it/kanap" rel="noopener" target="_blank">GitHub</a>. Las issues, las pull requests y los debates son bienvenidos. Consulte CONTRIBUTING.md para conocer las pautas.',
+          a: 'Sí, por favor. Todo el código fuente está en <a href="https://github.com/kanap-hq/kanap" rel="noopener" target="_blank">GitHub</a>. Las issues, las pull requests y los debates son bienvenidos. Consulte CONTRIBUTING.md para conocer las pautas.',
         },
       ],
     },

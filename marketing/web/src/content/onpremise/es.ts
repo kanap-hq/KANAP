@@ -12,7 +12,7 @@ const content: OnPremContent = {
     title: 'Ejecute KANAP usted mismo.\nSea dueño de cada capa.',
     lead: 'Open source bajo AGPL v3. Despliegue en su infraestructura, sea dueño de sus datos, actualice a su ritmo. La plataforma completa, usuarios ilimitados, todas las funcionalidades, en sus términos.',
     primaryCta: 'Desplegar desde GitHub',
-    primaryHref: 'https://github.com/kanap-it/kanap',
+    primaryHref: 'https://github.com/kanap-hq/kanap',
     secondaryCta: 'Leer la documentación de instalación',
     secondaryHref: 'https://doc.kanap.net/on-premise/',
   },

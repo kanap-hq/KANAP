@@ -16,7 +16,7 @@ const content: ChangelogContent = {
     label: 'Siga el ritmo',
     body: 'Las nuevas versiones llegan con regularidad. Marque el repositorio con una estrella o siga las releases en GitHub para estar al día.',
     githubCta: 'Ver releases en GitHub',
-    githubHref: 'https://github.com/kanap-it/kanap/releases',
+    githubHref: 'https://github.com/kanap-hq/kanap/releases',
   },
   entries: [
     {

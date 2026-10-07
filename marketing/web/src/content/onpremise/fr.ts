@@ -12,7 +12,7 @@ const content: OnPremContent = {
     title: 'Hébergez KANAP vous-même.\nMaîtrisez chaque couche.',
     lead: 'Open source sous AGPL v3. Déployez sur votre infrastructure, gardez vos données, mettez à jour à votre rythme. La plateforme complète, utilisateurs illimités, toutes les fonctionnalités, selon vos conditions.',
     primaryCta: 'Déployer depuis GitHub',
-    primaryHref: 'https://github.com/kanap-it/kanap',
+    primaryHref: 'https://github.com/kanap-hq/kanap',
     secondaryCta: 'Lire la doc d\'installation',
     secondaryHref: 'https://doc.kanap.net/on-premise/',
   },
