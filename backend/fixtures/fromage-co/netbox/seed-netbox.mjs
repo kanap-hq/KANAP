@@ -7,7 +7,7 @@
 // so a second run changes nothing.
 //
 // Usage:
-//   node fixtures/fromage-co/netbox/seed-netbox.mjs \
+//   node backend/fixtures/fromage-co/netbox/seed-netbox.mjs \
 //     --url http://localhost:8084 \
 //     --token 'nbt_kanapdevkey1.kanapdevnetboxtoken0123456789abcdefghijk'
 //

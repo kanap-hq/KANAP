@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Loads the perf dataset (scripts/perf/generate-dataset.mjs) into a KANAP
 // tenant through the public API and the real CSV import endpoints, and times
-// every step. Same sequence as fixtures/fromage-co/setup-tenant.mjs, without
+// every step. Same sequence as backend/fixtures/fromage-co/setup-tenant.mjs, without
 // the AI agent, the knowledge library and the IT landscape.
 //
 //   node scripts/perf/load-tenant.mjs --base-url http://127.0.0.1:18080 \
@@ -17,7 +17,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { createClient, pool, parseCsv } from './lib/http.mjs';
-import { buildLinesFile, buildMonthlyFile, fetchDefaultDimensionCode, loadBudgetFile } from '../lib/budget-file.mjs';
+import { buildLinesFile, buildMonthlyFile, fetchDefaultDimensionCode, loadBudgetFile } from '../../backend/scripts/lib/budget-file.mjs';
 
 const opts = {
   baseUrl: 'http://127.0.0.1:18080',
@@ -150,7 +150,7 @@ const importFile = (name, route) => step(`import ${name}`, () => importCsvText(n
 // ── Budget file (lines, then monthly rows) ──────────────────────────────────
 //
 // The item files and the monthly rows keep their old shape: the shared helper
-// (scripts/lib/budget-file.mjs) converts them and runs the two-step budget file
+// (backend/scripts/lib/budget-file.mjs) converts them and runs the two-step budget file
 // route (preflight, then import). One file per scope each time, no chunking:
 // the route's cap is 48 MB and the perf dataset fits in one file per scope.
 

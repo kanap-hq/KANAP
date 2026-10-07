@@ -8,9 +8,9 @@
 // provider.
 //
 // Usage:
-//   node fixtures/fromage-co/setup-tenant.mjs \
+//   node backend/fixtures/fromage-co/setup-tenant.mjs \
 //     --base-url https://fromage.dev.kanap.net \
-//     --email fried@kanap.net --password '<admin password>' \
+//     --email <your email> --password '<admin password>' \
 //     --demo-password '<private value>'
 //
 // --demo-password is required: it is the password every imported demo user
@@ -27,7 +27,6 @@ const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 const DEFAULTS = {
   baseUrl: 'https://fromage.dev.kanap.net',
-  email: 'fried@kanap.net',
   org: 'Fromage & Co',
   countryIso: 'FR',
   year: 2026,
@@ -36,7 +35,7 @@ const DEFAULTS = {
 const argv = process.argv.slice(2);
 const options = {
   baseUrl: DEFAULTS.baseUrl,
-  email: DEFAULTS.email,
+  email: '',
   password: '',
   org: DEFAULTS.org,
   countryIso: DEFAULTS.countryIso,
@@ -71,6 +70,9 @@ for (let i = 0; i < argv.length; i += 1) {
 
 options.baseUrl = options.baseUrl.replace(/\/$/, '');
 const missingArgs = [];
+if (!options.email) {
+  missingArgs.push('[ERR]  --email is required (the tenant administrator; also used when bootstrapping the tenant).');
+}
 if (!options.password) {
   missingArgs.push('[ERR]  --password is required (tenant admin password; also used when bootstrapping the tenant).');
 }
@@ -579,7 +581,7 @@ async function removeLegacyDomainValues() {
 // The budget files (26-30) come from tools/generate-budget.mjs. Cost centres,
 // dimension values and calendars import like any master data. The two item
 // files (14, 15) and the monthly amounts (29) keep their old shape: they are
-// converted at load time by scripts/lib/budget-file.mjs and sent through the
+// converted at load time by backend/scripts/lib/budget-file.mjs and sent through the
 // budget file routes (preflight, then import), one file per list. Costed lines
 // (quantity × price, file 30) still go through the versions API. The item files
 // and the monthly rows are keyed by item name, because item numbers only exist
@@ -997,7 +999,7 @@ async function ensureAssets(locationIdByFixtureCode) {
 }
 
 // Hardware info on a few physical assets. The Netbox test inventory
-// (fixtures/fromage-co/netbox) relies on these serials: GOU-NAS-01 carries the
+// (backend/fixtures/fromage-co/netbox) relies on these serials: GOU-NAS-01 carries the
 // serial of the Netbox device GOU-SYNO-01, so the sync matches by serial and
 // renames the asset. PAR-SAN-02 carries the serial Netbox already has, so
 // nothing changes. PRM-ESX-01 carries a stale serial and model that Netbox
@@ -1475,11 +1477,11 @@ async function ensurePortfolioTeamsAndCapacity() {
     else await apiPost('/portfolio/teams', body);
   }
   const teamByEmail = [
-    ['sophie.laurent@fromage-co.com', 'Business Applications'],
-    ['marc.petit@fromage-co.com', 'Development'],
-    ['pierre.martin@fromage-co.com', 'Infrastructure'],
-    ['lucas.bernard@fromage-co.com', 'Infrastructure'],
-    ['clara.dupont@fromage-co.com', 'Business Applications'],
+    ['sophie.laurent@fromage-co.example', 'Business Applications'],
+    ['marc.petit@fromage-co.example', 'Development'],
+    ['pierre.martin@fromage-co.example', 'Infrastructure'],
+    ['lucas.bernard@fromage-co.example', 'Infrastructure'],
+    ['clara.dupont@fromage-co.example', 'Business Applications'],
   ];
   for (const [email, team] of teamByEmail) {
     const userId = await userIdByEmail(email);
@@ -1538,21 +1540,21 @@ async function ensureProjectPhases() {
 }
 
 const IT_TEAM_EMAILS = new Set([
-  'sophie.laurent@fromage-co.com', 'lucas.bernard@fromage-co.com', 'pierre.martin@fromage-co.com',
-  'thomas.berger@fromage-co.com', 'amelie.rousseau@fromage-co.com', 'clara.dupont@fromage-co.com',
-  'jan.bakker@kaasmeester.nl', 'luca.ferrari@formaggio-supremo.it', 'hugo.mercier@fromage-co.com',
+  'sophie.laurent@fromage-co.example', 'lucas.bernard@fromage-co.example', 'pierre.martin@fromage-co.example',
+  'thomas.berger@fromage-co.example', 'amelie.rousseau@fromage-co.example', 'clara.dupont@fromage-co.example',
+  'jan.bakker@kaasmeester.example', 'luca.ferrari@formaggio-supremo.example', 'hugo.mercier@fromage-co.example',
 ]);
 
 const PROJECT_TEAMS = {
-  'Fromage-as-a-Service': ['amelie.rousseau@fromage-co.com', 'clara.dupont@fromage-co.com', 'isabelle.moreau@fromage-co.com', 'hugo.mercier@fromage-co.com'],
-  'Zero Trust Fromage': ['lucas.bernard@fromage-co.com', 'pierre.martin@fromage-co.com', 'thomas.berger@fromage-co.com'],
-  'Workday Global Rollout': ['sophie.laurent@fromage-co.com', 'jan.bakker@kaasmeester.nl', 'luca.ferrari@formaggio-supremo.it', 'maria.casanova@fromage-co.com'],
-  'Territory Planning Cockpit': ['isabelle.moreau@fromage-co.com', 'maria.casanova@fromage-co.com'],
-  'Supplier Contract Workspace': ['maria.casanova@fromage-co.com', 'isabelle.moreau@fromage-co.com'],
-  'Pricing Rules API Refactor': ['amelie.rousseau@fromage-co.com', 'clara.dupont@fromage-co.com', 'hugo.mercier@fromage-co.com'],
-  'Customer 360 Data Contracts': ['clara.dupont@fromage-co.com', 'jan.bakker@kaasmeester.nl', 'luca.ferrari@formaggio-supremo.it'],
-  'Branch Network Segmentation': ['lucas.bernard@fromage-co.com', 'pierre.martin@fromage-co.com', 'thomas.berger@fromage-co.com'],
-  'Endpoint Compliance Automation': ['sophie.laurent@fromage-co.com', 'pierre.martin@fromage-co.com', 'lucas.bernard@fromage-co.com'],
+  'Fromage-as-a-Service': ['amelie.rousseau@fromage-co.example', 'clara.dupont@fromage-co.example', 'isabelle.moreau@fromage-co.example', 'hugo.mercier@fromage-co.example'],
+  'Zero Trust Fromage': ['lucas.bernard@fromage-co.example', 'pierre.martin@fromage-co.example', 'thomas.berger@fromage-co.example'],
+  'Workday Global Rollout': ['sophie.laurent@fromage-co.example', 'jan.bakker@kaasmeester.example', 'luca.ferrari@formaggio-supremo.example', 'maria.casanova@fromage-co.example'],
+  'Territory Planning Cockpit': ['isabelle.moreau@fromage-co.example', 'maria.casanova@fromage-co.example'],
+  'Supplier Contract Workspace': ['maria.casanova@fromage-co.example', 'isabelle.moreau@fromage-co.example'],
+  'Pricing Rules API Refactor': ['amelie.rousseau@fromage-co.example', 'clara.dupont@fromage-co.example', 'hugo.mercier@fromage-co.example'],
+  'Customer 360 Data Contracts': ['clara.dupont@fromage-co.example', 'jan.bakker@kaasmeester.example', 'luca.ferrari@formaggio-supremo.example'],
+  'Branch Network Segmentation': ['lucas.bernard@fromage-co.example', 'pierre.martin@fromage-co.example', 'thomas.berger@fromage-co.example'],
+  'Endpoint Compliance Automation': ['sophie.laurent@fromage-co.example', 'pierre.martin@fromage-co.example', 'lucas.bernard@fromage-co.example'],
 };
 
 async function ensureProjectTeams() {
@@ -1842,8 +1844,8 @@ async function main() {
   console.log(`  App URL:      ${options.baseUrl}`);
   console.log(`  Tenant admin: ${options.email}`);
   console.log(options.demoPassword
-    ? '  Demo users:   thomas.berger@fromage-co.com (and 18 others), password passed with --demo-password'
-    : '  Demo users:   thomas.berger@fromage-co.com (and 18 others), no password set (--demo-password was empty)');
+    ? '  Demo users:   thomas.berger@fromage-co.example (and 17 others), password passed with --demo-password'
+    : '  Demo users:   thomas.berger@fromage-co.example (and 17 others), no password set (--demo-password was empty)');
   if (!options.skipAgents) {
     console.log(`  Demo agent:   '${AGENT_NAME}' (mock ticketing) — check the Agents pages`);
     console.log(`  Knowledge:    '${SERVICE_DESK_LIBRARY}' library — the demo tickets find their answers there`);

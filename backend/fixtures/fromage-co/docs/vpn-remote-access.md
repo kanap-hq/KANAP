@@ -6,7 +6,7 @@ All remote access to the Fromage & Co network goes through **FortiClient VPN** w
 
 1. Open a request in ServiceNow under **IT > Access > VPN**.
 2. Your manager approves the request; IT & Digital provisions the profile.
-3. You receive an email with the FortiClient installation link and the gateway address (`vpn.fromage-co.com`).
+3. You receive an email with the FortiClient installation link and the gateway address (`vpn.fromage-co.example`).
 
 Standard turnaround is **1 business day**. Production and Quality staff automatically receive access to the plant network segment.
 

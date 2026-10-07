@@ -4,7 +4,7 @@
 // (quantity × price) and monthly budget rows. Deterministic: the same input
 // always gives the same files, so the CSVs can be reviewed in a diff.
 //
-//   node fixtures/fromage-co/tools/generate-budget.mjs
+//   node backend/fixtures/fromage-co/tools/generate-budget.mjs
 //
 // Story: end of September 2026. The IT division of Fromage & Co budgets like a
 // mid-sized group: three divisions, twelve cost centres over four legal
@@ -99,18 +99,18 @@ const GROUPS = [
 ];
 const CC = [
   // code, name, group, company, owner, description
-  ['FR-DIS-100', 'Direction de projets Distribution', 'DIV-DIS', FR, 'clara.dupont@fromage-co.com', 'Projets des systèmes de vente B2B, EDI et portail distributeurs'],
-  ['FR-DIS-200', 'Ingénierie et déploiement Distribution', 'DIV-DIS', FR, 'lucas.bernard@fromage-co.com', 'Construction et déploiement des applications de la division'],
-  ['FR-DIS-300', 'Exploitation back office Distribution', 'DIV-DIS', FR, 'pierre.martin@fromage-co.com', 'Exploitation des systèmes de gestion commerciale et logistique'],
-  ['NL-DIS-300', 'Exploitation Distribution Benelux', 'DIV-DIS', NL, 'jan.bakker@kaasmeester.nl', 'Exploitation des systèmes de la filiale néerlandaise'],
-  ['FR-BOU-100', 'Direction de projets Boutiques & e-commerce', 'DIV-BOU', FR, 'amelie.rousseau@fromage-co.com', 'Projets boutiques, e-commerce et abonnements'],
-  ['FR-BOU-310', 'Exploitation front office (boutiques et e-commerce)', 'DIV-BOU', FR, 'nadia.lemaire@fromage-co.com', 'Exploitation des caisses, du site marchand et des outils boutique'],
-  ['IT-BOU-310', 'Exploitation front office Italie', 'DIV-BOU', IT, 'luca.ferrari@formaggio-supremo.it', 'Exploitation des boutiques et systèmes de la filiale italienne'],
-  ['US-BOU-310', 'E-commerce Amérique du Nord', 'DIV-BOU', US, 'mike.johnson@fromage-co.com', 'Site marchand et systèmes de la filiale américaine'],
-  ['FR-TRV-400', 'Infrastructure et cloud', 'DIV-TRV', FR, 'marc.petit@fromage-co.com', 'Centres de données, cloud, réseau et télécoms du groupe'],
-  ['FR-TRV-500', 'Poste de travail et support', 'DIV-TRV', FR, 'olivier.garnier@fromage-co.com', 'Postes de travail, outils collaboratifs et centre de services'],
-  ['FR-TRV-600', 'Sécurité', 'DIV-TRV', FR, 'ines.chevalier@fromage-co.com', 'Sécurité des systèmes d\'information et conformité'],
-  ['FR-TRV-700', 'Pilotage DSI et contrôle de gestion', 'DIV-TRV', FR, 'maria.casanova@fromage-co.com', 'Pilotage, contrôle de gestion, achats IT, formation'],
+  ['FR-DIS-100', 'Direction de projets Distribution', 'DIV-DIS', FR, 'clara.dupont@fromage-co.example', 'Projets des systèmes de vente B2B, EDI et portail distributeurs'],
+  ['FR-DIS-200', 'Ingénierie et déploiement Distribution', 'DIV-DIS', FR, 'lucas.bernard@fromage-co.example', 'Construction et déploiement des applications de la division'],
+  ['FR-DIS-300', 'Exploitation back office Distribution', 'DIV-DIS', FR, 'pierre.martin@fromage-co.example', 'Exploitation des systèmes de gestion commerciale et logistique'],
+  ['NL-DIS-300', 'Exploitation Distribution Benelux', 'DIV-DIS', NL, 'jan.bakker@kaasmeester.example', 'Exploitation des systèmes de la filiale néerlandaise'],
+  ['FR-BOU-100', 'Direction de projets Boutiques & e-commerce', 'DIV-BOU', FR, 'amelie.rousseau@fromage-co.example', 'Projets boutiques, e-commerce et abonnements'],
+  ['FR-BOU-310', 'Exploitation front office (boutiques et e-commerce)', 'DIV-BOU', FR, 'nadia.lemaire@fromage-co.example', 'Exploitation des caisses, du site marchand et des outils boutique'],
+  ['IT-BOU-310', 'Exploitation front office Italie', 'DIV-BOU', IT, 'luca.ferrari@formaggio-supremo.example', 'Exploitation des boutiques et systèmes de la filiale italienne'],
+  ['US-BOU-310', 'E-commerce Amérique du Nord', 'DIV-BOU', US, 'mike.johnson@fromage-co.example', 'Site marchand et systèmes de la filiale américaine'],
+  ['FR-TRV-400', 'Infrastructure et cloud', 'DIV-TRV', FR, 'marc.petit@fromage-co.example', 'Centres de données, cloud, réseau et télécoms du groupe'],
+  ['FR-TRV-500', 'Poste de travail et support', 'DIV-TRV', FR, 'olivier.garnier@fromage-co.example', 'Postes de travail, outils collaboratifs et centre de services'],
+  ['FR-TRV-600', 'Sécurité', 'DIV-TRV', FR, 'ines.chevalier@fromage-co.example', 'Sécurité des systèmes d\'information et conformité'],
+  ['FR-TRV-700', 'Pilotage DSI et contrôle de gestion', 'DIV-TRV', FR, 'maria.casanova@fromage-co.example', 'Pilotage, contrôle de gestion, achats IT, formation'],
 ];
 const ccRows = [['code', 'kind', 'name', 'parent_code', 'company_name', 'owner_email', 'description', 'status']];
 for (const [code, name, parent, description] of GROUPS) ccRows.push([code, 'group', name, parent, '', '', description, 'enabled']);
@@ -303,10 +303,10 @@ const NEW_LINES = [
   ['Veille et abonnements analystes', 'Abonnements d\'études et de veille technologique', '', 'FR-TRV-700', 'travel', 'General', 'travel', 'run', 'yes', '', 28000, '2023-01-01', '', 1.0],
   ['Recrutement IT', 'Honoraires de cabinets pour les recrutements de la DSI', '', 'FR-TRV-700', 'consulting', 'General', 'consulting', 'run', 'no', '', 40000, '2024-01-01', '', 1.3],
 ];
-const OWNER_IT = { 'FR-DIS-100': 'clara.dupont@fromage-co.com', 'FR-DIS-200': 'lucas.bernard@fromage-co.com', 'FR-DIS-300': 'pierre.martin@fromage-co.com', 'NL-DIS-300': 'jan.bakker@kaasmeester.nl',
-  'FR-BOU-100': 'amelie.rousseau@fromage-co.com', 'FR-BOU-310': 'nadia.lemaire@fromage-co.com', 'IT-BOU-310': 'luca.ferrari@formaggio-supremo.it', 'US-BOU-310': 'mike.johnson@fromage-co.com',
-  'FR-TRV-400': 'marc.petit@fromage-co.com', 'FR-TRV-500': 'olivier.garnier@fromage-co.com', 'FR-TRV-600': 'ines.chevalier@fromage-co.com', 'FR-TRV-700': 'maria.casanova@fromage-co.com' };
-const OWNER_BUSINESS = { 'DIV-DIS': 'isabelle.moreau@fromage-co.com', 'DIV-BOU': 'isabelle.moreau@fromage-co.com', 'DIV-TRV': 'thomas.berger@fromage-co.com' };
+const OWNER_IT = { 'FR-DIS-100': 'clara.dupont@fromage-co.example', 'FR-DIS-200': 'lucas.bernard@fromage-co.example', 'FR-DIS-300': 'pierre.martin@fromage-co.example', 'NL-DIS-300': 'jan.bakker@kaasmeester.example',
+  'FR-BOU-100': 'amelie.rousseau@fromage-co.example', 'FR-BOU-310': 'nadia.lemaire@fromage-co.example', 'IT-BOU-310': 'luca.ferrari@formaggio-supremo.example', 'US-BOU-310': 'mike.johnson@fromage-co.example',
+  'FR-TRV-400': 'marc.petit@fromage-co.example', 'FR-TRV-500': 'olivier.garnier@fromage-co.example', 'FR-TRV-600': 'ines.chevalier@fromage-co.example', 'FR-TRV-700': 'maria.casanova@fromage-co.example' };
+const OWNER_BUSINESS = { 'DIV-DIS': 'isabelle.moreau@fromage-co.example', 'DIV-BOU': 'isabelle.moreau@fromage-co.example', 'DIV-TRV': 'thomas.berger@fromage-co.example' };
 const ccGroup = Object.fromEntries(CC.map((c) => [c[0], c[2]]));
 
 for (const [name, description, supplier, cc, accountKey, domaine, nature, runBuild, recurrence, reference, budget, start, end, landingRatio] of NEW_LINES) {

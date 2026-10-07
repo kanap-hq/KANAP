@@ -40,7 +40,7 @@ in `backend/env.dev`.
 ## Seed the inventory
 
 ```bash
-node fixtures/fromage-co/netbox/seed-netbox.mjs
+node backend/fixtures/fromage-co/netbox/seed-netbox.mjs
 ```
 
 Options: `--url` (default `http://localhost:8084`), `--token`, `--scenario=base|drift`.
@@ -53,7 +53,7 @@ A second run reports `Created 0`.
 Run the drift scenario after a first KANAP sync, to exercise the automatic sync.
 
 ```bash
-node fixtures/fromage-co/netbox/seed-netbox.mjs --scenario=drift
+node backend/fixtures/fromage-co/netbox/seed-netbox.mjs --scenario=drift
 ```
 
 It deletes `CAVE-GW-02`, changes the serial of `PAR-SAN-01`, renames `PAR-ESX-04` to
@@ -74,7 +74,7 @@ Then start the profile again and reseed.
 
 ## KANAP fixture side
 
-`fixtures/fromage-co/setup-tenant.mjs` sets hardware info on `GOU-NAS-01`, `PAR-SAN-02` and
+`backend/fixtures/fromage-co/setup-tenant.mjs` sets hardware info on `GOU-NAS-01`, `PAR-SAN-02` and
 `PRM-ESX-01`. With `--netbox-test-cases` it also creates a second asset named `NYC-SW-01`,
 which the ambiguity case needs, and the assets `SRV-COMPTA-OLD` and `SRV-PAIE-OLD` for the two renamed-equipment cases. That flag is for dev tenants only, so the demo stays clean.
 Re-run the fixture against the dev tenant to apply them.

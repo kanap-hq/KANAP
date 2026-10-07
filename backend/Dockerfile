@@ -10,6 +10,8 @@ RUN npm ci
 COPY tsconfig*.json ./
 COPY src ./src
 COPY scripts ./scripts
+# The demo data set and its loader (setup-tenant.mjs), run by the API to load demo data.
+COPY fixtures ./fixtures
 RUN npm run build
 EXPOSE 8080
 # The locale the login shell of `sh -lc` used to export (/etc/profile.d/20locale.sh): pandoc,

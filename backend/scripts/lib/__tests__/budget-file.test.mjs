@@ -1,6 +1,6 @@
 // Unit tests of the budget file conversion (node --test).
 //
-//   node --test scripts/lib/__tests__/budget-file.test.mjs
+//   node --test backend/scripts/lib/__tests__/budget-file.test.mjs
 //
 // The expected column orders are the ones `backend/src/spend/budget-file/columns.ts`
 // writes: detail columns, then `analytics:<code>`, then the amount columns, then
@@ -48,8 +48,8 @@ const OPEX_ROW = {
   effective_start: '2024-01-01',
   status: 'enabled',
   disabled_at: '',
-  owner_it_email: 'pierre.martin@fromage-co.com',
-  owner_business_email: 'thomas.berger@fromage-co.com',
+  owner_it_email: 'pierre.martin@fromage-co.example',
+  owner_business_email: 'thomas.berger@fromage-co.example',
   analytics_category: 'Productivity',
   'analytics:nature': 'Licences',
   'analytics:reference': 'REF-SAP',
@@ -78,8 +78,8 @@ const CAPEX_ROW = {
   disabled_at: '2027-12-31',
   notes: 'Migration',
   company_name: 'Fromage & Co SA',
-  owner_it_email: 'lucas.bernard@fromage-co.com',
-  owner_business_email: 'isabelle.moreau@fromage-co.com',
+  owner_it_email: 'lucas.bernard@fromage-co.example',
+  owner_business_email: 'isabelle.moreau@fromage-co.example',
   analytics_category: 'Centre de compétences',
   'analytics:nature': 'Conseil',
   cost_center_code: 'FR-DIS-200',

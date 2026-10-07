@@ -114,7 +114,7 @@ function isoHoursAgo(hours: number): string {
   return new Date(anchor - hours * 3_600_000).toISOString();
 }
 
-// Demo tickets for the Fromage & Co fixture tenant (fixtures/fromage-co).
+// Demo tickets for the Fromage & Co fixture tenant (backend/fixtures/fromage-co).
 // Their answers live in the tenant's "Service Desk Docs" knowledge library, so
 // they exercise the knowledge-search → grounded-reply path end to end. Scoped
 // under a dedicated entity so acme-helpdesk/finance scope tests are unaffected.

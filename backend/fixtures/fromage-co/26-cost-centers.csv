@@ -1,0 +1,17 @@
+code;kind;name;parent_code;company_name;owner_email;description;status
+DSI-GRP;group;DSI Groupe;;;;La direction des systèmes d'information du groupe;enabled
+DIV-DIS;group;Division Distribution & restauration;DSI-GRP;;;Systèmes des ventes aux distributeurs et à la restauration;enabled
+DIV-BOU;group;Division Boutiques & e-commerce;DSI-GRP;;;Systèmes des boutiques et de la vente en ligne;enabled
+DIV-TRV;group;Fonctions transverses;DSI-GRP;;;Infrastructure, poste de travail, sécurité et pilotage;enabled
+FR-DIS-100;cost_center;Direction de projets Distribution;DIV-DIS;Fromage & Co SA;clara.dupont@fromage-co.example;Projets des systèmes de vente B2B, EDI et portail distributeurs;enabled
+FR-DIS-200;cost_center;Ingénierie et déploiement Distribution;DIV-DIS;Fromage & Co SA;lucas.bernard@fromage-co.example;Construction et déploiement des applications de la division;enabled
+FR-DIS-300;cost_center;Exploitation back office Distribution;DIV-DIS;Fromage & Co SA;pierre.martin@fromage-co.example;Exploitation des systèmes de gestion commerciale et logistique;enabled
+NL-DIS-300;cost_center;Exploitation Distribution Benelux;DIV-DIS;Kaasmeester BV;jan.bakker@kaasmeester.example;Exploitation des systèmes de la filiale néerlandaise;enabled
+FR-BOU-100;cost_center;Direction de projets Boutiques & e-commerce;DIV-BOU;Fromage & Co SA;amelie.rousseau@fromage-co.example;Projets boutiques, e-commerce et abonnements;enabled
+FR-BOU-310;cost_center;Exploitation front office (boutiques et e-commerce);DIV-BOU;Fromage & Co SA;nadia.lemaire@fromage-co.example;Exploitation des caisses, du site marchand et des outils boutique;enabled
+IT-BOU-310;cost_center;Exploitation front office Italie;DIV-BOU;Formaggio Supremo SRL;luca.ferrari@formaggio-supremo.example;Exploitation des boutiques et systèmes de la filiale italienne;enabled
+US-BOU-310;cost_center;E-commerce Amérique du Nord;DIV-BOU;Fromage & Co Inc.;mike.johnson@fromage-co.example;Site marchand et systèmes de la filiale américaine;enabled
+FR-TRV-400;cost_center;Infrastructure et cloud;DIV-TRV;Fromage & Co SA;marc.petit@fromage-co.example;Centres de données, cloud, réseau et télécoms du groupe;enabled
+FR-TRV-500;cost_center;Poste de travail et support;DIV-TRV;Fromage & Co SA;olivier.garnier@fromage-co.example;Postes de travail, outils collaboratifs et centre de services;enabled
+FR-TRV-600;cost_center;Sécurité;DIV-TRV;Fromage & Co SA;ines.chevalier@fromage-co.example;Sécurité des systèmes d'information et conformité;enabled
+FR-TRV-700;cost_center;Pilotage DSI et contrôle de gestion;DIV-TRV;Fromage & Co SA;maria.casanova@fromage-co.example;Pilotage, contrôle de gestion, achats IT, formation;enabled

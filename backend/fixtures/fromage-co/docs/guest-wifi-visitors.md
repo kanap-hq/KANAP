@@ -4,7 +4,7 @@
 
 Visitors use the **FromageGuest** SSID, available in all offices and the Paris tasting room.
 
-1. The host (any employee) opens the **Guest portal** at `guest.fromage-co.com` and registers the visitors: name, company, visit date.
+1. The host (any employee) opens the **Guest portal** at `guest.fromage-co.example` and registers the visitors: name, company, visit date.
 2. Each visitor receives an access code by email or SMS, valid for the visit day (up to 5 days for auditors).
 3. Codes work immediately — no IT ticket needed for groups under 20 people.
 

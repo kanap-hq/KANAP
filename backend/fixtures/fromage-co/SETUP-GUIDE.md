@@ -8,12 +8,15 @@ and a demo AI agent working mock helpdesk tickets.
 Everything is created through the public API by a single idempotent runner:
 
 ```bash
-node fixtures/fromage-co/setup-tenant.mjs \
+node backend/fixtures/fromage-co/setup-tenant.mjs \
   --base-url https://fromage.dev.kanap.net \
-  --email fried@kanap.net \
+  --email <your email> \
   --password '<admin password>' \
   --demo-password '<private value>'
 ```
+
+`--email` and `--password` are the tenant administrator's (the trial sign-up's)
+e-mail and password.
 
 `--demo-password` is required. It is the password every imported demo user
 gets. On any tenant reachable from outside your machine, use a private value
@@ -22,6 +25,13 @@ users without a password.
 
 The runner is safe to re-run: every step looks up existing records before
 creating anything.
+
+The demo users are on reserved `.example` domains (`fromage-co.example`,
+`kaasmeester.example`, `formaggio-supremo.example`): the API never sends an
+e-mail to such an address. Tenants loaded before this change hold the same
+users on the old `.com`, `.nl` and `.it` domains, and are left as they are.
+Re-running the runner on such a tenant would create every demo user a second
+time under its new address: load the current dataset on a new tenant instead.
 
 ## What the runner does
 
@@ -65,9 +75,9 @@ creating anything.
    budget demo initialises it by copying the 2026 landing. Re-running the
    runner restores the budget data, except on frozen columns: unfreeze them
    first (Budget administration → Freeze).
-5. **Demo user passwords**: all 19 imported users get the required
+5. **Demo user passwords**: all 18 imported users get the required
    `--demo-password` so you can log in as e.g.
-   `thomas.berger@fromage-co.com` during a demo. Pass `--demo-password ''`
+   `thomas.berger@fromage-co.example` during a demo. Pass `--demo-password ''`
    to create them without a password.
 6. **Relations**: Microsoft 365 suite members, application↔department links,
    app instances, interfaces + bindings, connections + equipment hops,
@@ -109,8 +119,8 @@ tokens, no scripting:
    (`fromage` on dev and QA, `demo` on prod), the organisation name
    `Fromage & Co` and your own email. The runner removes the company the
    trial creates under that name; with another name, pass it with `--org`.
-   On dev and QA all outbound mail is redirected to `fried@kanap.net`; prod
-   sends mail for real.
+   On dev and QA all outbound mail is redirected to the `EMAIL_OVERRIDE`
+   address; prod sends mail for real.
 2. Click the activation link in the email and set your password on the
    activation page — the tenant now exists and you are its Administrator.
 3. Run the runner with that email and password. It logs in and does
@@ -155,10 +165,10 @@ the fixture works without AI.
 | Who | Email | Role |
 |---|---|---|
 | Tenant owner | the `--email` you passed | Administrator |
-| Thomas Berger (CIO) | `thomas.berger@fromage-co.com` | Administrator |
-| Sophie Laurent | `sophie.laurent@fromage-co.com` | IT Landscape Administrator |
-| Maria Casanova (controller) | `maria.casanova@fromage-co.com` | Budget Administrator |
-| Nadia Lemaire (shops and e-commerce operations) | `nadia.lemaire@fromage-co.com` | Budget Member |
+| Thomas Berger (CIO) | `thomas.berger@fromage-co.example` | Administrator |
+| Sophie Laurent | `sophie.laurent@fromage-co.example` | IT Landscape Administrator |
+| Maria Casanova (controller) | `maria.casanova@fromage-co.example` | Budget Administrator |
+| Nadia Lemaire (shops and e-commerce operations) | `nadia.lemaire@fromage-co.example` | Budget Member |
 
 All demo users share the `--demo-password` value. It is required and has no
 default: on any tenant reachable from outside your machine, pass a private
@@ -172,7 +182,7 @@ first run.
 - `26-…30-*.csv` — the budget dataset: cost centres, dimension values,
   calendars, costed lines and monthly rows. `14-spend-items.csv` and
   `15-capex-items.csv` are generated too. Regenerate all of them with
-  `node fixtures/fromage-co/tools/generate-budget.mjs` (deterministic; edit the
+  `node backend/fixtures/fromage-co/tools/generate-budget.mjs` (deterministic; edit the
   script, not the files). The IT division has three divisions and twelve cost
   centres over the four legal entities; about 40 % of the OPEX is external
   staffing priced per working day.
