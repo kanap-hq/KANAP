@@ -29,6 +29,6 @@ KANAP can be deployed on-premise in **single-tenant mode**. You provide your own
 ## Quick Notes
 
 - `DEPLOYMENT_MODE=single-tenant` is the single switch that activates on-premise mode.
-- `APP_BASE_URL` must match your public URL for email links and exports.
+- `APP_BASE_URL` must match the exact address users open (including a non-standard port) for email links, sign-in redirects and exports. Put the same address in `CORS_ORIGINS`.
 - For outbound email, choose either **Resend** or **SMTP**. SMTP is intended for single-tenant/on-prem deployments only.
 - The backend returns structured `FEATURE_DISABLED` responses for disabled features — the UI hides them automatically.

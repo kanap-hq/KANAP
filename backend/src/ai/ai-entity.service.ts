@@ -2369,8 +2369,10 @@ export class AiEntityService {
     ): Promise<RankedSearchResult> => {
       // Unique name per savepoint — Promise.all dispatches all of these and PG
       // serializes them on a single connection, but using distinct names is cheap
-      // and removes any ambiguity if savepoints ever interleave.
-      const sp = `search_${type}_${++savepointCounter}`;
+      // and removes any ambiguity if savepoints ever interleave. The name is a
+      // fixed prefix and a counter only: an SQL identifier never takes a value
+      // from the request.
+      const sp = `search_sp_${++savepointCounter}`;
       try {
         await context.manager.query(`SAVEPOINT ${sp}`);
       } catch (err) {
@@ -2495,7 +2497,8 @@ export class AiEntityService {
       type: AiSearchEntityType,
       run: () => Promise<RankedSearchResult>,
     ): Promise<RankedSearchResult> => {
-      const sp = `mention_${type}_${++savepointCounter}`;
+      // Fixed prefix and counter only: an SQL identifier never takes a value from the request.
+      const sp = `mention_sp_${++savepointCounter}`;
       try {
         await context.manager.query(`SAVEPOINT ${sp}`);
       } catch (err) {
@@ -2645,8 +2648,10 @@ export class AiEntityService {
     const limitPerType = Math.min(Math.max(Number(input.limitPerType) || 3, 1), 20);
     const groups: Array<{ entity_type: string; items: AiEntitySummaryDto[] }> = [];
 
+    let savepointCounter = 0;
     for (const type of allowed) {
-      const sp = `pick_${type}`;
+      // Fixed prefix and counter only: an SQL identifier never takes a value from the request.
+      const sp = `pick_sp_${++savepointCounter}`;
       try {
         await context.manager.query(`SAVEPOINT ${sp}`);
       } catch {

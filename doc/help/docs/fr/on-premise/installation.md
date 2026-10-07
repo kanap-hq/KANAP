@@ -32,7 +32,9 @@ cd kanap
 
 # 2. Configurer l'environnement AVANT de compiler
 cp infra/.env.onprem.example .env
-nano .env  # Définir DATABASE_URL, identifiants S3, ADMIN_EMAIL, JWT_SECRET, APP_BASE_URL
+nano .env  # Définir DATABASE_URL, identifiants S3, ADMIN_EMAIL, JWT_SECRET, APP_BASE_URL, CORS_ORIGINS
+#          (APP_BASE_URL et CORS_ORIGINS : l'adresse exacte ouverte par les utilisateurs)
+#          Ajouter APP_ENV=production dès que les utilisateurs accèdent à KANAP en HTTPS
 # Voir le guide de Configuration pour toutes les variables
 
 # 3. Compiler les images Docker
@@ -51,6 +53,7 @@ docker compose -f infra/compose.onprem.yml logs -f api
 #    - /api/* → api:8080
 #    - /*     → web:80
 # Assurez-vous que le proxy préserve le Host et définit X-Forwarded-Proto.
+# Après le premier démarrage, lisez les lignes [ENV], [CONFIG] et [CORS] du journal de l'API.
 
 # 7. Accéder à l'application
 # https://kanap.votre-domaine.com
@@ -61,6 +64,8 @@ docker compose -f infra/compose.onprem.yml logs -f api
 
 **Exigence de rôle base de données :** `DATABASE_URL` doit utiliser un rôle applicatif PostgreSQL dédié. Ne le pointez pas vers `postgres` ou un autre rôle d'administration du cluster. KANAP refusera de démarrer plutôt que de fonctionner sans application effective du RLS.
 
+**Adresse et origines :** Définissez `APP_BASE_URL` et `CORS_ORIGINS` sur l'adresse exacte ouverte par les utilisateurs, avec le port s'il n'est pas standard. Tous les liens envoyés par KANAP viennent de `APP_BASE_URL`. Ajoutez `APP_ENV=production` quand les utilisateurs accèdent à KANAP en HTTPS : l'API refuse alors de démarrer sans ces deux valeurs et marque toujours le cookie de session comme Secure. Voir [Configuration](configuration.md#requis-identifiants-admin).
+
 **Choix email :** Les déploiements on-premise peuvent utiliser soit **Resend** soit **SMTP** pour l'email sortant. SMTP est utile lorsque le client dispose déjà d'un relais de messagerie interne ou d'un fournisseur managé tel que Microsoft 365. Configurez l'une de ces options si vous souhaitez que la réinitialisation de mot de passe, les invitations et les emails de notification fonctionnent dès le premier jour.
 
 ## Exemple de reverse proxy (nginx)
@@ -70,7 +75,7 @@ docker compose -f infra/compose.onprem.yml logs -f api
 1. Terminer TLS sur le port 443
 2. Router `/api/*` vers le conteneur API (port 8080)
 3. Router toutes les autres requêtes vers le conteneur web (port 80)
-4. Définir `X-Forwarded-Proto: https` et préserver `Host` / `X-Forwarded-Host`
+4. Définir `X-Forwarded-Proto: https` et préserver `Host`. KANAP construit les liens qu'il envoie à partir de `APP_BASE_URL` et ne lit plus `X-Forwarded-Host` en dehors du développement local. Quand le site utilise un port non standard, ajoutez l'adresse exacte avec son port à `CORS_ORIGINS`.
 5. Supporter l'upgrade WebSocket (utilisé par les fonctionnalités temps réel)
 
 Comme les conteneurs sont liés à `127.0.0.1`, nginx tourne sur le même hôte et proxifie vers `localhost`.

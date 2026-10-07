@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { assertPublicHttpTarget } from '../common/ssrf-guard';
+import { getEnvMode, isDevelopmentEnv } from '../common/env';
 import { AiAttachmentService } from './ai-attachment.service';
 import { AiConversationService } from './ai-conversation.service';
 import { AiModelResolverService } from './ai-model-resolver.service';
@@ -163,8 +164,8 @@ function isAiChatDebugTraceEnabled(): boolean {
   if (process.env.AI_CHAT_DEBUG_TRACE === '0') {
     return false;
   }
-  const nodeEnv = String(process.env.NODE_ENV || '').trim().toLowerCase();
-  return nodeEnv !== 'production' && nodeEnv !== 'test';
+  // Timing traces are a workstation aid: development mode only, never under test.
+  return isDevelopmentEnv() && getEnvMode() !== 'test';
 }
 
 type ChatStreamParams = {

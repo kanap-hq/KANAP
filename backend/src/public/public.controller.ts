@@ -33,6 +33,10 @@ import {
   buildNewTenantNotificationEmail,
 } from '../notifications/notification-templates';
 import { resolveEmailLocale } from '../i18n/email-i18n';
+import { developmentRequestOrigin, resolveTenantAppBaseUrl } from '../common/url';
+
+/** The answer of a trial sign-up when the address of the public website is not configured. */
+export const MARKETING_URL_NOT_CONFIGURED_MESSAGE = 'marketing URL is not configured: set MARKETING_BASE_URL';
 
 const STRIPE_EU_BANK_TRANSFER_COUNTRIES = new Set<string>(['BE', 'DE', 'ES', 'FR', 'IE', 'NL']);
 const STRIPE_DEFAULT_EU_BANK_TRANSFER_COUNTRY = 'FR';
@@ -231,6 +235,9 @@ export class PublicController {
   @Throttle({ default: RATE_LIMITS.publicStartTrial })
   async startTrial(@Body() body: StartTrialDto, @Req() req: any) {
     if (Features.SINGLE_TENANT) throwNotAvailableInMode();
+    // The activation link base comes from the configuration and is checked first: without it
+    // nothing is saved or sent, and every sign-up gets the same answer.
+    const marketingBaseUrl = this.resolveMarketingBaseUrl(req);
     await this.turnstile.verifyOrThrow({
       token: this.resolveCaptchaToken(body),
       remoteIp: this.resolveClientIp(req),
@@ -288,7 +295,7 @@ export class PublicController {
 
     await this.trialSignups.save(signup);
 
-    const activationUrl = `${this.resolveMarketingBaseUrl(req)}/activate.html#token=${token}`;
+    const activationUrl = `${marketingBaseUrl}/activate.html#token=${token}`;
     const emailLocale = this.resolveActivationEmailLocale(req);
 
     try {
@@ -450,6 +457,8 @@ export class PublicController {
     if (signup.expires_at && signup.expires_at.getTime() < Date.now()) {
       throw new BadRequestException('token expired');
     }
+    // The new tenant's address, from the configuration (common/url.ts), before anything is written.
+    const tenantUrl = resolveTenantAppBaseUrl(req, signup.slug);
 
     const runner = this.dataSource.createQueryRunner();
     await runner.connect();
@@ -535,9 +544,6 @@ export class PublicController {
       }
     }
 
-    const host = this.sanitizeForwardedHost((req.headers['x-forwarded-host'] as string) || (req.headers.host as string) || '');
-    const proto = this.normalizeForwardedProto((req.headers['x-forwarded-proto'] as string) || req.protocol || 'http');
-    const tenantUrl = this.computeTenantUrl(proto, host, signup.slug);
     const resetToken = await withTenant(this.dataSource, tenant.id, (manager) =>
       this.auth.createPasswordResetToken({ id: owner.id, email: owner.email, tenant_id: tenant.id }, manager),
     );
@@ -569,46 +575,20 @@ export class PublicController {
     }
   }
 
-  private computeTenantUrl(proto: string, host: string, slug: string): string {
-    const h = (host || '').toLowerCase();
-    if (h.endsWith('lvh.me')) return `${proto}://${slug}.lvh.me`;
-    if (h.endsWith('dev.kanap.net')) return `${proto}://${slug}.dev.kanap.net`;
-    if (h.endsWith('qa.kanap.net')) return `${proto}://${slug}.qa.kanap.net`;
-    return `${proto}://${slug}.kanap.net`;
-  }
-
+  /**
+   * Base URL of the trial activation link: `MARKETING_BASE_URL`. In development mode only, a
+   * request on a local development host stands in for it (common/url.ts).
+   */
   private resolveMarketingBaseUrl(req: any): string {
-    const configured = process.env.MARKETING_BASE_URL;
-    if (configured && configured.trim() !== '') {
-      return configured.replace(/\/$/, '');
-    }
-    const host = (req.headers['x-forwarded-host'] as string) || (req.headers.host as string);
-    const proto = this.normalizeForwardedProto((req.headers['x-forwarded-proto'] as string) || req.protocol || 'http');
-    const safeHost = this.sanitizeForwardedHost(host);
-    if (!safeHost) throw new BadRequestException('Unable to resolve marketing host');
-    return `${proto}://${safeHost}`.replace(/\/$/, '');
+    const configured = String(process.env.MARKETING_BASE_URL || '').trim();
+    if (configured) return configured.replace(/\/$/, '');
+    const devOrigin = developmentRequestOrigin(req);
+    if (devOrigin) return devOrigin;
+    throw new BadRequestException(MARKETING_URL_NOT_CONFIGURED_MESSAGE);
   }
 
   private resolveCaptchaToken(body: { captchaToken?: string | null; captcha_token?: string | null }): string | undefined {
     return (body.captchaToken ?? body.captcha_token ?? undefined) || undefined;
-  }
-
-  private normalizeForwardedProto(raw: string | undefined): 'http' | 'https' {
-    const first = String(raw || '').split(',')[0]?.trim().replace(/:$/, '').toLowerCase();
-    return first === 'https' ? 'https' : 'http';
-  }
-
-  private sanitizeForwardedHost(raw: string | undefined): string {
-    const first = String(raw || '').split(',')[0]?.trim();
-    if (!first) return '';
-    const withoutScheme = first.replace(/^https?:\/\//i, '');
-    const hostAndPort = withoutScheme.split('/')[0] || '';
-    if (hostAndPort.startsWith('[')) {
-      const end = hostAndPort.indexOf(']');
-      return (end >= 0 ? hostAndPort.slice(0, end + 1) : '').toLowerCase();
-    }
-    const colon = hostAndPort.indexOf(':');
-    return (colon >= 0 ? hostAndPort.slice(0, colon) : hostAndPort).toLowerCase();
   }
 
   private resolveActivationEmailLocale(req: any): string {

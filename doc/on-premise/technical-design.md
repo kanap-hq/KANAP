@@ -22,7 +22,7 @@ This document describes the technical design for on-premise deployments. User-fa
 - **Local Auth:** Username/password works without external dependencies
 - **SSO:** Entra ID is optional; local auth is fallback
 - **FX Rates:** Gracefully degrades if API keys are not configured
-- **Email links:** Use `APP_BASE_URL` directly in single-tenant mode (no subdomain derivation)
+- **Email links:** Built from `APP_BASE_URL` in single-tenant mode (no subdomain derivation); request headers are not read outside local development
 
 ## Deployment Modes
 
@@ -88,7 +88,7 @@ Frontend recognizes `FEATURE_DISABLED` in the API client and does not redirect o
 - Any domain/IP works (no wildcard DNS)
 - If tenant not yet provisioned (first-boot race), returns `503 TENANT_NOT_READY`
 
-**Important:** `Host` is still used for URL generation (password reset/invites). Ensure the reverse proxy forwards `Host` and `X-Forwarded-Proto`, or set `APP_BASE_URL`.
+**Important:** `Host` does not build any link. Password reset, invitation, Entra sign-in and export links come from the configured address (`APP_BASE_URL`; see URL Resolution). Without it those endpoints answer 400 `application URL is not configured: set APP_BASE_URL`. `Host` and `X-Forwarded-Proto` still matter for the request's own address in the origin policy and for the `Secure` cookie attribute when `APP_ENV` is unspecified. Only in development mode and on a local development host (`lvh.me`, `localhost`, `*.localhost`, `dev.kanap.net`) do links follow the request host.
 
 ## Database Role Safety
 
@@ -138,11 +138,34 @@ These return `403 FEATURE_DISABLED` when the relevant feature is off:
 
 ## URL Resolution (Notifications & Exports)
 
-`resolveNotificationBaseUrl()` in `backend/src/common/url.ts`:
-- **Single-tenant:** Uses `APP_BASE_URL` directly (no subdomain logic)
-- **Multi-tenant:** Uses `APP_URL` with slug substitution (`//app.` → `//{slug}.`)
+`resolveConfiguredAppBaseUrl()` in `backend/src/common/url.ts` is the single source of the application address. It reads configuration only; request headers are ignored outside development mode on a local development host.
+- **Single-tenant:** `APP_BASE_URL`, then `PUBLIC_APP_URL`, as configured (no subdomain logic)
+- **Multi-tenant:** the first of `APP_BASE_URL`, `PUBLIC_APP_URL`, `APP_URL` whose host is on a known tenant domain, turned into the tenant's address (slug substitution, `//app.` → `//{slug}.`, scheme and port kept); when none is, the first one as configured
+- **Nothing configured:** `resolveAppBaseUrl()` and `resolveTenantAppBaseUrl()` (password reset, invitation, Entra, knowledge links) throw 400 `application URL is not configured: set APP_BASE_URL`; `resolveNotificationBaseUrl()` throws; the scheduled expiration and weekly review runs are skipped with one log line; the XLSX export of the portfolio weekly report falls back to relative links. There is no default address.
 
-Used by: `scheduled-notifications.service.ts`, `notifications.service.ts`, `portfolio-status-change-report.controller.ts`
+Used by: `scheduled-notifications.service.ts`, `notifications.service.ts`, `portfolio-status-change-report.controller.ts`, `portfolio-weekly-report.controller.ts`, `users.service.ts` and `auth.controller.ts` (password reset, invitation), `entra.controller.ts`, `knowledge.controller.ts`
+
+## Run Mode and Browser Origins
+
+`getRuntimeMode()` in `backend/src/common/env.ts` reads `APP_ENV`, or `NODE_ENV` when `APP_ENV` is absent:
+
+| Mode | Values | Effect |
+|------|--------|--------|
+| `development` | `development`, `dev`, `local`, `test` | Links follow a local development host; `CORS_ORIGINS` entries match as written and an empty value allows every origin; `PLATFORM_ADMIN_EMAILS=*`; unsigned Stripe webhooks |
+| `production` | `production`, `prod` | Start-up requires `APP_BASE_URL` and `CORS_ORIGINS`; `Secure` cookie always |
+| `unspecified` | anything else or absent | Production rules for links, origins and platform administration; missing values are start-up warnings; the cookie follows the request |
+
+`validateStartupEnv()` throws only for `DATABASE_URL`, `JWT_SECRET` and, in production mode, `APP_BASE_URL` and `CORS_ORIGINS`. It returns warnings printed as `[ENV] run mode: ...`, `[ENV]`, `[CONFIG]` and `[CORS]` lines.
+
+`backend/src/common/cors-policy.ts` holds the origin policy shared by the CORS middleware and the cookie-based session routes. A request without `Origin` passes. Otherwise the origin is accepted when it is:
+- an exact entry of `CORS_ORIGINS`;
+- the application address (`APP_BASE_URL`, or the tenant's address in multi-tenant mode);
+- the address of the request (host and port equal to `Host`; outside production mode, the host name only when `Host` has no port);
+- multi-tenant: a pattern entry (`https://*.kanap.net`), for the tenant the request targets only;
+- single-tenant: a pattern entry as written, with a start-up warning (a later version accepts exact entries only);
+- development mode: entries as written, and every origin when `CORS_ORIGINS` is empty.
+
+In unspecified mode with `CORS_ORIGINS` empty and no application address, every origin stays allowed in this version (start-up warning). A refused origin gets a 403 JSON answer without CORS headers, logged once per origin and per minute (`[CORS] Rejected origin`). `POST /auth/refresh` and `POST /auth/logout` apply the same policy to `Origin` (or `Referer` when `Origin` is missing) and answer 403 when it is refused.
 
 ## Frontend Configuration
 
@@ -177,7 +200,7 @@ GET /api/config/public
 | Trial / support endpoints | Active | Return 404 |
 | Billing | Stripe-based | Disabled (`FEATURE_DISABLED`) |
 | Subscription defaults | Starter / 5 seats | On-Prem / 1000 seats |
-| Notification URLs | `APP_URL` + slug substitution | `APP_BASE_URL` directly |
+| Application address (links, redirects, exports) | `APP_BASE_URL`, `PUBLIC_APP_URL`, `APP_URL` + slug substitution | `APP_BASE_URL` directly |
 
 ## CI Matrix
 
@@ -195,9 +218,9 @@ Both modes must build clean. This catches import/type errors from feature flag u
 Required at startup (enforced by `validateStartupEnv()`):
 - `JWT_SECRET`
 - `DATABASE_URL`
-- `APP_BASE_URL` (in production mode)
+- `APP_BASE_URL` and `CORS_ORIGINS` (in production mode, `APP_ENV=production`)
 
-Fail fast with a clear error if missing.
+Fail fast with a clear error if missing. Outside production mode a missing `APP_BASE_URL` or `CORS_ORIGINS` is a start-up warning (see Run Mode and Browser Origins).
 
 ## Token Family Secrets and Purpose Typing
 
@@ -279,7 +302,7 @@ Rules:
 | `admin-coa-templates.controller.ts` | 11 | All `/admin/coa-templates/*` | 404 via `MultiTenantOnlyGuard` |
 | `admin-ops.controller.ts` | 11 | All `/admin/ops/*` | 404 via `MultiTenantOnlyGuard` |
 | `billing.service.ts` | 1281 | `ensureSubscription()` fallback | Defaults to On-Prem / 1000 seats instead of Starter / 5 |
-| `url.ts` | 163 | `resolveNotificationBaseUrl()` | Uses `APP_BASE_URL` directly (no subdomain substitution) |
+| `url.ts` | 164 | `resolveConfiguredAppBaseUrl()` | Single-tenant: `APP_BASE_URL` (then `PUBLIC_APP_URL`) as configured, no subdomain substitution; nothing configured returns null and callers answer 400 or skip |
 | `portfolio-status-change-report.controller.ts` | 134 | Export base URL | Delegates to `resolveNotificationBaseUrl()` |
 | `feature-gates.ts` | 34 | `MultiTenantOnlyGuard` | Throws 404 when `SINGLE_TENANT` is true |
 
@@ -362,7 +385,7 @@ No feature flag. The module is registered and the API is reachable in both modes
 
 | File | Line | What | Behavior |
 |------|------|------|----------|
-| `url.ts` | 163 | `resolveNotificationBaseUrl()` | Single-tenant: `APP_BASE_URL` directly. Multi-tenant: `APP_URL` with slug substitution |
+| `url.ts` | 164 | `resolveConfiguredAppBaseUrl()` | Single-tenant: `APP_BASE_URL` directly. Multi-tenant: first of `APP_BASE_URL`, `PUBLIC_APP_URL`, `APP_URL` on a tenant domain, with slug substitution. No default address |
 | `scheduled-notifications.service.ts` | 52, 57 | Weekly review + expiration emails | Calls `resolveNotificationBaseUrl(slug)` |
 | `notifications.service.ts` | 122 | Event-driven notifications | Calls `resolveNotificationBaseUrl(tenantSlug)` |
 | `portfolio-status-change-report.controller.ts` | 134 | PDF export base URL | Calls `resolveNotificationBaseUrl(null)` in single-tenant |
