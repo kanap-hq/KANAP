@@ -14,6 +14,7 @@ import {
   HEALTHY_STATUSES,
   FREEZE_GRACE_DAYS,
   BANK_TRANSFER_MIN_AMOUNT_EUR_CENTS,
+  CLOUD_SUBSCRIPTION_QUANTITY,
   getPriceId,
   isBankTransferEligible,
   resolvePlanKeyFromPriceId,
@@ -127,7 +128,7 @@ export class BillingService {
       });
     }
     const seats_used = await this.computeSeatsUsed(mg);
-    const estimated = await this.estimateRecurringAmount(sub, seats_used);
+    const estimated = await this.estimateRecurringAmount(sub);
     const amount = sub.amount ?? estimated?.amount ?? null;
     const currency = sub.currency ?? estimated?.currency ?? null;
 
@@ -318,8 +319,7 @@ export class BillingService {
     const successUrl = opts.successUrl ?? this.stripeConfig.getCheckoutSuccessUrl();
     const cancelUrl = opts.cancelUrl ?? this.stripeConfig.getCheckoutCancelUrl();
 
-    // Force quantity=1 for all cloud plans
-    const quantity = 1;
+    const quantity = CLOUD_SUBSCRIPTION_QUANTITY;
 
     // Card-only checkout is enforced for the checkout flow.
     const session = await client.checkout.sessions.create({
@@ -485,7 +485,7 @@ export class BillingService {
       const invoicePaymentSettings = this.buildSendInvoicePaymentSettings(invoicePaymentMethodTypes, euBankTransferCountry);
       stripeSubResult = await client.subscriptions.create({
         customer: customerId,
-        items: [{ price: priceId, quantity: 1 }],
+        items: [{ price: priceId, quantity: CLOUD_SUBSCRIPTION_QUANTITY }],
         collection_method: 'send_invoice',
         days_until_due: 30,
         payment_settings: invoicePaymentSettings,
@@ -1095,11 +1095,15 @@ export class BillingService {
     return null;
   }
 
-  private async estimateRecurringAmount(sub: Subscription, seats_used: number): Promise<{ amount: number; currency: string } | null> {
-    const seats = Math.max(seats_used, sub.active_seats ?? 0, sub.seat_limit ?? 0, 1);
+  /**
+   * Amount of one period at the quantity checkout uses: the price does not depend on the
+   * number of users. On-premise has no hosted subscription, so no amount.
+   */
+  private async estimateRecurringAmount(sub: Subscription): Promise<{ amount: number; currency: string } | null> {
+    if (Features.SINGLE_TENANT) return null;
     const priceInfo = await this.resolvePriceInfo(sub);
     if (!priceInfo || !priceInfo.currency) return null;
-    const amount = computePriceAmount(priceInfo, seats);
+    const amount = computePriceAmount(priceInfo, CLOUD_SUBSCRIPTION_QUANTITY);
     if (amount == null) return null;
     return { amount, currency: priceInfo.currency };
   }
@@ -1319,15 +1323,6 @@ export class BillingService {
       .where('user.status = :status', { status: 'enabled' })
       .andWhere('(role.role_name IS NULL OR LOWER(role.role_name) <> :contact)', { contact: 'contact' })
       .getCount();
-  }
-
-  private async resolveCheckoutQuantity(opts: { manager: EntityManager | null }): Promise<number> {
-    if (opts.manager) {
-      const summary = await this.getSubscriptionSummary({ manager: opts.manager });
-      return summary.seats_used || summary.seat_limit || 1;
-    }
-    const summary = await this.getSubscriptionSummary();
-    return summary.seats_used || summary.seat_limit || 1;
   }
 
   private async requireTenant(id: string, manager?: EntityManager): Promise<Tenant> {
