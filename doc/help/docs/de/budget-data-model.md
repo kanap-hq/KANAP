@@ -43,7 +43,7 @@ Die hier beschriebenen Dateien sind der Vertrag, auf den Sie sich stützen. Ihre
 | | Budgetverantwortlicher (Benutzer) | Keiner oder einer |
 | | Übergeordnete Gruppe | Keine oder eine |
 | Gruppe von Kostenstellen | Übergeordnete Gruppe | Keine oder eine. Eine Gruppe hat kein Unternehmen |
-| Unternehmen | Kontenplan | Einer. Ein Unternehmen ohne eigenen Kontenplan verwendet den globalen Standardkontenplan |
+| Unternehmen | Kontenplan | Einer. Ein Unternehmen ohne eigenen Kontenplan verwendet den Kontenplan, der Standard für andere Länder ist |
 | | Land und Basiswährung | Je eines |
 | | Kennzahlen: Mitarbeiterzahl, IT-Benutzer, Umsatz | Ein Satz pro Jahr |
 | Abteilung | Unternehmen | Eines |

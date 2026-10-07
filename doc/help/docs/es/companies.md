@@ -133,7 +133,7 @@ Cada empresa puede vincularse a un **Plan de cuentas** (CoA), que define el conj
 
 **Cómo funciona**:
 
-- Cuando crea una empresa, se asigna automáticamente al CoA predeterminado para su país (si existe). Si no existe un predeterminado para el país, se utiliza el CoA predeterminado global.
+- Cuando crea una empresa, se asigna automáticamente al CoA predeterminado para su país (si existe). Si no existe un predeterminado para el país, se utiliza el plan que tiene el rol **Predeterminado para otros países**.
 - Puede cambiar la asignación de CoA en el panel **Propiedades** usando el selector de **Plan de cuentas**. El selector muestra los CoA que coinciden con el país de la empresa más cualquier CoA de alcance global.
 - Cuando cambia el país de la empresa, el CoA lo sigue si el actual pertenece a otro país: pasa al predeterminado del nuevo país. Un CoA global se mantiene.
 - En una empresa existente, el CoA no se puede vaciar. Solo puede sustituirlo por otro.
@@ -145,7 +145,7 @@ Cada empresa puede vincularse a un **Plan de cuentas** (CoA), que define el conj
 - **Empresas sin CoA** (legado): pueden usar cuentas que no pertenecen a ningún plan de cuentas. Esto soporta la migración gradual al sistema CoA.
 - **Cambio de CoA**: si cambia una empresa a un CoA diferente, las partidas de gasto existentes conservan sus cuentas actuales (con una advertencia si no coinciden con el nuevo CoA), pero los nuevos elementos usarán cuentas del nuevo CoA.
 
-**Configurar planes de cuentas**: vaya a **Datos maestros > Planes de cuentas** para ver, crear o gestionar sus conjuntos de CoA. Puede crear CoA desde cero o cargarlos desde plantillas de la plataforma (conjuntos de cuentas estándar por país). Cada país puede tener un CoA predeterminado que se asigna automáticamente a las nuevas empresas de ese país.
+**Configurar planes de cuentas**: vaya a **Datos maestros > Planes de cuentas** para ver, crear o gestionar sus conjuntos de CoA. Puede crear CoA desde cero o cargarlos desde plantillas de la plataforma (conjuntos de cuentas estándar por país). Cada país puede tener un CoA predeterminado (**Plan predeterminado del país ({country})**), que se propone al crear una empresa en ese país. Las empresas de un país sin predeterminado usan el plan **Predeterminado para otros países**. Consulte [Roles de los planes](chart-of-accounts.md#roles-de-los-planes).
 
 **Consejo**: si ve una advertencia de "cuenta obsoleta" al editar partidas OPEX/CAPEX, significa que la cuenta no pertenece al plan de cuentas actual de la empresa. Actualice la cuenta a una del CoA correcto para resolver esto.
 

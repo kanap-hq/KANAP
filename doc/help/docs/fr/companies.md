@@ -133,7 +133,7 @@ Chaque société peut être liée à un **Plan comptable** (CoA), qui définit l
 
 **Comment ça fonctionne** :
 
-- Lorsque vous créez une société, elle est automatiquement assignée au CoA par défaut pour son pays (si un tel CoA existe). S'il n'y a pas de CoA par défaut pour le pays, le CoA par défaut global est utilisé.
+- Lorsque vous créez une société, elle est automatiquement assignée au CoA par défaut pour son pays (si un tel CoA existe). S'il n'y a pas de CoA par défaut pour le pays, le plan qui porte le rôle **Plan par défaut des autres pays** est utilisé.
 - Vous pouvez changer l'assignation du CoA dans le panneau **Propriétés** en utilisant le sélecteur **Plan comptable**. Le sélecteur affiche les CoA correspondant au pays de la société plus les CoA de portée globale.
 - Lorsque vous changez le pays de la société, le CoA suit si l'actuel appartient à un autre pays : il passe à celui par défaut du nouveau pays. Un CoA global reste en place.
 - Sur une société existante, le CoA ne peut pas être vidé. Vous pouvez seulement le remplacer par un autre.
@@ -145,7 +145,7 @@ Chaque société peut être liée à un **Plan comptable** (CoA), qui définit l
 - **Sociétés sans CoA** (historique) : peuvent utiliser des comptes qui n'appartiennent à aucun plan comptable. Cela supporte la migration progressive vers le système de CoA.
 - **Changer de CoA** : si vous basculez une société vers un autre CoA, les postes de dépenses existants conservent leurs comptes actuels (avec un avertissement s'ils ne correspondent pas au nouveau CoA), mais les nouveaux postes utiliseront les comptes du nouveau CoA.
 
-**Configurer les plans comptables** : rendez-vous dans **Données de référence > Plans comptables** pour consulter, créer ou gérer vos ensembles de CoA. Vous pouvez créer des CoA de zéro ou les charger depuis des modèles de la plateforme (ensembles de comptes standard par pays). Chaque pays peut avoir un CoA par défaut qui est automatiquement assigné aux nouvelles sociétés de ce pays.
+**Configurer les plans comptables** : rendez-vous dans **Données de référence > Plans comptables** pour consulter, créer ou gérer vos ensembles de CoA. Vous pouvez créer des CoA de zéro ou les charger depuis des modèles de la plateforme (ensembles de comptes standard par pays). Chaque pays peut avoir un CoA par défaut (**Plan par défaut du pays ({pays})**), proposé lorsque vous créez une société dans ce pays. Les sociétés d'un pays sans plan par défaut utilisent le plan **Plan par défaut des autres pays**. Voir [Rôles des plans](chart-of-accounts.md#roles-des-plans).
 
 **Conseil** : Si vous voyez un avertissement « compte obsolète » lors de la modification de postes OPEX/CAPEX, cela signifie que le compte n'appartient pas au plan comptable actuel de la société. Mettez à jour le compte vers un compte du bon CoA pour résoudre cet avertissement.
 

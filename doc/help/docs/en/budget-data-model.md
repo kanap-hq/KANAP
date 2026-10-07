@@ -43,7 +43,7 @@ The files described here are the contract to rely on. Their columns are document
 | | Budget holder (user) | Zero or one |
 | | Parent group | Zero or one |
 | Group of cost centers | Parent group | Zero or one. A group has no company |
-| Company | Chart of accounts | One. A company without its own chart uses the global default chart |
+| Company | Chart of accounts | One. A company without its own chart uses the chart that is the default for other countries |
 | | Country and base currency | One each |
 | | Metrics: headcount, IT users, turnover | One set per year |
 | Department | Company | One |

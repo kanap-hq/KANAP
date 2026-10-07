@@ -45,23 +45,37 @@ Die Seite hat zwei Ebenen: einen **Kontenplan-Selektor** oben und ein **Konten-G
 
 ### Kontenplan-Chip-Leiste
 
-Eine horizontale Reihe von Chips repräsentiert jeden Kontenplan. Klicken Sie auf einen Chip, um das Konten-Grid auf diesen Kontenplan umzuschalten.
+Eine horizontale Reihe von Chips stellt jeden Kontenplan dar. Klicken Sie auf einen Chip, um das Konten-Grid auf diesen Kontenplan umzuschalten.
 
-- Der ausgewählte Chip ist ausgefüllt; andere sind umrandet.
-- Ein Stern-Badge (**★**) markiert den Länder-Standard für das Land dieses Kontenplans.
-- Ein Kreis-Plus-Badge markiert den globalen Standard.
-- Fahren Sie mit der Maus über einen Chip, um den Kontenplan-Namen und die Kontenanzahl zu sehen.
+- Der ausgewählte Chip ist gefüllt, die übrigen sind umrandet.
+- Fahren Sie mit der Maus über einen Chip, um den Namen des Kontenplans, seine Länder, die Anzahl der Konten und seine Rollen zu sehen. Siehe [Rollen der Kontenpläne](#rollen-der-kontenplane).
 
-Wenn Sie die Berechtigung `accounts:manager` haben, erscheinen zwei zusätzliche Steuerelemente rechts:
+Mit der Berechtigung `accounts:manager` erscheinen rechts zwei weitere Bedienelemente:
 
 - **Neu**: Öffnet den Dialog **Neuer Kontenplan**.
-- **Verwalten**: Öffnet das Modal **Kontenpläne verwalten** zur Administration.
+- **Kontenpläne verwalten**: Öffnet den Dialog [Kontenpläne verwalten](#der-dialog-kontenplane-verwalten).
 
-Wenn keine Kontenpläne existieren, zeigt die Chip-Leiste eine Aufforderung, Ihren ersten Kontenplan zu erstellen.
+Wenn kein Kontenplan existiert, fordert die Chip-Leiste Sie auf, Ihren ersten Kontenplan zu erstellen.
 
 ### Kontenplan-Zusammenfassung
 
-Unterhalb der Chip-Leiste zeigt eine Zusammenfassungszeile den **Code**, die **Kontenanzahl**, den **Namen** und das **Land** des ausgewählten Kontenplans (für länderbezogene Kontenpläne).
+Unter der Chip-Leiste zeigt eine Zusammenfassung den **Code** und die **Anzahl der Konten** des ausgewählten Kontenplans. Eine zweite Zeile nennt seinen **Namen**, seine **Länder** und seine **Rollen** im Klartext, zum Beispiel „Französischer Kontenplan · Frankreich · Länderstandard (Frankreich)".
+
+### Konsolidierungszeile
+
+Wenn Ihr Arbeitsbereich einen [Konsolidierungskontenplan](#der-konsolidierungskontenplan) hat, zeigt eine dritte Zeile, wie gut der ausgewählte Kontenplan darauf abgebildet ist. Auf dem Konsolidierungskontenplan selbst erscheint sie nicht, weil seine Konten die Konzernkonten sind.
+
+In den folgenden Beispielen steht `IFRS` für den Code Ihres Konsolidierungskontenplans.
+
+- **Alle Konten sind dem Konsolidierungskontenplan IFRS zugeordnet.** Jedes Konto hat ein Konsolidierungskonto, das im Konsolidierungskontenplan existiert.
+- **N Konten verweisen auf ein Konsolidierungskonto, das in IFRS fehlt**: Diese Konten tragen eine Nummer, die der Konsolidierungskontenplan nicht enthält.
+- **N Konten haben kein Konsolidierungskonto**: Diese Konten sind noch nicht zugeordnet.
+
+Jede Zahl ist ein Link. Klicken Sie darauf, um das Grid auf diese Konten zu filtern. Der Filter zeigt Konten aller Status, deaktivierte Konten werden also mitgezählt und aufgelistet. Klicken Sie erneut auf die Zahl oder auf **Alle Konten anzeigen**, um zur normalen Liste zurückzukehren. Der Filter wird auch entfernt, wenn Sie einen anderen Chip wählen. Wenn Sie ein Konto aus einer gefilterten Liste öffnen, durchlaufen die Pfeile für vorheriges und nächstes Konto im Arbeitsbereich dieselbe gefilterte Liste.
+
+Im Grid markiert ein kleiner oranger Punkt neben **Konsol.-Kontonr.** ein Konto, dessen Nummer nicht im Konsolidierungskontenplan steht. Fahren Sie mit der Maus über den Punkt, um den Namen des Konsolidierungskontenplans zu sehen.
+
+Ohne Konsolidierungskontenplan lautet die Zeile „Kein Konsolidierungskontenplan." Manager können auf **Wählen Sie einen unter Kontenpläne verwalten** klicken, um den Dialog zu öffnen.
 
 ### Konten-Grid
 
@@ -70,13 +84,13 @@ Das Grid zeigt nur Konten für den ausgewählten Kontenplan.
 **Standardspalten**:
 - **Kontonr.**: Die Kontonummer. Zum Öffnen des Konten-Arbeitsbereichs anklicken.
 - **Name**: Der Kontoname. Zum Öffnen des Konten-Arbeitsbereichs anklicken.
-- **Kons. Kontonr.**: Die Konsolidierungs-Kontonummer.
-- **Kons. Name**: Der Konsolidierungs-Kontoname.
+- **Konsol.-Kontonr.**: Die Konsolidierungs-Kontonummer.
+- **Konsol.-Name**: Der Konsolidierungs-Kontoname.
 
 **Zusätzliche Spalten** (standardmäßig ausgeblendet, über Spaltenauswahl aktivierbar):
 - **Lokaler Name**: Der Kontoname in der Landessprache.
 - **Beschreibung**: Kontobeschreibung.
-- **Kons. Beschreibung**: Konsolidierungs-Kontobeschreibung.
+- **Konsol.-Beschreibung**: Konsolidierungs-Kontobeschreibung.
 - **Status**: Ob das Konto aktiviert oder deaktiviert ist.
 - **Erstellt**: Zeitstempel der Kontoerstellung.
 
@@ -88,7 +102,7 @@ Das Grid zeigt nur Konten für den ausgewählten Kontenplan.
 **Sortierung**: Standard ist **Kontonr.** aufsteigend.
 
 **Aktionen** (im Seitenheader):
-- **Neues Konto** (`accounts:manager`): Öffnet einen neuen Konten-Arbeitsbereich, vorverknüpft mit dem ausgewählten Kontenplan.
+- **Neues Konto** (`accounts:manager`): Öffnet ein neues Kontoformular, in dem der ausgewählte Kontenplan bereits gewählt ist.
 - **CSV importieren** (`accounts:admin`): Konten in den ausgewählten Kontenplan importieren.
 - **CSV exportieren** (`accounts:admin`): Konten aus dem ausgewählten Kontenplan exportieren.
 - **Ausgewählte löschen** (`accounts:admin`): Ausgewählte Kontenzeilen löschen. Zeilen über die Kontrollkästchen-Spalte auswählen (für Admins sichtbar).
@@ -99,59 +113,50 @@ Alle Zeilenzellen sind anklickbare Links zum Konten-Arbeitsbereich. Sie können 
 
 Klicken Sie auf eine beliebige Zeile im Konten-Grid, um den Konten-Arbeitsbereich zu öffnen.
 
-### Übersicht
+### Aufbau
 
-Der Arbeitsbereich hat einen einzelnen **Übersichts**-Tab mit einem Formular zum Anzeigen und Bearbeiten der Kontofelder.
+- **Kopfbereich**: Die Kontonummer dient als Referenz (Sie können sie dort kopieren) und der Kontoname als Titel. Klicken Sie auf den Titel, um das Konto umzubenennen. Die Pfeile **Vorheriges Konto** und **Nächstes Konto** führen durch die Konten der Liste, aus der Sie kommen, in derselben Reihenfolge und mit derselben Suche und denselben Filtern. Der Link zurück führt zu **Kontenpläne** und behält Ihre Auswahl bei.
+- **Eigenschaften-Bereich** rechts: **Kontenplan**, **Kontonummer** und **Lebenszyklus** (der Statusschalter und das Datum **Ende der Gültigkeit**). Mit der Bereichsschaltfläche klappen Sie ihn ein oder wieder aus. Siehe [Status und Lebenszyklus](#status-und-lebenszyklus).
+- **Hauptspalte**: **Lokaler Name (Landessprache)**, **Beschreibung** und der Abschnitt **Konsolidierung**.
 
-**Was Sie bearbeiten können**:
-- **Kontenplan**: Der Kontenplan, zu dem dieses Konto gehört (Dropdown aller Kontenpläne in Ihrem Arbeitsbereich).
-- **Kontonummer** (Pflicht): Die Kontonummer.
-- **Kontoname** (Pflicht): Der Kontoname auf Deutsch (oder Ihrer Hauptsprache).
-- **Lokaler Name (Landessprache)**: Der Kontoname in der Landessprache.
-- **Beschreibung**: Freitext-Beschreibung.
-- **Konsolidierungs-Kontonummer**: Die standardisierte Konsolidierungs-Kontonummer.
-- **Konsolidierungs-Kontoname**: Der standardisierte Konsolidierungsname.
-- **Konsolidierungs-Kontobeschreibung**: Details zur Konsolidierungskategorie.
-- **Lebenszyklus**: der Statusschalter, dessen Beschriftung den aktuellen Zustand zeigt (**Aktiviert** oder **Deaktiviert**), und das Datum **Ende der Gültigkeit**. Setzen Sie ein **Ende der Gültigkeit**, um zu planen, wann das Konto nicht mehr in Auswahl-Dropdowns erscheint. Siehe [Status und Lebenszyklus](#status-und-lebenszyklus).
+**Änderungen werden automatisch gespeichert.** Jedes Feld wird gespeichert, sobald Sie es verlassen, und es gibt keine Schaltfläche „Speichern". Wird ein Wert abgelehnt, erscheint unter dem Feld eine Meldung. Die **Kontonummer** muss eine ganze Zahl größer als null sein.
 
-**Navigation**:
-- **Zurück / Weiter**: Zwischen Konten in der aktuellen Listenreihenfolge navigieren.
-- **Speichern**: Änderungen speichern (aktiviert, wenn das Formular geändert wurde und Sie `accounts:manager` haben).
-- **Zurücksetzen**: Nicht gespeicherte Änderungen verwerfen.
-- **Schließen** (X-Schaltfläche): Zur Kontenliste zurückkehren, Ihre Kontenplan-Auswahl, Sortierung, Suche und Filter beibehalten.
+Zum Bearbeiten benötigen Sie `accounts:manager`. Benutzer mit Leserechten sehen dieselbe Seite mit gesperrten Feldern.
 
-Wenn Sie mit nicht gespeicherten Änderungen navigieren, fordert das System Sie zum Speichern oder Verwerfen auf.
+### Konsolidierungskonto
 
-**Tipp**: Sie benötigen `accounts:manager` zum Bearbeiten. Schreibgeschützte Benutzer sehen ein Hinweisbanner.
+Der Abschnitt **Konsolidierung** enthält ein einziges Feld, **Konsolidierungskonto**. Es ist eine Liste der Konten Ihres [Konsolidierungskontenplans](#der-konsolidierungskontenplan), angezeigt mit Nummer und Name. Wählen Sie eines aus, um das Konto darauf abzubilden, oder wählen Sie **Keines**, um die Zuordnung zu entfernen.
+
+- Sie wählen die Nummer. Name und Beschreibung des Konsolidierungskontos stammen aus dem Konsolidierungskontenplan und erscheinen unter dem Feld. Sie können sie nicht eingeben.
+- Deaktivierte Konten des Konsolidierungskontenplans werden nur angeboten, wenn das Konto bereits darauf abgebildet ist. Sie tragen den Hinweis **Deaktiviert**.
+- Existiert die gespeicherte Nummer nicht im Konsolidierungskontenplan, bleibt sie mit einem orangen Punkt sichtbar, dazu erscheint die Meldung „Diese Nummer existiert im Konsolidierungskontenplan IFRS nicht. Wählen Sie ein Konto aus IFRS." Wählen Sie ein gültiges Konto, um das zu beheben.
+- Ohne Konsolidierungskontenplan ist das Feld gesperrt und zeigt „Es ist kein Konsolidierungskontenplan festgelegt." mit einem Link zu **Kontenpläne > Kontenpläne verwalten**.
+
+### Ein Konto erstellen
+
+**Neues Konto** in der Liste öffnet ein kurzes Formular, in dem der Kontenplan, den Sie gerade angesehen haben, bereits ausgewählt ist. Füllen Sie Kontenplan, Kontonummer und Name sowie die optionalen Felder aus und klicken Sie auf **Konto erstellen**. Nach dem Erstellen öffnet sich das Konto im Arbeitsbereich und wird danach automatisch gespeichert.
 
 ## Kontenpläne einrichten
 
 ### Einen Kontenplan erstellen
 
-Sie können einen Kontenplan auf zwei Arten erstellen:
+Klicken Sie in der Chip-Leiste auf **Neu** oder im Dialog „Kontenpläne verwalten" auf **Neuer Kontenplan**. Sie können einen Kontenplan auf zwei Arten erstellen:
 
-1. **Von Grund auf**: Wählen Sie einen Geltungsbereich und erstellen Sie dann einen leeren Kontenplan.
-   - **Geltungsbereich**: `GLOBAL` (kein Land) oder `LAND` (erfordert eine Länderauswahl)
-   - Für den Geltungsbereich `LAND` können Sie ihn als Standard für dieses Land markieren. Es existiert jeweils nur ein Standard pro Land.
-   - Sie können später Konten per CSV laden.
-2. **Aus einer Vorlage**: Laden Sie ein vorkonfiguriertes Kontenset, das von Plattform-Administratoren gepflegt wird.
-   - Globale Vorlagen erstellen einen `GLOBAL`-Kontenplan (kein Länderfeld).
-   - Ländervorlagen erstellen einen `LAND`-Kontenplan mit dem vorausgefüllten Land der Vorlage.
+1. **Ein leerer Kontenplan**: Konten fügen Sie später einzeln oder per CSV-Import hinzu.
+2. **Eine Vorlage**: Laden Sie einen vorkonfigurierten Kontensatz, der von Plattform-Administratoren gepflegt wird.
 
-**Erstellungsdialog-Felder**:
-- **Modus**: Wählen Sie **Von Grund auf erstellen** oder **Aus Vorlage kopieren**.
-- **Vorlage** (nur Vorlagenmodus): Wählen Sie eine Vorlage aus dem Dropdown. Globale Vorlagen werden als „ALL -- ..." angezeigt; Ländervorlagen zeigen ihren 2-Buchstaben-Code.
-- **Code** (Pflicht): Ein stabiler Bezeichner für CSV-Exporte/Importe und Deep-Links.
+**Felder des Erstellen-Dialogs**:
+- **Ausgangspunkt**: **Ein leerer Kontenplan** oder **Eine Vorlage**.
+- **Vorlage** (nur im Vorlagenmodus): Wählen Sie eine Vorlage aus der Liste. Jeder Eintrag zeigt Name, Länder und Version. Mit der Wahl einer Vorlage werden Name und Code ausgefüllt, die Sie ändern können.
+- **Code** (Pflicht): Eine kurze, stabile Kennung für CSV-Dateien und Links.
 - **Name** (Pflicht): Ein beschreibender Name für den Kontenplan.
-- **Geltungsbereich**: `Land` oder `Global`.
-- **Land** (nur Ländergeltungsbereich): Wählen Sie ein Land aus der Liste.
-- **Als Standard für dieses Land festlegen** (nur Ländergeltungsbereich): Aktivieren, um diesen Kontenplan als Standard für das ausgewählte Land festzulegen.
+- **Verwendet für**: **Ein Land** oder **Alle Länder**. Eine globale Vorlage erstellt immer einen Kontenplan für **Alle Länder**.
+- **Land** (nur bei einem Land): Wählen Sie ein Land aus der Liste.
+- **Als Standard für {country} festlegen** (nur bei einem Land): Aktivieren Sie das Feld, um diesen Kontenplan zum Standard des gewählten Landes zu machen.
 
-Im Vorlagenmodus können Sie vor der Erstellung eine **Vorprüfung** durchführen, um zu sehen, wie viele Konten eingefügt und aktualisiert werden. Klicken Sie dann auf **Erstellen** zum Abschließen.
+Klicken Sie im Vorlagenmodus vor dem Erstellen auf **Vorlage prüfen**, um zu sehen, wie viele Konten hinzugefügt und wie viele aktualisiert werden. Klicken Sie dann auf **Erstellen**.
 
-**Standards**:
-  - Pro Land: Sie können einen Kontenplan als Standard für jedes Land markieren. Neue Unternehmen aus diesem Land werden automatisch diesem Kontenplan zugewiesen (Sie können es später im Übersichts-Tab des Unternehmens ändern).
-  - Globaler Fallback: Ihr Arbeitsbereich kann einen globalen Standard-Kontenplan haben, der für Länder verwendet wird, die noch keinen länderspezifischen Standard haben. Länder-Standards haben Vorrang; der globale Standard gilt überall sonst.
+Ein neuer Kontenplan hat keine Rolle, außer dem Länderstandard, den Sie hier ankreuzen. Für eine andere Rolle nutzen Sie [Kontenpläne verwalten](#der-dialog-kontenplane-verwalten).
 
 ### Aus Vorlagen laden
 
@@ -162,12 +167,12 @@ Vorlagen sind Standard-Kontensets, die von Plattform-Administratoren verwaltet w
 **Funktionsweise**:
   - Gehen Sie zu **Stammdaten > Kontenpläne**
   - Klicken Sie auf **Neu** in der Chip-Leiste
-  - Wählen Sie den Modus **Aus Vorlage kopieren**
-  - Wählen Sie eine Vorlage; globale Vorlagen werden als „ALL -- ..." angezeigt (lädt einen `GLOBAL`-Kontenplan); Ländervorlagen zeigen ihren 2-Buchstaben-Code
-  - Das System zeigt einen Vorprüfungsbericht (wie viele Konten eingefügt/aktualisiert werden)
-  - Bestätigen, um Konten in Ihren Kontenplan zu kopieren
+  - Wählen Sie unter **Ausgangspunkt** die Option **Eine Vorlage**
+  - Wählen Sie eine Vorlage. Globale Vorlagen zeigen „Alle Länder" und erstellen einen Kontenplan für alle Länder; Ländervorlagen zeigen ihr Land
+  - Klicken Sie auf **Vorlage prüfen**, um zu sehen, wie viele Konten hinzugefügt und wie viele aktualisiert werden
+  - Klicken Sie auf **Erstellen**, um die Konten in Ihren Kontenplan zu kopieren
 
-**Was kopiert wird**: Kontonummern, Namen, lokale Namen (Landessprache), Beschreibungen, Konsolidierungszuordnungen und Status. Die Konten werden zu Ihren eigenen, die Sie bearbeiten können -- Änderungen an der Plattform-Vorlage wirken sich nicht auf Ihren Kontenplan aus, es sei denn, Sie laden sie explizit neu.
+**Was kopiert wird**: Kontonummern, Namen, lokale Namen (Landessprache), Beschreibungen, Konsolidierungszuordnungen und Status. Die Konten werden zu Ihren eigenen, die Sie bearbeiten können -- Änderungen an der Plattform-Vorlage wirken sich nicht auf Ihren Kontenplan aus, es sei denn, Sie laden sie explizit neu. Hat Ihr Arbeitsbereich einen Konsolidierungskontenplan, werden Name und Beschreibung des Konsolidierungskontos jedes Kontos aus diesem Kontenplan übernommen (siehe [Der Konsolidierungskontenplan](#der-konsolidierungskontenplan)).
 
 **Tipp**: Nach dem Laden einer Vorlage können Sie unternehmensspezifische Konten hinzufügen, Einträge umbenennen oder ungenutzte Konten deaktivieren. Vorlagen bieten einen Ausgangspunkt, keine gesperrte Struktur.
 
@@ -221,46 +226,52 @@ Alle Vorlagen -- unabhängig vom Land -- ordnen jedes Konto einem von **14 stand
 
 **Beispiel**: Ihre französische Tochtergesellschaft lädt **FR-PCG v1.0** und Ihre deutsche Tochtergesellschaft lädt **DE-SKR03 v1.0**. Beide verwenden unterschiedliche lokale Kontonummern und lokale Namen, aber jedes Konto wird der gleichen IFRS-Konsolidierungsstruktur zugeordnet. Konzernberichte aggregieren nahtlos ohne manuelle Zuordnungsarbeit.
 
-### Globaler Standard-Kontenplan (Bereitstellung)
+### Neue Arbeitsbereiche (Bereitstellung)
 
-Neue Arbeitsbereiche werden automatisch mit der **IFRS v1.0**-Vorlage bereitgestellt. Dies erstellt einen `GLOBAL`-Kontenplan mit den 14 IFRS-Konsolidierungskonten und setzt ihn als globalen Standard des Mandanten, sodass Unternehmen ihn sofort ohne Einrichtung nutzen können. Sie können die vorgeladenen Konten/den Kontenplan später bei Bedarf bearbeiten oder löschen (unter Beachtung der üblichen Schutzmaßnahmen).
+Neue Arbeitsbereiche werden automatisch mit der Vorlage **IFRS v1.0** bereitgestellt. Sie erzeugt einen Kontenplan für alle Länder mit den 14 IFRS-Konsolidierungskonten. Er ist zugleich **Standard für andere Länder** und **Konsolidierungskontenplan**, sodass Unternehmen und Konzernberichte sofort ohne Einrichtung funktionieren. Sie können die vorgeladenen Konten und den Kontenplan später bearbeiten oder löschen (im Rahmen der üblichen Schutzregeln).
 
-Globale Kontenpläne werden mit Geltungsbereich-Metadaten im **Verwalten**-Modal angezeigt, ohne Länderwert für `GLOBAL`-Einträge. Nur `GLOBAL`-Kontenpläne können als globaler Standard markiert werden, und nur `LAND`-Kontenpläne können als Länder-Standard festgelegt werden.
+## Rollen der Kontenpläne
+
+Ein Kontenplan kann bis zu drei Rollen haben. Sie sind voneinander unabhängig und werden jeweils im Klartext im Tooltip des Chips, in der Zusammenfassung und in **Kontenpläne verwalten** angezeigt.
+
+| Rolle | Was sie bewirkt | Wie viele |
+|-------|-----------------|-----------|
+| **Länderstandard ({country})** | Wird vorgeschlagen, wenn Sie ein Unternehmen in diesem Land anlegen | Einer pro Land. Für Kontenpläne eines Landes |
+| **Standard für andere Länder** | Gilt für Unternehmen in Ländern ohne Standardkontenplan. Wird auch Unternehmen ohne Kontenplan zugewiesen | Einer pro Arbeitsbereich. Für Kontenpläne für alle Länder |
+| **Konsolidierungskontenplan** | Die Konzernkonten, auf die jedes lokale Konto für das konsolidierte Reporting abgebildet wird | Einer pro Arbeitsbereich. Jeder Kontenplan |
+
+Der übliche Ausgangspunkt ist ein IFRS-Kontenplan, der **Standard für andere Länder** und **Konsolidierungskontenplan** zugleich ist, dazu ein lokaler Kontenplan pro Land mit **Länderstandard ({country})**. Sie können die Rollen trennen, zum Beispiel einen Konzernkontenplan als Konsolidierungskontenplan, während ein anderer Kontenplan für alle Länder die übrigen Länder bedient. Ein Kontenplan kann auch keine Rolle haben.
+
+Jede Rolle hat genau einen Inhaber (einen pro Land beim Länderstandard). Wenn Sie eine Rolle einem anderen Kontenplan geben, verliert sie der bisherige Inhaber.
 
 ## Kontenpläne verwalten
 
-### Das Verwalten-Modal
+### Der Dialog Kontenpläne verwalten
 
-Klicken Sie auf **Verwalten** in der Chip-Leiste, um das Administrations-Modal zu öffnen. Das Modal hat zwei Bereiche:
+Klicken Sie in der Chip-Leiste auf **Kontenpläne verwalten**, um den Dialog zu öffnen. Eine Tabelle listet alle Kontenpläne:
 
-**Linker Bereich** -- Kontenplan-Liste:
-- Zeigt alle Ihre Kontenpläne mit Codes und Namen.
-- Standard-Badges: **★** für Länder-Standard, Kreis-Plus für globalen Standard.
-- Klicken Sie auf eine Zeile, um Details anzuzeigen.
-
-**Rechter Bereich** -- Kontenplan-Details:
 - **Code** und **Name**
-- **Geltungsbereich**: `GLOBAL` oder `LAND`
-- **Land** (für länderbezogene Kontenpläne)
-- **Länder-Standard**: Ja/Nein
-- **Globaler Standard**: Ja/Nein
-- **Verknüpfte Unternehmen**: Anzahl der Unternehmen, die diesem Kontenplan zugewiesen sind
-- **Konten**: Anzahl der Konten in diesem Kontenplan
+- **Länder**: das Land des Kontenplans oder „Alle Länder"
+- **Rollen**: die Rollen des Kontenplans im Klartext oder ein Strich, wenn er keine hat
+- **Gesellschaften**: die Anzahl der dem Kontenplan zugewiesenen Unternehmen
+- **Konten**: die Anzahl der Konten im Kontenplan
 
-**Aktionen** (in der Modal-Symbolleiste):
-- **Neu** (`accounts:manager`): Öffnet den Kontenplan-Erstellungsdialog.
-- **Als Länder-Standard festlegen** (`accounts:manager`): Markiert den ausgewählten länderbezogenen Kontenplan als Standard für sein Land. Deaktiviert für globale Kontenpläne.
-- **Als globalen Standard festlegen** (`accounts:manager`): Markiert den ausgewählten globalen Kontenplan als globalen Standard. Deaktiviert für Länder-Kontenpläne.
-- **Ausgewählte löschen** (`accounts:admin`): Ausgewählten Kontenplan löschen. Das Löschen ist gesperrt, wenn Unternehmen ihn referenzieren oder OPEX/CAPEX-Positionen seine Konten verwenden.
+Drei kurze Zeilen unter der Tabelle erklären die Rollen. **Neuer Kontenplan** (`accounts:manager`) unten links öffnet den Erstellen-Dialog.
+
+Jede Zeile hat ein Menü **⋯**, das nur die Aktionen anbietet, die für diesen Kontenplan gelten. Die Beschriftung folgt dem aktuellen Zustand.
+
+- **Als Länderstandard festlegen** / **Nicht mehr Länderstandard** (`accounts:manager`): für Kontenpläne eines Landes.
+- **Als Standard für andere Länder festlegen** / **Nicht mehr Standard für andere Länder** (`accounts:manager`): für Kontenpläne für alle Länder. Wenn Sie ihn zum Standard machen, wird er auch Unternehmen ohne Kontenplan zugewiesen.
+- **Als Konsolidierungskontenplan festlegen** / **Nicht mehr Konsolidierungskontenplan** (`accounts:manager`): für jeden Kontenplan. Siehe [Den Konsolidierungskontenplan wechseln](#den-konsolidierungskontenplan-wechseln).
+- **Löschen** (`accounts:admin`): Löscht den Kontenplan samt seinen Konten. Enthält der Kontenplan Konten, nennt eine Bestätigung, wie viele gelöscht werden. Ist er der Konsolidierungskontenplan, weist die Bestätigung darauf hin, dass das Konzernreporting dann keinen Referenzkontenplan mehr hat. Das Löschen wird abgelehnt, solange Unternehmen den Kontenplan verwenden oder OPEX-/CAPEX-Positionen seine Konten nutzen. Der Dialog nennt den Grund.
+
+Die Rollen ändern sich, sobald Sie eine Aktion wählen. Die Tabelle wird sofort aktualisiert.
 
 ## Konten verwalten
 
 ### Kontonummern
 
-Kontonummern werden als Text gespeichert, enthalten aber typischerweise numerische Werte. Beim Bearbeiten von Konten:
-  - Sie können Zahlen (z. B. `6011`) oder Text (z. B. `6011-TRAVEL`) eingeben
-  - Das System konvertiert numerische Eingaben automatisch in Zeichenketten
-  - Innerhalb eines Kontenplans sollten Kontonummern eindeutig sein (nach Bereinigung erzwungen)
+Eine Kontonummer ist eine ganze Zahl größer als null (zum Beispiel `6011`). Innerhalb eines Kontenplans wird jede Nummer nur einmal verwendet.
 
 ### Lokale Namen für Mehrsprachigkeit
 
@@ -274,46 +285,50 @@ Der lokale Name ist als ausgeblendete Spalte im Konten-Grid verfügbar. Aktivier
 
 ## Konsolidierungskonten (Konzernberichterstattung)
 
-Für Organisationen mit mehreren Ländern wird die tägliche Arbeit mit lokalen Kontenplänen (französischer PCG, UK GAAP, deutsches HGB usw.) erledigt, aber die Konzernberichterstattung erfordert oft eine Konsolidierung auf einen gemeinsamen Standard wie **IFRS** oder **US GAAP**.
+In Organisationen mit mehreren Ländern erfolgt die tägliche Arbeit mit lokalen Kontenplänen (französischer PCG, UK GAAP, deutsches HGB usw.), die Konzernberichterstattung erfordert jedoch oft eine Konsolidierung auf einen gemeinsamen Standard wie **IFRS** oder **US GAAP**.
 
-**Konsolidierungskonten** lösen dies, indem sie lokale Konten standardisierten Konsolidierungskonten zuordnen.
+**Konsolidierungskonten** lösen das, indem lokale Konten auf die Konten eines Referenzkontenplans abgebildet werden.
 
-### Funktionsweise
+### Der Konsolidierungskontenplan
 
-Jedes Konto kann drei Konsolidierungsfelder haben:
-  - **Konsolidierungs-Kontonummer**: Die standardisierte Kontonummer (z. B. IFRS-Konto `6200`)
-  - **Konsolidierungs-Kontoname**: Der standardisierte Name (z. B. `IT-Dienste und Software`)
-  - **Konsolidierungs-Kontobeschreibung**: Optionale Details zur Konsolidierungskategorie
+Ihr Arbeitsbereich hat höchstens einen **Konsolidierungskontenplan**. Er enthält die Konzernkonten, auf die jedes lokale Konto abgebildet wird. Er ist unabhängig von den Standard-Rollen: Jeder Kontenplan kann der Konsolidierungskontenplan sein, auch einer, der zugleich Standard für andere Länder ist.
 
-**Beispiel-Zuordnung**:
+Bei jedem lokalen Konto wählen Sie ein **Konsolidierungskonto** aus den Konten des Konsolidierungskontenplans. Die Nummer stellt die Verbindung her. Name und Beschreibung des Konsolidierungskontos stammen automatisch aus dem Konsolidierungskontenplan, sie stimmen also immer mit dessen Konten überein.
 
-| Land | Lokaler CoA | Lokales Konto | Lokaler Name | -> | Konsolidierungskonto | Konsolidierungsname |
-|------|------------|---------------|-------------|---|---------------------|---------------------|
-| Frankreich | FR-PCG | 6061 | Frais postaux | -> | 6200 | IT-Dienste und Software |
-| UK | UK-GAAP | 5200 | Postage and courier | -> | 6200 | IT-Dienste und Software |
-| Deutschland | DE-HGB | 4920 | Portokosten | -> | 6200 | IT-Dienste und Software |
+**Beispielzuordnung**:
 
-Alle drei lokalen Konten werden dem gleichen IFRS-Konsolidierungskonto `6200` zugeordnet, was eine Aggregation auf Konzernebene ermöglicht.
+| Land | Lokaler Kontenplan | Lokales Konto | Lokaler Name | -> | Konsolidierungskonto | Konsolidierungsname |
+|------|--------------------|---------------|--------------|----|----------------------|---------------------|
+| Frankreich | FR-PCG | 6061 | Frais postaux | -> | 6200 | IT Services and Software |
+| Vereinigtes Königreich | UK-GAAP | 5200 | Postage and courier | -> | 6200 | IT Services and Software |
+| Deutschland | DE-HGB | 4920 | Portokosten | -> | 6200 | IT Services and Software |
+
+Alle drei lokalen Konten werden auf dasselbe Konsolidierungskonto `6200` abgebildet, was die Aggregation auf Konzernebene ermöglicht.
+
+**Was synchron bleibt**:
+
+  - Wenn Sie ein Konto des Konsolidierungskontenplans umbenennen, seine Beschreibung ändern oder ihm eine neue Nummer geben, folgen alle darauf abgebildeten Konten. Nummer, Name und Beschreibung werden überall in einem Schritt aktualisiert.
+  - Wenn Sie ein Konto auf eine Nummer abbilden, die im Konsolidierungskontenplan existiert, werden Name und Beschreibung des Konsolidierungskontos für Sie ausgefüllt.
 
 ### Warum das wichtig ist
 
-**Täglicher Betrieb**: Benutzer arbeiten mit ihren vertrauten lokalen Konten
+**Tagesgeschäft**: Benutzer arbeiten mit ihren vertrauten lokalen Konten
   - Französische Benutzer wählen Konto `6061 - Frais postaux`
   - Britische Benutzer wählen Konto `5200 - Postage and courier`
   - Deutsche Benutzer wählen Konto `4920 - Portokosten`
 
-**Konzernberichterstattung**: Das System kann Kosten nach Konsolidierungskonto zusammenführen
-  - Alle IT-Dienstleistungskosten über Länder hinweg aggregieren zu `6200 - IT-Dienste und Software`
+**Konzernberichterstattung**: Das System kann Kosten nach Konsolidierungskonto zusammenfassen
+  - Alle IT-Dienstleistungskosten über Länder hinweg werden unter `6200 - IT Services and Software` aggregiert
   - Das Management sieht eine einheitliche Ansicht unabhängig von lokalen Buchhaltungsunterschieden
   - Die gesetzliche Berichterstattung pro Land verwendet weiterhin lokale Konten
 
 ### Konsolidierungszuordnungen einrichten
 
 **Option 1: Vorlagen (empfohlen)**
-Alle integrierten Vorlagen enthalten IFRS-Konsolidierungszuordnungen für jedes Konto. Laden Sie eine beliebige Ländervorlage und die Konsolidierungsspalten sind bereits ausgefüllt -- keine manuelle Zuordnung nötig. Siehe [Verfügbare Vorlagen](#verfugbare-vorlagen) für die vollständige Liste.
+Alle integrierten Vorlagen enthalten IFRS-Konsolidierungszuordnungen für jedes Konto. Laden Sie eine beliebige Ländervorlage, und die Konsolidierungsspalten sind bereits ausgefüllt. Ein neuer Arbeitsbereich hat den IFRS-Kontenplan bereits als Konsolidierungskontenplan. Siehe [Verfügbare Vorlagen](#verfugbare-vorlagen) für die vollständige Liste.
 
 **Option 2: CSV-Import**
-Beim Import von Konten fügen Sie die Konsolidierungsfelder in Ihre CSV ein:
+Nehmen Sie beim Import von Konten die Konsolidierungsfelder in Ihre CSV auf:
 
 ```
 coa_code;account_number;account_name;consolidation_account_number;consolidation_account_name;consolidation_account_description
@@ -322,16 +337,33 @@ UK-GAAP;5200;Postage and courier;6200;IT Services and Software;
 DE-HGB;4920;Portokosten;6200;IT Services and Software;
 ```
 
+Nur die Konsolidierungs-Kontonummer zählt, wenn der Konsolidierungskontenplan sie enthält: Der Import ersetzt die Spalten für Name und Beschreibung durch die des Konsolidierungskontenplans. Steht die Nummer nicht im Konsolidierungskontenplan, bleiben Name und Beschreibung aus der Datei erhalten, und das Konto wird als außerhalb des Konsolidierungskontenplans markiert. Eine leere Nummer entfernt die Zuordnung, den Namen und die Beschreibung.
+
 **Option 3: Manuelle Eingabe**
-Bearbeiten Sie Konten einzeln und füllen Sie die Konsolidierungsfelder im Konten-Arbeitsbereich aus.
+Öffnen Sie ein Konto und wählen Sie sein **Konsolidierungskonto** im Konten-Arbeitsbereich.
+
+### Den Konsolidierungskontenplan wechseln
+
+1. Öffnen Sie **Kontenpläne verwalten** und das Menü **⋯** des Kontenplans, den Sie verwenden möchten.
+2. Klicken Sie auf **Als Konsolidierungskontenplan festlegen**.
+3. Ersetzt der Kontenplan einen anderen Konsolidierungskontenplan, oder verweisen einige Konten auf Nummern, die er nicht enthält, öffnet sich eine Bestätigung. Sie nennt den ersetzten Kontenplan und gibt die Anzahlen an: wie viele Konten ihr Konsolidierungskonto behalten, wie viele auf eine Nummer verweisen, die im neuen Kontenplan fehlt, und wie viele kein Konsolidierungskonto haben.
+4. Klicken Sie auf **Als Konsolidierungskontenplan festlegen**, um zu bestätigen.
+
+**Was mit bestehenden Zuordnungen geschieht**: KANAP ordnet Konten nie automatisch neu zu. Jedes Konto behält seine Konsolidierungsnummer.
+
+  - Konten, deren Nummer im neuen Kontenplan existiert, behalten sie und übernehmen Name und Beschreibung dieses Kontenplans.
+  - Konten, deren Nummer im neuen Kontenplan nicht existiert, behalten ihre Nummer und werden markiert: Die Konsolidierungszeile zählt sie, ein Punkt kennzeichnet sie im Grid, und der Konten-Arbeitsbereich fordert Sie auf, ein gültiges Konto zu wählen. Filtern Sie sie über die Konsolidierungszeile und ordnen Sie sie einzeln neu zu, oder laden Sie eine CSV.
+  - Konten ohne Nummer bleiben nicht zugeordnet.
+
+Wenn Sie **Nicht mehr Konsolidierungskontenplan** wählen, hat das Konzernreporting keinen Referenzkontenplan mehr. Die Zuordnungen der Konten bleiben erhalten.
 
 ### Best Practices
 
   - **Einen gemeinsamen Standard verwenden**: IFRS ist typisch für europäische Konzerne; US GAAP für amerikanische Unternehmen. Alle integrierten Vorlagen ordnen bereits den gleichen 14 IFRS-Konsolidierungskonten zu (siehe [Integrierte IFRS-Konsolidierung](#integrierte-ifrs-konsolidierung))
-  - **Ein Konsolidierungsverzeichnis pflegen**: Führen Sie ein Referenzdokument mit Ihren Konsolidierungskonten und deren Bedeutung. Wenn Sie die integrierten Vorlagen verwenden, dienen die 14 IFRS-Konten als diese Referenz
-  - **Die richtige Granularität zuordnen**: Nicht zu breit konsolidieren (verliert Einblicke) oder zu eng (zu komplex)
-  - **Die Finanzabteilung einbeziehen**: Konsolidierungskonto-Zuordnungen sollten mit den Anforderungen der Konzern-Finanzberichterstattung übereinstimmen
-  - **Systematisch aktualisieren**: Wenn Sie lokale Konten hinzufügen, ordnen Sie sie sofort Konsolidierungskonten zu
+  - **Einen einzigen Konsolidierungskontenplan führen**: Er ist die Liste der Reporting-Konten Ihres Konzerns. Wenn Sie die integrierten Vorlagen verwenden, dienen die 14 IFRS-Konten als Referenz
+  - **Auf der richtigen Granularität zuordnen**: Nicht zu grob konsolidieren (Einblick geht verloren) und nicht zu fein (zu komplex)
+  - **Das Finanzwesen einbeziehen**: Konsolidierungszuordnungen sollten den Anforderungen der Finanzberichterstattung Ihres Konzerns entsprechen
+  - **Systematisch aktualisieren**: Wenn Sie lokale Konten hinzufügen, ordnen Sie sie sofort Konsolidierungskonten zu. Die Konsolidierungszeile zeigt, was noch fehlt
 
 ### Berichterstattung mit Konsolidierungskonten
 
@@ -339,7 +371,7 @@ Beim Erstellen von Berichten können Sie gruppieren nach:
   - **Lokalen Konten**: Zeigt länderspezifische Details (für lokales Management)
   - **Konsolidierungskonten**: Zeigt Kategorien auf Konzernebene (für Management-Berichte)
 
-Diese duale Ansicht ermöglicht es Ihnen, sowohl lokale Compliance-Anforderungen als auch Konzernberichtsanforderungen zu erfüllen, ohne doppelte Daten zu pflegen.
+Diese duale Sicht erfüllt sowohl lokale Compliance-Anforderungen als auch Konzernberichtsbedarf, ohne doppelte Daten zu pflegen.
 
 ## Legacy-Konten (Migrations-Support)
 
@@ -443,12 +475,13 @@ account_number;account_name;native_name;description;consolidation_account_number
   - Der `coa_code` muss einem bestehenden Kontenplan in Ihrem Arbeitsbereich entsprechen
   - Kontonummern sollten innerhalb eines Kontenplans eindeutig sein
   - Statuswerte: `enabled` oder `disabled` (Standard ist enabled)
+  - Konsolidierungsspalten: Existiert `consolidation_account_number` in Ihrem Konsolidierungskontenplan, ersetzen dessen Name und Beschreibung die Zellen `consolidation_account_name` und `consolidation_account_description`. Eine leere Nummer löscht alle drei. Siehe [Konsolidierungszuordnungen einrichten](#konsolidierungszuordnungen-einrichten)
 
 ## Tipps
 
   - **Mit Vorlagen beginnen**: KANAP wird mit Vorlagen für 9 Länder plus IFRS ausgeliefert. Laden Sie eine, anstatt von Grund auf zu bauen -- Sie erhalten korrekte Kontonummern, lokale Namen und IFRS-Konsolidierungszuordnungen direkt. Beginnen Sie mit v1.0 (Einfach), wenn Sie unsicher sind; upgraden Sie auf v2.0 (Detailliert), wenn Sie mehr Granularität benötigen.
-  - **Ein Standard pro Land**: Setzen Sie einen Standard-Kontenplan für jedes Land, damit neue Unternehmen automatisch der richtigen Kontenstruktur zugewiesen werden.
-  - **Lokale Namen für Compliance**: Verwenden Sie das Feld Lokaler Name, wenn lokale Vorschriften Konten in der Landessprache erfordern. Aktivieren Sie die Spalte **Lokaler Name** im Grid, um beide Namen auf einen Blick zu sehen.
+  - **Ein Standard pro Land**: Machen Sie für jedes Land einen Kontenplan zum Standard, damit neue Unternehmen mit der richtigen Kontenstruktur starten.
+  - **Lokale Namen für Compliance**: Verwenden Sie das Feld **Lokaler Name**, wenn lokale Vorschriften Konten in der Landessprache erfordern. Aktivieren Sie die Spalte **Lokaler Name** im Grid, um beide Namen auf einen Blick zu sehen.
   - **Schrittweise migrieren**: Sie müssen nicht alles auf einmal umstellen. Unternehmen ohne Kontenpläne arbeiten weiterhin mit Legacy-Konten.
   - **Veraltete Konten beheben**: Wenn Sie Warnungen sehen, aktualisieren Sie das Konto, damit es zum aktuellen Kontenplan des Unternehmens passt. Dies hält Ihre Daten für Berichte sauber.
   - **Deaktivieren statt löschen**: Das Deaktivieren von Konten bewahrt die Historie. Löschen Sie nur Konten, die versehentlich erstellt wurden und nie verwendet wurden.
@@ -465,7 +498,7 @@ Sie haben Tochtergesellschaften in Frankreich, im Vereinigten Königreich und in
 
 **Einrichtung**:
   1. Laden Sie drei Vorlagen: **FR-PCG v1.0**, **GB-UKGAAP v1.0**, **DE-SKR03 v1.0** (oder v2.0 für mehr Granularität)
-  2. Legen Sie jede als Standard für ihr Land fest
+  2. Machen Sie jeden zum Standard seines Landes (**Kontenpläne verwalten**, dann **Als Länderstandard festlegen**)
   3. Weisen Sie die Unternehmen ihren jeweiligen Kontenplänen zu
   4. Neue Unternehmen erhalten automatisch den richtigen Kontenplan; die Kontoauswahl wird entsprechend gefiltert
   5. Die Konsolidierungszuordnungen sind bereits vorhanden, Konzernberichte funktionieren sofort
@@ -508,7 +541,7 @@ Ihr Konzern hat Tochtergesellschaften in Frankreich, im Vereinigten Königreich 
       - GB-UKGAAP `510` (Capitalized Software) -> IFRS `1100` (Immaterielle Vermögenswerte)
       - DE-SKR03 `27` (EDV-Software) -> IFRS `1100` (Immaterielle Vermögenswerte)
 
-  3. Legen Sie jeden Kontenplan als Standard für sein Land fest und weisen Sie die Unternehmen zu
+  3. Machen Sie jeden Kontenplan zum Standard seines Landes und weisen Sie die Unternehmen zu
 
 **Ergebnis**:
   - Französische Benutzer arbeiten im Alltag mit Konten des französischen PCG und französischen lokalen Namen
@@ -530,7 +563,7 @@ A: Das Löschen ist gesperrt, wenn Unternehmen ihn referenzieren oder OPEX/CAPEX
 A: Ja, im Konten-Arbeitsbereich. Das Ändern der Kontonummer aktualisiert automatisch alle Referenzen in OPEX/CAPEX-Positionen (die UUID des Kontos bleibt intern gleich).
 
 **F: Wie sehe ich, welche Unternehmen einen bestimmten Kontenplan verwenden?**
-A: Öffnen Sie **Verwalten** auf der Kontenpläne-Seite, wählen Sie den Kontenplan und prüfen Sie **Verknüpfte Unternehmen** im Detailbereich. Sie können auch die Unternehmensseite nach Kontenplan filtern.
+A: Öffnen Sie **Kontenpläne verwalten** auf der Kontenpläne-Seite und lesen Sie die Spalte **Gesellschaften** in der Zeile des Kontenplans. Sie können auch die Unternehmensseite nach Kontenplan filtern.
 
 **F: Was, wenn mein Land keine Vorlage hat?**
 A: KANAP enthält Vorlagen für 9 Länder (FR, DE, GB, ES, IT, NL, BE, CH, US) plus IFRS als globalen Standard. Wenn Ihr Land nicht abgedeckt ist, erstellen Sie einen Kontenplan von Grund auf und fügen Sie Konten manuell oder per CSV-Import hinzu. Sie können weiterhin die IFRS-Konsolidierungs-Kontonummern (1000-2900) in Ihren Konsolidierungszuordnungen verwenden, um mit den integrierten Vorlagen kompatibel zu bleiben.
@@ -549,3 +582,12 @@ A: Ja, genau das ist der Sinn! Viele lokale Konten über verschiedene Kontenplä
 
 **F: Was passiert, wenn ich eine Konsolidierungszuordnung ändere?**
 A: Bestehende OPEX/CAPEX-Positionen speichern Konsolidierungsdaten nicht direkt -- sie referenzieren das Konto, das die Konsolidierungszuordnung hat. Wenn Sie eine Zuordnung ändern, werden alle historischen und zukünftigen Positionen, die dieses Konto verwenden, unter dem neuen Konsolidierungskonto berichtet. Ändern Sie Zuordnungen mit Bedacht, wenn Sie historische Berichtskategorien beibehalten müssen.
+
+**F: Muss der Konsolidierungskontenplan der Standard für andere Länder sein?**
+A: Nein. Die beiden Rollen sind unabhängig. In der üblichen Einrichtung hat ein IFRS-Kontenplan beide, und Sie können sie jederzeit in **Kontenpläne verwalten** verschiedenen Kontenplänen geben.
+
+**F: Was passiert mit den Konten, wenn ich ein Konto des Konsolidierungskontenplans umbenenne oder neu nummeriere?**
+A: Alle darauf abgebildeten Konten folgen. Ihre Konsolidierungsnummer, ihr Name und ihre Beschreibung werden gemeinsam aktualisiert, die Zuordnungen bleiben also gültig.
+
+**F: Warum zeigt das Grid neben manchen Konsolidierungsnummern einen Punkt?**
+A: Der Punkt markiert ein Konto, dessen Konsolidierungsnummer im Konsolidierungskontenplan nicht existiert, typischerweise nach einem Wechsel des Konsolidierungskontenplans. Öffnen Sie das Konto und wählen Sie ein gültiges Konsolidierungskonto, oder listen Sie alle über die Konsolidierungszeile auf.

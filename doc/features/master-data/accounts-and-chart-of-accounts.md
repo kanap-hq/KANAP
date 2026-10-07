@@ -20,7 +20,7 @@ This document explains the functional model and APIs for Charts of Accounts (CoA
 
 | Role | Column | Scope | UI label | Meaning |
 |---|---|---|---|---|
-| Country default | `is_default` | `COUNTRY` charts only | Default for {country} | Proposed when a company is created in that country. One per tenant and country. |
+| Country default | `is_default` | `COUNTRY` charts only | Country default ({country}) | Proposed when a company is created in that country. One per tenant and country. |
 | Global default | `is_global_default` | `GLOBAL` charts only | Default for other countries | Used for companies in a country that has no default chart. One per tenant. Setting it also assigns the chart to companies with `coa_id` NULL. |
 | Consolidation chart | `is_consolidation` | any scope | Consolidation chart | The group accounts every local account maps to for consolidated reporting. One per tenant. |
 

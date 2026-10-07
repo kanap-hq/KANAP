@@ -184,6 +184,6 @@ Eine größere Organisation fügt dazwischen die übrigen Stammdaten hinzu:
 8. Die OPEX-Datei
 9. Die CAPEX-Datei
 
-**Der Kontenplan kommt zuerst.** Klicken Sie auf der Seite Kontenpläne auf **Neu**, geben Sie dem Plan einen Code und einen Namen und wählen Sie den Geltungsbereich **Global**. Öffnen Sie dann **Verwalten** und klicken Sie auf **Als globalen Standard festlegen**. Ein Unternehmen ohne Kontenplan übernimmt diesen, und so werden die Kontonummern einer Budgetdatei aufgelöst. Wählen Sie den Plan auf der Seite aus und klicken Sie dann auf **CSV importieren**, um seine Konten zu laden.
+**Der Kontenplan kommt zuerst.** Klicken Sie auf der Seite Kontenpläne auf **Neu**, geben Sie dem Plan einen Code und einen Namen und wählen Sie unter **Verwendet für** die Option **Alle Länder**. Klicken Sie dann auf **Kontenpläne verwalten**, öffnen Sie das Menü **⋯** des Plans und klicken Sie auf **Als Standard für andere Länder festlegen**. Ein Unternehmen ohne Kontenplan übernimmt diesen, und so werden die Kontonummern einer Budgetdatei aufgelöst. Wählen Sie den Plan auf der Seite aus und klicken Sie dann auf **CSV importieren**, um seine Konten zu laden.
 
 Jede dieser Seiten hat ihren eigenen Abschnitt **CSV importieren** mit den Spalten ihrer Datei.

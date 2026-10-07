@@ -133,7 +133,7 @@ Each company can be linked to a **Chart of Accounts** (CoA), which defines the s
 
 **How it works**:
 
-- When you create a company, it is automatically assigned to the default CoA for its country (if one exists). If no country default exists, the global default CoA is used.
+- When you create a company, it is automatically assigned to the default CoA for its country (if one exists). If no country default exists, the chart that is the **Default for other countries** is used.
 - You can change the CoA assignment in the **Properties** panel using the **Chart of accounts** selector. The selector shows CoAs matching the company's country plus any global-scope CoAs.
 - When you change the company's country, the CoA follows if the current one belongs to another country: it switches to the new country's default. A global CoA stays in place.
 - On an existing company, the CoA cannot be emptied. You can only replace it with another one.
@@ -145,7 +145,7 @@ Each company can be linked to a **Chart of Accounts** (CoA), which defines the s
 - **Companies without a CoA** (legacy): can use accounts that do not belong to any Chart of Accounts. This supports gradual migration to the CoA system.
 - **Changing CoAs**: if you switch a company to a different CoA, existing spend items keep their current accounts (with a warning if they do not match the new CoA), but new items will use accounts from the new CoA.
 
-**Setting up Charts of Accounts**: go to **Master Data > Charts of Accounts** to view, create, or manage your CoA sets. You can create CoAs from scratch or load them from platform templates (country-specific standard account sets). Each country can have one default CoA that is automatically assigned to new companies from that country.
+**Setting up Charts of Accounts**: go to **Master Data > Charts of Accounts** to view, create, or manage your CoA sets. You can create CoAs from scratch or load them from platform templates (country-specific standard account sets). Each country can have one default CoA (**Country default ({country})**), which is proposed when you create a company in that country. Companies in a country without a default use the **Default for other countries** chart. See [Chart roles](chart-of-accounts.md#chart-roles).
 
 **Tip**: if you see an "obsolete account" warning when editing OPEX/CAPEX items, it means the account does not belong to the company's current Chart of Accounts. Update the account to one from the correct CoA to resolve this.
 
