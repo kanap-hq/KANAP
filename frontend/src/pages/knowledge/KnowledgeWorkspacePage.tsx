@@ -225,7 +225,14 @@ export default function KnowledgeWorkspacePage() {
   const [dirty, setDirty] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [editMode, setEditMode] = React.useState(isCreate);
-  const [lockToken, setLockToken] = React.useState<string | null>(null);
+  const [lockToken, setLockTokenState] = React.useState<string | null>(null);
+  // Mirrors the held token so a release can claim it synchronously: a second
+  // release (Done, then the unmount cleanup) finds nothing left to release.
+  const lockTokenRef = React.useRef<string | null>(null);
+  const setLockToken = React.useCallback((next: string | null) => {
+    lockTokenRef.current = next;
+    setLockTokenState(next);
+  }, []);
   const [lockExpiresAt, setLockExpiresAt] = React.useState<string | null>(null);
   const [activeLockInfo, setActiveLockInfo] = React.useState<EditLockInfo | null>(null);
   const [commentText, setCommentText] = React.useState('');
@@ -777,15 +784,17 @@ export default function KnowledgeWorkspacePage() {
   }, [id, isCreate, lockToken]);
 
   const releaseLock = React.useCallback(async () => {
-    if (isCreate || !lockToken) return;
+    const heldToken = lockTokenRef.current;
+    if (isCreate || !heldToken) return;
+    lockTokenRef.current = null;
     try {
       await api.delete(`/knowledge/${id}/locks`, {
-        headers: { 'X-Lock-Token': lockToken },
+        headers: { 'X-Lock-Token': heldToken },
       });
     } catch { /* best effort */ }
     setLockToken(null);
     setLockExpiresAt(null);
-  }, [id, isCreate, lockToken]);
+  }, [id, isCreate, setLockToken]);
 
   React.useEffect(() => {
     if (isCreate || lockToken) {
