@@ -3,6 +3,7 @@ import { EntityManager, In } from 'typeorm';
 import { parseString } from '@fast-csv/parse';
 import { decodeCsvBufferUtf8OrThrow } from '../encoding';
 import { AuditLog } from '../../audit/audit.entity';
+import { omitAuditSecrets } from '../../audit/audit.service';
 import {
   ArrayStrategy,
   CsvEntityConfig,
@@ -1206,8 +1207,9 @@ export class CsvImportService {
           table_name: tableName,
           record_id: entity.id,
           action: meta.action,
-          before_json: meta.before,
-          after_json: entity,
+          // Written without AuditService.log: the same keys are left out as there.
+          before_json: omitAuditSecrets(meta.before),
+          after_json: omitAuditSecrets(entity),
           user_id: context.userId ?? null,
         }),
       );
