@@ -421,7 +421,6 @@
     "title": "Kontenpläne",
     "loadError": "Fehler beim Laden der Kontenpläne.",
     "loadingCoA": "Kontenpläne werden geladen…",
-    "accounts": "Konten",
     "newAccount": "Neues Konto",
     "exportAccounts": "Konten exportieren",
     "importAccounts": "Konten in ausgewählten Kontenplan importieren",
@@ -438,43 +437,110 @@
       "accountsInChart": "Konten werden immer innerhalb eines Kontenplans verwaltet.",
       "newCoA": "Neuer Kontenplan",
       "newChip": "Neu",
-      "manage": "Verwalten"
+      "manage": "Kontenpläne verwalten"
     },
     "createDialog": {
       "title": "Neuer Kontenplan",
-      "mode": "Modus",
-      "scratch": "Von Grund auf erstellen",
-      "template": "Aus Vorlage kopieren",
+      "scratch": "Ein leerer Kontenplan",
+      "template": "Eine Vorlage",
       "templateLabel": "Vorlage",
       "codeLabel": "Code",
-      "codeTooltip": "Ein stabiler Bezeichner für Exporte/Importe (coa_code) und Direktlinks.",
-      "scopeLabel": "Geltungsbereich",
-      "scopeCountry": "Land",
-      "scopeGlobal": "Global",
+      "scopeCountry": "Ein Land",
+      "scopeGlobal": "Alle Länder",
       "setDefaultForCountry": "Als Standard für dieses Land festlegen",
-      "preflightOk": "Vorabprüfung OK: gesamt {{total}}, Einfügungen {{inserted}}, Aktualisierungen {{updated}}.",
-      "codeAndNameRequired": "Code und Name sind erforderlich",
-      "countryRequired": "Land ist erforderlich",
-      "selectTemplate": "Bitte wählen Sie eine Vorlage",
-      "preflightFailed": "Vorabprüfung fehlgeschlagen",
-      "failedToCreate": "Erstellung fehlgeschlagen",
-      "preflight": "Vorabprüfung"
+      "preflightOk": "Vorlage geprüft: {{total}} Konten, {{inserted}} neu, {{updated}} aktualisiert.",
+      "codeAndNameRequired": "Code und Name sind erforderlich.",
+      "countryRequired": "Wählen Sie ein Land aus.",
+      "selectTemplate": "Wählen Sie eine Vorlage aus.",
+      "preflightFailed": "Die Prüfung der Vorlage ist fehlgeschlagen.",
+      "failedToCreate": "Der Kontenplan konnte nicht erstellt werden.",
+      "preflight": "Vorlage prüfen",
+      "startFrom": "Ausgangspunkt",
+      "templatePlaceholder": "Vorlage auswählen",
+      "codeHelp": "Eine kurze, stabile Kennung für CSV-Dateien und Links.",
+      "codePlaceholder": "z. B. FR-PCG",
+      "nameLabel": "Name",
+      "namePlaceholder": "z. B. Französischer Kontenplan",
+      "coverageLabel": "Verwendet für",
+      "countryLabel": "Land",
+      "countryPlaceholder": "Land auswählen",
+      "setDefaultForNamedCountry": "Als Standard für {{country}} festlegen"
     },
     "manageDialog": {
       "title": "Kontenpläne verwalten",
-      "setCountryDefault": "Als Landesstandard festlegen",
-      "setGlobalDefault": "Als globalen Standard festlegen",
+      "newChart": "Neuer Kontenplan",
       "loadingCoAs": "Kontenpläne werden geladen…",
       "loadError": "Fehler beim Laden der Kontenpläne.",
-      "noCoAs": "Keine Kontenpläne gefunden.",
-      "selectToView": "Wählen Sie einen Kontenplan, um Details anzuzeigen.",
-      "scope": "Geltungsbereich",
-      "countryDefault": "Landesstandard",
-      "globalDefault": "Globaler Standard",
-      "linkedCompanies": "Verknüpfte Unternehmen",
-      "accountsCount": "Konten",
-      "failedSetDefault": "Fehler beim Festlegen des Standard-Kontenplans",
-      "failedSetGlobalDefault": "Fehler beim Festlegen des globalen Standard-Kontenplans"
+      "noCoAs": "Noch keine Kontenpläne.",
+      "columns": {
+        "code": "Code",
+        "name": "Name",
+        "coverage": "Länder",
+        "roles": "Rollen",
+        "companies": "Gesellschaften",
+        "accounts": "Konten",
+        "actions": "Aktionen"
+      },
+      "rowMenu": "Aktionen für {{code}}",
+      "actions": {
+        "makeCountryDefault": "Als Standard für {{country}} festlegen",
+        "stopCountryDefault": "Nicht mehr Standard für {{country}}",
+        "makeGlobalDefault": "Als Standard für andere Länder festlegen",
+        "makeGlobalDefaultHint": "Wird auch Gesellschaften ohne Kontenplan zugewiesen.",
+        "stopGlobalDefault": "Nicht mehr Standard für andere Länder",
+        "makeConsolidation": "Als Konsolidierungskontenplan festlegen",
+        "stopConsolidation": "Nicht mehr Konsolidierungskontenplan",
+        "delete": "Löschen"
+      },
+      "help": {
+        "countryDefault": "Standard für ein Land: wird beim Anlegen einer Gesellschaft in diesem Land vorgeschlagen.",
+        "globalDefault": "Standard für andere Länder: gilt für Gesellschaften in Ländern ohne Standardkontenplan.",
+        "consolidation": "Konsolidierungskontenplan: die Konzernkonten, denen jedes lokale Konto für das konsolidierte Reporting zugeordnet ist."
+      },
+      "consolidationConfirm": {
+        "title": "{{code}} als Konsolidierungskontenplan festlegen?",
+        "replaces": "{{code}} ersetzt {{previous}} als Konsolidierungskontenplan.",
+        "matched_one": "{{count}} Konto behält sein Konsolidierungskonto.",
+        "matched_other": "{{count}} Konten behalten ihr Konsolidierungskonto.",
+        "outside_one": "{{count}} Konto verweist auf eine Nummer, die in {{code}} nicht existiert: Es wird markiert, damit Sie es neu zuordnen können.",
+        "outside_other": "{{count}} Konten verweisen auf eine Nummer, die in {{code}} nicht existiert: Sie werden markiert, damit Sie sie neu zuordnen können.",
+        "unmapped_one": "{{count}} Konto hat kein Konsolidierungskonto.",
+        "unmapped_other": "{{count}} Konten haben kein Konsolidierungskonto."
+      },
+      "stopConsolidationConfirm": {
+        "title": "{{code}} nicht mehr als Konsolidierungskontenplan verwenden?",
+        "body": "Das konsolidierte Reporting hat dann keinen Referenzkontenplan mehr. Die Zuordnungen der Konten bleiben erhalten."
+      },
+      "deleteConfirm": {
+        "title": "{{code}} löschen?",
+        "accounts_one": "{{code}} enthält {{count}} Konto. Es wird mit dem Kontenplan gelöscht.",
+        "accounts_other": "{{code}} enthält {{count}} Konten. Sie werden mit dem Kontenplan gelöscht.",
+        "consolidation": "{{code}} ist der Konsolidierungskontenplan: Die Rolle wird entfernt und das konsolidierte Reporting hat keinen Referenzkontenplan mehr.",
+        "confirm": "Trotzdem löschen"
+      },
+      "deleteRefused": "{{code}} wurde nicht gelöscht. {{reason}}",
+      "actionFailed": "Die Änderung an {{code}} ist fehlgeschlagen."
+    },
+    "accountCount_one": "{{count}} Konto",
+    "accountCount_other": "{{count}} Konten",
+    "coverage": {
+      "allCountries": "Alle Länder"
+    },
+    "roles": {
+      "countryDefault": "Standard für {{country}}",
+      "globalDefault": "Standard für andere Länder",
+      "consolidation": "Konsolidierungskontenplan"
+    },
+    "outsideMarker": "Nicht im Konsolidierungskontenplan {{code}}",
+    "health": {
+      "noConsolidationChart": "Kein Konsolidierungskontenplan.",
+      "chooseConsolidationChart": "Wählen Sie einen unter Kontenpläne verwalten.",
+      "allMapped": "Alle Konten sind dem Konsolidierungskontenplan {{code}} zugeordnet.",
+      "outside_one": "{{count}} Konto verweist auf ein Konsolidierungskonto, das in {{code}} fehlt",
+      "outside_other": "{{count}} Konten verweisen auf ein Konsolidierungskonto, das in {{code}} fehlt",
+      "unmapped_one": "{{count}} Konto hat kein Konsolidierungskonto",
+      "unmapped_other": "{{count}} Konten haben kein Konsolidierungskonto",
+      "showAll": "Alle Konten anzeigen"
     }
   },
   "accounts": {

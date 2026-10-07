@@ -421,7 +421,6 @@
     "title": "Plans comptables",
     "loadError": "Échec du chargement des plans comptables.",
     "loadingCoA": "Chargement des plans comptables…",
-    "accounts": "comptes",
     "newAccount": "Nouveau compte",
     "exportAccounts": "Exporter les comptes",
     "importAccounts": "Importer les comptes dans le plan comptable sélectionné",
@@ -438,43 +437,110 @@
       "accountsInChart": "Les comptes sont toujours gérés au sein d'un plan comptable.",
       "newCoA": "Nouveau plan comptable",
       "newChip": "Nouveau",
-      "manage": "Gérer"
+      "manage": "Gérer les plans"
     },
     "createDialog": {
       "title": "Nouveau plan comptable",
-      "mode": "Mode",
-      "scratch": "Créer de zéro",
-      "template": "Copier à partir d'un modèle",
+      "scratch": "Un plan vide",
+      "template": "Un modèle",
       "templateLabel": "Modèle",
       "codeLabel": "Code",
-      "codeTooltip": "Un identifiant stable utilisé dans les exports/imports (coa_code) et les liens directs.",
-      "scopeLabel": "Périmètre",
-      "scopeCountry": "Pays",
-      "scopeGlobal": "Global",
-      "setDefaultForCountry": "Définir comme défaut pour ce pays",
-      "preflightOk": "Vérification OK : total {{total}}, insertions {{inserted}}, mises à jour {{updated}}.",
-      "codeAndNameRequired": "Le code et le nom sont requis",
-      "countryRequired": "Le pays est requis",
-      "selectTemplate": "Veuillez sélectionner un modèle",
-      "preflightFailed": "Échec de la vérification",
-      "failedToCreate": "Échec de la création",
-      "preflight": "Vérification"
+      "scopeCountry": "Un pays",
+      "scopeGlobal": "Tous les pays",
+      "setDefaultForCountry": "En faire le plan par défaut de ce pays",
+      "preflightOk": "Modèle vérifié : {{total}} comptes, {{inserted}} nouveaux, {{updated}} mis à jour.",
+      "codeAndNameRequired": "Le code et le nom sont obligatoires.",
+      "countryRequired": "Choisissez un pays.",
+      "selectTemplate": "Choisissez un modèle.",
+      "preflightFailed": "La vérification du modèle a échoué.",
+      "failedToCreate": "Le plan n'a pas pu être créé.",
+      "preflight": "Vérifier le modèle",
+      "startFrom": "Partir de",
+      "templatePlaceholder": "Choisissez un modèle",
+      "codeHelp": "Identifiant court et stable, utilisé dans les fichiers CSV et les liens.",
+      "codePlaceholder": "ex. FR-PCG",
+      "nameLabel": "Nom",
+      "namePlaceholder": "ex. Plan comptable français",
+      "coverageLabel": "Utilisé pour",
+      "countryLabel": "Pays",
+      "countryPlaceholder": "Choisissez un pays",
+      "setDefaultForNamedCountry": "En faire le plan par défaut pour {{country}}"
     },
     "manageDialog": {
-      "title": "Gérer les plans comptables",
-      "setCountryDefault": "Définir comme défaut pays",
-      "setGlobalDefault": "Définir comme défaut global",
+      "title": "Gérer les plans",
+      "newChart": "Nouveau plan",
       "loadingCoAs": "Chargement des plans comptables…",
       "loadError": "Échec du chargement des plans comptables.",
-      "noCoAs": "Aucun plan comptable trouvé.",
-      "selectToView": "Sélectionnez un plan comptable pour afficher les détails.",
-      "scope": "Périmètre",
-      "countryDefault": "Défaut pays",
-      "globalDefault": "Défaut global",
-      "linkedCompanies": "Sociétés associées",
-      "accountsCount": "Comptes",
-      "failedSetDefault": "Échec de la définition du plan comptable par défaut",
-      "failedSetGlobalDefault": "Échec de la définition du plan comptable par défaut global"
+      "noCoAs": "Aucun plan comptable pour l'instant.",
+      "columns": {
+        "code": "Code",
+        "name": "Nom",
+        "coverage": "Pays",
+        "roles": "Rôles",
+        "companies": "Sociétés",
+        "accounts": "Comptes",
+        "actions": "Actions"
+      },
+      "rowMenu": "Actions pour {{code}}",
+      "actions": {
+        "makeCountryDefault": "Définir par défaut pour {{country}}",
+        "stopCountryDefault": "Ne plus utiliser par défaut pour {{country}}",
+        "makeGlobalDefault": "Définir par défaut pour les autres pays",
+        "makeGlobalDefaultHint": "Également attribué aux sociétés sans plan comptable.",
+        "stopGlobalDefault": "Ne plus utiliser par défaut pour les autres pays",
+        "makeConsolidation": "Définir comme plan de consolidation",
+        "stopConsolidation": "Ne plus utiliser comme plan de consolidation",
+        "delete": "Supprimer"
+      },
+      "help": {
+        "countryDefault": "Plan par défaut d'un pays : proposé à la création d'une société dans ce pays.",
+        "globalDefault": "Plan par défaut des autres pays : utilisé pour les sociétés d'un pays sans plan par défaut.",
+        "consolidation": "Plan de consolidation : les comptes groupe auxquels chaque compte local est rattaché pour le reporting consolidé."
+      },
+      "consolidationConfirm": {
+        "title": "Définir {{code}} comme plan de consolidation ?",
+        "replaces": "{{code}} remplace {{previous}} comme plan de consolidation.",
+        "matched_one": "{{count}} compte conserve son compte de consolidation.",
+        "matched_other": "{{count}} comptes conservent leur compte de consolidation.",
+        "outside_one": "{{count}} compte pointe vers un numéro absent de {{code}} : il sera signalé pour que vous puissiez le rattacher à nouveau.",
+        "outside_other": "{{count}} comptes pointent vers un numéro absent de {{code}} : ils seront signalés pour que vous puissiez les rattacher à nouveau.",
+        "unmapped_one": "{{count}} compte n'a pas de compte de consolidation.",
+        "unmapped_other": "{{count}} comptes n'ont pas de compte de consolidation."
+      },
+      "stopConsolidationConfirm": {
+        "title": "Ne plus utiliser {{code}} comme plan de consolidation ?",
+        "body": "Le reporting consolidé n'aura plus de plan de référence. Les rattachements des comptes sont conservés."
+      },
+      "deleteConfirm": {
+        "title": "Supprimer {{code}} ?",
+        "accounts_one": "{{code}} contient {{count}} compte. Il est supprimé avec le plan.",
+        "accounts_other": "{{code}} contient {{count}} comptes. Ils sont supprimés avec le plan.",
+        "consolidation": "{{code}} est le plan de consolidation : ce rôle est retiré et le reporting consolidé n'aura plus de plan de référence.",
+        "confirm": "Supprimer quand même"
+      },
+      "deleteRefused": "{{code}} n'a pas été supprimé. {{reason}}",
+      "actionFailed": "La modification de {{code}} a échoué."
+    },
+    "accountCount_one": "{{count}} compte",
+    "accountCount_other": "{{count}} comptes",
+    "coverage": {
+      "allCountries": "Tous les pays"
+    },
+    "roles": {
+      "countryDefault": "Plan par défaut pour {{country}}",
+      "globalDefault": "Plan par défaut des autres pays",
+      "consolidation": "Plan de consolidation"
+    },
+    "outsideMarker": "Absent du plan de consolidation {{code}}",
+    "health": {
+      "noConsolidationChart": "Aucun plan de consolidation.",
+      "chooseConsolidationChart": "Choisissez-en un dans Gérer les plans.",
+      "allMapped": "Tous les comptes sont rattachés au plan de consolidation {{code}}.",
+      "outside_one": "{{count}} compte pointe vers un compte de consolidation absent de {{code}}",
+      "outside_other": "{{count}} comptes pointent vers un compte de consolidation absent de {{code}}",
+      "unmapped_one": "{{count}} compte n'a pas de compte de consolidation",
+      "unmapped_other": "{{count}} comptes n'ont pas de compte de consolidation",
+      "showAll": "Afficher tous les comptes"
     }
   },
   "accounts": {

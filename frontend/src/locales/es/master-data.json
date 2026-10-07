@@ -421,7 +421,6 @@
     "title": "Planes de cuentas",
     "loadError": "Error al cargar los planes de cuentas.",
     "loadingCoA": "Cargando planes de cuentas…",
-    "accounts": "cuentas",
     "newAccount": "Nueva cuenta",
     "exportAccounts": "Exportar cuentas",
     "importAccounts": "Importar cuentas en el plan de cuentas seleccionado",
@@ -438,43 +437,110 @@
       "accountsInChart": "Las cuentas siempre se gestionan dentro de un plan de cuentas.",
       "newCoA": "Nuevo plan de cuentas",
       "newChip": "Nuevo",
-      "manage": "Gestionar"
+      "manage": "Gestionar planes"
     },
     "createDialog": {
       "title": "Nuevo plan de cuentas",
-      "mode": "Modo",
-      "scratch": "Crear desde cero",
-      "template": "Copiar desde plantilla",
+      "scratch": "Un plan vacío",
+      "template": "Una plantilla",
       "templateLabel": "Plantilla",
       "codeLabel": "Código",
-      "codeTooltip": "Un identificador estable utilizado en exportaciones/importaciones (coa_code) y enlaces directos.",
-      "scopeLabel": "Ámbito",
-      "scopeCountry": "País",
-      "scopeGlobal": "Global",
-      "setDefaultForCountry": "Establecer como predeterminado para este país",
-      "preflightOk": "Verificación OK: total {{total}}, inserciones {{inserted}}, actualizaciones {{updated}}.",
-      "codeAndNameRequired": "El código y el nombre son obligatorios",
-      "countryRequired": "El país es obligatorio",
-      "selectTemplate": "Seleccione una plantilla",
-      "preflightFailed": "Error en la verificación",
-      "failedToCreate": "Error al crear",
-      "preflight": "Verificación"
+      "scopeCountry": "Un país",
+      "scopeGlobal": "Todos los países",
+      "setDefaultForCountry": "Hacerlo predeterminado para este país",
+      "preflightOk": "Plantilla verificada: {{total}} cuentas, {{inserted}} nuevas, {{updated}} actualizadas.",
+      "codeAndNameRequired": "El código y el nombre son obligatorios.",
+      "countryRequired": "Elija un país.",
+      "selectTemplate": "Elija una plantilla.",
+      "preflightFailed": "La verificación de la plantilla ha fallado.",
+      "failedToCreate": "No se pudo crear el plan.",
+      "preflight": "Verificar plantilla",
+      "startFrom": "Partir de",
+      "templatePlaceholder": "Elija una plantilla",
+      "codeHelp": "Un identificador corto y estable, usado en archivos CSV y enlaces.",
+      "codePlaceholder": "p. ej., FR-PCG",
+      "nameLabel": "Nombre",
+      "namePlaceholder": "p. ej., Plan de cuentas francés",
+      "coverageLabel": "Se usa para",
+      "countryLabel": "País",
+      "countryPlaceholder": "Elija un país",
+      "setDefaultForNamedCountry": "Hacerlo predeterminado para {{country}}"
     },
     "manageDialog": {
-      "title": "Gestionar planes de cuentas",
-      "setCountryDefault": "Establecer como predeterminado del país",
-      "setGlobalDefault": "Establecer como predeterminado global",
+      "title": "Gestionar planes",
+      "newChart": "Nuevo plan",
       "loadingCoAs": "Cargando planes de cuentas…",
       "loadError": "Error al cargar los planes de cuentas.",
-      "noCoAs": "No se encontraron planes de cuentas.",
-      "selectToView": "Seleccione un plan de cuentas para ver los detalles.",
-      "scope": "Ámbito",
-      "countryDefault": "Predeterminado del país",
-      "globalDefault": "Predeterminado global",
-      "linkedCompanies": "Empresas vinculadas",
-      "accountsCount": "Cuentas",
-      "failedSetDefault": "Error al establecer el plan de cuentas predeterminado",
-      "failedSetGlobalDefault": "Error al establecer el plan de cuentas predeterminado global"
+      "noCoAs": "Todavía no hay planes de cuentas.",
+      "columns": {
+        "code": "Código",
+        "name": "Nombre",
+        "coverage": "Países",
+        "roles": "Roles",
+        "companies": "Empresas",
+        "accounts": "Cuentas",
+        "actions": "Acciones"
+      },
+      "rowMenu": "Acciones para {{code}}",
+      "actions": {
+        "makeCountryDefault": "Hacer predeterminado para {{country}}",
+        "stopCountryDefault": "Dejar de ser predeterminado para {{country}}",
+        "makeGlobalDefault": "Hacer predeterminado para otros países",
+        "makeGlobalDefaultHint": "También se asigna a las empresas sin plan de cuentas.",
+        "stopGlobalDefault": "Dejar de ser predeterminado para otros países",
+        "makeConsolidation": "Hacer plan de consolidación",
+        "stopConsolidation": "Dejar de ser plan de consolidación",
+        "delete": "Eliminar"
+      },
+      "help": {
+        "countryDefault": "Predeterminado para un país: se propone al crear una empresa en ese país.",
+        "globalDefault": "Predeterminado para otros países: se usa para las empresas de un país sin plan predeterminado.",
+        "consolidation": "Plan de consolidación: las cuentas del grupo a las que se asigna cada cuenta local para el reporting consolidado."
+      },
+      "consolidationConfirm": {
+        "title": "¿Hacer de {{code}} el plan de consolidación?",
+        "replaces": "{{code}} sustituye a {{previous}} como plan de consolidación.",
+        "matched_one": "{{count}} cuenta conserva su cuenta de consolidación.",
+        "matched_other": "{{count}} cuentas conservan su cuenta de consolidación.",
+        "outside_one": "{{count}} cuenta apunta a un número que no existe en {{code}}: se marcará para que pueda reasignarla.",
+        "outside_other": "{{count}} cuentas apuntan a un número que no existe en {{code}}: se marcarán para que pueda reasignarlas.",
+        "unmapped_one": "{{count}} cuenta no tiene cuenta de consolidación.",
+        "unmapped_other": "{{count}} cuentas no tienen cuenta de consolidación."
+      },
+      "stopConsolidationConfirm": {
+        "title": "¿Dejar de usar {{code}} como plan de consolidación?",
+        "body": "El reporting consolidado ya no tendrá un plan de referencia. Las asignaciones de las cuentas se conservan."
+      },
+      "deleteConfirm": {
+        "title": "¿Eliminar {{code}}?",
+        "accounts_one": "{{code}} tiene {{count}} cuenta. Se elimina con el plan.",
+        "accounts_other": "{{code}} tiene {{count}} cuentas. Se eliminan con el plan.",
+        "consolidation": "{{code}} es el plan de consolidación: el rol se retira y el reporting consolidado ya no tendrá un plan de referencia.",
+        "confirm": "Eliminar de todos modos"
+      },
+      "deleteRefused": "{{code}} no se ha eliminado. {{reason}}",
+      "actionFailed": "El cambio en {{code}} ha fallado."
+    },
+    "accountCount_one": "{{count}} cuenta",
+    "accountCount_other": "{{count}} cuentas",
+    "coverage": {
+      "allCountries": "Todos los países"
+    },
+    "roles": {
+      "countryDefault": "Predeterminado para {{country}}",
+      "globalDefault": "Predeterminado para otros países",
+      "consolidation": "Plan de consolidación"
+    },
+    "outsideMarker": "No está en el plan de consolidación {{code}}",
+    "health": {
+      "noConsolidationChart": "No hay plan de consolidación.",
+      "chooseConsolidationChart": "Elija uno en Gestionar planes.",
+      "allMapped": "Todas las cuentas están asignadas al plan de consolidación {{code}}.",
+      "outside_one": "{{count}} cuenta apunta a una cuenta de consolidación que no existe en {{code}}",
+      "outside_other": "{{count}} cuentas apuntan a una cuenta de consolidación que no existe en {{code}}",
+      "unmapped_one": "{{count}} cuenta no tiene cuenta de consolidación",
+      "unmapped_other": "{{count}} cuentas no tienen cuenta de consolidación",
+      "showAll": "Mostrar todas las cuentas"
     }
   },
   "accounts": {

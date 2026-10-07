@@ -420,8 +420,7 @@
   "coa": {
     "title": "Charts of accounts",
     "loadError": "Failed to load charts of accounts.",
-    "loadingCoA": "Loading charts of Accounts…",
-    "accounts": "accounts",
+    "loadingCoA": "Loading charts of accounts…",
     "newAccount": "New account",
     "exportAccounts": "Export accounts",
     "importAccounts": "Import accounts into selected CoA",
@@ -429,52 +428,119 @@
       "accountNumber": "Account #",
       "accountName": "Name",
       "nativeName": "Native name",
-      "consolAccountNumber": "Consol. Account #",
-      "consolAccountName": "Consol. Name",
-      "consolDescription": "Consol. Description"
+      "consolAccountNumber": "Consol. account #",
+      "consolAccountName": "Consol. name",
+      "consolDescription": "Consol. description"
     },
     "chipBar": {
       "createFirst": "Create your first chart of accounts",
       "accountsInChart": "Accounts are always managed inside a chart.",
       "newCoA": "New chart of accounts",
       "newChip": "New",
-      "manage": "Manage"
+      "manage": "Manage charts"
     },
     "createDialog": {
       "title": "New chart of accounts",
-      "mode": "Mode",
-      "scratch": "Create from scratch",
-      "template": "Copy from template",
+      "scratch": "An empty chart",
+      "template": "A template",
       "templateLabel": "Template",
       "codeLabel": "Code",
-      "codeTooltip": "A stable identifier used in exports/imports (coa_code) and deep links.",
-      "scopeLabel": "Scope",
-      "scopeCountry": "Country",
-      "scopeGlobal": "Global",
-      "setDefaultForCountry": "Set as default for this country",
-      "preflightOk": "Preflight OK: total {{total}}, inserts {{inserted}}, updates {{updated}}.",
-      "codeAndNameRequired": "Code and name are required",
-      "countryRequired": "Country is required",
-      "selectTemplate": "Please select a template",
-      "preflightFailed": "Preflight failed",
-      "failedToCreate": "Failed to create",
-      "preflight": "Preflight"
+      "scopeCountry": "One country",
+      "scopeGlobal": "All countries",
+      "setDefaultForCountry": "Make it the default for this country",
+      "preflightOk": "Template checked: {{total}} accounts, {{inserted}} new, {{updated}} updated.",
+      "codeAndNameRequired": "Code and name are required.",
+      "countryRequired": "Choose a country.",
+      "selectTemplate": "Choose a template.",
+      "preflightFailed": "The template check failed.",
+      "failedToCreate": "The chart could not be created.",
+      "preflight": "Check template",
+      "startFrom": "Start from",
+      "templatePlaceholder": "Choose a template",
+      "codeHelp": "A short, stable identifier used in CSV files and links.",
+      "codePlaceholder": "e.g., FR-PCG",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g., French chart of accounts",
+      "coverageLabel": "Used for",
+      "countryLabel": "Country",
+      "countryPlaceholder": "Choose a country",
+      "setDefaultForNamedCountry": "Make it the default for {{country}}"
     },
     "manageDialog": {
-      "title": "Manage charts of accounts",
-      "setCountryDefault": "Set country default",
-      "setGlobalDefault": "Set global default",
+      "title": "Manage charts",
+      "newChart": "New chart",
       "loadingCoAs": "Loading charts of accounts…",
       "loadError": "Failed to load charts of accounts.",
-      "noCoAs": "No charts of accounts found.",
-      "selectToView": "Select a chart of accounts to view details.",
-      "scope": "Scope",
-      "countryDefault": "Country default",
-      "globalDefault": "Global default",
-      "linkedCompanies": "Linked companies",
-      "accountsCount": "Accounts",
-      "failedSetDefault": "Failed to set default chart of accounts",
-      "failedSetGlobalDefault": "Failed to set global default chart of accounts"
+      "noCoAs": "No charts of accounts yet.",
+      "columns": {
+        "code": "Code",
+        "name": "Name",
+        "coverage": "Countries",
+        "roles": "Roles",
+        "companies": "Companies",
+        "accounts": "Accounts",
+        "actions": "Actions"
+      },
+      "rowMenu": "Actions for {{code}}",
+      "actions": {
+        "makeCountryDefault": "Make default for {{country}}",
+        "stopCountryDefault": "Stop being default for {{country}}",
+        "makeGlobalDefault": "Make default for other countries",
+        "makeGlobalDefaultHint": "Also assigned to companies that have no chart.",
+        "stopGlobalDefault": "Stop being default for other countries",
+        "makeConsolidation": "Make consolidation chart",
+        "stopConsolidation": "Stop being consolidation chart",
+        "delete": "Delete"
+      },
+      "help": {
+        "countryDefault": "Default for a country: proposed when you create a company in that country.",
+        "globalDefault": "Default for other countries: used for companies in a country that has no default chart.",
+        "consolidation": "Consolidation chart: the group accounts every local account maps to for consolidated reporting."
+      },
+      "consolidationConfirm": {
+        "title": "Make {{code}} the consolidation chart?",
+        "replaces": "{{code}} replaces {{previous}} as the consolidation chart.",
+        "matched_one": "{{count}} account keeps its consolidation account.",
+        "matched_other": "{{count}} accounts keep their consolidation account.",
+        "outside_one": "{{count}} account points to a number that does not exist in {{code}}: it will be flagged so you can remap it.",
+        "outside_other": "{{count}} accounts point to a number that does not exist in {{code}}: they will be flagged so you can remap them.",
+        "unmapped_one": "{{count}} account has no consolidation account.",
+        "unmapped_other": "{{count}} accounts have no consolidation account."
+      },
+      "stopConsolidationConfirm": {
+        "title": "Stop using {{code}} as the consolidation chart?",
+        "body": "Consolidated reporting will no longer have a reference chart. Account mappings are kept."
+      },
+      "deleteConfirm": {
+        "title": "Delete {{code}}?",
+        "accounts_one": "{{code}} has {{count}} account. It is deleted with the chart.",
+        "accounts_other": "{{code}} has {{count}} accounts. They are deleted with the chart.",
+        "consolidation": "{{code}} is the consolidation chart: the role is removed and consolidated reporting will no longer have a reference chart.",
+        "confirm": "Delete anyway"
+      },
+      "deleteRefused": "{{code}} was not deleted. {{reason}}",
+      "actionFailed": "The change to {{code}} failed."
+    },
+    "accountCount_one": "{{count}} account",
+    "accountCount_other": "{{count}} accounts",
+    "coverage": {
+      "allCountries": "All countries"
+    },
+    "roles": {
+      "countryDefault": "Default for {{country}}",
+      "globalDefault": "Default for other countries",
+      "consolidation": "Consolidation chart"
+    },
+    "outsideMarker": "Not in the consolidation chart {{code}}",
+    "health": {
+      "noConsolidationChart": "No consolidation chart.",
+      "chooseConsolidationChart": "Choose one in Manage charts.",
+      "allMapped": "All accounts map to the consolidation chart {{code}}.",
+      "outside_one": "{{count}} account points to a consolidation account missing from {{code}}",
+      "outside_other": "{{count}} accounts point to a consolidation account missing from {{code}}",
+      "unmapped_one": "{{count}} account has no consolidation account",
+      "unmapped_other": "{{count}} accounts have no consolidation account",
+      "showAll": "Show all accounts"
     }
   },
   "accounts": {
