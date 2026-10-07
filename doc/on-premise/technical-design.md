@@ -194,7 +194,7 @@ GET /api/config/public
 | DNS requirements | Wildcard DNS | Simple A record |
 | Platform-admin | Active (allowlist or role) | Fully disabled (`isPlatformAdmin()` → false) |
 | Platform admin endpoints | Accessible | Return 404 (MultiTenantOnlyGuard) |
-| Tenant creation | Platform-admin UI or trial | Auto-created on first boot |
+| Tenant creation | Platform-admin UI or trial | Auto-created on first boot, with the default global chart of accounts |
 | Multiple tenants | Yes | No (single tenant only) |
 | Platform-admin nav | Visible (if user has access) | Hidden |
 | Trial / support endpoints | Active | Return 404 |

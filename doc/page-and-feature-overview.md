@@ -311,7 +311,7 @@ Platform admins operate through `AdminTenantsService` (`backend/src/admin/tenant
 - Freeze/unfreeze flips `TenantStatus` and records audit entries via `AuditService`.
 - Plan updates run inside `withTenant` to respect RLS while touching per-tenant subscriptions.
 - Mark as internal tenant (`markInternal`) turns a demonstration or test tenant into an active subscription with plan `Internal`, unlimited seats and no money flow, which also reactivates an expired trial. It is refused when the subscription is linked to Stripe. See "Internal tenants" in `architecture.md`.
-- Synchronous deletion (`deleteTenant`) validates confirmation slug, transitions status to `deleting`, purges tenant data across spend, contracts, CAPEX, RBAC, audit, accounting master data (including `chart_of_accounts` and `accounts`), and branding storage objects (tenant logo), then marks the record `deleted`. The tenant slug is cleared for reuse by assigning a unique `deleted-<slug>-<timestamp>` marker. Failures revert to `frozen` with an audit trail.
+- Synchronous deletion (`deleteTenant`) validates confirmation slug, transitions status to `deleting`, purges tenant data across spend, contracts, CAPEX, RBAC, audit, accounting master data (including `chart_of_accounts` and `accounts`), and branding storage objects (tenant logo), then marks the record `deleted`. Storage objects (attachments, logo) are deleted after the purge transaction commits (`admin/tenants/tenant-data-purge.ts`, shared with the tenant reset service). The tenant slug is cleared for reuse by assigning a unique `deleted-<slug>-<timestamp>` marker. Failures revert to `frozen` with an audit trail.
 
 ## Audit & Compliance
 

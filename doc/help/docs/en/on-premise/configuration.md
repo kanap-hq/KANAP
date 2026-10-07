@@ -16,7 +16,7 @@ A full template is available at `infra/.env.onprem.example`.
 | `DEFAULT_TENANT_SLUG` | No       | `default`         | Internal identifier for the tenant (URL-safe, lowercase)        |
 | `DEFAULT_TENANT_NAME` | No       | `My Organization` | Your organization's name, displayed in the UI header and reports |
 
-On first boot, KANAP automatically creates a tenant using these values. The defaults work fine for most deployments — you only need to change them if you want a specific organization name to appear in the application.
+On first boot, KANAP automatically creates a tenant using these values. The defaults work fine for most deployments — you only need to change them if you want a specific organization name to appear in the application. A new installation also receives the default IFRS chart of accounts, set as its default and consolidation chart (upgrading an existing installation does not add it).
 
 ## Required: Admin Credentials
 

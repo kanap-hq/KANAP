@@ -16,7 +16,7 @@ Eine vollständige Vorlage ist unter `infra/.env.onprem.example` verfügbar.
 | `DEFAULT_TENANT_SLUG` | Nein         | `default`         | Interne Kennung für den Mandanten (URL-sicher, Kleinbuchstaben) |
 | `DEFAULT_TENANT_NAME` | Nein         | `My Organization` | Name Ihrer Organisation, angezeigt im UI-Header und in Berichten |
 
-Beim ersten Start erstellt KANAP automatisch einen Mandanten mit diesen Werten. Die Standardwerte funktionieren für die meisten Bereitstellungen -- Sie müssen sie nur ändern, wenn ein bestimmter Organisationsname in der Anwendung erscheinen soll.
+Beim ersten Start erstellt KANAP automatisch einen Mandanten mit diesen Werten. Die Standardwerte funktionieren für die meisten Bereitstellungen -- Sie müssen sie nur ändern, wenn ein bestimmter Organisationsname in der Anwendung erscheinen soll. Eine neue Installation erhält außerdem den IFRS-Standard-Kontenplan, festgelegt als Standard-Kontenplan und Konsolidierungskontenplan (das Update einer bestehenden Installation fügt ihn nicht hinzu).
 
 ## Erforderlich: Admin-Zugangsdaten
 

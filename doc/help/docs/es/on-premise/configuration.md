@@ -16,7 +16,7 @@ Una plantilla completa está disponible en `infra/.env.onprem.example`.
 | `DEFAULT_TENANT_SLUG` | No        | `default`         | Identificador interno del espacio de trabajo (seguro para URL, minúsculas) |
 | `DEFAULT_TENANT_NAME` | No        | `My Organization` | Nombre de su organización, mostrado en el encabezado de la interfaz y los informes |
 
-En el primer arranque, KANAP crea automáticamente un espacio de trabajo usando estos valores. Los valores predeterminados funcionan bien para la mayoría de despliegues — solo necesita cambiarlos si desea que un nombre de organización específico aparezca en la aplicación.
+En el primer arranque, KANAP crea automáticamente un espacio de trabajo usando estos valores. Los valores predeterminados funcionan bien para la mayoría de despliegues — solo necesita cambiarlos si desea que un nombre de organización específico aparezca en la aplicación. Una instalación nueva recibe también el plan de cuentas IFRS predeterminado, definido como plan de cuentas predeterminado y plan de consolidación (actualizar una instalación existente no lo añade).
 
 ## Requerido: Credenciales de administrador
 
