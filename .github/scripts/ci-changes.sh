@@ -7,8 +7,9 @@
 #   ci-changes.sh --stdin        jobs for the file list read on stdin (local tests)
 #
 # Rules: backend/** -> backend; frontend/** -> frontend; .github/workflows/** and
-# .github/scripts/** -> both; onprem = backend or frontend. Everything else (doc/, marketing/,
-# infra/, .agents/, root files) runs none of the three jobs: no job reads it.
+# .github/scripts/** -> both; onprem = backend or frontend, or the marketing lockfile (the onprem
+# job checks the integrity hashes of every lockfile). Everything else (doc/, marketing/, infra/,
+# .agents/, root files) runs none of the three jobs: no job reads it.
 set -euo pipefail
 
 emit() {
@@ -36,13 +37,14 @@ show() {
 }
 
 classify() {
-  local backend=() frontend=() shared=() other=() f
+  local backend=() frontend=() shared=() lockfiles=() other=() f
   while IFS= read -r f; do
     [ -z "$f" ] && continue
     case "$f" in
       backend/*) backend+=("$f") ;;
       frontend/*) frontend+=("$f") ;;
       .github/workflows/* | .github/scripts/*) shared+=("$f") ;;
+      marketing/web/package-lock.json) lockfiles+=("$f") ;;
       *) other+=("$f") ;;
     esac
   done
@@ -50,12 +52,13 @@ classify() {
   show "Backend files" ${backend[@]+"${backend[@]}"}
   show "Frontend files" ${frontend[@]+"${frontend[@]}"}
   show "CI files (run every job)" ${shared[@]+"${shared[@]}"}
+  show "Other lockfiles (run onprem)" ${lockfiles[@]+"${lockfiles[@]}"}
   show "Files no job reads" ${other[@]+"${other[@]}"}
 
   local b=false fe=false o=false
   if [ "${#backend[@]}" -gt 0 ] || [ "${#shared[@]}" -gt 0 ]; then b=true; fi
   if [ "${#frontend[@]}" -gt 0 ] || [ "${#shared[@]}" -gt 0 ]; then fe=true; fi
-  if [ "$b" = true ] || [ "$fe" = true ]; then o=true; fi
+  if [ "$b" = true ] || [ "$fe" = true ] || [ "${#lockfiles[@]}" -gt 0 ]; then o=true; fi
   emit "$b" "$fe" "$o"
 }
 

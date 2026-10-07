@@ -32,7 +32,7 @@ Tool-specific or private notes live in each tool's local files, never here.
 
 ## Repository map
 
-- `backend/`: NestJS + TypeORM API (Node 20 in the images, 22 in CI). Source `backend/src/**`, build `backend/dist/`.
+- `backend/`: NestJS + TypeORM API (Node 22 in the images and in CI). Source `backend/src/**`, build `backend/dist/`.
 - `frontend/`: React + Vite + MUI app. Source `frontend/src/**`.
 - `marketing/`: public marketing site and blog.
 - `infra/`: Docker Compose stacks. Dev uses a local `docker-compose.yml` copied from

@@ -174,14 +174,10 @@ function detectSignature(buffer: Buffer): 'png' | 'jpeg' | 'gif' | 'webp' | 'pdf
   return null;
 }
 
-/** Minimal entry shape needed from `adm-zip`, which is declared untyped in `src/types/external.d.ts`. */
-type ZipEntry = { entryName: string };
-
 function detectZipContainerMime(buffer: Buffer): string {
   try {
     const zip = new AdmZip(buffer);
-    const zipEntries: ZipEntry[] = zip.getEntries();
-    const entries = zipEntries.map((entry) => entry.entryName.toLowerCase());
+    const entries = zip.getEntries().map((entry) => entry.entryName.toLowerCase());
 
     if (entries.some((entry) => entry.startsWith('word/'))) {
       return ZIP_BASED_EXTENSION_MIME['.docx'];

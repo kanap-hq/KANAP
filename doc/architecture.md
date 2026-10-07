@@ -29,7 +29,7 @@ Goals, constraints, assumptions, and relevant background for architectural choic
 
 ## Components
 - **Frontend (`web`)**: React + TypeScript (Vite), MUI + icons, AG Grid community (`ServerDataGrid`), TanStack Query, i18next (en/fr/de/es), zod + react-hook-form, dnd-kit, ag-charts, d3, SVAR Gantt, MDXEditor. Navigation is a top AppBar with workspace tabs (AI, Agents, Portfolio, Knowledge, IT Landscape, Budget Management, Master Data, Admin) plus a per-workspace left drawer; Home is the `/` root. Details in `doc/frontend-architecture.md`.
-- **Backend API (`api`)**: NestJS + TypeORM on Node 20. Modules by domain:
+- **Backend API (`api`)**: NestJS + TypeORM on Node 22. Modules by domain:
   - Budget: spend (OPEX), capex, contracts, accounts / chart of accounts, currency, freeze, analytics, billing, dashboard
   - Master data: companies, departments, suppliers, contacts, locations, users, business processes, master-data operations
   - Portfolio: requests, projects, teams, contributors, time entries; tasks
@@ -404,7 +404,7 @@ See also: `doc/frontend-architecture.md` for detailed UI guidelines.
 
 ### Authentication & SSO
 - Local email/password + JWT is the baseline for every user. Access tokens come from `AuthService.signToken`; a refresh token is kept in an `HttpOnly` cookie (`auth-cookie.util.ts`) and feeds `/auth/me`, guards and the SPA's Axios interceptor.
-- `JwtAuthGuard` verifies with a key built once from `JWT_SECRET` (`auth/jwt-key.ts`, rebuilt only if the secret changes). Given the secret as a string, jsonwebtoken first tried it as a public key (a thrown error) then built the key on every authenticated request: about 980 µs of main-thread time per request on Node 20 in the API image, 19 µs with the key built once.
+- `JwtAuthGuard` verifies with a key built once from `JWT_SECRET` (`auth/jwt-key.ts`, rebuilt only if the secret changes). Given the secret as a string, jsonwebtoken first tried it as a public key (a thrown error) then built the key on every authenticated request: about 980 µs of main-thread time per request, 19 µs with the key built once (measured on Node 20).
 - Microsoft Entra is the only SSO provider (no SAML, Google or generic OIDC). Each tenant connects one Entra directory via **Admin → Authentication**; the tenant row stores `sso_provider` (`none|entra`), `sso_enabled`, `entra_tenant_id` and `entra_metadata`, enforcing a strict 1:1 mapping.
 - `EntraAuthService` downloads the discovery document and JWKS, builds authorization URLs, exchanges codes and validates `id_token` claims (audience, `nonce`, `tid`, `oid`). The issuer is validated against `https://login.microsoftonline.com/<tid>/v2.0` to support multi-tenant authorities. Env: `ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET`, `ENTRA_AUTHORITY` (e.g. `https://login.microsoftonline.com/organizations`), `ENTRA_REDIRECT_URI` (public HTTPS URL of `/auth/entra/callback`). The whole feature is gated by `ENTRA_SSO`.
 - Setup flow: `POST /auth/entra/setup/start` (tenant admin, JWT; a `GET` variant exists for browser redirects) returns `{ url }` with a signed short-lived `state` carrying the OIDC nonce. The URL uses `prompt=consent`. The shared callback validates the nonce, persists the Entra tenant id and redirects to the tenant host's `/admin/auth?setup=success`.
