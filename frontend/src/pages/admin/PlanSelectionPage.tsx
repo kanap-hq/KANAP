@@ -106,6 +106,17 @@ export default function PlanSelectionDialog({
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [actionInfo, setActionInfo] = React.useState<string | null>(null);
   const [actionLoading, setActionLoading] = React.useState<string | null>(null);
+  // The dialog stays mounted between openings: each opening starts without the outcome of
+  // the previous attempt (an error from details fixed since, a finished request).
+  const [wasOpen, setWasOpen] = React.useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setActionError(null);
+      setActionInfo(null);
+      setActionLoading(null);
+    }
+  }
 
   const isBillingAdmin = !!claims?.isBillingAdmin;
   const isTrialing = subscription?.status === 'trialing';

@@ -299,7 +299,8 @@
     },
     "invoiceDetails": {
       "copyFromCustomer": "Copier depuis le client",
-      "title": "Informations de facturation"
+      "title": "Informations de facturation",
+      "vatNumberFormat": "Vérifiez le format de ce numéro de TVA."
     },
     "invoiceStatuses": {
       "draft": "Brouillon",

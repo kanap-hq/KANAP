@@ -299,7 +299,8 @@
     },
     "invoiceDetails": {
       "copyFromCustomer": "Copiar del cliente",
-      "title": "Información de facturación"
+      "title": "Información de facturación",
+      "vatNumberFormat": "Compruebe el formato de este número de IVA."
     },
     "invoiceStatuses": {
       "draft": "Borrador",

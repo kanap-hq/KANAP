@@ -170,6 +170,14 @@ const INVOICE_STATUS_META: Record<string, { label: string; color: ChipProps['col
   uncollectible: { label: 'Uncollectible', color: 'error' },
 };
 
+const ENDED_SUBSCRIPTION_STATUSES = ['canceled', 'incomplete_expired'];
+
+/** A Stripe subscription that still runs: its plan, amount and payment details are real. */
+function isLiveSubscription(subscription: BillingSubscription | null | undefined): boolean {
+  if (!subscription?.stripe_subscription_id) return false;
+  return !ENDED_SUBSCRIPTION_STATUSES.includes(subscription.status ?? '');
+}
+
 function derivePlanLabel(
   subscription: BillingSubscription | null | undefined,
   t: (key: string, options?: Record<string, unknown>) => string,
@@ -177,6 +185,8 @@ function derivePlanLabel(
   if (!subscription) return '—';
   // Local trial (no Stripe subscription)
   if (subscription.status === 'trialing' && !subscription.stripe_subscription_id) return t('billing.subscription.planLabels.freeTrial');
+  // Without a live subscription the stored plan name is a leftover (an old plan, an ended one).
+  if (!isLiveSubscription(subscription)) return '—';
   return subscription.plan_name || '—';
 }
 
@@ -416,6 +426,9 @@ export default function BillingCenter() {
   const allowPortal = hasSubscription;
   const isTrialing = subscriptionStatus === 'trialing';
   const isLocalTrial = isTrialing && !hasSubscription;
+  // Amount, frequency, collection and payment method only describe a live subscription.
+  const showSubscriptionDetails = isLiveSubscription(subscriptionSummary);
+  const showRenewal = showSubscriptionDetails || isLocalTrial || renewalLabel !== '—';
   const trialDaysRemaining = subscription?.trial_days_remaining;
   const isHealthy = subscription?.is_subscription_healthy;
   const planActionLabel = hasSubscription ? t('billing.actions.changePlan') : t('billing.actions.choosePlan');
@@ -424,6 +437,11 @@ export default function BillingCenter() {
   const canToggleInvoices = invoices.length > 5;
   const invoiceMissingFields = profileQuery.data?.invoice_missing_fields ?? [];
   const invoiceVatRequired = isEuCountry(invoiceForm.address.country);
+  // The saved VAT number is filled in but the server does not accept its format.
+  const invoiceVatMalformed =
+    invoiceMissingFields.includes('vatNumber') &&
+    invoiceForm.vatNumber.trim().length > 0 &&
+    invoiceForm.vatNumber === baseInvoiceForm.vatNumber;
   const invoiceCardRef = React.useRef<HTMLDivElement>(null);
   const focusInvoiceOnExit = React.useRef(false);
 
@@ -564,12 +582,14 @@ export default function BillingCenter() {
                     </Box>
                   </SummaryItem>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <SummaryItem label={t('billing.subscription.labels.renewalDate')}>
-                    <Typography>{renewalLabel}</Typography>
-                  </SummaryItem>
-                </Grid>
-                {!isLocalTrial && (
+                {showRenewal && (
+                  <Grid item xs={12} sm={6} md={3}>
+                    <SummaryItem label={t('billing.subscription.labels.renewalDate')}>
+                      <Typography>{renewalLabel}</Typography>
+                    </SummaryItem>
+                  </Grid>
+                )}
+                {showSubscriptionDetails && (
                   <>
                     <Grid item xs={12} sm={6} md={3}>
                       <SummaryItem label={t('billing.subscription.labels.amountPerPeriod')}>
@@ -600,7 +620,7 @@ export default function BillingCenter() {
                     </SummaryItem>
                   </Grid>
                 )}
-                {!isLocalTrial && (
+                {showSubscriptionDetails && (
                   <Grid item xs={12} sm={6} md={3}>
                     <SummaryItem label={t('billing.subscription.labels.lastStripeSync')}>
                       <Typography>{lastSyncedLabel}</Typography>
@@ -891,6 +911,8 @@ export default function BillingCenter() {
                   onChange={handleContactChange('invoice', 'vatNumber')}
                   fullWidth
                   required={invoiceVatRequired}
+                  error={invoiceVatMalformed}
+                  helperText={invoiceVatMalformed ? t('billing.invoiceDetails.vatNumberFormat') : undefined}
                   inputProps={{ 'data-invoice-field': 'vatNumber' }}
                   disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
                 />

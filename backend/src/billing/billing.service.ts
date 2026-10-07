@@ -279,46 +279,32 @@ export class BillingService {
   async createCheckoutSession(opts: {
     tenantId: string;
     manager?: EntityManager;
-    subscriptionType?: SubscriptionType;
-    priceId?: string | null;
-    quantity?: number;
-    planKey?: PlanKey;
-    interval?: IntervalKey;
+    planKey: PlanKey;
+    interval: IntervalKey;
     successUrl?: string | null;
     cancelUrl?: string | null;
     metadata?: Record<string, string>;
     allowPromotionCodes?: boolean;
   }) {
+    // Only a current plan can be bought, always at its configured price.
+    const planKey = opts.planKey;
+    const interval = opts.interval;
+    if (!planKey || !Object.prototype.hasOwnProperty.call(PLANS, planKey)) {
+      throw new BadRequestException('Unknown plan');
+    }
+    if (interval !== 'monthly' && interval !== 'annual') {
+      throw new BadRequestException('Unknown billing interval');
+    }
+    const priceId = getPriceId(this.stripeConfig, interval, planKey);
+    if (!priceId) {
+      throw new BadRequestException('Stripe price not configured for requested plan');
+    }
+
     const client = this.getStripeClientOrThrow();
     const tenant = await this.requireTenant(opts.tenantId);
     const invoiceProfile = this.requireCompleteInvoiceProfile(tenant);
     const manager = opts.manager ?? null;
     const customerId = await this.ensureStripeCustomerForTenant(tenant, { manager, invoiceProfile });
-
-    // Resolve plan_key: prefer explicit, then derive from legacy price_id
-    let planKey: PlanKey | null = opts.planKey ?? null;
-    if (!planKey && opts.priceId) {
-      planKey = resolvePlanKeyFromPriceId(opts.priceId);
-    }
-
-    // Resolve interval from new field, legacy subscriptionType, or default
-    let interval: IntervalKey = opts.interval ?? (opts.subscriptionType === SubscriptionType.ANNUAL ? 'annual' : 'monthly');
-
-    // Resolve price: prefer canonical config lookup, fall back to legacy price_id
-    let priceId: string | null = null;
-    if (planKey) {
-      priceId = getPriceId(this.stripeConfig, interval, planKey);
-    }
-    if (!priceId && opts.priceId) {
-      priceId = opts.priceId;
-    }
-    if (!priceId) {
-      // Legacy fallback: interval-only lookup
-      priceId = this.stripeConfig.getPriceId(interval);
-    }
-    if (!priceId) {
-      throw new BadRequestException('Stripe price not configured for requested plan');
-    }
 
     const successUrl = opts.successUrl ?? this.stripeConfig.getCheckoutSuccessUrl();
     const cancelUrl = opts.cancelUrl ?? this.stripeConfig.getCheckoutCancelUrl();
@@ -657,6 +643,12 @@ export class BillingService {
       return await run();
     } catch (error: any) {
       if (error?.code === 'tax_id_invalid' || error?.raw?.code === 'tax_id_invalid') {
+        this.logger.warn(
+          `Stripe refused the VAT number: code=${error?.code ?? error?.raw?.code ?? 'unknown'} `
+          + `param=${error?.param ?? error?.raw?.param ?? 'unknown'} `
+          + `request=${error?.requestId ?? error?.raw?.requestId ?? 'unknown'} `
+          + `message=${error?.message ?? error?.raw?.message ?? ''}`,
+        );
         throw new BadRequestException({ message: 'VAT_NUMBER_INVALID' });
       }
       throw error;
@@ -1182,7 +1174,7 @@ export class BillingService {
 
   private async resolvePriceInfo(sub: Subscription): Promise<NormalisedPrice | null> {
     const client = this.stripeClient.getClient();
-    const priceId = sub.stripe_price_id ?? this.resolveConfiguredPriceId(sub);
+    const priceId = this.resolveConfiguredPriceId(sub);
     if (!priceId) return null;
 
     if (this.priceCache.has(priceId)) {
@@ -1202,10 +1194,17 @@ export class BillingService {
     }
   }
 
+  /**
+   * Configured price of the subscription's current plan for its interval. A plan that is no
+   * longer sold (an old Stripe price, "Starter", "Trial") has no price, so no estimate.
+   */
   private resolveConfiguredPriceId(sub: Subscription): string | null {
-    const planKey = resolvePlanKeyFromLegacyName(sub.plan_name) ?? undefined;
-    const interval = sub.subscription_type === SubscriptionType.ANNUAL ? 'annual' : 'monthly';
-    return this.stripeConfig.getPriceId(interval, planKey);
+    const planKey =
+      (sub.stripe_price_id ? resolvePlanKeyFromPriceId(sub.stripe_price_id) : null)
+      ?? resolvePlanKeyFromLegacyName(sub.plan_name);
+    if (!planKey) return null;
+    const interval: IntervalKey = sub.subscription_type === SubscriptionType.ANNUAL ? 'annual' : 'monthly';
+    return getPriceId(this.stripeConfig, interval, planKey);
   }
 
   private resolveStripeQuantity(subObject: any): number {

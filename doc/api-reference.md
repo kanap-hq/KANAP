@@ -178,6 +178,7 @@ These endpoints are tenant-scoped and require:
 - PATCH `/billing/profile` → `{ customer, invoice, invoice_missing_fields, invoices }`
   - Incomplete details are accepted and saved; the answer reports what is still missing in `invoice_missing_fields`.
 - POST `/billing/checkout` → `{ url, id }`
+  - Body: `{ plan_key, interval, success_url?, cancel_url?, allow_promotion_codes? }`. `plan_key` (a current plan: `max`) and `interval` (`monthly` or `annual`) are required; a missing or unknown value is a 400. The price is always the plan's configured Stripe price (`STRIPE_PRICE_<PLAN>_<INTERVAL>`) and the quantity is always 1. The former `price_id`, `quantity` and `subscription_type` fields are gone: the validation pipe strips them, so they have no effect. A plan without a configured price is a 400.
   - Refused before any Stripe call when the invoice details are incomplete: 400 `{ "message": "BILLING_PROFILE_INCOMPLETE", "missing": [ ... ] }`. `missing` holds the keys listed above, in that order.
   - 400 `{ "message": "VAT_NUMBER_INVALID" }` when Stripe does not accept the EU VAT number. The invoice details are copied to the Stripe customer at this point, and an EU VAT number is registered there as a tax id so it appears on invoices.
 - POST `/billing/request-invoice` (bank transfer)

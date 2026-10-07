@@ -5,33 +5,17 @@ import { RequireLevel } from '../auth/require-level.decorator';
 import { BillingService } from './billing.service';
 import { Features } from '../config/features';
 import { throwFeatureDisabled } from '../common/feature-gates';
-import { IsBoolean, IsEmail, IsEnum, IsIn, IsInt, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
-import { SubscriptionType } from './subscription.entity';
+import { IsBoolean, IsEmail, IsIn, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import type { PlanKey, IntervalKey } from './plans.config';
 import { LongRunningRequest, OUTSIDE_WORK_TIMEOUTS } from '../common/request-db-timeouts';
 
-class CreateCheckoutSessionDto {
-  @IsOptional()
+export class CreateCheckoutSessionDto {
   @IsIn(['max'])
-  plan_key?: PlanKey;
+  plan_key!: PlanKey;
 
-  @IsOptional()
   @IsIn(['monthly', 'annual'])
-  interval?: IntervalKey;
-
-  @IsOptional()
-  @IsEnum(SubscriptionType)
-  subscription_type?: SubscriptionType;
-
-  @IsOptional()
-  @IsString()
-  price_id?: string;
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  quantity?: number;
+  interval!: IntervalKey;
 
   @IsOptional()
   @IsString()
@@ -225,9 +209,6 @@ export class BillingController {
       manager: mg,
       planKey: body.plan_key,
       interval: body.interval,
-      subscriptionType: body.subscription_type,
-      priceId: body.price_id,
-      quantity: body.quantity ?? undefined,
       successUrl: body.success_url,
       cancelUrl: body.cancel_url,
       allowPromotionCodes: body.allow_promotion_codes,

@@ -112,6 +112,27 @@ describe('PlanSelectionDialog', () => {
     expect(screen.queryByText('BILLING_PROFILE_INCOMPLETE')).not.toBeInTheDocument();
   });
 
+  it('clears the error of a refused attempt when the dialog opens again', async () => {
+    (api.post as any).mockRejectedValue({ response: { data: { message: 'VAT_NUMBER_INVALID' } } });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = (open: boolean) => (
+      <QueryClientProvider client={client}>
+        <PlanSelectionDialog open={open} onClose={vi.fn()} invoiceMissingFields={[]} />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(view(true));
+    fireEvent.click(await screen.findByRole('button', { name: 'Pay by card' }));
+    const refusal = 'The VAT number was not accepted. Check it in the invoicing information.';
+    expect(await screen.findByText(refusal)).toBeInTheDocument();
+
+    rerender(view(false));
+    rerender(view(true));
+    expect(await screen.findByRole('button', { name: 'Pay by card' })).toBeEnabled();
+    expect(screen.queryByText(refusal)).not.toBeInTheDocument();
+    expect(document.querySelector('.MuiAlert-standardError')).toBeNull();
+    expect(api.post).toHaveBeenCalledTimes(1);
+  });
+
   it('explains a refused VAT number', async () => {
     (api.post as any).mockRejectedValue({ response: { data: { message: 'VAT_NUMBER_INVALID' } } });
     renderDialog({ invoiceMissingFields: [] });

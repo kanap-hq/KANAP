@@ -299,7 +299,8 @@
     },
     "invoiceDetails": {
       "copyFromCustomer": "Copy from customer",
-      "title": "Invoicing information"
+      "title": "Invoicing information",
+      "vatNumberFormat": "Check the format of this VAT number."
     },
     "invoiceStatuses": {
       "draft": "Draft",

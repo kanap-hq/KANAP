@@ -299,7 +299,8 @@
     },
     "invoiceDetails": {
       "copyFromCustomer": "Vom Kunden kopieren",
-      "title": "Rechnungsinformationen"
+      "title": "Rechnungsinformationen",
+      "vatNumberFormat": "Prüfen Sie das Format dieser USt-IdNr."
     },
     "invoiceStatuses": {
       "draft": "Entwurf",

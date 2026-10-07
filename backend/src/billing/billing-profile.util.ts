@@ -60,18 +60,47 @@ export function normaliseVatNumber(value: string | null | undefined): string {
   return String(value ?? '').replace(/[\s.\-]/g, '').toUpperCase();
 }
 
-/** The prefix an EU VAT number starts with: the country code, except Greece (EL). */
-function euVatPrefix(country: string): string {
-  return country === 'GR' ? 'EL' : country;
-}
+/**
+ * VAT number format of each EU member state, as the VIES service defines it, applied to
+ * the normalised number (prefix included; Greece uses EL). Stripe's `eu_vat` check
+ * refuses a number outside these formats.
+ */
+const EU_VAT_FORMATS: Readonly<Record<string, RegExp>> = {
+  AT: /^ATU\d{8}$/,
+  BE: /^BE[01]\d{9}$/,
+  BG: /^BG\d{9,10}$/,
+  HR: /^HR\d{11}$/,
+  CY: /^CY\d{8}[A-Z]$/,
+  CZ: /^CZ\d{8,10}$/,
+  DK: /^DK\d{8}$/,
+  EE: /^EE\d{9}$/,
+  FI: /^FI\d{8}$/,
+  FR: /^FR[A-HJ-NP-Z0-9]{2}\d{9}$/,
+  DE: /^DE\d{9}$/,
+  GR: /^EL\d{9}$/,
+  HU: /^HU\d{8}$/,
+  IE: /^IE(\d{7}[A-W][A-I]?|\d[A-Z+*]\d{5}[A-W])$/,
+  IT: /^IT\d{11}$/,
+  LV: /^LV\d{11}$/,
+  LT: /^LT(\d{9}|\d{12})$/,
+  LU: /^LU\d{8}$/,
+  MT: /^MT\d{8}$/,
+  NL: /^NL\d{9}B\d{2}$/,
+  PL: /^PL\d{10}$/,
+  PT: /^PT\d{9}$/,
+  RO: /^RO\d{2,10}$/,
+  SK: /^SK\d{10}$/,
+  SI: /^SI\d{8}$/,
+  ES: /^ES[A-Z0-9]\d{7}[A-Z0-9]$/,
+  SE: /^SE\d{12}$/,
+};
 
-/** Local format check: country prefix followed by 2 to 12 letters or digits. */
+/** Local format check: the VIES format of the country's VAT numbers. */
 export function isValidEuVatNumber(country: string | null | undefined, vatNumber: string | null | undefined): boolean {
   const iso = toIsoCountry(country);
-  if (!iso || !EU_COUNTRIES.has(iso)) return false;
-  const value = normaliseVatNumber(vatNumber);
-  const prefix = euVatPrefix(iso);
-  return value.startsWith(prefix) && /^[A-Z0-9]{2,12}$/.test(value.slice(prefix.length));
+  const format = iso ? EU_VAT_FORMATS[iso] : undefined;
+  if (!format) return false;
+  return format.test(normaliseVatNumber(vatNumber));
 }
 
 /**
