@@ -85,7 +85,10 @@ function buildController() {
       return { id: 'u-1', email: input.email };
     },
   };
-  const companies = { create: async () => { writes.push('company'); } };
+  const baseline = {
+    provisionDefaultGlobalCoa: async () => { writes.push('chart of accounts'); },
+    createStartingCompany: async () => { writes.push('company'); },
+  };
   const runnerManager = {
     query: async () => [],
     getRepository: () => ({
@@ -116,12 +119,11 @@ function buildController() {
   const controller = new PublicController(
     tenants as any,
     users as any,
-    companies as any,
+    baseline as any,
     dataSource as any,
     emails as any,
     auth as any,
     trialSignups as any,
-    {} as any,
     turnstile as any,
     {} as any,
     {} as any,

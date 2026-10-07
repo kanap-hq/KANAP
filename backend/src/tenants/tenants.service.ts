@@ -382,21 +382,27 @@ export class TenantsService {
     // Ignore tenants that were previously deleted when checking for existing
     const existing = await repo.findOne({ where: { slug, deleted_at: IsNull() } });
     if (existing) {
-      await this.ensureSystemRoles(manager, existing.id);
-      await ensureDefaultAnalyticsAxis(manager, existing.id);
-      await this.seedDefaultTaskTypes(manager, existing.id);
-      await this.seedDefaultEmploymentTypes(manager, existing.id);
-      await this.seedDefaultDocumentLibraries(manager, existing.id);
+      await this.seedTenantDefaults(manager, existing.id);
       return existing;
     }
     const tenant = repo.create({ slug, name: params.name, status: TenantStatus.ACTIVE, metadata: { it_ops: catalogToMetadata(DEFAULT_CLASSIFICATION_CATALOG) } });
     const saved = await repo.save(tenant);
-    await this.ensureSystemRoles(manager, saved.id);
-    await ensureDefaultAnalyticsAxis(manager, saved.id);
-    await this.seedDefaultTaskTypes(manager, saved.id);
-    await this.seedDefaultEmploymentTypes(manager, saved.id);
-    await this.seedDefaultDocumentLibraries(manager, saved.id);
+    await this.seedTenantDefaults(manager, saved.id);
     return saved;
+  }
+
+  /**
+   * The defaults every tenant starts with: system and built-in roles with their permissions,
+   * the default analytics dimension, task types, employment types, and the document libraries
+   * with their folders, types and templates. Idempotent: existing rows are kept. Also used to
+   * rebuild a tenant's starting state (TenantBaselineService).
+   */
+  async seedTenantDefaults(manager: EntityManager, tenantId: string) {
+    await this.ensureSystemRoles(manager, tenantId);
+    await ensureDefaultAnalyticsAxis(manager, tenantId);
+    await this.seedDefaultTaskTypes(manager, tenantId);
+    await this.seedDefaultEmploymentTypes(manager, tenantId);
+    await this.seedDefaultDocumentLibraries(manager, tenantId);
   }
 
   private async seedDefaultTaskTypes(manager: EntityManager, tenantId: string) {

@@ -20,6 +20,7 @@ import { ContractsModule } from './contracts/contracts.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { BillingModule } from './billing/billing.module';
 import { TenantsModule } from './tenants/tenants.module';
+import { TenantBaselineModule } from './tenants/tenant-baseline.module';
 import { PublicController } from './public/public.controller';
 import { EmailModule } from './email/email.module';
 import { TrialSignup } from './public/trial-signup.entity';
@@ -125,6 +126,7 @@ import { readPoolMax } from './common/db-pool-budget';
     PermissionsModule,
     BillingModule,
     TenantsModule,
+    TenantBaselineModule,
     AdminTenantsModule,
     AdminCoaTemplatesModule,
     AdminOpsModule,

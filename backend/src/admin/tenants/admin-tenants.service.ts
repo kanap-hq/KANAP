@@ -14,11 +14,8 @@ import { PaymentMode, Subscription, SubscriptionStatus } from '../../billing/sub
 import { INTERNAL_PLAN_NAME } from '../../billing/plans.config';
 import { TrialSignup } from '../../public/trial-signup.entity';
 import { StorageService } from '../../common/storage/storage.service';
-import {
-  assertTenantPurgeConfiguration,
-  TENANT_PURGE_ATTACHMENT_TABLES,
-  TENANT_PURGE_TABLES,
-} from './tenant-purge.inventory';
+import { assertTenantPurgeConfiguration, TENANT_PURGE_TABLES } from './tenant-purge.inventory';
+import { deleteStorageObjects, purgeTenantTables } from './tenant-data-purge';
 
 @Injectable()
 export class AdminTenantsService {
@@ -383,77 +380,21 @@ export class AdminTenantsService {
 
   private async purgeTenantData(tenantId: string, branding?: TenantBranding | Record<string, any> | null) {
     assertTenantPurgeConfiguration();
-    const tablesInOrder = TENANT_PURGE_TABLES;
+    const { report, storagePaths } = await withTenant(this.dataSource, tenantId, (manager) =>
+      purgeTenantTables(manager, TENANT_PURGE_TABLES),
+    );
 
-    return withTenant(this.dataSource, tenantId, async (manager) => {
-      const report: Array<{ table: string; deleted: number }> = [];
-      const tenantTables = new Set<string>(
-        (await manager.query(
-          `SELECT table_name
-           FROM information_schema.columns
-           WHERE table_schema = 'public' AND column_name = 'tenant_id'`,
-        )).map((row: { table_name: string }) => row.table_name),
-      );
-      const missingTenantId = tablesInOrder.filter((table) => !tenantTables.has(table));
-      if (missingTenantId.length > 0) {
-        throw new BadRequestException(
-          `Tenant purge misconfigured: missing tenant_id on tables: ${missingTenantId.join(', ')}`,
-        );
-      }
+    // Storage objects go once their rows are gone for good. The branding logo lives on
+    // tenants.branding (no tenant_id column), so it is cleaned explicitly.
+    const brandingLogoPath = typeof (branding as any)?.logo_storage_path === 'string'
+      ? (branding as any).logo_storage_path as string
+      : null;
+    const logo = brandingLogoPath
+      ? await deleteStorageObjects(this.storage, [brandingLogoPath], 'tenant purge')
+      : { deleted: 0, failed: 0 };
+    await deleteStorageObjects(this.storage, storagePaths, 'tenant purge');
 
-      const deleteTable = async (table: string) => {
-        const res = await manager.query(
-          `WITH deleted AS (
-            DELETE FROM ${table}
-            WHERE tenant_id = app_current_tenant()
-            RETURNING 1
-          )
-          SELECT COUNT(*)::int AS count FROM deleted`,
-        );
-        const count = Number(res?.[0]?.count ?? 0);
-        report.push({ table, deleted: count });
-      };
-
-      // Branding logo lives on tenants.branding (no tenant_id column), so clean it explicitly.
-      const brandingLogoPath = typeof (branding as any)?.logo_storage_path === 'string'
-        ? (branding as any).logo_storage_path as string
-        : null;
-      if (brandingLogoPath) {
-        try {
-          await this.storage.deleteObject(brandingLogoPath);
-          report.push({ table: 'tenant_branding_logo', deleted: 1 });
-        } catch {
-          // Keep purge resilient if object is already missing.
-          report.push({ table: 'tenant_branding_logo', deleted: 0 });
-        }
-      } else {
-        report.push({ table: 'tenant_branding_logo', deleted: 0 });
-      }
-
-      // For attachment tables, delete remote S3 objects first
-      const attachmentTables = new Set<string>(TENANT_PURGE_ATTACHMENT_TABLES);
-
-      for (const table of tablesInOrder) {
-        if (attachmentTables.has(table)) {
-          try {
-            const rows: Array<{ storage_path: string }> = await manager.query(
-              `SELECT storage_path FROM ${table} WHERE tenant_id = app_current_tenant()`
-            );
-            for (const row of rows) {
-              if (row?.storage_path) {
-                try { await this.storage.deleteObject(row.storage_path); } catch {}
-              }
-            }
-          } catch (e) {
-            // Non-fatal; proceed with DB purge
-            console.warn(`[purge] Failed to list objects for ${table}:`, (e as Error)?.message);
-          }
-        }
-        await deleteTable(table);
-      }
-
-      return report;
-    });
+    return [{ table: 'tenant_branding_logo', deleted: logo.deleted }, ...report];
   }
 
   private serializeTenant(tenant: Tenant) {

@@ -21,6 +21,8 @@ import { PROCESS_STARTED_AT } from './common/process-start';
 import { shouldTrustProxyForRateLimit } from './common/rate-limit';
 import { Features } from './config/features';
 import { TenantsService } from './tenants/tenants.service';
+import { TenantBaselineService } from './tenants/tenant-baseline.service';
+import { createSingleTenantOnFirstStart } from './tenants/single-tenant-provisioning';
 import { OpsMetricsStore } from './admin/ops/ops-metrics.store';
 import { createRequestMetricsMiddleware } from './admin/ops/request-metrics.middleware';
 import { ScheduledTasksService } from './admin/scheduled-tasks/scheduled-tasks.service';
@@ -236,12 +238,8 @@ async function bootstrap() {
       const slug = (process.env.DEFAULT_TENANT_SLUG || 'default').trim();
       const name = (process.env.DEFAULT_TENANT_NAME || 'My Organization').trim();
 
-      const tenantsService = app.get(TenantsService);
-
-      // 1. Ensure tenant exists (idempotent — TenantsService.createTenant returns existing if found)
-      const existing = await ds.query('SELECT id FROM tenants WHERE slug = $1 LIMIT 1', [slug]);
-      if (!existing?.[0]) {
-        await tenantsService.createTenant({ slug, name });
+      // 1. Create the tenant on the first start only, with the default global chart of accounts
+      if (await createSingleTenantOnFirstStart(ds, app.get(TenantsService), app.get(TenantBaselineService), { slug, name })) {
         // eslint-disable-next-line no-console
         console.log(`[on-prem] Created tenant '${slug}'`);
       }

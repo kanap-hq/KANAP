@@ -8,17 +8,14 @@ import { randomBytes, createHash } from 'crypto';
 import { Repository } from 'typeorm';
 import { TenantsService } from '../tenants/tenants.service';
 import { UsersService } from '../users/users.service';
-import { CompaniesService } from '../companies/companies.service';
-import { ChartOfAccountsService } from '../accounts/chart-of-accounts.service';
+import { buildStartingCompanyName, TenantBaselineService } from '../tenants/tenant-baseline.service';
 import { DataSource } from 'typeorm';
 import { TrialSignup } from './trial-signup.entity';
 import { EmailService } from '../email/email.service';
 import { AuthService } from '../auth/auth.service';
-import { StatusState } from '../common/status';
 import { RateLimitGuard } from '../common/rate-limit.guard';
 import { RATE_LIMITS } from '../common/rate-limit';
 import { withTenant } from '../common/tenant-runner';
-import { withSavepoint } from '../common/savepoint.util';
 import { TurnstileService } from './turnstile.service';
 import { Subscription, SubscriptionStatus } from '../billing/subscription.entity';
 import { TRIAL_PERIOD_DAYS } from '../billing/plans.config';
@@ -154,13 +151,12 @@ export class PublicController {
   constructor(
     private readonly tenants: TenantsService,
     private readonly users: UsersService,
-    private readonly companies: CompaniesService,
+    private readonly baseline: TenantBaselineService,
     private readonly dataSource: DataSource,
     private readonly emails: EmailService,
     private readonly auth: AuthService,
     @InjectRepository(TrialSignup)
     private readonly trialSignups: Repository<TrialSignup>,
-    private readonly coas: ChartOfAccountsService,
     private readonly turnstile: TurnstileService,
     private readonly stripeClient: StripeClientService,
     private readonly storage: StorageService,
@@ -475,8 +471,9 @@ export class PublicController {
 
       await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenant.id]);
 
-      // Provision default global CoA from platform template if available
-      await this.provisionDefaultGlobalCoa(runner.manager);
+      // The starting state (TenantBaselineService): the tenant defaults came with the tenant;
+      // then the default global chart of accounts, the administrator, the starting company.
+      await this.baseline.provisionDefaultGlobalCoa(runner.manager);
 
       const provisionalPassword = randomBytes(18).toString('base64url');
       owner = await this.users.createUser({
@@ -486,13 +483,11 @@ export class PublicController {
         tenant_id: tenant.id,
       }, { manager: runner.manager });
 
-      const companyName = this.buildCompanyName(signup);
-      await this.companies.create({
-        name: companyName,
-        country_iso: (signup.country_iso || 'FR'),
-        city: 'Unknown',
-        status: StatusState.ENABLED,
-      }, owner.id, { manager: runner.manager });
+      await this.baseline.createStartingCompany(runner.manager, {
+        companyName: buildStartingCompanyName(signup),
+        countryIso: signup.country_iso || 'FR',
+        actorId: owner.id,
+      });
 
       await runner.manager.getRepository(TrialSignup).update(signup.id, {
         activated_at: new Date(),
@@ -552,30 +547,6 @@ export class PublicController {
     return { tenant_url: tenantUrl, reset_token: resetToken };
   }
 
-  // Create a tenant CoA from the single global template marked loaded_by_default, if present.
-  // Under its own savepoint: a failure (a SQL error included) undoes the whole chart and leaves
-  // the signup transaction usable, so tenant creation goes on without it.
-  private async provisionDefaultGlobalCoa(manager: DataSource['manager']) {
-    try {
-      await withSavepoint(manager, async () => {
-        const rows: Array<{ id: string; template_code: string; template_name: string }>
-          = await manager.query(`SELECT id, template_code, template_name FROM coa_templates WHERE is_global = true AND loaded_by_default = true LIMIT 1`);
-        const tmpl = rows?.[0];
-        if (!tmpl) return;
-        // Create tenant CoA from a global template with GLOBAL scope (no country), not country-default
-        const created = await this.coas.create({ code: tmpl.template_code, name: tmpl.template_name, scope: 'GLOBAL', is_default: false }, null, { manager });
-        // Copy accounts into CoA
-        await this.coas.loadTemplateIntoCoa(created.id, tmpl.id, { dryRun: false, userId: null, overwrite: true }, { manager });
-        // Mark as global default and consolidation chart for the tenant
-        await this.coas.setGlobalDefault(created.id, null, { manager });
-        await this.coas.setConsolidation(created.id, null, { manager });
-      });
-    } catch (e) {
-      // Swallow provisioning issues to not block tenant creation, but log
-      console.warn('[provisioning] Default global CoA provisioning skipped:', (e as Error)?.message);
-    }
-  }
-
   /**
    * Base URL of the trial activation link: `MARKETING_BASE_URL`. In development mode only, a
    * request on a local development host stands in for it (common/url.ts).
@@ -614,12 +585,6 @@ export class PublicController {
 
   private trialLinkTtlMs() {
     return 1000 * 60 * 60 * 48; // 48 hours
-  }
-
-  private buildCompanyName(signup: TrialSignup) {
-    if (signup.org_name && signup.org_name.trim().length > 0) return signup.org_name.trim();
-    const source = signup.slug ?? 'Tenant';
-    return source.charAt(0).toUpperCase() + source.slice(1);
   }
 
   private nameFromEmail(email: string, fallback?: string) {

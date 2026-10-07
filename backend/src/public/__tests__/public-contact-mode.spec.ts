@@ -39,7 +39,6 @@ function buildController() {
     emails as any,
     {} as any,
     {} as any,
-    {} as any,
     turnstile as any,
     {} as any,
     {} as any,
