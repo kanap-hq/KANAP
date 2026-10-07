@@ -154,7 +154,7 @@ marketing/  Astro marketing site
 
 ## Contributing
 
-Contributions are welcome. Please [open an issue](https://github.com/kanap-it/kanap/issues) before larger changes so we can align on scope.
+Contributions are welcome. Please [open an issue](https://github.com/kanap-hq/kanap/issues) before larger changes so we can align on scope.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 

@@ -12,7 +12,7 @@ const content: OnPremContent = {
     title: 'Betreiben Sie KANAP selbst.\nJede Schicht unter Kontrolle.',
     lead: 'Open Source unter AGPL v3. Auf Ihre Infrastruktur deployen, Ihre Daten behalten, im eigenen Takt aktualisieren. Die komplette Plattform, unbegrenzte Nutzer, alle Funktionen, zu Ihren Bedingungen.',
     primaryCta: 'Von GitHub bereitstellen',
-    primaryHref: 'https://github.com/kanap-it/kanap',
+    primaryHref: 'https://github.com/kanap-hq/kanap',
     secondaryCta: 'Installationsdoku lesen',
     secondaryHref: 'https://doc.kanap.net/on-premise/',
   },

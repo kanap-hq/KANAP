@@ -20,7 +20,7 @@ Format: **Decision**, **Why**, **Alternative if you disagree**.
 **Alternative:** Different license — tell me and I'll update everywhere.
 
 ### A-3. GitHub URL
-**Decision:** `https://github.com/kanap-it/kanap` (public repo per CLAUDE.md).
+**Decision:** `https://github.com/kanap-hq/kanap` (public repo per CLAUDE.md).
 **Why:** Matches the remote in CLAUDE.md.
 
 ### A-4. App / docs URLs

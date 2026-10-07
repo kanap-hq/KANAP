@@ -169,7 +169,7 @@ mc admin user svcacct add localminio minioadmin \
 
 ```bash
 cd /opt  # o su directorio preferido
-git clone https://github.com/kanap-it/kanap.git
+git clone https://github.com/kanap-hq/kanap.git
 cd kanap
 cp infra/.env.onprem.example .env
 ```

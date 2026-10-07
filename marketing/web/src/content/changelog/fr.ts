@@ -16,7 +16,7 @@ const content: ChangelogContent = {
     label: 'Restez informé',
     body: 'Les nouvelles versions sortent régulièrement. Étoilez le dépôt ou surveillez les releases sur GitHub pour rester à jour.',
     githubCta: 'Voir les releases sur GitHub',
-    githubHref: 'https://github.com/kanap-it/kanap/releases',
+    githubHref: 'https://github.com/kanap-hq/kanap/releases',
   },
   entries: [
     {

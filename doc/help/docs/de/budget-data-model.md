@@ -201,7 +201,7 @@ Die Budgetdatei liest und schreibt die Beträge jeder Spalte und jedes Jahres, a
 4. Füllen Sie eine Zeile pro Position, mit leerer `item_number`, mit einer Betragsspalte pro Budgetspalte und Jahr (`budget_2027`) oder pro Monat (`budget_2027_03`).
 5. Importieren Sie die Dateien. Die Prüfung meldet die Fehler nach Zeile der Datei, und nichts wird geschrieben, bevor Sie laden.
 
-Ein stimmiger Satz von Beispieldateien, mit einem fiktiven Unternehmen und seinen Stammdaten, liegt im [KANAP-Repository](https://github.com/kanap-it/KANAP/tree/main/doc/samples).
+Ein stimmiger Satz von Beispieldateien, mit einem fiktiven Unternehmen und seinen Stammdaten, liegt im [KANAP-Repository](https://github.com/kanap-hq/KANAP/tree/main/doc/samples).
 
 ## Die Daten direkt lesen
 

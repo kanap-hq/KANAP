@@ -36,7 +36,7 @@ const content: OfferContent = {
           'Community support via GitHub issues',
         ],
         ctaLabel: 'Deploy from GitHub',
-        ctaHref: 'https://github.com/kanap-it/kanap',
+        ctaHref: 'https://github.com/kanap-hq/kanap',
         ctaVariant: 'primary',
         note: 'Plaid and agents use an LLM, so you bring your own key and pay your provider for usage. Cap per-agent spend to keep running cost predictable.',
       },

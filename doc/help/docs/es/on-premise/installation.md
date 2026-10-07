@@ -27,7 +27,7 @@ Opcional:
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/kanap-it/kanap.git
+git clone https://github.com/kanap-hq/kanap.git
 cd kanap
 
 # 2. Configurar el entorno ANTES de construir
