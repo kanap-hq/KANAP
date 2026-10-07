@@ -126,25 +126,30 @@ export class AiProviderTestService {
       });
 
       const iterator = stream[Symbol.asyncIterator]();
-      const first = await iterator.next();
-      if (!first.done && (first.value as AiStreamEvent | undefined)?.type === 'error') {
-        return this.fail({
+      try {
+        const first = await iterator.next();
+        if (!first.done && (first.value as AiStreamEvent | undefined)?.type === 'error') {
+          return this.fail({
+            provider,
+            model,
+            startedAt,
+            message: (first.value as { message?: string }).message || 'Provider test failed.',
+            validationErrors: [],
+          });
+        }
+
+        return {
+          ok: true,
           provider,
           model,
-          startedAt,
-          message: (first.value as { message?: string }).message || 'Provider test failed.',
-          validationErrors: [],
-        });
+          latency_ms: Date.now() - startedAt,
+          message: 'Provider test succeeded.',
+          validation_errors: [],
+        };
+      } finally {
+        // Only the first event is read: closing the stream releases its connection.
+        await iterator.return?.(undefined).catch(() => undefined);
       }
-
-      return {
-        ok: true,
-        provider,
-        model,
-        latency_ms: Date.now() - startedAt,
-        message: 'Provider test succeeded.',
-        validation_errors: [],
-      };
     } catch (error) {
       return this.fail({
         provider,

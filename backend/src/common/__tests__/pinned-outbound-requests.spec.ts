@@ -5,6 +5,9 @@ import * as https from 'node:https';
 import * as path from 'node:path';
 import { AddressInfo, Socket } from 'node:net';
 import { Features } from '../../config/features';
+import { AiProviderTestService } from '../../ai/ai-provider-test.service';
+import { PlatformAiAdminController } from '../../ai/platform/platform-ai-admin.controller';
+import { CustomAiProviderAdapter } from '../../ai/providers/custom-ai-provider.adapter';
 import { openaiCompatibleStream } from '../../ai/providers/openai-stream.util';
 import { GlpiService } from '../../ai/glpi/glpi.service';
 import { PrtgService } from '../../ai/prtg/prtg.service';
@@ -17,8 +20,9 @@ import { backendPath } from './backend-root';
 // has validated the addresses of the host (multi-tenant mode), the connection
 // goes to one of them, never to an address a second resolution would give; TLS
 // keeps the host name of the URL. The connection is released when the call ends,
-// fails or is abandoned. Single-tenant installations (and allowlisted hosts) keep
-// the global fetch, unchanged.
+// fails or is abandoned, and a redirect is refused as on the unbound path. The
+// provider tests read the first event, then close the stream. Single-tenant
+// installations (and allowlisted hosts) keep the global fetch, unchanged.
 //
 // The test host name is answered only by the request-time resolver below: the
 // system resolver does not know it, so a request that reaches the local server
@@ -49,17 +53,28 @@ const SSE_CHUNK = (text: string, finish: string | null) => `data: ${JSON.stringi
   choices: [{ index: 0, delta: { content: text }, finish_reason: finish }],
 })}\n\n`;
 
-type Mode = 'ok' | 'error' | 'hang';
-const state: { mode: Mode; hosts: string[]; connectionHeaders: string[] } = { mode: 'ok', hosts: [], connectionHeaders: [] };
+type Mode = 'ok' | 'error' | 'hang' | 'redirect';
+const REDIRECT_TARGET = '/landing';
+const state: { mode: Mode; hosts: string[]; paths: string[]; connectionHeaders: string[] } = {
+  mode: 'ok', hosts: [], paths: [], connectionHeaders: [],
+};
 let tracked: Set<Socket> | null = null;
 
 function startServer(): Promise<{ server: http.Server; port: number }> {
   const server = http.createServer((req, res) => {
+    // The socket that serves the request (a kept-alive one may be reused).
+    tracked?.add(req.socket);
     state.hosts.push(String(req.headers.host));
+    state.paths.push(String(req.url));
     state.connectionHeaders.push(String(req.headers.connection || ''));
     req.resume();
     req.on('end', () => {
       const url = req.url || '/';
+      if (state.mode === 'redirect' && url !== REDIRECT_TARGET) {
+        res.writeHead(302, { location: REDIRECT_TARGET });
+        res.end();
+        return;
+      }
       if (url.startsWith('/v1/chat/completions')) {
         if (state.mode === 'error') {
           res.writeHead(500, { 'content-type': 'application/json' });
@@ -88,7 +103,6 @@ function startServer(): Promise<{ server: http.Server; port: number }> {
       res.end(JSON.stringify({ session_token: 's1', session: { glpiID: 7 }, 'netbox-version': '4.1.0' }));
     });
   });
-  server.on('connection', (socket: Socket) => tracked?.add(socket));
   return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve({ server, port: (server.address() as AddressInfo).port })));
 }
 
@@ -99,13 +113,14 @@ function setSingleTenant(value: boolean) {
 function reset(mode: Mode = 'ok') {
   state.mode = mode;
   state.hosts.length = 0;
+  state.paths.length = 0;
   state.connectionHeaders.length = 0;
   resolved.length = 0;
   globalFetchCalls = 0;
   tracked = new Set();
 }
 
-/** The connections opened since reset() are all closed (within a short wait: a kept-alive one lingers for seconds). */
+/** The connections that served a request since reset() are all closed (within a short wait: a kept-alive one lingers for seconds). */
 async function expectConnectionsClosed(label: string) {
   const sockets = tracked!;
   assert.ok(sockets.size > 0, `${label}: a connection was made`);
@@ -306,6 +321,74 @@ async function testNetbox(port: number) {
   await expectConnectionsClosed('Netbox');
 }
 
+async function testRedirectsOnTheBoundPath(port: number) {
+  setSingleTenant(false);
+  const base = `http://${PINNED_HOST}:${port}`;
+  const expectRefused = async (label: string) => {
+    expectPinned(label, port);
+    assert.ok(!state.paths.includes(REDIRECT_TARGET), `${label}: the redirect target is not requested`);
+    await expectConnectionsClosed(label);
+  };
+
+  reset('redirect');
+  const stream = await collect(openaiCompatibleStream(streamParams(`${base}/v1`)));
+  assert.ok(stream.error instanceof Error, 'stream: a redirect is an error');
+  assert.match((stream.error as Error).message, /redirect \(HTTP 302\)/);
+  await expectRefused('stream redirect');
+
+  reset('redirect');
+  await assert.rejects(glpiService(base).initSession('tenant-1', {} as any), /GLPI request failed/);
+  await expectRefused('GLPI redirect');
+
+  reset('redirect');
+  await assert.rejects(new PrtgService().listObjects(
+    { baseUrl: base, auth: { kind: 'api_token', apiToken: 'token' } } as any,
+    { content: 'sensors', columns: ['objid'], count: 10, start: 0 },
+  ));
+  await expectRefused('PRTG redirect');
+
+  reset('redirect');
+  await assert.rejects(new RemoteInlineImageImportService().importFromUrl(`${base}/image.png`), /Unable to fetch remote image/);
+  await expectRefused('remote image redirect');
+}
+
+async function testProviderTestsCloseTheStream(port: number) {
+  // The server sends a first event and keeps the stream open: the tests read
+  // that event, then close the stream, which releases the connection.
+  setSingleTenant(false);
+  const adapter = new CustomAiProviderAdapter();
+  const registry = { validate: (snapshot: any) => adapter.validateConfiguration(snapshot), get: () => adapter, list: () => [] };
+
+  reset('hang');
+  const service = new AiProviderTestService(
+    { find: async () => null } as any,
+    { decrypt: (value: string) => value } as any,
+    registry as any,
+  );
+  const tenantTest = await service.testProvider('tenant-1', {
+    llm_provider: 'custom',
+    llm_model: 'm',
+    llm_endpoint_url: `http://${PINNED_HOST}:${port}/v1`,
+    llm_api_key: 'test-key',
+  }, { skipStoredFallback: true });
+  assert.equal(tenantTest.ok, true, tenantTest.message);
+  expectPinned('provider test', port);
+  await expectConnectionsClosed('provider test');
+
+  // The platform route tests the operator's endpoint as configured (global fetch).
+  reset('hang');
+  const controller = new PlatformAiAdminController({ getRuntimeConfig: async () => null } as any, {} as any, registry as any);
+  const platformTest = await controller.testConfig({
+    provider: 'custom',
+    model: 'm',
+    endpoint_url: `http://127.0.0.1:${port}/v1`,
+    api_key: 'test-key',
+  });
+  assert.equal(platformTest.ok, true, platformTest.message);
+  assert.ok(globalFetchCalls > 0, 'platform provider test: global fetch');
+  await expectConnectionsClosed('platform provider test');
+}
+
 async function run() {
   const originalSingleTenant = Features.SINGLE_TENANT;
   const { server, port } = await startServer();
@@ -316,6 +399,8 @@ async function run() {
     await testPrtg(port);
     await testRemoteImage(port);
     await testNetbox(port);
+    await testRedirectsOnTheBoundPath(port);
+    await testProviderTestsCloseTheStream(port);
   } finally {
     setSingleTenant(originalSingleTenant);
     dnsPromises.lookup = realLookup;

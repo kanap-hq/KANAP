@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import { promises as fs } from 'node:fs';
+import { promises as fs, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import * as http from 'node:http';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -9,6 +9,8 @@ import AdmZip = require('adm-zip');
 import {
   ARCHIVE_MAX_ENTRIES,
   ARCHIVE_MAX_ENTRY_BYTES,
+  ARCHIVE_MAX_NAME_BYTES,
+  ARCHIVE_MAX_NAME_LEVELS,
   ArchiveLimitError,
   openBoundedArchive,
 } from '../archive-limits';
@@ -17,8 +19,9 @@ import { DocumentImportService } from '../document-import.service';
 import { validateUploadedFile } from '../upload-validation';
 import { WB_DOWNLOAD_MAX_BYTES, WB_RESPONSE_MAX_BYTES, WorldBankClient } from '../../currency/world-bank-client';
 
-// ZIP archives are opened under limits (entry count, size of an entry, total
-// size), checked before anything is decompressed, with the real size bounded
+// ZIP archives are opened under limits (entries plus the folders their names
+// imply, name length and folder levels, size of an entry, total size), checked
+// before the entries are listed or decompressed, with the real size bounded
 // while an entry is read. Each place that opens an archive goes through them.
 
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -33,11 +36,69 @@ function zipOf(entries: Record<string, Buffer | string>): Buffer {
   return zip.toBuffer();
 }
 
+/** `count` entries: those of `base`, then files at the root (no implied folder). */
 function manyEntries(count: number, base: Record<string, string> = {}): Buffer {
   const entries: Record<string, string> = { ...base };
-  for (let i = 0; Object.keys(entries).length < count; i += 1) entries[`extra/file-${i}.txt`] = 'x';
+  for (let i = 0; Object.keys(entries).length < count; i += 1) entries[`file-${i}.txt`] = 'x';
   return zipOf(entries);
 }
+
+/** A few entries whose names nest many folder levels (one shared chain). */
+function nestedNames(entries: number, levels: number): Buffer {
+  const chain = 'a/'.repeat(levels);
+  return zipOf(Object.fromEntries(Array.from({ length: entries }, (_, i) => [`${chain}file-${i}.txt`, 'x'])));
+}
+
+/** Entries each under a folder chain of its own: few entries, many implied folders. */
+function separateChains(entries: number, levels: number): Buffer {
+  const chain = 'a/'.repeat(levels - 1);
+  return zipOf(Object.fromEntries(Array.from({ length: entries }, (_, i) => [`root-${i}/${chain}file.txt`, 'x'])));
+}
+
+/** A project folder as people zip it: 3,000 files in 661 folders, 5 levels deep. */
+function projectTree(): Buffer {
+  const entries: Record<string, string> = {};
+  for (let area = 0; area < 30; area += 1) {
+    for (let folder = 0; folder < 10; folder += 1) {
+      for (let file = 0; file < 10; file += 1) entries[`project/area-${area}/2026/folder-${folder}/notes/file-${file}.txt`] = 'x';
+    }
+  }
+  return zipOf(entries);
+}
+
+/** The same archive with ZIP64 end records, which its end record then points to. */
+function withZip64End(archive: Buffer): Buffer {
+  const end = archive.length - 22;
+  assert.equal(archive.readUInt32LE(end), 0x06054b50, 'end record without comment');
+  const entries = BigInt(archive.readUInt16LE(end + 10));
+  const record = Buffer.alloc(56);
+  record.writeUInt32LE(0x06064b50, 0);
+  record.writeBigUInt64LE(BigInt(44), 4);
+  record.writeUInt16LE(45, 12);
+  record.writeUInt16LE(45, 14);
+  record.writeBigUInt64LE(entries, 24);
+  record.writeBigUInt64LE(entries, 32);
+  record.writeBigUInt64LE(BigInt(archive.readUInt32LE(end + 12)), 40);
+  record.writeBigUInt64LE(BigInt(archive.readUInt32LE(end + 16)), 48);
+  const locator = Buffer.alloc(20);
+  locator.writeUInt32LE(0x07064b50, 0);
+  locator.writeBigUInt64LE(BigInt(end), 8);
+  locator.writeUInt32LE(1, 16);
+  const endRecord = Buffer.from(archive.subarray(end));
+  endRecord.writeUInt16LE(0xffff, 8);
+  endRecord.writeUInt16LE(0xffff, 10);
+  endRecord.writeUInt32LE(0xffffffff, 12);
+  endRecord.writeUInt32LE(0xffffffff, 16);
+  return Buffer.concat([archive.subarray(0, end), record, locator, endRecord]);
+}
+
+function elapsedMs(started: bigint): number {
+  return Number(process.hrtime.bigint() - started) / 1e6;
+}
+
+// Listing the archive below takes about 0.4 s when its names are not checked
+// first; refused on the entry list, it takes about a millisecond.
+const LIST_REFUSAL_MAX_MS = 200;
 
 /** Rewrites the uncompressed size an entry declares, in its local and central headers. */
 function declareSize(archive: Buffer, entryName: string, size: number): Buffer {
@@ -85,6 +146,44 @@ function testHelper() {
   assert.doesNotThrow(() => openBoundedArchive(manyEntries(ARCHIVE_MAX_ENTRIES)));
   assert.throws(() => openBoundedArchive(manyEntries(ARCHIVE_MAX_ENTRIES + 1)), isLimitError);
 
+  // The folders that entry names imply count with the entries.
+  assert.throws(() => openBoundedArchive(manyEntries(ARCHIVE_MAX_ENTRIES, { 'extra/file.txt': 'x' })), isLimitError);
+  // a/ (an entry of its own, counted once), a/b/ (implied), a/b/c.txt, a/d.txt: 4.
+  const tree = zipOf({ 'a/': '', 'a/b/c.txt': 'x', 'a/d.txt': 'y' });
+  assert.equal(openBoundedArchive(tree, { maxEntries: 4 }).entries().length, 3);
+  assert.throws(() => openBoundedArchive(tree, { maxEntries: 3 }), isLimitError);
+  // The same rules through ZIP64 end records.
+  const zip64 = openBoundedArchive(withZip64End(tree), { maxEntries: 4 });
+  assert.equal(zip64.readText(zip64.zip.getEntry('a/b/c.txt')!), 'x');
+  assert.throws(() => openBoundedArchive(withZip64End(tree), { maxEntries: 3 }), isLimitError);
+  // 100 entries, each under 60 folder levels of its own: 6,100 objects to list.
+  assert.throws(() => openBoundedArchive(separateChains(100, 60)), isLimitError);
+
+  // Entry names: length in bytes and folder levels.
+  assert.doesNotThrow(() => openBoundedArchive(zipOf({ ['n'.repeat(ARCHIVE_MAX_NAME_BYTES)]: 'x' })));
+  assert.throws(() => openBoundedArchive(zipOf({ ['n'.repeat(ARCHIVE_MAX_NAME_BYTES + 1)]: 'x' })), isLimitError);
+  assert.doesNotThrow(() => openBoundedArchive(zipOf({ [`${'a/'.repeat(ARCHIVE_MAX_NAME_LEVELS)}file.txt`]: 'x' })));
+  assert.throws(() => openBoundedArchive(zipOf({ [`${'a/'.repeat(ARCHIVE_MAX_NAME_LEVELS + 1)}file.txt`]: 'x' })), isLimitError);
+
+  // A few entries with very nested names: refused before they are listed.
+  const nested = nestedNames(20, 3_000);
+  const started = process.hrtime.bigint();
+  assert.throws(() => openBoundedArchive(nested), isLimitError);
+  assert.ok(elapsedMs(started) < LIST_REFUSAL_MAX_MS, 'refused without listing the entries');
+
+  // An archive read from a file path is checked the same way.
+  const tempDir = mkdtempSync(path.join(os.tmpdir(), 'archive-limits-spec-'));
+  try {
+    const nestedPath = path.join(tempDir, 'nested.zip');
+    writeFileSync(nestedPath, nested);
+    assert.throws(() => openBoundedArchive(nestedPath), isLimitError);
+    const ordinaryPath = path.join(tempDir, 'ordinary.zip');
+    writeFileSync(ordinaryPath, zipOf({ 'a.txt': 'alpha' }));
+    assert.equal(openBoundedArchive(ordinaryPath).entries().length, 1);
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+
   // An entry that declares more than the per-entry limit: refused before it is decompressed.
   const declaredLarge = declareSize(zipOf({ 'big.xml': 'small' }), 'big.xml', ARCHIVE_MAX_ENTRY_BYTES + 1);
   const large = openBoundedArchive(declaredLarge);
@@ -98,9 +197,9 @@ function testHelper() {
 
   // An entry whose real size is larger than it declares: reading stops at the declared size.
   const understated = declareSize(zipOf({ 'data.xml': Buffer.alloc(2 * MB) }), 'data.xml', 1024);
-  const lying = openBoundedArchive(understated);
-  assert.doesNotThrow(() => lying.assertDeclaredSizes());
-  assert.throws(() => lying.read(lying.zip.getEntry('data.xml')!), isLimitError);
+  const understatedArchive = openBoundedArchive(understated);
+  assert.doesNotThrow(() => understatedArchive.assertDeclaredSizes());
+  assert.throws(() => understatedArchive.read(understatedArchive.zip.getEntry('data.xml')!), isLimitError);
   assert.throws(() => openBoundedArchive(understated).assertRealSizes(), isLimitError);
 
   // An entry whose decompressed size is over the limit (lower limits keep the archive small).
@@ -128,6 +227,19 @@ function testUploadValidation() {
     isLimitError,
   );
 
+  // Few entries with very nested names, or with many implied folders: 400, without listing them.
+  const nested = nestedNames(20, 3_000);
+  const started = process.hrtime.bigint();
+  assert.throws(() => validateUploadedFile({ originalName: 'bundle.zip', mimeType: 'application/zip', buffer: nested }), isLimitError);
+  assert.ok(elapsedMs(started) < LIST_REFUSAL_MAX_MS, 'refused without listing the entries');
+  assert.throws(
+    () => validateUploadedFile({ originalName: 'bundle.zip', mimeType: 'application/zip', buffer: separateChains(100, 60) }),
+    isLimitError,
+  );
+
+  // A ZIP of an ordinary folder tree is accepted.
+  assert.equal(validateUploadedFile({ originalName: 'project.zip', mimeType: 'application/zip', buffer: projectTree() }).mimeType, 'application/zip');
+
   // Only the entry list is read: a spreadsheet whose sheet is very large is not decompressed.
   const sparse = declareSize(zipOf({ '[Content_Types].xml': '<Types/>', 'xl/worksheets/sheet1.xml': '<worksheet/>' }), 'xl/worksheets/sheet1.xml', 300 * MB);
   assert.equal(validateUploadedFile({ originalName: 'sheet.xlsx', mimeType: XLSX_MIME, buffer: sparse }).mimeType, XLSX_MIME);
@@ -146,7 +258,7 @@ async function testDocumentImport() {
 
   // Real size larger than declared, in an entry the converter would read: 400 as well.
   const understated = declareSize(docx({ 'word/media/image1.png': Buffer.alloc(2 * MB) }), 'word/media/image1.png', 1024);
-  await assert.rejects(service.convertToMarkdown(understated, DOCX_MIME, 'lying.docx'), isLimitError);
+  await assert.rejects(service.convertToMarkdown(understated, DOCX_MIME, 'understated.docx'), isLimitError);
 
   // Images extracted by the converter are read back within limits.
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'archive-limits-spec-'));
