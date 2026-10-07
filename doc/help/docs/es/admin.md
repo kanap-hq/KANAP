@@ -189,12 +189,11 @@ Se pueden asignar múltiples roles a los usuarios. Sus permisos efectivos son la
 
 Quitar todos los roles no elimina la cuenta. El usuario pasa al rol de sistema **Contacto**, se queda sin acceso y aparece como **Acceso pendiente** en la cuadrícula. No puede quitarse su propio último rol, así que no puede bloquearse a sí mismo.
 
-### Gestión de puestos
+### Usuarios habilitados y deshabilitados
 
-La suscripción alojada incluye **usuarios ilimitados** — no hay límite de puestos que gestionar:
+Su suscripción incluye **usuarios ilimitados**. El interruptor **Habilitado** determina quién puede iniciar sesión:
 - **Usuarios habilitados**: Pueden iniciar sesión y usar KANAP
 - **Usuarios deshabilitados**: Conservan sus datos pero ya no pueden iniciar sesión
-- El contador en la barra de herramientas muestra el número de usuarios habilitados
 - Active o desactive el interruptor **Habilitado** al editar un usuario para controlar el acceso
 
 ### Usuarios gestionados por Microsoft Entra
@@ -391,7 +390,6 @@ Gestione su suscripción, usuarios y facturas.
 
 La tarjeta de suscripción muestra su plan actual de un vistazo:
 - **Plan**: Hosted KANAP (o Prueba gratuita). La suscripción incluye usuarios ilimitados — facturación mensual o anual
-- **Puestos**: Número de usuarios habilitados
 - **Estado**: Activo, En prueba, Pago vencido, Cancelado, etc.
 - **Fecha de renovación**: Cuándo comienza el siguiente ciclo de facturación
 

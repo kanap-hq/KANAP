@@ -37,7 +37,6 @@ type PlanPaymentOption = {
 type Plan = {
   plan_key: string;
   display_name: string;
-  seat_limit: number | null;
   invoice_eligible: boolean;
   bank_transfer_min_amount?: number;
   payment_options?: {
@@ -56,11 +55,6 @@ function formatPrice(cents: number, locale: string): string {
   } catch {
     return `${(cents / 100).toFixed(2)} EUR`;
   }
-}
-
-function formatSeatLimit(limit: number | null, t: TFunction): string {
-  if (limit == null) return t('planSelection.unlimitedUsers');
-  return t('planSelection.shared.upToSeats', { count: limit });
 }
 
 function parseApiError(error: any, t: TFunction): string {
@@ -252,7 +246,7 @@ export default function PlanSelectionDialog({ open, onClose, onSuccess }: PlanSe
                             {plan.display_name}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            {formatSeatLimit(plan.seat_limit, t)}
+                            {t('planSelection.unlimitedUsers')}
                           </Typography>
                           <Box>
                             <Typography variant="h4" fontWeight={700}>

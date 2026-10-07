@@ -189,12 +189,11 @@ Benutzern können mehrere Rollen zugewiesen werden. Ihre effektiven Berechtigung
 
 Das Entfernen aller Rollen löscht das Konto nicht. Der Benutzer fällt auf die Systemrolle **Kontakt** zurück, behält keinen Zugriff und erscheint im Grid mit dem Status **Zugriff ausstehend**. Sie können Ihre eigene letzte Rolle nicht entfernen und sperren sich damit nicht selbst aus.
 
-### Platzverwaltung
+### Aktivierte und deaktivierte Benutzer
 
-Das gehostete Abonnement umfasst **unbegrenzte Nutzer**. Es gibt kein Platzlimit zu verwalten:
+Ihr Abonnement umfasst **unbegrenzte Nutzer**. Der Schalter **Aktiviert** legt fest, wer sich anmelden kann:
 - **Aktivierte Benutzer**: Können sich anmelden und KANAP nutzen
 - **Deaktivierte Benutzer**: Behalten ihre Daten, können sich aber nicht mehr anmelden
-- Der Zähler in der Symbolleiste zeigt die Anzahl der aktivierten Benutzer
 - Schalten Sie den **Aktiviert**-Schalter beim Bearbeiten eines Benutzers um, um den Zugriff zu steuern
 
 ### Von Microsoft Entra verwaltete Benutzer
@@ -391,7 +390,6 @@ Verwalten Sie Ihr Abonnement, Ihre Benutzer und Rechnungen.
 
 Die Abonnementkarte zeigt Ihren aktuellen Tarif auf einen Blick:
 - **Tarif**: Hosted KANAP (oder Kostenlose Testversion). Das Abonnement umfasst unbegrenzte Nutzer, mit monatlicher oder jährlicher Abrechnung
-- **Plätze**: Anzahl der aktivierten Benutzer
 - **Status**: Aktiv, Testphase, Überfällig, Gekündigt usw.
 - **Verlängerungsdatum**: Wann der nächste Abrechnungszeitraum beginnt
 

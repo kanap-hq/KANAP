@@ -325,11 +325,6 @@ export default function BillingCenter() {
   const hasSubscription = !!subscriptionSummary?.stripe_subscription_id;
   const subscriptionStatus = subscriptionSummary?.status ?? null;
   const planLabel = React.useMemo(() => derivePlanLabel(subscriptionSummary, t), [subscriptionSummary, t]);
-  const seatsLabel = subscriptionSummary
-    ? subscriptionSummary.seat_limit != null
-      ? `${subscriptionSummary.seats_used}/${subscriptionSummary.seat_limit}`
-      : t('billing.subscription.values.unlimitedSeatsUsed', { count: subscriptionSummary.seats_used })
-    : '—';
   const statusMeta = React.useMemo(() => getStatusMeta(subscriptionSummary, t), [subscriptionSummary, t]);
   const frequencyLabel = React.useMemo(() => formatSubscriptionType(subscriptionSummary, t), [subscriptionSummary, t]);
   const collectionLabel = React.useMemo(() => formatCollectionMethod(subscriptionSummary, t), [subscriptionSummary, t]);
@@ -464,11 +459,6 @@ export default function BillingCenter() {
                 <Grid item xs={12} sm={6} md={3}>
                   <SummaryItem label={t('billing.subscription.labels.plan')}>
                     <Typography fontWeight={600}>{planLabel}</Typography>
-                  </SummaryItem>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <SummaryItem label={t('billing.subscription.labels.seats')}>
-                    <Typography>{seatsLabel}</Typography>
                   </SummaryItem>
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>

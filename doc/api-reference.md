@@ -51,7 +51,7 @@ Rate limiting (default enabled):
     - `subscription`: `{ plan_name, seat_limit, seats_used }`
   - Notes:
     - Admin safety: users with the `Administrator` role have `admin` across all resources.
-    - `seats_used` counts users with `status='enabled'`.
+    - `seat_limit` is `null` (unlimited) unless a platform administrator set a user limit on the tenant's plan. `seats_used` counts users with `status='enabled'`.
 - POST `/auth/password-reset/request` → `{ email }`
   - Body: `{ email: string }` (case-insensitive). Always returns `{ ok: true }`.
   - Requires `RESEND_API_KEY` to be configured; in production links are built from configured `APP_BASE_URL`/`PUBLIC_APP_URL` (non-production can derive from request host for local subdomain workflows).
@@ -1336,7 +1336,7 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
     - For neutral status, item inclusion uses a period-start gate derived from the requested years.
     - For joins/allocations tied to a single report year, the period start is the start of that year.
     - This yields: included through the disabled year and excluded for strictly later years.
-  - Users additionally support `contact|invited`; seat usage only counts `enabled`.
+  - Users additionally support `contact|invited`; a user limit, when a platform administrator has set one on the tenant's plan, only counts `enabled` users.
 
 ## Examples
 
@@ -1377,13 +1377,13 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
 - POST `/users` → create user `{ email, first_name?, last_name?, role_id?, status? }`
   - Password is optional; most flows leave it empty and rely on the invite/password-reset pipeline.
   - `role_id` preferred; falls back to `role_name` (defaults to system `Contact`).
-  - `status` defaults to `enabled`; enforcing seats still happens when saving with `status='enabled'`.
-- POST `/users/:id/enable` → sets user `status='enabled'` (consumes a seat)
+  - `status` defaults to `enabled`; a user limit, when set on the tenant's plan, is enforced when saving with `status='enabled'`.
+- POST `/users/:id/enable` → sets user `status='enabled'`
   - Requires: users:admin level
-  - Enforces seats: fails with 400 when `seats_used >= seat_limit`
-- POST `/users/:id/disable` → sets user `status='disabled'` (frees a seat)
+  - Enforces the user limit only when a platform administrator has set one on the tenant's plan (`seat_limit` not null): fails with 400 when the number of `enabled` users has reached it. No limit applies by default.
+- POST `/users/:id/disable` → sets user `status='disabled'`
   - Requires: users:admin level
-- POST `/users/:id/invite` → sets user `status='invited'` (does not consume a seat)
+- POST `/users/:id/invite` → sets user `status='invited'` (an invited user does not count toward a user limit)
   - Requires: users:admin level
   - Sends a Resend email with a password setup CTA pointing to `/accept-invite#token=...`. The token reuses the password-reset pipeline and automatically enables the user once a password is set.
 

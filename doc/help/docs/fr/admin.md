@@ -189,12 +189,11 @@ Les utilisateurs peuvent se voir assigner plusieurs rôles. Leurs autorisations 
 
 Retirer tous les rôles ne supprime pas le compte. L'utilisateur revient au rôle système **Contact**, ne conserve aucun accès et apparaît avec le statut **Accès en attente** dans la grille. Vous ne pouvez pas retirer votre propre dernier rôle, vous ne pouvez donc pas vous bloquer l'accès.
 
-### Gestion des sièges
+### Utilisateurs activés et désactivés
 
-L'abonnement hébergé inclut un nombre **illimité d'utilisateurs** — il n'y a pas de limite de sièges à gérer :
+Votre abonnement inclut un nombre **illimité d'utilisateurs**. Le commutateur **Activé** détermine qui peut se connecter :
 - **Utilisateurs activés** : Peuvent se connecter et utiliser KANAP
 - **Utilisateurs désactivés** : Conservent leurs données mais ne peuvent plus se connecter
-- Le compteur dans la barre d'outils affiche le nombre d'utilisateurs activés
 - Basculez le commutateur **Activé** lors de la modification d'un utilisateur pour contrôler l'accès
 
 ### Utilisateurs gérés par Microsoft Entra
@@ -391,7 +390,6 @@ Gérez votre abonnement, vos utilisateurs et vos factures.
 
 La carte d'abonnement affiche votre plan actuel en un coup d'oeil :
 - **Plan** : Hosted KANAP (ou Essai gratuit). L'abonnement inclut un nombre illimité d'utilisateurs — facturation mensuelle ou annuelle
-- **Sièges** : Nombre d'utilisateurs activés
 - **Statut** : Actif, En essai, En retard, Annulé, etc.
 - **Date de renouvellement** : Quand le prochain cycle de facturation commence
 

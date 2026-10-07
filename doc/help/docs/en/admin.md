@@ -189,12 +189,11 @@ Users can be assigned multiple roles. Their effective permissions are the combin
 
 Clearing every role does not delete the account. The user falls back to the **Contact** system role, keeps no access, and shows as **Pending access** in the grid. You cannot remove your own last role, so you cannot lock yourself out.
 
-### Seat Management
+### Enabled and disabled users
 
-The hosted subscription includes **unlimited users** -- there is no seat limit to manage:
+Your subscription includes **unlimited users**. The **Enabled** switch controls who can sign in:
 - **Enabled users**: Can log in and use KANAP
 - **Disabled users**: Keep their data but can no longer log in
-- The counter in the toolbar shows how many enabled users you have
 - Toggle the **Enabled** switch when editing a user to control access
 
 ### Users managed by Microsoft Entra
@@ -391,7 +390,6 @@ Manage your subscription, users, and invoices.
 
 The subscription card shows your current plan at a glance:
 - **Plan**: Hosted KANAP (or Free trial). The subscription includes unlimited users -- billed monthly or annually
-- **Seats**: Number of enabled users
 - **Status**: Active, Trialing, Past Due, Canceled, etc.
 - **Renewal date**: When the next billing cycle starts
 

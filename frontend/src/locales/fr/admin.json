@@ -346,7 +346,6 @@
         "paymentMethod": "Moyen de paiement",
         "plan": "Plan",
         "renewalDate": "Date de renouvellement",
-        "seats": "Postes",
         "status": "Statut",
         "trial": "Essai",
         "trialEnds": "Fin de l'essai"
@@ -363,8 +362,7 @@
         "daysRemaining_one": "{{count}} jour restant",
         "daysRemaining_other": "{{count}} jours restants",
         "invoiceManualPayment": "Facture (paiement manuel)",
-        "monthly": "Mensuel",
-        "unlimitedSeatsUsed": "{{count}} utilisés"
+        "monthly": "Mensuel"
       }
     },
     "title": "Facturation"
@@ -664,8 +662,6 @@
     "pricePer": "par {{period}}",
     "shared": {
       "month": "mois",
-      "upToSeats_one": "Jusqu'à {{count}} poste",
-      "upToSeats_other": "Jusqu'à {{count}} postes",
       "year": "an"
     },
     "title": "Choisir un plan",
@@ -1059,10 +1055,6 @@
     },
     "exportTitle": "Exporter les utilisateurs",
     "importTitle": "Importer les utilisateurs",
-    "seats": {
-      "limited": "Postes {{used}}/{{limit}}",
-      "unlimited": "Postes {{used}} (illimité)"
-    },
     "accountType": {
       "entra": "Microsoft Entra",
       "local": "Local"

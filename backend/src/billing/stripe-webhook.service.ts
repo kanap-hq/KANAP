@@ -268,7 +268,7 @@ export class StripeWebhookService implements OnModuleInit {
         const initPlanKey = this.resolvePlanKey(subscriptionData, null);
         sub = repo.create({
           plan_name: initPlanKey ? toPlanDisplayName(initPlanKey) : (subscriptionData?.plan?.nickname ?? null),
-          seat_limit: initPlanKey ? PLANS[initPlanKey].seatLimit : (typeof subscriptionData?.quantity === 'number' ? subscriptionData.quantity : null),
+          seat_limit: initPlanKey ? PLANS[initPlanKey].seatLimit : null,
           subscription_type: this.resolveSubscriptionType(subscriptionData?.items?.data?.[0]?.price),
           payment_mode: this.resolvePaymentMode(subscriptionData),
         });
@@ -307,10 +307,8 @@ export class StripeWebhookService implements OnModuleInit {
           sub.seat_limit = PLANS[resolvedPlanKey].seatLimit;
         } else {
           const planName = subscriptionData?.plan?.nickname ?? null;
+          // The Stripe quantity is not a number of users: keep the stored user limit.
           sub.plan_name = planName ?? sub.plan_name ?? null;
-          if (typeof subscriptionData?.quantity === 'number') {
-            sub.seat_limit = subscriptionData.quantity;
-          }
         }
         if (typeof subscriptionData?.quantity === 'number') {
           sub.active_seats = subscriptionData.quantity;

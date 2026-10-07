@@ -812,8 +812,8 @@ export class BillingService {
       sub.plan_name = toPlanDisplayName(resolvedPlanKey);
       sub.seat_limit = PLANS[resolvedPlanKey].seatLimit;
     } else {
+      // The Stripe quantity is not a number of users: keep the stored user limit.
       sub.plan_name = stripeSub?.plan?.nickname ?? sub.plan_name;
-      sub.seat_limit = quantity || sub.seat_limit || 1;
     }
     sub.active_seats = quantity;
     sub.subscription_type = this.resolveSubscriptionType(stripeSub?.items?.data?.[0]?.price);
@@ -1282,7 +1282,7 @@ export class BillingService {
     let subscription = await repo.findOne({ where: {} });
     if (!subscription) {
       const defaults = Features.SINGLE_TENANT
-        ? { plan_name: 'On-Prem', seat_limit: 1000, active_seats: 0, subscription_type: SubscriptionType.ANNUAL, payment_mode: PaymentMode.CARD, status: SubscriptionStatus.ACTIVE }
+        ? { plan_name: 'On-Prem', seat_limit: null, active_seats: 0, subscription_type: SubscriptionType.ANNUAL, payment_mode: PaymentMode.CARD, status: SubscriptionStatus.ACTIVE }
         : { plan_name: 'Trial', seat_limit: null, active_seats: 0, subscription_type: SubscriptionType.MONTHLY, payment_mode: PaymentMode.CARD };
       subscription = repo.create(defaults);
       subscription = await repo.save(subscription);
@@ -1292,8 +1292,8 @@ export class BillingService {
         subscription.plan_name = 'On-Prem';
         changed = true;
       }
-      if (subscription.seat_limit !== 1000) {
-        subscription.seat_limit = 1000;
+      if (subscription.seat_limit !== null) {
+        subscription.seat_limit = null;
         changed = true;
       }
       if (subscription.subscription_type !== SubscriptionType.ANNUAL) {

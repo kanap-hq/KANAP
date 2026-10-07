@@ -851,7 +851,7 @@ List grids use `onCellClicked` to route to specific tabs:
 - After login, the app calls `GET /auth/me` to load:
   - `profile` (id, email, name, status)
   - `claims` (global/billing admin flags and per‑resource permission levels)
-  - `subscription` (plan and seats)
+  - `subscription` (subscription summary: plan, status, billing)
 - `ProtectedRoute` shows a 403 page if the user lacks the required level for a route.
 - UI actions are hidden or disabled based on the current user’s level for the page.
 - Action gating conventions:
