@@ -44,21 +44,26 @@ Tool-specific or private notes live in each tool's local files, never here.
 ## Workflow with the maintainer
 
 - The maintainer tests every change personally on the local dev stack before it goes anywhere.
-- Work and commit locally on a dev branch. **Do not push, open a PR or merge until the maintainer
-  has validated on dev and asks for it.** Never push to `main`.
-- Once asked: `gh pr create` (problem, changes, testing notes, screenshots for UI). CI must pass
-  (`backend (cloud)`, `frontend (cloud)`, `build (onprem)`); branch protection on `main` requires them.
-- Merge only when asked, with GitHub auto-merge: `gh pr merge <n> --auto --squash --delete-branch`,
-  run once, then stop. GitHub merges as soon as the required checks pass; do not watch or poll CI.
-  The repository allows squash merges only, and the subject keeps `(#NNN)`. Never turn on
-  auto-merge for a PR the maintainer has not asked to merge.
-- A PR behind `main` waits (branch protection requires it to be up to date): run
-  `gh pr update-branch <n>` and auto-merge picks it up after the new CI run. A failed check leaves
-  the PR open with auto-merge still on: fix it, push, and it merges when green.
+- Work and commit locally on a dev branch. **Nothing is pushed or opened before the maintainer
+  has validated on dev.** Never push to `main`.
+- Once validated: `gh pr create` (problem, changes, testing notes, screenshots for UI), then add
+  the PR to the merge queue right away: `gh pr merge <n> --auto --squash`. From there the agent
+  owns the PR up to a confirmed merge and reports the merge commit. The maintainer does not need
+  to say "merge".
+- The merge queue tests each PR on `main` plus the PRs ahead of it, in the order they were added,
+  and merges it when `backend (cloud)`, `frontend (cloud)` and `build (onprem)` pass on that
+  combination. Queue runs (`merge_group`) run every job. The repository squashes, keeps `(#NNN)`
+  in the subject and deletes the branch. Do not watch or poll CI: the desktop app notifies the
+  session on a failure.
+- A failed check or a conflict with `main` drops that PR from the queue; the others continue.
+  Fix (merge `main` into the branch for a conflict), push, and add it again with the same command.
+- One PR at a time per change: no bundling of validated PRs, the queue handles throughput.
+- Releases and deploys to QA and prod are separate from merging and are the maintainer's
+  decision; `main` is always releasable.
 - One PR per coherent lot. Keep diffs focused.
 - Stacked PRs: GitHub closes (does not retarget) a PR whose base branch is deleted at merge.
-  Retarget it to `main` first, then delete the base. Auto-merge deletes the base as soon as it
-  merges, so retarget before turning it on for the base. CI only runs for PRs targeting `main`.
+  Retarget it to `main` first, then delete the base. The base is deleted as soon as it merges,
+  so retarget before adding the base to the queue. CI only runs for PRs targeting `main`.
   After a squash merge of the base: `git rebase --onto origin/main <old-base-tip> <branch>`, then
   `git push --force-with-lease`.
 - When a task is finished, say so and ask the maintainer to test.
