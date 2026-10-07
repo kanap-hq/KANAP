@@ -25,19 +25,78 @@ On first boot, KANAP automatically creates a tenant using these values. The defa
 | `ADMIN_EMAIL` | Initial admin user email | `admin@company.com` |
 | `ADMIN_PASSWORD` | Initial admin password (**change after first login!**) | `ChangeMe123!` |
 | `JWT_SECRET` | JWT signing key (generate: `openssl rand -hex 32`) | 64 hex chars |
-| `APP_BASE_URL` | Public URL (used in email links) | `https://kanap.company.com` |
-| `CORS_ORIGINS` | Comma-separated allowed browser origins (**required in production**) | `https://*.company.com` |
+| `APP_BASE_URL` | The exact address users open KANAP at: scheme, host and port when it is not standard (used in every link KANAP sends) | `https://kanap.company.com` |
+| `CORS_ORIGINS` | The exact address users open KANAP at, comma-separated if there are several (browser origins allowed to call the API) | `https://kanap.company.com` |
 
-**Email links:** Password reset/invite URLs use `APP_BASE_URL` (or forwarded host/proto). On-prem should set `APP_BASE_URL` to the externally reachable URL and configure the reverse proxy to pass `Host` / `X-Forwarded-Proto`.
+**Application address (`APP_BASE_URL`):** Password reset and invitation emails, notification emails, the Microsoft Entra sign-in redirect and the links in exports all start from `APP_BASE_URL`. Write the address exactly as users type it, with the port when it is not 443 for HTTPS or 80 for HTTP (for example `https://kanap.company.com:8443`). KANAP does not read the `Host` or `X-Forwarded-Host` headers of a request to build these links, except on a local development machine (`APP_ENV=development`). Without `APP_BASE_URL`:
 
-**CORS:** Configure `CORS_ORIGINS` to control which browser origins can access the API. The application **will fail to start in production** if `CORS_ORIGINS` is not set. Set it to the exact URL users access KANAP from.
+- password reset, invitation and Microsoft Entra sign-in answer "application URL is not configured: set APP_BASE_URL";
+- the scheduled reminders are skipped, with one line in the API log.
+
+**Allowed browser origins (`CORS_ORIGINS`):** `CORS_ORIGINS` controls which web addresses may call the API from a browser. Enter the exact address: scheme, host and port when it is not standard.
 
 ```bash
-# Match your APP_BASE_URL
+# Same address as APP_BASE_URL
 CORS_ORIGINS=https://kanap.company.com
 ```
 
-**Startup validation:** The application will refuse to start if `JWT_SECRET`, `DATABASE_URL`, or `APP_BASE_URL` are missing or empty. It also refuses to run if the PostgreSQL role from `DATABASE_URL` is still `SUPERUSER` or `BYPASSRLS`.
+KANAP also accepts, without any entry in `CORS_ORIGINS`:
+
+- the application address (`APP_BASE_URL`);
+- the address of the request itself: the host and port of the browser's address equal the `Host` header that reaches KANAP. When your reverse proxy forwards `Host` without the port, the same host name on any port counts, unless `APP_ENV=production`. In production, add the exact address with its port to `CORS_ORIGINS`.
+
+A request from any other address receives a 403 answer and the API logs one `[CORS] Rejected origin` line per address and per minute. Session refresh and sign-out requests follow the same rule: a refresh or sign-out sent from an address that is not allowed is refused with 403.
+
+A pattern such as `https://*.company.com` still works on a single-tenant installation. The API prints a warning at start, and a later version will accept exact addresses only. Replace patterns with the exact address now.
+
+If `CORS_ORIGINS` and the application address (`APP_BASE_URL`) are both missing and `APP_ENV` is not set, every origin is still allowed in this version, and the API prints a start-up warning. A later version will require them.
+
+## Optional: Run Mode (`APP_ENV`)
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `APP_ENV` | Run mode of the API: `production`, `development` or unset | *unset* |
+
+`APP_ENV` has three states:
+
+| State | Values | What changes |
+|-------|--------|--------------|
+| Production | `production`, `prod` | The API refuses to start without `APP_BASE_URL` and `CORS_ORIGINS`. The session cookie is always marked Secure, so it only works over HTTPS. |
+| Development | `development`, `dev`, `local`, `test` | Workstation conveniences: links can follow a local development host, every origin is allowed when `CORS_ORIGINS` is empty, and `PLATFORM_ADMIN_EMAILS=*` is accepted. Do not use it on a server. |
+| Unspecified | any other value, or no `APP_ENV` | The same link and origin rules as production. A missing `APP_BASE_URL` or `CORS_ORIGINS` produces a start-up warning and the API still starts. The session cookie follows the request: Secure when the request arrives over HTTPS. |
+
+Set `APP_ENV=production` only when users reach KANAP over HTTPS. If `NODE_ENV` is set and `APP_ENV` is not, KANAP reads `NODE_ENV` instead.
+
+**Startup validation:** The application refuses to start if `JWT_SECRET` or `DATABASE_URL` is missing or empty, and, with `APP_ENV=production`, if `APP_BASE_URL` or `CORS_ORIGINS` is missing. It also refuses to run if the PostgreSQL role from `DATABASE_URL` is still `SUPERUSER` or `BYPASSRLS`.
+
+**Startup messages:** The API log shows these lines when it starts. Read them after every change to the `.env` file.
+
+| Line | Meaning |
+|------|---------|
+| `[ENV] run mode: ...` | Always printed. Shows the mode the API runs in: `development`, `production` or `unspecified`. |
+| `[ENV] APP_ENV is not set: production rules apply to links, browser origins and platform administration. Set APP_ENV=production (or development on a workstation).` | Printed in unspecified mode (the message shows the value when `APP_ENV` is set to something else). Set `APP_ENV=production` if users reach KANAP over HTTPS. |
+| `[CONFIG] APP_BASE_URL is not set: ...` | Password reset and invitation emails, notification links and sign-in redirects are refused. Set `APP_BASE_URL`. |
+| `[CONFIG] APP_BASE_URL is not a valid http(s) address: ...` | The value is not a web address. Write it with `https://` or `http://`. |
+| `[CORS] CORS_ORIGINS is not set: browsers are allowed only from APP_BASE_URL and from the address of each request. ...` | Set `CORS_ORIGINS` to the exact address users open. |
+| `[CORS] CORS_ORIGINS and APP_BASE_URL are not set: browsers are still allowed from every origin in this version; ...` | Set both. A later version allows only the configured addresses. |
+| `[CORS] CORS_ORIGINS entry ... is a pattern: it is still accepted in this version. ...` | Replace the pattern with the exact address. |
+
+## Upgrading: Application Address and Allowed Origins
+
+This version changes how KANAP builds links and which browser origins it accepts. Before you upgrade, check your `.env` file:
+
+1. Set `APP_BASE_URL` to the exact address users open (scheme, host and port when it is not standard). It is the only source of the links in emails, sign-in redirects and exports. The request headers no longer change them. Without it, password reset, invitation and Microsoft Entra sign-in stop working, and scheduled reminders are skipped.
+2. Put that exact address in `CORS_ORIGINS`, in place of any pattern. If your proxy does not keep the `Host` header, or if the address uses a non-standard port, the exact origin with its port is required.
+3. Set `APP_ENV=production` only if users reach KANAP over HTTPS. The session cookie then always carries the Secure attribute and the API refuses to start without `APP_BASE_URL` and `CORS_ORIGINS`.
+4. After the upgrade, read the `[ENV]`, `[CONFIG]` and `[CORS]` lines in the API log and fix each warning.
+5. Session refresh and sign-out requests from an address that is not allowed now receive 403, and `PLATFORM_ADMIN_EMAILS=*` is only accepted when `APP_ENV` is a development value.
+
+Other visible changes:
+
+- If `APP_BASE_URL` starts with `app.`, Microsoft Entra sign-in and knowledge links use the address exactly as configured.
+- With neither `CORS_ORIGINS` nor an application address, and `APP_ENV` unset, nothing changes yet: every origin stays allowed and the API prints a warning.
+- Without `CORS_ORIGINS` but with an application address, outside development, only the application address and the address of the request are allowed (before: every origin).
+- The test weekly review email returns an error when no application address is configured.
 
 ## Required: Database
 
@@ -175,7 +234,7 @@ It covers the app registration, the delegated and application permissions, and t
 | `JWT_REFRESH_TOKEN_TTL` | Refresh token lifetime | `4h` |
 | `RATE_LIMIT_ENABLED` | App-level rate limiting toggle | `true` |
 | `RATE_LIMIT_TRUST_PROXY` | Trust proxy headers for client IP detection | `false` |
-| `APP_URL` | Base URL for notification email links in multi-tenant mode (tenant slug replaces `app`). **Not needed for on-prem** — `APP_BASE_URL` is used instead. | `https://app.kanap.net` |
+| `APP_URL` | Multi-tenant (cloud) only: third source of the application address, after `APP_BASE_URL` and `PUBLIC_APP_URL` (the tenant slug replaces `app`). **Not needed for on-prem**: `APP_BASE_URL` is used. | *unset* |
 | `EMAIL_OVERRIDE` | Redirect all emails to this address (dev/QA only, **never in production**) | *unset* |
 
 ## Optional: Capacity and Performance
@@ -227,8 +286,14 @@ ADMIN_PASSWORD=ChangeThisPassword123!
 # SECURITY (required)
 JWT_SECRET=
 
-# APPLICATION URL (required)
+# RUN MODE (optional - set production when users reach KANAP over HTTPS)
+# APP_ENV=production
+
+# APPLICATION URL (required - the exact address users open)
 APP_BASE_URL=https://kanap.your-domain.com
+
+# ALLOWED BROWSER ORIGINS (required - the exact address users open)
+CORS_ORIGINS=https://kanap.your-domain.com
 
 # DATABASE (required - use a dedicated app role, never postgres)
 DATABASE_URL=postgres://kanap:password@your-postgres:5432/kanap?sslmode=require
@@ -332,4 +397,4 @@ Another job keeps statuses up to date:
 
 With several API processes (`API_WORKERS`), each job still runs once per scheduled time: the processes agree through the database on which one runs it. When the API stops (an upgrade), a job in progress gets the drain time to finish; one still running then is shown as failed ("interrupted") in the scheduled tasks list and runs again at its next time.
 
-These jobs require the API to run as a **long-running process** (not a serverless function). In on-premise mode, `APP_BASE_URL` is used for notification email links (no subdomain derivation). If no outbound email transport is configured, these jobs skip sending gracefully.
+These jobs require the API to run as a **long-running process** (not a serverless function). In on-premise mode, `APP_BASE_URL` is used for notification email links (no subdomain derivation). If `APP_BASE_URL` is not set, the expiration warnings and weekly review digests are skipped and the API writes one log line ("application URL is not configured"). If no outbound email transport is configured, these jobs skip sending gracefully.

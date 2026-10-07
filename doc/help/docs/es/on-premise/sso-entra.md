@@ -104,7 +104,7 @@ ENTRA_REDIRECT_URI=https://kanap.empresa.com/api/auth/entra/callback
 Notas:
 - `ENTRA_AUTHORITY` debe ser **específico del inquilino** para despliegue local.
 - `ENTRA_REDIRECT_URI` debe coincidir **exactamente** con lo que registró en Entra.
-- Asegúrese de que `APP_BASE_URL` esté establecido a la URL pública para que la redirección posterior al inicio de sesión sea correcta.
+- Asegúrese de que `APP_BASE_URL` esté establecido con la dirección exacta que abren los usuarios (esquema, host y puerto cuando no sea el estándar). La redirección posterior al inicio de sesión se construye a partir de ella. Sin ella, el inicio de sesión con Microsoft responde «application URL is not configured».
 
 ## Paso 5: Reiniciar KANAP
 
@@ -156,7 +156,7 @@ El bloque en **Administración > Autenticación** informa del resultado: **Últi
 - **ENTRA_TENANT_MISMATCH**: Conectó un inquilino pero está intentando iniciar sesión desde otro. Los usuarios ven "Esta cuenta de Microsoft pertenece a una organización distinta de la conectada a este espacio de trabajo."
 - **ENTRA_EMAIL_UNVERIFIED**: La dirección de correo de la cuenta de Microsoft no está verificada, por lo que no puede usarse para iniciar sesión.
 - **Invalid Entra state / nonce**: El estado de inicio de sesión expiró o la redirección de Entra no volvió a la URL de callback configurada. Vuelva a intentar iniciar sesión y verifique que `ENTRA_REDIRECT_URI` coincida exactamente con el registro de aplicación de Entra.
-- **Mala redirección después del inicio de sesión**: Verificar `APP_BASE_URL` y cabeceras del proxy inverso (`Host`, `X-Forwarded-Proto`).
+- **Mala redirección después del inicio de sesión**: Verifique que `APP_BASE_URL` sea la dirección exacta que abren los usuarios. La redirección procede de `APP_BASE_URL`, y las cabeceras `Host` y `X-Forwarded-Host` no la modifican. Verifique también que el proxy envíe `X-Forwarded-Proto`.
 - **"Aún no autorizado" en la sincronización del directorio**: o bien el permiso de aplicación `User.Read.All` nunca se añadió al registro de aplicación, o bien ningún administrador de Microsoft Entra ha otorgado todavía el consentimiento para todo el inquilino. Compruebe ambos y haga clic en **Sincronizar ahora**.
 - **Los inicios de sesión empezaron a fallar justo después de otorgar el consentimiento de administrador**: el consentimiento reemplazó la concesión de la aplicación por la lista de permisos configurados, eliminando `openid`, `profile`, `email` y `offline_access`. Añádalos como permisos delegados configurados y otorgue el consentimiento de nuevo.
 - **Secreto de cliente expirado**: Microsoft devuelve `AADSTS7000222`. Los usuarios solo ven el mensaje genérico "El inicio de sesión con Microsoft no se completó. Inténtelo de nuevo o contacte con su administrador." en la página de inicio de sesión. Para confirmar la causa, consulte **Administración > Autenticación > Sincronización diaria del directorio**: la línea de error cita el código de error de Microsoft. Volver a ejecutar **Conectar** también lo muestra. Cree un nuevo secreto de cliente en **Certificados y secretos**, actualice `ENTRA_CLIENT_SECRET` y reinicie la API.
