@@ -36,7 +36,7 @@ Nach dem Speichern wird die Zeitzusammenfassungs-Kachel des Dashboards automatis
 
 ## Zeile zu den Beispieldaten
 
-In einem Cloud-Arbeitsbereich, der noch leer ist, sehen Administratoren über den Kacheln eine Zeile: „Entdecken Sie KANAP mit Beispieldaten.“ **Laden** öffnet den Dialog für Beispieldaten, und **Ausblenden** entfernt die Zeile dauerhaft. Die Zeile verschwindet, sobald der Arbeitsbereich Daten enthält. Siehe [Beispieldaten](sample-data.md).
+In einem leeren Cloud-Arbeitsbereich, in den noch nie Beispieldaten geladen wurden, sehen Administratoren über den Kacheln eine Zeile: „Entdecken Sie KANAP mit Beispieldaten.“ **Laden** öffnet den Dialog für Beispieldaten, und **Ausblenden** entfernt die Zeile dauerhaft. Die Zeile verschwindet, sobald der Arbeitsbereich Daten enthält, und kehrt nach dem Löschen nicht zurück. Siehe [Beispieldaten](sample-data.md).
 
 ## Dashboard-Kacheln
 

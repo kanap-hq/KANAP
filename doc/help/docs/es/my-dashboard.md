@@ -36,7 +36,7 @@ Después de guardar, el mosaico de resumen de tiempo del panel se actualiza auto
 
 ## Línea de datos de ejemplo
 
-En un espacio de trabajo en la nube que todavía está vacío, los administradores ven una línea sobre los mosaicos: «Descubra KANAP con datos de ejemplo.» **Cargar** abre el cuadro de diálogo de datos de ejemplo y **Ocultar** elimina la línea de forma definitiva. La línea desaparece en cuanto el espacio de trabajo contiene datos. Véase [Datos de ejemplo](sample-data.md).
+En un espacio de trabajo en la nube vacío, que nunca ha tenido datos de ejemplo, los administradores ven una línea sobre los mosaicos: «Descubra KANAP con datos de ejemplo.» **Cargar** abre el cuadro de diálogo de datos de ejemplo y **Ocultar** elimina la línea de forma definitiva. La línea desaparece en cuanto el espacio de trabajo contiene datos y no vuelve tras un borrado. Véase [Datos de ejemplo](sample-data.md).
 
 ## Mosaicos del panel
 

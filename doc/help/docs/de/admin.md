@@ -507,7 +507,7 @@ Für eine vollständige Schritt-für-Schritt-Anleitung siehe: [Branding](brandin
 
 ## Beispieldaten
 
-Verwenden Sie **Administration > Beispieldaten**, um einen leeren Arbeitsbereich mit Fromage & Co, einem fiktiven Käsehersteller, zu füllen und den gesamten Arbeitsbereich anschließend wieder zu löschen.
+Verwenden Sie **Administration › Beispieldaten**, um einen leeren Arbeitsbereich mit Fromage & Co, einem fiktiven Käsehersteller, zu füllen und den gesamten Arbeitsbereich anschließend wieder zu löschen.
 
 - Route: `/admin/sample-data`
 - Wer: Benutzer mit der Rolle Administrator

@@ -4,7 +4,7 @@ Use la página Datos de ejemplo para descubrir KANAP con un conjunto de datos li
 
 ## Dónde encontrarla
 
-- Espacio de trabajo: menú **Administración** → **Datos de ejemplo**
+- Espacio de trabajo: **Administración** › **Datos de ejemplo**
 - Ruta: `/admin/sample-data`
 - Quién puede usarla: los usuarios con el rol **Administrador**. Un nivel de permiso de módulo, incluso `admin`, no da acceso.
 - Disponible solo en espacios de trabajo en la nube. Las instalaciones en sus propios servidores no tienen esta página.
@@ -37,30 +37,35 @@ Lo que un espacio de trabajo nuevo crea por usted (su primera empresa, el plan d
 
 **Para cargar el conjunto**:
 
-1. Abra **Administración** → **Datos de ejemplo**.
+1. Abra **Administración** › **Datos de ejemplo**.
 2. Haga clic en **Cargar datos de ejemplo**.
 3. Lea el resumen del cuadro de diálogo y confirme con **Cargar datos de ejemplo**.
 
-La página sigue la carga paso a paso (por ejemplo, «Paso 4 de 19: planes de cuentas») y el estado cambia a **Cargados** al terminar. Todo lo que ve en KANAP se actualiza entonces con los nuevos datos.
+La página sigue la carga paso a paso (por ejemplo, «Paso 4 de 19: planes de cuentas») y el estado cambia a **Cargados** al terminar. La franja de estado muestra entonces cuándo se cargaron los datos y quién lo hizo. Todo lo que ve en KANAP se actualiza con los nuevos datos.
 
-**Si el espacio de trabajo ya contiene datos**, la página lo indica y no muestra el botón **Cargar datos de ejemplo**.
+**Si la carga no es posible**, la página no muestra el botón **Cargar datos de ejemplo**. Una línea explica el motivo:
 
-**Si la suscripción está congelada o el periodo de prueba ha caducado**, la carga se rechaza y el cuadro de diálogo muestra el motivo. El borrado sigue siendo posible (véase más abajo).
+- el espacio de trabajo ya contiene datos
+- la suscripción está congelada
+- el periodo de prueba ha terminado
 
-**Si la carga falla**, KANAP devuelve por sí mismo el espacio de trabajo a su estado inicial. El estado muestra **Error de carga** con el motivo y la hora. Haga clic en **Reintentar** para iniciar otra carga.
+El banner de la página de inicio permanece entonces oculto. El borrado sigue siendo posible en un espacio de trabajo congelado (véase más abajo).
+
+**Si la carga falla**, KANAP devuelve por sí mismo el espacio de trabajo a su estado inicial. El estado muestra **Error de carga** con la fecha, y la página indica el motivo. Haga clic en **Reintentar** para iniciar otra carga.
 
 !!! warning "Espere a que termine la carga"
     Mientras se ejecuta una carga, todo lo que se cree en el espacio de trabajo se borra si la carga falla. Espere a que el estado muestre **Cargados** antes de empezar a trabajar de verdad.
 
 ## El banner de la página de inicio
 
-Mientras el espacio de trabajo está vacío, los administradores ven una línea en la parte superior de la página de inicio: «Descubra KANAP con datos de ejemplo.»
+Mientras el espacio de trabajo está vacío y nunca se han cargado datos de ejemplo, los administradores ven una línea en la parte superior de la página de inicio: «Descubra KANAP con datos de ejemplo.»
 
 - **Cargar** abre el mismo cuadro de diálogo que la página.
-- **Ocultar** elimina la línea de forma definitiva, para todos los administradores del espacio de trabajo. La página en **Administración** → **Datos de ejemplo** sigue disponible.
+- **Ocultar** elimina la línea de forma definitiva, para todos los administradores del espacio de trabajo. La página en **Administración** › **Datos de ejemplo** sigue disponible.
 - Mientras se ejecuta una carga, la línea muestra el paso en curso.
+- Si una carga falla, la línea indica el motivo y ofrece **Reintentar**.
 
-La línea desaparece en cuanto el espacio de trabajo contiene datos.
+La línea desaparece en cuanto el espacio de trabajo contiene datos. No vuelve tras un borrado. Para cargar el conjunto de nuevo, use **Administración** › **Datos de ejemplo**.
 
 ## Borrar todo y empezar de cero
 
@@ -94,9 +99,11 @@ Una vez cargados los datos de ejemplo, la página ofrece **Borrar todo y empezar
 
 El borrado tarda unos segundos. El estado muestra **Borrando** y después **Sin cargar**. Durante esos segundos, KANAP rechaza los cambios de todos los usuarios del espacio de trabajo, y un error indica que se vuelva a intentar en un momento. La lectura sigue funcionando.
 
+Si el borrado falla, la página muestra «No se pudo borrar el contenido del espacio de trabajo. No se ha modificado nada.» No se pierde nada y puede volver a intentarlo.
+
 Cuando el espacio de trabajo se ha borrado, cada administrador recibe un correo electrónico que indica quién lo borró y cuándo. El registro de auditoría conserva constancia de la operación.
 
-Tras el borrado, el espacio de trabajo queda como nuevo: puede volver a cargar los datos de ejemplo o empezar a introducir sus propios datos.
+Tras el borrado, el espacio de trabajo queda como nuevo: puede volver a cargar los datos de ejemplo desde la página o empezar a introducir sus propios datos. El banner de la página de inicio no vuelve.
 
 ## Consejos
 

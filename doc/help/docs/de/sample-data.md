@@ -4,7 +4,7 @@ Auf der Seite Beispieldaten lernen Sie KANAP mit einem fertigen Datensatz kennen
 
 ## Wo Sie die Seite finden
 
-- Arbeitsbereich: Menü **Administration** → **Beispieldaten**
+- Arbeitsbereich: **Administration** › **Beispieldaten**
 - Route: `/admin/sample-data`
 - Wer sie nutzen kann: Benutzer mit der Rolle **Administrator**. Eine Berechtigungsstufe eines Moduls, auch `admin`, gewährt keinen Zugriff.
 - Nur in Cloud-Arbeitsbereichen verfügbar. Installationen auf Ihren eigenen Servern haben diese Seite nicht.
@@ -37,30 +37,35 @@ Was ein neuer Arbeitsbereich selbst anlegt (sein erstes Unternehmen, der Standar
 
 **So laden Sie den Datensatz**:
 
-1. Öffnen Sie **Administration** → **Beispieldaten**.
+1. Öffnen Sie **Administration** › **Beispieldaten**.
 2. Klicken Sie auf **Beispieldaten laden**.
 3. Lesen Sie die Zusammenfassung im Dialog und bestätigen Sie mit **Beispieldaten laden**.
 
-Die Seite zeigt den Ladevorgang Schritt für Schritt (zum Beispiel „Schritt 4 von 19: Kontenpläne“), und der Status wechselt am Ende zu **Geladen**. Alles, was Sie in KANAP sehen, wird dann mit den neuen Daten aktualisiert.
+Die Seite zeigt den Ladevorgang Schritt für Schritt (zum Beispiel „Schritt 4 von 19: Kontenpläne“), und der Status wechselt am Ende zu **Geladen**. Die Statusleiste zeigt dann, wann die Daten geladen wurden und von wem. Alles, was Sie in KANAP sehen, wird mit den neuen Daten aktualisiert.
 
-**Wenn der Arbeitsbereich bereits Daten enthält**, weist die Seite darauf hin und zeigt die Schaltfläche **Beispieldaten laden** nicht an.
+**Wenn das Laden nicht möglich ist**, zeigt die Seite die Schaltfläche **Beispieldaten laden** nicht an. Eine Zeile nennt den Grund:
 
-**Wenn das Abonnement eingefroren oder die Testphase abgelaufen ist**, wird das Laden abgelehnt, und der Dialog nennt den Grund. Das Löschen bleibt möglich (siehe unten).
+- Der Arbeitsbereich enthält bereits Daten.
+- Das Abonnement ist eingefroren.
+- Die Testphase ist beendet.
 
-**Wenn das Laden fehlschlägt**, versetzt KANAP den Arbeitsbereich selbstständig in seinen Ausgangszustand zurück. Der Status zeigt **Laden fehlgeschlagen** mit Grund und Uhrzeit. Klicken Sie auf **Erneut versuchen**, um einen neuen Ladevorgang zu starten.
+Das Banner auf der Startseite bleibt dann ausgeblendet. Das Löschen bleibt in einem eingefrorenen Arbeitsbereich möglich (siehe unten).
+
+**Wenn das Laden fehlschlägt**, versetzt KANAP den Arbeitsbereich selbstständig in seinen Ausgangszustand zurück. Der Status zeigt **Laden fehlgeschlagen** mit dem Datum, und die Seite nennt den Grund. Klicken Sie auf **Erneut versuchen**, um einen neuen Ladevorgang zu starten.
 
 !!! warning "Warten Sie, bis das Laden abgeschlossen ist"
     Während eines Ladevorgangs wird alles, was im Arbeitsbereich erstellt wird, gelöscht, falls das Laden fehlschlägt. Beginnen Sie mit echter Arbeit erst, wenn der Status **Geladen** anzeigt.
 
 ## Das Banner auf der Startseite
 
-Solange der Arbeitsbereich leer ist, sehen Administratoren oben auf der Startseite eine Zeile: „Entdecken Sie KANAP mit Beispieldaten.“
+Solange der Arbeitsbereich leer ist und noch nie Beispieldaten geladen wurden, sehen Administratoren oben auf der Startseite eine Zeile: „Entdecken Sie KANAP mit Beispieldaten.“
 
 - **Laden** öffnet denselben Dialog wie die Seite.
-- **Ausblenden** entfernt die Zeile dauerhaft, für alle Administratoren des Arbeitsbereichs. Die Seite unter **Administration** → **Beispieldaten** bleibt verfügbar.
+- **Ausblenden** entfernt die Zeile dauerhaft, für alle Administratoren des Arbeitsbereichs. Die Seite unter **Administration** › **Beispieldaten** bleibt verfügbar.
 - Während eines Ladevorgangs zeigt die Zeile den aktuellen Schritt.
+- Wenn ein Ladevorgang fehlschlägt, nennt die Zeile den Grund und bietet **Erneut versuchen** an.
 
-Die Zeile verschwindet, sobald der Arbeitsbereich Daten enthält.
+Die Zeile verschwindet, sobald der Arbeitsbereich Daten enthält. Nach dem Löschen kehrt sie nicht zurück. Um den Datensatz erneut zu laden, verwenden Sie **Administration** › **Beispieldaten**.
 
 ## Alles löschen und neu beginnen
 
@@ -94,9 +99,11 @@ Sobald Beispieldaten geladen sind, bietet die Seite **Alles löschen und neu beg
 
 Das Löschen dauert einige Sekunden. Der Status zeigt **Wird gelöscht** und danach **Nicht geladen**. In diesen Sekunden lehnt KANAP Änderungen aller Benutzer des Arbeitsbereichs ab, und eine Fehlermeldung rät, es gleich noch einmal zu versuchen. Lesen funktioniert weiterhin.
 
+Wenn das Löschen fehlschlägt, zeigt die Seite „Der Inhalt des Arbeitsbereichs konnte nicht gelöscht werden. Es wurde nichts geändert.“ Es geht nichts verloren, und Sie können es erneut versuchen.
+
 Sobald der Arbeitsbereich gelöscht ist, erhält jeder Administrator eine E-Mail, die angibt, wer ihn gelöscht hat und wann. Das Audit-Protokoll hält den Vorgang fest.
 
-Nach dem Löschen ist der Arbeitsbereich wie neu: Sie können die Beispieldaten erneut laden oder mit der Erfassung Ihrer eigenen Daten beginnen.
+Nach dem Löschen ist der Arbeitsbereich wie neu: Sie können die Beispieldaten über die Seite erneut laden oder mit der Erfassung Ihrer eigenen Daten beginnen. Das Banner auf der Startseite kehrt nicht zurück.
 
 ## Tipps
 

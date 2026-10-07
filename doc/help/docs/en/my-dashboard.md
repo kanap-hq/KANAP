@@ -36,7 +36,7 @@ After save, the dashboard time-summary tile refreshes automatically.
 
 ## Sample data line
 
-In a cloud workspace that is still empty, Administrators see one line above the tiles: "Discover KANAP with sample data." **Load** opens the sample data dialog and **Hide** removes the line for good. The line disappears once the workspace holds data. See [Sample data](sample-data.md).
+In a cloud workspace that is empty and has never held sample data, Administrators see one line above the tiles: "Discover KANAP with sample data." **Load** opens the sample data dialog and **Hide** removes the line for good. The line disappears once the workspace holds data and does not return after an erase. See [Sample data](sample-data.md).
 
 ## Dashboard tiles
 

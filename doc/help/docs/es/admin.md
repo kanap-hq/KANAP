@@ -507,7 +507,7 @@ Para instrucciones detalladas paso a paso, consulte: [Personalización](branding
 
 ## Datos de ejemplo
 
-Use **Administración > Datos de ejemplo** para llenar un espacio de trabajo vacío con Fromage & Co, una quesería ficticia, y para borrar después todo el espacio de trabajo.
+Use **Administración › Datos de ejemplo** para llenar un espacio de trabajo vacío con Fromage & Co, una quesería ficticia, y para borrar después todo el espacio de trabajo.
 
 - Ruta: `/admin/sample-data`
 - Quién: los usuarios con el rol Administrador

@@ -507,7 +507,7 @@ For full step-by-step instructions, see: [Branding](branding.md)
 
 ## Sample data
 
-Use **Admin > Sample data** to fill an empty workspace with Fromage & Co, a fictional cheese maker, and to erase the whole workspace afterwards.
+Use **Admin › Sample data** to fill an empty workspace with Fromage & Co, a fictional cheese maker, and to erase the whole workspace afterwards.
 
 - Route: `/admin/sample-data`
 - Who: users with the Administrator role

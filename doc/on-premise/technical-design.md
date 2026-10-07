@@ -308,13 +308,13 @@ Rules:
 
 #### Sample data (cloud only, `!Features.SINGLE_TENANT`)
 
-Administration > Sample data loads the Fromage & Co set into an empty workspace and erases a workspace back to its starting state. The feature does not exist on-premise: no route, no page, no navigation entry, no home banner. The flag is `sampleData` in `GET /config/public`.
+Administration > Sample data loads the Fromage & Co set into an empty workspace and erases a workspace back to its starting state. On-premise there is no navigation entry and no home banner, every API route answers 404, and the page refuses itself. The flag is `sampleData` in `GET /config/public`.
 
 | File | Line | What | Behavior |
 |------|------|------|----------|
-| `demo-data/demo-data.controller.ts` | 30 | All `/admin/sample-data/*` routes | 404 via `MultiTenantOnlyGuard`; also 404 on the platform host. Administrator role checked by the service on every route (403 `administrator_required`) |
-| `demo-data/demo-data.service.ts` | 684 | `readTenant()` | `throwNotAvailableInMode()` when `SINGLE_TENANT`: the service refuses by itself, whoever calls it |
-| `demo-data/demo-data.service.ts` | 623 | `reconcileOnStartup()` | No-op when `SINGLE_TENANT` (no sweep of orphaned loads or resets) |
+| `demo-data/demo-data.controller.ts` | 29, 89 | All `/admin/sample-data/*` routes | 404 via `MultiTenantOnlyGuard`; also 404 on the platform host and for system tenants. Administrator role checked by the service on every route (403 `administrator_required`) |
+| `demo-data/demo-data.service.ts` | 749 | `readTenant()` | `throwNotAvailableInMode()` when `SINGLE_TENANT`: the service refuses by itself, whoever calls it |
+| `demo-data/demo-data.service.ts` | 687 | `reconcileOnStartup()` | No-op when `SINGLE_TENANT` (no sweep of orphaned loads or resets) |
 | `config/config.controller.ts` | 23 | `sampleData` | `!Features.SINGLE_TENANT` in `GET /config/public` |
 | `frontend/src/config/FeaturesContext.tsx` | 15, 37 | `sampleData` | Type key; default `false`, so the feature stays hidden if `/config/public` cannot be read |
 
@@ -414,7 +414,7 @@ All gates read from `useFeatures()` hook (provided by `FeaturesContext.tsx`).
 | 181–182 | `config.features.billing` | `/admin/billing`, `/admin/choose-plan` — not rendered |
 | 183 | `config.features.sso` | `/admin/auth` — not rendered |
 | 184–189 | `!isSingleTenant` | `/admin/tenants`, `/admin/coa-templates`, `/admin/standard-accounts/*`, `/admin/ops-dashboard` — not rendered |
-| 338 | `!isSingleTenant && config.features.sampleData` | `/admin/sample-data` — not rendered |
+| 339 | none (always registered) | `/admin/sample-data` — the page refuses itself (`ForbiddenPage`) when the flag is off (on-premise), for a non-Administrator or on the platform host. A direct page load never falls to the catch-all |
 
 #### Navigation gating (`Layout.tsx`)
 
@@ -424,7 +424,7 @@ All gates read from `useFeatures()` hook (provided by `FeaturesContext.tsx`).
 | 454 | `!config.features.billing` | Billing nav item filtered out |
 | 455 | `!config.features.sso` | Auth/SSO nav item filtered out |
 | 495 | `config.features.billing` | `SubscriptionBanner` hidden |
-| 519 | `!isPlatformHost && !isSingleTenant && config.features.sampleData && claims.isGlobalAdmin` | **Sample data** admin nav item (after Branding) added; absent otherwise |
+| 521 | `!isPlatformHost && !isSingleTenant && config.features.sampleData && claims.isGlobalAdmin` | **Sample data** admin nav item (after Branding) added; absent otherwise |
 
 #### Component gating
 
@@ -435,7 +435,8 @@ All gates read from `useFeatures()` hook (provided by `FeaturesContext.tsx`).
 | `ForgotPasswordPage.tsx` | 11 | `!config.features.email` | Shows "contact your administrator" message instead of form |
 | `SubscriptionBanner.tsx` | 14 | `!config.features.billing` | Returns null (hidden) |
 | `ProtectedRoute.tsx` | 116 | `config.features.billing` | Skips billing/subscription redirect when billing off |
-| `pages/admin/SampleDataPage.tsx`, `pages/admin/sample-data/SampleDataBanner.tsx` | 1 | `useSampleDataAvailable()`: not single-tenant, `features.sampleData`, not the platform host, Administrator role | Page shows `ForbiddenPage`; the home banner (rendered first in `WorkspaceDashboardPage.tsx`) renders nothing |
+| `pages/admin/SampleDataPage.tsx`, `pages/admin/sample-data/SampleDataBanner.tsx` | 1 | `useSampleDataAvailable()`: not single-tenant, `features.sampleData`, not the platform host, Administrator role | Page shows `ForbiddenPage`; the home banner (rendered first in `WorkspaceDashboardPage.tsx`) renders nothing. No polling or retry after a 403 or 404 |
+| `ProtectedRoute.tsx` | 301 | Billing redirect of a frozen workspace | `/admin/sample-data` is exempt, so an Administrator can erase a frozen workspace |
 
 #### API client (`client.ts`)
 

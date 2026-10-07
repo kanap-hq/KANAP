@@ -507,7 +507,7 @@ Pour les instructions détaillées étape par étape, consultez : [Personnalisat
 
 ## Données d'exemple
 
-Utilisez **Administration > Données d'exemple** pour remplir un espace de travail vide avec Fromage & Co, une fromagerie fictive, puis pour effacer ensuite tout l'espace de travail.
+Utilisez **Administration › Données d'exemple** pour remplir un espace de travail vide avec Fromage & Co, une fromagerie fictive, puis pour effacer ensuite tout l'espace de travail.
 
 - Route : `/admin/sample-data`
 - Qui : les utilisateurs ayant le rôle Administrateur

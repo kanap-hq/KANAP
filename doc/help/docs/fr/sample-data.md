@@ -4,7 +4,7 @@ Utilisez la page Données d'exemple pour découvrir KANAP avec un jeu de donnée
 
 ## Où la trouver
 
-- Espace de travail : menu **Administration** → **Données d'exemple**
+- Espace de travail : **Administration** › **Données d'exemple**
 - Route : `/admin/sample-data`
 - Qui peut l'utiliser : les utilisateurs ayant le rôle **Administrateur**. Un niveau d'autorisation de module, même `admin`, ne donne pas accès à la page.
 - Disponible uniquement dans les espaces de travail cloud. Les installations sur vos propres serveurs n'ont pas cette page.
@@ -37,30 +37,35 @@ Ce qu'un nouvel espace de travail crée pour vous (sa première société, le pl
 
 **Pour charger le jeu** :
 
-1. Ouvrez **Administration** → **Données d'exemple**.
+1. Ouvrez **Administration** › **Données d'exemple**.
 2. Cliquez sur **Charger les données d'exemple**.
 3. Lisez le résumé dans la fenêtre et confirmez avec **Charger les données d'exemple**.
 
-La page suit le chargement étape par étape (par exemple « Étape 4 sur 19 : plans comptables ») et le statut passe à **Chargées** à la fin. Tout ce que vous voyez dans KANAP se rafraîchit alors avec les nouvelles données.
+La page suit le chargement étape par étape (par exemple « Étape 4 sur 19 : plans comptables ») et le statut passe à **Chargées** à la fin. La bande de statut indique alors quand les données ont été chargées et par qui. Tout ce que vous voyez dans KANAP se rafraîchit avec les nouvelles données.
 
-**Si l'espace de travail contient déjà des données**, la page l'indique et n'affiche pas le bouton **Charger les données d'exemple**.
+**Si un chargement n'est pas possible**, la page n'affiche pas le bouton **Charger les données d'exemple**. Une ligne en explique la raison :
 
-**Si l'abonnement est gelé ou la période d'essai expirée**, le chargement est refusé et la fenêtre en indique la raison. L'effacement reste possible (voir ci-dessous).
+- l'espace de travail contient déjà des données
+- l'abonnement est gelé
+- la période d'essai est terminée
 
-**Si le chargement échoue**, KANAP remet lui-même l'espace de travail dans son état initial. Le statut affiche **Échec du chargement** avec la raison et l'heure. Cliquez sur **Réessayer** pour lancer un nouveau chargement.
+Le bandeau de la page d'accueil reste alors masqué. L'effacement reste possible sur un espace de travail gelé (voir ci-dessous).
+
+**Si le chargement échoue**, KANAP remet lui-même l'espace de travail dans son état initial. Le statut affiche **Échec du chargement** avec la date, et la page en donne la raison. Cliquez sur **Réessayer** pour lancer un nouveau chargement.
 
 !!! warning "Attendez la fin du chargement"
     Pendant un chargement, tout ce qui est créé dans l'espace de travail est effacé si le chargement échoue. Attendez que le statut affiche **Chargées** avant de commencer un travail réel.
 
 ## Le bandeau de la page d'accueil
 
-Tant que l'espace de travail est vide, les administrateurs voient une ligne en haut de la page d'accueil : « Découvrez KANAP avec des données d'exemple. »
+Tant que l'espace de travail est vide et que les données d'exemple n'ont jamais été chargées, les administrateurs voient une ligne en haut de la page d'accueil : « Découvrez KANAP avec des données d'exemple. »
 
 - **Charger** ouvre la même fenêtre que la page.
-- **Masquer** supprime la ligne définitivement, pour tous les administrateurs de l'espace de travail. La page sous **Administration** → **Données d'exemple** reste disponible.
+- **Masquer** supprime la ligne définitivement, pour tous les administrateurs de l'espace de travail. La page sous **Administration** › **Données d'exemple** reste disponible.
 - Pendant un chargement, la ligne indique l'étape en cours.
+- Si un chargement échoue, la ligne en donne la raison et propose **Réessayer**.
 
-La ligne disparaît dès que l'espace de travail contient des données.
+La ligne disparaît dès que l'espace de travail contient des données. Elle ne revient pas après un effacement. Pour recharger le jeu, utilisez **Administration** › **Données d'exemple**.
 
 ## Tout effacer et repartir de zéro
 
@@ -94,9 +99,11 @@ Une fois les données d'exemple chargées, la page propose **Tout effacer et rep
 
 L'effacement prend quelques secondes. Le statut affiche **Effacement**, puis **Non chargées**. Pendant ces secondes, KANAP refuse les modifications de tous les utilisateurs de l'espace de travail, et une erreur invite à réessayer dans un instant. La lecture continue de fonctionner.
 
+Si l'effacement échoue, la page affiche « Le contenu de l'espace de travail n'a pas pu être effacé. Rien n'a été modifié. » Rien n'est perdu, et vous pouvez réessayer.
+
 Quand l'espace de travail est effacé, chaque administrateur reçoit un e-mail qui indique qui l'a effacé et quand. Le journal d'audit conserve une trace de l'opération.
 
-Après l'effacement, l'espace de travail est comme neuf : vous pouvez recharger les données d'exemple ou commencer à saisir vos propres données.
+Après l'effacement, l'espace de travail est comme neuf : vous pouvez recharger les données d'exemple depuis la page ou commencer à saisir vos propres données. Le bandeau de la page d'accueil ne revient pas.
 
 ## Conseils
 

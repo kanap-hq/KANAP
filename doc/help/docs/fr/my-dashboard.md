@@ -36,7 +36,7 @@ Après l'enregistrement, la tuile de synthèse du temps du tableau de bord se ra
 
 ## Ligne des données d'exemple
 
-Dans un espace de travail cloud encore vide, les administrateurs voient une ligne au-dessus des tuiles : « Découvrez KANAP avec des données d'exemple. » **Charger** ouvre la fenêtre des données d'exemple et **Masquer** supprime la ligne définitivement. La ligne disparaît dès que l'espace de travail contient des données. Voir [Données d'exemple](sample-data.md).
+Dans un espace de travail cloud vide, qui n'a jamais reçu les données d'exemple, les administrateurs voient une ligne au-dessus des tuiles : « Découvrez KANAP avec des données d'exemple. » **Charger** ouvre la fenêtre des données d'exemple et **Masquer** supprime la ligne définitivement. La ligne disparaît dès que l'espace de travail contient des données et ne revient pas après un effacement. Voir [Données d'exemple](sample-data.md).
 
 ## Tuiles du tableau de bord
 
