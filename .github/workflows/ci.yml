@@ -8,6 +8,9 @@ on:
     # `edited` covers a base-branch change: a stacked PR retargeted to main after its base
     # merged gets no `synchronize`, so without it the required checks never run.
     types: [ opened, synchronize, reopened, edited ]
+  # The merge queue tests each queued pull request on top of main and the pull requests ahead
+  # of it, and merges it only when the required checks pass on that combination.
+  merge_group:
 
 # A new push to a pull request cancels the run of the previous push.
 concurrency:
@@ -17,7 +20,7 @@ concurrency:
 jobs:
   # Lists the files a pull request changes and decides which of the three jobs below it can
   # affect (.github/scripts/ci-changes.sh). A skipped job reports its required check as
-  # passed. A push on main runs every job.
+  # passed. Every job runs for a push on main and in the merge queue.
   changes:
     name: changes
     runs-on: ubuntu-latest

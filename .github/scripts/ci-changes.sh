@@ -2,7 +2,7 @@
 # Decides which CI jobs a change can affect, prints why, and writes the decision to
 # $GITHUB_OUTPUT (backend, frontend, onprem = 'true' or 'false') when it is set.
 #
-#   ci-changes.sh all            every job runs (push on main)
+#   ci-changes.sh all            every job runs (push on main, merge queue)
 #   ci-changes.sh <base> <head>  jobs for the files changed on <head> since its merge base with <base>
 #   ci-changes.sh --stdin        jobs for the file list read on stdin (local tests)
 #
