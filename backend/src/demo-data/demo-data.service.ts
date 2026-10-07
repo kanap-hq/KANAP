@@ -9,6 +9,7 @@ import {
   OnApplicationShutdown,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { parseString } from '@fast-csv/parse';
 import { ChildProcess, spawn as nodeSpawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
@@ -17,6 +18,7 @@ import * as readline from 'node:readline';
 import { DataSource, EntityManager } from 'typeorm';
 import { TENANT_RESET_RUNNING_CODE, TenantResetService } from '../admin/tenants/tenant-reset.service';
 import { AuthService } from '../auth/auth.service';
+import { DEFAULT_ACCESS_TOKEN_TTL, parseDurationMs } from '../auth/token-ttl.util';
 import { StripeConfigService } from '../billing/stripe/stripe.config';
 import { Subscription } from '../billing/subscription.entity';
 import { evaluateSubscriptionAccess } from '../billing/subscription-freeze.util';
@@ -46,6 +48,10 @@ import { User } from '../users/user.entity';
  * While the status is `resetting`, the tenancy middleware refuses the tenant's write requests
  * (409 `tenant_resetting`). Each run carries an id: a run only moves the state it claimed, so a
  * late write of an old run never moves a newer one.
+ *
+ * The services that save the whole `tenants.metadata` object (currency settings, IT operations
+ * settings) lock the row before they read it, so these updates of one key merge with theirs. A
+ * new writer of the whole object must lock the row first as well.
  */
 
 export const DEMO_STATUSES = ['idle', 'loading', 'loaded', 'failed', 'resetting'] as const;
@@ -79,10 +85,11 @@ export type DemoDataState = {
 type StoredDemoState = DemoDataState & { run_id: string | null };
 
 /**
- * The main business tables of a workspace. Sample data is loaded only into a workspace where
- * they are all empty: what trial activation creates (the starting company, the document
- * templates) aside. A reset later erases everything, so a workspace with real content never
- * gets sample data.
+ * The main business tables of a workspace, and the configuration tables an administrator fills
+ * before any business data. Sample data is loaded only into a workspace where they are all
+ * empty, because the reset after a failed load erases them (`findTenantContent` adds the tables
+ * that activation fills). None of them is written at activation, by a scheduled job or by
+ * browsing: only by a user's own create, import or setting save.
  */
 export const DEMO_LOAD_EMPTY_TABLES = [
   'applications',
@@ -103,6 +110,13 @@ export const DEMO_LOAD_EMPTY_TABLES = [
   'spend_items',
   'suppliers',
   'tasks',
+  // Configuration: budget dimension values, portfolio classification, AI integrations and agents.
+  'analytics_categories',
+  'portfolio_sources',
+  'portfolio_categories',
+  'portfolio_streams',
+  'ai_adapter_configs',
+  'ai_agent_definitions',
 ] as const;
 
 /** The loader, from the backend directory (`src/`, `dist/` and `ci-dist/` all sit below it). */
@@ -119,6 +133,9 @@ const SLUG = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
 /** Lines of loader output kept in memory for the server log of a failed load. */
 const OUTPUT_LINES_KEPT = 40;
 const OUTPUT_LINE_MAX = 400;
+
+/** The wait before the second try of the `loaded` update. */
+const LOADED_RETRY_DELAY_MS = 1_000;
 
 /**
  * The advisory lock namespace of the load claim ("DEMO"): the two-key form, apart from the
@@ -137,18 +154,33 @@ export type DemoLoaderConfig = {
   heartbeatMs: number;
   /** A load or a reset whose heartbeat is older is dead: its API process stopped. */
   staleMs: number;
-  /** A load running longer is stopped and counts as failed. */
+  /** A load running longer is stopped and counts as failed (below the token lifetime). */
   timeoutMs: number;
   spawn: typeof nodeSpawn;
 };
 
-/** The loader script, looked up from `from` towards the root of the file system. */
+/**
+ * The loader script, looked up from `from` up to the backend directory (the one holding
+ * package.json and tsconfig.json, as `backendPath()` finds it); null when it is not there.
+ */
 export function findDemoScript(from: string = __dirname): string | null {
   for (let dir = from; ; dir = path.dirname(dir)) {
     const candidate = path.join(dir, DEMO_SCRIPT_RELATIVE_PATH);
     if (fs.existsSync(candidate)) return candidate;
-    if (path.dirname(dir) === dir) return null;
+    const backendRoot = fs.existsSync(path.join(dir, 'package.json')) && fs.existsSync(path.join(dir, 'tsconfig.json'));
+    if (backendRoot || path.dirname(dir) === dir) return null;
   }
+}
+
+/** The longest a load may run: 12 minutes, and 60 s less than the lifetime of its access token. */
+export const DEMO_LOAD_MAX_MS = 12 * 60_000;
+const TOKEN_MARGIN_MS = 60_000;
+const MIN_LOAD_TIMEOUT_MS = 30_000;
+
+export function demoLoadTimeoutMs(env: NodeJS.ProcessEnv = process.env): number {
+  // The lifetime AuthService.signToken gives the token.
+  const tokenMs = parseDurationMs(env.JWT_ACCESS_TOKEN_TTL || DEFAULT_ACCESS_TOKEN_TTL);
+  return Math.max(MIN_LOAD_TIMEOUT_MS, Math.min(DEMO_LOAD_MAX_MS, tokenMs - TOKEN_MARGIN_MS));
 }
 
 function positiveInt(raw: string | undefined, fallback: number): number {
@@ -165,7 +197,7 @@ export function readDemoLoaderConfig(env: NodeJS.ProcessEnv = process.env): Demo
     maxConcurrent: positiveInt(env.DEMO_LOAD_MAX_CONCURRENT, 2),
     heartbeatMs: 15_000,
     staleMs: 2 * 60_000,
-    timeoutMs: 12 * 60_000,
+    timeoutMs: demoLoadTimeoutMs(env),
     spawn: nodeSpawn,
   };
 }
@@ -202,13 +234,37 @@ export function normalizeTenantHost(host: unknown): string | null {
   return HOST_NAME.test(name) && name.length <= 253 ? name : null;
 }
 
+/** The account numbers of a chart of accounts template (its CSV, as the account import reads it). */
+async function templateAccountNumbers(csv: string): Promise<string[]> {
+  const numbers: string[] = [];
+  await new Promise<void>((resolve, reject) => {
+    parseString(csv.replace(/^\uFEFF/, ''), { headers: true, delimiter: ';', ignoreEmpty: true, trim: true })
+      .on('data', (row: Record<string, string>) => {
+        const value = Number.parseInt(String(row.account_number ?? ''), 10);
+        if (Number.isSafeInteger(value)) numbers.push(String(value));
+      })
+      .on('error', reject)
+      .on('end', () => resolve());
+  });
+  return numbers;
+}
+
 /**
- * Tables of `DEMO_LOAD_EMPTY_TABLES` that hold a row, plus `companies` beyond the starting
- * company, `documents` outside the templates library, and `users` on `.example` addresses
- * (sample data users). Empty: the workspace is still in its starting state. Runs under the
- * tenant's RLS context.
+ * The tables that hold more than activation leaves (empty: the workspace is still in its
+ * starting state). Every table of `DEMO_LOAD_EMPTY_TABLES` must be empty. Activation also
+ * creates, and these may hold only that: one company; documents in the templates library;
+ * the chart of accounts made from the default template, with that template's accounts; the
+ * standard calendar of the company's country. And no `.example` user (sample data users).
+ * Runs under the tenant's RLS context.
  */
 export async function findTenantContent(manager: EntityManager, tenantId: string): Promise<string[]> {
+  const [template]: Array<{ template_code: string; csv_payload: string | null }> = await manager.query(
+    `SELECT template_code, csv_payload FROM coa_templates WHERE is_global = true AND loaded_by_default = true LIMIT 1`,
+  );
+  const [baselineChart]: Array<{ id: string }> = template
+    ? await manager.query(`SELECT id FROM chart_of_accounts WHERE tenant_id = $1 AND code = $2 LIMIT 1`, [tenantId, template.template_code])
+    : [];
+  const templateNumbers = baselineChart && template?.csv_payload ? await templateAccountNumbers(template.csv_payload) : [];
   const checks = [
     ...DEMO_LOAD_EMPTY_TABLES.map((table) =>
       `SELECT '${table}' AS t WHERE EXISTS (SELECT 1 FROM ${table} WHERE tenant_id = $1)`),
@@ -216,9 +272,22 @@ export async function findTenantContent(manager: EntityManager, tenantId: string
     `SELECT 'documents' AS t WHERE EXISTS (
        SELECT 1 FROM documents d LEFT JOIN document_libraries l ON l.id = d.library_id AND l.tenant_id = d.tenant_id
         WHERE d.tenant_id = $1 AND l.slug IS DISTINCT FROM 'templates')`,
+    `SELECT 'chart_of_accounts' AS t WHERE EXISTS (
+       SELECT 1 FROM chart_of_accounts WHERE tenant_id = $1 AND id IS DISTINCT FROM $2::uuid)`,
+    `SELECT 'accounts' AS t WHERE EXISTS (
+       SELECT 1 FROM accounts WHERE tenant_id = $1
+          AND (coa_id IS DISTINCT FROM $2::uuid OR NOT (account_number::text = ANY($3::text[]))))`,
+    `SELECT 'working_day_profiles' AS t WHERE EXISTS (
+       SELECT 1 FROM working_day_profiles WHERE tenant_id = $1
+          AND NOT (region_code IS NULL AND country_iso IS NOT NULL AND code = country_iso))
+       OR (SELECT count(*) FROM working_day_profiles WHERE tenant_id = $1) > 1`,
     `SELECT 'users' AS t WHERE EXISTS (SELECT 1 FROM users WHERE tenant_id = $1 AND lower(email) LIKE '%.example')`,
   ];
-  const rows: Array<{ t: string }> = await manager.query(checks.join(' UNION ALL '), [tenantId]);
+  const rows: Array<{ t: string }> = await manager.query(checks.join(' UNION ALL '), [
+    tenantId,
+    baselineChart?.id ?? null,
+    templateNumbers,
+  ]);
   return rows.map((row) => row.t);
 }
 
@@ -288,6 +357,9 @@ export class DemoDataService implements OnApplicationShutdown {
   /** Loads this API process runs, by tenant. */
   private readonly running = new Map<string, RunningLoad>();
   private stopping = false;
+  /** The lead process's periodic pass over the tenants (`reconcileOnStartup`). */
+  private sweepTimer: NodeJS.Timeout | null = null;
+  private sweeping: Promise<void> | null = null;
 
   constructor(
     private readonly dataSource: DataSource,
@@ -403,30 +475,50 @@ export class DemoDataService implements OnApplicationShutdown {
   }
 
   /**
-   * At the start of the API (lead process): loads and resets left by a stopped API process are
-   * taken over (reset, then `failed` or `idle`), once now and once more when the heartbeat of
-   * those that were still fresh has gone stale. A load another API process runs is never touched.
-   * Resolves when the first pass has claimed what it takes over (the resets run in the
-   * background); never rejects.
+   * The lead process's pass over the tenants, at start-up and then every `staleMs`: loads and
+   * resets left by a stopped API process are taken over (reset, then `failed` or `idle`). A load
+   * another API process runs is never touched; deleted tenants are left out; one tenant that
+   * cannot be taken over does not stop the pass. Resolves when the first pass has claimed what
+   * it takes over (the resets run in the background); never rejects.
    */
   reconcileOnStartup(): Promise<void> {
-    if (Features.SINGLE_TENANT) return Promise.resolve();
-    const sweep = async () => {
+    if (Features.SINGLE_TENANT || this.stopping) return Promise.resolve();
+    if (!this.sweepTimer) {
+      this.sweepTimer = setInterval(() => { void this.sweep(); }, this.config.staleMs);
+      this.sweepTimer.unref();
+    }
+    return this.sweep();
+  }
+
+  /** One pass (one at a time). */
+  private sweep(): Promise<void> {
+    if (this.stopping) return Promise.resolve();
+    if (!this.sweeping) {
+      this.sweeping = this.sweepOnce().finally(() => { this.sweeping = null; });
+    }
+    return this.sweeping;
+  }
+
+  private async sweepOnce(): Promise<void> {
+    let rows: Array<{ id: string; demo: unknown }>;
+    try {
+      rows = await this.dataSource.query(
+        `SELECT id, metadata->'demo' AS demo FROM tenants
+          WHERE ${STATUS_SQL} IN ('loading', 'resetting')
+            AND is_system_tenant IS NOT TRUE
+            AND status NOT IN ('${TenantStatus.DELETING}', '${TenantStatus.DELETED}')`,
+      );
+    } catch (error) {
+      this.logger.warn(`Sample data states not checked: ${errorMessage(error)}`);
+      return;
+    }
+    for (const row of rows) {
       try {
-        const rows: Array<{ id: string; demo: unknown }> = await this.dataSource.query(
-          `SELECT id, metadata->'demo' AS demo FROM tenants
-            WHERE ${STATUS_SQL} IN ('loading', 'resetting') AND is_system_tenant IS NOT TRUE`,
-        );
-        for (const row of rows) {
-          await this.reconcile(row.id, readDemoState(row.demo));
-        }
+        await this.reconcile(row.id, readDemoState(row.demo));
       } catch (error) {
-        this.logger.warn(`Sample data states not checked at start-up: ${errorMessage(error)}`);
+        this.logger.warn(`Sample data state of tenant ${row.id} not checked: ${errorMessage(error)}`);
       }
-    };
-    const later = setTimeout(() => { if (!this.stopping) void sweep(); }, this.config.staleMs + 5_000);
-    later.unref();
-    return sweep();
+    }
   }
 
   /**
@@ -436,6 +528,8 @@ export class DemoDataService implements OnApplicationShutdown {
    */
   stop(): void {
     this.stopping = true;
+    if (this.sweepTimer) clearInterval(this.sweepTimer);
+    this.sweepTimer = null;
     for (const run of this.running.values()) {
       run.stopped = true;
       run.child?.kill('SIGKILL');
@@ -653,9 +747,17 @@ export class DemoDataService implements OnApplicationShutdown {
     })());
   }
 
-  /** Writes the run's heartbeat every `heartbeatMs` while `fn` runs. */
+  /**
+   * Writes the run's heartbeat every `heartbeatMs` while `fn` runs, one write at a time: during a
+   * reset the write waits for the reset's lock on the tenant row, and a beat still waiting is not
+   * joined by another one (each would hold a pool connection).
+   */
   private async withHeartbeat<T>(tenantId: string, runId: string, fn: () => Promise<T>): Promise<T> {
-    const timer = setInterval(() => { void this.beat(tenantId, runId); }, this.config.heartbeatMs);
+    let pending: Promise<void> | null = null;
+    const timer = setInterval(() => {
+      if (pending) return;
+      pending = this.beat(tenantId, runId).finally(() => { pending = null; });
+    }, this.config.heartbeatMs);
     timer.unref();
     try {
       return await fn();
@@ -681,7 +783,9 @@ export class DemoDataService implements OnApplicationShutdown {
     token: string;
   }): Promise<void> {
     const { tenantId, runId } = run;
-    const record: RunningLoad = { runId, child: null, stopped: false, timedOut: false };
+    // Claimed while the API process was stopping: no loader starts, the state is left for the
+    // next start to take over.
+    const record: RunningLoad = { runId, child: null, stopped: this.stopping, timedOut: false };
     this.running.set(tenantId, record);
     const startedAt = Date.now();
     this.logger.log(`Sample data load started for tenant ${tenantId}`);
@@ -695,11 +799,18 @@ export class DemoDataService implements OnApplicationShutdown {
           return;
         }
         if (outcome.code === 0 && !outcome.error) {
-          const loaded = await this.update(tenantId, { statuses: ['loading'], runId }, {
+          const markLoaded = () => this.update(tenantId, { statuses: ['loading'], runId }, {
             status: 'loaded',
             loaded_at: nowIso(),
             heartbeat_at: null,
             step: null,
+          });
+          // Once more after a database error: left `loading`, the load would be taken for dead
+          // and erased.
+          const loaded = await markLoaded().catch(async (error) => {
+            this.logger.warn(`Sample data state of tenant ${tenantId} not written, trying again: ${errorMessage(error)}`);
+            await new Promise((resolve) => setTimeout(resolve, LOADED_RETRY_DELAY_MS));
+            return markLoaded();
           });
           if (loaded) {
             this.logger.log(`Sample data loaded into tenant ${tenantId} in ${((Date.now() - startedAt) / 1000).toFixed(1)} s`);
@@ -745,6 +856,7 @@ export class DemoDataService implements OnApplicationShutdown {
     record: RunningLoad,
     output: string[],
   ): Promise<ExitOutcome> {
+    if (record.stopped) return { code: null, signal: null };
     let child: ChildProcess;
     try {
       child = this.config.spawn(process.execPath, [run.scriptPath, '--server-mode'], {

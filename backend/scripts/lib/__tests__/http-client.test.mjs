@@ -3,8 +3,9 @@
 //   node --test backend/scripts/lib/__tests__/http-client.test.mjs
 //
 // Against a local server: the explicit Host header, the hand-built multipart
-// body, and the retry rule (a GET may be sent twice; a request that may have
-// reached the server is never sent again).
+// body, the retry rule (a GET may be sent twice; a request that may have
+// reached the server is never sent again), and the one redirect the CLI mode
+// follows.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -124,6 +125,69 @@ test('a refused connection is tried once more, then fails', async () => {
     assert.deepEqual(client.stats, { requests: 2, retries: 1 });
   } finally {
     client.close();
+  }
+});
+
+// CLI mode behind a proxy that sends http to https: the client follows that one
+// redirect with the same method and body, then calls the new origin directly.
+test('follows one redirect to the same host, then calls there directly', async () => {
+  const target = await startServer((req, res, body) => json(res, 201, { method: req.method, url: req.url, body }));
+  const proxy = await startServer((req, res) => {
+    res.writeHead(301, { Location: `${target.url}${req.url}` });
+    res.end();
+  });
+  const client = createHttpClient({ baseUrl: `${proxy.url}/api`, followRedirect: true });
+  try {
+    const answer = await client.request('POST', '/companies/import?dryRun=false', { json: { name: 'Fromage' }, headers: { Authorization: 'Bearer test' } });
+    assert.equal(answer.status, 201);
+    assert.deepEqual(JSON.parse(answer.text), { method: 'POST', url: '/api/companies/import?dryRun=false', body: '{"name":"Fromage"}' });
+    assert.equal(target.seen[0].headers.authorization, 'Bearer test');
+    const next = await client.request('GET', '/companies');
+    assert.equal(next.status, 201);
+    assert.equal(proxy.seen.length, 1, 'the later calls skip the redirect');
+    assert.deepEqual(target.seen.map((r) => r.url), ['/api/companies/import?dryRun=false', '/api/companies']);
+  } finally {
+    client.close();
+    await proxy.close();
+    await target.close();
+  }
+});
+
+test('a redirect is not followed without the option, to another host, or a second time; 303 turns into a GET', async () => {
+  const target = await startServer((req, res, body) => {
+    if (req.url.startsWith('/again')) {
+      res.writeHead(302, { Location: '/elsewhere' });
+      res.end();
+      return;
+    }
+    json(res, 200, { method: req.method, body });
+  });
+  const { port } = new URL(target.url);
+  const proxy = await startServer((req, res) => {
+    const location = req.url === '/other-host' ? `http://localhost:${port}/x`
+      : req.url === '/see-other' ? `${target.url}/done`
+        : `${target.url}${req.url}`;
+    res.writeHead(req.url === '/see-other' ? 303 : 307, { Location: location });
+    res.end();
+  });
+  // A client per case: a followed redirect moves the client to the new origin.
+  const clients = [];
+  const client = (followRedirect) => {
+    const created = createHttpClient({ baseUrl: proxy.url, followRedirect });
+    clients.push(created);
+    return created;
+  };
+  try {
+    assert.equal((await client(false).request('POST', '/x', { json: {} })).status, 307, 'not followed without the option');
+    assert.equal((await client(true).request('POST', '/other-host', { json: {} })).status, 307, 'not followed to another host');
+    assert.equal((await client(true).request('GET', '/again')).status, 302, 'one redirect only');
+    const seeOther = await client(true).request('POST', '/see-other', { json: { a: 1 } });
+    assert.deepEqual(JSON.parse(seeOther.text), { method: 'GET', body: '' });
+    assert.ok(!target.seen.some((r) => r.url === '/x'), 'nothing reached the other host');
+  } finally {
+    clients.forEach((created) => created.close());
+    await proxy.close();
+    await target.close();
   }
 });
 

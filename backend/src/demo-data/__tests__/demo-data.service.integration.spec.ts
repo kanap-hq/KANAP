@@ -1,6 +1,9 @@
 import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { PassThrough } from 'node:stream';
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
@@ -24,7 +27,16 @@ import {
   runSpecs,
   Services,
 } from '../../admin/tenants/__tests__/tenant-reset-test-helpers';
-import { DEMO_LOAD_EMPTY_TABLES, DemoDataService, findTenantContent, readDemoState } from '../demo-data.service';
+import {
+  DEMO_LOAD_EMPTY_TABLES,
+  DEMO_SCRIPT_RELATIVE_PATH,
+  DemoDataService,
+  demoLoadTimeoutMs,
+  findDemoScript,
+  findTenantContent,
+  readDemoLoaderConfig,
+  readDemoState,
+} from '../demo-data.service';
 
 // DemoDataService against a real database (non-superuser role, RLS), with the real tenant reset
 // and a double of the loader process: the state machine in tenants.metadata.demo (claims, double
@@ -76,7 +88,7 @@ type Harness = {
 };
 
 /** The service on the spec database, its loader spawned as a double, its log recorded. */
-function harness(svc: Services, opts: { stripeConfigured?: boolean; failReset?: boolean } = {}): Harness {
+function harness(svc: Services, opts: { stripeConfigured?: boolean; failReset?: boolean; holdRowMs?: number } = {}): Harness {
   const spawns: SpawnCall[] = [];
   const logs: string[] = [];
   const resetCalls: Harness['resetCalls'] = [];
@@ -87,6 +99,13 @@ function harness(svc: Services, opts: { stripeConfigured?: boolean; failReset?: 
       const last = spawns.filter((call) => call.child).at(-1);
       resetCalls.push({ tenantId, actorId, status: row?.status, childClosed: last ? last.child.closed : null });
       if (opts.failReset) throw new Error('injected reset failure');
+      if (opts.holdRowMs) {
+        // A slow reset: the tenant row stays locked a while, as the reset's transaction does.
+        await dataSource.transaction(async (manager) => {
+          await manager.query(`SELECT 1 FROM tenants WHERE id = $1 FOR UPDATE`, [tenantId]);
+          await new Promise((resolve) => setTimeout(resolve, opts.holdRowMs));
+        });
+      }
       return realReset.reset(tenantId, actorId);
     },
   };
@@ -505,23 +524,47 @@ async function testRefusals() {
     await inTenant(t.tenantId, (m) => m.query(
       `UPDATE subscriptions SET status = 'trialing', trial_end = now() + interval '10 days' WHERE tenant_id = $1`, [t.tenantId]));
 
-    // A workspace with data of its own: a supplier, a second company, a document, a sample user.
-    for (const [table, sql] of [
-      ['suppliers', `INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Real supplier')`],
-      ['companies', `INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, 'Second company', 'FR', 'Lyon')`],
-      ['documents', `INSERT INTO documents (tenant_id, item_number, title, content_markdown, library_id)
-                     SELECT $1, 9001, 'Real document', '', id FROM document_libraries WHERE tenant_id = $1 AND slug = 'documents'`],
-    ] as const) {
-      await inTenant(t.tenantId, (m) => m.query(sql, [t.tenantId]));
+    // A workspace with data of its own, or with configuration a failed load's reset would erase:
+    // each case alone is refused and named, then removed.
+    const defaultChart = `(SELECT c.id FROM chart_of_accounts c JOIN coa_templates tpl ON tpl.template_code = c.code
+                            AND tpl.is_global AND tpl.loaded_by_default WHERE c.tenant_id = $1)`;
+    const cases: Array<[string[], string, string]> = [
+      [['suppliers'], `INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Real supplier')`,
+        `DELETE FROM suppliers WHERE tenant_id = $1`],
+      [['companies'], `INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, 'Second company', 'FR', 'Lyon')`,
+        `DELETE FROM companies WHERE tenant_id = $1 AND name = 'Second company'`],
+      [['documents'], `INSERT INTO documents (tenant_id, item_number, title, content_markdown, library_id)
+                       SELECT $1, 9001, 'Real document', '', id FROM document_libraries WHERE tenant_id = $1 AND slug = 'documents'`,
+        `DELETE FROM documents WHERE tenant_id = $1 AND title = 'Real document'`],
+      [['chart_of_accounts'], `INSERT INTO chart_of_accounts (tenant_id, code, name, scope) VALUES ($1, 'OWN', 'Own chart', 'GLOBAL')`,
+        `DELETE FROM chart_of_accounts WHERE tenant_id = $1 AND code = 'OWN'`],
+      [['accounts'], `INSERT INTO accounts (tenant_id, coa_id, account_number, account_name) SELECT $1, ${defaultChart}, 987654, 'Own account'`,
+        `DELETE FROM accounts WHERE tenant_id = $1 AND account_number = 987654`],
+      [['working_day_profiles'], `INSERT INTO working_day_profiles (tenant_id, code, name, days_by_year) VALUES ($1, 'SITE', 'Site calendar', '{}'::jsonb)`,
+        `DELETE FROM working_day_profiles WHERE tenant_id = $1 AND code = 'SITE'`],
+      [['analytics_categories'], `INSERT INTO analytics_categories (tenant_id, axis_id, name)
+                                  SELECT $1, id, 'Own value' FROM analytics_axes WHERE tenant_id = $1 AND is_default`,
+        `DELETE FROM analytics_categories WHERE tenant_id = $1`],
+      [['portfolio_sources'], `INSERT INTO portfolio_sources (tenant_id, name) VALUES ($1, 'Own source')`,
+        `DELETE FROM portfolio_sources WHERE tenant_id = $1`],
+      [['portfolio_categories', 'portfolio_streams'], `WITH c AS (INSERT INTO portfolio_categories (tenant_id, name) VALUES ($1, 'Own category') RETURNING id)
+                       INSERT INTO portfolio_streams (tenant_id, category_id, name) SELECT $1, id, 'Own stream' FROM c`,
+        `DELETE FROM portfolio_streams WHERE tenant_id = $1; DELETE FROM portfolio_categories WHERE tenant_id = $1`],
+      [['ai_adapter_configs'], `INSERT INTO ai_adapter_configs (tenant_id, provider_kind, provider_key, implementation, environment)
+                                VALUES ($1, 'monitoring', 'prtg', 'prtg', 'production')`,
+        `DELETE FROM ai_adapter_configs WHERE tenant_id = $1`],
+      [['ai_agent_definitions'], `INSERT INTO ai_agent_definitions (tenant_id, agent_key, name, agent_type, status, environment, max_autonomy_level, default_approval_requirement)
+                                  VALUES ($1, 'triage', 'Triage', 'helpdesk', 'draft', 'production', 'A0', 'human')`,
+        `DELETE FROM ai_agent_definitions WHERE tenant_id = $1`],
+    ];
+    for (const [tables, insert, remove] of cases) {
+      await inTenant(t.tenantId, (m) => m.query(insert, [t.tenantId]));
       const error = await refusal(() => h.service.load(params));
-      assert.ok(error instanceof ConflictException, `${table}: ${String(error)}`);
+      assert.ok(error instanceof ConflictException, `${tables}: ${String(error)}`);
       assert.equal(codeOf(error), 'tenant_not_empty');
-      assert.deepEqual((error.getResponse() as any).tables, [table]);
-      await inTenant(t.tenantId, (m) => m.query(
-        table === 'documents' ? `DELETE FROM documents WHERE tenant_id = $1 AND title = 'Real document'`
-          : table === 'companies' ? `DELETE FROM companies WHERE tenant_id = $1 AND name = 'Second company'`
-            : `DELETE FROM suppliers WHERE tenant_id = $1`,
-        [t.tenantId]));
+      assert.deepEqual([...(error.getResponse() as any).tables].sort(), tables, tables.join(', '));
+      for (const statement of remove.split('; ')) await inTenant(t.tenantId, (m) => m.query(statement, [t.tenantId]));
+      assert.deepEqual(await inTenant(t.tenantId, (m) => findTenantContent(m, t.tenantId)), [], `${tables}: removed`);
     }
     await loadDemoSet(t.tenantId);
     const full = await refusal(() => h.service.load(params));
@@ -593,6 +636,177 @@ async function testManualReset() {
   }
 }
 
+// The heartbeat during a reset waits for the reset's lock on the tenant row: one write at a time,
+// never a pile of waiting writes each holding a pool connection.
+async function testHeartbeatSingleFlight() {
+  const svc = buildServices();
+  const h = harness(svc, { holdRowMs: 800 });
+  let t: ActivatedTenant | undefined;
+  try {
+    t = await createActivatedTenant(svc, { tag: 'dd-beat', orgName: 'Beat Org' });
+    await setDemo(t.tenantId, { status: 'loaded', run_id: randomUUID() });
+    h.service.config.heartbeatMs = 20;
+    const service = h.service as any;
+    const beat = service.beat.bind(service);
+    let inFlight = 0;
+    let maxInFlight = 0;
+    let beats = 0;
+    service.beat = async (...args: unknown[]) => {
+      beats += 1;
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      try {
+        return await beat(...args);
+      } finally {
+        inFlight -= 1;
+      }
+    };
+    assert.equal((await h.service.reset({ tenantId: t.tenantId, actorId: t.ownerId })).status, 'idle');
+    assert.ok(beats >= 1, 'the heartbeat ran during the reset');
+    assert.equal(maxInFlight, 1, `one heartbeat write at a time (${maxInFlight} at once)`);
+  } finally {
+    await h.finishAll();
+    await cleanupTenants([t?.tenantId]);
+  }
+}
+
+// The lead process sweeps again and again (not only at start-up): a load that dies later is
+// taken over by a later pass. One tenant that cannot be checked does not stop the pass, and a
+// tenant being deleted is left out.
+async function testPeriodicSweep() {
+  const svc = buildServices();
+  const h = harness(svc);
+  const tenants: ActivatedTenant[] = [];
+  try {
+    for (const tag of ['sw-a', 'sw-b', 'sw-c', 'sw-gone']) {
+      tenants.push(await createActivatedTenant(svc, { tag: `dd-${tag}`, orgName: `Sweep ${tag}` }));
+    }
+    const [a, b, c, gone] = tenants;
+    for (const t of [a, b, gone]) {
+      await setDemo(t.tenantId, { status: 'loading', run_id: randomUUID(), heartbeat_at: minutesAgo(10) });
+    }
+    await dataSource.query(`UPDATE tenants SET status = 'deleting' WHERE id = $1`, [gone.tenantId]);
+    h.service.config.staleMs = 400;
+    h.service.config.heartbeatMs = 100;
+    const service = h.service as any;
+    const reconcile = service.reconcile.bind(service);
+    let refused: string | null = null;
+    service.reconcile = async (tenantId: string, state: unknown) => {
+      if (!refused && (tenantId === a.tenantId || tenantId === b.tenantId)) {
+        refused = tenantId;
+        throw new Error('injected failure of one tenant');
+      }
+      return reconcile(tenantId, state);
+    };
+
+    await h.service.reconcileOnStartup();
+    const other = refused === a.tenantId ? b : a;
+    assert.ok(refused, 'one tenant failed in the first pass');
+    assert.notEqual((await demoOf(other.tenantId)).status, 'loading', 'the pass went on after the failed tenant');
+    assert.equal((await demoOf(refused!)).status, 'loading');
+
+    // A load that dies after the start: a later pass takes it over, and the failed tenant too.
+    await setDemo(c.tenantId, { status: 'loading', run_id: randomUUID(), heartbeat_at: minutesAgo(10) });
+    for (const t of [a, b, c]) {
+      await waitFor(`${t.slug} taken over`, () => demoOf(t.tenantId), (demo) => demo.status === 'failed', 5_000);
+    }
+    const goneState = await demoOf(gone.tenantId);
+    assert.equal(goneState.status, 'loading', 'a tenant being deleted is left out');
+    assert.ok(!h.resetCalls.some((call) => call.tenantId === gone.tenantId));
+  } finally {
+    h.service.stop();
+    await h.finishAll();
+    await cleanupTenants(tenants.map((t) => t.tenantId));
+  }
+}
+
+// A stop of the API that lands while a load is being claimed: no loader starts, the state is
+// left for the next start.
+async function testStopDuringClaim() {
+  const svc = buildServices();
+  const h = harness(svc);
+  let t: ActivatedTenant | undefined;
+  try {
+    t = await createActivatedTenant(svc, { tag: 'dd-race', orgName: 'Race Org' });
+    const service = h.service as any;
+    const claim = service.claim.bind(service);
+    service.claim = async (...args: unknown[]) => {
+      const claimed = await claim(...args);
+      h.service.stop();
+      return claimed;
+    };
+    const state = await h.service.load({ tenantId: t.tenantId, actorId: t.ownerId, host: hostOf(t) });
+    assert.equal(state.status, 'loading');
+    await settle();
+    assert.equal(h.spawns.length, 0, 'no loader started after the stop');
+    assert.equal((await demoOf(t.tenantId)).status, 'loading', 'left for the next start');
+    assert.equal(h.resetCalls.length, 0);
+  } finally {
+    await h.finishAll();
+    await cleanupTenants([t?.tenantId]);
+  }
+}
+
+// A database error on the `loaded` update: tried once more, so a finished load is not left
+// `loading` (it would be taken for dead and erased).
+async function testLoadedIsWrittenAgain() {
+  const svc = buildServices();
+  const h = harness(svc);
+  let t: ActivatedTenant | undefined;
+  try {
+    t = await createActivatedTenant(svc, { tag: 'dd-retry', orgName: 'Retry Org' });
+    const service = h.service as any;
+    const update = service.update.bind(service);
+    let failures = 0;
+    service.update = async (tenantId: string, condition: unknown, patch: any, executor?: unknown) => {
+      if (patch?.status === 'loaded' && failures === 0) {
+        failures += 1;
+        throw new Error('injected connection error');
+      }
+      return update(tenantId, condition, patch, executor);
+    };
+    await h.service.load({ tenantId: t.tenantId, actorId: t.ownerId, host: hostOf(t) });
+    h.spawns[0].child.finish(0);
+    await settle();
+    assert.equal(failures, 1);
+    assert.equal((await demoOf(t.tenantId)).status, 'loaded');
+    assert.ok(h.logs.some((line) => /not written, trying again/.test(line)));
+  } finally {
+    await h.finishAll();
+    await cleanupTenants([t?.tenantId]);
+  }
+}
+
+// The time limit stays 60 s under the lifetime of the loader's token; the loader is looked up
+// below the backend directory only.
+async function testTimeLimitAndScriptLookup() {
+  assert.equal(demoLoadTimeoutMs({}), 12 * 60_000, 'default token lifetime (15 min): 12 min');
+  assert.equal(demoLoadTimeoutMs({ JWT_ACCESS_TOKEN_TTL: '1h' }), 12 * 60_000);
+  assert.equal(demoLoadTimeoutMs({ JWT_ACCESS_TOKEN_TTL: '10m' }), 9 * 60_000);
+  assert.equal(demoLoadTimeoutMs({ JWT_ACCESS_TOKEN_TTL: '300s' }), 4 * 60_000);
+  assert.equal(demoLoadTimeoutMs({ JWT_ACCESS_TOKEN_TTL: '1m' }), 30_000, 'never below 30 s');
+  assert.equal(readDemoLoaderConfig({ JWT_ACCESS_TOKEN_TTL: '10m' }).timeoutMs, 9 * 60_000);
+
+  const found = findDemoScript();
+  assert.ok(found && found.endsWith(DEMO_SCRIPT_RELATIVE_PATH) && fs.existsSync(found), String(found));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-script-'));
+  try {
+    // A loader above the backend directory is not taken.
+    fs.mkdirSync(path.join(tmp, path.dirname(DEMO_SCRIPT_RELATIVE_PATH)), { recursive: true });
+    fs.writeFileSync(path.join(tmp, DEMO_SCRIPT_RELATIVE_PATH), '');
+    const backend = path.join(tmp, 'backend');
+    fs.mkdirSync(path.join(backend, 'dist', 'demo-data'), { recursive: true });
+    fs.writeFileSync(path.join(backend, 'package.json'), '{}');
+    fs.writeFileSync(path.join(backend, 'tsconfig.json'), '{}');
+    assert.equal(findDemoScript(path.join(backend, 'dist', 'demo-data')), null);
+    fs.mkdirSync(path.join(backend, path.dirname(DEMO_SCRIPT_RELATIVE_PATH)), { recursive: true });
+    fs.writeFileSync(path.join(backend, DEMO_SCRIPT_RELATIVE_PATH), '');
+    assert.equal(findDemoScript(path.join(backend, 'dist', 'demo-data')), path.join(backend, DEMO_SCRIPT_RELATIVE_PATH));
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
 runSpecs('demo-data.service.integration.spec', [
   testLoadRunsTheLoader,
   testFailedLoadIsReset,
@@ -602,6 +816,11 @@ runSpecs('demo-data.service.integration.spec', [
   testTimeoutAndStop,
   testRefusals,
   testManualReset,
+  testHeartbeatSingleFlight,
+  testPeriodicSweep,
+  testStopDuringClaim,
+  testLoadedIsWrittenAgain,
+  testTimeLimitAndScriptLookup,
 ]).catch((err) => {
   console.error(err);
   process.exit(1);

@@ -214,8 +214,9 @@ function lower(value) {
 
 // The tenant's API (server mode: on 127.0.0.1 with the tenant's Host) and, in
 // CLI mode, the public routes on the marketing apex.
-const tenantClient = createHttpClient({ baseUrl: options.baseUrl, host: serverMode ? tenantHost : null });
-const publicClient = serverMode ? null : createHttpClient({ baseUrl: publicBaseUrl });
+// CLI mode follows one redirect to the same host (a proxy that sends http to https).
+const tenantClient = createHttpClient({ baseUrl: options.baseUrl, host: serverMode ? tenantHost : null, followRedirect: !serverMode });
+const publicClient = serverMode ? null : createHttpClient({ baseUrl: publicBaseUrl, followRedirect: true });
 
 async function request(method, route, body, { uploadBytes, uploadName, uploadFields, noAuth, publicHost } = {}) {
   const headers = {};

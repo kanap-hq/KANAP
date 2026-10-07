@@ -14,12 +14,19 @@
 // it (the spec shows the second case), and a duplicated write would go
 // unnoticed where a failed load is visible. The calls run one after the other,
 // so a socket is never idle long enough to meet the server's keep-alive limit.
+//
+// With `followRedirect` (CLI mode: a public URL, where a proxy may send http to
+// https), one redirect to the same host name is followed, with the same method,
+// body and headers (303: a GET without body). When only the origin changed,
+// the later calls go there directly. A redirect to another host is not
+// followed: the request carries the administrator's token.
 
 import http from 'node:http';
 import https from 'node:https';
 import { randomBytes } from 'node:crypto';
 
 const RETRIED_GET_STATUSES = new Set([502, 503, 504]);
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const RETRY_DELAY_MS = 500;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -52,23 +59,27 @@ export function mayRetry(method, attempt) {
   return method === 'GET' && RETRIED_GET_STATUSES.has(attempt.status);
 }
 
-/**
- * `baseUrl` is the API root (`http://127.0.0.1:8080`, or a public URL with its
- * `/api` prefix). `host`, when given, is sent as the `Host` header; otherwise
- * Node derives it from the URL.
- */
-export function createHttpClient({ baseUrl, host = null }) {
-  const base = new URL(baseUrl);
+/** The protocol module, keep-alive agent and path prefix of an API root. */
+function endpoint(rootUrl) {
+  const base = new URL(rootUrl);
   if (base.protocol !== 'http:' && base.protocol !== 'https:') {
     throw new Error(`Unsupported protocol in ${base.origin}`);
   }
   const lib = base.protocol === 'https:' ? https : http;
-  const agent = new lib.Agent({ keepAlive: true, maxSockets: 1 });
-  const prefix = base.pathname.replace(/\/$/, '');
+  return { base, lib, agent: new lib.Agent({ keepAlive: true, maxSockets: 1 }), prefix: base.pathname.replace(/\/$/, '') };
+}
+
+/**
+ * `baseUrl` is the API root (`http://127.0.0.1:8080`, or a public URL with its
+ * `/api` prefix). `host`, when given, is sent as the `Host` header; otherwise
+ * Node derives it from the URL. `followRedirect`: see the top of this file.
+ */
+export function createHttpClient({ baseUrl, host = null, followRedirect = false }) {
+  let current = endpoint(baseUrl);
+  const agents = [current.agent];
   const stats = { requests: 0, retries: 0 };
 
-  function attempt(method, route, headers, body) {
-    const url = new URL(prefix + route, base);
+  function attempt(method, url, headers, body, at = current) {
     const reqHeaders = { Accept: 'application/json', ...headers };
     if (host) reqHeaders.Host = host;
     if (body) reqHeaders['Content-Length'] = body.length;
@@ -81,14 +92,18 @@ export function createHttpClient({ baseUrl, host = null }) {
         settled = true;
         resolve(result);
       };
-      const req = lib.request(url, { method, headers: reqHeaders, agent }, (res) => {
+      const req = at.lib.request(url, { method, headers: reqHeaders, agent: at.agent }, (res) => {
         const chunks = [];
         responseBytes = 1; // the status line arrived
         res.on('data', (chunk) => {
           chunks.push(chunk);
           responseBytes += chunk.length;
         });
-        res.on('end', () => done({ status: res.statusCode ?? 0, text: Buffer.concat(chunks).toString('utf8') }));
+        res.on('end', () => done({
+          status: res.statusCode ?? 0,
+          text: Buffer.concat(chunks).toString('utf8'),
+          location: res.headers.location ?? null,
+        }));
         res.on('error', (error) => done({ status: 0, error: error.code || error.message, responseBytes }));
         res.on('close', () => {
           if (!res.complete) done({ status: 0, error: 'ECONNRESET', responseBytes });
@@ -103,6 +118,28 @@ export function createHttpClient({ baseUrl, host = null }) {
       if (body) req.write(body);
       req.end();
     });
+  }
+
+  /** The redirect answered to `url`, when it is to be followed: the target and its endpoint. */
+  function redirectTarget(url, result) {
+    if (!followRedirect || !REDIRECT_STATUSES.has(result.status) || !result.location) return null;
+    let target;
+    try {
+      target = new URL(result.location, url);
+    } catch {
+      return null;
+    }
+    if (target.hostname !== url.hostname) return null;
+    if (target.protocol !== 'http:' && target.protocol !== 'https:') return null;
+    if (target.pathname === url.pathname && target.search === url.search) {
+      // Only the origin changed (http to https): later calls go there directly.
+      current = endpoint(`${target.origin}${current.prefix}`);
+      agents.push(current.agent);
+      return { url: target, at: current };
+    }
+    const at = endpoint(target.origin);
+    agents.push(at.agent);
+    return { url: target, at };
   }
 
   /**
@@ -121,19 +158,29 @@ export function createHttpClient({ baseUrl, host = null }) {
       reqHeaders['Content-Type'] = 'application/json';
     }
 
-    let result = await attempt(method, route, reqHeaders, body);
+    const url = new URL(current.prefix + route, current.base);
+    let result = await attempt(method, url, reqHeaders, body);
     if (mayRetry(method, result)) {
       stats.retries += 1;
       await sleep(RETRY_DELAY_MS);
-      result = await attempt(method, route, reqHeaders, body);
+      result = await attempt(method, url, reqHeaders, body);
+    }
+    const redirect = redirectTarget(url, result);
+    if (redirect) {
+      const seeOther = result.status === 303;
+      const redirectedHeaders = { ...reqHeaders };
+      if (seeOther) {
+        delete redirectedHeaders['Content-Type'];
+      }
+      result = await attempt(seeOther ? 'GET' : method, redirect.url, redirectedHeaders, seeOther ? null : body, redirect.at);
     }
     if (result.status === 0) {
-      const error = new Error(`${method} ${prefix}${route}: no answer from ${base.origin} (${result.error})`);
+      const error = new Error(`${method} ${url.pathname}${url.search}: no answer from ${url.origin} (${result.error})`);
       error.status = 0;
       throw error;
     }
     return result;
   }
 
-  return { request, stats, close: () => agent.destroy() };
+  return { request, stats, close: () => agents.forEach((agent) => agent.destroy()) };
 }

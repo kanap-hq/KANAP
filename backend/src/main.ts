@@ -390,7 +390,7 @@ async function bootstrap() {
       console.warn(`[DB] pool budget not checked: ${(err as Error)?.message ?? err}`);
     }
     scheduledTasks.runStartupTasks();
-    // Sample data loads and resets left by a stopped API process (demo-data.service.ts).
+    // Sample data loads and resets left by a stopped API process, now and every 2 minutes (demo-data.service.ts).
     void demoData.reconcileOnStartup();
   }
   if (clusterWorkerId() !== null) {
