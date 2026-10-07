@@ -196,4 +196,13 @@ export const de: EmailStrings = {
       textAction: 'Passwort festlegen: {{url}}',
     },
   },
+  workspace: {
+    reset: {
+      subject: 'Ihr KANAP-Arbeitsbereich wurde zurückgesetzt',
+      heading: 'Arbeitsbereich auf den Ausgangszustand zurückgesetzt',
+      bodyHtml: '<strong>{{actorName}}</strong> hat am {{date}} den gesamten Inhalt des Arbeitsbereichs <strong>{{workspaceName}}</strong> gelöscht. Der Arbeitsbereich ist wieder im Ausgangszustand. Benutzerkonten und ihre Rollen, das Abonnement und das Audit-Protokoll wurden beibehalten.',
+      text: '{{actorName}} hat am {{date}} den gesamten Inhalt des Arbeitsbereichs {{workspaceName}} gelöscht. Der Arbeitsbereich ist wieder im Ausgangszustand. Benutzerkonten und ihre Rollen, das Abonnement und das Audit-Protokoll wurden beibehalten. Arbeitsbereich öffnen: {{url}}',
+      cta: 'Arbeitsbereich öffnen',
+    },
+  },
 };

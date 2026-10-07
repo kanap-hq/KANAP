@@ -66,9 +66,13 @@ export async function purgeTenantTables(
   return { report, storagePaths: [...storagePaths] };
 }
 
+/** Storage objects deleted at once by `deleteStorageObjects`. */
+export const STORAGE_DELETE_CONCURRENCY = 8;
+
 /**
- * Deletes storage objects one by one, after the commit that removed their rows. A failure is
- * logged and counted, never thrown: the orphaned attachment cleanup removes what is left.
+ * Deletes storage objects after the commit that removed their rows, `STORAGE_DELETE_CONCURRENCY`
+ * at a time. A failure is logged and counted, never thrown: the orphaned attachment cleanup
+ * removes what is left.
  */
 export async function deleteStorageObjects(
   storage: StorageService,
@@ -77,14 +81,19 @@ export async function deleteStorageObjects(
 ): Promise<{ deleted: number; failed: number }> {
   let deleted = 0;
   let failed = 0;
-  for (const path of paths) {
-    try {
-      await storage.deleteObject(path);
-      deleted += 1;
-    } catch (error) {
-      failed += 1;
-      logger.warn(`${context}: storage object ${path} not deleted: ${(error as Error)?.message ?? error}`);
+  let next = 0;
+  const worker = async () => {
+    while (next < paths.length) {
+      const path = paths[next++];
+      try {
+        await storage.deleteObject(path);
+        deleted += 1;
+      } catch (error) {
+        failed += 1;
+        logger.warn(`${context}: storage object ${path} not deleted: ${(error as Error)?.message ?? error}`);
+      }
     }
-  }
+  };
+  await Promise.all(Array.from({ length: Math.min(STORAGE_DELETE_CONCURRENCY, paths.length) }, worker));
   return { deleted, failed };
 }

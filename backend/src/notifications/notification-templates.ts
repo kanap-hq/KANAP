@@ -1481,3 +1481,45 @@ export function buildSsoUserProvisionedEmail(params: {
 
   return { subject: s.subject, html: wrapper.html, text, attachments: wrapper.attachments };
 }
+
+/** The date and time of a workspace event in an e-mail, in the reader's language, in UTC. */
+export function formatEmailDateTime(date: Date, locale?: string): string {
+  const language = (locale || 'en') === 'en' ? 'en-GB' : locale || 'en-GB';
+  const text = new Intl.DateTimeFormat(language, { dateStyle: 'long', timeStyle: 'short', timeZone: 'UTC' }).format(date);
+  return `${text} UTC`;
+}
+
+export function buildWorkspaceResetEmail(params: {
+  actorName: string;
+  workspaceName: string;
+  resetAt: Date;
+  workspaceUrl: string;
+  branding?: EmailBranding;
+  locale?: string;
+}): EmailContent {
+  const s = getEmailStrings(params.locale).workspace.reset;
+  const pc = getPrimaryColor(params.branding);
+  const date = formatEmailDateTime(params.resetAt, params.locale);
+
+  const body = `
+    ${buildEmailIntro({
+      title: s.heading,
+      summaryHtml: `<p style="margin:0;">${interpolate(s.bodyHtml, {
+        actorName: escapeHtml(params.actorName),
+        workspaceName: escapeHtml(params.workspaceName),
+        date: escapeHtml(date),
+      })}</p>`,
+    })}
+    ${buildActionButtons([{ label: s.cta, url: params.workspaceUrl }], pc)}
+  `;
+  const wrapper = emailWrapper(body, { branding: params.branding, locale: params.locale });
+  const text = joinTextBlocks([
+    interpolate(s.text, {
+      actorName: params.actorName,
+      workspaceName: params.workspaceName,
+      date,
+      url: params.workspaceUrl,
+    }),
+  ]);
+  return { subject: s.subject, html: wrapper.html, text, attachments: wrapper.attachments };
+}

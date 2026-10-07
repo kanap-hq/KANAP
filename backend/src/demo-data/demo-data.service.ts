@@ -84,6 +84,28 @@ export type DemoDataState = {
 /** The stored state: the public one plus the id of the run that owns it. */
 type StoredDemoState = DemoDataState & { run_id: string | null };
 
+/** What the administration page and the home banner read (`GET /admin/sample-data`). */
+export type DemoDataOverview = DemoDataState & {
+  /** Sample data can be loaded now: the workspace is in its starting state, status `idle` or `failed`. */
+  can_load: boolean;
+  /** Objects users created since the load (`countCreatedSinceLoad`); null unless the status is `loaded`. */
+  created_since_load: number | null;
+  /** The name an administrator types to confirm a reset. */
+  workspace_name: string;
+  /** The name of the user who started the last load, when known. */
+  loaded_by_name: string | null;
+};
+
+/** A reset started by `startReset`: the state it moved to, and the reset itself. */
+export type StartedDemoReset = {
+  state: DemoDataState;
+  /** Resolves with the final state once the workspace is reset; rejects when the reset failed. */
+  done: Promise<DemoDataState>;
+};
+
+/** The code of the 400 a reset gets when the typed workspace name does not match. */
+export const CONFIRMATION_MISMATCH_CODE = 'confirmation_mismatch';
+
 /**
  * The main business tables of a workspace, and the configuration tables an administrator fills
  * before any business data. Sample data is loaded only into a workspace where they are all
@@ -291,6 +313,43 @@ export async function findTenantContent(manager: EntityManager, tenantId: string
   return rows.map((row) => row.t);
 }
 
+/**
+ * The tables `countCreatedSinceLoad` reads besides the users and the documents: the business
+ * and configuration tables of a workspace that has data, plus its companies. Each has `created_at`
+ * (checked by the spec).
+ */
+export const DEMO_CREATED_SINCE_TABLES = [...DEMO_LOAD_EMPTY_TABLES, 'companies'] as const;
+
+/**
+ * How many objects were created in the workspace after `since` (the end of the sample data
+ * load): the rows of `DEMO_CREATED_SINCE_TABLES`, the documents outside the templates library,
+ * and the users other than the sample data ones. A reset erases them too. Runs under the
+ * tenant's RLS context.
+ */
+export async function countCreatedSinceLoad(manager: EntityManager, tenantId: string, since: string): Promise<number> {
+  const counts = [
+    ...DEMO_CREATED_SINCE_TABLES.map((table) =>
+      `SELECT count(*)::int AS n FROM ${table} WHERE tenant_id = $1 AND created_at > $2::timestamptz`),
+    `SELECT count(*)::int AS n FROM documents d LEFT JOIN document_libraries l ON l.id = d.library_id AND l.tenant_id = d.tenant_id
+      WHERE d.tenant_id = $1 AND d.created_at > $2::timestamptz AND l.slug IS DISTINCT FROM 'templates'`,
+    `SELECT count(*)::int AS n FROM users
+      WHERE tenant_id = $1 AND created_at > $2::timestamptz AND lower(email) NOT LIKE '%.example'`,
+  ];
+  const rows: Array<{ n: number }> = await manager.query(counts.join(' UNION ALL '), [tenantId, since]);
+  return rows.reduce((sum, row) => sum + Number(row.n ?? 0), 0);
+}
+
+/** The name to type to confirm a reset: the workspace name, or its address name when it has none. */
+export function workspaceConfirmationName(tenant: { name: string | null; slug: string }): string {
+  return String(tenant.name ?? '').trim() || tenant.slug;
+}
+
+/** Whether a typed confirmation matches the workspace name: spaces around it and case ignored. */
+export function confirmationMatches(typed: unknown, workspaceName: string): boolean {
+  const normalize = (value: string) => value.normalize('NFC').trim().toLowerCase();
+  return typeof typed === 'string' && normalize(typed) !== '' && normalize(typed) === normalize(workspaceName);
+}
+
 function isDemoStatus(value: unknown): value is DemoStatus {
   return typeof value === 'string' && (DEMO_STATUSES as readonly string[]).includes(value);
 }
@@ -376,6 +435,62 @@ export class DemoDataService implements OnApplicationShutdown {
   }
 
   /**
+   * What an administrator of the tenant sees of its sample data: the state, whether a load can
+   * start now, the objects created since a load, the name to type for a reset.
+   */
+  async getOverview(params: { tenantId: string; actorId: string }): Promise<DemoDataOverview> {
+    const tenant = await this.readTenant(params.tenantId);
+    await withTenant(this.dataSource, tenant.id, (manager) => this.requireAdministrator(manager, tenant.id, params.actorId));
+    const state = publicState(await this.reconcile(tenant.id, readDemoState(tenant.demo)));
+    return withTenant(this.dataSource, tenant.id, async (manager) => {
+      const canLoad = (state.status === 'idle' || state.status === 'failed')
+        && (await findTenantContent(manager, tenant.id)).length === 0;
+      const createdSinceLoad = state.status === 'loaded' && state.loaded_at
+        ? await countCreatedSinceLoad(manager, tenant.id, state.loaded_at)
+        : null;
+      let loadedByName: string | null = null;
+      if (state.loaded_by && UUID.test(state.loaded_by)) {
+        const [user]: Array<{ name: string | null }> = await manager.query(
+          `SELECT NULLIF(trim(concat_ws(' ', first_name, last_name)), '') AS name FROM users WHERE tenant_id = $1 AND id = $2`,
+          [tenant.id, state.loaded_by],
+        );
+        loadedByName = user?.name ?? null;
+      }
+      return {
+        ...state,
+        can_load: canLoad,
+        created_since_load: createdSinceLoad,
+        workspace_name: workspaceConfirmationName(tenant),
+        loaded_by_name: loadedByName,
+      };
+    });
+  }
+
+  /**
+   * Hides the home banner for every administrator of the tenant: `metadata.demo.dismissed_at`,
+   * one statement on that key alone. A reset keeps it.
+   */
+  async dismissBanner(params: { tenantId: string; actorId: string }): Promise<DemoDataState> {
+    const tenant = await this.readTenant(params.tenantId);
+    await withTenant(this.dataSource, tenant.id, (manager) => this.requireAdministrator(manager, tenant.id, params.actorId));
+    const rows: Array<{ demo: unknown }> = await this.dataSource.query(
+      `WITH updated AS (
+         UPDATE tenants
+            SET metadata = jsonb_set(
+                  CASE WHEN jsonb_typeof(metadata) = 'object' THEN metadata ELSE '{}'::jsonb END,
+                  '{demo}',
+                  ${DEMO_SQL} || jsonb_build_object('dismissed_at', $2::text),
+                  true)
+          WHERE id = $1
+          RETURNING metadata->'demo' AS demo
+       )
+       SELECT demo FROM updated`,
+      [tenant.id, nowIso()],
+    );
+    return publicState(readDemoState(rows[0]?.demo));
+  }
+
+  /**
    * Starts loading the sample data into the tenant and returns at once (status `loading`).
    * Only into a workspace still in its starting state, by one of its administrators, from a
    * host of the tenant, with a subscription in good standing, and while fewer than
@@ -445,8 +560,25 @@ export class DemoDataService implements OnApplicationShutdown {
    * with a frozen subscription or an expired trial. Waits for the reset.
    */
   async reset(params: { tenantId: string; actorId: string }): Promise<DemoDataState> {
+    const { done } = await this.startReset(params);
+    return done;
+  }
+
+  /**
+   * The checks of a reset and the move to `resetting`, then the reset itself in `done`, tracked
+   * as background work (a stop waits for it). With `confirmName`, the typed workspace name must
+   * match (`confirmationMatches`), or 400 `confirmation_mismatch`. When the reset fails, the
+   * state goes back to what it was and `done` rejects.
+   */
+  async startReset(params: { tenantId: string; actorId: string; confirmName?: unknown }): Promise<StartedDemoReset> {
     const tenant = await this.readTenant(params.tenantId);
     await withTenant(this.dataSource, tenant.id, (manager) => this.requireAdministrator(manager, tenant.id, params.actorId));
+    if ('confirmName' in params && !confirmationMatches(params.confirmName, workspaceConfirmationName(tenant))) {
+      throw new BadRequestException({
+        code: CONFIRMATION_MISMATCH_CODE,
+        message: 'The name typed does not match the name of this workspace.',
+      });
+    }
     const state = await this.reconcile(tenant.id, readDemoState(tenant.demo));
     if (state.status !== 'loaded' && state.status !== 'failed') throw this.statusConflict(state.status);
 
@@ -460,18 +592,24 @@ export class DemoDataService implements OnApplicationShutdown {
     });
     if (!moved) throw this.statusConflict((await this.readState(tenant.id)).status);
 
+    // Tracked, which also marks a rejection as handled until the caller awaits `done`.
+    const done = trackBackgroundWork(this.runReset(tenant.id, runId, params.actorId, state));
+    return { state: publicState(moved), done };
+  }
+
+  private async runReset(tenantId: string, runId: string, actorId: string, previous: StoredDemoState): Promise<DemoDataState> {
     try {
-      await this.withHeartbeat(tenant.id, runId, () => this.tenantReset.reset(tenant.id, params.actorId));
+      await this.withHeartbeat(tenantId, runId, () => this.tenantReset.reset(tenantId, actorId));
     } catch (error) {
       // The reset is one transaction: nothing changed, the state goes back to what it was.
-      await this.update(tenant.id, { statuses: ['resetting'], runId }, { ...state }).catch((restoreError) => {
-        this.logger.error(`Sample data state of tenant ${tenant.id} not restored after a failed reset: ${errorMessage(restoreError)}`);
+      await this.update(tenantId, { statuses: ['resetting'], runId }, { ...previous }).catch((restoreError) => {
+        this.logger.error(`Sample data state of tenant ${tenantId} not restored after a failed reset: ${errorMessage(restoreError)}`);
       });
       throw error;
     }
-    const settled = await this.update(tenant.id, { statuses: ['resetting'], runId }, this.idleState());
-    this.logger.log(`Tenant ${tenant.id} reset to its starting state after sample data`);
-    return publicState(settled ?? (await this.readState(tenant.id)));
+    const settled = await this.update(tenantId, { statuses: ['resetting'], runId }, this.idleState());
+    this.logger.log(`Tenant ${tenantId} reset to its starting state after sample data`);
+    return publicState(settled ?? (await this.readState(tenantId)));
   }
 
   /**

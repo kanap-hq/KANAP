@@ -22,6 +22,7 @@ import {
   buildExpirationWarningEmail,
   EmailContent,
   buildSsoUserProvisionedEmail,
+  buildWorkspaceResetEmail,
 } from './notification-templates';
 import { renderCommentForEmail } from './comment-email-renderer';
 import { renderMarkdownToHtml } from '../common/markdown-to-html';
@@ -1082,6 +1083,70 @@ export class NotificationsService {
       });
       for (const recipient of recipients) {
         this.sendNotification(recipient.email, content);
+      }
+    }
+  }
+
+  /**
+   * Tells the workspace's administrators (users with the Administrator role, not a module's admin
+   * level) that an administrator erased its content and brought it back to its starting state
+   * (sample data reset): who, when, and a link to the workspace. Called once the reset has
+   * committed; reads with its own connections, never the request's.
+   */
+  @NeverRejects()
+  async notifyWorkspaceReset(params: { tenantId: string; actorId: string; resetAt: Date }): Promise<void> {
+    if (!Features.EMAIL_ENABLED) return;
+
+    const lookup = await withTenant(this.dataSource, params.tenantId, async (manager) => {
+      const admins: Array<{ id: string; email: string; locale: string | null }> = await manager.query(
+        `SELECT DISTINCT u.id, u.email, u.locale
+           FROM users u
+          WHERE u.tenant_id = $1
+            AND u.status = 'enabled'
+            AND (
+              EXISTS (
+                SELECT 1 FROM roles r
+                 WHERE r.id = u.role_id AND r.tenant_id = u.tenant_id
+                   AND LOWER(r.role_name) = 'administrator'
+              )
+              OR EXISTS (
+                SELECT 1 FROM user_roles ur
+                  JOIN roles r2 ON r2.id = ur.role_id AND r2.tenant_id = ur.tenant_id
+                 WHERE ur.user_id = u.id AND ur.tenant_id = u.tenant_id
+                   AND LOWER(r2.role_name) = 'administrator'
+              )
+            )`,
+        [params.tenantId],
+      );
+      const [actor]: Array<{ name: string | null; email: string }> = await manager.query(
+        `SELECT NULLIF(trim(concat_ws(' ', first_name, last_name)), '') AS name, email
+           FROM users WHERE tenant_id = $1 AND id = $2`,
+        [params.tenantId, params.actorId],
+      );
+      const [tenant]: Array<{ name: string | null; slug: string }> = await manager.query(
+        `SELECT name, slug FROM tenants WHERE id = $1`,
+        [params.tenantId],
+      );
+      return { admins, actor, tenant };
+    });
+    if (lookup.admins.length === 0 || !lookup.tenant) return;
+
+    const workspaceUrl = this.buildTenantBaseUrl(lookup.tenant.slug);
+    const workspaceName = String(lookup.tenant.name ?? '').trim() || lookup.tenant.slug;
+    const actorName = lookup.actor?.name || lookup.actor?.email || '';
+    const branding = await this.resolveBranding(params.tenantId);
+
+    for (const [locale, recipients] of this.groupRecipientsByLocale(lookup.admins)) {
+      const content = buildWorkspaceResetEmail({
+        actorName,
+        workspaceName,
+        resetAt: params.resetAt,
+        workspaceUrl,
+        branding,
+        locale,
+      });
+      for (const recipient of recipients) {
+        await this.sendNotification(recipient.email, content);
       }
     }
   }
