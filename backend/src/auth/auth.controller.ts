@@ -8,7 +8,7 @@ import { PermissionsService, RESOURCES } from '../permissions/permissions.servic
 import { BillingService } from '../billing/billing.service';
 import * as jwt from 'jsonwebtoken';
 import { EmailService } from '../email/email.service';
-import { resolveAppBaseUrl } from '../common/url';
+import { resolveRequestAppBaseUrl } from '../common/url';
 import { Features } from '../config/features';
 import { throwFeatureDisabled } from '../common/feature-gates';
 import { isPlatformAdmin } from './platform-admin.util';
@@ -251,7 +251,7 @@ export class AuthController {
     if (user.external_auth_provider) return { ok: true };
 
     const token = await this.runInRequestTenant(req, (manager) => this.auth.createPasswordResetToken(user, manager));
-    const baseUrl = resolveAppBaseUrl(req);
+    const baseUrl = resolveRequestAppBaseUrl(req);
     const resetUrl = `${baseUrl.replace(/\/$/, '')}/reset-password#token=${encodeURIComponent(token)}`;
     await this.emails.sendPasswordResetEmail({
       to: email,

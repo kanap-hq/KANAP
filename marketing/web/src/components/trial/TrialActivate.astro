@@ -51,7 +51,7 @@ const failedHref = localePath(locale, '/trial/failed');
 
   function finalRedirect(tenantUrl, resetToken) {
     const url = new URL('/reset-password', tenantUrl);
-    url.hash = resetToken;
+    url.hash = 'token=' + encodeURIComponent(resetToken);
     url.searchParams.set('from', 'trial');
     setStatus(progressRedirecting);
     if (linkEl) {
