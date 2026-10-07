@@ -30,8 +30,18 @@ export type KanapDialogProps = {
   sx?: SxProps<Theme>;
 };
 
-function isMultilineTarget(target: EventTarget | null) {
-  return target instanceof HTMLTextAreaElement;
+/** Inputs whose Enter means "submit the form" (implicit submission): one-line text entries. */
+const NON_TEXT_INPUT_TYPES = new Set(['button', 'checkbox', 'color', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit']);
+
+/**
+ * Enter submits the dialog only from a one-line text input, and only when nothing handled it
+ * first. A select, a menu option (its portal bubbles to the form), an autocomplete choosing an
+ * option, a button or a textarea keeps its own Enter.
+ */
+function isSubmitEnter(event: React.KeyboardEvent<HTMLElement>) {
+  if (event.key !== 'Enter' || event.shiftKey || event.defaultPrevented || event.nativeEvent.isComposing) return false;
+  const target = event.target;
+  return target instanceof HTMLInputElement && !NON_TEXT_INPUT_TYPES.has(target.type);
 }
 
 export default function KanapDialog({
@@ -89,7 +99,7 @@ export default function KanapDialog({
         component="form"
         onSubmit={handleSubmit}
         onKeyDown={(event: React.KeyboardEvent<HTMLFormElement>) => {
-          if (event.key === 'Enter' && !event.shiftKey && !isMultilineTarget(event.target)) {
+          if (isSubmitEnter(event)) {
             event.preventDefault();
             if (!saveDisabled && !saveLoading) void onSave();
           }

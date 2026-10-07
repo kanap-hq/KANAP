@@ -548,17 +548,44 @@
     "newAccount": "New account",
     "accountFallback": "Account",
     "loadError": "Failed to load account.",
+    "previous": "Previous account",
+    "next": "Next account",
+    "actions": {
+      "create": "Create account"
+    },
+    "sections": {
+      "consolidation": "Consolidation"
+    },
     "fields": {
       "chartOfAccounts": "Chart of accounts",
-      "chartOfAccountsRequired": "Chart of accounts is required",
-      "selectCoA": "Select a CoA",
       "accountNumber": "Account number",
       "accountName": "Account name",
       "nativeName": "Native name (local language)",
-      "consolAccountNumber": "Consolidation account number",
-      "consolAccountName": "Consolidation account name",
-      "consolAccountDescription": "Consolidation account description",
+      "description": "Description",
+      "consolidationAccount": "Consolidation account",
+      "lifecycle": "Lifecycle",
       "loadCoAsError": "Failed to load charts of accounts"
+    },
+    "placeholders": {
+      "chartOfAccounts": "e.g., COA-FR",
+      "accountNumber": "e.g., 6200",
+      "accountName": "e.g., Software subscriptions",
+      "nativeName": "e.g., Logiciels SaaS",
+      "description": "e.g., SaaS licences and cloud subscriptions"
+    },
+    "consolidation": {
+      "none": "None",
+      "disabled": "Disabled",
+      "outside": "This number does not exist in the consolidation chart {{code}}. Choose an account from {{code}}.",
+      "noChart": "No consolidation chart is defined.",
+      "noChartLink": "Choose one in Charts of accounts → Manage charts."
+    },
+    "messages": {
+      "saveFailed": "Failed to save the account.",
+      "createFailed": "Failed to create the account.",
+      "chartRequired": "Choose a chart of accounts.",
+      "numberInvalid": "Enter a whole number greater than zero.",
+      "nameRequired": "Enter a name."
     }
   },
   "analytics": {

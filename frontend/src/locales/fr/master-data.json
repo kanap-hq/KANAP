@@ -548,17 +548,44 @@
     "newAccount": "Nouveau compte",
     "accountFallback": "Compte",
     "loadError": "Échec du chargement du compte.",
+    "previous": "Compte précédent",
+    "next": "Compte suivant",
+    "actions": {
+      "create": "Créer le compte"
+    },
+    "sections": {
+      "consolidation": "Consolidation"
+    },
     "fields": {
       "chartOfAccounts": "Plan comptable",
-      "chartOfAccountsRequired": "Le plan comptable est requis",
-      "selectCoA": "Sélectionnez un plan comptable",
       "accountNumber": "Numéro de compte",
       "accountName": "Nom du compte",
       "nativeName": "Nom local (langue locale)",
-      "consolAccountNumber": "Numéro de compte de consolidation",
-      "consolAccountName": "Nom du compte de consolidation",
-      "consolAccountDescription": "Description du compte de consolidation",
+      "description": "Description",
+      "consolidationAccount": "Compte de consolidation",
+      "lifecycle": "Cycle de vie",
       "loadCoAsError": "Échec du chargement des plans comptables"
+    },
+    "placeholders": {
+      "chartOfAccounts": "ex. COA-FR",
+      "accountNumber": "ex. 6200",
+      "accountName": "ex. Abonnements logiciels",
+      "nativeName": "ex. Logiciels SaaS",
+      "description": "ex. Licences SaaS et abonnements cloud"
+    },
+    "consolidation": {
+      "none": "Aucun",
+      "disabled": "Désactivé",
+      "outside": "Ce numéro n'existe pas dans le plan de consolidation {{code}}. Choisissez un compte de {{code}}.",
+      "noChart": "Aucun plan de consolidation n'est défini.",
+      "noChartLink": "Choisissez-en un dans Plans comptables → Gérer les plans."
+    },
+    "messages": {
+      "saveFailed": "Échec de l'enregistrement du compte.",
+      "createFailed": "Échec de la création du compte.",
+      "chartRequired": "Choisissez un plan comptable.",
+      "numberInvalid": "Saisissez un nombre entier supérieur à zéro.",
+      "nameRequired": "Saisissez un nom."
     }
   },
   "analytics": {

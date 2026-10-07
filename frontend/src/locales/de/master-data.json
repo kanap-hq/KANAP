@@ -548,17 +548,44 @@
     "newAccount": "Neues Konto",
     "accountFallback": "Konto",
     "loadError": "Fehler beim Laden des Kontos.",
+    "previous": "Vorheriges Konto",
+    "next": "Nächstes Konto",
+    "actions": {
+      "create": "Konto erstellen"
+    },
+    "sections": {
+      "consolidation": "Konsolidierung"
+    },
     "fields": {
       "chartOfAccounts": "Kontenplan",
-      "chartOfAccountsRequired": "Kontenplan ist erforderlich",
-      "selectCoA": "Kontenplan auswählen",
       "accountNumber": "Kontonummer",
       "accountName": "Kontoname",
       "nativeName": "Lokaler Name (Landessprache)",
-      "consolAccountNumber": "Konsolidierungskontonummer",
-      "consolAccountName": "Konsolidierungskontoname",
-      "consolAccountDescription": "Konsolidierungskontobeschreibung",
+      "description": "Beschreibung",
+      "consolidationAccount": "Konsolidierungskonto",
+      "lifecycle": "Lebenszyklus",
       "loadCoAsError": "Fehler beim Laden der Kontenpläne"
+    },
+    "placeholders": {
+      "chartOfAccounts": "z. B. COA-FR",
+      "accountNumber": "z. B. 6200",
+      "accountName": "z. B. Software-Abonnements",
+      "nativeName": "z. B. Logiciels SaaS",
+      "description": "z. B. SaaS-Lizenzen und Cloud-Abonnements"
+    },
+    "consolidation": {
+      "none": "Keines",
+      "disabled": "Deaktiviert",
+      "outside": "Diese Nummer existiert im Konsolidierungskontenplan {{code}} nicht. Wählen Sie ein Konto aus {{code}}.",
+      "noChart": "Es ist kein Konsolidierungskontenplan festgelegt.",
+      "noChartLink": "Wählen Sie einen unter Kontenpläne → Kontenpläne verwalten."
+    },
+    "messages": {
+      "saveFailed": "Das Konto konnte nicht gespeichert werden.",
+      "createFailed": "Das Konto konnte nicht erstellt werden.",
+      "chartRequired": "Wählen Sie einen Kontenplan.",
+      "numberInvalid": "Geben Sie eine ganze Zahl größer als null ein.",
+      "nameRequired": "Geben Sie einen Namen ein."
     }
   },
   "analytics": {
