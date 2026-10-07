@@ -69,6 +69,10 @@ updates:
     groups:
       backend-images-minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # The Node.js major is upgraded in a planned lot (images, CI and @types/node together).
+      - dependency-name: node
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: docker
     directory: /frontend
@@ -80,6 +84,10 @@ updates:
     groups:
       frontend-images-minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # The Node.js major is upgraded in a planned lot (images, CI and @types/node together).
+      - dependency-name: node
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: docker
     directory: /marketing
@@ -91,6 +99,10 @@ updates:
     groups:
       marketing-images-minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # The Node.js major is upgraded in a planned lot (images, CI and @types/node together).
+      - dependency-name: node
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: github-actions
     directory: /
