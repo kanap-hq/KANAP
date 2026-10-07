@@ -174,3 +174,17 @@ export function resolveNotificationBaseUrl(tenantSlug: string | null): string {
   if (!tenantSlug) return appUrl;
   return appUrl.replace(/\/\/app\./, `//${tenantSlug}.`);
 }
+
+/**
+ * Base URL for links sent by e-mail in answer to a request (password reset,
+ * invitation): e-mail links open the tenant address of the request.
+ * Multi-tenant with a request tenant: the tenant address (`<slug>.<domain>`).
+ * Single-tenant, or a request without a tenant: `resolveAppBaseUrl`.
+ */
+export function resolveRequestAppBaseUrl(req: any) {
+  const tenantSlug = req?.tenant?.slug;
+  if (!Features.SINGLE_TENANT && typeof tenantSlug === 'string' && tenantSlug) {
+    return resolveTenantAppBaseUrl(req, tenantSlug);
+  }
+  return resolveAppBaseUrl(req);
+}
