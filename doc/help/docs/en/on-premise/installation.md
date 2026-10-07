@@ -45,7 +45,7 @@ docker compose -f infra/compose.onprem.yml up -d
 
 # 5. Verify startup
 docker compose -f infra/compose.onprem.yml logs -f api
-# Wait for "Application started" message
+# Wait for "[entrypoint] Migrations complete", then "Nest application successfully started"
 # First boot creates the tenant, admin user, and subscription automatically
 
 # 6. Configure your reverse proxy to route traffic to:

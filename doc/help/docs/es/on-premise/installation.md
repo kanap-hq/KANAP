@@ -45,7 +45,7 @@ docker compose -f infra/compose.onprem.yml up -d
 
 # 5. Verificar el inicio
 docker compose -f infra/compose.onprem.yml logs -f api
-# Esperar el mensaje "Application started"
+# Esperar "[entrypoint] Migrations complete" y después "Nest application successfully started"
 # El primer arranque crea el espacio de trabajo, usuario administrador y suscripción automáticamente
 
 # 6. Configure su proxy inverso para enrutar el tráfico a:

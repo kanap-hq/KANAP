@@ -325,6 +325,7 @@ export class PublicController {
   @UseGuards(RateLimitGuard)
   @Throttle({ default: RATE_LIMITS.publicContact })
   async sendContact(@Body() body: SendContactDto, @Req() req: any) {
+    if (Features.SINGLE_TENANT) throwNotAvailableInMode();
     await this.turnstile.verifyOrThrow({
       token: this.resolveCaptchaToken(body),
       remoteIp: this.resolveClientIp(req),

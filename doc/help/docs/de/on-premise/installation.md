@@ -45,7 +45,7 @@ docker compose -f infra/compose.onprem.yml up -d
 
 # 5. Start überprüfen
 docker compose -f infra/compose.onprem.yml logs -f api
-# Auf "Application started"-Meldung warten
+# Auf "[entrypoint] Migrations complete" und danach "Nest application successfully started" warten
 # Beim ersten Start erstellt KANAP automatisch Mandant, Admin-Benutzer und Abonnement
 
 # 6. Ihren Reverse Proxy konfigurieren, um Traffic zu routen an:

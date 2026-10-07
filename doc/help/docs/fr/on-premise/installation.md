@@ -45,7 +45,7 @@ docker compose -f infra/compose.onprem.yml up -d
 
 # 5. Vérifier le démarrage
 docker compose -f infra/compose.onprem.yml logs -f api
-# Attendez le message "Application started"
+# Attendez "[entrypoint] Migrations complete", puis "Nest application successfully started"
 # Le premier démarrage crée automatiquement le tenant, l'utilisateur admin et l'abonnement
 
 # 6. Configurez votre reverse proxy pour router le trafic vers :

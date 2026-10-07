@@ -248,7 +248,7 @@ docker compose -f infra/compose.onprem.yml build --pull
 docker compose -f infra/compose.onprem.yml up -d
 ```
 
-Compruebe los registros — espere el mensaje "Application started":
+Compruebe los registros. Espere la línea "[entrypoint] Migrations complete" y después "Nest application successfully started":
 
 ```bash
 docker compose -f infra/compose.onprem.yml logs -f api
