@@ -61,11 +61,11 @@ If you don't see Tasks in the menu, ask your administrator to grant you the appr
 The Tasks grid shows all tasks across your organization.
 
 **Top scope filter**:
-  - **My tasks** (default): tasks assigned to you
+  - **My tasks**: tasks assigned to you or created by you
   - **My team's tasks**: tasks assigned to any member of your Portfolio team (including yours)
-  - **All tasks**: the full tasks grid
+  - **All tasks** (default): the full tasks grid
   - If you are not assigned to a Portfolio team, **My team's tasks** is disabled
-  - Your selection is remembered across sessions; returning to the page restores your last choice
+  - The page opens on **All tasks**. Your selection is remembered across sessions; returning to the page restores your last choice
 
 **Default columns** (visible by default):
 

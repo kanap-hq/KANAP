@@ -72,7 +72,7 @@ El filtro de alcance de nivel superior cambia qué documentos se listan:
 - **Documentos de mi equipo** se centra en los documentos que posee su equipo.
 - **Todos los documentos** elimina el alcance de propiedad y muestra la población completa que tiene permitido ver.
 
-Si no está asignado a un equipo, el alcance de equipo no está disponible. Su última elección de alcance se recuerda, lo cual es conveniente cuando coincide con su modo de trabajo normal y ligeramente confuso cuando olvida que lo cambió ayer.
+Si no está asignado a un equipo, el alcance de equipo no está disponible. La página se abre en **Todos los documentos**, y su última elección de alcance se recuerda, lo cual es conveniente cuando coincide con su modo de trabajo normal y ligeramente confuso cuando olvida que lo cambió ayer.
 
 ### Plantillas y tipos de documento
 

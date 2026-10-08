@@ -72,7 +72,7 @@ Der Bereichsfilter der obersten Ebene ändert, welche Dokumente aufgelistet werd
 - **Dokumente meines Teams** konzentriert sich auf Dokumente, die Ihrem Team gehören.
 - **Alle Dokumente** entfernt den Verantwortlichkeits-Bereich und zeigt die vollständige Population an, die Sie sehen dürfen.
 
-Wenn Sie keinem Team zugewiesen sind, ist der Team-Bereich nicht verfügbar. Ihre letzte Bereichswahl wird gespeichert, was bequem ist, wenn sie zu Ihrem normalen Arbeitsmodus passt, und etwas verwirrend, wenn Sie vergessen, dass Sie sie gestern geändert haben.
+Wenn Sie keinem Team zugewiesen sind, ist der Team-Bereich nicht verfügbar. Die Seite öffnet sich mit **Alle Dokumente**, und Ihre letzte Bereichswahl wird gespeichert, was bequem ist, wenn sie zu Ihrem normalen Arbeitsmodus passt, und etwas verwirrend, wenn Sie vergessen, dass Sie sie gestern geändert haben.
 
 ### Vorlagen und Dokumenttypen
 

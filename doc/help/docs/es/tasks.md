@@ -61,11 +61,11 @@ Si no ve Tareas en el menú, solicite a su administrador que le otorgue los perm
 La cuadrícula de Tareas muestra todas las tareas de su organización.
 
 **Filtro de alcance superior**:
-  - **Mis tareas** (predeterminado): tareas asignadas a usted
+  - **Mis tareas**: tareas asignadas a usted o creadas por usted
   - **Tareas de mi equipo**: tareas asignadas a cualquier miembro de su equipo de Portafolio (incluyendo las suyas)
-  - **Todas las tareas**: la cuadrícula completa de tareas
+  - **Todas las tareas** (predeterminado): la cuadrícula completa de tareas
   - Si no está asignado a un equipo de Portafolio, **Tareas de mi equipo** está deshabilitado
-  - Su selección se recuerda entre sesiones; al volver a la página se restaura su última elección
+  - La página se abre en **Todas las tareas**. Su selección se recuerda entre sesiones; al volver a la página se restaura su última elección
 
 **Columnas predeterminadas** (visibles por defecto):
 

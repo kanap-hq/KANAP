@@ -61,11 +61,11 @@ Wenn Sie Aufgaben nicht im Menü sehen, bitten Sie Ihren Administrator, Ihnen di
 Das Aufgaben-Raster zeigt alle Aufgaben in Ihrer Organisation.
 
 **Oberer Bereichsfilter**:
-  - **Meine Aufgaben** (Standard): Aufgaben, die Ihnen zugewiesen sind
+  - **Meine Aufgaben**: Aufgaben, die Ihnen zugewiesen sind oder die Sie erstellt haben
   - **Aufgaben meines Teams**: Aufgaben, die einem Mitglied Ihres Portfolio-Teams zugewiesen sind (einschließlich Ihrer eigenen)
-  - **Alle Aufgaben**: das vollständige Aufgaben-Raster
+  - **Alle Aufgaben** (Standard): das vollständige Aufgaben-Raster
   - Wenn Sie keinem Portfolio-Team zugewiesen sind, ist **Aufgaben meines Teams** deaktiviert
-  - Ihre Auswahl wird sitzungsübergreifend gespeichert; bei Rückkehr zur Seite wird Ihre letzte Wahl wiederhergestellt
+  - Die Seite öffnet sich mit **Alle Aufgaben**. Ihre Auswahl wird sitzungsübergreifend gespeichert; bei Rückkehr zur Seite wird Ihre letzte Wahl wiederhergestellt
 
 **Standardspalten** (standardmäßig sichtbar):
 

@@ -30,7 +30,7 @@ Use el selector de alcance encima de la cuadrícula para controlar qué pipeline
 - **Solicitudes de mi equipo** amplía esa vista a las solicitudes que involucran a miembros de su equipo de Portafolio. Esta opción no está disponible si no está asignado a un equipo.
 - **Todas las solicitudes** elimina el filtro de involucración y muestra el pipeline completo de solicitudes.
 
-Su elección de alcance se recuerda. Si abre una solicitud desde la lista y vuelve más tarde, KANAP mantiene el contexto de la lista para que no tenga que reconstruir su pila de filtros cada vez.
+La lista se abre en **Todas las solicitudes** y recuerda su elección de alcance. Si abre una solicitud desde la lista y vuelve más tarde, KANAP mantiene el contexto de la lista para que no tenga que reconstruir su pila de filtros cada vez.
 
 ### Columnas predeterminadas
 
@@ -326,7 +326,7 @@ Use exportar cuando necesite informes del portafolio o enriquecimiento sin conex
 ## Consejos
 
 - **Use la importación DOCX para contenido existente**: Si ya tiene una declaración de propósito o un registro de riesgos en un documento Word, use el botón **Importar** en el editor de Propósito o Riesgos y mitigaciones en lugar de copiar y pegar. La importación convierte el documento a markdown y le advierte si algún contenido no pudo trasladarse.
-- **Los filtros de alcance se mantienen**: KANAP recuerda su última elección de alcance, de modo que no necesita volver a seleccionarlo cada sesión.
+- **Los filtros de alcance se mantienen**: La lista se abre en **Todas las solicitudes**. KANAP recuerda su última elección de alcance, de modo que no necesita volver a seleccionarlo cada sesión.
 - **Las solicitudes convertidas están ocultas por defecto**: Si está buscando una solicitud que ya se convirtió en proyecto, añada **Convertida** al filtro de Estado en la lista.
 - **Permiso de miembro para colaboradores**: Dé a los expertos en la materia `portfolio_requests:member` para que puedan editar Propósito y Riesgos y mitigaciones sin poder cambiar el estado, la evaluación o la estructura del portafolio.
 - **De tarea a solicitud**: Cuando una tarea revele una iniciativa más grande, use **Convertir en solicitud** desde el espacio de trabajo de la tarea. La nueva solicitud hereda el título, descripción (como Propósito), clasificación y adjuntos de la tarea, y muestra la **Tarea de origen** en su encabezado.

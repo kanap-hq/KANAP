@@ -75,9 +75,9 @@ Nach dem Speichern schaltet der Arbeitsbereich alle Reiter für die detaillierte
 Das Anwendungsraster bietet eine umfassende Ansicht Ihres Anwendungsportfolios.
 
 **Oberer Bereichsfilter (Anzeigen)**:
-- **Meine Apps** (Standard): zeigt Apps, bei denen Sie in der Eigenschaftsleiste als **Business-Verantwortlicher** oder **IT-Verantwortlicher** gelistet sind. Mehrfach-Verantwortliche werden unterstützt.
+- **Meine Apps**: zeigt Apps, bei denen Sie in der Eigenschaftsleiste als **Business-Verantwortlicher** oder **IT-Verantwortlicher** gelistet sind. Mehrfach-Verantwortliche werden unterstützt.
 - **Apps meines Teams**: zeigt Apps, bei denen ein Mitglied Ihres Portfolio-Teams als Business-Verantwortlicher oder IT-Verantwortlicher gelistet ist. Ihre eigene Verantwortlichkeit ist in diesem Bereich ebenfalls enthalten. Deaktiviert, wenn Sie keinem Portfolio-Team zugewiesen sind.
-- **Alle Apps**: zeigt das vollständige Anwendungsraster mit dem standardmäßigen Lebenszyklus-Filterverhalten.
+- **Alle Apps** (Standard): zeigt das vollständige Anwendungsraster mit dem standardmäßigen Lebenszyklus-Filterverhalten.
 - Ihre Auswahl wird sitzungsübergreifend gespeichert -- bei Rückkehr zur Seite wird Ihre letzte Wahl wiederhergestellt.
 
 **Standardspalten**:

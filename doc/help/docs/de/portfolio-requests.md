@@ -30,7 +30,7 @@ Verwenden Sie die Bereichsauswahl über dem Raster, um zu steuern, wessen Pipeli
 - **Anfragen meines Teams** erweitert diese Ansicht auf Anfragen, die Mitglieder Ihres Portfolio-Teams einbeziehen. Diese Option ist nicht verfügbar, wenn Sie keinem Team zugewiesen sind.
 - **Alle Anfragen** entfernt den Beteiligungsfilter und zeigt die vollständige Anfragen-Pipeline an.
 
-Ihre Bereichswahl wird gespeichert. Wenn Sie eine Anfrage aus der Liste öffnen und später zurückkommen, behält KANAP den Listenkontext bei, sodass Sie nicht jedes Mal Ihren Filterstapel neu aufbauen müssen.
+Die Liste öffnet sich mit **Alle Anfragen** und speichert Ihre Bereichswahl. Wenn Sie eine Anfrage aus der Liste öffnen und später zurückkommen, behält KANAP den Listenkontext bei, sodass Sie nicht jedes Mal Ihren Filterstapel neu aufbauen müssen.
 
 ### Standardspalten
 
@@ -326,7 +326,7 @@ Verwenden Sie den Export, wenn Sie Portfolio-Berichterstattung oder Offline-Anre
 ## Tipps
 
 - **Verwenden Sie DOCX-Import für vorhandenen Inhalt**: Wenn Sie bereits eine Zweck-Erklärung oder ein Risikoregister in einem Word-Dokument haben, verwenden Sie die Schaltfläche **Importieren** im Editor Zweck oder Risiken & Mitigationen, anstatt zu kopieren und einzufügen. Der Import konvertiert das Dokument in Markdown und warnt Sie, wenn Inhalte nicht übertragen werden konnten.
-- **Bereichsfilter bleiben**: KANAP merkt sich Ihre letzte Bereichswahl, sodass Sie sie nicht in jeder Sitzung neu auswählen müssen.
+- **Bereichsfilter bleiben**: Die Liste öffnet sich mit **Alle Anfragen**. KANAP merkt sich Ihre letzte Bereichswahl, sodass Sie sie nicht in jeder Sitzung neu auswählen müssen.
 - **Konvertierte Anfragen sind standardmäßig ausgeblendet**: Wenn Sie nach einer Anfrage suchen, die bereits in ein Projekt konvertiert wurde, fügen Sie **Konvertiert** zum Status-Filter in der Liste hinzu.
 - **Member-Berechtigung für Mitwirkende**: Geben Sie Fachexperten `portfolio_requests:member`, damit sie Zweck und Risiken & Mitigationen bearbeiten können, ohne Status, Bewertung oder Portfolio-Struktur ändern zu können.
 - **Von Aufgabe zu Anfrage**: Wenn eine Aufgabe eine größere Initiative offenbart, verwenden Sie **In Anfrage umwandeln** aus dem Aufgaben-Arbeitsbereich. Die neue Anfrage erbt den Titel, die Beschreibung (als Zweck), die Klassifizierung und die Anhänge der Aufgabe und zeigt die **Quell-Aufgabe** in ihrer Kopfzeile.

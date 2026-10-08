@@ -32,7 +32,7 @@ La lista de proyectos está diseñada para responder rápidamente a dos pregunta
 - **Proyectos de mi equipo** amplía esa vista a proyectos que involucran a miembros de su equipo de portafolio
 - **Todos los proyectos** elimina el filtro de involucración
 - Si no está asignado a un equipo de portafolio, el alcance de equipo no está disponible
-- Su preferencia de alcance se recuerda, de modo que la lista vuelve como la dejó
+- La lista se abre en **Todos los proyectos**. Su preferencia de alcance se recuerda, de modo que la lista vuelve como la dejó
 
 **Columnas predeterminadas**
 

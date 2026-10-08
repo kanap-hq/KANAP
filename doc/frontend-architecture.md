@@ -238,7 +238,7 @@ The frontend implements automatic session management with sliding expiration:
 - Purpose: Centralized view for tasks across all entities (OPEX, Contracts, CAPEX, Projects) plus standalone tasks
 - **Tasks**
   - List: `frontend/src/pages/TasksPage.tsx` uses `ServerDataGrid` with Type, Phase, Priority, Score, Status columns. Default filter shows active statuses (`open`, `in_progress`, `pending`, `in_testing`) and hides closed statuses by default. Score column shows calculated priority score for all tasks (project: `project.score + adjustment`; non-project: fixed mapping from priority level). Type column shows "Standalone" for tasks without a related object.
-  - **Scope filter**: Radio buttons for "My tasks" (default), "My team's tasks", "All tasks". Scope is persisted per user via `useGridScopePreference` hook (localStorage key `kanap-grid-scope:{tenantSlug}:{userId}:tasks`), so returning to the page restores the last selection. URL params take priority when returning from workspace (scope is preserved in URL via `taskScope`, `assigneeUserId`, `teamId`). If the persisted scope is `team` but the user has no team, it falls back to `my`. Prev/Next navigation in workspace respects the selected scope.
+  - **Scope filter**: Radio buttons for "My tasks", "My team's tasks", "All tasks" (default). Scope is persisted per user via `useGridScopePreference` hook (localStorage key `kanap-grid-scope:{tenantSlug}:{userId}:tasks`), so returning to the page restores the last selection. URL params take priority when returning from workspace (scope is preserved in URL via `taskScope`, `assigneeUserId`, `teamId`). If the persisted scope is `team` but the user has no team, it falls back to `my`. Prev/Next navigation in workspace respects the selected scope.
   - Workspace: `frontend/src/pages/tasks/TaskWorkspacePage.tsx` — Jira-inspired sidebar layout
     - Header: Priority score badge (project tasks only, 56×56 circular, primary color, left of title), inline-editable title, status chip, priority chip, "Attach files" button (toggles upload area)
     - Priority score calculation:
@@ -379,7 +379,7 @@ function useGridScopePreference(
 ```
 
 - localStorage key: `kanap-grid-scope:{tenantSlug}:{userId}:{pageKey}`
-- Priority: URL param > localStorage > default (`'my'`)
+- Priority: URL param > localStorage > default (`'all'`, `DEFAULT_SCOPE` in `frontend/src/hooks/useGridScopePreference.ts`). Only an explicit choice is stored
 - Automatically reloads from localStorage when tenant or user changes (follows `useRecentlyViewed` pattern)
 - Pages should add a team-scope fallback guard to coerce `'team'` back to `'my'` when the user has no team:
   ```typescript

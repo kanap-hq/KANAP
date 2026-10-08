@@ -75,9 +75,9 @@ Once you save, the workspace unlocks all tabs for detailed documentation.
 The Applications grid provides a comprehensive view of your application portfolio.
 
 **Top scope filter (Show)**:
-- **My apps** (default): shows apps where you are listed in the properties drawer as either a **Business owner** or **IT owner**. Multi-owner entries are supported.
+- **My apps**: shows apps where you are listed in the properties drawer as either a **Business owner** or **IT owner**. Multi-owner entries are supported.
 - **My team's apps**: shows apps where any member of your Portfolio team is listed as Business owner or IT owner. Your own ownership is also included in this scope. Disabled if you are not assigned to a Portfolio team.
-- **All apps**: shows the full Applications grid with the standard default lifecycle filter behavior.
+- **All apps** (default): shows the full Applications grid with the standard default lifecycle filter behavior.
 - Your selection is remembered across sessions -- returning to the page restores your last choice.
 
 **Default columns**:

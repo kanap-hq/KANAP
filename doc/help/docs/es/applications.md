@@ -75,9 +75,9 @@ Una vez que guarde, el espacio de trabajo desbloquea todas las pestañas para do
 La cuadrícula de Aplicaciones proporciona una vista completa de su portafolio de aplicaciones.
 
 **Filtro de alcance superior (Mostrar)**:
-- **Mis apps** (predeterminado): muestra apps donde usted está listado en el panel de propiedades como **Responsable de negocio** o **Responsable IT**. Se admiten entradas con múltiples responsables.
+- **Mis apps**: muestra apps donde usted está listado en el panel de propiedades como **Responsable de negocio** o **Responsable IT**. Se admiten entradas con múltiples responsables.
 - **Apps de mi equipo**: muestra apps donde cualquier miembro de su equipo de Portafolio está listado como Responsable de negocio o Responsable IT. Su propia propiedad también se incluye en este alcance. Deshabilitado si no está asignado a un equipo de Portafolio.
-- **Todas las apps**: muestra la cuadrícula completa de Aplicaciones con el comportamiento predeterminado del filtro de ciclo de vida.
+- **Todas las apps** (predeterminado): muestra la cuadrícula completa de Aplicaciones con el comportamiento predeterminado del filtro de ciclo de vida.
 - Su selección se recuerda entre sesiones -- al volver a la página se restaura su última elección.
 
 **Columnas predeterminadas**:
