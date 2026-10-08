@@ -8,6 +8,8 @@ import type { AggregateSpec } from '../../common/list-engine/list-aggregate';
 import { resolveFteField, resolveFteVariantField, SUMMARY_SCOPES, SummaryScopeConfig, yearsNamedByFields } from '../spend-summary.builder';
 import * as engine from '../budget-list/budget-list.service';
 import { realSummaryDeps } from './oracle/oracle-deps';
+import { computeColumn, type CostLine } from '../costing.util';
+import { linesCalculation } from '../round-inputs.util';
 
 // FTE reports, lot 1: the list fields and measures the budget reports read
 // for an FTE measure, on OPEX and CAPEX, in a rolled-back transaction:
@@ -32,8 +34,12 @@ import { realSummaryDeps } from './oracle/oracle-deps';
 // - `staff_cost_<slot><Suffix>` (people and days lines, pieces left out) and
 //   `day_cost_<slot><Suffix>` (per-day priced lines): amounts converted like
 //   the column's amount (exactly, a USD line on a rate set), 0 without detail;
-// - `staff_fte_<slot><Suffix>` (null without detail) and `days_<slot><Suffix>`
-//   (null without detail or without a per-day line);
+// - `staff_fte_<slot><Suffix>`: the lines' result's own FTE (twelve one-month
+//   lines give 1.00, not 0.96), null without detail;
+// - `days_<slot><Suffix>`: the days the per-day lines buy (people full time,
+//   5 days a month, a 40-day bundle: day cost ÷ days = 500, the day's price),
+//   null without detail or without a per-day line;
+// - every calculation comes from the real costing (`computeColumn`);
 // - computed and spread (`lines_result`) rounds, a round without detail, a
 //   line without rounds, their sums grouped by a key, another tenant never counted.
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file in its serial database lane.
@@ -354,56 +360,92 @@ async function checkMonths(runner: QueryRunner, scope: SummaryScopeConfig) {
   console.log(`ok - ${name}: another tenant's months are never counted`);
 }
 
-/** One line result as stored (the fields the line totals read, and a few others). */
-const lineResult = (quantity_unit: 'people' | 'days' | 'pieces', price_basis: 'per_day' | 'per_month' | 'per_piece', total: string, fte: string, total_days: string | null = null) => ({
-  label: `${quantity_unit} ${price_basis}`, quantity_unit, price_basis, quantity: '1', unit_price: total, total, fte, fte_period: fte, total_days,
-  fte_months: Array(12).fill(fte), month_amounts: Array(12).fill('0'), active_months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-});
-const withLines = (lines: object[]) => ({ ...linesResult(fteMonths('0', '0')), lines });
+const CALENDAR_ID = '55555555-5555-4555-8555-555555555555';
+/** A calendar of 20 working days in every month of every year. */
+const CALENDARS = new Map([[CALENDAR_ID, { name: 'Twenty', code: 'T20', days: Array(12).fill('20') }]]);
+
+/** A line as the costing reads it: over the whole of `year` unless months are given, priced per day on the 20-day calendar. */
+function costLine(
+  quantity_unit: CostLine['quantity_unit'],
+  price_basis: CostLine['price_basis'],
+  quantity: string,
+  unit_price: string,
+  opts: { year?: number; days_per_month?: string; month?: number; frequency?: CostLine['frequency'] } = {},
+): CostLine {
+  const year = opts.year ?? Y;
+  const mm = opts.month == null ? null : String(opts.month).padStart(2, '0');
+  return {
+    label: `${quantity} ${quantity_unit} ${price_basis}`,
+    quantity_unit,
+    quantity,
+    unit_price,
+    price_basis,
+    frequency: opts.frequency ?? (quantity_unit === 'days' ? 'once' : 'per_month'),
+    days_per_month: opts.days_per_month ?? null,
+    period_start: mm ? `${year}-${mm}-01` : `${year}-01-01`,
+    period_end: mm ? `${year}-${mm}-${new Date(Date.UTC(year, opts.month!, 0)).getUTCDate()}` : `${year}-12-31`,
+    working_day_profile_id: price_basis === 'per_day' ? CALENDAR_ID : null,
+  };
+}
+
+/** What the real costing gives for `lines` in `year`: the stored calculation, the round's FTE and the column's total. */
+function costed(lines: CostLine[], year = Y) {
+  const result = computeColumn(lines, year, CALENDARS);
+  const calc = linesCalculation(lines, CALENDARS, result);
+  return { calc, result, fte: result.fte, total: calc.total };
+}
+const computedRound = (lines: CostLine[], year = Y): Round => {
+  const c = costed(lines, year);
+  return { year, measure: 'planned', method: 'computed', fte: c.fte, calc: c.calc };
+};
+
+/** The three per-day cases of the review (500 a day, a 20-day calendar). */
+const FULL_TIME = costLine('people', 'per_day', '2', '500');
+const PART_TIME = costLine('people', 'per_day', '1', '500', { days_per_month: '5' });
+const BUNDLE = costLine('days', 'per_day', '40', '500');
+const PIECES = costLine('pieces', 'per_piece', '1', '100');
+/** Twelve people lines of one month each: 0.08 FTE each when rounded per line, 1.00 FTE for the column. */
+const TWELVE = Array.from({ length: 12 }, (_, i) => costLine('people', 'per_month', '1', '1000', { month: i + 1 }));
+const USD_LINE = costLine('people', 'per_day', '1', '500.5');
+const USD_RATE = 0.8765;
 
 /**
- * The lines of the line totals scenario (same for OPEX and CAPEX), Budget Y:
- * - mixed (EUR), computed: people per day 1000.10 (1.50 FTE, 200 days), days
- *   per day 500.05 (0.25 FTE, 40.5 days), people per month 3000.00 (1.00 FTE),
- *   pieces 999.99; Budget Y-1 computed, people per day 100.00 (0.10 FTE, 20 days);
- * - spread (EUR): an annual spread with `lines_result`, people per month
- *   1200.00 (0.50 FTE), pieces 300.00;
+ * The lines of the line totals scenario (same for OPEX and CAPEX), Budget Y,
+ * every calculation from the real costing (`computeColumn`, `linesCalculation`):
+ * - full time (EUR): 2 people full time at 500 a day (240,000, 480 days, 2 FTE)
+ *   and a piece; Budget Y-1: 1 person full time at 100 a day;
+ * - part time (EUR): 1 person 5 days a month at 500 a day (30,000, 60 days);
+ * - bundle (EUR): 40 days at 500 a day (20,000, 40 days);
+ * - per month (EUR): 1 person at 3,000 a month (36,000, no days) and a piece;
+ * - twelve (EUR): twelve people lines of one month each at 1,000 a month (1.00 FTE);
+ * - spread (EUR): an annual spread with `lines_result`, 0.5 person at 2,400 a month and a piece;
  * - no detail (EUR): a copy without `lines_result`, FTE 1.75;
- * - pieces only (EUR), computed: pieces 50.00, FTE 0;
- * - usd (USD) on a rate set (USD 0.8765), computed: people per day 12345.67
- *   (2.00 FTE, 300 days), its amount 12345.67;
+ * - pieces only (EUR), computed: a piece, FTE 0;
+ * - usd (USD) on a rate set (USD 0.8765): 1 person full time at 500.50 a day, its amount the column's total;
  * - no rounds (EUR): a version of Y without any round.
  */
-const MIXED = [
-  lineResult('people', 'per_day', '1000.10', '1.50', '200'),
-  lineResult('days', 'per_day', '500.05', '0.25', '40.5'),
-  lineResult('people', 'per_month', '3000.00', '1.00'),
-  lineResult('pieces', 'per_piece', '999.99', '0'),
-];
-const USD_RATE = 0.8765;
-const totalsLines = (rateSetId: string): Line[] => [
-  {
-    label: 'mixed',
-    currency: 'EUR',
-    planned: { [Y]: '5500.14' },
-    rounds: [
-      budget('computed', '2.75', { kind: 'computed', ...withLines(MIXED) }),
-      { year: Y - 1, measure: 'planned', method: 'computed', fte: '0.10', calc: { kind: 'computed', ...withLines([lineResult('people', 'per_day', '100.00', '0.10', '20')]) } },
-    ],
-  },
-  {
-    label: 'spread',
-    currency: 'EUR',
-    rounds: [budget('spread', '0.50', {
-      kind: 'annual', total: '1500', profile: 'flat', active_months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], weights: Array(12).fill('1'),
-      lines_result: withLines([lineResult('people', 'per_month', '1200.00', '0.50'), lineResult('pieces', 'per_piece', '300.00', '0')]),
-    })],
-  },
-  { label: 'no detail', currency: 'EUR', rounds: [budget('copied', '1.75', copyCalc())] },
-  { label: 'pieces only', currency: 'EUR', rounds: [budget('computed', '0.00', { kind: 'computed', ...withLines([lineResult('pieces', 'per_piece', '50.00', '0')]) })] },
-  { label: 'usd', currency: 'USD', fxRateSetId: rateSetId, planned: { [Y]: '12345.67' }, rounds: [budget('computed', '2.00', { kind: 'computed', ...withLines([lineResult('people', 'per_day', '12345.67', '2.00', '300')]) })] },
-  { label: 'no rounds', currency: 'EUR', versionYears: [Y] },
-];
+const totalsLines = (rateSetId: string): Line[] => {
+  const spread = costed([costLine('people', 'per_month', '0.5', '2400'), PIECES]);
+  const { kind: _computed, ...spreadResult } = spread.calc;
+  return [
+    { label: 'full time', currency: 'EUR', rounds: [computedRound([FULL_TIME, PIECES]), computedRound([costLine('people', 'per_day', '1', '100', { year: Y - 1 })], Y - 1)] },
+    { label: 'part time', currency: 'EUR', rounds: [computedRound([PART_TIME])] },
+    { label: 'bundle', currency: 'EUR', rounds: [computedRound([BUNDLE])] },
+    { label: 'per month', currency: 'EUR', rounds: [computedRound([costLine('people', 'per_month', '1', '3000'), PIECES])] },
+    { label: 'twelve', currency: 'EUR', rounds: [computedRound(TWELVE)] },
+    {
+      label: 'spread',
+      currency: 'EUR',
+      rounds: [budget('spread', spread.fte, {
+        kind: 'annual', total: spread.total, profile: 'flat', active_months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], weights: Array(12).fill('1'), lines_result: spreadResult,
+      })],
+    },
+    { label: 'no detail', currency: 'EUR', rounds: [budget('copied', '1.75', copyCalc())] },
+    { label: 'pieces only', currency: 'EUR', rounds: [computedRound([costLine('pieces', 'per_piece', '1', '50')])] },
+    { label: 'usd', currency: 'USD', fxRateSetId: rateSetId, planned: { [Y]: costed([USD_LINE]).total }, rounds: [computedRound([USD_LINE])] },
+    { label: 'no rounds', currency: 'EUR', versionYears: [Y] },
+  ];
+};
 
 /** `Math.round(Number(local) * rate * 100)`, the builder's conversion, in units. */
 const converted = (local: string, rate: number) => Math.round(Number(local) * rate * 100) / 100;
@@ -412,6 +454,18 @@ const lineTotalMeasures = (suffix: string) => [
   sum('cost', `staff_cost_${suffix}`), sum('fte', `staff_fte_${suffix}`), sum('dayCost', `day_cost_${suffix}`), sum('days', `days_${suffix}`),
 ];
 
+/** The fixtures are what the review reproduced with the real costing. */
+function testCostingFixtures() {
+  const line = (l: CostLine) => costed([l]).calc.lines[0];
+  assert.deepEqual([line(FULL_TIME).total, line(FULL_TIME).total_days], ['240000.00', '240'], '2 people full time: the calendar\'s days, whatever the quantity');
+  assert.deepEqual([line(PART_TIME).total, line(PART_TIME).total_days], ['30000.00', '240'], '5 days a month: the calendar\'s days, not the days worked');
+  assert.deepEqual([line(BUNDLE).total, line(BUNDLE).total_days], ['20000.00', '240'], 'a 40-day bundle: the calendar\'s days, not the bundle');
+  const twelve = costed(TWELVE);
+  assert.equal(twelve.fte, '1', 'twelve one-month lines: 1 FTE for the column');
+  assert.equal(twelve.calc.lines.reduce((acc, l) => acc + Number(l.fte), 0).toFixed(2), '0.96', 'but 0.96 summed per line');
+  console.log('ok - costing fixtures');
+}
+
 async function checkLineTotals(runner: QueryRunner, scope: SummaryScopeConfig) {
   const m = runner.manager;
   const deps = realSummaryDeps(scope);
@@ -419,7 +473,7 @@ async function checkLineTotals(runner: QueryRunner, scope: SummaryScopeConfig) {
   const tenantId = await insertTenant(runner, `${scope.scope}-totals`);
   const otherTenantId = await insertTenant(runner, `${scope.scope}-totals-other`);
   await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [otherTenantId]);
-  const otherLine = await insertLine(runner, scope, otherTenantId, 1, { label: 'other tenant', rounds: [budget('computed', '9.00', { kind: 'computed', ...withLines([lineResult('people', 'per_day', '9999.00', '9.00', '999')]) })] });
+  const otherLine = await insertLine(runner, scope, otherTenantId, 1, { label: 'other tenant', rounds: [computedRound([costLine('people', 'per_day', '9', '100')])] });
   await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
   const [{ id: rateSetId }] = await runner.query(
     `INSERT INTO currency_rate_sets (tenant_id, fiscal_year, base_currency, rates) VALUES ($1, $2, 'EUR', $3::jsonb) RETURNING id`,
@@ -433,25 +487,34 @@ async function checkLineTotals(runner: QueryRunner, scope: SummaryScopeConfig) {
   // Per line: people and days lines in the staff totals, per-day lines in the day totals, pieces in neither.
   const perLine = await aggregate({ groupBy: ['id'], measures: [...lineTotalMeasures('yBudget'), sum('amount', 'yBudget'), sum('prevCost', `staff_cost_y${Y - 1}Budget`), sum('prevDays', `days_y${Y - 1}Budget`)] });
   const byId = new Map(perLine.groups.map((group) => [group.keys[0], group.values]));
-  const usdCost = converted('12345.67', USD_RATE);
+  const usdCost = converted('120120.00', USD_RATE);
   const expected: Record<string, [number | null, number | null, number | null, number | null]> = {
-    mixed: [4500.15, 2.75, 1500.15, 240.5],
-    spread: [1200, 0.5, 0, null],
+    'full time': [240000, 2, 240000, 480],
+    'part time': [30000, 0.25, 30000, 60],
+    bundle: [20000, 0.17, 20000, 40],
+    'per month': [36000, 1, 0, null],
+    twelve: [12000, 1, 0, null],
+    spread: [14400, 0.5, 0, null],
     'no detail': [0, null, 0, null],
     'pieces only': [0, 0, 0, null],
-    usd: [usdCost, 2, usdCost, 300],
+    usd: [usdCost, 1, usdCost, 240],
     'no rounds': [0, null, 0, null],
   };
   for (const [label, values] of Object.entries(expected)) {
     const got = byId.get(ids[label]);
     assert.deepEqual([got?.cost, got?.fte, got?.dayCost, got?.days], values, `${name}: ${label}`);
   }
+  for (const label of ['full time', 'part time', 'bundle']) {
+    const got = byId.get(ids[label])!;
+    assert.equal(got.dayCost! / got.days!, 500, `${name}: ${label}: day cost ÷ days is the price of a day`);
+  }
+  assert.equal(byId.get(ids.twelve)?.cost! / byId.get(ids.twelve)?.fte!, 12000, `${name}: twelve one-month lines: the column's FTE, not the lines' rounded FTE summed`);
   assert.equal(byId.has(otherLine), false, `${name}: another tenant's line is not a group`);
   assert.equal(byId.get(ids.usd)?.amount, usdCost, `${name}: the USD line's amount, converted on its rate set`);
-  assert.notEqual(usdCost, 12345.67, `${name}: the rate applies`);
-  assert.deepEqual([byId.get(ids.mixed)?.prevCost, byId.get(ids.mixed)?.prevDays], [100, 20], `${name}: another year reads its own round`);
+  assert.notEqual(usdCost, 120120, `${name}: the rate applies`);
+  assert.deepEqual([byId.get(ids['full time'])?.prevCost, byId.get(ids['full time'])?.prevDays], [24000, 240], `${name}: another year reads its own round`);
   assert.equal(perLine.reportingCurrency, 'EUR', `${name}: the staff cost is in the reporting currency`);
-  console.log(`ok - ${name}: line totals per line, pieces left out, converted like the amount`);
+  console.log(`ok - ${name}: line totals per line, pieces left out, days bought, converted like the amount`);
 
   // The cost per FTE report's request: grouped sums with the notices, on a dynamic year.
   const report = await aggregate({
@@ -461,27 +524,28 @@ async function checkLineTotals(runner: QueryRunner, scope: SummaryScopeConfig) {
   });
   const row = (values: Record<string, number | null>) => [values.cost, values.fte, values.dayCost, values.days, values.detached, values.nodetail];
   assert.deepEqual(report.groups.map((group) => [group.keys[0], group.count, ...row(group.values)]), [
-    ['EUR', 5, 5700.15, 3.25, 1500.15, 240.5, 2.25, 1.75],
-    ['USD', 1, usdCost, 2, usdCost, 300, null, null],
+    ['EUR', 9, 352400, 4.92, 290000, 580, 2.25, 1.75],
+    ['USD', 1, usdCost, 1, usdCost, 240, null, null],
   ], `${name}: sums per currency`);
   const total = report.total;
   assert.equal(total.count, lines.length, `${name}: every line of the tenant, none of the other`);
-  assert.deepEqual(row(total.values), [Math.round((5700.15 + usdCost) * 100) / 100, 5.25, Math.round((1500.15 + usdCost) * 100) / 100, 540.5, 2.25, 1.75], `${name}: the total row`);
+  assert.deepEqual(row(total.values), [Math.round((352400 + usdCost) * 100) / 100, 5.92, Math.round((290000 + usdCost) * 100) / 100, 820, 2.25, 1.75], `${name}: the total row`);
   assert.equal(total.unknown.fte, 2, `${name}: no staff FTE without detail (no detail, no rounds)`);
-  assert.equal(total.unknown.days, 4, `${name}: days only where a per-day line is`);
+  assert.equal(total.unknown.days, 6, `${name}: days only where a per-day line is`);
   assert.equal(total.unknown.cost, undefined, `${name}: an amount is never unknown`);
   console.log(`ok - ${name}: line totals grouped by a key, the notices beside them`);
 
   // The other tenant's session sees its own line only.
   await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [otherTenantId]);
   const other = await aggregate({ groupBy: [], measures: lineTotalMeasures('yBudget') });
-  assert.deepEqual([other.total.count, other.total.values.cost, other.total.values.fte, other.total.values.dayCost, other.total.values.days], [1, 9999, 9, 9999, 999], `${name}: the other tenant reads its own line only`);
+  assert.deepEqual([other.total.count, other.total.values.cost, other.total.values.fte, other.total.values.dayCost, other.total.values.days], [1, 216000, 9, 216000, 2160], `${name}: the other tenant reads its own line only`);
   await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
   console.log(`ok - ${name}: another tenant's line totals are never counted`);
 }
 
 async function main() {
   testKeyParsing();
+  testCostingFixtures();
   await dataSource.initialize();
   const runner = dataSource.createQueryRunner();
   await runner.connect();

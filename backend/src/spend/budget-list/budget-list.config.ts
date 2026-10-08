@@ -266,11 +266,18 @@ export class BudgetListConfig implements ListConfig {
    *   version's rate (its rate set, else `live`), `Math.round(local × rate ×
    *   100)` once per line and year, the chain of `amountsJoinSql`; 0 without
    *   detail;
-   * - `staff_fte`: the `fte` of the same lines, null without detail (0 with
-   *   detail but no people or days line);
+   * - `staff_fte`: the lines' result's own `fte` (the column's full-year
+   *   average, rounded once; pieces carry no FTE, so it is the FTE of the
+   *   people and days lines), null without detail. Never the sum of the
+   *   lines' `fte`, each rounded to 2 decimals: twelve one-month people lines
+   *   would add up to 0.96 instead of 1.00;
    * - `day_cost`: the `total` of its per-day priced lines, converted the same way;
-   * - `days`: the `total_days` of the same lines, null without detail or
-   *   without a per-day line.
+   * - `days`: the days those lines buy, null without detail or without a
+   *   per-day line: a days line, its `quantity`; a person priced per day, its
+   *   `quantity` × the days worked over its active months (`days_per_month`
+   *   × their number, else the calendar's working days over them, the line's
+   *   `total_days`). `total_days` alone is the calendar's days, whatever the
+   *   quantity, so `day_cost ÷ days` is the unit price of a single line.
    * `staff_fte` and `days` are numerics of the engine's kind `fte` (its only
    * numeric kind: summed exactly, `unknown` counting the lines without one).
    */
@@ -278,7 +285,7 @@ export class BudgetListConfig implements ListConfig {
     const join = this.lineTotals(stmt, round);
     switch (variant) {
       case 'staff_fte':
-        return { kind: 'fte', sql: `(CASE WHEN ${join}.detail THEN coalesce(${join}.staff_fte, 0) END)`, joins: [join] };
+        return { kind: 'fte', sql: `(CASE WHEN ${join}.detail THEN ${join}.staff_fte END)`, joins: [join] };
       case 'days':
         return { kind: 'fte', sql: `${join}.days`, joins: [join] };
       default: {
@@ -291,16 +298,19 @@ export class BudgetListConfig implements ListConfig {
 
   /**
    * The four line totals of the round joined as `round`, in one lateral read
-   * once per line, next to the months' (`fteMonths`): the lines' array is
-   * read once (`OFFSET 0` keeps the planner from copying its expression into
-   * each total), each line result parsed once into typed columns. `detail`
-   * is true when the round has a lines' result, null otherwise; the amounts
-   * are the local totals as the float the conversion multiplies (the
-   * `decimal2ToFloat` of `amountsJoinSql`), so a field converts a float
-   * once, not a numeric in each of the parts an aggregate reads. The four
-   * totals of one column grouped by `id` over 20,000 lines: 238 ms in the
-   * database (298 ms with `->>` reads and the numeric converted in the
-   * field), against 185 ms for 8 amounts. Returns the join's key.
+   * once per line, next to the months' (`fteMonths`). The lines' result (the
+   * calculation when its kind is `computed`, else its `lines_result`) is
+   * picked once, then its lines and its FTE read from it (`OFFSET 0` keeps
+   * the planner from copying those expressions into each total: every read
+   * of the stored calculation decompresses it again), each line result
+   * parsed once into typed columns. `detail` is true when the round has a
+   * lines' result, null otherwise; the amounts are the local totals as the
+   * float the conversion multiplies (the `decimal2ToFloat` of
+   * `amountsJoinSql`), so a field converts a float once, not a numeric in
+   * each of the parts an aggregate reads. The four totals of one column
+   * grouped by `id` over 20,000 lines: 255 ms in the database, against 185 ms
+   * for 8 amounts and 298 ms for the staffing report's 14 monthly FTE.
+   * Returns the join's key.
    */
   private lineTotals(stmt: SqlStatement, round: string): string {
     const key = `lt${round.slice('ri'.length)}`;
@@ -312,12 +322,14 @@ export class BudgetListConfig implements ListConfig {
       key,
       `LEFT JOIN LATERAL (SELECT bool_or(jsonb_typeof(lt_detail.lines) = 'array') AS detail,
           ${decimal2ToFloat(`sum(lt_line.total) FILTER (WHERE ${staff})`)} AS staff_cost,
-          sum(lt_line.fte) FILTER (WHERE ${staff}) AS staff_fte,
+          max(lt_detail.fte) AS staff_fte,
           ${decimal2ToFloat(`sum(lt_line.total) FILTER (WHERE ${perDay})`)} AS day_cost,
-          sum(lt_line.total_days) FILTER (WHERE ${perDay}) AS days
-        FROM (SELECT (CASE WHEN ${calc}->>'kind' = 'computed' THEN ${calc}->'lines' ELSE ${calc}->'lines_result'->'lines' END) AS lines OFFSET 0) lt_detail
+          sum(CASE WHEN lt_line.quantity_unit = 'days' THEN lt_line.quantity
+            ELSE lt_line.quantity * coalesce(lt_line.days_per_month * jsonb_array_length(lt_line.active_months), lt_line.total_days) END) FILTER (WHERE ${perDay}) AS days
+        FROM (SELECT lt_doc.d->'lines' AS lines, (lt_doc.d->>'fte')::numeric AS fte
+          FROM (SELECT (CASE WHEN ${calc}->>'kind' = 'computed' THEN ${calc} ELSE ${calc}->'lines_result' END) AS d OFFSET 0) lt_doc OFFSET 0) lt_detail
         LEFT JOIN LATERAL jsonb_to_recordset(CASE WHEN jsonb_typeof(lt_detail.lines) = 'array' THEN lt_detail.lines END)
-          AS lt_line(quantity_unit text, price_basis text, total numeric, fte numeric, total_days numeric) ON true) ${key} ON true`,
+          AS lt_line(quantity_unit text, price_basis text, quantity numeric, days_per_month numeric, active_months jsonb, total numeric, total_days numeric) ON true) ${key} ON true`,
       [round],
     );
     return key;

@@ -402,9 +402,10 @@ export function fteFieldKey(amountField: string): string {
  * for example `staff_cost_y2026Budget`, `days_yBudget`):
  * - `staff_cost_…` (an amount, converted like the column's): the cost of its
  *   people and days lines, 0 without detail;
- * - `staff_fte_…`: the FTE of those lines, null without detail;
+ * - `staff_fte_…`: the lines' result's own FTE (pieces carry none), null without detail;
  * - `day_cost_…` (an amount): the cost of its per-day priced lines, 0 without detail;
- * - `days_…`: the days those lines buy, null without detail or without one.
+ * - `days_…`: the days those per-day lines buy (a days line's quantity, a
+ *   person's days worked × the quantity), null without detail or without one.
  */
 export type FteVariant =
   | { variant: 'detached' }

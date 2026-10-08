@@ -284,16 +284,19 @@ function testFteReportFields() {
     assert.equal((raw.match(new RegExp(`JOIN ${rounds}`, 'g')) ?? []).length, 1, `${scope}: one round join for the line totals and the notices`);
     assert.equal((raw.match(/LEFT JOIN LATERAL \(SELECT bool_or/g) ?? []).length, 1, `${scope}: one lateral for the four line totals`);
     assert.equal((raw.match(/jsonb_to_recordset\(/g) ?? []).length, 1, `${scope}: the lines are read once`);
-    assert.ok(raw.includes(`AS lt_line(quantity_unit text, price_basis text, total numeric, fte numeric, total_days numeric) ON true) lt2026_planned ON true`), `${scope}: each line result parsed once`);
+    assert.ok(raw.includes(`AS lt_line(quantity_unit text, price_basis text, quantity numeric, days_per_month numeric, active_months jsonb, total numeric, total_days numeric) ON true) lt2026_planned ON true`), `${scope}: each line result parsed once`);
     const calc = 'ri2026_planned.last_calculation';
-    assert.ok(raw.includes(`FROM (SELECT (CASE WHEN ${calc}->>'kind' = 'computed' THEN ${calc}->'lines' ELSE ${calc}->'lines_result'->'lines' END) AS lines OFFSET 0) lt_detail`), `${scope}: the lines' result of the joined round, once`);
+    assert.ok(raw.includes(`FROM (SELECT lt_doc.d->'lines' AS lines, (lt_doc.d->>'fte')::numeric AS fte
+          FROM (SELECT (CASE WHEN ${calc}->>'kind' = 'computed' THEN ${calc} ELSE ${calc}->'lines_result' END) AS d OFFSET 0) lt_doc OFFSET 0) lt_detail`), `${scope}: the lines and the FTE of the joined round's lines' result, picked once`);
     assert.ok(raw.indexOf('LEFT JOIN LATERAL (SELECT bool_or') > raw.indexOf(`LEFT JOIN ${rounds} ri2026_planned ON ri2026_planned.tenant_id = $1`), `${scope}: after the round it reads, for the tenant`);
     assert.ok(raw.includes(`LEFT JOIN ${versions} v2026 ON v2026.tenant_id = $1`), `${scope}: the version for the tenant`);
     assert.ok(raw.includes(`(CASE WHEN abs(sum(lt_line.total) FILTER (WHERE lt_line.quantity_unit IN ('people', 'days'))) < 90071992547409.92`), `${scope}: staff cost from people and days lines`);
     assert.ok(raw.includes(`(CASE WHEN abs(sum(lt_line.total) FILTER (WHERE lt_line.price_basis = 'per_day')) < 90071992547409.92`), `${scope}: day cost from per-day lines`);
-    assert.ok(raw.includes(`sum(lt_line.fte) FILTER (WHERE lt_line.quantity_unit IN ('people', 'days')) AS staff_fte`), `${scope}: staff FTE from the same lines`);
-    assert.ok(raw.includes(`sum(lt_line.total_days) FILTER (WHERE lt_line.price_basis = 'per_day') AS days`), `${scope}: days from per-day lines`);
-    assert.ok(raw.includes(`(CASE WHEN lt2026_planned.detail THEN coalesce(lt2026_planned.staff_fte, 0) END) AS v1`), `${scope}: staff FTE null without detail`);
+    assert.ok(raw.includes('max(lt_detail.fte) AS staff_fte'), `${scope}: staff FTE: the lines' result's own FTE, rounded once`);
+    assert.equal(/sum\(lt_line\.fte\)/.test(raw), false, `${scope}: never the sum of the lines' rounded FTE`);
+    assert.ok(raw.includes(`sum(CASE WHEN lt_line.quantity_unit = 'days' THEN lt_line.quantity
+            ELSE lt_line.quantity * coalesce(lt_line.days_per_month * jsonb_array_length(lt_line.active_months), lt_line.total_days) END) FILTER (WHERE lt_line.price_basis = 'per_day') AS days`), `${scope}: days bought by per-day lines`);
+    assert.ok(raw.includes(`(CASE WHEN lt2026_planned.detail THEN lt2026_planned.staff_fte END) AS v1`), `${scope}: staff FTE null without detail`);
     assert.ok(raw.includes('lt2026_planned.days AS v3'), `${scope}: days as they are`);
     assert.ok(/LEFT JOIN unnest\(\$\d+::text\[\], \$\d+::int\[\], \$\d+::text\[\], \$\d+::float8\[\]\) AS fxv2026\(set_key, yr, cur, rate\) ON fxv2026\.yr = 2026 AND fxv2026\.cur = i\.currency::text AND fxv2026\.set_key = CASE WHEN v2026\.fx_rate_set_id = ANY\(\$\d+::uuid\[\]\) THEN v2026\.fx_rate_set_id::text ELSE 'live' END/.test(raw), `${scope}: the version's rate, as its amounts`);
     assert.equal((raw.match(/AS fxv2026\(/g) ?? []).length, 1, `${scope}: one rate join for both amounts of the year`);
