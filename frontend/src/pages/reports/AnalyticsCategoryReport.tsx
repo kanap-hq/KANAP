@@ -21,6 +21,8 @@ import { NO_ANALYTICS_VALUE, analyticsRequest, readAnalytics } from './reportAgg
 import { useBudgetAggregate } from './useBudgetAggregate';
 import { useAxisValueOptions } from './useReportOptions';
 import { ReportFteNotice, ReportMeasureSelect, useMeasureText, useReportMeasure } from './reportMeasure';
+import { axisListColumn, reportListLink, reportListPicks, rowListGroup } from './reportListLink';
+import ReportGroupLinkCell from './ReportGroupLinkCell';
 
 /** `?axis=<dimension id>`: the dimension the report groups on. */
 const AXIS_PARAM = 'axis';
@@ -105,21 +107,37 @@ export default function AnalyticsCategoryReport() {
   // FTE: only the values that declare FTE in one of the years.
   const { groups, totals } = useMemo(() => readAnalytics(years, report.data, labels, measure), [years, report.data, labels, measure]);
 
+  // A value opens the list filtered on it and on the bar, in a new tab; the total row stays plain.
+  const listPicks = useMemo(() => reportListPicks(reportFilters), [reportFilters]);
+  const axisColumn = axis ? axisListColumn(axis) : null;
+  const valueLink = useCallback((row: { groupName?: string | null }) => {
+    if (row.groupName === undefined || !listPicks) return null;
+    const group = rowListGroup('axis', { name: row.groupName }, axisColumn);
+    return group ? reportListLink(scope, group, listPicks) : null;
+  }, [scope, listPicks, axisColumn]);
+
   const tableRows = useMemo(() => groups.map((group) => {
-    const row: any = { group: group.label };
+    const row: any = { group: group.label, groupName: group.name ?? null };
     for (const yr of years) row[yr] = cell(group.values[yr]);
     return row;
   }), [groups, years, measureText]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const columns = useMemo<ColDef[]>(() => {
     const cols: ColDef[] = [
-      { field: 'group', headerName: dimensionLabel, flex: 1, minWidth: 240 },
+      {
+        field: 'group',
+        headerName: dimensionLabel,
+        flex: 1,
+        minWidth: 240,
+        cellRenderer: ReportGroupLinkCell,
+        cellRendererParams: { getLink: valueLink },
+      },
     ];
     for (const yr of years) {
       cols.push({ field: String(yr), headerName: String(yr), width: 140, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) });
     }
     return cols;
-  }, [years, dimensionLabel, formatNumber]);
+  }, [years, dimensionLabel, valueLink, formatNumber]);
 
   // The column as the measure reads it: `Budget`, or `Budget FTE`.
   const metricLabel = measureText.column(budgetColumns.label(metric));

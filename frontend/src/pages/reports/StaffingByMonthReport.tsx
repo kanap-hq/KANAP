@@ -18,7 +18,8 @@ import { escapeTooltipText } from './tooltipText';
 import { MONTHS, readStaffing, staffingChartSeries, staffingRequest } from './reportAggregates';
 import { compareNames, useBudgetAggregate } from './useBudgetAggregate';
 import { ReportNoticeLine } from './reportMeasure';
-import { GROUP_FILE_NAME, ReportGroupFilters, useReportGroup } from './reportGroup';
+import { GROUP_FILE_NAME, ReportGroupFilters, useGroupLinks, useReportGroup } from './reportGroup';
+import ReportGroupLinkCell from './ReportGroupLinkCell';
 import { gridTextMeasure, valueColumnWidth } from './reportValueWidth';
 
 const monthField = (month: number) => `m${month}`;
@@ -45,6 +46,8 @@ export default function StaffingByMonthReport() {
   const grouping = useReportGroup(reportFilters.analyticsAxes);
   // The group as the first column names it, as a sentence names it, and its rows without a key.
   const { kind, group, header: groupHeader, inSentence: groupInSentence, labels } = grouping;
+  // A group name opens its item, or the list filtered on the group and the bar, in a new tab.
+  const groupLink = useGroupLinks(scope, grouping, reportFilters);
 
   // One request: per group, the twelve monthly FTE of the column; on the total row, the notices.
   const request = useMemo(() => (reportFilters.queryFilters == null || group == null ? null : staffingRequest({
@@ -65,6 +68,8 @@ export default function StaffingByMonthReport() {
 
   const tableRows = useMemo(() => staffing.rows.map((row) => ({
     group: row.label,
+    groupKey: row.key,
+    groupName: row.name,
     ...Object.fromEntries(MONTHS.map((month, i) => [monthField(month), row.months[i]])),
     average: row.average,
     peak: row.peak,
@@ -98,12 +103,20 @@ export default function StaffingByMonthReport() {
       valueFormatter: (p) => fte(p.value),
     });
     return [
-      { field: 'group', headerName: groupHeader, flex: 1, minWidth: 180, tooltipField: 'group' },
+      {
+        field: 'group',
+        headerName: groupHeader,
+        flex: 1,
+        minWidth: 180,
+        tooltipField: 'group',
+        cellRenderer: ReportGroupLinkCell,
+        cellRendererParams: { getLink: groupLink },
+      },
       ...MONTHS.map((month, i) => value(monthField(month), monthNames[i])),
       value('average', t('reports.staffing.average')),
       value('peak', t('reports.staffing.peak')),
     ];
-  }, [groupHeader, monthNames, fte, valueWidth, t]);
+  }, [groupHeader, groupLink, monthNames, fte, valueWidth, t]);
 
   const gridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);

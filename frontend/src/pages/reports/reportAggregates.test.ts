@@ -5,6 +5,7 @@ import {
   amountField,
   analyticsRequest,
   columnsCompareRequest,
+  consolidationAccountsRequest,
   consolidationRequest,
   COST_PER_FTE_CHART_GROUPS,
   costPerFteRequests,
@@ -26,6 +27,7 @@ import {
   readAnalytics,
   readColumnsCompare,
   readConsolidation,
+  readConsolidationAccounts,
   readCostPerFte,
   readDailyRate,
   readDelta,
@@ -169,9 +171,32 @@ describe('per year groups', () => {
   it('Analytics: by value, unnamed for a blank name, unassigned without a value', () => {
     const read = readAnalytics([2026], result([row(['v1', ' '], { y2026: 3 }), row([null, null], { y2026: 2 })], row([], { y2026: 5 })), { unassigned: 'U', unnamed: 'N' });
     expect(read.groups).toEqual([
-      { key: 'cat_v1', label: 'N', values: { 2026: 3 } },
-      { key: 'uncategorized', label: 'U', values: { 2026: 2 } },
+      { key: 'cat_v1', label: 'N', name: ' ', values: { 2026: 3 } },
+      { key: 'uncategorized', label: 'U', name: null, values: { 2026: 2 } },
     ]);
+  });
+
+  it('Consolidation accounts: the same filters and exclusions as the report, the accounts of each line', () => {
+    const params = { years: [2026], metric: 'budget' as const, excludedAccountIds: ['a1', NO_CONSOLIDATION_LINE], filters: { run_build: keepValues(['run']) } };
+    const report = consolidationRequest(params);
+    const accounts = consolidationAccountsRequest(params);
+    expect(accounts.query).toEqual(report.query);
+    expect(accounts.spec).toEqual({ groupBy: ['account_consolidation_key', 'account_display'], measures: [] });
+    // The report's own request is unchanged.
+    expect(report).toEqual({
+      query: { filters: { run_build: keepValues(['run']), account_id: dropValues(['a1']), account_consolidation_key: dropValues([null]) } },
+      spec: {
+        groupBy: ['account_consolidation_key', 'account_consolidation_label'],
+        measures: [{ id: 'y2026', fn: 'sum', field: 'y2026Budget' }],
+        order: [{ by: 'measure', id: 'y2026', dir: 'DESC' }],
+      },
+    });
+    const read = readConsolidationAccounts(result([
+      row(['c_600', '6110 - Software'], {}),
+      row(['c_600', '6120 - Cloud'], {}),
+      row([null, '6300 - Other'], {}),
+    ], row([], {})));
+    expect(Object.fromEntries(read)).toEqual({ c_600: ['6110 - Software', '6120 - Cloud'], unassigned: ['6300 - Other', null] });
   });
 
   it('Consolidation: an excluded "unassigned" leaves out the lines without a consolidation line', () => {

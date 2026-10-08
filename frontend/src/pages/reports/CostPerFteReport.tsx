@@ -30,7 +30,8 @@ import {
 } from './reportAggregates';
 import { compareNames, useBudgetAggregates } from './useBudgetAggregate';
 import { formatAmount, ReportNoticeLine } from './reportMeasure';
-import { GROUP_FILE_NAME, ReportGroupFilters, useReportGroup } from './reportGroup';
+import { GROUP_FILE_NAME, ReportGroupFilters, useGroupLinks, useReportGroup } from './reportGroup';
+import ReportGroupLinkCell from './ReportGroupLinkCell';
 import { gridTextMeasure, valueColumnWidth } from './reportValueWidth';
 
 /** The most year and column pairs the report compares. */
@@ -69,7 +70,7 @@ const fieldOf = (index: number, kind: ValueKind) => `c${index}_${kind}`;
 type Cell = Partial<Record<ValueKind, number | null>>;
 /** What either view reads: rows and totals per pair, the notices (`monthly` in the daily rate only). */
 type ViewData = Pick<DailyRate, 'sortColumn' | 'detached' | 'noDetail' | 'monthly'> & {
-  rows: Array<{ key: string; label: string; cells: Cell[] }>;
+  rows: Array<{ key: string; label: string; name: string | null; cells: Cell[] }>;
   total: Cell[];
 };
 
@@ -125,6 +126,8 @@ export default function CostPerFteReport() {
   const reportFilters = useBudgetReportFilters({ scope, years: yearsNeeded });
   const grouping = useReportGroup(reportFilters.analyticsAxes);
   const { kind, group, header: groupHeader, inSentence: groupInSentence, labels } = grouping;
+  // A group name opens its item, or the list filtered on the group and the bar, in a new tab.
+  const groupLink = useGroupLinks(scope, grouping, reportFilters);
 
   // One request per pair: per group, the staff cost and FTE (or the day cost and days); on the total row, the notices.
   const requests = useMemo(() => {
@@ -146,6 +149,8 @@ export default function CostPerFteReport() {
 
   const tableRows = useMemo(() => data.rows.map((row) => ({
     group: row.label,
+    groupKey: row.key,
+    groupName: row.name,
     ...Object.assign({}, ...columns.map((_, index) => cellValues(kinds, index, row.cells[index]))),
   })), [data.rows, columns, kinds]);
   const totalRow = useMemo(() => ({
@@ -181,7 +186,15 @@ export default function CostPerFteReport() {
     rate: t('reports.costPerFte.dailyRate'),
   }), [t, view]);
   const columnDefs = useMemo<Array<ColDef | ColGroupDef>>(() => [
-    { field: 'group', headerName: groupHeader, flex: 1, minWidth: 180, tooltipField: 'group' },
+    {
+      field: 'group',
+      headerName: groupHeader,
+      flex: 1,
+      minWidth: 180,
+      tooltipField: 'group',
+      cellRenderer: ReportGroupLinkCell,
+      cellRendererParams: { getLink: groupLink },
+    },
     ...columns.map((column, index): ColGroupDef => ({
       groupId: `c${index}`,
       headerName: columnLabel(column),
@@ -195,7 +208,7 @@ export default function CostPerFteReport() {
         valueFormatter: (p) => formats[kindOf](p.value),
       })),
     })),
-  ], [groupHeader, columns, columnLabel, kinds, valueHeaders, widths, formats]);
+  ], [groupHeader, groupLink, columns, columnLabel, kinds, valueHeaders, widths, formats]);
 
   const gridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);

@@ -298,14 +298,17 @@ export function axisValuesRequest(axisId: string | null, years?: readonly number
 }
 
 export type LabelledOption = { id: string; label: string };
+/** A dimension value as the lines hold it: shown by `label`, its stored `name` as the list filters on it. */
+export type AxisValueOption = LabelledOption & { name: string };
 
 /** The values held, named (`unnamed` for a blank name), by name as `compare` orders. */
-export function readAxisValues(result: AggregateResult | undefined, unnamed: string, compare: (a: string, b: string) => number): LabelledOption[] {
-  const options: LabelledOption[] = [];
+export function readAxisValues(result: AggregateResult | undefined, unnamed: string, compare: (a: string, b: string) => number): AxisValueOption[] {
+  const options: AxisValueOption[] = [];
   for (const group of result?.groups ?? []) {
     const id = group.keys[0];
     if (!id) continue;
-    options.push({ id, label: (group.keys[1] ?? '').trim() || unnamed });
+    const name = group.keys[1] ?? '';
+    options.push({ id, label: name.trim() || unnamed, name });
   }
   return options.sort((a, b) => compare(a.label, b.label));
 }
@@ -406,7 +409,7 @@ export function mergeAxisValueOptions(
 ): LabelledOption[] {
   const byId = new Map<string, LabelledOption>();
   for (const value of catalogue) byId.set(value.id, { id: value.id, label: (value.name ?? '').trim() || unnamed });
-  for (const value of readAxisValues(held, unnamed, compare)) if (!byId.has(value.id)) byId.set(value.id, value);
+  for (const { id, label } of readAxisValues(held, unnamed, compare)) if (!byId.has(id)) byId.set(id, { id, label });
   return Array.from(byId.values()).sort((a, b) => compare(a.label, b.label));
 }
 
@@ -655,10 +658,11 @@ export function readDeltaYears(result: AggregateResult | undefined, currentYear:
 
 // ----- per year groups (ConsolidationReport, AnalyticsCategoryReport) -----
 
-export type YearGroup = { key: string; label: string; values: Record<number, number> };
+/** `name`: the dimension value's stored name (Analytics), null for the lines without a value. */
+export type YearGroup = { key: string; label: string; name?: string | null; values: Record<number, number> };
 export type YearGroups = { groups: YearGroup[]; totals: Record<number, number> };
 /** FTE: a year no line of the group declares is null. */
-export type FteYearGroup = { key: string; label: string; values: Record<number, number | null> };
+export type FteYearGroup = { key: string; label: string; name?: string | null; values: Record<number, number | null> };
 export type FteYearGroups = { groups: FteYearGroup[]; totals: Record<number, number | null> };
 
 function yearMeasures(years: readonly number[], metric: MetricKey, measure?: ReportMeasure): AggregateMeasure[] {
@@ -696,17 +700,47 @@ export interface ConsolidationParams {
  * per key).
  */
 export function consolidationRequest(p: ConsolidationParams): AggregateRequest {
-  const accountIds = p.excludedAccountIds.filter((id) => id !== NO_CONSOLIDATION_LINE);
-  let filters = exclusions(p.filters, [], 'account_id', accountIds);
-  if (accountIds.length < p.excludedAccountIds.length) filters = withFilter(filters, 'account_consolidation_key', dropValues([null]));
   return {
-    query: { filters },
+    query: { filters: consolidationFilters(p) },
     spec: withFteNotice({
       groupBy: ['account_consolidation_key', 'account_consolidation_label'],
       measures: yearMeasures(p.years, p.metric, p.measure),
       order: [{ by: 'measure', id: `y${p.years[0]}`, dir: 'DESC' }],
     }),
   };
+}
+
+/** The report's filters with its account exclusions (an excluded `NO_CONSOLIDATION_LINE`: the lines without one). */
+function consolidationFilters(p: Pick<ConsolidationParams, 'excludedAccountIds' | 'filters'>): ColumnFilters {
+  const accountIds = p.excludedAccountIds.filter((id) => id !== NO_CONSOLIDATION_LINE);
+  let filters = exclusions(p.filters, [], 'account_id', accountIds);
+  if (accountIds.length < p.excludedAccountIds.length) filters = withFilter(filters, 'account_consolidation_key', dropValues([null]));
+  return filters;
+}
+
+/**
+ * The accounts behind each consolidation line, under the report's own filters and exclusions: the
+ * list, which filters on the account (`account_display`), opens a line on the set of its accounts.
+ */
+export function consolidationAccountsRequest(p: Pick<ConsolidationParams, 'excludedAccountIds' | 'filters'>): AggregateRequest {
+  return { query: { filters: consolidationFilters(p) }, spec: { groupBy: ['account_consolidation_key', 'account_display'], measures: [] } };
+}
+
+/**
+ * Per row key of `readConsolidation` (`unassigned` for the lines without a consolidation line), the
+ * accounts (`account_display`) of its lines; the unassigned row always keeps the blank value too.
+ */
+export function readConsolidationAccounts(result: AggregateResult | undefined): Map<string, Array<string | null>> {
+  const byKey = new Map<string, Array<string | null>>();
+  for (const group of result?.groups ?? []) {
+    const key = group.keys[0] ?? 'unassigned';
+    const values = byKey.get(key) ?? [];
+    if (!values.includes(group.keys[1])) values.push(group.keys[1]);
+    byKey.set(key, values);
+  }
+  const unassigned = byKey.get('unassigned');
+  if (unassigned && !unassigned.includes(null)) unassigned.push(null);
+  return byKey;
 }
 
 export function readConsolidation(years: readonly number[], result: AggregateResult | undefined, unassigned: string): YearGroups;
@@ -750,12 +784,13 @@ export function analyticsRequest(p: AnalyticsParams): AggregateRequest {
 type AnalyticsLabels = { unassigned: string; unnamed: string };
 export function readAnalytics(years: readonly number[], result: AggregateResult | undefined, labels: AnalyticsLabels): YearGroups;
 export function readAnalytics(years: readonly number[], result: AggregateResult | undefined, labels: AnalyticsLabels, measure: ReportMeasure): FteYearGroups;
-export function readAnalytics(years: readonly number[], result: AggregateResult | undefined, labels: AnalyticsLabels, measure: ReportMeasure = 'amount') {
+export function readAnalytics(years: readonly number[], result: AggregateResult | undefined, labels: AnalyticsLabels, measure: ReportMeasure = 'amount'): YearGroups | FteYearGroups {
   const groups = declaredGroups(result, years, measure).map((group) => {
     const id = group.keys[0];
     return {
       key: id ? `cat_${id}` : 'uncategorized',
       label: id ? (group.keys[1] ?? '').trim() || labels.unnamed : labels.unassigned,
+      name: id ? group.keys[1] ?? '' : null,
       values: yearValues(group, years, measure),
     };
   });
@@ -813,7 +848,8 @@ export function staffingRequest(p: StaffingParams): AggregateRequest {
 
 /** Twelve monthly FTE (null: nobody's monthly FTE), their full-year average (sum ÷ 12) and the highest month. */
 export type StaffingMonths = { months: Array<number | null>; average: number | null; peak: number | null };
-export type StaffingRow = StaffingMonths & { key: string; label: string };
+/** `name`: the group's stored name (the list filters on it), null for the rows without a key. */
+export type StaffingRow = StaffingMonths & { key: string; label: string; name: string | null };
 /** FTE declared by some lines (and how many lines): the notices under the table. */
 export type StaffingNotice = { fte: number; items: number };
 export type Staffing = {
@@ -854,7 +890,7 @@ export function readStaffing(result: AggregateResult | undefined, labels: Staffi
     const months = staffingMonths(group);
     if (months.average == null) continue;
     const id = group.keys[0];
-    rows.push({ key: id ?? '', label: id == null ? labels.none : (group.keys[1] ?? '').trim() || labels.unnamed, ...months });
+    rows.push({ key: id ?? '', label: id == null ? labels.none : (group.keys[1] ?? '').trim() || labels.unnamed, name: id == null ? null : group.keys[1] ?? '', ...months });
   }
   rows.sort((a, b) => (b.average ?? 0) - (a.average ?? 0) || compare(a.label, b.label));
   const detached = staffingNotice(result?.total, DETACHED_MEASURE);
@@ -941,7 +977,7 @@ export function costPerFteRequests(p: CostPerFteParams): AggregateRequest[] {
 
 /** A group's staff FTE and cost in one column, and the cost of one FTE (null when the FTE is null or 0). */
 export type CostPerFteCell = { fte: number | null; cost: number | null; ratio: number | null };
-export type CostPerFteRow = { key: string; label: string; cells: CostPerFteCell[] };
+export type CostPerFteRow = { key: string; label: string; name: string | null; cells: CostPerFteCell[] };
 export type CostPerFteNotice = ColumnYear & StaffingNotice;
 export type CostPerFte = {
   rows: CostPerFteRow[];
@@ -978,21 +1014,25 @@ function readPairs<Cell extends Record<string, number | null>>(
   compare: (a: string, b: string) => number,
   cellOf: (row: AggregateRow | null | undefined) => Cell,
   measure: keyof Cell,
-): { rows: Array<{ key: string; label: string; cells: Cell[] }>; sortColumn: number | null; total: Cell[]; detached: CostPerFteNotice[]; noDetail: CostPerFteNotice[] } {
-  const groups = new Map<string, { label: string; rows: Array<AggregateRow | undefined> }>();
+): { rows: Array<{ key: string; label: string; name: string | null; cells: Cell[] }>; sortColumn: number | null; total: Cell[]; detached: CostPerFteNotice[]; noDetail: CostPerFteNotice[] } {
+  const groups = new Map<string, { label: string; name: string | null; rows: Array<AggregateRow | undefined> }>();
   columns.forEach((_, index) => {
     for (const group of results?.[index]?.groups ?? []) {
       const id = group.keys[0];
       const key = id ?? '';
-      const entry = groups.get(key) ?? { label: id == null ? labels.none : (group.keys[1] ?? '').trim() || labels.unnamed, rows: [] };
+      const entry = groups.get(key) ?? {
+        label: id == null ? labels.none : (group.keys[1] ?? '').trim() || labels.unnamed,
+        name: id == null ? null : group.keys[1] ?? '',
+        rows: [],
+      };
       entry.rows[index] = group;
       groups.set(key, entry);
     }
   });
-  const rows: Array<{ key: string; label: string; cells: Cell[] }> = [];
+  const rows: Array<{ key: string; label: string; name: string | null; cells: Cell[] }> = [];
   for (const [key, entry] of groups) {
     const cells = columns.map((_, index) => cellOf(entry.rows[index]));
-    if (cells.some((cell) => cell[measure] != null)) rows.push({ key, label: entry.label, cells });
+    if (cells.some((cell) => cell[measure] != null)) rows.push({ key, label: entry.label, name: entry.name, cells });
   }
   const found = columns.findIndex((_, index) => rows.some((row) => row.cells[index][measure] != null));
   const sortColumn = found >= 0 ? found : null;
@@ -1056,7 +1096,7 @@ export function dailyRateRequests(p: CostPerFteParams): AggregateRequest[] {
 
 /** A group's days bought and their cost in one column, and the cost of one day (null when the days are null or 0). */
 export type DailyRateCell = { days: number | null; cost: number | null; rate: number | null };
-export type DailyRateRow = { key: string; label: string; cells: DailyRateCell[] };
+export type DailyRateRow = { key: string; label: string; name: string | null; cells: DailyRateCell[] };
 /** The cost of the people lines priced per month in one column: left out of the rate. */
 export type DailyRateMonthlyNotice = ColumnYear & { amount: number };
 export type DailyRate = {

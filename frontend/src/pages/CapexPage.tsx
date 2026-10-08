@@ -61,6 +61,8 @@ type SummaryRow = {
   cost_center_path?: string | null;
   budget_holder_name?: string | null;
   run_build?: 'run' | 'build' | null;
+  /** 'yes' when the line declares FTE in some year and column, else null. */
+  has_fte?: 'yes' | null;
   ppe_type: 'hardware' | 'software';
   investment_type: 'replacement' | 'capacity' | 'productivity' | 'security' | 'conformity' | 'business_growth' | 'other';
   priority: 'mandatory' | 'high' | 'medium' | 'low';
@@ -250,6 +252,7 @@ export default function CapexPage() {
     low: t('capex.priorityTypes.low'),
   }), [t]);
 
+  const FTE_DECLARED_LABELS: Record<string, string> = useMemo(() => ({ yes: t('shared.fteDeclaredYes') }), [t]);
   const RUN_BUILD_LABELS: Record<string, string> = useMemo(() => ({
     run: t('capex.runBuild.run'),
     build: t('capex.runBuild.build'),
@@ -501,6 +504,21 @@ export default function CapexPage() {
       },
       ...buildAmountColumnDefs<SummaryRow>({ t, currentYear: Y, cellRenderer: linkCell, columns: budgetColumns }),
       ...buildFteColumnDefs<SummaryRow>({ t, currentYear: Y, locale, cellRenderer: linkCell, columns: budgetColumns }),
+      // Whether the line declares FTE in some year and column: the reports' "Items with FTE" filter.
+      {
+        colId: 'has_fte',
+        headerName: t('shared.fteDeclared'),
+        valueGetter: (p: any) => (p.data?.has_fte === 'yes' ? FTE_DECLARED_LABELS.yes : ''),
+        width: 140,
+        defaultHidden: true,
+        filter: CheckboxSetFilter,
+        floatingFilterComponent: CheckboxSetFloatingFilter,
+        filterParams: {
+          getValues: getCapexFilterValues('has_fte', { labelMap: FTE_DECLARED_LABELS, emptyLabel: t('shared.fteDeclaredNo') }),
+          searchable: false,
+        },
+        cellRenderer: linkCell('has_fte'),
+      },
       {
         field: 'currency',
         headerName: t('capex.columns.currency'),
@@ -652,7 +670,7 @@ export default function CapexPage() {
         cellRenderer: linkCell('updated_at'),
       },
     ];
-  }, [Y, analyticsAxes, budgetColumns, defaultAnalyticsLabel, getCapexFilterValues, getCapexHref, INVESTMENT_LABELS, PPE_LABELS, PRIORITY_LABELS, RUN_BUILD_LABELS, locale, navigate, queryClient, t]);
+  }, [Y, analyticsAxes, budgetColumns, defaultAnalyticsLabel, getCapexFilterValues, getCapexHref, INVESTMENT_LABELS, PPE_LABELS, PRIORITY_LABELS, RUN_BUILD_LABELS, FTE_DECLARED_LABELS, locale, navigate, queryClient, t]);
 
   const canCreate = hasLevel('capex','manager');
   const canAdmin = hasLevel('capex','admin');

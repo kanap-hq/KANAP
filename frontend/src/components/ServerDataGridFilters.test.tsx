@@ -373,7 +373,10 @@ describe('ServerDataGrid column filters follow the grid model', () => {
     expect(String(lastRequestFilters())).not.toContain('status');
   }, 30_000);
 
-  it('with showFilteredColumns, a starting filter on a hidden column shows that column, saved', async () => {
+  const savedHide = (colId: string) => (JSON.parse(localStorage.getItem('grid-columns:test:u-1:things') ?? '[]') as Array<{ colId: string; hide?: boolean }>)
+    .find((state) => state.colId === colId)?.hide;
+
+  it('with showFilteredColumns, a starting filter on a hidden column shows that column for this visit, not in the saved layout', async () => {
     const grid = await mount({
       initialState: { filter: { filterModel: { status: { filterType: 'set', values: [null] } } } },
       defaultHiddenColumns: ['status'],
@@ -386,8 +389,29 @@ describe('ServerDataGrid column filters follow the grid model', () => {
     // The filter shows in its box, with the cross that clears it.
     await waitFor(() => expect(floatingFilterCell('status').querySelector('button[aria-label="filters.clearFilter"]')).not.toBeNull());
     expect(String(lastRequestFilters())).toContain('status');
-    const saved = JSON.parse(localStorage.getItem('grid-columns:test:u-1:things') ?? '[]') as Array<{ colId: string; hide?: boolean }>;
-    expect(saved.find((state) => state.colId === 'status')?.hide).toBe(false);
+    expect(savedHide('status')).not.toBe(false);
+
+    // Another layout change is saved, the column shown for the visit still is not.
+    await toggleInChooser('Other');
+    expect(grid.api().getColumn('status').isVisible()).toBe(true);
+    expect(savedHide('other')).toBe(true);
+    expect(savedHide('status')).toBe(true);
+  }, 30_000);
+
+  it('with showFilteredColumns, a column shown for the visit is saved once the user shows it in the chooser', async () => {
+    const grid = await mount({
+      initialState: { filter: { filterModel: { status: { filterType: 'set', values: ['Alpha'] } } } },
+      defaultHiddenColumns: ['status'],
+      columnPreferencesKey: 'things',
+      showFilteredColumns: true,
+    });
+    await quiet();
+    expect(grid.api().getColumn('status').isVisible()).toBe(true);
+    await toggleInChooser('Status');
+    expect(grid.api().getColumn('status').isVisible()).toBe(false);
+    await toggleInChooser('Status');
+    expect(grid.api().getColumn('status').isVisible()).toBe(true);
+    expect(savedHide('status')).toBe(false);
   }, 30_000);
 
   it('with showFilteredColumns, a column kept out of the chooser stays hidden with its filter', async () => {

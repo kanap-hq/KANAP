@@ -61,6 +61,8 @@ type SummaryRow = {
   cost_center_path?: string | null;
   budget_holder_name?: string | null;
   run_build?: 'run' | 'build' | null;
+  /** 'yes' when the line declares FTE in some year and column, else null. */
+  has_fte?: 'yes' | null;
   project_name?: string | null;
   notes?: string | null;
   created_at: string;
@@ -138,6 +140,8 @@ export default function OpexListPage() {
     run: t('opex.runBuild.run'),
     build: t('opex.runBuild.build'),
   }), [t]);
+
+  const FTE_DECLARED_LABELS: Record<string, string> = useMemo(() => ({ yes: t('shared.fteDeclaredYes') }), [t]);
 
   const gridApiRef = useRef<any>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -556,6 +560,28 @@ export default function OpexListPage() {
         />
       ),
     }),
+    // Whether the line declares FTE in some year and column: the reports' "Items with FTE" filter.
+    {
+      colId: 'has_fte',
+      headerName: t('shared.fteDeclared'),
+      valueGetter: (p) => (p.data?.has_fte === 'yes' ? FTE_DECLARED_LABELS.yes : ''),
+      width: 140,
+      defaultHidden: true,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        getValues: getOpexFilterValues('has_fte', { labelMap: FTE_DECLARED_LABELS, emptyLabel: t('shared.fteDeclaredNo') }),
+        searchable: false,
+      },
+      cellRenderer: (params: any) => (
+        <LinkCellRenderer
+          {...params}
+          linkType="internal"
+          getHref={(row) => getOpexHref(row, 'has_fte')}
+          onNavigate={(href) => navigate(href)}
+        />
+      ),
+    },
     {
       colId: 'latest_task_text',
       headerName: t('opex.columns.task'),
@@ -847,7 +873,7 @@ export default function OpexListPage() {
         />
       ),
     },
-  ], [Y, analyticsAxes, budgetColumns, defaultAnalyticsLabel, getOpexFilterValues, getOpexHref, RUN_BUILD_LABELS, locale, navigate, queryClient, t]);
+  ], [Y, analyticsAxes, budgetColumns, defaultAnalyticsLabel, getOpexFilterValues, getOpexHref, RUN_BUILD_LABELS, FTE_DECLARED_LABELS, locale, navigate, queryClient, t]);
 
   if (!hasLevel('opex', 'reader')) {
     return <ForbiddenPage />;

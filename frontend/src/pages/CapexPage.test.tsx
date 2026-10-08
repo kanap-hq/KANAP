@@ -326,6 +326,31 @@ describe('CapexPage', () => {
     expect(versions.y.totals?.budget).toBe(10);
   });
 
+  it('offers an "FTE declared" column right after the FTE columns, hidden by default, Yes or blank, filtered on Yes and No', async () => {
+    await renderPage();
+    const ids = lastProps().columns.map((c) => c.colId ?? c.field ?? '');
+    const fte = ids.filter((id) => id.startsWith('fte_'));
+    expect(ids.indexOf('has_fte')).toBe(ids.indexOf(fte[fte.length - 1]) + 1);
+    const declared = column('has_fte');
+    expect(declared).toMatchObject({ headerName: 'shared.fteDeclared', defaultHidden: true, filter: CheckboxSetFilter });
+    expect(declared!.valueGetter!({ data: { has_fte: 'yes' } })).toBe('shared.fteDeclaredYes');
+    expect(declared!.valueGetter!({ data: { has_fte: null } })).toBe('');
+    expect(declared!.valueGetter!({ data: undefined })).toBe('');
+
+    get.mockImplementation(async (url: string, config?: { params?: { fields?: string } }) => {
+      if (url !== '/capex-items/summary/filter-values') return { data: {} };
+      return { data: { [config?.params?.fields ?? '']: [null, 'yes'] } };
+    });
+    type GetValues = (p: unknown) => Promise<Array<{ value: string | null; label: string }>>;
+    const options = await (declared!.filterParams!.getValues as GetValues)({ context: { getQueryState: () => ({}) } });
+    expect(options).toEqual([
+      { value: 'yes', label: 'shared.fteDeclaredYes' },
+      { value: null, label: 'shared.fteDeclaredNo' },
+    ]);
+    const calls = get.mock.calls.filter(([url]) => url === '/capex-items/summary/filter-values');
+    expect(calls.map(([, config]) => config.params.fields)).toEqual(['has_fte']);
+  });
+
   it('offers cost center and run or build columns, hidden by default, filtered on the values the server lists', async () => {
     await renderPage();
     const costCenter = column('cost_center_label');

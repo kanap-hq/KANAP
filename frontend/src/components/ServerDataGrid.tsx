@@ -485,6 +485,16 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   // Column state management
   const columnStateManager = useColumnState(columnPreferencesKey, columns, requiredColumns, defaultHiddenColumns, tenantSlug ?? undefined, profile?.id);
   const [currentColumnState, setCurrentColumnState] = useState<ColumnState[]>(() => columnStateManager.loadColumnState());
+  // Columns shown for this visit only, because a link's filter narrows them (`showFilteredColumns`):
+  // the saved layout keeps them hidden until the user shows one in the chooser.
+  const revealedColumnsRef = useRef<Set<string>>(new Set());
+  const saveLayout = useCallback((state: ColumnState[]) => {
+    if (!columnPreferencesKey) return;
+    const revealed = revealedColumnsRef.current;
+    columnStateManager.saveColumnState(revealed.size === 0
+      ? state
+      : state.map((col) => (col.colId && revealed.has(col.colId) ? { ...col, hide: true } : col)));
+  }, [columnPreferencesKey, columnStateManager]);
   const initializedRef = useRef<boolean>(false);
 
   // Re-apply column state when tenant/user changes (scoped key changes)
@@ -509,10 +519,8 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
       const newColumnState = (api.getColumnState?.() ?? []) as ColumnState[];
       setCurrentColumnState(newColumnState);
       
-      // Save to localStorage if enabled
-      if (columnPreferencesKey) {
-        columnStateManager.saveColumnState(newColumnState);
-      }
+      // Save to localStorage if enabled (the columns shown for this visit stay hidden there)
+      saveLayout(newColumnState);
       
       // Call external callback if provided
       if (onColumnStateChange) {
@@ -522,7 +530,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     } catch (e) {
       console.warn('Failed to handle column state change:', e);
     }
-  }, [columnStateManager, columnPreferencesKey, onColumnStateChange]);
+  }, [saveLayout, onColumnStateChange]);
 
   // Custom column chooser state (Community Edition compatible)
   const [columnChooserAnchor, setColumnChooserAnchor] = useState<HTMLElement | null>(null);
@@ -570,9 +578,10 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
 
   /**
    * With `showFilteredColumns`: shows the hidden columns the starting filters narrow (a link from
-   * the overview to the lines without an IT owner, a column hidden by default), so the list does not
-   * open narrowed by a filter nobody can see or clear. Columns kept out of the chooser only carry a
-   * link's filter and stay hidden.
+   * the overview to the lines without an IT owner, a report row opening the filtered list), so the
+   * list does not open narrowed by a filter nobody can see or clear. Shown for this visit only: the
+   * saved layout keeps them hidden (`saveLayout`), unless the user shows one in the chooser.
+   * Columns kept out of the chooser only carry a link's filter and stay hidden.
    */
   const revealFilteredColumns = useCallback((api: any) => {
     if (!showFilteredColumns) return;
@@ -583,15 +592,16 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     });
     if (hidden.length === 0) return;
     try {
+      // Before showing them: the grid's own column event saves the layout at once.
+      for (const colId of hidden) revealedColumnsRef.current.add(colId);
       api.setColumnsVisible?.(hidden, true);
       const newColumnState = (api.getColumnState?.() ?? []) as ColumnState[];
       setCurrentColumnState(newColumnState);
-      if (columnPreferencesKey) columnStateManager.saveColumnState(newColumnState);
       onColumnStateChange?.(newColumnState);
     } catch (e) {
       console.warn('Failed to show the filtered columns:', e);
     }
-  }, [showFilteredColumns, filterMayBeDropped, columnPreferencesKey, columnStateManager, onColumnStateChange]);
+  }, [showFilteredColumns, filterMayBeDropped, onColumnStateChange]);
 
   const handleColumnToggle = useCallback((field: string, visible: boolean) => {
     const api = gridApiRef.current;
@@ -601,6 +611,9 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
       // A column leaving the view takes its filter with it (see clearFiltersOfHiddenColumns).
       if (!visible) clearFiltersOfHiddenColumns(api, [field]);
 
+      // The user's own choice: a column shown for this visit is saved like any other from now on.
+      revealedColumnsRef.current.delete(api.getColumn?.(field)?.getColId?.() ?? field);
+
       // Update column visibility
       (api as any).setColumnsVisible?.([field], visible);
       
@@ -608,9 +621,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
       const newColumnState = (api.getColumnState?.() ?? []) as ColumnState[];
       setCurrentColumnState(newColumnState);
       
-      if (columnPreferencesKey) {
-        columnStateManager.saveColumnState(newColumnState);
-      }
+      saveLayout(newColumnState);
       
       if (onColumnStateChange) {
         onColumnStateChange(newColumnState);
@@ -619,7 +630,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     } catch (e) {
       console.warn('Failed to toggle column visibility:', e);
     }
-  }, [clearFiltersOfHiddenColumns, columnStateManager, columnPreferencesKey, onColumnStateChange]);
+  }, [clearFiltersOfHiddenColumns, saveLayout, onColumnStateChange]);
 
   // Get visible columns for the chooser. A column the caller keeps out of the tool panel only
   // exists to carry a filter coming from a link, so it never shows up in the list either.
@@ -658,6 +669,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
         if (state.colId && state.hide) hiddenBefore.add(state.colId);
       }
       const defaultState = columnStateManager.resetColumnState();
+      revealedColumnsRef.current.clear();
       clearFiltersOfHiddenColumns(
         api,
         defaultState.filter((state) => state.hide && state.colId && !hiddenBefore.has(state.colId))

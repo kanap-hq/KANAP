@@ -6,7 +6,10 @@ import { ReportFilter, reportFilterMenuProps, reportFilterSelectSx } from '../..
 import type { AnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import type { AnalyticsAxis } from '../../services/analytics';
 import { drawerMenuItemSx } from '../../theme/formSx';
-import type { StaffingGroup, StaffingLabels } from './reportAggregates';
+import type { BudgetReportFilterState } from '../../components/reports/BudgetReportFilters';
+import type { BudgetScope, StaffingGroup, StaffingLabels } from './reportAggregates';
+import { axisListColumn, reportListLink, reportListPicks, rowListGroup, type ReportListLink } from './reportListLink';
+import { itemHref } from './useReportScope';
 
 /**
  * The "Group by" of the FTE reports (Staffing by month, Cost per FTE): a cost center (default), an
@@ -124,4 +127,32 @@ export function ReportGroupFilters({ state }: { state: ReportGroupState }) {
       )}
     </>
   );
+}
+
+/** A table row's group: its key (the item id when grouped by item) and stored name; absent on the total row. */
+export type GroupRowRef = { groupKey?: string; groupName?: string | null };
+
+/**
+ * The link of a table row's group name, opened in a new tab: an item's page when grouped by item, else
+ * the OPEX or CAPEX list filtered on the group and on the bar's picks. The total row stays plain text,
+ * and so does every row while the picks cannot be named yet.
+ */
+export function useGroupLinks(
+  scope: BudgetScope,
+  state: Pick<ReportGroupState, 'kind' | 'axis'>,
+  filters: BudgetReportFilterState,
+): (row: GroupRowRef) => ReportListLink | null {
+  const picks = useMemo(() => reportListPicks(filters), [filters]);
+  const { kind } = state;
+  const axisColumn = state.axis ? axisListColumn(state.axis) : null;
+  return useCallback((row: GroupRowRef) => {
+    if (row.groupKey === undefined) return null;
+    if (kind === 'item') {
+      const href = itemHref(scope, row.groupKey);
+      return href ? { href } : null;
+    }
+    if (!picks) return null;
+    const group = rowListGroup(kind, { name: row.groupName ?? null }, axisColumn);
+    return group ? reportListLink(scope, group, picks) : null;
+  }, [scope, kind, axisColumn, picks]);
 }

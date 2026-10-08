@@ -878,6 +878,9 @@
     "fteUnknownLines_one": "Unbekannt für {{count}} Zeile",
     "fteUnknownCount": "{{count}} unbekannt",
     "fteUnknownCount_one": "{{count}} unbekannt",
+    "fteDeclared": "VZÄ gemeldet",
+    "fteDeclaredYes": "Ja",
+    "fteDeclaredNo": "Nein",
     "yearSlotWithYear": "{{slot}} ({{year}})",
     "yearSlots": {
       "yMinus2": "J-2",
