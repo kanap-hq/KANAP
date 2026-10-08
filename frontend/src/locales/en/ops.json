@@ -999,11 +999,27 @@
       "runBuildRun": "Run",
       "runBuildBuild": "Build",
       "runBuildNone": "Not set",
+      "fteItems": "Items",
+      "fteItemsAll": "All items",
+      "fteItemsWith": "Items with FTE",
       "dimension": "Dimension",
       "analyticsAll": "All",
       "analyticsNone": "No value",
       "analyticsMissing": "The analytics filter could not be applied. Clear it or try again.",
       "clearAnalytics": "Clear filter"
+    },
+    "measure": {
+      "label": "Measure",
+      "amount": "Amount",
+      "fte": "FTE",
+      "columnFte": "{{column}} FTE",
+      "chartTitleFte": "{{title}} · FTE",
+      "totalFte": "Total FTE",
+      "detachedSingle_one": "{{count}} item declares {{fte}} FTE while its amount no longer follows its lines.",
+      "detachedSingle_other": "{{count}} items declare {{fte}} FTE while their amount no longer follows their lines.",
+      "detachedList": "Amount no longer follows the lines for: {{list}}.",
+      "detachedEntry_one": "{{column}} ({{count}} item, {{fte}} FTE)",
+      "detachedEntry_other": "{{column}} ({{count}} items, {{fte}} FTE)"
     },
     "columns": {
       "company": "Company",

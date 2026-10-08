@@ -13,13 +13,7 @@ import { useBudgetAggregate } from './useBudgetAggregate';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { BudgetReportFilters, useBudgetReportFilters } from '../../components/reports/BudgetReportFilters';
 import { useTranslation } from 'react-i18next';
-
-function formatNumber(v: any) {
-  const n = Number(v ?? 0);
-  if (!isFinite(n)) return '';
-  const i = Math.round(n);
-  return i.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-}
+import { ReportFteNotice, ReportMeasureSelect, useMeasureText, useReportMeasure } from './reportMeasure';
 
 type ItemType = 'opex' | 'capex';
 
@@ -45,6 +39,10 @@ export default function BudgetColumnsCompareReport() {
   const Y = now.getFullYear();
   const allowedYears = [Y - 2, Y - 1, Y, Y + 1, Y + 2];
   const [itemType, setItemType] = useState<ItemType>('opex');
+  const [measure, setMeasure] = useReportMeasure();
+  const measureText = useMeasureText(measure);
+  const formatNumber = measureText.format;
+  const totalLabel = measureText.fte ? t('reports.measure.totalFte') : t('reports.columns.total');
   const [picked, setSelections] = useState<PickedSelection[]>([
     { year: Y, metric: null },
     { year: Y + 1, metric: null },
@@ -70,29 +68,30 @@ export default function BudgetColumnsCompareReport() {
 
   // One total per year and column picked, over the lines the filter bar keeps.
   const request = useMemo(
-    () => (reportFilters.queryFilters == null ? null : columnsCompareRequest({ selections: sortedSelections, filters: reportFilters.queryFilters })),
-    [reportFilters.queryFilters, sortedSelections],
+    () => (reportFilters.queryFilters == null ? null : columnsCompareRequest({ selections: sortedSelections, filters: reportFilters.queryFilters, measure })),
+    [reportFilters.queryFilters, sortedSelections, measure],
   );
   const report = useBudgetAggregate(itemType, request, { keepPrevious: true });
-  const selectionTotals = useMemo(() => readColumnsCompare(sortedSelections, report.data), [sortedSelections, report.data]);
+  // FTE: a year and column nobody declares is null (an empty cell, no point), never a 0.
+  const selectionTotals = useMemo(() => readColumnsCompare(sortedSelections, report.data, measure), [sortedSelections, report.data, measure]);
   // Loading, the filter bar still reading its address, or the last answer kept while the new one loads.
   const busy = reportFilters.queryFilters == null || report.isLoading || report.isPlaceholderData;
 
-  type TableRow = { key: string; selection: string; year: number; column: string; total: number };
+  type TableRow = { key: string; selection: string; year: number; column: string; total: number | null };
   const tableRows = useMemo<TableRow[]>(() => {
     return sortedSelections.map((sel, idx) => {
-      const total = selectionTotals[idx] ?? 0;
+      const total = measureText.fte ? selectionTotals[idx] ?? null : selectionTotals[idx] ?? 0;
       const label = `${sel.year} ${metricLabels[sel.metric]}`;
       return { key: `${sel.year}-${sel.metric}-${idx}`, selection: label, year: sel.year, column: metricLabels[sel.metric], total };
     });
-  }, [sortedSelections, selectionTotals, metricLabels]);
+  }, [sortedSelections, selectionTotals, metricLabels, measureText]);
 
   const columns = useMemo<ColDef[]>(() => ([
     { field: 'selection', headerName: t('reports.columns.selection'), flex: 1, minWidth: 200 },
     { field: 'year', headerName: t('reports.filters.year'), width: 120 },
     { field: 'column', headerName: t('reports.filters.column'), width: 160 },
-    { field: 'total', headerName: t('reports.columns.total'), width: 160, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
-  ]), []);
+    { field: 'total', headerName: totalLabel, width: 160, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
+  ]), [totalLabel, formatNumber]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const chartData = useMemo(() => tableRows.map((r) => ({ selection: r.selection, total: r.total })), [tableRows]);
   const chartRef = useRef<ChartCardHandle>(null);
@@ -123,14 +122,19 @@ export default function BudgetColumnsCompareReport() {
   // Build grouped data when eligible
   const groupedYears = useMemo(() => Array.from(new Set(sortedSelections.map((s) => s.year))).sort((a, b) => a - b), [sortedSelections]);
   const totalsByMetricYear = useMemo(() => {
-    const map = new Map<string, number>(); // key: `${year}:${metric}`
-    // A year and column picked twice adds up twice, as the table lists it twice.
+    const map = new Map<string, number | null>(); // key: `${year}:${metric}`
+    // A year and column picked twice adds up twice, as the table lists it twice. FTE nobody declares stays null.
     sortedSelections.forEach((sel, idx) => {
       const key = `${sel.year}:${sel.metric}`;
-      map.set(key, (map.get(key) || 0) + (selectionTotals[idx] ?? 0));
+      const value = selectionTotals[idx] ?? null;
+      if (value == null) {
+        if (!map.has(key)) map.set(key, measureText.fte ? null : 0);
+        return;
+      }
+      map.set(key, (map.get(key) || 0) + value);
     });
     return map;
-  }, [sortedSelections, selectionTotals]);
+  }, [sortedSelections, selectionTotals, measureText]);
 
   const groupedChartData = useMemo(() => {
     return groupedYears.map((year) => {
@@ -144,34 +148,41 @@ export default function BudgetColumnsCompareReport() {
     });
   }, [groupedYears, metricsInUse, totalsByMetricYear]);
 
+  // FTE: the value axis names the measure and reads FTE.
+  const valueAxis = useMemo(() => ({
+    type: 'number',
+    position: 'left',
+    ...(measureText.axisTitle ? { title: measureText.axisTitle, label: { formatter: ({ value }: { value: number }) => formatNumber(value) } } : {}),
+  }), [measureText, formatNumber]);
+
   const chartOptions = useMemo(() => {
     if (groupingEligible) {
       return {
-        title: { text: t('reports.budgetColumnsCompare.title') },
+        title: { text: measureText.chartTitle(t('reports.budgetColumnsCompare.title')) },
         subtitle: { text: t('reports.budgetColumnsCompare.yearGroupingSubtitle', { type: t(`operations.scope.${itemType}`) }) },
         data: groupedChartData,
         axes: [
           { type: 'number', position: 'bottom' },
-          { type: 'number', position: 'left' },
+          valueAxis,
         ],
         legend: { enabled: true },
-        series: metricsInUse.map((m) => ({ type: 'line', xKey: 'year', yKey: m, yName: metricLabels[m] })),
+        series: metricsInUse.map((m) => ({ type: 'line', xKey: 'year', yKey: m, yName: measureText.column(metricLabels[m]) })),
       } as any;
     }
     return {
-      title: { text: t('reports.budgetColumnsCompare.title') },
+      title: { text: measureText.chartTitle(t('reports.budgetColumnsCompare.title')) },
       subtitle: { text: t('reports.budgetColumnsCompare.selectionsSubtitle', { type: t(`operations.scope.${itemType}`), count: selections.length }) },
       data: chartData,
       axes: [
         { type: 'category', position: 'bottom' },
-        { type: 'number', position: 'left' },
+        valueAxis,
       ],
       legend: { enabled: false },
       series: [
-        { type: 'line', xKey: 'selection', yKey: 'total', yName: t('reports.columns.total') },
+        { type: 'line', xKey: 'selection', yKey: 'total', yName: totalLabel },
       ],
     } as any;
-  }, [groupingEligible, itemType, groupedChartData, metricsInUse, metricLabels, selections.length, chartData, t]);
+  }, [groupingEligible, itemType, groupedChartData, metricsInUse, metricLabels, selections.length, chartData, valueAxis, measureText, totalLabel, t]);
 
   // Grouped table (reflects year grouping) or flat table (per selection)
   const groupedTableRows = useMemo(() => {
@@ -192,10 +203,10 @@ export default function BudgetColumnsCompareReport() {
       { field: 'year', headerName: t('reports.filters.year'), width: 120 },
     ];
     for (const m of metricsInUse) {
-      cols.push({ field: m, headerName: metricLabels[m], width: 160, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) });
+      cols.push({ field: m, headerName: measureText.column(metricLabels[m]), width: 160, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) });
     }
     return cols;
-  }, [groupingEligible, metricsInUse, metricLabels]);
+  }, [groupingEligible, metricsInUse, metricLabels, measureText, formatNumber]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const MAX_SELECTIONS = 10;
   const canAdd = selections.length < MAX_SELECTIONS;
@@ -218,6 +229,7 @@ export default function BudgetColumnsCompareReport() {
             <MenuItem value="opex">{t('operations.scope.opex')}</MenuItem>
             <MenuItem value="capex">{t('operations.scope.capex')}</MenuItem>
           </TextField>
+          <ReportMeasureSelect value={measure} onChange={setMeasure} />
           <BudgetReportFilters filters={reportFilters} />
 
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', minWidth: 300 }}>
@@ -264,8 +276,8 @@ export default function BudgetColumnsCompareReport() {
           </Box>
         </>
       )}
-      onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.()}
-      onExportChartPng={() => chartRef.current?.download(`budget-columns-compare-${itemType}`)}
+      onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.(measureText.csvParams(`budget-columns-compare-${itemType}`))}
+      onExportChartPng={() => chartRef.current?.download(measureText.fileName(`budget-columns-compare-${itemType}`))}
     >
       <Stack direction="column" spacing={2} alignItems="stretch">
         <Box className="report-print-hide">
@@ -286,6 +298,7 @@ export default function BudgetColumnsCompareReport() {
             defaultColDef={{ sortable: true, resizable: true }}
             onGridReady={(e) => { gridApiRef.current = e.api; }}
           />
+          <ReportFteNotice scope={itemType} request={request} result={report.data} columnLabel={(column) => `${metricLabels[column.metric]} ${column.year}`} />
         </Paper>
       </Stack>
       <ReportDataStatus loading={busy} error={report.isError} onRetry={() => void report.refetch()} />

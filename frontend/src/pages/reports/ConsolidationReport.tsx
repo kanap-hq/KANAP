@@ -16,13 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { NO_CONSOLIDATION_LINE, consolidationRequest, readConsolidation } from './reportAggregates';
 import { useBudgetAggregate } from './useBudgetAggregate';
 import { useAccountIdOptions } from './useReportOptions';
-
-function formatNumber(v: any) {
-  const n = Number(v ?? 0);
-  if (!isFinite(n)) return '';
-  const i = Math.round(n);
-  return i.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-}
+import { ReportFteNotice, ReportMeasureSelect, useMeasureText, useReportMeasure } from './reportMeasure';
 
 export default function ConsolidationReport() {
   const { t } = useTranslation(["ops"]);
@@ -42,6 +36,11 @@ export default function ConsolidationReport() {
 
   const [scope, setScope] = useReportScope();
   const scopeLabel = t(`operations.scope.${scope}`);
+  const [measure, setMeasure] = useReportMeasure();
+  const measureText = useMeasureText(measure);
+  const formatNumber = measureText.format;
+  // FTE: a year nobody declares stays blank, never a 0 (an empty cell, no slice, no point).
+  const cell = (value: number | null | undefined) => (measureText.fte ? value ?? null : value || 0);
   const reportFilters = useBudgetReportFilters({ scope });
   // The tenant's accounts and the accounts the lines use (inactive ones included: their lines count
   // in their consolidation line), loaded when the picker first opens.
@@ -60,21 +59,23 @@ export default function ConsolidationReport() {
     metric,
     excludedAccountIds: excludedAccounts,
     filters: reportFilters.queryFilters,
-  })), [reportFilters.queryFilters, years, metric, excludedAccounts]);
+    measure,
+  })), [reportFilters.queryFilters, years, metric, excludedAccounts, measure]);
   const report = useBudgetAggregate(scope, request, { keepPrevious: true });
   // Loading, the filter bar still reading its address, or the last answer kept while the new one loads.
   const busy = reportFilters.queryFilters == null || report.isLoading || report.isPlaceholderData;
   const unassigned = t('reports.consolidation.unassigned');
-  const { groups, totals } = useMemo(() => readConsolidation(years, report.data, unassigned), [years, report.data, unassigned]);
+  // FTE: only the consolidation lines that declare FTE in one of the years.
+  const { groups, totals } = useMemo(() => readConsolidation(years, report.data, unassigned, measure), [years, report.data, unassigned, measure]);
 
   // Table rows
   const tableRows = useMemo(() => {
     return groups.map((g) => {
       const row: any = { group: g.label };
-      for (const yr of years) row[yr] = g.values[yr] || 0;
+      for (const yr of years) row[yr] = cell(g.values[yr]);
       return row;
     });
-  }, [groups, years]);
+  }, [groups, years, measureText]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const columns = useMemo<ColDef[]>(() => {
     const cols: ColDef[] = [
@@ -84,15 +85,16 @@ export default function ConsolidationReport() {
       cols.push({ field: String(yr), headerName: String(yr), width: 140, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) });
     }
     return cols;
-  }, [years]);
+  }, [years, formatNumber]);
 
-  const metricLabel = budgetColumns.label(metric);
+  // The column as the measure reads it: `Budget`, or `Budget FTE`.
+  const metricLabel = measureText.column(budgetColumns.label(metric));
 
   const totalsRow = useMemo(() => {
     const row: any = { group: t('reports.consolidation.totalMetric', { metric: metricLabel }) };
-    for (const yr of years) row[yr] = totals[yr] ?? 0;
+    for (const yr of years) row[yr] = measureText.fte ? totals[yr] ?? null : totals[yr] ?? 0;
     return row;
-  }, [totals, years, metricLabel, t]);
+  }, [totals, years, metricLabel, measureText, t]);
 
   const gridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);
@@ -103,12 +105,15 @@ export default function ConsolidationReport() {
   const chartOptions = useMemo(() => {
     if (singleYear) {
       const year = years[0];
-      const chartData = groups.map((g) => ({ label: g.label, value: g.values[year] || 0 }));
+      // FTE: a group that declares none that year gets no slice or bar.
+      const chartData = groups
+        .map((g) => ({ label: g.label, value: cell(g.values[year]) }))
+        .filter((d) => d.value != null);
       const total = chartData.reduce((acc, d) => acc + (Number(d.value) || 0), 0);
       const base = {
-        title: { text: t('reports.consolidation.chartTitleSingle', { type: scopeLabel, year }) },
+        title: { text: measureText.chartTitle(t('reports.consolidation.chartTitleSingle', { type: scopeLabel, year })) },
         subtitle: { text: metricsCaption || t('reports.consolidation.shareSubtitle') },
-        footnote: { text: t('reports.consolidation.totalLabel', { metric: metricsCaption, value: formatNumber(total) }) },
+        footnote: { text: t('reports.consolidation.totalLabel', { metric: metricsCaption, value: formatNumber(measureText.fte && chartData.length === 0 ? null : total) }) },
         data: chartData,
         legend: { enabled: false },
         animation: { enabled: true, duration: 800 },
@@ -121,6 +126,7 @@ export default function ConsolidationReport() {
             {
               type: 'number',
               position: 'bottom',
+              ...(measureText.axisTitle ? { title: measureText.axisTitle } : {}),
               label: {
                 formatter: ({ value }: { value: number }) => formatNumber(value),
               },
@@ -180,22 +186,36 @@ export default function ConsolidationReport() {
     // Multi-year: line chart with one series per group
     const chartData = years.map((yr) => {
       const row: any = { year: yr };
-      for (const g of groups) row[g.key] = g.values[yr] || 0;
+      for (const g of groups) row[g.key] = cell(g.values[yr]);
       return row;
     });
-    const series = groups.map((g) => ({ type: 'line', xKey: 'year', yKey: g.key, yName: g.label }));
+    const series = groups.map((g) => ({
+      type: 'line',
+      xKey: 'year',
+      yKey: g.key,
+      yName: g.label,
+      // FTE: the tooltip names the measure and reads FTE; amounts keep the chart's own tooltip.
+      ...(measureText.fte ? {
+        tooltip: {
+          renderer: ({ datum, yKey }: any) => ({
+            title: escapeTooltipText(g.label),
+            data: [{ label: `${metricLabel} (${datum.year})`, value: formatNumber(datum[yKey]) }],
+          }),
+        },
+      } : {}),
+    }));
     return {
-      title: { text: t('reports.consolidation.chartTitleRange', { type: scopeLabel, start: years[0], end: years[years.length - 1] }) },
+      title: { text: measureText.chartTitle(t('reports.consolidation.chartTitleRange', { type: scopeLabel, start: years[0], end: years[years.length - 1] })) },
       subtitle: { text: metricsCaption || t('reports.consolidation.annualSubtitle') },
       data: chartData,
       series,
       axes: [
         { type: 'category', position: 'bottom' },
-        { type: 'number', position: 'left' },
+        { type: 'number', position: 'left', ...(measureText.axisTitle ? { title: measureText.axisTitle, label: { formatter: ({ value }: { value: number }) => formatNumber(value) } } : {}) },
       ],
       legend: { enabled: true },
     };
-  }, [groups, singleYear, years, metricsCaption, chartType, metricLabel, scopeLabel, t]);
+  }, [groups, singleYear, years, metricsCaption, chartType, metricLabel, scopeLabel, measureText, formatNumber, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <ReportLayout
@@ -205,6 +225,7 @@ export default function ConsolidationReport() {
       filters={(
         <>
           <ItemScopeTabs value={scope} onChange={setScope} />
+          <ReportMeasureSelect value={measure} onChange={setMeasure} />
           <BudgetReportFilters filters={reportFilters} />
           <TextField select size="small" label={t("reports.filters.startYear")} value={startYear} onChange={(e) => {
             const v = parseInt(e.target.value, 10);
@@ -259,8 +280,8 @@ export default function ConsolidationReport() {
           />
         </>
       )}
-      onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.()}
-      onExportChartPng={() => chartRef.current?.download(`consolidation-${scope}-${years[0]}-${years[years.length - 1]}`)}
+      onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.(measureText.csvParams(`consolidation-${scope}-${years[0]}-${years[years.length - 1]}`))}
+      onExportChartPng={() => chartRef.current?.download(measureText.fileName(`consolidation-${scope}-${years[0]}-${years[years.length - 1]}`))}
     >
       <Stack direction="column" spacing={2} alignItems="stretch">
         <Box sx={{ minWidth: 0 }}>
@@ -276,6 +297,7 @@ export default function ConsolidationReport() {
             onGridReady={(e) => { gridApiRef.current = e.api; }}
             pinnedBottomRowData={[totalsRow]}
           />
+          <ReportFteNotice scope={scope} request={request} result={report.data} columnLabel={(column) => `${budgetColumns.label(column.metric)} ${column.year}`} />
         </Paper>
       </Stack>
       <ReportDataStatus loading={busy} error={report.isError} onRetry={() => void report.refetch()} />

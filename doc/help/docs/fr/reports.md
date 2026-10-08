@@ -38,6 +38,22 @@ La page d'accueil affiche une carte par rapport disponible avec une courte descr
 
 Les deux rapports de refacturation couvrent uniquement les OPEX.
 
+### Choisir le montant ou les ETP
+
+Les sept rapports budgétaires ont un sélecteur **Mesure**. Il se trouve juste après le sélecteur **OPEX** / **CAPEX**, ou en premier quand le rapport n'en a pas. Il propose **Montant** (par défaut) et **ETP**. Les deux rapports de refacturation n'ont pas de mesure.
+
+Avec **ETP**, un rapport additionne des personnes au lieu de montants :
+
+- Chaque colonne budgétaire affiche l'ETP moyen sur l'année complète que déclarent ses lignes de quantité et de prix. Les lignes en personnes ou en jours ajoutent des ETP. Les lignes en pièces comptent 0. Une colonne sans lignes ne déclare aucun ETP et n'est pas prise en compte : seuls les ETP déclarés comptent. Voir [Quantité et prix](opex.md#quantite-et-prix) et [ETP](opex.md#etp).
+- Une année ou une colonne où aucun poste ne déclare d'ETP affiche une cellule vide, sans barre ni point dans le graphique.
+- **Top postes**, **Comptes de consolidation** et **Dimensions analytiques** écartent les postes et les groupes qui ne déclarent aucun ETP. Les parts sont des parts du total des ETP.
+- **Top hausse / baisse** compare les ETP des deux colonnes poste par poste. Un poste qui déclare des ETP d'un seul côté compte 0 de l'autre.
+- Les valeurs s'affichent avec deux décimales. Les noms de colonnes et les titres de graphiques portent la mention ETP.
+- L'adresse de la page conserve la mesure (`?measure=fte`) : un lien enregistré en favori ou partagé s'ouvre sur la même mesure.
+- Les noms des fichiers PNG et CSV exportés se terminent par `-fte`.
+
+Avec les ETP, une ligne sous le tableau avertit quand certains postes déclarent des ETP dans une colonne dont le montant ne suit plus les lignes. C'est le cas quand le montant a été réparti, quand ses mois ont été modifiés à la main, ou quand la colonne a été copiée depuis une colonne dont les lignes ne servaient que de référence. La ligne indique combien de postes et combien d'ETP sont concernés, par colonne et par année. Avec plusieurs colonnes, elle se lit par exemple : « Le montant ne suit plus les lignes pour : Budget 2026 (2 postes, 1,50 ETP), Budget 2027 (1 poste, 0,50 ETP). » Avec une seule colonne : « 2 postes déclarent 1,50 ETP alors que leur montant ne suit plus leurs lignes. » Leurs ETP comptent toujours. La ligne vous signale que le montant de la colonne ne correspond pas au coût de ses lignes.
+
 ### Colonnes budgétaires dans les rapports
 
 Chaque sélecteur de colonne ou de métrique propose les colonnes budgétaires affichées par votre organisation, sous leurs noms, dans l'ordre fixe des colonnes. Prévision est proposée quand elle est affichée. Les colonnes masquées ne sont pas proposées. Chaque rapport démarre sur la colonne par défaut, comme décrit ci-dessous. Les administrateurs budgétaires définissent les noms, les colonnes affichées et la colonne par défaut dans [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires).
@@ -48,12 +64,14 @@ Les sept rapports budgétaires (**Top postes**, **Top hausse / baisse**, **Tenda
 
 - **Centre de coûts** : choisissez un centre de coûts ou un groupe. Un groupe inclut tout ce qui se trouve en dessous, y compris les centres de coûts désactivés, car leurs lignes appartiennent toujours au groupe. **Tous les centres de coûts** retire le filtre. Voir [Centres de coûts](cost-centers.md).
 - **Run ou build** : **Tous**, **Run**, **Build**, ou **Non défini** pour les lignes qui n'ont ni l'un ni l'autre.
+- **Postes** : **Tous les postes** ou **Postes avec ETP**. **Postes avec ETP** garde les postes qui déclarent des ETP dans au moins une colonne budgétaire, toutes années confondues. Le filtre fonctionne avec les deux mesures. Un rapport en montants restreint à **Postes avec ETP** compare par exemple les montants Budget et Réalisé des postes de personnel. Le montant Réalisé couvre l'ensemble du poste.
 - **Dimensions analytiques** : un filtre par dimension, au nom de la dimension. La dimension par défaut s'affiche comme **Dimension analytique** tant qu'elle n'est pas renommée. Choisissez une valeur, **Aucune valeur** pour les lignes sans valeur sur cette dimension, ou **Toutes** pour retirer le filtre. Chaque filtre propose les valeurs que portent les lignes du rapport. Voir [Dimensions analytiques](analytics.md).
 
 Quand les filtres apparaissent :
 
 - **Centre de coûts** s'affiche dès que votre espace de travail compte au moins un centre de coûts ou un groupe.
 - **Run ou build** s'affiche dès qu'une ligne du rapport est marquée **Run** ou **Build**, ou lorsque l'adresse de la page contient déjà le filtre.
+- **Postes** s'affiche dès qu'un poste du rapport déclare des ETP, ou lorsque l'adresse de la page contient déjà le filtre.
 - Le filtre d'une dimension s'affiche dès qu'une ligne du rapport a une valeur sur cette dimension, ou lorsque l'adresse de la page le contient déjà. Les dimensions désactivées n'ont pas de filtre.
 - Sans aucun de ces filtres, la barre de filtres n'affiche que les contrôles propres au rapport.
 
@@ -62,7 +80,7 @@ Fonctionnement :
 - Les filtres s'appliquent avant tout total. Les montants, les parts, les graphiques et les totaux ne couvrent que les lignes retenues.
 - Les filtres sur plusieurs dimensions se combinent : une ligne doit correspondre à chacun d'eux.
 - Les listes de postes, de comptes et de valeurs à exclure continuent de proposer toutes les lignes.
-- L'adresse de la page conserve les filtres (`?costCenter=`, `?runBuild=` et `?analytics=`) : un lien enregistré en favori ou partagé ouvre le rapport déjà restreint. Un lien qui désigne une dimension désactivée ou supprimée depuis ignore cette partie.
+- L'adresse de la page conserve les filtres (`?costCenter=`, `?runBuild=`, `?fte=with` et `?analytics=`) : un lien enregistré en favori ou partagé ouvre le rapport déjà restreint. Un lien qui désigne une dimension désactivée ou supprimée depuis ignore cette partie.
 - Si le lien désigne un centre de coûts supprimé depuis, ou si les centres de coûts n'ont pas pu être chargés, le rapport n'affiche aucune ligne et une ligne de texte : « Ce centre de coûts n'existe plus ou n'a pas pu être chargé. » Cliquez sur **Retirer le filtre** pour retrouver le rapport.
 - Si le lien contient un filtre analytique et que les dimensions n'ont pas pu être chargées, le rapport n'affiche aucune ligne et une ligne de texte : « Le filtre analytique n'a pas pu être appliqué. Retirez-le ou réessayez. » Cliquez sur **Retirer le filtre** pour retirer les filtres analytiques et retrouver le rapport.
 - Les deux rapports de refacturation n'ont pas ces filtres et ne sont pas concernés.
@@ -185,13 +203,14 @@ Identifiez vos postes OPEX ou CAPEX les plus importants pour une année donnée.
 ### Contrôles
 
 - **Type de poste** : OPEX ou CAPEX (voir [Choisir OPEX ou CAPEX](#choisir-opex-ou-capex))
+- **Mesure** : **Montant** ou **ETP** (voir [Choisir le montant ou les ETP](#choisir-le-montant-ou-les-etp))
 - **Année** : Année précédente, en cours ou suivante
 - **Métrique** : Toute colonne budgétaire affichée. Démarre sur la colonne par défaut
 - **Nombre top** : Combien de postes afficher (par défaut : 10, minimum : 1)
 - **Type de graphique** : Graphique en secteurs ou en barres horizontales
 - **Exclure des postes** : Autocomplétion multi-sélection pour exclure des postes spécifiques
 - **Exclure des comptes** : Autocomplétion multi-sélection pour exclure des comptes spécifiques
-- **Centre de coûts**, **Run ou build** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
+- **Centre de coûts**, **Run ou build**, **Postes** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
 
 ### Ce que vous verrez
 
@@ -223,6 +242,7 @@ Identifiez les plus grandes variations OPEX ou CAPEX entre deux colonnes budgét
 ### Contrôles
 
 - **Type de poste** : OPEX ou CAPEX (voir [Choisir OPEX ou CAPEX](#choisir-opex-ou-capex))
+- **Mesure** : **Montant** ou **ETP** (voir [Choisir le montant ou les ETP](#choisir-le-montant-ou-les-etp))
 - **Année source** et **Métrique source** : La colonne de référence pour la comparaison
 - **Année destination** et **Métrique destination** : La colonne cible de comparaison
 - **Nombre top** : Combien de postes afficher par direction (par défaut : 10)
@@ -230,7 +250,7 @@ Identifiez les plus grandes variations OPEX ou CAPEX entre deux colonnes budgét
 - **Exclure des postes** : Autocomplétion multi-sélection pour exclure des postes spécifiques
 - **Exclure des comptes** : Autocomplétion multi-sélection pour exclure des comptes spécifiques
 - **Direction** : onglets **Hausses**, **Baisses** ou **Les deux**
-- **Centre de coûts**, **Run ou build** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
+- **Centre de coûts**, **Run ou build**, **Postes** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
 
 Les sélecteurs d'année listent les années qui contiennent des données. Les sélecteurs de métrique proposent les colonnes budgétaires affichées. Le rapport démarre avec la colonne par défaut de l'année précédente comme source et la colonne par défaut de l'année en cours comme destination.
 
@@ -266,10 +286,11 @@ Comparez les métriques OPEX sur plusieurs années sur un seul graphique en cour
 
 ### Contrôles
 
+- **Mesure** : **Montant** ou **ETP** (voir [Choisir le montant ou les ETP](#choisir-le-montant-ou-les-etp))
 - **Année de début** : Début de la plage (année en cours moins 2 à plus 2)
 - **Année de fin** : Fin de la plage
 - **Métriques** : Multi-sélection parmi les colonnes budgétaires affichées. Le rapport démarre sur la colonne par défaut et la dernière colonne affichée (Budget et Atterrissage prévu avec les réglages standard). Si vous retirez toutes les métriques, la colonne par défaut est utilisée
-- **Centre de coûts**, **Run ou build** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
+- **Centre de coûts**, **Run ou build**, **Postes** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
 
 ### Ce que vous verrez
 
@@ -291,8 +312,9 @@ Disposition identique au rapport de tendance OPEX, mais exploitant les données 
 
 ### Contrôles
 
+- **Mesure** : **Montant** ou **ETP** (voir [Choisir le montant ou les ETP](#choisir-le-montant-ou-les-etp))
 - **Année de début**, **Année de fin**, **Métriques** : Identiques au rapport de tendance OPEX
-- **Centre de coûts**, **Run ou build** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
+- **Centre de coûts**, **Run ou build**, **Postes** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
 
 ### Ce que vous verrez
 
@@ -308,9 +330,10 @@ Comparez de manière flexible jusqu'à 10 combinaisons année+colonne pour OPEX 
 ### Contrôles
 
 - **Type de poste** : Bascule OPEX ou CAPEX
+- **Mesure** : **Montant** ou **ETP** (voir [Choisir le montant ou les ETP](#choisir-le-montant-ou-les-etp))
 - **Sélections** : Chaque sélection a un sélecteur d'année et un sélecteur de colonne avec les colonnes budgétaires affichées. Le rapport démarre avec deux sélections : la colonne par défaut de l'année en cours et celle de l'année suivante. **Ajouter** ajoute la colonne par défaut de l'année en cours, et l'icône de suppression retire une sélection. Maximum 10 sélections ; minimum 1.
 - **Regroupement par année** (case à cocher) : Lorsque activé et qu'au moins deux années partagent une métrique, bascule vers un graphique en courbe groupé avec une série par métrique et les années sur l'axe X. Lorsque désactivé, affiche un graphique en courbe plat avec chaque sélection comme point de données.
-- **Centre de coûts**, **Run ou build** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
+- **Centre de coûts**, **Run ou build**, **Postes** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
 
 ### Ce que vous verrez
 
@@ -339,11 +362,12 @@ Consultez les données budgétaires OPEX ou CAPEX regroupées par compte de cons
 ### Contrôles
 
 - **Type de poste** : OPEX ou CAPEX (voir [Choisir OPEX ou CAPEX](#choisir-opex-ou-capex))
+- **Mesure** : **Montant** ou **ETP** (voir [Choisir le montant ou les ETP](#choisir-le-montant-ou-les-etp))
 - **Année de début** et **Année de fin** : Année précédente, en cours ou suivante
 - **Métrique** : Toute colonne budgétaire affichée. Démarre sur la colonne par défaut
 - **Type de graphique** : Graphique en secteurs ou en barres horizontales (disponible uniquement pour une seule année sélectionnée)
 - **Exclure des comptes** : Autocomplétion multi-sélection pour exclure des comptes spécifiques. Propose tous les comptes utilisés par les lignes du rapport, par nom et numéro, que vous puissiez ou non ouvrir le plan comptable
-- **Centre de coûts**, **Run ou build** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
+- **Centre de coûts**, **Run ou build**, **Postes** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
 
 ### Ce que vous verrez
 
@@ -369,12 +393,13 @@ Consultez les données budgétaires OPEX ou CAPEX regroupées par les valeurs d'
 ### Contrôles
 
 - **Type de poste** : OPEX ou CAPEX (voir [Choisir OPEX ou CAPEX](#choisir-opex-ou-capex))
+- **Mesure** : **Montant** ou **ETP** (voir [Choisir le montant ou les ETP](#choisir-le-montant-ou-les-etp))
 - **Dimension** : la dimension sur laquelle le rapport regroupe. Elle s'affiche lorsque vous avez au moins deux dimensions activées, et le rapport s'ouvre sur la dimension par défaut. L'adresse de la page conserve votre choix : un lien enregistré en favori ou partagé s'ouvre sur la même dimension
 - **Année de début** et **Année de fin** : Année précédente, en cours ou suivante
 - **Métrique** : Toute colonne budgétaire affichée. Démarre sur la colonne par défaut
 - **Type de graphique** : Graphique en secteurs ou en barres horizontales (année unique uniquement)
 - **Exclure des valeurs** : Autocomplétion multi-sélection pour exclure des valeurs précises de la dimension choisie. Changer le type de poste ou la dimension la vide
-- **Centre de coûts**, **Run ou build** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
+- **Centre de coûts**, **Run ou build**, **Postes** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
 
 Le sous-titre, le titre du graphique et la première colonne du tableau nomment la dimension choisie, par exemple « OPEX par Nature ».
 
@@ -403,7 +428,7 @@ Chaque rapport partage ces capacités via la barre d'outils partagée :
 - **Exporter le graphique en PNG** (icône image) : Télécharge le graphique en tant qu'image PNG
 - **Imprimer / Enregistrer en PDF** (icône imprimante) : Ouvre la boîte de dialogue d'impression du navigateur. Vous pouvez aussi ajouter `?print=1` à n'importe quelle URL de rapport pour déclencher l'impression automatiquement au chargement.
 
-Les noms des fichiers exportés contiennent le nom de la colonne, par exemple `top10-opex-2026-budget-bar.png`.
+Les noms des fichiers exportés contiennent le nom de la colonne, par exemple `top10-opex-2026-budget-bar.png`. Avec la mesure ETP, ils se terminent par `-fte`.
 
 ### Métriques disponibles
 

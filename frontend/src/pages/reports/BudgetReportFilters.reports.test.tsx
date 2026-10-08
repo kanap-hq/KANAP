@@ -143,6 +143,9 @@ const ROWS = [
 // Only a line outside every filter below has a Y+1 amount: the Delta year pickers must still offer it.
 ROWS[4].versions.yPlus1 = slot(Y + 1, 1);
 
+/** The lines the server holds; the FTE tests swap in lines that declare FTE. */
+let serverRows: typeof ROWS = ROWS;
+
 function renderReport(element: React.ReactElement, path: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -157,6 +160,7 @@ function renderReport(element: React.ReactElement, path: string) {
 const gridRows = (index = 0) => JSON.parse(screen.getAllByTestId('grid')[index].textContent || '[]') as Array<Record<string, any>>;
 
 beforeEach(() => {
+  serverRows = ROWS;
   setBudgetColumns();
   tree.nodes = NODES;
   tree.ready = true;
@@ -164,13 +168,13 @@ beforeEach(() => {
   chart.options = null;
   get.mockReset();
   get.mockImplementation(async (url: string, config?: { params?: Record<string, string> }) => {
-    if (url.endsWith('/summary/filter-values')) return { data: fakeFilterValues(ROWS, String(config?.params?.fields ?? '').split(',')) };
+    if (url.endsWith('/summary/filter-values')) return { data: fakeFilterValues(serverRows, String(config?.params?.fields ?? '').split(',')) };
     return { data: { items: [], total: 0 } };
   });
   // The server's aggregates, computed from the same lines.
   post.mockReset();
   post.mockImplementation(async (url: string, body: any) => {
-    if (url.endsWith('/summary/aggregate')) return { data: fakeAggregate(ROWS, body) };
+    if (url.endsWith('/summary/aggregate')) return { data: fakeAggregate(serverRows, body) };
     throw new Error(`unexpected POST ${url}`);
   });
 });
@@ -439,5 +443,173 @@ describe('A report while new numbers load', () => {
     expect(busy()).toBe('true');
     expect(screen.getByText('ops:reports.shared.loadingData')).toBeInTheDocument();
     expect(post.mock.calls.some(([, body]) => body.spec.groupBy[0] === 'id' && body.spec.measures.length === 1)).toBe(false);
+  });
+});
+
+/** The same FTE in every budget column, so the tests hold whatever column a report starts on. */
+const everyColumn = <T,>(value: T) => Object.fromEntries(AMOUNT_COLUMNS.map((column) => [column.key, value]));
+
+/**
+ * The lines with declared FTE: a (2 in Y-1, 2.5 in Y), b (1.25 in Y, its amount spread since, so no
+ * longer following its lines) and d (0.5 in Y). c and e declare none, and nobody declares any in Y+1.
+ */
+function fteRows() {
+  const rows = ROWS.map((row) => ({ ...row, versions: { ...row.versions } as Record<string, any> }));
+  const declare = (id: string, slotKey: string, value: number, method?: string) => {
+    const row = rows.find((candidate) => candidate.id === id)!;
+    row.versions[slotKey] = { ...row.versions[slotKey], fte: everyColumn(value), ...(method ? { method: everyColumn(method) } : {}) };
+  };
+  declare('a', 'yMinus1', 2);
+  declare('a', 'y', 2.5);
+  declare('b', 'y', 1.25, 'spread');
+  declare('d', 'y', 0.5);
+  return rows as typeof ROWS;
+}
+
+describe('Reports with the FTE measure', () => {
+  const note = () => screen.queryByRole('note')?.textContent ?? null;
+  const format = (column: number, value: unknown) => (grid.columns[column] as any).valueFormatter({ value });
+
+  beforeEach(() => {
+    serverRows = fteRows();
+  });
+
+  it('Top items: ranks the declared FTE, shares of the FTE total, and names the lines whose amount left their lines', async () => {
+    renderReport(<TopOpexReport />, '/report?measure=fte');
+    await waitFor(() => expect(gridRows().map((row) => [row.name, row.value])).toEqual([
+      ['Line a', 2.5],
+      ['Line b', 1.25],
+      ['Line d', 0.5],
+    ]));
+    expect(gridRows()[0].pct_of_total).toBe(Math.round((2.5 / 4.25) * 100));
+    expect(chart.options.footnote.text).toMatch(/: 4\.25$/);
+    expect(grid.columns[1].headerName).toContain('reports.measure.columnFte');
+    expect(format(1, 1.5)).toBe('1.50');
+    expect(format(1, null)).toBe('');
+    expect(chart.options.title.text).toContain('reports.measure.columnFte');
+    // b's FTE is declared, but its amount was spread since.
+    await waitFor(() => expect(note()).toContain('reports.measure.detachedSingle'));
+    expect(note()).toContain('"count":1');
+    expect(note()).toContain('"fte":"1.25"');
+  });
+
+  it('Top items: the measure select switches amounts to FTE', async () => {
+    renderReport(<TopOpexReport />, '/report');
+    await waitFor(() => expect(gridRows()).toHaveLength(5));
+    expect(note()).toBeNull();
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'reports.measure.label' }));
+    fireEvent.click(within(await screen.findByRole('listbox')).getByRole('option', { name: 'reports.measure.fte' }));
+    await waitFor(() => expect(gridRows().map((row) => row.value)).toEqual([2.5, 1.25, 0.5]));
+    expect(post.mock.calls.some(([, body]) => body.spec.measures.some((m: any) => m.field.startsWith('fte_')))).toBe(true);
+  });
+
+  it('Top increase / decrease: FTE changes, a side nobody declares blank, the notice naming the column concerned', async () => {
+    renderReport(<OpexDeltaReport />, '/report?measure=fte');
+    // Y-1 to Y: b goes from nothing declared to 1.25, a from 2 to 2.5, d from nothing to 0.5.
+    await waitFor(() => expect(gridRows().map((row) => [row.name, row.previous, row.current, row.delta])).toEqual([
+      ['Line b', null, 1.25, 1.25],
+      ['Line a', 2, 2.5, 0.5],
+      ['Line d', null, 0.5, 0.5],
+    ]));
+    expect(grid.columns[1].headerName).toContain('reports.measure.columnFte');
+    expect(format(3, 0.5)).toBe('0.50');
+    await waitFor(() => expect(note()).toContain('reports.measure.detachedList'));
+    // Only Y is concerned: nobody's Y-1 FTE left its lines.
+    expect(note()).toContain(` ${Y}`);
+    expect(note()).not.toContain(String(Y - 1));
+  });
+
+  it.each([
+    ['OPEX trend', ComparisonReport],
+    ['CAPEX trend', CapexBudgetTrendReport],
+  ])('%s: FTE per year, a year nobody declares empty, no point for it', async (_name, Report) => {
+    renderReport(<Report />, '/report?measure=fte');
+    await waitFor(() => expect(gridRows()[0]?.[String(Y)]).toBe(4.25));
+    expect(gridRows()[0][String(Y - 1)]).toBe(2);
+    expect(gridRows()[0][String(Y + 1)]).toBeNull();
+    expect(gridRows()[0].metric).toContain('reports.measure.columnFte');
+    expect(chart.options.title.text).toContain('reports.measure.chartTitleFte');
+    const point = chart.options.data.find((datum: any) => datum.year === Y + 1);
+    expect(Object.entries(point).filter(([key]) => key !== 'year').every(([, value]) => value == null)).toBe(true);
+    expect(format(1, 4.25)).toBe('4.25');
+    await waitFor(() => expect(note()).toContain('reports.measure.detachedList'));
+  });
+
+  it('Top items: the top\'s sum is blank when no shown line declares FTE', async () => {
+    // Only c says neither run nor build, and it declares no FTE.
+    renderReport(<TopOpexReport />, '/report?measure=fte&runBuild=none');
+    await waitFor(() => expect(post.mock.calls.some(([, body]) => body.query.filters?.run_build && body.spec.measures[0]?.field?.startsWith('fte_'))).toBe(true));
+    await waitFor(() => expect(screen.getByTestId('layout').getAttribute('data-busy')).toBe('false'));
+    expect(gridRows()).toEqual([]);
+    const label = screen.getByText('reports.topOpex.topTotal {"count":0}');
+    expect(label.nextElementSibling?.textContent).toBe('');
+    expect(chart.options.footnote.text).toMatch(/: $/);
+  });
+
+  it('Top increase / decrease: the source sum is blank when no shown line declares FTE in the source column', async () => {
+    // build keeps b (nothing in Y-1, 1.25 in Y) and e (nothing declared).
+    renderReport(<OpexDeltaReport />, '/report?measure=fte&runBuild=build');
+    await waitFor(() => expect(gridRows().map((row) => [row.name, row.previous, row.delta])).toEqual([['Line b', null, 1.25]]));
+    expect(screen.getByText('reports.opexDelta.sourceDestinationTotals {"source":"","destination":"1.25"}')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['Consolidation', ConsolidationReport],
+    ['Analytics', AnalyticsCategoryReport],
+  ])('%s: over several years, the line tooltip reads FTE and names it; amounts keep the chart tooltip', async (_name, Report) => {
+    const view = renderReport(<Report />, '/report?measure=fte');
+    await waitFor(() => expect(gridRows().length).toBeGreaterThan(0));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'reports.filters.endYear' }));
+    fireEvent.click(within(await screen.findByRole('listbox')).getByRole('option', { name: String(Y + 1) }));
+    await waitFor(() => expect(chart.options.series?.length).toBeGreaterThan(0));
+    const series = chart.options.series[0];
+    const tip = series.tooltip.renderer({ datum: { year: Y, [series.yKey]: 2.5 }, yKey: series.yKey });
+    expect(tip.title).toBe(series.yName);
+    expect(tip.data).toEqual([{ label: expect.stringContaining('reports.measure.columnFte'), value: '2.50' }]);
+    expect(tip.data[0].label).toContain(`(${Y})`);
+    view.unmount();
+
+    serverRows = ROWS;
+    renderReport(<Report />, '/report');
+    await waitFor(() => expect(gridRows().length).toBeGreaterThan(0));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'reports.filters.endYear' }));
+    fireEvent.click(within(await screen.findByRole('listbox')).getByRole('option', { name: String(Y + 1) }));
+    await waitFor(() => expect(chart.options.series?.length).toBeGreaterThan(0));
+    expect(chart.options.series[0].tooltip).toBeUndefined();
+  });
+
+  it('Budget column comparison: FTE per selection, a selection nobody declares empty', async () => {
+    renderReport(<BudgetColumnsCompareReport />, '/report?measure=fte');
+    await waitFor(() => expect(gridRows().map((row) => row.total)).toEqual([4.25, null]));
+    expect(grid.columns[3].headerName).toBe('reports.measure.totalFte');
+    expect(format(3, null)).toBe('');
+  });
+
+  it('Analytics: only the values that declare FTE, largest first', async () => {
+    renderReport(<AnalyticsCategoryReport />, '/report?measure=fte');
+    await waitFor(() => expect(gridRows().map((row) => [row.group, row[String(Y)]])).toEqual([
+      ['Category a', 2.5],
+      ['Category b', 1.25],
+      ['Category d', 0.5],
+    ]));
+    expect(chart.options.title.text).toContain('reports.measure.chartTitleFte');
+    expect(chart.options.data.map((datum: any) => datum.value)).toEqual([2.5, 1.25, 0.5]);
+  });
+
+  it('Consolidation: the FTE total of the lines without a consolidation line', async () => {
+    renderReport(<ConsolidationReport />, '/report?measure=fte');
+    await waitFor(() => expect(gridRows().map((row) => row[String(Y)])).toEqual([4.25]));
+    await waitFor(() => expect(note()).toContain('reports.measure.detachedSingle'));
+  });
+
+  it('Items with FTE: an amount report keeps the lines that declare FTE', async () => {
+    renderReport(<TopOpexReport />, '/report?fte=with');
+    await waitFor(() => expect(gridRows().map((row) => [row.name, row.value])).toEqual([
+      ['Line d', 1000],
+      ['Line a', 100],
+      ['Line b', 20],
+    ]));
+    expect(screen.getByRole('combobox', { name: 'reports.filters.fteItems' }).textContent).toBe('reports.filters.fteItemsWith');
+    expect(note()).toBeNull();
   });
 });

@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { NO_ANALYTICS_VALUE, analyticsRequest, readAnalytics } from './reportAggregates';
 import { useBudgetAggregate } from './useBudgetAggregate';
 import { useAxisValueOptions } from './useReportOptions';
+import { ReportFteNotice, ReportMeasureSelect, useMeasureText, useReportMeasure } from './reportMeasure';
 
 /** `?axis=<dimension id>`: the dimension the report groups on. */
 const AXIS_PARAM = 'axis';
@@ -42,13 +43,6 @@ function useReportAxis(axes: AnalyticsAxes): [AnalyticsAxis | null, (id: string)
   return [axis, setAxis];
 }
 
-function formatNumber(v: any) {
-  const n = Number(v ?? 0);
-  if (!isFinite(n)) return '';
-  const i = Math.round(n);
-  return i.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-}
-
 export default function AnalyticsCategoryReport() {
   const { t } = useTranslation(["ops"]);
   const budgetColumns = useBudgetColumns();
@@ -67,6 +61,11 @@ export default function AnalyticsCategoryReport() {
 
   const [scope, setScope] = useReportScope();
   const scopeLabel = t(`operations.scope.${scope}`);
+  const [measure, setMeasure] = useReportMeasure();
+  const measureText = useMeasureText(measure);
+  const formatNumber = measureText.format;
+  // FTE: a year nobody declares stays blank, never a 0 (an empty cell, no slice, no point).
+  const cell = (value: number | null | undefined) => (measureText.fte ? value ?? null : value || 0);
   const reportFilters = useBudgetReportFilters({ scope });
   const analyticsAxes = reportFilters.analyticsAxes;
   const [axis, setAxis] = useReportAxis(analyticsAxes);
@@ -97,18 +96,20 @@ export default function AnalyticsCategoryReport() {
     metric,
     excludedIds: excludedCategories,
     filters: reportFilters.queryFilters,
-  })), [reportFilters.queryFilters, analyticsAxes.ready, axisId, years, metric, excludedCategories]);
+    measure,
+  })), [reportFilters.queryFilters, analyticsAxes.ready, axisId, years, metric, excludedCategories, measure]);
   const report = useBudgetAggregate(scope, request, { keepPrevious: true });
   // Loading, waiting for the filter bar or the dimensions, or the last answer kept while the new one loads.
   const busy = reportFilters.queryFilters == null || !analyticsAxes.ready || report.isLoading || report.isPlaceholderData;
   const labels = useMemo(() => ({ unassigned: t('reports.analyticsCategory.unassigned'), unnamed: t('reports.analyticsCategory.unnamed') }), [t]);
-  const { groups, totals } = useMemo(() => readAnalytics(years, report.data, labels), [years, report.data, labels]);
+  // FTE: only the values that declare FTE in one of the years.
+  const { groups, totals } = useMemo(() => readAnalytics(years, report.data, labels, measure), [years, report.data, labels, measure]);
 
   const tableRows = useMemo(() => groups.map((group) => {
     const row: any = { group: group.label };
-    for (const yr of years) row[yr] = group.values[yr] || 0;
+    for (const yr of years) row[yr] = cell(group.values[yr]);
     return row;
-  }), [groups, years]);
+  }), [groups, years, measureText]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const columns = useMemo<ColDef[]>(() => {
     const cols: ColDef[] = [
@@ -118,15 +119,16 @@ export default function AnalyticsCategoryReport() {
       cols.push({ field: String(yr), headerName: String(yr), width: 140, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) });
     }
     return cols;
-  }, [years, dimensionLabel]);
+  }, [years, dimensionLabel, formatNumber]);
 
-  const metricLabel = budgetColumns.label(metric);
+  // The column as the measure reads it: `Budget`, or `Budget FTE`.
+  const metricLabel = measureText.column(budgetColumns.label(metric));
 
   const totalsRow = useMemo(() => {
     const row: any = { group: t('reports.analyticsCategory.totalMetric', { metric: metricLabel }) };
-    for (const yr of years) row[yr] = totals[yr] ?? 0;
+    for (const yr of years) row[yr] = measureText.fte ? totals[yr] ?? null : totals[yr] ?? 0;
     return row;
-  }, [totals, years, metricLabel, t]);
+  }, [totals, years, metricLabel, measureText, t]);
 
   const gridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);
@@ -136,12 +138,15 @@ export default function AnalyticsCategoryReport() {
   const chartOptions = useMemo(() => {
     if (singleYear) {
       const year = years[0];
-      const chartData = groups.map((group) => ({ label: group.label, value: group.values[year] || 0 }));
+      // FTE: a value that declares none that year gets no slice or bar.
+      const chartData = groups
+        .map((group) => ({ label: group.label, value: cell(group.values[year]) }))
+        .filter((datum) => datum.value != null);
       const total = chartData.reduce((acc, datum) => acc + (Number(datum.value) || 0), 0);
       const base = {
-        title: { text: t('reports.analyticsCategory.chartTitleSingle', { type: scopeLabel, dimension: dimensionInSentence, year }) },
+        title: { text: measureText.chartTitle(t('reports.analyticsCategory.chartTitleSingle', { type: scopeLabel, dimension: dimensionInSentence, year })) },
         subtitle: { text: metricsCaption || t('reports.analyticsCategory.shareSubtitle') },
-        footnote: { text: t('reports.analyticsCategory.totalLabel', { metric: metricsCaption, value: formatNumber(total) }) },
+        footnote: { text: t('reports.analyticsCategory.totalLabel', { metric: metricsCaption, value: formatNumber(measureText.fte && chartData.length === 0 ? null : total) }) },
         data: chartData,
         legend: { enabled: false },
         animation: { enabled: true, duration: 800 },
@@ -154,6 +159,7 @@ export default function AnalyticsCategoryReport() {
             {
               type: 'number',
               position: 'bottom',
+              ...(measureText.axisTitle ? { title: measureText.axisTitle } : {}),
               label: {
                 formatter: ({ value }: { value: number }) => formatNumber(value),
               },
@@ -212,22 +218,36 @@ export default function AnalyticsCategoryReport() {
     }
     const chartData = years.map((yr) => {
       const row: any = { year: yr };
-      for (const group of groups) row[group.key] = group.values[yr] || 0;
+      for (const group of groups) row[group.key] = cell(group.values[yr]);
       return row;
     });
-    const series = groups.map((group) => ({ type: 'line', xKey: 'year', yKey: group.key, yName: group.label }));
+    const series = groups.map((group) => ({
+      type: 'line',
+      xKey: 'year',
+      yKey: group.key,
+      yName: group.label,
+      // FTE: the tooltip names the measure and reads FTE; amounts keep the chart's own tooltip.
+      ...(measureText.fte ? {
+        tooltip: {
+          renderer: ({ datum, yKey }: any) => ({
+            title: escapeTooltipText(group.label),
+            data: [{ label: `${metricLabel} (${datum.year})`, value: formatNumber(datum[yKey]) }],
+          }),
+        },
+      } : {}),
+    }));
     return {
-      title: { text: t('reports.analyticsCategory.chartTitleRange', { type: scopeLabel, dimension: dimensionInSentence, start: years[0], end: years[years.length - 1] }) },
+      title: { text: measureText.chartTitle(t('reports.analyticsCategory.chartTitleRange', { type: scopeLabel, dimension: dimensionInSentence, start: years[0], end: years[years.length - 1] })) },
       subtitle: { text: metricsCaption || t('reports.analyticsCategory.annualSubtitle') },
       data: chartData,
       series,
       axes: [
         { type: 'category', position: 'bottom' },
-        { type: 'number', position: 'left' },
+        { type: 'number', position: 'left', ...(measureText.axisTitle ? { title: measureText.axisTitle, label: { formatter: ({ value }: { value: number }) => formatNumber(value) } } : {}) },
       ],
       legend: { enabled: true },
     };
-  }, [groups, singleYear, years, metricsCaption, chartType, metricLabel, scopeLabel, dimensionInSentence, t]);
+  }, [groups, singleYear, years, metricsCaption, chartType, metricLabel, scopeLabel, dimensionInSentence, measureText, formatNumber, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <ReportLayout
@@ -237,6 +257,7 @@ export default function AnalyticsCategoryReport() {
       filters={(
         <>
           <ItemScopeTabs value={scope} onChange={setScope} />
+          <ReportMeasureSelect value={measure} onChange={setMeasure} />
           {axis && analyticsAxes.enabled.length >= 2 && (
             <ReportFilter label={t('reports.filters.dimension')} width={200}>
               <TextField
@@ -333,8 +354,8 @@ export default function AnalyticsCategoryReport() {
           </ReportFilter>
         </>
       )}
-      onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.()}
-      onExportChartPng={() => chartRef.current?.download(`analytics-${scope}-${years[0]}-${years[years.length - 1]}`)}
+      onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.(measureText.csvParams(`analytics-${scope}-${years[0]}-${years[years.length - 1]}`))}
+      onExportChartPng={() => chartRef.current?.download(measureText.fileName(`analytics-${scope}-${years[0]}-${years[years.length - 1]}`))}
     >
       <Stack direction="column" spacing={2} alignItems="stretch">
         <Box sx={{ minWidth: 0 }}>
@@ -350,6 +371,7 @@ export default function AnalyticsCategoryReport() {
             onGridReady={(e) => { gridApiRef.current = e.api; }}
             pinnedBottomRowData={[totalsRow]}
           />
+          <ReportFteNotice scope={scope} request={request} result={report.data} columnLabel={(column) => `${budgetColumns.label(column.metric)} ${column.year}`} />
         </Paper>
       </Stack>
       <ReportDataStatus loading={busy} error={report.isError} onRetry={() => void report.refetch()} />

@@ -11,6 +11,7 @@ import {
   FIXED_SORT_ORDERS,
   PROJECT_LIST_FIELDS,
   resolveAmountField,
+  resolveFteDetachedField,
   resolveFteField,
   resolveHasVersionField,
   resolveLocalAmountField,
@@ -190,7 +191,13 @@ export class BudgetListConfig implements ListConfig {
       ) am ON am.item_id = i.id`;
   }
 
-  private fte(stmt: SqlStatement, year: number, measure: string): FieldSql {
+  /**
+   * The yearly FTE of the round of `year` and `measure` (null without a
+   * version or lines); with `detached`, only when the round's method is not
+   * `computed` (the amount no longer follows the lines). Both read the one
+   * round join of that year and column.
+   */
+  private fte(stmt: SqlStatement, year: number, measure: string, detached = false): FieldSql {
     const v = this.version(stmt, year);
     const key = `ri${year}_${measure}`;
     this.join(
@@ -199,7 +206,27 @@ export class BudgetListConfig implements ListConfig {
       `LEFT JOIN ${this.scope.roundTable} ${key} ON ${key}.tenant_id = ${stmt.tenant} AND ${key}.version_id = ${v}.id AND ${key}.measure = '${measure}' AND ${key}.fte IS NOT NULL`,
       [v],
     );
-    return { kind: 'fte', sql: `(CASE WHEN ${v}.id IS NULL THEN NULL ELSE ${key}.fte END)`, joins: [key] };
+    const sql = detached
+      ? `(CASE WHEN ${v}.id IS NULL THEN NULL WHEN ${key}.method <> 'computed' THEN ${key}.fte END)`
+      : `(CASE WHEN ${v}.id IS NULL THEN NULL ELSE ${key}.fte END)`;
+    return { kind: 'fte', sql, joins: [key] };
+  }
+
+  /**
+   * `has_fte`: 'yes' when the line has a round with an FTE in any version
+   * (any year, any column), else null. Year-independent on purpose: a line
+   * that declares staff in one year is a staffing line.
+   */
+  private hasFte(stmt: SqlStatement): FieldSql {
+    const s = this.scope;
+    const t = stmt.tenant;
+    return {
+      kind: 'text',
+      sql: `(CASE WHEN EXISTS (SELECT 1 FROM ${s.versionTable} hfv
+          JOIN ${s.roundTable} hfr ON hfr.tenant_id = ${t} AND hfr.version_id = hfv.id AND hfr.fte IS NOT NULL
+          WHERE hfv.tenant_id = ${t} AND hfv.${s.versionItemFk} = i.id) THEN 'yes' END)`,
+      joins: [],
+    };
   }
 
   /** The allocation label of the version of `year` ('' without one): its own method, else the year's rule. */
@@ -376,6 +403,12 @@ export class BudgetListConfig implements ListConfig {
       const year = amount.year ?? Y + FIXED_SLOTS.find((slot) => slot.key === amount.slot)!.offset;
       return this.amountCents(stmt, year, amount.column.measure);
     }
+    // The longer prefix first: `fte_detached_…` is not an `fte_…` key.
+    const detached = resolveFteDetachedField(key);
+    if (detached) {
+      const year = detached.year ?? Y + FIXED_SLOTS.find((slot) => slot.key === detached.slot)!.offset;
+      return this.fte(stmt, year, detached.column.measure, true);
+    }
     const fte = resolveFteField(key);
     if (fte) {
       const year = fte.year ?? Y + FIXED_SLOTS.find((slot) => slot.key === fte.slot)!.offset;
@@ -517,6 +550,8 @@ export class BudgetListConfig implements ListConfig {
         return this.allocationLabel(stmt, Y);
       case 'next_year_allocation_method_label':
         return this.allocationLabel(stmt, Y + 1);
+      case 'has_fte':
+        return this.hasFte(stmt);
       case 'spread_mode_for_y': {
         const v = this.version(stmt, Y);
         return { kind: 'text', sql: `(CASE WHEN ${v}.id IS NULL THEN NULL WHEN ${v}.input_grain::text = 'annual' THEN 'flat' ELSE 'manual' END)`, joins: [v] };

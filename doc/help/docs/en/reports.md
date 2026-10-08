@@ -38,6 +38,22 @@ The landing page shows a card for each available report with a short description
 
 The two chargeback reports cover OPEX only.
 
+### Choosing amount or FTE
+
+The seven budget reports have a **Measure** select. It sits right after the **OPEX** / **CAPEX** switch, or first when the report has no switch. It offers **Amount** (the default) and **FTE**. The two chargeback reports have no measure.
+
+With **FTE**, a report sums people instead of money:
+
+- Each budget column shows the full-year average FTE that its quantity and price lines declare. Lines in people or days add FTE. Lines in pieces count 0. A column without lines declares no FTE and is left out: only declared FTE count. See [Quantity and price](opex.md#quantity-and-price) and [FTE](opex.md#fte).
+- A year or column where no item declares FTE shows an empty cell, with no bar or point in the chart.
+- **Top items**, **Consolidation accounts** and **Analytics dimensions** leave out the items and groups that declare no FTE. Shares are shares of the FTE total.
+- **Top increase / decrease** compares the FTE of the two columns item by item. An item that declares FTE on one side only counts 0 on the other.
+- Values show with two decimals. Column names and chart titles carry FTE.
+- The page address keeps the measure (`?measure=fte`), so a bookmarked or shared link opens on the same measure.
+- Exported PNG and CSV file names end with `-fte`.
+
+With FTE, a line under the table warns when some items declare FTE in a column whose amount no longer follows its lines. This happens when the amount was spread, its months were edited by hand, or the column was copied from a column whose lines were only a reference. The line says how many items and how many FTE are concerned, per column and year. With several columns it reads, for example, "Amount no longer follows the lines for: Budget 2026 (2 items, 1.50 FTE), Budget 2027 (1 item, 0.50 FTE)." With one column it reads "2 items declare 1.50 FTE while their amount no longer follows their lines." Their FTE still counts. The line tells you that the column's amount is not the cost of its lines.
+
 ### Budget columns in reports
 
 Every column or metric picker offers the budget columns your organisation shows, under their names, in the fixed column order. Forecast is offered when it is shown. Hidden columns are not offered. Each report starts on the default column, as described below. Budget administrators set the names, the shown columns and the default column in [Budget columns](budget-operations.md#budget-columns).
@@ -48,12 +64,14 @@ The seven budget reports (**Top items**, **Top increase / decrease**, **Budget t
 
 - **Cost center**: pick a cost center or a group. A group includes everything below it, disabled cost centers included, since their lines still belong to the group. **All cost centers** removes the filter. See [Cost centers](cost-centers.md).
 - **Run or build**: **All**, **Run**, **Build**, or **Not set** for the lines that have neither.
+- **Items**: **All items** or **Items with FTE**. **Items with FTE** keeps the items that declare FTE in at least one budget column of any year. It works with both measures. An Amount report narrowed to **Items with FTE** compares, for example, the Budget and Actual amounts of staffing items. The Actual amount covers the whole item.
 - **Analytics dimensions**: one filter per dimension, named after it. The default dimension shows as **Analytics dimension** until it is renamed. Pick a value, **No value** for the lines without a value on that dimension, or **All** to remove the filter. Each filter offers the values the report's lines hold. See [Analytics dimensions](analytics.md).
 
 When the filters appear:
 
 - **Cost center** shows once your workspace has at least one cost center or group.
 - **Run or build** shows once a line of the report is marked **Run** or **Build**, or when the page address already carries the filter.
+- **Items** shows once an item of the report declares FTE, or when the page address already carries the filter.
 - A dimension's filter shows once a line of the report has a value on that dimension, or when the page address already carries it. Disabled dimensions have no filter.
 - With none of these, the filter bar shows only the report's own controls.
 
@@ -62,7 +80,7 @@ How they work:
 - The filters apply before any total. Amounts, shares, charts and totals cover the kept lines only.
 - Filters on several dimensions combine: a line must match each of them.
 - The lists of items, accounts and values to exclude keep offering every line.
-- The page address keeps the filters (`?costCenter=`, `?runBuild=` and `?analytics=`), so a bookmarked or shared link opens the report already narrowed. A link that names a dimension since disabled or deleted ignores that part.
+- The page address keeps the filters (`?costCenter=`, `?runBuild=`, `?fte=with` and `?analytics=`), so a bookmarked or shared link opens the report already narrowed. A link that names a dimension since disabled or deleted ignores that part.
 - If the link names a cost center that was deleted since, or the cost centers could not be loaded, the report shows no lines and one line of text: "This cost center no longer exists or could not be loaded." Click **Clear filter** to see the report again.
 - If the link carries an analytics filter and the dimensions could not be loaded, the report shows no lines and one line of text: "The analytics filter could not be applied. Clear it or try again." Click **Clear filter** to remove the analytics filters and see the report again.
 - The two chargeback reports have no such filters and are not affected.
@@ -185,13 +203,14 @@ Identify your largest OPEX or CAPEX items for a given year.
 ### Controls
 
 - **Item type**: OPEX or CAPEX (see [Choosing OPEX or CAPEX](#choosing-opex-or-capex))
+- **Measure**: **Amount** or **FTE** (see [Choosing amount or FTE](#choosing-amount-or-fte))
 - **Year**: Previous, current, or next year
 - **Metric**: Any shown budget column. Starts on the default column
 - **Top count**: How many items to show (default: 10, minimum: 1)
 - **Chart type**: Pie chart or horizontal bar chart
 - **Exclude items**: Multi-select autocomplete to exclude specific items
 - **Exclude accounts**: Multi-select autocomplete to exclude specific accounts
-- **Cost center**, **Run or build** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
+- **Cost center**, **Run or build**, **Items** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
 
 ### What you'll see
 
@@ -223,6 +242,7 @@ Identify the biggest OPEX or CAPEX changes between two budget columns (any combi
 ### Controls
 
 - **Item type**: OPEX or CAPEX (see [Choosing OPEX or CAPEX](#choosing-opex-or-capex))
+- **Measure**: **Amount** or **FTE** (see [Choosing amount or FTE](#choosing-amount-or-fte))
 - **Source year** and **Source metric**: The baseline column to compare from
 - **Destination year** and **Destination metric**: The target column to compare to
 - **Top count**: How many items to show per direction (default: 10)
@@ -230,7 +250,7 @@ Identify the biggest OPEX or CAPEX changes between two budget columns (any combi
 - **Exclude items**: Multi-select autocomplete to exclude specific items
 - **Exclude accounts**: Multi-select autocomplete to exclude specific accounts
 - **Direction**: **Increases**, **Decreases**, or **Both** tabs
-- **Cost center**, **Run or build** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
+- **Cost center**, **Run or build**, **Items** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
 
 The year pickers list the years that hold data. The metric pickers offer the shown budget columns. The report starts on the default column of last year as the source and the default column of the current year as the destination.
 
@@ -266,10 +286,11 @@ Compare OPEX metrics across multiple years on a single line chart.
 
 ### Controls
 
+- **Measure**: **Amount** or **FTE** (see [Choosing amount or FTE](#choosing-amount-or-fte))
 - **Start year**: Beginning of the range (current year minus 2 through plus 2)
 - **End year**: End of the range
 - **Metrics**: Multi-select from the shown budget columns. The report starts on the default column and the last shown column (Budget and Expected landing with the standard settings). If you clear every metric, the default column is used
-- **Cost center**, **Run or build** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
+- **Cost center**, **Run or build**, **Items** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
 
 ### What you'll see
 
@@ -291,8 +312,9 @@ Identical layout to the OPEX trend report, but pulls from CAPEX budget data.
 
 ### Controls
 
+- **Measure**: **Amount** or **FTE** (see [Choosing amount or FTE](#choosing-amount-or-fte))
 - **Start year**, **End year**, **Metrics**: Same as the OPEX trend report
-- **Cost center**, **Run or build** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
+- **Cost center**, **Run or build**, **Items** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
 
 ### What you'll see
 
@@ -308,9 +330,10 @@ Flexibly compare up to 10 year+column combinations for either OPEX or CAPEX.
 ### Controls
 
 - **Item type**: OPEX or CAPEX toggle
+- **Measure**: **Amount** or **FTE** (see [Choosing amount or FTE](#choosing-amount-or-fte))
 - **Selections**: Each selection has a year picker and a column picker with the shown budget columns. The report starts with two selections: the default column of the current year and of next year. **Add** adds the default column of the current year, and the delete icon removes a selection. Maximum of 10 selections; minimum of 1.
 - **Year grouping** (checkbox): When enabled and at least two years share a metric, switches to a grouped line chart with one series per metric and years on the X axis. When disabled, shows a flat line chart with each selection as a data point.
-- **Cost center**, **Run or build** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
+- **Cost center**, **Run or build**, **Items** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
 
 ### What you'll see
 
@@ -339,11 +362,12 @@ View OPEX or CAPEX budget data grouped by consolidation account, with chart type
 ### Controls
 
 - **Item type**: OPEX or CAPEX (see [Choosing OPEX or CAPEX](#choosing-opex-or-capex))
+- **Measure**: **Amount** or **FTE** (see [Choosing amount or FTE](#choosing-amount-or-fte))
 - **Start year** and **End year**: Previous, current, or next year
 - **Metric**: Any shown budget column. Starts on the default column
 - **Chart type**: Pie chart or horizontal bar chart (only available when a single year is selected)
 - **Exclude accounts**: Multi-select autocomplete to exclude specific accounts. Offers every account used by the report's lines, by name and number, whether or not you can open the chart of accounts
-- **Cost center**, **Run or build** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
+- **Cost center**, **Run or build**, **Items** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
 
 ### What you'll see
 
@@ -369,12 +393,13 @@ View OPEX or CAPEX budget data grouped by the values of one analytics dimension.
 ### Controls
 
 - **Item type**: OPEX or CAPEX (see [Choosing OPEX or CAPEX](#choosing-opex-or-capex))
+- **Measure**: **Amount** or **FTE** (see [Choosing amount or FTE](#choosing-amount-or-fte))
 - **Dimension**: the dimension the report groups on. It shows when you have two or more enabled dimensions, and the report opens on the default dimension. The page address keeps your choice, so a bookmarked or shared link opens on the same dimension
 - **Start year** and **End year**: Previous, current, or next year
 - **Metric**: Any shown budget column. Starts on the default column
 - **Chart type**: Pie chart or horizontal bar chart (single-year only)
 - **Exclude values**: Multi-select autocomplete to exclude specific values of the chosen dimension. Switching the item type or the dimension clears it
-- **Cost center**, **Run or build** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
+- **Cost center**, **Run or build**, **Items** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
 
 The subtitle, the chart title and the first column of the table name the chosen dimension, for example "OPEX by Nature".
 
@@ -403,7 +428,7 @@ Every report shares these capabilities through the shared toolbar:
 - **Export chart as PNG** (image icon): Downloads the chart as a PNG image
 - **Print / Save as PDF** (print icon): Opens the browser print dialog. You can also append `?print=1` to any report URL to trigger printing automatically on load.
 
-Exported file names carry the column name, for example `top10-opex-2026-budget-bar.png`.
+Exported file names carry the column name, for example `top10-opex-2026-budget-bar.png`. With the FTE measure, they end with `-fte`.
 
 ### Available metrics
 

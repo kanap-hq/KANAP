@@ -999,11 +999,27 @@
       "runBuildRun": "Run",
       "runBuildBuild": "Build",
       "runBuildNone": "Sin definir",
+      "fteItems": "Partidas",
+      "fteItemsAll": "Todas las partidas",
+      "fteItemsWith": "Partidas con ETC",
       "dimension": "Dimensión",
       "analyticsAll": "Todos",
       "analyticsNone": "Sin valor",
       "analyticsMissing": "No se pudo aplicar el filtro analítico. Quítelo o vuelva a intentarlo.",
       "clearAnalytics": "Quitar el filtro"
+    },
+    "measure": {
+      "label": "Medida",
+      "amount": "Importe",
+      "fte": "ETC",
+      "columnFte": "ETC {{column}}",
+      "chartTitleFte": "{{title}} · ETC",
+      "totalFte": "Total ETC",
+      "detachedSingle_one": "{{count}} partida declara {{fte}} ETC, pero su importe ya no sigue sus líneas.",
+      "detachedSingle_other": "{{count}} partidas declaran {{fte}} ETC, pero su importe ya no sigue sus líneas.",
+      "detachedList": "El importe ya no sigue las líneas en: {{list}}.",
+      "detachedEntry_one": "{{column}} ({{count}} partida, {{fte}} ETC)",
+      "detachedEntry_other": "{{column}} ({{count}} partidas, {{fte}} ETC)"
     },
     "columns": {
       "company": "Empresa",

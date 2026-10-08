@@ -11,9 +11,11 @@ import { drawerMenuItemSx } from '../../theme/formSx';
 import { ReportFilter, reportFilterMenuProps, reportFilterSelectSx } from './ReportLayout';
 import {
   axisValuesRequest,
+  ftePresenceRequest,
   NO_ANALYTICS_VALUE,
   NO_LINE,
   readAxisValues,
+  readFtePresence,
   readRunBuildPresence,
   reportFilterModels,
   runBuildPresenceRequest,
@@ -33,6 +35,9 @@ export { NO_ANALYTICS_VALUE };
 
 export const COST_CENTER_PARAM = 'costCenter';
 export const RUN_BUILD_PARAM = 'runBuild';
+/** `?fte=with`: only the lines that declare FTE (in some year and column); absent: every line. */
+export const FTE_ITEMS_PARAM = 'fte';
+const FTE_ITEMS_WITH = 'with';
 /** `?analytics=<dimension id>:<value id or none>,…`, one pair per narrowed dimension. */
 export const ANALYTICS_PARAM = 'analytics';
 /** The pairs of `?analytics=`, in address order; a malformed pair is skipped, a repeated dimension keeps its first. */
@@ -61,6 +66,8 @@ export type BudgetReportFilterOptions = {
   lineCount: number;
   /** A line of the window says run or build. */
   hasRunBuild: boolean;
+  /** A line of the window declares FTE. */
+  hasFte: boolean;
   /** Per enabled dimension, the values the window's lines hold on it, by name. */
   analytics: ReadonlyMap<string, LabelledOption[]>;
   /** The options could not be read: the bar says so, with a retry, instead of hiding its selects. */
@@ -78,6 +85,8 @@ export type BudgetReportFilterState = {
   /** The address names a node the tree failed to load or does not hold: the report shows no line. */
   costCenterMissing: boolean;
   runBuild: RunBuildFilter | null;
+  /** Only the lines that declare FTE (`?fte=with`). */
+  withFte: boolean;
   analyticsAxes: AnalyticsAxes;
   /** The applied picks by enabled dimension, in dimension order: a value id or `none`. */
   analytics: ReadonlyMap<string, string>;
@@ -85,6 +94,7 @@ export type BudgetReportFilterState = {
   analyticsMissing: boolean;
   setCostCenterId: (id: string | null) => void;
   setRunBuild: (value: RunBuildFilter | null) => void;
+  setWithFte: (value: boolean) => void;
   /** A value id, `none`, or null to stop narrowing on that dimension. */
   setAnalyticsValue: (axisId: string, value: string | null) => void;
   /** Drops every dimension pick from the address. */
@@ -106,8 +116,10 @@ const filterNoticeSx = { alignSelf: 'center', fontSize: 13, color: 'kanap.text.s
 const filterNoticeLinkSx = { fontSize: 'inherit', verticalAlign: 'baseline' } as const;
 
 /**
- * Cost center, run/build and analytics values of a budget report, kept in `?costCenter=`, `?runBuild=`
- * and `?analytics=` so a link opens the report already narrowed. A group stands for every node below
+ * Cost center, run/build, items with FTE and analytics values of a budget report, kept in
+ * `?costCenter=`, `?runBuild=`, `?fte=with` and `?analytics=` so a link opens the report already
+ * narrowed. Items with FTE keeps the lines that declare FTE in any year and column, whatever the
+ * report sums (amounts or FTE). A group stands for every node below
  * it, disabled ones included: a line keeps a disabled cost center, and its amounts still belong to the
  * group. A pair naming an unknown or disabled dimension is ignored: the bar has no select to show or
  * clear it. Dimensions that failed to load make every pair unreadable: like a missing cost center, the
@@ -130,6 +142,7 @@ export function useBudgetReportFilters({ scope, years }: { scope: BudgetScope; y
   const rawRunBuild = params.get(RUN_BUILD_PARAM);
   const rawAnalytics = params.get(ANALYTICS_PARAM);
   const runBuild = RUN_BUILD_FILTERS.includes(rawRunBuild as RunBuildFilter) ? (rawRunBuild as RunBuildFilter) : null;
+  const withFte = params.get(FTE_ITEMS_PARAM) === FTE_ITEMS_WITH;
   const costCenterId = rawCostCenter && tree.ready && !tree.isError && tree.byId.has(rawCostCenter) ? rawCostCenter : null;
   const waitingForTree = rawCostCenter != null && !tree.ready;
   // A node deleted since the link was made, or a tree that failed to load: whole-tenant totals under a
@@ -157,6 +170,7 @@ export function useBudgetReportFilters({ scope, years }: { scope: BudgetScope; y
   }, [setParams]);
   const setCostCenterId = useCallback((id: string | null) => setParam(COST_CENTER_PARAM, id), [setParam]);
   const setRunBuild = useCallback((value: RunBuildFilter | null) => setParam(RUN_BUILD_PARAM, value), [setParam]);
+  const setWithFte = useCallback((value: boolean) => setParam(FTE_ITEMS_PARAM, value ? FTE_ITEMS_WITH : null), [setParam]);
   const setAnalyticsValue = useCallback((axisId: string, value: string | null) => {
     setParams((prev) => {
       const next = new URLSearchParams(prev);
@@ -179,13 +193,14 @@ export function useBudgetReportFilters({ scope, years }: { scope: BudgetScope; y
     // Until the tree and the dimensions say what the address means, no total is shown rather than a partial one.
     if (waitingForTree || waitingForAxes) return null;
     if (costCenterMissing || analyticsMissing) return NO_LINE;
-    return reportFilterModels({ costCenterIds: descendants, runBuild, analytics: Array.from(analytics) });
-  }, [waitingForTree, waitingForAxes, costCenterMissing, analyticsMissing, descendants, runBuild, analytics]);
+    return reportFilterModels({ costCenterIds: descendants, runBuild, analytics: Array.from(analytics), withFte });
+  }, [waitingForTree, waitingForAxes, costCenterMissing, analyticsMissing, descendants, runBuild, analytics, withFte]);
 
   // What the pickers offer: every line of the window, picks aside.
   const yearsKey = years?.join(',') ?? '';
   const windowYears = useMemo(() => (yearsKey ? yearsKey.split(',').map(Number) : undefined), [yearsKey]);
   const presence = useBudgetAggregate(scope, useMemo(() => runBuildPresenceRequest(windowYears), [windowYears]));
+  const ftePresence = useBudgetAggregate(scope, useMemo(() => ftePresenceRequest(windowYears), [windowYears]));
   const enabledAxes = analyticsAxes.ready ? analyticsAxes.enabled : [];
   const axisIdsKey = enabledAxes.map((axis) => axis.id).join(',');
   const axisRequests = useMemo(
@@ -200,17 +215,19 @@ export function useBudgetReportFilters({ scope, years }: { scope: BudgetScope; y
     const ids = axisIdsKey ? axisIdsKey.split(',') : [];
     ids.forEach((axisId, i) => byAxis.set(axisId, readAxisValues(axisValues.data?.[i], unnamed, compareNames)));
     return {
-      ready: presence.data != null && (ids.length === 0 || axisValues.data != null),
+      ready: presence.data != null && ftePresence.data != null && (ids.length === 0 || axisValues.data != null),
       lineCount,
       hasRunBuild,
+      hasFte: readFtePresence(ftePresence.data),
       analytics: ids.length ? byAxis : NO_AXIS_VALUES,
-      isError: presence.isError || axisValues.isError,
+      isError: presence.isError || ftePresence.isError || axisValues.isError,
       retry: () => {
         if (presence.isError) void presence.refetch();
+        if (ftePresence.isError) void ftePresence.refetch();
         if (axisValues.isError) axisValues.refetch();
       },
     };
-  }, [presence.data, presence.isError, presence.refetch, axisValues, axisIdsKey, unnamed]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [presence.data, presence.isError, presence.refetch, ftePresence.data, ftePresence.isError, ftePresence.refetch, axisValues, axisIdsKey, unnamed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return useMemo(
     () => ({
@@ -219,19 +236,21 @@ export function useBudgetReportFilters({ scope, years }: { scope: BudgetScope; y
       costCenterId,
       costCenterMissing,
       runBuild,
+      withFte,
       analyticsAxes,
       analytics,
       analyticsMissing,
       setCostCenterId,
       setRunBuild,
+      setWithFte,
       setAnalyticsValue,
       clearAnalytics,
       queryFilters,
       options,
     }),
     [
-      tree, hasCostCenters, costCenterId, costCenterMissing, runBuild, analyticsAxes, analytics, analyticsMissing,
-      setCostCenterId, setRunBuild, setAnalyticsValue, clearAnalytics, queryFilters, options,
+      tree, hasCostCenters, costCenterId, costCenterMissing, runBuild, withFte, analyticsAxes, analytics, analyticsMissing,
+      setCostCenterId, setRunBuild, setWithFte, setAnalyticsValue, clearAnalytics, queryFilters, options,
     ],
   );
 }
@@ -298,6 +317,7 @@ function AnalyticsValueSelect({
 /**
  * The bar's pickers, for a report's filter row. The cost center picker shows once the tenant has a
  * node; the run/build picker once a line of the report says run or build (or the address asks for it);
+ * the items picker (all items, or items with FTE) once a line declares FTE (or the address asks for it);
  * one select per enabled dimension once a line holds a value on it (or the address names it), offering
  * the values the lines hold. A node the tree cannot resolve, or dimension picks that cannot be read, get
  * a one-line notice with a way out. With none of these, nothing renders. The options come from every
@@ -307,6 +327,7 @@ export function BudgetReportFilters({ filters }: { filters: BudgetReportFilterSt
   const { t } = useTranslation(['ops', 'common']);
   const showCostCenter = filters.hasCostCenters;
   const showRunBuild = filters.runBuild != null || filters.options.hasRunBuild;
+  const showFte = filters.withFte || filters.options.hasFte;
   const { analyticsAxes, analytics, options } = filters;
   const analyticsFilters = useMemo<AnalyticsDimensionFilter[]>(() => {
     if (!analyticsAxes.ready) return [];
@@ -318,7 +339,7 @@ export function BudgetReportFilters({ filters }: { filters: BudgetReportFilterSt
     }
     return out;
   }, [analyticsAxes, analytics, options.analytics]);
-  if (!showCostCenter && !showRunBuild && !filters.costCenterMissing && !filters.analyticsMissing && analyticsFilters.length === 0 && !options.isError) {
+  if (!showCostCenter && !showRunBuild && !showFte && !filters.costCenterMissing && !filters.analyticsMissing && analyticsFilters.length === 0 && !options.isError) {
     return null;
   }
 
@@ -371,6 +392,25 @@ export function BudgetReportFilters({ filters }: { filters: BudgetReportFilterSt
             {RUN_BUILD_FILTERS.map((value) => (
               <MenuItem key={value} value={value} sx={drawerMenuItemSx}>{runBuildLabels[value]}</MenuItem>
             ))}
+          </TextField>
+        </ReportFilter>
+      )}
+      {showFte && (
+        <ReportFilter label={t('reports.filters.fteItems')} width={160}>
+          <TextField
+            select
+            size="small"
+            value={filters.withFte ? FTE_ITEMS_WITH : ''}
+            onChange={(event) => filters.setWithFte(event.target.value === FTE_ITEMS_WITH)}
+            SelectProps={{
+              displayEmpty: true,
+              MenuProps: reportFilterMenuProps,
+              inputProps: { 'aria-label': t('reports.filters.fteItems') },
+            }}
+            sx={reportFilterSelectSx}
+          >
+            <MenuItem value="" sx={drawerMenuItemSx}>{t('reports.filters.fteItemsAll')}</MenuItem>
+            <MenuItem value={FTE_ITEMS_WITH} sx={drawerMenuItemSx}>{t('reports.filters.fteItemsWith')}</MenuItem>
           </TextField>
         </ReportFilter>
       )}

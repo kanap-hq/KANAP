@@ -510,3 +510,55 @@ describe('BudgetReportFilters dimensions', () => {
     expect(get).toHaveBeenCalledWith('/analytics-categories/n-gone');
   });
 });
+
+describe('BudgetReportFilters items with FTE', () => {
+  const Y = new Date().getFullYear();
+  const fteSelect = () => screen.queryByRole('combobox', { name: 'Items' });
+  // x and z declare FTE (z in last year only); y declares none.
+  const FTE_ROWS: Row[] = [
+    { id: 'x', versions: { y: { year: Y, fte: { budget: 1.5 } } } },
+    { id: 'y', versions: { y: { year: Y, fte: { budget: null } } } },
+    { id: 'z', versions: { yMinus1: { year: Y - 1, fte: { landing: 0.5 } } } },
+  ];
+
+  it('shows once a line of the window declares FTE, and stays hidden otherwise', async () => {
+    treeState.nodes = [];
+    const view = await renderBar('/report', FTE_ROWS);
+    expect(fteSelect()?.textContent).toBe('All items');
+    expect(seen.kept).toEqual(['x', 'y', 'z']);
+    view.unmount();
+
+    await renderBar('/report', [{ id: 'y', versions: { y: { year: Y, fte: { budget: null } } } }]);
+    expect(fteSelect()).toBeNull();
+    expect(screen.getByTestId('bar')).toBeEmptyDOMElement();
+  });
+
+  it('reads the address, even when no line declares FTE, and keeps the lines that declare some', async () => {
+    treeState.nodes = [];
+    const view = await renderBar('/report?fte=with', FTE_ROWS);
+    expect(fteSelect()?.textContent).toBe('Items with FTE');
+    expect(seen.kept).toEqual(['x', 'z']);
+    view.unmount();
+
+    await renderBar('/report?fte=with', [{ id: 'y' }]);
+    expect(fteSelect()?.textContent).toBe('Items with FTE');
+    expect(seen.kept).toEqual([]);
+  });
+
+  it('writes the pick to the address, replacing the entry, with the other picks', async () => {
+    await renderBar('/report?scope=capex&runBuild=none', FTE_ROWS);
+    fireEvent.mouseDown(fteSelect() as HTMLElement);
+    const listbox = screen.getByRole('listbox');
+    expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual(['All items', 'Items with FTE']);
+    fireEvent.click(within(listbox).getByRole('option', { name: 'Items with FTE' }));
+    expect(new URLSearchParams(seen.search).get('fte')).toBe('with');
+    expect(new URLSearchParams(seen.search).get('scope')).toBe('capex');
+    expect(seen.navigation).toBe('REPLACE');
+    expect(seen.kept).toEqual(['x', 'z']);
+
+    fireEvent.mouseDown(fteSelect() as HTMLElement);
+    fireEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: 'All items' }));
+    expect(new URLSearchParams(seen.search).has('fte')).toBe(false);
+    expect(seen.kept).toEqual(['x', 'y', 'z']);
+  });
+});

@@ -77,7 +77,12 @@ function testFieldsAGroupOrAMeasureRefuses() {
   assert.throws(() => build({ groupBy: ['yBudget'], measures: [] }), isBadRequest(/yBudget \(money\) cannot group lines/));
   assert.throws(() => build({ groupBy: ['created_at'], measures: [] }), isBadRequest(/created_at \(ts\) cannot group lines/));
   assert.throws(() => build({ groupBy: [], measures: [sum('b', 'supplier_name')] }), isBadRequest(/supplier_name is not an amount or an FTE field/));
-  assert.throws(() => build({ groupBy: [], measures: [sum('b', 'fte_yBudget', { minus: 'fte_yLanding' })] }), isBadRequest(/minus and part apply to amounts only/));
+  // FTE lot 1 (A1): an FTE subtracts an FTE; an FTE and an amount never mix.
+  assert.doesNotThrow(() => build({ groupBy: [], measures: [sum('b', 'fte_yBudget', { minus: 'fte_yLanding' })] }), 'FTE minus FTE');
+  assert.doesNotThrow(() => build({ groupBy: ['id'], measures: [sum('b', 'fte_y2027Budget', { minus: 'fte_y2026Budget', part: 'negative' })] }), 'FTE minus FTE, a part');
+  assert.doesNotThrow(() => build({ groupBy: [], measures: [sum('b', 'fte_detached_yBudget', { part: 'positive' })] }), 'a part of an FTE');
+  assert.throws(() => build({ groupBy: [], measures: [sum('b', 'fte_yBudget', { minus: 'yLanding' })] }), isBadRequest(/yLanding is not an FTE field/));
+  assert.throws(() => build({ groupBy: [], measures: [sum('b', 'fte_yBudget', { minus: 'supplier_name' })] }), isBadRequest(/supplier_name is not an FTE field/));
   assert.throws(() => build({ groupBy: [], measures: [sum('b', 'yBudget', { minus: 'fte_yLanding' })] }), isBadRequest(/fte_yLanding is not an amount field/));
   // Group keys of every other kind compile.
   for (const key of ['supplier_name', 'status', 'id', 'project_stream_name', 'item_number', 'effective_start', 'cost_center_path', 'analytics_22222222-2222-4222-8222-222222222222', 'nonexistent']) {
@@ -211,7 +216,43 @@ function testGroupedCapAndReportFields() {
   assert.ok(version.includes(`(CASE WHEN v2024.id IS NULL THEN NULL ELSE 'yes' END)`) && version.includes('LEFT JOIN spend_versions v2028 ON v2028.tenant_id = $1'), 'a version of the year, within validity');
 }
 
+/**
+ * FTE lot 1: `minus` and `part` on FTE fields (A1), `has_fte` (A2) and
+ * `fte_detached_…` (A3). What they return is checked on a seeded database in
+ * `spend/__tests__/budget-fte-report-fields.integration.spec.ts`.
+ */
+function testFteReportFields() {
+  const delta = build({
+    groupBy: [],
+    measures: [sum('d', 'fte_y2027Budget', { minus: 'fte_y2026Budget' }), sum('p', 'fte_y2027Budget', { minus: 'fte_y2026Budget', part: 'positive' })],
+    having: [{ measure: 'd', op: 'gte', value: 0.5 }],
+  }).raw;
+  const a = `(CASE WHEN v2027.id IS NULL THEN NULL ELSE ri2027_planned.fte END)`;
+  const b = `(CASE WHEN v2026.id IS NULL THEN NULL ELSE ri2026_planned.fte END)`;
+  assert.ok(delta.includes(`(CASE WHEN ${a} IS NOT NULL OR ${b} IS NOT NULL THEN (coalesce(${a}, 0) - coalesce(${b}, 0)) END) AS v0`), 'null when both are unknown, else the unknown side as 0');
+  assert.ok(delta.includes(`THEN greatest((coalesce(${a}, 0) - coalesce(${b}, 0)), 0) END) AS v1`), 'a part of a known value only');
+  assert.ok(delta.includes('sum(agg_lines.v0) AS s0'), 'an FTE delta sums as a numeric');
+  assert.ok(/>= \$\d+::numeric(?! \* 100)/.test(delta), 'an FTE bound is compared as is');
+
+  const detached = build({ groupBy: [], measures: [sum('f', 'fte_y2026Budget'), sum('x', 'fte_detached_y2026Budget')] }, {}, 'capex').raw;
+  assert.equal((detached.match(/LEFT JOIN capex_round_inputs ri2026_planned/g) ?? []).length, 1, 'one round join for the FTE and its detached part');
+  assert.ok(detached.includes(`(CASE WHEN v2026.id IS NULL THEN NULL WHEN ri2026_planned.method <> 'computed' THEN ri2026_planned.fte END)`), 'detached: a round that is not computed');
+  assert.equal(build({ groupBy: [], measures: [sum('x', 'fte_detached_yRevision')] }).raw.includes('ri2026_committed.method'), true, 'a fixed slot');
+
+  for (const scope of ['opex', 'capex'] as const) {
+    const { raw, params } = build({ groupBy: ['has_fte'], measures: [] }, { filters: { has_fte: { filterType: 'set', values: ['yes'] } } }, scope);
+    const versions = scope === 'opex' ? 'spend_versions' : 'capex_versions';
+    const rounds = scope === 'opex' ? 'spend_round_inputs' : 'capex_round_inputs';
+    const fk = scope === 'opex' ? 'spend_item_id' : 'capex_item_id';
+    assert.ok(raw.includes(`EXISTS (SELECT 1 FROM ${versions} hfv`), `${scope}: has_fte reads the versions`);
+    assert.ok(raw.includes(`JOIN ${rounds} hfr ON hfr.tenant_id = $1 AND hfr.version_id = hfv.id AND hfr.fte IS NOT NULL`), `${scope}: its rounds for the tenant`);
+    assert.ok(raw.includes(`WHERE hfv.tenant_id = $1 AND hfv.${fk} = i.id`), `${scope}: its versions for the tenant`);
+    assert.ok(params.some((p) => Array.isArray(p) && p.includes('yes')), `${scope}: the filter value is bound`);
+  }
+}
+
 testSpecChecks();
+testFteReportFields();
 testFieldsAGroupOrAMeasureRefuses();
 testGroupedCapAndReportFields();
 testTenantOnEveryTableAndValuesBound();

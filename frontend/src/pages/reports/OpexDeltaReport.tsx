@@ -14,16 +14,10 @@ import { useBudgetColumns, type BudgetColumns } from '../../hooks/useBudgetColum
 import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { BudgetReportFilters, useBudgetReportFilters } from '../../components/reports/BudgetReportFilters';
 import { textTabSx, textTabsSx } from '../../theme/formSx';
-import { deltaRequests, deltaYearsRequest, excludedAccountValues, readDelta, readDeltaYears, type MetricKey } from './reportAggregates';
+import { deltaRequests, deltaYearsRequest, excludedAccountValues, readDelta, readDeltaYears, sumDeclared, type FteDeltaTotals, type MetricKey } from './reportAggregates';
 import { useBudgetAggregate, useBudgetAggregates } from './useBudgetAggregate';
 import { useAccountLabelOptions, useItemOptions } from './useReportOptions';
-
-function formatNumber(v: any) {
-  const n = Number(v ?? 0);
-  if (!isFinite(n)) return '';
-  const i = Math.round(n);
-  return i.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-}
+import { ReportFteNotice, ReportMeasureSelect, useMeasureText, useReportMeasure } from './reportMeasure';
 
 function labelForMetric(metric: string, budgetColumns: BudgetColumns) {
   return isMetricKey(metric) ? budgetColumns.label(metric) : '';
@@ -56,6 +50,9 @@ export default function OpexDeltaReport() {
 
   const [scope, setScope] = useReportScope();
   const scopeLabel = t(`operations.scope.${scope}`);
+  const [measure, setMeasure] = useReportMeasure();
+  const measureText = useMeasureText(measure);
+  const formatNumber = measureText.format;
 
   const reportFilters = useBudgetReportFilters({ scope });
   // The exclusion pickers offer every line and account of the window; they load when first opened.
@@ -133,8 +130,10 @@ export default function OpexDeltaReport() {
       excludedIds,
       excludedAccounts: excludedAccountValues(excludedAccounts, accountOptions.options ?? []),
       filters: reportFilters.queryFilters,
+      measure,
     });
   }, [
+    measure,
     reportFilters.queryFilters,
     scope,
     sourceYear,
@@ -151,16 +150,20 @@ export default function OpexDeltaReport() {
   const report = useBudgetAggregates(scope, requests);
   // Loading (the years or the lines), or the filter bar still reading its address.
   const busy = reportFilters.queryFilters == null || yearsQuery.isLoading || report.isLoading || report.isPlaceholderData;
+  // FTE: a side without a declared FTE is blank (the change counts it as 0), and so is a total nobody declares.
   const { processed, allTotals } = useMemo(
-    () => (requests && report.data ? readDelta(modes, report.data) : { processed: [], allTotals: { grossIncrease: 0, grossDecrease: 0, net: 0 } }),
-    [requests, report.data, modes],
+    () => (requests && report.data
+      ? readDelta(modes, report.data, measure)
+      : { processed: [], allTotals: { grossIncrease: 0, grossDecrease: 0, net: 0 } as FteDeltaTotals }),
+    [requests, report.data, modes, measure],
   );
 
+  // The columns as the measure reads them: `Budget (2026)`, or `Budget FTE (2026)`.
   const sourceLabel = sourceYear != null && sourceMetric
-    ? `${labelForMetric(sourceMetric, budgetColumns)} (${sourceYear})`
+    ? `${measureText.column(labelForMetric(sourceMetric, budgetColumns))} (${sourceYear})`
     : t('reports.opexDelta.sourceColumn');
   const destinationLabel = destinationYear != null && destinationMetric
-    ? `${labelForMetric(destinationMetric, budgetColumns)} (${destinationYear})`
+    ? `${measureText.column(labelForMetric(destinationMetric, budgetColumns))} (${destinationYear})`
     : t('reports.opexDelta.destinationColumn');
 
   const columns = useMemo<ColDef[]>(() => [
@@ -169,7 +172,7 @@ export default function OpexDeltaReport() {
     { field: 'current', headerName: destinationLabel, width: 200, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
     { field: 'delta', headerName: t('reports.columns.delta'), width: 140, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
     { field: 'pct_increase', headerName: t('reports.columns.pctIncrease'), width: 140, type: 'rightAligned', valueFormatter: (p) => (p.value == null ? '' : `${Number(p.value).toFixed(1)}%`) },
-  ], [sourceLabel, destinationLabel, t]);
+  ], [sourceLabel, destinationLabel, formatNumber, t]);
 
   const gridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);
@@ -192,16 +195,27 @@ export default function OpexDeltaReport() {
   }, { increase: 0, decrease: 0 }), [processed]);
 
   const increaseShare = useMemo(() => (
-    allTotals.grossIncrease > 0 ? (topTotals.increase / allTotals.grossIncrease) * 100 : null
+    allTotals.grossIncrease != null && allTotals.grossIncrease > 0 ? (topTotals.increase / allTotals.grossIncrease) * 100 : null
   ), [topTotals.increase, allTotals.grossIncrease]);
 
   const decreaseShare = useMemo(() => (
-    allTotals.grossDecrease > 0 ? (topTotals.decrease / allTotals.grossDecrease) * 100 : null
+    allTotals.grossDecrease != null && allTotals.grossDecrease > 0 ? (topTotals.decrease / allTotals.grossDecrease) * 100 : null
   ), [topTotals.decrease, allTotals.grossDecrease]);
 
-  const netTitle = allTotals.net >= 0 ? t('reports.opexDelta.netIncrease') : t('reports.opexDelta.netDecrease');
-  const topSelectionPrevSum = useMemo(() => processed.reduce((acc: number, r) => acc + (Number(r.previous) || 0), 0), [processed]);
-  const topSelectionCurrSum = useMemo(() => processed.reduce((acc: number, r) => acc + (Number(r.current) || 0), 0), [processed]);
+  const netTitle = (allTotals.net ?? 0) >= 0 ? t('reports.opexDelta.netIncrease') : t('reports.opexDelta.netDecrease');
+  // FTE: the shown lines' sums add the declared values only, and are blank when none is declared.
+  const shownTotals = useMemo(() => (measureText.fte
+    ? {
+      increase: sumDeclared(processed.filter((row) => row.direction === 'increase').map((row) => row.delta)),
+      decrease: sumDeclared(processed.filter((row) => row.direction === 'decrease').map((row) => -row.delta)),
+    }
+    : topTotals), [measureText, processed, topTotals]);
+  const topSelectionPrevSum = useMemo(() => (measureText.fte
+    ? sumDeclared(processed.map((r) => r.previous))
+    : processed.reduce((acc: number, r) => acc + (Number(r.previous) || 0), 0)), [processed, measureText]);
+  const topSelectionCurrSum = useMemo(() => (measureText.fte
+    ? sumDeclared(processed.map((r) => r.current))
+    : processed.reduce((acc: number, r) => acc + (Number(r.current) || 0), 0)), [processed, measureText]);
 
   const increaseCount = processed.filter((row) => row.direction === 'increase').length;
   const decreaseCount = processed.filter((row) => row.direction === 'decrease').length;
@@ -223,12 +237,12 @@ export default function OpexDeltaReport() {
 
   const selectionFootnote = (() => {
     if (modes.length === 2) {
-      return t('reports.opexDelta.selectionTotals', { inc: formatNumber(topTotals.increase), dec: formatNumber(topTotals.decrease) });
+      return t('reports.opexDelta.selectionTotals', { inc: formatNumber(shownTotals.increase), dec: formatNumber(shownTotals.decrease) });
     }
     if (modes[0] === 'increase') {
-      return t('reports.opexDelta.totalIncrease', { value: formatNumber(topTotals.increase) });
+      return t('reports.opexDelta.totalIncrease', { value: formatNumber(shownTotals.increase) });
     }
-    return t('reports.opexDelta.totalDecrease', { value: formatNumber(topTotals.decrease) });
+    return t('reports.opexDelta.totalDecrease', { value: formatNumber(shownTotals.decrease) });
   })();
 
   const chartOptions = useMemo(() => {
@@ -286,6 +300,7 @@ export default function OpexDeltaReport() {
         {
           type: 'number',
           position: 'bottom',
+          ...(measureText.axisTitle ? { title: measureText.axisTitle } : {}),
           label: {
             formatter: ({ value }: { value: number }) => formatNumber(value),
           },
@@ -319,7 +334,7 @@ export default function OpexDeltaReport() {
         },
       ],
     };
-  }, [chartData, totalMagnitude, chartTitleKey, countLabel, scopeLabel, sourceLabel, destinationLabel, chartType, selectionFootnote, modes.length, t]);
+  }, [chartData, totalMagnitude, chartTitleKey, countLabel, scopeLabel, sourceLabel, destinationLabel, chartType, selectionFootnote, modes.length, measureText, formatNumber, t]);
 
   useEffect(() => {
     const api = gridApiRef.current;
@@ -380,6 +395,7 @@ export default function OpexDeltaReport() {
         }}
         >
           <ItemScopeTabs value={scope} onChange={setScope} />
+          <ReportMeasureSelect value={measure} onChange={setMeasure} />
           <BudgetReportFilters filters={reportFilters} />
           <TextField
             select
@@ -511,11 +527,11 @@ export default function OpexDeltaReport() {
           </Tabs>
         </Box>
       )}
-      onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.()}
+      onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.(measureText.csvParams(`top${countSlug}-${scope}-delta-${sourceSlug}-to-${destinationSlug}-${modeSlug}`))}
       onExportChartPng={() => {
         const increaseSlug = `inc${increaseCount}`;
         const decreaseSlug = `dec${decreaseCount}`;
-        chartRef.current?.download(`top${countSlug}-${scope}-delta-${sourceSlug}-to-${destinationSlug}-${modeSlug}-${increaseSlug}-${decreaseSlug}-${chartType}`);
+        chartRef.current?.download(measureText.fileName(`top${countSlug}-${scope}-delta-${sourceSlug}-to-${destinationSlug}-${modeSlug}-${increaseSlug}-${decreaseSlug}-${chartType}`));
       }}
     >
       <Stack direction="column" spacing={2} alignItems="stretch">
@@ -531,6 +547,12 @@ export default function OpexDeltaReport() {
             onGridReady={(e) => { gridApiRef.current = e.api; }}
             domLayout="autoHeight"
           />
+          <ReportFteNotice
+            scope={scope}
+            request={requests?.[0] ?? null}
+            result={report.data?.[0]}
+            columnLabel={(column) => `${labelForMetric(column.metric, budgetColumns)} ${column.year}`}
+          />
           <Box sx={{ mt: 2, display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' } }}>
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
               <Typography variant="body2" color="text.secondary">
@@ -540,8 +562,8 @@ export default function OpexDeltaReport() {
               </Typography>
               <Typography variant="subtitle2">
                 {modes.length === 2
-                  ? `${t('reports.opexDelta.incValue', { value: formatNumber(topTotals.increase) })} · ${t('reports.opexDelta.decValue', { value: formatNumber(topTotals.decrease) })}`
-                  : formatNumber(modes[0] === 'increase' ? topTotals.increase : topTotals.decrease)}
+                  ? `${t('reports.opexDelta.incValue', { value: formatNumber(shownTotals.increase) })} · ${t('reports.opexDelta.decValue', { value: formatNumber(shownTotals.decrease) })}`
+                  : formatNumber(modes[0] === 'increase' ? shownTotals.increase : shownTotals.decrease)}
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 {t('reports.opexDelta.sourceDestinationTotals', { source: formatNumber(topSelectionPrevSum), destination: formatNumber(topSelectionCurrSum) })}
