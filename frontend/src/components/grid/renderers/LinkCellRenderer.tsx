@@ -39,6 +39,11 @@ export interface LinkCellRendererProps<T = unknown> extends ICellRendererParams<
   linkSx?: SxProps<Theme>;
   /** Content shown right after the link text, inside the cell (a status marker, for example) */
   endAdornment?: React.ReactNode;
+  /**
+   * Open an internal link in a new browser tab: a plain `<a target="_blank">`, without `onNavigate`
+   * and without the external icon, underlined on hover.
+   */
+  newTab?: boolean;
 }
 
 /**
@@ -138,6 +143,7 @@ export function LinkCellRenderer<T = unknown>(
     maxWidth,
     linkSx,
     endAdornment,
+    newTab = false,
     valueFormatted,
     colDef,
   } = props;
@@ -185,7 +191,8 @@ export function LinkCellRenderer<T = unknown>(
   }
 
   // Determine link type
-  const isExternal = linkType === 'external' || (linkType === 'auto' && isExternalUrl(href));
+  const isExternal = !newTab && (linkType === 'external' || (linkType === 'auto' && isExternalUrl(href)));
+  const opensNewTab = isExternal || newTab;
 
   // Get tooltip content
   const tooltipContent = typeof tooltip === 'function' && data
@@ -194,7 +201,7 @@ export function LinkCellRenderer<T = unknown>(
 
   // Handle click
   const handleClick = (e: React.MouseEvent) => {
-    if (!isExternal && onNavigate && data) {
+    if (!isExternal && !newTab && onNavigate && data) {
       if (!isPlainLeftClick(e)) return;
       e.preventDefault();
       onNavigate(href!, data);
@@ -216,8 +223,8 @@ export function LinkCellRenderer<T = unknown>(
       <Link
         href={href}
         onClick={handleClick}
-        target={isExternal ? '_blank' : undefined}
-        rel={isExternal ? 'noopener noreferrer' : undefined}
+        target={opensNewTab ? '_blank' : undefined}
+        rel={opensNewTab ? 'noopener noreferrer' : undefined}
         underline={isExternal ? 'hover' : 'none'}
         sx={{
           display: 'block',
@@ -236,10 +243,13 @@ export function LinkCellRenderer<T = unknown>(
             color: isExternal ? undefined : 'inherit',
             textDecoration: isExternal ? undefined : 'none',
           },
+          // The grid strips text decoration from cell links (`ag-grid-overrides.css`): the
+          // underline goes on the text inside the link.
+          ...(newTab ? { '&:hover > span, &:focus-visible > span': { textDecoration: 'underline' } } : {}),
           ...linkSx,
         }}
       >
-        {displayText}
+        {newTab ? <span>{displayText}</span> : displayText}
       </Link>
       {isExternal && showExternalIcon && (
         <OpenInNewIcon sx={{ fontSize: 14, color: 'text.secondary', flexShrink: 0 }} />

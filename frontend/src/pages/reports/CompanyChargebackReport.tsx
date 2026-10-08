@@ -26,6 +26,8 @@ import CompanySelect from '../../components/fields/CompanySelect';
 import api from '../../api';
 import { MetricKey, horizontalBarChartHeight, metricFileName, useReportMetric } from './reportMetrics';
 import { escapeTooltipText } from './tooltipText';
+import { itemHref } from './useReportScope';
+import { LinkCellRenderer } from '../../components/grid/renderers';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useLocale } from '../../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
@@ -276,7 +278,15 @@ export default function CompanyChargebackReport() {
   ], [formatCount, formatNumber, metricLabel]);
 
   const itemColumns = useMemo<ColDef[]>(() => [
-    { field: 'itemName', headerName: t('reports.columns.item'), flex: 1, minWidth: 220 },
+    {
+      field: 'itemName',
+      headerName: t('reports.columns.item'),
+      flex: 1,
+      minWidth: 220,
+      cellRenderer: LinkCellRenderer,
+      // Chargeback covers OPEX lines; common costs (no line) and the total row stay plain text.
+      cellRendererParams: { newTab: true, getHref: (row: Partial<CompanyChargebackItemRow>) => itemHref('opex', row.itemId) },
+    },
     { field: 'allocationMethodLabel', headerName: t('reports.columns.allocationMethod'), minWidth: 180 },
     {
       field: 'amount',

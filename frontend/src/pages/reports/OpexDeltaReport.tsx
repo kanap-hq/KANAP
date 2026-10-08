@@ -6,7 +6,8 @@ import ReportLayout from '../../components/reports/ReportLayout';
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
 import ReportExclusionPicker from '../../components/reports/ReportExclusionPicker';
 import ReportDataStatus from '../../components/reports/ReportDataStatus';
-import { useReportScope } from './useReportScope';
+import { itemHref, useReportScope } from './useReportScope';
+import { LinkCellRenderer } from '../../components/grid/renderers';
 import { useTranslation } from 'react-i18next';
 import { isMetricKey, metricFileName, resolveMetric, shownMetricKeys } from './reportMetrics';
 import { escapeTooltipText } from './tooltipText';
@@ -167,12 +168,19 @@ export default function OpexDeltaReport() {
     : t('reports.opexDelta.destinationColumn');
 
   const columns = useMemo<ColDef[]>(() => [
-    { field: 'name', headerName: t('reports.columns.item'), flex: 1, minWidth: 240 },
+    {
+      field: 'name',
+      headerName: t('reports.columns.item'),
+      flex: 1,
+      minWidth: 240,
+      cellRenderer: LinkCellRenderer,
+      cellRendererParams: { newTab: true, getHref: (row: { id?: string | null }) => itemHref(scope, row.id) },
+    },
     { field: 'previous', headerName: sourceLabel, width: 200, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
     { field: 'current', headerName: destinationLabel, width: 200, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
     { field: 'delta', headerName: t('reports.columns.delta'), width: 140, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
     { field: 'pct_increase', headerName: t('reports.columns.pctIncrease'), width: 140, type: 'rightAligned', valueFormatter: (p) => (p.value == null ? '' : `${Number(p.value).toFixed(1)}%`) },
-  ], [sourceLabel, destinationLabel, formatNumber, t]);
+  ], [scope, sourceLabel, destinationLabel, formatNumber, t]);
 
   const gridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);
