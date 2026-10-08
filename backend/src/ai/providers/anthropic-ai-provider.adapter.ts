@@ -1,17 +1,41 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import Anthropic from '@anthropic-ai/sdk';
 import {
   AiProviderAdapter,
   AiProviderDescriptor,
   AiProviderSettingsSnapshot,
+  AiReasoningEffort,
   AiStreamEvent,
   AiStreamParams,
 } from './ai-provider.types';
 import { isAbortError, parseToolCallArguments } from './streaming.util';
 import { describeProviderError, providerFetchOptions, toProviderError } from './provider-http.util';
 
+// Models that accept `output_config.effort`: Opus 4.5 and later, Sonnet 4.6 and later,
+// Fable and Mythos. Haiku, Sonnet 4.5 and older models reject the field with a 400.
+export function anthropicModelSupportsEffort(model: string): boolean {
+  const id = model.trim().toLowerCase().replace(/^anthropic\./, '');
+  if (/^claude-(fable|mythos)-/.test(id)) return true;
+  const match = /^claude-(opus|sonnet)-(\d+)(?:-(\d+))?/.exec(id);
+  if (!match) return false;
+  const major = Number(match[2]);
+  // A long numeric suffix is a snapshot date (claude-opus-4-20250514), not a minor version.
+  const minor = match[3] && match[3].length <= 2 ? Number(match[3]) : 0;
+  const version = major + minor / 10;
+  return match[1] === 'opus' ? version >= 4.5 : version >= 4.6;
+}
+
+export function anthropicOutputConfig(
+  model: string,
+  effort: AiReasoningEffort | null | undefined,
+): { output_config: { effort: AiReasoningEffort } } | Record<string, never> {
+  return effort && anthropicModelSupportsEffort(model) ? { output_config: { effort } } : {};
+}
+
 @Injectable()
 export class AnthropicAiProviderAdapter implements AiProviderAdapter {
+  private readonly logger = new Logger(AnthropicAiProviderAdapter.name);
+
   readonly descriptor: AiProviderDescriptor = {
     id: 'anthropic',
     label: 'Anthropic',
@@ -110,6 +134,10 @@ export class AnthropicAiProviderAdapter implements AiProviderAdapter {
       system: params.systemPrompt,
       messages,
       ...(tools.length > 0 ? { tools } : {}),
+      ...anthropicOutputConfig(params.model, params.reasoningEffort),
+      // Automatic prompt caching: the breakpoint follows the last block, so each tool
+      // round reads the system prompt, tools and history written by the previous one.
+      cache_control: { type: 'ephemeral' },
     }, params.signal ? { signal: params.signal } : undefined);
     if (params.debugTrace) {
       yield { type: 'debug_trace', name: 'provider_stream_opened' };
@@ -205,11 +233,20 @@ export class AnthropicAiProviderAdapter implements AiProviderAdapter {
 
     try {
       const finalMessage = await stream.finalMessage();
+      const uncachedInput = finalMessage.usage?.input_tokens ?? 0;
+      const cacheWrite = finalMessage.usage?.cache_creation_input_tokens ?? 0;
+      const cacheRead = finalMessage.usage?.cache_read_input_tokens ?? 0;
+      const outputTokens = finalMessage.usage?.output_tokens ?? 0;
+      this.logger.log(
+        `model=${params.model} input_uncached=${uncachedInput} cache_write=${cacheWrite} `
+        + `cache_read=${cacheRead} output=${outputTokens}`,
+      );
       yield {
         type: 'done',
         usage: {
-          input_tokens: finalMessage.usage?.input_tokens ?? 0,
-          output_tokens: finalMessage.usage?.output_tokens ?? 0,
+          // The whole prompt, cached or not: callers read input_tokens as the prompt size.
+          input_tokens: uncachedInput + cacheWrite + cacheRead,
+          output_tokens: outputTokens,
         },
         // Normalise Anthropic's stop_reason to the OpenAI-style finish_reason the
         // structured-JSON helper inspects: a max_tokens stop is a length truncation.
