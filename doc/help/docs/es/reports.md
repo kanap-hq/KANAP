@@ -27,7 +27,7 @@ La página principal muestra una tarjeta para cada informe disponible con una br
 | **Cuentas de consolidación** | Presupuesto OPEX o CAPEX agrupado por cuenta de consolidación |
 | **Dimensiones analíticas** | Presupuesto OPEX o CAPEX agrupado por dimensión analítica |
 | **Plantilla por mes** | ETC mensuales por centro de coste, partida, proveedor o dimensión analítica |
-| **Coste por ETC** | Coste anual de un ETC por centro de coste, partida, proveedor o dimensión analítica, en varias columnas de presupuesto y años |
+| **Coste por ETC** | Coste anual de un ETC o tarifa diaria media, por centro de coste, partida, proveedor o dimensión analítica, en varias columnas de presupuesto y años |
 
 ### Elegir OPEX o CAPEX
 
@@ -465,13 +465,14 @@ Una línea bajo la tabla para cada caso, cuando se da:
 
 ## Coste por ETC
 
-Vea cuánto cuesta un ETC en cada parte del presupuesto y cómo evoluciona ese coste entre columnas presupuestarias y años. El informe divide el coste de las líneas de cantidad y precio en personas o días entre sus ETC. Consulte [Cantidad y precio](opex.md#cantidad-y-precio) y [ETC](opex.md#etc).
+Vea cuánto cuesta un ETC en cada parte del presupuesto y cómo evoluciona ese coste entre columnas presupuestarias y años. El informe divide el coste de las líneas de cantidad y precio en personas o días entre sus ETC. También puede mostrar la tarifa diaria media de las líneas con precio por día (ver [Tarifa diaria](#tarifa-diaria)). Consulte [Cantidad y precio](opex.md#cantidad-y-precio) y [ETC](opex.md#etc).
 
 ### Controles
 
 - **Tipo de partida**: OPEX o CAPEX (ver [Elegir OPEX o CAPEX](#elegir-opex-o-capex))
 - **Centro de coste**, **Run o build**, **Partidas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
 - **Agrupar por** y **Dimensión**: las mismas opciones que en [Plantilla por mes](#plantilla-por-mes). La dirección de la página conserva la agrupación de la misma manera
+- **Mostrar**: **Coste por ETC** (por defecto) o **Tarifa diaria**. Al cambiar se conservan el tipo, la agrupación, los pares y los filtros. La dirección de la página conserva la tarifa diaria (`?view=rate`), de modo que un enlace guardado o compartido se abre en ella
 - **Columnas**: de uno a cuatro pares de un año y una columna presupuestaria. Los años van de dos años atrás a dos años adelante. **Agregar** añade un par, y el botón de quitar junto a un par lo quita. El informe se abre en la columna por defecto del año pasado y del año actual. La tabla y el gráfico muestran los pares en orden cronológico
 
 ### Qué se cuenta
@@ -497,12 +498,32 @@ Los grupos se nombran como en Plantilla por mes («Sin centro de coste», «Sin 
 
 Una línea bajo la tabla para cada caso, cuando se da. Cada línea indica los pares afectados:
 
-- «El importe ya no sigue las líneas en: Presupuesto 2026 (2 partidas, 1,50 ETC). El coste por ETC usa el coste de sus líneas.» Estas columnas cuentan con el coste de sus líneas. Consulte [Elegir importe o ETC](#elegir-importe-o-etc).
-- «Sin detalle de líneas en: Presupuesto 2025 (1 partida, 0,50 ETC). Quedan fuera del coste por ETC.» Estas partidas declaran un ETC del año completo, sin resultado por línea, por lo que el informe no puede leer su coste.
+- «El importe ya no sigue las líneas en: Presupuesto 2026 (2 partidas, 1,50 ETC). Estas cifras usan el coste de sus líneas.» Estas columnas cuentan con el coste de sus líneas. Consulte [Elegir importe o ETC](#elegir-importe-o-etc).
+- «Sin detalle de líneas en: Presupuesto 2025 (1 partida, 0,50 ETC). Quedan fuera de estas cifras.» Estas partidas declaran un ETC del año completo, sin resultado por línea, por lo que el informe no puede leer su coste.
+
+### Tarifa diaria
+
+Elija **Mostrar** > **Tarifa diaria** para ver la tarifa diaria media de cada grupo en lugar del coste por ETC.
+
+- Solo cuentan las líneas con precio por día: personas con precio por día y paquetes de días. La tarifa es su coste dividido entre los días que compran, de modo que cada línea pesa según sus días.
+- Las líneas con precio por mes no tienen tarifa diaria. Quedan fuera, y un aviso indica su coste (ver más abajo).
+- Como en el coste por ETC, el informe lee los resultados de las líneas y convierte el coste a la moneda de reporte.
+
+**Tabla**: Una fila por grupo con días en al menos un par, el mayor número de días primero. Se comparan los días del primer par en el que algún grupo tiene días. Cada par tiene tres columnas bajo su nombre:
+
+- **Días**: los días que compran las líneas con precio por día
+- **Coste de los días**: el coste de las mismas líneas en el año, en la moneda de reporte
+- **Tarifa diaria**: el coste de los días dividido entre los días. La celda queda vacía cuando los días son 0 o cuando el grupo no tiene líneas con precio por día en ese par
+
+Una fila **Total** fijada da, para cada par, el total de días, el total del coste de los días y el total del coste de los días dividido entre el total de días.
+
+**Gráfico**: Las mismas barras horizontales, con la tarifa diaria. El título indica el tipo y la agrupación, por ejemplo «Tarifa diaria OPEX por centro de coste». Pase el cursor sobre una barra para leer el grupo, el par, la tarifa diaria, los días y el coste de los días.
+
+**Avisos**: Los dos avisos anteriores, y una línea más cuando hay líneas en personas o días con precio por mes: «Las líneas con precio mensual no se incluyen en la tarifa diaria: Presupuesto 2026 (180 000).» El importe es el coste de esas líneas en cada par afectado, en la moneda de reporte.
 
 ### Exportar
 
-- **Exportar tabla como CSV**: El nombre del archivo lleva el tipo, la agrupación y el primer par, por ejemplo `cost-per-fte-opex-cost-center-2025-budget.csv`
+- **Exportar tabla como CSV**: El nombre del archivo lleva el tipo, la agrupación y el primer par, por ejemplo `cost-per-fte-opex-cost-center-2025-budget.csv`. En la tarifa diaria empieza por `daily-rate`, por ejemplo `daily-rate-opex-cost-center-2025-budget.csv`
 - **Exportar gráfico como PNG**: El mismo nombre, como imagen PNG
 - **Imprimir / Guardar como PDF**
 

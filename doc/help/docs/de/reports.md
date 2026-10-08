@@ -27,7 +27,7 @@ Die Startseite zeigt eine Karte für jeden verfügbaren Bericht mit einer kurzen
 | **Konsolidierungskonten** | OPEX- oder CAPEX-Budget gruppiert nach Konsolidierungskonto |
 | **Analysedimensionen** | OPEX- oder CAPEX-Budget gruppiert nach Analysedimension |
 | **Personal nach Monat** | Monatliche VZÄ nach Kostenstelle, Position, Lieferant oder Analysedimension |
-| **Kosten pro VZÄ** | Jährliche Kosten eines VZÄ nach Kostenstelle, Position, Lieferant oder Analysedimension, über Budgetspalten und Jahre |
+| **Kosten pro VZÄ** | Jährliche Kosten eines VZÄ oder durchschnittlicher Tagessatz, nach Kostenstelle, Position, Lieferant oder Analysedimension, über Budgetspalten und Jahre |
 
 ### OPEX oder CAPEX wählen
 
@@ -465,13 +465,14 @@ Eine Zeile unter der Tabelle für jeden Fall, wenn er eintritt:
 
 ## Kosten pro VZÄ
 
-Sehen Sie, was ein VZÄ in jedem Teil des Budgets kostet und wie sich diese Kosten über Budgetspalten und Jahre entwickeln. Der Bericht teilt die Kosten der Zeilen mit Menge und Preis in Personen oder Tagen durch ihre VZÄ. Siehe [Menge und Preis](opex.md#menge-und-preis) und [VZÄ](opex.md#vza).
+Sehen Sie, was ein VZÄ in jedem Teil des Budgets kostet und wie sich diese Kosten über Budgetspalten und Jahre entwickeln. Der Bericht teilt die Kosten der Zeilen mit Menge und Preis in Personen oder Tagen durch ihre VZÄ. Er kann auch den durchschnittlichen Tagessatz der pro Tag bepreisten Zeilen zeigen (siehe [Tagessatz](#tagessatz)). Siehe [Menge und Preis](opex.md#menge-und-preis) und [VZÄ](opex.md#vza).
 
 ### Steuerungen
 
 - **Positionstyp**: OPEX oder CAPEX (siehe [OPEX oder CAPEX wählen](#opex-oder-capex-wahlen))
 - **Kostenstelle**, **Run oder Build**, **Positionen** und die Filter nach Analysedimension: Siehe [Filter nach Kostenstelle, Run oder Build und Analysedimensionen](#filter-nach-kostenstelle-run-oder-build-und-analysedimensionen)
 - **Gruppieren nach** und **Dimension**: dieselben Optionen wie in [Personal nach Monat](#personal-nach-monat). Die Seitenadresse speichert die Gruppierung auf dieselbe Weise
+- **Anzeige**: **Kosten pro VZÄ** (Standard) oder **Tagessatz**. Beim Wechsel bleiben Typ, Gruppierung, Paare und Filter erhalten. Die Seitenadresse speichert den Tagessatz (`?view=rate`), sodass ein gespeicherter oder geteilter Link damit öffnet
 - **Spalten**: ein bis vier Paare aus einem Jahr und einer Budgetspalte. Die Jahre reichen von zwei Jahren zurück bis zwei Jahre voraus. **Hinzufügen** fügt ein Paar hinzu, die Schaltfläche zum Entfernen neben einem Paar entfernt es. Der Bericht öffnet mit der Standardspalte für das letzte und das laufende Jahr. Tabelle und Diagramm zeigen die Paare in chronologischer Reihenfolge
 
 ### Was gezählt wird
@@ -497,12 +498,32 @@ Die Gruppen heißen wie in Personal nach Monat („Keine Kostenstelle“, „Kei
 
 Eine Zeile unter der Tabelle für jeden Fall, wenn er eintritt. Jede Zeile nennt die betroffenen Paare:
 
-- „Der Betrag folgt nicht mehr den Zeilen bei: Budget 2026 (2 Positionen, 1,50 VZÄ). Die Kosten pro VZÄ verwenden die Kosten ihrer Zeilen.“ Diese Spalten zählen mit den Kosten ihrer Zeilen. Siehe [Betrag oder VZÄ wählen](#betrag-oder-vza-wahlen).
-- „Keine Zeilendetails bei: Budget 2025 (1 Position, 0,50 VZÄ). Sie fließen nicht in die Kosten pro VZÄ ein.“ Diese Positionen melden VZÄ für das ganze Jahr, aber kein Ergebnis pro Zeile, sodass der Bericht ihre Kosten nicht lesen kann.
+- „Der Betrag folgt nicht mehr den Zeilen bei: Budget 2026 (2 Positionen, 1,50 VZÄ). Diese Zahlen verwenden die Kosten ihrer Zeilen.“ Diese Spalten zählen mit den Kosten ihrer Zeilen. Siehe [Betrag oder VZÄ wählen](#betrag-oder-vza-wahlen).
+- „Keine Zeilendetails bei: Budget 2025 (1 Position, 0,50 VZÄ). Sie fließen nicht in diese Zahlen ein.“ Diese Positionen melden VZÄ für das ganze Jahr, aber kein Ergebnis pro Zeile, sodass der Bericht ihre Kosten nicht lesen kann.
+
+### Tagessatz
+
+Wählen Sie **Anzeige** > **Tagessatz**, um anstelle der Kosten pro VZÄ den durchschnittlichen Tagessatz jeder Gruppe zu sehen.
+
+- Nur die pro Tag bepreisten Zeilen zählen: Personen mit Preis pro Tag und Tagespakete. Der Tagessatz entspricht ihren Kosten geteilt durch die Tage, die sie einkaufen, sodass jede Zeile nach ihren Tagen gewichtet wird.
+- Pro Monat bepreiste Zeilen haben keinen Tagessatz. Sie bleiben unberücksichtigt, und ein Hinweis nennt ihre Kosten (siehe unten).
+- Wie bei den Kosten pro VZÄ liest der Bericht die Ergebnisse der Zeilen und rechnet die Kosten in die Berichtswährung um.
+
+**Tabelle**: Eine Zeile pro Gruppe mit Tagen in mindestens einem Paar, die meisten Tage zuerst. Verglichen werden die Tage des frühesten Paars, in dem eine Gruppe Tage hat. Jedes Paar hat drei Spalten unter seinem Namen:
+
+- **Tage**: die Tage, die die pro Tag bepreisten Zeilen einkaufen
+- **Kosten der Tage**: die Kosten derselben Zeilen für das Jahr, in der Berichtswährung
+- **Tagessatz**: die Kosten der Tage geteilt durch die Tage. Die Zelle ist leer, wenn die Tage 0 sind oder die Gruppe in diesem Paar keine pro Tag bepreisten Zeilen hat
+
+Eine angeheftete Zeile **Gesamt** zeigt für jedes Paar die Tage gesamt, die Kosten der Tage gesamt und die Kosten der Tage gesamt geteilt durch die Tage gesamt.
+
+**Diagramm**: Dieselben horizontalen Balken, mit dem Tagessatz. Der Titel nennt Typ und Gruppierung, zum Beispiel „OPEX-Tagessatz nach Kostenstelle“. Fahren Sie über einen Balken, um Gruppe, Paar, Tagessatz, Tage und Kosten der Tage zu lesen.
+
+**Hinweise**: Die beiden Hinweise oben und eine weitere Zeile, wenn Zeilen in Personen oder Tagen pro Monat bepreist sind: „Monatlich bepreiste Zeilen sind nicht im Tagessatz enthalten: Budget 2026 (180 000).“ Der Betrag entspricht den Kosten dieser Zeilen in jedem betroffenen Paar, in der Berichtswährung.
 
 ### Export
 
-- **Tabelle als CSV exportieren**: Der Dateiname nennt Typ, Gruppierung und das erste Paar, zum Beispiel `cost-per-fte-opex-cost-center-2025-budget.csv`
+- **Tabelle als CSV exportieren**: Der Dateiname nennt Typ, Gruppierung und das erste Paar, zum Beispiel `cost-per-fte-opex-cost-center-2025-budget.csv`. Beim Tagessatz beginnt er mit `daily-rate`, zum Beispiel `daily-rate-opex-cost-center-2025-budget.csv`
 - **Diagramm als PNG exportieren**: Gleicher Name, als PNG-Bild
 - **Drucken / Als PDF speichern**
 

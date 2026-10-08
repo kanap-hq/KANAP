@@ -27,7 +27,7 @@ The landing page shows a card for each available report with a short description
 | **Consolidation accounts** | OPEX or CAPEX budget grouped by consolidation account |
 | **Analytics dimensions** | OPEX or CAPEX budget grouped by analytics dimension |
 | **Staffing by month** | Monthly FTE by cost center, item, supplier or analytics dimension |
-| **Cost per FTE** | Yearly cost of one FTE by cost center, item, supplier or analytics dimension, across budget columns and years |
+| **Cost per FTE** | Yearly cost of one FTE or average daily rate, by cost center, item, supplier or analytics dimension, across budget columns and years |
 
 ### Choosing OPEX or CAPEX
 
@@ -465,13 +465,14 @@ One line under the table for each case, when it applies:
 
 ## Cost per FTE
 
-See what one FTE costs in each part of the budget, and how that cost moves across budget columns and years. The report divides the cost of the quantity and price lines in people or days by their FTE. See [Quantity and price](opex.md#quantity-and-price) and [FTE](opex.md#fte).
+See what one FTE costs in each part of the budget, and how that cost moves across budget columns and years. The report divides the cost of the quantity and price lines in people or days by their FTE. It can also show the average daily rate of the lines priced per day (see [Daily rate](#daily-rate)). See [Quantity and price](opex.md#quantity-and-price) and [FTE](opex.md#fte).
 
 ### Controls
 
 - **Item type**: OPEX or CAPEX (see [Choosing OPEX or CAPEX](#choosing-opex-or-capex))
 - **Cost center**, **Run or build**, **Items** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
 - **Group by** and **Dimension**: the same choices as in [Staffing by month](#staffing-by-month). The page address keeps the grouping in the same way
+- **Show**: **Cost per FTE** (the default) or **Daily rate**. Switching keeps the type, the grouping, the pairs and the filters. The page address keeps the daily rate (`?view=rate`), so a bookmarked or shared link opens on it
 - **Columns**: one to four pairs of a year and a budget column. The years go from two years back to two years ahead. **Add** adds a pair, and the remove button next to a pair removes it. The report opens on the default column for last year and this year. The table and the chart show the pairs in chronological order
 
 ### What is counted
@@ -497,12 +498,32 @@ Groups are named as in Staffing by month ("No cost center", "No supplier", "No v
 
 One line under the table for each case, when it applies. Each line names the pairs concerned:
 
-- "Amount no longer follows the lines for: Budget 2026 (2 items, 1.50 FTE). Cost per FTE uses the cost of their lines." These columns count with the cost of their lines. See [Choosing amount or FTE](#choosing-amount-or-fte).
-- "No line detail for: Budget 2025 (1 item, 0.50 FTE). They are left out of the cost per FTE." These items declare a full-year FTE but keep no result per line, so the report cannot read their cost.
+- "Amount no longer follows the lines for: Budget 2026 (2 items, 1.50 FTE). These figures use the cost of their lines." These columns count with the cost of their lines. See [Choosing amount or FTE](#choosing-amount-or-fte).
+- "No line detail for: Budget 2025 (1 item, 0.50 FTE). They are left out of these figures." These items declare a full-year FTE but keep no result per line, so the report cannot read their cost.
+
+### Daily rate
+
+Choose **Show** > **Daily rate** to see the average daily rate of each group in place of the cost per FTE.
+
+- Only the lines priced per day count: people priced per day and days bundles. The rate is their cost divided by the days they buy, so each line weighs by its days.
+- Lines priced per month have no daily rate. They are left out, and a notice gives their cost (see below).
+- As for the cost per FTE, the report reads the results of the lines and converts the cost to the reporting currency.
+
+**Table**: One row per group with days in at least one pair, the most days first. The days compared are those of the earliest pair where a group has days. Each pair has three columns under its name:
+
+- **Days**: the days bought by the lines priced per day
+- **Day cost**: the cost of the same lines for the year, in the reporting currency
+- **Daily rate**: the day cost divided by the days. The cell is empty when the days are 0 or when the group has no lines priced per day in that pair
+
+A pinned **Total** row gives, for each pair, the total days, the total day cost and the total day cost divided by the total days.
+
+**Chart**: The same horizontal bars, with the daily rate. The title names the type and the grouping, for example "OPEX daily rate by cost center". Hover a bar to read the group, the pair, the daily rate, the days and the day cost.
+
+**Notices**: The two notices above, and one more line when some people and days lines are priced per month: "Lines priced per month are not in the daily rate: Budget 2026 (180 000)." The amount is the cost of those lines in each pair concerned, in the reporting currency.
 
 ### Export
 
-- **Export table as CSV**: The file name carries the type, the grouping and the first pair, for example `cost-per-fte-opex-cost-center-2025-budget.csv`
+- **Export table as CSV**: The file name carries the type, the grouping and the first pair, for example `cost-per-fte-opex-cost-center-2025-budget.csv`. In the daily rate it starts with `daily-rate`, for example `daily-rate-opex-cost-center-2025-budget.csv`
 - **Export chart as PNG**: Same name, as a PNG image
 - **Print / Save as PDF**
 

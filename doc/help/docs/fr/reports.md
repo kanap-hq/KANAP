@@ -27,7 +27,7 @@ La page d'accueil affiche une carte par rapport disponible avec une courte descr
 | **Comptes de consolidation** | Budget OPEX ou CAPEX regroupé par compte de consolidation |
 | **Dimensions analytiques** | Budget OPEX ou CAPEX regroupé par dimension analytique |
 | **Effectifs par mois** | ETP mensuels par centre de coûts, poste, fournisseur ou dimension analytique |
-| **Coût par ETP** | Coût annuel d'un ETP par centre de coûts, poste, fournisseur ou dimension analytique, sur plusieurs colonnes budgétaires et années |
+| **Coût par ETP** | Coût annuel d'un ETP ou TJM, par centre de coûts, poste, fournisseur ou dimension analytique, sur plusieurs colonnes budgétaires et années |
 
 ### Choisir OPEX ou CAPEX
 
@@ -465,13 +465,14 @@ Une ligne sous le tableau pour chaque cas, quand il se présente :
 
 ## Coût par ETP
 
-Voyez ce que coûte un ETP dans chaque partie du budget, et comment ce coût évolue d'une colonne budgétaire et d'une année à l'autre. Le rapport divise le coût des lignes de quantité et de prix en personnes ou en jours par leurs ETP. Voir [Quantité et prix](opex.md#quantite-et-prix) et [ETP](opex.md#etp).
+Voyez ce que coûte un ETP dans chaque partie du budget, et comment ce coût évolue d'une colonne budgétaire et d'une année à l'autre. Le rapport divise le coût des lignes de quantité et de prix en personnes ou en jours par leurs ETP. Il peut aussi afficher le taux journalier moyen (TJM) des lignes au prix par jour (voir [TJM](#tjm)). Voir [Quantité et prix](opex.md#quantite-et-prix) et [ETP](opex.md#etp).
 
 ### Contrôles
 
 - **Type de poste** : OPEX ou CAPEX (voir [Choisir OPEX ou CAPEX](#choisir-opex-ou-capex))
 - **Centre de coûts**, **Run ou build**, **Postes** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
 - **Regrouper par** et **Dimension** : les mêmes choix que dans [Effectifs par mois](#effectifs-par-mois). L'adresse de la page conserve le regroupement de la même façon
+- **Afficher** : **Coût par ETP** (par défaut) ou **TJM**. Le changement conserve le type, le regroupement, les paires et les filtres. L'adresse de la page conserve le TJM (`?view=rate`) : un lien enregistré ou partagé s'ouvre dessus
 - **Colonnes** : une à quatre paires d'une année et d'une colonne budgétaire. Les années vont de deux ans en arrière à deux ans en avant. **Ajouter** ajoute une paire, et le bouton de retrait à côté d'une paire la retire. Le rapport s'ouvre sur la colonne par défaut de l'année dernière et de l'année en cours. Le tableau et le graphique présentent les paires dans l'ordre chronologique
 
 ### Ce qui est compté
@@ -497,12 +498,32 @@ Les groupes sont nommés comme dans Effectifs par mois (« Aucun centre de coût
 
 Une ligne sous le tableau pour chaque cas, quand il se présente. Chaque ligne nomme les paires concernées :
 
-- « Le montant ne suit plus les lignes pour : Budget 2026 (2 postes, 1,50 ETP). Le coût par ETP utilise le coût de leurs lignes. » Ces colonnes comptent avec le coût de leurs lignes. Voir [Choisir le montant ou les ETP](#choisir-le-montant-ou-les-etp).
-- « Aucun détail de lignes pour : Budget 2025 (1 poste, 0,50 ETP). Ils sont exclus du coût par ETP. » Ces postes déclarent un ETP sur l'année complète, sans résultat par ligne : le rapport ne peut pas lire leur coût.
+- « Le montant ne suit plus les lignes pour : Budget 2026 (2 postes, 1,50 ETP). Ces chiffres utilisent le coût de leurs lignes. » Ces colonnes comptent avec le coût de leurs lignes. Voir [Choisir le montant ou les ETP](#choisir-le-montant-ou-les-etp).
+- « Aucun détail de lignes pour : Budget 2025 (1 poste, 0,50 ETP). Ils sont exclus de ces chiffres. » Ces postes déclarent un ETP sur l'année complète, sans résultat par ligne : le rapport ne peut pas lire leur coût.
+
+### TJM
+
+Choisissez **Afficher** > **TJM** pour voir le TJM de chaque groupe à la place du coût par ETP.
+
+- Seules les lignes au prix par jour comptent : les personnes au prix par jour et les forfaits de jours. Le TJM est leur coût divisé par les jours qu'elles achètent : chaque ligne pèse selon ses jours.
+- Les lignes au prix par mois n'ont pas de TJM. Elles sont écartées, et un avertissement donne leur coût (voir ci-dessous).
+- Comme pour le coût par ETP, le rapport lit les résultats des lignes et convertit le coût dans la devise de reporting.
+
+**Tableau** : Une ligne par groupe ayant des jours dans au moins une paire, le plus grand nombre de jours en premier. Les jours comparés sont ceux de la première paire où un groupe a des jours. Chaque paire a trois colonnes sous son nom :
+
+- **Jours** : les jours achetés par les lignes au prix par jour
+- **Coût des jours** : le coût des mêmes lignes sur l'année, dans la devise de reporting
+- **TJM** : le coût des jours divisé par les jours. La cellule est vide quand les jours valent 0 ou quand le groupe n'a pas de lignes au prix par jour dans cette paire
+
+Une ligne **Total** épinglée donne, pour chaque paire, le total des jours, le total du coût des jours et le total du coût des jours divisé par le total des jours.
+
+**Graphique** : Les mêmes barres horizontales, avec le TJM. Le titre nomme le type et le regroupement, par exemple « TJM OPEX par centre de coûts ». Survolez une barre pour lire le groupe, la paire, le TJM, les jours et le coût des jours.
+
+**Avertissements** : Les deux avertissements ci-dessus, et une ligne de plus quand des lignes en personnes ou en jours sont au prix par mois : « Les lignes au prix mensuel sont exclues du TJM : Budget 2026 (180 000). » Le montant est le coût de ces lignes dans chaque paire concernée, dans la devise de reporting.
 
 ### Export
 
-- **Exporter le tableau en CSV** : Le nom du fichier porte le type, le regroupement et la première paire, par exemple `cost-per-fte-opex-cost-center-2025-budget.csv`
+- **Exporter le tableau en CSV** : Le nom du fichier porte le type, le regroupement et la première paire, par exemple `cost-per-fte-opex-cost-center-2025-budget.csv`. Pour le TJM, il commence par `daily-rate`, par exemple `daily-rate-opex-cost-center-2025-budget.csv`
 - **Exporter le graphique en PNG** : Même nom, en image PNG
 - **Imprimer / Enregistrer en PDF**
 
