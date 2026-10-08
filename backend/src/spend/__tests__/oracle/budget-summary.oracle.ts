@@ -145,11 +145,14 @@ export class BudgetSummaryOracle {
     };
   }
 
+  /** Enabled: no end of validity or one on or after January 1 of the current year (UTC); Disabled: one before it. */
   private lifecycleScope(ctx: OracleContext, fallback: LifecycleScope): LifecycleScope {
+    const yearStart = new Date(`${ctx.currentYear}-01-01T00:00:00.000Z`);
     if (ctx.matchNone) return 'none';
-    if (ctx.explicitStatus === StatusState.DISABLED) return 'inactive';
-    if (ctx.explicitStatus === StatusState.ENABLED) return 'active';
-    return ctx.includeDisabled ? null : fallback;
+    if (ctx.explicitStatus === StatusState.DISABLED) return { endedBefore: yearStart };
+    if (ctx.explicitStatus === StatusState.ENABLED) return { activeSince: yearStart };
+    if (ctx.includeDisabled) return null;
+    return fallback === 'active' ? { activeSince: yearStart } : fallback;
   }
 
   private windowScope(ctx: OracleContext): LifecycleScope {

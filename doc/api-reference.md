@@ -980,6 +980,7 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
 
 ## Summary (OPEX list)
 - GET `/spend-items/summary?status=enabled&page=1&limit=50&sort=product_name:ASC&years=2024,2025,2026`
+  - Status (OPEX and CAPEX, every summary route: page, ids, neighbours, totals, filter values, aggregate): `status=enabled` (or a `status` set filter on `enabled`) keeps the lines with no `disabled_at` or one on or after 1 January of the current year (UTC), so a line ending during the year stays enabled until 31 December; `status=disabled` keeps the lines with a `disabled_at` before 1 January. Without a status, `/summary/ids`, `/summary/neighbors` and `/summary/totals` use the enabled lines. The item lists (`GET /spend-items`, `/capex-items`) keep "not ended as of now"
   - Each row includes derived blocks for Y-1, Y, Y+1 totals and:
     - `allocation_method_label`: `Headcount|IT users|Turnover|Company|Department` (resolves `default` via rule)
     - `latest_contract_id` and `latest_contract_name` when linked to Contracts

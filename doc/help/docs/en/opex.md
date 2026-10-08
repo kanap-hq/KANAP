@@ -69,13 +69,13 @@ The OPEX list (at **Budget management > OPEX**) is your main view for browsing, 
 
 **Filtering**:
   - **Quick search**: Searches the reference, product name, description, supplier, paying company, account, contract, project names, allocation, owners, analytics values, cost center (code, name and path), budget holder, notes, currency and status. Filters the list in real time as you type, ignoring accents and case
-  - **Column filters**: Click the filter icon in any column header. **Supplier**, **Paying company**, **Account**, **Allocation**, **Currency**, **IT owner**, **Business owner**, each analytics dimension, **Cost center**, **Budget holder**, **Run or build** and **Enabled** use checkbox set filters (multi-select). The **Enabled** filter offers **Enabled** and **Disabled** and narrows the list when **Show** is set to **All**. Clicking **Clear** in it, or unticking both values, lists nothing, whatever **Show** says
+  - **Column filters**: Click the filter icon in any column header. **Supplier**, **Paying company**, **Account**, **Allocation**, **Currency**, **IT owner**, **Business owner**, each analytics dimension, **Cost center**, **Budget holder**, **Run or build** and **Enabled** use checkbox set filters (multi-select). The **Enabled** filter offers **Enabled** and **Disabled**, with the same meaning as **Show**, and narrows the list when **Show** is set to **All**. Clicking **Clear** in it, or unticking both values, lists nothing, whatever **Show** says
   - **All but a few**: Tick **All**, then untick the values you want to leave out: the filter keeps everything except those (the header reads, for example, **All but 3**), and a value created later is included automatically
   - **Amount filters**: Every amount column has a number filter. A number typed in the box under the header keeps the items with at least that amount. Open the filter menu for the other conditions: greater than, less than, equal, not equal, or between two amounts
   - **FTE filters**: Every FTE column has a number filter with the same conditions, plus blank and not blank. **Blank** keeps the items whose column has no lines
   - **Date filters**: **Effective start**, **End of validity**, **Created** and **Updated** have date filters. Pick a date in the box under the header to keep the items on that date, or open the filter menu for before, after, between, blank or not blank
   - **Text columns** use text filters, ignoring accents and case. On **Ref**, type the number or the full reference, for example `12` or `OPX-12`
-  - **Status scope**: Use the **Show: All / Enabled / Disabled** toggle above the grid (defaults to **Enabled**)
+  - **Status scope**: Use the **Show: All / Enabled / Disabled** toggle above the grid (defaults to **Enabled**). **Enabled** lists the items with no end of validity or one in the current year or later: lines that end during the current year stay in **Enabled** until 31 December. **Disabled** lists the items that ended before 1 January of the current year
   - **Sharing a view**: Your sort, search and filters are kept in the page's web address, so reloading the page or sharing the link reopens the same view. A link whose filters are no longer available shows "The filters of this link are no longer available."
 
 **Sorting**:
@@ -465,7 +465,8 @@ Every OPEX item has a **status** (Enabled or Disabled) and an optional **End of 
 
 **Viewing disabled items**:
   - By default, the OPEX list shows only **Enabled** items
-  - Use the **Show: All / Enabled / Disabled** toggle and pick **Disabled** or **All** to see disabled items
+  - Lines that end during the current year stay in **Enabled** until 31 December, even once their status reads **Disabled**. They move to **Disabled** on 1 January
+  - Use the **Show: All / Enabled / Disabled** toggle and pick **Disabled** or **All** to see the items that ended in an earlier year
 
 **When to disable vs delete**:
   - **Prefer disabling**: Keeps history intact, ensures reports remain consistent, and supports audit trails

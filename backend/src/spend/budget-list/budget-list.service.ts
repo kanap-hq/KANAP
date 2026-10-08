@@ -122,9 +122,23 @@ function windowScope(req: BudgetRequest): LifecycleScope {
   return { activeSince: new Date(`${first}-01-01T00:00:00.000Z`) };
 }
 
+/**
+ * The budget lists' Enabled and Disabled, by the current year: Enabled is a
+ * line with no end of validity or one on or after January 1 (UTC), so a line
+ * that ends during the year stays listed until December 31; Disabled is a
+ * line that ended before January 1. The other lists keep "ended as of now".
+ */
+export function budgetLifecycleScope(scope: LifecycleScope, currentYear: number): LifecycleScope {
+  const yearStart = new Date(`${currentYear}-01-01T00:00:00.000Z`);
+  if (scope === 'active') return { activeSince: yearStart };
+  if (scope === 'inactive') return { endedBefore: yearStart };
+  return scope;
+}
+
 function stateOf(req: BudgetRequest, fallback: LifecycleScope): ListState {
   const r = req.request;
-  return { page: r.page, limit: r.limit, skip: r.skip, sort: r.sort, q: r.q, filters: r.filters, scope: resolveLifecycleScope(r, fallback) };
+  const scope = budgetLifecycleScope(resolveLifecycleScope(r, fallback), req.currentYear);
+  return { page: r.page, limit: r.limit, skip: r.skip, sort: r.sort, q: r.q, filters: r.filters, scope };
 }
 
 /** Keys the statement reads for the request's own sort and filters. */
@@ -249,7 +263,7 @@ export async function budgetListSummary(
   return { items: rows, total: page.total, page: req.request.page, limit: req.request.limit };
 }
 
-/** The ordered ids of every line of the list (workspace navigation). Without a status: active lines. */
+/** The ordered ids of every line of the list (workspace navigation). Without a status: the Enabled lines. */
 export async function budgetListIds(
   scope: SummaryScopeConfig,
   deps: SummaryDeps,
@@ -270,7 +284,7 @@ export type BudgetListNeighbor = { id: string; item_number: number } | null;
 /**
  * Where one line stands in the list (0-based `index`, null when the list does
  * not hold it) and its previous and next lines: the workspace navigation
- * without downloading every id. Without a status: active lines, like the ids.
+ * without downloading every id. Without a status: the Enabled lines, like the ids.
  */
 export async function budgetListNeighbors(
   scope: SummaryScopeConfig,
@@ -347,7 +361,7 @@ export type SummaryTotals = Record<string, number | string> & { fte?: Record<str
  * read). Each version is converted to the cent
  * once and the sums are exact (numeric cents). With `fte=<keys>`, `fte` sums
  * each FTE key over the lines and counts the lines whose FTE is unknown.
- * Without a status: active lines.
+ * Without a status: the Enabled lines.
  */
 export async function budgetListTotals(
   scope: SummaryScopeConfig,

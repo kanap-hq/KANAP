@@ -108,7 +108,7 @@ The search box at the top searches the reference, description, supplier, paying 
 
 ### Column filters
 
-Each filterable column header has a filter icon. **Supplier**, **Paying company**, **Account**, **PP&E type**, **Investment type**, **Priority**, **Allocation**, **Currency**, **IT owner**, **Business owner**, each analytics dimension, **Cost center**, **Budget holder**, **Run or build** and **Enabled** use checkbox set filters with **All**, **None**, and a clear button. The **Enabled** filter offers **Enabled** and **Disabled** and narrows the list when **Show** is set to **All**. Clicking **Clear** in it, or unticking both values, lists nothing, whatever **Show** says. Multiple filters combine with AND logic.
+Each filterable column header has a filter icon. **Supplier**, **Paying company**, **Account**, **PP&E type**, **Investment type**, **Priority**, **Allocation**, **Currency**, **IT owner**, **Business owner**, each analytics dimension, **Cost center**, **Budget holder**, **Run or build** and **Enabled** use checkbox set filters with **All**, **None**, and a clear button. The **Enabled** filter offers **Enabled** and **Disabled**, with the same meaning as **Show**, and narrows the list when **Show** is set to **All**. Clicking **Clear** in it, or unticking both values, lists nothing, whatever **Show** says. Multiple filters combine with AND logic.
 
 Tick **All**, then untick the values you want to leave out: the filter keeps everything except those (the header reads, for example, **All but 3**), and a value created later is included automatically.
 
@@ -143,7 +143,7 @@ Click any cell in a row to open the workspace on the tab most relevant to that c
 
 ### Status filter
 
-Use the **Show: All / Enabled / Disabled** toggle above the grid to control lifecycle scope (defaults to **Enabled**). Pick **Disabled** to review archived investments or **All** to include both states. Totals update immediately.
+Use the **Show: All / Enabled / Disabled** toggle above the grid to control lifecycle scope (defaults to **Enabled**). **Enabled** lists the items with no end of validity or one in the current year or later: lines that end during the current year stay in **Enabled** until 31 December. **Disabled** lists the items that ended before 1 January of the current year. Pick **Disabled** to review archived investments or **All** to include both states. Totals update immediately.
 
 ### Search context preservation
 
@@ -570,6 +570,7 @@ Every CAPEX item has a **status** (Enabled or Disabled) and an optional **End of
 **Viewing disabled items**:
 
 - By default, the CAPEX list shows only **Enabled** items
+- Lines that end during the current year stay in **Enabled** until 31 December, even once their status reads **Disabled**. They move to **Disabled** on 1 January
 - Use the **Show: All / Enabled / Disabled** toggle to change the scope
 
 **When to disable vs delete**:
