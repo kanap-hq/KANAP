@@ -29,16 +29,20 @@ const AXIS_PREFIX = 'axis:';
 type GroupKind = StaffingGroup['kind'];
 const GROUP_KINDS: readonly GroupKind[] = ['costCenter', 'item', 'supplier', 'axis'];
 const monthField = (month: number) => `m${month}`;
-/** The fourteen value columns (twelve months, average, peak): each one as wide as its header and values. */
+/**
+ * The fourteen value columns (twelve months, average, peak): each one as wide as its values. The header is
+ * left out of the measure (its sort and menu icon space made every month too wide); `headerTooltip` shows a
+ * cut header in full.
+ */
 export const VALUE_COLUMN_IDS: readonly string[] = [...MONTHS.map(monthField), 'average', 'peak'];
-const AUTO_SIZE_STRATEGY = { type: 'fitCellContents' as const, colIds: [...VALUE_COLUMN_IDS] };
+const AUTO_SIZE_STRATEGY = { type: 'fitCellContents' as const, colIds: [...VALUE_COLUMN_IDS], skipHeader: true };
 /**
  * Fits the value columns again once the grid has drawn new rows, a new total or new headers (grouping,
  * year, column, scope). Deferred like AG Grid's own first fit, which measures the rendered cells.
  */
 function fitValueColumns(api: GridApi) {
   setTimeout(() => {
-    if (!api.isDestroyed()) api.autoSizeColumns([...VALUE_COLUMN_IDS]);
+    if (!api.isDestroyed()) api.autoSizeColumns([...VALUE_COLUMN_IDS], true);
   });
 }
 /** The grouping in a downloaded file's name. */

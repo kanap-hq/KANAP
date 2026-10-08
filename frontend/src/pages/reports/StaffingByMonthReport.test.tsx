@@ -198,7 +198,7 @@ describe('Staffing by month', () => {
     expect(grid.columns[1].valueFormatter({ value: 1.5 })).toBe('1.50');
     expect(grid.columns[1].valueFormatter({ value: null })).toBe('');
     // The group takes the rest with its full name on hover; the fourteen value columns have no fixed
-    // width: the grid fits them to their header and values, right-aligned.
+    // width: the grid fits them to their values (header left out, read in full on hover), right-aligned.
     expect(grid.columns[0]).toMatchObject({ flex: 1, minWidth: 180, tooltipField: 'group' });
     const values = grid.columns.slice(1);
     expect(values.map((column) => column.colId)).toEqual(['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12', 'average', 'peak']);
@@ -206,8 +206,13 @@ describe('Staffing by month', () => {
       expect(column.width).toBeUndefined();
       expect(column.flex).toBeUndefined();
       expect(column.type).toBe('rightAligned');
+      expect(column.headerTooltip).toBe(column.headerName);
     }
-    expect(grid.props.autoSizeStrategy).toEqual({ type: 'fitCellContents', colIds: values.map((column) => column.colId) });
+    expect(grid.props.autoSizeStrategy).toEqual({
+      type: 'fitCellContents',
+      colIds: values.map((column) => column.colId),
+      skipHeader: true,
+    });
     // The total: 2.75 FTE each month from January to June, 4.75 from July.
     expect(grid.pinned).toHaveLength(1);
     expect(grid.pinned[0]).toMatchObject({ group: 'reports.columns.total', m1: 2.75, m7: 4.75, peak: 4.75 });
@@ -227,7 +232,7 @@ describe('Staffing by month', () => {
         grid.props[handler]({ api: { isDestroyed: () => false, autoSizeColumns } });
         expect(autoSizeColumns).not.toHaveBeenCalled();
         vi.runOnlyPendingTimers();
-        expect(autoSizeColumns).toHaveBeenCalledWith(['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12', 'average', 'peak']);
+        expect(autoSizeColumns).toHaveBeenCalledWith(['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12', 'average', 'peak'], true);
       }
       // A grid gone in the meantime is left alone.
       const autoSizeColumns = vi.fn();
