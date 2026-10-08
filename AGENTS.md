@@ -53,8 +53,9 @@ Tool-specific or private notes live in each tool's local files, never here.
 - The merge queue tests each PR on `main` plus the PRs ahead of it, in the order they were added,
   and merges it when `backend (cloud)`, `frontend (cloud)` and `build (onprem)` pass on that
   combination. Queue runs (`merge_group`) run every job. The repository squashes, keeps `(#NNN)`
-  in the subject and deletes the branch. Do not watch or poll CI: the desktop app notifies the
-  session on a failure.
+  in the subject and deletes the branch. Do not watch or poll CI: arrange to be notified of a
+  failure (Claude Code: Auto-fix, see `CLAUDE.md`) and report the merge commit on the next
+  exchange. A merge needs no message: no news means it merged.
 - A failed check or a conflict with `main` drops that PR from the queue; the others continue.
   Fix (merge `main` into the branch for a conflict), push, and add it again with the same command.
 - One PR at a time per change: no bundling of validated PRs, the queue handles throughput.
@@ -117,8 +118,8 @@ Tool-specific or private notes live in each tool's local files, never here.
 - CI runs the backend and frontend suites in the cloud jobs, and builds both sides in on-premise
   mode. A failing spec blocks the PR.
 - On a PR, each job runs only when its side changed (`backend/`, `frontend/`; a CI file change runs
-  all three); a skipped job counts as passed. A push on `main` runs every job. The rules live in
-  `.github/scripts/ci-changes.sh`.
+  all three); a skipped job counts as passed. Every job runs for a push on `main` and in the
+  merge queue. The rules live in `.github/scripts/ci-changes.sh`.
 - The frontend check runs as a `frontend build` job and three `frontend tests (i/3)` shards in
   parallel (`vitest run --shard`, split by file); the `frontend (cloud)` job only gathers their
   results. To rerun one shard locally: `npm test -- --shard=2/3` in `frontend/`.
