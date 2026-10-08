@@ -51,6 +51,15 @@ export interface AggregateQuery {
   status?: 'enabled' | 'disabled';
 }
 
+/**
+ * The first year a report request reads, which sets its window: the lines still active on 1 January of
+ * that year (`years=`, else the year before this one; the server's `windowScope`).
+ */
+export function requestFirstYear(request: AggregateRequest | null | undefined, currentYear = new Date().getFullYear()): number {
+  const years = String(request?.query.years ?? '').split(',').map((part) => part.trim()).filter((part) => /^\d{4}$/.test(part)).map(Number);
+  return years.length ? Math.min(...years) : currentYear - 1;
+}
+
 export interface AggregateMeasure {
   id: string;
   fn: 'sum' | 'min' | 'max' | 'avg';
@@ -720,15 +729,15 @@ function consolidationFilters(p: Pick<ConsolidationParams, 'excludedAccountIds' 
 
 /**
  * The accounts behind each consolidation line, under the report's own filters and exclusions: the
- * list, which filters on the account (`account_display`), opens a line on the set of its accounts.
+ * list opens a line on the ids of its accounts (`account_id`; account names repeat across charts).
  */
 export function consolidationAccountsRequest(p: Pick<ConsolidationParams, 'excludedAccountIds' | 'filters'>): AggregateRequest {
-  return { query: { filters: consolidationFilters(p) }, spec: { groupBy: ['account_consolidation_key', 'account_display'], measures: [] } };
+  return { query: { filters: consolidationFilters(p) }, spec: { groupBy: ['account_consolidation_key', 'account_id'], measures: [] } };
 }
 
 /**
  * Per row key of `readConsolidation` (`unassigned` for the lines without a consolidation line), the
- * accounts (`account_display`) of its lines; the unassigned row always keeps the blank value too.
+ * account ids of its lines; the unassigned row always keeps the blank value too (lines without an account).
  */
 export function readConsolidationAccounts(result: AggregateResult | undefined): Map<string, Array<string | null>> {
   const byKey = new Map<string, Array<string | null>>();

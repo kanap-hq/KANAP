@@ -10,20 +10,44 @@ export type ReportGroupLinkParams = {
 };
 
 /**
- * The group name of a report row, opening its link in a new tab. Filters too long for a URL are
- * saved when the pointer or the focus reaches the link, so it opens on a short `ctx` address.
+ * Opens a link whose filters are too long for a URL: a new tab at once (still inside the click, so no
+ * popup blocker stops it), cut from this page (`opener`), then sent to the short `ctx` address once
+ * the filters are saved; to the inline address when the save fails. Returns the save, for `refresh`.
+ */
+export function openSavedListLink(link: ReportListLink & { save: NonNullable<ReportListLink['save']> }): Promise<unknown> {
+  const tab = window.open('', '_blank');
+  if (tab) tab.opener = null;
+  return link.save().then(
+    (href) => { if (tab) tab.location.href = href; },
+    () => { if (tab) tab.location.href = link.href; },
+  );
+}
+
+/**
+ * The group name of a report row, opening its link in a new tab. Short filters are a plain link. Long
+ * ones are saved only when the link is used (click, middle click, Enter): saves are rate limited, so
+ * never on hover. Until then the href carries them inline, so copying the link still works.
  */
 export default function ReportGroupLinkCell(props: ICellRendererParams & ReportGroupLinkParams) {
   const { getLink, ...cell } = props;
   const link = props.data ? getLink(props.data) : null;
   const [, refresh] = useReducer((n: number) => n + 1, 0);
-  const prepare = link?.save ? () => { link.save!().then(refresh, () => undefined); } : undefined;
+  const save = link?.save;
+  // Enter on a link dispatches a click: the click handler covers the keyboard too.
+  const activate = save && link
+    ? (event: React.MouseEvent) => {
+      if (event.type === 'auxclick' && event.button !== 1) return;
+      if (!(event.target as HTMLElement | null)?.closest?.('a')) return;
+      event.preventDefault();
+      openSavedListLink({ ...link, save }).finally(refresh);
+    }
+    : undefined;
   return (
     <Box
       component="span"
       sx={{ display: 'flex', alignItems: 'center', width: '100%', minWidth: 0, height: '100%' }}
-      onMouseEnter={prepare}
-      onFocus={prepare}
+      onClick={activate}
+      onAuxClick={activate}
     >
       <LinkCellRenderer {...cell} newTab getHref={() => link?.href ?? null} />
     </Box>

@@ -24,6 +24,7 @@ import {
   dailyRateRequests,
   readCostPerFte,
   readDailyRate,
+  requestFirstYear,
   type ColumnYear,
   type CostPerFteNotice,
   type DailyRate,
@@ -126,8 +127,6 @@ export default function CostPerFteReport() {
   const reportFilters = useBudgetReportFilters({ scope, years: yearsNeeded });
   const grouping = useReportGroup(reportFilters.analyticsAxes);
   const { kind, group, header: groupHeader, inSentence: groupInSentence, labels } = grouping;
-  // A group name opens its item, or the list filtered on the group and the bar, in a new tab.
-  const groupLink = useGroupLinks(scope, grouping, reportFilters);
 
   // One request per pair: per group, the staff cost and FTE (or the day cost and days); on the total row, the notices.
   const requests = useMemo(() => {
@@ -136,6 +135,9 @@ export default function CostPerFteReport() {
     return view === 'rate' ? dailyRateRequests(params) : costPerFteRequests(params);
   }, [reportFilters.queryFilters, scope, columns, group, view]);
   const report = useBudgetAggregates(scope, requests, { keepPrevious: true });
+  // A group name opens its item, or the list of the lines the row counts (the group, the bar, the
+  // report's window, the lines that declare FTE), in a new tab.
+  const groupLink = useGroupLinks(scope, grouping, reportFilters, { firstYear: requestFirstYear(requests?.[0], Y), fteOnly: true });
   const busy = requests == null || report.isLoading || report.isPlaceholderData;
   // While a new pair loads, the kept answers may hold fewer pairs: read nothing rather than shifted columns.
   const results = report.data && report.data.length === columns.length ? report.data : undefined;

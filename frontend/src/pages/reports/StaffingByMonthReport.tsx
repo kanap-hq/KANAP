@@ -15,7 +15,7 @@ import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { useReportScope } from './useReportScope';
 import { metricFileName, MetricKey, useReportMetric } from './reportMetrics';
 import { escapeTooltipText } from './tooltipText';
-import { MONTHS, readStaffing, staffingChartSeries, staffingRequest } from './reportAggregates';
+import { MONTHS, readStaffing, requestFirstYear, staffingChartSeries, staffingRequest } from './reportAggregates';
 import { compareNames, useBudgetAggregate } from './useBudgetAggregate';
 import { ReportNoticeLine } from './reportMeasure';
 import { GROUP_FILE_NAME, ReportGroupFilters, useGroupLinks, useReportGroup } from './reportGroup';
@@ -46,8 +46,6 @@ export default function StaffingByMonthReport() {
   const grouping = useReportGroup(reportFilters.analyticsAxes);
   // The group as the first column names it, as a sentence names it, and its rows without a key.
   const { kind, group, header: groupHeader, inSentence: groupInSentence, labels } = grouping;
-  // A group name opens its item, or the list filtered on the group and the bar, in a new tab.
-  const groupLink = useGroupLinks(scope, grouping, reportFilters);
 
   // One request: per group, the twelve monthly FTE of the column; on the total row, the notices.
   const request = useMemo(() => (reportFilters.queryFilters == null || group == null ? null : staffingRequest({
@@ -58,6 +56,9 @@ export default function StaffingByMonthReport() {
     filters: reportFilters.queryFilters,
   })), [reportFilters.queryFilters, scope, year, metric, group]);
   const report = useBudgetAggregate(scope, request, { keepPrevious: true });
+  // A group name opens its item, or the list of the lines the row counts (the group, the bar, the
+  // report's window, the lines that declare FTE), in a new tab.
+  const groupLink = useGroupLinks(scope, grouping, reportFilters, { firstYear: requestFirstYear(request, Y), fteOnly: true });
   const busy = request == null || report.isLoading || report.isPlaceholderData;
   const staffing = useMemo(() => readStaffing(report.data, labels, compareNames), [report.data, labels]);
 

@@ -33,7 +33,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useTenant } from '../tenant/TenantContext';
 import { useThemeMode } from '../config/ThemeContext';
 import { useLocale } from '../i18n/useLocale';
-import { statusScopeParams } from '../utils/statusScopeParams';
+import { STATUS_SCOPE_PARAM, statusScopeParams } from '../utils/statusScopeParams';
 import {
   cachedListContextId,
   filtersNeedContext,
@@ -67,6 +67,7 @@ const NUMBER_FILTER_PARAMS = {
 type ServerResponse<T> = { items: T[]; total: number; page: number; limit: number };
 
 export type StatusScope = 'enabled' | 'disabled' | 'invited' | 'all';
+const DEFAULT_STATUS_SCOPES: StatusScope[] = ['all', 'enabled', 'disabled'];
 
 export type EnhancedColDef<T> = ColDef<T> & {
   required?: boolean; // cannot be hidden
@@ -91,6 +92,11 @@ export type ServerDataGridProps<T> = {
   defaultHiddenColumns?: string[]; // columns hidden by default
   /** Shows the hidden columns the starting filters narrow (a link's filter on a column hidden by default). */
   showFilteredColumns?: boolean;
+  /**
+   * With `showFilteredColumns`: the column the shown ones go right after (the name column), so they
+   * are on screen when the list opens; without it they keep their place in the layout.
+   */
+  filteredColumnsAfter?: string;
   columnPreferencesKey?: string; // localStorage key for persistence
   onColumnStateChange?: (columnState: ColumnState[]) => void; // callback for external state management
   onCellClicked?: (event: any) => void; // optional cell click handler
@@ -225,9 +231,47 @@ function blockQueryKey(sortModel: SortModelItem[] | undefined, filterModel: unkn
 }
 
 /** Date columns: date models from both the filter menu and the box under the header. */
+/**
+ * The layout to save while some columns are shown for this visit only (a link's filters): those
+ * columns stay hidden, at the place they had before (the visit moved them next to the name column).
+ */
+export function layoutWithoutRevealed(state: ColumnState[], revealed: ReadonlySet<string>, before: ColumnState[]): ColumnState[] {
+  const kept = state.filter((col) => !col.colId || !revealed.has(col.colId));
+  const result = [...kept];
+  const beforeIds = before.map((col) => col.colId);
+  for (const colId of beforeIds) {
+    if (!colId || !revealed.has(colId)) continue;
+    const current = state.find((col) => col.colId === colId);
+    const entry = { ...(before.find((col) => col.colId === colId) ?? current ?? { colId }), ...(current ? { width: current.width } : {}), hide: true };
+    // After the nearest column that came before it in the earlier layout and is still saved.
+    const index = beforeIds.indexOf(colId);
+    let at = 0;
+    for (let i = index - 1; i >= 0; i -= 1) {
+      const found = result.findIndex((col) => col.colId === beforeIds[i]);
+      if (found >= 0) { at = found + 1; break; }
+    }
+    result.splice(at, 0, entry);
+  }
+  // A revealed column the earlier layout did not hold: hidden, where it is now.
+  for (const col of state) {
+    if (col.colId && revealed.has(col.colId) && !result.some((other) => other.colId === col.colId)) result.push({ ...col, hide: true });
+  }
+  return result;
+}
+
 export const DATE_COLUMN_FILTER = {
   filter: 'agDateColumnFilter',
   floatingFilterComponent: 'agDateColumnFloatingFilter',
+} as const;
+
+/**
+ * A date column whose filter takes two conditions joined by AND or OR: End of validity on the budget
+ * lists, which a report link narrows to "blank, or after 31 December" (the lines still active on
+ * 1 January of the report's first year), and which the user can read and change in the filter.
+ */
+export const DATE_COLUMN_FILTER_TWO_CONDITIONS = {
+  ...DATE_COLUMN_FILTER,
+  filterParams: { ...DATE_FILTER_PARAMS, suppressAndOrCondition: false, maxNumConditions: 2 },
 } as const;
 
 // Column state management hook
@@ -346,6 +390,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   requiredColumns = [],
   defaultHiddenColumns = [],
   showFilteredColumns = false,
+  filteredColumnsAfter,
   columnPreferencesKey,
   onColumnStateChange,
   onCellClicked,
@@ -473,7 +518,14 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   const filterModelRef = useRef<any>({});
   const appliedInitialFilterRef = useRef(false);
 
-  const [statusScope, setStatusScope] = useState<StatusScope>(statusScopeConfig?.defaultScope ?? 'enabled');
+  // `?statusScope=all` (a report row opening the list on every line of its window): the Show scope the
+  // list starts on, when it is one this list offers; written back when the user changes it.
+  const defaultStatusScope: StatusScope = statusScopeConfig?.defaultScope ?? 'enabled';
+  const offeredScopes = statusScopeConfig?.scopes ?? DEFAULT_STATUS_SCOPES;
+  const urlStatusScope = urlParams.get(STATUS_SCOPE_PARAM) as StatusScope | null;
+  const [statusScope, setStatusScope] = useState<StatusScope>(
+    statusScopeConfig && urlStatusScope && offeredScopes.includes(urlStatusScope) ? urlStatusScope : defaultStatusScope,
+  );
   const statusScopeRef = useRef<StatusScope>(statusScope);
   useEffect(() => {
     statusScopeRef.current = statusScope;
@@ -488,12 +540,12 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   // Columns shown for this visit only, because a link's filter narrows them (`showFilteredColumns`):
   // the saved layout keeps them hidden until the user shows one in the chooser.
   const revealedColumnsRef = useRef<Set<string>>(new Set());
+  // The layout before they were shown (and moved next to the name column): where they go back to.
+  const layoutBeforeRevealRef = useRef<ColumnState[]>([]);
   const saveLayout = useCallback((state: ColumnState[]) => {
     if (!columnPreferencesKey) return;
     const revealed = revealedColumnsRef.current;
-    columnStateManager.saveColumnState(revealed.size === 0
-      ? state
-      : state.map((col) => (col.colId && revealed.has(col.colId) ? { ...col, hide: true } : col)));
+    columnStateManager.saveColumnState(revealed.size === 0 ? state : layoutWithoutRevealed(state, revealed, layoutBeforeRevealRef.current));
   }, [columnPreferencesKey, columnStateManager]);
   const initializedRef = useRef<boolean>(false);
 
@@ -582,10 +634,17 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
    * list does not open narrowed by a filter nobody can see or clear. Shown for this visit only: the
    * saved layout keeps them hidden (`saveLayout`), unless the user shows one in the chooser.
    * Columns kept out of the chooser only carry a link's filter and stay hidden.
+   *
+   * With `filteredColumnsAfter`, they move right after that column for the visit: in their layout
+   * place (often far right) they opened off screen and the list looked narrowed for no reason.
+   *
+   * The starting model is the one this grid applied (`filterModelRef`) as well as `getFilterModel()`:
+   * filters read from a `ctx` are set after the grid starts, and the grid only reports a filter's model
+   * once its component exists.
    */
   const revealFilteredColumns = useCallback((api: any) => {
     if (!showFilteredColumns) return;
-    const model = (api?.getFilterModel?.() ?? {}) as Record<string, unknown>;
+    const model = { ...(filterModelRef.current ?? {}), ...(api?.getFilterModel?.() ?? {}) } as Record<string, unknown>;
     const hidden = Object.keys(model).filter((colId) => {
       const column = api.getColumn?.(colId);
       return !!column && column.isVisible?.() === false && filterMayBeDropped(colId);
@@ -593,15 +652,21 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     if (hidden.length === 0) return;
     try {
       // Before showing them: the grid's own column event saves the layout at once.
+      if (revealedColumnsRef.current.size === 0) layoutBeforeRevealRef.current = (api.getColumnState?.() ?? []) as ColumnState[];
       for (const colId of hidden) revealedColumnsRef.current.add(colId);
       api.setColumnsVisible?.(hidden, true);
+      if (filteredColumnsAfter) {
+        const order = ((api.getColumnState?.() ?? []) as ColumnState[]).map((col) => col.colId).filter((colId) => !hidden.includes(String(colId)));
+        const at = order.indexOf(filteredColumnsAfter);
+        if (at >= 0) api.moveColumns?.(hidden, at + 1);
+      }
       const newColumnState = (api.getColumnState?.() ?? []) as ColumnState[];
       setCurrentColumnState(newColumnState);
       onColumnStateChange?.(newColumnState);
     } catch (e) {
       console.warn('Failed to show the filtered columns:', e);
     }
-  }, [showFilteredColumns, filterMayBeDropped, onColumnStateChange]);
+  }, [showFilteredColumns, filteredColumnsAfter, filterMayBeDropped, onColumnStateChange]);
 
   const handleColumnToggle = useCallback((field: string, visible: boolean) => {
     const api = gridApiRef.current;
@@ -670,6 +735,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
       }
       const defaultState = columnStateManager.resetColumnState();
       revealedColumnsRef.current.clear();
+      layoutBeforeRevealRef.current = [];
       clearFiltersOfHiddenColumns(
         api,
         defaultState.filter((state) => state.hide && state.colId && !hiddenBefore.has(state.colId))
@@ -726,10 +792,13 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   const handleStatusScopeChange = useCallback((next: StatusScope) => {
     statusScopeRef.current = next;
     setStatusScope(next);
+    const params = new URLSearchParams(locationSearchRef.current);
+    if (next === defaultStatusScope) params.delete(STATUS_SCOPE_PARAM); else params.set(STATUS_SCOPE_PARAM, next);
+    if (params.toString() !== new URLSearchParams(locationSearchRef.current).toString()) navigate({ search: params.toString() }, { replace: true });
     try {
       onQueryStateChange?.({ sort: sortParamRef.current, filterModel: filterModelRef.current, q: searchRef.current, statusScope: next });
     } catch {}
-  }, [onQueryStateChange]);
+  }, [onQueryStateChange, defaultStatusScope, navigate]);
 
   const extraParamsRef = useRef(extraParams);
   const extraParamsKey = useMemo(() => JSON.stringify(extraParams ?? {}), [extraParams]);
@@ -1275,7 +1344,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
                 onChange={(event) => handleStatusScopeChange(event.target.value as StatusScope)}
                 sx={{ '& .MuiFormControlLabel-root': { mr: 1 } }}
               >
-                {(statusScopeConfig.scopes ?? ['all', 'enabled', 'disabled']).map((scope) => (
+                {offeredScopes.map((scope) => (
                   <FormControlLabel
                     key={scope}
                     value={scope}

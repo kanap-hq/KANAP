@@ -1,10 +1,10 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import type { TFunction } from 'i18next';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import type { ColDef } from 'ag-grid-community';
 import { createAppTheme } from '../../config/ThemeContext';
 import { AMOUNT_COLUMNS } from '../../components/finance/amountColumns';
@@ -91,7 +91,7 @@ import CostPerFteReport from './CostPerFteReport';
 import AnalyticsCategoryReport from './AnalyticsCategoryReport';
 import ConsolidationReport from './ConsolidationReport';
 import ReportGroupLinkCell from './ReportGroupLinkCell';
-import { NO_LIST_PICKS, reportListLink } from './reportListLink';
+import { NO_LIST_PICKS, reportListLink, windowFilter } from './reportListLink';
 import { resetListContextCache } from '../../lib/listContext';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
@@ -216,8 +216,15 @@ afterEach(() => {
 });
 
 const set = (values: Array<string | null>) => ({ filterType: 'set', values });
+/**
+ * The filters of every link: the report's window (no `years`, or last year as the first pair: the
+ * lines still active on 1 January of last year), then the row's own.
+ */
+const listed = (filters: Record<string, unknown>) => ({ disabled_at: windowFilter(Y - 1), ...filters });
+/** The same for a row that counts only the lines declaring FTE. */
+const staffed = (filters: Record<string, unknown>) => listed({ has_fte: set(['yes']), ...filters });
 
-/** The link of a row, in a new tab, and the list filters its address carries. */
+/** The link of a row, in a new tab, the list filters its address carries and its Show scope. */
 async function linkOf(name: string) {
   // The grid may remount (a new value width): read it afresh each time.
   const link = await waitFor(() => within(screen.getByTestId('grid')).getByRole('link', { name }));
@@ -225,7 +232,9 @@ async function linkOf(name: string) {
   expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   const href = link.getAttribute('href') ?? '';
   const [path, search] = href.split('?');
-  const filters = search ? JSON.parse(new URLSearchParams(search).get('filters') ?? 'null') : null;
+  const params = new URLSearchParams(search ?? '');
+  const filters = search ? JSON.parse(params.get('filters') ?? 'null') : null;
+  if (filters) expect(params.get('statusScope')).toBe('all');
   return { href, path, filters };
 }
 
@@ -236,45 +245,46 @@ async function expectPlainTotal() {
 }
 
 describe('Staffing by month group links', () => {
-  it('a cost center opens the OPEX list on it, the row without one on the blank value; the total stays plain', async () => {
+  it('a cost center opens the OPEX list on every status, its window, FTE declared and the cost center; No cost center on blank', async () => {
     renderReport(<StaffingByMonthReport />, '/report');
+    const filters = staffed({ cost_center_label: set(['CC1 · Ops']) });
     expect(await linkOf('CC1 · Ops')).toEqual({
-      href: `/ops/opex?${new URLSearchParams({ filters: JSON.stringify({ cost_center_label: set(['CC1 · Ops']) }) })}`,
+      href: `/ops/opex?${new URLSearchParams({ filters: JSON.stringify(filters), statusScope: 'all' })}`,
       path: '/ops/opex',
-      filters: { cost_center_label: set(['CC1 · Ops']) },
+      filters,
     });
-    expect((await linkOf('reports.staffing.none.costCenter')).filters).toEqual({ cost_center_label: set([null]) });
+    expect((await linkOf('reports.staffing.none.costCenter')).filters).toEqual(staffed({ cost_center_label: set([null]) }));
     await expectPlainTotal();
   });
 
   it("the bar's picks follow: the cost center node's cost centers, run or build, a dimension value, Items with FTE", async () => {
     renderReport(<StaffingByMonthReport />, '/report?group=supplier&costCenter=it&runBuild=run&fte=with&analytics=ax-nat:n-hw');
-    expect((await linkOf('Acme')).filters).toEqual({
+    expect((await linkOf('Acme')).filters).toEqual(listed({
       cost_center_label: set(['CC1 · Ops', 'CC2 · Dev']),
       run_build: set(['run']),
       'analytics_ax-nat': set(['Hardware']),
       has_fte: set(['yes']),
       supplier_name: set(['Acme']),
-    });
+    }));
   });
 
   it('a supplier row and No supplier, on the CAPEX list', async () => {
     renderReport(<StaffingByMonthReport />, '/report?scope=capex&group=supplier');
     const acme = await linkOf('Acme');
     expect(acme.path).toBe('/ops/capex');
-    expect(acme.filters).toEqual({ supplier_name: set(['Acme']) });
-    expect((await linkOf('reports.staffing.none.supplier')).filters).toEqual({ supplier_name: set([null]) });
+    expect(acme.filters).toEqual(staffed({ supplier_name: set(['Acme']) }));
+    expect((await linkOf('reports.staffing.none.supplier')).filters).toEqual(staffed({ supplier_name: set([null]) }));
   });
 
   it('a dimension value filters its dimension column: the default one, and a value picked as none', async () => {
     renderReport(<StaffingByMonthReport />, '/report?group=axis:ax-def&analytics=ax-nat:none');
-    expect((await linkOf('Apps')).filters).toEqual({ 'analytics_ax-nat': set([null]), analytics_category_name: set(['Apps']) });
-    expect((await linkOf('reports.staffing.none.axis')).filters).toEqual({ 'analytics_ax-nat': set([null]), analytics_category_name: set([null]) });
+    expect((await linkOf('Apps')).filters).toEqual(staffed({ 'analytics_ax-nat': set([null]), analytics_category_name: set(['Apps']) }));
+    expect((await linkOf('reports.staffing.none.axis')).filters).toEqual(staffed({ 'analytics_ax-nat': set([null]), analytics_category_name: set([null]) }));
   });
 
   it('a cost center row under the picked node keeps its own cost center only', async () => {
     renderReport(<StaffingByMonthReport />, '/report?costCenter=it');
-    expect((await linkOf('CC2 · Dev')).filters).toEqual({ cost_center_label: set(['CC2 · Dev']) });
+    expect((await linkOf('CC2 · Dev')).filters).toEqual(staffed({ cost_center_label: set(['CC2 · Dev']) }));
   });
 
   it('an item opens its page', async () => {
@@ -285,15 +295,15 @@ describe('Staffing by month group links', () => {
 });
 
 describe('Cost per FTE group links', () => {
-  it('cost per FTE view: a cost center opens the filtered list, the total stays plain', async () => {
+  it('cost per FTE view: a cost center opens the list of its FTE lines in the window, the total stays plain', async () => {
     renderReport(<CostPerFteReport />, '/report?runBuild=build');
-    expect((await linkOf('CC2 · Dev')).filters).toEqual({ run_build: set(['build']), cost_center_label: set(['CC2 · Dev']) });
+    expect((await linkOf('CC2 · Dev')).filters).toEqual(staffed({ run_build: set(['build']), cost_center_label: set(['CC2 · Dev']) }));
     await expectPlainTotal();
   });
 
   it('daily rate view: a dimension value and an item', async () => {
     const view = renderReport(<CostPerFteReport />, '/report?view=rate&group=axis:ax-nat');
-    expect((await linkOf('Hardware')).filters).toEqual({ 'analytics_ax-nat': set(['Hardware']) });
+    expect((await linkOf('Hardware')).filters).toEqual(staffed({ 'analytics_ax-nat': set(['Hardware']) }));
     view.unmount();
     renderReport(<CostPerFteReport />, '/report?view=rate&group=item&scope=capex');
     expect((await linkOf('Line b')).href).toBe('/ops/capex/b');
@@ -302,51 +312,60 @@ describe('Cost per FTE group links', () => {
 });
 
 describe('Analytics dimensions report value links', () => {
-  it('each value opens the list filtered on it and on the bar; the unassigned row on the blank value; totals plain', async () => {
+  it('each value opens the list filtered on it, the bar and the window; the unassigned row on blank; totals plain', async () => {
     renderReport(<AnalyticsCategoryReport />, '/report?fte=with');
-    expect((await linkOf('Cloud')).filters).toEqual({ has_fte: set(['yes']), analytics_category_name: set(['Cloud']) });
-    expect((await linkOf('reports.analyticsCategory.unassigned')).filters).toEqual({ has_fte: set(['yes']), analytics_category_name: set([null]) });
+    expect((await linkOf('Cloud')).filters).toEqual(listed({ has_fte: set(['yes']), analytics_category_name: set(['Cloud']) }));
+    expect((await linkOf('reports.analyticsCategory.unassigned')).filters).toEqual(listed({ has_fte: set(['yes']), analytics_category_name: set([null]) }));
     const pinned = await screen.findByTestId('pinned');
     expect(within(pinned).queryByRole('link')).toBeNull();
   });
 
-  it('on another dimension, its own column', async () => {
+  it('on another dimension, its own column; an amount measure keeps every line', async () => {
     renderReport(<AnalyticsCategoryReport />, '/report?axis=ax-nat');
-    expect((await linkOf('Hardware')).filters).toEqual({ 'analytics_ax-nat': set(['Hardware']) });
+    expect((await linkOf('Hardware')).filters).toEqual(listed({ 'analytics_ax-nat': set(['Hardware']) }));
+  });
+
+  it('the FTE measure adds FTE declared', async () => {
+    renderReport(<AnalyticsCategoryReport />, '/report?measure=fte');
+    expect((await linkOf('Cloud')).filters).toEqual(staffed({ analytics_category_name: set(['Cloud']) }));
   });
 });
 
 describe('Consolidation accounts report line links', () => {
-  const accountRequests = () => post.mock.calls.filter(([, body]) => body.spec.groupBy.includes('account_display'));
+  const accountRequests = () => post.mock.calls.filter(([, body]) => body.spec.groupBy.includes('account_id'));
   const reportRequests = () => post.mock.calls.filter(([, body]) => body.spec.groupBy[1] === 'account_consolidation_label');
 
-  it('a consolidation line opens the list on its accounts and the bar; Unassigned on the other accounts and blank; totals plain', async () => {
+  it('a consolidation line opens the list on the ids of its accounts and the bar; totals plain', async () => {
     renderReport(<ConsolidationReport />, '/report?runBuild=build');
-    expect((await linkOf('[600] IT')).filters).toEqual({ run_build: set(['build']), account_display: set(['6120 - Cloud']) });
+    expect((await linkOf('[600] IT')).filters).toEqual(listed({ run_build: set(['build']), account_id: set(['acc2']) }));
     const pinned = await screen.findByTestId('pinned');
     expect(within(pinned).queryByRole('link')).toBeNull();
     // The second request reads the same filters as the report's own, grouped by consolidation line and account.
     const accounts = accountRequests()[accountRequests().length - 1][1];
     expect(accounts.query).toEqual(reportRequests()[reportRequests().length - 1][1].query);
-    expect(accounts.spec).toEqual({ groupBy: ['account_consolidation_key', 'account_display'], measures: [] });
+    expect(accounts.spec).toEqual({ groupBy: ['account_consolidation_key', 'account_id'], measures: [] });
   });
 
-  it('every account of a line, and the unassigned row with blank', async () => {
-    renderReport(<ConsolidationReport />, '/report');
+  it('every account of a line, the unassigned row with blank, and FTE declared with the FTE measure', async () => {
+    const view = renderReport(<ConsolidationReport />, '/report');
     const it600 = await linkOf('[600] IT');
-    expect(it600.filters.account_display.values.slice().sort()).toEqual(['6110 - Software', '6120 - Cloud']);
+    expect(it600.filters.account_id.values.slice().sort()).toEqual(['acc1', 'acc2']);
+    expect(it600.filters).not.toHaveProperty('has_fte');
     const unassigned = await linkOf('reports.consolidation.unassigned');
-    expect(Object.keys(unassigned.filters)).toEqual(['account_display']);
-    expect(unassigned.filters.account_display.values).toHaveLength(2);
-    expect(unassigned.filters.account_display.values).toEqual(expect.arrayContaining(['6300 - Other', null]));
+    expect(Object.keys(unassigned.filters).sort()).toEqual(['account_id', 'disabled_at']);
+    expect(unassigned.filters.account_id.values).toHaveLength(2);
+    expect(unassigned.filters.account_id.values).toEqual(expect.arrayContaining(['acc3', null]));
+    view.unmount();
+    renderReport(<ConsolidationReport />, '/report?measure=fte');
+    expect((await linkOf('[600] IT')).filters.has_fte).toEqual(set(['yes']));
   });
 
   it('a caller who cannot read accounts: the one unassigned row opens the list on every account and blank', async () => {
     serverAccounts = undefined;
     renderReport(<ConsolidationReport />, '/report');
     const unassigned = await linkOf('reports.consolidation.unassigned');
-    expect(unassigned.filters.account_display.values.slice().sort((a: string | null, b: string | null) => String(a).localeCompare(String(b))))
-      .toEqual(['6110 - Software', '6120 - Cloud', '6300 - Other', null].sort((a, b) => String(a).localeCompare(String(b))));
+    expect(unassigned.filters.account_id.values.slice().sort((a: string | null, b: string | null) => String(a).localeCompare(String(b))))
+      .toEqual(['acc1', 'acc2', 'acc3', null].sort((a, b) => String(a).localeCompare(String(b))));
   });
 
   it('asks the accounts only once the report has rows', async () => {
@@ -358,20 +377,82 @@ describe('Consolidation accounts report line links', () => {
 });
 
 describe('a group link whose filters are too long for a URL', () => {
-  it('carries them inline, saves them when the pointer reaches the link, then opens on ctx', async () => {
+  const labels = Array.from({ length: 80 }, (_, i) => `CC${100 + i} · Cost center number ${i}`);
+  const getLink = () => reportListLink('opex', { kind: 'supplier', name: 'Acme' }, { ...NO_LIST_PICKS, costCenterLabels: labels }, { firstYear: Y - 1, fteOnly: false });
+  let tab: { opener: unknown; location: { href: string } };
+  let open: MockInstance<typeof window.open>;
+
+  beforeEach(() => {
     resetListContextCache();
     post.mockImplementation(async (url: string) => {
       if (url === '/list-contexts') return { data: { id: 'ctx-42' } };
       throw new Error(`unexpected POST ${url}`);
     });
-    const labels = Array.from({ length: 80 }, (_, i) => `CC${100 + i} · Cost center number ${i}`);
-    const getLink = () => reportListLink('opex', { kind: 'supplier', name: 'Acme' }, { ...NO_LIST_PICKS, costCenterLabels: labels });
-    render(<ReportGroupLinkCell {...({ value: 'Acme', data: { groupName: 'Acme' }, colDef: {} } as any)} getLink={getLink} />);
+    tab = { opener: window, location: { href: '' } };
+    open = vi.spyOn(window, 'open').mockImplementation(() => tab as unknown as Window);
+  });
+  afterEach(() => open.mockRestore());
+
+  const saves = () => post.mock.calls.filter(([url]) => url === '/list-contexts');
+  const renderCell = () => render(<ReportGroupLinkCell {...({ value: 'Acme', data: { groupName: 'Acme' }, colDef: {} } as any)} getLink={getLink} />);
+
+  it('carries them inline (a copyable link) and saves nothing on hover or focus', async () => {
+    renderCell();
     const link = screen.getByRole('link', { name: 'Acme' });
-    expect(link.getAttribute('href')).toMatch(/^\/ops\/opex\?filters=/);
+    expect(link.getAttribute('href')).toMatch(/^\/ops\/opex\?filters=.*statusScope=all$/);
     expect(link).toHaveAttribute('target', '_blank');
     fireEvent.mouseEnter(link);
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Acme' })).toHaveAttribute('href', '/ops/opex?ctx=ctx-42'));
-    expect(post.mock.calls.filter(([url]) => url === '/list-contexts')).toHaveLength(1);
+    fireEvent.mouseOver(link);
+    fireEvent.focus(link);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(saves()).toHaveLength(0);
+    expect(open).not.toHaveBeenCalled();
+  });
+
+  it('a click (or Enter, which clicks) opens a tab at once, saves, then sends the tab to the ctx address', async () => {
+    renderCell();
+    const link = screen.getByRole('link', { name: 'Acme' });
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 });
+    await act(async () => { link.dispatchEvent(click); });
+    expect(click.defaultPrevented).toBe(true);
+    expect(open).toHaveBeenCalledWith('', '_blank');
+    expect(tab.opener).toBeNull();
+    await waitFor(() => expect(tab.location.href).toBe('/ops/opex?statusScope=all&ctx=ctx-42'));
+    expect(saves()).toHaveLength(1);
+    // Saved: the link itself now carries the short address.
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Acme' })).toHaveAttribute('href', '/ops/opex?statusScope=all&ctx=ctx-42'));
+  });
+
+  it('a middle click does the same; a right click (copy link) does nothing', async () => {
+    renderCell();
+    const link = screen.getByRole('link', { name: 'Acme' });
+    const right = new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 2 });
+    await act(async () => { link.dispatchEvent(right); });
+    expect(right.defaultPrevented).toBe(false);
+    expect(saves()).toHaveLength(0);
+    const middle = new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 1 });
+    await act(async () => { link.dispatchEvent(middle); });
+    expect(middle.defaultPrevented).toBe(true);
+    await waitFor(() => expect(tab.location.href).toBe('/ops/opex?statusScope=all&ctx=ctx-42'));
+  });
+
+  it('a failed save sends the tab to the inline address', async () => {
+    post.mockImplementation(async () => { throw new Error('429'); });
+    renderCell();
+    const link = screen.getByRole('link', { name: 'Acme' });
+    const inline = link.getAttribute('href');
+    await act(async () => { fireEvent.click(link); });
+    await waitFor(() => expect(tab.location.href).toBe(inline));
+  });
+
+  it('short filters: a plain link, no handler, no save', async () => {
+    const short = () => reportListLink('opex', { kind: 'supplier', name: 'Acme' }, NO_LIST_PICKS, { firstYear: Y - 1, fteOnly: false });
+    render(<ReportGroupLinkCell {...({ value: 'Acme', data: { groupName: 'Acme' }, colDef: {} } as any)} getLink={short} />);
+    const link = screen.getByRole('link', { name: 'Acme' });
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 });
+    await act(async () => { link.dispatchEvent(click); });
+    expect(click.defaultPrevented).toBe(false);
+    expect(open).not.toHaveBeenCalled();
+    expect(saves()).toHaveLength(0);
   });
 });

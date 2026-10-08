@@ -2,7 +2,7 @@ import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import PageHeader from '../components/PageHeader';
-import ServerDataGrid, { DATE_COLUMN_FILTER, StatusScope, gridSortModel } from '../components/ServerDataGrid';
+import ServerDataGrid, { DATE_COLUMN_FILTER, DATE_COLUMN_FILTER_TWO_CONDITIONS, StatusScope, gridSortModel } from '../components/ServerDataGrid';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Stack, Typography } from '@mui/material';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
@@ -447,6 +447,19 @@ export default function CapexPage() {
         filterParams: { getValues: getCapexFilterValues('account_display'), searchable: false },
         cellRenderer: linkCell('account_display'),
       },
+      // The account by id, for a report link (a consolidation line opens the list on its accounts:
+      // account names repeat across charts of accounts). Hidden and kept out of the column chooser, like
+      // the link filters of the tasks list; the column has to exist, or the grid would drop the model.
+      {
+        colId: 'account_id',
+        headerName: t('capex.columns.account'),
+        hide: true,
+        defaultHidden: true,
+        suppressColumnsToolPanel: true,
+        filter: CheckboxSetFilter,
+        filterParams: { values: [] },
+        sortable: false,
+      },
       // Lines whose account belongs to another chart of accounts than the paying company's: the
       // filter the overview's data hygiene count opens the list with. Hidden by default.
       {
@@ -543,7 +556,8 @@ export default function CapexPage() {
         headerName: t('capex.columns.endOfValidity'),
         width: 150,
         defaultHidden: true,
-        ...DATE_COLUMN_FILTER,
+        // Two conditions: a report link opens the list on "blank, or after 31 December" (its window).
+        ...DATE_COLUMN_FILTER_TWO_CONDITIONS,
         // A timestamp: shown as the calendar day in the viewer's time zone, like the drawer.
         valueFormatter: (p: any) => formatShortDate(p.value ? new Date(p.value as string) : null, locale),
         cellRenderer: linkCell('disabled_at'),
@@ -734,6 +748,8 @@ export default function CapexPage() {
         defaultSort={gridDefaultSort}
         // A link's filter on a hidden column (the overview's hygiene counts) shows that column.
         showFilteredColumns
+        // Next to the name, so they are on screen: the reason the list is narrowed.
+        filteredColumnsAfter="description"
         statusScopeConfig={{ defaultScope: 'enabled' }}
         columnPreferencesKey="capex-summary"
         initialState={initialGridState}

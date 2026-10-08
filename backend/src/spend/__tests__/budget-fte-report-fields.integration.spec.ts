@@ -279,6 +279,47 @@ async function checkScope(runner: QueryRunner, scope: SummaryScopeConfig, tenant
   assert.deepEqual(await engine.budgetListFilterValues(scope, deps, { includeDisabled: 'true', fields: 'has_fte' }, m), { has_fte: ['yes'] }, `${name}: the other tenant's filter values`);
   await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
   console.log(`ok - ${name}: another tenant's line is never counted`);
+
+  // A report link opens the list on its lines: the account ids (consolidation lines) and the report's
+  // window as End of validity "blank, or after 31 December", on every status.
+  const byAccount = await aggregate({ groupBy: ['account_consolidation_key', 'account_id'], measures: [] });
+  assert.deepEqual(byAccount.groups.map((group) => [group.keys[0], group.keys[1], group.count]), [[null, null, LINES.length]], `${name}: lines without an account, by account id`);
+  const listIds = async (filters: object, extra: Record<string, string> = {}) => (await engine.budgetListSummary(
+    scope, deps, { includeDisabled: 'true', limit: '50', shape: 'grid', filters: JSON.stringify(filters), ...extra }, m,
+  )).items.map((row) => row.id).sort();
+  assert.equal((await listIds({ account_id: { filterType: 'set', values: [null] } })).length, LINES.length, `${name}: the list filters on the account id (blank)`);
+  assert.deepEqual(await listIds({ account_id: { filterType: 'set', values: [randomUUID()] } }), [], `${name}: an unknown account id keeps no line`);
+
+  const table = scope.itemTable;
+  const ends: Array<[string, string]> = [
+    ['manual', `${Y - 1}-06-15T10:00:00Z`],
+    ['spread', `${Y - 2}-12-31T23:30:00Z`],
+    ['removed', `${Y - 1}-01-01T00:00:00Z`],
+    ['old staff', `${Y - 3}-03-01T00:00:00Z`],
+  ];
+  for (const [label, at] of ends) await runner.query(`UPDATE ${table} SET disabled_at = $3::timestamptz WHERE tenant_id = $1 AND id = $2`, [tenantId, ids[label], at]);
+  const windowModel = (firstYear: number) => ({
+    disabled_at: {
+      filterType: 'date',
+      operator: 'OR',
+      conditions: [
+        { filterType: 'date', type: 'blank', dateFrom: null, dateTo: null },
+        { filterType: 'date', type: 'greaterThan', dateFrom: `${firstYear - 1}-12-31 00:00:00`, dateTo: null },
+      ],
+    },
+  });
+  for (const years of [undefined, `${Y - 2},${Y}`, `${Y}`]) {
+    const reportIds = (await aggregate({ groupBy: ['id'], measures: [] }, years ? { years } : {})).groups.map((group) => group.keys[0]).sort();
+    const firstYear = years ? Math.min(...years.split(',').map(Number)) : Y - 1;
+    assert.deepEqual(await listIds(windowModel(firstYear)), reportIds, `${name}: the list window equals the report's (years ${years ?? 'default'})`);
+  }
+  assert.deepEqual(
+    (await listIds(windowModel(Y - 1))).map((id) => LINES.find((line) => ids[line.label] === id)?.label).sort(),
+    ['computed', 'manual', 'no rounds', 'removed'],
+    `${name}: ended in the window or after it kept, ended before (one second before the year, Y-3) left out`,
+  );
+  for (const [label] of ends) await runner.query(`UPDATE ${table} SET disabled_at = NULL WHERE tenant_id = $1 AND id = $2`, [tenantId, ids[label]]);
+  console.log(`ok - ${name}: report links (account ids, the window as End of validity on every status)`);
 }
 
 /** Twelve monthly FTE as stored (decimal strings): `first` for January, `h1` to June, `h2` from July. */

@@ -28,6 +28,7 @@ import {
   readColumnsCompare,
   readConsolidation,
   readConsolidationAccounts,
+  requestFirstYear,
   readCostPerFte,
   readDailyRate,
   readDelta,
@@ -181,7 +182,7 @@ describe('per year groups', () => {
     const report = consolidationRequest(params);
     const accounts = consolidationAccountsRequest(params);
     expect(accounts.query).toEqual(report.query);
-    expect(accounts.spec).toEqual({ groupBy: ['account_consolidation_key', 'account_display'], measures: [] });
+    expect(accounts.spec).toEqual({ groupBy: ['account_consolidation_key', 'account_id'], measures: [] });
     // The report's own request is unchanged.
     expect(report).toEqual({
       query: { filters: { run_build: keepValues(['run']), account_id: dropValues(['a1']), account_consolidation_key: dropValues([null]) } },
@@ -192,11 +193,17 @@ describe('per year groups', () => {
       },
     });
     const read = readConsolidationAccounts(result([
-      row(['c_600', '6110 - Software'], {}),
-      row(['c_600', '6120 - Cloud'], {}),
-      row([null, '6300 - Other'], {}),
+      row(['c_600', 'acc-1'], {}),
+      row(['c_600', 'acc-2'], {}),
+      row([null, 'acc-3'], {}),
     ], row([], {})));
-    expect(Object.fromEntries(read)).toEqual({ c_600: ['6110 - Software', '6120 - Cloud'], unassigned: ['6300 - Other', null] });
+    expect(Object.fromEntries(read)).toEqual({ c_600: ['acc-1', 'acc-2'], unassigned: ['acc-3', null] });
+  });
+
+  it("a request's first year: the earliest of its years, else last year (the server's window)", () => {
+    expect(requestFirstYear({ query: { years: '2027,2025,2026' }, spec: { groupBy: [], measures: [] } }, 2026)).toBe(2025);
+    expect(requestFirstYear({ query: {}, spec: { groupBy: [], measures: [] } }, 2026)).toBe(2025);
+    expect(requestFirstYear(null, 2030)).toBe(2029);
   });
 
   it('Consolidation: an excluded "unassigned" leaves out the lines without a consolidation line', () => {

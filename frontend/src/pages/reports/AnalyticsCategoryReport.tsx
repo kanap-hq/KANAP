@@ -17,7 +17,7 @@ import type { AnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import type { AnalyticsAxis } from '../../services/analytics';
 import { drawerMenuItemSx } from '../../theme/formSx';
 import { useTranslation } from 'react-i18next';
-import { NO_ANALYTICS_VALUE, analyticsRequest, readAnalytics } from './reportAggregates';
+import { NO_ANALYTICS_VALUE, analyticsRequest, readAnalytics, requestFirstYear } from './reportAggregates';
 import { useBudgetAggregate } from './useBudgetAggregate';
 import { useAxisValueOptions } from './useReportOptions';
 import { ReportFteNotice, ReportMeasureSelect, useMeasureText, useReportMeasure } from './reportMeasure';
@@ -110,11 +110,14 @@ export default function AnalyticsCategoryReport() {
   // A value opens the list filtered on it and on the bar, in a new tab; the total row stays plain.
   const listPicks = useMemo(() => reportListPicks(reportFilters), [reportFilters]);
   const axisColumn = axis ? axisListColumn(axis) : null;
+  // The list shows the lines the row counts: the report's window, and with FTE the lines that declare it.
+  const firstYear = requestFirstYear(request, Y);
+  const fteOnly = measure === 'fte';
   const valueLink = useCallback((row: { groupName?: string | null }) => {
     if (row.groupName === undefined || !listPicks) return null;
     const group = rowListGroup('axis', { name: row.groupName }, axisColumn);
-    return group ? reportListLink(scope, group, listPicks) : null;
-  }, [scope, listPicks, axisColumn]);
+    return group ? reportListLink(scope, group, listPicks, { firstYear, fteOnly }) : null;
+  }, [scope, listPicks, axisColumn, firstYear, fteOnly]);
 
   const tableRows = useMemo(() => groups.map((group) => {
     const row: any = { group: group.label, groupName: group.name ?? null };

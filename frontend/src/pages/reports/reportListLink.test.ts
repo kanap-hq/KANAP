@@ -17,7 +17,9 @@ import {
   reportListLink,
   reportListPicks,
   rowListGroup,
+  windowFilter,
   type ReportListPicks,
+  type ReportListScope,
 } from './reportListLink';
 
 const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
@@ -81,31 +83,47 @@ beforeEach(() => {
   post.mockReset();
 });
 
+// An amount report reading 2025 and later: the lines still active on 1 January 2025, every line.
+const REPORT: ReportListScope = { firstYear: 2025, fteOnly: false };
+const WINDOW = {
+  filterType: 'date',
+  operator: 'OR',
+  conditions: [
+    { filterType: 'date', type: 'blank', dateFrom: null, dateTo: null },
+    { filterType: 'date', type: 'greaterThan', dateFrom: '2024-12-31 00:00:00', dateTo: null },
+  ],
+};
+/** The filters every link carries besides its group and picks: the report's window. */
+const withWindow = (filters: Record<string, unknown>) => ({ disabled_at: WINDOW, ...filters });
+const statusOf = (href: string) => new URLSearchParams(href.split('?')[1]).get('statusScope');
+
 describe('reportListHref: each group kind', () => {
-  it('a cost center row opens the list filtered on its label, the row without one on the blank value', () => {
-    expect(reportListHref('opex', { kind: 'costCenter', label: 'CC1 · Ops' }, NO_LIST_PICKS))
-      .toBe(`/ops/opex?${new URLSearchParams({ filters: JSON.stringify({ cost_center_label: set(['CC1 · Ops']) }) })}`);
-    expect(filtersOf(reportListHref('opex', { kind: 'costCenter', label: null }, NO_LIST_PICKS))).toEqual({ cost_center_label: set([null]) });
+  it('a cost center row opens the list on every status, its window and its label; the row without one on blank', () => {
+    const href = reportListHref('opex', { kind: 'costCenter', label: 'CC1 · Ops' }, NO_LIST_PICKS, REPORT);
+    const filters = withWindow({ cost_center_label: set(['CC1 · Ops']) });
+    expect(href).toBe(`/ops/opex?${new URLSearchParams({ filters: JSON.stringify(filters), statusScope: 'all' })}`);
+    expect(statusOf(href)).toBe('all');
+    expect(filtersOf(reportListHref('opex', { kind: 'costCenter', label: null }, NO_LIST_PICKS, REPORT))).toEqual(withWindow({ cost_center_label: set([null]) }));
   });
 
   it('a supplier row filters the supplier column, No supplier the blank value', () => {
-    expect(filtersOf(reportListHref('capex', { kind: 'supplier', name: 'Acme' }, NO_LIST_PICKS))).toEqual({ supplier_name: set(['Acme']) });
-    expect(reportListHref('capex', { kind: 'supplier', name: null }, NO_LIST_PICKS).startsWith('/ops/capex?filters=')).toBe(true);
-    expect(filtersOf(reportListHref('capex', { kind: 'supplier', name: null }, NO_LIST_PICKS))).toEqual({ supplier_name: set([null]) });
+    expect(filtersOf(reportListHref('capex', { kind: 'supplier', name: 'Acme' }, NO_LIST_PICKS, REPORT))).toEqual(withWindow({ supplier_name: set(['Acme']) }));
+    expect(reportListHref('capex', { kind: 'supplier', name: null }, NO_LIST_PICKS, REPORT).startsWith('/ops/capex?filters=')).toBe(true);
+    expect(filtersOf(reportListHref('capex', { kind: 'supplier', name: null }, NO_LIST_PICKS, REPORT))).toEqual(withWindow({ supplier_name: set([null]) }));
   });
 
   it('a dimension value row filters that dimension column: the default one keeps analytics_category_name', () => {
     expect(axisListColumn(DEFAULT_AXIS)).toBe('analytics_category_name');
     expect(axisListColumn(NATURE)).toBe('analytics_ax-nat');
-    expect(filtersOf(reportListHref('opex', { kind: 'axis', column: axisListColumn(NATURE), name: 'Hardware' }, NO_LIST_PICKS)))
-      .toEqual({ 'analytics_ax-nat': set(['Hardware']) });
-    expect(filtersOf(reportListHref('opex', { kind: 'axis', column: axisListColumn(DEFAULT_AXIS), name: null }, NO_LIST_PICKS)))
-      .toEqual({ analytics_category_name: set([null]) });
+    expect(filtersOf(reportListHref('opex', { kind: 'axis', column: axisListColumn(NATURE), name: 'Hardware' }, NO_LIST_PICKS, REPORT)))
+      .toEqual(withWindow({ 'analytics_ax-nat': set(['Hardware']) }));
+    expect(filtersOf(reportListHref('opex', { kind: 'axis', column: axisListColumn(DEFAULT_AXIS), name: null }, NO_LIST_PICKS, REPORT)))
+      .toEqual(withWindow({ analytics_category_name: set([null]) }));
   });
 
-  it('an account row filters the account column on its accounts', () => {
-    expect(filtersOf(reportListHref('opex', { kind: 'account', values: ['6110 - Software', '6120 - Cloud'] }, NO_LIST_PICKS)))
-      .toEqual({ account_display: set(['6110 - Software', '6120 - Cloud']) });
+  it('a consolidation line filters the account ids (the link-only column), blank for the lines without an account', () => {
+    expect(filtersOf(reportListHref('opex', { kind: 'account', ids: ['acc-1', 'acc-2', null] }, NO_LIST_PICKS, REPORT)))
+      .toEqual(withWindow({ account_id: set(['acc-1', 'acc-2', null]) }));
   });
 
   it('rowListGroup: the stored name, null without one, no link for a blank name', () => {
@@ -117,7 +135,7 @@ describe('reportListHref: each group kind', () => {
   });
 });
 
-describe('reportListFilters: the bar picks', () => {
+describe('reportListFilters: the window, the FTE scope and the bar picks', () => {
   const picks: ReportListPicks = {
     costCenterLabels: ['CC1 · Ops', 'CC2 · Dev'],
     runBuild: 'run',
@@ -125,25 +143,37 @@ describe('reportListFilters: the bar picks', () => {
     withFte: true,
   };
 
+  it('the window: End of validity blank or after 31 December of the year before the first year', () => {
+    expect(windowFilter(2025)).toEqual(WINDOW);
+    expect(reportListFilters({ kind: 'supplier', name: 'Acme' }, NO_LIST_PICKS, { firstYear: 2027, fteOnly: false }).disabled_at)
+      .toMatchObject({ operator: 'OR', conditions: [{ type: 'blank' }, { type: 'greaterThan', dateFrom: '2026-12-31 00:00:00' }] });
+  });
+
+  it('rows that count only FTE lines always add FTE declared, Items with FTE or not', () => {
+    expect(reportListFilters({ kind: 'supplier', name: 'Acme' }, NO_LIST_PICKS, { firstYear: 2025, fteOnly: true }))
+      .toEqual(withWindow({ has_fte: set(['yes']), supplier_name: set(['Acme']) }));
+    expect(reportListFilters({ kind: 'supplier', name: 'Acme' }, NO_LIST_PICKS, REPORT)).not.toHaveProperty('has_fte');
+  });
+
   it('maps cost center, run or build, dimension values and Items with FTE to the list columns', () => {
-    expect(reportListFilters({ kind: 'supplier', name: 'Acme' }, picks)).toEqual({
+    expect(reportListFilters({ kind: 'supplier', name: 'Acme' }, picks, REPORT)).toEqual(withWindow({
       cost_center_label: set(['CC1 · Ops', 'CC2 · Dev']),
       run_build: set(['run']),
       'analytics_ax-nat': set(['Hardware']),
       analytics_category_name: set([null]),
       has_fte: set(['yes']),
       supplier_name: set(['Acme']),
-    });
-    expect(reportListFilters({ kind: 'supplier', name: 'Acme' }, { ...NO_LIST_PICKS, runBuild: 'none' })).toEqual({
+    }));
+    expect(reportListFilters({ kind: 'supplier', name: 'Acme' }, { ...NO_LIST_PICKS, runBuild: 'none' }, REPORT)).toEqual(withWindow({
       run_build: set([null]),
       supplier_name: set(['Acme']),
-    });
+    }));
   });
 
   it("the row's group replaces a pick on the same column (a cost center under the node, the picked value)", () => {
-    const filters = reportListFilters({ kind: 'costCenter', label: 'CC2 · Dev' }, picks);
+    const filters = reportListFilters({ kind: 'costCenter', label: 'CC2 · Dev' }, picks, REPORT);
     expect(filters.cost_center_label).toEqual(set(['CC2 · Dev']));
-    expect(reportListFilters({ kind: 'axis', column: 'analytics_ax-nat', name: 'Hardware' }, picks)['analytics_ax-nat']).toEqual(set(['Hardware']));
+    expect(reportListFilters({ kind: 'axis', column: 'analytics_ax-nat', name: 'Hardware' }, picks, REPORT)['analytics_ax-nat']).toEqual(set(['Hardware']));
   });
 });
 
@@ -178,27 +208,30 @@ describe('reportListPicks: the bar as the list names it', () => {
 });
 
 describe('reportListLink: filters too long for a URL', () => {
-  it('stays inline until saved, then opens on ctx', async () => {
-    const many = Array.from({ length: 80 }, (_, i) => `CC${100 + i} · Cost center number ${i}`);
-    const picks: ReportListPicks = { ...NO_LIST_PICKS, costCenterLabels: many };
-    const group = { kind: 'supplier' as const, name: 'Acme' };
-    expect(encodeURIComponent(JSON.stringify(reportListFilters(group, picks))).length).toBeGreaterThan(LIST_CONTEXT_INLINE_LIMIT);
+  const many = Array.from({ length: 80 }, (_, i) => `CC${100 + i} · Cost center number ${i}`);
+  const picks: ReportListPicks = { ...NO_LIST_PICKS, costCenterLabels: many };
+  const group = { kind: 'supplier' as const, name: 'Acme' };
 
-    const before = reportListLink('opex', group, picks);
-    expect(filtersOf(before.href)).toEqual(reportListFilters(group, picks));
+  it('stays inline (copyable) and saves nothing until used; the save answers the ctx address', async () => {
+    expect(encodeURIComponent(JSON.stringify(reportListFilters(group, picks, REPORT))).length).toBeGreaterThan(LIST_CONTEXT_INLINE_LIMIT);
+
+    const before = reportListLink('opex', group, picks, REPORT);
+    expect(filtersOf(before.href)).toEqual(reportListFilters(group, picks, REPORT));
+    expect(statusOf(before.href)).toBe('all');
     expect(before.save).toBeTypeOf('function');
+    expect(post).not.toHaveBeenCalled();
 
     post.mockResolvedValue({ data: { id: 'ctx-1' } });
-    await expect(before.save!()).resolves.toBe('ctx-1');
-    expect(post).toHaveBeenCalledWith('/list-contexts', { list: 'spend-items', state: { filters: reportListFilters(group, picks) } });
-    expect(cachedListContextId('/spend-items/summary', JSON.stringify(reportListFilters(group, picks)))).toBe('ctx-1');
+    await expect(before.save!()).resolves.toBe('/ops/opex?statusScope=all&ctx=ctx-1');
+    expect(post).toHaveBeenCalledWith('/list-contexts', { list: 'spend-items', state: { filters: reportListFilters(group, picks, REPORT) } });
+    expect(cachedListContextId('/spend-items/summary', JSON.stringify(reportListFilters(group, picks, REPORT)))).toBe('ctx-1');
 
-    const after = reportListLink('opex', group, picks);
-    expect(after.href).toBe('/ops/opex?ctx=ctx-1');
+    const after = reportListLink('opex', group, picks, REPORT);
+    expect(after.href).toBe('/ops/opex?statusScope=all&ctx=ctx-1');
     expect(after.save).toBeUndefined();
   });
 
   it('short filters never need saving', () => {
-    expect(reportListLink('opex', { kind: 'supplier', name: 'Acme' }, NO_LIST_PICKS).save).toBeUndefined();
+    expect(reportListLink('opex', { kind: 'supplier', name: 'Acme' }, NO_LIST_PICKS, REPORT).save).toBeUndefined();
   });
 });

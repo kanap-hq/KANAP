@@ -2,7 +2,7 @@ import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ColDef } from 'ag-grid-community';
-import ServerDataGrid, { DATE_COLUMN_FILTER, EnhancedColDef, StatusScope, gridSortModel } from '../components/ServerDataGrid';
+import ServerDataGrid, { DATE_COLUMN_FILTER, DATE_COLUMN_FILTER_TWO_CONDITIONS, EnhancedColDef, StatusScope, gridSortModel } from '../components/ServerDataGrid';
 import PageHeader from '../components/PageHeader';
 import { Button, Stack, Typography } from '@mui/material';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
@@ -491,6 +491,19 @@ export default function OpexListPage() {
         />
       ),
     },
+    // The account by id, for a report link (a consolidation line opens the list on its accounts:
+    // account names repeat across charts of accounts). Hidden and kept out of the column chooser, like
+    // the link filters of the tasks list; the column has to exist, or the grid would drop the model.
+    {
+      colId: 'account_id',
+      headerName: t('opex.columns.account'),
+      hide: true,
+      defaultHidden: true,
+      suppressColumnsToolPanel: true,
+      filter: CheckboxSetFilter,
+      filterParams: { values: [] },
+      sortable: false,
+    },
     // Lines whose account belongs to another chart of accounts than the paying company's: the
     // filter the overview's data hygiene count opens the list with. Hidden by default.
     {
@@ -668,7 +681,8 @@ export default function OpexListPage() {
       headerName: t('opex.columns.endOfValidity'),
       width: 150,
       defaultHidden: true,
-      ...DATE_COLUMN_FILTER,
+      // Two conditions: a report link opens the list on "blank, or after 31 December" (its window).
+      ...DATE_COLUMN_FILTER_TWO_CONDITIONS,
       // A timestamp: shown as the calendar day in the viewer's time zone, like the drawer.
       valueFormatter: (p) => formatShortDate(p.value ? new Date(p.value as string) : null, locale),
       cellRenderer: (params: any) => (
@@ -897,6 +911,8 @@ export default function OpexListPage() {
         defaultSort={gridDefaultSort}
         // A link's filter on a hidden column (the overview's hygiene counts) shows that column.
         showFilteredColumns
+        // Next to the name, so they are on screen: the reason the list is narrowed.
+        filteredColumnsAfter="product_name"
         statusScopeConfig={{ defaultScope: 'enabled' }}
         columnPreferencesKey="opex-summary"
         initialState={initialGridState}

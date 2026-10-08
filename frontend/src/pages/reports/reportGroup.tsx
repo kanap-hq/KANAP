@@ -8,7 +8,7 @@ import type { AnalyticsAxis } from '../../services/analytics';
 import { drawerMenuItemSx } from '../../theme/formSx';
 import type { BudgetReportFilterState } from '../../components/reports/BudgetReportFilters';
 import type { BudgetScope, StaffingGroup, StaffingLabels } from './reportAggregates';
-import { axisListColumn, reportListLink, reportListPicks, rowListGroup, type ReportListLink } from './reportListLink';
+import { axisListColumn, reportListLink, reportListPicks, rowListGroup, type ReportListLink, type ReportListScope } from './reportListLink';
 import { itemHref } from './useReportScope';
 
 /**
@@ -134,17 +134,19 @@ export type GroupRowRef = { groupKey?: string; groupName?: string | null };
 
 /**
  * The link of a table row's group name, opened in a new tab: an item's page when grouped by item, else
- * the OPEX or CAPEX list filtered on the group and on the bar's picks. The total row stays plain text,
- * and so does every row while the picks cannot be named yet.
+ * the OPEX or CAPEX list filtered on the group, the bar's picks and the report's window and FTE scope
+ * (`report`). The total row stays plain text, and so does every row while the picks cannot be named yet.
  */
 export function useGroupLinks(
   scope: BudgetScope,
   state: Pick<ReportGroupState, 'kind' | 'axis'>,
   filters: BudgetReportFilterState,
+  report: ReportListScope,
 ): (row: GroupRowRef) => ReportListLink | null {
   const picks = useMemo(() => reportListPicks(filters), [filters]);
   const { kind } = state;
   const axisColumn = state.axis ? axisListColumn(state.axis) : null;
+  const { firstYear, fteOnly } = report;
   return useCallback((row: GroupRowRef) => {
     if (row.groupKey === undefined) return null;
     if (kind === 'item') {
@@ -153,6 +155,6 @@ export function useGroupLinks(
     }
     if (!picks) return null;
     const group = rowListGroup(kind, { name: row.groupName ?? null }, axisColumn);
-    return group ? reportListLink(scope, group, picks) : null;
-  }, [scope, kind, axisColumn, picks]);
+    return group ? reportListLink(scope, group, picks, { firstYear, fteOnly }) : null;
+  }, [scope, kind, axisColumn, picks, firstYear, fteOnly]);
 }

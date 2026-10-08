@@ -13,7 +13,7 @@ import { MetricKey, useReportMetric } from './reportMetrics';
 import { escapeTooltipText } from './tooltipText';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useTranslation } from 'react-i18next';
-import { NO_CONSOLIDATION_LINE, consolidationAccountsRequest, consolidationRequest, readConsolidation, readConsolidationAccounts } from './reportAggregates';
+import { NO_CONSOLIDATION_LINE, consolidationAccountsRequest, consolidationRequest, readConsolidation, readConsolidationAccounts, requestFirstYear } from './reportAggregates';
 import { reportListLink, reportListPicks } from './reportListLink';
 import ReportGroupLinkCell from './ReportGroupLinkCell';
 import { useBudgetAggregate } from './useBudgetAggregate';
@@ -70,8 +70,7 @@ export default function ConsolidationReport() {
   // FTE: only the consolidation lines that declare FTE in one of the years.
   const { groups, totals } = useMemo(() => readConsolidation(years, report.data, unassigned, measure), [years, report.data, unassigned, measure]);
 
-  // A consolidation line opens the list filtered on its accounts (the list filters on the account) and
-  // on the bar, in a new tab. The accounts come from a second request with the same filters and
+  // A consolidation line opens the list filtered on the ids of its accounts and on the bar, in a new tab. The accounts come from a second request with the same filters and
   // exclusions, asked only once the report has rows; until they arrive, the names stay plain text.
   const accountsRequest = useMemo(() => (reportFilters.queryFilters == null || groups.length === 0 ? null : consolidationAccountsRequest({
     excludedAccountIds: excludedAccounts,
@@ -80,11 +79,14 @@ export default function ConsolidationReport() {
   const accounts = useBudgetAggregate(scope, accountsRequest);
   const accountsByLine = useMemo(() => (accounts.data ? readConsolidationAccounts(accounts.data) : null), [accounts.data]);
   const listPicks = useMemo(() => reportListPicks(reportFilters), [reportFilters]);
+  // The list shows the lines the row counts: the report's window, and with FTE the lines that declare it.
+  const firstYear = requestFirstYear(request, Y);
+  const fteOnly = measure === 'fte';
   const lineLink = useCallback((row: { groupKey?: string }) => {
     if (row.groupKey === undefined || !listPicks || !accountsByLine) return null;
-    const values = accountsByLine.get(row.groupKey);
-    return values ? reportListLink(scope, { kind: 'account', values }, listPicks) : null;
-  }, [scope, listPicks, accountsByLine]);
+    const ids = accountsByLine.get(row.groupKey);
+    return ids ? reportListLink(scope, { kind: 'account', ids }, listPicks, { firstYear, fteOnly }) : null;
+  }, [scope, listPicks, accountsByLine, firstYear, fteOnly]);
 
   // Table rows
   const tableRows = useMemo(() => {
