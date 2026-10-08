@@ -27,7 +27,7 @@ const content: SecurityContent = {
       },
       {
         title: 'Immer exportierbar',
-        body: 'Ihre Daten gehören Ihnen. CSV-Export auf jedem Grid, Dokumentexport nach PDF, DOCX und ODT. Keine Extraktions-Gebühr.',
+        body: 'Ihre Daten gehören Ihnen. CSV-Export auf den wichtigsten Listen, Dokumentexport nach PDF, DOCX und ODT. Keine Extraktions-Gebühr.',
       },
     ],
   },
@@ -40,16 +40,16 @@ const content: SecurityContent = {
       '`tenant_id`-Filter auf Datenbankebene erzwungen, nicht nur in der App',
       'Der aktuelle Tenant wird zu Beginn jeder Datenbanktransaktion gesetzt, und die Policies lesen ihn',
       'Die Datenbankrolle der Anwendung hat weder Superuser- noch Bypass-Rechte, sonst startet die Anwendung nicht',
-      'Batch-Operationen mit `tenant_id = ANY($1)`, kein N+1-Leck',
+      'Eine Tabelle mit Tenant-Daten ohne Isolations-Policy lässt die CI-Tests fehlschlagen',
       'Tenant-Isolationstests bei jedem CI-Lauf',
     ],
   },
   dataProtection: {
     title: 'Datenschutz',
     body:
-      'Standardpraktiken, konsequent angewandt. Starkes Passwort-Hashing, verschlüsselte Secrets, gehashte Tokens und HTTPS für jede Nutzerverbindung.',
+      'Standardpraktiken, konsequent angewandt. Starkes Passwort-Hashing, verschlüsselte Secrets, gehashte Tokens und HTTPS bei jeder Cloud-Verbindung.',
     bullets: [
-      'HTTPS für jede Verbindung zwischen Nutzern und Plattform. In der Cloud beendet Cloudflare TLS vor unseren Servern',
+      'Cloud: HTTPS für jede Verbindung zwischen Nutzern und Plattform, mit Weiterleitung von HTTP auf HTTPS und Cloudflare, das TLS vor unseren Servern beendet. Self-Hosting: Sie beenden TLS mit Ihren eigenen Zertifikaten',
       'Argon2id-Passwort-Hashing (64 MiB Speicherkosten) mit Salts pro Nutzer',
       'Secrets über Environment, nicht im Code',
       'Ihre eigenen KI-Provider-Schlüssel und Integrationszugangsdaten (GLPI, Netbox) im Ruhezustand mit AES-256-GCM verschlüsselt',
@@ -62,7 +62,7 @@ const content: SecurityContent = {
     body:
       'Feinkörnige Berechtigungen pro Modul, pro Rolle. Jedes Feature-Gate und jede Entity-Abfrage respektiert dieselbe RBAC-Matrix, auch Plaid und MCP.',
     bullets: [
-      'Reader-/Manager-/Admin-Stufen pro Modul',
+      'Stufen Leser, Mitwirkender, Mitglied und Admin pro Modul',
       'Workspace-Admin-Rolle getrennt von Modul-Admins',
       'SSO über Microsoft Entra ID (OIDC) in Cloud und Self-Hosting',
       'Lokale Passwort-Authentifizierung mit Argon2 + optionale Passwort-Reset-Flows',
@@ -78,21 +78,21 @@ const content: SecurityContent = {
       'Zeitleiste pro Entity (Aufgaben, Projekte, Dokumente usw.)',
       'Anlegen, Ändern und Deaktivieren mit Nutzer, Zeitstempel sowie Werten vorher und nachher protokolliert',
       'Administratoren durchsuchen und filtern das Audit-Log in der App',
-      'Agentenaktionen im selben Trail protokolliert, mit den Quellen, die jeder Agent genutzt hat',
+      'Änderungen über Plaid werden im selben Trail protokolliert, mit ihrer Herkunft. Agenten führen einen eigenen Aktivitätsverlauf, mit den Quellen, die jeder Agent genutzt hat',
     ],
   },
   agentGovernance: {
     title: 'Agenten-Governance',
     body:
-      'Agenten handeln unter denselben Kontrollen wie alles andere, plus Grenzen, die für autonome Arbeit gelten. Jede Agentenaktion wird protokolliert und auf das beschränkt, was Sie erlaubt haben, und Sie können einen Agenten jederzeit stoppen. Autonomie wird von Ihnen gewährt und an der Bilanz des Agenten gemessen, nicht vorausgesetzt.',
+      'Agenten handeln unter denselben Kontrollen wie alles andere, plus Grenzen, die für autonome Arbeit gelten. Jede Agentenaktion wird protokolliert und auf das beschränkt, was Sie erlaubt haben, und Sie können einen Agenten jederzeit stoppen. Jeder Agent startet mit allen Aktionsarten unter Ihrer Freigabe. Sie entscheiden, wann eine Aktionsart automatisch läuft, und die Bilanz des Agenten (geprüfte Vorschläge, Akzeptanzquote, Aktivitätstage) steht neben dieser Entscheidung.',
     bullets: [
       'Agenten handeln nur über definierte Operationen, ohne direkten Datenbank- oder Shell-Zugriff',
-      'Jeder Agent auf das beschränkt, was Sie erlauben, unter demselben RBAC wie das UI',
-      'Jede Agentenaktion im selben Audit-Trail protokolliert',
+      'Jeder Agent auf die Operationen beschränkt, die Sie erlauben. Wer Agenten konfigurieren oder deren Arbeit prüfen darf, folgt denselben Rollen wie der Rest der Anwendung',
+      'Jede Agentenaktion im Aktivitätsverlauf des Agenten protokolliert, standardmäßig 30 Tage aufbewahrt und von 7 bis 90 Tagen einstellbar',
       'Antworten tragen die Quellen, die der Agent genutzt hat, sodass eine Entscheidung geprüft werden kann',
       'Jeden Agenten sofort pausieren, einzeln oder alle zusammen',
       'Ausgabenlimits pro Agent halten die Betriebskosten begrenzt',
-      'KI-Funktionen sind standardmäßig ausgeschaltet. Bevor ein Administrator sie mit dem integrierten Modell einschaltet, nennt die Anwendung den Anbieter und den Ort der Datenverarbeitung und bittet um Bestätigung. Sie können stattdessen Ihren eigenen Modellanbieter verwenden',
+      'KI-Funktionen sind standardmäßig ausgeschaltet. In der Cloud erhält das integrierte Modell keine Daten, bevor der Workspace dessen Anbieter und Verarbeitungsort akzeptiert hat, die beide in der Anwendung genannt werden. Ein Administrator bestätigt sie, und ändert sich eines davon, wird erneut um Bestätigung gebeten. Workspaces, die den Assistenten oder einen Agenten vor Einführung dieser Bestätigung eingeschaltet hatten, gelten als mit dem aktuellen Anbieter einverstanden. Sie können stattdessen Ihren eigenen Modellanbieter verwenden',
     ],
   },
   deployment: {

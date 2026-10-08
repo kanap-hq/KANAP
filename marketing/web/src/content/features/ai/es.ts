@@ -40,7 +40,7 @@ const content: FeatureContent = {
       bullets: [
         'Protocolo MCP estándar, funciona con cualquier cliente compatible',
         'Autenticación segura con clave API y alcance granular',
-        'Las mismas consultas y acciones que el chat integrado',
+        'Las mismas consultas de lectura que el chat integrado (MCP es de solo lectura)',
         'Conserve sus flujos de IA actuales y añada el contexto de KANAP',
       ],
       shotAlt: 'Configuración MCP con alcance de clave API',
@@ -53,7 +53,7 @@ const content: FeatureContent = {
         'Claves API seguras con alcance granular de MCP',
         'La búsqueda web se puede activar o desactivar de forma independiente',
         'Vista previa y confirmación para todas las operaciones de escritura',
-        'Modo solo lectura disponible para despliegues prudentes',
+        'Acceso de solo lectura mediante roles para despliegues prudentes',
       ],
       shotAlt: 'Controles de administración de Plaid con matriz de permisos',
     },

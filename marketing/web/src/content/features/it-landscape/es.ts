@@ -67,7 +67,7 @@ const content: FeatureContent = {
       { title: 'Derivación de riesgo', body: 'Riesgo de conexión calculado a partir de las interfaces vinculadas. Criticidad, clase de datos y PII se derivan automáticamente.' },
       { title: 'Contactos de soporte', body: 'Usuarios internos y contactos externos por aplicación con roles y notas.' },
       { title: 'Enlace con costes', body: 'Vincule aplicaciones a ítems OPEX / CAPEX. Vea el coste real de su portafolio.' },
-      { title: 'Importación / exportación CSV', body: 'Importe aplicaciones e interfaces en masa. Exporte su inventario para análisis.' },
+      { title: 'Importación / exportación CSV', body: 'Importe aplicaciones y activos en masa. Exporte su inventario para análisis.' },
     ],
   },
   crossLinks: {

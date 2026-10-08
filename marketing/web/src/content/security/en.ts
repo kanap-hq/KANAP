@@ -26,7 +26,7 @@ const content: SecurityContent = {
       },
       {
         title: 'Exportable, always',
-        body: 'Your data is yours. CSV export on every grid, document export to PDF, DOCX and ODT. No extraction tax.',
+        body: 'Your data is yours. CSV export on the main lists, document export to PDF, DOCX and ODT. No extraction tax.',
       },
     ],
   },
@@ -39,16 +39,16 @@ const content: SecurityContent = {
       '`tenant_id` filtering enforced at the database level, not just in the app',
       'The current tenant is set at the start of every database transaction, and the policies read it',
       'The application database role has no superuser or bypass rights, and the application refuses to start otherwise',
-      'Batch operations use `tenant_id = ANY($1)`, never N+1 leakage',
+      'A table that holds tenant data without its isolation policy fails the CI tests',
       'Tenant isolation tests on every CI run',
     ],
   },
   dataProtection: {
     title: 'Data protection',
     body:
-      'Standard practices, applied rigorously. Strong password hashing, encrypted secrets, hashed tokens, and HTTPS for every user connection.',
+      'Standard practices, applied rigorously. Strong password hashing, encrypted secrets, hashed tokens, and HTTPS on every cloud connection.',
     bullets: [
-      'HTTPS for every connection between users and the platform. On the cloud, Cloudflare terminates TLS in front of our servers',
+      'Cloud: HTTPS for every connection between users and the platform, with HTTP redirected to HTTPS and Cloudflare terminating TLS in front of our servers. Self-hosted: you terminate TLS with your own certificates',
       'Argon2id password hashing (64 MiB memory cost) with per-user salts',
       'Secrets stored via environment, not checked into source',
       'Your own AI provider keys and integration credentials (GLPI, Netbox) encrypted at rest with AES-256-GCM',
@@ -61,7 +61,7 @@ const content: SecurityContent = {
     body:
       'Fine-grained permissions per module, per role. Every feature gate and every entity query honours the same RBAC matrix, including Plaid and MCP.',
     bullets: [
-      'Reader / manager / admin levels per module',
+      'Reader, contributor, member and admin levels per module',
       'Workspace-level admin role separate from module admins',
       'SSO via Microsoft Entra ID (OIDC) on both cloud and self-hosted',
       'Local password authentication with Argon2 + optional password reset flows',
@@ -77,21 +77,21 @@ const content: SecurityContent = {
       'Per-entity activity timeline (tasks, projects, documents, etc.)',
       'Create, update and disable actions logged with the user, the timestamp, and before and after values',
       'Administrators browse and filter the audit log in the app',
-      'Agent actions logged in the same trail, with the sources each agent used',
+      'Changes made through Plaid are logged in the same trail, with their source. Agents keep their own activity history, with the sources each agent used',
     ],
   },
   agentGovernance: {
     title: 'Agent governance',
     body:
-      'Agents act under the same controls as everything else, plus limits specific to autonomous work. Every agent action is recorded and scoped to what you allowed, and you can stop an agent at any moment. Autonomy is granted by you and measured against the agent\'s track record, not assumed.',
+      'Agents act under the same controls as everything else, plus limits specific to autonomous work. Every agent action is recorded and scoped to what you allowed, and you can stop an agent at any moment. Every agent starts with each type of action waiting for your approval. You choose when a type runs automatically, with the agent\'s track record (reviewed proposals, acceptance rate, days of activity) shown beside the choice.',
     bullets: [
       'Agents act only through defined operations, with no raw database or shell access',
-      'Each agent scoped to what you allow, under the same RBAC as the UI',
-      'Every agent action recorded in the same audit trail',
+      'Each agent scoped to the operations you allow. Who can configure agents or review their work follows the same roles as the rest of the application',
+      'Every agent action recorded in the agent\'s activity history, kept 30 days by default and configurable from 7 to 90 days',
       'Answers carry the sources the agent used, so a decision can be checked',
       'Pause any agent immediately, one at a time or across the board',
       'Per-agent spend caps keep running cost bounded',
-      'AI features are off by default. Before an administrator turns them on with the built-in model, the application names the provider and where it processes data, and asks for confirmation. You can use your own model provider instead',
+      'AI features are off by default. On the cloud, the built-in model receives no data until the workspace has accepted its provider and processing location, both named in the application. An administrator confirms them, and a new confirmation is asked if either changes. Workspaces that had the assistant or an agent turned on before this confirmation existed count as having accepted the current provider. You can use your own model provider instead',
     ],
   },
   deployment: {

@@ -46,10 +46,10 @@ const content: AgentsContent = {
       shotAlt: "Les réglages de l'agent : persona et ciblage",
     },
     {
-      title: "Une trace complète de tout ce qu'il a fait.",
-      body: "Chaque action d'agent est enregistrée, limitée à ce que vous avez autorisé, étayée par les sources utilisées et interruptible à tout moment. C'est cette trace qui rend défendable le fait de confier un vrai travail à un agent.",
+      title: "Une trace de tout ce qu'il a fait.",
+      body: "Chaque action d'agent est enregistrée, limitée à ce que vous avez autorisé, étayée par les sources utilisées et interruptible à tout moment. C'est cette trace qui rend défendable le fait de confier un vrai travail à un agent. L'historique est conservé 30 jours par défaut, et vous pouvez le régler de 7 à 90 jours.",
       bullets: [
-        "Chaque action enregistrée dans le journal d'audit",
+        "Chaque action enregistrée dans l'historique d'activité de l'agent",
         'Limitée aux opérations que vous autorisez',
         'Chaque réponse étayée par ses sources',
         "Mettez n'importe quel agent en pause immédiatement",
@@ -58,11 +58,11 @@ const content: AgentsContent = {
     },
     {
       title: "À vous de l'exécuter et de le modifier.",
-      body: "Les agents font partie du produit open source. Exécutez-les au sein de votre propre déploiement, là où vos tickets et documents restent, et modifiez leur fonctionnement puisque vous disposez de tout le code source. Apportez votre propre clé LLM, comme avec Plaid.",
+      body: "Les agents font partie du produit open source. Exécutez-les au sein de votre propre déploiement, là où vos tickets et documents restent, hors du texte envoyé au fournisseur LLM que vous choisissez, et modifiez leur fonctionnement puisque vous disposez de tout le code source. Apportez votre propre clé LLM, comme avec Plaid.",
       bullets: [
         'Inclus dans le produit open source',
         "S'exécute au sein de votre propre déploiement",
-        'Vos tickets et documents restent chez vous',
+        'Tickets et documents restent chez vous, hors ce qui part au LLM',
         'Apportez votre propre clé LLM',
       ],
       shotAlt: 'Un agent traitant une file de tâches',

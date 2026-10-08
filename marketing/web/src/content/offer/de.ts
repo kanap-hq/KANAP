@@ -88,7 +88,7 @@ const content: OfferContent = {
           'Wir hosten, aktualisieren und sichern KANAP für Sie',
           'EU-Hosting für europäische Teams',
           '2.500 Plaid-Nachrichten/Mon enthalten oder eigener Schlüssel ohne Limit',
-          'Agenten enthalten, mit Ihrem eigenen LLM-Schlüssel',
+          'Agenten enthalten, mit den enthaltenen Nachrichten oder mit Ihrem eigenen LLM-Schlüssel',
           '60-min Kickoff-Call mit einem KANAP-Experten',
           'Prioritärer E-Mail-Support',
           'Beratung für 900 € pro Tag statt 1.150 €',

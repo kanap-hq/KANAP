@@ -67,9 +67,9 @@ const content: LegalContent = {
   <li><strong>Cloudflare</strong> (United States): network, CDN and TLS termination in front of the servers, with contractual safeguards for transfers outside the European Union.</li>
   <li><strong>Resend</strong> (transactional email, United States): account activation, password reset and notification emails.</li>
   <li><strong>Stripe</strong> (payments, Ireland and United States): payment processing and subscription billing.</li>
-  <li><strong>AI model provider</strong> for the built-in AI features of the cloud service: AI features are off by default. Before a tenant administrator turns them on with the built-in model, KANAP names the provider and where it processes data, and asks for confirmation. Administrators can use their own model provider instead. The provider may process data outside the European Union.</li>
+  <li><strong>AI model provider</strong> for the built-in AI features of the cloud service: AI features are off by default. The built-in model receives no data until the workspace has accepted its provider and where it processes data, both named in the application. An administrator of the workspace gives this confirmation, which covers the assistant, the agents and scheduled processing, and a new confirmation is asked if the provider or the location changes. Workspaces that had the assistant or an agent turned on before this confirmation existed are treated as having accepted the current provider. Administrators can use their own model provider instead. The provider may process data outside the European Union.</li>
 </ul>
-<p>Customers who self-host KANAP, or who connect their own AI provider key, choose their own providers. KANAP does not process their data in that case.</p>
+<p>Customers who self-host KANAP choose their own providers, and KANAP does not process their data. Customers of the cloud service who connect their own AI model provider choose that provider, and KANAP does not send their data to its built-in model.</p>
 
 <h2>6. Data retention period</h2>
 <ul>

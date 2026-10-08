@@ -27,7 +27,7 @@ const content: SecurityContent = {
       },
       {
         title: 'Toujours exportable',
-        body: "Vos données sont à vous. Export CSV sur chaque grille, export documents en PDF, DOCX et ODT. Aucune taxe d'extraction.",
+        body: "Vos données sont à vous. Export CSV sur les listes principales, export documents en PDF, DOCX et ODT. Aucune taxe d'extraction.",
       },
     ],
   },
@@ -40,16 +40,16 @@ const content: SecurityContent = {
       "Filtrage `tenant_id` imposé au niveau base de données, pas juste dans l'app",
       'Le tenant courant est posé au début de chaque transaction de base de données, et les policies le lisent',
       "Le rôle de base de données de l'application n'a ni droit superutilisateur ni droit de contournement, et l'application refuse de démarrer sinon",
-      'Opérations batch avec `tenant_id = ANY($1)`, jamais de fuite N+1',
+      "Une table de données de tenant sans sa policy d'isolation fait échouer les tests de CI",
       "Tests d'isolation des tenants à chaque exécution CI",
     ],
   },
   dataProtection: {
     title: 'Protection des données',
     body:
-      'Pratiques standards, appliquées rigoureusement. Hachage robuste des mots de passe, secrets chiffrés, jetons hachés et HTTPS pour chaque connexion utilisateur.',
+      'Pratiques standards, appliquées rigoureusement. Hachage robuste des mots de passe, secrets chiffrés, jetons hachés et HTTPS sur chaque connexion au cloud.',
     bullets: [
-      'HTTPS pour chaque connexion entre les utilisateurs et la plateforme. Dans le cloud, Cloudflare termine TLS devant nos serveurs',
+      "Cloud : HTTPS pour chaque connexion entre les utilisateurs et la plateforme, avec redirection de HTTP vers HTTPS et Cloudflare qui termine TLS devant nos serveurs. Auto-hébergement : vous terminez TLS avec vos propres certificats",
       'Hachage Argon2id des mots de passe (64 Mio de mémoire) avec sels par utilisateur',
       "Secrets stockés via l'environnement, jamais dans le code",
       "Vos propres clés de fournisseur IA et identifiants d'intégration (GLPI, Netbox) chiffrés au repos en AES-256-GCM",
@@ -62,7 +62,7 @@ const content: SecurityContent = {
     body:
       "Permissions fines par module, par rôle. Chaque feature gate et chaque requête d'entité respecte la même matrice RBAC, y compris Plaid et MCP.",
     bullets: [
-      'Niveaux lecteur / gestionnaire / administrateur par module',
+      'Niveaux lecteur, contributeur, membre et administrateur par module',
       'Rôle admin workspace distinct des admins de module',
       'SSO via Microsoft Entra ID (OIDC) en cloud et auto-hébergé',
       'Authentification locale par mot de passe avec Argon2 + flux optionnel de réinitialisation',
@@ -78,21 +78,21 @@ const content: SecurityContent = {
       "Chronologie d'activité par entité (tâches, projets, documents, etc.)",
       "Créations, modifications et désactivations enregistrées avec l'utilisateur, l'horodatage et les valeurs avant et après",
       "Les administrateurs consultent et filtrent le journal d'audit dans l'app",
-      'Actions des agents enregistrées dans le même journal, avec les sources utilisées par chaque agent',
+      "Les modifications faites via Plaid sont enregistrées dans le même journal, avec leur origine. Les agents ont leur propre historique d'activité, avec les sources utilisées par chaque agent",
     ],
   },
   agentGovernance: {
     title: 'Gouvernance des agents',
     body:
-      "Les agents agissent sous les mêmes contrôles que tout le reste, plus des limites propres au travail autonome. Chaque action d'agent est enregistrée et limitée à ce que vous avez autorisé, et vous pouvez arrêter un agent à tout moment. L'autonomie est accordée par vous et mesurée au regard du bilan de l'agent, jamais présumée.",
+      "Les agents agissent sous les mêmes contrôles que tout le reste, plus des limites propres au travail autonome. Chaque action d'agent est enregistrée et limitée à ce que vous avez autorisé, et vous pouvez arrêter un agent à tout moment. Chaque agent démarre avec tous ses types d'action soumis à votre approbation. Vous décidez quand un type passe en automatique, avec le bilan de l'agent (propositions examinées, taux d'acceptation, jours d'activité) affiché à côté du choix.",
     bullets: [
       "Les agents n'agissent qu'à travers des opérations définies, sans accès direct à la base de données ni au shell",
-      "Chaque agent limité à ce que vous autorisez, sous le même RBAC que l'UI",
-      "Chaque action d'agent enregistrée dans le même journal d'audit",
+      "Chaque agent limité aux opérations que vous autorisez. Qui peut configurer les agents ou examiner leur travail suit les mêmes rôles que le reste de l'application",
+      "Chaque action d'agent enregistrée dans l'historique d'activité de l'agent, conservé 30 jours par défaut et réglable de 7 à 90 jours",
       "Les réponses portent les sources utilisées par l'agent, pour qu'une décision puisse être vérifiée",
       "Mettez n'importe quel agent en pause immédiatement, un par un ou tous à la fois",
       'Des plafonds de dépense par agent maintiennent le coût de fonctionnement borné',
-      "Les fonctions d'IA sont désactivées par défaut. Avant qu'un administrateur les active avec le modèle intégré, l'application nomme le fournisseur et le lieu de traitement des données, et demande une confirmation. Vous pouvez utiliser votre propre fournisseur de modèle à la place",
+      "Les fonctions d'IA sont désactivées par défaut. Dans le cloud, le modèle intégré ne reçoit aucune donnée tant que le workspace n'a pas accepté son fournisseur et son lieu de traitement, tous deux indiqués dans l'application. Un administrateur les confirme, et une nouvelle confirmation est demandée si l'un des deux change. Les workspaces qui avaient activé l'assistant ou un agent avant l'arrivée de cette confirmation sont considérés comme ayant accepté le fournisseur actuel. Vous pouvez utiliser votre propre fournisseur de modèle à la place",
     ],
   },
   deployment: {

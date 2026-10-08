@@ -67,7 +67,7 @@ const content: FeatureContent = {
       { title: 'Risikoableitung', body: 'Verbindungsrisiko automatisch aus verknüpften Schnittstellen abgeleitet. Kritikalität, Datenklasse, PII werden mitgezogen.' },
       { title: 'Support-Kontakte', body: 'Interne Nutzer und externe Kontakte pro Anwendung, mit Rollen und Notizen.' },
       { title: 'Kostenverknüpfung', body: 'Anwendungen an OPEX- und CAPEX-Posten knüpfen. Sehen Sie die echten Portfoliokosten.' },
-      { title: 'CSV-Import/-Export', body: 'Anwendungen und Schnittstellen in Masse importieren. Inventar für Analysen exportieren.' },
+      { title: 'CSV-Import/-Export', body: 'Anwendungen und Assets in Masse importieren. Inventar für Analysen exportieren.' },
     ],
   },
   crossLinks: {

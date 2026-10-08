@@ -84,11 +84,11 @@ const content: FaqContent = {
       items: [
         {
           q: 'What\'s the difference between included Plaid messages and Bring Your Own Key?',
-          a: 'Hosted KANAP includes a generous number of Plaid messages, powered by a mid-range model we\'ve carefully selected and tested with KANAP. For even more capable responses, the Bring Your Own Key option lets you connect state-of-the-art models from OpenAI, Anthropic, or any compatible provider. BYOK also gives you full control over how your data is processed, and removes any message limit.',
+          a: 'Hosted KANAP includes a generous number of Plaid messages, powered by a mid-range model we\'ve carefully selected and tested with KANAP. For even more capable responses, the Bring Your Own Key option lets you connect state-of-the-art models from OpenAI, Anthropic, or any compatible provider. BYOK also lets you choose the provider that processes your prompts, and removes any message limit.',
         },
         {
           q: 'How can I control Plaid?',
-          a: 'At platform level, Plaid can be fully disabled, enabled in read-only mode, or enabled in read-write mode (with preview and confirmation for all changes). Web search and MCP can be enabled or disabled separately. At user level, you control who has access to which Plaid feature through role-based permissions. RBAC is always enforced, Plaid never sees more than the user is allowed to.',
+          a: 'At workspace level, an administrator turns Plaid on or off, and web search and MCP can be enabled or disabled separately. At user level, role-based permissions decide who can use Plaid and which modules it can read. Making a change needs member level on both Plaid and the module, and every change is shown as a preview that the user confirms. MCP access is read-only. RBAC is always enforced, Plaid never sees more than the user is allowed to.',
         },
       ],
     },
@@ -105,7 +105,7 @@ const content: FaqContent = {
         },
         {
           q: 'Can I trust an agent with real work?',
-          a: 'That is what the controls are for. An agent reasons over your own IT data rather than guessing, cites the sources it used, and records every action in the same audit trail as the rest of KANAP. It earns autonomy by proving itself on real tasks, and you can stop it at any time.',
+          a: 'That is what the controls are for. An agent reasons over your own IT data rather than guessing, cites the sources it used, and records every action in its activity history. It earns autonomy by proving itself on real tasks, and you can stop it at any time.',
         },
         {
           q: 'Which tools do agents work with today?',
@@ -125,7 +125,7 @@ const content: FaqContent = {
         },
         {
           q: 'Do agent actions stay on my own servers?',
-          a: 'On a self-hosted deployment, yes. Agent reasoning and actions happen inside your own deployment, and your tickets and documents never leave it. The only external call is to the LLM provider you choose.',
+          a: 'On a self-hosted deployment, yes. The agent runtime and its actions happen inside your own deployment. The only ticket and document content that leaves it is what the agent sends to the LLM provider you choose, and nothing if you run the model on your own servers. If you turn on web search, short queries go to the search provider, with item references, identifiers and email addresses removed.',
         },
       ],
     },

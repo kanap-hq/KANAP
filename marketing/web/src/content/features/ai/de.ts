@@ -40,7 +40,7 @@ const content: FeatureContent = {
       bullets: [
         'Standard-MCP-Protokoll, funktioniert mit jedem kompatiblen Client',
         'Sichere API-Key-Authentifizierung mit feingranularem Scoping',
-        'Dieselben Abfragen und Aktionen wie im eingebauten Chat',
+        'Dieselben Leseabfragen wie im eingebauten Chat (MCP ist schreibgeschützt)',
         'Bestehende KI-Workflows beibehalten und KANAP-Kontext ergänzen',
       ],
       shotAlt: 'MCP-Konfiguration mit API-Key-Scoping',
@@ -53,7 +53,7 @@ const content: FeatureContent = {
         'Sichere API-Keys mit granularem MCP-Scoping',
         'Websuche kann unabhängig aktiviert oder deaktiviert werden',
         'Vorschau und Bestätigung für alle Schreiboperationen',
-        'Read-only-Modus für vorsichtige Rollouts',
+        'Nur-Lese-Zugriff über Rollen für vorsichtige Rollouts',
       ],
       shotAlt: 'Plaid-Admin-Steuerung mit Berechtigungsmatrix',
     },

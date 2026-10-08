@@ -4,7 +4,7 @@ const content: OnPremContent = {
   meta: {
     title: 'Self-host KANAP, the first-class citizen',
     description:
-      'Run KANAP on your own infrastructure, under AGPL v3. Full platform including AI agents, unlimited users, your data never leaves your environment. Deploy in minutes with Docker Compose.',
+      'Run KANAP on your own infrastructure, under AGPL v3. Full platform including AI agents, unlimited users, and you decide where your data goes. Deploy in minutes with Docker Compose.',
   },
 
   header: {
@@ -25,7 +25,7 @@ const content: OnPremContent = {
     pillars: [
       {
         title: 'Your data stays put',
-        body: 'Budget figures, supplier contracts, IT landscape, everything. On your servers, in your network. No third-party data processor to trust with your governance data. Agent reasoning and actions run there too, which matters when an auditor asks.',
+        body: 'Budget figures, supplier contracts, IT landscape, everything. On your servers, in your network. No third-party data processor to trust with your governance data, except the services you choose to connect, such as an AI model provider or an email relay. The agent runtime and its actions run there too, which matters when an auditor asks.',
       },
       {
         title: 'No per-seat tax',
@@ -41,7 +41,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Air-gap friendly',
-        body: 'Docker Compose deployment runs in restricted networks. Self-contained images, no mandatory outbound calls for core functions.',
+        body: 'Docker Compose deployment runs in restricted networks. You build the images from the public source, and once built they make no mandatory outbound calls for core functions.',
       },
       {
         title: 'Your cadence',
@@ -106,10 +106,10 @@ const content: OnPremContent = {
       { label: 'OS', value: 'Any Linux with Docker (Ubuntu 22+, Debian 12+, RHEL 9+ recommended)' },
       { label: 'CPU', value: '2 vCPU minimum · 4+ recommended for 50+ users' },
       { label: 'RAM', value: '4 GB minimum · 8 GB recommended' },
-      { label: 'Storage', value: '20 GB for the platform + whatever your data grows to' },
-      { label: 'Database', value: 'PostgreSQL 15+ (bundled in the compose file, or bring your own)' },
+      { label: 'Storage', value: '20 GB for the platform + whatever your data grows to, plus S3-compatible object storage' },
+      { label: 'Database', value: 'PostgreSQL 16+ with citext, pgcrypto and uuid-ossp (you provide it)' },
       { label: 'Network', value: 'HTTPS terminator (your choice, nginx, Traefik, cloud LB)' },
-      { label: 'Outbound (optional)', value: 'World Bank FX API for live currency rates · LLM provider for Plaid' },
+      { label: 'Outbound (optional)', value: 'FX rate APIs (World Bank, exchangerate-api.com) · LLM provider for Plaid and agents · Microsoft Entra for SSO · Resend or your SMTP relay for email · Web search provider, if enabled' },
     ],
   },
 
@@ -135,11 +135,11 @@ const content: OnPremContent = {
       },
       {
         title: 'SSO via Entra ID',
-        body: 'Enterprise SSO is part of the core platform, not an upsell. Wire it up through the admin console.',
+        body: 'Enterprise SSO is part of the core platform. Add your Entra app registration to the configuration, then connect it from the admin console.',
       },
       {
         title: 'Plaid and agents, your way',
-        body: 'Bring your own LLM key for both Plaid and your agents, OpenAI, Anthropic, Ollama, or any OpenAI-compatible endpoint. Agent reasoning and actions run inside your own deployment, and the only thing that leaves is the prompt you send to the provider you chose.',
+        body: 'Bring your own LLM key for both Plaid and your agents, OpenAI, Anthropic, Ollama, or any OpenAI-compatible endpoint. The agent runtime and its actions run inside your own deployment. The only content that leaves is what you send to the provider you chose, plus short web search queries if you turn web search on.',
       },
     ],
   },
@@ -147,7 +147,7 @@ const content: OnPremContent = {
   support: {
     title: 'Need priority help?',
     body:
-      'The Self-Hosted Support plan adds priority email support, install troubleshooting, Plaid BYOK unlock, and 20% off consulting, without changing the deployment model.',
+      'The Self-Hosted Support plan adds priority email support, install troubleshooting, and 20% off consulting, without changing the deployment model.',
     bullets: [
       'Priority email support (real humans, best-effort response)',
       'Installation and upgrade troubleshooting',

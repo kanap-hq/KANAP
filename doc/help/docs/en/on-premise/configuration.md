@@ -367,7 +367,7 @@ Only required if the corresponding feature is enabled.
 | `login.microsoftonline.com` | 443 | Entra ID SSO metadata & tokens | If Entra SSO is configured |
 | `graph.microsoft.com` | 443 | Profile enrichment at sign-in and the daily directory sync | If Entra SSO is configured |
 | `api.worldbank.org` | 443 | Annual FX rates | Optional |
-| `v6.exchangerate-api.com` | 443 | Spot FX rates | Optional |
+| `open.er-api.com` | 443 | Spot FX rates | Optional |
 
 ### Internal (No Firewall Rule Needed)
 

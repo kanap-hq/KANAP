@@ -86,11 +86,11 @@ const content: FaqContent = {
       items: [
         {
           q: '¿Cuál es la diferencia entre los mensajes Plaid incluidos y Bring Your Own Key?',
-          a: 'KANAP alojado incluye una cantidad generosa de mensajes Plaid, impulsados por un modelo intermedio que hemos seleccionado y probado con cuidado con KANAP. Para respuestas aún más capaces, la opción Bring Your Own Key le permite conectar modelos de última generación de OpenAI, Anthropic o cualquier proveedor compatible. BYOK también le da control total sobre cómo se procesan sus datos y elimina cualquier límite de mensajes.',
+          a: 'KANAP alojado incluye una cantidad generosa de mensajes Plaid, impulsados por un modelo intermedio que hemos seleccionado y probado con cuidado con KANAP. Para respuestas aún más capaces, la opción Bring Your Own Key le permite conectar modelos de última generación de OpenAI, Anthropic o cualquier proveedor compatible. BYOK también le permite elegir el proveedor que procesa sus solicitudes y elimina cualquier límite de mensajes.',
         },
         {
           q: '¿Cómo puedo controlar Plaid?',
-          a: 'A nivel de plataforma, Plaid se puede desactivar por completo, activar en modo solo lectura o activar en modo lectura-escritura (con vista previa y confirmación para todos los cambios). La búsqueda web y MCP se activan o desactivan por separado. A nivel de usuario, usted controla quién accede a cada funcionalidad de Plaid mediante permisos por rol. El RBAC se aplica siempre, Plaid nunca ve más de lo que el usuario tiene permitido.',
+          a: 'A nivel de workspace, un administrador activa o desactiva Plaid, y la búsqueda web y MCP se activan o desactivan por separado. A nivel de usuario, los permisos por rol deciden quién puede usar Plaid y qué módulos puede leer. Hacer un cambio exige el nivel miembro en Plaid y en el módulo, y cada cambio se muestra como vista previa que el usuario confirma. El acceso MCP es de solo lectura. El RBAC se aplica siempre, Plaid nunca ve más de lo que el usuario tiene permitido.',
         },
       ],
     },
@@ -107,7 +107,7 @@ const content: FaqContent = {
         },
         {
           q: '¿Puedo confiar trabajo real a un agente?',
-          a: 'Para eso están los controles. Un agente razona sobre sus propios datos de TI en lugar de adivinar, cita las fuentes que utilizó y registra cada acción en el mismo registro de auditoría que el resto de KANAP. Gana autonomía demostrándose en tareas reales, y usted puede detenerlo en cualquier momento.',
+          a: 'Para eso están los controles. Un agente razona sobre sus propios datos de TI en lugar de adivinar, cita las fuentes que utilizó y registra cada acción en su historial de actividad. Gana autonomía demostrándose en tareas reales, y usted puede detenerlo en cualquier momento.',
         },
         {
           q: '¿Con qué herramientas trabajan los agentes hoy?',
@@ -127,7 +127,7 @@ const content: FaqContent = {
         },
         {
           q: '¿Las acciones de los agentes se quedan en mis propios servidores?',
-          a: 'En un despliegue autoalojado, sí. El razonamiento y las acciones del agente ocurren dentro de su propio despliegue, y sus tickets y documentos nunca salen de él. La única llamada externa es al proveedor de LLM que usted elija.',
+          a: 'En un despliegue autoalojado, sí. El motor de los agentes y sus acciones ocurren dentro de su propio despliegue. El único contenido de tickets y documentos que sale es lo que el agente envía al proveedor de LLM que usted elija, y nada si ejecuta el modelo en sus propios servidores. Si activa la búsqueda web, consultas breves van al proveedor de búsqueda, sin referencias de elementos, identificadores ni direcciones de correo.',
         },
       ],
     },

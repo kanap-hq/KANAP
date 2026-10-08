@@ -88,7 +88,7 @@ const content: OfferContent = {
           'Nous hébergeons, mettons à jour et sauvegardons KANAP pour vous',
           'Hébergement UE pour les équipes européennes',
           '2 500 messages Plaid/mois inclus, ou votre propre clé en illimité',
-          'Agents inclus, avec votre propre clé LLM',
+          'Agents inclus, sur les messages inclus ou avec votre propre clé LLM',
           'Session de cadrage 60 min avec un expert KANAP',
           'Support email prioritaire',
           'Conseil à 900 € la journée au lieu de 1 150 €',

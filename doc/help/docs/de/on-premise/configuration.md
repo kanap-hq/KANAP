@@ -367,7 +367,7 @@ Nur erforderlich, wenn die entsprechende Funktion aktiviert ist.
 | `login.microsoftonline.com` | 443 | Entra ID SSO-Metadaten & Tokens | Wenn Entra SSO konfiguriert ist |
 | `graph.microsoft.com` | 443 | Profilanreicherung bei der Anmeldung und tägliche Verzeichnissynchronisierung | Wenn Entra SSO konfiguriert ist |
 | `api.worldbank.org` | 443 | Jährliche FX-Kurse | Optional |
-| `v6.exchangerate-api.com` | 443 | Kassakurse | Optional |
+| `open.er-api.com` | 443 | Kassakurse | Optional |
 
 ### Intern (Keine Firewall-Regel nötig)
 

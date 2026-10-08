@@ -367,7 +367,7 @@ Requis uniquement si la fonctionnalité correspondante est activée.
 | `login.microsoftonline.com` | 443 | Métadonnées et tokens SSO Entra ID | Si le SSO Entra est configuré |
 | `graph.microsoft.com` | 443 | Enrichissement de profil à la connexion et synchronisation quotidienne de l'annuaire | Si le SSO Entra est configuré |
 | `api.worldbank.org` | 443 | Taux de change annuels | Optionnel |
-| `v6.exchangerate-api.com` | 443 | Taux de change spot | Optionnel |
+| `open.er-api.com` | 443 | Taux de change spot | Optionnel |
 
 ### Interne (aucune règle de pare-feu nécessaire)
 

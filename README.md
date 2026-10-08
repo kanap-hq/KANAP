@@ -44,9 +44,9 @@ Think of it as the operating system of the IT department: the coordination layer
 
 ## Plaid: the agent layer
 
-Plaid is the native AI agent inside KANAP. It is not a chatbot bolted onto a
-wiki: it works through typed tools, tenant-scoped execution, RBAC, RLS, mutation
-previews, approvals, and audit records.
+Plaid is the native AI agent inside KANAP. It works through typed tools,
+tenant-scoped execution, RBAC, RLS, mutation previews, approvals, and audit
+records.
 
 Today, Plaid can:
 
@@ -69,8 +69,7 @@ The agentic control plane also tracks runs, tool executions, evidence, action
 requests, approvals, policy decisions, and live-readiness checks. Provider
 contracts exist for monitoring, ticketing, virtualization, directory, and
 automation systems; production external adapters beyond the current GLPI import
-path are the next step, not a claim about every external system being connected
-out of the box.
+path are the next step.
 
 ![Plaid prepares a change as a preview and applies it only after approval](marketing/web/public/screenshots/ai-preview.png)
 
