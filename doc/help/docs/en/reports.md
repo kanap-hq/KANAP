@@ -181,6 +181,7 @@ Drill down into a single company's chargeback allocations across departments, bu
 
 - Item name, allocation method, amount, share of total
 - Pinned totals row at the bottom
+- The item name is a link that opens the OPEX item in a new tab. Common costs and totals are plain text.
 
 **Intercompany flows** (when enabled):
 
@@ -223,6 +224,8 @@ Identify your largest OPEX or CAPEX items for a given year.
 - Item
 - Value for the selected metric and year
 - Share of total (percentage)
+
+The item name is a link that opens the OPEX or CAPEX item in a new tab.
 
 **Summary cards below the table**:
 
@@ -269,6 +272,8 @@ When **Both** is selected, the pie chart option is disabled and the report autom
 - Destination value (current)
 - Delta (absolute change)
 - Percentage increase
+
+The item name is a link that opens the OPEX or CAPEX item in a new tab.
 
 **Summary cards below the table**:
 
