@@ -25,7 +25,11 @@ import { divRoundHalfAway, ICU_COLLATION, jsCents, sqlLiteral, sumJsCents } from
  * - FTE (`fte`, a numeric, null when unknown): `sum`, `min`, `max` of the
  *   lines that have one, `avg` their mean rounded once half away from zero to
  *   2 decimals; `unknown` counts the lines without one; with none, the value
- *   is null.
+ *   is null. `minus` subtracts another FTE field line by line (never an
+ *   amount): a line has a value when either side has one, the unknown side
+ *   counting as 0 (sums of declared FTE), and none when both are unknown;
+ *   `part` keeps the positive or the negative part of a line's value. The
+ *   unit stays FTE (a `having` bound is compared as is).
  *
  * Group keys are text: a text-like field's value with '' read as null (a
  * multi-valued field, such as the linked projects, groups under its joined
@@ -53,9 +57,9 @@ export interface AggregateMeasureSpec {
   fn: AggregateFn;
   /** A money or FTE field of the list. */
   field: string;
-  /** Money only: another money field subtracted from `field` on each line. */
+  /** Another field of the same kind (money from money, FTE from FTE) subtracted from `field` on each line. */
   minus?: string;
-  /** Money only: the positive or the negative part of each line's value. */
+  /** The positive or the negative part of each line's value (money or FTE). */
   part?: 'positive' | 'negative';
 }
 
@@ -214,8 +218,22 @@ function keyOrderSql(column: string, field: FieldSql): string {
 function compileMeasure(stmt: SqlStatement, config: ListConfig, spec: AggregateMeasureSpec): CompiledMeasure {
   const field = fieldOf(stmt, config, spec.field);
   if (field.kind === 'fte') {
-    if (spec.minus != null || spec.part != null) fail(`${spec.field}: minus and part apply to amounts only.`);
-    return { spec, unit: 'fte', line: field.sql, fields: [field] };
+    if (spec.minus == null && spec.part == null) return { spec, unit: 'fte', line: field.sql, fields: [field] };
+    const fields = [field];
+    // A line has a value when either side has one; an unknown side counts as 0 against a known one.
+    let known = `${field.sql} IS NOT NULL`;
+    let value = field.sql;
+    if (spec.minus != null) {
+      const other = fieldOf(stmt, config, spec.minus);
+      if (other.kind !== 'fte') fail(`${spec.minus} is not an FTE field (an FTE subtracts an FTE).`);
+      fields.push(other);
+      known = `${known} OR ${other.sql} IS NOT NULL`;
+      value = `(coalesce(${field.sql}, 0) - coalesce(${other.sql}, 0))`;
+    }
+    // `greatest` and `least` skip a null: the part applies to a known value only.
+    if (spec.part === 'positive') value = `greatest(${value}, 0)`;
+    else if (spec.part === 'negative') value = `least(${value}, 0)`;
+    return { spec, unit: 'fte', line: `(CASE WHEN ${known} THEN ${value} END)`, fields };
   }
   if (field.kind !== 'money') fail(`${spec.field} is not an amount or an FTE field.`);
   if (spec.minus == null && spec.part == null) return { spec, unit: 'money', line: field.sql, fields: [field] };
