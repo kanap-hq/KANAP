@@ -921,6 +921,11 @@ export type CostPerFteRow = { key: string; label: string; cells: CostPerFteCell[
 export type CostPerFteNotice = ColumnYear & StaffingNotice;
 export type CostPerFte = {
   rows: CostPerFteRow[];
+  /**
+   * The column the rows are sorted on: the earliest one where some group has a staff FTE (null when
+   * none has any, the rows then go by name).
+   */
+  sortColumn: number | null;
   /** Per column, the totals of FTE and cost and the ratio of the totals. */
   total: CostPerFteCell[];
   /** Per column with some, the detached FTE that has line detail: its cost is the lines' cost. */
@@ -937,8 +942,9 @@ function costPerFteCell(row: AggregateRow | null | undefined): CostPerFteCell {
 }
 
 /**
- * The groups with a staff FTE in at least one column, by the first column's FTE, largest first (then by
- * label); the total row (ratio of the totals, never an average of ratios); the notices per column.
+ * The groups with a staff FTE in at least one column, by the FTE of the earliest column where some group
+ * has one, largest first (then by label; a tenant planning staff for this year only still sorts by FTE
+ * when last year comes first); the total row (ratio of the totals, never an average of ratios); the notices per column.
  * `results` holds the answers to `costPerFteRequests`, in the order of `columns`.
  */
 export function readCostPerFte(
@@ -962,10 +968,11 @@ export function readCostPerFte(
     const cells = columns.map((_, index) => costPerFteCell(entry.rows[index]));
     if (cells.some((cell) => cell.fte != null)) rows.push({ key, label: entry.label, cells });
   }
-  const first = (row: CostPerFteRow) => row.cells[0]?.fte;
+  const found = columns.findIndex((_, index) => rows.some((row) => row.cells[index].fte != null));
+  const sortColumn = found >= 0 ? found : null;
   rows.sort((a, b) => {
-    const x = first(a);
-    const y = first(b);
+    const x = sortColumn == null ? null : a.cells[sortColumn].fte;
+    const y = sortColumn == null ? null : b.cells[sortColumn].fte;
     if (x != null && y != null && x !== y) return y - x;
     if ((x == null) !== (y == null)) return x == null ? 1 : -1;
     return compare(a.label, b.label);
@@ -979,7 +986,7 @@ export function readCostPerFte(
     if (withDetail) detached.push({ ...column, ...withDetail });
     if (without) noDetail.push({ ...column, ...without });
   });
-  return { rows, total: columns.map((_, index) => costPerFteCell(results?.[index]?.total)), detached, noDetail };
+  return { rows, sortColumn, total: columns.map((_, index) => costPerFteCell(results?.[index]?.total)), detached, noDetail };
 }
 
 /** The most groups the cost per FTE chart draws, after the total. */

@@ -483,7 +483,7 @@ Sehen Sie, was ein VZÄ in jedem Teil des Budgets kostet und wie sich diese Kost
 
 ### Was Sie sehen
 
-**Tabelle**: Eine Zeile pro Gruppe mit Personal-VZÄ in mindestens einem Paar, die meisten VZÄ des ersten Paars zuerst. Jedes Paar hat drei Spalten unter seinem Namen, zum Beispiel „Budget 2026“:
+**Tabelle**: Eine Zeile pro Gruppe mit Personal-VZÄ in mindestens einem Paar, die meisten VZÄ zuerst. Verglichen werden die VZÄ des frühesten Paars, in dem eine Gruppe Personal-VZÄ hat, sodass ein Budget, das nur für dieses Jahr Personal plant, trotzdem nach VZÄ sortiert ist. Ohne Personal-VZÄ folgen die Zeilen den Namen. Jedes Paar hat drei Spalten unter seinem Namen, zum Beispiel „Budget 2026“:
 
 - **VZÄ**: die durchschnittlichen VZÄ der Zeilen über das ganze Jahr
 - **Personalkosten**: die Kosten derselben Zeilen für das Jahr, in der Berichtswährung
@@ -491,7 +491,7 @@ Sehen Sie, was ein VZÄ in jedem Teil des Budgets kostet und wie sich diese Kost
 
 Die Gruppen heißen wie in Personal nach Monat („Keine Kostenstelle“, „Kein Lieferant“, „Kein Wert“). Eine angeheftete Zeile **Gesamt** zeigt für jedes Paar die VZÄ gesamt, die Personalkosten gesamt und die Personalkosten gesamt geteilt durch die VZÄ gesamt.
 
-**Diagramm**: Horizontale Balken der Kosten pro VZÄ, ein Balken pro Paar. Die erste Kategorie ist die Summe, gefolgt von den zehn Gruppen mit den meisten VZÄ im ersten Paar. Der Titel nennt Typ und Gruppierung, zum Beispiel „OPEX-Kosten pro VZÄ nach Kostenstelle“. Fahren Sie über einen Balken, um Gruppe, Paar, Kosten pro VZÄ, VZÄ und Personalkosten zu lesen.
+**Diagramm**: Horizontale Balken der Kosten pro VZÄ, ein Balken pro Paar. Die erste Kategorie ist die Summe, gefolgt von den ersten zehn Gruppen der Tabelle. Der Titel nennt Typ und Gruppierung, zum Beispiel „OPEX-Kosten pro VZÄ nach Kostenstelle“. Fahren Sie über einen Balken, um Gruppe, Paar, Kosten pro VZÄ, VZÄ und Personalkosten zu lesen.
 
 ### Hinweise
 

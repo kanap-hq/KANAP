@@ -296,6 +296,19 @@ describe('Cost per FTE', () => {
     expect(tooltip.data[0].value).toMatch(new RegExp(` ${Y - 1}$`));
   });
 
+  it('sorts and charts on this year when no group has staff last year', async () => {
+    // Twelve groups planning staff this year only, named in the order of their FTE, smallest first.
+    serverRows = Array.from({ length: 12 }, (_, i) => line(`l${i}`, [`cc${i}`, `CC${String.fromCharCode(65 + i)}`], null, null, { staffFte: i + 1, cost: (i + 1) * 1000, fte: i + 1 }));
+    renderReport();
+    await waitFor(() => expect(gridRows()).toHaveLength(12));
+    // CCL (12 FTE) down to CCA (1 FTE): by this year's FTE, never by name.
+    expect(gridRows().map((row) => row.c1_fte)).toEqual([12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
+    expect(gridRows().every((row) => row.c0_fte == null)).toBe(true);
+    await waitFor(() => expect(chart.options.data).toHaveLength(11));
+    const categories = chart.options.data.map((datum: any) => chart.options.axes[0].label.formatter({ value: datum.key }));
+    expect(categories).toEqual(['reports.columns.total', 'CCL', 'CCK', 'CCJ', 'CCI', 'CCH', 'CCG', 'CCF', 'CCE', 'CCD', 'CCC']);
+  });
+
   it('flags per pair the FTE whose amount left its lines and the FTE without line detail', async () => {
     renderReport();
     await waitFor(() => expect(screen.getAllByRole('note')).toHaveLength(2));

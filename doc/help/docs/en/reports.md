@@ -483,7 +483,7 @@ See what one FTE costs in each part of the budget, and how that cost moves acros
 
 ### What you'll see
 
-**Table**: One row per group with staff FTE in at least one pair, the largest FTE of the first pair first. Each pair has three columns under its name, for example "Budget 2026":
+**Table**: One row per group with staff FTE in at least one pair, the largest FTE first. The FTE compared are those of the earliest pair where a group has staff FTE, so a budget that plans staff for this year only still sorts by FTE. Without any staff FTE, the rows go by name. Each pair has three columns under its name, for example "Budget 2026":
 
 - **FTE**: the full-year average FTE of the lines
 - **Staff cost**: the cost of the same lines for the year, in the reporting currency
@@ -491,7 +491,7 @@ See what one FTE costs in each part of the budget, and how that cost moves acros
 
 Groups are named as in Staffing by month ("No cost center", "No supplier", "No value"). A pinned **Total** row gives, for each pair, the total FTE, the total staff cost and the total staff cost divided by the total FTE.
 
-**Chart**: Horizontal bars of the cost per FTE, one bar for each pair. The first category is the total, followed by the ten groups with the most FTE in the first pair. The title names the type and the grouping, for example "OPEX cost per FTE by cost center". Hover a bar to read the group, the pair, the cost per FTE, the FTE and the staff cost.
+**Chart**: Horizontal bars of the cost per FTE, one bar for each pair. The first category is the total, followed by the first ten groups of the table. The title names the type and the grouping, for example "OPEX cost per FTE by cost center". Hover a bar to read the group, the pair, the cost per FTE, the FTE and the staff cost.
 
 ### Notices
 

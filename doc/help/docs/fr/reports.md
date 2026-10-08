@@ -483,7 +483,7 @@ Voyez ce que coûte un ETP dans chaque partie du budget, et comment ce coût év
 
 ### Ce que vous verrez
 
-**Tableau** : Une ligne par groupe ayant des ETP de personnel dans au moins une paire, le plus grand nombre d'ETP de la première paire en premier. Chaque paire a trois colonnes sous son nom, par exemple « Budget 2026 » :
+**Tableau** : Une ligne par groupe ayant des ETP de personnel dans au moins une paire, le plus grand nombre d'ETP en premier. Les ETP comparés sont ceux de la première paire où un groupe a des ETP de personnel : un budget qui prévoit du personnel pour cette année seulement reste trié par ETP. Sans aucun ETP de personnel, les lignes suivent l'ordre des noms. Chaque paire a trois colonnes sous son nom, par exemple « Budget 2026 » :
 
 - **ETP** : l'ETP moyen sur l'année complète des lignes
 - **Coût du personnel** : le coût des mêmes lignes sur l'année, dans la devise de reporting
@@ -491,7 +491,7 @@ Voyez ce que coûte un ETP dans chaque partie du budget, et comment ce coût év
 
 Les groupes sont nommés comme dans Effectifs par mois (« Aucun centre de coûts », « Aucun fournisseur », « Aucune valeur »). Une ligne **Total** épinglée donne, pour chaque paire, le total des ETP, le total du coût du personnel et le total du coût du personnel divisé par le total des ETP.
 
-**Graphique** : Des barres horizontales du coût par ETP, une barre par paire. La première catégorie est le total, suivie des dix groupes ayant le plus d'ETP dans la première paire. Le titre nomme le type et le regroupement, par exemple « Coût par ETP OPEX par centre de coûts ». Survolez une barre pour lire le groupe, la paire, le coût par ETP, les ETP et le coût du personnel.
+**Graphique** : Des barres horizontales du coût par ETP, une barre par paire. La première catégorie est le total, suivie des dix premiers groupes du tableau. Le titre nomme le type et le regroupement, par exemple « Coût par ETP OPEX par centre de coûts ». Survolez une barre pour lire le groupe, la paire, le coût par ETP, les ETP et le coût du personnel.
 
 ### Avertissements
 

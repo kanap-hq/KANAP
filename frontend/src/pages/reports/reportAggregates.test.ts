@@ -505,6 +505,7 @@ describe('cost per FTE', () => {
     ], cpfRow([], { cost: 290000, fte: 2.5, detached: 1.25, nodetail: 0.5 }, 6, { detached: 3, nodetail: 5 }));
     const read = readCostPerFte(columns, [first, second], labels, compare);
     expect(read.rows.map((r) => r.label)).toEqual(['CC2', 'CC1', 'No cost center', 'Unnamed value']);
+    expect(read.sortColumn).toBe(0);
     expect(read.rows[0].cells).toEqual([{ fte: 2.5, cost: 300000, ratio: 120000 }, { fte: null, cost: null, ratio: null }]);
     expect(read.rows[1].cells).toEqual([{ fte: 1, cost: 100000, ratio: 100000 }, { fte: 2, cost: 240000, ratio: 120000 }]);
     // An FTE of 0: a row, a blank ratio.
@@ -520,9 +521,25 @@ describe('cost per FTE', () => {
     expect(read.noDetail).toEqual([{ year: 2026, metric: 'revision', fte: 0.5, items: 1 }]);
   });
 
+  it('sorts on the earliest column with a staff FTE when the first one has none', () => {
+    const first = result([cpfRow(['cc-1', 'A'], { cost: 0, fte: null }), cpfRow(['cc-2', 'B'], { cost: 0, fte: null })], cpfRow([], { cost: 0, fte: null }));
+    const second = result([
+      cpfRow(['cc-1', 'A'], { cost: 50000, fte: 0.5 }),
+      cpfRow(['cc-2', 'B'], { cost: 300000, fte: 3 }),
+      cpfRow(['cc-3', 'C'], { cost: 100000, fte: 1 }),
+    ], cpfRow([], { cost: 450000, fte: 4.5 }));
+    const read = readCostPerFte(columns, [first, second], labels, compare);
+    expect(read.sortColumn).toBe(1);
+    expect(read.rows.map((r) => r.label)).toEqual(['B', 'C', 'A']);
+    expect(read.rows[0].cells[0]).toEqual({ fte: null, cost: null, ratio: null });
+    // No staff FTE anywhere: no row, nothing to sort on.
+    expect(readCostPerFte(columns, [first, first], labels, compare).sortColumn).toBeNull();
+  });
+
   it('reads nothing without answers, and blank totals without staff FTE', () => {
     const empty = readCostPerFte(columns, undefined, labels, compare);
     expect(empty.rows).toEqual([]);
+    expect(empty.sortColumn).toBeNull();
     expect(empty.total).toEqual([{ fte: null, cost: null, ratio: null }, { fte: null, cost: null, ratio: null }]);
     expect(empty.detached).toEqual([]);
     expect(empty.noDetail).toEqual([]);

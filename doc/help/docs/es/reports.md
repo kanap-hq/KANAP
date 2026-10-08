@@ -483,7 +483,7 @@ Vea cuánto cuesta un ETC en cada parte del presupuesto y cómo evoluciona ese c
 
 ### Qué verá
 
-**Tabla**: Una fila por grupo con ETC de personal en al menos un par, el mayor número de ETC del primer par primero. Cada par tiene tres columnas bajo su nombre, por ejemplo «Presupuesto 2026»:
+**Tabla**: Una fila por grupo con ETC de personal en al menos un par, el mayor número de ETC primero. Se comparan los ETC del primer par en el que algún grupo tiene ETC de personal, de modo que un presupuesto que solo prevé personal para este año sigue ordenado por ETC. Sin ningún ETC de personal, las filas siguen el orden de los nombres. Cada par tiene tres columnas bajo su nombre, por ejemplo «Presupuesto 2026»:
 
 - **ETC**: el ETC medio del año completo de las líneas
 - **Coste de personal**: el coste de las mismas líneas en el año, en la moneda de reporte
@@ -491,7 +491,7 @@ Vea cuánto cuesta un ETC en cada parte del presupuesto y cómo evoluciona ese c
 
 Los grupos se nombran como en Plantilla por mes («Sin centro de coste», «Sin proveedor», «Sin valor»). Una fila **Total** fijada da, para cada par, el total de ETC, el total del coste de personal y el total del coste de personal dividido entre el total de ETC.
 
-**Gráfico**: Barras horizontales del coste por ETC, una barra por par. La primera categoría es el total, seguida de los diez grupos con más ETC en el primer par. El título indica el tipo y la agrupación, por ejemplo «Coste por ETC OPEX por centro de coste». Pase el cursor sobre una barra para leer el grupo, el par, el coste por ETC, los ETC y el coste de personal.
+**Gráfico**: Barras horizontales del coste por ETC, una barra por par. La primera categoría es el total, seguida de los diez primeros grupos de la tabla. El título indica el tipo y la agrupación, por ejemplo «Coste por ETC OPEX por centro de coste». Pase el cursor sobre una barra para leer el grupo, el par, el coste por ETC, los ETC y el coste de personal.
 
 ### Avisos
 
