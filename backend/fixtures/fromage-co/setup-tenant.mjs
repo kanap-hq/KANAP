@@ -1800,7 +1800,14 @@ async function ensureDemoAgent() {
   }
 
   // Agent triage runs on the tenant AI surface, which is disabled by default.
-  await apiPatch('/ai/settings', { chat_enabled: true });
+  try {
+    await apiPatch('/ai/settings', { chat_enabled: true });
+  } catch (error) {
+    // On the KANAP included model, an administrator confirms its provider in the app first.
+    if (error.payload?.code !== 'BUILTIN_PROVIDER_CONFIRMATION_REQUIRED') throw error;
+    warn('The assistant and the demo agent wait for an administrator to confirm the KANAP included model in Admin > Plaid; no demo run yet');
+    return;
+  }
 
   try {
     await apiPost(`${cp}/helpdesk/ticketing-ingestion/poll`, {});

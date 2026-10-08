@@ -152,7 +152,9 @@
     },
     "newAgentSreDefaultName": "Agent de supervision d'infrastructure",
     "newAgentSreDescription": "Agent de supervision en brouillon : il lit les alertes, les met en relation avec vos données KANAP et prépare des notes de diagnostic à relire.",
-    "cost": "Coût — aujourd’hui / 7 jours"
+    "cost": "Coût — aujourd’hui / 7 jours",
+    "includedModelPaused": "Les agents qui utilisent le modèle inclus KANAP sont en pause jusqu'à ce qu'un administrateur le confirme dans Administration > Plaid.",
+    "includedModelOpenSettings": "Ouvrir les réglages Plaid"
   },
   "approvals": {
     "title": "Approbations agents",

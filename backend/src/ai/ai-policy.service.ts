@@ -221,8 +221,13 @@ export class AiPolicyService {
     });
     const tenantActive = !!tenant && tenant.status === TenantStatus.ACTIVE;
     const settings = tenant ? await this.aiSettings.find(context.tenantId, { manager }) : null;
-    const providerReady = settings
-      ? (await this.aiSettings.getProviderValidationErrors(settings, manager)).length === 0
+    const readiness = settings ? await this.aiSettings.getProviderReadiness(settings, manager) : null;
+    const providerReady = readiness ? readiness.errors.length === 0 : false;
+    // The included model waits for an administrator's confirmation: named apart so
+    // the assistant can say so instead of a generic message.
+    const providerReason = readiness?.errorCode === 'builtin_not_accepted' ? 'builtin_not_accepted' : 'provider_not_ready';
+    const builtinConfirmationNeeded = tenant
+      ? await this.aiSettings.isBuiltinConfirmationNeeded(context.tenantId, settings, manager)
       : false;
 
     const buildSurfaceCapability = (
@@ -241,7 +246,7 @@ export class AiPolicyService {
       if (!tenant) reasons.push('tenant_not_found');
       if (tenant && !tenantActive) reasons.push('tenant_inactive');
       if (!opts.tenantEnabled) reasons.push('tenant_disabled');
-      if (!providerReady) reasons.push('provider_not_ready');
+      if (!providerReady) reasons.push(providerReason);
       if (!state) reasons.push('user_not_allowed');
       if (!opts.permissionGranted) reasons.push('permission_denied');
 
@@ -295,6 +300,7 @@ export class AiPolicyService {
           this.hasPermission(state, 'ai_settings', 'admin'),
         ),
       },
+      builtin_confirmation_needed: builtinConfirmationNeeded,
     };
   }
 

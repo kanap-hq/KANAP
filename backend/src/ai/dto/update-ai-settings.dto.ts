@@ -74,4 +74,11 @@ export class UpdateAiSettingsDto {
   @IsString()
   @MaxLength(255)
   glpi_app_token?: string | null;
+
+  // Confirms the included model's provider identity (the key shown in the settings
+  // view); null withdraws the confirmation.
+  @ValidateIf((_, value) => value !== undefined && value !== null)
+  @IsString()
+  @MaxLength(200)
+  accept_builtin_provider_key?: string | null;
 }

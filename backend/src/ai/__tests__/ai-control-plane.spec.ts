@@ -5985,7 +5985,7 @@ async function testAgentRunsConsumeBuiltinFreeMessageQuota() {
   const context = createContext(createMemoryManager().manager);
   const makeService = (source: 'builtin' | 'custom', count: number, limit: number, reserved: string[]) => new AiAgentBuiltinQuotaService(
     {
-      tryResolve: async () => ({ source: source === 'builtin' ? 'builtin' : 'registry' }),
+      resolve: async () => ({ source: source === 'builtin' ? 'builtin' : 'registry' }),
     } as any,
     {
       getCurrentUsage: async () => ({ count, limit, year_month: '2026-07', reset_date: '' }),

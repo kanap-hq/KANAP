@@ -11,6 +11,9 @@ export type PlatformAiConfig = {
   updated_at: string;
   updated_by: string | null;
   has_api_key: boolean;
+  disclosure_name: string | null;
+  disclosure_location: string | null;
+  disclosure_key: string | null;
 };
 
 export type PlatformAiUsageRow = {

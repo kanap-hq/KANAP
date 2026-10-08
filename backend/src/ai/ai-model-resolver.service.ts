@@ -6,7 +6,7 @@ import { AiModelConfig } from './ai-model-config.entity';
 import { AiSecretCipherService } from './ai-secret-cipher.service';
 import { AiSettings } from './ai-settings.entity';
 import { AiAgentDefinition } from './control-plane/entities/ai-agent-definition.entity';
-import { PlatformAiConfigService } from './platform/platform-ai-config.service';
+import { BuiltinProviderIdentity, PlatformAiConfigService } from './platform/platform-ai-config.service';
 import { AiProviderRegistry } from './providers/ai-provider-registry.service';
 
 export type AiModelConsumer = { type: 'chat' } | { type: 'agent'; agentId: string };
@@ -34,9 +34,25 @@ export type ResolveModelOptions = {
   // never throw on a corrupt or legacy key payload — only an actual LLM call
   // (withSecrets: true) should surface that.
   withSecrets?: boolean;
+  // The workspace's confirmation of the included model to check, for a settings
+  // payload not saved yet. Undefined reads it from ai_settings.
+  builtinAcceptedKey?: string | null;
 };
 
-export type AiModelResolutionErrorCode = 'no_model_available' | 'builtin_not_configured';
+export type AiModelResolutionErrorCode = 'no_model_available' | 'builtin_not_configured' | 'builtin_not_accepted';
+
+export const BUILTIN_NOT_ACCEPTED_MESSAGE = 'The KANAP included model needs an administrator\'s confirmation in Admin > Plaid.';
+
+/** What a consumer would run on, without resolving secrets. */
+export type AiModelReadiness = {
+  // Empty when the consumer can call its model (chat_ready).
+  errors: string[];
+  errorCode: AiModelResolutionErrorCode | null;
+  // The consumer lands on the included model, confirmed or not.
+  usesBuiltin: boolean;
+  // The included model's identity when workspaces can use it (multi-tenant only).
+  builtinIdentity: BuiltinProviderIdentity | null;
+};
 
 export class AiModelResolutionError extends Error {
   constructor(
@@ -60,6 +76,12 @@ function parsePriceEurPerMtok(value: string | null): number | null {
  * Chain: explicit assignment (ai_settings.chat_model_config_id or
  * ai_agent_definitions.llm_model_config_id) → tenant default registry entry →
  * platform builtin (multi-tenant only) → typed error.
+ *
+ * The platform builtin is used only once an administrator of the workspace has
+ * confirmed the identity the platform shows: provider and endpoint host, provider
+ * name and processing location (ai_settings builtin_accepted_key equal to the
+ * platform's current builtinProviderKey). Otherwise the resolution fails with
+ * builtin_not_accepted and no workspace data reaches it.
  *
  * An archived or dangling assignment falls through to the next step with a
  * structured warning (ops signal, never silent). Reads only — this service is
@@ -149,8 +171,15 @@ export class AiModelResolverService {
     }
 
     if (!Features.SINGLE_TENANT) {
-      if (!(await this.platformAiConfig.isConfigured())) {
+      const identity = await this.platformAiConfig.getBuiltinIdentity();
+      if (!identity || !(await this.platformAiConfig.isConfigured())) {
         throw new AiModelResolutionError('builtin_not_configured', 'Built-in AI provider is not configured.');
+      }
+      const acceptedKey = opts?.builtinAcceptedKey !== undefined
+        ? opts.builtinAcceptedKey
+        : await this.loadBuiltinAcceptedKey(tenantId, manager);
+      if (acceptedKey !== identity.key) {
+        throw new AiModelResolutionError('builtin_not_accepted', BUILTIN_NOT_ACCEPTED_MESSAGE);
       }
       const runtime = await this.platformAiConfig.getRuntimeConfig();
       return {
@@ -181,25 +210,60 @@ export class AiModelResolverService {
    * chat_ready / provider_validation_errors without exposing resolution
    * internals to callers.
    */
-  async validationErrors(tenantId: string, assignmentId: string | null, manager?: EntityManager): Promise<string[]> {
+  async validationErrors(
+    tenantId: string,
+    assignmentId: string | null,
+    manager?: EntityManager,
+    opts?: Pick<ResolveModelOptions, 'builtinAcceptedKey'>,
+  ): Promise<string[]> {
+    return (await this.readiness(tenantId, assignmentId, manager, opts)).errors;
+  }
+
+  /**
+   * Validation errors plus why the chain stopped and whether it lands on the
+   * included model (confirmed or not). Reads only; secrets are not decrypted for
+   * registry entries.
+   */
+  async readiness(
+    tenantId: string,
+    assignmentId: string | null,
+    manager?: EntityManager,
+    opts?: Pick<ResolveModelOptions, 'builtinAcceptedKey'>,
+  ): Promise<AiModelReadiness> {
+    const builtinIdentity = !Features.SINGLE_TENANT && await this.platformAiConfig.isConfigured()
+      ? await this.platformAiConfig.getBuiltinIdentity()
+      : null;
     let resolved: ResolvedModel;
     try {
-      resolved = await this.resolveForAssignment(tenantId, assignmentId, manager, 'validation', { withSecrets: false });
+      resolved = await this.resolveForAssignment(tenantId, assignmentId, manager, 'validation', {
+        withSecrets: false,
+        builtinAcceptedKey: opts?.builtinAcceptedKey,
+      });
     } catch (error) {
       if (error instanceof AiModelResolutionError) {
-        return [error.message];
+        return {
+          errors: [error.message],
+          errorCode: error.code,
+          usesBuiltin: error.code === 'builtin_not_accepted',
+          builtinIdentity,
+        };
       }
       throw error;
     }
     if (resolved.source === 'builtin') {
-      return [];
+      return { errors: [], errorCode: null, usesBuiltin: true, builtinIdentity };
     }
-    return this.providerRegistry.validate({
-      llm_provider: resolved.provider,
-      llm_model: resolved.model,
-      llm_endpoint_url: resolved.endpointUrl,
-      has_llm_api_key: resolved.hasApiKey,
-    });
+    return {
+      errors: this.providerRegistry.validate({
+        llm_provider: resolved.provider,
+        llm_model: resolved.model,
+        llm_endpoint_url: resolved.endpointUrl,
+        has_llm_api_key: resolved.hasApiKey,
+      }),
+      errorCode: null,
+      usesBuiltin: false,
+      builtinIdentity,
+    };
   }
 
   private describeConsumer(consumer: AiModelConsumer): string {
@@ -221,6 +285,13 @@ export class AiModelResolverService {
       .getRepository(AiAgentDefinition)
       .findOne({ where: { id: consumer.agentId, tenant_id: tenantId } });
     return definition?.llm_model_config_id ?? null;
+  }
+
+  private async loadBuiltinAcceptedKey(tenantId: string, manager?: EntityManager): Promise<string | null> {
+    const settings = await (manager ?? this.settingsRepo.manager)
+      .getRepository(AiSettings)
+      .findOne({ where: { tenant_id: tenantId } });
+    return settings?.builtin_accepted_key ?? null;
   }
 
   private async loadActiveConfig(

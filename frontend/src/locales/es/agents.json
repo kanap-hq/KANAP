@@ -152,7 +152,9 @@
     },
     "newAgentSreDefaultName": "Agente de supervisión de infraestructura",
     "newAgentSreDescription": "Agente de supervisión en borrador: lee alertas, las relaciona con sus datos de KANAP y prepara notas de diagnóstico para revisión.",
-    "cost": "Coste — hoy / 7 días"
+    "cost": "Coste — hoy / 7 días",
+    "includedModelPaused": "Los agentes que usan el modelo incluido de KANAP están en pausa hasta que un administrador lo confirme en Administración > Plaid.",
+    "includedModelOpenSettings": "Abrir la configuración de Plaid"
   },
   "approvals": {
     "title": "Aprobaciones de agentes",

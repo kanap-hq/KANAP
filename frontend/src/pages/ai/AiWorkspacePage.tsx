@@ -9,6 +9,8 @@ import { useFeatures } from '../../config/FeaturesContext';
 import { useChat, MAX_PENDING_ATTACHMENTS } from '../../ai/useChat';
 import { useStickToBottom } from '../../ai/useStickToBottom';
 import { aiConversationsApi } from '../../ai/aiApi';
+import { chatAwaitsIncludedModelConfirmation } from '../../ai/includedModel';
+import { useAiCapabilities } from '../../ai/useAiCapabilities';
 import { AiMutationPreview, ChatConversation, ChatMessage } from '../../ai/aiTypes';
 import ArtifactPanel from '../../ai/components/ArtifactPanel';
 import BuiltinUsageIndicator from '../../ai/components/BuiltinUsageIndicator';
@@ -105,6 +107,7 @@ export default function AiWorkspacePage() {
   const { config } = useFeatures();
   const queryClient = useQueryClient();
   const { t } = useTranslation(['ai']);
+  const aiCapabilities = useAiCapabilities();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const chat = useChat();
   const inputRef = useRef<ChatInputHandle>(null);
@@ -277,12 +280,12 @@ export default function AiWorkspacePage() {
     void chat.regenerate(messageId);
   }, [chat.regenerate]);
 
-  if (!config.features.aiChat) {
+  if (!config.features.aiChat || chatAwaitsIncludedModelConfirmation(aiCapabilities.data)) {
     return (
       <>
         <PageHeader title={t('workspace.title')} />
         <Alert severity="warning" sx={{ maxWidth: 600 }}>
-          {t('workspace.messages.disabled')}
+          {config.features.aiChat ? t('workspace.messages.builtinNotAccepted') : t('workspace.messages.disabled')}
         </Alert>
       </>
     );

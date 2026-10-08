@@ -51,6 +51,14 @@ import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { useTheme } from '@mui/material/styles';
 import { getDotColor } from '../../utils/statusColors';
 import { StatusDot } from '../../components/design';
+import {
+  BUILTIN_PROVIDER_CHANGED,
+  BUILTIN_PROVIDER_CONFIRMATION_REQUIRED,
+  identityOf,
+  includedModelError,
+  type IncludedModelIdentity,
+} from '../../ai/includedModel';
+import { IncludedModelDialog, IncludedModelStatus, WithdrawIncludedModelDialog } from './IncludedModelConfirmation';
 
 type AiSettingsForm = {
   chat_enabled: boolean;
@@ -194,6 +202,14 @@ export default function AdminAiPage() {
   const [newKeyLabel, setNewKeyLabel] = useState('');
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [keyActionError, setKeyActionError] = useState<string | null>(null);
+  // Confirmation of the KANAP included model: alone, or with the settings save that turns the assistant on.
+  const [includedDialog, setIncludedDialog] = useState<{
+    identity: IncludedModelIdentity;
+    payload: Record<string, unknown>;
+    activating: boolean;
+  } | null>(null);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [includedError, setIncludedError] = useState<string | null>(null);
 
   const settingsQuery = useQuery<AiSettingsPayload>({
     queryKey: ['admin-ai-settings'],
@@ -247,10 +263,55 @@ export default function AdminAiPage() {
       await queryClient.invalidateQueries({ queryKey: ['ai-model-configs'] });
       setTimeout(() => setSaveSuccess(false), 3000);
     },
-    onError: (error: any) => {
+    onError: (error: any, data) => {
+      const included = includedModelError(error);
+      if (included?.code === BUILTIN_PROVIDER_CONFIRMATION_REQUIRED && included.identity && settingsQuery.data) {
+        // Nothing was saved: the same changes go again with the confirmation.
+        setIncludedError(null);
+        setIncludedDialog({
+          identity: included.identity,
+          payload: buildSettingsUpdatePayload(data, settingsQuery.data.settings),
+          activating: true,
+        });
+        return;
+      }
       const validationErrors = getValidationErrors(error);
       const message = getApiErrorMessage(error, t, t('aiAdmin.messages.saveFailed'));
       setSaveError(validationErrors.length > 0 ? `${message} ${validationErrors.join(' ')}` : message);
+    },
+  });
+
+  const includedMutation = useMutation({
+    mutationFn: async (payload: Record<string, unknown>) => aiAdminApi.updateSettings(payload),
+    onMutate: () => {
+      setIncludedError(null);
+    },
+    onSuccess: async (_result, payload) => {
+      const activating = Object.prototype.hasOwnProperty.call(payload, 'chat_enabled');
+      setIncludedDialog(null);
+      setWithdrawOpen(false);
+      if (activating) {
+        setSaveSuccess(true);
+        setForm((prev) => ({ ...prev, glpi_user_token: '', glpi_app_token: '' }));
+        setTimeout(() => setSaveSuccess(false), 3000);
+      }
+      await queryClient.invalidateQueries({ queryKey: ['admin-ai-settings'] });
+      await queryClient.invalidateQueries({ queryKey: ['admin-ai-builtin-usage'] });
+      await queryClient.invalidateQueries({ queryKey: ['ai-capabilities'] });
+    },
+    onError: async (error: any) => {
+      const included = includedModelError(error);
+      if (included?.code === BUILTIN_PROVIDER_CHANGED && includedDialog) {
+        // The platform changed the provider or its location meanwhile: show the new one.
+        const refreshed = await settingsQuery.refetch();
+        const identity = included.identity ?? identityOf(refreshed.data?.settings.builtin_provider);
+        if (identity) {
+          setIncludedDialog({ ...includedDialog, identity });
+          setIncludedError(t('aiAdmin.includedModel.changed'));
+          return;
+        }
+      }
+      setIncludedError(getApiErrorMessage(error, t, t('aiAdmin.messages.saveFailed')));
     },
   });
 
@@ -307,6 +368,9 @@ export default function AdminAiPage() {
   // With no explicit assignment, chat falls back to the tenant default model,
   // then to the KANAP included model — the quota card only matters on that path.
   const chatUsesBuiltin = config.features.builtinAiProvider && form.chat_model_config_id === '' && !defaultModelName;
+  const includedModel = currentSettings?.builtin_provider?.in_use ? currentSettings.builtin_provider : null;
+  // The status line explains it: no validation list for a confirmation still to give.
+  const awaitingIncludedConfirmation = !!includedModel && !includedModel.accepted;
 
   return (
     <>
@@ -347,7 +411,7 @@ export default function AdminAiPage() {
                       </Stack>
                     </Stack>
 
-                    {currentSettings?.provider_validation_errors.length ? (
+                    {currentSettings?.provider_validation_errors.length && !awaitingIncludedConfirmation ? (
                       <Alert severity="warning" variant="outlined">
                         <Stack spacing={0.75}>
                           <Typography variant="body2" fontWeight={600}>
@@ -386,6 +450,23 @@ export default function AdminAiPage() {
                         <Link component={RouterLink} to="/admin/ai-models">{t('aiAdmin.provider.modelSelector.hintLink')}</Link>
                       </Typography>
                     </PropertyRow>
+
+                    {includedModel ? (
+                      <IncludedModelStatus
+                        provider={includedModel}
+                        disabled={includedMutation.isPending}
+                        onConfirm={() => {
+                          const identity = identityOf(includedModel);
+                          if (!identity) return;
+                          setIncludedError(null);
+                          setIncludedDialog({ identity, payload: {}, activating: false });
+                        }}
+                        onWithdraw={() => {
+                          setIncludedError(null);
+                          setWithdrawOpen(true);
+                        }}
+                      />
+                    ) : null}
 
                     {chatUsesBuiltin ? (
                       <Card variant="outlined">
@@ -623,6 +704,27 @@ export default function AdminAiPage() {
           </>
         )}
       </Stack>
+
+      <IncludedModelDialog
+        open={!!includedDialog}
+        identity={includedDialog?.identity ?? null}
+        activating={includedDialog?.activating ?? false}
+        loading={includedMutation.isPending}
+        error={includedError}
+        onCancel={() => setIncludedDialog(null)}
+        onConfirm={() => {
+          if (!includedDialog) return;
+          includedMutation.mutate({ ...includedDialog.payload, accept_builtin_provider_key: includedDialog.identity.key });
+        }}
+      />
+
+      <WithdrawIncludedModelDialog
+        open={withdrawOpen}
+        loading={includedMutation.isPending}
+        error={includedError}
+        onCancel={() => setWithdrawOpen(false)}
+        onConfirm={() => includedMutation.mutate({ accept_builtin_provider_key: null })}
+      />
 
       <Dialog
         open={createKeyDialog}

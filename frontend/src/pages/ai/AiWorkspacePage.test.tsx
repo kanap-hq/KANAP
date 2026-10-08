@@ -40,6 +40,31 @@ vi.mock('../../config/FeaturesContext', () => ({
   useFeatures: () => featuresState,
 }));
 
+let capabilitiesState: { data: any } = { data: undefined };
+
+vi.mock('../../ai/useAiCapabilities', () => ({
+  useAiCapabilities: () => capabilitiesState,
+}));
+
+function chatCapabilities(reasons: string[]) {
+  return {
+    instance_features: { ai_chat: true, ai_mcp: false, ai_settings: false, ai_web_search: false },
+    surfaces: {
+      chat: {
+        feature_enabled: true,
+        tenant_enabled: true,
+        permission_granted: true,
+        provider_ready: !reasons.includes('builtin_not_accepted'),
+        available: reasons.length === 0,
+        reasons,
+      },
+      mcp: { feature_enabled: false, tenant_enabled: false, permission_granted: false, provider_ready: false, available: false, reasons: [] },
+      settings: { feature_enabled: false, permission_granted: false, available: false, reasons: [] },
+    },
+    builtin_confirmation_needed: reasons.includes('builtin_not_accepted'),
+  };
+}
+
 vi.mock('../../ai/useChat', () => ({
   MAX_PENDING_ATTACHMENTS: 5,
   useChat: () => chatState,
@@ -180,6 +205,7 @@ describe('AiWorkspacePage', () => {
         },
       },
     };
+    capabilitiesState = { data: chatCapabilities([]) };
     chatState = {
       messages: [],
       previews: [],
@@ -229,6 +255,35 @@ describe('AiWorkspacePage', () => {
 
     expect(screen.getByText('workspace.title')).toBeInTheDocument();
     expect(screen.getByText('workspace.messages.disabled')).toBeInTheDocument();
+  });
+
+  it('says an administrator must confirm the AI provider when only that holds the assistant back', () => {
+    capabilitiesState = { data: chatCapabilities(['builtin_not_accepted']) };
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    renderPage(client);
+
+    expect(screen.getByText('workspace.messages.builtinNotAccepted')).toBeInTheDocument();
+    expect(screen.queryByText('Send message')).not.toBeInTheDocument();
+  });
+
+  it('keeps the chat when the assistant is available', () => {
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    renderPage(client);
+
+    expect(screen.queryByText('workspace.messages.builtinNotAccepted')).not.toBeInTheDocument();
+    expect(screen.getByText('Send message')).toBeInTheDocument();
   });
 
   it('forwards conversation selection and sends messages from the page controls', () => {

@@ -31,4 +31,13 @@ export class PlatformAiConfig {
 
   @Column('uuid', { nullable: true })
   updated_by!: string | null;
+
+  // How the included model is shown to customers: provider name and where data is
+  // processed (ISO 3166-1 alpha-2 region code, or EU). Both are required for the
+  // included model to be offered; a change asks every workspace to confirm again.
+  @Column('text', { nullable: true })
+  disclosure_name!: string | null;
+
+  @Column('text', { nullable: true })
+  disclosure_location!: string | null;
 }

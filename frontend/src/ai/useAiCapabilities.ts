@@ -32,6 +32,9 @@ export type AiCapabilities = {
     mcp: AiSurfaceCapability;
     settings: AiSettingsCapability;
   };
+  // The workspace's fallback model is the KANAP included model and no administrator
+  // has confirmed it: agents without a model of their own are paused.
+  builtin_confirmation_needed?: boolean;
 };
 
 export function useAiCapabilities() {

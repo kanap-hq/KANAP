@@ -17,7 +17,7 @@ type MockAgent = { id: string; tenant_id: string; name: string; llm_model_config
 
 type State = {
   configs: AiModelConfig[];
-  settings: { tenant_id: string; chat_model_config_id: string | null } | null;
+  settings: { tenant_id: string; chat_model_config_id: string | null; builtin_accepted_key?: string | null } | null;
   agents: MockAgent[];
   seq: number;
 };
@@ -182,6 +182,7 @@ function createResolver(state: State, opts?: { platformConfigured?: boolean; reg
   const manager = createManager(state);
   const platform = {
     isConfigured: async () => opts?.platformConfigured !== false,
+    getBuiltinIdentity: async () => ({ name: 'Anthropic', location: 'US', key: 'anthropic||Anthropic|US' }),
     getRuntimeConfig: async () => ({
       provider: 'anthropic',
       model: 'claude-builtin',
@@ -297,7 +298,10 @@ async function testResolverBuiltinFallbackInMultiTenant() {
   // Runs without DEPLOYMENT_MODE → multi-tenant (Features.SINGLE_TENANT false).
   assert.equal(Features.SINGLE_TENANT, false, 'spec must run without DEPLOYMENT_MODE set');
 
-  const configured = createResolver(createState());
+  // The workspace confirmed the included model (ai-included-model-confirmation.spec covers the rule).
+  const configured = createResolver(createState({
+    settings: { tenant_id: 'tenant-1', chat_model_config_id: null, builtin_accepted_key: 'anthropic||Anthropic|US' },
+  }));
   const resolved = await configured.resolver.resolve('tenant-1', { type: 'chat' });
   assert.equal(resolved.source, 'builtin');
   assert.equal(resolved.configId, null);
@@ -352,7 +356,9 @@ async function testResolverAgentConsumerReadsAgentAssignment() {
 
 async function testResolverValidationErrors() {
   // Builtin resolution → no provider validation, empty list.
-  const builtin = createResolver(createState());
+  const builtin = createResolver(createState({
+    settings: { tenant_id: 'tenant-1', chat_model_config_id: null, builtin_accepted_key: 'anthropic||Anthropic|US' },
+  }));
   assert.deepEqual(await builtin.resolver.validationErrors('tenant-1', null), []);
 
   // Registry resolution → delegates to providerRegistry.validate with the config snapshot.

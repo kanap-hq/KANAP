@@ -30,4 +30,15 @@ export class UpdatePlatformAiConfigDto {
   @IsInt()
   @Min(1)
   rate_limit_user_per_hour?: number;
+
+  // Shown to customers; validated in PlatformAiConfigService (1 to 80 characters, region code).
+  @ValidateIf((_, value) => value !== undefined && value !== null)
+  @IsString()
+  @MaxLength(200)
+  disclosure_name?: string | null;
+
+  @ValidateIf((_, value) => value !== undefined && value !== null)
+  @IsString()
+  @MaxLength(10)
+  disclosure_location?: string | null;
 }

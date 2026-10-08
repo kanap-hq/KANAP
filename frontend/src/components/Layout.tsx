@@ -54,6 +54,7 @@ import { getDocUrl } from '../utils/docUrls';
 import SubscriptionBanner from './SubscriptionBanner';
 import { focusPageScroller } from './appScroll';
 import { useAiCapabilities } from '../ai/useAiCapabilities';
+import { chatAwaitsIncludedModelConfirmation } from '../ai/includedModel';
 import { aiAgentControlApi } from '../ai/aiApi';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../i18n/useLocale';
@@ -247,7 +248,9 @@ export default function Layout() {
   const hasWorkspaceAccess = React.useCallback((ws: string): boolean => {
     if (ws === 'ai') {
       if (!config.features.aiChat) return false;
-      return aiCapabilities.data?.surfaces.chat.available === true;
+      // Still listed while it waits for the included model's confirmation: the page says why.
+      return aiCapabilities.data?.surfaces.chat.available === true
+        || chatAwaitsIncludedModelConfirmation(aiCapabilities.data);
     }
     if (ws === 'agents') {
       return canShowAgents;

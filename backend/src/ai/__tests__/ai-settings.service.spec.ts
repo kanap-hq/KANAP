@@ -23,6 +23,9 @@ function createMockSettings(overrides?: Partial<AiSettings>): AiSettings {
     glpi_url: null,
     glpi_user_token_encrypted: null,
     glpi_app_token_encrypted: null,
+    builtin_accepted_key: null,
+    builtin_accepted_at: null,
+    builtin_accepted_by: null,
     created_at: new Date(),
     updated_at: new Date(),
     ...overrides,
@@ -61,7 +64,7 @@ function createService(settings: AiSettings) {
   };
 
   const modelResolver = {
-    validationErrors: async () => [],
+    readiness: async () => ({ errors: [], errorCode: null, usesBuiltin: false, builtinIdentity: null }),
   };
 
   return new AiSettingsService(repo as any, providerRegistry as any, cipher as any, platformAiConfig as any, modelResolver as any);

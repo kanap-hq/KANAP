@@ -185,7 +185,30 @@
       "never": "Jamais",
       "none": "Aucun"
     },
-    "title": "Plaid"
+    "title": "Plaid",
+    "includedModel": {
+      "status": "Modèle inclus KANAP : {{name}} (lieu de traitement : {{place}})",
+      "confirmed": "Confirmé",
+      "needsConfirmation": "À confirmer",
+      "needed": "L'assistant et les agents l'utilisent une fois qu'un administrateur l'a confirmé.",
+      "confirmedBy": "Confirmé par {{name}} le {{date}}",
+      "confirmedOn": "Confirmé le {{date}}",
+      "confirmedAutomatically": "Confirmé automatiquement le {{date}}, déjà utilisé",
+      "confirm": "Confirmer",
+      "withdraw": "Retirer",
+      "changed": "Le fournisseur ou son lieu de traitement a changé. Vérifiez-le et confirmez à nouveau.",
+      "dialog": {
+        "title": "Utiliser le modèle inclus KANAP ?",
+        "body": "Les questions que vous posez à l'assistant et aux agents, ainsi que les données KANAP qu'ils lisent pour y répondre, sont envoyées à {{name}}. Lieu de traitement : {{place}}.",
+        "ownModel": "Vous pouvez utiliser votre propre modèle à la place, depuis la <link />.",
+        "ownModelLink": "liste des modèles IA",
+        "confirmAndTurnOn": "Confirmer et activer"
+      },
+      "withdrawDialog": {
+        "title": "Retirer la confirmation ?",
+        "body": "Les fonctions d'IA qui utilisent le modèle inclus s'arrêtent jusqu'à ce qu'un administrateur confirme à nouveau."
+      }
+    }
   },
   "auditLogs": {
     "actions": {
@@ -541,7 +564,9 @@
       "model": "Model",
       "provider": "Provider",
       "tenantRateLimit": "Tenant rate limit / minute",
-      "userRateLimit": "User rate limit / hour"
+      "userRateLimit": "User rate limit / hour",
+      "disclosureName": "Nom du fournisseur affiché aux clients",
+      "disclosureLocation": "Lieu de traitement des données"
     },
     "messages": {
       "loadFailed": "Failed to load platform AI settings.",
@@ -566,6 +591,16 @@
       "percent": "Usage",
       "tenant": "Tenant",
       "used": "Used"
+    },
+    "disclosure": {
+      "title": "Affiché aux clients",
+      "namePlaceholder": "ex. Anthropic",
+      "locationNotSet": "Non défini",
+      "hint": "Les espaces de travail voient ce fournisseur et ce lieu, et les confirment avant leur première requête d'IA. Un nouveau fournisseur, endpoint, nom ou lieu leur redemande cette confirmation ; un nouveau modèle, non. Le modèle inclus reste indisponible tant que les deux champs ne sont pas renseignés.",
+      "confirmTitle": "Modifier le fournisseur affiché aux clients ?",
+      "confirmBody": "Chaque espace de travail qui utilise le modèle inclus devra confirmer à nouveau avant sa prochaine requête d'IA.",
+      "confirmShown": "Les espaces de travail verront : {{name}}, lieu de traitement : {{place}}.",
+      "confirmSave": "Enregistrer et redemander"
     }
   },
   "opsDashboard": {

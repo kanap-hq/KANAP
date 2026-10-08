@@ -215,7 +215,8 @@
       "title": "Plaid is ready"
     },
     "messages": {
-      "disabled": "AI chat is disabled for this workspace."
+      "disabled": "AI chat is disabled for this workspace.",
+      "builtinNotAccepted": "An administrator must confirm the AI provider in Admin > Plaid."
     },
     "suggestions": {
       "applicationMention": "Summarize @APP-",

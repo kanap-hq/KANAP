@@ -6,6 +6,7 @@ import { useTenant } from '../tenant/TenantContext';
 import { useFeatures } from '../config/FeaturesContext';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { useAiCapabilities } from '../ai/useAiCapabilities';
+import { chatAwaitsIncludedModelConfirmation } from '../ai/includedModel';
 import PendingAccessPage from '../pages/PendingAccessPage';
 import { canUseAnyOperation, canUseOperation } from '../pages/operations/operationAccess';
 
@@ -123,7 +124,11 @@ export default function ProtectedRoute() {
           </Box>
         );
       }
-      if (aiCapabilities.isError || aiCapabilities.data?.surfaces.chat.available !== true) {
+      // A wait for the included model's confirmation opens the page, which says so.
+      if (
+        aiCapabilities.isError
+        || (aiCapabilities.data?.surfaces.chat.available !== true && !chatAwaitsIncludedModelConfirmation(aiCapabilities.data))
+      ) {
         return <Navigate to="/403" replace />;
       }
     }
