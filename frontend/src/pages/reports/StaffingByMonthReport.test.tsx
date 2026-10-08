@@ -197,14 +197,18 @@ describe('Staffing by month', () => {
     ]);
     expect(grid.columns[1].valueFormatter({ value: 1.5 })).toBe('1.50');
     expect(grid.columns[1].valueFormatter({ value: null })).toBe('');
-    // The group takes the rest with its full name on hover; the fourteen value columns have no fixed
-    // width: the grid fits them to their values (header left out, read in full on hover), right-aligned.
-    expect(grid.columns[0]).toMatchObject({ flex: 1, minWidth: 180, tooltipField: 'group' });
+    // The group takes the rest (size-to-fit, not flex) with its full name on hover; the fourteen value
+    // columns have no fixed width: the grid fits them to their values (header left out, read in full on
+    // hover), right-aligned, and the size-to-fit leaves them alone.
+    expect(grid.columns[0]).toMatchObject({ minWidth: 180, tooltipField: 'group' });
+    expect(grid.columns[0].flex).toBeUndefined();
+    expect(grid.columns[0].suppressSizeToFit).toBeUndefined();
     const values = grid.columns.slice(1);
     expect(values.map((column) => column.colId)).toEqual(['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12', 'average', 'peak']);
     for (const column of values) {
       expect(column.width).toBeUndefined();
       expect(column.flex).toBeUndefined();
+      expect(column.suppressSizeToFit).toBe(true);
       expect(column.type).toBe('rightAligned');
       expect(column.headerTooltip).toBe(column.headerName);
     }
@@ -224,23 +228,38 @@ describe('Staffing by month', () => {
     expect(chart.options.axes[1].title.text).toBe('reports.measure.fte');
   });
 
-  it('fits the value columns again, and only them, when the rows, the total or the headers change', async () => {
+  it('fits the value columns, then gives the group the rest, after the first render and when the rows, the total or the headers change', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout'] });
     try {
       renderReport('/report');
       await vi.waitFor(() => expect(grid.props.onRowDataUpdated).toBeTypeOf('function'));
-      for (const handler of ['onRowDataUpdated', 'onPinnedRowDataChanged', 'onNewColumnsLoaded']) {
-        const autoSizeColumns = vi.fn();
-        grid.props[handler]({ api: { isDestroyed: () => false, autoSizeColumns } });
-        expect(autoSizeColumns).not.toHaveBeenCalled();
+      for (const handler of ['onFirstDataRendered', 'onRowDataUpdated', 'onPinnedRowDataChanged', 'onNewColumnsLoaded']) {
+        const order: string[] = [];
+        const autoSizeColumns = vi.fn(() => order.push('autoSize'));
+        const sizeColumnsToFit = vi.fn(() => order.push('sizeToFit'));
+        grid.props[handler]({ api: { isDestroyed: () => false, autoSizeColumns, sizeColumnsToFit } });
+        expect(order).toEqual([]);
         vi.runOnlyPendingTimers();
         expect(autoSizeColumns).toHaveBeenCalledWith(['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12', 'average', 'peak'], true);
+        expect(sizeColumnsToFit).toHaveBeenCalledWith();
+        expect(order).toEqual(['autoSize', 'sizeToFit']);
       }
-      // A grid gone in the meantime is left alone.
+      // A resized grid: the group takes the new width left, the value columns keep theirs.
       const autoSizeColumns = vi.fn();
-      grid.props.onRowDataUpdated({ api: { isDestroyed: () => true, autoSizeColumns } });
-      vi.runOnlyPendingTimers();
+      const sizeColumnsToFit = vi.fn();
+      grid.props.onGridSizeChanged({ api: { isDestroyed: () => false, autoSizeColumns, sizeColumnsToFit } });
+      expect(sizeColumnsToFit).toHaveBeenCalledTimes(1);
       expect(autoSizeColumns).not.toHaveBeenCalled();
+      // A grid gone in the meantime is left alone.
+      const goneAutoSize = vi.fn();
+      const goneSizeToFit = vi.fn();
+      const gone = { api: { isDestroyed: () => true, autoSizeColumns: goneAutoSize, sizeColumnsToFit: goneSizeToFit } };
+      grid.props.onRowDataUpdated(gone);
+      grid.props.onFirstDataRendered(gone);
+      grid.props.onGridSizeChanged(gone);
+      vi.runOnlyPendingTimers();
+      expect(goneAutoSize).not.toHaveBeenCalled();
+      expect(goneSizeToFit).not.toHaveBeenCalled();
     } finally {
       vi.useRealTimers();
     }

@@ -37,13 +37,21 @@ const monthField = (month: number) => `m${month}`;
 export const VALUE_COLUMN_IDS: readonly string[] = [...MONTHS.map(monthField), 'average', 'peak'];
 const AUTO_SIZE_STRATEGY = { type: 'fitCellContents' as const, colIds: [...VALUE_COLUMN_IDS], skipHeader: true };
 /**
- * Fits the value columns again once the grid has drawn new rows, a new total or new headers (grouping,
- * year, column, scope). Deferred like AG Grid's own first fit, which measures the rendered cells.
+ * Fits the value columns to their values, then gives the group column the width left (the value columns
+ * are kept out of the size-to-fit). Runs after the first render, once AG Grid's own first fit is done, and
+ * again once the grid has drawn new rows, a new total or new headers (grouping, year, column, scope).
+ * Deferred like AG Grid's own fit, which measures the rendered cells.
  */
 function fitValueColumns(api: GridApi) {
   setTimeout(() => {
-    if (!api.isDestroyed()) api.autoSizeColumns([...VALUE_COLUMN_IDS], true);
+    if (api.isDestroyed()) return;
+    api.autoSizeColumns([...VALUE_COLUMN_IDS], true);
+    api.sizeColumnsToFit();
   });
+}
+/** A resized window: the group column takes the new width left, the value columns keep theirs. */
+function fitGroupColumn(api: GridApi) {
+  if (!api.isDestroyed()) api.sizeColumnsToFit();
 }
 /** The grouping in a downloaded file's name. */
 const GROUP_FILE_NAME: Record<GroupKind, string> = { costCenter: 'cost-center', item: 'item', supplier: 'supplier', axis: 'dimension' };
@@ -147,7 +155,8 @@ export default function StaffingByMonthReport() {
   }), [staffing.total, t]);
 
   // Fifteen columns on the dense grid (10 px cell padding): each value column is as wide as its content,
-  // compact for `42.00`, wider for `1,000.00`; the group takes what is left and shows its full name on hover.
+  // compact for `42.00`, wider for `1,000.00`; the group takes what is left (size-to-fit, not flex: AG Grid
+  // re-flexes only the columns right of a resized one) and shows its full name on hover.
   const columns = useMemo<ColDef[]>(() => {
     const value = (field: string, headerName: string): ColDef => ({
       field,
@@ -155,10 +164,11 @@ export default function StaffingByMonthReport() {
       headerName,
       headerTooltip: headerName,
       type: 'rightAligned',
+      suppressSizeToFit: true,
       valueFormatter: (p) => fte(p.value),
     });
     return [
-      { field: 'group', headerName: groupHeader, flex: 1, minWidth: 180, tooltipField: 'group' },
+      { field: 'group', headerName: groupHeader, minWidth: 180, tooltipField: 'group' },
       ...MONTHS.map((month, i) => value(monthField(month), monthNames[i])),
       value('average', t('reports.staffing.average')),
       value('peak', t('reports.staffing.peak')),
@@ -291,6 +301,8 @@ export default function StaffingByMonthReport() {
             onRowDataUpdated={(e) => fitValueColumns(e.api)}
             onPinnedRowDataChanged={(e) => fitValueColumns(e.api)}
             onNewColumnsLoaded={(e) => fitValueColumns(e.api)}
+            onFirstDataRendered={(e) => fitValueColumns(e.api)}
+            onGridSizeChanged={(e) => fitGroupColumn(e.api)}
           />
           {staffing.detached && (
             <ReportNoticeLine>{t('reports.measure.detachedSingle', { count: staffing.detached.items, fte: fte(staffing.detached.fte) })}</ReportNoticeLine>
