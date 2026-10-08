@@ -27,10 +27,11 @@ La page d'accueil affiche une carte par rapport disponible avec une courte descr
 | **Comptes de consolidation** | Budget OPEX ou CAPEX regroupé par compte de consolidation |
 | **Dimensions analytiques** | Budget OPEX ou CAPEX regroupé par dimension analytique |
 | **Effectifs par mois** | ETP mensuels par centre de coûts, poste, fournisseur ou dimension analytique |
+| **Coût par ETP** | Coût annuel d'un ETP par centre de coûts, poste, fournisseur ou dimension analytique, sur plusieurs colonnes budgétaires et années |
 
 ### Choisir OPEX ou CAPEX
 
-**Top postes**, **Top hausse / baisse**, **Comptes de consolidation**, **Dimensions analytiques** et **Effectifs par mois** commencent chacun par un sélecteur **OPEX** / **CAPEX**, la première commande de la barre de filtres.
+**Top postes**, **Top hausse / baisse**, **Comptes de consolidation**, **Dimensions analytiques**, **Effectifs par mois** et **Coût par ETP** commencent chacun par un sélecteur **OPEX** / **CAPEX**, la première commande de la barre de filtres.
 
 - Le rapport s'ouvre sur un type que vous pouvez consulter, OPEX en priorité. Un type que vous ne pouvez pas consulter est désactivé.
 - L'adresse de la page conserve le type choisi (`?scope=opex` ou `?scope=capex`) : un lien enregistré en favori ou partagé s'ouvre sur le même type.
@@ -61,7 +62,7 @@ Chaque sélecteur de colonne ou de métrique propose les colonnes budgétaires a
 
 ### Filtres par centre de coûts, run ou build et dimensions analytiques
 
-Les sept rapports budgétaires (**Top postes**, **Top hausse / baisse**, **Tendance budgétaire (OPEX)**, **Tendance budgétaire (CAPEX)**, **Comparaison de colonnes budgétaires**, **Comptes de consolidation** et **Dimensions analytiques**) et **Effectifs par mois** peuvent être restreints à une partie du budget avec ces filtres :
+Les sept rapports budgétaires (**Top postes**, **Top hausse / baisse**, **Tendance budgétaire (OPEX)**, **Tendance budgétaire (CAPEX)**, **Comparaison de colonnes budgétaires**, **Comptes de consolidation** et **Dimensions analytiques**), **Effectifs par mois** et **Coût par ETP** peuvent être restreints à une partie du budget avec ces filtres :
 
 - **Centre de coûts** : choisissez un centre de coûts ou un groupe. Un groupe inclut tout ce qui se trouve en dessous, y compris les centres de coûts désactivés, car leurs lignes appartiennent toujours au groupe. **Tous les centres de coûts** retire le filtre. Voir [Centres de coûts](cost-centers.md).
 - **Run ou build** : **Tous**, **Run**, **Build**, ou **Non défini** pour les lignes qui n'ont ni l'un ni l'autre.
@@ -457,6 +458,51 @@ Une ligne sous le tableau pour chaque cas, quand il se présente :
 ### Export
 
 - **Exporter le tableau en CSV** : Le nom du fichier porte le type, l'année, la colonne et le regroupement, par exemple `staffing-opex-2026-budget-cost-center.csv`
+- **Exporter le graphique en PNG** : Même nom, en image PNG
+- **Imprimer / Enregistrer en PDF**
+
+---
+
+## Coût par ETP
+
+Voyez ce que coûte un ETP dans chaque partie du budget, et comment ce coût évolue d'une colonne budgétaire et d'une année à l'autre. Le rapport divise le coût des lignes de quantité et de prix en personnes ou en jours par leurs ETP. Voir [Quantité et prix](opex.md#quantite-et-prix) et [ETP](opex.md#etp).
+
+### Contrôles
+
+- **Type de poste** : OPEX ou CAPEX (voir [Choisir OPEX ou CAPEX](#choisir-opex-ou-capex))
+- **Centre de coûts**, **Run ou build**, **Postes** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
+- **Regrouper par** et **Dimension** : les mêmes choix que dans [Effectifs par mois](#effectifs-par-mois). L'adresse de la page conserve le regroupement de la même façon
+- **Colonnes** : une à quatre paires d'une année et d'une colonne budgétaire. Les années vont de deux ans en arrière à deux ans en avant. **Ajouter** ajoute une paire, et le bouton de retrait à côté d'une paire la retire. Le rapport s'ouvre sur la colonne par défaut de l'année dernière et de l'année en cours. Le tableau et le graphique présentent les paires dans l'ordre chronologique
+
+### Ce qui est compté
+
+- Le coût et les ETP des lignes en personnes ou en jours. Les lignes en pièces sont écartées des deux.
+- Le rapport lit les résultats des lignes, y compris quand le montant de la colonne ne les suit plus (le montant a été réparti, ses mois ont été modifiés à la main, ou la colonne a été copiée). Le coût est alors le coût des lignes.
+- Le coût est converti dans la devise de reporting au taux de la version de chaque année, comme tous les montants des rapports.
+- Les postes qui déclarent des ETP sans détail de lignes sont écartés. Un avertissement les signale (voir ci-dessous).
+
+### Ce que vous verrez
+
+**Tableau** : Une ligne par groupe ayant des ETP de personnel dans au moins une paire, le plus grand nombre d'ETP de la première paire en premier. Chaque paire a trois colonnes sous son nom, par exemple « Budget 2026 » :
+
+- **ETP** : l'ETP moyen sur l'année complète des lignes
+- **Coût du personnel** : le coût des mêmes lignes sur l'année, dans la devise de reporting
+- **Coût par ETP** : le coût du personnel divisé par les ETP. La cellule est vide quand les ETP valent 0 ou quand le groupe n'a pas de lignes de personnel dans cette paire
+
+Les groupes sont nommés comme dans Effectifs par mois (« Aucun centre de coûts », « Aucun fournisseur », « Aucune valeur »). Une ligne **Total** épinglée donne, pour chaque paire, le total des ETP, le total du coût du personnel et le total du coût du personnel divisé par le total des ETP.
+
+**Graphique** : Des barres horizontales du coût par ETP, une barre par paire. La première catégorie est le total, suivie des dix groupes ayant le plus d'ETP dans la première paire. Le titre nomme le type et le regroupement, par exemple « Coût par ETP OPEX par centre de coûts ». Survolez une barre pour lire le groupe, la paire, le coût par ETP, les ETP et le coût du personnel.
+
+### Avertissements
+
+Une ligne sous le tableau pour chaque cas, quand il se présente. Chaque ligne nomme les paires concernées :
+
+- « Le montant ne suit plus les lignes pour : Budget 2026 (2 postes, 1,50 ETP). Le coût par ETP utilise le coût de leurs lignes. » Ces colonnes comptent avec le coût de leurs lignes. Voir [Choisir le montant ou les ETP](#choisir-le-montant-ou-les-etp).
+- « Aucun détail de lignes pour : Budget 2025 (1 poste, 0,50 ETP). Ils sont exclus du coût par ETP. » Ces postes déclarent un ETP sur l'année complète, sans résultat par ligne : le rapport ne peut pas lire leur coût.
+
+### Export
+
+- **Exporter le tableau en CSV** : Le nom du fichier porte le type, le regroupement et la première paire, par exemple `cost-per-fte-opex-cost-center-2025-budget.csv`
 - **Exporter le graphique en PNG** : Même nom, en image PNG
 - **Imprimer / Enregistrer en PDF**
 
