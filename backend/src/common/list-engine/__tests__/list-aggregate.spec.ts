@@ -180,11 +180,24 @@ function testGroupedCapAndReportFields() {
   const sums = (n: number) => Array.from({ length: n }, (_, i) => sum(`m${i}`, 'yBudget'));
   const refused = isBadRequest(new RegExp(`at most ${AGGREGATE_LIMITS.groupedMeasures} measures with group keys`));
   for (const groupBy of [['id'], ['item_number'], ['product_name'], ['notes'], ['currency'], ['supplier_name', 'notes']]) {
-    assert.throws(() => validateAggregateSpec({ groupBy, measures: sums(AGGREGATE_LIMITS.groupedMeasures + 1) }), refused, groupBy.join(', '));
+    assert.throws(() => build({ groupBy, measures: sums(AGGREGATE_LIMITS.groupedMeasures + 1) }), refused, groupBy.join(', '));
     assert.doesNotThrow(() => build({ groupBy, measures: sums(AGGREGATE_LIMITS.groupedMeasures) }), groupBy.join(', '));
   }
   assert.doesNotThrow(() => build({ groupBy: [], measures: sums(AGGREGATE_LIMITS.measures) }), 'one group keeps the cap of 60');
   assert.throws(() => validateAggregateSpec({ groupBy: [], measures: sums(AGGREGATE_LIMITS.measures + 1) }), isBadRequest(/at most 60 measures/));
+
+  // FTE lot 2b: up to 16 grouped measures when every one is on an FTE field (no conversion); an amount among them keeps the cap of 8.
+  assert.equal(AGGREGATE_LIMITS.groupedFteMeasures, 16);
+  const months = (n: number) => Array.from({ length: n }, (_, i) => sum(`f${i}`, `fte_month_${String((i % 12) + 1).padStart(2, '0')}_y${Y + Math.floor(i / 12)}Budget`));
+  for (const groupBy of [['id'], ['cost_center_id', 'cost_center_label'], ['supplier_id', 'supplier_name']]) {
+    assert.doesNotThrow(() => build({ groupBy, measures: months(AGGREGATE_LIMITS.groupedFteMeasures) }), `${groupBy.join(', ')}: 16 FTE measures`);
+    assert.doesNotThrow(() => build({ groupBy, measures: [...months(12), sum('d', 'fte_detached_yBudget'), sum('n', 'fte_nodetail_yBudget')] }), `${groupBy.join(', ')}: the staffing report`);
+    assert.throws(() => build({ groupBy, measures: [...months(AGGREGATE_LIMITS.groupedMeasures), sum('a', 'yBudget')] }), refused, `${groupBy.join(', ')}: 9 with an amount`);
+    assert.throws(() => build({ groupBy, measures: [sum('a', 'yBudget'), ...months(AGGREGATE_LIMITS.groupedMeasures)] }), refused, `${groupBy.join(', ')}: an amount first`);
+    assert.throws(() => validateAggregateSpec({ groupBy, measures: months(AGGREGATE_LIMITS.groupedFteMeasures + 1) }), isBadRequest(/\(16 when every measure is an FTE/), `${groupBy.join(', ')}: 17 FTE`);
+  }
+  assert.throws(() => build({ groupBy: ['id'], measures: sums(AGGREGATE_LIMITS.groupedMeasures + 1) }), refused, '9 amounts');
+  assert.doesNotThrow(() => build({ groupBy: [], measures: [...sums(30), ...months(30)] }), 'without keys, the cap of 60 whatever the kinds');
 
   const axis = '22222222-2222-4222-8222-222222222222';
   const valueId = build({ groupBy: [`analytics_id_${axis}`, `analytics_${axis}`], measures: [] }, { filters: { [`analytics_id_${axis}`]: { filterType: 'set', values: [null] } } }).raw;
@@ -238,6 +251,22 @@ function testFteReportFields() {
   assert.equal((detached.match(/LEFT JOIN capex_round_inputs ri2026_planned/g) ?? []).length, 1, 'one round join for the FTE and its detached part');
   assert.ok(detached.includes(`(CASE WHEN v2026.id IS NULL THEN NULL WHEN ri2026_planned.method <> 'computed' THEN ri2026_planned.fte END)`), 'detached: a round that is not computed');
   assert.equal(build({ groupBy: [], measures: [sum('x', 'fte_detached_yRevision')] }).raw.includes('ri2026_committed.method'), true, 'a fixed slot');
+
+  // Lot 2b: the monthly FTE and the FTE without monthly detail read the same round join, their months once per line.
+  for (const scope of ['opex', 'capex'] as const) {
+    const rounds = scope === 'opex' ? 'spend_round_inputs' : 'capex_round_inputs';
+    const monthly = build({ groupBy: ['id'], measures: [sum('f', 'fte_y2026Budget'), sum('m3', 'fte_month_03_y2026Budget'), sum('m12', 'fte_month_12_yBudget'), sum('n', 'fte_nodetail_yBudget'), sum('x', 'fte_detached_yBudget')] }, {}, scope).raw;
+    assert.equal((monthly.match(new RegExp(`JOIN ${rounds}`, 'g')) ?? []).length, 1, `${scope}: one round join for the FTE, its months and its notices`);
+    const calc = 'ri2026_planned.last_calculation';
+    assert.ok(monthly.includes(`LEFT JOIN LATERAL (SELECT (CASE WHEN ${calc}->>'kind' = 'computed' THEN ${calc}->'fte_months' ELSE ${calc}->'lines_result'->'fte_months' END) AS fte_months OFFSET 0) fm2026_planned ON true`), `${scope}: the months once per line, from the joined round`);
+    assert.equal((monthly.match(/LEFT JOIN LATERAL/g) ?? []).length, 1, `${scope}: once for every month of that round`);
+    assert.ok(monthly.indexOf('LEFT JOIN LATERAL') > monthly.indexOf(`LEFT JOIN ${rounds} ri2026_planned`), `${scope}: after the round it reads`);
+    assert.ok(monthly.includes(`(CASE WHEN v2026.id IS NULL THEN NULL ELSE (fm2026_planned.fte_months->>2)::numeric END) AS v1`), `${scope}: March is the third value`);
+    assert.ok(monthly.includes(`(CASE WHEN v2026.id IS NULL THEN NULL ELSE (fm2026_planned.fte_months->>11)::numeric END) AS v2`), `${scope}: December on a fixed slot`);
+    assert.ok(monthly.includes(`(CASE WHEN v2026.id IS NULL THEN NULL WHEN jsonb_typeof(fm2026_planned.fte_months) IS DISTINCT FROM 'array' THEN ri2026_planned.fte END) AS v3`), `${scope}: no detail`);
+    const plain = build({ groupBy: ['id'], measures: [sum('f', 'fte_y2026Budget'), sum('x', 'fte_detached_yBudget')] }, {}, scope).raw;
+    assert.equal(plain.includes('LATERAL'), false, `${scope}: the yearly FTE alone reads no months`);
+  }
 
   for (const scope of ['opex', 'capex'] as const) {
     const { raw, params } = build({ groupBy: ['has_fte'], measures: [] }, { filters: { has_fte: { filterType: 'set', values: ['yes'] } } }, scope);

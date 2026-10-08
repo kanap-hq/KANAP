@@ -5,7 +5,7 @@ import { BadRequestException } from '@nestjs/common';
 import type { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import type { AggregateSpec } from '../../common/list-engine/list-aggregate';
-import { resolveFteDetachedField, resolveFteField, SUMMARY_SCOPES, SummaryScopeConfig, yearsNamedByFields } from '../spend-summary.builder';
+import { resolveFteField, resolveFteVariantField, SUMMARY_SCOPES, SummaryScopeConfig, yearsNamedByFields } from '../spend-summary.builder';
 import * as engine from '../budget-list/budget-list.service';
 import { realSummaryDeps } from './oracle/oracle-deps';
 
@@ -19,12 +19,20 @@ import { realSummaryDeps } from './oracle/oracle-deps';
 //   follows its lines (method spread or manual), null for a computed round,
 //   a round without FTE (lines removed), a line without rounds;
 // - another tenant's line is never counted.
+// FTE reports, lot 2b: the staffing report's monthly fields, on OPEX and CAPEX:
+// - `fte_month_<MM>_<slot><Suffix>`: a round's FTE of one month, from its
+//   calculation when its kind is `computed` (computed or edited by hand), else
+//   from its `lines_result` (spread, copy); null without detail, without FTE,
+//   without rounds;
+// - `fte_nodetail_<slot><Suffix>`: the FTE of a round without monthly detail;
+// - their sums grouped by a key, 14 FTE measures in one grouped request (the
+//   FTE cap), and another tenant's line never counted.
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file in its serial database lane.
 
 const Y = new Date().getFullYear();
 
-type Round = { year: number; measure: string; method: 'computed' | 'spread' | 'manual' | 'copied'; fte: string | null };
-type Line = { label: string; rounds?: Round[]; versionYears?: number[] };
+type Round = { year: number; measure: string; method: 'computed' | 'spread' | 'manual' | 'copied'; fte: string | null; calc?: object | null };
+type Line = { label: string; rounds?: Round[]; versionYears?: number[]; currency?: string };
 
 /**
  * The lines of the scenario (same for OPEX and CAPEX):
@@ -60,14 +68,14 @@ async function insertLine(runner: QueryRunner, scope: SummaryScopeConfig, tenant
   if (scope.scope === 'opex') {
     await runner.query(
       `INSERT INTO spend_items (id, tenant_id, item_number, product_name, currency, effective_start, status, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, 'EUR', '2020-01-01', 'enabled', now(), now())`,
-      [itemId, tenantId, itemNumber, `FTE ${line.label}`],
+       VALUES ($1, $2, $3, $4, $5, '2020-01-01', 'enabled', now(), now())`,
+      [itemId, tenantId, itemNumber, `FTE ${line.label}`, line.currency ?? 'EUR'],
     );
   } else {
     await runner.query(
       `INSERT INTO capex_items (id, tenant_id, item_number, description, ppe_type, investment_type, priority, currency, effective_start)
-       VALUES ($1, $2, $3, $4, 'hardware', 'other', 'low', 'EUR', '2020-01-01')`,
-      [itemId, tenantId, itemNumber, `FTE ${line.label}`],
+       VALUES ($1, $2, $3, $4, 'hardware', 'other', 'low', $5, '2020-01-01')`,
+      [itemId, tenantId, itemNumber, `FTE ${line.label}`, line.currency ?? 'EUR'],
     );
   }
   const years = new Set([...(line.versionYears ?? []), ...(line.rounds ?? []).map((round) => round.year)]);
@@ -91,9 +99,9 @@ async function insertLine(runner: QueryRunner, scope: SummaryScopeConfig, tenant
   }
   for (const round of line.rounds ?? []) {
     await runner.query(
-      `INSERT INTO ${scope.roundTable} (tenant_id, version_id, measure, period_start, period_end, method, fte)
-       VALUES ($1, $2, $3, make_date($4, 1, 1), make_date($4, 12, 31), $5, $6::numeric)`,
-      [tenantId, versions.get(round.year), round.measure, round.year, round.method, round.fte],
+      `INSERT INTO ${scope.roundTable} (tenant_id, version_id, measure, period_start, period_end, method, fte, last_calculation)
+       VALUES ($1, $2, $3, make_date($4, 1, 1), make_date($4, 12, 31), $5, $6::numeric, $7::jsonb)`,
+      [tenantId, versions.get(round.year), round.measure, round.year, round.method, round.fte, round.calc == null ? null : JSON.stringify(round.calc)],
     );
   }
   return itemId;
@@ -102,14 +110,28 @@ async function insertLine(runner: QueryRunner, scope: SummaryScopeConfig, tenant
 const sum = (id: string, field: string, extra: object = {}) => ({ id, fn: 'sum' as const, field, ...extra });
 
 function testKeyParsing() {
-  assert.equal(resolveFteField('fte_detached_yBudget'), null, 'fte_ resolution leaves fte_detached_ alone');
-  assert.equal(resolveFteField(`fte_detached_y${Y}Budget`), null);
-  assert.equal(resolveFteDetachedField(`fte_detached_y${Y}Budget`)?.year, Y);
-  assert.equal(resolveFteDetachedField('fte_detached_yRevision')?.column.measure, 'committed');
-  assert.equal(resolveFteDetachedField('fte_yBudget'), null);
-  assert.equal(resolveFteDetachedField('fte_detached_nonsense'), null);
+  for (const key of ['fte_detached_yBudget', `fte_detached_y${Y}Budget`, 'fte_month_03_yBudget', `fte_month_12_y${Y}Budget`, 'fte_nodetail_yBudget', 'fte_month_13_yBudget', 'fte_month_3_yBudget']) {
+    assert.equal(resolveFteField(key), null, `fte_ resolution leaves ${key} alone`);
+  }
+  const detached = resolveFteVariantField(`fte_detached_y${Y}Budget`);
+  assert.deepEqual([detached?.variant, detached?.year, detached?.column.measure], ['detached', Y, 'planned']);
+  assert.equal(resolveFteVariantField('fte_detached_yRevision')?.column.measure, 'committed');
+  const month = resolveFteVariantField(`fte_month_03_y${Y}Budget`);
+  assert.deepEqual([month?.variant, month?.variant === 'month' ? month.month : null, month?.year], ['month', 3, Y]);
+  const december = resolveFteVariantField('fte_month_12_yRevision');
+  assert.deepEqual([december?.variant === 'month' ? december.month : null, december?.slot, december?.column.measure], [12, 'y', 'committed']);
+  const nodetail = resolveFteVariantField('fte_nodetail_yMinus1Budget');
+  assert.deepEqual([nodetail?.variant, nodetail?.slot], ['nodetail', 'yMinus1']);
+  for (const key of ['fte_yBudget', 'yBudget', 'fte_detached_nonsense', 'fte_month_00_yBudget', 'fte_month_13_yBudget', 'fte_month_3_yBudget', 'fte_month_yBudget', 'fte_nodetail_', 'fte_other_yBudget']) {
+    assert.equal(resolveFteVariantField(key), null, `${key} is not a variant`);
+  }
   assert.deepEqual(yearsNamedByFields([`fte_detached_y${Y - 4}Budget`]), [Y - 4], 'a detached key names its year (bounds, loaded slots)');
-  assert.deepEqual(engine.parseFteKeys(`fte_detached_yBudget,fte_detached_y${Y}Budget,fte_yBudget`, Y).map((fte) => fte.key), ['fte_yBudget'], 'grid FTE keys ignore detached keys');
+  assert.deepEqual(yearsNamedByFields([`fte_month_01_y${Y - 5}Budget`, `fte_nodetail_y${Y + 3}Forecast`]).sort(), [Y - 5, Y + 3], 'a month or no-detail key names its year');
+  assert.deepEqual(
+    engine.parseFteKeys(`fte_detached_yBudget,fte_detached_y${Y}Budget,fte_month_01_yBudget,fte_month_02_y${Y}Budget,fte_nodetail_yBudget,fte_yBudget`, Y).map((fte) => fte.key),
+    ['fte_yBudget'],
+    'grid FTE keys ignore the report variants',
+  );
   console.log('ok - key parsing');
 }
 
@@ -202,6 +224,110 @@ async function checkScope(runner: QueryRunner, scope: SummaryScopeConfig, tenant
   console.log(`ok - ${name}: another tenant's line is never counted`);
 }
 
+/** Twelve monthly FTE as stored (decimal strings): `first` for January, `h1` to June, `h2` from July. */
+const fteMonths = (h1: string, h2: string, first = h1) => [first, ...Array(5).fill(h1), ...Array(6).fill(h2)];
+const linesResult = (months: string[]) => ({ total: '1000', fte: '0', fte_period: '0', month_amounts: Array(12).fill('0'), fte_months: months, active_months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], lines: [] });
+const computedCalc = (months: string[]) => ({ kind: 'computed', ...linesResult(months) });
+const copyCalc = (result?: object) => ({ kind: 'copy', source_year: Y - 1, source_measure: 'planned', uplift_pct: '0', source_total: '1000', total: '1000', source_method: 'spread', ...(result ? { lines_result: result } : {}) });
+const budget = (method: Round['method'], fte: string | null, calc: object | null): Round => ({ year: Y, measure: 'planned', method, fte, calc });
+
+/**
+ * The lines of the monthly scenario (same for OPEX and CAPEX), Budget Y:
+ * - computed (EUR): computed, months 3 to June then 2; Budget Y-1 computed, months 5;
+ * - hand-edited (USD): manual over a `computed` calculation, months 1;
+ * - spread (EUR): an annual spread with `lines_result`, months 0 to June then 1.5;
+ * - copy (USD): a copy with `lines_result`, January 0.5, then 0.25;
+ * - no detail (EUR): a copy without `lines_result`, FTE 1.75;
+ * - legacy (USD): a spread without any calculation, FTE 0.60;
+ * - removed (USD): a computed calculation but no FTE (lines removed);
+ * - no rounds (EUR): a version of Y without any round.
+ */
+const MONTH_LINES: Line[] = [
+  { label: 'computed', currency: 'EUR', rounds: [budget('computed', '2.50', computedCalc(fteMonths('3', '2'))), { year: Y - 1, measure: 'planned', method: 'computed', fte: '5.00', calc: computedCalc(fteMonths('5', '5')) }] },
+  { label: 'hand-edited', currency: 'USD', rounds: [budget('manual', '1.00', computedCalc(fteMonths('1', '1')))] },
+  { label: 'spread', currency: 'EUR', rounds: [budget('spread', '0.75', { kind: 'annual', total: '1000', profile: 'flat', active_months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], weights: Array(12).fill('1'), lines_result: linesResult(fteMonths('0', '1.5')) })] },
+  { label: 'copy', currency: 'USD', rounds: [budget('copied', '0.27', copyCalc(linesResult(fteMonths('0.25', '0.25', '0.5'))))] },
+  { label: 'no detail', currency: 'EUR', rounds: [budget('copied', '1.75', copyCalc())] },
+  { label: 'legacy', currency: 'USD', rounds: [budget('spread', '0.60', null)] },
+  { label: 'removed', currency: 'USD', rounds: [budget('spread', null, computedCalc(fteMonths('7', '7')))] },
+  { label: 'no rounds', currency: 'EUR', versionYears: [Y] },
+];
+
+const MONTHS = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
+/** The staffing report's request: twelve monthly sums and the two notice sums, 14 FTE measures. */
+const staffingMeasures = (suffix: string) => [
+  ...MONTHS.map((mm) => sum(`m${mm}`, `fte_month_${mm}_${suffix}`)),
+  sum('detached', `fte_detached_${suffix}`),
+  sum('nodetail', `fte_nodetail_${suffix}`),
+];
+
+async function checkMonths(runner: QueryRunner, scope: SummaryScopeConfig) {
+  const m = runner.manager;
+  const deps = realSummaryDeps(scope);
+  const name = scope.scope.toUpperCase();
+  const tenantId = await insertTenant(runner, `${scope.scope}-months`);
+  const otherTenantId = await insertTenant(runner, `${scope.scope}-months-other`);
+  await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [otherTenantId]);
+  const otherLine = await insertLine(runner, scope, otherTenantId, 1, { label: 'other tenant', rounds: [budget('computed', '9.00', computedCalc(fteMonths('9', '9')))] });
+  await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+  const ids: Record<string, string> = {};
+  for (const [i, line] of MONTH_LINES.entries()) ids[line.label] = await insertLine(runner, scope, tenantId, 1 + i, line);
+  const aggregate = (spec: AggregateSpec, query: Record<string, unknown> = {}) => engine.budgetListAggregate(scope, deps, query, spec, m);
+
+  // A1 and A2 per line: the months where there is detail, the FTE without detail where there is none.
+  const perLine = await aggregate({ groupBy: ['id'], measures: [sum('jan', 'fte_month_01_yBudget'), sum('jun', `fte_month_06_y${Y}Budget`), sum('dec', 'fte_month_12_yBudget'), sum('nodetail', 'fte_nodetail_yBudget')] });
+  const byId = new Map(perLine.groups.map((group) => [group.keys[0], group.values]));
+  const expected: Record<string, [number | null, number | null, number | null, number | null]> = {
+    computed: [3, 3, 2, null],
+    'hand-edited': [1, 1, 1, null],
+    spread: [0, 0, 1.5, null],
+    copy: [0.5, 0.25, 0.25, null],
+    'no detail': [null, null, null, 1.75],
+    legacy: [null, null, null, 0.6],
+    removed: [null, null, null, null],
+    'no rounds': [null, null, null, null],
+  };
+  for (const [label, values] of Object.entries(expected)) {
+    const got = byId.get(ids[label]);
+    assert.deepEqual([got?.jan, got?.jun, got?.dec, got?.nodetail], values, `${name}: ${label}`);
+  }
+  assert.equal(byId.has(otherLine), false, `${name}: another tenant's line is not a group`);
+  console.log(`ok - ${name}: fte_month_ reads the lines' result, fte_nodetail_ the FTE without it`);
+
+  // The staffing report's request: 14 FTE measures grouped by a key, sums per month, the notices on the total row.
+  const staffing = await aggregate({ groupBy: ['currency'], measures: staffingMeasures('yBudget'), order: [{ by: 'key', index: 0, dir: 'ASC' }] });
+  const row = (values: Record<string, number | null>) => [MONTHS.map((mm) => values[`m${mm}`]), values.nodetail];
+  const months = (first: number, h1: number, h2: number) => [first, ...Array(5).fill(h1), ...Array(6).fill(h2)];
+  assert.deepEqual(staffing.groups.map((group) => [group.keys[0], group.count, ...row(group.values)]), [
+    ['EUR', 4, months(3, 3, 3.5), 1.75],
+    ['USD', 4, months(1.5, 1.25, 1.25), 0.6],
+  ], `${name}: monthly sums per currency`);
+  const total = staffing.total;
+  assert.equal(total.count, MONTH_LINES.length, `${name}: every line of the tenant, none of the other`);
+  assert.deepEqual(row(total.values), [months(4.5, 4.25, 4.75), 2.35], `${name}: the total row`);
+  assert.equal(total.unknown.m01, 4, `${name}: four lines without a month`);
+  assert.equal(total.count - total.unknown.nodetail, 2, `${name}: two lines declare FTE without monthly detail`);
+  assert.equal(total.values.detached, 4.37, `${name}: hand-edited 1 + spread 0.75 + copy 0.27 + no detail 1.75 + legacy 0.60`);
+  assert.equal(total.count - total.unknown.detached, 5);
+  const byLine = await aggregate({ groupBy: ['id'], measures: [...staffingMeasures(`y${Y}Budget`), sum('fte', 'fte_yBudget'), sum('prev', `fte_month_01_y${Y - 1}Budget`)] });
+  assert.equal(byLine.groups.length, MONTH_LINES.length, `${name}: 16 FTE measures grouped by id`);
+  assert.deepEqual(row(byLine.total.values), [months(4.5, 4.25, 4.75), 2.35], `${name}: a dynamic year reads the same rounds`);
+  assert.equal(byLine.total.values.prev, 5, `${name}: another year reads its own round`);
+  await assert.rejects(
+    aggregate({ groupBy: ['id'], measures: [...staffingMeasures('yBudget').slice(0, 8), sum('amount', 'yBudget')] }),
+    (err: unknown) => err instanceof BadRequestException && /at most 8 measures with group keys/.test((err as Error).message),
+    `${name}: 9 measures with an amount among them are refused`,
+  );
+  console.log(`ok - ${name}: monthly sums grouped by a key, 14 and 16 FTE measures`);
+
+  // The other tenant's session sees its own line only.
+  await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [otherTenantId]);
+  const other = await aggregate({ groupBy: [], measures: staffingMeasures('yBudget') });
+  assert.deepEqual([other.total.count, ...row(other.total.values)], [1, Array(12).fill(9), null], `${name}: the other tenant reads its own line only`);
+  await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+  console.log(`ok - ${name}: another tenant's months are never counted`);
+}
+
 async function main() {
   testKeyParsing();
   await dataSource.initialize();
@@ -212,6 +338,7 @@ async function main() {
     const tenantId = await insertTenant(runner, 'main');
     const otherTenantId = await insertTenant(runner, 'other');
     for (const scope of [SUMMARY_SCOPES.opex, SUMMARY_SCOPES.capex]) await checkScope(runner, scope, tenantId, otherTenantId);
+    for (const scope of [SUMMARY_SCOPES.opex, SUMMARY_SCOPES.capex]) await checkMonths(runner, scope);
   } finally {
     await runner.rollbackTransaction();
     await runner.release();

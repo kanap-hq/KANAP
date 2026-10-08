@@ -9,10 +9,11 @@ import { formatAllocationMethodLabel } from '../allocation-utils';
 import {
   FIXED_SLOTS,
   FIXED_SORT_ORDERS,
+  type FteVariant,
   PROJECT_LIST_FIELDS,
   resolveAmountField,
-  resolveFteDetachedField,
   resolveFteField,
+  resolveFteVariantField,
   resolveHasVersionField,
   resolveLocalAmountField,
 } from '../spend-summary.builder';
@@ -193,11 +194,17 @@ export class BudgetListConfig implements ListConfig {
 
   /**
    * The yearly FTE of the round of `year` and `measure` (null without a
-   * version or lines); with `detached`, only when the round's method is not
-   * `computed` (the amount no longer follows the lines). Both read the one
-   * round join of that year and column.
+   * version or lines), or one of its report variants:
+   * - `detached`: the FTE when the round's method is not `computed` (the
+   *   amount no longer follows the lines);
+   * - `month`: the FTE of one month, from the lines' result: the round's
+   *   calculation when its kind is `computed`, else its `lines_result`
+   *   (null without one);
+   * - `nodetail`: the FTE when the round has neither, so a report counts
+   *   what its months leave out.
+   * All read the one round join of that year and column.
    */
-  private fte(stmt: SqlStatement, year: number, measure: string, detached = false): FieldSql {
+  private fte(stmt: SqlStatement, year: number, measure: string, variant?: FteVariant): FieldSql {
     const v = this.version(stmt, year);
     const key = `ri${year}_${measure}`;
     this.join(
@@ -206,10 +213,41 @@ export class BudgetListConfig implements ListConfig {
       `LEFT JOIN ${this.scope.roundTable} ${key} ON ${key}.tenant_id = ${stmt.tenant} AND ${key}.version_id = ${v}.id AND ${key}.measure = '${measure}' AND ${key}.fte IS NOT NULL`,
       [v],
     );
-    const sql = detached
+    if (variant?.variant === 'month' || variant?.variant === 'nodetail') {
+      const join = this.fteMonths(stmt, key);
+      const months = `${join}.fte_months`;
+      // `->>` reads a month's decimal string (the array is 0-based); the month is an integer of the key, never a request value.
+      const branch = variant.variant === 'month'
+        ? `ELSE (${months}->>${variant.month - 1})::numeric`
+        : `WHEN jsonb_typeof(${months}) IS DISTINCT FROM 'array' THEN ${key}.fte`;
+      return { kind: 'fte', sql: `(CASE WHEN ${v}.id IS NULL THEN NULL ${branch} END)`, joins: [join] };
+    }
+    const sql = variant?.variant === 'detached'
       ? `(CASE WHEN ${v}.id IS NULL THEN NULL WHEN ${key}.method <> 'computed' THEN ${key}.fte END)`
       : `(CASE WHEN ${v}.id IS NULL THEN NULL ELSE ${key}.fte END)`;
     return { kind: 'fte', sql, joins: [key] };
+  }
+
+  /**
+   * The twelve monthly FTE of the round joined as `round` (a jsonb array of
+   * decimal strings, null without detail): its calculation's `fte_months`
+   * when its kind is `computed`, else its `lines_result`'s. Read once per
+   * line on the round already joined (`OFFSET 0` keeps the planner from
+   * copying the expression into every month and every aggregate of every
+   * month, each of which would decompress the calculation again: 14 monthly
+   * measures over 5,000 lines took 0.7 s that way, 60 ms this way). Returns
+   * the join's key; its column is `fte_months`.
+   */
+  private fteMonths(stmt: SqlStatement, round: string): string {
+    const key = `fm${round.slice('ri'.length)}`;
+    const calc = `${round}.last_calculation`;
+    this.join(
+      stmt,
+      key,
+      `LEFT JOIN LATERAL (SELECT (CASE WHEN ${calc}->>'kind' = 'computed' THEN ${calc}->'fte_months' ELSE ${calc}->'lines_result'->'fte_months' END) AS fte_months OFFSET 0) ${key} ON true`,
+      [round],
+    );
+    return key;
   }
 
   /**
@@ -403,11 +441,11 @@ export class BudgetListConfig implements ListConfig {
       const year = amount.year ?? Y + FIXED_SLOTS.find((slot) => slot.key === amount.slot)!.offset;
       return this.amountCents(stmt, year, amount.column.measure);
     }
-    // The longer prefix first: `fte_detached_…` is not an `fte_…` key.
-    const detached = resolveFteDetachedField(key);
-    if (detached) {
-      const year = detached.year ?? Y + FIXED_SLOTS.find((slot) => slot.key === detached.slot)!.offset;
-      return this.fte(stmt, year, detached.column.measure, true);
+    // The longer prefixes first: `fte_detached_…`, `fte_month_<MM>_…` and `fte_nodetail_…` are not `fte_…` keys.
+    const variant = resolveFteVariantField(key);
+    if (variant) {
+      const year = variant.year ?? Y + FIXED_SLOTS.find((slot) => slot.key === variant.slot)!.offset;
+      return this.fte(stmt, year, variant.column.measure, variant);
     }
     const fte = resolveFteField(key);
     if (fte) {
