@@ -287,6 +287,7 @@ export default function StaffingByMonthReport() {
             onGridReady={(e) => { gridApiRef.current = e.api; }}
             pinnedBottomRowData={[totalRow]}
             autoSizeStrategy={AUTO_SIZE_STRATEGY}
+            autoSizePadding={4}
             onRowDataUpdated={(e) => fitValueColumns(e.api)}
             onPinnedRowDataChanged={(e) => fitValueColumns(e.api)}
             onNewColumnsLoaded={(e) => fitValueColumns(e.api)}

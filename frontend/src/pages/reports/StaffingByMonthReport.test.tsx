@@ -213,6 +213,8 @@ describe('Staffing by month', () => {
       colIds: values.map((column) => column.colId),
       skipHeader: true,
     });
+    // The cell padding already spaces the values: the default 20 px extra would overflow the table.
+    expect(grid.props.autoSizePadding).toBe(4);
     // The total: 2.75 FTE each month from January to June, 4.75 from July.
     expect(grid.pinned).toHaveLength(1);
     expect(grid.pinned[0]).toMatchObject({ group: 'reports.columns.total', m1: 2.75, m7: 4.75, peak: 4.75 });
