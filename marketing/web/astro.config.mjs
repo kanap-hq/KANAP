@@ -4,6 +4,10 @@ import sitemap from '@astrojs/sitemap';
 export default defineConfig({
   site: 'https://kanap.net',
   trailingSlash: 'ignore',
+  // Keep HTML-aware whitespace collapsing (one space kept between inline
+  // elements). Astro 7 otherwise defaults to JSX rules ('jsx'), which drops
+  // the spaces between links, icons and words across the site.
+  compressHTML: true,
   build: {
     format: 'directory',
   },

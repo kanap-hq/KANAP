@@ -10,7 +10,8 @@
  * How to publish an article: see `BLOG.md` at the root of `web/`.
  */
 
-import { defineCollection, z } from 'astro:content';
+import { defineCollection } from 'astro:content';
+import { z } from 'astro/zod';
 import { glob } from 'astro/loaders';
 
 /**

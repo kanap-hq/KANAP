@@ -12,11 +12,11 @@
     "og": "node scripts/og.mjs"
   },
   "dependencies": {
-    "@astrojs/sitemap": "^3.7.2",
-    "astro": "^5.1.0"
+    "@astrojs/sitemap": "^3.7.4",
+    "astro": "^7.3.7"
   },
   "devDependencies": {
-    "puppeteer-core": "^24.43.1",
+    "puppeteer-core": "^25.12.0",
     "typescript": "^5.6.3"
   }
 }

@@ -7,6 +7,7 @@
  */
 
 import { getCollection, type CollectionEntry } from 'astro:content';
+import { publicDir } from 'astro:config/server';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { DEFAULT_LOCALE, LOCALES, localePath, type Locale } from '../i18n/ui';
@@ -152,7 +153,9 @@ export async function getRelated(item: BlogItem, locale: Locale, n = 2): Promise
 export function ogImageFor(item: BlogItem): string {
   if (item.post.data.ogImage) return item.post.data.ogImage;
   const generated = `/og/blog/${item.slug}.png`;
-  const onDisk = fileURLToPath(new URL(`../../public${generated}`, import.meta.url));
+  // Resolved from the configured public directory: `import.meta.url` points
+  // into the bundled build output, not into `src/lib/`.
+  const onDisk = fileURLToPath(new URL(`.${generated}`, publicDir));
   return existsSync(onDisk) ? generated : '/og-image.png';
 }
 
