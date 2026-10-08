@@ -41,8 +41,9 @@ vi.mock('../../hooks/useAnalyticsAxes', async (importOriginal) => {
 });
 vi.mock('../../components/reports/ReportLayout', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../components/reports/ReportLayout')>()),
-  default: ({ filters, children }: { filters?: React.ReactNode; children?: React.ReactNode }) => (
+  default: ({ filters, children, onExportTableCsv }: { filters?: React.ReactNode; children?: React.ReactNode; onExportTableCsv?: () => void }) => (
     <div>
+      <button type="button" onClick={onExportTableCsv}>export-csv</button>
       <div data-testid="filters">{filters}</div>
       {children}
     </div>
@@ -55,13 +56,22 @@ vi.mock('../../components/reports/ChartCard', () => ({
     return null;
   }),
 }));
-const grid = vi.hoisted(() => ({ columns: [] as any[], pinned: [] as any[], props: {} as Record<string, any> }));
+// Each mount of the grid: the value width it laid out with and the api it handed to `onGridReady`.
+type GridMount = { width: number | undefined; api: { exportDataAsCsv: ReturnType<typeof vi.fn> } };
+const grid = vi.hoisted(() => ({ columns: [] as any[], pinned: [] as any[], props: {} as Record<string, any>, mounts: [] as GridMount[] }));
 vi.mock('../../components/reports/ReportGrid', () => ({
-  default: (props: { rowData?: unknown[]; columnDefs?: any[]; pinnedBottomRowData?: any[] }) => {
+  default: (props: { rowData?: unknown[]; columnDefs?: any[]; pinnedBottomRowData?: any[]; onGridReady?: (e: { api: unknown }) => void }) => {
     const { rowData, columnDefs, pinnedBottomRowData } = props;
     grid.columns = columnDefs ?? [];
     grid.pinned = pinnedBottomRowData ?? [];
     grid.props = props;
+    React.useEffect(() => {
+      const mount: GridMount = { width: props.columnDefs?.[1]?.width, api: { exportDataAsCsv: vi.fn() } };
+      grid.mounts.push(mount);
+      props.onGridReady?.({ api: mount.api });
+      // Mount only: a remount is what the test watches.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     return <pre data-testid="grid">{JSON.stringify(rowData ?? [])}</pre>;
   },
 }));
@@ -174,6 +184,7 @@ beforeEach(() => {
   grid.columns = [];
   grid.pinned = [];
   grid.props = {};
+  grid.mounts = [];
   get.mockReset();
   get.mockImplementation(async (url: string, config?: { params?: Record<string, string> }) => {
     if (url.endsWith('/summary/filter-values')) return { data: fakeFilterValues(serverRows, String(config?.params?.fields ?? '').split(',')) };
@@ -260,6 +271,38 @@ describe('Staffing by month', () => {
     await waitFor(() => expect(grid.columns[1].width).toBe(fallbackWidth(gridRows(), grid.pinned[0])));
     expect(grid.columns[1].width).toBe(Math.ceil(8 * 13 * 0.65 + 2 * 10 + 6));
     expect(new Set(grid.columns.slice(1).map((column) => column.width)).size).toBe(1);
+  });
+
+  it('lays the grid out again only when the shared value width changes, the export following the new grid', async () => {
+    serverRows = [
+      line('a', ['cc1', 'CC1 · Ops'], null, { fte: 1, months: flat(1) }),
+      line('b', ['cc2', 'CC2 · Dev'], null, { fte: 1234.5, months: flat(1234.5) }),
+    ];
+    renderReport('/report');
+    await waitFor(() => expect(gridRows()).toHaveLength(2));
+    // Before the rows: `00.00`; with them: `1,235.50`. The new width remounts the grid.
+    const wide = Math.ceil(8 * 13 * 0.65 + 2 * 10 + 6);
+    await waitFor(() => expect(grid.mounts.map((mount) => mount.width)).toEqual([69, wide]));
+    fireEvent.click(screen.getByRole('button', { name: 'export-csv' }));
+    expect(grid.mounts[0].api.exportDataAsCsv).not.toHaveBeenCalled();
+    expect(grid.mounts[1].api.exportDataAsCsv).toHaveBeenCalledWith({ fileName: expect.stringMatching(/^staffing-.*\.csv$/) });
+
+    // A refresh with values as wide (another budget column, same values): same width, same grid.
+    const requests = post.mock.calls.length;
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'reports.filters.column' }));
+    const other = within(await screen.findByRole('listbox')).getAllByRole('option').find((option) => option.getAttribute('aria-selected') !== 'true');
+    fireEvent.click(other!);
+    await waitFor(() => expect(post.mock.calls.length).toBeGreaterThan(requests));
+    await waitFor(() => expect(gridRows()).toHaveLength(2));
+    expect(grid.columns[1].width).toBe(wide);
+    expect(grid.mounts.map((mount) => mount.width)).toEqual([69, wide]);
+  });
+
+  it('keeps the same grid when the data arrives within the narrowest width', async () => {
+    renderReport('/report');
+    await waitFor(() => expect(gridRows()).toHaveLength(3));
+    expect(grid.columns[1].width).toBe(69);
+    expect(grid.mounts.map((mount) => mount.width)).toEqual([69]);
   });
 
   it('switches the grouping and keeps it in the address', async () => {

@@ -359,7 +359,10 @@ export default function StaffingByMonthReport() {
         </Box>
         <Paper variant="outlined" sx={{ p: 2 }}>
           <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>{t('reports.shared.summaryTable')}</Typography>
+          {/* AG Grid re-flexes only the flex columns right of a resized column, and the group column is the
+              first: a new shared width remounts the grid so the group column takes exactly the room left. */}
           <ReportGrid
+            key={`staffing-${valueWidth}`}
             wrapperClassName="kanap-dense-grid"
             domLayout="autoHeight"
             rowData={tableRows}
