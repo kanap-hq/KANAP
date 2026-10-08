@@ -59,8 +59,6 @@ This table lists the major upgrades that are planned or queued for planning, inc
 | `react-router-dom` | frontend | 6.x | 7.x | Delivery 2 |
 | `@mdxeditor/editor` | frontend | 3.x | 4.x | Delivery 2 |
 | Node.js | backend, frontend and marketing images, CI | 22 | 24 (LTS) | Delivery 2 |
-| `astro` | marketing/web | 5.x | 7.x | Marketing site lot (V1) |
-| `puppeteer-core` | marketing/web | 24.x | 25.x | Marketing site lot (V1) |
 | `@nestjs/config` | backend | 4.x | 12.x | To be scheduled |
 | `openai` | backend | 6.x | 7.x | To be scheduled |
 | `ag-charts-react` | frontend | 9.x | 14.x | To be scheduled |
