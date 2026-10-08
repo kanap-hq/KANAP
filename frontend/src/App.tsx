@@ -224,7 +224,6 @@ function RouteLoadingFallback() {
 }
 
 function AppRoutes() {
-  const { token } = useAuth();
   const { config, isLoading: featuresLoading } = useFeatures();
   const isSingleTenant = config.deploymentMode === 'single-tenant';
   if (featuresLoading) {
@@ -415,7 +414,9 @@ function AppRoutes() {
         </Route>
       </Route>
       <Route path="/403" element={<ForbiddenPage />} />
-      <Route path="*" element={<Navigate to={token ? '/' : '/login'} replace />} />
+      {/* Unknown paths go home, where ProtectedRoute waits for the session restore of a full
+          page load before it decides between the app and /login. */}
+      <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
   );
