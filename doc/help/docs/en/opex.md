@@ -53,6 +53,7 @@ The OPEX list (at **Budget management > OPEX**) is your main view for browsing, 
 **Additional columns** (hidden by default, toggle via the column chooser):
   - **Amount columns**: Every shown budget column for Y-1, Y, Y+1 and Y+2, under the names your organisation chose. The header gives the column, the year relative to today and the calendar year, for example **Revision Y+1 (2027)**. Amounts are in the reporting currency. Hidden columns are not offered
   - **FTE columns**: The FTE of every shown budget column for Y-1, Y, Y+1 and Y+2, under the names your organization chose, right after the amount columns in the column chooser. The header gives the column and the calendar year, for example **Budget FTE (2026)**. An item's FTE is the sum of the FTE of its lines in that column. See [FTE](#fte). The cell is empty when the column has no lines
+  - **FTE declared**: **Yes** when the item declares FTE in at least one budget column of any year, otherwise empty. These are the items the **Items with FTE** filter of the reports keeps
   - **Enabled**: Item status (enabled or disabled)
   - **Description**: Item description
   - **Currency**: ISO currency code
@@ -69,14 +70,14 @@ The OPEX list (at **Budget management > OPEX**) is your main view for browsing, 
 
 **Filtering**:
   - **Quick search**: Searches the reference, product name, description, supplier, paying company, account, contract, project names, allocation, owners, analytics values, cost center (code, name and path), budget holder, notes, currency and status. Filters the list in real time as you type, ignoring accents and case
-  - **Column filters**: Click the filter icon in any column header. **Supplier**, **Paying company**, **Account**, **Allocation**, **Currency**, **IT owner**, **Business owner**, each analytics dimension, **Cost center**, **Budget holder**, **Run or build** and **Enabled** use checkbox set filters (multi-select). The **Enabled** filter offers **Enabled** and **Disabled** and narrows the list when **Show** is set to **All**. Clicking **Clear** in it, or unticking both values, lists nothing, whatever **Show** says
+  - **Column filters**: Click the filter icon in any column header. **Supplier**, **Paying company**, **Account**, **Allocation**, **Currency**, **IT owner**, **Business owner**, each analytics dimension, **Cost center**, **Budget holder**, **Run or build**, **FTE declared** and **Enabled** use checkbox set filters (multi-select). The **FTE declared** filter offers **Yes** and **No**. The **Enabled** filter offers **Enabled** and **Disabled** and narrows the list when **Show** is set to **All**. Clicking **Clear** in it, or unticking both values, lists nothing, whatever **Show** says
   - **All but a few**: Tick **All**, then untick the values you want to leave out: the filter keeps everything except those (the header reads, for example, **All but 3**), and a value created later is included automatically
   - **Amount filters**: Every amount column has a number filter. A number typed in the box under the header keeps the items with at least that amount. Open the filter menu for the other conditions: greater than, less than, equal, not equal, or between two amounts
   - **FTE filters**: Every FTE column has a number filter with the same conditions, plus blank and not blank. **Blank** keeps the items whose column has no lines
   - **Date filters**: **Effective start**, **End of validity**, **Created** and **Updated** have date filters. Pick a date in the box under the header to keep the items on that date, or open the filter menu for before, after, between, blank or not blank
   - **Text columns** use text filters, ignoring accents and case. On **Ref**, type the number or the full reference, for example `12` or `OPX-12`
   - **Status scope**: Use the **Show: All / Enabled / Disabled** toggle above the grid (defaults to **Enabled**)
-  - **Sharing a view**: Your sort, search and filters are kept in the page's web address, so reloading the page or sharing the link reopens the same view. A link whose filters are no longer available shows "The filters of this link are no longer available."
+  - **Sharing a view**: Your sort, search and filters are kept in the page's web address, so reloading the page or sharing the link reopens the same view. A link whose filters are no longer available shows "The filters of this link are no longer available." When a link filters a hidden column, for example a report row opening the list, the list shows that column for this visit. Your saved column layout does not change.
 
 **Sorting**:
   - Click a column header to sort ascending/descending. Every column sorts, including every amount and FTE column. Items without an FTE come last in ascending order

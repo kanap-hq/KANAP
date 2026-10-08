@@ -89,6 +89,7 @@ Estas columnas están ocultas por defecto. Muéstrelas desde el selector de colu
 |---------|-------------|
 | **Columnas de importes** | Cada columna presupuestaria visible para A-1, A, A+1 y A+2, con los nombres que eligió su organización. El encabezado indica la columna, el año respecto a hoy y el año natural, por ejemplo **Revisión A+1 (2027)**. Los importes están en la moneda de reporte. Las columnas ocultas no se ofrecen |
 | **Columnas de ETC** | El ETC de cada columna presupuestaria visible para A-1, A, A+1 y A+2, con los nombres que eligió su organización, justo después de las columnas de importes en el selector de columnas. El encabezado indica la columna y el año natural, por ejemplo **ETC Presupuesto (2026)**. El ETC de una partida es la suma del ETC de sus líneas en esa columna. Consulte [ETC](#etc). La celda queda vacía cuando la columna no tiene líneas |
+| **ETC declarados** | **Sí** cuando la partida declara ETC en al menos una columna presupuestaria de cualquier año; si no, vacía. Son las partidas que conserva el filtro **Partidas con ETC** de los informes |
 | **Moneda** | Código de moneda de la partida |
 | **Inicio efectivo** | Fecha de inicio |
 | **Fin de validez** | Fecha en que la partida termina (en blanco significa sin fin) |
@@ -108,7 +109,7 @@ El cuadro de búsqueda en la parte superior busca en la referencia, la descripci
 
 ### Filtros de columna
 
-Cada encabezado de columna filtrable tiene un icono de filtro. **Proveedor**, **Empresa pagadora**, **Cuenta**, **Tipo de activo fijo**, **Tipo de inversión**, **Prioridad**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio**, cada dimensión analítica, **Centro de coste**, **Responsable del presupuesto**, **Run o build** y **Habilitado** usan filtros de conjunto de casillas con **Todos**, **Ninguno** y un botón de limpiar. El filtro **Habilitado** ofrece **Activado** y **Desactivado** y restringe la lista cuando **Mostrar** está en **Todos**. Si hace clic en **Limpiar** dentro del filtro, o desmarca ambos valores, la lista no muestra nada, sea cual sea la opción de **Mostrar**. Múltiples filtros se combinan con lógica AND.
+Cada encabezado de columna filtrable tiene un icono de filtro. **Proveedor**, **Empresa pagadora**, **Cuenta**, **Tipo de activo fijo**, **Tipo de inversión**, **Prioridad**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio**, cada dimensión analítica, **Centro de coste**, **Responsable del presupuesto**, **Run o build**, **ETC declarados** y **Habilitado** usan filtros de conjunto de casillas con **Todos**, **Ninguno** y un botón de limpiar. El filtro **ETC declarados** ofrece **Sí** y **No**. El filtro **Habilitado** ofrece **Activado** y **Desactivado** y restringe la lista cuando **Mostrar** está en **Todos**. Si hace clic en **Limpiar** dentro del filtro, o desmarca ambos valores, la lista no muestra nada, sea cual sea la opción de **Mostrar**. Múltiples filtros se combinan con lógica AND.
 
 Marque **Todos** y luego desmarque los valores que quiera excluir: el filtro conserva todo salvo esos (el encabezado muestra, por ejemplo, **Todos menos 3**), y un valor creado más tarde se incluye automáticamente.
 
@@ -149,7 +150,7 @@ Utilice el conmutador **Mostrar: Todos / Activos / Desactivados** encima de la c
 
 Su contexto de lista (orden de clasificación, texto de búsqueda y filtros activos) se preserva cuando abre una partida y se restaura al volver a la lista. Esto significa que puede profundizar en varias partidas en secuencia sin perder su lugar.
 
-Estos mismos filtros también se guardan en la dirección web de la página, de modo que recargar la página o compartir el enlace reabre la misma vista. Un enlace cuyos filtros ya no están disponibles muestra «Los filtros de este enlace ya no están disponibles.»
+Estos mismos filtros también se guardan en la dirección web de la página, de modo que recargar la página o compartir el enlace reabre la misma vista. Un enlace cuyos filtros ya no están disponibles muestra «Los filtros de este enlace ya no están disponibles.» Cuando un enlace filtra una columna oculta, por ejemplo una fila de un informe que abre la lista, la lista muestra esa columna durante esta visita. La disposición de columnas que guardó no cambia.
 
 ### Navegación Anterior/Siguiente
 

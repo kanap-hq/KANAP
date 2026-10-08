@@ -387,7 +387,7 @@ Vea datos presupuestarios OPEX o CAPEX agrupados por cuenta de consolidación, c
 
 - Gráfico de líneas con una serie por cuenta de consolidación, trazada a lo largo de los años
 
-**Tabla**: Una fila por cuenta de consolidación con columnas de año. Una fila de totales fijada en la parte inferior suma todos los grupos.
+**Tabla**: Una fila por cuenta de consolidación con columnas de año. Una fila de totales fijada en la parte inferior suma todos los grupos. Una cuenta de consolidación es un enlace que abre la lista OPEX o CAPEX en una pestaña nueva, filtrada por sus cuentas ("Sin asignar": las cuentas sin cuenta de consolidación y las partidas sin cuenta) y por la barra de filtros; la fila de totales es texto sin enlace.
 
 Una línea en una cuenta de consolidación desactivada desde entonces sigue contando, en la línea de consolidación de esa cuenta. Los nombres y números de cuenta solo se muestran si puede leer el [plan de cuentas](chart-of-accounts.md); sin ese acceso, todas las líneas aparecen bajo "Sin asignar" en su lugar (los totales siguen siendo correctos, solo se oculta el desglose por cuenta). Las partidas sin cuenta de consolidación también aparecen como "Sin asignar". Las cuentas de consolidación son las cuentas de su [plan de consolidación](chart-of-accounts.md#el-plan-de-consolidacion).
 
@@ -423,6 +423,8 @@ El subtítulo, el título del gráfico y la primera columna de la tabla indican 
 
 **Tabla**: Una fila por valor con columnas de año. Una fila de totales fijada en la parte inferior. Las líneas sin valor en la dimensión elegida aparecen como "Sin asignar".
 
+Un valor es un enlace que abre la lista OPEX o CAPEX en una pestaña nueva, filtrada por ese valor ("Sin asignar": por las partidas sin valor) y por la barra de filtros. La fila de totales es texto sin enlace.
+
 ---
 
 ## Plantilla por mes
@@ -452,6 +454,8 @@ La dirección de la página conserva la agrupación (`?group=item`, `?group=supp
 - **Pico**: el mes más alto
 
 Una fila **Total** fijada da los totales mensuales, su media y su pico. Los valores se muestran con dos decimales. Solo cuentan los ETC declarados: las partidas sin líneas de cantidad y precio en la columna se dejan fuera.
+
+El nombre de un grupo es un enlace que se abre en una pestaña nueva. Una partida abre su página. Un centro de coste, un proveedor o un valor abre la lista OPEX o CAPEX filtrada por ese grupo y por la barra de filtros, **Partidas con ETC** incluido. «Sin centro de coste», «Sin proveedor» y «Sin valor» abren las partidas que no lo tienen. La fila **Total** es texto sin enlace. La exportación CSV conserva los nombres como texto.
 
 ### Avisos
 
@@ -496,6 +500,8 @@ Vea cuánto cuesta un ETC en cada parte del presupuesto y cómo evoluciona ese c
 - **Coste por ETC**: el coste de personal dividido entre los ETC. La celda queda vacía cuando los ETC son 0 o cuando el grupo no tiene líneas de personal en ese par
 
 Los grupos se nombran como en Plantilla por mes («Sin centro de coste», «Sin proveedor», «Sin valor»). Una fila **Total** fijada da, para cada par, el total de ETC, el total del coste de personal y el total del coste de personal dividido entre el total de ETC.
+
+En las dos vistas, el nombre de un grupo abre su partida, o la lista OPEX o CAPEX filtrada, en una pestaña nueva, como en [Plantilla por mes](#plantilla-por-mes).
 
 **Gráfico**: Barras horizontales del coste por ETC, una barra por par. La primera categoría es el total, seguida de los diez primeros grupos de la tabla. El título indica el tipo y la agrupación, por ejemplo «Coste por ETC OPEX por centro de coste». Pase el cursor sobre una barra para leer el grupo, el par, el coste por ETC, los ETC y el coste de personal.
 
