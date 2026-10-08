@@ -22,6 +22,10 @@ import type { AggregateRequest, AggregateResult, AggregateRow } from '../pages/r
  * Staff lines (`staff_cost_<slot><Column>`, `staff_fte_<slot><Column>`): a slot holds the cost of its
  * people and days lines in the reporting currency in `staff_cost: { budget: 9000 }` (0 without) and
  * their FTE in `staff_fte: { budget: 1.5 }` (null without line detail).
+ *
+ * Per-day lines (`day_cost_<slot><Column>`, `days_<slot><Column>`): a slot holds the cost of its
+ * per-day priced lines in the reporting currency in `day_cost: { budget: 6000 }` (0 without) and the
+ * days they buy in `days: { budget: 10 }` (null without line detail or without a per-day line).
  */
 
 type Row = Record<string, any>;
@@ -32,9 +36,14 @@ const SUFFIX_METRIC: Record<string, string> = { Budget: 'budget', Revision: 'rev
 const AMOUNT = /^(local_)?(yMinus2|yMinus1|yPlus1|yPlus2|y\d{4}|y)(Budget|Revision|Forecast|FollowUp|Landing)$/;
 const HAS_VERSION = /^has_version_(yMinus2|yMinus1|yPlus1|yPlus2|y\d{4}|y)$/;
 const FTE = /^fte_(detached_|nodetail_|month_(\d{2})_)?(yMinus2|yMinus1|yPlus1|yPlus2|y\d{4}|y)(Budget|Revision|Forecast|FollowUp|Landing)$/;
-const STAFF = /^staff_(cost|fte)_(yMinus2|yMinus1|yPlus1|yPlus2|y\d{4}|y)(Budget|Revision|Forecast|FollowUp|Landing)$/;
+const STAFF = /^(staff_cost|staff_fte|day_cost|days)_(yMinus2|yMinus1|yPlus1|yPlus2|y\d{4}|y)(Budget|Revision|Forecast|FollowUp|Landing)$/;
+/** The line totals that are amounts; the others are numerics (the engine's FTE kind). */
+const STAFF_AMOUNTS = new Set(['staff_cost', 'day_cost']);
 /** A field the engine sums as FTE (a numeric, null when no line holds one). */
-const isFteField = (field: string) => FTE.test(field) || (STAFF.exec(field)?.[1] === 'fte');
+function isFteField(field: string): boolean {
+  const staff = STAFF.exec(field);
+  return FTE.test(field) || (staff != null && !STAFF_AMOUNTS.has(staff[1]));
+}
 
 function slotYear(slot: string): number {
   const Y = new Date().getFullYear();
@@ -52,7 +61,7 @@ function versionOf(row: Row, year: number): any {
 /** An amount in cents (reporting currency, or the line's own with `local_`). */
 function amountCents(row: Row, field: string): number | null {
   const staff = STAFF.exec(field);
-  if (staff?.[1] === 'cost') return Math.round(Number(versionOf(row, slotYear(staff[2]))?.staff_cost?.[SUFFIX_METRIC[staff[3]]] ?? 0) * 100);
+  if (staff && STAFF_AMOUNTS.has(staff[1])) return Math.round(Number(versionOf(row, slotYear(staff[2]))?.[staff[1]]?.[SUFFIX_METRIC[staff[3]]] ?? 0) * 100);
   const match = AMOUNT.exec(field);
   if (!match) return null;
   const version = versionOf(row, slotYear(match[2]));
@@ -67,8 +76,8 @@ function amountCents(row: Row, field: string): number | null {
  */
 function fteHundredths(row: Row, field: string | undefined): number | null | undefined {
   const staff = field ? STAFF.exec(field) : null;
-  if (staff?.[1] === 'fte') {
-    const value = versionOf(row, slotYear(staff[2]))?.staff_fte?.[SUFFIX_METRIC[staff[3]]];
+  if (staff && !STAFF_AMOUNTS.has(staff[1])) {
+    const value = versionOf(row, slotYear(staff[2]))?.[staff[1]]?.[SUFFIX_METRIC[staff[3]]];
     return value == null ? null : Math.round(Number(value) * 100);
   }
   const match = field ? FTE.exec(field) : null;

@@ -84,14 +84,19 @@ const Y = new Date().getFullYear();
 const everyColumn = <T,>(value: T) => Object.fromEntries(AMOUNT_COLUMNS.map((column) => [column.key, value]));
 const flat = (value: number) => Array.from({ length: 12 }, () => value);
 
-/** One year of a line: its staff lines' FTE and cost, the declared FTE, how its amount was set, its monthly detail. */
-type Staff = { staffFte: number | null; cost: number; fte: number; method?: string; detail?: boolean };
+/**
+ * One year of a line: its staff lines' FTE and cost, the declared FTE, how its amount was set, its monthly
+ * detail; the days its per-day lines buy and their cost (none: no per-day line).
+ */
+type Staff = { staffFte: number | null; cost: number; fte: number; method?: string; detail?: boolean; days?: number; dayCost?: number };
 function version(year: number, staff: Staff) {
   return {
     year,
     totals: everyColumn(0),
     staff_cost: everyColumn(staff.cost),
+    day_cost: everyColumn(staff.dayCost ?? 0),
     ...(staff.staffFte != null ? { staff_fte: everyColumn(staff.staffFte) } : {}),
+    ...(staff.days != null ? { days: everyColumn(staff.days) } : {}),
     fte: everyColumn(staff.fte),
     ...(staff.detail !== false ? { fte_months: everyColumn(flat(staff.fte)) } : {}),
     ...(staff.method ? { method: everyColumn(staff.method) } : {}),
@@ -117,11 +122,13 @@ function line(id: string, costCenter: [string, string] | null, supplier: [string
 // Last year: CC2 2 FTE for 160 000, CC1 1 FTE for 90 000. This year: CC1 a (1 FTE, 100 000) and b, spread
 // since (1.5 FTE, 165 000: detached, with its lines' detail); CC2 2 FTE for 180 000; CC3 a line of 0 FTE;
 // CC4 declares 3 FTE without line detail (a copy: detached too, never in the figures); CC5 no FTE.
+// Per day: a 200 days both years (rate 450, then 500); b priced per month only (no days); c 400 days
+// last year (rate 400), this year 360 days for 144 000 (rate 400) and 36 000 priced per month; d 0 days.
 const ROWS = [
-  line('a', ['cc1', 'CC1 · Ops'], ['s1', 'Acme'], { staffFte: 1, cost: 90000, fte: 1 }, { staffFte: 1, cost: 100000, fte: 1 }),
+  line('a', ['cc1', 'CC1 · Ops'], ['s1', 'Acme'], { staffFte: 1, cost: 90000, fte: 1, days: 200, dayCost: 90000 }, { staffFte: 1, cost: 100000, fte: 1, days: 200, dayCost: 100000 }),
   line('b', ['cc1', 'CC1 · Ops'], ['s2', 'Globex'], null, { staffFte: 1.5, cost: 165000, fte: 1.5, method: 'spread' }),
-  line('c', ['cc2', 'CC2 · Dev'], ['s1', 'Acme'], { staffFte: 2, cost: 160000, fte: 2 }, { staffFte: 2, cost: 180000, fte: 2 }),
-  line('d', ['cc3', 'CC3 · Data'], null, null, { staffFte: 0, cost: 0, fte: 0 }),
+  line('c', ['cc2', 'CC2 · Dev'], ['s1', 'Acme'], { staffFte: 2, cost: 160000, fte: 2, days: 400, dayCost: 160000 }, { staffFte: 2, cost: 180000, fte: 2, days: 360, dayCost: 144000 }),
+  line('d', ['cc3', 'CC3 · Data'], null, null, { staffFte: 0, cost: 0, fte: 0, days: 0, dayCost: 0 }),
   line('e', ['cc4', 'CC4 · Copy'], ['s3', 'Initech'], null, { staffFte: null, cost: 0, fte: 3, method: 'copied', detail: false }),
   line('f', ['cc5', 'CC5 · Empty'], null, null, null),
 ];
@@ -162,6 +169,8 @@ const pick = async (combobox: string, option: string) => {
   fireEvent.click(within(await screen.findByRole('listbox')).getByRole('option', { name: option }));
 };
 const valueColumns = () => grid.columns.slice(1).flatMap((group: any) => group.children);
+/** The bodies of the last daily rate requests, one per pair. */
+const rateCalls = () => post.mock.calls.map(([, body]) => body).filter((body) => body.spec.measures[0]?.field?.startsWith('day_cost_'));
 
 beforeEach(() => {
   const getContext = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
@@ -328,6 +337,101 @@ describe('Cost per FTE', () => {
     serverRows = ROWS.filter((row) => row.id !== 'b' && row.id !== 'e');
     renderReport();
     await waitFor(() => expect(gridRows()).toHaveLength(3));
+    expect(screen.queryByRole('note')).toBeNull();
+  });
+});
+
+describe('Daily rate', () => {
+  it('switches to the daily rate in the address, keeping the type, the grouping and the pairs', async () => {
+    renderReport('/report?group=supplier');
+    await waitFor(() => expect(gridRows()).toHaveLength(3));
+    fireEvent.click(screen.getByRole('button', { name: 'reports.budgetColumnsCompare.addSelection' }));
+    await waitFor(() => expect(pairYears()).toEqual([Y - 1, Y, Y + 1]));
+    expect(rateCalls()).toHaveLength(0);
+
+    await pick('reports.costPerFte.show', 'reports.costPerFte.dailyRate');
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('?group=supplier&view=rate'));
+    await waitFor(() => expect(gridRows().map((row) => row.group)).toEqual(['Acme', 'reports.staffing.none.supplier']));
+    expect(pairYears()).toEqual([Y - 1, Y, Y + 1]);
+    const request = rateCalls()[rateCalls().length - 1];
+    expect(request.spec.groupBy).toEqual(['supplier_id', 'supplier_name']);
+    expect(request.spec.measures.map((measure: any) => measure.id)).toEqual(['cost', 'days', 'staff', 'detached', 'nodetail']);
+    expect(grid.columns).toHaveLength(4);
+
+    // Back to the cost per FTE: the address drops the view only.
+    await pick('reports.costPerFte.show', 'reports.costPerFte.costPerFte');
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('?group=supplier'));
+    await waitFor(() => expect(gridRows().map((row) => row.group)).toEqual(['Acme', 'Globex', 'reports.staffing.none.supplier']));
+    expect(pairYears()).toEqual([Y - 1, Y, Y + 1]);
+  });
+
+  it('shows days, day cost and daily rate per pair, with the ratio of the totals', async () => {
+    renderReport('/report?view=rate');
+    await waitFor(() => expect(gridRows().map((row) => row.group)).toEqual(['CC2 · Dev', 'CC1 · Ops', 'CC3 · Data']));
+    expect(valueColumns().map((column: any) => [column.colId, column.headerName])).toEqual([
+      ['c0_days', 'reports.costPerFte.days'], ['c0_cost', 'reports.costPerFte.dayCost'], ['c0_rate', 'reports.costPerFte.dailyRate'],
+      ['c1_days', 'reports.costPerFte.days'], ['c1_cost', 'reports.costPerFte.dayCost'], ['c1_rate', 'reports.costPerFte.dailyRate'],
+    ]);
+    const [cc2, cc1, cc3] = gridRows();
+    expect(cc2).toMatchObject({ c0_days: 400, c0_cost: 160000, c0_rate: 400, c1_days: 360, c1_cost: 144000, c1_rate: 400 });
+    // b is priced per month: CC1's rate is a's alone.
+    expect(cc1).toMatchObject({ c0_days: 200, c0_cost: 90000, c0_rate: 450, c1_days: 200, c1_cost: 100000, c1_rate: 500 });
+    expect(cc3).toMatchObject({ c0_days: null, c0_cost: null, c0_rate: null, c1_days: 0, c1_cost: 0, c1_rate: null });
+    expect(grid.pinned[0]).toMatchObject({ group: 'reports.columns.total', c0_days: 600, c0_cost: 250000, c1_days: 560, c1_cost: 244000 });
+    expect(grid.pinned[0].c0_rate).toBeCloseTo(250000 / 600);
+    expect(grid.pinned[0].c1_rate).toBeCloseTo(244000 / 560);
+
+    const [days, cost, rate] = valueColumns();
+    expect(days.valueFormatter({ value: 1234.5 })).toBe('1,234.5');
+    expect(days.valueFormatter({ value: 360 })).toBe('360');
+    expect(days.valueFormatter({ value: null })).toBe('');
+    expect(cost.valueFormatter({ value: 144000 })).toBe('144 000');
+    expect(rate.valueFormatter({ value: 416.67 })).toBe('417');
+    expect(rate.valueFormatter({ value: null })).toBe('');
+    for (const column of valueColumns()) {
+      expect(column.width).toBeGreaterThan(0);
+      expect(column.type).toBe('rightAligned');
+    }
+
+    fireEvent.click(screen.getByRole('button', { name: 'export-csv' }));
+    expect(grid.api!.exportDataAsCsv).toHaveBeenCalledWith({ fileName: expect.stringMatching(new RegExp(`^daily-rate-opex-cost-center-${Y - 1}-[a-z0-9-]+\\.csv$`)) });
+  });
+
+  it('charts the daily rate of the total and the groups with the most days', async () => {
+    renderReport('/report?view=rate');
+    await waitFor(() => expect(chart.options?.data).toHaveLength(4));
+    expect(chart.options.title.text).toContain('reports.costPerFte.rateChartTitle');
+    expect(chart.options.title.text).toContain('"group":"reports.staffing.groupsInSentence.costCenter"');
+    const categories = chart.options.data.map((datum: any) => chart.options.axes[0].label.formatter({ value: datum.key }));
+    expect(categories).toEqual(['reports.columns.total', 'CC2 · Dev', 'CC1 · Ops', 'CC3 · Data']);
+    expect(chart.options.axes[1].title.text).toBe('reports.costPerFte.dailyRate');
+    expect(chart.options.series.map((series: any) => series.yKey)).toEqual(['c0_rate', 'c1_rate']);
+    const tooltip = chart.options.series[1].tooltip.renderer({ datum: chart.options.data[2] });
+    expect(tooltip.title).toBe('CC1 · Ops');
+    expect(tooltip.data.map((entry: any) => entry.label)).toEqual(['reports.filters.column', 'reports.costPerFte.dailyRate', 'reports.costPerFte.days', 'reports.costPerFte.dayCost']);
+    expect(tooltip.data.slice(1).map((entry: any) => entry.value)).toEqual(['500', '200', '100 000']);
+    expect(tooltip.data[0].value).toMatch(new RegExp(` ${Y}$`));
+  });
+
+  it('flags the detached and undetailed FTE, and the staff cost priced per month, per pair', async () => {
+    renderReport('/report?view=rate');
+    await waitFor(() => expect(screen.getAllByRole('note')).toHaveLength(3));
+    const [detached, noDetail, monthly] = screen.getAllByRole('note').map((note) => note.textContent ?? '');
+    expect(detached).toContain('reports.measure.detachedList');
+    expect(detached.endsWith('reports.costPerFte.detachedNote')).toBe(true);
+    expect(noDetail).toContain('reports.costPerFte.noDetail');
+    // This year: 445 000 of staff cost, 244 000 of it per day. Last year everything is per day: not named.
+    expect(monthly).toContain('reports.costPerFte.monthlyLeftOut');
+    expect(monthly).toContain('reports.costPerFte.monthlyEntry');
+    expect(monthly).toContain('\\"amount\\":\\"201 000\\"');
+    expect(monthly).toContain(` ${Y}`);
+    expect(monthly).not.toContain(`${Y - 1}`);
+  });
+
+  it('names no per-month cost when every staff line is priced per day', async () => {
+    serverRows = ROWS.filter((row) => row.id === 'a' || row.id === 'd');
+    renderReport('/report?view=rate');
+    await waitFor(() => expect(gridRows()).toHaveLength(2));
     expect(screen.queryByRole('note')).toBeNull();
   });
 });

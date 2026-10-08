@@ -939,7 +939,7 @@
         },
         "costPerFte": {
           "title": "Cost per FTE",
-          "description": "Yearly cost of one FTE by cost center, item, supplier or analytics dimension, across budget columns and years"
+          "description": "Yearly cost of one FTE or average daily rate, by cost center, item, supplier or analytics dimension, across budget columns and years"
         }
       }
     },
@@ -1228,13 +1228,20 @@
     },
     "costPerFte": {
       "title": "Cost per FTE",
-      "subtitle": "Yearly {{type}} cost of one FTE by {{group}}",
+      "subtitle": "Yearly {{type}} cost of one FTE or average daily rate, by {{group}}",
       "chartTitle": "{{type}} cost per FTE by {{group}}",
+      "rateChartTitle": "{{type}} daily rate by {{group}}",
       "columns": "Columns",
+      "show": "Show",
       "staffCost": "Staff cost",
       "costPerFte": "Cost per FTE",
-      "detachedNote": "Cost per FTE uses the cost of their lines.",
-      "noDetail": "No line detail for: {{list}}. They are left out of the cost per FTE."
+      "days": "Days",
+      "dayCost": "Day cost",
+      "dailyRate": "Daily rate",
+      "detachedNote": "These figures use the cost of their lines.",
+      "noDetail": "No line detail for: {{list}}. They are left out of these figures.",
+      "monthlyLeftOut": "Lines priced per month are not in the daily rate: {{list}}.",
+      "monthlyEntry": "{{column}} ({{amount}})"
     }
   },
   "budgetTab": {

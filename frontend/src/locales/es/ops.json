@@ -939,7 +939,7 @@
         },
         "costPerFte": {
           "title": "Coste por ETC",
-          "description": "Coste anual de un ETC por centro de coste, partida, proveedor o dimensión analítica, en varias columnas de presupuesto y años"
+          "description": "Coste anual de un ETC o tarifa diaria media, por centro de coste, partida, proveedor o dimensión analítica, en varias columnas de presupuesto y años"
         }
       }
     },
@@ -1228,13 +1228,20 @@
     },
     "costPerFte": {
       "title": "Coste por ETC",
-      "subtitle": "Coste anual {{type}} de un ETC por {{group}}",
+      "subtitle": "Coste anual {{type}} de un ETC o tarifa diaria media, por {{group}}",
       "chartTitle": "Coste por ETC {{type}} por {{group}}",
+      "rateChartTitle": "Tarifa diaria {{type}} por {{group}}",
       "columns": "Columnas",
+      "show": "Mostrar",
       "staffCost": "Coste de personal",
       "costPerFte": "Coste por ETC",
-      "detachedNote": "El coste por ETC usa el coste de sus líneas.",
-      "noDetail": "Sin detalle de líneas en: {{list}}. Quedan fuera del coste por ETC."
+      "days": "Días",
+      "dayCost": "Coste de los días",
+      "dailyRate": "Tarifa diaria",
+      "detachedNote": "Estas cifras usan el coste de sus líneas.",
+      "noDetail": "Sin detalle de líneas en: {{list}}. Quedan fuera de estas cifras.",
+      "monthlyLeftOut": "Las líneas con precio mensual no se incluyen en la tarifa diaria: {{list}}.",
+      "monthlyEntry": "{{column}} ({{amount}})"
     }
   },
   "budgetTab": {
