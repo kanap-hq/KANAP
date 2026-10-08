@@ -8,6 +8,12 @@ import type { AggregateRequest, AggregateResult, AggregateRow } from '../pages/r
  * not blank, combined AND models; sums with `minus` and `part`, in cents; `having`; orders by
  * measure, key or count, then the keys; `limit`; the total. The real engine is checked against
  * the former browser computation by the backend parity spec.
+ *
+ * FTE (`fte_<slot><Column>`, `fte_detached_<slot><Column>`, `has_fte`): a slot declares FTE in
+ * `fte: { budget: 2.5 }` and, when the column's amount no longer follows its lines,
+ * `method: { budget: 'spread' }` (default `computed`). FTE measures sum the lines that have a value
+ * (null with none, `unknown` counts the others); `minus` reads an undeclared side as 0 unless both
+ * are; a null never passes `having` and orders last.
  */
 
 type Row = Record<string, any>;
@@ -17,6 +23,7 @@ const SLOT_OFFSETS: Record<string, number> = { yMinus2: -2, yMinus1: -1, y: 0, y
 const SUFFIX_METRIC: Record<string, string> = { Budget: 'budget', Revision: 'revision', Forecast: 'forecast', FollowUp: 'follow_up', Landing: 'landing' };
 const AMOUNT = /^(local_)?(yMinus2|yMinus1|yPlus1|yPlus2|y\d{4}|y)(Budget|Revision|Forecast|FollowUp|Landing)$/;
 const HAS_VERSION = /^has_version_(yMinus2|yMinus1|yPlus1|yPlus2|y\d{4}|y)$/;
+const FTE = /^fte_(detached_)?(yMinus2|yMinus1|yPlus1|yPlus2|y\d{4}|y)(Budget|Revision|Forecast|FollowUp|Landing)$/;
 
 function slotYear(slot: string): number {
   const Y = new Date().getFullYear();
@@ -41,6 +48,22 @@ function amountCents(row: Row, field: string): number | null {
   return Math.round(Number(source?.[metric] ?? 0) * 100);
 }
 
+/** A declared FTE in hundredths (null when none, or not detached for `fte_detached_`); undefined for any other field. */
+function fteHundredths(row: Row, field: string | undefined): number | null | undefined {
+  const match = field ? FTE.exec(field) : null;
+  if (!match) return undefined;
+  const version = versionOf(row, slotYear(match[2]));
+  const metric = SUFFIX_METRIC[match[3]];
+  const value = version?.fte?.[metric];
+  if (value == null) return null;
+  if (match[1] && (version?.method?.[metric] ?? 'computed') === 'computed') return null;
+  return Math.round(Number(value) * 100);
+}
+
+function hasFte(row: Row): boolean {
+  return Object.values(row.versions ?? {}).some((version: any) => Object.values(version?.fte ?? {}).some((value) => value != null));
+}
+
 function consolidationKey(account: Account | undefined): { key: string | null; label: string | null } {
   const num = account?.consolidation_account_number ?? null;
   const name = (account?.consolidation_account_name ?? '').trim() || null;
@@ -52,6 +75,7 @@ function consolidationKey(account: Account | undefined): { key: string | null; l
 }
 
 function textValue(row: Row, field: string, accounts: Map<string, Account>): string | null {
+  if (field === 'has_fte') return hasFte(row) ? 'yes' : null;
   const hasVersion = HAS_VERSION.exec(field);
   if (hasVersion) return versionOf(row, slotYear(hasVersion[1]))?.year != null ? 'yes' : null;
   if (field.startsWith('analytics_id_')) return row.analytics_value_ids?.[field.slice('analytics_id_'.length)] ?? null;
@@ -91,7 +115,9 @@ function passes(row: Row, field: string, model: any, accounts: Map<string, Accou
 
 type Group = { keys: Array<string | null>; rows: Row[] };
 
-function measureCents(rows: Row[], measure: AggregateRequest['spec']['measures'][number]): number {
+type Measure = AggregateRequest['spec']['measures'][number];
+
+function measureCents(rows: Row[], measure: Measure): number {
   let sum = 0;
   for (const row of rows) {
     let cents = amountCents(row, measure.field) ?? 0;
@@ -103,13 +129,36 @@ function measureCents(rows: Row[], measure: AggregateRequest['spec']['measures']
   return sum;
 }
 
+/** An FTE measure: the sum of the lines that have a value (null with none) and how many have none. */
+function measureFte(rows: Row[], measure: Measure): { value: number | null; unknown: number } {
+  let sum = 0;
+  let known = 0;
+  for (const row of rows) {
+    const a = fteHundredths(row, measure.field) ?? null;
+    const b = measure.minus ? fteHundredths(row, measure.minus) ?? null : null;
+    if (a == null && b == null) continue;
+    let value = (a ?? 0) - (b ?? 0);
+    if (measure.part === 'positive') value = Math.max(value, 0);
+    if (measure.part === 'negative') value = Math.min(value, 0);
+    sum += value;
+    known += 1;
+  }
+  return { value: known ? sum / 100 : null, unknown: rows.length - known };
+}
+
 function rowOf(keys: Array<string | null>, rows: Row[], request: AggregateRequest): AggregateRow {
-  return {
-    keys,
-    count: rows.length,
-    values: Object.fromEntries(request.spec.measures.map((m) => [m.id, measureCents(rows, m) / 100])),
-    unknown: {},
-  };
+  const values: Record<string, number | null> = {};
+  const unknown: Record<string, number> = {};
+  for (const m of request.spec.measures) {
+    if (FTE.test(m.field)) {
+      const fte = measureFte(rows, m);
+      values[m.id] = fte.value;
+      unknown[m.id] = fte.unknown;
+    } else {
+      values[m.id] = measureCents(rows, m) / 100;
+    }
+  }
+  return { keys, count: rows.length, values, unknown };
 }
 
 const compareText = (a: string | null, b: string | null) => (a === b ? 0 : a == null ? -1 : b == null ? 1 : a.localeCompare(b));
@@ -130,7 +179,8 @@ export function fakeAggregate(rows: Row[], request: AggregateRequest, options: {
   let groups = Array.from(byKey.values()).map((group) => rowOf(group.keys, group.rows, request));
   for (const having of spec.having ?? []) {
     groups = groups.filter((group) => {
-      const value = group.values[having.measure] ?? 0;
+      const value = group.values[having.measure];
+      if (value == null) return false;
       switch (having.op) {
         case 'gt': return value > having.value;
         case 'gte': return value >= having.value;
@@ -147,7 +197,13 @@ export function fakeAggregate(rows: Row[], request: AggregateRequest, options: {
       const sign = term.dir === 'DESC' ? -1 : 1;
       let diff = 0;
       if (term.by === 'count') diff = (a.count - b.count) * sign;
-      else if (term.by === 'measure') diff = ((a.values[term.id!] ?? 0) - (b.values[term.id!] ?? 0)) * sign;
+      else if (term.by === 'measure') {
+        const x = a.values[term.id!];
+        const y = b.values[term.id!];
+        if (x == null || y == null) {
+          if (x !== y) diff = (x == null) === (term.nulls === 'FIRST') ? -1 : 1;
+        } else diff = (x - y) * sign;
+      }
       else {
         const x = a.keys[term.index!];
         const y = b.keys[term.index!];

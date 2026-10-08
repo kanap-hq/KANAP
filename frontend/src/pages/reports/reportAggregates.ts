@@ -23,6 +23,14 @@ export const METRIC_SUFFIX: Record<MetricKey, string> = {
   landing: 'Landing',
 };
 
+/**
+ * What a budget report sums: the amounts of a column, or its declared FTE (the yearly average FTE a
+ * column computed from quantity × price lines keeps on its record; a column without lines has none).
+ * Every builder below takes it as an optional `measure` and, without it, asks exactly what it always
+ * asked (the amounts).
+ */
+export type ReportMeasure = 'amount' | 'fte';
+
 /** The field naming a line: OPEX lines by their product name, CAPEX lines by their description. */
 export const NAME_FIELD: Record<BudgetScope, 'product_name' | 'description'> = { opex: 'product_name', capex: 'description' };
 
@@ -95,6 +103,27 @@ export function amountField(year: number, metric: MetricKey): string {
   return `y${year}${METRIC_SUFFIX[metric]}`;
 }
 
+/** The declared FTE of a year and budget column (`fte_y2026Budget`): null for a line without one. */
+export function fteField(year: number, metric: MetricKey): string {
+  return `fte_${amountField(year, metric)}`;
+}
+
+/**
+ * The declared FTE of a year and budget column when the column's amount no longer follows its lines
+ * (spread or edited by hand since): null otherwise (`fte_detached_y2026Budget`).
+ */
+export function detachedFteField(year: number, metric: MetricKey): string {
+  return `fte_detached_${amountField(year, metric)}`;
+}
+
+/** The field a report sums for a year and column: the amount, or the declared FTE. */
+export function measureField(year: number, metric: MetricKey, measure: ReportMeasure = 'amount'): string {
+  return measure === 'fte' ? fteField(year, metric) : amountField(year, metric);
+}
+
+/** `yes` for a line that declares FTE in some year and column, null otherwise (the "Items with FTE" filter). */
+export const HAS_FTE_FIELD = 'has_fte';
+
 /** The same amount in the line's own currency, not converted (`local_y2026Budget`): the operations pages show it. */
 export function localAmountField(year: number, metric: MetricKey): string {
   return `local_${amountField(year, metric)}`;
@@ -146,7 +175,24 @@ export function sumAmounts(values: Iterable<number>): number {
   return cents / 100;
 }
 
+/**
+ * Sums the declared values exactly (in cents), as `sumAmounts`; null when none is declared: a sum
+ * of FTE nobody declares is blank, like the server's totals.
+ */
+export function sumDeclared(values: Iterable<number | null | undefined>): number | null {
+  let cents = 0;
+  let declared = false;
+  for (const value of values) {
+    if (value == null) continue;
+    declared = true;
+    cents += Math.round(value * 100);
+  }
+  return declared ? cents / 100 : null;
+}
+
 const valueOf = (row: AggregateRow | null | undefined, id: string): number => row?.values[id] ?? 0;
+/** A measure's value, null when no line holds one (an FTE nobody declared). */
+const knownValueOf = (row: AggregateRow | null | undefined, id: string): number | null => row?.values[id] ?? null;
 const textKey = (row: AggregateRow, index: number): string => row.keys[index] ?? '';
 
 // ----- the filter bar (cost center, run or build, dimension values) -----
@@ -161,6 +207,8 @@ export interface ReportFilterPicks {
   runBuild: RunBuildPick | null;
   /** Per dimension id, a value id or `none`. */
   analytics: ReadonlyArray<readonly [string, string]>;
+  /** Only the lines that declare FTE (in some year and column). */
+  withFte?: boolean;
 }
 
 /**
@@ -176,6 +224,7 @@ export function reportFilterModels(picks: ReportFilterPicks): ColumnFilters {
   for (const [axisId, value] of picks.analytics) {
     filters[analyticsIdField(axisId)] = keepValues([value === NO_ANALYTICS_VALUE ? null : value]);
   }
+  if (picks.withFte) filters[HAS_FTE_FIELD] = keepValues(['yes']);
   return filters;
 }
 
@@ -189,6 +238,15 @@ export function readRunBuildPresence(result: AggregateResult | undefined): { lin
     lineCount: result?.total.count ?? 0,
     hasRunBuild: (result?.groups ?? []).some((group) => group.keys[0] != null),
   };
+}
+
+/** Whether a line of the window declares FTE (the bar's "Items with FTE" filter shows then). */
+export function ftePresenceRequest(years?: readonly number[]): AggregateRequest {
+  return { query: yearsQuery(years), spec: { groupBy: [HAS_FTE_FIELD], measures: [] } };
+}
+
+export function readFtePresence(result: AggregateResult | undefined): boolean {
+  return (result?.groups ?? []).some((group) => group.keys[0] === 'yes');
 }
 
 /** The values the lines hold on a dimension (id and name), every line of the window. */
@@ -312,6 +370,93 @@ export function mergeAxisValueOptions(
   return Array.from(byId.values()).sort((a, b) => compare(a.label, b.label));
 }
 
+// ----- the FTE notice: declared FTE whose column amount no longer follows its lines -----
+
+/** A year and budget column a report shows. */
+export type ColumnYear = { year: number; metric: MetricKey };
+
+/** The most measures a spec with group keys may hold (the server's `groupedMeasures`), and without keys. */
+export const GROUPED_MEASURE_CAP = 8;
+export const MEASURE_CAP = 60;
+
+const METRIC_OF_SUFFIX = Object.fromEntries(Object.entries(METRIC_SUFFIX).map(([metric, suffix]) => [suffix, metric])) as Record<string, MetricKey>;
+const FTE_FIELD = /^fte_y(\d{4})([A-Za-z]+)$/;
+
+function fteColumn(field: string | undefined): ColumnYear | null {
+  const match = field ? FTE_FIELD.exec(field) : null;
+  const metric = match ? METRIC_OF_SUFFIX[match[2]] : undefined;
+  return match && metric ? { year: Number(match[1]), metric } : null;
+}
+
+/** The year and column pairs an FTE spec sums, once each, in the order its measures name them; none for amounts. */
+function specFteColumns(spec: AggregateSpec): ColumnYear[] {
+  const out = new Map<string, ColumnYear>();
+  for (const measure of spec.measures) {
+    for (const field of [measure.minus, measure.field]) {
+      const column = fteColumn(field);
+      if (column) out.set(`${column.metric}_${column.year}`, column);
+    }
+  }
+  return Array.from(out.values());
+}
+
+const noticeMeasureId = (column: ColumnYear) => `detached_${column.metric}_${column.year}`;
+
+function noticeMeasures(columns: readonly ColumnYear[]): AggregateMeasure[] {
+  return columns.map((column) => ({ id: noticeMeasureId(column), fn: 'sum', field: detachedFteField(column.year, column.metric) }));
+}
+
+/**
+ * An FTE spec with, for each column it sums, the FTE whose amount no longer follows the lines,
+ * when they fit under the measure cap (read on the total row). An amount spec, or one they do not
+ * fit in, comes back as it is: `fteNoticeRequest` then asks them apart.
+ */
+function withFteNotice(spec: AggregateSpec): AggregateSpec {
+  const columns = specFteColumns(spec);
+  if (!columns.length) return spec;
+  const cap = spec.groupBy.length ? GROUPED_MEASURE_CAP : MEASURE_CAP;
+  if (spec.measures.length + columns.length > cap) return spec;
+  return { ...spec, measures: [...spec.measures, ...noticeMeasures(columns)] };
+}
+
+/** The columns of a report request the notice reads: the FTE columns it sums, none for amounts. */
+export function fteNoticeColumns(request: AggregateRequest | null | undefined): ColumnYear[] {
+  return request ? specFteColumns(request.spec) : [];
+}
+
+/**
+ * The notice's own request when the report's request could not carry its measures (one total, same
+ * lines); null for an amount request or when the report's answer already holds them.
+ */
+export function fteNoticeRequest(request: AggregateRequest | null | undefined): AggregateRequest | null {
+  const columns = fteNoticeColumns(request);
+  if (!request || !columns.length) return null;
+  const measures = noticeMeasures(columns);
+  if (measures.every((measure) => request.spec.measures.some((m) => m.id === measure.id))) return null;
+  const capped = measures.slice(0, MEASURE_CAP);
+  return { query: request.query, spec: { groupBy: [], measures: capped } };
+}
+
+export type FteNoticeEntry = ColumnYear & { fte: number; items: number };
+
+/**
+ * Per column of the request, in its order, the FTE declared by lines whose amount no longer follows
+ * their lines and how many lines that is (the total row's count minus the lines without that value);
+ * only the columns where it is not zero. `result` is the answer holding the notice measures.
+ */
+export function readFteNotice(request: AggregateRequest | null | undefined, result: AggregateResult | undefined): FteNoticeEntry[] {
+  const total = result?.total;
+  if (!total) return [];
+  const entries: FteNoticeEntry[] = [];
+  for (const column of fteNoticeColumns(request)) {
+    const id = noticeMeasureId(column);
+    const fte = knownValueOf(total, id);
+    if (fte == null || fte === 0) continue;
+    entries.push({ ...column, fte, items: total.count - (total.unknown[id] ?? 0) });
+  }
+  return entries;
+}
+
 // ----- top items (TopOpexReport) -----
 
 export interface TopItemsParams {
@@ -324,6 +469,7 @@ export interface TopItemsParams {
   excludedAccounts: readonly string[];
   filters: ColumnFilters;
   years?: readonly number[];
+  measure?: ReportMeasure;
 }
 
 /** The number of lines a top shows: at least one, at most `MAX_GROUPS`. */
@@ -341,24 +487,34 @@ function exclusions(filters: ColumnFilters, excludedIds: readonly string[], acco
 export function topItemsRequest(p: TopItemsParams): AggregateRequest {
   return {
     query: withYears({ filters: exclusions(p.filters, p.excludedIds, 'account_display', p.excludedAccounts) }, p.years),
-    spec: {
+    spec: withFteNotice({
       groupBy: ['id', NAME_FIELD[p.scope]],
-      measures: [{ id: 'value', fn: 'sum', field: amountField(p.year, p.metric) }],
+      measures: [{ id: 'value', fn: 'sum', field: measureField(p.year, p.metric, p.measure) }],
       order: [{ by: 'measure', id: 'value', dir: 'DESC' }],
       limit: topLimit(p.topCount),
-    },
+    }),
   };
 }
 
 export type TopItemRow = { id: string; name: string; value: number; pct_of_total: number };
 
-export function readTopItems(result: AggregateResult | undefined): { processed: TopItemRow[]; totalMetric: number; topSelectionTotal: number } {
-  const totalMetric = valueOf(result?.total, 'value');
-  const processed = (result?.groups ?? []).map((group) => {
+/**
+ * The top lines, their share of the total and the top's sum. FTE: the lines without a declared FTE
+ * are left out, and the total and the top's sum are null when no line declares one.
+ */
+export function readTopItems(result: AggregateResult | undefined): { processed: TopItemRow[]; totalMetric: number; topSelectionTotal: number };
+export function readTopItems(result: AggregateResult | undefined, measure: ReportMeasure): { processed: TopItemRow[]; totalMetric: number | null; topSelectionTotal: number | null };
+export function readTopItems(result: AggregateResult | undefined, measure: ReportMeasure = 'amount') {
+  const fte = measure === 'fte';
+  const known = fte ? knownValueOf(result?.total, 'value') : valueOf(result?.total, 'value');
+  const totalMetric = known ?? 0;
+  const groups = (result?.groups ?? []).filter((group) => !fte || knownValueOf(group, 'value') != null);
+  const processed = groups.map((group) => {
     const value = valueOf(group, 'value');
     return { id: textKey(group, 0), name: textKey(group, 1), value, pct_of_total: totalMetric > 0 ? Math.round((value / totalMetric) * 100) : 0 };
   });
-  return { processed, totalMetric, topSelectionTotal: sumAmounts(processed.map((row) => row.value)) };
+  const values = processed.map((row) => row.value);
+  return { processed, totalMetric: fte ? known : totalMetric, topSelectionTotal: fte ? sumDeclared(values) : sumAmounts(values) };
 }
 
 // ----- increases and decreases (OpexDeltaReport) -----
@@ -374,16 +530,17 @@ export interface DeltaParams {
   excludedIds: readonly string[];
   excludedAccounts: readonly string[];
   filters: ColumnFilters;
+  measure?: ReportMeasure;
 }
 
 /** One request per mode: the lines whose destination minus source is above (or below) zero, largest change first. */
 export function deltaRequests(p: DeltaParams): AggregateRequest[] {
-  const src = amountField(p.source.year, p.source.metric);
-  const dst = amountField(p.destination.year, p.destination.metric);
+  const src = measureField(p.source.year, p.source.metric, p.measure);
+  const dst = measureField(p.destination.year, p.destination.metric, p.measure);
   const filters = exclusions(p.filters, p.excludedIds, 'account_display', p.excludedAccounts);
   return p.modes.map((mode) => ({
     query: { filters },
-    spec: {
+    spec: withFteNotice({
       groupBy: ['id', NAME_FIELD[p.scope]],
       measures: [
         { id: 'prev', fn: 'sum', field: src },
@@ -395,7 +552,7 @@ export function deltaRequests(p: DeltaParams): AggregateRequest[] {
       having: [{ measure: 'delta', op: mode === 'increase' ? 'gt' : 'lt', value: 0 }],
       order: [{ by: 'measure', id: 'delta', dir: mode === 'increase' ? 'DESC' : 'ASC' }],
       limit: topLimit(p.topCount),
-    },
+    }),
   }));
 }
 
@@ -411,27 +568,34 @@ export type DeltaRow = {
 
 export type DeltaTotals = { grossIncrease: number; grossDecrease: number; net: number };
 
+/** FTE: a side without a declared FTE is null (the change counts it as 0), and so are totals no line declares. */
+export type FteDeltaRow = Omit<DeltaRow, 'previous' | 'current'> & { previous: number | null; current: number | null };
+export type FteDeltaTotals = { grossIncrease: number | null; grossDecrease: number | null; net: number | null };
+
 /** The kept lines of each mode (in `modes` order) and the totals over every line of the state. */
-export function readDelta(modes: readonly DeltaMode[], results: ReadonlyArray<AggregateResult | undefined>): { processed: DeltaRow[]; allTotals: DeltaTotals } {
-  const processed: DeltaRow[] = [];
+export function readDelta(modes: readonly DeltaMode[], results: ReadonlyArray<AggregateResult | undefined>): { processed: DeltaRow[]; allTotals: DeltaTotals };
+export function readDelta(modes: readonly DeltaMode[], results: ReadonlyArray<AggregateResult | undefined>, measure: ReportMeasure): { processed: FteDeltaRow[]; allTotals: FteDeltaTotals };
+export function readDelta(modes: readonly DeltaMode[], results: ReadonlyArray<AggregateResult | undefined>, measure: ReportMeasure = 'amount') {
+  const read = measure === 'fte' ? knownValueOf : valueOf;
+  const processed: FteDeltaRow[] = [];
   modes.forEach((direction, i) => {
     for (const group of results[i]?.groups ?? []) {
-      const previous = valueOf(group, 'prev');
+      const previous = read(group, 'prev');
       const delta = valueOf(group, 'delta');
       processed.push({
         id: textKey(group, 0),
         name: textKey(group, 1),
-        current: valueOf(group, 'curr'),
+        current: read(group, 'curr'),
         previous,
         delta,
-        pct_increase: previous > 0 ? (delta / previous) * 100 : null,
+        pct_increase: previous != null && previous > 0 ? (delta / previous) * 100 : null,
         direction,
       });
     }
   });
   const total = results.find(Boolean)?.total;
-  const down = valueOf(total, 'down');
-  return { processed, allTotals: { grossIncrease: valueOf(total, 'up'), grossDecrease: down === 0 ? 0 : -down, net: valueOf(total, 'delta') } };
+  const down = read(total, 'down');
+  return { processed, allTotals: { grossIncrease: read(total, 'up'), grossDecrease: down == null ? null : down === 0 ? 0 : -down, net: read(total, 'delta') } };
 }
 
 /** Whether a line of the window shows a version in Y-2 and in Y+2: the year pickers offer those years only then. */
@@ -453,13 +617,25 @@ export function readDeltaYears(result: AggregateResult | undefined, currentYear:
 
 export type YearGroup = { key: string; label: string; values: Record<number, number> };
 export type YearGroups = { groups: YearGroup[]; totals: Record<number, number> };
+/** FTE: a year no line of the group declares is null. */
+export type FteYearGroup = { key: string; label: string; values: Record<number, number | null> };
+export type FteYearGroups = { groups: FteYearGroup[]; totals: Record<number, number | null> };
 
-function yearMeasures(years: readonly number[], metric: MetricKey): AggregateMeasure[] {
-  return years.map((year) => ({ id: `y${year}`, fn: 'sum', field: amountField(year, metric) }));
+function yearMeasures(years: readonly number[], metric: MetricKey, measure?: ReportMeasure): AggregateMeasure[] {
+  return years.map((year) => ({ id: `y${year}`, fn: 'sum', field: measureField(year, metric, measure) }));
 }
 
-function yearValues(row: AggregateRow | null | undefined, years: readonly number[]): Record<number, number> {
-  return Object.fromEntries(years.map((year) => [year, valueOf(row, `y${year}`)]));
+function yearValues(row: AggregateRow | null | undefined, years: readonly number[]): Record<number, number>;
+function yearValues(row: AggregateRow | null | undefined, years: readonly number[], measure: ReportMeasure): Record<number, number | null>;
+function yearValues(row: AggregateRow | null | undefined, years: readonly number[], measure: ReportMeasure = 'amount') {
+  const read = measure === 'fte' ? knownValueOf : valueOf;
+  return Object.fromEntries(years.map((year) => [year, read(row, `y${year}`)]));
+}
+
+/** FTE: only the groups that declare FTE in one of the years (a sum of nobody's FTE is no group). */
+function declaredGroups(result: AggregateResult | undefined, years: readonly number[], measure: ReportMeasure): AggregateRow[] {
+  const groups = result?.groups ?? [];
+  return measure === 'fte' ? groups.filter((group) => years.some((year) => knownValueOf(group, `y${year}`) != null)) : groups;
 }
 
 /** The Consolidation exclusion option for the lines without a consolidation line (unassigned). */
@@ -470,6 +646,7 @@ export interface ConsolidationParams {
   metric: MetricKey;
   excludedAccountIds: readonly string[];
   filters: ColumnFilters;
+  measure?: ReportMeasure;
 }
 
 /**
@@ -484,21 +661,23 @@ export function consolidationRequest(p: ConsolidationParams): AggregateRequest {
   if (accountIds.length < p.excludedAccountIds.length) filters = withFilter(filters, 'account_consolidation_key', dropValues([null]));
   return {
     query: { filters },
-    spec: {
+    spec: withFteNotice({
       groupBy: ['account_consolidation_key', 'account_consolidation_label'],
-      measures: yearMeasures(p.years, p.metric),
+      measures: yearMeasures(p.years, p.metric, p.measure),
       order: [{ by: 'measure', id: `y${p.years[0]}`, dir: 'DESC' }],
-    },
+    }),
   };
 }
 
-export function readConsolidation(years: readonly number[], result: AggregateResult | undefined, unassigned: string): YearGroups {
-  const groups = (result?.groups ?? []).map((group) => ({
+export function readConsolidation(years: readonly number[], result: AggregateResult | undefined, unassigned: string): YearGroups;
+export function readConsolidation(years: readonly number[], result: AggregateResult | undefined, unassigned: string, measure: ReportMeasure): FteYearGroups;
+export function readConsolidation(years: readonly number[], result: AggregateResult | undefined, unassigned: string, measure: ReportMeasure = 'amount') {
+  const groups = declaredGroups(result, years, measure).map((group) => ({
     key: group.keys[0] ?? 'unassigned',
     label: group.keys[0] == null ? unassigned : group.keys[1] ?? '',
-    values: yearValues(group, years),
+    values: yearValues(group, years, measure),
   }));
-  return { groups, totals: yearValues(result?.total, years) };
+  return { groups, totals: yearValues(result?.total, years, measure) };
 }
 
 export interface AnalyticsParams {
@@ -508,6 +687,7 @@ export interface AnalyticsParams {
   metric: MetricKey;
   excludedIds: readonly string[];
   filters: ColumnFilters;
+  measure?: ReportMeasure;
 }
 
 /**
@@ -519,24 +699,27 @@ export function analyticsRequest(p: AnalyticsParams): AggregateRequest {
   const filters = excluded.length ? withFilter(p.filters, analyticsIdField(p.axisId), dropValues(excluded)) : p.filters;
   return {
     query: { filters },
-    spec: {
+    spec: withFteNotice({
       groupBy: [analyticsIdField(p.axisId), analyticsNameField(p.axisId)],
-      measures: yearMeasures(p.years, p.metric),
+      measures: yearMeasures(p.years, p.metric, p.measure),
       order: [{ by: 'measure', id: `y${p.years[0]}`, dir: 'DESC' }],
-    },
+    }),
   };
 }
 
-export function readAnalytics(years: readonly number[], result: AggregateResult | undefined, labels: { unassigned: string; unnamed: string }): YearGroups {
-  const groups = (result?.groups ?? []).map((group) => {
+type AnalyticsLabels = { unassigned: string; unnamed: string };
+export function readAnalytics(years: readonly number[], result: AggregateResult | undefined, labels: AnalyticsLabels): YearGroups;
+export function readAnalytics(years: readonly number[], result: AggregateResult | undefined, labels: AnalyticsLabels, measure: ReportMeasure): FteYearGroups;
+export function readAnalytics(years: readonly number[], result: AggregateResult | undefined, labels: AnalyticsLabels, measure: ReportMeasure = 'amount') {
+  const groups = declaredGroups(result, years, measure).map((group) => {
     const id = group.keys[0];
     return {
       key: id ? `cat_${id}` : 'uncategorized',
       label: id ? (group.keys[1] ?? '').trim() || labels.unnamed : labels.unassigned,
-      values: yearValues(group, years),
+      values: yearValues(group, years, measure),
     };
   });
-  return { groups, totals: yearValues(result?.total, years) };
+  return { groups, totals: yearValues(result?.total, years, measure) };
 }
 
 // ----- sums per year and column (ComparisonReport, CapexBudgetTrendReport, BudgetColumnsCompareReport) -----
@@ -550,20 +733,25 @@ export interface TrendParams {
   /** The years the report reads: the window starts on the earliest. */
   windowYears: readonly number[];
   filters: ColumnFilters;
+  measure?: ReportMeasure;
 }
 
 /** One total per column and year of the range, over every line of the state. */
 export function trendRequest(p: TrendParams): AggregateRequest {
   return {
     query: withYears({ filters: p.filters }, p.windowYears),
-    spec: { groupBy: [], measures: p.metrics.flatMap((metric) => p.years.map((year) => ({ id: columnMeasureId(metric, year), fn: 'sum' as const, field: amountField(year, metric) }))) },
+    spec: withFteNotice({ groupBy: [], measures: p.metrics.flatMap((metric) => p.years.map((year) => ({ id: columnMeasureId(metric, year), fn: 'sum' as const, field: measureField(year, metric, p.measure) }))) }),
   };
 }
 
-export function readTrend(p: Pick<TrendParams, 'years' | 'metrics'>, result: AggregateResult | undefined): Record<string, Record<number, number>> {
-  const out: Record<string, Record<number, number>> = {};
+/** Per column, per year, the total; FTE: null for a year and column no line declares. */
+export function readTrend(p: Pick<TrendParams, 'years' | 'metrics'>, result: AggregateResult | undefined): Record<string, Record<number, number>>;
+export function readTrend(p: Pick<TrendParams, 'years' | 'metrics'>, result: AggregateResult | undefined, measure: ReportMeasure): Record<string, Record<number, number | null>>;
+export function readTrend(p: Pick<TrendParams, 'years' | 'metrics'>, result: AggregateResult | undefined, measure: ReportMeasure = 'amount') {
+  const read = measure === 'fte' ? knownValueOf : valueOf;
+  const out: Record<string, Record<number, number | null>> = {};
   for (const metric of p.metrics) {
-    out[metric] = Object.fromEntries(p.years.map((year) => [year, valueOf(result?.total, columnMeasureId(metric, year))]));
+    out[metric] = Object.fromEntries(p.years.map((year) => [year, read(result?.total, columnMeasureId(metric, year))]));
   }
   return out;
 }
@@ -571,19 +759,23 @@ export function readTrend(p: Pick<TrendParams, 'years' | 'metrics'>, result: Agg
 export interface ColumnsCompareParams {
   selections: ReadonlyArray<{ year: number; metric: MetricKey }>;
   filters: ColumnFilters;
+  measure?: ReportMeasure;
 }
 
 /** One total per distinct year and column picked; the window starts on the earliest year picked. */
 export function columnsCompareRequest(p: ColumnsCompareParams): AggregateRequest {
   const years = Array.from(new Set(p.selections.map((s) => s.year))).sort((a, b) => a - b);
   const measures = new Map<string, AggregateMeasure>();
-  for (const s of p.selections) measures.set(columnMeasureId(s.metric, s.year), { id: columnMeasureId(s.metric, s.year), fn: 'sum', field: amountField(s.year, s.metric) });
-  return { query: withYears({ filters: p.filters }, years), spec: { groupBy: [], measures: Array.from(measures.values()) } };
+  for (const s of p.selections) measures.set(columnMeasureId(s.metric, s.year), { id: columnMeasureId(s.metric, s.year), fn: 'sum', field: measureField(s.year, s.metric, p.measure) });
+  return { query: withYears({ filters: p.filters }, years), spec: withFteNotice({ groupBy: [], measures: Array.from(measures.values()) }) };
 }
 
-/** The total of each selection, in the order given. */
-export function readColumnsCompare(selections: ReadonlyArray<{ year: number; metric: MetricKey }>, result: AggregateResult | undefined): number[] {
-  return selections.map((s) => valueOf(result?.total, columnMeasureId(s.metric, s.year)));
+/** The total of each selection, in the order given; FTE: null for a selection no line declares. */
+export function readColumnsCompare(selections: ReadonlyArray<{ year: number; metric: MetricKey }>, result: AggregateResult | undefined): number[];
+export function readColumnsCompare(selections: ReadonlyArray<{ year: number; metric: MetricKey }>, result: AggregateResult | undefined, measure: ReportMeasure): Array<number | null>;
+export function readColumnsCompare(selections: ReadonlyArray<{ year: number; metric: MetricKey }>, result: AggregateResult | undefined, measure: ReportMeasure = 'amount') {
+  const read = measure === 'fte' ? knownValueOf : valueOf;
+  return selections.map((s) => read(result?.total, columnMeasureId(s.metric, s.year)));
 }
 
 // ----- dashboard -----

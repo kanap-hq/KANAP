@@ -37,10 +37,13 @@ type Options = {
   keepPrevious?: boolean;
 };
 
-/** Same measures (ids, in order) and same group keys: the last answer still fits the labels. */
+/**
+ * Same measures (ids, in order, and amounts or FTE alike) and same group keys: the last answer still
+ * fits the labels. An amount answer never stands in for FTE, nor the reverse.
+ */
 function sameShape(a: AggregateRequest | null | undefined, b: AggregateRequest | null | undefined): boolean {
   if (!a || !b) return false;
-  const ids = (request: AggregateRequest) => request.spec.measures.map((measure) => measure.id).join('\u0000');
+  const ids = (request: AggregateRequest) => request.spec.measures.map((measure) => `${measure.id}:${measure.field.startsWith('fte_') ? 'fte' : ''}`).join('\u0000');
   return ids(a) === ids(b) && a.spec.groupBy.join('\u0000') === b.spec.groupBy.join('\u0000');
 }
 

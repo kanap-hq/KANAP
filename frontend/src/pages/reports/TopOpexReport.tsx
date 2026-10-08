@@ -16,13 +16,7 @@ import { BudgetReportFilters, useBudgetReportFilters } from '../../components/re
 import { excludedAccountValues, readTopItems, topItemsRequest } from './reportAggregates';
 import { useBudgetAggregate } from './useBudgetAggregate';
 import { useAccountLabelOptions, useItemOptions } from './useReportOptions';
-
-function formatNumber(v: any) {
-  const n = Number(v ?? 0);
-  if (!isFinite(n)) return '';
-  const i = Math.round(n);
-  return i.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-}
+import { ReportFteNotice, ReportMeasureSelect, useMeasureText, useReportMeasure } from './reportMeasure';
 
 export default function TopOpexReport() {
   const { t } = useTranslation(["ops"]);
@@ -35,7 +29,11 @@ export default function TopOpexReport() {
   const [excludedIds, setExcludedIds] = useState<string[]>([]);
   const [excludedAccounts, setExcludedAccounts] = useState<string[]>([]);
   const [chartType, setChartType] = useState<'pie' | 'bar'>('pie');
-  const metricLabel = budgetColumns.label(metric);
+  const [measure, setMeasure] = useReportMeasure();
+  const measureText = useMeasureText(measure);
+  const formatNumber = measureText.format;
+  // The column as the measure reads it: `Budget`, or `Budget FTE`.
+  const metricLabel = measureText.column(budgetColumns.label(metric));
   const [scope, setScope] = useReportScope();
   const scopeLabel = t(`operations.scope.${scope}`);
 
@@ -61,17 +59,20 @@ export default function TopOpexReport() {
     excludedIds,
     excludedAccounts: excludedAccountValues(excludedAccounts, accountOptions.options ?? []),
     filters: reportFilters.queryFilters,
-  })), [reportFilters.queryFilters, scope, year, metric, topCount, excludedIds, excludedAccounts, accountOptions.options]);
+    measure,
+  })), [reportFilters.queryFilters, scope, year, metric, topCount, excludedIds, excludedAccounts, accountOptions.options, measure]);
   const report = useBudgetAggregate(scope, request, { keepPrevious: true });
   // Loading, the filter bar still reading its address, or the last answer kept while the new one loads.
   const busy = reportFilters.queryFilters == null || report.isLoading || report.isPlaceholderData;
-  const { processed, totalMetric, topSelectionTotal } = useMemo(() => readTopItems(report.data), [report.data]);
+  // FTE: the lines that declare none are left out, and no line declaring any leaves the total blank.
+  const { processed, totalMetric: knownTotal, topSelectionTotal } = useMemo(() => readTopItems(report.data, measure), [report.data, measure]);
+  const totalMetric = knownTotal ?? 0;
 
   const columns = useMemo<ColDef[]>(() => [
     { field: 'name', headerName: t('reports.columns.item'), flex: 1, minWidth: 220 },
     { field: 'value', headerName: `${metricLabel} (${year})`, width: 160, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
     { field: 'pct_of_total', headerName: t('reports.columns.shareOfTotal'), width: 160, type: 'rightAligned', valueFormatter: (p) => (p.value != null ? `${p.value}%` : '') },
-  ], [year, metricLabel, t]);
+  ], [year, metricLabel, formatNumber, t]);
 
   const gridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);
@@ -81,7 +82,7 @@ export default function TopOpexReport() {
     const base = {
       title: { text: t('reports.topOpex.chartTitle', { count: chartData.length, type: scopeLabel, metric: metricLabel, year }) },
       subtitle: { text: t('reports.topOpex.shareSubtitle', { metric: metricLabel }) },
-      footnote: { text: `${t('reports.topOpex.totalMetric', { metric: metricLabel })}: ${formatNumber(totalMetric)}` },
+      footnote: { text: `${t('reports.topOpex.totalMetric', { metric: metricLabel })}: ${formatNumber(knownTotal)}` },
       data: chartData,
       legend: { enabled: false },
       animation: { enabled: true, duration: 800 },
@@ -132,6 +133,7 @@ export default function TopOpexReport() {
         {
           type: 'number',
           position: 'bottom',
+          ...(measureText.axisTitle ? { title: measureText.axisTitle } : {}),
           label: {
             formatter: ({ value }: { value: number }) => formatNumber(value),
           },
@@ -164,10 +166,10 @@ export default function TopOpexReport() {
         },
       ],
     };
-  }, [chartData, totalMetric, year, chartType, metricLabel, scopeLabel, t]);
+  }, [chartData, totalMetric, knownTotal, year, chartType, metricLabel, scopeLabel, measureText, formatNumber, t]);
 
   const selectionSharePct = useMemo(() => (
-    totalMetric > 0 ? Math.round((topSelectionTotal / totalMetric) * 100) : null
+    topSelectionTotal != null && totalMetric > 0 ? Math.round((topSelectionTotal / totalMetric) * 100) : null
   ), [topSelectionTotal, totalMetric]);
 
   return (
@@ -185,6 +187,7 @@ export default function TopOpexReport() {
         }}
         >
           <ItemScopeTabs value={scope} onChange={setScope} />
+          <ReportMeasureSelect value={measure} onChange={setMeasure} />
           <BudgetReportFilters filters={reportFilters} />
           <TextField select size="small" label={t("reports.filters.year")} value={year} onChange={(e) => setYear(parseInt(e.target.value, 10))} sx={{ minWidth: 140 }}>
             <MenuItem value={Y - 1}>{Y - 1}</MenuItem>
@@ -250,8 +253,8 @@ export default function TopOpexReport() {
           />
         </Box>
       )}
-      onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.()}
-      onExportChartPng={() => chartRef.current?.download(`top${processed.length}-${scope}-${year}-${metricFileName(budgetColumns, metric)}-${chartType}`)}
+      onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.(measureText.csvParams(`top${processed.length}-${scope}-${year}-${metricFileName(budgetColumns, metric)}`))}
+      onExportChartPng={() => chartRef.current?.download(measureText.fileName(`top${processed.length}-${scope}-${year}-${metricFileName(budgetColumns, metric)}-${chartType}`))}
     >
       <Stack direction="column" spacing={2} alignItems="stretch">
         <Box sx={{ minWidth: 0 }}>
@@ -266,6 +269,7 @@ export default function TopOpexReport() {
             onGridReady={(e) => { gridApiRef.current = e.api; }}
             domLayout="autoHeight"
           />
+          <ReportFteNotice scope={scope} request={request} result={report.data} columnLabel={(column) => `${budgetColumns.label(column.metric)} ${column.year}`} />
           <Box sx={{ mt: 2, display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' } }}>
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
               <Typography variant="body2" color="text.secondary">{t('reports.topOpex.topTotal', { count: processed.length })}</Typography>
@@ -276,7 +280,7 @@ export default function TopOpexReport() {
             </Box>
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
               <Typography variant="body2" color="text.secondary">{t('reports.topOpex.totalMetric', { metric: metricLabel })}</Typography>
-              <Typography variant="subtitle2">{formatNumber(totalMetric)}</Typography>
+              <Typography variant="subtitle2">{formatNumber(knownTotal)}</Typography>
             </Box>
           </Box>
         </Paper>

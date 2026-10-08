@@ -1000,11 +1000,27 @@
       "runBuildRun": "Run",
       "runBuildBuild": "Build",
       "runBuildNone": "Non défini",
+      "fteItems": "Postes",
+      "fteItemsAll": "Tous les postes",
+      "fteItemsWith": "Postes avec ETP",
       "dimension": "Dimension",
       "analyticsAll": "Toutes",
       "analyticsNone": "Aucune valeur",
       "analyticsMissing": "Le filtre analytique n'a pas pu être appliqué. Retirez-le ou réessayez.",
       "clearAnalytics": "Retirer le filtre"
+    },
+    "measure": {
+      "label": "Mesure",
+      "amount": "Montant",
+      "fte": "ETP",
+      "columnFte": "ETP {{column}}",
+      "chartTitleFte": "{{title}} · ETP",
+      "totalFte": "Total ETP",
+      "detachedSingle_one": "{{count}} poste déclare {{fte}} ETP alors que son montant ne suit plus ses lignes.",
+      "detachedSingle_other": "{{count}} postes déclarent {{fte}} ETP alors que leur montant ne suit plus leurs lignes.",
+      "detachedList": "Le montant ne suit plus les lignes pour : {{list}}.",
+      "detachedEntry_one": "{{column}} ({{count}} poste, {{fte}} ETP)",
+      "detachedEntry_other": "{{column}} ({{count}} postes, {{fte}} ETP)"
     },
     "columns": {
       "company": "Société",

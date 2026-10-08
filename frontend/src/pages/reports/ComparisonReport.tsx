@@ -11,13 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { metricFileName, useReportMetrics } from './reportMetrics';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { BudgetReportFilters, useBudgetReportFilters } from '../../components/reports/BudgetReportFilters';
-
-function formatNumber(v: any) {
-  const n = Number(v ?? 0);
-  if (!isFinite(n)) return '';
-  const i = Math.round(n);
-  return i.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-}
+import { ReportFteNotice, ReportMeasureSelect, useMeasureText, useReportMeasure } from './reportMeasure';
 
 export default function ComparisonReport() {
   const { t } = useTranslation(["ops"]);
@@ -31,6 +25,11 @@ export default function ComparisonReport() {
   const [endYear, setEndYear] = useState<number>(Y + 1);
   const budgetColumns = useBudgetColumns();
   const [metrics, setMetrics] = useReportMetrics(budgetColumns);
+  const [measure, setMeasure] = useReportMeasure();
+  const measureText = useMeasureText(measure);
+  const formatNumber = measureText.format;
+  // FTE: a year and column nobody declares stays blank, never a 0 (an empty cell, no point).
+  const cell = (value: number | null | undefined) => (measureText.fte ? value ?? null : value || 0);
 
   // Keep range valid and within allowed set
   const years = useMemo(() => allowedYears.filter((yr) => yr >= startYear && yr <= endYear), [allowedYears, startYear, endYear]);
@@ -45,19 +44,20 @@ export default function ComparisonReport() {
     metrics: metrics as MetricKey[],
     windowYears: allowedYears,
     filters: reportFilters.queryFilters,
-  })), [reportFilters.queryFilters, years, metrics]); // eslint-disable-line react-hooks/exhaustive-deps
+    measure,
+  })), [reportFilters.queryFilters, years, metrics, measure]); // eslint-disable-line react-hooks/exhaustive-deps
   const report = useBudgetAggregate('opex', request, { keepPrevious: true });
   // Loading, the filter bar still reading its address, or the last answer kept while the new one loads.
   const busy = reportFilters.queryFilters == null || report.isLoading || report.isPlaceholderData;
-  const totalsByMetricAndYear = useMemo(() => readTrend({ years, metrics: metrics as MetricKey[] }, report.data), [years, metrics, report.data]);
+  const totalsByMetricAndYear = useMemo(() => readTrend({ years, metrics: metrics as MetricKey[] }, report.data, measure), [years, metrics, report.data, measure]);
 
   const tableRows = useMemo(() => {
     return metrics.map((m) => {
-      const row: any = { metric: metricLabels[m], _key: m };
-      for (const yr of years) row[yr] = totalsByMetricAndYear[m]?.[yr] || 0;
+      const row: any = { metric: measureText.column(metricLabels[m]), _key: m };
+      for (const yr of years) row[yr] = cell(totalsByMetricAndYear[m]?.[yr]);
       return row;
     });
-  }, [metrics, metricLabels, years, totalsByMetricAndYear]);
+  }, [metrics, metricLabels, years, totalsByMetricAndYear, measureText]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const columns = useMemo<ColDef[]>(() => {
     const cols: ColDef[] = [
@@ -67,32 +67,35 @@ export default function ComparisonReport() {
       cols.push({ field: String(yr), headerName: String(yr), width: 140, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) });
     }
     return cols;
-  }, [years]);
+  }, [years, formatNumber]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Chart data: one row per year with each metric as a field
   const chartData = useMemo(() => {
     return years.map((yr) => {
       const row: any = { year: yr };
-      for (const m of metrics) row[m] = totalsByMetricAndYear[m]?.[yr] || 0;
+      for (const m of metrics) row[m] = cell(totalsByMetricAndYear[m]?.[yr]);
       return row;
     });
-  }, [years, metrics, totalsByMetricAndYear]);
+  }, [years, metrics, totalsByMetricAndYear, measureText]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const chartSeries = useMemo(() => metrics.map((m) => ({ type: 'line', xKey: 'year', yKey: m, yName: metricLabels[m] })), [metrics, metricLabels]);
+  const chartSeries = useMemo(
+    () => metrics.map((m) => ({ type: 'line', xKey: 'year', yKey: m, yName: measureText.column(metricLabels[m]) })),
+    [metrics, metricLabels, measureText],
+  );
   const chartRef = useRef<ChartCardHandle>(null);
   const gridApiRef = useRef<any>(null);
 
   const chartOptions = useMemo(() => ({
-    title: { text: t('reports.budgetTrendOpex.title') },
-    subtitle: { text: metrics.map((m) => metricLabels[m]).join(' • ') },
+    title: { text: measureText.chartTitle(t('reports.budgetTrendOpex.title')) },
+    subtitle: { text: metrics.map((m) => measureText.column(metricLabels[m])).join(' • ') },
     data: chartData,
     series: chartSeries,
     axes: [
       { type: 'category', position: 'bottom' },
-      { type: 'number', position: 'left' },
+      { type: 'number', position: 'left', ...(measureText.axisTitle ? { title: measureText.axisTitle, label: { formatter: ({ value }: { value: number }) => formatNumber(value) } } : {}) },
     ],
     legend: { enabled: true },
-  }), [chartData, chartSeries, metrics, metricLabels, t]);
+  }), [chartData, chartSeries, metrics, metricLabels, measureText, formatNumber, t]);
 
   return (
     <ReportLayout
@@ -101,6 +104,7 @@ export default function ComparisonReport() {
       subtitle={t("reports.budgetTrendOpex.subtitle")}
       filters={(
         <>
+          <ReportMeasureSelect value={measure} onChange={setMeasure} />
           <BudgetReportFilters filters={reportFilters} />
           <TextField select size="small" label={t("reports.filters.startYear")} value={startYear} onChange={(e) => {
             const v = parseInt(e.target.value, 10);
@@ -135,8 +139,8 @@ export default function ComparisonReport() {
           </TextField>
         </>
       )}
-      onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.()}
-      onExportChartPng={() => chartRef.current?.download(`comparison-${years[0]}-${years[years.length - 1]}-${metrics.map((m) => metricFileName(budgetColumns, m)).join('_')}`)}
+      onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.(measureText.csvParams(`comparison-${years[0]}-${years[years.length - 1]}-${metrics.map((m) => metricFileName(budgetColumns, m)).join('_')}`))}
+      onExportChartPng={() => chartRef.current?.download(measureText.fileName(`comparison-${years[0]}-${years[years.length - 1]}-${metrics.map((m) => metricFileName(budgetColumns, m)).join('_')}`))}
     >
       <Stack direction="column" spacing={2} alignItems="stretch">
         <Box sx={{ minWidth: 0 }}>
@@ -151,6 +155,7 @@ export default function ComparisonReport() {
             defaultColDef={{ sortable: true, resizable: true }}
             onGridReady={(e) => { gridApiRef.current = e.api; }}
           />
+          <ReportFteNotice scope="opex" request={request} result={report.data} columnLabel={(column) => `${metricLabels[column.metric]} ${column.year}`} />
         </Paper>
       </Stack>
       <ReportDataStatus loading={busy} error={report.isError} onRetry={() => void report.refetch()} />

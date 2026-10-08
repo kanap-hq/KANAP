@@ -999,11 +999,27 @@
       "runBuildRun": "Run",
       "runBuildBuild": "Build",
       "runBuildNone": "Nicht festgelegt",
+      "fteItems": "Positionen",
+      "fteItemsAll": "Alle Positionen",
+      "fteItemsWith": "Positionen mit VZÄ",
       "dimension": "Dimension",
       "analyticsAll": "Alle",
       "analyticsNone": "Kein Wert",
       "analyticsMissing": "Der Analysefilter konnte nicht angewendet werden. Entfernen Sie ihn oder versuchen Sie es erneut.",
       "clearAnalytics": "Filter entfernen"
+    },
+    "measure": {
+      "label": "Messgröße",
+      "amount": "Betrag",
+      "fte": "VZÄ",
+      "columnFte": "VZÄ {{column}}",
+      "chartTitleFte": "{{title}} · VZÄ",
+      "totalFte": "VZÄ gesamt",
+      "detachedSingle_one": "{{count}} Position meldet {{fte}} VZÄ, ihr Betrag folgt aber nicht mehr ihren Zeilen.",
+      "detachedSingle_other": "{{count}} Positionen melden {{fte}} VZÄ, ihr Betrag folgt aber nicht mehr ihren Zeilen.",
+      "detachedList": "Der Betrag folgt nicht mehr den Zeilen bei: {{list}}.",
+      "detachedEntry_one": "{{column}} ({{count}} Position, {{fte}} VZÄ)",
+      "detachedEntry_other": "{{column}} ({{count}} Positionen, {{fte}} VZÄ)"
     },
     "columns": {
       "company": "Unternehmen",

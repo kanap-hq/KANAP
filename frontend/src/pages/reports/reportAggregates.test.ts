@@ -9,6 +9,8 @@ import {
   deltaRequests,
   dropValues,
   excludedAccountValues,
+  fteNoticeRequest,
+  ftePresenceRequest,
   keepValues,
   localAmountField,
   METRIC_SUFFIX,
@@ -21,9 +23,15 @@ import {
   readConsolidation,
   readDelta,
   readDeltaYears,
+  readFteNotice,
+  readFtePresence,
   readTopItems,
+  readTrend,
+  reportFilterModels,
+  sumDeclared,
   topItemsRequest,
   topLimit,
+  trendRequest,
   withFilter,
   type AggregateResult,
   type AggregateRow,
@@ -195,5 +203,156 @@ describe('pickers', () => {
       row([null, null, null], {}),
     ], row([], {})), 'Unnamed', compare);
     expect(options).toEqual([{ id: 'a2', label: '[200]' }, { id: 'a1', label: '[6100] Software' }]);
+  });
+});
+
+describe('the FTE measure', () => {
+  const fteRow = (keys: Array<string | null>, values: Record<string, number | null>, count = 1, unknown: Record<string, number> = {}): AggregateRow => ({ keys, count, values, unknown });
+
+  it('asks the same amounts as before without a measure, or with the amount measure', () => {
+    const params = { scope: 'opex' as const, year: 2026, metric: 'budget' as const, topCount: 5, excludedIds: [], excludedAccounts: [], filters: {} };
+    expect(topItemsRequest({ ...params, measure: 'amount' })).toEqual(topItemsRequest(params));
+    expect(JSON.stringify(topItemsRequest(params).spec.measures)).toBe('[{"id":"value","fn":"sum","field":"y2026Budget"}]');
+    const trend = { years: [2025, 2026], metrics: ['budget' as const], windowYears: [2025, 2026], filters: {} };
+    expect(trendRequest({ ...trend, measure: 'amount' })).toEqual(trendRequest(trend));
+    expect(fteNoticeRequest(topItemsRequest(params))).toBeNull();
+  });
+
+  it('Top items: sums the declared FTE and reads the detached FTE on the same request', () => {
+    const request = topItemsRequest({
+      scope: 'opex', year: 2026, metric: 'revision', topCount: 10, excludedIds: [], excludedAccounts: [], filters: {}, measure: 'fte',
+    });
+    expect(request.spec.measures).toEqual([
+      { id: 'value', fn: 'sum', field: 'fte_y2026Revision' },
+      { id: 'detached_revision_2026', fn: 'sum', field: 'fte_detached_y2026Revision' },
+    ]);
+    expect(request.spec.order).toEqual([{ by: 'measure', id: 'value', dir: 'DESC' }]);
+    // The notice rides on the report's own answer: no second request.
+    expect(fteNoticeRequest(request)).toBeNull();
+  });
+
+  it('Top items: leaves out the lines without a declared FTE, and a total nobody declares is blank', () => {
+    const read = readTopItems(result([fteRow(['a', 'A'], { value: 2.5 }), fteRow(['b', 'B'], { value: null })], fteRow([], { value: 2.5 }, 4, { value: 3 })), 'fte');
+    expect(read.processed).toEqual([{ id: 'a', name: 'A', value: 2.5, pct_of_total: 100 }]);
+    expect(read.totalMetric).toBe(2.5);
+    expect(readTopItems(result([], fteRow([], { value: null }, 4, { value: 4 })), 'fte').totalMetric).toBeNull();
+    // The top's sum: blank when no shown line declares FTE, like the total; amounts still read 0.
+    expect(read.topSelectionTotal).toBe(2.5);
+    expect(readTopItems(result([fteRow(['b', 'B'], { value: null })], fteRow([], { value: null }, 1, { value: 1 })), 'fte').topSelectionTotal).toBeNull();
+    expect(readTopItems(result([], row([], { value: 0 }))).topSelectionTotal).toBe(0);
+  });
+
+  it('sums declared values only, blank when none is declared', () => {
+    expect(sumDeclared([null, 0.1, undefined, 0.2])).toBe(0.3);
+    expect(sumDeclared([null, undefined])).toBeNull();
+    expect(sumDeclared([])).toBeNull();
+    expect(sumDeclared([0])).toBe(0);
+  });
+
+  it('Top increase / decrease: FTE minus FTE, with the detached FTE of both columns', () => {
+    const [up] = deltaRequests({
+      scope: 'capex',
+      source: { year: 2025, metric: 'budget' },
+      destination: { year: 2026, metric: 'budget' },
+      modes: ['increase'],
+      topCount: 10,
+      excludedIds: [],
+      excludedAccounts: [],
+      filters: {},
+      measure: 'fte',
+    });
+    expect(up.spec.measures).toEqual([
+      { id: 'prev', fn: 'sum', field: 'fte_y2025Budget' },
+      { id: 'curr', fn: 'sum', field: 'fte_y2026Budget' },
+      { id: 'delta', fn: 'sum', field: 'fte_y2026Budget', minus: 'fte_y2025Budget' },
+      { id: 'up', fn: 'sum', field: 'fte_y2026Budget', minus: 'fte_y2025Budget', part: 'positive' },
+      { id: 'down', fn: 'sum', field: 'fte_y2026Budget', minus: 'fte_y2025Budget', part: 'negative' },
+      { id: 'detached_budget_2025', fn: 'sum', field: 'fte_detached_y2025Budget' },
+      { id: 'detached_budget_2026', fn: 'sum', field: 'fte_detached_y2026Budget' },
+    ]);
+    expect(up.spec.having).toEqual([{ measure: 'delta', op: 'gt', value: 0 }]);
+  });
+
+  it('Top increase / decrease: a side without a declared FTE stays blank, and so do totals nobody declares', () => {
+    const read = readDelta(['increase'], [result([fteRow(['b', 'B'], { prev: null, curr: 1.25, delta: 1.25 })], fteRow([], { prev: null, curr: 1.25, delta: 1.25, up: 1.25, down: 0 }, 3))], 'fte');
+    expect(read.processed).toEqual([{ id: 'b', name: 'B', previous: null, current: 1.25, delta: 1.25, pct_increase: null, direction: 'increase' }]);
+    expect(read.allTotals).toEqual({ grossIncrease: 1.25, grossDecrease: 0, net: 1.25 });
+    const none = readDelta(['increase'], [result([], fteRow([], { prev: null, curr: null, delta: null, up: null, down: null }, 3))], 'fte');
+    expect(none.allTotals).toEqual({ grossIncrease: null, grossDecrease: null, net: null });
+  });
+
+  it('per year groups: keep the groups that declare FTE in one of the years, a year nobody declares blank', () => {
+    const request = analyticsRequest({ axisId: null, years: [2026, 2027], metric: 'budget', excludedIds: [], filters: {}, measure: 'fte' });
+    expect(request.spec.measures.map((m) => [m.id, m.field])).toEqual([
+      ['y2026', 'fte_y2026Budget'],
+      ['y2027', 'fte_y2027Budget'],
+      ['detached_budget_2026', 'fte_detached_y2026Budget'],
+      ['detached_budget_2027', 'fte_detached_y2027Budget'],
+    ]);
+    const read = readConsolidation([2026, 2027], result([
+      fteRow(['c_600', 'IT'], { y2026: 3, y2027: null }),
+      fteRow(['c_700', 'HR'], { y2026: null, y2027: null }),
+      fteRow([null, null], { y2026: null, y2027: 0.5 }),
+    ], fteRow([], { y2026: 3, y2027: 0.5 })), 'Unassigned', 'fte');
+    expect(read.groups).toEqual([
+      { key: 'c_600', label: 'IT', values: { 2026: 3, 2027: null } },
+      { key: 'unassigned', label: 'Unassigned', values: { 2026: null, 2027: 0.5 } },
+    ]);
+    expect(read.totals).toEqual({ 2026: 3, 2027: 0.5 });
+    expect(readAnalytics([2026], result([fteRow(['v', 'V'], { y2026: null })], fteRow([], { y2026: null })), { unassigned: 'U', unnamed: 'N' }, 'fte'))
+      .toEqual({ groups: [], totals: { 2026: null } });
+  });
+
+  it('asks the notice on its own, over the same lines, when it does not fit in a grouped request', () => {
+    const years = [2024, 2025, 2026, 2027, 2028];
+    const request = consolidationRequest({ years, metric: 'landing', excludedAccountIds: [], filters: { run_build: keepValues(['run']) }, measure: 'fte' });
+    // Five years and five notice measures would pass the 8 measures of a grouped request.
+    expect(request.spec.measures.map((m) => m.id)).toEqual(['y2024', 'y2025', 'y2026', 'y2027', 'y2028']);
+    const notice = fteNoticeRequest(request);
+    expect(notice).toEqual({
+      query: request.query,
+      spec: { groupBy: [], measures: years.map((year) => ({ id: `detached_landing_${year}`, fn: 'sum', field: `fte_detached_y${year}Landing` })) },
+    });
+  });
+
+  it('Trends and columns: blank for a year and column nobody declares; the notice in the same total', () => {
+    const request = trendRequest({ years: [2026, 2027], metrics: ['budget', 'landing'], windowYears: [2024, 2025, 2026, 2027, 2028], filters: {}, measure: 'fte' });
+    expect(request.spec.measures).toHaveLength(8);
+    expect(request.spec.measures[0]).toEqual({ id: 'budget_2026', fn: 'sum', field: 'fte_y2026Budget' });
+    expect(fteNoticeRequest(request)).toBeNull();
+    const total = fteRow([], { budget_2026: 4, budget_2027: null, landing_2026: 1, landing_2027: null });
+    expect(readTrend({ years: [2026, 2027], metrics: ['budget', 'landing'] }, result([], total), 'fte')).toEqual({
+      budget: { 2026: 4, 2027: null },
+      landing: { 2026: 1, 2027: null },
+    });
+    const selections = [{ year: 2026, metric: 'budget' as const }, { year: 2027, metric: 'budget' as const }];
+    const compare = columnsCompareRequest({ selections, filters: {}, measure: 'fte' });
+    expect(compare.spec.measures.map((m) => m.field)).toEqual(['fte_y2026Budget', 'fte_y2027Budget', 'fte_detached_y2026Budget', 'fte_detached_y2027Budget']);
+    expect(readColumnsCompare(selections, result([], total), 'fte')).toEqual([4, null]);
+  });
+
+  it('reads the notice: the detached FTE and the lines declaring it, only for the columns concerned', () => {
+    const request = trendRequest({ years: [2026, 2027], metrics: ['budget', 'revision'], windowYears: [2026, 2027], filters: {}, measure: 'fte' });
+    const total = fteRow([], {
+      detached_budget_2026: 3.5, detached_budget_2027: null, detached_revision_2026: 0, detached_revision_2027: 0.5,
+    }, 10, { detached_budget_2026: 6, detached_budget_2027: 10, detached_revision_2026: 9, detached_revision_2027: 9 });
+    expect(readFteNotice(request, result([], total))).toEqual([
+      { year: 2026, metric: 'budget', fte: 3.5, items: 4 },
+      { year: 2027, metric: 'revision', fte: 0.5, items: 1 },
+    ]);
+    expect(readFteNotice(request, undefined)).toEqual([]);
+    expect(readFteNotice(topItemsRequest({ scope: 'opex', year: 2026, metric: 'budget', topCount: 1, excludedIds: [], excludedAccounts: [], filters: {} }), result([], total))).toEqual([]);
+  });
+
+  it('"Items with FTE": keeps the lines that declare FTE, and tells whether the window holds one', () => {
+    expect(reportFilterModels({ costCenterIds: null, runBuild: 'run', analytics: [], withFte: true })).toEqual({
+      run_build: keepValues(['run']),
+      has_fte: keepValues(['yes']),
+    });
+    expect(reportFilterModels({ costCenterIds: null, runBuild: null, analytics: [], withFte: false })).toEqual({});
+    expect(ftePresenceRequest([2025, 2026])).toEqual({ query: { years: '2025,2026' }, spec: { groupBy: ['has_fte'], measures: [] } });
+    expect(readFtePresence(result([row([null], {})], row([], {})))).toBe(false);
+    expect(readFtePresence(result([row([null], {}), row(['yes'], {})], row([], {})))).toBe(true);
+    expect(readFtePresence(undefined)).toBe(false);
   });
 });
