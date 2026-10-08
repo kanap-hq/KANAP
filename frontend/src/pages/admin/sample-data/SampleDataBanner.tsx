@@ -1,11 +1,17 @@
 import React from 'react';
-import { Box, Button, Typography } from '@mui/material';
+import { Box, Button, CircularProgress, Typography } from '@mui/material';
+import { alpha, type Theme } from '@mui/material/styles';
+import ExploreOutlinedIcon from '@mui/icons-material/ExploreOutlined';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import { useTranslation } from 'react-i18next';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { LoadSampleDataDialog, useStepLabel } from './SampleDataDialogs';
 import { useSampleData, useSampleDataAvailable } from './useSampleData';
 
-const bannerSx = {
+type Tone = 'info' | 'error';
+
+/** Informational tint (status "active" ramp) for the line; teal stays on the action button. */
+const bannerSx = (tone: Tone) => (theme: Theme) => ({
   mb: 2,
   display: 'flex',
   alignItems: 'center',
@@ -14,10 +20,13 @@ const bannerSx = {
   px: '14px',
   py: '8px',
   borderRadius: '8px',
-  border: 1,
-  borderColor: 'kanap.border.soft',
-  bgcolor: 'kanap.bg.drawer',
-} as const;
+  border: '1px solid',
+  borderColor: alpha(theme.palette[tone].main, theme.palette.mode === 'dark' ? 0.35 : 0.25),
+  bgcolor: theme.palette[tone].light,
+  color: theme.palette.kanap.text.primary,
+});
+
+const iconSx = (tone: Tone) => ({ fontSize: 18, color: `${tone}.main`, flexShrink: 0 }) as const;
 
 const textSx = { flex: 1, minWidth: 0 } as const;
 
@@ -53,7 +62,8 @@ export default function SampleDataBanner() {
   if (loading) {
     const step = stepLabel(overview.step);
     return (
-      <Box sx={bannerSx}>
+      <Box sx={bannerSx('info')}>
+        <CircularProgress size={16} thickness={5} sx={{ color: 'info.main', flexShrink: 0 }} />
         <Typography role="status" variant="body2" sx={textSx}>
           {step ? t('sampleData.banner.loading', { step }) : t('sampleData.banner.loadingNoStep')}{' '}
           <Box component="span" sx={{ color: 'text.secondary' }}>{t('sampleData.loading.concurrentWrites')}</Box>
@@ -65,7 +75,8 @@ export default function SampleDataBanner() {
 
   if (failed) {
     return (
-      <Box sx={bannerSx}>
+      <Box sx={bannerSx('error')}>
+        <ErrorOutlineIcon aria-hidden sx={iconSx('error')} />
         <Typography role="status" variant="body2" sx={textSx}>
           {t(`sampleData.failure.${overview.error_code}`)}
           {overview.error_code !== 'reset_failed' ? ` ${t('sampleData.failure.backToStart')}` : null}
@@ -79,9 +90,10 @@ export default function SampleDataBanner() {
   }
 
   return (
-    <Box sx={bannerSx}>
+    <Box sx={bannerSx('info')}>
+      <ExploreOutlinedIcon aria-hidden sx={iconSx('info')} />
       <Typography role="status" variant="body2" sx={textSx}>
-        {t('sampleData.banner.text')}
+        <Box component="span" sx={{ fontWeight: 500 }}>{t('sampleData.banner.text')}</Box>
         {dismiss.error ? (
           <Box component="span" sx={{ color: 'error.main', ml: 1 }}>
             {getApiErrorMessage(dismiss.error, t, t('sampleData.messages.dismissFailed'))}
