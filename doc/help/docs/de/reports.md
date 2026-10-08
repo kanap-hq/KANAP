@@ -181,6 +181,7 @@ Detailansicht der Leistungsverrechnungs-Zuordnungen eines einzelnen Unternehmens
 
 - Positionsname, Zuordnungsmethode, Betrag, Anteil an Gesamtsumme
 - Angeheftete Summenzeile unten
+- Der Positionsname ist ein Link, der die OPEX-Position in einem neuen Tab öffnet. Gemeinkosten und Summen bleiben einfacher Text.
 
 **Konzerninterne Flüsse** (wenn aktiviert):
 
@@ -223,6 +224,8 @@ Identifizieren Sie Ihre größten OPEX- oder CAPEX-Positionen für ein bestimmte
 - Position
 - Wert für die ausgewählte Kennzahl und das Jahr
 - Anteil an Gesamtsumme (Prozentsatz)
+
+Der Positionsname ist ein Link, der die OPEX- oder CAPEX-Position in einem neuen Tab öffnet.
 
 **Zusammenfassungskarten unter der Tabelle**:
 
@@ -269,6 +272,8 @@ Wenn **Beide** ausgewählt ist, wird die Kreisdiagramm-Option deaktiviert und de
 - Zielwert (aktuell)
 - Delta (absolute Änderung)
 - Prozentuale Steigerung
+
+Der Positionsname ist ein Link, der die OPEX- oder CAPEX-Position in einem neuen Tab öffnet.
 
 **Zusammenfassungskarten unter der Tabelle**:
 

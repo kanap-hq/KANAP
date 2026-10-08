@@ -181,6 +181,7 @@ Profundice en las asignaciones de contracargo de una empresa entre departamentos
 
 - Nombre de la partida, método de asignación, importe, participación en el total
 - Fila de totales fijada en la parte inferior
+- El nombre de la partida es un enlace que abre la partida OPEX en una nueva pestaña. Los costes comunes y los totales son texto simple.
 
 **Flujos intercompañía** (cuando está habilitado):
 
@@ -223,6 +224,8 @@ Identifique sus mayores partidas OPEX o CAPEX para un año dado.
 - Partida
 - Valor para la métrica y año seleccionados
 - Participación en el total (porcentaje)
+
+El nombre de la partida es un enlace que abre la partida OPEX o CAPEX en una nueva pestaña.
 
 **Tarjetas de resumen debajo de la tabla**:
 
@@ -269,6 +272,8 @@ Cuando se selecciona **Ambos**, la opción de gráfico circular se deshabilita y
 - Valor de destino (actual)
 - Delta (cambio absoluto)
 - Porcentaje de aumento
+
+El nombre de la partida es un enlace que abre la partida OPEX o CAPEX en una nueva pestaña.
 
 **Tarjetas de resumen debajo de la tabla**:
 

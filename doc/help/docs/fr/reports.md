@@ -181,6 +181,7 @@ Vue détaillée des ventilations de refacturation d'une société avec départem
 
 - Nom du poste, méthode de ventilation, montant, part du total
 - Ligne de totaux épinglée en bas
+- Le nom du poste est un lien qui ouvre le poste OPEX dans un nouvel onglet. Les coûts communs et les totaux restent du texte simple.
 
 **Flux intersociétés** (lorsque activé) :
 
@@ -223,6 +224,8 @@ Identifiez vos postes OPEX ou CAPEX les plus importants pour une année donnée.
 - Poste
 - Valeur pour la métrique et l'année sélectionnées
 - Part du total (pourcentage)
+
+Le nom du poste est un lien qui ouvre le poste OPEX ou CAPEX dans un nouvel onglet.
 
 **Cartes récapitulatives sous le tableau** :
 
@@ -269,6 +272,8 @@ Lorsque **Les deux** est sélectionné, l'option graphique en secteurs est désa
 - Valeur destination (actuelle)
 - Delta (variation absolue)
 - Pourcentage d'augmentation
+
+Le nom du poste est un lien qui ouvre le poste OPEX ou CAPEX dans un nouvel onglet.
 
 **Cartes récapitulatives sous le tableau** :
 

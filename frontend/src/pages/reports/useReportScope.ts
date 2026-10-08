@@ -26,6 +26,11 @@ export function itemName(scope: BudgetScope, row: Pick<BudgetSummaryRow, 'produc
   return (scope === 'capex' ? row.description : row.product_name) ?? '';
 }
 
+/** Page of a line of the given type; null when the row is not a line (no id). */
+export function itemHref(scope: BudgetScope, id: string | null | undefined): string | null {
+  return id ? `/ops/${scope}/${encodeURIComponent(id)}` : null;
+}
+
 /**
  * Item type of a budget report, kept in `?scope=` so links can open a report on CAPEX.
  * A missing, unknown or unreadable type falls back to the user's default type.

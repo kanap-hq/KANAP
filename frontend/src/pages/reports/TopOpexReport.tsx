@@ -6,7 +6,8 @@ import ReportLayout from '../../components/reports/ReportLayout';
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
 import ReportExclusionPicker from '../../components/reports/ReportExclusionPicker';
 import ReportDataStatus from '../../components/reports/ReportDataStatus';
-import { useReportScope } from './useReportScope';
+import { itemHref, useReportScope } from './useReportScope';
+import { LinkCellRenderer } from '../../components/grid/renderers';
 import { metricFileName, MetricKey, useReportMetric } from './reportMetrics';
 import { escapeTooltipText } from './tooltipText';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
@@ -69,10 +70,17 @@ export default function TopOpexReport() {
   const totalMetric = knownTotal ?? 0;
 
   const columns = useMemo<ColDef[]>(() => [
-    { field: 'name', headerName: t('reports.columns.item'), flex: 1, minWidth: 220 },
+    {
+      field: 'name',
+      headerName: t('reports.columns.item'),
+      flex: 1,
+      minWidth: 220,
+      cellRenderer: LinkCellRenderer,
+      cellRendererParams: { newTab: true, getHref: (row: { id?: string | null }) => itemHref(scope, row.id) },
+    },
     { field: 'value', headerName: `${metricLabel} (${year})`, width: 160, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
     { field: 'pct_of_total', headerName: t('reports.columns.shareOfTotal'), width: 160, type: 'rightAligned', valueFormatter: (p) => (p.value != null ? `${p.value}%` : '') },
-  ], [year, metricLabel, formatNumber, t]);
+  ], [scope, year, metricLabel, formatNumber, t]);
 
   const gridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);
