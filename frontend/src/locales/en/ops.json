@@ -932,6 +932,10 @@
         "analytics": {
           "title": "Analytics dimensions",
           "description": "OPEX or CAPEX budget grouped by analytics dimension (pie or line)"
+        },
+        "staffing": {
+          "title": "Staffing by month",
+          "description": "Monthly FTE by cost center, item, supplier or analytics dimension"
         }
       }
     },
@@ -1190,6 +1194,33 @@
       "unassigned": "Unassigned",
       "unnamed": "Unnamed value",
       "defaultDimensionInSentence": "analytics dimension"
+    },
+    "staffing": {
+      "title": "Staffing by month",
+      "subtitle": "Monthly {{type}} FTE by {{group}}",
+      "chartTitle": "{{type}} staffing by {{group}}, {{column}} {{year}}",
+      "groupBy": "Group by",
+      "groups": {
+        "costCenter": "Cost center",
+        "item": "Item",
+        "supplier": "Supplier",
+        "axis": "Analytics dimension"
+      },
+      "groupsInSentence": {
+        "costCenter": "cost center",
+        "item": "item",
+        "supplier": "supplier"
+      },
+      "none": {
+        "costCenter": "No cost center",
+        "supplier": "No supplier",
+        "axis": "No value"
+      },
+      "average": "Average",
+      "peak": "Peak",
+      "others": "Others",
+      "noDetail_one": "{{count}} item declares {{fte}} FTE without monthly detail. It is not in the months.",
+      "noDetail_other": "{{count}} items declare {{fte}} FTE without monthly detail. They are not in the months."
     }
   },
   "budgetTab": {

@@ -107,9 +107,14 @@ export interface AggregateSpec {
  * `groupedMeasures` caps a spec with keys. Each measure costs per group, and a key can give one
  * group per line (`id`, but also a name, a note or a combination of fields): 5,000 groups × 60
  * measures took 1 to 2 s and answered 3 to 6 MB. A grouped report reads at most 5 measures, the AI
- * one.
+ * one. `groupedFteMeasures` caps a spec with keys whose every measure is on an FTE field: an FTE
+ * needs no currency conversion, and the staffing report reads 12 monthly sums and 2 notice sums
+ * per group. Grouped by `id` over 5,000 lines, 14 monthly FTE took 87 ms (63 ms in the database)
+ * against 61 ms (51 ms) for 8 amounts, 8 monthly FTE as long as 8 amounts; 20,000 lines, 4 times that.
  */
-export const AGGREGATE_LIMITS = { groupBy: 6, measures: 60, groupedMeasures: 8, having: 10, order: 10, limit: 10_000 } as const;
+export const AGGREGATE_LIMITS = { groupBy: 6, measures: 60, groupedMeasures: 8, groupedFteMeasures: 16, having: 10, order: 10, limit: 10_000 } as const;
+
+const GROUPED_CAP_MESSAGE = `at most ${AGGREGATE_LIMITS.groupedMeasures} measures with group keys (${AGGREGATE_LIMITS.groupedFteMeasures} when every measure is an FTE, ${AGGREGATE_LIMITS.measures} without).`;
 
 const FUNCTIONS: ReadonlySet<string> = new Set(['sum', 'min', 'max', 'avg']);
 const HAVING_OPS: Record<AggregateHavingSpec['op'], string> = { gt: '>', gte: '>=', lt: '<', lte: '<=', eq: '=', ne: '<>' };
@@ -141,9 +146,8 @@ export function validateAggregateSpec(spec: AggregateSpec): void {
   if (spec.groupBy.length > AGGREGATE_LIMITS.groupBy) fail(`at most ${AGGREGATE_LIMITS.groupBy} group fields.`);
   if (!Array.isArray(spec.measures)) fail('measures must be a list.');
   if (spec.measures.length > AGGREGATE_LIMITS.measures) fail(`at most ${AGGREGATE_LIMITS.measures} measures.`);
-  if (spec.groupBy.length > 0 && spec.measures.length > AGGREGATE_LIMITS.groupedMeasures) {
-    fail(`at most ${AGGREGATE_LIMITS.groupedMeasures} measures with group keys (${AGGREGATE_LIMITS.measures} without).`);
-  }
+  // Past `groupedMeasures`, the kinds decide: `aggregateSql` checks that every measure is an FTE.
+  if (spec.groupBy.length > 0 && spec.measures.length > AGGREGATE_LIMITS.groupedFteMeasures) fail(GROUPED_CAP_MESSAGE);
   const ids = new Set<string>();
   for (const measure of spec.measures) {
     if (!measure || typeof measure.id !== 'string' || !MEASURE_ID.test(measure.id)) fail(`invalid measure id ${JSON.stringify(measure?.id)}.`);
@@ -314,6 +318,7 @@ export function aggregateSql(stmt: SqlStatement, config: ListConfig, state: List
   const keys = spec.groupBy.map((key) => ({ key, field: fieldOf(stmt, config, key) }));
   const keyColumns = keys.map((k, i) => `${groupKeySql(k.key, k.field)} AS k${i}`);
   const measures = spec.measures.map((measure) => compileMeasure(stmt, config, measure));
+  if (keys.length > 0 && measures.length > AGGREGATE_LIMITS.groupedMeasures && measures.some((m) => m.unit !== 'fte')) fail(GROUPED_CAP_MESSAGE);
   const core = buildCore(stmt, config, state, { fields: [...keys.map((k) => k.field), ...measures.flatMap((m) => m.fields)] });
   const measureIndex = (id: string) => measures.findIndex((m) => m.spec.id === id);
 

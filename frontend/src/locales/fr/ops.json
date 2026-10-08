@@ -933,6 +933,10 @@
         "analytics": {
           "title": "Dimensions analytiques",
           "description": "Budget OPEX ou CAPEX regroupé par dimension analytique (camembert ou courbe)"
+        },
+        "staffing": {
+          "title": "Effectifs par mois",
+          "description": "ETP mensuels par centre de coûts, poste, fournisseur ou dimension analytique"
         }
       }
     },
@@ -1191,6 +1195,33 @@
       "unassigned": "Non affecté",
       "unnamed": "Valeur sans nom",
       "defaultDimensionInSentence": "dimension analytique"
+    },
+    "staffing": {
+      "title": "Effectifs par mois",
+      "subtitle": "ETP mensuels {{type}} par {{group}}",
+      "chartTitle": "Effectifs {{type}} par {{group}}, {{column}} {{year}}",
+      "groupBy": "Regrouper par",
+      "groups": {
+        "costCenter": "Centre de coûts",
+        "item": "Poste",
+        "supplier": "Fournisseur",
+        "axis": "Dimension analytique"
+      },
+      "groupsInSentence": {
+        "costCenter": "centre de coûts",
+        "item": "poste",
+        "supplier": "fournisseur"
+      },
+      "none": {
+        "costCenter": "Aucun centre de coûts",
+        "supplier": "Aucun fournisseur",
+        "axis": "Aucune valeur"
+      },
+      "average": "Moyenne",
+      "peak": "Pic",
+      "others": "Autres",
+      "noDetail_one": "{{count}} poste déclare {{fte}} ETP sans détail mensuel. Il n'est pas compté dans les mois.",
+      "noDetail_other": "{{count}} postes déclarent {{fte}} ETP sans détail mensuel. Ils ne sont pas comptés dans les mois."
     }
   },
   "budgetTab": {

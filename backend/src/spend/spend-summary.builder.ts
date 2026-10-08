@@ -389,25 +389,35 @@ export function fteFieldKey(amountField: string): string {
 }
 
 /**
- * The FTE a column declares while its amount no longer follows its lines:
- * `fte_detached_<slot><Suffix>` (`fte_detached_yBudget`,
- * `fte_detached_y2026Budget`), the round's FTE when its method is not
- * `computed` (the amount was spread or edited by hand after the lines), null
- * otherwise. A list field only (the reports' notice), never a grid FTE key.
+ * The report fields of a round's FTE, `fte_<variant>_<slot><Suffix>`, each a
+ * list field only (the reports), never a grid FTE key:
+ * - `fte_detached_…` (`fte_detached_yBudget`): the round's FTE when its
+ *   method is not `computed` (the amount was spread, copied or edited by hand
+ *   after the lines), null otherwise;
+ * - `fte_month_<MM>_…` (`fte_month_03_y2026Budget`, MM `01` to `12`): the
+ *   round's FTE of that month, from its lines' result (null without one);
+ * - `fte_nodetail_…`: the round's FTE when it has no monthly detail.
  */
-export const FTE_DETACHED_FIELD_PREFIX = 'fte_detached_';
+export type FteVariant = { variant: 'detached' } | { variant: 'nodetail' } | { variant: 'month'; month: number };
 
-/** `fte_<slot><Suffix>` to its slot and column, like `resolveAmountField`; null for any other field (`fte_detached_…` included). */
-export function resolveFteField(field: string): ReturnType<typeof resolveAmountField> {
-  const text = String(field ?? '');
-  if (text.startsWith(FTE_DETACHED_FIELD_PREFIX)) return null;
-  return text.startsWith(FTE_FIELD_PREFIX) ? resolveAmountField(text.slice(FTE_FIELD_PREFIX.length)) : null;
+const FTE_VARIANT_FIELD = /^fte_(detached|nodetail|month_(0[1-9]|1[0-2]))_(.*)$/;
+/** Any `fte_detached_`, `fte_nodetail_` or `fte_month_` key, valid or not: never an `fte_…` key. */
+const FTE_VARIANT_PREFIX = /^fte_(detached|nodetail|month)_/;
+
+/** `fte_<variant>_<slot><Suffix>` to its variant, slot and column, like `resolveAmountField`; null for any other field. */
+export function resolveFteVariantField(field: string): (NonNullable<ReturnType<typeof resolveAmountField>> & FteVariant) | null {
+  const match = FTE_VARIANT_FIELD.exec(String(field ?? ''));
+  const resolved = match ? resolveAmountField(match[3]) : null;
+  if (!match || !resolved) return null;
+  if (match[2]) return { ...resolved, variant: 'month', month: Number(match[2]) };
+  return { ...resolved, variant: match[1] as 'detached' | 'nodetail' };
 }
 
-/** `fte_detached_<slot><Suffix>` to its slot and column, like `resolveAmountField`; null for any other field. */
-export function resolveFteDetachedField(field: string): ReturnType<typeof resolveAmountField> {
+/** `fte_<slot><Suffix>` to its slot and column, like `resolveAmountField`; null for any other field (the variants of `resolveFteVariantField` included). */
+export function resolveFteField(field: string): ReturnType<typeof resolveAmountField> {
   const text = String(field ?? '');
-  return text.startsWith(FTE_DETACHED_FIELD_PREFIX) ? resolveAmountField(text.slice(FTE_DETACHED_FIELD_PREFIX.length)) : null;
+  if (FTE_VARIANT_PREFIX.test(text)) return null;
+  return text.startsWith(FTE_FIELD_PREFIX) ? resolveAmountField(text.slice(FTE_FIELD_PREFIX.length)) : null;
 }
 
 /**
@@ -439,11 +449,11 @@ export function resolveHasVersionField(field: string): { slot: string; year: num
   return { slot: match[1], year: null };
 }
 
-/** Years named by `y<YYYY><Suffix>`, `fte_y<YYYY><Suffix>`, `fte_detached_y<YYYY><Suffix>`, `local_y<YYYY><Suffix>` and `has_version_y<YYYY>` fields (a sort or a filter key), so their slot is loaded. */
+/** Years named by `y<YYYY><Suffix>`, `fte_y<YYYY><Suffix>`, `fte_<variant>_y<YYYY><Suffix>`, `local_y<YYYY><Suffix>` and `has_version_y<YYYY>` fields (a sort or a filter key), so their slot is loaded. */
 export function yearsNamedByFields(fields: string[]): number[] {
   const years = new Set<number>();
   for (const field of fields) {
-    const resolved = resolveAmountField(field) ?? resolveFteDetachedField(field) ?? resolveFteField(field) ?? resolveLocalAmountField(field) ?? resolveHasVersionField(field);
+    const resolved = resolveAmountField(field) ?? resolveFteVariantField(field) ?? resolveFteField(field) ?? resolveLocalAmountField(field) ?? resolveHasVersionField(field);
     if (resolved?.year != null) years.add(resolved.year);
   }
   return Array.from(years);

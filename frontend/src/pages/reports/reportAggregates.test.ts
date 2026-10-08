@@ -23,11 +23,14 @@ import {
   readConsolidation,
   readDelta,
   readDeltaYears,
+  readStaffing,
   readFteNotice,
   readFtePresence,
   readTopItems,
   readTrend,
   reportFilterModels,
+  staffingChartSeries,
+  staffingRequest,
   sumDeclared,
   topItemsRequest,
   topLimit,
@@ -354,5 +357,85 @@ describe('the FTE measure', () => {
     expect(readFtePresence(result([row([null], {})], row([], {})))).toBe(false);
     expect(readFtePresence(result([row([null], {}), row(['yes'], {})], row([], {})))).toBe(true);
     expect(readFtePresence(undefined)).toBe(false);
+  });
+});
+
+describe('staffing by month', () => {
+  const months = (values: Array<number | null>) => Object.fromEntries(values.map((value, i) => [`m${String(i + 1).padStart(2, '0')}`, value]));
+  const staffRow = (keys: Array<string | null>, values: Record<string, number | null>, count = 1, unknown: Record<string, number> = {}): AggregateRow => ({ keys, count, values, unknown });
+  const labels = { none: 'No cost center', unnamed: 'Unnamed value' };
+  const flat = (value: number | null) => Array.from({ length: 12 }, () => value);
+
+  it('groups by cost center, item, supplier or a dimension, with the twelve months and the two notices', () => {
+    const base = { year: 2026, metric: 'revision' as const, filters: { run_build: keepValues(['run']) } };
+    const request = staffingRequest({ ...base, scope: 'opex', group: { kind: 'costCenter' } });
+    expect(request.query).toEqual({ filters: { run_build: keepValues(['run']) } });
+    expect(request.spec.groupBy).toEqual(['cost_center_id', 'cost_center_label']);
+    expect(request.spec.measures).toHaveLength(14);
+    expect(request.spec.measures[0]).toEqual({ id: 'm01', fn: 'sum', field: 'fte_month_01_y2026Revision' });
+    expect(request.spec.measures[11]).toEqual({ id: 'm12', fn: 'sum', field: 'fte_month_12_y2026Revision' });
+    expect(request.spec.measures.slice(12)).toEqual([
+      { id: 'detached', fn: 'sum', field: 'fte_detached_y2026Revision' },
+      { id: 'nodetail', fn: 'sum', field: 'fte_nodetail_y2026Revision' },
+    ]);
+    // Every group comes back: the reader drops the ones without monthly FTE.
+    expect(request.spec.having).toBeUndefined();
+    expect(staffingRequest({ ...base, scope: 'opex', group: { kind: 'item' } }).spec.groupBy).toEqual(['id', 'product_name']);
+    expect(staffingRequest({ ...base, scope: 'capex', group: { kind: 'item' } }).spec.groupBy).toEqual(['id', 'description']);
+    expect(staffingRequest({ ...base, scope: 'opex', group: { kind: 'supplier' } }).spec.groupBy).toEqual(['supplier_id', 'supplier_name']);
+    expect(staffingRequest({ ...base, scope: 'opex', group: { kind: 'axis', axisId: 'ax-1' } }).spec.groupBy).toEqual(['analytics_id_ax-1', 'analytics_ax-1']);
+  });
+
+  it('drops the groups without a monthly FTE, sorts by average, and reads average, peak, total and notices', () => {
+    const read = readStaffing(result([
+      staffRow(['cc-1', 'CC1 · Small'], months([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])),
+      staffRow(['cc-2', 'CC2 · Ramp'], months([0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2])),
+      staffRow(['cc-3', 'CC3 · None'], months(flat(null))),
+      staffRow([null, null], months([0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 3.5])),
+    ], staffRow([], { ...months([1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 3.5, 3.5, 3.5, 3.5, 3.5, 6.5]), detached: 1.25, nodetail: 0.75 }, 9, { detached: 7, nodetail: 8 })), labels, compare);
+    expect(read.rows.map((r) => [r.label, r.average, r.peak])).toEqual([
+      ['CC1 · Small', 1, 1],
+      ['CC2 · Ramp', 1, 2],
+      ['No cost center', 0.75, 3.5],
+    ]);
+    expect(read.rows[0].months).toEqual(flat(1));
+    // The average of the totals is the sum of the groups' averages: 1 + 1 + 0.75.
+    expect(read.total.average).toBeCloseTo(2.75);
+    expect(read.total.peak).toBe(6.5);
+    // The line without monthly detail (0.75) is detached too: the detached notice keeps the other one.
+    expect(read.detached).toEqual({ fte: 0.5, items: 1 });
+    expect(read.noDetail).toEqual({ fte: 0.75, items: 1 });
+  });
+
+  it('shows no notice at zero or blank, and a blank total without any monthly FTE', () => {
+    const read = readStaffing(result([], staffRow([], { ...months(flat(null)), detached: 0, nodetail: null }, 3, { detached: 2, nodetail: 3 })), labels, compare);
+    expect(read.rows).toEqual([]);
+    expect(read.total).toEqual({ months: flat(null), average: null, peak: null });
+    expect(read.detached).toBeNull();
+    expect(read.noDetail).toBeNull();
+    expect(readStaffing(undefined, labels, compare).total.average).toBeNull();
+  });
+
+  it('shows no detached notice when every detached line is one without monthly detail', () => {
+    const notices = (detached: number, nodetail: number, unknown: Record<string, number>) => {
+      const read = readStaffing(result([], staffRow([], { ...months(flat(null)), detached, nodetail }, 5, unknown)), labels, compare);
+      return [read.detached, read.noDetail];
+    };
+    expect(notices(0.75, 0.75, { detached: 3, nodetail: 3 })).toEqual([null, { fte: 0.75, items: 2 }]);
+    // A rounding below zero reads as none, never as a negative notice.
+    expect(notices(0.3, 0.30000000000000004, { detached: 3, nodetail: 3 })).toEqual([null, { fte: 0.30000000000000004, items: 2 }]);
+    // Without any line lacking monthly detail, the detached notice is the whole detached sum.
+    expect(notices(1.5, 0, { detached: 2, nodetail: 5 })).toEqual([{ fte: 1.5, items: 3 }, null]);
+  });
+
+  it('names a dimension value without a name, and charts the eight largest groups and the rest as others', () => {
+    const groups = Array.from({ length: 10 }, (_, i) => staffRow([`v${i}`, i === 0 ? ' ' : `V${i}`], months(flat(10 - i))));
+    const read = readStaffing(result(groups, staffRow([], {})), labels, compare);
+    expect(read.rows[0].label).toBe('Unnamed value');
+    const chart = staffingChartSeries(read.rows);
+    expect(chart.series.map((r) => r.label)).toEqual(['Unnamed value', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7']);
+    // V8 (2) + V9 (1) each month.
+    expect(chart.others).toEqual(flat(3));
+    expect(staffingChartSeries(read.rows.slice(0, 8)).others).toBeNull();
   });
 });
