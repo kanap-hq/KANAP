@@ -18,6 +18,7 @@ const content: TrialContent = {
       orgHelp: 'Der Anzeigename, den Ihr Team oben in der App sieht.',
       countryLabel: 'Land',
       countryHelp: 'Wird für Ihre Standardwährung und Standardfirma verwendet.',
+      countryNoMatch: 'Kein passendes Land',
       slugLabel: 'Workspace-URL',
       slugHelp: 'Kleinbuchstaben, Ziffern und Bindestriche.',
       slugDomain: '.kanap.net',

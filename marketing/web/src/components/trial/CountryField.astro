@@ -1,0 +1,473 @@
+---
+/**
+ * CountryField: country picker that accepts typing (WAI-ARIA combobox with a
+ * listbox popup, "list autocomplete with automatic selection" pattern).
+ *
+ * The visible text input is never submitted. The chosen country code goes in
+ * a hidden input named `name`, so the forms read it with `FormData` exactly as
+ * they read the former native select.
+ *
+ * Matching (case and accent insensitive): an exact ISO code ("fr", "de", "gb")
+ * comes first, then labels that start with the text, then labels with a word
+ * that starts with it ("unis" finds "États-Unis"). "OTHER" always stays last.
+ *
+ * Used by the trial signup form and the support invoice form on /offer.
+ */
+interface Option {
+  value: string;
+  label: string;
+}
+
+interface Props {
+  id: string;
+  name: string;
+  label: string;
+  options: Option[];
+  noMatch: string;
+  help?: string;
+  required?: boolean;
+}
+
+const { id, name, label, options, noMatch, help, required = false } = Astro.props;
+const labelId = `${id}-label`;
+const listId = `${id}-listbox`;
+const helpId = help ? `${id}-help` : undefined;
+---
+
+<div class="mk-tf__field mk-cf" data-country-field>
+  <label for={id} id={labelId}>{label}</label>
+  <div class="mk-cf__control">
+    <input
+      id={id}
+      type="text"
+      role="combobox"
+      aria-autocomplete="list"
+      aria-expanded="false"
+      aria-controls={listId}
+      aria-describedby={helpId}
+      autocomplete="off"
+      autocapitalize="off"
+      autocorrect="off"
+      spellcheck="false"
+      required={required}
+      data-cf-input
+    />
+    <span class="mk-cf__chevron" aria-hidden="true" data-cf-toggle>
+      <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 6l4 4 4-4" />
+      </svg>
+    </span>
+    <input type="hidden" name={name} value="" data-cf-value />
+    <div class="mk-cf__popup" hidden data-cf-popup>
+      <p class="mk-cf__empty" role="status" data-cf-empty data-no-match={noMatch}></p>
+      <ul class="mk-cf__list" role="listbox" id={listId} aria-labelledby={labelId} tabindex="-1" data-cf-list>
+        {options.map((o) => (
+          <li class="mk-cf__option" role="option" id={`${id}-opt-${o.value.toLowerCase()}`} data-value={o.value} aria-selected="false">
+            {o.label}
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+  {help && <p class="mk-tf__help" id={helpId}>{help}</p>}
+</div>
+
+<script>
+  /** Extra codes people type for a country (beyond its ISO code). */
+  const ALIASES: Record<string, string[]> = { GB: ['uk'], US: ['usa'] };
+  const OTHER = 'OTHER';
+
+  interface Entry {
+    el: HTMLLIElement;
+    value: string;
+    label: string;
+    index: number;
+    key: string;
+    words: string[];
+    codes: string[];
+  }
+
+  function normalize(text: string): string {
+    return text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  }
+
+  function rank(entry: Entry, query: string): number {
+    if (entry.codes.includes(query)) return 0;
+    if (entry.key.startsWith(query)) return 1;
+    if (entry.words.some((w) => w.startsWith(query))) return 2;
+    return -1;
+  }
+
+  function setup(root: HTMLElement) {
+    const input = root.querySelector<HTMLInputElement>('[data-cf-input]');
+    const hidden = root.querySelector<HTMLInputElement>('[data-cf-value]');
+    const popup = root.querySelector<HTMLElement>('[data-cf-popup]');
+    const list = root.querySelector<HTMLUListElement>('[data-cf-list]');
+    const empty = root.querySelector<HTMLElement>('[data-cf-empty]');
+    const toggle = root.querySelector<HTMLElement>('[data-cf-toggle]');
+    if (!input || !hidden || !popup || !list || !empty || !toggle) return;
+
+    const entries: Entry[] = Array.from(list.querySelectorAll<HTMLLIElement>('[role="option"]')).map((el, index) => {
+      const value = el.dataset.value ?? '';
+      const label = (el.textContent ?? '').trim();
+      const key = normalize(label);
+      return {
+        el,
+        value,
+        label,
+        index,
+        key,
+        words: key.split(/[\s\-'’.]+/).filter(Boolean),
+        codes: [...(value.length === 2 ? [value.toLowerCase()] : []), ...(ALIASES[value] ?? [])],
+      };
+    });
+    const other = entries.find((e) => e.value === OTHER) ?? null;
+
+    let current: Entry | null = null;
+    let visible: Entry[] = entries;
+    let active = -1;
+    let open = false;
+
+    function filter(query: string): Entry[] {
+      if (!query) return entries.slice();
+      return entries
+        .map((entry) => ({ entry, r: rank(entry, query) }))
+        .filter((m) => m.r >= 0)
+        .sort((a, b) =>
+          Number(a.entry.value === OTHER) - Number(b.entry.value === OTHER)
+          || a.r - b.r
+          || a.entry.index - b.entry.index)
+        .map((m) => m.entry);
+    }
+
+    function setActive(index: number) {
+      if (active >= 0 && visible[active]) {
+        visible[active].el.classList.remove('is-active');
+        visible[active].el.setAttribute('aria-selected', 'false');
+      }
+      active = index;
+      const entry = visible[active];
+      if (!entry) {
+        active = -1;
+        input.removeAttribute('aria-activedescendant');
+        return;
+      }
+      entry.el.classList.add('is-active');
+      entry.el.setAttribute('aria-selected', 'true');
+      input.setAttribute('aria-activedescendant', entry.el.id);
+      // Scroll inside the list only, never the page.
+      const top = entry.el.offsetTop;
+      const bottom = top + entry.el.offsetHeight;
+      if (top < list.scrollTop) list.scrollTop = top - 4;
+      else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight + 4;
+    }
+
+    function show(items: Entry[], index: number, noMatch = false) {
+      setActive(-1);
+      visible = items;
+      const shown = new Set(items);
+      for (const entry of entries) entry.el.hidden = !shown.has(entry);
+      for (const entry of items) list.appendChild(entry.el);
+      empty.textContent = noMatch ? (empty.dataset.noMatch ?? '') : '';
+      if (!open) {
+        open = true;
+        popup.hidden = false;
+        input.setAttribute('aria-expanded', 'true');
+        root.dataset.open = '';
+        list.scrollTop = 0;
+      }
+      setActive(index);
+    }
+
+    function close() {
+      if (!open) return;
+      setActive(-1);
+      open = false;
+      popup.hidden = true;
+      input.setAttribute('aria-expanded', 'false');
+      delete root.dataset.open;
+    }
+
+    function markCurrent() {
+      for (const entry of entries) entry.el.classList.toggle('is-current', entry === current);
+    }
+
+    function commit(entry: Entry) {
+      const changed = entry !== current;
+      current = entry;
+      hidden.value = entry.value;
+      input.value = entry.label;
+      markCurrent();
+      close();
+      if (changed) hidden.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function restore() {
+      input.value = current ? current.label : '';
+    }
+
+    /** Text typed so far; the full current label counts as "no filter". */
+    function query(): string {
+      const q = normalize(input.value);
+      return current && q === current.key ? '' : q;
+    }
+
+    function openAll(direction: 1 | -1 | 0) {
+      const q = query();
+      const items = q ? filter(q) : entries.slice();
+      if (!items.length) {
+        show(other ? [other] : [], -1, true);
+        return;
+      }
+      const at = current ? items.indexOf(current) : -1;
+      if (at >= 0) show(items, at);
+      else if (direction === 0) show(items, -1);
+      else show(items, direction > 0 ? 0 : items.length - 1);
+    }
+
+    function move(delta: 1 | -1) {
+      const n = visible.length;
+      if (!n) return;
+      const next = active < 0 ? (delta > 0 ? 0 : n - 1) : (active + delta + n) % n;
+      setActive(next);
+    }
+
+    /** Focus left the field: keep the highlighted option, else the last valid choice. */
+    function finish() {
+      if (open && active >= 0 && visible[active]) {
+        commit(visible[active]);
+        return;
+      }
+      const q = normalize(input.value);
+      const exact = q ? entries.find((e) => e.key === q || e.codes.includes(q)) : undefined;
+      close();
+      if (exact) commit(exact);
+      else restore();
+    }
+
+    input.addEventListener('input', () => {
+      const q = normalize(input.value);
+      if (!q) {
+        show(entries.slice(), -1);
+        return;
+      }
+      const items = filter(q);
+      if (items.length) show(items, 0);
+      else show(other ? [other] : [], -1, true);
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.isComposing) return;
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          if (!open) openAll(1);
+          else if (!e.altKey) move(1);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          if (!open) openAll(-1);
+          else move(-1);
+          break;
+        case 'Enter':
+          // An open list owns Enter: it picks the option and never submits the form.
+          if (!open) return;
+          e.preventDefault();
+          if (active >= 0 && visible[active]) commit(visible[active]);
+          break;
+        case 'Escape':
+          // A closed list lets Escape through (it closes the /offer dialog).
+          if (!open) return;
+          e.preventDefault();
+          e.stopPropagation();
+          close();
+          restore();
+          break;
+        case 'Tab':
+          if (open && active >= 0 && visible[active]) commit(visible[active]);
+          break;
+        default:
+          break;
+      }
+    });
+
+    input.addEventListener('click', () => {
+      if (!open) openAll(0);
+    });
+
+    // Mouse: keep the focus in the text field while picking or scrolling.
+    list.addEventListener('mousedown', (e) => e.preventDefault());
+    toggle.addEventListener('mousedown', (e) => e.preventDefault());
+
+    list.addEventListener('click', (e) => {
+      const el = e.target instanceof Element ? e.target.closest('[role="option"]') : null;
+      const entry = el ? entries.find((x) => x.el === el) : undefined;
+      if (!entry) return;
+      commit(entry);
+      if ((e as PointerEvent).pointerType !== 'touch') input.focus();
+    });
+
+    toggle.addEventListener('click', () => {
+      if (open) {
+        close();
+        restore();
+        return;
+      }
+      input.focus();
+      openAll(0);
+    });
+
+    root.addEventListener('focusout', (e) => {
+      const next = e.relatedTarget;
+      if (next instanceof Node && root.contains(next)) return;
+      finish();
+    });
+
+    input.form?.addEventListener('reset', () => {
+      current = null;
+      hidden.value = '';
+      markCurrent();
+      close();
+    });
+
+    // Start from whatever the page holds (server value or restored text).
+    const initial = entries.find((e) => e.value === hidden.value)
+      ?? (input.value ? entries.find((e) => e.key === normalize(input.value)) : undefined);
+    if (initial) commit(initial);
+    else {
+      hidden.value = '';
+      input.value = '';
+    }
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-country-field]').forEach(setup);
+</script>
+
+<style>
+  .mk-cf__control {
+    position: relative;
+  }
+
+  .mk-cf__control input[type='text'] {
+    padding-right: 36px;
+    text-overflow: ellipsis;
+  }
+
+  .mk-cf__chevron {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--kanap-text-tertiary);
+    cursor: pointer;
+  }
+
+  .mk-cf__chevron svg {
+    transition: transform var(--mk-duration) var(--mk-ease);
+  }
+
+  .mk-cf[data-open] .mk-cf__chevron svg {
+    transform: rotate(180deg);
+  }
+
+  .mk-cf__popup {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 40;
+    background: var(--kanap-bg-composer);
+    border: 1px solid var(--kanap-border-default);
+    border-radius: var(--kanap-radius-submit);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
+    overflow: hidden;
+  }
+
+  .mk-cf__popup[hidden] {
+    display: none;
+  }
+
+  .mk-cf__empty {
+    margin: 0;
+    padding: 10px 12px 4px;
+    font-size: 13px;
+    color: var(--kanap-text-secondary);
+  }
+
+  .mk-cf__empty:empty {
+    display: none;
+  }
+
+  .mk-cf__list {
+    position: relative;
+    list-style: none;
+    margin: 0;
+    padding: 4px;
+    max-height: min(280px, 45vh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    outline: none;
+  }
+
+  .mk-cf__option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 36px;
+    padding: 7px 10px;
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--kanap-text-primary);
+    border-radius: 4px;
+    cursor: pointer;
+    user-select: none;
+    /* The highlight follows the arrow keys at once (base.css fades colours site-wide). */
+    transition: none !important;
+  }
+
+  .mk-cf__option[hidden] {
+    display: none;
+  }
+
+  .mk-cf__option:hover {
+    background: var(--kanap-pill-hover-bg);
+  }
+
+  .mk-cf__option.is-active {
+    background: var(--kanap-tab-bg-hover);
+    box-shadow: inset 2px 0 0 var(--kanap-teal);
+  }
+
+  .mk-cf__option.is-current {
+    font-weight: 500;
+  }
+
+  .mk-cf__option.is-current::after {
+    content: '';
+    flex: none;
+    width: 10px;
+    height: 5px;
+    margin-bottom: 3px;
+    border-left: 1.6px solid var(--kanap-teal);
+    border-bottom: 1.6px solid var(--kanap-teal);
+    transform: rotate(-45deg);
+  }
+
+  @media (pointer: coarse) {
+    .mk-cf__option {
+      min-height: 44px;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .mk-cf__option.is-active {
+      outline: 2px solid Highlight;
+      outline-offset: -2px;
+    }
+  }
+</style>

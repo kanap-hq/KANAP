@@ -15,6 +15,8 @@ export interface TrialFormCopy extends TrialPageCopy {
     orgHelp: string;
     countryLabel: string;
     countryHelp: string;
+    /** Shown in the country list when the typed text matches no country. */
+    countryNoMatch: string;
     slugLabel: string;
     slugHelp: string;
     slugDomain: string;

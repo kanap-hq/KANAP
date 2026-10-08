@@ -18,6 +18,7 @@ const content: TrialContent = {
       orgHelp: 'El nombre que verá tu equipo en la parte superior de la aplicación.',
       countryLabel: 'País',
       countryHelp: 'Se usa para definir tu moneda y empresa por defecto.',
+      countryNoMatch: 'Ningún país coincide',
       slugLabel: 'URL del workspace',
       slugHelp: 'Letras minúsculas, números y guiones.',
       slugDomain: '.kanap.net',

@@ -5,6 +5,7 @@
  */
 
 import BaseLayout from '../layouts/BaseLayout.astro';
+import CountryField from './trial/CountryField.astro';
 import {
   Section,
   PageHeader,
@@ -191,15 +192,14 @@ function resolveHref(href: string): string {
             <label for="si-email">{content.supportInvoice.billingEmailLabel}</label>
             <input id="si-email" name="billing_email" type="email" required autocomplete="email" />
           </div>
-          <div class="mk-tf__field">
-            <label for="si-country">{content.supportInvoice.countryLabel}</label>
-            <select id="si-country" name="country" required>
-              <option value="" disabled selected>—</option>
-              {trial.countryOptions.map((o) => (
-                <option value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </div>
+          <CountryField
+            id="si-country"
+            name="country"
+            label={content.supportInvoice.countryLabel}
+            options={trial.countryOptions}
+            noMatch={trial.form.countryNoMatch}
+            required
+          />
         </div>
 
         <details class="mk-support-form__details">
