@@ -108,7 +108,7 @@ Das Suchfeld oben durchsucht Referenz, Beschreibung, Lieferant, zahlendes Untern
 
 ### Spaltenfilter
 
-Jede filterbare Spaltenüberschrift hat ein Filtersymbol. **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **Anlagentyp**, **Investitionsart**, **Priorität**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher**, jede Analysedimension, **Kostenstelle**, **Budgetverantwortlicher**, **Run oder Build** und **Aktiviert** verwenden Kontrollkästchen-Set-Filter mit **Alle**, **Keine** und einer Löschen-Schaltfläche. Der Filter **Aktiviert** bietet **Aktiviert** und **Deaktiviert** und grenzt die Liste ein, wenn **Anzeigen** auf **Alle** steht. Wenn Sie darin auf **Leeren** klicken oder beide Werte abwählen, zeigt die Liste nichts mehr an, unabhängig von **Anzeigen**. Mehrere Filter werden mit UND-Logik kombiniert.
+Jede filterbare Spaltenüberschrift hat ein Filtersymbol. **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **Anlagentyp**, **Investitionsart**, **Priorität**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher**, jede Analysedimension, **Kostenstelle**, **Budgetverantwortlicher**, **Run oder Build** und **Aktiviert** verwenden Kontrollkästchen-Set-Filter mit **Alle**, **Keine** und einer Löschen-Schaltfläche. Der Filter **Aktiviert** bietet **Aktiviert** und **Deaktiviert** mit derselben Bedeutung wie **Anzeigen** und grenzt die Liste ein, wenn **Anzeigen** auf **Alle** steht. Wenn Sie darin auf **Leeren** klicken oder beide Werte abwählen, zeigt die Liste nichts mehr an, unabhängig von **Anzeigen**. Mehrere Filter werden mit UND-Logik kombiniert.
 
 Aktivieren Sie **Alle** und deaktivieren Sie dann die Werte, die Sie ausschließen möchten: Der Filter behält alles außer diesen (die Überschrift zeigt dann zum Beispiel **Alle außer 3**), und ein später angelegter Wert wird automatisch einbezogen.
 
@@ -143,7 +143,7 @@ Klicken Sie auf eine beliebige Zelle in einer Zeile, um den Arbeitsbereich auf d
 
 ### Statusfilter
 
-Verwenden Sie den Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über dem Grid, um den Lebenszyklusbereich zu steuern (Standard ist **Aktiv**). Wählen Sie **Deaktiviert**, um archivierte Investitionen zu überprüfen, oder **Alle**, um beide Zustände einzuschließen. Summen aktualisieren sich sofort.
+Verwenden Sie den Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über dem Grid, um den Lebenszyklusbereich zu steuern (Standard ist **Aktiv**). **Aktiv** listet die Positionen ohne Ende der Gültigkeit oder mit einem Ende im laufenden Jahr oder später: Zeilen, die im laufenden Jahr enden, bleiben bis zum 31. Dezember unter **Aktiv**. **Deaktiviert** listet die Positionen, die vor dem 1. Januar des laufenden Jahres geendet haben. Wählen Sie **Deaktiviert**, um archivierte Investitionen zu überprüfen, oder **Alle**, um beide Zustände einzuschließen. Summen aktualisieren sich sofort.
 
 ### Suchkontext-Erhaltung
 
@@ -568,6 +568,7 @@ Jede CAPEX-Position hat einen **Status** (Aktiviert oder Deaktiviert) und ein op
 **Deaktivierte Positionen anzeigen**:
 
 - Standardmäßig zeigt die CAPEX-Liste nur **aktivierte** Positionen
+- Zeilen, die im laufenden Jahr enden, bleiben bis zum 31. Dezember unter **Aktiv**, auch wenn ihr Status bereits **Deaktiviert** lautet. Am 1. Januar wechseln sie zu **Deaktiviert**
 - Verwenden Sie den Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert**, um den Bereich zu ändern
 
 **Wann deaktivieren vs. löschen**:

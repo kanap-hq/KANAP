@@ -171,6 +171,7 @@ applyStatusFilter(queryBuilder, {
 
 **Default Behavior**:
 - List endpoints default to "currently active" (disabled_at IS NULL OR disabled_at > NOW())
+- Exception: the OPEX and CAPEX budget lists read Enabled and Disabled by the current year (enabled: no end of validity or one on or after 1 January UTC; disabled: one before it), so a line ending during the year stays listed until 31 December
 - Historical queries include items active during the period
 - Frontend `StatusLifecycleField` component handles date picker + derived status
 

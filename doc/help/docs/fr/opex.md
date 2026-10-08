@@ -69,13 +69,13 @@ La liste OPEX (dans **Gestion budgétaire > OPEX**) est votre vue principale pou
 
 **Filtrage** :
   - **Recherche rapide** : Recherche dans la référence, le nom du produit, la description, le fournisseur, la société payeuse, le compte, le contrat, les noms de projets, la ventilation, les responsables, les valeurs analytiques, le centre de coûts (code, nom et chemin), le responsable budgétaire, les notes, la devise et le statut. Filtre la liste en temps réel pendant la saisie, en ignorant les accents et la casse
-  - **Filtres de colonnes** : Cliquez sur l'icône de filtre dans n'importe quel en-tête de colonne. **Fournisseur**, **Société payeuse**, **Compte**, **Ventilation**, **Devise**, **Responsable IT**, **Responsable métier**, chaque dimension analytique, **Centre de coûts**, **Responsable budgétaire**, **Run ou build** et **Activé** utilisent des filtres par jeu de cases à cocher (multi-sélection). Le filtre **Activé** propose **Activé** et **Désactivé** et restreint la liste lorsque **Afficher** est réglé sur **Tous**. Cliquer sur **Effacer** dans ce filtre, ou décocher les deux valeurs, n'affiche plus rien, quel que soit le choix de **Afficher**
+  - **Filtres de colonnes** : Cliquez sur l'icône de filtre dans n'importe quel en-tête de colonne. **Fournisseur**, **Société payeuse**, **Compte**, **Ventilation**, **Devise**, **Responsable IT**, **Responsable métier**, chaque dimension analytique, **Centre de coûts**, **Responsable budgétaire**, **Run ou build** et **Activé** utilisent des filtres par jeu de cases à cocher (multi-sélection). Le filtre **Activé** propose **Activé** et **Désactivé**, avec le même sens que **Afficher**, et restreint la liste lorsque **Afficher** est réglé sur **Tous**. Cliquer sur **Effacer** dans ce filtre, ou décocher les deux valeurs, n'affiche plus rien, quel que soit le choix de **Afficher**
   - **Tous sauf quelques valeurs** : Cochez **Tous**, puis décochez les valeurs à exclure : le filtre garde tout sauf celles-ci (l'en-tête affiche par exemple **Tous sauf 3**), et une valeur créée plus tard est incluse automatiquement
   - **Filtres de montants** : Chaque colonne de montant a un filtre numérique. Un nombre saisi dans la case sous l'en-tête garde les postes d'au moins ce montant. Ouvrez le menu du filtre pour les autres conditions : supérieur à, inférieur à, égal, différent, ou entre deux montants
   - **Filtres ETP** : Chaque colonne ETP a un filtre numérique avec les mêmes conditions, plus vide et non vide. **Vide** garde les postes dont la colonne n'a aucune ligne
   - **Filtres de dates** : **Début effectif**, **Fin de validité**, **Créé** et **Mis à jour** ont des filtres de date. Choisissez une date dans la case sous l'en-tête pour garder les postes à cette date, ou ouvrez le menu du filtre pour avant, après, entre, vide ou non vide
   - **Colonnes texte** : elles utilisent des filtres texte, en ignorant les accents et la casse. Sur **Réf**, saisissez le numéro ou la référence complète, par exemple `12` ou `OPX-12`
-  - **Périmètre par statut** : Utilisez la bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la grille (par défaut **Activés**)
+  - **Périmètre par statut** : Utilisez la bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la grille (par défaut **Activés**). **Activés** liste les postes sans fin de validité ou dont la fin de validité tombe dans l'année en cours ou plus tard : les lignes qui se terminent pendant l'année en cours restent dans **Activés** jusqu'au 31 décembre. **Désactivés** liste les postes terminés avant le 1er janvier de l'année en cours
   - **Partage d'une vue** : Votre tri, votre recherche et vos filtres sont conservés dans l'adresse de la page : recharger la page ou partager le lien rouvre la même vue. Un lien dont les filtres ne sont plus disponibles affiche « Les filtres de ce lien ne sont plus disponibles. »
 
 **Tri** :
@@ -463,7 +463,8 @@ Chaque poste OPEX a un **statut** (Activé ou Désactivé) et une **Fin de valid
 
 **Afficher les postes désactivés** :
   - Par défaut, la liste OPEX n'affiche que les postes **Activés**
-  - Utilisez le bouton bascule **Afficher : Tous / Activés / Désactivés** et choisissez **Désactivés** ou **Tous** pour voir les postes désactivés
+  - Les lignes qui se terminent pendant l'année en cours restent dans **Activés** jusqu'au 31 décembre, même lorsque leur statut indique **Désactivé**. Elles passent dans **Désactivés** le 1er janvier
+  - Utilisez le bouton bascule **Afficher : Tous / Activés / Désactivés** et choisissez **Désactivés** ou **Tous** pour voir les postes terminés une année précédente
 
 **Désactiver ou supprimer** :
   - **Privilégiez la désactivation** : Elle préserve l'historique, garantit la cohérence des rapports et conserve la piste d'audit

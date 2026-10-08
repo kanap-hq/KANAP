@@ -69,13 +69,13 @@ La lista OPEX (en **Gestión presupuestaria > OPEX**) es su vista principal para
 
 **Filtrado**:
   - **Búsqueda rápida**: Busca en la referencia, el nombre del producto, la descripción, el proveedor, la empresa pagadora, la cuenta, el contrato, los nombres de proyectos, la asignación, los responsables, los valores analíticos, el centro de coste (código, nombre y ruta), el responsable del presupuesto, las notas, la moneda y el estado. Filtra la lista en tiempo real mientras escribe, sin distinguir acentos ni mayúsculas y minúsculas
-  - **Filtros de columna**: Haga clic en el icono de filtro en cualquier encabezado de columna. **Proveedor**, **Empresa pagadora**, **Cuenta**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio**, cada dimensión analítica, **Centro de coste**, **Responsable del presupuesto**, **Run o build** y **Habilitado** usan filtros de conjunto de casillas (selección múltiple). El filtro **Habilitado** ofrece **Activado** y **Desactivado** y restringe la lista cuando **Mostrar** está en **Todos**. Si hace clic en **Limpiar** dentro del filtro, o desmarca ambos valores, la lista no muestra nada, sea cual sea la opción de **Mostrar**
+  - **Filtros de columna**: Haga clic en el icono de filtro en cualquier encabezado de columna. **Proveedor**, **Empresa pagadora**, **Cuenta**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio**, cada dimensión analítica, **Centro de coste**, **Responsable del presupuesto**, **Run o build** y **Habilitado** usan filtros de conjunto de casillas (selección múltiple). El filtro **Habilitado** ofrece **Activado** y **Desactivado**, con el mismo significado que **Mostrar**, y restringe la lista cuando **Mostrar** está en **Todos**. Si hace clic en **Limpiar** dentro del filtro, o desmarca ambos valores, la lista no muestra nada, sea cual sea la opción de **Mostrar**
   - **Todos menos algunos**: Marque **Todos** y luego desmarque los valores que quiera excluir: el filtro conserva todo salvo esos (el encabezado muestra, por ejemplo, **Todos menos 3**), y un valor creado más tarde se incluye automáticamente
   - **Filtros de importe**: Cada columna de importe tiene un filtro numérico. Un número escrito en el cuadro bajo el encabezado conserva las partidas con al menos ese importe. Abra el menú del filtro para las demás condiciones: mayor que, menor que, igual, distinto o entre dos importes
   - **Filtros de ETC**: Cada columna de ETC tiene un filtro numérico con las mismas condiciones, más vacío y no vacío. **Vacío** conserva las partidas cuya columna no tiene líneas
   - **Filtros de fecha**: **Inicio efectivo**, **Fin de validez**, **Creado** y **Actualizado** tienen filtros de fecha. Elija una fecha en el cuadro bajo el encabezado para conservar las partidas de esa fecha, o abra el menú del filtro para antes de, después de, entre, vacío o no vacío
   - **Columnas de texto**: usan filtros de texto, sin distinguir acentos ni mayúsculas y minúsculas. En **Ref**, escriba el número o la referencia completa, por ejemplo `12` u `OPX-12`
-  - **Alcance de estado**: Utilice el conmutador **Mostrar: Todos / Activos / Desactivados** encima de la cuadrícula (predeterminado: **Activos**)
+  - **Alcance de estado**: Utilice el conmutador **Mostrar: Todos / Activos / Desactivados** encima de la cuadrícula (predeterminado: **Activos**). **Activos** muestra las partidas sin fin de validez o con un fin de validez en el año en curso o posterior: las líneas que terminan durante el año en curso permanecen en **Activos** hasta el 31 de diciembre. **Desactivados** muestra las partidas que terminaron antes del 1 de enero del año en curso
   - **Compartir una vista**: Su orden, búsqueda y filtros se guardan en la dirección web de la página, de modo que recargar la página o compartir el enlace reabre la misma vista. Un enlace cuyos filtros ya no están disponibles muestra «Los filtros de este enlace ya no están disponibles.»
 
 **Ordenación**:
@@ -463,7 +463,8 @@ Cada partida OPEX tiene un **estado** (Habilitado o Deshabilitado) y un **Fin de
 
 **Ver partidas deshabilitadas**:
   - Por defecto, la lista OPEX muestra solo partidas **Habilitadas**
-  - Use el selector **Mostrar: Todos / Activos / Desactivados** y elija **Desactivados** o **Todos** para ver partidas desactivadas
+  - Las líneas que terminan durante el año en curso permanecen en **Activos** hasta el 31 de diciembre, aunque su estado ya indique **Desactivado**. Pasan a **Desactivados** el 1 de enero
+  - Use el selector **Mostrar: Todos / Activos / Desactivados** y elija **Desactivados** o **Todos** para ver las partidas que terminaron en un año anterior
 
 **Cuándo desactivar vs eliminar**:
   - **Prefiera desactivar**: Mantiene el historial intacto, asegura que los informes permanezcan consistentes y soporta registros de auditoría
