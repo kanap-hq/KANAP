@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import CountryField from './CountryField.astro';
 import { Section, PageHeader } from '../sections';
 import { getLocaleFromUrl, localePath } from '../../i18n/ui';
 import { getTrialContent } from '../../content/resolve';
@@ -32,16 +33,15 @@ const c = getTrialContent(locale).start;
           <p class="mk-tf__help">{c.form.orgHelp}</p>
         </div>
 
-        <div class="mk-tf__field">
-          <label for="tf-country">{c.form.countryLabel}</label>
-          <select id="tf-country" name="country_iso" required>
-            <option value="" disabled selected>—</option>
-            {c.countryOptions.map((o) => (
-              <option value={o.value}>{o.label}</option>
-            ))}
-          </select>
-          <p class="mk-tf__help">{c.form.countryHelp}</p>
-        </div>
+        <CountryField
+          id="tf-country"
+          name="country_iso"
+          label={c.form.countryLabel}
+          help={c.form.countryHelp}
+          options={c.countryOptions}
+          noMatch={c.form.countryNoMatch}
+          required
+        />
 
         <div class="mk-tf__field">
           <label for="tf-slug">{c.form.slugLabel}</label>
