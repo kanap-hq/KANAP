@@ -1,18 +1,18 @@
 axis_code;name;description;status
-nature;Licences et maintenance;;enabled
-nature;Abonnements SaaS;;enabled
-nature;Cloud et hébergement;;enabled
-nature;Télécoms et réseau;;enabled
-nature;Assistance technique;;enabled
-nature;Centre de compétences;;enabled
-nature;Infogérance;;enabled
-nature;Matériel;;enabled
-nature;Conseil et audit;;enabled
-nature;Formation;;enabled
-nature;Frais et déplacements;;enabled
-reference;REF-ECOM-CDC;Centre de compétences e-commerce : squad externalisée, lignes OPEX et CAPEX, fournisseur variable;enabled
-reference;REF-SAP-S4;Programme S/4HANA : régie fonctionnelle et technique, matériel et développement capitalisé;enabled
-reference;REF-DATA;Plateforme data groupe : licences, hébergement et ingénierie;enabled
-reference;REF-SECU-ZT;Programme Zero Trust : audits, outillage et déploiement;enabled
-recurrence;Récurrent;;enabled
-recurrence;Non récurrent;;enabled
+nature;Licenses and maintenance;;enabled
+nature;SaaS subscriptions;;enabled
+nature;Cloud and hosting;;enabled
+nature;Telecom and network;;enabled
+nature;Staff augmentation;;enabled
+nature;Competence center;;enabled
+nature;Managed services;;enabled
+nature;Hardware;;enabled
+nature;Consulting and audit;;enabled
+nature;Training;;enabled
+nature;Travel and expenses;;enabled
+reference;REF-ECOM-CDC;E-commerce competence center: outsourced squad, OPEX and CAPEX lines, changing suppliers;enabled
+reference;REF-SAP-S4;S/4HANA program: functional and technical contractors, hardware and capitalized development;enabled
+reference;REF-DATA;Group data platform: licenses, hosting and engineering;enabled
+reference;REF-SECU-ZT;Zero Trust program: audits, tooling and rollout;enabled
+recurrence;Recurring;;enabled
+recurrence;One-off;;enabled

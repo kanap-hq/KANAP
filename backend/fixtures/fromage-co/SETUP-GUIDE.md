@@ -36,6 +36,14 @@ users on the old `.com`, `.nl` and `.it` domains, and are left as they are.
 Re-running the runner on such a tenant would create every demo user a second
 time under its new address: load the current dataset on a new tenant instead.
 
+The master data and the budget are in English, as an international group
+would keep them; the subsidiaries keep a few local names (Dutch and Italian
+budget lines, the local charts of accounts). Tenants loaded before this
+change hold French names for the cost centres, the dimensions and the budget
+lines. The runner renames the default dimension, but re-running it on such a
+tenant would add the English departments, dimension values and budget lines
+next to the French ones: load the current dataset on a new tenant instead.
+
 ## What the runner does
 
 1. **Tenant bootstrap** (if login fails): `POST /public/start-trial` →
@@ -44,7 +52,7 @@ time under its new address: load the current dataset on a new tenant instead.
 2. **Settings**: currencies (EUR/USD), IT Ops server kinds, operating systems,
    DNS domains, connection entities.
 3. **Portfolio classification** (sources, categories, streams) and the
-   **Domaine** dimension: the default analytics dimension, named `Domaine`,
+   **Domain** dimension: the default analytics dimension, named `Domain`,
    holds the domain each line serves (ERP, E-commerce, Workplace…).
 4. **CSV imports** (01, 03→19 and 26→30): companies, charts of accounts, suppliers,
    departments, contacts, users, cost centres, analytics dimension values,
@@ -70,10 +78,10 @@ time under its new address: load the current dataset on a new tenant instead.
    the quantity × price lines of the external staffing items (`30-costed-lines.csv`,
    keyed by item name, resolved to versions) and imports the monthly amounts
    (`29-budget-rows.csv`: 2026 actuals January to August for every item, a
-   forecast on some). Three more analytics dimensions are created first (Nature de
-   coût, Référence budget, Récurrence). What a line pays for is on Nature de
-   coût, so Domaine holds no expense kinds; on a tenant built by an earlier
-   version, the runner removes the old Domaine values Professional Services,
+   forecast on some). Three more analytics dimensions are created first (Cost
+   type, Budget reference, Recurrence). What a line pays for is on Cost type,
+   so Domain holds no expense kinds; on a tenant built by an earlier
+   version, the runner removes the old Domain values Professional Services,
    Managed Services, Training and General once no line uses them. 2027 is left empty on purpose: the
    budget demo initialises it by copying the 2026 landing. Re-running the
    runner restores the budget data, except on frozen columns: unfreeze them

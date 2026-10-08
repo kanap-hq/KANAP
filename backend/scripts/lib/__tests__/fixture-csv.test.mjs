@@ -112,7 +112,7 @@ test('a shift of one year, file by file', () => {
 
   const notes = find('14-spend-items.csv', (row) => row.product_name.startsWith('Lotus Notes'));
   assert.equal(notes.disabled_at, '2027-12-31');
-  assert.equal(notes.notes, 'Fin de validité 2027-12-31', 'a date inside a text moves too');
+  assert.equal(notes.notes, 'End of validity 2027-12-31', 'a date inside a text moves too');
 
   const sap = find('15-capex-items.csv', (row) => row.description.startsWith('SAP Cheddar Migration'));
   assert.deepEqual([sap.effective_start, sap.disabled_at], ['2026-07-01', '2028-12-31']);
@@ -135,6 +135,6 @@ test('a shift of one year, file by file', () => {
   const actual = find('29-budget-rows.csv', (row) => row.item_name.startsWith('Microsoft Enterprise') && row.measure === 'actual');
   assert.deepEqual([actual.year, actual.period_start, actual.period_end], ['2027', '2027-01-01', '2027-08-31']);
 
-  const staffing = find('30-costed-lines.csv', (row) => row.label === 'Chef de projet EDI');
+  const staffing = find('30-costed-lines.csv', (row) => row.label === 'EDI project manager');
   assert.deepEqual([staffing.year, staffing.period_start, staffing.period_end], ['2027', '2027-01-01', '2027-12-31']);
 });
