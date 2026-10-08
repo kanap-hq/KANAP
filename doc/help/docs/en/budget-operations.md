@@ -169,7 +169,9 @@ A column can be built from lines, each a quantity times a unit price. See [Quant
 
 **The lines are only a reference.** This is the case when the source amounts were typed by hand, spread, or copied.
 
-- The percentage increase applies to the months, as for any other column. The lines are copied as they are, with their unit prices and their FTE
+- The percentage increase applies to the months, as for any other column. The unit prices of the lines do not change
+- The lines move to the destination year with their description, quantity, unit, how often and calendar, and their periods move like the column's period. A line kept for only part of the destination year, because of the item's validity, is cut to that period, and a line left with no month is dropped
+- The FTE is recalculated from the copied lines with the working-day calendars of the destination year
 - In the Budget tab, the destination column shows "Copied from Budget 2026", and its **Quantity and price** tab says "Amounts were copied from Budget 2026. Use the lines again."
 - The copied lines are a read-only reference. Click **Use the lines again** on the **Quantity and price** tab to compute the column from them at their current prices. To plan the destination year at its own prices, change the unit prices after that: each change computes the column again
 
@@ -177,9 +179,9 @@ A copy from a column without lines leaves the destination without lines, and its
 
 #### Calendars without days for the destination year
 
-A line priced per day needs a calendar that holds the destination year. When the calendar of a line has no working days for that year, the copy uses the company standard calendar of the country of the item's paying company instead. This is the calendar created with the company. If there is none, the item is copied the usual way: months times the percentage, with the lines kept unchanged as a reference.
+A line priced per day needs a calendar that holds the destination year. When the calendar of a line has no working days for that year, the copy uses the company standard calendar of the country of the item's paying company instead. This is the calendar created with the company. This holds for a column built from lines and for a column whose lines are only a reference. If there is none, the item is copied the usual way: months times the percentage. The lines are kept unchanged as a reference, and the FTE stays the FTE of the source column.
 
-The dry run flags these items with a **Calendar** note, with a tooltip for each line, and shows a warning above the preview. To copy anyway, tick **Copy anyway with these calendar changes**. The better fix is to add the year's days on the **Working-day calendars** page, then run the dry run again.
+The dry run flags these items with a **Calendar** note, with a tooltip for each line, and shows a warning above the preview. The preview also reports an item for which no replacement calendar exists. To copy anyway, tick **Copy anyway with these calendar changes**. The better fix is to add the year's days on the **Working-day calendars** page, then run the dry run again.
 
 A disabled calendar is still used. The dry run notes it and asks for no confirmation.
 

@@ -169,7 +169,9 @@ Une colonne peut être construite à partir de lignes, chacune étant une quanti
 
 **Les lignes ne sont qu'une référence.** C'est le cas lorsque les montants source ont été saisis à la main, répartis ou copiés.
 
-- Le pourcentage d'augmentation s'applique aux mois, comme pour toute autre colonne. Les lignes sont copiées telles quelles, avec leurs prix unitaires et leur ETP
+- Le pourcentage d'augmentation s'applique aux mois, comme pour toute autre colonne. Les prix unitaires des lignes ne changent pas
+- Les lignes passent à l'année de destination avec leur description, leur quantité, leur unité, leur fréquence et leur calendrier, et leurs périodes suivent la période de la colonne. Une ligne conservée seulement pour une partie de l'année de destination, à cause de la validité du poste, est ramenée à cette période, et une ligne qui n'a plus aucun mois est supprimée
+- L'ETP est recalculé à partir des lignes copiées avec les calendriers de jours ouvrés de l'année de destination
 - Dans l'onglet Budget, la colonne de destination affiche « Copié depuis Budget 2026 », et son onglet **Quantité et prix** indique « Les montants ont été copiés depuis Budget 2026. Utiliser à nouveau les lignes. »
 - Les lignes copiées sont une référence en lecture seule. Cliquez sur **Utiliser à nouveau les lignes** dans l'onglet **Quantité et prix** pour calculer la colonne à partir d'elles, à leurs prix actuels. Pour planifier l'année de destination à ses propres prix, modifiez ensuite les prix unitaires : chaque modification recalcule la colonne
 
@@ -177,9 +179,9 @@ Une copie depuis une colonne sans ligne laisse la destination sans ligne, et son
 
 #### Calendriers sans jours pour l'année de destination
 
-Une ligne au prix par jour a besoin d'un calendrier qui contient l'année de destination. Lorsque le calendrier d'une ligne n'a aucun jour ouvré pour cette année, la copie utilise à la place le calendrier standard de la société payeuse du poste, celui du pays de la société. C'est le calendrier créé avec la société. S'il n'en existe pas, le poste est copié de la façon habituelle : mois multipliés par le pourcentage, lignes conservées telles quelles comme référence.
+Une ligne au prix par jour a besoin d'un calendrier qui contient l'année de destination. Lorsque le calendrier d'une ligne n'a aucun jour ouvré pour cette année, la copie utilise à la place le calendrier standard de la société payeuse du poste, celui du pays de la société. C'est le calendrier créé avec la société. Cela vaut pour une colonne construite à partir de lignes et pour une colonne dont les lignes ne sont qu'une référence. S'il n'en existe pas, le poste est copié de la façon habituelle : mois multipliés par le pourcentage. Les lignes sont conservées telles quelles comme référence, et l'ETP reste celui de la colonne source.
 
-La simulation signale ces postes par une note **Calendrier**, avec une infobulle pour chaque ligne, et affiche un avertissement au-dessus de l'aperçu. Pour copier malgré tout, cochez **Copier quand même avec ces changements de calendrier**. La meilleure solution est d'ajouter les jours de l'année dans la page **Calendriers de jours ouvrés**, puis de relancer la simulation.
+La simulation signale ces postes par une note **Calendrier**, avec une infobulle pour chaque ligne, et affiche un avertissement au-dessus de l'aperçu. L'aperçu signale aussi un poste pour lequel il n'existe aucun calendrier de remplacement. Pour copier malgré tout, cochez **Copier quand même avec ces changements de calendrier**. La meilleure solution est d'ajouter les jours de l'année dans la page **Calendriers de jours ouvrés**, puis de relancer la simulation.
 
 Un calendrier désactivé reste utilisé. La simulation le signale et ne demande aucune confirmation.
 

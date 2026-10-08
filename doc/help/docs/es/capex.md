@@ -416,7 +416,7 @@ Por ejemplo, un consultor a tiempo completo de febrero a octubre cuenta 1 ETC en
 - **Contado**: una columna con líneas en personas o días
 - **Cero**: una columna cuyas líneas están todas en piezas. Su ETC es 0
 - **Vacío**: una columna sin líneas, una partida sin versión para ese año o un año posterior al fin de validez de la partida. Su celda de ETC queda vacía, porque KANAP no puede saber cuántas personas paga
-- El ETC se queda con las líneas. Tras una edición a mano, un reparto o una copia, la columna conserva el ETC de sus líneas. Una copia lleva el ETC de la columna de origen
+- El ETC se queda con las líneas. Tras una edición a mano, un reparto o una copia, la columna conserva el ETC de sus líneas. Una copia recalcula el ETC a partir de las líneas copiadas, con los calendarios laborales del año de destino
 
 ---
 

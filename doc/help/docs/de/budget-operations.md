@@ -169,7 +169,9 @@ Eine Spalte kann aus Zeilen aufgebaut sein, jede eine Menge mal ein Stückpreis.
 
 **Die Zeilen sind nur eine Referenz.** Das ist der Fall, wenn die Quellbeträge von Hand eingegeben, verteilt oder kopiert wurden.
 
-- Die prozentuale Erhöhung gilt für die Monate, wie bei jeder anderen Spalte. Die Zeilen werden unverändert kopiert, mit ihren Stückpreisen und ihren VZÄ
+- Die prozentuale Erhöhung gilt für die Monate, wie bei jeder anderen Spalte. Die Stückpreise der Zeilen ändern sich nicht
+- Die Zeilen wandern ins Zieljahr, mit Beschreibung, Menge, Einheit, Häufigkeit und Kalender, und ihre Zeiträume wandern wie der Zeitraum der Spalte. Eine Zeile, die wegen der Gültigkeit der Position nur für einen Teil des Zieljahres bleibt, wird auf diesen Zeitraum gekürzt, und eine Zeile ohne verbleibenden Monat entfällt
+- Die VZÄ werden aus den kopierten Zeilen mit den Arbeitstagekalendern des Zieljahres neu berechnet
 - Im Budget-Tab zeigt die Zielspalte „Kopiert aus Budget 2026“, und ihr Tab **Menge und Preis** meldet „Die Beträge wurden aus Budget 2026 kopiert. Die Zeilen wieder verwenden.“
 - Die kopierten Zeilen sind eine schreibgeschützte Referenz. Klicken Sie im Tab **Menge und Preis** auf **Die Zeilen wieder verwenden**, um die Spalte mit ihren aktuellen Preisen aus den Zeilen zu berechnen. Um das Zieljahr zu eigenen Preisen zu planen, ändern Sie danach die Stückpreise: Jede Änderung berechnet die Spalte erneut
 
@@ -177,9 +179,9 @@ Eine Kopie aus einer Spalte ohne Zeilen lässt das Ziel ohne Zeilen, und seine V
 
 #### Kalender ohne Tage für das Zieljahr
 
-Eine Zeile mit Preis pro Tag braucht einen Kalender, der das Zieljahr enthält. Hat der Kalender einer Zeile für dieses Jahr keine Arbeitstage, verwendet die Kopie stattdessen den Standardkalender des Landes des zahlenden Unternehmens der Position. Das ist der Kalender, der mit dem Unternehmen angelegt wurde. Gibt es keinen, wird die Position auf die übliche Weise kopiert: Monate mal Prozentsatz, die Zeilen bleiben unverändert als Referenz.
+Eine Zeile mit Preis pro Tag braucht einen Kalender, der das Zieljahr enthält. Hat der Kalender einer Zeile für dieses Jahr keine Arbeitstage, verwendet die Kopie stattdessen den Standardkalender des Landes des zahlenden Unternehmens der Position. Das ist der Kalender, der mit dem Unternehmen angelegt wurde. Das gilt für eine Spalte, die aus Zeilen aufgebaut ist, und für eine Spalte, deren Zeilen nur eine Referenz sind. Gibt es keinen, wird die Position auf die übliche Weise kopiert: Monate mal Prozentsatz. Die Zeilen bleiben unverändert als Referenz, und die VZÄ bleiben die VZÄ der Quellspalte.
 
-Der Testlauf kennzeichnet diese Positionen mit einem Hinweis **Kalender**, mit einem Tooltip je Zeile, und zeigt eine Warnung über der Vorschau. Um trotzdem zu kopieren, haken Sie **Trotzdem mit diesen Kalenderänderungen kopieren** an. Besser ist es, die Tage des Jahres auf der Seite **Arbeitstagekalender** hinzuzufügen und den Testlauf erneut auszuführen.
+Der Testlauf kennzeichnet diese Positionen mit einem Hinweis **Kalender**, mit einem Tooltip je Zeile, und zeigt eine Warnung über der Vorschau. Die Vorschau meldet auch eine Position, für die es keinen Ersatzkalender gibt. Um trotzdem zu kopieren, haken Sie **Trotzdem mit diesen Kalenderänderungen kopieren** an. Besser ist es, die Tage des Jahres auf der Seite **Arbeitstagekalender** hinzuzufügen und den Testlauf erneut auszuführen.
 
 Ein deaktivierter Kalender wird weiterhin verwendet. Der Testlauf vermerkt ihn und verlangt keine Bestätigung.
 

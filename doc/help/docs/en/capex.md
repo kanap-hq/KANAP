@@ -416,7 +416,7 @@ For example, a consultant full time from February to October counts 1 FTE in eac
 - **Counted**: a column with lines in people or days
 - **Zero**: a column whose lines are all in pieces. Its FTE is 0
 - **Blank**: a column without lines, an item without a version for that year, or a year after the item's end of validity. Its FTE cell stays empty, because KANAP cannot tell how many people it pays for
-- The FTE stays with the lines. After an edit by hand, a spread or a copy, the column keeps the FTE of its lines. A copy brings the FTE of the source column
+- The FTE stays with the lines. After an edit by hand, a spread or a copy, the column keeps the FTE of its lines. A copy calculates the FTE again from the copied lines, with the working-day calendars of the destination year
 
 ---
 

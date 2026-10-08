@@ -416,7 +416,7 @@ Par exemple, un consultant à temps plein de février à octobre compte 1 ETP da
 - **Compté** : une colonne avec des lignes en personnes ou en jours
 - **Zéro** : une colonne dont toutes les lignes sont en pièces. Son ETP vaut 0
 - **Vide** : une colonne sans ligne, un poste sans version pour cette année, ou une année postérieure à la fin de validité du poste. Sa cellule ETP reste vide, car KANAP ne peut pas savoir pour combien de personnes il paie
-- L'ETP reste avec les lignes. Après une modification à la main, une répartition ou une copie, la colonne garde l'ETP de ses lignes. Une copie reporte l'ETP de la colonne source
+- L'ETP reste avec les lignes. Après une modification à la main, une répartition ou une copie, la colonne garde l'ETP de ses lignes. Une copie recalcule l'ETP à partir des lignes copiées, avec les calendriers de jours ouvrés de l'année de destination
 
 ---
 
