@@ -201,7 +201,7 @@ Le fichier budgétaire lit et écrit les montants de n'importe quelle colonne et
 4. Remplissez une ligne par poste, en laissant `item_number` vide, avec une colonne de montant par colonne budgétaire et par année (`budget_2027`), ou par mois (`budget_2027_03`).
 5. Importez les fichiers. La vérification signale les erreurs par ligne du fichier, et rien n'est écrit avant le chargement.
 
-Un jeu cohérent de fichiers d'exemple, avec une société fictive et ses données de référence, se trouve dans le [dépôt KANAP](https://github.com/kanap-it/KANAP/tree/main/doc/samples).
+Un jeu cohérent de fichiers d'exemple, avec une société fictive et ses données de référence, se trouve dans le [dépôt KANAP](https://github.com/kanap-hq/KANAP/tree/main/doc/samples).
 
 ## Lire les données directement
 

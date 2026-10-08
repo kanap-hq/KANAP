@@ -201,7 +201,7 @@ El archivo de presupuesto lee y escribe los importes de cualquier columna y año
 4. Rellene una fila por partida, con `item_number` vacío, con una columna de importe por columna presupuestaria y año (`budget_2027`), o por mes (`budget_2027_03`).
 5. Importe los archivos. La comprobación informa de los errores por línea del archivo, y no se escribe nada hasta que usted carga.
 
-Un conjunto coherente de archivos de ejemplo, con una empresa ficticia y sus datos maestros, está en el [repositorio de KANAP](https://github.com/kanap-it/KANAP/tree/main/doc/samples).
+Un conjunto coherente de archivos de ejemplo, con una empresa ficticia y sus datos maestros, está en el [repositorio de KANAP](https://github.com/kanap-hq/KANAP/tree/main/doc/samples).
 
 ## Leer los datos directamente
 

@@ -1,6 +1,6 @@
-# Weekly dependency update pull requests. Minor and patch updates are grouped per ecosystem
-# and folder; a major update comes as its own pull request, except for the packages ignored
-# below, whose next major is planned separately.
+# Weekly dependency update pull requests: minor and patch updates only, grouped per ecosystem
+# and folder. Major versions are upgraded in planned lots (see doc/dependency-exceptions.md), so
+# every major is ignored here.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -14,13 +14,7 @@ updates:
       backend-minor-and-patch:
         update-types: [minor, patch]
     ignore:
-      - dependency-name: nodemailer
-        update-types: [version-update:semver-major]
-      - dependency-name: csv-parse
-        update-types: [version-update:semver-major]
-      - dependency-name: uuid
-        update-types: [version-update:semver-major]
-      - dependency-name: "@types/node"
+      - dependency-name: "*"
         update-types: [version-update:semver-major]
 
   - package-ecosystem: npm
@@ -34,13 +28,7 @@ updates:
       frontend-minor-and-patch:
         update-types: [minor, patch]
     ignore:
-      - dependency-name: vite
-        update-types: [version-update:semver-major]
-      - dependency-name: vitest
-        update-types: [version-update:semver-major]
-      - dependency-name: react-router-dom
-        update-types: [version-update:semver-major]
-      - dependency-name: "@mdxeditor/editor"
+      - dependency-name: "*"
         update-types: [version-update:semver-major]
 
   - package-ecosystem: npm
@@ -54,9 +42,7 @@ updates:
       marketing-minor-and-patch:
         update-types: [minor, patch]
     ignore:
-      - dependency-name: astro
-        update-types: [version-update:semver-major]
-      - dependency-name: puppeteer-core
+      - dependency-name: "*"
         update-types: [version-update:semver-major]
 
   - package-ecosystem: docker
@@ -70,8 +56,7 @@ updates:
       backend-images-minor-and-patch:
         update-types: [minor, patch]
     ignore:
-      # The Node.js major is upgraded in a planned lot (images, CI and @types/node together).
-      - dependency-name: node
+      - dependency-name: "*"
         update-types: [version-update:semver-major]
 
   - package-ecosystem: docker
@@ -85,8 +70,7 @@ updates:
       frontend-images-minor-and-patch:
         update-types: [minor, patch]
     ignore:
-      # The Node.js major is upgraded in a planned lot (images, CI and @types/node together).
-      - dependency-name: node
+      - dependency-name: "*"
         update-types: [version-update:semver-major]
 
   - package-ecosystem: docker
@@ -100,8 +84,7 @@ updates:
       marketing-images-minor-and-patch:
         update-types: [minor, patch]
     ignore:
-      # The Node.js major is upgraded in a planned lot (images, CI and @types/node together).
-      - dependency-name: node
+      - dependency-name: "*"
         update-types: [version-update:semver-major]
 
   - package-ecosystem: github-actions
@@ -114,3 +97,6 @@ updates:
     groups:
       actions-minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]

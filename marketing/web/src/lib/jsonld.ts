@@ -10,7 +10,7 @@ export function organizationLd(site: string) {
     name: 'KANAP',
     url: site,
     logo: new URL('/logo.svg', site).href,
-    sameAs: ['https://github.com/kanap-it/kanap'],
+    sameAs: ['https://github.com/kanap-hq/kanap'],
   };
 }
 

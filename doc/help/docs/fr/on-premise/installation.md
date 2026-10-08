@@ -27,7 +27,7 @@ Optionnel :
 
 ```bash
 # 1. Cloner le dépôt
-git clone https://github.com/kanap-it/kanap.git
+git clone https://github.com/kanap-hq/kanap.git
 cd kanap
 
 # 2. Configurer l'environnement AVANT de compiler
