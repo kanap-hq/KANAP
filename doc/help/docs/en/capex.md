@@ -117,7 +117,7 @@ Every amount column has a number filter. A number typed in the box under the hea
 
 Every FTE column has a number filter with the same conditions, plus blank and not blank. **Blank** keeps the items whose column has no lines.
 
-**Effective start**, **End of validity**, **Created** and **Updated** have date filters. Pick a date in the box under the header to keep the items on that date, or open the filter menu for before, after, between, blank or not blank.
+**Effective start**, **End of validity**, **Created** and **Updated** have date filters. Pick a date in the box under the header to keep the items on that date, or open the filter menu for before, after, between, blank or not blank. **End of validity** takes two conditions joined by AND or OR, for example blank or after a date.
 
 Text columns use text filters, ignoring accents and case. On **Ref**, type the number or the full reference, for example `12` or `CPX-12`.
 
@@ -150,7 +150,7 @@ Use the **Show: All / Enabled / Disabled** toggle above the grid to control life
 
 Your list context -- sort order, search text, and active filters -- is preserved when you open an item and restored when you return to the list. This means you can drill into several items in sequence without losing your place.
 
-The same filters are also kept in the page's web address, so reloading the page or sharing the link reopens the same view. A link whose filters are no longer available shows "The filters of this link are no longer available." When a link filters a hidden column, for example a report row opening the list, the list shows that column for this visit. Your saved column layout does not change.
+The same filters are also kept in the page's web address, so reloading the page or sharing the link reopens the same view. A link whose filters are no longer available shows "The filters of this link are no longer available." When a link filters a hidden column, for example a report row opening the list, the list shows that column right after the item name for this visit. Your saved column layout does not change. The **Show** choice is kept in the address too.
 
 ### Prev/Next navigation
 

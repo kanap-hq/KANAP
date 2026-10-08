@@ -87,6 +87,16 @@ So funktionieren sie:
 - Enthält der Link einen Analysefilter und konnten die Dimensionen nicht geladen werden, zeigt der Bericht keine Zeilen und eine Textzeile: „Der Analysefilter konnte nicht angewendet werden. Entfernen Sie ihn oder versuchen Sie es erneut.“ Klicken Sie auf **Filter entfernen**, um die Analysefilter zu entfernen und den Bericht wieder zu sehen.
 - Die beiden Leistungsverrechnungsberichte haben keine solchen Filter und sind nicht betroffen.
 
+### Die Liste aus einem Bericht öffnen
+
+In **Personal nach Monat**, **Kosten pro VZÄ**, **Analysedimensionen** und **Konsolidierungskonten** ist der Name einer Gruppe ein Link, der die OPEX- oder CAPEX-Liste in einem neuen Tab öffnet, mit den Positionen, die die Zeile zählt:
+
+- die Positionen der Gruppe, eingegrenzt durch die Filterleiste;
+- alle Status (**Anzeigen: Alle**), mit einem Filter **Ende der Gültigkeit** „leer oder nach dem 31. Dezember“ des Jahres vor dem ersten Jahr des Berichts. Ein Bericht zählt die Positionen, die am 1. Januar seines ersten Jahres noch aktiv waren, auch die seither deaktivierten;
+- in **Personal nach Monat** und **Kosten pro VZÄ** sowie mit der Messgröße **VZÄ** nur die Positionen, die VZÄ melden (der Filter **VZÄ gemeldet**).
+
+Die gefilterten Spalten erscheinen für diesen Besuch direkt nach dem Positionsnamen, damit Sie sehen, warum die Liste eingegrenzt ist. Ein Konsolidierungskonto filtert auf seine Konten, ohne eigene Spalte.
+
 ---
 
 ## Globale Leistungsverrechnung
@@ -387,7 +397,7 @@ Zeigen Sie OPEX- oder CAPEX-Budgetdaten gruppiert nach Konsolidierungskonto, wob
 
 - Liniendiagramm mit einer Serie pro Konsolidierungskonto über Jahre
 
-**Tabelle**: Eine Zeile pro Konsolidierungskonto mit Jahresspalten. Eine angeheftete Summenzeile unten summiert alle Gruppen. Ein Konsolidierungskonto ist ein Link, der die OPEX- oder CAPEX-Liste in einem neuen Tab öffnet, gefiltert auf seine Konten („Nicht zugeordnet“: die Konten ohne Konsolidierungskonto und die Positionen ohne Konto) und auf die Filterleiste; die Summenzeile ist reiner Text.
+**Tabelle**: Eine Zeile pro Konsolidierungskonto mit Jahresspalten. Eine angeheftete Summenzeile unten summiert alle Gruppen. Ein Konsolidierungskonto öffnet die Liste der Positionen auf seinen Konten in einem neuen Tab („Nicht zugeordnet“: die Positionen, deren Konto kein Konsolidierungskonto hat, und die Positionen ohne Konto). Siehe [Die Liste aus einem Bericht öffnen](#die-liste-aus-einem-bericht-offnen). Die Summenzeile ist reiner Text.
 
 Eine Zeile auf einem inzwischen deaktivierten Konsolidierungskonto zählt weiterhin, unter der Konsolidierungszeile dieses Kontos. Kontonamen und -nummern werden nur angezeigt, wenn Sie den [Kontenplan](chart-of-accounts.md) lesen dürfen; ohne diesen Zugriff erscheinen alle Zeilen stattdessen unter „Nicht zugeordnet“ (die Summen bleiben richtig, nur die Aufteilung nach Konto ist ausgeblendet). Positionen ohne Konsolidierungskonto erscheinen ebenfalls als „Nicht zugeordnet“. Die Konsolidierungskonten sind die Konten Ihres [Konsolidierungskontenplans](chart-of-accounts.md#der-konsolidierungskontenplan).
 
@@ -423,7 +433,7 @@ Untertitel, Diagrammtitel und erste Tabellenspalte nennen die gewählte Dimensio
 
 **Tabelle**: Eine Zeile pro Wert mit Jahresspalten. Eine angeheftete Summenzeile unten. Zeilen ohne Wert in der gewählten Dimension erscheinen als „Nicht zugeordnet“.
 
-Ein Wert ist ein Link, der die OPEX- oder CAPEX-Liste in einem neuen Tab öffnet, gefiltert auf diesen Wert („Nicht zugeordnet“: auf die Positionen ohne Wert) und auf die Filterleiste. Die Summenzeile ist reiner Text.
+Ein Wert öffnet die Liste seiner Positionen in einem neuen Tab („Nicht zugeordnet“: die Positionen ohne Wert). Mit der Messgröße **VZÄ** zeigt die Liste die Positionen des Werts, die VZÄ melden. Siehe [Die Liste aus einem Bericht öffnen](#die-liste-aus-einem-bericht-offnen). Die Summenzeile ist reiner Text.
 
 ---
 
@@ -455,7 +465,7 @@ Die Seitenadresse speichert die Gruppierung (`?group=item`, `?group=supplier` od
 
 Eine angeheftete Zeile **Gesamt** zeigt die Monatssummen, ihren Durchschnitt und ihre Spitze. Werte erscheinen mit zwei Dezimalstellen. Es zählen nur gemeldete VZÄ: Positionen ohne Zeilen mit Menge und Preis in der Spalte bleiben unberücksichtigt.
 
-Der Name einer Gruppe ist ein Link, der sich in einem neuen Tab öffnet. Eine Position öffnet ihre Seite. Eine Kostenstelle, ein Lieferant oder ein Wert öffnet die OPEX- oder CAPEX-Liste, gefiltert auf diese Gruppe und auf die Filterleiste, **Positionen mit VZÄ** eingeschlossen. „Keine Kostenstelle“, „Kein Lieferant“ und „Kein Wert“ öffnen die Positionen ohne Angabe. Die Zeile **Gesamt** ist reiner Text. Der CSV-Export behält die Namen als reinen Text.
+Der Name einer Gruppe ist ein Link, der sich in einem neuen Tab öffnet. Eine Position öffnet ihre Seite. Eine Kostenstelle, ein Lieferant oder ein Wert öffnet die OPEX- oder CAPEX-Liste mit den Positionen der Gruppe, die VZÄ melden, im Zeitraum des Berichts und eingegrenzt durch die Filterleiste (siehe [Die Liste aus einem Bericht öffnen](#die-liste-aus-einem-bericht-offnen)). „Keine Kostenstelle“, „Kein Lieferant“ und „Kein Wert“ öffnen die Positionen ohne Angabe. Die Zeile **Gesamt** ist reiner Text. Der CSV-Export behält die Namen als reinen Text.
 
 ### Hinweise
 
@@ -501,7 +511,7 @@ Sehen Sie, was ein VZÄ in jedem Teil des Budgets kostet und wie sich diese Kost
 
 Die Gruppen heißen wie in Personal nach Monat („Keine Kostenstelle“, „Kein Lieferant“, „Kein Wert“). Eine angeheftete Zeile **Gesamt** zeigt für jedes Paar die VZÄ gesamt, die Personalkosten gesamt und die Personalkosten gesamt geteilt durch die VZÄ gesamt.
 
-In beiden Ansichten öffnet der Name einer Gruppe ihre Position oder die gefilterte OPEX- oder CAPEX-Liste in einem neuen Tab, wie in [Personal nach Monat](#personal-nach-monat).
+In beiden Ansichten öffnet der Name einer Gruppe ihre Position oder die Liste der Positionen der Gruppe, die VZÄ melden, in einem neuen Tab, wie in [Personal nach Monat](#personal-nach-monat).
 
 **Diagramm**: Horizontale Balken der Kosten pro VZÄ, ein Balken pro Paar. Die erste Kategorie ist die Summe, gefolgt von den ersten zehn Gruppen der Tabelle. Der Titel nennt Typ und Gruppierung, zum Beispiel „OPEX-Kosten pro VZÄ nach Kostenstelle“. Fahren Sie über einen Balken, um Gruppe, Paar, Kosten pro VZÄ, VZÄ und Personalkosten zu lesen.
 

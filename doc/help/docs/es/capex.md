@@ -117,7 +117,7 @@ Cada columna de importe tiene un filtro numérico. Un número escrito en el cuad
 
 Cada columna de ETC tiene un filtro numérico con las mismas condiciones, más vacío y no vacío. **Vacío** conserva las partidas cuya columna no tiene líneas.
 
-**Inicio efectivo**, **Fin de validez**, **Creado** y **Actualizado** tienen filtros de fecha. Elija una fecha en el cuadro bajo el encabezado para conservar las partidas de esa fecha, o abra el menú del filtro para antes de, después de, entre, vacío o no vacío.
+**Inicio efectivo**, **Fin de validez**, **Creado** y **Actualizado** tienen filtros de fecha. Elija una fecha en el cuadro bajo el encabezado para conservar las partidas de esa fecha, o abra el menú del filtro para antes de, después de, entre, vacío o no vacío. **Fin de validez** admite dos condiciones unidas por Y u O, por ejemplo vacío o posterior a una fecha.
 
 Las columnas de texto usan filtros de texto, sin distinguir acentos ni mayúsculas y minúsculas. En **Ref**, escriba el número o la referencia completa, por ejemplo `12` o `CPX-12`.
 
@@ -150,7 +150,7 @@ Utilice el conmutador **Mostrar: Todos / Activos / Desactivados** encima de la c
 
 Su contexto de lista (orden de clasificación, texto de búsqueda y filtros activos) se preserva cuando abre una partida y se restaura al volver a la lista. Esto significa que puede profundizar en varias partidas en secuencia sin perder su lugar.
 
-Estos mismos filtros también se guardan en la dirección web de la página, de modo que recargar la página o compartir el enlace reabre la misma vista. Un enlace cuyos filtros ya no están disponibles muestra «Los filtros de este enlace ya no están disponibles.» Cuando un enlace filtra una columna oculta, por ejemplo una fila de un informe que abre la lista, la lista muestra esa columna durante esta visita. La disposición de columnas que guardó no cambia.
+Estos mismos filtros también se guardan en la dirección web de la página, de modo que recargar la página o compartir el enlace reabre la misma vista. Un enlace cuyos filtros ya no están disponibles muestra «Los filtros de este enlace ya no están disponibles.» Cuando un enlace filtra una columna oculta, por ejemplo una fila de un informe que abre la lista, la lista muestra esa columna justo después del nombre de la partida durante esta visita. La disposición de columnas que guardó no cambia. La opción de **Mostrar** también se guarda en la dirección.
 
 ### Navegación Anterior/Siguiente
 

@@ -117,7 +117,7 @@ Jede Betragsspalte hat einen Zahlenfilter. Eine Zahl im Feld unter der Überschr
 
 Jede VZÄ-Spalte hat einen Zahlenfilter mit denselben Bedingungen, dazu leer und nicht leer. **Leer** behält die Positionen, deren Spalte keine Zeilen hat.
 
-**Gültig ab**, **Ende der Gültigkeit**, **Erstellt** und **Aktualisiert** haben Datumsfilter. Wählen Sie ein Datum im Feld unter der Überschrift, um die Positionen an diesem Datum zu behalten, oder öffnen Sie das Filtermenü für vor, nach, zwischen, leer oder nicht leer.
+**Gültig ab**, **Ende der Gültigkeit**, **Erstellt** und **Aktualisiert** haben Datumsfilter. Wählen Sie ein Datum im Feld unter der Überschrift, um die Positionen an diesem Datum zu behalten, oder öffnen Sie das Filtermenü für vor, nach, zwischen, leer oder nicht leer. **Ende der Gültigkeit** nimmt zwei Bedingungen, verknüpft mit UND oder ODER, zum Beispiel leer oder nach einem Datum.
 
 Textspalten verwenden Textfilter, unabhängig von Akzenten und Groß-/Kleinschreibung. Geben Sie bei **Ref** die Nummer oder die vollständige Referenz ein, zum Beispiel `12` oder `CPX-12`.
 
@@ -150,7 +150,7 @@ Verwenden Sie den Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über dem 
 
 Ihr Listenkontext (Sortierreihenfolge, Suchtext und aktive Filter) wird beibehalten, wenn Sie eine Position öffnen, und wiederhergestellt, wenn Sie zur Liste zurückkehren. Sie können also mehrere Positionen nacheinander aufrufen, ohne Ihren Platz zu verlieren.
 
-Dieselben Filter werden auch in der Webadresse der Seite gespeichert. Ein Neuladen der Seite oder das Teilen des Links öffnet dieselbe Ansicht wieder. Ein Link, dessen Filter nicht mehr verfügbar sind, zeigt „Die Filter dieses Links sind nicht mehr verfügbar.“ Filtert ein Link eine ausgeblendete Spalte, zum Beispiel eine Berichtszeile, die die Liste öffnet, zeigt die Liste diese Spalte für diesen Besuch an. Ihre gespeicherte Spaltenanordnung ändert sich nicht.
+Dieselben Filter werden auch in der Webadresse der Seite gespeichert. Ein Neuladen der Seite oder das Teilen des Links öffnet dieselbe Ansicht wieder. Ein Link, dessen Filter nicht mehr verfügbar sind, zeigt „Die Filter dieses Links sind nicht mehr verfügbar.“ Filtert ein Link eine ausgeblendete Spalte, zum Beispiel eine Berichtszeile, die die Liste öffnet, zeigt die Liste diese Spalte für diesen Besuch direkt nach dem Positionsnamen an. Ihre gespeicherte Spaltenanordnung ändert sich nicht. Auch die Auswahl unter **Anzeigen** wird in der Adresse gespeichert.
 
 ### Zurück/Weiter-Navigation
 

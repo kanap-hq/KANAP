@@ -117,7 +117,7 @@ Chaque colonne de montant a un filtre numérique. Un nombre saisi dans la case s
 
 Chaque colonne ETP a un filtre numérique avec les mêmes conditions, plus vide et non vide. **Vide** garde les postes dont la colonne n'a aucune ligne.
 
-**Début effectif**, **Fin de validité**, **Créé** et **Mis à jour** ont des filtres de date. Choisissez une date dans la case sous l'en-tête pour garder les postes à cette date, ou ouvrez le menu du filtre pour avant, après, entre, vide ou non vide.
+**Début effectif**, **Fin de validité**, **Créé** et **Mis à jour** ont des filtres de date. Choisissez une date dans la case sous l'en-tête pour garder les postes à cette date, ou ouvrez le menu du filtre pour avant, après, entre, vide ou non vide. **Fin de validité** accepte deux conditions reliées par ET ou OU, par exemple vide ou après une date.
 
 Les colonnes texte utilisent des filtres texte, en ignorant les accents et la casse. Sur **Réf**, saisissez le numéro ou la référence complète, par exemple `12` ou `CPX-12`.
 
@@ -150,7 +150,7 @@ Utilisez la bascule **Afficher : Tous / Activés / Désactivés** au-dessus de l
 
 Votre contexte de liste (ordre de tri, texte de recherche et filtres actifs) est conservé lorsque vous ouvrez un poste et restauré lorsque vous revenez à la liste. Vous pouvez ainsi consulter plusieurs postes à la suite sans perdre votre position.
 
-Ces mêmes filtres sont aussi conservés dans l'adresse de la page : recharger la page ou partager le lien rouvre la même vue. Un lien dont les filtres ne sont plus disponibles affiche « Les filtres de ce lien ne sont plus disponibles. » Lorsqu'un lien filtre une colonne masquée, par exemple une ligne de rapport qui ouvre la liste, la liste affiche cette colonne pour cette visite. La disposition de colonnes que vous avez enregistrée ne change pas.
+Ces mêmes filtres sont aussi conservés dans l'adresse de la page : recharger la page ou partager le lien rouvre la même vue. Un lien dont les filtres ne sont plus disponibles affiche « Les filtres de ce lien ne sont plus disponibles. » Lorsqu'un lien filtre une colonne masquée, par exemple une ligne de rapport qui ouvre la liste, la liste affiche cette colonne juste après le nom du poste pour cette visite. La disposition de colonnes que vous avez enregistrée ne change pas. Le choix **Afficher** est aussi conservé dans l'adresse.
 
 ### Navigation Préc./Suiv.
 
