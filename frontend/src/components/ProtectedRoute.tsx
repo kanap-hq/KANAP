@@ -177,6 +177,8 @@ export default function ProtectedRoute() {
       roles: { resource: 'users', level: 'admin' },
       auth: { resource: 'users', level: 'admin' },
       branding: { resource: 'users', level: 'admin' },
+      // The page itself requires the Administrator role.
+      'sample-data': { resource: 'users', level: 'admin' },
       integrations: { resource: 'ai_settings', level: 'admin' },
       'audit-logs': { resource: 'users', level: 'admin' },
       billing: { resource: 'billing', level: 'reader' },
@@ -295,6 +297,8 @@ export default function ProtectedRoute() {
       subscription?.is_subscription_healthy === false &&
       claims.isBillingAdmin &&
       !path.startsWith('/admin/billing') &&
+      // An Administrator may still erase the content of a frozen workspace (sample data reset).
+      !path.startsWith('/admin/sample-data') &&
       !claims.isPlatformAdmin
     ) {
       return <Navigate to="/admin/billing" replace />;

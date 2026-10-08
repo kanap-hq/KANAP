@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Performance dataset generator for KANAP (step 0.1 of the perf plan).
 //
-// Writes CSV files in the formats of the Fromage fixture (fixtures/fromage-co),
+// Writes CSV files in the formats of the Fromage fixture (backend/fixtures/fromage-co),
 // scaled to a large IT department: by default 5,000 OPEX lines, 1,000 CAPEX
 // lines, 1,500 suppliers, 800 accounts, 300 cost centres, 4 analytics
 // dimensions, 800 contracts, 5 budget years. Deterministic: same parameters,

@@ -104,6 +104,7 @@ Si desea el camino más corto hacia la productividad, comience con las guías de
 
 - [Usuarios](admin.md) - Gestión de usuarios, roles, autenticación y registros de auditoría
 - [Personalización](branding.md) - Personalización del logotipo del espacio de trabajo y colores primarios claro/oscuro
+- [Datos de ejemplo](sample-data.md) - Descubra KANAP con una empresa ficticia, bórrela después y empiece de cero
 - [Registro de auditoría](admin.md#registro-de-auditoria) - Revisión del historial de cambios del espacio de trabajo con filtros y vista detallada
 - [Modelos IA](ai-models.md) - Registro de los modelos IA que usa su organización, con sus precios, y definición del predeterminado
 - [Configuración de Plaid](ai-settings.md) - Elección del modelo que usa Plaid, funcionalidades de chat, retención y claves MCP

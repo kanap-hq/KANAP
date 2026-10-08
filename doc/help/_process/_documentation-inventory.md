@@ -1,6 +1,6 @@
 # User Manual Documentation Inventory
 
-_Generated: 2026-08-13_
+_Generated: 2026-10-08_
 
 This document tracks documentation coverage for the KANAP user manual.
 
@@ -13,12 +13,12 @@ This document tracks documentation coverage for the KANAP user manual.
 | IT Landscape | 9 | 9 | 0 |
 | Knowledge | 1 | 1 | 0 |
 | Master Data | 8 | 8 | 0 |
-| Admin & Settings | 15 | 15 | 0 |
+| Admin & Settings | 16 | 16 | 0 |
 | Plaid | 1 | 1 | 0 |
 | AI Agents | 5 | 5 | 0 |
 | Reports | 10 | 10 | 0 |
 | Portfolio | 10 | 10 | 0 |
-| **TOTAL** | **69** | **69** | **0** |
+| **TOTAL** | **70** | **70** | **0** |
 
 _Note: Supplemental Fast Track guides are excluded from these route-based counts. All tenant-facing routes have a manual. The classic product (through the 2026-05-10 sweep) is available in en/fr/de/es; the AI Agents section (added 2026-07-05) is also available in en/fr/de/es. The two AI model registry pages (added 2026-08-10) are available in en/fr/de/es._
 
@@ -28,6 +28,7 @@ _Note: Supplemental Fast Track guides are excluded from these route-based counts
 
 | Date | Doc File | Changes |
 |------|----------|---------|
+| 2026-10-08 | `sample-data.md` (en/fr/de/es) | New page for **Admin** → **Sample data** (`/admin/sample-data`, cloud workspaces, Administrator role): what the Fromage & Co set contains, when a workspace counts as empty, loading and failure recovery, the home banner (**Load**, **Hide**), and **Erase everything and start over** (what is erased, kept and reset to defaults, the typed workspace name, the e-mail to Administrators, writes refused while it runs, allowed on frozen workspaces). Aligned with the review fixes (banner only before the first load and never after an erase, one-line load refusal, failed erase shown on the page, real nav labels). `admin.md` and `my-dashboard.md` (four languages) get a short **Sample data** section and permission line (`admin.md`) and a note on the home line (`my-dashboard.md`). Wired mkdocs nav (+fr/de/es labels), `index.md`, `doc-update-map.tsv`; `docUrls.ts` already maps the route. |
 | 2026-10-07 | `chart-of-accounts.md` (en/fr/de/es) | Consolidation chart. Chart roles in words (**Country default**, **Default for other countries**, **Consolidation chart**) replace the star and circle-plus badges. Rewrote the **Manage charts** dialog (table, row menu, confirmations) and the create dialog. New consolidation health line with its grid filter and marker. The account workspace now has the shared workspace layout with autosave and a **Consolidation account** picker. New sections: chart roles, change the consolidation chart, CSV behaviour for consolidation names. Account numbers are whole numbers. Small updates in `companies.md`, `budget-file.md`, `budget-data-model.md` and `reports.md` (default chart wording, link to the consolidation chart). |
 | 2026-10-06 | _Budget data model (en/fr/de/es)_ | New `budget-data-model.md`: the budget domain as a functional contract for migrations and BI on-premise. Objects and their relations (OPEX and CAPEX lines, budget years, the five budget columns, monthly amounts, quantity and price lines, allocations, links), key fields with their budget file columns, reference data identifiers, the exchange formats (every export and import with its matching key, and what has no file), and a "Reading the data directly" section (row-level security, internal tables, views blocking upgrades, a read-only BI role example). Not tied to a route, so no Help button mapping; listed under Supplemental Guides. mkdocs nav: under Budget Management after the budget file page, with fr/de/es labels. Linked from `index.md` in the four languages. `doc-update-map.tsv` maps it to the budget and master data entities, `budget-file/columns.ts` and `budget-columns.util.ts`. |
 | 2026-10-06 | _CSV files (en/fr/de/es)_ | New `csv-files.md`: the shared reference for the master data **Export CSV** and **Import CSV** buttons, moved out of `master-data-operations.md` (which is now only the freeze and the yearly metrics copy). Links from `companies.md`, `departments.md`, `cost-centers.md`, `suppliers.md`, `chart-of-accounts.md`, `analytics.md`, `working-day-calendars.md` and `admin.md` point to it. Not tied to a route, so no Help button mapping; listed under Supplemental Guides. The mkdocs nav has it as the last item of Master Data. |
@@ -210,6 +211,7 @@ _Note: `/knowledge/new`, `/knowledge/:id`, and `/knowledge/:id/:tab` are covered
 | `/admin/billing` | BillingCenter | **DOCUMENTED** | `admin.md` |
 | `/admin/auth` | AdminAuthPage | **DOCUMENTED** | `admin.md` |
 | `/admin/branding` | AdminBrandingPage | **DOCUMENTED** | `branding.md` |
+| `/admin/sample-data` | SampleDataPage | **DOCUMENTED** | `sample-data.md` |
 | `/admin/ai-models` | AdminAiModelsPage | **DOCUMENTED** | `ai-models.md` |
 | `/admin/ai` | AdminAiPage | **DOCUMENTED** | `ai-settings.md` |
 | `/admin/ai-usage` | AdminAiUsagePage | **DOCUMENTED** | `ai-usage.md` |

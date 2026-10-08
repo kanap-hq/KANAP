@@ -26,6 +26,22 @@ interface QueuedEmail {
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+/** The addresses of a recipient entry: `a@b.c`, `Name <a@b.c>`, or several in one string. */
+const ADDRESS_PATTERN = /[^\s<>,;"']+@[^\s<>,;"']+/g;
+
+/**
+ * Whether a recipient entry holds an address on a reserved `.example` domain (RFC 2606). The
+ * demo users (`fromage-co.example`, ...) live on such domains: no e-mail is ever sent to them.
+ * An entry carrying several addresses is left out whole when one of them is reserved.
+ */
+export function isExampleRecipient(entry: unknown): boolean {
+  const addresses = String(entry ?? '').match(ADDRESS_PATTERN) ?? [];
+  return addresses.some((address) => {
+    const domain = address.slice(address.lastIndexOf('@') + 1).trim().toLowerCase().replace(/\.+$/, '');
+    return domain === 'example' || domain.endsWith('.example');
+  });
+}
+
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, '&amp;')
@@ -70,7 +86,21 @@ export class EmailService {
     }
   }
 
+  /**
+   * Queues an e-mail. Recipients on a reserved `.example` domain are left out first, before
+   * `EMAIL_OVERRIDE` applies; when none is left, nothing is sent and the call resolves.
+   */
   async send(options: SendEmailOptions): Promise<void> {
+    const to = Array.isArray(options.to) ? options.to : [options.to];
+    const kept = to.filter((entry) => !isExampleRecipient(entry));
+    if (kept.length < to.length) {
+      if (kept.length === 0) {
+        this.logger.log(`E-mail not sent: its ${to.length} recipient(s) are on reserved .example domains`);
+        return;
+      }
+      this.logger.log(`${to.length - kept.length} recipient(s) on reserved .example domains left out of an e-mail`);
+      options = { ...options, to: kept };
+    }
     return new Promise((resolve, reject) => {
       this.emailQueue.push({ options, resolve, reject });
       void this.processQueue();

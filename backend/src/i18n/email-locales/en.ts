@@ -194,6 +194,15 @@ export const en = {
       textAction: 'Set your password: {{url}}',
     },
   },
+  workspace: {
+    reset: {
+      subject: 'Your KANAP workspace was reset',
+      heading: 'Workspace reset to its starting state',
+      bodyHtml: '<strong>{{actorName}}</strong> erased all the content of the workspace <strong>{{workspaceName}}</strong> on {{date}}. The workspace is back to its starting state. User accounts and their roles, the subscription and the audit log were kept.',
+      text: '{{actorName}} erased all the content of the workspace {{workspaceName}} on {{date}}. The workspace is back to its starting state. User accounts and their roles, the subscription and the audit log were kept. Open the workspace: {{url}}',
+      cta: 'Open the workspace',
+    },
+  },
 } as const;
 
 type DeepStringShape<T> = T extends string

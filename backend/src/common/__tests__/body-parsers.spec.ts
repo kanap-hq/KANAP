@@ -10,9 +10,14 @@ import { backendPath } from './backend-root';
 // which no route takes, are limited to a small size and parsed flat.
 
 function testMainUsesTheseParsers() {
+  // main.ts mounts the HTTP wiring of http-app.ts.
   const main = fs.readFileSync(backendPath('src', 'main.ts'), 'utf8');
-  assert.match(main, /app\.use\(\.\.\.createBodyParsers\(rawBodySaver\)\)/, 'main.ts installs these parsers');
-  assert.doesNotMatch(main, /express\.(json|urlencoded)\(/, 'main.ts installs no other JSON or form parser');
+  const wiring = fs.readFileSync(backendPath('src', 'http-app.ts'), 'utf8');
+  assert.match(main, /applyHttpMiddleware\(app\)/, 'main.ts mounts the HTTP middleware of http-app.ts');
+  assert.match(wiring, /app\.use\(\.\.\.createBodyParsers\(rawBodySaver\)\)/, 'http-app.ts installs these parsers');
+  for (const [name, source] of [['main.ts', main], ['http-app.ts', wiring]]) {
+    assert.doesNotMatch(source, /express\.(json|urlencoded)\(/, `${name} installs no other JSON or form parser`);
+  }
 }
 
 async function run() {

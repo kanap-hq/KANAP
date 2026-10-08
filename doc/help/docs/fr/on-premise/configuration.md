@@ -16,7 +16,7 @@ Un modèle complet est disponible dans `infra/.env.onprem.example`.
 | `DEFAULT_TENANT_SLUG` | Non    | `default`         | Identifiant interne du tenant (compatible URL, minuscules)          |
 | `DEFAULT_TENANT_NAME` | Non    | `My Organization` | Le nom de votre organisation, affiché dans l'en-tête et les rapports |
 
-Au premier démarrage, KANAP crée automatiquement un tenant avec ces valeurs. Les valeurs par défaut conviennent à la plupart des déploiements — vous n'avez besoin de les modifier que si vous souhaitez qu'un nom d'organisation spécifique apparaisse dans l'application.
+Au premier démarrage, KANAP crée automatiquement un tenant avec ces valeurs. Les valeurs par défaut conviennent à la plupart des déploiements — vous n'avez besoin de les modifier que si vous souhaitez qu'un nom d'organisation spécifique apparaisse dans l'application. Une nouvelle installation reçoit aussi le plan comptable IFRS par défaut, défini comme plan comptable par défaut et plan de consolidation (la mise à jour d'une installation existante ne l'ajoute pas).
 
 ## Requis : Identifiants admin
 

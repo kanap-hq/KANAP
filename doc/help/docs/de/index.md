@@ -104,6 +104,7 @@ Wenn Sie schnellstmöglich produktiv werden möchten, beginnen Sie mit den Fast-
 
 - [Benutzer](admin.md) - Benutzer, Rollen, Authentifizierung und Audit-Protokolle verwalten
 - [Branding](branding.md) - Ihr Mandanten-Logo und die Primärfarben für hell/dunkel anpassen
+- [Beispieldaten](sample-data.md) - KANAP mit einem fiktiven Unternehmen erkunden, dann alles löschen und neu beginnen
 - [Audit-Protokoll](admin.md#audit-protokoll) - Änderungsverlauf des Mandanten mit Filtern und Detailansicht prüfen
 - [KI-Modelle](ai-models.md) - Die von Ihrer Organisation genutzten KI-Modelle mit ihren Preisen registrieren und den Standard festlegen
 - [Plaid-Einstellungen](ai-settings.md) - Das von Plaid genutzte Modell wählen, dazu Chat-Funktionen, Aufbewahrung und MCP-Schlüssel

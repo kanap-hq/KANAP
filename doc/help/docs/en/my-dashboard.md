@@ -34,6 +34,10 @@ The **Log Time** action opens a focused dialog so you can record hours without l
 
 After save, the dashboard time-summary tile refreshes automatically.
 
+## Sample data line
+
+In a cloud workspace that is empty and has never held sample data, Administrators see one line above the tiles: "Discover KANAP with sample data." **Load** opens the sample data dialog and **Hide** removes the line for good. The line disappears once the workspace holds data and does not return after an erase. See [Sample data](sample-data.md).
+
 ## Dashboard tiles
 
 The dashboard displays a grid of tiles, each showing a different aspect of your work. Tiles are laid out in a responsive grid (three columns on large screens, two on medium, one on small). Tiles you do not have permission to view are not loaded at all.

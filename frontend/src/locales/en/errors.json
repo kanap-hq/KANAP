@@ -30,5 +30,16 @@
   "busy": "This data is busy with another operation. Please try again in a few seconds.",
   "notSavedYet": "Your last change is not saved yet because the server is busy. It stays on this page and is sent again with your next change.",
   "edit_conflict": "Someone else changed this field while you were editing it. Choose which value to keep.",
-  "edit_conflict_unreadable": "Someone else changed what you were saving, and the answer could not be read. Your values stay on screen, not saved yet."
+  "edit_conflict_unreadable": "Someone else changed what you were saving, and the answer could not be read. Your values stay on screen, not saved yet.",
+  "administrator_required": "Only an administrator of this workspace can do this.",
+  "demo_status_conflict": "The sample data status changed in the meantime. Reload the page to see where it stands.",
+  "demo_load_capacity": "Other workspaces are loading sample data right now. Try again in a few minutes.",
+  "tenant_not_empty": "Sample data can only be loaded into an empty workspace. This workspace already holds data.",
+  "host_mismatch": "This request does not come from the address of this workspace. Open the workspace at its own address and try again.",
+  "demo_data_unavailable": "Sample data is not available on the server right now. Try again in a few minutes.",
+  "tenant_not_active": "This workspace is not active.",
+  "tenant_resetting": "This workspace is being erased and put back in its starting state. Try again in a moment.",
+  "tenant_reset_running": "This workspace is already being erased. Try again when it has finished.",
+  "confirmation_mismatch": "The name typed does not match the name of the workspace.",
+  "rate_limited": "Too many attempts. Wait a few minutes and try again."
 }

@@ -14,6 +14,7 @@ Navegue a **Administración** desde el menú principal para acceder al centro de
 - Facturación: Requiere el rol de administrador de facturación
 - Autenticación: Requiere `users:admin` (con flag de funcionalidad; requiere SSO habilitado)
 - Personalización: Requiere `users:admin` (solo host del espacio de trabajo; accesible desde la barra lateral)
+- Datos de ejemplo: Requiere el rol de administrador (solo espacios de trabajo en la nube; accesible desde la barra lateral)
 
 ---
 
@@ -32,7 +33,7 @@ La página principal de Administración proporciona acceso rápido a las funcion
 | **Registro de auditoría** | Consultar todo el historial de cambios | `users:admin` |
 | **Facturación** | Plan y facturas | Administrador de facturación |
 
-Autenticación y Personalización están disponibles desde la navegación lateral pero no aparecen en la página principal del centro de Administración.
+Autenticación, Personalización y Datos de ejemplo están disponibles desde la navegación lateral pero no aparecen en la página principal del centro de Administración.
 
 ---
 
@@ -501,6 +502,18 @@ La Personalización le permite:
 - Restablecer toda la personalización a los valores predeterminados
 
 Para instrucciones detalladas paso a paso, consulte: [Personalización](branding.md)
+
+---
+
+## Datos de ejemplo
+
+Use **Administración › Datos de ejemplo** para llenar un espacio de trabajo vacío con Fromage & Co, una quesería ficticia, y para borrar después todo el espacio de trabajo.
+
+- Ruta: `/admin/sample-data`
+- Quién: los usuarios con el rol Administrador
+- Alcance: solo espacios de trabajo en la nube
+
+Para el contenido del conjunto, lo que el borrado elimina y conserva, y el banner de la página de inicio, consulte: [Datos de ejemplo](sample-data.md)
 
 ---
 

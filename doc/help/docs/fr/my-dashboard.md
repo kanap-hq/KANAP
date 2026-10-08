@@ -34,6 +34,10 @@ L'action **Enregistrer du temps** ouvre une boîte de dialogue ciblée pour enre
 
 Après l'enregistrement, la tuile de synthèse du temps du tableau de bord se rafraîchit automatiquement.
 
+## Ligne des données d'exemple
+
+Dans un espace de travail cloud vide, qui n'a jamais reçu les données d'exemple, les administrateurs voient une ligne au-dessus des tuiles : « Découvrez KANAP avec des données d'exemple. » **Charger** ouvre la fenêtre des données d'exemple et **Masquer** supprime la ligne définitivement. La ligne disparaît dès que l'espace de travail contient des données et ne revient pas après un effacement. Voir [Données d'exemple](sample-data.md).
+
 ## Tuiles du tableau de bord
 
 Le tableau de bord affiche une grille de tuiles, chacune montrant un aspect différent de votre travail. Les tuiles sont disposées dans une grille responsive (trois colonnes sur les grands écrans, deux sur les moyens, une sur les petits). Les tuiles que vous n'avez pas l'autorisation de voir ne sont pas chargées du tout.

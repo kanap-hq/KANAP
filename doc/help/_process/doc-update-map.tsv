@@ -52,6 +52,10 @@ admin.md	frontend/src/pages/admin/AuditLogsPage.tsx
 admin.md	frontend/src/pages/admin/BillingCenter.tsx
 admin.md	frontend/src/pages/admin/AdminAuthPage.tsx
 branding.md	frontend/src/pages/admin/AdminBrandingPage.tsx
+sample-data.md	frontend/src/pages/admin/SampleDataPage.tsx
+sample-data.md	frontend/src/pages/admin/sample-data/*.tsx
+sample-data.md	frontend/src/pages/admin/sample-data/*.ts
+sample-data.md	backend/src/demo-data/*.ts
 master-data-operations.md	frontend/src/pages/admin/master-data/**/*.tsx
 csv-files.md	frontend/src/components/csv/**/*.tsx
 csv-files.md	frontend/src/components/csv/**/*.ts

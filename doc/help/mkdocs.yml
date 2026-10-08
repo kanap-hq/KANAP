@@ -145,6 +145,7 @@ plugins:
             Administration: Administration
             "Admin & Users": Utilisateurs
             Branding: Personnalisation
+            Sample data: Données d'exemple
             Master data freeze and metrics copy: Gel des données de référence et copie des indicateurs
             CSV files: Fichiers CSV
             Budget Overview: Vue d'ensemble
@@ -225,6 +226,7 @@ plugins:
             Administration: Administration
             "Admin & Users": Benutzer
             Branding: Branding
+            Sample data: Beispieldaten
             Master data freeze and metrics copy: Stammdaten einfrieren und Kennzahlen kopieren
             CSV files: CSV-Dateien
             Budget Overview: Übersicht
@@ -305,6 +307,7 @@ plugins:
             Administration: Administración
             "Admin & Users": Usuarios
             Branding: Personalización
+            Sample data: Datos de ejemplo
             Master data freeze and metrics copy: Congelar datos maestros y copiar indicadores
             CSV files: Archivos CSV
             Budget Overview: Vista general
@@ -406,6 +409,7 @@ nav:
   - Administration:
     - Admin & Users: admin.md
     - Branding: branding.md
+    - Sample data: sample-data.md
     - "AI models": ai-models.md
     - Plaid Settings: ai-settings.md
     - "Usage & costs": ai-usage.md

@@ -37,6 +37,7 @@ import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import SyncIcon from '@mui/icons-material/Sync';
 import BrushIcon from '@mui/icons-material/Brush';
+import DatasetIcon from '@mui/icons-material/Dataset';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ExtensionIcon from '@mui/icons-material/Extension';
 import ReportProblemOutlinedIcon from '@mui/icons-material/ReportProblemOutlined';
@@ -514,6 +515,12 @@ export default function Layout() {
                 if (aiAdminRoutes.includes(entry.to) && !aiSettingsAvailable) return false;
                 return true;
               });
+              // Sample data (cloud workspaces): the Administrator role, after Branding.
+              if (!isPlatformHost && !isSingleTenant && config.features.sampleData && claims?.isGlobalAdmin) {
+                const at = entries.findIndex((entry) => isNavItem(entry) && entry.to === '/admin/branding');
+                const item: NavEntry = { to: '/admin/sample-data', label: t('nav:sidebar.admin.sampleData'), icon: <DatasetIcon /> };
+                entries = at >= 0 ? [...entries.slice(0, at + 1), item, ...entries.slice(at + 1)] : [...entries, item];
+              }
               // In single-tenant mode, append Scheduled Tasks for admin users
               if (isSingleTenant && claims?.isGlobalAdmin) {
                 entries = [...entries, { to: '/admin/scheduled-tasks', label: t('nav:sidebar.platform.scheduledTasks'), icon: <ScheduleIcon /> }];

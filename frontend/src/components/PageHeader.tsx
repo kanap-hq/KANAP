@@ -52,6 +52,7 @@ function useBreadcrumbs(): Crumb[] {
       'dimensions': 'dimensions',
       'users': 'users',
       'roles': 'roles',
+      'sample-data': 'sampleData',
       'agent-control': 'agentControl',
       'ai-models': 'aiModels',
       'ai-usage': 'aiUsage',

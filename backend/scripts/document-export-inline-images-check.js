@@ -16,7 +16,7 @@
  * Exécution (pile locale) :
  *   cd backend
  *   CHECK_BASE=http://fromage.lvh.me/api CHECK_HOST=fromage.lvh.me \
- *   CHECK_EMAIL=thomas.berger@fromage-co.com CHECK_PASSWORD='…' \
+ *   CHECK_EMAIL=thomas.berger@fromage-co.example CHECK_PASSWORD='…' \
  *   CHECK_TENANT_SLUG=fromage CHECK_ATTACHMENT_ID=<uuid> \
  *   npm run test:security:export:live
  *

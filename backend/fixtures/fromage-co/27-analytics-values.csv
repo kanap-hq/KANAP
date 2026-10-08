@@ -1,0 +1,18 @@
+axis_code;name;description;status
+nature;Licenses and maintenance;;enabled
+nature;SaaS subscriptions;;enabled
+nature;Cloud and hosting;;enabled
+nature;Telecom and network;;enabled
+nature;Staff augmentation;;enabled
+nature;Competence center;;enabled
+nature;Managed services;;enabled
+nature;Hardware;;enabled
+nature;Consulting and audit;;enabled
+nature;Training;;enabled
+nature;Travel and expenses;;enabled
+reference;REF-ECOM-CDC;E-commerce competence center: outsourced squad, OPEX and CAPEX lines, changing suppliers;enabled
+reference;REF-SAP-S4;S/4HANA program: functional and technical contractors, hardware and capitalized development;enabled
+reference;REF-DATA;Group data platform: licenses, hosting and engineering;enabled
+reference;REF-SECU-ZT;Zero Trust program: audits, tooling and rollout;enabled
+recurrence;Recurring;;enabled
+recurrence;One-off;;enabled

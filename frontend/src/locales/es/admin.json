@@ -1239,5 +1239,111 @@
         "goToSync": "Configurar la sincronización"
       }
     }
+  },
+  "sampleData": {
+    "title": "Datos de ejemplo",
+    "intro": "Descubra KANAP con Fromage & Co, una quesería ficticia. Los datos de ejemplo se cargan en un espacio de trabajo vacío y se borran después desde esta página.",
+    "notEmpty": "Los datos de ejemplo solo se pueden cargar en un espacio de trabajo vacío. Este espacio de trabajo ya contiene datos.",
+    "loadRefusal": {
+      "SUBSCRIPTION_FROZEN": "Los datos de ejemplo no se pueden cargar mientras la suscripción esté congelada.",
+      "TRIAL_EXPIRED": "Los datos de ejemplo ya no se pueden cargar una vez finalizado el periodo de prueba."
+    },
+    "loadedHint": "Para empezar su propio trabajo en un espacio de trabajo limpio, borre todo. El espacio de trabajo vuelve a su estado inicial.",
+    "resetting": "Borrando el contenido del espacio de trabajo. Tarda unos segundos.",
+    "status": {
+      "idle": "Sin cargar",
+      "loading": "Cargando",
+      "loaded": "Cargados",
+      "failed": "Error de carga",
+      "resetting": "Borrando"
+    },
+    "strip": {
+      "status": "Estado",
+      "loadedOn": "Cargados el",
+      "startedOn": "Iniciado el",
+      "failedOn": "Falló el",
+      "dateBy": "{{date}} por {{name}}"
+    },
+    "actions": {
+      "load": "Cargar datos de ejemplo",
+      "retry": "Reintentar",
+      "eraseAndStartOver": "Borrar todo y empezar de cero",
+      "eraseAll": "Borrar todo"
+    },
+    "loading": {
+      "step": "Paso {{current}} de {{total}}: {{label}}",
+      "generic": "Cargando…",
+      "concurrentWrites": "Lo que se cree en el espacio de trabajo mientras tanto se borra si la carga falla."
+    },
+    "steps": {
+      "settings": "configuración",
+      "classification": "clasificación del portafolio y análisis",
+      "companies": "empresas",
+      "charts-of-accounts": "planes de cuentas",
+      "master-data": "proveedores, departamentos y contactos",
+      "users": "usuarios",
+      "budget-setup": "centros de coste y calendarios",
+      "applications": "procesos de negocio y aplicaciones",
+      "contracts": "contratos",
+      "budget": "presupuesto",
+      "portfolio": "proyectos y solicitudes",
+      "assets": "ubicaciones y activos",
+      "tasks": "tareas",
+      "application-links": "vínculos de las aplicaciones",
+      "landscape": "instancias, interfaces y conexiones",
+      "budget-links": "vínculos presupuestarios",
+      "portfolio-teams": "equipos y fases de los proyectos",
+      "allocations": "asignaciones entre empresas",
+      "knowledge": "documentos"
+    },
+    "failure": {
+      "load_failed": "No se pudieron cargar los datos de ejemplo.",
+      "load_timeout": "La carga tardó demasiado y se detuvo.",
+      "load_not_started": "La carga no pudo iniciarse en el servidor.",
+      "load_interrupted": "La carga se detuvo porque el servidor se reinició.",
+      "reset_failed": "La carga falló y el espacio de trabajo no pudo volver a su estado inicial. Borre todo para intentarlo de nuevo.",
+      "backToStart": "El espacio de trabajo volvió a su estado inicial."
+    },
+    "loadDialog": {
+      "title": "Cargar datos de ejemplo",
+      "intro": "KANAP llena este espacio de trabajo con Fromage & Co, una quesería ficticia:",
+      "companies": "4 empresas en Francia, los Países Bajos, Italia y Estados Unidos",
+      "users": "18 usuarios ficticios, que no pueden iniciar sesión",
+      "landscape": "Las aplicaciones y su panorama: instancias, interfaces y conexiones",
+      "business": "Los contratos, el presupuesto del año en curso, los proyectos y las tareas",
+      "duration": "La carga tarda menos de un minuto. Puede borrarlo todo más tarde desde {{path}}."
+    },
+    "resetDialog": {
+      "title": "Borrar todo y empezar de cero",
+      "warning": "Todo el contenido de este espacio de trabajo se borra, sin posibilidad de recuperarlo. El espacio de trabajo vuelve a su estado inicial.",
+      "keptTitle": "Se conservan:",
+      "kept": {
+        "users": "Las cuentas de usuario reales y sus roles",
+        "subscription": "La suscripción",
+        "identity": "El nombre, la dirección y el logotipo del espacio de trabajo",
+        "microsoft": "La conexión con Microsoft",
+        "ai": "La configuración de IA",
+        "audit": "El registro de auditoría"
+      },
+      "settingsDefaults": "La configuración guardada en el espacio de trabajo (monedas, columnas presupuestarias, catálogo de clasificación) vuelve a sus valores predeterminados.",
+      "createdSinceLoad_one": "También se borrará {{count}} elemento creado desde la carga de los datos de ejemplo.",
+      "createdSinceLoad_other": "También se borrarán {{count}} elementos creados desde la carga de los datos de ejemplo.",
+      "email": "Los administradores reciben un correo electrónico cuando se ha borrado el contenido del espacio de trabajo.",
+      "typeName": "Para confirmar, escriba el nombre del espacio de trabajo:",
+      "nameLabel": "Nombre del espacio de trabajo"
+    },
+    "banner": {
+      "text": "Descubra KANAP con datos de ejemplo.",
+      "load": "Cargar",
+      "hide": "Ocultar",
+      "loading": "Cargando datos de ejemplo. {{step}}.",
+      "loadingNoStep": "Cargando datos de ejemplo."
+    },
+    "messages": {
+      "statusFailed": "No se pudo leer el estado de los datos de ejemplo.",
+      "loadFailed": "No se pudieron cargar los datos de ejemplo.",
+      "resetFailed": "No se pudo borrar el contenido del espacio de trabajo. No se ha modificado nada.",
+      "dismissFailed": "No se pudo ocultar este mensaje."
+    }
   }
 }

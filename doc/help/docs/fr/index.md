@@ -104,6 +104,7 @@ Si vous souhaitez le chemin le plus court vers la productivité, commencez par l
 
 - [Utilisateurs](admin.md) - Gérez les utilisateurs, les rôles, l'authentification et les journaux d'audit
 - [Personnalisation](branding.md) - Personnalisez le logo de votre tenant et les couleurs primaires en mode clair et sombre
+- [Données d'exemple](sample-data.md) - Découvrez KANAP avec une entreprise fictive, puis effacez-la et repartez de zéro
 - [Journal d'audit](admin.md#journal-daudit) - Consultez l'historique des modifications du tenant avec des filtres et une vue détaillée
 - [Modèles IA](ai-models.md) - Enregistrez les modèles IA utilisés par votre organisation, avec leurs tarifs, et désignez celui par défaut
 - [Paramètres Plaid](ai-settings.md) - Choisissez le modèle utilisé par Plaid, ainsi que les fonctionnalités de chat, la rétention et les clés MCP

@@ -31,4 +31,6 @@ export const RATE_LIMITS = {
    * under it.
    */
   listContextSave: { limit: 60, ttl: 60_000 },
+  /** Sample data load, reset and banner dismissal, per user (`UserRateLimitGuard`). */
+  sampleDataAction: { limit: 10, ttl: 10 * 60_000 },
 };

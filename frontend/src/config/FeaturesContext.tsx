@@ -11,6 +11,8 @@ export type FeaturesConfig = {
     aiSettings: boolean;
     aiWebSearch: boolean;
     builtinAiProvider: boolean;
+    /** Administration › Sample data and the home banner (cloud workspaces). */
+    sampleData: boolean;
   };
   version: string;
   tenantSlug?: string;
@@ -31,6 +33,8 @@ const CLOUD_DEFAULTS: FeaturesConfig = {
     aiSettings: false,
     aiWebSearch: false,
     builtinAiProvider: false,
+    // Off until the server says otherwise: a failed /config/public never shows it on-premise.
+    sampleData: false,
   },
   version: 'unknown',
 };

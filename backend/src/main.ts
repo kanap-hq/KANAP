@@ -1,8 +1,6 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import helmet from 'helmet';
-import * as express from 'express';
 import { DataSource, EntityManager } from 'typeorm';
 import { User } from './users/user.entity';
 import { Role } from './roles/role.entity';
@@ -10,23 +8,16 @@ import { UserRole } from './users/user-role.entity';
 import { RolePermission } from './permissions/role-permission.entity';
 import { RESOURCES } from './permissions/permissions.service';
 import * as argon2 from 'argon2';
-import { Request, Response, NextFunction } from 'express';
-import { useRequestPipeline } from './common/request-pipeline';
-import { parseBoolean, parseCorsPatterns, requireEnv, validateStartupEnv } from './common/env';
-import { createCorsMiddlewares, createOriginPolicy } from './common/cors-policy';
-import { createBodyParsers } from './common/body-parsers';
+import { parseBoolean, requireEnv, validateStartupEnv } from './common/env';
 import { describeTokenPurposePolicy } from './auth/access-token.util';
 import { describeSecretPolicy } from './auth/token-secret.util';
 import { PROCESS_STARTED_AT } from './common/process-start';
-import { shouldTrustProxyForRateLimit } from './common/rate-limit';
 import { Features } from './config/features';
 import { TenantsService } from './tenants/tenants.service';
-import { OpsMetricsStore } from './admin/ops/ops-metrics.store';
-import { createRequestMetricsMiddleware } from './admin/ops/request-metrics.middleware';
+import { TenantBaselineService } from './tenants/tenant-baseline.service';
+import { createSingleTenantOnFirstStart } from './tenants/single-tenant-provisioning';
 import { ScheduledTasksService } from './admin/scheduled-tasks/scheduled-tasks.service';
 import { assertSafeDatabaseRole } from './common/database-role-safety';
-import { createRequestTenancyMiddleware } from './common/tenancy/request-tenancy.middleware';
-import { createRequestFinalizer } from './common/request-finalizer.middleware';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { installGracefulShutdown } from './common/graceful-shutdown';
 import { waitForBackgroundWork } from './common/background-work';
@@ -34,6 +25,8 @@ import { EmailService } from './email/email.service';
 import { apiProcessCount, clusterWorkerId, isLeadProcess, processLabel } from './common/cluster/process-role';
 import { STARTUP_PROVISIONING_LOCK, withStartupLock } from './common/cluster/startup-lock';
 import { checkPoolBudget, poolMaxFloorWarning, readPoolMax } from './common/db-pool-budget';
+import { DemoDataService } from './demo-data/demo-data.service';
+import { applyHttpMiddleware, applyTenancyAndPipeline } from './http-app';
 
 /**
  * Environment checks (common/env.ts): throws where the API always refused to start, prints the
@@ -93,28 +86,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   checkStartupEnv();
   logTokenSecretPolicy();
-  if (shouldTrustProxyForRateLimit()) {
-    const expressApp = app.getHttpAdapter().getInstance();
-    expressApp.set('trust proxy', 1);
-  }
-  app.use(helmet());
-  // Browser origins (common/cors-policy.ts): a refused origin gets a 403 without CORS headers.
-  const corsPatterns = parseCorsPatterns();
-  if (corsPatterns.length > 0) {
-    // eslint-disable-next-line no-console
-    console.log(`[CORS] Configured ${corsPatterns.length} origin pattern(s)`);
-  }
-  app.use(...createCorsMiddlewares(createOriginPolicy()));
-  const rawBodySaver = (req: Request, _res: Response, buffer: Buffer) => {
-    if (buffer?.length) {
-      (req as any).rawBody = buffer;
-    }
-  };
-  app.use('/stripe/webhook', express.raw({ type: '*/*' }));
-  app.use(...createBodyParsers(rawBodySaver));
-  // Ops metrics middleware — must be registered before tenancy so it wraps the full pipeline
-  const opsMetricsStore = app.get(OpsMetricsStore);
-  app.use(createRequestMetricsMiddleware(opsMetricsStore));
+  // Proxy trust, headers, browser origins, body parsers, ops metrics (http-app.ts).
+  applyHttpMiddleware(app);
 
   // Seed admin user (dev-only convenience). Enable explicitly via SEED_ADMIN=true.
   const ds = app.get(DataSource);
@@ -236,12 +209,8 @@ async function bootstrap() {
       const slug = (process.env.DEFAULT_TENANT_SLUG || 'default').trim();
       const name = (process.env.DEFAULT_TENANT_NAME || 'My Organization').trim();
 
-      const tenantsService = app.get(TenantsService);
-
-      // 1. Ensure tenant exists (idempotent — TenantsService.createTenant returns existing if found)
-      const existing = await ds.query('SELECT id FROM tenants WHERE slug = $1 LIMIT 1', [slug]);
-      if (!existing?.[0]) {
-        await tenantsService.createTenant({ slug, name });
+      // 1. Create the tenant on the first start only, with the default global chart of accounts
+      if (await createSingleTenantOnFirstStart(ds, app.get(TenantsService), app.get(TenantBaselineService), { slug, name })) {
         // eslint-disable-next-line no-console
         console.log(`[on-prem] Created tenant '${slug}'`);
       }
@@ -367,26 +336,8 @@ async function bootstrap() {
     }
   });
 
-  // Tenancy resolution middleware: attach { slug, id? } based on Host header (or the single-tenant
-  // slug); a failed lookup answers 503 busy. See common/tenancy/request-tenancy.middleware.ts.
-  // NOTE: TenancyMiddleware is available in common/tenancy for use with NestJS module-level
-  // middleware configuration. New code should prefer using TenancyManager and @Tenant() decorator in controllers.
-  app.use(createRequestTenancyMiddleware({
-    query: (sql, params) => ds.query(sql, params),
-    singleTenant: Features.SINGLE_TENANT,
-    defaultTenantSlug: (process.env.DEFAULT_TENANT_SLUG || 'default').trim(),
-    platformAdminHost: process.env.PLATFORM_ADMIN_HOST || '',
-    marketingRedirectUrl: (process.env.MARKETING_BASE_URL || 'https://www.kanap.net').replace(/\/$/, ''),
-  }));
-  // Pipes (ValidationPipe for class-validator DTOs, ZodValidationPipe for Zod DTOs), the tenant
-  // transaction (TenantInitGuard opens it before the other guards, TenantInterceptor finishes it),
-  // saved list filters (`ctx=<id>`, inside that transaction, before the pipes) and the exception
-  // filter that releases a transaction left open: see common/request-pipeline.ts.
-  useRequestPipeline(app, ds);
-
-  // Finalizer middleware: ensure any leftover queryRunner is released on finish/close; a client
-  // abort rolls back quietly (one warning line). See common/request-finalizer.middleware.ts.
-  app.use(createRequestFinalizer());
+  // Tenant resolution from the Host header, the request pipeline and the finalizer (http-app.ts).
+  applyTenancyAndPipeline(app, ds);
 
   const port = process.env.PORT || 8080;
   await app.listen(port as number);
@@ -398,10 +349,15 @@ async function bootstrap() {
   const schedulerRegistry = app.get(SchedulerRegistry);
   const scheduledTasks = app.get(ScheduledTasksService);
   const emailService = app.get(EmailService);
+  const demoData = app.get(DemoDataService);
   installGracefulShutdown({
     server: app.getHttpServer(),
     label: processLabel(),
-    beforeDrain: () => schedulerRegistry.getCronJobs().forEach((job) => job.stop()),
+    beforeDrain: () => {
+      schedulerRegistry.getCronJobs().forEach((job) => job.stop());
+      // A sample data load of this process stops; the next start takes it over (reset).
+      demoData.stop();
+    },
     close: async (deadlineAt) => {
       await waitForBackgroundWork(deadlineAt);
       await scheduledTasks.drain(deadlineAt);
@@ -434,6 +390,8 @@ async function bootstrap() {
       console.warn(`[DB] pool budget not checked: ${(err as Error)?.message ?? err}`);
     }
     scheduledTasks.runStartupTasks();
+    // Sample data loads and resets left by a stopped API process, now and every 2 minutes (demo-data.service.ts).
+    void demoData.reconcileOnStartup();
   }
   if (clusterWorkerId() !== null) {
     // eslint-disable-next-line no-console

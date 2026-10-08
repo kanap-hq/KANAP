@@ -196,4 +196,13 @@ export const es: EmailStrings = {
       textAction: 'Definir su contraseña: {{url}}',
     },
   },
+  workspace: {
+    reset: {
+      subject: 'Su espacio de trabajo KANAP se ha restablecido',
+      heading: 'Espacio de trabajo restablecido a su estado inicial',
+      bodyHtml: '<strong>{{actorName}}</strong> borró todo el contenido del espacio de trabajo <strong>{{workspaceName}}</strong> el {{date}}. El espacio de trabajo ha vuelto a su estado inicial. Se conservaron las cuentas de usuario y sus roles, la suscripción y el registro de auditoría.',
+      text: '{{actorName}} borró todo el contenido del espacio de trabajo {{workspaceName}} el {{date}}. El espacio de trabajo ha vuelto a su estado inicial. Se conservaron las cuentas de usuario y sus roles, la suscripción y el registro de auditoría. Abrir el espacio de trabajo: {{url}}',
+      cta: 'Abrir el espacio de trabajo',
+    },
+  },
 };

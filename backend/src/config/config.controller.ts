@@ -19,6 +19,8 @@ export class ConfigController {
         aiSettings: Features.AI_SETTINGS_ENABLED,
         aiWebSearch: Features.AI_WEB_SEARCH_READY,
         builtinAiProvider: !Features.SINGLE_TENANT,
+        // Sample data (Administration > Sample data, home banner): cloud workspaces only.
+        sampleData: !Features.SINGLE_TENANT,
       },
       version,
       supportedLocales: [...SUPPORTED_LOCALES],

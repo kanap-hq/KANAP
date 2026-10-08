@@ -110,6 +110,7 @@ const WorkspaceDashboardPage = React.lazy(() =>
 );
 const SettingsPage = React.lazy(() => import('./pages/settings/SettingsPage'));
 const AdminBrandingPage = React.lazy(() => import('./pages/admin/AdminBrandingPage'));
+const SampleDataPage = React.lazy(() => import('./pages/admin/SampleDataPage'));
 const KnowledgePage = React.lazy(() => import('./pages/knowledge/KnowledgePage'));
 const KnowledgeWorkspacePage = React.lazy(() => import('./pages/knowledge/KnowledgeWorkspacePage'));
 const AiWorkspacePage = React.lazy(() => import('./pages/ai/AiWorkspacePage'));
@@ -334,6 +335,8 @@ function AppRoutes() {
           <Route path="/admin/integrations" element={<AdminIntegrationsPage />} />
           {!isSingleTenant && <Route path="/admin/platform-ai" element={<AdminPlatformAiPage />} />}
           <Route path="/admin/branding" element={<AdminBrandingPage />} />
+          {/* Always registered: the page refuses itself where sample data is off (on-premise, flag off). */}
+          <Route path="/admin/sample-data" element={<SampleDataPage />} />
           <Route path="/admin/scheduled-tasks" element={<ScheduledTasksPage />} />
           {!isSingleTenant && <Route path="/admin/ops-dashboard" element={<OpsDashboardPage />} />}
           {!isSingleTenant && <Route path="/admin/tenants" element={<AdminTenantsPage />} />}

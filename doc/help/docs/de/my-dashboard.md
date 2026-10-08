@@ -34,6 +34,10 @@ Die Aktion **Zeit erfassen** öffnet einen fokussierten Dialog, sodass Sie Stund
 
 Nach dem Speichern wird die Zeitzusammenfassungs-Kachel des Dashboards automatisch aktualisiert.
 
+## Zeile zu den Beispieldaten
+
+In einem leeren Cloud-Arbeitsbereich, in den noch nie Beispieldaten geladen wurden, sehen Administratoren über den Kacheln eine Zeile: „Entdecken Sie KANAP mit Beispieldaten.“ **Laden** öffnet den Dialog für Beispieldaten, und **Ausblenden** entfernt die Zeile dauerhaft. Die Zeile verschwindet, sobald der Arbeitsbereich Daten enthält, und kehrt nach dem Löschen nicht zurück. Siehe [Beispieldaten](sample-data.md).
+
 ## Dashboard-Kacheln
 
 Das Dashboard zeigt ein Raster von Kacheln, die jeweils einen anderen Aspekt Ihrer Arbeit zeigen. Kacheln sind in einem responsiven Raster angeordnet (drei Spalten auf großen Bildschirmen, zwei auf mittleren, eine auf kleinen). Kacheln, für die Sie keine Anzeigeberechtigung haben, werden überhaupt nicht geladen.

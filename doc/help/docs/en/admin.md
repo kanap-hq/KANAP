@@ -14,6 +14,7 @@ Navigate to **Admin** from the main menu to access the administration hub.
 - Billing: Requires billing admin role
 - Authentication: Requires `users:admin` (feature-flagged; requires SSO enabled)
 - Branding: Requires `users:admin` (tenant host only; accessible from sidebar)
+- Sample data: Requires the Administrator role (cloud workspaces only; accessible from sidebar)
 
 ---
 
@@ -32,7 +33,7 @@ The Admin landing page provides quick access to the main administrative function
 | **Audit Log** | Browse all change history | `users:admin` |
 | **Billing** | Plan and invoices | Billing admin |
 
-Authentication and Branding are available from the sidebar navigation but do not appear on the Admin hub landing page.
+Authentication, Branding and Sample data are available from the sidebar navigation but do not appear on the Admin hub landing page.
 
 ---
 
@@ -501,6 +502,18 @@ Branding lets you:
 - Reset all branding back to default
 
 For full step-by-step instructions, see: [Branding](branding.md)
+
+---
+
+## Sample data
+
+Use **Admin › Sample data** to fill an empty workspace with Fromage & Co, a fictional cheese maker, and to erase the whole workspace afterwards.
+
+- Route: `/admin/sample-data`
+- Who: users with the Administrator role
+- Scope: cloud workspaces only
+
+For what the set contains, what the erase step removes and keeps, and the home banner, see: [Sample data](sample-data.md)
 
 ---
 

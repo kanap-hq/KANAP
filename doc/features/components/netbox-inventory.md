@@ -76,7 +76,7 @@ A manual run writes only what its preview listed.
 
 ## Local test inventory
 
-A Netbox instance with a seeded inventory runs behind the `netbox` compose profile. Start commands, access values, seed scenarios and the test-case table are in `fixtures/fromage-co/netbox/README.md`.
+A Netbox instance with a seeded inventory runs behind the `netbox` compose profile. Start commands, access values, seed scenarios and the test-case table are in `backend/fixtures/fromage-co/netbox/README.md`.
 
 - `infra/docker-compose.yml` is gitignored. The tracked copy is `infra/docker-compose.example.yml`.
 - `docker compose --profile netbox down` stops the whole dev stack. Stop and remove the three Netbox services by name instead (`netbox`, `netbox-postgres`, `netbox-redis`).

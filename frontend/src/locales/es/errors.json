@@ -30,5 +30,16 @@
   "busy": "Estos datos están ocupados por otra operación. Vuelva a intentarlo en unos segundos.",
   "notSavedYet": "Su último cambio aún no se ha guardado porque el servidor está ocupado. Se queda en esta página y se enviará de nuevo con su próximo cambio.",
   "edit_conflict": "Otra persona modificó este campo mientras usted lo editaba. Elija qué valor conservar.",
-  "edit_conflict_unreadable": "Otra persona modificó lo que usted guardaba, y su respuesta no se pudo leer. Sus valores siguen en pantalla, aún sin guardar."
+  "edit_conflict_unreadable": "Otra persona modificó lo que usted guardaba, y su respuesta no se pudo leer. Sus valores siguen en pantalla, aún sin guardar.",
+  "administrator_required": "Solo un administrador de este espacio de trabajo puede hacerlo.",
+  "demo_status_conflict": "El estado de los datos de ejemplo ha cambiado mientras tanto. Recargue la página para ver en qué punto está.",
+  "demo_load_capacity": "Otros espacios de trabajo están cargando datos de ejemplo en este momento. Inténtelo de nuevo en unos minutos.",
+  "tenant_not_empty": "Los datos de ejemplo solo se pueden cargar en un espacio de trabajo vacío. Este espacio de trabajo ya contiene datos.",
+  "host_mismatch": "Esta solicitud no procede de la dirección de este espacio de trabajo. Abra el espacio de trabajo en su propia dirección e inténtelo de nuevo.",
+  "demo_data_unavailable": "Los datos de ejemplo no están disponibles en el servidor en este momento. Inténtelo de nuevo en unos minutos.",
+  "tenant_not_active": "Este espacio de trabajo no está activo.",
+  "tenant_resetting": "Este espacio de trabajo se está borrando y vuelve a su estado inicial. Inténtelo de nuevo en un momento.",
+  "tenant_reset_running": "Este espacio de trabajo ya se está borrando. Inténtelo de nuevo cuando haya terminado.",
+  "confirmation_mismatch": "El nombre escrito no coincide con el nombre del espacio de trabajo.",
+  "rate_limited": "Demasiados intentos. Espere unos minutos e inténtelo de nuevo."
 }
