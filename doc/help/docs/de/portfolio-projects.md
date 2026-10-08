@@ -32,7 +32,7 @@ Die Projektliste ist darauf ausgelegt, zwei Fragen schnell zu beantworten: „Wo
 - **Projekte meines Teams** erweitert diese Ansicht auf Projekte, die Mitglieder Ihres Portfolio-Teams einbeziehen
 - **Alle Projekte** entfernt den Beteiligungsfilter
 - Wenn Sie keinem Portfolio-Team zugewiesen sind, ist der Team-Bereich nicht verfügbar
-- Ihre Bereichswahl wird gespeichert, sodass die Liste so zurückkommt, wie Sie sie verlassen haben
+- Die Liste öffnet sich mit **Alle Projekte**. Ihre Bereichswahl wird gespeichert, sodass die Liste so zurückkommt, wie Sie sie verlassen haben
 
 **Standardspalten**
 

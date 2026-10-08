@@ -140,9 +140,9 @@ This is the single most important concept for new users. Every major list in KAN
 
 ### Why this matters
 
-If you open the Tasks page and see nothing — don't panic. You're probably viewing "My Tasks" and nothing is assigned to you yet. Switch to "All Tasks" to see the full picture.
+The Tasks page opens on "All Tasks", so you see the full picture. Choose "My Tasks" to narrow the list to tasks assigned to you or created by you.
 
-The scope filter **remembers your last selection** across sessions. So if you switch to "All", it stays on "All" next time you visit.
+The scope filter **remembers your last selection** across sessions. So if you switch to "My Tasks", it stays on "My Tasks" next time you visit.
 
 !!! warning "No team = no 'My Team's' filter"
     The "My Team's" option only works if you've been assigned to a Portfolio team via the Contributors page. If it's grayed out, ask your admin or project manager to set up your Contributor profile.
@@ -164,7 +164,7 @@ Tasks are your daily workhorse. They track action items, deliverables, follow-up
 
 ### Find your tasks
 
-Navigate to **Portfolio → Tasks**. The default view shows **My Tasks** — items assigned to you, sorted by priority score.
+Navigate to **Portfolio → Tasks**. The page opens on **All Tasks**. Choose **My Tasks** to see the items assigned to you or created by you, sorted by priority score.
 
 ### Create a task
 

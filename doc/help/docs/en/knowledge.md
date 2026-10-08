@@ -72,7 +72,7 @@ The top-level scope filter changes which documents are listed:
 - **My team's docs** focuses on documents owned by your team.
 - **All docs** removes the ownership scope and shows the full population you are allowed to see.
 
-If you are not assigned to a team, the team scope is unavailable. Your last scope choice is remembered, which is convenient when it matches your normal working mode and slightly confusing when you forget you changed it yesterday.
+If you are not assigned to a team, the team scope is unavailable. The page opens on **All docs**, and your last scope choice is remembered, which is convenient when it matches your normal working mode and slightly confusing when you forget you changed it yesterday.
 
 ### Templates and document types
 

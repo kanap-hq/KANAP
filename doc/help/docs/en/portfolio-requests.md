@@ -30,7 +30,7 @@ Use the scope selector above the grid to control whose pipeline you are looking 
 - **My team's requests** expands that view to requests involving members of your Portfolio team. This option is unavailable if you are not assigned to a team.
 - **All requests** removes the involvement filter and shows the full request pipeline.
 
-Your scope choice is remembered. If you open a request from the list and come back later, KANAP keeps the list context so you do not have to rebuild your filter stack every time.
+The list opens on **All requests** and remembers your scope choice. If you open a request from the list and come back later, KANAP keeps the list context so you do not have to rebuild your filter stack every time.
 
 ### Default columns
 
@@ -326,7 +326,7 @@ Use export when you need portfolio reporting or offline enrichment. Use import w
 ## Tips
 
 - **Use DOCX import for existing content**: If you already have a purpose statement or risk register in a Word document, use the **Import** button on the Purpose or Risks & Mitigations editor instead of copying and pasting. The import converts the document to markdown and warns you if any content could not be carried over.
-- **Scope filters stick**: KANAP remembers your last scope choice, so you do not need to re-select it every session.
+- **Scope filters stick**: The list opens on **All requests**. KANAP remembers your last scope choice, so you do not need to re-select it every session.
 - **Converted requests are hidden by default**: If you are looking for a request that was already converted to a project, add **Converted** to the Status filter on the list.
 - **Member permission for contributors**: Give subject-matter experts `portfolio_requests:member` so they can edit Purpose and Risks & Mitigations without being able to change status, scoring, or portfolio structure.
 - **From task to request**: When a task reveals a larger initiative, use **Convert to Request** from the task workspace. The new request inherits the task's title, description (as Purpose), classification, and attachments, and shows the **Source Task** in its header.

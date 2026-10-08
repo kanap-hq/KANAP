@@ -140,9 +140,9 @@ Este es el concepto más importante para nuevos usuarios. Cada lista principal e
 
 ### Por qué esto importa
 
-Si abre la página de Tareas y no ve nada -- no se preocupe. Probablemente está viendo "Mis tareas" y nada le está asignado todavía. Cambie a "Todas las tareas" para ver el panorama completo.
+La página de Tareas se abre en "Todas las tareas", para que vea el panorama completo. Elija "Mis tareas" para limitar la lista a las tareas que le están asignadas o que usted ha creado.
 
-El filtro de alcance **recuerda su última selección** entre sesiones. Así que si cambia a "Todos", se mantiene en "Todos" la próxima vez que visite.
+El filtro de alcance **recuerda su última selección** entre sesiones. Así que si cambia a "Mis tareas", se mantiene en "Mis tareas" la próxima vez que visite.
 
 !!! warning "Advertencia"
     La opción "De mi equipo" solo funciona si ha sido asignado a un equipo de Portafolio a través de la página de Colaboradores. Si está en gris, pida a su administrador o jefe de proyecto que configure su perfil de Colaborador.
@@ -164,7 +164,7 @@ Las tareas son su herramienta de trabajo diaria. Rastrean elementos de acción, 
 
 ### Encuentre sus tareas
 
-Navegue a **Portafolio > Tareas**. La vista predeterminada muestra **Mis tareas** -- elementos asignados a usted, ordenados por puntuación de prioridad.
+Navegue a **Portafolio > Tareas**. La página se abre en **Todas las tareas**. Elija **Mis tareas** para ver los elementos asignados a usted o creados por usted, ordenados por puntuación de prioridad.
 
 ### Cree una tarea
 

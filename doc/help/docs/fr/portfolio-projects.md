@@ -32,7 +32,7 @@ La liste des projets est conçue pour répondre rapidement à deux questions : �
 - **Projets de mon équipe** étend cette vue aux projets impliquant des membres de votre équipe portefeuille
 - **Tous les projets** supprime le filtre d'implication
 - Si vous n'êtes pas assigné à une équipe portefeuille, le périmètre équipe est indisponible
-- Votre préférence de périmètre est mémorisée, donc la liste revient comme vous l'avez laissée
+- La liste s'ouvre sur **Tous les projets**. Votre préférence de périmètre est mémorisée, donc la liste revient comme vous l'avez laissée
 
 **Colonnes par défaut**
 

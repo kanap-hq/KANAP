@@ -32,7 +32,7 @@ The project list is designed to answer two questions quickly: "what should I car
 - **My team's projects** expands that view to projects involving members of your portfolio team
 - **All projects** removes the involvement filter
 - If you are not assigned to a portfolio team, the team scope is unavailable
-- Your scope preference is remembered, so the list comes back the way you left it
+- The list opens on **All projects**. Your scope preference is remembered, so the list comes back the way you left it
 
 **Default columns**
 

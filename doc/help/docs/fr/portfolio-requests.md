@@ -30,7 +30,7 @@ Utilisez le sélecteur de périmètre au-dessus de la grille pour contrôler le 
 - **Demandes de mon équipe** étend cette vue aux demandes impliquant des membres de votre équipe Portefeuille. Cette option est indisponible si vous n'êtes pas assigné à une équipe.
 - **Toutes les demandes** supprime le filtre d'implication et affiche le pipeline complet des demandes.
 
-Votre choix de périmètre est mémorisé. Si vous ouvrez une demande depuis la liste et revenez plus tard, KANAP conserve le contexte de liste afin que vous n'ayez pas à reconstruire votre pile de filtres à chaque fois.
+La liste s'ouvre sur **Toutes les demandes** et mémorise votre choix de périmètre. Si vous ouvrez une demande depuis la liste et revenez plus tard, KANAP conserve le contexte de liste afin que vous n'ayez pas à reconstruire votre pile de filtres à chaque fois.
 
 ### Colonnes par défaut
 
@@ -326,7 +326,7 @@ Utilisez l'export quand vous avez besoin de reporting de portefeuille ou d'enric
 ## Conseils
 
 - **Utilisez l'import DOCX pour le contenu existant** : Si vous avez déjà une déclaration d'objectif ou un registre des risques dans un document Word, utilisez le bouton **Importer** sur l'éditeur Objectif ou Risques et atténuations au lieu de copier-coller. L'import convertit le document en markdown et vous avertit si du contenu n'a pas pu être reporté.
-- **Les filtres de périmètre persistent** : KANAP mémorise votre dernier choix de périmètre, vous n'avez donc pas besoin de le re-sélectionner à chaque session.
+- **Les filtres de périmètre persistent** : La liste s'ouvre sur **Toutes les demandes**. KANAP mémorise votre dernier choix de périmètre, vous n'avez donc pas besoin de le re-sélectionner à chaque session.
 - **Les demandes converties sont masquées par défaut** : Si vous cherchez une demande qui a déjà été convertie en projet, ajoutez **Convertie** au filtre Statut sur la liste.
 - **Autorisation membre pour les contributeurs** : Donnez aux experts du sujet `portfolio_requests:member` afin qu'ils puissent modifier Objectif et Risques et atténuations sans pouvoir changer le statut, l'évaluation ou la structure du portefeuille.
 - **De la tâche à la demande** : Lorsqu'une tâche révèle une initiative plus grande, utilisez **Convertir en demande** depuis l'espace de travail de la tâche. La nouvelle demande hérite du titre de la tâche, de la description (comme Objectif), de la classification et des pièces jointes, et affiche la **Tâche source** dans son en-tête.

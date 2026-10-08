@@ -4,6 +4,10 @@ import { useTenant } from '../tenant/TenantContext';
 
 type Scope = 'my' | 'team' | 'all';
 
+// A user with no stored choice starts on every item they may see: a new user is rarely involved in
+// anything yet, so "My ..." used to open on an empty list. The API still limits "All" to their rights.
+const DEFAULT_SCOPE: Scope = 'all';
+
 function getStorageKey(tenantSlug: string, userId: string, pageKey: string): string {
   return `kanap-grid-scope:${tenantSlug}:${userId}:${pageKey}`;
 }
@@ -11,7 +15,8 @@ function getStorageKey(tenantSlug: string, userId: string, pageKey: string): str
 /**
  * Persists the grid scope filter preference (my / team / all) per tenant and user.
  *
- * Priority: URL param > localStorage > default ('my').
+ * Priority: URL param > localStorage > default ('all'). Only an explicit choice is stored, so a user
+ * who picked "My ..." keeps it.
  */
 export function useGridScopePreference(
   pageKey: string,
@@ -34,7 +39,7 @@ export function useGridScopePreference(
 
   const [scope, setScopeState] = useState<Scope>(() => {
     if (urlScope === 'my' || urlScope === 'team' || urlScope === 'all') return urlScope;
-    return readStored() ?? 'my';
+    return readStored() ?? DEFAULT_SCOPE;
   });
 
   // Follow the URL when it carries a scope (deep links from the home tiles), otherwise reload the
@@ -45,7 +50,7 @@ export function useGridScopePreference(
       setScopeState(urlScope);
       return;
     }
-    setScopeState(readStored() ?? 'my');
+    setScopeState(readStored() ?? DEFAULT_SCOPE);
   }, [storageKey, urlScope, readStored]);
 
   const setScope = useCallback(

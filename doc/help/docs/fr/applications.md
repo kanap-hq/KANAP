@@ -75,9 +75,9 @@ Une fois enregistré, l'espace de travail déverrouille tous les onglets pour un
 La grille Applications offre une vue complète de votre portefeuille applicatif.
 
 **Filtre de périmètre en haut (Afficher)** :
-- **Mes apps** (par défaut) : affiche les apps où vous êtes listé dans le tiroir des propriétés comme **Responsable métier** ou **Responsable IT**. Les entrées multi-responsables sont supportées.
+- **Mes apps** : affiche les apps où vous êtes listé dans le tiroir des propriétés comme **Responsable métier** ou **Responsable IT**. Les entrées multi-responsables sont supportées.
 - **Apps de mon équipe** : affiche les apps où tout membre de votre équipe Portefeuille est listé comme Responsable métier ou Responsable IT. Votre propre responsabilité est aussi incluse dans ce périmètre. Désactivé si vous n'êtes pas assigné à une équipe Portefeuille.
-- **Toutes les apps** : affiche la grille complète des Applications avec le comportement de filtre par défaut du cycle de vie.
+- **Toutes les apps** (par défaut) : affiche la grille complète des Applications avec le comportement de filtre par défaut du cycle de vie.
 - Votre sélection est mémorisée entre les sessions -- revenir sur la page restaure votre dernier choix.
 
 **Colonnes par défaut** :

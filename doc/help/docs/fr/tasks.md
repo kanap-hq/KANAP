@@ -61,11 +61,11 @@ Si vous ne voyez pas Tâches dans le menu, demandez à votre administrateur de v
 La grille Tâches affiche toutes les tâches de votre organisation.
 
 **Filtre de périmètre en haut** :
-  - **Mes tâches** (par défaut) : tâches qui vous sont assignées
+  - **Mes tâches** : tâches qui vous sont assignées ou que vous avez créées
   - **Tâches de mon équipe** : tâches assignées à tout membre de votre équipe Portefeuille (y compris les vôtres)
-  - **Toutes les tâches** : la grille complète des tâches
+  - **Toutes les tâches** (par défaut) : la grille complète des tâches
   - Si vous n'êtes pas assigné à une équipe Portefeuille, **Tâches de mon équipe** est désactivé
-  - Votre sélection est mémorisée entre les sessions ; revenir sur la page restaure votre dernier choix
+  - La page s'ouvre sur **Toutes les tâches**. Votre sélection est mémorisée entre les sessions ; revenir sur la page restaure votre dernier choix
 
 **Colonnes par défaut** (visibles par défaut) :
 
