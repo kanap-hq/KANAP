@@ -97,6 +97,8 @@ In **Personal nach Monat**, **Kosten pro VZÄ**, **Analysedimensionen** und **Ko
 
 Die gefilterten Spalten erscheinen für diesen Besuch direkt nach dem Positionsnamen, damit Sie sehen, warum die Liste eingegrenzt ist. Ein Konsolidierungskonto filtert auf seine Konten, ohne eigene Spalte.
 
+Diese Liste ist eine Ansicht des Berichts. Was Sie darin ändern, bleibt in ihrer Adresse, und **OPEX** oder **CAPEX**, danach über das Menü geöffnet, zeigen Ihre eigene Sortierung, Suche und Filter.
+
 ---
 
 ## Globale Leistungsverrechnung

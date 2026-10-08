@@ -97,6 +97,8 @@ En **Plantilla por mes**, **Coste por ETC**, **Dimensiones analíticas** y **Cue
 
 Las columnas filtradas aparecen justo después del nombre de la partida durante esta visita, para que vea por qué la lista está restringida. Una cuenta de consolidación filtra por sus cuentas, sin columna propia.
 
+Esta lista es una vista del informe. Lo que cambie en ella queda en su dirección, y **OPEX** o **CAPEX** abiertos después desde el menú muestran su propio orden, búsqueda y filtros.
+
 ---
 
 ## Contracargo global

@@ -97,6 +97,8 @@ In **Staffing by month**, **Cost per FTE**, **Analytics dimensions** and **Conso
 
 The filtered columns show right after the item name for this visit, so you see why the list is narrowed. A consolidation account filters on its accounts without a column of its own.
 
+This list is a view of the report. What you change in it stays in its address, and opening **OPEX** or **CAPEX** from the menu afterwards shows your own sort, search and filters.
+
 ---
 
 ## Global chargeback

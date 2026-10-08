@@ -97,6 +97,8 @@ Dans **Effectifs par mois**, **Coût par ETP**, **Dimensions analytiques** et **
 
 Les colonnes filtrées s'affichent juste après le nom du poste pour cette visite : vous voyez pourquoi la liste est restreinte. Un compte de consolidation filtre sur ses comptes, sans colonne à lui.
 
+Cette liste est une vue du rapport. Ce que vous y changez reste dans son adresse, et **OPEX** ou **CAPEX** ouverts ensuite depuis le menu affichent vos propres tri, recherche et filtres.
+
 ---
 
 ## Refacturation globale
