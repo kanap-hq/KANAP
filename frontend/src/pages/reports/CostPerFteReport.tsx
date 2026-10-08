@@ -76,18 +76,16 @@ type ViewData = Pick<DailyRate, 'sortColumn' | 'detached' | 'noDetail' | 'monthl
 /** An amount, blank when there is none (a ratio without FTE, a cost without staff). */
 const money = (value: unknown) => (value == null ? '' : formatAmount(value));
 
-/** Days with a thousands separator and only the decimals the value needs (two at most). */
-const dayFormatters = new Map<string, Intl.NumberFormat>();
-function formatDays(value: unknown, locale: string): string {
+/**
+ * Days grouped like the amounts next to them (`formatAmount`: a space between thousands), with only the
+ * decimals the value needs, two at most (`1 341.7`); blank when there are none.
+ */
+function formatDays(value: unknown): string {
   if (value == null || value === '') return '';
   const n = Number(value);
   if (!Number.isFinite(n)) return '';
-  let formatter = dayFormatters.get(locale);
-  if (!formatter) {
-    formatter = new Intl.NumberFormat(locale, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-    dayFormatters.set(locale, formatter);
-  }
-  return formatter.format(n);
+  const [whole, fraction] = String(Math.round(n * 100) / 100).split('.');
+  return `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}${fraction ? `.${fraction}` : ''}`;
 }
 
 /** Chronological: by year, then in the budget columns' fixed order; each pair once. */
@@ -110,7 +108,6 @@ export default function CostPerFteReport() {
   const [scope, setScope] = useReportScope();
   const scopeLabel = t(`operations.scope.${scope}`);
   const fte = useCallback((value: unknown) => formatFte(value, locale), [locale]);
-  const days = useCallback((value: unknown) => formatDays(value, locale), [locale]);
   const [view, setView] = useReportView();
   const kinds = VALUES[view];
   const [countKind, costKind, ratioKind] = kinds;
@@ -157,8 +154,8 @@ export default function CostPerFteReport() {
   }), [data.total, columns, kinds, t]);
 
   const formats = useMemo<Record<ValueKind, (value: unknown) => string>>(
-    () => ({ fte, days, cost: money, ratio: money, rate: money }),
-    [fte, days],
+    () => ({ fte, days: formatDays, cost: money, ratio: money, rate: money }),
+    [fte],
   );
 
   // The value columns of a kind share one width, measured from their values before the grid lays out;

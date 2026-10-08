@@ -382,7 +382,11 @@ describe('Daily rate', () => {
     expect(grid.pinned[0].c1_rate).toBeCloseTo(244000 / 560);
 
     const [days, cost, rate] = valueColumns();
-    expect(days.valueFormatter({ value: 1234.5 })).toBe('1,234.5');
+    // Grouped like the amounts, with only the decimals the value needs (two at most).
+    expect(days.valueFormatter({ value: 1341.7 })).toBe('1 341.7');
+    expect(days.valueFormatter({ value: 8948.5 })).toBe('8 948.5');
+    expect(days.valueFormatter({ value: 1234567.456 })).toBe('1 234 567.46');
+    expect(days.valueFormatter({ value: 2.5 })).toBe('2.5');
     expect(days.valueFormatter({ value: 360 })).toBe('360');
     expect(days.valueFormatter({ value: null })).toBe('');
     expect(cost.valueFormatter({ value: 144000 })).toBe('144 000');

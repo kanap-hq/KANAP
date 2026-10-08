@@ -519,7 +519,7 @@ A pinned **Total** row gives, for each pair, the total days, the total day cost 
 
 **Chart**: The same horizontal bars, with the daily rate. The title names the type and the grouping, for example "OPEX daily rate by cost center". Hover a bar to read the group, the pair, the daily rate, the days and the day cost.
 
-**Notices**: The two notices above, and one more line when some people and days lines are priced per month: "Lines priced per month are not in the daily rate: Budget 2026 (180 000)." The amount is the cost of those lines in each pair concerned, in the reporting currency.
+**Notices**: The two notices above, and one more line when some people lines are priced per month: "Lines priced per month are not in the daily rate: Budget 2026 (180 000)." The amount is the cost of those lines in each pair concerned, in the reporting currency.
 
 ### Export
 

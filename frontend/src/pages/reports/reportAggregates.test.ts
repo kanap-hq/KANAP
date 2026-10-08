@@ -610,7 +610,7 @@ describe('daily rate', () => {
       drRow(['cc-1', 'CC1'], { cost: 14000, days: 20, staff: 14000 }),
       drRow(['cc-4', ' '], { cost: 1000, days: 2.5, staff: 1000 }),
     ], drRow([], { cost: 15000, days: 22.5, staff: 15000, detached: 1.25, nodetail: 0.5 }, 6, { detached: 3, nodetail: 5 }));
-    // More day cost than staff cost (a pieces line priced per day): no notice either.
+    // More day cost than staff cost cannot happen (every per-day line is a staff line): a guard, no notice either.
     const third = result([drRow(['cc-1', 'CC1'], { cost: 800, days: 1, staff: 700 })], drRow([], { cost: 800, days: 1, staff: 700 }));
     const read = readDailyRate(columns, [first, second, third], labels, compare);
     expect(read.rows.map((r) => r.label)).toEqual(['CC2', 'CC1', 'No cost center', 'Unnamed value']);
@@ -648,5 +648,13 @@ describe('daily rate', () => {
       noDetail: [],
       monthly: [],
     });
+  });
+
+  it('names a pair for its per-month cost only from 50 cents, the notice showing whole amounts', () => {
+    const answer = (staff: number, cost: number) => result([drRow(['cc-1', 'A'], { cost, days: 10, staff })], drRow([], { cost, days: 10, staff }));
+    // 0.49 reads 0 once rounded: no pair, no notice; 0.50 reads 1.
+    expect(readDailyRate(columns.slice(0, 2), [answer(6000.49, 6000), answer(6000.3, 6000.1)], labels, compare).monthly).toEqual([]);
+    expect(readDailyRate(columns.slice(0, 2), [answer(6000.49, 6000), answer(6000.6, 6000.1)], labels, compare).monthly)
+      .toEqual([{ year: 2026, metric: 'revision', amount: 0.5 }]);
   });
 });

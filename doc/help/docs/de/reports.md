@@ -519,7 +519,7 @@ Eine angeheftete Zeile **Gesamt** zeigt für jedes Paar die Tage gesamt, die Kos
 
 **Diagramm**: Dieselben horizontalen Balken, mit dem Tagessatz. Der Titel nennt Typ und Gruppierung, zum Beispiel „OPEX-Tagessatz nach Kostenstelle“. Fahren Sie über einen Balken, um Gruppe, Paar, Tagessatz, Tage und Kosten der Tage zu lesen.
 
-**Hinweise**: Die beiden Hinweise oben und eine weitere Zeile, wenn Zeilen in Personen oder Tagen pro Monat bepreist sind: „Monatlich bepreiste Zeilen sind nicht im Tagessatz enthalten: Budget 2026 (180 000).“ Der Betrag entspricht den Kosten dieser Zeilen in jedem betroffenen Paar, in der Berichtswährung.
+**Hinweise**: Die beiden Hinweise oben und eine weitere Zeile, wenn Zeilen in Personen pro Monat bepreist sind: „Monatlich bepreiste Zeilen sind nicht im Tagessatz enthalten: Budget 2026 (180 000).“ Der Betrag entspricht den Kosten dieser Zeilen in jedem betroffenen Paar, in der Berichtswährung.
 
 ### Export
 

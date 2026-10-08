@@ -519,7 +519,7 @@ Une ligne **Total** épinglée donne, pour chaque paire, le total des jours, le 
 
 **Graphique** : Les mêmes barres horizontales, avec le TJM. Le titre nomme le type et le regroupement, par exemple « TJM OPEX par centre de coûts ». Survolez une barre pour lire le groupe, la paire, le TJM, les jours et le coût des jours.
 
-**Avertissements** : Les deux avertissements ci-dessus, et une ligne de plus quand des lignes en personnes ou en jours sont au prix par mois : « Les lignes au prix mensuel sont exclues du TJM : Budget 2026 (180 000). » Le montant est le coût de ces lignes dans chaque paire concernée, dans la devise de reporting.
+**Avertissements** : Les deux avertissements ci-dessus, et une ligne de plus quand des lignes en personnes sont au prix par mois : « Les lignes au prix mensuel sont exclues du TJM : Budget 2026 (180 000). » Le montant est le coût de ces lignes dans chaque paire concernée, dans la devise de reporting.
 
 ### Export
 

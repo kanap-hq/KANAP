@@ -519,7 +519,7 @@ Una fila **Total** fijada da, para cada par, el total de días, el total del cos
 
 **Gráfico**: Las mismas barras horizontales, con la tarifa diaria. El título indica el tipo y la agrupación, por ejemplo «Tarifa diaria OPEX por centro de coste». Pase el cursor sobre una barra para leer el grupo, el par, la tarifa diaria, los días y el coste de los días.
 
-**Avisos**: Los dos avisos anteriores, y una línea más cuando hay líneas en personas o días con precio por mes: «Las líneas con precio mensual no se incluyen en la tarifa diaria: Presupuesto 2026 (180 000).» El importe es el coste de esas líneas en cada par afectado, en la moneda de reporte.
+**Avisos**: Los dos avisos anteriores, y una línea más cuando hay líneas en personas con precio por mes: «Las líneas con precio mensual no se incluyen en la tarifa diaria: Presupuesto 2026 (180 000).» El importe es el coste de esas líneas en cada par afectado, en la moneda de reporte.
 
 ### Exportar
 

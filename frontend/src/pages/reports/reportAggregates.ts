@@ -1069,7 +1069,7 @@ export type DailyRate = {
   detached: CostPerFteNotice[];
   /** As in the cost per FTE: the FTE declared without line detail, per column with some. */
   noDetail: CostPerFteNotice[];
-  /** Per column where it is positive, the staff cost the rate leaves out (lines priced per month). */
+  /** Per column where it reads at least 1 once rounded, the staff cost the rate leaves out (lines priced per month). */
   monthly: DailyRateMonthlyNotice[];
 };
 
@@ -1084,7 +1084,7 @@ function dailyRateCell(row: AggregateRow | null | undefined): DailyRateCell {
  * The groups with days in at least one column, by the days of the earliest column where some group has
  * them, largest first (then by label); the total row (ratio of the totals, never an average of rates);
  * the notices per column, with the staff cost priced per month (all staff cost minus the day cost, in
- * cents, only when positive). `results` holds the answers to `dailyRateRequests`, in the order of `columns`.
+ * cents, only from 50 cents: the notice shows whole amounts, and never names a pair for 0). `results` holds the answers to `dailyRateRequests`, in the order of `columns`.
  */
 export function readDailyRate(
   columns: readonly ColumnYear[],
@@ -1097,7 +1097,7 @@ export function readDailyRate(
   columns.forEach((column, index) => {
     const total = results?.[index]?.total;
     const cents = Math.round(valueOf(total, ALL_STAFF_COST_MEASURE) * 100) - Math.round(valueOf(total, DAY_COST_MEASURE) * 100);
-    if (cents > 0) monthly.push({ ...column, amount: cents / 100 });
+    if (cents >= 50) monthly.push({ ...column, amount: cents / 100 });
   });
   return { ...read, monthly };
 }
