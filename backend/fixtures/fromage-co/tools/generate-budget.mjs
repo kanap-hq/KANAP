@@ -252,7 +252,7 @@ const NEW_LINES = [
   ['Coupa Procurement', 'Indirect purchasing and expense reports', 'Coupa', 'FR-DIS-300', 'saas', 'ERP', 'saas', 'run', 'yes', '', 64000, '2024-07-01', '', 0.97],
   ['Salesforce CPQ add-on', 'Quotes and price lists for food service', 'Salesforce', 'FR-DIS-200', 'saas', 'CRM', 'saas', 'run', 'yes', '', 36000, '2026-01-01', '', 1.0],
   ['Distribution — performance testing', 'Load testing campaigns before the year-end peaks', '', 'FR-DIS-200', 'consulting', 'ERP', 'consulting', 'build', 'no', '', 24000, '2026-01-01', '', 1.1],
-  ['Distribution — user training', 'Training the sales force on the new tools', '', 'FR-DIS-100', 'training', 'CRM', 'training', 'build', 'no', '', 18000, '2025-01-01', '', 0.8],
+  ['Distribution — formation des utilisateurs', 'Formation de la force de vente aux nouveaux outils', '', 'FR-DIS-100', 'training', 'CRM', 'training', 'build', 'no', '', 18000, '2025-01-01', '', 0.8],
   ['Kaasmeester WMS — licenties', 'Gouda warehouse management, licenses and maintenance', '', 'NL-DIS-300', 'licence', 'Supply Chain', 'licence', 'run', 'yes', '', 41000, '2023-01-01', '', 1.0],
   ['Kaasmeester — KPN connectivity', 'Links for the Gouda warehouse and offices', 'KPN', 'NL-DIS-300', 'telecom', 'Infrastructure', 'telecom', 'run', 'yes', '', 22000, '2023-01-01', '', 1.0],
   ['Kaasmeester — werkplekbeheer', 'Managed workplace services for Benelux', 'Benelux IT Partners', 'NL-DIS-300', 'maint', 'Workplace', 'managed', 'run', 'yes', '', 54000, '2024-01-01', '', 1.02],
@@ -261,8 +261,8 @@ const NEW_LINES = [
   ['La Boutique — payments and fraud', 'Payment platform and fraud detection fees', '', 'FR-BOU-310', 'saas', 'E-commerce', 'saas', 'run', 'yes', 'ecom', 54000, '2025-06-01', '', 1.25],
   ['La Boutique — CDN and application security', 'Content delivery, WAF and bot protection for the online shop', '', 'FR-BOU-310', 'cloud', 'E-commerce', 'cloud', 'run', 'yes', 'ecom', 30000, '2025-06-01', '', 1.1],
   ['La Boutique — subscriber email and CRM', 'Email platform for the cheese box subscribers', 'HubSpot', 'FR-BOU-310', 'saas', 'CRM', 'saas', 'run', 'yes', '', 26000, '2025-09-01', '', 1.0],
-  ['Shops — 4G backup connectivity', '4G routers and backup plans for the shops', 'Orange Business', 'FR-BOU-310', 'telecom', 'Network', 'telecom', 'run', 'yes', '', 19000, '2024-01-01', '', 1.0],
-  ['Shops — till and printer maintenance', 'On-site maintenance of the till hardware and label printers', '', 'FR-BOU-310', 'maint', 'Retail', 'hardware', 'run', 'yes', '', 33000, '2023-01-01', '', 1.0],
+  ['Boutiques — secours 4G', 'Routeurs 4G et forfaits de secours des boutiques', 'Orange Business', 'FR-BOU-310', 'telecom', 'Network', 'telecom', 'run', 'yes', '', 19000, '2024-01-01', '', 1.0],
+  ['Boutiques — maintenance des caisses et imprimantes', 'Maintenance sur site des caisses et des imprimantes d\'étiquettes', '', 'FR-BOU-310', 'maint', 'Retail', 'hardware', 'run', 'yes', '', 33000, '2023-01-01', '', 1.0],
   ['E-commerce — UX research and user testing', 'User testing of the subscription journey', '', 'FR-BOU-100', 'consulting', 'E-commerce', 'consulting', 'build', 'no', 'ecom', 28000, '2026-01-01', '', 1.0],
   ['E-commerce — product photos and content', 'Photo shoots and product sheets for the online shop', '', 'FR-BOU-100', 'consulting', 'E-commerce', 'consulting', 'build', 'no', '', 22000, '2026-01-01', '', 1.15],
   ['Formaggio — software punti vendita', 'Tills for the Italian shops, licenses and maintenance', 'Cegid', 'IT-BOU-310', 'licence', 'Retail', 'licence', 'run', 'yes', '', 31000, '2023-01-01', '', 1.0],
@@ -272,7 +272,7 @@ const NEW_LINES = [
   ['US e-commerce — AWS hosting', 'Hosting of the US order and logistics services', '', 'US-BOU-310', 'cloud', 'Infrastructure', 'cloud', 'run', 'yes', '', 36000, '2025-03-01', '', 1.1],
   ['US — Verizon connectivity', 'Links for the US offices and warehouse', 'Verizon Business', 'US-BOU-310', 'telecom', 'Network', 'telecom', 'run', 'yes', '', 21000, '2024-01-01', '', 1.0],
   // Infrastructure and cloud
-  ['Paris DC — colocation and power', 'Colocation, power and maintenance of the Paris data center', '', 'FR-TRV-400', 'dc', 'Infrastructure', 'cloud', 'run', 'yes', '', 210000, '2022-01-01', '', 1.03],
+  ['Data center de Paris — hébergement et énergie', 'Location des baies, énergie et maintenance du data center de Paris', '', 'FR-TRV-400', 'dc', 'Infrastructure', 'cloud', 'run', 'yes', '', 210000, '2022-01-01', '', 1.03],
   ['Veeam Backup & Replication', 'Backup of the virtualized environments, licenses and support', 'Veeam', 'FR-TRV-400', 'licence', 'Infrastructure', 'licence', 'run', 'yes', '', 38000, '2024-01-01', '', 1.0],
   ['Cisco Meraki — site networks', 'Network and Wi-Fi for the plants, caves and offices, cloud licenses', 'Cisco', 'FR-TRV-400', 'telecom', 'Network', 'licence', 'run', 'yes', '', 72000, '2024-01-01', '', 1.0],
   ['Orange Business — group WAN', 'Wide area network of the French sites and subsidiary interconnection', 'Orange Business', 'FR-TRV-400', 'telecom', 'Network', 'telecom', 'run', 'yes', '', 165000, '2023-01-01', '', 0.98],
@@ -283,8 +283,8 @@ const NEW_LINES = [
   ['Power BI Premium', 'Premium capacity for the group dashboards', 'Microsoft', 'FR-TRV-700', 'saas', 'Analytics', 'saas', 'run', 'yes', 'data', 60000, '2024-01-01', '', 1.0],
   // Workplace and support
   ['Workstations — leasing', 'Leasing of the group laptops and desktops (France fleet)', 'Lenovo', 'FR-TRV-500', 'maint', 'Workplace', 'hardware', 'run', 'yes', '', 186000, '2023-01-01', '', 1.0],
-  ['Printing — cost-per-page contract', 'Copiers and printers on the sites, charged per page', '', 'FR-TRV-500', 'maint', 'Workplace', 'hardware', 'run', 'yes', '', 34000, '2022-01-01', '', 0.92],
-  ['Mobile telephony', 'Mobile plans for the employees in France', 'Orange Business', 'FR-TRV-500', 'telecom', 'Workplace', 'telecom', 'run', 'yes', '', 98000, '2023-01-01', '', 1.0],
+  ['Impression — contrat au coût à la page', 'Copieurs et imprimantes des sites, facturés à la page', '', 'FR-TRV-500', 'maint', 'Workplace', 'hardware', 'run', 'yes', '', 34000, '2022-01-01', '', 0.92],
+  ['Téléphonie mobile', 'Forfaits mobiles des collaborateurs en France', 'Orange Business', 'FR-TRV-500', 'telecom', 'Workplace', 'telecom', 'run', 'yes', '', 98000, '2023-01-01', '', 1.0],
   ['Service desk — level 1 managed service', 'Phone reception and level 1 handling of requests', 'Axians', 'FR-TRV-500', 'maint', 'ITSM', 'managed', 'run', 'yes', '', 132000, '2024-01-01', '', 1.0],
   ['Adobe Creative Cloud', 'Creative licenses for marketing and e-commerce', 'Adobe', 'FR-TRV-500', 'saas', 'Workplace', 'saas', 'run', 'yes', '', 24000, '2024-01-01', '', 1.0],
   ['Atlassian Cloud (Jira, Confluence)', 'Project management and documentation tools', 'Atlassian', 'FR-TRV-500', 'saas', 'Productivity', 'saas', 'run', 'yes', '', 52000, '2023-01-01', '', 1.0],
@@ -298,10 +298,10 @@ const NEW_LINES = [
   ['Annual penetration tests', 'External and internal penetration tests, two campaigns', '', 'FR-TRV-600', 'consulting', 'Security', 'consulting', 'build', 'no', 'zt', 45000, '2024-01-01', '', 1.0],
   ['Certificates and PKI', 'TLS certificates, code signing and internal PKI', 'DocuSign', 'FR-TRV-600', 'security', 'Security', 'saas', 'run', 'yes', '', 12000, '2023-01-01', '', 1.0],
   // IT management
-  ['Consulting firm — IT master plan', 'Support for the 2027-2030 IT master plan', '', 'FR-TRV-700', 'consulting', 'IT Management', 'consulting', 'build', 'no', '', 90000, '2026-01-01', '', 1.1],
+  ['Cabinet de conseil — schéma directeur SI', 'Accompagnement du schéma directeur SI 2027-2030', '', 'FR-TRV-700', 'consulting', 'IT Management', 'consulting', 'build', 'no', '', 90000, '2026-01-01', '', 1.1],
   ['License audit', 'Annual review of vendor usage rights', '', 'FR-TRV-700', 'consulting', 'IT Management', 'consulting', 'run', 'no', '', 25000, '2024-01-01', '', 1.0],
   ['Analyst research subscriptions', 'Research and technology watch subscriptions', '', 'FR-TRV-700', 'travel', 'IT Management', 'travel', 'run', 'yes', '', 28000, '2023-01-01', '', 1.0],
-  ['IT recruitment', 'Recruitment agency fees for IT hires', '', 'FR-TRV-700', 'consulting', 'IT Management', 'consulting', 'run', 'no', '', 40000, '2024-01-01', '', 1.3],
+  ['Recrutement informatique', 'Honoraires des cabinets de recrutement pour les postes informatiques', '', 'FR-TRV-700', 'consulting', 'IT Management', 'consulting', 'run', 'no', '', 40000, '2024-01-01', '', 1.3],
 ];
 const OWNER_IT = { 'FR-DIS-100': 'clara.dupont@fromage-co.example', 'FR-DIS-200': 'lucas.bernard@fromage-co.example', 'FR-DIS-300': 'pierre.martin@fromage-co.example', 'NL-DIS-300': 'jan.bakker@kaasmeester.example',
   'FR-BOU-100': 'amelie.rousseau@fromage-co.example', 'FR-BOU-310': 'nadia.lemaire@fromage-co.example', 'IT-BOU-310': 'luca.ferrari@formaggio-supremo.example', 'US-BOU-310': 'mike.johnson@fromage-co.example',
@@ -430,7 +430,7 @@ const NEW_CAPEX = [
   ['S/4HANA — HANA servers', 'hardware', 'replacement', 'mandatory', 'FR-TRV-400', 'ERP', 'hardware', 'sap', 180000, '2026-01-01', '2026-12-31', 1.02, null],
   ['La Boutique — version 2 (subscriptions and marketplace)', 'software', 'business_growth', 'high', 'FR-BOU-100', 'E-commerce', 'cdc', 'ecom', 0, '2026-01-01', '2027-03-31', 1.0,
     ['E-commerce full-stack developer', 'Nearshore Digital Lisboa', 480, 2, ['01-01', '12-31'], ['01-01', '12-31']]],
-  ['Shops — till replacement', 'hardware', 'replacement', 'high', 'FR-BOU-310', 'Retail', 'hardware', '', 140000, '2026-01-01', '2026-12-31', 0.9, null],
+  ['Boutiques — renouvellement des caisses', 'hardware', 'replacement', 'high', 'FR-BOU-310', 'Retail', 'hardware', '', 140000, '2026-01-01', '2026-12-31', 0.9, null],
   ['Formaggio — nuove casse punti vendita', 'hardware', 'replacement', 'high', 'IT-BOU-310', 'Retail', 'hardware', '', 45000, '2026-03-01', '2026-12-31', 1.0, null],
   ['US — warehouse management system', 'software', 'business_growth', 'high', 'US-BOU-310', 'Supply Chain', 'licence', '', 95000, '2026-01-01', '2026-12-31', 1.15, null],
   ['Kaasmeester — WMS upgrade', 'software', 'replacement', 'high', 'NL-DIS-300', 'Supply Chain', 'licence', '', 60000, '2026-01-01', '2026-09-30', 1.0, null],
@@ -439,7 +439,7 @@ const NEW_CAPEX = [
     ['Platform data engineer', 'Alpine Data Experts', 780, 2, ['01-01', '12-31'], ['01-01', '12-31']]],
   ['Zero Trust — plant network segmentation', 'hardware', 'replacement', 'mandatory', 'FR-TRV-600', 'Security', 'hardware', 'zt', 120000, '2026-01-01', '2026-12-31', 1.05, null],
   ['Workstations — plant refresh', 'hardware', 'replacement', 'high', 'FR-TRV-500', 'Workplace', 'hardware', '', 85000, '2026-01-01', '2026-12-31', 1.0, null],
-  ['Cave and warehouse Wi-Fi network', 'hardware', 'replacement', 'high', 'FR-TRV-400', 'Network', 'hardware', '', 55000, '2026-01-01', '2026-12-31', 1.0, null],
+  ['Réseau Wi-Fi des caves et des entrepôts', 'hardware', 'replacement', 'high', 'FR-TRV-400', 'Network', 'hardware', '', 55000, '2026-01-01', '2026-12-31', 1.0, null],
 ];
 for (const [description, ppe, inv, prio, cc, domain, nature, reference, budgetRaw, start, end, ratio, staffing] of NEW_CAPEX) {
   const company = ccCompany[cc];

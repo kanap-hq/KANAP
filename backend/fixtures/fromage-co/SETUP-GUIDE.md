@@ -37,8 +37,9 @@ Re-running the runner on such a tenant would create every demo user a second
 time under its new address: load the current dataset on a new tenant instead.
 
 The master data and the budget are in English, as an international group
-would keep them; the subsidiaries keep a few local names (Dutch and Italian
-budget lines, the local charts of accounts). Tenants loaded before this
+would keep them; each company keeps a few local names (French, Dutch and
+Italian budget lines, the French projects and requests, the local charts of
+accounts). Tenants loaded before this
 change hold French names for the cost centres, the dimensions and the budget
 lines. The runner renames the default dimension, but re-running it on such a
 tenant would add the English departments, dimension values and budget lines
