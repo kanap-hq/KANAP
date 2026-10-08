@@ -289,8 +289,8 @@ export default function StaffingByMonthReport() {
         <Paper variant="outlined" sx={{ p: 2 }}>
           <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>{t('reports.shared.summaryTable')}</Typography>
           <ReportGrid
-            wrapperSx={{ height: 520 }}
             wrapperClassName="kanap-dense-grid"
+            domLayout="autoHeight"
             rowData={tableRows}
             columnDefs={columns}
             defaultColDef={{ sortable: true, resizable: true }}
