@@ -91,7 +91,7 @@ const content: SecurityContent = {
       'Las respuestas llevan las fuentes que utilizó el agente, para que una decisión se pueda comprobar',
       'Pause cualquier agente de inmediato, uno a uno o todos a la vez',
       'Los límites de gasto por agente mantienen acotado el coste de operación',
-      'Las funciones de IA están desactivadas por defecto. En la nube, el modelo integrado no recibe ningún dato hasta que el workspace haya aceptado su proveedor y su lugar de tratamiento, ambos indicados en la aplicación. Un administrador los confirma, y se pide una nueva confirmación si cambia cualquiera de los dos. Los workspaces que tenían activado el asistente o un agente antes de que existiera esta confirmación se consideran conformes con el proveedor actual. Puede usar su propio proveedor de modelos en su lugar',
+      'Las funciones de IA están desactivadas por defecto. En la nube, el modelo integrado no recibe ningún dato hasta que el workspace haya aceptado su proveedor y su lugar de tratamiento, ambos indicados en la aplicación. Un administrador los confirma, y se pide una nueva confirmación si cambia cualquiera de los dos. Puede usar su propio proveedor de modelos en su lugar',
     ],
   },
   deployment: {

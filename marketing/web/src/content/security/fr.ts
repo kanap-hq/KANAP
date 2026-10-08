@@ -92,7 +92,7 @@ const content: SecurityContent = {
       "Les réponses portent les sources utilisées par l'agent, pour qu'une décision puisse être vérifiée",
       "Mettez n'importe quel agent en pause immédiatement, un par un ou tous à la fois",
       'Des plafonds de dépense par agent maintiennent le coût de fonctionnement borné',
-      "Les fonctions d'IA sont désactivées par défaut. Dans le cloud, le modèle intégré ne reçoit aucune donnée tant que le workspace n'a pas accepté son fournisseur et son lieu de traitement, tous deux indiqués dans l'application. Un administrateur les confirme, et une nouvelle confirmation est demandée si l'un des deux change. Les workspaces qui avaient activé l'assistant ou un agent avant l'arrivée de cette confirmation sont considérés comme ayant accepté le fournisseur actuel. Vous pouvez utiliser votre propre fournisseur de modèle à la place",
+      "Les fonctions d'IA sont désactivées par défaut. Dans le cloud, le modèle intégré ne reçoit aucune donnée tant que le workspace n'a pas accepté son fournisseur et son lieu de traitement, tous deux indiqués dans l'application. Un administrateur les confirme, et une nouvelle confirmation est demandée si l'un des deux change. Vous pouvez utiliser votre propre fournisseur de modèle à la place",
     ],
   },
   deployment: {

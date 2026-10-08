@@ -92,7 +92,7 @@ const content: SecurityContent = {
       'Antworten tragen die Quellen, die der Agent genutzt hat, sodass eine Entscheidung geprüft werden kann',
       'Jeden Agenten sofort pausieren, einzeln oder alle zusammen',
       'Ausgabenlimits pro Agent halten die Betriebskosten begrenzt',
-      'KI-Funktionen sind standardmäßig ausgeschaltet. In der Cloud erhält das integrierte Modell keine Daten, bevor der Workspace dessen Anbieter und Verarbeitungsort akzeptiert hat, die beide in der Anwendung genannt werden. Ein Administrator bestätigt sie, und ändert sich eines davon, wird erneut um Bestätigung gebeten. Workspaces, die den Assistenten oder einen Agenten vor Einführung dieser Bestätigung eingeschaltet hatten, gelten als mit dem aktuellen Anbieter einverstanden. Sie können stattdessen Ihren eigenen Modellanbieter verwenden',
+      'KI-Funktionen sind standardmäßig ausgeschaltet. In der Cloud erhält das integrierte Modell keine Daten, bevor der Workspace dessen Anbieter und Verarbeitungsort akzeptiert hat, die beide in der Anwendung genannt werden. Ein Administrator bestätigt sie, und ändert sich eines davon, wird erneut um Bestätigung gebeten. Sie können stattdessen Ihren eigenen Modellanbieter verwenden',
     ],
   },
   deployment: {

@@ -37,7 +37,7 @@ const content: FaqContent = {
         },
         {
           q: 'What happens after my trial?',
-          a: 'After your 14-day trial you must choose a paid plan to continue. Your tenant remains available for 30 more days with limited access. After this 30-day period your tenant is deleted.',
+          a: 'After your 14-day trial you must choose a paid plan to continue. At the end of the trial, your workspace moves to limited, read-only access until you subscribe. You can ask us to delete it at any time.',
         },
         {
           q: 'What is the free activation session?',

@@ -89,7 +89,7 @@ const content: OfferContent = {
           'Everything in self-host',
           'We host, update, and back up KANAP for you',
           'EU hosting for European teams',
-          '2,500 Plaid messages/mo included, or bring your own key, unlimited',
+          '1,500 Plaid messages/mo included, or bring your own key, unlimited',
           'Agents included, on the included messages or with your own LLM key',
           '60-min kickoff call with a KANAP expert',
           'Priority email support',

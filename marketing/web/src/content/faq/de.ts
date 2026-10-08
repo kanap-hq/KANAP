@@ -39,7 +39,7 @@ const content: FaqContent = {
         },
         {
           q: 'Was passiert nach meiner Testphase?',
-          a: 'Nach Ihrem 14-tägigen Test müssen Sie einen kostenpflichtigen Plan wählen, um fortzufahren. Ihr Tenant bleibt weitere 30 Tage mit eingeschränktem Zugriff verfügbar. Nach Ablauf dieser 30 Tage wird Ihr Tenant gelöscht.',
+          a: 'Nach Ihrem 14-tägigen Test müssen Sie einen kostenpflichtigen Plan wählen, um fortzufahren. Am Ende des Tests wechselt Ihr Workspace in einen eingeschränkten Zugriff (nur Lesen), bis Sie ein Abonnement abschließen. Sie können jederzeit die Löschung Ihres Workspace verlangen.',
         },
         {
           q: 'Was ist die kostenlose Aktivierungssitzung?',

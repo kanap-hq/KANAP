@@ -39,7 +39,7 @@ const content: FaqContent = {
         },
         {
           q: '¿Qué pasa cuando termina mi prueba?',
-          a: 'Tras los 14 días de prueba debe elegir un plan de pago para continuar. Su tenant sigue disponible 30 días más con acceso limitado. Pasado ese periodo de 30 días, su tenant se elimina.',
+          a: 'Tras los 14 días de prueba debe elegir un plan de pago para continuar. Al terminar la prueba, su workspace pasa a acceso limitado (solo lectura) hasta que contrate una suscripción. Puede pedir su eliminación en cualquier momento.',
         },
         {
           q: '¿Qué es la sesión de activación gratuita?',

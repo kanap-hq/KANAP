@@ -87,7 +87,7 @@ const content: OfferContent = {
           'Tout ce qui est inclus en auto-hébergement',
           'Nous hébergeons, mettons à jour et sauvegardons KANAP pour vous',
           'Hébergement UE pour les équipes européennes',
-          '2 500 messages Plaid/mois inclus, ou votre propre clé en illimité',
+          '1 500 messages Plaid/mois inclus, ou votre propre clé en illimité',
           'Agents inclus, sur les messages inclus ou avec votre propre clé LLM',
           'Session de cadrage 60 min avec un expert KANAP',
           'Support email prioritaire',

@@ -31,7 +31,7 @@ const content: ContactContent = {
     submitting: 'Enviando…',
     successTitle: 'Mensaje enviado.',
     successBody: 'Le responderemos en un día hábil.',
-    errorGeneric: 'Algo ha fallado. Inténtelo de nuevo o escriba directamente a admin@kanap.net.',
+    errorGeneric: 'Algo ha fallado. Inténtelo de nuevo o escriba directamente a support@kanap.net.',
   },
   alternate: {
     label: '¿Prefiere el email directo?',

@@ -89,7 +89,7 @@ const content: OfferContent = {
           'Todo lo de Autoalojado',
           'Alojamos, actualizamos y respaldamos KANAP por usted',
           'Alojamiento en la UE para equipos europeos',
-          '2 500 mensajes Plaid/mes incluidos, o su propia clave, sin límite',
+          '1 500 mensajes Plaid/mes incluidos, o su propia clave, sin límite',
           'Agentes incluidos, con los mensajes incluidos o con su propia clave LLM',
           'Sesión inicial de 60 min con un experto de KANAP',
           'Soporte por email prioritario',

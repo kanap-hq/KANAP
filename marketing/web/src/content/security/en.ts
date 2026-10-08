@@ -91,7 +91,7 @@ const content: SecurityContent = {
       'Answers carry the sources the agent used, so a decision can be checked',
       'Pause any agent immediately, one at a time or across the board',
       'Per-agent spend caps keep running cost bounded',
-      'AI features are off by default. On the cloud, the built-in model receives no data until the workspace has accepted its provider and processing location, both named in the application. An administrator confirms them, and a new confirmation is asked if either changes. Workspaces that had the assistant or an agent turned on before this confirmation existed count as having accepted the current provider. You can use your own model provider instead',
+      'AI features are off by default. On the cloud, the built-in model receives no data until the workspace has accepted its provider and processing location, both named in the application. An administrator confirms them, and a new confirmation is asked if either changes. You can use your own model provider instead',
     ],
   },
   deployment: {

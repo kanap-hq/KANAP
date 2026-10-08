@@ -39,7 +39,7 @@ const content: FaqContent = {
         },
         {
           q: 'Que se passe-t-il à la fin de mon essai ?',
-          a: 'Après votre essai de 14 jours, vous devez choisir un plan payant pour continuer. Votre tenant reste disponible 30 jours de plus avec un accès limité. À l\'issue de cette période de 30 jours, votre tenant est supprimé.',
+          a: 'Après votre essai de 14 jours, vous devez choisir un plan payant pour continuer. À la fin de l\'essai, votre workspace passe en accès limité, en lecture seule, jusqu\'à ce que vous souscriviez un abonnement. Vous pouvez demander sa suppression à tout moment.',
         },
         {
           q: 'Qu\'est-ce que la session d\'activation gratuite ?',
