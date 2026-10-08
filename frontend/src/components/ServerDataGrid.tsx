@@ -28,6 +28,7 @@ import type {
 import { useTranslation } from 'react-i18next';
 import useDebouncedValue from '../hooks/useDebouncedValue';
 import ClearableColumnFloatingFilter from './ClearableColumnFloatingFilter';
+import DateFloatingFilter from './DateFloatingFilter';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useTenant } from '../tenant/TenantContext';
@@ -50,11 +51,17 @@ import { getApiErrorMessage } from '../utils/apiErrorMessage';
 import { foldText } from '../utils/foldText';
 import { fieldResetSx } from '../theme/formSx';
 
+// AG Grid merges a column's filterParams into defaultColDef's, so each set names its own default
+// option: the text filters' `contains` is not a date or number operator. A filter reset (Clear, a
+// model without this column, Reset columns) sets the operator back to the default; one it does not
+// offer is ignored, the previous operator stays, and an operator without a value ("Blank") then
+// stays applied: the filter could not be removed.
 const DATE_FILTER_PARAMS = {
   suppressAndOrCondition: true,
   maxNumConditions: 1,
   buttons: ['clear'],
   filterOptions: ['equals', 'notEqual', 'lessThan', 'greaterThan', 'inRange', 'blank', 'notBlank'],
+  defaultOption: 'equals',
 };
 
 const NUMBER_FILTER_PARAMS = {
@@ -62,6 +69,7 @@ const NUMBER_FILTER_PARAMS = {
   maxNumConditions: 1,
   buttons: ['clear'],
   filterOptions: ['equals', 'notEqual', 'lessThan', 'lessThanOrEqual', 'greaterThan', 'greaterThanOrEqual', 'inRange', 'blank', 'notBlank'],
+  defaultOption: 'equals',
 };
 
 type ServerResponse<T> = { items: T[]; total: number; page: number; limit: number };
@@ -259,9 +267,15 @@ export function layoutWithoutRevealed(state: ColumnState[], revealed: ReadonlySe
   return result;
 }
 
+/**
+ * A date column filtered with date models (the menu's date filter). The box under the header shows
+ * the filter in words, every condition included, opens the menu on a click and clears in one click
+ * (`DateFloatingFilter`).
+ */
 export const DATE_COLUMN_FILTER = {
   filter: 'agDateColumnFilter',
-  floatingFilterComponent: 'agDateColumnFloatingFilter',
+  filterParams: DATE_FILTER_PARAMS,
+  floatingFilterComponent: DateFloatingFilter,
 } as const;
 
 /**

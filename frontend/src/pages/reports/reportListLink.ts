@@ -2,6 +2,7 @@ import type { BudgetReportFilterState } from '../../components/reports/BudgetRep
 import { compactListSearchCached, filtersNeedContext, saveListContext } from '../../lib/listContext';
 import { analyticsFieldKey } from '../../services/analytics';
 import { costCenterLabel } from '../../services/costCenters';
+import { REPORT_VIEW_PARAM, REPORT_VIEW_VALUE } from '../../hooks/useListContextSearch';
 import { STATUS_SCOPE_PARAM } from '../../utils/statusScopeParams';
 import { keepValues, NO_ANALYTICS_VALUE, type BudgetScope, type ColumnFilters, type FilterModel, type RunBuildPick } from './reportAggregates';
 import { SUMMARY_ENDPOINT } from './useReportScope';
@@ -22,6 +23,10 @@ import { SUMMARY_ENDPOINT } from './useReportScope';
  *   sees and can change);
  * - a row that counts only lines declaring FTE (staffing, cost per FTE, the FTE measure) adds "FTE
  *   declared".
+ *
+ * The list opens as a one-off view (`?from=report`, `REPORT_VIEW_PARAM`): it leaves the tab's
+ * remembered list state alone, so a later plain visit to the list does not reapply the report's
+ * filters and Show scope.
  */
 
 /** The list column of a dimension: the default one keeps `analytics_category_name`, the others `analytics_<id>`. */
@@ -99,7 +104,7 @@ export function reportListFilters(group: ReportListGroup, picks: ReportListPicks
 
 /** The list a row opens: its href, and how to save its filters when they are too long for a URL. */
 export type ReportListLink = {
-  /** `/ops/<scope>?filters=…&statusScope=all`, or `?ctx=…` once filters too long for a URL are saved in this tab. */
+  /** `/ops/<scope>?filters=…&statusScope=all&from=report`, or `?ctx=…` once filters too long for a URL are saved in this tab. */
   href: string;
   /**
    * Present while the filters are too long for a URL and not saved yet: saves them and answers the
@@ -119,6 +124,7 @@ export function reportListLink(scope: BudgetScope, group: ReportListGroup, picks
   const address = (search: string) => `/ops/${scope}?${search}`;
   const params = new URLSearchParams({ filters });
   params.set(STATUS_SCOPE_PARAM, 'all');
+  params.set(REPORT_VIEW_PARAM, REPORT_VIEW_VALUE);
   const search = compactListSearchCached(params.toString(), endpoint);
   const saved = !new URLSearchParams(search).has('filters');
   if (!filtersNeedContext(filters) || saved) return { href: address(search) };

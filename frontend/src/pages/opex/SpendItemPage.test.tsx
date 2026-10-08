@@ -596,6 +596,25 @@ describe('SpendItemPage list context', () => {
     expect(stored.sort).toBe('');
     expect(stored.filters).not.toContain('yForecast');
   });
+
+  it('opened from a list a report link opened (`from=report`): walks its scope and filters, leaves the stored context alone, goes back to that view', async () => {
+    const own = { sort: '', q: '', filters: JSON.stringify({ supplier_name: { filterType: 'set', values: ['Alpha'] } }), statusScope: 'enabled' };
+    window.sessionStorage.setItem('opex-list-context', JSON.stringify(own));
+    const filters = JSON.stringify({ has_fte: { filterType: 'set', values: ['yes'] } });
+    renderAt(`/ops/opex/${ITEM_ID}/overview?${new URLSearchParams({ filters, statusScope: 'all', from: 'report' })}`);
+    await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
+    for (const call of nav.calls.filter((c) => c.enabled) as Array<{ filters?: string | null; statusScope?: string }>) {
+      expect(call.statusScope).toBe('all');
+      expect(JSON.parse(call.filters ?? '{}')).toEqual(JSON.parse(filters));
+    }
+    expect(JSON.parse(window.sessionStorage.getItem('opex-list-context') ?? '{}')).toEqual(own);
+    fireEvent.click(screen.getByRole('button', { name: 'back to list' }));
+    const search = new URLSearchParams((await screen.findByTestId('list-page')).getAttribute('data-search') ?? '');
+    expect(search.get('from')).toBe('report');
+    expect(search.get('statusScope')).toBe('all');
+    expect(search.get('filters')).toBe(filters);
+    expect(JSON.parse(window.sessionStorage.getItem('opex-list-context') ?? '{}')).toEqual(own);
+  });
 });
 
 describe('SpendItemPage list context too long for a URL (ctx)', () => {

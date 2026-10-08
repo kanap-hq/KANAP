@@ -80,11 +80,6 @@ function floatingFilterCell(colId: string): HTMLElement {
   return document.querySelector(`.ag-floating-filter[aria-colindex="${index}"]`) as HTMLElement;
 }
 
-/** The text box under a column header. */
-function floatingFilterInput(colId: string): HTMLInputElement {
-  return floatingFilterCell(colId).querySelector('input') as HTMLInputElement;
-}
-
 function renderPage(path = '/ops/opex') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -124,7 +119,7 @@ const LINK_FILTERS = {
   cost_center_label: set(['CC1 · Ops']),
   account_id: set(['acc-1']),
 };
-const linkPath = (filters: Record<string, unknown> = LINK_FILTERS) => `/ops/opex?${new URLSearchParams({ filters: JSON.stringify(filters), statusScope: 'all' })}`;
+const linkPath = (filters: Record<string, unknown> = LINK_FILTERS) => `/ops/opex?${new URLSearchParams({ filters: JSON.stringify(filters), statusScope: 'all', from: 'report' })}`;
 const visible = (colId: string) => grid.api.getColumn(colId)?.isVisible();
 const savedLayout = (stored: Map<string, string>) => JSON.parse(stored.get('grid-columns:test:u-1:opex-summary') ?? '[]') as Array<{ colId: string; hide?: boolean }>;
 
@@ -163,7 +158,8 @@ describe('OPEX list opened from a report link', () => {
     // Their filters show in the boxes under the headers (the reason the list is narrowed).
     await waitFor(() => expect(floatingFilterCell('cost_center_label').querySelector('button[aria-label="filters.clearFilter"]')).not.toBeNull());
     expect(floatingFilterCell('has_fte').querySelector('button[aria-label="filters.clearFilter"]')).not.toBeNull();
-    expect(floatingFilterInput('disabled_at').value).not.toBe('');
+    expect(floatingFilterCell('disabled_at').querySelector('button[aria-label="filters.clearFilter"]')).not.toBeNull();
+    expect(floatingFilterCell('disabled_at').textContent?.toLowerCase()).toContain('filters.date.greaterthan');
     // On screen: right after the name, not at their place far right in the layout (where they opened
     // off screen and the list looked narrowed for no reason).
     const order = grid.api.getAllGridColumns().filter((column: any) => column.isVisible()).map((column: any) => column.getColId());

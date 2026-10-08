@@ -79,7 +79,18 @@
     "clearFilter": "Clear filter",
     "columnPlaceholder": "Filter…",
     "filterColumn": "Filter {{column}}",
-    "linkFiltersLost": "The filters of this link are no longer available."
+    "linkFiltersLost": "The filters of this link are no longer available.",
+    "date": {
+      "blank": "blank",
+      "notBlank": "not blank",
+      "equals": "on {{date}}",
+      "notEqual": "not on {{date}}",
+      "lessThan": "before {{date}}",
+      "greaterThan": "after {{date}}",
+      "inRange": "from {{from}} to {{to}}",
+      "or": "or",
+      "and": "and"
+    }
   },
   "columnChooser": {
     "searchPlaceholder": "Search columns",

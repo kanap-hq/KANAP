@@ -97,6 +97,7 @@ vi.mock('../hooks/useAnalyticsAxes', async (importOriginal) => {
 
 import api from '../api';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
+import DateFloatingFilter from '../components/DateFloatingFilter';
 import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
 import CapexPage from './CapexPage';
 import { DEFAULT_BUDGET_COLUMNS } from '../services/budgetColumns';
@@ -230,7 +231,10 @@ describe('CapexPage', () => {
   it('filters every date column with date models, from the menu and from the box under the header', async () => {
     await renderPage();
     for (const id of ['effective_start', 'disabled_at', 'created_at', 'updated_at']) {
-      expect(column(id)).toMatchObject({ filter: 'agDateColumnFilter', floatingFilterComponent: 'agDateColumnFloatingFilter' });
+      // The box under the header shows the filter in words and clears it in one click (DateFloatingFilter);
+      // each date filter names a date operator as its default, never the text filters' `contains`.
+      expect(column(id)).toMatchObject({ filter: 'agDateColumnFilter', floatingFilterComponent: DateFloatingFilter });
+      expect((column(id)?.filterParams as { defaultOption?: string } | undefined)?.defaultOption).toBe('equals');
     }
   });
 

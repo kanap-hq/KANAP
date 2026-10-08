@@ -101,7 +101,7 @@ describe('reportListHref: each group kind', () => {
   it('a cost center row opens the list on every status, its window and its label; the row without one on blank', () => {
     const href = reportListHref('opex', { kind: 'costCenter', label: 'CC1 · Ops' }, NO_LIST_PICKS, REPORT);
     const filters = withWindow({ cost_center_label: set(['CC1 · Ops']) });
-    expect(href).toBe(`/ops/opex?${new URLSearchParams({ filters: JSON.stringify(filters), statusScope: 'all' })}`);
+    expect(href).toBe(`/ops/opex?${new URLSearchParams({ filters: JSON.stringify(filters), statusScope: 'all', from: 'report' })}`);
     expect(statusOf(href)).toBe('all');
     expect(filtersOf(reportListHref('opex', { kind: 'costCenter', label: null }, NO_LIST_PICKS, REPORT))).toEqual(withWindow({ cost_center_label: set([null]) }));
   });
@@ -222,12 +222,12 @@ describe('reportListLink: filters too long for a URL', () => {
     expect(post).not.toHaveBeenCalled();
 
     post.mockResolvedValue({ data: { id: 'ctx-1' } });
-    await expect(before.save!()).resolves.toBe('/ops/opex?statusScope=all&ctx=ctx-1');
+    await expect(before.save!()).resolves.toBe('/ops/opex?statusScope=all&from=report&ctx=ctx-1');
     expect(post).toHaveBeenCalledWith('/list-contexts', { list: 'spend-items', state: { filters: reportListFilters(group, picks, REPORT) } });
     expect(cachedListContextId('/spend-items/summary', JSON.stringify(reportListFilters(group, picks, REPORT)))).toBe('ctx-1');
 
     const after = reportListLink('opex', group, picks, REPORT);
-    expect(after.href).toBe('/ops/opex?statusScope=all&ctx=ctx-1');
+    expect(after.href).toBe('/ops/opex?statusScope=all&from=report&ctx=ctx-1');
     expect(after.save).toBeUndefined();
   });
 

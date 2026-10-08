@@ -79,7 +79,18 @@
     "clearFilter": "Effacer le filtre",
     "columnPlaceholder": "Filtrer…",
     "filterColumn": "Filtrer {{column}}",
-    "linkFiltersLost": "Les filtres de ce lien ne sont plus disponibles."
+    "linkFiltersLost": "Les filtres de ce lien ne sont plus disponibles.",
+    "date": {
+      "blank": "vide",
+      "notBlank": "non vide",
+      "equals": "le {{date}}",
+      "notEqual": "autre que le {{date}}",
+      "lessThan": "avant le {{date}}",
+      "greaterThan": "après le {{date}}",
+      "inRange": "du {{from}} au {{to}}",
+      "or": "ou",
+      "and": "et"
+    }
   },
   "columnChooser": {
     "searchPlaceholder": "Rechercher une colonne",

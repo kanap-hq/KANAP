@@ -234,7 +234,11 @@ async function linkOf(name: string) {
   const [path, search] = href.split('?');
   const params = new URLSearchParams(search ?? '');
   const filters = search ? JSON.parse(params.get('filters') ?? 'null') : null;
-  if (filters) expect(params.get('statusScope')).toBe('all');
+  if (filters) {
+    expect(params.get('statusScope')).toBe('all');
+    // A one-off view: the list leaves the tab's remembered state alone.
+    expect(params.get('from')).toBe('report');
+  }
   return { href, path, filters };
 }
 
@@ -249,7 +253,7 @@ describe('Staffing by month group links', () => {
     renderReport(<StaffingByMonthReport />, '/report');
     const filters = staffed({ cost_center_label: set(['CC1 · Ops']) });
     expect(await linkOf('CC1 · Ops')).toEqual({
-      href: `/ops/opex?${new URLSearchParams({ filters: JSON.stringify(filters), statusScope: 'all' })}`,
+      href: `/ops/opex?${new URLSearchParams({ filters: JSON.stringify(filters), statusScope: 'all', from: 'report' })}`,
       path: '/ops/opex',
       filters,
     });
@@ -399,7 +403,7 @@ describe('a group link whose filters are too long for a URL', () => {
   it('carries them inline (a copyable link) and saves nothing on hover or focus', async () => {
     renderCell();
     const link = screen.getByRole('link', { name: 'Acme' });
-    expect(link.getAttribute('href')).toMatch(/^\/ops\/opex\?filters=.*statusScope=all$/);
+    expect(link.getAttribute('href')).toMatch(/^\/ops\/opex\?filters=.*statusScope=all&from=report$/);
     expect(link).toHaveAttribute('target', '_blank');
     fireEvent.mouseEnter(link);
     fireEvent.mouseOver(link);
@@ -417,10 +421,10 @@ describe('a group link whose filters are too long for a URL', () => {
     expect(click.defaultPrevented).toBe(true);
     expect(open).toHaveBeenCalledWith('', '_blank');
     expect(tab.opener).toBeNull();
-    await waitFor(() => expect(tab.location.href).toBe('/ops/opex?statusScope=all&ctx=ctx-42'));
+    await waitFor(() => expect(tab.location.href).toBe('/ops/opex?statusScope=all&from=report&ctx=ctx-42'));
     expect(saves()).toHaveLength(1);
     // Saved: the link itself now carries the short address.
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Acme' })).toHaveAttribute('href', '/ops/opex?statusScope=all&ctx=ctx-42'));
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Acme' })).toHaveAttribute('href', '/ops/opex?statusScope=all&from=report&ctx=ctx-42'));
   });
 
   it('a middle click does the same; a right click (copy link) does nothing', async () => {
@@ -433,7 +437,7 @@ describe('a group link whose filters are too long for a URL', () => {
     const middle = new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 1 });
     await act(async () => { link.dispatchEvent(middle); });
     expect(middle.defaultPrevented).toBe(true);
-    await waitFor(() => expect(tab.location.href).toBe('/ops/opex?statusScope=all&ctx=ctx-42'));
+    await waitFor(() => expect(tab.location.href).toBe('/ops/opex?statusScope=all&from=report&ctx=ctx-42'));
   });
 
   it('a failed save sends the tab to the inline address', async () => {
