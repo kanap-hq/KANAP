@@ -936,6 +936,10 @@
         "staffing": {
           "title": "Personal nach Monat",
           "description": "Monatliche VZÄ nach Kostenstelle, Position, Lieferant oder Analysedimension"
+        },
+        "costPerFte": {
+          "title": "Kosten pro VZÄ",
+          "description": "Jährliche Kosten eines VZÄ nach Kostenstelle, Position, Lieferant oder Analysedimension, über Budgetspalten und Jahre"
         }
       }
     },
@@ -1221,6 +1225,16 @@
       "others": "Sonstige",
       "noDetail_one": "{{count}} Position meldet {{fte}} VZÄ ohne Monatsdetail. Sie ist nicht in den Monaten enthalten.",
       "noDetail_other": "{{count}} Positionen melden {{fte}} VZÄ ohne Monatsdetail. Sie sind nicht in den Monaten enthalten."
+    },
+    "costPerFte": {
+      "title": "Kosten pro VZÄ",
+      "subtitle": "Jährliche {{type}}-Kosten eines VZÄ nach {{group}}",
+      "chartTitle": "{{type}}-Kosten pro VZÄ nach {{group}}",
+      "columns": "Spalten",
+      "staffCost": "Personalkosten",
+      "costPerFte": "Kosten pro VZÄ",
+      "detachedNote": "Die Kosten pro VZÄ verwenden die Kosten ihrer Zeilen.",
+      "noDetail": "Keine Zeilendetails bei: {{list}}. Sie fließen nicht in die Kosten pro VZÄ ein."
     }
   },
   "budgetTab": {

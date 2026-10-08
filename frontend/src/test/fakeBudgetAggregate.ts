@@ -18,6 +18,10 @@ import type { AggregateRequest, AggregateResult, AggregateRow } from '../pages/r
  * Monthly FTE (`fte_month_<MM>_<slot><Column>`, `fte_nodetail_<slot><Column>`): a slot holds the
  * twelve months of a column in `fte_months: { budget: [1, 1, …] }`; a column that declares FTE without
  * them has no monthly detail.
+ *
+ * Staff lines (`staff_cost_<slot><Column>`, `staff_fte_<slot><Column>`): a slot holds the cost of its
+ * people and days lines in the reporting currency in `staff_cost: { budget: 9000 }` (0 without) and
+ * their FTE in `staff_fte: { budget: 1.5 }` (null without line detail).
  */
 
 type Row = Record<string, any>;
@@ -28,6 +32,9 @@ const SUFFIX_METRIC: Record<string, string> = { Budget: 'budget', Revision: 'rev
 const AMOUNT = /^(local_)?(yMinus2|yMinus1|yPlus1|yPlus2|y\d{4}|y)(Budget|Revision|Forecast|FollowUp|Landing)$/;
 const HAS_VERSION = /^has_version_(yMinus2|yMinus1|yPlus1|yPlus2|y\d{4}|y)$/;
 const FTE = /^fte_(detached_|nodetail_|month_(\d{2})_)?(yMinus2|yMinus1|yPlus1|yPlus2|y\d{4}|y)(Budget|Revision|Forecast|FollowUp|Landing)$/;
+const STAFF = /^staff_(cost|fte)_(yMinus2|yMinus1|yPlus1|yPlus2|y\d{4}|y)(Budget|Revision|Forecast|FollowUp|Landing)$/;
+/** A field the engine sums as FTE (a numeric, null when no line holds one). */
+const isFteField = (field: string) => FTE.test(field) || (STAFF.exec(field)?.[1] === 'fte');
 
 function slotYear(slot: string): number {
   const Y = new Date().getFullYear();
@@ -44,6 +51,8 @@ function versionOf(row: Row, year: number): any {
 
 /** An amount in cents (reporting currency, or the line's own with `local_`). */
 function amountCents(row: Row, field: string): number | null {
+  const staff = STAFF.exec(field);
+  if (staff?.[1] === 'cost') return Math.round(Number(versionOf(row, slotYear(staff[2]))?.staff_cost?.[SUFFIX_METRIC[staff[3]]] ?? 0) * 100);
   const match = AMOUNT.exec(field);
   if (!match) return null;
   const version = versionOf(row, slotYear(match[2]));
@@ -57,6 +66,11 @@ function amountCents(row: Row, field: string): number | null {
  * for `fte_nodetail_`, without it for `fte_month_`); undefined for any other field.
  */
 function fteHundredths(row: Row, field: string | undefined): number | null | undefined {
+  const staff = field ? STAFF.exec(field) : null;
+  if (staff?.[1] === 'fte') {
+    const value = versionOf(row, slotYear(staff[2]))?.staff_fte?.[SUFFIX_METRIC[staff[3]]];
+    return value == null ? null : Math.round(Number(value) * 100);
+  }
   const match = field ? FTE.exec(field) : null;
   if (!match) return undefined;
   const version = versionOf(row, slotYear(match[3]));
@@ -160,7 +174,7 @@ function rowOf(keys: Array<string | null>, rows: Row[], request: AggregateReques
   const values: Record<string, number | null> = {};
   const unknown: Record<string, number> = {};
   for (const m of request.spec.measures) {
-    if (FTE.test(m.field)) {
+    if (isFteField(m.field)) {
       const fte = measureFte(rows, m);
       values[m.id] = fte.value;
       unknown[m.id] = fte.unknown;

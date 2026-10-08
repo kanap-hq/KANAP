@@ -936,6 +936,10 @@
         "staffing": {
           "title": "Staffing by month",
           "description": "Monthly FTE by cost center, item, supplier or analytics dimension"
+        },
+        "costPerFte": {
+          "title": "Cost per FTE",
+          "description": "Yearly cost of one FTE by cost center, item, supplier or analytics dimension, across budget columns and years"
         }
       }
     },
@@ -1221,6 +1225,16 @@
       "others": "Others",
       "noDetail_one": "{{count}} item declares {{fte}} FTE without monthly detail. It is not in the months.",
       "noDetail_other": "{{count}} items declare {{fte}} FTE without monthly detail. They are not in the months."
+    },
+    "costPerFte": {
+      "title": "Cost per FTE",
+      "subtitle": "Yearly {{type}} cost of one FTE by {{group}}",
+      "chartTitle": "{{type}} cost per FTE by {{group}}",
+      "columns": "Columns",
+      "staffCost": "Staff cost",
+      "costPerFte": "Cost per FTE",
+      "detachedNote": "Cost per FTE uses the cost of their lines.",
+      "noDetail": "No line detail for: {{list}}. They are left out of the cost per FTE."
     }
   },
   "budgetTab": {

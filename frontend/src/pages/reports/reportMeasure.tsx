@@ -66,7 +66,7 @@ export function ReportMeasureSelect({ value, onChange }: { value: ReportMeasure;
 }
 
 /** Whole amounts with a space between thousands, as the budget reports always showed them. */
-function formatAmount(v: unknown): string {
+export function formatAmount(v: unknown): string {
   const n = Number(v ?? 0);
   if (!isFinite(n)) return '';
   const i = Math.round(n);

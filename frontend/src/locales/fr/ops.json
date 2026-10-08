@@ -937,6 +937,10 @@
         "staffing": {
           "title": "Effectifs par mois",
           "description": "ETP mensuels par centre de coûts, poste, fournisseur ou dimension analytique"
+        },
+        "costPerFte": {
+          "title": "Coût par ETP",
+          "description": "Coût annuel d'un ETP par centre de coûts, poste, fournisseur ou dimension analytique, sur plusieurs colonnes budgétaires et années"
         }
       }
     },
@@ -1222,6 +1226,16 @@
       "others": "Autres",
       "noDetail_one": "{{count}} poste déclare {{fte}} ETP sans détail mensuel. Il n'est pas compté dans les mois.",
       "noDetail_other": "{{count}} postes déclarent {{fte}} ETP sans détail mensuel. Ils ne sont pas comptés dans les mois."
+    },
+    "costPerFte": {
+      "title": "Coût par ETP",
+      "subtitle": "Coût annuel {{type}} d'un ETP par {{group}}",
+      "chartTitle": "Coût par ETP {{type}} par {{group}}",
+      "columns": "Colonnes",
+      "staffCost": "Coût du personnel",
+      "costPerFte": "Coût par ETP",
+      "detachedNote": "Le coût par ETP utilise le coût de leurs lignes.",
+      "noDetail": "Aucun détail de lignes pour : {{list}}. Ils sont exclus du coût par ETP."
     }
   },
   "budgetTab": {

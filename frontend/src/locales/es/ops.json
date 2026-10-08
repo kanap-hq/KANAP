@@ -936,6 +936,10 @@
         "staffing": {
           "title": "Plantilla por mes",
           "description": "ETC mensuales por centro de coste, partida, proveedor o dimensión analítica"
+        },
+        "costPerFte": {
+          "title": "Coste por ETC",
+          "description": "Coste anual de un ETC por centro de coste, partida, proveedor o dimensión analítica, en varias columnas de presupuesto y años"
         }
       }
     },
@@ -1221,6 +1225,16 @@
       "others": "Otros",
       "noDetail_one": "{{count}} partida declara {{fte}} ETC sin detalle mensual. No se incluye en los meses.",
       "noDetail_other": "{{count}} partidas declaran {{fte}} ETC sin detalle mensual. No se incluyen en los meses."
+    },
+    "costPerFte": {
+      "title": "Coste por ETC",
+      "subtitle": "Coste anual {{type}} de un ETC por {{group}}",
+      "chartTitle": "Coste por ETC {{type}} por {{group}}",
+      "columns": "Columnas",
+      "staffCost": "Coste de personal",
+      "costPerFte": "Coste por ETC",
+      "detachedNote": "El coste por ETC usa el coste de sus líneas.",
+      "noDetail": "Sin detalle de líneas en: {{list}}. Quedan fuera del coste por ETC."
     }
   },
   "budgetTab": {

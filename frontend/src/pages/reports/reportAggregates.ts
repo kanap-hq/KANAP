@@ -129,6 +129,20 @@ export function noDetailFteField(year: number, metric: MetricKey): string {
   return `fte_nodetail_${amountField(year, metric)}`;
 }
 
+/**
+ * The cost of the people and days quantity × price lines of a year and budget column, in the reporting
+ * currency (`staff_cost_y2026Budget`): read from the lines' results, also when the column's amount no
+ * longer follows them; 0 without line detail, like any amount.
+ */
+export function staffCostField(year: number, metric: MetricKey): string {
+  return `staff_cost_${amountField(year, metric)}`;
+}
+
+/** The full-year FTE of the same lines (`staff_fte_y2026Budget`): null without line detail. */
+export function staffFteField(year: number, metric: MetricKey): string {
+  return `staff_fte_${amountField(year, metric)}`;
+}
+
 /** The field a report sums for a year and column: the amount, or the declared FTE. */
 export function measureField(year: number, metric: MetricKey, measure: ReportMeasure = 'amount'): string {
   return measure === 'fte' ? fteField(year, metric) : amountField(year, metric);
@@ -832,14 +846,15 @@ export function readStaffing(result: AggregateResult | undefined, labels: Staffi
   rows.sort((a, b) => (b.average ?? 0) - (a.average ?? 0) || compare(a.label, b.label));
   const detached = staffingNotice(result?.total, DETACHED_MEASURE);
   const noDetail = staffingNotice(result?.total, NO_DETAIL_MEASURE);
-  return { rows, total: staffingMonths(result?.total), detached: detachedInMonths(detached, noDetail), noDetail };
+  return { rows, total: staffingMonths(result?.total), detached: detachedWithDetail(detached, noDetail), noDetail };
 }
 
 /**
- * The detached FTE that is in the months: every line without monthly detail is also detached, so it
- * comes off both the FTE and the line count (exact, in cents; a rounding below zero reads as none).
+ * The detached FTE that has its lines' detail (the one in the months, or in the cost per FTE): every
+ * line without detail is also detached, so it comes off both the FTE and the line count (exact, in
+ * cents; a rounding below zero reads as none).
  */
-function detachedInMonths(detached: StaffingNotice | null, noDetail: StaffingNotice | null): StaffingNotice | null {
+function detachedWithDetail(detached: StaffingNotice | null, noDetail: StaffingNotice | null): StaffingNotice | null {
   if (!detached || !noDetail) return detached;
   const fte = Math.max(0, Math.round((detached.fte - noDetail.fte) * 100) / 100);
   const items = Math.max(0, detached.items - noDetail.items);
@@ -863,6 +878,112 @@ export function staffingChartSeries(rows: readonly StaffingRow[], limit = STAFFI
   });
   return { series, others };
 }
+
+// ----- cost per FTE (CostPerFteReport) -----
+
+const STAFF_COST_MEASURE = 'cost';
+const STAFF_FTE_MEASURE = 'fte';
+
+export interface CostPerFteParams {
+  scope: BudgetScope;
+  /** The year and column pairs compared, in the order shown. */
+  columns: readonly ColumnYear[];
+  group: StaffingGroup;
+  filters: ColumnFilters;
+}
+
+/**
+ * One request per year and column: per group, the cost of the people and days lines and their FTE,
+ * with, read on the total row, the FTE whose amount no longer follows the lines and the FTE declared
+ * without line detail. Every request reads the same lines: the window starts on the earliest year
+ * compared, as in the column comparison. Every group comes back: the reader keeps the ones with a staff
+ * FTE in some column.
+ */
+export function costPerFteRequests(p: CostPerFteParams): AggregateRequest[] {
+  const years = Array.from(new Set(p.columns.map((column) => column.year))).sort((a, b) => a - b);
+  return p.columns.map((column) => ({
+    query: withYears({ filters: p.filters }, years),
+    spec: {
+      groupBy: staffingGroupKeys(p.scope, p.group),
+      measures: [
+        { id: STAFF_COST_MEASURE, fn: 'sum', field: staffCostField(column.year, column.metric) },
+        { id: STAFF_FTE_MEASURE, fn: 'sum', field: staffFteField(column.year, column.metric) },
+        { id: DETACHED_MEASURE, fn: 'sum', field: detachedFteField(column.year, column.metric) },
+        { id: NO_DETAIL_MEASURE, fn: 'sum', field: noDetailFteField(column.year, column.metric) },
+      ],
+    },
+  }));
+}
+
+/** A group's staff FTE and cost in one column, and the cost of one FTE (null when the FTE is null or 0). */
+export type CostPerFteCell = { fte: number | null; cost: number | null; ratio: number | null };
+export type CostPerFteRow = { key: string; label: string; cells: CostPerFteCell[] };
+export type CostPerFteNotice = ColumnYear & StaffingNotice;
+export type CostPerFte = {
+  rows: CostPerFteRow[];
+  /** Per column, the totals of FTE and cost and the ratio of the totals. */
+  total: CostPerFteCell[];
+  /** Per column with some, the detached FTE that has line detail: its cost is the lines' cost. */
+  detached: CostPerFteNotice[];
+  /** Per column with some, the FTE declared without line detail: left out of the figures. */
+  noDetail: CostPerFteNotice[];
+};
+
+function costPerFteCell(row: AggregateRow | null | undefined): CostPerFteCell {
+  const fte = knownValueOf(row, STAFF_FTE_MEASURE);
+  if (fte == null) return { fte: null, cost: null, ratio: null };
+  const cost = valueOf(row, STAFF_COST_MEASURE);
+  return { fte, cost, ratio: fte !== 0 ? cost / fte : null };
+}
+
+/**
+ * The groups with a staff FTE in at least one column, by the first column's FTE, largest first (then by
+ * label); the total row (ratio of the totals, never an average of ratios); the notices per column.
+ * `results` holds the answers to `costPerFteRequests`, in the order of `columns`.
+ */
+export function readCostPerFte(
+  columns: readonly ColumnYear[],
+  results: ReadonlyArray<AggregateResult | undefined> | undefined,
+  labels: StaffingLabels,
+  compare: (a: string, b: string) => number,
+): CostPerFte {
+  const groups = new Map<string, { label: string; rows: Array<AggregateRow | undefined> }>();
+  columns.forEach((_, index) => {
+    for (const group of results?.[index]?.groups ?? []) {
+      const id = group.keys[0];
+      const key = id ?? '';
+      const entry = groups.get(key) ?? { label: id == null ? labels.none : (group.keys[1] ?? '').trim() || labels.unnamed, rows: [] };
+      entry.rows[index] = group;
+      groups.set(key, entry);
+    }
+  });
+  const rows: CostPerFteRow[] = [];
+  for (const [key, entry] of groups) {
+    const cells = columns.map((_, index) => costPerFteCell(entry.rows[index]));
+    if (cells.some((cell) => cell.fte != null)) rows.push({ key, label: entry.label, cells });
+  }
+  const first = (row: CostPerFteRow) => row.cells[0]?.fte;
+  rows.sort((a, b) => {
+    const x = first(a);
+    const y = first(b);
+    if (x != null && y != null && x !== y) return y - x;
+    if ((x == null) !== (y == null)) return x == null ? 1 : -1;
+    return compare(a.label, b.label);
+  });
+  const detached: CostPerFteNotice[] = [];
+  const noDetail: CostPerFteNotice[] = [];
+  columns.forEach((column, index) => {
+    const total = results?.[index]?.total;
+    const without = staffingNotice(total, NO_DETAIL_MEASURE);
+    const withDetail = detachedWithDetail(staffingNotice(total, DETACHED_MEASURE), without);
+    if (withDetail) detached.push({ ...column, ...withDetail });
+    if (without) noDetail.push({ ...column, ...without });
+  });
+  return { rows, total: columns.map((_, index) => costPerFteCell(results?.[index]?.total)), detached, noDetail };
+}
+
+/** The most groups the cost per FTE chart draws, after the total. */
+export const COST_PER_FTE_CHART_GROUPS = 10;
 
 // ----- sums per year and column (ComparisonReport, CapexBudgetTrendReport, BudgetColumnsCompareReport) -----
 
