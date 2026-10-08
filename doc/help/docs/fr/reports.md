@@ -26,10 +26,11 @@ La page d'accueil affiche une carte par rapport disponible avec une courte descr
 | **Comparaison de colonnes budgétaires** | Choisir jusqu'à 10 combinaisons année+colonne pour OPEX ou CAPEX |
 | **Comptes de consolidation** | Budget OPEX ou CAPEX regroupé par compte de consolidation |
 | **Dimensions analytiques** | Budget OPEX ou CAPEX regroupé par dimension analytique |
+| **Effectifs par mois** | ETP mensuels par centre de coûts, poste, fournisseur ou dimension analytique |
 
 ### Choisir OPEX ou CAPEX
 
-**Top postes**, **Top hausse / baisse**, **Comptes de consolidation** et **Dimensions analytiques** commencent chacun par un sélecteur **OPEX** / **CAPEX**, la première commande de la barre de filtres.
+**Top postes**, **Top hausse / baisse**, **Comptes de consolidation**, **Dimensions analytiques** et **Effectifs par mois** commencent chacun par un sélecteur **OPEX** / **CAPEX**, la première commande de la barre de filtres.
 
 - Le rapport s'ouvre sur un type que vous pouvez consulter, OPEX en priorité. Un type que vous ne pouvez pas consulter est désactivé.
 - L'adresse de la page conserve le type choisi (`?scope=opex` ou `?scope=capex`) : un lien enregistré en favori ou partagé s'ouvre sur le même type.
@@ -60,7 +61,7 @@ Chaque sélecteur de colonne ou de métrique propose les colonnes budgétaires a
 
 ### Filtres par centre de coûts, run ou build et dimensions analytiques
 
-Les sept rapports budgétaires (**Top postes**, **Top hausse / baisse**, **Tendance budgétaire (OPEX)**, **Tendance budgétaire (CAPEX)**, **Comparaison de colonnes budgétaires**, **Comptes de consolidation** et **Dimensions analytiques**) peuvent être restreints à une partie du budget avec ces filtres :
+Les sept rapports budgétaires (**Top postes**, **Top hausse / baisse**, **Tendance budgétaire (OPEX)**, **Tendance budgétaire (CAPEX)**, **Comparaison de colonnes budgétaires**, **Comptes de consolidation** et **Dimensions analytiques**) et **Effectifs par mois** peuvent être restreints à une partie du budget avec ces filtres :
 
 - **Centre de coûts** : choisissez un centre de coûts ou un groupe. Un groupe inclut tout ce qui se trouve en dessous, y compris les centres de coûts désactivés, car leurs lignes appartiennent toujours au groupe. **Tous les centres de coûts** retire le filtre. Voir [Centres de coûts](cost-centers.md).
 - **Run ou build** : **Tous**, **Run**, **Build**, ou **Non défini** pour les lignes qui n'ont ni l'un ni l'autre.
@@ -415,6 +416,49 @@ Le sous-titre, le titre du graphique et la première colonne du tableau nomment 
 - Graphique en courbe avec une série par valeur
 
 **Tableau** : Une ligne par valeur avec des colonnes d'années. Une ligne de totaux épinglée en bas. Les lignes sans valeur sur la dimension choisie apparaissent comme « Non affecté ».
+
+---
+
+## Effectifs par mois
+
+Voyez combien de personnes chaque partie du budget prévoit, mois par mois. Le rapport lit les ETP mensuels que déclarent les lignes de quantité et de prix d'une colonne budgétaire. Voir [Quantité et prix](opex.md#quantite-et-prix) et [ETP](opex.md#etp).
+
+### Contrôles
+
+- **Type de poste** : OPEX ou CAPEX (voir [Choisir OPEX ou CAPEX](#choisir-opex-ou-capex))
+- **Centre de coûts**, **Run ou build**, **Postes** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
+- **Année** : Année précédente, en cours ou suivante
+- **Colonne** : Toute colonne budgétaire affichée. Démarre sur la colonne par défaut
+- **Regrouper par** : **Centre de coûts** (par défaut), **Poste**, **Fournisseur** ou **Dimension analytique**
+- **Dimension** : la dimension sur laquelle le rapport regroupe, avec **Dimension analytique**. Elle s'affiche lorsque vous avez au moins deux dimensions activées, et le rapport s'ouvre sur la dimension par défaut
+
+L'adresse de la page conserve le regroupement (`?group=item`, `?group=supplier` ou `?group=axis:<dimension id>`) : un lien enregistré en favori ou partagé s'ouvre sur le même regroupement. Sans ce paramètre, le rapport regroupe par centre de coûts.
+
+### Ce que vous verrez
+
+**Graphique** : Des aires empilées sur les douze mois, une pour chacun des huit plus grands groupes par moyenne. Les autres groupes s'additionnent dans une aire **Autres**. Le titre nomme le type, le regroupement, la colonne et l'année, par exemple « Effectifs OPEX par centre de coûts, Budget 2026 ». Survolez un mois pour lire les ETP d'un groupe.
+
+**Tableau** : Une ligne par groupe qui déclare des ETP mensuels, la plus grande moyenne en premier :
+
+- Le groupe : un centre de coûts, un poste, un fournisseur ou une valeur de la dimension. Les postes sans centre de coûts apparaissent comme « Aucun centre de coûts », sans fournisseur comme « Aucun fournisseur », et sans valeur sur la dimension comme « Aucune valeur »
+- Une colonne par mois
+- **Moyenne** : la somme des douze mois divisée par 12. C'est l'ETP moyen sur l'année complète que déclare la colonne
+- **Pic** : le mois le plus élevé
+
+Une ligne **Total** épinglée donne les totaux mensuels, leur moyenne et leur pic. Les valeurs s'affichent avec deux décimales. Seuls les ETP déclarés comptent : les postes sans lignes de quantité et de prix dans la colonne sont écartés.
+
+### Avertissements
+
+Une ligne sous le tableau pour chaque cas, quand il se présente :
+
+- « 2 postes déclarent 1,50 ETP alors que leur montant ne suit plus leurs lignes. » Le montant a été réparti, ses mois ont été modifiés à la main, ou la colonne a été copiée. Leurs ETP comptent toujours dans les mois. Voir [Choisir le montant ou les ETP](#choisir-le-montant-ou-les-etp).
+- « 1 poste déclare 3,00 ETP sans détail mensuel. Il n'est pas compté dans les mois. » Ces postes déclarent un ETP sur l'année complète, sans ETP par mois. Ils sont écartés des mois, de la moyenne et du pic.
+
+### Export
+
+- **Exporter le tableau en CSV** : Le nom du fichier porte le type, l'année, la colonne et le regroupement, par exemple `staffing-opex-2026-budget-cost-center.csv`
+- **Exporter le graphique en PNG** : Même nom, en image PNG
+- **Imprimer / Enregistrer en PDF**
 
 ---
 

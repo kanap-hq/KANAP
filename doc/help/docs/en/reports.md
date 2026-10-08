@@ -26,10 +26,11 @@ The landing page shows a card for each available report with a short description
 | **Budget column comparison** | Pick up to 10 year+column totals for OPEX or CAPEX |
 | **Consolidation accounts** | OPEX or CAPEX budget grouped by consolidation account |
 | **Analytics dimensions** | OPEX or CAPEX budget grouped by analytics dimension |
+| **Staffing by month** | Monthly FTE by cost center, item, supplier or analytics dimension |
 
 ### Choosing OPEX or CAPEX
 
-**Top items**, **Top increase / decrease**, **Consolidation accounts**, and **Analytics dimensions** each start with an **OPEX** / **CAPEX** switch, the first control of the filter bar.
+**Top items**, **Top increase / decrease**, **Consolidation accounts**, **Analytics dimensions**, and **Staffing by month** each start with an **OPEX** / **CAPEX** switch, the first control of the filter bar.
 
 - The report opens on a type you can read, OPEX first. A type you cannot read is disabled.
 - The page address keeps the chosen type (`?scope=opex` or `?scope=capex`), so a bookmarked or shared link opens on the same type.
@@ -60,7 +61,7 @@ Every column or metric picker offers the budget columns your organisation shows,
 
 ### Cost center, run or build and analytics filters
 
-The seven budget reports (**Top items**, **Top increase / decrease**, **Budget trend (OPEX)**, **Budget trend (CAPEX)**, **Budget column comparison**, **Consolidation accounts** and **Analytics dimensions**) can be narrowed to one part of the budget with these filters:
+The seven budget reports (**Top items**, **Top increase / decrease**, **Budget trend (OPEX)**, **Budget trend (CAPEX)**, **Budget column comparison**, **Consolidation accounts** and **Analytics dimensions**) and **Staffing by month** can be narrowed to one part of the budget with these filters:
 
 - **Cost center**: pick a cost center or a group. A group includes everything below it, disabled cost centers included, since their lines still belong to the group. **All cost centers** removes the filter. See [Cost centers](cost-centers.md).
 - **Run or build**: **All**, **Run**, **Build**, or **Not set** for the lines that have neither.
@@ -415,6 +416,49 @@ The subtitle, the chart title and the first column of the table name the chosen 
 - Line chart with one series per value
 
 **Table**: One row per value with year columns. A pinned totals row at the bottom. Lines without a value on the chosen dimension appear as "Unassigned".
+
+---
+
+## Staffing by month
+
+See how many people each part of the budget plans, month by month. The report reads the monthly FTE that the quantity and price lines of a budget column declare. See [Quantity and price](opex.md#quantity-and-price) and [FTE](opex.md#fte).
+
+### Controls
+
+- **Item type**: OPEX or CAPEX (see [Choosing OPEX or CAPEX](#choosing-opex-or-capex))
+- **Cost center**, **Run or build**, **Items** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
+- **Year**: Previous, current, or next year
+- **Column**: Any shown budget column. Starts on the default column
+- **Group by**: **Cost center** (the default), **Item**, **Supplier** or **Analytics dimension**
+- **Dimension**: the dimension the report groups on, with **Analytics dimension**. It shows when you have two or more enabled dimensions, and the report opens on the default dimension
+
+The page address keeps the grouping (`?group=item`, `?group=supplier` or `?group=axis:<dimension id>`), so a bookmarked or shared link opens on the same grouping. Without it, the report groups by cost center.
+
+### What you'll see
+
+**Chart**: Stacked areas over the twelve months, one for each of the eight largest groups by average. The other groups add up in one **Others** area. The title names the type, the grouping, the column and the year, for example "OPEX staffing by cost center, Budget 2026". Hover a month to read a group's FTE.
+
+**Table**: One row per group that declares monthly FTE, the largest average first:
+
+- The group: a cost center, an item, a supplier or a value of the dimension. Items without a cost center appear as "No cost center", without a supplier as "No supplier", and without a value on the dimension as "No value"
+- One column per month
+- **Average**: the sum of the twelve months divided by 12. This is the full-year average FTE the column declares
+- **Peak**: the highest month
+
+A pinned **Total** row gives the monthly totals, their average and their peak. Values show with two decimals. Only declared FTE count: items without quantity and price lines in the column are left out.
+
+### Notices
+
+One line under the table for each case, when it applies:
+
+- "2 items declare 1.50 FTE while their amount no longer follows their lines." The amount was spread, its months were edited by hand, or the column was copied. Their FTE still counts in the months. See [Choosing amount or FTE](#choosing-amount-or-fte).
+- "1 item declares 3.00 FTE without monthly detail. It is not in the months." These items declare a full-year FTE but no FTE per month. They are left out of the months, the average and the peak.
+
+### Export
+
+- **Export table as CSV**: The file name carries the type, the year, the column and the grouping, for example `staffing-opex-2026-budget-cost-center.csv`
+- **Export chart as PNG**: Same name, as a PNG image
+- **Print / Save as PDF**
 
 ---
 

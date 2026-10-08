@@ -26,10 +26,11 @@ La página principal muestra una tarjeta para cada informe disponible con una br
 | **Comparación de columnas presupuestarias** | Seleccione hasta 10 combinaciones de año+columna para OPEX o CAPEX |
 | **Cuentas de consolidación** | Presupuesto OPEX o CAPEX agrupado por cuenta de consolidación |
 | **Dimensiones analíticas** | Presupuesto OPEX o CAPEX agrupado por dimensión analítica |
+| **Plantilla por mes** | ETC mensuales por centro de coste, partida, proveedor o dimensión analítica |
 
 ### Elegir OPEX o CAPEX
 
-**Top partidas**, **Top aumento / disminución**, **Cuentas de consolidación** y **Dimensiones analíticas** empiezan con un conmutador **OPEX** / **CAPEX**, el primer control de la barra de filtros.
+**Top partidas**, **Top aumento / disminución**, **Cuentas de consolidación**, **Dimensiones analíticas** y **Plantilla por mes** empiezan con un conmutador **OPEX** / **CAPEX**, el primer control de la barra de filtros.
 
 - El informe se abre en un tipo que usted puede consultar, primero OPEX. Un tipo que no puede consultar aparece desactivado.
 - La dirección de la página conserva el tipo elegido (`?scope=opex` o `?scope=capex`), de modo que un enlace guardado o compartido se abre en el mismo tipo.
@@ -60,7 +61,7 @@ Cada selector de columna o de métrica ofrece las columnas presupuestarias que m
 
 ### Filtros de centro de coste, de Run o build y de dimensiones analíticas
 
-Los siete informes presupuestarios (**Top partidas**, **Top aumento / disminución**, **Tendencia presupuestaria (OPEX)**, **Tendencia presupuestaria (CAPEX)**, **Comparación de columnas presupuestarias**, **Cuentas de consolidación** y **Dimensiones analíticas**) se pueden limitar a una parte del presupuesto con estos filtros:
+Los siete informes presupuestarios (**Top partidas**, **Top aumento / disminución**, **Tendencia presupuestaria (OPEX)**, **Tendencia presupuestaria (CAPEX)**, **Comparación de columnas presupuestarias**, **Cuentas de consolidación** y **Dimensiones analíticas**) y **Plantilla por mes** se pueden limitar a una parte del presupuesto con estos filtros:
 
 - **Centro de coste**: elija un centro de coste o un grupo. Un grupo incluye todo lo que tiene por debajo, también los centros de coste desactivados, ya que sus líneas siguen perteneciendo al grupo. **Todos los centros de coste** quita el filtro. Consulte [Centros de coste](cost-centers.md).
 - **Run o build**: **Todos**, **Run**, **Build** o **Sin definir** para las líneas que no tienen ninguno de los dos.
@@ -415,6 +416,49 @@ El subtítulo, el título del gráfico y la primera columna de la tabla indican 
 - Gráfico de líneas con una serie por valor
 
 **Tabla**: Una fila por valor con columnas de año. Una fila de totales fijada en la parte inferior. Las líneas sin valor en la dimensión elegida aparecen como "Sin asignar".
+
+---
+
+## Plantilla por mes
+
+Vea cuántas personas prevé cada parte del presupuesto, mes a mes. El informe lee los ETC mensuales que declaran las líneas de cantidad y precio de una columna presupuestaria. Consulte [Cantidad y precio](opex.md#cantidad-y-precio) y [ETC](opex.md#etc).
+
+### Controles
+
+- **Tipo de partida**: OPEX o CAPEX (ver [Elegir OPEX o CAPEX](#elegir-opex-o-capex))
+- **Centro de coste**, **Run o build**, **Partidas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
+- **Año**: Año anterior, actual o siguiente
+- **Columna**: Cualquier columna presupuestaria visible. Empieza en la columna por defecto
+- **Agrupar por**: **Centro de coste** (por defecto), **Partida**, **Proveedor** o **Dimensión analítica**
+- **Dimensión**: la dimensión por la que agrupa el informe, con **Dimensión analítica**. Aparece cuando tiene dos o más dimensiones activadas, y el informe se abre en la dimensión por defecto
+
+La dirección de la página conserva la agrupación (`?group=item`, `?group=supplier` o `?group=axis:<dimension id>`), de modo que un enlace guardado o compartido se abre con la misma agrupación. Sin este parámetro, el informe agrupa por centro de coste.
+
+### Qué verá
+
+**Gráfico**: Áreas apiladas sobre los doce meses, una para cada uno de los ocho grupos más grandes por media. Los demás grupos se suman en un área **Otros**. El título indica el tipo, la agrupación, la columna y el año, por ejemplo «Plantilla OPEX por centro de coste, Presupuesto 2026». Pase el cursor sobre un mes para leer los ETC de un grupo.
+
+**Tabla**: Una fila por grupo que declara ETC mensuales, la media más alta primero:
+
+- El grupo: un centro de coste, una partida, un proveedor o un valor de la dimensión. Las partidas sin centro de coste aparecen como «Sin centro de coste», sin proveedor como «Sin proveedor» y sin valor en la dimensión como «Sin valor»
+- Una columna por mes
+- **Media**: la suma de los doce meses dividida entre 12. Es el ETC medio del año completo que declara la columna
+- **Pico**: el mes más alto
+
+Una fila **Total** fijada da los totales mensuales, su media y su pico. Los valores se muestran con dos decimales. Solo cuentan los ETC declarados: las partidas sin líneas de cantidad y precio en la columna se dejan fuera.
+
+### Avisos
+
+Una línea bajo la tabla para cada caso, cuando se da:
+
+- «2 partidas declaran 1,50 ETC, pero su importe ya no sigue sus líneas.» El importe se ha distribuido, sus meses se han editado a mano o la columna se ha copiado. Sus ETC siguen contando en los meses. Consulte [Elegir importe o ETC](#elegir-importe-o-etc).
+- «1 partida declara 3,00 ETC sin detalle mensual. No se incluye en los meses.» Estas partidas declaran un ETC del año completo, sin ETC por mes. Quedan fuera de los meses, de la media y del pico.
+
+### Exportar
+
+- **Exportar tabla como CSV**: El nombre del archivo lleva el tipo, el año, la columna y la agrupación, por ejemplo `staffing-opex-2026-budget-cost-center.csv`
+- **Exportar gráfico como PNG**: El mismo nombre, como imagen PNG
+- **Imprimir / Guardar como PDF**
 
 ---
 

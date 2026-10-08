@@ -26,10 +26,11 @@ Die Startseite zeigt eine Karte für jeden verfügbaren Bericht mit einer kurzen
 | **Budgetspaltenvergleich** | Bis zu 10 Jahr+Spalten-Kombinationen für OPEX oder CAPEX auswählen |
 | **Konsolidierungskonten** | OPEX- oder CAPEX-Budget gruppiert nach Konsolidierungskonto |
 | **Analysedimensionen** | OPEX- oder CAPEX-Budget gruppiert nach Analysedimension |
+| **Personal nach Monat** | Monatliche VZÄ nach Kostenstelle, Position, Lieferant oder Analysedimension |
 
 ### OPEX oder CAPEX wählen
 
-**Top-Positionen**, **Top Anstieg / Rückgang**, **Konsolidierungskonten** und **Analysedimensionen** beginnen jeweils mit einem Umschalter **OPEX** / **CAPEX**, dem ersten Steuerelement der Filterleiste.
+**Top-Positionen**, **Top Anstieg / Rückgang**, **Konsolidierungskonten**, **Analysedimensionen** und **Personal nach Monat** beginnen jeweils mit einem Umschalter **OPEX** / **CAPEX**, dem ersten Steuerelement der Filterleiste.
 
 - Der Bericht öffnet sich auf einem Typ, den Sie lesen dürfen, zuerst OPEX. Ein Typ, den Sie nicht lesen dürfen, ist deaktiviert.
 - Die Seitenadresse behält den gewählten Typ (`?scope=opex` oder `?scope=capex`). Ein gespeicherter oder geteilter Link öffnet sich daher auf demselben Typ.
@@ -60,7 +61,7 @@ Jede Spalten- oder Kennzahlauswahl bietet die Budgetspalten an, die Ihre Organis
 
 ### Filter nach Kostenstelle, Run oder Build und Analysedimensionen
 
-Die sieben Budgetberichte (**Top-Positionen**, **Top Anstieg / Rückgang**, **Budgettrend (OPEX)**, **Budgettrend (CAPEX)**, **Budgetspaltenvergleich**, **Konsolidierungskonten** und **Analysedimensionen**) lassen sich mit diesen Filtern auf einen Teil des Budgets eingrenzen:
+Die sieben Budgetberichte (**Top-Positionen**, **Top Anstieg / Rückgang**, **Budgettrend (OPEX)**, **Budgettrend (CAPEX)**, **Budgetspaltenvergleich**, **Konsolidierungskonten** und **Analysedimensionen**) und **Personal nach Monat** lassen sich mit diesen Filtern auf einen Teil des Budgets eingrenzen:
 
 - **Kostenstelle**: Wählen Sie eine Kostenstelle oder eine Gruppe. Eine Gruppe umfasst alles, was darunter liegt, einschließlich deaktivierter Kostenstellen, da deren Zeilen weiterhin zur Gruppe gehören. **Alle Kostenstellen** entfernt den Filter. Siehe [Kostenstellen](cost-centers.md).
 - **Run oder Build**: **Alle**, **Run**, **Build** oder **Nicht festgelegt** für die Zeilen, die keines von beiden haben.
@@ -415,6 +416,49 @@ Untertitel, Diagrammtitel und erste Tabellenspalte nennen die gewählte Dimensio
 - Liniendiagramm mit einer Serie pro Wert
 
 **Tabelle**: Eine Zeile pro Wert mit Jahresspalten. Eine angeheftete Summenzeile unten. Zeilen ohne Wert in der gewählten Dimension erscheinen als „Nicht zugeordnet“.
+
+---
+
+## Personal nach Monat
+
+Sehen Sie, wie viele Personen jeder Teil des Budgets Monat für Monat plant. Der Bericht liest die monatlichen VZÄ, die die Zeilen mit Menge und Preis einer Budgetspalte melden. Siehe [Menge und Preis](opex.md#menge-und-preis) und [VZÄ](opex.md#vza).
+
+### Steuerungen
+
+- **Positionstyp**: OPEX oder CAPEX (siehe [OPEX oder CAPEX wählen](#opex-oder-capex-wahlen))
+- **Kostenstelle**, **Run oder Build**, **Positionen** und die Filter nach Analysedimension: Siehe [Filter nach Kostenstelle, Run oder Build und Analysedimensionen](#filter-nach-kostenstelle-run-oder-build-und-analysedimensionen)
+- **Jahr**: Vorheriges, aktuelles oder nächstes Jahr
+- **Spalte**: Jede angezeigte Budgetspalte. Beginnt mit der Standardspalte
+- **Gruppieren nach**: **Kostenstelle** (Standard), **Position**, **Lieferant** oder **Analysedimension**
+- **Dimension**: die Dimension, nach der der Bericht gruppiert, bei **Analysedimension**. Sie erscheint, wenn Sie zwei oder mehr aktivierte Dimensionen haben, und der Bericht öffnet mit der Standarddimension
+
+Die Seitenadresse speichert die Gruppierung (`?group=item`, `?group=supplier` oder `?group=axis:<dimension id>`), sodass ein gespeicherter oder geteilter Link mit derselben Gruppierung öffnet. Ohne diesen Parameter gruppiert der Bericht nach Kostenstelle.
+
+### Was Sie sehen
+
+**Diagramm**: Gestapelte Flächen über die zwölf Monate, eine für jede der acht größten Gruppen nach Durchschnitt. Die übrigen Gruppen ergeben zusammen eine Fläche **Sonstige**. Der Titel nennt Typ, Gruppierung, Spalte und Jahr, zum Beispiel „OPEX-Personal nach Kostenstelle, Budget 2026“. Fahren Sie über einen Monat, um die VZÄ einer Gruppe zu lesen.
+
+**Tabelle**: Eine Zeile pro Gruppe mit monatlichen VZÄ, der größte Durchschnitt zuerst:
+
+- Die Gruppe: eine Kostenstelle, eine Position, ein Lieferant oder ein Wert der Dimension. Positionen ohne Kostenstelle erscheinen als „Keine Kostenstelle“, ohne Lieferant als „Kein Lieferant“ und ohne Wert in der Dimension als „Kein Wert“
+- Eine Spalte pro Monat
+- **Durchschnitt**: die Summe der zwölf Monate geteilt durch 12. Das sind die durchschnittlichen VZÄ über das ganze Jahr, die die Spalte meldet
+- **Spitze**: der höchste Monat
+
+Eine angeheftete Zeile **Gesamt** zeigt die Monatssummen, ihren Durchschnitt und ihre Spitze. Werte erscheinen mit zwei Dezimalstellen. Es zählen nur gemeldete VZÄ: Positionen ohne Zeilen mit Menge und Preis in der Spalte bleiben unberücksichtigt.
+
+### Hinweise
+
+Eine Zeile unter der Tabelle für jeden Fall, wenn er eintritt:
+
+- „2 Positionen melden 1,50 VZÄ, ihr Betrag folgt aber nicht mehr ihren Zeilen.“ Der Betrag wurde verteilt, seine Monate wurden von Hand bearbeitet oder die Spalte wurde kopiert. Ihre VZÄ zählen weiterhin in den Monaten. Siehe [Betrag oder VZÄ wählen](#betrag-oder-vza-wahlen).
+- „1 Position meldet 3,00 VZÄ ohne Monatsdetail. Sie ist nicht in den Monaten enthalten.“ Diese Positionen melden VZÄ für das ganze Jahr, aber keine VZÄ pro Monat. Sie fehlen in den Monaten, im Durchschnitt und in der Spitze.
+
+### Export
+
+- **Tabelle als CSV exportieren**: Der Dateiname nennt Typ, Jahr, Spalte und Gruppierung, zum Beispiel `staffing-opex-2026-budget-cost-center.csv`
+- **Diagramm als PNG exportieren**: Gleicher Name, als PNG-Bild
+- **Drucken / Als PDF speichern**
 
 ---
 
