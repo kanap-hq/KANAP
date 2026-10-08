@@ -8,7 +8,8 @@ export const spendItemsRegistry: AiEntityFilterRegistry = {
       ai: 'status',
       grid: 'status',
       type: 'set',
-      description: 'Spend item lifecycle status.',
+      description:
+        'Spend item lifecycle status. As a filter, `enabled` keeps the items with no end of validity or one on or after 1 January of the current year (an item ending this year stays enabled until 31 December) and `disabled` keeps the items that ended before 1 January. The status value of each item, its sort and its grouping show the current state of the item itself: an item that ended earlier this year reads `disabled`.',
       values: ['enabled', 'disabled'],
       discoverable: true,
       sortable: true,

@@ -24,6 +24,8 @@ import {
 // (`list`) keep "not ended as of now".
 // @database-spec: runSpecs opens the data-source, so run-ci-tests.js runs this file in its serial database lane.
 
+// The year the list reads (`readRequest`: `new Date().getFullYear()`). Every date below is a UTC
+// instant; the Enabled and Disabled assertions depend on the year only, never on the time of the run.
 const Y = new Date().getFullYear();
 const KINDS: Kind[] = ['opex', 'capex'];
 
@@ -48,7 +50,7 @@ function itemService(kind: Kind): any {
 
 type LineKey = 'lastYear' | 'lastInstant' | 'yearStart' | 'earlier' | 'later' | 'nextYear' | 'blank';
 
-/** Already passed and in this year: yesterday, or January 1 on January 1. */
+/** In this year and, except in the year's first day, already passed: yesterday, or January 1 (UTC). */
 const earlierThisYear = new Date(Math.max(Date.UTC(Y, 0, 1), Date.now() - 24 * 3600 * 1000)).toISOString();
 
 /** Each line: item number, end of validity, monthly Budget of Y-1 (distinct powers of two, so a sum names its lines). */
@@ -183,13 +185,24 @@ async function testTotalsFilterValuesAndAggregates(kind: Kind) {
   });
 }
 
-/** The item pickers (`GET /spend-items`, `/capex-items`) keep "not ended as of now". */
+/**
+ * The item pickers (`GET /spend-items`, `/capex-items`) keep "not ended as of now". What has ended
+ * depends on the time of the run (31 December afternoon, the first hours of the year in another
+ * time zone), so the expectation reads the clock the picker reads: the transaction's `now()`.
+ */
 async function testPickersKeepTheirRule(kind: Kind) {
   await withFixture(kind, async (runner, { ids }, svc) => {
     const opts = { manager: runner.manager };
-    const listed = (await svc.list({ status: 'enabled', limit: 100 }, opts)).items.map((item: any) => item.id);
-    assert.ok(!listed.includes(ids.yearStart), `${kind}: the picker leaves out a line already ended`);
-    assert.ok(listed.includes(ids.later) && listed.includes(ids.blank), `${kind}: the picker keeps the lines still running`);
+    const [{ now }] = await runner.query(`SELECT now() AS now`);
+    const at = new Date(now).getTime();
+    const keys = Object.keys(LINES) as LineKey[];
+    const endOf = (key: LineKey) => (LINES[key].end == null ? Infinity : new Date(LINES[key].end!).getTime());
+    const listed = new Set((await svc.list({ status: 'enabled', limit: 100 }, opts)).items.map((item: any) => item.id));
+    assert.deepEqual(keys.filter((key) => listed.has(ids[key])), keys.filter((key) => endOf(key) > at), `${kind}: the picker keeps the lines not ended as of now`);
+    // Well after any run time: always listed.
+    assert.ok(listed.has(ids.nextYear) && listed.has(ids.blank), `${kind}: the picker keeps the lines still running`);
+    // A line that ended earlier this year: in Enabled, not in the picker (except on the year's first day, where it may not have ended yet).
+    if (endOf('earlier') <= at) assert.ok(!listed.has(ids.earlier), `${kind}: the picker leaves out a line already ended this year`);
   });
 }
 
