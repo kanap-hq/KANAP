@@ -88,14 +88,17 @@ export class BudgetListConfig implements ListConfig {
   /**
    * The lifecycle scope on `disabled_at`, AND the grid's date filter on that
    * column with every condition of a combined model (`disabledAtWhere`),
-   * the day read in UTC.
+   * the day read in UTC. The service hands Enabled and Disabled over as the
+   * year scopes (`budgetLifecycleScope`): `activeSince` and `endedBefore`
+   * January 1 of the current year.
    */
   scopeWhere(stmt: SqlStatement, scope: LifecycleScope, filters: Record<string, any>): string | null {
     const parts: string[] = [];
     if (scope === 'active') parts.push('i.disabled_at IS NULL OR i.disabled_at > NOW()');
     else if (scope === 'inactive') parts.push('i.disabled_at IS NOT NULL AND i.disabled_at <= NOW()');
     else if (scope === 'none') parts.push('1 = 0');
-    else if (scope && scope.activeSince) parts.push(`i.disabled_at IS NULL OR i.disabled_at >= ${stmt.bind(scope.activeSince.toISOString(), 'timestamptz')}`);
+    else if (scope && 'activeSince' in scope) parts.push(`i.disabled_at IS NULL OR i.disabled_at >= ${stmt.bind(scope.activeSince.toISOString(), 'timestamptz')}`);
+    else if (scope && 'endedBefore' in scope) parts.push(`i.disabled_at IS NOT NULL AND i.disabled_at < ${stmt.bind(scope.endedBefore.toISOString(), 'timestamptz')}`);
 
     const raw = filters?.disabled_at;
     const combined = raw && typeof raw === 'object' && Array.isArray(raw.conditions) && raw.conditions.length > 0

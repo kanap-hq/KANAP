@@ -166,8 +166,12 @@ export function resolveEndOfValidityAlias(disabledAt: DisabledAtInput, effective
   return parseNamedEndOfValidity('effective_end', effectiveEnd);
 }
 
-/** `none`: the status column filter ticks no value, so the list holds no line. */
-export type LifecycleScope = 'active' | 'inactive' | 'none' | { activeSince: Date } | null;
+/**
+ * `none`: the status column filter ticks no value, so the list holds no line.
+ * `activeSince`: no end of validity, or one on or after that instant.
+ * `endedBefore`: an end of validity before that instant (the complement of `activeSince`).
+ */
+export type LifecycleScope = 'active' | 'inactive' | 'none' | { activeSince: Date } | { endedBefore: Date } | null;
 
 const ALIAS_TOKEN = '__disabled_at__';
 
@@ -185,9 +189,12 @@ export function disabledAtWhere(scope: LifecycleScope, gridFilter?: unknown): Fi
     parts.push(`${ALIAS_TOKEN} IS NOT NULL AND ${ALIAS_TOKEN} <= NOW()`);
   } else if (scope === 'none') {
     parts.push('1 = 0');
-  } else if (scope && scope.activeSince) {
+  } else if (scope && 'activeSince' in scope) {
     parts.push(`${ALIAS_TOKEN} IS NULL OR ${ALIAS_TOKEN} >= :period_start`);
     params.period_start = scope.activeSince;
+  } else if (scope && 'endedBefore' in scope) {
+    parts.push(`${ALIAS_TOKEN} IS NOT NULL AND ${ALIAS_TOKEN} < :ended_before`);
+    params.ended_before = scope.endedBefore;
   }
   // A combined model (two conditions from the grid, or two AI filters on the
   // same column) applies every condition with its own operator.
