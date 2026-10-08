@@ -24,20 +24,20 @@ Snowflake;SUP-022;;;;Cloud data platform and analytics;enabled
 Coupa;SUP-023;;;;Procurement and spend management;enabled
 Intuit;SUP-024;;;;Accounting — QuickBooks Online for US entity;enabled
 Adobe;SUP-025;;;;Document management — Acrobat Pro;enabled
-Axians;SUP-026;;;;Managed IT services — infogérance for FR operations;enabled
+Axians;SUP-026;;;;Managed IT services for the French operations;enabled
 Atlantic IT Solutions;SUP-027;;;;Managed IT services — US operations support;enabled
-Fromatech Consulting;SUP-028;;;;Assistance technique et centres de compétences, France;enabled
-Nearshore Digital Lisboa;SUP-029;;;;Développement et support nearshore, Portugal;enabled
-DevHouse Milano;SUP-030;;;;Développement et infogérance, Italie;enabled
-Benelux IT Partners;SUP-031;;;;Infogérance et régie, Benelux;enabled
-Alpine Data Experts;SUP-032;;;;Conseil, data et pilotage de projets;enabled
-Generix Group;SUP-033;;;;Plateforme EDI et supply chain;enabled
-Akeneo;SUP-034;;;;Référentiel produit (PIM);enabled
-Cegid;SUP-035;;;;Logiciels de caisse et retail;enabled
-Orange Business;SUP-036;;;;Télécoms et réseau, France;enabled
-KPN;SUP-037;;;;Télécoms, Pays-Bas;enabled
-TIM Business;SUP-038;;;;Télécoms, Italie;enabled
-Verizon Business;SUP-039;;;;Télécoms, États-Unis;enabled
-Dell Technologies;SUP-040;;;;Serveurs et stockage;enabled
-Lenovo;SUP-041;;;;Postes de travail;enabled
-Shopify;SUP-042;;;;Plateforme e-commerce;enabled
+Fromatech Consulting;SUP-028;;;;Contractors and competence centers, France;enabled
+Nearshore Digital Lisboa;SUP-029;;;;Nearshore development and support, Portugal;enabled
+DevHouse Milano;SUP-030;;;;Development and managed services, Italy;enabled
+Benelux IT Partners;SUP-031;;;;Managed services and contractors, Benelux;enabled
+Alpine Data Experts;SUP-032;;;;Consulting, data and project management;enabled
+Generix Group;SUP-033;;;;EDI and supply chain platform;enabled
+Akeneo;SUP-034;;;;Product information management (PIM);enabled
+Cegid;SUP-035;;;;Point-of-sale and retail software;enabled
+Orange Business;SUP-036;;;;Telecom and network, France;enabled
+KPN;SUP-037;;;;Telecom, Netherlands;enabled
+TIM Business;SUP-038;;;;Telecom, Italy;enabled
+Verizon Business;SUP-039;;;;Telecom, United States;enabled
+Dell Technologies;SUP-040;;;;Servers and storage;enabled
+Lenovo;SUP-041;;;;Workstations;enabled
+Shopify;SUP-042;;;;E-commerce platform;enabled

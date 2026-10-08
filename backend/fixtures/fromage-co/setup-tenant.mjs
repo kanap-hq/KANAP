@@ -544,8 +544,8 @@ async function ensurePortfolioClassification() {
 }
 
 // The default dimension holds the domain a line serves (ERP, e-commerce, workplace…).
-// What the expense pays for is on the "Nature de coût" dimension.
-const DEFAULT_AXIS = { name: 'Domaine', description: 'Le domaine fonctionnel ou technique que la dépense sert' };
+// What the expense pays for is on the "Cost type" dimension.
+const DEFAULT_AXIS = { name: 'Domain', description: 'The business or technical domain the expense serves' };
 const DOMAINS = [
   ['Productivity', 'Email, collaboration, office suites'],
   ['ERP', 'Enterprise resource planning'],
@@ -579,7 +579,7 @@ async function defaultAxisValues(axisId) {
 }
 
 async function ensureAnalyticsCategories() {
-  info('Ensuring the Domaine dimension');
+  info('Ensuring the Domain dimension');
   const axis = await defaultAxis();
   if (axis.name !== DEFAULT_AXIS.name || axis.description !== DEFAULT_AXIS.description) {
     await apiPatch(`/analytics-axes/${axis.id}`, DEFAULT_AXIS);
@@ -619,9 +619,9 @@ async function removeLegacyDomainValues() {
 // first.
 
 const ANALYTICS_AXES = [
-  { code: 'nature', name: 'Nature de coût', description: 'Ce que la dépense paie : licences, assistance technique, cloud, matériel…', sort_order: 10 },
-  { code: 'reference', name: 'Référence budget', description: "Regroupe les lignes OPEX et CAPEX d'une même commande ou d'un même centre de compétences, quel que soit le fournisseur", sort_order: 20 },
-  { code: 'recurrence', name: 'Récurrence', description: 'Dépense récurrente ou ponctuelle', sort_order: 30 },
+  { code: 'nature', name: 'Cost type', description: 'What the expense pays for: licenses, staff augmentation, cloud, hardware…', sort_order: 10 },
+  { code: 'reference', name: 'Budget reference', description: 'Groups the OPEX and CAPEX lines of one order or one competence center, whatever the supplier', sort_order: 20 },
+  { code: 'recurrence', name: 'Recurrence', description: 'Recurring or one-off expense', sort_order: 30 },
 ];
 
 async function ensureAnalyticsAxes() {
@@ -1380,7 +1380,7 @@ async function linkSuites() {
 // company::department pairs per application
 const APP_DEPARTMENTS = {
   'Microsoft 365': [
-    'Fromage & Co SA::Direction Générale', 'Fromage & Co SA::Finance & Controlling', 'Fromage & Co SA::IT & Digital',
+    'Fromage & Co SA::Executive Management', 'Fromage & Co SA::Finance & Controlling', 'Fromage & Co SA::IT & Digital',
     'Fromage & Co SA::Human Resources', 'Fromage & Co SA::Sales & Marketing', 'Fromage & Co SA::Production',
     'Fromage & Co SA::Procurement', 'Fromage & Co SA::Logistics', 'Fromage & Co SA::Quality & R&D',
     'Kaasmeester BV::Management', 'Kaasmeester BV::Finance', 'Kaasmeester BV::IT', 'Kaasmeester BV::Sales', 'Kaasmeester BV::Operations',
@@ -1389,7 +1389,7 @@ const APP_DEPARTMENTS = {
     'Fromage & Co Inc.::Management', 'Fromage & Co Inc.::Finance', 'Fromage & Co Inc.::IT', 'Fromage & Co Inc.::Sales', 'Fromage & Co Inc.::Operations',
   ],
   'SAP S/4HANA': ['Fromage & Co SA::Finance & Controlling', 'Fromage & Co SA::Production', 'Fromage & Co SA::Procurement', 'Fromage & Co SA::Logistics'],
-  'SAP BW/4HANA': ['Fromage & Co SA::Finance & Controlling', 'Fromage & Co SA::Direction Générale'],
+  'SAP BW/4HANA': ['Fromage & Co SA::Finance & Controlling', 'Fromage & Co SA::Executive Management'],
   'Salesforce Sales Cloud': ['Fromage & Co SA::Sales & Marketing', 'Kaasmeester BV::Sales', 'Formaggio Supremo SRL::Commerciale', 'Fromage & Co Inc.::Sales'],
   'Salesforce Service Cloud': ['Fromage & Co SA::Sales & Marketing'],
   'Workday HCM': ['Fromage & Co SA::Human Resources'],
@@ -1399,7 +1399,7 @@ const APP_DEPARTMENTS = {
   'Sage X3': ['Kaasmeester BV::Finance', 'Formaggio Supremo SRL::Amministrazione'],
   'CheeseTrack': ['Fromage & Co SA::Production', 'Fromage & Co SA::Quality & R&D', 'Formaggio Supremo SRL::Produzione'],
   'CaveGuard IoT': ['Fromage & Co SA::Production'],
-  'Power BI': ['Fromage & Co SA::Finance & Controlling', 'Fromage & Co SA::Direction Générale', 'Fromage & Co SA::Sales & Marketing'],
+  'Power BI': ['Fromage & Co SA::Finance & Controlling', 'Fromage & Co SA::Executive Management', 'Fromage & Co SA::Sales & Marketing'],
   'La Boutique du Fromage': ['Fromage & Co SA::Sales & Marketing', 'Fromage & Co SA::IT & Digital'],
   'Fromage B2B Portal': ['Fromage & Co SA::Sales & Marketing', 'Fromage & Co SA::Logistics'],
 };
@@ -1443,7 +1443,7 @@ const CONTRACT_SPEND_ITEMS = {
   'Sage X3 Subscription': ['Sage X3 Licenties — Kaasmeester', 'Sage X3 Licenze — Formaggio Supremo'],
   'CheeseTrack SaaS': ['CheeseTrack SaaS'],
   'Fortinet FortiCare': ['Fortinet FortiCare & FortiGuard'],
-  'Axians Infogérance': ['Managed Services — Axians Infogérance'],
+  'Axians managed services': ['Managed services — Axians'],
   'US Managed IT Services': ['US Managed IT Services', 'US Office IT Services'],
 };
 
