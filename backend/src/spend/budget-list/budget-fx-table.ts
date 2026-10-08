@@ -40,15 +40,16 @@ export function fxKeyCurrency(alias: string): string {
 }
 
 /**
- * The table as an inline function scan `fx(set_key, yr, cur, rate)` (not a
- * CTE: the planner then knows its size and hashes it), its parameters bound
- * once per statement.
+ * The table as an inline function scan `<alias>(set_key, yr, cur, rate)`
+ * (`fx` by default; not a CTE: the planner then knows its size and hashes
+ * it), its parameters bound once per statement, whatever the alias.
  */
-export function fxTableSql(stmt: SqlStatement, fx: FxTable): string {
-  return stmt.once('fx_rows', () => {
-    const rows = fx.rows;
-    return `unnest(${stmt.bind(rows.map((r) => r.setKey), 'text[]')}, ${stmt.bind(rows.map((r) => r.year), 'int[]')}, ${stmt.bind(rows.map((r) => r.currency), 'text[]')}, ${stmt.bind(rows.map((r) => String(r.rate)), 'float8[]')}) AS fx(set_key, yr, cur, rate)`;
+export function fxTableSql(stmt: SqlStatement, fx: FxTable, alias = 'fx'): string {
+  const rows = stmt.once('fx_rows', () => {
+    const r = fx.rows;
+    return `unnest(${stmt.bind(r.map((row) => row.setKey), 'text[]')}, ${stmt.bind(r.map((row) => row.year), 'int[]')}, ${stmt.bind(r.map((row) => row.currency), 'text[]')}, ${stmt.bind(r.map((row) => String(row.rate)), 'float8[]')})`;
   });
+  return `${rows} AS ${alias}(set_key, yr, cur, rate)`;
 }
 
 /** The table key of a version's rate set: the set when the tenant has it, else `live`. */

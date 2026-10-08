@@ -27,12 +27,21 @@ import { realSummaryDeps } from './oracle/oracle-deps';
 // - `fte_nodetail_<slot><Suffix>`: the FTE of a round without monthly detail;
 // - their sums grouped by a key, 14 FTE measures in one grouped request (the
 //   FTE cap), and another tenant's line never counted.
+// FTE reports, lot 3: the line totals of a round, from its lines' result, on
+// OPEX and CAPEX:
+// - `staff_cost_<slot><Suffix>` (people and days lines, pieces left out) and
+//   `day_cost_<slot><Suffix>` (per-day priced lines): amounts converted like
+//   the column's amount (exactly, a USD line on a rate set), 0 without detail;
+// - `staff_fte_<slot><Suffix>` (null without detail) and `days_<slot><Suffix>`
+//   (null without detail or without a per-day line);
+// - computed and spread (`lines_result`) rounds, a round without detail, a
+//   line without rounds, their sums grouped by a key, another tenant never counted.
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file in its serial database lane.
 
 const Y = new Date().getFullYear();
 
 type Round = { year: number; measure: string; method: 'computed' | 'spread' | 'manual' | 'copied'; fte: string | null; calc?: object | null };
-type Line = { label: string; rounds?: Round[]; versionYears?: number[]; currency?: string };
+type Line = { label: string; rounds?: Round[]; versionYears?: number[]; currency?: string; fxRateSetId?: string; planned?: Record<number, string> };
 
 /**
  * The lines of the scenario (same for OPEX and CAPEX):
@@ -85,15 +94,22 @@ async function insertLine(runner: QueryRunner, scope: SummaryScopeConfig, tenant
     versions.set(year, versionId);
     if (scope.scope === 'opex') {
       await runner.query(
-        `INSERT INTO spend_versions (id, tenant_id, spend_item_id, version_name, input_grain, as_of_date, budget_year, allocation_method)
-         VALUES ($1, $2, $3, 'Y' || $5::int, 'monthly', $4::date, $5::int, 'default')`,
-        [versionId, tenantId, itemId, `${year}-01-01`, year],
+        `INSERT INTO spend_versions (id, tenant_id, spend_item_id, version_name, input_grain, as_of_date, budget_year, allocation_method, fx_rate_set_id)
+         VALUES ($1, $2, $3, 'Y' || $5::int, 'monthly', $4::date, $5::int, 'default', $6)`,
+        [versionId, tenantId, itemId, `${year}-01-01`, year, line.fxRateSetId ?? null],
       );
     } else {
       await runner.query(
-        `INSERT INTO capex_versions (id, tenant_id, capex_item_id, version_name, as_of_date, budget_year, allocation_method)
-         VALUES ($1, $2, $3, 'Y' || $5::int, $4::date, $5::int, 'default')`,
-        [versionId, tenantId, itemId, `${year}-01-01`, year],
+        `INSERT INTO capex_versions (id, tenant_id, capex_item_id, version_name, as_of_date, budget_year, allocation_method, fx_rate_set_id)
+         VALUES ($1, $2, $3, 'Y' || $5::int, $4::date, $5::int, 'default', $6)`,
+        [versionId, tenantId, itemId, `${year}-01-01`, year, line.fxRateSetId ?? null],
+      );
+    }
+    const planned = line.planned?.[year];
+    if (planned != null) {
+      await runner.query(
+        `INSERT INTO ${scope.scope === 'opex' ? 'spend_amounts' : 'capex_amounts'} (tenant_id, version_id, period, planned) VALUES ($1, $2, make_date($3, 1, 1), $4::numeric)`,
+        [tenantId, versionId, year, planned],
       );
     }
   }
@@ -127,8 +143,18 @@ function testKeyParsing() {
   }
   assert.deepEqual(yearsNamedByFields([`fte_detached_y${Y - 4}Budget`]), [Y - 4], 'a detached key names its year (bounds, loaded slots)');
   assert.deepEqual(yearsNamedByFields([`fte_month_01_y${Y - 5}Budget`, `fte_nodetail_y${Y + 3}Forecast`]).sort(), [Y - 5, Y + 3], 'a month or no-detail key names its year');
+  // Lot 3: the line totals.
+  for (const [key, variant, measure] of [[`staff_cost_y${Y}Budget`, 'staff_cost', 'planned'], ['staff_fte_yRevision', 'staff_fte', 'committed'], ['day_cost_yMinus1Budget', 'day_cost', 'planned'], [`days_y${Y}Landing`, 'days', 'expected_landing']]) {
+    const resolved = resolveFteVariantField(key);
+    assert.deepEqual([resolved?.variant, resolved?.column.measure], [variant, measure], key);
+    assert.equal(resolveFteField(key), null, `fte_ resolution leaves ${key} alone`);
+  }
+  for (const key of ['staff_cost_', 'staff_cost_nonsense', 'staff_yBudget', 'days_fte_yBudget', 'day_yBudget', 'fte_days_yBudget', 'staff_cost_y99Budget']) {
+    assert.equal(resolveFteVariantField(key), null, `${key} is not a variant`);
+  }
+  assert.deepEqual(yearsNamedByFields([`staff_cost_y${Y - 6}Budget`, `staff_fte_y${Y - 7}Budget`, `day_cost_y${Y + 4}Budget`, `days_y${Y + 5}Forecast`]).sort(), [Y - 7, Y - 6, Y + 4, Y + 5], 'a line total names its year');
   assert.deepEqual(
-    engine.parseFteKeys(`fte_detached_yBudget,fte_detached_y${Y}Budget,fte_month_01_yBudget,fte_month_02_y${Y}Budget,fte_nodetail_yBudget,fte_yBudget`, Y).map((fte) => fte.key),
+    engine.parseFteKeys(`fte_detached_yBudget,fte_detached_y${Y}Budget,fte_month_01_yBudget,fte_month_02_y${Y}Budget,fte_nodetail_yBudget,staff_cost_yBudget,staff_fte_yBudget,day_cost_yBudget,days_yBudget,fte_yBudget`, Y).map((fte) => fte.key),
     ['fte_yBudget'],
     'grid FTE keys ignore the report variants',
   );
@@ -328,6 +354,132 @@ async function checkMonths(runner: QueryRunner, scope: SummaryScopeConfig) {
   console.log(`ok - ${name}: another tenant's months are never counted`);
 }
 
+/** One line result as stored (the fields the line totals read, and a few others). */
+const lineResult = (quantity_unit: 'people' | 'days' | 'pieces', price_basis: 'per_day' | 'per_month' | 'per_piece', total: string, fte: string, total_days: string | null = null) => ({
+  label: `${quantity_unit} ${price_basis}`, quantity_unit, price_basis, quantity: '1', unit_price: total, total, fte, fte_period: fte, total_days,
+  fte_months: Array(12).fill(fte), month_amounts: Array(12).fill('0'), active_months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+});
+const withLines = (lines: object[]) => ({ ...linesResult(fteMonths('0', '0')), lines });
+
+/**
+ * The lines of the line totals scenario (same for OPEX and CAPEX), Budget Y:
+ * - mixed (EUR), computed: people per day 1000.10 (1.50 FTE, 200 days), days
+ *   per day 500.05 (0.25 FTE, 40.5 days), people per month 3000.00 (1.00 FTE),
+ *   pieces 999.99; Budget Y-1 computed, people per day 100.00 (0.10 FTE, 20 days);
+ * - spread (EUR): an annual spread with `lines_result`, people per month
+ *   1200.00 (0.50 FTE), pieces 300.00;
+ * - no detail (EUR): a copy without `lines_result`, FTE 1.75;
+ * - pieces only (EUR), computed: pieces 50.00, FTE 0;
+ * - usd (USD) on a rate set (USD 0.8765), computed: people per day 12345.67
+ *   (2.00 FTE, 300 days), its amount 12345.67;
+ * - no rounds (EUR): a version of Y without any round.
+ */
+const MIXED = [
+  lineResult('people', 'per_day', '1000.10', '1.50', '200'),
+  lineResult('days', 'per_day', '500.05', '0.25', '40.5'),
+  lineResult('people', 'per_month', '3000.00', '1.00'),
+  lineResult('pieces', 'per_piece', '999.99', '0'),
+];
+const USD_RATE = 0.8765;
+const totalsLines = (rateSetId: string): Line[] => [
+  {
+    label: 'mixed',
+    currency: 'EUR',
+    planned: { [Y]: '5500.14' },
+    rounds: [
+      budget('computed', '2.75', { kind: 'computed', ...withLines(MIXED) }),
+      { year: Y - 1, measure: 'planned', method: 'computed', fte: '0.10', calc: { kind: 'computed', ...withLines([lineResult('people', 'per_day', '100.00', '0.10', '20')]) } },
+    ],
+  },
+  {
+    label: 'spread',
+    currency: 'EUR',
+    rounds: [budget('spread', '0.50', {
+      kind: 'annual', total: '1500', profile: 'flat', active_months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], weights: Array(12).fill('1'),
+      lines_result: withLines([lineResult('people', 'per_month', '1200.00', '0.50'), lineResult('pieces', 'per_piece', '300.00', '0')]),
+    })],
+  },
+  { label: 'no detail', currency: 'EUR', rounds: [budget('copied', '1.75', copyCalc())] },
+  { label: 'pieces only', currency: 'EUR', rounds: [budget('computed', '0.00', { kind: 'computed', ...withLines([lineResult('pieces', 'per_piece', '50.00', '0')]) })] },
+  { label: 'usd', currency: 'USD', fxRateSetId: rateSetId, planned: { [Y]: '12345.67' }, rounds: [budget('computed', '2.00', { kind: 'computed', ...withLines([lineResult('people', 'per_day', '12345.67', '2.00', '300')]) })] },
+  { label: 'no rounds', currency: 'EUR', versionYears: [Y] },
+];
+
+/** `Math.round(Number(local) * rate * 100)`, the builder's conversion, in units. */
+const converted = (local: string, rate: number) => Math.round(Number(local) * rate * 100) / 100;
+
+const lineTotalMeasures = (suffix: string) => [
+  sum('cost', `staff_cost_${suffix}`), sum('fte', `staff_fte_${suffix}`), sum('dayCost', `day_cost_${suffix}`), sum('days', `days_${suffix}`),
+];
+
+async function checkLineTotals(runner: QueryRunner, scope: SummaryScopeConfig) {
+  const m = runner.manager;
+  const deps = realSummaryDeps(scope);
+  const name = scope.scope.toUpperCase();
+  const tenantId = await insertTenant(runner, `${scope.scope}-totals`);
+  const otherTenantId = await insertTenant(runner, `${scope.scope}-totals-other`);
+  await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [otherTenantId]);
+  const otherLine = await insertLine(runner, scope, otherTenantId, 1, { label: 'other tenant', rounds: [budget('computed', '9.00', { kind: 'computed', ...withLines([lineResult('people', 'per_day', '9999.00', '9.00', '999')]) })] });
+  await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+  const [{ id: rateSetId }] = await runner.query(
+    `INSERT INTO currency_rate_sets (tenant_id, fiscal_year, base_currency, rates) VALUES ($1, $2, 'EUR', $3::jsonb) RETURNING id`,
+    [tenantId, Y, JSON.stringify({ USD: USD_RATE })],
+  );
+  const lines = totalsLines(rateSetId);
+  const ids: Record<string, string> = {};
+  for (const [i, line] of lines.entries()) ids[line.label] = await insertLine(runner, scope, tenantId, 1 + i, line);
+  const aggregate = (spec: AggregateSpec, query: Record<string, unknown> = {}) => engine.budgetListAggregate(scope, deps, query, spec, m);
+
+  // Per line: people and days lines in the staff totals, per-day lines in the day totals, pieces in neither.
+  const perLine = await aggregate({ groupBy: ['id'], measures: [...lineTotalMeasures('yBudget'), sum('amount', 'yBudget'), sum('prevCost', `staff_cost_y${Y - 1}Budget`), sum('prevDays', `days_y${Y - 1}Budget`)] });
+  const byId = new Map(perLine.groups.map((group) => [group.keys[0], group.values]));
+  const usdCost = converted('12345.67', USD_RATE);
+  const expected: Record<string, [number | null, number | null, number | null, number | null]> = {
+    mixed: [4500.15, 2.75, 1500.15, 240.5],
+    spread: [1200, 0.5, 0, null],
+    'no detail': [0, null, 0, null],
+    'pieces only': [0, 0, 0, null],
+    usd: [usdCost, 2, usdCost, 300],
+    'no rounds': [0, null, 0, null],
+  };
+  for (const [label, values] of Object.entries(expected)) {
+    const got = byId.get(ids[label]);
+    assert.deepEqual([got?.cost, got?.fte, got?.dayCost, got?.days], values, `${name}: ${label}`);
+  }
+  assert.equal(byId.has(otherLine), false, `${name}: another tenant's line is not a group`);
+  assert.equal(byId.get(ids.usd)?.amount, usdCost, `${name}: the USD line's amount, converted on its rate set`);
+  assert.notEqual(usdCost, 12345.67, `${name}: the rate applies`);
+  assert.deepEqual([byId.get(ids.mixed)?.prevCost, byId.get(ids.mixed)?.prevDays], [100, 20], `${name}: another year reads its own round`);
+  assert.equal(perLine.reportingCurrency, 'EUR', `${name}: the staff cost is in the reporting currency`);
+  console.log(`ok - ${name}: line totals per line, pieces left out, converted like the amount`);
+
+  // The cost per FTE report's request: grouped sums with the notices, on a dynamic year.
+  const report = await aggregate({
+    groupBy: ['currency'],
+    measures: [...lineTotalMeasures(`y${Y}Budget`), sum('detached', `fte_detached_y${Y}Budget`), sum('nodetail', `fte_nodetail_y${Y}Budget`)],
+    order: [{ by: 'key', index: 0, dir: 'ASC' }],
+  });
+  const row = (values: Record<string, number | null>) => [values.cost, values.fte, values.dayCost, values.days, values.detached, values.nodetail];
+  assert.deepEqual(report.groups.map((group) => [group.keys[0], group.count, ...row(group.values)]), [
+    ['EUR', 5, 5700.15, 3.25, 1500.15, 240.5, 2.25, 1.75],
+    ['USD', 1, usdCost, 2, usdCost, 300, null, null],
+  ], `${name}: sums per currency`);
+  const total = report.total;
+  assert.equal(total.count, lines.length, `${name}: every line of the tenant, none of the other`);
+  assert.deepEqual(row(total.values), [Math.round((5700.15 + usdCost) * 100) / 100, 5.25, Math.round((1500.15 + usdCost) * 100) / 100, 540.5, 2.25, 1.75], `${name}: the total row`);
+  assert.equal(total.unknown.fte, 2, `${name}: no staff FTE without detail (no detail, no rounds)`);
+  assert.equal(total.unknown.days, 4, `${name}: days only where a per-day line is`);
+  assert.equal(total.unknown.cost, undefined, `${name}: an amount is never unknown`);
+  console.log(`ok - ${name}: line totals grouped by a key, the notices beside them`);
+
+  // The other tenant's session sees its own line only.
+  await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [otherTenantId]);
+  const other = await aggregate({ groupBy: [], measures: lineTotalMeasures('yBudget') });
+  assert.deepEqual([other.total.count, other.total.values.cost, other.total.values.fte, other.total.values.dayCost, other.total.values.days], [1, 9999, 9, 9999, 999], `${name}: the other tenant reads its own line only`);
+  await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+  console.log(`ok - ${name}: another tenant's line totals are never counted`);
+}
+
 async function main() {
   testKeyParsing();
   await dataSource.initialize();
@@ -339,6 +491,7 @@ async function main() {
     const otherTenantId = await insertTenant(runner, 'other');
     for (const scope of [SUMMARY_SCOPES.opex, SUMMARY_SCOPES.capex]) await checkScope(runner, scope, tenantId, otherTenantId);
     for (const scope of [SUMMARY_SCOPES.opex, SUMMARY_SCOPES.capex]) await checkMonths(runner, scope);
+    for (const scope of [SUMMARY_SCOPES.opex, SUMMARY_SCOPES.capex]) await checkLineTotals(runner, scope);
   } finally {
     await runner.rollbackTransaction();
     await runner.release();

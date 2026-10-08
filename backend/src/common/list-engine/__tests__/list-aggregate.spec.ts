@@ -3,7 +3,7 @@ import { BadRequestException } from '@nestjs/common';
 import { AGGREGATE_LIMITS, aggregateSql, AggregateSpec, validateAggregateSpec } from '../list-aggregate';
 import type { ListState } from '../list-engine.types';
 import { SqlStatement } from '../sql-statement';
-import { BudgetListConfig } from '../../../spend/budget-list/budget-list.config';
+import { BudgetListConfig, budgetRuntimeNeeds } from '../../../spend/budget-list/budget-list.config';
 import type { BudgetListRuntime } from '../../../spend/budget-list/budget-list.runtime';
 import { SUMMARY_SCOPES } from '../../../spend/spend-summary.builder';
 
@@ -195,6 +195,11 @@ function testGroupedCapAndReportFields() {
     assert.throws(() => build({ groupBy, measures: [...months(AGGREGATE_LIMITS.groupedMeasures), sum('a', 'yBudget')] }), refused, `${groupBy.join(', ')}: 9 with an amount`);
     assert.throws(() => build({ groupBy, measures: [sum('a', 'yBudget'), ...months(AGGREGATE_LIMITS.groupedMeasures)] }), refused, `${groupBy.join(', ')}: an amount first`);
     assert.throws(() => validateAggregateSpec({ groupBy, measures: months(AGGREGATE_LIMITS.groupedFteMeasures + 1) }), isBadRequest(/\(16 when every measure is an FTE/), `${groupBy.join(', ')}: 17 FTE`);
+    // Lot 3: a staff cost or a day cost is an amount (cap of 8); the staff FTE and the days are FTE.
+    const costPerFte = [sum('c', 'staff_cost_yBudget'), sum('f', 'staff_fte_yBudget'), sum('dc', 'day_cost_yBudget'), sum('d', 'days_yBudget')];
+    assert.doesNotThrow(() => build({ groupBy, measures: [...costPerFte, ...months(4)] }), `${groupBy.join(', ')}: 8 measures, amounts and FTE`);
+    assert.throws(() => build({ groupBy, measures: [...costPerFte, ...months(5)] }), refused, `${groupBy.join(', ')}: 9 with a staff cost`);
+    assert.doesNotThrow(() => build({ groupBy, measures: [sum('f', 'staff_fte_yBudget'), sum('d', 'days_yBudget'), ...months(14)] }), `${groupBy.join(', ')}: 16 FTE with the staff FTE and the days`);
   }
   assert.throws(() => build({ groupBy: ['id'], measures: sums(AGGREGATE_LIMITS.groupedMeasures + 1) }), refused, '9 amounts');
   assert.doesNotThrow(() => build({ groupBy: [], measures: [...sums(30), ...months(30)] }), 'without keys, the cap of 60 whatever the kinds');
@@ -267,6 +272,43 @@ function testFteReportFields() {
     const plain = build({ groupBy: ['id'], measures: [sum('f', 'fte_y2026Budget'), sum('x', 'fte_detached_yBudget')] }, {}, scope).raw;
     assert.equal(plain.includes('LATERAL'), false, `${scope}: the yearly FTE alone reads no months`);
   }
+
+  // Lot 3: the line totals read the same round join, its lines once per line through one lateral.
+  for (const scope of ['opex', 'capex'] as const) {
+    const rounds = scope === 'opex' ? 'spend_round_inputs' : 'capex_round_inputs';
+    const versions = scope === 'opex' ? 'spend_versions' : 'capex_versions';
+    const { raw, params } = build({
+      groupBy: ['id'],
+      measures: [sum('c', 'staff_cost_y2026Budget'), sum('f', 'staff_fte_y2026Budget'), sum('dc', 'day_cost_yBudget'), sum('d', 'days_yBudget'), sum('x', 'fte_detached_yBudget'), sum('n', 'fte_nodetail_yBudget')],
+    }, {}, scope);
+    assert.equal((raw.match(new RegExp(`JOIN ${rounds}`, 'g')) ?? []).length, 1, `${scope}: one round join for the line totals and the notices`);
+    assert.equal((raw.match(/LEFT JOIN LATERAL \(SELECT bool_or/g) ?? []).length, 1, `${scope}: one lateral for the four line totals`);
+    assert.equal((raw.match(/jsonb_to_recordset\(/g) ?? []).length, 1, `${scope}: the lines are read once`);
+    assert.ok(raw.includes(`AS lt_line(quantity_unit text, price_basis text, total numeric, fte numeric, total_days numeric) ON true) lt2026_planned ON true`), `${scope}: each line result parsed once`);
+    const calc = 'ri2026_planned.last_calculation';
+    assert.ok(raw.includes(`FROM (SELECT (CASE WHEN ${calc}->>'kind' = 'computed' THEN ${calc}->'lines' ELSE ${calc}->'lines_result'->'lines' END) AS lines OFFSET 0) lt_detail`), `${scope}: the lines' result of the joined round, once`);
+    assert.ok(raw.indexOf('LEFT JOIN LATERAL (SELECT bool_or') > raw.indexOf(`LEFT JOIN ${rounds} ri2026_planned ON ri2026_planned.tenant_id = $1`), `${scope}: after the round it reads, for the tenant`);
+    assert.ok(raw.includes(`LEFT JOIN ${versions} v2026 ON v2026.tenant_id = $1`), `${scope}: the version for the tenant`);
+    assert.ok(raw.includes(`(CASE WHEN abs(sum(lt_line.total) FILTER (WHERE lt_line.quantity_unit IN ('people', 'days'))) < 90071992547409.92`), `${scope}: staff cost from people and days lines`);
+    assert.ok(raw.includes(`(CASE WHEN abs(sum(lt_line.total) FILTER (WHERE lt_line.price_basis = 'per_day')) < 90071992547409.92`), `${scope}: day cost from per-day lines`);
+    assert.ok(raw.includes(`sum(lt_line.fte) FILTER (WHERE lt_line.quantity_unit IN ('people', 'days')) AS staff_fte`), `${scope}: staff FTE from the same lines`);
+    assert.ok(raw.includes(`sum(lt_line.total_days) FILTER (WHERE lt_line.price_basis = 'per_day') AS days`), `${scope}: days from per-day lines`);
+    assert.ok(raw.includes(`(CASE WHEN lt2026_planned.detail THEN coalesce(lt2026_planned.staff_fte, 0) END) AS v1`), `${scope}: staff FTE null without detail`);
+    assert.ok(raw.includes('lt2026_planned.days AS v3'), `${scope}: days as they are`);
+    assert.ok(/LEFT JOIN unnest\(\$\d+::text\[\], \$\d+::int\[\], \$\d+::text\[\], \$\d+::float8\[\]\) AS fxv2026\(set_key, yr, cur, rate\) ON fxv2026\.yr = 2026 AND fxv2026\.cur = i\.currency::text AND fxv2026\.set_key = CASE WHEN v2026\.fx_rate_set_id = ANY\(\$\d+::uuid\[\]\) THEN v2026\.fx_rate_set_id::text ELSE 'live' END/.test(raw), `${scope}: the version's rate, as its amounts`);
+    assert.equal((raw.match(/AS fxv2026\(/g) ?? []).length, 1, `${scope}: one rate join for both amounts of the year`);
+    assert.ok(raw.includes(`coalesce((floor(lt2026_planned.staff_cost * coalesce(fxv2026.rate, 1::float8) * 100) + CASE WHEN`), `${scope}: the staff cost converted like an amount, rounded to the cent`);
+    assert.ok(raw.includes(`coalesce((floor(lt2026_planned.day_cost * coalesce(fxv2026.rate, 1::float8) * 100) + CASE WHEN`), `${scope}: the day cost too`);
+    assert.ok(raw.includes('round(coalesce(sum((agg_lines.v0)::bigint)'), `${scope}: summed exactly in cents`);
+    assert.ok(params.includes(TENANT), `${scope}: the tenant is bound`);
+    // Two columns of a year: one lateral per round, one rate join per year.
+    const two = build({ groupBy: ['id'], measures: [sum('a', 'staff_cost_y2026Budget'), sum('b', 'staff_cost_y2026Revision'), sum('c', 'staff_cost_y2025Budget')] }, {}, scope).raw;
+    assert.equal((two.match(/LEFT JOIN LATERAL \(SELECT bool_or/g) ?? []).length, 3, `${scope}: one lateral per round`);
+    assert.deepEqual([(two.match(/AS fxv2026\(/g) ?? []).length, (two.match(/AS fxv2025\(/g) ?? []).length], [1, 1], `${scope}: one rate join per year`);
+    const fteOnly = build({ groupBy: ['id'], measures: [sum('f', 'staff_fte_yBudget'), sum('d', 'days_yBudget')] }, {}, scope).raw;
+    assert.equal(/fxv\d+/.test(fteOnly), false, `${scope}: the FTE and the days need no rate`);
+  }
+  assert.deepEqual(budgetRuntimeNeeds(Y, ['staff_cost_y2024Budget', 'day_cost_yBudget', 'staff_fte_y2030Budget', 'days_y2031Budget'], false).fxYears?.sort(), [2024, Y], 'the amounts among the line totals load their year\'s rates');
 
   for (const scope of ['opex', 'capex'] as const) {
     const { raw, params } = build({ groupBy: ['has_fte'], measures: [] }, { filters: { has_fte: { filterType: 'set', values: ['yes'] } } }, scope);
