@@ -149,9 +149,14 @@ export function ReportFteNotice({
         .map((entry) => t('reports.measure.detachedEntry', { column: columnLabel(entry), count: entry.items, fte: formatFte(entry.fte, locale) }))
         .join(', '),
     });
+  return <ReportNoticeLine>{text}</ReportNoticeLine>;
+}
+
+/** One line of secondary text under a report's key table (the FTE notices). */
+export function ReportNoticeLine({ children }: { children: React.ReactNode }) {
   return (
     <Typography role="note" sx={{ mt: 1, fontSize: 13, color: 'kanap.text.secondary' }}>
-      {text}
+      {children}
     </Typography>
   );
 }

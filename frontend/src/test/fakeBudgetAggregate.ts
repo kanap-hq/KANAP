@@ -14,6 +14,10 @@ import type { AggregateRequest, AggregateResult, AggregateRow } from '../pages/r
  * `method: { budget: 'spread' }` (default `computed`). FTE measures sum the lines that have a value
  * (null with none, `unknown` counts the others); `minus` reads an undeclared side as 0 unless both
  * are; a null never passes `having` and orders last.
+ *
+ * Monthly FTE (`fte_month_<MM>_<slot><Column>`, `fte_nodetail_<slot><Column>`): a slot holds the
+ * twelve months of a column in `fte_months: { budget: [1, 1, …] }`; a column that declares FTE without
+ * them has no monthly detail.
  */
 
 type Row = Record<string, any>;
@@ -23,7 +27,7 @@ const SLOT_OFFSETS: Record<string, number> = { yMinus2: -2, yMinus1: -1, y: 0, y
 const SUFFIX_METRIC: Record<string, string> = { Budget: 'budget', Revision: 'revision', Forecast: 'forecast', FollowUp: 'follow_up', Landing: 'landing' };
 const AMOUNT = /^(local_)?(yMinus2|yMinus1|yPlus1|yPlus2|y\d{4}|y)(Budget|Revision|Forecast|FollowUp|Landing)$/;
 const HAS_VERSION = /^has_version_(yMinus2|yMinus1|yPlus1|yPlus2|y\d{4}|y)$/;
-const FTE = /^fte_(detached_)?(yMinus2|yMinus1|yPlus1|yPlus2|y\d{4}|y)(Budget|Revision|Forecast|FollowUp|Landing)$/;
+const FTE = /^fte_(detached_|nodetail_|month_(\d{2})_)?(yMinus2|yMinus1|yPlus1|yPlus2|y\d{4}|y)(Budget|Revision|Forecast|FollowUp|Landing)$/;
 
 function slotYear(slot: string): number {
   const Y = new Date().getFullYear();
@@ -48,15 +52,21 @@ function amountCents(row: Row, field: string): number | null {
   return Math.round(Number(source?.[metric] ?? 0) * 100);
 }
 
-/** A declared FTE in hundredths (null when none, or not detached for `fte_detached_`); undefined for any other field. */
+/**
+ * A declared FTE in hundredths (null when none, not detached for `fte_detached_`, with monthly detail
+ * for `fte_nodetail_`, without it for `fte_month_`); undefined for any other field.
+ */
 function fteHundredths(row: Row, field: string | undefined): number | null | undefined {
   const match = field ? FTE.exec(field) : null;
   if (!match) return undefined;
-  const version = versionOf(row, slotYear(match[2]));
-  const metric = SUFFIX_METRIC[match[3]];
+  const version = versionOf(row, slotYear(match[3]));
+  const metric = SUFFIX_METRIC[match[4]];
   const value = version?.fte?.[metric];
   if (value == null) return null;
-  if (match[1] && (version?.method?.[metric] ?? 'computed') === 'computed') return null;
+  const months: number[] | undefined = version?.fte_months?.[metric];
+  if (match[1] === 'detached_' && (version?.method?.[metric] ?? 'computed') === 'computed') return null;
+  if (match[1] === 'nodetail_' && months) return null;
+  if (match[2]) return months ? Math.round(Number(months[Number(match[2]) - 1]) * 100) : null;
   return Math.round(Number(value) * 100);
 }
 

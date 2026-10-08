@@ -39,6 +39,7 @@ const CapexBudgetTrendReport = React.lazy(() => import('./pages/reports/CapexBud
 const BudgetColumnsCompareReport = React.lazy(() => import('./pages/reports/BudgetColumnsCompareReport'));
 const ConsolidationReport = React.lazy(() => import('./pages/reports/ConsolidationReport'));
 const AnalyticsCategoryReport = React.lazy(() => import('./pages/reports/AnalyticsCategoryReport'));
+const StaffingByMonthReport = React.lazy(() => import('./pages/reports/StaffingByMonthReport'));
 const GlobalChargebackReport = React.lazy(() => import('./pages/reports/GlobalChargebackReport'));
 const CompanyChargebackReport = React.lazy(() => import('./pages/reports/CompanyChargebackReport'));
 const ContractsPage = React.lazy(() => import('./pages/ContractsPage'));
@@ -276,6 +277,7 @@ function AppRoutes() {
           <Route path="/ops/reports/budget-columns-compare" element={<BudgetColumnsCompareReport />} />
           <Route path="/ops/reports/consolidation" element={<ConsolidationReport />} />
           <Route path="/ops/reports/analytics" element={<AnalyticsCategoryReport />} />
+          <Route path="/ops/reports/staffing" element={<StaffingByMonthReport />} />
           <Route path="/ops/operations" element={<BudgetOperationsLandingPage />} />
           <Route path="/ops/operations/copy-budget-columns" element={<CopyBudgetColumnsPage />} />
           <Route path="/ops/operations/column-init" element={<CopyBudgetColumnsPage />} />

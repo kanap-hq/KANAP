@@ -116,6 +116,19 @@ export function detachedFteField(year: number, metric: MetricKey): string {
   return `fte_detached_${amountField(year, metric)}`;
 }
 
+/**
+ * The FTE of one month (1 to 12) of a year and budget column, from the monthly detail its lines
+ * computed (`fte_month_03_y2026Budget`): null without a declared FTE or without monthly detail.
+ */
+export function monthlyFteField(year: number, metric: MetricKey, month: number): string {
+  return `fte_month_${String(month).padStart(2, '0')}_${amountField(year, metric)}`;
+}
+
+/** The declared FTE of a year and budget column that has no monthly detail, null otherwise (`fte_nodetail_y2026Budget`). */
+export function noDetailFteField(year: number, metric: MetricKey): string {
+  return `fte_nodetail_${amountField(year, metric)}`;
+}
+
 /** The field a report sums for a year and column: the amount, or the declared FTE. */
 export function measureField(year: number, metric: MetricKey, measure: ReportMeasure = 'amount'): string {
   return measure === 'fte' ? fteField(year, metric) : amountField(year, metric);
@@ -720,6 +733,124 @@ export function readAnalytics(years: readonly number[], result: AggregateResult 
     };
   });
   return { groups, totals: yearValues(result?.total, years, measure) };
+}
+
+// ----- staffing by month (StaffingByMonthReport) -----
+
+/** What the staffing report groups on: a cost center, an item, a supplier or the value on a dimension. */
+export type StaffingGroup = { kind: 'costCenter' | 'item' | 'supplier' } | { kind: 'axis'; axisId: string };
+
+/** The months of a year, 1 to 12. */
+export const MONTHS: readonly number[] = Array.from({ length: 12 }, (_, i) => i + 1);
+
+const monthMeasureId = (month: number) => `m${String(month).padStart(2, '0')}`;
+const DETACHED_MEASURE = 'detached';
+const NO_DETAIL_MEASURE = 'nodetail';
+
+/** The group keys of a grouping: an id, then its name. */
+export function staffingGroupKeys(scope: BudgetScope, group: StaffingGroup): [string, string] {
+  switch (group.kind) {
+    case 'item': return ['id', NAME_FIELD[scope]];
+    case 'supplier': return ['supplier_id', 'supplier_name'];
+    case 'axis': return [analyticsIdField(group.axisId), analyticsNameField(group.axisId)];
+    default: return ['cost_center_id', 'cost_center_label'];
+  }
+}
+
+export interface StaffingParams {
+  scope: BudgetScope;
+  year: number;
+  metric: MetricKey;
+  group: StaffingGroup;
+  filters: ColumnFilters;
+}
+
+/**
+ * Per group, the FTE of each month of the column (`m01` to `m12`), with, read on the total row, the
+ * FTE whose amount no longer follows the lines and the FTE declared without monthly detail. Every
+ * group comes back: the reader drops the ones without any monthly FTE.
+ */
+export function staffingRequest(p: StaffingParams): AggregateRequest {
+  return {
+    query: { filters: p.filters },
+    spec: {
+      groupBy: staffingGroupKeys(p.scope, p.group),
+      measures: [
+        ...MONTHS.map((month) => ({ id: monthMeasureId(month), fn: 'sum' as const, field: monthlyFteField(p.year, p.metric, month) })),
+        { id: DETACHED_MEASURE, fn: 'sum', field: detachedFteField(p.year, p.metric) },
+        { id: NO_DETAIL_MEASURE, fn: 'sum', field: noDetailFteField(p.year, p.metric) },
+      ],
+    },
+  };
+}
+
+/** Twelve monthly FTE (null: nobody's monthly FTE), their full-year average (sum ÷ 12) and the highest month. */
+export type StaffingMonths = { months: Array<number | null>; average: number | null; peak: number | null };
+export type StaffingRow = StaffingMonths & { key: string; label: string };
+/** FTE declared by some lines (and how many lines): the notices under the table. */
+export type StaffingNotice = { fte: number; items: number };
+export type Staffing = {
+  rows: StaffingRow[];
+  total: StaffingMonths;
+  /** FTE whose column amount no longer follows its lines. */
+  detached: StaffingNotice | null;
+  /** FTE declared without monthly detail: not in the months. */
+  noDetail: StaffingNotice | null;
+};
+
+function staffingMonths(row: AggregateRow | null | undefined): StaffingMonths {
+  const months = MONTHS.map((month) => knownValueOf(row, monthMeasureId(month)));
+  const known = months.filter((value): value is number => value != null);
+  if (!known.length) return { months, average: null, peak: null };
+  return { months, average: known.reduce((sum, value) => sum + value, 0) / 12, peak: Math.max(...known) };
+}
+
+function staffingNotice(total: AggregateRow | undefined, id: string): StaffingNotice | null {
+  const fte = knownValueOf(total, id);
+  if (fte == null || fte === 0 || !total) return null;
+  return { fte, items: total.count - (total.unknown[id] ?? 0) };
+}
+
+/** The labels of the rows without a key (`none`) and of a dimension value without a name (`unnamed`). */
+export type StaffingLabels = { none: string; unnamed: string };
+
+/**
+ * The groups with a monthly FTE, largest average first (then by label), the total row and the two
+ * notices. A group without a key reads `none`.
+ */
+export function readStaffing(result: AggregateResult | undefined, labels: StaffingLabels, compare: (a: string, b: string) => number): Staffing {
+  const rows: StaffingRow[] = [];
+  for (const group of result?.groups ?? []) {
+    const months = staffingMonths(group);
+    if (months.average == null) continue;
+    const id = group.keys[0];
+    rows.push({ key: id ?? '', label: id == null ? labels.none : (group.keys[1] ?? '').trim() || labels.unnamed, ...months });
+  }
+  rows.sort((a, b) => (b.average ?? 0) - (a.average ?? 0) || compare(a.label, b.label));
+  return {
+    rows,
+    total: staffingMonths(result?.total),
+    detached: staffingNotice(result?.total, DETACHED_MEASURE),
+    noDetail: staffingNotice(result?.total, NO_DETAIL_MEASURE),
+  };
+}
+
+/** The most groups the staffing chart draws on their own; the rest stack as one "Others" area. */
+export const STAFFING_CHART_GROUPS = 8;
+
+/**
+ * The chart's areas: the largest groups by average (the rows come sorted), then the rest summed
+ * month by month as `others` (null when there is no rest).
+ */
+export function staffingChartSeries(rows: readonly StaffingRow[], limit = STAFFING_CHART_GROUPS): { series: StaffingRow[]; others: Array<number | null> | null } {
+  const series = rows.slice(0, limit);
+  const rest = rows.slice(limit);
+  if (!rest.length) return { series, others: null };
+  const others = MONTHS.map((_, i) => {
+    const values = rest.map((row) => row.months[i]).filter((value): value is number => value != null);
+    return values.length ? values.reduce((sum, value) => sum + value, 0) : null;
+  });
+  return { series, others };
 }
 
 // ----- sums per year and column (ComparisonReport, CapexBudgetTrendReport, BudgetColumnsCompareReport) -----

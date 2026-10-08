@@ -932,6 +932,10 @@
         "analytics": {
           "title": "Dimensiones analíticas",
           "description": "Presupuesto OPEX o CAPEX agrupado por dimensión analítica (circular o lineal)"
+        },
+        "staffing": {
+          "title": "Plantilla por mes",
+          "description": "ETC mensuales por centro de coste, partida, proveedor o dimensión analítica"
         }
       }
     },
@@ -1190,6 +1194,33 @@
       "unassigned": "Sin asignar",
       "unnamed": "Valor sin nombre",
       "defaultDimensionInSentence": "dimensión analítica"
+    },
+    "staffing": {
+      "title": "Plantilla por mes",
+      "subtitle": "ETC mensuales {{type}} por {{group}}",
+      "chartTitle": "Plantilla {{type}} por {{group}}, {{column}} {{year}}",
+      "groupBy": "Agrupar por",
+      "groups": {
+        "costCenter": "Centro de coste",
+        "item": "Partida",
+        "supplier": "Proveedor",
+        "axis": "Dimensión analítica"
+      },
+      "groupsInSentence": {
+        "costCenter": "centro de coste",
+        "item": "partida",
+        "supplier": "proveedor"
+      },
+      "none": {
+        "costCenter": "Sin centro de coste",
+        "supplier": "Sin proveedor",
+        "axis": "Sin valor"
+      },
+      "average": "Media",
+      "peak": "Pico",
+      "others": "Otros",
+      "noDetail_one": "{{count}} partida declara {{fte}} ETC sin detalle mensual. No se incluye en los meses.",
+      "noDetail_other": "{{count}} partidas declaran {{fte}} ETC sin detalle mensual. No se incluyen en los meses."
     }
   },
   "budgetTab": {

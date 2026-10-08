@@ -932,6 +932,10 @@
         "analytics": {
           "title": "Analysedimensionen",
           "description": "OPEX- oder CAPEX-Budget nach Analysedimension gruppiert (Kreis- oder Liniendiagramm)"
+        },
+        "staffing": {
+          "title": "Personal nach Monat",
+          "description": "Monatliche VZÄ nach Kostenstelle, Position, Lieferant oder Analysedimension"
         }
       }
     },
@@ -1190,6 +1194,33 @@
       "unassigned": "Nicht zugeordnet",
       "unnamed": "Unbenannter Wert",
       "defaultDimensionInSentence": "Analysedimension"
+    },
+    "staffing": {
+      "title": "Personal nach Monat",
+      "subtitle": "Monatliche {{type}}-VZÄ nach {{group}}",
+      "chartTitle": "{{type}}-Personal nach {{group}}, {{column}} {{year}}",
+      "groupBy": "Gruppieren nach",
+      "groups": {
+        "costCenter": "Kostenstelle",
+        "item": "Position",
+        "supplier": "Lieferant",
+        "axis": "Analysedimension"
+      },
+      "groupsInSentence": {
+        "costCenter": "Kostenstelle",
+        "item": "Position",
+        "supplier": "Lieferant"
+      },
+      "none": {
+        "costCenter": "Keine Kostenstelle",
+        "supplier": "Kein Lieferant",
+        "axis": "Kein Wert"
+      },
+      "average": "Durchschnitt",
+      "peak": "Spitze",
+      "others": "Sonstige",
+      "noDetail_one": "{{count}} Position meldet {{fte}} VZÄ ohne Monatsdetail. Sie ist nicht in den Monaten enthalten.",
+      "noDetail_other": "{{count}} Positionen melden {{fte}} VZÄ ohne Monatsdetail. Sie sind nicht in den Monaten enthalten."
     }
   },
   "budgetTab": {
