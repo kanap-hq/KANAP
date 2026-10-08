@@ -169,7 +169,9 @@ Una columna puede construirse a partir de líneas, cada una una cantidad por un 
 
 **Las líneas son solo una referencia.** Es el caso cuando los importes de origen se escribieron a mano, se repartieron o se copiaron.
 
-- El porcentaje de incremento se aplica a los meses, como en cualquier otra columna. Las líneas se copian tal cual, con sus precios unitarios y su ETC
+- El porcentaje de incremento se aplica a los meses, como en cualquier otra columna. Los precios unitarios de las líneas no cambian
+- Las líneas pasan al año de destino con su descripción, cantidad, unidad, frecuencia y calendario, y sus periodos se desplazan igual que el periodo de la columna. Una línea que se conserva solo para una parte del año de destino, por la vigencia de la partida, se ajusta a ese periodo, y una línea que se queda sin ningún mes se elimina
+- El ETC se recalcula a partir de las líneas copiadas con los calendarios laborales del año de destino
 - En la pestaña Presupuesto, la columna de destino muestra «Copiado de Presupuesto 2026», y su pestaña **Cantidad y precio** indica «Los importes se copiaron de Presupuesto 2026. Usar de nuevo las líneas.»
 - Las líneas copiadas son una referencia de solo lectura. Haga clic en **Usar de nuevo las líneas** en la pestaña **Cantidad y precio** para calcular la columna a partir de ellas, con sus precios actuales. Para planificar el año de destino con sus propios precios, cambie después los precios unitarios: cada cambio vuelve a calcular la columna
 
@@ -177,9 +179,9 @@ Una copia desde una columna sin líneas deja el destino sin líneas, y su ETC qu
 
 #### Calendarios sin días para el año de destino
 
-Una línea con precio por día necesita un calendario que contenga el año de destino. Cuando el calendario de una línea no tiene días laborables para ese año, la copia usa en su lugar el calendario estándar del país de la empresa pagadora de la partida. Es el calendario creado con la empresa. Si no existe ninguno, la partida se copia de la forma habitual: meses por el porcentaje, con las líneas sin cambios como referencia.
+Una línea con precio por día necesita un calendario que contenga el año de destino. Cuando el calendario de una línea no tiene días laborables para ese año, la copia usa en su lugar el calendario estándar del país de la empresa pagadora de la partida. Es el calendario creado con la empresa. Esto vale para una columna construida a partir de líneas y para una columna cuyas líneas son solo una referencia. Si no existe ninguno, la partida se copia de la forma habitual: meses por el porcentaje. Las líneas se conservan sin cambios como referencia, y el ETC sigue siendo el de la columna de origen.
 
-La simulación señala estas partidas con una nota **Calendario**, con una información emergente por línea, y muestra una advertencia sobre la vista previa. Para copiar de todos modos, marque **Copiar de todos modos con estos cambios de calendario**. Lo mejor es añadir los días del año en la página **Calendarios laborales** y volver a ejecutar la simulación.
+La simulación señala estas partidas con una nota **Calendario**, con una información emergente por línea, y muestra una advertencia sobre la vista previa. La vista previa señala también una partida para la que no existe ningún calendario de sustitución. Para copiar de todos modos, marque **Copiar de todos modos con estos cambios de calendario**. Lo mejor es añadir los días del año en la página **Calendarios laborales** y volver a ejecutar la simulación.
 
 Un calendario desactivado se sigue usando. La simulación lo anota y no pide confirmación.
 

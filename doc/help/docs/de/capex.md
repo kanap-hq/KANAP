@@ -416,7 +416,7 @@ Zum Beispiel zählt ein Berater in Vollzeit von Februar bis Oktober in jedem die
 - **Gezählt**: eine Spalte mit Zeilen in Personen oder Tagen
 - **Null**: eine Spalte, deren Zeilen alle in Stück sind. Ihre VZÄ sind 0
 - **Leer**: eine Spalte ohne Zeilen, eine Position ohne Version für dieses Jahr oder ein Jahr nach dem Ende der Gültigkeit der Position. Ihre VZÄ-Zelle bleibt leer, weil KANAP nicht sagen kann, für wie viele Personen sie bezahlt
-- Die VZÄ bleiben bei den Zeilen. Nach einer Änderung von Hand, einer Verteilung oder einer Kopie behält die Spalte die VZÄ ihrer Zeilen. Eine Kopie überträgt die VZÄ der Quellspalte
+- Die VZÄ bleiben bei den Zeilen. Nach einer Änderung von Hand, einer Verteilung oder einer Kopie behält die Spalte die VZÄ ihrer Zeilen. Eine Kopie berechnet die VZÄ aus den kopierten Zeilen neu, mit den Arbeitstagekalendern des Zieljahres
 
 ---
 
