@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Box, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
-import type { ColDef, GridApi } from 'ag-grid-community';
+import type { ColDef } from 'ag-grid-community';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import ReportGrid from '../../components/reports/ReportGrid';
@@ -30,28 +30,89 @@ type GroupKind = StaffingGroup['kind'];
 const GROUP_KINDS: readonly GroupKind[] = ['costCenter', 'item', 'supplier', 'axis'];
 const monthField = (month: number) => `m${month}`;
 /**
- * The fourteen value columns (twelve months, average, peak): each one as wide as its values. The header is
- * left out of the measure (its sort and menu icon space made every month too wide); `headerTooltip` shows a
- * cut header in full.
+ * The fourteen value columns (twelve months, average, peak), all as wide as the widest value among them
+ * (a uniform grid reads better). The width is known before the grid lays out, so the group column's flex
+ * takes exactly the room left; `headerTooltip` shows a cut header in full.
  */
 export const VALUE_COLUMN_IDS: readonly string[] = [...MONTHS.map(monthField), 'average', 'peak'];
-const AUTO_SIZE_STRATEGY = { type: 'fitCellContents' as const, colIds: [...VALUE_COLUMN_IDS], skipHeader: true };
+
+/** A text's width in pixels, in the grid's cell font. */
+export type TextMeasurer = (text: string) => number;
+/** The narrowest value column holds `00.00`: small values do not make tiny columns. */
+const MIN_VALUE_TEXT = '00.00';
+/** A few pixels beyond the text and the cell padding, for rounding and font rendering. */
+const VALUE_COLUMN_MARGIN = 6;
+/** Without a canvas to measure with: an average character, a little wider than a digit. */
+const FALLBACK_CHAR_EM = 0.65;
+
 /**
- * Fits the value columns to their values, then gives the group column the width left (the value columns
- * are kept out of the size-to-fit). Runs after the first render, once AG Grid's own first fit is done, and
- * again once the grid has drawn new rows, a new total or new headers (grouping, year, column, scope).
- * Deferred like AG Grid's own fit, which measures the rendered cells.
+ * The shared width of the value columns: the widest formatted value among the rows and the total row,
+ * plus the cell padding on both sides and a small margin, never narrower than `00.00`.
  */
-function fitValueColumns(api: GridApi) {
-  setTimeout(() => {
-    if (api.isDestroyed()) return;
-    api.autoSizeColumns([...VALUE_COLUMN_IDS], true);
-    api.sizeColumnsToFit();
-  });
+export function valueColumnWidth({ rows, total, format, measure, cellPadding }: {
+  rows: ReadonlyArray<Record<string, unknown>>;
+  total: Record<string, unknown>;
+  format: (value: unknown) => string;
+  measure: TextMeasurer;
+  cellPadding: number;
+}): number {
+  const texts = new Set<string>([MIN_VALUE_TEXT]);
+  for (const row of [...rows, total]) {
+    for (const id of VALUE_COLUMN_IDS) texts.add(format(row[id]));
+  }
+  let widest = 0;
+  for (const text of texts) if (text) widest = Math.max(widest, measure(text));
+  return Math.ceil(widest + 2 * cellPadding + VALUE_COLUMN_MARGIN);
 }
-/** A resized window: the group column takes the new width left, the value columns keep theirs. */
-function fitGroupColumn(api: GridApi) {
-  if (!api.isDestroyed()) api.sizeColumnsToFit();
+
+/** The grid's cell font (bold, as the total row) and its horizontal cell padding. */
+export type GridTextMetrics = { font: string; fontSize: number; cellPadding: number };
+
+/**
+ * Reads the font and the cell padding of a dense report grid from the AG Grid theme variables, on a hidden
+ * probe carrying the grid's classes (the variables live on the theme class, not on the document).
+ * Falls back to 13 px sans-serif and 10 px when the theme is not loaded.
+ */
+export function readGridTextMetrics(doc: Document = document): GridTextMetrics {
+  const probe = doc.createElement('div');
+  probe.className = 'ag-theme-quartz kanap-dense-grid';
+  probe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none';
+  doc.body.appendChild(probe);
+  try {
+    const style = doc.defaultView?.getComputedStyle(probe);
+    const family = style?.getPropertyValue('--ag-font-family').trim() || style?.fontFamily || 'sans-serif';
+    const fontSize = parseFloat(style?.getPropertyValue('--ag-font-size') ?? '') || 13;
+    const padding = parseFloat(style?.getPropertyValue('--ag-cell-horizontal-padding') ?? '');
+    return { font: `bold ${fontSize}px ${family}`, fontSize, cellPadding: Number.isFinite(padding) ? padding : 10 };
+  } finally {
+    probe.remove();
+  }
+}
+
+const canvasContext = () => document.createElement('canvas').getContext('2d');
+
+/**
+ * Measures texts with a canvas in the given font. The cells show tabular figures, which a canvas cannot
+ * set: every digit is measured as a `0`, as wide as a tabular figure. Without a canvas (jsdom, or no 2D
+ * context), estimates from the character count.
+ */
+export function createTextMeasurer(
+  font: string,
+  fontSize: number,
+  getContext: () => CanvasRenderingContext2D | null = canvasContext,
+): TextMeasurer {
+  let context: CanvasRenderingContext2D | null = null;
+  try {
+    context = getContext();
+  } catch {
+    context = null;
+  }
+  if (context && typeof context.measureText === 'function') {
+    const ctx = context;
+    ctx.font = font;
+    return (text) => ctx.measureText(text.replace(/\d/g, '0')).width;
+  }
+  return (text) => text.length * fontSize * FALLBACK_CHAR_EM;
 }
 /** The grouping in a downloaded file's name. */
 const GROUP_FILE_NAME: Record<GroupKind, string> = { costCenter: 'cost-center', item: 'item', supplier: 'supplier', axis: 'dimension' };
@@ -154,9 +215,19 @@ export default function StaffingByMonthReport() {
     peak: staffing.total.peak,
   }), [staffing.total, t]);
 
-  // Fifteen columns on the dense grid (10 px cell padding): each value column is as wide as its content,
-  // compact for `42.00`, wider for `1,000.00`; the group takes what is left (size-to-fit, not flex: AG Grid
-  // re-flexes only the columns right of a resized one) and shows its full name on hover.
+  // Fifteen columns on the dense grid: the fourteen value columns share one width, measured from their
+  // values before the grid lays out; the group column flexes into the rest and shows its full name on hover.
+  const textMetrics = useMemo(() => {
+    const metrics = readGridTextMetrics();
+    return { measure: createTextMeasurer(metrics.font, metrics.fontSize), cellPadding: metrics.cellPadding };
+  }, []);
+  const valueWidth = useMemo(() => valueColumnWidth({
+    rows: tableRows,
+    total: totalRow,
+    format: fte,
+    measure: textMetrics.measure,
+    cellPadding: textMetrics.cellPadding,
+  }), [tableRows, totalRow, fte, textMetrics]);
   const columns = useMemo<ColDef[]>(() => {
     const value = (field: string, headerName: string): ColDef => ({
       field,
@@ -164,16 +235,16 @@ export default function StaffingByMonthReport() {
       headerName,
       headerTooltip: headerName,
       type: 'rightAligned',
-      suppressSizeToFit: true,
+      width: valueWidth,
       valueFormatter: (p) => fte(p.value),
     });
     return [
-      { field: 'group', headerName: groupHeader, minWidth: 180, tooltipField: 'group' },
+      { field: 'group', headerName: groupHeader, flex: 1, minWidth: 180, tooltipField: 'group' },
       ...MONTHS.map((month, i) => value(monthField(month), monthNames[i])),
       value('average', t('reports.staffing.average')),
       value('peak', t('reports.staffing.peak')),
     ];
-  }, [groupHeader, monthNames, fte, t]);
+  }, [groupHeader, monthNames, fte, valueWidth, t]);
 
   const gridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);
@@ -296,13 +367,6 @@ export default function StaffingByMonthReport() {
             defaultColDef={{ sortable: true, resizable: true }}
             onGridReady={(e) => { gridApiRef.current = e.api; }}
             pinnedBottomRowData={[totalRow]}
-            autoSizeStrategy={AUTO_SIZE_STRATEGY}
-            autoSizePadding={4}
-            onRowDataUpdated={(e) => fitValueColumns(e.api)}
-            onPinnedRowDataChanged={(e) => fitValueColumns(e.api)}
-            onNewColumnsLoaded={(e) => fitValueColumns(e.api)}
-            onFirstDataRendered={(e) => fitValueColumns(e.api)}
-            onGridSizeChanged={(e) => fitGroupColumn(e.api)}
           />
           {staffing.detached && (
             <ReportNoticeLine>{t('reports.measure.detachedSingle', { count: staffing.detached.items, fte: fte(staffing.detached.fte) })}</ReportNoticeLine>

@@ -4,9 +4,9 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import type { TFunction } from 'i18next';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
-import { AMOUNT_COLUMNS } from '../../components/finance/amountColumns';
+import { AMOUNT_COLUMNS, formatFte } from '../../components/finance/amountColumns';
 import type { AnalyticsAxis } from '../../services/analytics';
 
 vi.mock('react-i18next', () => {
@@ -69,7 +69,12 @@ vi.mock('../../components/reports/ReportGrid', () => ({
 import api from '../../api';
 import { fakeAggregate, fakeFilterValues } from '../../test/fakeBudgetAggregate';
 import { setBudgetColumns } from './budgetColumnsTestState';
-import StaffingByMonthReport from './StaffingByMonthReport';
+import StaffingByMonthReport, {
+  createTextMeasurer,
+  readGridTextMetrics,
+  valueColumnWidth,
+  VALUE_COLUMN_IDS,
+} from './StaffingByMonthReport';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
 const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
@@ -126,6 +131,8 @@ const ROWS = [
 ];
 
 let serverRows: ReturnType<typeof line>[] = ROWS;
+// jsdom has no canvas: the report measures its values with the character-count estimate.
+let restoreCanvas: (() => void) | null = null;
 
 function LocationProbe() {
   const location = useLocation();
@@ -158,6 +165,8 @@ const pick = async (combobox: string, option: string) => {
 };
 
 beforeEach(() => {
+  const getContext = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+  restoreCanvas = () => getContext.mockRestore();
   serverRows = ROWS;
   setBudgetColumns();
   axesState.list = [DEFAULT_AXIS, NATURE];
@@ -175,6 +184,20 @@ beforeEach(() => {
     if (url.endsWith('/summary/aggregate')) return { data: fakeAggregate(serverRows, body) };
     throw new Error(`unexpected POST ${url}`);
   });
+});
+
+afterEach(() => {
+  restoreCanvas?.();
+  restoreCanvas = null;
+});
+
+/** The width the report gives its value columns without a canvas: 13 px font, 10 px dense cell padding. */
+const fallbackWidth = (rows: Array<Record<string, unknown>>, total: Record<string, unknown>) => valueColumnWidth({
+  rows,
+  total,
+  format: (value) => formatFte(value, 'en'),
+  measure: createTextMeasurer('bold 13px sans-serif', 13, () => null),
+  cellPadding: 10,
 });
 
 describe('Staffing by month', () => {
@@ -197,28 +220,26 @@ describe('Staffing by month', () => {
     ]);
     expect(grid.columns[1].valueFormatter({ value: 1.5 })).toBe('1.50');
     expect(grid.columns[1].valueFormatter({ value: null })).toBe('');
-    // The group takes the rest (size-to-fit, not flex) with its full name on hover; the fourteen value
-    // columns have no fixed width: the grid fits them to their values (header left out, read in full on
-    // hover), right-aligned, and the size-to-fit leaves them alone.
-    expect(grid.columns[0]).toMatchObject({ minWidth: 180, tooltipField: 'group' });
-    expect(grid.columns[0].flex).toBeUndefined();
-    expect(grid.columns[0].suppressSizeToFit).toBeUndefined();
+    // The group flexes into the room left, with its full name on hover; the fourteen value columns share
+    // one width measured from their values (`00.00` at least), right-aligned, header read in full on hover.
+    expect(grid.columns[0]).toMatchObject({ flex: 1, minWidth: 180, tooltipField: 'group' });
+    expect(grid.columns[0].width).toBeUndefined();
     const values = grid.columns.slice(1);
     expect(values.map((column) => column.colId)).toEqual(['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12', 'average', 'peak']);
+    const width = fallbackWidth(gridRows(), grid.pinned[0]);
+    // `00.00`: 5 characters at 0.65 em of 13 px, 10 px padding each side, 6 px margin.
+    expect(width).toBe(69);
     for (const column of values) {
-      expect(column.width).toBeUndefined();
+      expect(column.width).toBe(width);
       expect(column.flex).toBeUndefined();
-      expect(column.suppressSizeToFit).toBe(true);
+      expect(column.suppressSizeToFit).toBeUndefined();
       expect(column.type).toBe('rightAligned');
       expect(column.headerTooltip).toBe(column.headerName);
     }
-    expect(grid.props.autoSizeStrategy).toEqual({
-      type: 'fitCellContents',
-      colIds: values.map((column) => column.colId),
-      skipHeader: true,
-    });
-    // The cell padding already spaces the values: the default 20 px extra would overflow the table.
-    expect(grid.props.autoSizePadding).toBe(4);
+    // No auto-size left: the widths are known before the grid lays out.
+    for (const prop of ['autoSizeStrategy', 'autoSizePadding', 'onFirstDataRendered', 'onRowDataUpdated', 'onPinnedRowDataChanged', 'onNewColumnsLoaded', 'onGridSizeChanged']) {
+      expect(grid.props[prop]).toBeUndefined();
+    }
     // The total: 2.75 FTE each month from January to June, 4.75 from July.
     expect(grid.pinned).toHaveLength(1);
     expect(grid.pinned[0]).toMatchObject({ group: 'reports.columns.total', m1: 2.75, m7: 4.75, peak: 4.75 });
@@ -228,41 +249,17 @@ describe('Staffing by month', () => {
     expect(chart.options.axes[1].title.text).toBe('reports.measure.fte');
   });
 
-  it('fits the value columns, then gives the group the rest, after the first render and when the rows, the total or the headers change', async () => {
-    vi.useFakeTimers({ toFake: ['setTimeout'] });
-    try {
-      renderReport('/report');
-      await vi.waitFor(() => expect(grid.props.onRowDataUpdated).toBeTypeOf('function'));
-      for (const handler of ['onFirstDataRendered', 'onRowDataUpdated', 'onPinnedRowDataChanged', 'onNewColumnsLoaded']) {
-        const order: string[] = [];
-        const autoSizeColumns = vi.fn(() => order.push('autoSize'));
-        const sizeColumnsToFit = vi.fn(() => order.push('sizeToFit'));
-        grid.props[handler]({ api: { isDestroyed: () => false, autoSizeColumns, sizeColumnsToFit } });
-        expect(order).toEqual([]);
-        vi.runOnlyPendingTimers();
-        expect(autoSizeColumns).toHaveBeenCalledWith(['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12', 'average', 'peak'], true);
-        expect(sizeColumnsToFit).toHaveBeenCalledWith();
-        expect(order).toEqual(['autoSize', 'sizeToFit']);
-      }
-      // A resized grid: the group takes the new width left, the value columns keep theirs.
-      const autoSizeColumns = vi.fn();
-      const sizeColumnsToFit = vi.fn();
-      grid.props.onGridSizeChanged({ api: { isDestroyed: () => false, autoSizeColumns, sizeColumnsToFit } });
-      expect(sizeColumnsToFit).toHaveBeenCalledTimes(1);
-      expect(autoSizeColumns).not.toHaveBeenCalled();
-      // A grid gone in the meantime is left alone.
-      const goneAutoSize = vi.fn();
-      const goneSizeToFit = vi.fn();
-      const gone = { api: { isDestroyed: () => true, autoSizeColumns: goneAutoSize, sizeColumnsToFit: goneSizeToFit } };
-      grid.props.onRowDataUpdated(gone);
-      grid.props.onFirstDataRendered(gone);
-      grid.props.onGridSizeChanged(gone);
-      vi.runOnlyPendingTimers();
-      expect(goneAutoSize).not.toHaveBeenCalled();
-      expect(goneSizeToFit).not.toHaveBeenCalled();
-    } finally {
-      vi.useRealTimers();
-    }
+  it('widens every value column together when a value grows, the total row included', async () => {
+    serverRows = [
+      line('a', ['cc1', 'CC1 · Ops'], null, { fte: 1, months: flat(1) }),
+      line('b', ['cc2', 'CC2 · Dev'], null, { fte: 1234.5, months: flat(1234.5) }),
+    ];
+    renderReport('/report');
+    await waitFor(() => expect(gridRows()).toHaveLength(2));
+    // The total, `1,235.50`, is the widest value: 8 characters.
+    await waitFor(() => expect(grid.columns[1].width).toBe(fallbackWidth(gridRows(), grid.pinned[0])));
+    expect(grid.columns[1].width).toBe(Math.ceil(8 * 13 * 0.65 + 2 * 10 + 6));
+    expect(new Set(grid.columns.slice(1).map((column) => column.width)).size).toBe(1);
   });
 
   it('switches the grouping and keeps it in the address', async () => {
@@ -331,5 +328,77 @@ describe('Staffing by month', () => {
     renderReport('/report');
     await waitFor(() => expect(gridRows()).toHaveLength(3));
     expect(screen.queryByRole('note')).toBeNull();
+  });
+});
+
+describe('valueColumnWidth', () => {
+  const byLength = (text: string) => text.length;
+  const format = (value: unknown) => formatFte(value, 'en');
+  const row = (value: number | null) => Object.fromEntries(VALUE_COLUMN_IDS.map((id) => [id, value]));
+  const measureOf = (patch: Record<string, unknown>, total: Record<string, unknown> = row(1)) => valueColumnWidth({
+    rows: [row(1), { ...row(2), ...patch }],
+    total,
+    format,
+    measure: byLength,
+    cellPadding: 10,
+  });
+
+  it('takes the widest formatted value of any value column, plus the padding on both sides and a margin', () => {
+    // `1,234.50`: 8 characters.
+    expect(measureOf({ peak: 1234.5 })).toBe(8 + 20 + 6);
+    expect(measureOf({ m3: 1234.5, m7: 98765.25 })).toBe('98,765.25'.length + 20 + 6);
+  });
+
+  it('counts the total row', () => {
+    expect(measureOf({}, { ...row(1), average: 123456.75 })).toBe('123,456.75'.length + 20 + 6);
+  });
+
+  it('never goes narrower than `00.00`, and ignores empty cells', () => {
+    expect(measureOf({ m1: null, m2: 0.5 })).toBe(5 + 20 + 6);
+    expect(valueColumnWidth({ rows: [], total: row(null), format, measure: byLength, cellPadding: 10 })).toBe(5 + 20 + 6);
+  });
+
+  it('rounds up to a whole pixel', () => {
+    expect(valueColumnWidth({ rows: [], total: row(1), format, measure: () => 40.2, cellPadding: 10 })).toBe(67);
+  });
+});
+
+describe('createTextMeasurer', () => {
+  it('measures with a canvas in the given font, every digit as a tabular `0`', () => {
+    const measured: string[] = [];
+    const context = { font: '', measureText: (text: string) => { measured.push(text); return { width: 50 }; } };
+    const measure = createTextMeasurer('bold 13px Inter', 13, () => context as unknown as CanvasRenderingContext2D);
+    expect(measure('1,234.50')).toBe(50);
+    expect(context.font).toBe('bold 13px Inter');
+    expect(measured).toEqual(['0,000.00']);
+  });
+
+  it('estimates from the character count without a canvas context', () => {
+    expect(createTextMeasurer('bold 13px Inter', 13, () => null)('00.00')).toBeCloseTo(5 * 13 * 0.65);
+    expect(createTextMeasurer('bold 14px Inter', 14, () => { throw new Error('no canvas'); })('1.00')).toBeCloseTo(4 * 14 * 0.65);
+    const noMeasure = { font: '' } as unknown as CanvasRenderingContext2D;
+    expect(createTextMeasurer('bold 13px Inter', 13, () => noMeasure)('6.00')).toBeCloseTo(4 * 13 * 0.65);
+  });
+});
+
+describe('readGridTextMetrics', () => {
+  it('reads the dense grid theme variables on a probe it removes', () => {
+    const style = document.createElement('style');
+    style.textContent = '.ag-theme-quartz.kanap-dense-grid { --ag-font-family: Inter, sans-serif; --ag-font-size: 14px; --ag-cell-horizontal-padding: 8px; }';
+    document.head.appendChild(style);
+    try {
+      expect(readGridTextMetrics()).toEqual({ font: 'bold 14px Inter, sans-serif', fontSize: 14, cellPadding: 8 });
+    } finally {
+      style.remove();
+    }
+    expect(document.querySelector('.kanap-dense-grid')).toBeNull();
+  });
+
+  it('falls back to 13 px and 10 px padding without the theme', () => {
+    const metrics = readGridTextMetrics();
+    expect(metrics.fontSize).toBe(13);
+    expect(metrics.cellPadding).toBe(10);
+    expect(metrics.font).toMatch(/^bold 13px /);
+    expect(document.querySelector('.kanap-dense-grid')).toBeNull();
   });
 });
