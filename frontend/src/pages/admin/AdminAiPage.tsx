@@ -210,6 +210,9 @@ export default function AdminAiPage() {
   } | null>(null);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [includedError, setIncludedError] = useState<string | null>(null);
+  // A confirmation or a withdrawal saved alone touches no form field: the settings it
+  // returns (by updated_at) reload without resetting changes not saved yet.
+  const keepFormForUpdate = React.useRef<string | null>(null);
 
   const settingsQuery = useQuery<AiSettingsPayload>({
     queryKey: ['admin-ai-settings'],
@@ -237,6 +240,10 @@ export default function AdminAiPage() {
 
   React.useEffect(() => {
     if (settingsQuery.data) {
+      if (keepFormForUpdate.current && keepFormForUpdate.current === settingsQuery.data.settings.updated_at) {
+        keepFormForUpdate.current = null;
+        return;
+      }
       setForm(buildSettingsForm(settingsQuery.data.settings));
     }
   }, [settingsQuery.data?.settings.updated_at]);
@@ -286,7 +293,7 @@ export default function AdminAiPage() {
     onMutate: () => {
       setIncludedError(null);
     },
-    onSuccess: async (_result, payload) => {
+    onSuccess: async (result, payload) => {
       const activating = Object.prototype.hasOwnProperty.call(payload, 'chat_enabled');
       setIncludedDialog(null);
       setWithdrawOpen(false);
@@ -294,6 +301,8 @@ export default function AdminAiPage() {
         setSaveSuccess(true);
         setForm((prev) => ({ ...prev, glpi_user_token: '', glpi_app_token: '' }));
         setTimeout(() => setSaveSuccess(false), 3000);
+      } else {
+        keepFormForUpdate.current = result?.settings?.updated_at ?? null;
       }
       await queryClient.invalidateQueries({ queryKey: ['admin-ai-settings'] });
       await queryClient.invalidateQueries({ queryKey: ['admin-ai-builtin-usage'] });
@@ -369,8 +378,9 @@ export default function AdminAiPage() {
   // then to the KANAP included model — the quota card only matters on that path.
   const chatUsesBuiltin = config.features.builtinAiProvider && form.chat_model_config_id === '' && !defaultModelName;
   const includedModel = currentSettings?.builtin_provider?.in_use ? currentSettings.builtin_provider : null;
-  // The status line explains it: no validation list for a confirmation still to give.
-  const awaitingIncludedConfirmation = !!includedModel && !includedModel.accepted;
+  // The assistant waits for the included model's confirmation: the status line says so,
+  // with no validation list and no "provider incomplete" chip on top.
+  const awaitingIncludedConfirmation = !!includedModel?.used_by_assistant && !includedModel.accepted;
 
   return (
     <>
@@ -404,10 +414,12 @@ export default function AdminAiPage() {
                           <StatusDot color={getDotColor(settingsQuery.data.settings.mcp_enabled ? 'success' : 'default', mode)} />
                           <Typography variant="body2" sx={{ color: getDotColor(settingsQuery.data.settings.mcp_enabled ? 'success' : 'default', mode), fontWeight: 500, fontSize: '0.8125rem' }}>{settingsQuery.data.settings.mcp_enabled ? t('aiAdmin.provider.chips.mcpEnabled') : t('aiAdmin.provider.chips.mcpDisabled')}</Typography>
                         </Box>
-                        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
-                          <StatusDot color={getDotColor(settingsQuery.data.settings.chat_ready ? 'success' : 'default', mode)} />
-                          <Typography variant="body2" sx={{ color: getDotColor(settingsQuery.data.settings.chat_ready ? 'success' : 'default', mode), fontWeight: 500, fontSize: '0.8125rem' }}>{settingsQuery.data.settings.chat_ready ? t('aiAdmin.provider.chips.providerReady') : t('aiAdmin.provider.chips.providerIncomplete')}</Typography>
-                        </Box>
+                        {awaitingIncludedConfirmation ? null : (
+                          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+                            <StatusDot color={getDotColor(settingsQuery.data.settings.chat_ready ? 'success' : 'default', mode)} />
+                            <Typography variant="body2" sx={{ color: getDotColor(settingsQuery.data.settings.chat_ready ? 'success' : 'default', mode), fontWeight: 500, fontSize: '0.8125rem' }}>{settingsQuery.data.settings.chat_ready ? t('aiAdmin.provider.chips.providerReady') : t('aiAdmin.provider.chips.providerIncomplete')}</Typography>
+                          </Box>
+                        )}
                       </Stack>
                     </Stack>
 

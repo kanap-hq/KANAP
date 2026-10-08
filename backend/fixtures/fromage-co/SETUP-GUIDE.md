@@ -103,12 +103,14 @@ next to the French ones: load the current dataset on a new tenant instead.
    mock ticketing provider, with a persona, a shared-context profile, and a
    scope targeting the `fromage-helpdesk` entity. The mock provider ships five
    fromage tickets whose answers live in the Service Desk Docs — the agent's
-   knowledge search finds them during triage. The runner triggers one
-   ingestion poll and one mock triage so the Activity and Approvals pages have
-   content immediately.
+   knowledge search finds them during triage. The runner turns the assistant
+   on and triggers one ingestion poll and one mock triage so the Activity and
+   Approvals pages have content immediately (on the KANAP included model, once
+   it is confirmed: see "AI prerequisites").
 
 Flags: `--skip-relations`, `--skip-agents`, `--org`, `--country`, `--year`,
-`--shift-years`, `--activation-token` (see below), `--netbox-test-cases`.
+`--shift-years`, `--activation-token` (see below), `--netbox-test-cases`,
+`--accept-included-model` (see "AI prerequisites").
 
 ## Dates and years
 
@@ -195,14 +197,24 @@ To wipe and rebuild (e.g. on QA):
 
 ## AI prerequisites
 
-Cloud installs (dev/QA/prod) use the platform's built-in LLM — no per-tenant
-configuration needed. On-premise installs must configure an LLM endpoint in
-the AI settings before the demo agent can triage tickets; everything else in
-the fixture works without AI.
+Cloud installs (dev/QA/prod) use the platform's built-in LLM, the KANAP
+included model. A tenant administrator confirms its provider and processing
+location before the tenant's data reaches it. Pass `--accept-included-model`
+to confirm it as the account of `--email`: the runner reads the provider the
+API shows (`GET /ai/settings`) and confirms it in the request that turns the
+assistant on. Without the flag, the runner says so, leaves the assistant off
+and skips the demo ingestion poll and mock triage; confirm the included model
+in Admin > Plaid, then trigger them from the agent cockpit. The platform
+console must show a provider name and a processing location first (Platform AI
+page), or the included model is unavailable.
+
+On-premise installs must configure an LLM endpoint in the AI settings before
+the demo agent can triage tickets; everything else in the fixture works
+without AI.
 
 ## Known traps
 
-- **The tenant AI surface is off by default.** Agent triage fails with "AI chat is disabled for this tenant" until `PATCH /ai/settings` receives `{ "chat_enabled": true }`. The runner does this when it sets up the demo agent. If you skip the agent step (`--skip-agents`) or build the agent by hand, enable it yourself.
+- **The tenant AI surface is off by default.** Agent triage fails with "AI chat is disabled for this tenant" until `PATCH /ai/settings` receives `{ "chat_enabled": true }`. The runner does this when it sets up the demo agent, once the KANAP included model is confirmed (`--accept-included-model`, see "AI prerequisites"). If you skip the agent step (`--skip-agents`) or build the agent by hand, enable it yourself.
 - **Users get a password only at creation.** `POST /users` is the one endpoint that accepts an initial password. `PATCH /users/:id` refuses a password (`PASSWORD_UPDATE_NOT_ALLOWED`), so a re-run cannot reset the password of a user that already exists. Use the password reset flow, or delete the user and run the runner again.
 - **The seeded admin password is never updated.** With `SEED_ADMIN=true`, the backend creates the admin user from `ADMIN_EMAIL` and `ADMIN_PASSWORD` only when that user does not exist. Changing `ADMIN_PASSWORD` later has no effect on the existing account. If a platform-admin login stops working after an environment change, the stored password is the one from the first boot.
 

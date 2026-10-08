@@ -34,6 +34,22 @@ export type PlatformAiRuntimeConfig = PlatformAiConfigView & {
   apiKey: string;
 };
 
+/**
+ * The included model from one read of the platform record: the identity workspaces
+ * confirm and the runtime that is called always come from the same record.
+ */
+export type BuiltinRuntimeSnapshot = {
+  // Null while the provider name or the processing location is empty.
+  identity: BuiltinProviderIdentity | null;
+  provider: string;
+  model: string;
+  endpointUrl: string | null;
+  // Decrypted only when asked for (withSecrets).
+  apiKey: string | null;
+  hasApiKey: boolean;
+  rateLimits: { tenantPerMinute: number; userPerHour: number };
+};
+
 export type UpdatePlatformAiConfigInput = {
   provider?: string | null;
   model?: string | null;
@@ -62,9 +78,6 @@ export type BuiltinProviderKeyParts = {
  * of provider or endpoint asks again even when the shown name stays the same), and the
  * provider name and processing location shown to customers. A model change at the same
  * provider and endpoint keeps the key; any other change asks every workspace again.
- *
- * Migration 1853880000000-ai-included-model-confirmation writes the same value as a
- * literal for the workspaces it marks as confirmed: keep both in step.
  */
 export function builtinProviderKey({ provider, endpointHost, name, location }: BuiltinProviderKeyParts): string {
   return `${provider}|${endpointHost}|${name.trim()}|${location}`;
@@ -207,15 +220,29 @@ export class PlatformAiConfigService {
     });
   }
 
-  /** Usable by workspaces: valid provider settings, and a provider name and location to show them. */
-  async isConfigured(): Promise<boolean> {
+  /**
+   * The included model's identity and runtime from a single read of the platform record,
+   * so the identity checked against a workspace's confirmation is the one of the runtime
+   * returned. Null when the record is missing or its provider settings are not valid. The
+   * API key is decrypted only with withSecrets.
+   */
+  async getBuiltinRuntime(opts?: { withSecrets?: boolean }): Promise<BuiltinRuntimeSnapshot | null> {
     const record = await this.loadRecord();
-    return !!record && !!disclosureIdentity(record) && this.validateRecord(record).length === 0;
-  }
-
-  /** Provider name, processing location and confirmation key; null while either field is empty. */
-  async getBuiltinIdentity(): Promise<BuiltinProviderIdentity | null> {
-    return disclosureIdentity(await this.loadRecord());
+    if (!record || this.validateRecord(record).length > 0) {
+      return null;
+    }
+    return {
+      identity: disclosureIdentity(record),
+      provider: record.provider,
+      model: record.model,
+      endpointUrl: record.endpoint_url,
+      apiKey: opts?.withSecrets && record.api_key_encrypted ? this.cipher.decrypt(record.api_key_encrypted) : null,
+      hasApiKey: !!record.api_key_encrypted,
+      rateLimits: {
+        tenantPerMinute: record.rate_limit_tenant_per_minute,
+        userPerHour: record.rate_limit_user_per_hour,
+      },
+    };
   }
 
   async getConfig(): Promise<PlatformAiConfigView> {

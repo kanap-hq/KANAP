@@ -193,7 +193,6 @@
       "needed": "Der Assistent und die Agenten nutzen es, sobald ein Administrator es bestätigt hat.",
       "confirmedBy": "Bestätigt von {{name}} am {{date}}",
       "confirmedOn": "Bestätigt am {{date}}",
-      "confirmedAutomatically": "Automatisch bestätigt am {{date}}, bereits in Verwendung",
       "confirm": "Bestätigen",
       "withdraw": "Zurückziehen",
       "changed": "Der Anbieter oder sein Verarbeitungsort hat sich geändert. Prüfen Sie die Angaben und bestätigen Sie erneut.",
@@ -595,7 +594,8 @@
     "disclosure": {
       "title": "Für Kunden angezeigt",
       "namePlaceholder": "z. B. Anthropic",
-      "locationNotSet": "Nicht festgelegt",
+      "locationPlaceholder": "z. B. Vereinigte Staaten",
+      "missing": "Geben Sie vor dem Speichern den für Kunden angezeigten Anbieternamen und Verarbeitungsort ein.",
       "hint": "Arbeitsbereiche sehen diesen Anbieter und diesen Ort und bestätigen sie vor ihrer ersten KI-Anfrage. Ein neuer Anbieter, Endpoint, Name oder Ort erfordert eine erneute Bestätigung, ein neues Modell nicht. Das inklusive Modell bleibt nicht verfügbar, bis beide Felder ausgefüllt sind.",
       "confirmTitle": "Für Kunden angezeigten Anbieter ändern?",
       "confirmBody": "Jeder Arbeitsbereich, der das inklusive Modell verwendet, wird vor seiner nächsten KI-Anfrage um eine erneute Bestätigung gebeten.",

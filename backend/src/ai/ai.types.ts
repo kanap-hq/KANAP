@@ -555,7 +555,7 @@ export type AiCapabilitiesDto = {
     mcp: AiSurfaceCapabilityDto;
     settings: AiSettingsCapabilityDto;
   };
-  // The workspace's fallback model is the KANAP included model and no administrator
-  // has confirmed it: agents without a model of their own are paused.
+  // At least one enabled agent runs on the workspace's fallback model, the KANAP included
+  // model, and no administrator has confirmed it: those agents are paused.
   builtin_confirmation_needed: boolean;
 };

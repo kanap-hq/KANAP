@@ -30,7 +30,7 @@ import { platformAiApi, PlatformAiConfigPayload } from '../../ai/platformAiApi';
 import { AiProviderTestResult } from '../../ai/aiApi';
 import { useLocale } from '../../i18n/useLocale';
 import { KanapDialog, PropertyRow } from '../../components/design';
-import { drawerMenuItemSx } from '../../theme/formSx';
+import { drawerMenuItemSx, selectPlaceholderSx } from '../../theme/formSx';
 import { INCLUDED_MODEL_LOCATIONS } from '../../ai/includedModel';
 import { useRegionName } from '../../ai/useRegionName';
 
@@ -146,6 +146,15 @@ function buildConfigPayload(form: ConfigForm, existing: PlatformAiConfigPayload[
   return payload;
 }
 
+/**
+ * The shown name or location this save would send empty. The server keeps neither
+ * empty, and a new provider or endpoint host sends both again (buildConfigPayload).
+ */
+function missingDisclosure(form: ConfigForm, existing: PlatformAiConfigPayload['config']): { name: boolean; location: boolean } {
+  const payload = buildConfigPayload(form, existing);
+  return { name: payload.disclosure_name === '', location: payload.disclosure_location === '' };
+}
+
 export default function AdminPlatformAiPage() {
   const { claims } = useAuth();
   const { t } = useTranslation(['admin', 'common']);
@@ -160,6 +169,8 @@ export default function AdminPlatformAiPage() {
   const [planSaved, setPlanSaved] = React.useState(false);
   const [testResult, setTestResult] = React.useState<AiProviderTestResult | null>(null);
   const [confirmDisclosureChange, setConfirmDisclosureChange] = React.useState(false);
+  // Set when a save was stopped because the shown name or location is empty.
+  const [disclosureChecked, setDisclosureChecked] = React.useState(false);
   const regionName = useRegionName();
 
   const configQuery = useQuery({
@@ -194,6 +205,7 @@ export default function AdminPlatformAiPage() {
     },
     onSuccess: async (changed) => {
       setConfirmDisclosureChange(false);
+      setDisclosureChecked(false);
       if (!changed) {
         return;
       }
@@ -208,7 +220,17 @@ export default function AdminPlatformAiPage() {
     },
   });
 
+  const disclosureGaps = configQuery.data
+    ? missingDisclosure(configForm, configQuery.data.config)
+    : { name: false, location: false };
+
   const saveConfig = () => {
+    if (disclosureGaps.name || disclosureGaps.location) {
+      setDisclosureChecked(true);
+      setConfigSaved(false);
+      setConfigError(t('platformAi.disclosure.missing'));
+      return;
+    }
     if (configQuery.data && disclosureChangeAsksAgain(configForm, configQuery.data.config)) {
       setConfirmDisclosureChange(true);
       return;
@@ -356,6 +378,7 @@ export default function AdminPlatformAiPage() {
                         variant="standard"
                         fullWidth
                         value={configForm.disclosure_name}
+                        error={disclosureChecked && disclosureGaps.name}
                         inputProps={{ maxLength: 80, 'aria-label': t('platformAi.fields.disclosureName') }}
                         placeholder={t('platformAi.disclosure.namePlaceholder')}
                         onChange={(event) => setConfigForm((prev) => ({ ...prev, disclosure_name: event.target.value }))}
@@ -367,10 +390,13 @@ export default function AdminPlatformAiPage() {
                         fullWidth
                         displayEmpty
                         value={configForm.disclosure_location}
+                        error={disclosureChecked && disclosureGaps.location}
+                        renderValue={(value) => (value
+                          ? regionName(String(value))
+                          : <Box component="span" sx={selectPlaceholderSx}>{t('platformAi.disclosure.locationPlaceholder')}</Box>)}
                         SelectDisplayProps={{ 'aria-label': t('platformAi.fields.disclosureLocation') } as React.HTMLAttributes<HTMLDivElement>}
                         onChange={(event) => setConfigForm((prev) => ({ ...prev, disclosure_location: String(event.target.value) }))}
                       >
-                        <MenuItem value="" sx={drawerMenuItemSx}>{t('platformAi.disclosure.locationNotSet')}</MenuItem>
                         {INCLUDED_MODEL_LOCATIONS.map((code) => (
                           <MenuItem key={code} value={code} sx={drawerMenuItemSx}>{regionName(code)}</MenuItem>
                         ))}

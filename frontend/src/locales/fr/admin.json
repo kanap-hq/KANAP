@@ -193,7 +193,6 @@
       "needed": "L'assistant et les agents l'utilisent une fois qu'un administrateur l'a confirmé.",
       "confirmedBy": "Confirmé par {{name}} le {{date}}",
       "confirmedOn": "Confirmé le {{date}}",
-      "confirmedAutomatically": "Confirmé automatiquement le {{date}}, déjà utilisé",
       "confirm": "Confirmer",
       "withdraw": "Retirer",
       "changed": "Le fournisseur ou son lieu de traitement a changé. Vérifiez-le et confirmez à nouveau.",
@@ -595,7 +594,8 @@
     "disclosure": {
       "title": "Affiché aux clients",
       "namePlaceholder": "ex. Anthropic",
-      "locationNotSet": "Non défini",
+      "locationPlaceholder": "ex. États-Unis",
+      "missing": "Saisissez le nom du fournisseur et le lieu de traitement affichés aux clients avant d'enregistrer.",
       "hint": "Les espaces de travail voient ce fournisseur et ce lieu, et les confirment avant leur première requête d'IA. Un nouveau fournisseur, endpoint, nom ou lieu leur redemande cette confirmation ; un nouveau modèle, non. Le modèle inclus reste indisponible tant que les deux champs ne sont pas renseignés.",
       "confirmTitle": "Modifier le fournisseur affiché aux clients ?",
       "confirmBody": "Chaque espace de travail qui utilise le modèle inclus devra confirmer à nouveau avant sa prochaine requête d'IA.",

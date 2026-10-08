@@ -40,19 +40,19 @@ export type AiSettingsView = {
 };
 
 /**
- * The KANAP included model as this workspace sees it. in_use: the assistant would
- * run on it. accepted: an administrator confirmed the platform's current identity
- * (key); presumed when that confirmation was set by migration (no author).
+ * The KANAP included model as this workspace sees it. in_use: the assistant, or agents
+ * without a model of their own, would run on it; used_by_assistant: the assistant would.
+ * accepted: an administrator confirmed the platform's current identity (key).
  */
 export type AiBuiltinProviderView = {
   in_use: boolean;
+  used_by_assistant: boolean;
   name: string | null;
   location: string | null;
   key: string | null;
   accepted: boolean;
   accepted_at: string | null;
   accepted_by_name: string | null;
-  presumed: boolean;
 };
 
 export const BUILTIN_PROVIDER_CHANGED = 'BUILTIN_PROVIDER_CHANGED';
@@ -226,25 +226,76 @@ export class AiSettingsService {
   }
 
   /**
-   * True when the workspace's fallback model (no explicit assignment) is the included
-   * model and it is not confirmed: agents without a model of their own are paused.
+   * The assistant's model readiness without the included model's confirmation, for paths
+   * that send nothing to that model (MCP, tools run by agents): valid platform settings are
+   * enough there, as before the confirmation existed.
+   */
+  async getProviderErrorsWithoutConfirmation(settings: AiSettings, manager?: EntityManager): Promise<string[]> {
+    return this.modelResolver.validationErrors(
+      settings.tenant_id,
+      settings.chat_model_config_id ?? null,
+      manager,
+      { includedModelGate: 'none' },
+    );
+  }
+
+  /**
+   * Readiness of the workspace's fallback model (no explicit assignment): the one agents
+   * without a model of their own run on. Reuses the assistant's readiness when the
+   * assistant has no assignment either.
+   */
+  private async getFallbackReadiness(
+    tenantId: string,
+    settings: Pick<AiSettings, 'chat_model_config_id' | 'builtin_accepted_key'> | null,
+    manager?: EntityManager,
+    assistantReadiness?: AiModelReadiness | null,
+  ): Promise<AiModelReadiness> {
+    if (assistantReadiness && settings && settings.chat_model_config_id == null) {
+      return assistantReadiness;
+    }
+    return this.modelResolver.readiness(tenantId, null, manager, {
+      builtinAcceptedKey: settings?.builtin_accepted_key ?? null,
+    });
+  }
+
+  /**
+   * True when an enabled agent of the workspace runs on the fallback model (no model of
+   * its own, or one no longer active) and that fallback is the included model, not
+   * confirmed: those agents are paused.
    */
   async isBuiltinConfirmationNeeded(
     tenantId: string,
-    settings: Pick<AiSettings, 'builtin_accepted_key'> | null,
+    settings: Pick<AiSettings, 'chat_model_config_id' | 'builtin_accepted_key'> | null,
     manager?: EntityManager,
+    assistantReadiness?: AiModelReadiness | null,
   ): Promise<boolean> {
-    const readiness = await this.modelResolver.readiness(tenantId, null, manager, {
-      builtinAcceptedKey: settings?.builtin_accepted_key ?? null,
-    });
-    return readiness.errorCode === 'builtin_not_accepted';
+    const fallback = await this.getFallbackReadiness(tenantId, settings, manager, assistantReadiness);
+    if (fallback.errorCode !== 'builtin_not_accepted') {
+      return false;
+    }
+    const rows: unknown[] = await (manager ?? this.repo.manager).query(
+      `SELECT 1
+         FROM ai_agent_definitions d
+        WHERE d.tenant_id = $1
+          AND d.status = 'enabled'
+          AND (
+            d.llm_model_config_id IS NULL
+            OR NOT EXISTS (
+              SELECT 1 FROM ai_model_configs c
+               WHERE c.id = d.llm_model_config_id AND c.tenant_id = $1 AND c.status = 'active'
+            )
+          )
+        LIMIT 1`,
+      [tenantId],
+    );
+    return rows.length > 0;
   }
 
   private async currentBuiltinIdentity(): Promise<BuiltinProviderIdentity | null> {
-    if (Features.SINGLE_TENANT || !(await this.platformAiConfig.isConfigured())) {
+    if (Features.SINGLE_TENANT) {
       return null;
     }
-    return this.platformAiConfig.getBuiltinIdentity();
+    return (await this.platformAiConfig.getBuiltinRuntime())?.identity ?? null;
   }
 
   private async userDisplayName(tenantId: string, userId: string, manager?: EntityManager): Promise<string | null> {
@@ -476,17 +527,22 @@ export class AiSettingsService {
     manager?: EntityManager,
   ): Promise<AiBuiltinProviderView> {
     const identity = readiness.builtinIdentity;
+    const usedByAssistant = !!identity && readiness.usesBuiltin;
+    // Agents without a model of their own fall back on it even when the assistant has its own.
+    const usedAsFallback = !!identity && !usedByAssistant
+      && (await this.getFallbackReadiness(settings.tenant_id, settings, manager, readiness)).usesBuiltin;
     const accepted = !!identity && settings.builtin_accepted_key === identity.key;
     const acceptedBy = accepted ? settings.builtin_accepted_by ?? null : null;
     return {
-      in_use: !!identity && readiness.usesBuiltin,
+      in_use: usedByAssistant || usedAsFallback,
+      used_by_assistant: usedByAssistant,
       name: identity?.name ?? null,
       location: identity?.location ?? null,
       key: identity?.key ?? null,
       accepted,
       accepted_at: accepted && settings.builtin_accepted_at ? new Date(settings.builtin_accepted_at).toISOString() : null,
+      // Null when the user who confirmed it no longer exists: shown as "Confirmed on <date>".
       accepted_by_name: acceptedBy ? await this.userDisplayName(settings.tenant_id, acceptedBy, manager) : null,
-      presumed: accepted && !acceptedBy,
     };
   }
 }

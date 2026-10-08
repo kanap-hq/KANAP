@@ -4,22 +4,20 @@ import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { AiIncludedModelConfirmation1853880000000 as Migration } from '../../migrations/1853880000000-ai-included-model-confirmation';
-import { builtinProviderKey } from '../platform/platform-ai-config.service';
 
 // Migration 1853880000000 (confirmation of the KANAP included model), against a real
 // database, each case in a transaction that is rolled back. The migration runs as
 // migrations do, without a tenant context. Each workspace's rows are written and read
 // through its own app.current_tenant; assertions read this test's workspaces only.
+// - the columns are added (down then up), nullable;
 // - platform on the Anthropic API (no endpoint, or the api.anthropic.com host): shown as
-//   Anthropic / US; the workspaces with the assistant or an enabled agent are marked as
-//   confirmed without an author (a workspace with an enabled agent and no settings row
-//   gets one); a workspace without AI, one with MCP only (MCP sends nothing to the
-//   included model) and one with a draft agent only stay as they were; row level
-//   security is left as found; a second run changes no row;
-// - a provider name already set in the platform console is kept and used for the key;
-// - another provider (openai, or Anthropic behind another host): nothing filled, nobody
-//   marked, a warning;
-// - no platform row (single-tenant): nothing changes, no warning.
+//   Anthropic / US; a second run changes nothing;
+// - a provider name already set in the platform console is kept;
+// - another provider (openai, or Anthropic behind another host), or a name without a valid
+//   location: nothing filled, a warning;
+// - no platform row (single-tenant): nothing changes, no warning;
+// - in every case no workspace is marked as confirmed, no ai_settings row is written or
+//   created, and row level security of ai_settings and ai_agent_definitions is untouched.
 
 const migration = new Migration();
 const LOG_PREFIX = '[Migration] AiIncludedModelConfirmation:';
@@ -172,93 +170,101 @@ async function seedWorkspaces(runner: QueryRunner, tag: string): Promise<Workspa
   return workspaces;
 }
 
-async function assertNobodyMarked(runner: QueryRunner, workspaces: Workspaces) {
+/**
+ * No workspace is marked as confirmed and no settings row is written or created: each
+ * row is the one found before the run (same ctid), and the workspace with an enabled
+ * agent but no settings row still has none. Row level security is as found.
+ */
+async function assertTenantDataUntouched(
+  runner: QueryRunner,
+  workspaces: Workspaces,
+  before: Map<string, string | null>,
+) {
   for (const [label, tenantId] of Object.entries(workspaces)) {
     const row = await settingsOf(runner, tenantId);
     if (label === 'agentWithoutSettings') {
       assert.equal(row, null, `${label}: no settings row created`);
       continue;
     }
-    assert.equal(row?.builtin_accepted_key, null, `${label}: not marked`);
-    assert.equal(row?.builtin_accepted_at, null, `${label}: not marked`);
+    assert.ok(row, `${label}: settings row kept`);
+    assert.equal(row.ctid, before.get(tenantId), `${label}: row not rewritten`);
+    assert.equal(row.builtin_accepted_key, null, `${label}: not marked`);
+    assert.equal(row.builtin_accepted_at, null, `${label}: not marked`);
+    assert.equal(row.builtin_accepted_by, null, `${label}: not marked`);
   }
+  assert.deepEqual(await rowSecurity(runner, 'ai_settings'), { enabled: true, forced: true }, 'ai_settings RLS as found');
+  assert.deepEqual(await rowSecurity(runner, 'ai_agent_definitions'), { enabled: true, forced: true }, 'ai_agent_definitions RLS as found');
 }
 
-/** Anthropic API without endpoint: identity filled, workspaces using AI marked, the others kept. */
-async function testAnthropicDirectMarksWorkspacesUsingAi() {
+async function settingsSnapshot(runner: QueryRunner, workspaces: Workspaces): Promise<Map<string, string | null>> {
+  const snapshot = new Map<string, string | null>();
+  for (const tenantId of Object.values(workspaces)) {
+    snapshot.set(tenantId, (await settingsOf(runner, tenantId))?.ctid ?? null);
+  }
+  return snapshot;
+}
+
+async function columnsOf(runner: QueryRunner) {
+  const rows: Array<{ column: string; nullable: string }> = await runner.query(
+    `SELECT table_name || '.' || column_name AS column, is_nullable AS nullable
+       FROM information_schema.columns
+      WHERE table_schema = current_schema()
+        AND ((table_name = 'platform_ai_config' AND column_name IN ('disclosure_name', 'disclosure_location'))
+          OR (table_name = 'ai_settings' AND column_name IN ('builtin_accepted_key', 'builtin_accepted_at', 'builtin_accepted_by')))
+      ORDER BY 1`,
+  );
+  return rows;
+}
+
+/** down() drops the columns, up() adds them back, nullable. */
+async function testColumns() {
+  await inRolledBackTransaction(async (runner) => {
+    await clearTenant(runner);
+    await captureConsole(() => migration.down(runner));
+    assert.deepEqual(await columnsOf(runner), [], 'down drops the columns');
+    await captureConsole(() => migration.up(runner));
+    assert.deepEqual(await columnsOf(runner), [
+      { column: 'ai_settings.builtin_accepted_at', nullable: 'YES' },
+      { column: 'ai_settings.builtin_accepted_by', nullable: 'YES' },
+      { column: 'ai_settings.builtin_accepted_key', nullable: 'YES' },
+      { column: 'platform_ai_config.disclosure_location', nullable: 'YES' },
+      { column: 'platform_ai_config.disclosure_name', nullable: 'YES' },
+    ]);
+  });
+}
+
+/** Anthropic API without endpoint: identity filled; no workspace touched; a second run changes nothing. */
+async function testAnthropicDirectFillsTheIdentityOnly() {
   await inRolledBackTransaction(async (runner) => {
     await setPlatform(runner, { provider: 'anthropic' });
     const workspaces = await seedWorkspaces(runner, 'direct');
-    const before = {
-      noAi: await settingsOf(runner, workspaces.noAi),
-      mcpOnly: await settingsOf(runner, workspaces.mcpOnly),
-      draftAgentOnly: await settingsOf(runner, workspaces.draftAgentOnly),
-    };
+    const before = await settingsSnapshot(runner, workspaces);
 
     await clearTenant(runner);
     const first = await captureConsole(() => migration.up(runner));
 
     assert.deepEqual(await platformDisclosure(runner), { disclosure_name: 'Anthropic', disclosure_location: 'US' });
-    const key = builtinProviderKey({ provider: 'anthropic', endpointHost: '', name: 'Anthropic', location: 'US' });
-    assert.equal(key, 'anthropic||Anthropic|US', 'the key the service computes');
-
-    for (const label of ['chat', 'agentOnly', 'agentWithoutSettings'] as const) {
-      const row = await settingsOf(runner, workspaces[label]);
-      assert.ok(row, `${label}: has a settings row`);
-      assert.equal(row.builtin_accepted_key, key, `${label}: marked as confirmed`);
-      assert.ok(row.builtin_accepted_at instanceof Date, `${label}: confirmation date set`);
-      assert.equal(row.builtin_accepted_by, null, `${label}: no author (presumed)`);
-    }
-    const created = await settingsOf(runner, workspaces.agentWithoutSettings);
+    await assertTenantDataUntouched(runner, workspaces, before);
     assert.deepEqual(
-      {
-        chat_enabled: created?.chat_enabled,
-        mcp_enabled: created?.mcp_enabled,
-        provider_source: created?.provider_source,
-        web_search_enabled: created?.web_search_enabled,
-        llm_supports_vision: created?.llm_supports_vision,
-        glpi_enabled: created?.glpi_enabled,
-      },
-      {
-        chat_enabled: false,
-        mcp_enabled: false,
-        provider_source: 'builtin',
-        web_search_enabled: false,
-        llm_supports_vision: true,
-        glpi_enabled: false,
-      },
-      'the created row has the defaults of AiSettingsService.get',
+      first.logs.filter((line) => line.startsWith(LOG_PREFIX)),
+      [`${LOG_PREFIX} included model shown as Anthropic, processed in US`],
     );
-    for (const label of ['noAi', 'mcpOnly', 'draftAgentOnly'] as const) {
-      const row = await settingsOf(runner, workspaces[label]);
-      assert.equal(row?.builtin_accepted_key, null, `${label}: not marked`);
-      assert.equal(row?.ctid, before[label]?.ctid, `${label}: row not rewritten`);
-    }
-
-    assert.deepEqual(await rowSecurity(runner, 'ai_settings'), { enabled: true, forced: true }, 'ai_settings RLS as found');
-    assert.deepEqual(await rowSecurity(runner, 'ai_agent_definitions'), { enabled: true, forced: true }, 'ai_agent_definitions RLS as found');
-
-    assert.ok(first.logs.includes(`${LOG_PREFIX} included model shown as Anthropic, processed in US`), first.logs.join('\n'));
-    const summary = first.logs.find((line) => line.includes('workspace(s) already using AI marked as confirmed'));
-    const counted = Number(/ (\d+) workspace\(s\)/.exec(summary ?? '')?.[1] ?? 0);
-    assert.ok(counted >= 3, `the marked workspaces are counted (${summary})`);
-    assert.match(summary ?? '', /\(\d+ AI settings row\(s\) created\)/);
     assert.deepEqual(first.warnings, []);
 
     // A second run changes nothing.
-    const afterFirst = new Map<string, string | undefined>();
-    for (const tenantId of Object.values(workspaces)) afterFirst.set(tenantId, (await settingsOf(runner, tenantId))?.ctid);
+    const [platformBefore] = await runner.query(`SELECT ctid::text AS ctid FROM platform_ai_config`);
     await clearTenant(runner);
     const second = await captureConsole(() => migration.up(runner));
-    for (const tenantId of Object.values(workspaces)) {
-      assert.equal((await settingsOf(runner, tenantId))?.ctid, afterFirst.get(tenantId), 'the second run rewrites no row');
-    }
+    const [platformAfter] = await runner.query(`SELECT ctid::text AS ctid FROM platform_ai_config`);
+    assert.equal(platformAfter.ctid, platformBefore.ctid, 'the platform row is not rewritten');
     assert.deepEqual(await platformDisclosure(runner), { disclosure_name: 'Anthropic', disclosure_location: 'US' });
+    await assertTenantDataUntouched(runner, workspaces, before);
     assert.deepEqual(
       second.logs.filter((line) => line.startsWith(LOG_PREFIX)),
-      [`${LOG_PREFIX} no workspace to mark as confirmed for anthropic||Anthropic|US`],
+      [`${LOG_PREFIX} included model disclosure already set, nothing to do`],
       'the second run says so',
     );
+    assert.deepEqual(second.warnings, []);
   });
 }
 
@@ -266,46 +272,45 @@ async function testAnthropicDirectMarksWorkspacesUsingAi() {
 async function testAnthropicHostAndExistingName() {
   await inRolledBackTransaction(async (runner) => {
     await setPlatform(runner, { provider: 'anthropic', endpoint_url: 'https://api.anthropic.com/v1' });
-    const tenantId = await seedTenant(runner, 'host');
-    await insertSettings(runner, tenantId, { chat: true, mcp: false });
+    const workspaces = await seedWorkspaces(runner, 'host');
+    const before = await settingsSnapshot(runner, workspaces);
     await clearTenant(runner);
     await captureConsole(() => migration.up(runner));
     assert.deepEqual(await platformDisclosure(runner), { disclosure_name: 'Anthropic', disclosure_location: 'US' });
-    assert.equal(
-      (await settingsOf(runner, tenantId))?.builtin_accepted_key,
-      'anthropic|api.anthropic.com|Anthropic|US',
-      'the endpoint host is part of the key',
-    );
+    await assertTenantDataUntouched(runner, workspaces, before);
   });
 
   await inRolledBackTransaction(async (runner) => {
     await setPlatform(runner, { provider: 'anthropic', disclosure_name: 'Anthropic', disclosure_location: 'EU' });
-    const tenantId = await seedTenant(runner, 'named');
-    await insertSettings(runner, tenantId, { chat: true, mcp: false });
+    const workspaces = await seedWorkspaces(runner, 'named');
+    const before = await settingsSnapshot(runner, workspaces);
     await clearTenant(runner);
     const captured = await captureConsole(() => migration.up(runner));
     assert.deepEqual(await platformDisclosure(runner), { disclosure_name: 'Anthropic', disclosure_location: 'EU' }, 'kept');
-    assert.equal(
-      (await settingsOf(runner, tenantId))?.builtin_accepted_key,
-      builtinProviderKey({ provider: 'anthropic', endpointHost: '', name: 'Anthropic', location: 'EU' }),
-    );
+    await assertTenantDataUntouched(runner, workspaces, before);
     assert.deepEqual(captured.warnings, []);
   });
 }
 
-/** Another provider, or Anthropic behind another host: nothing filled, nobody marked, a warning. */
+/** Another provider, Anthropic behind another host, or a name without a valid location: nothing filled, a warning. */
 async function testOtherProviderLeavesEverythingEmpty() {
   for (const platform of [
     { provider: 'openai' },
     { provider: 'anthropic', endpoint_url: 'https://llm-gateway.example.com/v1' },
+    { provider: 'anthropic', disclosure_name: 'Anthropic' },
   ]) {
     await inRolledBackTransaction(async (runner) => {
       await setPlatform(runner, platform);
       const workspaces = await seedWorkspaces(runner, 'other');
+      const before = await settingsSnapshot(runner, workspaces);
       await clearTenant(runner);
       const captured = await captureConsole(() => migration.up(runner));
-      assert.deepEqual(await platformDisclosure(runner), { disclosure_name: null, disclosure_location: null }, platform.provider);
-      await assertNobodyMarked(runner, workspaces);
+      assert.deepEqual(
+        await platformDisclosure(runner),
+        { disclosure_name: platform.disclosure_name ?? null, disclosure_location: null },
+        JSON.stringify(platform),
+      );
+      await assertTenantDataUntouched(runner, workspaces, before);
       assert.deepEqual(captured.warnings, [`${LOG_PREFIX} ${DISCLOSURE_WARNING}`], `${JSON.stringify(platform)}: warned`);
     });
   }
@@ -316,9 +321,10 @@ async function testEmptyPlatformChangesNothing() {
   await inRolledBackTransaction(async (runner) => {
     await setPlatform(runner, null);
     const workspaces = await seedWorkspaces(runner, 'empty');
+    const before = await settingsSnapshot(runner, workspaces);
     await clearTenant(runner);
     const captured = await captureConsole(() => migration.up(runner));
-    await assertNobodyMarked(runner, workspaces);
+    await assertTenantDataUntouched(runner, workspaces, before);
     assert.deepEqual(captured.warnings, []);
     assert.deepEqual(
       captured.logs.filter((line) => line.startsWith(LOG_PREFIX)),
@@ -332,7 +338,8 @@ async function testEmptyPlatformChangesNothing() {
 async function run() {
   await dataSource.initialize();
   try {
-    await testAnthropicDirectMarksWorkspacesUsingAi();
+    await testColumns();
+    await testAnthropicDirectFillsTheIdentityOnly();
     await testAnthropicHostAndExistingName();
     await testOtherProviderLeavesEverythingEmpty();
     await testEmptyPlatformChangesNothing();

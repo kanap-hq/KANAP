@@ -1,5 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { Features } from '../../config/features';
 import { Subscription } from '../../billing/subscription.entity';
 import { Tenant, TenantStatus } from '../../tenants/tenant.entity';
@@ -20,14 +22,16 @@ import {
   AiAgentBuiltinQuotaService,
 } from '../control-plane/agent/ai-agent-builtin-quota.service';
 import { AiAgentDefinition } from '../control-plane/entities/ai-agent-definition.entity';
+import { UpdateAiSettingsDto } from '../dto/update-ai-settings.dto';
 import { PlatformAiConfig } from '../platform/platform-ai-config.entity';
 import { builtinProviderKey, endpointHostOf, PlatformAiConfigService } from '../platform/platform-ai-config.service';
 
 // The KANAP included model is used for a workspace only once one of its administrators
 // has confirmed the identity the platform shows: technical provider and endpoint host,
 // provider name and processing location (a new model alone keeps it). Covers:
-// the resolver (single choice point), the settings PATCH (confirm, activate, withdraw,
-// audit, view), agent runs and the included quota, MCP counting, the capabilities the
+// the resolver (single choice point, one read of the platform record), the settings PATCH
+// (confirm, activate, withdraw, audit, view), agent runs and the included quota, MCP
+// (sends nothing to the included model: works and counts as before), the capabilities the
 // interface reads, and the platform fields that define the identity.
 
 const TENANT_ID = 'tenant-1';
@@ -41,7 +45,7 @@ const KEY_US = 'anthropic||Anthropic|US';
 type Workspace = {
   settings: AiSettings | null;
   configs: AiModelConfig[];
-  agents: Array<Pick<AiAgentDefinition, 'id' | 'tenant_id' | 'llm_model_config_id'>>;
+  agents: Array<Pick<AiAgentDefinition, 'id' | 'tenant_id' | 'llm_model_config_id' | 'status'>>;
   users: Array<{ id: string; tenant_id: string; first_name: string | null; last_name: string | null; email: string }>;
   saves: number;
 };
@@ -101,7 +105,7 @@ function workspace(overrides?: Partial<Workspace>): Workspace {
   return {
     settings: settingsRow(),
     configs: [],
-    agents: [{ id: 'agent-1', tenant_id: TENANT_ID, llm_model_config_id: null }],
+    agents: [{ id: 'agent-1', tenant_id: TENANT_ID, llm_model_config_id: null, status: 'enabled' }],
     users: [{ id: ADMIN_ID, tenant_id: TENANT_ID, first_name: 'Ada', last_name: 'Martin', email: 'ada@example.com' }],
     saves: 0,
     ...overrides,
@@ -163,6 +167,17 @@ function createManager(ws: Workspace) {
         return ws.users
           .filter((user) => user.id === params[0] && user.tenant_id === params[1])
           .map((user) => ({ first_name: user.first_name, last_name: user.last_name }));
+      }
+      if (/FROM ai_agent_definitions d/.test(sql)) {
+        // Enabled agents of the workspace on the fallback model: none of their own, or one no longer active.
+        const activeConfig = (id: string) => ws.configs.some((config) => (
+          config.id === id && config.tenant_id === params[0] && config.status === 'active'
+        ));
+        return ws.agents
+          .filter((agent) => agent.tenant_id === params[0] && agent.status === 'enabled')
+          .filter((agent) => agent.llm_model_config_id == null || !activeConfig(agent.llm_model_config_id))
+          .slice(0, 1)
+          .map(() => ({ '?column?': 1 }));
       }
       throw new Error(`Unexpected query: ${sql}`);
     },
@@ -314,6 +329,57 @@ async function testIncludedModelNeedsTheWorkspaceConfirmation() {
   );
 }
 
+/**
+ * The identity compared with the workspace's confirmation and the runtime returned come
+ * from one read of the platform record: when the record changes during a resolution
+ * (another process saved a new provider and the cache expired), the result is the
+ * record that was confirmed, or a refusal, never the new runtime under the old
+ * confirmation.
+ */
+async function testIdentityAndRuntimeComeFromOneRead() {
+  const stack = createStack(workspace({ settings: settingsRow({ builtin_accepted_key: KEY_US }) }));
+  const confirmedRecord = { ...stack.platform.state.record! } as PlatformAiConfig;
+  const newRecord = {
+    ...confirmedRecord,
+    provider: 'openai',
+    model: 'gpt-other',
+    endpoint_url: 'https://other.example.com/v1',
+    api_key_encrypted: 'enc:other-key',
+    disclosure_name: 'Other provider',
+    disclosure_location: 'EU',
+  } as PlatformAiConfig;
+  let reads = 0;
+  (stack.platform.service as any).loadRecord = async () => {
+    reads += 1;
+    return reads === 1 ? { ...confirmedRecord } : { ...newRecord };
+  };
+
+  const resolved = await stack.resolver.resolve(TENANT_ID, { type: 'chat' }, stack.manager);
+  assert.equal(reads, 1, 'one read of the platform record per resolution');
+  assert.deepEqual(
+    {
+      provider: resolved.provider,
+      model: resolved.model,
+      endpointUrl: resolved.endpointUrl,
+      apiKey: resolved.apiKey,
+      builtinRateLimits: resolved.builtinRateLimits,
+    },
+    {
+      provider: 'anthropic',
+      model: 'claude-included-1',
+      endpointUrl: null,
+      apiKey: 'platform-key',
+      builtinRateLimits: { tenantPerMinute: 30, userPerHour: 60 },
+    },
+    'the runtime of the record whose identity was confirmed',
+  );
+
+  // The next resolution reads the new record: refused under the old confirmation.
+  await assert.rejects(() => stack.resolver.resolve(TENANT_ID, { type: 'chat' }, stack.manager), isResolutionError('builtin_not_accepted'));
+  const agentRuntime = await new AiAgentLlmClient(stack.resolver, providerRegistry as any).resolveRuntime(agentContext(stack.manager) as any);
+  assert.equal(agentRuntime, null, 'agents get no runtime either');
+}
+
 async function testNewNameOrLocationAsksAgainButNotANewModel() {
   const confirmedSettings = () => settingsRow({ builtin_accepted_key: KEY_US });
 
@@ -366,7 +432,7 @@ async function testRegistryModelsNeverAskForConfirmation() {
   const assigned = createStack(workspace({
     settings: settingsRow({ chat_model_config_id: 'cfg-own' }),
     configs: [registryModel()],
-    agents: [{ id: 'agent-1', tenant_id: TENANT_ID, llm_model_config_id: 'cfg-own' }],
+    agents: [{ id: 'agent-1', tenant_id: TENANT_ID, llm_model_config_id: 'cfg-own', status: 'enabled' }],
   }));
   assert.equal((await assigned.resolver.resolve(TENANT_ID, { type: 'chat' }, assigned.manager)).source, 'registry');
   assert.equal((await assigned.resolver.resolve(TENANT_ID, { type: 'agent', agentId: 'agent-1' }, assigned.manager)).source, 'registry');
@@ -390,7 +456,7 @@ async function testIncludedModelWithoutIdentityIsNotConfigured() {
       isResolutionError('builtin_not_configured'),
       JSON.stringify(record),
     );
-    assert.equal(await stack.platform.service.isConfigured(), false);
+    assert.equal((await stack.platform.service.getBuiltinRuntime())?.identity ?? null, null);
   }
 }
 
@@ -448,13 +514,13 @@ async function testConfirmAndTurnOnInOneWrite() {
   assert.equal(view.chat_ready, true);
   assert.deepEqual(view.builtin_provider, {
     in_use: true,
+    used_by_assistant: true,
     name: 'Anthropic',
     location: 'US',
     key: KEY_US,
     accepted: true,
     accepted_at: saved.builtin_accepted_at!.toISOString(),
     accepted_by_name: 'Ada Martin',
-    presumed: false,
   });
 
   // The audit records the confirmation (who, when, which provider), names only.
@@ -549,21 +615,75 @@ async function testOwnModelTurnsOnWithoutConfirmation() {
   assert.equal(view.builtin_provider.accepted, false);
 }
 
-async function testPresumedConfirmationAndSingleTenantView() {
-  const presumed = createStack(workspace({
+/**
+ * The Provider card shows the confirmation when the assistant or the workspace's fallback
+ * model (agents without a model of their own) lands on the included model.
+ */
+async function testCardShowsWhenAgentsFallBackOnIt() {
+  // Assistant on a registry model of its own, no default model: agents fall back on the included model.
+  const split = createStack(workspace({
+    settings: settingsRow({ chat_enabled: true, chat_model_config_id: 'cfg-own' }),
+    configs: [registryModel()],
+  }));
+  const splitSettings = await split.settings.get(TENANT_ID, { manager: split.manager });
+  const splitView = await split.settings.toView(splitSettings, { manager: split.manager });
+  assert.equal(splitView.chat_ready, true, 'the assistant runs on its own model');
+  assert.equal(splitView.builtin_provider.in_use, true, 'shown for the agents');
+  assert.equal(splitView.builtin_provider.used_by_assistant, false);
+  assert.equal(splitView.builtin_provider.accepted, false);
+  assert.equal(splitView.builtin_provider.key, KEY_US);
+
+  // Confirming it from there works the same.
+  const confirmed = await split.settings.update(TENANT_ID, { accept_builtin_provider_key: KEY_US }, { manager: split.manager, userId: ADMIN_ID });
+  const confirmedView = await split.settings.toView(confirmed, { manager: split.manager });
+  assert.equal(confirmedView.builtin_provider.in_use, true);
+  assert.equal(confirmedView.builtin_provider.accepted, true);
+
+  // A default registry model: everything runs on it, nothing to show.
+  const byDefault = createStack(workspace({
+    settings: settingsRow({ chat_enabled: true, chat_model_config_id: 'cfg-own' }),
+    configs: [registryModel({ is_default: true })],
+  }));
+  const defaultSettings = await byDefault.settings.get(TENANT_ID, { manager: byDefault.manager });
+  const defaultView = await byDefault.settings.toView(defaultSettings, { manager: byDefault.manager });
+  assert.equal(defaultView.builtin_provider.in_use, false);
+  assert.equal(defaultView.builtin_provider.used_by_assistant, false);
+}
+
+/** The confirmation key holds an endpoint host of up to 253 characters and a name of up to 80. */
+async function testConfirmationKeyLength() {
+  const host = ['a'.repeat(63), 'b'.repeat(63), 'c'.repeat(63), 'd'.repeat(61)].join('.');
+  const longKey = builtinProviderKey({ provider: 'anthropic', endpointHost: host, name: 'N'.repeat(80), location: 'US' });
+  assert.ok(longKey.length > 300, `long key (${longKey.length})`);
+  assert.deepEqual(await validate(plainToInstance(UpdateAiSettingsDto, { accept_builtin_provider_key: longKey })), []);
+  assert.deepEqual(await validate(plainToInstance(UpdateAiSettingsDto, { accept_builtin_provider_key: null })), []);
+  assert.equal((await validate(plainToInstance(UpdateAiSettingsDto, { accept_builtin_provider_key: 'k'.repeat(513) }))).length, 1);
+
+  // And the settings take it.
+  const stack = createStack(
+    workspace(),
+    createPlatform({ endpoint_url: `https://${host}/v1`, disclosure_name: 'N'.repeat(80) }),
+  );
+  const saved = await stack.settings.update(TENANT_ID, { accept_builtin_provider_key: longKey }, { manager: stack.manager, userId: ADMIN_ID });
+  assert.equal(saved.builtin_accepted_key, longKey);
+}
+
+async function testConfirmationByAUserNoLongerFoundAndSingleTenantView() {
+  // The administrator who confirmed it was deleted since: confirmed, on a date, no name.
+  const authorGone = createStack(workspace({
     settings: settingsRow({
       chat_enabled: true,
       builtin_accepted_key: KEY_US,
       builtin_accepted_at: new Date('2026-10-08T06:00:00.000Z'),
-      builtin_accepted_by: null,
+      builtin_accepted_by: '22222222-2222-4222-8222-222222222222',
     }),
   }));
-  const stored = await presumed.settings.get(TENANT_ID, { manager: presumed.manager });
-  const view = await presumed.settings.toView(stored, { manager: presumed.manager });
+  const stored = await authorGone.settings.get(TENANT_ID, { manager: authorGone.manager });
+  const view = await authorGone.settings.toView(stored, { manager: authorGone.manager });
   assert.equal(view.builtin_provider.accepted, true);
-  assert.equal(view.builtin_provider.presumed, true);
   assert.equal(view.builtin_provider.accepted_by_name, null);
   assert.equal(view.builtin_provider.accepted_at, '2026-10-08T06:00:00.000Z');
+  assert.equal('presumed' in view.builtin_provider, false, 'no confirmation is presumed');
 
   await withFeatures({ SINGLE_TENANT: true }, async () => {
     const stack = createStack(workspace({ settings: settingsRow({ provider_source: 'custom' }) }));
@@ -571,13 +691,13 @@ async function testPresumedConfirmationAndSingleTenantView() {
     const singleView = await stack.settings.toView(settings, { manager: stack.manager });
     assert.deepEqual(singleView.builtin_provider, {
       in_use: false,
+      used_by_assistant: false,
       name: null,
       location: null,
       key: null,
       accepted: false,
       accepted_at: null,
       accepted_by_name: null,
-      presumed: false,
     });
     await assert.rejects(
       () => stack.settings.update(TENANT_ID, { accept_builtin_provider_key: KEY_US }, { manager: stack.manager, userId: ADMIN_ID }),
@@ -647,7 +767,7 @@ async function testAgentsWaitWithoutConsumingTheQuota() {
   // An agent on the workspace's own model is never held back.
   const own = createStack(workspace({
     configs: [registryModel()],
-    agents: [{ id: 'agent-1', tenant_id: TENANT_ID, llm_model_config_id: 'cfg-own' }],
+    agents: [{ id: 'agent-1', tenant_id: TENANT_ID, llm_model_config_id: 'cfg-own', status: 'enabled' }],
   }));
   const ownQuota = new AiAgentBuiltinQuotaService(own.resolver, service as any);
   await ownQuota.assertQuotaAvailable(agentContext(own.manager) as any);
@@ -655,22 +775,101 @@ async function testAgentsWaitWithoutConsumingTheQuota() {
   assert.equal(usage.reserved, 1, 'own model: nothing reserved');
 }
 
-async function testMcpCountsNothingWithoutConfirmation() {
-  const { usage, service } = createUsage();
-  const makeController = (stack: ReturnType<typeof createStack>) => new AiMcpController(
-    {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
-    stack.resolver,
-    stack.platform.service,
-    service as any,
-    { assertAllowed: () => undefined } as any,
-  );
-  const unconfirmed = createStack(workspace());
-  await (makeController(unconfirmed) as any).assertBuiltinMcpBudget({ ...agentContext(unconfirmed.manager, null), surface: 'mcp' });
-  assert.equal(usage.mcpReserved, 0, 'no included message counted');
+/**
+ * MCP sends KANAP data to the user's own client, never to the included model: it works
+ * without the confirmation and without the provider name and location, and its requests
+ * count against the included volume whenever the assistant would fall back on that model,
+ * as before the confirmation existed.
+ */
+async function testMcpWorksAndCountsAsBefore() {
+  await withFeatures({ AI_CHAT_ENABLED: true, AI_MCP_ENABLED: true, AI_SETTINGS_ENABLED: true }, async () => {
+    const { usage, service } = createUsage();
+    const rateLimits: unknown[] = [];
+    const makeController = (stack: ReturnType<typeof createStack>) => new AiMcpController(
+      {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
+      stack.resolver,
+      service as any,
+      { assertAllowed: (_tenantId: string, _userId: string, limits: unknown) => { rateLimits.push(limits); } } as any,
+    );
+    const mcpContext = (manager: any) => ({ ...agentContext(manager, null), userId: 'user-2', surface: 'mcp' as const });
+    const permissions = new Map([['ai_mcp', 'reader']]);
 
-  const confirmed = createStack(workspace({ settings: settingsRow({ builtin_accepted_key: KEY_US }) }));
-  await (makeController(confirmed) as any).assertBuiltinMcpBudget({ ...agentContext(confirmed.manager, null), surface: 'mcp' });
-  assert.equal(usage.mcpReserved, 1, 'counted once confirmed, as before');
+    // An MCP-only workspace that never confirmed the included model.
+    const mcpOnly = createStack(workspace({ settings: settingsRow({ mcp_enabled: true }) }));
+    await createPolicy(mcpOnly, permissions).assertSurfaceAccess(mcpContext(mcpOnly.manager), mcpOnly.manager);
+    const capabilities = await createPolicy(mcpOnly, permissions).getCapabilities(READER_CONTEXT, mcpOnly.manager);
+    assert.equal(capabilities.surfaces.mcp.available, true);
+    assert.equal(capabilities.surfaces.mcp.provider_ready, true);
+    await (makeController(mcpOnly) as any).assertBuiltinMcpBudget(mcpContext(mcpOnly.manager));
+    assert.equal(usage.mcpReserved, 1, 'counted on the included volume, confirmed or not');
+    assert.deepEqual(rateLimits, [{ tenantPerMinute: 30, userPerHour: 60 }]);
+
+    // A platform without a provider name or location yet: MCP keeps working and counting.
+    const noIdentity = createStack(
+      workspace({ settings: settingsRow({ mcp_enabled: true }) }),
+      createPlatform({ disclosure_name: null, disclosure_location: null }),
+    );
+    await createPolicy(noIdentity, permissions).assertSurfaceAccess(mcpContext(noIdentity.manager), noIdentity.manager);
+    await (makeController(noIdentity) as any).assertBuiltinMcpBudget(mcpContext(noIdentity.manager));
+    assert.equal(usage.mcpReserved, 2);
+
+    // The resolution MCP uses never carries the included model's key.
+    const ungated = await mcpOnly.resolver.resolve(TENANT_ID, { type: 'chat' }, mcpOnly.manager, { includedModelGate: 'none' });
+    assert.equal(ungated.source, 'builtin');
+    assert.equal(ungated.apiKey, null);
+
+    // Assistant on the workspace's own model: nothing counted.
+    const own = createStack(workspace({
+      settings: settingsRow({ mcp_enabled: true }),
+      configs: [registryModel({ is_default: true })],
+    }));
+    await (makeController(own) as any).assertBuiltinMcpBudget(mcpContext(own.manager));
+    assert.equal(usage.mcpReserved, 2, 'own model: nothing counted');
+
+    // No platform row at all: MCP is not ready, as before.
+    const noPlatform = createStack(workspace({ settings: settingsRow({ mcp_enabled: true }) }), createPlatform(null));
+    await assert.rejects(
+      () => createPolicy(noPlatform, permissions).assertSurfaceAccess(mcpContext(noPlatform.manager), noPlatform.manager),
+      /AI MCP is not fully configured/,
+    );
+  });
+}
+
+/**
+ * Tools that agents and system work run reach the assistant's access check. They send
+ * nothing to the included model (each model call goes through the resolver), so an agent
+ * on its own model keeps working while the assistant waits for the confirmation, or while
+ * the platform has no provider name or location yet.
+ */
+async function testAgentToolsDoNotWaitForTheAssistant() {
+  await withFeatures({ AI_CHAT_ENABLED: true, AI_MCP_ENABLED: true, AI_SETTINGS_ENABLED: true }, async () => {
+    const permissions = new Map([['ai_chat', 'reader']]);
+    const ownAgent = () => workspace({
+      settings: settingsRow({ chat_enabled: true }),
+      configs: [registryModel()],
+      agents: [{ id: 'agent-1', tenant_id: TENANT_ID, llm_model_config_id: 'cfg-own', status: 'enabled' }],
+    });
+    const agentRun = { ...READER_CONTEXT, surface: 'chat' as const, authMethod: 'jwt' as const, agentId: 'agent-1' };
+    const systemWork = { ...READER_CONTEXT, userId: '', surface: 'chat' as const, authMethod: 'jwt' as const };
+    const userChat = { ...READER_CONTEXT, surface: 'chat' as const, authMethod: 'jwt' as const };
+
+    for (const platform of [createPlatform(), createPlatform({ disclosure_name: null, disclosure_location: null })]) {
+      const stack = createStack(ownAgent(), platform);
+      const policy = createPolicy(stack, permissions);
+      await policy.assertSurfaceAccess(agentRun, stack.manager);
+      await policy.assertSurfaceAccess(systemWork, stack.manager);
+      await assert.rejects(() => policy.assertSurfaceAccess(userChat, stack.manager), ForbiddenException, 'the assistant itself waits');
+      const runtime = await new AiAgentLlmClient(stack.resolver, providerRegistry as any).resolveRuntime(agentContext(stack.manager) as any);
+      assert.equal(runtime?.source, 'custom', 'the agent calls its own model');
+    }
+
+    // No platform row: the assistant has no model at all, and agent tools stop as before.
+    const nothing = createStack(ownAgent(), createPlatform(null));
+    await assert.rejects(
+      () => createPolicy(nothing, permissions).assertSurfaceAccess(agentRun, nothing.manager),
+      /AI chat is not fully configured/,
+    );
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -722,7 +921,7 @@ async function testCapabilitiesNameTheConfirmation() {
     assert.equal(ready.surfaces.chat.available, true);
     assert.equal(ready.builtin_confirmation_needed, false);
 
-    // Assistant on its own model, agents falling back on the unconfirmed included model.
+    // Assistant on its own model, an enabled agent falling back on the unconfirmed included model.
     const split = createStack(workspace({
       settings: settingsRow({ chat_enabled: true, chat_model_config_id: 'cfg-own' }),
       configs: [registryModel()],
@@ -730,6 +929,26 @@ async function testCapabilitiesNameTheConfirmation() {
     const splitCapabilities = await createPolicy(split, permissions).getCapabilities(READER_CONTEXT, split.manager);
     assert.equal(splitCapabilities.surfaces.chat.available, true);
     assert.equal(splitCapabilities.builtin_confirmation_needed, true);
+
+    // An agent whose model was archived falls back too.
+    const archived = createStack(workspace({
+      settings: settingsRow({ chat_enabled: true, chat_model_config_id: 'cfg-own' }),
+      configs: [registryModel(), registryModel({ id: 'cfg-old', status: 'archived' })],
+      agents: [{ id: 'agent-1', tenant_id: TENANT_ID, llm_model_config_id: 'cfg-old', status: 'enabled' }],
+    }));
+    assert.equal((await createPolicy(archived, permissions).getCapabilities(READER_CONTEXT, archived.manager)).builtin_confirmation_needed, true);
+
+    // No enabled agent on the fallback (none at all, a draft one, or one on its own model): no banner.
+    for (const agents of [
+      [],
+      [{ id: 'agent-1', tenant_id: TENANT_ID, llm_model_config_id: null, status: 'draft' }],
+      [{ id: 'agent-1', tenant_id: TENANT_ID, llm_model_config_id: 'cfg-own', status: 'enabled' }],
+    ]) {
+      const quiet = createStack(workspace({ settings: settingsRow({ chat_enabled: true }), configs: [registryModel()], agents }));
+      const quietCapabilities = await createPolicy(quiet, permissions).getCapabilities(READER_CONTEXT, quiet.manager);
+      assert.deepEqual(quietCapabilities.surfaces.chat.reasons, ['builtin_not_accepted'], 'the assistant still waits');
+      assert.equal(quietCapabilities.builtin_confirmation_needed, false, JSON.stringify(agents));
+    }
 
     // Own default model: nothing to confirm.
     const own = createStack(workspace({
@@ -820,7 +1039,7 @@ async function testPlatformViewShowsTheKeyChange() {
   assert.equal(audit.before.disclosure_location, 'US');
   assert.equal(audit.after.disclosure_location, 'EU');
   assert.equal(audit.after.disclosure_key, 'anthropic||Anthropic|EU');
-  assert.deepEqual(await platform.service.getBuiltinIdentity(), { name: 'Anthropic', location: 'EU', key: 'anthropic||Anthropic|EU' });
+  assert.deepEqual((await platform.service.getBuiltinRuntime())?.identity, { name: 'Anthropic', location: 'EU', key: 'anthropic||Anthropic|EU' });
 
   // A new endpoint host, name and location confirmed in the same save: a new key.
   const gateway = await platform.service.updateConfig(
@@ -833,13 +1052,13 @@ async function testPlatformViewShowsTheKeyChange() {
   const legacy = createPlatform({ disclosure_name: null, disclosure_location: null });
   const legacyView = await legacy.service.getConfig();
   assert.equal(legacyView.disclosure_key, null);
-  assert.equal(await legacy.service.getBuiltinIdentity(), null);
-  assert.equal(await legacy.service.isConfigured(), false);
+  assert.equal((await legacy.service.getBuiltinRuntime())?.identity, null);
 }
 
 async function run() {
   const tests = [
     testIncludedModelNeedsTheWorkspaceConfirmation,
+    testIdentityAndRuntimeComeFromOneRead,
     testNewNameOrLocationAsksAgainButNotANewModel,
     testRegistryModelsNeverAskForConfirmation,
     testIncludedModelWithoutIdentityIsNotConfigured,
@@ -849,9 +1068,12 @@ async function run() {
     testOutdatedKeyIsRefused,
     testWithdrawKeepsOtherSettingsSavable,
     testOwnModelTurnsOnWithoutConfirmation,
-    testPresumedConfirmationAndSingleTenantView,
+    testCardShowsWhenAgentsFallBackOnIt,
+    testConfirmationKeyLength,
+    testConfirmationByAUserNoLongerFoundAndSingleTenantView,
     testAgentsWaitWithoutConsumingTheQuota,
-    testMcpCountsNothingWithoutConfirmation,
+    testMcpWorksAndCountsAsBefore,
+    testAgentToolsDoNotWaitForTheAssistant,
     testCapabilitiesNameTheConfirmation,
     testPlatformFieldsAreValidated,
     testPlatformViewShowsTheKeyChange,

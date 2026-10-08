@@ -63,6 +63,7 @@ function renderPage() {
 }
 
 const ASK_AGAIN = 'Every workspace that uses the included model will be asked to confirm again before its next AI request.';
+const MISSING = 'Enter the provider name and the processing location shown to customers before saving.';
 
 describe('AdminPlatformAiPage included model identity', () => {
   beforeEach(() => {
@@ -136,6 +137,50 @@ describe('AdminPlatformAiPage included model identity', () => {
       disclosure_name: 'Anthropic',
       disclosure_location: 'US',
     }));
+  });
+
+  it('stops a new endpoint saved without the shown name and location, and flags both fields', async () => {
+    config = platformConfig({ disclosure_name: null, disclosure_location: null, disclosure_key: null });
+    renderPage();
+    const location = await screen.findByRole('combobox', { name: 'Where data is processed' });
+    expect(location).toHaveTextContent('e.g. United States');
+    fireEvent.mouseDown(location);
+    const listbox = await screen.findByRole('listbox');
+    expect(within(listbox).queryByRole('option', { name: 'Not set' })).not.toBeInTheDocument();
+    fireEvent.keyDown(listbox, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText('Endpoint URL'), { target: { value: 'https://llm-gateway.example.com/v1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText(MISSING)).toBeInTheDocument();
+    expect(api.patch).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Provider name shown to customers')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('combobox', { name: 'Where data is processed' }).closest('.MuiInputBase-root')).toHaveClass('Mui-error');
+
+    // Filled in: saved with the change.
+    fireEvent.change(screen.getByLabelText('Provider name shown to customers'), { target: { value: 'Anthropic' } });
+    expect(screen.getByLabelText('Provider name shown to customers')).toHaveAttribute('aria-invalid', 'false');
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Where data is processed' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'United States' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith('/admin/ai/config', {
+      endpoint_url: 'https://llm-gateway.example.com/v1',
+      disclosure_name: 'Anthropic',
+      disclosure_location: 'US',
+    }));
+  });
+
+  it('stops a save that empties the shown name', async () => {
+    renderPage();
+    fireEvent.change(await screen.findByLabelText('Provider name shown to customers'), { target: { value: '  ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText(MISSING)).toBeInTheDocument();
+    expect(api.patch).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Provider name shown to customers')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('combobox', { name: 'Where data is processed' }).closest('.MuiInputBase-root')).not.toHaveClass('Mui-error');
   });
 
   it('fills the identity for the first time without asking', async () => {

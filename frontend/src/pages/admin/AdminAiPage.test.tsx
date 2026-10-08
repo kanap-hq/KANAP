@@ -182,11 +182,11 @@ describe('AdminAiPage included model', () => {
   function provider(overrides: Record<string, unknown>) {
     return {
       in_use: true,
+      used_by_assistant: true,
       ...US,
       accepted: false,
       accepted_at: null,
       accepted_by_name: null,
-      presumed: false,
       ...overrides,
     };
   }
@@ -210,7 +210,12 @@ describe('AdminAiPage included model', () => {
             },
           });
         case '/ai/model-configs':
-          return Promise.resolve({ data: { model_configs: [], secret_writable: true } });
+          return Promise.resolve({
+            data: {
+              model_configs: [{ id: 'model-1', name: 'Our model', status: 'active', is_default: false }],
+              secret_writable: true,
+            },
+          });
         case '/ai/admin/keys':
           return Promise.resolve({ data: [] });
         default:
@@ -220,12 +225,48 @@ describe('AdminAiPage included model', () => {
     (api.patch as any).mockResolvedValue({ data: { settings: {} } });
   });
 
-  it('shows nothing about it when the assistant does not run on it', async () => {
-    settings = baseSettings({ builtin_provider: provider({ in_use: false }) });
+  it('shows nothing about it when everything runs on a model of the workspace', async () => {
+    settings = baseSettings({ builtin_provider: provider({ in_use: false, used_by_assistant: false }) });
     renderPage();
     await screen.findByRole('heading', { name: 'Provider' });
     expect(screen.queryByTestId('included-model-status')).not.toBeInTheDocument();
     expect(screen.queryByText('Needs confirmation')).not.toBeInTheDocument();
+  });
+
+  it('offers the confirmation when only agents fall back on it', async () => {
+    settings = baseSettings({
+      chat_enabled: true,
+      chat_model_config_id: 'model-1',
+      chat_ready: true,
+      builtin_provider: provider({ used_by_assistant: false }),
+    });
+    renderPage();
+
+    const status = await screen.findByTestId('included-model-status');
+    expect(within(status).getByText('Needs confirmation')).toBeInTheDocument();
+    expect(within(status).getByRole('button', { name: 'Confirm' })).toBeInTheDocument();
+    // The assistant runs on its own model: its readiness shows as usual.
+    expect(screen.getByText('Provider ready')).toBeInTheDocument();
+
+    fireEvent.click(within(status).getByRole('button', { name: 'Confirm' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith('/ai/settings', { accept_builtin_provider_key: 'anthropic||Anthropic|US' }));
+  });
+
+  it('keeps the validation list of the assistant\'s own model while agents wait for the included model', async () => {
+    settings = baseSettings({
+      chat_enabled: true,
+      chat_model_config_id: 'model-1',
+      chat_ready: false,
+      provider_validation_errors: ['API key is required.'],
+      builtin_provider: provider({ used_by_assistant: false }),
+    });
+    renderPage();
+
+    await screen.findByTestId('included-model-status');
+    expect(screen.getByText('Current provider validation errors')).toBeInTheDocument();
+    expect(screen.getByText('Provider incomplete')).toBeInTheDocument();
   });
 
   it('asks for a confirmation and sends the key shown', async () => {
@@ -239,8 +280,9 @@ describe('AdminAiPage included model', () => {
     const status = await screen.findByTestId('included-model-status');
     expect(within(status).getByText('KANAP included model: Anthropic (processing location: United States)')).toBeInTheDocument();
     expect(within(status).getByText('Needs confirmation')).toBeInTheDocument();
-    // The status line says it: no validation list on top.
+    // The status line says it: no validation list and no "provider incomplete" chip on top.
     expect(screen.queryByText('Current provider validation errors')).not.toBeInTheDocument();
+    expect(screen.queryByText('Provider incomplete')).not.toBeInTheDocument();
 
     fireEvent.click(within(status).getByRole('button', { name: 'Confirm' }));
     const dialog = await screen.findByRole('dialog');
@@ -272,17 +314,45 @@ describe('AdminAiPage included model', () => {
     await waitFor(() => expect(api.patch).toHaveBeenCalledWith('/ai/settings', { accept_builtin_provider_key: null }));
   });
 
-  it('says when the confirmation was set automatically', async () => {
+  it('gives the date alone when the administrator who confirmed it is no longer found', async () => {
     const acceptedAt = '2026-10-08T06:00:00.000Z';
     settings = baseSettings({
       chat_enabled: true,
-      builtin_provider: provider({ accepted: true, accepted_at: acceptedAt, presumed: true }),
+      builtin_provider: provider({ accepted: true, accepted_at: acceptedAt, accepted_by_name: null }),
     });
     renderPage();
 
     const status = await screen.findByTestId('included-model-status');
     const date = new Date(acceptedAt).toLocaleDateString('en');
-    expect(within(status).getByText(`Confirmed automatically on ${date}, already in use`)).toBeInTheDocument();
+    expect(within(status).getByText(`Confirmed on ${date}`)).toBeInTheDocument();
+  });
+
+  it('keeps changes not saved yet when the included model is confirmed alone', async () => {
+    settings = baseSettings({ chat_ready: false, builtin_provider: provider({}) });
+    (api.patch as any).mockImplementation(async () => {
+      settings = {
+        ...settings,
+        chat_ready: true,
+        updated_at: '2026-10-02T08:00:00.000Z',
+        builtin_provider: provider({ accepted: true, accepted_at: '2026-10-02T08:00:00.000Z', accepted_by_name: 'Ada Martin' }),
+      };
+      return { data: { settings } };
+    });
+    renderPage();
+
+    const status = await screen.findByTestId('included-model-status');
+    fireEvent.click(screen.getByLabelText('Enable MCP'));
+    expect(screen.getByLabelText('Enable MCP')).toBeChecked();
+
+    fireEvent.click(within(status).getByRole('button', { name: 'Confirm' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+
+    await screen.findByText(/Confirmed by Ada Martin/);
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByLabelText('Enable MCP')).toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
+    await waitFor(() => expect(api.patch).toHaveBeenLastCalledWith('/ai/settings', { mcp_enabled: true }));
   });
 
   it('opens the confirmation when turning the assistant on, then saves both together', async () => {

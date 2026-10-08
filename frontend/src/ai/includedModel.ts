@@ -1,15 +1,19 @@
 import type { AiCapabilities } from './useAiCapabilities';
 
-/** The KANAP included model as a workspace sees it (`builtin_provider` of the AI settings). */
+/**
+ * The KANAP included model as a workspace sees it (`builtin_provider` of the AI settings).
+ * in_use: the assistant, or agents without a model of their own, would run on it;
+ * used_by_assistant: the assistant would.
+ */
 export type AiBuiltinProvider = {
   in_use: boolean;
+  used_by_assistant: boolean;
   name: string | null;
   location: string | null;
   key: string | null;
   accepted: boolean;
   accepted_at: string | null;
   accepted_by_name: string | null;
-  presumed: boolean;
 };
 
 /** Provider name, processing location and the key an administrator confirms. */

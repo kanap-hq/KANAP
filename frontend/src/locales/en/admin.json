@@ -193,7 +193,6 @@
       "needed": "The assistant and agents use it once an administrator confirms it.",
       "confirmedBy": "Confirmed by {{name}} on {{date}}",
       "confirmedOn": "Confirmed on {{date}}",
-      "confirmedAutomatically": "Confirmed automatically on {{date}}, already in use",
       "confirm": "Confirm",
       "withdraw": "Withdraw",
       "changed": "The provider or its processing location changed. Review it and confirm again.",
@@ -595,7 +594,8 @@
     "disclosure": {
       "title": "Shown to customers",
       "namePlaceholder": "e.g. Anthropic",
-      "locationNotSet": "Not set",
+      "locationPlaceholder": "e.g. United States",
+      "missing": "Enter the provider name and the processing location shown to customers before saving.",
       "hint": "Workspaces see this provider and location and confirm them before their first AI request. A new provider, endpoint, name or location asks them again; a new model does not. The included model stays unavailable until both fields are filled in.",
       "confirmTitle": "Change the provider shown to customers?",
       "confirmBody": "Every workspace that uses the included model will be asked to confirm again before its next AI request.",

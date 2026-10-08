@@ -28,8 +28,6 @@ export function IncludedModelStatus({ provider, disabled, onConfirm, onWithdraw 
   let detail: string;
   if (!provider.accepted) {
     detail = t('aiAdmin.includedModel.needed');
-  } else if (provider.presumed) {
-    detail = t('aiAdmin.includedModel.confirmedAutomatically', { date });
   } else if (provider.accepted_by_name) {
     detail = t('aiAdmin.includedModel.confirmedBy', { name: provider.accepted_by_name, date });
   } else {

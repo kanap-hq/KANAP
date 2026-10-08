@@ -17,6 +17,12 @@
 // gets. Use a private value on any tenant reachable from outside the machine,
 // or pass --demo-password '' to create the users without a password.
 //
+// --accept-included-model: on a cloud tenant that falls back on the KANAP included
+// model, confirms its provider and processing location as the tenant administrator
+// (the account of --email), in the request that turns the assistant on. Without it,
+// the assistant stays off and the demo agent has no demo run until an administrator
+// confirms the included model in Admin > Plaid.
+//
 // Server mode (`--server-mode`, no other argument) is for the API, which runs
 // the script on a tenant that was just activated. Its inputs come from the
 // environment only:
@@ -62,6 +68,7 @@ const options = {
   skipRelations: false,
   skipAgents: false,
   netboxTestCases: false,
+  acceptIncludedModel: false,
 };
 
 /** Stops before any request, with one line per problem. */
@@ -123,6 +130,8 @@ if (serverMode) {
     else if (arg === '--shift-years') options.yearShift = Number(argv[++i]);
     else if (arg === '--skip-relations') options.skipRelations = true;
     else if (arg === '--skip-agents') options.skipAgents = true;
+    // Confirms the KANAP included model as the tenant administrator (see the header).
+    else if (arg === '--accept-included-model') options.acceptIncludedModel = true;
     // Dev only: adds the deliberately duplicated asset used by the Netbox sync tests.
     else if (arg === '--netbox-test-cases') options.netboxTestCases = true;
     else throw new Error(`Unknown argument: ${arg}`);
@@ -1800,14 +1809,7 @@ async function ensureDemoAgent() {
   }
 
   // Agent triage runs on the tenant AI surface, which is disabled by default.
-  try {
-    await apiPatch('/ai/settings', { chat_enabled: true });
-  } catch (error) {
-    // On the KANAP included model, an administrator confirms its provider in the app first.
-    if (error.payload?.code !== 'BUILTIN_PROVIDER_CONFIRMATION_REQUIRED') throw error;
-    warn('The assistant and the demo agent wait for an administrator to confirm the KANAP included model in Admin > Plaid; no demo run yet');
-    return;
-  }
+  if (!(await turnAssistantOn())) return;
 
   try {
     await apiPost(`${cp}/helpdesk/ticketing-ingestion/poll`, {});
@@ -1821,6 +1823,45 @@ async function ensureDemoAgent() {
     ok('Ran a mock triage — a pending approval is now waiting on the Approvals page');
   } catch (error) {
     warn(`Mock triage failed (${error.message.split('\n')[0]}); the agent is created but has no demo run yet`);
+  }
+}
+
+/**
+ * Turns the assistant on. When the tenant falls back on the KANAP included model, an
+ * administrator confirms its provider first: with --accept-included-model, the key the
+ * API shows (GET /ai/settings) goes in the same request. Returns false when the
+ * assistant stays off.
+ */
+async function turnAssistantOn() {
+  const includedModelToConfirm = async () => {
+    if (!options.acceptIncludedModel) return null;
+    const provider = (await apiGet('/ai/settings'))?.settings?.builtin_provider;
+    return provider?.in_use && !provider.accepted && provider.key ? provider : null;
+  };
+
+  let provider = await includedModelToConfirm();
+  for (let attempt = 1; ; attempt += 1) {
+    const body = provider ? { chat_enabled: true, accept_builtin_provider_key: provider.key } : { chat_enabled: true };
+    try {
+      await apiPatch('/ai/settings', body);
+      if (provider) ok(`Confirmed the KANAP included model: ${provider.name}, processing location ${provider.location}`);
+      return true;
+    } catch (error) {
+      const code = error.payload?.code;
+      if (code === 'BUILTIN_PROVIDER_CHANGED' && attempt === 1) {
+        // The platform changed the included model meanwhile: read it once more.
+        provider = await includedModelToConfirm();
+        continue;
+      }
+      if (code === 'BUILTIN_PROVIDER_CONFIRMATION_REQUIRED' || code === 'BUILTIN_PROVIDER_CHANGED') {
+        const hint = !options.acceptIncludedModel
+          ? ', or rerun with --accept-included-model'
+          : code === 'BUILTIN_PROVIDER_CHANGED' ? ' (it changed again while the runner confirmed it)' : '';
+        warn(`The assistant stays off and the demo agent has no demo run: confirm the KANAP included model in Admin > Plaid${hint}`);
+        return false;
+      }
+      throw error;
+    }
   }
 }
 

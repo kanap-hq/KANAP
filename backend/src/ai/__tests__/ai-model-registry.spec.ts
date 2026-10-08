@@ -181,13 +181,14 @@ function createRegistryMock(validateResult: string[] = []) {
 function createResolver(state: State, opts?: { platformConfigured?: boolean; registry?: any }) {
   const manager = createManager(state);
   const platform = {
-    isConfigured: async () => opts?.platformConfigured !== false,
-    getBuiltinIdentity: async () => ({ name: 'Anthropic', location: 'US', key: 'anthropic||Anthropic|US' }),
-    getRuntimeConfig: async () => ({
+    getBuiltinRuntime: async (runtimeOpts?: { withSecrets?: boolean }) => (opts?.platformConfigured === false ? null : {
+      identity: { name: 'Anthropic', location: 'US', key: 'anthropic||Anthropic|US' },
       provider: 'anthropic',
       model: 'claude-builtin',
-      endpoint_url: null,
-      apiKey: 'platform-key',
+      endpointUrl: null,
+      apiKey: runtimeOpts?.withSecrets ? 'platform-key' : null,
+      hasApiKey: true,
+      rateLimits: { tenantPerMinute: 30, userPerHour: 60 },
     }),
   };
   const registry = opts?.registry ?? createRegistryMock();
@@ -314,6 +315,7 @@ async function testResolverBuiltinFallbackInMultiTenant() {
   assert.equal(resolved.priceInputEurPerMtok, 0);
   assert.equal(resolved.priceOutputEurPerMtok, 0);
   assert.equal(resolved.timeoutMs, null);
+  assert.deepEqual(resolved.builtinRateLimits, { tenantPerMinute: 30, userPerHour: 60 });
 
   const unconfigured = createResolver(createState(), { platformConfigured: false });
   await assert.rejects(
