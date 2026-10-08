@@ -17,11 +17,13 @@ Nothing in KANAP is hard-wired to one model. Each consumer — Plaid and each ag
 
 1. **The model assigned to that consumer**, if there is one.
 2. Otherwise, **the organization's default model** — the one marked with a star on this page.
-3. Otherwise, **the KANAP included model**.
+3. Otherwise, **the KANAP included model**, once an administrator has confirmed its provider and processing location.
 
 So there is exactly one default per organization, and anything you never touch follows it. Change the default and every unassigned consumer moves with it — that is the point of having one.
 
 The third step only exists on KANAP's hosted service. On an on-premise installation there is no included model, so if nothing is assigned and no default is set, the chain simply runs out: the Plaid settings page reports that no model is configured and chat won't answer, while agents keep running but skip the steps that need a model — they fall back to their non-AI behaviour rather than failing outright. Registering a model fixes it — star it as the default so everything picks it up at once, or assign it consumer by consumer.
+
+On the hosted service, the third step has one condition. Plaid and the agents that would use the included model wait until an administrator confirms its provider, and the Plaid settings page and the agents page say so. A model you add never needs a confirmation. See [Confirming the KANAP included model](ai-settings.md#confirming-the-kanap-included-model).
 
 You cannot break this chain by tidying the list: a model that anything still points at cannot be archived in the first place, and should an assignment ever end up pointing at an archived model, the consumer falls back to the default rather than failing.
 
@@ -56,6 +58,7 @@ On the hosted service, the first row of the table is always **KANAP included mod
 - In the **Usage** column it shows your **included messages this month** with a progress bar, so you can see how much of the monthly allowance is left. A message is one question asked of Plaid, one request from an external assistant connected over MCP, or one ticket reviewed by an agent — all three draw on the same allowance. That bar is the included-model quota; it is not the same figure as the message counts on the models you add.
 - It shows a filled star in the **Default** column whenever no active model of your own is starred — that is the "nothing configured" fallback in visible form. Click its empty star to clear your current default and fall back to it. You still cannot edit or archive it.
 - It has no edit or archive actions: those belong to the models you add. It is simply always there.
+- Plaid and the agents use it only after an administrator confirms the provider and where it processes data, on the [Plaid Settings](ai-settings.md#confirming-the-kanap-included-model) page. Models you add are not subject to that step.
 
 On an on-premise installation this row does not appear at all.
 

@@ -32,6 +32,9 @@ Otras dos superficies de IA se confunden fácilmente con los agentes, pero son c
 
 ## El panel de la flota
 
+!!! note "Agentes a la espera de una confirmación"
+    En el servicio alojado, un agente sin modelo propio funciona con el modelo incluido de KANAP cuando un administrador ha confirmado su proveedor. Hasta entonces, un aviso en la parte superior de la página dice *Los agentes que usan el modelo incluido de KANAP están en pausa hasta que un administrador lo confirme en Administración > Plaid.* Los administradores encuentran en él un botón **Abrir la configuración de Plaid**. Los agentes fijados a un modelo que usted añadió siguen funcionando. Consulte [Confirmar el modelo incluido de KANAP](ai-settings.md#confirmar-el-modelo-incluido-de-kanap).
+
 En la parte superior hay cinco cifras agrupadas. Describen toda la flota, no un agente concreto:
 
 - **Aprobaciones pendientes** — cuántas propuestas de toda la flota esperan ahora mismo una decisión humana. Es la misma cifra que alimenta el indicador de la barra lateral.
@@ -118,5 +121,5 @@ La guía de fondo reutilizable que quiere que varios agentes compartan vive en l
 - **La cifra de coste es la factura honesta de la flota.** Cubre todos los agentes que tenga en marcha. Si sube más rápido de lo que esperaba, la causa habitual es un agente que comprueba mucho más a menudo de lo que su cola justifica: mire **Comprobar cada (minutos)** antes que ninguna otra cosa.
 - **Un recuento creciente de fallidos es su alerta temprana.** La ficha **N fallidos** muestra el trabajo que se atascó. Abra el agente y despeje los elementos **Requiere atención** antes de que se acumulen: normalmente apuntan a un problema de conexión o a un ticket que cambió bajo el agente.
 - **Solo manual antes que Vigilancia.** Un agente creado desde **Nuevo agente** está intencionadamente en **No iniciado**. Ejecútelo primero manualmente sobre un puñado de tickets representativos desde su espacio; páselo a **Vigilancia** solo cuando esté satisfecho con lo que redacta.
-- **El modo automático se gana y es reversible.** Promover un tipo de acción a automático no elimina ninguna barrera de protección: los presupuestos diarios y por ejecución, las comprobaciones de frescura y las pausas siguen aplicándose, y una aceptación que decaiga hará que el tipo de acción vuelva a preguntar primero. Los tipos de acción que el solicitante puede ver piden además una confirmación explícita.
+- **El modo automático se gana y es reversible.** Promover un tipo de acción a automático no elimina ninguna barrera de protección: los presupuestos diarios y por ejecución, las comprobaciones de frescura y las pausas siguen aplicándose, un tipo de acción que tiene una mala hora espera su aprobación, y uno cuya aceptación cae por debajo de la mitad vuelve a preguntar primero (véase [La escala de autonomía](agents-workspace.md#la-escala-de-autonomia)). Los tipos de acción que el solicitante puede ver piden además una confirmación explícita.
 - **Prefiera la pausa por agente.** Recurra a **Pausar todos los agentes** solo ante un problema genuino de toda la flota. Para un único agente ruidoso, la pausa de su propio espacio mantiene el resto de su flota funcionando.

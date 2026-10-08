@@ -16,6 +16,9 @@ Plaid does not replace the rest of the application. It is a faster way to summar
 
 The workspace is also available to administrators with `ai_chat:admin`, who can see and moderate everything regular users do.
 
+!!! note "Waiting for an administrator"
+    On the hosted service, Plaid can run on the KANAP included model. Before it does, an administrator confirms the provider and where it processes data. Until then the workspace shows *An administrator must confirm the AI provider in Admin > Plaid.* instead of the chat. An administrator does this on the [Plaid Settings](ai-settings.md#confirming-the-kanap-included-model) page. Organizations that use a model of their own never see this notice.
+
 ## Starting a conversation
 
 When you open Plaid for the first time, you land on a welcome screen with:
@@ -134,7 +137,7 @@ Nothing that mutates KANAP data is applied silently. The preview is the gate.
 
 Above the composer, two small indicators help you stay aware of cost and limits:
 
-- **Built-in usage**: when Plaid is running on the KANAP included model rather than one of your organization's own models, this shows how many messages remain in the current month and the date the quota resets. When the limit is reached, the composer is disabled and a helper text invites administrators to switch to a model of their own — see [AI models](ai-models.md).
+- **Built-in usage**: when Plaid is running on the KANAP included model rather than one of your organization's own models, this shows how many messages remain in the current month and the date the quota resets. An administrator has confirmed that model beforehand (see [Plaid Settings](ai-settings.md#confirming-the-kanap-included-model)). When the limit is reached, the composer is disabled and a helper text invites administrators to switch to a model of their own; see [AI models](ai-models.md).
 - **Token usage**: a thin bar with input/output token counters for the current conversation, plus the size of the last request. Long conversations get more expensive over time; the bar makes that cost visible so you can decide when to start a fresh thread.
 
 The token usage bar only appears once the conversation has at least one exchange.

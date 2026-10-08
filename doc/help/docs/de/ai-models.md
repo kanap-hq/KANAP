@@ -17,11 +17,13 @@ In KANAP ist nichts fest auf ein Modell verdrahtet. Jeder Verbraucher — Plaid 
 
 1. **Das diesem Verbraucher zugewiesene Modell**, sofern es eines gibt.
 2. Andernfalls das **Standardmodell der Organisation** — dasjenige, das auf dieser Seite mit dem Stern markiert ist.
-3. Andernfalls das **Inklusive KANAP-Modell**.
+3. Andernfalls das **Inklusive KANAP-Modell**, sobald ein Administrator seinen Anbieter und seinen Verarbeitungsort bestätigt hat.
 
 Es gibt also genau einen Standard pro Organisation, und alles, was Sie nie anfassen, folgt ihm. Ändern Sie den Standard, und jeder nicht zugewiesene Verbraucher zieht mit — genau dafür ist er da.
 
 Der dritte Schritt existiert nur im gehosteten Dienst von KANAP. In einer On-Premise-Installation gibt es kein inklusives Modell: Ist nichts zugewiesen und kein Standard gesetzt, läuft die Kette schlicht aus. Die Plaid-Einstellungsseite meldet dann, dass kein Modell konfiguriert ist, und der Chat antwortet nicht; die Agenten laufen zwar weiter, überspringen aber die Schritte, die ein Modell benötigen — sie fallen auf ihr Verhalten ohne KI zurück, statt komplett zu scheitern. Ein registriertes Modell behebt das: Markieren Sie es mit dem Stern als Standard, damit alles auf einen Schlag darauf zugreift, oder weisen Sie es Verbraucher für Verbraucher zu.
+
+Im gehosteten Dienst knüpft der dritte Schritt an eine Bedingung. Plaid und die Agenten, die das inklusive Modell nutzen würden, warten, bis ein Administrator dessen Anbieter bestätigt hat, und die Plaid-Einstellungsseite sowie die Agentenseite weisen darauf hin. Ein Modell, das Sie selbst anlegen, braucht nie eine Bestätigung. Siehe [Das inklusive KANAP-Modell bestätigen](ai-settings.md#das-inklusive-kanap-modell-bestatigen).
 
 Durch Aufräumen der Liste können Sie diese Kette nicht zerreißen: Ein Modell, auf das noch etwas zeigt, lässt sich gar nicht erst archivieren; und sollte eine Zuweisung doch einmal auf ein archiviertes Modell zeigen, fällt der Verbraucher auf den Standard zurück, statt zu scheitern.
 
@@ -56,6 +58,7 @@ Im gehosteten Dienst ist die erste Zeile der Tabelle immer **Inklusives KANAP-Mo
 - In der Spalte **Nutzung** zeigt es Ihre **inklusiven Nachrichten in diesem Monat** mit einem Fortschrittsbalken, sodass Sie sehen, wie viel des Monatskontingents noch übrig ist. Eine Nachricht ist eine an Plaid gestellte Frage, eine Anfrage eines externen Assistenten über MCP oder ein von einem Agenten geprüftes Ticket — alle drei schöpfen aus demselben Kontingent. Dieser Balken ist das Kontingent des inklusiven Modells; es ist nicht dieselbe Zahl wie die Nachrichtenzähler der Modelle, die Sie anlegen.
 - Es zeigt in der Spalte **Standard** einen ausgefüllten Stern, solange keines Ihrer eigenen aktiven Modelle mit dem Stern markiert ist — der Rückfall „nichts konfiguriert“ in sichtbarer Form. Klicken Sie auf seinen leeren Stern, um Ihren aktuellen Standard zu löschen und darauf zurückzufallen. Bearbeiten oder archivieren können Sie es weiterhin nicht.
 - Es hat keine Bearbeiten- oder Archivieren-Aktionen: die gehören zu den Modellen, die Sie selbst anlegen. Es ist einfach immer da.
+- Plaid und die Agenten nutzen es erst, nachdem ein Administrator den Anbieter und den Ort der Datenverarbeitung auf der Seite [Plaid-Einstellungen](ai-settings.md#das-inklusive-kanap-modell-bestatigen) bestätigt hat. Modelle, die Sie selbst anlegen, unterliegen diesem Schritt nicht.
 
 In einer On-Premise-Installation erscheint diese Zeile überhaupt nicht.
 

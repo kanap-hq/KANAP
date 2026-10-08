@@ -32,6 +32,9 @@ Deux autres surfaces IA se confondent facilement avec les agents, mais sont des 
 
 ## Le tableau de bord du parc
 
+!!! note "Agents en attente d'une confirmation"
+    Sur le service hébergé, un agent sans modèle propre s'exécute sur le modèle inclus KANAP une fois qu'un administrateur en a confirmé le fournisseur. Jusque-là, un bandeau en haut de la page indique *Les agents qui utilisent le modèle inclus KANAP sont en pause jusqu'à ce qu'un administrateur le confirme dans Administration > Plaid.* Les administrateurs y trouvent un bouton **Ouvrir les réglages Plaid**. Les agents rattachés à un modèle que vous avez ajouté continuent de fonctionner. Voir [Confirmer le modèle inclus KANAP](ai-settings.md#confirmer-le-modele-inclus-kanap).
+
 Cinq indicateurs mutualisés figurent en haut. Ils décrivent l'ensemble du parc, et non les chiffres d'un agent en particulier :
 
 - **Approbations en attente** — combien de propositions, sur l'ensemble du parc, attendent une décision humaine en ce moment. C'est le même nombre qui alimente le badge de la barre latérale.
@@ -118,5 +121,5 @@ La guidance de fond réutilisable que vous souhaitez partager entre plusieurs ag
 - **La tuile de coût est la facture honnête du parc.** Elle couvre tous les agents que vous faites tourner. Si elle grimpe plus vite que prévu, la cause habituelle est un agent qui contrôle bien plus souvent que sa file ne le justifie — regardez **Contrôler toutes les (minutes)** avant toute autre chose.
 - **Un nombre d'échecs qui augmente est votre signal d'alerte précoce.** La puce **N en échec** fait remonter le travail bloqué. Ouvrez l'agent et traitez les éléments **Attention requise** avant qu'ils ne s'accumulent — ils pointent généralement vers un problème de connexion ou un ticket qui a changé sous l'agent.
 - **Manuel uniquement avant Surveillance.** Un agent créé depuis **Nouvel agent** est intentionnellement en **Non démarré**. Exécutez-le d'abord manuellement sur une poignée de tickets représentatifs depuis son espace ; ne le passez en **Surveillance** qu'une fois satisfait de ce qu'il rédige.
-- **L'automatique se mérite et se révoque.** Promouvoir un type d'action en automatique ne supprime aucun garde-fou — les budgets quotidiens et par exécution, les contrôles de fraîcheur et les pauses s'appliquent toujours, et un taux d'acceptation qui baisse ramènera le type d'action en demander d'abord. Les types d'action que le demandeur peut voir exigent en outre une confirmation explicite.
+- **L'automatique se mérite et se révoque.** Promouvoir un type d'action en automatique ne supprime aucun garde-fou : les budgets quotidiens et par exécution, les contrôles de fraîcheur et les pauses s'appliquent toujours, un type d'action qui connaît une mauvaise heure attend votre approbation, et un type dont l'acceptation tombe sous la moitié repasse en demander d'abord (voir [L'échelle d'autonomie](agents-workspace.md#lechelle-dautonomie)). Les types d'action que le demandeur peut voir exigent en outre une confirmation explicite.
 - **Préférez la pause propre à l'agent.** Ne recourez à **Mettre tous les agents en pause** que pour un véritable problème à l'échelle du parc. Pour un seul agent bruyant, la pause de son propre espace laisse le reste de votre parc fonctionner.

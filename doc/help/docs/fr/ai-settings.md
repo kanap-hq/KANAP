@@ -19,13 +19,29 @@ Cette page pilote l'[assistant de chat Plaid](ai-assistant.md) : le modèle IA a
 Un unique sélecteur décide quel modèle répond aux questions du chat :
 
 - **Modèle par défaut (*nom*)** — le modèle par défaut de l'organisation défini sur la page [Modèles IA](ai-models.md), nommé pour que vous voyiez ce que vous obtenez. C'est la première option et la réponse habituelle : laissez le sélecteur ici et Plaid suivra le modèle par défaut où que vous le déplaciez.
-- **Modèle inclus KANAP** — affiché à la place de l'option précédente lorsqu'aucun modèle par défaut n'est défini, sur le service hébergé. Plaid fonctionne alors sur le modèle inclus dans votre abonnement, dans la limite de son volume mensuel de messages.
+- **Modèle inclus KANAP** : affiché à la place de l'option précédente lorsqu'aucun modèle par défaut n'est défini, sur le service hébergé. Plaid fonctionne alors sur le modèle inclus dans votre abonnement, dans la limite de son volume mensuel de messages. Un administrateur confirme d'abord le fournisseur et le lieu où il traite les données : voir [Confirmer le modèle inclus KANAP](#confirmer-le-modele-inclus-kanap).
 - **Aucun modèle configuré** — affiché lorsqu'il n'y a ni modèle par défaut *ni* modèle inclus, c'est-à-dire le cas d'une installation on-premise. Notez que cette option continue d'afficher *Aucun modèle configuré* tant qu'aucun modèle n'a été marqué d'une étoile comme modèle par défaut de l'organisation, même si vous en avez déjà enregistré plusieurs : elle décrit le repli, pas votre registre.
 - **N'importe quel modèle actif, par son nom** — épinglez Plaid à un modèle précis, indépendamment du modèle par défaut. Les modèles archivés ne sont pas proposés.
 
 Il y a donc deux façons de faire fonctionner le chat : marquer un modèle par défaut d'une étoile sur la page [Modèles IA](ai-models.md) et laisser ce sélecteur sur la première option, ou choisir ici un modèle par son nom. Épingler un modèle ici fonctionne qu'un modèle par défaut existe ou non.
 
 L'indication en dessous renvoie directement vers la page **Modèles IA**, d'où proviennent toutes les options de la liste. Il n'y a plus ici ni fournisseur, ni point d'accès, ni clé API à renseigner, ni commutateur multimodal distinct : la capacité du modèle à lire les images est une propriété du modèle, définie une fois pour toutes dans son éditeur.
+
+### Confirmer le modèle inclus KANAP
+
+Sur le service hébergé, un administrateur confirme quel fournisseur reçoit vos données avant que Plaid ou un agent n'utilise le modèle inclus. D'ici là, ils attendent.
+
+Lorsque Plaid, ou un agent sans modèle propre, s'exécuterait sur le modèle inclus, une ligne d'état apparaît dans la carte Fournisseur. Elle nomme le fournisseur et le lieu où il traite les données, par exemple *Modèle inclus KANAP : Anthropic (lieu de traitement : États-Unis)*. **À confirmer** ou **Confirmé** s'affiche à côté. Sous la ligne, vous voyez qui a confirmé et quand. Si Plaid et tous vos agents utilisent des modèles que vous avez ajoutés, la ligne n'apparaît pas et il n'y a rien à confirmer.
+
+Une confirmation couvre ce que ces fonctions envoient au fournisseur : les questions posées à Plaid, les questions sur lesquelles travaillent les agents et les données KANAP qu'ils lisent pour y répondre.
+
+- **Confirmer** enregistre votre confirmation. Cela n'active pas Plaid.
+- **Activer le chat** demande la confirmation lorsqu'elle manque encore. Activez-le et enregistrez : une fenêtre affiche le fournisseur et le lieu de traitement. **Confirmer et activer** enregistre vos modifications et la confirmation ensemble. Si vous fermez la fenêtre, rien n'est enregistré. La fenêtre renvoie aussi vers la page [Modèles IA](ai-models.md), si vous préférez utiliser votre propre modèle.
+- **Retirer** supprime la confirmation, après une seconde confirmation. Les fonctions d'IA qui utilisent le modèle inclus s'arrêtent jusqu'à ce qu'un administrateur confirme à nouveau. Plaid reste activé et affiche un avis à ses utilisateurs.
+- Une nouvelle confirmation est demandée lorsque le fournisseur, son adresse de connexion, le nom affiché ou le lieu de traitement change. Un nouveau modèle du même fournisseur n'en demande pas. Si le fournisseur change pendant que votre fenêtre est ouverte, elle affiche le nouveau et vous demande de le vérifier.
+- Plaid et les agents qui s'exécutent sur un modèle que vous avez ajouté n'ont besoin d'aucune confirmation. Les assistants externes connectés via MCP n'en dépendent pas non plus, car MCP n'envoie rien au modèle inclus.
+
+Sur une installation on-premise, il n'y a pas de modèle inclus : cette section ne s'applique pas.
 
 ### Utilisation intégrée
 
@@ -43,7 +59,7 @@ L'en-tête de la carte Fournisseur affiche trois indicateurs consultables d'un c
 
 - **Chat activé / Chat désactivé** — l'interrupteur principal du chat pour les utilisateurs finaux
 - **MCP activé / MCP désactivé** — indique si les clients MCP externes peuvent se connecter
-- **Fournisseur prêt / Fournisseur incomplet** — indique si le modèle vers lequel Plaid se résout est réellement utilisable
+- **Fournisseur prêt / Fournisseur incomplet** : indique si le modèle vers lequel Plaid se résout est réellement utilisable. Tant que seule la confirmation du modèle inclus manque, ce voyant est masqué et la ligne d'état ci-dessus le remplace.
 
 Lorsqu'il manque quelque chose, **Erreurs de validation du fournisseur actuel** le liste au-dessus du formulaire — un modèle incomplet, ou aucun modèle du tout. La correction se fait normalement sur la page [Modèles IA](ai-models.md) plutôt qu'ici.
 
@@ -53,8 +69,8 @@ Lorsqu'il manque quelque chose, **Erreurs de validation du fournisseur actuel** 
 
 La section **Fonctionnalités** active ou désactive les surfaces d'IA facultatives :
 
-- **Activer le chat** — active ou désactive l'espace de chat intégré pour les utilisateurs finaux. Il ne peut pas être activé tant que l'en-tête affiche **Fournisseur incomplet** : l'enregistrement est refusé avec la liste des raisons, et vous les corrigez d'abord sur la page [Modèles IA](ai-models.md). Le même contrôle s'exécute à chaque enregistrement tant que le chat est déjà activé : un modèle devenu incomplet par la suite bloquera donc des modifications sans rapport sur cette page tant qu'il n'aura pas été réglé.
-- **Activer MCP** — active ou désactive l'API MCP pour les clients externes.
+- **Activer le chat** : active ou désactive l'espace de chat intégré pour les utilisateurs finaux. Il ne peut pas être activé tant que l'en-tête affiche **Fournisseur incomplet** : l'enregistrement est refusé avec la liste des raisons, et vous les corrigez d'abord sur la page [Modèles IA](ai-models.md). Une confirmation manquante du modèle inclus fait exception : l'enregistrement ouvre alors la fenêtre de confirmation. Le même contrôle s'exécute à chaque enregistrement tant que le chat est déjà activé : un modèle devenu incomplet par la suite bloquera donc des modifications sans rapport sur cette page tant qu'il n'aura pas été réglé.
+- **Activer MCP** : active ou désactive l'API MCP pour les clients externes. Elle n'attend pas la confirmation du modèle inclus. Les requêtes MCP comptent quand même dans le volume mensuel inclus lorsque Plaid utiliserait ce modèle.
 - **Recherche web** — permet à l'assistant de chat Plaid d'effectuer des recherches sur le web. Cela nécessite que la clé de recherche web au niveau de l'instance soit configurée ; sans elle, le commutateur est désactivé et une infobulle en explique la raison. Son activation lance automatiquement un test de connectivité et en signale le résultat. Ce commutateur s'applique **uniquement à l'assistant de chat** — les agents IA disposent de leur propre réglage de recherche web indépendant, dans l'onglet [Paramètres](agents-workspace.md) de chaque agent, qui repose sur la même configuration au niveau de l'instance.
 
 ---

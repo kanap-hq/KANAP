@@ -16,6 +16,9 @@ Plaid no reemplaza al resto de la aplicación. Es una forma más rápida de resu
 
 El espacio de trabajo también está disponible para los administradores con `ai_chat:admin`, que pueden ver y moderar todo lo que hacen los usuarios habituales.
 
+!!! note "A la espera de un administrador"
+    En el servicio alojado, Plaid puede funcionar con el modelo incluido de KANAP. Antes, un administrador confirma el proveedor y el lugar donde trata los datos. Hasta entonces, el espacio de trabajo muestra *Un administrador debe confirmar el proveedor de IA en Administración > Plaid.* en lugar del chat. Un administrador lo hace en la página [Configuración de Plaid](ai-settings.md#confirmar-el-modelo-incluido-de-kanap). Las organizaciones que usan un modelo propio nunca ven este aviso.
+
 ## Iniciar una conversación
 
 Cuando abre Plaid por primera vez, llega a una pantalla de bienvenida con:
@@ -134,7 +137,7 @@ Nada que modifique los datos de KANAP se aplica de forma silenciosa. La vista pr
 
 Encima del cuadro de redacción, dos pequeños indicadores le ayudan a estar al tanto del coste y los límites:
 
-- **Uso integrado**: cuando Plaid funciona con el modelo incluido de KANAP en lugar de con uno de los modelos propios de su organización, esto muestra cuántos mensajes quedan en el mes actual y la fecha en la que se restablece la cuota. Cuando se alcanza el límite, el cuadro de redacción se desactiva y un texto de ayuda invita a los administradores a cambiar a un modelo propio; consulte [Modelos IA](ai-models.md).
+- **Uso integrado**: cuando Plaid funciona con el modelo incluido de KANAP en lugar de con uno de los modelos propios de su organización, esto muestra cuántos mensajes quedan en el mes actual y la fecha en la que se restablece la cuota. Un administrador ha confirmado ese modelo antes (consulte [Configuración de Plaid](ai-settings.md#confirmar-el-modelo-incluido-de-kanap)). Cuando se alcanza el límite, el cuadro de redacción se desactiva y un texto de ayuda invita a los administradores a cambiar a un modelo propio; consulte [Modelos IA](ai-models.md).
 - **Uso de tokens**: una barra fina con contadores de tokens de entrada/salida para la conversación actual, además del tamaño de la última solicitud. Las conversaciones largas se vuelven más caras con el tiempo; la barra hace visible ese coste para que pueda decidir cuándo iniciar un nuevo hilo.
 
 La barra de uso de tokens solo aparece una vez que la conversación tiene al menos un intercambio.
