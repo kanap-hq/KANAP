@@ -27,10 +27,11 @@ La página principal muestra una tarjeta para cada informe disponible con una br
 | **Cuentas de consolidación** | Presupuesto OPEX o CAPEX agrupado por cuenta de consolidación |
 | **Dimensiones analíticas** | Presupuesto OPEX o CAPEX agrupado por dimensión analítica |
 | **Plantilla por mes** | ETC mensuales por centro de coste, partida, proveedor o dimensión analítica |
+| **Coste por ETC** | Coste anual de un ETC por centro de coste, partida, proveedor o dimensión analítica, en varias columnas de presupuesto y años |
 
 ### Elegir OPEX o CAPEX
 
-**Top partidas**, **Top aumento / disminución**, **Cuentas de consolidación**, **Dimensiones analíticas** y **Plantilla por mes** empiezan con un conmutador **OPEX** / **CAPEX**, el primer control de la barra de filtros.
+**Top partidas**, **Top aumento / disminución**, **Cuentas de consolidación**, **Dimensiones analíticas**, **Plantilla por mes** y **Coste por ETC** empiezan con un conmutador **OPEX** / **CAPEX**, el primer control de la barra de filtros.
 
 - El informe se abre en un tipo que usted puede consultar, primero OPEX. Un tipo que no puede consultar aparece desactivado.
 - La dirección de la página conserva el tipo elegido (`?scope=opex` o `?scope=capex`), de modo que un enlace guardado o compartido se abre en el mismo tipo.
@@ -61,7 +62,7 @@ Cada selector de columna o de métrica ofrece las columnas presupuestarias que m
 
 ### Filtros de centro de coste, de Run o build y de dimensiones analíticas
 
-Los siete informes presupuestarios (**Top partidas**, **Top aumento / disminución**, **Tendencia presupuestaria (OPEX)**, **Tendencia presupuestaria (CAPEX)**, **Comparación de columnas presupuestarias**, **Cuentas de consolidación** y **Dimensiones analíticas**) y **Plantilla por mes** se pueden limitar a una parte del presupuesto con estos filtros:
+Los siete informes presupuestarios (**Top partidas**, **Top aumento / disminución**, **Tendencia presupuestaria (OPEX)**, **Tendencia presupuestaria (CAPEX)**, **Comparación de columnas presupuestarias**, **Cuentas de consolidación** y **Dimensiones analíticas**), **Plantilla por mes** y **Coste por ETC** se pueden limitar a una parte del presupuesto con estos filtros:
 
 - **Centro de coste**: elija un centro de coste o un grupo. Un grupo incluye todo lo que tiene por debajo, también los centros de coste desactivados, ya que sus líneas siguen perteneciendo al grupo. **Todos los centros de coste** quita el filtro. Consulte [Centros de coste](cost-centers.md).
 - **Run o build**: **Todos**, **Run**, **Build** o **Sin definir** para las líneas que no tienen ninguno de los dos.
@@ -457,6 +458,51 @@ Una línea bajo la tabla para cada caso, cuando se da:
 ### Exportar
 
 - **Exportar tabla como CSV**: El nombre del archivo lleva el tipo, el año, la columna y la agrupación, por ejemplo `staffing-opex-2026-budget-cost-center.csv`
+- **Exportar gráfico como PNG**: El mismo nombre, como imagen PNG
+- **Imprimir / Guardar como PDF**
+
+---
+
+## Coste por ETC
+
+Vea cuánto cuesta un ETC en cada parte del presupuesto y cómo evoluciona ese coste entre columnas presupuestarias y años. El informe divide el coste de las líneas de cantidad y precio en personas o días entre sus ETC. Consulte [Cantidad y precio](opex.md#cantidad-y-precio) y [ETC](opex.md#etc).
+
+### Controles
+
+- **Tipo de partida**: OPEX o CAPEX (ver [Elegir OPEX o CAPEX](#elegir-opex-o-capex))
+- **Centro de coste**, **Run o build**, **Partidas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
+- **Agrupar por** y **Dimensión**: las mismas opciones que en [Plantilla por mes](#plantilla-por-mes). La dirección de la página conserva la agrupación de la misma manera
+- **Columnas**: de uno a cuatro pares de un año y una columna presupuestaria. Los años van de dos años atrás a dos años adelante. **Agregar** añade un par, y el botón de quitar junto a un par lo quita. El informe se abre en la columna por defecto del año pasado y del año actual. La tabla y el gráfico muestran los pares en orden cronológico
+
+### Qué se cuenta
+
+- El coste y los ETC de las líneas en personas o días. Las líneas en piezas quedan fuera de ambos.
+- El informe lee los resultados de las líneas, también cuando el importe de la columna ya no las sigue (el importe se ha distribuido, sus meses se han editado a mano o la columna se ha copiado). El coste es entonces el coste de las líneas.
+- El coste se convierte a la moneda de reporte al tipo de la versión de cada año, como todos los importes de los informes.
+- Las partidas que declaran ETC sin detalle de líneas quedan fuera. Un aviso las indica (ver más abajo).
+
+### Qué verá
+
+**Tabla**: Una fila por grupo con ETC de personal en al menos un par, el mayor número de ETC primero. Se comparan los ETC del primer par en el que algún grupo tiene ETC de personal, de modo que un presupuesto que solo prevé personal para este año sigue ordenado por ETC. Sin ningún ETC de personal, las filas siguen el orden de los nombres. Cada par tiene tres columnas bajo su nombre, por ejemplo «Presupuesto 2026»:
+
+- **ETC**: el ETC medio del año completo de las líneas
+- **Coste de personal**: el coste de las mismas líneas en el año, en la moneda de reporte
+- **Coste por ETC**: el coste de personal dividido entre los ETC. La celda queda vacía cuando los ETC son 0 o cuando el grupo no tiene líneas de personal en ese par
+
+Los grupos se nombran como en Plantilla por mes («Sin centro de coste», «Sin proveedor», «Sin valor»). Una fila **Total** fijada da, para cada par, el total de ETC, el total del coste de personal y el total del coste de personal dividido entre el total de ETC.
+
+**Gráfico**: Barras horizontales del coste por ETC, una barra por par. La primera categoría es el total, seguida de los diez primeros grupos de la tabla. El título indica el tipo y la agrupación, por ejemplo «Coste por ETC OPEX por centro de coste». Pase el cursor sobre una barra para leer el grupo, el par, el coste por ETC, los ETC y el coste de personal.
+
+### Avisos
+
+Una línea bajo la tabla para cada caso, cuando se da. Cada línea indica los pares afectados:
+
+- «El importe ya no sigue las líneas en: Presupuesto 2026 (2 partidas, 1,50 ETC). El coste por ETC usa el coste de sus líneas.» Estas columnas cuentan con el coste de sus líneas. Consulte [Elegir importe o ETC](#elegir-importe-o-etc).
+- «Sin detalle de líneas en: Presupuesto 2025 (1 partida, 0,50 ETC). Quedan fuera del coste por ETC.» Estas partidas declaran un ETC del año completo, sin resultado por línea, por lo que el informe no puede leer su coste.
+
+### Exportar
+
+- **Exportar tabla como CSV**: El nombre del archivo lleva el tipo, la agrupación y el primer par, por ejemplo `cost-per-fte-opex-cost-center-2025-budget.csv`
 - **Exportar gráfico como PNG**: El mismo nombre, como imagen PNG
 - **Imprimir / Guardar como PDF**
 

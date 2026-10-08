@@ -397,20 +397,42 @@ export function fteFieldKey(amountField: string): string {
  * - `fte_month_<MM>_…` (`fte_month_03_y2026Budget`, MM `01` to `12`): the
  *   round's FTE of that month, from its lines' result (null without one);
  * - `fte_nodetail_…`: the round's FTE when it has no monthly detail.
+ *
+ * The same round's line totals, from its lines' result (`<total>_<slot><Suffix>`,
+ * for example `staff_cost_y2026Budget`, `days_yBudget`):
+ * - `staff_cost_…` (an amount, converted like the column's): the cost of its
+ *   people and days lines, 0 without detail;
+ * - `staff_fte_…`: the lines' result's own FTE (pieces carry none), null without detail;
+ * - `day_cost_…` (an amount): the cost of its per-day priced lines, 0 without detail;
+ * - `days_…`: the days those per-day lines buy (a days line's quantity, a
+ *   person's days worked × the quantity), null without detail or without one.
  */
-export type FteVariant = { variant: 'detached' } | { variant: 'nodetail' } | { variant: 'month'; month: number };
+export type FteVariant =
+  | { variant: 'detached' }
+  | { variant: 'nodetail' }
+  | { variant: 'month'; month: number }
+  | { variant: LineTotalVariant };
 
-const FTE_VARIANT_FIELD = /^fte_(detached|nodetail|month_(0[1-9]|1[0-2]))_(.*)$/;
+/** The line totals of a round; `staff_cost` and `day_cost` are amounts. */
+export type LineTotalVariant = 'staff_cost' | 'staff_fte' | 'day_cost' | 'days';
+
+const FTE_VARIANT_FIELD = /^(?:fte_(detached|nodetail|month_(0[1-9]|1[0-2]))|(staff_cost|staff_fte|day_cost|days))_(.*)$/;
 /** Any `fte_detached_`, `fte_nodetail_` or `fte_month_` key, valid or not: never an `fte_…` key. */
 const FTE_VARIANT_PREFIX = /^fte_(detached|nodetail|month)_/;
 
-/** `fte_<variant>_<slot><Suffix>` to its variant, slot and column, like `resolveAmountField`; null for any other field. */
+/** `<variant>_<slot><Suffix>` to its variant, slot and column, like `resolveAmountField`; null for any other field. */
 export function resolveFteVariantField(field: string): (NonNullable<ReturnType<typeof resolveAmountField>> & FteVariant) | null {
   const match = FTE_VARIANT_FIELD.exec(String(field ?? ''));
-  const resolved = match ? resolveAmountField(match[3]) : null;
+  const resolved = match ? resolveAmountField(match[4]) : null;
   if (!match || !resolved) return null;
+  if (match[3]) return { ...resolved, variant: match[3] as LineTotalVariant };
   if (match[2]) return { ...resolved, variant: 'month', month: Number(match[2]) };
   return { ...resolved, variant: match[1] as 'detached' | 'nodetail' };
+}
+
+/** Whether a variant is an amount (converted to the reporting currency), not an FTE or a number of days. */
+export function isMoneyVariant(variant: FteVariant): boolean {
+  return variant.variant === 'staff_cost' || variant.variant === 'day_cost';
 }
 
 /** `fte_<slot><Suffix>` to its slot and column, like `resolveAmountField`; null for any other field (the variants of `resolveFteVariantField` included). */
@@ -449,7 +471,7 @@ export function resolveHasVersionField(field: string): { slot: string; year: num
   return { slot: match[1], year: null };
 }
 
-/** Years named by `y<YYYY><Suffix>`, `fte_y<YYYY><Suffix>`, `fte_<variant>_y<YYYY><Suffix>`, `local_y<YYYY><Suffix>` and `has_version_y<YYYY>` fields (a sort or a filter key), so their slot is loaded. */
+/** Years named by `y<YYYY><Suffix>`, `fte_y<YYYY><Suffix>`, `fte_<variant>_y<YYYY><Suffix>`, line totals (`staff_cost_y<YYYY><Suffix>`…), `local_y<YYYY><Suffix>` and `has_version_y<YYYY>` fields (a sort or a filter key), so their slot is loaded. */
 export function yearsNamedByFields(fields: string[]): number[] {
   const years = new Set<number>();
   for (const field of fields) {

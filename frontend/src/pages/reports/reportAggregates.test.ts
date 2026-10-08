@@ -6,6 +6,8 @@ import {
   analyticsRequest,
   columnsCompareRequest,
   consolidationRequest,
+  COST_PER_FTE_CHART_GROUPS,
+  costPerFteRequests,
   deltaRequests,
   dropValues,
   excludedAccountValues,
@@ -21,6 +23,7 @@ import {
   readAnalytics,
   readColumnsCompare,
   readConsolidation,
+  readCostPerFte,
   readDelta,
   readDeltaYears,
   readStaffing,
@@ -29,6 +32,8 @@ import {
   readTopItems,
   readTrend,
   reportFilterModels,
+  staffCostField,
+  staffFteField,
   staffingChartSeries,
   staffingRequest,
   sumDeclared,
@@ -437,5 +442,107 @@ describe('staffing by month', () => {
     // V8 (2) + V9 (1) each month.
     expect(chart.others).toEqual(flat(3));
     expect(staffingChartSeries(read.rows.slice(0, 8)).others).toBeNull();
+  });
+});
+
+describe('cost per FTE', () => {
+  const cpfRow = (keys: Array<string | null>, values: Record<string, number | null>, count = 1, unknown: Record<string, number> = {}): AggregateRow => ({ keys, count, values, unknown });
+  const labels = { none: 'No cost center', unnamed: 'Unnamed value' };
+  const columns = [{ year: 2025, metric: 'budget' as const }, { year: 2026, metric: 'revision' as const }];
+
+  it('names the staff fields of a year and column', () => {
+    expect(staffCostField(2026, 'follow_up')).toBe('staff_cost_y2026FollowUp');
+    expect(staffFteField(2026, 'budget')).toBe('staff_fte_y2026Budget');
+  });
+
+  it('asks one grouped request per year and column, the window starting on the earliest year', () => {
+    const filters = { run_build: keepValues(['run']) };
+    const requests = costPerFteRequests({ scope: 'capex', columns, group: { kind: 'supplier' }, filters });
+    expect(requests).toEqual([
+      {
+        query: { filters, years: '2025,2026' },
+        spec: {
+          groupBy: ['supplier_id', 'supplier_name'],
+          measures: [
+            { id: 'cost', fn: 'sum', field: 'staff_cost_y2025Budget' },
+            { id: 'fte', fn: 'sum', field: 'staff_fte_y2025Budget' },
+            { id: 'detached', fn: 'sum', field: 'fte_detached_y2025Budget' },
+            { id: 'nodetail', fn: 'sum', field: 'fte_nodetail_y2025Budget' },
+          ],
+        },
+      },
+      {
+        query: { filters, years: '2025,2026' },
+        spec: {
+          groupBy: ['supplier_id', 'supplier_name'],
+          measures: [
+            { id: 'cost', fn: 'sum', field: 'staff_cost_y2026Revision' },
+            { id: 'fte', fn: 'sum', field: 'staff_fte_y2026Revision' },
+            { id: 'detached', fn: 'sum', field: 'fte_detached_y2026Revision' },
+            { id: 'nodetail', fn: 'sum', field: 'fte_nodetail_y2026Revision' },
+          ],
+        },
+      },
+    ]);
+    // Same group keys as the staffing report; never more than the grouped-measure cap.
+    expect(costPerFteRequests({ scope: 'capex', columns, group: { kind: 'item' }, filters })[0].spec.groupBy).toEqual(['id', 'description']);
+    expect(costPerFteRequests({ scope: 'opex', columns, group: { kind: 'axis', axisId: 'ax-1' }, filters })[0].spec.groupBy).toEqual(['analytics_id_ax-1', 'analytics_ax-1']);
+    expect(requests[0].spec.measures.length).toBeLessThanOrEqual(8);
+    expect(costPerFteRequests({ scope: 'opex', columns: [], group: { kind: 'item' }, filters })).toEqual([]);
+  });
+
+  it('merges the groups of every column, keeps those with a staff FTE, by the first column\'s FTE', () => {
+    const first = result([
+      cpfRow(['cc-1', 'CC1'], { cost: 100000, fte: 1 }),
+      cpfRow(['cc-2', 'CC2'], { cost: 300000, fte: 2.5 }),
+      cpfRow(['cc-3', 'CC3'], { cost: 0, fte: null }),
+      cpfRow([null, null], { cost: 0, fte: 0 }),
+    ], cpfRow([], { cost: 400000, fte: 3.5, detached: null, nodetail: null }, 6, { detached: 6, nodetail: 6 }));
+    const second = result([
+      cpfRow(['cc-1', 'CC1'], { cost: 240000, fte: 2 }),
+      cpfRow(['cc-4', ' '], { cost: 50000, fte: 0.5 }),
+      cpfRow(['cc-3', 'CC3'], { cost: 0, fte: null }),
+    ], cpfRow([], { cost: 290000, fte: 2.5, detached: 1.25, nodetail: 0.5 }, 6, { detached: 3, nodetail: 5 }));
+    const read = readCostPerFte(columns, [first, second], labels, compare);
+    expect(read.rows.map((r) => r.label)).toEqual(['CC2', 'CC1', 'No cost center', 'Unnamed value']);
+    expect(read.sortColumn).toBe(0);
+    expect(read.rows[0].cells).toEqual([{ fte: 2.5, cost: 300000, ratio: 120000 }, { fte: null, cost: null, ratio: null }]);
+    expect(read.rows[1].cells).toEqual([{ fte: 1, cost: 100000, ratio: 100000 }, { fte: 2, cost: 240000, ratio: 120000 }]);
+    // An FTE of 0: a row, a blank ratio.
+    expect(read.rows[2].cells[0]).toEqual({ fte: 0, cost: 0, ratio: null });
+    // Only in the second column: after the groups of the first.
+    expect(read.rows[3].key).toBe('cc-4');
+    expect(read.rows[3].cells[0]).toEqual({ fte: null, cost: null, ratio: null });
+    // The ratio of the totals: 400000 / 3.5, never the average of the groups' ratios.
+    expect(read.total[0].ratio).toBeCloseTo(114285.714, 3);
+    expect(read.total[1]).toEqual({ fte: 2.5, cost: 290000, ratio: 116000 });
+    // Notices per column, only where not zero; the detached one without the lines lacking detail.
+    expect(read.detached).toEqual([{ year: 2026, metric: 'revision', fte: 0.75, items: 2 }]);
+    expect(read.noDetail).toEqual([{ year: 2026, metric: 'revision', fte: 0.5, items: 1 }]);
+  });
+
+  it('sorts on the earliest column with a staff FTE when the first one has none', () => {
+    const first = result([cpfRow(['cc-1', 'A'], { cost: 0, fte: null }), cpfRow(['cc-2', 'B'], { cost: 0, fte: null })], cpfRow([], { cost: 0, fte: null }));
+    const second = result([
+      cpfRow(['cc-1', 'A'], { cost: 50000, fte: 0.5 }),
+      cpfRow(['cc-2', 'B'], { cost: 300000, fte: 3 }),
+      cpfRow(['cc-3', 'C'], { cost: 100000, fte: 1 }),
+    ], cpfRow([], { cost: 450000, fte: 4.5 }));
+    const read = readCostPerFte(columns, [first, second], labels, compare);
+    expect(read.sortColumn).toBe(1);
+    expect(read.rows.map((r) => r.label)).toEqual(['B', 'C', 'A']);
+    expect(read.rows[0].cells[0]).toEqual({ fte: null, cost: null, ratio: null });
+    // No staff FTE anywhere: no row, nothing to sort on.
+    expect(readCostPerFte(columns, [first, first], labels, compare).sortColumn).toBeNull();
+  });
+
+  it('reads nothing without answers, and blank totals without staff FTE', () => {
+    const empty = readCostPerFte(columns, undefined, labels, compare);
+    expect(empty.rows).toEqual([]);
+    expect(empty.sortColumn).toBeNull();
+    expect(empty.total).toEqual([{ fte: null, cost: null, ratio: null }, { fte: null, cost: null, ratio: null }]);
+    expect(empty.detached).toEqual([]);
+    expect(empty.noDetail).toEqual([]);
+    expect(COST_PER_FTE_CHART_GROUPS).toBe(10);
   });
 });

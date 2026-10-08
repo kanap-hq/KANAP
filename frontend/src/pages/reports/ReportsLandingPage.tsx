@@ -25,6 +25,7 @@ export default function ReportsLandingPage() {
     { title: t('reports.landing.cards.consolidation.title'), description: t('reports.landing.cards.consolidation.description'), to: '/ops/reports/consolidation' },
     { title: t('reports.landing.cards.analytics.title'), description: t('reports.landing.cards.analytics.description'), to: '/ops/reports/analytics' },
     { title: t('reports.landing.cards.staffing.title'), description: t('reports.landing.cards.staffing.description'), to: '/ops/reports/staffing' },
+    { title: t('reports.landing.cards.costPerFte.title'), description: t('reports.landing.cards.costPerFte.description'), to: '/ops/reports/cost-per-fte' },
   ];
 
   return (

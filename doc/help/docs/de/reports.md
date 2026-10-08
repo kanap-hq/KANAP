@@ -27,10 +27,11 @@ Die Startseite zeigt eine Karte für jeden verfügbaren Bericht mit einer kurzen
 | **Konsolidierungskonten** | OPEX- oder CAPEX-Budget gruppiert nach Konsolidierungskonto |
 | **Analysedimensionen** | OPEX- oder CAPEX-Budget gruppiert nach Analysedimension |
 | **Personal nach Monat** | Monatliche VZÄ nach Kostenstelle, Position, Lieferant oder Analysedimension |
+| **Kosten pro VZÄ** | Jährliche Kosten eines VZÄ nach Kostenstelle, Position, Lieferant oder Analysedimension, über Budgetspalten und Jahre |
 
 ### OPEX oder CAPEX wählen
 
-**Top-Positionen**, **Top Anstieg / Rückgang**, **Konsolidierungskonten**, **Analysedimensionen** und **Personal nach Monat** beginnen jeweils mit einem Umschalter **OPEX** / **CAPEX**, dem ersten Steuerelement der Filterleiste.
+**Top-Positionen**, **Top Anstieg / Rückgang**, **Konsolidierungskonten**, **Analysedimensionen**, **Personal nach Monat** und **Kosten pro VZÄ** beginnen jeweils mit einem Umschalter **OPEX** / **CAPEX**, dem ersten Steuerelement der Filterleiste.
 
 - Der Bericht öffnet sich auf einem Typ, den Sie lesen dürfen, zuerst OPEX. Ein Typ, den Sie nicht lesen dürfen, ist deaktiviert.
 - Die Seitenadresse behält den gewählten Typ (`?scope=opex` oder `?scope=capex`). Ein gespeicherter oder geteilter Link öffnet sich daher auf demselben Typ.
@@ -61,7 +62,7 @@ Jede Spalten- oder Kennzahlauswahl bietet die Budgetspalten an, die Ihre Organis
 
 ### Filter nach Kostenstelle, Run oder Build und Analysedimensionen
 
-Die sieben Budgetberichte (**Top-Positionen**, **Top Anstieg / Rückgang**, **Budgettrend (OPEX)**, **Budgettrend (CAPEX)**, **Budgetspaltenvergleich**, **Konsolidierungskonten** und **Analysedimensionen**) und **Personal nach Monat** lassen sich mit diesen Filtern auf einen Teil des Budgets eingrenzen:
+Die sieben Budgetberichte (**Top-Positionen**, **Top Anstieg / Rückgang**, **Budgettrend (OPEX)**, **Budgettrend (CAPEX)**, **Budgetspaltenvergleich**, **Konsolidierungskonten** und **Analysedimensionen**), **Personal nach Monat** und **Kosten pro VZÄ** lassen sich mit diesen Filtern auf einen Teil des Budgets eingrenzen:
 
 - **Kostenstelle**: Wählen Sie eine Kostenstelle oder eine Gruppe. Eine Gruppe umfasst alles, was darunter liegt, einschließlich deaktivierter Kostenstellen, da deren Zeilen weiterhin zur Gruppe gehören. **Alle Kostenstellen** entfernt den Filter. Siehe [Kostenstellen](cost-centers.md).
 - **Run oder Build**: **Alle**, **Run**, **Build** oder **Nicht festgelegt** für die Zeilen, die keines von beiden haben.
@@ -457,6 +458,51 @@ Eine Zeile unter der Tabelle für jeden Fall, wenn er eintritt:
 ### Export
 
 - **Tabelle als CSV exportieren**: Der Dateiname nennt Typ, Jahr, Spalte und Gruppierung, zum Beispiel `staffing-opex-2026-budget-cost-center.csv`
+- **Diagramm als PNG exportieren**: Gleicher Name, als PNG-Bild
+- **Drucken / Als PDF speichern**
+
+---
+
+## Kosten pro VZÄ
+
+Sehen Sie, was ein VZÄ in jedem Teil des Budgets kostet und wie sich diese Kosten über Budgetspalten und Jahre entwickeln. Der Bericht teilt die Kosten der Zeilen mit Menge und Preis in Personen oder Tagen durch ihre VZÄ. Siehe [Menge und Preis](opex.md#menge-und-preis) und [VZÄ](opex.md#vza).
+
+### Steuerungen
+
+- **Positionstyp**: OPEX oder CAPEX (siehe [OPEX oder CAPEX wählen](#opex-oder-capex-wahlen))
+- **Kostenstelle**, **Run oder Build**, **Positionen** und die Filter nach Analysedimension: Siehe [Filter nach Kostenstelle, Run oder Build und Analysedimensionen](#filter-nach-kostenstelle-run-oder-build-und-analysedimensionen)
+- **Gruppieren nach** und **Dimension**: dieselben Optionen wie in [Personal nach Monat](#personal-nach-monat). Die Seitenadresse speichert die Gruppierung auf dieselbe Weise
+- **Spalten**: ein bis vier Paare aus einem Jahr und einer Budgetspalte. Die Jahre reichen von zwei Jahren zurück bis zwei Jahre voraus. **Hinzufügen** fügt ein Paar hinzu, die Schaltfläche zum Entfernen neben einem Paar entfernt es. Der Bericht öffnet mit der Standardspalte für das letzte und das laufende Jahr. Tabelle und Diagramm zeigen die Paare in chronologischer Reihenfolge
+
+### Was gezählt wird
+
+- Die Kosten und die VZÄ der Zeilen in Personen oder Tagen. Zeilen in Stück bleiben bei beiden unberücksichtigt.
+- Der Bericht liest die Ergebnisse der Zeilen, auch wenn der Betrag der Spalte ihnen nicht mehr folgt (der Betrag wurde verteilt, seine Monate wurden von Hand bearbeitet oder die Spalte wurde kopiert). Die Kosten sind dann die Kosten der Zeilen.
+- Die Kosten werden zum Kurs der Version des jeweiligen Jahres in die Berichtswährung umgerechnet, wie jeder Betrag in den Berichten.
+- Positionen, die VZÄ ohne Zeilendetails melden, bleiben unberücksichtigt. Ein Hinweis nennt sie (siehe unten).
+
+### Was Sie sehen
+
+**Tabelle**: Eine Zeile pro Gruppe mit Personal-VZÄ in mindestens einem Paar, die meisten VZÄ zuerst. Verglichen werden die VZÄ des frühesten Paars, in dem eine Gruppe Personal-VZÄ hat, sodass ein Budget, das nur für dieses Jahr Personal plant, trotzdem nach VZÄ sortiert ist. Ohne Personal-VZÄ folgen die Zeilen den Namen. Jedes Paar hat drei Spalten unter seinem Namen, zum Beispiel „Budget 2026“:
+
+- **VZÄ**: die durchschnittlichen VZÄ der Zeilen über das ganze Jahr
+- **Personalkosten**: die Kosten derselben Zeilen für das Jahr, in der Berichtswährung
+- **Kosten pro VZÄ**: die Personalkosten geteilt durch die VZÄ. Die Zelle ist leer, wenn die VZÄ 0 sind oder die Gruppe in diesem Paar keine Personalzeilen hat
+
+Die Gruppen heißen wie in Personal nach Monat („Keine Kostenstelle“, „Kein Lieferant“, „Kein Wert“). Eine angeheftete Zeile **Gesamt** zeigt für jedes Paar die VZÄ gesamt, die Personalkosten gesamt und die Personalkosten gesamt geteilt durch die VZÄ gesamt.
+
+**Diagramm**: Horizontale Balken der Kosten pro VZÄ, ein Balken pro Paar. Die erste Kategorie ist die Summe, gefolgt von den ersten zehn Gruppen der Tabelle. Der Titel nennt Typ und Gruppierung, zum Beispiel „OPEX-Kosten pro VZÄ nach Kostenstelle“. Fahren Sie über einen Balken, um Gruppe, Paar, Kosten pro VZÄ, VZÄ und Personalkosten zu lesen.
+
+### Hinweise
+
+Eine Zeile unter der Tabelle für jeden Fall, wenn er eintritt. Jede Zeile nennt die betroffenen Paare:
+
+- „Der Betrag folgt nicht mehr den Zeilen bei: Budget 2026 (2 Positionen, 1,50 VZÄ). Die Kosten pro VZÄ verwenden die Kosten ihrer Zeilen.“ Diese Spalten zählen mit den Kosten ihrer Zeilen. Siehe [Betrag oder VZÄ wählen](#betrag-oder-vza-wahlen).
+- „Keine Zeilendetails bei: Budget 2025 (1 Position, 0,50 VZÄ). Sie fließen nicht in die Kosten pro VZÄ ein.“ Diese Positionen melden VZÄ für das ganze Jahr, aber kein Ergebnis pro Zeile, sodass der Bericht ihre Kosten nicht lesen kann.
+
+### Export
+
+- **Tabelle als CSV exportieren**: Der Dateiname nennt Typ, Gruppierung und das erste Paar, zum Beispiel `cost-per-fte-opex-cost-center-2025-budget.csv`
 - **Diagramm als PNG exportieren**: Gleicher Name, als PNG-Bild
 - **Drucken / Als PDF speichern**
 

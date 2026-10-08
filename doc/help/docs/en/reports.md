@@ -27,10 +27,11 @@ The landing page shows a card for each available report with a short description
 | **Consolidation accounts** | OPEX or CAPEX budget grouped by consolidation account |
 | **Analytics dimensions** | OPEX or CAPEX budget grouped by analytics dimension |
 | **Staffing by month** | Monthly FTE by cost center, item, supplier or analytics dimension |
+| **Cost per FTE** | Yearly cost of one FTE by cost center, item, supplier or analytics dimension, across budget columns and years |
 
 ### Choosing OPEX or CAPEX
 
-**Top items**, **Top increase / decrease**, **Consolidation accounts**, **Analytics dimensions**, and **Staffing by month** each start with an **OPEX** / **CAPEX** switch, the first control of the filter bar.
+**Top items**, **Top increase / decrease**, **Consolidation accounts**, **Analytics dimensions**, **Staffing by month** and **Cost per FTE** each start with an **OPEX** / **CAPEX** switch, the first control of the filter bar.
 
 - The report opens on a type you can read, OPEX first. A type you cannot read is disabled.
 - The page address keeps the chosen type (`?scope=opex` or `?scope=capex`), so a bookmarked or shared link opens on the same type.
@@ -61,7 +62,7 @@ Every column or metric picker offers the budget columns your organisation shows,
 
 ### Cost center, run or build and analytics filters
 
-The seven budget reports (**Top items**, **Top increase / decrease**, **Budget trend (OPEX)**, **Budget trend (CAPEX)**, **Budget column comparison**, **Consolidation accounts** and **Analytics dimensions**) and **Staffing by month** can be narrowed to one part of the budget with these filters:
+The seven budget reports (**Top items**, **Top increase / decrease**, **Budget trend (OPEX)**, **Budget trend (CAPEX)**, **Budget column comparison**, **Consolidation accounts** and **Analytics dimensions**), **Staffing by month** and **Cost per FTE** can be narrowed to one part of the budget with these filters:
 
 - **Cost center**: pick a cost center or a group. A group includes everything below it, disabled cost centers included, since their lines still belong to the group. **All cost centers** removes the filter. See [Cost centers](cost-centers.md).
 - **Run or build**: **All**, **Run**, **Build**, or **Not set** for the lines that have neither.
@@ -457,6 +458,51 @@ One line under the table for each case, when it applies:
 ### Export
 
 - **Export table as CSV**: The file name carries the type, the year, the column and the grouping, for example `staffing-opex-2026-budget-cost-center.csv`
+- **Export chart as PNG**: Same name, as a PNG image
+- **Print / Save as PDF**
+
+---
+
+## Cost per FTE
+
+See what one FTE costs in each part of the budget, and how that cost moves across budget columns and years. The report divides the cost of the quantity and price lines in people or days by their FTE. See [Quantity and price](opex.md#quantity-and-price) and [FTE](opex.md#fte).
+
+### Controls
+
+- **Item type**: OPEX or CAPEX (see [Choosing OPEX or CAPEX](#choosing-opex-or-capex))
+- **Cost center**, **Run or build**, **Items** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
+- **Group by** and **Dimension**: the same choices as in [Staffing by month](#staffing-by-month). The page address keeps the grouping in the same way
+- **Columns**: one to four pairs of a year and a budget column. The years go from two years back to two years ahead. **Add** adds a pair, and the remove button next to a pair removes it. The report opens on the default column for last year and this year. The table and the chart show the pairs in chronological order
+
+### What is counted
+
+- The cost and the FTE of the lines in people or days. Lines in pieces are left out of both.
+- The report reads the results of the lines, also when the column's amount no longer follows them (the amount was spread, its months were edited by hand, or the column was copied). The cost is then the cost of the lines.
+- The cost is converted to the reporting currency at the rate of each year's version, like every amount in the reports.
+- Items that declare FTE without line detail are left out. A notice names them (see below).
+
+### What you'll see
+
+**Table**: One row per group with staff FTE in at least one pair, the largest FTE first. The FTE compared are those of the earliest pair where a group has staff FTE, so a budget that plans staff for this year only still sorts by FTE. Without any staff FTE, the rows go by name. Each pair has three columns under its name, for example "Budget 2026":
+
+- **FTE**: the full-year average FTE of the lines
+- **Staff cost**: the cost of the same lines for the year, in the reporting currency
+- **Cost per FTE**: the staff cost divided by the FTE. The cell is empty when the FTE is 0 or when the group has no staff lines in that pair
+
+Groups are named as in Staffing by month ("No cost center", "No supplier", "No value"). A pinned **Total** row gives, for each pair, the total FTE, the total staff cost and the total staff cost divided by the total FTE.
+
+**Chart**: Horizontal bars of the cost per FTE, one bar for each pair. The first category is the total, followed by the first ten groups of the table. The title names the type and the grouping, for example "OPEX cost per FTE by cost center". Hover a bar to read the group, the pair, the cost per FTE, the FTE and the staff cost.
+
+### Notices
+
+One line under the table for each case, when it applies. Each line names the pairs concerned:
+
+- "Amount no longer follows the lines for: Budget 2026 (2 items, 1.50 FTE). Cost per FTE uses the cost of their lines." These columns count with the cost of their lines. See [Choosing amount or FTE](#choosing-amount-or-fte).
+- "No line detail for: Budget 2025 (1 item, 0.50 FTE). They are left out of the cost per FTE." These items declare a full-year FTE but keep no result per line, so the report cannot read their cost.
+
+### Export
+
+- **Export table as CSV**: The file name carries the type, the grouping and the first pair, for example `cost-per-fte-opex-cost-center-2025-budget.csv`
 - **Export chart as PNG**: Same name, as a PNG image
 - **Print / Save as PDF**
 

@@ -1,7 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Box, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import type { ColDef } from 'ag-grid-community';
-import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import ReportGrid from '../../components/reports/ReportGrid';
 import ReportLayout, { ReportFilter, reportFilterMenuProps, reportFilterSelectSx } from '../../components/reports/ReportLayout';
@@ -10,24 +9,18 @@ import ReportDataStatus from '../../components/reports/ReportDataStatus';
 import { BudgetReportFilters, useBudgetReportFilters } from '../../components/reports/BudgetReportFilters';
 import { formatFte } from '../../components/finance/amountColumns';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
-import type { AnalyticsAxes } from '../../hooks/useAnalyticsAxes';
-import type { AnalyticsAxis } from '../../services/analytics';
 import { useLocale } from '../../i18n/useLocale';
 import { drawerMenuItemSx } from '../../theme/formSx';
 import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { useReportScope } from './useReportScope';
 import { metricFileName, MetricKey, useReportMetric } from './reportMetrics';
 import { escapeTooltipText } from './tooltipText';
-import { MONTHS, readStaffing, staffingChartSeries, staffingRequest, type StaffingGroup } from './reportAggregates';
+import { MONTHS, readStaffing, staffingChartSeries, staffingRequest } from './reportAggregates';
 import { compareNames, useBudgetAggregate } from './useBudgetAggregate';
 import { ReportNoticeLine } from './reportMeasure';
+import { GROUP_FILE_NAME, ReportGroupFilters, useReportGroup } from './reportGroup';
+import { gridTextMeasure, valueColumnWidth } from './reportValueWidth';
 
-/** `?group=`: `item`, `supplier` or `axis:<dimension id>`; absent (or `costCenter`): by cost center. */
-export const GROUP_PARAM = 'group';
-const AXIS_PREFIX = 'axis:';
-
-type GroupKind = StaffingGroup['kind'];
-const GROUP_KINDS: readonly GroupKind[] = ['costCenter', 'item', 'supplier', 'axis'];
 const monthField = (month: number) => `m${month}`;
 /**
  * The fourteen value columns (twelve months, average, peak), all as wide as the widest value among them
@@ -35,128 +28,6 @@ const monthField = (month: number) => `m${month}`;
  * takes exactly the room left; `headerTooltip` shows a cut header in full.
  */
 export const VALUE_COLUMN_IDS: readonly string[] = [...MONTHS.map(monthField), 'average', 'peak'];
-
-/** A text's width in pixels, in the grid's cell font. */
-export type TextMeasurer = (text: string) => number;
-/** The narrowest value column holds `00.00`: small values do not make tiny columns. */
-const MIN_VALUE_TEXT = '00.00';
-/** A few pixels beyond the text and the cell padding, for rounding and font rendering. */
-const VALUE_COLUMN_MARGIN = 6;
-/** Without a canvas to measure with: an average character, a little wider than a digit. */
-const FALLBACK_CHAR_EM = 0.65;
-
-/**
- * The shared width of the value columns: the widest formatted value among the rows and the total row,
- * plus the cell padding on both sides and a small margin, never narrower than `00.00`.
- */
-export function valueColumnWidth({ rows, total, format, measure, cellPadding }: {
-  rows: ReadonlyArray<Record<string, unknown>>;
-  total: Record<string, unknown>;
-  format: (value: unknown) => string;
-  measure: TextMeasurer;
-  cellPadding: number;
-}): number {
-  const texts = new Set<string>([MIN_VALUE_TEXT]);
-  for (const row of [...rows, total]) {
-    for (const id of VALUE_COLUMN_IDS) texts.add(format(row[id]));
-  }
-  let widest = 0;
-  for (const text of texts) if (text) widest = Math.max(widest, measure(text));
-  return Math.ceil(widest + 2 * cellPadding + VALUE_COLUMN_MARGIN);
-}
-
-/** The grid's cell font (bold, as the total row) and its horizontal cell padding. */
-export type GridTextMetrics = { font: string; fontSize: number; cellPadding: number };
-
-/**
- * Reads the font and the cell padding of a dense report grid from the AG Grid theme variables, on a hidden
- * probe carrying the grid's classes (the variables live on the theme class, not on the document).
- * Falls back to 13 px sans-serif and 10 px when the theme is not loaded.
- */
-export function readGridTextMetrics(doc: Document = document): GridTextMetrics {
-  const probe = doc.createElement('div');
-  probe.className = 'ag-theme-quartz kanap-dense-grid';
-  probe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none';
-  doc.body.appendChild(probe);
-  try {
-    const style = doc.defaultView?.getComputedStyle(probe);
-    const family = style?.getPropertyValue('--ag-font-family').trim() || style?.fontFamily || 'sans-serif';
-    const fontSize = parseFloat(style?.getPropertyValue('--ag-font-size') ?? '') || 13;
-    const padding = parseFloat(style?.getPropertyValue('--ag-cell-horizontal-padding') ?? '');
-    return { font: `bold ${fontSize}px ${family}`, fontSize, cellPadding: Number.isFinite(padding) ? padding : 10 };
-  } finally {
-    probe.remove();
-  }
-}
-
-const canvasContext = () => document.createElement('canvas').getContext('2d');
-
-/**
- * Measures texts with a canvas in the given font. The cells show tabular figures, which a canvas cannot
- * set: every digit is measured as a `0`, as wide as a tabular figure. Without a canvas (jsdom, or no 2D
- * context), estimates from the character count.
- */
-export function createTextMeasurer(
-  font: string,
-  fontSize: number,
-  getContext: () => CanvasRenderingContext2D | null = canvasContext,
-): TextMeasurer {
-  let context: CanvasRenderingContext2D | null = null;
-  try {
-    context = getContext();
-  } catch {
-    context = null;
-  }
-  if (context && typeof context.measureText === 'function') {
-    const ctx = context;
-    ctx.font = font;
-    return (text) => ctx.measureText(text.replace(/\d/g, '0')).width;
-  }
-  return (text) => text.length * fontSize * FALLBACK_CHAR_EM;
-}
-/** The grouping in a downloaded file's name. */
-const GROUP_FILE_NAME: Record<GroupKind, string> = { costCenter: 'cost-center', item: 'item', supplier: 'supplier', axis: 'dimension' };
-
-/**
- * The grouping in the address. A dimension that is unknown or disabled reads as the default one, and
- * as cost center when no dimension is enabled; null while the dimensions load (nothing is asked yet).
- */
-function useStaffingGroup(axes: AnalyticsAxes): {
-  kind: GroupKind;
-  axis: AnalyticsAxis | null;
-  group: StaffingGroup | null;
-  setKind: (kind: GroupKind) => void;
-  setAxis: (id: string) => void;
-} {
-  const [params, setParams] = useSearchParams();
-  const raw = params.get(GROUP_PARAM) ?? '';
-  const wantsAxis = raw.startsWith(AXIS_PREFIX);
-  const axisId = wantsAxis ? raw.slice(AXIS_PREFIX.length) : null;
-  const axis = wantsAxis ? axes.enabled.find((candidate) => candidate.id === axisId) ?? axes.defaultAxis ?? axes.enabled[0] ?? null : null;
-  const kind: GroupKind = wantsAxis ? (axis || !axes.ready ? 'axis' : 'costCenter') : raw === 'item' || raw === 'supplier' ? raw : 'costCenter';
-  const groupAxisId = kind === 'axis' ? axis?.id ?? null : null;
-  const group = useMemo<StaffingGroup | null>(() => {
-    if (kind !== 'axis') return { kind };
-    return groupAxisId ? { kind: 'axis', axisId: groupAxisId } : null;
-  }, [kind, groupAxisId]);
-
-  const write = useCallback((value: string | null) => {
-    setParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (value) next.set(GROUP_PARAM, value);
-      else next.delete(GROUP_PARAM);
-      return next;
-    }, { replace: true });
-  }, [setParams]);
-  const fallbackAxisId = axis?.id ?? axes.defaultAxis?.id ?? axes.enabled[0]?.id ?? null;
-  const setKind = useCallback((next: GroupKind) => {
-    if (next === 'axis') {
-      if (fallbackAxisId) write(`${AXIS_PREFIX}${fallbackAxisId}`);
-    } else write(next === 'costCenter' ? null : next);
-  }, [write, fallbackAxisId]);
-  const setAxis = useCallback((id: string) => write(`${AXIS_PREFIX}${id}`), [write]);
-  return { kind, axis, group, setKind, setAxis };
-}
 
 export default function StaffingByMonthReport() {
   const { t } = useTranslation(['ops']);
@@ -171,19 +42,9 @@ export default function StaffingByMonthReport() {
   const fte = useCallback((value: unknown) => formatFte(value, locale), [locale]);
 
   const reportFilters = useBudgetReportFilters({ scope });
-  const analyticsAxes = reportFilters.analyticsAxes;
-  const { kind, axis, group, setKind, setAxis } = useStaffingGroup(analyticsAxes);
-  const groupKinds = GROUP_KINDS.filter((option) => option !== 'axis' || analyticsAxes.enabled.length > 0 || kind === 'axis');
-
+  const grouping = useReportGroup(reportFilters.analyticsAxes);
   // The group as the first column names it, as a sentence names it, and its rows without a key.
-  const groupHeader = kind === 'axis' && axis ? analyticsAxes.label(axis) : t(`reports.staffing.groups.${kind}`);
-  const groupInSentence = kind === 'axis'
-    ? axis?.name?.trim() || t('reports.analyticsCategory.defaultDimensionInSentence')
-    : t(`reports.staffing.groupsInSentence.${kind}`);
-  const labels = useMemo(() => ({
-    none: kind === 'item' ? '' : t(`reports.staffing.none.${kind}`),
-    unnamed: t('reports.analyticsCategory.unnamed'),
-  }), [kind, t]);
+  const { kind, group, header: groupHeader, inSentence: groupInSentence, labels } = grouping;
 
   // One request: per group, the twelve monthly FTE of the column; on the total row, the notices.
   const request = useMemo(() => (reportFilters.queryFilters == null || group == null ? null : staffingRequest({
@@ -217,13 +78,11 @@ export default function StaffingByMonthReport() {
 
   // Fifteen columns on the dense grid: the fourteen value columns share one width, measured from their
   // values before the grid lays out; the group column flexes into the rest and shows its full name on hover.
-  const textMetrics = useMemo(() => {
-    const metrics = readGridTextMetrics();
-    return { measure: createTextMeasurer(metrics.font, metrics.fontSize), cellPadding: metrics.cellPadding };
-  }, []);
+  const textMetrics = useMemo(() => gridTextMeasure(), []);
   const valueWidth = useMemo(() => valueColumnWidth({
     rows: tableRows,
     total: totalRow,
+    ids: VALUE_COLUMN_IDS,
     format: fte,
     measure: textMetrics.measure,
     cellPadding: textMetrics.cellPadding,
@@ -318,36 +177,7 @@ export default function StaffingByMonthReport() {
               ))}
             </TextField>
           </ReportFilter>
-          <ReportFilter label={t('reports.staffing.groupBy')} width={180}>
-            <TextField
-              select
-              size="small"
-              value={kind}
-              onChange={(e) => setKind(e.target.value as GroupKind)}
-              SelectProps={{ MenuProps: reportFilterMenuProps, inputProps: { 'aria-label': t('reports.staffing.groupBy') } }}
-              sx={reportFilterSelectSx}
-            >
-              {groupKinds.map((option) => (
-                <MenuItem key={option} value={option} sx={drawerMenuItemSx}>{t(`reports.staffing.groups.${option}`)}</MenuItem>
-              ))}
-            </TextField>
-          </ReportFilter>
-          {kind === 'axis' && axis && analyticsAxes.enabled.length >= 2 && (
-            <ReportFilter label={t('reports.filters.dimension')} width={200}>
-              <TextField
-                select
-                size="small"
-                value={axis.id}
-                onChange={(e) => setAxis(String(e.target.value))}
-                SelectProps={{ MenuProps: reportFilterMenuProps, inputProps: { 'aria-label': t('reports.filters.dimension') } }}
-                sx={reportFilterSelectSx}
-              >
-                {analyticsAxes.enabled.map((option) => (
-                  <MenuItem key={option.id} value={option.id} sx={drawerMenuItemSx}>{analyticsAxes.label(option)}</MenuItem>
-                ))}
-              </TextField>
-            </ReportFilter>
-          )}
+          <ReportGroupFilters state={grouping} />
         </>
       )}
       onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.({ fileName: `${fileName}.csv` })}
