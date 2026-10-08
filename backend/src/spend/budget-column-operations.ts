@@ -28,6 +28,7 @@ import {
   costLine,
   deleteRoundInput,
   lineCalendarDays,
+  linesResult,
   linesRound,
   listRoundInputs,
   RoundInput,
@@ -322,12 +323,14 @@ export async function createBudgetVersion(
 /* ── Copy of a column that follows its quantity × price lines ─────────────── */
 
 /**
- * What a copy did with the calendar of one per-day line:
+ * What a copy did with the calendar of one per-day line (of a column that
+ * follows its lines, or of lines that are only a reference):
  * - `disabled`: the calendar is disabled; the copy still uses it;
  * - `fallback`: it has no working days for the destination year; the copy
  *   uses the paying company's standard calendar (`fallback`) instead;
  * - `missing`: neither has days; the item is copied the old way (months ×
- *   uplift, lines unchanged as a reference).
+ *   uplift, lines unchanged as a reference, their FTE as the source's, no
+ *   result of the lines).
  */
 export type CalendarIssue = {
   /** The line's description, or "Line n" when it has none. */
@@ -379,7 +382,8 @@ type CopyCalendars = { calendars: Map<string, WorkingDayProfileInfo>; countryOf:
  * The calendars the per-day lines name, and the company standard calendars
  * (country, no region) of the items' paying companies, which replace a
  * calendar without days for the destination year. A real copy reads them in
- * one statement FOR KEY SHARE, after the version locks (`budget-locks.ts`).
+ * one statement FOR KEY SHARE, after the version locks (`budget-locks.ts`):
+ * it may write lines that name them.
  */
 async function loadCopyCalendars(
   manager: EntityManager,
@@ -419,7 +423,7 @@ function standardCalendar(calendars: Map<string, WorkingDayProfileInfo>, country
     .sort((a, b) => a.code.localeCompare(b.code) || a.id.localeCompare(b.id))[0] ?? null;
 }
 
-/** The copy of a column that follows its lines, decided: copied from the lines, the old way, or nothing left. */
+/** The copy of a column's lines, decided: computed for the destination year, the old way, or nothing left. */
 type LinesCopy =
   | { kind: 'lines'; lines: CostLine[]; calendars: Map<string, WorkingDayProfileInfo>; result: ColumnResult; issues: CalendarIssue[] }
   | { kind: 'reference'; issues: CalendarIssue[] }
@@ -428,9 +432,10 @@ type LinesCopy =
 /**
  * The lines of a source column copied to the destination year: shifted, cut
  * to the item's validity (a line left without an active month is dropped),
- * their unit prices raised by the uplift, their per-day calendars read for
- * the destination year (see `CalendarIssue`), then computed. A calendar no
- * line can do without sends the whole item back to the old copy.
+ * their unit prices raised by `pct` (0 for lines that are only a
+ * reference), their per-day calendars read for the destination year (see
+ * `CalendarIssue`), then computed. A calendar no line can do without sends
+ * the whole item back to the old copy.
  */
 function planLinesCopy(
   item: { id: string; name: string; validity: YearValidity },
@@ -525,7 +530,10 @@ export const CALENDAR_CHANGES_MESSAGE = (year: number) =>
  * copied from them instead (`planLinesCopy`): the unit prices take the
  * uplift, the months are computed again with the destination year's
  * calendars, and the column is stored like a lines write (`computed`). Lines
- * that are only a reference are copied as they are. A real copy where a line
+ * that are only a reference travel with the months × uplift, their prices
+ * untouched, through the same plan: shifted, cut to the validity, computed
+ * with the destination year's calendars; the record keeps what they give
+ * (`lines_result`) and its FTE comes from them. A real copy where a line
  * changes calendar or cannot be computed (`CalendarIssue`) is refused unless
  * `acceptCalendarChanges` is set; every item is decided first, then written.
  */
@@ -576,12 +584,12 @@ export async function copyBudgetColumn(
   const pctText = pct.toString();
   const sourceRecordOf = (version: BudgetVersionRow) => records.get(version.id)?.find((r) => r.measure === sourceMeasure);
 
-  // Sources that follow their lines: their calendars and the company standard calendars,
-  // read once, after the version locks and before any months (`budget-locks.ts`).
+  // Sources with lines (followed or a reference): their calendars and the company standard
+  // calendars, read once, after the version locks and before any months (`budget-locks.ts`).
   const linesSources = items.flatMap((item) => {
     const version = versions.get(`${item.id}:${sourceYear}`);
     const record = version ? sourceRecordOf(version) : undefined;
-    return record && followsLines(record) ? [{ itemId: item.id, record }] : [];
+    return record && record.lines.length > 0 ? [{ itemId: item.id, record }] : [];
   });
   const copyCalendars = await loadCopyCalendars(
     mg,
@@ -603,6 +611,8 @@ export async function copyBudgetColumn(
     targetTotal: bigint;
     prorated: boolean;
     lines: Extract<LinesCopy, { kind: 'lines' }> | null;
+    /** Lines that are only a reference, planned for the destination year; null: none, or copied the old way. */
+    reference: Exclude<LinesCopy, { kind: 'reference' }> | null;
     issues: CalendarIssue[];
   };
   const plans: Planned[] = [];
@@ -627,12 +637,15 @@ export async function copyBudgetColumn(
     const currentTotal = sum(current);
     const sourceRecord = sourceRecordOf(sourceVersion);
     let skip = source.every((v) => v === 0n) || (!overwrite && current.some((v) => v !== 0n));
-    // A source that follows its lines is copied from them, its prices raised; else its months are.
-    const linesCopy = !skip && followsLines(sourceRecord)
-      ? planLinesCopy(item, sourceRecord!, destinationYear, pct, copyCalendars)
+    // A source that follows its lines is copied from them, its prices raised; else its months are,
+    // and lines that are only a reference are planned the same way, their prices as they are.
+    const follows = followsLines(sourceRecord);
+    const linesCopy = !skip && sourceRecord && sourceRecord.lines.length > 0
+      ? planLinesCopy(item, sourceRecord, destinationYear, follows ? pct : Decimal.ZERO, copyCalendars)
       : null;
-    if (linesCopy?.kind === 'empty') skip = true;
-    const fromLines = linesCopy?.kind === 'lines' ? linesCopy : null;
+    if (follows && linesCopy?.kind === 'empty') skip = true;
+    const fromLines = follows && linesCopy?.kind === 'lines' ? linesCopy : null;
+    const reference = !follows && linesCopy && linesCopy.kind !== 'reference' ? linesCopy : null;
     const issues = linesCopy && linesCopy.kind !== 'empty' ? linesCopy.issues : [];
     const target = fromLines ? fromLines.result.month_cents : copiedMonths(source, pct);
     const targetTotal = sum(target);
@@ -652,7 +665,7 @@ export async function copyBudgetColumn(
       skipped++;
       continue;
     }
-    plans.push({ item, sourceVersion, sourceRecord, sourceTotal, currentTotal, target, targetTotal, prorated, lines: fromLines, issues });
+    plans.push({ item, sourceVersion, sourceRecord, sourceTotal, currentTotal, target, targetTotal, prorated, lines: fromLines, reference, issues });
   }
 
   if (dryRun) {
@@ -670,7 +683,7 @@ export async function copyBudgetColumn(
   }
 
   for (const plan of plans) {
-    const { item, sourceVersion, sourceRecord, sourceTotal, currentTotal, target, targetTotal, prorated, lines, issues } = plan;
+    const { item, sourceVersion, sourceRecord, sourceTotal, currentTotal, target, targetTotal, prorated, lines, reference, issues } = plan;
     let destinationVersion = versions.get(`${item.id}:${destinationYear}`);
     if (!destinationVersion) {
       const ensured = await createBudgetVersion(
@@ -712,10 +725,13 @@ export async function copyBudgetColumn(
       await upsertRoundInput(rctx, destinationMeasure, linesRound(lines.lines, lines.calendars, lines.result), lines.lines);
     } else {
       const copiedPeriod = sourceRecord ? shiftPeriod(sourceRecord, destinationYear - sourceYear) : wholeYear(destinationYear);
-      // A copy replaces the whole destination column, lines included: lines
-      // that are only a reference travel with their FTE (same calendar,
-      // quantity and price: the uplift applies to the months only), and a
-      // source without lines leaves none.
+      // A copy replaces the whole destination column, lines included. Lines
+      // that are only a reference travel as planned for the destination year
+      // (the uplift applies to the months only), with what they give there
+      // and their FTE from it; none left within the validity, none. Copied
+      // the old way (a calendar without days and no replacement), they travel
+      // as they are with the source's FTE. A source without lines leaves none.
+      const planned = reference?.kind === 'lines' ? reference : null;
       await upsertRoundInput(
         rctx,
         destinationMeasure,
@@ -731,10 +747,11 @@ export async function copyBudgetColumn(
             source_total: centsToDecimal(sourceTotal),
             total: centsToDecimal(targetTotal),
             source_method: sourceRecord?.method ?? null,
+            ...(planned ? { lines_result: linesResult(planned.lines, planned.calendars, planned.result) } : {}),
           },
-          fte: sourceRecord?.lines.length ? sourceRecord.fte : null,
+          fte: planned ? planned.result.fte : reference ? null : sourceRecord?.lines.length ? sourceRecord.fte : null,
         },
-        shiftLines(sourceRecord, destinationYear),
+        planned ? planned.lines : reference ? [] : shiftLines(sourceRecord, destinationYear),
       );
     }
 

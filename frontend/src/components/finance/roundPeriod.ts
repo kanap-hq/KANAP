@@ -121,9 +121,22 @@ export type LinesCalculation = {
   lines: LineCalculation[];
 };
 
+/**
+ * What the lines of a column that no longer follows them give (after a spread, or a copy of lines
+ * that are only a reference): the computed explanation without its kind. Optional: present only on
+ * a column with lines, and not on records written before it existed.
+ */
+export type LinesResult = Omit<LinesCalculation, 'kind'>;
+
 export type LastCalculation =
-  | { kind: 'annual'; total: string; profile: 'flat' | '4-4-5'; active_months: number[]; weights: string[]; source?: 'item_csv' }
-  | { kind: 'quarterly'; quarters: { Q1: string; Q2: string; Q3: string; Q4: string }; distribution: 'equal' | '445'; active_months: number[] }
+  | { kind: 'annual'; total: string; profile: 'flat' | '4-4-5'; active_months: number[]; weights: string[]; source?: 'item_csv'; lines_result?: LinesResult }
+  | {
+    kind: 'quarterly';
+    quarters: { Q1: string; Q2: string; Q3: string; Q4: string };
+    distribution: 'equal' | '445';
+    active_months: number[];
+    lines_result?: LinesResult;
+  }
   | {
     kind: 'copy';
     source_year: number;
@@ -132,6 +145,7 @@ export type LastCalculation =
     source_total: string;
     total: string;
     source_method: RoundMethod | null;
+    lines_result?: LinesResult;
   }
   | LinesCalculation;
 

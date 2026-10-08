@@ -72,9 +72,39 @@ export type LineCalculation = CostLine & {
   total: string;
 };
 
+/** What the lines gave, frozen at compute time: a later calendar edit never changes it. */
+export type LinesCalculation = {
+  kind: 'computed';
+  total: string;
+  /** The full-year average, as stored on the round. */
+  fte: string;
+  /** The average over the months where a people or days line is active (pieces do not count). */
+  fte_period: string;
+  month_amounts: string[];
+  fte_months: string[];
+  active_months: number[];
+  lines: LineCalculation[];
+};
+
+/**
+ * What the lines of a column that no longer follows them give (a spread, or a
+ * copy of lines that are only a reference): the `computed` calculation
+ * without its kind, kept as `lines_result` beside the calculation that
+ * produced the amounts, so the monthly FTE and each line's result outlive the
+ * spread. Present only on a record with lines (`fte` not null); optional, so
+ * every record stored before it stays valid. See `storedLinesResult`.
+ */
+export type LinesResult = Omit<LinesCalculation, 'kind'>;
+
 export type LastCalculation =
-  | { kind: 'annual'; total: string; profile: string; active_months: number[]; weights: string[]; source?: 'item_csv' }
-  | { kind: 'quarterly'; quarters: { Q1: string; Q2: string; Q3: string; Q4: string }; distribution: 'equal' | '445'; active_months: number[] }
+  | { kind: 'annual'; total: string; profile: string; active_months: number[]; weights: string[]; source?: 'item_csv'; lines_result?: LinesResult }
+  | {
+    kind: 'quarterly';
+    quarters: { Q1: string; Q2: string; Q3: string; Q4: string };
+    distribution: 'equal' | '445';
+    active_months: number[];
+    lines_result?: LinesResult;
+  }
   | {
     kind: 'copy';
     source_year: number;
@@ -83,20 +113,9 @@ export type LastCalculation =
     source_total: string;
     total: string;
     source_method: RoundMethod | null;
+    lines_result?: LinesResult;
   }
-  | {
-    // What the lines gave, frozen at compute time: a later calendar edit never changes it.
-    kind: 'computed';
-    total: string;
-    /** The full-year average, as stored on the round. */
-    fte: string;
-    /** The average over the months where a people or days line is active (pieces do not count). */
-    fte_period: string;
-    month_amounts: string[];
-    fte_months: string[];
-    active_months: number[];
-    lines: LineCalculation[];
-  };
+  | LinesCalculation;
 
 /** A stored line as the API returns it; decimals are plain strings without trailing zeros. */
 export type RoundLine = {
@@ -267,9 +286,9 @@ const MEASURE_ORDER = new Map(ROUND_MEASURES.map((m, i) => [m as string, i]));
 /**
  * The lines of several records in one query, keyed by record id, in `sort`
  * order; each with its calendar's code and name (the composite key keeps the
- * calendar in the line's tenant).
+ * calendar in the line's tenant). Also read by the backfill 1853880000000.
  */
-async function readLines(manager: EntityManager, scope: AmountScope, tenantId: string, roundIds: string[]): Promise<Map<string, RoundLine[]>> {
+export async function readLines(manager: EntityManager, scope: AmountScope, tenantId: string, roundIds: string[]): Promise<Map<string, RoundLine[]>> {
   const result = new Map<string, RoundLine[]>(roundIds.map((id) => [id, []]));
   if (roundIds.length === 0) return result;
   const rows: StoredLine[] = await manager.query(
@@ -515,6 +534,35 @@ export async function deleteRoundInput(ctx: RoundInputsContext, rawMeasure: stri
   );
 }
 
+/**
+ * The result of a record's lines, for a write that keeps its FTE while the
+ * column does not follow the lines: its `computed` calculation (a column
+ * that follows them, or was edited by hand since), else the `lines_result`
+ * its calculation carries, else none. None without lines (`fte` null).
+ */
+export function storedLinesResult(stored: Pick<RoundInput, 'fte' | 'last_calculation'> | null | undefined): LinesResult | null {
+  if (stored?.fte == null) return null;
+  const calculation = stored.last_calculation;
+  if (!calculation) return null;
+  if (calculation.kind === 'computed') {
+    const { kind: _computed, ...result } = calculation;
+    return result;
+  }
+  return calculation.lines_result ?? null;
+}
+
+/**
+ * A spread's fields with the result of the stored record's lines carried in
+ * its calculation as `lines_result` (none: the fields as they are). The
+ * spread keeps the stored FTE itself.
+ */
+function carryLinesResult(fields: RoundInputFields, stored: Pick<RoundInput, 'fte' | 'last_calculation'> | null): RoundInputFields {
+  const result = storedLinesResult(stored);
+  const calculation = fields.last_calculation;
+  if (!result || !calculation || calculation.kind === 'computed') return fields;
+  return { ...fields, last_calculation: { ...calculation, lines_result: result } };
+}
+
 /** The round-input fields a flat or named yearly spread stores. Shared with the budget-file load. */
 export function annualSpreadFields(
   total: bigint,
@@ -543,7 +591,8 @@ export function annualSpreadFields(
 /**
  * The records a spread writes: one `spread` record per measure it replaced,
  * with the period, the profile and what was computed. The lines and the FTE
- * of a column stay as they were: the budget tab keeps them as a reference.
+ * of a column stay as they were: the budget tab keeps them as a reference,
+ * and the calculation carries what they give (`lines_result`).
  */
 export async function recordSpread(ctx: RoundInputsContext, spread: PayloadSpread, source?: 'item_csv') {
   const { period_start, period_end, active_months } = spread.period;
@@ -551,18 +600,18 @@ export async function recordSpread(ctx: RoundInputsContext, spread: PayloadSprea
     for (const measure of ROUND_MEASURES) {
       const total = spread.totals[measure];
       if (total === undefined) continue;
-      await saveRoundInput(ctx, measure, (stored) => annualSpreadFields(
+      await saveRoundInput(ctx, measure, (stored) => carryLinesResult(annualSpreadFields(
         total,
         spread.profile,
         { period_start, period_end, active_months },
         stored?.fte ?? null,
         source,
-      ));
+      ), stored));
     }
     return;
   }
   const q = spread.quarters;
-  await saveRoundInput(ctx, spread.measure, (stored) => ({
+  await saveRoundInput(ctx, spread.measure, (stored) => carryLinesResult({
     period_start,
     period_end,
     method: 'spread',
@@ -574,7 +623,7 @@ export async function recordSpread(ctx: RoundInputsContext, spread: PayloadSprea
       active_months,
     },
     fte: stored?.fte ?? null,
-  }));
+  }, stored));
 }
 
 /**
@@ -757,6 +806,61 @@ function activeMonthsPeriod(year: number, activeMonths: readonly number[]): { pe
   return { period_start: `${year}-${mm(first)}-01`, period_end: `${year}-${mm(last)}-${lastDay}` };
 }
 
+/** What the lines gave, as a column computed from them stores it: the column's months, total and FTE, and each line's. */
+export function linesCalculation(
+  lines: readonly CostLine[],
+  calendars: ReadonlyMap<string, Pick<WorkingDayProfileInfo, 'code' | 'name'>>,
+  result: ColumnResult,
+): LinesCalculation {
+  return {
+    kind: 'computed',
+    total: centsToDecimal(result.total_cents),
+    fte: result.fte,
+    fte_period: result.fte_period,
+    month_amounts: result.month_cents.map(centsToDecimal),
+    fte_months: result.fte_months,
+    active_months: result.active_months,
+    lines: lines.map((line, index) => {
+      const computed = result.lines[index];
+      const calendar = line.working_day_profile_id ? calendars.get(line.working_day_profile_id) : undefined;
+      return {
+        ...line,
+        working_day_profile_code: calendar?.code ?? null,
+        working_day_profile_name: calendar?.name ?? null,
+        active_months: computed.active_months,
+        day_counts: computed.day_counts,
+        total_days: computed.total_days,
+        month_amounts: computed.month_cents.map(centsToDecimal),
+        fte_months: computed.fte_months,
+        fte: computed.fte,
+        fte_period: computed.fte_period,
+        total: centsToDecimal(computed.total_cents),
+      };
+    }),
+  };
+}
+
+/** `linesCalculation` as a `lines_result`: the same content without the kind. */
+export function linesResult(
+  lines: readonly CostLine[],
+  calendars: ReadonlyMap<string, Pick<WorkingDayProfileInfo, 'code' | 'name'>>,
+  result: ColumnResult,
+): LinesResult {
+  const { kind: _computed, ...content } = linesCalculation(lines, calendars, result);
+  return content;
+}
+
+/**
+ * The result of stored lines computed for `year` with the calendars as they
+ * are now (`calendars` holds every calendar the lines name, with its days).
+ * Throws when they cannot be computed: a calendar without days for the year,
+ * a line outside the year, an amount over the limits. The backfill
+ * 1853880000000 uses it.
+ */
+export function computeLinesResult(lines: readonly CostLine[], year: number, calendars: ReadonlyMap<string, WorkingDayProfileInfo>): LinesResult {
+  return linesResult(lines, calendars, computeColumn(lines, year, lineCalendarDays(calendars, year)));
+}
+
 /** The record of a column computed from its lines: the whole months they cover, the FTE and what each line gave. */
 export function linesRound(
   lines: readonly CostLine[],
@@ -768,46 +872,28 @@ export function linesRound(
     method: 'computed',
     spread_profile_name: null,
     fte: result.fte,
-    last_calculation: {
-      kind: 'computed',
-      total: centsToDecimal(result.total_cents),
-      fte: result.fte,
-      fte_period: result.fte_period,
-      month_amounts: result.month_cents.map(centsToDecimal),
-      fte_months: result.fte_months,
-      active_months: result.active_months,
-      lines: lines.map((line, index) => {
-        const computed = result.lines[index];
-        const calendar = line.working_day_profile_id ? calendars.get(line.working_day_profile_id) : undefined;
-        return {
-          ...line,
-          working_day_profile_code: calendar?.code ?? null,
-          working_day_profile_name: calendar?.name ?? null,
-          active_months: computed.active_months,
-          day_counts: computed.day_counts,
-          total_days: computed.total_days,
-          month_amounts: computed.month_cents.map(centsToDecimal),
-          fte_months: computed.fte_months,
-          fte: computed.fte,
-          fte_period: computed.fte_period,
-          total: centsToDecimal(computed.total_cents),
-        };
-      }),
-    },
+    last_calculation: linesCalculation(lines, calendars, result),
   };
 }
 
 /**
  * The record of a column whose lines are removed: amounts kept, FTE unknown.
  * A column computed from them reads as edited by hand and loses their
- * explanation; any other keeps how it was produced. No record: nothing.
+ * explanation; any other keeps how it was produced, without the result of
+ * the lines it carried. No record: nothing.
  */
 function withoutLines(stored: RoundInput | null): RoundInputFields | null {
   if (!stored) return null;
+  const calculation = stored.last_calculation;
+  let kept: LastCalculation | null = null;
+  if (calculation && calculation.kind !== 'computed') {
+    const { lines_result: _dropped, ...rest } = calculation;
+    kept = rest;
+  }
   return {
     ...roundFields(stored),
     method: stored.method === 'computed' ? 'manual' : stored.method,
-    last_calculation: stored.last_calculation?.kind === 'computed' ? null : stored.last_calculation,
+    last_calculation: kept,
     fte: null,
   };
 }
