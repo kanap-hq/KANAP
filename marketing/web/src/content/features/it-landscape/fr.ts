@@ -67,7 +67,7 @@ const content: FeatureContent = {
       { title: 'Dérivation des risques', body: 'Risque de connexion calculé depuis les interfaces liées. Criticité, classe de données, PII auto-dérivés.' },
       { title: 'Contacts support', body: 'Utilisateurs internes et contacts externes par application avec rôles et notes.' },
       { title: 'Liens coûts', body: 'Liez les applications aux items OPEX / CAPEX. Voyez le vrai coût du portefeuille.' },
-      { title: 'Import / export CSV', body: 'Import en masse d\'applications et d\'interfaces. Export de l\'inventaire pour analyse.' },
+      { title: 'Import / export CSV', body: 'Import en masse d\'applications et d\'actifs. Export de l\'inventaire pour analyse.' },
     ],
   },
   crossLinks: {

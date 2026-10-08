@@ -46,10 +46,10 @@ const content: AgentsContent = {
       shotAlt: 'Die Agenten-Einstellungen für Persona und Zielausrichtung',
     },
     {
-      title: 'Ein vollständiges Protokoll von allem, was er getan hat.',
-      body: 'Jede Agentenaktion wird protokolliert, auf das beschränkt, was Sie erlaubt haben, durch die genutzten Quellen belegt und jederzeit stoppbar. Dieses Protokoll macht es vertretbar, einem Agenten echte Arbeit zu übergeben.',
+      title: 'Ein Protokoll von allem, was er getan hat.',
+      body: 'Jede Agentenaktion wird protokolliert, auf das beschränkt, was Sie erlaubt haben, durch die genutzten Quellen belegt und jederzeit stoppbar. Dieses Protokoll macht es vertretbar, einem Agenten echte Arbeit zu übergeben. Der Verlauf wird standardmäßig 30 Tage aufbewahrt und lässt sich von 7 bis 90 Tagen einstellen.',
       bullets: [
-        'Jede Aktion im Audit-Trail protokolliert',
+        'Jede Aktion im Aktivitätsverlauf des Agenten protokolliert',
         'Auf die Operationen beschränkt, die Sie erlauben',
         'Jede Antwort durch ihre Quellen belegt',
         'Jeden Agenten sofort pausieren',
@@ -58,11 +58,11 @@ const content: AgentsContent = {
     },
     {
       title: 'Ihres zum Betreiben und Anpassen.',
-      body: 'Agenten sind Teil des Open-Source-Produkts. Betreiben Sie sie in Ihrer eigenen Installation, wo Ihre Tickets und Dokumente bleiben, und verändern Sie ihre Arbeitsweise, weil Sie den vollständigen Quellcode haben. Ihr eigener LLM-Schlüssel, genau wie bei Plaid.',
+      body: 'Agenten sind Teil des Open-Source-Produkts. Betreiben Sie sie in Ihrer eigenen Installation, wo Ihre Tickets und Dokumente bleiben, abgesehen vom Text, der an den von Ihnen gewählten LLM-Anbieter geht, und verändern Sie ihre Arbeitsweise, weil Sie den vollständigen Quellcode haben. Ihr eigener LLM-Schlüssel, genau wie bei Plaid.',
       bullets: [
         'Im Open-Source-Produkt enthalten',
         'Läuft in Ihrer eigenen Installation',
-        'Ihre Tickets und Dokumente bleiben bei Ihnen',
+        'Tickets und Dokumente bleiben bei Ihnen, außer dem, was an das LLM geht',
         'Ihr eigener LLM-Schlüssel',
       ],
       shotAlt: 'Ein Agent, der eine Aufgaben-Queue bearbeitet',

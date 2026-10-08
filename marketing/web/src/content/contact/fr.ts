@@ -31,7 +31,7 @@ const content: ContactContent = {
     submitting: 'Envoi…',
     successTitle: 'Message envoyé.',
     successBody: 'Nous vous répondrons sous un jour ouvré.',
-    errorGeneric: 'Une erreur est survenue. Réessayez ou écrivez directement à admin@kanap.net.',
+    errorGeneric: 'Une erreur est survenue. Réessayez ou écrivez directement à support@kanap.net.',
   },
   alternate: {
     label: 'Vous préférez l\'email direct ?',

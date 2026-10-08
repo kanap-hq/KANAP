@@ -39,7 +39,7 @@ Goals, constraints, assumptions, and relevant background for architectural choic
   - Platform and admin: tenants, roles, permissions, auth (local + Entra), audit, branding, CoA templates, ops, scheduled tasks, cleanup
   - Cross-cutting: tenancy, storage, email, notifications, i18n, public endpoints, health, seed
 - **Data store (`db`)**: PostgreSQL 15. Containerized in dev only; host-installed on QA/prod. Row-level security on every tenant-scoped table.
-- **Marketing (`marketing`)**: Astro 5 static site in `marketing/web`, built with Node 22 and served by Nginx. Takes a `PUBLIC_GA_ID` build argument (GA4). Content notes live next to the site (`marketing/web/*.md`).
+- **Marketing (`marketing`)**: Astro 5 static site in `marketing/web`, built with Node 22 and served by Nginx. Content notes live next to the site (`marketing/web/*.md`).
 - **Integrations**: CSV import/export; GLPI (ticketing) and PRTG (monitoring) providers for agents; Microsoft Entra (SSO + directory sync); Stripe (billing, cloud only); Resend or SMTP (email); Brave Search (web search); S3-compatible object storage; MCP (inbound server and outbound bridge).
 
 ## Ingress & Routing (prod intent)

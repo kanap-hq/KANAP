@@ -40,7 +40,7 @@ const content: FeatureContent = {
       bullets: [
         'Protocole MCP standard, compatible avec tout client',
         'Authentification par clé API avec scoping granulaire',
-        'Mêmes requêtes et actions que le chat intégré',
+        'Les mêmes requêtes en lecture que le chat intégré (MCP est en lecture seule)',
         'Conservez vos flux IA existants, ajoutez le contexte KANAP',
       ],
       shotAlt: 'Configuration MCP avec scoping de clé API',
@@ -53,7 +53,7 @@ const content: FeatureContent = {
         'Clés API sécurisées avec scoping MCP granulaire',
         'Recherche web activable ou désactivable indépendamment',
         'Aperçu et confirmation de toutes les écritures',
-        'Mode lecture seule disponible pour des déploiements prudents',
+        'Accès en lecture seule via les rôles pour des déploiements prudents',
       ],
       shotAlt: 'Contrôles admin Plaid avec matrice de permissions',
     },

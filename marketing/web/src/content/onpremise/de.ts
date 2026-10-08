@@ -4,7 +4,7 @@ const content: OnPremContent = {
   meta: {
     title: 'KANAP selbst hosten, die bevorzugte Option',
     description:
-      'Betreiben Sie KANAP auf Ihrer eigenen Infrastruktur, unter AGPL v3. Komplette Plattform inklusive KI-Agenten, unbegrenzte Nutzer, Ihre Daten verlassen nie Ihre Umgebung. Deployment in Minuten mit Docker Compose.',
+      'Betreiben Sie KANAP auf Ihrer eigenen Infrastruktur, unter AGPL v3. Komplette Plattform inklusive KI-Agenten, unbegrenzte Nutzer, und Sie entscheiden, wohin Ihre Daten gehen. Deployment in Minuten mit Docker Compose.',
   },
 
   header: {
@@ -25,7 +25,7 @@ const content: OnPremContent = {
     pillars: [
       {
         title: 'Ihre Daten bleiben zu Hause',
-        body: 'Budgets, Lieferantenverträge, IT-Landschaft, alles. Auf Ihren Servern, in Ihrem Netz. Kein Dritt-Datenverarbeiter, dem Sie Ihre Governance-Daten anvertrauen müssen. Auch die Schlussfolgerungen und Aktionen der Agenten laufen dort, was zählt, wenn ein Prüfer fragt.',
+        body: 'Budgets, Lieferantenverträge, IT-Landschaft, alles. Auf Ihren Servern, in Ihrem Netz. Kein Dritt-Datenverarbeiter, dem Sie Ihre Governance-Daten anvertrauen müssen, außer den Diensten, die Sie anbinden, etwa einem KI-Modellanbieter oder einem E-Mail-Relay. Auch die Agenten-Laufzeit und ihre Aktionen laufen dort, was zählt, wenn ein Prüfer fragt.',
       },
       {
         title: 'Keine Platzsteuer',
@@ -33,7 +33,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Compliance-ready',
-        body: 'Row-Level Security isoliert Tenants. Argon2-Passworthashing. TLS überall. Ihre VPC, Ihre Backups, Ihr SOC.',
+        body: 'Row-Level Security isoliert Tenants. Argon2-Passworthashing. HTTPS mit Zertifikaten, die Sie kontrollieren. Ihre VPC, Ihre Backups, Ihr SOC.',
       },
       {
         title: 'Quellcode prüfbar',
@@ -41,11 +41,11 @@ const content: OnPremContent = {
       },
       {
         title: 'Air-Gap-freundlich',
-        body: 'Docker-Compose-Deployment läuft in eingeschränkten Netzen. Eigenständige Images, keine zwingenden ausgehenden Aufrufe für Kernfunktionen.',
+        body: 'Docker-Compose-Deployment läuft in eingeschränkten Netzen. Sie bauen die Images aus dem öffentlichen Quellcode, und nach dem Bau machen sie keine zwingenden ausgehenden Aufrufe für Kernfunktionen.',
       },
       {
         title: 'Ihr Takt',
-        body: 'Version pinnen, Minor-Release testen, im Change-Fenster migrieren. Keine erzwungenen Updates, keine Überraschungs-Downtime.',
+        body: 'Die betriebene Version pinnen, ein Update testen, im Change-Fenster migrieren. Keine erzwungenen Updates, keine Überraschungs-Downtime.',
       },
     ],
   },
@@ -106,10 +106,10 @@ const content: OnPremContent = {
       { label: 'OS', value: 'Beliebiges Linux mit Docker (Ubuntu 22+, Debian 12+, RHEL 9+ empfohlen)' },
       { label: 'CPU', value: '2 vCPU minimum · 4+ empfohlen für 50+ Nutzer' },
       { label: 'RAM', value: '4 GB minimum · 8 GB empfohlen' },
-      { label: 'Speicher', value: '20 GB für die Plattform + Datenzuwachs' },
-      { label: 'Datenbank', value: 'PostgreSQL 15+ (im Compose enthalten oder extern)' },
+      { label: 'Speicher', value: '20 GB für die Plattform + Datenzuwachs, plus S3-kompatibler Objektspeicher' },
+      { label: 'Datenbank', value: 'PostgreSQL 16+ mit citext, pgcrypto und uuid-ossp (von Ihnen bereitgestellt)' },
       { label: 'Netzwerk', value: 'HTTPS-Terminator Ihrer Wahl, nginx, Traefik, Cloud-LB' },
-      { label: 'Ausgehend (optional)', value: 'World-Bank-FX-API für Live-Kurse · LLM-Provider für Plaid' },
+      { label: 'Ausgehend (optional)', value: 'Wechselkurs-APIs (World Bank, exchangerate-api.com) · LLM-Provider für Plaid und Agenten · Microsoft Entra für SSO · Resend oder Ihr SMTP-Relay für E-Mail · Websuche-Anbieter, falls aktiviert' },
     ],
   },
 
@@ -119,15 +119,15 @@ const content: OnPremContent = {
     items: [
       {
         title: 'Updates nach Plan',
-        body: 'Version-Tag pinnen, Release in Pre-Prod testen, im Change-Fenster anwenden. Migrations laufen beim Boot, idempotent.',
+        body: 'Die betriebene Version pinnen, das Update in Pre-Prod testen, im Change-Fenster anwenden. Migrations laufen beim Boot, idempotent.',
       },
       {
-        title: 'Backups sind ein Postgres-Dump',
-        body: 'Standard-Tooling. pg_dump in Ihre bestehende Backup-Pipeline einbauen. Dateien sind klein und separat snapshotbar.',
+        title: 'Backups mit Ihren eigenen Werkzeugen',
+        body: 'Standard-PostgreSQL und Dateispeicher. Sichern Sie beides mit der Pipeline, die Sie bereits betreiben.',
       },
       {
         title: 'Observability, die Sie schon haben',
-        body: 'Container liefern strukturierte Logs und Health-Endpoints. Richten Sie Ihren bestehenden Stack darauf aus (Prometheus, Loki, Datadog, was Sie schon haben).',
+        body: 'Container schreiben Logs auf stdout und bieten einen Health-Endpoint. Richten Sie Ihren bestehenden Stack darauf aus (Prometheus, Loki, Datadog, was Sie schon haben).',
       },
       {
         title: 'Branding inklusive',
@@ -135,11 +135,11 @@ const content: OnPremContent = {
       },
       {
         title: 'SSO über Entra ID',
-        body: 'Enterprise-SSO ist Teil der Plattform, kein Upsell. Konfiguration über die Admin-Konsole.',
+        body: 'Enterprise-SSO ist Teil der Plattform. Tragen Sie Ihre Entra-App-Registrierung in die Konfiguration ein und verbinden Sie sie dann in der Admin-Konsole.',
       },
       {
         title: 'Plaid und Agenten nach Ihren Regeln',
-        body: 'Ihr eigener LLM-Schlüssel für Plaid und Ihre Agenten, OpenAI, Anthropic, Ollama oder ein beliebiger OpenAI-kompatibler Endpoint. Die Schlussfolgerungen und Aktionen der Agenten laufen in Ihrer eigenen Installation, und das Einzige, was sie verlässt, ist der Prompt, den Sie an den von Ihnen gewählten Anbieter senden.',
+        body: 'Ihr eigener LLM-Schlüssel für Plaid und Ihre Agenten, OpenAI, Anthropic, Ollama oder ein beliebiger OpenAI-kompatibler Endpoint. Die Agenten-Laufzeit und ihre Aktionen laufen in Ihrer eigenen Installation. Als Inhalt verlässt sie nur, was Sie an den von Ihnen gewählten Anbieter senden, dazu kurze Websuche-Anfragen, wenn Sie die Websuche einschalten.',
       },
     ],
   },
@@ -147,7 +147,7 @@ const content: OnPremContent = {
   support: {
     title: 'Prioritäre Hilfe gewünscht?',
     body:
-      'Der Self-Hosted-Support-Plan bringt prioritären E-Mail-Support, Installationshilfe, Plaid-BYOK-Freischaltung und 20 % Rabatt auf Beratung, ohne das Betriebsmodell zu ändern.',
+      'Der Self-Hosted-Support-Plan bringt prioritären E-Mail-Support, Installationshilfe und 20 % Rabatt auf Beratung, ohne das Betriebsmodell zu ändern.',
     bullets: [
       'Prioritärer E-Mail-Support (echte Menschen, Best-Effort-Reaktion)',
       'Hilfe bei Installation und Upgrades',

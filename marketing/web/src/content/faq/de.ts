@@ -39,7 +39,7 @@ const content: FaqContent = {
         },
         {
           q: 'Was passiert nach meiner Testphase?',
-          a: 'Nach Ihrem 14-tägigen Test müssen Sie einen kostenpflichtigen Plan wählen, um fortzufahren. Ihr Tenant bleibt weitere 30 Tage mit eingeschränktem Zugriff verfügbar. Nach Ablauf dieser 30 Tage wird Ihr Tenant gelöscht.',
+          a: 'Nach Ihrem 14-tägigen Test müssen Sie einen kostenpflichtigen Plan wählen, um fortzufahren. Am Ende des Tests wechselt Ihr Workspace in einen eingeschränkten Zugriff (nur Lesen), bis Sie ein Abonnement abschließen. Sie können jederzeit die Löschung Ihres Workspace verlangen.',
         },
         {
           q: 'Was ist die kostenlose Aktivierungssitzung?',
@@ -86,11 +86,11 @@ const content: FaqContent = {
       items: [
         {
           q: 'Was ist der Unterschied zwischen den inkludierten Plaid-Nachrichten und Bring Your Own Key?',
-          a: 'Hosted KANAP enthält eine großzügige Zahl an Plaid-Nachrichten, betrieben mit einem Mid-Range-Modell, das wir sorgfältig ausgewählt und mit KANAP getestet haben. Für noch leistungsfähigere Antworten können Sie über Bring Your Own Key State-of-the-Art-Modelle von OpenAI, Anthropic oder jedem kompatiblen Anbieter anbinden. BYOK gibt Ihnen zudem die volle Kontrolle über die Datenverarbeitung, und entfernt jede Nachrichten-Grenze.',
+          a: 'Hosted KANAP enthält eine großzügige Zahl an Plaid-Nachrichten, betrieben mit einem Mid-Range-Modell, das wir sorgfältig ausgewählt und mit KANAP getestet haben. Für noch leistungsfähigere Antworten können Sie über Bring Your Own Key State-of-the-Art-Modelle von OpenAI, Anthropic oder jedem kompatiblen Anbieter anbinden. BYOK lässt Sie zudem den Anbieter wählen, der Ihre Anfragen verarbeitet, und entfernt jede Nachrichten-Grenze.',
         },
         {
           q: 'Wie kann ich Plaid steuern?',
-          a: 'Auf Plattformebene kann Plaid vollständig deaktiviert, im Lesemodus oder im Lese-Schreib-Modus (mit Vorschau und Bestätigung für alle Änderungen) aktiviert werden. Websuche und MCP lassen sich separat aktivieren oder deaktivieren. Auf Benutzerebene steuern Sie über rollenbasierte Berechtigungen, wer welche Plaid-Funktion nutzt. RBAC wird immer durchgesetzt, Plaid sieht nie mehr, als der Nutzer sehen darf.',
+          a: 'Auf Workspace-Ebene schaltet ein Administrator Plaid ein oder aus, und Websuche und MCP lassen sich separat aktivieren oder deaktivieren. Auf Benutzerebene bestimmen rollenbasierte Berechtigungen, wer Plaid nutzen darf und welche Module es lesen kann. Für eine Änderung ist die Stufe Mitglied bei Plaid und beim Modul nötig, und jede Änderung wird als Vorschau gezeigt, die der Nutzer bestätigt. Der MCP-Zugriff ist schreibgeschützt. RBAC wird immer durchgesetzt, Plaid sieht nie mehr, als der Nutzer sehen darf.',
         },
       ],
     },
@@ -107,7 +107,7 @@ const content: FaqContent = {
         },
         {
           q: 'Kann ich einem Agenten echte Arbeit anvertrauen?',
-          a: 'Genau dafür sind die Kontrollen da. Ein Agent schließt anhand Ihrer eigenen IT-Daten, statt zu raten, nennt die genutzten Quellen und protokolliert jede Aktion im selben Audit-Trail wie der Rest von KANAP. Er gewinnt Autonomie, indem er sich an realen Aufgaben beweist, und Sie können ihn jederzeit stoppen.',
+          a: 'Genau dafür sind die Kontrollen da. Ein Agent schließt anhand Ihrer eigenen IT-Daten, statt zu raten, nennt die genutzten Quellen und protokolliert jede Aktion in seinem Aktivitätsverlauf. Er gewinnt Autonomie, indem er sich an realen Aufgaben beweist, und Sie können ihn jederzeit stoppen.',
         },
         {
           q: 'Mit welchen Tools arbeiten Agenten heute?',
@@ -127,7 +127,7 @@ const content: FaqContent = {
         },
         {
           q: 'Bleiben Agentenaktionen auf meinen eigenen Servern?',
-          a: 'Bei einer selbstgehosteten Installation ja. Die Schlussfolgerungen und Aktionen der Agenten laufen in Ihrer eigenen Installation, und Ihre Tickets und Dokumente verlassen sie nie. Der einzige externe Aufruf geht an den LLM-Anbieter, den Sie wählen.',
+          a: 'Bei einer selbstgehosteten Installation ja. Die Agenten-Laufzeit und ihre Aktionen laufen in Ihrer eigenen Installation. Als Ticket- und Dokumentinhalt verlässt sie nur, was der Agent an den von Ihnen gewählten LLM-Anbieter sendet, und nichts, wenn Sie das Modell auf Ihren eigenen Servern betreiben. Wenn Sie die Websuche einschalten, gehen kurze Anfragen an den Suchanbieter, ohne Objektreferenzen, Kennungen und E-Mail-Adressen.',
         },
       ],
     },

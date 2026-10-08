@@ -136,7 +136,7 @@ const content: HomeContent = {
         bullets: [
           'Schließt anhand Ihres realen IT-Datenbestands',
           'Startet beaufsichtigt, gewinnt mehr Autonomie',
-          'Jede Aktion protokolliert und umkehrbar',
+          'Jede Aktion protokolliert, Autonomie jederzeit entziehbar',
           'Offene Runtime, schreiben Sie Ihren eigenen Konnektor',
         ],
         ctaLabel: 'Mehr erfahren',
@@ -156,7 +156,7 @@ const content: HomeContent = {
       },
       {
         title: 'Rollenbasierte Zugriffskontrolle',
-        body: 'Feinkörnige Berechtigungen pro Modul. Leser-, Manager- und Administratorebenen.',
+        body: 'Feinkörnige Berechtigungen pro Modul. Stufen Leser, Mitwirkender, Mitglied und Administrator.',
       },
       {
         title: 'Reichhaltige Beziehungen',
@@ -164,7 +164,7 @@ const content: HomeContent = {
       },
       {
         title: 'Vollständiger Audit-Trail',
-        body: 'Jede Änderung protokolliert, auch die Aktionen der Agenten. Wer hat wann was geändert, mit vollständiger Vorher-Nachher-Historie.',
+        body: 'Jede Änderung protokolliert, auch die über Plaid vorgenommenen. Die Aktionen der Agenten haben einen eigenen Aktivitätsverlauf. Wer hat wann was geändert, mit vollständiger Vorher-Nachher-Historie.',
       },
       {
         title: 'Einheitliches Aufgabenmanagement',

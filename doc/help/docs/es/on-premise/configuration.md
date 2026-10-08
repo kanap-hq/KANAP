@@ -367,7 +367,7 @@ Solo requerido si la funcionalidad correspondiente está habilitada.
 | `login.microsoftonline.com` | 443 | Metadatos y tokens de SSO Entra ID | Si SSO Entra está configurado |
 | `graph.microsoft.com` | 443 | Enriquecimiento del perfil al iniciar sesión y sincronización diaria del directorio | Si SSO Entra está configurado |
 | `api.worldbank.org` | 443 | Tasas FX anuales | Opcional |
-| `v6.exchangerate-api.com` | 443 | Tasas FX spot | Opcional |
+| `open.er-api.com` | 443 | Tasas FX spot | Opcional |
 
 ### Interno (sin regla de firewall necesaria)
 

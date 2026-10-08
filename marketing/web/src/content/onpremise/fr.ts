@@ -4,7 +4,7 @@ const content: OnPremContent = {
   meta: {
     title: 'Auto-héberger KANAP, l\'approche prioritaire',
     description:
-      'Exécutez KANAP sur votre infrastructure, sous AGPL v3. Plateforme complète incluant les agents IA, utilisateurs illimités, vos données ne quittent jamais votre environnement. Déploiement en quelques minutes avec Docker Compose.',
+      'Exécutez KANAP sur votre infrastructure, sous AGPL v3. Plateforme complète incluant les agents IA, utilisateurs illimités, et vous décidez où vont vos données. Déploiement en quelques minutes avec Docker Compose.',
   },
 
   header: {
@@ -25,7 +25,7 @@ const content: OnPremContent = {
     pillars: [
       {
         title: 'Vos données restent à la maison',
-        body: "Budgets, contrats fournisseurs, paysage IT, tout. Sur vos serveurs, dans votre réseau. Aucun sous-traitant à qui confier vos données de gouvernance. Le raisonnement et les actions des agents s'y exécutent aussi, ce qui compte quand un auditeur pose la question.",
+        body: "Budgets, contrats fournisseurs, paysage IT, tout. Sur vos serveurs, dans votre réseau. Aucun sous-traitant à qui confier vos données de gouvernance, hormis les services que vous choisissez de connecter, comme un fournisseur de modèle IA ou un relais email. Le moteur des agents et leurs actions s'y exécutent aussi, ce qui compte quand un auditeur pose la question.",
       },
       {
         title: 'Aucune taxe par utilisateur',
@@ -33,7 +33,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Prêt pour la conformité',
-        body: 'Row-level security isole les tenants. Hash de mot de passe Argon2. TLS partout. Votre VPC, vos sauvegardes, votre SOC.',
+        body: 'Row-level security isole les tenants. Hash de mot de passe Argon2. HTTPS avec des certificats que vous maîtrisez. Votre VPC, vos sauvegardes, votre SOC.',
       },
       {
         title: 'Audit du code source',
@@ -41,11 +41,11 @@ const content: OnPremContent = {
       },
       {
         title: 'Compatible air-gap',
-        body: 'Déploiement Docker Compose en réseau restreint. Images autonomes, aucun appel sortant obligatoire pour les fonctions centrales.',
+        body: 'Déploiement Docker Compose en réseau restreint. Vous construisez les images depuis le code source public, et une fois construites, elles ne font aucun appel sortant obligatoire pour les fonctions centrales.',
       },
       {
         title: 'Votre cadence',
-        body: 'Épinglez une version, testez une mineure, migrez selon votre calendrier de changements. Aucune mise à jour forcée, aucune coupure surprise.',
+        body: 'Épinglez la version que vous exécutez, testez une mise à jour, migrez selon votre calendrier de changements. Aucune mise à jour forcée, aucune coupure surprise.',
       },
     ],
   },
@@ -106,10 +106,10 @@ const content: OnPremContent = {
       { label: 'OS', value: 'Tout Linux avec Docker (Ubuntu 22+, Debian 12+, RHEL 9+ recommandés)' },
       { label: 'CPU', value: '2 vCPU minimum · 4+ recommandés pour 50+ utilisateurs' },
       { label: 'RAM', value: '4 Go minimum · 8 Go recommandés' },
-      { label: 'Stockage', value: '20 Go pour la plateforme + la croissance de vos données' },
-      { label: 'Base de données', value: 'PostgreSQL 15+ (inclus dans Compose, ou externe)' },
+      { label: 'Stockage', value: '20 Go pour la plateforme + la croissance de vos données, plus un stockage objet compatible S3' },
+      { label: 'Base de données', value: 'PostgreSQL 16+ avec citext, pgcrypto et uuid-ossp (à fournir)' },
       { label: 'Réseau', value: 'Terminateur HTTPS de votre choix, nginx, Traefik, LB cloud' },
-      { label: 'Sortant (optionnel)', value: 'API World Bank FX pour les taux live · fournisseur LLM pour Plaid' },
+      { label: 'Sortant (optionnel)', value: 'API de taux de change (World Bank, exchangerate-api.com) · fournisseur LLM pour Plaid et les agents · Microsoft Entra pour le SSO · Resend ou votre relais SMTP pour l\'email · fournisseur de recherche web, si activé' },
     ],
   },
 
@@ -119,15 +119,15 @@ const content: OnPremContent = {
     items: [
       {
         title: 'Mises à jour à votre rythme',
-        body: 'Épinglez un tag, testez en pré-prod, appliquez dans votre fenêtre de changement. Migrations au boot, idempotentes par conception.',
+        body: 'Épinglez la version que vous exécutez, testez la mise à jour en pré-prod, appliquez-la dans votre fenêtre de changement. Migrations au boot, idempotentes par conception.',
       },
       {
-        title: 'Les sauvegardes sont un dump postgres',
-        body: 'Outillage standard. Programmez pg_dump avec votre pipeline existant. Les fichiers sont légers et peuvent être snapshotés à part.',
+        title: 'Des sauvegardes avec vos propres outils',
+        body: 'PostgreSQL et stockage de fichiers standard. Sauvegardez-les avec le pipeline que vous exploitez déjà.',
       },
       {
         title: 'L\'observabilité que vous avez déjà',
-        body: 'Les conteneurs émettent des logs structurés et des endpoints de santé. Pointez votre stack existant dessus (Prometheus, Loki, Datadog, ce que vous avez déjà).',
+        body: 'Les conteneurs écrivent leurs logs sur stdout et exposent un endpoint de santé. Pointez votre stack existant dessus (Prometheus, Loki, Datadog, ce que vous avez déjà).',
       },
       {
         title: 'Branding inclus',
@@ -135,11 +135,11 @@ const content: OnPremContent = {
       },
       {
         title: 'SSO via Entra ID',
-        body: 'Le SSO entreprise fait partie de la plateforme, pas d\'un upsell. Configurable via la console admin.',
+        body: "Le SSO entreprise fait partie de la plateforme. Ajoutez l'enregistrement d'application Entra à la configuration, puis connectez-le depuis la console admin.",
       },
       {
         title: 'Plaid et agents, à votre façon',
-        body: "Apportez votre propre clé LLM pour Plaid comme pour vos agents, OpenAI, Anthropic, Ollama, ou tout endpoint compatible OpenAI. Le raisonnement et les actions des agents s'exécutent au sein de votre propre déploiement, et la seule chose qui sort est le prompt que vous envoyez au fournisseur que vous avez choisi.",
+        body: "Apportez votre propre clé LLM pour Plaid comme pour vos agents, OpenAI, Anthropic, Ollama, ou tout endpoint compatible OpenAI. Le moteur des agents et leurs actions s'exécutent au sein de votre propre déploiement. Le seul contenu qui en sort est ce que vous envoyez au fournisseur que vous avez choisi, plus de courtes requêtes de recherche web si vous activez la recherche web.",
       },
     ],
   },
@@ -147,7 +147,7 @@ const content: OnPremContent = {
   support: {
     title: 'Besoin d\'aide prioritaire ?',
     body:
-      'Le plan Support auto-hébergé ajoute le support email prioritaire, l\'aide à l\'installation, le déblocage BYOK de Plaid et 20 % de remise sur le conseil, sans changer votre mode de déploiement.',
+      'Le plan Support auto-hébergé ajoute le support email prioritaire, l\'aide à l\'installation et 20 % de remise sur le conseil, sans changer votre mode de déploiement.',
     bullets: [
       'Support email prioritaire (de vrais humains, réponse meilleur effort)',
       'Aide à l\'installation et aux mises à niveau',

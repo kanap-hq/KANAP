@@ -46,10 +46,10 @@ const content: AgentsContent = {
       shotAlt: 'The agent settings for persona and targeting',
     },
     {
-      title: 'A full record of everything it did.',
-      body: 'Every agent action is recorded, scoped to what you allowed, backed by the sources it used, and stoppable at any moment. That record is what makes it defensible to hand an agent real work.',
+      title: 'A record of everything it did.',
+      body: 'Every agent action is recorded, scoped to what you allowed, backed by the sources it used, and stoppable at any moment. That record is what makes it defensible to hand an agent real work. The history is kept 30 days by default, and you can set it from 7 to 90 days.',
       bullets: [
-        'Every action recorded in the audit trail',
+        'Every action recorded in the agent\'s activity history',
         'Scoped to the operations you allow',
         'Each answer backed by its sources',
         'Pause any agent immediately',
@@ -58,11 +58,11 @@ const content: AgentsContent = {
     },
     {
       title: 'Yours to run and to change.',
-      body: 'Agents are part of the open-source product. Run them inside your own deployment, where your tickets and documents stay, and change how they work because you have the full source. Bring your own LLM key, the same as Plaid.',
+      body: 'Agents are part of the open-source product. Run them inside your own deployment, where your tickets and documents stay, except the text sent to the LLM provider you choose, and change how they work because you have the full source. Bring your own LLM key, the same as Plaid.',
       bullets: [
         'Included in the open-source product',
         'Runs inside your own deployment',
-        'Your tickets and documents stay with you',
+        'Tickets and documents stay with you, except what goes to the LLM',
         'Bring your own LLM key',
       ],
       shotAlt: 'An agent working a queue of tasks',

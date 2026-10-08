@@ -67,7 +67,7 @@ const content: FeatureContent = {
       { title: 'Risk derivation', body: 'Connection risk calculated from linked interfaces. Criticality, data class, PII auto-derived.' },
       { title: 'Support contacts', body: 'Internal users and external contacts per application with roles and notes.' },
       { title: 'Cost linking', body: 'Link applications to OPEX / CAPEX items. See the true cost of your portfolio.' },
-      { title: 'CSV import / export', body: 'Bulk import applications and interfaces. Export your inventory for analysis.' },
+      { title: 'CSV import / export', body: 'Bulk import applications and assets. Export your inventory for analysis.' },
     ],
   },
   crossLinks: {

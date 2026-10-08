@@ -136,7 +136,7 @@ const content: HomeContent = {
         bullets: [
           'Raisonne sur votre référentiel IT réel',
           'Démarre supervisé, gagne en autonomie',
-          'Chaque action enregistrée et réversible',
+          'Chaque action enregistrée, autonomie que vous pouvez retirer',
           'Runtime ouvert, écrivez votre propre connecteur',
         ],
         ctaLabel: 'En savoir plus',
@@ -156,7 +156,7 @@ const content: HomeContent = {
       },
       {
         title: "Contrôle d'accès par rôle",
-        body: 'Permissions fines par module. Niveaux lecteur, gestionnaire, administrateur.',
+        body: 'Permissions fines par module. Niveaux lecteur, contributeur, membre, administrateur.',
       },
       {
         title: 'Relations riches',
@@ -164,7 +164,7 @@ const content: HomeContent = {
       },
       {
         title: "Journal d'audit complet",
-        body: "Chaque changement tracé, y compris les actions effectuées par les agents. Sachez qui a changé quoi, quand, avec l'historique complet avant et après.",
+        body: "Chaque changement tracé, y compris ceux faits via Plaid. Les actions des agents ont leur propre historique d'activité. Sachez qui a changé quoi, quand, avec l'historique complet avant et après.",
       },
       {
         title: 'Gestion unifiée des tâches',

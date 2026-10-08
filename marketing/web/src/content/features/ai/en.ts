@@ -40,7 +40,7 @@ const content: FeatureContent = {
       bullets: [
         'Standard MCP protocol, works with any compatible client',
         'Secure API key authentication with granular scoping',
-        'Same queries and actions as the built-in chat',
+        'The same read queries as the built-in chat (MCP is read-only)',
         'Keep your existing AI workflows, add KANAP context',
       ],
       shotAlt: 'MCP configuration with API key scoping',
@@ -53,7 +53,7 @@ const content: FeatureContent = {
         'Secure API keys with granular MCP scoping',
         'Web search can be enabled or disabled independently',
         'Preview and confirmation for all write operations',
-        'Read-only mode available for cautious rollouts',
+        'Read-only access through roles for cautious rollouts',
       ],
       shotAlt: 'Plaid admin controls with permission matrix',
     },

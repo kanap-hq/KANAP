@@ -31,7 +31,7 @@ const content: ContactContent = {
     submitting: 'Sending…',
     successTitle: 'Message sent.',
     successBody: 'We\'ll get back to you within one business day.',
-    errorGeneric: 'Something went wrong. Please try again or email admin@kanap.net directly.',
+    errorGeneric: 'Something went wrong. Please try again or email support@kanap.net directly.',
   },
   alternate: {
     label: 'Prefer plain email?',

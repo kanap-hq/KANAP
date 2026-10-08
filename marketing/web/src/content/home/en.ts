@@ -136,7 +136,7 @@ const content: HomeContent = {
         bullets: [
           'Reasons over your real IT record',
           'Starts supervised, earns more autonomy',
-          'Every action recorded and reversible',
+          'Every action recorded, autonomy you can withdraw',
           'Open runtime, write your own connector',
         ],
         ctaLabel: 'Learn more',
@@ -156,7 +156,7 @@ const content: HomeContent = {
       },
       {
         title: 'Role-based access',
-        body: 'Fine-grained permissions per module. Reader, manager, admin levels.',
+        body: 'Fine-grained permissions per module. Reader, contributor, member and admin levels.',
       },
       {
         title: 'Rich relations',
@@ -164,7 +164,7 @@ const content: HomeContent = {
       },
       {
         title: 'Complete audit trail',
-        body: 'Every change tracked, including the actions taken by agents. Know who changed what, when, with full before and after history.',
+        body: 'Every change tracked, including changes made through Plaid. Agent actions have their own activity history. Know who changed what, when, with full before and after history.',
       },
       {
         title: 'Unified task management',

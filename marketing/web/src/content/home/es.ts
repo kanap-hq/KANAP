@@ -136,7 +136,7 @@ const content: HomeContent = {
         bullets: [
           'Razona sobre su repositorio de TI real',
           'Empieza supervisado y gana más autonomía',
-          'Cada acción registrada y reversible',
+          'Cada acción registrada, autonomía que puede retirar',
           'Runtime abierto, escriba su propio conector',
         ],
         ctaLabel: 'Más información',
@@ -156,7 +156,7 @@ const content: HomeContent = {
       },
       {
         title: 'Control de acceso por rol',
-        body: 'Permisos granulares por módulo. Niveles lector, gestor, administrador.',
+        body: 'Permisos granulares por módulo. Niveles lector, colaborador, miembro, administrador.',
       },
       {
         title: 'Relaciones ricas',
@@ -164,7 +164,7 @@ const content: HomeContent = {
       },
       {
         title: 'Registro de auditoría completo',
-        body: 'Cada cambio queda registrado, incluidas las acciones de los agentes. Sepa quién cambió qué y cuándo, con historial completo de antes y después.',
+        body: 'Cada cambio queda registrado, incluidos los hechos con Plaid. Las acciones de los agentes tienen su propio historial de actividad. Sepa quién cambió qué y cuándo, con historial completo de antes y después.',
       },
       {
         title: 'Gestión unificada de tareas',

@@ -143,18 +143,6 @@ const xDefault = alternateOverride
 
     <slot name="head" />
 
-    {import.meta.env.PUBLIC_GA_ID && (
-      <>
-        <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${import.meta.env.PUBLIC_GA_ID}`}></script>
-        <script is:inline define:vars={{ GA_ID: import.meta.env.PUBLIC_GA_ID }}>
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', GA_ID, { anonymize_ip: true });
-        </script>
-      </>
-    )}
-
 {/* Cloudflare Web Analytics: cookieless (no consent banner required, CNIL/GDPR) and
     injected automatically at the Cloudflare edge (zone RUM set to "Enable"). No script
     tag here on purpose: the edge injector skips pages that already carry its analytics

@@ -1,0 +1,5 @@
+Contact: mailto:security@kanap.net
+Expires: 2027-10-07T00:00:00.000Z
+Preferred-Languages: en, fr
+Policy: https://kanap.net/security
+Canonical: https://kanap.net/.well-known/security.txt

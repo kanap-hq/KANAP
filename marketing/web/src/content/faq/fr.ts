@@ -39,7 +39,7 @@ const content: FaqContent = {
         },
         {
           q: 'Que se passe-t-il à la fin de mon essai ?',
-          a: 'Après votre essai de 14 jours, vous devez choisir un plan payant pour continuer. Votre tenant reste disponible 30 jours de plus avec un accès limité. À l\'issue de cette période de 30 jours, votre tenant est supprimé.',
+          a: 'Après votre essai de 14 jours, vous devez choisir un plan payant pour continuer. À la fin de l\'essai, votre workspace passe en accès limité, en lecture seule, jusqu\'à ce que vous souscriviez un abonnement. Vous pouvez demander sa suppression à tout moment.',
         },
         {
           q: 'Qu\'est-ce que la session d\'activation gratuite ?',
@@ -86,11 +86,11 @@ const content: FaqContent = {
       items: [
         {
           q: 'Quelle est la différence entre les messages Plaid inclus et Bring Your Own Key ?',
-          a: 'KANAP hébergé inclut un nombre généreux de messages Plaid, propulsés par un modèle intermédiaire que nous avons soigneusement sélectionné et testé avec KANAP. Pour des réponses encore plus performantes, l\'option Bring Your Own Key vous permet de connecter les modèles de pointe d\'OpenAI, Anthropic ou de tout fournisseur compatible. BYOK vous donne aussi la maîtrise complète du traitement de vos données, et supprime toute limite de messages.',
+          a: 'KANAP hébergé inclut un nombre généreux de messages Plaid, propulsés par un modèle intermédiaire que nous avons soigneusement sélectionné et testé avec KANAP. Pour des réponses encore plus performantes, l\'option Bring Your Own Key vous permet de connecter les modèles de pointe d\'OpenAI, Anthropic ou de tout fournisseur compatible. BYOK vous laisse aussi choisir le fournisseur qui traite vos requêtes, et supprime toute limite de messages.',
         },
         {
           q: 'Comment puis-je contrôler Plaid ?',
-          a: 'Au niveau plateforme, Plaid peut être totalement désactivé, activé en lecture seule, ou activé en lecture-écriture (avec aperçu et confirmation pour toutes les modifications). La recherche web et MCP s\'activent ou se désactivent séparément. Au niveau utilisateur, vous contrôlez qui accède à quelle fonctionnalité Plaid via les permissions par rôle. Le RBAC est toujours appliqué, Plaid ne voit jamais plus que ce qui est permis à l\'utilisateur.',
+          a: 'Au niveau du workspace, un administrateur active ou désactive Plaid, et la recherche web et MCP s\'activent ou se désactivent séparément. Au niveau utilisateur, les permissions par rôle décident qui peut utiliser Plaid et quels modules il peut lire. Faire une modification demande le niveau membre sur Plaid et sur le module, et chaque modification est présentée en aperçu que l\'utilisateur confirme. L\'accès MCP est en lecture seule. Le RBAC est toujours appliqué, Plaid ne voit jamais plus que ce qui est permis à l\'utilisateur.',
         },
       ],
     },
@@ -107,7 +107,7 @@ const content: FaqContent = {
         },
         {
           q: 'Puis-je confier un vrai travail à un agent ?',
-          a: "C'est précisément le rôle des contrôles. Un agent raisonne sur vos propres données IT plutôt que de deviner, cite les sources qu'il a utilisées et enregistre chaque action dans le même journal d'audit que le reste de KANAP. Il gagne en autonomie en faisant ses preuves sur des tâches réelles, et vous pouvez l'arrêter à tout moment.",
+          a: "C'est précisément le rôle des contrôles. Un agent raisonne sur vos propres données IT plutôt que de deviner, cite les sources qu'il a utilisées et enregistre chaque action dans son historique d'activité. Il gagne en autonomie en faisant ses preuves sur des tâches réelles, et vous pouvez l'arrêter à tout moment.",
         },
         {
           q: "Avec quels outils les agents travaillent-ils aujourd'hui ?",
@@ -127,7 +127,7 @@ const content: FaqContent = {
         },
         {
           q: 'Les actions des agents restent-elles sur mes propres serveurs ?',
-          a: "Sur un déploiement auto-hébergé, oui. Le raisonnement et les actions de l'agent se déroulent au sein de votre propre déploiement, et vos tickets et documents n'en sortent jamais. Le seul appel externe va au fournisseur LLM que vous choisissez.",
+          a: "Sur un déploiement auto-hébergé, oui. Le moteur des agents et leurs actions se déroulent au sein de votre propre déploiement. Le seul contenu de tickets et de documents qui en sort est ce que l'agent envoie au fournisseur LLM que vous choisissez, et rien si vous faites tourner le modèle sur vos propres serveurs. Si vous activez la recherche web, de courtes requêtes partent vers le fournisseur de recherche, sans les références d'éléments, les identifiants ni les adresses e-mail.",
         },
       ],
     },

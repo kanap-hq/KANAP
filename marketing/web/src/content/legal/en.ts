@@ -14,7 +14,7 @@ const content: LegalContent = {
     header: {
       eyebrow: 'Legal',
       title: 'Privacy policy',
-      lastUpdated: 'Last updated: 12 October 2025',
+      lastUpdated: 'Last updated: 7 October 2026',
     },
     body: `
 <h2>Preamble</h2>
@@ -61,25 +61,32 @@ const content: LegalContent = {
   <li><strong>Legal obligations:</strong> KANAP may be required to disclose personal data to administrative or judicial authorities when required by law.</li>
 </ul>
 <p>KANAP undertakes not to share users' personal data for commercial purposes other than those mentioned above. KANAP will never sell or rent your personal data to third parties.</p>
+<p>The service providers (sub-processors) that process personal data on behalf of KANAP for the cloud service are:</p>
+<ul>
+  <li><strong>Hetzner Online GmbH</strong> (Germany): hosting of the servers, database and file storage.</li>
+  <li><strong>Cloudflare</strong> (United States): network, CDN and TLS termination in front of the servers, with contractual safeguards for transfers outside the European Union.</li>
+  <li><strong>Resend</strong> (transactional email, United States): account activation, password reset and notification emails.</li>
+  <li><strong>Stripe</strong> (payments, Ireland and United States): payment processing and subscription billing.</li>
+  <li><strong>AI model provider</strong> for the built-in AI features of the cloud service: AI features are off by default. The built-in model receives no data until the workspace has accepted its provider and where it processes data, both named in the application. An administrator of the workspace gives this confirmation, which covers the assistant, the agents and scheduled processing, and a new confirmation is asked if the provider or the location changes. Administrators can use their own model provider instead. The provider may process data outside the European Union.</li>
+</ul>
+<p>Customers who self-host KANAP choose their own providers, and KANAP does not process their data. Customers of the cloud service who connect their own AI model provider choose that provider, and KANAP does not send their data to its built-in model.</p>
 
 <h2>6. Data retention period</h2>
 <ul>
-  <li>Account data (name, email, etc.) is retained for the duration of the subscription and for 3 years after the end of the subscription, for administrative and litigation management purposes.</li>
-  <li>Usage data is retained for 1 year for service improvement purposes.</li>
-  <li>Financial data entered by customers is retained for the duration of the subscription and may be deleted at the customer's request or automatically 30 days after account cancellation.</li>
+  <li>Account data and the data entered by customers into the Platform are retained for the duration of the contract. On termination, they are deleted at the customer's request.</li>
   <li>Billing and invoicing data is retained for 10 years in accordance with French accounting and tax regulations.</li>
   <li>Payment data is not retained by KANAP and is managed directly by the payment processor (Stripe).</li>
 </ul>
 
 <h2>7. Data security</h2>
 <ul>
-  <li>Encryption of data at rest and in transit (TLS/SSL)</li>
+  <li>HTTPS for all connections to the Platform</li>
+  <li>Encryption at rest of secrets and credentials stored by the Platform (AES-256-GCM)</li>
   <li>Role-based access control and authentication mechanisms</li>
-  <li>Regular security audits and vulnerability assessments</li>
-  <li>Secure hosting infrastructure within the European Union</li>
-  <li>Password hashing using industry-standard algorithms (Argon2)</li>
+  <li>Hosting in the European Union (Hetzner, Germany)</li>
+  <li>Password hashing using industry-standard algorithms (Argon2id)</li>
   <li>Multi-tenant isolation using Row-Level Security (RLS) in the database</li>
-  <li>Incident response procedures and breach notification protocols</li>
+  <li>Source code published under AGPL v3, and a private channel to report vulnerabilities</li>
 </ul>
 
 <h2>8. User rights</h2>
@@ -96,10 +103,11 @@ const content: LegalContent = {
 <p>To exercise your rights, you can contact KANAP at <a href="mailto:admin@kanap.net">admin@kanap.net</a>. You also have the right to lodge a complaint with the French Data Protection Authority (CNIL).</p>
 
 <h2>9. International data transfers</h2>
-<p>KANAP hosts all data within the European Union. In the event that data needs to be transferred outside the EU, KANAP will ensure that appropriate safeguards are in place, such as Standard Contractual Clauses approved by the European Commission.</p>
+<p>The Platform is hosted in the European Union, in Germany. Some providers listed in section 5 may process personal data outside the European Union, for example Cloudflare for network traffic. In that case, KANAP ensures that appropriate safeguards are in place (the EU-US Data Privacy Framework or standard contractual clauses).</p>
 
 <h2>10. Cookies and tracking technologies</h2>
-<p>The KANAP website and Platform may use cookies for essential operation (authentication, session management) and analytics. You can manage cookie preferences via the cookie banner and browser settings.</p>
+<p>The KANAP website sets no advertising or analytics cookies and shows no cookie banner. We measure audience with Cloudflare Web Analytics, which works without cookies and without storing anything on your device. The contact and trial forms use Cloudflare Turnstile, a security check that tells people from automated programs. The website remembers your light or dark theme choice in your browser, only when you pick one.</p>
+<p>The application uses only the cookies needed to sign in and keep your session. It also stores interface preferences, such as your theme and table layout, in your browser. You can remove them at any time in your browser settings.</p>
 
 <h2>11. Modifications to the policy</h2>
 <p>KANAP reserves the right to modify this Policy at any time. Users will be notified of changes by any means, including a notification on the Platform or by email.</p>
@@ -116,7 +124,7 @@ const content: LegalContent = {
     header: {
       eyebrow: 'Legal',
       title: 'Terms of use',
-      lastUpdated: 'Last updated: 12 October 2025',
+      lastUpdated: 'Last updated: 7 October 2026',
     },
     body: `
 <h2>Preamble</h2>
@@ -146,7 +154,7 @@ const content: LegalContent = {
 
 <h2>Article 5. Confidentiality and data security</h2>
 <p>5.1. KANAP undertakes to take all necessary technical and organizational measures to preserve the confidentiality of all information and data provided.</p>
-<p>5.2. User data is stored on secure servers with encryption and access control. KANAP implements industry-standard security practices.</p>
+<p>5.2. User data is stored on servers hosted in the European Union, with access control. Secrets and credentials stored by the Platform are encrypted at rest. KANAP implements industry-standard security practices.</p>
 <p>5.3. KANAP employees and subcontractors who may have access to client data are bound by strict confidentiality obligations.</p>
 <p>5.4. KANAP will not share, sell, or disclose client data to third parties, except with explicit consent, when required by law, or to trusted subcontractors under confidentiality agreements.</p>
 <p>5.5. In the event of a data security incident, KANAP will notify affected clients within 72 hours.</p>
@@ -244,7 +252,7 @@ const content: LegalContent = {
     header: {
       eyebrow: 'Legal',
       title: 'Legal notice',
-      lastUpdated: 'Last updated: 12 October 2025',
+      lastUpdated: 'Last updated: 7 October 2026',
     },
     body: `
 <h2>Site publisher</h2>
@@ -257,9 +265,10 @@ Registered office: 2, rue du Finhay – 67210 Obernai – France</p>
 <p>Email: <a href="mailto:admin@kanap.net">admin@kanap.net</a></p>
 
 <h2>Hosting</h2>
-<p>The website kanap.net is hosted by OVH, whose registered office is located at:</p>
-<p>OVH SAS<br/>
-2 rue Kellermann – BP 80157 – 59053 Roubaix Cedex 1 – France</p>
+<p>The website kanap.net is hosted by Hetzner Online GmbH, whose registered office is located at:</p>
+<p>Hetzner Online GmbH<br/>
+Industriestr. 25 – 91710 Gunzenhausen – Germany</p>
+<p>The servers are located in Nuremberg, Germany. Traffic to the website passes through Cloudflare, which provides the content delivery network and TLS protection.</p>
 
 <h2>Applicable law and jurisdiction</h2>
 <p>This website is governed by French law. In the event of a dispute relating to the use of the kanap.net website and in the absence of an amicable agreement between the parties concerned, the French courts shall have sole jurisdiction.</p>

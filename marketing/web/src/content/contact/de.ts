@@ -31,7 +31,7 @@ const content: ContactContent = {
     submitting: 'Wird gesendet…',
     successTitle: 'Nachricht gesendet.',
     successBody: 'Wir melden uns innerhalb eines Werktags.',
-    errorGeneric: 'Etwas ist schiefgelaufen. Bitte erneut versuchen oder direkt an admin@kanap.net schreiben.',
+    errorGeneric: 'Etwas ist schiefgelaufen. Bitte erneut versuchen oder direkt an support@kanap.net schreiben.',
   },
   alternate: {
     label: 'Lieber direkt per E-Mail?',

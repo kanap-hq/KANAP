@@ -4,7 +4,7 @@ const content: OnPremContent = {
   meta: {
     title: 'Autoaloje KANAP, ciudadano de primera clase',
     description:
-      'Ejecute KANAP en su propia infraestructura, bajo AGPL v3. Plataforma completa, incluidos los agentes de IA, usuarios ilimitados, sus datos nunca salen de su entorno. Despliegue en minutos con Docker Compose.',
+      'Ejecute KANAP en su propia infraestructura, bajo AGPL v3. Plataforma completa, incluidos los agentes de IA, usuarios ilimitados, y usted decide adónde van sus datos. Despliegue en minutos con Docker Compose.',
   },
 
   header: {
@@ -25,7 +25,7 @@ const content: OnPremContent = {
     pillars: [
       {
         title: 'Sus datos se quedan donde están',
-        body: 'Cifras de presupuesto, contratos de proveedores, paisaje de TI, todo. En sus servidores, en su red. Ningún encargado de tratamiento externo al que confiar sus datos de gobernanza. El razonamiento y las acciones de los agentes también se ejecutan ahí, lo que importa cuando un auditor pregunta.',
+        body: 'Cifras de presupuesto, contratos de proveedores, paisaje de TI, todo. En sus servidores, en su red. Ningún encargado de tratamiento externo al que confiar sus datos de gobernanza, salvo los servicios que decida conectar, como un proveedor de modelos de IA o un relé de correo. El motor de los agentes y sus acciones también se ejecutan ahí, lo que importa cuando un auditor pregunta.',
       },
       {
         title: 'Sin tasa por asiento',
@@ -33,7 +33,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Listo para cumplimiento',
-        body: 'El row-level security aísla los tenants. Hash de contraseñas con Argon2. TLS en todas partes. Su VPC, sus copias de seguridad, su SOC.',
+        body: 'El row-level security aísla los tenants. Hash de contraseñas con Argon2. HTTPS con certificados que usted controla. Su VPC, sus copias de seguridad, su SOC.',
       },
       {
         title: 'Audite el código',
@@ -41,11 +41,11 @@ const content: OnPremContent = {
       },
       {
         title: 'Compatible con air-gap',
-        body: 'El despliegue con Docker Compose se ejecuta en redes restringidas. Imágenes autocontenidas, sin llamadas salientes obligatorias para las funciones básicas.',
+        body: 'El despliegue con Docker Compose se ejecuta en redes restringidas. Usted construye las imágenes desde el código fuente público y, una vez construidas, no hacen llamadas salientes obligatorias para las funciones básicas.',
       },
       {
         title: 'Su ritmo',
-        body: 'Fije una versión, pruebe una release menor, migre según el calendario de su ventana de cambios. Sin actualizaciones forzadas, sin caídas sorpresa.',
+        body: 'Fije la versión que ejecuta, pruebe una actualización, migre según el calendario de su ventana de cambios. Sin actualizaciones forzadas, sin caídas sorpresa.',
       },
     ],
   },
@@ -106,10 +106,10 @@ const content: OnPremContent = {
       { label: 'SO', value: 'Cualquier Linux con Docker (Ubuntu 22+, Debian 12+, RHEL 9+ recomendados)' },
       { label: 'CPU', value: '2 vCPU mínimo · 4+ recomendadas para 50+ usuarios' },
       { label: 'RAM', value: '4 GB mínimo · 8 GB recomendados' },
-      { label: 'Almacenamiento', value: '20 GB para la plataforma + lo que crezcan sus datos' },
-      { label: 'Base de datos', value: 'PostgreSQL 15+ (incluida en el archivo compose, o use la suya)' },
+      { label: 'Almacenamiento', value: '20 GB para la plataforma + lo que crezcan sus datos, más almacenamiento de objetos compatible con S3' },
+      { label: 'Base de datos', value: 'PostgreSQL 16+ con citext, pgcrypto y uuid-ossp (lo aporta usted)' },
       { label: 'Red', value: 'Terminador HTTPS (a su elección, nginx, Traefik, LB en nube)' },
-      { label: 'Saliente (opcional)', value: 'API FX del Banco Mundial para tasas de cambio en vivo · proveedor de LLM para Plaid' },
+      { label: 'Saliente (opcional)', value: 'API de tipos de cambio (Banco Mundial, exchangerate-api.com) · proveedor de LLM para Plaid y los agentes · Microsoft Entra para SSO · Resend o su relé SMTP para el correo · proveedor de búsqueda web, si está activada' },
     ],
   },
 
@@ -119,15 +119,15 @@ const content: OnPremContent = {
     items: [
       {
         title: 'Actualizaciones en su calendario',
-        body: 'Fije una etiqueta de versión, pruebe una release en pre-prod, aplíquela en su ventana de cambios. Las migraciones se ejecutan al arranque, idempotentes por diseño.',
+        body: 'Fije la versión que ejecuta, pruebe la actualización en pre-prod, aplíquela en su ventana de cambios. Las migraciones se ejecutan al arranque, idempotentes por diseño.',
       },
       {
-        title: 'Las copias son un dump de postgres',
-        body: 'Herramientas estándar. Programe pg_dump con su pipeline de backup existente. Los archivos son mínimos y se pueden capturar por separado.',
+        title: 'Copias de seguridad con sus propias herramientas',
+        body: 'PostgreSQL y almacenamiento de archivos estándar. Cópielos con el pipeline que ya utiliza.',
       },
       {
         title: 'La observabilidad que ya tiene',
-        body: 'Los contenedores emiten logs estructurados y endpoints de salud. Apunte su stack existente a ellos (Prometheus, Loki, Datadog, lo que ya ejecute).',
+        body: 'Los contenedores escriben sus logs en stdout y exponen un endpoint de salud. Apunte su stack existente a ellos (Prometheus, Loki, Datadog, lo que ya ejecute).',
       },
       {
         title: 'Branding incluido',
@@ -135,11 +135,11 @@ const content: OnPremContent = {
       },
       {
         title: 'SSO vía Entra ID',
-        body: 'El SSO empresarial es parte de la plataforma central, no un upsell. Configúrelo desde la consola de administración.',
+        body: 'El SSO empresarial es parte de la plataforma central. Añada el registro de su aplicación de Entra a la configuración y conéctelo después desde la consola de administración.',
       },
       {
         title: 'Plaid y agentes, a su manera',
-        body: 'Use su propia clave LLM tanto para Plaid como para sus agentes, OpenAI, Anthropic, Ollama o cualquier endpoint compatible con OpenAI. El razonamiento y las acciones de los agentes se ejecutan dentro de su propio despliegue, y lo único que sale es el prompt que usted envía al proveedor que eligió.',
+        body: 'Use su propia clave LLM tanto para Plaid como para sus agentes, OpenAI, Anthropic, Ollama o cualquier endpoint compatible con OpenAI. El motor de los agentes y sus acciones se ejecutan dentro de su propio despliegue. El único contenido que sale es lo que usted envía al proveedor que eligió, más consultas breves de búsqueda web si activa la búsqueda web.',
       },
     ],
   },
@@ -147,7 +147,7 @@ const content: OnPremContent = {
   support: {
     title: '¿Necesita ayuda prioritaria?',
     body:
-      'El plan de Soporte autoalojado añade soporte por email prioritario, ayuda con la instalación, desbloqueo de BYOK de Plaid y un 20 % de descuento en consultoría, sin cambiar el modelo de despliegue.',
+      'El plan de Soporte autoalojado añade soporte por email prioritario, ayuda con la instalación y un 20 % de descuento en consultoría, sin cambiar el modelo de despliegue.',
     bullets: [
       'Soporte por email prioritario (personas reales, respuesta best-effort)',
       'Ayuda con la instalación y las actualizaciones',

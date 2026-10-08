@@ -46,10 +46,10 @@ const content: AgentsContent = {
       shotAlt: 'Los ajustes del agente para persona y segmentación',
     },
     {
-      title: 'Un registro completo de todo lo que hizo.',
-      body: 'Cada acción del agente queda registrada, acotada a lo que usted permitió, respaldada por las fuentes que utilizó y detenible en cualquier momento. Ese registro es lo que hace defendible confiar trabajo real a un agente.',
+      title: 'Un registro de todo lo que hizo.',
+      body: 'Cada acción del agente queda registrada, acotada a lo que usted permitió, respaldada por las fuentes que utilizó y detenible en cualquier momento. Ese registro es lo que hace defendible confiar trabajo real a un agente. El historial se conserva 30 días por defecto y puede ajustarse de 7 a 90 días.',
       bullets: [
-        'Cada acción registrada en el registro de auditoría',
+        'Cada acción registrada en el historial de actividad del agente',
         'Acotada a las operaciones que usted permite',
         'Cada respuesta respaldada por sus fuentes',
         'Pause cualquier agente de inmediato',
@@ -58,11 +58,11 @@ const content: AgentsContent = {
     },
     {
       title: 'Suyo para ejecutar y modificar.',
-      body: 'Los agentes forman parte del producto open source. Ejecútelos dentro de su propio despliegue, donde sus tickets y documentos permanecen, y cambie cómo funcionan porque dispone del código fuente completo. Use su propia clave LLM, igual que con Plaid.',
+      body: 'Los agentes forman parte del producto open source. Ejecútelos dentro de su propio despliegue, donde sus tickets y documentos permanecen, salvo el texto enviado al proveedor de LLM que usted elija, y cambie cómo funcionan porque dispone del código fuente completo. Use su propia clave LLM, igual que con Plaid.',
       bullets: [
         'Incluidos en el producto open source',
         'Se ejecuta dentro de su propio despliegue',
-        'Sus tickets y documentos se quedan con usted',
+        'Tickets y documentos se quedan con usted, salvo lo que va al LLM',
         'Use su propia clave LLM',
       ],
       shotAlt: 'Un agente trabajando una cola de tareas',
