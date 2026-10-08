@@ -3,9 +3,9 @@ import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
-import { AiIncludedModelConfirmation1853880000000 as Migration } from '../../migrations/1853880000000-ai-included-model-confirmation';
+import { AiIncludedModelConfirmation1853885000000 as Migration } from '../../migrations/1853885000000-ai-included-model-confirmation';
 
-// Migration 1853880000000 (confirmation of the KANAP included model), against a real
+// Migration 1853885000000 (confirmation of the KANAP included model), against a real
 // database, each case in a transaction that is rolled back. The migration runs as
 // migrations do, without a tenant context. Each workspace's rows are written and read
 // through its own app.current_tenant; assertions read this test's workspaces only.

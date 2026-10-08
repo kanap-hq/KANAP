@@ -36,8 +36,8 @@ type PlatformRow = {
  * nothing. In single-tenant installations the platform table is empty: step 2 does
  * nothing and the columns stay empty. down() drops the columns.
  */
-export class AiIncludedModelConfirmation1853880000000 implements MigrationInterface {
-  name = 'AiIncludedModelConfirmation1853880000000';
+export class AiIncludedModelConfirmation1853885000000 implements MigrationInterface {
+  name = 'AiIncludedModelConfirmation1853885000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`ALTER TABLE platform_ai_config ADD COLUMN IF NOT EXISTS disclosure_name text`);
