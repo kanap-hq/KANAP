@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -21,6 +21,7 @@ vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 import api from '../api';
 import ServerDataGrid from './ServerDataGrid';
 import { resetListContextCache } from '../lib/listContext';
+import { flushAgGridTimers } from '../test/agGridTimers';
 
 const mocked = api as unknown as { get: ReturnType<typeof vi.fn>; post: ReturnType<typeof vi.fn> };
 type Config = { params: Record<string, string>; signal?: AbortSignal };
@@ -81,7 +82,11 @@ describe('ServerDataGrid list contexts and page parameters', () => {
       removeItem: (key: string) => { stored.delete(key); },
     });
   });
-  afterEach(() => { vi.unstubAllGlobals(); });
+  afterEach(async () => {
+    cleanup();
+    await flushAgGridTimers();
+    vi.unstubAllGlobals();
+  });
 
   it('a 31 KB filter goes as ctx (saved once), a short one inline', async () => {
     expect(encodeURIComponent(JSON.stringify(BIG)).length).toBeGreaterThan(30_000);

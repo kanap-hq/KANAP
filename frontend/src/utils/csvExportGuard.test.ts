@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { createGrid } from 'ag-grid-community';
 import type { ColDef, ColGroupDef, GridApi } from 'ag-grid-community';
 import { CSV_EXPORT_GUARD, installCsvExportGuard, neutralizeCsvText } from './csvExportGuard';
+import { flushAgGridTimers } from '../test/agGridTimers';
 
 // The grids' CSV exports: a tenant-defined name (a budget column label in a
 // header or group header, an item name in a cell) that starts like a formula is
@@ -9,15 +10,25 @@ import { CSV_EXPORT_GUARD, installCsvExportGuard, neutralizeCsvText } from './cs
 
 type Row = { name: string; amount: number; note: string };
 
+const grids: Array<GridApi<Row>> = [];
+
 function grid(columnDefs: Array<ColDef<Row> | ColGroupDef<Row>>, rowData: Row[], withGuard = true): GridApi<Row> {
   const element = document.createElement('div');
   document.body.appendChild(element);
-  return createGrid<Row>(element, {
+  const api = createGrid<Row>(element, {
     columnDefs,
     rowData,
     ...(withGuard ? { defaultCsvExportParams: CSV_EXPORT_GUARD } : {}),
   });
+  grids.push(api);
+  return api;
 }
+
+afterEach(async () => {
+  grids.splice(0).forEach((api) => api.destroy());
+  document.body.innerHTML = '';
+  await flushAgGridTimers();
+});
 
 const money = (value: number) => `${value < 0 ? '-' : ''}${Math.abs(value).toLocaleString('fr-FR')} €`;
 
