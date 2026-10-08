@@ -451,7 +451,7 @@ Una fila **Total** fijada da los totales mensuales, su media y su pico. Los valo
 
 Una línea bajo la tabla para cada caso, cuando se da:
 
-- «2 partidas declaran 1,50 ETC, pero su importe ya no sigue sus líneas.» El importe se ha distribuido, sus meses se han editado a mano o la columna se ha copiado. Sus ETC siguen contando en los meses. Consulte [Elegir importe o ETC](#elegir-importe-o-etc).
+- «2 partidas declaran 1,50 ETC, pero su importe ya no sigue sus líneas.» El importe se ha distribuido, sus meses se han editado a mano o la columna se ha copiado. Esta línea cubre las partidas que tienen detalle mensual, y sus ETC siguen contando en los meses. Las partidas sin detalle mensual aparecen solo en la línea siguiente. Consulte [Elegir importe o ETC](#elegir-importe-o-etc).
 - «1 partida declara 3,00 ETC sin detalle mensual. No se incluye en los meses.» Estas partidas declaran un ETC del año completo, sin ETC por mes. Quedan fuera de los meses, de la media y del pico.
 
 ### Exportar

@@ -28,6 +28,9 @@ const AXIS_PREFIX = 'axis:';
 
 type GroupKind = StaffingGroup['kind'];
 const GROUP_KINDS: readonly GroupKind[] = ['costCenter', 'item', 'supplier', 'axis'];
+/** Widths of the value columns: a month or the peak, and the average (a longer header). */
+const VALUE_COLUMN_WIDTH = 62;
+const AVERAGE_COLUMN_WIDTH = 78;
 /** The grouping in a downloaded file's name. */
 const GROUP_FILE_NAME: Record<GroupKind, string> = { costCenter: 'cost-center', item: 'item', supplier: 'supplier', axis: 'dimension' };
 
@@ -130,18 +133,24 @@ export default function StaffingByMonthReport() {
     peak: staffing.total.peak,
   }), [staffing.total, t]);
 
-  const columns = useMemo<ColDef[]>(() => [
-    { field: 'group', headerName: groupHeader, flex: 1, minWidth: 220 },
-    ...MONTHS.map((month, i): ColDef => ({
-      field: monthField(month),
-      headerName: monthNames[i],
-      width: 88,
+  // Fifteen columns fit a 1440 px screen on the dense grid (10 px cell padding): the values are
+  // compact (`42.00` in 13 px), the group takes what is left and shows its full name on hover.
+  const columns = useMemo<ColDef[]>(() => {
+    const value = (field: string, headerName: string, width: number): ColDef => ({
+      field,
+      headerName,
+      headerTooltip: headerName,
+      width,
       type: 'rightAligned',
       valueFormatter: (p) => fte(p.value),
-    })),
-    { field: 'average', headerName: t('reports.staffing.average'), width: 110, type: 'rightAligned', valueFormatter: (p) => fte(p.value) },
-    { field: 'peak', headerName: t('reports.staffing.peak'), width: 100, type: 'rightAligned', valueFormatter: (p) => fte(p.value) },
-  ], [groupHeader, monthNames, fte, t]);
+    });
+    return [
+      { field: 'group', headerName: groupHeader, flex: 1, minWidth: 200, tooltipField: 'group' },
+      ...MONTHS.map((month, i) => value(monthField(month), monthNames[i], VALUE_COLUMN_WIDTH)),
+      value('average', t('reports.staffing.average'), AVERAGE_COLUMN_WIDTH),
+      value('peak', t('reports.staffing.peak'), VALUE_COLUMN_WIDTH),
+    ];
+  }, [groupHeader, monthNames, fte, t]);
 
   const gridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);
@@ -258,6 +267,7 @@ export default function StaffingByMonthReport() {
           <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>{t('reports.shared.summaryTable')}</Typography>
           <ReportGrid
             wrapperSx={{ height: 520 }}
+            wrapperClassName="kanap-dense-grid"
             rowData={tableRows}
             columnDefs={columns}
             defaultColDef={{ sortable: true, resizable: true }}

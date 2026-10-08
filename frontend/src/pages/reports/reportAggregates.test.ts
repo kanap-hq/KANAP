@@ -402,7 +402,8 @@ describe('staffing by month', () => {
     // The average of the totals is the sum of the groups' averages: 1 + 1 + 0.75.
     expect(read.total.average).toBeCloseTo(2.75);
     expect(read.total.peak).toBe(6.5);
-    expect(read.detached).toEqual({ fte: 1.25, items: 2 });
+    // The line without monthly detail (0.75) is detached too: the detached notice keeps the other one.
+    expect(read.detached).toEqual({ fte: 0.5, items: 1 });
     expect(read.noDetail).toEqual({ fte: 0.75, items: 1 });
   });
 
@@ -413,6 +414,18 @@ describe('staffing by month', () => {
     expect(read.detached).toBeNull();
     expect(read.noDetail).toBeNull();
     expect(readStaffing(undefined, labels, compare).total.average).toBeNull();
+  });
+
+  it('shows no detached notice when every detached line is one without monthly detail', () => {
+    const notices = (detached: number, nodetail: number, unknown: Record<string, number>) => {
+      const read = readStaffing(result([], staffRow([], { ...months(flat(null)), detached, nodetail }, 5, unknown)), labels, compare);
+      return [read.detached, read.noDetail];
+    };
+    expect(notices(0.75, 0.75, { detached: 3, nodetail: 3 })).toEqual([null, { fte: 0.75, items: 2 }]);
+    // A rounding below zero reads as none, never as a negative notice.
+    expect(notices(0.3, 0.30000000000000004, { detached: 3, nodetail: 3 })).toEqual([null, { fte: 0.30000000000000004, items: 2 }]);
+    // Without any line lacking monthly detail, the detached notice is the whole detached sum.
+    expect(notices(1.5, 0, { detached: 2, nodetail: 5 })).toEqual([{ fte: 1.5, items: 3 }, null]);
   });
 
   it('names a dimension value without a name, and charts the eight largest groups and the rest as others', () => {

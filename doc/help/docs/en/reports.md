@@ -451,7 +451,7 @@ A pinned **Total** row gives the monthly totals, their average and their peak. V
 
 One line under the table for each case, when it applies:
 
-- "2 items declare 1.50 FTE while their amount no longer follows their lines." The amount was spread, its months were edited by hand, or the column was copied. Their FTE still counts in the months. See [Choosing amount or FTE](#choosing-amount-or-fte).
+- "2 items declare 1.50 FTE while their amount no longer follows their lines." The amount was spread, its months were edited by hand, or the column was copied. This line covers the items that have monthly detail, and their FTE still counts in the months. Items without monthly detail appear in the next line only. See [Choosing amount or FTE](#choosing-amount-or-fte).
 - "1 item declares 3.00 FTE without monthly detail. It is not in the months." These items declare a full-year FTE but no FTE per month. They are left out of the months, the average and the peak.
 
 ### Export

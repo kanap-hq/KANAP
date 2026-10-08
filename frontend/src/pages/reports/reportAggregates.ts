@@ -792,7 +792,10 @@ export type StaffingNotice = { fte: number; items: number };
 export type Staffing = {
   rows: StaffingRow[];
   total: StaffingMonths;
-  /** FTE whose column amount no longer follows its lines. */
+  /**
+   * FTE in the months whose column amount no longer follows its lines. A column without monthly
+   * detail never follows its lines either: those are `noDetail` only, never counted twice.
+   */
   detached: StaffingNotice | null;
   /** FTE declared without monthly detail: not in the months. */
   noDetail: StaffingNotice | null;
@@ -827,12 +830,20 @@ export function readStaffing(result: AggregateResult | undefined, labels: Staffi
     rows.push({ key: id ?? '', label: id == null ? labels.none : (group.keys[1] ?? '').trim() || labels.unnamed, ...months });
   }
   rows.sort((a, b) => (b.average ?? 0) - (a.average ?? 0) || compare(a.label, b.label));
-  return {
-    rows,
-    total: staffingMonths(result?.total),
-    detached: staffingNotice(result?.total, DETACHED_MEASURE),
-    noDetail: staffingNotice(result?.total, NO_DETAIL_MEASURE),
-  };
+  const detached = staffingNotice(result?.total, DETACHED_MEASURE);
+  const noDetail = staffingNotice(result?.total, NO_DETAIL_MEASURE);
+  return { rows, total: staffingMonths(result?.total), detached: detachedInMonths(detached, noDetail), noDetail };
+}
+
+/**
+ * The detached FTE that is in the months: every line without monthly detail is also detached, so it
+ * comes off both the FTE and the line count (exact, in cents; a rounding below zero reads as none).
+ */
+function detachedInMonths(detached: StaffingNotice | null, noDetail: StaffingNotice | null): StaffingNotice | null {
+  if (!detached || !noDetail) return detached;
+  const fte = Math.max(0, Math.round((detached.fte - noDetail.fte) * 100) / 100);
+  const items = Math.max(0, detached.items - noDetail.items);
+  return fte > 0 && items > 0 ? { fte, items } : null;
 }
 
 /** The most groups the staffing chart draws on their own; the rest stack as one "Others" area. */

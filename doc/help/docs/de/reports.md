@@ -451,7 +451,7 @@ Eine angeheftete Zeile **Gesamt** zeigt die Monatssummen, ihren Durchschnitt und
 
 Eine Zeile unter der Tabelle für jeden Fall, wenn er eintritt:
 
-- „2 Positionen melden 1,50 VZÄ, ihr Betrag folgt aber nicht mehr ihren Zeilen.“ Der Betrag wurde verteilt, seine Monate wurden von Hand bearbeitet oder die Spalte wurde kopiert. Ihre VZÄ zählen weiterhin in den Monaten. Siehe [Betrag oder VZÄ wählen](#betrag-oder-vza-wahlen).
+- „2 Positionen melden 1,50 VZÄ, ihr Betrag folgt aber nicht mehr ihren Zeilen.“ Der Betrag wurde verteilt, seine Monate wurden von Hand bearbeitet oder die Spalte wurde kopiert. Diese Zeile umfasst die Positionen mit Monatsdetail, und ihre VZÄ zählen weiterhin in den Monaten. Positionen ohne Monatsdetail erscheinen nur in der nächsten Zeile. Siehe [Betrag oder VZÄ wählen](#betrag-oder-vza-wahlen).
 - „1 Position meldet 3,00 VZÄ ohne Monatsdetail. Sie ist nicht in den Monaten enthalten.“ Diese Positionen melden VZÄ für das ganze Jahr, aber keine VZÄ pro Monat. Sie fehlen in den Monaten, im Durchschnitt und in der Spitze.
 
 ### Export

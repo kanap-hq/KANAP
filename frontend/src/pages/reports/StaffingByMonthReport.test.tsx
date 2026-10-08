@@ -111,13 +111,14 @@ function line(id: string, costCenter: [string, string] | null, supplier: [string
 
 const RAMP = [0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2];
 // a and b on CC1 (2 FTE all year), c on CC2 ramping up from July (1 FTE on average), d without a cost
-// center (0.5), e declares 3 FTE without monthly detail, f's amount was spread since (detached), g has no FTE.
+// center (0.5), e declares 3 FTE without monthly detail (a copy, so detached too), f's amount was spread since
+// (detached, in the months), g has no FTE.
 const ROWS = [
   line('a', ['cc1', 'CC1 · Ops'], ['s1', 'Acme'], { fte: 1, months: flat(1) }, ['n-hw', 'Hardware']),
   line('b', ['cc1', 'CC1 · Ops'], ['s2', 'Globex'], { fte: 1, months: flat(1) }),
   line('c', ['cc2', 'CC2 · Dev'], ['s1', 'Acme'], { fte: 1, months: RAMP }, ['n-sw', 'Software']),
   line('d', null, null, { fte: 0.5, months: flat(0.5) }),
-  line('e', ['cc3', 'CC3 · Data'], ['s3', 'Initech'], { fte: 3 }),
+  line('e', ['cc3', 'CC3 · Data'], ['s3', 'Initech'], { fte: 3, method: 'copied' }),
   line('f', ['cc2', 'CC2 · Dev'], ['s2', 'Globex'], { fte: 0.25, months: flat(0.25), method: 'spread' }),
   line('g', ['cc4', 'CC4 · Empty'], ['s4', 'Umbrella'], null),
 ];
@@ -193,6 +194,11 @@ describe('Staffing by month', () => {
     ]);
     expect(grid.columns[1].valueFormatter({ value: 1.5 })).toBe('1.50');
     expect(grid.columns[1].valueFormatter({ value: null })).toBe('');
+    // Fifteen columns within a 1440 px screen (less the 220 px menu and the page and card padding):
+    // compact values, and the group takes the rest with its full name on hover.
+    expect(grid.columns[0]).toMatchObject({ flex: 1, minWidth: 200, tooltipField: 'group' });
+    const fixed = grid.columns.slice(1).reduce((sum, column) => sum + column.width, 0);
+    expect(fixed + grid.columns[0].minWidth).toBeLessThanOrEqual(1100);
     // The total: 2.75 FTE each month from January to June, 4.75 from July.
     expect(grid.pinned).toHaveLength(1);
     expect(grid.pinned[0]).toMatchObject({ group: 'reports.columns.total', m1: 2.75, m7: 4.75, peak: 4.75 });
@@ -254,6 +260,7 @@ describe('Staffing by month', () => {
     renderReport('/report');
     await waitFor(() => expect(screen.getAllByRole('note')).toHaveLength(2));
     const [detached, noDetail] = screen.getAllByRole('note').map((note) => note.textContent ?? '');
+    // e is detached too, but has no monthly detail: only f counts in the detached notice.
     expect(detached).toContain('reports.measure.detachedSingle');
     expect(detached).toContain('"count":1');
     expect(detached).toContain('"fte":"0.25"');

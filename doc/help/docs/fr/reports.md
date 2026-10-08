@@ -451,7 +451,7 @@ Une ligne **Total** épinglée donne les totaux mensuels, leur moyenne et leur p
 
 Une ligne sous le tableau pour chaque cas, quand il se présente :
 
-- « 2 postes déclarent 1,50 ETP alors que leur montant ne suit plus leurs lignes. » Le montant a été réparti, ses mois ont été modifiés à la main, ou la colonne a été copiée. Leurs ETP comptent toujours dans les mois. Voir [Choisir le montant ou les ETP](#choisir-le-montant-ou-les-etp).
+- « 2 postes déclarent 1,50 ETP alors que leur montant ne suit plus leurs lignes. » Le montant a été réparti, ses mois ont été modifiés à la main, ou la colonne a été copiée. Cette ligne couvre les postes qui ont un détail mensuel, et leurs ETP comptent toujours dans les mois. Les postes sans détail mensuel apparaissent seulement dans la ligne suivante. Voir [Choisir le montant ou les ETP](#choisir-le-montant-ou-les-etp).
 - « 1 poste déclare 3,00 ETP sans détail mensuel. Il n'est pas compté dans les mois. » Ces postes déclarent un ETP sur l'année complète, sans ETP par mois. Ils sont écartés des mois, de la moyenne et du pic.
 
 ### Export
