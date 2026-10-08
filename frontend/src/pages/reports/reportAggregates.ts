@@ -143,6 +143,19 @@ export function staffFteField(year: number, metric: MetricKey): string {
   return `staff_fte_${amountField(year, metric)}`;
 }
 
+/**
+ * The cost of the per-day priced lines of a year and budget column (people priced per day and days
+ * bundles), in the reporting currency (`day_cost_y2026Budget`): 0 without line detail, like any amount.
+ */
+export function dayCostField(year: number, metric: MetricKey): string {
+  return `day_cost_${amountField(year, metric)}`;
+}
+
+/** The days those per-day lines buy (`days_y2026Budget`): null without line detail or without a per-day line. */
+export function daysField(year: number, metric: MetricKey): string {
+  return `days_${amountField(year, metric)}`;
+}
+
 /** The field a report sums for a year and column: the amount, or the declared FTE. */
 export function measureField(year: number, metric: MetricKey, measure: ReportMeasure = 'amount'): string {
   return measure === 'fte' ? fteField(year, metric) : amountField(year, metric);
@@ -893,26 +906,37 @@ export interface CostPerFteParams {
 }
 
 /**
- * One request per year and column: per group, the cost of the people and days lines and their FTE,
- * with, read on the total row, the FTE whose amount no longer follows the lines and the FTE declared
- * without line detail. Every request reads the same lines: the window starts on the earliest year
- * compared, as in the column comparison. Every group comes back: the reader keeps the ones with a staff
- * FTE in some column.
+ * One request per year and column, grouped by `group`, with the measures `measuresOf` gives the
+ * column. Every request reads the same lines: the window starts on the earliest year compared, as in
+ * the column comparison.
  */
-export function costPerFteRequests(p: CostPerFteParams): AggregateRequest[] {
+function pairRequests(p: CostPerFteParams, measuresOf: (column: ColumnYear) => AggregateMeasure[]): AggregateRequest[] {
   const years = Array.from(new Set(p.columns.map((column) => column.year))).sort((a, b) => a - b);
   return p.columns.map((column) => ({
     query: withYears({ filters: p.filters }, years),
-    spec: {
-      groupBy: staffingGroupKeys(p.scope, p.group),
-      measures: [
-        { id: STAFF_COST_MEASURE, fn: 'sum', field: staffCostField(column.year, column.metric) },
-        { id: STAFF_FTE_MEASURE, fn: 'sum', field: staffFteField(column.year, column.metric) },
-        { id: DETACHED_MEASURE, fn: 'sum', field: detachedFteField(column.year, column.metric) },
-        { id: NO_DETAIL_MEASURE, fn: 'sum', field: noDetailFteField(column.year, column.metric) },
-      ],
-    },
+    spec: { groupBy: staffingGroupKeys(p.scope, p.group), measures: measuresOf(column) },
   }));
+}
+
+/** On the total row: the FTE whose amount no longer follows the lines, and the FTE declared without line detail. */
+function pairNoticeMeasures(column: ColumnYear): AggregateMeasure[] {
+  return [
+    { id: DETACHED_MEASURE, fn: 'sum', field: detachedFteField(column.year, column.metric) },
+    { id: NO_DETAIL_MEASURE, fn: 'sum', field: noDetailFteField(column.year, column.metric) },
+  ];
+}
+
+/**
+ * One request per year and column (see `pairRequests`): per group, the cost of the people and days
+ * lines and their FTE, with the notices' measures. Every group comes back: the reader keeps the ones
+ * with a staff FTE in some column.
+ */
+export function costPerFteRequests(p: CostPerFteParams): AggregateRequest[] {
+  return pairRequests(p, (column) => [
+    { id: STAFF_COST_MEASURE, fn: 'sum', field: staffCostField(column.year, column.metric) },
+    { id: STAFF_FTE_MEASURE, fn: 'sum', field: staffFteField(column.year, column.metric) },
+    ...pairNoticeMeasures(column),
+  ]);
 }
 
 /** A group's staff FTE and cost in one column, and the cost of one FTE (null when the FTE is null or 0). */
@@ -942,17 +966,19 @@ function costPerFteCell(row: AggregateRow | null | undefined): CostPerFteCell {
 }
 
 /**
- * The groups with a staff FTE in at least one column, by the FTE of the earliest column where some group
- * has one, largest first (then by label; a tenant planning staff for this year only still sorts by FTE
- * when last year comes first); the total row (ratio of the totals, never an average of ratios); the notices per column.
- * `results` holds the answers to `costPerFteRequests`, in the order of `columns`.
+ * The groups of every column merged by key (named once, a blank key reading `none`), those with a
+ * `measure` (`fte`, `days`) in at least one column, by that measure in the earliest column where some
+ * group has one, largest first (then by label: a tenant planning staff for this year only still sorts
+ * by it when last year comes first); and the notices per column.
  */
-export function readCostPerFte(
+function readPairs<Cell extends Record<string, number | null>>(
   columns: readonly ColumnYear[],
   results: ReadonlyArray<AggregateResult | undefined> | undefined,
   labels: StaffingLabels,
   compare: (a: string, b: string) => number,
-): CostPerFte {
+  cellOf: (row: AggregateRow | null | undefined) => Cell,
+  measure: keyof Cell,
+): { rows: Array<{ key: string; label: string; cells: Cell[] }>; sortColumn: number | null; total: Cell[]; detached: CostPerFteNotice[]; noDetail: CostPerFteNotice[] } {
   const groups = new Map<string, { label: string; rows: Array<AggregateRow | undefined> }>();
   columns.forEach((_, index) => {
     for (const group of results?.[index]?.groups ?? []) {
@@ -963,16 +989,16 @@ export function readCostPerFte(
       groups.set(key, entry);
     }
   });
-  const rows: CostPerFteRow[] = [];
+  const rows: Array<{ key: string; label: string; cells: Cell[] }> = [];
   for (const [key, entry] of groups) {
-    const cells = columns.map((_, index) => costPerFteCell(entry.rows[index]));
-    if (cells.some((cell) => cell.fte != null)) rows.push({ key, label: entry.label, cells });
+    const cells = columns.map((_, index) => cellOf(entry.rows[index]));
+    if (cells.some((cell) => cell[measure] != null)) rows.push({ key, label: entry.label, cells });
   }
-  const found = columns.findIndex((_, index) => rows.some((row) => row.cells[index].fte != null));
+  const found = columns.findIndex((_, index) => rows.some((row) => row.cells[index][measure] != null));
   const sortColumn = found >= 0 ? found : null;
   rows.sort((a, b) => {
-    const x = sortColumn == null ? null : a.cells[sortColumn].fte;
-    const y = sortColumn == null ? null : b.cells[sortColumn].fte;
+    const x = sortColumn == null ? null : a.cells[sortColumn][measure];
+    const y = sortColumn == null ? null : b.cells[sortColumn][measure];
     if (x != null && y != null && x !== y) return y - x;
     if ((x == null) !== (y == null)) return x == null ? 1 : -1;
     return compare(a.label, b.label);
@@ -986,11 +1012,95 @@ export function readCostPerFte(
     if (withDetail) detached.push({ ...column, ...withDetail });
     if (without) noDetail.push({ ...column, ...without });
   });
-  return { rows, sortColumn, total: columns.map((_, index) => costPerFteCell(results?.[index]?.total)), detached, noDetail };
+  return { rows, sortColumn, total: columns.map((_, index) => cellOf(results?.[index]?.total)), detached, noDetail };
+}
+
+/**
+ * The groups with a staff FTE in at least one column, by the FTE of the earliest column where some group
+ * has one, largest first (then by label; a tenant planning staff for this year only still sorts by FTE
+ * when last year comes first); the total row (ratio of the totals, never an average of ratios); the notices per column.
+ * `results` holds the answers to `costPerFteRequests`, in the order of `columns`.
+ */
+export function readCostPerFte(
+  columns: readonly ColumnYear[],
+  results: ReadonlyArray<AggregateResult | undefined> | undefined,
+  labels: StaffingLabels,
+  compare: (a: string, b: string) => number,
+): CostPerFte {
+  return readPairs(columns, results, labels, compare, costPerFteCell, 'fte');
 }
 
 /** The most groups the cost per FTE chart draws, after the total. */
 export const COST_PER_FTE_CHART_GROUPS = 10;
+
+// ----- daily rate (CostPerFteReport, `?view=rate`) -----
+
+const DAY_COST_MEASURE = 'cost';
+const DAYS_MEASURE = 'days';
+const ALL_STAFF_COST_MEASURE = 'staff';
+
+/**
+ * One request per year and column (see `pairRequests`): per group, the cost of the per-day priced
+ * lines and the days they buy, with, read on the total row, the cost of every people and days line
+ * (its part priced per month is not in the rate) and the notices' measures. Every group comes back:
+ * the reader keeps the ones with days in some column.
+ */
+export function dailyRateRequests(p: CostPerFteParams): AggregateRequest[] {
+  return pairRequests(p, (column) => [
+    { id: DAY_COST_MEASURE, fn: 'sum', field: dayCostField(column.year, column.metric) },
+    { id: DAYS_MEASURE, fn: 'sum', field: daysField(column.year, column.metric) },
+    { id: ALL_STAFF_COST_MEASURE, fn: 'sum', field: staffCostField(column.year, column.metric) },
+    ...pairNoticeMeasures(column),
+  ]);
+}
+
+/** A group's days bought and their cost in one column, and the cost of one day (null when the days are null or 0). */
+export type DailyRateCell = { days: number | null; cost: number | null; rate: number | null };
+export type DailyRateRow = { key: string; label: string; cells: DailyRateCell[] };
+/** The cost of the people lines priced per month in one column: left out of the rate. */
+export type DailyRateMonthlyNotice = ColumnYear & { amount: number };
+export type DailyRate = {
+  rows: DailyRateRow[];
+  /** The column the rows are sorted on: the earliest one where some group has days (null when none has any). */
+  sortColumn: number | null;
+  /** Per column, the totals of days and cost and the ratio of the totals. */
+  total: DailyRateCell[];
+  /** As in the cost per FTE: the detached FTE that has line detail, per column with some. */
+  detached: CostPerFteNotice[];
+  /** As in the cost per FTE: the FTE declared without line detail, per column with some. */
+  noDetail: CostPerFteNotice[];
+  /** Per column where it reads at least 1 once rounded, the staff cost the rate leaves out (lines priced per month). */
+  monthly: DailyRateMonthlyNotice[];
+};
+
+function dailyRateCell(row: AggregateRow | null | undefined): DailyRateCell {
+  const days = knownValueOf(row, DAYS_MEASURE);
+  if (days == null) return { days: null, cost: null, rate: null };
+  const cost = valueOf(row, DAY_COST_MEASURE);
+  return { days, cost, rate: days !== 0 ? cost / days : null };
+}
+
+/**
+ * The groups with days in at least one column, by the days of the earliest column where some group has
+ * them, largest first (then by label); the total row (ratio of the totals, never an average of rates);
+ * the notices per column, with the staff cost priced per month (all staff cost minus the day cost, in
+ * cents, only from 50 cents: the notice shows whole amounts, and never names a pair for 0). `results` holds the answers to `dailyRateRequests`, in the order of `columns`.
+ */
+export function readDailyRate(
+  columns: readonly ColumnYear[],
+  results: ReadonlyArray<AggregateResult | undefined> | undefined,
+  labels: StaffingLabels,
+  compare: (a: string, b: string) => number,
+): DailyRate {
+  const read = readPairs(columns, results, labels, compare, dailyRateCell, 'days');
+  const monthly: DailyRateMonthlyNotice[] = [];
+  columns.forEach((column, index) => {
+    const total = results?.[index]?.total;
+    const cents = Math.round(valueOf(total, ALL_STAFF_COST_MEASURE) * 100) - Math.round(valueOf(total, DAY_COST_MEASURE) * 100);
+    if (cents >= 50) monthly.push({ ...column, amount: cents / 100 });
+  });
+  return { ...read, monthly };
+}
 
 // ----- sums per year and column (ComparisonReport, CapexBudgetTrendReport, BudgetColumnsCompareReport) -----
 

@@ -3,6 +3,7 @@ import { Box, Button, IconButton, MenuItem, Paper, Stack, TextField, Typography 
 import RemoveIcon from '@mui/icons-material/RemoveCircleOutline';
 import AddIcon from '@mui/icons-material/Add';
 import type { ColDef, ColGroupDef } from 'ag-grid-community';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import ReportGrid from '../../components/reports/ReportGrid';
 import ReportLayout, { ReportFilter, reportFilterMenuProps, reportFilterSelectSx } from '../../components/reports/ReportLayout';
@@ -20,10 +21,12 @@ import { escapeTooltipText } from './tooltipText';
 import {
   COST_PER_FTE_CHART_GROUPS,
   costPerFteRequests,
+  dailyRateRequests,
   readCostPerFte,
+  readDailyRate,
   type ColumnYear,
-  type CostPerFteCell,
   type CostPerFteNotice,
+  type DailyRate,
 } from './reportAggregates';
 import { compareNames, useBudgetAggregates } from './useBudgetAggregate';
 import { formatAmount, ReportNoticeLine } from './reportMeasure';
@@ -36,13 +39,54 @@ export const MAX_COLUMNS = 4;
 /** A pair as picked: no column yet means the default column (and follows it). */
 type PickedColumn = { year: number; metric: MetricKey | null };
 
-/** The three values of a pair, as the grid's field ids (`c0_fte`, `c0_cost`, `c0_ratio`). */
-const VALUES = ['fte', 'cost', 'ratio'] as const;
-type ValueKind = (typeof VALUES)[number];
+/** `?view=rate`: the average daily rate; absent (or anything else): the cost per FTE. */
+const VIEW_PARAM = 'view';
+type View = 'fte' | 'rate';
+const VIEWS: readonly View[] = ['fte', 'rate'];
+
+/** The view in the address, so a shared link opens on it; switching keeps every other parameter. */
+function useReportView(): [View, (next: View) => void] {
+  const [params, setParams] = useSearchParams();
+  const view: View = params.get(VIEW_PARAM) === 'rate' ? 'rate' : 'fte';
+  const setView = useCallback((next: View) => {
+    setParams((prev) => {
+      const nextParams = new URLSearchParams(prev);
+      if (next === 'rate') nextParams.set(VIEW_PARAM, 'rate');
+      else nextParams.delete(VIEW_PARAM);
+      return nextParams;
+    }, { replace: true });
+  }, [setParams]);
+  return [view, setView];
+}
+
+/**
+ * The three values of a pair in each view, as the grid's field ids: what the rows count (`c0_fte`,
+ * `c0_days`), its cost (`c0_cost`) and the cost of one unit (`c0_ratio`, `c0_rate`).
+ */
+type ValueKind = 'fte' | 'days' | 'cost' | 'ratio' | 'rate';
+const VALUES: Record<View, readonly [ValueKind, ValueKind, ValueKind]> = { fte: ['fte', 'cost', 'ratio'], rate: ['days', 'cost', 'rate'] };
 const fieldOf = (index: number, kind: ValueKind) => `c${index}_${kind}`;
+type Cell = Partial<Record<ValueKind, number | null>>;
+/** What either view reads: rows and totals per pair, the notices (`monthly` in the daily rate only). */
+type ViewData = Pick<DailyRate, 'sortColumn' | 'detached' | 'noDetail' | 'monthly'> & {
+  rows: Array<{ key: string; label: string; cells: Cell[] }>;
+  total: Cell[];
+};
 
 /** An amount, blank when there is none (a ratio without FTE, a cost without staff). */
 const money = (value: unknown) => (value == null ? '' : formatAmount(value));
+
+/**
+ * Days grouped like the amounts next to them (`formatAmount`: a space between thousands), with only the
+ * decimals the value needs, two at most (`1 341.7`); blank when there are none.
+ */
+function formatDays(value: unknown): string {
+  if (value == null || value === '') return '';
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '';
+  const [whole, fraction] = String(Math.round(n * 100) / 100).split('.');
+  return `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}${fraction ? `.${fraction}` : ''}`;
+}
 
 /** Chronological: by year, then in the budget columns' fixed order; each pair once. */
 function distinctColumns(columns: readonly ColumnYear[]): ColumnYear[] {
@@ -51,8 +95,8 @@ function distinctColumns(columns: readonly ColumnYear[]): ColumnYear[] {
   return Array.from(byKey.values()).sort((a, b) => a.year - b.year || metricKeys.indexOf(a.metric) - metricKeys.indexOf(b.metric));
 }
 
-function cellValues(index: number, cell: CostPerFteCell | undefined): Record<string, number | null> {
-  return { [fieldOf(index, 'fte')]: cell?.fte ?? null, [fieldOf(index, 'cost')]: cell?.cost ?? null, [fieldOf(index, 'ratio')]: cell?.ratio ?? null };
+function cellValues(kinds: readonly ValueKind[], index: number, cell: Cell | undefined): Record<string, number | null> {
+  return Object.fromEntries(kinds.map((kind) => [fieldOf(index, kind), cell?.[kind] ?? null]));
 }
 
 export default function CostPerFteReport() {
@@ -64,6 +108,9 @@ export default function CostPerFteReport() {
   const [scope, setScope] = useReportScope();
   const scopeLabel = t(`operations.scope.${scope}`);
   const fte = useCallback((value: unknown) => formatFte(value, locale), [locale]);
+  const [view, setView] = useReportView();
+  const kinds = VALUES[view];
+  const [countKind, costKind, ratioKind] = kinds;
 
   // The default column for the previous and the current year, until the user picks others.
   const [picked, setPicked] = useState<PickedColumn[]>([{ year: Y - 1, metric: null }, { year: Y, metric: null }]);
@@ -79,69 +126,81 @@ export default function CostPerFteReport() {
   const grouping = useReportGroup(reportFilters.analyticsAxes);
   const { kind, group, header: groupHeader, inSentence: groupInSentence, labels } = grouping;
 
-  // One request per pair: per group, the staff cost and FTE; on the total row, the notices.
-  const requests = useMemo(() => (reportFilters.queryFilters == null || group == null ? null : costPerFteRequests({
-    scope,
-    columns,
-    group,
-    filters: reportFilters.queryFilters,
-  })), [reportFilters.queryFilters, scope, columns, group]);
+  // One request per pair: per group, the staff cost and FTE (or the day cost and days); on the total row, the notices.
+  const requests = useMemo(() => {
+    if (reportFilters.queryFilters == null || group == null) return null;
+    const params = { scope, columns, group, filters: reportFilters.queryFilters };
+    return view === 'rate' ? dailyRateRequests(params) : costPerFteRequests(params);
+  }, [reportFilters.queryFilters, scope, columns, group, view]);
   const report = useBudgetAggregates(scope, requests, { keepPrevious: true });
   const busy = requests == null || report.isLoading || report.isPlaceholderData;
   // While a new pair loads, the kept answers may hold fewer pairs: read nothing rather than shifted columns.
   const results = report.data && report.data.length === columns.length ? report.data : undefined;
-  const data = useMemo(() => readCostPerFte(columns, results, labels, compareNames), [columns, results, labels]);
+  // The two views ask measures of other names, so an answer of one never stands in for the other.
+  const data = useMemo<ViewData>(
+    () => (view === 'rate'
+      ? readDailyRate(columns, results, labels, compareNames)
+      : { ...readCostPerFte(columns, results, labels, compareNames), monthly: [] }),
+    [view, columns, results, labels],
+  );
 
   const tableRows = useMemo(() => data.rows.map((row) => ({
     group: row.label,
-    ...Object.assign({}, ...columns.map((_, index) => cellValues(index, row.cells[index]))),
-  })), [data.rows, columns]);
+    ...Object.assign({}, ...columns.map((_, index) => cellValues(kinds, index, row.cells[index]))),
+  })), [data.rows, columns, kinds]);
   const totalRow = useMemo(() => ({
     group: t('reports.columns.total'),
-    ...Object.assign({}, ...columns.map((_, index) => cellValues(index, data.total[index]))),
-  }), [data.total, columns, t]);
+    ...Object.assign({}, ...columns.map((_, index) => cellValues(kinds, index, data.total[index]))),
+  }), [data.total, columns, kinds, t]);
+
+  const formats = useMemo<Record<ValueKind, (value: unknown) => string>>(
+    () => ({ fte, days: formatDays, cost: money, ratio: money, rate: money }),
+    [fte],
+  );
 
   // The value columns of a kind share one width, measured from their values before the grid lays out;
   // the group column flexes into the rest and shows its full name on hover.
   const textMetrics = useMemo(() => gridTextMeasure(), []);
   const widths = useMemo(() => {
-    const width = (kindOf: ValueKind, format: (value: unknown) => string) => valueColumnWidth({
+    const width = (kindOf: ValueKind) => valueColumnWidth({
       rows: tableRows,
       total: totalRow,
       ids: columns.map((_, index) => fieldOf(index, kindOf)),
-      format,
+      format: formats[kindOf],
       measure: textMetrics.measure,
       cellPadding: textMetrics.cellPadding,
     });
-    return { fte: width('fte', fte), cost: width('cost', money), ratio: width('ratio', money) } as Record<ValueKind, number>;
-  }, [tableRows, totalRow, columns, fte, textMetrics]);
+    return Object.fromEntries(kinds.map((kindOf) => [kindOf, width(kindOf)])) as Partial<Record<ValueKind, number>>;
+  }, [tableRows, totalRow, columns, kinds, formats, textMetrics]);
 
   const valueHeaders = useMemo<Record<ValueKind, string>>(() => ({
     fte: t('reports.measure.fte'),
-    cost: t('reports.costPerFte.staffCost'),
+    days: t('reports.costPerFte.days'),
+    cost: view === 'rate' ? t('reports.costPerFte.dayCost') : t('reports.costPerFte.staffCost'),
     ratio: t('reports.costPerFte.costPerFte'),
-  }), [t]);
+    rate: t('reports.costPerFte.dailyRate'),
+  }), [t, view]);
   const columnDefs = useMemo<Array<ColDef | ColGroupDef>>(() => [
     { field: 'group', headerName: groupHeader, flex: 1, minWidth: 180, tooltipField: 'group' },
     ...columns.map((column, index): ColGroupDef => ({
       groupId: `c${index}`,
       headerName: columnLabel(column),
-      children: VALUES.map((kindOf): ColDef => ({
+      children: kinds.map((kindOf): ColDef => ({
         field: fieldOf(index, kindOf),
         colId: fieldOf(index, kindOf),
         headerName: valueHeaders[kindOf],
         headerTooltip: `${columnLabel(column)} · ${valueHeaders[kindOf]}`,
         type: 'rightAligned',
         width: widths[kindOf],
-        valueFormatter: (p) => (kindOf === 'fte' ? fte(p.value) : money(p.value)),
+        valueFormatter: (p) => formats[kindOf](p.value),
       })),
     })),
-  ], [groupHeader, columns, columnLabel, valueHeaders, widths, fte]);
+  ], [groupHeader, columns, columnLabel, kinds, valueHeaders, widths, formats]);
 
   const gridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);
 
-  const chartTitle = t('reports.costPerFte.chartTitle', { type: scopeLabel, group: groupInSentence });
+  const chartTitle = t(view === 'rate' ? 'reports.costPerFte.rateChartTitle' : 'reports.costPerFte.chartTitle', { type: scopeLabel, group: groupInSentence });
   const chartCategories = useMemo(() => [
     { key: 'total', label: t('reports.columns.total'), cells: data.total },
     ...data.rows.slice(0, COST_PER_FTE_CHART_GROUPS).map((row) => ({ key: `group:${row.key}`, label: row.label, cells: row.cells })),
@@ -153,7 +212,7 @@ export default function CostPerFteReport() {
       data: chartCategories.map((category) => ({
         key: category.key,
         label: category.label,
-        ...Object.assign({}, ...columns.map((_, index) => cellValues(index, category.cells[index]))),
+        ...Object.assign({}, ...columns.map((_, index) => cellValues(kinds, index, category.cells[index]))),
       })),
       // Categories by key (two items may share a name), shown by name.
       axes: [
@@ -161,7 +220,7 @@ export default function CostPerFteReport() {
         {
           type: 'number',
           position: 'bottom',
-          title: { text: valueHeaders.ratio },
+          title: { text: valueHeaders[ratioKind] },
           label: { formatter: ({ value }: { value: number }) => money(value) },
         },
       ],
@@ -169,7 +228,7 @@ export default function CostPerFteReport() {
         type: 'bar',
         direction: 'horizontal',
         xKey: 'key',
-        yKey: fieldOf(index, 'ratio'),
+        yKey: fieldOf(index, ratioKind),
         yName: columnLabel(column),
         strokeWidth: 0,
         tooltip: {
@@ -178,9 +237,9 @@ export default function CostPerFteReport() {
             title: escapeTooltipText(datum.label),
             data: [
               { label: t('reports.filters.column'), value: escapeTooltipText(columnLabel(column)) },
-              { label: valueHeaders.ratio, value: money(datum[fieldOf(index, 'ratio')]) },
-              { label: valueHeaders.fte, value: fte(datum[fieldOf(index, 'fte')]) },
-              { label: valueHeaders.cost, value: money(datum[fieldOf(index, 'cost')]) },
+              { label: valueHeaders[ratioKind], value: formats[ratioKind](datum[fieldOf(index, ratioKind)]) },
+              { label: valueHeaders[countKind], value: formats[countKind](datum[fieldOf(index, countKind)]) },
+              { label: valueHeaders[costKind], value: formats[costKind](datum[fieldOf(index, costKind)]) },
             ],
           }),
         },
@@ -188,11 +247,11 @@ export default function CostPerFteReport() {
       legend: { enabled: true, position: 'bottom' },
       animation: { enabled: true, duration: 800 },
     };
-  }, [chartCategories, chartTitle, columns, columnLabel, valueHeaders, fte, t]);
+  }, [chartCategories, chartTitle, columns, columnLabel, kinds, countKind, costKind, ratioKind, valueHeaders, formats, t]);
   const chartHeight = Math.max(260, Math.min(900, 140 + chartCategories.length * (12 + 14 * columns.length)));
 
   const first = columns[0];
-  const fileName = `cost-per-fte-${scope}-${GROUP_FILE_NAME[kind]}-${first ? `${first.year}-${metricFileName(budgetColumns, first.metric)}` : Y}`;
+  const fileName = `${view === 'rate' ? 'daily-rate' : 'cost-per-fte'}-${scope}-${GROUP_FILE_NAME[kind]}-${first ? `${first.year}-${metricFileName(budgetColumns, first.metric)}` : Y}`;
 
   // The notices name each pair concerned: "Budget 2026 (2 items, 1.50 FTE)".
   const noticeList = (entries: readonly CostPerFteNotice[]) => entries
@@ -218,6 +277,22 @@ export default function CostPerFteReport() {
           <ItemScopeTabs value={scope} onChange={setScope} />
           <BudgetReportFilters filters={reportFilters} />
           <ReportGroupFilters state={grouping} />
+          <ReportFilter label={t('reports.costPerFte.show')} width={150}>
+            <TextField
+              select
+              size="small"
+              value={view}
+              onChange={(e) => setView(e.target.value === 'rate' ? 'rate' : 'fte')}
+              SelectProps={{ MenuProps: reportFilterMenuProps, inputProps: { 'aria-label': t('reports.costPerFte.show') } }}
+              sx={reportFilterSelectSx}
+            >
+              {VIEWS.map((option) => (
+                <MenuItem key={option} value={option} sx={drawerMenuItemSx}>
+                  {t(option === 'rate' ? 'reports.costPerFte.dailyRate' : 'reports.costPerFte.costPerFte')}
+                </MenuItem>
+              ))}
+            </TextField>
+          </ReportFilter>
           <ReportFilter label={t('reports.costPerFte.columns')} width={260}>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1.5, rowGap: 1 }}>
               {selections.map((pair, index) => (
@@ -280,7 +355,7 @@ export default function CostPerFteReport() {
           {/* AG Grid re-flexes only the flex columns right of a resized column, and the group column is the
               first: new widths or pairs remount the grid so the group column takes exactly the room left. */}
           <ReportGrid
-            key={`cost-per-fte-${columns.length}-${widths.fte}-${widths.cost}-${widths.ratio}`}
+            key={`${view}-${columns.length}-${kinds.map((kindOf) => widths[kindOf]).join('-')}`}
             wrapperClassName="kanap-dense-grid"
             domLayout="autoHeight"
             rowData={tableRows}
@@ -296,6 +371,13 @@ export default function CostPerFteReport() {
           )}
           {data.noDetail.length > 0 && (
             <ReportNoticeLine>{t('reports.costPerFte.noDetail', { list: noticeList(data.noDetail) })}</ReportNoticeLine>
+          )}
+          {data.monthly.length > 0 && (
+            <ReportNoticeLine>
+              {t('reports.costPerFte.monthlyLeftOut', {
+                list: data.monthly.map((entry) => t('reports.costPerFte.monthlyEntry', { column: columnLabel(entry), amount: formatAmount(entry.amount) })).join(', '),
+              })}
+            </ReportNoticeLine>
           )}
         </Paper>
       </Stack>
