@@ -47,7 +47,7 @@ export interface AggregateQuery {
   filters?: ColumnFilters;
   /** `2025,2026`: the lines still active on 1 January of the earliest one (the year before this one by default). */
   years?: string;
-  /** `enabled`: the lines enabled today, as the list shows by default (instead of the window of `years`). */
+  /** `enabled`: the Enabled lines (not ended before 1 January of this year), as the list shows by default (instead of the window of `years`). */
   status?: 'enabled' | 'disabled';
 }
 
@@ -1231,7 +1231,7 @@ export function readTopIncreases(result: AggregateResult | undefined): Array<{ i
   });
 }
 
-/** How many lines pass the filters: of the window, or of the lines enabled today with `status: 'enabled'`. */
+/** How many lines pass the filters: of the window, or of the Enabled lines (not ended before 1 January) with `status: 'enabled'`. */
 export function countRequest(filters: ColumnFilters, status?: AggregateQuery['status']): AggregateRequest {
   return { query: status ? { filters, status } : { filters }, spec: { groupBy: [], measures: [] } };
 }
@@ -1246,7 +1246,7 @@ export function nextYearField(metric: MetricKey): string {
   return `yPlus1${METRIC_SUFFIX[metric]}`;
 }
 
-/** How many lines enabled today (the list's default) pass the filters, and their sum of this year's column. */
+/** How many Enabled lines (not ended before 1 January, the list's default) pass the filters, and their sum of this year's column. */
 export function lineTotalRequest(filters: ColumnFilters, metric: MetricKey): AggregateRequest {
   return {
     query: { filters, status: 'enabled' },
@@ -1260,7 +1260,7 @@ export function readLineTotal(result: AggregateResult | undefined): { count: num
 
 /**
  * This year's column by cost center label (`code · name`; lines without one: a null key), over the
- * lines enabled today, the largest sums above zero first.
+ * Enabled lines (not ended before 1 January), the largest sums above zero first.
  */
 export function costCenterTotalsRequest(metric: MetricKey, limit: number): AggregateRequest {
   return {

@@ -109,7 +109,7 @@ Le champ de recherche en haut porte sur la référence, la description, le fourn
 
 ### Filtres de colonnes
 
-Chaque en-tête de colonne filtrable a une icône de filtre. **Fournisseur**, **Société payeuse**, **Compte**, **Type d'immobilisation**, **Type d'investissement**, **Priorité**, **Ventilation**, **Devise**, **Responsable IT**, **Responsable métier**, chaque dimension analytique, **Centre de coûts**, **Responsable budgétaire**, **Run ou build**, **ETP déclarés** et **Activé** utilisent des filtres par jeu de cases à cocher avec **Tous**, **Aucun** et un bouton d'effacement. Le filtre **ETP déclarés** propose **Oui** et **Non**. Le filtre **Activé** propose **Activé** et **Désactivé** et restreint la liste lorsque **Afficher** est réglé sur **Tous**. Cliquer sur **Effacer** dans ce filtre, ou décocher les deux valeurs, n'affiche plus rien, quel que soit le choix de **Afficher**. Plusieurs filtres se combinent avec une logique ET.
+Chaque en-tête de colonne filtrable a une icône de filtre. **Fournisseur**, **Société payeuse**, **Compte**, **Type d'immobilisation**, **Type d'investissement**, **Priorité**, **Ventilation**, **Devise**, **Responsable IT**, **Responsable métier**, chaque dimension analytique, **Centre de coûts**, **Responsable budgétaire**, **Run ou build**, **ETP déclarés** et **Activé** utilisent des filtres par jeu de cases à cocher avec **Tous**, **Aucun** et un bouton d'effacement. Le filtre **ETP déclarés** propose **Oui** et **Non**. Le filtre **Activé** propose **Activé** et **Désactivé**, avec le même sens que **Afficher**, et restreint la liste lorsque **Afficher** est réglé sur **Tous**. Cliquer sur **Effacer** dans ce filtre, ou décocher les deux valeurs, n'affiche plus rien, quel que soit le choix de **Afficher**. Plusieurs filtres se combinent avec une logique ET.
 
 Cochez **Tous**, puis décochez les valeurs à exclure : le filtre garde tout sauf celles-ci (l'en-tête affiche par exemple **Tous sauf 3**), et une valeur créée plus tard est incluse automatiquement.
 
@@ -144,7 +144,7 @@ Cliquez sur n'importe quelle cellule d'une ligne pour ouvrir l'espace de travail
 
 ### Filtre de statut
 
-Utilisez la bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la grille pour choisir le périmètre de cycle de vie (par défaut **Activés**). Choisissez **Désactivés** pour revoir les investissements archivés, ou **Tous** pour inclure les deux états. Les totaux se mettent à jour immédiatement.
+Utilisez la bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la grille pour choisir le périmètre de cycle de vie (par défaut **Activés**). **Activés** liste les postes sans fin de validité ou dont la fin de validité tombe dans l'année en cours ou plus tard : les lignes qui se terminent pendant l'année en cours restent dans **Activés** jusqu'au 31 décembre. **Désactivés** liste les postes terminés avant le 1er janvier de l'année en cours. Choisissez **Désactivés** pour revoir les investissements archivés, ou **Tous** pour inclure les deux états. Les totaux se mettent à jour immédiatement.
 
 ### Conservation du contexte de recherche
 
@@ -569,6 +569,7 @@ Chaque poste CAPEX a un **statut** (Activé ou Désactivé) et une **Fin de vali
 **Afficher les postes désactivés** :
 
 - Par défaut, la liste CAPEX n'affiche que les postes **Activés**
+- Les lignes qui se terminent pendant l'année en cours restent dans **Activés** jusqu'au 31 décembre, même lorsque leur statut indique **Désactivé**. Elles passent dans **Désactivés** le 1er janvier
 - Utilisez la bascule **Afficher : Tous / Activés / Désactivés** pour changer le périmètre
 
 **Désactiver ou supprimer** :

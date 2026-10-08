@@ -172,9 +172,9 @@ function listHref(scope: BudgetScope, filters: ColumnFilters): string {
   return `/ops/${scope}?${new URLSearchParams({ filters: JSON.stringify(filters) }).toString()}`;
 }
 
-/** The hygiene counts of one type: lines enabled today (as the list's default) passing each check, no row built. */
+/** The hygiene counts of one type: Enabled lines (not ended before 1 January, the list's default) passing each check, no row built. */
 function useHygieneCounts(scope: BudgetScope, checks: readonly HygieneCheck[] | null, enabled: boolean) {
-  // The lines the list shows by default: enabled today.
+  // The lines the list shows by default: Enabled, not ended before 1 January of this year.
   const requests = useMemo(() => (checks ? checks.map((check) => countRequest(check.filter, 'enabled')) : null), [checks]);
   const counts = useBudgetAggregates(scope, requests, { enabled });
   const data = useMemo(
@@ -215,7 +215,7 @@ function myBudgetFilters(profile: ProfileName): Array<{ role: MyBudgetRole; filt
   ];
 }
 
-/** Per role: the lines enabled today in the user's name and their sum of this year's default column. */
+/** Per role: the Enabled lines (not ended before 1 January) in the user's name and their sum of this year's default column. */
 function useMyBudget(scope: BudgetScope, profile: ProfileName, metric: AmountColumnKey, enabled: boolean) {
   const roles = useMemo(() => myBudgetFilters(profile), [profile]);
   const requests = useMemo(() => (roles ? roles.map((role) => lineTotalRequest(role.filter, metric)) : null), [roles, metric]);

@@ -109,7 +109,7 @@ El cuadro de búsqueda en la parte superior busca en la referencia, la descripci
 
 ### Filtros de columna
 
-Cada encabezado de columna filtrable tiene un icono de filtro. **Proveedor**, **Empresa pagadora**, **Cuenta**, **Tipo de activo fijo**, **Tipo de inversión**, **Prioridad**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio**, cada dimensión analítica, **Centro de coste**, **Responsable del presupuesto**, **Run o build**, **ETC declarados** y **Habilitado** usan filtros de conjunto de casillas con **Todos**, **Ninguno** y un botón de limpiar. El filtro **ETC declarados** ofrece **Sí** y **No**. El filtro **Habilitado** ofrece **Activado** y **Desactivado** y restringe la lista cuando **Mostrar** está en **Todos**. Si hace clic en **Limpiar** dentro del filtro, o desmarca ambos valores, la lista no muestra nada, sea cual sea la opción de **Mostrar**. Múltiples filtros se combinan con lógica AND.
+Cada encabezado de columna filtrable tiene un icono de filtro. **Proveedor**, **Empresa pagadora**, **Cuenta**, **Tipo de activo fijo**, **Tipo de inversión**, **Prioridad**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio**, cada dimensión analítica, **Centro de coste**, **Responsable del presupuesto**, **Run o build**, **ETC declarados** y **Habilitado** usan filtros de conjunto de casillas con **Todos**, **Ninguno** y un botón de limpiar. El filtro **ETC declarados** ofrece **Sí** y **No**. El filtro **Habilitado** ofrece **Activado** y **Desactivado**, con el mismo significado que **Mostrar**, y restringe la lista cuando **Mostrar** está en **Todos**. Si hace clic en **Limpiar** dentro del filtro, o desmarca ambos valores, la lista no muestra nada, sea cual sea la opción de **Mostrar**. Múltiples filtros se combinan con lógica AND.
 
 Marque **Todos** y luego desmarque los valores que quiera excluir: el filtro conserva todo salvo esos (el encabezado muestra, por ejemplo, **Todos menos 3**), y un valor creado más tarde se incluye automáticamente.
 
@@ -144,7 +144,7 @@ Haga clic en cualquier celda de una fila para abrir el espacio de trabajo en la 
 
 ### Filtro de estado
 
-Utilice el conmutador **Mostrar: Todos / Activos / Desactivados** encima de la cuadrícula para controlar el alcance del ciclo de vida (predeterminado: **Activos**). Seleccione **Desactivados** para revisar inversiones archivadas o **Todos** para incluir ambos estados. Los totales se actualizan inmediatamente.
+Utilice el conmutador **Mostrar: Todos / Activos / Desactivados** encima de la cuadrícula para controlar el alcance del ciclo de vida (predeterminado: **Activos**). **Activos** muestra las partidas sin fin de validez o con un fin de validez en el año en curso o posterior: las líneas que terminan durante el año en curso permanecen en **Activos** hasta el 31 de diciembre. **Desactivados** muestra las partidas que terminaron antes del 1 de enero del año en curso. Seleccione **Desactivados** para revisar inversiones archivadas o **Todos** para incluir ambos estados. Los totales se actualizan inmediatamente.
 
 ### Preservación del contexto de búsqueda
 
@@ -569,6 +569,7 @@ Cada partida CAPEX tiene un **estado** (Habilitado o Deshabilitado) y un **Fin d
 **Ver partidas deshabilitadas**:
 
 - Por defecto, la lista CAPEX muestra solo partidas **Habilitadas**
+- Las líneas que terminan durante el año en curso permanecen en **Activos** hasta el 31 de diciembre, aunque su estado ya indique **Desactivado**. Pasan a **Desactivados** el 1 de enero
 - Utilice el conmutador **Mostrar: Todos / Activos / Desactivados** para cambiar el alcance
 
 **Cuándo desactivar vs eliminar**:

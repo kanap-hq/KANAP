@@ -12,7 +12,7 @@ const FILE_QUERY = new Set(['amountyears', 'columns', 'detail', 'language', 'all
 /**
  * The list query, without the budget-file parameters.
  * `all` drops filters, search and status. Ended lines are included: the ids
- * endpoint's fallback is active lines, and a status set of both values is
+ * endpoint's fallback is the Enabled lines, and a status set of both values is
  * discarded before that fallback, so "every status" is `includeDisabled`.
  */
 export function exportListQuery(query: Record<string, unknown>, all: boolean): Record<string, unknown> {
