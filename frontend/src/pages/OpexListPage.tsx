@@ -2,7 +2,7 @@ import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ColDef } from 'ag-grid-community';
-import ServerDataGrid, { DATE_COLUMN_FILTER, EnhancedColDef, StatusScope, gridSortModel } from '../components/ServerDataGrid';
+import ServerDataGrid, { DATE_COLUMN_FILTER, DATE_COLUMN_FILTER_TWO_CONDITIONS, EnhancedColDef, StatusScope, gridSortModel } from '../components/ServerDataGrid';
 import PageHeader from '../components/PageHeader';
 import { Button, Stack, Typography } from '@mui/material';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
@@ -29,7 +29,7 @@ import {
   visibleFteFields,
 } from '../components/finance/amountColumns';
 import { compactListSearchCached, filtersNeedContext, listFiltersOf, getWithListContext } from '../lib/listContext';
-import { snapshotFilters, useSettledListSearch, writeListSnapshot } from '../hooks/useListContextSearch';
+import { isReportView, markReportView, snapshotFilters, useSettledListSearch, writeListSnapshot } from '../hooks/useListContextSearch';
 import { useBudgetColumns } from '../hooks/useBudgetColumns';
 import { useAnalyticsAxes } from '../hooks/useAnalyticsAxes';
 import { analyticsFieldKey } from '../services/analytics';
@@ -61,6 +61,8 @@ type SummaryRow = {
   cost_center_path?: string | null;
   budget_holder_name?: string | null;
   run_build?: 'run' | 'build' | null;
+  /** 'yes' when the line declares FTE in some year and column, else null. */
+  has_fte?: 'yes' | null;
   project_name?: string | null;
   notes?: string | null;
   created_at: string;
@@ -91,7 +93,17 @@ const VALUES_ENDPOINT = '/spend-items/summary/filter-values';
  */
 const pageParams = (state: Parameters<typeof visibleFteFields>[0]) => ({ shape: 'grid', fte: visibleFteFields(state).join(',') });
 
+/**
+ * The list, mounted afresh when the address enters or leaves a one-off view opened from a report
+ * (`?from=report`): the menu's link to the list, followed from that view, then opens on the tab's own
+ * list state instead of keeping the report's filters and Show scope on screen.
+ */
 export default function OpexListPage() {
+  const location = useLocation();
+  return <OpexListPageView key={isReportView(location.search) ? 'report' : 'list'} />;
+}
+
+function OpexListPageView() {
   const { hasLevel } = useAuth();
   const { t } = useTranslation(['ops', 'common']);
   const locale = useLocale();
@@ -139,6 +151,8 @@ export default function OpexListPage() {
     build: t('opex.runBuild.build'),
   }), [t]);
 
+  const FTE_DECLARED_LABELS: Record<string, string> = useMemo(() => ({ yes: t('shared.fteDeclaredYes') }), [t]);
+
   const gridApiRef = useRef<any>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
@@ -146,7 +160,18 @@ export default function OpexListPage() {
   const [filteredCount, setFilteredCount] = useState<number | null>(null);
   const [selectedRows, setSelectedRows] = useState<SummaryRow[]>([]);
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any; filtersString: string; statusScope?: StatusScope } | null>(null);
-  const storedContextRef = useRef(readStoredOpexListContext());
+  // A list opened from a report row is a one-off view (`?from=report`): it neither reads nor writes
+  // the tab's stored list context, its state lives in its address only.
+  const reportViewRef = useRef(isReportView(location.search));
+  reportViewRef.current = isReportView(location.search);
+  const storedContextRef = useRef(reportViewRef.current ? null : readStoredOpexListContext());
+  /** The tab's stored list context; none in a one-off view. */
+  const storedContext = useCallback(() => {
+    if (reportViewRef.current) return null;
+    const stored = storedContextRef.current || readStoredOpexListContext();
+    if (stored && !storedContextRef.current) storedContextRef.current = stored;
+    return stored;
+  }, []);
   // The default sort and the shown columns come from the budget columns setting; callbacks
   // created once read them here.
   const budgetColumnsRef = useRef(budgetColumns);
@@ -173,21 +198,17 @@ export default function OpexListPage() {
   // URL only, so the first request already uses the tenant's default sort, and a saved layout
   // (applied at mount only) finds the dimension columns.
   // Filters saved as a context (`ctx`, too long for a URL) are read first; long ones go back as `ctx`.
-  const readStored = useCallback(() => {
-    const stored = storedContextRef.current || readStoredOpexListContext();
-    if (stored && !storedContextRef.current) storedContextRef.current = stored;
-    return stored;
-  }, []);
+  const readStored = storedContext;
   // The filters of a link were lost: the stored list context forgets its own too (the list opens
   // unfiltered, and the next settling of the address must not bring them back).
   const dropStoredFilters = useCallback(() => {
-    const stored = storedContextRef.current || readStoredOpexListContext();
+    const stored = storedContext();
     if (!stored) return;
     const { ctx: _ctx, ...rest } = stored;
     const next = { ...rest, filters: '' };
     storedContextRef.current = next;
     writeStoredOpexListContext(next);
-  }, []);
+  }, [storedContext]);
   const settledSearch = useSettledListSearch({
     endpoint: ROWS_ENDPOINT,
     search: location.search,
@@ -280,8 +301,7 @@ export default function OpexListPage() {
           variant="contained"
           onClick={() => {
             const urlParams = new URLSearchParams(window.location.search);
-            const stored = storedContextRef.current || readStoredOpexListContext();
-            if (stored && !storedContextRef.current) storedContextRef.current = stored;
+            const stored = storedContext();
             const sort = listSort(urlParams.get('sort') || stored?.sort);
             const q = urlParams.get('q') || stored?.q || '';
             const filters = listFiltersOf(urlParams) || snapshotFilters(stored);
@@ -289,6 +309,7 @@ export default function OpexListPage() {
             if (sort) sp.set('sort', sort);
             if (q) sp.set('q', q);
             if (filters) sp.set('filters', filters);
+            if (reportViewRef.current) markReportView(sp, lastQueryRef.current?.statusScope);
             navigate(`/ops/opex/new?${compactListSearchCached(sp.toString(), ROWS_ENDPOINT)}`);
           }}
         >
@@ -314,8 +335,7 @@ export default function OpexListPage() {
 
   const buildGridSearch = useCallback(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const stored = storedContextRef.current || readStoredOpexListContext();
-    if (stored && !storedContextRef.current) storedContextRef.current = stored;
+    const stored = storedContext();
     const fallbackSort = listSort(lastQueryRef.current?.sort || urlParams.get('sort') || stored?.sort);
     const primarySort = gridApiRef.current ? gridSortModel(gridApiRef.current)[0] : undefined;
     let sort = fallbackSort;
@@ -332,8 +352,11 @@ export default function OpexListPage() {
     if (sort) sp.set('sort', sort);
     if (q) sp.set('q', q);
     if (filters) sp.set('filters', filters);
+    // Item links of a one-off view keep it, with its Show scope: the item page walks the same lines
+    // and leaves the stored list context alone.
+    if (reportViewRef.current) markReportView(sp, lastQueryRef.current?.statusScope);
     return sp;
-  }, []);
+  }, [storedContext]);
 
   // The list part of the cell links, built once per list state (each grid report replaces
   // lastQueryRef.current) rather than once per cell. Filters too long for a URL go as `ctx`, once
@@ -487,6 +510,19 @@ export default function OpexListPage() {
         />
       ),
     },
+    // The account by id, for a report link (a consolidation line opens the list on its accounts:
+    // account names repeat across charts of accounts). Hidden and kept out of the column chooser, like
+    // the link filters of the tasks list; the column has to exist, or the grid would drop the model.
+    {
+      colId: 'account_id',
+      headerName: t('opex.columns.account'),
+      hide: true,
+      defaultHidden: true,
+      suppressColumnsToolPanel: true,
+      filter: CheckboxSetFilter,
+      filterParams: { values: [] },
+      sortable: false,
+    },
     // Lines whose account belongs to another chart of accounts than the paying company's: the
     // filter the overview's data hygiene count opens the list with. Hidden by default.
     {
@@ -556,6 +592,28 @@ export default function OpexListPage() {
         />
       ),
     }),
+    // Whether the line declares FTE in some year and column: the reports' "Items with FTE" filter.
+    {
+      colId: 'has_fte',
+      headerName: t('shared.fteDeclared'),
+      valueGetter: (p) => (p.data?.has_fte === 'yes' ? FTE_DECLARED_LABELS.yes : ''),
+      width: 140,
+      defaultHidden: true,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        getValues: getOpexFilterValues('has_fte', { labelMap: FTE_DECLARED_LABELS, emptyLabel: t('shared.fteDeclaredNo') }),
+        searchable: false,
+      },
+      cellRenderer: (params: any) => (
+        <LinkCellRenderer
+          {...params}
+          linkType="internal"
+          getHref={(row) => getOpexHref(row, 'has_fte')}
+          onNavigate={(href) => navigate(href)}
+        />
+      ),
+    },
     {
       colId: 'latest_task_text',
       headerName: t('opex.columns.task'),
@@ -640,9 +698,11 @@ export default function OpexListPage() {
     {
       field: 'disabled_at',
       headerName: t('opex.columns.endOfValidity'),
-      width: 150,
+      // Room for its filter in words: "Blank or after 31 Dec 2024" and the clear button.
+      width: 260,
       defaultHidden: true,
-      ...DATE_COLUMN_FILTER,
+      // Two conditions: a report link opens the list on "blank, or after 31 December" (its window).
+      ...DATE_COLUMN_FILTER_TWO_CONDITIONS,
       // A timestamp: shown as the calendar day in the viewer's time zone, like the drawer.
       valueFormatter: (p) => formatShortDate(p.value ? new Date(p.value as string) : null, locale),
       cellRenderer: (params: any) => (
@@ -847,7 +907,7 @@ export default function OpexListPage() {
         />
       ),
     },
-  ], [Y, analyticsAxes, budgetColumns, defaultAnalyticsLabel, getOpexFilterValues, getOpexHref, RUN_BUILD_LABELS, locale, navigate, queryClient, t]);
+  ], [Y, analyticsAxes, budgetColumns, defaultAnalyticsLabel, getOpexFilterValues, getOpexHref, RUN_BUILD_LABELS, FTE_DECLARED_LABELS, locale, navigate, queryClient, t]);
 
   if (!hasLevel('opex', 'reader')) {
     return <ForbiddenPage />;
@@ -871,6 +931,8 @@ export default function OpexListPage() {
         defaultSort={gridDefaultSort}
         // A link's filter on a hidden column (the overview's hygiene counts) shows that column.
         showFilteredColumns
+        // Next to the name, so they are on screen: the reason the list is narrowed.
+        filteredColumnsAfter="product_name"
         statusScopeConfig={{ defaultScope: 'enabled' }}
         columnPreferencesKey="opex-summary"
         initialState={initialGridState}
@@ -893,9 +955,12 @@ export default function OpexListPage() {
           const filtersString = filtersObject && Object.keys(filtersObject).length > 0 ? JSON.stringify(filtersObject) : '';
           const scope = state.statusScope ?? 'enabled';
           lastQueryRef.current = { sort: normalizedSort, q: state.q || '', filters: filtersObject, filtersString, statusScope: scope };
-          const snapshot = { sort: normalizedSort, q: state.q || '', filters: filtersString, statusScope: scope };
-          storedContextRef.current = snapshot;
-          writeListSnapshot(ROWS_ENDPOINT, snapshot, readStoredOpexListContext, writeStoredOpexListContext);
+          // A one-off view keeps its state in its address only (see reportViewRef).
+          if (!reportViewRef.current) {
+            const snapshot = { sort: normalizedSort, q: state.q || '', filters: filtersString, statusScope: scope };
+            storedContextRef.current = snapshot;
+            writeListSnapshot(ROWS_ENDPOINT, snapshot, readStoredOpexListContext, writeStoredOpexListContext);
+          }
           // Before the grid is ready it reports its URL sync without the initial filter yet.
           if (gridApiRef.current) followTotalsQuery({ q: state.q || '', filters: filtersString, statusScope: scope });
         }}

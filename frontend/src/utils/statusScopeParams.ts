@@ -1,3 +1,6 @@
+/** The list address parameter of the Show scope (`?statusScope=all`); absent: the list's default scope. */
+export const STATUS_SCOPE_PARAM = 'statusScope';
+
 /**
  * Map a grid status scope onto list request params.
  *

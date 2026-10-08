@@ -227,6 +227,8 @@ export type BudgetSummaryRow = Record<string, any> & {
   budget_holder_id: string | null;
   budget_holder_name: string | null;
   run_build: 'run' | 'build' | null;
+  /** 'yes' when the line declares FTE in some version (any year, any column), else null. */
+  has_fte: 'yes' | null;
   latest_contract_id: string | null;
   latest_contract_name: string;
   project_name: string | null;
@@ -311,12 +313,13 @@ const GRID_VERSION_SLOTS = ['yMinus1', 'y', 'yPlus1', 'yPlus2'] as const;
  * Derived fields the list grid reads (grid shape with `gridItemColumns`): names
  * and labels its cells, tooltips and links show, besides the item columns, the
  * default dimension's value name, the enabled other dimensions, the latest
- * task's title, the amounts and the requested FTE keys.
+ * task's title, the amounts, the requested FTE keys and whether the line
+ * declares FTE (`has_fte`, the list's "FTE declared" column).
  */
 const GRID_DERIVED_FIELDS = [
   'cost_center_id', 'run_build', 'latest_contract_id', 'latest_contract_name', 'supplier_name', 'paying_company_name',
   'account_display', 'allocation_method_label', 'owner_it_name', 'owner_business_name', 'cost_center_label',
-  'cost_center_path', 'budget_holder_name', 'project_name', 'analytics_category_name',
+  'cost_center_path', 'budget_holder_name', 'project_name', 'analytics_category_name', 'has_fte',
 ] as const;
 
 /**
@@ -788,6 +791,17 @@ export async function buildBudgetSummaryRows(
   );
   const contractByItem = new Map(contracts.map((row) => [row.item_id, row]));
 
+  // `has_fte`: the lines with a round holding an FTE in any version (any year, any column), as the
+  // list statement computes it (`budget-list.config.ts`).
+  const staffRows: Array<{ item_id: string }> = await manager.query(
+    `SELECT DISTINCT v.${config.versionItemFk} AS item_id
+     FROM ${config.versionTable} v
+     JOIN ${config.roundTable} r ON r.tenant_id = v.tenant_id AND r.version_id = v.id AND r.fte IS NOT NULL
+     WHERE v.tenant_id = $1 AND v.${config.versionItemFk} = ANY($2::uuid[])`,
+    [tenantId, itemIds],
+  );
+  const staffItems = new Set(staffRows.map((row) => row.item_id));
+
   // Projects linked in the Relations panel, plus the legacy item field when set and not already linked.
   const projectRows: Array<{ item_id: string; name: string; stream_name: string | null; category_name: string | null }> = await manager.query(
     `SELECT l.item_id, p.name, pst.name AS stream_name, pc.name AS category_name
@@ -936,6 +950,7 @@ export async function buildBudgetSummaryRows(
       budget_holder_id: costCenter?.owner_user_id ?? null,
       budget_holder_name: costCenter?.owner_user_id ? costCenter.owner_name || null : null,
       run_build: item.run_build ?? null,
+      has_fte: staffItems.has(item.id) ? 'yes' : null,
       latest_contract_id: contract?.contract_id ?? null,
       latest_contract_name: contract?.contract_name ?? '',
       project_name: joinNames(projectLists.project_name),

@@ -89,6 +89,7 @@ Diese Spalten sind standardmäßig ausgeblendet. Zeigen Sie sie über die Spalte
 |--------|---------------|
 | **Betragsspalten** | Jede angezeigte Budgetspalte für J-1, J, J+1 und J+2, unter den Namen, die Ihre Organisation gewählt hat. Die Überschrift nennt die Spalte, das Jahr relativ zu heute und das Kalenderjahr, zum Beispiel **Revision J+1 (2027)**. Die Beträge sind in der Berichtswährung. Ausgeblendete Spalten werden nicht angeboten |
 | **VZÄ-Spalten** | Die VZÄ jeder angezeigten Budgetspalte für J-1, J, J+1 und J+2, unter den Namen, die Ihre Organisation gewählt hat, in der Spaltenauswahl direkt nach den Betragsspalten. Die Überschrift nennt die Spalte und das Kalenderjahr, zum Beispiel **VZÄ Budget (2026)**. Die VZÄ einer Position sind die Summe der VZÄ ihrer Zeilen in dieser Spalte. Siehe [VZÄ](#vza). Die Zelle ist leer, wenn die Spalte keine Zeilen hat |
+| **VZÄ gemeldet** | **Ja**, wenn die Position in mindestens einer Budgetspalte eines beliebigen Jahres VZÄ meldet, sonst leer. Das sind die Positionen, die der Filter **Positionen mit VZÄ** der Berichte behält |
 | **Währung** | Währungscode der Position |
 | **Gültig ab** | Startdatum |
 | **Ende der Gültigkeit** | Datum, an dem die Position endet (leer bedeutet kein Ende) |
@@ -108,7 +109,7 @@ Das Suchfeld oben durchsucht Referenz, Beschreibung, Lieferant, zahlendes Untern
 
 ### Spaltenfilter
 
-Jede filterbare Spaltenüberschrift hat ein Filtersymbol. **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **Anlagentyp**, **Investitionsart**, **Priorität**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher**, jede Analysedimension, **Kostenstelle**, **Budgetverantwortlicher**, **Run oder Build** und **Aktiviert** verwenden Kontrollkästchen-Set-Filter mit **Alle**, **Keine** und einer Löschen-Schaltfläche. Der Filter **Aktiviert** bietet **Aktiviert** und **Deaktiviert** mit derselben Bedeutung wie **Anzeigen** und grenzt die Liste ein, wenn **Anzeigen** auf **Alle** steht. Wenn Sie darin auf **Leeren** klicken oder beide Werte abwählen, zeigt die Liste nichts mehr an, unabhängig von **Anzeigen**. Mehrere Filter werden mit UND-Logik kombiniert.
+Jede filterbare Spaltenüberschrift hat ein Filtersymbol. **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **Anlagentyp**, **Investitionsart**, **Priorität**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher**, jede Analysedimension, **Kostenstelle**, **Budgetverantwortlicher**, **Run oder Build**, **VZÄ gemeldet** und **Aktiviert** verwenden Kontrollkästchen-Set-Filter mit **Alle**, **Keine** und einer Löschen-Schaltfläche. Der Filter **VZÄ gemeldet** bietet **Ja** und **Nein**. Der Filter **Aktiviert** bietet **Aktiviert** und **Deaktiviert** mit derselben Bedeutung wie **Anzeigen** und grenzt die Liste ein, wenn **Anzeigen** auf **Alle** steht. Wenn Sie darin auf **Leeren** klicken oder beide Werte abwählen, zeigt die Liste nichts mehr an, unabhängig von **Anzeigen**. Mehrere Filter werden mit UND-Logik kombiniert.
 
 Aktivieren Sie **Alle** und deaktivieren Sie dann die Werte, die Sie ausschließen möchten: Der Filter behält alles außer diesen (die Überschrift zeigt dann zum Beispiel **Alle außer 3**), und ein später angelegter Wert wird automatisch einbezogen.
 
@@ -116,7 +117,7 @@ Jede Betragsspalte hat einen Zahlenfilter. Eine Zahl im Feld unter der Überschr
 
 Jede VZÄ-Spalte hat einen Zahlenfilter mit denselben Bedingungen, dazu leer und nicht leer. **Leer** behält die Positionen, deren Spalte keine Zeilen hat.
 
-**Gültig ab**, **Ende der Gültigkeit**, **Erstellt** und **Aktualisiert** haben Datumsfilter. Wählen Sie ein Datum im Feld unter der Überschrift, um die Positionen an diesem Datum zu behalten, oder öffnen Sie das Filtermenü für vor, nach, zwischen, leer oder nicht leer.
+**Gültig ab**, **Ende der Gültigkeit**, **Erstellt** und **Aktualisiert** haben Datumsfilter. Das Feld unter der Überschrift zeigt den Filter in Worten mit allen Bedingungen, zum Beispiel „Leer oder nach dem 31. Dez. 2024“. Klicken Sie darauf, um das Filtermenü zu öffnen (am, vor, nach, zwischen, leer oder nicht leer), oder klicken Sie auf ×, um den Filter zu entfernen. **Ende der Gültigkeit** nimmt zwei Bedingungen, verknüpft mit UND oder ODER, zum Beispiel leer oder nach einem Datum.
 
 Textspalten verwenden Textfilter, unabhängig von Akzenten und Groß-/Kleinschreibung. Geben Sie bei **Ref** die Nummer oder die vollständige Referenz ein, zum Beispiel `12` oder `CPX-12`.
 
@@ -149,7 +150,7 @@ Verwenden Sie den Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über dem 
 
 Ihr Listenkontext (Sortierreihenfolge, Suchtext und aktive Filter) wird beibehalten, wenn Sie eine Position öffnen, und wiederhergestellt, wenn Sie zur Liste zurückkehren. Sie können also mehrere Positionen nacheinander aufrufen, ohne Ihren Platz zu verlieren.
 
-Dieselben Filter werden auch in der Webadresse der Seite gespeichert. Ein Neuladen der Seite oder das Teilen des Links öffnet dieselbe Ansicht wieder. Ein Link, dessen Filter nicht mehr verfügbar sind, zeigt „Die Filter dieses Links sind nicht mehr verfügbar.“
+Dieselben Filter werden auch in der Webadresse der Seite gespeichert. Ein Neuladen der Seite oder das Teilen des Links öffnet dieselbe Ansicht wieder. Ein Link, dessen Filter nicht mehr verfügbar sind, zeigt „Die Filter dieses Links sind nicht mehr verfügbar.“ Filtert ein Link eine ausgeblendete Spalte, zum Beispiel eine Berichtszeile, die die Liste öffnet, zeigt die Liste diese Spalte für diesen Besuch direkt nach dem Positionsnamen an. Ihre gespeicherte Spaltenanordnung ändert sich nicht. Auch die Auswahl unter **Anzeigen** wird in der Adresse gespeichert. Eine aus einem Bericht geöffnete Liste ist eine Ansicht dieses Berichts: Was Sie darin ändern, bleibt in ihrer Adresse, und die über das Menü geöffnete Liste behält Ihre eigene Sortierung, Suche und Filter.
 
 ### Zurück/Weiter-Navigation
 

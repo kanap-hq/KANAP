@@ -2,7 +2,7 @@ import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import PageHeader from '../components/PageHeader';
-import ServerDataGrid, { DATE_COLUMN_FILTER, StatusScope, gridSortModel } from '../components/ServerDataGrid';
+import ServerDataGrid, { DATE_COLUMN_FILTER, DATE_COLUMN_FILTER_TWO_CONDITIONS, StatusScope, gridSortModel } from '../components/ServerDataGrid';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Stack, Typography } from '@mui/material';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
@@ -31,7 +31,7 @@ import {
   visibleFteFields,
 } from '../components/finance/amountColumns';
 import { compactListSearchCached, filtersNeedContext, listFiltersOf, getWithListContext } from '../lib/listContext';
-import { snapshotFilters, useSettledListSearch, writeListSnapshot } from '../hooks/useListContextSearch';
+import { isReportView, markReportView, snapshotFilters, useSettledListSearch, writeListSnapshot } from '../hooks/useListContextSearch';
 import { useBudgetColumns } from '../hooks/useBudgetColumns';
 import { useAnalyticsAxes } from '../hooks/useAnalyticsAxes';
 import { analyticsFieldKey } from '../services/analytics';
@@ -61,6 +61,8 @@ type SummaryRow = {
   cost_center_path?: string | null;
   budget_holder_name?: string | null;
   run_build?: 'run' | 'build' | null;
+  /** 'yes' when the line declares FTE in some year and column, else null. */
+  has_fte?: 'yes' | null;
   ppe_type: 'hardware' | 'software';
   investment_type: 'replacement' | 'capacity' | 'productivity' | 'security' | 'conformity' | 'business_growth' | 'other';
   priority: 'mandatory' | 'high' | 'medium' | 'low';
@@ -93,7 +95,17 @@ const VALUES_ENDPOINT = '/capex-items/summary/filter-values';
  */
 const pageParams = (state: Parameters<typeof visibleFteFields>[0]) => ({ shape: 'grid', fte: visibleFteFields(state).join(',') });
 
+/**
+ * The list, mounted afresh when the address enters or leaves a one-off view opened from a report
+ * (`?from=report`): the menu's link to the list, followed from that view, then opens on the tab's own
+ * list state instead of keeping the report's filters and Show scope on screen.
+ */
 export default function CapexPage() {
+  const location = useLocation();
+  return <CapexPageView key={isReportView(location.search) ? 'report' : 'list'} />;
+}
+
+function CapexPageView() {
   const { hasLevel } = useAuth();
   const { t } = useTranslation(["ops", "common"]);
   const locale = useLocale();
@@ -111,7 +123,18 @@ export default function CapexPage() {
   const [selectedRows, setSelectedRows] = useState<SummaryRow[]>([]);
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any; filtersString: string; statusScope?: StatusScope } | null>(null);
   const gridApiRef = useRef<any>(null);
-  const storedContextRef = useRef(readStoredCapexListContext());
+  // A list opened from a report row is a one-off view (`?from=report`): it neither reads nor writes
+  // the tab's stored list context, its state lives in its address only.
+  const reportViewRef = useRef(isReportView(location.search));
+  reportViewRef.current = isReportView(location.search);
+  const storedContextRef = useRef(reportViewRef.current ? null : readStoredCapexListContext());
+  /** The tab's stored list context; none in a one-off view. */
+  const storedContext = useCallback(() => {
+    if (reportViewRef.current) return null;
+    const stored = storedContextRef.current || readStoredCapexListContext();
+    if (stored && !storedContextRef.current) storedContextRef.current = stored;
+    return stored;
+  }, []);
   // The default sort and the shown columns come from the budget columns setting; callbacks
   // created once read them here.
   const budgetColumnsRef = useRef(budgetColumns);
@@ -138,21 +161,17 @@ export default function CapexPage() {
   // URL only, so the first request already uses the tenant's default sort, and a saved layout
   // (applied at mount only) finds the dimension columns.
   // Filters saved as a context (`ctx`, too long for a URL) are read first; long ones go back as `ctx`.
-  const readStored = useCallback(() => {
-    const stored = storedContextRef.current || readStoredCapexListContext();
-    if (stored && !storedContextRef.current) storedContextRef.current = stored;
-    return stored;
-  }, []);
+  const readStored = storedContext;
   // The filters of a link were lost: the stored list context forgets its own too (the list opens
   // unfiltered, and the next settling of the address must not bring them back).
   const dropStoredFilters = useCallback(() => {
-    const stored = storedContextRef.current || readStoredCapexListContext();
+    const stored = storedContext();
     if (!stored) return;
     const { ctx: _ctx, ...rest } = stored;
     const next = { ...rest, filters: '' };
     storedContextRef.current = next;
     writeStoredCapexListContext(next);
-  }, []);
+  }, [storedContext]);
   const settledSearch = useSettledListSearch({
     endpoint: ROWS_ENDPOINT,
     search: location.search,
@@ -250,6 +269,7 @@ export default function CapexPage() {
     low: t('capex.priorityTypes.low'),
   }), [t]);
 
+  const FTE_DECLARED_LABELS: Record<string, string> = useMemo(() => ({ yes: t('shared.fteDeclaredYes') }), [t]);
   const RUN_BUILD_LABELS: Record<string, string> = useMemo(() => ({
     run: t('capex.runBuild.run'),
     build: t('capex.runBuild.build'),
@@ -312,8 +332,7 @@ export default function CapexPage() {
 
   const buildGridSearch = useCallback(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const stored = storedContextRef.current || readStoredCapexListContext();
-    if (stored && !storedContextRef.current) storedContextRef.current = stored;
+    const stored = storedContext();
     const fallbackSort = listSort(lastQueryRef.current?.sort || urlParams.get('sort') || stored?.sort);
     const primarySort = gridApiRef.current ? gridSortModel(gridApiRef.current)[0] : undefined;
     let sort = fallbackSort;
@@ -330,8 +349,11 @@ export default function CapexPage() {
     if (sort) sp.set('sort', sort);
     if (q) sp.set('q', q);
     if (filters) sp.set('filters', filters);
+    // Item links of a one-off view keep it, with its Show scope: the item page walks the same lines
+    // and leaves the stored list context alone.
+    if (reportViewRef.current) markReportView(sp, lastQueryRef.current?.statusScope);
     return sp;
-  }, []);
+  }, [storedContext]);
 
   // The list part of the cell links, built once per list state (each grid report replaces
   // lastQueryRef.current) rather than once per cell. Filters too long for a URL go as `ctx`, once
@@ -444,6 +466,19 @@ export default function CapexPage() {
         filterParams: { getValues: getCapexFilterValues('account_display'), searchable: false },
         cellRenderer: linkCell('account_display'),
       },
+      // The account by id, for a report link (a consolidation line opens the list on its accounts:
+      // account names repeat across charts of accounts). Hidden and kept out of the column chooser, like
+      // the link filters of the tasks list; the column has to exist, or the grid would drop the model.
+      {
+        colId: 'account_id',
+        headerName: t('capex.columns.account'),
+        hide: true,
+        defaultHidden: true,
+        suppressColumnsToolPanel: true,
+        filter: CheckboxSetFilter,
+        filterParams: { values: [] },
+        sortable: false,
+      },
       // Lines whose account belongs to another chart of accounts than the paying company's: the
       // filter the overview's data hygiene count opens the list with. Hidden by default.
       {
@@ -501,6 +536,21 @@ export default function CapexPage() {
       },
       ...buildAmountColumnDefs<SummaryRow>({ t, currentYear: Y, cellRenderer: linkCell, columns: budgetColumns }),
       ...buildFteColumnDefs<SummaryRow>({ t, currentYear: Y, locale, cellRenderer: linkCell, columns: budgetColumns }),
+      // Whether the line declares FTE in some year and column: the reports' "Items with FTE" filter.
+      {
+        colId: 'has_fte',
+        headerName: t('shared.fteDeclared'),
+        valueGetter: (p: any) => (p.data?.has_fte === 'yes' ? FTE_DECLARED_LABELS.yes : ''),
+        width: 140,
+        defaultHidden: true,
+        filter: CheckboxSetFilter,
+        floatingFilterComponent: CheckboxSetFloatingFilter,
+        filterParams: {
+          getValues: getCapexFilterValues('has_fte', { labelMap: FTE_DECLARED_LABELS, emptyLabel: t('shared.fteDeclaredNo') }),
+          searchable: false,
+        },
+        cellRenderer: linkCell('has_fte'),
+      },
       {
         field: 'currency',
         headerName: t('capex.columns.currency'),
@@ -523,9 +573,11 @@ export default function CapexPage() {
       {
         field: 'disabled_at',
         headerName: t('capex.columns.endOfValidity'),
-        width: 150,
+        // Room for its filter in words: "Blank or after 31 Dec 2024" and the clear button.
+        width: 260,
         defaultHidden: true,
-        ...DATE_COLUMN_FILTER,
+        // Two conditions: a report link opens the list on "blank, or after 31 December" (its window).
+        ...DATE_COLUMN_FILTER_TWO_CONDITIONS,
         // A timestamp: shown as the calendar day in the viewer's time zone, like the drawer.
         valueFormatter: (p: any) => formatShortDate(p.value ? new Date(p.value as string) : null, locale),
         cellRenderer: linkCell('disabled_at'),
@@ -652,7 +704,7 @@ export default function CapexPage() {
         cellRenderer: linkCell('updated_at'),
       },
     ];
-  }, [Y, analyticsAxes, budgetColumns, defaultAnalyticsLabel, getCapexFilterValues, getCapexHref, INVESTMENT_LABELS, PPE_LABELS, PRIORITY_LABELS, RUN_BUILD_LABELS, locale, navigate, queryClient, t]);
+  }, [Y, analyticsAxes, budgetColumns, defaultAnalyticsLabel, getCapexFilterValues, getCapexHref, INVESTMENT_LABELS, PPE_LABELS, PRIORITY_LABELS, RUN_BUILD_LABELS, FTE_DECLARED_LABELS, locale, navigate, queryClient, t]);
 
   const canCreate = hasLevel('capex','manager');
   const canAdmin = hasLevel('capex','admin');
@@ -664,8 +716,7 @@ export default function CapexPage() {
           variant="contained"
           onClick={() => {
             const urlParams = new URLSearchParams(window.location.search);
-            const stored = storedContextRef.current || readStoredCapexListContext();
-            if (stored && !storedContextRef.current) storedContextRef.current = stored;
+            const stored = storedContext();
             const sort = listSort(urlParams.get('sort') || stored?.sort);
             const q = urlParams.get('q') || stored?.q || '';
             const filters = listFiltersOf(urlParams) || snapshotFilters(stored);
@@ -673,6 +724,7 @@ export default function CapexPage() {
             if (sort) sp.set('sort', sort);
             if (q) sp.set('q', q);
             if (filters) sp.set('filters', filters);
+            if (reportViewRef.current) markReportView(sp, lastQueryRef.current?.statusScope);
             navigate(`/ops/capex/new?${compactListSearchCached(sp.toString(), ROWS_ENDPOINT)}`);
           }}
         >{t('capex.newButton')}</Button>
@@ -716,6 +768,8 @@ export default function CapexPage() {
         defaultSort={gridDefaultSort}
         // A link's filter on a hidden column (the overview's hygiene counts) shows that column.
         showFilteredColumns
+        // Next to the name, so they are on screen: the reason the list is narrowed.
+        filteredColumnsAfter="description"
         statusScopeConfig={{ defaultScope: 'enabled' }}
         columnPreferencesKey="capex-summary"
         initialState={initialGridState}
@@ -737,9 +791,12 @@ export default function CapexPage() {
           const filtersString = filtersObject && Object.keys(filtersObject).length > 0 ? JSON.stringify(filtersObject) : '';
           const scope = state.statusScope ?? 'enabled';
           lastQueryRef.current = { sort: normalizedSort, q: state.q || '', filters: filtersObject, filtersString, statusScope: scope };
-          const snapshot = { sort: normalizedSort, q: state.q || '', filters: filtersString, statusScope: scope };
-          storedContextRef.current = snapshot;
-          writeListSnapshot(ROWS_ENDPOINT, snapshot, readStoredCapexListContext, writeStoredCapexListContext);
+          // A one-off view keeps its state in its address only (see reportViewRef).
+          if (!reportViewRef.current) {
+            const snapshot = { sort: normalizedSort, q: state.q || '', filters: filtersString, statusScope: scope };
+            storedContextRef.current = snapshot;
+            writeListSnapshot(ROWS_ENDPOINT, snapshot, readStoredCapexListContext, writeStoredCapexListContext);
+          }
           // Before the grid is ready it reports its URL sync without the initial filter yet.
           if (gridApiRef.current) followTotalsQuery({ q: state.q || '', filters: filtersString, statusScope: scope });
         }}

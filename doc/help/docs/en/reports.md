@@ -87,6 +87,18 @@ How they work:
 - If the link carries an analytics filter and the dimensions could not be loaded, the report shows no lines and one line of text: "The analytics filter could not be applied. Clear it or try again." Click **Clear filter** to remove the analytics filters and see the report again.
 - The two chargeback reports have no such filters and are not affected.
 
+### Opening the list from a report
+
+In **Staffing by month**, **Cost per FTE**, **Analytics dimensions** and **Consolidation accounts**, a group name is a link that opens the OPEX or CAPEX list in a new tab, on the items the row counts:
+
+- the items of the group, narrowed by the filter bar;
+- every status (**Show: All**), with an **End of validity** filter "blank, or after 31 December" of the year before the report's first year. A report counts the items still active on 1 January of its first year, including the ones disabled since;
+- in **Staffing by month** and **Cost per FTE**, and with the **FTE** measure, only the items that declare FTE (the **FTE declared** filter).
+
+The filtered columns show right after the item name for this visit, so you see why the list is narrowed. A consolidation account filters on its accounts without a column of its own.
+
+This list is a view of the report. What you change in it stays in its address, and opening **OPEX** or **CAPEX** from the menu afterwards shows your own sort, search and filters.
+
 ---
 
 ## Global chargeback
@@ -387,7 +399,7 @@ View OPEX or CAPEX budget data grouped by consolidation account, with chart type
 
 - Line chart with one series per consolidation account, plotted across years
 
-**Table**: One row per consolidation account with year columns. A pinned totals row at the bottom sums all groups.
+**Table**: One row per consolidation account with year columns. A pinned totals row at the bottom sums all groups. A consolidation account opens the list of the items on its accounts in a new tab ("Unassigned": the items whose account has no consolidation account, and the items without an account). See [Opening the list from a report](#opening-the-list-from-a-report). The totals row is plain text.
 
 A line on a consolidation account that has since been disabled still counts, under that account's own consolidation line. Account names and numbers show only when you can read the [chart of accounts](chart-of-accounts.md); without that access, every line appears under "Unassigned" instead (the totals are still right, only the breakdown by account is hidden). Items without a consolidation account also appear as "Unassigned". The consolidation accounts are the accounts of your [consolidation chart](chart-of-accounts.md#the-consolidation-chart).
 
@@ -423,6 +435,8 @@ The subtitle, the chart title and the first column of the table name the chosen 
 
 **Table**: One row per value with year columns. A pinned totals row at the bottom. Lines without a value on the chosen dimension appear as "Unassigned".
 
+A value opens the list of its items in a new tab ("Unassigned": the items without a value). With the **FTE** measure, the list shows the value's items that declare FTE. See [Opening the list from a report](#opening-the-list-from-a-report). The totals row is plain text.
+
 ---
 
 ## Staffing by month
@@ -452,6 +466,8 @@ The page address keeps the grouping (`?group=item`, `?group=supplier` or `?group
 - **Peak**: the highest month
 
 A pinned **Total** row gives the monthly totals, their average and their peak. Values show with two decimals. Only declared FTE count: items without quantity and price lines in the column are left out.
+
+A group name is a link that opens in a new tab. An item opens its page. A cost center, a supplier or a value opens the OPEX or CAPEX list on the group's items that declare FTE, in the report's window and narrowed by the filter bar (see [Opening the list from a report](#opening-the-list-from-a-report)). "No cost center", "No supplier" and "No value" open the items without one. The **Total** row is plain text. The CSV export keeps the plain names.
 
 ### Notices
 
@@ -496,6 +512,8 @@ See what one FTE costs in each part of the budget, and how that cost moves acros
 - **Cost per FTE**: the staff cost divided by the FTE. The cell is empty when the FTE is 0 or when the group has no staff lines in that pair
 
 Groups are named as in Staffing by month ("No cost center", "No supplier", "No value"). A pinned **Total** row gives, for each pair, the total FTE, the total staff cost and the total staff cost divided by the total FTE.
+
+In both views, a group name opens its item, or the list of the group's items that declare FTE, in a new tab, as in [Staffing by month](#staffing-by-month).
 
 **Chart**: Horizontal bars of the cost per FTE, one bar for each pair. The first category is the total, followed by the first ten groups of the table. The title names the type and the grouping, for example "OPEX cost per FTE by cost center". Hover a bar to read the group, the pair, the cost per FTE, the FTE and the staff cost.
 

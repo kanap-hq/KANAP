@@ -879,6 +879,9 @@
     "fteUnknownLines_one": "Inconnu pour {{count}} ligne",
     "fteUnknownCount": "{{count}} inconnues",
     "fteUnknownCount_one": "{{count}} inconnue",
+    "fteDeclared": "ETP déclarés",
+    "fteDeclaredYes": "Oui",
+    "fteDeclaredNo": "Non",
     "yearSlotWithYear": "{{slot}} ({{year}})",
     "yearSlots": {
       "yMinus2": "A-2",

@@ -21,7 +21,7 @@ import {
   runBuildPresenceRequest,
   type BudgetScope,
   type ColumnFilters,
-  type LabelledOption,
+  type AxisValueOption,
   type RunBuildPick,
 } from '../../pages/reports/reportAggregates';
 import { compareNames, useBudgetAggregate, useBudgetAggregates } from '../../pages/reports/useBudgetAggregate';
@@ -69,7 +69,7 @@ export type BudgetReportFilterOptions = {
   /** A line of the window declares FTE. */
   hasFte: boolean;
   /** Per enabled dimension, the values the window's lines hold on it, by name. */
-  analytics: ReadonlyMap<string, LabelledOption[]>;
+  analytics: ReadonlyMap<string, AxisValueOption[]>;
   /** The options could not be read: the bar says so, with a retry, instead of hiding its selects. */
   isError: boolean;
   retry: () => void;
@@ -109,7 +109,7 @@ export type BudgetReportFilterState = {
   options: BudgetReportFilterOptions;
 };
 
-const NO_AXIS_VALUES: ReadonlyMap<string, LabelledOption[]> = new Map();
+const NO_AXIS_VALUES: ReadonlyMap<string, AxisValueOption[]> = new Map();
 
 /** A one-line notice in the filter row, and its way out. */
 const filterNoticeSx = { alignSelf: 'center', fontSize: 13, color: 'kanap.text.secondary' } as const;
@@ -211,7 +211,7 @@ export function useBudgetReportFilters({ scope, years }: { scope: BudgetScope; y
   const unnamed = t('reports.analyticsCategory.unnamed');
   const options = useMemo<BudgetReportFilterOptions>(() => {
     const { lineCount, hasRunBuild } = readRunBuildPresence(presence.data);
-    const byAxis = new Map<string, LabelledOption[]>();
+    const byAxis = new Map<string, AxisValueOption[]>();
     const ids = axisIdsKey ? axisIdsKey.split(',') : [];
     ids.forEach((axisId, i) => byAxis.set(axisId, readAxisValues(axisValues.data?.[i], unnamed, compareNames)));
     return {

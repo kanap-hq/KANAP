@@ -878,6 +878,9 @@
     "fteUnknownLines_one": "Unknown for {{count}} line",
     "fteUnknownCount": "{{count}} unknown",
     "fteUnknownCount_one": "{{count}} unknown",
+    "fteDeclared": "FTE declared",
+    "fteDeclaredYes": "Yes",
+    "fteDeclaredNo": "No",
     "yearSlotWithYear": "{{slot}} ({{year}})",
     "yearSlots": {
       "yMinus2": "Y-2",

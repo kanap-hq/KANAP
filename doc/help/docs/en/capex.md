@@ -89,6 +89,7 @@ These columns are hidden by default. Show them from the column chooser (hamburge
 |---|---|
 | **Amount columns** | Every shown budget column for Y-1, Y, Y+1 and Y+2, under the names your organisation chose. The header gives the column, the year relative to today and the calendar year, for example **Revision Y+1 (2027)**. Amounts are in the reporting currency. Hidden columns are not offered |
 | **FTE columns** | The FTE of every shown budget column for Y-1, Y, Y+1 and Y+2, under the names your organization chose, right after the amount columns in the column chooser. The header gives the column and the calendar year, for example **Budget FTE (2026)**. An item's FTE is the sum of the FTE of its lines in that column. See [FTE](#fte). The cell is empty when the column has no lines |
+| **FTE declared** | **Yes** when the item declares FTE in at least one budget column of any year, otherwise empty. These are the items the **Items with FTE** filter of the reports keeps |
 | **Currency** | Item-level currency code |
 | **Effective start** | Start date |
 | **End of validity** | Date the item stops (blank means no end) |
@@ -108,7 +109,7 @@ The search box at the top searches the reference, description, supplier, paying 
 
 ### Column filters
 
-Each filterable column header has a filter icon. **Supplier**, **Paying company**, **Account**, **PP&E type**, **Investment type**, **Priority**, **Allocation**, **Currency**, **IT owner**, **Business owner**, each analytics dimension, **Cost center**, **Budget holder**, **Run or build** and **Enabled** use checkbox set filters with **All**, **None**, and a clear button. The **Enabled** filter offers **Enabled** and **Disabled**, with the same meaning as **Show**, and narrows the list when **Show** is set to **All**. Clicking **Clear** in it, or unticking both values, lists nothing, whatever **Show** says. Multiple filters combine with AND logic.
+Each filterable column header has a filter icon. **Supplier**, **Paying company**, **Account**, **PP&E type**, **Investment type**, **Priority**, **Allocation**, **Currency**, **IT owner**, **Business owner**, each analytics dimension, **Cost center**, **Budget holder**, **Run or build**, **FTE declared** and **Enabled** use checkbox set filters with **All**, **None**, and a clear button. The **FTE declared** filter offers **Yes** and **No**. The **Enabled** filter offers **Enabled** and **Disabled**, with the same meaning as **Show**, and narrows the list when **Show** is set to **All**. Clicking **Clear** in it, or unticking both values, lists nothing, whatever **Show** says. Multiple filters combine with AND logic.
 
 Tick **All**, then untick the values you want to leave out: the filter keeps everything except those (the header reads, for example, **All but 3**), and a value created later is included automatically.
 
@@ -116,7 +117,7 @@ Every amount column has a number filter. A number typed in the box under the hea
 
 Every FTE column has a number filter with the same conditions, plus blank and not blank. **Blank** keeps the items whose column has no lines.
 
-**Effective start**, **End of validity**, **Created** and **Updated** have date filters. Pick a date in the box under the header to keep the items on that date, or open the filter menu for before, after, between, blank or not blank.
+**Effective start**, **End of validity**, **Created** and **Updated** have date filters. The box under the header shows the filter in words, every condition included, for example "Blank or after 31 Dec 2024". Click it to open the filter menu (on, before, after, between, blank or not blank), or click × to remove the filter. **End of validity** takes two conditions joined by AND or OR, for example blank or after a date.
 
 Text columns use text filters, ignoring accents and case. On **Ref**, type the number or the full reference, for example `12` or `CPX-12`.
 
@@ -149,7 +150,7 @@ Use the **Show: All / Enabled / Disabled** toggle above the grid to control life
 
 Your list context -- sort order, search text, and active filters -- is preserved when you open an item and restored when you return to the list. This means you can drill into several items in sequence without losing your place.
 
-The same filters are also kept in the page's web address, so reloading the page or sharing the link reopens the same view. A link whose filters are no longer available shows "The filters of this link are no longer available."
+The same filters are also kept in the page's web address, so reloading the page or sharing the link reopens the same view. A link whose filters are no longer available shows "The filters of this link are no longer available." When a link filters a hidden column, for example a report row opening the list, the list shows that column right after the item name for this visit. Your saved column layout does not change. The **Show** choice is kept in the address too. A list opened from a report is a view of that report: what you change in it stays in its address, and the list opened from the menu keeps your own sort, search and filters.
 
 ### Prev/Next navigation
 

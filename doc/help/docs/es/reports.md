@@ -87,6 +87,18 @@ Cómo funcionan:
 - Si el enlace incluye un filtro analítico y las dimensiones no se pudieron cargar, el informe no muestra ninguna línea y sí una línea de texto: "No se pudo aplicar el filtro analítico. Quítelo o vuelva a intentarlo." Haga clic en **Quitar el filtro** para quitar los filtros analíticos y volver a ver el informe.
 - Los dos informes de contracargo no tienen estos filtros y no se ven afectados.
 
+### Abrir la lista desde un informe
+
+En **Plantilla por mes**, **Coste por ETC**, **Dimensiones analíticas** y **Cuentas de consolidación**, el nombre de un grupo es un enlace que abre la lista OPEX o CAPEX en una pestaña nueva, con las partidas que cuenta la fila:
+
+- las partidas del grupo, restringidas por la barra de filtros;
+- todos los estados (**Mostrar: Todos**), con un filtro **Fin de validez** "vacío, o posterior al 31 de diciembre" del año anterior al primer año del informe. Un informe cuenta las partidas todavía activas el 1 de enero de su primer año, incluidas las desactivadas después;
+- en **Plantilla por mes** y **Coste por ETC**, y con la medida **ETC**, solo las partidas que declaran ETC (el filtro **ETC declarados**).
+
+Las columnas filtradas aparecen justo después del nombre de la partida durante esta visita, para que vea por qué la lista está restringida. Una cuenta de consolidación filtra por sus cuentas, sin columna propia.
+
+Esta lista es una vista del informe. Lo que cambie en ella queda en su dirección, y **OPEX** o **CAPEX** abiertos después desde el menú muestran su propio orden, búsqueda y filtros.
+
 ---
 
 ## Contracargo global
@@ -387,7 +399,7 @@ Vea datos presupuestarios OPEX o CAPEX agrupados por cuenta de consolidación, c
 
 - Gráfico de líneas con una serie por cuenta de consolidación, trazada a lo largo de los años
 
-**Tabla**: Una fila por cuenta de consolidación con columnas de año. Una fila de totales fijada en la parte inferior suma todos los grupos.
+**Tabla**: Una fila por cuenta de consolidación con columnas de año. Una fila de totales fijada en la parte inferior suma todos los grupos. Una cuenta de consolidación abre la lista de las partidas de sus cuentas en una pestaña nueva ("Sin asignar": las partidas cuya cuenta no tiene cuenta de consolidación, y las partidas sin cuenta). Consulte [Abrir la lista desde un informe](#abrir-la-lista-desde-un-informe). La fila de totales es texto sin enlace.
 
 Una línea en una cuenta de consolidación desactivada desde entonces sigue contando, en la línea de consolidación de esa cuenta. Los nombres y números de cuenta solo se muestran si puede leer el [plan de cuentas](chart-of-accounts.md); sin ese acceso, todas las líneas aparecen bajo "Sin asignar" en su lugar (los totales siguen siendo correctos, solo se oculta el desglose por cuenta). Las partidas sin cuenta de consolidación también aparecen como "Sin asignar". Las cuentas de consolidación son las cuentas de su [plan de consolidación](chart-of-accounts.md#el-plan-de-consolidacion).
 
@@ -423,6 +435,8 @@ El subtítulo, el título del gráfico y la primera columna de la tabla indican 
 
 **Tabla**: Una fila por valor con columnas de año. Una fila de totales fijada en la parte inferior. Las líneas sin valor en la dimensión elegida aparecen como "Sin asignar".
 
+Un valor abre la lista de sus partidas en una pestaña nueva ("Sin asignar": las partidas sin valor). Con la medida **ETC**, la lista muestra las partidas del valor que declaran ETC. Consulte [Abrir la lista desde un informe](#abrir-la-lista-desde-un-informe). La fila de totales es texto sin enlace.
+
 ---
 
 ## Plantilla por mes
@@ -452,6 +466,8 @@ La dirección de la página conserva la agrupación (`?group=item`, `?group=supp
 - **Pico**: el mes más alto
 
 Una fila **Total** fijada da los totales mensuales, su media y su pico. Los valores se muestran con dos decimales. Solo cuentan los ETC declarados: las partidas sin líneas de cantidad y precio en la columna se dejan fuera.
+
+El nombre de un grupo es un enlace que se abre en una pestaña nueva. Una partida abre su página. Un centro de coste, un proveedor o un valor abre la lista OPEX o CAPEX con las partidas del grupo que declaran ETC, en el periodo del informe y restringidas por la barra de filtros (consulte [Abrir la lista desde un informe](#abrir-la-lista-desde-un-informe)). «Sin centro de coste», «Sin proveedor» y «Sin valor» abren las partidas que no lo tienen. La fila **Total** es texto sin enlace. La exportación CSV conserva los nombres como texto.
 
 ### Avisos
 
@@ -496,6 +512,8 @@ Vea cuánto cuesta un ETC en cada parte del presupuesto y cómo evoluciona ese c
 - **Coste por ETC**: el coste de personal dividido entre los ETC. La celda queda vacía cuando los ETC son 0 o cuando el grupo no tiene líneas de personal en ese par
 
 Los grupos se nombran como en Plantilla por mes («Sin centro de coste», «Sin proveedor», «Sin valor»). Una fila **Total** fijada da, para cada par, el total de ETC, el total del coste de personal y el total del coste de personal dividido entre el total de ETC.
+
+En las dos vistas, el nombre de un grupo abre su partida, o la lista de las partidas del grupo que declaran ETC, en una pestaña nueva, como en [Plantilla por mes](#plantilla-por-mes).
 
 **Gráfico**: Barras horizontales del coste por ETC, una barra por par. La primera categoría es el total, seguida de los diez primeros grupos de la tabla. El título indica el tipo y la agrupación, por ejemplo «Coste por ETC OPEX por centro de coste». Pase el cursor sobre una barra para leer el grupo, el par, el coste por ETC, los ETC y el coste de personal.
 

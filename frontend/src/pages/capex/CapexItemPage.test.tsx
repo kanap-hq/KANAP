@@ -485,6 +485,19 @@ describe('CapexItemPage list context and dimensions', () => {
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
     expect(nav.calls.filter((c) => c.enabled).every((c) => c.sort === `analytics_${NATURE}:DESC`)).toBe(true);
   });
+
+  it('opened from a list a report link opened (`from=report`): walks its scope and filters, leaves the stored context alone', async () => {
+    const own = { sort: '', q: '', filters: JSON.stringify({ supplier_name: { filterType: 'set', values: ['Alpha'] } }), statusScope: 'enabled' };
+    window.sessionStorage.setItem('capex-list-context', JSON.stringify(own));
+    const filters = JSON.stringify({ has_fte: { filterType: 'set', values: ['yes'] } });
+    renderAt(`/ops/capex/${ITEM_ID}/overview?${new URLSearchParams({ filters, statusScope: 'all', from: 'report' })}`);
+    await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
+    for (const call of nav.calls.filter((c) => c.enabled) as Array<{ filters?: string | null; statusScope?: string }>) {
+      expect(call.statusScope).toBe('all');
+      expect(JSON.parse(call.filters ?? '{}')).toEqual(JSON.parse(filters));
+    }
+    expect(JSON.parse(window.sessionStorage.getItem('capex-list-context') ?? '{}')).toEqual(own);
+  });
 });
 
 /** An API error as axios rejects it. */

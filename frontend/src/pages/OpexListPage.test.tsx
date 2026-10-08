@@ -75,6 +75,7 @@ vi.mock('../hooks/useAnalyticsAxes', async (importOriginal) => {
 
 import api from '../api';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
+import DateFloatingFilter from '../components/DateFloatingFilter';
 import OpexListPage from './OpexListPage';
 import { DEFAULT_BUDGET_COLUMNS, type BudgetColumnsSettings } from '../services/budgetColumns';
 
@@ -299,7 +300,10 @@ describe('OpexListPage', () => {
   it('filters every date column with date models, from the menu and from the box under the header', async () => {
     await renderPage();
     for (const id of ['effective_start', 'disabled_at', 'created_at', 'updated_at']) {
-      expect(column(id)).toMatchObject({ filter: 'agDateColumnFilter', floatingFilterComponent: 'agDateColumnFloatingFilter' });
+      // The box under the header shows the filter in words and clears it in one click (DateFloatingFilter);
+      // each date filter names a date operator as its default, never the text filters' `contains`.
+      expect(column(id)).toMatchObject({ filter: 'agDateColumnFilter', floatingFilterComponent: DateFloatingFilter });
+      expect((column(id)?.filterParams as { defaultOption?: string } | undefined)?.defaultOption).toBe('equals');
     }
   });
 
@@ -309,6 +313,30 @@ describe('OpexListPage', () => {
     expect(versions.yPlus2.totals?.budget).toBe(80);
     expect(versions.yPlus2.totals?.landing).toBe(60);
     expect(versions.y.totals?.forecast).toBe(5);
+  });
+
+  it('offers an "FTE declared" column right after the FTE columns, hidden by default, Yes or blank, filtered on Yes and No', async () => {
+    await renderPage();
+    const ids = lastProps().columns.map((c) => c.colId ?? c.field ?? '');
+    const fte = ids.filter((id) => id.startsWith('fte_'));
+    expect(ids.indexOf('has_fte')).toBe(ids.indexOf(fte[fte.length - 1]) + 1);
+    const declared = column('has_fte');
+    expect(declared).toMatchObject({ headerName: 'shared.fteDeclared', defaultHidden: true, filter: CheckboxSetFilter });
+    expect(declared!.valueGetter!({ data: { has_fte: 'yes' } })).toBe('shared.fteDeclaredYes');
+    expect(declared!.valueGetter!({ data: { has_fte: null } })).toBe('');
+    expect(declared!.valueGetter!({ data: undefined })).toBe('');
+
+    get.mockImplementation(async (url: string, config?: { params?: { fields?: string } }) => {
+      if (url !== '/spend-items/summary/filter-values') return { data: {} };
+      return { data: { [config?.params?.fields ?? '']: [null, 'yes'] } };
+    });
+    const options = await declared!.filterParams!.getValues!({ context: { getQueryState: () => ({}) } });
+    expect(options).toEqual([
+      { value: 'yes', label: 'shared.fteDeclaredYes' },
+      { value: null, label: 'shared.fteDeclaredNo' },
+    ]);
+    const calls = get.mock.calls.filter(([url]) => url === '/spend-items/summary/filter-values');
+    expect(calls.map(([, config]) => config.params.fields)).toEqual(['has_fte']);
   });
 
   it('offers cost center and run or build columns, hidden by default, filtered on the values the server lists', async () => {

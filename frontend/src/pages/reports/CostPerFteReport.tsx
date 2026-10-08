@@ -24,13 +24,15 @@ import {
   dailyRateRequests,
   readCostPerFte,
   readDailyRate,
+  requestFirstYear,
   type ColumnYear,
   type CostPerFteNotice,
   type DailyRate,
 } from './reportAggregates';
 import { compareNames, useBudgetAggregates } from './useBudgetAggregate';
 import { formatAmount, ReportNoticeLine } from './reportMeasure';
-import { GROUP_FILE_NAME, ReportGroupFilters, useReportGroup } from './reportGroup';
+import { GROUP_FILE_NAME, ReportGroupFilters, useGroupLinks, useReportGroup } from './reportGroup';
+import ReportGroupLinkCell from './ReportGroupLinkCell';
 import { gridTextMeasure, valueColumnWidth } from './reportValueWidth';
 
 /** The most year and column pairs the report compares. */
@@ -69,7 +71,7 @@ const fieldOf = (index: number, kind: ValueKind) => `c${index}_${kind}`;
 type Cell = Partial<Record<ValueKind, number | null>>;
 /** What either view reads: rows and totals per pair, the notices (`monthly` in the daily rate only). */
 type ViewData = Pick<DailyRate, 'sortColumn' | 'detached' | 'noDetail' | 'monthly'> & {
-  rows: Array<{ key: string; label: string; cells: Cell[] }>;
+  rows: Array<{ key: string; label: string; name: string | null; cells: Cell[] }>;
   total: Cell[];
 };
 
@@ -133,6 +135,9 @@ export default function CostPerFteReport() {
     return view === 'rate' ? dailyRateRequests(params) : costPerFteRequests(params);
   }, [reportFilters.queryFilters, scope, columns, group, view]);
   const report = useBudgetAggregates(scope, requests, { keepPrevious: true });
+  // A group name opens its item, or the list of the lines the row counts (the group, the bar, the
+  // report's window, the lines that declare FTE), in a new tab.
+  const groupLink = useGroupLinks(scope, grouping, reportFilters, { firstYear: requestFirstYear(requests?.[0], Y), fteOnly: true });
   const busy = requests == null || report.isLoading || report.isPlaceholderData;
   // While a new pair loads, the kept answers may hold fewer pairs: read nothing rather than shifted columns.
   const results = report.data && report.data.length === columns.length ? report.data : undefined;
@@ -146,6 +151,8 @@ export default function CostPerFteReport() {
 
   const tableRows = useMemo(() => data.rows.map((row) => ({
     group: row.label,
+    groupKey: row.key,
+    groupName: row.name,
     ...Object.assign({}, ...columns.map((_, index) => cellValues(kinds, index, row.cells[index]))),
   })), [data.rows, columns, kinds]);
   const totalRow = useMemo(() => ({
@@ -181,7 +188,15 @@ export default function CostPerFteReport() {
     rate: t('reports.costPerFte.dailyRate'),
   }), [t, view]);
   const columnDefs = useMemo<Array<ColDef | ColGroupDef>>(() => [
-    { field: 'group', headerName: groupHeader, flex: 1, minWidth: 180, tooltipField: 'group' },
+    {
+      field: 'group',
+      headerName: groupHeader,
+      flex: 1,
+      minWidth: 180,
+      tooltipField: 'group',
+      cellRenderer: ReportGroupLinkCell,
+      cellRendererParams: { getLink: groupLink },
+    },
     ...columns.map((column, index): ColGroupDef => ({
       groupId: `c${index}`,
       headerName: columnLabel(column),
@@ -195,7 +210,7 @@ export default function CostPerFteReport() {
         valueFormatter: (p) => formats[kindOf](p.value),
       })),
     })),
-  ], [groupHeader, columns, columnLabel, kinds, valueHeaders, widths, formats]);
+  ], [groupHeader, groupLink, columns, columnLabel, kinds, valueHeaders, widths, formats]);
 
   const gridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);

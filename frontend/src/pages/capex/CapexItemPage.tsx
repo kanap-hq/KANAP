@@ -8,7 +8,8 @@ import api from '../../api';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { useCapexNav } from '../../hooks/useCapexNav';
 import { capexDetailQuery } from '../../hooks/budgetItemDetailQuery';
-import { useListFilters, writeListSnapshot } from '../../hooks/useListContextSearch';
+import { isReportView, useListFilters, writeListSnapshot } from '../../hooks/useListContextSearch';
+import { STATUS_SCOPE_PARAM } from '../../utils/statusScopeParams';
 import { compactListSearchCached } from '../../lib/listContext';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
@@ -257,7 +258,10 @@ export default function CapexItemPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const searchParamsString = searchParams.toString();
   const queryClient = useQueryClient();
-  const storedListContext = React.useMemo(() => readStoredCapexListContext(), []);
+  // An item opened from a one-off list view (a report link, `?from=report`) leaves the stored list
+  // context alone: the view's state travels in the address.
+  const reportView = React.useMemo(() => isReportView(location.search), [location.search]);
+  const storedListContext = React.useMemo(() => (isReportView(location.search) ? null : readStoredCapexListContext()), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const idParam = String(params.id || '');
   const isCreate = idParam === 'new';
@@ -400,13 +404,13 @@ export default function CapexItemPage() {
   const q = searchParams.get('q') || storedListContext?.q || '';
   // A filter on a column that is not shown falls back like the list's, so prev/next walks the rows on screen.
   const filters = filtersStringOnShownColumns(listFilters.filters, budgetColumns.shown, isListField);
-  // Status scope of the list we came from. The grid keeps it in local state, so it reaches
-  // us through the stored list context; it must be forwarded to prev/next or the navigation
+  // Status scope of the list we came from: in the address for a one-off view, else through the
+  // stored list context (the grid keeps it in local state); it must be forwarded to prev/next or the navigation
   // walks a different set from the one on screen.
-  const statusScope = storedListContext?.statusScope || 'enabled';
+  const statusScope = searchParams.get(STATUS_SCOPE_PARAM) || storedListContext?.statusScope || 'enabled';
   React.useEffect(() => {
-    if (listContextReady) writeListSnapshot(LIST_ENDPOINT, { sort, q, filters, statusScope }, readStoredCapexListContext, writeStoredCapexListContext);
-  }, [listContextReady, sort, q, filters, statusScope]);
+    if (listContextReady && !reportView) writeListSnapshot(LIST_ENDPOINT, { sort, q, filters, statusScope }, readStoredCapexListContext, writeStoredCapexListContext);
+  }, [listContextReady, reportView, sort, q, filters, statusScope]);
   const buildListContextParams = React.useCallback(() => {
     const sp = new URLSearchParams(searchParamsString);
     if (sort) sp.set('sort', sort); else sp.delete('sort');

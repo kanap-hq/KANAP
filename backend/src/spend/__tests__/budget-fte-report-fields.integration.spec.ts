@@ -16,7 +16,8 @@ import { linesCalculation } from '../round-inputs.util';
 // - `minus` between two FTE fields (null when both lines are unknown, an
 //   unknown side as 0 against a known one) and its `part`s;
 // - `has_fte`: 'yes' when a line has a round with an FTE in any year and
-//   column, as a filter and as a group key;
+//   column, as a filter and as a group key, on the list's grid rows and in
+//   its filter values (the "FTE declared" column);
 // - `fte_detached_<slot><Suffix>`: the FTE of a round whose amount no longer
 //   follows its lines (method spread or manual), null for a computed round,
 //   a round without FTE (lines removed), a line without rounds;
@@ -248,12 +249,77 @@ async function checkScope(runner: QueryRunner, scope: SummaryScopeConfig, tenant
   assert.equal(blank.total.count, 2, `${name}: the others are blank`);
   console.log(`ok - ${name}: has_fte as a group and a filter`);
 
+  // The list's "FTE declared" column: `has_fte` on the grid rows, in the filter values, as a filter.
+  const listQuery = { includeDisabled: 'true', limit: '50', shape: 'grid' };
+  const gridRows = (await engine.budgetListSummary(scope, deps, listQuery, m)).items;
+  const declared = new Map(gridRows.map((row) => [row.id, row.has_fte]));
+  assert.deepEqual(
+    Object.fromEntries(LINES.map((line) => [line.label, declared.get(ids[line.label])])),
+    { computed: 'yes', spread: 'yes', manual: 'yes', removed: null, 'no rounds': null, 'old staff': 'yes' },
+    `${name}: the grid rows say which lines declare FTE, any year`,
+  );
+  const gridFiltered = await engine.budgetListSummary(scope, deps, { ...listQuery, filters: JSON.stringify({ has_fte: { filterType: 'set', values: ['yes'] } }) }, m);
+  assert.deepEqual(new Set(gridFiltered.items.map((row) => row.id)), new Set([ids.computed, ids.spread, ids.manual, ids['old staff']]), `${name}: the list filter keeps the lines with an FTE`);
+  const gridBlank = await engine.budgetListSummary(scope, deps, { ...listQuery, filters: JSON.stringify({ has_fte: { filterType: 'set', values: [null] } }) }, m);
+  assert.deepEqual(new Set(gridBlank.items.map((row) => row.id)), new Set([ids.removed, ids['no rounds']]), `${name}: the blank value keeps the others`);
+  assert.deepEqual(await engine.budgetListFilterValues(scope, deps, { includeDisabled: 'true', fields: 'has_fte' }, m), { has_fte: ['yes', null] }, `${name}: the filter values`);
+  assert.deepEqual(
+    await engine.budgetListFilterValues(scope, deps, { includeDisabled: 'true', fields: 'has_fte', filters: JSON.stringify({ has_fte: { filterType: 'set', values: ['yes'] } }) }, m),
+    { has_fte: ['yes', null] },
+    `${name}: the column's own filter does not narrow its values`,
+  );
+  console.log(`ok - ${name}: has_fte on the list's grid rows and filter values`);
+
   // The other tenant's session sees its own line only.
   await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [otherTenantId]);
   const other = await aggregate({ groupBy: ['has_fte'], measures: [sum('detached', 'fte_detached_yBudget')] });
   assert.deepEqual(other.groups.map((group) => [group.keys[0], group.count, group.values.detached]), [['yes', 1, 9]], `${name}: the other tenant reads its own line only`);
+  const otherRows = (await engine.budgetListSummary(scope, deps, { includeDisabled: 'true', limit: '50', shape: 'grid' }, m)).items;
+  assert.deepEqual(otherRows.map((row) => [row.id, row.has_fte]), [[otherLine, 'yes']], `${name}: the other tenant's list holds its own line only`);
+  assert.deepEqual(await engine.budgetListFilterValues(scope, deps, { includeDisabled: 'true', fields: 'has_fte' }, m), { has_fte: ['yes'] }, `${name}: the other tenant's filter values`);
   await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
   console.log(`ok - ${name}: another tenant's line is never counted`);
+
+  // A report link opens the list on its lines: the account ids (consolidation lines) and the report's
+  // window as End of validity "blank, or after 31 December", on every status.
+  const byAccount = await aggregate({ groupBy: ['account_consolidation_key', 'account_id'], measures: [] });
+  assert.deepEqual(byAccount.groups.map((group) => [group.keys[0], group.keys[1], group.count]), [[null, null, LINES.length]], `${name}: lines without an account, by account id`);
+  const listIds = async (filters: object, extra: Record<string, string> = {}) => (await engine.budgetListSummary(
+    scope, deps, { includeDisabled: 'true', limit: '50', shape: 'grid', filters: JSON.stringify(filters), ...extra }, m,
+  )).items.map((row) => row.id).sort();
+  assert.equal((await listIds({ account_id: { filterType: 'set', values: [null] } })).length, LINES.length, `${name}: the list filters on the account id (blank)`);
+  assert.deepEqual(await listIds({ account_id: { filterType: 'set', values: [randomUUID()] } }), [], `${name}: an unknown account id keeps no line`);
+
+  const table = scope.itemTable;
+  const ends: Array<[string, string]> = [
+    ['manual', `${Y - 1}-06-15T10:00:00Z`],
+    ['spread', `${Y - 2}-12-31T23:30:00Z`],
+    ['removed', `${Y - 1}-01-01T00:00:00Z`],
+    ['old staff', `${Y - 3}-03-01T00:00:00Z`],
+  ];
+  for (const [label, at] of ends) await runner.query(`UPDATE ${table} SET disabled_at = $3::timestamptz WHERE tenant_id = $1 AND id = $2`, [tenantId, ids[label], at]);
+  const windowModel = (firstYear: number) => ({
+    disabled_at: {
+      filterType: 'date',
+      operator: 'OR',
+      conditions: [
+        { filterType: 'date', type: 'blank', dateFrom: null, dateTo: null },
+        { filterType: 'date', type: 'greaterThan', dateFrom: `${firstYear - 1}-12-31 00:00:00`, dateTo: null },
+      ],
+    },
+  });
+  for (const years of [undefined, `${Y - 2},${Y}`, `${Y}`]) {
+    const reportIds = (await aggregate({ groupBy: ['id'], measures: [] }, years ? { years } : {})).groups.map((group) => group.keys[0]).sort();
+    const firstYear = years ? Math.min(...years.split(',').map(Number)) : Y - 1;
+    assert.deepEqual(await listIds(windowModel(firstYear)), reportIds, `${name}: the list window equals the report's (years ${years ?? 'default'})`);
+  }
+  assert.deepEqual(
+    (await listIds(windowModel(Y - 1))).map((id) => LINES.find((line) => ids[line.label] === id)?.label).sort(),
+    ['computed', 'manual', 'no rounds', 'removed'],
+    `${name}: ended in the window or after it kept, ended before (one second before the year, Y-3) left out`,
+  );
+  for (const [label] of ends) await runner.query(`UPDATE ${table} SET disabled_at = NULL WHERE tenant_id = $1 AND id = $2`, [tenantId, ids[label]]);
+  console.log(`ok - ${name}: report links (account ids, the window as End of validity on every status)`);
 }
 
 /** Twelve monthly FTE as stored (decimal strings): `first` for January, `h1` to June, `h2` from July. */

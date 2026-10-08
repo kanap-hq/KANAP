@@ -87,6 +87,18 @@ Fonctionnement :
 - Si le lien contient un filtre analytique et que les dimensions n'ont pas pu être chargées, le rapport n'affiche aucune ligne et une ligne de texte : « Le filtre analytique n'a pas pu être appliqué. Retirez-le ou réessayez. » Cliquez sur **Retirer le filtre** pour retirer les filtres analytiques et retrouver le rapport.
 - Les deux rapports de refacturation n'ont pas ces filtres et ne sont pas concernés.
 
+### Ouvrir la liste depuis un rapport
+
+Dans **Effectifs par mois**, **Coût par ETP**, **Dimensions analytiques** et **Comptes de consolidation**, le nom d'un groupe est un lien qui ouvre la liste OPEX ou CAPEX dans un nouvel onglet, sur les postes que compte la ligne :
+
+- les postes du groupe, restreints par la barre de filtres ;
+- tous les statuts (**Afficher : Tous**), avec un filtre **Fin de validité** « vide, ou après le 31 décembre » de l'année qui précède la première année du rapport. Un rapport compte les postes encore actifs au 1er janvier de sa première année, y compris ceux désactivés depuis ;
+- dans **Effectifs par mois** et **Coût par ETP**, et avec la mesure **ETP**, seulement les postes qui déclarent des ETP (le filtre **ETP déclarés**).
+
+Les colonnes filtrées s'affichent juste après le nom du poste pour cette visite : vous voyez pourquoi la liste est restreinte. Un compte de consolidation filtre sur ses comptes, sans colonne à lui.
+
+Cette liste est une vue du rapport. Ce que vous y changez reste dans son adresse, et **OPEX** ou **CAPEX** ouverts ensuite depuis le menu affichent vos propres tri, recherche et filtres.
+
 ---
 
 ## Refacturation globale
@@ -387,7 +399,7 @@ Consultez les données budgétaires OPEX ou CAPEX regroupées par compte de cons
 
 - Graphique en courbe avec une série par compte de consolidation, tracé sur les années
 
-**Tableau** : Une ligne par compte de consolidation avec des colonnes d'années. Une ligne de totaux épinglée en bas additionne tous les groupes.
+**Tableau** : Une ligne par compte de consolidation avec des colonnes d'années. Une ligne de totaux épinglée en bas additionne tous les groupes. Un compte de consolidation ouvre la liste des postes sur ses comptes dans un nouvel onglet (« Non affecté » : les postes dont le compte n'a pas de compte de consolidation, et les postes sans compte). Voir [Ouvrir la liste depuis un rapport](#ouvrir-la-liste-depuis-un-rapport). La ligne de totaux est en texte simple.
 
 Une ligne sur un compte de consolidation désactivé depuis compte toujours, sur la ligne de consolidation de ce compte. Les noms et numéros de compte ne s'affichent que si vous pouvez lire le [plan comptable](chart-of-accounts.md) ; sans cet accès, toutes les lignes apparaissent sous « Non affecté » à la place (les totaux restent corrects, seule la répartition par compte est masquée). Les postes sans compte de consolidation apparaissent aussi comme « Non affecté ». Les comptes de consolidation sont les comptes de votre [plan de consolidation](chart-of-accounts.md#le-plan-de-consolidation).
 
@@ -423,6 +435,8 @@ Le sous-titre, le titre du graphique et la première colonne du tableau nomment 
 
 **Tableau** : Une ligne par valeur avec des colonnes d'années. Une ligne de totaux épinglée en bas. Les lignes sans valeur sur la dimension choisie apparaissent comme « Non affecté ».
 
+Une valeur ouvre la liste de ses postes dans un nouvel onglet (« Non affecté » : les postes sans valeur). Avec la mesure **ETP**, la liste montre les postes de la valeur qui déclarent des ETP. Voir [Ouvrir la liste depuis un rapport](#ouvrir-la-liste-depuis-un-rapport). La ligne de totaux est en texte simple.
+
 ---
 
 ## Effectifs par mois
@@ -452,6 +466,8 @@ L'adresse de la page conserve le regroupement (`?group=item`, `?group=supplier` 
 - **Pic** : le mois le plus élevé
 
 Une ligne **Total** épinglée donne les totaux mensuels, leur moyenne et leur pic. Les valeurs s'affichent avec deux décimales. Seuls les ETP déclarés comptent : les postes sans lignes de quantité et de prix dans la colonne sont écartés.
+
+Le nom d'un groupe est un lien qui s'ouvre dans un nouvel onglet. Un poste ouvre sa page. Un centre de coûts, un fournisseur ou une valeur ouvre la liste OPEX ou CAPEX sur les postes du groupe qui déclarent des ETP, dans la période du rapport et restreints par la barre de filtres (voir [Ouvrir la liste depuis un rapport](#ouvrir-la-liste-depuis-un-rapport)). « Aucun centre de coûts », « Aucun fournisseur » et « Aucune valeur » ouvrent les postes qui n'en ont pas. La ligne **Total** est en texte simple. L'export CSV garde les noms en texte simple.
 
 ### Avertissements
 
@@ -496,6 +512,8 @@ Voyez ce que coûte un ETP dans chaque partie du budget, et comment ce coût év
 - **Coût par ETP** : le coût du personnel divisé par les ETP. La cellule est vide quand les ETP valent 0 ou quand le groupe n'a pas de lignes de personnel dans cette paire
 
 Les groupes sont nommés comme dans Effectifs par mois (« Aucun centre de coûts », « Aucun fournisseur », « Aucune valeur »). Une ligne **Total** épinglée donne, pour chaque paire, le total des ETP, le total du coût du personnel et le total du coût du personnel divisé par le total des ETP.
+
+Dans les deux vues, le nom d'un groupe ouvre son poste, ou la liste des postes du groupe qui déclarent des ETP, dans un nouvel onglet, comme dans [Effectifs par mois](#effectifs-par-mois).
 
 **Graphique** : Des barres horizontales du coût par ETP, une barre par paire. La première catégorie est le total, suivie des dix premiers groupes du tableau. Le titre nomme le type et le regroupement, par exemple « Coût par ETP OPEX par centre de coûts ». Survolez une barre pour lire le groupe, la paire, le coût par ETP, les ETP et le coût du personnel.
 

@@ -97,7 +97,7 @@ const GRID_ITEM_KEYS: Record<SummaryScopeConfig['scope'], string[]> = {
 const GRID_DERIVED_KEYS = [
   'cost_center_id', 'run_build', 'latest_contract_id', 'latest_contract_name', 'supplier_name', 'paying_company_name', 'account_display',
   'allocation_method_label', 'owner_it_name', 'owner_business_name', 'cost_center_label', 'cost_center_path', 'budget_holder_name',
-  'project_name', 'analytics_category_name',
+  'project_name', 'analytics_category_name', 'has_fte',
 ];
 const GRID_SLOTS = ['yMinus1', 'y', 'yPlus1', 'yPlus2'];
 

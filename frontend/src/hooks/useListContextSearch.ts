@@ -16,6 +16,33 @@ import {
   reportLostListFilters,
   saveListContext,
 } from '../lib/listContext';
+import { STATUS_SCOPE_PARAM } from '../utils/statusScopeParams';
+
+/**
+ * The address marker of a list opened from a report row (`?from=report`). Such a list is a one-off
+ * view: it neither reads nor writes the tab's stored list context, so a later plain visit to the list
+ * opens on the user's own state, not on the report's filters and Show scope. Its state lives in its
+ * address only (filters, sort, search, `statusScope`), and the item links and back links it builds
+ * carry the marker along.
+ */
+export const REPORT_VIEW_PARAM = 'from';
+export const REPORT_VIEW_VALUE = 'report';
+
+/** The address is a one-off view opened from a report (`REPORT_VIEW_PARAM`). */
+export function isReportView(search: string | URLSearchParams): boolean {
+  const sp = typeof search === 'string' ? new URLSearchParams(search) : search;
+  return sp.get(REPORT_VIEW_PARAM) === REPORT_VIEW_VALUE;
+}
+
+/**
+ * Marks an address built from a one-off view (an item link, the New button) with the view and its
+ * Show scope, so the item page leaves the stored list context alone and walks the same lines.
+ */
+export function markReportView(sp: URLSearchParams, statusScope: string | null | undefined, defaultScope = 'enabled'): void {
+  sp.set(REPORT_VIEW_PARAM, REPORT_VIEW_VALUE);
+  if (statusScope && statusScope !== defaultScope) sp.set(STATUS_SCOPE_PARAM, statusScope);
+  else sp.delete(STATUS_SCOPE_PARAM);
+}
 
 /** A stored list context (OPEX, CAPEX): its filters inline, or `ctx` for filters too long for a URL. */
 export type ListSnapshot = { sort?: string; q?: string; filters?: string; ctx?: string; statusScope?: string };
