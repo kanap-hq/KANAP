@@ -940,7 +940,7 @@
         },
         "costPerFte": {
           "title": "Coût par ETP",
-          "description": "Coût annuel d'un ETP par centre de coûts, poste, fournisseur ou dimension analytique, sur plusieurs colonnes budgétaires et années"
+          "description": "Coût annuel d'un ETP ou TJM, par centre de coûts, poste, fournisseur ou dimension analytique, sur plusieurs colonnes budgétaires et années"
         }
       }
     },
@@ -1229,13 +1229,20 @@
     },
     "costPerFte": {
       "title": "Coût par ETP",
-      "subtitle": "Coût annuel {{type}} d'un ETP par {{group}}",
+      "subtitle": "Coût annuel {{type}} d'un ETP ou TJM, par {{group}}",
       "chartTitle": "Coût par ETP {{type}} par {{group}}",
+      "rateChartTitle": "TJM {{type}} par {{group}}",
       "columns": "Colonnes",
+      "show": "Afficher",
       "staffCost": "Coût du personnel",
       "costPerFte": "Coût par ETP",
-      "detachedNote": "Le coût par ETP utilise le coût de leurs lignes.",
-      "noDetail": "Aucun détail de lignes pour : {{list}}. Ils sont exclus du coût par ETP."
+      "days": "Jours",
+      "dayCost": "Coût des jours",
+      "dailyRate": "TJM",
+      "detachedNote": "Ces chiffres utilisent le coût de leurs lignes.",
+      "noDetail": "Aucun détail de lignes pour : {{list}}. Ils sont exclus de ces chiffres.",
+      "monthlyLeftOut": "Les lignes au prix mensuel sont exclues du TJM : {{list}}.",
+      "monthlyEntry": "{{column}} ({{amount}})"
     }
   },
   "budgetTab": {

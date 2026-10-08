@@ -939,7 +939,7 @@
         },
         "costPerFte": {
           "title": "Kosten pro VZÄ",
-          "description": "Jährliche Kosten eines VZÄ nach Kostenstelle, Position, Lieferant oder Analysedimension, über Budgetspalten und Jahre"
+          "description": "Jährliche Kosten eines VZÄ oder durchschnittlicher Tagessatz, nach Kostenstelle, Position, Lieferant oder Analysedimension, über Budgetspalten und Jahre"
         }
       }
     },
@@ -1228,13 +1228,20 @@
     },
     "costPerFte": {
       "title": "Kosten pro VZÄ",
-      "subtitle": "Jährliche {{type}}-Kosten eines VZÄ nach {{group}}",
+      "subtitle": "Jährliche {{type}}-Kosten eines VZÄ oder durchschnittlicher Tagessatz, nach {{group}}",
       "chartTitle": "{{type}}-Kosten pro VZÄ nach {{group}}",
+      "rateChartTitle": "{{type}}-Tagessatz nach {{group}}",
       "columns": "Spalten",
+      "show": "Anzeige",
       "staffCost": "Personalkosten",
       "costPerFte": "Kosten pro VZÄ",
-      "detachedNote": "Die Kosten pro VZÄ verwenden die Kosten ihrer Zeilen.",
-      "noDetail": "Keine Zeilendetails bei: {{list}}. Sie fließen nicht in die Kosten pro VZÄ ein."
+      "days": "Tage",
+      "dayCost": "Kosten der Tage",
+      "dailyRate": "Tagessatz",
+      "detachedNote": "Diese Zahlen verwenden die Kosten ihrer Zeilen.",
+      "noDetail": "Keine Zeilendetails bei: {{list}}. Sie fließen nicht in diese Zahlen ein.",
+      "monthlyLeftOut": "Monatlich bepreiste Zeilen sind nicht im Tagessatz enthalten: {{list}}.",
+      "monthlyEntry": "{{column}} ({{amount}})"
     }
   },
   "budgetTab": {

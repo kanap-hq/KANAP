@@ -8,6 +8,9 @@ import {
   consolidationRequest,
   COST_PER_FTE_CHART_GROUPS,
   costPerFteRequests,
+  dailyRateRequests,
+  dayCostField,
+  daysField,
   deltaRequests,
   dropValues,
   excludedAccountValues,
@@ -24,6 +27,7 @@ import {
   readColumnsCompare,
   readConsolidation,
   readCostPerFte,
+  readDailyRate,
   readDelta,
   readDeltaYears,
   readStaffing,
@@ -544,5 +548,113 @@ describe('cost per FTE', () => {
     expect(empty.detached).toEqual([]);
     expect(empty.noDetail).toEqual([]);
     expect(COST_PER_FTE_CHART_GROUPS).toBe(10);
+  });
+});
+
+describe('daily rate', () => {
+  const drRow = (keys: Array<string | null>, values: Record<string, number | null>, count = 1, unknown: Record<string, number> = {}): AggregateRow => ({ keys, count, values, unknown });
+  const labels = { none: 'No cost center', unnamed: 'Unnamed value' };
+  const columns = [{ year: 2025, metric: 'budget' as const }, { year: 2026, metric: 'revision' as const }, { year: 2026, metric: 'forecast' as const }];
+
+  it('names the per-day fields of a year and column', () => {
+    expect(dayCostField(2026, 'follow_up')).toBe('day_cost_y2026FollowUp');
+    expect(daysField(2026, 'budget')).toBe('days_y2026Budget');
+  });
+
+  it('asks one grouped request per year and column: day cost, days, all staff cost and the notices', () => {
+    const filters = { run_build: keepValues(['run']) };
+    const requests = dailyRateRequests({ scope: 'opex', columns: columns.slice(0, 2), group: { kind: 'costCenter' }, filters });
+    expect(requests).toEqual([
+      {
+        query: { filters, years: '2025,2026' },
+        spec: {
+          groupBy: ['cost_center_id', 'cost_center_label'],
+          measures: [
+            { id: 'cost', fn: 'sum', field: 'day_cost_y2025Budget' },
+            { id: 'days', fn: 'sum', field: 'days_y2025Budget' },
+            { id: 'staff', fn: 'sum', field: 'staff_cost_y2025Budget' },
+            { id: 'detached', fn: 'sum', field: 'fte_detached_y2025Budget' },
+            { id: 'nodetail', fn: 'sum', field: 'fte_nodetail_y2025Budget' },
+          ],
+        },
+      },
+      {
+        query: { filters, years: '2025,2026' },
+        spec: {
+          groupBy: ['cost_center_id', 'cost_center_label'],
+          measures: [
+            { id: 'cost', fn: 'sum', field: 'day_cost_y2026Revision' },
+            { id: 'days', fn: 'sum', field: 'days_y2026Revision' },
+            { id: 'staff', fn: 'sum', field: 'staff_cost_y2026Revision' },
+            { id: 'detached', fn: 'sum', field: 'fte_detached_y2026Revision' },
+            { id: 'nodetail', fn: 'sum', field: 'fte_nodetail_y2026Revision' },
+          ],
+        },
+      },
+    ]);
+    // Same group keys as the cost per FTE; never more than the grouped-measure cap.
+    expect(dailyRateRequests({ scope: 'capex', columns, group: { kind: 'item' }, filters })[0].spec.groupBy).toEqual(['id', 'description']);
+    expect(requests[0].spec.measures.length).toBeLessThanOrEqual(8);
+    expect(dailyRateRequests({ scope: 'opex', columns: [], group: { kind: 'item' }, filters })).toEqual([]);
+  });
+
+  it('keeps the groups with days, the ratio of the totals, a blank rate at zero days, the per-month cost when positive', () => {
+    const first = result([
+      drRow(['cc-1', 'CC1'], { cost: 6000, days: 10, staff: 9000 }),
+      drRow(['cc-2', 'CC2'], { cost: 30000, days: 50, staff: 30000 }),
+      // Staff priced per month only: no days, no row.
+      drRow(['cc-3', 'CC3'], { cost: 0, days: null, staff: 12000 }),
+      drRow([null, null], { cost: 0, days: 0, staff: 0 }),
+    ], drRow([], { cost: 36000, days: 60, staff: 51000, detached: null, nodetail: null }, 6, { detached: 6, nodetail: 6 }));
+    const second = result([
+      drRow(['cc-1', 'CC1'], { cost: 14000, days: 20, staff: 14000 }),
+      drRow(['cc-4', ' '], { cost: 1000, days: 2.5, staff: 1000 }),
+    ], drRow([], { cost: 15000, days: 22.5, staff: 15000, detached: 1.25, nodetail: 0.5 }, 6, { detached: 3, nodetail: 5 }));
+    // More day cost than staff cost cannot happen (every per-day line is a staff line): a guard, no notice either.
+    const third = result([drRow(['cc-1', 'CC1'], { cost: 800, days: 1, staff: 700 })], drRow([], { cost: 800, days: 1, staff: 700 }));
+    const read = readDailyRate(columns, [first, second, third], labels, compare);
+    expect(read.rows.map((r) => r.label)).toEqual(['CC2', 'CC1', 'No cost center', 'Unnamed value']);
+    expect(read.sortColumn).toBe(0);
+    expect(read.rows[0].cells[0]).toEqual({ days: 50, cost: 30000, rate: 600 });
+    expect(read.rows[0].cells[1]).toEqual({ days: null, cost: null, rate: null });
+    expect(read.rows[1].cells.slice(0, 2)).toEqual([{ days: 10, cost: 6000, rate: 600 }, { days: 20, cost: 14000, rate: 700 }]);
+    // Zero days: a row, a blank rate.
+    expect(read.rows[2].cells[0]).toEqual({ days: 0, cost: 0, rate: null });
+    // The ratio of the totals: 15000 / 22.5, never the average of the groups' rates.
+    expect(read.total[0]).toEqual({ days: 60, cost: 36000, rate: 600 });
+    expect(read.total[1].rate).toBeCloseTo(666.667, 3);
+    // The notices as in the cost per FTE; the staff cost priced per month only where positive.
+    expect(read.detached).toEqual([{ year: 2026, metric: 'revision', fte: 0.75, items: 2 }]);
+    expect(read.noDetail).toEqual([{ year: 2026, metric: 'revision', fte: 0.5, items: 1 }]);
+    expect(read.monthly).toEqual([{ year: 2025, metric: 'budget', amount: 15000 }]);
+  });
+
+  it('sorts on the earliest column with days, and reads nothing without answers', () => {
+    const first = result([drRow(['cc-1', 'A'], { cost: 0, days: null, staff: 5000 })], drRow([], { cost: 0, days: null, staff: 5000 }));
+    const second = result([
+      drRow(['cc-1', 'A'], { cost: 500, days: 1, staff: 500 }),
+      drRow(['cc-2', 'B'], { cost: 3000, days: 6, staff: 3000 }),
+    ], drRow([], { cost: 3500, days: 7, staff: 3500 }));
+    const read = readDailyRate(columns.slice(0, 2), [first, second], labels, compare);
+    expect(read.sortColumn).toBe(1);
+    expect(read.rows.map((r) => r.label)).toEqual(['B', 'A']);
+    expect(read.monthly).toEqual([{ year: 2025, metric: 'budget', amount: 5000 }]);
+    const empty = readDailyRate(columns.slice(0, 2), undefined, labels, compare);
+    expect(empty).toEqual({
+      rows: [],
+      sortColumn: null,
+      total: [{ days: null, cost: null, rate: null }, { days: null, cost: null, rate: null }],
+      detached: [],
+      noDetail: [],
+      monthly: [],
+    });
+  });
+
+  it('names a pair for its per-month cost only from 50 cents, the notice showing whole amounts', () => {
+    const answer = (staff: number, cost: number) => result([drRow(['cc-1', 'A'], { cost, days: 10, staff })], drRow([], { cost, days: 10, staff }));
+    // 0.49 reads 0 once rounded: no pair, no notice; 0.50 reads 1.
+    expect(readDailyRate(columns.slice(0, 2), [answer(6000.49, 6000), answer(6000.3, 6000.1)], labels, compare).monthly).toEqual([]);
+    expect(readDailyRate(columns.slice(0, 2), [answer(6000.49, 6000), answer(6000.6, 6000.1)], labels, compare).monthly)
+      .toEqual([{ year: 2026, metric: 'revision', amount: 0.5 }]);
   });
 });
