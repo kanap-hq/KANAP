@@ -140,9 +140,9 @@ C'est le concept le plus important pour les nouveaux utilisateurs. Chaque liste 
 
 ### Pourquoi c'est important
 
-Si vous ouvrez la page Tâches et ne voyez rien -- pas de panique. Vous consultez probablement « Mes tâches » et rien ne vous est encore assigné. Passez à « Toutes les tâches » pour voir l'ensemble.
+La page Tâches s'ouvre sur « Toutes les tâches », pour que vous voyiez l'ensemble. Choisissez « Mes tâches » pour limiter la liste aux tâches qui vous sont assignées ou que vous avez créées.
 
-Le filtre de périmètre **mémorise votre dernière sélection** entre les sessions. Donc si vous passez à « Toutes », il reste sur « Toutes » la prochaine fois que vous visitez.
+Le filtre de périmètre **mémorise votre dernière sélection** entre les sessions. Donc si vous passez à « Mes tâches », il reste sur « Mes tâches » la prochaine fois que vous visitez.
 
 !!! warning "Avertissement : Pas d'équipe = pas de filtre « Mon équipe »"
     L'option « Mon équipe » ne fonctionne que si vous avez été assigné à une équipe Portefeuille via la page Contributeurs. Si elle est grisée, demandez à votre admin ou chef de projet de configurer votre profil Contributeur.
@@ -164,7 +164,7 @@ Les tâches sont votre outil quotidien. Elles suivent les actions, les livrables
 
 ### Trouvez vos tâches
 
-Rendez-vous dans **Portefeuille > Tâches**. La vue par défaut affiche **Mes tâches** -- les éléments qui vous sont assignés, triés par score de priorité.
+Rendez-vous dans **Portefeuille > Tâches**. La page s'ouvre sur **Toutes les tâches**. Choisissez **Mes tâches** pour voir les éléments qui vous sont assignés ou que vous avez créés, triés par score de priorité.
 
 ### Créez une tâche
 

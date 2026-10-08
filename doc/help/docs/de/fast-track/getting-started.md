@@ -140,9 +140,9 @@ Dies ist das wichtigste Konzept für neue Benutzer. Jede wichtige Liste in KANAP
 
 ### Warum das wichtig ist
 
-Wenn Sie die Aufgabenseite öffnen und nichts sehen -- keine Panik. Sie betrachten wahrscheinlich „Meine Aufgaben" und Ihnen ist noch nichts zugewiesen. Wechseln Sie zu „Alle Aufgaben", um das vollständige Bild zu sehen.
+Die Aufgabenseite öffnet sich mit „Alle Aufgaben", sodass Sie das vollständige Bild sehen. Wählen Sie „Meine Aufgaben", um die Liste auf Aufgaben zu beschränken, die Ihnen zugewiesen sind oder die Sie erstellt haben.
 
-Der Bereichsfilter **merkt sich Ihre letzte Auswahl** über Sitzungen hinweg. Wenn Sie also zu „Alle" wechseln, bleibt es beim nächsten Besuch auf „Alle".
+Der Bereichsfilter **merkt sich Ihre letzte Auswahl** über Sitzungen hinweg. Wenn Sie also zu „Meine Aufgaben" wechseln, bleibt es beim nächsten Besuch auf „Meine Aufgaben".
 
 !!! warning "Kein Team = kein Filter „Meines Teams""
     Die Option „Meines Teams" funktioniert nur, wenn Sie über die Mitwirkende-Seite einem Portfolio-Team zugewiesen wurden. Wenn sie ausgegraut ist, bitten Sie Ihren Admin oder Projektmanager, Ihr Mitwirkendenprofil einzurichten.
@@ -164,7 +164,7 @@ Aufgaben sind Ihr tägliches Arbeitspferd. Sie verfolgen Handlungspunkte, Ergebn
 
 ### Ihre Aufgaben finden
 
-Navigieren Sie zu **Portfolio > Aufgaben**. Die Standardansicht zeigt **Meine Aufgaben** -- Ihnen zugewiesene Elemente, sortiert nach Prioritätswert.
+Navigieren Sie zu **Portfolio > Aufgaben**. Die Seite öffnet sich mit **Alle Aufgaben**. Wählen Sie **Meine Aufgaben**, um Elemente zu sehen, die Ihnen zugewiesen sind oder die Sie erstellt haben, sortiert nach Prioritätswert.
 
 ### Eine Aufgabe erstellen
 
