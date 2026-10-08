@@ -6,7 +6,7 @@ import { AiModelConfig } from './ai-model-config.entity';
 import { AiSecretCipherService } from './ai-secret-cipher.service';
 import { AiSettings } from './ai-settings.entity';
 import { AiAgentDefinition } from './control-plane/entities/ai-agent-definition.entity';
-import { PlatformAiConfigService } from './platform/platform-ai-config.service';
+import { BuiltinProviderIdentity, PlatformAiConfigService } from './platform/platform-ai-config.service';
 import { AiProviderRegistry } from './providers/ai-provider-registry.service';
 
 export type AiModelConsumer = { type: 'chat' } | { type: 'agent'; agentId: string };
@@ -27,6 +27,9 @@ export type ResolvedModel = {
   priceOutputEurPerMtok: number | null;
   // Per-model LLM timeout; null falls back to the caller's per-stage env default.
   timeoutMs: number | null;
+  // The included model's rate limits, from the same platform record as the runtime above;
+  // null for a registry model.
+  builtinRateLimits: { tenantPerMinute: number; userPerHour: number } | null;
 };
 
 export type ResolveModelOptions = {
@@ -34,9 +37,30 @@ export type ResolveModelOptions = {
   // never throw on a corrupt or legacy key payload — only an actual LLM call
   // (withSecrets: true) should surface that.
   withSecrets?: boolean;
+  // The workspace's confirmation of the included model to check, for a settings
+  // payload not saved yet. Undefined reads it from ai_settings.
+  builtinAcceptedKey?: string | null;
+  // 'confirmed' (default): the included model only once the workspace confirmed its
+  // current identity. 'none': for paths that send nothing to the included model (MCP
+  // access and its message count): valid platform settings are enough, as before the
+  // confirmation existed, and the result never carries the API key.
+  includedModelGate?: 'confirmed' | 'none';
 };
 
-export type AiModelResolutionErrorCode = 'no_model_available' | 'builtin_not_configured';
+export type AiModelResolutionErrorCode = 'no_model_available' | 'builtin_not_configured' | 'builtin_not_accepted';
+
+export const BUILTIN_NOT_ACCEPTED_MESSAGE = 'The KANAP included model needs an administrator\'s confirmation in Admin > Plaid.';
+
+/** What a consumer would run on, without resolving secrets. */
+export type AiModelReadiness = {
+  // Empty when the consumer can call its model (chat_ready).
+  errors: string[];
+  errorCode: AiModelResolutionErrorCode | null;
+  // The consumer lands on the included model, confirmed or not.
+  usesBuiltin: boolean;
+  // The included model's identity when workspaces can use it (multi-tenant only).
+  builtinIdentity: BuiltinProviderIdentity | null;
+};
 
 export class AiModelResolutionError extends Error {
   constructor(
@@ -60,6 +84,12 @@ function parsePriceEurPerMtok(value: string | null): number | null {
  * Chain: explicit assignment (ai_settings.chat_model_config_id or
  * ai_agent_definitions.llm_model_config_id) → tenant default registry entry →
  * platform builtin (multi-tenant only) → typed error.
+ *
+ * The platform builtin is used only once an administrator of the workspace has
+ * confirmed the identity the platform shows: provider and endpoint host, provider
+ * name and processing location (ai_settings builtin_accepted_key equal to the
+ * platform's current builtinProviderKey). Otherwise the resolution fails with
+ * builtin_not_accepted and no workspace data reaches it.
  *
  * An archived or dangling assignment falls through to the next step with a
  * structured warning (ops signal, never silent). Reads only — this service is
@@ -149,24 +179,36 @@ export class AiModelResolverService {
     }
 
     if (!Features.SINGLE_TENANT) {
-      if (!(await this.platformAiConfig.isConfigured())) {
+      const confirmationRequired = opts?.includedModelGate !== 'none';
+      // One read of the platform record: the identity compared with the workspace's
+      // confirmation and the runtime returned are the same record.
+      const snapshot = await this.platformAiConfig.getBuiltinRuntime({ withSecrets: withSecrets && confirmationRequired });
+      if (!snapshot || (confirmationRequired && !snapshot.identity)) {
         throw new AiModelResolutionError('builtin_not_configured', 'Built-in AI provider is not configured.');
       }
-      const runtime = await this.platformAiConfig.getRuntimeConfig();
+      if (confirmationRequired) {
+        const acceptedKey = opts?.builtinAcceptedKey !== undefined
+          ? opts.builtinAcceptedKey
+          : await this.loadBuiltinAcceptedKey(tenantId, manager);
+        if (acceptedKey !== snapshot.identity?.key) {
+          throw new AiModelResolutionError('builtin_not_accepted', BUILTIN_NOT_ACCEPTED_MESSAGE);
+        }
+      }
       return {
         source: 'builtin',
         configId: null,
         configName: null,
-        provider: runtime.provider,
-        model: runtime.model,
-        endpointUrl: runtime.endpoint_url,
-        apiKey: runtime.apiKey,
-        hasApiKey: runtime.apiKey != null,
+        provider: snapshot.provider,
+        model: snapshot.model,
+        endpointUrl: snapshot.endpointUrl,
+        apiKey: snapshot.apiKey,
+        hasApiKey: snapshot.hasApiKey,
         // The platform-operated model is multimodal; tenants cannot configure it.
         supportsVision: true,
         priceInputEurPerMtok: 0,
         priceOutputEurPerMtok: 0,
         timeoutMs: null,
+        builtinRateLimits: snapshot.rateLimits,
       };
     }
 
@@ -181,25 +223,60 @@ export class AiModelResolverService {
    * chat_ready / provider_validation_errors without exposing resolution
    * internals to callers.
    */
-  async validationErrors(tenantId: string, assignmentId: string | null, manager?: EntityManager): Promise<string[]> {
+  async validationErrors(
+    tenantId: string,
+    assignmentId: string | null,
+    manager?: EntityManager,
+    opts?: Pick<ResolveModelOptions, 'builtinAcceptedKey' | 'includedModelGate'>,
+  ): Promise<string[]> {
+    return (await this.readiness(tenantId, assignmentId, manager, opts)).errors;
+  }
+
+  /**
+   * Validation errors plus why the chain stopped and whether it lands on the
+   * included model (confirmed or not). Reads only; no secret is decrypted.
+   */
+  async readiness(
+    tenantId: string,
+    assignmentId: string | null,
+    manager?: EntityManager,
+    opts?: Pick<ResolveModelOptions, 'builtinAcceptedKey' | 'includedModelGate'>,
+  ): Promise<AiModelReadiness> {
+    const builtinIdentity = Features.SINGLE_TENANT
+      ? null
+      : (await this.platformAiConfig.getBuiltinRuntime())?.identity ?? null;
     let resolved: ResolvedModel;
     try {
-      resolved = await this.resolveForAssignment(tenantId, assignmentId, manager, 'validation', { withSecrets: false });
+      resolved = await this.resolveForAssignment(tenantId, assignmentId, manager, 'validation', {
+        withSecrets: false,
+        builtinAcceptedKey: opts?.builtinAcceptedKey,
+        includedModelGate: opts?.includedModelGate,
+      });
     } catch (error) {
       if (error instanceof AiModelResolutionError) {
-        return [error.message];
+        return {
+          errors: [error.message],
+          errorCode: error.code,
+          usesBuiltin: error.code === 'builtin_not_accepted',
+          builtinIdentity,
+        };
       }
       throw error;
     }
     if (resolved.source === 'builtin') {
-      return [];
+      return { errors: [], errorCode: null, usesBuiltin: true, builtinIdentity };
     }
-    return this.providerRegistry.validate({
-      llm_provider: resolved.provider,
-      llm_model: resolved.model,
-      llm_endpoint_url: resolved.endpointUrl,
-      has_llm_api_key: resolved.hasApiKey,
-    });
+    return {
+      errors: this.providerRegistry.validate({
+        llm_provider: resolved.provider,
+        llm_model: resolved.model,
+        llm_endpoint_url: resolved.endpointUrl,
+        has_llm_api_key: resolved.hasApiKey,
+      }),
+      errorCode: null,
+      usesBuiltin: false,
+      builtinIdentity,
+    };
   }
 
   private describeConsumer(consumer: AiModelConsumer): string {
@@ -221,6 +298,13 @@ export class AiModelResolverService {
       .getRepository(AiAgentDefinition)
       .findOne({ where: { id: consumer.agentId, tenant_id: tenantId } });
     return definition?.llm_model_config_id ?? null;
+  }
+
+  private async loadBuiltinAcceptedKey(tenantId: string, manager?: EntityManager): Promise<string | null> {
+    const settings = await (manager ?? this.settingsRepo.manager)
+      .getRepository(AiSettings)
+      .findOne({ where: { tenant_id: tenantId } });
+    return settings?.builtin_accepted_key ?? null;
   }
 
   private async loadActiveConfig(
@@ -251,6 +335,7 @@ export class AiModelResolverService {
       priceInputEurPerMtok: parsePriceEurPerMtok(config.price_input_eur_per_mtok),
       priceOutputEurPerMtok: parsePriceEurPerMtok(config.price_output_eur_per_mtok),
       timeoutMs: config.llm_timeout_ms ?? null,
+      builtinRateLimits: null,
     };
   }
 }

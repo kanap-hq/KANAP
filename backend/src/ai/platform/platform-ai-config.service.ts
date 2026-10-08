@@ -17,10 +17,37 @@ export type PlatformAiConfigView = {
   updated_at: string;
   updated_by: string | null;
   has_api_key: boolean;
+  disclosure_name: string | null;
+  disclosure_location: string | null;
+  // Identity workspaces confirm (builtinProviderKey); null until both fields are filled.
+  disclosure_key: string | null;
+};
+
+/** The included model as workspaces see and confirm it. */
+export type BuiltinProviderIdentity = {
+  name: string;
+  location: string;
+  key: string;
 };
 
 export type PlatformAiRuntimeConfig = PlatformAiConfigView & {
   apiKey: string;
+};
+
+/**
+ * The included model from one read of the platform record: the identity workspaces
+ * confirm and the runtime that is called always come from the same record.
+ */
+export type BuiltinRuntimeSnapshot = {
+  // Null while the provider name or the processing location is empty.
+  identity: BuiltinProviderIdentity | null;
+  provider: string;
+  model: string;
+  endpointUrl: string | null;
+  // Decrypted only when asked for (withSecrets).
+  apiKey: string | null;
+  hasApiKey: boolean;
+  rateLimits: { tenantPerMinute: number; userPerHour: number };
 };
 
 export type UpdatePlatformAiConfigInput = {
@@ -30,7 +57,77 @@ export type UpdatePlatformAiConfigInput = {
   endpoint_url?: string | null;
   rate_limit_tenant_per_minute?: number | null;
   rate_limit_user_per_hour?: number | null;
+  disclosure_name?: string | null;
+  disclosure_location?: string | null;
 };
+
+export const DISCLOSURE_NAME_MAX_LENGTH = 80;
+/** ISO 3166-1 alpha-2 region code in upper case, or EU. */
+const DISCLOSURE_LOCATION_PATTERN = /^[A-Z]{2}$/;
+
+export type BuiltinProviderKeyParts = {
+  provider: string;
+  endpointHost: string;
+  name: string;
+  location: string;
+};
+
+/**
+ * The identity a workspace confirms before its data reaches the included model: the
+ * technical provider (platform_ai_config.provider and the endpoint host, so a switch
+ * of provider or endpoint asks again even when the shown name stays the same), and the
+ * provider name and processing location shown to customers. A model change at the same
+ * provider and endpoint keeps the key; any other change asks every workspace again.
+ */
+export function builtinProviderKey({ provider, endpointHost, name, location }: BuiltinProviderKeyParts): string {
+  return `${provider}|${endpointHost}|${name.trim()}|${location}`;
+}
+
+/** The endpoint's host in lower case; empty without an endpoint (the provider's default API). */
+export function endpointHostOf(endpointUrl: string | null | undefined): string {
+  const raw = endpointUrl?.trim() ?? '';
+  if (!raw) return '';
+  try {
+    return new URL(raw).hostname.toLowerCase();
+  } catch {
+    return raw.toLowerCase();
+  }
+}
+
+function disclosureIdentity(
+  record: Pick<PlatformAiConfig, 'provider' | 'endpoint_url' | 'disclosure_name' | 'disclosure_location'> | null,
+): BuiltinProviderIdentity | null {
+  const name = record?.disclosure_name?.trim() ?? '';
+  const location = record?.disclosure_location ?? '';
+  if (!record || !name || !DISCLOSURE_LOCATION_PATTERN.test(location)) {
+    return null;
+  }
+  const key = builtinProviderKey({
+    provider: record.provider,
+    endpointHost: endpointHostOf(record.endpoint_url),
+    name,
+    location,
+  });
+  return { name, location, key };
+}
+
+function normalizeDisclosureName(value: string | null | undefined, existing: string | null): string | null {
+  if (value == null) return existing;
+  const name = String(value).trim();
+  if (name.length < 1 || name.length > DISCLOSURE_NAME_MAX_LENGTH) {
+    throw new BadRequestException(`disclosure_name must be 1 to ${DISCLOSURE_NAME_MAX_LENGTH} characters.`);
+  }
+  return name;
+}
+
+function normalizeDisclosureLocation(value: string | null | undefined, existing: string | null): string | null {
+  if (value == null) return existing;
+  const location = String(value).trim();
+  if (!DISCLOSURE_LOCATION_PATTERN.test(location)) {
+    throw new BadRequestException('disclosure_location must be a two-letter region code in upper case, such as US or EU.');
+  }
+  return location;
+}
 
 
 const CACHE_TTL_MS = 60_000;
@@ -108,6 +205,9 @@ export class PlatformAiConfigService {
       updated_at: record.updated_at.toISOString(),
       updated_by: record.updated_by,
       has_api_key: !!record.api_key_encrypted,
+      disclosure_name: record.disclosure_name ?? null,
+      disclosure_location: record.disclosure_location ?? null,
+      disclosure_key: disclosureIdentity(record)?.key ?? null,
     };
   }
 
@@ -120,9 +220,29 @@ export class PlatformAiConfigService {
     });
   }
 
-  async isConfigured(): Promise<boolean> {
+  /**
+   * The included model's identity and runtime from a single read of the platform record,
+   * so the identity checked against a workspace's confirmation is the one of the runtime
+   * returned. Null when the record is missing or its provider settings are not valid. The
+   * API key is decrypted only with withSecrets.
+   */
+  async getBuiltinRuntime(opts?: { withSecrets?: boolean }): Promise<BuiltinRuntimeSnapshot | null> {
     const record = await this.loadRecord();
-    return !!record && this.validateRecord(record).length === 0;
+    if (!record || this.validateRecord(record).length > 0) {
+      return null;
+    }
+    return {
+      identity: disclosureIdentity(record),
+      provider: record.provider,
+      model: record.model,
+      endpointUrl: record.endpoint_url,
+      apiKey: opts?.withSecrets && record.api_key_encrypted ? this.cipher.decrypt(record.api_key_encrypted) : null,
+      hasApiKey: !!record.api_key_encrypted,
+      rateLimits: {
+        tenantPerMinute: record.rate_limit_tenant_per_minute,
+        userPerHour: record.rate_limit_user_per_hour,
+      },
+    };
   }
 
   async getConfig(): Promise<PlatformAiConfigView> {
@@ -175,6 +295,18 @@ export class PlatformAiConfigService {
       : existing?.api_key_encrypted ?? null;
     const tenantLimit = input.rate_limit_tenant_per_minute ?? existing?.rate_limit_tenant_per_minute ?? 30;
     const userLimit = input.rate_limit_user_per_hour ?? existing?.rate_limit_user_per_hour ?? 60;
+    const disclosureName = normalizeDisclosureName(input.disclosure_name, existing?.disclosure_name ?? null);
+    const disclosureLocation = normalizeDisclosureLocation(input.disclosure_location, existing?.disclosure_location ?? null);
+    // A new provider or endpoint host changes what workspaces confirmed: the name and
+    // location shown to them are entered again, or confirmed, in the same save.
+    const technicalProviderChanged = !!existing && (
+      provider !== existing.provider || endpointHostOf(endpointUrl) !== endpointHostOf(existing.endpoint_url)
+    );
+    if (technicalProviderChanged && (input.disclosure_name == null || input.disclosure_location == null)) {
+      throw new BadRequestException(
+        'The provider or its endpoint changed: enter or confirm the provider name and the processing location shown to customers in the same save.',
+      );
+    }
 
     if (!provider) throw new BadRequestException('provider is required.');
     if (!model) throw new BadRequestException('model is required.');
@@ -205,9 +337,11 @@ export class PlatformAiConfigService {
           rate_limit_tenant_per_minute,
           rate_limit_user_per_hour,
           updated_at,
-          updated_by
+          updated_by,
+          disclosure_name,
+          disclosure_location
         )
-        VALUES (true, $1, $2, $3, $4, $5, $6, now(), $7)
+        VALUES (true, $1, $2, $3, $4, $5, $6, now(), $7, $8, $9)
         ON CONFLICT (singleton)
         DO UPDATE SET
           provider = EXCLUDED.provider,
@@ -217,10 +351,12 @@ export class PlatformAiConfigService {
           rate_limit_tenant_per_minute = EXCLUDED.rate_limit_tenant_per_minute,
           rate_limit_user_per_hour = EXCLUDED.rate_limit_user_per_hour,
           updated_at = now(),
-          updated_by = EXCLUDED.updated_by
+          updated_by = EXCLUDED.updated_by,
+          disclosure_name = EXCLUDED.disclosure_name,
+          disclosure_location = EXCLUDED.disclosure_location
         RETURNING id
       `,
-      [provider, model, apiKeyEncrypted, endpointUrl, tenantLimit, userLimit, userId ?? null],
+      [provider, model, apiKeyEncrypted, endpointUrl, tenantLimit, userLimit, userId ?? null, disclosureName, disclosureLocation],
     );
 
     this.clearCache();

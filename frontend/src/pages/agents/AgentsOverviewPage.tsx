@@ -21,7 +21,7 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutline';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import { useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import PageHeader from '../../components/PageHeader';
@@ -68,6 +68,7 @@ import { compactSelectMenuProps, drawerMenuItemSx, pageSelectSx } from '../../th
 import { useLocale } from '../../i18n/useLocale';
 import { helpdeskScopeFiltered } from '../../components/agents/agentRunState';
 import { useAgentControlData } from './useAgentControlData';
+import { useAiCapabilities } from '../../ai/useAiCapabilities';
 
 // Dialog fields plus create-time defaults that are not collected in the UI
 // (watchEnabled stays false; limit/cap fields ship the template values).
@@ -332,6 +333,7 @@ export default function AgentsOverviewPage() {
     return map;
   }, [overview?.helpdesk?.summaries, overview?.helpdesk?.summary]);
   const activePause = data.queueQuery.data?.emergency_pause ?? null;
+  const includedModelWaiting = useAiCapabilities().data?.builtin_confirmation_needed === true;
   const [wizardOpen, setWizardOpen] = React.useState(false);
   const [wizardForm, setWizardForm] = React.useState<NewAgentWizardForm>(() => defaultWizardForm(t));
   const canAdmin = hasLevel('ai_agents', 'admin') || hasLevel('ai_settings', 'admin');
@@ -459,6 +461,18 @@ export default function AgentsOverviewPage() {
       <Stack spacing={2}>
         {data.error && <Alert severity="error" onClose={() => data.setError(null)}>{data.error}</Alert>}
         {data.message && <Alert severity="success" onClose={() => data.setMessage(null)}>{data.message}</Alert>}
+        {includedModelWaiting && (
+          <Alert
+            severity="warning"
+            action={hasLevel('ai_settings', 'admin') ? (
+              <Button size="small" color="inherit" component={RouterLink} to="/admin/ai">
+                {t('overview.includedModelOpenSettings')}
+              </Button>
+            ) : null}
+          >
+            {t('overview.includedModelPaused')}
+          </Alert>
+        )}
         {activePause && (
           <Alert
             severity="warning"

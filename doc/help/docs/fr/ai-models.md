@@ -17,11 +17,13 @@ Rien dans KANAP n'est figé sur un seul modèle. Chaque consommateur — Plaid e
 
 1. **Le modèle assigné à ce consommateur**, s'il y en a un.
 2. Sinon, **le modèle par défaut de l'organisation** — celui marqué d'une étoile sur cette page.
-3. Sinon, **le modèle inclus KANAP**.
+3. Sinon, **le modèle inclus KANAP**, une fois qu'un administrateur a confirmé son fournisseur et son lieu de traitement.
 
 Il y a donc exactement un modèle par défaut par organisation, et tout ce que vous ne touchez jamais le suit. Changez le modèle par défaut et tous les consommateurs non assignés changent avec lui — c'est tout l'intérêt d'en avoir un.
 
 La troisième étape n'existe que sur le service hébergé de KANAP. Sur une installation on-premise, il n'y a pas de modèle inclus : si rien n'est assigné et qu'aucun modèle par défaut n'est défini, la chaîne s'arrête simplement là. La page des paramètres Plaid signale alors qu'aucun modèle n'est configuré et le chat ne répond pas, tandis que les agents continuent de tourner mais sautent les étapes qui nécessitent un modèle — ils se replient sur leur comportement non-IA plutôt que d'échouer complètement. Enregistrer un modèle suffit à corriger cela : marquez-le d'une étoile comme modèle par défaut pour que tout le monde le reprenne d'un coup, ou assignez-le consommateur par consommateur.
+
+Sur le service hébergé, la troisième étape a une condition. Plaid et les agents qui utiliseraient le modèle inclus attendent qu'un administrateur en confirme le fournisseur, et la page des paramètres Plaid ainsi que la page des agents l'indiquent. Un modèle que vous ajoutez n'a jamais besoin de confirmation. Voir [Confirmer le modèle inclus KANAP](ai-settings.md#confirmer-le-modele-inclus-kanap).
 
 Vous ne pouvez pas rompre cette chaîne en faisant le ménage dans la liste : un modèle vers lequel quelque chose pointe encore ne peut de toute façon pas être archivé et, si une assignation venait malgré tout à pointer vers un modèle archivé, le consommateur se rabat sur le modèle par défaut au lieu d'échouer.
 
@@ -56,6 +58,7 @@ Sur le service hébergé, la première ligne du tableau est toujours **Modèle i
 - Dans la colonne **Utilisation**, il affiche vos **messages inclus ce mois-ci** avec une barre de progression, pour que vous voyiez ce qu'il reste du volume mensuel. Un message correspond à une question posée à Plaid, à une requête d'un assistant externe connecté via MCP, ou à un ticket examiné par un agent — les trois puisent dans le même volume. Cette barre est le quota du modèle inclus ; ce n'est pas le même chiffre que les décomptes de messages des modèles que vous ajoutez.
 - Il affiche une étoile pleine dans la colonne **Par défaut** dès qu'aucun de vos propres modèles actifs n'est marqué d'une étoile — c'est le repli « rien n'est configuré » rendu visible. Cliquez sur son étoile vide pour effacer votre défaut actuel et y revenir. Vous ne pouvez toujours ni le modifier ni l'archiver.
 - Il n'a pas d'actions de modification ni d'archivage : celles-ci appartiennent aux modèles que vous ajoutez. Il est simplement toujours là.
+- Plaid et les agents ne l'utilisent qu'après la confirmation, par un administrateur, du fournisseur et du lieu de traitement des données, sur la page [Paramètres Plaid](ai-settings.md#confirmer-le-modele-inclus-kanap). Les modèles que vous ajoutez ne sont pas soumis à cette étape.
 
 Sur une installation on-premise, cette ligne n'apparaît pas du tout.
 

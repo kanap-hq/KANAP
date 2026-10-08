@@ -1,9 +1,9 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { assertPublicHttpTarget } from '../common/ssrf-guard';
 import { getEnvMode, isDevelopmentEnv } from '../common/env';
 import { AiAttachmentService } from './ai-attachment.service';
 import { AiConversationService } from './ai-conversation.service';
-import { AiModelResolverService } from './ai-model-resolver.service';
+import { AiModelResolutionError, AiModelResolverService, ResolvedModel } from './ai-model-resolver.service';
 import { AiMutationPreviewService } from './ai-mutation-preview.service';
 import { AiPolicyService } from './ai-policy.service';
 import { AiSecretCipherService } from './ai-secret-cipher.service';
@@ -45,7 +45,7 @@ import {
   ChatStreamEvent,
 } from './ai.types';
 import { buildStructuredToolResultValidation } from './ai-tool-result-validation.util';
-import { BUILTIN_REASONING_EFFORT, PlatformAiConfigService } from './platform/platform-ai-config.service';
+import { BUILTIN_REASONING_EFFORT } from './platform/platform-ai-config.service';
 import { AiBuiltinUsageService } from './platform/ai-builtin-usage.service';
 import { AiApprovalService } from './control-plane/approval/ai-approval.service';
 import { AiCapabilityRegistry, EXECUTE_APPROVED_PREVIEW_CAPABILITY } from './control-plane/capability/ai-capability.registry';
@@ -1096,7 +1096,6 @@ export class AiChatOrchestratorService {
     private readonly cipher: AiSecretCipherService,
     private readonly modelResolver: AiModelResolverService,
     private readonly providerRegistry: AiProviderRegistry,
-    private readonly platformAiConfig: PlatformAiConfigService,
     private readonly builtinUsage: AiBuiltinUsageService,
     private readonly conversations: AiConversationService,
     private readonly previews: AiMutationPreviewService,
@@ -1662,11 +1661,22 @@ export class AiChatOrchestratorService {
         [ctx.tenantId],
       );
       const tenantName = tenant?.[0]?.name || 'KANAP';
-      const resolved = await this.modelResolver.resolve(ctx.tenantId, { type: 'chat' }, ctx.manager);
+      let resolved: ResolvedModel;
+      try {
+        resolved = await this.modelResolver.resolve(ctx.tenantId, { type: 'chat' }, ctx.manager);
+      } catch (error) {
+        // The model became unavailable after the access check above (for instance, the
+        // included model's confirmation was withdrawn meanwhile): refused like that check.
+        if (error instanceof AiModelResolutionError) {
+          throw new ForbiddenException(error.message);
+        }
+        throw error;
+      }
 
       if (resolved.source === 'builtin') {
-        const runtime = await this.platformAiConfig.getRuntimeConfig();
-        const adapter = this.providerRegistry.get(runtime.provider);
+        // The resolved model is the one called: its identity was checked against the
+        // workspace's confirmation on the same platform record.
+        const adapter = this.providerRegistry.get(resolved.provider);
         if (!adapter) {
           throw new Error('Provider not configured.');
         }
@@ -1679,15 +1689,12 @@ export class AiChatOrchestratorService {
           approvalAction,
           providerSource: 'builtin',
           provider: adapter,
-          model: runtime.model,
-          apiKey: runtime.apiKey,
-          endpointUrl: runtime.endpoint_url,
+          model: resolved.model,
+          apiKey: resolved.apiKey,
+          endpointUrl: resolved.endpointUrl,
           modelTimeoutMs: null,
           tenantName,
-          builtinRateLimits: {
-            tenantPerMinute: runtime.rate_limit_tenant_per_minute,
-            userPerHour: runtime.rate_limit_user_per_hour,
-          },
+          builtinRateLimits: resolved.builtinRateLimits ?? undefined,
         };
       }
 

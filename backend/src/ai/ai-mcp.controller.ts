@@ -33,7 +33,6 @@ import {
 import { AiTenantExecutionService } from './execution/ai-tenant-execution.service';
 import { AiBuiltinRateLimiter } from './platform/ai-builtin-rate-limiter';
 import { AiBuiltinUsageService } from './platform/ai-builtin-usage.service';
-import { PlatformAiConfigService } from './platform/platform-ai-config.service';
 import { AiExecutionContext } from './ai.types';
 
 @Controller('ai/mcp')
@@ -49,7 +48,6 @@ export class AiMcpController {
     private readonly tenantExecutor: AiTenantExecutionService,
     private readonly settingsService: AiSettingsService,
     private readonly modelResolver: AiModelResolverService,
-    private readonly platformAiConfig: PlatformAiConfigService,
     private readonly builtinUsage: AiBuiltinUsageService,
     private readonly builtinRateLimiter: AiBuiltinRateLimiter,
   ) {}
@@ -126,16 +124,17 @@ export class AiMcpController {
     return keyPolicy;
   }
 
+  // MCP requests count against the included volume whenever the assistant would fall back
+  // on the included model, confirmed or not: MCP sends nothing to that model, so its
+  // confirmation does not apply here (and the resolution carries no key).
   private async assertBuiltinMcpBudget(ctx: AiExecutionContext & { manager: any }) {
-    const resolved = await this.modelResolver.tryResolve(ctx.tenantId, { type: 'chat' }, ctx.manager);
-    if (resolved?.source !== 'builtin') {
+    const resolved = await this.modelResolver.tryResolve(ctx.tenantId, { type: 'chat' }, ctx.manager, {
+      includedModelGate: 'none',
+    });
+    if (resolved?.source !== 'builtin' || !resolved.builtinRateLimits) {
       return;
     }
-    const runtime = await this.platformAiConfig.getRuntimeConfig();
-    this.builtinRateLimiter.assertAllowed(ctx.tenantId, ctx.userId, {
-      tenantPerMinute: runtime.rate_limit_tenant_per_minute,
-      userPerHour: runtime.rate_limit_user_per_hour,
-    });
+    this.builtinRateLimiter.assertAllowed(ctx.tenantId, ctx.userId, resolved.builtinRateLimits);
     const limit = await this.builtinUsage.getMonthlyLimit(ctx.manager);
     await this.builtinUsage.reserveMessage(ctx.tenantId, limit, ctx.manager);
   }

@@ -16,6 +16,9 @@ Plaid ersetzt nicht den Rest der Anwendung. Es ist ein schnellerer Weg, um Konte
 
 Der Arbeitsbereich steht auch Administratoren mit `ai_chat:admin` zur Verfügung, die alles sehen und moderieren können, was normale Benutzer tun.
 
+!!! note "Wartet auf einen Administrator"
+    Im gehosteten Dienst kann Plaid auf dem inklusiven KANAP-Modell laufen. Zuvor bestätigt ein Administrator den Anbieter und den Ort, an dem er Daten verarbeitet. Bis dahin zeigt der Arbeitsbereich *Ein Administrator muss den KI-Anbieter unter Administration > Plaid bestätigen.* statt des Chats. Ein Administrator erledigt das auf der Seite [Plaid-Einstellungen](ai-settings.md#das-inklusive-kanap-modell-bestatigen). Organisationen, die ein eigenes Modell nutzen, sehen diesen Hinweis nie.
+
 ## Eine Konversation beginnen
 
 Wenn Sie Plaid zum ersten Mal öffnen, gelangen Sie auf einen Begrüßungsbildschirm mit:
@@ -134,7 +137,7 @@ Nichts, was KANAP-Daten verändert, wird stillschweigend angewendet. Die Vorscha
 
 Über dem Eingabefeld helfen Ihnen zwei kleine Anzeigen, Kosten und Grenzen im Blick zu behalten:
 
-- **Integrierte Nutzung**: Wenn Plaid mit dem inklusiven KANAP-Modell arbeitet und nicht mit einem der eigenen Modelle Ihrer Organisation, zeigt dies, wie viele Nachrichten im aktuellen Monat verbleiben und an welchem Datum das Kontingent zurückgesetzt wird. Ist das Limit erreicht, wird das Eingabefeld deaktiviert und ein Hinweistext fordert Administratoren auf, auf ein eigenes Modell zu wechseln — siehe [KI-Modelle](ai-models.md).
+- **Integrierte Nutzung**: Wenn Plaid mit dem inklusiven KANAP-Modell arbeitet und nicht mit einem der eigenen Modelle Ihrer Organisation, zeigt dies, wie viele Nachrichten im aktuellen Monat verbleiben und an welchem Datum das Kontingent zurückgesetzt wird. Ein Administrator hat dieses Modell zuvor bestätigt (siehe [Plaid-Einstellungen](ai-settings.md#das-inklusive-kanap-modell-bestatigen)). Ist das Limit erreicht, wird das Eingabefeld deaktiviert und ein Hinweistext fordert Administratoren auf, auf ein eigenes Modell zu wechseln; siehe [KI-Modelle](ai-models.md).
 - **Token-Nutzung**: ein schmaler Balken mit Zählern für Eingabe-/Ausgabe-Tokens der aktuellen Konversation sowie der Größe der letzten Anfrage. Lange Konversationen werden mit der Zeit teurer; der Balken macht diese Kosten sichtbar, sodass Sie entscheiden können, wann Sie einen neuen Verlauf beginnen.
 
 Der Token-Nutzungsbalken erscheint erst, wenn die Konversation mindestens einen Austausch enthält.

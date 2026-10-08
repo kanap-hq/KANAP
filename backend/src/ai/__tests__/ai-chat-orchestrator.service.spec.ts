@@ -1,11 +1,12 @@
 import * as assert from 'node:assert/strict';
-import { Logger } from '@nestjs/common';
+import { ForbiddenException, Logger } from '@nestjs/common';
 import {
   AiChatOrchestratorService,
   resolveChatProviderTimeoutMs,
   resolveProviderMaxTokens,
 } from '../ai-chat-orchestrator.service';
 import { estimateTokenCount } from '../ai-context-budget.helper';
+import { AiModelResolutionError, BUILTIN_NOT_ACCEPTED_MESSAGE } from '../ai-model-resolver.service';
 import { AiSystemPromptService } from '../ai-system-prompt.service';
 import { ChatStreamEvent } from '../ai.types';
 
@@ -27,6 +28,7 @@ function createOrchestrator(options?: {
   conversationUsage?: { input_tokens: number; output_tokens: number };
   availableTools?: any[];
   resolvedSource?: 'registry' | 'builtin';
+  resolveError?: Error;
 }) {
   const persistedMessages: any[] = [];
   let conversationCreated = false;
@@ -93,22 +95,43 @@ function createOrchestrator(options?: {
     decrypt: () => 'real-api-key',
   };
 
-  const mockResolvedModel = () => ({
-    source: options?.resolvedSource ?? 'registry',
-    configId: 'model-config-1',
-    configName: options?.model ?? 'gpt-4o',
-    provider: options?.providerId ?? 'openai',
-    model: options?.model ?? 'gpt-4o',
-    endpointUrl: options?.endpointUrl ?? null,
-    apiKey: 'real-api-key',
-    supportsVision: true,
-    priceInputEurPerMtok: null,
-    priceOutputEurPerMtok: null,
-    timeoutMs: null,
-  });
+  // The included model comes resolved with the platform's runtime: the orchestrator calls
+  // that model and reads no platform configuration of its own.
+  const mockResolvedModel = () => (options?.resolvedSource === 'builtin'
+    ? {
+      source: 'builtin',
+      configId: null,
+      configName: null,
+      provider: 'openai',
+      model: 'gpt-4o-mini',
+      endpointUrl: null,
+      apiKey: 'platform-key',
+      supportsVision: true,
+      priceInputEurPerMtok: 0,
+      priceOutputEurPerMtok: 0,
+      timeoutMs: null,
+      builtinRateLimits: { tenantPerMinute: 30, userPerHour: 60 },
+    }
+    : {
+      source: 'registry',
+      configId: 'model-config-1',
+      configName: options?.model ?? 'gpt-4o',
+      provider: options?.providerId ?? 'openai',
+      model: options?.model ?? 'gpt-4o',
+      endpointUrl: options?.endpointUrl ?? null,
+      apiKey: 'real-api-key',
+      supportsVision: true,
+      priceInputEurPerMtok: null,
+      priceOutputEurPerMtok: null,
+      timeoutMs: null,
+      builtinRateLimits: null,
+    });
 
   const mockModelResolver = {
-    resolve: async () => mockResolvedModel(),
+    resolve: async () => {
+      if (options?.resolveError) throw options.resolveError;
+      return mockResolvedModel();
+    },
     tryResolve: async () => mockResolvedModel(),
     validationErrors: async () => [],
   };
@@ -289,17 +312,6 @@ function createOrchestrator(options?: {
     }),
   };
 
-  const mockPlatformAiConfig = {
-    getRuntimeConfig: async () => ({
-      provider: 'openai',
-      model: 'gpt-4o-mini',
-      apiKey: 'platform-key',
-      endpoint_url: null,
-      rate_limit_tenant_per_minute: 30,
-      rate_limit_user_per_hour: 60,
-    }),
-  };
-
   const mockBuiltinUsage = {
     getCurrentUsage: async () => ({
       count: 1,
@@ -316,7 +328,6 @@ function createOrchestrator(options?: {
     mockCipher as any,
     mockModelResolver as any,
     mockProviderRegistry as any,
-    mockPlatformAiConfig as any,
     mockBuiltinUsage as any,
     mockConversations as any,
     mockPreviews as any,
@@ -2367,7 +2378,30 @@ async function testProviderEndpointSourceFollowsTheResolvedModel() {
     );
     assert.equal(recordedRequests[0].endpointSource, expected, `${resolvedSource} model`);
     assert.equal(recordedRequests[0].apiKey, resolvedSource === 'builtin' ? 'platform-key' : 'real-api-key');
+    assert.equal(recordedRequests[0].model, resolvedSource === 'builtin' ? 'gpt-4o-mini' : 'gpt-4o', 'the resolved model is the one called');
   }
+}
+
+// A model that became unavailable between the access check and the resolution (the
+// included model's confirmation withdrawn meanwhile) is refused like the access check.
+async function testModelUnavailableAfterTheAccessCheckIsRefused() {
+  const { orchestrator, recordedRequests } = createOrchestrator({
+    resolveError: new AiModelResolutionError('builtin_not_accepted', BUILTIN_NOT_ACCEPTED_MESSAGE),
+  });
+  await assert.rejects(
+    () => orchestrator.prepareRequest({
+      context: {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        isPlatformHost: false,
+        surface: 'chat',
+        authMethod: 'jwt',
+      },
+      userMessage: 'Hello',
+    }),
+    (error: unknown) => error instanceof ForbiddenException && error.message === BUILTIN_NOT_ACCEPTED_MESSAGE,
+  );
+  assert.equal(recordedRequests.length, 0, 'no provider call');
 }
 
 async function testRepeatedToolCallRepairCanRecoverToFinalAnswer() {
@@ -2999,6 +3033,7 @@ async function run() {
   await testProviderReceivesAbortSignal();
   await testProviderRequestUsesChatTimeout();
   await testProviderEndpointSourceFollowsTheResolvedModel();
+  await testModelUnavailableAfterTheAccessCheckIsRefused();
   await testRepeatedToolCallRepairCanRecoverToFinalAnswer();
   await testRepeatedToolCallsStopWithoutFurtherProgress();
   await testDistinctSearchAllNoProgressStopsEarly();

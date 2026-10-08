@@ -215,7 +215,8 @@
       "title": "Plaid ist bereit"
     },
     "messages": {
-      "disabled": "Der KI-Chat ist für diesen Arbeitsbereich deaktiviert."
+      "disabled": "Der KI-Chat ist für diesen Arbeitsbereich deaktiviert.",
+      "builtinNotAccepted": "Ein Administrator muss den KI-Anbieter unter Administration > Plaid bestätigen."
     },
     "suggestions": {
       "applicationMention": "Zusammenfassung für @APP-",

@@ -9,6 +9,7 @@ import {
   ConversationMessagesResponse,
 } from './aiTypes';
 import i18n from '../i18n';
+import type { AiBuiltinProvider } from './includedModel';
 
 const MAX_STREAM_BUFFER_CHARS = 1_048_576;
 
@@ -95,6 +96,7 @@ export type AiSettingsPayload = {
     provider_secret_writable: boolean;
     provider_validation_errors: string[];
     chat_ready: boolean;
+    builtin_provider?: AiBuiltinProvider;
     created_at: string;
     updated_at: string;
   };

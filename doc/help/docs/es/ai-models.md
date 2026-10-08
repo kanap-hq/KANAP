@@ -17,11 +17,13 @@ Nada en KANAP está fijado a un único modelo. Cada consumidor —Plaid y cada a
 
 1. **El modelo asignado a ese consumidor**, si lo hay.
 2. Si no, **el modelo predeterminado de la organización**: el que aparece marcado con una estrella en esta página.
-3. Si no, **el modelo incluido de KANAP**.
+3. Si no, **el modelo incluido de KANAP**, una vez que un administrador ha confirmado su proveedor y su lugar de tratamiento.
 
 Así que hay exactamente un modelo predeterminado por organización, y todo aquello que no toque lo sigue. Cambie el predeterminado y todos los consumidores sin asignación se mueven con él: para eso sirve tener uno.
 
 El tercer paso solo existe en el servicio alojado de KANAP. En una instalación local no hay modelo incluido, de modo que si no hay nada asignado ni ningún predeterminado definido, la cadena simplemente se agota: la página de configuración de Plaid indica que no hay ningún modelo configurado y el chat no responde, mientras que los agentes siguen funcionando pero se saltan los pasos que necesitan un modelo —recurren a su comportamiento sin IA en lugar de fallar por completo—. Registrar un modelo lo soluciona: márquelo con la estrella como predeterminado para que todo lo adopte de una vez, o asígnelo consumidor por consumidor.
+
+En el servicio alojado, el tercer paso tiene una condición. Plaid y los agentes que usarían el modelo incluido esperan a que un administrador confirme su proveedor, y la página de configuración de Plaid y la de agentes lo indican. Un modelo que usted añade nunca necesita confirmación. Consulte [Confirmar el modelo incluido de KANAP](ai-settings.md#confirmar-el-modelo-incluido-de-kanap).
 
 No puede romper esta cadena por ordenar la lista: un modelo al que algo siga apuntando no se puede archivar, y si alguna asignación acabara apuntando a un modelo archivado, el consumidor recurre al predeterminado en lugar de fallar.
 
@@ -56,6 +58,7 @@ En el servicio alojado, la primera fila de la tabla es siempre **Modelo incluido
 - En la columna **Uso** muestra sus **mensajes incluidos este mes** con una barra de progreso, para que vea cuánto queda del volumen mensual. Un mensaje es una pregunta hecha a Plaid, una solicitud de un asistente externo conectado por MCP o un ticket revisado por un agente: los tres consumen el mismo volumen. Esa barra es la cuota del modelo incluido; no es la misma cifra que los recuentos de mensajes de los modelos que usted añade.
 - Muestra una estrella rellena en la columna **Predeterminado** siempre que no haya ningún modelo propio activo marcado con la estrella: es la alternativa de «nada configurado» hecha visible. Haga clic en su estrella vacía para borrar su predeterminado actual y volver a él. Sigue sin poder editarse ni archivarse.
 - No tiene acciones de edición ni de archivo: esas corresponden a los modelos que usted añade. Simplemente está siempre ahí.
+- Plaid y los agentes lo usan solo después de que un administrador confirme el proveedor y el lugar de tratamiento de los datos, en la página [Configuración de Plaid](ai-settings.md#confirmar-el-modelo-incluido-de-kanap). Los modelos que usted añade no están sujetos a ese paso.
 
 En una instalación local esta fila no aparece en absoluto.
 

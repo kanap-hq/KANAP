@@ -32,6 +32,9 @@ Two other AI surfaces are easy to confuse with agents but are separate things: [
 
 ## The fleet dashboard
 
+!!! note "Agents waiting for a confirmation"
+    On the hosted service, an agent that has no model of its own runs on the KANAP included model once an administrator has confirmed its provider. Until then, a banner at the top of the page says *Agents that use the KANAP included model are paused until an administrator confirms it in Admin > Plaid.* Administrators get an **Open Plaid settings** button on it. Agents pinned to a model you added keep working. See [Confirming the KANAP included model](ai-settings.md#confirming-the-kanap-included-model).
+
 Five pooled numbers sit at the top. They describe the whole fleet, not any one agent:
 
 - **Pending approvals** — how many proposals across the whole fleet are waiting for a human decision right now. This is the same number that drives the sidebar badge.
@@ -118,5 +121,5 @@ Reusable background guidance you want several agents to share lives on the [Shar
 - **The cost tile is the fleet's honest bill.** It covers every agent you run. If it climbs faster than you expected, the usual cause is an agent checking far more often than its queue warrants — look at **Check every (minutes)** before you look at anything else.
 - **A rising failed count is your early warning.** The **N failed** chip surfaces work that stalled. Open the agent and clear the **Needs attention** items before they pile up — they usually point at a connection issue or a ticket that changed under the agent.
 - **Manual only before Watching.** An agent created from **New agent** is intentionally **Not started**. Run it by hand on a handful of representative tickets from its workspace first; only move it to **Watching** once you're happy with what it drafts.
-- **Automatic is earned, and reversible.** Promoting an action type to automatic doesn't remove any guardrail — the daily and per-run budgets, freshness checks, and pauses still apply, and acceptance that drops off will pull the action type back to ask-first. The action types the requester can see ask for an explicit acknowledgement on top.
+- **Automatic is earned, and reversible.** Promoting an action type to automatic doesn't remove any guardrail: the daily and per-run budgets, freshness checks, and pauses still apply, and an action type that has a bad hour waits for your approval, and one whose acceptance falls below half goes back to ask-first (see [The autonomy ladder](agents-workspace.md#the-autonomy-ladder)). The action types the requester can see ask for an explicit acknowledgement on top.
 - **Prefer the per-agent pause.** Reach for **Pause all agents** only for a genuine fleet-wide problem. For one noisy agent, the pause in its own workspace keeps the rest of your fleet working.

@@ -239,7 +239,7 @@ Définissez ce que chaque rôle peut faire dans KANAP.
 Chaque rôle a des niveaux d'autorisation pour différentes ressources :
 - **Aucun** : Pas d'accès à cette ressource
 - **Reader** : Consultation uniquement
-- **Contributeur** : Consultation et modification des éléments existants, ajout de commentaires et pièces jointes, mais pas de création de nouveaux éléments de premier niveau (actuellement utilisé pour les projets du portefeuille)
+- **Contributeur** : Consultation et modification des éléments existants, ajout de commentaires et pièces jointes, mais pas de création de nouveaux éléments de premier niveau. L'éditeur de rôles propose ce niveau sur la plupart des ressources (pas sur Knowledge, les paramètres d'IA, le chat Plaid ni l'accès MCP). Les projets du portefeuille, les incidents et les agents IA l'utilisent aujourd'hui. Sur toutes les autres ressources, les modifications exigent le niveau Membre : un Contributeur y a donc un accès Lecteur.
 - **Member** : Consultation, création et modification
 - **Admin** : Accès complet incluant la suppression
 

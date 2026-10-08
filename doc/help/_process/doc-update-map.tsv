@@ -95,6 +95,7 @@ reports.md	frontend/src/pages/reports/**/*.tsx
 ai-assistant.md	frontend/src/pages/ai/AiWorkspacePage.tsx
 ai-assistant.md	frontend/src/ai/**/*.tsx
 ai-settings.md	frontend/src/pages/admin/AdminAiPage.tsx
+ai-settings.md	frontend/src/pages/admin/IncludedModelConfirmation.tsx
 ai-models.md	frontend/src/pages/admin/AdminAiModelsPage.tsx
 ai-usage.md	frontend/src/pages/admin/AdminAiUsagePage.tsx
 integrations.md	frontend/src/pages/admin/AdminIntegrationsPage.tsx

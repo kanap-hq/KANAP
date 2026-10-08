@@ -239,7 +239,7 @@ Defina qué puede hacer cada rol en todo KANAP.
 Cada rol tiene niveles de permiso para diferentes recursos:
 - **Ninguno**: Sin acceso a este recurso
 - **Lector**: Solo lectura
-- **Colaborador**: Ver y editar elementos existentes, añadir comentarios y adjuntos, pero no puede crear nuevos elementos de nivel superior (actualmente utilizado para proyectos del portafolio)
+- **Colaborador**: Ver y editar elementos existentes, añadir comentarios y adjuntos, pero no puede crear nuevos elementos de nivel superior. El editor de roles ofrece este nivel en la mayoría de los recursos (no en Base de conocimiento, configuración de IA, chat de Plaid ni acceso MCP). Los proyectos del portafolio, los incidentes y los agentes IA lo usan hoy. En todos los demás recursos, los cambios exigen el nivel Miembro, así que un Colaborador tiene allí acceso de Lector.
 - **Miembro**: Ver, crear y editar
 - **Administrador**: Acceso completo incluyendo eliminación
 

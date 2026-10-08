@@ -29,6 +29,10 @@ import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { platformAiApi, PlatformAiConfigPayload } from '../../ai/platformAiApi';
 import { AiProviderTestResult } from '../../ai/aiApi';
 import { useLocale } from '../../i18n/useLocale';
+import { KanapDialog, PropertyRow } from '../../components/design';
+import { drawerMenuItemSx, selectPlaceholderSx } from '../../theme/formSx';
+import { INCLUDED_MODEL_LOCATIONS } from '../../ai/includedModel';
+import { useRegionName } from '../../ai/useRegionName';
 
 type ConfigForm = {
   provider: string;
@@ -37,6 +41,8 @@ type ConfigForm = {
   endpoint_url: string;
   rate_limit_tenant_per_minute: string;
   rate_limit_user_per_hour: string;
+  disclosure_name: string;
+  disclosure_location: string;
 };
 
 const EMPTY_CONFIG_FORM: ConfigForm = {
@@ -46,6 +52,8 @@ const EMPTY_CONFIG_FORM: ConfigForm = {
   endpoint_url: '',
   rate_limit_tenant_per_minute: '30',
   rate_limit_user_per_hour: '60',
+  disclosure_name: '',
+  disclosure_location: '',
 };
 
 function buildConfigForm(data: PlatformAiConfigPayload['config']): ConfigForm {
@@ -59,7 +67,44 @@ function buildConfigForm(data: PlatformAiConfigPayload['config']): ConfigForm {
     endpoint_url: data.endpoint_url || '',
     rate_limit_tenant_per_minute: String(data.rate_limit_tenant_per_minute),
     rate_limit_user_per_hour: String(data.rate_limit_user_per_hour),
+    disclosure_name: data.disclosure_name ?? '',
+    disclosure_location: data.disclosure_location ?? '',
   };
+}
+
+function endpointHost(endpointUrl: string | null | undefined): string {
+  const raw = endpointUrl?.trim() ?? '';
+  if (!raw) return '';
+  try {
+    return new URL(raw).hostname.toLowerCase();
+  } catch {
+    return raw.toLowerCase();
+  }
+}
+
+/**
+ * True when the save switches the technical provider or the endpoint host (the server
+ * keeps the stored endpoint when the field is left empty). Workspaces confirm the
+ * provider again, so the name and location shown to them go with the same save.
+ */
+function technicalProviderChanges(form: ConfigForm, existing: PlatformAiConfigPayload['config']): boolean {
+  if (!existing) return false;
+  const provider = form.provider || existing.provider;
+  const endpoint = form.endpoint_url.trim() || existing.endpoint_url;
+  return provider !== existing.provider || endpointHost(endpoint) !== endpointHost(existing.endpoint_url);
+}
+
+/**
+ * True when saving changes what workspaces confirmed (provider, endpoint host, name or
+ * location shown) while they had something to confirm. A new model keeps it.
+ */
+function disclosureChangeAsksAgain(form: ConfigForm, existing: PlatformAiConfigPayload['config']): boolean {
+  const previousName = existing?.disclosure_name?.trim() ?? '';
+  const previousLocation = existing?.disclosure_location ?? '';
+  if (!previousName || !previousLocation) return false;
+  return technicalProviderChanges(form, existing)
+    || form.disclosure_name.trim() !== previousName
+    || form.disclosure_location !== previousLocation;
 }
 
 function buildConfigPayload(form: ConfigForm, existing: PlatformAiConfigPayload['config']): Record<string, unknown> {
@@ -88,7 +133,26 @@ function buildConfigPayload(form: ConfigForm, existing: PlatformAiConfigPayload[
     payload.rate_limit_user_per_hour = userRate;
   }
 
+  // A new provider or endpoint host sends the shown name and location again: the
+  // operator confirms them with the change.
+  const technicalChange = technicalProviderChanges(form, existing);
+  if (technicalChange || form.disclosure_name.trim() !== (existing?.disclosure_name ?? '')) {
+    payload.disclosure_name = form.disclosure_name.trim();
+  }
+  if (technicalChange || form.disclosure_location !== (existing?.disclosure_location ?? '')) {
+    payload.disclosure_location = form.disclosure_location;
+  }
+
   return payload;
+}
+
+/**
+ * The shown name or location this save would send empty. The server keeps neither
+ * empty, and a new provider or endpoint host sends both again (buildConfigPayload).
+ */
+function missingDisclosure(form: ConfigForm, existing: PlatformAiConfigPayload['config']): { name: boolean; location: boolean } {
+  const payload = buildConfigPayload(form, existing);
+  return { name: payload.disclosure_name === '', location: payload.disclosure_location === '' };
 }
 
 export default function AdminPlatformAiPage() {
@@ -104,6 +168,10 @@ export default function AdminPlatformAiPage() {
   const [configSaved, setConfigSaved] = React.useState(false);
   const [planSaved, setPlanSaved] = React.useState(false);
   const [testResult, setTestResult] = React.useState<AiProviderTestResult | null>(null);
+  const [confirmDisclosureChange, setConfirmDisclosureChange] = React.useState(false);
+  // Set when a save was stopped because the shown name or location is empty.
+  const [disclosureChecked, setDisclosureChecked] = React.useState(false);
+  const regionName = useRegionName();
 
   const configQuery = useQuery({
     queryKey: ['platform-ai-config'],
@@ -136,6 +204,8 @@ export default function AdminPlatformAiPage() {
       setConfigSaved(false);
     },
     onSuccess: async (changed) => {
+      setConfirmDisclosureChange(false);
+      setDisclosureChecked(false);
       if (!changed) {
         return;
       }
@@ -145,9 +215,28 @@ export default function AdminPlatformAiPage() {
       setTimeout(() => setConfigSaved(false), 3000);
     },
     onError: (error: unknown) => {
+      setConfirmDisclosureChange(false);
       setConfigError(getApiErrorMessage(error, t, t('platformAi.messages.saveFailed')));
     },
   });
+
+  const disclosureGaps = configQuery.data
+    ? missingDisclosure(configForm, configQuery.data.config)
+    : { name: false, location: false };
+
+  const saveConfig = () => {
+    if (disclosureGaps.name || disclosureGaps.location) {
+      setDisclosureChecked(true);
+      setConfigSaved(false);
+      setConfigError(t('platformAi.disclosure.missing'));
+      return;
+    }
+    if (configQuery.data && disclosureChangeAsksAgain(configForm, configQuery.data.config)) {
+      setConfirmDisclosureChange(true);
+      return;
+    }
+    saveConfigMutation.mutate();
+  };
 
   const testConfigMutation = useMutation({
     mutationFn: async () => platformAiApi.testConfig({
@@ -282,10 +371,47 @@ export default function AdminPlatformAiPage() {
                     />
                   </Stack>
 
+                  <Typography variant="subtitle2" color="text.secondary">{t('platformAi.disclosure.title')}</Typography>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                    <PropertyRow label={t('platformAi.fields.disclosureName')} sx={{ flex: 1 }}>
+                      <TextField
+                        variant="standard"
+                        fullWidth
+                        value={configForm.disclosure_name}
+                        error={disclosureChecked && disclosureGaps.name}
+                        inputProps={{ maxLength: 80, 'aria-label': t('platformAi.fields.disclosureName') }}
+                        placeholder={t('platformAi.disclosure.namePlaceholder')}
+                        onChange={(event) => setConfigForm((prev) => ({ ...prev, disclosure_name: event.target.value }))}
+                      />
+                    </PropertyRow>
+                    <PropertyRow label={t('platformAi.fields.disclosureLocation')} sx={{ flex: 1 }}>
+                      <Select
+                        variant="standard"
+                        fullWidth
+                        displayEmpty
+                        value={configForm.disclosure_location}
+                        error={disclosureChecked && disclosureGaps.location}
+                        renderValue={(value) => (value
+                          ? regionName(String(value))
+                          : <Box component="span" sx={selectPlaceholderSx}>{t('platformAi.disclosure.locationPlaceholder')}</Box>)}
+                        SelectDisplayProps={{ 'aria-label': t('platformAi.fields.disclosureLocation') } as React.HTMLAttributes<HTMLDivElement>}
+                        onChange={(event) => setConfigForm((prev) => ({ ...prev, disclosure_location: String(event.target.value) }))}
+                      >
+                        {INCLUDED_MODEL_LOCATIONS.map((code) => (
+                          <MenuItem key={code} value={code} sx={drawerMenuItemSx}>{regionName(code)}</MenuItem>
+                        ))}
+                        {configForm.disclosure_location && !(INCLUDED_MODEL_LOCATIONS as readonly string[]).includes(configForm.disclosure_location) ? (
+                          <MenuItem value={configForm.disclosure_location} sx={drawerMenuItemSx}>{regionName(configForm.disclosure_location)}</MenuItem>
+                        ) : null}
+                      </Select>
+                    </PropertyRow>
+                  </Stack>
+                  <Typography variant="caption" color="text.secondary">{t('platformAi.disclosure.hint')}</Typography>
+
                   <Stack direction="row" spacing={2}>
                     <Button
                       variant="contained"
-                      onClick={() => saveConfigMutation.mutate()}
+                      onClick={saveConfig}
                       disabled={saveConfigMutation.isPending}
                     >
                       {saveConfigMutation.isPending ? t('common:status.saving') : t('platformAi.actions.save')}
@@ -392,6 +518,25 @@ export default function AdminPlatformAiPage() {
           </>
         ) : null}
       </Stack>
+
+      <KanapDialog
+        open={confirmDisclosureChange}
+        title={t('platformAi.disclosure.confirmTitle')}
+        onClose={() => setConfirmDisclosureChange(false)}
+        onSave={() => saveConfigMutation.mutate()}
+        saveLabel={t('platformAi.disclosure.confirmSave')}
+        saveLoading={saveConfigMutation.isPending}
+      >
+        <Stack spacing={1.5}>
+          <Typography variant="body2">{t('platformAi.disclosure.confirmBody')}</Typography>
+          <Typography variant="body2">
+            {t('platformAi.disclosure.confirmShown', {
+              name: configForm.disclosure_name.trim(),
+              place: regionName(configForm.disclosure_location),
+            })}
+          </Typography>
+        </Stack>
+      </KanapDialog>
     </>
   );
 }

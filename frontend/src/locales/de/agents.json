@@ -152,7 +152,9 @@
     },
     "newAgentSreDefaultName": "Agent für Infrastruktur-Überwachung",
     "newAgentSreDescription": "Überwachungs-Agent im Entwurf: liest Alarme, verknüpft sie mit Ihren KANAP-Daten und bereitet Diagnosenotizen zur Prüfung vor.",
-    "cost": "Kosten — heute / 7 Tage"
+    "cost": "Kosten — heute / 7 Tage",
+    "includedModelPaused": "Agenten, die das inklusive KANAP-Modell verwenden, sind pausiert, bis ein Administrator es unter Administration > Plaid bestätigt.",
+    "includedModelOpenSettings": "Plaid-Einstellungen öffnen"
   },
   "approvals": {
     "title": "Agentenfreigaben",

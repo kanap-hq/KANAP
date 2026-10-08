@@ -185,7 +185,29 @@
       "never": "Nie",
       "none": "Keine"
     },
-    "title": "Plaid"
+    "title": "Plaid",
+    "includedModel": {
+      "status": "Inklusives KANAP-Modell: {{name}} (Verarbeitungsort: {{place}})",
+      "confirmed": "Bestätigt",
+      "needsConfirmation": "Bestätigung erforderlich",
+      "needed": "Der Assistent und die Agenten nutzen es, sobald ein Administrator es bestätigt hat.",
+      "confirmedBy": "Bestätigt von {{name}} am {{date}}",
+      "confirmedOn": "Bestätigt am {{date}}",
+      "confirm": "Bestätigen",
+      "withdraw": "Zurückziehen",
+      "changed": "Der Anbieter oder sein Verarbeitungsort hat sich geändert. Prüfen Sie die Angaben und bestätigen Sie erneut.",
+      "dialog": {
+        "title": "Inklusives KANAP-Modell verwenden?",
+        "body": "Fragen, die Sie dem Assistenten und den Agenten stellen, und die KANAP-Daten, die sie für die Antwort lesen, werden an {{name}} gesendet. Verarbeitungsort: {{place}}.",
+        "ownModel": "Stattdessen können Sie ein eigenes Modell aus der <link /> verwenden.",
+        "ownModelLink": "Liste der KI-Modelle",
+        "confirmAndTurnOn": "Bestätigen und aktivieren"
+      },
+      "withdrawDialog": {
+        "title": "Bestätigung zurückziehen?",
+        "body": "KI-Funktionen, die das inklusive Modell verwenden, stoppen, bis ein Administrator erneut bestätigt."
+      }
+    }
   },
   "auditLogs": {
     "actions": {
@@ -541,7 +563,9 @@
       "model": "Model",
       "provider": "Provider",
       "tenantRateLimit": "Tenant rate limit / minute",
-      "userRateLimit": "User rate limit / hour"
+      "userRateLimit": "User rate limit / hour",
+      "disclosureName": "Für Kunden angezeigter Anbietername",
+      "disclosureLocation": "Ort der Datenverarbeitung"
     },
     "messages": {
       "loadFailed": "Failed to load platform AI settings.",
@@ -566,6 +590,17 @@
       "percent": "Usage",
       "tenant": "Tenant",
       "used": "Used"
+    },
+    "disclosure": {
+      "title": "Für Kunden angezeigt",
+      "namePlaceholder": "z. B. Anthropic",
+      "locationPlaceholder": "z. B. Vereinigte Staaten",
+      "missing": "Geben Sie vor dem Speichern den für Kunden angezeigten Anbieternamen und Verarbeitungsort ein.",
+      "hint": "Arbeitsbereiche sehen diesen Anbieter und diesen Ort und bestätigen sie vor ihrer ersten KI-Anfrage. Ein neuer Anbieter, Endpoint, Name oder Ort erfordert eine erneute Bestätigung, ein neues Modell nicht. Das inklusive Modell bleibt nicht verfügbar, bis beide Felder ausgefüllt sind.",
+      "confirmTitle": "Für Kunden angezeigten Anbieter ändern?",
+      "confirmBody": "Jeder Arbeitsbereich, der das inklusive Modell verwendet, wird vor seiner nächsten KI-Anfrage um eine erneute Bestätigung gebeten.",
+      "confirmShown": "Arbeitsbereiche sehen: {{name}}, Verarbeitungsort: {{place}}.",
+      "confirmSave": "Speichern und erneut anfragen"
     }
   },
   "opsDashboard": {

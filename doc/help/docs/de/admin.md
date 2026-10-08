@@ -239,7 +239,7 @@ Definieren Sie, was jede Rolle in KANAP tun kann.
 Jede Rolle hat Berechtigungsstufen für verschiedene Ressourcen:
 - **Keine**: Kein Zugriff auf diese Ressource
 - **Leser**: Nur Ansicht
-- **Mitwirkender**: Ansicht und Bearbeitung bestehender Elemente, Kommentare und Anhänge hinzufügen, aber keine neuen übergeordneten Elemente erstellen (derzeit für Portfolio-Projekte verwendet)
+- **Mitwirkender**: Ansicht und Bearbeitung bestehender Elemente, Kommentare und Anhänge hinzufügen, aber keine neuen übergeordneten Elemente erstellen. Der Rolleneditor bietet diese Stufe bei den meisten Ressourcen an (nicht bei Wissensdatenbank, KI-Einstellungen, Plaid-Chat und MCP-Zugriff). Portfolio-Projekte, Vorfälle und KI-Agenten nutzen sie heute. Bei allen anderen Ressourcen erfordern Änderungen die Stufe Mitglied, ein Mitwirkender hat dort also Leserechte.
 - **Mitglied**: Ansicht, Erstellen und Bearbeiten
 - **Administrator**: Vollzugriff einschließlich Löschen
 

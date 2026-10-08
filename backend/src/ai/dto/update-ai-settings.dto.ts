@@ -74,4 +74,12 @@ export class UpdateAiSettingsDto {
   @IsString()
   @MaxLength(255)
   glpi_app_token?: string | null;
+
+  // Confirms the included model's provider identity (the key shown in the settings
+  // view); null withdraws the confirmation. The key holds the provider, the endpoint
+  // host (up to 253 characters) and the name shown (up to 80).
+  @ValidateIf((_, value) => value !== undefined && value !== null)
+  @IsString()
+  @MaxLength(512)
+  accept_builtin_provider_key?: string | null;
 }

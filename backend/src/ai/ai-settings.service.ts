@@ -5,11 +5,11 @@ import { AuditService } from '../audit/audit.service';
 import { Features } from '../config/features';
 import { assertPublicHttpUrl } from '../common/ssrf-guard';
 import { AiModelConfig } from './ai-model-config.entity';
-import { AiModelResolverService } from './ai-model-resolver.service';
+import { AiModelReadiness, AiModelResolverService } from './ai-model-resolver.service';
 import { AiSettings } from './ai-settings.entity';
 import { AiSecretCipherService } from './ai-secret-cipher.service';
 import { normalizeGlpiPathname } from './glpi/glpi-url';
-import { PlatformAiConfigService } from './platform/platform-ai-config.service';
+import { BuiltinProviderIdentity, PlatformAiConfigService } from './platform/platform-ai-config.service';
 import { AiProviderRegistry } from './providers/ai-provider-registry.service';
 
 export type AiSettingsView = {
@@ -34,9 +34,33 @@ export type AiSettingsView = {
   provider_secret_writable: boolean;
   provider_validation_errors: string[];
   chat_ready: boolean;
+  builtin_provider: AiBuiltinProviderView;
   created_at: string;
   updated_at: string;
 };
+
+/**
+ * The KANAP included model as this workspace sees it. in_use: the assistant, or agents
+ * without a model of their own, would run on it; used_by_assistant: the assistant would.
+ * accepted: an administrator confirmed the platform's current identity (key).
+ */
+export type AiBuiltinProviderView = {
+  in_use: boolean;
+  used_by_assistant: boolean;
+  name: string | null;
+  location: string | null;
+  key: string | null;
+  accepted: boolean;
+  accepted_at: string | null;
+  accepted_by_name: string | null;
+};
+
+export const BUILTIN_PROVIDER_CHANGED = 'BUILTIN_PROVIDER_CHANGED';
+export const BUILTIN_PROVIDER_CONFIRMATION_REQUIRED = 'BUILTIN_PROVIDER_CONFIRMATION_REQUIRED';
+
+function identityBody(identity: BuiltinProviderIdentity | null) {
+  return identity ? { name: identity.name, location: identity.location, key: identity.key } : null;
+}
 
 export type UpdateAiSettingsInput = {
   chat_enabled?: boolean;
@@ -55,6 +79,7 @@ export type UpdateAiSettingsInput = {
   glpi_url?: string | null;
   glpi_user_token?: string | null;
   glpi_app_token?: string | null;
+  accept_builtin_provider_key?: string | null;
 };
 
 function normalizeNullableString(value: string | null | undefined): string | null {
@@ -187,11 +212,102 @@ export class AiSettingsService {
   }
 
   async getProviderValidationErrors(settings: AiSettings, manager?: EntityManager): Promise<string[]> {
+    return (await this.getProviderReadiness(settings, manager)).errors;
+  }
+
+  /** The assistant's model readiness, checked against this settings row's confirmation of the included model. */
+  async getProviderReadiness(settings: AiSettings, manager?: EntityManager): Promise<AiModelReadiness> {
+    return this.modelResolver.readiness(
+      settings.tenant_id,
+      settings.chat_model_config_id ?? null,
+      manager,
+      { builtinAcceptedKey: settings.builtin_accepted_key ?? null },
+    );
+  }
+
+  /**
+   * The assistant's model readiness without the included model's confirmation, for paths
+   * that send nothing to that model (MCP, tools run by agents): valid platform settings are
+   * enough there, as before the confirmation existed.
+   */
+  async getProviderErrorsWithoutConfirmation(settings: AiSettings, manager?: EntityManager): Promise<string[]> {
     return this.modelResolver.validationErrors(
       settings.tenant_id,
       settings.chat_model_config_id ?? null,
       manager,
+      { includedModelGate: 'none' },
     );
+  }
+
+  /**
+   * Readiness of the workspace's fallback model (no explicit assignment): the one agents
+   * without a model of their own run on. Reuses the assistant's readiness when the
+   * assistant has no assignment either.
+   */
+  private async getFallbackReadiness(
+    tenantId: string,
+    settings: Pick<AiSettings, 'chat_model_config_id' | 'builtin_accepted_key'> | null,
+    manager?: EntityManager,
+    assistantReadiness?: AiModelReadiness | null,
+  ): Promise<AiModelReadiness> {
+    if (assistantReadiness && settings && settings.chat_model_config_id == null) {
+      return assistantReadiness;
+    }
+    return this.modelResolver.readiness(tenantId, null, manager, {
+      builtinAcceptedKey: settings?.builtin_accepted_key ?? null,
+    });
+  }
+
+  /**
+   * True when an enabled agent of the workspace runs on the fallback model (no model of
+   * its own, or one no longer active) and that fallback is the included model, not
+   * confirmed: those agents are paused.
+   */
+  async isBuiltinConfirmationNeeded(
+    tenantId: string,
+    settings: Pick<AiSettings, 'chat_model_config_id' | 'builtin_accepted_key'> | null,
+    manager?: EntityManager,
+    assistantReadiness?: AiModelReadiness | null,
+  ): Promise<boolean> {
+    const fallback = await this.getFallbackReadiness(tenantId, settings, manager, assistantReadiness);
+    if (fallback.errorCode !== 'builtin_not_accepted') {
+      return false;
+    }
+    const rows: unknown[] = await (manager ?? this.repo.manager).query(
+      `SELECT 1
+         FROM ai_agent_definitions d
+        WHERE d.tenant_id = $1
+          AND d.status = 'enabled'
+          AND (
+            d.llm_model_config_id IS NULL
+            OR NOT EXISTS (
+              SELECT 1 FROM ai_model_configs c
+               WHERE c.id = d.llm_model_config_id AND c.tenant_id = $1 AND c.status = 'active'
+            )
+          )
+        LIMIT 1`,
+      [tenantId],
+    );
+    return rows.length > 0;
+  }
+
+  private async currentBuiltinIdentity(): Promise<BuiltinProviderIdentity | null> {
+    if (Features.SINGLE_TENANT) {
+      return null;
+    }
+    return (await this.platformAiConfig.getBuiltinRuntime())?.identity ?? null;
+  }
+
+  private async userDisplayName(tenantId: string, userId: string, manager?: EntityManager): Promise<string | null> {
+    const rows: Array<{ first_name: string | null; last_name: string | null }> = await (manager ?? this.repo.manager).query(
+      'SELECT first_name, last_name FROM users WHERE id = $1 AND tenant_id = $2',
+      [userId, tenantId],
+    );
+    const name = [rows[0]?.first_name, rows[0]?.last_name]
+      .map((part) => String(part ?? '').trim())
+      .filter(Boolean)
+      .join(' ');
+    return name || null;
   }
 
   async update(
@@ -294,6 +410,27 @@ export class AiSettingsService {
       settings.glpi_app_token_encrypted = raw ? this.cipher.encrypt(raw) : null;
     }
 
+    if (Object.prototype.hasOwnProperty.call(input, 'accept_builtin_provider_key')) {
+      const requestedKey = input.accept_builtin_provider_key;
+      if (requestedKey == null) {
+        settings.builtin_accepted_key = null;
+        settings.builtin_accepted_at = null;
+        settings.builtin_accepted_by = null;
+      } else {
+        const identity = await this.currentBuiltinIdentity();
+        if (!identity || requestedKey !== identity.key) {
+          throw new BadRequestException({
+            code: BUILTIN_PROVIDER_CHANGED,
+            message: 'The KANAP included model has changed. Review it and confirm again.',
+            builtin_provider: identityBody(identity),
+          });
+        }
+        settings.builtin_accepted_key = identity.key;
+        settings.builtin_accepted_at = new Date();
+        settings.builtin_accepted_by = opts?.userId || null;
+      }
+    }
+
     const glpiConfigTouched = [
       'glpi_enabled',
       'glpi_url',
@@ -310,11 +447,21 @@ export class AiSettingsService {
     }
 
     if (settings.chat_enabled) {
-      const providerErrors = await this.getProviderValidationErrors(settings, opts?.manager);
-      if (providerErrors.length > 0) {
+      const readiness = await this.getProviderReadiness(settings, opts?.manager);
+      if (readiness.errorCode === 'builtin_not_accepted') {
+        // Turning the assistant on needs the included model confirmed, in this
+        // payload or before. Other changes save; the assistant waits for it.
+        if (input.chat_enabled === true) {
+          throw new BadRequestException({
+            code: BUILTIN_PROVIDER_CONFIRMATION_REQUIRED,
+            message: 'Confirm the KANAP included model before turning on the assistant.',
+            builtin_provider: identityBody(readiness.builtinIdentity),
+          });
+        }
+      } else if (readiness.errors.length > 0) {
         throw new BadRequestException({
           message: 'AI chat cannot be enabled until the provider is fully configured.',
-          errors: providerErrors,
+          errors: readiness.errors,
         });
       }
     }
@@ -343,7 +490,8 @@ export class AiSettingsService {
 
   async toView(settings: AiSettings, opts?: { manager?: EntityManager }): Promise<AiSettingsView> {
     const normalized = await this.normalizeProviderSource(settings, opts?.manager);
-    const providerErrors = await this.getProviderValidationErrors(normalized, opts?.manager);
+    const readiness = await this.getProviderReadiness(normalized, opts?.manager);
+    const providerErrors = readiness.errors;
 
     return {
       id: normalized.id,
@@ -367,8 +515,34 @@ export class AiSettingsService {
       provider_secret_writable: this.cipher.canEncrypt(),
       provider_validation_errors: providerErrors,
       chat_ready: providerErrors.length === 0,
+      builtin_provider: await this.toBuiltinProviderView(normalized, readiness, opts?.manager),
       created_at: normalized.created_at.toISOString(),
       updated_at: normalized.updated_at.toISOString(),
+    };
+  }
+
+  private async toBuiltinProviderView(
+    settings: AiSettings,
+    readiness: AiModelReadiness,
+    manager?: EntityManager,
+  ): Promise<AiBuiltinProviderView> {
+    const identity = readiness.builtinIdentity;
+    const usedByAssistant = !!identity && readiness.usesBuiltin;
+    // Agents without a model of their own fall back on it even when the assistant has its own.
+    const usedAsFallback = !!identity && !usedByAssistant
+      && (await this.getFallbackReadiness(settings.tenant_id, settings, manager, readiness)).usesBuiltin;
+    const accepted = !!identity && settings.builtin_accepted_key === identity.key;
+    const acceptedBy = accepted ? settings.builtin_accepted_by ?? null : null;
+    return {
+      in_use: usedByAssistant || usedAsFallback,
+      used_by_assistant: usedByAssistant,
+      name: identity?.name ?? null,
+      location: identity?.location ?? null,
+      key: identity?.key ?? null,
+      accepted,
+      accepted_at: accepted && settings.builtin_accepted_at ? new Date(settings.builtin_accepted_at).toISOString() : null,
+      // Null when the user who confirmed it no longer exists: shown as "Confirmed on <date>".
+      accepted_by_name: acceptedBy ? await this.userDisplayName(settings.tenant_id, acceptedBy, manager) : null,
     };
   }
 }

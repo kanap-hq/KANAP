@@ -221,8 +221,16 @@ export class AiPolicyService {
     });
     const tenantActive = !!tenant && tenant.status === TenantStatus.ACTIVE;
     const settings = tenant ? await this.aiSettings.find(context.tenantId, { manager }) : null;
-    const providerReady = settings
-      ? (await this.aiSettings.getProviderValidationErrors(settings, manager)).length === 0
+    const readiness = settings ? await this.aiSettings.getProviderReadiness(settings, manager) : null;
+    const providerReady = readiness ? readiness.errors.length === 0 : false;
+    // The included model waits for an administrator's confirmation: named apart so
+    // the assistant can say so instead of a generic message.
+    const providerReason = readiness?.errorCode === 'builtin_not_accepted' ? 'builtin_not_accepted' : 'provider_not_ready';
+    // MCP sends nothing to the included model: ready on valid settings, confirmed or not.
+    const mcpProviderReady = providerReady
+      || (!!settings && (await this.aiSettings.getProviderErrorsWithoutConfirmation(settings, manager)).length === 0);
+    const builtinConfirmationNeeded = tenant
+      ? await this.aiSettings.isBuiltinConfirmationNeeded(context.tenantId, settings, manager, readiness)
       : false;
 
     const buildSurfaceCapability = (
@@ -231,6 +239,7 @@ export class AiPolicyService {
         tenantEnabled: boolean;
         permissionGranted: boolean;
         providerReady?: boolean;
+        providerReason?: string;
       },
     ): AiSurfaceCapabilityDto => {
       const reasons: string[] = [];
@@ -241,7 +250,7 @@ export class AiPolicyService {
       if (!tenant) reasons.push('tenant_not_found');
       if (tenant && !tenantActive) reasons.push('tenant_inactive');
       if (!opts.tenantEnabled) reasons.push('tenant_disabled');
-      if (!providerReady) reasons.push('provider_not_ready');
+      if (!providerReady) reasons.push(opts.providerReason ?? 'provider_not_ready');
       if (!state) reasons.push('user_not_allowed');
       if (!opts.permissionGranted) reasons.push('permission_denied');
 
@@ -285,16 +294,18 @@ export class AiPolicyService {
           tenantEnabled: settings?.chat_enabled === true,
           permissionGranted: this.hasPermission(state, 'ai_chat', 'reader'),
           providerReady,
+          providerReason,
         }),
         mcp: buildSurfaceCapability('mcp', {
           tenantEnabled: settings?.mcp_enabled === true,
           permissionGranted: this.hasPermission(state, 'ai_mcp', 'reader'),
-          providerReady,
+          providerReady: mcpProviderReady,
         }),
         settings: buildSettingsCapability(
           this.hasPermission(state, 'ai_settings', 'admin'),
         ),
       },
+      builtin_confirmation_needed: builtinConfirmationNeeded,
     };
   }
 
@@ -309,12 +320,20 @@ export class AiPolicyService {
     await this.assertSubscriptionAllowsAi(context.tenantId, manager);
 
     const settings = await this.aiSettings.get(context.tenantId, { manager });
-    const providerReady = (await this.aiSettings.getProviderValidationErrors(settings, manager)).length === 0;
     if (context.surface === 'chat') {
       if (!settings.chat_enabled) {
         throw new ForbiddenException('AI chat is disabled for this tenant.');
       }
-      if (!providerReady) {
+      // Agent runs and system work pass here to use KANAP tools. Every model call they
+      // make goes through the model resolver, which checks the included model's
+      // confirmation for the model that call runs on. Here they need the assistant's model
+      // set up as before: an agent on its own model keeps working while the assistant
+      // waits for the confirmation.
+      const runsWithoutTheAssistant = !!context.agentId || !context.userId;
+      const providerErrors = runsWithoutTheAssistant
+        ? await this.aiSettings.getProviderErrorsWithoutConfirmation(settings, manager)
+        : await this.aiSettings.getProviderValidationErrors(settings, manager);
+      if (providerErrors.length > 0) {
         throw new ForbiddenException('AI chat is not fully configured for this tenant.');
       }
     }
@@ -322,7 +341,8 @@ export class AiPolicyService {
       if (!settings.mcp_enabled) {
         throw new ForbiddenException('AI MCP access is disabled for this tenant.');
       }
-      if (!providerReady) {
+      // MCP sends KANAP data to the user's own client, never to the included model.
+      if ((await this.aiSettings.getProviderErrorsWithoutConfirmation(settings, manager)).length > 0) {
         throw new ForbiddenException('AI MCP is not fully configured for this tenant.');
       }
     }

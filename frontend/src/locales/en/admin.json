@@ -185,7 +185,29 @@
       "never": "Never",
       "none": "None"
     },
-    "title": "Plaid"
+    "title": "Plaid",
+    "includedModel": {
+      "status": "KANAP included model: {{name}} (processing location: {{place}})",
+      "confirmed": "Confirmed",
+      "needsConfirmation": "Needs confirmation",
+      "needed": "The assistant and agents use it once an administrator confirms it.",
+      "confirmedBy": "Confirmed by {{name}} on {{date}}",
+      "confirmedOn": "Confirmed on {{date}}",
+      "confirm": "Confirm",
+      "withdraw": "Withdraw",
+      "changed": "The provider or its processing location changed. Review it and confirm again.",
+      "dialog": {
+        "title": "Use the KANAP included model?",
+        "body": "Questions you ask the assistant and agents, and the KANAP data they read to answer, are sent to {{name}}. Processing location: {{place}}.",
+        "ownModel": "You can use your own model instead from the <link />.",
+        "ownModelLink": "AI models list",
+        "confirmAndTurnOn": "Confirm and turn on"
+      },
+      "withdrawDialog": {
+        "title": "Withdraw the confirmation?",
+        "body": "AI features that use the included model stop until an administrator confirms again."
+      }
+    }
   },
   "auditLogs": {
     "actions": {
@@ -541,7 +563,9 @@
       "model": "Model",
       "provider": "Provider",
       "tenantRateLimit": "Tenant rate limit / minute",
-      "userRateLimit": "User rate limit / hour"
+      "userRateLimit": "User rate limit / hour",
+      "disclosureName": "Provider name shown to customers",
+      "disclosureLocation": "Where data is processed"
     },
     "messages": {
       "loadFailed": "Failed to load platform AI settings.",
@@ -566,6 +590,17 @@
       "percent": "Usage",
       "tenant": "Tenant",
       "used": "Used"
+    },
+    "disclosure": {
+      "title": "Shown to customers",
+      "namePlaceholder": "e.g. Anthropic",
+      "locationPlaceholder": "e.g. United States",
+      "missing": "Enter the provider name and the processing location shown to customers before saving.",
+      "hint": "Workspaces see this provider and location and confirm them before their first AI request. A new provider, endpoint, name or location asks them again; a new model does not. The included model stays unavailable until both fields are filled in.",
+      "confirmTitle": "Change the provider shown to customers?",
+      "confirmBody": "Every workspace that uses the included model will be asked to confirm again before its next AI request.",
+      "confirmShown": "Workspaces will see: {{name}}, processing location: {{place}}.",
+      "confirmSave": "Save and ask again"
     }
   },
   "opsDashboard": {

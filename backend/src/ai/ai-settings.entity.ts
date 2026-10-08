@@ -64,6 +64,17 @@ export class AiSettings {
   @Column('text', { nullable: true, select: false })
   glpi_app_token_encrypted!: string | null;
 
+  // Confirmation of the included model's provider identity (builtinProviderKey) by an
+  // administrator of the workspace: valid while it equals the platform's current key.
+  @Column('text', { nullable: true })
+  builtin_accepted_key!: string | null;
+
+  @Column('timestamptz', { nullable: true })
+  builtin_accepted_at!: Date | null;
+
+  @Column('uuid', { nullable: true })
+  builtin_accepted_by!: string | null;
+
   @Column('timestamptz', { default: () => 'now()' })
   created_at!: Date;
 

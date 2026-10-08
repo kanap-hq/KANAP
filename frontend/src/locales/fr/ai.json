@@ -215,7 +215,8 @@
       "title": "Plaid est prêt"
     },
     "messages": {
-      "disabled": "Le chat IA est désactivé pour cet espace de travail."
+      "disabled": "Le chat IA est désactivé pour cet espace de travail.",
+      "builtinNotAccepted": "Un administrateur doit confirmer le fournisseur d'IA dans Administration > Plaid."
     },
     "suggestions": {
       "applicationMention": "Résume @APP-",

@@ -16,6 +16,9 @@ Plaid ne remplace pas le reste de l'application. C'est un moyen plus rapide de s
 
 L'espace de travail est également accessible aux administrateurs disposant de `ai_chat:admin`, qui peuvent voir et modérer tout ce que font les utilisateurs standard.
 
+!!! note "En attente d'un administrateur"
+    Sur le service hébergé, Plaid peut s'exécuter sur le modèle inclus KANAP. Avant cela, un administrateur confirme le fournisseur et le lieu où il traite les données. Jusque-là, l'espace de travail affiche *Un administrateur doit confirmer le fournisseur d'IA dans Administration > Plaid.* à la place du chat. Un administrateur le fait sur la page [Paramètres Plaid](ai-settings.md#confirmer-le-modele-inclus-kanap). Les organisations qui utilisent un modèle propre ne voient jamais cet avis.
+
 ## Démarrer une conversation
 
 Lorsque vous ouvrez Plaid pour la première fois, vous arrivez sur un écran d'accueil comportant :
@@ -134,7 +137,7 @@ Rien de ce qui modifie les données de KANAP n'est appliqué en silence. L'aper�
 
 Au-dessus du composeur, deux petits indicateurs vous aident à garder à l'esprit les coûts et les limites :
 
-- **Utilisation intégrée** : lorsque Plaid s'exécute sur le modèle inclus KANAP plutôt que sur l'un des modèles propres à votre organisation, cet indicateur montre combien de messages restent pour le mois en cours ainsi que la date de réinitialisation du quota. Lorsque la limite est atteinte, le composeur est désactivé et un texte d'aide invite les administrateurs à basculer vers un modèle qui leur est propre — voir [Modèles IA](ai-models.md).
+- **Utilisation intégrée** : lorsque Plaid s'exécute sur le modèle inclus KANAP plutôt que sur l'un des modèles propres à votre organisation, cet indicateur montre combien de messages restent pour le mois en cours ainsi que la date de réinitialisation du quota. Un administrateur a confirmé ce modèle au préalable (voir [Paramètres Plaid](ai-settings.md#confirmer-le-modele-inclus-kanap)). Lorsque la limite est atteinte, le composeur est désactivé et un texte d'aide invite les administrateurs à basculer vers un modèle qui leur est propre ; voir [Modèles IA](ai-models.md).
 - **Utilisation des tokens** : une fine barre avec des compteurs de tokens en entrée/sortie pour la conversation en cours, ainsi que la taille de la dernière requête. Les longues conversations deviennent plus coûteuses avec le temps ; la barre rend ce coût visible afin que vous puissiez décider quand démarrer un nouveau fil.
 
 La barre d'utilisation des tokens n'apparaît qu'une fois que la conversation compte au moins un échange.

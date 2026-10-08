@@ -239,7 +239,7 @@ Define what each role can do across KANAP.
 Each role has permission levels for different resources:
 - **None**: No access to this resource
 - **Reader**: View only
-- **Contributor**: View and edit existing items, add comments and attachments, but cannot create new top-level items (currently used for portfolio projects)
+- **Contributor**: View and edit existing items, add comments and attachments, but cannot create new top-level items. The role editor offers this level on most resources (not on Knowledge, AI settings, Plaid chat or MCP access). Portfolio projects, incidents and AI agents use it today. On every other resource, changes need the Member level, so a Contributor there has Reader access.
 - **Member**: View, create, and edit
 - **Admin**: Full access including delete
 

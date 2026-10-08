@@ -19,13 +19,29 @@ Diese Seite steuert den [Plaid-Chat-Assistenten](ai-assistant.md): mit welchem K
 Eine einzige Auswahlliste entscheidet, welches Modell Chat-Fragen beantwortet:
 
 - **Standardmodell (*Name*)** — der Organisationsstandard von der Seite [KI-Modelle](ai-models.md), namentlich genannt, damit Sie sehen, was Sie bekommen. Das ist die erste Option und in aller Regel die richtige: Lassen Sie sie stehen, und Plaid folgt dem Standard, wohin Sie ihn auch verschieben.
-- **Inklusives KANAP-Modell** — erscheint anstelle der obigen Option, wenn kein Standard gesetzt ist, im gehosteten Dienst. Plaid läuft dann auf dem Modell, das in Ihrem Abonnement enthalten ist, innerhalb seines monatlichen Nachrichtenkontingents.
+- **Inklusives KANAP-Modell**: erscheint anstelle der obigen Option, wenn kein Standard gesetzt ist, im gehosteten Dienst. Plaid läuft dann auf dem Modell, das in Ihrem Abonnement enthalten ist, innerhalb seines monatlichen Nachrichtenkontingents. Ein Administrator bestätigt zuvor den Anbieter und den Ort, an dem er Daten verarbeitet: siehe [Das inklusive KANAP-Modell bestätigen](#das-inklusive-kanap-modell-bestatigen).
 - **Kein Modell konfiguriert** — erscheint, wenn es weder einen Standard *noch* ein inklusives Modell gibt, also im On-Premise-Fall. Beachten Sie: Diese Option zeigt weiterhin *Kein Modell konfiguriert* an, bis irgendein Modell als Organisationsstandard mit dem Stern markiert ist, selbst wenn Sie längst mehrere registriert haben — sie beschreibt den Rückfall, nicht Ihre Modellliste.
 - **Jedes aktive Modell namentlich** — heftet Plaid an ein bestimmtes Modell, unabhängig vom Standard. Archivierte Modelle werden nicht angeboten.
 
 Es gibt also zwei Wege, den Chat zum Laufen zu bringen: Markieren Sie auf der Seite [KI-Modelle](ai-models.md) einen Standard mit dem Stern und lassen Sie diese Auswahlliste auf der ersten Option stehen — oder wählen Sie hier ein Modell namentlich aus. Das Anheften hier funktioniert unabhängig davon, ob ein Standard existiert.
 
 Der Hinweis darunter verlinkt direkt auf die Seite **KI-Modelle**, aus der jede Option dieser Liste stammt. Anbieter, Endpunkt oder API-Schlüssel tragen Sie hier nicht mehr ein, und einen separaten Multimodal-Schalter gibt es ebenfalls nicht mehr — ob ein Modell Bilder lesen kann, ist eine Eigenschaft des Modells und wird einmalig in dessen Editor festgelegt.
+
+### Das inklusive KANAP-Modell bestätigen
+
+Im gehosteten Dienst bestätigt ein Administrator, welcher Anbieter Ihre Daten erhält, bevor Plaid oder ein Agent das inklusive Modell nutzt. Bis dahin warten beide.
+
+Wenn Plaid oder ein Agent ohne eigenes Modell auf dem inklusiven Modell laufen würde, erscheint in der Karte „Anbieter" eine Statuszeile. Sie nennt den Anbieter und den Ort, an dem er Daten verarbeitet, zum Beispiel *Inklusives KANAP-Modell: Anthropic (Verarbeitungsort: Vereinigte Staaten)*. Daneben steht **Bestätigung erforderlich** oder **Bestätigt**. Unter der Zeile sehen Sie, wer wann bestätigt hat. Nutzen Plaid und alle Ihre Agenten Modelle, die Sie selbst angelegt haben, erscheint die Zeile nicht und es gibt nichts zu bestätigen.
+
+Eine Bestätigung deckt ab, was diese Funktionen an den Anbieter senden: die Fragen, die Benutzer Plaid stellen, die Fragen, an denen Agenten arbeiten, und die KANAP-Daten, die sie zur Antwort lesen.
+
+- **Bestätigen** speichert Ihre Bestätigung. Plaid wird dadurch nicht eingeschaltet.
+- **Chat aktivieren** verlangt die Bestätigung, solange sie fehlt. Schalten Sie ihn ein und speichern Sie: Ein Fenster zeigt den Anbieter und den Verarbeitungsort. **Bestätigen und aktivieren** speichert Ihre Änderungen und die Bestätigung gemeinsam. Schließen Sie das Fenster, wird nichts gespeichert. Das Fenster verweist außerdem auf die Seite [KI-Modelle](ai-models.md), falls Sie lieber ein eigenes Modell verwenden.
+- **Zurückziehen** entfernt die Bestätigung nach einer zweiten Rückfrage. KI-Funktionen, die das inklusive Modell verwenden, stoppen, bis ein Administrator erneut bestätigt. Plaid bleibt eingeschaltet und zeigt seinen Benutzern einen Hinweis.
+- Eine erneute Bestätigung wird verlangt, wenn sich der Anbieter, seine Verbindungsadresse, der angezeigte Name oder der Verarbeitungsort ändert. Ein neues Modell desselben Anbieters verlangt sie nicht. Ändert sich der Anbieter, während Ihr Fenster offen ist, zeigt das Fenster den neuen und bittet Sie, ihn zu prüfen.
+- Plaid und Agenten, die auf einem von Ihnen angelegten Modell laufen, brauchen keine Bestätigung. Auch über MCP verbundene externe Assistenten hängen nicht davon ab, weil MCP nichts an das inklusive Modell sendet.
+
+In einer On-Premise-Installation gibt es kein inklusives Modell, dieser Abschnitt gilt dort nicht.
 
 ### Integrierte Nutzung
 
@@ -43,7 +59,7 @@ Der Header der Anbieter-Karte zeigt drei Indikatoren auf einen Blick:
 
 - **Chat aktiviert / Chat deaktiviert** — der Hauptschalter für den Endbenutzer-Chat
 - **MCP aktiviert / MCP deaktiviert** — ob externe MCP-Clients eine Verbindung herstellen können
-- **Anbieter bereit / Anbieter unvollständig** — ob das Modell, auf das Plaid auflöst, tatsächlich nutzbar ist
+- **Anbieter bereit / Anbieter unvollständig**: ob das Modell, auf das Plaid auflöst, tatsächlich nutzbar ist. Solange nur die Bestätigung des inklusiven Modells fehlt, ist dieser Indikator ausgeblendet und die Statuszeile oben tritt an seine Stelle.
 
 Fehlt etwas, listet **Aktuelle Validierungsfehler des Anbieters** es über dem Formular auf — ein unvollständiges Modell oder gar kein Modell. Behoben wird das in der Regel auf der Seite [KI-Modelle](ai-models.md) und nicht hier.
 
@@ -53,8 +69,8 @@ Fehlt etwas, listet **Aktuelle Validierungsfehler des Anbieters** es über dem F
 
 Der Bereich **Funktionen** schaltet die optionalen KI-Oberflächen um:
 
-- **Chat aktivieren** — schaltet den In-App-Chat-Arbeitsbereich für Endbenutzer ein oder aus. Er lässt sich nicht einschalten, solange der Header **Anbieter unvollständig** meldet: Das Speichern wird mit den aufgeführten Gründen abgelehnt, und Sie beheben sie zuerst auf der Seite [KI-Modelle](ai-models.md). Dieselbe Prüfung läuft bei jedem Speichern, solange der Chat bereits aktiv ist — ein Modell, das später unvollständig wird, blockiert also auch unabhängige Änderungen auf dieser Seite, bis die Sache geklärt ist.
-- **MCP aktivieren** — schaltet die MCP-API für externe Clients ein oder aus.
+- **Chat aktivieren**: schaltet den In-App-Chat-Arbeitsbereich für Endbenutzer ein oder aus. Er lässt sich nicht einschalten, solange der Header **Anbieter unvollständig** meldet: Das Speichern wird mit den aufgeführten Gründen abgelehnt, und Sie beheben sie zuerst auf der Seite [KI-Modelle](ai-models.md). Eine fehlende Bestätigung des inklusiven Modells ist die Ausnahme: Dann öffnet das Speichern das Bestätigungsfenster. Dieselbe Prüfung läuft bei jedem Speichern, solange der Chat bereits aktiv ist: Ein Modell, das später unvollständig wird, blockiert also auch unabhängige Änderungen auf dieser Seite, bis die Sache geklärt ist.
+- **MCP aktivieren**: schaltet die MCP-API für externe Clients ein oder aus. Sie wartet nicht auf die Bestätigung des inklusiven Modells. MCP-Anfragen zählen trotzdem zum monatlichen Kontingent, wenn Plaid auf diesem Modell laufen würde.
 - **Websuche** — ermöglicht es dem Plaid-Chat-Assistenten, das Web zu durchsuchen. Dafür muss der Websuche-Schlüssel auf Instanzebene konfiguriert sein; ohne ihn ist der Schalter deaktiviert und ein Tooltip erklärt den Grund. Beim Aktivieren wird automatisch ein Konnektivitätstest ausgeführt und das Ergebnis gemeldet. Dieser Schalter gilt **nur für den Chat-Assistenten** — KI-Agenten haben ihre eigene, unabhängige Websuche-Einstellung auf der [Registerkarte Einstellungen](agents-workspace.md) jedes Agenten, die auf derselben Konfiguration auf Instanzebene beruht.
 
 ---
