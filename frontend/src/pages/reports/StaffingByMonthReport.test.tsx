@@ -55,11 +55,13 @@ vi.mock('../../components/reports/ChartCard', () => ({
     return null;
   }),
 }));
-const grid = vi.hoisted(() => ({ columns: [] as any[], pinned: [] as any[] }));
+const grid = vi.hoisted(() => ({ columns: [] as any[], pinned: [] as any[], props: {} as Record<string, any> }));
 vi.mock('../../components/reports/ReportGrid', () => ({
-  default: ({ rowData, columnDefs, pinnedBottomRowData }: { rowData?: unknown[]; columnDefs?: any[]; pinnedBottomRowData?: any[] }) => {
+  default: (props: { rowData?: unknown[]; columnDefs?: any[]; pinnedBottomRowData?: any[] }) => {
+    const { rowData, columnDefs, pinnedBottomRowData } = props;
     grid.columns = columnDefs ?? [];
     grid.pinned = pinnedBottomRowData ?? [];
+    grid.props = props;
     return <pre data-testid="grid">{JSON.stringify(rowData ?? [])}</pre>;
   },
 }));
@@ -162,6 +164,7 @@ beforeEach(() => {
   chart.options = null;
   grid.columns = [];
   grid.pinned = [];
+  grid.props = {};
   get.mockReset();
   get.mockImplementation(async (url: string, config?: { params?: Record<string, string> }) => {
     if (url.endsWith('/summary/filter-values')) return { data: fakeFilterValues(serverRows, String(config?.params?.fields ?? '').split(',')) };
@@ -194,11 +197,17 @@ describe('Staffing by month', () => {
     ]);
     expect(grid.columns[1].valueFormatter({ value: 1.5 })).toBe('1.50');
     expect(grid.columns[1].valueFormatter({ value: null })).toBe('');
-    // Fifteen columns within a 1440 px screen (less the 220 px menu and the page and card padding):
-    // compact values, and the group takes the rest with its full name on hover.
-    expect(grid.columns[0]).toMatchObject({ flex: 1, minWidth: 200, tooltipField: 'group' });
-    const fixed = grid.columns.slice(1).reduce((sum, column) => sum + column.width, 0);
-    expect(fixed + grid.columns[0].minWidth).toBeLessThanOrEqual(1100);
+    // The group takes the rest with its full name on hover; the fourteen value columns have no fixed
+    // width: the grid fits them to their header and values, right-aligned.
+    expect(grid.columns[0]).toMatchObject({ flex: 1, minWidth: 180, tooltipField: 'group' });
+    const values = grid.columns.slice(1);
+    expect(values.map((column) => column.colId)).toEqual(['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12', 'average', 'peak']);
+    for (const column of values) {
+      expect(column.width).toBeUndefined();
+      expect(column.flex).toBeUndefined();
+      expect(column.type).toBe('rightAligned');
+    }
+    expect(grid.props.autoSizeStrategy).toEqual({ type: 'fitCellContents', colIds: values.map((column) => column.colId) });
     // The total: 2.75 FTE each month from January to June, 4.75 from July.
     expect(grid.pinned).toHaveLength(1);
     expect(grid.pinned[0]).toMatchObject({ group: 'reports.columns.total', m1: 2.75, m7: 4.75, peak: 4.75 });
@@ -206,6 +215,28 @@ describe('Staffing by month', () => {
     expect(chart.options.title.text).toContain('reports.staffing.chartTitle');
     expect(chart.options.title.text).toContain('"group":"reports.staffing.groupsInSentence.costCenter"');
     expect(chart.options.axes[1].title.text).toBe('reports.measure.fte');
+  });
+
+  it('fits the value columns again, and only them, when the rows, the total or the headers change', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout'] });
+    try {
+      renderReport('/report');
+      await vi.waitFor(() => expect(grid.props.onRowDataUpdated).toBeTypeOf('function'));
+      for (const handler of ['onRowDataUpdated', 'onPinnedRowDataChanged', 'onNewColumnsLoaded']) {
+        const autoSizeColumns = vi.fn();
+        grid.props[handler]({ api: { isDestroyed: () => false, autoSizeColumns } });
+        expect(autoSizeColumns).not.toHaveBeenCalled();
+        vi.runOnlyPendingTimers();
+        expect(autoSizeColumns).toHaveBeenCalledWith(['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12', 'average', 'peak']);
+      }
+      // A grid gone in the meantime is left alone.
+      const autoSizeColumns = vi.fn();
+      grid.props.onRowDataUpdated({ api: { isDestroyed: () => true, autoSizeColumns } });
+      vi.runOnlyPendingTimers();
+      expect(autoSizeColumns).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('switches the grouping and keeps it in the address', async () => {

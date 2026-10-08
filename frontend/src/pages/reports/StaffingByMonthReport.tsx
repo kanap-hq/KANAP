@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Box, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
-import type { ColDef } from 'ag-grid-community';
+import type { ColDef, GridApi } from 'ag-grid-community';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import ReportGrid from '../../components/reports/ReportGrid';
@@ -28,9 +28,19 @@ const AXIS_PREFIX = 'axis:';
 
 type GroupKind = StaffingGroup['kind'];
 const GROUP_KINDS: readonly GroupKind[] = ['costCenter', 'item', 'supplier', 'axis'];
-/** Widths of the value columns: a month or the peak, and the average (a longer header). */
-const VALUE_COLUMN_WIDTH = 62;
-const AVERAGE_COLUMN_WIDTH = 78;
+const monthField = (month: number) => `m${month}`;
+/** The fourteen value columns (twelve months, average, peak): each one as wide as its header and values. */
+export const VALUE_COLUMN_IDS: readonly string[] = [...MONTHS.map(monthField), 'average', 'peak'];
+const AUTO_SIZE_STRATEGY = { type: 'fitCellContents' as const, colIds: [...VALUE_COLUMN_IDS] };
+/**
+ * Fits the value columns again once the grid has drawn new rows, a new total or new headers (grouping,
+ * year, column, scope). Deferred like AG Grid's own first fit, which measures the rendered cells.
+ */
+function fitValueColumns(api: GridApi) {
+  setTimeout(() => {
+    if (!api.isDestroyed()) api.autoSizeColumns([...VALUE_COLUMN_IDS]);
+  });
+}
 /** The grouping in a downloaded file's name. */
 const GROUP_FILE_NAME: Record<GroupKind, string> = { costCenter: 'cost-center', item: 'item', supplier: 'supplier', axis: 'dimension' };
 
@@ -119,7 +129,6 @@ export default function StaffingByMonthReport() {
     return MONTHS.map((month) => format.format(new Date(year, month - 1, 1)));
   }, [locale, year]);
 
-  const monthField = (month: number) => `m${month}`;
   const tableRows = useMemo(() => staffing.rows.map((row) => ({
     group: row.label,
     ...Object.fromEntries(MONTHS.map((month, i) => [monthField(month), row.months[i]])),
@@ -133,22 +142,22 @@ export default function StaffingByMonthReport() {
     peak: staffing.total.peak,
   }), [staffing.total, t]);
 
-  // Fifteen columns fit a 1440 px screen on the dense grid (10 px cell padding): the values are
-  // compact (`42.00` in 13 px), the group takes what is left and shows its full name on hover.
+  // Fifteen columns on the dense grid (10 px cell padding): each value column is as wide as its content,
+  // compact for `42.00`, wider for `1,000.00`; the group takes what is left and shows its full name on hover.
   const columns = useMemo<ColDef[]>(() => {
-    const value = (field: string, headerName: string, width: number): ColDef => ({
+    const value = (field: string, headerName: string): ColDef => ({
       field,
+      colId: field,
       headerName,
       headerTooltip: headerName,
-      width,
       type: 'rightAligned',
       valueFormatter: (p) => fte(p.value),
     });
     return [
-      { field: 'group', headerName: groupHeader, flex: 1, minWidth: 200, tooltipField: 'group' },
-      ...MONTHS.map((month, i) => value(monthField(month), monthNames[i], VALUE_COLUMN_WIDTH)),
-      value('average', t('reports.staffing.average'), AVERAGE_COLUMN_WIDTH),
-      value('peak', t('reports.staffing.peak'), VALUE_COLUMN_WIDTH),
+      { field: 'group', headerName: groupHeader, flex: 1, minWidth: 180, tooltipField: 'group' },
+      ...MONTHS.map((month, i) => value(monthField(month), monthNames[i])),
+      value('average', t('reports.staffing.average')),
+      value('peak', t('reports.staffing.peak')),
     ];
   }, [groupHeader, monthNames, fte, t]);
 
@@ -273,6 +282,10 @@ export default function StaffingByMonthReport() {
             defaultColDef={{ sortable: true, resizable: true }}
             onGridReady={(e) => { gridApiRef.current = e.api; }}
             pinnedBottomRowData={[totalRow]}
+            autoSizeStrategy={AUTO_SIZE_STRATEGY}
+            onRowDataUpdated={(e) => fitValueColumns(e.api)}
+            onPinnedRowDataChanged={(e) => fitValueColumns(e.api)}
+            onNewColumnsLoaded={(e) => fitValueColumns(e.api)}
           />
           {staffing.detached && (
             <ReportNoticeLine>{t('reports.measure.detachedSingle', { count: staffing.detached.items, fte: fte(staffing.detached.fte) })}</ReportNoticeLine>
