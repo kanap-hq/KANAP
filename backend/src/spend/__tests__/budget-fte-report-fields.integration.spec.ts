@@ -16,7 +16,8 @@ import { linesCalculation } from '../round-inputs.util';
 // - `minus` between two FTE fields (null when both lines are unknown, an
 //   unknown side as 0 against a known one) and its `part`s;
 // - `has_fte`: 'yes' when a line has a round with an FTE in any year and
-//   column, as a filter and as a group key;
+//   column, as a filter and as a group key, on the list's grid rows and in
+//   its filter values (the "FTE declared" column);
 // - `fte_detached_<slot><Suffix>`: the FTE of a round whose amount no longer
 //   follows its lines (method spread or manual), null for a computed round,
 //   a round without FTE (lines removed), a line without rounds;
@@ -248,10 +249,34 @@ async function checkScope(runner: QueryRunner, scope: SummaryScopeConfig, tenant
   assert.equal(blank.total.count, 2, `${name}: the others are blank`);
   console.log(`ok - ${name}: has_fte as a group and a filter`);
 
+  // The list's "FTE declared" column: `has_fte` on the grid rows, in the filter values, as a filter.
+  const listQuery = { includeDisabled: 'true', limit: '50', shape: 'grid' };
+  const gridRows = (await engine.budgetListSummary(scope, deps, listQuery, m)).items;
+  const declared = new Map(gridRows.map((row) => [row.id, row.has_fte]));
+  assert.deepEqual(
+    Object.fromEntries(LINES.map((line) => [line.label, declared.get(ids[line.label])])),
+    { computed: 'yes', spread: 'yes', manual: 'yes', removed: null, 'no rounds': null, 'old staff': 'yes' },
+    `${name}: the grid rows say which lines declare FTE, any year`,
+  );
+  const gridFiltered = await engine.budgetListSummary(scope, deps, { ...listQuery, filters: JSON.stringify({ has_fte: { filterType: 'set', values: ['yes'] } }) }, m);
+  assert.deepEqual(new Set(gridFiltered.items.map((row) => row.id)), new Set([ids.computed, ids.spread, ids.manual, ids['old staff']]), `${name}: the list filter keeps the lines with an FTE`);
+  const gridBlank = await engine.budgetListSummary(scope, deps, { ...listQuery, filters: JSON.stringify({ has_fte: { filterType: 'set', values: [null] } }) }, m);
+  assert.deepEqual(new Set(gridBlank.items.map((row) => row.id)), new Set([ids.removed, ids['no rounds']]), `${name}: the blank value keeps the others`);
+  assert.deepEqual(await engine.budgetListFilterValues(scope, deps, { includeDisabled: 'true', fields: 'has_fte' }, m), { has_fte: ['yes', null] }, `${name}: the filter values`);
+  assert.deepEqual(
+    await engine.budgetListFilterValues(scope, deps, { includeDisabled: 'true', fields: 'has_fte', filters: JSON.stringify({ has_fte: { filterType: 'set', values: ['yes'] } }) }, m),
+    { has_fte: ['yes', null] },
+    `${name}: the column's own filter does not narrow its values`,
+  );
+  console.log(`ok - ${name}: has_fte on the list's grid rows and filter values`);
+
   // The other tenant's session sees its own line only.
   await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [otherTenantId]);
   const other = await aggregate({ groupBy: ['has_fte'], measures: [sum('detached', 'fte_detached_yBudget')] });
   assert.deepEqual(other.groups.map((group) => [group.keys[0], group.count, group.values.detached]), [['yes', 1, 9]], `${name}: the other tenant reads its own line only`);
+  const otherRows = (await engine.budgetListSummary(scope, deps, { includeDisabled: 'true', limit: '50', shape: 'grid' }, m)).items;
+  assert.deepEqual(otherRows.map((row) => [row.id, row.has_fte]), [[otherLine, 'yes']], `${name}: the other tenant's list holds its own line only`);
+  assert.deepEqual(await engine.budgetListFilterValues(scope, deps, { includeDisabled: 'true', fields: 'has_fte' }, m), { has_fte: ['yes'] }, `${name}: the other tenant's filter values`);
   await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
   console.log(`ok - ${name}: another tenant's line is never counted`);
 }
