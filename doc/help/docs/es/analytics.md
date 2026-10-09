@@ -156,7 +156,7 @@ Active **Obligatoria** cuando cada línea de presupuesto deba estar clasificada 
 
 - **Una línea nueva necesita un valor en la dimensión.** Esto vale para todas las formas de crear una línea: las pantallas OPEX y CAPEX, un archivo de presupuesto, Plaid y la API. Sin valor, la línea no se crea, con el mensaje "The Nature dimension is required. Choose a value."
 - **Una línea que tiene un valor no puede perderlo.** Puede elegir otro valor. El campo no se puede vaciar.
-- **Una línea creada antes de activar el ajuste sigue funcionando.** Si no tiene valor en la dimensión, sigue siendo editable y puede guardar otros cambios en ella. Su campo está marcado como obligatorio.
+- **Una línea creada antes de activar el ajuste sigue funcionando.** Si no tiene valor en la dimensión, sigue siendo editable y puede guardar otros cambios en ella. Su campo está marcado como obligatorio. En las pantallas OPEX y CAPEX, al salir de una línea así después de modificarla se le pide primero que elija un valor, con **Quedarse** y **Salir de todos modos**. Abrirla sin cambiar nada nunca pregunta.
 
 El ajuste solo se comprueba mientras la dimensión está activada. Una dimensión desactivada conserva su ajuste, y una línea bajo el interruptor indica "No se comprueba mientras la dimensión esté desactivada." Una dimensión usada para un solo tipo de línea solo se comprueba en ese tipo: una dimensión **Solo OPEX** y obligatoria no exige nada a las líneas CAPEX.
 

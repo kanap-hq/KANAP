@@ -156,7 +156,7 @@ Activez **Obligatoire** lorsque chaque ligne budgétaire doit être classée sur
 
 - **Une nouvelle ligne doit avoir une valeur sur la dimension.** Cela vaut pour toutes les façons de créer une ligne : les écrans OPEX et CAPEX, un fichier budgétaire, Plaid et l'API. Sans valeur, la ligne n'est pas créée, avec le message « The Nature dimension is required. Choose a value. »
 - **Une ligne qui porte une valeur ne peut pas la perdre.** Vous pouvez choisir une autre valeur. Le champ ne peut pas être vidé.
-- **Une ligne créée avant l'activation du réglage continue de fonctionner.** Si elle n'a pas de valeur sur la dimension, elle reste modifiable et vous pouvez y enregistrer d'autres modifications. Son champ est marqué comme obligatoire.
+- **Une ligne créée avant l'activation du réglage continue de fonctionner.** Si elle n'a pas de valeur sur la dimension, elle reste modifiable et vous pouvez y enregistrer d'autres modifications. Son champ est marqué comme obligatoire. Sur les écrans OPEX et CAPEX, quitter une telle ligne après l'avoir modifiée vous demande d'abord de choisir une valeur, avec **Rester** et **Quitter quand même**. L'ouvrir sans rien modifier ne demande jamais rien.
 
 Le réglage n'est contrôlé que tant que la dimension est activée. Une dimension désactivée garde son réglage, et une ligne sous l'interrupteur indique « Pas de contrôle tant que la dimension est désactivée. » Une dimension utilisée pour un seul type de ligne n'est contrôlée que sur ce type : une dimension **OPEX uniquement** et obligatoire n'impose rien aux lignes CAPEX.
 

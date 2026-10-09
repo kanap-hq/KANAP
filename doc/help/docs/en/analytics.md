@@ -156,7 +156,7 @@ Turn on **Required** when every budget line must be classified on a dimension. K
 
 - **A new line needs a value on the dimension.** This applies to every way of creating a line: the OPEX and CAPEX screens, a budget file, Plaid and the API. Without a value, the line is not created, with the message "The Nature dimension is required. Choose a value."
 - **A line that holds a value cannot lose it.** You can pick another value. The field cannot be cleared.
-- **A line created before you turned the setting on keeps working.** If it has no value on the dimension, it stays editable and you can save other changes on it. Its field is marked as required.
+- **A line created before you turned the setting on keeps working.** If it has no value on the dimension, it stays editable and you can save other changes on it. Its field is marked as required. On the OPEX and CAPEX screens, leaving such a line after changing it asks you to choose a value first, with **Stay** and **Leave anyway**. Opening it without changing anything never asks.
 
 The setting is checked only while the dimension is enabled. A disabled dimension keeps its setting, and one line under the switch says "Not checked while the dimension is disabled." A dimension used for one kind of line only is checked on that kind only: a dimension set to **OPEX only** and required asks nothing of CAPEX lines.
 

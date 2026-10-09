@@ -156,7 +156,7 @@ Schalten Sie **Erforderlich** ein, wenn jede Budgetzeile in einer Dimension klas
 
 - **Eine neue Zeile braucht einen Wert in der Dimension.** Das gilt für jeden Weg, eine Zeile anzulegen: die OPEX- und CAPEX-Bildschirme, eine Budgetdatei, Plaid und die API. Ohne Wert wird die Zeile nicht angelegt, mit der Meldung „The Nature dimension is required. Choose a value.“
 - **Eine Zeile mit einem Wert kann ihn nicht verlieren.** Sie können einen anderen Wert wählen. Das Feld kann nicht geleert werden.
-- **Eine Zeile, die vor dem Einschalten angelegt wurde, funktioniert weiter.** Hat sie keinen Wert in der Dimension, bleibt sie bearbeitbar, und Sie können andere Änderungen an ihr speichern. Ihr Feld ist als erforderlich markiert.
+- **Eine Zeile, die vor dem Einschalten angelegt wurde, funktioniert weiter.** Hat sie keinen Wert in der Dimension, bleibt sie bearbeitbar, und Sie können andere Änderungen an ihr speichern. Ihr Feld ist als erforderlich markiert. In den OPEX- und CAPEX-Bildschirmen fragt KANAP beim Verlassen einer solchen Zeile nach einer Änderung zuerst nach einem Wert, mit **Bleiben** und **Trotzdem verlassen**. Wird sie nur geöffnet, ohne etwas zu ändern, fragt KANAP nie.
 
 Die Einstellung wird nur geprüft, solange die Dimension aktiviert ist. Eine deaktivierte Dimension behält ihre Einstellung, und eine Zeile unter dem Schalter sagt „Wird nicht geprüft, solange die Dimension deaktiviert ist.“ Eine Dimension, die nur für eine Zeilenart verwendet wird, wird nur bei dieser Art geprüft: Eine erforderliche Dimension mit **Nur OPEX** verlangt nichts von CAPEX-Zeilen.
 
