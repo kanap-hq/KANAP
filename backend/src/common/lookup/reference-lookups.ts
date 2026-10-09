@@ -61,10 +61,33 @@ export const ACCOUNT_LOOKUP: LookupSpec = {
 const USER_FULL_NAME = "btrim(coalesce(t.first_name, '') || ' ' || coalesce(t.last_name, ''))";
 const USER_NAMELESS = `${USER_FULL_NAME} = ''`;
 
+/** A person's name as compared for sameness: first and last name each trimmed, case-insensitive. */
+function userNameKey(alias: string): string {
+  return `lower(btrim(coalesce(btrim(${alias}.first_name), '') || ' ' || coalesce(btrim(${alias}.last_name), '')))`;
+}
+
+/**
+ * True when another account of the same tenant bears the same name as the
+ * `users` row aliased `alias` (one person with a user and an admin account,
+ * or accounts on two domains). Any status counts: a stored assignee can be a
+ * disabled account, and a label must read the same everywhere. A nameless row
+ * is never "shared" (it already shows its email). Used by the people lookup
+ * below and by the knowledge contributor options (`knowledge.service.ts`).
+ */
+export function userNameSharedSql(alias: string): string {
+  const key = userNameKey(alias);
+  return `(${key} <> '' AND EXISTS (SELECT 1 FROM users same_name WHERE same_name.tenant_id = ${alias}.tenant_id AND same_name.id <> ${alias}.id AND ${userNameKey('same_name')} = ${key}))`;
+}
+
+/** The email shown, and searched, in place of the name: a person without a name, or whose name another account shares. */
+const USER_SHOWN_EMAIL = `CASE WHEN ${USER_NAMELESS} OR ${userNameSharedSql('t')} THEN t.email END`;
+
 /**
  * People: names only, searched on "first last" and "last first", sorted by last
  * name (the pickers' order). The email is returned only for a person without
- * a name, the one case a picker shows it.
+ * a name, or whose name another account shares: the cases a picker shows it
+ * instead of the name. Only that email is searched, so a person with a unique
+ * name is not found by email.
  */
 export const USER_LOOKUP: LookupSpec = {
   table: 'users',
@@ -72,12 +95,12 @@ export const USER_LOOKUP: LookupSpec = {
     id: 't.id',
     first_name: 't.first_name',
     last_name: 't.last_name',
-    email: `CASE WHEN ${USER_NAMELESS} THEN t.email END`,
+    email: USER_SHOWN_EMAIL,
     status: 't.status',
   },
   label: USER_FULL_NAME,
   prefixes: ['t.last_name'],
-  search: ["btrim(coalesce(t.last_name, '') || ' ' || coalesce(t.first_name, ''))", `CASE WHEN ${USER_NAMELESS} THEN t.email END`],
+  search: ["btrim(coalesce(t.last_name, '') || ' ' || coalesce(t.first_name, ''))", USER_SHOWN_EMAIL],
   sort: [
     `coalesce(nullif(btrim(t.last_name), ''), nullif(btrim(t.first_name), ''), t.email) COLLATE ${ICU_COLLATION}`,
     `coalesce(t.first_name, '') COLLATE ${ICU_COLLATION}`,

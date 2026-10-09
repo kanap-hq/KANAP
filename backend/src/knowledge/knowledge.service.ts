@@ -75,6 +75,7 @@ import { DocumentTask } from './document-task.entity';
 import { DocumentType } from './document-type.entity';
 import { DocumentVersion } from './document-version.entity';
 import { Document } from './document.entity';
+import { userNameSharedSql } from '../common/lookup/reference-lookups';
 
 export type RelationEntityType =
   | 'applications'
@@ -3513,19 +3514,23 @@ export class KnowledgeService {
     label: string;
   }>> {
     const manager = this.getManager(opts);
+    // The label is the name, or the email when another account shares the name
+    // (same rule as the people lookup, `userNameSharedSql`) or when there is none.
     const rows = await manager.query(
-      `SELECT id,
-              email,
-              first_name,
-              last_name,
-              status,
-              COALESCE(NULLIF(trim(concat_ws(' ', first_name, last_name)), ''), email, id::text) AS label
-       FROM users
-       WHERE tenant_id = app_current_tenant()
-         AND coalesce(status, '') = 'enabled'
-       ORDER BY lower(coalesce(nullif(last_name, ''), email)) ASC,
-                lower(coalesce(nullif(first_name, ''), email)) ASC,
-                lower(email) ASC`,
+      `SELECT u.id,
+              u.email,
+              u.first_name,
+              u.last_name,
+              u.status,
+              CASE WHEN ${userNameSharedSql('u')} THEN u.email
+                   ELSE COALESCE(NULLIF(trim(concat_ws(' ', u.first_name, u.last_name)), ''), u.email, u.id::text)
+              END AS label
+       FROM users u
+       WHERE u.tenant_id = app_current_tenant()
+         AND coalesce(u.status, '') = 'enabled'
+       ORDER BY lower(coalesce(nullif(u.last_name, ''), u.email)) ASC,
+                lower(coalesce(nullif(u.first_name, ''), u.email)) ASC,
+                lower(u.email) ASC`,
     );
 
     return rows.map((row: any) => ({
