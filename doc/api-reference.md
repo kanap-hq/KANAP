@@ -23,7 +23,8 @@ JWT_REFRESH_TOKEN_TTL=4h      # Inactivity timeout / sliding window (default: 4h
 
 Rate limiting (default enabled):
 - `RATE_LIMIT_ENABLED=true` to keep app-level throttling on; set `false` for local testing.
-- `RATE_LIMIT_TRUST_PROXY=true` when behind a proxy/Cloudflare so limits use the real client IP.
+- `RATE_LIMIT_TRUST_PROXY`: the number of reverse proxies in front of the API (`false`, `true` for one, or 1 to 3). The client address, which the limits and the audit log use, is then read from `X-Forwarded-For`. Unset or invalid: one proxy in single-tenant mode, none in multi-tenant mode. The start-up log has a `[RATE-LIMIT]` line that says which applies.
+- Limits count per client address: `POST /auth/login` 5 a minute; Microsoft sign-in (`GET /auth/entra/callback`, `POST /auth/entra/session`) 60 a minute.
 - Defaults: `POST /auth/login` (5/60s), `POST /auth/password-reset/request` (3/15m), `POST /auth/password-reset/complete` (5/10m), `POST /public/start-trial` (5/10m), `POST /public/contact` (5/10m).
 
 ### Endpoints
@@ -1494,6 +1495,16 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
     - `to` is exclusive (`<`) when a full datetime is provided; for `YYYY-MM-DD`, API treats it as end-of-day inclusive by shifting to the next day internally.
   - Whitelisted sort fields: `created_at`, `table_name`, `action`. Default: `created_at:DESC`.
   - `source` identifies origin (`user`, `system`, `webhook`); `source_ref` stores upstream event correlation (for example Stripe event id).
+  - The grid's date filter (`filters.created_at`, a date model) applies on the server, by day, for the list and the export. Days must be real calendar dates.
+  - Answers 400 for an invalid `from`, `to` or grid date, and for a `user_id` (parameter or grid filter) that is not a user id (UUID).
+  - Besides data changes, the log holds sign-in and session events (`table_name = auth`: `login`, `login_failed`, `logout`, `refresh_denied`, `password_reset_requested`, `password_reset_completed`, `sso_login`, `sso_login_failed`; the reason in `source_ref`; `after_json = { ip, user_agent }`) and exports (`table_name = export`, `action = export`; `after_json = { resource, path, ip, user_agent }`). Sign-in and session events are deleted after 365 days.
+- GET `/audit-logs/export?sort=...&q=...&filters=<agGridFilterModel>&from=...&to=...&table_name=...&action=...&source=...&user_id=...`
+  - Permission: `users:admin`. Same filters, search and sort as the list; `page` and `limit` do not apply. Answers 400 on the same invalid dates and user ids as the list, and on a request without a tenant (platform host).
+  - Returns the matching entries of the current tenant as a CSV file (`Content-Type: text/csv; charset=utf-8`, `Content-Disposition` with `audit-log-YYYY-MM-DD.csv`). The file is read in batches of 1,000 rows and streamed, so memory stays bounded. If an error occurs after the first part was sent, the server closes the connection and the client receives an incomplete file.
+  - At most 100,000 rows, in the list's order (newest first by default). When more rows match, the response carries `X-Export-Truncated: 100000` (the limit) and the file holds the first rows only.
+  - One fixed format, whatever the user's language: RFC 4180, comma separator, UTF-8 without a byte order mark, English headers `date,action,table,record_id,user,source,source_ref,ip,user_agent,before,after`. `date` is ISO 8601 in UTC; `action`, `table` and `source_ref` are the stored codes; `user` is the person's name (their address when they have no name), else `Unknown account`, `Webhook` or `System`; `ip` and `user_agent` are filled for sign-in, session and export rows only; `before` and `after` are compact JSON. Every cell is guarded against spreadsheet formulas.
+  - `before` and `after` hold the complete values stored in the log, personal data included, the same as `GET /audit-logs/:id` and at the same permission. Password hashes and MFA secrets are never written to the log.
+  - Recorded in the audit log like every `/export` route. Rate-limited as the other document exports (429 beyond 5 requests a minute per client address).
 - GET `/audit-logs/filter-values?fields=table_name,action,source&q=...&filters=<agGridFilterModel>`
   - Returns distinct filter values for checkbox-set column filters, scoped by the current query state.
   - Response shape:

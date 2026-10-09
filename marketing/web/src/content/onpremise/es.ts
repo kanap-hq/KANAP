@@ -33,7 +33,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Listo para cumplimiento',
-        body: 'El row-level security aísla los tenants. Hash de contraseñas con Argon2. HTTPS con certificados que usted controla. Su VPC, sus copias de seguridad, su SOC.',
+        body: 'El row-level security aísla los tenants. Hash de contraseñas con Argon2. Un registro de auditoría de accesos y exportaciones que su recolector de logs lee como CSV. HTTPS con certificados que usted controla. Su VPC, sus copias de seguridad, su SOC.',
       },
       {
         title: 'Audite el código',
@@ -127,7 +127,7 @@ const content: OnPremContent = {
       },
       {
         title: 'La observabilidad que ya tiene',
-        body: 'Los contenedores escriben sus logs en stdout y exponen un endpoint de salud. Apunte su stack existente a ellos (Prometheus, Loki, Datadog, lo que ya ejecute).',
+        body: 'Los contenedores escriben sus logs en stdout (limitados a unos 50 MB cada uno) y muestran su salud en docker ps. La API expone un endpoint de salud. Apunte su stack existente a ellos (Prometheus, Loki, Datadog, lo que ya ejecute).',
       },
       {
         title: 'Branding incluido',

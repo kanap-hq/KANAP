@@ -167,4 +167,6 @@ If you find a security issue, please follow [SECURITY.md](SECURITY.md).
 
 The public holiday rules behind the standard working-day calendars come from the [date-holidays](https://github.com/commenthol/date-holidays) package: its code is under the ISC license and its holiday data under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/), with the attributions listed in the package's LICENSE file. KANAP ships that data unchanged and works offline with it.
 
+The licenses of KANAP's production dependencies are checked on every merge. Each published version carries a component inventory (CycloneDX) and a third-party notices file; see [doc/sbom.md](doc/sbom.md).
+
 Copyright 2025-2026, KANAP EURL.

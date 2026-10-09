@@ -1,6 +1,6 @@
 # Administración
 
-La sección de Administración proporciona acceso a la gestión de usuarios, configuración de roles, facturación, ajustes de autenticación, controles de personalización y el visor de registro de auditoría. Estas páginas normalmente están restringidas a los administradores.
+La sección de Administración proporciona acceso a la gestión de usuarios, configuración de roles, facturación, ajustes de autenticación, controles de personalización y el registro de auditoría, que también registra los accesos y las exportaciones. Estas páginas normalmente están restringidas a los administradores.
 
 ## Dónde encontrarla
 
@@ -30,7 +30,7 @@ La página principal de Administración proporciona acceso rápido a las funcion
 | **Cuentas** | Gestionar códigos contables | `accounts:reader` |
 | **Usuarios y acceso** | Gestionar usuarios y roles | `users:reader` |
 | **Roles** | Definir permisos de roles | `users:reader` |
-| **Registro de auditoría** | Consultar todo el historial de cambios | `users:admin` |
+| **Registro de auditoría** | Consultar el historial de cambios, los accesos y las exportaciones | `users:admin` |
 | **Facturación** | Plan y facturas | Administrador de facturación |
 
 Autenticación, Personalización y Datos de ejemplo están disponibles desde la navegación lateral pero no aparecen en la página principal del centro de Administración.
@@ -39,13 +39,38 @@ Autenticación, Personalización y Datos de ejemplo están disponibles desde la 
 
 ## Registro de auditoría
 
-La página de Registro de auditoría muestra el historial de cambios del espacio de trabajo para las actualizaciones de datos en toda la plataforma.
+La página de Registro de auditoría conserva el historial de los cambios de datos y de los eventos de seguridad de su espacio de trabajo. Le permite ver quién cambió qué y cuándo, quién inició sesión y quién exportó datos.
 
 ### Acceso
 
 - Ruta: `/admin/audit-logs`
 - Permiso requerido: `users:admin`
-- Esta página es de solo lectura (no hay acciones de crear/editar/eliminar).
+- El registro es de solo lectura. Puede consultarlo, filtrarlo y exportarlo, pero no editar ni eliminar entradas.
+
+### Qué se registra
+
+**Cambios de datos**: creación, actualización, eliminación y desactivación de registros, con el usuario, la hora y los valores antes y después.
+
+**Cambios de roles**: creación, cambio de nombre y eliminación de un rol, y cada cambio de sus permisos.
+
+**Eventos de acceso y de sesión** (tabla **Acceso y sesiones**):
+
+| Evento | Se registra cuando |
+|--------|--------------------|
+| **Inicio de sesión** | Alguien inicia sesión |
+| **Inicio de sesión fallido** | Se rechaza un inicio de sesión. El **motivo** indica la causa, por ejemplo contraseña incorrecta, cuenta deshabilitada o ninguna cuenta con esta dirección |
+| **Cierre de sesión** | Alguien cierra sesión |
+| **Renovación de sesión rechazada** | No se pudo renovar la sesión, por ejemplo porque caducó |
+| **Restablecimiento de contraseña solicitado** / **Restablecimiento de contraseña completado** | Alguien pide un enlace de restablecimiento, y cuando el restablecimiento termina |
+| **Inicio de sesión con Microsoft** / **Inicio de sesión con Microsoft fallido** | Un inicio de sesión mediante Microsoft Entra ID se completa o falla |
+
+**Exportaciones** (tabla **Exportación**): exportaciones CSV, documentos e informes que genera el servidor. La fila indica qué se exportó y quién lo hizo. La exportación del propio registro de auditoría también se registra.
+
+Las filas de acceso, de sesión y de exportación guardan además la **dirección del equipo** desde el que llegó la solicitud y el **navegador** utilizado. Abra la fila para leerlos en el panel **Después**. Detrás de un proxy inverso, la dirección es la de la persona, siempre que el proxy la transmita. Instalaciones on-premise: consulte la guía de instalación. Las contraseñas, los enlaces de acceso y los tokens nunca se escriben en el registro. Cuando alguien intenta iniciar sesión con una dirección que no tiene cuenta, la fila muestra **Cuenta desconocida** y no conserva la dirección escrita.
+
+### Cuánto tiempo se conservan las entradas
+
+Los eventos de acceso y de sesión se eliminan después de **365 días**. Las demás entradas (cambios de datos, cambios de roles y exportaciones) no se ven afectadas por esta regla.
 
 ### Qué puede hacer
 
@@ -56,24 +81,25 @@ La página de Registro de auditoría muestra el historial de cambios del espacio
   - Acción
   - Origen (`user`, `system`, `webhook`)
 - Abrir cualquier fila para ver los detalles completos:
-  - Chips de metadatos (fecha, tabla, acción, origen, referencia de origen, espacio de trabajo, ID de registro, usuario)
+  - Chips de metadatos (fecha, tabla, acción, origen, motivo o referencia de origen, espacio de trabajo, ID de registro, usuario)
   - Resumen de campos modificados
   - Comparación lado a lado de los datos JSON **Antes** y **Después**
+- Exportar el registro a CSV (véase más abajo)
 
 ### Columnas
 
 **Columnas predeterminadas**:
-- **Fecha**: Cuándo ocurrió el cambio
-- **Tabla**: Qué tabla de la base de datos fue afectada
-- **Acción**: El tipo de cambio (crear, actualizar, eliminar, desactivar)
+- **Fecha**: Cuándo ocurrió el cambio o el evento
+- **Tabla**: Qué tabla fue afectada, o **Acceso y sesiones**, o el recurso exportado en los eventos de seguridad
+- **Acción**: El tipo de cambio o de evento (crear, actualizar, eliminar, desactivar, inicio de sesión, exportación, etc.)
 - **Origen**: Quién o qué desencadenó el cambio (usuario, sistema, webhook)
-- **Usuario**: Correo del usuario que realizó el cambio (o "Sistema"/"Webhook" para orígenes no humanos)
+- **Usuario**: Nombre del usuario que realizó el cambio, o su correo si no tiene nombre. Muestra "Sistema" o "Webhook" para orígenes no humanos, y "Cuenta desconocida" para un intento de acceso con una dirección desconocida.
 
 **Columnas adicionales** (mediante el selector de columnas):
 - **ID de registro**: Identificador del registro afectado
 - **ID de usuario**: UUID del usuario que actuó
 - **Nombre de usuario**: Nombre visible del usuario que actuó
-- **Ref. de origen**: Referencia externa para cambios originados por webhook
+- **Ref. de origen**: Referencia externa para cambios originados por webhook, o motivo de un acceso rechazado
 - **ID de espacio de trabajo**: El espacio de trabajo al que pertenece esta entrada
 
 ### Paginación
@@ -81,13 +107,36 @@ La página de Registro de auditoría muestra el historial de cambios del espacio
 - La cuadrícula utiliza paginación explícita con **100 filas por página**.
 - Los filtros y la búsqueda se aplican a todo el conjunto de datos, no solo a la página actual.
 
+### Exportar a CSV
+
+Haga clic en **Exportar CSV** en la parte superior de la página para descargar el registro como archivo.
+
+- El archivo contiene las entradas que coinciden con los filtros, la búsqueda y el orden que se muestran en pantalla. Quite los filtros para exportar todo el registro.
+- Un archivo contiene como máximo **100 000 entradas**, las más recientes primero de forma predeterminada. Cuando el registro es mayor, KANAP le avisa de que el archivo termina ahí. Acote los filtros (por ejemplo, un intervalo de fechas) y vuelva a exportar para obtener el resto.
+- Solo puede iniciar unas pocas exportaciones por minuto. Si vuelve a hacer clic demasiado pronto, KANAP le pide que espere un minuto.
+- La exportación queda registrada en el registro, como cualquier otra exportación.
+
+El archivo tiene siempre el mismo formato, sea cual sea su idioma, para que una herramienta de recopilación de registros pueda leerlo sin configuración:
+
+- separado por comas, en UTF-8 sin marca de orden de bytes;
+- nombres de columna en inglés: `date`, `action`, `table`, `record_id`, `user`, `source`, `source_ref`, `ip`, `user_agent`, `before`, `after`;
+- códigos de acciones y tablas en inglés (por ejemplo `login_failed`), tal como se almacenan;
+- fechas en formato ISO 8601, en UTC (por ejemplo `2026-10-09T14:32:05.000Z`);
+- las columnas `before` y `after` como JSON compacto.
+
+Para abrir el archivo en Excel con otro separador de listas, como en una instalación en español o en francés, no haga doble clic sobre él. Use **Datos > Desde texto o CSV**, elija UTF-8 como origen del archivo y la coma como delimitador.
+
+### Quién puede ver qué
+
+Los valores **Antes** y **Después** contienen el registro completo tal como se guardó, incluidos datos personales como nombres, correos y números de teléfono. La pantalla de detalle y el archivo CSV muestran los mismos valores, y ambos requieren `users:admin`. Los hashes de contraseña y los secretos de la autenticación multifactor nunca se escriben en el registro. Trate un archivo exportado como el propio registro: guárdelo con el mismo cuidado.
+
 ### Comprender el origen y el actor
 
-- **Origen = user**: cambio iniciado por una acción de usuario autenticado.
+- **Origen = user**: cambio iniciado por una acción de usuario autenticado. Los eventos de acceso, de sesión y de exportación también usan este origen.
 - **Origen = webhook**: cambio iniciado por un webhook externo (por ejemplo, eventos de sincronización de facturación). Utilice **Ref. de origen** para correlacionar los IDs del evento de origen.
 - **Origen = system**: proceso interno de la plataforma sin un actor de usuario directo.
 
-Si una cuenta de usuario ya no es resoluble en el contexto actual, la columna de Usuario puede mostrar un UUID alternativo (`Unknown (xxxx...)`) en lugar de un correo electrónico.
+Si una cuenta de usuario ya no es resoluble en el contexto actual, la columna de Usuario puede mostrar un UUID alternativo (`Desconocido (xxxx...)`) en lugar de un nombre.
 
 ---
 
@@ -381,6 +430,8 @@ La página de Roles tiene un diseño de dos paneles:
 
 **Consejo**: Comience duplicando un rol integrado que se aproxime a lo que necesita, y luego ajuste los permisos.
 
+Cada cambio en un rol (creación, cambio de nombre, permisos, eliminación) queda registrado en el [Registro de auditoría](#registro-de-auditoria), con la persona que lo hizo y los valores antes y después.
+
 ---
 
 ## Facturación
@@ -484,6 +535,15 @@ La sincronización necesita una aprobación única por parte de un administrador
 | **Sincronizar ahora** | Ejecuta la sincronización de inmediato en lugar de esperar a esta noche. Informa **Sincronización completada: N cuentas actualizadas, N desactivadas.** |
 
 Los pasos de configuración del registro de aplicación de Entra están en [SSO con Microsoft Entra](on-premise/sso-entra.md).
+
+### Límites de inicio de sesión
+
+KANAP limita las solicitudes de inicio de sesión repetidas desde la misma dirección de equipo:
+
+- **Inicio de sesión con contraseña**: 5 intentos por minuto.
+- **Inicio de sesión con Microsoft**: 60 solicitudes por minuto. El límite es más alto porque el personal de una misma organización suele acceder a KANAP desde la misma dirección de salida.
+
+Cuando se alcanza el límite, la persona espera un minuto y vuelve a intentarlo. Detrás de un proxy inverso, el recuento sigue la dirección real de cada persona, siempre que el proxy la transmita. Los intentos correctos, fallidos y rechazados aparecen en el [Registro de auditoría](#registro-de-auditoria).
 
 ---
 

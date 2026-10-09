@@ -33,7 +33,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Prêt pour la conformité',
-        body: 'Row-level security isole les tenants. Hash de mot de passe Argon2. HTTPS avec des certificats que vous maîtrisez. Votre VPC, vos sauvegardes, votre SOC.',
+        body: 'Row-level security isole les tenants. Hash de mot de passe Argon2. Un journal d\'audit des connexions et des exports que votre collecteur de journaux lit en CSV. HTTPS avec des certificats que vous maîtrisez. Votre VPC, vos sauvegardes, votre SOC.',
       },
       {
         title: 'Audit du code source',
@@ -127,7 +127,7 @@ const content: OnPremContent = {
       },
       {
         title: 'L\'observabilité que vous avez déjà',
-        body: 'Les conteneurs écrivent leurs logs sur stdout et exposent un endpoint de santé. Pointez votre stack existant dessus (Prometheus, Loki, Datadog, ce que vous avez déjà).',
+        body: 'Les conteneurs écrivent leurs logs sur stdout (plafonnés à environ 50 Mo chacun) et affichent leur santé dans docker ps. L\'API expose un endpoint de santé. Pointez votre stack existant dessus (Prometheus, Loki, Datadog, ce que vous avez déjà).',
       },
       {
         title: 'Branding inclus',

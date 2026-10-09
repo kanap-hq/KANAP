@@ -4,7 +4,7 @@ const content: SecurityContent = {
   meta: {
     title: 'Sécurité',
     description:
-      "Comment KANAP protège vos données : row-level security, mots de passe hachés, secrets chiffrés, RBAC, journal d'audit, gouvernance des agents, SSO et transparence open source. Auto-hébergé ou cloud.",
+      "Comment KANAP protège vos données : row-level security, mots de passe hachés, secrets chiffrés, RBAC, journal d'audit de sécurité, gouvernance des agents, SSO, une chaîne de fabrication transparente et l'open source. Auto-hébergé ou cloud.",
   },
   header: {
     eyebrow: 'Sécurité',
@@ -66,6 +66,8 @@ const content: SecurityContent = {
       'Rôle admin workspace distinct des admins de module',
       'SSO via Microsoft Entra ID (OIDC) en cloud et auto-hébergé',
       'Authentification locale par mot de passe avec Argon2 + flux optionnel de réinitialisation',
+      "Les tentatives de connexion sont limitées par adresse de poste : 5 tentatives par mot de passe et 60 demandes de connexion Microsoft par minute. Derrière un reverse proxy, la limite suit l'adresse réelle de chaque personne",
+      "Les jetons de session ne sont acceptés que dans l'unique algorithme de signature avec lequel KANAP les émet",
       "Plaid et MCP appliquent le même RBAC que l'UI, pas d'escalade de privilèges",
       'Tokens API limités aux utilisateurs individuels, révocables à tout moment',
     ],
@@ -73,11 +75,15 @@ const content: SecurityContent = {
   audit: {
     title: "Journal d'audit",
     body:
-      "Chaque modification significative est enregistrée. Qui a changé quoi, quand, avec les valeurs avant et après. Activité visible dans l'app.",
+      "Chaque modification significative est enregistrée, tout comme les événements de sécurité qui l'entourent. Qui a changé quoi et quand, qui s'est connecté, qui a échoué à se connecter, qui a exporté des données. Les administrateurs voient tout dans l'app.",
     bullets: [
       "Chronologie d'activité par entité (tâches, projets, documents, etc.)",
       "Créations, modifications et désactivations enregistrées avec l'utilisateur, l'horodatage et les valeurs avant et après",
-      "Les administrateurs consultent et filtrent le journal d'audit dans l'app",
+      "Modifications de rôles et d'autorisations enregistrées avec leur auteur et les valeurs avant et après",
+      "Connexions, échecs de connexion, déconnexions, renouvellements de session refusés, réinitialisations de mot de passe et connexions Microsoft enregistrés avec l'adresse du poste et le navigateur. Les mots de passe et les jetons ne sont jamais écrits dans le journal",
+      'Exports produits par le serveur enregistrés avec qui a exporté quoi',
+      'Événements de connexion et de session conservés 365 jours',
+      "Les administrateurs consultent et filtrent le journal d'audit dans l'app, et l'exportent en CSV dans un format fixe que les outils de collecte de journaux lisent tel quel (jusqu'à 100 000 entrées par fichier)",
       "Les modifications faites via Plaid sont enregistrées dans le même journal, avec leur origine. Les agents ont leur propre historique d'activité, avec les sources utilisées par chaque agent",
     ],
   },
@@ -95,6 +101,20 @@ const content: SecurityContent = {
       "Les fonctions d'IA sont désactivées par défaut. Dans le cloud, le modèle intégré ne reçoit aucune donnée tant que le workspace n'a pas accepté son fournisseur et son lieu de traitement, tous deux indiqués dans l'application. Un administrateur les confirme, et une nouvelle confirmation est demandée si l'un des deux change. Vous pouvez utiliser votre propre fournisseur de modèle à la place",
     ],
   },
+  supplyChain: {
+    title: "Chaîne d'approvisionnement logicielle",
+    body:
+      'Ce qui tourne sur vos serveurs est construit à partir du code source public, et la façon de le construire est contrôlée à chaque modification. Vous pouvez vérifier ce qui est livré.',
+    bullets: [
+      "L'image de l'API est construite en deux étapes : l'image qui s'exécute contient l'application compilée et ses dépendances de production, sans sources ni outils de développement",
+      "Les conteneurs tournent avec des privilèges réduits : l'API s'exécute sous un utilisateur sans privilège, et les conteneurs abandonnent les capacités Linux dont ils n'ont pas besoin et n'en gagnent pas de nouvelles",
+      "Le conteneur web envoie les en-têtes de sécurité usuels et n'annonce pas sa version de nginx",
+      'Les images de base sont épinglées sur un condensat (digest) fixe. Les mises à jour arrivent sous forme de pull requests qui passent les mêmes contrôles que toute autre modification',
+      "Un inventaire des composants (CycloneDX) du backend, du frontend et du site web, les paquets de l'image de l'API et un fichier de notices tierces sont produits pour chaque version publiée",
+      "Les licences des dépendances de production sont vérifiées à chaque fusion, et une dépendance dont la licence n'est pas acceptée ou manque la bloque",
+      'Les actions de CI sont épinglées sur des hachages de commit complets, et le jeton des workflows est en lecture seule par défaut',
+    ],
+  },
   deployment: {
     title: 'Déploiement et exploitation',
     body:
@@ -105,6 +125,8 @@ const content: SecurityContent = {
       "Auto-hébergement : aucun appel sortant obligatoire pour les fonctions de base, KANAP peut donc tourner sans accès internet",
       "Auto-hébergement : vous choisissez où il tourne et comment il est sauvegardé",
       "Auto-hébergement : les fonctions d'IA n'utilisent que le fournisseur de modèle configuré par votre administrateur",
+      "Auto-hébergement : au démarrage, KANAP avertit quand le secret de signature est court ou que le mot de passe du premier administrateur est encore une valeur d'exemple",
+      'Auto-hébergement : la santé des conteneurs API et web apparaît dans la sortie de docker ps, et les journaux Docker sont plafonnés à environ 50 Mo par conteneur',
     ],
   },
   disclosure: {

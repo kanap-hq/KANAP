@@ -33,7 +33,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Compliance-ready',
-        body: 'Row-Level Security isoliert Tenants. Argon2-Passworthashing. HTTPS mit Zertifikaten, die Sie kontrollieren. Ihre VPC, Ihre Backups, Ihr SOC.',
+        body: 'Row-Level Security isoliert Tenants. Argon2-Passworthashing. Ein Audit-Log der Anmeldungen und Exporte, das Ihr Log-Collector als CSV liest. HTTPS mit Zertifikaten, die Sie kontrollieren. Ihre VPC, Ihre Backups, Ihr SOC.',
       },
       {
         title: 'Quellcode prüfbar',
@@ -127,7 +127,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Observability, die Sie schon haben',
-        body: 'Container schreiben Logs auf stdout und bieten einen Health-Endpoint. Richten Sie Ihren bestehenden Stack darauf aus (Prometheus, Loki, Datadog, was Sie schon haben).',
+        body: 'Container schreiben Logs auf stdout (auf etwa 50 MB je Container begrenzt) und zeigen ihren Zustand in docker ps. Die API bietet einen Health-Endpoint. Richten Sie Ihren bestehenden Stack darauf aus (Prometheus, Loki, Datadog, was Sie schon haben).',
       },
       {
         title: 'Branding inklusive',

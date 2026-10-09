@@ -7,7 +7,7 @@ import { getSecurityContent } from '../content/resolve';
 const locale = getLocaleFromUrl(Astro.url);
 const c = getSecurityContent(locale);
 
-const sections = [c.tenancy, c.dataProtection, c.access, c.audit, c.agentGovernance, c.deployment]
+const sections = [c.tenancy, c.dataProtection, c.access, c.audit, c.agentGovernance, c.supplyChain, c.deployment]
   .filter((s): s is NonNullable<typeof s> => s != null);
 ---
 

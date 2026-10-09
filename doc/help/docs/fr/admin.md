@@ -1,6 +1,6 @@
 # Administration
 
-La section Administration donne accès à la gestion des utilisateurs, la configuration des rôles, la facturation, les paramètres d'authentification, les contrôles de personnalisation et le lecteur du journal d'audit. Ces pages sont généralement réservées aux administrateurs.
+La section Administration donne accès à la gestion des utilisateurs, la configuration des rôles, la facturation, les paramètres d'authentification, les contrôles de personnalisation et le journal d'audit, qui enregistre aussi les connexions et les exports. Ces pages sont généralement réservées aux administrateurs.
 
 ## Où trouver cette page
 
@@ -30,7 +30,7 @@ La page d'accueil Administration donne un accès rapide aux principales fonction
 | **Comptes** | Gérer les codes comptables | `accounts:reader` |
 | **Utilisateurs et accès** | Gérer les utilisateurs et rôles | `users:reader` |
 | **Rôles** | Définir les autorisations des rôles | `users:reader` |
-| **Journal d'audit** | Parcourir tout l'historique des modifications | `users:admin` |
+| **Journal d'audit** | Parcourir l'historique des modifications, les connexions et les exports | `users:admin` |
 | **Facturation** | Plan et factures | Admin facturation |
 
 Authentification, Personnalisation et Données d'exemple sont accessibles depuis la navigation dans la barre latérale mais n'apparaissent pas sur la page d'accueil du hub d'administration.
@@ -39,13 +39,38 @@ Authentification, Personnalisation et Données d'exemple sont accessibles depuis
 
 ## Journal d'audit
 
-La page Journal d'audit affiche l'historique des modifications au niveau du tenant pour les mises à jour de données à travers la plateforme.
+La page Journal d'audit conserve l'historique des modifications de données et des événements de sécurité de votre espace de travail. Elle vous permet de voir qui a changé quoi et quand, qui s'est connecté et qui a exporté des données.
 
 ### Accès
 
 - Route : `/admin/audit-logs`
 - Autorisation requise : `users:admin`
-- Cette page est en lecture seule (aucune action de création/modification/suppression).
+- Le journal est en lecture seule. Vous pouvez le parcourir, le filtrer et l'exporter, mais vous ne pouvez ni modifier ni supprimer des entrées.
+
+### Ce qui est enregistré
+
+**Modifications de données** : créations, mises à jour, suppressions et désactivations d'enregistrements, avec l'utilisateur, l'heure et les valeurs avant et après.
+
+**Modifications de rôles** : création, renommage et suppression d'un rôle, et chaque changement de ses autorisations.
+
+**Événements de connexion et de session** (table **Connexion et session**) :
+
+| Événement | Enregistré quand |
+|-----------|------------------|
+| **Connexion** | Quelqu'un se connecte |
+| **Échec de connexion** | Une connexion est refusée. Le **motif** en donne la raison, par exemple mot de passe incorrect, compte désactivé ou aucun compte avec cette adresse |
+| **Déconnexion** | Quelqu'un se déconnecte |
+| **Renouvellement de session refusé** | La session n'a pas pu être renouvelée, par exemple parce qu'elle a expiré |
+| **Réinitialisation du mot de passe demandée** / **Réinitialisation du mot de passe terminée** | Quelqu'un demande un lien de réinitialisation, puis quand la réinitialisation est terminée |
+| **Connexion avec Microsoft** / **Échec de connexion avec Microsoft** | Une connexion via Microsoft Entra ID réussit ou échoue |
+
+**Exports** (table **Export**) : exports CSV, documents et rapports produits par le serveur. La ligne indique ce qui a été exporté et par qui. L'export du journal d'audit est lui aussi enregistré.
+
+Les lignes de connexion, de session et d'export conservent aussi l'**adresse du poste** d'où venait la demande et le **navigateur** utilisé. Ouvrez la ligne pour les lire dans le panneau **Après**. Derrière un reverse proxy, l'adresse enregistrée est celle de la personne, tant que le proxy la transmet. Installations on-premise : consultez le guide d'installation. Les mots de passe, les liens de connexion et les jetons ne sont jamais écrits dans le journal. Quand quelqu'un tente de se connecter avec une adresse sans compte, la ligne affiche **Compte inconnu** et ne conserve pas l'adresse saisie.
+
+### Durée de conservation
+
+Les événements de connexion et de session sont supprimés après **365 jours**. Les autres entrées (modifications de données, modifications de rôles et exports) ne sont pas concernées par cette règle.
 
 ### Ce que vous pouvez faire
 
@@ -56,24 +81,25 @@ La page Journal d'audit affiche l'historique des modifications au niveau du tena
   - Action
   - Source (`user`, `system`, `webhook`)
 - Ouvrir n'importe quelle ligne pour voir les détails complets :
-  - Pastilles de métadonnées (date, table, action, source, référence source, tenant, id d'enregistrement, utilisateur)
+  - Pastilles de métadonnées (date, table, action, source, motif ou référence source, tenant, id d'enregistrement, utilisateur)
   - Résumé des champs modifiés
   - Payloads JSON **Avant** et **Après** côte à côte
+- Exporter le journal en CSV (voir ci-dessous)
 
 ### Colonnes
 
 **Colonnes par défaut** :
-- **Date** : Quand la modification a eu lieu
-- **Table** : Quelle table de base de données a été affectée
-- **Action** : Le type de modification (create, update, delete, disable)
-- **Source** : Qui ou quoi a déclenché la modification (user, system, webhook)
-- **Utilisateur** : E-mail de l'utilisateur qui a fait la modification (ou « System »/« Webhook » pour les sources non-utilisateur)
+- **Date** : Quand la modification ou l'événement a eu lieu
+- **Table** : Quelle table a été affectée, ou **Connexion et session**, ou la ressource exportée pour les événements de sécurité
+- **Action** : Le type de modification ou d'événement (créer, mettre à jour, supprimer, désactiver, connexion, export, etc.)
+- **Source** : Qui ou quoi a déclenché la modification (utilisateur, système, webhook)
+- **Utilisateur** : Nom de l'utilisateur qui a fait la modification, ou son adresse e-mail s'il n'a pas de nom. Affiche « Système » ou « Webhook » pour les sources non-utilisateur, et « Compte inconnu » pour une tentative de connexion sur une adresse inconnue.
 
 **Colonnes supplémentaires** (via le sélecteur de colonnes) :
-- **ID d'enregistrement** : Identifiant de l'enregistrement affecté
+- **ID enregistrement** : Identifiant de l'enregistrement affecté
 - **ID utilisateur** : UUID de l'utilisateur agissant
-- **Nom utilisateur** : Nom d'affichage de l'utilisateur agissant
-- **Réf. source** : Référence externe pour les modifications provenant de webhooks
+- **Nom d'utilisateur** : Nom d'affichage de l'utilisateur agissant
+- **Réf. source** : Référence externe pour les modifications provenant de webhooks, ou motif d'une connexion refusée
 - **ID tenant** : Le tenant auquel cette entrée appartient
 
 ### Pagination
@@ -81,13 +107,36 @@ La page Journal d'audit affiche l'historique des modifications au niveau du tena
 - La grille utilise une pagination explicite avec **100 lignes par page**.
 - Les filtres et la recherche s'appliquent à l'ensemble des données, pas seulement à la page actuelle.
 
+### Export CSV
+
+Cliquez sur **Exporter CSV** en haut de la page pour télécharger le journal sous forme de fichier.
+
+- Le fichier contient les entrées qui correspondent aux filtres, à la recherche et au tri affichés à l'écran. Effacez les filtres pour exporter tout le journal.
+- Un fichier contient au plus **100 000 entrées**, les plus récentes d'abord par défaut. Quand le journal est plus grand, KANAP vous indique que le fichier s'arrête là. Affinez les filtres (une plage de dates, par exemple) et exportez à nouveau pour obtenir le reste.
+- Vous ne pouvez lancer que quelques exports par minute. Si vous cliquez de nouveau trop tôt, KANAP vous demande d'attendre une minute.
+- L'export est enregistré dans le journal, comme tout autre export.
+
+Le fichier a toujours le même format, quelle que soit votre langue, pour qu'un outil de collecte de journaux puisse le lire sans réglage :
+
+- séparé par des virgules, en UTF-8 sans marque d'ordre des octets ;
+- noms de colonnes en anglais : `date`, `action`, `table`, `record_id`, `user`, `source`, `source_ref`, `ip`, `user_agent`, `before`, `after` ;
+- codes d'actions et de tables en anglais (par exemple `login_failed`), tels qu'ils sont stockés ;
+- dates au format ISO 8601, en UTC (par exemple `2026-10-09T14:32:05.000Z`) ;
+- colonnes `before` et `after` en JSON compact.
+
+Pour ouvrir le fichier dans Excel avec un séparateur de liste différent, comme sur une installation française ou allemande, ne double-cliquez pas dessus. Utilisez **Données > À partir d'un fichier texte/CSV**, choisissez UTF-8 comme origine du fichier et la virgule comme délimiteur.
+
+### Qui peut voir quoi
+
+Les valeurs **Avant** et **Après** contiennent l'enregistrement complet tel qu'il a été sauvegardé, y compris les données personnelles comme les noms, les adresses e-mail et les numéros de téléphone. L'écran de détail et le fichier CSV montrent les mêmes valeurs, et les deux exigent `users:admin`. Les empreintes de mots de passe et les secrets d'authentification multifacteur ne sont jamais écrits dans le journal. Traitez un fichier exporté comme le journal lui-même : conservez-le avec le même soin.
+
 ### Comprendre la source et l'acteur
 
-- **Source = user** : modification déclenchée par l'action d'un utilisateur authentifié.
+- **Source = user** : modification déclenchée par l'action d'un utilisateur authentifié. Les événements de connexion, de session et d'export utilisent aussi cette source.
 - **Source = webhook** : modification déclenchée par un webhook externe (par exemple des événements de synchronisation de facturation). Utilisez **Réf. source** pour faire le lien avec les identifiants d'événements en amont.
 - **Source = system** : processus interne de la plateforme, sans acteur utilisateur direct.
 
-Si un compte utilisateur n'est plus identifiable dans le contexte actuel, la colonne Utilisateur peut afficher un UUID de repli (`Unknown (xxxx...)`) au lieu d'un e-mail.
+Si un compte utilisateur n'est plus identifiable dans le contexte actuel, la colonne Utilisateur peut afficher un UUID de repli (`Inconnu (xxxx...)`) au lieu d'un nom.
 
 ---
 
@@ -381,6 +430,8 @@ La page Rôles a une disposition à deux panneaux :
 
 **Conseil** : Commencez par dupliquer un rôle intégré qui se rapproche de ce dont vous avez besoin, puis ajustez les autorisations.
 
+Chaque modification d'un rôle (création, renommage, autorisations, suppression) est enregistrée dans le [Journal d'audit](#journal-daudit), avec la personne qui l'a faite et les valeurs avant et après.
+
 ---
 
 ## Facturation
@@ -484,6 +535,15 @@ La synchronisation nécessite une approbation unique par un administrateur Micro
 | **Synchroniser maintenant** | Lance la synchronisation immédiatement au lieu d'attendre la nuit. Affiche **Synchronisation terminée : N comptes actualisés, N désactivés.** |
 
 Les étapes de configuration de l'enregistrement d'application Entra sont décrites dans [SSO Microsoft Entra](on-premise/sso-entra.md).
+
+### Limites de connexion
+
+KANAP limite les demandes de connexion répétées depuis la même adresse de poste :
+
+- **Connexion par mot de passe** : 5 tentatives par minute.
+- **Connexion Microsoft** : 60 demandes par minute. La limite est plus haute parce que les collaborateurs d'une même organisation accèdent souvent à KANAP depuis la même adresse sortante.
+
+Une fois la limite atteinte, la personne patiente une minute et réessaie. Derrière un reverse proxy, le décompte suit l'adresse réelle de chaque personne, tant que le proxy la transmet. Les tentatives réussies, échouées et refusées apparaissent dans le [Journal d'audit](#journal-daudit).
 
 ---
 
