@@ -18,6 +18,7 @@ import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.ser
 import { PortfolioProjectsService } from '../../portfolio/services';
 import { SpendItemsService } from '../../spend/spend-items.service';
 import { lockBudgetLine } from '../../spend/budget-locks';
+import { parseItemRef } from '../../common/resolve-item-id';
 import {
   DISABLED_VALUE_MESSAGE,
   dimensionPhrase,
@@ -1003,6 +1004,17 @@ export class AiBusinessRecordMutationSupportService {
     return this.referenceFromRow(entityType, rows[0]);
   }
 
+  /** The item number of a budget line reference (`OPX-3`, `CPX-3`), or -1 when the reference is not one of this type. */
+  private itemNumberOfReference(ref: string, type: 'spend' | 'capex'): number {
+    try {
+      const parsed = parseItemRef(ref, type);
+      // A bare number stays a name: only the prefixed reference names a line.
+      return parsed.type === 'item_number' && ref.includes('-') ? parsed.value : -1;
+    } catch {
+      return -1;
+    }
+  }
+
   private async queryReferenceCandidates(
     context: AiExecutionContextWithManager,
     entityType: RelationTarget,
@@ -1083,13 +1095,13 @@ export class AiBusinessRecordMutationSupportService {
         );
       case 'spend_items':
         return this.withDefaultAnalyticsValue(context, 'opex', await manager.query(
-          `SELECT * FROM spend_items WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(product_name) = LOWER($2::text)) ORDER BY product_name LIMIT 6`,
-          [tenantId, ref],
+          `SELECT * FROM spend_items WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(product_name) = LOWER($2::text) OR item_number = $3) ORDER BY product_name LIMIT 6`,
+          [tenantId, ref, this.itemNumberOfReference(ref, 'spend')],
         ));
       case 'capex_items':
         return this.withDefaultAnalyticsValue(context, 'capex', await manager.query(
-          `SELECT * FROM capex_items WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(description) = LOWER($2::text)) ORDER BY description LIMIT 6`,
-          [tenantId, ref],
+          `SELECT * FROM capex_items WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(description) = LOWER($2::text) OR item_number = $3) ORDER BY description LIMIT 6`,
+          [tenantId, ref, this.itemNumberOfReference(ref, 'capex')],
         ));
       case 'companies':
         return manager.query(`SELECT * FROM companies WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text)) ORDER BY name LIMIT 6`, [tenantId, ref]);

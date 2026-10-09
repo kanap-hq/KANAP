@@ -1422,6 +1422,43 @@ async function createHarness(): Promise<Harness> {
   };
 }
 
+/**
+ * A budget line is named by its business reference: OPX-<n> for a spend item,
+ * CPX-<n> for a CAPEX item (case-insensitive). A reference of the other line
+ * type matches nothing.
+ */
+async function testBudgetLinesByBusinessReference(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const [spend] = await runner.query(`SELECT item_number FROM spend_items WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.spendItemId]);
+    const [capex] = await runner.query(`SELECT item_number FROM capex_items WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.capexItemId]);
+    const cases = [
+      { entityType: 'spend_items', itemId: seed.spendItemId, ref: `OPX-${spend.item_number}`, otherRef: `CPX-${capex.item_number}`, labelPlural: 'spend items' },
+      { entityType: 'capex_items', itemId: seed.capexItemId, ref: `cpx-${capex.item_number}`, otherRef: `OPX-${spend.item_number}`, labelPlural: 'CAPEX items' },
+    ];
+    for (const { entityType, itemId, ref, otherRef, labelPlural } of cases) {
+      const ctx = context(seed, runner, `by-reference-${entityType}`);
+      const preview = await executeToolPreview(harness, ctx, 'update_business_record', {
+        entity_type: entityType,
+        ref,
+        fields: { notes: `Notes by reference ${seed.tag}` },
+      });
+      assert.equal(preview.target.entity_id, itemId, `${ref} targets the seeded line`);
+      await approvePreview(harness, ctx, preview);
+      const [row] = await runner.query(`SELECT notes FROM ${entityType} WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, itemId]);
+      assert.equal(row.notes, `Notes by reference ${seed.tag}`, `${ref} updates the line`);
+
+      await expectRejects(
+        () => harness.tools.execute(ctx, 'update_business_record', {
+          entity_type: entityType,
+          ref: otherRef,
+          fields: { notes: 'Never written' },
+        }),
+        new RegExp(`^No ${labelPlural} found matching "${otherRef}"\\.$`),
+      );
+    }
+  });
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -1433,6 +1470,7 @@ async function run() {
     await testItemAnalyticsCategoryThroughTheLinks(harness);
     await testItemAnalyticsDimensions(harness);
     await testAnalyticsValueInANamedDimension(harness);
+    await testBudgetLinesByBusinessReference(harness);
   } finally {
     await harness.app.close();
   }
