@@ -26,6 +26,7 @@ import {
 import { backendPid, closeRunner, committed, openTenantTransaction, waitUntilBlocked } from '../../cost-centers/__tests__/cost-center-test-helpers';
 import {
   context,
+  csvFile,
   expectRefused,
   linkValue,
   runSpecs,
@@ -622,19 +623,29 @@ async function testValueAppliesToFollowsItsDimension() {
     await axes.update(nature.id, { applies_to: null }, ctx);
     assert.equal((await values.get(saas.id, ctx)).applies_to, 'opex', 'opening the dimension keeps the value restriction');
 
-    // Narrowing the dimension while values are restricted to the other type is refused (singular, plural).
+    // Narrowing the dimension while values are restricted to the other type is refused, naming them
+    // (singular, plural, then "and N more" past three, disabled values included).
     const hardware = await values.create({ axis_id: nature.id, name: 'Matériel', applies_to: 'capex' }, null, ctx);
     await expectRefused(
       runner,
-      /^1 value of this dimension is for CAPEX lines only\. Set it to OPEX and CAPEX first\./,
+      /^1 value of this dimension is for CAPEX lines only \(Matériel\)\. Set it to OPEX and CAPEX first\./,
       () => axes.update(nature.id, { applies_to: 'opex' }, ctx),
     );
     const servers = await values.create({ axis_id: nature.id, name: 'Serveurs', applies_to: 'capex' }, null, ctx);
     await expectRefused(
       runner,
-      /^2 values of this dimension are for CAPEX lines only\. Set them to OPEX and CAPEX first\./,
+      /^2 values of this dimension are for CAPEX lines only \(Matériel, Serveurs\)\. Set them to OPEX and CAPEX first\./,
       () => axes.update(nature.id, { applies_to: 'opex' }, ctx),
     );
+    const archives = await values.create({ axis_id: nature.id, name: 'archives', applies_to: 'capex', status: 'disabled' }, null, ctx);
+    const zinc = await values.create({ axis_id: nature.id, name: 'Zinc', applies_to: 'capex' }, null, ctx);
+    await expectRefused(
+      runner,
+      /^4 values of this dimension are for CAPEX lines only \(archives, Matériel, Serveurs and 1 more\)\. Set them to OPEX and CAPEX first\./,
+      () => axes.update(nature.id, { applies_to: 'opex' }, ctx),
+    );
+    await values.update(archives.id, { applies_to: null }, null, ctx);
+    await values.update(zinc.id, { applies_to: null }, null, ctx);
     // The values of another dimension do not count.
     const other = await axes.create({ code: 'other', name: 'Other' }, ctx);
     await values.create({ axis_id: other.id, name: 'Elsewhere', applies_to: 'capex' }, null, ctx);
@@ -707,7 +718,7 @@ async function testNarrowingRacesAValueRestriction() {
         outcome.message,
         first === 'dimension'
           ? /^The Nature dimension is for OPEX lines only\./
-          : /^1 value of this dimension is for CAPEX lines only\./,
+          : /^1 value of this dimension is for CAPEX lines only \(Matériel\)\./,
       );
       const state = await committed(async (runner) => {
         await setCurrentTenant(runner, seed.tenantId);
@@ -732,6 +743,60 @@ async function testNarrowingRacesAValueRestriction() {
   }
 }
 
+/**
+ * A values CSV import works from an unlocked snapshot: it reads a value restricted to CAPEX lines,
+ * and rewrites it unchanged. Meanwhile another transaction clears the value and narrows the
+ * dimension to OPEX lines, then commits while the import waits. The import must take the
+ * dimension lock and check it even though the value looks unchanged to it: it is refused, and the
+ * end state never holds a CAPEX value under an OPEX dimension.
+ */
+async function testCsvImportRacesAClearAndNarrow() {
+  const seed = await committed(async (runner) => {
+    const tenantId = await seedTenant(runner, 'value-race-csv');
+    const { axes, values } = services(runner.manager);
+    const ctx = context(runner.manager, tenantId);
+    const nature = await axes.create({ code: 'nature', name: 'Nature' }, ctx);
+    const value = await values.create({ axis_id: nature.id, name: 'Matériel', applies_to: 'capex' }, null, ctx);
+    return { tenantId, axisId: nature.id, valueId: value.id };
+  });
+  const narrower = await openTenantTransaction(seed.tenantId);
+  const importer = await openTenantTransaction(seed.tenantId);
+  try {
+    const narrowerSvc = services(narrower.manager);
+    const narrowerCtx = context(narrower.manager, seed.tenantId);
+    await narrowerSvc.values.update(seed.valueId, { applies_to: null }, null, narrowerCtx);
+    await narrowerSvc.axes.update(seed.axisId, { applies_to: 'opex' }, narrowerCtx);
+
+    const pid = await backendPid(importer);
+    const run = services(importer.manager).csv.importCsv({
+      file: csvFile(['axis_code;name;description;status;disabled_at;applies_to', 'nature;Matériel;Edited;enabled;;capex'].join('\n')),
+      dryRun: false,
+    }, context(importer.manager, seed.tenantId)).then((result) => result, (err: any) => err);
+    await waitUntilBlocked(pid);
+    await narrower.commitTransaction();
+    const outcome: any = await run;
+    assert.equal(outcome?.getStatus?.(), 400, `the import is refused (${JSON.stringify(outcome?.errors ?? outcome?.message ?? outcome)})`);
+    assert.match(outcome.message, /^The Nature dimension is for OPEX lines only\./);
+    await importer.rollbackTransaction();
+
+    const state = await committed(async (runner) => {
+      await setCurrentTenant(runner, seed.tenantId);
+      const [row] = await runner.query(
+        `SELECT a.applies_to AS axis, c.applies_to AS value FROM analytics_axes a
+           JOIN analytics_categories c ON c.tenant_id = a.tenant_id AND c.axis_id = a.id
+          WHERE a.tenant_id = $1 AND a.id = $2 AND c.id = $3`,
+        [seed.tenantId, seed.axisId, seed.valueId],
+      );
+      return row;
+    });
+    assert.deepEqual(state, { axis: 'opex', value: null }, 'only the narrowing is stored');
+  } finally {
+    await closeRunner(importer);
+    await closeRunner(narrower);
+    await deleteRaceTenant(seed.tenantId);
+  }
+}
+
 runSpecs('analytics-axes.integration.spec', [
   testOneDefaultPerTenant,
   testDefaultIsLocked,
@@ -749,6 +814,7 @@ runSpecs('analytics-axes.integration.spec', [
   testValueAppliesTo,
   testValueAppliesToFollowsItsDimension,
   testNarrowingRacesAValueRestriction,
+  testCsvImportRacesAClearAndNarrow,
 ]).catch((err) => {
   console.error(err);
   process.exit(1);

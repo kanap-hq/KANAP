@@ -105,12 +105,18 @@ export function normalizeAppliesTo(raw: unknown): AxisAppliesTo | null {
   return value as AxisAppliesTo;
 }
 
-/** "2 values of this dimension are for CAPEX lines only. Set them to OPEX and CAPEX first." */
-export function otherTypeValuesMessage(count: number, other: AxisAppliesTo): string {
+/**
+ * "2 values of this dimension are for CAPEX lines only (Matériel, Projet). Set them to OPEX and
+ * CAPEX first.": up to three names in name order, then "and N more". The names matter because the
+ * count includes disabled values, which the values grid hides by default.
+ */
+export function otherTypeValuesMessage(count: number, other: AxisAppliesTo, names: string[]): string {
   const type = other.toUpperCase();
+  const shown = names.slice(0, 3).join(', ');
+  const more = count > 3 ? ` and ${count - 3} more` : '';
   return count === 1
-    ? `1 value of this dimension is for ${type} lines only. Set it to OPEX and CAPEX first.`
-    : `${count} values of this dimension are for ${type} lines only. Set them to OPEX and CAPEX first.`;
+    ? `1 value of this dimension is for ${type} lines only (${shown}). Set it to OPEX and CAPEX first.`
+    : `${count} values of this dimension are for ${type} lines only (${shown}${more}). Set them to OPEX and CAPEX first.`;
 }
 
 /** The effective status, as every lifecycle list shows it. */
@@ -294,12 +300,18 @@ export class AnalyticsAxesService {
   /** A dimension restricted to one line type cannot hold values restricted to the other. */
   private async assertNoValueOfOtherType(ctx: AnalyticsContext, id: string, appliesTo: AxisAppliesTo) {
     const other: AxisAppliesTo = appliesTo === 'opex' ? 'capex' : 'opex';
-    const [row] = await ctx.manager.query(
-      `SELECT count(*)::int AS n FROM analytics_categories WHERE tenant_id = $1 AND axis_id = $2 AND applies_to = $3`,
+    // Disabled values included: the count, and the first three names to find them by.
+    const rows: Array<{ name: string; total: number }> = await ctx.manager.query(
+      `SELECT name, count(*) OVER ()::int AS total FROM analytics_categories
+        WHERE tenant_id = $1 AND axis_id = $2 AND applies_to = $3
+        ORDER BY lower(name), name, id
+        LIMIT 3`,
       [ctx.tenantId, id, other],
     );
-    const count = Number(row?.n ?? 0);
-    if (count > 0) throw analyticsRefusal(otherTypeValuesMessage(count, other), 'applies_to');
+    const count = Number(rows[0]?.total ?? 0);
+    if (count > 0) {
+      throw analyticsRefusal(otherTypeValuesMessage(count, other, rows.map((row) => row.name)), 'applies_to');
+    }
   }
 
   /** A readable refusal before the unique indexes (which stay the guarantee). */

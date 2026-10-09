@@ -145,7 +145,7 @@ A single value can also be limited to one kind of line. The two settings work at
 - The dimension setting decides whether the field exists on a kind of line. When the field is gone, the values the lines hold are hidden.
 - The value setting only filters the choices. The field stays, CAPEX lines no longer offer **Abonnements SaaS**, and a CAPEX line that already has it keeps it, shows it and stays editable. See [OPEX or CAPEX values](#opex-or-capex-values).
 
-The two settings must agree. A dimension cannot be set to one kind of line while some of its values are for the other kind only: KANAP refuses, for example, "2 values of this dimension are for CAPEX lines only. Set them to OPEX and CAPEX first."
+The two settings must agree. A dimension cannot be set to one kind of line while some of its values are for the other kind only: KANAP refuses and names the values (up to three, then "and N more"), for example "2 values of this dimension are for CAPEX lines only (Matériel, Projet). Set them to OPEX and CAPEX first."
 
 ### Deleting a dimension
 
@@ -190,7 +190,7 @@ The **Used for** field of a value says which budget lines may use it:
 
 The field of an OPEX line offers the values for OPEX and for both. The field of a CAPEX line does the same for CAPEX. A line that already holds a value of the other kind keeps it, shows it and stays editable, like a disabled value. Choosing such a value for another line, or when you change the value of a line, is refused: in the app, in a budget file, through the API and in Plaid.
 
-- When the dimension is used for one kind of line only, the field is locked on the dimension's setting, with a line such as "The Nature de coût dimension is for OPEX lines only." A value cannot be limited to the kind of line its dimension excludes.
+- When the dimension is used for one kind of line only, the kind it excludes is unavailable in the field, with a line such as "The Nature de coût dimension is for OPEX lines only." **OPEX and CAPEX** and the dimension's own kind stay selectable. A value cannot be limited to the kind of line its dimension excludes.
 - When lines of the other kind hold the value, one line appears under the field, for example "4 CAPEX lines have this value. They keep it, but new CAPEX lines cannot choose it." Click **Show these lines** to open them in the list, in a new tab. The line stays as long as the conflict exists.
 - The Analytics dimensions report offers the values of the selected kind in its **Exclude values** list. See [Reporting](reports.md#analytics-dimensions).
 

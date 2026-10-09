@@ -145,7 +145,7 @@ Auch ein einzelner Wert kann auf eine Zeilenart beschränkt werden. Die beiden E
 - Die Einstellung der Dimension legt fest, ob das Feld für eine Zeilenart existiert. Fällt das Feld weg, sind die Werte ausgeblendet, die die Zeilen haben.
 - Die Einstellung des Werts filtert die Auswahl. Das Feld bleibt, CAPEX-Zeilen bieten **Abonnements SaaS** nicht mehr an, und eine CAPEX-Zeile, die ihn bereits hat, behält ihn, zeigt ihn an und bleibt bearbeitbar. Siehe [OPEX- oder CAPEX-Werte](#opex-oder-capex-werte).
 
-Die beiden Einstellungen müssen zusammenpassen. Eine Dimension kann nicht auf eine Zeilenart beschränkt werden, solange einige ihrer Werte nur für die andere gelten: KANAP lehnt zum Beispiel „2 values of this dimension are for CAPEX lines only. Set them to OPEX and CAPEX first.“ ab.
+Die beiden Einstellungen müssen zusammenpassen. Eine Dimension kann nicht auf eine Zeilenart beschränkt werden, solange einige ihrer Werte nur für die andere gelten: KANAP lehnt dies ab und nennt die Werte (höchstens drei, dann „and N more“), zum Beispiel „2 values of this dimension are for CAPEX lines only (Matériel, Projet). Set them to OPEX and CAPEX first.“
 
 ### Eine Dimension löschen
 
@@ -190,7 +190,7 @@ Das Feld **Verwendet für** eines Werts legt fest, welche Budgetzeilen ihn verwe
 
 Das Feld einer OPEX-Zeile bietet die Werte für OPEX und für beide an. Das Feld einer CAPEX-Zeile tut dasselbe für CAPEX. Eine Zeile, die bereits einen Wert der anderen Art hat, behält ihn, zeigt ihn an und bleibt bearbeitbar, wie bei einem deaktivierten Wert. Einen solchen Wert für eine andere Zeile oder beim Ändern des Werts einer Zeile zu wählen, wird abgelehnt: in der Anwendung, in einer Budgetdatei, über die API und in Plaid.
 
-- Gilt die Dimension nur für eine Zeilenart, ist das Feld auf die Einstellung der Dimension gesperrt, mit einer Zeile wie „Die Dimension Nature de coût gilt nur für OPEX-Zeilen.“ Ein Wert kann nicht auf die Zeilenart beschränkt werden, die seine Dimension ausschließt.
+- Gilt die Dimension nur für eine Zeilenart, ist die Zeilenart, die sie ausschließt, im Feld nicht verfügbar, mit einer Zeile wie „Die Dimension Nature de coût gilt nur für OPEX-Zeilen.“ **OPEX und CAPEX** und die eigene Zeilenart der Dimension bleiben wählbar. Ein Wert kann nicht auf die Zeilenart beschränkt werden, die seine Dimension ausschließt.
 - Haben Zeilen der anderen Art den Wert, erscheint unter dem Feld eine Zeile, zum Beispiel „4 CAPEX-Zeilen haben diesen Wert. Sie behalten ihn, aber neue CAPEX-Zeilen können ihn nicht auswählen.“ Klicken Sie auf **Diese Zeilen anzeigen**, um sie in der Liste in einem neuen Tab zu öffnen. Die Zeile bleibt, solange der Konflikt besteht.
 - Der Bericht Analysedimensionen bietet in seiner Liste **Werte ausschließen** die Werte der gewählten Art an. Siehe [Berichte](reports.md#analysedimensionen).
 

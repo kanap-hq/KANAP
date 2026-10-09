@@ -191,14 +191,25 @@ describe('AnalyticsWorkspacePage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('The Nature dimension is for OPEX lines only.');
   });
 
-  it('locks "Used for" under a dimension restricted to one type, and says why', async () => {
+  it('under a dimension restricted to one type, says why and offers every choice but the other type', async () => {
     axesState.list = AXES.map((axis) => (axis.id === 'ax-nature' ? { ...axis, applies_to: 'opex' } : axis));
+    // A redundant restriction: the value is for OPEX lines only, as its dimension.
+    mocked.getAnalyticsValue.mockResolvedValue({ ...VALUE, applies_to: 'opex' });
     renderAt('/master-data/analytics/v-1/overview?axis=ax-nature');
     await findTitle();
-    expect(usageSelect()).toHaveAttribute('aria-disabled', 'true');
     expect(within(screen.getByRole('complementary')).getByText('analytics.hints.valueDimensionAppliesTo.opex:Nature')).toBeInTheDocument();
     // The CAPEX lines do not show the dimension: no conflict line about them.
     expect(screen.queryByTestId('analytics-value-applies-to-conflict')).toBeNull();
+    expect(usageSelect()).not.toHaveAttribute('aria-disabled');
+    fireEvent.mouseDown(usageSelect());
+    const listbox = await screen.findByRole('listbox');
+    expect(within(listbox).getByRole('option', { name: 'master-data:shared.lineTypeUsage.capex' })).toHaveAttribute('aria-disabled', 'true');
+    expect(within(listbox).getByRole('option', { name: 'master-data:shared.lineTypeUsage.opex' })).not.toHaveAttribute('aria-disabled');
+    // Clearing the restriction, as the dimension's refusal asks before it changes type.
+    const both = within(listbox).getByRole('option', { name: 'master-data:shared.lineTypeUsage.both' });
+    expect(both).not.toHaveAttribute('aria-disabled');
+    fireEvent.click(both);
+    await waitFor(() => expect(mocked.updateAnalyticsValue).toHaveBeenCalledWith('v-1', { applies_to: null }));
   });
 
   it('says how many lines of the other type keep the value, and opens them in a new tab', async () => {
@@ -340,26 +351,36 @@ describe('AnalyticsWorkspacePage', () => {
     }));
   });
 
-  it('locks "Used for" on create under a dimension restricted to one type, and shows a refusal under it', async () => {
+  it('on create under a dimension restricted to one type, offers every choice but the other type', async () => {
     axesState.list = AXES.map((axis) => (axis.id === 'ax-nature' ? { ...axis, applies_to: 'capex' } : axis));
-    mocked.createAnalyticsValue.mockRejectedValueOnce({
-      response: { status: 400, data: { message: 'The Nature dimension is for CAPEX lines only.', field: 'applies_to' } },
-    });
+    mocked.createAnalyticsValue
+      .mockRejectedValueOnce({ response: { status: 400, data: { message: 'The Nature dimension is for CAPEX lines only.', field: 'applies_to' } } })
+      .mockResolvedValueOnce({ ...VALUE, id: 'v-new', axis_id: 'ax-nature', applies_to: 'capex' });
     renderAt('/master-data/analytics/new/overview?axis=ax-default');
-    // The default dimension is for both types: the field is open.
+    // The default dimension is for both types: every choice is open.
     await pickUsage('master-data:shared.lineTypeUsage.opex');
-    // Nature is for CAPEX lines only: the field locks on both types, which the create posts.
+    // Nature is for CAPEX lines only: the OPEX choice falls back to both types and closes.
     const dimension = within(screen.getByLabelText('analytics.fields.dimension').parentElement as HTMLElement).getByRole('combobox');
     fireEvent.mouseDown(dimension);
     fireEvent.click(within(await screen.findByRole('listbox')).getByRole('option', { name: 'Nature' }));
-    await waitFor(() => expect(usageSelect()).toHaveAttribute('aria-disabled', 'true'));
-    expect(usageSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both');
+    await waitFor(() => expect(usageSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both'));
+    expect(usageSelect()).not.toHaveAttribute('aria-disabled');
     expect(screen.getByText('analytics.hints.valueDimensionAppliesTo.capex:Nature')).toBeInTheDocument();
+    fireEvent.mouseDown(usageSelect());
+    const listbox = await screen.findByRole('listbox');
+    expect(within(listbox).getByRole('option', { name: 'master-data:shared.lineTypeUsage.opex' })).toHaveAttribute('aria-disabled', 'true');
+    expect(within(listbox).getByRole('option', { name: 'master-data:shared.lineTypeUsage.capex' })).not.toHaveAttribute('aria-disabled');
+    expect(within(listbox).getByRole('option', { name: 'master-data:shared.lineTypeUsage.both' })).not.toHaveAttribute('aria-disabled');
+    fireEvent.keyDown(listbox, { key: 'Escape' });
     fireEvent.change(screen.getByLabelText('analytics.fields.name'), { target: { value: 'Leasing' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.createAnalyticsValue).toHaveBeenCalledWith(expect.objectContaining({ axis_id: 'ax-nature', applies_to: null })));
     // A refusal on the field shows under it.
     expect(await screen.findByRole('alert')).toHaveTextContent('The Nature dimension is for CAPEX lines only.');
+    // The dimension's own type stays a choice.
+    await pickUsage('master-data:shared.lineTypeUsage.capex');
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(mocked.createAnalyticsValue).toHaveBeenLastCalledWith(expect.objectContaining({ axis_id: 'ax-nature', applies_to: 'capex' })));
   });
 
   it('refuses to create without a name', async () => {

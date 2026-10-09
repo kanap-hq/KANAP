@@ -300,9 +300,17 @@ function dimensionUsageHint(t: TFunction, axis: Pick<AnalyticsAxis, 'applies_to'
   return usage ? t(`analytics.hints.valueDimensionAppliesTo.${usage}`, { dimension: dimensionLabel }) : null;
 }
 
+/** The type a value of this dimension cannot be restricted to: the one a restricted dimension leaves out. */
+function excludedLineType(axis: Pick<AnalyticsAxis, 'applies_to'> | undefined): LineType | null {
+  const usage = parseLineTypeUsage(axis?.applies_to);
+  if (!usage) return null;
+  return usage === 'opex' ? 'capex' : 'opex';
+}
+
 /**
- * "Used for" of a value: which lines may choose it. Under a dimension restricted to one type the
- * dimension decides, and the field is locked with a line saying so. When lines of the other type
+ * "Used for" of a value: which lines may choose it. Under a dimension restricted to one type, a
+ * line says so and the other type cannot be chosen; both types and the dimension's own type stay
+ * open, so a redundant restriction can be cleared before the dimension changes type. When lines of the other type
  * hold the value, they keep and show it: one line counts them, with a link opening them in the OPEX
  * or CAPEX list in a new tab (every status, filtered on this value, as a one-off view). That line
  * shows only while the dimension is enabled and shows on those lines.
@@ -325,6 +333,7 @@ function ValueAppliesToRow({
   const { t } = useTranslation(['master-data']);
   const appliesTo = parseLineTypeUsage(value.applies_to);
   const dimensionHint = axis ? dimensionUsageHint(t, axis, dimensionLabel) : null;
+  const excluded = excludedLineType(axis);
   const conflict = lineTypeUsageConflict(appliesTo, { opex: value.opex_count ?? 0, capex: value.capex_count ?? 0 });
   const shownConflict = conflict && axis && isAnalyticsActive(axis) && axisAppliesTo(axis, conflict.scope) ? conflict : null;
   const link = shownConflict && axis
@@ -336,7 +345,8 @@ function ValueAppliesToRow({
       <LineTypeUsageSelect
         value={appliesTo}
         label={t('shared.lineTypeUsage.label')}
-        disabled={disabled || !!dimensionHint}
+        disabled={disabled}
+        excluded={excluded}
         error={error}
         onChange={(next) => {
           if (next !== appliesTo) onChange(next);
@@ -392,9 +402,11 @@ function ValueCreate({
   }, [axes.defaultAxis, axes.enabled, requestedAxisId]);
   const axisId = chosenAxisId ?? fallbackAxisId;
   const chosenAxis = axisId ? axes.byId.get(axisId) : undefined;
-  // A dimension restricted to one type decides for its values: the field stays on OPEX and CAPEX.
+  // Under a dimension restricted to one type, a value cannot be restricted to the other: a choice
+  // made under another dimension falls back to OPEX and CAPEX.
   const dimensionHint = chosenAxis ? dimensionUsageHint(t, chosenAxis, axes.label(chosenAxis)) : null;
-  const shownAppliesTo = dimensionHint ? null : appliesTo;
+  const excluded = excludedLineType(chosenAxis);
+  const shownAppliesTo = appliesTo && appliesTo === excluded ? null : appliesTo;
 
   const handleCreate = async () => {
     if (!canCreate || submitting) return;
@@ -474,7 +486,7 @@ function ValueCreate({
             <LineTypeUsageSelect
               value={shownAppliesTo}
               label={t('shared.lineTypeUsage.label')}
-              disabled={!!dimensionHint}
+              excluded={excluded}
               error={errors.applies_to}
               onChange={setAppliesTo}
             />

@@ -332,10 +332,12 @@ export class AnalyticsCategoriesService {
   }
 
   /**
-   * Inserts (existing = null) or updates one value and writes its audit row. A write that sets a
-   * restriction to one line type (new, or changed) first locks the dimension FOR SHARE and checks
-   * it against the dimension's own: a concurrent narrowing of the dimension (FOR UPDATE) then
-   * either committed first and is seen here, or waits and counts this value.
+   * Inserts (existing = null) or updates one value and writes its audit row. Any write of a
+   * restriction to one line type first locks the dimension FOR SHARE and checks it against the
+   * dimension's own: a concurrent narrowing of the dimension (FOR UPDATE) then either committed
+   * first and is seen here, or waits and counts this value. Also when the restriction looks
+   * unchanged: `existing` may be an unlocked snapshot (the CSV import), so a transaction that
+   * cleared the value and narrowed the dimension meanwhile is only seen under the lock.
    */
   async persist(
     ctx: AnalyticsContext,
@@ -343,7 +345,7 @@ export class AnalyticsCategoriesService {
     values: AnalyticsCategoryValues,
     axis: { name: string | null },
   ): Promise<StoredAnalyticsCategory> {
-    if (values.applies_to !== null && values.applies_to !== (existing?.applies_to ?? null)) {
+    if (values.applies_to !== null) {
       const [locked] = await ctx.manager.query(
         `SELECT name, applies_to FROM analytics_axes WHERE tenant_id = $1 AND id = $2::uuid FOR SHARE`,
         [ctx.tenantId, values.axis_id],

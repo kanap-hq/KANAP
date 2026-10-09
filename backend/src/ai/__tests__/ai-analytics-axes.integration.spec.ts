@@ -21,7 +21,8 @@ import { itemService } from '../../spend/__tests__/cost-center.fixtures';
 // - `analytics_category` keeps addressing the default dimension after a rename,
 //   a new code and a reorder; its SQL group join reads the link with a tenant
 //   predicate on every join (a stale legacy column is ignored);
-// - the `analytics_categories` entity carries its dimension (`axis`, `axis_code`);
+// - the `analytics_categories` entity carries its dimension (`axis`, `axis_code`)
+//   and the lines a value is for (`applies_to`, also a filter);
 // - a dimension used for one line type only is a field of that type's entity
 //   only; a value a line holds on a dimension of the other type stays out of
 //   the detail.
@@ -304,10 +305,13 @@ async function testCategoriesEntityCarriesDimension() {
     assert.deepEqual(values.values.axis, ['Analytics dimension', 'Archive', 'Nature'], 'dimension names, the unnamed default under the product label');
     assert.deepEqual(values.values.axis_code, ['archive', 'default', 'nature']);
 
+    await runner.query(`UPDATE analytics_categories SET applies_to = 'opex' WHERE tenant_id = $1 AND name = 'Maintenance'`, [seed.tenantId]);
     const listed: any = await queryExecutor('opex').execute(ctx, { entity_type: 'analytics_categories', sort: { field: 'name', direction: 'asc' } });
-    const metadata = Object.fromEntries(listed.items.map((item: any) => [item.label, [item.metadata.axis, item.metadata.axis_code]]));
-    assert.deepEqual(metadata.Maintenance, ['Nature', 'nature'], 'a value carries its dimension');
-    assert.deepEqual(metadata.Licences, ['Analytics dimension', 'default']);
+    const metadata = Object.fromEntries(listed.items.map((item: any) => [item.label, [item.metadata.axis, item.metadata.axis_code, item.metadata.applies_to]]));
+    assert.deepEqual(metadata.Maintenance, ['Nature', 'nature', 'opex'], 'a value carries its dimension and the lines it is for');
+    assert.deepEqual(metadata.Licences, ['Analytics dimension', 'default', null]);
+    const opexOnly: any = await queryExecutor('opex').execute(ctx, { entity_type: 'analytics_categories', filters: { applies_to: ['opex'] }, sort: { field: 'name', direction: 'asc' } });
+    assert.deepEqual(opexOnly.items.map((item: any) => item.label), ['Maintenance'], 'filtered on applies_to');
 
     const labels = (result: any) => result.items.map((item: any) => item.label);
     const ofNature: any = await queryExecutor('opex').execute(ctx, { entity_type: 'analytics_categories', filters: { axis: ['Nature'] }, sort: { field: 'name', direction: 'asc' } });

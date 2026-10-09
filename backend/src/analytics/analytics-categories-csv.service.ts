@@ -58,7 +58,7 @@ interface ParsedRow {
 
 /**
  * The values (analytics categories) of every dimension in one file:
- * `axis_code;name;description;status;disabled_at`. A blank `axis_code` is the
+ * `axis_code;name;description;status;disabled_at;applies_to`. A blank `axis_code` is the
  * default dimension. Rows match on (dimension, name) case-insensitively.
  * Dimensions themselves are created on the page (no dimensions file).
  */

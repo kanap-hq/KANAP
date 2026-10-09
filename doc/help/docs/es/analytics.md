@@ -145,7 +145,7 @@ Un valor también puede limitarse a un solo tipo de línea. Los dos ajustes act�
 - El ajuste de la dimensión decide si el campo existe para un tipo de línea. Cuando el campo desaparece, los valores que tienen las líneas quedan ocultos.
 - El ajuste del valor filtra las opciones. El campo se mantiene, las líneas CAPEX ya no ofrecen **Abonnements SaaS**, y una línea CAPEX que ya lo tiene lo conserva, lo muestra y sigue siendo editable. Consulte [Valores OPEX o CAPEX](#valores-opex-o-capex).
 
-Los dos ajustes deben ser coherentes. Una dimensión no puede limitarse a un tipo de línea mientras algunos de sus valores sean solo para el otro: KANAP rechaza, por ejemplo, "2 values of this dimension are for CAPEX lines only. Set them to OPEX and CAPEX first."
+Los dos ajustes deben ser coherentes. Una dimensión no puede limitarse a un tipo de línea mientras algunos de sus valores sean solo para el otro: KANAP lo rechaza y nombra los valores (como máximo tres, y después "and N more"), por ejemplo "2 values of this dimension are for CAPEX lines only (Matériel, Projet). Set them to OPEX and CAPEX first."
 
 ### Eliminar una dimensión
 
@@ -190,7 +190,7 @@ El campo **Usada para** de un valor indica qué líneas de presupuesto pueden us
 
 El campo de una línea OPEX ofrece los valores para OPEX y para ambos. El campo de una línea CAPEX hace lo mismo para CAPEX. Una línea que ya tiene un valor del otro tipo lo conserva, lo muestra y sigue siendo editable, como con un valor desactivado. Elegir un valor así para otra línea, o al cambiar el valor de una línea, se rechaza: en la aplicación, en un archivo de presupuesto, por la API y en Plaid.
 
-- Cuando la dimensión se usa para un solo tipo de línea, el campo queda bloqueado según el ajuste de la dimensión, con una línea como "La dimensión Nature de coût es solo para líneas OPEX." Un valor no puede limitarse al tipo de línea que su dimensión excluye.
+- Cuando la dimensión se usa para un solo tipo de línea, el tipo que excluye no está disponible en el campo, con una línea como "La dimensión Nature de coût es solo para líneas OPEX." **OPEX y CAPEX** y el tipo propio de la dimensión siguen siendo seleccionables. Un valor no puede limitarse al tipo de línea que su dimensión excluye.
 - Cuando líneas del otro tipo tienen el valor, aparece una línea bajo el campo, por ejemplo "4 líneas CAPEX tienen este valor. Lo conservan, pero las nuevas líneas CAPEX no pueden elegirlo." Haga clic en **Mostrar estas líneas** para abrirlas en la lista, en una pestaña nueva. La línea permanece mientras exista el conflicto.
 - El informe Dimensiones analíticas ofrece en su lista **Excluir valores** los valores del tipo elegido. Consulte [Informes](reports.md#dimensiones-analiticas).
 
