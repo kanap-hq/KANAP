@@ -310,7 +310,8 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 
-describe('FlowReport', () => {
+// Each test renders the full report several times; CI runners need more than the 5 s default.
+describe('FlowReport', { timeout: 20_000 }, () => {
   it('leads with what is open now, its change over the window and a trend', async () => {
     mockApi(report());
     renderReport();

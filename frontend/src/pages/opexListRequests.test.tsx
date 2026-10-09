@@ -3,6 +3,7 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { stubOffsetParent } from '../test/jsdomOffsetParent';
 
 // These specs mount the real ServerDataGrid (and AG Grid), the real set filter and the real text
 // filter box, and count the requests each user action sends.
@@ -109,6 +110,7 @@ async function openList() {
 describe('OPEX list requests per action', () => {
   let stored = new Map<string, string>();
   beforeEach(() => {
+    stubOffsetParent();
     grid.api = null;
     get.mockReset();
     window.sessionStorage.clear();

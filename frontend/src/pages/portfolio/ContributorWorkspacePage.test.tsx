@@ -421,7 +421,7 @@ describe('ContributorWorkspacePage manager and employment type', () => {
       listItems: [contributor(), MANAGER],
     });
     renderAt(`/portfolio/contributors/${CONTRIBUTOR_REF}`);
-    const link = await screen.findByRole('button', { name: /metadata\.manager Grace HOPPER/ });
+    const link = await screen.findByRole('button', { name: /metadata\.manager\s*Grace HOPPER/ });
     fireEvent.click(link);
     await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/portfolio/contributors/CTR-7'));
   });
@@ -430,7 +430,7 @@ describe('ContributorWorkspacePage manager and employment type', () => {
     mockGets('missing', { subject: { manager_user_id: 'user-3', manager_source: 'manual', manager_name: 'Grace HOPPER' } });
     renderAt(`/portfolio/contributors/${CONTRIBUTOR_REF}`);
     await screen.findAllByText('Grace HOPPER');
-    expect(screen.queryByRole('button', { name: /metadata\.manager Grace HOPPER/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /metadata\.manager\s*Grace HOPPER/ })).toBeNull();
   });
 
   it('hides both fields on the self-service route', async () => {

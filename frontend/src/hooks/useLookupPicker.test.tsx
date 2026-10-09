@@ -137,7 +137,7 @@ describe('useLookupPicker (through SupplierSelect)', () => {
 
   /** The next searches wait until the test answers them (`answer()`), as on a slow server. */
   function holdSearches() {
-    const served = apiGet.getMockImplementation()!;
+    const served = apiGet.getMockImplementation()! as (...args: any[]) => any;
     let answer: () => void = () => undefined;
     apiGet.mockImplementation(async (url: string, config?: { params?: Record<string, unknown>; signal?: AbortSignal }) => {
       if (!config?.params?.ids) await new Promise<void>((resolve) => { answer = resolve; });
@@ -210,7 +210,7 @@ describe('useLookupPicker (through SupplierSelect)', () => {
 
   it('keeps what the user types while the chosen value\'s label is still loading', async () => {
     let answerLabel: () => void = () => undefined;
-    const served = apiGet.getMockImplementation()!;
+    const served = apiGet.getMockImplementation()! as (...args: any[]) => any;
     apiGet.mockImplementation(async (url: string, config?: { params?: Record<string, unknown>; signal?: AbortSignal }) => {
       if (config?.params?.ids) await new Promise<void>((resolve) => { answerLabel = resolve; });
       return served(url, config);
@@ -235,7 +235,7 @@ describe('useLookupPicker (through SupplierSelect)', () => {
   });
 
   it('gives up on a label whose read fails twice, instead of loading forever', async () => {
-    const served = apiGet.getMockImplementation()!;
+    const served = apiGet.getMockImplementation()! as (...args: any[]) => any;
     apiGet.mockImplementation(async (url: string, config?: { params?: Record<string, unknown>; signal?: AbortSignal }) => {
       if (config?.params?.ids) {
         calls.push({ url, params: config.params });

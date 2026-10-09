@@ -2,18 +2,6 @@
 
 These packages have a known advisory and stay on their current major for now; each entry says where the package runs, what keeps it out of what is shipped or limits its use, and when it is upgraded.
 
-## vitest, with tinypool, vite-node and @vitest/mocker (frontend, critical)
-
-- Where it runs: a development dependency, used only by the test suite in CI and on developer machines.
-- What keeps it out of production: the frontend image installs it in the build stage only. The final image is nginx serving the static files of the build, with no Node packages.
-- Planned upgrade: delivery 2.
-
-## vite, with esbuild (frontend, high)
-
-- Where it runs: a development dependency, used at build time and by the local dev server.
-- What keeps it out of production: its output is static files; the final frontend image is nginx serving them.
-- Planned upgrade: delivery 2.
-
 ## ts-node-dev, with chokidar and braces (backend, high)
 
 - Where it runs: the local development restarter (`npm run start:dev`). No fixed version exists upstream.
@@ -22,7 +10,7 @@ These packages have a known advisory and stay on their current major for now; ea
 
 ## Remaining moderate advisories
 
-`react-router` and `react-router-dom` (frontend), and `esbuild` through `vite` (frontend) each need a new major: planned with the dependency majors of delivery 2.
+`react-router` and `react-router-dom` (frontend) each need a new major: planned with the dependency majors of delivery 2.
 
 ## Planned major upgrades
 
@@ -30,8 +18,6 @@ This table lists the major upgrades that are planned or queued for planning, inc
 
 | Package | Folder | Current | Target | Planned in |
 |---|---|---|---|---|
-| `vite` | frontend | 5.x | 8.x | Delivery 2 |
-| `vitest` | frontend | 2.x | 5.x | Delivery 2 |
 | `react-router-dom` | frontend | 6.x | 7.x | Delivery 2 |
 | `@mdxeditor/editor` | frontend | 3.x | 4.x | Delivery 2 |
 | Node.js | backend, frontend and marketing images, CI | 24 | 26 (LTS on 2026-10-28) | To be scheduled |
@@ -63,13 +49,10 @@ This table lists the major upgrades that are planned or queued for planning, inc
 | `zod` | backend | 3.x | 4.x | To be scheduled |
 | `@mui/icons-material` | frontend | 5.x | 9.x | To be scheduled |
 | `@mui/material` | frontend | 5.x | 9.x | To be scheduled |
-| `@testing-library/jest-dom` | frontend | 6.x | 7.x | To be scheduled |
-| `@vitejs/plugin-react` | frontend | 4.x | 6.x | Delivery 2 (with vite) |
 | `ag-charts-community` | frontend | 9.x | 14.x | To be scheduled |
 | `ag-grid-community` | frontend | 32.x | 36.x | To be scheduled |
 | `ag-grid-react` | frontend | 32.x | 36.x | To be scheduled |
 | `i18next` | frontend | 25.x | 26.x | To be scheduled |
-| `jsdom` | frontend | 26.x | 30.x | Delivery 2 (with vitest) |
 | `react-i18next` | frontend | 16.x | 17.x | To be scheduled |
 | `typescript` | frontend | 5.x | 7.x | To be scheduled |
 | `actions/checkout` | .github/workflows | v4 | v7 | To be scheduled |

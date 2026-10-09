@@ -1475,7 +1475,7 @@ describe('SpendItemPage others\' changes (lot 3G)', () => {
     renderAt(`/ops/opex/${LINE}/overview`);
     const notes = await screen.findByDisplayValue('Start');
     othersWrite({ notes: 'Notes from Marie' });
-    const served = mocked.get.getMockImplementation()!;
+    const served = mocked.get.getMockImplementation()! as (...args: any[]) => any;
     mocked.get.mockImplementation(async (url: string, config?: unknown) => {
       if (url === `/spend-items/${LINE}`) throw Object.assign(new Error('HTTP 503'), { response: { status: 503, headers: {}, data: { code: 'busy' } } });
       return served(url, config);
@@ -1491,7 +1491,7 @@ describe('SpendItemPage others\' changes (lot 3G)', () => {
   it('a line deleted elsewhere says so, and is not read again', async () => {
     renderAt(`/ops/opex/${LINE}/overview`);
     await screen.findByDisplayValue('Start');
-    const served = mocked.get.getMockImplementation()!;
+    const served = mocked.get.getMockImplementation()! as (...args: any[]) => any;
     mocked.get.mockImplementation(async (url: string, config?: unknown) => {
       if (url === `/spend-items/${LINE}/meta`) throw Object.assign(new Error('HTTP 404'), { response: { status: 404, headers: {}, data: {} } });
       return served(url, config);

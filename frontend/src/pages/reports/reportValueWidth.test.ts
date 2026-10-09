@@ -64,7 +64,7 @@ describe('readGridTextMetrics', () => {
     style.textContent = '.ag-theme-quartz.kanap-dense-grid { --ag-font-family: Inter, sans-serif; --ag-font-size: 14px; --ag-cell-horizontal-padding: 8px; }';
     document.head.appendChild(style);
     try {
-      expect(readGridTextMetrics()).toEqual({ font: 'bold 14px Inter, sans-serif', fontSize: 14, cellPadding: 8 });
+      expect(readGridTextMetrics()).toEqual({ font: 'bold 14px Inter,sans-serif', fontSize: 14, cellPadding: 8 });
     } finally {
       style.remove();
     }

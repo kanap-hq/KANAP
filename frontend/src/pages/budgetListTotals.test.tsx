@@ -156,7 +156,7 @@ describe.each([
     fireEvent.click(screen.getByRole('button', { name: 'delete-selected' }));
     await settle();
     expect(totalsCalls()).toHaveLength(3);
-    expect(totalsCalls()[2][1]).toEqual(totalsCalls()[1][1]);
+    expect((totalsCalls()[2][1] as { params: unknown }).params).toEqual((totalsCalls()[1][1] as { params: unknown }).params);
     // The real grid mounts four times here: 3 to 4 s alone, more under the full suite's load.
   }, 20_000);
 });
