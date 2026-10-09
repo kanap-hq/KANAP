@@ -32,7 +32,7 @@ Die hier beschriebenen Dateien sind der Vertrag, auf den Sie sich stützen. Ihre
 | | Währung, aus den erlaubten Währungen | Eine |
 | | Kostenstelle | Keine oder eine. Eine Gruppe ist nicht verwendbar |
 | | Lieferant | Keiner oder einer |
-| | Wert jeder aktiven Analysedimension | Keiner oder einer pro Dimension |
+| | Wert jeder aktiven Analysedimension | Keiner oder einer pro Dimension. Einer auf einer neuen Zeile für eine erforderliche Dimension |
 | | IT-Verantwortlicher und Fachverantwortlicher (Benutzer) | Je keiner oder einer |
 | | Budgetjahre | Eines pro Jahr |
 | Budgetjahr einer Position | Budgetspalten | Fünf, jede mit zwölf Monatsbeträgen |
@@ -71,7 +71,7 @@ Eine Position lebt über mehrere Jahre: Eine Lizenz über drei Jahre ist eine Po
 | Konto | `account_number` | Ja | Im Kontenplan des zahlenden Unternehmens |
 | Kostenstelle | `cost_center_code` | Nein | Eine Gruppe wird abgelehnt |
 | Run oder Build | `run_build` | Nein | `run` oder `build` |
-| Analysewerte | `analytics:<code>` | Nein | Eine Spalte pro aktiver Dimension, die für die Art der Datei verwendet wird |
+| Analysewerte | `analytics:<code>` | Bei einer erforderlichen Dimension | Eine Spalte pro aktiver Dimension, die für die Art der Datei verwendet wird. Eine erforderliche Dimension braucht einen Wert auf einer neuen Zeile |
 | IT-Verantwortlicher, Fachverantwortlicher | `owner_it_email`, `owner_business_email` | Nein | Aktive Benutzer |
 | Projekt | `project` | Nein | Eine Projektnummer, zum Beispiel `PRJ-3` |
 | Währung | `currency` | Ja | ISO-Code mit drei Buchstaben |

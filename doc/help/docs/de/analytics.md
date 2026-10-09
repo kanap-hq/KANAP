@@ -9,6 +9,7 @@ Eine **Dimension** ist eine Art, Budgetzeilen zu klassifizieren, zum Beispiel **
 - Jede Dimension hat ihre eigene Werteliste.
 - Jede OPEX- und CAPEX-Zeile kann einen Wert pro Dimension tragen. Eine Zeile kann gleichzeitig **Licenses** in Nature und **Workplace** in Program sein.
 - Eine Zeile kann in einer Dimension auch keinen Wert haben. Berichte zeigen diese Zeilen als „Nicht zugeordnet“.
+- Eine als **Erforderlich** markierte Dimension verlangt einen Wert auf jeder neuen Zeile. Siehe [Erforderliche Dimensionen](#erforderliche-dimensionen).
 
 Zum Beispiel:
 
@@ -99,6 +100,7 @@ Klicken Sie in der Auswahlleiste auf **Neu**, füllen Sie die Felder aus und kli
 - **Code** wird aus dem Namen vorgeschlagen: Kleinbuchstaben, ohne Akzente, Leerzeichen durch `-` ersetzt. Sie können ihn ändern, bevor Sie die Dimension erstellen.
 - **Reihenfolge** wird so vorgeschlagen, dass die neue Dimension zuletzt kommt.
 - **Verwendet für** beginnt mit **OPEX und CAPEX**. Siehe [OPEX- oder CAPEX-Dimensionen](#opex-oder-capex-dimensionen).
+- **Erforderlich** ist zu Beginn ausgeschaltet. Siehe [Erforderliche Dimensionen](#erforderliche-dimensionen).
 - **Beschreibung** ist optional.
 
 Kehren Sie dann zur Seite zurück, um die Werte der neuen Dimension hinzuzufügen.
@@ -109,9 +111,9 @@ Kehren Sie dann zur Seite zurück, um die Werte der neuen Dimension hinzuzufüge
 
 - **Kopfzeile**: der Name der Dimension. Klicken Sie darauf, um die Dimension umzubenennen. **Zurück** / **Weiter** bewegen sich durch die Dimensionen in ihrer Reihenfolge, und die Schließen-Schaltfläche führt zur Seite mit dieser Dimension zurück
 - **Hauptbereich**: eine Nutzungszeile, zum Beispiel „12 Werte, verwendet von 27 OPEX-Zeilen und 2 CAPEX-Zeilen.“, dann die **Beschreibung**
-- **Bereich Eigenschaften** rechts: **Name**, **Code**, **Reihenfolge**, **Verwendet für** und **Lebenszyklus**
+- **Bereich Eigenschaften** rechts: **Name**, **Code**, **Reihenfolge**, **Verwendet für**, **Erforderlich** und **Lebenszyklus**
 
-**Automatisches Speichern**: Jede Änderung wird von selbst gespeichert. Es gibt keine Schaltfläche zum Speichern. Textfelder werden gespeichert, wenn Sie sie verlassen (drücken Sie in **Name**, **Code** und **Reihenfolge** Enter, um sofort zu speichern); der Lebenszyklus wird gespeichert, sobald Sie ihn ändern. Wird eine Änderung abgelehnt, erscheint der Grund unter dem Feld, das sie verursacht hat, zum Beispiel ein doppelter Code unter **Code**. Ein in der Kopfzeile abgelehnter Name wird oben auf der Seite angezeigt.
+**Automatisches Speichern**: Jede Änderung wird von selbst gespeichert. Es gibt keine Schaltfläche zum Speichern. Textfelder werden gespeichert, wenn Sie sie verlassen (drücken Sie in **Name**, **Code** und **Reihenfolge** Enter, um sofort zu speichern); der Schalter **Erforderlich** und der Lebenszyklus werden gespeichert, sobald Sie sie ändern. Wird eine Änderung abgelehnt, erscheint der Grund unter dem Feld, das sie verursacht hat, zum Beispiel ein doppelter Code unter **Code**. Ein in der Kopfzeile abgelehnter Name wird oben auf der Seite angezeigt.
 
 ### Felder einer Dimension
 
@@ -122,6 +124,7 @@ Kehren Sie dann zur Seite zurück, um die Werte der neuen Dimension hinzuzufüge
 | **Reihenfolge** | Eine ganze Zahl. Dimensionen werden nach dieser Zahl sortiert, die kleinste zuerst: auf dieser Seite, auf Budgetzeilen, in den Berichtsfiltern und in der Dimensionsauswahl des Berichts |
 | **Beschreibung** | Wofür die Dimension da ist, damit Teammitglieder Zeilen einheitlich klassifizieren |
 | **Verwendet für** | **OPEX und CAPEX**, **Nur OPEX** oder **Nur CAPEX**. Legt fest, welche Budgetzeilen einen Wert in dieser Dimension haben können. Siehe [OPEX- oder CAPEX-Dimensionen](#opex-oder-capex-dimensionen). Bei der Standarddimension gesperrt, mit einer Zeile darunter: „Die Standarddimension gilt für OPEX- und CAPEX-Zeilen.“ |
+| **Erforderlich** | Ein Schalter. Ist er eingeschaltet, braucht jede neue Zeile der Arten, für die die Dimension verwendet wird, einen Wert in ihr, und eine Zeile mit einem Wert kann ihn nicht mehr verlieren. Siehe [Erforderliche Dimensionen](#erforderliche-dimensionen). Auch die Standarddimension kann erforderlich sein |
 | **Lebenszyklus** | Der Statusschalter, dessen Beschriftung den aktuellen Zustand zeigt (**Aktiviert** oder **Deaktiviert**), und das Datum **Ende der Gültigkeit**. Siehe [Status und Lebenszyklus](#status-und-lebenszyklus). Bei der Standarddimension gesperrt, mit einer Zeile darunter: „Diese Dimension kann weder deaktiviert noch gelöscht werden: Ältere Dateien und Fragen an die KI verwenden sie.“ |
 
 ### OPEX- oder CAPEX-Dimensionen
@@ -146,6 +149,21 @@ Auch ein einzelner Wert kann auf eine Zeilenart beschränkt werden. Die beiden E
 - Die Einstellung des Werts filtert die Auswahl. Das Feld bleibt, CAPEX-Zeilen bieten **Abonnements SaaS** nicht mehr an, und eine CAPEX-Zeile, die ihn bereits hat, behält ihn, zeigt ihn an und bleibt bearbeitbar. Siehe [OPEX- oder CAPEX-Werte](#opex-oder-capex-werte).
 
 Die beiden Einstellungen müssen zusammenpassen. Eine Dimension kann nicht auf eine Zeilenart beschränkt werden, solange einige ihrer Werte nur für die andere gelten: KANAP lehnt dies ab und nennt die Werte (höchstens drei, dann „and N more“), zum Beispiel „2 values of this dimension are for CAPEX lines only (Matériel, Projet). Set them to OPEX and CAPEX first.“
+
+### Erforderliche Dimensionen
+
+Schalten Sie **Erforderlich** ein, wenn jede Budgetzeile in einer Dimension klassifiziert sein muss. KANAP prüft dann die Zeilen der Arten, für die die Dimension verwendet wird:
+
+- **Eine neue Zeile braucht einen Wert in der Dimension.** Das gilt für jeden Weg, eine Zeile anzulegen: die OPEX- und CAPEX-Bildschirme, eine Budgetdatei, Plaid und die API. Ohne Wert wird die Zeile nicht angelegt, mit der Meldung „The Nature dimension is required. Choose a value.“
+- **Eine Zeile mit einem Wert kann ihn nicht verlieren.** Sie können einen anderen Wert wählen. Das Feld kann nicht geleert werden.
+- **Eine Zeile, die vor dem Einschalten angelegt wurde, funktioniert weiter.** Hat sie keinen Wert in der Dimension, bleibt sie bearbeitbar, und Sie können andere Änderungen an ihr speichern. Ihr Feld ist als erforderlich markiert.
+
+Die Einstellung wird nur geprüft, solange die Dimension aktiviert ist. Eine deaktivierte Dimension behält ihre Einstellung, und eine Zeile unter dem Schalter sagt „Wird nicht geprüft, solange die Dimension deaktiviert ist.“ Eine Dimension, die nur für eine Zeilenart verwendet wird, wird nur bei dieser Art geprüft: Eine erforderliche Dimension mit **Nur OPEX** verlangt nichts von CAPEX-Zeilen.
+
+Solange die Einstellung eingeschaltet ist, helfen Ihnen Zeilen unter dem Schalter, die bestehenden Zeilen zu vervollständigen:
+
+- **Zeilen ohne Wert**: zum Beispiel „117 OPEX-Zeilen und 15 CAPEX-Zeilen haben keinen Wert.“ Jede Zeilenart hat ihren eigenen Link, **OPEX-Zeilen anzeigen** und **CAPEX-Zeilen anzeigen** (**Diese Zeilen anzeigen**, wenn nur eine Art betroffen ist). Der Link öffnet die Zeilen in ihrer Liste, in einem neuen Tab, aktivierte und deaktivierte Zeilen eingeschlossen.
+- **Kein Wert zur Auswahl**: Hat eine Zeilenart, für die die Dimension verwendet wird, keinen aktivierten Wert, den sie verwenden kann, weist eine Warnung darauf hin, zum Beispiel „Kein aktivierter Wert ist für CAPEX-Zeilen verwendbar. Neue CAPEX-Zeilen können nicht angelegt werden.“ Fügen Sie einen Wert für diese Zeilenart hinzu, oder aktivieren Sie einen. Siehe [OPEX- oder CAPEX-Werte](#opex-oder-capex-werte).
 
 ### Eine Dimension löschen
 
@@ -211,6 +229,7 @@ Dimensionen und Werte haben jeweils einen Status (**Aktiviert** oder **Deaktivie
 
 **Eine deaktivierte Dimension**:
 
+- Wird nicht geprüft, wenn sie **Erforderlich** ist: Zeilen können ohne Wert in ihr angelegt werden. Sie behält die Einstellung für den Fall, dass Sie sie wieder aktivieren.
 - Verschwindet aus den Positionsformularen, den OPEX- und CAPEX-Listen, den Berichtsfiltern, der Dimensionsauswahl des Berichts, den OPEX- und CAPEX-CSV-Exporten und aus Plaid. Nur die Seite Analysedimensionen zeigt sie, als **Deaktiviert** markiert.
 - Behält ihre Werte auf den Zeilen. Aktivieren Sie die Dimension wieder, und die Werte erscheinen wieder.
 - Nimmt keine neuen Werte auf. **Neuer Wert** ist deaktiviert, solange die Dimension ausgewählt ist, und CSV-Dateien können ihre Werte weder hinzufügen noch ändern.
@@ -226,6 +245,7 @@ Die Standarddimension kann nicht deaktiviert werden.
 Im Bereich **Eigenschaften** einer OPEX- oder CAPEX-Position, und wenn Sie eine erstellen, hat jede aktivierte Dimension, die für diese Zeilenart verwendet wird, ein eigenes Feld, nach der Dimension benannt, in der Reihenfolge der Dimensionen. Die Standarddimension erscheint als **Analysedimension**, bis Sie sie umbenennen.
 
 - Wählen Sie einen Wert, oder leeren Sie das Feld, um die Zeile in dieser Dimension ohne Wert zu lassen. Die Änderung wird sofort gespeichert.
+- Das Feld einer erforderlichen Dimension ist mit einem Sternchen markiert. Eine neue Position kann ohne Wert in ihr nicht angelegt werden, mit der Meldung „Nature ist erforderlich.“ Bei einer Position mit einem Wert hat das Feld keine Schaltfläche zum Leeren: Sie können nur einen anderen Wert wählen. Siehe [Erforderliche Dimensionen](#erforderliche-dimensionen).
 - Das Feld listet die aktivierten Werte seiner Dimension, die für diese Zeilenart verwendet werden. Ein deaktivierter Wert oder ein Wert, der nur für die andere Zeilenart gilt, bleibt auf den Zeilen sichtbar, die ihn haben. Siehe [OPEX- oder CAPEX-Werte](#opex-oder-capex-werte).
 - Das Feld kann keinen Wert erstellen. Erstellen Sie Werte auf der Seite Analysedimensionen, oder lassen Sie sie von einem OPEX- oder CAPEX-CSV-Import erstellen.
 - Ein Wert gilt für die ganze Zeile, über alle Jahre.
@@ -255,6 +275,7 @@ Die sieben Budgetberichte lassen sich auch auf einen Wert einer Dimension eingre
 - Eine Frage zur Analysekategorie verwendet die Standarddimension, unabhängig von ihrem Namen und ihrer Reihenfolge.
 - Plaid kann den Wert einer Zeile in jeder Dimension setzen, ändern oder löschen, wenn es eine OPEX- oder CAPEX-Zeile anlegt oder aktualisiert. Fragen Sie zum Beispiel: „Setze die Nature de coût von OPX-12 auf Licences et maintenance.“ Plaid findet den Wert über seinen Namen in dieser Dimension und zeigt in der Vorschau die Dimension und den Wert, vorher und nachher. Nichts ändert sich, bevor Sie zustimmen.
 - Plaid befolgt dieselben Regeln wie die App: nur aktivierte Dimensionen, die für den Typ der Zeile verwendet werden, nur aktivierte Werte, die für den Typ der Zeile verwendet werden, und eine Zeile behält einen Wert, den sie bereits trägt.
+- Plaid weiß, welche Dimensionen erforderlich sind. Eine neue Zeile braucht in jeder von ihnen einen Wert, und Plaid kann den Wert einer erforderlichen Dimension nicht löschen. Plaid lehnt eine Anfrage ab, die gegen die Regel verstößt, und nennt den Grund, zum Beispiel „Nature is required for spend item creation.“
 - Plaid kann auch einen Wert in der Dimension anlegen, die Sie nennen. Ohne Angabe einer Dimension kommt der Wert in die Standarddimension.
 
 ---
@@ -351,7 +372,7 @@ Beginnen Sie mit 5 bis 10 pro Dimension. Mehr als 20 bedeutet meist, dass die Di
 **Abteilungen** sind formale Organisationseinheiten mit präzisen Zuordnungsschlüsseln. **Kostenstellen** geben an, wer für die Ausgaben verantwortlich ist und einsteht. **Analysedimensionen** sind freie, optionale Klassifizierungen für das Reporting, ohne Zuordnung oder Verantwortung.
 
 **Warum zeigen manche Zeilen „Nicht zugeordnet“?**
-Im Bericht Analysedimensionen erscheinen Zeilen ohne Wert in der gewählten Dimension als „Nicht zugeordnet“. Das ist so vorgesehen: Werte sind optional.
+Im Bericht Analysedimensionen erscheinen Zeilen ohne Wert in der gewählten Dimension als „Nicht zugeordnet“. Das ist so vorgesehen: Werte sind optional, außer die Dimension ist erforderlich. Auch dann können Zeilen, die vor dem Einschalten angelegt wurden, keinen Wert haben. Der Arbeitsbereich der Dimension zählt sie und verlinkt sie.
 
 **Was passiert mit den Zeilen, wenn ich einen Wert oder eine Dimension umbenenne?**
 An den Zeilen ändert sich nichts. Listen und Berichte zeigen den neuen Namen sofort.

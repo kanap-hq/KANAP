@@ -32,7 +32,7 @@ Les fichiers décrits ici sont le contrat sur lequel s'appuyer. Leurs colonnes s
 | | Devise, parmi les devises autorisées | Une |
 | | Centre de coûts | Zéro ou un. Un groupe ne peut pas être utilisé |
 | | Fournisseur | Zéro ou un |
-| | Valeur de chaque dimension analytique active | Zéro ou une par dimension |
+| | Valeur de chaque dimension analytique active | Zéro ou une par dimension. Une sur une nouvelle ligne pour une dimension obligatoire |
 | | Responsable IT et responsable métier (utilisateurs) | Zéro ou un chacun |
 | | Années budgétaires | Une par année |
 | Année budgétaire d'un poste | Colonnes budgétaires | Cinq, chacune avec douze montants mensuels |
@@ -71,7 +71,7 @@ Un poste vit sur plusieurs années : une licence sur trois ans est un poste avec
 | Compte | `account_number` | Oui | Dans le plan comptable de la société payeuse |
 | Centre de coûts | `cost_center_code` | Non | Un groupe est refusé |
 | Run ou build | `run_build` | Non | `run` ou `build` |
-| Valeurs analytiques | `analytics:<code>` | Non | Une colonne par dimension active utilisée pour le type du fichier |
+| Valeurs analytiques | `analytics:<code>` | Pour une dimension obligatoire | Une colonne par dimension active utilisée pour le type du fichier. Une dimension obligatoire demande une valeur sur une nouvelle ligne |
 | Responsable IT, responsable métier | `owner_it_email`, `owner_business_email` | Non | Utilisateurs actifs |
 | Projet | `project` | Non | Un numéro de projet, par exemple `PRJ-3` |
 | Devise | `currency` | Oui | Code ISO à trois lettres |

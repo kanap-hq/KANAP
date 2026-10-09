@@ -9,6 +9,7 @@ Une **dimension** est une façon de classer les lignes budgétaires, par exemple
 - Chaque dimension a sa propre liste de valeurs.
 - Chaque ligne OPEX et CAPEX peut porter une valeur par dimension. Une ligne peut être **Licenses** sur Nature et **Workplace** sur Program en même temps.
 - Une ligne peut aussi n'avoir aucune valeur sur une dimension. Les rapports affichent ces lignes comme « Non affecté ».
+- Une dimension marquée **Obligatoire** demande une valeur sur chaque nouvelle ligne. Voir [Dimensions obligatoires](#dimensions-obligatoires).
 
 Par exemple :
 
@@ -99,6 +100,7 @@ Cliquez sur **Nouveau** dans la barre de sélection, remplissez les champs, puis
 - Le **Code** est proposé à partir du nom : en minuscules, sans accents, les espaces remplacés par `-`. Vous pouvez le modifier avant de créer la dimension.
 - L'**Ordre** est proposé pour que la nouvelle dimension arrive en dernier.
 - **Utilisé pour** démarre sur **OPEX et CAPEX**. Voir [Dimensions OPEX ou CAPEX](#dimensions-opex-ou-capex).
+- **Obligatoire** démarre désactivé. Voir [Dimensions obligatoires](#dimensions-obligatoires).
 - La **Description** est facultative.
 
 Revenez ensuite à la page pour ajouter les valeurs de la nouvelle dimension.
@@ -109,9 +111,9 @@ Ouvrez-le avec **Modifier** (**Ouvrir** si vous pouvez seulement consulter) dans
 
 - **En-tête** : le nom de la dimension. Cliquez dessus pour renommer la dimension. **Précédent** / **Suivant** parcourent les dimensions dans leur ordre, et le bouton de fermeture ramène à la page sur cette dimension
 - **Zone principale** : une ligne d'utilisation, par exemple « 12 valeurs. Utilisation : 27 lignes OPEX et 2 lignes CAPEX. », puis la **Description**
-- **Panneau Propriétés** à droite : **Nom**, **Code**, **Ordre**, **Utilisé pour** et **Cycle de vie**
+- **Panneau Propriétés** à droite : **Nom**, **Code**, **Ordre**, **Utilisé pour**, **Obligatoire** et **Cycle de vie**
 
-**Enregistrement automatique** : chaque modification s'enregistre d'elle-même. Il n'y a pas de bouton Enregistrer. Les champs texte s'enregistrent quand vous les quittez (dans **Nom**, **Code** et **Ordre**, appuyez sur Entrée pour enregistrer aussitôt) ; le cycle de vie s'enregistre dès que vous le modifiez. Lorsqu'une modification est refusée, la raison s'affiche sous le champ concerné, par exemple un code en double sous **Code**. Un nom refusé dans l'en-tête s'affiche en haut de la page.
+**Enregistrement automatique** : chaque modification s'enregistre d'elle-même. Il n'y a pas de bouton Enregistrer. Les champs texte s'enregistrent quand vous les quittez (dans **Nom**, **Code** et **Ordre**, appuyez sur Entrée pour enregistrer aussitôt) ; l'interrupteur **Obligatoire** et le cycle de vie s'enregistrent dès que vous les modifiez. Lorsqu'une modification est refusée, la raison s'affiche sous le champ concerné, par exemple un code en double sous **Code**. Un nom refusé dans l'en-tête s'affiche en haut de la page.
 
 ### Champs de la dimension
 
@@ -122,6 +124,7 @@ Ouvrez-le avec **Modifier** (**Ouvrir** si vous pouvez seulement consulter) dans
 | **Ordre** | Un nombre entier. Les dimensions sont classées selon ce nombre, du plus petit au plus grand : sur cette page, sur les lignes budgétaires, dans les filtres des rapports et dans le sélecteur de dimension du rapport |
 | **Description** | À quoi sert la dimension, pour que vos collègues classent les lignes de la même façon |
 | **Utilisé pour** | **OPEX et CAPEX**, **OPEX uniquement** ou **CAPEX uniquement**. Indique quelles lignes budgétaires peuvent avoir une valeur sur cette dimension. Voir [Dimensions OPEX ou CAPEX](#dimensions-opex-ou-capex). Verrouillé sur la dimension par défaut, avec une ligne en dessous : « La dimension par défaut s'applique aux lignes OPEX et CAPEX. » |
+| **Obligatoire** | Un interrupteur. Activé, il impose une valeur sur cette dimension à chaque nouvelle ligne des types pour lesquels la dimension est utilisée, et une ligne qui porte une valeur ne peut plus la perdre. Voir [Dimensions obligatoires](#dimensions-obligatoires). La dimension par défaut peut aussi être obligatoire |
 | **Cycle de vie** | L'interrupteur de statut, dont le libellé indique l'état actuel (**Activé** ou **Désactivé**), et la date de **Fin de validité**. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie). Verrouillé sur la dimension par défaut, avec une ligne en dessous : « Cette dimension ne peut être ni désactivée ni supprimée : les anciens fichiers et les questions posées à l'IA l'utilisent. » |
 
 ### Dimensions OPEX ou CAPEX
@@ -146,6 +149,21 @@ Une même valeur peut aussi être réservée à un seul type de ligne. Les deux 
 - Le réglage de la valeur filtre les choix. Le champ reste, les lignes CAPEX ne proposent plus **Abonnements SaaS**, et une ligne CAPEX qui l'a déjà le garde, l'affiche et reste modifiable. Voir [Valeurs OPEX ou CAPEX](#valeurs-opex-ou-capex).
 
 Les deux réglages doivent concorder. Une dimension ne peut pas être réglée sur un seul type de ligne tant que certaines de ses valeurs sont réservées à l'autre type : KANAP refuse et nomme les valeurs (trois au plus, puis « and N more »), par exemple « 2 values of this dimension are for CAPEX lines only (Matériel, Projet). Set them to OPEX and CAPEX first. »
+
+### Dimensions obligatoires
+
+Activez **Obligatoire** lorsque chaque ligne budgétaire doit être classée sur une dimension. KANAP contrôle alors les lignes des types pour lesquels la dimension est utilisée :
+
+- **Une nouvelle ligne doit avoir une valeur sur la dimension.** Cela vaut pour toutes les façons de créer une ligne : les écrans OPEX et CAPEX, un fichier budgétaire, Plaid et l'API. Sans valeur, la ligne n'est pas créée, avec le message « The Nature dimension is required. Choose a value. »
+- **Une ligne qui porte une valeur ne peut pas la perdre.** Vous pouvez choisir une autre valeur. Le champ ne peut pas être vidé.
+- **Une ligne créée avant l'activation du réglage continue de fonctionner.** Si elle n'a pas de valeur sur la dimension, elle reste modifiable et vous pouvez y enregistrer d'autres modifications. Son champ est marqué comme obligatoire.
+
+Le réglage n'est contrôlé que tant que la dimension est activée. Une dimension désactivée garde son réglage, et une ligne sous l'interrupteur indique « Pas de contrôle tant que la dimension est désactivée. » Une dimension utilisée pour un seul type de ligne n'est contrôlée que sur ce type : une dimension **OPEX uniquement** et obligatoire n'impose rien aux lignes CAPEX.
+
+Tant que le réglage est activé, des lignes sous l'interrupteur vous aident à compléter les lignes existantes :
+
+- **Lignes sans valeur** : par exemple « 117 lignes OPEX et 15 lignes CAPEX n'ont pas de valeur. » Chaque type de ligne a son propre lien, **Afficher les lignes OPEX** et **Afficher les lignes CAPEX** (**Afficher ces lignes** lorsqu'un seul type est concerné). Le lien ouvre les lignes dans leur liste, dans un nouvel onglet, lignes activées et désactivées comprises.
+- **Aucune valeur à choisir** : lorsqu'un type de ligne pour lequel la dimension est utilisée n'a aucune valeur activée utilisable, un avertissement le signale, par exemple « Aucune valeur activée n'est utilisable sur les lignes CAPEX. Aucune nouvelle ligne CAPEX ne peut être créée. » Ajoutez une valeur pour ce type de ligne, ou activez-en une. Voir [Valeurs OPEX ou CAPEX](#valeurs-opex-ou-capex).
 
 ### Supprimer une dimension
 
@@ -211,6 +229,7 @@ Les dimensions et les valeurs ont chacune un statut (**Activé** ou **Désactiv�
 
 **Une dimension désactivée** :
 
+- N'est pas contrôlée lorsqu'elle est **Obligatoire** : des lignes peuvent être créées sans valeur sur elle. Elle garde le réglage pour le jour où vous la réactivez.
 - Disparaît des formulaires des postes, des listes OPEX et CAPEX, des filtres des rapports, du sélecteur de dimension du rapport, des exports CSV OPEX et CAPEX et de Plaid. Seule la page Dimensions analytiques l'affiche, marquée **Désactivé**.
 - Conserve ses valeurs sur les lignes. Réactivez la dimension et elles s'affichent de nouveau.
 - Ne reçoit plus de nouvelles valeurs. **Nouvelle valeur** est désactivé tant que la dimension est sélectionnée, et les fichiers CSV ne peuvent ni ajouter ni modifier ses valeurs.
@@ -226,6 +245,7 @@ La dimension par défaut ne peut pas être désactivée.
 Dans le panneau **Propriétés** d'un poste OPEX ou CAPEX, et lorsque vous en créez un, chaque dimension activée utilisée pour ce type de ligne a son propre champ, au nom de la dimension, dans l'ordre des dimensions. La dimension par défaut s'affiche comme **Dimension analytique** tant que vous ne la renommez pas.
 
 - Choisissez une valeur, ou videz le champ pour laisser la ligne sans valeur sur cette dimension. La modification s'enregistre aussitôt.
+- Le champ d'une dimension obligatoire est marqué d'un astérisque. Un nouveau poste ne peut pas être créé sans valeur sur cette dimension, avec le message « Nature est obligatoire. » Sur un poste qui porte une valeur, le champ n'a pas de bouton d'effacement : vous pouvez seulement choisir une autre valeur. Voir [Dimensions obligatoires](#dimensions-obligatoires).
 - Le champ liste les valeurs activées de sa dimension utilisées pour ce type de ligne. Une valeur désactivée, ou une valeur réservée à l'autre type de ligne, reste affichée sur les lignes qui l'ont. Voir [Valeurs OPEX ou CAPEX](#valeurs-opex-ou-capex).
 - Le champ ne peut pas créer de valeur. Créez les valeurs sur la page Dimensions analytiques, ou laissez un import CSV OPEX ou CAPEX les créer.
 - Une valeur s'applique à toute la ligne, sur toutes les années.
@@ -255,6 +275,7 @@ Les sept rapports budgétaires peuvent aussi être restreints à une valeur d'un
 - Une question sur la catégorie analytique utilise la dimension par défaut, quels que soient son nom ou son ordre.
 - Plaid peut définir, modifier ou effacer la valeur d'une ligne sur n'importe quelle dimension lorsqu'il crée ou met à jour une ligne OPEX ou CAPEX. Demandez par exemple : « Mets la Nature de coût de OPX-12 sur Licences et maintenance ». Plaid trouve la valeur par son nom dans cette dimension et affiche dans l'aperçu la dimension et la valeur, avant et après. Rien ne change tant que vous n'avez pas approuvé.
 - Plaid applique les mêmes règles que l'application : uniquement les dimensions activées utilisées pour le type de la ligne, uniquement les valeurs activées utilisées pour le type de la ligne, et une ligne conserve une valeur qu'elle porte déjà.
+- Plaid sait quelles dimensions sont obligatoires. Une nouvelle ligne doit avoir une valeur sur chacune d'elles, et Plaid ne peut pas effacer la valeur d'une dimension obligatoire. Plaid refuse une demande qui enfreint la règle et en donne la raison, par exemple « Nature is required for spend item creation. »
 - Plaid peut aussi créer une valeur dans la dimension que vous nommez. Sans dimension, la valeur est créée dans la dimension par défaut.
 
 ---
@@ -351,7 +372,7 @@ Commencez avec 5 à 10 par dimension. Au-delà de 20, la dimension essaie géné
 Les **départements** sont des unités organisationnelles formelles avec des clés de ventilation précises. Les **centres de coûts** indiquent qui porte la dépense et en répond. Les **dimensions analytiques** sont des classifications libres et facultatives pour le reporting, sans ventilation ni responsabilité associées.
 
 **Pourquoi certaines lignes affichent-elles « Non affecté » ?**
-Dans le rapport Dimensions analytiques, les lignes sans valeur sur la dimension choisie apparaissent comme « Non affecté ». C'est attendu : les valeurs sont facultatives.
+Dans le rapport Dimensions analytiques, les lignes sans valeur sur la dimension choisie apparaissent comme « Non affecté ». C'est attendu : les valeurs sont facultatives, sauf si la dimension est obligatoire. Même dans ce cas, des lignes créées avant l'activation du réglage peuvent ne pas avoir de valeur. L'espace de travail de la dimension les compte et donne un lien vers elles.
 
 **Que deviennent les lignes quand je renomme une valeur ou une dimension ?**
 Rien ne change sur les lignes. Les listes et les rapports affichent aussitôt le nouveau nom.

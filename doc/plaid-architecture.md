@@ -202,7 +202,15 @@ previous one included. Apply translates these keys into `analytics_values`
 edit-conflict check compares each dimension with the live line's value on that
 axis. The system prompt lists each enabled dimension once, with the line types it
 applies to among those the user can read (`analytics_dimensions`: `key`, `name`,
-`default`, `used_for`), built by `ai-analytics-dimensions-context.ts`. Creating a
+`default`, `used_for`, `required`), built by `ai-analytics-dimensions-context.ts`.
+`required` is the dimension's setting (a listed dimension is enabled and applies to
+each `used_for` type), and the prompt says a required dimension must be given a
+value when creating a line. The create preview refuses a line missing a value on a
+dimension required for its type ("Nature is required for spend item creation.",
+"… for CAPEX item creation.", with the label the preview uses), through
+`missingRequiredDimensions`; the update preview refuses a `null` on a required
+dimension the line holds, with the write gate's message ("The Nature dimension is
+required. Choose a value."). The write gate checks both again at apply. Creating a
 value in a chosen dimension is a master-data create of `analytics_categories`
 with the field `dimension`. It accepts the dimension's code, its `analytics:<code>`
 key or its name, and for the default dimension also `analytics_category` or its

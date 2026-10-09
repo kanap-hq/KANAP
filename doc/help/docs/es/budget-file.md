@@ -58,7 +58,7 @@ Son iguales en ambos archivos, salvo las columnas propias del tipo al principio 
 | `account_number` | Número de cuenta, en el plan de cuentas de la empresa pagadora | Obligatorio |
 | `cost_center_code` | Código del centro de coste. Se rechaza un grupo | Opcional |
 | `run_build` | `run` o `build` | Opcional |
-| `analytics:<code>` | El nombre del valor en la dimensión cuyo código es ese. Una columna por dimensión activada usada para las líneas OPEX, la dimensión por defecto incluida | Opcional. La carga crea un valor que no existe |
+| `analytics:<code>` | El nombre del valor en la dimensión cuyo código es ese. Una columna por dimensión activada usada para las líneas OPEX, la dimensión por defecto incluida | Opcional, salvo para una dimensión obligatoria. La carga crea un valor que no existe |
 | `owner_it_email` | Correo de un usuario activo | Opcional |
 | `owner_business_email` | Correo de un usuario activo | Opcional |
 | `project` | Número de proyecto, por ejemplo `PRJ-3` | Opcional |
@@ -82,7 +82,7 @@ Son iguales en ambos archivos, salvo las columnas propias del tipo al principio 
 | `account_number` | Número de cuenta, en el plan de cuentas de la empresa pagadora | Obligatorio |
 | `cost_center_code` | Código del centro de coste. Se rechaza un grupo | Opcional |
 | `run_build` | `run` o `build` | Opcional |
-| `analytics:<code>` | El nombre del valor en la dimensión cuyo código es ese. Una columna por dimensión activada usada para las líneas CAPEX, la dimensión por defecto incluida | Opcional. La carga crea un valor que no existe |
+| `analytics:<code>` | El nombre del valor en la dimensión cuyo código es ese. Una columna por dimensión activada usada para las líneas CAPEX, la dimensión por defecto incluida | Opcional, salvo para una dimensión obligatoria. La carga crea un valor que no existe |
 | `owner_it_email` | Correo de un usuario activo | Opcional |
 | `owner_business_email` | Correo de un usuario activo | Opcional |
 | `project` | Número de proyecto, por ejemplo `PRJ-3` | Opcional |
@@ -112,7 +112,7 @@ Estos son los nombres estándar. Su organización puede renombrar las cinco colu
 ## Qué significa una celda
 
 - Una celda vacía conserva el valor guardado.
-- `-` borra un detalle de la partida: descripción, notas, nombre e ID de ERP del proveedor, centro de coste, run o build, un valor de dimensión, un responsable, el proyecto, el fin de validez. En una columna que una partida nueva debe rellenar, `-` es un error de fila.
+- `-` borra un detalle de la partida: descripción, notas, nombre e ID de ERP del proveedor, centro de coste, run o build, un valor de dimensión, un responsable, el proyecto, el fin de validez. En una columna que una partida nueva debe rellenar, `-` es un error de fila. En una dimensión obligatoria, `-` es un error de fila cuando la línea tiene un valor.
 - `0` escribe cero.
 - Un total anual igual al total guardado no escribe nada. Un total distinto se reparte por el periodo de la columna, exactamente como cuando escribe el total en la pestaña **Presupuesto**.
 - Una celda de mes escribe ese mes, y marca la columna como editada a mano, igual que un mes escrito en la pestaña **Presupuesto**.
@@ -129,6 +129,7 @@ Una columna ausente conserva todos los valores guardados de esa columna. Un arch
 - La carga crea un valor de dimensión que no existe y lo lista en la verificación. Las cuentas, los centros de coste, las empresas y los usuarios nunca se crean: un elemento desconocido es un error de fila que indica dónde añadirlo.
 - Un archivo con una columna `analytics:<code>` de una dimensión que solo se usa para el otro tipo de línea se rechaza por completo, por ejemplo "The Recurrence dimension is for CAPEX lines only. Remove the analytics:recurrence column from this OPEX file." La exportación no escribe ninguna columna para esa dimensión: un valor oculto en una línea no se exporta, y una carga lo deja en su sitio. El ajuste está en [Dimensiones analíticas](analytics.md#dimensiones-opex-o-capex).
 - Un valor que se usa solo para el otro tipo de línea es un error de fila en su celda `analytics:<code>`, por ejemplo "Abonnements SaaS is for OPEX lines only. Pick a value for CAPEX lines." Una línea conserva el valor que ya tiene. Los valores que crea la carga se usan para OPEX y CAPEX. El ajuste está en [Dimensiones analíticas](analytics.md#valores-opex-o-capex).
+- Una línea nueva necesita un valor en cada dimensión obligatoria de su tipo, con el mensaje "The Nature dimension is required. Choose a value." en la celda `analytics:<code>`. Esto vale cuando la columna falta en el archivo, cuando la celda está vacía y cuando contiene `-`. Un valor que crea la carga cuenta. Una línea existente solo se rechaza por un `-` que borraría el valor que tiene: una celda vacía o una columna ausente la deja como está. El ajuste está en [Dimensiones analíticas](analytics.md#dimensiones-obligatorias).
 - Una fila que crea una línea presupuestaria, o que cambia su cuenta, se rechaza cuando la cuenta es del otro tipo de línea, con el mensaje «Account 6061 is for CAPEX lines only.» (o OPEX). Una línea presupuestaria conserva su cuenta actual. El ajuste de las cuentas está en [Planes de cuentas y gestión de cuentas](chart-of-accounts.md#cuentas-opex-o-capex).
 - Los proyectos se hacen coincidir por su número, por ejemplo `PRJ-3`.
 - Una partida finalizada es una partida cuya `end_of_validity` ha pasado. Indique la fecha para finalizar una partida, o escriba `-` en la celda para borrarla y mantener la partida en curso. No hay columna de estado.
