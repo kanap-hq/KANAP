@@ -72,6 +72,10 @@ assert.equal(apiStages[apiStages.length - 1].name, 'runtime', 'runtime is the la
 assert.ok(byName.has('dev'), 'a dev stage exists');
 assert.equal((apiDockerfile.match(/\bnpm ci\b/g) ?? []).length, 1, 'dependencies are installed once');
 assert.ok(/npm prune --omit=dev/.test(apiDockerfile), 'production dependencies are pruned from the build tree');
+assert.ok(
+  /npm prune --omit=dev --omit=optional\b/.test(apiDockerfile),
+  'the pruned tree also leaves out the development tools that production packages name as optional peers',
+);
 const runtime = byName.get('runtime')!;
 const runtimeCopies = runtime.body.filter((line) => /^COPY\b/.test(line));
 assert.ok(runtimeCopies.length > 0, 'the runtime stage copies its files');
