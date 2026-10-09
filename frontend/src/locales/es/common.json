@@ -132,6 +132,14 @@
     "previous": "Año anterior",
     "next": "Año siguiente"
   },
+  "calendar": {
+    "label": "Elegir una fecha",
+    "previousMonth": "Mes anterior",
+    "nextMonth": "Mes siguiente",
+    "previousYear": "Año anterior",
+    "nextYear": "Año siguiente",
+    "today": "Hoy"
+  },
   "delete": {
     "confirmTitle": "Confirmar eliminación",
     "deleteSelectedTitle": "Eliminar elementos seleccionados",

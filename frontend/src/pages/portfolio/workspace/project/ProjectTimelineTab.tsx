@@ -64,6 +64,7 @@ import api from '../../../../api';
 import { KanapDialog, StatusDot } from '../../../../components/design';
 import { useTheme } from '@mui/material/styles';
 import DateEUField from '../../../../components/fields/DateEUField';
+import DateCalendarPopover from '../../../../components/fields/DateCalendarPopover';
 import { getApiErrorMessage } from '../../../../utils/apiErrorMessage';
 import { useLocale } from '../../../../i18n/useLocale';
 import {
@@ -277,18 +278,20 @@ function CompactPhaseDateField({
   valueYmd?: string | null;
 }) {
   const { t } = useTranslation(['common']);
-  const nativeRef = React.useRef<HTMLInputElement | null>(null);
+  const rootRef = React.useRef<HTMLDivElement | null>(null);
+  const [calendarAnchor, setCalendarAnchor] = React.useState<HTMLElement | null>(null);
   const [focused, setFocused] = React.useState(false);
   const normalizedYmd = getDatePart(valueYmd);
 
+  // The calendar hangs from the field's input box.
   const openPicker = () => {
     if (disabled) return;
-    nativeRef.current?.showPicker?.();
-    if (!nativeRef.current?.showPicker) nativeRef.current?.click();
+    setCalendarAnchor(rootRef.current?.querySelector<HTMLElement>('.MuiInputBase-root') ?? null);
   };
 
   return (
     <Box
+      ref={rootRef}
       className="kanap-phase-date-field"
       sx={{
         position: 'relative',
@@ -297,22 +300,6 @@ function CompactPhaseDateField({
         },
       }}
     >
-      <input
-        ref={nativeRef}
-        type="date"
-        style={{
-          position: 'absolute',
-          right: 0,
-          top: '50%',
-          opacity: 0,
-          width: 0,
-          height: 0,
-          pointerEvents: 'none',
-        }}
-        value={normalizedYmd}
-        disabled={disabled}
-        onChange={(event) => onChangeYmd(event.target.value || '')}
-      />
       <TextField
         value={formatShortDate(valueYmd, locale)}
         disabled={disabled}
@@ -371,6 +358,14 @@ function CompactPhaseDateField({
             m: 0,
           },
         })]}
+      />
+      <DateCalendarPopover
+        anchorEl={calendarAnchor}
+        open={!!calendarAnchor}
+        valueYmd={normalizedYmd}
+        onSelect={onChangeYmd}
+        onClose={() => setCalendarAnchor(null)}
+        allowClear
       />
     </Box>
   );

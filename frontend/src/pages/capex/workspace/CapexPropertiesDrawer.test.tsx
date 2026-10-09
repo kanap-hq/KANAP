@@ -244,12 +244,14 @@ describe('CapexPropertiesDrawer end of validity', () => {
     const legacy = { onStatusChange } as Partial<DrawerProps>;
     renderDrawer('edit', { status: 'enabled', disabledAt: null, onDisabledAtChange, ...legacy });
 
-    // The calendar's native input inside the lifecycle group (the dates group has its own).
+    // The calendar inside the lifecycle group (the dates group has its own), picking today.
     const lifecycle = screen.getByText('capex.fields.lifecycle').parentElement as HTMLElement;
-    const nativeDate = lifecycle.querySelector('input[type="date"]') as HTMLInputElement;
-    fireEvent.change(nativeDate, { target: { value: '2099-12-31' } });
+    fireEvent.click(within(lifecycle).getByRole('button', { name: 'labels.openCalendar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'calendar.today' }));
 
-    expect(onDisabledAtChange.mock.calls).toEqual([[new Date(2099, 11, 31, 23, 59, 0, 0).toISOString()]]);
+    const now = new Date();
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 0, 0);
+    expect(onDisabledAtChange.mock.calls).toEqual([[endOfToday.toISOString()]]);
     expect(onStatusChange).not.toHaveBeenCalled();
   });
 });

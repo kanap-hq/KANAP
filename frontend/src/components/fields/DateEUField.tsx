@@ -6,6 +6,7 @@ import { formatShortDate } from '../../lib/dateFormat';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../../i18n/useLocale';
 import { FieldLabel } from '../design';
+import DateCalendarPopover from './DateCalendarPopover';
 
 type Props = {
   label: string;
@@ -35,7 +36,8 @@ function toYmdOnly(value: string): string {
 export default function DateEUField({ label, valueYmd = '', onChangeYmd, disabled, required, name, error, helperText, size, sx, hideLabel = false, textFieldSx }: Props) {
   const [text, setText] = React.useState<string>('');
   const [focused, setFocused] = React.useState(false);
-  const nativeRef = React.useRef<HTMLInputElement | null>(null);
+  const rootRef = React.useRef<HTMLDivElement | null>(null);
+  const [calendarAnchor, setCalendarAnchor] = React.useState<HTMLElement | null>(null);
   const locale = useLocale();
   const { t } = useTranslation('common');
 
@@ -74,46 +76,37 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
     if (ymd) setText(ymdToEu(ymd));
   };
 
+  // The calendar hangs from the input box (not the button), so it lines up with the field.
   const openPicker = () => {
-    nativeRef.current?.showPicker?.();
-    if (!nativeRef.current?.showPicker) nativeRef.current?.click();
+    if (disabled) return;
+    setCalendarAnchor(rootRef.current?.querySelector<HTMLElement>('.MuiInputBase-root') ?? null);
   };
 
-  const onNativeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const ymd = e.target.value || '';
+  const onCalendarSelect = (ymd: string) => {
     onChangeYmd(ymd);
     setText(ymdToEu(ymd));
+  };
+
+  // Alt+Down opens the calendar from the keyboard: the button itself stays out of the tab order.
+  const onInputKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.altKey && e.key === 'ArrowDown') {
+      e.preventDefault();
+      openPicker();
+    }
   };
 
   const naked = hideLabel || !label;
 
   return (
-    <Box sx={{ position: 'relative', ...sx }}>
+    <Box ref={rootRef} sx={{ position: 'relative', ...sx }}>
       {!naked && <FieldLabel required={required} sx={{ mb: '2px' }}>{label}</FieldLabel>}
-      {/* Only the calendar button opens it: out of the tab order, so Tab goes from one date field to the next. */}
-      <input
-        ref={nativeRef}
-        type="date"
-        tabIndex={-1}
-        aria-hidden
-        style={{
-          position: 'absolute',
-          right: 8,
-          top: '50%',
-          opacity: 0,
-          width: 0,
-          height: 0,
-          pointerEvents: 'none',
-        }}
-        value={normalizedYmd}
-        onChange={onNativeChange}
-      />
       <TextField
         placeholder={t('labels.datePlaceholder')}
         value={focused ? text : restText}
         onChange={onTextChange}
         onFocus={onFocus}
         onBlur={onBlur}
+        onKeyDown={onInputKeyDown}
         disabled={disabled}
         required={required}
         variant="standard"
@@ -127,12 +120,21 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
         InputProps={{
           endAdornment: (
             <InputAdornment position="end">
-              <IconButton size="small" onClick={openPicker} aria-label={t('labels.openCalendar')} tabIndex={-1}>
+              {/* Out of the tab order, so Tab goes from one date field to the next. */}
+              <IconButton size="small" onClick={openPicker} aria-label={t('labels.openCalendar')} tabIndex={-1} disabled={disabled}>
                 <EventIcon fontSize="small" />
               </IconButton>
             </InputAdornment>
           )
         }}
+      />
+      <DateCalendarPopover
+        anchorEl={calendarAnchor}
+        open={!!calendarAnchor}
+        valueYmd={normalizedYmd}
+        onSelect={onCalendarSelect}
+        onClose={() => setCalendarAnchor(null)}
+        allowClear={!required}
       />
     </Box>
   );

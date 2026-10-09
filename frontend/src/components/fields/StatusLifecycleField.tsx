@@ -3,6 +3,7 @@ import { Box, Stack, TextField, IconButton, InputAdornment } from '@mui/material
 import EventIcon from '@mui/icons-material/Event';
 import { useTranslation } from 'react-i18next';
 import StatusSwitch from './StatusSwitch';
+import DateCalendarPopover from './DateCalendarPopover';
 import { FieldLabel } from '../design';
 import { STATUS_ENABLED, STATUS_DISABLED, StatusValue, deriveStatusFromDisabledAt } from '../../constants/status';
 import { isoToEuDate, euDateToIsoEndOfDay, formatEuPartial } from '../../lib/date-eu';
@@ -111,15 +112,14 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
     }
   }, [inputText, onDisabledAtChange, onStatusChange]);
 
-  // Hidden native date input to keep a calendar picker available
-  const hiddenNativeRef = React.useRef<HTMLInputElement | null>(null);
-  const openNativePicker = () => {
-    hiddenNativeRef.current?.showPicker?.();
-    // fallback: click to trigger some browsers
-    if (!hiddenNativeRef.current?.showPicker) hiddenNativeRef.current?.click();
+  // In-page calendar, hung from the date input box.
+  const dateFieldRef = React.useRef<HTMLDivElement | null>(null);
+  const [calendarAnchor, setCalendarAnchor] = React.useState<HTMLElement | null>(null);
+  const openCalendar = () => {
+    if (disabled) return;
+    setCalendarAnchor(dateFieldRef.current?.querySelector<HTMLElement>('.MuiInputBase-root') ?? null);
   };
-  const onNativeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const yyyyMmDd = e.target.value; // YYYY-MM-DD
+  const onCalendarSelect = (yyyyMmDd: string) => {
     if (!yyyyMmDd) { setInputText(''); onDisabledAtChange(null); onStatusChange(deriveStatusFromDisabledAt(null)); return; }
     const [y, m, d] = yyyyMmDd.split('-');
     const ddmmyyyy = `${d}/${m}/${y}`;
@@ -130,9 +130,7 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
   };
 
   return (
-    // Positioned so the hidden date input below stays inside this field when a properties
-    // drawer scrolls; showPicker() anchors the native calendar on that input's box.
-    <Stack spacing={1.5} alignItems="flex-start" sx={{ position: 'relative' }}>
+    <Stack spacing={1.5} alignItems="flex-start">
       <StatusSwitch
         label={onLabel}
         offLabel={offLabel}
@@ -145,20 +143,20 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
       />
       {!hideDisabledAt && (
         <>
-          <input
-            ref={hiddenNativeRef}
-            type="date"
-            style={{ position: 'absolute', opacity: 0, width: 0, height: 0, pointerEvents: 'none' }}
-            value={isoToLocalDateInput(disabledAt)}
-            onChange={onNativeChange}
-          />
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          <Box ref={dateFieldRef} sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
             <FieldLabel>{disabledAtLabel ?? t('lifecycleField.endOfValidity')}</FieldLabel>
             <TextField
             placeholder={t('labels.datePlaceholder')}
             value={inputText}
             onChange={handleDisabledAtTextChange}
             onBlur={handleDisabledAtBlur}
+            onKeyDown={(event) => {
+              // Alt+Down opens the calendar from the keyboard; its button is out of the tab order.
+              if (event.altKey && event.key === 'ArrowDown') {
+                event.preventDefault();
+                openCalendar();
+              }
+            }}
             disabled={disabled}
             name={disabledAtName}
             error={disabledAtError}
@@ -167,7 +165,7 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
-                  <IconButton size="small" onClick={openNativePicker} aria-label={t('labels.openCalendar')} tabIndex={-1}>
+                  <IconButton size="small" onClick={openCalendar} aria-label={t('labels.openCalendar')} tabIndex={-1} disabled={disabled}>
                     <EventIcon fontSize="small" />
                   </IconButton>
                 </InputAdornment>
@@ -175,6 +173,14 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
             }}
             />
           </Box>
+          <DateCalendarPopover
+            anchorEl={calendarAnchor}
+            open={!!calendarAnchor}
+            valueYmd={isoToLocalDateInput(disabledAt)}
+            onSelect={onCalendarSelect}
+            onClose={() => setCalendarAnchor(null)}
+            allowClear
+          />
         </>
       )}
     </Stack>
