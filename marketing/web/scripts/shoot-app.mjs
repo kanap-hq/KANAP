@@ -13,8 +13,9 @@
  *   node scripts/shoot-app.mjs --all
  *   node scripts/shoot-app.mjs --inspect-fixed        # debug floating elements
  *
- * Output is 2000x1050 CSS px at deviceScaleFactor 2 (4000x2100 PNG), matching
- * the existing blog screenshots.
+ * Output defaults to 2000x1050 CSS px at deviceScaleFactor 2 (4000x2100 PNG).
+ * Blog standard: --width 1440 --height 900 --scale 1 --lang en (1440 px PNG,
+ * English UI whatever the article language).
  *
  * Requirements:
  *   - chromium at /usr/bin/chromium (override with CHROMIUM_PATH)
@@ -38,16 +39,24 @@ const OUT_DIR = resolve(flag('out', 'public/screenshots/blog'));
 const THEME = flag('theme', 'light');
 const WIDTH = Number(flag('width', 2000));
 const HEIGHT = Number(flag('height', 1050));
+const SCALE = Number(flag('scale', 2)); // 1 for the blog standard: 1440 x 900 window, 1440 px PNG
 const EMAIL = process.env.APP_EMAIL;
 const PASSWORD = process.env.APP_PASSWORD;
 
 // Sample data used by the shot definitions (Fromage demo tenant).
-const ALLOC_ITEM_ID = '97ed5331-5cf0-4ba1-bfa7-8e13fa3b3cb4'; // SAP S/4HANA, Headcount
+const ALLOC_ITEM_ID = 'OPX-2'; // SAP S/4HANA Maintenance, Headcount (refs resolve in the URL)
 const ANALYTICS_ITEM_ID = '9f2f0c3f-fc65-441b-b22b-cfeefdd27086'; // OPX-8 AWS Cloud Hosting, Infrastructure
 const COMPANY_NAME = 'Fromage & Co SA';
 const LANG = flag('lang', ''); // UI language override, e.g. fr
-// Budget demo data (Fromage & Co fixture with the budget files 26-30, QA tenant).
-const STAFFING_ITEM_ID = flag('staffing-item', '91fb51a9-1ba1-4794-8758-1bcb797933de'); // Régie · Product owner e-commerce · BOU-100
+// Budget demo data (Fromage & Co fixture with the budget files 26-30).
+const STAFFING_ITEM_ID = flag('staffing-item', 'OPX-90'); // Régie · Product owner e-commerce · BOU-100
+const SAAS_ITEM_ID = 'OPX-4'; // Salesforce (Sales + Service Cloud), account 612100
+// OPEX list filter used by the budget articles: the two software accounts.
+const SOFTWARE_ACCOUNTS = ['612100 - SaaS Subscriptions', '612200 - Software Licenses'];
+// Analytics dimensions kept out of the shots (customer-specific names).
+// Report filter controls to leave out of the shot, by label (local test dimensions):
+// --hide "Dimension A,Dimension B".
+const HIDDEN_DIMENSIONS = (flag('hide', '') || '').split(',').map((s) => s.trim()).filter(Boolean);
 
 if (!EMAIL || !PASSWORD) {
   console.error('APP_EMAIL and APP_PASSWORD are required (never hardcode them).');
@@ -61,6 +70,61 @@ const waitForWidgets = (page) =>
   page
     .waitForFunction(() => !document.querySelector('.MuiSkeleton-root'), { timeout: 45000 })
     .catch(() => {});
+
+// Click the first element matching `selector` whose text is exactly `text`.
+const clickText = async (page, selector, text) => {
+  for (const el of await page.$$(selector)) {
+    if ((await el.evaluate((n) => n.textContent?.trim() || '')) === text) {
+      await el.click();
+      return true;
+    }
+  }
+  console.warn(`'${text}' not found in ${selector}`);
+  return false;
+};
+
+// MUI select placed after a plain text label (report and operations forms);
+// `nth` picks a later select in the same group (e.g. the Columns pairs).
+const pickSelect = async (page, label, option, nth = 1) => {
+  const [select] = await page.$$(`xpath/.//*[normalize-space(text())="${label}"]/following::*[contains(@class,"MuiSelect-select")][${nth}]`);
+  if (!select) return console.warn(`select '${label}' not found`);
+  await select.click();
+  await page.waitForSelector('li[role="option"]', { timeout: 10000 });
+  await sleep(400); // let the menu finish opening, or the click lands on a neighbour
+  if (!(await clickText(page, 'li[role="option"]', option))) await page.keyboard.press('Escape');
+  await sleep(800);
+  const shown = await select.evaluate((n) => n.textContent?.trim());
+  if (shown !== option) console.warn(`select '${label}' shows '${shown}', not '${option}'`);
+};
+
+// Hide the filter controls of the given analytics dimensions (label + field).
+const hideControls = (page, labels) =>
+  page.evaluate((labels) => {
+    for (const el of document.querySelectorAll('main label, main p, main span, main div')) {
+      if (el.children.length || !labels.includes(el.textContent?.replace('*', '').trim())) continue;
+      let box = el;
+      while (box.parentElement && !box.querySelector('.MuiFormControl-root, .MuiSelect-select')) box = box.parentElement;
+      box.style.display = 'none';
+    }
+  }, labels);
+
+// Collapse the item Properties side panel. The state is kept in localStorage
+// (this browser only), so it may already be closed by an earlier shot.
+const closeProperties = async (page) => {
+  const close = 'button[aria-label="Close properties"], button[aria-label="Fermer les propriétés"]';
+  const open = 'button[aria-label="Open properties"], button[aria-label="Ouvrir les propriétés"]';
+  await page.waitForSelector(`${close}, ${open}`, { timeout: 30000 });
+  if (await page.$(close)) {
+    await page.click(close);
+    await sleep(800);
+  }
+};
+
+// Reports draw once their query answers: wait for a table row or a chart.
+const waitForReport = (page) =>
+  page
+    .waitForFunction(() => document.querySelector('main table tbody tr, main .ag-row, main .ag-charts-wrapper canvas'), { timeout: 40000 })
+    .catch(() => console.warn('report still empty'));
 
 const PAGES = {
   dashboard: { path: '/', waitFor: 'main', prepare: waitForWidgets },
@@ -81,7 +145,11 @@ const PAGES = {
     prepare: waitForWidgets,
   },
   plaid: { path: '/ai', waitFor: 'main' },
-  'chargeback-global': { path: '/ops/reports/chargeback/global', waitFor: 'main' },
+  'chargeback-global': {
+    path: '/ops/reports/chargeback/global',
+    waitFor: 'main',
+    prepare: (page) => page.waitForFunction(() => /Overall total\s+[\d,  ]{3,}/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }),
+  },
   'chargeback-company': {
     path: '/ops/reports/chargeback/company',
     waitFor: 'main',
@@ -131,7 +199,9 @@ const PAGES = {
     prepare: async (page) => {
       const sel = 'button[aria-label="Quantité et prix"], button[aria-label="Quantity and price"]';
       await page.waitForSelector(sel, { timeout: 30000 });
+      await closeProperties(page); // keeps the analytics dimensions out of the shot
       await page.click(sel);
+      await page.mouse.move(700, 300); // drop the button tooltip
       await sleep(2000);
     },
   },
@@ -207,12 +277,149 @@ const PAGES = {
       await sleep(1500); // let the chart redraw
     },
   },
+  // Budget articles (October 2026), blog standard 1440 x 900, English UI.
+  'opex-list-filters': {
+    path: '/ops/opex',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      // Hide Paying company, Contract and Allocation so the 2026 amounts fit
+      // next to the Account column (column choice is kept in localStorage only).
+      await clickText(page, 'button', 'Choose columns');
+      await page.waitForSelector('.MuiPopover-paper', { timeout: 10000 });
+      for (const label of ['Paying company', 'Contract', 'Allocation']) await clickText(page, '.MuiPopover-paper label', label);
+      await page.keyboard.press('Escape');
+      await sleep(800);
+      // Account set filter: clear, then tick the two software accounts.
+      const col = await page.$eval('.ag-header-cell[col-id="account_display"]', (h) => h.getAttribute('aria-colindex'));
+      await page.click(`.ag-floating-filter[aria-colindex="${col}"] button`);
+      // The popup fills in once the account values are loaded.
+      await page.waitForFunction(
+        () => [...document.querySelectorAll('.ag-popup button')].some((b) => b.textContent?.trim() === 'Clear')
+          && document.querySelectorAll('.ag-popup label').length > 2,
+        { timeout: 20000 },
+      );
+      await clickText(page, '.ag-popup button', 'Clear');
+      await sleep(500);
+      for (const account of SOFTWARE_ACCOUNTS) await clickText(page, '.ag-popup label', account);
+      // Wait for the filtered total in the pinned bottom row.
+      await page.waitForFunction(
+        () => document.querySelector('.ag-floating-filter')?.closest('.ag-header')?.textContent?.includes('2 selected')
+          && /\d/.test(document.querySelector('.ag-floating-bottom .ag-cell[col-id="yBudget"]')?.textContent || ''),
+        { timeout: 30000 },
+      );
+      await sleep(1000);
+    },
+  },
+  // Budget tab opened with the list filter in the URL: the "3 of 21" pill shows.
+  'opex-budget-tab': {
+    path: `/ops/opex/${SAAS_ITEM_ID}/budget?year=2026&filters=${encodeURIComponent(
+      JSON.stringify({ account_display: { filterType: 'set', values: SOFTWARE_ACCOUNTS } }),
+    )}`,
+    waitFor: 'main',
+    async prepare(page) {
+      await closeProperties(page);
+      await page.waitForFunction(() => / of \d+/.test(document.querySelector('main')?.innerText || ''), { timeout: 20000 });
+      await page.waitForSelector('.ag-charts-wrapper canvas', { timeout: 20000 }).catch(() => {});
+    },
+  },
+  'currency-settings': {
+    path: '/ops/operations/currency',
+    waitFor: 'main',
+    prepare: (page) => page.waitForFunction(() => /\d\.\d{6}/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }),
+  },
+  // Dry run only (never "Copy data"): 2026 Expected landing -> 2027 Budget, +3 %.
+  'copy-budget-columns': {
+    path: '/ops/operations/copy-budget-columns',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      await sleep(1000);
+      await pickSelect(page, 'Source year', '2026');
+      await pickSelect(page, 'Source column', 'Expected landing');
+      await pickSelect(page, 'Destination year', '2027');
+      await pickSelect(page, 'Destination column', 'Budget');
+      const [pct] = await page.$$('xpath/.//*[normalize-space(text())="Percentage increase"]/following::input[1]');
+      await pct.click({ clickCount: 3 });
+      await page.keyboard.type('3');
+      await clickText(page, 'button', 'Dry run');
+      await page.waitForFunction(() => /items? in the preview/.test(document.body.innerText), { timeout: 60000 });
+      await sleep(1000);
+      // Sort by preview, ascending: the skipped lines (0 or kept value) come
+      // first, followed by the smallest copied lines.
+      await page.click('.ag-header-cell[col-id="previewValue"]');
+      await sleep(800);
+      // Frame from the selection bar down to the first preview rows.
+      const [bar] = await page.$$('xpath/.//*[normalize-space(text())="Source year"]/ancestor::*[contains(@class,"MuiPaper-root")][1]');
+      await bar?.evaluate((n) => n.scrollIntoView({ block: 'start' }));
+      await sleep(1000);
+    },
+  },
+  'reporting-landing': {
+    path: '/ops/reports',
+    waitFor: 'main',
+    prepare: (page) => page.waitForFunction(() => document.querySelector('main')?.innerText.includes('Cost per FTE'), { timeout: 20000 }),
+  },
+  // Last year's landing against next year's budget (2027 budget is still empty on the demo tenant).
+  'top-opex-increase': {
+    path: '/ops/reports/opex-delta',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForReport(page);
+      await pickSelect(page, 'Source year', '2025');
+      await pickSelect(page, 'Source metric', 'Expected landing');
+      await pickSelect(page, 'Destination year', '2026');
+      await pickSelect(page, 'Destination metric', 'Budget');
+      await hideControls(page, HIDDEN_DIMENSIONS);
+      await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('Expected landing (2025)'), { timeout: 30000 });
+      await sleep(1500);
+      // Chart and the top of the table; the selection reads in the chart title.
+      await page.evaluate(() => document.querySelector('.ag-root-wrapper')?.scrollIntoView({ block: 'end' }));
+      await sleep(800);
+    },
+  },
+  'cost-per-fte': {
+    path: '/ops/reports/cost-per-fte',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForReport(page);
+      await pickSelect(page, 'Group by', 'Supplier');
+      // 2026 Budget against 2026 Expected landing: 2025 and 2027 carry no FTE on the demo tenant.
+      await pickSelect(page, 'Columns', '2026', 1);
+      await pickSelect(page, 'Columns', 'Expected landing', 4);
+      await hideControls(page, HIDDEN_DIMENSIONS);
+      await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('Expected landing 2026'), { timeout: 30000 });
+      await sleep(1500);
+      // The table sits under the chart: bring it up, the chart keeps the top.
+      await page.evaluate(() => document.querySelector('.ag-root-wrapper')?.scrollIntoView({ block: 'end' }));
+      await sleep(800);
+    },
+  },
+  'chargeback-default-method': {
+    path: '/ops/operations/allocation-default',
+    waitFor: 'main',
+    prepare: (page) => page.waitForFunction(() => document.querySelector('main')?.innerText.includes('Headcount'), { timeout: 20000 }),
+  },
+  'chargeback-allocations': {
+    path: `/ops/opex/${ALLOC_ITEM_ID}/allocations?year=2026`,
+    waitFor: 'main',
+    async prepare(page) {
+      await closeProperties(page);
+      await page.waitForFunction(() => /100(\.00)?%/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+    },
+  },
 };
 
-const positional = args.filter((a) => !a.startsWith('--'));
+// Flags that take a value, so their value is not read as a shot name.
+const VALUE_FLAGS = ['base', 'out', 'theme', 'width', 'height', 'scale', 'lang', 'staffing-item', 'hide'];
+const positional = args.filter((a, i) => !a.startsWith('--') && !VALUE_FLAGS.includes(args[i - 1]?.slice(2)));
+// A positional starting with "/" is an ad-hoc path, saved as path-<slug>.png (for scouting).
+const adHoc = (p) => [`path-${p.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '')}`, { path: p, waitFor: 'main' }];
 const selected = has('all') || positional.length === 0
   ? PAGES
-  : Object.fromEntries(positional.filter((k) => PAGES[k]).map((k) => [k, PAGES[k]]));
+  : Object.fromEntries(
+      positional.filter((k) => PAGES[k] || k.startsWith('/')).map((k) => (k.startsWith('/') ? adHoc(k) : [k, PAGES[k]])),
+    );
 
 mkdirSync(OUT_DIR, { recursive: true });
 
@@ -245,7 +452,24 @@ try {
       password: decodeURIComponent(PROXY_URL.password),
     });
   }
-  await page.setViewport({ width: WIDTH, height: HEIGHT, deviceScaleFactor: 2 });
+  await page.setViewport({ width: WIDTH, height: HEIGHT, deviceScaleFactor: SCALE });
+
+  // The profile language wins over localStorage: with --lang, rewrite it in the
+  // /auth/me answer for this browser only (the account itself is untouched).
+  if (LANG) {
+    await page.setRequestInterception(true);
+    page.on('request', async (req) => {
+      if (!/\/api\/auth\/me(\?|$)/.test(req.url()) || req.method() !== 'GET') return req.continue();
+      try {
+        const res = await fetch(req.url(), { headers: req.headers() });
+        const body = await res.json();
+        if (body?.profile) body.profile.locale = LANG;
+        await req.respond({ status: res.status, contentType: 'application/json', body: JSON.stringify(body) });
+      } catch {
+        await req.continue();
+      }
+    });
+  }
 
   if (has('inspect-fixed')) {
     await page.goto(`${BASE}/login`, { waitUntil: 'networkidle0', timeout: 30000 });

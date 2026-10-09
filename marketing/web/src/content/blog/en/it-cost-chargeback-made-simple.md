@@ -6,6 +6,7 @@ topic: cost
 author: Friedrich
 authorRole: Founder, CIO
 draft: false
+updated: 2026-10-10
 translationKey: it-cost-chargeback-made-simple
 ---
 
@@ -50,9 +51,13 @@ Every allocation basis is available:
 - **Turnover**: when the contribution follows the entity's economic size.
 - **Manual by company**: to allocate costs to one or more specific companies (still by headcount, IT user count or turnover).
 - **Manual by department**: to allocate costs to one or more specific departments, by headcount only.
-- **Manual**: for complete freedom of allocation, but you calculate the percentages yourself.
+- **Manual percentages**: for complete freedom of allocation; you enter the percentages, which must add up to 100%, or split them evenly in one click.
 
-To avoid reconfiguring everything every year, the "Copy allocations" tool rolls these rules from one fiscal year to the next, dry run included. Allocation therefore follows the budget with no retyping.
+To avoid reconfiguring everything every year, the "Copy allocations" tool rolls these rules from one fiscal year to the next, for OPEX as for CAPEX, dry run included. Allocation therefore follows the budget with no retyping.
+
+### Not to be confused with cost centers
+
+Cost centers say who owns a line and answers for it: each center has its budget holder, and their groups let you read a whole division's budget. They have no effect on chargeback. A licence owned by the "Infrastructure" cost center can perfectly well be charged back to every company by headcount.
 
 ## The chargeback reports
 
@@ -90,7 +95,7 @@ This is often where serious savings opportunities lie, and it is how the CIO can
 
 ## What about CAPEX?
 
-Investments use the same Allocations tab and the same mechanics. A project funded for a single subsidiary is allocated to that subsidiary; the rest follows the chosen method. The chargeback reports cover both envelopes, OPEX and CAPEX.
+Investments use the same Allocations tab and the same mechanics. A project funded for a single subsidiary is allocated to that subsidiary; the rest follows the chosen method. Both chargeback reports, however, cover OPEX: the recurring spend is what gets charged back year after year.
 
 ## Where to start
 
