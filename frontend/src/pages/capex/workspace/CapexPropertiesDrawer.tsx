@@ -263,7 +263,8 @@ export default function CapexPropertiesDrawer({
           </Typography>
         ) : analyticsAxes.enabled.map((axis) => (
           <PropertyRow key={axis.id} label={analyticsAxes.label(axis)} required={axisRequiredFor(axis, 'capex')}>
-            <Box sx={hideInnerLabelSx}>
+            {/* Found by the question asked before leaving a line lacking a required value. */}
+            <Box sx={hideInnerLabelSx} data-analytics-axis={axis.id}>
               <AnalyticsCategorySelect
                 axisId={axis.id}
                 label={analyticsAxes.label(axis)}

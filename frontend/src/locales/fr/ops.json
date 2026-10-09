@@ -53,6 +53,12 @@
       "payingCompanyRequired": "La société payeuse est requise",
       "accountRequired": "Le compte est requis",
       "dimensionRequired": "{{name}} est obligatoire",
+      "requiredLeaveTitle_one": "Valeur obligatoire manquante",
+      "requiredLeaveTitle_other": "Valeurs obligatoires manquantes",
+      "requiredLeaveMessage_one": "{{names}} est obligatoire. Choisissez une valeur avant de quitter.",
+      "requiredLeaveMessage_other": "{{names}} sont obligatoires. Choisissez des valeurs avant de quitter.",
+      "requiredLeaveStay": "Rester",
+      "requiredLeaveConfirm": "Quitter quand même",
       "effectiveStartRequired": "La date de début effectif est requise",
       "failedToCreate": "Impossible de créer le poste",
       "failedToSave": "Impossible d'enregistrer",
@@ -269,7 +275,13 @@
       "obsoleteAccount": "Compte obsolète détecté. Le compte sélectionné n'appartient pas au plan comptable de la société. Veuillez mettre à jour le compte.",
       "payingCompanyRequired": "La société payeuse est requise",
       "accountRequired": "Le compte est requis",
-      "dimensionRequired": "{{name}} est obligatoire"
+      "dimensionRequired": "{{name}} est obligatoire",
+      "requiredLeaveTitle_one": "Valeur obligatoire manquante",
+      "requiredLeaveTitle_other": "Valeurs obligatoires manquantes",
+      "requiredLeaveMessage_one": "{{names}} est obligatoire. Choisissez une valeur avant de quitter.",
+      "requiredLeaveMessage_other": "{{names}} sont obligatoires. Choisissez des valeurs avant de quitter.",
+      "requiredLeaveStay": "Rester",
+      "requiredLeaveConfirm": "Quitter quand même"
     },
     "budget": {
       "title": "Budget",

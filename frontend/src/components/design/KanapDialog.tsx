@@ -30,6 +30,8 @@ export type KanapDialogProps = {
   saveColor?: ButtonProps['color'];
   saveDisabled?: boolean;
   saveLoading?: boolean;
+  /** The main action takes the focus when the dialog opens (its answer is the safe one). */
+  saveAutoFocus?: boolean;
   /** Extra styles for the main action button, merged after the defaults. */
   saveSx?: SxProps<Theme>;
   /** Defaults to the localized "Cancel"; pass one only for a non-standard label. */
@@ -67,6 +69,7 @@ export default function KanapDialog({
   saveColor = 'primary',
   saveDisabled = false,
   saveLoading = false,
+  saveAutoFocus = false,
   saveSx,
   cancelLabel,
   showCancel = true,
@@ -183,6 +186,7 @@ export default function KanapDialog({
           {secondaryActions}
           <Button
             type="submit"
+            autoFocus={saveAutoFocus}
             variant={saveVariant}
             color={saveColor}
             disabled={saveDisabled || saveLoading}

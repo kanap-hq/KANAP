@@ -87,6 +87,12 @@
       "payingCompanyRequired": "Paying company is required",
       "accountRequired": "Account is required",
       "dimensionRequired": "{{name}} is required",
+      "requiredLeaveTitle_one": "Required value missing",
+      "requiredLeaveTitle_other": "Required values missing",
+      "requiredLeaveMessage_one": "{{names}} is required. Choose a value before leaving.",
+      "requiredLeaveMessage_other": "{{names}} are required. Choose values before leaving.",
+      "requiredLeaveStay": "Stay",
+      "requiredLeaveConfirm": "Leave anyway",
       "effectiveStartRequired": "Effective start is required",
       "failedToCreate": "Failed to create item",
       "failedToSave": "Failed to save",
@@ -269,7 +275,13 @@
       "obsoleteAccount": "Obsolete account detected. The selected account does not belong to the company's Chart of Accounts. Please update the account.",
       "payingCompanyRequired": "Paying company is required",
       "accountRequired": "Account is required",
-      "dimensionRequired": "{{name}} is required"
+      "dimensionRequired": "{{name}} is required",
+      "requiredLeaveTitle_one": "Required value missing",
+      "requiredLeaveTitle_other": "Required values missing",
+      "requiredLeaveMessage_one": "{{names}} is required. Choose a value before leaving.",
+      "requiredLeaveMessage_other": "{{names}} are required. Choose values before leaving.",
+      "requiredLeaveStay": "Stay",
+      "requiredLeaveConfirm": "Leave anyway"
     },
     "budget": {
       "title": "Budget",

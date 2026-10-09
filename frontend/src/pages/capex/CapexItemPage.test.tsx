@@ -26,7 +26,9 @@ vi.mock('../../hooks/useCapexNav', () => ({
 }));
 vi.mock('../../hooks/useCurrencySettings', () => ({ default: () => ({ data: { defaultCapexCurrency: 'EUR' } }) }));
 // The signed-in user: a conflict with their own change from another window is said so.
-vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: 'me' } }) }));
+// May the user change lines (the required dimensions asked before leaving, lot D2).
+const auth = vi.hoisted(() => ({ canEdit: true }));
+vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: 'me' }, hasLevel: () => auth.canEdit }) }));
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: vi.fn() }) }));
 vi.mock('../../utils/workspaceTabCounts', () => ({ fetchCapexRelationsCount: vi.fn(async () => 0) }));
 vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
@@ -953,5 +955,94 @@ describe('CapexItemPage cost center across lines', () => {
     await waitFor(() => expect(shown('cc-b')).not.toBeNull());
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
     expect(mocked.get.mock.calls.filter(([url]) => String(url).startsWith('/cost-centers'))).toEqual([]);
+  });
+});
+
+describe('CapexItemPage required dimensions before leaving (lot D2)', () => {
+  const AXES = [
+    { id: 'axis-default', code: 'default', name: null, description: null, sort_order: 0, is_default: true, applies_to: null, required: false, status: 'enabled', disabled_at: null },
+    { id: 'axis-nature', code: 'nature', name: 'Nature', description: null, sort_order: 1, is_default: false, applies_to: 'capex', required: true, status: 'enabled', disabled_at: null },
+    // Required for OPEX lines only: never asked here.
+    { id: 'axis-other', code: 'other', name: 'Other', description: null, sort_order: 2, is_default: false, applies_to: 'opex', required: true, status: 'enabled', disabled_at: null },
+  ];
+
+  beforeEach(() => {
+    auth.canEdit = true;
+    mocked.get.mockReset();
+    mocked.patch.mockReset();
+    dialogs.confirm.mockReset();
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/analytics-axes') return { data: { items: AXES } };
+      if (url === `/capex-items/${ITEM_ID}`) {
+        return {
+          data: {
+            id: ITEM_ID, item_number: 7, description: 'New servers', paying_company_id: 'company-1', account_id: 'account-1',
+            currency: 'EUR', effective_start: '2026-01-01', analytics_values: [],
+          },
+        };
+      }
+      return { data: {} };
+    });
+    mocked.patch.mockResolvedValue({ data: {} });
+  });
+  afterEach(() => { auth.canEdit = true; });
+
+  async function openLine() {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <MemoryRouter initialEntries={[`/ops/capex/${ITEM_ID}/overview`]}>
+            <Routes>
+              <Route path="/ops/capex/:id/:tab" element={<CapexItemPage />} />
+              <Route path="/ops/capex" element={<div data-testid="list-page" />} />
+            </Routes>
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(document.querySelector('[data-mode="edit"]')).not.toBeNull());
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/analytics-axes'));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+  }
+
+  it('asks after a change when a required dimension is empty: Stay keeps the line, Leave anyway leaves', async () => {
+    await openLine();
+    fireEvent.click(screen.getByRole('button', { name: 'pick run' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
+    expect(await screen.findByText('capex.editor.requiredLeaveMessage')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'capex.editor.requiredLeaveStay' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.queryByTestId('list-page')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'capex.editor.requiredLeaveConfirm' }));
+    expect(await screen.findByTestId('list-page')).toBeInTheDocument();
+  });
+
+  it('never asks without a change', async () => {
+    await openLine();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
+    expect(await screen.findByTestId('list-page')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('never asks once the required value is picked', async () => {
+    await openLine();
+    fireEvent.click(screen.getByRole('button', { name: 'pick nature value' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
+    expect(await screen.findByTestId('list-page')).toBeInTheDocument();
+  });
+
+  it('never asks a user who cannot edit the line', async () => {
+    auth.canEdit = false;
+    await openLine();
+    fireEvent.click(screen.getByRole('button', { name: 'pick run' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
+    expect(await screen.findByTestId('list-page')).toBeInTheDocument();
   });
 });
