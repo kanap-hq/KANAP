@@ -1,6 +1,6 @@
 ---
-title: Budget, épisode 3 - La présentation
-description: Le budget est prêt, il faut le vendre ! KANAP présente les chiffres clés, vous offre des rapports prêts à l'emploi et répond au « qui paie quoi ».
+title: "Présenter et faire valider le budget de la DSI"
+description: "Les rapports qui font passer un budget IT en comité : chiffres clés, tendances, refacturation, puis gel de la version approuvée."
 date: 2026-08-31
 topic: cost
 author: Friedrich
@@ -9,7 +9,7 @@ draft: false
 series:
   key: opex-budget
   part: 3
-  title: Préparer le budget OPEX avec KANAP
+  title: "Construire le budget de la DSI"
 ---
 
 Le budget est construit ; reste à le faire approuver. KANAP facilite la présentation du budget avec plusieurs rapports paramétrables qui permettent de présenter les différentes facettes du budget de façon visuelle et pragmatique. Lorsque le budget est approuvé, KANAP permet de verrouiller les colonnes concernées pour éviter toute modification ultérieure.

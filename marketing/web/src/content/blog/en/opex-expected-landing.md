@@ -1,6 +1,6 @@
 ---
-title: Budget, part 1 - The landing
-description: "In this first part, we make the 2026 landing reliable line by line, using the tools built into KANAP. It then becomes the base of the 2027 budget."
+title: "IT budget expected landing, line by line"
+description: "Firming up the current year's IT budget landing, item by item, so it becomes a solid base for next year's budget."
 date: 2026-08-29
 topic: cost
 author: Friedrich
@@ -9,7 +9,7 @@ draft: false
 series:
   key: opex-budget
   part: 1
-  title: Preparing the OPEX budget with KANAP
+  title: "Building the IT budget"
 ---
 
 September. Finance asks for a first version of the 2027 budget, and last year's Excel file comes out of the drawer: two hundred lines, eight tabs, three versions that no longer agree. Here we go again?
