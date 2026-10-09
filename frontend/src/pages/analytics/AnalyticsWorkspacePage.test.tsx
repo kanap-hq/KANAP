@@ -254,7 +254,7 @@ describe('AnalyticsWorkspacePage', () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30_000 } } });
     const nature: AnalyticsAxisDetail = {
       id: 'ax-nature', code: 'nature', name: 'Nature', description: null, sort_order: 1, is_default: false,
-      status: 'enabled', disabled_at: null, value_count: 1, opex_count: 0, capex_count: 0,
+      applies_to: null, status: 'enabled', disabled_at: null, value_count: 1, opex_count: 0, capex_count: 0,
     };
     mocked.getAnalyticsAxis.mockResolvedValue(nature);
     const first = renderAt('/master-data/analytics/dimensions/ax-nature/overview', queryClient);

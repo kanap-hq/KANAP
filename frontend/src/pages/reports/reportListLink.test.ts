@@ -30,7 +30,7 @@ const set = (values: Array<string | null>) => ({ filterType: 'set', values });
 const filtersOf = (href: string) => JSON.parse(new URLSearchParams(href.split('?')[1]).get('filters') ?? 'null');
 
 function axis(id: string, patch: Partial<AnalyticsAxis> = {}): AnalyticsAxis {
-  return { id, code: id, name: null, description: null, sort_order: 0, is_default: false, status: 'enabled', disabled_at: null, ...patch };
+  return { id, code: id, name: null, description: null, sort_order: 0, is_default: false, applies_to: null, status: 'enabled', disabled_at: null, ...patch };
 }
 const DEFAULT_AXIS = axis('ax-def', { is_default: true });
 const NATURE = axis('ax-nat', { name: 'Nature', sort_order: 1 });

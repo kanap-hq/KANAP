@@ -1,5 +1,6 @@
 import api from '../api';
 import { deriveStatusFromDisabledAt } from '../constants/status';
+import type { LineType } from '../constants/lineTypeUsage';
 
 /**
  * Analytics dimensions (`/analytics-axes`) and their values (`/analytics-categories`). "Axis" and
@@ -17,6 +18,8 @@ export type AnalyticsAxis = {
   description: string | null;
   sort_order: number;
   is_default: boolean;
+  /** The lines the dimension applies to: OPEX only, CAPEX only, or both when null (always both for the default). */
+  applies_to: LineType | null;
   status: AnalyticsStatus;
   disabled_at: string | null;
   created_at?: string;
@@ -35,6 +38,8 @@ export type AnalyticsAxisWrite = {
   name: string | null;
   description?: string | null;
   sort_order?: number;
+  /** Null for OPEX and CAPEX lines. On a patch, null clears it and absent leaves it unchanged. */
+  applies_to?: LineType | null;
   status?: AnalyticsStatus;
   disabled_at?: string | null;
 };

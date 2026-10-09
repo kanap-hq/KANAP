@@ -95,8 +95,19 @@ describe('AnalyticsCategoriesPage', () => {
     renderPage();
     expect(chips().map((c) => c.textContent)).toEqual(['Analytics dimension', 'Nature', 'Internal orderanalytics.disabledMark']);
     // The accessible name separates the mark from the name.
-    expect(screen.getByRole('button', { name: 'analytics.disabledDimension:Internal order' })).toBe(chips()[2]);
+    expect(screen.getByRole('button', { name: 'analytics.markedDimension:Internal order' })).toBe(chips()[2]);
     expect(screen.getByRole('button', { name: 'Nature' })).toBe(chips()[1]);
+  });
+
+  it('marks a dimension used for one type of line only, next to a disabled mark', () => {
+    axesState.list = [DEFAULT, { ...NATURE, applies_to: 'capex' }, { ...ORDER, applies_to: 'opex' }];
+    renderPage();
+    expect(chips().map((c) => c.textContent)).toEqual([
+      'Analytics dimension',
+      'Naturemaster-data:shared.lineTypeUsage.capex',
+      'Internal orderanalytics.disabledMark · master-data:shared.lineTypeUsage.opex',
+    ]);
+    expect(screen.getByRole('button', { name: 'analytics.markedDimension:Nature' })).toBe(chips()[1]);
   });
 
   it('disables New value on a disabled dimension, with the reason', () => {

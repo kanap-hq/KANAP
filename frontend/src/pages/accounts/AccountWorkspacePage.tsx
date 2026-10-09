@@ -15,15 +15,14 @@ import { STATUS_ENABLED, deriveStatusFromDisabledAt, normalizeStatus } from '../
 import { drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx, longFormSurfaceFieldSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { COA_LIST_QUERY_KEY, type CoaListItem, useCoaList } from '../coa/useCoaList';
-import ConsolidationAccountField, { attentionDotSx, type ConsolidationStatus } from './ConsolidationAccountField';
+import ConsolidationAccountField, { type ConsolidationStatus } from './ConsolidationAccountField';
 import {
-  ACCOUNT_NATURES,
   type AccountLineCounts,
   type AccountNature,
   accountNatureConflict,
-  accountNatureLabel,
   parseAccountNature,
 } from '../../constants/accountNature';
+import LineTypeUsageSelect, { LineTypeUsageConflictNote } from '../../components/fields/LineTypeUsageSelect';
 import { oneOffListLink } from '../reports/reportListLink';
 import { openSavedListLink } from '../reports/ReportGroupLinkCell';
 import { keepValues } from '../reports/reportAggregates';
@@ -277,8 +276,9 @@ export default function AccountWorkspacePage() {
           onCommit={commitNumber}
         />
         <PropertyRow label={t('accounts.fields.nature')}>
-          <NatureSelect
+          <LineTypeUsageSelect
             value={parseAccountNature(data.nature)}
+            label={t('accounts.fields.nature')}
             disabled={disabled}
             error={errors.nature}
             onChange={(next) => {
@@ -434,47 +434,6 @@ function ChartSelect({
   );
 }
 
-/** "Used for": OPEX and CAPEX lines (stored as null), OPEX lines only or CAPEX lines only. */
-function NatureSelect({
-  value,
-  disabled,
-  error,
-  onChange,
-}: {
-  value: AccountNature | null;
-  disabled?: boolean;
-  error?: string;
-  onChange: (next: AccountNature | null) => void;
-}) {
-  const { t } = useTranslation(['master-data']);
-  const label = t('accounts.fields.nature');
-  return (
-    <Box>
-      <Select
-        variant="standard"
-        value={value ?? ''}
-        onChange={(event) => onChange(parseAccountNature(event.target.value))}
-        // The empty value is a real choice (OPEX and CAPEX): shown, never a placeholder.
-        displayEmpty
-        disabled={disabled}
-        error={!!error}
-        sx={drawerSelectSx}
-        SelectDisplayProps={{ 'aria-label': label } as React.HTMLAttributes<HTMLDivElement>}
-        renderValue={(selected) => accountNatureLabel(t, selected)}
-      >
-        {[null, ...ACCOUNT_NATURES].map((nature) => (
-          <MenuItem key={nature ?? 'both'} value={nature ?? ''} sx={drawerMenuItemSx}>
-            {accountNatureLabel(t, nature)}
-          </MenuItem>
-        ))}
-      </Select>
-      {error && (
-        <Typography role="alert" sx={{ mt: '3px', fontSize: 12, lineHeight: 1.35, color: 'error.main' }}>{error}</Typography>
-      )}
-    </Box>
-  );
-}
-
 /**
  * Lines of the other kind that still use the account (they keep it, new ones cannot choose it), with
  * a link opening them in the OPEX or CAPEX list in a new tab: every status, filtered on this account,
@@ -495,25 +454,19 @@ function NatureConflictNote({
   const link = oneOffListLink(conflict.scope, { account_id: keepValues([accountId]) });
   const save = link.save;
   return (
-    <Box
-      data-testid="nature-conflict"
-      sx={{ fontSize: 12, lineHeight: 1.45, mt: '6px', display: 'flex', alignItems: 'baseline', gap: '8px', color: 'kanap.text.secondary' }}
-    >
-      <Box component="span" sx={{ ...attentionDotSx, position: 'relative', top: '-1px' }} />
-      <span>
-        {t(conflict.scope === 'capex' ? 'accounts.nature.conflictCapex' : 'accounts.nature.conflictOpex', { count: conflict.count })}{' '}
-        <Link
-          href={link.href}
-          target="_blank"
-          rel="noopener noreferrer"
-          sx={{ fontSize: 12 }}
-          // Filters too long for a URL are saved first (never the case for one account, kept for safety).
-          onClick={save ? (event) => { event.preventDefault(); void openSavedListLink({ ...link, save }); } : undefined}
-        >
-          {t('accounts.nature.showLines')}
-        </Link>
-      </span>
-    </Box>
+    <LineTypeUsageConflictNote testId="nature-conflict">
+      {t(conflict.scope === 'capex' ? 'accounts.nature.conflictCapex' : 'accounts.nature.conflictOpex', { count: conflict.count })}{' '}
+      <Link
+        href={link.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        sx={{ fontSize: 12 }}
+        // Filters too long for a URL are saved first (never the case for one account, kept for safety).
+        onClick={save ? (event) => { event.preventDefault(); void openSavedListLink({ ...link, save }); } : undefined}
+      >
+        {t('accounts.nature.showLines')}
+      </Link>
+    </LineTypeUsageConflictNote>
   );
 }
 
@@ -791,7 +744,12 @@ function AccountCreate({
             />
           </PropertyRow>
           <PropertyRow label={t('accounts.fields.nature')} valueSx={{ maxWidth: 520 }}>
-            <NatureSelect value={values.nature} error={errors.nature} onChange={(next) => set('nature', next)} />
+            <LineTypeUsageSelect
+              value={values.nature}
+              label={t('accounts.fields.nature')}
+              error={errors.nature}
+              onChange={(next) => set('nature', next)}
+            />
           </PropertyRow>
           <PropertyRow label={t('accounts.fields.nativeName')} valueSx={{ maxWidth: 520 }}>
             <TextField

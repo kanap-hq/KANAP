@@ -108,7 +108,7 @@ function OpexListPageView() {
   const { t } = useTranslation(['ops', 'common']);
   const locale = useLocale();
   const budgetColumns = useBudgetColumns();
-  const analyticsAxes = useAnalyticsAxes();
+  const analyticsAxes = useAnalyticsAxes({ scope: 'opex' });
   const queryClient = useQueryClient();
 
   const navigate = useNavigate();
