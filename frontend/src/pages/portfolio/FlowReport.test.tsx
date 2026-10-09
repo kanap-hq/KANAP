@@ -310,7 +310,8 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 
-describe('FlowReport', () => {
+// Each test renders the full report several times; CI runners need more than the 5 s default.
+describe('FlowReport', { timeout: 20_000 }, () => {
   it('leads with what is open now, its change over the window and a trend', async () => {
     mockApi(report());
     renderReport();
@@ -774,8 +775,7 @@ describe('FlowReport', () => {
     const weeklyLinks = allHrefs().filter((href) => href.startsWith('/portfolio/reports/weekly'));
     expect(weeklyLinks.length).toBeGreaterThan(3);
     expect(weeklyLinks.every((href) => href.endsWith('&sourceIds=src-desk'))).toBe(true);
-    // Heavy test: several full renders, slower under the full suite's load.
-  }, 20_000);
+  });
 
   it('sends both filters at once and drops them when every value is picked', async () => {
     mockApi(report());
@@ -816,8 +816,7 @@ describe('FlowReport', () => {
     const afterClear = linkHref('12');
     expect(afterClear).not.toContain('source_name');
     expect(afterClear).toContain('"category_name":{"filterType":"set","values":["Run"]}');
-    // Heavy test: several full renders, slower under the full suite's load.
-  }, 20_000);
+  });
 
   it('drops the weekly link when some closings were imported already closed', async () => {
     const base = report();
