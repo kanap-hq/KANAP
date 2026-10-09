@@ -7,7 +7,6 @@ import { AuditLog } from './audit.entity';
 import { assertSetFilterModes, compileAgFilterCondition, createParamNameGenerator, normalizeAgFilterModel } from '../common/ag-grid-filtering';
 import { neutralizeCsvRow } from '../common/csv/csv-export.service';
 import { writeCsvHeader, writeCsvRows } from '../common/csv-sheet/write';
-import type { CsvLanguage } from '../common/csv-sheet/types';
 import { AUTH_EVENT_TABLE, EXPORT_EVENT_TABLE } from './security-events';
 
 type AuditListItem = {
@@ -50,6 +49,10 @@ export const AUDIT_LOG_EXPORT_TRUNCATED_HEADER = 'X-Export-Truncated';
  * The columns of the export, flat and stable: the date (ISO 8601, UTC), the codes as stored, the
  * person as the audit log page shows them (exportUserLabel), the client address and user agent of
  * a sign-in, session or export event, then the values before and after as compact JSON.
+ *
+ * The file has one fixed format whatever the user's language, so a log collector can import it
+ * as is: RFC 4180 with a comma separator, UTF-8 without a BOM, these English headers, the codes
+ * and English fallbacks in the user column, and the formula guard on every cell.
  */
 export const AUDIT_LOG_EXPORT_HEADERS = [
   'date',
@@ -65,13 +68,16 @@ export const AUDIT_LOG_EXPORT_HEADERS = [
   'after',
 ] as const;
 
+/** The comma-separated profile, whatever the user's language (see AUDIT_LOG_EXPORT_HEADERS). */
+const AUDIT_LOG_EXPORT_LANGUAGE = 'en' as const;
+
 export type AuditLogExport = {
   filename: string;
   /** More rows matched than `limit`: the file stops there. Known before the first part. */
   truncated: boolean;
   limit: number;
   /**
-   * The file in parts, read once and in order: the BOM and the header line, then one part per
+   * The file in parts, read once and in order: the header line, then one part per
    * batch of rows. Each batch is read when the previous part has been taken, in the caller's
    * transaction, so the caller keeps that transaction open until the last part.
    */
@@ -480,7 +486,7 @@ export class AuditLogsService {
    */
   async exportCsv(
     query: any,
-    opts: { manager: EntityManager; tenantId: string; language: CsvLanguage },
+    opts: { manager: EntityManager; tenantId: string },
   ): Promise<AuditLogExport> {
     const { sort, q, filters } = parsePagination(query, {
       field: 'created_at',
@@ -490,7 +496,7 @@ export class AuditLogsService {
     const direction = sort.direction === 'ASC' ? 'ASC' : 'DESC';
     const limit = Math.max(0, Math.floor(this.exportRowLimit));
     const batchSize = Math.max(1, Math.floor(this.exportBatchSize));
-    const { manager, tenantId, language } = opts;
+    const { manager, tenantId } = opts;
 
     const filtered = () => this.createFilteredQuery({ query, q, filters, manager })
       .andWhere('a.tenant_id = :exportTenantId', { exportTenantId: tenantId });
@@ -532,7 +538,7 @@ export class AuditLogsService {
     };
 
     async function* chunks(): AsyncGenerator<string> {
-      yield writeCsvHeader(language, AUDIT_LOG_EXPORT_HEADERS);
+      yield writeCsvHeader(AUDIT_LOG_EXPORT_LANGUAGE, AUDIT_LOG_EXPORT_HEADERS, { bom: false });
       let written = 0;
       let after: { value: string; id: string } | null = null;
       while (written < limit) {
@@ -540,7 +546,7 @@ export class AuditLogsService {
         const batch = await readBatch(take, after);
         if (batch.length === 0) return;
         const rows = batch.map((row) => neutralizeCsvRow(auditExportRow(row)));
-        yield writeCsvRows({ language, headers: AUDIT_LOG_EXPORT_HEADERS, rows });
+        yield writeCsvRows({ language: AUDIT_LOG_EXPORT_LANGUAGE, headers: AUDIT_LOG_EXPORT_HEADERS, rows });
         written += batch.length;
         if (batch.length < take) return;
         const last = batch[batch.length - 1];

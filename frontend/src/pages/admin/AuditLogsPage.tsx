@@ -22,7 +22,6 @@ import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilte
 import { useLocale } from '../../i18n/useLocale';
 import { formatShortDateTime } from '../../lib/dateFormat';
 import { getWithListContext, withListContext } from '../../lib/listContext';
-import { screenLanguage } from '../../components/csv/readings';
 import { downloadBlob, extractFilenameFromDisposition } from '../../utils/downloadBlob';
 import {
   AUTH_EVENT_TABLE,
@@ -75,7 +74,7 @@ function getChangedKeys(beforeValue: any, afterValue: any): string[] {
 
 export default function AuditLogsPage() {
   const { hasLevel } = useAuth();
-  const { t, i18n } = useTranslation(['admin']);
+  const { t } = useTranslation(['admin']);
   const locale = useLocale();
   const [open, setOpen] = React.useState(false);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
@@ -90,7 +89,7 @@ export default function AuditLogsPage() {
     setExportNotice(null);
     try {
       const state = lastQueryRef.current;
-      const params: Record<string, unknown> = { language: screenLanguage(i18n?.resolvedLanguage || i18n?.language) };
+      const params: Record<string, unknown> = {};
       if (state?.sort) params.sort = state.sort;
       if (state?.q) params.q = state.q;
       if (state?.filterModel && Object.keys(state.filterModel).length > 0) params.filters = JSON.stringify(state.filterModel);
@@ -111,7 +110,7 @@ export default function AuditLogsPage() {
     } finally {
       setExporting(false);
     }
-  }, [i18n, locale, t]);
+  }, [locale, t]);
 
   const detailQuery = useQuery({
     queryKey: ['audit-log-entry', selectedId],

@@ -151,6 +151,7 @@ async function waitForIdlePool() {
 
 type Answer = {
   status: number;
+  bytes: Buffer;
   text: string;
   type: string | null;
   disposition: string | null;
@@ -159,8 +160,8 @@ type Answer = {
   table: string[][];
 };
 
-function parseCsv(text: string, delimiter: string): string[][] {
-  return parse(text, { bom: true, delimiter, relax_column_count: false }) as string[][];
+function parseCsv(text: string): string[][] {
+  return parse(text, { delimiter: ',', relax_column_count: false }) as string[][];
 }
 
 async function main() {
@@ -173,6 +174,8 @@ async function main() {
       const admin = await seedPerson(runner, tenantA, { first: 'Alice', last: 'Admin' }, {}, 'Administrator');
       const dash = await seedPerson(runner, tenantA, { first: '-Dash', last: 'Person' }, { users: 'admin' }, 'Audit export people admin');
       const reader = await seedPerson(runner, tenantA, { first: 'Rita', last: 'Reader' }, { users: 'member' }, 'Audit export people member');
+      const french = await seedPerson(runner, tenantA, { first: 'Francine', last: 'Admin' }, { users: 'admin' }, 'Audit export people admin fr');
+      await runner.query(`UPDATE users SET locale = 'fr' WHERE tenant_id = $1 AND id = $2`, [tenantA, french.id]);
       const recordId = randomUUID();
       await insertAudit(runner, tenantA, {
         table: 'auth', action: 'login_failed', sourceRef: 'unknown_user',
@@ -190,7 +193,7 @@ async function main() {
         table: 'suppliers', action: 'create', recordId: randomUUID(), userId: admin.id, sourceRef: '@sheet-2',
         after: { name: 'Tenant A supplier' }, ageMinutes: 20,
       });
-      return { admin, dash, reader, recordId };
+      return { admin, dash, reader, french, recordId };
     });
     const b = await seed(tenantB, async (runner) => {
       const admin = await seedPerson(runner, tenantB, { first: 'Bob', last: 'Admin' }, {}, 'Administrator');
@@ -214,23 +217,24 @@ async function main() {
     const base = `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`;
 
     const get = async (query: Record<string, string>, user: Person, tenantId = user.tenant_id): Promise<Answer> => {
-      const search = new URLSearchParams({ language: 'en', ...query });
+      const search = new URLSearchParams(query);
       const res = await fetch(`${base}/audit-logs/export?${search.toString()}`, {
         headers: { authorization: `Bearer ${token(user)}`, 'x-probe-tenant': tenantId, 'user-agent': 'Export probe' },
         signal: AbortSignal.timeout(10_000),
       });
-      // The bytes as sent (`res.text()` drops a BOM).
-      const text = Buffer.from(await res.arrayBuffer()).toString('utf8');
+      // The bytes as sent (`res.text()` would drop a BOM).
+      const bytes = Buffer.from(await res.arrayBuffer());
+      const text = bytes.toString('utf8');
       await waitForIdlePool();
       const type = res.headers.get('content-type');
-      const delimiter = search.get('language') === 'en' ? ',' : ';';
       return {
         status: res.status,
+        bytes,
         text,
         type,
         disposition: res.headers.get('content-disposition'),
         truncated: res.headers.get(AUDIT_LOG_EXPORT_TRUNCATED_HEADER),
-        table: res.status === 200 ? parseCsv(text, delimiter) : [],
+        table: res.status === 200 ? parseCsv(text) : [],
       };
     };
     const rowsOf = (answer: Answer) => {
@@ -246,7 +250,8 @@ async function main() {
     assert.match(full.type ?? '', /^text\/csv/);
     assert.match(full.disposition ?? '', /audit-log-\d{4}-\d{2}-\d{2}\.csv/);
     assert.equal(full.truncated, null, 'no row limit reached: no header');
-    assert.ok(full.text.startsWith('﻿'), 'UTF-8 with a BOM, like the other exports');
+    assert.notEqual(full.bytes[0], 0xef, 'UTF-8 without a BOM');
+    assert.ok(full.text.startsWith(`${AUDIT_LOG_EXPORT_HEADERS.join(',')}\n`), 'comma-separated English header line');
     assert.deepEqual(full.table[0], [...AUDIT_LOG_EXPORT_HEADERS]);
     const rows = rowsOf(full);
     // The export's own row is written in the request transaction before the file is read.
@@ -301,11 +306,24 @@ async function main() {
     assert.deepEqual(searched.map((row) => row.action), ['update'], 'search on the person');
     const ascending = rowsOf(await get({ sort: 'created_at:ASC', filters: JSON.stringify({ table_name: { filterType: 'set', values: ['suppliers'] } }) }, a.admin));
     assert.deepEqual(ascending.map((row) => row.action), ['update', 'create'], 'sort');
-    const inFrench = await get({ language: 'fr', action: 'login' }, a.admin);
-    assert.equal(inFrench.status, 200);
-    assert.ok(inFrench.text.split('\n')[0].includes(';'), 'the language sets the separator');
-    assert.deepEqual(rowsOf(inFrench).map((row) => row.ip), ['2001:db8::1']);
     console.log('ok - the filters, search and sort of the list apply');
+
+    // 3b. One fixed format whatever the language: a user in French, with or without a `language`
+    // parameter, gets the same bytes as a user in English for the same rows.
+    const suppliersOnly = { filters: JSON.stringify({ table_name: { filterType: 'set', values: ['suppliers'] } }) };
+    const inEnglish = await get(suppliersOnly, a.admin);
+    const inFrench = await get(suppliersOnly, a.french);
+    const inFrenchAsked = await get({ ...suppliersOnly, language: 'fr' }, a.french);
+    const unknownAsked = await get({ ...suppliersOnly, language: 'xx' }, a.french);
+    assert.equal(inEnglish.status, 200, inEnglish.text);
+    assert.equal(rowsOf(inEnglish).length, 2);
+    for (const answer of [inFrench, inFrenchAsked, unknownAsked]) {
+      assert.equal(answer.status, 200, answer.text);
+      assert.notEqual(answer.bytes[0], 0xef, 'no BOM');
+      assert.ok(answer.text.startsWith(`${AUDIT_LOG_EXPORT_HEADERS.join(',')}\n`), 'comma separator, English headers');
+      assert.ok(answer.bytes.equals(inEnglish.bytes), 'the same bytes as for a user in English');
+    }
+    console.log('ok - one fixed format: commas, no BOM, English headers, whatever the language');
 
     // 4. Only `users:admin`: a people member is refused, another administrator is not.
     const refusedBefore = (await exportRows(tenantA)).length;
@@ -328,7 +346,7 @@ async function main() {
 
     // 6. Each export is recorded in the audit log of its tenant.
     const recordedA = await exportRows(tenantA);
-    assert.equal(recordedA.length, 7, 'one row per export made in tenant A (seven answered 200)');
+    assert.equal(recordedA.length, 10, 'one row per export made in tenant A (ten answered 200)');
     for (const row of recordedA) {
       assert.deepEqual(row.after_json, { resource: 'audit-logs', path: '/audit-logs/export', ip: '127.0.0.1', user_agent: 'Export probe' });
     }
@@ -360,10 +378,10 @@ async function main() {
     // alone would give A's rows).
     const exportInTransaction = (asTenant: string, forTenant: string) => dataSource.transaction(async (manager) => {
       await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [asTenant]);
-      const result = await service.exportCsv({}, { manager, tenantId: forTenant, language: 'en' });
+      const result = await service.exportCsv({}, { manager, tenantId: forTenant });
       let text = '';
       for await (const part of result.chunks) text += part;
-      return { truncated: result.truncated, table: parseCsv(text, ',') };
+      return { truncated: result.truncated, table: parseCsv(text) };
     });
     const sameTenant = await exportInTransaction(tenantA, tenantA);
     assert.ok(sameTenant.table.length > 1, 'the rows of A are there for A');
@@ -446,7 +464,7 @@ async function main() {
     };
     service.exportBatchSize = 2;
     const exportsBefore = (await exportRows(tenantA)).length;
-    const broken = await fetch(`${base}/audit-logs/export?language=en&table_name=tie`, {
+    const broken = await fetch(`${base}/audit-logs/export?table_name=tie`, {
       headers: { authorization: `Bearer ${token(a.admin)}`, 'x-probe-tenant': tenantA },
       signal: AbortSignal.timeout(10_000),
     });

@@ -106,7 +106,7 @@ describe('AuditLogsPage', () => {
     expect(screen.queryByRole('button', { name: 'Export CSV' })).toBeNull();
   });
 
-  it("exports with the list's filters, search, sort and the screen language", async () => {
+  it("exports with the list's filters, search and sort, in one format whatever the screen language", async () => {
     await i18n.changeLanguage('fr');
     getMock.mockResolvedValue(csvResponse() as any);
     renderPage();
@@ -117,7 +117,7 @@ describe('AuditLogsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Exporter CSV' }));
     await waitFor(() => expect(downloadBlob).toHaveBeenCalledTimes(1));
     expect(getMock).toHaveBeenCalledWith('/audit-logs/export', {
-      params: { language: 'fr', sort: 'created_at:ASC', q: 'alice', filters: JSON.stringify(filterModel) },
+      params: { sort: 'created_at:ASC', q: 'alice', filters: JSON.stringify(filterModel) },
       responseType: 'blob',
     });
     expect(vi.mocked(downloadBlob).mock.calls[0][1]).toBe('audit-log-2026-10-09.csv');

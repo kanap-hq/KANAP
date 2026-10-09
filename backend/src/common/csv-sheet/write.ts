@@ -19,11 +19,17 @@ export function writeCsv(request: CsvWriteRequest): string {
 
 /**
  * The start of a file written in parts: the BOM and the header line. The rows follow with
- * `writeCsvRows`; together they are the text `writeCsv` writes.
+ * `writeCsvRows`; together they are the text `writeCsv` writes. `bom: false` leaves the BOM out,
+ * for a file read by a program rather than opened in a spreadsheet.
  */
-export function writeCsvHeader(language: CsvLanguage, headers: readonly string[]): string {
+export function writeCsvHeader(
+  language: CsvLanguage,
+  headers: readonly string[],
+  options: { bom?: boolean } = {},
+): string {
   const separator = csvProfile(language).separator;
-  return `\uFEFF${headers.map((cell) => quoteCell(cell, separator)).join(separator)}\n`;
+  const bom = options.bom === false ? '' : '\uFEFF';
+  return `${bom}${headers.map((cell) => quoteCell(cell, separator)).join(separator)}\n`;
 }
 
 /** Rows of a file written in parts (after `writeCsvHeader`): one line each, ending with a line break. */

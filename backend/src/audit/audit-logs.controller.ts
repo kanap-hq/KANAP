@@ -5,7 +5,6 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { contentDisposition } from '../common/content-disposition';
-import { languageOf } from '../common/csv-sheet';
 import { Tenant, TenantRequest } from '../common/decorators';
 import { RATE_LIMITS } from '../common/rate-limit';
 import { RateLimitGuard } from '../common/rate-limit.guard';
@@ -67,8 +66,7 @@ export class AuditLogsController {
     @Res() res: Response,
   ): Promise<void> {
     if (!ctx.manager) throw new BadRequestException('The audit log export needs a tenant.');
-    const language = await languageOf(ctx.manager, ctx.tenantId, ctx.userId || null, query?.language);
-    const result = await this.svc.exportCsv(query, { manager: ctx.manager, tenantId: ctx.tenantId, language });
+    const result = await this.svc.exportCsv(query, { manager: ctx.manager, tenantId: ctx.tenantId });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(result.filename));
     if (result.truncated) res.setHeader(AUDIT_LOG_EXPORT_TRUNCATED_HEADER, String(result.limit));
