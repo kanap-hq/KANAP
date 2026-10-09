@@ -4,7 +4,7 @@ const content: SecurityContent = {
   meta: {
     title: 'Seguridad',
     description:
-      'Cómo KANAP protege sus datos: row-level security, contraseñas con hash, secretos cifrados, RBAC, registro de auditoría, gobernanza de agentes, SSO y transparencia open source. Autoalojado o en nube.',
+      'Cómo KANAP protege sus datos: row-level security, contraseñas con hash, secretos cifrados, RBAC, un registro de auditoría de seguridad, gobernanza de agentes, SSO, una cadena de compilación transparente y open source. Autoalojado o en nube.',
   },
   header: {
     eyebrow: 'Seguridad',
@@ -65,6 +65,8 @@ const content: SecurityContent = {
       'Rol de administrador a nivel de workspace separado de los administradores de módulo',
       'SSO vía Microsoft Entra ID (OIDC) tanto en nube como en autoalojado',
       'Autenticación local con contraseña usando Argon2 + flujos opcionales de restablecimiento de contraseña',
+      'Los intentos de inicio de sesión se limitan por dirección de cliente: 5 intentos con contraseña y 60 solicitudes de inicio de sesión con Microsoft por minuto. Detrás de un proxy inverso, el límite sigue la dirección real de cada persona',
+      'Los tokens de sesión solo se aceptan con el único algoritmo de firma con el que KANAP los emite',
       'Plaid y MCP aplican el mismo RBAC que la interfaz, sin escalada de privilegios',
       'Tokens API ligados a usuarios individuales, revocables en cualquier momento',
     ],
@@ -72,11 +74,15 @@ const content: SecurityContent = {
   audit: {
     title: 'Registro de auditoría',
     body:
-      'Cada cambio relevante queda registrado. Quién cambió qué y cuándo, con los valores de antes y después. La actividad se ve en la app.',
+      'Cada cambio relevante queda registrado, y también los eventos de seguridad que lo rodean. Quién cambió qué y cuándo, quién inició sesión, quién no lo logró, quién exportó datos. Los administradores lo ven todo en la app.',
     bullets: [
       'Cronología de actividad por entidad (tareas, proyectos, documentos, etc.)',
       'Altas, modificaciones y desactivaciones registradas con el usuario, la marca de tiempo y los valores de antes y después',
-      'Los administradores consultan y filtran el registro de auditoría en la app',
+      'Cambios de roles y permisos registrados con quién los hizo y los valores de antes y después',
+      'Inicios de sesión, inicios fallidos, cierres de sesión, renovaciones de sesión rechazadas, restablecimientos de contraseña e inicios con Microsoft registrados con la dirección del equipo y el navegador. Las contraseñas y los tokens nunca se escriben en el registro',
+      'Exportaciones generadas por el servidor registradas con quién exportó qué',
+      'Eventos de acceso y de sesión conservados 365 días',
+      'Los administradores consultan y filtran el registro de auditoría en la app, y lo exportan a CSV en un formato fijo que las herramientas de recopilación de registros leen tal cual (hasta 100 000 entradas por archivo)',
       'Los cambios hechos con Plaid se registran en el mismo registro, con su origen. Los agentes llevan su propio historial de actividad, con las fuentes que utilizó cada agente',
     ],
   },
@@ -94,6 +100,20 @@ const content: SecurityContent = {
       'Las funciones de IA están desactivadas por defecto. En la nube, el modelo integrado no recibe ningún dato hasta que el workspace haya aceptado su proveedor y su lugar de tratamiento, ambos indicados en la aplicación. Un administrador los confirma, y se pide una nueva confirmación si cambia cualquiera de los dos. Puede usar su propio proveedor de modelos en su lugar',
     ],
   },
+  supplyChain: {
+    title: 'Cadena de suministro de software',
+    body:
+      'Lo que se ejecuta en sus servidores se compila a partir del código fuente público, y la forma de compilarlo se comprueba en cada cambio. Puede verificar lo que se entrega.',
+    bullets: [
+      'La imagen de la API se compila en dos etapas: la imagen que se ejecuta contiene la aplicación compilada y sus dependencias de producción, sin código fuente ni herramientas de desarrollo',
+      'Los contenedores se ejecutan con privilegios reducidos: la API corre como usuario sin privilegios, y los contenedores renuncian a las capacidades de Linux que no necesitan y no obtienen otras nuevas',
+      'El contenedor web envía las cabeceras de seguridad habituales y no anuncia su versión de nginx',
+      'Las imágenes base están fijadas a un digest concreto. Las actualizaciones llegan como pull requests que pasan las mismas comprobaciones que cualquier otro cambio',
+      'Para cada versión publicada se generan un inventario de componentes (CycloneDX) del backend, el frontend y el sitio web, los paquetes de la imagen de la API y un archivo de avisos de terceros',
+      'Las licencias de las dependencias de producción se comprueban en cada fusión, y una dependencia con una licencia no aceptada o ausente la bloquea',
+      'Las acciones de CI están fijadas a hashes de commit completos, y el token de los workflows es de solo lectura por defecto',
+    ],
+  },
   deployment: {
     title: 'Despliegue y operaciones',
     body:
@@ -104,6 +124,8 @@ const content: SecurityContent = {
       'Autoalojado: ninguna llamada saliente obligatoria para las funciones básicas, así que KANAP puede funcionar sin acceso a internet',
       'Autoalojado: usted decide dónde se ejecuta y cómo se respalda',
       'Autoalojado: las funciones de IA usan solo el proveedor de modelos que configura su administrador',
+      'Autoalojado: al arrancar, KANAP avisa cuando el secreto de firma es corto o la contraseña del primer administrador sigue siendo un valor de ejemplo',
+      'Autoalojado: la salud de los contenedores de la API y web aparece en la salida de docker ps, y los registros de Docker se limitan a unos 50 MB por contenedor',
     ],
   },
   disclosure: {

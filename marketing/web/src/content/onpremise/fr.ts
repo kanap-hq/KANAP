@@ -28,16 +28,8 @@ const content: OnPremContent = {
         body: "Budgets, contrats fournisseurs, paysage IT, tout. Sur vos serveurs, dans votre réseau. Aucun sous-traitant à qui confier vos données de gouvernance, hormis les services que vous choisissez de connecter, comme un fournisseur de modèle IA ou un relais email. Le moteur des agents et leurs actions s'y exécutent aussi, ce qui compte quand un auditeur pose la question.",
       },
       {
-        title: 'Aucune taxe par utilisateur',
-        body: 'Utilisateurs illimités, workspaces illimités, Plaid et agents avec votre propre clé LLM. Déployez à toute la DSI sans calculatrice.',
-      },
-      {
         title: 'Prêt pour la conformité',
-        body: 'Row-level security isole les tenants. Hash de mot de passe Argon2. HTTPS avec des certificats que vous maîtrisez. Votre VPC, vos sauvegardes, votre SOC.',
-      },
-      {
-        title: 'Audit du code source',
-        body: 'AGPL v3 signifie que le code est ouvert. Votre équipe sécurité le lit, vos architectes l\'étendent, votre CISO dort mieux.',
+        body: 'Row-level security isole les tenants. Hash de mot de passe Argon2. Un journal d\'audit des connexions et des exports que votre collecteur de journaux lit en CSV. HTTPS avec des certificats que vous maîtrisez. Votre VPC, vos sauvegardes, votre SOC.',
       },
       {
         title: 'Compatible air-gap',
@@ -127,7 +119,7 @@ const content: OnPremContent = {
       },
       {
         title: 'L\'observabilité que vous avez déjà',
-        body: 'Les conteneurs écrivent leurs logs sur stdout et exposent un endpoint de santé. Pointez votre stack existant dessus (Prometheus, Loki, Datadog, ce que vous avez déjà).',
+        body: 'Les conteneurs écrivent leurs logs sur stdout (plafonnés à environ 50 Mo chacun) et affichent leur santé dans docker ps. L\'API expose un endpoint de santé. Pointez votre stack existant dessus (Prometheus, Loki, Datadog, ce que vous avez déjà).',
       },
       {
         title: 'Branding inclus',

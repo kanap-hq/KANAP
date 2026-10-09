@@ -1,6 +1,6 @@
 # Administration
 
-The Admin section provides access to user management, role configuration, billing, authentication settings, branding controls, and the audit log viewer. These pages are typically restricted to administrators.
+The Admin section provides access to user management, role configuration, billing, authentication settings, branding controls, and the audit log, which also records sign-ins and exports. These pages are typically restricted to administrators.
 
 ## Where to find it
 
@@ -30,7 +30,7 @@ The Admin landing page provides quick access to the main administrative function
 | **Accounts** | Manage accounting codes | `accounts:reader` |
 | **Users & Access** | Manage users and roles | `users:reader` |
 | **Roles** | Define role permissions | `users:reader` |
-| **Audit Log** | Browse all change history | `users:admin` |
+| **Audit Log** | Browse change history, sign-ins and exports | `users:admin` |
 | **Billing** | Plan and invoices | Billing admin |
 
 Authentication, Branding and Sample data are available from the sidebar navigation but do not appear on the Admin hub landing page.
@@ -39,13 +39,38 @@ Authentication, Branding and Sample data are available from the sidebar navigati
 
 ## Audit Log
 
-The Audit Log page shows tenant-scoped change history for data updates across the platform.
+The Audit Log page keeps the history of data changes and of security events in your workspace. Use it to see who changed what and when, who signed in, and who exported data.
 
 ### Access
 
 - Route: `/admin/audit-logs`
 - Required permission: `users:admin`
-- This page is read-only (no create/edit/delete actions).
+- The log is read-only. You can browse it, filter it and export it, but you cannot edit or delete entries.
+
+### What is recorded
+
+**Data changes**: creations, updates, deletions and disabling of records, with the user, the time and the values before and after.
+
+**Role changes**: creating, renaming and deleting a role, and every change to its permissions.
+
+**Sign-in and session events** (table **Sign-in and session**):
+
+| Event | Recorded when |
+|-------|---------------|
+| **Sign-in** | Someone signs in |
+| **Failed sign-in** | A sign-in is refused. The **Reason** says why, for example wrong password, disabled account or no account with this address |
+| **Sign-out** | Someone signs out |
+| **Session renewal refused** | The session could not be renewed, for example because it expired |
+| **Password reset requested** / **Password reset completed** | Someone asks for a reset link, and when the reset is finished |
+| **Sign-in with Microsoft** / **Failed sign-in with Microsoft** | A sign-in through Microsoft Entra ID succeeds or fails |
+
+**Exports** (table **Export**): CSV exports, documents and reports produced by the server. The row says what was exported and by whom. Exporting the audit log is recorded too.
+
+Sign-in, session and export rows also keep the **address of the computer** the request came from and the **browser** it used. Open the row to read them in the **After** panel. Behind a reverse proxy, the address is the real address of the person, as long as the proxy passes it on. On-premise installations: see the installation guide. Passwords, sign-in links and tokens are never written to the log. When someone tries to sign in with an address that has no account, the row shows **Unknown account** and does not keep the address they typed.
+
+### How long entries are kept
+
+Sign-in and session events are deleted after **365 days**. All other entries (data changes, role changes and exports) are not affected by this rule.
 
 ### What You Can Do
 
@@ -56,24 +81,25 @@ The Audit Log page shows tenant-scoped change history for data updates across th
   - Action
   - Source (`user`, `system`, `webhook`)
 - Open any row to view full details:
-  - Metadata chips (date, table, action, source, source reference, tenant, record id, user)
+  - Metadata chips (date, table, action, source, reason or source reference, tenant, record id, user)
   - Changed fields summary
   - Side-by-side **Before** and **After** JSON payloads
+- Export the log to CSV (see below)
 
 ### Columns
 
 **Default columns**:
-- **Date**: When the change occurred
-- **Table**: Which database table was affected
-- **Action**: The type of change (create, update, delete, disable)
+- **Date**: When the change or event occurred
+- **Table**: Which table was affected, or **Sign-in and session** or the exported resource for security events
+- **Action**: The type of change or event (create, update, delete, disable, sign-in, export and so on)
 - **Source**: Who or what triggered the change (user, system, webhook)
-- **User**: Email of the user who made the change (or "System"/"Webhook" for non-user sources)
+- **User**: Name of the user who made the change, or their email address when they have no name. Shows "System" or "Webhook" for non-user sources, and "Unknown account" for a sign-in attempt on an unknown address.
 
 **Additional columns** (via column chooser):
 - **Record ID**: Identifier of the affected record
 - **User ID**: UUID of the acting user
 - **User Name**: Display name of the acting user
-- **Source Ref**: External reference for webhook-originated changes
+- **Source Ref**: External reference for webhook-originated changes, or the reason for a refused sign-in
 - **Tenant ID**: The tenant this entry belongs to
 
 ### Pagination
@@ -81,13 +107,36 @@ The Audit Log page shows tenant-scoped change history for data updates across th
 - The grid uses explicit pagination with **100 rows per page**.
 - Filters and search apply to the full dataset, not only the current page.
 
+### Export to CSV
+
+Click **Export CSV** at the top of the page to download the log as a file.
+
+- The file holds the entries that match the filters, the search and the sort currently shown on screen. Clear the filters to export the whole log.
+- A file holds at most **100,000 entries**, newest first by default. When the log is larger, KANAP tells you that the file stops there. Narrow the filters (a date range, for example) and export again to get the rest.
+- You can start only a few exports per minute. If you click again too soon, KANAP asks you to wait a minute.
+- The export is recorded in the log, like any other export.
+
+The file always has the same format, whatever your language, so that a log collection tool can read it without setup:
+
+- comma-separated, UTF-8 without a byte order mark;
+- English column names: `date`, `action`, `table`, `record_id`, `user`, `source`, `source_ref`, `ip`, `user_agent`, `before`, `after`;
+- English codes for actions and tables (for example `login_failed`), as stored;
+- dates in ISO 8601, in UTC (for example `2026-10-09T14:32:05.000Z`);
+- the `before` and `after` columns as compact JSON.
+
+To open the file in Excel with a different list separator, such as in a French or German installation, do not double-click it. Use **Data > From Text/CSV**, choose UTF-8 as the file origin and comma as the delimiter.
+
+### Who can see what
+
+The **Before** and **After** values hold the complete record as it was saved, including personal data such as names, email addresses and phone numbers. The detail screen and the CSV file show the same values, and both need `users:admin`. Password hashes and multi-factor secrets are never written to the log. Treat an exported file like the log itself: store it with the same care.
+
 ### Understanding Source and Actor
 
-- **Source = user**: change initiated by an authenticated user action.
+- **Source = user**: change initiated by an authenticated user action. Sign-in, session and export events also use this source.
 - **Source = webhook**: change initiated by an external webhook (for example billing sync events). Use **Source Ref** to correlate upstream event IDs.
 - **Source = system**: internal platform process without a direct user actor.
 
-If a user account is no longer resolvable in the current context, the User column may show a UUID fallback (`Unknown (xxxx...)`) instead of an email.
+If a user account is no longer resolvable in the current context, the User column may show a UUID fallback (`Unknown (xxxx...)`) instead of a name.
 
 ---
 
@@ -381,6 +430,8 @@ The Roles page has a two-panel layout:
 
 **Tip**: Start by duplicating a built-in role that's close to what you need, then adjust permissions.
 
+Every role change (creation, rename, permissions, deletion) is recorded in the [Audit Log](#audit-log) with the person who made it and the values before and after.
+
 ---
 
 ## Billing
@@ -484,6 +535,15 @@ The sync needs a one-time approval by a Microsoft Entra administrator. Until it 
 | **Sync now** | Runs the sync immediately instead of waiting for tonight. Reports **Sync complete: N accounts refreshed, N disabled.** |
 
 Setup steps for the Entra app registration are in [Microsoft Entra SSO](on-premise/sso-entra.md).
+
+### Sign-in limits
+
+KANAP limits repeated sign-in requests from the same computer address:
+
+- **Password sign-in**: 5 attempts per minute.
+- **Microsoft sign-in**: 60 requests per minute. The limit is higher because the staff of one organization often reach KANAP from the same outbound address.
+
+Once the limit is reached, the person waits a minute and tries again. Behind a reverse proxy, the count follows the real address of each person, as long as the proxy passes it on. Signed-in, failed and refused attempts are listed in the [Audit Log](#audit-log).
 
 ---
 

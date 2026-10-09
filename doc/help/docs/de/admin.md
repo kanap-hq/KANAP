@@ -1,6 +1,6 @@
 # Administration
 
-Der Bereich Administration bietet Zugriff auf Benutzerverwaltung, Rollenkonfiguration, Abrechnung, Authentifizierungseinstellungen, Branding-Steuerung und den Audit-Protokoll-Viewer. Diese Seiten sind in der Regel auf Administratoren beschränkt.
+Der Bereich Administration bietet Zugriff auf Benutzerverwaltung, Rollenkonfiguration, Abrechnung, Authentifizierungseinstellungen, Branding-Steuerung und das Audit-Protokoll, das auch Anmeldungen und Exporte aufzeichnet. Diese Seiten sind in der Regel auf Administratoren beschränkt.
 
 ## Wo Sie es finden
 
@@ -30,7 +30,7 @@ Die Startseite der Administration bietet schnellen Zugriff auf die wichtigsten V
 | **Konten** | Buchungskonten verwalten | `accounts:reader` |
 | **Benutzer & Zugriff** | Benutzer und Rollen verwalten | `users:reader` |
 | **Rollen** | Rollenberechtigungen definieren | `users:reader` |
-| **Audit-Protokoll** | Gesamte Änderungshistorie durchsuchen | `users:admin` |
+| **Audit-Protokoll** | Änderungshistorie, Anmeldungen und Exporte durchsuchen | `users:admin` |
 | **Abrechnung** | Tarif und Rechnungen | Abrechnungsadministrator |
 
 Authentifizierung, Branding und Beispieldaten sind über die Seitenleistennavigation erreichbar, erscheinen jedoch nicht auf der Startseite des Administrations-Hubs.
@@ -39,13 +39,38 @@ Authentifizierung, Branding und Beispieldaten sind über die Seitenleistennaviga
 
 ## Audit-Protokoll
 
-Die Audit-Protokoll-Seite zeigt die mandantenbezogene Änderungshistorie für Datenaktualisierungen auf der gesamten Plattform.
+Die Seite Audit-Protokoll bewahrt die Historie der Datenänderungen und der Sicherheitsereignisse Ihres Arbeitsbereichs auf. Sie sehen hier, wer was wann geändert hat, wer sich angemeldet hat und wer Daten exportiert hat.
 
 ### Zugriff
 
 - Route: `/admin/audit-logs`
 - Erforderliche Berechtigung: `users:admin`
-- Diese Seite ist schreibgeschützt (keine Erstellen/Bearbeiten/Löschen-Aktionen).
+- Das Protokoll ist schreibgeschützt. Sie können es durchsuchen, filtern und exportieren, aber keine Einträge bearbeiten oder löschen.
+
+### Was aufgezeichnet wird
+
+**Datenänderungen**: Erstellen, Aktualisieren, Löschen und Deaktivieren von Datensätzen, mit Benutzer, Zeitpunkt sowie den Werten vorher und nachher.
+
+**Rollenänderungen**: Erstellen, Umbenennen und Löschen einer Rolle sowie jede Änderung ihrer Berechtigungen.
+
+**Anmelde- und Sitzungsereignisse** (Tabelle **Anmeldung und Sitzung**):
+
+| Ereignis | Aufgezeichnet, wenn |
+|----------|---------------------|
+| **Anmeldung** | sich jemand anmeldet |
+| **Fehlgeschlagene Anmeldung** | eine Anmeldung abgelehnt wird. Der **Grund** nennt die Ursache, zum Beispiel falsches Passwort, deaktiviertes Konto oder kein Konto mit dieser Adresse |
+| **Abmeldung** | sich jemand abmeldet |
+| **Sitzungsverlängerung abgelehnt** | die Sitzung nicht verlängert werden konnte, zum Beispiel weil sie abgelaufen ist |
+| **Zurücksetzen des Passworts angefordert** / **Passwort zurückgesetzt** | jemand einen Link zum Zurücksetzen anfordert, und wenn das Zurücksetzen abgeschlossen ist |
+| **Anmeldung mit Microsoft** / **Fehlgeschlagene Anmeldung mit Microsoft** | eine Anmeldung über Microsoft Entra ID gelingt oder fehlschlägt |
+
+**Exporte** (Tabelle **Export**): CSV-Exporte, Dokumente und Berichte, die der Server erzeugt. Die Zeile zeigt, was exportiert wurde und von wem. Auch der Export des Audit-Protokolls wird aufgezeichnet.
+
+Anmelde-, Sitzungs- und Export-Zeilen halten außerdem die **Adresse des Rechners** fest, von dem die Anfrage kam, sowie den verwendeten **Browser**. Öffnen Sie die Zeile, um beides im Bereich **Nachher** zu lesen. Hinter einem Reverse Proxy ist es die tatsächliche Adresse der Person, sofern der Proxy sie weitergibt. On-Premise-Installationen: siehe Installationsanleitung. Passwörter, Anmelde-Links und Tokens werden nie ins Protokoll geschrieben. Versucht sich jemand mit einer Adresse anzumelden, zu der es kein Konto gibt, zeigt die Zeile **Unbekanntes Konto** und speichert die eingegebene Adresse nicht.
+
+### Wie lange Einträge aufbewahrt werden
+
+Anmelde- und Sitzungsereignisse werden nach **365 Tagen** gelöscht. Alle anderen Einträge (Datenänderungen, Rollenänderungen und Exporte) sind von dieser Regel nicht betroffen.
 
 ### Was Sie tun können
 
@@ -56,24 +81,25 @@ Die Audit-Protokoll-Seite zeigt die mandantenbezogene Änderungshistorie für Da
   - Aktion
   - Quelle (`user`, `system`, `webhook`)
 - Beliebige Zeile öffnen, um vollständige Details anzuzeigen:
-  - Metadaten-Chips (Datum, Tabelle, Aktion, Quelle, Quellreferenz, Mandant, Datensatz-ID, Benutzer)
+  - Metadaten-Chips (Datum, Tabelle, Aktion, Quelle, Grund oder Quellreferenz, Mandant, Datensatz-ID, Benutzer)
   - Zusammenfassung der geänderten Felder
   - Nebeneinander dargestellte **Vorher**- und **Nachher**-JSON-Daten
+- Das Protokoll als CSV exportieren (siehe unten)
 
 ### Spalten
 
 **Standardspalten**:
-- **Datum**: Wann die Änderung erfolgte
-- **Tabelle**: Welche Datenbanktabelle betroffen war
-- **Aktion**: Art der Änderung (Erstellen, Aktualisieren, Löschen, Deaktivieren)
+- **Datum**: Wann die Änderung oder das Ereignis stattfand
+- **Tabelle**: Welche Tabelle betroffen war, oder **Anmeldung und Sitzung**, oder bei Sicherheitsereignissen die exportierte Ressource
+- **Aktion**: Art der Änderung oder des Ereignisses (Erstellen, Aktualisieren, Löschen, Deaktivieren, Anmeldung, Export usw.)
 - **Quelle**: Wer oder was die Änderung ausgelöst hat (Benutzer, System, Webhook)
-- **Benutzer**: E-Mail des Benutzers, der die Änderung vorgenommen hat (oder „System"/„Webhook" für Nicht-Benutzer-Quellen)
+- **Benutzer**: Name des Benutzers, der die Änderung vorgenommen hat, oder seine E-Mail-Adresse, wenn er keinen Namen hat. Zeigt „System" oder „Webhook" für Nicht-Benutzer-Quellen und „Unbekanntes Konto" für einen Anmeldeversuch mit unbekannter Adresse.
 
 **Zusätzliche Spalten** (über Spaltenauswahl):
 - **Datensatz-ID**: Kennung des betroffenen Datensatzes
 - **Benutzer-ID**: UUID des handelnden Benutzers
 - **Benutzername**: Anzeigename des handelnden Benutzers
-- **Quellreferenz**: Externe Referenz für Webhook-initiierte Änderungen
+- **Quellreferenz**: Externe Referenz für Webhook-initiierte Änderungen oder Grund einer abgelehnten Anmeldung
 - **Mandanten-ID**: Der Mandant, zu dem dieser Eintrag gehört
 
 ### Paginierung
@@ -81,13 +107,36 @@ Die Audit-Protokoll-Seite zeigt die mandantenbezogene Änderungshistorie für Da
 - Das Grid verwendet explizite Paginierung mit **100 Zeilen pro Seite**.
 - Filter und Suche gelten für den gesamten Datensatz, nicht nur für die aktuelle Seite.
 
+### CSV-Export
+
+Klicken Sie oben auf der Seite auf **CSV exportieren**, um das Protokoll als Datei herunterzuladen.
+
+- Die Datei enthält die Einträge, die zu den auf dem Bildschirm angezeigten Filtern, der Suche und der Sortierung passen. Entfernen Sie die Filter, um das gesamte Protokoll zu exportieren.
+- Eine Datei enthält höchstens **100.000 Einträge**, standardmäßig die neuesten zuerst. Ist das Protokoll größer, weist KANAP darauf hin, dass die Datei dort endet. Grenzen Sie die Filter ein (zum Beispiel auf einen Zeitraum) und exportieren Sie erneut, um den Rest zu erhalten.
+- Sie können nur wenige Exporte pro Minute starten. Klicken Sie zu früh erneut, bittet KANAP Sie, eine Minute zu warten.
+- Der Export wird wie jeder andere Export im Protokoll aufgezeichnet.
+
+Die Datei hat unabhängig von Ihrer Sprache immer dasselbe Format, damit ein Werkzeug zur Protokollsammlung sie ohne Einrichtung lesen kann:
+
+- durch Kommas getrennt, UTF-8 ohne Byte-Order-Mark;
+- englische Spaltennamen: `date`, `action`, `table`, `record_id`, `user`, `source`, `source_ref`, `ip`, `user_agent`, `before`, `after`;
+- englische Codes für Aktionen und Tabellen (zum Beispiel `login_failed`), wie gespeichert;
+- Datumsangaben nach ISO 8601, in UTC (zum Beispiel `2026-10-09T14:32:05.000Z`);
+- die Spalten `before` und `after` als kompaktes JSON.
+
+Um die Datei in Excel mit einem anderen Listentrennzeichen zu öffnen, etwa bei einer deutschen oder französischen Installation, öffnen Sie sie nicht per Doppelklick. Verwenden Sie **Daten > Aus Text/CSV**, wählen Sie UTF-8 als Dateiursprung und das Komma als Trennzeichen.
+
+### Wer was sehen kann
+
+Die Werte **Vorher** und **Nachher** enthalten den vollständigen Datensatz, wie er gespeichert wurde, einschließlich personenbezogener Daten wie Namen, E-Mail-Adressen und Telefonnummern. Die Detailansicht und die CSV-Datei zeigen dieselben Werte, und beide erfordern `users:admin`. Passwort-Hashes und Geheimnisse der Mehrfaktor-Authentifizierung werden nie ins Protokoll geschrieben. Behandeln Sie eine exportierte Datei wie das Protokoll selbst: Bewahren Sie sie mit derselben Sorgfalt auf.
+
 ### Quelle und Akteur verstehen
 
-- **Quelle = user**: Änderung wurde durch eine authentifizierte Benutzeraktion ausgelöst.
+- **Quelle = user**: Änderung wurde durch eine authentifizierte Benutzeraktion ausgelöst. Auch Anmelde-, Sitzungs- und Export-Ereignisse verwenden diese Quelle.
 - **Quelle = webhook**: Änderung wurde durch einen externen Webhook ausgelöst (z. B. Abrechnungs-Sync-Ereignisse). Verwenden Sie die **Quellreferenz**, um vorgelagerte Ereignis-IDs zuzuordnen.
 - **Quelle = system**: Interner Plattformprozess ohne direkten Benutzerakteur.
 
-Wenn ein Benutzerkonto im aktuellen Kontext nicht mehr aufgelöst werden kann, zeigt die Benutzer-Spalte möglicherweise einen UUID-Fallback (`Unbekannt (xxxx...)`) anstelle einer E-Mail an.
+Wenn ein Benutzerkonto im aktuellen Kontext nicht mehr aufgelöst werden kann, zeigt die Benutzer-Spalte möglicherweise einen UUID-Fallback (`Unbekannt (xxxx...)`) anstelle eines Namens an.
 
 ---
 
@@ -381,6 +430,8 @@ Die Rollenseite hat ein zweispaltiges Layout:
 
 **Tipp**: Beginnen Sie damit, eine integrierte Rolle zu duplizieren, die Ihren Anforderungen nahekommt, und passen Sie dann die Berechtigungen an.
 
+Jede Änderung an einer Rolle (Erstellen, Umbenennen, Berechtigungen, Löschen) wird im [Audit-Protokoll](#audit-protokoll) aufgezeichnet, mit der Person, die sie vorgenommen hat, und den Werten vorher und nachher.
+
 ---
 
 ## Abrechnung
@@ -484,6 +535,15 @@ Die Synchronisierung erfordert eine einmalige Genehmigung durch einen Microsoft 
 | **Jetzt synchronisieren** | Startet die Synchronisierung sofort, statt auf die kommende Nacht zu warten. Meldet **Synchronisierung abgeschlossen: N Konten aktualisiert, N deaktiviert.** |
 
 Die Einrichtungsschritte für die Entra-App-Registrierung finden Sie unter [Microsoft Entra SSO](on-premise/sso-entra.md).
+
+### Anmeldelimits
+
+KANAP begrenzt wiederholte Anmeldeanfragen von derselben Rechneradresse:
+
+- **Anmeldung mit Passwort**: 5 Versuche pro Minute.
+- **Anmeldung mit Microsoft**: 60 Anfragen pro Minute. Das Limit ist höher, weil die Beschäftigten einer Organisation KANAP oft über dieselbe ausgehende Adresse erreichen.
+
+Ist das Limit erreicht, wartet die Person eine Minute und versucht es erneut. Hinter einem Reverse Proxy folgt die Zählung der tatsächlichen Adresse jeder Person, sofern der Proxy sie weitergibt. Erfolgreiche, fehlgeschlagene und abgelehnte Versuche erscheinen im [Audit-Protokoll](#audit-protokoll).
 
 ---
 

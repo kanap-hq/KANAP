@@ -105,7 +105,7 @@ If you want the shortest path to productivity, start with the Fast Track guides 
 - [Admin & Users](admin.md) - Manage users, roles, authentication, and audit logs
 - [Branding](branding.md) - Customize your tenant logo and light/dark primary colors
 - [Sample data](sample-data.md) - Explore KANAP with a fictional company, then erase it and start clean
-- [Audit Log](admin.md#audit-log) - Review tenant change history with filters and detail view
+- [Audit Log](admin.md#audit-log) - Review data changes, sign-ins and exports with filters, detail view and CSV export
 - [AI models](ai-models.md) - Register the AI models your organization uses, with their prices, and set the default
 - [Plaid Settings](ai-settings.md) - Choose the model Plaid uses, plus chat features, retention, and MCP keys
 - [Usage & costs](ai-usage.md) - AI usage and real costs across chat and agents, by agent and by model

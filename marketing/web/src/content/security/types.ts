@@ -45,6 +45,12 @@ export interface SecurityContent {
     body: string;
     bullets: string[];
   };
+  /** Build and release practices: images, base image pins, component inventory, license check, CI. */
+  supplyChain: {
+    title: string;
+    body: string;
+    bullets: string[];
+  };
   deployment: {
     title: string;
     body: string;

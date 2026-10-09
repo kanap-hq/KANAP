@@ -4,7 +4,7 @@ const content: SecurityContent = {
   meta: {
     title: 'Security',
     description:
-      'How KANAP protects your data: row-level security, hashed passwords, encrypted secrets, RBAC, audit trail, agent governance, SSO, and open source transparency. Self-host or cloud.',
+      'How KANAP protects your data: row-level security, hashed passwords, encrypted secrets, RBAC, a security audit log, agent governance, SSO, a transparent build, and open source. Self-host or cloud.',
   },
   header: {
     eyebrow: 'Security',
@@ -65,6 +65,8 @@ const content: SecurityContent = {
       'Workspace-level admin role separate from module admins',
       'SSO via Microsoft Entra ID (OIDC) on both cloud and self-hosted',
       'Local password authentication with Argon2 + optional password reset flows',
+      'Sign-in attempts are limited per client address: 5 password attempts and 60 Microsoft sign-in requests per minute. Behind a reverse proxy, the limit follows the real address of each person',
+      'Session tokens are accepted only in the one signing algorithm KANAP issues them with',
       'Plaid and MCP enforce the same RBAC as the UI, no privilege escalation',
       'API tokens scoped to individual users, revocable at any time',
     ],
@@ -72,11 +74,15 @@ const content: SecurityContent = {
   audit: {
     title: 'Audit trail',
     body:
-      'Every meaningful change is recorded. Who changed what, when, with before and after snapshots. Activity is visible in the app.',
+      'Every meaningful change is recorded, and so are the security events around it. Who changed what and when, who signed in, who failed to, who exported data. Administrators see it all in the app.',
     bullets: [
       'Per-entity activity timeline (tasks, projects, documents, etc.)',
       'Create, update and disable actions logged with the user, the timestamp, and before and after values',
-      'Administrators browse and filter the audit log in the app',
+      'Role and permission changes recorded with who made them and the values before and after',
+      'Sign-ins, failed sign-ins, sign-outs, refused session renewals, password resets and Microsoft sign-ins recorded with the address of the computer and the browser. Passwords and tokens are never written to the log',
+      'Exports produced by the server recorded with who exported what',
+      'Sign-in and session events kept for 365 days',
+      'Administrators browse and filter the audit log in the app, and export it to CSV in one fixed format that log collection tools read as is (up to 100,000 entries per file)',
       'Changes made through Plaid are logged in the same trail, with their source. Agents keep their own activity history, with the sources each agent used',
     ],
   },
@@ -94,6 +100,20 @@ const content: SecurityContent = {
       'AI features are off by default. On the cloud, the built-in model receives no data until the workspace has accepted its provider and processing location, both named in the application. An administrator confirms them, and a new confirmation is asked if either changes. You can use your own model provider instead',
     ],
   },
+  supplyChain: {
+    title: 'Software supply chain',
+    body:
+      'What runs on your servers is built from public source, and the way it is built is checked on every change. You can verify what ships.',
+    bullets: [
+      'The API image is built in two stages: the image that runs holds the compiled application and its production dependencies, without sources or development tools',
+      'Containers run with reduced privileges: the API runs as an unprivileged user, and containers drop the Linux capabilities they do not need and cannot gain new ones',
+      'The web container sends the usual security headers and does not announce its nginx version',
+      'Base images are pinned to a fixed digest. Updates arrive as pull requests that go through the same checks as any other change',
+      'A component inventory (CycloneDX) for the backend, the frontend and the website, the packages of the API image and a third-party notices file are produced for each published version',
+      'The licenses of production dependencies are checked on every merge, and a dependency with an unaccepted or missing license blocks it',
+      'CI actions are pinned to full commit hashes, and the workflow token is read-only by default',
+    ],
+  },
   deployment: {
     title: 'Deployment & operations',
     body:
@@ -104,6 +124,8 @@ const content: SecurityContent = {
       'Self-hosted: no mandatory outbound calls for core functions, so KANAP can run without internet access',
       'Self-hosted: you choose where it runs and how it is backed up',
       'Self-hosted: AI features use only the model provider your administrator configures',
+      'Self-hosted: at start-up, KANAP warns when the signing secret is short or the first administrator password is still an example value',
+      'Self-hosted: the health of the API and web containers shows in the docker ps output, and Docker logs are capped at about 50 MB per container',
     ],
   },
   disclosure: {
