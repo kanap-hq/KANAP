@@ -60,8 +60,8 @@ vi.mock('../../../hooks/useCostCenterTree', () => {
   };
 });
 vi.mock('../../../components/fields/AnalyticsCategorySelect', () => ({
-  default: (p: { axisId: string; label?: string; lineType?: string; value: string | null; onChange: (v: string | null) => void }) => (
-    <div data-testid={`analytics-select-${p.axisId}`} data-label={p.label} data-line-type={p.lineType ?? ''}>
+  default: (p: { axisId: string; label?: string; lineType?: string; disableClearable?: boolean; value: string | null; onChange: (v: string | null) => void }) => (
+    <div data-testid={`analytics-select-${p.axisId}`} data-label={p.label} data-line-type={p.lineType ?? ''} data-clearable={String(!p.disableClearable)}>
       {p.value ?? ''}
       <button type="button" onClick={() => p.onChange(`value-${p.axisId}`)}>{`pick ${p.axisId}`}</button>
       <button type="button" onClick={() => p.onChange(null)}>{`clear ${p.axisId}`}</button>
@@ -70,7 +70,7 @@ vi.mock('../../../components/fields/AnalyticsCategorySelect', () => ({
 }));
 // The tenant's dimensions, out of order on purpose: the hook's own core orders them and names the
 // default, which has no name; one dimension is disabled. `failed` stands for a load that failed.
-const dimensions = vi.hoisted(() => ({ failed: false }));
+const dimensions = vi.hoisted(() => ({ failed: false, required: [] as string[] }));
 vi.mock('../../../hooks/useAnalyticsAxes', async (importOriginal) => {
   const mod = await importOriginal<typeof import('../../../hooks/useAnalyticsAxes')>();
   const t = ((key: string) => key) as unknown as Parameters<typeof mod.buildAnalyticsAxes>[1];
@@ -90,7 +90,10 @@ vi.mock('../../../hooks/useAnalyticsAxes', async (importOriginal) => {
     useAnalyticsAxes: (options?: { scope?: 'opex' | 'capex' | null }) => (
       dimensions.failed
         ? mod.buildAnalyticsAxes([], t, true, true)
-        : mod.buildAnalyticsAxes(list as never, t, true, false, undefined, options?.scope)
+        : mod.buildAnalyticsAxes(
+          list.map((entry) => ({ ...entry, required: dimensions.required.includes(entry.id) })) as never,
+          t, true, false, undefined, options?.scope,
+        )
     ),
   };
 });
@@ -216,6 +219,29 @@ describe('CapexPropertiesDrawer', () => {
     fireEvent.click(screen.getByRole('button', { name: 'pick nature' }));
     fireEvent.click(screen.getByRole('button', { name: 'clear default' }));
     expect(onAnalyticsValueChange.mock.calls).toEqual([['nature', 'value-nature'], ['default', null]]);
+  });
+
+  it('marks the dimensions required for CAPEX lines, and keeps a held value on them from being cleared', () => {
+    // Licence model is required but for OPEX lines only: never shown here.
+    dimensions.required = ['default', 'nature', 'licence'];
+    try {
+      const { unmount } = renderDrawer('edit');
+      const label = (name: string) => screen.getByText(name).closest('.kanap-field-label');
+      expect(label('master-data:analytics.analyticsCategoryFallback')).toHaveTextContent('*');
+      expect(label('Nature')).toHaveTextContent('Nature*');
+      expect(label('Activity')).toHaveTextContent(/^Activity$/);
+      expect(screen.queryByText('Licence model')).toBeNull();
+      // The default holds a value: replaced, never removed. Nature holds none: the line stays editable.
+      expect(screen.getByTestId('analytics-select-default')).toHaveAttribute('data-clearable', 'false');
+      expect(screen.getByTestId('analytics-select-nature')).toHaveAttribute('data-clearable', 'true');
+      expect(screen.getByTestId('analytics-select-activity')).toHaveAttribute('data-clearable', 'true');
+      unmount();
+
+      renderDrawer('create');
+      expect(screen.getByTestId('analytics-select-default')).toHaveAttribute('data-clearable', 'true');
+    } finally {
+      dimensions.required = [];
+    }
   });
 });
 

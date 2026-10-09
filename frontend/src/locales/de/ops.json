@@ -52,6 +52,7 @@
       "currencyMust3": "Die Währung muss aus 3 Buchstaben bestehen",
       "payingCompanyRequired": "Zahlendes Unternehmen ist erforderlich",
       "accountRequired": "Konto ist erforderlich",
+      "dimensionRequired": "{{name}} ist erforderlich.",
       "effectiveStartRequired": "Gültigkeitsbeginn ist erforderlich",
       "failedToCreate": "Position konnte nicht erstellt werden",
       "failedToSave": "Speichern fehlgeschlagen",
@@ -267,7 +268,8 @@
       "failedToLoad": "Position konnte nicht geladen werden",
       "obsoleteAccount": "Veraltetes Konto erkannt. Das ausgewählte Konto gehört nicht zum Kontenplan des Unternehmens. Bitte aktualisieren Sie das Konto.",
       "payingCompanyRequired": "Zahlendes Unternehmen ist erforderlich",
-      "accountRequired": "Konto ist erforderlich"
+      "accountRequired": "Konto ist erforderlich",
+      "dimensionRequired": "{{name}} ist erforderlich."
     },
     "budget": {
       "title": "Budget",

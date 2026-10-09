@@ -271,6 +271,32 @@ describe('CapexItemPage create', () => {
     expect(document.querySelector('[data-mode="create"]')).toHaveAttribute('data-company', 'company-1');
   });
 
+  it('refuses to create a line without a value on a dimension required for CAPEX lines, and only those', async () => {
+    mocked.get.mockImplementation(async (url: string) => (url === '/analytics-axes'
+      ? { data: { items: [
+        { id: 'axis-default', code: 'default', name: null, description: null, sort_order: 0, is_default: true, applies_to: null, required: false, status: 'enabled', disabled_at: null },
+        { id: 'axis-nature', code: 'nature', name: 'Nature', description: null, sort_order: 1, is_default: false, applies_to: null, required: true, status: 'enabled', disabled_at: null },
+        // Required, but for OPEX lines only, or disabled: not checked here.
+        { id: 'axis-other', code: 'other', name: 'Other', description: null, sort_order: 2, is_default: false, applies_to: 'opex', required: true, status: 'enabled', disabled_at: null },
+        { id: 'axis-old', code: 'old', name: 'Old', description: null, sort_order: 3, is_default: false, applies_to: null, required: true, status: 'disabled', disabled_at: '2020-01-01T00:00:00.000Z' },
+      ] } }
+      : { data: {} }));
+    renderAt();
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/analytics-axes'));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+    fireEvent.click(screen.getByRole('button', { name: 'set title' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(await screen.findByText('capex.editor.dimensionRequired')).toBeInTheDocument();
+    expect(mocked.post).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'pick nature value' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
+    expect(mocked.post.mock.calls[0][1].analytics_values).toEqual({ 'axis-nature': 'category-2' });
+  });
+
   it('refuses to create a line without an account', async () => {
     renderAt();
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));

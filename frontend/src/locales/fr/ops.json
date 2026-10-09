@@ -52,6 +52,7 @@
       "currencyMust3": "La devise doit comporter 3 lettres",
       "payingCompanyRequired": "La société payeuse est requise",
       "accountRequired": "Le compte est requis",
+      "dimensionRequired": "{{name}} est obligatoire.",
       "effectiveStartRequired": "La date de début effectif est requise",
       "failedToCreate": "Impossible de créer le poste",
       "failedToSave": "Impossible d'enregistrer",
@@ -267,7 +268,8 @@
       "failedToLoad": "Impossible de charger le poste",
       "obsoleteAccount": "Compte obsolète détecté. Le compte sélectionné n'appartient pas au plan comptable de la société. Veuillez mettre à jour le compte.",
       "payingCompanyRequired": "La société payeuse est requise",
-      "accountRequired": "Le compte est requis"
+      "accountRequired": "Le compte est requis",
+      "dimensionRequired": "{{name}} est obligatoire."
     },
     "budget": {
       "title": "Budget",

@@ -12,7 +12,7 @@ import { isReportView, useListFilters, writeListSnapshot } from '../../hooks/use
 import { STATUS_SCOPE_PARAM } from '../../utils/statusScopeParams';
 import { compactListSearchCached } from '../../lib/listContext';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
-import { isHiddenAxis, useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
+import { axisRequiredFor, isHiddenAxis, useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import { dimensionFieldPredicate, explicitSort, filtersStringOnShownColumns } from '../../components/finance/amountColumns';
 import useAutosave, { autosaveErrorMessage, useAutosaveRegistry } from '../../hooks/useAutosave';
 import { sendPatchBuffer, useSharedPatchBuffer } from '../../hooks/patchBuffer';
@@ -856,6 +856,12 @@ export default function SpendItemPage() {
     }
     if (!createForm.effective_start) {
       setSaveError(t('opex.editor.effectiveStartRequired'));
+      return;
+    }
+    // The server checks it too (and for every other source); the shown dimensions are the ones that apply.
+    const missingDimension = analyticsAxes.enabled.find((axis) => axisRequiredFor(axis, 'opex') && !createForm.analytics_values[axis.id]);
+    if (missingDimension) {
+      setSaveError(t('opex.editor.dimensionRequired', { name: analyticsAxes.label(missingDimension) }));
       return;
     }
 

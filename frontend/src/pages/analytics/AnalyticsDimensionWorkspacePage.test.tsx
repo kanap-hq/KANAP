@@ -69,6 +69,7 @@ const DEFAULT: AnalyticsAxisDetail = {
   sort_order: 0,
   is_default: true,
   applies_to: null,
+  required: false,
   status: 'enabled',
   disabled_at: null,
   value_count: 15,
@@ -85,6 +86,14 @@ const NATURE: AnalyticsAxisDetail = {
   value_count: 3,
   opex_count: 2,
   capex_count: 2,
+};
+
+const requiredSwitch = () => screen.getByRole('checkbox', { name: 'analytics.fields.required' });
+/** The path and the filters an href carries inline. */
+const linkTarget = (href: string | null) => {
+  const [path, search] = String(href).split('?');
+  const params = new URLSearchParams(search);
+  return { path, filters: JSON.parse(params.get('filters') ?? 'null'), statusScope: params.get('statusScope'), from: params.get('from') };
 };
 
 const usageSelect = () => screen.getByRole('combobox', { name: 'shared.lineTypeUsage.label' });
@@ -115,11 +124,13 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     vi.clearAllMocks();
     levels.value = 'admin';
     axesState.list = [DEFAULT, NATURE];
-    mocked.getAnalyticsAxis.mockImplementation(async (id: string) => (id === 'ax-default' ? DEFAULT : NATURE));
-    mocked.updateAnalyticsAxis.mockImplementation(async (id: string, patch: Partial<AnalyticsAxisDetail>) => ({
-      ...(id === 'ax-default' ? DEFAULT : NATURE),
-      ...patch,
-    }));
+    // The server keeps what it saved: a read after a save returns it.
+    const stored: Record<string, AnalyticsAxisDetail> = { 'ax-default': DEFAULT, 'ax-nature': NATURE };
+    mocked.getAnalyticsAxis.mockImplementation(async (id: string) => stored[id]);
+    mocked.updateAnalyticsAxis.mockImplementation(async (id: string, patch: Partial<AnalyticsAxisDetail>) => {
+      stored[id] = { ...stored[id], ...patch };
+      return stored[id];
+    });
   });
 
   it('saves name, code, order and description when each field loses focus, with no save button', async () => {
@@ -296,6 +307,7 @@ describe('AnalyticsDimensionWorkspacePage', () => {
       description: null,
       sort_order: 2,
       applies_to: null,
+      required: false,
     }));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics/dimensions/ax-new/overview'));
   });
@@ -362,6 +374,114 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     expect(usageSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both');
     expect(usageSelect()).toHaveAttribute('aria-disabled', 'true');
     expect(within(drawer).getByText('analytics.hints.appliesToDefault')).toBeInTheDocument();
+  });
+
+  it('saves Required at once, then reads the lines without a value and links to each type', async () => {
+    mocked.getAnalyticsAxis
+      .mockResolvedValueOnce(NATURE)
+      .mockResolvedValue({ ...NATURE, required: true, opex_missing: 117, capex_missing: 15, unusable_for: [] });
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    await screen.findByLabelText('analytics.fields.code');
+    expect(requiredSwitch()).not.toBeChecked();
+    expect(screen.queryByTestId('analytics-dimension-required-missing')).toBeNull();
+
+    fireEvent.click(requiredSwitch());
+    await waitFor(() => expect(mocked.updateAnalyticsAxis).toHaveBeenCalledWith('ax-nature', { required: true }));
+    // The detail is read again: the counts show without a reload.
+    const note = await screen.findByTestId('analytics-dimension-required-missing');
+    expect(mocked.getAnalyticsAxis).toHaveBeenCalledTimes(2);
+    expect(requiredSwitch()).toBeChecked();
+    expect(note).toHaveTextContent('analytics.required.missing.both');
+    const opex = within(note).getByRole('link', { name: 'analytics.required.showLines.opex' });
+    const capex = within(note).getByRole('link', { name: 'analytics.required.showLines.capex' });
+    expect(opex).toHaveAttribute('target', '_blank');
+    expect(linkTarget(opex.getAttribute('href'))).toEqual({
+      path: '/ops/opex',
+      filters: { 'analytics_ax-nature': { filterType: 'set', values: [null] } },
+      statusScope: 'all',
+      from: 'report',
+    });
+    expect(linkTarget(capex.getAttribute('href')).path).toBe('/ops/capex');
+    expect(screen.queryByTestId('analytics-dimension-required-unusable')).toBeNull();
+    expect(screen.queryByTestId('analytics-dimension-required-disabled')).toBeNull();
+
+    fireEvent.click(requiredSwitch());
+    await waitFor(() => expect(mocked.updateAnalyticsAxis).toHaveBeenLastCalledWith('ax-nature', { required: false }));
+  });
+
+  it('names a single type with one link, on the default dimension list column', async () => {
+    mocked.getAnalyticsAxis.mockResolvedValue({ ...DEFAULT, required: true, opex_missing: 3, capex_missing: 0, unusable_for: [] });
+    renderAt('/master-data/analytics/dimensions/ax-default/overview');
+    const note = await screen.findByTestId('analytics-dimension-required-missing');
+    expect(note).toHaveTextContent('analytics.required.missing.opex');
+    const links = within(note).getAllByRole('link');
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveTextContent('analytics.showLines');
+    expect(linkTarget(links[0].getAttribute('href'))).toMatchObject({
+      path: '/ops/opex',
+      filters: { analytics_category_name: { filterType: 'set', values: [null] } },
+    });
+  });
+
+  it('says nothing more while every line has a value, or when the dimension is not required', async () => {
+    mocked.getAnalyticsAxis.mockResolvedValue({ ...NATURE, required: true, opex_missing: 0, capex_missing: 0, unusable_for: [] });
+    const { unmount } = renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    await screen.findByLabelText('analytics.fields.code');
+    expect(requiredSwitch()).toBeChecked();
+    expect(screen.queryByTestId('analytics-dimension-required-missing')).toBeNull();
+    unmount();
+
+    mocked.getAnalyticsAxis.mockResolvedValue({ ...NATURE, required: false, opex_missing: 4, capex_missing: 2, unusable_for: ['capex'] });
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    await screen.findByLabelText('analytics.fields.code');
+    expect(screen.queryByTestId('analytics-dimension-required-missing')).toBeNull();
+    expect(screen.queryByTestId('analytics-dimension-required-unusable')).toBeNull();
+  });
+
+  it('only hints that a disabled required dimension is not checked', async () => {
+    mocked.getAnalyticsAxis.mockResolvedValue({
+      ...NATURE, required: true, status: 'disabled', disabled_at: '2020-01-01T00:00:00.000Z',
+      opex_missing: 4, capex_missing: 2, unusable_for: ['opex', 'capex'],
+    });
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    expect(await screen.findByTestId('analytics-dimension-required-disabled')).toHaveTextContent('analytics.required.disabledHint');
+    expect(screen.queryByTestId('analytics-dimension-required-missing')).toBeNull();
+    expect(screen.queryByTestId('analytics-dimension-required-unusable')).toBeNull();
+  });
+
+  it('warns when a type the dimension applies to has no enabled value to choose', async () => {
+    mocked.getAnalyticsAxis.mockResolvedValue({ ...NATURE, required: true, opex_missing: 0, capex_missing: 0, unusable_for: ['capex'] });
+    const { unmount } = renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    expect(await screen.findByTestId('analytics-dimension-required-unusable')).toHaveTextContent('analytics.required.unusable.capex');
+    unmount();
+
+    mocked.getAnalyticsAxis.mockResolvedValue({ ...NATURE, required: true, opex_missing: 0, capex_missing: 0, unusable_for: ['opex', 'capex'] });
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    expect(await screen.findByTestId('analytics-dimension-required-unusable')).toHaveTextContent('analytics.required.unusable.both');
+  });
+
+  it('shows a refusal of Required under the switch', async () => {
+    mocked.updateAnalyticsAxis.mockRejectedValueOnce({
+      response: { status: 400, data: { message: 'Required refused.', field: 'required' } },
+    });
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    await screen.findByLabelText('analytics.fields.code');
+    fireEvent.click(requiredSwitch());
+    expect(await screen.findByRole('alert')).toHaveTextContent('Required refused.');
+    expect(requiredSwitch()).not.toBeChecked();
+  });
+
+  it('creates a required dimension', async () => {
+    mocked.createAnalyticsAxis.mockResolvedValue({ ...NATURE, id: 'ax-new', required: true });
+    renderAt('/master-data/analytics/dimensions/new/overview');
+    fireEvent.change(screen.getByLabelText('analytics.fields.name'), { target: { value: 'Investment type' } });
+    expect(requiredSwitch()).not.toBeChecked();
+    fireEvent.click(requiredSwitch());
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(mocked.createAnalyticsAxis).toHaveBeenCalledWith(expect.objectContaining({
+      code: 'investment-type',
+      required: true,
+    })));
   });
 
   it('keeps a code the user typed, and places a create refusal under its field', async () => {

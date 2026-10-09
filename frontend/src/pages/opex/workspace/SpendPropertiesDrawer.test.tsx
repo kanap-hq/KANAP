@@ -27,8 +27,8 @@ vi.mock('../../../components/fields/AccountSelect', () => ({
   ),
 }));
 vi.mock('../../../components/fields/AnalyticsCategorySelect', () => ({
-  default: (p: { axisId: string; label?: string; lineType?: string; value: string | null; onChange: (v: string | null) => void }) => (
-    <div data-testid={`analytics-select-${p.axisId}`} data-label={p.label} data-line-type={p.lineType ?? ''}>
+  default: (p: { axisId: string; label?: string; lineType?: string; disableClearable?: boolean; value: string | null; onChange: (v: string | null) => void }) => (
+    <div data-testid={`analytics-select-${p.axisId}`} data-label={p.label} data-line-type={p.lineType ?? ''} data-clearable={String(!p.disableClearable)}>
       {p.value ?? ''}
       <button type="button" onClick={() => p.onChange(`value-${p.axisId}`)}>{`pick ${p.axisId}`}</button>
       <button type="button" onClick={() => p.onChange(null)}>{`clear ${p.axisId}`}</button>
@@ -332,6 +332,35 @@ describe('SpendPropertiesDrawer analytics dimensions', () => {
     expect(screen.queryAllByTestId(/^analytics-select-/)).toHaveLength(0);
     // The rest of the drawer is still there.
     expect(screen.getByText('opex.fields.runBuild')).toBeInTheDocument();
+  });
+
+  it('marks the dimensions required for OPEX lines, and only those', () => {
+    dimensions.list = [
+      ...DIMENSIONS.map((entry) => (entry.id === 'nature' ? { ...entry, required: true } : entry)),
+      // Required for CAPEX lines only: no select here at all.
+      dimension('investment', 'Investment type', 4, { applies_to: 'capex', required: true }),
+    ];
+    renderDrawer({ mode: 'edit' });
+    const label = (name: string) => screen.getByText(name).closest('.kanap-field-label');
+    expect(label('Nature')).toHaveTextContent('Nature*');
+    expect(label('Activity')).toHaveTextContent(/^Activity$/);
+    expect(label('master-data:analytics.analyticsCategoryFallback')).not.toHaveTextContent('*');
+    expect(screen.queryByText('Investment type')).toBeNull();
+  });
+
+  it('keeps a held value on a required dimension from being cleared, and nothing else', () => {
+    dimensions.list = DIMENSIONS.map((entry) => (entry.id === 'nature' || entry.id === 'activity' ? { ...entry, required: true } : entry));
+    const { unmount } = renderDrawer({ mode: 'edit', analyticsValues: { default: 'value-1', nature: 'value-2' } });
+    // Required and held: replaced, never removed.
+    expect(screen.getByTestId('analytics-select-nature')).toHaveAttribute('data-clearable', 'false');
+    // Required with no value yet, or held on an optional dimension: as before.
+    expect(screen.getByTestId('analytics-select-activity')).toHaveAttribute('data-clearable', 'true');
+    expect(screen.getByTestId('analytics-select-default')).toHaveAttribute('data-clearable', 'true');
+    unmount();
+
+    // A new line: everything can still be cleared before it is created.
+    renderDrawer({ mode: 'create', analyticsValues: { nature: 'value-2' } });
+    expect(screen.getByTestId('analytics-select-nature')).toHaveAttribute('data-clearable', 'true');
   });
 
   it('shows no such line when the dimensions load', () => {

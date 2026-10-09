@@ -1,4 +1,5 @@
 import type { TFunction } from 'i18next';
+import type { LineType } from '../../constants/lineTypeUsage';
 
 export const ANALYTICS_LIST_PATH = '/master-data/analytics';
 export const ANALYTICS_DIMENSIONS_PATH = `${ANALYTICS_LIST_PATH}/dimensions`;
@@ -32,10 +33,10 @@ export function proposeDimensionCode(name: string): string {
 }
 
 /** Fields a refusal can be attached to, so the error shows under the field that caused it. */
-export type AnalyticsField = 'name' | 'code' | 'description' | 'sort_order' | 'applies_to' | 'axis_id' | 'disabled_at';
+export type AnalyticsField = 'name' | 'code' | 'description' | 'sort_order' | 'applies_to' | 'required' | 'axis_id' | 'disabled_at';
 
 const REFUSAL_FIELDS: ReadonlySet<string> = new Set<AnalyticsField>([
-  'name', 'code', 'description', 'sort_order', 'applies_to', 'axis_id', 'disabled_at',
+  'name', 'code', 'description', 'sort_order', 'applies_to', 'required', 'axis_id', 'disabled_at',
 ]);
 
 /**
@@ -76,4 +77,30 @@ export function dimensionUsageLine(t: TFunction, valueCount: number, opexCount: 
 /** The line that explains a disabled Delete on a dimension other than the default, or null when it can be deleted. */
 export function dimensionDeleteBlock(t: TFunction, valueCount: number): string | null {
   return valueCount > 0 ? t('analytics.deleteBlocked.dimensionHasValues') : null;
+}
+
+/**
+ * "117 OPEX lines and 15 CAPEX lines have no value.", naming only the types with lines lacking a
+ * value; null when none does.
+ */
+export function requiredMissingLine(t: TFunction, opexMissing: number, capexMissing: number): string | null {
+  if (opexMissing > 0 && capexMissing > 0) {
+    return t('analytics.required.missing.both', {
+      opex: t('analytics.usage.opex', { count: opexMissing }),
+      capex: t('analytics.usage.capex', { count: capexMissing }),
+    });
+  }
+  if (opexMissing > 0) return t('analytics.required.missing.opex', { count: opexMissing });
+  if (capexMissing > 0) return t('analytics.required.missing.capex', { count: capexMissing });
+  return null;
+}
+
+/** "No enabled value can be used on CAPEX lines. New CAPEX lines cannot be created.", or null when every type has one. */
+export function requiredUnusableLine(t: TFunction, unusableFor: readonly LineType[] | null | undefined): string | null {
+  const opex = !!unusableFor?.includes('opex');
+  const capex = !!unusableFor?.includes('capex');
+  if (opex && capex) return t('analytics.required.unusable.both');
+  if (opex) return t('analytics.required.unusable.opex');
+  if (capex) return t('analytics.required.unusable.capex');
+  return null;
 }

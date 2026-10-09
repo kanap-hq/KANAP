@@ -86,6 +86,7 @@
       "currencyMust3": "Currency must be 3 letters",
       "payingCompanyRequired": "Paying company is required",
       "accountRequired": "Account is required",
+      "dimensionRequired": "{{name}} is required.",
       "effectiveStartRequired": "Effective start is required",
       "failedToCreate": "Failed to create item",
       "failedToSave": "Failed to save",
@@ -267,7 +268,8 @@
       "failedToLoad": "Failed to load item",
       "obsoleteAccount": "Obsolete account detected. The selected account does not belong to the company's Chart of Accounts. Please update the account.",
       "payingCompanyRequired": "Paying company is required",
-      "accountRequired": "Account is required"
+      "accountRequired": "Account is required",
+      "dimensionRequired": "{{name}} is required."
     },
     "budget": {
       "title": "Budget",

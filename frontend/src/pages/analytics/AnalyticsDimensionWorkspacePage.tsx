@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Stack, Switch, TextField, Typography } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
@@ -14,6 +14,7 @@ import {
   createAnalyticsAxis,
   deleteAnalyticsAxis,
   getAnalyticsAxis,
+  isAnalyticsActive,
   updateAnalyticsAxis,
   type AnalyticsAxisDetail,
   type AnalyticsAxisPatch,
@@ -30,12 +31,17 @@ import {
   dimensionDeleteBlock,
   dimensionUsageLine,
   proposeDimensionCode,
+  requiredMissingLine,
+  requiredUnusableLine,
   type AnalyticsField,
 } from './analyticsFields';
 import AnalyticsDescriptionField from './AnalyticsDescriptionField';
 import { useFieldDraft } from '../../hooks/useFieldDraft';
 import LineTypeUsageSelect, { LineTypeUsageConflictNote } from '../../components/fields/LineTypeUsageSelect';
 import { lineTypeUsageConflict, parseLineTypeUsage, type LineType } from '../../constants/lineTypeUsage';
+import { axisListColumn, oneOffListLink } from '../reports/reportListLink';
+import { keepValues } from '../reports/reportAggregates';
+import ListLinkAnchor from '../reports/ListLinkAnchor';
 
 type FieldErrors = Partial<Record<AnalyticsField, string>>;
 /** `title` is the click-to-edit name in the header: its refusals show above the workspace. */
@@ -98,8 +104,13 @@ export default function AnalyticsDimensionWorkspacePage() {
       const run = async (): Promise<boolean> => {
         try {
           const saved = await updateAnalyticsAxis(recordId, body);
-          queryClient.setQueryData([...ANALYTICS_AXIS_DETAIL_KEY, recordId], saved);
+          const key = [...ANALYTICS_AXIS_DETAIL_KEY, recordId];
+          // The response may leave out what only the detail read computes (lines without a value):
+          // the known figures stay until the read below replaces them.
+          queryClient.setQueryData<AnalyticsAxisDetail>(key, (prev) => (prev ? { ...prev, ...saved } : saved));
           void queryClient.invalidateQueries({ queryKey: ANALYTICS_AXES_QUERY_KEY, exact: true });
+          // The lines without a value depend on these: read them again so they show at once.
+          if ('required' in body || 'applies_to' in body) void queryClient.invalidateQueries({ queryKey: key, exact: true });
           return true;
         } catch (e) {
           if (currentIdRef.current !== recordId) return false;
@@ -206,6 +217,7 @@ export default function AnalyticsDimensionWorkspacePage() {
             onCodeCommit={(code) => void patch({ code }, 'code')}
             onOrderCommit={(sortOrder) => void patch({ sort_order: sortOrder }, 'sort_order')}
             onAppliesToChange={(appliesTo) => void patch({ applies_to: appliesTo }, 'applies_to')}
+            onRequiredChange={(required) => void patch({ required }, 'required')}
             onDisabledAtChange={(disabledAt) => {
               if (disabledAt === data.disabled_at) return;
               void patch({ status: deriveStatusFromDisabledAt(disabledAt), disabled_at: disabledAt }, 'disabled_at');
@@ -250,6 +262,7 @@ function DimensionProperties({
   onCodeCommit,
   onOrderCommit,
   onAppliesToChange,
+  onRequiredChange,
   onDisabledAtChange,
   onFieldError,
 }: {
@@ -261,6 +274,7 @@ function DimensionProperties({
   onCodeCommit: (code: string) => void;
   onOrderCommit: (sortOrder: number) => void;
   onAppliesToChange: (appliesTo: LineType | null) => void;
+  onRequiredChange: (required: boolean) => void;
   onDisabledAtChange: (disabledAt: string | null) => void;
   /** Shows (or clears, with undefined) a refusal found before any request. */
   onFieldError: (field: AnalyticsField, message: string | undefined) => void;
@@ -405,6 +419,17 @@ function DimensionProperties({
             </LineTypeUsageConflictNote>
           )}
         </PropertyRow>
+        <PropertyRow label={t('analytics.fields.required')}>
+          <RequiredSwitch
+            checked={!!axis.required}
+            disabled={disabled}
+            error={errors.required}
+            onChange={(next) => {
+              if (next !== !!axis.required) onRequiredChange(next);
+            }}
+          />
+          {axis.required && <RequiredNotes axis={axis} />}
+        </PropertyRow>
       </PropertyGroup>
 
       <PropertyGroup>
@@ -433,6 +458,79 @@ function DimensionProperties({
   );
 }
 
+function RequiredSwitch({
+  checked,
+  disabled,
+  error,
+  onChange,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  error?: string;
+  onChange: (next: boolean) => void;
+}) {
+  const { t } = useTranslation(['master-data']);
+  return (
+    <Box>
+      <Switch
+        size="small"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+        inputProps={{ 'aria-label': t('analytics.fields.required') }}
+      />
+      {error && (
+        <Typography role="alert" sx={{ mt: '3px', fontSize: 12, lineHeight: 1.35, color: 'error.main' }}>{error}</Typography>
+      )}
+    </Box>
+  );
+}
+
+/**
+ * Under a required dimension's switch. Disabled: one hint, nothing is checked. Enabled: the lines
+ * that have no value yet (they stay editable), each type with a link opening them in its list in a
+ * new tab (every status, a one-off view), and a warning when a type it applies to has no enabled
+ * value to choose, so no new line of that type can be created.
+ */
+function RequiredNotes({ axis }: { axis: AnalyticsAxisDetail }) {
+  const { t } = useTranslation(['master-data']);
+  if (!isAnalyticsActive(axis)) {
+    return (
+      <Typography data-testid="analytics-dimension-required-disabled" sx={{ mt: '6px', fontSize: 12, lineHeight: 1.35, color: 'kanap.text.tertiary' }}>
+        {t('analytics.required.disabledHint')}
+      </Typography>
+    );
+  }
+  const opexMissing = axis.opex_missing ?? 0;
+  const capexMissing = axis.capex_missing ?? 0;
+  const missing = requiredMissingLine(t, opexMissing, capexMissing);
+  const unusable = requiredUnusableLine(t, axis.unusable_for);
+  const scopes = ([['opex', opexMissing], ['capex', capexMissing]] as const)
+    .filter(([, count]) => count > 0)
+    .map(([scope]) => scope);
+  const column = axisListColumn(axis);
+  return (
+    <>
+      {missing && (
+        <LineTypeUsageConflictNote testId="analytics-dimension-required-missing">
+          {missing}{' '}
+          {scopes.map((scope, index) => (
+            <React.Fragment key={scope}>
+              {index > 0 && ' · '}
+              <ListLinkAnchor link={oneOffListLink(scope, { [column]: keepValues([null]) })}>
+                {scopes.length > 1 ? t(`analytics.required.showLines.${scope}`) : t('analytics.showLines')}
+              </ListLinkAnchor>
+            </React.Fragment>
+          ))}
+        </LineTypeUsageConflictNote>
+      )}
+      {unusable && (
+        <LineTypeUsageConflictNote testId="analytics-dimension-required-unusable">{unusable}</LineTypeUsageConflictNote>
+      )}
+    </>
+  );
+}
+
 type CreateForm = {
   name: string;
   code: string;
@@ -440,9 +538,10 @@ type CreateForm = {
   order: string;
   /** Null: OPEX and CAPEX lines. */
   appliesTo: LineType | null;
+  required: boolean;
 };
 
-const EMPTY_FORM: CreateForm = { name: '', code: '', description: '', order: '', appliesTo: null };
+const EMPTY_FORM: CreateForm = { name: '', code: '', description: '', order: '', appliesTo: null, required: false };
 
 function DimensionCreate({
   canCreate,
@@ -495,13 +594,14 @@ function DimensionCreate({
         description: form.description.trim() || null,
         ...(trimmedOrder ? { sort_order: Number(trimmedOrder) } : {}),
         applies_to: form.appliesTo,
+        required: form.required,
       });
       void queryClient.invalidateQueries({ queryKey: ANALYTICS_AXES_QUERY_KEY, exact: true });
       onCreated(saved.id);
     } catch (e) {
       const message = getApiErrorMessage(e, t, t('analytics.messages.dimensionCreateFailed'));
       const field = analyticsRefusalField(e);
-      if (field === 'name' || field === 'code' || field === 'description' || field === 'sort_order' || field === 'applies_to') {
+      if (field === 'name' || field === 'code' || field === 'description' || field === 'sort_order' || field === 'applies_to' || field === 'required') {
         setErrors({ [field]: message });
       } else {
         setServerError(message);
@@ -577,6 +677,13 @@ function DimensionCreate({
               label={t('shared.lineTypeUsage.label')}
               error={errors.applies_to}
               onChange={(next) => update({ appliesTo: next })}
+            />
+          </PropertyRow>
+          <PropertyRow label={t('analytics.fields.required')} valueSx={{ maxWidth: 520 }}>
+            <RequiredSwitch
+              checked={form.required}
+              error={errors.required}
+              onChange={(next) => update({ required: next })}
             />
           </PropertyRow>
           <PropertyRow label={t('analytics.fields.description')} valueSx={{ maxWidth: 520 }}>

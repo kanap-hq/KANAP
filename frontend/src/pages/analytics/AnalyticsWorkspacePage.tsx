@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, Link, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useAuth } from '../../auth/AuthContext';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
@@ -25,7 +25,7 @@ import {
 import { deriveStatusFromDisabledAt, normalizeStatus } from '../../constants/status';
 import { lineTypeUsageConflict, parseLineTypeUsage, type LineType } from '../../constants/lineTypeUsage';
 import { axisListColumn, oneOffListLink } from '../reports/reportListLink';
-import { openSavedListLink } from '../reports/ReportGroupLinkCell';
+import ListLinkAnchor from '../reports/ListLinkAnchor';
 import { keepValues } from '../reports/reportAggregates';
 import { drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
@@ -337,7 +337,6 @@ function ValueAppliesToRow({
   const link = shownConflict && axis
     ? oneOffListLink(shownConflict.scope, { [axisListColumn(axis)]: keepValues([value.name]) })
     : null;
-  const save = link?.save;
   return (
     <PropertyRow label={t('shared.lineTypeUsage.label')} helperText={dimensionHint}>
       <LineTypeUsageSelect
@@ -353,16 +352,7 @@ function ValueAppliesToRow({
       {shownConflict && link && (
         <LineTypeUsageConflictNote testId="analytics-value-applies-to-conflict">
           {t(`analytics.valueAppliesToConflict.${shownConflict.scope}`, { count: shownConflict.count })}{' '}
-          <Link
-            href={link.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            sx={{ fontSize: 12 }}
-            // Filters too long for a URL are saved first.
-            onClick={save ? (event) => { event.preventDefault(); void openSavedListLink({ ...link, save }); } : undefined}
-          >
-            {t('analytics.showLines')}
-          </Link>
+          <ListLinkAnchor link={link}>{t('analytics.showLines')}</ListLinkAnchor>
         </LineTypeUsageConflictNote>
       )}
     </PropertyRow>
