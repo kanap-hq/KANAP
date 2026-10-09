@@ -200,7 +200,7 @@ async function testIndexedRowsMapToLegacyDtoShape(applicationClassifications: Re
         status: 'open',
         extra_json: { assignee: 'Eva Fried', creator: null },
         source_updated_at: updatedAt,
-        total_count: 3,
+        total_count: 4,
         score: 4,
       },
       {
@@ -213,7 +213,7 @@ async function testIndexedRowsMapToLegacyDtoShape(applicationClassifications: Re
         status: 'active',
         extra_json: { item_ref: 'APP-7', lifecycle: 'production', criticality: null, ...applicationClassifications },
         source_updated_at: updatedAt,
-        total_count: 3,
+        total_count: 4,
         score: 3,
       },
       {
@@ -226,20 +226,33 @@ async function testIndexedRowsMapToLegacyDtoShape(applicationClassifications: Re
         status: 'active',
         extra_json: { supplier: 'ACME', paying_company: null, account: null, contract: null },
         source_updated_at: updatedAt,
-        total_count: 3,
+        total_count: 4,
         score: 2,
+      },
+      {
+        entity_type: 'capex_items',
+        entity_id: 'capex-1',
+        ref_prefix: 'CPX',
+        ref_number: 3,
+        label: 'Server refresh',
+        summary: null,
+        status: 'active',
+        extra_json: null,
+        source_updated_at: updatedAt,
+        total_count: 4,
+        score: 1,
       },
     ];
   });
 
   const result = await service.searchAll(context as any, {
     query: 'whatever',
-    entity_types: ['tasks', 'applications', 'spend_items'],
+    entity_types: ['tasks', 'applications', 'spend_items', 'capex_items'],
     limit: 10,
   });
 
-  assert.equal(result.total, 3);
-  const [task, app, spend] = result.items as any[];
+  assert.equal(result.total, 4);
+  const [task, app, spend, capex] = result.items as any[];
 
   assert.equal(task.type, 'tasks');
   assert.equal(task.ref, 'T-42');
@@ -268,8 +281,9 @@ async function testIndexedRowsMapToLegacyDtoShape(applicationClassifications: Re
     ...applicationClassifications,
   });
 
-  // …while spend items keep ref=null exactly like the legacy DTO.
-  assert.equal(spend.ref, null);
+  // …while budget lines build theirs from the item number.
+  assert.equal(spend.ref, 'OPX-9');
+  assert.equal(capex.ref, 'CPX-3');
   assert.deepEqual(spend.metadata, {
     supplier: 'ACME',
     paying_company: null,
@@ -278,9 +292,31 @@ async function testIndexedRowsMapToLegacyDtoShape(applicationClassifications: Re
   });
 }
 
+async function testLegacySearchAllGivesBudgetLineReferences() {
+  await withFlag('false', async () => {
+    const service = createService();
+    const context = createContext(async (sql) => {
+      const row = { label: 'Line', summary: null, status: 'active', updated_at: null, total_count: 1, score: 3 };
+      if (sql.includes('FROM spend_items')) return [{ ...row, id: 'spend-1', item_number: 12 }];
+      if (sql.includes('FROM capex_items')) return [{ ...row, id: 'capex-1', item_number: 4 }];
+      return [];
+    });
+
+    const result = await service.searchAll(context as any, {
+      query: 'Line',
+      entity_types: ['spend_items', 'capex_items'],
+      limit: 10,
+    });
+
+    const refs = Object.fromEntries((result.items as any[]).map((item) => [item.type, item.ref]));
+    assert.deepEqual(refs, { spend_items: 'OPX-12', capex_items: 'CPX-4' });
+  });
+}
+
 async function run() {
   await testLegacySearchAllCastsNonTextFieldsBeforeLike();
   await testLegacySearchAllReportsPartialEntityFailures();
+  await testLegacySearchAllGivesBudgetLineReferences();
   await testIndexedSearchAllRunsSingleSearchIndexQuery();
   await testIndexedSearchAllAppliesParticipationScope();
   await testIndexedSearchAllAppliesDocumentLibraryAcl();

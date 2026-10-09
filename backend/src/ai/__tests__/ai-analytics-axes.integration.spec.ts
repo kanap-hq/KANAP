@@ -293,6 +293,20 @@ async function testDefaultSqlJoin(kind: Kind) {
   });
 }
 
+// A listed line and its detail carry the business reference (OPX-n, CPX-n), so
+// the model can name the line it read.
+async function testLinesCarryTheirReference(kind: Kind) {
+  await withDimensions(kind, async (runner, seed) => {
+    const prefix = kind === 'opex' ? 'OPX' : 'CPX';
+    const ctx = context(runner, seed.tenantId);
+    const listed: any = await queryExecutor(kind).execute(ctx, { entity_type: ENTITY[kind] });
+    const refs = Object.fromEntries(listed.items.map((item: any) => [item.label, item.ref]));
+    assert.deepEqual(refs, { 'Alpha line': `${prefix}-1`, 'Bravo line': `${prefix}-2`, 'Charlie line': `${prefix}-3` }, `${kind}: each listed line has its reference`);
+    const detail: any = await queryExecutor(kind).executeDetail(ctx, { entity_type: ENTITY[kind], entity_id: seed.items.bravo });
+    assert.equal(detail.entity.ref, `${prefix}-2`, `${kind}: the detail has the line's reference`);
+  });
+}
+
 async function testCategoriesEntityCarriesDimension() {
   await withDimensions('opex', async (runner, seed) => {
     const ctx = context(runner, seed.tenantId);
@@ -331,6 +345,7 @@ async function testCategoriesEntityCarriesDimension() {
 
 void runSpecs('ai-analytics-axes.integration.spec', [
   ...KINDS.flatMap((kind): Array<[string, () => Promise<void>]> => [
+    [`lines carry their reference (${kind})`, () => testLinesCarryTheirReference(kind)],
     [`resolved registry (${kind})`, () => testResolvedRegistry(kind)],
     [`describe lists the dimensions (${kind})`, () => testDescribeListsDimensions(kind)],
     [`query, aggregate and values on a dimension (${kind})`, () => testQueryAggregateAndValues(kind)],

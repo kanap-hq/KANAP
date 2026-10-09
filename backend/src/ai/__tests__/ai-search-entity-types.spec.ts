@@ -69,6 +69,7 @@ async function testControllerTreatsOnlyUnknownTypesAsNoNarrow() {
 
   await controller.searchEntities(createRequest(), 'billing', undefined, undefined);
   const defaultTypes = received.pop();
+  assert.ok(defaultTypes?.includes('spend_items') && defaultTypes.includes('capex_items'), 'the default types include OPEX and CAPEX lines');
   await controller.searchEntities(createRequest(), 'billing', undefined, UNKNOWN_TYPE);
   assert.deepEqual(received.pop(), defaultTypes, 'a query with unknown types only searches the default types');
 

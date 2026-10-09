@@ -73,6 +73,8 @@ function buildRef(
   if (entityType === 'tasks') return `T-${itemNumber}`;
   if (entityType === 'documents') return `DOC-${itemNumber}`;
   if (entityType === 'incidents') return `INC-${itemNumber}`;
+  if (entityType === 'spend_items') return `OPX-${itemNumber}`;
+  if (entityType === 'capex_items') return `CPX-${itemNumber}`;
   return null;
 }
 
@@ -621,6 +623,7 @@ export class AiQueryExecutor {
       ?? ([row.supplier_name, row.paying_company_name, row.account_display].filter(Boolean).join(' | ') || null);
     return toEntitySummary('spend_items', {
       id: row.id,
+      item_number: row.item_number ?? null,
       label: row.product_name || 'Untitled spend item',
       status: row.status ?? null,
       summary,
@@ -639,6 +642,7 @@ export class AiQueryExecutor {
       ?? ([row.company_name, row.ppe_type, row.investment_type].filter(Boolean).join(' | ') || null);
     return toEntitySummary('capex_items', {
       id: row.id,
+      item_number: row.item_number ?? null,
       label: row.description || 'Untitled CAPEX item',
       status: row.status ?? null,
       summary,
