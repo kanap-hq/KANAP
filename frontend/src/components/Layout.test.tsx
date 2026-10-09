@@ -1,14 +1,18 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Layout from './Layout';
 import { registerLeaveGuard } from '../hooks/leaveGuard';
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
-}));
+vi.mock('react-i18next', async () => {
+  const { default: nav } = await import('../locales/en/nav.json');
+  // One stable `t`: keys render as themselves, except the version line, which renders its English text.
+  const t = (key: string, options?: { version?: string }) =>
+    key === 'nav:userMenu.version' ? nav.userMenu.version.replace('{{version}}', options?.version ?? '') : key;
+  return { useTranslation: () => ({ t, i18n: { language: 'en' } }) };
+});
 
 // Every right by default; a test may narrow it to a level per resource.
 type Level = 'reader' | 'member' | 'admin';
@@ -18,6 +22,7 @@ const access = vi.hoisted(() => ({
   isGlobalAdmin: false,
   deploymentMode: 'multi-tenant' as 'multi-tenant' | 'single-tenant',
   sampleData: false,
+  version: 'unknown',
 }));
 vi.mock('../auth/AuthContext', () => ({
   useAuth: () => ({
@@ -44,6 +49,7 @@ vi.mock('../config/FeaturesContext', () => ({
     config: {
       deploymentMode: access.deploymentMode,
       features: { billing: true, aiChat: false, aiSettings: false, sso: false, email: false, sampleData: access.sampleData },
+      version: access.version,
     },
     isLoading: false,
   }),
@@ -276,5 +282,33 @@ describe('Layout administration sidebar: sample data', () => {
     renderAdmin();
     expect(screen.getByRole('link', { name: 'nav:sidebar.admin.branding' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'nav:sidebar.admin.sampleData' })).not.toBeInTheDocument();
+  });
+});
+
+describe('Layout user menu: version', () => {
+  afterEach(() => {
+    access.version = 'unknown';
+  });
+
+  it('shows the version after Logout, linking to the release notes', () => {
+    access.version = '26.10.1';
+    renderShell();
+    fireEvent.click(screen.getByTitle('nav:topBar.account'));
+
+    const line = within(screen.getByRole('menu')).getByRole('link', { name: 'KANAP 26.10.1' });
+    expect(line).toHaveAttribute('href', 'https://github.com/kanap-hq/KANAP/releases');
+    expect(line).toHaveAttribute('target', '_blank');
+    expect(line).toHaveAttribute('rel', 'noopener');
+    const logout = screen.getByRole('menuitem', { name: 'nav:userMenu.logout' });
+    expect(logout.compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('shows no version line while the version is unknown', () => {
+    renderShell();
+    fireEvent.click(screen.getByTitle('nav:topBar.account'));
+
+    const menu = within(screen.getByRole('menu'));
+    expect(menu.getByRole('menuitem', { name: 'nav:userMenu.logout' })).toBeInTheDocument();
+    expect(menu.queryByText(/KANAP/)).not.toBeInTheDocument();
   });
 });

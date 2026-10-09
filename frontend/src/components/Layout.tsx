@@ -50,7 +50,7 @@ import BrightnessAutoIcon from '@mui/icons-material/BrightnessAuto';
 import { useTenant } from '../tenant/TenantContext';
 import { useFeatures } from '../config/FeaturesContext';
 import { useThemeMode } from '../config/ThemeContext';
-import { getDocUrl } from '../utils/docUrls';
+import { getDocUrl, RELEASES_URL } from '../utils/docUrls';
 import SubscriptionBanner from './SubscriptionBanner';
 import { focusPageScroller } from './appScroll';
 import { useAiCapabilities } from '../ai/useAiCapabilities';
@@ -478,6 +478,21 @@ export default function Layout() {
                 <Divider sx={{ my: 0.5 }} />
                 <MenuItem onClick={() => { closeMenu(); void guardedLeave(() => navigate('/settings')); }}>{t('nav:userMenu.myProfile')}</MenuItem>
                 <MenuItem onClick={() => { closeMenu(); void guardedLeave(logout); }}>{t('nav:userMenu.logout')}</MenuItem>
+                {config.version !== 'unknown' && [
+                  <Divider key="version-divider" sx={{ my: 0.5 }} />,
+                  <Typography
+                    key="version"
+                    component="a"
+                    variant="caption"
+                    href={RELEASES_URL}
+                    target="_blank"
+                    rel="noopener"
+                    onClick={closeMenu}
+                    sx={{ display: 'block', px: 2, py: 0.5, color: 'text.secondary', textDecoration: 'none' }}
+                  >
+                    {t('nav:userMenu.version', { version: config.version })}
+                  </Typography>,
+                ]}
               </Menu>
             </>
           )}
