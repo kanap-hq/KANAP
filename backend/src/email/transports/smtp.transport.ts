@@ -61,6 +61,9 @@ export class SmtpTransport implements EmailTransport {
           pass: config.password,
         }
         : undefined,
+      // Every attachment is built in memory (logo, inline images): nothing is read from disk or a URL.
+      disableFileAccess: true,
+      disableUrlAccess: true,
     });
   }
 

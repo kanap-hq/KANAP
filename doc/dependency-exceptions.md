@@ -2,12 +2,6 @@
 
 These packages have a known advisory and stay on their current major for now; each entry says where the package runs, what keeps it out of what is shipped or limits its use, and when it is upgraded.
 
-## nodemailer (backend, high)
-
-- Where it runs: a production dependency, shipped in the API.
-- What limits it: the API imports it in one place, the SMTP email transport (`backend/src/email/transports/smtp.transport.ts`). That transport is selected only in single-tenant deployments with `SMTP_HOST` and `SMTP_FROM` set; cloud deployments send through Resend and never create it. It opens one transport to the SMTP server configured by the operator (host, port, TLS and credentials from environment variables) and sends the messages the API composes through it.
-- Planned upgrade: the fix needs major 10, planned in delivery 2.
-
 ## vitest, with tinypool, vite-node and @vitest/mocker (frontend, critical)
 
 - Where it runs: a development dependency, used only by the test suite in CI and on developer machines.
@@ -28,7 +22,7 @@ These packages have a known advisory and stay on their current major for now; ea
 
 ## Remaining moderate advisories
 
-`csv-parse` and `uuid` (backend), `react-router` and `react-router-dom` (frontend), and `esbuild` through `vite` (frontend) each need a new major: planned with the dependency majors of delivery 2.
+`react-router` and `react-router-dom` (frontend), and `esbuild` through `vite` (frontend) each need a new major: planned with the dependency majors of delivery 2.
 
 ## Planned major upgrades
 
@@ -36,10 +30,6 @@ This table lists the major upgrades that are planned or queued for planning, inc
 
 | Package | Folder | Current | Target | Planned in |
 |---|---|---|---|---|
-| `nodemailer` | backend | 8.x | 10.x | Delivery 2 |
-| `csv-parse` | backend | 5.x | 7.x | Delivery 2 |
-| `uuid` | backend | 9.x | 14.x | Delivery 2 |
-| `@types/node` | backend | 20.x | 24.x (matches Node 24) | Delivery 2 |
 | `vite` | frontend | 5.x | 8.x | Delivery 2 |
 | `vitest` | frontend | 2.x | 5.x | Delivery 2 |
 | `react-router-dom` | frontend | 6.x | 7.x | Delivery 2 |
@@ -59,8 +49,7 @@ This table lists the major upgrades that are planned or queued for planning, inc
 | `@nestjs/schedule` | backend | 6.x | 12.x | To be scheduled |
 | `@nestjs/typeorm` | backend | 11.x | 12.x | To be scheduled |
 | `@types/multer` | backend | 1.x | 2.x | To be scheduled |
-| `@types/nodemailer` | backend | 7.x | 8.x | To be scheduled |
-| `@types/uuid` | backend | 9.x | 11.x | To be scheduled |
+| `@types/node` | backend | 24.x | 26.x (follows the Node.js of the images) | To be scheduled |
 | `fast-csv` | backend | 4.x | 5.x | To be scheduled |
 | `helmet` | backend | 7.x | 8.x | To be scheduled |
 | `marked` | backend | 14.x | 18.x | To be scheduled |
