@@ -2091,7 +2091,8 @@ export class AiQueryExecutor {
       if (row.tenant_id && row.tenant_id !== context.tenantId) throw new NotFoundException('Spend item not found.');
       await this.withoutHiddenAnalyticsValues(context, row, 'opex');
       const registry = await resolveAiEntityRegistry(context, entityType);
-      Object.assign(row, await this.loadSpendItemDeepDetail(context, entityId, registry));
+      // The id, not the reference the caller may have given (`get` accepts both).
+      Object.assign(row, await this.loadSpendItemDeepDetail(context, row.id as string, registry));
       return this.toDetailResult(this.mapSpendItem(row, registry), row);
     }
 

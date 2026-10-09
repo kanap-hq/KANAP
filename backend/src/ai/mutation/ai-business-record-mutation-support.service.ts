@@ -18,13 +18,27 @@ import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.ser
 import { PortfolioProjectsService } from '../../portfolio/services';
 import { SpendItemsService } from '../../spend/spend-items.service';
 import { lockBudgetLine } from '../../spend/budget-locks';
+import { parseItemRef } from '../../common/resolve-item-id';
 import {
+  DISABLED_VALUE_MESSAGE,
+  dimensionPhrase,
+  disabledDimensionMessage,
+  isValueActive,
   itemAnalyticsFields,
   ItemAnalyticsScope,
+  ItemAnalyticsValue,
   loadItemAnalyticsValues,
+  notApplicableDimensionMessage,
   notApplicableValueMessage,
   valueAppliesTo,
 } from '../../spend/item-analytics.util';
+import {
+  ANALYTICS_CSV_PREFIX,
+  AnalyticsAxisInfo,
+  analyticsAxisLabel,
+  axisAppliesTo,
+  loadAnalyticsAxes,
+} from '../../analytics/analytics-axes.util';
 import { isActiveAt, parseEndOfValidityInput } from '../../common/status';
 import { sameFieldValue } from '../../common/edit-conflicts';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
@@ -424,6 +438,60 @@ export function getAiBusinessRecordBusinessResource(entityType: unknown): string
 // Budget items whose disabled_at is their end of validity (effective_end is its deprecated alias).
 const END_OF_VALIDITY_ENTITIES = new Set<AiBusinessRecordEntityType>(['spend_items', 'capex_items']);
 
+/** The field of a line's default analytics dimension (`analytics_category` for the model). */
+const DEFAULT_ANALYTICS_FIELD = 'analytics_category_id';
+/**
+ * The stored key of another analytics dimension of a line: built on the
+ * dimension id, so renaming the dimension between preview and apply changes
+ * nothing. The model addresses it as `analytics:<code>`; `normalizeFields`
+ * accepts both (undo re-feeds the stored keys).
+ */
+const ANALYTICS_AXIS_FIELD_PREFIX = 'analytics_axis:';
+
+function lineScope(entityType: AiBusinessRecordEntityType): ItemAnalyticsScope | null {
+  if (entityType === 'spend_items') return 'opex';
+  if (entityType === 'capex_items') return 'capex';
+  return null;
+}
+
+function analyticsAxisFieldKey(axisId: string): string {
+  return `${ANALYTICS_AXIS_FIELD_PREFIX}${axisId}`;
+}
+
+/** The dimension id of an `analytics_axis:<id>` field, else null. */
+function analyticsAxisIdOfField(fieldName: string): string | null {
+  return fieldName.startsWith(ANALYTICS_AXIS_FIELD_PREFIX) ? fieldName.slice(ANALYTICS_AXIS_FIELD_PREFIX.length) : null;
+}
+
+function isAnalyticsDimensionField(fieldName: string): boolean {
+  return fieldName === DEFAULT_ANALYTICS_FIELD || analyticsAxisIdOfField(fieldName) !== null;
+}
+
+/** Whether a line of `scope` may change its value on the dimension (the write gate's rule). */
+function dimensionWritable(axis: AnalyticsAxisInfo, scope: ItemAnalyticsScope): boolean {
+  return axis.status === 'enabled' && axisAppliesTo(axis, scope);
+}
+
+/** The write gate's refusal for a dimension the line may not change (the other-type message wins). */
+function lockedDimensionMessage(axis: AnalyticsAxisInfo, scope: ItemAnalyticsScope): string {
+  return axisAppliesTo(axis, scope) ? disabledDimensionMessage(axis) : notApplicableDimensionMessage(axis);
+}
+
+/**
+ * The `analytics:<code>` keys of the dimensions a line of `scope` may write
+ * besides the default one (`analytics_category`): enabled and used for its type.
+ */
+export function writableAnalyticsDimensionKeys(axes: AnalyticsAxisInfo[], scope: ItemAnalyticsScope): string[] {
+  return axes
+    .filter((axis) => !axis.is_default && dimensionWritable(axis, scope))
+    .map((axis) => `${ANALYTICS_CSV_PREFIX}${axis.code}`);
+}
+
+/** A line's analytics values under their stored keys (`analytics_axis:<dimension id>` → value id). */
+function analyticsValueKeys(values: ItemAnalyticsValue[]): Record<string, string> {
+  return Object.fromEntries(values.map((value) => [analyticsAxisFieldKey(value.axis_id), value.category_id]));
+}
+
 function coerceRecord(value: unknown, fieldName: string): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new BadRequestException(`${fieldName} must be an object.`);
@@ -489,7 +557,12 @@ export class AiBusinessRecordMutationSupportService {
   }
 
   getWritableFieldDescriptions(entityTypes: readonly AiBusinessRecordEntityType[] = AI_BUSINESS_RECORD_ENTITY_TYPES): string[] {
-    return entityTypes.map((entityType) => `${entityType}: ${Object.keys(ENTITY_CONFIG[entityType].fields).join(', ')}`);
+    return entityTypes.map((entityType) => {
+      const fields = Object.keys(ENTITY_CONFIG[entityType].fields);
+      // The tenant's other analytics dimensions (listed per tenant in the prompt context).
+      if (lineScope(entityType)) fields.push(`${ANALYTICS_CSV_PREFIX}<dimension code>`);
+      return `${entityType}: ${fields.join(', ')}`;
+    });
   }
 
   private getConfig(entityType: AiBusinessRecordEntityType): EntityConfig {
@@ -562,13 +635,6 @@ export class AiBusinessRecordMutationSupportService {
         // A new assignment names an enabled cost center; the stored one is kept as it is.
         if (relation.row.kind !== 'cost_center') throw new BadRequestException('Choose a cost center, not a group.');
         if (!isActiveAt(relation.row.disabled_at as any)) throw new BadRequestException('This cost center is disabled.');
-      }
-      if (field.relationTarget === 'analytics_categories' && relation && relation.id !== (existing?.[fieldName] ?? null)) {
-        // A new value must be enabled; the line's current one is kept as it is (the write gate checks it again).
-        if (relation.row.status === 'disabled' || !isActiveAt(relation.row.disabled_at as any)) throw new BadRequestException('This value is disabled.');
-        const lineType = entityType === 'capex_items' ? 'capex' : 'opex';
-        const value = { name: String(relation.row.name ?? relation.label), applies_to: (relation.row.applies_to as string | null) ?? null };
-        if (!valueAppliesTo(value, lineType)) throw new BadRequestException(notApplicableValueMessage(value, lineType));
       }
       return { value: relation?.id ?? null, displayValue: relation?.label ?? null };
     }
@@ -681,19 +747,60 @@ export class AiBusinessRecordMutationSupportService {
       ? await this.itOpsSettings.getClassificationCatalog(context.tenantId, { manager: context.manager })
       : undefined;
 
+    // OPEX and CAPEX lines also write their analytics dimensions (the tenant's, loaded once when named).
+    const scope = lineScope(entityType);
+    let axes: AnalyticsAxisInfo[] | null = null;
+    const tenantAxes = async () => (axes ??= await loadAnalyticsAxes(context.manager, context.tenantId));
+
     for (const [rawName, rawValue] of Object.entries(rawFields)) {
       if (rawValue === undefined) continue;
-      const resolved = this.getFieldConfig(entityType, rawName);
+      const axis = scope ? await this.dimensionOfField(rawName, tenantAxes) : undefined;
+      let resolved: { name: string; config: FieldConfig } | null;
+      if (axis === undefined) {
+        resolved = this.getFieldConfig(entityType, rawName);
+      } else if (axis === null) {
+        resolved = null;
+      } else if (axis.is_default) {
+        // `analytics:<default code>` is the default dimension's field: a second address of it is a duplicate.
+        resolved = { name: DEFAULT_ANALYTICS_FIELD, config: config.fields[DEFAULT_ANALYTICS_FIELD] };
+      } else {
+        resolved = {
+          name: analyticsAxisFieldKey(axis.id),
+          config: { label: analyticsAxisLabel(axis), kind: 'relation', nullable: true, relationTarget: 'analytics_categories' },
+        };
+      }
       if (!resolved) {
-        throw new BadRequestException(`${rawName} is not writable for ${config.labelPlural}. Writable fields: ${Object.keys(config.fields).join(', ')}.`);
+        const writable = Object.keys(config.fields);
+        if (scope) writable.push(...writableAnalyticsDimensionKeys(await tenantAxes(), scope));
+        throw new BadRequestException(`${rawName} is not writable for ${config.labelPlural}. Writable fields: ${writable.join(', ')}.`);
       }
       if (Object.prototype.hasOwnProperty.call(fields, resolved.name)) {
-        throw new BadRequestException(`Field ${resolved.name} was provided more than once.`);
+        const shown = axis && !axis.is_default ? `${ANALYTICS_CSV_PREFIX}${axis.code}` : resolved.name;
+        throw new BadRequestException(`Field ${shown} was provided more than once.`);
       }
-      const normalized = await this.normalizeFieldValue(context, entityType, resolved.name, resolved.config, rawValue, fields, catalog, existing);
+      let normalized: { value: unknown; displayValue: string | null };
+      let label = resolved.config.label;
+      if (scope && isAnalyticsDimensionField(resolved.name)) {
+        // Any dimension of a line, the default one included (however addressed), takes the gate's rules
+        // and shows the dimension's name. A tenant still without its default dimension holds no value on it.
+        const dimensionAxis = axis ?? (await tenantAxes()).find((candidate) => candidate.is_default) ?? null;
+        label = analyticsAxisLabel(dimensionAxis ?? { name: null });
+        if (dimensionAxis) {
+          const dimension = await this.normalizeDimensionValue(context, scope, dimensionAxis, rawValue, (existing?.[resolved.name] as string | null | undefined) ?? null);
+          // A dimension the line may not change passes its current value as a no-op: nothing to create.
+          if (dimension.locked && mode === 'create') continue;
+          normalized = dimension;
+        } else {
+          const ref = textOrNull(rawValue);
+          if (ref) throw new BadRequestException(`"${ref}" is not a value of ${dimensionPhrase({ name: null })}.`);
+          normalized = { value: null, displayValue: null };
+        }
+      } else {
+        normalized = await this.normalizeFieldValue(context, entityType, resolved.name, resolved.config, rawValue, fields, catalog, existing);
+      }
       fields[resolved.name] = normalized.value;
       displayValues[resolved.name] = normalized.displayValue;
-      fieldLabels[resolved.name] = resolved.config.label;
+      fieldLabels[resolved.name] = label;
     }
 
     if (END_OF_VALIDITY_ENTITIES.has(entityType) && Object.prototype.hasOwnProperty.call(fields, 'effective_end')) {
@@ -726,6 +833,81 @@ export class AiBusinessRecordMutationSupportService {
       }
     }
     return { fields, displayValues, fieldLabels };
+  }
+
+  /**
+   * The dimension a line field names: `analytics:<code>` (code matched case-insensitively,
+   * read before `normalizeFieldKey`, which would rewrite a `-` of the code) or the stored
+   * `analytics_axis:<dimension id>`. undefined when the field is no dimension key, null
+   * when its code names no dimension of the tenant. A stored key whose dimension was deleted
+   * since (an undo) is refused as such.
+   */
+  private async dimensionOfField(
+    rawName: string,
+    tenantAxes: () => Promise<AnalyticsAxisInfo[]>,
+  ): Promise<AnalyticsAxisInfo | null | undefined> {
+    const name = String(rawName ?? '').trim();
+    const lower = name.toLowerCase();
+    if (lower.startsWith(ANALYTICS_CSV_PREFIX)) {
+      const code = lower.slice(ANALYTICS_CSV_PREFIX.length).trim();
+      return (await tenantAxes()).find((axis) => axis.code.toLowerCase() === code) ?? null;
+    }
+    if (lower.startsWith(ANALYTICS_AXIS_FIELD_PREFIX)) {
+      const id = lower.slice(ANALYTICS_AXIS_FIELD_PREFIX.length).trim();
+      const axis = (await tenantAxes()).find((candidate) => candidate.id.toLowerCase() === id);
+      if (!axis) throw new BadRequestException('This dimension no longer exists.');
+      return axis;
+    }
+    return undefined;
+  }
+
+  /**
+   * A line's value on one dimension: by name (case-insensitive) or
+   * id, looked up within that dimension only; empty clears it. The write gate's rules, checked
+   * at preview (the gate checks again at apply): a dimension that is disabled or used for the
+   * other line type only passes the line's current value (`locked`); a disabled value or one
+   * used for the other line type only when it is the line's current value.
+   */
+  private async normalizeDimensionValue(
+    context: AiExecutionContextWithManager,
+    scope: ItemAnalyticsScope,
+    axis: AnalyticsAxisInfo,
+    rawValue: unknown,
+    currentId: string | null,
+  ): Promise<{ value: string | null; displayValue: string | null; locked: boolean }> {
+    const ref = Array.isArray(rawValue) && rawValue.length === 0 ? null : textOrNull(rawValue);
+    const value = ref ? await this.findDimensionValue(context, axis.id, ref) : null;
+    const writable = dimensionWritable(axis, scope);
+    if (ref && !value) {
+      throw new BadRequestException(writable ? `"${ref}" is not a value of ${dimensionPhrase(axis)}.` : lockedDimensionMessage(axis, scope));
+    }
+    const id = value?.id ?? null;
+    const current = sameValue(id, currentId);
+    if (!writable && !current) throw new BadRequestException(lockedDimensionMessage(axis, scope));
+    if (value && !current) {
+      if (!isValueActive(value)) throw new BadRequestException(DISABLED_VALUE_MESSAGE);
+      if (!valueAppliesTo(value, scope)) throw new BadRequestException(notApplicableValueMessage(value, scope));
+    }
+    return { value: id, displayValue: value?.name ?? null, locked: !writable };
+  }
+
+  /** The value of one dimension named by `ref` (its id, or its name, unique within the dimension). */
+  private async findDimensionValue(
+    context: AiExecutionContextWithManager,
+    axisId: string,
+    ref: string,
+  ): Promise<{ id: string; name: string; applies_to: string | null; status: string; disabled_at: Date | string | null } | null> {
+    const rows: Array<{ id: string; name: string; applies_to: string | null; status: string; disabled_at: Date | string | null }> =
+      await context.manager.query(
+        `SELECT c.id::text AS id, c.name, c.applies_to, c.status::text AS status, c.disabled_at
+           FROM analytics_categories c
+          WHERE c.tenant_id = $1 AND c.axis_id = $2
+            AND (${isUuid(ref) ? 'c.id = $3 OR ' : ''}LOWER(c.name) = LOWER($3::text))
+          ORDER BY c.name
+          LIMIT 2`,
+        [context.tenantId, axisId, ref],
+      );
+    return rows.find((row) => row.id.toLowerCase() === ref.toLowerCase()) ?? rows[0] ?? null;
   }
 
   private async resolveRelation(
@@ -822,6 +1004,17 @@ export class AiBusinessRecordMutationSupportService {
     return this.referenceFromRow(entityType, rows[0]);
   }
 
+  /** The item number of a budget line reference (`OPX-3`, `CPX-3`), or -1 when the reference is not one of this type. */
+  private itemNumberOfReference(ref: string, type: 'spend' | 'capex'): number {
+    try {
+      const parsed = parseItemRef(ref, type);
+      // A bare number stays a name: only the prefixed reference names a line.
+      return parsed.type === 'item_number' && ref.includes('-') ? parsed.value : -1;
+    } catch {
+      return -1;
+    }
+  }
+
   private async queryReferenceCandidates(
     context: AiExecutionContextWithManager,
     entityType: RelationTarget,
@@ -902,13 +1095,13 @@ export class AiBusinessRecordMutationSupportService {
         );
       case 'spend_items':
         return this.withDefaultAnalyticsValue(context, 'opex', await manager.query(
-          `SELECT * FROM spend_items WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(product_name) = LOWER($2::text)) ORDER BY product_name LIMIT 6`,
-          [tenantId, ref],
+          `SELECT * FROM spend_items WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(product_name) = LOWER($2::text) OR item_number = $3) ORDER BY product_name LIMIT 6`,
+          [tenantId, ref, this.itemNumberOfReference(ref, 'spend')],
         ));
       case 'capex_items':
         return this.withDefaultAnalyticsValue(context, 'capex', await manager.query(
-          `SELECT * FROM capex_items WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(description) = LOWER($2::text)) ORDER BY description LIMIT 6`,
-          [tenantId, ref],
+          `SELECT * FROM capex_items WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(description) = LOWER($2::text) OR item_number = $3) ORDER BY description LIMIT 6`,
+          [tenantId, ref, this.itemNumberOfReference(ref, 'capex')],
         ));
       case 'companies':
         return manager.query(`SELECT * FROM companies WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text)) ORDER BY name LIMIT 6`, [tenantId, ref]);
@@ -927,14 +1120,6 @@ export class AiBusinessRecordMutationSupportService {
         return manager.query(`SELECT * FROM suppliers WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text) OR LOWER(COALESCE(erp_supplier_id, '')) = LOWER($2::text)) ORDER BY name LIMIT 6`, [tenantId, ref]);
       case 'accounts':
         return manager.query(`SELECT * FROM accounts WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}account_number::text = $2::text OR LOWER(account_name) = LOWER($2::text) OR LOWER(CONCAT(account_number, ' - ', account_name)) = LOWER($2::text)) ORDER BY account_number LIMIT 6`, [tenantId, ref]);
-      case 'analytics_categories':
-        // A line's analytics category is a value of the default dimension (the other dimensions are not written by the AI).
-        return manager.query(
-          `SELECT c.* FROM analytics_categories c
-             JOIN analytics_axes ax ON ax.tenant_id = c.tenant_id AND ax.id = c.axis_id AND ax.is_default
-            WHERE c.tenant_id = $1 AND (${uuid ? 'c.id = $2 OR ' : ''}LOWER(c.name) = LOWER($2::text)) ORDER BY c.name LIMIT 6`,
-          [tenantId, ref],
-        );
       case 'business_processes':
         return manager.query(`SELECT * FROM business_processes WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text)) ORDER BY name LIMIT 6`, [tenantId, ref]);
       case 'portfolio_sources':
@@ -951,9 +1136,10 @@ export class AiBusinessRecordMutationSupportService {
   }
 
   /**
-   * Line rows with their default dimension's value read from the analytics links:
-   * the item column of that name is no longer written, so the preview's current
-   * values and the reference checks never read it.
+   * Line rows with their analytics values read from the links: the default dimension's
+   * under `analytics_category_id` (the item column of that name is no longer written, so
+   * the preview's current values and the reference checks never read it), and every
+   * dimension's under its stored key `analytics_axis:<dimension id>`.
    */
   private async withDefaultAnalyticsValue(
     context: AiExecutionContextWithManager,
@@ -961,7 +1147,41 @@ export class AiBusinessRecordMutationSupportService {
     rows: Record<string, unknown>[],
   ): Promise<Record<string, unknown>[]> {
     const values = await loadItemAnalyticsValues(context.manager, scope, context.tenantId, rows.map((row) => String(row.id)));
-    return rows.map((row) => ({ ...row, analytics_category_id: itemAnalyticsFields(values.get(String(row.id)) ?? []).analytics_category_id }));
+    return rows.map((row) => {
+      const lineValues = values.get(String(row.id)) ?? [];
+      return { ...row, ...analyticsValueKeys(lineValues), analytics_category_id: itemAnalyticsFields(lineValues).analytics_category_id };
+    });
+  }
+
+  /** A line snapshot (`get`) with every dimension's value under its stored key as well. */
+  private withAnalyticsValueKeys(entityType: AiBusinessRecordEntityType, row: Record<string, unknown>): Record<string, unknown> {
+    if (!lineScope(entityType)) return row;
+    const values = Array.isArray(row.analytics_values) ? row.analytics_values as ItemAnalyticsValue[] : [];
+    return { ...row, ...analyticsValueKeys(values) };
+  }
+
+  /** What the update preview shows as "from": the value names of the dimension fields, the values otherwise. */
+  private async previousDisplayValues(
+    context: AiExecutionContextWithManager,
+    entityType: AiBusinessRecordEntityType,
+    previousValues: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    const display: Record<string, unknown> = { ...previousValues };
+    if (!lineScope(entityType)) return display;
+    const ids = Object.entries(previousValues)
+      .filter(([fieldName, value]) => isAnalyticsDimensionField(fieldName) && typeof value === 'string' && isUuid(value))
+      .map(([, value]) => String(value));
+    if (ids.length === 0) return display;
+    const rows: Array<{ id: string; name: string }> = await context.manager.query(
+      `SELECT id::text AS id, name FROM analytics_categories WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [context.tenantId, ids],
+    );
+    const names = new Map(rows.map((row) => [row.id.toLowerCase(), row.name]));
+    for (const [fieldName, value] of Object.entries(previousValues)) {
+      if (!isAnalyticsDimensionField(fieldName) || typeof value !== 'string') continue;
+      display[fieldName] = names.get(value.toLowerCase()) ?? value;
+    }
+    return display;
   }
 
   private referenceFromRow(entityType: RelationTarget, row: Record<string, unknown>): ResolvedReference {
@@ -1091,7 +1311,7 @@ export class AiBusinessRecordMutationSupportService {
     const entityType = requireEntityType(preview.target_entity_type || preview.mutation_input?.entity_type);
     if (!preview.target_entity_id) throw new BadRequestException('Original preview is missing the target record.');
     const previousValues = coerceRecord(preview.current_values?.values, 'current_values.values');
-    const targetRow = await this.getRecordSnapshot(context, entityType, preview.target_entity_id);
+    const targetRow = this.withAnalyticsValueKeys(entityType, await this.getRecordSnapshot(context, entityType, preview.target_entity_id));
     const target = this.referenceFromRow(entityType, targetRow);
     return this.prepareUpdatePreviewForTarget(context, entityType, target, previousValues, {
       sourcePreviewId: preview.id,
@@ -1143,7 +1363,7 @@ export class AiBusinessRecordMutationSupportService {
         target_ref: target.ref,
         target_title: target.label,
         values: previousValues,
-        display_values: previousValues,
+        display_values: await this.previousDisplayValues(context, entityType, previousValues),
       },
     };
   }
@@ -1236,7 +1456,7 @@ export class AiBusinessRecordMutationSupportService {
     const mutation = preview.mutation_input ?? {};
     const action = String(mutation.action || '');
     const fields = coerceRecord(mutation.fields, 'mutation_input.fields');
-    const executionFields = fields;
+    const executionFields = this.executionFields(fields);
     if (action === 'create') {
       const saved = await this.createRecord(context, entityType, executionFields);
       const snapshot = await this.getRecordSnapshot(context, entityType, String((saved as any).id));
@@ -1260,9 +1480,11 @@ export class AiBusinessRecordMutationSupportService {
       await lockBudgetLine(context.manager, entityType === 'spend_items' ? 'opex' : 'capex', context.tenantId, preview.target_entity_id);
     }
     const live = await this.getRecordSnapshot(context, entityType, preview.target_entity_id);
+    // A dimension is compared with the live line's value on that dimension (none reads null).
+    const liveValues = this.withAnalyticsValueKeys(entityType, live);
     for (const [fieldName, expectedValue] of Object.entries(expectedValues)) {
-      if (!sameValue(live[fieldName], expectedValue)) {
-        const label = this.getConfig(entityType).fields[fieldName]?.label ?? fieldName;
+      if (!sameValue(liveValues[fieldName] ?? null, expectedValue)) {
+        const label = await this.conflictLabel(context, entityType, fieldName, mutation.field_labels);
         throw new ConflictException(`${label} changed after the preview was created.`);
       }
     }
@@ -1270,6 +1492,44 @@ export class AiBusinessRecordMutationSupportService {
     await this.updateRecord(context, entityType, preview.target_entity_id, executionFields);
     const after = await this.getRecordSnapshot(context, entityType, preview.target_entity_id);
     await this.logAiAudit(context, preview, entityType, 'update', before, after);
+  }
+
+  /**
+   * The fields the services take: the stored dimension keys become
+   * `analytics_values: { [dimension id]: value id | null }`, checked again by the
+   * write gate; the default dimension stays `analytics_category_id`.
+   */
+  private executionFields(fields: Record<string, unknown>): Record<string, unknown> {
+    const execution: Record<string, unknown> = {};
+    const analyticsValues: Record<string, string | null> = {};
+    for (const [fieldName, value] of Object.entries(fields)) {
+      const axisId = analyticsAxisIdOfField(fieldName);
+      if (axisId) analyticsValues[axisId] = value == null || value === '' ? null : String(value);
+      else execution[fieldName] = value;
+    }
+    if (Object.keys(analyticsValues).length > 0) execution.analytics_values = analyticsValues;
+    return execution;
+  }
+
+  /** The label of a field that changed since the preview: a dimension's current name, else the field's label. */
+  private async conflictLabel(
+    context: AiExecutionContextWithManager,
+    entityType: AiBusinessRecordEntityType,
+    fieldName: string,
+    storedLabels: unknown,
+  ): Promise<string> {
+    const axisId = analyticsAxisIdOfField(fieldName);
+    if (lineScope(entityType) && fieldName === DEFAULT_ANALYTICS_FIELD) {
+      const axis = (await loadAnalyticsAxes(context.manager, context.tenantId)).find((candidate) => candidate.is_default);
+      return analyticsAxisLabel(axis ?? { name: null });
+    }
+    if (axisId) {
+      const axis = (await loadAnalyticsAxes(context.manager, context.tenantId)).find((candidate) => candidate.id === axisId);
+      if (axis) return analyticsAxisLabel(axis);
+      const stored = storedLabels && typeof storedLabels === 'object' ? (storedLabels as Record<string, unknown>)[fieldName] : null;
+      return typeof stored === 'string' && stored ? stored : fieldName;
+    }
+    return this.getConfig(entityType).fields[fieldName]?.label ?? fieldName;
   }
 
   private async logAiAudit(

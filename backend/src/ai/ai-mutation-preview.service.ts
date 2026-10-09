@@ -248,15 +248,23 @@ export class AiMutationPreviewService {
     return JSON.parse(JSON.stringify(input ?? {}));
   }
 
+  /**
+   * What makes two previews the same request: the tool, the target, the change and the state it
+   * was asked against (`current_values.values`, as stored: JSON). A retry finds its preview, even
+   * once executed; the same change asked again after the record moved on (back and forth between
+   * two values) is a new preview.
+   */
   private previewSignature(
     toolName: string,
-    prepared: Pick<AiPreparedMutationPreview, 'targetEntityType' | 'targetEntityId' | 'mutationInput'>,
+    prepared: Pick<AiPreparedMutationPreview, 'targetEntityType' | 'targetEntityId' | 'mutationInput' | 'currentValues'>,
   ): string {
+    const values = prepared.currentValues?.values;
     return stableStringify({
       tool_name: toolName,
       target_entity_type: prepared.targetEntityType,
       target_entity_id: prepared.targetEntityId ?? null,
       mutation_input: prepared.mutationInput,
+      current_values: values === undefined ? null : JSON.parse(JSON.stringify(values)),
     });
   }
 
@@ -297,6 +305,7 @@ export class AiMutationPreviewService {
         targetEntityType: candidate.target_entity_type,
         targetEntityId: candidate.target_entity_id,
         mutationInput: candidate.mutation_input,
+        currentValues: candidate.current_values,
       }) === signature,
     ) ?? null;
   }

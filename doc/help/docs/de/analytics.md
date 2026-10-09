@@ -253,7 +253,9 @@ Die sieben Budgetberichte lassen sich auch auf einen Wert einer Dimension eingre
 
 - Plaid kann OPEX-Zeilen nach jeder aktivierten Dimension filtern und gruppieren, die für OPEX-Zeilen verwendet wird, und CAPEX-Zeilen nach jeder aktivierten Dimension, die für CAPEX-Zeilen verwendet wird.
 - Eine Frage zur Analysekategorie verwendet die Standarddimension, unabhängig von ihrem Namen und ihrer Reihenfolge.
-- Plaid kann den Wert einer Zeile nur in der Standarddimension ändern. Setzen Sie die anderen Dimensionen in der App oder mit einer CSV-Datei.
+- Plaid kann den Wert einer Zeile in jeder Dimension setzen, ändern oder löschen, wenn es eine OPEX- oder CAPEX-Zeile anlegt oder aktualisiert. Fragen Sie zum Beispiel: „Setze die Nature de coût von OPX-12 auf Licences et maintenance.“ Plaid findet den Wert über seinen Namen in dieser Dimension und zeigt in der Vorschau die Dimension und den Wert, vorher und nachher. Nichts ändert sich, bevor Sie zustimmen.
+- Plaid befolgt dieselben Regeln wie die App: nur aktivierte Dimensionen, die für den Typ der Zeile verwendet werden, nur aktivierte Werte, die für den Typ der Zeile verwendet werden, und eine Zeile behält einen Wert, den sie bereits trägt.
+- Plaid kann auch einen Wert in der Dimension anlegen, die Sie nennen. Ohne Angabe einer Dimension kommt der Wert in die Standarddimension.
 
 ---
 

@@ -51,6 +51,8 @@ import { AiApprovalService } from './control-plane/approval/ai-approval.service'
 import { AiCapabilityRegistry, EXECUTE_APPROVED_PREVIEW_CAPABILITY } from './control-plane/capability/ai-capability.registry';
 import { AiCapabilityDispatcherService } from './control-plane/dispatcher/ai-capability-dispatcher.service';
 import { budgetColumnsAiContext, readBudgetColumns } from '../budget-columns/budget-columns.util';
+import { loadAnalyticsAxes } from '../analytics/analytics-axes.util';
+import { analyticsDimensionsAiContext, AnalyticsDimensionsPromptContext } from './ai-analytics-dimensions-context';
 
 const MAX_TOOL_ITERATIONS = parsePositiveIntEnv(process.env.AI_CHAT_MAX_TOOL_ITERATIONS, 40);
 /**
@@ -1745,6 +1747,15 @@ export class AiChatOrchestratorService {
     return budgetColumnsAiContext(await readBudgetColumns(ctx.manager, ctx.tenantId));
   }
 
+  /** The analytics dimensions OPEX and CAPEX lines may hold, for users who can read those lines; none otherwise. */
+  private async loadAnalyticsDimensionsPromptContext(
+    ctx: AiExecutionContext & { manager: any },
+    readableTypes: readonly string[],
+  ): Promise<AnalyticsDimensionsPromptContext | undefined> {
+    if (!readableTypes.includes('spend_items') && !readableTypes.includes('capex_items')) return undefined;
+    return analyticsDimensionsAiContext(await loadAnalyticsAxes(ctx.manager, ctx.tenantId), readableTypes);
+  }
+
   private async loadCurrentUserPromptContext(ctx: AiExecutionContext & { manager: any }): Promise<CurrentUserPromptContext> {
     const userRows = await ctx.manager.query(
       `SELECT u.email,
@@ -2117,6 +2128,7 @@ export class AiChatOrchestratorService {
               : [];
             const currentUser = await this.loadCurrentUserPromptContext(ctx);
             const budgetColumns = await this.loadBudgetColumnsPromptContext(ctx, readableTypes);
+            const analyticsDimensions = await this.loadAnalyticsDimensionsPromptContext(ctx, readableTypes);
             const builtSystemPrompt = this.systemPrompt.buildWithMetadata({
               tenantName,
               availableTools,
@@ -2124,6 +2136,7 @@ export class AiChatOrchestratorService {
               currentUser,
               contextProfile,
               budgetColumns,
+              analyticsDimensions,
             });
             const latestUserMessageRow = [...historyAfterApproval]
               .reverse()
@@ -2315,6 +2328,7 @@ export class AiChatOrchestratorService {
           : [];
         const currentUser = await this.loadCurrentUserPromptContext(ctx);
         const budgetColumns = await this.loadBudgetColumnsPromptContext(ctx, readableTypes);
+        const analyticsDimensions = await this.loadAnalyticsDimensionsPromptContext(ctx, readableTypes);
 
         const builtSystemPrompt = this.systemPrompt.buildWithMetadata({
           tenantName,
@@ -2323,6 +2337,7 @@ export class AiChatOrchestratorService {
           currentUser,
           contextProfile,
           budgetColumns,
+          analyticsDimensions,
         });
         const sysPrompt = builtSystemPrompt.text;
 

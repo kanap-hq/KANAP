@@ -3,7 +3,14 @@ import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
 import { AccountsService } from '../../accounts/accounts.service';
 import { ChartOfAccountsService } from '../../accounts/chart-of-accounts.service';
-import { AnalyticsCategoriesService } from '../../analytics/analytics-categories.service';
+import { AnalyticsCategoriesService, valueAppliesToConflict } from '../../analytics/analytics-categories.service';
+import {
+  analyticsAxisLabel,
+  analyticsAxisSubject,
+  isAxisActive,
+  isReservedAnalyticsAxisName,
+} from '../../analytics/analytics-axes.util';
+import { AxisAppliesTo } from '../../analytics/analytics-axis.entity';
 import { AuditSourceOptions } from '../../audit/audit.service';
 import { BusinessProcessesService } from '../../business-processes/business-processes.service';
 import { CompanyMetricsService } from '../../companies/company-metrics.service';
@@ -57,7 +64,17 @@ type FieldKind =
   | 'status'
   | 'date'
   | 'enum'
-  | 'relation';
+  | 'relation'
+  | 'analytics_axis';
+type AnalyticsAxisRow = {
+  id: string;
+  code: string;
+  name: string | null;
+  is_default: boolean;
+  applies_to: AxisAppliesTo | null;
+  status: string;
+  disabled_at: Date | string | null;
+};
 type EnumCase = 'lower' | 'upper';
 type FieldStorage = 'record' | 'company_metrics' | 'company_metric_year' | 'department_metrics' | 'department_metric_year';
 
@@ -277,6 +294,8 @@ const ENTITY_CONFIG: Record<AiMasterDataEntityType, EntityConfig> = {
       },
       status: { label: 'Status', kind: 'status' },
       disabled_at: { label: 'Disabled At', kind: 'date', nullable: true },
+      // Create only: the value's dimension (code or name); the default dimension when omitted.
+      dimension: { label: 'Dimension', kind: 'analytics_axis', nullable: true },
     },
   },
   business_processes: {
@@ -653,6 +672,42 @@ export class AiMasterDataMutationSupportService {
     return { value: text, displayValue: text };
   }
 
+  /**
+   * An analytics value's dimension as the model names it: its code or name (case-insensitive;
+   * a code wins over another dimension's name), its business-record key (`analytics:<code>`,
+   * or `analytics_category` for the default dimension), or the default dimension's label
+   * ("Analytics dimension" and its translations). Null when that is the default dimension
+   * and the tenant has none yet (the value service creates it).
+   */
+  private async resolveAnalyticsAxis(
+    context: AiExecutionContextWithManager,
+    rawRef: string,
+  ): Promise<AnalyticsAxisRow | null> {
+    const ref = rawRef.replace(/^analytics:/i, '').trim();
+    const columns = `id::text AS id, code, name, is_default, applies_to, status::text AS status, disabled_at`;
+    if (['analytics_category', 'analytics_category_id'].includes(ref.toLowerCase()) || isReservedAnalyticsAxisName(ref)) {
+      const [row] = await context.manager.query(
+        `SELECT ${columns} FROM analytics_axes WHERE tenant_id = $1 AND is_default`,
+        [context.tenantId],
+      );
+      return row ?? null;
+    }
+    const rows: AnalyticsAxisRow[] = await context.manager.query(
+      `SELECT ${columns} FROM analytics_axes
+        WHERE tenant_id = $1 AND (lower(code) = lower($2::text) OR lower(name) = lower($2::text))
+        ORDER BY sort_order, code
+        LIMIT 6`,
+      [context.tenantId, ref],
+    );
+    const byCode = rows.filter((row) => row.code.toLowerCase() === ref.toLowerCase());
+    const matches = byCode.length > 0 ? byCode : rows;
+    if (matches.length === 0) throw new NotFoundException(`No analytics dimension has the code or name "${rawRef}".`);
+    if (matches.length > 1) {
+      throw new BadRequestException(`Several analytics dimensions are named "${rawRef}": use the code (${matches.map((row) => row.code).join(', ')}).`);
+    }
+    return matches[0];
+  }
+
   private normalizeBoolean(value: unknown, field: FieldConfig): { value: boolean; displayValue: string } {
     if (typeof value === 'boolean') {
       return { value, displayValue: value ? 'Yes' : 'No' };
@@ -672,11 +727,15 @@ export class AiMasterDataMutationSupportService {
     entityType: AiMasterDataEntityType,
     rawFields: Record<string, unknown>,
     mode: 'create' | 'update',
+    existing?: Record<string, unknown> | null,
   ): Promise<NormalizedFields> {
     const config = this.getConfig(entityType);
     const fields: Record<string, unknown> = {};
     const displayValues: Record<string, string | null> = {};
     const fieldLabels: Record<string, string> = {};
+    // An analytics value's dimension: checked at preview as the value service will at apply.
+    let dimension: AnalyticsAxisRow | null = null;
+    let unchangedDimension = false;
 
     for (const [rawName, rawValue] of Object.entries(rawFields)) {
       if (rawValue === undefined) continue;
@@ -689,6 +748,26 @@ export class AiMasterDataMutationSupportService {
       if (Object.prototype.hasOwnProperty.call(fields, resolved.name)) {
         throw new BadRequestException(`Field ${resolved.name} was provided more than once.`);
       }
+      if (resolved.config.kind === 'analytics_axis') {
+        const ref = textOrNull(rawValue);
+        const axis = await this.resolveAnalyticsAxis(context, ref ?? 'analytics_category');
+        if (mode === 'update') {
+          // Naming the value's own dimension is a no-op; a value never moves to another one.
+          if (axis && axis.id === String(existing?.axis_id ?? '')) {
+            unchangedDimension = true;
+            continue;
+          }
+          throw new BadRequestException('A value cannot move to another dimension. Leave out dimension.');
+        }
+        if (axis && !isAxisActive(axis)) {
+          throw new BadRequestException(`${analyticsAxisSubject(axis)} is disabled. Enable it to add values.`);
+        }
+        dimension = axis;
+        fields[resolved.name] = ref ? axis?.id ?? null : null;
+        displayValues[resolved.name] = axis ? analyticsAxisLabel(axis) : null;
+        fieldLabels[resolved.name] = resolved.config.label;
+        continue;
+      }
       const normalized = await this.normalizeFieldValue(context, entityType, resolved.name, resolved.config, rawValue);
       fields[resolved.name] = normalized.value;
       displayValues[resolved.name] = normalized.displayValue;
@@ -696,7 +775,12 @@ export class AiMasterDataMutationSupportService {
     }
 
     if (Object.keys(fields).length === 0) {
+      if (unchangedDimension) throw new BadRequestException(`${config.labelSingular} already has the requested values.`);
       throw new BadRequestException('At least one writable field is required.');
+    }
+    if (dimension) {
+      const conflict = valueAppliesToConflict(dimension, (fields.applies_to as AxisAppliesTo | null | undefined) ?? null);
+      if (conflict) throw new BadRequestException(conflict);
     }
 
     if (mode === 'create') {
@@ -1112,7 +1196,7 @@ export class AiMasterDataMutationSupportService {
     rawFields: Record<string, unknown>,
     opts: { sourcePreviewId: string | null },
   ): Promise<AiPreparedMutationPreview> {
-    const normalized = await this.normalizeFields(context, entityType, rawFields, 'update');
+    const normalized = await this.normalizeFields(context, entityType, rawFields, 'update', target.row);
     if (entityType === 'contacts' && normalized.fields.supplier_role) {
       const nextSupplierId = Object.prototype.hasOwnProperty.call(normalized.fields, 'supplier_id')
         ? normalized.fields.supplier_id
@@ -1345,9 +1429,12 @@ export class AiMasterDataMutationSupportService {
         return this.accounts.create(fields as any, context.userId, { manager: context.manager, audit });
       case 'chart_of_accounts':
         return this.chartOfAccounts.create(fields as any, context.userId, { manager: context.manager, audit });
-      case 'analytics_categories':
-        // No dimension in the fields: a new value lands in the default dimension.
-        return this.analyticsCategories.create(fields as any, context.userId, { manager: context.manager, tenantId: context.tenantId, audit });
+      case 'analytics_categories': {
+        // Without a dimension, a new value lands in the default dimension.
+        const { dimension, ...values } = fields;
+        const body = dimension ? { ...values, axis_id: dimension } : values;
+        return this.analyticsCategories.create(body as any, context.userId, { manager: context.manager, tenantId: context.tenantId, audit });
+      }
       case 'business_processes':
         return this.businessProcesses.create(fields as any, context.userId, { manager: context.manager, audit });
       case 'locations':
