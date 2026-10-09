@@ -288,11 +288,14 @@ const KnowledgeSidebar = React.memo(function KnowledgeSidebar({
     }
     return out;
   }, [contributorOptions, currentUserId, doc?.contributors]);
+  // The server's label wins: it is the email when another account shares the name.
   const formatContributorLabel = React.useCallback((option: ContributorOption) => {
+    const label = String(option?.label || '').trim();
+    if (label) return label;
     const firstName = String(option?.first_name || '').trim();
     const lastName = String(option?.last_name || '').trim();
     const fullName = [firstName, lastName].filter(Boolean).join(' ');
-    return fullName || option?.label || option?.email || option?.id || '';
+    return fullName || option?.email || option?.id || '';
   }, []);
   const getContributorOptionLabel = React.useCallback((option: ContributorOption) => {
     const baseLabel = formatContributorLabel(option);

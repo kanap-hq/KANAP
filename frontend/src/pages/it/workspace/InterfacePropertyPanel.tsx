@@ -11,7 +11,7 @@ import {
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useLookupHydration, useLookupPicker } from '../../../hooks/useLookupPicker';
-import { USERS_LOOKUP_ENDPOINT, type UserOption } from '../../../components/fields/userLookup';
+import { formatUserOption, USERS_LOOKUP_ENDPOINT, type UserOption } from '../../../components/fields/userLookup';
 import BusinessProcessSelect from '../../../components/fields/BusinessProcessSelect';
 import EnumAutocomplete from '../../../components/fields/EnumAutocomplete';
 import TeamMemberMultiSelect from '../../../components/fields/TeamMemberMultiSelect';
@@ -124,11 +124,12 @@ export default function InterfacePropertyPanel({
         const user = userById.get(owner.user_id);
         const firstName = user?.first_name || '';
         const lastName = user?.last_name || '';
-        const displayName = [firstName, lastName].filter(Boolean).join(' ');
+        // The name, or the email the lookup returns when the name is shared or missing.
+        const displayName = formatUserOption(user);
         return {
           user_id: owner.user_id,
           // '…' while the name loads, never the raw id; a person no longer readable says so.
-          user_display_name: displayName || user?.email || (unavailableOwners.has(owner.user_id) ? t('common:selects.valueUnavailable') : '…'),
+          user_display_name: displayName || (unavailableOwners.has(owner.user_id) ? t('common:selects.valueUnavailable') : '…'),
           first_name: firstName || undefined,
           last_name: lastName || undefined,
           email: user?.email ?? undefined,

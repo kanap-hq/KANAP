@@ -20,7 +20,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import api from '../api';
 import { narrowToText, useLookupSearch } from '../hooks/useLookupPicker';
 import LookupListPaper, { type LookupListPaperProps } from './fields/LookupListPaper';
-import { USERS_LOOKUP_ENDPOINT, type UserOption } from './fields/userLookup';
+import { formatUserOption, USERS_LOOKUP_ENDPOINT, type UserOption } from './fields/userLookup';
 import { useTranslation } from 'react-i18next';
 import { MONO_FONT_FAMILY } from '../config/ThemeContext';
 import { formatItemRef } from '../utils/item-ref';
@@ -95,13 +95,6 @@ function buildApiEndpoint(itemType: ShareItemType, itemId: string): string {
     case 'document':
       return `/knowledge/${itemId}/share`;
   }
-}
-
-function formatName(u: User) {
-  const fn = (u.first_name || '').trim();
-  const ln = (u.last_name || '').trim();
-  const name = [fn, ln].filter(Boolean).join(' ');
-  return name || u.email || '';
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -274,12 +267,12 @@ export default function ShareDialog({
                 setInputValue('');
               }}
               getOptionLabel={(option) =>
-                typeof option === 'string' ? option : formatName(option)
+                typeof option === 'string' ? option : formatUserOption(option)
               }
               // The server matched the names; while the next page loads, the rows shown keep only
               // the names that still match the text typed (no stale person picked by Enter).
               filterOptions={(options) => narrowToText(options, search.pendingText, (option) => (
-                typeof option === 'string' ? option : formatName(option)
+                typeof option === 'string' ? option : formatUserOption(option)
               ))}
               PaperComponent={LookupListPaper as React.JSXElementConstructor<React.HTMLAttributes<HTMLElement>>}
               slotProps={{ paper: listPaperProps }}
@@ -293,13 +286,13 @@ export default function ShareDialog({
                 if (typeof option === 'string') return <li {...props}>{option}</li>;
                 return (
                   <li {...props} key={option.id}>
-                    {formatName(option)}
+                    {formatUserOption(option)}
                   </li>
                 );
               }}
               renderTags={(tagValue, getTagProps) =>
                 tagValue.map((item, index) => {
-                  const label = typeof item === 'string' ? item : formatName(item);
+                  const label = typeof item === 'string' ? item : formatUserOption(item);
                   const key = typeof item === 'string' ? item : item.id;
                   return (
                     <Chip {...getTagProps({ index })} key={key} label={label} size="small" />

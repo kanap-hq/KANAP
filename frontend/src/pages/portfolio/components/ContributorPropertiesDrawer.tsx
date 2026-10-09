@@ -5,7 +5,7 @@ import { PropertyGroup, PropertyRow } from '../../../components/design';
 import EnumAutocomplete from '../../../components/fields/EnumAutocomplete';
 import CompanySelect from '../../../components/fields/CompanySelect';
 import UserSelect from '../../../components/fields/UserSelect';
-import { formatMetadataUserName } from '../../../components/workspace/MetadataUserPicker';
+import { formatUserOption } from '../../../components/fields/userLookup';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import { drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
 
@@ -224,7 +224,7 @@ export default function ContributorPropertiesDrawer({
                 excludeUserId={contributorUserId}
                 onChange={(value, user) => {
                   onChange({ manager_user_id: value });
-                  onManagerPicked?.(value, formatMetadataUserName(user));
+                  onManagerPicked?.(value, formatUserOption(user) || null);
                 }}
                 textFieldSx={drawerFieldValueSx}
               />

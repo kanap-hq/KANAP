@@ -3,8 +3,7 @@ import { Autocomplete, Box, Divider, TextField, CircularProgress, Chip } from '@
 import type { SxProps, Theme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { useLookupPicker } from '../../hooks/useLookupPicker';
-import { formatUserName } from '../../utils/userDisplay';
-import { USERS_LOOKUP_ENDPOINT, useMeOption, withMeFirst, type UserOption } from './userLookup';
+import { formatUserOption, USERS_LOOKUP_ENDPOINT, useMeOption, withMeFirst, type UserOption } from './userLookup';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
 
@@ -54,7 +53,7 @@ export default function UserMultiSelect({
   const selected = picker.selected;
 
   // `…` while a chosen person's name loads, "Value no longer available" when it cannot.
-  const formatName = (u: User) => picker.label(u, (person) => formatUserName(person) ?? '');
+  const formatName = (u: User) => picker.label(u, formatUserOption);
 
   const control = (
     <Autocomplete

@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../../data-source';
+import { KnowledgeService } from '../../../knowledge/knowledge.service';
 import { LOOKUP_MAX_IDS, parseLookupIds, parseLookupRequest, runLookup } from '../reference-lookup';
 import {
   lookupAccounts,
@@ -17,7 +18,8 @@ import {
 // folding, prefix-first order, the tenant predicate, the page size, the
 // lifecycle (search offers active rows, ids return any), the scopes (a
 // company's chart, a company's departments, a dimension's values), the people
-// lookup (names only), and a row far beyond the old 1,000-row cap.
+// lookup (names only, the email for a nameless person or a name two accounts
+// share), and a row far beyond the old 1,000-row cap.
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file in its serial database lane.
 
 const PAST = '2020-06-30T12:00:00Z';
@@ -194,6 +196,74 @@ async function testUsersByNameOnly() {
   console.log('ok - people: names only, last name order, email only for a nameless person');
 }
 
+async function testUsersSharingAName() {
+  const runner = dataSource.createQueryRunner();
+  await runner.connect();
+  await runner.startTransaction();
+  try {
+    const tenantId = await insertTenant(runner, 'a');
+    const otherTenant = await insertTenant(runner, 'b');
+    const insertUsers = async (tenant: string, rows: Array<[string | null, string | null, string, string?]>) => {
+      await useTenant(runner, tenant);
+      const [role] = await runner.query(`INSERT INTO roles (tenant_id, role_name) VALUES ($1, 'Lookup role') RETURNING id`, [tenant]);
+      const ids = new Map<string, string>();
+      for (const [first, last, email, status] of rows) {
+        const [row] = await runner.query(
+          `INSERT INTO users (tenant_id, role_id, first_name, last_name, email, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+          [tenant, role.id, first, last, email, status ?? 'enabled'],
+        );
+        ids.set(email, row.id);
+      }
+      return ids;
+    };
+    // The twin in the other tenant shares Unique Person's name: it must not count.
+    await insertUsers(otherTenant, [['Unique', 'Person', 'unique.elsewhere@example.invalid']]);
+    const ids = await insertUsers(tenantId, [
+      ['Ana', 'Diaz', 'ana.user@example.invalid'],
+      [' ana', 'diaz ', 'ana.admin@example.invalid'],
+      ['Unique', 'Person', 'unique@example.invalid'],
+      [null, null, 'nameless@example.invalid'],
+      // A disabled account still makes a name shared: its stored assignments read the same everywhere.
+      ['Bob', 'Martin', 'bob@example.invalid'],
+      ['Bob', 'Martin', 'bob.old@example.invalid', 'disabled'],
+    ]);
+    const call = { manager: runner.manager, tenantId };
+    const emailOf = new Map(
+      (await lookupReference(call, USER_LOOKUP, { ids: Array.from(ids.values()).join(',') })).items.map((u: any) => [u.id, u.email]),
+    );
+    assert.equal(emailOf.get(ids.get('ana.user@example.invalid')!), 'ana.user@example.invalid', 'a shared name (case and spaces ignored) shows the email');
+    assert.equal(emailOf.get(ids.get('ana.admin@example.invalid')!), 'ana.admin@example.invalid');
+    assert.equal(emailOf.get(ids.get('unique@example.invalid')!), null, 'a unique name keeps no email, whatever another tenant holds');
+    assert.equal(emailOf.get(ids.get('nameless@example.invalid')!), 'nameless@example.invalid', 'a nameless person keeps its email');
+    assert.equal(emailOf.get(ids.get('bob@example.invalid')!), 'bob@example.invalid', 'a disabled twin makes the name shared');
+    assert.equal(emailOf.get(ids.get('bob.old@example.invalid')!), 'bob.old@example.invalid', 'the disabled twin reads its email when hydrated');
+
+    const byTwinEmail = await lookupReference(call, USER_LOOKUP, { q: 'ana.admin@' });
+    assert.deepEqual(byTwinEmail.items.map((u: any) => u.id), [ids.get('ana.admin@example.invalid')], 'the email shown finds its account');
+    assert.deepEqual((await lookupReference(call, USER_LOOKUP, { q: 'unique@example' })).items, [], 'a unique name is still not found by email');
+    assert.deepEqual(
+      (await lookupReference(call, USER_LOOKUP, { q: 'ana diaz' })).items.map((u: any) => u.email).sort(),
+      ['ana.admin@example.invalid', 'ana.user@example.invalid'],
+      'both twins are found by their name, each with its email',
+    );
+
+    // The knowledge contributor options label the same people the same way (enabled only).
+    const knowledge = Object.create(KnowledgeService.prototype) as KnowledgeService;
+    const options = await knowledge.listContributorOptions({ manager: runner.manager });
+    const labels = new Map(options.map((option) => [option.email, option.label]));
+    assert.equal(labels.get('ana.user@example.invalid'), 'ana.user@example.invalid');
+    assert.equal(labels.get('ana.admin@example.invalid'), 'ana.admin@example.invalid');
+    assert.equal(labels.get('bob@example.invalid'), 'bob@example.invalid', 'a disabled twin counts for the contributor options too');
+    assert.equal(labels.get('unique@example.invalid'), 'Unique Person');
+    assert.equal(labels.get('nameless@example.invalid'), 'nameless@example.invalid');
+    assert.equal(labels.has('unique.elsewhere@example.invalid'), false);
+  } finally {
+    await runner.rollbackTransaction();
+    await runner.release();
+  }
+  console.log('ok - people sharing a name show (and are found by) their email; unique names stay names only');
+}
+
 async function testScopes() {
   await withTenant(async (runner, tenantId) => {
     const one = async (sql: string, params: unknown[]) => (await runner.query(sql, params))[0].id as string;
@@ -233,6 +303,7 @@ async function main() {
     await testLimitAndCap();
     await testLifecycleAndIds();
     await testUsersByNameOnly();
+    await testUsersSharingAName();
     await testScopes();
     console.log('reference-lookup.integration.spec: ok');
   } finally {

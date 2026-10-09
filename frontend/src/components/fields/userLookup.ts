@@ -1,7 +1,12 @@
 import React from 'react';
 import { useAuth } from '../../auth/AuthContext';
+import { formatUserName, type DisplayUserLike } from '../../utils/userDisplay';
 
-/** A person as the user lookup returns it: names only, the email only for a person without a name. */
+/**
+ * A person as the user lookup returns it: names only, the email only for a
+ * person without a name or whose name another account shares (one person with
+ * a user and an admin account, for instance).
+ */
 export type UserOption = {
   id: string;
   first_name?: string | null;
@@ -13,12 +18,33 @@ export type UserOption = {
 /** People search of every person picker (`GET /users/lookup`, readable from every page that picks a person). */
 export const USERS_LOOKUP_ENDPOINT = '/users/lookup';
 
-/** The signed-in person as a picker option. */
+/**
+ * A person's label in a picker. The lookup returns an email only for a person
+ * without a name or whose name another account shares: that email is the label
+ * (it tells the two accounts apart); otherwise the name.
+ */
+export function formatUserOption(user: DisplayUserLike | null | undefined): string {
+  if (!user) return '';
+  return String(user.email || '').trim() || formatUserName(user) || '';
+}
+
+/**
+ * The signed-in person as a picker option. It carries the email only when the
+ * profile has no name, as the lookup does; when the lookup's own row of me is
+ * on the page, `withMeFirst` uses that one (with its email when my name is shared).
+ */
 export function useMeOption(): UserOption | null {
   const { profile } = useAuth();
-  return React.useMemo(() => (profile?.id
-    ? { id: profile.id, first_name: profile.first_name ?? null, last_name: profile.last_name ?? null, email: profile.email ?? null }
-    : null), [profile?.id, profile?.first_name, profile?.last_name, profile?.email]);
+  return React.useMemo(() => {
+    if (!profile?.id) return null;
+    const nameless = !String(profile.first_name || '').trim() && !String(profile.last_name || '').trim();
+    return {
+      id: profile.id,
+      first_name: profile.first_name ?? null,
+      last_name: profile.last_name ?? null,
+      email: nameless ? profile.email ?? null : null,
+    };
+  }, [profile?.id, profile?.first_name, profile?.last_name, profile?.email]);
 }
 
 /**

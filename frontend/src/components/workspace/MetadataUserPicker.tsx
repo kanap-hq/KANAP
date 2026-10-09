@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import { narrowToText, useLookupHydration, useLookupSearch } from '../../hooks/useLookupPicker';
 import { MoreResultsHint } from '../fields/LookupListPaper';
-import { USERS_LOOKUP_ENDPOINT, useMeOption, withMeFirst } from '../fields/userLookup';
+import { formatUserOption, USERS_LOOKUP_ENDPOINT, useMeOption, withMeFirst } from '../fields/userLookup';
 import { taskDetailAvatarSizes, taskDetailTypography, metaItemSx, metaLabelSx } from '../../pages/tasks/theme/taskDetailTokens';
 import { formatUserName, getInitials } from '../../utils/userDisplay';
 
@@ -73,8 +73,9 @@ export default function MetadataUserPicker({
   const me = useMeOption();
   const [localSelectedUser, setLocalSelectedUser] = React.useState<MetadataUserOption | null>(null);
   const selectedUserId = value || null;
+  // People picked here are lookup rows: their label is the email when the name is shared.
   const localSelectedName = localSelectedUser?.id === selectedUserId
-    ? formatMetadataUserName(localSelectedUser)
+    ? formatUserOption(localSelectedUser) || null
     : null;
 
   const normalizedDisplayName = normalizeDisplayName(displayName);
@@ -93,11 +94,11 @@ export default function MetadataUserPicker({
   const searching = search.searchedText !== '';
   // While the next page loads, the people listed are the ones that still match the text typed.
   const filteredUsers = React.useMemo(
-    () => narrowToText(withMeFirst(search.items, me, searching), search.pendingText, (user) => formatMetadataUserName(user) ?? ''),
+    () => narrowToText(withMeFirst(search.items, me, searching), search.pendingText, formatUserOption),
     [search.items, me, searching, search.pendingText],
   );
 
-  const selectedName = localSelectedName || normalizedDisplayName || formatMetadataUserName(selectedUser) || null;
+  const selectedName = localSelectedName || normalizedDisplayName || formatUserOption(selectedUser) || null;
   // A chosen person whose name cannot be read says so instead of looking unset.
   const selectedUnavailable = !selectedName && !!selectedUserId && unavailable.has(selectedUserId);
   const displayedName = selectedName || (selectedUnavailable ? t('selects.valueUnavailable') : placeholder);
@@ -207,7 +208,7 @@ export default function MetadataUserPicker({
             </Box>
           )}
           {!loading && filteredUsers.map((user, index) => {
-            const name = formatMetadataUserName(user) || t('labels.unknown');
+            const name = formatUserOption(user) || t('labels.unknown');
             const isCurrentUser = user.id === profile?.id;
             return (
               <React.Fragment key={user.id}>

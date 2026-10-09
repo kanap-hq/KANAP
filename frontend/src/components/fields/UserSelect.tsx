@@ -3,8 +3,7 @@ import { Autocomplete, Box, Divider, TextField, CircularProgress } from '@mui/ma
 import type { SxProps, Theme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { useLookupPicker } from '../../hooks/useLookupPicker';
-import { formatUserName } from '../../utils/userDisplay';
-import { USERS_LOOKUP_ENDPOINT, useMeOption, withMeFirst, type UserOption } from './userLookup';
+import { formatUserOption, USERS_LOOKUP_ENDPOINT, useMeOption, withMeFirst, type UserOption } from './userLookup';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
 
@@ -73,7 +72,7 @@ const UserSelect = React.forwardRef<HTMLInputElement, UserSelectProps>(function 
   );
   const selected = value ? picker.selected[0] ?? null : null;
 
-  const formatName = (u: User) => formatUserName(u) ?? '';
+  const formatName = formatUserOption;
 
   const control = (
     <Autocomplete
