@@ -1672,7 +1672,7 @@ describe('SpendItemPage required dimensions before leaving (lot D2)', () => {
         return {
           data: {
             id: ITEM_ID, item_number: 7, product_name: 'Monitoring', currency: 'EUR', effective_start: '2026-01-01',
-            paying_company_id: 'company-1', account_id: 'account-1', analytics_values: [],
+            paying_company_id: 'company-1', account_id: 'account-1', analytics_values: [], notes: 'Monitoring notes',
           },
         };
       }
@@ -1680,7 +1680,10 @@ describe('SpendItemPage required dimensions before leaving (lot D2)', () => {
     });
     mocked.patch.mockResolvedValue({ data: {} });
   });
-  afterEach(() => { auth.canEdit = true; });
+  afterEach(() => {
+    auth.canEdit = true;
+    vi.useRealTimers();
+  });
 
   async function openLine() {
     renderAt(`/ops/opex/${ITEM_ID}/overview`);
@@ -1706,6 +1709,23 @@ describe('SpendItemPage required dimensions before leaving (lot D2)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'back to list' }));
     fireEvent.click(await screen.findByRole('button', { name: 'opex.editor.requiredLeaveConfirm' }));
     expect(await screen.findByTestId('list-page')).toBeInTheDocument();
+  });
+
+  it('asks one question per move: leaving without saving drops the edits and does not ask about the dimension', async () => {
+    await openLine();
+    mocked.patch.mockRejectedValue(apiError(503, 'busy'));
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const notes = await screen.findByDisplayValue('Monitoring notes');
+    fireEvent.change(notes, { target: { value: 'never saved' } });
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1), { timeout: 3000 });
+    await act(async () => { await vi.advanceTimersByTimeAsync(8_000); });
+
+    dialogs.confirm.mockResolvedValueOnce(true);
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
+    expect(await screen.findByTestId('list-page')).toBeInTheDocument();
+    expect(dialogs.confirm).toHaveBeenCalledTimes(1);
+    expect(dialogs.confirm).toHaveBeenCalledWith(expect.objectContaining({ title: 'common:autosave.leaveTitle' }));
+    expect(screen.queryByText('opex.editor.requiredLeaveMessage')).not.toBeInTheDocument();
   });
 
   it('asks through the leave guard of the app\'s links', async () => {

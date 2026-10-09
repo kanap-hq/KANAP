@@ -250,6 +250,9 @@ const composerSx = {
   },
 } as const;
 
+/** A move off the line, once pending edits are handled: all saved, dropped by the user's choice, or stay. */
+type FlushOutcome = 'saved' | 'dropped' | 'stay';
+
 export default function CapexItemPage() {
   const { t, i18n } = useTranslation(['ops', 'common']);
   const locale = i18n.resolvedLanguage || i18n.language || 'en';
@@ -477,7 +480,7 @@ export default function CapexItemPage() {
   // A line changed during this visit and left without a value on a required dimension: leaving asks (lot D2).
   const requiredLeave = useRequiredDimensionsLeave({
     scope: 'capex',
-    lineId: isCreate ? null : uuid,
+    lineId: isCreate ? null : idParam,
     canEdit: hasLevel('capex', 'member'),
     axes: analyticsAxes,
     values: () => formRef.current.analytics_values,
@@ -569,7 +572,7 @@ export default function CapexItemPage() {
   // answer is retried, a refusal shows the stored value again, a conflict asks the user.
   const patchNow = React.useCallback(async (patch: Partial<CapexForm>) => {
     if (isCreate || !uuid || stale) return;
-    noteLineChange(uuid);
+    noteLineChange();
     const base = baseFor(patch);
     setForm((prev) => mergePatch(prev, patch));
     setSaveError(null);
@@ -609,7 +612,7 @@ export default function CapexItemPage() {
 
   const patchDebounced = React.useCallback((patch: Partial<CapexForm>) => {
     if (isCreate || !uuid || stale) return;
-    noteLineChange(uuid);
+    noteLineChange();
     const base = baseFor(patch);
     setForm((prev) => mergePatch(prev, patch));
     // Typed in a field waiting for a choice: it stays with it, nothing is saved yet.
@@ -776,12 +779,12 @@ export default function CapexItemPage() {
   // trap the user on the line: leaving is offered, and drops what could not be saved.
   // `keepChoices` (a tab change, opening the line a choice waits on): the page stays, so an edit
   // waiting for a choice neither stops the move nor is dropped; only a failed save asks.
-  const flushOrLeave = React.useCallback(async (options?: { keepChoices?: boolean }): Promise<boolean> => {
+  const flushOrAsk = React.useCallback(async (options?: { keepChoices?: boolean }): Promise<FlushOutcome> => {
     const keepChoices = !!options?.keepChoices;
-    if (await flushAll({ ignoreHeld: keepChoices })) return true;
+    if (await flushAll({ ignoreHeld: keepChoices })) return 'saved';
     const unsaved = keepChoices ? autosave.isSaving() || tabUnsaved() : unsavedWork();
     // Nothing left unsaved (the save was refused and the screen reloaded): stay, the message shows why.
-    if (!unsaved) return false;
+    if (!unsaved) return 'stay';
     const elsewhere = patchBuffer.conflictTargets().filter((lineId) => lineId !== uuid);
     // Leaving the line drops a budget or allocation choice still waiting: the warning names it.
     const columns = keepChoices ? [] : budgetChoices();
@@ -798,7 +801,7 @@ export default function CapexItemPage() {
       confirmLabel: t('common:autosave.leaveConfirm'),
       intent: 'danger',
     });
-    if (!leave) return false;
+    if (!leave) return 'stay';
     autosaveRegistry.discardAll();
     // The budget and allocation choices kept for the line are lost with it.
     if (!keepChoices) {
@@ -808,14 +811,22 @@ export default function CapexItemPage() {
     patchBuffer.discard({ keepChoices });
     setSaveError(null);
     if (dataRef.current) syncForm(dataRef.current);
-    return true;
+    return 'dropped';
   }, [flushAll, autosave, tabUnsaved, unsavedWork, patchBuffer, uuid, t, lineRef, dialogs, autosaveRegistry, syncForm, budgetChoices, allocationChoice, heldChoices, locale]);
 
+  const flushOrLeave = React.useCallback(async (options?: { keepChoices?: boolean }): Promise<boolean> => (
+    (await flushOrAsk(options)) !== 'stay'
+  ), [flushOrAsk]);
+
   // Leaving the line: what is not saved first, then a required dimension left without a value.
-  // A tab change keeps the line and does not ask about the dimension.
-  const leaveLine = React.useCallback(async (options?: { keepChoices?: boolean }): Promise<boolean> => (
-    (await flushOrLeave(options)) && confirmRequired()
-  ), [flushOrLeave, confirmRequired]);
+  // One question per move: a user who already chose to leave and drop their edits is not asked
+  // again. A tab change keeps the line and does not ask about the dimension.
+  const leaveLine = React.useCallback(async (options?: { keepChoices?: boolean }): Promise<boolean> => {
+    const outcome = await flushOrAsk(options);
+    if (outcome === 'stay') return false;
+    if (outcome === 'dropped') return true;
+    return confirmRequired();
+  }, [flushOrAsk, confirmRequired]);
   const leaveAsks = React.useCallback(() => unsavedWork() || requiredMissing(), [unsavedWork, requiredMissing]);
 
   // A link of the app (left menu, top bar, user menu) asks the same as the close button.

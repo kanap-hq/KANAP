@@ -11,7 +11,7 @@ export const ANALYTICS_AXIS_FIELD_ATTR = 'data-analytics-axis';
 
 type Options = {
   scope: LineType;
-  /** The line shown; another line starts a new visit. */
+  /** The line of the route (its id or reference); another line starts a new visit. */
   lineId: string | null | undefined;
   /** The user may change the line. */
   canEdit: boolean;
@@ -23,18 +23,21 @@ type Options = {
   root: React.RefObject<HTMLElement | null>;
 };
 
-type Asking = { names: string[]; firstAxisId: string; resolve: (leave: boolean) => void };
+type Asking = { names: string[]; firstAxisId: string };
 
 /**
  * Leaving an OPEX or CAPEX line the user changed during this visit while a dimension required for
  * its type has no value asks first (lot D2). Reading a line, or a line nobody touched, never asks.
  *
- * - `noteChange(lineId)`: the user changed a field of that line;
+ * - `noteChange()`: the user changed a field of the line shown;
  * - `isBusy()`: leaving now would ask (the page's leave guard);
  * - `confirm()`: asks; true when the user leaves anyway. « Stay » (or closing the dialog) keeps
  *   the line and focuses the first missing field, opening the Properties panel
  *   (`drawerOpenRequest` for the workspace shell);
  * - `dialog`: rendered by the page.
+ *
+ * A question left unanswered (the page goes, another line opens) closes as « Stay »: the move that
+ * asked does not happen, and the app's leave lock (`confirmLeave`) is released.
  */
 export function useRequiredDimensionsLeave({ scope, lineId, canEdit, axes, values, root }: Options) {
   const { t, i18n } = useTranslation(['ops']);
@@ -44,14 +47,25 @@ export function useRequiredDimensionsLeave({ scope, lineId, canEdit, axes, value
   latest.current = { scope, lineId, canEdit, axes, values, root };
   const [asking, setAsking] = React.useState<Asking | null>(null);
   const [drawerOpenRequest, setDrawerOpenRequest] = React.useState(0);
+  // The answer of the question shown, if any.
+  const pending = React.useRef<((leave: boolean) => void) | null>(null);
+  const settle = React.useCallback((leave: boolean, close = true) => {
+    const resolve = pending.current;
+    pending.current = null;
+    if (close) setAsking(null);
+    resolve?.(leave);
+  }, []);
 
-  // Another line: a new visit, nothing changed yet.
+  // Another line: a new visit, nothing changed yet, and a question still shown stays unanswered.
   React.useEffect(() => {
     changedLine.current = null;
-  }, [lineId]);
+    settle(false);
+  }, [lineId, settle]);
+  // The page goes: the move that asked does not happen.
+  React.useEffect(() => () => settle(false, false), [settle]);
 
-  const noteChange = React.useCallback((changedId: string) => {
-    changedLine.current = changedId;
+  const noteChange = React.useCallback(() => {
+    changedLine.current = latest.current.lineId ?? null;
   }, []);
 
   const missing = React.useCallback(() => {
@@ -63,20 +77,15 @@ export function useRequiredDimensionsLeave({ scope, lineId, canEdit, axes, value
 
   const isBusy = React.useCallback(() => missing().length > 0, [missing]);
 
-  const askingRef = React.useRef(false);
   const confirm = React.useCallback((): Promise<boolean> => {
     const lacking = missing();
     if (lacking.length === 0) return Promise.resolve(true);
     // A second move while the question shows (a double click) stays.
-    if (askingRef.current) return Promise.resolve(false);
-    askingRef.current = true;
+    if (pending.current) return Promise.resolve(false);
     const { axes: dimensions } = latest.current;
     return new Promise<boolean>((resolve) => {
-      const answer = (leave: boolean) => {
-        askingRef.current = false;
-        resolve(leave);
-      };
-      setAsking({ names: lacking.map((axis) => dimensions.label(axis)), firstAxisId: lacking[0].id, resolve: answer });
+      pending.current = resolve;
+      setAsking({ names: lacking.map((axis) => dimensions.label(axis)), firstAxisId: lacking[0].id });
     });
   }, [missing]);
 
@@ -99,16 +108,15 @@ export function useRequiredDimensionsLeave({ scope, lineId, canEdit, axes, value
 
   const stay = React.useCallback(() => {
     if (!asking) return;
-    setAsking(null);
-    asking.resolve(false);
+    settle(false);
     focusField(asking.firstAxisId);
-  }, [asking, focusField]);
+  }, [asking, settle, focusField]);
 
+  // Leaving ends the visit: a next line still loading (the route's line not shown yet) never asks again.
   const leave = React.useCallback(() => {
-    if (!asking) return;
-    setAsking(null);
-    asking.resolve(true);
-  }, [asking]);
+    changedLine.current = null;
+    settle(true);
+  }, [settle]);
 
   const count = asking?.names.length ?? 0;
   const dialog = asking ? (
