@@ -47,7 +47,8 @@ function AppShell() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <BrowserRouter>
+      {/* Router updates render synchronously, as in v6: the leave guards see the page state of the latest navigation. */}
+      <BrowserRouter useTransitions={false}>
         <WithQueryClient>
           <AuthProvider>
             <SessionManager>

@@ -8,18 +8,12 @@ These packages have a known advisory and stay on their current major for now; ea
 - What keeps it out of production: QA, production and on-premise images start the API with `node` on the compiled `dist/` and never load it. It is still installed in the API image until the multi-stage image of delivery 2, which leaves development dependencies out.
 - Planned upgrade: removed from the image in delivery 2.
 
-## Remaining moderate advisories
-
-`react-router` and `react-router-dom` (frontend) each need a new major: planned with the dependency majors of delivery 2.
-
 ## Planned major upgrades
 
 This table lists the major upgrades that are planned or queued for planning, including those with no known advisory. It covers every dependency the script reports and is reviewed at the start of each delivery with `node scripts/deps/outdated-majors.mjs`, which compares the majors resolved in the lockfiles of `backend`, `frontend` and `marketing/web` with the latest published ones and lists the Node and GitHub Actions versions in use.
 
 | Package | Folder | Current | Target | Planned in |
 |---|---|---|---|---|
-| `react-router-dom` | frontend | 6.x | 7.x | Delivery 2 |
-| `@mdxeditor/editor` | frontend | 3.x | 4.x | Delivery 2 |
 | Node.js | backend, frontend and marketing images, CI | 24 | 26 (LTS on 2026-10-28) | To be scheduled |
 | `@nestjs/config` | backend | 4.x | 12.x | To be scheduled |
 | `openai` | backend | 6.x | 7.x | To be scheduled |
