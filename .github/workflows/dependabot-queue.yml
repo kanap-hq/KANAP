@@ -1,0 +1,62 @@
+name: Dependabot queue
+
+# Puts the minor and patch Dependabot pull requests in the merge queue by themselves
+# (`gh pr merge --auto --squash`, as .github/scripts/queue-stack.sh does by hand). Majors never
+# reach this point: .github/dependabot.yml ignores them.
+#
+# Why a GitHub App: GitHub's "Automating Dependabot with GitHub Actions" says that when the
+# target branch uses a merge queue, "the built-in `GITHUB_TOKEN` cannot add pull requests to the
+# queue". The org app `kanap-queue` (installed on this repository only, Contents and Pull
+# requests in write) gives a short-lived installation token instead. Its client id and private
+# key are Dependabot secrets of the repository: a workflow run started by Dependabot only sees
+# those. Unlike `GITHUB_TOKEN`, an app installation token triggers workflows, so the merge queue
+# still starts the `merge_group` run of CI that tests the pull request.
+#
+# On failure in the queue (a required check fails, or a conflict with main), the pull request
+# leaves the queue and stays open, like any other pull request. An agent finds the cause, fixes
+# it apart if needed, and queues it again with queue-stack.sh.
+on:
+  pull_request:
+    branches: [ main ]
+
+# A new push to the pull request (a Dependabot rebase) cancels the run of the previous push.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# The workflow token only reads; the queueing uses the app token.
+permissions:
+  contents: read
+
+jobs:
+  queue:
+    name: queue Dependabot pull request
+    # A human or agent push to a Dependabot branch skips the job: that run gets no Dependabot
+    # secrets and fetch-metadata refuses an actor other than Dependabot.
+    if: >-
+      ${{ github.event.pull_request.user.login == 'dependabot[bot]' &&
+          github.actor == 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Read the Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+      # update-type is the highest change of the pull request (a grouped pull request included).
+      # It is empty when Dependabot reports no semver change, for example an image digest update:
+      # such a pull request is not queued and waits for an agent.
+      - name: Create the kanap-queue app token
+        id: app-token
+        if: >-
+          ${{ steps.metadata.outputs.update-type == 'version-update:semver-minor' ||
+              steps.metadata.outputs.update-type == 'version-update:semver-patch' }}
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.KANAP_QUEUE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.KANAP_QUEUE_APP_PRIVATE_KEY }}
+      - name: Put the pull request in the merge queue
+        if: ${{ steps.app-token.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash "$PR_URL"

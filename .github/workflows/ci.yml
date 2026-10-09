@@ -345,8 +345,11 @@ jobs:
           cache-from: type=gha,scope=api-runtime
           cache-to: ${{ github.event_name != 'merge_group' && 'type=gha,mode=max,scope=api-runtime' || '' }}
       - name: Check the API image (converters, no sources or development tools)
+        # The development tools are looked for at any depth of node_modules: the find lists
+        # each one it meets and the check fails when it lists anything.
         run: |
-          docker run --rm kanap-api:ci sh -c 'node -v && inkscape --version && pandoc --version | head -1 && typst --version && test ! -e src && test ! -e node_modules/ts-node-dev && test -f dist/knowledge/scripts/backfill-integrated-docs.js'
+          docker run --rm kanap-api:ci sh -c 'node -v && inkscape --version && pandoc --version | head -1 && typst --version && test ! -e src && test -f dist/knowledge/scripts/backfill-integrated-docs.js'
+          docker run --rm kanap-api:ci sh -c 'tools=$(find ./node_modules -path "*/node_modules/ts-node-dev" -o -path "*/node_modules/ts-node" -o -path "*/node_modules/typescript") || exit 1; echo "${tools:-No ts-node-dev, ts-node or typescript in node_modules.}"; test -z "$tools"'
           docker image ls kanap-api:ci
       - name: Build the API image (dev stage)
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2

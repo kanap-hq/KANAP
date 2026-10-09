@@ -35,8 +35,15 @@ COPY fixtures ./fixtures
 RUN npm run build
 
 # Production dependencies, pruned from the tree of the build stage (no second install).
+# `--omit=optional` also drops the development tools that a production package names as an
+# optional peer (typeorm names ts-node, which brings typescript, acorn and @types/node; stripe
+# names @types/node): the lockfile marks them `devOptional`, and npm keeps those unless both
+# dev and optional are omitted. It drops the two optional production dependencies too, which
+# the API never loads: pg-cloudflare (Cloudflare Workers only) and @pkgjs/parseargs (Node
+# before 18.11 only). A production package that ships its binary as an optional dependency
+# would be dropped the same way: revisit this line before adding one.
 FROM build AS production-dependencies
-RUN npm prune --omit=dev --no-audit --no-fund
+RUN npm prune --omit=dev --omit=optional --no-audit --no-fund
 
 # Development image: the full tree, as the single-stage image had it.
 FROM build AS dev
