@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { AuthController } from '../auth.controller';
 import { Features } from '../../config/features';
+import { waitForBackgroundWork } from '../../common/background-work';
 
 // The password reset e-mail links to the tenant address of the request
 // (`https://<slug>.kanap.net`), not to the configured marketing address.
@@ -40,6 +41,8 @@ async function testResetLinkOpensTheTenantAddress() {
     );
 
     assert.deepEqual(result, { ok: true });
+    // The link is issued and e-mailed after the answer (background work).
+    assert.equal(await waitForBackgroundWork(Date.now() + 5000), 0);
     assert.equal(sent.length, 1);
     assert.equal(sent[0].resetUrl, 'https://acme.kanap.net/reset-password#token=reset-token');
   } finally {

@@ -294,6 +294,7 @@
     "reasons": {
       "bad_password": "Wrong password",
       "disabled": "Account disabled",
+      "email_not_sent": "Email could not be sent",
       "email_unverified": "Address not verified by Microsoft",
       "expired": "Session expired",
       "external_account": "Account managed by the company directory",

@@ -32,6 +32,7 @@ export const AUTH_EVENT_REASONS = [
   'invalid_token',
   'expired',
   'external_account',
+  'email_not_sent',
   'tenant_mismatch',
   'sso_not_configured',
   'email_unverified',

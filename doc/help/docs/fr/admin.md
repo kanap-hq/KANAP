@@ -61,7 +61,7 @@ La page Journal d'audit conserve l'historique des modifications de données et d
 | **Échec de connexion** | Une connexion est refusée. Le **motif** en donne la raison, par exemple mot de passe incorrect, compte désactivé ou aucun compte avec cette adresse |
 | **Déconnexion** | Quelqu'un se déconnecte |
 | **Renouvellement de session refusé** | La session n'a pas pu être renouvelée, par exemple parce qu'elle a expiré |
-| **Réinitialisation du mot de passe demandée** / **Réinitialisation du mot de passe terminée** | Quelqu'un demande un lien de réinitialisation, puis définit un nouveau mot de passe avec ce lien |
+| **Réinitialisation du mot de passe demandée** / **Réinitialisation du mot de passe terminée** | Quelqu'un demande un lien de réinitialisation, puis définit un nouveau mot de passe avec ce lien. Si l'e-mail contenant le lien n'a pas pu être envoyé, le **motif** le signale |
 | **Connexion avec Microsoft** / **Échec de connexion avec Microsoft** | Une connexion via Microsoft Entra ID réussit ou échoue |
 
 **Exports** (table **Export**) : exports CSV, documents et rapports produits par le serveur. La ligne indique ce qui a été exporté et par qui. L'export du journal d'audit est lui aussi enregistré.

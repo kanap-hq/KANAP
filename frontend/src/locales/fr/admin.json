@@ -294,6 +294,7 @@
     "reasons": {
       "bad_password": "Mot de passe incorrect",
       "disabled": "Compte désactivé",
+      "email_not_sent": "L'e-mail n'a pas pu être envoyé",
       "email_unverified": "Adresse non vérifiée par Microsoft",
       "expired": "Session expirée",
       "external_account": "Compte géré par l'annuaire de l'entreprise",
