@@ -83,18 +83,24 @@ export function useAccountIdOptions(scope: BudgetScope, wanted: boolean): Option
 
 type AnalyticsCategory = { id: string; name: string | null };
 
+/** The values the lines of `scope` may choose: those for both types (null) and those for that one. */
+export function axisValueCatalogueFilters(scope: BudgetScope): string {
+  return JSON.stringify({ applies_to: { filterType: 'set', values: [null, scope] } });
+}
+
 /**
  * The values of a dimension (the value exclusion of the Analytics report): the dimension's own
- * values and the ones the lines hold, by name.
+ * values the report's lines may choose, and the ones the lines hold (a value restricted to the
+ * other type included), by name.
  */
 export function useAxisValueOptions(scope: BudgetScope, axisId: string | null, wanted: boolean): Options<ExclusionOption> {
   const { t } = useTranslation('ops');
   const unnamed = t('reports.analyticsCategory.unnamed');
   const catalogue = useQuery<AnalyticsCategory[]>({
-    queryKey: ['analytics-categories', 'reporting', axisId],
+    queryKey: ['analytics-categories', 'reporting', axisId, scope],
     queryFn: async () => {
       const res = await api.get<{ items: AnalyticsCategory[] }>(ANALYTICS_VALUES_ENDPOINT, {
-        params: { axis_id: axisId, limit: 1000, sort: 'name:ASC' },
+        params: { axis_id: axisId, limit: 1000, sort: 'name:ASC', filters: axisValueCatalogueFilters(scope) },
       });
       return res.data.items;
     },

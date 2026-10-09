@@ -20,7 +20,7 @@ import { CoaListItem, useCoaList } from './useCoaList';
 import { coaCoverage, coaRoleLabels, useCountryName } from './coaRoles';
 import { tealLinkSx } from '../../theme/formSx';
 import { statusColumnProps } from '../../components/grid/statusColumn';
-import { accountNatureColumnProps } from '../../components/grid/accountNatureColumn';
+import { lineTypeUsageColumnProps } from '../../components/grid/lineTypeUsageColumn';
 import type { AccountNature } from '../../constants/accountNature';
 
 type AccountRow = {
@@ -207,7 +207,7 @@ export default function CoaPage() {
       field: 'nature',
       headerName: t('coa.columns.nature'),
       width: 150,
-      ...accountNatureColumnProps(t),
+      ...lineTypeUsageColumnProps(t),
       cellRenderer: (params: any) => (
         <LinkCellRenderer {...params} linkType="internal" getHref={getAccountHref} onNavigate={(href) => navigate(href)} />
       ),

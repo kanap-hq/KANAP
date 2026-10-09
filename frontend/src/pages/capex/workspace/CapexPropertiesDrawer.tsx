@@ -268,6 +268,7 @@ export default function CapexPropertiesDrawer({
                 axisId={axis.id}
                 label={analyticsAxes.label(axis)}
                 hideLabel
+                lineType="capex"
                 value={analyticsValues[axis.id] ?? null}
                 onChange={(v) => onAnalyticsValueChange(axis.id, v)}
                 disabled={disabled}

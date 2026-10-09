@@ -637,7 +637,11 @@
       "codeCreate": "Se usa como nombre de columna en los archivos CSV. Letras minúsculas, dígitos, - o _.",
       "order": "Las dimensiones se ordenan según este número, de menor a mayor.",
       "defaultLocked": "Esta dimensión no se puede desactivar ni eliminar: los archivos antiguos y las preguntas a la IA la usan.",
-      "appliesToDefault": "La dimensión predeterminada se aplica a las líneas OPEX y CAPEX."
+      "appliesToDefault": "La dimensión predeterminada se aplica a las líneas OPEX y CAPEX.",
+      "valueDimensionAppliesTo": {
+        "opex": "La dimensión {{dimension}} es solo para líneas OPEX.",
+        "capex": "La dimensión {{dimension}} es solo para líneas CAPEX."
+      }
     },
     "placeholders": {
       "dimensionName": "p. ej., Naturaleza",
@@ -670,6 +674,13 @@
       "opex_one": "{{count}} línea OPEX tiene un valor para esta dimensión. Lo conserva, oculto mientras la dimensión sea solo para líneas CAPEX.",
       "opex_other": "{{count}} líneas OPEX tienen un valor para esta dimensión. Lo conservan, oculto mientras la dimensión sea solo para líneas CAPEX."
     },
+    "valueAppliesToConflict": {
+      "capex_one": "{{count}} línea CAPEX tiene este valor. Lo conserva, pero las nuevas líneas CAPEX no pueden elegirlo.",
+      "capex_other": "{{count}} líneas CAPEX tienen este valor. Lo conservan, pero las nuevas líneas CAPEX no pueden elegirlo.",
+      "opex_one": "{{count}} línea OPEX tiene este valor. Lo conserva, pero las nuevas líneas OPEX no pueden elegirlo.",
+      "opex_other": "{{count}} líneas OPEX tienen este valor. Lo conservan, pero las nuevas líneas OPEX no pueden elegirlo."
+    },
+    "showLines": "Mostrar estas líneas",
     "messages": {
       "loadFailed": "Error al cargar el valor.",
       "saveFailed": "Error al guardar el valor.",

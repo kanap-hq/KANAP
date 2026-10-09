@@ -27,8 +27,8 @@ vi.mock('../../../components/fields/AccountSelect', () => ({
   ),
 }));
 vi.mock('../../../components/fields/AnalyticsCategorySelect', () => ({
-  default: (p: { axisId: string; label?: string; value: string | null; onChange: (v: string | null) => void }) => (
-    <div data-testid={`analytics-select-${p.axisId}`} data-label={p.label}>
+  default: (p: { axisId: string; label?: string; lineType?: string; value: string | null; onChange: (v: string | null) => void }) => (
+    <div data-testid={`analytics-select-${p.axisId}`} data-label={p.label} data-line-type={p.lineType ?? ''}>
       {p.value ?? ''}
       <button type="button" onClick={() => p.onChange(`value-${p.axisId}`)}>{`pick ${p.axisId}`}</button>
       <button type="button" onClick={() => p.onChange(null)}>{`clear ${p.axisId}`}</button>
@@ -292,6 +292,8 @@ describe('SpendPropertiesDrawer analytics dimensions', () => {
     expect(screen.queryByText('Old')).toBeNull();
     expect(screen.getByTestId('analytics-select-default')).toHaveTextContent('value-1');
     expect(screen.getByTestId('analytics-select-nature')).not.toHaveTextContent('value');
+    // Each select offers only the values OPEX lines may use.
+    expect(selects.map((el) => el.getAttribute('data-line-type'))).toEqual(['opex', 'opex', 'opex']);
   });
 
   it.each(['create', 'edit'] as const)('shows no select for a dimension used for CAPEX lines only, even with a held value (%s)', (mode) => {

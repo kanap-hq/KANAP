@@ -1,23 +1,32 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Link, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useAuth } from '../../auth/AuthContext';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import { PropertyGroup, PropertyRow } from '../../components/design';
 import StatusLifecycleField from '../../components/fields/StatusLifecycleField';
-import { ANALYTICS_AXES_QUERY_KEY, analyticsAxisLabel, useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
+import LineTypeUsageSelect, { LineTypeUsageConflictNote } from '../../components/fields/LineTypeUsageSelect';
+import { ANALYTICS_AXES_QUERY_KEY, analyticsAxisLabel, axisAppliesTo, useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import { useAnalyticsNav } from '../../hooks/useAnalyticsNav';
 import {
   createAnalyticsValue,
   deleteAnalyticsValue,
   getAnalyticsValue,
+  isAnalyticsActive,
   updateAnalyticsValue,
+  type AnalyticsAxis,
+  type AnalyticsValueDetail,
   type AnalyticsValuePatch,
 } from '../../services/analytics';
 import { deriveStatusFromDisabledAt, normalizeStatus } from '../../constants/status';
+import { lineTypeUsageConflict, parseLineTypeUsage, type LineType } from '../../constants/lineTypeUsage';
+import { axisListColumn, oneOffListLink } from '../reports/reportListLink';
+import { openSavedListLink } from '../reports/ReportGroupLinkCell';
+import { keepValues } from '../reports/reportAggregates';
 import { drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import AnalyticsDescriptionField from './AnalyticsDescriptionField';
@@ -234,6 +243,14 @@ export default function AnalyticsWorkspacePage() {
                 {dimensionLabel}
               </Typography>
             </PropertyRow>
+            <ValueAppliesToRow
+              value={data}
+              axis={axis}
+              dimensionLabel={dimensionLabel}
+              disabled={disabled}
+              error={errors.applies_to}
+              onChange={(appliesTo) => void patch({ applies_to: appliesTo }, 'applies_to')}
+            />
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, py: '5px' }}>
               <Typography sx={{ fontSize: 12, lineHeight: 1.3, color: 'kanap.text.tertiary' }}>
                 {t('analytics.fields.lifecycle')}
@@ -277,6 +294,73 @@ export default function AnalyticsWorkspacePage() {
   );
 }
 
+/** "The Nature dimension is for OPEX lines only.", or null when the dimension is used for both types. */
+function dimensionUsageHint(t: TFunction, axis: Pick<AnalyticsAxis, 'applies_to'>, dimensionLabel: string): string | null {
+  const usage = parseLineTypeUsage(axis.applies_to);
+  return usage ? t(`analytics.hints.valueDimensionAppliesTo.${usage}`, { dimension: dimensionLabel }) : null;
+}
+
+/**
+ * "Used for" of a value: which lines may choose it. Under a dimension restricted to one type the
+ * dimension decides, and the field is locked with a line saying so. When lines of the other type
+ * hold the value, they keep and show it: one line counts them, with a link opening them in the OPEX
+ * or CAPEX list in a new tab (every status, filtered on this value, as a one-off view). That line
+ * shows only while the dimension is enabled and shows on those lines.
+ */
+function ValueAppliesToRow({
+  value,
+  axis,
+  dimensionLabel,
+  disabled,
+  error,
+  onChange,
+}: {
+  value: AnalyticsValueDetail;
+  axis: AnalyticsAxis | undefined;
+  dimensionLabel: string;
+  disabled: boolean;
+  error?: string;
+  onChange: (appliesTo: LineType | null) => void;
+}) {
+  const { t } = useTranslation(['master-data']);
+  const appliesTo = parseLineTypeUsage(value.applies_to);
+  const dimensionHint = axis ? dimensionUsageHint(t, axis, dimensionLabel) : null;
+  const conflict = lineTypeUsageConflict(appliesTo, { opex: value.opex_count ?? 0, capex: value.capex_count ?? 0 });
+  const shownConflict = conflict && axis && isAnalyticsActive(axis) && axisAppliesTo(axis, conflict.scope) ? conflict : null;
+  const link = shownConflict && axis
+    ? oneOffListLink(shownConflict.scope, { [axisListColumn(axis)]: keepValues([value.name]) })
+    : null;
+  const save = link?.save;
+  return (
+    <PropertyRow label={t('shared.lineTypeUsage.label')} helperText={dimensionHint}>
+      <LineTypeUsageSelect
+        value={appliesTo}
+        label={t('shared.lineTypeUsage.label')}
+        disabled={disabled || !!dimensionHint}
+        error={error}
+        onChange={(next) => {
+          if (next !== appliesTo) onChange(next);
+        }}
+      />
+      {shownConflict && link && (
+        <LineTypeUsageConflictNote testId="analytics-value-applies-to-conflict">
+          {t(`analytics.valueAppliesToConflict.${shownConflict.scope}`, { count: shownConflict.count })}{' '}
+          <Link
+            href={link.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{ fontSize: 12 }}
+            // Filters too long for a URL are saved first.
+            onClick={save ? (event) => { event.preventDefault(); void openSavedListLink({ ...link, save }); } : undefined}
+          >
+            {t('analytics.showLines')}
+          </Link>
+        </LineTypeUsageConflictNote>
+      )}
+    </PropertyRow>
+  );
+}
+
 function ValueCreate({
   canCreate,
   requestedAxisId,
@@ -294,6 +378,7 @@ function ValueCreate({
   const [chosenAxisId, setChosenAxisId] = React.useState<string | null>(null);
   const [name, setName] = React.useState('');
   const [description, setDescription] = React.useState('');
+  const [appliesTo, setAppliesTo] = React.useState<LineType | null>(null);
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
@@ -306,6 +391,10 @@ function ValueCreate({
     return axes.enabled[0]?.id ?? null;
   }, [axes.defaultAxis, axes.enabled, requestedAxisId]);
   const axisId = chosenAxisId ?? fallbackAxisId;
+  const chosenAxis = axisId ? axes.byId.get(axisId) : undefined;
+  // A dimension restricted to one type decides for its values: the field stays on OPEX and CAPEX.
+  const dimensionHint = chosenAxis ? dimensionUsageHint(t, chosenAxis, axes.label(chosenAxis)) : null;
+  const shownAppliesTo = dimensionHint ? null : appliesTo;
 
   const handleCreate = async () => {
     if (!canCreate || submitting) return;
@@ -322,6 +411,7 @@ function ValueCreate({
         ...(axisId ? { axis_id: axisId } : {}),
         name: trimmed,
         description: description.trim() || null,
+        applies_to: shownAppliesTo,
       });
       void queryClient.invalidateQueries({ queryKey: ['analytics-categories'] });
       void queryClient.invalidateQueries({ queryKey: ['analytics-ids'] });
@@ -330,7 +420,7 @@ function ValueCreate({
     } catch (e) {
       const message = getApiErrorMessage(e, t, t('analytics.messages.createFailed'));
       const field = analyticsRefusalField(e);
-      if (field === 'name' || field === 'description' || field === 'axis_id') setErrors({ [field]: message });
+      if (field === 'name' || field === 'description' || field === 'axis_id' || field === 'applies_to') setErrors({ [field]: message });
       else setServerError(message);
     } finally {
       setSubmitting(false);
@@ -379,6 +469,15 @@ function ValueCreate({
                 </MenuItem>
               ))}
             </TextField>
+          </PropertyRow>
+          <PropertyRow label={t('shared.lineTypeUsage.label')} helperText={dimensionHint} valueSx={{ maxWidth: 520 }}>
+            <LineTypeUsageSelect
+              value={shownAppliesTo}
+              label={t('shared.lineTypeUsage.label')}
+              disabled={!!dimensionHint}
+              error={errors.applies_to}
+              onChange={setAppliesTo}
+            />
           </PropertyRow>
           <PropertyRow label={t('analytics.fields.name')} required valueSx={{ maxWidth: 520 }}>
             <TextField
