@@ -47,10 +47,45 @@ jobs:
             bash .github/scripts/ci-changes.sh all
           fi
 
-  # Each job below fails open: when `changes` did not succeed, the job runs.
+  # Refuses, in the merge queue, a pull request that contains the commits of another pull
+  # request still open and not ahead of it in the queue (.github/scripts/stack-order.sh). On a
+  # pull request it only warns; on a push it has nothing to check. It is not a required check
+  # itself: the three required jobs below fail when it did not succeed, so its failure blocks
+  # the merge without a change to the repository settings.
+  stack-order:
+    name: stack order
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout
+        if: ${{ github.event_name != 'push' }}
+        uses: actions/checkout@v4
+        with:
+          # Full history, so git can tell whether one pull request head contains another.
+          fetch-depth: 0
+      - name: Check that no open pull request below this one waits behind it
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          QUEUE_REF: ${{ github.event.merge_group.head_ref }}
+          QUEUE_BASE: ${{ github.event.merge_group.base_sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          case "$EVENT_NAME" in
+            merge_group) bash .github/scripts/stack-order.sh merge-group "$QUEUE_REF" "$QUEUE_BASE" ;;
+            pull_request) bash .github/scripts/stack-order.sh pull-request "$PR_NUMBER" "$PR_BASE" ;;
+            *) echo "Not a pull request nor a queue run: nothing to check." ;;
+          esac
+
+  # Each job below fails open: when `changes` did not succeed, the job runs. Each also fails
+  # when `stack order` did not succeed; `!cancelled()` in its condition keeps it from being
+  # skipped (a skip would count as passed) when `stack order` failed.
   backend:
     name: backend (cloud)
-    needs: changes
+    needs: [ changes, stack-order ]
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.backend == 'true') }}
     runs-on: ubuntu-latest
     services:
@@ -77,6 +112,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Check that the stack order check passed
+        env:
+          STACK_ORDER: ${{ needs.stack-order.result }}
+        run: |
+          if [ "$STACK_ORDER" != success ]; then
+            echo "::error::The stack order check did not pass (result: $STACK_ORDER): see the stack order job."
+            exit 1
+          fi
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -166,10 +209,11 @@ jobs:
         run: npm test -- --shard=${{ matrix.shard }}/3
 
   # The required check. It always runs, even when the run is cancelled, so it never reports a
-  # skip (which would count as passed) for a frontend change whose build or tests did not pass.
+  # skip (which would count as passed) for a frontend change whose build or tests did not pass,
+  # nor for a run whose stack order check did not pass.
   frontend:
     name: frontend (cloud)
-    needs: [ changes, frontend-build, frontend-tests ]
+    needs: [ changes, stack-order, frontend-build, frontend-tests ]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
@@ -179,8 +223,13 @@ jobs:
           AFFECTED: ${{ needs.changes.outputs.frontend }}
           BUILD: ${{ needs.frontend-build.result }}
           TESTS: ${{ needs.frontend-tests.result }}
+          STACK_ORDER: ${{ needs.stack-order.result }}
         run: |
-          echo "changes=$CHANGES frontend affected=$AFFECTED build=$BUILD tests=$TESTS"
+          echo "changes=$CHANGES frontend affected=$AFFECTED build=$BUILD tests=$TESTS stack order=$STACK_ORDER"
+          if [ "$STACK_ORDER" != success ]; then
+            echo "::error::The stack order check did not pass (result: $STACK_ORDER): see the stack order job."
+            exit 1
+          fi
           if [ "$CHANGES" = success ] && [ "$AFFECTED" = false ]; then
             echo "This pull request does not change the frontend: nothing to check."
             exit 0
@@ -194,12 +243,20 @@ jobs:
 
   onprem:
     name: build (onprem)
-    needs: changes
+    needs: [ changes, stack-order ]
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.onprem == 'true') }}
     runs-on: ubuntu-latest
     env:
       DEPLOYMENT_MODE: single-tenant
     steps:
+      - name: Check that the stack order check passed
+        env:
+          STACK_ORDER: ${{ needs.stack-order.result }}
+        run: |
+          if [ "$STACK_ORDER" != success ]; then
+            echo "::error::The stack order check did not pass (result: $STACK_ORDER): see the stack order job."
+            exit 1
+          fi
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Node

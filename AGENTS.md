@@ -62,11 +62,14 @@ Tool-specific or private notes live in each tool's local files, never here.
 - Releases and deploys to QA and prod are separate from merging and are the maintainer's
   decision; `main` is always releasable.
 - One PR per coherent lot. Keep diffs focused.
-- Stacked PRs: GitHub closes (does not retarget) a PR whose base branch is deleted at merge.
-  Retarget it to `main` first, then delete the base. The base is deleted as soon as it merges,
-  so retarget before adding the base to the queue. CI only runs for PRs targeting `main`.
-  After a squash merge of the base: `git rebase --onto origin/main <old-base-tip> <branch>`, then
-  `git push --force-with-lease`.
+- Stacked PRs: each PR of a stack targets `main` and contains the commits of the PR below it.
+  Only the bottom PR is open as ready; the others stay drafts. When the bottom PR merges, the
+  next one becomes ready: merge `origin/main` into its branch, push, then add it to the queue.
+  The `stack order` job refuses in the queue a PR that contains a PR still open and not ahead of
+  it in the queue (on a PR it only warns). GitHub closes (does not retarget) a PR whose base
+  branch is deleted at merge. Retarget it to `main` first, then delete the base. The base is
+  deleted as soon as it merges, so retarget before adding the base to the queue. CI only runs
+  for PRs targeting `main`.
 - When a task is finished, say so and ask the maintainer to test.
 - Commits: imperative mood, short scope prefix when useful (`backend: ...`, `frontend: ...`,
   `master data: ...`). Attribution footers only when the agent actually wrote the code.
