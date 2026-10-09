@@ -156,7 +156,7 @@ export default function DepartmentsPage() {
             navigate(`/master-data/departments/new/overview?${sp.toString()}`);
           }}
         >
-          New
+          {t('shared.labels.new')}
         </Button>
       )}
       {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('shared.labels.importCsv')}</Button>}

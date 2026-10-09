@@ -330,7 +330,7 @@ export default function ConnectionsPage() {
     <Stack direction="row" spacing={1}>
       {hasLevel('infrastructure', 'member') && (
         <Button variant="action-primary" onClick={() => navigate('/it/connections/new/overview')}>
-          Add connection
+          {t('pages.connections.addConnection')}
         </Button>
       )}
       {hasLevel('infrastructure', 'admin') && (
@@ -341,7 +341,6 @@ export default function ConnectionsPage() {
           getItemName={(row) => row.name}
           gridApi={gridApiRef.current}
           onDeleteSuccess={() => setRefreshKey((k) => k + 1)}
-          label={t('pages.connections.deleteConnection')}
         />
       )}
     </Stack>

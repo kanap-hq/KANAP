@@ -51,6 +51,9 @@ function getComponentOverrides(mode: PaletteMode): ThemeOptions['components'] {
     minWidth: 0,
     height: 'auto',
     boxShadow: 'none',
+    // A pill is one line: it neither wraps nor shrinks below its label in a crowded bar.
+    whiteSpace: 'nowrap' as const,
+    flexShrink: 0,
   };
   const actionPillDisabled = {
     backgroundColor: kanap.pill.bg,

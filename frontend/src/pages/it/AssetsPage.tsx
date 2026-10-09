@@ -432,7 +432,6 @@ export default function AssetsPage() {
           getItemName={(row) => row.name}
           gridApi={gridApiRef.current}
           onDeleteSuccess={() => { setRefreshKey((k) => k + 1); }}
-          label={t('pages.assets.deleteAsset')}
         />
       )}
     </Stack>

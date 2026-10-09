@@ -78,7 +78,6 @@
     "assets": {
       "title": "Actifs",
       "addAsset": "Ajouter un actif",
-      "deleteAsset": "Supprimer l'actif",
       "importCsv": "Importer CSV",
       "exportCsv": "Exporter CSV",
       "exportTitle": "Exporter les actifs",
@@ -110,7 +109,6 @@
     "connections": {
       "title": "Connexions",
       "addConnection": "Ajouter une connexion",
-      "deleteConnection": "Supprimer la connexion",
       "columns": {
         "connectionReference": "Référence",
         "name": "Nom",
@@ -136,7 +134,6 @@
       "title": "Interfaces",
       "addInterface": "Ajouter une interface",
       "duplicateInterface": "Dupliquer l'interface",
-      "deleteInterface": "Supprimer l'interface",
       "alsoDeleteBindings": "Supprimer également les liaisons associées",
       "deleteBindingsDescription": "Si cette option est décochée, les interfaces avec des liaisons ne seront pas supprimées.",
       "duplicateDialogTitle": "Dupliquer l'interface",

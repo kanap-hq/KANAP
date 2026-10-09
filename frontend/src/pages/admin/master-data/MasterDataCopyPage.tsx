@@ -342,7 +342,7 @@ export default function MasterDataCopyPage() {
       actions={
         <Stack direction="row" spacing={1}>
           <Button
-            variant="outlined"
+            variant="action"
             onClick={handleDryRun}
             disabled={disableActions}
             startIcon={isProcessing ? <CircularProgress size={16} /> : undefined}
@@ -350,8 +350,7 @@ export default function MasterDataCopyPage() {
             {isProcessing && !hasPreview ? t('admin.copy.processing') : t('admin.copy.dryRunBtn')}
           </Button>
           <Button
-            variant="contained"
-            color="primary"
+            variant="action-primary"
             onClick={handleCopy}
             disabled={disableCopy}
             startIcon={isProcessing && hasPreview ? <CircularProgress size={16} /> : undefined}

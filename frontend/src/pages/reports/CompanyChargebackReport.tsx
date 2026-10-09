@@ -447,8 +447,7 @@ export default function CompanyChargebackReport() {
       )}
       actions={(
         <Button
-          variant="contained"
-          size="small"
+          variant="action-primary"
           onClick={() => refetch()}
           disabled={!companyId || isFetching || !budgetColumns.ready}
         >

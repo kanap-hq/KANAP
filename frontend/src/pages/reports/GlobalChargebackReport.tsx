@@ -537,7 +537,7 @@ export default function GlobalChargebackReport() {
         </>
       )}
       actions={(
-        <Button variant="contained" size="small" onClick={() => refetch()} disabled={isFetching || !budgetColumns.ready}>
+        <Button variant="action-primary" onClick={() => refetch()} disabled={isFetching || !budgetColumns.ready}>
           {isFetching ? t('reports.shared.refreshing') : t('reports.shared.run')}
         </Button>
       )}

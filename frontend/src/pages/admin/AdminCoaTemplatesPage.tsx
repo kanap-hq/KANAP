@@ -1,11 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import PageHeader from '../../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef } from '../../components/ServerDataGrid';
 import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Stack, TextField, Alert } from '@mui/material';
 // no special tenant checks here; backend enforces platform admin
 import { COUNTRY_OPTIONS } from '../../constants/isoOptions';
-import DeleteSelectedButton from '../../components/DeleteSelectedButton';
 import api from '../../api';
 import CsvExportDialog from '../../components/csv/CsvExportDialog';
 import CsvImportDialog from '../../components/csv/CsvImportDialog';
@@ -100,7 +99,6 @@ export default function AdminCoaTemplatesPage() {
   const [editInitial, setEditInitial] = useState<Partial<Template> | undefined>(undefined);
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const gridApiRef = useRef<any>(null);
 
   const columns: EnhancedColDef<Template>[] = useMemo(() => [
     { field: 'template_code', headerName: t('coaTemplates.columns.code'), width: 160, required: true, cellStyle: { fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace", fontSize: '12px', color: 'var(--kanap-text-secondary)', fontVariantNumeric: 'tabular-nums' } },
@@ -117,15 +115,6 @@ export default function AdminCoaTemplatesPage() {
       <Button variant="action" disabled={selectedRows.length !== 1} onClick={() => { setEditInitial(selectedRows[0]); setEditOpen(true); }}>{t('coaTemplates.actions.edit')}</Button>
       <Button variant="action" disabled={selectedRows.length !== 1} onClick={() => setImportOpen(true)}>{t('coaTemplates.actions.importCsv')}</Button>
       <Button variant="action" disabled={selectedRows.length !== 1} onClick={() => setExportOpen(true)}>{t('coaTemplates.actions.exportCsv')}</Button>
-      <DeleteSelectedButton
-        selectedRows={selectedRows}
-        endpoint="/admin/coa-templates/bulk" // not implemented; fall back to single delete below
-        getItemId={(row) => row.id}
-        getItemName={(row) => `${row.template_code} ${row.version}`}
-        onDeleteSuccess={() => setRefreshKey((k) => k + 1)}
-        gridApi={gridApiRef.current}
-        disabled
-      />
       <Button
         variant="action-danger"
         disabled={selectedRows.length !== 1}
@@ -146,7 +135,6 @@ export default function AdminCoaTemplatesPage() {
         columnPreferencesKey="admin-coa-templates"
         enableRowSelection
         onSelectionChanged={(rows) => setSelectedRows(rows as Template[])}
-        onGridApiReady={(api) => { gridApiRef.current = api; }}
       />
 
       <TemplateDialog

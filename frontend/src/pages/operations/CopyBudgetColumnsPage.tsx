@@ -441,20 +441,19 @@ export default function CopyBudgetColumnsPage() {
       actions={
         <Stack direction="row" spacing={1}>
           <Button
-            variant="outlined"
+            variant="action"
             onClick={handleDryRun}
             disabled={isProcessing || processedData.length === 0 || freezeLoading || destinationFrozen || !budgetColumns.ready}
           >
             {isProcessing ? t('operations.copyBudgetColumns.processing') : t('operations.copyBudgetColumns.dryRun')}
           </Button>
           <Button
-            variant="contained"
+            variant="action-primary"
             onClick={handleCopyData}
             disabled={
               isProcessing || processedData.length === 0 || !showPreview || freezeLoading || destinationFrozen
               || (stats.itemsWithCalendarChanges > 0 && !acceptCalendarChanges)
             }
-            color="primary"
           >
             {isProcessing ? t('operations.copyBudgetColumns.processing') : t('operations.copyBudgetColumns.copyData')}
           </Button>

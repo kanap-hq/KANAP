@@ -341,7 +341,7 @@ export default function InterfacesPage() {
     <Stack direction="row" spacing={1}>
       {canCreate && (
         <Button variant="action-primary" onClick={() => navigate('/it/interfaces/new/overview')}>
-          Add interface
+          {t('pages.interfaces.addInterface')}
         </Button>
       )}
       {canCreate && (
@@ -351,7 +351,7 @@ export default function InterfacesPage() {
           onClick={handleOpenDuplicateDialog}
           disabled={selectedRows.length !== 1 || duplicating}
         >
-          Duplicate interface
+          {t('pages.interfaces.duplicateInterface')}
         </Button>
       )}
       {canAdmin && (
@@ -364,7 +364,6 @@ export default function InterfacesPage() {
           onDeleteSuccess={() => {
             setRefreshKey((k) => k + 1);
           }}
-          label={t('pages.interfaces.deleteInterface')}
           cascadeOption={{
             label: t('pages.interfaces.alsoDeleteBindings'),
             description: t('pages.interfaces.deleteBindingsDescription'),

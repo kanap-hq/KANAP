@@ -1173,6 +1173,7 @@ export default function KnowledgePage() {
           {t('actions.newDocument')}
         </Button>
         <Button
+          aria-label={t('actions.newDocumentOptions')}
           onClick={(e) => setNewDocAnchorEl(e.currentTarget)}
           disabled={!canManageDocuments || !activeLibrary?.can_write}
           sx={(theme) => ({

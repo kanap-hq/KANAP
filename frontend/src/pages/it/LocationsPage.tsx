@@ -170,7 +170,7 @@ export default function LocationsPage() {
     <Stack direction="row" spacing={1}>
       {hasLevel('locations', 'member') && (
         <Button variant="action-primary" onClick={() => navigate('/it/locations/new/overview')}>
-          Add Location
+          {t('pages.locations.addLocation')}
         </Button>
       )}
     </Stack>

@@ -283,8 +283,10 @@ Deprecated no-op aliases still exported for older call sites: `dialogBorderedFie
 Four button variants extend MUI's default Button, defined via `MuiButton.variants` in the theme.
 
 **Page-level action bars** (list page and admin page headers, the actions of a `ChipToggleBar` band
-and of the context line under it, workspace title rows) use only the three compact pills below, all
-the same size. Write the variant at each call site; never restyle buttons through a selector on the
+and of the context line under it, workspace title rows, the actions of a `ReportLayout` filter bar:
+Run, Dry run, Copy data, Clear column) use only the three compact pills below, all the same size.
+The form controls of a filter bar keep their field style. The home dashboard quick actions keep
+their outlined look with icons, at the pill height (30px) and radius (5px). Write the variant at each call site; never restyle buttons through a selector on the
 header.
 
 **`variant="action-primary"`**: the one key action of the bar (New X, Add X, or Invite when it is
@@ -296,8 +298,8 @@ the only main action). At most one per bar.
 
 **`variant="action"`**: every other action of the bar (Import CSV, Export CSV, Invite (n),
 Disable (n), Move (n), Manage X, Edit, a "new" chip in a band, Send link, Convert to request):
-- Padding `4px 11px` (about 26px tall), border-radius 5px, font-size 12px, weight 500
-- `textTransform: 'none'`, `minWidth: 0`
+- Padding `4px 11px`, 30px tall (12px text on the 1.75 button line-height, plus the 1px border), border-radius 5px, font-size 12px, weight 500
+- `textTransform: 'none'`, `minWidth: 0`, one line (`whiteSpace: nowrap`, `flexShrink: 0`)
 - Background `kanap.pill.bg`, border `1px solid kanap.pill.border`, color `kanap.text.secondary`
 - Hover: `kanap.pill.hoverBg`, no shadow
 
