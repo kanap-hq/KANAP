@@ -1,16 +1,16 @@
-account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status
-612100;SaaS Subscriptions;Redevances et abonnements SaaS;Abonnements logiciels cloud (Microsoft 365, Salesforce, etc.);2000;Software Licenses (OPEX);Recurring licenses and subscriptions;enabled
-612200;Software Licenses;Licences logiciels;Licences perpétuelles et temporaires (SAP, VMware);2000;Software Licenses (OPEX);Recurring licenses and subscriptions;enabled
-613100;Cloud Hosting;Hébergement cloud et IaaS;Serveurs dédiés, stockage objet et PaaS (OVHcloud, AWS);2100;Cloud & Hosting Services;IaaS/PaaS/SaaS usage and hosting;enabled
-613200;Cybersecurity Tools;Outils de cybersécurité;Sécurité des endpoints, IAM et scanning (Sophos, Okta);2100;Cloud & Hosting Services;IaaS/PaaS/SaaS usage and hosting;enabled
-613300;Data & Analytics Platforms;Plateformes données et analytics;Monitoring, BI et outils data (Datadog, Snowflake);2100;Cloud & Hosting Services;IaaS/PaaS/SaaS usage and hosting;enabled
-615100;IT Maintenance & Support;Maintenance et support informatique;Contrats de maintenance matériel, infogérance;2300;Maintenance & Support;Software/hardware maintenance contracts;enabled
-616100;Telecom & Network;Télécommunications et réseaux;WAN, LAN, internet et téléphonie;2200;Telecommunications & Network;Internet, mobile, lines, VPN;enabled
-616200;Data Center Costs;Hébergement datacenter;Colocation, énergie et refroidissement;2200;Telecommunications & Network;Internet, mobile, lines, VPN;enabled
-621100;IT Staff Augmentation;Personnel intérimaire IT;Développeurs, ingénieurs et chefs de projet externes;2400;IT Consulting & External Services;Professional services, integration, contractors;enabled
-622100;IT Consulting;Honoraires conseil IT;Conseil en stratégie, architecture et cybersécurité;2400;IT Consulting & External Services;Professional services, integration, contractors;enabled
-622200;Software Development Services;Développement logiciel externalisé;Développement d'applications et intégration;2400;IT Consulting & External Services;Professional services, integration, contractors;enabled
-618100;IT Training & Certification;Formation et certification IT;Programmes de formation et certifications professionnelles;2600;Training & Certification;Staff training and certifications;enabled
-625100;IT Travel & Events;Déplacements et événements IT;Déplacements, conférences et salons IT;2800;Travel & Mobility (IT Projects);Project-related travel costs;enabled
-205000;Software Assets;Logiciels et licences;Immobilisations incorporelles — logiciels acquis ou développés;1100;Intangible Assets (CAPEX);Capitalized software and rights — IAS 38;enabled
-218300;IT Equipment;Matériel informatique;Immobilisations corporelles — serveurs, postes de travail et réseau;1000;Tangible Assets (CAPEX);Purchase of physical IT equipment — IAS 16;enabled
+account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
+612100;SaaS Subscriptions;Redevances et abonnements SaaS;Abonnements logiciels cloud (Microsoft 365, Salesforce, etc.);2000;Software Licenses (OPEX);Recurring licenses and subscriptions;enabled;opex
+612200;Software Licenses;Licences logiciels;Licences perpétuelles et temporaires (SAP, VMware);2000;Software Licenses (OPEX);Recurring licenses and subscriptions;enabled;opex
+613100;Cloud Hosting;Hébergement cloud et IaaS;Serveurs dédiés, stockage objet et PaaS (OVHcloud, AWS);2100;Cloud & Hosting Services;IaaS/PaaS/SaaS usage and hosting;enabled;opex
+613200;Cybersecurity Tools;Outils de cybersécurité;Sécurité des endpoints, IAM et scanning (Sophos, Okta);2100;Cloud & Hosting Services;IaaS/PaaS/SaaS usage and hosting;enabled;opex
+613300;Data & Analytics Platforms;Plateformes données et analytics;Monitoring, BI et outils data (Datadog, Snowflake);2100;Cloud & Hosting Services;IaaS/PaaS/SaaS usage and hosting;enabled;opex
+615100;IT Maintenance & Support;Maintenance et support informatique;Contrats de maintenance matériel, infogérance;2300;Maintenance & Support;Software/hardware maintenance contracts;enabled;opex
+616100;Telecom & Network;Télécommunications et réseaux;WAN, LAN, internet et téléphonie;2200;Telecommunications & Network;Internet, mobile, lines, VPN;enabled;opex
+616200;Data Center Costs;Hébergement datacenter;Colocation, énergie et refroidissement;2200;Telecommunications & Network;Internet, mobile, lines, VPN;enabled;opex
+621100;IT Staff Augmentation;Personnel intérimaire IT;Développeurs, ingénieurs et chefs de projet externes;2400;IT Consulting & External Services;Professional services, integration, contractors;enabled;opex
+622100;IT Consulting;Honoraires conseil IT;Conseil en stratégie, architecture et cybersécurité;2400;IT Consulting & External Services;Professional services, integration, contractors;enabled;opex
+622200;Software Development Services;Développement logiciel externalisé;Développement d'applications et intégration;2400;IT Consulting & External Services;Professional services, integration, contractors;enabled;opex
+618100;IT Training & Certification;Formation et certification IT;Programmes de formation et certifications professionnelles;2600;Training & Certification;Staff training and certifications;enabled;opex
+625100;IT Travel & Events;Déplacements et événements IT;Déplacements, conférences et salons IT;2800;Travel & Mobility (IT Projects);Project-related travel costs;enabled;opex
+205000;Software Assets;Logiciels et licences;Immobilisations incorporelles — logiciels acquis ou développés;1100;Intangible Assets (CAPEX);Capitalized software and rights — IAS 38;enabled;capex
+218300;IT Equipment;Matériel informatique;Immobilisations corporelles — serveurs, postes de travail et réseau;1000;Tangible Assets (CAPEX);Purchase of physical IT equipment — IAS 16;enabled;capex

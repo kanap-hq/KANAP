@@ -44,7 +44,9 @@ import { CsvLanguage } from '../csv-sheet';
 //  - row errors name the physical line, so a quoted cell spanning two lines
 //    shifts the next row to line 4;
 //  - a French round trip changes nothing;
-//  - an extra cell and an unreadable file are refused.
+//  - an extra cell and an unreadable file are refused;
+//  - the accounts file's optional `nature` column: absent, it leaves the
+//    stored natures alone; an invalid value is a row error.
 //
 // Every case runs inside one transaction, rolled back at the end, like
 // `master-data-csv-lifecycle.integration.spec.ts`.
@@ -370,8 +372,9 @@ function importers(manager: EntityManager, tenantId: string, seeds: Seeds): Impo
         ),
       base: accountBase,
       samples: () => [
-        { ...accountBase('Round trip account A', 0), status: 'enabled' },
-        { ...accountBase('Round trip account B', 1), status: 'disabled' },
+        { ...accountBase('Round trip account A', 0), status: 'enabled', nature: 'opex' },
+        { ...accountBase('Round trip account B', 1), status: 'disabled', nature: 'capex' },
+        { ...accountBase('Round trip account C', 2), status: 'enabled', nature: '' },
       ],
       broken: (key) => ({ ...accountBase(key), account_number: 'not-a-number' }),
       brokenMessage: /^account_number is required and must be an integer$/,
@@ -385,7 +388,7 @@ function importers(manager: EntityManager, tenantId: string, seeds: Seeds): Impo
       snapshot: (runner, id) =>
         runner.query(
           `SELECT account_number, account_name, native_name, description, consolidation_account_number,
-                  consolidation_account_name, consolidation_account_description, status::text AS status, coa_id
+                  consolidation_account_name, consolidation_account_description, status::text AS status, nature, coa_id
              FROM accounts WHERE tenant_id = $1 ORDER BY account_number`,
           [id],
         ),
@@ -733,6 +736,64 @@ async function testUnreadableFileIsRefused() {
   });
 }
 
+/**
+ * The accounts file's `nature` column is optional: a file without it (written before the
+ * column existed) leaves the stored natures alone and creates accounts for both types; a
+ * value other than opex, capex or empty is a row error.
+ */
+async function testAccountNatureColumn() {
+  await withTenant('nature', async (runner, tenantId, seeds) => {
+    const importer = importers(runner.manager, tenantId, seeds).find((entry) => entry.label === 'accounts');
+    assert.ok(importer, 'the accounts importer');
+    const headers = await importer.headers('en');
+    assert.equal(headers[headers.length - 1], 'nature', 'the export writes nature last');
+    const natures = async () => Object.fromEntries(
+      (await importer.snapshot(runner, tenantId)).map((row) => [row.account_name, [row.nature, row.description]]),
+    );
+
+    const seeded = await importer.importCsv(await fileFor(importer, importer.samples(), { language: 'en' }), { language: 'en' });
+    assert.deepEqual([seeded.ok, seeded.errors], [true, []], `seed: ${JSON.stringify(seeded.errors)}`);
+    assert.deepEqual(await natures(), {
+      'Round trip account A': ['opex', 'Shared layer account'],
+      'Round trip account B': ['capex', 'Shared layer account'],
+      'Round trip account C': [null, 'Shared layer account'],
+    }, 'the nature cells are stored, empty as null');
+
+    // The same accounts and a new one, without the column: natures kept, other cells applied.
+    const withoutNature = headers.filter((header) => header !== 'nature');
+    const rows = [...importer.samples(), { ...importer.base('Round trip account D'), account_number: '6103' }]
+      .map((row): Row => ({ ...row, description: 'Edited without nature' }));
+    const content = [
+      withoutNature.join(','),
+      ...rows.map((row) => withoutNature.map((header) => csvCell(row[header] ?? '', ',')).join(',')),
+    ].join('\n') + '\n';
+    const loaded = await importer.importCsv(content, { language: 'en' });
+    assert.deepEqual([loaded.ok, loaded.errors, loaded.ignoredColumns], [true, [], []], `without nature: ${JSON.stringify(loaded.errors)}`);
+    assert.deepEqual(await natures(), {
+      'Round trip account A': ['opex', 'Edited without nature'],
+      'Round trip account B': ['capex', 'Edited without nature'],
+      'Round trip account C': [null, 'Edited without nature'],
+      'Round trip account D': [null, 'Edited without nature'],
+    }, 'a file without nature keeps the stored natures');
+
+    // The column present: an empty cell clears, an invalid value is refused.
+    const cleared = await importer.importCsv(
+      await fileFor(importer, [{ ...importer.samples()[0], nature: '' }], { language: 'en' }),
+      { language: 'en' },
+    );
+    assert.deepEqual([cleared.ok, cleared.errors], [true, []]);
+    assert.equal((await natures())['Round trip account A'][0], null, 'an empty nature cell clears it');
+    const before = await importer.snapshot(runner, tenantId);
+    const invalid = await importer.importCsv(
+      await fileFor(importer, [{ ...importer.samples()[1], nature: 'both' }], { language: 'en' }),
+      { language: 'en' },
+    );
+    assert.equal(invalid.ok, false, 'an invalid nature is refused');
+    assert.deepEqual(invalid.errors, [{ row: 2, message: "Invalid nature 'both'. Use 'opex', 'capex' or leave it empty." }]);
+    assert.deepEqual(await importer.snapshot(runner, tenantId), before, 'nothing is written');
+  });
+}
+
 async function main() {
   await dataSource.initialize();
   let failed = 0;
@@ -745,6 +806,7 @@ async function main() {
     ['testFrenchRoundTripChangesNothing', testFrenchRoundTripChangesNothing],
     ['testMoreCellsThanTheHeader', testMoreCellsThanTheHeader],
     ['testUnreadableFileIsRefused', testUnreadableFileIsRefused],
+    ['testAccountNatureColumn', testAccountNatureColumn],
   ];
   try {
     for (const [name, test] of tests) {

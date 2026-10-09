@@ -406,6 +406,12 @@ function resolveAccount(
     fail('account_number', `Account ${account.number} is disabled.`);
     return;
   }
+  // An account kept for the other type of line: refused on a new line or a new account; the
+  // line's current account stays, as `resolveItemWrite` lets it.
+  if (account.nature && account.nature !== input.scope && account.id !== (live?.accountId ?? null)) {
+    fail('account_number', `Account ${account.number} is for ${account.nature === 'capex' ? 'CAPEX' : 'OPEX'} lines only.`);
+    return;
+  }
   const changed = !!(live && account.id !== live.accountId);
   if (changed) changes.push('account_number');
   writeField(draft, creating, changed, 'account_id', account.id);

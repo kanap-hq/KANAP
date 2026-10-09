@@ -1,6 +1,9 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { StatusState } from '../common/status';
 
+export const ACCOUNT_NATURES = ['opex', 'capex'] as const;
+export type AccountNature = (typeof ACCOUNT_NATURES)[number];
+
 @Entity('accounts')
 export class Account {
   @PrimaryGeneratedColumn('uuid')
@@ -34,6 +37,10 @@ export class Account {
 
   @Column('text', { nullable: true })
   consolidation_account_description!: string | null;
+
+  /** The budget lines that may use the account: OPEX only, CAPEX only, or both (null). */
+  @Column('text', { nullable: true })
+  nature!: AccountNature | null;
 
   @Column({
     type: 'enum',

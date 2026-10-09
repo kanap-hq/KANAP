@@ -19,7 +19,8 @@ import {
 // lifecycle (search offers active rows, ids return any), the scopes (a
 // company's chart, a company's departments, a dimension's values), the people
 // lookup (names only, the email for a nameless person or a name two accounts
-// share), and a row far beyond the old 1,000-row cap.
+// share), a row far beyond the old 1,000-row cap, and the accounts a line type
+// may use (`nature`), hydration by ids unfiltered.
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file in its serial database lane.
 
 const PAST = '2020-06-30T12:00:00Z';
@@ -293,6 +294,30 @@ async function testScopes() {
   console.log("ok - scopes: a company's chart (global default without one), a company's departments, a dimension's values");
 }
 
+async function testAccountNature() {
+  await withTenant(async (runner, tenantId) => {
+    const [chart] = await runner.query(`INSERT INTO chart_of_accounts (tenant_id, code, name, country_iso) VALUES ($1, 'LKN', 'Chart N', 'FR') RETURNING id`, [tenantId]);
+    const ids: Record<string, string> = {};
+    for (const [number, name, nature] of [[6100, 'Licences', 'opex'], [2100, 'Servers', 'capex'], [6900, 'Shared', null]] as const) {
+      const [row] = await runner.query(
+        `INSERT INTO accounts (tenant_id, coa_id, account_number, account_name, nature) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+        [tenantId, chart.id, number, name, nature],
+      );
+      ids[name] = row.id;
+    }
+    const call = { manager: runner.manager, tenantId };
+    const offered = async (query: Record<string, unknown>) => (await lookupAccounts(call, { coaId: chart.id, ...query })).items.map((a: any) => `${a.account_name}:${a.nature ?? 'both'}`);
+    assert.deepEqual(await offered({}), ['Servers:capex', 'Licences:opex', 'Shared:both'], 'no nature: every account, with its nature');
+    assert.deepEqual(await offered({ nature: 'opex' }), ['Licences:opex', 'Shared:both'], 'OPEX lines: OPEX accounts and accounts for both');
+    assert.deepEqual(await offered({ nature: 'capex' }), ['Servers:capex', 'Shared:both'], 'CAPEX lines: CAPEX accounts and accounts for both');
+    assert.deepEqual(await offered({ nature: 'capex', q: 'lic' }), [], 'the search stays within the nature');
+    const hydrated = await lookupAccounts(call, { nature: 'capex', ids: ids.Licences });
+    assert.deepEqual(hydrated.items.map((a: any) => a.account_name), ['Licences'], 'ids hydrate an account of the other type');
+    await assert.rejects(() => lookupAccounts(call, { nature: 'both' }), /nature must be 'opex' or 'capex'/);
+  });
+  console.log('ok - account nature: the accounts a line type may use, ids unfiltered');
+}
+
 async function main() {
   await dataSource.initialize();
   try {
@@ -305,6 +330,7 @@ async function main() {
     await testUsersByNameOnly();
     await testUsersSharingAName();
     await testScopes();
+    await testAccountNature();
     console.log('reference-lookup.integration.spec: ok');
   } finally {
     await dataSource.destroy();

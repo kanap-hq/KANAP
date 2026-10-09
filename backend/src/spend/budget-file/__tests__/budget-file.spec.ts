@@ -276,6 +276,36 @@ async function testCreateRules() {
   assert.ok(dash.errors.some((error) => error.message === 'name is required.'));
 }
 
+/** An account for the other type of line only: refused on a new line or a new account, the current one kept. */
+async function testAccountNature() {
+  const cat = catalog({
+    companies: [{ id: 'c1', name: 'Acme', coaId: 'chart', disabledAt: null }],
+    accounts: [
+      { id: 'a1', number: '1200', coaId: 'chart', disabledAt: null, nature: 'capex' },
+      { id: 'a2', number: '6100', coaId: 'chart', disabledAt: null, nature: 'opex' },
+      { id: 'a3', number: '6200', coaId: 'chart', disabledAt: null, nature: null },
+    ],
+  });
+  const create = 'item_number,name,company_name,account_number,currency\n';
+  const accountErrors = (report: { errors: Array<{ column: string | null; message: string }> }) =>
+    report.errors.filter((error) => error.column === 'account_number').map((error) => error.message);
+
+  const capexAccount = await preflight('opex', `${create},Widget,Acme,1200,EUR\n`, [], { cat });
+  assert.deepEqual(accountErrors(capexAccount), ['Account 1200 is for CAPEX lines only.'], 'a new OPEX line on a CAPEX account');
+  const opexAccount = await preflight('capex', `${create},Server,Acme,6100,EUR\n`, [], { cat });
+  assert.deepEqual(accountErrors(opexAccount), ['Account 6100 is for OPEX lines only.'], 'a new CAPEX line on an OPEX account');
+  for (const number of ['6100', '6200']) {
+    const fine = await preflight('opex', `${create},Widget,Acme,${number},EUR\n`, [], { cat });
+    assert.equal(fine.ok, true, `a new OPEX line on account ${number}: ${JSON.stringify(fine.errors)}`);
+  }
+
+  const update = 'item_number,name,account_number,currency\nOPX-3,Widget,1200,EUR\n';
+  const moved = await preflight('opex', update, [line({ companyId: 'c1', accountId: 'a2', accountNumber: '6100' })], { cat });
+  assert.deepEqual(accountErrors(moved), ['Account 1200 is for CAPEX lines only.'], 'an account change to the other type');
+  const kept = await preflight('opex', update, [line({ companyId: 'c1', accountId: 'a1', accountNumber: '1200' })], { cat });
+  assert.equal(kept.ok, true, `the line's current account is kept: ${JSON.stringify(kept.errors)}`);
+}
+
 async function testExportShape() {
   const built = buildBudgetExport({
     scope: 'opex', language: 'en', years: [YEAR], columns: ['budget'], detail: 'months', lines: [], dimensionCodes: ['nature'],
@@ -372,6 +402,7 @@ async function main() {
   await testIdentity();
   await testSuppliersAndDuplicates();
   await testCreateRules();
+  await testAccountNature();
   await testExportShape();
   await testPlan();
   console.log('budget-file.spec: ok');
