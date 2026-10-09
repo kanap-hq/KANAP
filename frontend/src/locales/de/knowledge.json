@@ -2,7 +2,7 @@
   "actions": {
     "manageTypes": "Typen verwalten",
     "moveCount": "Verschieben ({{count}})",
-    "new": "Neu"
+    "newDocument": "Neues Dokument"
   },
   "columns": {
     "folder": "Ordner",
@@ -130,6 +130,15 @@
       "root": "Stammverzeichnis"
     }
   },
+  "libraries": {
+    "documentCount_one": "{{count}} Dokument",
+    "documentCount_other": "{{count}} Dokumente",
+    "label": "Bibliotheken",
+    "manage": "Bibliothek verwalten",
+    "newChip": "Neu",
+    "newLibrary": "Neue Bibliothek",
+    "restrictedAccess": "Eingeschränkter Zugriff"
+  },
   "menus": {
     "blankDocument": "Leeres Dokument",
     "fromTemplate": "Aus Vorlage..."
@@ -176,10 +185,10 @@
     "title": "Dokumente verschieben"
   },
   "scope": {
-    "allDocs": "Alle Dokumente",
+    "allDocs": "Alle",
     "allLibraries": "Alle Bibliotheken",
     "myDocs": "Meine Dokumente",
-    "myTeamsDocs": "Dokumente meines Teams",
+    "myTeamsDocs": "Mein Team",
     "noTeamAssigned": "Sie sind keinem Team zugeordnet.",
     "show": "Anzeigen:"
   },

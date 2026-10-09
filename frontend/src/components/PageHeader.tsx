@@ -128,15 +128,18 @@ export default function PageHeader({
   const isAdmin = location.pathname.startsWith('/admin');
   return (
     <Stack spacing={1} sx={{ mb: 2 }}>
-      <Breadcrumbs aria-label="breadcrumb">
-        {crumbs.map((c, idx) => (
-          c.to ? (
-            <MLink key={idx} component={Link} underline="hover" color="inherit" to={c.to!}>{c.label}</MLink>
-          ) : (
-            <Typography key={idx} color="text.primary">{c.label}</Typography>
-          )
-        ))}
-      </Breadcrumbs>
+      {/* A lone crumb links nowhere and repeats the top nav tab or the title. */}
+      {crumbs.length > 1 && (
+        <Breadcrumbs aria-label="breadcrumb">
+          {crumbs.map((c, idx) => (
+            c.to ? (
+              <MLink key={idx} component={Link} underline="hover" color="inherit" to={c.to!}>{c.label}</MLink>
+            ) : (
+              <Typography key={idx} color="text.primary">{c.label}</Typography>
+            )
+          ))}
+        </Breadcrumbs>
+      )}
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ flexWrap: 'wrap', gap: 1 }}>
         <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 0, flex: 1 }}>
           {titleContent ?? <Typography variant="h5">{title}</Typography>}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -111,6 +111,8 @@ describe('CoaPage summary and consolidation health', () => {
     expect(summary).toHaveTextContent('FR-PCG · 512 accounts');
     expect(summary).toHaveTextContent('Plan comptable général · France · Country default (France)');
     expect(screen.getByRole('button', { name: 'FR-PCG' })).toBeInTheDocument();
+    // The actions on the accounts sit on the summary line, under the band.
+    expect(within(summary).getByRole('button', { name: 'New account' })).toBeEnabled();
     expect(screen.queryByText(/★|⊕/)).not.toBeInTheDocument();
   });
 

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Box, Button, Stack, Tooltip } from '@mui/material';
+import { Alert, Box, Button, Tooltip } from '@mui/material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import PageHeader from '../components/PageHeader';
@@ -8,6 +8,7 @@ import ServerDataGrid, { EnhancedColDef, StatusScope } from '../components/Serve
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
+import { ChipToggleContextLine } from '../components/ChipToggleBar';
 import { useAuth } from '../auth/AuthContext';
 import { LinkCellRenderer } from '../components/grid/renderers';
 import { useLocale } from '../i18n/useLocale';
@@ -51,12 +52,15 @@ function AnalyticsValuesList() {
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState<AnalyticsValue[]>([]);
+  /** The grid's row count (its filters and status scope apply), once a page has loaded. */
+  const [valueTotal, setValueTotal] = useState<number | null>(null);
   const gridApiRef = useRef<any>(null);
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any; statusScope?: StatusScope } | null>(null);
 
   // A selection never spans two dimensions.
   useEffect(() => {
     setSelectedRows([]);
+    setValueTotal(null);
     gridApiRef.current?.deselectAll?.();
   }, [selectedAxisId]);
 
@@ -143,8 +147,8 @@ function AnalyticsValuesList() {
     </Button>
   );
 
-  const actions = (
-    <Stack direction="row" spacing={1}>
+  const actions = (canCreate || canAdmin) && (
+    <>
       {canCreate && (selectedDisabled ? (
         <Tooltip title={t('analytics.enableToAddValues')}>
           <Box component="span" sx={{ display: 'inline-flex' }}>{newValueButton}</Box>
@@ -162,15 +166,21 @@ function AnalyticsValuesList() {
           onDeleteSuccess={refresh}
         />
       )}
-    </Stack>
+    </>
   );
 
   // A tenant without dimensions (never after the migration) still lists its values, unfiltered.
   const gridReady = axes.ready && !axes.isError && (!!selectedAxisId || axes.axes.length === 0);
+  const contextTitle = gridReady
+    ? [
+      selectedAxis ? axes.label(selectedAxis) : null,
+      valueTotal != null ? t('analytics.usage.values', { count: valueTotal }) : null,
+    ].filter(Boolean).join(' · ')
+    : null;
 
   return (
     <>
-      <PageHeader title={t('analytics.title')} actions={actions} />
+      <PageHeader title={t('analytics.title')} />
       {axes.isError && (
         <Alert severity="error" sx={{ mb: 1.5 }}>{t('analytics.messages.dimensionsLoadFailed')}</Alert>
       )}
@@ -184,6 +194,9 @@ function AnalyticsValuesList() {
           canEdit={canCreate}
           onCreate={canCreate ? () => navigate(`${ANALYTICS_DIMENSIONS_PATH}/new/overview`) : undefined}
         />
+      )}
+      {(contextTitle || actions) && (
+        <ChipToggleContextLine testId="analytics-context" title={contextTitle} actions={actions} sx={{ mb: 2 }} />
       )}
       {gridReady && (
         <ServerDataGrid<AnalyticsValue>
@@ -201,6 +214,7 @@ function AnalyticsValuesList() {
           requiredColumns={['name']}
           enableRowSelection={canAdmin}
           onSelectionChanged={setSelectedRows}
+          onTotalChange={setValueTotal}
           onGridApiReady={(api) => { gridApiRef.current = api; }}
           onQueryStateChange={(state) => {
             lastQueryRef.current = {
