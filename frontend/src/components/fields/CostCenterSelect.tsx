@@ -128,6 +128,8 @@ export default function CostCenterSelect({
   const { t } = useTranslation('common');
   const label = labelProp ?? t('selects.costCenter');
   const naked = hideLabel || label === '';
+  // A hidden label still names the field for assistive technology; the placeholder must not.
+  const ariaLabel = naked && label ? label : undefined;
   // The tree (about 180 KB, 18 KB compressed, on a 300-node tenant) loads when the list is first
   // opened or focused, or when the value cannot be named otherwise; a value the caller knows is
   // shown without it.
@@ -253,6 +255,7 @@ export default function CostCenterSelect({
           required={required}
           variant="standard"
           sx={textFieldSx}
+          inputProps={ariaLabel ? { ...params.inputProps, 'aria-label': ariaLabel } : params.inputProps}
           placeholder={placeholder ?? (naked ? t('selects.notSet') : undefined)}
           error={error}
           helperText={helperText}

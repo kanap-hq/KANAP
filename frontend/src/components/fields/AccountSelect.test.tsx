@@ -107,4 +107,14 @@ describe('AccountSelect options', () => {
     expect(option).toHaveTextContent(/^\[6300\] Travel$/);
     expect(screen.queryByText('Trips and hotels')).not.toBeInTheDocument();
   });
+
+  it('names the combobox after its label when the label is hidden, not after the placeholder', () => {
+    renderSelect({ label: undefined, hideLabel: true });
+    expect(screen.getByRole('combobox', { name: 'selects.account' })).toHaveAttribute('placeholder', 'selects.notSet');
+  });
+
+  it('keeps a given label as the name when hidden', () => {
+    renderSelect({ label: 'Account to charge', hideLabel: true });
+    expect(screen.getByRole('combobox', { name: 'Account to charge' })).toBeInTheDocument();
+  });
 });

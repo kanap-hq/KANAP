@@ -43,6 +43,8 @@ export default function CompanySelect({
 }) {
   const { t } = useTranslation('common');
   const naked = hideLabel || label === '';
+  // A hidden label still names the field for assistive technology; the placeholder must not.
+  const ariaLabel = naked && label ? label : undefined;
   const picker = useLookupPicker<Company>({
     endpoint: '/companies/lookup',
     value: value ? [value] : [],
@@ -78,6 +80,7 @@ export default function CompanySelect({
             size={size}
             variant="standard"
             sx={textFieldSx}
+            inputProps={ariaLabel ? { ...params.inputProps, 'aria-label': ariaLabel } : params.inputProps}
             InputProps={{
               ...params.InputProps,
               endAdornment: (

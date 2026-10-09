@@ -56,6 +56,8 @@ const SupplierSelect = React.forwardRef<HTMLInputElement, SupplierSelectProps>(f
 ) {
   const { t } = useTranslation(['master-data', 'common']);
   const naked = hideLabel || label === '';
+  // A hidden label still names the field for assistive technology; the placeholder must not.
+  const ariaLabel = naked && label ? label : undefined;
   const picker = useLookupPicker<Supplier>({
     endpoint: '/suppliers/lookup',
     value: value ? [value] : [],
@@ -98,6 +100,7 @@ const SupplierSelect = React.forwardRef<HTMLInputElement, SupplierSelectProps>(f
           placeholder={placeholder ?? (naked ? t('common:selects.notSet') : undefined)}
           variant="standard"
           sx={textFieldSx}
+          inputProps={ariaLabel ? { ...params.inputProps, 'aria-label': ariaLabel } : params.inputProps}
           inputRef={(node) => {
             assignRef((params.inputProps as any)?.ref, node);
             assignRef(ref, node ?? null);

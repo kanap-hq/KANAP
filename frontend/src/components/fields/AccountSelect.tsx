@@ -65,6 +65,8 @@ const AccountSelect = React.forwardRef<HTMLInputElement, AccountSelectProps>(fun
   const { t } = useTranslation('common');
   const label = labelProp ?? t('selects.account');
   const naked = hideLabel || label === '';
+  // A hidden label still names the field for assistive technology; the placeholder must not.
+  const ariaLabel = naked && label ? label : undefined;
   // The company's chart of accounts, searched as the user types; nothing before a company is chosen.
   // The chosen account is read by id, whatever its nature: a legacy line keeps showing its account.
   const picker = useLookupPicker<Account>({
@@ -101,6 +103,7 @@ const AccountSelect = React.forwardRef<HTMLInputElement, AccountSelectProps>(fun
           required={required}
           variant="standard"
           sx={textFieldSx}
+          inputProps={ariaLabel ? { ...params.inputProps, 'aria-label': ariaLabel } : params.inputProps}
           inputRef={(node) => {
             assignRef((params.inputProps as any)?.ref, node);
             assignRef(ref, node ?? null);
