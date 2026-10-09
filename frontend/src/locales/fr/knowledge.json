@@ -2,7 +2,7 @@
   "actions": {
     "manageTypes": "Gérer les types",
     "moveCount": "Déplacer ({{count}})",
-    "new": "Nouveau"
+    "newDocument": "Nouveau document"
   },
   "columns": {
     "folder": "Dossier",
@@ -130,6 +130,15 @@
       "root": "Racine"
     }
   },
+  "libraries": {
+    "documentCount_one": "{{count}} document",
+    "documentCount_other": "{{count}} documents",
+    "label": "Bibliothèques",
+    "manage": "Gérer la bibliothèque",
+    "newChip": "Nouvelle",
+    "newLibrary": "Nouvelle bibliothèque",
+    "restrictedAccess": "Accès restreint"
+  },
   "menus": {
     "blankDocument": "Document vierge",
     "fromTemplate": "À partir d'un modèle..."
@@ -176,10 +185,10 @@
     "title": "Déplacer des documents"
   },
   "scope": {
-    "allDocs": "Tous les documents",
+    "allDocs": "Tous",
     "allLibraries": "Toutes les bibliothèques",
     "myDocs": "Mes documents",
-    "myTeamsDocs": "Documents de mon équipe",
+    "myTeamsDocs": "Mon équipe",
     "noTeamAssigned": "Vous n'êtes assigné à aucune équipe.",
     "show": "Afficher :"
   },

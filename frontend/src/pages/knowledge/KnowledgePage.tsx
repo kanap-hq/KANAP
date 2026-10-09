@@ -21,24 +21,22 @@ import {
   Snackbar,
   Stack,
   Switch,
-  Tab,
-  Tabs,
   TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import IconButton from '@mui/material/IconButton';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
-import EditIcon from '@mui/icons-material/Edit';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import SettingsIcon from '@mui/icons-material/Settings';
 import type { ICellRendererParams } from 'ag-grid-community';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
+import ChipToggleBar, { ChipToggleContextLine } from '../../components/ChipToggleBar';
 import { KanapDialog, PropertyRow, StatusDot } from '../../components/design';
 import ServerDataGrid from '../../components/ServerDataGrid';
 import type { EnhancedColDef } from '../../components/ServerDataGrid';
@@ -304,6 +302,8 @@ export default function KnowledgePage() {
   const gridApiRef = useRef<any>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedRows, setSelectedRows] = useState<DocumentRow[]>([]);
+  /** The grid's row count (its filters apply), once a page has loaded. */
+  const [documentTotal, setDocumentTotal] = useState<number | null>(null);
   const [draggedDocuments, setDraggedDocuments] = useState<DraggedDocumentState | null>(null);
   const [draggedFolder, setDraggedFolder] = useState<DraggedFolderState | null>(null);
   const [dragHoveredFolderId, setDragHoveredFolderId] = useState<string | null>(null);
@@ -760,6 +760,7 @@ export default function KnowledgePage() {
 
   React.useEffect(() => {
     clearSelection();
+    setDocumentTotal(null);
     clearDocumentDragState();
     clearFolderDragState();
     resetMoveDialogState();
@@ -1071,7 +1072,7 @@ export default function KnowledgePage() {
     return true;
   }, [canMoveAcrossLibraries, draggedFolder, moveFolderMutation.isPending]);
 
-  const handleLibraryTabDragOver = useCallback((library: DocumentLibrary, event: React.DragEvent<HTMLDivElement>) => {
+  const handleLibraryTabDragOver = useCallback((library: DocumentLibrary, event: React.DragEvent<HTMLElement>) => {
     const canDropDocument = canDropDraggedDocumentsOnLibrary(library);
     const canDropFolder = canDropDraggedFolderOnLibrary(library);
     if (!canDropDocument && !canDropFolder) return;
@@ -1083,7 +1084,7 @@ export default function KnowledgePage() {
     setDragHoveredLibraryId(library.id);
   }, [canDropDraggedDocumentsOnLibrary, canDropDraggedFolderOnLibrary, dragHoveredFolderId]);
 
-  const handleLibraryTabDrop = useCallback((library: DocumentLibrary, event: React.DragEvent<HTMLDivElement>) => {
+  const handleLibraryTabDrop = useCallback((library: DocumentLibrary, event: React.DragEvent<HTMLElement>) => {
     if (draggedDocuments && canDropDraggedDocumentsOnLibrary(library)) {
       event.preventDefault();
       setDragHoveredLibraryId(null);
@@ -1118,171 +1119,182 @@ export default function KnowledgePage() {
   };
 
   const scopeToolbar = (
-    <Stack direction="row" spacing={2} alignItems="center" sx={{ flexWrap: 'wrap', flex: 1, justifyContent: 'space-between' }}>
-      <Stack direction="row" spacing={2} alignItems="center">
-        <FormControlLabel
-          control={(
-            <Switch
-              size="small"
-              checked={searchAllLibraries}
-              onChange={(_, checked) => {
-                if (checked) {
-                  updateQuery({ allLibraries: '1', folder_id: null });
-                } else {
-                  updateQuery({ allLibraries: '0' });
-                }
-              }}
-            />
-          )}
-          label={<Typography variant="body2">{t('scope.allLibraries')}</Typography>}
-        />
-        <Stack direction="row" spacing={0.5} alignItems="center">
-          <Typography variant="body2">{t('scope.show')}</Typography>
-          <RadioGroup
-            row
-            value={docScope}
-            onChange={(e) => setDocScope(e.target.value as 'my' | 'team' | 'all')}
-            sx={{ '& .MuiFormControlLabel-root': { mr: 1 } }}
-          >
-            <FormControlLabel value="my" control={<Radio size="small" />} label={t('scope.myDocs')} />
-            <Tooltip title={hasTeam ? '' : t('scope.noTeamAssigned')}>
-              <span>
-                <FormControlLabel
-                  value="team"
-                  control={<Radio size="small" />}
-                  label={t('scope.myTeamsDocs')}
-                  disabled={!hasTeam}
-                />
-              </span>
-            </Tooltip>
-            <FormControlLabel value="all" control={<Radio size="small" />} label={t('scope.allDocs')} />
-          </RadioGroup>
-        </Stack>
-      </Stack>
-
-      <Stack direction="row" spacing={1} alignItems="center">
-        {activeLibrary?.slug === 'templates' && canAdminLibraries && (
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => setTypesManagerOpen(true)}
-          >
-            {t('actions.manageTypes')}
-          </Button>
-        )}
-        <ButtonGroup variant="contained" size="small">
-          <Button startIcon={<AddIcon />} onClick={goToBlankDocument} disabled={!canManageDocuments || !activeLibrary?.can_write}>
-            {t('actions.new')}
-          </Button>
-          <Button
-            onClick={(e) => setNewDocAnchorEl(e.currentTarget)}
-            disabled={!canManageDocuments || !activeLibrary?.can_write}
-            sx={{ px: 0.5, minWidth: 'auto' }}
-          >
-            <ArrowDropDownIcon />
-          </Button>
-        </ButtonGroup>
-        <Tooltip title={moveDisabledReason}>
-          <span>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={() => {
-                resetMoveDialogState();
-                setMoveDialogOpen(true);
-              }}
-              disabled={!!moveDisabledReason || moveDocumentsMutation.isPending}
-            >
-              {t('actions.moveCount', { count: selectedRows.length })}
-            </Button>
-          </span>
-        </Tooltip>
-        {canAdminLibraries && (
-          <Tooltip title={deleteDisabledReason}>
+    <Stack direction="row" spacing={2} alignItems="center" sx={{ flexWrap: 'wrap' }}>
+      <Stack direction="row" spacing={0.5} alignItems="center">
+        <Typography variant="body2">{t('scope.show')}</Typography>
+        <RadioGroup
+          row
+          value={docScope}
+          onChange={(e) => setDocScope(e.target.value as 'my' | 'team' | 'all')}
+          sx={{ '& .MuiFormControlLabel-root': { mr: 1 } }}
+        >
+          <FormControlLabel value="my" control={<Radio size="small" />} label={t('scope.myDocs')} />
+          <Tooltip title={hasTeam ? '' : t('scope.noTeamAssigned')}>
             <span>
-              <DeleteSelectedButton<DocumentRow>
-                selectedRows={selectedRows}
-                endpoint="/knowledge/bulk"
-                getItemId={(row) => row.id}
-                getItemName={(row) => `${row.item_ref}${row.title ? ` - ${row.title}` : ''}`}
-                gridApi={gridApiRef.current}
-                onDeleteSuccess={() => {
-                  clearSelection();
-                  setRefreshKey((prev) => prev + 1);
-                }}
-                disabled={!!deleteDisabledReason}
-                label={t('common:buttons.delete')}
+              <FormControlLabel
+                value="team"
+                control={<Radio size="small" />}
+                label={t('scope.myTeamsDocs')}
+                disabled={!hasTeam}
               />
             </span>
           </Tooltip>
-        )}
+          <FormControlLabel value="all" control={<Radio size="small" />} label={t('scope.allDocs')} />
+        </RadioGroup>
       </Stack>
+      <FormControlLabel
+        control={(
+          <Switch
+            size="small"
+            checked={searchAllLibraries}
+            onChange={(_, checked) => {
+              if (checked) {
+                updateQuery({ allLibraries: '1', folder_id: null });
+              } else {
+                updateQuery({ allLibraries: '0' });
+              }
+            }}
+          />
+        )}
+        label={<Typography variant="body2">{t('scope.allLibraries')}</Typography>}
+      />
     </Stack>
   );
 
+  const documentActions = (
+    <>
+      <ButtonGroup variant="contained" size="small">
+        <Button startIcon={<AddIcon />} onClick={goToBlankDocument} disabled={!canManageDocuments || !activeLibrary?.can_write}>
+          {t('actions.newDocument')}
+        </Button>
+        <Button
+          onClick={(e) => setNewDocAnchorEl(e.currentTarget)}
+          disabled={!canManageDocuments || !activeLibrary?.can_write}
+          sx={{ px: 0.5, minWidth: 'auto' }}
+        >
+          <ArrowDropDownIcon />
+        </Button>
+      </ButtonGroup>
+      <Tooltip title={moveDisabledReason}>
+        <span>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => {
+              resetMoveDialogState();
+              setMoveDialogOpen(true);
+            }}
+            disabled={!!moveDisabledReason || moveDocumentsMutation.isPending}
+          >
+            {t('actions.moveCount', { count: selectedRows.length })}
+          </Button>
+        </span>
+      </Tooltip>
+      {canAdminLibraries && (
+        <Tooltip title={deleteDisabledReason}>
+          <span>
+            <DeleteSelectedButton<DocumentRow>
+              selectedRows={selectedRows}
+              endpoint="/knowledge/bulk"
+              getItemId={(row) => row.id}
+              getItemName={(row) => `${row.item_ref}${row.title ? ` - ${row.title}` : ''}`}
+              gridApi={gridApiRef.current}
+              onDeleteSuccess={() => {
+                clearSelection();
+                setRefreshKey((prev) => prev + 1);
+              }}
+              disabled={!!deleteDisabledReason}
+              label={t('common:buttons.delete')}
+            />
+          </span>
+        </Tooltip>
+      )}
+    </>
+  );
+
+  const libraryActions = (
+    <>
+      {canCreateLibraries && (
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<AddIcon />}
+          aria-label={t('libraries.newLibrary')}
+          onClick={() => setCreateLibraryOpen(true)}
+        >
+          {t('libraries.newChip')}
+        </Button>
+      )}
+      {activeLibrary && !activeLibrary.is_system && activeLibrary.can_manage && (
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<SettingsIcon />}
+          onClick={() => openLibraryEdit(activeLibrary)}
+        >
+          {t('libraries.manage')}
+        </Button>
+      )}
+      {activeLibrary?.slug === TEMPLATE_LIBRARY_SLUG && canAdminLibraries && (
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={() => setTypesManagerOpen(true)}
+        >
+          {t('actions.manageTypes')}
+        </Button>
+      )}
+    </>
+  );
+  const hasLibraryActions = canCreateLibraries
+    || (!!activeLibrary && !activeLibrary.is_system && !!activeLibrary.can_manage)
+    || (activeLibrary?.slug === TEMPLATE_LIBRARY_SLUG && canAdminLibraries);
+
+  const contextName = searchAllLibraries ? t('scope.allLibraries') : activeLibrary?.name;
+  const contextTitle = contextName
+    ? [contextName, documentTotal != null ? t('libraries.documentCount', { count: documentTotal }) : null]
+      .filter(Boolean)
+      .join(' · ')
+    : null;
+
   return (
     <>
-      <Stack direction="row" alignItems="center" sx={{ mb: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0, flex: 1 }}>
-          <Tabs
-            value={activeLibrary?.slug || false}
-            onChange={(_, value) => updateQuery({ library: String(value), folder_id: null })}
-            variant="scrollable"
-            allowScrollButtonsMobile
-          >
-            {sortedLibraries.map((library) => (
-              <Tab
-                key={library.id}
-                value={library.slug}
-                onDragOver={(event) => handleLibraryTabDragOver(library, event)}
-                onDragLeave={() => {
-                  if (dragHoveredLibraryId === library.id) {
-                    setDragHoveredLibraryId(null);
-                  }
-                }}
-                onDrop={(event) => handleLibraryTabDrop(library, event)}
-                sx={{
-                  borderRadius: 1,
-                  bgcolor: dragHoveredLibraryId === library.id ? 'action.hover' : 'transparent',
-                }}
-                label={(
-                  <Box sx={{ display: 'inline-flex', alignItems: 'center', '&:hover .lib-edit': { opacity: 1 } }}>
-                    <span>{library.name}</span>
-                    {library.is_restricted && (
-                      <LockOutlinedIcon sx={{ ml: 0.5, fontSize: 14, color: 'text.secondary' }} />
-                    )}
-                    {!library.is_system && library.can_manage && (
-                      <Box
-                        component="span"
-                        className="lib-edit"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openLibraryEdit(library);
-                        }}
-                        sx={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          ml: 0.5,
-                          opacity: 0,
-                          transition: 'opacity 0.15s',
-                          '&:hover': { color: 'text.primary' },
-                        }}
-                      >
-                        <EditIcon sx={{ fontSize: 14 }} />
-                      </Box>
-                    )}
-                  </Box>
-                )}
-              />
-            ))}
-          </Tabs>
-          {canCreateLibraries && (
-            <IconButton size="small" onClick={() => setCreateLibraryOpen(true)} sx={{ ml: 1 }}>
-              <AddIcon fontSize="small" />
-            </IconButton>
+      <ChipToggleBar
+        ariaLabel={t('libraries.label')}
+        selectedId={activeLibrary?.slug ?? null}
+        onSelect={(slug) => updateQuery({ library: slug, folder_id: null })}
+        sx={{ mb: 2 }}
+        items={sortedLibraries.map((library) => ({
+          id: library.slug,
+          label: (
+            <>
+              {library.name}
+              {library.is_restricted && <LockOutlinedIcon sx={{ ml: 0.5, fontSize: 14, opacity: 0.8 }} />}
+            </>
+          ),
+          onDragOver: (event) => handleLibraryTabDragOver(library, event),
+          onDragLeave: () => {
+            if (dragHoveredLibraryId === library.id) {
+              setDragHoveredLibraryId(null);
+            }
+          },
+          onDrop: (event) => handleLibraryTabDrop(library, event),
+          highlighted: dragHoveredLibraryId === library.id,
+        }))}
+        actions={hasLibraryActions && libraryActions}
+      />
+      {contextTitle && (
+        <ChipToggleContextLine
+          testId="knowledge-context"
+          title={contextTitle}
+          actions={documentActions}
+          sx={{ mb: 2 }}
+        >
+          {!searchAllLibraries && activeLibrary?.is_restricted && (
+            <Typography variant="body2" color="text.secondary">{t('libraries.restrictedAccess')}</Typography>
           )}
-        </Box>
-      </Stack>
+        </ChipToggleContextLine>
+      )}
 
       <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start' }}>
         {!searchAllLibraries && !!activeLibrary?.id && (
@@ -1322,6 +1334,7 @@ export default function KnowledgePage() {
             onSelectionChanged={(rows) => setSelectedRows(rows)}
             onGridApiReady={(api) => { gridApiRef.current = api; }}
             toolbarExtras={scopeToolbar}
+            onTotalChange={setDocumentTotal}
             onQueryStateChange={(state) => {
               lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
             }}
