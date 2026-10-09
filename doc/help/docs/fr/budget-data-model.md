@@ -71,7 +71,7 @@ Un poste vit sur plusieurs années : une licence sur trois ans est un poste avec
 | Compte | `account_number` | Oui | Dans le plan comptable de la société payeuse |
 | Centre de coûts | `cost_center_code` | Non | Un groupe est refusé |
 | Run ou build | `run_build` | Non | `run` ou `build` |
-| Valeurs analytiques | `analytics:<code>` | Non | Une colonne par dimension active |
+| Valeurs analytiques | `analytics:<code>` | Non | Une colonne par dimension active utilisée pour le type du fichier |
 | Responsable IT, responsable métier | `owner_it_email`, `owner_business_email` | Non | Utilisateurs actifs |
 | Projet | `project` | Non | Un numéro de projet, par exemple `PRJ-3` |
 | Devise | `currency` | Oui | Code ISO à trois lettres |

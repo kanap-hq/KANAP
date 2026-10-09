@@ -58,7 +58,7 @@ Elles sont identiques dans les deux fichiers, sauf les colonnes propres au type 
 | `account_number` | Numéro de compte, dans le plan comptable de la société payeuse | Obligatoire |
 | `cost_center_code` | Code du centre de coûts. Un groupe est refusé | Facultatif |
 | `run_build` | `run` ou `build` | Facultatif |
-| `analytics:<code>` | Le nom de la valeur dans la dimension dont c'est le code. Une colonne par dimension, dimension par défaut incluse | Facultatif. Une valeur inexistante est créée par le chargement |
+| `analytics:<code>` | Le nom de la valeur dans la dimension dont c'est le code. Une colonne par dimension activée utilisée pour les lignes OPEX, dimension par défaut incluse | Facultatif. Une valeur inexistante est créée par le chargement |
 | `owner_it_email` | E-mail d'un utilisateur actif | Facultatif |
 | `owner_business_email` | E-mail d'un utilisateur actif | Facultatif |
 | `project` | Numéro de projet, par exemple `PRJ-3` | Facultatif |
@@ -82,7 +82,7 @@ Elles sont identiques dans les deux fichiers, sauf les colonnes propres au type 
 | `account_number` | Numéro de compte, dans le plan comptable de la société payeuse | Obligatoire |
 | `cost_center_code` | Code du centre de coûts. Un groupe est refusé | Facultatif |
 | `run_build` | `run` ou `build` | Facultatif |
-| `analytics:<code>` | Le nom de la valeur dans la dimension dont c'est le code. Une colonne par dimension, dimension par défaut incluse | Facultatif. Une valeur inexistante est créée par le chargement |
+| `analytics:<code>` | Le nom de la valeur dans la dimension dont c'est le code. Une colonne par dimension activée utilisée pour les lignes CAPEX, dimension par défaut incluse | Facultatif. Une valeur inexistante est créée par le chargement |
 | `owner_it_email` | E-mail d'un utilisateur actif | Facultatif |
 | `owner_business_email` | E-mail d'un utilisateur actif | Facultatif |
 | `project` | Numéro de projet, par exemple `PRJ-3` | Facultatif |
@@ -127,6 +127,7 @@ Une colonne absente conserve toutes les valeurs enregistrées de cette colonne. 
 - Il n'y a pas d'autre clé. Une nouvelle ligne qui ressemble à un poste existant, ou à une autre nouvelle ligne du même fichier, est un avertissement que vous pouvez ignorer.
 - Les fournisseurs sont mis en correspondance par `supplier_erp_id` lorsqu'il est rempli, sinon par `supplier_name`. Un fournisseur nommé par le fichier et absent de KANAP est créé par le chargement lorsque **Créer les fournisseurs manquants** est cochée. Sans cette option, la vérification les liste et vous demande de les créer dans **Données de référence > Fournisseurs**.
 - Une valeur de dimension inexistante est créée par le chargement, et listée dans la vérification. Les comptes, les centres de coûts, les sociétés et les utilisateurs ne sont jamais créés : un élément inconnu est une erreur de ligne qui indique où l'ajouter.
+- Un fichier qui contient une colonne `analytics:<code>` pour une dimension réservée à l'autre type de ligne est refusé en entier, par exemple « The Recurrence dimension is for CAPEX lines only. Remove the analytics:recurrence column from this OPEX file. » L'export n'écrit aucune colonne pour une telle dimension : une valeur masquée sur une ligne n'est donc pas exportée, et un chargement la laisse en place. Le réglage se trouve dans [Dimensions analytiques](analytics.md#dimensions-opex-ou-capex).
 - Une ligne du fichier qui crée une ligne budgétaire, ou qui change son compte, est refusée lorsque le compte est réservé à l'autre type de ligne, avec le message « Account 6061 is for CAPEX lines only. » (ou OPEX). Une ligne budgétaire garde son compte actuel. Le réglage des comptes se trouve dans [Plans comptables et gestion des comptes](chart-of-accounts.md#comptes-opex-ou-capex).
 - Les projets sont mis en correspondance par leur numéro, par exemple `PRJ-3`.
 - Un poste terminé est un poste dont la `end_of_validity` est passée. Indiquez la date pour terminer un poste, ou écrivez `-` dans la cellule pour l'effacer et laisser le poste en cours. Il n'y a pas de colonne de statut.

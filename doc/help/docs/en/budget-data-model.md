@@ -71,7 +71,7 @@ A line lives across years: a three-year licence is one line with three budget ye
 | Account | `account_number` | Yes | In the chart of accounts of the paying company |
 | Cost center | `cost_center_code` | No | A group is refused |
 | Run or build | `run_build` | No | `run` or `build` |
-| Analytics values | `analytics:<code>` | No | One column per enabled dimension |
+| Analytics values | `analytics:<code>` | No | One column per enabled dimension used for the file's type |
 | IT owner, business owner | `owner_it_email`, `owner_business_email` | No | Active users |
 | Project | `project` | No | A project number such as `PRJ-3` |
 | Currency | `currency` | Yes | Three-letter ISO code |
