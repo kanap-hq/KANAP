@@ -40,6 +40,7 @@ https://doc.kanap.net/on-premise/configuration/
 Parameters:
 - Address users open: https://kanap.example.com
 - Administrator email: admin@example.com
+- Organization name: Example Company
 - Certificate (keep one line):
   - Public name: get a certificate from Let's Encrypt, with automatic renewal.
   - Internal certificate: the files are on this server at <path of the full
@@ -112,12 +113,13 @@ The agent asks for confirmation before running commands on your server. When it 
 ## After installation
 
 1. **Read the report.** Check the start-up lines: a `[SECURITY]`, `[CONFIG]` or `[CORS]` warning, or an `[ENV] APP_ENV is not set` line, means a setting needs attention (see [Configuration](configuration.md#what-the-api-log-shows-at-start)).
-2. **Review your `.env` file** at `/opt/kanap/.env`. It is readable by its owner only and holds every secret. Adjust settings such as the organization name.
-3. **Configure email** if you haven't already: see [Configuration](configuration.md) for SMTP or Resend setup. Email enables password reset, invitations, and notifications.
+2. **Review your `.env` file** at `/opt/kanap/.env`. It is readable by its owner only and holds every secret.
+3. **Configure email** if you haven't already: see [Configuration](configuration.md) for SMTP or Resend setup, then [test it](configuration.md#test-the-email). Email enables password reset, invitations, and notifications.
 4. **Sign in** at `https://your-address` with `ADMIN_EMAIL` and the `ADMIN_PASSWORD` of `.env`: `grep '^ADMIN_PASSWORD=' /opt/kanap/.env` shows it. Change it in your profile if you want one only you know.
-5. **Set up the backups** and read the [Operations](operations.md) guide for upgrades and monitoring.
-6. **Keep the encryption key.** `/etc/default/rustfs` holds the key that encrypts the stored files. Keep it with your configuration backup.
-7. **Remove passwordless sudo.** The installation is complete, restore normal security:
+5. **Add your logo and colors** in **Admin → Branding** (optional).
+6. **Set up the backups** and read the [Operations](operations.md) guide for upgrades and monitoring.
+7. **Keep the encryption key.** `/etc/default/rustfs` holds the key that encrypts the stored files. Keep it with your configuration backup.
+8. **Remove passwordless sudo.** The installation is complete, restore normal security:
 
     ```bash
     sudo rm /etc/sudoers.d/90-install-nopasswd

@@ -25,14 +25,16 @@ Write the value exactly. A misspelled value (`single_tenant`) starts KANAP in cl
 | Variable              | Required | Default           | Description                                                     |
 | --------------------- | -------- | ----------------- | --------------------------------------------------------------- |
 | `DEFAULT_TENANT_SLUG` | No       | `default`         | Internal identifier for the tenant (URL-safe, lowercase)        |
-| `DEFAULT_TENANT_NAME` | No       | `My Organization` | Your organization's name, displayed in the UI header and reports |
+| `DEFAULT_TENANT_NAME` | No       | `My Organization` | Your organization's name: the text alternative of the logo, and the name the AI assistant uses |
 
 On first boot, KANAP creates a tenant using these values. The defaults work for most deployments. A new installation also receives the default IFRS chart of accounts, set as its default and consolidation chart (upgrading an existing installation does not add it).
 
 Set both before the first start:
 
 - Changing `DEFAULT_TENANT_SLUG` later makes KANAP create a second, empty workspace and serve that one. The first workspace stays in the database, out of reach.
-- Changing `DEFAULT_TENANT_NAME` later has no effect. Rename the organization in the application.
+- Changing `DEFAULT_TENANT_NAME` later has no effect, and the application has no page to rename the organization. Set the name before the first start.
+
+To give KANAP the look of your organization, add your logo and colors in **Admin → Branding**.
 
 ## Required: admin credentials
 
@@ -99,7 +101,7 @@ Read the API log after every start and after every change to `.env`:
 
 ```bash
 cd /opt/kanap
-docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|^Admin seeding|WARN|ERROR|successfully started'
+docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|^Admin seeding|WARN|ERROR|successfully started|Email transport'
 ```
 
 The filter keeps the lines below and leaves out the framework details. Without it, `docker compose -f infra/compose.onprem.yml logs api` shows everything.
@@ -127,7 +129,7 @@ Admin seeding disabled (set SEED_ADMIN=true to enable)
 [DB] pool budget: 1 process × 20 connections = 20 of 87 usable (...)
 ```
 
-The number of migrations changes from version to version. On later starts it is `0 executed` (or the number of new migrations after an upgrade), and the four `[on-prem]` creation lines give way to `Administrator account ... left unchanged`. Without an email transport you also see `WARN [EmailService] No outbound email transport configured; email sending is disabled.`
+The number of migrations changes from version to version. On later starts it is `0 executed` (or the number of new migrations after an upgrade), and the four `[on-prem]` creation lines give way to `Administrator account ... left unchanged`. The email line depends on your settings: `LOG [EmailService] Email transport selected: ...` with an email transport, `WARN [EmailService] No outbound email transport configured; email sending is disabled.` without one.
 
 **Lines to know.**
 
@@ -153,6 +155,8 @@ The number of migrations changes from version to version. On later starts it is 
 | `[on-prem] Restored ... as an enabled administrator: the workspace had no active administrator (password unchanged)` | A warning. No active administrator was left, so KANAP restored the `ADMIN_EMAIL` account. |
 | `[SECURITY] JWT_SECRET is shorter than 32 characters. ...` | Set a longer random value (`openssl rand -hex 32`) and recreate the API: everyone signs in again and pending password reset links stop working. |
 | `[SECURITY] The account of ADMIN_EMAIL still has the password from ADMIN_PASSWORD, which is an example value from the documentation or shorter than 12 characters. ...` | Change the administrator's password in the application, or follow [Password reset](operations.md#password-reset). The line stops once the password is changed. |
+| `LOG [EmailService] Email transport selected: smtp (<host>:<port>, secure=false)` | Email is on, through the SMTP relay shown. `secure=true` means implicit TLS (`SMTP_SECURE`). With Resend the line ends with `selected: resend`. To test it, see [Test the email](#test-the-email). |
+| `WARN [EmailService] No outbound email transport configured; email sending is disabled.` | No email transport is set. Invitations, password reset and notifications send nothing. See [Optional: email via SMTP](#optional-email-via-smtp-single-tenant-on-premise-only). |
 | `[DB] pool budget: ...` | Informational. A `pool budget exceeded` warning means `API_WORKERS` × `DB_POOL_MAX` is too high for PostgreSQL's `max_connections`. |
 
 ## Upgrading an installation from before version 26.10.1
@@ -279,6 +283,7 @@ Notes:
 - If `SMTP_SECURE` is unset, KANAP defaults to `true` for port `465` and `false` otherwise.
 - If both SMTP and Resend are configured in single-tenant mode, SMTP takes precedence.
 - `SMTP_FROM` should be an address your SMTP server is allowed to send as.
+- A relay on the KANAP server itself: set `SMTP_HOST=host.docker.internal`, which is how the API container reaches the server. The relay must listen on the Docker bridge address (`172.17.0.1` by default), and the firewall must allow its port from the Docker networks (see the command below).
 - A relay whose TLS certificate comes from your company's authority needs that authority: see [Certificates from an internal authority](#optional-certificates-from-an-internal-authority).
 - If mail is sent outside your network, configure SPF, DKIM, and DMARC on the sender domain through your mail administrator or provider.
 
@@ -316,6 +321,17 @@ SMTP_FROM=KANAP <noreply@company.com>
 ```
 
 Use the Microsoft 365 profile only if SMTP AUTH is allowed for the mailbox and tenant.
+
+**A relay on the KANAP server.** Allow the API container to reach it. Set the port of your relay in the first line:
+
+```bash
+SMTP_PORT=25   # the SMTP_PORT of .env
+sudo ufw allow from 172.16.0.0/12 to any port "$SMTP_PORT" proto tcp
+```
+
+### Test the email
+
+After a change to the email settings, recreate the API (`docker compose -f infra/compose.onprem.yml up -d api`). The API log then shows `Email transport selected` (see [What the API log shows at start](#what-the-api-log-shows-at-start)). To send a test message, open the sign-in page, choose **Forgot password** and enter the email of an existing account that signs in with a password. The message arrives with a link that starts with your `APP_BASE_URL`. Accounts that sign in with Microsoft Entra receive no reset message.
 
 ## Optional: certificates from an internal authority
 
@@ -546,6 +562,7 @@ These connections stay on the server: loopback or the Docker networks.
 | nginx → web container | 8081 | Bound to `127.0.0.1` |
 | API container → PostgreSQL | 5432 | Via `host.docker.internal`, which is the Docker bridge address of the server (`172.17.0.1` by default). Allow it from the Docker networks only (`172.16.0.0/12`). |
 | API container → object storage | 9000 | Same path. In the installation example the storage listens on `172.17.0.1` only. |
+| API container → mail relay on the server | Its `SMTP_PORT` | Only when the relay runs on the KANAP server. Same path: the relay listens on `172.17.0.1`, and the rule allows its port from `172.16.0.0/12`. |
 
 `172.16.0.0/12` covers every network Docker creates by default. A narrower rule uses the network of the KANAP containers: after the first start, `docker network inspect infra_default` shows its subnet.
 

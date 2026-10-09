@@ -355,6 +355,7 @@ The smoke test of step 9 reads it from `.env` without showing it. Step 10 shows 
 Notes on the file:
 
 - The administrator account is created at the first start from `ADMIN_EMAIL` and `ADMIN_PASSWORD`. Changing them later changes nothing while an active administrator exists.
+- `DEFAULT_TENANT_NAME` is your organization's name. KANAP reads it at the first start only, and the application has no page to change it. Replace `My Organization` in `.env` before step 7.
 - The `DATABASE_URL` password and the `JWT_SECRET` were generated in step 0. Do not reuse example values.
 - With `sslmode=disable` the connection to PostgreSQL stays on the server. For another PostgreSQL server, see [`sslmode`](configuration.md#required-database).
 - If you reach KANAP by IP address instead of a name, set `APP_BASE_URL` and `CORS_ORIGINS` to `https://<ip address>`.
@@ -372,7 +373,7 @@ cd /opt/kanap
 docker compose -f infra/compose.onprem.yml build --pull
 docker compose -f infra/compose.onprem.yml up -d --wait
 docker compose -f infra/compose.onprem.yml ps
-docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|^Admin seeding|WARN|ERROR|successfully started'
+docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|^Admin seeding|WARN|ERROR|successfully started|Email transport'
 ```
 
 If the build stops with `signal: killed`, the server ran out of memory. `sudo dmesg | grep -i oom` confirms it. Check the free memory with `free -m` and stop the other services that use it. Check that PostgreSQL and the storage still run (`pg_lsclusters`, `systemctl status rustfs`). Then restart Docker, which stops what is left of the killed build, build the two images one after the other, which needs less memory, and start KANAP:
@@ -580,7 +581,7 @@ curl -sSk -o /dev/null -w "%{http_code}\n" "https://${KANAP_HOST}/"
 # Expected: 200
 ```
 
-Then run the smoke test. It checks the database, the storage, the sign-in and the exports through the public API, the way the web app does. The server has no Node.js, so it runs in a container. The first line reads the administrator password from `.env` into the environment of the test without showing it. The first run downloads the `node:24-alpine` image (about 240 MB). `KANAP_WRITE=1` also creates a temporary task with an attachment, which checks the storage, and deletes it again. Use it right after installation only: it writes to the data. The temporary task uses one task reference (`T-1` on a new installation), so your first task is `T-2`. `KANAP_INSECURE_TLS=1` accepts a certificate the container does not trust: keep it with a self-signed certificate. With a certificate from your internal authority, you can keep it or let the container check the certificate: put the authority's file in `/opt/kanap/infra/certs/` (see [Certificates from an internal authority](configuration.md#optional-certificates-from-an-internal-authority)) and replace `-e KANAP_INSECURE_TLS=1` with `-v /opt/kanap/infra/certs:/certs:ro -e NODE_EXTRA_CA_CERTS=/certs/company-ca.pem`. With Let's Encrypt, remove `-e KANAP_INSECURE_TLS=1`.
+Then run the smoke test. It checks the database, the storage, the sign-in and the exports through the public API, the way the web app does. The server has no Node.js, so it runs in a container. The first line reads the administrator password from `.env` into the environment of the test without showing it. The first run downloads the `node:24-alpine` image from Docker Hub (about 240 MB) and keeps it for later runs. `KANAP_WRITE=1` also creates a temporary task with an attachment, which checks the storage, and deletes it again. Use it right after installation only: it writes to the data. The temporary task uses one task reference (`T-1` on a new installation), so your first task is `T-2`. `KANAP_INSECURE_TLS=1` accepts a certificate the container does not trust: keep it with a self-signed certificate. With a certificate from your internal authority, you can keep it or let the container check the certificate: put the authority's file in `/opt/kanap/infra/certs/` (see [Certificates from an internal authority](configuration.md#optional-certificates-from-an-internal-authority)) and replace `-e KANAP_INSECURE_TLS=1` with `-v /opt/kanap/infra/certs:/certs:ro -e NODE_EXTRA_CA_CERTS=/certs/company-ca.pem`. With Let's Encrypt, remove `-e KANAP_INSECURE_TLS=1`.
 
 ```bash
 . ~/kanap-install.env
@@ -606,7 +607,7 @@ docker compose -f infra/compose.onprem.yml logs api | grep 'PutObject fallback' 
 1. Open `https://<your name>` in a browser (accept the certificate warning if you use a self-signed certificate; the workstation must resolve the name).
 2. Sign in with `ADMIN_EMAIL` and the administrator password. To see the password, run `grep '^ADMIN_PASSWORD=' /opt/kanap/.env` on the server. It shows on screen, so run it when nobody else can see your screen.
 3. Change the password in your profile right after this first sign-in. KANAP reads the `.env` value at the first start only.
-4. Set your organization name in the administration settings.
+4. Add your logo and colors in **Admin → Branding** (optional).
 5. Invite additional users (if email is configured).
 
 The installation is complete. `~/kanap-install.env` has done its job: every value now lives in `/opt/kanap/.env`, `/etc/default/rustfs` and the PostgreSQL role. Delete the file:

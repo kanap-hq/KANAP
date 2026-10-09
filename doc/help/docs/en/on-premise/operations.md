@@ -7,6 +7,8 @@ KANAP_HOST=kanap.example.internal    # the name users type to open KANAP, withou
 ADMIN_EMAIL=admin@example.internal   # the email of an administrator account
 ```
 
+The `curl` commands on this page use `-k`. They check what KANAP answers, so they also accept a certificate the server does not trust (self-signed, or from an internal authority that is not installed on the server).
+
 ## Upgrade procedure
 
 KANAP publishes a new version about once a month. The `stable` branch always points to the latest published version. Every version has an entry in `CHANGELOG.md` at the root of the repository. An entry that needs something from you (a setting to change, a step to run) has "Action required" in its title.
@@ -19,7 +21,7 @@ git fetch origin stable
 git diff HEAD origin/stable -- CHANGELOG.md
 ```
 
-**2. Back up the database and the files.** See [Backup and restore](#backup-and-restore). Migrations only go forward: a backup is the way back.
+**2. Back up the database, the files and the configuration.** Run the commands of [Before an upgrade](#before-an-upgrade). They write to a directory of their own, which the daily backup never touches. Migrations only go forward: this backup is the way back.
 
 **3. Pull, build, start.**
 
@@ -33,9 +35,9 @@ docker compose -f infra/compose.onprem.yml up -d
 # its running background jobs (up to 20 s), then stops. Migrations run when the new one starts.
 ```
 
-Docker Compose builds the `api` and `web` images itself, from the sources you just pulled. `--pull` also fetches updated base images. Running `up -d` alone keeps the old version, because Compose reuses the images it already has. Always run `build` first. On a server with 4 GB of RAM the build uses almost all of the memory: stop other heavy services while it runs.
+Docker Compose builds the `api` and `web` images itself, from the sources you just pulled. `--pull` also fetches updated base images. Running `up -d` alone keeps the old version, because Compose reuses the images it already has. Always run `build` first. The build needs the memory of the [installation prerequisites](installation.md#prerequisites). If it stops with `signal: killed`, the server ran out of memory: build the two images one after the other (`build --pull api`, then `build --pull web`), then run `up -d`.
 
-**A precise version.** To run a published version other than the latest, fetch the tags and check one out. The checkout is detached: return to `stable` with `git checkout stable` before the next upgrade.
+**A precise version.** To run a published version other than the latest, fetch the tags and check one out. The checkout is detached. The `git checkout stable` of step 3 brings it back to the branch at the next upgrade.
 
 ```bash
 git fetch --tags
@@ -51,7 +53,7 @@ Then run the `build --pull` and `up -d` commands above.
 ```bash
 cd /opt/kanap
 git describe --tags
-curl -sS "https://${KANAP_HOST}/api/config/public"
+curl -sSk -w '\n' "https://${KANAP_HOST}/api/config/public"
 ```
 
 The first command prints the version of the checkout. The second one answers with a JSON document whose `version` field is the version the API reports.
@@ -61,15 +63,15 @@ The first command prints the version of the checkout. The second one answers wit
 ```bash
 cd /opt/kanap
 docker compose -f infra/compose.onprem.yml ps
-docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|^Admin seeding|WARN|ERROR|successfully started'
-curl -sS "https://${KANAP_HOST}/api/health"
+docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|^Admin seeding|WARN|ERROR|successfully started|Email transport'
+curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
 ```
 
-- `ps` shows `api` and `web` as `healthy` after about a minute.
+- `ps` shows `api` and `web` as `healthy` after about a minute. When the new version did not change the web content, Compose keeps the running `web` container, and `ps` can show an image id in place of `infra-web`. That is expected.
 - The API log shows the migrations (`[entrypoint] Migrations complete (N executed).`) and then the start of the API (`Nest application successfully started`). Read the other start-up lines too: [Configuration](configuration.md#what-the-api-log-shows-at-start) explains each one.
-- The health address answers `{"status":"ok"}`. Add `-k` to `curl` when the server does not trust the certificate (self-signed, or an internal authority not installed on the server).
+- The health address answers `{"status":"ok"}`.
 
-Then run the smoke test. It checks the database, the sign-in, the main lists and the exports through the public API. The server has no Node.js, so it runs in a container. Type the administrator password at the prompt; nothing shows as you type. Keep `-e KANAP_INSECURE_TLS=1` when the certificate is self-signed (the container does not trust it); remove it with a certificate from a public authority. With a certificate from your internal authority, keep it, or replace it with `-v /opt/kanap/infra/certs:/certs:ro -e NODE_EXTRA_CA_CERTS=/certs/company-ca.pem` to let the container check the certificate against the authority's file in `/opt/kanap/infra/certs/` (see [Certificates from an internal authority](configuration.md#optional-certificates-from-an-internal-authority)). Do not add `-e KANAP_WRITE=1` on a production installation: that option creates a temporary task with an attachment to check the storage, which suits a new installation only.
+Then run the smoke test. It checks the database, the sign-in, the main lists and the exports through the public API. The server has no Node.js, so it runs in a container. The first run on a server downloads the `node:24-alpine` image from Docker Hub (about 240 MB) and keeps it: run the test once while outbound access is open (see [Firewall rules](configuration.md#outbound-initial-setup-and-build)). At the prompt, type the current password of the `ADMIN_EMAIL` account; nothing shows as you type. The `ADMIN_PASSWORD` of `.env` is read at the first start only, so it may no longer be the right one. Keep `-e KANAP_INSECURE_TLS=1` when the certificate is self-signed (the container does not trust it); remove it with a certificate from a public authority. With a certificate from your internal authority, keep it, or replace it with `-v /opt/kanap/infra/certs:/certs:ro -e NODE_EXTRA_CA_CERTS=/certs/company-ca.pem` to let the container check the certificate against the authority's file in `/opt/kanap/infra/certs/` (see [Certificates from an internal authority](configuration.md#optional-certificates-from-an-internal-authority)). Do not add `-e KANAP_WRITE=1` on a production installation: that option creates a temporary task with an attachment to check the storage, which suits a new installation only.
 
 ```bash
 read -rsp 'Administrator password: ' KANAP_PASSWORD; echo; export KANAP_PASSWORD
@@ -82,16 +84,17 @@ unset KANAP_PASSWORD
 
 The last line of the output reads `0 failed`.
 
-**Rollback.** Migrations only go forward, so a rollback puts back the backups taken before the upgrade, under the previous version:
+**Rollback.** Migrations only go forward, so a rollback puts back the backup taken before the upgrade, under the previous version:
 
 1. Stop KANAP: `docker compose -f infra/compose.onprem.yml down`.
 2. Check out the previous version and build it: `git checkout v<previous version>` (for example `git checkout v26.10.1`), then `docker compose -f infra/compose.onprem.yml build --pull`.
-3. Restore the database and the files: steps 2 to 4 of [Restore](#restore).
+3. Restore the database and the files from the `before-upgrade-...` directory of that upgrade: choose the backup, then run steps 1 to 3 of [Restore](#restore). If you changed `.env` for the new version, compare it with the copy in the `config` directory of the backup.
 4. Start KANAP: `docker compose -f infra/compose.onprem.yml up -d --wait`.
 5. Check it as above.
-6. Before the next upgrade, return to the branch: `git checkout stable`.
 
 Build the previous version before you start KANAP: a start with the newer version would run its migrations on the restored database again.
+
+After a rollback, stay on the tag of the version you rolled back to. The `git checkout stable` of the upgrade procedure (its step 3) brings the checkout back to the branch at the next upgrade. The checkout (`git describe --tags`) and the running API (`/api/config/public`, see [Which version runs](#upgrade-procedure)) must show the same version. If they differ, the next `build` changes the running version.
 
 ## Version support
 
@@ -160,49 +163,98 @@ EOF
 
 **Test a restore every few months**, on a spare server, so that you know the backups work before you need them.
 
+### Before an upgrade
+
+Before each upgrade, take a full backup into a dated directory of its own, for example `/var/backups/kanap/before-upgrade-20261009-1400/`. It holds `db.dump`, `files/` and `config/`. The daily backup writes other names, so it never overwrites this one.
+
+```bash
+B=/var/backups/kanap/before-upgrade-$(date +%Y%m%d-%H%M)
+sudo install -d -o postgres -g postgres -m 0700 "$B"
+sudo install -d -m 0700 "$B/files" "$B/config"
+sudo -u postgres pg_dump -Fc -f "$B/db.dump" kanap
+sudo -u postgres pg_restore --list "$B/db.dump" | head -5
+sudo rc mirror --overwrite --remove kanapstore/kanap-files "$B/files"
+sudo cp -p /opt/kanap/.env /etc/default/rustfs "$B/config/"
+echo "$B"
+```
+
+The last line prints the directory. Note it: a rollback restores from it. With another S3 store, replace the `rc mirror` line with the `rclone sync` command of the files backup above, with `"$B/files"` as the destination.
+
+Keep this directory until the new version has run without trouble for a few weeks. The daily `find ... -mtime +30 -delete` of the cron file removes old daily dumps only. Delete an old `before-upgrade-...` directory yourself: list them with `sudo ls /var/backups/kanap/`, then run `sudo rm -r` followed by the path of the directory.
+
 ### Restore
 
-Run these steps in order. They replace the database and the files with the content of the backups.
+These steps replace the database and the files with the content of a backup. Run them in order, in one terminal: each step uses the variables you set first.
+
+**Choose the backup.** List the backups:
+
+```bash
+sudo ls /var/backups/kanap/
+```
+
+The list shows the `before-upgrade-...` directories and the daily dumps (`db-YYYY-MM-DD.dump`). To restore a backup taken before an upgrade, set its directory:
+
+```bash
+BACKUP=/var/backups/kanap/before-upgrade-20261009-1400   # your directory
+DUMP="$BACKUP/db.dump"
+FILES="$BACKUP/files"
+```
+
+To restore a daily backup instead, set the dump of that day. The daily files copy holds the latest state of the files:
+
+```bash
+DUMP=/var/backups/kanap/db-2026-10-09.dump   # your date
+FILES=/var/backups/kanap/files
+```
+
+**1. Restore the database.** This block stops KANAP, recreates the database owned by the application role and restores the dump. It runs nothing unless the dump file exists and `pg_restore` can read it:
 
 ```bash
 cd /opt/kanap
-sudo ls /var/backups/kanap/                                  # the dumps, one per day
-DUMP=$(sudo sh -c 'ls -1 /var/backups/kanap/db-*.dump' | tail -n 1)  # the latest; or DUMP=/var/backups/kanap/db-2026-10-09.dump
-echo "$DUMP"
-
-# 1. Stop KANAP
-docker compose -f infra/compose.onprem.yml down
-
-# 2. Recreate the database, owned by the application role
-sudo -u postgres psql <<'SQL'
-DROP DATABASE kanap;
-CREATE DATABASE kanap OWNER kanap TEMPLATE template0;
-SQL
-
-# 3. Restore the dump
-sudo -u postgres pg_restore -d kanap "$DUMP"
-
-# 4. Restore the files (the copy replaces the content of the bucket)
-sudo rc mirror --overwrite --remove /var/backups/kanap/files kanapstore/kanap-files
-
-# 5. Start KANAP
-docker compose -f infra/compose.onprem.yml up -d --wait
+sudo test -s "$DUMP" \
+  && sudo -u postgres pg_restore --list "$DUMP" </dev/null >/dev/null \
+  && docker compose -f infra/compose.onprem.yml down \
+  && sudo -u postgres psql -X -v ON_ERROR_STOP=1 -c 'DROP DATABASE IF EXISTS kanap' \
+  && sudo -u postgres psql -X -v ON_ERROR_STOP=1 -c 'CREATE DATABASE kanap OWNER kanap TEMPLATE template0' \
+  && sudo -u postgres pg_restore -d kanap "$DUMP" </dev/null \
+  && echo 'Database restored' \
+  || echo 'Stopped. Read the message above; with no message, DUMP is empty or the file is missing.'
 ```
 
-Run `pg_restore` as `postgres` and without `--no-owner`. The dump records the owner of every object (`kanap`), so the restore gives the tables back to the application role, with their row-level security settings. With `--no-owner` the tables would belong to `postgres` and the API could not use them. The `kanap` role must exist: on a new server, create it as in the installation example before step 2.
+The last line reads `Database restored`. When it reads `Stopped`, nothing after the failed command ran.
 
-Check the result. The first query prints `0` (no table owned by another role) and the second one prints a number above `0` (the tables that carry row-level security):
+Run `pg_restore` as `postgres` and without `--no-owner`. The dump records the owner of every object (`kanap`), so the restore gives the tables back to the application role, with their row-level security settings. With `--no-owner` the tables would belong to `postgres` and the API could not use them. The `kanap` role must exist: on a new server, create it as in [step 4 of the installation example](installation-example.md#4-postgresql) before this step.
+
+**2. Restore the files.** The copy replaces the content of the bucket. The command runs only if the copy exists:
+
+```bash
+sudo test -d "$FILES" \
+  && sudo rc mirror --overwrite --remove "$FILES" kanapstore/kanap-files \
+  && echo 'Files restored' \
+  || echo 'Files not restored. Read the message above; with no message, FILES is empty or the directory is missing.'
+```
+
+If the storage was lost too, set it up again as in [step 5 of the installation example](installation-example.md#5-object-storage-rustfs), with the same `/etc/default/rustfs`, before this step.
+
+**3. Check the result.** The first query prints `0` (no table owned by another role) and the second one prints a number above `0` (the tables that carry row-level security):
 
 ```bash
 sudo -u postgres psql -d kanap -Atc "SELECT count(*) FROM pg_tables WHERE schemaname = 'public' AND tableowner <> 'kanap'"
 sudo -u postgres psql -d kanap -Atc "SELECT count(*) FROM pg_class WHERE relrowsecurity AND relforcerowsecurity"
 ```
 
-Then run the smoke test of [Check the upgrade](#upgrade-procedure) and open KANAP in a browser. If storage was lost too, set it up again as in the installation example (the same `/etc/default/rustfs`) before step 4.
+**4. Start KANAP.**
+
+```bash
+cd /opt/kanap
+docker compose -f infra/compose.onprem.yml up -d --wait
+```
+
+Then run the smoke test of [Check the upgrade](#upgrade-procedure) and open KANAP in a browser.
 
 ## Maintenance tools image
 
-The API image holds the compiled application only. A maintenance command that needs TypeScript, such as `npm run typeorm`, runs in a second image built from the same sources. Build it once, and again after each upgrade:
+The API image holds the compiled application only. A maintenance command that needs TypeScript, such as `npm run typeorm`, runs in a second image built from the same sources. Build it from the current checkout right before each use, so that it matches the running version. The build reuses the cached layers of the API image and takes a few seconds:
 
 ```bash
 cd /opt/kanap
@@ -218,7 +270,7 @@ docker run --rm --env-file .env --add-host host.docker.internal:host-gateway \
 
 ## PostgreSQL settings
 
-PostgreSQL's defaults are sized for a small machine. `infra/postgres/kanap-pg-tune.sh` prints settings sized from your server's memory (memory, SSD costs, slow statement log, statement statistics). Run it on the PostgreSQL server and read the file before applying it: its header explains each value. The installation example applies it in step 3.
+PostgreSQL's defaults are sized for a small machine. `infra/postgres/kanap-pg-tune.sh` prints settings sized from your server's memory (memory, SSD costs, slow statement log, statement statistics). Run it on the PostgreSQL server and read the file before applying it: its header explains each value. The installation example applies it in [step 4](installation-example.md#size-postgresql-for-this-server).
 
 ```bash
 cd /opt/kanap
@@ -250,8 +302,8 @@ KANAP's migrations also make autovacuum start earlier on the two largest tables 
 **Health.** The API answers `GET /health` on its own port and `GET /api/health` through the reverse proxy. Both return `{"status":"ok"}`:
 
 ```bash
-curl -sS http://127.0.0.1:8080/health
-curl -sS "https://${KANAP_HOST}/api/health"
+curl -sSk -w '\n' http://127.0.0.1:8080/health
+curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
 ```
 
 **Containers.** `docker compose ps` shows `healthy` for `api` and `web` once they answer. Docker only reports it: nothing restarts on that status.
@@ -276,7 +328,7 @@ Set `OPS_METRICS_TOKEN` in `.env` (24 characters or more, for example `openssl r
 
 ```bash
 OPS_METRICS_TOKEN=$(grep '^OPS_METRICS_TOKEN=' /opt/kanap/.env | cut -d= -f2-)
-curl -sS -H "Authorization: Bearer ${OPS_METRICS_TOKEN}" "https://${KANAP_HOST}/api/ops/metrics"
+curl -sSk -H "Authorization: Bearer ${OPS_METRICS_TOKEN}" "https://${KANAP_HOST}/api/ops/metrics"
 ```
 
 The answer is JSON. Without the setting the address answers 404. It answers even when the API is overloaded: the figures that need the database are then marked `db.statsStale`. The fields to watch:
@@ -340,7 +392,7 @@ Set the email of the account in the first line, then type the new password at th
 cd /opt/kanap
 USER_EMAIL=admin@example.internal   # the account to reset
 read -rsp 'New password: ' NEW_PASSWORD; echo
-HASH=$(docker compose -f infra/compose.onprem.yml exec -T api node -e "require('argon2').hash(process.argv[1]).then(console.log)" "$NEW_PASSWORD")
+HASH=$(docker compose -f infra/compose.onprem.yml exec -T api node -e "require('argon2').hash(process.argv[1]).then(console.log)" "$NEW_PASSWORD" </dev/null)
 unset NEW_PASSWORD
 sudo -u postgres psql -d kanap -v hash="$HASH" -v email="${USER_EMAIL}" <<'SQL'
 UPDATE users SET password_hash = :'hash' WHERE lower(email) = lower(:'email');

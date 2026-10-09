@@ -78,6 +78,7 @@ git checkout stable
 cp infra/.env.onprem.example .env
 chmod 600 .env
 nano .env  # Set DATABASE_URL, S3 credentials, ADMIN_EMAIL, ADMIN_PASSWORD, JWT_SECRET,
+#          DEFAULT_TENANT_NAME (your organization's name, read at the first start only),
 #          APP_BASE_URL and CORS_ORIGINS (the exact address users open),
 #          APP_ENV=production (users reach KANAP over HTTPS) and RATE_LIMIT_TRUST_PROXY=true
 # See the Configuration guide for all variables
@@ -242,7 +243,7 @@ server {
 1. Navigate to `https://<your-name>`
 2. Sign in with `ADMIN_EMAIL` and `ADMIN_PASSWORD` from `.env`
 3. **Change the admin password** in your profile if you started with a value you do not want to keep. The `[SECURITY]` warning in the API log stops once the password has been changed (see below).
-4. Configure organization settings
+4. Add your logo and colors in **Admin → Branding** (optional)
 5. Invite additional users (if email is configured)
 
 **About the administrator account.** KANAP creates it at the first start from `ADMIN_EMAIL` and `ADMIN_PASSWORD`, and only then. Changing those two lines later changes nothing while an active administrator exists: change the password in the application. If no active administrator remains, the next start restores the `ADMIN_EMAIL` account as an enabled administrator and keeps its existing password. `ADMIN_PASSWORD` must be a value of your own, 12 characters or more: `openssl rand -base64 18` generates one. An example value or a shorter one makes the API print a `[SECURITY]` warning at each start until the account's password is changed. See [Configuration](configuration.md#required-admin-credentials).
