@@ -46,30 +46,33 @@ Tool-specific or private notes live in each tool's local files, never here.
 - The maintainer tests every change personally on the local dev stack before it goes anywhere.
 - Work and commit locally on a dev branch. **Nothing is pushed or opened before the maintainer
   has validated on dev.** Never push to `main`.
-- Once validated: `gh pr create` (problem, changes, testing notes, screenshots for UI), then add
-  the PR to the merge queue right away: `gh pr merge <n> --auto --squash`. From there the agent
-  owns the PR up to a confirmed merge and reports the merge commit. The maintainer does not need
-  to say "merge".
-- The merge queue tests each PR on `main` plus the PRs ahead of it, in the order they were added,
-  and merges it when `backend (cloud)`, `frontend (cloud)` and `build (onprem)` pass on that
-  combination. Queue runs (`merge_group`) run every job. The repository squashes, keeps `(#NNN)`
-  in the subject and deletes the branch. Do not watch or poll CI: arrange to be notified of a
-  failure (Claude Code: Auto-fix, see `CLAUDE.md`) and report the merge commit on the next
-  exchange. A merge needs no message: no news means it merged.
-- A failed check or a conflict with `main` drops that PR from the queue; the others continue.
-  Fix (merge `main` into the branch for a conflict), push, and add it again with the same command.
+- Once validated: `gh pr create` (problem, changes, testing notes, screenshots for UI), then put
+  the PR in the merge queue at once: `bash .github/scripts/queue-stack.sh <n>`. From there the
+  agent owns the PR up to a confirmed merge and reports the merge commit. The maintainer does not
+  need to say "merge".
+- CI runs in the merge queue only, one PR at a time. The queue tests each PR on `main` plus the
+  PRs ahead of it, in the order they were added, and merges it when `backend (cloud)`,
+  `frontend (cloud)` and `build (onprem)` pass on that combination. On a PR these three jobs are
+  skipped and report as passed within seconds, so the PR can enter the queue right away. A push
+  on `main` runs no CI. The repository squashes, keeps `(#NNN)` in the subject and deletes the
+  branch. Do not watch or poll CI: arrange to be notified of a failure (Claude Code: Auto-fix,
+  see `CLAUDE.md`) and report the merge commit on the next exchange. A merge needs no message:
+  no news means it merged.
+- A failed check or a conflict with `main` drops that PR from the queue, along with the queued
+  PRs that contain it. Fix, merge `origin/main` into the branch, push, and queue it again with
+  the script.
 - One PR at a time per change: no bundling of validated PRs, the queue handles throughput.
 - Releases and deploys to QA and prod are separate from merging and are the maintainer's
   decision; `main` is always releasable.
 - One PR per coherent lot. Keep diffs focused.
 - Stacked PRs: each PR of a stack targets `main` and contains the commits of the PR below it.
-  Only the bottom PR is open as ready; the others stay drafts. When the bottom PR merges, the
-  next one becomes ready: merge `origin/main` into its branch, push, then add it to the queue.
-  The `stack order` job refuses in the queue a PR that contains a PR still open and not ahead of
-  it in the queue (on a PR it only warns). GitHub closes (does not retarget) a PR whose base
-  branch is deleted at merge. Retarget it to `main` first, then delete the base. The base is
-  deleted as soon as it merges, so retarget before adding the base to the queue. CI only runs
-  for PRs targeting `main`.
+  Open the whole stack as ready PRs (no drafts), then queue it in one go, bottom first:
+  `bash .github/scripts/queue-stack.sh <bottom> ... <top>`. The script queues each PR once the
+  previous one is in the queue, so the stack merges in that order. The `stack order` job refuses
+  a queued PR that contains a PR still open and not ahead of it in the queue (on a PR it only
+  warns). After a failure, fix the failing PR, merge `origin/main` into each branch of the stack
+  that left the queue, push, and rerun the script with the same list: it skips merged and queued
+  PRs. CI only runs for PRs targeting `main`.
 - When a task is finished, say so and ask the maintainer to test.
 - Commits: imperative mood, short scope prefix when useful (`backend: ...`, `frontend: ...`,
   `master data: ...`). Attribution footers only when the agent actually wrote the code.
@@ -119,10 +122,8 @@ Tool-specific or private notes live in each tool's local files, never here.
   (`src/common/__tests__/backend-root.ts`), not `__dirname`: the compiled tree holds no `.ts`
   file and no fixture.
 - CI runs the backend and frontend suites in the cloud jobs, and builds both sides in on-premise
-  mode. A failing spec blocks the PR.
-- On a PR, each job runs only when its side changed (`backend/`, `frontend/`; a CI file change runs
-  all three); a skipped job counts as passed. Every job runs for a push on `main` and in the
-  merge queue. The rules live in `.github/scripts/ci-changes.sh`.
+  mode. Every job runs in the merge queue, and only there (see "Workflow with the maintainer"). A
+  failing spec drops the PR from the queue.
 - The frontend check runs as a `frontend build` job and three `frontend tests (i/3)` shards in
   parallel (`vitest run --shard`, split by file); the `frontend (cloud)` job only gathers their
   results. To rerun one shard locally: `npm test -- --shard=2/3` in `frontend/`.

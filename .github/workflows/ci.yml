@@ -1,15 +1,14 @@
 name: CI
 
+# CI runs in the merge queue only. The queue builds one pull request at a time, on top of main
+# and the pull requests ahead of it, and merges it only when the required checks
+# (`backend (cloud)`, `frontend (cloud)`, `build (onprem)`) pass on that combination. On a pull
+# request those jobs are skipped, which reports them as passed within seconds, so the pull
+# request can enter the queue right away; only the stack order warning runs there. A push on
+# main runs nothing: main only receives what the queue has tested.
 on:
-  push:
-    branches: [ main ]
   pull_request:
     branches: [ main ]
-    # `edited` covers a base-branch change: a stacked PR retargeted to main after its base
-    # merged gets no `synchronize`, so without it the required checks never run.
-    types: [ opened, synchronize, reopened, edited ]
-  # The merge queue tests each queued pull request on top of main and the pull requests ahead
-  # of it, and merges it only when the required checks pass on that combination.
   merge_group:
 
 # A new push to a pull request cancels the run of the previous push.
@@ -18,75 +17,55 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Lists the files a pull request changes and decides which of the three jobs below it can
-  # affect (.github/scripts/ci-changes.sh). A skipped job reports its required check as
-  # passed. Every job runs for a push on main and in the merge queue.
-  changes:
-    name: changes
-    runs-on: ubuntu-latest
-    outputs:
-      backend: ${{ steps.decide.outputs.backend }}
-      frontend: ${{ steps.decide.outputs.frontend }}
-      onprem: ${{ steps.decide.outputs.onprem }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          # Full history, so `git diff` can find the merge base of the pull request.
-          fetch-depth: 0
-      - name: Decide which jobs run
-        id: decide
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          if [ "$EVENT_NAME" = pull_request ]; then
-            bash .github/scripts/ci-changes.sh "$BASE_SHA" "$HEAD_SHA"
-          else
-            bash .github/scripts/ci-changes.sh all
-          fi
-
-  # Refuses, in the merge queue, a pull request that contains the commits of another pull
-  # request still open and not ahead of it in the queue (.github/scripts/stack-order.sh). On a
-  # pull request it only warns; on a push it has nothing to check. It is not a required check
-  # itself: the three required jobs below fail when it did not succeed, so its failure blocks
-  # the merge without a change to the repository settings.
-  stack-order:
-    name: stack order
+  # Warns on a pull request that contains the commits of another pull request still open
+  # (.github/scripts/stack-order.sh). Nothing depends on it, so it never delays the required
+  # checks of the pull request.
+  stack-order-pr:
+    name: stack order (pull request)
+    if: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: read
     steps:
       - name: Checkout
-        if: ${{ github.event_name != 'push' }}
         uses: actions/checkout@v4
         with:
           # Full history, so git can tell whether one pull request head contains another.
           fetch-depth: 0
+      - name: Warn when an open pull request below this one is not merged yet
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: bash .github/scripts/stack-order.sh pull-request "$PR_NUMBER" "$PR_BASE"
+
+  # Refuses, in the merge queue, a pull request that contains the commits of another pull
+  # request still open and not ahead of it in the queue. It is not a required check itself:
+  # `frontend (cloud)` fails when it did not succeed, so its failure blocks the merge without a
+  # change to the repository settings.
+  stack-order:
+    name: stack order
+    if: ${{ github.event_name == 'merge_group' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Check that no open pull request below this one waits behind it
         env:
           GH_TOKEN: ${{ github.token }}
-          EVENT_NAME: ${{ github.event_name }}
           QUEUE_REF: ${{ github.event.merge_group.head_ref }}
           QUEUE_BASE: ${{ github.event.merge_group.base_sha }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_BASE: ${{ github.event.pull_request.base.sha }}
-        run: |
-          case "$EVENT_NAME" in
-            merge_group) bash .github/scripts/stack-order.sh merge-group "$QUEUE_REF" "$QUEUE_BASE" ;;
-            pull_request) bash .github/scripts/stack-order.sh pull-request "$PR_NUMBER" "$PR_BASE" ;;
-            *) echo "Not a pull request nor a queue run: nothing to check." ;;
-          esac
+        run: bash .github/scripts/stack-order.sh merge-group "$QUEUE_REF" "$QUEUE_BASE"
 
-  # Each job below fails open: when `changes` did not succeed, the job runs. Each also fails
-  # when `stack order` did not succeed; `!cancelled()` in its condition keeps it from being
-  # skipped (a skip would count as passed) when `stack order` failed.
   backend:
     name: backend (cloud)
-    needs: [ changes, stack-order ]
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.backend == 'true') }}
+    if: ${{ github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -112,14 +91,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Check that the stack order check passed
-        env:
-          STACK_ORDER: ${{ needs.stack-order.result }}
-        run: |
-          if [ "$STACK_ORDER" != success ]; then
-            echo "::error::The stack order check did not pass (result: $STACK_ORDER): see the stack order job."
-            exit 1
-          fi
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -159,11 +130,12 @@ jobs:
         run: node scripts/run-ci-tests.js --no-compile --db-lanes "$DB_LANES"
 
   # The frontend check runs as one build job and three test shards in parallel; the
-  # `frontend (cloud)` job below gathers their results into the required check.
+  # `frontend (cloud)` job below gathers their results into the required check. Both wait for
+  # `stack order` and are skipped when it fails, so a stacking problem fails the run at once.
   frontend-build:
     name: frontend build
-    needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.frontend == 'true') }}
+    needs: stack-order
+    if: ${{ github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -182,8 +154,8 @@ jobs:
 
   frontend-tests:
     name: frontend tests (${{ matrix.shard }}/3)
-    needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.frontend == 'true') }}
+    needs: stack-order
+    if: ${{ github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     strategy:
       # Every shard finishes, so one run lists every failing test.
@@ -208,31 +180,25 @@ jobs:
       - name: Run frontend tests (shard ${{ matrix.shard }} of 3)
         run: npm test -- --shard=${{ matrix.shard }}/3
 
-  # The required check. It always runs, even when the run is cancelled, so it never reports a
-  # skip (which would count as passed) for a frontend change whose build or tests did not pass,
-  # nor for a run whose stack order check did not pass.
+  # The required check. In the merge queue it always runs, even when the run is cancelled, so
+  # it never reports a skip (which would count as passed) when the stack order check, the build
+  # or the tests did not pass.
   frontend:
     name: frontend (cloud)
-    needs: [ changes, stack-order, frontend-build, frontend-tests ]
-    if: ${{ always() }}
+    needs: [ stack-order, frontend-build, frontend-tests ]
+    if: ${{ always() && github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Check the frontend build and tests
+      - name: Check the stack order, the frontend build and the tests
         env:
-          CHANGES: ${{ needs.changes.result }}
-          AFFECTED: ${{ needs.changes.outputs.frontend }}
+          STACK_ORDER: ${{ needs.stack-order.result }}
           BUILD: ${{ needs.frontend-build.result }}
           TESTS: ${{ needs.frontend-tests.result }}
-          STACK_ORDER: ${{ needs.stack-order.result }}
         run: |
-          echo "changes=$CHANGES frontend affected=$AFFECTED build=$BUILD tests=$TESTS stack order=$STACK_ORDER"
+          echo "stack order=$STACK_ORDER build=$BUILD tests=$TESTS"
           if [ "$STACK_ORDER" != success ]; then
             echo "::error::The stack order check did not pass (result: $STACK_ORDER): see the stack order job."
             exit 1
-          fi
-          if [ "$CHANGES" = success ] && [ "$AFFECTED" = false ]; then
-            echo "This pull request does not change the frontend: nothing to check."
-            exit 0
           fi
           if [ "$BUILD" = success ] && [ "$TESTS" = success ]; then
             echo "Frontend build and every test shard passed."
@@ -243,20 +209,11 @@ jobs:
 
   onprem:
     name: build (onprem)
-    needs: [ changes, stack-order ]
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.onprem == 'true') }}
+    if: ${{ github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     env:
       DEPLOYMENT_MODE: single-tenant
     steps:
-      - name: Check that the stack order check passed
-        env:
-          STACK_ORDER: ${{ needs.stack-order.result }}
-        run: |
-          if [ "$STACK_ORDER" != success ]; then
-            echo "::error::The stack order check did not pass (result: $STACK_ORDER): see the stack order job."
-            exit 1
-          fi
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Node
