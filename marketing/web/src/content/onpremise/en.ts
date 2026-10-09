@@ -28,16 +28,8 @@ const content: OnPremContent = {
         body: 'Budget figures, supplier contracts, IT landscape, everything. On your servers, in your network. No third-party data processor to trust with your governance data, except the services you choose to connect, such as an AI model provider or an email relay. The agent runtime and its actions run there too, which matters when an auditor asks.',
       },
       {
-        title: 'No per-seat tax',
-        body: 'Unlimited users, unlimited workspaces, Plaid and agents with your own LLM key. Roll it out to the entire department without a pricing page spreadsheet.',
-      },
-      {
         title: 'Compliance-ready',
         body: 'Row-level security isolates tenants. Argon2 password hashing. An audit log of sign-ins and exports that your log collector reads as CSV. HTTPS with certificates you control. Your VPC, your backups, your SOC.',
-      },
-      {
-        title: 'Audit the source',
-        body: 'AGPL v3 means the code is open. Your security team reads it, your architects extend it, your CISO sleeps better.',
       },
       {
         title: 'Air-gap friendly',

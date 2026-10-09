@@ -28,16 +28,8 @@ const content: OnPremContent = {
         body: 'Budgets, Lieferantenverträge, IT-Landschaft, alles. Auf Ihren Servern, in Ihrem Netz. Kein Dritt-Datenverarbeiter, dem Sie Ihre Governance-Daten anvertrauen müssen, außer den Diensten, die Sie anbinden, etwa einem KI-Modellanbieter oder einem E-Mail-Relay. Auch die Agenten-Laufzeit und ihre Aktionen laufen dort, was zählt, wenn ein Prüfer fragt.',
       },
       {
-        title: 'Keine Platzsteuer',
-        body: 'Unbegrenzte Nutzer, unbegrenzte Workspaces, Plaid und Agenten mit Ihrem eigenen LLM-Schlüssel. Rollout an die gesamte Abteilung ohne Preislisten-Tabelle.',
-      },
-      {
         title: 'Compliance-ready',
         body: 'Row-Level Security isoliert Tenants. Argon2-Passworthashing. Ein Audit-Log der Anmeldungen und Exporte, das Ihr Log-Collector als CSV liest. HTTPS mit Zertifikaten, die Sie kontrollieren. Ihre VPC, Ihre Backups, Ihr SOC.',
-      },
-      {
-        title: 'Quellcode prüfbar',
-        body: 'AGPL v3 heißt offener Code. Security-Team liest ihn, Architekten erweitern ihn, CISO schläft besser.',
       },
       {
         title: 'Air-Gap-freundlich',

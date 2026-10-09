@@ -28,16 +28,8 @@ const content: OnPremContent = {
         body: 'Cifras de presupuesto, contratos de proveedores, paisaje de TI, todo. En sus servidores, en su red. Ningún encargado de tratamiento externo al que confiar sus datos de gobernanza, salvo los servicios que decida conectar, como un proveedor de modelos de IA o un relé de correo. El motor de los agentes y sus acciones también se ejecutan ahí, lo que importa cuando un auditor pregunta.',
       },
       {
-        title: 'Sin tasa por asiento',
-        body: 'Usuarios ilimitados, workspaces ilimitados, Plaid y agentes con su propia clave LLM. Despliéguela a todo el departamento sin una hoja de cálculo de precios.',
-      },
-      {
         title: 'Listo para cumplimiento',
         body: 'El row-level security aísla los tenants. Hash de contraseñas con Argon2. Un registro de auditoría de accesos y exportaciones que su recolector de logs lee como CSV. HTTPS con certificados que usted controla. Su VPC, sus copias de seguridad, su SOC.',
-      },
-      {
-        title: 'Audite el código',
-        body: 'AGPL v3 significa que el código es abierto. Su equipo de seguridad lo lee, sus arquitectos lo amplían, su CISO duerme mejor.',
       },
       {
         title: 'Compatible con air-gap',
