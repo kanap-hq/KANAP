@@ -38,7 +38,7 @@ Users open KANAP at one HTTPS address, for example `https://kanap.company.com`. 
 | **Internal name** | A record in your company DNS. For a test, a line in `/etc/hosts` on the server and on each client. | From your company's internal certificate authority. The browsers of managed workstations already trust it, so users see no warning. |
 | **Self-signed** | Same as the internal name | Created on the server. Test only: every browser shows a warning that each user must accept. |
 
-Many installations have no public DNS. The internal name with an internal certificate is a normal, supported setup.
+Many installations have no public DNS. The internal name with an internal certificate is a normal, supported setup. The certificate of the reverse proxy serves the browsers. The API also opens connections of its own, to SMTP, PostgreSQL or S3: when your authority signed those servers' certificates, see [Certificates from an internal authority](configuration.md#optional-certificates-from-an-internal-authority).
 
 **The server must resolve the name too.** The verification commands in this guide, and the smoke test, run on the server and call KANAP by its name. When no DNS record exists yet, add the name to the server's hosts file:
 

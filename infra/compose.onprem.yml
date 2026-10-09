@@ -8,6 +8,10 @@ services:
     env_file: ../.env
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    # Your internal certificate authority, for SMTP, PostgreSQL or S3 over TLS (see certs/README.md).
+    # Nothing changes while NODE_EXTRA_CA_CERTS in ../.env names no file of this directory.
+    volumes:
+      - ./certs:/etc/kanap/certs:ro
     ports:
       - "127.0.0.1:8080:8080"
     restart: unless-stopped

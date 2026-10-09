@@ -217,7 +217,7 @@ If a dedicated application role was initially created with too many privileges, 
 | `sslmode=require` | PostgreSQL is a separate server or a managed service whose certificate comes from a public authority. The API checks the certificate. |
 | `sslmode=no-verify` | The connection is encrypted but the API does not check the certificate. Use it for a private or self-signed certificate. |
 
-`require` checks the certificate completely. A server with a private or self-signed certificate then makes the API fail to start: it tries 30 times and stops. Without any `sslmode` the connection is not encrypted.
+`require` checks the certificate completely. A server with a private or self-signed certificate then makes the API fail to start: it tries 30 times and stops. When your company's authority signed that certificate, make the API trust the authority (see [Certificates from an internal authority](#optional-certificates-from-an-internal-authority)) and keep `require`. Otherwise use `no-verify`. Without any `sslmode` the connection is not encrypted.
 
 ## Required: storage
 
@@ -279,6 +279,7 @@ Notes:
 - If `SMTP_SECURE` is unset, KANAP defaults to `true` for port `465` and `false` otherwise.
 - If both SMTP and Resend are configured in single-tenant mode, SMTP takes precedence.
 - `SMTP_FROM` should be an address your SMTP server is allowed to send as.
+- A relay whose TLS certificate comes from your company's authority needs that authority: see [Certificates from an internal authority](#optional-certificates-from-an-internal-authority).
 - If mail is sent outside your network, configure SPF, DKIM, and DMARC on the sender domain through your mail administrator or provider.
 
 **Common SMTP profiles**
@@ -315,6 +316,31 @@ SMTP_FROM=KANAP <noreply@company.com>
 ```
 
 Use the Microsoft 365 profile only if SMTP AUTH is allowed for the mailbox and tenant.
+
+## Optional: certificates from an internal authority
+
+The API checks the certificate of every server it reaches over TLS. Your SMTP relay, a PostgreSQL server with `sslmode=require` or an S3 store over HTTPS may use a certificate signed by your company's own authority. The API then refuses the connection until it trusts that authority. Give it the certificate of the authority, as a PEM file:
+
+```bash
+cd /opt/kanap
+cp /path/to/company-ca.pem infra/certs/company-ca.pem
+chmod 644 infra/certs/company-ca.pem
+echo 'NODE_EXTRA_CA_CERTS=/etc/kanap/certs/company-ca.pem' >> .env
+docker compose -f infra/compose.onprem.yml up -d api
+```
+
+- The file holds the root authority, followed by the intermediate authorities when your servers do not send them. Put certificates only, no private key.
+- Mode `644` lets the API read the file. The certificate of an authority is public.
+- Git ignores the files of `infra/certs/`, so an upgrade leaves them in place.
+- Your authority is added to the public ones: connections to public services keep working.
+
+Check that the API reads the file:
+
+```bash
+docker compose -f infra/compose.onprem.yml exec api node -e 'require("tls").createSecureContext()'
+```
+
+The command prints nothing when all is well. A line that starts with `Warning: Ignoring extra certs from` means the API cannot read the file: check the path in `.env`, the file name and its mode. The API log shows the same line after its first TLS connection.
 
 ## Optional: Entra SSO
 
