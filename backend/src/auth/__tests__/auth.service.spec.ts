@@ -192,6 +192,9 @@ async function testPasswordResetConsumesTokenAndRevokesSessions() {
 
 async function testEveryAccessTokenPathIsMarkedAsAnAccessToken() {
   process.env.JWT_SECRET = 'auth-service-spec-secret';
+  // No deadline: the guard refuses a token without the marker, so each acceptance below proves
+  // that path marks its token.
+  process.env.JWT_LEGACY_ACCESS_TOKEN_DEADLINE = '';
   const { service, repo } = createService();
 
   repo.findOne = async () => ({
@@ -215,8 +218,7 @@ async function testEveryAccessTokenPathIsMarkedAsAnAccessToken() {
     tenant_id: 'tenant-1',
   });
 
-  const guard = new JwtAuthGuard({ getAllAndOverride: () => false } as any)
-    .setClock({ processStartedAt: new Date('2020-01-01T00:00:00.000Z').getTime() });
+  const guard = new JwtAuthGuard({ getAllAndOverride: () => false } as any);
   for (const [label, token] of [
     ['login', signed.access_token],
     ['refresh', refreshed.access_token],
@@ -277,8 +279,7 @@ async function testLegacyPasswordResetTokenSignedWithJwtSecretIsRejected() {
   const currentToken = await service.createPasswordResetToken(legacyUser);
   assert.equal(resetTokenRepoState.saved.length, 1, 'only the current-family link is persisted');
 
-  const guard = new JwtAuthGuard({ getAllAndOverride: () => false } as any)
-    .setClock({ processStartedAt: new Date('2020-01-01T00:00:00.000Z').getTime() });
+  const guard = new JwtAuthGuard({ getAllAndOverride: () => false } as any);
   const rejects = (token: string, label: string) => assert.throws(
     () => guard.canActivate(createContext(guardRequest(token, 'tenant-1'))),
     (error: unknown) => {

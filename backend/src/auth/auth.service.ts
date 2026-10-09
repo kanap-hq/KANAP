@@ -8,6 +8,7 @@ import * as crypto from 'crypto';
 import { createPasswordResetToken as buildPasswordResetToken, getPasswordResetExpirationMinutes } from './password-reset.util';
 import { ACCESS_TOKEN_PURPOSE, PASSWORD_RESET_PURPOSE } from './access-token.util';
 import { getPasswordResetSecret } from './token-secret.util';
+import { ISSUED_TOKEN_ALGORITHM, ISSUED_TOKEN_ALGORITHMS } from './jwt-algorithms';
 import {
   DEFAULT_ACCESS_TOKEN_TTL,
   DEFAULT_REFRESH_TOKEN_TTL,
@@ -101,7 +102,7 @@ export class AuthService {
 
     // Sign access token
     const payload = buildAccessTokenPayload(user);
-    const accessToken = jwt.sign(payload, secret, { expiresIn: accessExpiresInSec });
+    const accessToken = jwt.sign(payload, secret, { algorithm: ISSUED_TOKEN_ALGORITHM, expiresIn: accessExpiresInSec });
 
     // Generate refresh token (random bytes)
     const refreshTokenRaw = crypto.randomBytes(32).toString('hex');
@@ -133,7 +134,7 @@ export class AuthService {
     const accessTtl = process.env.JWT_ACCESS_TOKEN_TTL || DEFAULT_ACCESS_TOKEN_TTL;
     const accessExpiresInSec = parseDurationSec(accessTtl);
     const payload = buildAccessTokenPayload(user);
-    const token = jwt.sign(payload, secret, { expiresIn: accessExpiresInSec });
+    const token = jwt.sign(payload, secret, { algorithm: ISSUED_TOKEN_ALGORITHM, expiresIn: accessExpiresInSec });
     return { access_token: token };
   }
 
@@ -192,7 +193,7 @@ export class AuthService {
       role: user.role,
       tenant_id: storedToken.tenant_id,
     });
-    const accessToken = jwt.sign(payload, secret, { expiresIn: accessExpiresInSec });
+    const accessToken = jwt.sign(payload, secret, { algorithm: ISSUED_TOKEN_ALGORITHM, expiresIn: accessExpiresInSec });
 
     return {
       access_token: accessToken,
@@ -254,7 +255,7 @@ export class AuthService {
     const secret = getPasswordResetSecret();
     let payload: any;
     try {
-      payload = jwt.verify(token, secret);
+      payload = jwt.verify(token, secret, { algorithms: [...ISSUED_TOKEN_ALGORITHMS] });
     } catch {
       throw new BadRequestException('invalid or expired token');
     }

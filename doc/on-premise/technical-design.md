@@ -247,27 +247,34 @@ Rules:
   `JWT_SECRET` until `PROVISIONING_TOKEN_SECRET` is set — and then that key is the only accepted one
   (lockstep deploy with the issuer). Sharing `JWT_SECRET` here is safe because the guard refuses the
   marker; what made it dangerous was the missing purpose control.
+- Each family is accepted only in the algorithm it is issued with (`auth/jwt-algorithms.ts`):
+  HS256 for access, password-reset, SSO state and SSO handoff tokens, which the API signs with
+  HS256; any HMAC algorithm (HS256, HS384, HS512) for provisioning, whose issuer is outside this
+  repository; RS256 for the Entra ID token.
 - `JwtAuthGuard` accepts only access tokens (RFC 8725 §3.12, "Use Explicit Typing"). Signature and
   tenant checks alone would accept any family, since all of them carry a valid `sub`/`tenant_id`.
   `purpose` is tested explicitly: `null`, `''`, a number, an object, another family's marker and the
   handoff's `type` are all rejected. Shape is checked on **every** acceptance path — a non-empty
   `sub` and no `type` claim — so a marked token cannot also be something else. A marker-less payload
-  is accepted **only** during the compatibility window and only with that shape; a pre-fix SSO state
-  (`mode`/`nonce`, no `sub`) is therefore refused from day one.
-- Start-up reports where each family key comes from, plus the access-token compatibility window
-  (`[SECRETS]` lines in `main.ts`). The window line is informational when the cut-over is pinned
-  explicitly, and a warning when it needs an operator decision: deadline unparseable or already
-  past, or no deadline configured (the derived window then renews with every restart).
+  is accepted **only** before `JWT_LEGACY_ACCESS_TOKEN_DEADLINE`, when the operator sets one, and
+  only with that shape; without that variable it is refused at all times, including right after a
+  start. An SSO state from an older build (`mode`/`nonce`, no `sub`) is therefore refused from day
+  one.
+- Start-up reports where each family key comes from, plus how access tokens without the marker are
+  handled (`[SECRETS]` lines in `main.ts`). The line is informational when they are refused (the
+  default) or accepted until a future deadline, and a warning when the deadline is unparseable or
+  already past (both refuse them).
 - **Upgrade impact (both modes, once):**
   - Password-reset links and Entra SSO states minted before the upgrade stop verifying, because
     their family key changes even when no dedicated variable is configured.
   - Provisioning keeps working untouched, until an operator sets `PROVISIONING_TOKEN_SECRET`; from
     that moment the issuer must sign with the same key.
-  - Untyped access tokens stop being accepted at `JWT_LEGACY_ACCESS_TOKEN_DEADLINE`, which must be
-    an explicit future instant. In the web UI this costs one extra round trip (a 401 triggers
-    `/auth/refresh`, and refresh tokens are unaffected); only clients holding a stale `Bearer` token
-    of their own break. Announce both effects before deploying, then pin the deadline once every
-    instance runs the new build.
+  - Untyped access tokens are refused, unless `JWT_LEGACY_ACCESS_TOKEN_DEADLINE` sets an explicit
+    future instant until which they stay accepted. In the web UI this costs one extra round trip (a
+    401 triggers `/auth/refresh`, and refresh tokens are unaffected); only clients holding a stale
+    `Bearer` token of their own break. Builds that have the marker issue only marked access tokens,
+    so an upgrade from one of them changes nothing for signed-in users. Announce both effects before
+    deploying.
 
 ---
 

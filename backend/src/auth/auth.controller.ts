@@ -18,6 +18,7 @@ import { DataSource, EntityManager } from 'typeorm';
 import { withTenant } from '../common/tenant-runner';
 import { PROVISIONING_PURPOSE } from './access-token.util';
 import { getProvisioningSecret } from './token-secret.util';
+import { PROVISIONING_TOKEN_ALGORITHMS } from './jwt-algorithms';
 import { TenantsService } from '../tenants/tenants.service';
 import { UserRole } from '../users/user-role.entity';
 import { RateLimitGuard } from '../common/rate-limit.guard';
@@ -224,7 +225,7 @@ export class AuthController {
     const secret = getProvisioningSecret();
     let payload: any;
     try {
-      payload = jwt.verify(t, secret);
+      payload = jwt.verify(t, secret, { algorithms: [...PROVISIONING_TOKEN_ALGORITHMS] });
     } catch {
       throw new BadRequestException({ code: 'TOKEN_EXPIRED', message: 'invalid or expired token' });
     }
