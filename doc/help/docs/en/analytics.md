@@ -253,7 +253,9 @@ The seven budget reports can also be narrowed to one value of a dimension, with 
 
 - Plaid can filter and group OPEX lines on every enabled dimension used for OPEX lines, and CAPEX lines on every enabled dimension used for CAPEX lines.
 - A question about the analytics category uses the default dimension, whatever its name or order.
-- Plaid can change a line's value on the default dimension only. Set the other dimensions in the app or with a CSV file.
+- Plaid can set, change or clear a line's value on any dimension when it creates or updates an OPEX or CAPEX line. Ask for example: "Set the Nature de coût of OPX-12 to Licences et maintenance". Plaid finds the value by its name within that dimension and shows the dimension and the value, before and after, in the preview. Nothing changes until you approve it.
+- Plaid follows the same rules as the app: only enabled dimensions used for the line's type, only enabled values used for the line's type, and a line keeps a value it already has.
+- Plaid can also create a value in the dimension you name. Without a dimension, the value goes into the default dimension.
 
 ---
 
