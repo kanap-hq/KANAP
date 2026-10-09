@@ -9,6 +9,26 @@ import { PermissionsService, RESOURCES } from '../permissions/permissions.servic
 import { RolePermission } from '../permissions/role-permission.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UserRole } from '../users/user-role.entity';
+import { AuditService } from '../audit/audit.service';
+
+/** What the audit log keeps of a role: its name and description, and its permissions when given. */
+function roleSnapshot(role: Pick<Role, 'role_name' | 'role_description'>, permissions?: Record<string, unknown>) {
+  return {
+    role_name: role.role_name,
+    role_description: role.role_description ?? null,
+    ...(permissions ? { permissions } : {}),
+  };
+}
+
+/** JSON with object keys in order, so two snapshots compare whatever order their keys came in. */
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    return `{${entries.map(([key, item]) => `${JSON.stringify(key)}:${stableJson(item)}`).join(',')}}`;
+  }
+  return JSON.stringify(value ?? null);
+}
 
 @Controller('roles')
 @UseGuards(JwtAuthGuard)
@@ -22,7 +42,27 @@ export class RolesController {
     private readonly rolePermRepo: Repository<RolePermission>,
     @InjectRepository(UserRole)
     private readonly userRoleRepo: Repository<UserRole>,
+    private readonly audit: AuditService,
   ) {}
+
+  /**
+   * A change to a role (creation, rename, permissions, deletion): before, after and who, in the
+   * request's transaction. An update that changes nothing is not logged.
+   */
+  private async logRoleChange(
+    req: any,
+    roleId: string,
+    action: 'create' | 'update' | 'delete',
+    before: Record<string, unknown> | null,
+    after: Record<string, unknown> | null,
+  ) {
+    if (action === 'update' && stableJson(before) === stableJson(after)) return;
+    const mg: EntityManager | undefined = req?.queryRunner?.manager;
+    await this.audit.log(
+      { table: 'roles', recordId: roleId, action, before, after, userId: req?.user?.sub ?? null },
+      mg ? { manager: mg } : undefined,
+    );
+  }
 
   @Get()
   @UseGuards(PermissionGuard)
@@ -45,7 +85,10 @@ export class RolesController {
   async createRole(@Body() body: { role_name?: string; role_description?: string }, @Req() req: any) {
     const mg: EntityManager | undefined = req?.queryRunner?.manager;
     if (!body?.role_name) throw new BadRequestException('role_name is required');
+    // An existing name returns that role (its description updated): a change, not a creation.
+    const existing = await this.rolesService.findByName(body.role_name, { manager: mg });
     const saved = await this.rolesService.createRole({ role_name: body.role_name, role_description: body.role_description || null }, { manager: mg });
+    await this.logRoleChange(req, saved.id, existing ? 'update' : 'create', existing ? roleSnapshot(existing) : null, roleSnapshot(saved));
     return saved;
   }
 
@@ -58,14 +101,17 @@ export class RolesController {
     if (!role) throw new BadRequestException('Role not found');
     if (role.is_system) throw new BadRequestException('Cannot modify a system role');
     if (role.is_built_in) throw new BadRequestException('Cannot modify a built-in role');
+    const before = roleSnapshot(role);
+    let saved: Role | null;
     try {
-      const saved = await this.rolesService.updateRole(id, { role_name: body.role_name, role_description: body.role_description }, { manager: mg });
+      saved = await this.rolesService.updateRole(id, { role_name: body.role_name, role_description: body.role_description }, { manager: mg });
       if (!saved) throw new BadRequestException('Role not found');
-      return saved;
     } catch (e: any) {
       if (String(e?.message || '').includes('unique')) throw new BadRequestException('Role name must be unique');
       throw new BadRequestException(e?.message || 'Failed to update role');
     }
+    await this.logRoleChange(req, id, 'update', before, roleSnapshot(saved));
+    return saved;
   }
 
   @Delete(':id')
@@ -79,7 +125,9 @@ export class RolesController {
     if (role.is_built_in) throw new BadRequestException('Cannot delete built-in role');
     const count = await (mg ?? this.userRoleRepo.manager).getRepository(UserRole).count({ where: { role_id: id } });
     if (count > 0) throw new BadRequestException('Cannot delete role with users assigned');
+    const before = roleSnapshot(role, await this.perms.getRolePermissionsMap(id, { manager: mg }));
     await (mg ?? this.roleRepo.manager).getRepository(Role).delete({ id });
+    await this.logRoleChange(req, id, 'delete', before, null);
     return { ok: true };
   }
 
@@ -115,6 +163,10 @@ export class RolesController {
     if (Object.keys(perms).length > 0) {
       await this.perms.setRolePermissionsMap(saved.id, perms as any, { manager: mg });
     }
+    await this.logRoleChange(req, saved.id, 'create', null, {
+      ...roleSnapshot(saved, await this.perms.getRolePermissionsMap(saved.id, { manager: mg })),
+      duplicated_from: { id: role.id, role_name: role.role_name },
+    });
 
     return saved;
   }
@@ -149,6 +201,9 @@ export class RolesController {
     }
     if (!body || typeof body !== 'object' || !body.permissions) throw new BadRequestException('permissions required');
     const perms = body.permissions as Record<string, 'reader'|'contributor'|'member'|'admin'|null>;
-    return this.perms.setRolePermissionsMap(id, perms as any, { manager: mg });
+    const before = await this.perms.getRolePermissionsMap(id, { manager: mg });
+    const after = await this.perms.setRolePermissionsMap(id, perms as any, { manager: mg });
+    await this.logRoleChange(req, id, 'update', roleSnapshot(role, before), roleSnapshot(role, after));
+    return after;
   }
 }

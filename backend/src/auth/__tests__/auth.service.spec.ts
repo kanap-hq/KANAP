@@ -2,7 +2,8 @@ import * as assert from 'node:assert/strict';
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
 import { UnauthorizedException } from '@nestjs/common';
-import { AuthService } from '../auth.service';
+import * as argon2 from 'argon2';
+import { AuthService, FIXED_PASSWORD_HASH } from '../auth.service';
 import { JwtAuthGuard } from '../jwt-auth.guard';
 import { ACCESS_TOKEN_PURPOSE, PASSWORD_RESET_PURPOSE } from '../access-token.util';
 import { deriveSecret } from '../token-secret.util';
@@ -124,14 +125,42 @@ async function testRefreshAccessTokenRejectsTenantMismatchAndMintsTenantBoundTok
 async function testRevokeTokenDeletesByHashAndTenant() {
   const refreshToken = 'refresh-token-raw';
   const expectedHash = hashToken(refreshToken);
-  const { service, state } = createService();
+  const { service, repo, state } = createService();
+  // One DELETE ... RETURNING: the session is removed and its account read in the same statement.
+  const statements: Array<{ where: string; params: Record<string, unknown>; returning: unknown }> = [];
+  let closed: Array<{ user_id: string }> = [{ user_id: 'user-1' }];
+  (repo as any).createQueryBuilder = () => {
+    const statement: any = { where: '', params: {}, returning: null };
+    const builder: any = {
+      delete: () => builder,
+      where: (where: string, params: Record<string, unknown>) => {
+        statement.where = where;
+        statement.params = params;
+        return builder;
+      },
+      returning: (columns: unknown) => {
+        statement.returning = columns;
+        return builder;
+      },
+      execute: async () => {
+        statements.push(statement);
+        return { raw: closed, affected: closed.length };
+      },
+    };
+    return builder;
+  };
 
-  await service.revokeToken(refreshToken, 'tenant-1');
+  assert.equal(await service.revokeToken(refreshToken, 'tenant-1'), 'user-1');
+  assert.equal(statements.length, 1);
+  assert.equal(statements[0].where, 'token_hash = :tokenHash AND tenant_id = :tenantId');
+  assert.deepEqual(statements[0].params, { tokenHash: expectedHash, tenantId: 'tenant-1' });
+  assert.equal(statements[0].returning, 'user_id');
+  assert.equal(state.findOneArgs.length, 0, 'no read before the delete');
+  assert.equal(state.deleteArgs.length, 0);
 
-  assert.deepEqual(state.deleteArgs[0], {
-    token_hash: expectedHash,
-    tenant_id: 'tenant-1',
-  });
+  // No session of the tenant with this token: nothing closed.
+  closed = [];
+  assert.equal(await service.revokeToken(refreshToken, 'tenant-1'), null);
 }
 
 async function testPasswordResetConsumesTokenAndRevokesSessions() {
@@ -302,6 +331,79 @@ async function testLegacyPasswordResetTokenSignedWithJwtSecretIsRejected() {
   await assert.rejects(() => service.resetPasswordWithToken(currentToken, 'OtherPassword!2026'));
 }
 
+/**
+ * Every sign-in that reaches the account lookup runs exactly one argon2 check: against the
+ * account's hash, or against FIXED_PASSWORD_HASH for an unknown address, an account without a
+ * local password and a directory account. The answers stay the same.
+ */
+async function testEveryRefusedSignInRunsOnePasswordCheck() {
+  const accountHash = await argon2.hash('Right-pass-2026', { type: argon2.argon2id });
+  const role = { role_name: 'Member', is_system: false };
+  const accounts: Record<string, any> = {
+    'ada@example.com': { id: 'user-ada', email: 'ada@example.com', password_hash: accountHash, status: 'enabled', role },
+    'invited@example.com': { id: 'user-invited', email: 'invited@example.com', password_hash: null, status: 'invited', role },
+    'directory@example.com': {
+      id: 'user-directory',
+      email: 'directory@example.com',
+      password_hash: null,
+      external_auth_provider: 'entra',
+      status: 'enabled',
+      role,
+    },
+  };
+  const users = { findByEmailForSignIn: async (email: string) => accounts[email] ?? null };
+  const service = new AuthService(users as any, {} as any, {} as any);
+  const checks: string[] = [];
+  const realCheck = (service as any).verifyPasswordHash;
+  (service as any).verifyPasswordHash = async (hash: string, password: string) => {
+    checks.push(hash);
+    return realCheck(hash, password);
+  };
+
+  const refusal = async (email: string, password: string) => {
+    checks.length = 0;
+    let caught: any = null;
+    try {
+      await service.validateUser(email, password);
+    } catch (error) {
+      caught = error;
+    }
+    assert.ok(caught instanceof UnauthorizedException, `${email}: refused with a 401`);
+    return { status: caught.getStatus(), body: caught.getResponse(), checks: [...checks] };
+  };
+  const invalid = { status: 401, body: { code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' } };
+
+  for (const email of ['nobody@example.com', 'invited@example.com', 'directory@example.com']) {
+    const refused = await refusal(email, 'Right-pass-2026');
+    assert.deepEqual({ status: refused.status, body: refused.body }, invalid, `${email}: the same answer`);
+    assert.deepEqual(refused.checks, [FIXED_PASSWORD_HASH], `${email}: one check, against the fixed hash`);
+  }
+  // The password of the fixed hash is unknown, and would not sign in anyway: the answer is no.
+  (service as any).verifyPasswordHash = async (hash: string) => {
+    checks.push(hash);
+    return true;
+  };
+  const matchingFixed = await refusal('nobody@example.com', 'Right-pass-2026');
+  assert.deepEqual({ status: matchingFixed.status, body: matchingFixed.body }, invalid);
+  (service as any).verifyPasswordHash = async (hash: string, password: string) => {
+    checks.push(hash);
+    return realCheck(hash, password);
+  };
+
+  const wrong = await refusal('ada@example.com', 'Wrong-pass-0');
+  assert.deepEqual({ status: wrong.status, body: wrong.body }, invalid);
+  assert.deepEqual(wrong.checks, [accountHash], 'a wrong password: one check, against the account hash');
+
+  checks.length = 0;
+  assert.equal((await service.validateUser('ada@example.com', 'Right-pass-2026')).id, 'user-ada');
+  assert.deepEqual(checks, [accountHash]);
+
+  // The fixed hash has the parameters an account hash gets today: the check costs the same.
+  const parameters = (hash: string) => hash.split('$').slice(1, 4).join('$');
+  assert.equal(parameters(FIXED_PASSWORD_HASH), parameters(accountHash));
+  assert.equal(await argon2.verify(FIXED_PASSWORD_HASH, 'Right-pass-2026'), false);
+}
+
 async function run() {
   await testSignTokensIncludeTenantIdInAccessAndRefreshTokens();
   await testRefreshAccessTokenRejectsTenantMismatchAndMintsTenantBoundTokens();
@@ -309,6 +411,7 @@ async function run() {
   await testPasswordResetConsumesTokenAndRevokesSessions();
   await testEveryAccessTokenPathIsMarkedAsAnAccessToken();
   await testLegacyPasswordResetTokenSignedWithJwtSecretIsRejected();
+  await testEveryRefusedSignInRunsOnePasswordCheck();
 }
 
 void run();

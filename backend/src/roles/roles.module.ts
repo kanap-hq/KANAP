@@ -7,9 +7,10 @@ import { RolePermission } from '../permissions/role-permission.entity';
 import { UsersModule } from '../users/users.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { User } from '../users/user.entity';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Role, RolePermission, User]), forwardRef(() => UsersModule), PermissionsModule],
+  imports: [TypeOrmModule.forFeature([Role, RolePermission, User]), forwardRef(() => UsersModule), PermissionsModule, forwardRef(() => AuditModule)],
   providers: [RolesService],
   controllers: [RolesController],
   exports: [RolesService],

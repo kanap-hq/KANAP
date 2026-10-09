@@ -31,6 +31,7 @@ async function testResetLinkOpensTheTenantAddress() {
     const emails = { sendPasswordResetEmail: async (params: any) => { sent.push(params); } };
     const controller = new AuthController(
       auth as any, users as any, {} as any, {} as any, emails as any, {} as any, {} as any, {} as any,
+      { recordAuthEvent: async () => undefined } as any,
     );
 
     const result = await controller.requestPasswordReset(
