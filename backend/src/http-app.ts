@@ -6,9 +6,10 @@ import { DataSource } from 'typeorm';
 import { OpsMetricsStore } from './admin/ops/ops-metrics.store';
 import { createRequestMetricsMiddleware } from './admin/ops/request-metrics.middleware';
 import { createBodyParsers } from './common/body-parsers';
+import { applyTrustProxy, trustProxySettingFromEnv, trustProxyStartupLine } from './common/client-address';
+import { isLeadProcess } from './common/cluster/process-role';
 import { createCorsMiddlewares, createOriginPolicy } from './common/cors-policy';
 import { parseCorsPatterns } from './common/env';
-import { shouldTrustProxyForRateLimit } from './common/rate-limit';
 import { createRequestFinalizer } from './common/request-finalizer.middleware';
 import { useRequestPipeline } from './common/request-pipeline';
 import { createRequestTenancyMiddleware } from './common/tenancy/request-tenancy.middleware';
@@ -19,9 +20,13 @@ import { Features } from './config/features';
 
 /** Before the start-up writes: proxy trust, headers, browser origins, body parsers, ops metrics. */
 export function applyHttpMiddleware(app: INestApplication): void {
-  if (shouldTrustProxyForRateLimit()) {
-    const expressApp = app.getHttpAdapter().getInstance();
-    expressApp.set('trust proxy', 1);
+  // Client address (common/client-address.ts): the number of trusted proxies in front of the API.
+  const trustProxy = trustProxySettingFromEnv(Features.SINGLE_TENANT);
+  applyTrustProxy(app.getHttpAdapter().getInstance(), trustProxy);
+  if (isLeadProcess()) {
+    const line = trustProxyStartupLine(trustProxy);
+    // eslint-disable-next-line no-console
+    console[line.level](line.message);
   }
   app.use(helmet());
   // Browser origins (common/cors-policy.ts): a refused origin gets a 403 without CORS headers.

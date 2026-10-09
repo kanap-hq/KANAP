@@ -3,6 +3,7 @@ import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import { promisify } from 'node:util';
 import { Injectable, Logger } from '@nestjs/common';
+import { converterEnv } from './converter-env';
 
 const execFileAsync = promisify(execFile);
 
@@ -32,7 +33,7 @@ export class VectorImageConversionService {
         case '.wmf':
         case '.svg':
         case '.eps':
-          return await this.convertWithInkscape(inputPath, outputPath);
+          return await this.convertWithInkscape(inputPath, outputPath, tempDir);
         default:
           return { success: false, reason: `unsupported vector format: ${ext}` };
       }
@@ -43,8 +44,10 @@ export class VectorImageConversionService {
     }
   }
 
-  private async convertWithInkscape(inputPath: string, outputPath: string): Promise<ConversionResult> {
-    if (!(await this.isToolAvailable('inkscape'))) {
+  // Inkscape and `which` get the environment of converterEnv (common/converter-env.ts), with
+  // their home and cache folders in a dedicated folder inside the temporary folder of the call.
+  private async convertWithInkscape(inputPath: string, outputPath: string, tempDir: string): Promise<ConversionResult> {
+    if (!(await this.isToolAvailable('inkscape', tempDir))) {
       return { success: false, reason: 'inkscape is not installed' };
     }
 
@@ -52,6 +55,7 @@ export class VectorImageConversionService {
       'inkscape',
       [inputPath, '--export-type=png', `--export-dpi=${CONVERSION_DPI}`, '--export-background=white', `--export-filename=${outputPath}`],
       {
+        env: await converterEnv(tempDir),
         timeout: CONVERSION_TIMEOUT_MS,
         maxBuffer: CONVERSION_MAX_BUFFER_BYTES,
       },
@@ -69,9 +73,9 @@ export class VectorImageConversionService {
     return { success: true, pngBuffer, pngFilename: `${baseName}.png` };
   }
 
-  private async isToolAvailable(command: string): Promise<boolean> {
+  private async isToolAvailable(command: string, tempDir: string): Promise<boolean> {
     try {
-      await execFileAsync('which', [command], { timeout: 5_000 });
+      await execFileAsync('which', [command], { env: await converterEnv(tempDir), timeout: 5_000 });
       return true;
     } catch {
       return false;

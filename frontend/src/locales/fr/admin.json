@@ -214,6 +214,15 @@
       "create": "Créer",
       "delete": "Supprimer",
       "disable": "Désactiver",
+      "export": "Export",
+      "login": "Connexion",
+      "login_failed": "Échec de connexion",
+      "logout": "Déconnexion",
+      "password_reset_completed": "Réinitialisation du mot de passe terminée",
+      "password_reset_requested": "Réinitialisation du mot de passe demandée",
+      "refresh_denied": "Renouvellement de session refusé",
+      "sso_login": "Connexion avec Microsoft",
+      "sso_login_failed": "Échec de connexion avec Microsoft",
       "update": "Mettre à jour"
     },
     "columns": {
@@ -234,7 +243,9 @@
       "before": "Avant",
       "changedFields": "Champs modifiés",
       "date": "Date : {{value}}",
+      "exported": "Exporté : {{value}}",
       "noFieldChanges": "Aucune modification au niveau des clés",
+      "reason": "Motif : {{value}}",
       "recordId": "ID enregistrement : {{value}}",
       "source": "Source : {{value}}",
       "sourceRef": "Réf. source : {{value}}",
@@ -243,8 +254,58 @@
       "title": "Détails de l'entrée d'audit",
       "user": "Utilisateur : {{value}}"
     },
+    "export": {
+      "button": "Exporter CSV",
+      "failed": "Le journal d'audit n'a pas pu être exporté.",
+      "tooMany": "Trop d'exports en peu de temps. Réessayez dans une minute.",
+      "truncated": "Le fichier contient les {{limit}} premières entrées. Affinez les filtres pour exporter le reste."
+    },
+    "exportResources": {
+      "accounts": "Comptes",
+      "analyticsCategories": "Dimensions analytiques",
+      "applications": "Applications",
+      "assets": "Actifs",
+      "auditLog": "Journal d'audit",
+      "businessProcesses": "Processus métier",
+      "capexBudgetFile": "Fichier budgétaire CAPEX",
+      "chartOfAccounts": "Plan comptable",
+      "coaTemplates": "Modèle CoA",
+      "companies": "Sociétés",
+      "contacts": "Contacts",
+      "contracts": "Contrats",
+      "costCenters": "Centres de coûts",
+      "departments": "Départements",
+      "document": "Document",
+      "incidentReport": "Rapport d'incident",
+      "incidents": "Incidents",
+      "knowledgeDocument": "Document de la base de connaissances",
+      "opexBudgetFile": "Fichier budgétaire OPEX",
+      "projects": "Projets",
+      "requests": "Demandes",
+      "suppliers": "Fournisseurs",
+      "tasks": "Tâches",
+      "users": "Utilisateurs",
+      "weeklyReport": "Rapport hebdomadaire",
+      "workingDayCalendars": "Calendriers de jours ouvrés"
+    },
     "messages": {
       "loadDetailsFailed": "Impossible de charger les détails de l'entrée d'audit."
+    },
+    "reasons": {
+      "bad_password": "Mot de passe incorrect",
+      "disabled": "Compte désactivé",
+      "email_unverified": "Adresse non vérifiée par Microsoft",
+      "expired": "Session expirée",
+      "external_account": "Compte géré par l'annuaire de l'entreprise",
+      "invalid_state": "La connexion avec Microsoft n'a pas pu être vérifiée",
+      "invalid_token": "Lien ou session non valide",
+      "no_password": "Compte sans mot de passe",
+      "not_allowed": "Rôle non autorisé à se connecter",
+      "provisioning": "Lien de création de l'espace de travail",
+      "sso_failed": "La connexion avec Microsoft a échoué",
+      "sso_not_configured": "Connexion avec Microsoft non configurée",
+      "tenant_mismatch": "L'annuaire Microsoft ne correspond pas à l'espace de travail",
+      "unknown_user": "Aucun compte avec cette adresse"
     },
     "shared": {
       "empty": "-"
@@ -254,8 +315,13 @@
       "user": "Utilisateur",
       "webhook": "Webhook"
     },
+    "tables": {
+      "auth": "Connexion et session",
+      "export": "Export"
+    },
     "title": "Journal d'audit",
     "values": {
+      "unknownAccount": "Compte inconnu",
       "unknownUser": "Inconnu ({{id}}...)"
     }
   },

@@ -233,3 +233,64 @@ jobs:
       - name: Build frontend (onprem)
         working-directory: frontend
         run: npm ci && npm run build
+
+  # Builds the images the servers run (API runtime stage, web, marketing) and the API dev stage,
+  # and checks the compose files and the base image pins. It runs in the merge queue, like every
+  # other job. Not a required check yet: the maintainer adds it to the required checks after a
+  # week of runs.
+  images:
+    name: images
+    if: ${{ github.event_name == 'merge_group' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      # The env files the compose files load are not in git: the on-premise example stands in
+      # for ../.env (it also proves the example is accepted), empty files for the others.
+      - name: Check the compose files
+        run: |
+          cp infra/.env.onprem.example .env
+          touch backend/.env.qa frontend/.env.qa backend/.env.prod frontend/.env.prod backend/env.dev
+          docker compose -f infra/compose.onprem.yml config -q
+          docker compose --env-file backend/.env.qa -f infra/compose.qa.yml config -q
+          docker compose --env-file backend/.env.prod -f infra/compose.prod.yml config -q
+          docker compose -f infra/docker-compose.example.yml config -q
+      - name: Check the base image pins (multi-architecture index digests)
+        run: bash .github/scripts/check-image-pins.sh
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build the API image (runtime stage)
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          target: runtime
+          tags: kanap-api:ci
+          load: true
+          cache-from: type=gha,scope=api-runtime
+          cache-to: type=gha,mode=max,scope=api-runtime
+      - name: Check the API image (converters, no sources or development tools)
+        run: |
+          docker run --rm kanap-api:ci sh -c 'node -v && inkscape --version && pandoc --version | head -1 && typst --version && test ! -e src && test ! -e node_modules/ts-node-dev && test -f dist/knowledge/scripts/backfill-integrated-docs.js'
+          docker image ls kanap-api:ci
+      - name: Build the API image (dev stage)
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          target: dev
+          cache-from: |
+            type=gha,scope=api-runtime
+            type=gha,scope=api-dev
+          cache-to: type=gha,mode=max,scope=api-dev
+      - name: Build the web image
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+      - name: Build the marketing image
+        uses: docker/build-push-action@v6
+        with:
+          context: marketing
+          cache-from: type=gha,scope=marketing
+          cache-to: type=gha,mode=max,scope=marketing

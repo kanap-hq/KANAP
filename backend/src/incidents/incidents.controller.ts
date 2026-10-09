@@ -6,6 +6,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { Response } from 'express';
 import { DataSource, EntityManager } from 'typeorm';
+import { ExportRoute } from '../audit/security-events';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
@@ -200,6 +201,7 @@ export class IncidentsController {
   @RequireLevel('incidents', 'reader')
   @Throttle({ default: RATE_LIMITS.documentExport })
   @LongRunningRequest(OUTSIDE_WORK_TIMEOUTS)
+  @ExportRoute()
   @Get(':id/report')
   async exportReport(
     @Param('id') idOrRef: string,

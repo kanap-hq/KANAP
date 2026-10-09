@@ -15,6 +15,7 @@ import { EmailService } from '../email/email.service';
 import { AuthService } from '../auth/auth.service';
 import { RateLimitGuard } from '../common/rate-limit.guard';
 import { RATE_LIMITS } from '../common/rate-limit';
+import { clientAddress } from '../common/client-address';
 import { withTenant } from '../common/tenant-runner';
 import { TurnstileService } from './turnstile.service';
 import { Subscription, SubscriptionStatus } from '../billing/subscription.entity';
@@ -236,7 +237,7 @@ export class PublicController {
     const marketingBaseUrl = this.resolveMarketingBaseUrl(req);
     await this.turnstile.verifyOrThrow({
       token: this.resolveCaptchaToken(body),
-      remoteIp: this.resolveClientIp(req),
+      remoteIp: clientAddress(req),
       action: 'start-trial',
     });
 
@@ -324,7 +325,7 @@ export class PublicController {
     if (Features.SINGLE_TENANT) throwNotAvailableInMode();
     await this.turnstile.verifyOrThrow({
       token: this.resolveCaptchaToken(body),
-      remoteIp: this.resolveClientIp(req),
+      remoteIp: clientAddress(req),
       action: 'contact',
     });
 
@@ -353,7 +354,7 @@ export class PublicController {
     if (Features.SINGLE_TENANT) throwNotAvailableInMode();
     await this.turnstile.verifyOrThrow({
       token: this.resolveCaptchaToken(body),
-      remoteIp: this.resolveClientIp(req),
+      remoteIp: clientAddress(req),
       action: 'support-invoice',
     });
 
@@ -610,20 +611,6 @@ export class PublicController {
       "'": '&#039;',
     };
     return text.replace(/[&<>"']/g, (m) => map[m] || m);
-  }
-
-  private resolveClientIp(req: any): string | null {
-    const cfIp = String(req?.headers?.['cf-connecting-ip'] || '').trim();
-    if (cfIp) return cfIp;
-
-    const forwarded = String(req?.headers?.['x-forwarded-for'] || '').trim();
-    if (forwarded) {
-      const first = forwarded.split(',')[0]?.trim();
-      if (first) return first;
-    }
-
-    const ip = String(req?.ip || '').trim();
-    return ip || null;
   }
 
   private extractInvoiceId(source: any): string | null {

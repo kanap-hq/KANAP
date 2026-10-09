@@ -94,7 +94,15 @@ function getComponentOverrides(mode: PaletteMode): ThemeOptions['components'] {
         '*::-webkit-scrollbar-corner': {
           backgroundColor: 'transparent',
         },
+        // The autofill keyframes every input watches, injected once here (see MuiInputBase).
+        '@keyframes mui-auto-fill': { from: { display: 'block' } },
+        '@keyframes mui-auto-fill-cancel': { from: { display: 'block' } },
       }),
+    },
+    MuiInputBase: {
+      // Each input otherwise mounts its own global style for the two autofill keyframes and
+      // looks it up in the document: dozens of times on a budget grid. The baseline holds them.
+      defaultProps: { disableInjectingGlobalStyles: true },
     },
     MuiTextField: {
       defaultProps: {

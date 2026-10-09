@@ -23,6 +23,9 @@ import { TenantsService } from '../tenants/tenants.service';
 import { UserRole } from '../users/user-role.entity';
 import { RateLimitGuard } from '../common/rate-limit.guard';
 import { RATE_LIMITS } from '../common/rate-limit';
+import { SecurityEventsService } from '../audit/security-events.service';
+import { AuthEvent } from '../audit/security-events';
+import { authRefusalOf } from './auth-refused.exception';
 import { Response } from 'express';
 import {
   REFRESH_TOKEN_COOKIE_NAME,
@@ -86,7 +89,23 @@ export class AuthController {
     private readonly fxIngestion: FxIngestionService,
     private readonly dataSource: DataSource,
     private readonly tenants: TenantsService,
+    private readonly securityEvents: SecurityEventsService,
   ) {}
+
+  /**
+   * Records a sign-in or session event in the request's tenant (security-events.ts), on a
+   * connection of its own and without waiting for it: the response stays the same, whether
+   * the write succeeds or not.
+   */
+  private recordAuthEvent(req: any, event: AuthEvent, tenantId: string | null | undefined = req?.tenant?.id) {
+    void this.securityEvents.recordAuthEvent(tenantId, event, req);
+  }
+
+  /** Records `action` for a refused request, with its reason and account; other errors are not events. */
+  private recordRefusal(req: any, action: AuthEvent['action'], error: unknown) {
+    const refusal = authRefusalOf(error);
+    if (refusal) this.recordAuthEvent(req, { action, reason: refusal.reason, userId: refusal.userId });
+  }
 
   private async runInRequestTenant<T>(
     req: any,
@@ -107,17 +126,26 @@ export class AuthController {
   @Throttle({ default: RATE_LIMITS.authLogin })
   async login(@Body() body: LoginDto, @Req() req: any, @Res({ passthrough: true }) res: Response) {
     if (!body?.email || !body?.password) throw new BadRequestException({ code: 'MISSING_CREDENTIALS', message: 'email and password are required' });
-    const tokens = await this.runInRequestTenant(req, async (manager) => {
-      const user = await this.auth.validateUser(body.email, body.password, manager);
-      await this.users.touchLastLogin(user.id, { manager });
-      void this.fxIngestion.maybeRefreshOnLogin((user as any)?.tenant_id);
-      return this.auth.signTokens(
-        { id: user.id, email: user.email, role: user.role, tenant_id: (user as any)?.tenant_id },
-        manager,
-      );
-    });
-    setRefreshTokenCookie(res, tokens.refresh_token, tokens.refresh_expires_in, isSecureRequest(req));
-    return this.toTokenResponse(tokens);
+    let signedIn: { userId: string; tokens: Awaited<ReturnType<AuthService['signTokens']>> };
+    try {
+      signedIn = await this.runInRequestTenant(req, async (manager) => {
+        const user = await this.auth.validateUser(body.email, body.password, manager);
+        await this.users.touchLastLogin(user.id, { manager });
+        void this.fxIngestion.maybeRefreshOnLogin((user as any)?.tenant_id);
+        const tokens = await this.auth.signTokens(
+          { id: user.id, email: user.email, role: user.role, tenant_id: (user as any)?.tenant_id },
+          manager,
+        );
+        return { userId: user.id, tokens };
+      });
+    } catch (error) {
+      // After the rollback of the sign-in transaction: the event is written apart from it.
+      this.recordRefusal(req, 'login_failed', error);
+      throw error;
+    }
+    this.recordAuthEvent(req, { action: 'login', userId: signedIn.userId });
+    setRefreshTokenCookie(res, signedIn.tokens.refresh_token, signedIn.tokens.refresh_expires_in, isSecureRequest(req));
+    return this.toTokenResponse(signedIn.tokens);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -215,7 +243,7 @@ export class AuthController {
   @Post('exchange-provisioning-token')
   @UseGuards(RateLimitGuard)
   @Throttle({ default: RATE_LIMITS.authProvisioningExchange })
-  async exchangeProvisioningToken(@Body() body: { token?: string }) {
+  async exchangeProvisioningToken(@Body() body: { token?: string }, @Req() req: any) {
     const t = body?.token;
     if (!t) throw new BadRequestException({ code: 'TOKEN_REQUIRED', message: 'token is required' });
     // Dedicated `PROVISIONING_TOKEN_SECRET` when configured, otherwise `JWT_SECRET` — the issuer
@@ -227,16 +255,23 @@ export class AuthController {
     try {
       payload = jwt.verify(t, secret, { algorithms: [...PROVISIONING_TOKEN_ALGORITHMS] });
     } catch {
+      // The tenant named in an unverified token is not trusted: only the host's tenant gets the event.
+      this.recordAuthEvent(req, { action: 'login_failed', reason: 'invalid_token' });
       throw new BadRequestException({ code: 'TOKEN_EXPIRED', message: 'invalid or expired token' });
     }
     if (!payload || payload.purpose !== PROVISIONING_PURPOSE || !payload.tenant_id || !payload.email) {
+      this.recordAuthEvent(req, { action: 'login_failed', reason: 'invalid_token' });
       throw new BadRequestException('invalid token payload');
     }
     const tenantId = payload.tenant_id as string;
     const user = await withTenant(this.dataSource, tenantId, async (manager) => {
       return this.users.findByEmail(payload.email, { manager });
     });
-    if (!user) throw new BadRequestException('user not found');
+    if (!user) {
+      this.recordAuthEvent(req, { action: 'login_failed', reason: 'unknown_user' }, tenantId);
+      throw new BadRequestException('user not found');
+    }
+    this.recordAuthEvent(req, { action: 'login', userId: user.id, reason: 'provisioning' }, tenantId);
     return this.auth.signToken({ id: user.id, email: user.email, role: user.role, tenant_id: tenantId });
   }
 
@@ -250,12 +285,19 @@ export class AuthController {
     const baseUrl = resolveAppBaseUrl(req);
     const email = body.email.trim().toLowerCase();
     const user = await this.runInRequestTenant(req, (manager) => this.users.findByEmail(email, { manager }));
-    if (!user) return { ok: true };
+    if (!user) {
+      this.recordAuthEvent(req, { action: 'password_reset_requested', reason: 'unknown_user' });
+      return { ok: true };
+    }
     // Externally managed accounts (Entra) have no local password. Silent ok:
     // this endpoint is unauthenticated and must not leak the account type.
-    if (user.external_auth_provider) return { ok: true };
+    if (user.external_auth_provider) {
+      this.recordAuthEvent(req, { action: 'password_reset_requested', reason: 'external_account', userId: user.id });
+      return { ok: true };
+    }
 
     const token = await this.runInRequestTenant(req, (manager) => this.auth.createPasswordResetToken(user, manager));
+    this.recordAuthEvent(req, { action: 'password_reset_requested', userId: user.id });
     const resetUrl = `${baseUrl.replace(/\/$/, '')}/reset-password#token=${encodeURIComponent(token)}`;
     await this.emails.sendPasswordResetEmail({
       to: email,
@@ -271,7 +313,8 @@ export class AuthController {
   @UseGuards(RateLimitGuard)
   @Throttle({ default: RATE_LIMITS.authPasswordResetComplete })
   async completePasswordReset(@Body() body: CompletePasswordResetDto, @Req() req: any) {
-    await this.runInRequestTenant(req, (manager) => this.auth.resetPasswordWithToken(body.token, body.password, { manager }));
+    const userId = await this.runInRequestTenant(req, (manager) => this.auth.resetPasswordWithToken(body.token, body.password, { manager }));
+    this.recordAuthEvent(req, { action: 'password_reset_completed', userId });
     return { ok: true };
   }
 
@@ -283,7 +326,13 @@ export class AuthController {
     assertRequestOriginAllowed(req);
     const refreshToken = this.resolveRefreshToken(req, body);
     if (!refreshToken) throw new BadRequestException('refresh_token is required');
-    const refreshed = await this.runInRequestTenant(req, (manager) => this.auth.refreshAccessToken(refreshToken, req?.tenant?.id, manager));
+    let refreshed: Awaited<ReturnType<AuthService['refreshAccessToken']>>;
+    try {
+      refreshed = await this.runInRequestTenant(req, (manager) => this.auth.refreshAccessToken(refreshToken, req?.tenant?.id, manager));
+    } catch (error) {
+      this.recordRefusal(req, 'refresh_denied', error);
+      throw error;
+    }
     setRefreshTokenCookie(res, refreshToken, refreshed.refresh_expires_in, isSecureRequest(req));
     return refreshed;
   }
@@ -295,7 +344,9 @@ export class AuthController {
     const refreshToken = this.resolveRefreshToken(req, body);
     clearRefreshTokenCookie(res, isSecureRequest(req));
     if (refreshToken) {
-      await this.runInRequestTenant(req, (manager) => this.auth.revokeToken(refreshToken, req?.tenant?.id, manager));
+      const userId = await this.runInRequestTenant(req, (manager) => this.auth.revokeToken(refreshToken, req?.tenant?.id, manager));
+      // A sign-out that closed a session; one without a session changes nothing and is not an event.
+      if (userId) this.recordAuthEvent(req, { action: 'logout', userId });
     }
     return { ok: true };
   }

@@ -31,10 +31,14 @@ import { DataSource, QueryRunner } from 'typeorm';
  *   npx ts-node scripts/verify-analytics-axes.ts [--report]
  *   VERIFY_TENANT_SLUG=<slug> npx ts-node scripts/verify-analytics-axes.ts
  *
- * On a server (QA: .env.qa / compose.qa.yml, prod: .env.prod / compose.prod.yml),
- * once the new image has migrated at boot:
- *   docker compose --env-file backend/.env.qa -f infra/compose.qa.yml exec api npx ts-node scripts/verify-analytics-axes.ts
- * On-premise: the same command with the installation's own compose file.
+ * On a server, once the new image has migrated at boot. The server images run compiled
+ * code only: TypeScript scripts run in the maintenance image, built from the same tree
+ * (QA: .env.qa, prod: .env.prod), from /opt/kanap after `git pull`:
+ *   docker build --target dev -t kanap-api-tools backend
+ *   docker run --rm --env-file backend/.env.qa --network infra_default kanap-api-tools \
+ *     npx ts-node scripts/verify-analytics-axes.ts
+ * `infra_default` is the network of the API container (`docker network ls` lists it).
+ * On-premise: the same commands with the installation's own env file and network.
  */
 
 type Kind = { label: 'OPEX' | 'CAPEX'; items: string; links: string; prefix: string; name: string };

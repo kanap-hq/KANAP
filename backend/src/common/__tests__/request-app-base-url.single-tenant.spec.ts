@@ -76,6 +76,7 @@ async function testPasswordResetLink() {
       const emails = { sendPasswordResetEmail: async (params: any) => { sent.push(params); } };
       const controller = new AuthController(
         auth as any, users as any, {} as any, {} as any, emails as any, {} as any, {} as any, {} as any,
+        { recordAuthEvent: async () => undefined } as any,
       );
       await controller.requestPasswordReset({ email: 'user@example.invalid' }, onPremRequest('app.acme-corp.com'));
       assert.equal(sent.length, 1);

@@ -214,6 +214,15 @@
       "create": "Create",
       "delete": "Delete",
       "disable": "Disable",
+      "export": "Export",
+      "login": "Sign-in",
+      "login_failed": "Failed sign-in",
+      "logout": "Sign-out",
+      "password_reset_completed": "Password reset completed",
+      "password_reset_requested": "Password reset requested",
+      "refresh_denied": "Session renewal refused",
+      "sso_login": "Sign-in with Microsoft",
+      "sso_login_failed": "Failed sign-in with Microsoft",
       "update": "Update"
     },
     "columns": {
@@ -234,7 +243,9 @@
       "before": "Before",
       "changedFields": "Changed fields",
       "date": "Date: {{value}}",
+      "exported": "Exported: {{value}}",
       "noFieldChanges": "No key-level changes",
+      "reason": "Reason: {{value}}",
       "recordId": "Record ID: {{value}}",
       "source": "Source: {{value}}",
       "sourceRef": "Source ref: {{value}}",
@@ -243,8 +254,58 @@
       "title": "Audit entry details",
       "user": "User: {{value}}"
     },
+    "export": {
+      "button": "Export CSV",
+      "failed": "The audit log could not be exported.",
+      "tooMany": "Too many exports in a short time. Try again in a minute.",
+      "truncated": "The file holds the first {{limit}} entries. Narrow the filters to export the rest."
+    },
+    "exportResources": {
+      "accounts": "Accounts",
+      "analyticsCategories": "Analytics dimensions",
+      "applications": "Applications",
+      "assets": "Assets",
+      "auditLog": "Audit log",
+      "businessProcesses": "Business processes",
+      "capexBudgetFile": "CAPEX budget file",
+      "chartOfAccounts": "Chart of accounts",
+      "coaTemplates": "CoA template",
+      "companies": "Companies",
+      "contacts": "Contacts",
+      "contracts": "Contracts",
+      "costCenters": "Cost centers",
+      "departments": "Departments",
+      "document": "Document",
+      "incidentReport": "Incident report",
+      "incidents": "Incidents",
+      "knowledgeDocument": "Knowledge document",
+      "opexBudgetFile": "OPEX budget file",
+      "projects": "Projects",
+      "requests": "Requests",
+      "suppliers": "Suppliers",
+      "tasks": "Tasks",
+      "users": "Users",
+      "weeklyReport": "Weekly report",
+      "workingDayCalendars": "Working-day calendars"
+    },
     "messages": {
       "loadDetailsFailed": "Failed to load audit entry details."
+    },
+    "reasons": {
+      "bad_password": "Wrong password",
+      "disabled": "Account disabled",
+      "email_unverified": "Address not verified by Microsoft",
+      "expired": "Session expired",
+      "external_account": "Account managed by the company directory",
+      "invalid_state": "Sign-in with Microsoft could not be checked",
+      "invalid_token": "Link or session not valid",
+      "no_password": "Account without a password",
+      "not_allowed": "Role not allowed to sign in",
+      "provisioning": "Workspace setup link",
+      "sso_failed": "Sign-in with Microsoft failed",
+      "sso_not_configured": "Sign-in with Microsoft not set up",
+      "tenant_mismatch": "Microsoft directory does not match the workspace",
+      "unknown_user": "No account with this address"
     },
     "shared": {
       "empty": "-"
@@ -254,8 +315,13 @@
       "user": "User",
       "webhook": "Webhook"
     },
+    "tables": {
+      "auth": "Sign-in and session",
+      "export": "Export"
+    },
     "title": "Audit log",
     "values": {
+      "unknownAccount": "Unknown account",
       "unknownUser": "Unknown ({{id}}...)"
     }
   },
