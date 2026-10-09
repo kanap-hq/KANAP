@@ -62,6 +62,9 @@ Tool-specific or private notes live in each tool's local files, never here.
 - A failed check or a conflict with `main` drops that PR from the queue, along with the queued
   PRs that contain it. Fix, merge `origin/main` into the branch, push, and queue it again with
   the script.
+- A failed queue run shows up on the PR as a failing `merge queue` check and a comment naming the
+  failed jobs (`.github/workflows/queue-failure.yml`). That check is not required: the next push
+  clears it.
 - Minor and patch Dependabot PRs enter the queue by themselves, through the `kanap-queue` app
   (`.github/workflows/dependabot-queue.yml`). One that fails leaves the queue and stays open: an
   agent finds the cause, fixes it in a separate PR if needed, then queues it with `queue-stack.sh`.
@@ -126,8 +129,8 @@ Tool-specific or private notes live in each tool's local files, never here.
   (`src/common/__tests__/backend-root.ts`), not `__dirname`: the compiled tree holds no `.ts`
   file and no fixture.
 - CI runs the backend and frontend suites in the cloud jobs, and builds both sides in on-premise
-  mode. Every job runs in the merge queue, and only there (see "Workflow with the maintainer"). A
-  failing spec drops the PR from the queue.
+  mode. These jobs run in the merge queue only (see "Workflow with the maintainer"); on a PR only
+  the stack order warning runs. A failing spec drops the PR from the queue.
 - The frontend check runs as a `frontend build` job and three `frontend tests (i/3)` shards in
   parallel (`vitest run --shard`, split by file); the `frontend (cloud)` job only gathers their
   results. To rerun one shard locally: `npm test -- --shard=2/3` in `frontend/`.
