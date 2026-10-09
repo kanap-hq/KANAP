@@ -30,6 +30,10 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: [version-update:semver-major]
+      # Lexical must stay on the version @mdxeditor/editor is built against (0.x minors break
+      # its types): it moves with the editor, in a planned lot.
+      - dependency-name: "lexical"
+      - dependency-name: "@lexical/*"
 
   - package-ecosystem: npm
     directory: /marketing/web
