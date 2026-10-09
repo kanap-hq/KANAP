@@ -176,7 +176,7 @@ Los cambios se guardan por sí solos, como en el espacio de trabajo de la dimens
 - **Una lista por dimensión**: los nombres son únicos dentro de una dimensión, sin distinguir mayúsculas y minúsculas. Dos dimensiones pueden tener cada una un valor llamado "Other". Un duplicado se rechaza, por ejemplo "A value named Licenses already exists in Nature."
 - **Un valor se queda en su dimensión**: la dimensión se fija al crear el valor y no puede cambiar. Para mover un valor, créelo en la otra dimensión, cambie las líneas y después elimine el valor antiguo.
 - **Cambiar el nombre conserva las líneas**: las líneas apuntan al propio valor, de modo que el nuevo nombre aparece de inmediato en las listas y los informes.
-- **Eliminar**: el botón **Eliminar** del encabezado elimina el valor de inmediato (requiere `analytics:admin`). Está desactivado cuando hay líneas de presupuesto que usan el valor, con el motivo, por ejemplo "Usado por 3 líneas OPEX y 1 línea CAPEX. Desactívelo en su lugar." Quite antes el valor de esas líneas, o desactívelo.
+- **Eliminar**: el botón **Eliminar** del encabezado elimina el valor de inmediato (requiere `analytics:admin`). Está desactivado cuando hay líneas de presupuesto que usan el valor, con el motivo, por ejemplo "Usado por 3 líneas OPEX y 1 línea CAPEX." Quite antes el valor de esas líneas, o desactívelo.
 
 ### Valores OPEX o CAPEX
 

@@ -176,7 +176,7 @@ Changes save on their own, as in the dimension workspace. A name refused in the 
 - **One list per dimension**: names are unique within a dimension, regardless of case. Two dimensions can each have a value called "Other". A duplicate is refused, for example "A value named Licenses already exists in Nature."
 - **A value stays in its dimension**: the dimension is set when the value is created and cannot change. To move a value, create it in the other dimension, change the lines, then delete the old value.
 - **Renaming keeps the lines**: lines point to the value itself, so the new name shows at once in lists and reports.
-- **Deleting**: the **Delete** button in the header deletes the value at once (requires `analytics:admin`). It is disabled when budget lines use the value, with the reason, for example "Used by 3 OPEX lines and 1 CAPEX line. Disable it instead." Remove the value from these lines first, or disable it.
+- **Deleting**: the **Delete** button in the header deletes the value at once (requires `analytics:admin`). It is disabled when budget lines use the value, with the reason, for example "Used by 3 OPEX lines and 1 CAPEX line." Remove the value from these lines first, or disable it.
 
 ### OPEX or CAPEX values
 

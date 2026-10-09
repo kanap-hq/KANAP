@@ -279,7 +279,8 @@ describe('AnalyticsWorkspacePage', () => {
     const second = renderAt('/master-data/analytics/v-1/overview?axis=ax-nature');
     await findTitle();
     expect(screen.getByRole('button', { name: 'common:buttons.delete' })).toBeDisabled();
-    expect(screen.getByTestId('analytics-value-usage')).toHaveTextContent('analytics.deleteBlocked.valueUsed');
+    expect(screen.getByTestId('analytics-value-usage')).toHaveTextContent('analytics.usage.valueBoth');
+    expect(screen.getByTestId('analytics-value-usage')).not.toHaveTextContent('analytics.deleteBlocked');
     second.unmount();
 
     mocked.getAnalyticsValue.mockResolvedValue({ ...VALUE, opex_count: 0, capex_count: 0 });

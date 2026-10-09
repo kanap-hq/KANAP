@@ -665,8 +665,7 @@
       "valueBoth": "Utilisée par {{opex}} et {{capex}}."
     },
     "deleteBlocked": {
-      "dimensionHasValues": "Pour supprimer cette dimension, supprimez d'abord ses valeurs.",
-      "valueUsed": "{{usage}} Désactivez-la plutôt."
+      "dimensionHasValues": "Pour supprimer cette dimension, supprimez d'abord ses valeurs."
     },
     "appliesToConflict": {
       "capex_one": "{{count}} ligne CAPEX a une valeur pour cette dimension. Elle la garde, masquée tant que la dimension est réservée aux lignes OPEX.",

@@ -176,7 +176,7 @@ Klicken Sie auf **Neuer Wert**. Das Feld **Dimension** steht zunächst auf der D
 - **Eine Liste pro Dimension**: Namen sind innerhalb einer Dimension eindeutig, unabhängig von Groß- und Kleinschreibung. Zwei Dimensionen können jeweils einen Wert namens „Sonstiges“ haben. Ein doppelter Name wird abgelehnt, zum Beispiel „A value named Licenses already exists in Nature.“
 - **Ein Wert bleibt in seiner Dimension**: Die Dimension wird beim Erstellen des Werts festgelegt und kann sich nicht ändern. Um einen Wert zu verschieben, erstellen Sie ihn in der anderen Dimension, ändern Sie die Zeilen und löschen Sie dann den alten Wert.
 - **Umbenennen behält die Zeilen**: Zeilen verweisen auf den Wert selbst, daher erscheint der neue Name sofort in Listen und Berichten.
-- **Löschen**: Die Schaltfläche **Löschen** in der Kopfzeile löscht den Wert sofort (erfordert `analytics:admin`). Sie ist deaktiviert, wenn Budgetzeilen den Wert verwenden, mit dem Grund, zum Beispiel „Verwendet von 3 OPEX-Zeilen und 1 CAPEX-Zeile. Deaktivieren Sie ihn stattdessen.“ Entfernen Sie den Wert zuerst von diesen Zeilen, oder deaktivieren Sie ihn.
+- **Löschen**: Die Schaltfläche **Löschen** in der Kopfzeile löscht den Wert sofort (erfordert `analytics:admin`). Sie ist deaktiviert, wenn Budgetzeilen den Wert verwenden, mit dem Grund, zum Beispiel „Verwendet von 3 OPEX-Zeilen und 1 CAPEX-Zeile.“ Entfernen Sie den Wert zuerst von diesen Zeilen, oder deaktivieren Sie ihn.
 
 ### OPEX- oder CAPEX-Werte
 

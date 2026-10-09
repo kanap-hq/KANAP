@@ -187,8 +187,8 @@ export default function AnalyticsWorkspacePage() {
   const axis = data ? axes.byId.get(data.axis_id) : undefined;
   const dimensionLabel = axis ? axes.label(axis) : analyticsAxisLabel({ name: data?.axis_name ?? null }, t);
   const usage = data ? valueUsageLine(t, data.opex_count ?? 0, data.capex_count ?? 0) : null;
-  // The server refuses deleting a value in use; the page already knows, so it says why up front.
-  const deleteBlock = usage ? t('analytics.deleteBlocked.valueUsed', { usage }) : null;
+  // The server refuses deleting a value in use: Delete stays disabled while the usage line shows.
+  const inUse = !!usage;
   const disabled = !canEdit;
 
   const actions = canDelete && data ? (
@@ -197,13 +197,11 @@ export default function AnalyticsWorkspacePage() {
       startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}
       size="small"
       onClick={() => void handleDelete()}
-      disabled={deleting || !!deleteBlock}
+      disabled={deleting || inUse}
     >
       {t('common:buttons.delete')}
     </Button>
   ) : undefined;
-
-  const shownUsage = canDelete ? deleteBlock ?? usage : usage;
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
@@ -274,9 +272,9 @@ export default function AnalyticsWorkspacePage() {
       >
         {data && (
           <Stack spacing={2.5} sx={{ maxWidth: 900 }}>
-            {shownUsage && (
+            {usage && (
               <Typography data-testid="analytics-value-usage" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
-                {shownUsage}
+                {usage}
               </Typography>
             )}
             <AnalyticsDescriptionField

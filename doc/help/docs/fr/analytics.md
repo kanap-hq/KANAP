@@ -176,7 +176,7 @@ Les modifications s'enregistrent d'elles-mêmes, comme dans l'espace de travail 
 - **Une liste par dimension** : les noms sont uniques au sein d'une dimension, sans tenir compte de la casse. Deux dimensions peuvent chacune avoir une valeur appelée « Other ». Un doublon est refusé, par exemple « A value named Licenses already exists in Nature. »
 - **Une valeur reste dans sa dimension** : la dimension est fixée à la création de la valeur et ne peut pas changer. Pour déplacer une valeur, créez-la dans l'autre dimension, modifiez les lignes, puis supprimez l'ancienne valeur.
 - **Renommer conserve les lignes** : les lignes pointent vers la valeur elle-même, le nouveau nom s'affiche donc aussitôt dans les listes et les rapports.
-- **Supprimer** : le bouton **Supprimer** de l'en-tête supprime la valeur immédiatement (nécessite `analytics:admin`). Il est désactivé lorsque des lignes budgétaires utilisent la valeur, avec la raison, par exemple « Utilisée par 3 lignes OPEX et 1 ligne CAPEX. Désactivez-la plutôt. » Retirez d'abord la valeur de ces lignes, ou désactivez-la.
+- **Supprimer** : le bouton **Supprimer** de l'en-tête supprime la valeur immédiatement (nécessite `analytics:admin`). Il est désactivé lorsque des lignes budgétaires utilisent la valeur, avec la raison, par exemple « Utilisée par 3 lignes OPEX et 1 ligne CAPEX. » Retirez d'abord la valeur de ces lignes, ou désactivez-la.
 
 ### Valeurs OPEX ou CAPEX
 
