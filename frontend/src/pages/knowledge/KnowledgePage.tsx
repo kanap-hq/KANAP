@@ -37,7 +37,6 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
 import ChipToggleBar, { ChipToggleContextLine } from '../../components/ChipToggleBar';
-import PageHeader from '../../components/PageHeader';
 import { KanapDialog, PropertyRow, StatusDot } from '../../components/design';
 import ServerDataGrid from '../../components/ServerDataGrid';
 import type { EnhancedColDef } from '../../components/ServerDataGrid';
@@ -170,7 +169,7 @@ function StatusCellRenderer(props: any) {
 
 export default function KnowledgePage() {
   const { hasLevel, profile } = useAuth();
-  const { t } = useTranslation(['knowledge', 'common', 'nav']);
+  const { t } = useTranslation(['knowledge', 'common']);
   const locale = useLocale();
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -1257,11 +1256,9 @@ export default function KnowledgePage() {
       .filter(Boolean)
       .join(' · ')
     : null;
-  const pageTitle = t('nav:workspaces.knowledge');
 
   return (
     <>
-      <PageHeader title={pageTitle} breadcrumbTitle={pageTitle} />
       <ChipToggleBar
         ariaLabel={t('libraries.label')}
         selectedId={activeLibrary?.slug ?? null}
