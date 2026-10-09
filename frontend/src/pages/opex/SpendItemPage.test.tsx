@@ -183,12 +183,13 @@ function ListPageProbe() {
   return <div data-testid="list-page" data-search={search} />;
 }
 
+// The routers here render like the app's (`useTransitions={false}` in main.tsx).
 function renderAt(path: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
-        <MemoryRouter initialEntries={[path]}>
+        <MemoryRouter initialEntries={[path]} useTransitions={false}>
           <Routes>
             <Route path="/ops/opex/:id/:tab" element={<SpendItemPage />} />
             <Route path="/ops/opex" element={<ListPageProbe />} />
@@ -753,7 +754,7 @@ describe('SpendItemPage autosave across lines, refusals and a busy server', () =
     render(
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={createAppTheme('light')}>
-          <MemoryRouter initialEntries={[path]}>
+          <MemoryRouter initialEntries={[path]} useTransitions={false}>
             <NavigateProbe />
             <Routes>
               <Route path="/ops/opex/:id/:tab" element={<SpendItemPage />} />
@@ -933,7 +934,7 @@ describe('SpendItemPage edit conflicts (lot 3C)', () => {
     render(
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={createAppTheme('light')}>
-          <MemoryRouter initialEntries={[path]}>
+          <MemoryRouter initialEntries={[path]} useTransitions={false}>
             <NavigateProbe />
             <LocationProbe />
             <Routes>
@@ -1508,7 +1509,7 @@ describe('SpendItemPage others\' changes (lot 3G)', () => {
     const ui = (path: string) => (
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={createAppTheme('light')}>
-          <MemoryRouter initialEntries={[path]}>
+          <MemoryRouter initialEntries={[path]} useTransitions={false}>
             <Routes>
               <Route path="/ops/opex/:id/:tab" element={<SpendItemPage />} />
             </Routes>
@@ -1575,7 +1576,7 @@ describe('SpendItemPage cost center across lines', () => {
     render(
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={createAppTheme('light')}>
-          <MemoryRouter initialEntries={[`/ops/opex/${LINE_A}/overview`]}>
+          <MemoryRouter initialEntries={[`/ops/opex/${LINE_A}/overview`]} useTransitions={false}>
             <NavigateProbe />
             <Routes>
               <Route path="/ops/opex/:id/:tab" element={<SpendItemPage />} />
