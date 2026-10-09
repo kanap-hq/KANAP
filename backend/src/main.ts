@@ -1,13 +1,7 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { DataSource, EntityManager } from 'typeorm';
-import { User } from './users/user.entity';
-import { Role } from './roles/role.entity';
-import { UserRole } from './users/user-role.entity';
-import { RolePermission } from './permissions/role-permission.entity';
-import { RESOURCES } from './permissions/permissions.service';
-import * as argon2 from 'argon2';
+import { DataSource } from 'typeorm';
 import { parseBoolean, requireEnv, validateStartupEnv } from './common/env';
 import { describeTokenPurposePolicy } from './auth/access-token.util';
 import { describeSecretPolicy } from './auth/token-secret.util';
@@ -16,6 +10,8 @@ import { Features } from './config/features';
 import { TenantsService } from './tenants/tenants.service';
 import { TenantBaselineService } from './tenants/tenant-baseline.service';
 import { createSingleTenantOnFirstStart } from './tenants/single-tenant-provisioning';
+import { ensureBootstrapAdministrator } from './tenants/bootstrap-admin';
+import { jwtSecretWarnings } from './common/startup-secrets';
 import { ScheduledTasksService } from './admin/scheduled-tasks/scheduled-tasks.service';
 import { assertSafeDatabaseRole } from './common/database-role-safety';
 import { SchedulerRegistry } from '@nestjs/schedule';
@@ -65,23 +61,6 @@ function logTokenSecretPolicy() {
   }
 }
 
-async function ensurePrimaryUserRole(manager: EntityManager, user: User, role: Role) {
-  const userRoleRepo = manager.getRepository(UserRole);
-  const existing = await userRoleRepo.findOne({ where: { user_id: user.id, role_id: role.id } });
-  if (!existing) {
-    const tenantId = user.tenant_id ?? (await manager.query(`SELECT app_current_tenant()::text AS tenant_id`))?.[0]?.tenant_id;
-    await userRoleRepo.save(userRoleRepo.create({
-      tenant_id: tenantId,
-      user_id: user.id,
-      role_id: role.id,
-      is_primary: true,
-    }));
-  } else if (!existing.is_primary && user.role_id === role.id) {
-    existing.is_primary = true;
-    await userRoleRepo.save(existing);
-  }
-}
-
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   checkStartupEnv();
@@ -94,6 +73,8 @@ async function bootstrap() {
   const roleState = await assertSafeDatabaseRole(ds, 'startup');
   // eslint-disable-next-line no-console
   console.log(`[DB] Connected as PostgreSQL role "${roleState.currentUser}" with native RLS enforcement`);
+  // `[SECURITY]` lines (startup-secrets.ts): printed once per start, by the lead process.
+  const securityWarnings = new Set<string>(jwtSecretWarnings(process.env));
   // Start-up writes (admin seed, single-tenant provisioning) check then insert: with several API
   // processes starting together they take turns under one advisory lock (startup-lock.ts).
   await withStartupLock(ds, STARTUP_PROVISIONING_LOCK, async () => {
@@ -103,98 +84,11 @@ async function bootstrap() {
       const adminPassword = requireEnv('ADMIN_PASSWORD');
       const defaultTenantSlug = requireEnv('DEFAULT_TENANT_SLUG');
       try {
-        const runner = ds.createQueryRunner();
-        await runner.connect();
-        await runner.startTransaction();
-        try {
-          const row = await runner.query(`SELECT id FROM tenants WHERE slug = $1 LIMIT 1`, [defaultTenantSlug]);
-          const tenantId = row?.[0]?.id as string | undefined;
-          if (!tenantId) {
-            // eslint-disable-next-line no-console
-            console.warn(`Admin seed skipped: tenant '${defaultTenantSlug}' not found`);
-            // Ends the seed only (this used to return from bootstrap(): the API never listened).
-            await runner.rollbackTransaction();
-            return;
-          }
-          await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
-          await runner.query(`SELECT set_config('app.default_tenant_slug', $1, true)`, [defaultTenantSlug]);
-
-          // First ensure roles exist (roles table should be created by migration, but ensure seeding)
-          const roleRepo = runner.manager.getRepository(Role);
-          const userRepo = runner.manager.getRepository(User);
-          const rolePermRepo = runner.manager.getRepository(RolePermission);
-
-          // Seed Administrator and Contact roles if missing
-          let adminRole = await roleRepo.findOne({ where: { role_name: 'Administrator' } });
-          if (!adminRole) {
-            adminRole = await roleRepo.save(roleRepo.create({
-              role_name: 'Administrator',
-              role_description: 'Full system administrator with access to all features',
-              is_system: true,
-            }));
-          }
-          // Ensure Administrator marked as system
-          if (!adminRole.is_system) {
-            adminRole.is_system = true as any;
-            await roleRepo.save(adminRole);
-          }
-          let contactRole = await roleRepo.findOne({ where: { role_name: 'Contact' } });
-          if (!contactRole) {
-            contactRole = await roleRepo.save(roleRepo.create({
-              role_name: 'Contact',
-              role_description: 'Directory contact without app access by default',
-              is_system: true,
-            }));
-          }
-          if (!contactRole.is_system) {
-            contactRole.is_system = true as any;
-            await roleRepo.save(contactRole);
-          }
-
-          // Ensure Administrator has full permissions on all resources
-          for (const r of RESOURCES) {
-            const existing = await rolePermRepo.findOne({ where: { role_id: adminRole.id, resource: r } });
-            if (!existing) {
-              await rolePermRepo.save(rolePermRepo.create({ role_id: adminRole.id, resource: r, level: 'admin' as any }));
-            } else if (existing.level !== 'admin') {
-              existing.level = 'admin' as any;
-              await rolePermRepo.save(existing);
-            }
-          }
-
-          const existing = await userRepo.findOne({ where: { email: adminEmail } });
-          if (!existing) {
-            const password_hash = await argon2.hash(adminPassword, { type: argon2.argon2id });
-            const savedAdmin = await userRepo.save(userRepo.create({
-              email: adminEmail,
-              password_hash,
-              tenant_id: tenantId,
-              role_id: adminRole.id,
-              status: 'enabled'
-            }));
-            await ensurePrimaryUserRole(runner.manager, savedAdmin, adminRole);
-            // eslint-disable-next-line no-console
-            console.log(`Seeded admin user ${adminEmail} with Administrator role`);
-          } else {
-            // Ensure admin user has correct role even if already exists
-            if (existing.role_id !== adminRole.id) {
-              existing.role_id = adminRole.id;
-              await userRepo.save(existing);
-              // eslint-disable-next-line no-console
-              console.log(`Updated admin user ${adminEmail} to Administrator role`);
-            } else {
-              // eslint-disable-next-line no-console
-              console.log(`Admin user already present: ${adminEmail}`);
-            }
-            await ensurePrimaryUserRole(runner.manager, existing, adminRole);
-          }
-          await runner.commitTransaction();
-        } catch (seedError) {
-          await runner.rollbackTransaction();
-          throw seedError;
-        } finally {
-          await runner.release();
-        }
+        const seeded = await ensureBootstrapAdministrator(ds, {
+          // Single-tenant: the provisioning below checks the same account's password.
+          tenantSlug: defaultTenantSlug, email: adminEmail, password: adminPassword, checkPassword: isLeadProcess() && !Features.SINGLE_TENANT,
+        });
+        seeded.warnings.forEach((warning) => securityWarnings.add(warning));
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('Admin seed check failed:', err instanceof Error ? err.message : err);
@@ -215,87 +109,14 @@ async function bootstrap() {
         console.log(`[on-prem] Created tenant '${slug}'`);
       }
 
-      // 2. Seed admin user (reuses SEED_ADMIN logic pattern but triggered by single-tenant mode)
+      // 2. Administrator account: created, or restored, only when no active administrator remains (bootstrap-admin.ts)
       const adminEmail = process.env.ADMIN_EMAIL?.trim();
       const adminPassword = process.env.ADMIN_PASSWORD?.trim();
       if (adminEmail && adminPassword) {
-        const tenantRow = await ds.query('SELECT id FROM tenants WHERE slug = $1 LIMIT 1', [slug]);
-        const tenantId = tenantRow[0].id;
-        const runner = ds.createQueryRunner();
-        await runner.connect();
-        await runner.startTransaction();
-        try {
-          await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
-
-          const roleRepo = runner.manager.getRepository(Role);
-          const userRepo = runner.manager.getRepository(User);
-          const rolePermRepo = runner.manager.getRepository(RolePermission);
-
-          let adminRole = await roleRepo.findOne({ where: { role_name: 'Administrator' } });
-          if (!adminRole) {
-            adminRole = await roleRepo.save(roleRepo.create({
-              role_name: 'Administrator',
-              role_description: 'Full system administrator with access to all features',
-              is_system: true,
-            }));
-          }
-          if (!adminRole.is_system) {
-            adminRole.is_system = true as any;
-            await roleRepo.save(adminRole);
-          }
-          let contactRole = await roleRepo.findOne({ where: { role_name: 'Contact' } });
-          if (!contactRole) {
-            contactRole = await roleRepo.save(roleRepo.create({
-              role_name: 'Contact',
-              role_description: 'Directory contact without app access by default',
-              is_system: true,
-            }));
-          }
-          if (!contactRole.is_system) {
-            contactRole.is_system = true as any;
-            await roleRepo.save(contactRole);
-          }
-
-          for (const r of RESOURCES) {
-            const existingPerm = await rolePermRepo.findOne({ where: { role_id: adminRole.id, resource: r } });
-            if (!existingPerm) {
-              await rolePermRepo.save(rolePermRepo.create({ role_id: adminRole.id, resource: r, level: 'admin' as any }));
-            } else if (existingPerm.level !== 'admin') {
-              existingPerm.level = 'admin' as any;
-              await rolePermRepo.save(existingPerm);
-            }
-          }
-
-          const existingUser = await userRepo.findOne({ where: { email: adminEmail } });
-          if (!existingUser) {
-            const password_hash = await argon2.hash(adminPassword, { type: argon2.argon2id });
-            const savedAdmin = await userRepo.save(userRepo.create({
-              email: adminEmail,
-              password_hash,
-              tenant_id: tenantId,
-              role_id: adminRole.id,
-              status: 'enabled',
-            }));
-            await ensurePrimaryUserRole(runner.manager, savedAdmin, adminRole);
-            // eslint-disable-next-line no-console
-            console.log(`[on-prem] Seeded admin user ${adminEmail}`);
-          } else if (existingUser.role_id !== adminRole.id) {
-            existingUser.role_id = adminRole.id;
-            await userRepo.save(existingUser);
-            await ensurePrimaryUserRole(runner.manager, existingUser, adminRole);
-            // eslint-disable-next-line no-console
-            console.log(`[on-prem] Updated admin user ${adminEmail} to Administrator role`);
-          } else {
-            await ensurePrimaryUserRole(runner.manager, existingUser, adminRole);
-          }
-
-          await runner.commitTransaction();
-        } catch (seedError) {
-          await runner.rollbackTransaction();
-          throw seedError;
-        } finally {
-          await runner.release();
-        }
+        const seeded = await ensureBootstrapAdministrator(ds, {
+          tenantSlug: slug, email: adminEmail, password: adminPassword, checkPassword: isLeadProcess(), logPrefix: '[on-prem] ',
+        });
+        seeded.warnings.forEach((warning) => securityWarnings.add(warning));
       }
 
       // 3. Bootstrap subscription row
@@ -335,6 +156,8 @@ async function bootstrap() {
       }
     }
   });
+  // eslint-disable-next-line no-console
+  if (isLeadProcess()) securityWarnings.forEach((warning) => console.warn(warning));
 
   // Tenant resolution from the Host header, the request pipeline and the finalizer (http-app.ts).
   applyTenancyAndPipeline(app, ds);
