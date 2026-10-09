@@ -245,7 +245,7 @@ La dimension par défaut ne peut pas être désactivée.
 Dans le panneau **Propriétés** d'un poste OPEX ou CAPEX, et lorsque vous en créez un, chaque dimension activée utilisée pour ce type de ligne a son propre champ, au nom de la dimension, dans l'ordre des dimensions. La dimension par défaut s'affiche comme **Dimension analytique** tant que vous ne la renommez pas.
 
 - Choisissez une valeur, ou videz le champ pour laisser la ligne sans valeur sur cette dimension. La modification s'enregistre aussitôt.
-- Le champ d'une dimension obligatoire est marqué d'un astérisque. Un nouveau poste ne peut pas être créé sans valeur sur cette dimension, avec le message « Nature est obligatoire. » Sur un poste qui porte une valeur, le champ n'a pas de bouton d'effacement : vous pouvez seulement choisir une autre valeur. Voir [Dimensions obligatoires](#dimensions-obligatoires).
+- Le champ d'une dimension obligatoire est marqué d'un astérisque. Un nouveau poste ne peut pas être créé sans valeur sur cette dimension, avec le message « Nature est obligatoire ». Sur un poste qui porte une valeur, le champ n'a pas de bouton d'effacement : vous pouvez seulement choisir une autre valeur. Voir [Dimensions obligatoires](#dimensions-obligatoires).
 - Le champ liste les valeurs activées de sa dimension utilisées pour ce type de ligne. Une valeur désactivée, ou une valeur réservée à l'autre type de ligne, reste affichée sur les lignes qui l'ont. Voir [Valeurs OPEX ou CAPEX](#valeurs-opex-ou-capex).
 - Le champ ne peut pas créer de valeur. Créez les valeurs sur la page Dimensions analytiques, ou laissez un import CSV OPEX ou CAPEX les créer.
 - Une valeur s'applique à toute la ligne, sur toutes les années.

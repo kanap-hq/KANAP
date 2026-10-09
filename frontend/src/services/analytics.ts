@@ -36,10 +36,10 @@ export type AnalyticsAxisDetail = AnalyticsAxis & {
   value_count: number;
   opex_count: number;
   capex_count: number;
-  /** OPEX / CAPEX lines of every status with no value on the dimension (0 for a type it does not apply to). Detail read only. */
+  /** OPEX / CAPEX lines of every status with no value on the dimension (0 for a type it does not apply to). */
   opex_missing?: number;
   capex_missing?: number;
-  /** The types the dimension applies to for which none of its enabled values may be used. Detail read only. */
+  /** The types the dimension applies to for which none of its enabled values may be used. */
   unusable_for?: LineType[];
 };
 

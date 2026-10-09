@@ -326,6 +326,7 @@ async function testValueAppliesTo() {
       code: 'nature',
       name: 'Nature de coût',
       required: false,
+      axisName: 'Nature de coût',
       values: [
         { id: 'v1', name: 'Abonnements SaaS', disabledAt: null, appliesTo: 'opex' },
         { id: 'v2', name: 'Matériel', disabledAt: null, appliesTo: 'capex' },
@@ -370,8 +371,8 @@ async function testRequiredDimension() {
   const cat = catalog({
     companies: [{ id: 'c1', name: 'Acme', coaId: null, disabledAt: null }],
     dimensions: [
-      { code: 'menu', name: 'Menu', required: true, values: [{ id: 'm1', name: 'Fromage', disabledAt: null }] },
-      { code: 'nature', name: 'Nature', required: false, values: [{ id: 'n1', name: 'Licences', disabledAt: null }] },
+      { code: 'menu', name: 'Menu', required: true, axisName: 'Menu', values: [{ id: 'm1', name: 'Fromage', disabledAt: null }] },
+      { code: 'nature', name: 'Nature', required: false, axisName: 'Nature', values: [{ id: 'n1', name: 'Licences', disabledAt: null }] },
     ],
   });
   const options = { cat, dimensions: ['menu', 'nature'] };
@@ -404,6 +405,18 @@ async function testRequiredDimension() {
   }
   const cleared = await preflight('opex', 'item_number,name,analytics:menu\nOPX-3,Widget,-\n', held, options);
   assert.deepEqual(menuErrors(cleared), [message], 'an existing line may not clear the value it holds');
+
+  // The unnamed default dimension: the gate's wording, not its code.
+  const unnamed = catalog({
+    companies: [{ id: 'c1', name: 'Acme', coaId: null, disabledAt: null }],
+    dimensions: [{ code: 'default', name: 'default', required: true, axisName: null, values: [] }],
+  });
+  const defaultMissing = await preflight('opex', 'item_number,name,company_name,currency\n,Widget,Acme,EUR\n', [], { cat: unnamed, dimensions: ['default'] });
+  assert.deepEqual(
+    defaultMissing.errors.filter((error) => error.column === 'analytics:default').map((error) => error.message),
+    ['The analytics dimension is required. Choose a value.'],
+    'a required default dimension without a name',
+  );
 }
 
 async function testExportShape() {

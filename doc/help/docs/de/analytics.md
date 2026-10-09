@@ -245,7 +245,7 @@ Die Standarddimension kann nicht deaktiviert werden.
 Im Bereich **Eigenschaften** einer OPEX- oder CAPEX-Position, und wenn Sie eine erstellen, hat jede aktivierte Dimension, die für diese Zeilenart verwendet wird, ein eigenes Feld, nach der Dimension benannt, in der Reihenfolge der Dimensionen. Die Standarddimension erscheint als **Analysedimension**, bis Sie sie umbenennen.
 
 - Wählen Sie einen Wert, oder leeren Sie das Feld, um die Zeile in dieser Dimension ohne Wert zu lassen. Die Änderung wird sofort gespeichert.
-- Das Feld einer erforderlichen Dimension ist mit einem Sternchen markiert. Eine neue Position kann ohne Wert in ihr nicht angelegt werden, mit der Meldung „Nature ist erforderlich.“ Bei einer Position mit einem Wert hat das Feld keine Schaltfläche zum Leeren: Sie können nur einen anderen Wert wählen. Siehe [Erforderliche Dimensionen](#erforderliche-dimensionen).
+- Das Feld einer erforderlichen Dimension ist mit einem Sternchen markiert. Eine neue Position kann ohne Wert in ihr nicht angelegt werden, mit der Meldung „Nature ist erforderlich“. Bei einer Position mit einem Wert hat das Feld keine Schaltfläche zum Leeren: Sie können nur einen anderen Wert wählen. Siehe [Erforderliche Dimensionen](#erforderliche-dimensionen).
 - Das Feld listet die aktivierten Werte seiner Dimension, die für diese Zeilenart verwendet werden. Ein deaktivierter Wert oder ein Wert, der nur für die andere Zeilenart gilt, bleibt auf den Zeilen sichtbar, die ihn haben. Siehe [OPEX- oder CAPEX-Werte](#opex-oder-capex-werte).
 - Das Feld kann keinen Wert erstellen. Erstellen Sie Werte auf der Seite Analysedimensionen, oder lassen Sie sie von einem OPEX- oder CAPEX-CSV-Import erstellen.
 - Ein Wert gilt für die ganze Zeile, über alle Jahre.

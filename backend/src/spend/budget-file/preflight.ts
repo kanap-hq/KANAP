@@ -787,7 +787,7 @@ function resolveAnalytics(
     if (blocked(column)) continue;
     const cell = row.analytics[dimension.code] ?? { kind: 'absent' as const };
     const refused = creating ? cell.kind !== 'value' : cell.kind === 'clear' && !!live?.analytics[dimension.code];
-    if (refused) fail(column, requiredDimensionMessage({ name: dimension.name }));
+    if (refused) fail(column, requiredDimensionMessage({ name: dimension.axisName }));
   }
 }
 

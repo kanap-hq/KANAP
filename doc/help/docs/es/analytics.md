@@ -245,7 +245,7 @@ La dimensión por defecto no se puede desactivar.
 En el panel **Propiedades** de una partida OPEX o CAPEX, y al crear una, cada dimensión activada que se usa para ese tipo de línea tiene su propio campo, con el nombre de la dimensión, en el orden de las dimensiones. La dimensión por defecto se muestra como **Dimensión analítica** hasta que le dé un nombre.
 
 - Elija un valor, o vacíe el campo para dejar la línea sin valor en esa dimensión. El cambio se guarda de inmediato.
-- El campo de una dimensión obligatoria está marcado con un asterisco. No se puede crear una partida nueva sin valor en ella, con el mensaje "El campo Nature es obligatorio." En una partida que tiene un valor, el campo no tiene botón para vaciarlo: solo puede elegir otro valor. Consulte [Dimensiones obligatorias](#dimensiones-obligatorias).
+- El campo de una dimensión obligatoria está marcado con un asterisco. No se puede crear una partida nueva sin valor en ella, con el mensaje "El campo Nature es obligatorio". En una partida que tiene un valor, el campo no tiene botón para vaciarlo: solo puede elegir otro valor. Consulte [Dimensiones obligatorias](#dimensiones-obligatorias).
 - El campo lista los valores activados de su dimensión que se usan para este tipo de línea. Un valor desactivado, o un valor solo para el otro tipo de línea, sigue mostrándose en las líneas que lo tienen. Consulte [Valores OPEX o CAPEX](#valores-opex-o-capex).
 - El campo no puede crear un valor. Cree los valores en la página Dimensiones analíticas, o deje que los cree una importación CSV de OPEX o CAPEX.
 - Un valor se aplica a toda la línea, en todos los años.

@@ -1,7 +1,7 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, focusManager } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
@@ -103,8 +103,7 @@ async function pickUsage(label: string) {
   fireEvent.click(within(await screen.findByRole('listbox')).getByRole('option', { name: label }));
 }
 
-function renderAt(path: string) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function renderAt(path: string, queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
@@ -376,10 +375,8 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     expect(within(drawer).getByText('analytics.hints.appliesToDefault')).toBeInTheDocument();
   });
 
-  it('saves Required at once, then reads the lines without a value and links to each type', async () => {
-    mocked.getAnalyticsAxis
-      .mockResolvedValueOnce(NATURE)
-      .mockResolvedValue({ ...NATURE, required: true, opex_missing: 117, capex_missing: 15, unusable_for: [] });
+  it('saves Required at once, and shows the lines without a value from the response, with a link per type', async () => {
+    mocked.updateAnalyticsAxis.mockResolvedValueOnce({ ...NATURE, required: true, opex_missing: 117, capex_missing: 15, unusable_for: [] });
     renderAt('/master-data/analytics/dimensions/ax-nature/overview');
     await screen.findByLabelText('analytics.fields.code');
     expect(requiredSwitch()).not.toBeChecked();
@@ -387,9 +384,9 @@ describe('AnalyticsDimensionWorkspacePage', () => {
 
     fireEvent.click(requiredSwitch());
     await waitFor(() => expect(mocked.updateAnalyticsAxis).toHaveBeenCalledWith('ax-nature', { required: true }));
-    // The detail is read again: the counts show without a reload.
+    // The response carries the counts: no second read.
     const note = await screen.findByTestId('analytics-dimension-required-missing');
-    expect(mocked.getAnalyticsAxis).toHaveBeenCalledTimes(2);
+    expect(mocked.getAnalyticsAxis).toHaveBeenCalledTimes(1);
     expect(requiredSwitch()).toBeChecked();
     expect(note).toHaveTextContent('analytics.required.missing.both');
     const opex = within(note).getByRole('link', { name: 'analytics.required.showLines.opex' });
@@ -407,6 +404,24 @@ describe('AnalyticsDimensionWorkspacePage', () => {
 
     fireEvent.click(requiredSwitch());
     await waitFor(() => expect(mocked.updateAnalyticsAxis).toHaveBeenLastCalledWith('ax-nature', { required: false }));
+  });
+
+  it('reads the lines without a value again when the window regains focus, unlike the app default', async () => {
+    mocked.getAnalyticsAxis
+      .mockResolvedValueOnce({ ...NATURE, required: true, opex_missing: 4, capex_missing: 0, unusable_for: [] })
+      .mockResolvedValue({ ...NATURE, required: true, opex_missing: 1, capex_missing: 0, unusable_for: [] });
+    // The app's client never refetches on focus by default (lib/queryClient.tsx).
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } } });
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview', queryClient);
+    await screen.findByTestId('analytics-dimension-required-missing');
+    expect(mocked.getAnalyticsAxis).toHaveBeenCalledTimes(1);
+    try {
+      act(() => { focusManager.setFocused(false); });
+      act(() => { focusManager.setFocused(true); });
+      await waitFor(() => expect(mocked.getAnalyticsAxis).toHaveBeenCalledTimes(2));
+    } finally {
+      focusManager.setFocused(undefined);
+    }
   });
 
   it('names a single type with one link, on the default dimension list column', async () => {

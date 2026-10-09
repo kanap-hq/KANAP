@@ -52,7 +52,7 @@
       "currencyMust3": "La moneda debe tener 3 letras",
       "payingCompanyRequired": "La empresa pagadora es obligatoria",
       "accountRequired": "La cuenta es obligatoria",
-      "dimensionRequired": "El campo {{name}} es obligatorio.",
+      "dimensionRequired": "El campo {{name}} es obligatorio",
       "effectiveStartRequired": "La fecha de inicio efectivo es obligatoria",
       "failedToCreate": "No se pudo crear la partida",
       "failedToSave": "No se pudo guardar",
@@ -269,7 +269,7 @@
       "obsoleteAccount": "Cuenta obsoleta detectada. La cuenta seleccionada no pertenece al plan de cuentas de la empresa. Actualice la cuenta.",
       "payingCompanyRequired": "La empresa pagadora es obligatoria",
       "accountRequired": "La cuenta es obligatoria",
-      "dimensionRequired": "El campo {{name}} es obligatorio."
+      "dimensionRequired": "El campo {{name}} es obligatorio"
     },
     "budget": {
       "title": "Presupuesto",

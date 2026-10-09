@@ -376,6 +376,11 @@ async function testRequiredDimensions(kind: Kind) {
     assert.equal(noDefault.message, 'The analytics dimension is required. Choose a value.', `${kind}: the unnamed default`);
     const clearedLegacy = await refusal(runner, () => svc.update(legacy.id, { analytics_category_id: null }, undefined, opts));
     assert.equal(clearedLegacy.message, 'The analytics dimension is required. Choose a value.', `${kind}: the legacy field cannot clear it`);
+    const clearedBoth = await refusal(runner, () => svc.update(legacy.id, {
+      analytics_values: { [s.main]: null }, analytics_category_id: null,
+    }, undefined, opts));
+    assert.equal(clearedBoth.message, 'The analytics dimension is required. Choose a value.', `${kind}: nor both fields together`);
+    assert.deepEqual(await links(runner, kind, legacy.id), { [s.main]: s.licences, [s.nature]: s.otherNature }, `${kind}: the default value stays`);
     await runner.query(`UPDATE analytics_axes SET required = false WHERE id = $1`, [s.main]);
 
     // Update: a held value cannot be cleared; changing it passes.

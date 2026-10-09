@@ -245,7 +245,7 @@ The default dimension cannot be disabled.
 In the **Properties** panel of an OPEX or CAPEX item, and when you create one, each enabled dimension used for that kind of line has its own field, named after the dimension, in dimension order. The default dimension shows as **Analytics dimension** until you rename it.
 
 - Pick a value, or clear the field to leave the line without a value on that dimension. The change saves at once.
-- A required dimension's field is marked with an asterisk. A new item cannot be created without a value on it, with the message "Nature is required." On an item that holds a value, the field offers no clear button: you can only pick another value. See [Required dimensions](#required-dimensions).
+- A required dimension's field is marked with an asterisk. A new item cannot be created without a value on it, with the message "Nature is required". On an item that holds a value, the field offers no clear button: you can only pick another value. See [Required dimensions](#required-dimensions).
 - The field lists the enabled values of its dimension that are used for this kind of line. A disabled value, or a value used for the other kind of line only, stays shown on the lines that have it. See [OPEX or CAPEX values](#opex-or-capex-values).
 - The field cannot create a value. Create values on the Analytics dimensions page, or let an OPEX or CAPEX CSV import create them.
 - A value applies to the whole line, across all years.

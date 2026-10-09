@@ -122,6 +122,8 @@ export interface CatalogDimension {
   name: string;
   /** A new line must get a value on it, and a held value cannot be cleared (the catalog holds enabled dimensions of the type only). */
   required: boolean;
+  /** The dimension's own name: null for the unnamed default (`name` then holds its code). */
+  axisName: string | null;
   values: CatalogValue[];
 }
 

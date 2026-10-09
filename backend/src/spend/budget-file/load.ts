@@ -383,6 +383,7 @@ async function loadDimensions(manager: EntityManager, tenantId: string, scope: B
     code: axis.code,
     name: axis.name ?? axis.code,
     required: axis.required,
+    axisName: axis.name,
     values: values.filter((value) => value.code === axis.code).map((value) => ({
       id: value.id,
       name: value.name,

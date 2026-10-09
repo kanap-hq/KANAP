@@ -67,6 +67,8 @@ export default function AnalyticsDimensionWorkspacePage() {
     queryKey: detailKey,
     queryFn: () => getAnalyticsAxis(id),
     enabled: !isCreate && !!id,
+    // The admin fills the lines without a value in the list tab: coming back shows the new count.
+    refetchOnWindowFocus: true,
   });
 
   const [errors, setErrors] = React.useState<FieldErrors>({});
@@ -104,13 +106,12 @@ export default function AnalyticsDimensionWorkspacePage() {
       const run = async (): Promise<boolean> => {
         try {
           const saved = await updateAnalyticsAxis(recordId, body);
-          const key = [...ANALYTICS_AXIS_DETAIL_KEY, recordId];
-          // The response may leave out what only the detail read computes (lines without a value):
-          // the known figures stay until the read below replaces them.
-          queryClient.setQueryData<AnalyticsAxisDetail>(key, (prev) => (prev ? { ...prev, ...saved } : saved));
+          // The response is the full detail, the lines without a value included.
+          queryClient.setQueryData<AnalyticsAxisDetail>(
+            [...ANALYTICS_AXIS_DETAIL_KEY, recordId],
+            (prev) => (prev ? { ...prev, ...saved } : saved),
+          );
           void queryClient.invalidateQueries({ queryKey: ANALYTICS_AXES_QUERY_KEY, exact: true });
-          // The lines without a value depend on these: read them again so they show at once.
-          if ('required' in body || 'applies_to' in body) void queryClient.invalidateQueries({ queryKey: key, exact: true });
           return true;
         } catch (e) {
           if (currentIdRef.current !== recordId) return false;
