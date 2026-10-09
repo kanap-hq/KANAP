@@ -155,7 +155,7 @@ Opening the file and saving it keeps it loadable. Both programs keep the columns
 
 A date or an amount the file cannot settle on its own is read the way the export wrote it, then in the language the screen is shown in. Every date whose day is 12 or less is ambiguous (`01/03/2027` is March 1 in French and January 3 in English), and so is an amount written like `12,280`. The check says how it read them and offers a button to switch.
 
-A column KANAP does not know is ignored, with a warning. A column that looks like a misspelled amount column, such as `budjet_2027`, refuses the whole file.
+A column KANAP does not know is ignored, with a warning. A column that looks like a misspelled amount column, such as `budjet_2027`, refuses the whole file. An `analytics:<code>` column that names no enabled dimension refuses the whole file too, with "Unknown dimension 'x'."
 
 ## Files from earlier versions
 

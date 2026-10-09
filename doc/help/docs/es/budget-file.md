@@ -155,7 +155,7 @@ Abrir el archivo y guardarlo lo deja cargable. Los dos programas conservan las c
 
 Una fecha o un importe que el archivo no puede decidir por sí solo se lee como lo escribió la exportación, y después en el idioma en que se muestra la pantalla. Toda fecha con un día igual o menor que 12 es ambigua (`01/03/2027` es el 1 de marzo en francés y el 3 de enero en inglés), y un importe escrito como `12,280` también lo es. La verificación indica cómo los ha leído y ofrece un botón para cambiar la lectura.
 
-Una columna que KANAP no conoce se ignora, con una advertencia. Una columna que parece una columna de importes mal escrita, como `budjet_2027`, rechaza el archivo entero.
+Una columna que KANAP no conoce se ignora, con una advertencia. Una columna que parece una columna de importes mal escrita, como `budjet_2027`, rechaza el archivo entero. Una columna `analytics:<code>` que no nombra ninguna dimensión activada también rechaza el archivo entero, con "Unknown dimension 'x'."
 
 ## Archivos de versiones anteriores
 

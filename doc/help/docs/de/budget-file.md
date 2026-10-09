@@ -155,7 +155,7 @@ Die Datei zu öffnen und zu speichern lässt sie ladbar. Beide Programme behalte
 
 Ein Datum oder ein Betrag, den die Datei nicht selbst entscheiden kann, wird so gelesen, wie der Export ihn geschrieben hat, dann in der Sprache, in der die Oberfläche angezeigt wird. Jedes Datum mit einem Tag bis 12 ist mehrdeutig (`01/03/2027` ist auf Französisch der 1. März und auf Englisch der 3. Januar), und ein Betrag wie `12,280` ebenfalls. Die Prüfung sagt, wie sie gelesen wurden, und bietet eine Schaltfläche zum Wechseln der Lesart.
 
-Eine Spalte, die KANAP nicht kennt, wird mit einer Warnung ignoriert. Eine Spalte, die wie eine falsch geschriebene Betragsspalte aussieht, zum Beispiel `budjet_2027`, lehnt die ganze Datei ab.
+Eine Spalte, die KANAP nicht kennt, wird mit einer Warnung ignoriert. Eine Spalte, die wie eine falsch geschriebene Betragsspalte aussieht, zum Beispiel `budjet_2027`, lehnt die ganze Datei ab. Auch eine Spalte `analytics:<code>`, die keine aktivierte Dimension benennt, lehnt die ganze Datei ab, mit „Unknown dimension 'x'.“
 
 ## Dateien aus früheren Versionen
 

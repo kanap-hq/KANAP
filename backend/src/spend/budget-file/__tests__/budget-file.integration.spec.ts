@@ -727,9 +727,29 @@ async function testDimensionCells(runner: { query: Function; manager: EntityMana
      VALUES ($1, $2, $3, $4)`,
     [tenantId, alpha.id, recurrence, monthly],
   );
+  // A file checked while Recurrence still applied to both types: a new value on Alpha and a new line.
+  const staleFile = csvOf(newLineColumns(kind, ['analytics:recurrence']), [
+    { ...newLine(kind, 'Alpha'), item_number: ref(kind, alpha.n), 'analytics:recurrence': 'Yearly' },
+    newLine(kind, 'Charlie', { 'analytics:recurrence': 'Monthly' }),
+  ]);
+  const stalePreflight = await preflightBudgetFile(runner.manager, kind, tenantId, staleFile);
+  assert.equal(stalePreflight.ok, true, `${kind}: the file is valid while the dimension applies to both (${JSON.stringify(stalePreflight.errors)})`);
   await runner.query(`UPDATE analytics_axes SET applies_to = $3 WHERE tenant_id = $1 AND id = $2`, [tenantId, recurrence, other]);
   const message = `The Recurrence dimension is for ${other.toUpperCase()} lines only. `
     + `Remove the analytics:recurrence column from this ${kind.toUpperCase()} file.`;
+  // The load reads the file again: refused by its header, nothing written.
+  const linksBeforeLoad = await links();
+  const [{ n: linesBeforeLoad }] = await runner.query(`SELECT count(*)::int AS n FROM ${ITEM_TABLE[kind]} WHERE tenant_id = $1`, [tenantId]);
+  const staleLoad = await budgetFileService().importFile(
+    kind, Buffer.from(staleFile, 'utf8'), stalePreflight.snapshot, { manager: runner.manager, tenantId, userId: null }, BUDGET_FILE_OPTIONS,
+    { items: itemService(kind), audit: captureAudit() as any, freeze: noFreeze },
+  );
+  assert.equal(staleLoad.ok, false, `${kind}: the load refuses a column of the other type`);
+  assert.deepEqual('headerErrors' in staleLoad ? staleLoad.headerErrors : null, [message], `${kind}: with the contract message`);
+  assert.deepEqual(await links(), linksBeforeLoad, `${kind}: the load writes no value`);
+  assert.deepEqual(await valuesOf(recurrence), ['Monthly'], `${kind}: nor creates one`);
+  const [{ n: linesAfterLoad }] = await runner.query(`SELECT count(*)::int AS n FROM ${ITEM_TABLE[kind]} WHERE tenant_id = $1`, [tenantId]);
+  assert.equal(linesAfterLoad, linesBeforeLoad, `${kind}: nor a line`);
   for (const header of ['analytics:recurrence', 'Analytics:Recurrence']) {
     const refused = await preflightBudgetFile(runner.manager, kind, tenantId, csvOf(['item_number', header], [{ item_number: ref(kind, alpha.n), [header]: 'Monthly' }]));
     assert.equal(refused.ok, false, `${kind}: ${header} refuses the file`);

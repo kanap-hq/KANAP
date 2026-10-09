@@ -6,7 +6,7 @@ import { Box, Link, MenuItem, Select, Typography } from '@mui/material';
 import api from '../../api';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { STATUS_DISABLED, deriveStatusFromDisabledAt } from '../../constants/status';
-import { drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
+import { attentionDotSx, drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import type { CoaListItem } from '../coa/useCoaList';
 
 export type ConsolidationStatus = 'mapped' | 'outside' | 'unmapped';
@@ -52,16 +52,6 @@ export function useConsolidationOptions(chartId: string | null | undefined) {
 function isDisabled(option: ConsolidationOption) {
   return deriveStatusFromDisabledAt(option.disabled_at) === STATUS_DISABLED;
 }
-
-/** The orange dot before an attention note on the account pages. */
-export const attentionDotSx = {
-  display: 'inline-block',
-  width: 6,
-  height: 6,
-  borderRadius: '50%',
-  bgcolor: 'kanap.orange',
-  flexShrink: 0,
-} as const;
 
 const noteSx = { fontSize: 12, lineHeight: 1.45, mt: '6px' } as const;
 

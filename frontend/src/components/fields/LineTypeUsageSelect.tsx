@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box, MenuItem, Select, Typography } from '@mui/material';
 import { LINE_TYPES, lineTypeUsageLabel, parseLineTypeUsage, type LineType } from '../../constants/lineTypeUsage';
-import { drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
+import { attentionDotSx, drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 
 /**
  * "Used for": OPEX and CAPEX lines (stored as null), OPEX lines only or CAPEX lines only. Shared by
@@ -50,17 +50,6 @@ export default function LineTypeUsageSelect({
   );
 }
 
-const conflictDotSx = {
-  display: 'inline-block',
-  width: 6,
-  height: 6,
-  borderRadius: '50%',
-  bgcolor: 'kanap.orange',
-  flexShrink: 0,
-  position: 'relative',
-  top: '-1px',
-} as const;
-
 /**
  * One line under a "Used for" select, in the attention tone: lines of the other type still hold the
  * record. The caller writes the sentence (and any link) as children.
@@ -71,7 +60,7 @@ export function LineTypeUsageConflictNote({ testId, children }: { testId: string
       data-testid={testId}
       sx={{ fontSize: 12, lineHeight: 1.45, mt: '6px', display: 'flex', alignItems: 'baseline', gap: '8px', color: 'kanap.text.secondary' }}
     >
-      <Box component="span" sx={conflictDotSx} />
+      <Box component="span" sx={{ ...attentionDotSx, position: 'relative', top: '-1px' }} />
       <span>{children}</span>
     </Box>
   );

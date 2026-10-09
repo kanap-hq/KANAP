@@ -155,7 +155,7 @@ Ouvrir le fichier et l'enregistrer le laisse chargeable. Les deux programmes con
 
 Une date ou un montant que le fichier ne peut pas trancher seul est lu comme l'export l'a écrit, puis dans la langue d'affichage de l'écran. Toute date dont le jour est inférieur ou égal à 12 est ambiguë (`01/03/2027` est le 1er mars en français et le 3 janvier en anglais), et un montant écrit comme `12,280` l'est aussi. La vérification indique comment elle les a lus et propose un bouton pour changer la lecture.
 
-Une colonne que KANAP ne connaît pas est ignorée, avec un avertissement. Une colonne qui ressemble à une colonne de montants mal orthographiée, comme `budjet_2027`, refuse le fichier entier.
+Une colonne que KANAP ne connaît pas est ignorée, avec un avertissement. Une colonne qui ressemble à une colonne de montants mal orthographiée, comme `budjet_2027`, refuse le fichier entier. Une colonne `analytics:<code>` qui ne désigne aucune dimension activée refuse elle aussi le fichier entier, avec « Unknown dimension 'x'. »
 
 ## Fichiers d'anciennes versions
 
