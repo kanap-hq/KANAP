@@ -1,10 +1,15 @@
+/**
+ * Integrated-document verification, run after the repair. Compiled with the API
+ * (`dist/knowledge/scripts/`): the image entrypoint (scripts/migrate-and-start.js) runs it with
+ * `node`, and `npm run integrated-docs:verify` runs it by hand.
+ */
 import 'reflect-metadata';
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { DataSource, EntityManager } from 'typeorm';
-import { AppModule } from '../src/app.module';
-import { IntegratedDocumentsService } from '../src/knowledge/integrated-documents.service';
-import { withTenant } from '../src/common/tenant-runner';
+import { AppModule } from '../../app.module';
+import { IntegratedDocumentsService } from '../integrated-documents.service';
+import { withTenant } from '../../common/tenant-runner';
 
 type TenantRow = {
   id: string;

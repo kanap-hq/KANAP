@@ -10,8 +10,12 @@
 # changes. The Docker build does not regenerate them because the frontend
 # source is not part of this build context.
 
+# Base images are pinned to the digest of their multi-architecture index (date in the comment).
+# Dependabot proposes the new digest; `docker compose build --pull` fetches exactly this image.
+
 # ---------- Build stage ----------
-FROM node:24-alpine AS build
+# node:24-alpine, index digest pinned on 2026-10-09 (later digests: Dependabot)
+FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS build
 
 WORKDIR /app
 
@@ -26,7 +30,8 @@ COPY web/ ./
 RUN npm run build
 
 # ---------- Runtime stage ----------
-FROM nginx:alpine
+# nginx:alpine, index digest pinned on 2026-10-09 (later digests: Dependabot)
+FROM nginx:alpine@sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2
 
 # Clean-URL nginx config (directory format output)
 COPY web/nginx.conf /etc/nginx/conf.d/default.conf

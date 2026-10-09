@@ -1,10 +1,30 @@
-FROM node:24-alpine
-RUN apk add --no-cache pandoc typst fontconfig font-noto ttf-dejavu \
+# API image, in stages. The last stage, `runtime`, is what `docker build` gives without a
+# target and what the server compose files name (on-premise, QA, production): compiled code
+# and production dependencies only. `dev` is the full tree (sources, development tools): the
+# local stack runs it, and so do maintenance commands that run TypeScript
+# (`docker build --target dev`, then `npx ts-node scripts/...` or `npm run typeorm`).
+#
+# The base image is pinned to the digest of its multi-architecture index (date in the comment).
+# Dependabot proposes the new digest; `docker compose build --pull` fetches exactly this image.
+
+# node:24-alpine, index digest pinned on 2026-10-09 (later digests: Dependabot)
+FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS base
+# Document converters (pandoc, typst, inkscape) and fonts, all from the repositories of the
+# Alpine release of the image. The font folders get a whole-second time before fc-cache: image
+# layers keep whole seconds only, and fontconfig ignores a cache whose recorded folder time
+# differs, then rebuilds it in the folder of each converter call.
+RUN apk add --no-cache pandoc typst inkscape fontconfig font-noto ttf-dejavu \
     font-liberation font-carlito \
-    && apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community \
-    inkscape \
+    && find /usr/share/fonts -type d -exec touch -d "$(date -u '+%Y-%m-%d %H:%M:%S')" {} + \
     && fc-cache -f
 WORKDIR /app
+EXPOSE 8080
+# The locale the login shell of `sh -lc` used to export (/etc/profile.d/20locale.sh): pandoc,
+# typst and inkscape (document export) read it, and the exec-form CMD below starts no shell.
+ENV CHARSET=UTF-8 LANG=C.UTF-8 LC_COLLATE=C
+
+# Every dependency, the sources and the compiled dist/.
+FROM base AS build
 COPY package.json package-lock.json* ./
 RUN npm ci
 COPY tsconfig*.json ./
@@ -13,10 +33,25 @@ COPY scripts ./scripts
 # The demo data set and its loader (setup-tenant.mjs), run by the API to load demo data.
 COPY fixtures ./fixtures
 RUN npm run build
-EXPOSE 8080
-# The locale the login shell of `sh -lc` used to export (/etc/profile.d/20locale.sh): pandoc,
-# typst and inkscape (document export) read it, and the exec-form CMD below starts no shell.
-ENV CHARSET=UTF-8 LANG=C.UTF-8 LC_COLLATE=C
+
+# Production dependencies, pruned from the tree of the build stage (no second install).
+FROM build AS production-dependencies
+RUN npm prune --omit=dev --no-audit --no-fund
+
+# Development image: the full tree, as the single-stage image had it.
+FROM build AS dev
+USER node
+CMD ["node", "./scripts/migrate-and-start.js"]
+
+# Runtime image: compiled code, production dependencies, the start-up script, the loader
+# helpers of the demo data and the demo data set. No sources, specs or development tools.
+FROM base AS runtime
+COPY --from=build /app/package.json /app/package-lock.json ./
+COPY --from=production-dependencies /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/scripts/migrate-and-start.js ./scripts/
+COPY --from=build /app/scripts/lib/*.mjs ./scripts/lib/
+COPY --from=build /app/fixtures ./fixtures
 USER node
 # Exec form: node receives SIGTERM itself and drains in-flight requests before it exits
 # (src/common/graceful-shutdown.ts). Through `sh -lc` the signal never reached node and every

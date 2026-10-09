@@ -5,8 +5,8 @@ These packages have a known advisory and stay on their current major for now; ea
 ## ts-node-dev, with chokidar and braces (backend, high)
 
 - Where it runs: the local development restarter (`npm run start:dev`). No fixed version exists upstream.
-- What keeps it out of production: QA, production and on-premise images start the API with `node` on the compiled `dist/` and never load it. It is still installed in the API image until the multi-stage image of delivery 2, which leaves development dependencies out.
-- Planned upgrade: removed from the image in delivery 2.
+- What keeps it out of production: it is not installed in the API runtime image, the one QA, production and on-premise servers build and run (`target: runtime` in their compose files). That image holds the compiled `dist/` and the production dependencies only. It stays in the `dev` stage of `backend/Dockerfile`, which the local development stack builds.
+- Planned upgrade: none for the server images, which no longer install it (delivery 2). The development stack keeps it while no fixed version exists.
 
 ## Planned major upgrades
 
