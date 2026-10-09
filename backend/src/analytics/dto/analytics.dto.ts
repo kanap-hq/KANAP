@@ -66,6 +66,11 @@ export class AnalyticsCategoryCreateDto extends StatusLifecycleDto {
   @IsOptional()
   @IsString()
   description?: string | null;
+
+  /** OPEX lines only, CAPEX lines only; null clears it (both), absent leaves it unchanged. */
+  @IsOptional()
+  @IsIn(AXIS_APPLIES_TO)
+  applies_to?: AxisAppliesTo | null;
 }
 
 export class AnalyticsCategoryUpdateDto extends StatusLifecycleDto {
@@ -80,6 +85,11 @@ export class AnalyticsCategoryUpdateDto extends StatusLifecycleDto {
   @IsOptional()
   @IsString()
   description?: string | null;
+
+  /** OPEX lines only, CAPEX lines only; null clears it (both), absent leaves it unchanged. */
+  @IsOptional()
+  @IsIn(AXIS_APPLIES_TO)
+  applies_to?: AxisAppliesTo | null;
 }
 
 export class AnalyticsCategoryBulkDeleteDto {

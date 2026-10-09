@@ -21,11 +21,20 @@ import {
   AnalyticsCategoryValues,
   categoryValuesEqual,
   StoredAnalyticsCategory,
+  valueAppliesToConflict,
 } from './analytics-categories.service';
+import { AXIS_APPLIES_TO, AxisAppliesTo } from './analytics-axis.entity';
 
-export const ANALYTICS_VALUE_CSV_HEADERS = ['axis_code', 'name', 'description', 'status', 'disabled_at'] as const;
+export const ANALYTICS_VALUE_CSV_HEADERS = ['axis_code', 'name', 'description', 'status', 'disabled_at', 'applies_to'] as const;
 /** Only the name is required; an absent column keeps what is stored (a new value gets the default). */
-const OPTIONAL_HEADERS = ['axis_code', 'description', 'status', 'disabled_at'] as const;
+const OPTIONAL_HEADERS = ['axis_code', 'description', 'status', 'disabled_at', 'applies_to'] as const;
+
+/** An `applies_to` cell: '' is null (OPEX and CAPEX lines), undefined an invalid value. */
+function csvAppliesTo(raw: string): AxisAppliesTo | null | undefined {
+  const text = raw.trim().toLowerCase();
+  if (text === '') return null;
+  return (AXIS_APPLIES_TO as readonly string[]).includes(text) ? (text as AxisAppliesTo) : undefined;
+}
 
 export interface AnalyticsValueImportResult {
   ok: boolean;
@@ -80,6 +89,7 @@ export class AnalyticsCategoriesCsvService {
           value.description ?? '',
           isAxisActive(value) ? StatusState.ENABLED : StatusState.DISABLED,
           endOfValidityCell(value.disabled_at, language),
+          value.applies_to ?? '',
         ]);
       }
     }
@@ -153,6 +163,7 @@ export class AnalyticsCategoriesCsvService {
       const code = has('axis_code') ? cellOf(raw, 'axis_code') : '';
       let axisId: string | null = null;
       let axisName: string | null = null;
+      let axisAppliesTo: AxisAppliesTo | null = null;
       // A disabled dimension's rows are checked once the row is resolved: unchanged ones pass (a re-imported export).
       let disabledAxis: { name: string | null } | null = null;
       if (code) {
@@ -161,12 +172,14 @@ export class AnalyticsCategoriesCsvService {
         else {
           axisId = axis.id;
           axisName = axis.name;
+          axisAppliesTo = axis.applies_to;
           if (axis.status !== 'enabled') disabledAxis = axis;
         }
       } else if (defaultAxisId || dryRun) {
         // A dry run on a tenant without dimensions: the default is created at load.
         axisId = defaultAxisId;
         axisName = defaultAxisId ? axisById.get(defaultAxisId)?.name ?? null : null;
+        axisAppliesTo = defaultAxisId ? axisById.get(defaultAxisId)?.applies_to ?? null : null;
       }
 
       const name = attempt(() => normalizeAnalyticsName(cellOf(raw, 'name')));
@@ -194,6 +207,15 @@ export class AnalyticsCategoriesCsvService {
       }
       const lifecycleConflict = csvLifecycleConflict(status, disabledAt);
       if (lifecycleConflict) rowErrors.push(lifecycleConflict);
+      // An absent column keeps what is stored (null for a new value); a blank cell clears it.
+      const appliesToRaw = has('applies_to') ? cellOf(raw, 'applies_to') : '';
+      const appliesTo = has('applies_to') ? csvAppliesTo(appliesToRaw) : existing?.applies_to ?? null;
+      if (appliesTo === undefined) {
+        rowErrors.push(`Invalid applies_to '${appliesToRaw}'. Use 'opex', 'capex' or leave it empty.`);
+      } else {
+        const conflict = valueAppliesToConflict({ name: axisName, applies_to: axisAppliesTo }, appliesTo);
+        if (conflict) rowErrors.push(conflict);
+      }
 
       if (rowErrors.length > 0 || !name) {
         for (const message of rowErrors) errors.push({ row: line, message });
@@ -213,6 +235,7 @@ export class AnalyticsCategoriesCsvService {
         description: has('description')
           ? normalizeAnalyticsDescription(cellOf(raw, 'description'))
           : existing?.description ?? null,
+        applies_to: appliesTo ?? null,
         status: lifecycle.status,
         disabled_at: lifecycle.disabled_at,
       };

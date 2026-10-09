@@ -319,6 +319,48 @@ async function testAccountNature() {
   assert.equal(kept.ok, true, `the line's current account is kept: ${JSON.stringify(kept.errors)}`);
 }
 
+async function testValueAppliesTo() {
+  const cat = catalog({
+    companies: [{ id: 'c1', name: 'Acme', coaId: null, disabledAt: null }],
+    dimensions: [{
+      code: 'nature',
+      name: 'Nature de coût',
+      values: [
+        { id: 'v1', name: 'Abonnements SaaS', disabledAt: null, appliesTo: 'opex' },
+        { id: 'v2', name: 'Matériel', disabledAt: null, appliesTo: 'capex' },
+        { id: 'v3', name: 'Licences', disabledAt: null, appliesTo: null },
+        // A fixture without the field (older catalogs): both types.
+        { id: 'v4', name: 'Divers', disabledAt: null },
+      ],
+    }],
+  });
+  const options = { cat, dimensions: ['nature'] };
+  const create = 'item_number,name,company_name,currency,analytics:nature\n';
+  const cellErrors = (report: { errors: Array<{ column: string | null; message: string }> }) =>
+    report.errors.filter((error) => error.column === 'analytics:nature').map((error) => error.message);
+
+  const onCapex = await preflight('capex', `${create},Server,Acme,EUR,abonnements saas\n`, [], options);
+  assert.deepEqual(
+    cellErrors(onCapex),
+    ['Abonnements SaaS is for OPEX lines only. Pick a value for CAPEX lines.'],
+    'a new CAPEX line on an OPEX value',
+  );
+  const onOpex = await preflight('opex', `${create},Widget,Acme,EUR,Matériel\n`, [], options);
+  assert.deepEqual(cellErrors(onOpex), ['Matériel is for CAPEX lines only. Pick a value for OPEX lines.'], 'a new OPEX line on a CAPEX value');
+  for (const name of ['Abonnements SaaS', 'Licences', 'Divers']) {
+    const fine = await preflight('opex', `${create},Widget,Acme,EUR,${name}\n`, [], options);
+    assert.deepEqual(cellErrors(fine), [], `a new OPEX line on ${name}`);
+  }
+
+  const update = 'item_number,name,analytics:nature\nOPX-3,Widget,Matériel\n';
+  const changed = await preflight('opex', update, [line({ analytics: { nature: 'Licences' } })], options);
+  assert.deepEqual(cellErrors(changed), ['Matériel is for CAPEX lines only. Pick a value for OPEX lines.'], 'a change to a value of the other type');
+  const kept = await preflight('opex', update, [line({ analytics: { nature: 'Matériel' } })], options);
+  assert.equal(kept.ok, true, `the line's current value is kept: ${JSON.stringify(kept.errors)}`);
+  const cleared = await preflight('opex', 'item_number,name,analytics:nature\nOPX-3,Widget,-\n', [line({ analytics: { nature: 'Matériel' } })], options);
+  assert.equal(cleared.ok, true, `clearing it is allowed: ${JSON.stringify(cleared.errors)}`);
+}
+
 async function testExportShape() {
   const built = buildBudgetExport({
     scope: 'opex', language: 'en', years: [YEAR], columns: ['budget'], detail: 'months', lines: [], dimensionCodes: ['nature'],
@@ -417,6 +459,7 @@ async function main() {
   await testSuppliersAndDuplicates();
   await testCreateRules();
   await testAccountNature();
+  await testValueAppliesTo();
   await testExportShape();
   await testPlan();
   console.log('budget-file.spec: ok');

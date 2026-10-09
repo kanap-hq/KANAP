@@ -366,8 +366,14 @@ async function loadDimensions(manager: EntityManager, tenantId: string, scope: B
   const axes = await loadAnalyticsAxes(manager, tenantId);
   const enabled = axes.filter((axis) => axis.status === 'enabled' && axisAppliesTo(axis, scope));
   if (enabled.length === 0) return [];
-  const values: Array<{ code: string; id: string; name: string; disabled_at: Date | string | null }> = await manager.query(
-    `SELECT ax.code, c.id::text AS id, c.name, c.disabled_at
+  const values: Array<{
+    code: string;
+    id: string;
+    name: string;
+    disabled_at: Date | string | null;
+    applies_to: 'opex' | 'capex' | null;
+  }> = await manager.query(
+    `SELECT ax.code, c.id::text AS id, c.name, c.disabled_at, c.applies_to
        FROM analytics_categories c
        JOIN analytics_axes ax ON ax.tenant_id = c.tenant_id AND ax.id = c.axis_id
       WHERE c.tenant_id = $1 AND ax.code = ANY($2::text[])`,
@@ -380,6 +386,7 @@ async function loadDimensions(manager: EntityManager, tenantId: string, scope: B
       id: value.id,
       name: value.name,
       disabledAt: value.disabled_at ? new Date(value.disabled_at).toISOString() : null,
+      appliesTo: value.applies_to ?? null,
     })),
   }));
 }

@@ -91,8 +91,11 @@ function normalizeSortOrder(raw: unknown): number {
   return value;
 }
 
-/** `opex`, `capex`, or null (OPEX and CAPEX lines). The DTO checks the shape; this covers other callers. */
-function normalizeAppliesTo(raw: unknown): AxisAppliesTo | null {
+/**
+ * `opex`, `capex`, or null (OPEX and CAPEX lines), for a dimension or a value. The DTO checks the
+ * shape; this covers other callers.
+ */
+export function normalizeAppliesTo(raw: unknown): AxisAppliesTo | null {
   if (raw == null) return null;
   const value = String(raw).trim().toLowerCase();
   if (value === '') return null;
@@ -100,6 +103,14 @@ function normalizeAppliesTo(raw: unknown): AxisAppliesTo | null {
     throw analyticsRefusal("Used for must be 'opex', 'capex' or empty.", 'applies_to');
   }
   return value as AxisAppliesTo;
+}
+
+/** "2 values of this dimension are for CAPEX lines only. Set them to OPEX and CAPEX first." */
+export function otherTypeValuesMessage(count: number, other: AxisAppliesTo): string {
+  const type = other.toUpperCase();
+  return count === 1
+    ? `1 value of this dimension is for ${type} lines only. Set it to OPEX and CAPEX first.`
+    : `${count} values of this dimension are for ${type} lines only. Set them to OPEX and CAPEX first.`;
 }
 
 /** The effective status, as every lifecycle list shows it. */
@@ -203,6 +214,10 @@ export class AnalyticsAxesService {
     // PATCH: null clears it (both), absent keeps it. The default always applies to both.
     const appliesTo = has('applies_to') ? normalizeAppliesTo(body.applies_to) : existing.applies_to ?? null;
     if (existing.is_default && appliesTo !== null) throw analyticsRefusal(DEFAULT_AXIS_APPLIES_MESSAGE, 'applies_to');
+    if (appliesTo !== null && appliesTo !== (existing.applies_to ?? null)) {
+      // The row lock above serialises this count with a value write, which locks the dimension FOR SHARE.
+      await this.assertNoValueOfOtherType(ctx, id, appliesTo);
+    }
     let name = existing.name ?? null;
     if (has('name')) {
       const blank = body.name === null || (typeof body.name === 'string' && body.name.trim() === '');
@@ -274,6 +289,17 @@ export class AnalyticsAxesService {
       [ctx.tenantId, id],
     );
     return row;
+  }
+
+  /** A dimension restricted to one line type cannot hold values restricted to the other. */
+  private async assertNoValueOfOtherType(ctx: AnalyticsContext, id: string, appliesTo: AxisAppliesTo) {
+    const other: AxisAppliesTo = appliesTo === 'opex' ? 'capex' : 'opex';
+    const [row] = await ctx.manager.query(
+      `SELECT count(*)::int AS n FROM analytics_categories WHERE tenant_id = $1 AND axis_id = $2 AND applies_to = $3`,
+      [ctx.tenantId, id, other],
+    );
+    const count = Number(row?.n ?? 0);
+    if (count > 0) throw analyticsRefusal(otherTypeValuesMessage(count, other), 'applies_to');
   }
 
   /** A readable refusal before the unique indexes (which stay the guarantee). */

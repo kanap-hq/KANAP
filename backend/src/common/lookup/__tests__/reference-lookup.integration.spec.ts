@@ -19,8 +19,9 @@ import {
 // lifecycle (search offers active rows, ids return any), the scopes (a
 // company's chart, a company's departments, a dimension's values), the people
 // lookup (names only, the email for a nameless person or a name two accounts
-// share), a row far beyond the old 1,000-row cap, and the accounts a line type
-// may use (`nature`), hydration by ids unfiltered.
+// share), a row far beyond the old 1,000-row cap, the accounts a line type
+// may use (`nature`) and the dimension values it may choose (`applies_to`),
+// hydration by ids unfiltered.
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file in its serial database lane.
 
 const PAST = '2020-06-30T12:00:00Z';
@@ -318,6 +319,35 @@ async function testAccountNature() {
   console.log('ok - account nature: the accounts a line type may use, ids unfiltered');
 }
 
+async function testValueAppliesTo() {
+  await withTenant(async (runner, tenantId) => {
+    const [axis] = await runner.query(`INSERT INTO analytics_axes (tenant_id, code, name) VALUES ($1, 'lkv', 'Nature') RETURNING id`, [tenantId]);
+    const [otherAxis] = await runner.query(`INSERT INTO analytics_axes (tenant_id, code, name) VALUES ($1, 'lkw', 'Other') RETURNING id`, [tenantId]);
+    const ids: Record<string, string> = {};
+    for (const [name, appliesTo] of [['Abonnements SaaS', 'opex'], ['Matériel', 'capex'], ['Licences', null]] as const) {
+      const [row] = await runner.query(
+        `INSERT INTO analytics_categories (tenant_id, axis_id, name, applies_to) VALUES ($1, $2, $3, $4) RETURNING id`,
+        [tenantId, axis.id, name, appliesTo],
+      );
+      ids[name] = row.id;
+    }
+    await runner.query(`INSERT INTO analytics_categories (tenant_id, axis_id, name) VALUES ($1, $2, 'Elsewhere')`, [tenantId, otherAxis.id]);
+    const call = { manager: runner.manager, tenantId };
+    const offered = async (query: Record<string, unknown>) =>
+      (await lookupAnalyticsValues(call, { axis_id: axis.id, ...query })).items.map((v: any) => `${v.name}:${v.applies_to ?? 'both'}`);
+    assert.deepEqual(await offered({}), ['Abonnements SaaS:opex', 'Licences:both', 'Matériel:capex'], 'no type: every value, with its type');
+    assert.deepEqual(await offered({ applies_to: 'opex' }), ['Abonnements SaaS:opex', 'Licences:both'], 'OPEX lines: OPEX values and values for both');
+    assert.deepEqual(await offered({ applies_to: 'capex' }), ['Licences:both', 'Matériel:capex'], 'CAPEX lines: CAPEX values and values for both');
+    assert.deepEqual(await offered({ applies_to: 'capex', q: 'abon' }), [], 'the search stays within the type');
+    assert.deepEqual(await offered({ applies_to: 'opex', q: 'abon' }), ['Abonnements SaaS:opex']);
+    assert.deepEqual(await offered({ applies_to: '' }), ['Abonnements SaaS:opex', 'Licences:both', 'Matériel:capex'], 'blank is no filter');
+    const hydrated = await lookupAnalyticsValues(call, { applies_to: 'capex', ids: ids['Abonnements SaaS'] });
+    assert.deepEqual(hydrated.items.map((v: any) => [v.name, v.applies_to]), [['Abonnements SaaS', 'opex']], 'ids hydrate a value of the other type');
+    await assert.rejects(() => lookupAnalyticsValues(call, { axis_id: axis.id, applies_to: 'both' }), /applies_to must be 'opex' or 'capex'\./);
+  });
+  console.log('ok - value applies_to: the values a line type may choose, ids unfiltered');
+}
+
 async function main() {
   await dataSource.initialize();
   try {
@@ -331,6 +361,7 @@ async function main() {
     await testUsersSharingAName();
     await testScopes();
     await testAccountNature();
+    await testValueAppliesTo();
     console.log('reference-lookup.integration.spec: ok');
   } finally {
     await dataSource.destroy();

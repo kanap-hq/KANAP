@@ -1038,6 +1038,11 @@ async function testItemAnalyticsCategoryThroughTheLinks(harness: Harness) {
     const target = await value(axisId, `Target ${seed.tag}`);
     await value(axisId, `Retired ${seed.tag}`, true);
     const natureOnly = await value(nature.id, `Nature only ${seed.tag}`);
+    // Default-dimension values restricted to one line type.
+    for (const type of ['opex', 'capex']) {
+      const id = await value(axisId, `${type.toUpperCase()} only ${seed.tag}`);
+      await runner.query(`UPDATE analytics_categories SET applies_to = $2 WHERE id = $1`, [id, type]);
+    }
     const [otherTenant] = await runner.query(`SELECT id FROM tenants WHERE slug = $1`, [`ai-cap-other-${seed.tag}`]);
     await setCurrentTenant(runner, otherTenant.id);
     const [foreign] = await runner.query(
@@ -1082,6 +1087,12 @@ async function testItemAnalyticsCategoryThroughTheLinks(harness: Harness) {
       await expectRejects(
         () => harness.tools.execute(ctx, 'update_business_record', { entity_type: entityType, ref: itemId, fields: { analytics_category: `Retired ${seed.tag}` } }),
         /This value is disabled/,
+      );
+      // A value restricted to the other line type is refused, with the write gate's message.
+      const [lineType, otherType] = entityType === 'spend_items' ? ['OPEX', 'CAPEX'] : ['CAPEX', 'OPEX'];
+      await expectRejects(
+        () => harness.tools.execute(ctx, 'update_business_record', { entity_type: entityType, ref: itemId, fields: { analytics_category: `${otherType} only ${seed.tag}` } }),
+        new RegExp(`^${otherType} only ${seed.tag} is for ${otherType} lines only\\. Choose a value for ${lineType} lines\\.$`),
       );
     }
   });

@@ -112,7 +112,14 @@ export const USER_LOOKUP: LookupSpec = {
 /** One dimension's values (`axis_id`). */
 export const ANALYTICS_VALUE_LOOKUP: LookupSpec = {
   table: 'analytics_categories',
-  columns: { id: 't.id', axis_id: 't.axis_id', name: 't.name', description: 't.description', status: 't.status' },
+  columns: {
+    id: 't.id',
+    axis_id: 't.axis_id',
+    name: 't.name',
+    description: 't.description',
+    applies_to: 't.applies_to',
+    status: 't.status',
+  },
   label: 't.name',
   search: ['t.description'],
   offered: ACTIVE_BY_DISABLED_AT,
@@ -152,11 +159,11 @@ export async function lookupDepartments(call: LookupCall, query: any) {
   return lookup(call, DEPARTMENT_LOOKUP, request);
 }
 
-/** An optional account nature (`opex`, `capex`): absent is null, anything else a 400. */
-function optionalNature(value: unknown): 'opex' | 'capex' | null {
+/** An optional line type (`opex`, `capex`) in the parameter `param`: absent is null, anything else a 400. */
+function optionalLineType(value: unknown, param: string): 'opex' | 'capex' | null {
   const raw = value == null ? '' : String(value).trim();
   if (!raw) return null;
-  if (raw !== 'opex' && raw !== 'capex') throw new BadRequestException(`nature must be 'opex' or 'capex'.`);
+  if (raw !== 'opex' && raw !== 'capex') throw new BadRequestException(`${param} must be 'opex' or 'capex'.`);
   return raw;
 }
 
@@ -172,7 +179,7 @@ export async function lookupAccounts(call: LookupCall, query: any) {
   const request = parseLookupRequest(query);
   const companyId = optionalUuid(query?.companyId ?? query?.company_id, 'companyId');
   const coaId = optionalUuid(query?.coaId ?? query?.coa_id, 'coaId');
-  const nature = optionalNature(query?.nature);
+  const nature = optionalLineType(query?.nature, 'nature');
   request.scope = [];
   if (companyId) {
     request.scope.push((bind: Bind) => {
@@ -188,10 +195,17 @@ export async function lookupAccounts(call: LookupCall, query: any) {
   return lookup(call, ACCOUNT_LOOKUP, request);
 }
 
-/** One dimension's values when `axis_id` is given. */
+/**
+ * One dimension's values when `axis_id` is given. `applies_to` (`opex`, `capex`) offers the values
+ * a line of that type may choose: those for that type and those for both (NULL). Hydration by
+ * `ids` ignores it, so a held value of the other type still shows.
+ */
 export async function lookupAnalyticsValues(call: LookupCall, query: any) {
   const request = parseLookupRequest(query);
   const axisId = optionalUuid(query?.axis_id, 'axis_id');
-  if (axisId) request.scope = [(bind: Bind) => `t.axis_id = ${bind(axisId, 'uuid')}`];
+  const appliesTo = optionalLineType(query?.applies_to, 'applies_to');
+  request.scope = [];
+  if (axisId) request.scope.push((bind: Bind) => `t.axis_id = ${bind(axisId, 'uuid')}`);
+  if (appliesTo) request.scope.push((bind: Bind) => `t.applies_to IS NULL OR t.applies_to = ${bind(appliesTo, 'text')}`);
   return lookup(call, ANALYTICS_VALUE_LOOKUP, request);
 }
