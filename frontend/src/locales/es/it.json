@@ -78,7 +78,6 @@
     "assets": {
       "title": "Activos",
       "addAsset": "Agregar activo",
-      "deleteAsset": "Eliminar activo",
       "importCsv": "Importar CSV",
       "exportCsv": "Exportar CSV",
       "exportTitle": "Exportar activos",
@@ -110,7 +109,6 @@
     "connections": {
       "title": "Conexiones",
       "addConnection": "Agregar conexión",
-      "deleteConnection": "Eliminar conexión",
       "columns": {
         "connectionReference": "Referencia",
         "name": "Nombre",
@@ -136,7 +134,6 @@
       "title": "Interfaces",
       "addInterface": "Agregar interfaz",
       "duplicateInterface": "Duplicar interfaz",
-      "deleteInterface": "Eliminar interfaz",
       "alsoDeleteBindings": "Eliminar también los enlaces relacionados",
       "deleteBindingsDescription": "Si se desmarca, las interfaces con enlaces no serán eliminadas.",
       "duplicateDialogTitle": "Duplicar interfaz",

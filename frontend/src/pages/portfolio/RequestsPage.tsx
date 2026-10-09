@@ -464,7 +464,7 @@ export default function RequestsPage() {
     <Stack direction="row" spacing={1}>
       {canCreate && (
         <Button
-          variant="contained"
+          variant="action-primary"
           onClick={() => {
             const sp = buildWorkspaceSearch();
             navigate(`/portfolio/requests/new/summary?${sp.toString()}`);
@@ -473,8 +473,8 @@ export default function RequestsPage() {
           {t('requests.actions.new')}
         </Button>
       )}
-      {canAdmin && <Button onClick={() => setImportOpen(true)}>{t('requests.actions.importCsv')}</Button>}
-      {canAdmin && <Button onClick={() => setExportOpen(true)}>{t('requests.actions.exportCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('requests.actions.importCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('requests.actions.exportCsv')}</Button>}
     </Stack>
   );
 

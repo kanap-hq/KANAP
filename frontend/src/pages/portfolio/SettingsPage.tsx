@@ -682,43 +682,43 @@ export default function SettingsPage() {
 
   const actions = canEdit ? (
     activeTab === 0 ? (
-      <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreateClick}>
+      <Button variant="action-primary" startIcon={<AddIcon sx={{ fontSize: '14px !important' }} />} onClick={handleCreateClick}>
         {t('settings.actions.addCriterion')}
       </Button>
     ) : activeTab === 1 ? (
       <Stack direction="row" spacing={1}>
         {skills.length === 0 && (
-          <Button variant="outlined" startIcon={<PlaylistAddIcon />} onClick={handleSeedDefaults}>
+          <Button variant="action" startIcon={<PlaylistAddIcon sx={{ fontSize: '14px !important' }} />} onClick={handleSeedDefaults}>
             {t('settings.actions.seedDefaults')}
           </Button>
         )}
-        <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreateSkill}>
+        <Button variant="action-primary" startIcon={<AddIcon sx={{ fontSize: '14px !important' }} />} onClick={handleCreateSkill}>
           {t('settings.actions.addSkill')}
         </Button>
       </Stack>
     ) : activeTab === 2 ? (
-      <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreateTemplate}>
+      <Button variant="action-primary" startIcon={<AddIcon sx={{ fontSize: '14px !important' }} />} onClick={handleCreateTemplate}>
         {t('settings.actions.addTemplate')}
       </Button>
     ) : activeTab === 4 ? (
       <Stack direction="row" spacing={1}>
         {teams.length === 0 && (
-          <Button variant="outlined" startIcon={<PlaylistAddIcon />} onClick={handleSeedTeams}>
+          <Button variant="action" startIcon={<PlaylistAddIcon sx={{ fontSize: '14px !important' }} />} onClick={handleSeedTeams}>
             {t('settings.actions.seedDefaults')}
           </Button>
         )}
-        <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreateTeam}>
+        <Button variant="action-primary" startIcon={<AddIcon sx={{ fontSize: '14px !important' }} />} onClick={handleCreateTeam}>
           {t('settings.actions.addTeam')}
         </Button>
       </Stack>
     ) : activeTab === 5 ? (
       <Stack direction="row" spacing={1}>
         {employmentTypes.length === 0 && (
-          <Button variant="outlined" startIcon={<PlaylistAddIcon />} onClick={handleSeedEmploymentTypes}>
+          <Button variant="action" startIcon={<PlaylistAddIcon sx={{ fontSize: '14px !important' }} />} onClick={handleSeedEmploymentTypes}>
             {t('settings.actions.seedDefaults')}
           </Button>
         )}
-        <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreateEmploymentType}>
+        <Button variant="action-primary" startIcon={<AddIcon sx={{ fontSize: '14px !important' }} />} onClick={handleCreateEmploymentType}>
           {t('settings.actions.addEmploymentType')}
         </Button>
       </Stack>

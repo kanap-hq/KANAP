@@ -334,7 +334,7 @@ export default function IncidentsPage() {
   const actions = (
     <Stack direction="row" spacing={1}>
       {hasLevel('incidents', 'contributor') && (
-        <Button variant="contained" onClick={() => {
+        <Button variant="action-primary" onClick={() => {
           const sp = buildWorkspaceSearch();
           navigate(`/it/incidents/new?${sp.toString()}`);
         }}>
@@ -342,9 +342,9 @@ export default function IncidentsPage() {
         </Button>
       )}
       {hasLevel('incidents', 'contributor') && (
-        <Button onClick={() => setImportOpen(true)}>{t('pages.incidents.importCsv')}</Button>
+        <Button variant="action" onClick={() => setImportOpen(true)}>{t('pages.incidents.importCsv')}</Button>
       )}
-      <Button onClick={() => setExportOpen(true)}>{t('pages.incidents.exportCsv')}</Button>
+      <Button variant="action" onClick={() => setExportOpen(true)}>{t('pages.incidents.exportCsv')}</Button>
     </Stack>
   );
 

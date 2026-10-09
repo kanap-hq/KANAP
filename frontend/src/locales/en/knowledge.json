@@ -2,7 +2,8 @@
   "actions": {
     "manageTypes": "Manage types",
     "moveCount": "Move ({{count}})",
-    "newDocument": "New document"
+    "newDocument": "New document",
+    "newDocumentOptions": "New document options"
   },
   "columns": {
     "folder": "Folder",

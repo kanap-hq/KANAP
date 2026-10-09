@@ -415,15 +415,15 @@ export default function AssetsPage() {
   const actions = (
     <Stack direction="row" spacing={1}>
       {hasLevel('infrastructure', 'member') && (
-        <Button variant="contained" onClick={() => {
+        <Button variant="action-primary" onClick={() => {
           const sp = buildWorkspaceSearch();
           navigate(`/it/assets/new/overview?${sp.toString()}`);
         }}>
           {t('pages.assets.addAsset')}
         </Button>
       )}
-      {hasLevel('infrastructure', 'admin') && <Button onClick={() => setImportOpen(true)}>{t('pages.assets.importCsv')}</Button>}
-      {hasLevel('infrastructure', 'admin') && <Button onClick={() => setExportOpen(true)}>{t('pages.assets.exportCsv')}</Button>}
+      {hasLevel('infrastructure', 'admin') && <Button variant="action" onClick={() => setImportOpen(true)}>{t('pages.assets.importCsv')}</Button>}
+      {hasLevel('infrastructure', 'admin') && <Button variant="action" onClick={() => setExportOpen(true)}>{t('pages.assets.exportCsv')}</Button>}
       {hasLevel('infrastructure', 'admin') && (
         <DeleteSelectedButton
           selectedRows={selectedRows}
@@ -432,7 +432,6 @@ export default function AssetsPage() {
           getItemName={(row) => row.name}
           gridApi={gridApiRef.current}
           onDeleteSuccess={() => { setRefreshKey((k) => k + 1); }}
-          label={t('pages.assets.deleteAsset')}
         />
       )}
     </Stack>

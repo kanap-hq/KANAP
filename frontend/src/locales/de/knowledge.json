@@ -2,7 +2,8 @@
   "actions": {
     "manageTypes": "Typen verwalten",
     "moveCount": "Verschieben ({{count}})",
-    "newDocument": "Neues Dokument"
+    "newDocument": "Neues Dokument",
+    "newDocumentOptions": "Optionen für neues Dokument"
   },
   "columns": {
     "folder": "Ordner",

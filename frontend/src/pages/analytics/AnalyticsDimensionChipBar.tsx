@@ -52,9 +52,8 @@ export default function AnalyticsDimensionChipBar({ axes, selectedAxisId, label,
         <>
           {onCreate && (
             <Button
-              size="small"
-              variant="outlined"
-              startIcon={<AddIcon />}
+              variant="action"
+              startIcon={<AddIcon sx={{ fontSize: '14px !important' }} />}
               aria-label={t('analytics.newDimension')}
               onClick={onCreate}
             >
@@ -63,9 +62,8 @@ export default function AnalyticsDimensionChipBar({ axes, selectedAxisId, label,
           )}
           {selectedAxis && (
             <Button
-              size="small"
-              variant="outlined"
-              startIcon={canEdit ? <EditOutlinedIcon /> : undefined}
+              variant="action"
+              startIcon={canEdit ? <EditOutlinedIcon sx={{ fontSize: '14px !important' }} /> : undefined}
               aria-label={t(canEdit ? 'analytics.editDimension' : 'analytics.openDimension', { name: label(selectedAxis) })}
               onClick={() => onEdit(selectedAxis.id)}
             >

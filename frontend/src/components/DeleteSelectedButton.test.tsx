@@ -23,6 +23,20 @@ const FROZEN = 'This line has amounts in Budget 2026, a frozen budget column. '
 type Row = { id: string; name: string };
 const rows: Row[] = [{ id: 'a', name: 'First' }, { id: 'b', name: 'Frozen' }];
 
+function renderIdle(selectedRows: Row[]) {
+  return render(
+    <ThemeProvider theme={createAppTheme('light')}>
+      <DeleteSelectedButton<Row>
+        selectedRows={selectedRows}
+        endpoint="/spend-items/bulk"
+        getItemId={(row) => row.id}
+        getItemName={(row) => row.name}
+        onDeleteSuccess={vi.fn()}
+      />
+    </ThemeProvider>,
+  );
+}
+
 function renderButton() {
   const onDeleteSuccess = vi.fn();
   render(
@@ -44,6 +58,21 @@ function renderButton() {
 describe('DeleteSelectedButton', () => {
   beforeEach(() => {
     vi.mocked(api.delete).mockReset();
+  });
+
+  it('is a disabled neutral pill with no selection', () => {
+    renderIdle([]);
+    const button = screen.getByRole('button', { name: 'buttons.deleteSelected (0)' });
+    expect(button).toBeDisabled();
+    expect(button).toHaveClass('MuiButton-action');
+    expect(button).not.toHaveClass('MuiButton-action-danger');
+  });
+
+  it('turns into the danger pill once rows are selected', () => {
+    renderIdle(rows);
+    const button = screen.getByRole('button', { name: 'buttons.deleteSelected (2)' });
+    expect(button).toBeEnabled();
+    expect(button).toHaveClass('MuiButton-action-danger');
   });
 
   it('shows the reason of each failed item when the others are deleted', async () => {

@@ -50,6 +50,9 @@ Object.entries(TILE_LOADERS).forEach(([id, loader]) => {
   });
 });
 
+// Quick actions keep their outlined look, at the height and radius of the action pills.
+const quickActionSx = { height: 30, borderRadius: '5px' } as const;
+
 function TileLoader() {
   return (
     <Card sx={{ height: '100%', p: 2 }}>
@@ -197,6 +200,7 @@ export default function WorkspaceDashboardPage() {
               startIcon={<AddTaskIcon />}
               onClick={() => navigate('/portfolio/tasks/new/overview')}
               size="small"
+              sx={quickActionSx}
             >
               {t('dashboard.createTask')}
             </Button>
@@ -207,6 +211,7 @@ export default function WorkspaceDashboardPage() {
               startIcon={<AccessTimeIcon />}
               onClick={() => setLogTimeOpen(true)}
               size="small"
+              sx={quickActionSx}
             >
               {t('dashboard.logTime')}
             </Button>
@@ -217,6 +222,7 @@ export default function WorkspaceDashboardPage() {
               startIcon={<InboxIcon />}
               onClick={() => navigate('/portfolio/requests/new/summary')}
               size="small"
+              sx={quickActionSx}
             >
               {t('dashboard.newRequest')}
             </Button>
@@ -227,6 +233,7 @@ export default function WorkspaceDashboardPage() {
               startIcon={<WorkOutlineIcon />}
               onClick={() => navigate('/it/applications/new/overview')}
               size="small"
+              sx={quickActionSx}
             >
               {t('dashboard.newApplication')}
             </Button>
@@ -237,6 +244,7 @@ export default function WorkspaceDashboardPage() {
               startIcon={<DnsIcon />}
               onClick={() => navigate('/it/assets/new/overview')}
               size="small"
+              sx={quickActionSx}
             >
               {t('dashboard.newAsset')}
             </Button>
@@ -246,12 +254,13 @@ export default function WorkspaceDashboardPage() {
               <Button
                 startIcon={<DescriptionIcon />}
                 onClick={goToBlankDocument}
+                sx={quickActionSx}
               >
                 {t('dashboard.newDocument')}
               </Button>
               <Button
                 onClick={(event) => setNewDocAnchorEl(event.currentTarget)}
-                sx={{ px: 0.5, minWidth: 'auto' }}
+                sx={[quickActionSx, { px: 0.5, minWidth: 'auto' }]}
               >
                 <ArrowDropDownIcon />
               </Button>
