@@ -4,6 +4,7 @@ import type * as AuthControllerModule from '../../auth/auth.controller';
 import type * as UsersControllerModule from '../../users/users.controller';
 import type * as UsersServiceModule from '../../users/users.service';
 import type * as FeaturesModule from '../../config/features';
+import { waitForBackgroundWork } from '../background-work';
 
 // Single-tenant (on-premise): every request carries the one tenant
 // (`req.tenant = { slug: 'default' }`), and e-mail links open APP_BASE_URL as
@@ -79,6 +80,8 @@ async function testPasswordResetLink() {
         { recordAuthEvent: async () => undefined } as any,
       );
       await controller.requestPasswordReset({ email: 'user@example.invalid' }, onPremRequest('app.acme-corp.com'));
+      // The link is issued and e-mailed after the answer (background work).
+      assert.equal(await waitForBackgroundWork(Date.now() + 5000), 0);
       assert.equal(sent.length, 1);
       assert.equal(sent[0].resetUrl, 'https://app.acme-corp.com/reset-password#token=reset-token');
     } finally {

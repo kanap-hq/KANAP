@@ -60,6 +60,8 @@ export const AUTH_EVENT_REASONS = [
   'expired',
   /** A password reset asked for an account the directory manages (no local password). */
   'external_account',
+  /** A password reset for a known account whose e-mail could not be sent (the server log says why). */
+  'email_not_sent',
   /** Single sign-on: the directory or the tenant does not match the one the workspace is bound to. */
   'tenant_mismatch',
   /** Single sign-on is not set up for the workspace. */

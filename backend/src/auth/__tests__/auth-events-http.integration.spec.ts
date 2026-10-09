@@ -264,6 +264,8 @@ async function main() {
 
     // Password reset: the request (known and unknown address) and the completion.
     assert.deepEqual((await post(app, a, 'password-reset/request', { email: a.ada.email })).body, { ok: true });
+    // A known address's row is written once its e-mail is sent, after the response.
+    await settled();
     assert.deepEqual((await post(app, a, 'password-reset/request', { email: unknownEmail })).body, { ok: true });
     assert.equal(sentResets.length, 1, 'one e-mail, for the known account');
     const token = new URL(sentResets[0].resetUrl).hash.replace('#token=', '');

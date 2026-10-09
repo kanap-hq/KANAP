@@ -42,6 +42,11 @@ export function isExampleRecipient(entry: unknown): boolean {
   });
 }
 
+/** `text` with every e-mail address replaced by `[address]`, for a log line. */
+export function maskEmailAddresses(text: string): string {
+  return text.replace(ADDRESS_PATTERN, '[address]');
+}
+
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, '&amp;')
@@ -105,6 +110,11 @@ export class EmailService {
       this.emailQueue.push({ options, resolve, reject });
       void this.processQueue();
     });
+  }
+
+  /** The transport in use (`smtp`, `resend`, `disabled`), for log lines about a failed send. */
+  get transportName(): string {
+    return this.transport.name;
   }
 
   /** Emails queued or being sent. */

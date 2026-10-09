@@ -61,7 +61,7 @@ Die Seite Audit-Protokoll bewahrt die Historie der Datenänderungen und der Sich
 | **Fehlgeschlagene Anmeldung** | eine Anmeldung abgelehnt wird. Der **Grund** nennt die Ursache, zum Beispiel falsches Passwort, deaktiviertes Konto oder kein Konto mit dieser Adresse |
 | **Abmeldung** | sich jemand abmeldet |
 | **Sitzungsverlängerung abgelehnt** | die Sitzung nicht verlängert werden konnte, zum Beispiel weil sie abgelaufen ist |
-| **Zurücksetzen des Passworts angefordert** / **Passwort zurückgesetzt** | jemand einen Link zum Zurücksetzen anfordert und danach mit diesem Link ein neues Passwort festlegt |
+| **Zurücksetzen des Passworts angefordert** / **Passwort zurückgesetzt** | jemand einen Link zum Zurücksetzen anfordert und danach mit diesem Link ein neues Passwort festlegt. Konnte die E-Mail mit dem Link nicht gesendet werden, nennt der **Grund** dies |
 | **Anmeldung mit Microsoft** / **Fehlgeschlagene Anmeldung mit Microsoft** | eine Anmeldung über Microsoft Entra ID gelingt oder fehlschlägt |
 
 **Exporte** (Tabelle **Export**): CSV-Exporte, Dokumente und Berichte, die der Server erzeugt. Die Zeile zeigt, was exportiert wurde und von wem. Auch der Export des Audit-Protokolls wird aufgezeichnet.

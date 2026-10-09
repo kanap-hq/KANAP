@@ -61,7 +61,7 @@ The Audit Log page keeps the history of data changes and of security events in y
 | **Failed sign-in** | A sign-in is refused. The **Reason** says why, for example wrong password, disabled account or no account with this address |
 | **Sign-out** | Someone signs out |
 | **Session renewal refused** | The session could not be renewed, for example because it expired |
-| **Password reset requested** / **Password reset completed** | Someone asks for a reset link, then sets a new password with it |
+| **Password reset requested** / **Password reset completed** | Someone asks for a reset link, then sets a new password with it. When the email with the link could not be sent, the **Reason** says so |
 | **Sign-in with Microsoft** / **Failed sign-in with Microsoft** | A sign-in through Microsoft Entra ID succeeds or fails |
 
 **Exports** (table **Export**): CSV exports, documents and reports produced by the server. The row says what was exported and by whom. Exporting the audit log is recorded too.
