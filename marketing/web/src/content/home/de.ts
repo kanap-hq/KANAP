@@ -2,192 +2,192 @@ import type { HomeContent } from './types';
 
 const content: HomeContent = {
   meta: {
-    title: 'Open-Source-KI-Agenten für Ihre IT-Abteilung',
+    title: 'IT-Budget, IT-Landschaft und Projekte, Open Source',
     description:
-      'KI-Agenten, verankert im vollständigen Bild Ihrer IT: Anwendungen, Infrastruktur, Budgets, Projekte und Dokumentation. Open Source unter AGPL v3. Kostenlos selbst hosten oder Hosted KANAP wählen.',
+      'IT-Budget, Anwendungslandschaft, Projektportfolio und Dokumentation in einem Datenbestand, mit integriertem KI-Agenten. Open Source.',
   },
 
   hero: {
-    eyebrow: 'Open Source · selbst gehostet · auf Erweiterung ausgelegt',
-    title: 'KI-Agenten, die Ihre wiederkehrende Arbeit übernehmen.',
-    lead: 'KANAP hält das vollständige Bild Ihrer IT-Abteilung, von Anwendungen und Servern bis zu Budgets und Projekten. Plaid lässt jeden in Alltagssprache damit arbeiten, und Agenten handeln jetzt auf dieser Grundlage, um Ihrem Team die wiederkehrende Last abzunehmen.\nKostenlos selbst hosten oder von uns betreiben lassen.',
-    primaryCta: 'Kostenlos bereitstellen',
-    secondaryCta: 'Hosted Cloud testen',
-    trialNote: 'AGPL v3 · kompletter Quellcode auf GitHub · Docker-Installation · keine Feature-Paywall.',
-  },
-
-  pillars: {
-    eyebrow: 'Warum KANAP',
-    title: 'Was KANAP unterscheidet.',
-    items: [
-      {
-        title: 'Die ganze IT-Abteilung in einem System.',
-        body: 'Anwendungen, Infrastruktur, Budgets, Projekte und Dokumentation liegen in einem zentralen Datenbestand statt in zehn unverbundenen Tools.',
-      },
-      {
-        title: 'Agenten, die Ihr Team entlasten.',
-        body: 'Autonome Agenten übernehmen die wiederkehrende Last und gewinnen mehr Eigenständigkeit, je mehr sie sich an realen Aufgaben beweisen.',
-      },
-      {
-        title: 'Open Source, selbst gehostet, von Ihnen erweiterbar.',
-        body: 'Vollständiger Quellcode unter AGPL v3. Betreiben Sie es auf Ihren eigenen Servern, behalten Sie jede Funktion und schreiben Sie Ihre eigenen Agenten und Konnektoren.',
-      },
-    ],
+    eyebrow: 'Open Source · von einem CIO für CIOs entwickelt',
+    title: 'IT-Budget, IT-Landschaft und Projekte in einem einzigen Datenbestand.',
+    lead: 'Das IT-Budget verlässt die Tabellenkalkulation und wird mit dem verknüpft, was es begründet: Anwendungen, Verträge, Projekte. Landschaft, Portfolio und Dokumentation teilen dieselben Daten, und Plaid, der integrierte KI-Agent, antwortet über alles hinweg. Open Source, kostenlos selbst zu hosten.',
+    primaryCta: 'Mit Beispieldaten testen',
+    secondaryCta: 'Kostenlos bereitstellen',
+    trialNote: 'Test der gehosteten Version · Beispieldaten in einer Minute geladen · AGPL v3, vollständiger Quellcode auf GitHub.',
   },
 
   layers: {
-    eyebrow: 'Wie alles zusammenpasst',
-    title: 'Eine komplette Plattform für die IT-Abteilung.',
+    eyebrow: 'IT-Budget',
+    title: 'Das IT-Budget, raus aus Excel.',
     intro:
-      'KANAP ist in drei Schichten aufgebaut, die auf denselben Informationen arbeiten, sodass jede die anderen nützlicher macht.',
+      'OPEX und CAPEX über mehrere Jahre, in Spalten, die Sie selbst benennen: Budget, Revision, erwartetes Jahresergebnis. Jede Version lässt sich kopieren, vergleichen und einfrieren. Schluss mit kopierten Reitern und kaputten Formeln.',
     items: [
       {
-        title: 'Der zentrale Datenbestand',
-        body: 'KANAP hält das vollständige Bild Ihrer IT-Abteilung: Anwendungen und Infrastruktur, Budgets, Projekte und Dokumentation. Ein Ort statt zehn Tools.',
+        title: 'Hochrechnung und Budget des Folgejahres',
+        body: 'Festigen Sie die Hochrechnung Zeile für Zeile, kopieren Sie sie in das Budget des Folgejahres, passen Sie über Menge × Preis an und frieren Sie die genehmigte Version ein. Die Wechselkurse werden mit ihr festgeschrieben.',
       },
       {
-        title: 'Die Interaktion',
-        body: 'Plaid lässt jeden in Ihrem Team in Alltagssprache mit dem zentralen Datenbestand arbeiten, Fragen stellen und Änderungen vornehmen, ohne erst zu lernen, wo alles liegt.',
+        title: 'Leistungsverrechnung und Analyse',
+        body: 'Verteilen Sie jede Zeile auf Gesellschaften, Abteilungen und Kostenstellen, verrechnen Sie mit klaren Regeln, analysieren Sie nach Analysedimension und konsolidieren Sie auf Ihrem Kontenplan.',
       },
       {
-        title: 'Die Aktion',
-        body: 'Agenten handeln auf demselben Datenbestand, übernehmen wiederkehrende Arbeit und führen sie unter der Autonomie aus, die Sie ihnen gewähren.',
+        title: 'Personal und Kosten pro FTE',
+        body: 'Erfassen Sie FTE auf den betroffenen Zeilen: KANAP leitet daraus den monatlichen Personalbestand und die Kosten pro FTE ab, als Betrag oder als Tagessatz, direkt neben den Beträgen.',
       },
     ],
-    outro: 'Jeder Teil ist für sich nützlich, und zusammen werden sie stärker.',
+    outro: 'Und weil jede Zeile mit dem restlichen Datenbestand verknüpft ist, ist das Budget keine Liste von Beträgen mehr: Es ist die Landkarte dessen, was die IT betreibt.',
+  },
+
+  pillars: {
+    eyebrow: 'Alles ist verknüpft',
+    title: 'Ein Datenbestand statt Tabellenkalkulation, Wiki und Projekttool.',
+    items: [
+      {
+        title: 'Eine Budgetzeile führt zu dem, was sie begründet.',
+        body: 'Jede OPEX- oder CAPEX-Position ist mit ihren Anwendungen, Verträgen, Lieferanten und Projekten verknüpft. Sie wissen, wofür Sie zahlen, und warum.',
+      },
+      {
+        title: 'Eine Anwendung zeigt, was sie kostet.',
+        body: 'Ihr Datensatz vereint Umgebungen, Schnittstellen, Server, Verträge und Ausgaben: genug, um über eine Bereinigung auf Basis von Fakten zu entscheiden.',
+      },
+      {
+        title: 'Ein Vertrag zeigt, wozu er verpflichtet.',
+        body: 'Jahresbetrag, automatische Verlängerung, Kündigungsfrist, berechneter Kündigungstermin und verknüpfte Budgetzeilen: Verlängerungen werden vor der Frist vorbereitet, nicht danach.',
+      },
+    ],
   },
 
   modules: {
-    eyebrow: 'Komplettes IT-Toolkit',
-    title: 'Für jede IT-Rolle gemacht.',
+    eyebrow: 'Die gesamte IT-Governance',
+    title: 'Vier Säulen, ein KI-Agent, dieselben Daten.',
     intro:
-      'KANAP deckt das Kernterrain ab, das jede IT-Abteilung im Griff haben muss, von der ersten Budgetzeile bis zur letzten abgeschalteten Anwendung, mit Plaid, um alles in Alltagssprache zu bearbeiten, und Agenten, die die wiederkehrende Last übernehmen. Jedes Modul ist für sich allein voll nutzbar, Sie können also dort anfangen, wo es am meisten weh tut, und den Rest ergänzen, wenn Sie soweit sind.',
+      'Jedes Modul funktioniert für sich: Beginnen Sie mit dem Budget und ergänzen Sie Landschaft, Portfolio oder Dokumentation, wenn Sie so weit sind. Alle arbeiten auf demselben Datenbestand.',
     items: [
       {
         slug: '/features/budget',
-        title: 'Budget-Management',
+        title: 'IT-Budget',
         blurb:
-          'Für CIOs und Finanzpartner. Mehrjährige Planung, intelligente Verteilung, Chargeback für die Geschäftsführung. Verteidigen Sie das IT-Budget mit Zahlen, denen Ihr CFO vertraut.',
+          'Für den CIO und seine Partner im Finanzbereich. Mehrjahresbudget, Hochrechnung und Folgejahresbudget, Leistungsverrechnung, Konsolidierung, Personal. Zahlen, die Ihr CFO prüfen kann.',
         bullets: [
-          'Mehrjährige Budgetplanung',
-          'Sechs Verteilungsmethoden',
-          'Mehrwährung mit Weltbank-FX',
-          'Chargeback-Berichte für die Geschäftsführung',
+          'OPEX und CAPEX, Spalten für Budget, Revision und Hochrechnung',
+          'Versionen kopieren und einfrieren',
+          'Leistungsverrechnung, Analysedimensionen, Konsolidierung',
+          'Monatlicher Personalbestand und Kosten pro FTE',
         ],
-        ctaLabel: 'Mehr erfahren',
+        ctaLabel: 'Budget entdecken',
       },
       {
         slug: '/features/it-landscape',
         title: 'IT-Landschaft',
         blurb:
-          'Für Architekten, Anwendungsverantwortliche und Infrastruktur-Teams. Dokumentieren Sie Apps, Schnittstellen und Server. Sehen Sie das System auf einen Blick, planen Sie Änderungen mit allen Abhängigkeiten vor Augen.',
+          'Für Architekten, Anwendungsverantwortliche und Infrastrukturteams. Anwendungen, Schnittstellen und Server dokumentiert, und Karten, die die Landschaft auf einen Blick zeigen.',
         bullets: [
-          'Anwendungsportfolio mit Instanzen pro Umgebung',
-          'Schnittstellendokumentation mit 3-Leg-Middleware',
-          'Server- und Infrastrukturregister',
+          'Anwendungen und Instanzen pro Umgebung',
+          'Schnittstellen, Datenflüsse und Middleware',
+          'Server und Infrastruktur, Import aus NetBox',
           'Interaktive Schnittstellen- und Verbindungskarten',
         ],
-        ctaLabel: 'Mehr erfahren',
+        ctaLabel: 'Landschaft entdecken',
       },
       {
         slug: '/features/portfolio',
-        title: 'Portfolio-Management',
+        title: 'Projektportfolio',
         blurb:
-          'Für Projektleiter und IT-Leads. Bewerten Sie die Nachfrage, simulieren Sie kapazitätsbewusste Roadmaps, sagen Sie Termine zu, ohne die Daumen zu drücken.',
+          'Für Projektleiter und IT-Verantwortliche. Bewerten Sie Anfragen, planen Sie eine Roadmap, die die Kapazität berücksichtigt, und verfolgen Sie Projekte bis zur Lieferung.',
         bullets: [
-          'Anfrage-Scoring mit gewichteten Kriterien',
-          'Automatische Roadmap-Planung',
+          'Bewertung von Anfragen mit gewichteten Kriterien',
+          'Kapazitätsbasierte Roadmap-Planung',
           'Engpass- und Auslastungsanalyse',
-          'Projekt-Lifecycle-Tracking',
+          'Projekte, Meilensteine und Aufgaben',
         ],
-        ctaLabel: 'Mehr erfahren',
+        ctaLabel: 'Portfolio entdecken',
       },
       {
         slug: '/features/knowledge',
-        title: 'Wissen',
+        title: 'Dokumentation',
         blurb:
-          'Für alle, besonders Support und Operations. Markdown-Editor, Bibliotheken, Review-Workflows. Runbooks, Entscheidungen und Architekturnotizen, verknüpft mit den Apps und Projekten, die sie beschreiben.',
+          'Für das ganze Team, zuerst für Support und Betrieb. Betriebshandbücher, Entscheidungen und Architekturnotizen, geprüft, versioniert und mit den beschriebenen Anwendungen und Projekten verknüpft.',
         bullets: [
-          'Markdown-Editor mit Review-Workflows',
+          'Markdown-Editor mit Prüfablauf',
           'Bibliotheken, Ordner, Dokumenttypen',
-          'Versionshistorie und Export nach PDF, DOCX, ODT',
-          'Tiefe Verknüpfungen zu Apps, Projekten, Assets, Aufgaben',
+          'Versionen und Export als PDF, DOCX, ODT',
+          'Links zu Anwendungen, Projekten, Assets, Aufgaben',
         ],
-        ctaLabel: 'Mehr erfahren',
+        ctaLabel: 'Dokumentation entdecken',
       },
       {
         slug: '/features/ai',
-        title: 'Plaid, KI-Assistent',
+        title: 'Plaid, der integrierte KI-Agent',
         blurb:
-          'Für jede Rolle, nicht nur für KI-Begeisterte. Fragen Sie in Alltagssprache, bekommen Sie strukturierte Antworten über alle Module hinweg. Der kürzeste Weg zwischen einer IT-Frage und den Daten, die sie beantworten.',
+          'Für jede Rolle. Stellen Sie eine Frage in natürlicher Sprache zum Budget, zur Landschaft oder zu den Projekten: Plaid antwortet aus dem gesamten Datenbestand und bereitet Änderungen vor, die Sie freigeben.',
         bullets: [
-          'Natürlichsprachliche Abfragen über alle Module',
-          'Dokument- und Aufgabenaktionen mit Vorschau',
-          'MCP-Server für Claude, Cursor, Windsurf…',
-          'Nutzung in Hosted Cloud enthalten, oder eigener Schlüssel',
+          'Fragen in natürlicher Sprache über alle Module',
+          'Änderungen als Vorschau, angewendet nach Freigabe',
+          'Schreibgeschützter MCP-Server für Ihre KI-Clients',
+          'Nutzung in der gehosteten Version inklusive, oder eigener Schlüssel',
         ],
-        ctaLabel: 'Mehr erfahren',
+        ctaLabel: 'Plaid entdecken',
       },
       {
         slug: '/features/agents',
-        title: 'Agenten',
+        title: 'Helpdesk-Agent',
         blurb:
-          'Für Teams, die in wiederkehrenden Tickets versinken. Ein Agent liest jede Aufgabe gegen Ihre IT-Daten und schlägt entweder eine Aktion vor oder führt sie aus, unter der Autonomie, die Sie festlegen. Ein Service-Desk-Konnektor läuft heute in Produktion, und die Runtime ist auf Erweiterung ausgelegt.',
+          'Für Support-Teams. Der Agent liest jedes Ticket Ihres Service Desks (heute GLPI) im Licht Ihrer Anwendungen und Dokumentation und schlägt eine Antwort, eine interne Notiz oder eine Ticketänderung vor.',
         bullets: [
-          'Schließt anhand Ihres realen IT-Datenbestands',
-          'Startet beaufsichtigt, gewinnt mehr Autonomie',
-          'Jede Aktion protokolliert, Autonomie jederzeit entziehbar',
-          'Offene Runtime, schreiben Sie Ihren eigenen Konnektor',
+          'Arbeitet mit Ihrem echten Datenbestand',
+          'Jede Aktionsart beginnt mit Freigabe',
+          'Automatisch, sobald die Erfahrung es rechtfertigt',
+          'Jede Aktion protokolliert, Autonomie widerrufbar',
         ],
-        ctaLabel: 'Mehr erfahren',
+        ctaLabel: 'Agent entdecken',
       },
     ],
   },
 
   crossCutting: {
-    eyebrow: 'Enterprise-ready',
-    title: 'Ein verbundenes System unter Ihrer Kontrolle.',
+    eyebrow: 'Für Unternehmen gemacht',
+    title: 'Ein System, unter Ihrer Kontrolle.',
     intro:
-      'Die Module arbeiten auf denselben Daten, und genau das gibt einer IT-Abteilung echte Governance. Genau das lässt auch einen Agenten handeln, ohne Ihre Umgebung zu gefährden.',
+      'Die Module teilen dieselben Daten: Das gibt der IT echte Governance und erlaubt der KI zu helfen, ohne Ihre Umgebung zu gefährden.',
     items: [
       {
-        title: 'Reporting & Dashboards',
-        body: 'Dashboards für die Geschäftsführung, Trendanalysen, Exporte nach CSV und PNG.',
+        title: 'Umfassende Beziehungen',
+        body: 'Kosten verknüpft mit Anwendungen, Anwendungen mit Verträgen, Projekten und Servern, Dokumentation mit allem.',
+      },
+      {
+        title: 'Berichte und Dashboards',
+        body: 'Fertige Budgetberichte, Trends, Versionsvergleiche, Export als CSV und PNG.',
+      },
+      {
+        title: 'Mehrere Gesellschaften und Währungen',
+        body: 'Mehrere Gesellschaften, mehrere Währungen, beim Einfrieren festgeschriebene Kurse und Konsolidierung auf Ihrem Kontenplan.',
       },
       {
         title: 'Rollenbasierte Zugriffskontrolle',
-        body: 'Feinkörnige Berechtigungen pro Modul. Stufen Leser, Mitwirkender, Mitglied und Administrator.',
+        body: 'Feingranulare Berechtigungen pro Modul: Leser, Mitwirkender, Mitglied, Administrator.',
       },
       {
-        title: 'Reichhaltige Beziehungen',
-        body: 'Verknüpfen Sie Kosten mit Apps, Apps mit Projekten, Projekte mit Budgets, Wissen mit allem.',
+        title: 'Vollständiges Audit-Protokoll',
+        body: 'Jede Änderung protokolliert, auch die über Plaid, mit Vorher und Nachher. Aktionen des Agenten haben einen eigenen Verlauf.',
       },
       {
-        title: 'Vollständiger Audit-Trail',
-        body: 'Jede Änderung protokolliert, auch die über Plaid vorgenommenen. Die Aktionen der Agenten haben einen eigenen Aktivitätsverlauf. Wer hat wann was geändert, mit vollständiger Vorher-Nachher-Historie.',
-      },
-      {
-        title: 'Einheitliches Aufgabenmanagement',
-        body: 'Aufgaben über OPEX, CAPEX, Verträge und Projekte hinweg zuweisen. Ein Backlog über die ganze Plattform.',
-      },
-      {
-        title: 'SSO über Microsoft Entra ID',
-        body: 'Enterprise Single Sign-On. Ein Login für Ihre gesamte Organisation.',
+        title: 'SSO mit Microsoft Entra ID',
+        body: 'Single Sign-on für Unternehmen: eine Identität für die ganze Organisation.',
       },
     ],
   },
 
   vision: {
-    eyebrow: 'Wohin das führt',
-    title: 'Hin zu einer KI-gestützten IT-Abteilung.',
-    body: 'Die Richtung ist eine IT-Abteilung, in der Agenten die wiederkehrende Last unauffällig tragen, damit Ihr Team seine Zeit für die Arbeit nutzt, die echtes Urteilsvermögen erfordert, und all das läuft auf Software, die Ihnen gehört und die Sie von Anfang bis Ende lesen können.',
+    eyebrow: 'KI auf einem vollständigen Datenbestand',
+    title: 'KI, die hilft, weil alles an einem Ort ist.',
+    body: 'Ein KI-Assistent ist nur so gut wie die Daten, die er sieht. In KANAP sieht er Budget, Anwendungen, Verträge, Projekte und Dokumentation zugleich und kann daher beantworten: „Warum läuft die Hochrechnung bei der Infrastruktur aus dem Ruder?“ oder „Welche Anwendungen hängen von diesem Vertrag ab?“.\nEr bereitet die Änderungen vor, Sie geben sie frei. Nichts ändert sich ohne Sie, und alles wird protokolliert.',
   },
 
   cta: {
-    title: 'Steuern Sie Ihre IT-Abteilung mit einem System, das Ihnen gehört.',
-    body: 'Stellen Sie KANAP kostenlos selbst bereit oder lassen Sie es von uns hosten. Das Produkt und jede Funktion sind identisch, Agenten inklusive.',
-    primary: 'Kostenlos bereitstellen',
-    secondary: 'Hosted Cloud testen',
+    title: 'Führen Sie Ihre IT auf einem System, das Ihnen gehört.',
+    body: 'Testen Sie die gehostete Version mit Beispieldaten oder stellen Sie KANAP kostenlos auf Ihren eigenen Servern bereit. Dasselbe Produkt, ohne eingeschränkte Funktionen.',
+    primary: 'Mit Beispieldaten testen',
+    secondary: 'Kostenlos bereitstellen',
   },
 };
 
