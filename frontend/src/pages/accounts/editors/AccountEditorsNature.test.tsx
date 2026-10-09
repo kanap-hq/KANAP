@@ -87,8 +87,8 @@ describe('platform admin template account editors: Used for', () => {
   it('shows the stored choice and saves a change with the row', async () => {
     const ref = React.createRef<AccountOverviewEditorHandle>();
     wrap(<AccountOverviewEditor ref={ref} id="2050" basePath={BASE} />);
-    await waitFor(() => expect(natureSelect()).toHaveTextContent('master-data:accounts.nature.capex'));
-    await pickNature('master-data:accounts.nature.both');
+    await waitFor(() => expect(natureSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.capex'));
+    await pickNature('master-data:shared.lineTypeUsage.both');
     await ref.current!.save().catch(() => undefined);
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith(`${BASE}/2050`, expect.objectContaining({
       account_number: 2050, nature: null,
@@ -98,7 +98,7 @@ describe('platform admin template account editors: Used for', () => {
   it('keeps the stored choice on a save that does not touch it', async () => {
     const ref = React.createRef<AccountOverviewEditorHandle>();
     wrap(<AccountOverviewEditor ref={ref} id="2050" basePath={BASE} />);
-    await waitFor(() => expect(natureSelect()).toHaveTextContent('master-data:accounts.nature.capex'));
+    await waitFor(() => expect(natureSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.capex'));
     await ref.current!.save().catch(() => undefined);
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith(`${BASE}/2050`, expect.objectContaining({ nature: 'capex' })));
   });
@@ -110,10 +110,10 @@ describe('platform admin template account editors: Used for', () => {
     wrap(<AccountCreateEditor ref={ref} basePath={BASE} />);
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/chart-of-accounts', expect.anything()));
     // OPEX and CAPEX until a choice is made.
-    expect(natureSelect()).toHaveTextContent('master-data:accounts.nature.both');
+    expect(natureSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both');
     fireEvent.change(screen.getByLabelText(/^Account Number/), { target: { value: '6100' } });
     fireEvent.change(screen.getByLabelText(/^Account Name/), { target: { value: 'Software subscriptions' } });
-    await pickNature('master-data:accounts.nature.opex');
+    await pickNature('master-data:shared.lineTypeUsage.opex');
     await ref.current!.save().catch(() => undefined);
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith(BASE, expect.objectContaining({
       account_number: 6100, account_name: 'Software subscriptions', nature: 'opex',

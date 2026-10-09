@@ -58,6 +58,11 @@ export interface CsvReadSchema {
    * error. Leave this unset when the file has no dimension columns.
    */
   dimensions?: readonly string[];
+  /**
+   * Codes outside `dimensions` refused with their own header error instead of the unknown
+   * dimension one (code → message), for example a dimension of the other budget line type.
+   */
+  refusedDimensions?: Readonly<Record<string, string>>;
   /** Detail columns whose cells are dates. They must also be listed in `fields`. */
   dateFields?: readonly string[];
   language: CsvLanguage;

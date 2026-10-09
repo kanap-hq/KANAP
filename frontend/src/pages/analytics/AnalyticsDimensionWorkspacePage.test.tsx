@@ -68,6 +68,7 @@ const DEFAULT: AnalyticsAxisDetail = {
   description: null,
   sort_order: 0,
   is_default: true,
+  applies_to: null,
   status: 'enabled',
   disabled_at: null,
   value_count: 15,
@@ -85,6 +86,13 @@ const NATURE: AnalyticsAxisDetail = {
   opex_count: 2,
   capex_count: 2,
 };
+
+const usageSelect = () => screen.getByRole('combobox', { name: 'shared.lineTypeUsage.label' });
+
+async function pickUsage(label: string) {
+  fireEvent.mouseDown(usageSelect());
+  fireEvent.click(within(await screen.findByRole('listbox')).getByRole('option', { name: label }));
+}
 
 function renderAt(path: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -287,8 +295,73 @@ describe('AnalyticsDimensionWorkspacePage', () => {
       name: 'Nature de coût',
       description: null,
       sort_order: 2,
+      applies_to: null,
     }));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics/dimensions/ax-new/overview'));
+  });
+
+  it('creates a dimension for one type of line', async () => {
+    mocked.createAnalyticsAxis.mockResolvedValue({ ...NATURE, id: 'ax-new', applies_to: 'capex' });
+    renderAt('/master-data/analytics/dimensions/new/overview');
+    fireEvent.change(screen.getByLabelText('analytics.fields.name'), { target: { value: 'Investment type' } });
+    expect(usageSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both');
+    await pickUsage('master-data:shared.lineTypeUsage.capex');
+    expect(usageSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.capex');
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(mocked.createAnalyticsAxis).toHaveBeenCalledWith(expect.objectContaining({
+      code: 'investment-type',
+      applies_to: 'capex',
+    })));
+  });
+
+  it('saves what the dimension is used for at once, and says which lines keep a hidden value', async () => {
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    await screen.findByLabelText('analytics.fields.code');
+    expect(usageSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both');
+    expect(screen.queryByTestId('analytics-dimension-applies-to-conflict')).toBeNull();
+
+    await pickUsage('master-data:shared.lineTypeUsage.opex');
+    await waitFor(() => expect(mocked.updateAnalyticsAxis).toHaveBeenCalledWith('ax-nature', { applies_to: 'opex' }));
+    // The 2 CAPEX lines keep their value, hidden.
+    expect(await screen.findByTestId('analytics-dimension-applies-to-conflict')).toHaveTextContent('analytics.appliesToConflict.capex');
+    expect(usageSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.opex');
+
+    await pickUsage('master-data:shared.lineTypeUsage.capex');
+    await waitFor(() => expect(mocked.updateAnalyticsAxis).toHaveBeenLastCalledWith('ax-nature', { applies_to: 'capex' }));
+    await waitFor(() => expect(screen.getByTestId('analytics-dimension-applies-to-conflict')).toHaveTextContent('analytics.appliesToConflict.opex'));
+
+    // Both types again: null clears it, and no line hides a value.
+    await pickUsage('master-data:shared.lineTypeUsage.both');
+    await waitFor(() => expect(mocked.updateAnalyticsAxis).toHaveBeenLastCalledWith('ax-nature', { applies_to: null }));
+    await waitFor(() => expect(screen.queryByTestId('analytics-dimension-applies-to-conflict')).toBeNull());
+  });
+
+  it('says nothing when no line of the other type has a value', async () => {
+    mocked.getAnalyticsAxis.mockResolvedValue({ ...NATURE, applies_to: 'opex', opex_count: 5, capex_count: 0 });
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    await screen.findByLabelText('analytics.fields.code');
+    expect(usageSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.opex');
+    expect(screen.queryByTestId('analytics-dimension-applies-to-conflict')).toBeNull();
+  });
+
+  it('shows a refusal of the choice under the field', async () => {
+    mocked.updateAnalyticsAxis.mockRejectedValueOnce({
+      response: { status: 400, data: { message: 'The default dimension applies to OPEX and CAPEX lines.', field: 'applies_to' } },
+    });
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    await screen.findByLabelText('analytics.fields.code');
+    await pickUsage('master-data:shared.lineTypeUsage.opex');
+    expect(await screen.findByRole('alert')).toHaveTextContent('The default dimension applies to OPEX and CAPEX lines.');
+    expect(usageSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both');
+  });
+
+  it('keeps the default dimension on both types, with its reason', async () => {
+    renderAt('/master-data/analytics/dimensions/ax-default/overview');
+    await screen.findByLabelText('analytics.fields.code');
+    const drawer = screen.getByRole('complementary');
+    expect(usageSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both');
+    expect(usageSelect()).toHaveAttribute('aria-disabled', 'true');
+    expect(within(drawer).getByText('analytics.hints.appliesToDefault')).toBeInTheDocument();
   });
 
   it('keeps a code the user typed, and places a create refusal under its field', async () => {

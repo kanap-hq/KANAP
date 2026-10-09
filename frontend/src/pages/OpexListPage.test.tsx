@@ -63,14 +63,18 @@ vi.mock('../hooks/useAnalyticsAxes', async (importOriginal) => {
   const mod = await importOriginal<typeof import('../hooks/useAnalyticsAxes')>();
   const { useSyncExternalStore } = await import('react');
   const t = ((key: string) => key) as unknown as Parameters<typeof mod.buildAnalyticsAxes>[1];
-  let cache: { list: unknown[]; ready: boolean; value: ReturnType<typeof mod.buildAnalyticsAxes> } | null = null;
-  const snapshot = () => {
-    if (!cache || cache.list !== dimensions.list || cache.ready !== dimensions.ready) {
-      cache = { list: dimensions.list, ready: dimensions.ready, value: mod.buildAnalyticsAxes(dimensions.list as never, t, dimensions.ready) };
+  type Scope = 'opex' | 'capex' | null;
+  let cache: { list: unknown[]; ready: boolean; scope: Scope; value: ReturnType<typeof mod.buildAnalyticsAxes> } | null = null;
+  const snapshot = (scope: Scope) => {
+    if (!cache || cache.list !== dimensions.list || cache.ready !== dimensions.ready || cache.scope !== scope) {
+      cache = { list: dimensions.list, ready: dimensions.ready, scope, value: mod.buildAnalyticsAxes(dimensions.list as never, t, dimensions.ready, false, undefined, scope) };
     }
     return cache.value;
   };
-  return { ...mod, useAnalyticsAxes: () => useSyncExternalStore(dimensions.subscribe, snapshot) };
+  return {
+    ...mod,
+    useAnalyticsAxes: (options?: { scope?: Scope }) => useSyncExternalStore(dimensions.subscribe, () => snapshot(options?.scope ?? null)),
+  };
 });
 
 import api from '../api';
@@ -455,6 +459,18 @@ describe('OpexListPage', () => {
     ]);
     const calls = get.mock.calls.filter(([url]) => url === '/spend-items/summary/filter-values');
     expect(calls.map(([, config]) => config.params.fields)).toEqual(['analytics_nature']);
+  });
+
+  it('adds no column for a dimension used for CAPEX lines only', async () => {
+    dimensions.list = [
+      DEFAULT_DIMENSION,
+      dimension('mine', 'Mine', 1, { applies_to: 'opex' }),
+      dimension('theirs', 'Theirs', 2, { applies_to: 'capex' }),
+    ];
+    await renderPage();
+    const ids = lastProps().columns.map((c) => c.colId ?? c.field);
+    expect(ids).toContain('analytics_mine');
+    expect(ids).not.toContain('analytics_theirs');
   });
 
   it('mounts the grid only once the dimensions are known, so a saved layout finds their columns', async () => {

@@ -58,7 +58,7 @@ Sie sind in beiden Dateien gleich, außer den typspezifischen Spalten am Zeilena
 | `account_number` | Kontonummer, im Kontenplan des zahlenden Unternehmens | Erforderlich |
 | `cost_center_code` | Code der Kostenstelle. Eine Gruppe wird abgelehnt | Optional |
 | `run_build` | `run` oder `build` | Optional |
-| `analytics:<code>` | Der Name des Werts in der Dimension, deren Code dies ist. Eine Spalte pro Dimension, die Standarddimension eingeschlossen | Optional. Ein nicht vorhandener Wert wird beim Laden angelegt |
+| `analytics:<code>` | Der Name des Werts in der Dimension, deren Code dies ist. Eine Spalte pro aktivierter Dimension, die für OPEX-Zeilen verwendet wird, die Standarddimension eingeschlossen | Optional. Ein nicht vorhandener Wert wird beim Laden angelegt |
 | `owner_it_email` | E-Mail-Adresse eines aktiven Benutzers | Optional |
 | `owner_business_email` | E-Mail-Adresse eines aktiven Benutzers | Optional |
 | `project` | Projektnummer, zum Beispiel `PRJ-3` | Optional |
@@ -82,7 +82,7 @@ Sie sind in beiden Dateien gleich, außer den typspezifischen Spalten am Zeilena
 | `account_number` | Kontonummer, im Kontenplan des zahlenden Unternehmens | Erforderlich |
 | `cost_center_code` | Code der Kostenstelle. Eine Gruppe wird abgelehnt | Optional |
 | `run_build` | `run` oder `build` | Optional |
-| `analytics:<code>` | Der Name des Werts in der Dimension, deren Code dies ist. Eine Spalte pro Dimension, die Standarddimension eingeschlossen | Optional. Ein nicht vorhandener Wert wird beim Laden angelegt |
+| `analytics:<code>` | Der Name des Werts in der Dimension, deren Code dies ist. Eine Spalte pro aktivierter Dimension, die für CAPEX-Zeilen verwendet wird, die Standarddimension eingeschlossen | Optional. Ein nicht vorhandener Wert wird beim Laden angelegt |
 | `owner_it_email` | E-Mail-Adresse eines aktiven Benutzers | Optional |
 | `owner_business_email` | E-Mail-Adresse eines aktiven Benutzers | Optional |
 | `project` | Projektnummer, zum Beispiel `PRJ-3` | Optional |
@@ -127,6 +127,7 @@ Eine fehlende Spalte behält alle gespeicherten Werte dieser Spalte. Eine Datei,
 - Es gibt keinen weiteren Schlüssel. Eine neue Zeile, die einer bestehenden Position ähnelt oder einer anderen neuen Zeile derselben Datei, ist eine Warnung, die Sie ignorieren können.
 - Lieferanten werden über `supplier_erp_id` zugeordnet, wenn er gefüllt ist, sonst über `supplier_name`. Einen Lieferanten, den die Datei nennt und den KANAP nicht kennt, legt das Laden an, wenn **Fehlende Lieferanten anlegen** angehakt ist. Ohne diese Option listet die Prüfung die fehlenden Lieferanten auf und bittet Sie, sie unter **Stammdaten > Lieferanten** anzulegen.
 - Ein nicht vorhandener Dimensionswert wird beim Laden angelegt und in der Prüfung aufgelistet. Konten, Kostenstellen, Unternehmen und Benutzer werden nie angelegt: Ein unbekanntes Element ist ein Zeilenfehler, der nennt, wo es hinzugefügt wird.
+- Eine Datei mit einer Spalte `analytics:<code>` für eine Dimension, die nur für die andere Zeilenart gilt, wird als Ganzes abgelehnt, zum Beispiel „The Recurrence dimension is for CAPEX lines only. Remove the analytics:recurrence column from this OPEX file.“ Der Export schreibt für eine solche Dimension keine Spalte: Ein ausgeblendeter Wert einer Zeile wird nicht exportiert, und ein Laden lässt ihn unverändert. Die Einstellung finden Sie unter [Analysedimensionen](analytics.md#opex-oder-capex-dimensionen).
 - Eine Zeile, die eine Budgetposition anlegt oder deren Konto ändert, wird abgelehnt, wenn das Konto für die andere Art von Position bestimmt ist, mit der Meldung „Account 6061 is for CAPEX lines only.“ (oder OPEX). Eine Budgetposition behält ihr aktuelles Konto. Die Einstellung der Konten steht in [Kontenpläne und Kontenverwaltung](chart-of-accounts.md#opex-oder-capex-konten).
 - Projekte werden über ihre Nummer zugeordnet, zum Beispiel `PRJ-3`.
 - Eine beendete Position ist eine Position, deren `end_of_validity` verstrichen ist. Setzen Sie das Datum, um eine Position zu beenden, oder schreiben Sie `-` in die Zelle, um es zu löschen und die Position weiterlaufen zu lassen. Es gibt keine Statusspalte.
@@ -154,7 +155,7 @@ Die Datei zu öffnen und zu speichern lässt sie ladbar. Beide Programme behalte
 
 Ein Datum oder ein Betrag, den die Datei nicht selbst entscheiden kann, wird so gelesen, wie der Export ihn geschrieben hat, dann in der Sprache, in der die Oberfläche angezeigt wird. Jedes Datum mit einem Tag bis 12 ist mehrdeutig (`01/03/2027` ist auf Französisch der 1. März und auf Englisch der 3. Januar), und ein Betrag wie `12,280` ebenfalls. Die Prüfung sagt, wie sie gelesen wurden, und bietet eine Schaltfläche zum Wechseln der Lesart.
 
-Eine Spalte, die KANAP nicht kennt, wird mit einer Warnung ignoriert. Eine Spalte, die wie eine falsch geschriebene Betragsspalte aussieht, zum Beispiel `budjet_2027`, lehnt die ganze Datei ab.
+Eine Spalte, die KANAP nicht kennt, wird mit einer Warnung ignoriert. Eine Spalte, die wie eine falsch geschriebene Betragsspalte aussieht, zum Beispiel `budjet_2027`, lehnt die ganze Datei ab. Auch eine Spalte `analytics:<code>`, die keine aktivierte Dimension benennt, lehnt die ganze Datei ab, mit „Unknown dimension 'x'.“
 
 ## Dateien aus früheren Versionen
 

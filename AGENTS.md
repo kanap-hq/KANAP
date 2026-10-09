@@ -207,6 +207,8 @@ or subscriptions must work in both modes.
 
 - TypeORM 0.3 drops `null` and `undefined` from find options (`{ fiscal_year: null }` matches every
   row). Use `IsNull()`.
+- `queryRunner.query()` / `manager.query()` return `[rows, rowCount]` for an `UPDATE` or `DELETE`, even
+  with `RETURNING`: `.length` is always 2. Count with `WITH changed AS (UPDATE ... RETURNING 1) SELECT count(*)`.
 - The JWT payload carries the user id in `sub`: use `req.user.sub`, not `req.user.id`.
 - Nest matches routes in declaration order: declare `@Get('export')` before `@Get(':id')`.
 - Fire-and-forget notifications must never reject (an unhandled rejection exits Node). Mark them

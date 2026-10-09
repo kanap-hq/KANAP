@@ -34,6 +34,8 @@ import {
 } from './analyticsFields';
 import AnalyticsDescriptionField from './AnalyticsDescriptionField';
 import { useFieldDraft } from '../../hooks/useFieldDraft';
+import LineTypeUsageSelect, { LineTypeUsageConflictNote } from '../../components/fields/LineTypeUsageSelect';
+import { lineTypeUsageConflict, parseLineTypeUsage, type LineType } from '../../constants/lineTypeUsage';
 
 type FieldErrors = Partial<Record<AnalyticsField, string>>;
 /** `title` is the click-to-edit name in the header: its refusals show above the workspace. */
@@ -203,6 +205,7 @@ export default function AnalyticsDimensionWorkspacePage() {
             onNameCommit={(name) => void patch({ name }, 'name')}
             onCodeCommit={(code) => void patch({ code }, 'code')}
             onOrderCommit={(sortOrder) => void patch({ sort_order: sortOrder }, 'sort_order')}
+            onAppliesToChange={(appliesTo) => void patch({ applies_to: appliesTo }, 'applies_to')}
             onDisabledAtChange={(disabledAt) => {
               if (disabledAt === data.disabled_at) return;
               void patch({ status: deriveStatusFromDisabledAt(disabledAt), disabled_at: disabledAt }, 'disabled_at');
@@ -246,6 +249,7 @@ function DimensionProperties({
   onNameCommit,
   onCodeCommit,
   onOrderCommit,
+  onAppliesToChange,
   onDisabledAtChange,
   onFieldError,
 }: {
@@ -256,6 +260,7 @@ function DimensionProperties({
   onNameCommit: (name: string | null) => void;
   onCodeCommit: (code: string) => void;
   onOrderCommit: (sortOrder: number) => void;
+  onAppliesToChange: (appliesTo: LineType | null) => void;
   onDisabledAtChange: (disabledAt: string | null) => void;
   /** Shows (or clears, with undefined) a refusal found before any request. */
   onFieldError: (field: AnalyticsField, message: string | undefined) => void;
@@ -318,6 +323,10 @@ function DimensionProperties({
     if (event.key === 'Enter') (event.target as HTMLInputElement).blur();
   };
 
+  const appliesTo = parseLineTypeUsage(axis.applies_to);
+  // Lines of the other type keep their value on the dimension, hidden while it does not apply to them.
+  const appliesToConflict = lineTypeUsageConflict(appliesTo, { opex: axis.opex_count ?? 0, capex: axis.capex_count ?? 0 });
+
   return (
     <>
       <PropertyGroup>
@@ -376,6 +385,26 @@ function DimensionProperties({
             inputProps={{ 'aria-label': t('analytics.fields.order'), inputMode: 'numeric', autoComplete: 'off' }}
           />
         </PropertyRow>
+        <PropertyRow
+          label={t('shared.lineTypeUsage.label')}
+          helperText={axis.is_default ? t('analytics.hints.appliesToDefault') : undefined}
+        >
+          <LineTypeUsageSelect
+            value={appliesTo}
+            label={t('shared.lineTypeUsage.label')}
+            // The default dimension applies to both types, always.
+            disabled={disabled || axis.is_default}
+            error={errors.applies_to}
+            onChange={(next) => {
+              if (next !== appliesTo) onAppliesToChange(next);
+            }}
+          />
+          {appliesToConflict && (
+            <LineTypeUsageConflictNote testId="analytics-dimension-applies-to-conflict">
+              {t(`analytics.appliesToConflict.${appliesToConflict.scope}`, { count: appliesToConflict.count })}
+            </LineTypeUsageConflictNote>
+          )}
+        </PropertyRow>
       </PropertyGroup>
 
       <PropertyGroup>
@@ -409,9 +438,11 @@ type CreateForm = {
   code: string;
   description: string;
   order: string;
+  /** Null: OPEX and CAPEX lines. */
+  appliesTo: LineType | null;
 };
 
-const EMPTY_FORM: CreateForm = { name: '', code: '', description: '', order: '' };
+const EMPTY_FORM: CreateForm = { name: '', code: '', description: '', order: '', appliesTo: null };
 
 function DimensionCreate({
   canCreate,
@@ -463,14 +494,18 @@ function DimensionCreate({
         name,
         description: form.description.trim() || null,
         ...(trimmedOrder ? { sort_order: Number(trimmedOrder) } : {}),
+        applies_to: form.appliesTo,
       });
       void queryClient.invalidateQueries({ queryKey: ANALYTICS_AXES_QUERY_KEY, exact: true });
       onCreated(saved.id);
     } catch (e) {
       const message = getApiErrorMessage(e, t, t('analytics.messages.dimensionCreateFailed'));
       const field = analyticsRefusalField(e);
-      if (field === 'name' || field === 'code' || field === 'description' || field === 'sort_order') setErrors({ [field]: message });
-      else setServerError(message);
+      if (field === 'name' || field === 'code' || field === 'description' || field === 'sort_order' || field === 'applies_to') {
+        setErrors({ [field]: message });
+      } else {
+        setServerError(message);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -534,6 +569,14 @@ function DimensionCreate({
               error={!!errors.sort_order}
               helperText={errors.sort_order}
               inputProps={{ 'aria-label': t('analytics.fields.order'), inputMode: 'numeric', autoComplete: 'off' }}
+            />
+          </PropertyRow>
+          <PropertyRow label={t('shared.lineTypeUsage.label')} valueSx={{ maxWidth: 520 }}>
+            <LineTypeUsageSelect
+              value={form.appliesTo}
+              label={t('shared.lineTypeUsage.label')}
+              error={errors.applies_to}
+              onChange={(next) => update({ appliesTo: next })}
             />
           </PropertyRow>
           <PropertyRow label={t('analytics.fields.description')} valueSx={{ maxWidth: 520 }}>

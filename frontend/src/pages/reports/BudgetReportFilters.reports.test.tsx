@@ -35,9 +35,10 @@ vi.mock('../../hooks/useAnalyticsAxes', async (importOriginal) => {
   const t = ((key: string) => (key === 'master-data:analytics.analyticsCategoryFallback' ? 'Analytics dimension' : key)) as unknown as TFunction;
   return {
     ...actual,
-    useAnalyticsAxes: () => {
+    useAnalyticsAxes: (options?: { scope?: 'opex' | 'capex' | null }) => {
       const list = axesState.list;
-      return useMemo(() => actual.buildAnalyticsAxes(list as AnalyticsAxis[], t), [list]);
+      const scope = options?.scope ?? null;
+      return useMemo(() => actual.buildAnalyticsAxes(list as AnalyticsAxis[], t, true, false, undefined, scope), [list, scope]);
     },
   };
 });
@@ -105,7 +106,7 @@ function slot(year: number, amount: number) {
 }
 
 function axis(id: string, patch: Partial<AnalyticsAxis>): AnalyticsAxis {
-  return { id, code: id, name: null, description: null, sort_order: 0, is_default: false, status: 'enabled', disabled_at: null, ...patch };
+  return { id, code: id, name: null, description: null, sort_order: 0, is_default: false, applies_to: null, status: 'enabled', disabled_at: null, ...patch };
 }
 
 // The default dimension has no name of its own and reads as the translated default label.
@@ -340,6 +341,15 @@ describe('Analytics report dimensions', () => {
     expect(groups()[0]).toEqual(['Category e', 7000]);
     // The default without a name reads in lowercase inside a sentence; the grid header keeps the label.
     expect(chart.options.title.text).toContain('"dimension":"reports.analyticsCategory.defaultDimensionInSentence"');
+    expect(grid.columns[0].headerName).toBe('Analytics dimension');
+  });
+
+  it('groups an OPEX report on the default dimension when the address names one for CAPEX lines only', async () => {
+    axesState.list = [DEFAULT_AXIS, { ...NATURE, applies_to: 'capex' }];
+    renderReport(<AnalyticsCategoryReport />, '/report?axis=ax-nat');
+    await waitFor(() => expect(groups()).toHaveLength(5));
+    expect(dimensionPicker()).toBeNull();
+    expect(groups()[0]).toEqual(['Category e', 7000]);
     expect(grid.columns[0].headerName).toBe('Analytics dimension');
   });
 

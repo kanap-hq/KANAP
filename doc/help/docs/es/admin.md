@@ -61,16 +61,18 @@ La página de Registro de auditoría conserva el historial de los cambios de dat
 | **Inicio de sesión fallido** | Se rechaza un inicio de sesión. El **motivo** indica la causa, por ejemplo contraseña incorrecta, cuenta deshabilitada o ninguna cuenta con esta dirección |
 | **Cierre de sesión** | Alguien cierra sesión |
 | **Renovación de sesión rechazada** | No se pudo renovar la sesión, por ejemplo porque caducó |
-| **Restablecimiento de contraseña solicitado** / **Restablecimiento de contraseña completado** | Alguien pide un enlace de restablecimiento, y cuando el restablecimiento termina |
+| **Restablecimiento de contraseña solicitado** / **Restablecimiento de contraseña completado** | Alguien pide un enlace de restablecimiento y luego define una contraseña nueva con él |
 | **Inicio de sesión con Microsoft** / **Inicio de sesión con Microsoft fallido** | Un inicio de sesión mediante Microsoft Entra ID se completa o falla |
 
 **Exportaciones** (tabla **Exportación**): exportaciones CSV, documentos e informes que genera el servidor. La fila indica qué se exportó y quién lo hizo. La exportación del propio registro de auditoría también se registra.
 
-Las filas de acceso, de sesión y de exportación guardan además la **dirección del equipo** desde el que llegó la solicitud y el **navegador** utilizado. Abra la fila para leerlos en el panel **Después**. Detrás de un proxy inverso, la dirección es la de la persona, siempre que el proxy la transmita. Instalaciones on-premise: consulte la guía de instalación. Las contraseñas, los enlaces de acceso y los tokens nunca se escriben en el registro. Cuando alguien intenta iniciar sesión con una dirección que no tiene cuenta, la fila muestra **Cuenta desconocida** y no conserva la dirección escrita.
+Las filas de acceso, de sesión y de exportación guardan además la **dirección IP** desde la que llegó la solicitud y el **navegador** utilizado. Abra la fila para leerlos en el panel **Después**. Detrás de un proxy inverso, es la dirección IP de la propia persona, siempre que el proxy la transmita (on-premise: consulte el [ejemplo de proxy inverso](on-premise/installation.md#ejemplo-de-proxy-inverso-nginx)).
+
+Las contraseñas, los enlaces de acceso y los tokens nunca se escriben en el registro. Cuando alguien intenta iniciar sesión con una dirección de correo electrónico que no tiene cuenta, la fila muestra **Cuenta desconocida** y no conserva la dirección escrita.
 
 ### Cuánto tiempo se conservan las entradas
 
-Los eventos de acceso y de sesión se eliminan después de **365 días**. Las demás entradas (cambios de datos, cambios de roles y exportaciones) no se ven afectadas por esta regla.
+Los eventos de acceso y de sesión se eliminan después de **365 días**. Los cambios de datos, los cambios de roles y las exportaciones se conservan sin límite de tiempo.
 
 ### Qué puede hacer
 
@@ -90,7 +92,7 @@ Los eventos de acceso y de sesión se eliminan después de **365 días**. Las de
 
 **Columnas predeterminadas**:
 - **Fecha**: Cuándo ocurrió el cambio o el evento
-- **Tabla**: Qué tabla fue afectada, o **Acceso y sesiones**, o el recurso exportado en los eventos de seguridad
+- **Tabla**: Qué tabla fue afectada. Los eventos de acceso y de sesión muestran **Acceso y sesiones**, y una exportación muestra qué se exportó (por ejemplo **Proveedores**)
 - **Acción**: El tipo de cambio o de evento (crear, actualizar, eliminar, desactivar, inicio de sesión, exportación, etc.)
 - **Origen**: Quién o qué desencadenó el cambio (usuario, sistema, webhook)
 - **Usuario**: Nombre del usuario que realizó el cambio, o su correo si no tiene nombre. Muestra "Sistema" o "Webhook" para orígenes no humanos, y "Cuenta desconocida" para un intento de acceso con una dirección desconocida.
@@ -124,7 +126,7 @@ El archivo tiene siempre el mismo formato, sea cual sea su idioma, para que una 
 - fechas en formato ISO 8601, en UTC (por ejemplo `2026-10-09T14:32:05.000Z`);
 - las columnas `before` y `after` como JSON compacto.
 
-Para abrir el archivo en Excel con otro separador de listas, como en una instalación en español o en francés, no haga doble clic sobre él. Use **Datos > Desde texto o CSV**, elija UTF-8 como origen del archivo y la coma como delimitador.
+Si Excel usa el punto y coma como separador de listas en su equipo (habitual con la configuración regional española o francesa), no haga doble clic sobre el archivo. Use **Datos > Desde texto o CSV**, elija UTF-8 como origen del archivo y la coma como delimitador.
 
 ### Quién puede ver qué
 
@@ -538,12 +540,12 @@ Los pasos de configuración del registro de aplicación de Entra están en [SSO 
 
 ### Límites de inicio de sesión
 
-KANAP limita las solicitudes de inicio de sesión repetidas desde la misma dirección de equipo:
+KANAP limita las solicitudes de inicio de sesión repetidas desde la misma dirección IP:
 
 - **Inicio de sesión con contraseña**: 5 intentos por minuto.
 - **Inicio de sesión con Microsoft**: 60 solicitudes por minuto. El límite es más alto porque el personal de una misma organización suele acceder a KANAP desde la misma dirección de salida.
 
-Cuando se alcanza el límite, la persona espera un minuto y vuelve a intentarlo. Detrás de un proxy inverso, el recuento sigue la dirección real de cada persona, siempre que el proxy la transmita. Los intentos correctos, fallidos y rechazados aparecen en el [Registro de auditoría](#registro-de-auditoria).
+Cuando se alcanza el límite, la persona espera un minuto y vuelve a intentarlo. Detrás de un proxy inverso, KANAP cuenta la dirección IP de cada persona, siempre que el proxy la transmita. Los inicios de sesión y los inicios de sesión fallidos aparecen en el [Registro de auditoría](#registro-de-auditoria). Las solicitudes bloqueadas por el límite no se registran.
 
 ---
 

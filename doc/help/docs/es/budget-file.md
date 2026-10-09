@@ -58,7 +58,7 @@ Son iguales en ambos archivos, salvo las columnas propias del tipo al principio 
 | `account_number` | Número de cuenta, en el plan de cuentas de la empresa pagadora | Obligatorio |
 | `cost_center_code` | Código del centro de coste. Se rechaza un grupo | Opcional |
 | `run_build` | `run` o `build` | Opcional |
-| `analytics:<code>` | El nombre del valor en la dimensión cuyo código es ese. Una columna por dimensión, la dimensión por defecto incluida | Opcional. La carga crea un valor que no existe |
+| `analytics:<code>` | El nombre del valor en la dimensión cuyo código es ese. Una columna por dimensión activada usada para las líneas OPEX, la dimensión por defecto incluida | Opcional. La carga crea un valor que no existe |
 | `owner_it_email` | Correo de un usuario activo | Opcional |
 | `owner_business_email` | Correo de un usuario activo | Opcional |
 | `project` | Número de proyecto, por ejemplo `PRJ-3` | Opcional |
@@ -82,7 +82,7 @@ Son iguales en ambos archivos, salvo las columnas propias del tipo al principio 
 | `account_number` | Número de cuenta, en el plan de cuentas de la empresa pagadora | Obligatorio |
 | `cost_center_code` | Código del centro de coste. Se rechaza un grupo | Opcional |
 | `run_build` | `run` o `build` | Opcional |
-| `analytics:<code>` | El nombre del valor en la dimensión cuyo código es ese. Una columna por dimensión, la dimensión por defecto incluida | Opcional. La carga crea un valor que no existe |
+| `analytics:<code>` | El nombre del valor en la dimensión cuyo código es ese. Una columna por dimensión activada usada para las líneas CAPEX, la dimensión por defecto incluida | Opcional. La carga crea un valor que no existe |
 | `owner_it_email` | Correo de un usuario activo | Opcional |
 | `owner_business_email` | Correo de un usuario activo | Opcional |
 | `project` | Número de proyecto, por ejemplo `PRJ-3` | Opcional |
@@ -127,6 +127,7 @@ Una columna ausente conserva todos los valores guardados de esa columna. Un arch
 - No hay otra clave. Una fila nueva que se parezca a una partida existente, o a otra fila nueva del mismo archivo, es una advertencia que puede ignorar.
 - Los proveedores se hacen coincidir por `supplier_erp_id` cuando está relleno, y si no por `supplier_name`. La carga crea un proveedor que el archivo nombra y que KANAP no tiene cuando **Crear los proveedores que faltan** está marcada. Sin esa opción, la verificación lista los que faltan y le pide crearlos en **Datos maestros > Proveedores**.
 - La carga crea un valor de dimensión que no existe y lo lista en la verificación. Las cuentas, los centros de coste, las empresas y los usuarios nunca se crean: un elemento desconocido es un error de fila que indica dónde añadirlo.
+- Un archivo con una columna `analytics:<code>` de una dimensión que solo se usa para el otro tipo de línea se rechaza por completo, por ejemplo "The Recurrence dimension is for CAPEX lines only. Remove the analytics:recurrence column from this OPEX file." La exportación no escribe ninguna columna para esa dimensión: un valor oculto en una línea no se exporta, y una carga lo deja en su sitio. El ajuste está en [Dimensiones analíticas](analytics.md#dimensiones-opex-o-capex).
 - Una fila que crea una línea presupuestaria, o que cambia su cuenta, se rechaza cuando la cuenta es del otro tipo de línea, con el mensaje «Account 6061 is for CAPEX lines only.» (o OPEX). Una línea presupuestaria conserva su cuenta actual. El ajuste de las cuentas está en [Planes de cuentas y gestión de cuentas](chart-of-accounts.md#cuentas-opex-o-capex).
 - Los proyectos se hacen coincidir por su número, por ejemplo `PRJ-3`.
 - Una partida finalizada es una partida cuya `end_of_validity` ha pasado. Indique la fecha para finalizar una partida, o escriba `-` en la celda para borrarla y mantener la partida en curso. No hay columna de estado.
@@ -154,7 +155,7 @@ Abrir el archivo y guardarlo lo deja cargable. Los dos programas conservan las c
 
 Una fecha o un importe que el archivo no puede decidir por sí solo se lee como lo escribió la exportación, y después en el idioma en que se muestra la pantalla. Toda fecha con un día igual o menor que 12 es ambigua (`01/03/2027` es el 1 de marzo en francés y el 3 de enero en inglés), y un importe escrito como `12,280` también lo es. La verificación indica cómo los ha leído y ofrece un botón para cambiar la lectura.
 
-Una columna que KANAP no conoce se ignora, con una advertencia. Una columna que parece una columna de importes mal escrita, como `budjet_2027`, rechaza el archivo entero.
+Una columna que KANAP no conoce se ignora, con una advertencia. Una columna que parece una columna de importes mal escrita, como `budjet_2027`, rechaza el archivo entero. Una columna `analytics:<code>` que no nombra ninguna dimensión activada también rechaza el archivo entero, con "Unknown dimension 'x'."
 
 ## Archivos de versiones anteriores
 

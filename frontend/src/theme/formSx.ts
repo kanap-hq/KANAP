@@ -146,6 +146,20 @@ export const drawerMenuItemSx = {
 } as const;
 
 /**
+ * The small orange dot before an attention note under a field (lines that keep an account or a
+ * dimension value of the other type, a consolidation account outside the chart). Inside a text line,
+ * add `position: 'relative', top: '-1px'` to sit on the baseline.
+ */
+export const attentionDotSx = {
+  display: 'inline-block',
+  width: 6,
+  height: 6,
+  borderRadius: '50%',
+  bgcolor: 'kanap.orange',
+  flexShrink: 0,
+} as const;
+
+/**
  * `SelectProps` of a select that takes the focus back once a choice is made. The theme closes every
  * menu without giving the focus back (#181: no ring left on the button that opened it); a select in a
  * run of fields typed with the keyboard needs it, so Tab goes on to the next field.

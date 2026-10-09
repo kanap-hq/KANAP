@@ -139,6 +139,19 @@ async function testTokenLanguages() {
   assert.equal(hinted, 'fr');
 }
 
+/** A column of a dimension of the other line type is a header error with the reader's own message; no row is read. */
+async function testOtherTypeDimensionHeader() {
+  const message = 'The Recurrence dimension is for CAPEX lines only. Remove the analytics:recurrence column from this OPEX file.';
+  const options = { scope: 'opex' as const, language: 'en' as const, dimensionCodes: ['nature'], refusedDimensions: { recurrence: message } };
+  const refused = await readBudgetCsv('item_number,analytics:nature,Analytics: Recurrence\nOPX-3,Hardware,Monthly\n', options);
+  assert.deepEqual(refused.headerErrors, [message]);
+  assert.ok(refused.columns.some((column) => column.kind === 'analytics' && column.code === 'nature'), 'the other columns are read');
+  const report = await preflight('opex', 'item_number,analytics:recurrence\nOPX-3,Monthly\n', [line()]);
+  assert.deepEqual(report.headerErrors, ["Unknown dimension 'recurrence'."], 'without the refusal map: unknown, as before');
+  const unknown = await readBudgetCsv('item_number,analytics:nope\nOPX-3,x\n', options);
+  assert.deepEqual(unknown.headerErrors, ["Unknown dimension 'nope'."], 'another code stays unknown');
+}
+
 async function testOldFiles() {
   const opex = await readBudgetCsv('product_name;y_budget\nWidget;10\n', { scope: 'opex', language: 'en', dimensionCodes: [] });
   assert.deepEqual(opex.fileErrors, [OLD_BUDGET_FILE_MESSAGE]);
@@ -397,6 +410,7 @@ async function main() {
   await testTokenLanguages();
   await testDecimalMarkParameter();
   await testOldFiles();
+  await testOtherTypeDimensionHeader();
   await testRoundTrip();
   await testAmounts();
   await testIdentity();

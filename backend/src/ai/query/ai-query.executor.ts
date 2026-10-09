@@ -54,7 +54,7 @@ import {
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { analyticsAxisFields, resolveAiEntityRegistry } from './registries';
 import { budgetFteFields } from './registries/budget-amount-fields';
-import { analyticsAxisLabel, AnalyticsAxisInfo, loadAnalyticsAxes, parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
+import { analyticsAxisLabel, AnalyticsAxisInfo, axisAppliesTo, loadAnalyticsAxes, parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
 import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 
 function toIso(value: Date | string | null | undefined): string | null {
@@ -711,6 +711,19 @@ export class AiQueryExecutor {
   private async analyticsAxesById(context: AiExecutionContextWithManager): Promise<Map<string, AnalyticsAxisInfo>> {
     const axes = await loadAnalyticsAxes(context.manager, context.tenantId);
     return new Map(axes.map((axis) => [axis.id, axis]));
+  }
+
+  /**
+   * A line's `analytics_values` (the detail endpoint returns every value it holds) without
+   * the values on dimensions of the other line type: kept in the database, hidden everywhere.
+   */
+  private async withoutHiddenAnalyticsValues(context: AiExecutionContextWithManager, row: any, scope: 'opex' | 'capex'): Promise<void> {
+    if (!Array.isArray(row?.analytics_values) || row.analytics_values.length === 0) return;
+    const axes = await this.analyticsAxesById(context);
+    row.analytics_values = row.analytics_values.filter((value: { axis_id: string }) => {
+      const axis = axes.get(value.axis_id);
+      return !axis || axisAppliesTo(axis, scope);
+    });
   }
 
   private mapBusinessProcess(row: any): AiEntitySummaryDto {
@@ -2068,6 +2081,7 @@ export class AiQueryExecutor {
     if (entityType === 'spend_items') {
       const row: any = await this.spendItems.get(entityId, { manager: context.manager });
       if (row.tenant_id && row.tenant_id !== context.tenantId) throw new NotFoundException('Spend item not found.');
+      await this.withoutHiddenAnalyticsValues(context, row, 'opex');
       const registry = await resolveAiEntityRegistry(context, entityType);
       Object.assign(row, await this.loadSpendItemDeepDetail(context, entityId, registry));
       return this.toDetailResult(this.mapSpendItem(row, registry), row);
@@ -2078,6 +2092,7 @@ export class AiQueryExecutor {
       if (row.tenant_id && row.tenant_id !== context.tenantId) throw new NotFoundException('CAPEX item not found.');
       // The id, not the reference the caller may have given (`get` accepts both).
       const capexItemId = row.id as string;
+      await this.withoutHiddenAnalyticsValues(context, row, 'capex');
       const registry = await resolveAiEntityRegistry(context, entityType);
       Object.assign(row, await this.loadCapexItemDeepDetail(context, capexItemId, registry));
       row.links = await this.capexItems.listLinks(capexItemId, { manager: context.manager }).catch(() => []);

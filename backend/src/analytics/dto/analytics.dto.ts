@@ -1,5 +1,6 @@
-import { ArrayMaxSize, IsArray, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 import { StatusLifecycleDto } from '../../common/dto/status-lifecycle.dto';
+import { AXIS_APPLIES_TO, AxisAppliesTo } from '../analytics-axis.entity';
 
 // Shapes only: trimming, lengths, code format, the default-dimension rules and
 // tenant checks are the services'. `is_default` is not declared, so the global
@@ -22,6 +23,11 @@ export class AnalyticsAxisCreateDto extends StatusLifecycleDto {
   @Min(-2147483648)
   @Max(2147483647)
   sort_order?: number;
+
+  /** OPEX lines only, CAPEX lines only; null clears it (both), absent leaves it unchanged. */
+  @IsOptional()
+  @IsIn(AXIS_APPLIES_TO)
+  applies_to?: AxisAppliesTo | null;
 }
 
 export class AnalyticsAxisUpdateDto extends StatusLifecycleDto {
@@ -42,6 +48,11 @@ export class AnalyticsAxisUpdateDto extends StatusLifecycleDto {
   @Min(-2147483648)
   @Max(2147483647)
   sort_order?: number;
+
+  /** OPEX lines only, CAPEX lines only; null clears it (both), absent leaves it unchanged. */
+  @IsOptional()
+  @IsIn(AXIS_APPLIES_TO)
+  applies_to?: AxisAppliesTo | null;
 }
 
 export class AnalyticsCategoryCreateDto extends StatusLifecycleDto {

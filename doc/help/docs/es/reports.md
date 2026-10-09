@@ -74,7 +74,7 @@ Cuándo aparecen los filtros:
 - **Centro de coste** aparece en cuanto su espacio de trabajo tiene al menos un centro de coste o un grupo.
 - **Run o build** aparece en cuanto una línea del informe está marcada como **Run** o **Build**, o cuando la dirección de la página ya incluye el filtro.
 - **Partidas** aparece en cuanto una partida del informe declara ETC, o cuando la dirección de la página ya incluye el filtro.
-- El filtro de una dimensión aparece en cuanto una línea del informe tiene un valor en esa dimensión, o cuando la dirección de la página ya lo incluye. Las dimensiones desactivadas no tienen filtro.
+- El filtro de una dimensión aparece en cuanto una línea del informe tiene un valor en esa dimensión, o cuando la dirección de la página ya lo incluye. Las dimensiones desactivadas no tienen filtro. Un informe solo muestra las dimensiones usadas para las líneas que cubre: pasar de **OPEX** a **CAPEX** cambia la lista. Una dimensión en **Solo OPEX** no tiene filtro en un informe CAPEX, y al revés. Consulte [Dimensiones OPEX o CAPEX](analytics.md#dimensiones-opex-o-capex).
 - Sin ninguno de ellos, la barra de filtros solo muestra los controles propios del informe.
 
 Cómo funcionan:
@@ -413,7 +413,7 @@ Vea datos presupuestarios OPEX o CAPEX agrupados por los valores de una dimensi�
 
 - **Tipo de partida**: OPEX o CAPEX (ver [Elegir OPEX o CAPEX](#elegir-opex-o-capex))
 - **Medida**: **Importe** o **ETC** (consulte [Elegir importe o ETC](#elegir-importe-o-etc))
-- **Dimensión**: la dimensión por la que agrupa el informe. Aparece cuando tiene dos o más dimensiones activadas, y el informe se abre en la dimensión por defecto. La dirección de la página conserva su elección, de modo que un enlace guardado o compartido se abre en la misma dimensión
+- **Dimensión**: la dimensión por la que agrupa el informe. Ofrece las dimensiones activadas usadas para el tipo de partida elegido, aparece cuando hay dos o más, y el informe se abre en la dimensión por defecto. Si cambia a un tipo de partida que no usa la dimensión elegida, el informe vuelve a la dimensión por defecto. La dirección de la página conserva su elección, de modo que un enlace guardado o compartido se abre en la misma dimensión
 - **Año de inicio** y **Año de fin**: Año anterior, actual o siguiente
 - **Métrica**: Cualquier columna presupuestaria visible. Empieza en la columna por defecto
 - **Tipo de gráfico**: Gráfico circular o de barras horizontales (solo un año)
@@ -450,7 +450,7 @@ Vea cuántas personas prevé cada parte del presupuesto, mes a mes. El informe l
 - **Año**: Año anterior, actual o siguiente
 - **Columna**: Cualquier columna presupuestaria visible. Empieza en la columna por defecto
 - **Agrupar por**: **Centro de coste** (por defecto), **Partida**, **Proveedor** o **Dimensión analítica**
-- **Dimensión**: la dimensión por la que agrupa el informe, con **Dimensión analítica**. Aparece cuando tiene dos o más dimensiones activadas, y el informe se abre en la dimensión por defecto
+- **Dimensión**: la dimensión por la que agrupa el informe, con **Dimensión analítica**. Ofrece las dimensiones activadas usadas para las líneas del informe y aparece cuando hay dos o más. El informe se abre en la dimensión por defecto
 
 La dirección de la página conserva la agrupación (`?group=item`, `?group=supplier` o `?group=axis:<dimension id>`), de modo que un enlace guardado o compartido se abre con la misma agrupación. Sin este parámetro, el informe agrupa por centro de coste.
 

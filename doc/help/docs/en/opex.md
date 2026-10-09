@@ -21,7 +21,7 @@ The workspace opens in creation mode, with the **Properties** panel open on the 
   - **Supplier**: Who you are paying. Links to your suppliers in master data
   - **Cost center**: Who owns the spend. See [Cost centers](cost-centers.md). When the paying company is still empty, picking a cost center fills it with the cost center's company
   - **Run or build**: **Run** for spend that keeps existing services running, **Build** for spend that creates or changes them
-  - **Analytics dimensions**: One field per dimension, named after it, for custom grouping in reports (e.g., "Licenses" on Nature). The default dimension shows as **Analytics dimension** until it is renamed. See [Analytics dimensions](analytics.md)
+  - **Analytics dimensions**: One field per dimension used for OPEX lines, named after it, for custom grouping in reports (e.g., "Licenses" on Nature). The default dimension shows as **Analytics dimension** until it is renamed. See [Analytics dimensions](analytics.md)
   - **End of validity**: The date this spend stops. Leave it blank if there is no end. After it, the item is disabled and later years no longer count in the budget views
   - **IT owner** / **Business owner**: Who is responsible
   - **Description** and **Notes**: Free text on the Overview tab
@@ -60,7 +60,7 @@ The OPEX list (at **Budget management > OPEX**) is your main view for browsing, 
   - **Effective start**: Start date
   - **End of validity**: Date the item stops (blank means no end)
   - **IT owner** / **Business owner**: Responsible users
-  - **Analytics dimensions**: One column per enabled dimension, named after it, with the item's value. The default dimension's column comes first (**Analytics dimension** until it is renamed), then the other dimensions in their order
+  - **Analytics dimensions**: One column per enabled dimension used for OPEX lines, named after it, with the item's value. The default dimension's column comes first (**Analytics dimension** until it is renamed), then the other dimensions in their order
   - **Cost center**: The code and name of the cost center. Hover it to see its full path in the tree; click it to open the cost center
   - **Budget holder**: The budget holder of the item's cost center. It is derived from the cost center, not stored on the item: change the budget holder of a cost center and every item on it follows
   - **Run or build**: **Run** or **Build**
@@ -170,7 +170,7 @@ The Overview tab holds the free-text fields and the tasks of the item.
 **Run or build**: **Run**, **Build**, or **Not set**. Use it to split the budget between keeping services running and changing them.
 
 **Analytics dimensions**:
-  - Each enabled dimension has its own field, named after the dimension, in dimension order. Pick a value or clear the field; the change saves at once
+  - Each enabled dimension used for OPEX lines has its own field, named after the dimension, in dimension order. A dimension set to **CAPEX only** has none, and a value an item holds on it stays hidden Pick a value or clear the field; the change saves at once
   - Each field lists the enabled values of its dimension. A disabled value stays on the items that already have it, and cannot be picked for another item
   - The field cannot create a value: create it in [Analytics dimensions](analytics.md), or let a CSV import create it
   - If the dimensions cannot be loaded, one line replaces these fields: "Dimensions could not be loaded."

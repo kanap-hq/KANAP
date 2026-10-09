@@ -373,11 +373,11 @@ describe('AccountWorkspacePage', () => {
     renderAt('/master-data/accounts/acc-1/overview');
     await screen.findByText('Software subscriptions');
     // Null: an account for OPEX and CAPEX lines.
-    expect(natureSelect()).toHaveTextContent('master-data:accounts.nature.both');
-    await pickNature('master-data:accounts.nature.opex');
+    expect(natureSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both');
+    await pickNature('master-data:shared.lineTypeUsage.opex');
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/accounts/acc-1', { nature: 'opex' }));
-    await waitFor(() => expect(natureSelect()).toHaveTextContent('master-data:accounts.nature.opex'));
-    await pickNature('master-data:accounts.nature.both');
+    await waitFor(() => expect(natureSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.opex'));
+    await pickNature('master-data:shared.lineTypeUsage.both');
     await waitFor(() => expect(mocked.patch).toHaveBeenLastCalledWith('/accounts/acc-1', { nature: null }));
   });
 
@@ -385,7 +385,7 @@ describe('AccountWorkspacePage', () => {
     mocked.patch.mockRejectedValueOnce({ response: { status: 400, data: { message: 'Invalid nature.', field: 'nature' } } });
     renderAt('/master-data/accounts/acc-1/overview');
     await screen.findByText('Software subscriptions');
-    await pickNature('master-data:accounts.nature.capex');
+    await pickNature('master-data:shared.lineTypeUsage.capex');
     expect(await screen.findByRole('alert')).toHaveTextContent('Invalid nature.');
   });
 
@@ -404,13 +404,13 @@ describe('AccountWorkspacePage', () => {
     expect(url.searchParams.get('from')).toBe('report');
 
     // The reverse choice: the OPEX lines keep it.
-    await pickNature('master-data:accounts.nature.capex');
+    await pickNature('master-data:shared.lineTypeUsage.capex');
     await waitFor(() => expect(screen.getByTestId('nature-conflict')).toHaveTextContent('accounts.nature.conflictOpex:3'));
     const opexLink = within(screen.getByTestId('nature-conflict')).getByRole('link', { name: 'accounts.nature.showLines' });
     expect(new URL(opexLink.getAttribute('href') as string, 'http://kanap.test').pathname).toBe('/ops/opex');
 
     // Both kinds allowed: no conflict left.
-    await pickNature('master-data:accounts.nature.both');
+    await pickNature('master-data:shared.lineTypeUsage.both');
     await waitFor(() => expect(screen.queryByTestId('nature-conflict')).toBeNull());
   });
 
@@ -418,7 +418,7 @@ describe('AccountWorkspacePage', () => {
     serve({ account: { ...ACCOUNT, nature: 'capex', line_counts: { opex: 0, capex: 4 } } });
     renderAt('/master-data/accounts/acc-1/overview');
     await screen.findByText('Software subscriptions');
-    await waitFor(() => expect(natureSelect()).toHaveTextContent('master-data:accounts.nature.capex'));
+    await waitFor(() => expect(natureSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.capex'));
     expect(screen.queryByTestId('nature-conflict')).toBeNull();
   });
 
@@ -534,10 +534,10 @@ describe('AccountWorkspacePage', () => {
     mocked.post.mockResolvedValue({ data: { ...ACCOUNT, id: 'acc-new' } });
     renderAt('/master-data/accounts/new/overview?selected=coa-fr');
     await waitFor(() => expect(screen.getByRole('combobox', { name: 'accounts.fields.chartOfAccounts' })).toHaveTextContent('PCG · French chart'));
-    expect(natureSelect()).toHaveTextContent('master-data:accounts.nature.both');
+    expect(natureSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both');
     fireEvent.change(screen.getByLabelText('accounts.fields.accountNumber'), { target: { value: '218300' } });
     fireEvent.change(screen.getByLabelText('accounts.fields.accountName'), { target: { value: 'IT hardware' } });
-    await pickNature('master-data:accounts.nature.capex');
+    await pickNature('master-data:shared.lineTypeUsage.capex');
     fireEvent.click(screen.getByRole('button', { name: 'accounts.actions.create' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/accounts', expect.objectContaining({
       account_number: 218300, account_name: 'IT hardware', nature: 'capex',

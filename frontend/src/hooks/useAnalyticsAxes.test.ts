@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TFunction } from 'i18next';
-import { buildAnalyticsAxes } from './useAnalyticsAxes';
+import { axisAppliesTo, buildAnalyticsAxes, isHiddenAxis } from './useAnalyticsAxes';
 import { analyticsFieldKey, type AnalyticsAxis } from '../services/analytics';
 
 const t = ((key: string) => (key === 'master-data:analytics.analyticsCategoryFallback' ? 'Analytics dimension' : key)) as unknown as TFunction;
@@ -11,6 +11,7 @@ function axis(partial: Partial<AnalyticsAxis> & Pick<AnalyticsAxis, 'id' | 'code
     description: null,
     sort_order: 0,
     is_default: false,
+    applies_to: null,
     status: 'enabled',
     disabled_at: null,
     ...partial,
@@ -57,6 +58,37 @@ describe('buildAnalyticsAxes', () => {
     expect(failed.ready).toBe(true);
     expect(failed.isError).toBe(true);
     expect(failed.axes).toEqual([]);
+  });
+
+  it('keeps, with a scope, only the enabled dimensions that apply to its lines, and the full list beside', () => {
+    const OPEX_ONLY = axis({ id: 'ax-opex', code: 'opex-only', name: 'Opex only', sort_order: 2, applies_to: 'opex' });
+    const CAPEX_ONLY = axis({ id: 'ax-capex', code: 'capex-only', name: 'Capex only', sort_order: 3, applies_to: 'capex' });
+    const list = [ORDER, CAPEX_ONLY, ACTIVITY, OPEX_ONLY, DEFAULT, NATURE];
+    const opex = buildAnalyticsAxes(list, t, true, false, undefined, 'opex');
+    expect(opex.enabled.map((a) => a.id)).toEqual(['ax-nature', 'ax-opex', 'ax-default', 'ax-activity']);
+    const capex = buildAnalyticsAxes(list, t, true, false, undefined, 'capex');
+    expect(capex.enabled.map((a) => a.id)).toEqual(['ax-nature', 'ax-capex', 'ax-default', 'ax-activity']);
+    // Labels of held values and edit conflicts still find every dimension.
+    expect(opex.axes).toHaveLength(6);
+    expect(opex.byId.get('ax-capex')).toBe(CAPEX_ONLY);
+    expect(opex.defaultAxis?.id).toBe('ax-default');
+    // No scope: every enabled dimension, as before.
+    expect(buildAnalyticsAxes(list, t).enabled.map((a) => a.id)).toEqual(['ax-nature', 'ax-opex', 'ax-capex', 'ax-default', 'ax-activity']);
+  });
+
+  it('tells which dimensions apply to a type of line, and which a screen hides', () => {
+    expect(axisAppliesTo({ applies_to: null }, 'opex')).toBe(true);
+    expect(axisAppliesTo({ applies_to: null }, 'capex')).toBe(true);
+    expect(axisAppliesTo({ applies_to: 'opex' }, 'opex')).toBe(true);
+    expect(axisAppliesTo({ applies_to: 'opex' }, 'capex')).toBe(false);
+    expect(axisAppliesTo({ applies_to: 'capex' }, 'opex')).toBe(false);
+    const capex = axis({ id: 'ax-capex', code: 'capex-only', applies_to: 'capex' });
+    const opex = buildAnalyticsAxes([DEFAULT, NATURE, ORDER, capex], t, true, false, undefined, 'opex');
+    expect(isHiddenAxis(opex, 'ax-capex')).toBe(true);
+    expect(isHiddenAxis(opex, 'ax-order')).toBe(true);
+    expect(isHiddenAxis(opex, 'ax-nature')).toBe(false);
+    // Unknown (dimensions not loaded): the server decides.
+    expect(isHiddenAxis(opex, 'ax-unknown')).toBe(false);
   });
 
   it('builds the list field key of a dimension without a colon', () => {

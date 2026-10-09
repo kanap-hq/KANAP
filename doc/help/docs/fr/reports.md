@@ -74,7 +74,7 @@ Quand les filtres apparaissent :
 - **Centre de coûts** s'affiche dès que votre espace de travail compte au moins un centre de coûts ou un groupe.
 - **Run ou build** s'affiche dès qu'une ligne du rapport est marquée **Run** ou **Build**, ou lorsque l'adresse de la page contient déjà le filtre.
 - **Postes** s'affiche dès qu'un poste du rapport déclare des ETP, ou lorsque l'adresse de la page contient déjà le filtre.
-- Le filtre d'une dimension s'affiche dès qu'une ligne du rapport a une valeur sur cette dimension, ou lorsque l'adresse de la page le contient déjà. Les dimensions désactivées n'ont pas de filtre.
+- Le filtre d'une dimension s'affiche dès qu'une ligne du rapport a une valeur sur cette dimension, ou lorsque l'adresse de la page le contient déjà. Les dimensions désactivées n'ont pas de filtre. Un rapport n'affiche que les dimensions utilisées pour les lignes qu'il couvre : passer de **OPEX** à **CAPEX** change la liste. Une dimension réglée sur **OPEX uniquement** n'a pas de filtre dans un rapport CAPEX, et inversement. Voir [Dimensions OPEX ou CAPEX](analytics.md#dimensions-opex-ou-capex).
 - Sans aucun de ces filtres, la barre de filtres n'affiche que les contrôles propres au rapport.
 
 Fonctionnement :
@@ -413,7 +413,7 @@ Consultez les données budgétaires OPEX ou CAPEX regroupées par les valeurs d'
 
 - **Type de poste** : OPEX ou CAPEX (voir [Choisir OPEX ou CAPEX](#choisir-opex-ou-capex))
 - **Mesure** : **Montant** ou **ETP** (voir [Choisir le montant ou les ETP](#choisir-le-montant-ou-les-etp))
-- **Dimension** : la dimension sur laquelle le rapport regroupe. Elle s'affiche lorsque vous avez au moins deux dimensions activées, et le rapport s'ouvre sur la dimension par défaut. L'adresse de la page conserve votre choix : un lien enregistré en favori ou partagé s'ouvre sur la même dimension
+- **Dimension** : la dimension sur laquelle le rapport regroupe. Elle propose les dimensions activées utilisées pour le type de poste choisi, s'affiche lorsqu'il y en a au moins deux, et le rapport s'ouvre sur la dimension par défaut. Si vous passez à un type de poste qui n'utilise pas la dimension choisie, le rapport revient à la dimension par défaut. L'adresse de la page conserve votre choix : un lien enregistré en favori ou partagé s'ouvre sur la même dimension
 - **Année de début** et **Année de fin** : Année précédente, en cours ou suivante
 - **Métrique** : Toute colonne budgétaire affichée. Démarre sur la colonne par défaut
 - **Type de graphique** : Graphique en secteurs ou en barres horizontales (année unique uniquement)
@@ -450,7 +450,7 @@ Voyez combien de personnes chaque partie du budget prévoit, mois par mois. Le r
 - **Année** : Année précédente, en cours ou suivante
 - **Colonne** : Toute colonne budgétaire affichée. Démarre sur la colonne par défaut
 - **Regrouper par** : **Centre de coûts** (par défaut), **Poste**, **Fournisseur** ou **Dimension analytique**
-- **Dimension** : la dimension sur laquelle le rapport regroupe, avec **Dimension analytique**. Elle s'affiche lorsque vous avez au moins deux dimensions activées, et le rapport s'ouvre sur la dimension par défaut
+- **Dimension** : la dimension sur laquelle le rapport regroupe, avec **Dimension analytique**. Elle propose les dimensions activées utilisées pour les lignes du rapport et s'affiche lorsqu'il y en a au moins deux. Le rapport s'ouvre sur la dimension par défaut
 
 L'adresse de la page conserve le regroupement (`?group=item`, `?group=supplier` ou `?group=axis:<dimension id>`) : un lien enregistré en favori ou partagé s'ouvre sur le même regroupement. Sans ce paramètre, le rapport regroupe par centre de coûts.
 

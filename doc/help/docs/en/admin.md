@@ -61,16 +61,18 @@ The Audit Log page keeps the history of data changes and of security events in y
 | **Failed sign-in** | A sign-in is refused. The **Reason** says why, for example wrong password, disabled account or no account with this address |
 | **Sign-out** | Someone signs out |
 | **Session renewal refused** | The session could not be renewed, for example because it expired |
-| **Password reset requested** / **Password reset completed** | Someone asks for a reset link, and when the reset is finished |
+| **Password reset requested** / **Password reset completed** | Someone asks for a reset link, then sets a new password with it |
 | **Sign-in with Microsoft** / **Failed sign-in with Microsoft** | A sign-in through Microsoft Entra ID succeeds or fails |
 
 **Exports** (table **Export**): CSV exports, documents and reports produced by the server. The row says what was exported and by whom. Exporting the audit log is recorded too.
 
-Sign-in, session and export rows also keep the **address of the computer** the request came from and the **browser** it used. Open the row to read them in the **After** panel. Behind a reverse proxy, the address is the real address of the person, as long as the proxy passes it on. On-premise installations: see the installation guide. Passwords, sign-in links and tokens are never written to the log. When someone tries to sign in with an address that has no account, the row shows **Unknown account** and does not keep the address they typed.
+Sign-in, session and export rows also keep the **IP address** the request came from and the **browser** it used. Open the row to read them in the **After** panel. Behind a reverse proxy, this is the person's own IP address, as long as the proxy passes it on (on-premise: see the [reverse proxy example](on-premise/installation.md#reverse-proxy-example-nginx)).
+
+Passwords, sign-in links and tokens are never written to the log. When someone tries to sign in with an email address that has no account, the row shows **Unknown account** and does not keep the address they typed.
 
 ### How long entries are kept
 
-Sign-in and session events are deleted after **365 days**. All other entries (data changes, role changes and exports) are not affected by this rule.
+Sign-in and session events are deleted after **365 days**. Data changes, role changes and exports are kept with no time limit.
 
 ### What You Can Do
 
@@ -90,7 +92,7 @@ Sign-in and session events are deleted after **365 days**. All other entries (da
 
 **Default columns**:
 - **Date**: When the change or event occurred
-- **Table**: Which table was affected, or **Sign-in and session** or the exported resource for security events
+- **Table**: Which table was affected. Sign-in and session events show **Sign-in and session**, and an export shows what was exported (for example **Suppliers**)
 - **Action**: The type of change or event (create, update, delete, disable, sign-in, export and so on)
 - **Source**: Who or what triggered the change (user, system, webhook)
 - **User**: Name of the user who made the change, or their email address when they have no name. Shows "System" or "Webhook" for non-user sources, and "Unknown account" for a sign-in attempt on an unknown address.
@@ -124,7 +126,7 @@ The file always has the same format, whatever your language, so that a log colle
 - dates in ISO 8601, in UTC (for example `2026-10-09T14:32:05.000Z`);
 - the `before` and `after` columns as compact JSON.
 
-To open the file in Excel with a different list separator, such as in a French or German installation, do not double-click it. Use **Data > From Text/CSV**, choose UTF-8 as the file origin and comma as the delimiter.
+If Excel on your computer uses a semicolon as list separator (common with French or German regional settings), do not double-click the file. Use **Data > From Text/CSV**, choose UTF-8 as the file origin and comma as the delimiter.
 
 ### Who can see what
 
@@ -538,12 +540,12 @@ Setup steps for the Entra app registration are in [Microsoft Entra SSO](on-premi
 
 ### Sign-in limits
 
-KANAP limits repeated sign-in requests from the same computer address:
+KANAP limits repeated sign-in requests from the same IP address:
 
 - **Password sign-in**: 5 attempts per minute.
 - **Microsoft sign-in**: 60 requests per minute. The limit is higher because the staff of one organization often reach KANAP from the same outbound address.
 
-Once the limit is reached, the person waits a minute and tries again. Behind a reverse proxy, the count follows the real address of each person, as long as the proxy passes it on. Signed-in, failed and refused attempts are listed in the [Audit Log](#audit-log).
+Once the limit is reached, the person waits a minute and tries again. Behind a reverse proxy, KANAP counts each person's own IP address, as long as the proxy passes it on. Sign-ins and failed sign-ins appear in the [Audit Log](#audit-log). Requests stopped by the limit are not recorded.
 
 ---
 
