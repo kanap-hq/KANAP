@@ -563,55 +563,6 @@
     "unsavedNavigate": "Vous avez des modifications non enregistrées. Enregistrer avant de naviguer ?",
     "unsavedSwitchTab": "Vous avez des modifications non enregistrées. Enregistrer avant de changer d'onglet ?"
   },
-  "landing": {
-    "cards": {
-      "accounts": {
-        "description": "Gérer les comptes.",
-        "title": "Comptes"
-      },
-      "auditLogs": {
-        "description": "Consulter l'activité du journal d'audit.",
-        "title": "Journal d'audit"
-      },
-      "billing": {
-        "description": "Gérer la facturation et les abonnements.",
-        "title": "Facturation"
-      },
-      "companies": {
-        "description": "Gérer les sociétés.",
-        "title": "Sociétés"
-      },
-      "departments": {
-        "description": "Gérer les départements.",
-        "title": "Départements"
-      },
-      "opsDashboard": {
-        "description": "Voir les métriques opérationnelles de la plateforme.",
-        "title": "Tableau de bord opérationnel"
-      },
-      "platformAi": {
-        "description": "Manage the platform-wide built-in AI provider.",
-        "title": "Platform AI"
-      },
-      "roles": {
-        "description": "Gérer les rôles et les autorisations.",
-        "title": "Rôles"
-      },
-      "suppliers": {
-        "description": "Gérer les fournisseurs.",
-        "title": "Fournisseurs"
-      },
-      "tenants": {
-        "description": "Gérer les tenants.",
-        "title": "Tenants"
-      },
-      "users": {
-        "description": "Gérer les utilisateurs.",
-        "title": "Utilisateurs"
-      }
-    },
-    "title": "Administration"
-  },
   "platformAi": {
     "actions": {
       "save": "Save",

@@ -563,55 +563,6 @@
     "unsavedNavigate": "Sie haben ungespeicherte Änderungen. Vor dem Navigieren speichern?",
     "unsavedSwitchTab": "Sie haben ungespeicherte Änderungen. Vor dem Wechsel der Registerkarte speichern?"
   },
-  "landing": {
-    "cards": {
-      "accounts": {
-        "description": "Konten verwalten.",
-        "title": "Konten"
-      },
-      "auditLogs": {
-        "description": "Audit-Protokoll-Aktivitäten überprüfen.",
-        "title": "Audit-Protokoll"
-      },
-      "billing": {
-        "description": "Abrechnung und Abonnements verwalten.",
-        "title": "Abrechnung"
-      },
-      "companies": {
-        "description": "Unternehmen verwalten.",
-        "title": "Unternehmen"
-      },
-      "departments": {
-        "description": "Abteilungen verwalten.",
-        "title": "Abteilungen"
-      },
-      "opsDashboard": {
-        "description": "Plattform-Betriebsmetriken anzeigen.",
-        "title": "Betriebs-Dashboard"
-      },
-      "platformAi": {
-        "description": "Manage the platform-wide built-in AI provider.",
-        "title": "Platform AI"
-      },
-      "roles": {
-        "description": "Rollen und Berechtigungen verwalten.",
-        "title": "Rollen"
-      },
-      "suppliers": {
-        "description": "Lieferanten verwalten.",
-        "title": "Lieferanten"
-      },
-      "tenants": {
-        "description": "Mandanten verwalten.",
-        "title": "Mandanten"
-      },
-      "users": {
-        "description": "Benutzer verwalten.",
-        "title": "Benutzer"
-      }
-    },
-    "title": "Administration"
-  },
   "platformAi": {
     "actions": {
       "save": "Save",

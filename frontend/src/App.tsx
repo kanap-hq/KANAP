@@ -58,7 +58,6 @@ const TaskWorkspacePage = React.lazy(() => import('./pages/tasks/TaskWorkspacePa
 const ContactsPage = React.lazy(() => import('./pages/ContactsPage'));
 const ContactWorkspacePage = React.lazy(() => import('./pages/contacts/ContactWorkspacePage'));
 const BillingCenter = React.lazy(() => import('./pages/admin/BillingCenter'));
-const AdminLanding = React.lazy(() => import('./pages/admin/AdminLanding'));
 const RolesPage = React.lazy(() => import('./pages/admin/RolesPage'));
 const AuditLogsPage = React.lazy(() => import('./pages/admin/AuditLogsPage'));
 const AdminTenantsPage = React.lazy(() => import('./pages/admin/AdminTenantsPage'));
