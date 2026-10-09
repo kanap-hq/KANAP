@@ -7,3 +7,5 @@
 - Right after opening a pull request, turn on **Auto-fix** for it in the app's PR bar
   (`mcp__ccd_pr__set_monitor`, `auto_fix: true`): a failed queue check or a conflict then wakes
   the session, which fixes it and queues the PR again. Successful merges stay silent.
+  A failed queue run marks the PR with a failing `merge queue` check and a comment
+  (`.github/workflows/queue-failure.yml`): that check is what wakes the session.
