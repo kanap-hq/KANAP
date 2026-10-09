@@ -285,7 +285,9 @@ describe('BillingCenter invoicing section', () => {
     (api.patch as any).mockResolvedValue(answer({ ...FRENCH_INVOICE, address: { ...FRENCH_INVOICE.address, country: 'DE' } }, ['vatNumber']));
     renderPage(LOCAL_TRIAL, { invoice: FRENCH_INVOICE });
     const country = await loadedField('country');
-    expect(country.value).toBe('France');
+    // The input appears empty: Autocomplete writes the name of its value from an effect, in a later
+    // render that a busy machine can run after the wait above has returned.
+    await waitFor(() => expect(field('country').value).toBe('France'));
     act(() => { country.focus(); });
     fireEvent.mouseDown(country);
     fireEvent.change(country, { target: { value: 'Germany' } });
