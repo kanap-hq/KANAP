@@ -28,6 +28,7 @@ const PICKER_ENTITY_TYPES: AiSearchEntityType[] = [
   'locations',
   'projects',
   'requests',
+  'spend_items',
   'suppliers',
   'tasks',
 ];
