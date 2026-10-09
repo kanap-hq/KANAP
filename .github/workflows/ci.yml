@@ -5,11 +5,15 @@ name: CI
 # (`backend (cloud)`, `frontend (cloud)`, `build (onprem)`) pass on that combination. On a pull
 # request those jobs are skipped, which reports them as passed within seconds, so the pull
 # request can enter the queue right away; only the stack order warning runs there. A push on
-# main runs nothing: main only receives what the queue has tested.
+# main runs nothing: main only receives what the queue has tested. The weekly schedule and a
+# manual run on main only rebuild the images to refresh their cache (see the `images` job).
 on:
   pull_request:
     branches: [ main ]
   merge_group:
+  schedule:
+    - cron: '17 4 * * 1' # Mondays, 04:17 UTC
+  workflow_dispatch:
 
 # A new push to a pull request cancels the run of the previous push.
 concurrency:
@@ -234,13 +238,62 @@ jobs:
         working-directory: frontend
         run: npm ci && npm run build
 
+  # Decides, in the merge queue, whether the queued changes reach the images: a Dockerfile or
+  # .dockerignore, infra/, frontend/nginx/, marketing/web/nginx.conf, a package.json or a
+  # lockfile, the API tsconfig files, start-up script and script helpers, or .github/. When the
+  # files cannot be listed, the images are built.
+  image-files:
+    name: image files
+    if: ${{ github.event_name == 'merge_group' }}
+    runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.decide.outputs.build }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Decide whether the images are built
+        id: decide
+        env:
+          BASE_SHA: ${{ github.event.merge_group.base_sha }}
+          HEAD_SHA: ${{ github.event.merge_group.head_sha }}
+        run: |
+          build=false
+          if git fetch --no-tags --quiet --depth=1 origin "$BASE_SHA" &&
+            files=$(git diff --name-only --no-renames "$BASE_SHA" "$HEAD_SHA"); then
+            while IFS= read -r f; do
+              case "$f" in
+                Dockerfile | Dockerfile.* | */Dockerfile | */Dockerfile.* | .dockerignore | */.dockerignore | \
+                  infra/* | frontend/nginx/* | marketing/web/nginx.conf | \
+                  package.json | */package.json | package-lock.json | */package-lock.json | \
+                  backend/tsconfig*.json | backend/scripts/migrate-and-start.js | backend/scripts/lib/* | .github/*)
+                  echo "Image file: $f"
+                  build=true
+                  ;;
+              esac
+            done <<<"$files"
+          else
+            echo "::warning::Could not list the queued changes: the images are built."
+            build=true
+          fi
+          echo "Build the images: $build"
+          echo "build=$build" >>"$GITHUB_OUTPUT"
+
   # Builds the images the servers run (API runtime stage, web, marketing) and the API dev stage,
-  # and checks the compose files and the base image pins. It runs in the merge queue, like every
-  # other job. Not a required check yet: the maintainer adds it to the required checks after a
+  # and checks the compose files and the base image pins. In the merge queue it runs when
+  # `image files` finds a change that reaches the images, and only reads the BuildKit cache: a
+  # cache written on a queue branch could not be read by any later run. The weekly schedule and
+  # a manual run on main build everything and write the cache, in the scope of main that queue
+  # runs read. Not a required check yet: the maintainer adds it to the required checks after a
   # week of runs.
   images:
     name: images
-    if: ${{ github.event_name == 'merge_group' }}
+    needs: image-files
+    if: >-
+      ${{ !cancelled() && (
+        (github.event_name == 'merge_group' &&
+          (needs.image-files.result != 'success' || needs.image-files.outputs.build == 'true')) ||
+        ((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') &&
+          github.ref == 'refs/heads/main')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -268,7 +321,7 @@ jobs:
           tags: kanap-api:ci
           load: true
           cache-from: type=gha,scope=api-runtime
-          cache-to: type=gha,mode=max,scope=api-runtime
+          cache-to: ${{ github.event_name != 'merge_group' && 'type=gha,mode=max,scope=api-runtime' || '' }}
       - name: Check the API image (converters, no sources or development tools)
         run: |
           docker run --rm kanap-api:ci sh -c 'node -v && inkscape --version && pandoc --version | head -1 && typst --version && test ! -e src && test ! -e node_modules/ts-node-dev && test -f dist/knowledge/scripts/backfill-integrated-docs.js'
@@ -281,16 +334,16 @@ jobs:
           cache-from: |
             type=gha,scope=api-runtime
             type=gha,scope=api-dev
-          cache-to: type=gha,mode=max,scope=api-dev
+          cache-to: ${{ github.event_name != 'merge_group' && 'type=gha,mode=max,scope=api-dev' || '' }}
       - name: Build the web image
         uses: docker/build-push-action@v6
         with:
           context: frontend
           cache-from: type=gha,scope=web
-          cache-to: type=gha,mode=max,scope=web
+          cache-to: ${{ github.event_name != 'merge_group' && 'type=gha,mode=max,scope=web' || '' }}
       - name: Build the marketing image
         uses: docker/build-push-action@v6
         with:
           context: marketing
           cache-from: type=gha,scope=marketing
-          cache-to: type=gha,mode=max,scope=marketing
+          cache-to: ${{ github.event_name != 'merge_group' && 'type=gha,mode=max,scope=marketing' || '' }}

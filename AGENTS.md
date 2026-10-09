@@ -54,7 +54,8 @@ Tool-specific or private notes live in each tool's local files, never here.
   PRs ahead of it, in the order they were added, and merges it when `backend (cloud)`,
   `frontend (cloud)` and `build (onprem)` pass on that combination. On a PR these three jobs are
   skipped and report as passed within seconds, so the PR can enter the queue right away. A push
-  on `main` runs no CI. The repository squashes, keeps `(#NNN)` in the subject and deletes the
+  on `main` runs no CI. Every Monday, the `images` job builds the images on `main` to refresh
+  their cache; it blocks nothing. The repository squashes, keeps `(#NNN)` in the subject and deletes the
   branch. Do not watch or poll CI: arrange to be notified of a failure (Claude Code: Auto-fix,
   see `CLAUDE.md`) and report the merge commit on the next exchange. A merge needs no message:
   no news means it merged.
