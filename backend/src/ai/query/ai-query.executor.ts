@@ -1568,7 +1568,8 @@ export class AiQueryExecutor {
   ): Promise<string> {
     const value = String(rawId || '').trim();
     if (!value) return value;
-    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) {
+    // Any uuid shape (not only v1-v5): an unmatched one would now throw below.
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
       return value;
     }
     if (entityType === 'documents') {
@@ -1601,7 +1602,9 @@ export class AiQueryExecutor {
     );
     if (exact) return exact.id;
     if (result.items.length === 1) return result.items[0].id;
-    return value;
+    // Not a uuid and nothing matched: the services would cast it to uuid and
+    // fail in Postgres, so answer with a plain "not found" instead.
+    throw new NotFoundException(`No ${entityType} record matches "${value}". Search for it first, then use its id or reference.`);
   }
 
   private toDetailResult(
