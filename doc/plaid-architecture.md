@@ -195,15 +195,21 @@ disabled or other-type value are refused at once, except when the request leaves
 the line's current value unchanged. `mutation_input.fields` stores each
 dimension under `analytics_axis:<axis id>`, never the code, so a rename between
 preview and apply changes nothing and undo keeps working. `field_labels` holds
-the dimension's display name and `display_values` the value names, the previous
-one included. Apply translates these keys into `analytics_values`
+the dimension's display name (the tenant's name for it, "Analytics dimension"
+when an unnamed default has none) and `display_values` the value names, the
+previous one included. Apply translates these keys into `analytics_values`
 (`{ [axisId]: categoryId | null }`) for the spend and CAPEX services, and the
 edit-conflict check compares each dimension with the live line's value on that
-axis. The system prompt lists, per readable line type, the enabled dimensions
-used for that type (`analytics_dimensions`: key, name, default flag), built by
-`ai-analytics-dimensions-context.ts`. Creating a value in a chosen dimension is a
-master-data create of `analytics_categories` with the create-only field
-`dimension` (code or name); the value service validates the dimension.
+axis. The system prompt lists each enabled dimension once, with the line types it
+applies to among those the user can read (`analytics_dimensions`: `key`, `name`,
+`default`, `used_for`), built by `ai-analytics-dimensions-context.ts`. Creating a
+value in a chosen dimension is a master-data create of `analytics_categories`
+with the field `dimension`. It accepts the dimension's code, its `analytics:<code>`
+key or its name, and for the default dimension also `analytics_category` or its
+reserved label. The preview refuses a disabled dimension and a value `applies_to`
+that conflicts with the dimension, before approval. On update, `dimension` naming
+the value's current dimension is a no-op; any other is refused, since a value
+never moves.
 
 Writes go through existing domain services where practical, so normal validation,
 workflow rules, side effects, and audit logging still apply. AI-originated domain
