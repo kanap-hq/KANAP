@@ -1,0 +1,23 @@
+{
+  "description": "Production dependencies accepted although scripts/sbom/check-licenses.mjs would refuse their lockfile license. One entry per exact version: a new version is checked again. `license` is the license the package declares, `reason` why it is accepted.",
+  "exceptions": [
+    {
+      "name": "busboy",
+      "version": "1.6.0",
+      "license": "MIT",
+      "reason": "The lockfile has no license field: the package declares MIT in the older `licenses` array of its package.json, and its LICENSE file is the MIT license."
+    },
+    {
+      "name": "streamsearch",
+      "version": "1.1.0",
+      "license": "MIT",
+      "reason": "The lockfile has no license field: the package declares MIT in the older `licenses` array of its package.json, and its LICENSE file is the MIT license."
+    },
+    {
+      "name": "format",
+      "version": "0.2.2",
+      "license": "MIT",
+      "reason": "The lockfile has no license field: the package declares MIT in the older `licenses` array of its package.json (link to the MIT license text)."
+    }
+  ]
+}

@@ -34,7 +34,7 @@ By submitting a pull request or other contribution to this project, you agree th
 
 1. Your contribution is your original work, or you have the right to submit it.
 2. Your contribution is licensed under the AGPL v3, consistent with the project license.
-3. You grant Kanap SARL a perpetual, worldwide, non-exclusive, royalty-free, irrevocable license to use, reproduce, modify, distribute, and relicense your contribution as part of this project.
+3. You grant KANAP EURL a perpetual, worldwide, non-exclusive, royalty-free, irrevocable license to use, reproduce, modify, distribute, and relicense your contribution as part of this project.
 
 This agreement allows the project to evolve its licensing if needed while ensuring contributors retain credit for their work.
 

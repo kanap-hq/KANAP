@@ -20,6 +20,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# The token of every job reads the repository only; a job that needs more says so itself.
+# Actions are pinned to the full commit SHA of a release, its version in the comment
+# (Dependabot updates both). Each job's timeout-minutes is about three times its usual duration
+# (3 minutes at least), so a stuck job fails and frees the queue before its 30-minute limit.
+permissions:
+  contents: read
+
 jobs:
   # Warns on a pull request that contains the commits of another pull request still open
   # (.github/scripts/stack-order.sh). Nothing depends on it, so it never delays the required
@@ -28,12 +35,13 @@ jobs:
     name: stack order (pull request)
     if: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 3
     permissions:
       contents: read
       pull-requests: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           # Full history, so git can tell whether one pull request head contains another.
           fetch-depth: 0
@@ -52,12 +60,13 @@ jobs:
     name: stack order
     if: ${{ github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 3
     permissions:
       contents: read
       pull-requests: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
       - name: Check that no open pull request below this one waits behind it
@@ -71,6 +80,7 @@ jobs:
     name: backend (cloud)
     if: ${{ github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:16
@@ -94,9 +104,9 @@ jobs:
         working-directory: backend
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24
           cache: npm
@@ -141,14 +151,15 @@ jobs:
     needs: stack-order
     if: ${{ github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 4
     defaults:
       run:
         working-directory: frontend
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24
           cache: npm
@@ -161,6 +172,7 @@ jobs:
     needs: stack-order
     if: ${{ github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 7
     strategy:
       # Every shard finishes, so one run lists every failing test.
       fail-fast: false
@@ -171,9 +183,9 @@ jobs:
         working-directory: frontend
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24
           cache: npm
@@ -192,6 +204,7 @@ jobs:
     needs: [ stack-order, frontend-build, frontend-tests ]
     if: ${{ always() && github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 3
     steps:
       - name: Check the stack order, the frontend build and the tests
         env:
@@ -215,13 +228,14 @@ jobs:
     name: build (onprem)
     if: ${{ github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     env:
       DEPLOYMENT_MODE: single-tenant
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24
           cache: npm
@@ -231,6 +245,13 @@ jobs:
       # Every lockfile entry carries an integrity hash (backend, frontend, marketing).
       - name: Check lockfile integrity hashes
         run: bash .github/scripts/check-lockfile-integrity.sh
+      # Production dependencies of backend, frontend and marketing: no GPL, AGPL or SSPL license
+      # and no missing or unreadable one, except the written exceptions
+      # (scripts/sbom/license-exceptions.json). Reads the lockfiles only, no network.
+      - name: Check the licenses of the production dependencies
+        run: |
+          node --test scripts/sbom/__tests__/*.test.mjs
+          node scripts/sbom/check-licenses.mjs
       - name: Build backend (onprem)
         working-directory: backend
         run: npm ci && npm run build
@@ -246,11 +267,12 @@ jobs:
     name: image files
     if: ${{ github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 3
     outputs:
       build: ${{ steps.decide.outputs.build }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Decide whether the images are built
         id: decide
         env:
@@ -298,7 +320,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # The env files the compose files load are not in git: the on-premise example stands in
       # for ../.env (it also proves the example is accepted), empty files for the others.
       - name: Check the compose files
@@ -312,9 +334,9 @@ jobs:
       - name: Check the base image pins (multi-architecture index digests)
         run: bash .github/scripts/check-image-pins.sh
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
       - name: Build the API image (runtime stage)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: backend
           target: runtime
@@ -327,7 +349,7 @@ jobs:
           docker run --rm kanap-api:ci sh -c 'node -v && inkscape --version && pandoc --version | head -1 && typst --version && test ! -e src && test ! -e node_modules/ts-node-dev && test -f dist/knowledge/scripts/backfill-integrated-docs.js'
           docker image ls kanap-api:ci
       - name: Build the API image (dev stage)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: backend
           target: dev
@@ -336,13 +358,13 @@ jobs:
             type=gha,scope=api-dev
           cache-to: ${{ github.event_name != 'merge_group' && 'type=gha,mode=max,scope=api-dev' || '' }}
       - name: Build the web image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: frontend
           cache-from: type=gha,scope=web
           cache-to: ${{ github.event_name != 'merge_group' && 'type=gha,mode=max,scope=web' || '' }}
       - name: Build the marketing image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: marketing
           cache-from: type=gha,scope=marketing

@@ -132,8 +132,9 @@ function collectRuntime() {
     readText(file).split('\n').forEach((line, index) => {
       const nodeMatch = /^\s*node-version:\s*['"]?([^'"\s#]+)/.exec(line);
       if (nodeMatch) node.push({ source: `${file}:${index + 1}`, version: nodeMatch[1] });
-      const actionMatch = /uses:\s*(actions\/[\w.-]+)@(\S+)/.exec(line);
-      if (actionMatch) actions.push({ source: `${file}:${index + 1}`, action: actionMatch[1], version: actionMatch[2] });
+      // An action pinned to a commit SHA carries its version in the comment: `@<sha> # v4.4.0`.
+      const actionMatch = /uses:\s*(actions\/[\w.-]+)@(\S+)(?:\s+#\s*(\S+))?/.exec(line);
+      if (actionMatch) actions.push({ source: `${file}:${index + 1}`, action: actionMatch[1], version: actionMatch[3] ?? actionMatch[2] });
     });
   }
   return { node, actions };
