@@ -286,7 +286,7 @@ Notes:
 - If `SMTP_SECURE` is unset, KANAP defaults to `true` for port `465` and `false` otherwise.
 - If both SMTP and Resend are configured in single-tenant mode, SMTP takes precedence.
 - `SMTP_FROM` should be an address your SMTP server is allowed to send as.
-- A relay on the KANAP server itself: set `SMTP_HOST=host.docker.internal`, which is how the API container reaches the server. The relay must listen on the Docker bridge address (`172.17.0.1` by default), and the firewall must allow its port from the Docker networks (see the command below).
+- A relay on the KANAP server itself: set `SMTP_HOST=host.docker.internal`, which is how the API container reaches the server. The relay must listen on the Docker bridge address (`172.17.0.1` by default). A relay installed on the server also needs a firewall rule that allows its port from the Docker networks (see the command below). A relay run as a Docker container with a published port needs none.
 - The address `172.17.0.1` exists only once Docker runs. A relay installed on the server that listens on it must start after Docker, as the storage does in the [installation example](installation-example.md#5-object-storage-rustfs). With systemd, create the file `/etc/systemd/system/<relay service>.service.d/override.conf` (the name of the relay's service in place of `<relay service>`) with two lines, `[Unit]` then `After=docker.service`, and run `sudo systemctl daemon-reload`.
 - A relay whose TLS certificate comes from your company's authority needs that authority: see [Certificates from an internal authority](#optional-certificates-from-an-internal-authority).
 - If mail is sent outside your network, configure SPF, DKIM, and DMARC on the sender domain through your mail administrator or provider.
@@ -535,7 +535,7 @@ Nothing else needs to be reachable from the network. In particular, PostgreSQL (
 
 ### Outbound: initial setup and build
 
-These destinations are needed during installation, at each upgrade (`docker build`) and the first time the smoke test runs. They can be closed between upgrades.
+These destinations are needed at installation, at each upgrade and at each rollback (`docker build`), and the first time the smoke test runs. They can be closed between these operations.
 
 | Destination | Port | Purpose |
 |-------------|------|---------|

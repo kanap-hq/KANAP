@@ -82,15 +82,21 @@ docker run --rm --network host \
 unset KANAP_PASSWORD
 ```
 
-The last line of the output reads `0 failed`.
+The last line of the output reads `0 failed`. With `KANAP_INSECURE_TLS=1`, two TLS warnings at the top of the output are expected: the script's own and the Node.js warning about `NODE_TLS_REJECT_UNAUTHORIZED`.
 
 **Rollback.** Migrations only go forward, so a rollback puts back the backup taken before the upgrade, under the previous version:
 
 1. Stop KANAP: `cd /opt/kanap`, then `docker compose -f infra/compose.onprem.yml down`. A rollback often starts in a new terminal, outside `/opt/kanap`.
-2. Check out the previous version and build it: `git checkout v<previous version>` (for example `git checkout v26.10.1`), then `docker compose -f infra/compose.onprem.yml build --pull`.
-3. Restore the database and the files from the `before-upgrade-...` directory of that upgrade: choose the backup, then run steps 1 to 3 of [Restore](#restore) in the same terminal. If you changed `.env` for the new version, compare it with the copy in the `config` directory of the backup.
+2. Check out the previous version and build it. The build needs the outbound access of an upgrade: if you closed it after the upgrade, open it first (see [Firewall rules](configuration.md#outbound-initial-setup-and-build)). Then run `git checkout v<previous version>` (for example `git checkout v26.10.1`), then `docker compose -f infra/compose.onprem.yml build --pull`.
+3. Restore the database and the files from the `before-upgrade-...` directory of that upgrade: choose the backup, then run steps 1 to 3 of [Restore](#restore) in the same terminal. If you changed `.env` for the new version, compare it with the copy in the `config` directory of the backup. This command compares the setting names of the two files without printing their values:
+
+    ```bash
+    diff <(cut -d= -f1 /opt/kanap/.env | sort) <(sudo cut -d= -f1 "$BACKUP/config/.env" | sort)
+    ```
+
+    It lists only the names that differ. To compare the values, open both files.
 4. Start KANAP: `docker compose -f infra/compose.onprem.yml up -d --wait`.
-5. Check it as above.
+5. Check it as in step 4 above (**Check the upgrade**). Its commands use `KANAP_HOST` and `ADMIN_EMAIL` from the top of this page: in a new terminal, set them first.
 
 Build the previous version before you start KANAP: a start with the newer version would run its migrations on the restored database again.
 
@@ -255,7 +261,7 @@ Then run the smoke test of [Check the upgrade](#upgrade-procedure) and open KANA
 
 ## Maintenance tools image
 
-The API image holds the compiled application only. A maintenance command that needs TypeScript, such as `npm run typeorm`, runs in a second image built from the same sources. Build it from the current checkout right before each use, so that it matches the running version. The build reuses the cached layers of the API image and takes about 20 seconds when the API image is already built:
+The API image holds the compiled application only. A maintenance command that needs TypeScript, such as `npm run typeorm`, runs in a second image built from the same sources. Build it from the current checkout right before each use, so that it matches the running version. The build reuses the cached layers of the API image and takes about 10 to 20 seconds when the API image is already built:
 
 ```bash
 cd /opt/kanap
@@ -285,6 +291,8 @@ sh infra/postgres/kanap-pg-tune.sh --preload "$CURRENT" | sudo tee /etc/postgres
 sudo systemctl restart postgresql
 sudo -u postgres psql -d kanap -c 'CREATE EXTENSION IF NOT EXISTS pg_stat_statements'
 ```
+
+When the database already has the extension, as after the installation example, the last command prints `NOTICE:  extension "pg_stat_statements" already exists, skipping`. That is expected.
 
 Two checks before the restart, both done by the script, which writes the `shared_preload_libraries` line commented out when one fails:
 
@@ -419,6 +427,6 @@ UPDATE users SET password_hash = :'hash' WHERE lower(email) = lower(:'email');
 SQL
 ```
 
-`psql` answers `UPDATE 1`. `UPDATE 0` means no account has that email. The password is briefly visible in the process list of the server while the first command runs: sign in, then change it from your profile.
+`psql` answers `UPDATE 1`. `UPDATE 0` means no account has that email. The password is briefly visible in the process list of the server while the `HASH=` line runs: sign in, then change it from your profile.
 
 This SQL method is a last-resort fallback for locked-out administrators.
