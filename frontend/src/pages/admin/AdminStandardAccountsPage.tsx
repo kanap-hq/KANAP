@@ -140,9 +140,9 @@ export default function AdminStandardAccountsPage() {
           );
         })}
       </TextField>
-      <Button variant="contained" disabled={!selectedTemplateId} onClick={() => navigate(`/admin/standard-accounts/${selectedTemplateId}/new/overview`)}>{t('standardAccounts.actions.new')}</Button>
-      <Button onClick={() => setImportOpen(true)} disabled={!selectedTemplateId}>{t('standardAccounts.actions.importCsv')}</Button>
-      <Button onClick={() => setExportOpen(true)} disabled={!selectedTemplateId}>{t('standardAccounts.actions.exportCsv')}</Button>
+      <Button variant="action-primary" disabled={!selectedTemplateId} onClick={() => navigate(`/admin/standard-accounts/${selectedTemplateId}/new/overview`)}>{t('standardAccounts.actions.new')}</Button>
+      <Button variant="action" onClick={() => setImportOpen(true)} disabled={!selectedTemplateId}>{t('standardAccounts.actions.importCsv')}</Button>
+      <Button variant="action" onClick={() => setExportOpen(true)} disabled={!selectedTemplateId}>{t('standardAccounts.actions.exportCsv')}</Button>
       <DeleteSelectedButton
         selectedRows={selectedRows}
         endpoint={`/admin/coa-templates/${selectedTemplateId}/accounts/bulk`}

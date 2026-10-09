@@ -162,9 +162,9 @@ export default function ContractsPage() {
   const canAdmin = hasLevel('contracts','admin');
   const actions = (
     <Stack direction="row" spacing={1}>
-      {canCreate && <Button variant="contained" onClick={handleNew}>{t('contracts.newButton')}</Button>}
-      {canAdmin && <Button onClick={() => setImportOpen(true)}>{t('contracts.importCsv')}</Button>}
-      {canAdmin && <Button onClick={() => setExportOpen(true)}>{t('contracts.exportCsv')}</Button>}
+      {canCreate && <Button variant="action-primary" onClick={handleNew}>{t('contracts.newButton')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('contracts.importCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('contracts.exportCsv')}</Button>}
     </Stack>
   );
 

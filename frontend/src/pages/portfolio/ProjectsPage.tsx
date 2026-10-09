@@ -497,7 +497,7 @@ export default function ProjectsPage() {
     <Stack direction="row" spacing={1}>
       {canCreate && (
         <Button
-          variant="contained"
+          variant="action-primary"
           onClick={() => {
             const sp = buildWorkspaceSearch();
             navigate(`/portfolio/projects/new/summary?${sp.toString()}`);
@@ -506,8 +506,8 @@ export default function ProjectsPage() {
           {t('projects.actions.new')}
         </Button>
       )}
-      {canAdmin && <Button onClick={() => setImportOpen(true)}>{t('projects.actions.importCsv')}</Button>}
-      {canAdmin && <Button onClick={() => setExportOpen(true)}>{t('projects.actions.exportCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('projects.actions.importCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('projects.actions.exportCsv')}</Button>}
     </Stack>
   );
 

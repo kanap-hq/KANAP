@@ -329,8 +329,8 @@ export default function ConnectionsPage() {
   const actions = (
     <Stack direction="row" spacing={1}>
       {hasLevel('infrastructure', 'member') && (
-        <Button variant="contained" onClick={() => navigate('/it/connections/new/overview')}>
-          Add connection
+        <Button variant="action-primary" onClick={() => navigate('/it/connections/new/overview')}>
+          {t('pages.connections.addConnection')}
         </Button>
       )}
       {hasLevel('infrastructure', 'admin') && (
@@ -341,7 +341,6 @@ export default function ConnectionsPage() {
           getItemName={(row) => row.name}
           gridApi={gridApiRef.current}
           onDeleteSuccess={() => setRefreshKey((k) => k + 1)}
-          label={t('pages.connections.deleteConnection')}
         />
       )}
     </Stack>

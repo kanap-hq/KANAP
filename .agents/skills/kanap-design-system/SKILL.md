@@ -62,12 +62,21 @@ KANAP uses MUI, but only through constrained patterns:
 - Do not use `Select label="..."`.
 - Do not use `MuiDrawer` for contained side panels.
 - Use label-above-value form rows with `PropertyRow`.
+- Page-level action bars (list and admin page headers, chip bands and their context line, workspace title rows, report and operation filter-bar actions) use only the compact pills: `variant="action-primary"` for the one key action (at most one per bar), `variant="action"` for every other action (import/export CSV, invite, disable, move, manage, edit), `variant="action-danger"` for a destructive action on a non-empty selection. Set the variant at each call site. `contained` / `outlined` stay for dialogs, forms, composers and empty states. Bulk delete goes through `DeleteSelectedButton`, which switches from `action` (disabled, 0 selected) to `action-danger`.
 - Every form field is a discreet bordered box drawn by the theme (`MuiInput` override): 1px `kanap.border.default`, 6px radius, ~32px, teal border on focus, `kanap.bg.drawer` when read-only. Write `TextField variant="standard"` / `Select` with no field sx; never draw or remove the border by hand.
 - Only inline controls (filter selects, composer-footer selects, click-to-edit titles) use `inlineControlSx`; inputs inside a custom surface use `fieldResetSx`; editable table cells use `tableCellFieldSx` / `tableCellTextFieldSx`.
 - Empty editable fields need concrete data-shape placeholders (`e.g., server1`), never instruction copy.
 - Use tertiary `Not set` only for display/read-only empty values, not as a generic editable-field placeholder.
 - Use shared `sx` constants for repeated drawer/select/date/menu styling; do not paste large repeated inline `sx` objects.
 - Required asterisks are orange, not red.
+
+## List Pages
+
+- Plain list: `PageHeader` (breadcrumb, title, action bar) → grid toolbar (quick filter, "Show" scope, filters) → column chooser → grid. Reference: `frontend/src/pages/CompaniesPage.tsx`.
+- List split by collections (charts of accounts, analytics dimensions, knowledge libraries): `PageHeader` without actions → `ChipToggleBar` band with the collection toggles and the collection actions (new, manage) → `ChipToggleContextLine` "<collection> · <n> items" with the item actions on its title row → grid toolbar → grid. Item actions never sit above the band. Reference: `frontend/src/pages/coa/CoaPage.tsx`.
+- A page whose band is its header and whose name is already the top nav tab (knowledge base) has no `PageHeader`.
+- `PageHeader` hides a single-crumb breadcrumb by itself; do not add one back by hand.
+- Full rules: "List pages" in the charter.
 
 ## Workspace Pages
 

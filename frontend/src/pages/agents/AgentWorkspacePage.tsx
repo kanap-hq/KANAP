@@ -2798,7 +2798,7 @@ export default function AgentWorkspacePage() {
       <Box sx={{ p: 2 }}>
         <PageHeader
           title={t('workspace.notFound')}
-          actions={<Button size="small" variant="outlined" onClick={() => navigate('/agents')}>{t('workspace.back')}</Button>}
+          actions={<Button variant="action" onClick={() => navigate('/agents')}>{t('workspace.back')}</Button>}
         />
         <Alert severity="warning">{t('workspace.notFoundBody')}</Alert>
       </Box>
@@ -2817,7 +2817,7 @@ export default function AgentWorkspacePage() {
           />
         )}
         breadcrumbTitle={definition.name}
-        actions={<Button size="small" variant="outlined" onClick={() => navigate('/agents')}>{t('workspace.back')}</Button>}
+        actions={<Button variant="action" onClick={() => navigate('/agents')}>{t('workspace.back')}</Button>}
       />
       <AgentInlineDescription
         canEdit={canAdmin}

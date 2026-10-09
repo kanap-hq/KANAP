@@ -409,12 +409,12 @@ export default function UsersPage() {
 
   const actions = (
     <Stack direction="row" spacing={1} alignItems="center">
-      {canManageUsers && <Button variant="contained" onClick={handleNew}>{t('users.actions.new')}</Button>}
-      {canManageUsers && <Button onClick={() => setImportOpen(true)}>{t('users.actions.importCsv')}</Button>}
-      {canManageUsers && <Button onClick={() => setExportOpen(true)}>{t('users.actions.exportCsv')}</Button>}
+      {canManageUsers && <Button variant="action-primary" onClick={handleNew}>{t('users.actions.new')}</Button>}
+      {canManageUsers && <Button variant="action" onClick={() => setImportOpen(true)}>{t('users.actions.importCsv')}</Button>}
+      {canManageUsers && <Button variant="action" onClick={() => setExportOpen(true)}>{t('users.actions.exportCsv')}</Button>}
       {canManageUsers && (
         <Button
-          variant="outlined"
+          variant="action"
           onClick={handleInviteSelected}
           disabled={inviting || selectedRows.length === 0}
         >
@@ -423,8 +423,7 @@ export default function UsersPage() {
       )}
       {canManageUsers && (
         <Button
-          variant="outlined"
-          color="inherit"
+          variant="action"
           onClick={handleDeactivateSelected}
           disabled={deactivating || selectedRows.length === 0}
         >
@@ -439,7 +438,6 @@ export default function UsersPage() {
           getItemName={(row) => row.email || `${row.first_name ?? ''} ${row.last_name ?? ''}`.trim() || 'User'}
           gridApi={gridApiRef.current}
           onDeleteSuccess={() => setRefreshKey((k) => k + 1)}
-          label="Delete"
         />
       )}
     </Stack>

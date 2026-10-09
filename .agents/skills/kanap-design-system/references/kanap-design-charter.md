@@ -105,7 +105,7 @@ Semantic logic: **grey** = passive/not started, **blue** = active/in progress, *
 
 ### UI element tokens
 
-#### Action pills (header actions)
+#### Action pills (page-level action bars)
 
 | Token | Light | Dark |
 |---|---|---|
@@ -280,25 +280,52 @@ Deprecated no-op aliases still exported for older call sites: `dialogBorderedFie
 
 ### Button variants
 
-Three button variants extend MUI's default Button, defined via `MuiButton.variants` in the theme:
+Four button variants extend MUI's default Button, defined via `MuiButton.variants` in the theme.
 
-**`variant="action"`** — header secondary actions (Send link, Convert to request):
-- Padding `4px 11px`, border-radius 5px, font-size 12px, weight 500
-- `textTransform: 'none'`, `minWidth: 0`
+**Page-level action bars** (list page and admin page headers, the actions of a `ChipToggleBar` band
+and of the context line under it, workspace title rows, the actions of a `ReportLayout` filter bar:
+Run, Dry run, Copy data, Clear column) use only the three compact pills below, all the same size.
+The form controls of a filter bar keep their field style. The home dashboard quick actions keep
+their outlined look with icons, at the pill height (30px) and radius (5px). Write the variant at each call site; never restyle buttons through a selector on the
+header.
+
+**`variant="action-primary"`**: the one key action of the bar (New X, Add X, or Invite when it is
+the only main action). At most one per bar.
+- Same dimensions as `action`
+- Background and border `kanap.teal` (the tenant's branded primary when set), color `kanap.tealForeground`
+- Hover: the darker primary shade, no shadow
+- A split button (`ButtonGroup variant="action-primary"`) keeps both halves primary and joined: 5px on the outer corners, square inner corners
+
+**`variant="action"`**: every other action of the bar (Import CSV, Export CSV, Invite (n),
+Disable (n), Move (n), Manage X, Edit, a "new" chip in a band, Send link, Convert to request):
+- Padding `4px 11px`, 30px tall (12px text on the 1.75 button line-height, plus the 1px border), border-radius 5px, font-size 12px, weight 500
+- `textTransform: 'none'`, `minWidth: 0`, one line (`whiteSpace: nowrap`, `flexShrink: 0`)
 - Background `kanap.pill.bg`, border `1px solid kanap.pill.border`, color `kanap.text.secondary`
 - Hover: `kanap.pill.hoverBg`, no shadow
 
-**`variant="action-danger"`** — destructive header actions (Delete):
-- Same dimensions as action
+**`variant="action-danger"`**: a destructive action, only while it has something to act on
+(delete the selection once the selection is not empty, delete on a workspace):
+- Same dimensions as `action`
 - Background `kanap.pillDanger.bg`, border `kanap.pillDanger.border`, color `kanap.danger`
+- `DeleteSelectedButton` does this itself: `action` and disabled at 0 selected, `action-danger` from 1, label "Delete (n)"
 
-**`variant="contained"`** — primary CTAs (Submit, Save):
+**Disabled** (all three): the neutral pill, `kanap.pill.bg` / `kanap.pill.border`, text
+`kanap.text.tertiary`. No teal, no red.
+
+**Icons on pills**: 14px (`sx={{ fontSize: '14px !important' }}` on the icon). Keep `+` on "new"
+actions and the trash on delete; import and export carry no icon.
+
+**`variant="contained"`**: primary CTAs in dialogs, create forms and empty states (Submit, Save,
+"Create your first chart of accounts"):
 - Background `kanap.teal`, color `kanap.tealForeground`
 - Border-radius: 6px, no shadow (flat)
 - Height: 36px (medium), 32px (small)
 - `textTransform: 'none'`
 
-**General rules**: no uppercase, no shadow on any variant.
+`contained` and `outlined` stay in dialog footers, forms, composers and empty states; they do not
+appear in page-level action bars.
+
+**General rules**: no uppercase, no shadow on any variant. The theme's default button radius is 6px.
 
 ### Tabs (compact horizontal navigation)
 
@@ -622,6 +649,50 @@ Only add drag-to-reorder when the items have an inherent manual order that alpha
 
 ---
 
+## List pages
+
+Reference implementations: `frontend/src/pages/CompaniesPage.tsx` (plain list),
+`frontend/src/pages/coa/CoaPage.tsx` (list split by collections).
+
+### Plain list page
+
+```
+PageHeader: breadcrumb, title ........................ [action bar]
+Grid toolbar: [quick filter] Show: o All o Enabled o Disabled  [extra filters]
+Choose columns   Reset columns
+Grid
+```
+
+The action bar follows "Button variants": one `action-primary` (New X), `action` for the rest,
+`DeleteSelectedButton` for the selection.
+
+### List split by collections (toggle band)
+
+When the grid shows the items of one collection picked among several (charts of accounts,
+analytics dimensions, knowledge libraries), the actions follow what they act on:
+
+```
+PageHeader: breadcrumb, title (no actions)
+ChipToggleBar: [collection] [collection] [collection] ........ [+ New] [Manage X]
+ChipToggleContextLine: <collection name> · <n> items ......... [New item] [Import] [Export] [Delete (n)]
+                       optional secondary line (scope, access, description)
+Grid toolbar, column chooser, grid
+```
+
+- The band (`frontend/src/components/ChipToggleBar.tsx`) holds the collection toggles and the
+  actions on collections (create, manage, edit). Never put item actions on the band.
+- The context line (`ChipToggleContextLine`, same file) names the selected collection with the
+  grid total (title 14px weight 500) and carries the actions on the items, aligned with its title row.
+  The count follows the grid (current scope and folder); never add a backend call only for it.
+- Item actions never sit above the band: the user picks the collection first, then acts in it.
+- When the band is the page's own header and the top nav tab already names the page (knowledge
+  base), the page has no `PageHeader`.
+
+### Breadcrumbs on list pages
+
+`PageHeader` hides a breadcrumb that holds a single crumb: it links nowhere and repeats the top
+nav tab or the title. Multi-level breadcrumbs (`Master data / Charts of accounts`) stay.
+
 ## Workspace pages (detail / edit)
 
 Workspace pages are full-height detail views for a single entity (task, project, request, contract, etc.). They follow a strict layout. Reference implementation: `TaskWorkspacePage.tsx`.
@@ -659,7 +730,7 @@ WorkspacePage (full height, flex column)
 - **Title row**: flex, items flex-start, gap 24px, margin-bottom 18px
   - **ID prefix** (`T-49`): monospace 14px, `kanap.text.secondary`, vertical-align 1px, mr 14px, click-to-copy. Always a business display reference (`T-4`, `PRJ-3`, `AST-5`), never a raw or truncated UUID. Add/backfill a reference field if one does not exist yet.
   - **Title**: 22px weight 500, click-to-edit pattern (span -> input on click, save on blur, cancel on Escape)
-  - **Actions**: pill buttons on the right, gap 8px, mt 7px. Use `variant="action"` and `variant="action-danger"`. Close button at the end.
+  - **Actions**: pill buttons on the right, gap 8px, mt 7px. Use `variant="action"` and `variant="action-danger"` (`action-primary` for a single key action). Close button at the end.
 - **Metadata bar**: flex, gap 22px, flex-wrap, font-size 12px
   - Status chip: colored dot (8px) + label, click -> Menu with all statuses
   - Score chip: colored dot + monospace value, read-only with Tooltip
@@ -841,8 +912,8 @@ When converting an existing page to this pattern:
 | Element | Radius |
 |---|---|
 | Composer container, cards | 8px |
-| Action pills, nav chip, MenuItems | 5px |
-| Submit button, primary CTAs | 6px |
+| Action pills (`action-primary`, `action`, `action-danger`), nav chip, MenuItems | 5px |
+| Submit button, dialog and form CTAs, default button radius | 6px |
 | Sidebar items | 6px |
 | AG Grid wrapper | 8px |
 | Avatars | 50% |

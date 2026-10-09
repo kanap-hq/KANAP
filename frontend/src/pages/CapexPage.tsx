@@ -713,7 +713,7 @@ function CapexPageView() {
     <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
       {canCreate && (
         <Button
-          variant="contained"
+          variant="action-primary"
           onClick={() => {
             const urlParams = new URLSearchParams(window.location.search);
             const stored = storedContext();
@@ -729,8 +729,8 @@ function CapexPageView() {
           }}
         >{t('capex.newButton')}</Button>
       )}
-      {canAdmin && <Button onClick={() => setImportOpen(true)}>{t('capex.importCsv')}</Button>}
-      {canAdmin && <Button onClick={() => setExportOpen(true)}>{t('capex.exportCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('capex.importCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('capex.exportCsv')}</Button>}
       {canAdmin && (
         <DeleteSelectedButton
           selectedRows={selectedRows}

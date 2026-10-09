@@ -249,11 +249,11 @@ export default function ContributorsPage() {
   const actions = viewAction || canEdit ? (
     <Stack direction="row" spacing={1}>
       {canEdit && (
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAddDialogOpen(true)}>
+        <Button variant="action-primary" startIcon={<AddIcon sx={{ fontSize: '14px !important' }} />} onClick={() => setAddDialogOpen(true)}>
           {t('contributors.actions.addContributor')}
         </Button>
       )}
-      {viewAction && <Button onClick={viewAction.run}>{viewAction.label}</Button>}
+      {viewAction && <Button variant="action" onClick={viewAction.run}>{viewAction.label}</Button>}
     </Stack>
   ) : null;
 

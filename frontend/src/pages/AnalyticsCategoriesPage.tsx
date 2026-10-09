@@ -139,7 +139,7 @@ function AnalyticsValuesList() {
   const selectedDisabled = !!selectedAxis && !isAnalyticsActive(selectedAxis);
   const newValueButton = (
     <Button
-      variant="contained"
+      variant="action-primary"
       disabled={!axes.ready || selectedDisabled}
       onClick={() => navigate(`${ANALYTICS_LIST_PATH}/new/overview?${buildWorkspaceSearch().toString()}`)}
     >
@@ -154,8 +154,8 @@ function AnalyticsValuesList() {
           <Box component="span" sx={{ display: 'inline-flex' }}>{newValueButton}</Box>
         </Tooltip>
       ) : newValueButton)}
-      {canAdmin && <Button onClick={() => setImportOpen(true)}>{t('shared.labels.importCsv')}</Button>}
-      {canAdmin && <Button onClick={() => setExportOpen(true)}>{t('shared.labels.exportCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('shared.labels.importCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('shared.labels.exportCsv')}</Button>}
       {canAdmin && (
         <DeleteSelectedButton
           selectedRows={selectedRows}

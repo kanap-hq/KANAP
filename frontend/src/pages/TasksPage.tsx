@@ -614,7 +614,7 @@ export default function TasksPage() {
     <Stack direction="row" spacing={1}>
       {canCreate && (
         <Button
-          variant="contained"
+          variant="action-primary"
           onClick={() => {
             const sp = buildWorkspaceSearch();
             navigate(`/portfolio/tasks/new/overview?${sp.toString()}`);
@@ -623,8 +623,8 @@ export default function TasksPage() {
           {t('tasks.actions.new')}
         </Button>
       )}
-      {canAdmin && <Button onClick={() => setImportOpen(true)}>{t('tasks.actions.importCsv')}</Button>}
-      {canAdmin && <Button onClick={() => setExportOpen(true)}>{t('tasks.actions.exportCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('tasks.actions.importCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('tasks.actions.exportCsv')}</Button>}
       {canAdmin && (
         <DeleteSelectedButton
           selectedRows={selectedRows}

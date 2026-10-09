@@ -71,17 +71,15 @@ export default function CoaChipBar({
       actions={canManage && (
         <>
           <Button
-            size="small"
-            variant="outlined"
-            startIcon={<AddIcon />}
+            variant="action"
+            startIcon={<AddIcon sx={{ fontSize: '14px !important' }} />}
             onClick={onCreate}
           >
             {t('coa.chipBar.newChip')}
           </Button>
           <Button
-            size="small"
-            variant="outlined"
-            startIcon={<SettingsIcon />}
+            variant="action"
+            startIcon={<SettingsIcon sx={{ fontSize: '14px !important' }} />}
             onClick={onManage}
           >
             {t('coa.chipBar.manage')}

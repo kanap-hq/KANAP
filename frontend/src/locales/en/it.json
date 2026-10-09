@@ -78,7 +78,6 @@
     "assets": {
       "title": "Assets",
       "addAsset": "Add asset",
-      "deleteAsset": "Delete asset",
       "importCsv": "Import CSV",
       "exportCsv": "Export CSV",
       "exportTitle": "Export assets",
@@ -110,7 +109,6 @@
     "connections": {
       "title": "Connections",
       "addConnection": "Add connection",
-      "deleteConnection": "Delete connection",
       "columns": {
         "connectionReference": "Reference",
         "name": "Name",
@@ -136,7 +134,6 @@
       "title": "Interfaces",
       "addInterface": "Add interface",
       "duplicateInterface": "Duplicate interface",
-      "deleteInterface": "Delete interface",
       "alsoDeleteBindings": "Also delete related bindings",
       "deleteBindingsDescription": "If unchecked, interfaces with bindings will not be deleted.",
       "duplicateDialogTitle": "Duplicate interface",

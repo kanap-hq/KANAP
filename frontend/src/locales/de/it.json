@@ -78,7 +78,6 @@
     "assets": {
       "title": "Assets",
       "addAsset": "Asset hinzufügen",
-      "deleteAsset": "Asset löschen",
       "importCsv": "CSV importieren",
       "exportCsv": "CSV exportieren",
       "exportTitle": "Assets exportieren",
@@ -110,7 +109,6 @@
     "connections": {
       "title": "Verbindungen",
       "addConnection": "Verbindung hinzufügen",
-      "deleteConnection": "Verbindung löschen",
       "columns": {
         "connectionReference": "Referenz",
         "name": "Name",
@@ -136,7 +134,6 @@
       "title": "Schnittstellen",
       "addInterface": "Schnittstelle hinzufügen",
       "duplicateInterface": "Schnittstelle duplizieren",
-      "deleteInterface": "Schnittstelle löschen",
       "alsoDeleteBindings": "Zugehörige Bindungen ebenfalls löschen",
       "deleteBindingsDescription": "Wenn diese Option deaktiviert ist, werden Schnittstellen mit Bindungen nicht gelöscht.",
       "duplicateDialogTitle": "Schnittstelle duplizieren",

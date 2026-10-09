@@ -289,14 +289,14 @@ export default function CopyAllocationsPage() {
       actions={
         <Stack direction="row" spacing={1}>
           <Button
-            variant="outlined"
+            variant="action"
             onClick={handleDryRun}
             disabled={isProcessing || isSameYear}
           >
             {isProcessing ? t('operations.copyAllocations.processing') : t('operations.copyAllocations.dryRun')}
           </Button>
           <Button
-            variant="contained"
+            variant="action-primary"
             onClick={handleCopy}
             disabled={isProcessing || previewData.length === 0 || isSameYear}
           >

@@ -2,7 +2,8 @@
   "actions": {
     "manageTypes": "Gestionar tipos",
     "moveCount": "Mover ({{count}})",
-    "newDocument": "Nuevo documento"
+    "newDocument": "Nuevo documento",
+    "newDocumentOptions": "Opciones de nuevo documento"
   },
   "columns": {
     "folder": "Carpeta",
