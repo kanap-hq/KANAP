@@ -1,6 +1,7 @@
 import { CsvReadResult } from '../../common/csv-sheet';
 import { matchCode } from '../../common/csv-sheet';
 import { normalizeAnalyticsName } from '../../analytics/analytics-context';
+import { requiredDimensionMessage } from '../item-analytics.util';
 import { AmountMeasure, MEASURE_FREEZE_COLUMN } from '../amounts-write.util';
 import { endOfValidityFromDate, isActiveAt } from '../../common/status';
 import { firstAmountYear, interpretBudgetFile, InterpretedRow, FieldCell } from './interpret';
@@ -776,6 +777,17 @@ function resolveAnalytics(
     } catch (err) {
       fail(column, analyticsMessage(err));
     }
+  }
+  // Required dimensions, the ones whose column the file leaves out included. The catalog holds the
+  // enabled dimensions of the file's type only. A new line needs a value (one the load creates
+  // counts); an existing line may not clear one it holds, and is left alone otherwise.
+  for (const dimension of input.catalog.dimensions) {
+    if (!dimension.required) continue;
+    const column = `analytics:${dimension.code}`;
+    if (blocked(column)) continue;
+    const cell = row.analytics[dimension.code] ?? { kind: 'absent' as const };
+    const refused = creating ? cell.kind !== 'value' : cell.kind === 'clear' && !!live?.analytics[dimension.code];
+    if (refused) fail(column, requiredDimensionMessage({ name: dimension.name }));
   }
 }
 

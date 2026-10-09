@@ -1330,6 +1330,88 @@ async function testItemAnalyticsDimensions(harness: Harness) {
   });
 }
 
+/**
+ * Lot D2: a required dimension. The create preview is refused without a value on it (in the style
+ * of the other create-time fields) and passes with one; an update preview clearing a held value is
+ * refused with the write gate's message. A disabled required dimension and one of the other line
+ * type are not checked.
+ */
+async function testItemRequiredDimensions(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const defaultAxisId = await ensureDefaultAnalyticsAxis(runner.manager, seed.tenantId);
+    await runner.query(`UPDATE analytics_axes SET name = NULL WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, defaultAxisId]);
+    const axis = async (code: string, name: string, extra: { applies_to?: string; disabled?: boolean } = {}): Promise<string> => {
+      const [row] = await runner.query(
+        `INSERT INTO analytics_axes (tenant_id, code, name, sort_order, applies_to, status, required)
+         VALUES ($1, $2, $3, 1, $4, $5, true) RETURNING id`,
+        [seed.tenantId, code, name, extra.applies_to ?? null, extra.disabled ? 'disabled' : 'enabled'],
+      );
+      return row.id;
+    };
+    const menu = await axis('menu', 'Menu');
+    await axis('gone', 'Gone', { disabled: true });
+    const [{ id: fromage }] = await runner.query(
+      `INSERT INTO analytics_categories (tenant_id, axis_id, name) VALUES ($1, $2, 'Fromage') RETURNING id`,
+      [seed.tenantId, menu],
+    );
+    const ctx = context(seed, runner, 'item-required-dimensions');
+
+    for (const line of [
+      {
+        entityType: 'spend_items', itemId: seed.spendItemId, linkTable: 'spend_item_analytics_values', label: 'spend item', other: 'capex',
+        createFields: { product_name: `Required ${seed.tag}`, paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01' },
+      },
+      {
+        entityType: 'capex_items', itemId: seed.capexItemId, linkTable: 'capex_item_analytics_values', label: 'CAPEX item', other: 'opex',
+        createFields: {
+          description: `Required ${seed.tag}`, ppe_type: 'hardware', investment_type: 'capacity', priority: 'medium',
+          paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01',
+        },
+      },
+    ]) {
+      const { entityType, itemId, linkTable } = line;
+      // Required, but for the other line type only: never checked here.
+      const otherCode = `recipe-${line.other}`;
+      const otherAxis = await axis(otherCode, `Recipe ${line.other}`, { applies_to: line.other });
+      const create = (fields: Record<string, unknown>) =>
+        harness.tools.execute(ctx, 'create_business_record', { entity_type: entityType, fields });
+
+      await expectRejects(() => create(line.createFields), new RegExp(`^Menu is required for ${line.label} creation\\.$`));
+      await expectRejects(() => create({ ...line.createFields, 'analytics:menu': null }), new RegExp(`^Menu is required for ${line.label} creation\\.$`));
+      const created = await executeToolPreview(harness, ctx, 'create_business_record', {
+        entity_type: entityType, fields: { ...line.createFields, 'analytics:menu': 'Fromage' },
+      });
+      const createdId = (await approvePreview(harness, ctx, created)).target.entity_id;
+      const [link] = await runner.query(
+        `SELECT category_id FROM ${linkTable} WHERE tenant_id = $1 AND item_id = $2 AND axis_id = $3`,
+        [seed.tenantId, createdId, menu],
+      );
+      assert.equal(link?.category_id, fromage, `${entityType}: created with the required value`);
+
+      // The default dimension required: its label is the default one while it has no name.
+      await runner.query(`UPDATE analytics_axes SET required = true WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, defaultAxisId]);
+      await expectRejects(
+        () => create({ ...line.createFields, 'analytics:menu': 'Fromage' }),
+        new RegExp(`^Analytics dimension is required for ${line.label} creation\\.$`),
+      );
+      await runner.query(`UPDATE analytics_axes SET required = false WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, defaultAxisId]);
+
+      // Update: clearing a held value is refused with the gate's message.
+      await runner.query(
+        `INSERT INTO ${linkTable} (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4)
+         ON CONFLICT (tenant_id, item_id, axis_id) DO UPDATE SET category_id = EXCLUDED.category_id`,
+        [seed.tenantId, itemId, menu, fromage],
+      );
+      await expectRejects(
+        () => harness.tools.execute(ctx, 'update_business_record', { entity_type: entityType, ref: itemId, fields: { 'analytics:menu': null } }),
+        /^The Menu dimension is required\. Choose a value\.$/,
+      );
+      // The next line type is the one this dimension is for.
+      await runner.query(`UPDATE analytics_axes SET required = false WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, otherAxis]);
+    }
+  });
+}
+
 /** Lot A: a value created by the AI lands in a named dimension; its dimension cannot change afterwards. */
 async function testAnalyticsValueInANamedDimension(harness: Harness) {
   await withSeededTransaction(harness, async (runner, seed) => {
@@ -1469,6 +1551,7 @@ async function run() {
     await testCapexOwnersAnalyticsAndApplications(harness);
     await testItemAnalyticsCategoryThroughTheLinks(harness);
     await testItemAnalyticsDimensions(harness);
+    await testItemRequiredDimensions(harness);
     await testAnalyticsValueInANamedDimension(harness);
     await testBudgetLinesByBusinessReference(harness);
   } finally {

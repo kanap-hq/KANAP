@@ -120,6 +120,8 @@ export interface CatalogValue {
 export interface CatalogDimension {
   code: string;
   name: string;
+  /** A new line must get a value on it, and a held value cannot be cleared (the catalog holds enabled dimensions of the type only). */
+  required: boolean;
   values: CatalogValue[];
 }
 

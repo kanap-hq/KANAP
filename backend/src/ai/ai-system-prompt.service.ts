@@ -266,7 +266,8 @@ export class AiSystemPromptService {
       (analyticsDimensions
         ? '\n`analytics_dimensions` lists the analytics dimensions an OPEX or CAPEX line can hold a value on, with the line types each is `used_for`. ' +
           'To set a line\'s value on a dimension, put its `key` in the `fields` of `create_business_record` or `update_business_record` with the value\'s name (null clears it); ' +
-          'a value missing from the dimension must be created first (`create_master_data_record`, analytics_categories with `dimension`) or asked for.'
+          'a value missing from the dimension must be created first (`create_master_data_record`, analytics_categories with `dimension`) or asked for. ' +
+          'A `required` dimension must be given a value when creating a line.'
         : ''),
     );
 

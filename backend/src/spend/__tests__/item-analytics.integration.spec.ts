@@ -320,6 +320,87 @@ async function testOtherTypeDimension(kind: Kind) {
   });
 }
 
+/**
+ * A required dimension (required, enabled, applying to the line's type): a new line must end with
+ * a value on it, a body naming no dimension included, and the legacy field fills the default
+ * dimension; an existing line may not clear a held value; a line already lacking one stays
+ * editable; a disabled required dimension and one of the other type are not checked.
+ */
+async function testRequiredDimensions(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const s = await setup(runner, kind);
+    const svc = itemService(kind);
+    const opts = { manager: runner.manager };
+    const other: Kind = kind === 'opex' ? 'capex' : 'opex';
+    const natureMessage = 'The Nature dimension is required. Choose a value.';
+    // Lines from before the setting: one holding a value, one lacking it.
+    const holder = await svc.create(lineBody(kind, 'Holds hardware', { paying_company_id: s.companyId, analytics_values: { [s.nature]: s.hardware } }), undefined, opts);
+    const lacking = await svc.create(lineBody(kind, 'Lacks nature', { paying_company_id: s.companyId }), undefined, opts);
+    await runner.query(`UPDATE analytics_axes SET required = true WHERE id = $1`, [s.nature]);
+    // Never checked: a disabled required dimension, and a required dimension of the other type.
+    await runner.query(`UPDATE analytics_axes SET required = true WHERE id = $1`, [s.old]);
+    const recurrence = await seedAxis(runner, s.tenantId, 'recurrence', 'Recurrence', 3);
+    await runner.query(`UPDATE analytics_axes SET required = true, applies_to = $2 WHERE id = $1`, [recurrence, other]);
+
+    // Create: refused without a value, whatever the body names; nothing written.
+    const [{ n: linesBefore }] = await runner.query(`SELECT count(*)::int AS n FROM ${ITEM_TABLE[kind]} WHERE tenant_id = $1`, [s.tenantId]);
+    const linksBefore = await linkCount(runner, kind, s.tenantId);
+    const cases: Array<[string, Record<string, unknown>]> = [
+      ['no analytics field at all', {}],
+      ['another dimension only', { analytics_values: { [s.main]: s.licences } }],
+      ['the legacy field only', { analytics_category_id: s.licences }],
+      ['null on it', { analytics_values: { [s.nature]: null } }],
+    ];
+    for (const [label, fields] of cases) {
+      const refused = await refusal(runner, () => svc.create(lineBody(kind, `Refused: ${label}`, { paying_company_id: s.companyId, ...fields }), undefined, opts));
+      assert.equal(refused.message, natureMessage, `${kind} create, ${label}`);
+      assert.equal((refused as any).getStatus?.(), 400, `${kind} create, ${label}: a 400`);
+    }
+    const [{ n: linesAfter }] = await runner.query(`SELECT count(*)::int AS n FROM ${ITEM_TABLE[kind]} WHERE tenant_id = $1`, [s.tenantId]);
+    assert.equal(linesAfter, linesBefore, `${kind}: no line written`);
+    assert.equal(await linkCount(runner, kind, s.tenantId), linksBefore, `${kind}: no link written`);
+
+    // With the value: created (the disabled and other-type required dimensions are not checked).
+    const created = await svc.create(lineBody(kind, 'With nature', { paying_company_id: s.companyId, analytics_values: { [s.nature]: s.hardware } }), undefined, opts);
+    assert.deepEqual(await links(runner, kind, created.id), { [s.nature]: s.hardware }, `${kind}: created with the value`);
+
+    // The default dimension required: the legacy field satisfies it, its absence is refused.
+    await runner.query(`UPDATE analytics_axes SET required = true WHERE id = $1`, [s.main]);
+    const legacy = await svc.create(lineBody(kind, 'Legacy default', {
+      paying_company_id: s.companyId, analytics_category_id: s.licences, analytics_values: { [s.nature]: s.otherNature },
+    }), undefined, opts);
+    assert.deepEqual(await links(runner, kind, legacy.id), { [s.main]: s.licences, [s.nature]: s.otherNature }, `${kind}: the legacy field fills the default`);
+    const noDefault = await refusal(runner, () => svc.create(lineBody(kind, 'No default', {
+      paying_company_id: s.companyId, analytics_values: { [s.nature]: s.hardware },
+    }), undefined, opts));
+    assert.equal(noDefault.message, 'The analytics dimension is required. Choose a value.', `${kind}: the unnamed default`);
+    const clearedLegacy = await refusal(runner, () => svc.update(legacy.id, { analytics_category_id: null }, undefined, opts));
+    assert.equal(clearedLegacy.message, 'The analytics dimension is required. Choose a value.', `${kind}: the legacy field cannot clear it`);
+    await runner.query(`UPDATE analytics_axes SET required = false WHERE id = $1`, [s.main]);
+
+    // Update: a held value cannot be cleared; changing it passes.
+    const cleared = await refusal(runner, () => svc.update(holder.id, { analytics_values: { [s.nature]: null } }, undefined, opts));
+    assert.equal(cleared.message, natureMessage, `${kind}: clearing a held value is refused`);
+    assert.equal((cleared as any).getStatus?.(), 400);
+    assert.deepEqual(await links(runner, kind, holder.id), { [s.nature]: s.hardware }, `${kind}: the value stays`);
+    await svc.update(holder.id, { analytics_values: { [s.nature]: s.otherNature } }, undefined, opts);
+    assert.deepEqual(await links(runner, kind, holder.id), { [s.nature]: s.otherNature }, `${kind}: a change passes`);
+
+    // A line lacking the value: any other change passes, and null stays a no-op.
+    await svc.update(lacking.id, { notes: 'edited' }, undefined, opts);
+    await svc.update(lacking.id, { analytics_values: { [s.main]: s.licences } }, undefined, opts);
+    await svc.update(lacking.id, { analytics_values: { [s.nature]: null } }, undefined, opts);
+    assert.deepEqual(await links(runner, kind, lacking.id), { [s.main]: s.licences }, `${kind}: the lacking line stays editable`);
+    const [note] = await runner.query(`SELECT notes FROM ${ITEM_TABLE[kind]} WHERE id = $1`, [lacking.id]);
+    assert.equal(note.notes, 'edited');
+
+    // Disabled: the setting is ignored, a held value may be cleared.
+    await runner.query(`UPDATE analytics_axes SET status = 'disabled', disabled_at = now() - interval '1 day' WHERE id = $1`, [s.nature]);
+    const bare = await svc.create(lineBody(kind, 'Nature disabled', { paying_company_id: s.companyId }), undefined, opts);
+    assert.deepEqual(await links(runner, kind, bare.id), {}, `${kind}: a disabled required dimension is not checked`);
+  });
+}
+
 async function testOtherTypeValue(kind: Kind) {
   await inRolledBackTransaction(async (runner) => {
     const s = await setup(runner, kind);
@@ -489,6 +570,7 @@ void runSpecs('item-analytics.integration.spec', KINDS.flatMap((kind): Array<[st
   [`disabled dimension: no-op passes, change refused (${kind})`, () => testDisabledDimensionNoOp(kind)],
   [`dimension of the other line type: no-op passes, change refused (${kind})`, () => testOtherTypeDimension(kind)],
   [`value of the other line type: kept as current, refused as new (${kind})`, () => testOtherTypeValue(kind)],
+  [`required dimensions: create needs a value, a held value stays (${kind})`, () => testRequiredDimensions(kind)],
   [`a change of values alone is an edit (${kind})`, () => testChangeAloneIsAnEdit(kind)],
   [`the default dimension is an identity (${kind})`, () => testDefaultIsAnIdentity(kind)],
   [`legacy list reads the links (${kind})`, () => testLegacyListReadsTheLinks(kind)],

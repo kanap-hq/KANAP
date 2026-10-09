@@ -786,6 +786,44 @@ async function testDimensionCells(runner: { query: Function; manager: EntityMana
 }
 
 /**
+ * A required dimension through the loader: a new line without the column is a row error on
+ * `analytics:<code>`, a value the load creates counts; an existing line is refused only for a `-`
+ * on the value it holds, and is left alone when the column is absent.
+ */
+async function testRequiredDimensionCells(runner: { query: Function; manager: EntityManager }, kind: Kind) {
+  const tenantId = await seedTenant(runner as any, `csv-d2-required-${kind}`);
+  await seedCompany(runner as any, tenantId, 'File company');
+  await ensureDefaultAnalyticsAxis(runner.manager, tenantId);
+  const [{ id: menu }] = await runner.query(
+    `INSERT INTO analytics_axes (tenant_id, code, name, sort_order, required) VALUES ($1, 'menu', 'Menu', 1, true) RETURNING id`,
+    [tenantId],
+  );
+  await runner.query(`INSERT INTO analytics_categories (tenant_id, axis_id, name) VALUES ($1, $2, 'Fromage')`, [tenantId, menu]);
+  const message = 'The Menu dimension is required. Choose a value.';
+
+  const missing = await preflightBudgetFile(runner.manager, kind, tenantId, csvOf(newLineColumns(kind), [newLine(kind, 'No menu')]));
+  assert.deepEqual(rowErrors(missing), [`2 analytics:menu: ${message}`], `${kind}: a new line without the column`);
+
+  await loadBudgetFile(runner.manager, kind, tenantId, csvOf(newLineColumns(kind, ['analytics:menu']), [
+    newLine(kind, 'Alpha', { 'analytics:menu': 'fromage' }),
+    newLine(kind, 'Bravo', { 'analytics:menu': 'Dessert' }),
+  ]));
+  const lines = await linesByName(runner, kind, tenantId);
+  const [{ n: linked }] = await runner.query(
+    `SELECT count(*)::int AS n FROM ${kind === 'opex' ? 'spend_item_analytics_values' : 'capex_item_analytics_values'}
+      WHERE tenant_id = $1 AND axis_id = $2`,
+    [tenantId, menu],
+  );
+  assert.equal(linked, 2, `${kind}: both new lines hold a value, one created by the load`);
+
+  const alpha = lines.get('Alpha');
+  const cleared = await preflightBudgetFile(runner.manager, kind, tenantId, csvOf(['item_number', 'analytics:menu'], [{ item_number: ref(kind, alpha.n), 'analytics:menu': '-' }]));
+  assert.deepEqual(rowErrors(cleared), [`2 analytics:menu: ${message}`], `${kind}: a held value cannot be cleared`);
+  const nameOnly = await preflightBudgetFile(runner.manager, kind, tenantId, csvOf(['item_number', 'name'], [{ item_number: ref(kind, alpha.n), name: 'Alpha renamed' }]));
+  assert.equal(nameOnly.ok, true, `${kind}: an existing line, the column absent (${JSON.stringify(nameOnly.errors)})`);
+}
+
+/**
  * Owners, accounts and the currency against the tenant's data: an owner email
  * must name an enabled user of this tenant (another tenant's user, a disabled,
  * invited or contact user is a row error, and nothing of the file is written,
@@ -1076,6 +1114,7 @@ async function main() {
       await testExportAmountSwitch(runner, kind);
       await testCostCenterCells(runner, kind);
       await testDimensionCells(runner, kind);
+      await testRequiredDimensionCells(runner, kind);
     }
     await testOwnersAccountsAndCurrency(runner);
     await setTenant(runner, tenantId);
