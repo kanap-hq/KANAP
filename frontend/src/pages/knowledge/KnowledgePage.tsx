@@ -665,7 +665,8 @@ export default function KnowledgePage() {
 
   const librarySelectableUsers = useMemo(() => {
     const byId = new Map<string, KnowledgeContributorOption>();
-    [...knowledgeContributorOptions, ...(editingLibraryDetail?.readers || []), ...(editingLibraryDetail?.writers || []), ...(editingLibraryDetail?.owner ? [editingLibraryDetail.owner] : [])]
+    // Later entries win: the contributor options come last, their label is the email when a name is shared.
+    [...(editingLibraryDetail?.readers || []), ...(editingLibraryDetail?.writers || []), ...(editingLibraryDetail?.owner ? [editingLibraryDetail.owner] : []), ...knowledgeContributorOptions]
       .forEach((user) => {
         if (user?.id) byId.set(user.id, user);
       });

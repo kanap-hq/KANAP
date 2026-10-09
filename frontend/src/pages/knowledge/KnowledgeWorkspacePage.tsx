@@ -1122,10 +1122,11 @@ export default function KnowledgeWorkspacePage() {
   const contributorLabelById = React.useMemo(() => {
     const byId = new Map<string, string>();
     for (const option of contributorOptions) {
+      // The server's label wins: it is the email when another account shares the name.
       const firstName = String(option.first_name || '').trim();
       const lastName = String(option.last_name || '').trim();
       const fullName = [firstName, lastName].filter(Boolean).join(' ');
-      const label = fullName || option.label || option.email || option.id;
+      const label = String(option.label || '').trim() || fullName || option.email || option.id;
       if (label) byId.set(option.id, label);
     }
     for (const row of Array.isArray(doc?.contributors) ? doc.contributors : []) {

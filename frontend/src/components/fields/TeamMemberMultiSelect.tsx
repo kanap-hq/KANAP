@@ -6,7 +6,7 @@ import type { SxProps, Theme } from '@mui/material/styles';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useTranslation } from 'react-i18next';
 import { useLookupPicker } from '../../hooks/useLookupPicker';
-import { USERS_LOOKUP_ENDPOINT, useMeOption, withMeFirst, type UserOption } from './userLookup';
+import { formatUserOption, USERS_LOOKUP_ENDPOINT, useMeOption, withMeFirst, type UserOption } from './userLookup';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
 
@@ -59,14 +59,6 @@ export default function TeamMemberMultiSelect({
     if (m.display_name) return m.display_name;
     if (m.first_name || m.last_name) return `${m.first_name || ''} ${m.last_name || ''}`.trim();
     return m.user_email || m.email || m.user_id;
-  }, []);
-
-  // Format user name from first_name/last_name
-  const formatUserName = useCallback((u: User) => {
-    const fn = (u.first_name || '').trim();
-    const ln = (u.last_name || '').trim();
-    const name = [fn, ln].filter(Boolean).join(' ');
-    return name || u.email || '';
   }, []);
 
   const handleAdd = useCallback(async (user: User | null) => {
@@ -143,7 +135,7 @@ export default function TeamMemberMultiSelect({
       <Autocomplete
         {...picker.autocomplete}
         options={availableUsers}
-        getOptionLabel={(option) => formatUserName(option)}
+        getOptionLabel={(option) => formatUserOption(option)}
         value={null}
         onChange={(_, v) => {
           void handleAdd(v);
@@ -154,7 +146,7 @@ export default function TeamMemberMultiSelect({
             <Fragment key={option.id}>
               <li {...other}>
                 <Typography variant="body2" fontWeight={500}>
-                  {formatUserName(option)}{option.id === myId ? ` ${t('selects.meSuffix')}` : ''}
+                  {formatUserOption(option)}{option.id === myId ? ` ${t('selects.meSuffix')}` : ''}
                 </Typography>
               </li>
               {option.id === myId && !picker.searching && <Divider />}
