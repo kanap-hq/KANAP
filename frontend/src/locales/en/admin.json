@@ -563,55 +563,6 @@
     "unsavedNavigate": "You have unsaved changes. Save before navigating?",
     "unsavedSwitchTab": "You have unsaved changes. Save before switching tabs?"
   },
-  "landing": {
-    "cards": {
-      "accounts": {
-        "description": "Manage accounts.",
-        "title": "Accounts"
-      },
-      "auditLogs": {
-        "description": "Review audit log activity.",
-        "title": "Audit logs"
-      },
-      "billing": {
-        "description": "Manage billing and subscriptions.",
-        "title": "Billing"
-      },
-      "companies": {
-        "description": "Manage companies.",
-        "title": "Companies"
-      },
-      "departments": {
-        "description": "Manage departments.",
-        "title": "Departments"
-      },
-      "opsDashboard": {
-        "description": "View platform operations metrics.",
-        "title": "Ops dashboard"
-      },
-      "platformAi": {
-        "description": "Manage the platform-wide built-in AI provider.",
-        "title": "Platform AI"
-      },
-      "roles": {
-        "description": "Manage roles and permissions.",
-        "title": "Roles"
-      },
-      "suppliers": {
-        "description": "Manage suppliers.",
-        "title": "Suppliers"
-      },
-      "tenants": {
-        "description": "Manage tenants.",
-        "title": "Tenants"
-      },
-      "users": {
-        "description": "Manage users.",
-        "title": "Users"
-      }
-    },
-    "title": "Administration"
-  },
   "platformAi": {
     "actions": {
       "save": "Save",

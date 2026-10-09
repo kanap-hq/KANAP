@@ -563,55 +563,6 @@
     "unsavedNavigate": "Tiene cambios sin guardar. ¿Desea guardar antes de navegar?",
     "unsavedSwitchTab": "Tiene cambios sin guardar. ¿Desea guardar antes de cambiar de pestaña?"
   },
-  "landing": {
-    "cards": {
-      "accounts": {
-        "description": "Gestionar cuentas.",
-        "title": "Cuentas"
-      },
-      "auditLogs": {
-        "description": "Revisar la actividad del registro de auditoría.",
-        "title": "Registro de auditoría"
-      },
-      "billing": {
-        "description": "Gestionar facturación y suscripciones.",
-        "title": "Facturación"
-      },
-      "companies": {
-        "description": "Gestionar empresas.",
-        "title": "Empresas"
-      },
-      "departments": {
-        "description": "Gestionar departamentos.",
-        "title": "Departamentos"
-      },
-      "opsDashboard": {
-        "description": "Ver métricas de operaciones de la plataforma.",
-        "title": "Panel de operaciones"
-      },
-      "platformAi": {
-        "description": "Manage the platform-wide built-in AI provider.",
-        "title": "Platform AI"
-      },
-      "roles": {
-        "description": "Gestionar roles y permisos.",
-        "title": "Roles"
-      },
-      "suppliers": {
-        "description": "Gestionar proveedores.",
-        "title": "Proveedores"
-      },
-      "tenants": {
-        "description": "Gestionar espacios de trabajo.",
-        "title": "Espacios de trabajo"
-      },
-      "users": {
-        "description": "Gestionar usuarios.",
-        "title": "Usuarios"
-      }
-    },
-    "title": "Administración"
-  },
   "platformAi": {
     "actions": {
       "save": "Save",
