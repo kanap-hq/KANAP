@@ -90,3 +90,21 @@ describe('AccountSelect nature', () => {
     expect(search?.params).not.toHaveProperty('nature');
   });
 });
+
+describe('AccountSelect options', () => {
+  beforeEach(() => {
+    calls = [];
+    apiGet.mockReset();
+    apiGet.mockResolvedValue({
+      data: { items: [{ id: 'acc-desc', account_number: 6300, account_name: 'Travel', description: 'Trips and hotels' }], has_more: false },
+    });
+  });
+
+  it('shows each account on one line, number and name, without its description', async () => {
+    renderSelect();
+    openList();
+    const option = await screen.findByRole('option');
+    expect(option).toHaveTextContent(/^\[6300\] Travel$/);
+    expect(screen.queryByText('Trips and hotels')).not.toBeInTheDocument();
+  });
+});

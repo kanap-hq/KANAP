@@ -12,14 +12,18 @@ vi.mock('../../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../../../hooks/useCurrencySettings', () => ({ default: () => ({ data: { allowedCurrencies: ['EUR'] } }) }));
 // The pickers load their options from the API; they only report the props this file checks.
 vi.mock('../../../components/fields/SupplierSelect', () => ({
-  default: (p: { required?: boolean }) => <div data-testid="supplier-select" data-required={String(!!p.required)} />,
+  default: (p: { required?: boolean; hideLabel?: boolean }) => (
+    <div data-testid="supplier-select" data-required={String(!!p.required)} data-hide-label={String(!!p.hideLabel)} />
+  ),
 }));
 vi.mock('../../../components/fields/CompanySelect', () => ({
-  default: (p: { disableClearable?: boolean }) => <div data-testid="company-select" data-clearable={String(!p.disableClearable)} />,
+  default: (p: { disableClearable?: boolean; hideLabel?: boolean }) => (
+    <div data-testid="company-select" data-clearable={String(!p.disableClearable)} data-hide-label={String(!!p.hideLabel)} />
+  ),
 }));
 vi.mock('../../../components/fields/AccountSelect', () => ({
-  default: (p: { disableClearable?: boolean; required?: boolean; nature?: string }) => (
-    <div data-testid="account-select" data-clearable={String(!p.disableClearable)} data-required={String(!!p.required)} data-nature={p.nature ?? ''} />
+  default: (p: { disableClearable?: boolean; required?: boolean; nature?: string; hideLabel?: boolean }) => (
+    <div data-testid="account-select" data-clearable={String(!p.disableClearable)} data-required={String(!!p.required)} data-nature={p.nature ?? ''} data-hide-label={String(!!p.hideLabel)} />
   ),
 }));
 vi.mock('../../../components/fields/UserSelect', () => ({ default: () => null }));
@@ -143,6 +147,13 @@ describe('CapexPropertiesDrawer', () => {
   it.each(['create', 'edit'] as const)('offers only the accounts CAPEX lines may use in %s mode', (mode) => {
     renderDrawer(mode);
     expect(screen.getByTestId('account-select')).toHaveAttribute('data-nature', 'capex');
+  });
+
+  it('shows supplier, company and account in the drawer list style, as the dimension pickers', () => {
+    renderDrawer('edit');
+    for (const id of ['supplier-select', 'company-select', 'account-select']) {
+      expect(screen.getByTestId(id)).toHaveAttribute('data-hide-label', 'true');
+    }
   });
 
   it.each(['create', 'edit'] as const)('offers one select per enabled dimension in %s mode, in dimension order, named after it', (mode) => {

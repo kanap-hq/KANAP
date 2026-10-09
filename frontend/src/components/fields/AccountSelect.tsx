@@ -91,16 +91,7 @@ const AccountSelect = React.forwardRef<HTMLInputElement, AccountSelectProps>(fun
       blurOnSelect
       renderOption={(props, option) => (
         <li {...props} key={option.id}>
-          <div>
-            <div style={{ fontWeight: 500 }}>
-              [{option.account_number}] {option.account_name}
-            </div>
-            {option.description && (
-              <div style={{ fontSize: '0.875rem', color: 'text.secondary', opacity: 0.7 }}>
-                {option.description}
-              </div>
-            )}
-          </div>
+          {accountLabel(option)}
         </li>
       )}
       ListboxProps={naked ? { sx: drawerAutocompleteListboxSx } : undefined}

@@ -172,7 +172,7 @@ export default function CapexPropertiesDrawer({
       <PropertyGroup>
         <PropertyRow label={t('capex.fields.supplier')}>
           <Box sx={hideInnerLabelSx}>
-            <SupplierSelect value={supplierId} onChange={(v) => onSupplierChange(v ?? '')} disabled={disabled} selectedOption={matching(references?.supplier, supplierId)} />
+            <SupplierSelect hideLabel value={supplierId} onChange={(v) => onSupplierChange(v ?? '')} disabled={disabled} selectedOption={matching(references?.supplier, supplierId)} />
           </Box>
         </PropertyRow>
         <PropertyRow label={t('capex.fields.costCenter')} helperText={costCenterHint}>
@@ -189,12 +189,12 @@ export default function CapexPropertiesDrawer({
         </PropertyRow>
         <PropertyRow label={t('capex.fields.payingCompany')} required>
           <Box sx={hideInnerLabelSx}>
-            <CompanySelect value={payingCompanyId || null} onChange={(v) => onPayingCompanyChange(v ?? '')} disabled={disabled} required disableClearable={mode === 'edit'} selectedOption={matching(references?.paying_company, payingCompanyId)} />
+            <CompanySelect hideLabel value={payingCompanyId || null} onChange={(v) => onPayingCompanyChange(v ?? '')} disabled={disabled} required disableClearable={mode === 'edit'} selectedOption={matching(references?.paying_company, payingCompanyId)} />
           </Box>
         </PropertyRow>
         <PropertyRow label={t('capex.fields.account')} required>
           <Box sx={hideInnerLabelSx}>
-            <AccountSelect nature="capex" value={accountId} onChange={(v) => onAccountChange(v ?? '')} companyId={payingCompanyId || undefined} disabled={disabled || !payingCompanyId} required disableClearable={mode === 'edit'} selectedOption={matching(references?.account, accountId)} />
+            <AccountSelect hideLabel nature="capex" value={accountId} onChange={(v) => onAccountChange(v ?? '')} companyId={payingCompanyId || undefined} disabled={disabled || !payingCompanyId} required disableClearable={mode === 'edit'} selectedOption={matching(references?.account, accountId)} />
           </Box>
         </PropertyRow>
         <PropertyRow label={t('capex.fields.currency')} required>
