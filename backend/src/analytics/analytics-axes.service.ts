@@ -12,6 +12,7 @@ import {
   sameInstant,
 } from './analytics-context';
 import { isAxisActive, isReservedAnalyticsAxisName, resolveDefaultAxisId } from './analytics-axes.util';
+import { AXIS_APPLIES_TO, AxisAppliesTo } from './analytics-axis.entity';
 
 /** A stored row, as `SELECT *` returns it. */
 export interface StoredAnalyticsAxis {
@@ -22,6 +23,7 @@ export interface StoredAnalyticsAxis {
   description: string | null;
   sort_order: number;
   is_default: boolean;
+  applies_to: AxisAppliesTo | null;
   status: StatusState;
   disabled_at: Date | null;
   created_at: Date;
@@ -33,6 +35,7 @@ export interface AnalyticsAxisValues {
   name: string | null;
   description: string | null;
   sort_order: number;
+  applies_to: AxisAppliesTo | null;
   status: StatusState;
   disabled_at: Date | null;
 }
@@ -50,6 +53,7 @@ export interface AnalyticsAxisInput {
   name?: unknown;
   description?: unknown;
   sort_order?: unknown;
+  applies_to?: unknown;
   status?: unknown;
   disabled_at?: unknown;
 }
@@ -61,6 +65,7 @@ const INT_MAX = 2147483647;
 export const DEFAULT_AXIS_LOCKED_MESSAGE = 'This dimension cannot be disabled: older files and AI questions use it.';
 export const DEFAULT_AXIS_DELETE_MESSAGE = 'This dimension cannot be deleted: older files and AI questions use it.';
 export const RESERVED_AXIS_NAME_MESSAGE = 'This name is reserved for the default dimension.';
+export const DEFAULT_AXIS_APPLIES_MESSAGE = 'The default dimension applies to OPEX and CAPEX lines.';
 
 /** The name of a dimension other than the default: required, and never one of the default's labels. */
 function normalizeOtherAxisName(raw: unknown): string {
@@ -86,9 +91,42 @@ function normalizeSortOrder(raw: unknown): number {
   return value;
 }
 
+/**
+ * `opex`, `capex`, or null (OPEX and CAPEX lines), for a dimension or a value. The DTO checks the
+ * shape; this covers other callers.
+ */
+export function normalizeAppliesTo(raw: unknown): AxisAppliesTo | null {
+  if (raw == null) return null;
+  const value = String(raw).trim().toLowerCase();
+  if (value === '') return null;
+  if (!(AXIS_APPLIES_TO as readonly string[]).includes(value)) {
+    throw analyticsRefusal("Used for must be 'opex', 'capex' or empty.", 'applies_to');
+  }
+  return value as AxisAppliesTo;
+}
+
+/**
+ * "2 values of this dimension are for CAPEX lines only (Matériel, Projet). Set them to OPEX and
+ * CAPEX first.": up to three names in name order, then "and N more". The names matter because the
+ * count includes disabled values, which the values grid hides by default.
+ */
+export function otherTypeValuesMessage(count: number, other: AxisAppliesTo, names: string[]): string {
+  const type = other.toUpperCase();
+  const shown = names.slice(0, 3).join(', ');
+  const more = count > 3 ? ` and ${count - 3} more` : '';
+  return count === 1
+    ? `1 value of this dimension is for ${type} lines only (${shown}). Set it to OPEX and CAPEX first.`
+    : `${count} values of this dimension are for ${type} lines only (${shown}${more}). Set them to OPEX and CAPEX first.`;
+}
+
 /** The effective status, as every lifecycle list shows it. */
 function toRow(stored: StoredAnalyticsAxis): AnalyticsAxisRow {
-  return { ...stored, sort_order: Number(stored.sort_order ?? 0), status: isAxisActive(stored) ? 'enabled' : 'disabled' };
+  return {
+    ...stored,
+    sort_order: Number(stored.sort_order ?? 0),
+    applies_to: stored.applies_to ?? null,
+    status: isAxisActive(stored) ? 'enabled' : 'disabled',
+  };
 }
 
 function valuesEqual(stored: StoredAnalyticsAxis, next: AnalyticsAxisValues): boolean {
@@ -96,6 +134,7 @@ function valuesEqual(stored: StoredAnalyticsAxis, next: AnalyticsAxisValues): bo
     && (stored.name ?? null) === next.name
     && (stored.description ?? null) === next.description
     && Number(stored.sort_order) === next.sort_order
+    && (stored.applies_to ?? null) === next.applies_to
     // From the stored end of validity: the stored status lags until the hourly sync once that date passes.
     && deriveStatusFromDisabledAt(stored.disabled_at) === next.status
     && sameInstant(stored.disabled_at, next.disabled_at);
@@ -158,6 +197,7 @@ export class AnalyticsAxesService {
       name: normalizeOtherAxisName(body?.name),
       description: normalizeAnalyticsDescription(body?.description),
       sort_order: sortOrder,
+      applies_to: normalizeAppliesTo(body?.applies_to),
       status: lifecycle.status,
       disabled_at: lifecycle.disabled_at,
     };
@@ -177,6 +217,13 @@ export class AnalyticsAxesService {
     if (existing.is_default && (lifecycle.status !== StatusState.ENABLED || lifecycle.disabled_at !== null)) {
       throw analyticsRefusal(DEFAULT_AXIS_LOCKED_MESSAGE, 'status');
     }
+    // PATCH: null clears it (both), absent keeps it. The default always applies to both.
+    const appliesTo = has('applies_to') ? normalizeAppliesTo(body.applies_to) : existing.applies_to ?? null;
+    if (existing.is_default && appliesTo !== null) throw analyticsRefusal(DEFAULT_AXIS_APPLIES_MESSAGE, 'applies_to');
+    if (appliesTo !== null && appliesTo !== (existing.applies_to ?? null)) {
+      // The row lock above serialises this count with a value write, which locks the dimension FOR SHARE.
+      await this.assertNoValueOfOtherType(ctx, id, appliesTo);
+    }
     let name = existing.name ?? null;
     if (has('name')) {
       const blank = body.name === null || (typeof body.name === 'string' && body.name.trim() === '');
@@ -189,6 +236,7 @@ export class AnalyticsAxesService {
       name,
       description: has('description') ? normalizeAnalyticsDescription(body.description) : existing.description ?? null,
       sort_order: has('sort_order') ? normalizeSortOrder(body.sort_order) : Number(existing.sort_order),
+      applies_to: appliesTo,
       status: lifecycle.status,
       disabled_at: lifecycle.disabled_at,
     };
@@ -249,6 +297,23 @@ export class AnalyticsAxesService {
     return row;
   }
 
+  /** A dimension restricted to one line type cannot hold values restricted to the other. */
+  private async assertNoValueOfOtherType(ctx: AnalyticsContext, id: string, appliesTo: AxisAppliesTo) {
+    const other: AxisAppliesTo = appliesTo === 'opex' ? 'capex' : 'opex';
+    // Disabled values included: the count, and the first three names to find them by.
+    const rows: Array<{ name: string; total: number }> = await ctx.manager.query(
+      `SELECT name, count(*) OVER ()::int AS total FROM analytics_categories
+        WHERE tenant_id = $1 AND axis_id = $2 AND applies_to = $3
+        ORDER BY lower(name), name, id
+        LIMIT 3`,
+      [ctx.tenantId, id, other],
+    );
+    const count = Number(rows[0]?.total ?? 0);
+    if (count > 0) {
+      throw analyticsRefusal(otherTypeValuesMessage(count, other, rows.map((row) => row.name)), 'applies_to');
+    }
+  }
+
   /** A readable refusal before the unique indexes (which stay the guarantee). */
   private async assertUnique(ctx: AnalyticsContext, values: AnalyticsAxisValues, id: string | null) {
     const rows: Array<{ code: string; name: string | null }> = await ctx.manager.query(
@@ -275,16 +340,23 @@ export class AnalyticsAxesService {
       const rows = existing
         ? await ctx.manager.query(
           `UPDATE analytics_axes
-              SET code = $3, name = $4, description = $5, sort_order = $6, status = $7, disabled_at = $8, updated_at = now()
+              SET code = $3, name = $4, description = $5, sort_order = $6, status = $7, disabled_at = $8,
+                  applies_to = $9, updated_at = now()
             WHERE tenant_id = $1 AND id = $2
         RETURNING *`,
-          [ctx.tenantId, existing.id, values.code, values.name, values.description, values.sort_order, values.status, values.disabled_at],
+          [
+            ctx.tenantId, existing.id, values.code, values.name, values.description, values.sort_order,
+            values.status, values.disabled_at, values.applies_to,
+          ],
         )
         : await ctx.manager.query(
-          `INSERT INTO analytics_axes (tenant_id, code, name, description, sort_order, is_default, status, disabled_at)
-           VALUES ($1, $2, $3, $4, $5, false, $6, $7)
+          `INSERT INTO analytics_axes (tenant_id, code, name, description, sort_order, is_default, status, disabled_at, applies_to)
+           VALUES ($1, $2, $3, $4, $5, false, $6, $7, $8)
         RETURNING *`,
-          [ctx.tenantId, values.code, values.name, values.description, values.sort_order, values.status, values.disabled_at],
+          [
+            ctx.tenantId, values.code, values.name, values.description, values.sort_order,
+            values.status, values.disabled_at, values.applies_to,
+          ],
         );
       saved = firstReturnedRow<StoredAnalyticsAxis>(rows);
     } catch (err: any) {
@@ -296,6 +368,9 @@ export class AnalyticsAxesService {
       }
       if (err?.code === '23514') {
         // The CHECK constraints mirror the rules above; this only fires on a rule the service missed.
+        if (err?.constraint === 'analytics_axes_default_applies_check') {
+          throw analyticsRefusal(DEFAULT_AXIS_APPLIES_MESSAGE, 'applies_to');
+        }
         throw analyticsRefusal('This dimension cannot be saved as it is.');
       }
       throw err;

@@ -74,7 +74,7 @@ Wann die Filter erscheinen:
 - **Kostenstelle** erscheint, sobald Ihr Arbeitsbereich mindestens eine Kostenstelle oder Gruppe hat.
 - **Run oder Build** erscheint, sobald eine Zeile des Berichts als **Run** oder **Build** markiert ist oder die Seitenadresse den Filter bereits enthält.
 - **Positionen** erscheint, sobald eine Position des Berichts VZÄ meldet oder die Seitenadresse den Filter bereits enthält.
-- Der Filter einer Dimension erscheint, sobald eine Zeile des Berichts einen Wert in dieser Dimension hat oder die Seitenadresse ihn bereits enthält. Deaktivierte Dimensionen haben keinen Filter.
+- Der Filter einer Dimension erscheint, sobald eine Zeile des Berichts einen Wert in dieser Dimension hat oder die Seitenadresse ihn bereits enthält. Deaktivierte Dimensionen haben keinen Filter. Ein Bericht zeigt nur die Dimensionen, die für die Zeilen gelten, die er abdeckt: Der Wechsel zwischen **OPEX** und **CAPEX** ändert die Liste. Eine Dimension mit **Nur OPEX** hat in einem CAPEX-Bericht keinen Filter und umgekehrt. Siehe [OPEX- oder CAPEX-Dimensionen](analytics.md#opex-oder-capex-dimensionen).
 - Ohne all diese zeigt die Filterleiste nur die eigenen Steuerelemente des Berichts.
 
 So funktionieren sie:
@@ -413,11 +413,11 @@ Zeigen Sie OPEX- oder CAPEX-Budgetdaten gruppiert nach den Werten einer Analysed
 
 - **Positionstyp**: OPEX oder CAPEX (siehe [OPEX oder CAPEX wählen](#opex-oder-capex-wahlen))
 - **Messgröße**: **Betrag** oder **VZÄ** (siehe [Betrag oder VZÄ wählen](#betrag-oder-vza-wahlen))
-- **Dimension**: die Dimension, nach der der Bericht gruppiert. Sie erscheint, wenn Sie zwei oder mehr aktivierte Dimensionen haben, und der Bericht öffnet mit der Standarddimension. Die Seitenadresse speichert Ihre Wahl, sodass ein gespeicherter oder geteilter Link mit derselben Dimension öffnet
+- **Dimension**: die Dimension, nach der der Bericht gruppiert. Sie bietet die aktivierten Dimensionen an, die für die gewählte Positionsart verwendet werden, erscheint, wenn es zwei oder mehr gibt, und der Bericht öffnet mit der Standarddimension. Wechseln Sie zu einer Positionsart, die die gewählte Dimension nicht verwendet, kehrt der Bericht zur Standarddimension zurück. Die Seitenadresse speichert Ihre Wahl, sodass ein gespeicherter oder geteilter Link mit derselben Dimension öffnet
 - **Startjahr** und **Endjahr**: Vorheriges, aktuelles oder nächstes Jahr
 - **Kennzahl**: Jede angezeigte Budgetspalte. Beginnt mit der Standardspalte
 - **Diagrammtyp**: Kreisdiagramm oder horizontales Balkendiagramm (nur Einzeljahr)
-- **Werte ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Werte der gewählten Dimension. Ein Wechsel des Positionstyps oder der Dimension leert die Auswahl
+- **Werte ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Werte der gewählten Dimension. Die Liste bietet die Werte an, die für den gewählten Positionstyp verwendet werden, dazu die Werte, die die Zeilen des Berichts haben. Ein Wechsel des Positionstyps oder der Dimension leert die Auswahl
 - **Kostenstelle**, **Run oder Build**, **Positionen** und die Filter nach Analysedimension: Siehe [Filter nach Kostenstelle, Run oder Build und Analysedimensionen](#filter-nach-kostenstelle-run-oder-build-und-analysedimensionen)
 
 Untertitel, Diagrammtitel und erste Tabellenspalte nennen die gewählte Dimension, zum Beispiel „OPEX nach Nature“.
@@ -450,7 +450,7 @@ Sehen Sie, wie viele Personen jeder Teil des Budgets Monat für Monat plant. Der
 - **Jahr**: Vorheriges, aktuelles oder nächstes Jahr
 - **Spalte**: Jede angezeigte Budgetspalte. Beginnt mit der Standardspalte
 - **Gruppieren nach**: **Kostenstelle** (Standard), **Position**, **Lieferant** oder **Analysedimension**
-- **Dimension**: die Dimension, nach der der Bericht gruppiert, bei **Analysedimension**. Sie erscheint, wenn Sie zwei oder mehr aktivierte Dimensionen haben, und der Bericht öffnet mit der Standarddimension
+- **Dimension**: die Dimension, nach der der Bericht gruppiert, bei **Analysedimension**. Sie bietet die aktivierten Dimensionen an, die für die Zeilen des Berichts verwendet werden, und erscheint, wenn es zwei oder mehr gibt. Der Bericht öffnet mit der Standarddimension
 
 Die Seitenadresse speichert die Gruppierung (`?group=item`, `?group=supplier` oder `?group=axis:<dimension id>`), sodass ein gespeicherter oder geteilter Link mit derselben Gruppierung öffnet. Ohne diesen Parameter gruppiert der Bericht nach Kostenstelle.
 

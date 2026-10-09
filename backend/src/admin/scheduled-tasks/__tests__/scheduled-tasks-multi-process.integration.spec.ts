@@ -124,6 +124,50 @@ async function testConcurrentBootstrapRegistersOnce(other: DataSource) {
 }
 
 /**
+ * A task new in this version, two processes starting at once: both read it missing, both insert
+ * it. The second insert adds nothing and fails no statement, so the database log of the API
+ * (TypeORM `logging: ['error', 'warn']`, app.module.ts) prints no error line at that start. A
+ * statement that does fail is still printed.
+ */
+async function testFirstRegistrationRaceLogsNothing() {
+  const name = `spec-boot-${randomUUID()}`;
+  const logged: string[] = [];
+  const logger = {
+    logQuery: () => undefined,
+    logQueryError: (error: unknown, query: string) => { logged.push(`${(error as Error)?.message ?? error}: ${query}`); },
+    logQuerySlow: () => undefined,
+    logSchemaBuild: () => undefined,
+    logMigration: () => undefined,
+    log: (level: string, message: unknown) => { if (level === 'warn') logged.push(String(message)); },
+  };
+  const watched = new DataSource({ ...(dataSource.options as any), poolSize: 2, logging: ['error', 'warn'], logger });
+  await watched.initialize();
+  const reg: Registry = { added: [], deleted: [] };
+  const svc = service(watched, reg);
+  svc.register({ name, description: 'this process', defaultCron: '0 3 * * *', handler: async () => ({}) });
+  // The other process inserts the task between this process's read and its insert.
+  const repo = watched.getRepository(ScheduledTask);
+  repo.findOne = (async () => {
+    await dataSource.query(`INSERT INTO scheduled_tasks (name, description, cron_expression, enabled) VALUES ($1, 'other process', '0 3 * * *', true)`, [name]);
+    return null;
+  }) as any;
+  try {
+    await svc.onApplicationBootstrap();
+    assert.deepEqual(logged, [], 'no error line in the database log');
+    const rows = await dataSource.query(`SELECT description FROM scheduled_tasks WHERE name = $1`, [name]);
+    assert.deepEqual(rows.map((r: any) => r.description), ['other process'], 'one row, the first insert stands');
+    assert.deepEqual(reg.added.map((e) => e.name), [name], 'the task is scheduled in this process too');
+
+    await assert.rejects(() => watched.query(`SELECT 1 FROM scheduled_tasks WHERE no_such_column = 1`));
+    assert.equal(logged.length, 1, 'a failing statement is still printed');
+  } finally {
+    for (const entry of reg.added) entry.job.stop();
+    await cleanup([name]);
+    await watched.destroy();
+  }
+}
+
+/**
  * A stored tick more than a day ahead (a clock that was ahead, a VM restored from a snapshot)
  * would stop the task until that date: it is claimed over, with a warning. Less than a day ahead
  * is left alone (an ordinary tick of another process can be slightly ahead of this one).
@@ -212,6 +256,7 @@ async function main() {
       ['testOneTickRunsOnce', testOneTickRunsOnce],
       ['testRescheduleAndDisableReachOtherProcesses', testRescheduleAndDisableReachOtherProcesses],
       ['testConcurrentBootstrapRegistersOnce', testConcurrentBootstrapRegistersOnce],
+      ['testFirstRegistrationRaceLogsNothing', () => testFirstRegistrationRaceLogsNothing()],
       ['testFutureTickIsClaimedOver', testFutureTickIsClaimedOver],
       ['testStopWaitsThenRecordsInterruptedRuns', () => testStopWaitsThenRecordsInterruptedRuns()],
     ] as const) {

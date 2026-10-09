@@ -1,6 +1,6 @@
 {
-  "site.title": "KANAP · la plataforma open source de tu departamento de TI",
-  "site.description": "Un solo registro para tus aplicaciones, infraestructura, presupuestos, proyectos y documentación, con Plaid y agentes de IA trabajando sobre él. Autoaloja, o déjanos gestionarla.",
+  "site.title": "KANAP · Plataforma open source de gobernanza de TI",
+  "site.description": "Presupuesto de TI, mapa de aplicaciones, portafolio de proyectos y documentación en un solo repositorio, con agente de IA integrado. Open source.",
 
   "nav.features": "Funcionalidades",
   "nav.featuresAgents": "Agentes",
@@ -27,7 +27,7 @@
 
   "locale.switch": "Cambiar idioma",
 
-  "footer.tagline": "La plataforma open source sobre la que funciona su departamento de TI. Autoalójela, o déjenos operarla.",
+  "footer.tagline": "La plataforma open source de gobernanza de TI: presupuesto, sistemas, proyectos y documentación en un solo repositorio. Autoalójela gratis o déjenos gestionarla.",
   "footer.product": "Producto",
   "footer.resources": "Recursos",
   "footer.legal": "Legal",

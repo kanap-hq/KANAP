@@ -26,10 +26,12 @@ import { applyHttpMiddleware, applyTenancyAndPipeline } from './http-app';
 
 /**
  * Environment checks (common/env.ts): throws where the API always refused to start, prints the
- * rest as warnings (run mode, application address, browser origins).
+ * rest as warnings (run mode, application address, browser origins). Every process checks; the
+ * lead process alone prints, so the lines appear once per start (`API_WORKERS` > 1).
  */
 function checkStartupEnv() {
   const report = validateStartupEnv(process.env, { singleTenant: Features.SINGLE_TENANT });
+  if (!isLeadProcess()) return;
   // eslint-disable-next-line no-console
   console.log(`[ENV] run mode: ${report.mode}`);
   for (const warning of report.warnings) {
@@ -64,7 +66,9 @@ function logTokenSecretPolicy() {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   checkStartupEnv();
-  logTokenSecretPolicy();
+  // Start-up report lines (`[SECRETS]`, `[DB]`, `[CORS]`, `[RATE-LIMIT]`, `[SECURITY]`): printed once
+  // per start, by the lead process (the single process, or worker 1).
+  if (isLeadProcess()) logTokenSecretPolicy();
   // Proxy trust, headers, browser origins, body parsers, ops metrics (http-app.ts).
   applyHttpMiddleware(app);
 
@@ -72,7 +76,7 @@ async function bootstrap() {
   const ds = app.get(DataSource);
   const roleState = await assertSafeDatabaseRole(ds, 'startup');
   // eslint-disable-next-line no-console
-  console.log(`[DB] Connected as PostgreSQL role "${roleState.currentUser}" with native RLS enforcement`);
+  if (isLeadProcess()) console.log(`[DB] Connected as PostgreSQL role "${roleState.currentUser}" with native RLS enforcement`);
   // `[SECURITY]` lines (startup-secrets.ts): printed once per start, by the lead process.
   const securityWarnings = new Set<string>(jwtSecretWarnings(process.env));
   // Start-up writes (admin seed, single-tenant provisioning) check then insert: with several API
@@ -87,13 +91,14 @@ async function bootstrap() {
         const seeded = await ensureBootstrapAdministrator(ds, {
           // Single-tenant: the provisioning below checks the same account's password.
           tenantSlug: defaultTenantSlug, email: adminEmail, password: adminPassword, checkPassword: isLeadProcess() && !Features.SINGLE_TENANT,
+          logUnchanged: isLeadProcess(),
         });
         seeded.warnings.forEach((warning) => securityWarnings.add(warning));
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('Admin seed check failed:', err instanceof Error ? err.message : err);
       }
-    } else {
+    } else if (isLeadProcess()) {
       // eslint-disable-next-line no-console
       console.log('Admin seeding disabled (set SEED_ADMIN=true to enable)');
     }
@@ -115,6 +120,7 @@ async function bootstrap() {
       if (adminEmail && adminPassword) {
         const seeded = await ensureBootstrapAdministrator(ds, {
           tenantSlug: slug, email: adminEmail, password: adminPassword, checkPassword: isLeadProcess(), logPrefix: '[on-prem] ',
+          logUnchanged: isLeadProcess(),
         });
         seeded.warnings.forEach((warning) => securityWarnings.add(warning));
       }

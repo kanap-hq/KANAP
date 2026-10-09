@@ -18,7 +18,6 @@ import { AdminAuthController } from './admin-auth.controller';
 import { EntraDirectorySyncService } from './entra-directory-sync.service';
 import { RefreshToken } from './refresh-token.entity';
 import { PasswordResetToken } from './password-reset-token.entity';
-import { ThrottlerModule } from '@nestjs/throttler';
 import { RateLimitGuard } from '../common/rate-limit.guard';
 import { AuditModule } from '../audit/audit.module';
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -27,7 +26,8 @@ import { PortfolioModule } from '../portfolio/portfolio.module';
 @Module({
   imports: [
     ConfigModule,
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10 }]),
+    // No ThrottlerModule here: RateLimitGuard counts in the one storage of app.module.ts (the
+    // database with several API processes), like every other rate-limited route.
     TypeOrmModule.forFeature([RefreshToken, PasswordResetToken]),
     UsersModule,
     PermissionsModule,

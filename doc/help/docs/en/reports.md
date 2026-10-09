@@ -74,7 +74,7 @@ When the filters appear:
 - **Cost center** shows once your workspace has at least one cost center or group.
 - **Run or build** shows once a line of the report is marked **Run** or **Build**, or when the page address already carries the filter.
 - **Items** shows once an item of the report declares FTE, or when the page address already carries the filter.
-- A dimension's filter shows once a line of the report has a value on that dimension, or when the page address already carries it. Disabled dimensions have no filter.
+- A dimension's filter shows once a line of the report has a value on that dimension, or when the page address already carries it. Disabled dimensions have no filter. A report shows only the dimensions used for the lines it covers: switching between **OPEX** and **CAPEX** changes the list. A dimension set to **OPEX only** has no filter in a CAPEX report, and the reverse. See [OPEX or CAPEX dimensions](analytics.md#opex-or-capex-dimensions).
 - With none of these, the filter bar shows only the report's own controls.
 
 How they work:
@@ -413,11 +413,11 @@ View OPEX or CAPEX budget data grouped by the values of one analytics dimension.
 
 - **Item type**: OPEX or CAPEX (see [Choosing OPEX or CAPEX](#choosing-opex-or-capex))
 - **Measure**: **Amount** or **FTE** (see [Choosing amount or FTE](#choosing-amount-or-fte))
-- **Dimension**: the dimension the report groups on. It shows when you have two or more enabled dimensions, and the report opens on the default dimension. The page address keeps your choice, so a bookmarked or shared link opens on the same dimension
+- **Dimension**: the dimension the report groups on. It offers the enabled dimensions used for the selected item type, shows when there are two or more, and the report opens on the default dimension. Switching the item type to one that does not use the chosen dimension returns to the default dimension. The page address keeps your choice, so a bookmarked or shared link opens on the same dimension
 - **Start year** and **End year**: Previous, current, or next year
 - **Metric**: Any shown budget column. Starts on the default column
 - **Chart type**: Pie chart or horizontal bar chart (single-year only)
-- **Exclude values**: Multi-select autocomplete to exclude specific values of the chosen dimension. Switching the item type or the dimension clears it
+- **Exclude values**: Multi-select autocomplete to exclude specific values of the chosen dimension. It offers the values used for the selected item type, plus the values the report's lines hold. Switching the item type or the dimension clears it
 - **Cost center**, **Run or build**, **Items** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
 
 The subtitle, the chart title and the first column of the table name the chosen dimension, for example "OPEX by Nature".
@@ -450,7 +450,7 @@ See how many people each part of the budget plans, month by month. The report re
 - **Year**: Previous, current, or next year
 - **Column**: Any shown budget column. Starts on the default column
 - **Group by**: **Cost center** (the default), **Item**, **Supplier** or **Analytics dimension**
-- **Dimension**: the dimension the report groups on, with **Analytics dimension**. It shows when you have two or more enabled dimensions, and the report opens on the default dimension
+- **Dimension**: the dimension the report groups on, with **Analytics dimension**. It offers the enabled dimensions used for the lines of the report and shows when there are two or more. The report opens on the default dimension
 
 The page address keeps the grouping (`?group=item`, `?group=supplier` or `?group=axis:<dimension id>`), so a bookmarked or shared link opens on the same grouping. Without it, the report groups by cost center.
 

@@ -121,16 +121,16 @@ const filterNoticeLinkSx = { fontSize: 'inherit', verticalAlign: 'baseline' } as
  * narrowed. Items with FTE keeps the lines that declare FTE in any year and column, whatever the
  * report sums (amounts or FTE). A group stands for every node below
  * it, disabled ones included: a line keeps a disabled cost center, and its amounts still belong to the
- * group. A pair naming an unknown or disabled dimension is ignored: the bar has no select to show or
- * clear it. Dimensions that failed to load make every pair unreadable: like a missing cost center, the
- * report then shows nothing and says why.
+ * group. A pair naming an unknown or disabled dimension, or one that does not apply to the report's
+ * line type, is ignored: the bar has no select to show or clear it. Dimensions that failed to load
+ * make every pair unreadable: like a missing cost center, the report then shows nothing and says why.
  *
  * `scope` and `years` are the report's: the pickers offer what the lines of its window hold (the
  * lines still active on 1 January of the earliest year it reads), whatever the picks.
  */
 export function useBudgetReportFilters({ scope, years }: { scope: BudgetScope; years?: readonly number[] }): BudgetReportFilterState {
   const { t } = useTranslation('ops');
-  const analyticsAxes = useAnalyticsAxes();
+  const analyticsAxes = useAnalyticsAxes({ scope });
   const [params, setParams] = useSearchParams();
   const rawCostCenter = params.get(COST_CENTER_PARAM) || null;
   // The tree only for an address that names a node (its subtree and its label); the picker loads

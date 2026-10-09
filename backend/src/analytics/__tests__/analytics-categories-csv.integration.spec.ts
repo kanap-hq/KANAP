@@ -11,14 +11,16 @@ import {
   withRollback,
 } from './analytics-test-helpers';
 
-// The values CSV (`axis_code;name;description;status;disabled_at`): a blank
-// dimension code is the default dimension, an unknown code or a disabled
-// dimension is a row error, a dry run writes nothing, the whole file is
-// checked before any write, and an export imported back is all unchanged.
+// The values CSV (`axis_code;name;description;status;disabled_at;applies_to`):
+// a blank dimension code is the default dimension, an unknown code or a
+// disabled dimension is a row error, a dry run writes nothing, the whole file
+// is checked before any write, and an export imported back is all unchanged.
+// The optional `applies_to` column: absent keeps what is stored, blank clears
+// it, another word or the type the dimension excludes is a row error.
 
 const HEADER = 'axis_code;name;description;status;disabled_at';
 /** The input files below stay `;` (a `;` file still loads); an English export is `,`-separated now. */
-const EXPORT_HEADER = HEADER.split(';').join(',');
+const EXPORT_HEADER = [...HEADER.split(';'), 'applies_to'].join(',');
 
 async function count(tenantId: string, runner: { query: (sql: string, params: unknown[]) => Promise<any> }) {
   const [row] = await runner.query(
@@ -128,7 +130,7 @@ async function testExportImportRoundTrip() {
     await values.create({ name: 'Licences', description: 'Software; with a semicolon' }, null, ctx);
     await values.create({ name: 'Other' }, null, ctx);
     await values.create({ axis_id: nature.id, name: 'Other', status: 'disabled' }, null, ctx);
-    await values.create({ axis_id: nature.id, name: '=Formula', disabled_at: '2031-06-30' }, null, ctx);
+    await values.create({ axis_id: nature.id, name: '=Formula', disabled_at: '2031-06-30', applies_to: 'capex' }, null, ctx);
     // A disabled dimension's values are exported too and must come back unchanged.
     const retired = await axes.create({ code: 'retired', name: 'Retired' }, ctx);
     await values.create({ axis_id: retired.id, name: 'Legacy', description: 'Kept as it is' }, null, ctx);
@@ -144,6 +146,7 @@ async function testExportImportRoundTrip() {
     assert.equal(lines[0], EXPORT_HEADER);
     assert.equal(lines.length, 6, 'every value, disabled ones and disabled dimensions included');
     assert.ok(lines[1].startsWith('default,'), 'the default dimension comes first');
+    assert.ok(lines.some((line) => line.includes('Formula') && line.endsWith(',capex')), `applies_to is exported last (${lines.join(' / ')})`);
 
     const before = await count(tenantId, runner);
     const result = await csv.importCsv({ file: csvFile(exported.content), dryRun: false }, ctx);
@@ -267,6 +270,85 @@ async function testEndOfValidityFormat() {
   });
 }
 
+async function testAppliesToColumn() {
+  await withRollback(async (runner) => {
+    const tenantId = await seedTenant(runner, 'csv-applies');
+    const { axes, values, csv } = services(runner.manager);
+    const ctx = context(runner.manager, tenantId);
+    const nature = await axes.create({ code: 'nature', name: 'Nature', applies_to: 'opex' }, ctx);
+    const both = await axes.create({ code: 'both', name: 'Both' }, ctx);
+    const saas = await values.create({ axis_id: both.id, name: 'Abonnements SaaS', applies_to: 'opex' }, null, ctx);
+    const hardware = await values.create({ axis_id: both.id, name: 'Matériel', applies_to: 'capex' }, null, ctx);
+    const licences = await values.create({ axis_id: both.id, name: 'Licences' }, null, ctx);
+    const stored = async () => new Map(
+      (await runner.query(`SELECT id, applies_to FROM analytics_categories WHERE tenant_id = $1`, [tenantId]))
+        .map((row: { id: string; applies_to: string | null }) => [row.id, row.applies_to]),
+    );
+
+    // An absent column keeps what is stored, on an update and on a row that changes nothing else.
+    const absent = await csv.importCsv({
+      file: csvFile([HEADER, 'both;Abonnements SaaS;Edited;enabled;', 'both;Matériel;;enabled;'].join('\n')),
+      dryRun: false,
+    }, ctx);
+    assert.deepEqual([absent.ok, absent.updated, absent.unchanged], [true, 1, 1], JSON.stringify(absent.errors));
+    let byId = await stored();
+    assert.equal(byId.get(saas.id), 'opex', 'an absent column keeps the stored value');
+    assert.equal(byId.get(hardware.id), 'capex');
+
+    // Row errors: an invalid word, and the type the dimension excludes (on a new value and an update).
+    const refused = await csv.importCsv({
+      file: csvFile([
+        `${HEADER};applies_to`,
+        'both;Licences;;;;both',
+        'nature;Serveurs;;;;capex',
+        'nature;Run;;;;opex',
+      ].join('\n')),
+      dryRun: false,
+    }, ctx);
+    assert.equal(refused.ok, false);
+    assert.deepEqual(refused.errors, [
+      { row: 2, message: "Invalid applies_to 'both'. Use 'opex', 'capex' or leave it empty." },
+      { row: 3, message: 'The Nature dimension is for OPEX lines only.' },
+    ]);
+    assert.equal((await stored()).get(licences.id), null, 'a refused file writes nothing');
+
+    // A blank cell clears it; a value is read in any case; a redundant restriction is accepted.
+    const loaded = await csv.importCsv({
+      file: csvFile([
+        `${HEADER};applies_to`,
+        'both;Abonnements SaaS;Edited;enabled;;',
+        'both;Licences;;enabled;;CAPEX',
+        'both;Matériel;;enabled;;capex',
+        'nature;Run;;enabled;;opex',
+      ].join('\n')),
+      dryRun: false,
+    }, ctx);
+    assert.deepEqual([loaded.ok, loaded.inserted, loaded.updated, loaded.unchanged], [true, 1, 2, 1], JSON.stringify(loaded.errors));
+    byId = await stored();
+    assert.equal(byId.get(saas.id), null, 'a blank cell clears it');
+    assert.equal(byId.get(licences.id), 'capex');
+    assert.equal(byId.get(hardware.id), 'capex');
+    const [run] = await runner.query(
+      `SELECT applies_to FROM analytics_categories WHERE tenant_id = $1 AND axis_id = $2 AND name = 'Run'`,
+      [tenantId, nature.id],
+    );
+    assert.equal(run.applies_to, 'opex');
+    const [audit] = await runner.query(
+      `SELECT before_json, after_json FROM audit_log
+        WHERE tenant_id = $1 AND table_name = 'analytics_categories' AND record_id = $2 AND action = 'update'
+        ORDER BY created_at DESC, id DESC LIMIT 1`,
+      [tenantId, licences.id],
+    );
+    assert.deepEqual([audit.before_json.applies_to, audit.after_json.applies_to], [null, 'capex'], 'the import is audited');
+
+    // Export, then import back: all unchanged, the column round-trips.
+    const exported = await csv.exportCsv('data', ctx);
+    const result = await csv.importCsv({ file: csvFile(exported.content), dryRun: false }, ctx);
+    assert.deepEqual([result.ok, result.updated, result.unchanged], [true, 0, 4], JSON.stringify(result.errors));
+    assert.deepEqual(await stored(), byId);
+  });
+}
+
 void dataSource;
 
 runSpecs('analytics-categories-csv.integration.spec', [
@@ -274,6 +356,7 @@ runSpecs('analytics-categories-csv.integration.spec', [
   testExportImportRoundTrip,
   testNoDimensionYet,
   testEndOfValidityFormat,
+  testAppliesToColumn,
 ]).catch((err) => {
   console.error(err);
   process.exit(1);

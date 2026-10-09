@@ -71,6 +71,12 @@
       "readOnlyAccess": "You need manager access to edit {{entity}}.",
       "metricsFrozen": "Metrics for {{year}} are frozen. A budget administrator can unfreeze them.",
       "metricsYearHint": "Each value is saved for the selected year when you leave its field. Switch years to review past data."
+    },
+    "lineTypeUsage": {
+      "label": "Used for",
+      "both": "OPEX and CAPEX",
+      "opex": "OPEX only",
+      "capex": "CAPEX only"
     }
   },
   "companies": {
@@ -582,9 +588,6 @@
       "noChartLink": "Choose one in Charts of accounts → Manage charts."
     },
     "nature": {
-      "both": "OPEX and CAPEX",
-      "opex": "OPEX only",
-      "capex": "CAPEX only",
       "conflictCapex_one": "{{count}} CAPEX line uses this account. It keeps it. New CAPEX lines cannot choose it.",
       "conflictCapex_other": "{{count}} CAPEX lines use this account. They keep it. New CAPEX lines cannot choose it.",
       "conflictOpex_one": "{{count}} OPEX line uses this account. It keeps it. New OPEX lines cannot choose it.",
@@ -610,7 +613,7 @@
     "dimensionsLabel": "Dimensions",
     "editDimension": "Edit {{name}}",
     "openDimension": "Open {{name}}",
-    "disabledDimension": "{{name}}, disabled",
+    "markedDimension": "{{name}}, {{marks}}",
     "disabledMark": "Disabled",
     "enableToAddValues": "Enable this dimension to add values.",
     "export": "Export values",
@@ -633,7 +636,12 @@
       "codeDefault": "Older files use the column analytics_category for this dimension; analytics:{{code}} works too.",
       "codeCreate": "Used as the column name in CSV files. Lowercase letters, digits, - or _.",
       "order": "Dimensions are listed by this number, lowest first.",
-      "defaultLocked": "This dimension cannot be disabled or deleted: older files and AI questions use it."
+      "defaultLocked": "This dimension cannot be disabled or deleted: older files and AI questions use it.",
+      "appliesToDefault": "The default dimension applies to OPEX and CAPEX lines.",
+      "valueDimensionAppliesTo": {
+        "opex": "The {{dimension}} dimension is for OPEX lines only.",
+        "capex": "The {{dimension}} dimension is for CAPEX lines only."
+      }
     },
     "placeholders": {
       "dimensionName": "e.g., Nature",
@@ -657,9 +665,21 @@
       "valueBoth": "Used by {{opex}} and {{capex}}."
     },
     "deleteBlocked": {
-      "dimensionHasValues": "To delete this dimension, delete its values first.",
-      "valueUsed": "{{usage}} Disable it instead."
+      "dimensionHasValues": "To delete this dimension, delete its values first."
     },
+    "appliesToConflict": {
+      "capex_one": "{{count}} CAPEX line has a value for this dimension. It keeps it, hidden while the dimension is for OPEX lines only.",
+      "capex_other": "{{count}} CAPEX lines have a value for this dimension. They keep it, hidden while the dimension is for OPEX lines only.",
+      "opex_one": "{{count}} OPEX line has a value for this dimension. It keeps it, hidden while the dimension is for CAPEX lines only.",
+      "opex_other": "{{count}} OPEX lines have a value for this dimension. They keep it, hidden while the dimension is for CAPEX lines only."
+    },
+    "valueAppliesToConflict": {
+      "capex_one": "{{count}} CAPEX line has this value. It keeps it, but new CAPEX lines cannot choose it.",
+      "capex_other": "{{count}} CAPEX lines have this value. They keep it, but new CAPEX lines cannot choose it.",
+      "opex_one": "{{count}} OPEX line has this value. It keeps it, but new OPEX lines cannot choose it.",
+      "opex_other": "{{count}} OPEX lines have this value. They keep it, but new OPEX lines cannot choose it."
+    },
+    "showLines": "Show these lines",
     "messages": {
       "loadFailed": "Failed to load the value.",
       "saveFailed": "Failed to save the value.",

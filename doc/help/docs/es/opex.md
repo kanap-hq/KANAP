@@ -21,7 +21,7 @@ El espacio de trabajo se abre en modo de creación, con el panel **Propiedades**
   - **Proveedor**: A quién paga. Vinculado a sus proveedores en datos maestros
   - **Centro de coste**: Quién es responsable del gasto. Consulte [Centros de coste](cost-centers.md). Cuando la empresa pagadora aún está vacía, elegir un centro de coste la completa con la empresa del centro de coste
   - **Run o build**: **Run** para el gasto que mantiene en funcionamiento los servicios existentes, **Build** para el gasto que los crea o los modifica
-  - **Dimensiones analíticas**: Un campo por dimensión, con el nombre de la dimensión, para agrupar a medida en los informes (p. ej., "Licenses" en Nature). La dimensión por defecto se muestra como **Dimensión analítica** hasta que se le da un nombre. Consulte [Dimensiones analíticas](analytics.md)
+  - **Dimensiones analíticas**: Un campo por dimensión usada para las líneas OPEX, con el nombre de la dimensión, para agrupar a medida en los informes (p. ej., "Licenses" en Nature). La dimensión por defecto se muestra como **Dimensión analítica** hasta que se le da un nombre. Consulte [Dimensiones analíticas](analytics.md)
   - **Fin de validez**: La fecha en que termina este gasto. Déjela en blanco si no hay fin. Después de esa fecha, la partida queda desactivada y los años posteriores dejan de contar en las vistas presupuestarias
   - **Responsable de TI** / **Responsable de negocio**: Quién es responsable
   - **Descripción** y **Notas**: Texto libre en la pestaña Vista general
@@ -60,7 +60,7 @@ La lista OPEX (en **Gestión presupuestaria > OPEX**) es su vista principal para
   - **Inicio efectivo**: Fecha de inicio
   - **Fin de validez**: Fecha en que la partida termina (en blanco significa sin fin)
   - **Responsable IT** / **Responsable de negocio**: Usuarios responsables
-  - **Dimensiones analíticas**: Una columna por dimensión activada, con el nombre de la dimensión y el valor de la partida. La columna de la dimensión por defecto va primero (**Dimensión analítica** hasta que se le da un nombre) y después las demás dimensiones en su orden
+  - **Dimensiones analíticas**: Una columna por dimensión activada usada para las líneas OPEX, con el nombre de la dimensión y el valor de la partida. La columna de la dimensión por defecto va primero (**Dimensión analítica** hasta que se le da un nombre) y después las demás dimensiones en su orden
   - **Centro de coste**: El código y el nombre del centro de coste. Pase el cursor por encima para ver su ruta completa en el árbol; haga clic para abrir el centro de coste
   - **Responsable del presupuesto**: El responsable del presupuesto del centro de coste de la partida. Se deriva del centro de coste y no se almacena en la partida: cambie el responsable del presupuesto de un centro de coste y todas sus partidas lo siguen
   - **Run o build**: **Run** o **Build**
@@ -170,8 +170,9 @@ La pestaña Vista general contiene los campos de texto libre y las tareas de la 
 **Run o build**: **Run**, **Build** o **Sin definir**. Úselo para repartir el presupuesto entre mantener los servicios en funcionamiento y modificarlos.
 
 **Dimensiones analíticas**:
-  - Cada dimensión activada tiene su propio campo, con el nombre de la dimensión, en el orden de las dimensiones. Elija un valor o vacíe el campo; el cambio se guarda de inmediato
+  - Cada dimensión activada usada para las líneas OPEX tiene su propio campo, con el nombre de la dimensión, en el orden de las dimensiones. Una dimensión en **Solo CAPEX** no tiene campo, y el valor que una partida tenga en ella sigue oculto. Elija un valor o vacíe el campo; el cambio se guarda de inmediato
   - Cada campo lista los valores activados de su dimensión. Un valor desactivado se mantiene en las partidas que ya lo tienen y no se puede elegir para otra partida
+  - Un valor que se usa solo para líneas CAPEX no se ofrece, y elegirlo se rechaza. Una partida que ya lo tiene lo conserva y sigue siendo editable. Consulte [Valores OPEX o CAPEX](analytics.md#valores-opex-o-capex)
   - El campo no puede crear un valor: créelo en [Dimensiones analíticas](analytics.md) o deje que lo cree una importación CSV
   - Si las dimensiones no se pueden cargar, una línea sustituye a estos campos: "No se pudieron cargar las dimensiones."
 

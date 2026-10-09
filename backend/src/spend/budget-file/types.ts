@@ -113,6 +113,8 @@ export interface CatalogValue {
   id: string;
   name: string;
   disabledAt: string | null;
+  /** The lines that may choose it: OPEX only, CAPEX only; null or absent for both. */
+  appliesTo?: 'opex' | 'capex' | null;
 }
 
 export interface CatalogDimension {

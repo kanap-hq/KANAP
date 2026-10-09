@@ -71,6 +71,12 @@
       "readOnlyAccess": "Necesita acceso de gestor para editar {{entity}}.",
       "metricsFrozen": "Los indicadores de {{year}} están congelados. Un administrador de presupuesto puede descongelarlos.",
       "metricsYearHint": "Cada valor se guarda para el año seleccionado al salir de su campo. Cambie de año para revisar los datos anteriores."
+    },
+    "lineTypeUsage": {
+      "label": "Usada para",
+      "both": "OPEX y CAPEX",
+      "opex": "Solo OPEX",
+      "capex": "Solo CAPEX"
     }
   },
   "companies": {
@@ -582,9 +588,6 @@
       "noChartLink": "Elija uno en Planes de cuentas → Gestionar planes."
     },
     "nature": {
-      "both": "OPEX y CAPEX",
-      "opex": "Solo OPEX",
-      "capex": "Solo CAPEX",
       "conflictCapex_one": "{{count}} línea CAPEX usa esta cuenta. La conserva. Las nuevas líneas CAPEX no pueden elegirla.",
       "conflictCapex_other": "{{count}} líneas CAPEX usan esta cuenta. La conservan. Las nuevas líneas CAPEX no pueden elegirla.",
       "conflictOpex_one": "{{count}} línea OPEX usa esta cuenta. La conserva. Las nuevas líneas OPEX no pueden elegirla.",
@@ -610,7 +613,7 @@
     "dimensionsLabel": "Dimensiones",
     "editDimension": "Editar {{name}}",
     "openDimension": "Abrir {{name}}",
-    "disabledDimension": "{{name}}, desactivada",
+    "markedDimension": "{{name}}, {{marks}}",
     "disabledMark": "Desactivada",
     "enableToAddValues": "Active esta dimensión para añadir valores.",
     "export": "Exportar valores",
@@ -633,7 +636,12 @@
       "codeDefault": "Los archivos antiguos usan la columna analytics_category para esta dimensión; analytics:{{code}} también funciona.",
       "codeCreate": "Se usa como nombre de columna en los archivos CSV. Letras minúsculas, dígitos, - o _.",
       "order": "Las dimensiones se ordenan según este número, de menor a mayor.",
-      "defaultLocked": "Esta dimensión no se puede desactivar ni eliminar: los archivos antiguos y las preguntas a la IA la usan."
+      "defaultLocked": "Esta dimensión no se puede desactivar ni eliminar: los archivos antiguos y las preguntas a la IA la usan.",
+      "appliesToDefault": "La dimensión predeterminada se aplica a las líneas OPEX y CAPEX.",
+      "valueDimensionAppliesTo": {
+        "opex": "La dimensión {{dimension}} es solo para líneas OPEX.",
+        "capex": "La dimensión {{dimension}} es solo para líneas CAPEX."
+      }
     },
     "placeholders": {
       "dimensionName": "p. ej., Naturaleza",
@@ -657,9 +665,21 @@
       "valueBoth": "Usado por {{opex}} y {{capex}}."
     },
     "deleteBlocked": {
-      "dimensionHasValues": "Para eliminar esta dimensión, elimine primero sus valores.",
-      "valueUsed": "{{usage}} Desactívelo en su lugar."
+      "dimensionHasValues": "Para eliminar esta dimensión, elimine primero sus valores."
     },
+    "appliesToConflict": {
+      "capex_one": "{{count}} línea CAPEX tiene un valor para esta dimensión. Lo conserva, oculto mientras la dimensión sea solo para líneas OPEX.",
+      "capex_other": "{{count}} líneas CAPEX tienen un valor para esta dimensión. Lo conservan, oculto mientras la dimensión sea solo para líneas OPEX.",
+      "opex_one": "{{count}} línea OPEX tiene un valor para esta dimensión. Lo conserva, oculto mientras la dimensión sea solo para líneas CAPEX.",
+      "opex_other": "{{count}} líneas OPEX tienen un valor para esta dimensión. Lo conservan, oculto mientras la dimensión sea solo para líneas CAPEX."
+    },
+    "valueAppliesToConflict": {
+      "capex_one": "{{count}} línea CAPEX tiene este valor. Lo conserva, pero las nuevas líneas CAPEX no pueden elegirlo.",
+      "capex_other": "{{count}} líneas CAPEX tienen este valor. Lo conservan, pero las nuevas líneas CAPEX no pueden elegirlo.",
+      "opex_one": "{{count}} línea OPEX tiene este valor. Lo conserva, pero las nuevas líneas OPEX no pueden elegirlo.",
+      "opex_other": "{{count}} líneas OPEX tienen este valor. Lo conservan, pero las nuevas líneas OPEX no pueden elegirlo."
+    },
+    "showLines": "Mostrar estas líneas",
     "messages": {
       "loadFailed": "Error al cargar el valor.",
       "saveFailed": "Error al guardar el valor.",

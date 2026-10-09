@@ -61,16 +61,18 @@ Die Seite Audit-Protokoll bewahrt die Historie der Datenänderungen und der Sich
 | **Fehlgeschlagene Anmeldung** | eine Anmeldung abgelehnt wird. Der **Grund** nennt die Ursache, zum Beispiel falsches Passwort, deaktiviertes Konto oder kein Konto mit dieser Adresse |
 | **Abmeldung** | sich jemand abmeldet |
 | **Sitzungsverlängerung abgelehnt** | die Sitzung nicht verlängert werden konnte, zum Beispiel weil sie abgelaufen ist |
-| **Zurücksetzen des Passworts angefordert** / **Passwort zurückgesetzt** | jemand einen Link zum Zurücksetzen anfordert, und wenn das Zurücksetzen abgeschlossen ist |
+| **Zurücksetzen des Passworts angefordert** / **Passwort zurückgesetzt** | jemand einen Link zum Zurücksetzen anfordert und danach mit diesem Link ein neues Passwort festlegt |
 | **Anmeldung mit Microsoft** / **Fehlgeschlagene Anmeldung mit Microsoft** | eine Anmeldung über Microsoft Entra ID gelingt oder fehlschlägt |
 
 **Exporte** (Tabelle **Export**): CSV-Exporte, Dokumente und Berichte, die der Server erzeugt. Die Zeile zeigt, was exportiert wurde und von wem. Auch der Export des Audit-Protokolls wird aufgezeichnet.
 
-Anmelde-, Sitzungs- und Export-Zeilen halten außerdem die **Adresse des Rechners** fest, von dem die Anfrage kam, sowie den verwendeten **Browser**. Öffnen Sie die Zeile, um beides im Bereich **Nachher** zu lesen. Hinter einem Reverse Proxy ist es die tatsächliche Adresse der Person, sofern der Proxy sie weitergibt. On-Premise-Installationen: siehe Installationsanleitung. Passwörter, Anmelde-Links und Tokens werden nie ins Protokoll geschrieben. Versucht sich jemand mit einer Adresse anzumelden, zu der es kein Konto gibt, zeigt die Zeile **Unbekanntes Konto** und speichert die eingegebene Adresse nicht.
+Anmelde-, Sitzungs- und Export-Zeilen halten außerdem die **IP-Adresse** fest, von der die Anfrage kam, sowie den verwendeten **Browser**. Öffnen Sie die Zeile, um beides im Bereich **Nachher** zu lesen. Hinter einem Reverse Proxy ist es die IP-Adresse der Person selbst, sofern der Proxy sie weitergibt (On-Premise: siehe das [Reverse-Proxy-Beispiel](on-premise/installation.md#reverse-proxy-beispiel-nginx)).
+
+Passwörter, Anmelde-Links und Tokens werden nie ins Protokoll geschrieben. Versucht sich jemand mit einer E-Mail-Adresse anzumelden, zu der es kein Konto gibt, zeigt die Zeile **Unbekanntes Konto** und speichert die eingegebene Adresse nicht.
 
 ### Wie lange Einträge aufbewahrt werden
 
-Anmelde- und Sitzungsereignisse werden nach **365 Tagen** gelöscht. Alle anderen Einträge (Datenänderungen, Rollenänderungen und Exporte) sind von dieser Regel nicht betroffen.
+Anmelde- und Sitzungsereignisse werden nach **365 Tagen** gelöscht. Datenänderungen, Rollenänderungen und Exporte werden ohne zeitliche Begrenzung aufbewahrt.
 
 ### Was Sie tun können
 
@@ -90,7 +92,7 @@ Anmelde- und Sitzungsereignisse werden nach **365 Tagen** gelöscht. Alle andere
 
 **Standardspalten**:
 - **Datum**: Wann die Änderung oder das Ereignis stattfand
-- **Tabelle**: Welche Tabelle betroffen war, oder **Anmeldung und Sitzung**, oder bei Sicherheitsereignissen die exportierte Ressource
+- **Tabelle**: Welche Tabelle betroffen war. Anmelde- und Sitzungsereignisse zeigen **Anmeldung und Sitzung**, ein Export zeigt, was exportiert wurde (zum Beispiel **Lieferanten**)
 - **Aktion**: Art der Änderung oder des Ereignisses (Erstellen, Aktualisieren, Löschen, Deaktivieren, Anmeldung, Export usw.)
 - **Quelle**: Wer oder was die Änderung ausgelöst hat (Benutzer, System, Webhook)
 - **Benutzer**: Name des Benutzers, der die Änderung vorgenommen hat, oder seine E-Mail-Adresse, wenn er keinen Namen hat. Zeigt „System" oder „Webhook" für Nicht-Benutzer-Quellen und „Unbekanntes Konto" für einen Anmeldeversuch mit unbekannter Adresse.
@@ -124,7 +126,7 @@ Die Datei hat unabhängig von Ihrer Sprache immer dasselbe Format, damit ein Wer
 - Datumsangaben nach ISO 8601, in UTC (zum Beispiel `2026-10-09T14:32:05.000Z`);
 - die Spalten `before` und `after` als kompaktes JSON.
 
-Um die Datei in Excel mit einem anderen Listentrennzeichen zu öffnen, etwa bei einer deutschen oder französischen Installation, öffnen Sie sie nicht per Doppelklick. Verwenden Sie **Daten > Aus Text/CSV**, wählen Sie UTF-8 als Dateiursprung und das Komma als Trennzeichen.
+Verwendet Excel auf Ihrem Rechner das Semikolon als Listentrennzeichen (üblich bei deutschen oder französischen Regionaleinstellungen), öffnen Sie die Datei nicht per Doppelklick. Verwenden Sie **Daten > Aus Text/CSV**, wählen Sie UTF-8 als Dateiursprung und das Komma als Trennzeichen.
 
 ### Wer was sehen kann
 
@@ -538,12 +540,12 @@ Die Einrichtungsschritte für die Entra-App-Registrierung finden Sie unter [Micr
 
 ### Anmeldelimits
 
-KANAP begrenzt wiederholte Anmeldeanfragen von derselben Rechneradresse:
+KANAP begrenzt wiederholte Anmeldeanfragen von derselben IP-Adresse:
 
 - **Anmeldung mit Passwort**: 5 Versuche pro Minute.
 - **Anmeldung mit Microsoft**: 60 Anfragen pro Minute. Das Limit ist höher, weil die Beschäftigten einer Organisation KANAP oft über dieselbe ausgehende Adresse erreichen.
 
-Ist das Limit erreicht, wartet die Person eine Minute und versucht es erneut. Hinter einem Reverse Proxy folgt die Zählung der tatsächlichen Adresse jeder Person, sofern der Proxy sie weitergibt. Erfolgreiche, fehlgeschlagene und abgelehnte Versuche erscheinen im [Audit-Protokoll](#audit-protokoll).
+Ist das Limit erreicht, wartet die Person eine Minute und versucht es erneut. Hinter einem Reverse Proxy zählt KANAP die IP-Adresse jeder Person, sofern der Proxy sie weitergibt. Anmeldungen und fehlgeschlagene Anmeldungen erscheinen im [Audit-Protokoll](#audit-protokoll). Anfragen, die das Limit stoppt, werden nicht aufgezeichnet.
 
 ---
 

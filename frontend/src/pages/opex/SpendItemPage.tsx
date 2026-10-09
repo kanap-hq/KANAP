@@ -12,7 +12,7 @@ import { isReportView, useListFilters, writeListSnapshot } from '../../hooks/use
 import { STATUS_SCOPE_PARAM } from '../../utils/statusScopeParams';
 import { compactListSearchCached } from '../../lib/listContext';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
-import { useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
+import { isHiddenAxis, useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import { dimensionFieldPredicate, explicitSort, filtersStringOnShownColumns } from '../../components/finance/amountColumns';
 import useAutosave, { autosaveErrorMessage, useAutosaveRegistry } from '../../hooks/useAutosave';
 import { sendPatchBuffer, useSharedPatchBuffer } from '../../hooks/patchBuffer';
@@ -391,7 +391,7 @@ export default function SpendItemPage() {
   const budgetColumns = useBudgetColumns();
   // The list builds a column for each enabled dimension besides the default one; a sort or filter
   // on another dimension falls back there, and here too.
-  const analyticsAxes = useAnalyticsAxes();
+  const analyticsAxes = useAnalyticsAxes({ scope: 'opex' });
   const isListField = React.useMemo(
     () => dimensionFieldPredicate(analyticsAxes.enabled.filter((axis) => !axis.is_default).map((axis) => axis.id)),
     [analyticsAxes],
@@ -875,8 +875,10 @@ export default function SpendItemPage() {
           : {}),
         owner_it_id: toNull(createForm.owner_it_id),
         owner_business_id: toNull(createForm.owner_business_id),
-        // Only the dimensions given a value: the others stay empty on the new line.
-        analytics_values: Object.fromEntries(Object.entries(createForm.analytics_values).filter(([, id]) => !!id)),
+        // Only the dimensions given a value: the others stay empty on the new line. A value picked on a
+        // dimension since disabled or limited to the other type is no longer shown, and is not sent.
+        analytics_values: Object.fromEntries(Object.entries(createForm.analytics_values)
+          .filter(([axisId, id]) => !!id && !isHiddenAxis(analyticsAxes, axisId))),
         cost_center_id: toNull(createForm.cost_center_id),
         run_build: toNull(createForm.run_build),
         notes: toNull(createForm.notes),
@@ -893,7 +895,7 @@ export default function SpendItemPage() {
     } finally {
       setCreateSubmitting(false);
     }
-  }, [buildListContextParams, createForm, createSubmitting, navigate, queryClient, t]);
+  }, [analyticsAxes, buildListContextParams, createForm, createSubmitting, navigate, queryClient, t]);
 
   // ----- Status lifecycle handlers -----
   const handleStatusChange = (next: StatusValue) => {

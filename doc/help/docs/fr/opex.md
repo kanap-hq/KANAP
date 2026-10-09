@@ -21,7 +21,7 @@ L'espace de travail s'ouvre en mode création, avec le panneau **Propriétés** 
   - **Fournisseur** : À qui vous payez. Lié à vos fournisseurs dans les données de référence
   - **Centre de coûts** : Qui porte la dépense. Voir [Centres de coûts](cost-centers.md). Lorsque la société payeuse est encore vide, choisir un centre de coûts la remplit avec la société du centre de coûts
   - **Run ou build** : **Run** pour une dépense qui maintient les services existants, **Build** pour une dépense qui les crée ou les fait évoluer
-  - **Dimensions analytiques** : Un champ par dimension, à son nom, pour des regroupements personnalisés dans les rapports (ex. : « Licenses » sur Nature). La dimension par défaut s'affiche comme **Dimension analytique** tant qu'elle n'est pas renommée. Voir [Dimensions analytiques](analytics.md)
+  - **Dimensions analytiques** : Un champ par dimension utilisée pour les lignes OPEX, à son nom, pour des regroupements personnalisés dans les rapports (ex. : « Licenses » sur Nature). La dimension par défaut s'affiche comme **Dimension analytique** tant qu'elle n'est pas renommée. Voir [Dimensions analytiques](analytics.md)
   - **Fin de validité** : La date à laquelle cette dépense s'arrête. Laissez-la vide s'il n'y a pas de fin. Après cette date, le poste est désactivé et les années suivantes ne comptent plus dans les vues budgétaires
   - **Responsable IT** / **Responsable métier** : Qui est en charge
   - **Description** et **Notes** : Texte libre dans l'onglet Vue d'ensemble
@@ -60,7 +60,7 @@ La liste OPEX (dans **Gestion budgétaire > OPEX**) est votre vue principale pou
   - **Début effectif** : Date de début
   - **Fin de validité** : Date à laquelle le poste s'arrête (vide signifie sans fin)
   - **Responsable IT** / **Responsable métier** : Utilisateurs responsables
-  - **Dimensions analytiques** : Une colonne par dimension activée, à son nom, avec la valeur du poste. La colonne de la dimension par défaut vient en premier (**Dimension analytique** tant qu'elle n'est pas renommée), puis les autres dimensions dans leur ordre
+  - **Dimensions analytiques** : Une colonne par dimension activée utilisée pour les lignes OPEX, à son nom, avec la valeur du poste. La colonne de la dimension par défaut vient en premier (**Dimension analytique** tant qu'elle n'est pas renommée), puis les autres dimensions dans leur ordre
   - **Centre de coûts** : Le code et le nom du centre de coûts. Survolez-le pour voir son chemin complet dans l'arbre ; cliquez dessus pour ouvrir le centre de coûts
   - **Responsable budgétaire** : Le responsable budgétaire du centre de coûts du poste. Il est déduit du centre de coûts et non enregistré sur le poste : changez le responsable budgétaire d'un centre de coûts et tous ses postes suivent
   - **Run ou build** : **Run** ou **Build**
@@ -170,8 +170,9 @@ L'onglet Vue d'ensemble contient les champs de texte libre et les tâches du pos
 **Run ou build** : **Run**, **Build** ou **Non défini**. Utilisez-le pour répartir le budget entre le maintien des services et leur évolution.
 
 **Dimensions analytiques** :
-  - Chaque dimension activée a son propre champ, au nom de la dimension, dans l'ordre des dimensions. Choisissez une valeur ou videz le champ ; la modification s'enregistre aussitôt
+  - Chaque dimension activée utilisée pour les lignes OPEX a son propre champ, au nom de la dimension, dans l'ordre des dimensions. Une dimension réglée sur **CAPEX uniquement** n'en a pas, et la valeur qu'un poste y porte reste masquée. Choisissez une valeur ou videz le champ ; la modification s'enregistre aussitôt
   - Chaque champ liste les valeurs activées de sa dimension. Une valeur désactivée reste sur les postes qui l'ont déjà, et ne peut pas être choisie pour un autre poste
+  - Une valeur utilisée pour les lignes CAPEX uniquement n'est pas proposée, et son choix est refusé. Un poste qui l'a déjà la garde et reste modifiable. Voir [Valeurs OPEX ou CAPEX](analytics.md#valeurs-opex-ou-capex)
   - Le champ ne peut pas créer de valeur : créez-la dans [Dimensions analytiques](analytics.md), ou laissez un import CSV la créer
   - Si les dimensions ne peuvent pas être chargées, une ligne remplace ces champs : « Les dimensions n'ont pas pu être chargées. »
 

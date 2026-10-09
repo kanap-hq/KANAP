@@ -37,6 +37,7 @@ const ENTITY_TYPE_LABELS: Record<string, string> = {
   interfaces: 'Interfaces',
   locations: 'Locations',
   contracts: 'Contracts',
+  spend_items: 'Opex',
   capex_items: 'Capex',
   incidents: 'Incidents',
   companies: 'Companies',

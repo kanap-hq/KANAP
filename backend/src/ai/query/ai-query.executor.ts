@@ -54,7 +54,7 @@ import {
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { analyticsAxisFields, resolveAiEntityRegistry } from './registries';
 import { budgetFteFields } from './registries/budget-amount-fields';
-import { analyticsAxisLabel, AnalyticsAxisInfo, loadAnalyticsAxes, parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
+import { analyticsAxisLabel, AnalyticsAxisInfo, axisAppliesTo, loadAnalyticsAxes, parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
 import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 
 function toIso(value: Date | string | null | undefined): string | null {
@@ -73,6 +73,8 @@ function buildRef(
   if (entityType === 'tasks') return `T-${itemNumber}`;
   if (entityType === 'documents') return `DOC-${itemNumber}`;
   if (entityType === 'incidents') return `INC-${itemNumber}`;
+  if (entityType === 'spend_items') return `OPX-${itemNumber}`;
+  if (entityType === 'capex_items') return `CPX-${itemNumber}`;
   return null;
 }
 
@@ -621,6 +623,7 @@ export class AiQueryExecutor {
       ?? ([row.supplier_name, row.paying_company_name, row.account_display].filter(Boolean).join(' | ') || null);
     return toEntitySummary('spend_items', {
       id: row.id,
+      item_number: row.item_number ?? null,
       label: row.product_name || 'Untitled spend item',
       status: row.status ?? null,
       summary,
@@ -639,6 +642,7 @@ export class AiQueryExecutor {
       ?? ([row.company_name, row.ppe_type, row.investment_type].filter(Boolean).join(' | ') || null);
     return toEntitySummary('capex_items', {
       id: row.id,
+      item_number: row.item_number ?? null,
       label: row.description || 'Untitled CAPEX item',
       status: row.status ?? null,
       summary,
@@ -704,6 +708,7 @@ export class AiQueryExecutor {
       metadata: {
         axis: axis ? analyticsAxisLabel(axis) : null,
         axis_code: axis ? axis.code : null,
+        applies_to: scalar(row.applies_to),
       },
     });
   }
@@ -711,6 +716,19 @@ export class AiQueryExecutor {
   private async analyticsAxesById(context: AiExecutionContextWithManager): Promise<Map<string, AnalyticsAxisInfo>> {
     const axes = await loadAnalyticsAxes(context.manager, context.tenantId);
     return new Map(axes.map((axis) => [axis.id, axis]));
+  }
+
+  /**
+   * A line's `analytics_values` (the detail endpoint returns every value it holds) without
+   * the values on dimensions of the other line type: kept in the database, hidden everywhere.
+   */
+  private async withoutHiddenAnalyticsValues(context: AiExecutionContextWithManager, row: any, scope: 'opex' | 'capex'): Promise<void> {
+    if (!Array.isArray(row?.analytics_values) || row.analytics_values.length === 0) return;
+    const axes = await this.analyticsAxesById(context);
+    row.analytics_values = row.analytics_values.filter((value: { axis_id: string }) => {
+      const axis = axes.get(value.axis_id);
+      return !axis || axisAppliesTo(axis, scope);
+    });
   }
 
   private mapBusinessProcess(row: any): AiEntitySummaryDto {
@@ -1554,7 +1572,8 @@ export class AiQueryExecutor {
   ): Promise<string> {
     const value = String(rawId || '').trim();
     if (!value) return value;
-    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) {
+    // Any uuid shape (not only v1-v5): an unmatched one would now throw below.
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
       return value;
     }
     if (entityType === 'documents') {
@@ -1587,7 +1606,9 @@ export class AiQueryExecutor {
     );
     if (exact) return exact.id;
     if (result.items.length === 1) return result.items[0].id;
-    return value;
+    // Not a uuid and nothing matched: the services would cast it to uuid and
+    // fail in Postgres, so answer with a plain "not found" instead.
+    throw new NotFoundException(`No ${entityType} record matches "${value}". Search for it first, then use its id or reference.`);
   }
 
   private toDetailResult(
@@ -2068,6 +2089,7 @@ export class AiQueryExecutor {
     if (entityType === 'spend_items') {
       const row: any = await this.spendItems.get(entityId, { manager: context.manager });
       if (row.tenant_id && row.tenant_id !== context.tenantId) throw new NotFoundException('Spend item not found.');
+      await this.withoutHiddenAnalyticsValues(context, row, 'opex');
       const registry = await resolveAiEntityRegistry(context, entityType);
       Object.assign(row, await this.loadSpendItemDeepDetail(context, entityId, registry));
       return this.toDetailResult(this.mapSpendItem(row, registry), row);
@@ -2078,6 +2100,7 @@ export class AiQueryExecutor {
       if (row.tenant_id && row.tenant_id !== context.tenantId) throw new NotFoundException('CAPEX item not found.');
       // The id, not the reference the caller may have given (`get` accepts both).
       const capexItemId = row.id as string;
+      await this.withoutHiddenAnalyticsValues(context, row, 'capex');
       const registry = await resolveAiEntityRegistry(context, entityType);
       Object.assign(row, await this.loadCapexItemDeepDetail(context, capexItemId, registry));
       row.links = await this.capexItems.listLinks(capexItemId, { manager: context.manager }).catch(() => []);

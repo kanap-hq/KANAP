@@ -11,6 +11,8 @@ import { deriveStatusFromDisabledAt, StatusState } from '../common/status';
 import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/status-filter';
 import { AnalyticsCategory } from './analytics-category.entity';
 import { analyticsAxisInSentence, analyticsAxisSubject, isAxisActive, resolveDefaultAxisId } from './analytics-axes.util';
+import { normalizeAppliesTo } from './analytics-axes.service';
+import { AxisAppliesTo } from './analytics-axis.entity';
 import {
   AnalyticsCallOptions,
   AnalyticsContext,
@@ -31,6 +33,8 @@ export interface StoredAnalyticsCategory {
   axis_id: string;
   name: string;
   description: string | null;
+  /** OPEX lines only, CAPEX lines only, or both (null). */
+  applies_to: AxisAppliesTo | null;
   status: StatusState;
   disabled_at: Date | null;
   created_at: Date;
@@ -41,6 +45,7 @@ export interface AnalyticsCategoryValues {
   axis_id: string;
   name: string;
   description: string | null;
+  applies_to: AxisAppliesTo | null;
   status: StatusState;
   disabled_at: Date | null;
 }
@@ -59,6 +64,7 @@ export interface AnalyticsAxisRef {
   code: string;
   name: string | null;
   is_default: boolean;
+  applies_to: AxisAppliesTo | null;
   status: string;
   disabled_at: Date | string | null;
 }
@@ -67,15 +73,17 @@ export interface AnalyticsCategoryInput {
   axis_id?: unknown;
   name?: unknown;
   description?: unknown;
+  applies_to?: unknown;
   status?: unknown;
   disabled_at?: unknown;
 }
 
-const SORT_FIELDS = new Set(['name', 'description', 'status', 'created_at', 'updated_at', 'disabled_at']);
+const SORT_FIELDS = new Set(['name', 'description', 'applies_to', 'status', 'created_at', 'updated_at', 'disabled_at']);
 // Grid and AI filter fields and the SQL they compile to (the dimension label as the AI registry shows it).
 const FILTER_EXPRESSIONS: Record<string, string> = {
   name: 'cat.name',
   description: 'cat.description',
+  applies_to: 'cat.applies_to',
   axis_code: 'ax.code',
   axis_name: `COALESCE(NULLIF(BTRIM(ax.name), ''), 'Analytics dimension')`,
 };
@@ -85,9 +93,32 @@ export function categoryValuesEqual(stored: StoredAnalyticsCategory, next: Analy
   return stored.axis_id === next.axis_id
     && stored.name === next.name
     && (stored.description ?? null) === next.description
+    && (stored.applies_to ?? null) === next.applies_to
     // From the stored end of validity: the stored status lags until the hourly sync once that date passes.
     && deriveStatusFromDisabledAt(stored.disabled_at) === next.status
     && sameInstant(stored.disabled_at, next.disabled_at);
+}
+
+/**
+ * "The Nature de coût dimension is for OPEX lines only.": a value cannot be restricted to the line
+ * type its dimension excludes. Null when the value fits its dimension.
+ */
+export function valueAppliesToConflict(
+  axis: { name: string | null; applies_to?: AxisAppliesTo | null },
+  appliesTo: AxisAppliesTo | null,
+): string | null {
+  if (appliesTo === null || axis.applies_to == null || axis.applies_to === appliesTo) return null;
+  return `${analyticsAxisSubject(axis)} is for ${axis.applies_to.toUpperCase()} lines only.`;
+}
+
+/**
+ * The grid's set filter on `applies_to`: a blank value ('') means "OPEX and CAPEX", stored as NULL,
+ * which the set filter matches through a null value.
+ */
+function withAppliesToBlanks<T>(filters: T): T {
+  const model = (filters as any)?.applies_to;
+  if (!model || model.filterType !== 'set' || !Array.isArray(model.values)) return filters;
+  return { ...filters, applies_to: { ...model, values: model.values.map((value: unknown) => (value === '' ? null : value)) } };
 }
 
 export function duplicateValueMessage(name: string, axis: { name: string | null }): string {
@@ -156,6 +187,7 @@ export class AnalyticsCategoriesService {
       axis_id: axis.id,
       name,
       description: normalizeAnalyticsDescription(body?.description),
+      applies_to: normalizeAppliesTo(body?.applies_to),
       status: lifecycle.status,
       disabled_at: lifecycle.disabled_at,
     };
@@ -179,6 +211,8 @@ export class AnalyticsCategoriesService {
       axis_id: existing.axis_id,
       name: has('name') ? normalizeAnalyticsName(body.name) : existing.name,
       description: has('description') ? normalizeAnalyticsDescription(body.description) : existing.description ?? null,
+      // PATCH: null clears it (both), absent keeps it.
+      applies_to: has('applies_to') ? normalizeAppliesTo(body.applies_to) : existing.applies_to ?? null,
       status: lifecycle.status,
       disabled_at: lifecycle.disabled_at,
     };
@@ -278,7 +312,7 @@ export class AnalyticsCategoriesService {
   async loadAxis(ctx: AnalyticsContext, axisId: string): Promise<AnalyticsAxisRef | undefined> {
     if (!isUUID(String(axisId))) return undefined;
     const [row] = await ctx.manager.query(
-      `SELECT id, code, name, is_default, status, disabled_at FROM analytics_axes WHERE tenant_id = $1 AND id = $2::uuid`,
+      `SELECT id, code, name, is_default, applies_to, status, disabled_at FROM analytics_axes WHERE tenant_id = $1 AND id = $2::uuid`,
       [ctx.tenantId, axisId],
     );
     return row;
@@ -297,32 +331,54 @@ export class AnalyticsCategoriesService {
     return axis;
   }
 
-  /** Inserts (existing = null) or updates one value and writes its audit row. */
+  /**
+   * Inserts (existing = null) or updates one value and writes its audit row. Any write of a
+   * restriction to one line type first locks the dimension FOR SHARE and checks it against the
+   * dimension's own: a concurrent narrowing of the dimension (FOR UPDATE) then either committed
+   * first and is seen here, or waits and counts this value. Also when the restriction looks
+   * unchanged: `existing` may be an unlocked snapshot (the CSV import), so a transaction that
+   * cleared the value and narrowed the dimension meanwhile is only seen under the lock.
+   */
   async persist(
     ctx: AnalyticsContext,
     existing: StoredAnalyticsCategory | null,
     values: AnalyticsCategoryValues,
     axis: { name: string | null },
   ): Promise<StoredAnalyticsCategory> {
+    if (values.applies_to !== null) {
+      const [locked] = await ctx.manager.query(
+        `SELECT name, applies_to FROM analytics_axes WHERE tenant_id = $1 AND id = $2::uuid FOR SHARE`,
+        [ctx.tenantId, values.axis_id],
+      );
+      const conflict = locked ? valueAppliesToConflict(locked, values.applies_to) : null;
+      if (conflict) throw analyticsRefusal(conflict, 'applies_to');
+    }
     let saved: StoredAnalyticsCategory | undefined;
     try {
       const rows = existing
         ? await ctx.manager.query(
           `UPDATE analytics_categories
-              SET name = $3, description = $4, status = $5, disabled_at = $6, updated_at = now()
+              SET name = $3, description = $4, status = $5, disabled_at = $6, applies_to = $7, updated_at = now()
             WHERE tenant_id = $1 AND id = $2
         RETURNING *`,
-          [ctx.tenantId, existing.id, values.name, values.description, values.status, values.disabled_at],
+          [ctx.tenantId, existing.id, values.name, values.description, values.status, values.disabled_at, values.applies_to],
         )
         : await ctx.manager.query(
-          `INSERT INTO analytics_categories (tenant_id, axis_id, name, description, status, disabled_at)
-           VALUES ($1, $2, $3, $4, $5, $6)
+          `INSERT INTO analytics_categories (tenant_id, axis_id, name, description, status, disabled_at, applies_to)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING *`,
-          [ctx.tenantId, values.axis_id, values.name, values.description, values.status, values.disabled_at],
+          [ctx.tenantId, values.axis_id, values.name, values.description, values.status, values.disabled_at, values.applies_to],
         );
       saved = firstReturnedRow<StoredAnalyticsCategory>(rows);
     } catch (err: any) {
       if (err?.code === '23505') throw analyticsRefusal(duplicateValueMessage(values.name, axis), 'name');
+      if (err?.code === '23514') {
+        // The CHECK constraint mirrors `normalizeAppliesTo`; this only fires on a rule the service missed.
+        if (err?.constraint === 'analytics_categories_applies_to_check') {
+          throw analyticsRefusal("Used for must be 'opex', 'capex' or empty.", 'applies_to');
+        }
+        throw analyticsRefusal('This value cannot be saved as it is.');
+      }
       throw err;
     }
     if (!saved) throw new NotFoundException('Analytics value not found.');
@@ -382,7 +438,8 @@ export class AnalyticsCategoriesService {
   /** The list query: tenant, dimension, lifecycle scope, quick search and grid filters. */
   private buildQuery(ctx: AnalyticsContext, query: any) {
     const { status, q, filters } = parsePagination(query);
-    const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
+    const { status: statusFromAg, matchNone, sanitizedFilters: extracted } = extractStatusFilterFromAgModel(filters);
+    const sanitizedFilters = withAppliesToBlanks(extracted);
     const effectiveStatus = status ?? statusFromAg;
     const includeDisabled = ['1', 'true'].includes(String(query?.includeDisabled ?? '').toLowerCase());
 

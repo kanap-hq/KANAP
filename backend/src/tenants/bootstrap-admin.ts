@@ -26,6 +26,12 @@ export type BootstrapAdministratorParams = {
   checkPassword: boolean;
   /** Prefix of the log lines, for example `[on-prem] `. */
   logPrefix?: string;
+  /**
+   * Print the line of a run that changed nothing (account left as it was, tenant not found).
+   * Default true; main.ts passes the lead process only, so with several API processes it prints
+   * once. A creation or a restore is always printed, by the process that made it.
+   */
+  logUnchanged?: boolean;
 };
 
 /**
@@ -71,6 +77,7 @@ export async function ensureBootstrapAdministrator(
   params: BootstrapAdministratorParams,
 ): Promise<BootstrapAdministratorResult> {
   const prefix = params.logPrefix ?? '';
+  const logUnchanged = params.logUnchanged ?? true;
   const runner = dataSource.createQueryRunner();
   await runner.connect();
   await runner.startTransaction();
@@ -79,7 +86,7 @@ export async function ensureBootstrapAdministrator(
     const tenantId = tenant?.id as string | undefined;
     if (!tenantId) {
       // eslint-disable-next-line no-console
-      console.warn(`${prefix}Admin seed skipped: tenant '${params.tenantSlug}' not found`);
+      if (logUnchanged) console.warn(`${prefix}Admin seed skipped: tenant '${params.tenantSlug}' not found`);
       await runner.rollbackTransaction();
       return { outcome: 'tenant-missing', warnings: [] };
     }
@@ -101,7 +108,7 @@ export async function ensureBootstrapAdministrator(
     if (hasActiveAdministrator) {
       outcome = 'unchanged';
       // eslint-disable-next-line no-console
-      console.log(
+      if (logUnchanged) console.log(
         `${prefix}Administrator account ${params.email} ${account ? 'left unchanged' : 'not created'}: the workspace has an active administrator`,
       );
     } else if (!account) {

@@ -61,16 +61,18 @@ La page Journal d'audit conserve l'historique des modifications de données et d
 | **Échec de connexion** | Une connexion est refusée. Le **motif** en donne la raison, par exemple mot de passe incorrect, compte désactivé ou aucun compte avec cette adresse |
 | **Déconnexion** | Quelqu'un se déconnecte |
 | **Renouvellement de session refusé** | La session n'a pas pu être renouvelée, par exemple parce qu'elle a expiré |
-| **Réinitialisation du mot de passe demandée** / **Réinitialisation du mot de passe terminée** | Quelqu'un demande un lien de réinitialisation, puis quand la réinitialisation est terminée |
+| **Réinitialisation du mot de passe demandée** / **Réinitialisation du mot de passe terminée** | Quelqu'un demande un lien de réinitialisation, puis définit un nouveau mot de passe avec ce lien |
 | **Connexion avec Microsoft** / **Échec de connexion avec Microsoft** | Une connexion via Microsoft Entra ID réussit ou échoue |
 
 **Exports** (table **Export**) : exports CSV, documents et rapports produits par le serveur. La ligne indique ce qui a été exporté et par qui. L'export du journal d'audit est lui aussi enregistré.
 
-Les lignes de connexion, de session et d'export conservent aussi l'**adresse du poste** d'où venait la demande et le **navigateur** utilisé. Ouvrez la ligne pour les lire dans le panneau **Après**. Derrière un reverse proxy, l'adresse enregistrée est celle de la personne, tant que le proxy la transmet. Installations on-premise : consultez le guide d'installation. Les mots de passe, les liens de connexion et les jetons ne sont jamais écrits dans le journal. Quand quelqu'un tente de se connecter avec une adresse sans compte, la ligne affiche **Compte inconnu** et ne conserve pas l'adresse saisie.
+Les lignes de connexion, de session et d'export conservent aussi l'**adresse IP** d'où venait la demande et le **navigateur** utilisé. Ouvrez la ligne pour les lire dans le panneau **Après**. Derrière un reverse proxy, c'est l'adresse IP de la personne elle-même, tant que le proxy la transmet (on-premise : voir l'[exemple de reverse proxy](on-premise/installation.md#exemple-de-reverse-proxy-nginx)).
+
+Les mots de passe, les liens de connexion et les jetons ne sont jamais écrits dans le journal. Quand quelqu'un tente de se connecter avec une adresse e-mail sans compte, la ligne affiche **Compte inconnu** et ne conserve pas l'adresse saisie.
 
 ### Durée de conservation
 
-Les événements de connexion et de session sont supprimés après **365 jours**. Les autres entrées (modifications de données, modifications de rôles et exports) ne sont pas concernées par cette règle.
+Les événements de connexion et de session sont supprimés après **365 jours**. Les modifications de données, les modifications de rôles et les exports sont conservés sans limite de durée.
 
 ### Ce que vous pouvez faire
 
@@ -90,7 +92,7 @@ Les événements de connexion et de session sont supprimés après **365 jours**
 
 **Colonnes par défaut** :
 - **Date** : Quand la modification ou l'événement a eu lieu
-- **Table** : Quelle table a été affectée, ou **Connexion et session**, ou la ressource exportée pour les événements de sécurité
+- **Table** : Quelle table a été affectée. Les événements de connexion et de session affichent **Connexion et session**, et un export affiche ce qui a été exporté (par exemple **Fournisseurs**)
 - **Action** : Le type de modification ou d'événement (créer, mettre à jour, supprimer, désactiver, connexion, export, etc.)
 - **Source** : Qui ou quoi a déclenché la modification (utilisateur, système, webhook)
 - **Utilisateur** : Nom de l'utilisateur qui a fait la modification, ou son adresse e-mail s'il n'a pas de nom. Affiche « Système » ou « Webhook » pour les sources non-utilisateur, et « Compte inconnu » pour une tentative de connexion sur une adresse inconnue.
@@ -124,7 +126,7 @@ Le fichier a toujours le même format, quelle que soit votre langue, pour qu'un 
 - dates au format ISO 8601, en UTC (par exemple `2026-10-09T14:32:05.000Z`) ;
 - colonnes `before` et `after` en JSON compact.
 
-Pour ouvrir le fichier dans Excel avec un séparateur de liste différent, comme sur une installation française ou allemande, ne double-cliquez pas dessus. Utilisez **Données > À partir d'un fichier texte/CSV**, choisissez UTF-8 comme origine du fichier et la virgule comme délimiteur.
+Si Excel utilise le point-virgule comme séparateur de liste sur votre poste (fréquent avec les paramètres régionaux français ou allemands), ne double-cliquez pas sur le fichier. Utilisez **Données > À partir d'un fichier texte/CSV**, choisissez UTF-8 comme origine du fichier et la virgule comme délimiteur.
 
 ### Qui peut voir quoi
 
@@ -538,12 +540,12 @@ Les étapes de configuration de l'enregistrement d'application Entra sont décri
 
 ### Limites de connexion
 
-KANAP limite les demandes de connexion répétées depuis la même adresse de poste :
+KANAP limite les demandes de connexion répétées depuis la même adresse IP :
 
 - **Connexion par mot de passe** : 5 tentatives par minute.
 - **Connexion Microsoft** : 60 demandes par minute. La limite est plus haute parce que les collaborateurs d'une même organisation accèdent souvent à KANAP depuis la même adresse sortante.
 
-Une fois la limite atteinte, la personne patiente une minute et réessaie. Derrière un reverse proxy, le décompte suit l'adresse réelle de chaque personne, tant que le proxy la transmet. Les tentatives réussies, échouées et refusées apparaissent dans le [Journal d'audit](#journal-daudit).
+Une fois la limite atteinte, la personne patiente une minute et réessaie. Derrière un reverse proxy, KANAP compte l'adresse IP de chaque personne, tant que le proxy la transmet. Les connexions et les échecs de connexion apparaissent dans le [Journal d'audit](#journal-daudit). Les demandes bloquées par la limite ne sont pas enregistrées.
 
 ---
 

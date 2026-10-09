@@ -27,8 +27,8 @@ vi.mock('../../../components/fields/AccountSelect', () => ({
   ),
 }));
 vi.mock('../../../components/fields/AnalyticsCategorySelect', () => ({
-  default: (p: { axisId: string; label?: string; value: string | null; onChange: (v: string | null) => void }) => (
-    <div data-testid={`analytics-select-${p.axisId}`} data-label={p.label}>
+  default: (p: { axisId: string; label?: string; lineType?: string; value: string | null; onChange: (v: string | null) => void }) => (
+    <div data-testid={`analytics-select-${p.axisId}`} data-label={p.label} data-line-type={p.lineType ?? ''}>
       {p.value ?? ''}
       <button type="button" onClick={() => p.onChange(`value-${p.axisId}`)}>{`pick ${p.axisId}`}</button>
       <button type="button" onClick={() => p.onChange(null)}>{`clear ${p.axisId}`}</button>
@@ -40,7 +40,12 @@ const dimensions = vi.hoisted(() => ({ list: [] as unknown[], isError: false }))
 vi.mock('../../../hooks/useAnalyticsAxes', async (importOriginal) => {
   const mod = await importOriginal<typeof import('../../../hooks/useAnalyticsAxes')>();
   const t = ((key: string) => key) as unknown as Parameters<typeof mod.buildAnalyticsAxes>[1];
-  return { ...mod, useAnalyticsAxes: () => mod.buildAnalyticsAxes(dimensions.list as never, t, true, dimensions.isError) };
+  return {
+    ...mod,
+    useAnalyticsAxes: (options?: { scope?: 'opex' | 'capex' | null }) => (
+      mod.buildAnalyticsAxes(dimensions.list as never, t, true, dimensions.isError, undefined, options?.scope)
+    ),
+  };
 });
 vi.mock('../../../components/fields/UserSelect', () => ({ default: () => null }));
 vi.mock('../../../components/fields/CostCenterSelect', () => ({
@@ -287,6 +292,21 @@ describe('SpendPropertiesDrawer analytics dimensions', () => {
     expect(screen.queryByText('Old')).toBeNull();
     expect(screen.getByTestId('analytics-select-default')).toHaveTextContent('value-1');
     expect(screen.getByTestId('analytics-select-nature')).not.toHaveTextContent('value');
+    // Each select offers only the values OPEX lines may use.
+    expect(selects.map((el) => el.getAttribute('data-line-type'))).toEqual(['opex', 'opex', 'opex']);
+  });
+
+  it.each(['create', 'edit'] as const)('shows no select for a dimension used for CAPEX lines only, even with a held value (%s)', (mode) => {
+    dimensions.list = [
+      ...DIMENSIONS,
+      dimension('investment', 'Investment type', 4, { applies_to: 'capex' }),
+      dimension('licence', 'Licence model', 5, { applies_to: 'opex' }),
+    ];
+    renderDrawer({ mode, analyticsValues: { default: 'value-1', investment: 'value-7' } });
+    expect(screen.getAllByTestId(/^analytics-select-/).map((el) => el.getAttribute('data-testid'))).toEqual([
+      'analytics-select-default', 'analytics-select-nature', 'analytics-select-activity', 'analytics-select-licence',
+    ]);
+    expect(screen.queryByText('Investment type')).toBeNull();
   });
 
   it('names the default dimension once it has a name', () => {

@@ -3,9 +3,10 @@
  * HomePage — full marketing homepage.
  *
  * Assembled from section primitives + content pulled from src/content/home
- * for the current locale. The agentic bands (layers / vision) are optional
- * in HomeContent: locales that have not been retranslated yet simply skip
- * them and render the core sections.
+ * for the current locale. Order follows the description reference: the IT
+ * budget band (`layers`) right after the hero, then "everything links"
+ * (`pillars`), the modules, the enterprise features and the AI band
+ * (`vision`). `layers` and `vision` stay optional in HomeContent.
  */
 
 import BaseLayout from '../layouts/BaseLayout.astro';
@@ -63,10 +64,10 @@ const crossItems = content.crossCutting.items.map((i) => ({
     lead={content.hero.lead}
   >
     <Fragment slot="cta">
-      <a href="https://github.com/kanap-hq/kanap" class="mk-btn mk-btn--primary">
+      <a href={localePath(locale, '/trial/start')} class="mk-btn mk-btn--primary">
         {content.hero.primaryCta}
       </a>
-      <a href={localePath(locale, '/trial/start')} class="mk-btn mk-btn--ghost">
+      <a href="https://github.com/kanap-hq/kanap" class="mk-btn mk-btn--ghost">
         {content.hero.secondaryCta}
       </a>
     </Fragment>
@@ -83,17 +84,8 @@ const crossItems = content.crossCutting.items.map((i) => ({
     </Fragment>
   </Hero>
 
-  <Section tone="sunken">
-    <PillarGrid
-      eyebrow={content.pillars.eyebrow}
-      title={content.pillars.title}
-      pillars={content.pillars.items}
-      columns={3}
-    />
-  </Section>
-
   {content.layers && (
-    <Section tone="default">
+    <Section tone="sunken">
       <PillarGrid
         eyebrow={content.layers.eyebrow}
         title={content.layers.title}
@@ -104,6 +96,15 @@ const crossItems = content.crossCutting.items.map((i) => ({
       <p class="mk-home__layers-outro">{content.layers.outro}</p>
     </Section>
   )}
+
+  <Section tone="default">
+    <PillarGrid
+      eyebrow={content.pillars.eyebrow}
+      title={content.pillars.title}
+      pillars={content.pillars.items}
+      columns={3}
+    />
+  </Section>
 
   <Section tone="sunken">
     <FeatureGrid
@@ -159,9 +160,9 @@ const crossItems = content.crossCutting.items.map((i) => ({
     <CTABand
       title={content.cta.title}
       body={content.cta.body}
-      primaryHref="https://github.com/kanap-hq/kanap"
+      primaryHref={localePath(locale, '/trial/start')}
       primaryLabel={content.cta.primary}
-      secondaryHref={localePath(locale, '/trial/start')}
+      secondaryHref="https://github.com/kanap-hq/kanap"
       secondaryLabel={content.cta.secondary}
     />
   </Section>

@@ -124,9 +124,10 @@ export default function SpendPropertiesDrawer({
     ? t('opex.fields.costCenterCompanyHint', { company: costCenter.company_name ?? '' })
     : undefined;
 
-  // One select per enabled dimension, in dimension order. A disabled dimension shows no select;
-  // its value stays on the line. When the dimensions cannot be loaded, one line says so.
-  const analyticsAxes = useAnalyticsAxes();
+  // One select per enabled dimension that applies to OPEX lines, in dimension order. A disabled
+  // dimension, or one for CAPEX lines only, shows no select; its value stays on the line. When the
+  // dimensions cannot be loaded, one line says so.
+  const analyticsAxes = useAnalyticsAxes({ scope: 'opex' });
 
   return (
     <>
@@ -184,6 +185,7 @@ export default function SpendPropertiesDrawer({
                 axisId={axis.id}
                 label={analyticsAxes.label(axis)}
                 hideLabel
+                lineType="opex"
                 value={analyticsValues[axis.id] ?? null}
                 onChange={(v) => onAnalyticsValueChange(axis.id, v)}
                 disabled={disabled}

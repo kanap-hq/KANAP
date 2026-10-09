@@ -21,7 +21,11 @@ import { itemService } from '../../spend/__tests__/cost-center.fixtures';
 // - `analytics_category` keeps addressing the default dimension after a rename,
 //   a new code and a reorder; its SQL group join reads the link with a tenant
 //   predicate on every join (a stale legacy column is ignored);
-// - the `analytics_categories` entity carries its dimension (`axis`, `axis_code`).
+// - the `analytics_categories` entity carries its dimension (`axis`, `axis_code`)
+//   and the lines a value is for (`applies_to`, also a filter);
+// - a dimension used for one line type only is a field of that type's entity
+//   only; a value a line holds on a dimension of the other type stays out of
+//   the detail.
 
 const KINDS: Kind[] = ['opex', 'capex'];
 const ENTITY: Record<Kind, 'spend_items' | 'capex_items'> = { opex: 'spend_items', capex: 'capex_items' };
@@ -212,6 +216,37 @@ async function testQueryAggregateAndValues(kind: Kind) {
   });
 }
 
+async function testDimensionsFollowLineType(kind: Kind) {
+  await withDimensions(kind, async (runner, seed) => {
+    const ctx = context(runner, seed.tenantId);
+    const other: Kind = kind === 'opex' ? 'capex' : 'opex';
+    const own = await insertAxis(runner, seed.tenantId, 'own', 'Own type', { order: 3 });
+    const recurrence = await insertAxis(runner, seed.tenantId, 'recurrence', 'Recurrence', { order: 4 });
+    await runner.query(`UPDATE analytics_axes SET applies_to = $2 WHERE tenant_id = $1 AND id = $3`, [seed.tenantId, kind, own]);
+    await runner.query(`UPDATE analytics_axes SET applies_to = $2 WHERE tenant_id = $1 AND id = $3`, [seed.tenantId, other, recurrence]);
+    // Alpha holds a value on Recurrence from before it was given to the other type.
+    const monthly = await insertValue(runner, seed.tenantId, recurrence, 'Monthly');
+    await runner.query(
+      `INSERT INTO ${SUMMARY_SCOPES[kind].analyticsLink.table} (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4)`,
+      [seed.tenantId, seed.items.alpha, recurrence, monthly],
+    );
+
+    const fields = async (entity: 'spend_items' | 'capex_items') =>
+      Object.keys((await resolveAiEntityRegistry(ctx, entity)).fields).filter((key) => key.startsWith('analytics'));
+    assert.deepEqual(await fields(ENTITY[kind]), ['analytics_category', 'analytics:nature', 'analytics:own'], `${kind}: the dimensions of its type and of both`);
+    assert.deepEqual(await fields(ENTITY[other]), ['analytics_category', 'analytics:nature', 'analytics:recurrence'], `${other}: the reverse`);
+
+    const query = queryExecutor(kind);
+    const refused: any = await query.execute(ctx, { entity_type: ENTITY[kind], filters: { 'analytics:recurrence': ['Monthly'] } });
+    assert.equal(refused.status, 'invalid_filter', `${kind}: a dimension of the other type is not a field`);
+    const detail: any = await query.executeDetail(ctx, { entity_type: ENTITY[kind], entity_id: seed.items.alpha });
+    assert.equal('analytics:recurrence' in detail.data, false, `${kind}: no hidden dimension key in the detail`);
+    assert.equal('analytics:recurrence' in detail.entity.metadata, false, `${kind}: nor in its metadata`);
+    const held = (detail.data.analytics_values ?? []).map((value: any) => value.axis_code).sort();
+    assert.deepEqual(held, ['archive', 'default', 'nature'], `${kind}: the hidden value stays out of the detail's values`);
+  });
+}
+
 async function testDefaultSurvivesRenameAndReorder(kind: Kind) {
   await withDimensions(kind, async (runner, seed) => {
     await runner.query(
@@ -258,6 +293,20 @@ async function testDefaultSqlJoin(kind: Kind) {
   });
 }
 
+// A listed line and its detail carry the business reference (OPX-n, CPX-n), so
+// the model can name the line it read.
+async function testLinesCarryTheirReference(kind: Kind) {
+  await withDimensions(kind, async (runner, seed) => {
+    const prefix = kind === 'opex' ? 'OPX' : 'CPX';
+    const ctx = context(runner, seed.tenantId);
+    const listed: any = await queryExecutor(kind).execute(ctx, { entity_type: ENTITY[kind] });
+    const refs = Object.fromEntries(listed.items.map((item: any) => [item.label, item.ref]));
+    assert.deepEqual(refs, { 'Alpha line': `${prefix}-1`, 'Bravo line': `${prefix}-2`, 'Charlie line': `${prefix}-3` }, `${kind}: each listed line has its reference`);
+    const detail: any = await queryExecutor(kind).executeDetail(ctx, { entity_type: ENTITY[kind], entity_id: seed.items.bravo });
+    assert.equal(detail.entity.ref, `${prefix}-2`, `${kind}: the detail has the line's reference`);
+  });
+}
+
 async function testCategoriesEntityCarriesDimension() {
   await withDimensions('opex', async (runner, seed) => {
     const ctx = context(runner, seed.tenantId);
@@ -270,10 +319,13 @@ async function testCategoriesEntityCarriesDimension() {
     assert.deepEqual(values.values.axis, ['Analytics dimension', 'Archive', 'Nature'], 'dimension names, the unnamed default under the product label');
     assert.deepEqual(values.values.axis_code, ['archive', 'default', 'nature']);
 
+    await runner.query(`UPDATE analytics_categories SET applies_to = 'opex' WHERE tenant_id = $1 AND name = 'Maintenance'`, [seed.tenantId]);
     const listed: any = await queryExecutor('opex').execute(ctx, { entity_type: 'analytics_categories', sort: { field: 'name', direction: 'asc' } });
-    const metadata = Object.fromEntries(listed.items.map((item: any) => [item.label, [item.metadata.axis, item.metadata.axis_code]]));
-    assert.deepEqual(metadata.Maintenance, ['Nature', 'nature'], 'a value carries its dimension');
-    assert.deepEqual(metadata.Licences, ['Analytics dimension', 'default']);
+    const metadata = Object.fromEntries(listed.items.map((item: any) => [item.label, [item.metadata.axis, item.metadata.axis_code, item.metadata.applies_to]]));
+    assert.deepEqual(metadata.Maintenance, ['Nature', 'nature', 'opex'], 'a value carries its dimension and the lines it is for');
+    assert.deepEqual(metadata.Licences, ['Analytics dimension', 'default', null]);
+    const opexOnly: any = await queryExecutor('opex').execute(ctx, { entity_type: 'analytics_categories', filters: { applies_to: ['opex'] }, sort: { field: 'name', direction: 'asc' } });
+    assert.deepEqual(opexOnly.items.map((item: any) => item.label), ['Maintenance'], 'filtered on applies_to');
 
     const labels = (result: any) => result.items.map((item: any) => item.label);
     const ofNature: any = await queryExecutor('opex').execute(ctx, { entity_type: 'analytics_categories', filters: { axis: ['Nature'] }, sort: { field: 'name', direction: 'asc' } });
@@ -293,11 +345,13 @@ async function testCategoriesEntityCarriesDimension() {
 
 void runSpecs('ai-analytics-axes.integration.spec', [
   ...KINDS.flatMap((kind): Array<[string, () => Promise<void>]> => [
+    [`lines carry their reference (${kind})`, () => testLinesCarryTheirReference(kind)],
     [`resolved registry (${kind})`, () => testResolvedRegistry(kind)],
     [`describe lists the dimensions (${kind})`, () => testDescribeListsDimensions(kind)],
     [`query, aggregate and values on a dimension (${kind})`, () => testQueryAggregateAndValues(kind)],
     [`default survives rename and reorder (${kind})`, () => testDefaultSurvivesRenameAndReorder(kind)],
     [`default SQL group join (${kind})`, () => testDefaultSqlJoin(kind)],
+    [`dimensions follow the line type (${kind})`, () => testDimensionsFollowLineType(kind)],
   ]),
   ['analytics_categories carries its dimension', testCategoriesEntityCarriesDimension],
 ]).catch((err) => {

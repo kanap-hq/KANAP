@@ -19,6 +19,11 @@ import { ITEM_TABLE, itemService, lineBody, refusal, seedCompany } from './cost-
 //   are refused and nothing is written; a disabled current value is kept, and
 //   the unchanged value (or null where there is none) of a disabled dimension
 //   passes as a no-op;
+// - a dimension of the other line type (`applies_to`) follows the disabled
+//   rule with its own message (which wins when both apply); a value the line
+//   already holds there is kept and the detail still returns it;
+// - a value restricted to the other line type (`applies_to`) follows the
+//   disabled value rule with its own message, through both fields;
 // - a value deleted while a line takes it: the save waits for the delete and
 //   is refused with a 400, never a database error (the gate's FOR KEY SHARE);
 // - a change of analytics values alone moves updated_at and is audited with
@@ -266,6 +271,101 @@ async function testDisabledDimensionNoOp(kind: Kind) {
   });
 }
 
+async function testOtherTypeDimension(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const s = await setup(runner, kind);
+    const svc = itemService(kind);
+    const opts = { manager: runner.manager };
+    const other: Kind = kind === 'opex' ? 'capex' : 'opex';
+    const message = `The Recurrence dimension is for ${other.toUpperCase()} lines only. Leave it out.`;
+    const recurrence = await seedAxis(runner, s.tenantId, 'recurrence', 'Recurrence', 3);
+    const monthly = await seedValue(runner, s.tenantId, recurrence, 'Monthly');
+    const yearly = await seedValue(runner, s.tenantId, recurrence, 'Yearly');
+    // A line holding a value from before the dimension was given to the other type.
+    const holder = await svc.create(lineBody(kind, 'Holds monthly', { paying_company_id: s.companyId, analytics_values: { [recurrence]: monthly } }), undefined, opts);
+    await runner.query(`UPDATE analytics_axes SET applies_to = $2 WHERE id = $1`, [recurrence, other]);
+    // The same type still writes it.
+    await runner.query(`UPDATE analytics_axes SET applies_to = $2 WHERE id = $1`, [s.nature, kind]);
+    await svc.update(holder.id, { analytics_values: { [s.nature]: s.hardware } }, undefined, opts);
+
+    // Refused on create, as a value or a change; nothing written.
+    const linksBefore = await linkCount(runner, kind, s.tenantId);
+    const onCreate = await refusal(runner, () => svc.create(lineBody(kind, 'Refused', { paying_company_id: s.companyId, analytics_values: { [recurrence]: monthly } }), undefined, opts));
+    assert.equal(onCreate.message, message, `${kind}: refused on create`);
+    assert.equal((onCreate as any).getStatus?.(), 400);
+    for (const [label, value] of [['changed', yearly], ['cleared', null]] as const) {
+      const refused = await refusal(runner, () => svc.update(holder.id, { analytics_values: { [recurrence]: value } }, undefined, opts));
+      assert.equal(refused.message, message, `${kind}: ${label} refused`);
+    }
+    assert.equal(await linkCount(runner, kind, s.tenantId), linksBefore, `${kind}: nothing written`);
+
+    // Resending the held value passes; the other dimensions of the body are written; the value stays.
+    await svc.update(holder.id, { analytics_values: { [recurrence]: monthly, [s.main]: s.licences } }, undefined, opts);
+    assert.deepEqual(await links(runner, kind, holder.id), { [recurrence]: monthly, [s.nature]: s.hardware, [s.main]: s.licences }, `${kind}: held value kept`);
+    const detail = await svc.get(holder.id, opts);
+    assert.ok(detail.analytics_values.some((value: any) => value.axis_id === recurrence && value.category_id === monthly), `${kind}: the detail still returns it`);
+
+    // Null without a held value passes, on create and update.
+    const bare = await svc.create(lineBody(kind, 'Bare', { paying_company_id: s.companyId, analytics_values: { [recurrence]: null } }), undefined, opts);
+    await svc.update(bare.id, { analytics_values: { [recurrence]: null } }, undefined, opts);
+    assert.deepEqual(await links(runner, kind, bare.id), {}, `${kind}: null where there is none is a no-op`);
+    const onBare = await refusal(runner, () => svc.update(bare.id, { analytics_values: { [recurrence]: monthly } }, undefined, opts));
+    assert.equal(onBare.message, message);
+
+    // Disabled and of the other type: the other-type message wins.
+    await runner.query(`UPDATE analytics_axes SET status = 'disabled', disabled_at = now() - interval '1 day' WHERE id = $1`, [recurrence]);
+    const both = await refusal(runner, () => svc.update(holder.id, { analytics_values: { [recurrence]: yearly } }, undefined, opts));
+    assert.equal(both.message, message, `${kind}: the applicability message wins`);
+    await svc.update(holder.id, { analytics_values: { [recurrence]: monthly } }, undefined, opts);
+  });
+}
+
+async function testOtherTypeValue(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const s = await setup(runner, kind);
+    const svc = itemService(kind);
+    const opts = { manager: runner.manager };
+    const other: Kind = kind === 'opex' ? 'capex' : 'opex';
+    const message = (name: string) => `${name} is for ${other.toUpperCase()} lines only. Choose a value for ${kind.toUpperCase()} lines.`;
+    // Lines holding the values from before they were given to the other type.
+    const holder = await svc.create(lineBody(kind, 'Holds hardware', {
+      paying_company_id: s.companyId,
+      analytics_values: { [s.nature]: s.hardware, [s.main]: s.licences },
+    }), undefined, opts);
+    await runner.query(`UPDATE analytics_categories SET applies_to = $2 WHERE id = ANY($1::uuid[])`, [[s.hardware, s.licences], other]);
+    // A value restricted to the line's own type is accepted.
+    await runner.query(`UPDATE analytics_categories SET applies_to = $2 WHERE id = $1`, [s.otherMain, kind]);
+
+    // Refused on create and as a change, through analytics_values and the legacy field; nothing written.
+    const linksBefore = await linkCount(runner, kind, s.tenantId);
+    const onCreate = await refusal(runner, () => svc.create(lineBody(kind, 'Refused', { paying_company_id: s.companyId, analytics_values: { [s.nature]: s.hardware } }), undefined, opts));
+    assert.equal(onCreate.message, message('Hardware'), `${kind}: refused on create`);
+    assert.equal((onCreate as any).getStatus?.(), 400);
+    const legacyCreate = await refusal(runner, () => svc.create(lineBody(kind, 'Refused legacy', { paying_company_id: s.companyId, analytics_category_id: s.licences }), undefined, opts));
+    assert.equal(legacyCreate.message, message('Licences'), `${kind}: refused on create, legacy field`);
+    const bare = await svc.create(lineBody(kind, 'Bare', { paying_company_id: s.companyId }), undefined, opts);
+    const onChange = await refusal(runner, () => svc.update(bare.id, { analytics_values: { [s.nature]: s.hardware } }, undefined, opts));
+    assert.equal(onChange.message, message('Hardware'), `${kind}: refused as a change`);
+    const legacyChange = await refusal(runner, () => svc.update(bare.id, { analytics_category_id: s.licences }, undefined, opts));
+    assert.equal(legacyChange.message, message('Licences'), `${kind}: refused as a change, legacy field`);
+    assert.equal(await linkCount(runner, kind, s.tenantId), linksBefore, `${kind}: nothing written`);
+
+    // The current value stays through any update, repeated or not, through both fields; the detail returns it.
+    await svc.update(holder.id, { notes: 'edited' }, undefined, opts);
+    await svc.update(holder.id, { analytics_values: { [s.nature]: s.hardware }, analytics_category_id: s.licences, notes: 'again' }, undefined, opts);
+    assert.deepEqual(await links(runner, kind, holder.id), { [s.nature]: s.hardware, [s.main]: s.licences }, `${kind}: held values kept`);
+    const detail = await svc.get(holder.id, opts);
+    assert.equal(detail.analytics_category_id, s.licences, `${kind}: the detail still returns it`);
+
+    // A value for the line's own type is accepted; clearing a held value of the other type is allowed.
+    await svc.update(holder.id, { analytics_category_id: s.otherMain, analytics_values: { [s.nature]: null } }, undefined, opts);
+    assert.deepEqual(await links(runner, kind, holder.id), { [s.main]: s.otherMain }, `${kind}: own type written, other type cleared`);
+    // Once cleared it cannot come back.
+    const back = await refusal(runner, () => svc.update(holder.id, { analytics_values: { [s.nature]: s.hardware } }, undefined, opts));
+    assert.equal(back.message, message('Hardware'));
+  });
+}
+
 async function testChangeAloneIsAnEdit(kind: Kind) {
   await inRolledBackTransaction(async (runner) => {
     const s = await setup(runner, kind);
@@ -387,6 +487,8 @@ void runSpecs('item-analytics.integration.spec', KINDS.flatMap((kind): Array<[st
   [`refusals write nothing (${kind})`, () => testRefusals(kind)],
   [`disabled value kept as current (${kind})`, () => testDisabledValueKeptAsCurrent(kind)],
   [`disabled dimension: no-op passes, change refused (${kind})`, () => testDisabledDimensionNoOp(kind)],
+  [`dimension of the other line type: no-op passes, change refused (${kind})`, () => testOtherTypeDimension(kind)],
+  [`value of the other line type: kept as current, refused as new (${kind})`, () => testOtherTypeValue(kind)],
   [`a change of values alone is an edit (${kind})`, () => testChangeAloneIsAnEdit(kind)],
   [`the default dimension is an identity (${kind})`, () => testDefaultIsAnIdentity(kind)],
   [`legacy list reads the links (${kind})`, () => testLegacyListReadsTheLinks(kind)],

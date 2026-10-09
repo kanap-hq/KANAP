@@ -71,6 +71,12 @@
       "readOnlyAccess": "Vous devez disposer d'un accès gestionnaire pour modifier {{entity}}.",
       "metricsFrozen": "Les indicateurs pour {{year}} sont gelés. Un administrateur budgétaire peut les dégeler.",
       "metricsYearHint": "Chaque valeur est enregistrée pour l'année sélectionnée quand vous quittez son champ. Changez d'année pour consulter les données passées."
+    },
+    "lineTypeUsage": {
+      "label": "Utilisé pour",
+      "both": "OPEX et CAPEX",
+      "opex": "OPEX uniquement",
+      "capex": "CAPEX uniquement"
     }
   },
   "companies": {
@@ -582,9 +588,6 @@
       "noChartLink": "Choisissez-en un dans Plans comptables → Gérer les plans."
     },
     "nature": {
-      "both": "OPEX et CAPEX",
-      "opex": "OPEX uniquement",
-      "capex": "CAPEX uniquement",
       "conflictCapex_one": "{{count}} ligne CAPEX utilise ce compte. Elle le garde. Les nouvelles lignes CAPEX ne peuvent pas le choisir.",
       "conflictCapex_other": "{{count}} lignes CAPEX utilisent ce compte. Elles le gardent. Les nouvelles lignes CAPEX ne peuvent pas le choisir.",
       "conflictOpex_one": "{{count}} ligne OPEX utilise ce compte. Elle le garde. Les nouvelles lignes OPEX ne peuvent pas le choisir.",
@@ -610,7 +613,7 @@
     "dimensionsLabel": "Dimensions",
     "editDimension": "Modifier {{name}}",
     "openDimension": "Ouvrir {{name}}",
-    "disabledDimension": "{{name}}, désactivée",
+    "markedDimension": "{{name}}, {{marks}}",
     "disabledMark": "Désactivée",
     "enableToAddValues": "Activez cette dimension pour ajouter des valeurs.",
     "export": "Exporter les valeurs",
@@ -633,7 +636,12 @@
       "codeDefault": "Les anciens fichiers utilisent la colonne analytics_category pour cette dimension ; analytics:{{code}} fonctionne aussi.",
       "codeCreate": "Sert de nom de colonne dans les fichiers CSV. Lettres minuscules, chiffres, - ou _.",
       "order": "Les dimensions sont classées selon ce nombre, du plus petit au plus grand.",
-      "defaultLocked": "Cette dimension ne peut être ni désactivée ni supprimée : les anciens fichiers et les questions posées à l'IA l'utilisent."
+      "defaultLocked": "Cette dimension ne peut être ni désactivée ni supprimée : les anciens fichiers et les questions posées à l'IA l'utilisent.",
+      "appliesToDefault": "La dimension par défaut s'applique aux lignes OPEX et CAPEX.",
+      "valueDimensionAppliesTo": {
+        "opex": "La dimension {{dimension}} est réservée aux lignes OPEX.",
+        "capex": "La dimension {{dimension}} est réservée aux lignes CAPEX."
+      }
     },
     "placeholders": {
       "dimensionName": "ex. Nature",
@@ -657,9 +665,21 @@
       "valueBoth": "Utilisée par {{opex}} et {{capex}}."
     },
     "deleteBlocked": {
-      "dimensionHasValues": "Pour supprimer cette dimension, supprimez d'abord ses valeurs.",
-      "valueUsed": "{{usage}} Désactivez-la plutôt."
+      "dimensionHasValues": "Pour supprimer cette dimension, supprimez d'abord ses valeurs."
     },
+    "appliesToConflict": {
+      "capex_one": "{{count}} ligne CAPEX a une valeur pour cette dimension. Elle la garde, masquée tant que la dimension est réservée aux lignes OPEX.",
+      "capex_other": "{{count}} lignes CAPEX ont une valeur pour cette dimension. Elles la gardent, masquée tant que la dimension est réservée aux lignes OPEX.",
+      "opex_one": "{{count}} ligne OPEX a une valeur pour cette dimension. Elle la garde, masquée tant que la dimension est réservée aux lignes CAPEX.",
+      "opex_other": "{{count}} lignes OPEX ont une valeur pour cette dimension. Elles la gardent, masquée tant que la dimension est réservée aux lignes CAPEX."
+    },
+    "valueAppliesToConflict": {
+      "capex_one": "{{count}} ligne CAPEX a cette valeur. Elle la garde, mais les nouvelles lignes CAPEX ne peuvent pas la choisir.",
+      "capex_other": "{{count}} lignes CAPEX ont cette valeur. Elles la gardent, mais les nouvelles lignes CAPEX ne peuvent pas la choisir.",
+      "opex_one": "{{count}} ligne OPEX a cette valeur. Elle la garde, mais les nouvelles lignes OPEX ne peuvent pas la choisir.",
+      "opex_other": "{{count}} lignes OPEX ont cette valeur. Elles la gardent, mais les nouvelles lignes OPEX ne peuvent pas la choisir."
+    },
+    "showLines": "Afficher ces lignes",
     "messages": {
       "loadFailed": "Échec du chargement de la valeur.",
       "saveFailed": "Échec de l'enregistrement de la valeur.",

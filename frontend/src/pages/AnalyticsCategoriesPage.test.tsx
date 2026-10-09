@@ -95,8 +95,19 @@ describe('AnalyticsCategoriesPage', () => {
     renderPage();
     expect(chips().map((c) => c.textContent)).toEqual(['Analytics dimension', 'Nature', 'Internal orderanalytics.disabledMark']);
     // The accessible name separates the mark from the name.
-    expect(screen.getByRole('button', { name: 'analytics.disabledDimension:Internal order' })).toBe(chips()[2]);
+    expect(screen.getByRole('button', { name: 'analytics.markedDimension:Internal order' })).toBe(chips()[2]);
     expect(screen.getByRole('button', { name: 'Nature' })).toBe(chips()[1]);
+  });
+
+  it('marks a dimension used for one type of line only, next to a disabled mark', () => {
+    axesState.list = [DEFAULT, { ...NATURE, applies_to: 'capex' }, { ...ORDER, applies_to: 'opex' }];
+    renderPage();
+    expect(chips().map((c) => c.textContent)).toEqual([
+      'Analytics dimension',
+      'Naturemaster-data:shared.lineTypeUsage.capex',
+      'Internal orderanalytics.disabledMark · master-data:shared.lineTypeUsage.opex',
+    ]);
+    expect(screen.getByRole('button', { name: 'analytics.markedDimension:Nature' })).toBe(chips()[1]);
   });
 
   it('disables New value on a disabled dimension, with the reason', () => {
@@ -116,7 +127,28 @@ describe('AnalyticsCategoriesPage', () => {
     expect(grid.props?.extraParams).toEqual({ axis_id: 'ax-default' });
     expect(grid.props?.columnPreferencesKey).toBe('analytics-values');
     expect(grid.props?.statusScopeConfig).toEqual({ defaultScope: 'enabled' });
-    expect((grid.props?.columns as Array<{ field: string }>).map((c) => c.field)).toEqual(['name', 'description', 'status', 'updated_at']);
+    expect((grid.props?.columns as Array<{ field: string }>).map((c) => c.field)).toEqual(['name', 'description', 'status', 'applies_to', 'updated_at']);
+  });
+
+  it('shows which lines may use each value, with a set filter on the three choices', () => {
+    renderPage();
+    const column = (grid.props?.columns as Array<any>).find((col) => col.field === 'applies_to');
+    expect(column.headerName).toBe('shared.lineTypeUsage.label');
+    expect(column.defaultHidden).toBeFalsy();
+    // The blank value is the default: a value for OPEX and CAPEX lines.
+    expect(column.filterParams).toEqual({
+      values: [
+        { value: null, label: 'master-data:shared.lineTypeUsage.both' },
+        { value: 'opex', label: 'master-data:shared.lineTypeUsage.opex' },
+        { value: 'capex', label: 'master-data:shared.lineTypeUsage.capex' },
+      ],
+      searchable: false,
+    });
+    expect([null, 'opex', 'capex'].map((value) => column.valueFormatter({ value }))).toEqual([
+      'master-data:shared.lineTypeUsage.both',
+      'master-data:shared.lineTypeUsage.opex',
+      'master-data:shared.lineTypeUsage.capex',
+    ]);
   });
 
   it('lists the dimension named by ?axis=, and writes the chosen chip into the URL', () => {

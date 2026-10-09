@@ -96,11 +96,13 @@ export function budgetFileSchema(
   dimensionCodes: readonly string[],
   dateOrder?: CsvDateOrder,
   decimalMark?: DecimalMark,
+  refusedDimensions?: Readonly<Record<string, string>>,
 ): CsvReadSchema {
   return {
     fields: schemaFields(scope),
     amounts: BUDGET_AMOUNT_COLUMNS,
     dimensions: dimensionCodes,
+    ...(refusedDimensions ? { refusedDimensions } : {}),
     dateFields: ['effective_start', 'end_of_validity'],
     language,
     dateOrder,

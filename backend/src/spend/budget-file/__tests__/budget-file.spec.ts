@@ -139,6 +139,19 @@ async function testTokenLanguages() {
   assert.equal(hinted, 'fr');
 }
 
+/** A column of a dimension of the other line type is a header error with the reader's own message; no row is read. */
+async function testOtherTypeDimensionHeader() {
+  const message = 'The Recurrence dimension is for CAPEX lines only. Remove the analytics:recurrence column from this OPEX file.';
+  const options = { scope: 'opex' as const, language: 'en' as const, dimensionCodes: ['nature'], refusedDimensions: { recurrence: message } };
+  const refused = await readBudgetCsv('item_number,analytics:nature,Analytics: Recurrence\nOPX-3,Hardware,Monthly\n', options);
+  assert.deepEqual(refused.headerErrors, [message]);
+  assert.ok(refused.columns.some((column) => column.kind === 'analytics' && column.code === 'nature'), 'the other columns are read');
+  const report = await preflight('opex', 'item_number,analytics:recurrence\nOPX-3,Monthly\n', [line()]);
+  assert.deepEqual(report.headerErrors, ["Unknown dimension 'recurrence'."], 'without the refusal map: unknown, as before');
+  const unknown = await readBudgetCsv('item_number,analytics:nope\nOPX-3,x\n', options);
+  assert.deepEqual(unknown.headerErrors, ["Unknown dimension 'nope'."], 'another code stays unknown');
+}
+
 async function testOldFiles() {
   const opex = await readBudgetCsv('product_name;y_budget\nWidget;10\n', { scope: 'opex', language: 'en', dimensionCodes: [] });
   assert.deepEqual(opex.fileErrors, [OLD_BUDGET_FILE_MESSAGE]);
@@ -306,6 +319,48 @@ async function testAccountNature() {
   assert.equal(kept.ok, true, `the line's current account is kept: ${JSON.stringify(kept.errors)}`);
 }
 
+async function testValueAppliesTo() {
+  const cat = catalog({
+    companies: [{ id: 'c1', name: 'Acme', coaId: null, disabledAt: null }],
+    dimensions: [{
+      code: 'nature',
+      name: 'Nature de coût',
+      values: [
+        { id: 'v1', name: 'Abonnements SaaS', disabledAt: null, appliesTo: 'opex' },
+        { id: 'v2', name: 'Matériel', disabledAt: null, appliesTo: 'capex' },
+        { id: 'v3', name: 'Licences', disabledAt: null, appliesTo: null },
+        // A fixture without the field (older catalogs): both types.
+        { id: 'v4', name: 'Divers', disabledAt: null },
+      ],
+    }],
+  });
+  const options = { cat, dimensions: ['nature'] };
+  const create = 'item_number,name,company_name,currency,analytics:nature\n';
+  const cellErrors = (report: { errors: Array<{ column: string | null; message: string }> }) =>
+    report.errors.filter((error) => error.column === 'analytics:nature').map((error) => error.message);
+
+  const onCapex = await preflight('capex', `${create},Server,Acme,EUR,abonnements saas\n`, [], options);
+  assert.deepEqual(
+    cellErrors(onCapex),
+    ['Abonnements SaaS is for OPEX lines only. Pick a value for CAPEX lines.'],
+    'a new CAPEX line on an OPEX value',
+  );
+  const onOpex = await preflight('opex', `${create},Widget,Acme,EUR,Matériel\n`, [], options);
+  assert.deepEqual(cellErrors(onOpex), ['Matériel is for CAPEX lines only. Pick a value for OPEX lines.'], 'a new OPEX line on a CAPEX value');
+  for (const name of ['Abonnements SaaS', 'Licences', 'Divers']) {
+    const fine = await preflight('opex', `${create},Widget,Acme,EUR,${name}\n`, [], options);
+    assert.deepEqual(cellErrors(fine), [], `a new OPEX line on ${name}`);
+  }
+
+  const update = 'item_number,name,analytics:nature\nOPX-3,Widget,Matériel\n';
+  const changed = await preflight('opex', update, [line({ analytics: { nature: 'Licences' } })], options);
+  assert.deepEqual(cellErrors(changed), ['Matériel is for CAPEX lines only. Pick a value for OPEX lines.'], 'a change to a value of the other type');
+  const kept = await preflight('opex', update, [line({ analytics: { nature: 'Matériel' } })], options);
+  assert.equal(kept.ok, true, `the line's current value is kept: ${JSON.stringify(kept.errors)}`);
+  const cleared = await preflight('opex', 'item_number,name,analytics:nature\nOPX-3,Widget,-\n', [line({ analytics: { nature: 'Matériel' } })], options);
+  assert.equal(cleared.ok, true, `clearing it is allowed: ${JSON.stringify(cleared.errors)}`);
+}
+
 async function testExportShape() {
   const built = buildBudgetExport({
     scope: 'opex', language: 'en', years: [YEAR], columns: ['budget'], detail: 'months', lines: [], dimensionCodes: ['nature'],
@@ -397,12 +452,14 @@ async function main() {
   await testTokenLanguages();
   await testDecimalMarkParameter();
   await testOldFiles();
+  await testOtherTypeDimensionHeader();
   await testRoundTrip();
   await testAmounts();
   await testIdentity();
   await testSuppliersAndDuplicates();
   await testCreateRules();
   await testAccountNature();
+  await testValueAppliesTo();
   await testExportShape();
   await testPlan();
   console.log('budget-file.spec: ok');

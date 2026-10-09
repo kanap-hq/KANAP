@@ -71,6 +71,12 @@
       "readOnlyAccess": "Sie benötigen Managerrechte, um {{entity}} zu bearbeiten.",
       "metricsFrozen": "Die Kennzahlen für {{year}} sind eingefroren. Ein Budgetadministrator kann die Sperre aufheben.",
       "metricsYearHint": "Jeder Wert wird für das ausgewählte Jahr gespeichert, wenn Sie sein Feld verlassen. Wechseln Sie das Jahr, um frühere Daten einzusehen."
+    },
+    "lineTypeUsage": {
+      "label": "Verwendet für",
+      "both": "OPEX und CAPEX",
+      "opex": "Nur OPEX",
+      "capex": "Nur CAPEX"
     }
   },
   "companies": {
@@ -582,9 +588,6 @@
       "noChartLink": "Wählen Sie einen unter Kontenpläne → Kontenpläne verwalten."
     },
     "nature": {
-      "both": "OPEX und CAPEX",
-      "opex": "Nur OPEX",
-      "capex": "Nur CAPEX",
       "conflictCapex_one": "{{count}} CAPEX-Zeile verwendet dieses Konto. Sie behält es. Neue CAPEX-Zeilen können es nicht auswählen.",
       "conflictCapex_other": "{{count}} CAPEX-Zeilen verwenden dieses Konto. Sie behalten es. Neue CAPEX-Zeilen können es nicht auswählen.",
       "conflictOpex_one": "{{count}} OPEX-Zeile verwendet dieses Konto. Sie behält es. Neue OPEX-Zeilen können es nicht auswählen.",
@@ -610,7 +613,7 @@
     "dimensionsLabel": "Dimensionen",
     "editDimension": "{{name}} bearbeiten",
     "openDimension": "{{name}} öffnen",
-    "disabledDimension": "{{name}}, deaktiviert",
+    "markedDimension": "{{name}}, {{marks}}",
     "disabledMark": "Deaktiviert",
     "enableToAddValues": "Aktivieren Sie diese Dimension, um Werte hinzuzufügen.",
     "export": "Werte exportieren",
@@ -633,7 +636,12 @@
       "codeDefault": "Ältere Dateien verwenden für diese Dimension die Spalte analytics_category; analytics:{{code}} funktioniert ebenfalls.",
       "codeCreate": "Wird als Spaltenname in CSV-Dateien verwendet. Kleinbuchstaben, Ziffern, - oder _.",
       "order": "Die Dimensionen werden nach dieser Zahl sortiert, die kleinste zuerst.",
-      "defaultLocked": "Diese Dimension kann weder deaktiviert noch gelöscht werden: Ältere Dateien und Fragen an die KI verwenden sie."
+      "defaultLocked": "Diese Dimension kann weder deaktiviert noch gelöscht werden: Ältere Dateien und Fragen an die KI verwenden sie.",
+      "appliesToDefault": "Die Standarddimension gilt für OPEX- und CAPEX-Zeilen.",
+      "valueDimensionAppliesTo": {
+        "opex": "Die Dimension {{dimension}} gilt nur für OPEX-Zeilen.",
+        "capex": "Die Dimension {{dimension}} gilt nur für CAPEX-Zeilen."
+      }
     },
     "placeholders": {
       "dimensionName": "z. B. Kostenart",
@@ -657,9 +665,21 @@
       "valueBoth": "Verwendet von {{opex}} und {{capex}}."
     },
     "deleteBlocked": {
-      "dimensionHasValues": "Um diese Dimension zu löschen, löschen Sie zuerst ihre Werte.",
-      "valueUsed": "{{usage}} Deaktivieren Sie ihn stattdessen."
+      "dimensionHasValues": "Um diese Dimension zu löschen, löschen Sie zuerst ihre Werte."
     },
+    "appliesToConflict": {
+      "capex_one": "{{count}} CAPEX-Zeile hat einen Wert für diese Dimension. Sie behält ihn, ausgeblendet, solange die Dimension nur für OPEX-Zeilen gilt.",
+      "capex_other": "{{count}} CAPEX-Zeilen haben einen Wert für diese Dimension. Sie behalten ihn, ausgeblendet, solange die Dimension nur für OPEX-Zeilen gilt.",
+      "opex_one": "{{count}} OPEX-Zeile hat einen Wert für diese Dimension. Sie behält ihn, ausgeblendet, solange die Dimension nur für CAPEX-Zeilen gilt.",
+      "opex_other": "{{count}} OPEX-Zeilen haben einen Wert für diese Dimension. Sie behalten ihn, ausgeblendet, solange die Dimension nur für CAPEX-Zeilen gilt."
+    },
+    "valueAppliesToConflict": {
+      "capex_one": "{{count}} CAPEX-Zeile hat diesen Wert. Sie behält ihn, aber neue CAPEX-Zeilen können ihn nicht auswählen.",
+      "capex_other": "{{count}} CAPEX-Zeilen haben diesen Wert. Sie behalten ihn, aber neue CAPEX-Zeilen können ihn nicht auswählen.",
+      "opex_one": "{{count}} OPEX-Zeile hat diesen Wert. Sie behält ihn, aber neue OPEX-Zeilen können ihn nicht auswählen.",
+      "opex_other": "{{count}} OPEX-Zeilen haben diesen Wert. Sie behalten ihn, aber neue OPEX-Zeilen können ihn nicht auswählen."
+    },
+    "showLines": "Diese Zeilen anzeigen",
     "messages": {
       "loadFailed": "Der Wert konnte nicht geladen werden.",
       "saveFailed": "Der Wert konnte nicht gespeichert werden.",

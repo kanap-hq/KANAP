@@ -35,9 +35,10 @@ vi.mock('../../hooks/useAnalyticsAxes', async (importOriginal) => {
   const t = ((key: string) => (key === 'master-data:analytics.analyticsCategoryFallback' ? 'Analytics dimension' : key)) as unknown as TFunction;
   return {
     ...actual,
-    useAnalyticsAxes: () => {
+    useAnalyticsAxes: (options?: { scope?: 'opex' | 'capex' | null }) => {
       const list = axesState.list;
-      return useMemo(() => actual.buildAnalyticsAxes(list as AnalyticsAxis[], t), [list]);
+      const scope = options?.scope ?? null;
+      return useMemo(() => actual.buildAnalyticsAxes(list as AnalyticsAxis[], t, true, false, undefined, scope), [list, scope]);
     },
   };
 });
@@ -105,7 +106,7 @@ function slot(year: number, amount: number) {
 }
 
 function axis(id: string, patch: Partial<AnalyticsAxis>): AnalyticsAxis {
-  return { id, code: id, name: null, description: null, sort_order: 0, is_default: false, status: 'enabled', disabled_at: null, ...patch };
+  return { id, code: id, name: null, description: null, sort_order: 0, is_default: false, applies_to: null, status: 'enabled', disabled_at: null, ...patch };
 }
 
 // The default dimension has no name of its own and reads as the translated default label.
@@ -307,6 +308,8 @@ describe('Analytics report dimensions', () => {
   const dimensionPicker = () => screen.queryByRole('combobox', { name: 'reports.filters.dimension' });
   const groups = () => gridRows().map((row) => [row.group, row[String(Y)]]);
   const valueCalls = () => get.mock.calls.filter(([url]) => url === '/analytics-categories').map(([, config]) => config?.params);
+  /** The catalogue filter of the values the lines of a type may choose (theirs and those for both). */
+  const forLines = (scope: 'opex' | 'capex') => JSON.stringify({ applies_to: { filterType: 'set', values: [null, scope] } });
 
   async function exclude(option: string) {
     const input = screen.getByRole('combobox', { name: 'reports.filters.excludeCategories' });
@@ -343,6 +346,15 @@ describe('Analytics report dimensions', () => {
     expect(grid.columns[0].headerName).toBe('Analytics dimension');
   });
 
+  it('groups an OPEX report on the default dimension when the address names one for CAPEX lines only', async () => {
+    axesState.list = [DEFAULT_AXIS, { ...NATURE, applies_to: 'capex' }];
+    renderReport(<AnalyticsCategoryReport />, '/report?axis=ax-nat');
+    await waitFor(() => expect(groups()).toHaveLength(5));
+    expect(dimensionPicker()).toBeNull();
+    expect(groups()[0]).toEqual(['Category e', 7000]);
+    expect(grid.columns[0].headerName).toBe('Analytics dimension');
+  });
+
   it('names the default dimension in titles by its own name once it has one', async () => {
     axesState.list = [axis('ax-def', { is_default: true, name: 'Cost type' }), NATURE];
     renderReport(<AnalyticsCategoryReport />, '/report');
@@ -359,7 +371,7 @@ describe('Analytics report dimensions', () => {
     // The dimension's own values load with the exclusion picker, not with the report.
     expect(valueCalls()).toEqual([]);
     await optionsOf('reports.filters.excludeCategories', 'keyDown');
-    expect(valueCalls()).toContainEqual({ axis_id: 'ax-def', limit: 1000, sort: 'name:ASC' });
+    expect(valueCalls()).toContainEqual({ axis_id: 'ax-def', limit: 1000, sort: 'name:ASC', filters: forLines('opex') });
 
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'reports.filters.dimension' }));
     fireEvent.click(within(await screen.findByRole('listbox')).getByRole('option', { name: 'Nature' }));
@@ -370,7 +382,38 @@ describe('Analytics report dimensions', () => {
       ['Software', 3],
     ]));
     expect(chart.options.title.text).toContain('"dimension":"Nature"');
-    await waitFor(() => expect(valueCalls()).toContainEqual({ axis_id: 'ax-nat', limit: 1000, sort: 'name:ASC' }));
+    await waitFor(() => expect(valueCalls()).toContainEqual({ axis_id: 'ax-nat', limit: 1000, sort: 'name:ASC', filters: forLines('opex') }));
+  });
+
+  it('offers the values the lines of the report may choose, and the values they hold', async () => {
+    // Nature's values on the server: SaaS for OPEX lines only, Leasing and Hardware for CAPEX lines
+    // only. OPEX lines still hold Hardware (a and d).
+    const catalogue = [
+      { id: 'n-saas', name: 'SaaS subscriptions', applies_to: 'opex' },
+      { id: 'n-lease', name: 'Leasing', applies_to: 'capex' },
+      { id: 'n-hw', name: 'Hardware', applies_to: 'capex' },
+    ];
+    get.mockImplementation(async (url: string, config?: { params?: Record<string, string> }) => {
+      if (url.endsWith('/summary/filter-values')) return { data: fakeFilterValues(serverRows, String(config?.params?.fields ?? '').split(',')) };
+      if (url === '/analytics-categories' && config?.params?.axis_id === 'ax-nat') {
+        const allowed = JSON.parse(String(config.params.filters)).applies_to.values as Array<string | null>;
+        const items = catalogue.filter((value) => allowed.includes(value.applies_to));
+        return { data: { items, total: items.length } };
+      }
+      return { data: { items: [], total: 0 } };
+    });
+    renderReport(<AnalyticsCategoryReport />, '/report?axis=ax-nat');
+    await waitFor(() => expect(groups()).toHaveLength(3));
+    const options = await optionsOf('reports.filters.excludeCategories', 'keyDown');
+    expect(valueCalls()).toContainEqual({ axis_id: 'ax-nat', limit: 1000, sort: 'name:ASC', filters: forLines('opex') });
+    expect(options).toContain('SaaS subscriptions');
+    expect(options).toContain('Hardware');
+    expect(options).not.toContain('Leasing');
+
+    fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'reports.filters.dimension' }).textContent).toBe('Nature'));
+    await optionsOf('reports.filters.excludeCategories', 'keyDown');
+    await waitFor(() => expect(valueCalls()).toContainEqual({ axis_id: 'ax-nat', limit: 1000, sort: 'name:ASC', filters: forLines('capex') }));
   });
 
   it('opens on the dimension the address names', async () => {

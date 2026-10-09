@@ -29,7 +29,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Listo para cumplimiento',
-        body: 'El row-level security aísla los tenants. Hash de contraseñas con Argon2. Un registro de auditoría de accesos y exportaciones que su recolector de logs lee como CSV. HTTPS con certificados que usted controla. Su VPC, sus copias de seguridad, su SOC.',
+        body: 'El row-level security aísla los tenants. Hash de contraseñas con Argon2. Un registro de auditoría de cambios, accesos y exportaciones, con una exportación CSV que sus herramientas de logs leen tal cual. HTTPS con certificados que usted controla. Su VPC, sus copias de seguridad, su SOC.',
       },
       {
         title: 'Compatible con air-gap',

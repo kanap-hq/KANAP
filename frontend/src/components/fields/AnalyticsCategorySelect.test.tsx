@@ -90,6 +90,22 @@ describe('AnalyticsCategorySelect', () => {
     await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('Old licenses'));
   });
 
+  it('offers only the values of its line type, asking the server with applies_to', async () => {
+    renderSelect({ lineType: 'capex' });
+    const input = await screen.findByRole('combobox');
+    act(() => { input.focus(); });
+    fireEvent.mouseDown(input);
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/analytics-categories/lookup', expect.objectContaining({
+      params: { axis_id: 'ax-nature', applies_to: 'capex', limit: 30 },
+    })));
+  });
+
+  it('still shows a held value of the other line type, read by id without applies_to', async () => {
+    renderSelect({ lineType: 'capex', value: 'v-old' });
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/analytics-categories/lookup', expect.objectContaining({ params: { ids: 'v-old' } })));
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('Old licenses'));
+  });
+
   it("shows the line's value from the label it is given, without any request", async () => {
     renderSelect({ value: 'v-lic', selectedOption: { id: 'v-lic', name: 'Licenses' } });
     expect(screen.getByRole('combobox')).toHaveValue('Licenses');

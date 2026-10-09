@@ -1,5 +1,5 @@
 import { EntityManager } from 'typeorm';
-import { loadAnalyticsAxes } from '../../analytics/analytics-axes.util';
+import { AnalyticsAxisInfo, analyticsAxisSubject, axisAppliesTo, loadAnalyticsAxes } from '../../analytics/analytics-axes.util';
 import { toCents } from '../../common/amount';
 import { budgetColumnName, readBudgetColumns } from '../../budget-columns/budget-columns.util';
 import { loadItemAnalyticsValues } from '../item-analytics.util';
@@ -69,9 +69,29 @@ export interface LoadedPreflight {
   dimensionCodes: string[];
 }
 
-export async function loadDimensionCodes(manager: EntityManager, tenantId: string): Promise<string[]> {
-  const axes = await loadAnalyticsAxes(manager, tenantId);
-  return axes.filter((axis) => axis.status === 'enabled').map((axis) => axis.code);
+/**
+ * The dimension columns of a file of `scope`: `codes`, the enabled dimensions that apply to its
+ * lines (read and exported); `refused`, the enabled ones of the other line type, each with the
+ * header error its column gets (the whole file is refused). Unknown and disabled codes keep the
+ * reader's unknown dimension error.
+ */
+export async function loadFileDimensions(
+  manager: EntityManager,
+  tenantId: string,
+  scope: BudgetFileScope,
+): Promise<{ codes: string[]; refused: Record<string, string> }> {
+  const enabled = (await loadAnalyticsAxes(manager, tenantId)).filter((axis) => axis.status === 'enabled');
+  const refused: Record<string, string> = {};
+  for (const axis of enabled) {
+    if (!axisAppliesTo(axis, scope)) refused[axis.code] = otherTypeColumnMessage(axis, scope);
+  }
+  return { codes: enabled.filter((axis) => axisAppliesTo(axis, scope)).map((axis) => axis.code), refused };
+}
+
+/** "The Recurrence dimension is for CAPEX lines only. Remove the analytics:recurrence column from this OPEX file." */
+function otherTypeColumnMessage(axis: AnalyticsAxisInfo, scope: BudgetFileScope): string {
+  return `${analyticsAxisSubject(axis)} is for ${String(axis.applies_to).toUpperCase()} lines only. `
+    + `Remove the analytics:${axis.code} column from this ${scope.toUpperCase()} file.`;
 }
 
 export async function loadColumnLabels(manager: EntityManager, tenantId: string): Promise<Record<string, string>> {
@@ -102,7 +122,7 @@ export async function loadExportLines(
   tenantId: string,
   ids: readonly string[],
 ): Promise<{ lines: StoredLine[]; dimensionCodes: string[]; labels: Record<string, string> }> {
-  const dimensionCodes = await loadDimensionCodes(manager, tenantId);
+  const dimensionCodes = (await loadFileDimensions(manager, tenantId, scope)).codes;
   const labels = await loadColumnLabels(manager, tenantId);
   const lines = await loadLinesById(manager, scope, tenantId, ids);
   const byId = new Map(lines.map((line) => [line.id, line]));
@@ -317,7 +337,7 @@ async function loadCatalog(
   const projects: Array<{ id: string; item_number: number }> = await manager.query(
     `SELECT id::text AS id, item_number::int AS item_number FROM portfolio_projects WHERE tenant_id = $1`, [tenantId],
   );
-  const dimensions = await loadDimensions(manager, tenantId);
+  const dimensions = await loadDimensions(manager, tenantId, scope);
   const chart: Array<{ id: string }> = await manager.query(
     `SELECT id::text AS id FROM chart_of_accounts WHERE tenant_id = $1 AND is_global_default = true LIMIT 1`, [tenantId],
   );
@@ -341,12 +361,19 @@ async function loadCatalog(
   };
 }
 
-async function loadDimensions(manager: EntityManager, tenantId: string): Promise<CatalogDimension[]> {
+/** The enabled dimensions that apply to the lines of `scope`, with their values. */
+async function loadDimensions(manager: EntityManager, tenantId: string, scope: BudgetFileScope): Promise<CatalogDimension[]> {
   const axes = await loadAnalyticsAxes(manager, tenantId);
-  const enabled = axes.filter((axis) => axis.status === 'enabled');
+  const enabled = axes.filter((axis) => axis.status === 'enabled' && axisAppliesTo(axis, scope));
   if (enabled.length === 0) return [];
-  const values: Array<{ code: string; id: string; name: string; disabled_at: Date | string | null }> = await manager.query(
-    `SELECT ax.code, c.id::text AS id, c.name, c.disabled_at
+  const values: Array<{
+    code: string;
+    id: string;
+    name: string;
+    disabled_at: Date | string | null;
+    applies_to: 'opex' | 'capex' | null;
+  }> = await manager.query(
+    `SELECT ax.code, c.id::text AS id, c.name, c.disabled_at, c.applies_to
        FROM analytics_categories c
        JOIN analytics_axes ax ON ax.tenant_id = c.tenant_id AND ax.id = c.axis_id
       WHERE c.tenant_id = $1 AND ax.code = ANY($2::text[])`,
@@ -359,6 +386,7 @@ async function loadDimensions(manager: EntityManager, tenantId: string): Promise
       id: value.id,
       name: value.name,
       disabledAt: value.disabled_at ? new Date(value.disabled_at).toISOString() : null,
+      appliesTo: value.applies_to ?? null,
     })),
   }));
 }

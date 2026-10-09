@@ -66,7 +66,7 @@ const content: SecurityContent = {
       'Workspace-Admin-Rolle getrennt von Modul-Admins',
       'SSO über Microsoft Entra ID (OIDC) in Cloud und Self-Hosting',
       'Lokale Passwort-Authentifizierung mit Argon2 + optionale Passwort-Reset-Flows',
-      'Anmeldeversuche werden pro Client-Adresse begrenzt: 5 Passwortversuche und 60 Microsoft-Anmeldeanfragen pro Minute. Hinter einem Reverse Proxy folgt das Limit der tatsächlichen Adresse jeder Person',
+      'Anmeldeversuche werden pro IP-Adresse begrenzt: 5 Passwortversuche und 60 Microsoft-Anmeldeanfragen pro Minute. Hinter einem Reverse Proxy zählt das Limit die IP-Adresse jedes Benutzers',
       'Sitzungstokens werden nur in dem einen Signaturverfahren akzeptiert, mit dem KANAP sie ausstellt',
       'Plaid und MCP erzwingen dasselbe RBAC wie das UI, keine Privilegienerweiterung',
       'API-Tokens pro Nutzer gebunden, jederzeit widerrufbar',
@@ -75,12 +75,12 @@ const content: SecurityContent = {
   audit: {
     title: 'Audit-Trail',
     body:
-      'Jede relevante Änderung wird protokolliert, ebenso die Sicherheitsereignisse drumherum. Wer hat was wann geändert, wer hat sich angemeldet, wer ist daran gescheitert, wer hat Daten exportiert. Administratoren sehen alles in der App.',
+      'Jede relevante Änderung wird protokolliert, ebenso Anmeldungen und Exporte. Administratoren sehen, wer was wann geändert hat, wer sich angemeldet hat oder daran gescheitert ist und wer Daten exportiert hat.',
     bullets: [
       'Zeitleiste pro Entity (Aufgaben, Projekte, Dokumente usw.)',
       'Anlegen, Ändern und Deaktivieren mit Nutzer, Zeitstempel sowie Werten vorher und nachher protokolliert',
       'Änderungen an Rollen und Berechtigungen mit Urheber sowie Werten vorher und nachher protokolliert',
-      'Anmeldungen, fehlgeschlagene Anmeldungen, Abmeldungen, abgelehnte Sitzungsverlängerungen, Passwort-Resets und Microsoft-Anmeldungen mit Rechneradresse und Browser protokolliert. Passwörter und Tokens werden nie ins Protokoll geschrieben',
+      'Anmeldungen, fehlgeschlagene Anmeldungen, Abmeldungen, abgelehnte Sitzungsverlängerungen, Passwort-Resets und Microsoft-Anmeldungen mit IP-Adresse und Browser protokolliert. Passwörter und Tokens werden nie ins Protokoll geschrieben',
       'Vom Server erzeugte Exporte protokolliert, mit Angabe, wer was exportiert hat',
       'Anmelde- und Sitzungsereignisse 365 Tage aufbewahrt',
       'Administratoren durchsuchen und filtern das Audit-Log in der App und exportieren es als CSV in einem festen Format, das Werkzeuge zur Protokollsammlung unverändert lesen (bis zu 100.000 Einträge pro Datei)',
@@ -104,14 +104,14 @@ const content: SecurityContent = {
   supplyChain: {
     title: 'Software-Lieferkette',
     body:
-      'Was auf Ihren Servern läuft, wird aus dem öffentlichen Quellcode gebaut, und die Art des Builds wird bei jeder Änderung geprüft. Sie können nachprüfen, was ausgeliefert wird.',
+      'KANAP wird aus dem öffentlichen Quellcode gebaut, und der Build wird bei jeder Änderung geprüft. Sie können nachprüfen, was ausgeliefert wird.',
     bullets: [
-      'Das API-Image wird in zwei Stufen gebaut: Das laufende Image enthält die kompilierte Anwendung und ihre Produktionsabhängigkeiten, ohne Quellcode und Entwicklungswerkzeuge',
-      'Container laufen mit reduzierten Rechten: Die API läuft als unprivilegierter Benutzer, und Container geben die Linux-Capabilities ab, die sie nicht brauchen, und erlangen keine neuen',
-      'Der Web-Container sendet die üblichen Sicherheits-Header und gibt seine nginx-Version nicht preis',
+      'Das laufende API-Image enthält nur die kompilierte Anwendung und ihre Produktionsabhängigkeiten, ohne Quellcode und Entwicklungswerkzeuge',
+      'Container laufen mit reduzierten Rechten: Die API läuft als unprivilegierter Benutzer, und Container geben die Linux-Capabilities ab, die sie nicht brauchen, und können keine neuen erlangen',
+      'Der Web-Container sendet gängige Sicherheits-Header (Content Security Policy, X-Frame-Options und weitere) und gibt seine nginx-Version nicht preis',
       'Basis-Images sind auf einen festen Digest festgelegt. Updates kommen als Pull Requests, die dieselben Prüfungen durchlaufen wie jede andere Änderung',
-      'Für jede veröffentlichte Version entstehen eine Komponentenliste (CycloneDX) für Backend, Frontend und Website, die Pakete des API-Images und eine Datei mit Hinweisen zu Drittanbieter-Software',
-      'Die Lizenzen der Produktionsabhängigkeiten werden bei jedem Merge geprüft, und eine Abhängigkeit mit nicht akzeptierter oder fehlender Lizenz blockiert ihn',
+      'Zu jeder veröffentlichten Version gehören eine Komponentenliste (CycloneDX) für Backend, Frontend und Website, die Paketliste des API-Images und eine Datei mit Hinweisen zu Drittanbieter-Software',
+      'Die Lizenzen der Produktionsabhängigkeiten werden bei jedem Merge geprüft, und eine Abhängigkeit mit fehlender oder nicht akzeptierter Lizenz blockiert den Merge',
       'CI-Actions sind auf vollständige Commit-Hashes festgelegt, und das Workflow-Token ist standardmäßig schreibgeschützt',
     ],
   },
@@ -125,7 +125,7 @@ const content: SecurityContent = {
       'Self-Hosting: keine zwingenden ausgehenden Aufrufe für Kernfunktionen, KANAP kann also ohne Internetzugang laufen',
       'Self-Hosting: Sie entscheiden, wo es läuft und wie es gesichert wird',
       'Self-Hosting: KI-Funktionen nutzen nur den Modellanbieter, den Ihr Administrator konfiguriert',
-      'Self-Hosting: Beim Start warnt KANAP, wenn das Signatur-Secret kurz ist oder das Passwort des ersten Administrators noch ein Beispielwert ist',
+      'Self-Hosting: Beim Start warnt KANAP, wenn das Signatur-Secret kurz ist oder das Passwort des ersten Administrators noch ein Beispielwert oder zu kurz ist',
       'Self-Hosting: Der Zustand der API- und Web-Container erscheint in der Ausgabe von docker ps, und Docker-Logs sind auf etwa 50 MB pro Container begrenzt',
     ],
   },
