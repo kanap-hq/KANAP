@@ -1,6 +1,6 @@
 ---
-title: Analytics dimensions for your IT budget
-description: Allocations answer "who pays". Analytics dimensions answer "who uses". Here is how it works.
+title: "Analytics dimensions: what security really costs IT"
+description: "Chargeback says who pays; an analytics dimension says what the spend is for: security, cloud, licences. How to use it in the IT budget."
 date: 2026-09-13
 topic: cost
 author: Friedrich

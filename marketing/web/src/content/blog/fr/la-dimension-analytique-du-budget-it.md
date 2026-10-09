@@ -1,6 +1,6 @@
 ---
-title: La dimension analytique du budget IT
-description: Les ventilations répondent à « qui paie ». La dimension analytique répond à « qui utilise ». Mode d'emploi.
+title: "Axe analytique du budget IT : ce que coûte la cyber"
+description: "La refacturation dit qui paie ; la dimension analytique dit à quoi sert la dépense : sécurité, cloud, licences. Mode d'emploi de cet axe du budget DSI."
 date: 2026-09-13
 topic: cost
 author: Friedrich

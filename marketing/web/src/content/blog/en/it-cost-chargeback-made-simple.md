@@ -1,6 +1,6 @@
 ---
-title: IT cost chargeback, made easy
-description: Who pays what? How to share IT costs across companies and departments with clear rules, and how to use the chargeback reports.
+title: "IT cost chargeback: who pays what, and why"
+description: "Allocating IT costs across companies and departments with clear, checkable rules, and turning them into chargeback reports."
 date: 2026-09-12
 topic: cost
 author: Friedrich
