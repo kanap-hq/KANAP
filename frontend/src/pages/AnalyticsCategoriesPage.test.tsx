@@ -183,6 +183,10 @@ describe('AnalyticsCategoriesPage', () => {
 
     levels.value = 'admin';
     renderPage();
+    // The actions on the values sit on the context line under the band, after the dimension's name.
+    const context = screen.getByTestId('analytics-context');
+    expect(context).toHaveTextContent('Analytics dimension');
+    expect(within(context).getByRole('button', { name: 'analytics.newValue' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'shared.labels.importCsv' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'shared.labels.exportCsv' })).toBeInTheDocument();
     expect(grid.props?.enableRowSelection).toBe(true);
