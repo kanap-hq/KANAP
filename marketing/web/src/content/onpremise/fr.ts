@@ -29,7 +29,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Prêt pour la conformité',
-        body: 'Row-level security isole les tenants. Hash de mot de passe Argon2. Un journal d\'audit des connexions et des exports que votre collecteur de journaux lit en CSV. HTTPS avec des certificats que vous maîtrisez. Votre VPC, vos sauvegardes, votre SOC.',
+        body: 'Row-level security isole les tenants. Hash de mot de passe Argon2. Un journal d\'audit des modifications, des connexions et des exports, avec un export CSV que vos outils de journaux lisent tel quel. HTTPS avec des certificats que vous maîtrisez. Votre VPC, vos sauvegardes, votre SOC.',
       },
       {
         title: 'Compatible air-gap',

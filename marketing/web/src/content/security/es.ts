@@ -65,7 +65,7 @@ const content: SecurityContent = {
       'Rol de administrador a nivel de workspace separado de los administradores de módulo',
       'SSO vía Microsoft Entra ID (OIDC) tanto en nube como en autoalojado',
       'Autenticación local con contraseña usando Argon2 + flujos opcionales de restablecimiento de contraseña',
-      'Los intentos de inicio de sesión se limitan por dirección de cliente: 5 intentos con contraseña y 60 solicitudes de inicio de sesión con Microsoft por minuto. Detrás de un proxy inverso, el límite sigue la dirección real de cada persona',
+      'Los intentos de inicio de sesión se limitan por dirección IP: 5 intentos con contraseña y 60 solicitudes de inicio de sesión con Microsoft por minuto. Detrás de un proxy inverso, el límite cuenta la dirección IP de cada usuario',
       'Los tokens de sesión solo se aceptan con el único algoritmo de firma con el que KANAP los emite',
       'Plaid y MCP aplican el mismo RBAC que la interfaz, sin escalada de privilegios',
       'Tokens API ligados a usuarios individuales, revocables en cualquier momento',
@@ -74,12 +74,12 @@ const content: SecurityContent = {
   audit: {
     title: 'Registro de auditoría',
     body:
-      'Cada cambio relevante queda registrado, y también los eventos de seguridad que lo rodean. Quién cambió qué y cuándo, quién inició sesión, quién no lo logró, quién exportó datos. Los administradores lo ven todo en la app.',
+      'Cada cambio relevante queda registrado, y también los inicios de sesión y las exportaciones. Los administradores ven quién cambió qué y cuándo, quién inició sesión o no lo logró, y quién exportó datos.',
     bullets: [
       'Cronología de actividad por entidad (tareas, proyectos, documentos, etc.)',
       'Altas, modificaciones y desactivaciones registradas con el usuario, la marca de tiempo y los valores de antes y después',
       'Cambios de roles y permisos registrados con quién los hizo y los valores de antes y después',
-      'Inicios de sesión, inicios fallidos, cierres de sesión, renovaciones de sesión rechazadas, restablecimientos de contraseña e inicios con Microsoft registrados con la dirección del equipo y el navegador. Las contraseñas y los tokens nunca se escriben en el registro',
+      'Inicios de sesión, inicios fallidos, cierres de sesión, renovaciones de sesión rechazadas, restablecimientos de contraseña e inicios con Microsoft registrados con la dirección IP y el navegador. Las contraseñas y los tokens nunca se escriben en el registro',
       'Exportaciones generadas por el servidor registradas con quién exportó qué',
       'Eventos de acceso y de sesión conservados 365 días',
       'Los administradores consultan y filtran el registro de auditoría en la app, y lo exportan a CSV en un formato fijo que las herramientas de recopilación de registros leen tal cual (hasta 100 000 entradas por archivo)',
@@ -103,14 +103,14 @@ const content: SecurityContent = {
   supplyChain: {
     title: 'Cadena de suministro de software',
     body:
-      'Lo que se ejecuta en sus servidores se compila a partir del código fuente público, y la forma de compilarlo se comprueba en cada cambio. Puede verificar lo que se entrega.',
+      'KANAP se compila a partir del código fuente público, y la compilación se comprueba en cada cambio. Puede verificar lo que se entrega.',
     bullets: [
-      'La imagen de la API se compila en dos etapas: la imagen que se ejecuta contiene la aplicación compilada y sus dependencias de producción, sin código fuente ni herramientas de desarrollo',
-      'Los contenedores se ejecutan con privilegios reducidos: la API corre como usuario sin privilegios, y los contenedores renuncian a las capacidades de Linux que no necesitan y no obtienen otras nuevas',
-      'El contenedor web envía las cabeceras de seguridad habituales y no anuncia su versión de nginx',
+      'La imagen de la API que se ejecuta contiene solo la aplicación compilada y sus dependencias de producción, sin código fuente ni herramientas de desarrollo',
+      'Los contenedores se ejecutan con privilegios reducidos: la API corre como usuario sin privilegios, y los contenedores renuncian a las capacidades de Linux que no necesitan y no pueden obtener otras nuevas',
+      'El contenedor web envía las cabeceras de seguridad estándar (Content Security Policy, X-Frame-Options y otras) y no anuncia su versión de nginx',
       'Las imágenes base están fijadas a un digest concreto. Las actualizaciones llegan como pull requests que pasan las mismas comprobaciones que cualquier otro cambio',
-      'Para cada versión publicada se generan un inventario de componentes (CycloneDX) del backend, el frontend y el sitio web, los paquetes de la imagen de la API y un archivo de avisos de terceros',
-      'Las licencias de las dependencias de producción se comprueban en cada fusión, y una dependencia con una licencia no aceptada o ausente la bloquea',
+      'Cada versión publicada incluye un inventario de componentes (CycloneDX) del backend, el frontend y el sitio web, la lista de paquetes de la imagen de la API y un archivo de avisos de terceros',
+      'Las licencias de las dependencias de producción se comprueban en cada fusión, y una dependencia sin licencia o con una licencia no aceptada bloquea la fusión',
       'Las acciones de CI están fijadas a hashes de commit completos, y el token de los workflows es de solo lectura por defecto',
     ],
   },
@@ -124,8 +124,8 @@ const content: SecurityContent = {
       'Autoalojado: ninguna llamada saliente obligatoria para las funciones básicas, así que KANAP puede funcionar sin acceso a internet',
       'Autoalojado: usted decide dónde se ejecuta y cómo se respalda',
       'Autoalojado: las funciones de IA usan solo el proveedor de modelos que configura su administrador',
-      'Autoalojado: al arrancar, KANAP avisa cuando el secreto de firma es corto o la contraseña del primer administrador sigue siendo un valor de ejemplo',
-      'Autoalojado: la salud de los contenedores de la API y web aparece en la salida de docker ps, y los registros de Docker se limitan a unos 50 MB por contenedor',
+      'Autoalojado: al arrancar, KANAP avisa cuando el secreto de firma es corto o la contraseña del primer administrador sigue siendo un valor de ejemplo o es demasiado corta',
+      'Autoalojado: la salud de los contenedores API y web aparece en la salida de docker ps, y los registros de Docker se limitan a unos 50 MB por contenedor',
     ],
   },
   disclosure: {
