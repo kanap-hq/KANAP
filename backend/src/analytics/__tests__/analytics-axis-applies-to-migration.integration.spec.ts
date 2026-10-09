@@ -9,8 +9,9 @@ import { runSpecs, seedTenant, setCurrentTenant, withRollback } from './analytic
 // nothing and keeps the stored values; down() drops both constraints and the
 // column, and up() after it restores them (every dimension back to NULL); on a
 // dirty table (constraints absent, an invalid value, a value on a default
-// dimension) up() run without a tenant repairs both rows to NULL, then adds the
-// constraints, and leaves row level security as it found it.
+// dimension) up() run without a tenant repairs the three rows to NULL, logs that
+// count, then adds the constraints, and leaves row level security as it found it;
+// a second up() then logs 0 repaired values.
 // @database-spec (the data source opens in analytics-test-helpers).
 
 const migration = new Migration();
@@ -24,6 +25,18 @@ async function silently<T>(fn: () => Promise<T>): Promise<T> {
   } finally {
     console.log = original;
   }
+}
+
+async function logged(fn: () => Promise<unknown>): Promise<string[]> {
+  const lines: string[] = [];
+  const original = console.log;
+  console.log = (...args: any[]) => { lines.push(args.map(String).join(' ')); };
+  try {
+    await fn();
+  } finally {
+    console.log = original;
+  }
+  return lines;
 }
 
 async function shape(runner: QueryRunner) {
@@ -88,27 +101,30 @@ async function testRepairsDirtyRows() {
       `INSERT INTO analytics_axes (tenant_id, code, name) VALUES ($1, 'invalid', 'Invalid') RETURNING id`,
       [tenantId],
     );
+    const [invalidToo] = await runner.query(
+      `INSERT INTO analytics_axes (tenant_id, code, name) VALUES ($1, 'invalid-too', 'Invalid too') RETURNING id`,
+      [tenantId],
+    );
     const [kept] = await runner.query(
       `INSERT INTO analytics_axes (tenant_id, code, name, applies_to) VALUES ($1, 'kept', 'Kept', 'capex') RETURNING id`,
       [tenantId],
     );
     for (const name of CONSTRAINTS) await runner.query(`ALTER TABLE analytics_axes DROP CONSTRAINT ${name}`);
-    await runner.query(`UPDATE analytics_axes SET applies_to = 'both' WHERE tenant_id = $1 AND id = $2`, [tenantId, invalid.id]);
+    await runner.query(
+      `UPDATE analytics_axes SET applies_to = 'both' WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [tenantId, [invalid.id, invalidToo.id]],
+    );
     await runner.query(`UPDATE analytics_axes SET applies_to = 'opex' WHERE tenant_id = $1 AND id = $2`, [tenantId, defaultAxis.id]);
 
     // As a migration runs: no tenant (FORCE RLS would hide every row from the repair).
     await runner.query(`SELECT set_config('app.current_tenant', '', true)`);
-    const lines: string[] = [];
-    const original = console.log;
-    console.log = (...args: any[]) => { lines.push(args.map(String).join(' ')); };
-    try {
-      await migration.up(runner);
-    } finally {
-      console.log = original;
-    }
-    assert.ok(lines.some((line) => /, 2 invalid value\(s\) cleared,/.test(line)), `the repaired count is logged (the constraints held every other row) (${lines.join(' / ')})`);
+    const lines = await logged(() => migration.up(runner));
+    assert.ok(lines.some((line) => /, 3 invalid value\(s\) cleared,/.test(line)), `the repaired count is logged (the constraints held every other row) (${lines.join(' / ')})`);
     assert.deepEqual(await shape(runner), applied, 'both constraints are back');
     assert.deepEqual(await rowSecurity(runner), security, 'row level security as found');
+
+    const rerun = await logged(() => migration.up(runner));
+    assert.ok(rerun.some((line) => /, 0 invalid value\(s\) cleared,/.test(line)), `a second up() repairs nothing (${rerun.join(' / ')})`);
 
     await setCurrentTenant(runner, tenantId);
     const rows: Array<{ id: string; applies_to: string | null }> = await runner.query(
@@ -117,6 +133,7 @@ async function testRepairsDirtyRows() {
     );
     const byId = new Map(rows.map((row) => [row.id, row.applies_to]));
     assert.equal(byId.get(invalid.id), null, 'an invalid value is cleared');
+    assert.equal(byId.get(invalidToo.id), null, 'every invalid value is cleared');
     assert.equal(byId.get(defaultAxis.id), null, 'a value on the default dimension is cleared');
     assert.equal(byId.get(kept.id), 'capex', 'a valid value is kept');
   });

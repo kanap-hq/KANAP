@@ -27,12 +27,15 @@ export class AnalyticsAxisAppliesTo1853900000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`ALTER TABLE analytics_axes ADD COLUMN IF NOT EXISTS applies_to text`);
     const repaired = await withoutRowSecurity(queryRunner, 'analytics_axes', async () => {
-      const rows: Array<{ id: string }> = await queryRunner.query(
-        `UPDATE analytics_axes SET applies_to = NULL
+      const [{ n }]: Array<{ n: number }> = await queryRunner.query(
+        `WITH changed AS (
+          UPDATE analytics_axes SET applies_to = NULL
           WHERE applies_to IS NOT NULL AND (applies_to NOT IN ('opex', 'capex') OR is_default)
-        RETURNING id`,
+          RETURNING 1
+        )
+        SELECT count(*)::int AS n FROM changed`,
       );
-      return rows.length;
+      return n;
     });
     const added: string[] = [];
     for (const [name, check] of [
