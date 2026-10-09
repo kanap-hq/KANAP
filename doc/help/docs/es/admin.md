@@ -61,7 +61,7 @@ La página de Registro de auditoría conserva el historial de los cambios de dat
 | **Inicio de sesión fallido** | Se rechaza un inicio de sesión. El **motivo** indica la causa, por ejemplo contraseña incorrecta, cuenta deshabilitada o ninguna cuenta con esta dirección |
 | **Cierre de sesión** | Alguien cierra sesión |
 | **Renovación de sesión rechazada** | No se pudo renovar la sesión, por ejemplo porque caducó |
-| **Restablecimiento de contraseña solicitado** / **Restablecimiento de contraseña completado** | Alguien pide un enlace de restablecimiento y luego define una contraseña nueva con él |
+| **Restablecimiento de contraseña solicitado** / **Restablecimiento de contraseña completado** | Alguien pide un enlace de restablecimiento y luego define una contraseña nueva con él. Si no se pudo enviar el correo electrónico con el enlace, el **motivo** lo indica |
 | **Inicio de sesión con Microsoft** / **Inicio de sesión con Microsoft fallido** | Un inicio de sesión mediante Microsoft Entra ID se completa o falla |
 
 **Exportaciones** (tabla **Exportación**): exportaciones CSV, documentos e informes que genera el servidor. La fila indica qué se exportó y quién lo hizo. La exportación del propio registro de auditoría también se registra.

@@ -107,6 +107,11 @@ export class EmailService {
     });
   }
 
+  /** The transport in use (`smtp`, `resend`, `disabled`), for log lines about a failed send. */
+  get transportName(): string {
+    return this.transport.name;
+  }
+
   /** Emails queued or being sent. */
   pendingCount(): number {
     return this.emailQueue.length + (this.isProcessingQueue ? 1 : 0);

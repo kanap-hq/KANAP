@@ -60,6 +60,7 @@ Rate limiting (default enabled):
   - Requires `RESEND_API_KEY` to be configured. Links are built from the configured application address: `APP_BASE_URL` (or `PUBLIC_APP_URL`) in single-tenant mode; in multi-tenant mode, the address of the request's tenant derived from the first of `APP_BASE_URL`, `PUBLIC_APP_URL`, `APP_URL` (for example `https://acme.kanap.net`). `Host` and `X-Forwarded-*` headers are followed only in development mode (`APP_ENV=development`) on a local development host (`lvh.me`, `localhost`, `dev.kanap.net` and their subdomains).
   - Without a configured address: `400` `application URL is not configured: set APP_BASE_URL`, checked before the account lookup, so every address gets the same answer.
   - Security: reset links now carry the token in URL fragment form (`/reset-password#token=...`) instead of query string.
+  - The e-mail is sent after the response: the status and the body are the same whether the account exists and whether the e-mail goes out, and the response does not wait for the e-mail. A failed send is an error line in the server log (`Password reset e-mail not sent`, with the tenant, the account id, the transport and the error code; never the link) and the request's audit row carries `source_ref = email_not_sent`.
 - POST `/auth/password-reset/complete` → `{ ok: true }`
   - Body: `{ token: string, password: string }`. Minimum length 8.
   - Token expires based on `PASSWORD_RESET_TTL` (defaults to 1 hour).

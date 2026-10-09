@@ -24,7 +24,8 @@ import { UserRole } from '../users/user-role.entity';
 import { RateLimitGuard } from '../common/rate-limit.guard';
 import { RATE_LIMITS } from '../common/rate-limit';
 import { SecurityEventsService } from '../audit/security-events.service';
-import { AuthEvent } from '../audit/security-events';
+import { AuthEvent, AuthEventReason } from '../audit/security-events';
+import { NeverRejects } from '../common/never-rejects';
 import { authRefusalOf } from './auth-refused.exception';
 import { Response } from 'express';
 import {
@@ -297,16 +298,64 @@ export class AuthController {
     }
 
     const token = await this.runInRequestTenant(req, (manager) => this.auth.createPasswordResetToken(user, manager));
-    this.recordAuthEvent(req, { action: 'password_reset_requested', userId: user.id });
     const resetUrl = `${baseUrl.replace(/\/$/, '')}/reset-password#token=${encodeURIComponent(token)}`;
-    await this.emails.sendPasswordResetEmail({
-      to: email,
-      resetUrl,
-      expiresInMinutes: this.auth.getPasswordResetExpirationMinutes(),
-      // `getEmailStrings` / `resolveEmailLocale` treat null and undefined identically.
-      locale: user.locale ?? undefined,
+    // Not awaited: the answer and its timing are the same for every address, whether the
+    // e-mail goes out or not.
+    void this.deliverPasswordReset({
+      tenantId: req?.tenant?.id,
+      userId: user.id,
+      // The event's address and agent, read now: the request is answered before the send ends.
+      requestDetails: { ip: req?.ip, headers: { 'user-agent': req?.headers?.['user-agent'] } },
+      token,
+      email: {
+        to: email,
+        resetUrl,
+        expiresInMinutes: this.auth.getPasswordResetExpirationMinutes(),
+        // `getEmailStrings` / `resolveEmailLocale` treat null and undefined identically.
+        locale: user.locale ?? undefined,
+      },
     });
     return { ok: true };
+  }
+
+  /**
+   * Sends a password reset e-mail, then records the `password_reset_requested` event: with the
+   * reason `email_not_sent` when the send failed, which is also logged as an error with the
+   * transport and the error code (never the link or the token). Runs after the response, on
+   * connections of its own (no entity manager of the request), and never rejects.
+   */
+  @NeverRejects()
+  private async deliverPasswordReset(input: {
+    tenantId: string | null | undefined;
+    userId: string;
+    requestDetails: { ip: unknown; headers: Record<string, unknown> };
+    token: string;
+    email: Parameters<EmailService['sendPasswordResetEmail']>[0];
+  }): Promise<void> {
+    let reason: AuthEventReason | null = null;
+    try {
+      await this.emails.sendPasswordResetEmail(input.email);
+    } catch (error) {
+      reason = 'email_not_sent';
+      const failure = (error ?? {}) as { code?: unknown; responseCode?: unknown; message?: unknown };
+      const message = String(typeof failure.message === 'string' ? failure.message : error)
+        .split(input.email.resetUrl).join('[link]')
+        .split(input.token).join('[token]')
+        .split(encodeURIComponent(input.token)).join('[token]');
+      const details = [
+        `tenant ${input.tenantId ?? 'none'}`,
+        `user ${input.userId}`,
+        `transport ${this.emails.transportName ?? 'unknown'}`,
+        `code ${typeof failure.code === 'string' && failure.code ? failure.code : 'none'}`,
+        ...(typeof failure.responseCode === 'number' ? [`response ${failure.responseCode}`] : []),
+      ].join(', ');
+      this.logger.error(`Password reset e-mail not sent (${details}): ${message}`);
+    }
+    await this.securityEvents.recordAuthEvent(
+      input.tenantId,
+      { action: 'password_reset_requested', userId: input.userId, reason },
+      input.requestDetails,
+    );
   }
 
   @Post('password-reset/complete')

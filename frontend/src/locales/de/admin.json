@@ -294,6 +294,7 @@
     "reasons": {
       "bad_password": "Falsches Passwort",
       "disabled": "Konto deaktiviert",
+      "email_not_sent": "E-Mail konnte nicht gesendet werden",
       "email_unverified": "Adresse nicht von Microsoft bestätigt",
       "expired": "Sitzung abgelaufen",
       "external_account": "Konto wird im Unternehmensverzeichnis verwaltet",
