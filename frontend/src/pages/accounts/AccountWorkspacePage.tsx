@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Link, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { useAccountNav } from '../../hooks/useAccountNav';
@@ -15,7 +15,18 @@ import { STATUS_ENABLED, deriveStatusFromDisabledAt, normalizeStatus } from '../
 import { drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx, longFormSurfaceFieldSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { COA_LIST_QUERY_KEY, type CoaListItem, useCoaList } from '../coa/useCoaList';
-import ConsolidationAccountField, { type ConsolidationStatus } from './ConsolidationAccountField';
+import ConsolidationAccountField, { attentionDotSx, type ConsolidationStatus } from './ConsolidationAccountField';
+import {
+  ACCOUNT_NATURES,
+  type AccountLineCounts,
+  type AccountNature,
+  accountNatureConflict,
+  accountNatureLabel,
+  parseAccountNature,
+} from '../../constants/accountNature';
+import { oneOffListLink } from '../reports/reportListLink';
+import { openSavedListLink } from '../reports/ReportGroupLinkCell';
+import { keepValues } from '../reports/reportAggregates';
 
 const LIST_PATH = '/master-data/coa';
 const ACCOUNT_PATH = '/master-data/accounts';
@@ -36,6 +47,10 @@ type Account = {
   consolidation_account_description: string | null;
   /** Null when the tenant has no consolidation chart. */
   consolidation_status?: ConsolidationStatus | null;
+  /** The lines that may use the account: null for OPEX and CAPEX lines. */
+  nature?: AccountNature | null;
+  /** The OPEX and CAPEX lines (all statuses) using the account; on `GET /accounts/:id` only. */
+  line_counts?: AccountLineCounts;
   status: string;
   disabled_at: string | null;
 };
@@ -43,11 +58,11 @@ type Account = {
 type TextKey = 'native_name' | 'description';
 /** Fields typed in place and saved on blur: a revert must reach the server even mid-save. */
 type TypedField = TextKey | 'account_name' | 'account_number';
-type AccountField = 'account_name' | 'account_number' | 'coa_id' | 'consolidation_account_number' | 'disabled_at' | TextKey;
+type AccountField = 'account_name' | 'account_number' | 'coa_id' | 'consolidation_account_number' | 'disabled_at' | 'nature' | TextKey;
 type FieldErrors = Partial<Record<AccountField, string>>;
 
 const ACCOUNT_FIELDS: ReadonlySet<string> = new Set<AccountField>([
-  'account_name', 'account_number', 'coa_id', 'consolidation_account_number', 'disabled_at', 'native_name', 'description',
+  'account_name', 'account_number', 'coa_id', 'consolidation_account_number', 'disabled_at', 'nature', 'native_name', 'description',
 ]);
 
 /** The field a refusal names in its 400 body (`{ message, field }`), when the form shows it. */
@@ -261,6 +276,17 @@ export default function AccountWorkspacePage() {
           error={errors.account_number}
           onCommit={commitNumber}
         />
+        <PropertyRow label={t('accounts.fields.nature')}>
+          <NatureSelect
+            value={parseAccountNature(data.nature)}
+            disabled={disabled}
+            error={errors.nature}
+            onChange={(next) => {
+              if (next !== parseAccountNature(data.nature)) void patch({ nature: next }, 'nature');
+            }}
+          />
+          <NatureConflictNote accountId={data.id} nature={parseAccountNature(data.nature)} lineCounts={data.line_counts} />
+        </PropertyRow>
       </PropertyGroup>
       <PropertyGroup>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, py: '5px' }}>
@@ -408,6 +434,89 @@ function ChartSelect({
   );
 }
 
+/** "Used for": OPEX and CAPEX lines (stored as null), OPEX lines only or CAPEX lines only. */
+function NatureSelect({
+  value,
+  disabled,
+  error,
+  onChange,
+}: {
+  value: AccountNature | null;
+  disabled?: boolean;
+  error?: string;
+  onChange: (next: AccountNature | null) => void;
+}) {
+  const { t } = useTranslation(['master-data']);
+  const label = t('accounts.fields.nature');
+  return (
+    <Box>
+      <Select
+        variant="standard"
+        value={value ?? ''}
+        onChange={(event) => onChange(parseAccountNature(event.target.value))}
+        // The empty value is a real choice (OPEX and CAPEX): shown, never a placeholder.
+        displayEmpty
+        disabled={disabled}
+        error={!!error}
+        sx={drawerSelectSx}
+        SelectDisplayProps={{ 'aria-label': label } as React.HTMLAttributes<HTMLDivElement>}
+        renderValue={(selected) => accountNatureLabel(t, selected)}
+      >
+        {[null, ...ACCOUNT_NATURES].map((nature) => (
+          <MenuItem key={nature ?? 'both'} value={nature ?? ''} sx={drawerMenuItemSx}>
+            {accountNatureLabel(t, nature)}
+          </MenuItem>
+        ))}
+      </Select>
+      {error && (
+        <Typography role="alert" sx={{ mt: '3px', fontSize: 12, lineHeight: 1.35, color: 'error.main' }}>{error}</Typography>
+      )}
+    </Box>
+  );
+}
+
+/**
+ * Lines of the other kind that still use the account (they keep it, new ones cannot choose it), with
+ * a link opening them in the OPEX or CAPEX list in a new tab: every status, filtered on this account,
+ * as a one-off view. Shown as long as the conflict exists.
+ */
+function NatureConflictNote({
+  accountId,
+  nature,
+  lineCounts,
+}: {
+  accountId: string;
+  nature: AccountNature | null;
+  lineCounts: AccountLineCounts | null | undefined;
+}) {
+  const { t } = useTranslation(['master-data']);
+  const conflict = accountNatureConflict(nature, lineCounts);
+  if (!conflict) return null;
+  const link = oneOffListLink(conflict.scope, { account_id: keepValues([accountId]) });
+  const save = link.save;
+  return (
+    <Box
+      data-testid="nature-conflict"
+      sx={{ fontSize: 12, lineHeight: 1.45, mt: '6px', display: 'flex', alignItems: 'baseline', gap: '8px', color: 'kanap.text.secondary' }}
+    >
+      <Box component="span" sx={{ ...attentionDotSx, position: 'relative', top: '-1px' }} />
+      <span>
+        {t(conflict.scope === 'capex' ? 'accounts.nature.conflictCapex' : 'accounts.nature.conflictOpex', { count: conflict.count })}{' '}
+        <Link
+          href={link.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          sx={{ fontSize: 12 }}
+          // Filters too long for a URL are saved first (never the case for one account, kept for safety).
+          onClick={save ? (event) => { event.preventDefault(); void openSavedListLink({ ...link, save }); } : undefined}
+        >
+          {t('accounts.nature.showLines')}
+        </Link>
+      </span>
+    </Box>
+  );
+}
+
 function AccountNumberRow({
   value,
   disabled,
@@ -539,6 +648,7 @@ type CreateValues = {
   native_name: string;
   description: string;
   consolidation_account_number: number | null;
+  nature: AccountNature | null;
 };
 
 const EMPTY_CREATE: CreateValues = {
@@ -548,6 +658,7 @@ const EMPTY_CREATE: CreateValues = {
   native_name: '',
   description: '',
   consolidation_account_number: null,
+  nature: null,
 };
 
 function AccountCreate({
@@ -601,6 +712,7 @@ function AccountCreate({
         native_name: values.native_name.trim() || null,
         description: values.description.trim() || null,
         consolidation_account_number: values.consolidation_account_number,
+        nature: values.nature,
         status: STATUS_ENABLED,
         disabled_at: null,
       });
@@ -677,6 +789,9 @@ function AccountCreate({
               helperText={errors.account_name}
               inputProps={{ 'aria-label': t('accounts.fields.accountName'), autoComplete: 'off' }}
             />
+          </PropertyRow>
+          <PropertyRow label={t('accounts.fields.nature')} valueSx={{ maxWidth: 520 }}>
+            <NatureSelect value={values.nature} error={errors.nature} onChange={(next) => set('nature', next)} />
           </PropertyRow>
           <PropertyRow label={t('accounts.fields.nativeName')} valueSx={{ maxWidth: 520 }}>
             <TextField

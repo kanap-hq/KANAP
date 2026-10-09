@@ -179,6 +179,28 @@ describe('CoaPage summary and consolidation health', () => {
     expect(await screen.findByTestId('manage-dialog')).toBeInTheDocument();
   });
 
+  it('shows what each account is used for right after its name, with a filter on the three choices', async () => {
+    renderPage();
+    await screen.findByTestId('coa-summary');
+    await waitFor(() => expect(grid.props).not.toBeNull());
+    const columns = grid.props!.columns as any[];
+    const fields = columns.map((col) => col.field);
+    expect(fields.indexOf('nature')).toBe(fields.indexOf('account_name') + 1);
+    const column = columns.find((col) => col.field === 'nature');
+    expect(column.headerName).toBe('Used for');
+    expect(column.defaultHidden).toBeFalsy();
+    // The blank value is the default: an account for OPEX and CAPEX lines.
+    expect(column.filterParams).toEqual({
+      values: [
+        { value: null, label: 'OPEX and CAPEX' },
+        { value: 'opex', label: 'OPEX only' },
+        { value: 'capex', label: 'CAPEX only' },
+      ],
+      searchable: false,
+    });
+    expect([null, 'opex', 'capex'].map((value) => column.valueFormatter({ value }))).toEqual(['OPEX and CAPEX', 'OPEX only', 'CAPEX only']);
+  });
+
   it('flags the grid rows outside the consolidation chart next to their consolidation number', async () => {
     renderPage();
     await screen.findByTestId('coa-summary');

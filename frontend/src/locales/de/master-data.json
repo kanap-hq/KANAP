@@ -427,6 +427,7 @@
     "columns": {
       "accountNumber": "Kontonr.",
       "accountName": "Name",
+      "nature": "Verwendet für",
       "nativeName": "Lokaler Name",
       "consolAccountNumber": "Konsol.-Kontonr.",
       "consolAccountName": "Konsol.-Name",
@@ -559,6 +560,7 @@
       "chartOfAccounts": "Kontenplan",
       "accountNumber": "Kontonummer",
       "accountName": "Kontoname",
+      "nature": "Verwendet für",
       "nativeName": "Lokaler Name (Landessprache)",
       "description": "Beschreibung",
       "consolidationAccount": "Konsolidierungskonto",
@@ -578,6 +580,16 @@
       "outside": "Diese Nummer existiert im Konsolidierungskontenplan {{code}} nicht. Wählen Sie ein Konto aus {{code}}.",
       "noChart": "Es ist kein Konsolidierungskontenplan festgelegt.",
       "noChartLink": "Wählen Sie einen unter Kontenpläne → Kontenpläne verwalten."
+    },
+    "nature": {
+      "both": "OPEX und CAPEX",
+      "opex": "Nur OPEX",
+      "capex": "Nur CAPEX",
+      "conflictCapex_one": "{{count}} CAPEX-Zeile verwendet dieses Konto. Sie behält es. Neue CAPEX-Zeilen können es nicht auswählen.",
+      "conflictCapex_other": "{{count}} CAPEX-Zeilen verwenden dieses Konto. Sie behalten es. Neue CAPEX-Zeilen können es nicht auswählen.",
+      "conflictOpex_one": "{{count}} OPEX-Zeile verwendet dieses Konto. Sie behält es. Neue OPEX-Zeilen können es nicht auswählen.",
+      "conflictOpex_other": "{{count}} OPEX-Zeilen verwenden dieses Konto. Sie behalten es. Neue OPEX-Zeilen können es nicht auswählen.",
+      "showLines": "Diese Zeilen anzeigen"
     },
     "messages": {
       "saveFailed": "Das Konto konnte nicht gespeichert werden.",

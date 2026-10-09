@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { TFunction } from 'i18next';
 import { STATUS_DISABLED, STATUS_ENABLED, STATUS_VALUES, StatusValue, deriveStatusFromDisabledAt, normalizeDisabledAtInput } from '../../constants/status';
+import { ACCOUNT_NATURES, type AccountNature } from '../../constants/accountNature';
 
 const optStr = (schema = z.string()) =>
   z.preprocess((v) => {
@@ -22,6 +23,10 @@ const optDateTime = () =>
     return typeof v === 'string' ? v : null;
   }, z.string().datetime().nullable());
 
+/** "Used for": 'opex', 'capex', or null (empty) for both. */
+const optNature = () =>
+  z.preprocess((v) => (v === '' || v == null ? null : v), z.enum(ACCOUNT_NATURES).nullable());
+
 export function createAccountFormSchema(t: TFunction) {
   return z.object({
     account_number: z.number().int().min(1, t('master-data:formSchemas.account.accountNumberRequired')),
@@ -31,6 +36,7 @@ export function createAccountFormSchema(t: TFunction) {
     consolidation_account_number: optInt(),
     consolidation_account_name: optStr(),
     consolidation_account_description: optStr(),
+    nature: optNature(),
     status: z.enum(STATUS_VALUES).default(STATUS_ENABLED),
     disabled_at: optDateTime(),
   });
@@ -47,6 +53,7 @@ export type AccountInput = {
   consolidation_account_number?: number | null;
   consolidation_account_name?: string | null;
   consolidation_account_description?: string | null;
+  nature?: AccountNature | null;
   status: StatusValue;
   disabled_at?: string | null;
 };

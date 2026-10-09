@@ -5,12 +5,15 @@ import { useTranslation } from 'react-i18next';
 import { useLookupPicker } from '../../hooks/useLookupPicker';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
+import type { AccountNature } from '../../constants/accountNature';
 
 export type AccountOption = {
   id: string;
   account_number: number;
   account_name: string;
   description?: string | null;
+  /** The lines that may use the account: null for OPEX and CAPEX lines. */
+  nature?: AccountNature | null;
 };
 type Account = AccountOption;
 
@@ -28,6 +31,8 @@ type AccountSelectProps = {
   disableClearable?: boolean;
   /** The chosen account's label when the caller holds it (the detail's references): no request to show it. */
   selectedOption?: AccountOption | null;
+  /** Offers only the accounts this kind of line may use. A stored account of the other kind still shows. */
+  nature?: AccountNature;
 };
 
 function assignRef<T>(target: React.Ref<T | null> | undefined, value: T | null) {
@@ -53,6 +58,7 @@ const AccountSelect = React.forwardRef<HTMLInputElement, AccountSelectProps>(fun
     textFieldSx,
     disableClearable = false,
     selectedOption,
+    nature,
   },
   ref,
 ) {
@@ -60,9 +66,10 @@ const AccountSelect = React.forwardRef<HTMLInputElement, AccountSelectProps>(fun
   const label = labelProp ?? t('selects.account');
   const naked = hideLabel || label === '';
   // The company's chart of accounts, searched as the user types; nothing before a company is chosen.
+  // The chosen account is read by id, whatever its nature: a legacy line keeps showing its account.
   const picker = useLookupPicker<Account>({
     endpoint: '/accounts/lookup',
-    scope: { companyId: companyId || null },
+    scope: { companyId: companyId || null, nature: nature ?? null },
     enabled: !!companyId,
     value: value ? [value] : [],
     given: [selectedOption],

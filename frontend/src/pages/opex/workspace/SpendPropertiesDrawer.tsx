@@ -155,7 +155,7 @@ export default function SpendPropertiesDrawer({
         </PropertyRow>
         <PropertyRow label={t('opex.fields.account')} required>
           <Box sx={hideInnerLabelSx}>
-            <AccountSelect value={accountId} onChange={(v) => onAccountChange(v ?? '')} companyId={payingCompanyId || undefined} disabled={disabled || !payingCompanyId} required disableClearable={mode === 'edit'} selectedOption={matching(references?.account, accountId)} />
+            <AccountSelect nature="opex" value={accountId} onChange={(v) => onAccountChange(v ?? '')} companyId={payingCompanyId || undefined} disabled={disabled || !payingCompanyId} required disableClearable={mode === 'edit'} selectedOption={matching(references?.account, accountId)} />
           </Box>
         </PropertyRow>
         <PropertyRow label={t('opex.fields.currency')} required>

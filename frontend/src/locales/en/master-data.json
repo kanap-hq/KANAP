@@ -427,6 +427,7 @@
     "columns": {
       "accountNumber": "Account #",
       "accountName": "Name",
+      "nature": "Used for",
       "nativeName": "Native name",
       "consolAccountNumber": "Consol. account #",
       "consolAccountName": "Consol. name",
@@ -559,6 +560,7 @@
       "chartOfAccounts": "Chart of accounts",
       "accountNumber": "Account number",
       "accountName": "Account name",
+      "nature": "Used for",
       "nativeName": "Native name (local language)",
       "description": "Description",
       "consolidationAccount": "Consolidation account",
@@ -578,6 +580,16 @@
       "outside": "This number does not exist in the consolidation chart {{code}}. Choose an account from {{code}}.",
       "noChart": "No consolidation chart is defined.",
       "noChartLink": "Choose one in Charts of accounts → Manage charts."
+    },
+    "nature": {
+      "both": "OPEX and CAPEX",
+      "opex": "OPEX only",
+      "capex": "CAPEX only",
+      "conflictCapex_one": "{{count}} CAPEX line uses this account. It keeps it. New CAPEX lines cannot choose it.",
+      "conflictCapex_other": "{{count}} CAPEX lines use this account. They keep it. New CAPEX lines cannot choose it.",
+      "conflictOpex_one": "{{count}} OPEX line uses this account. It keeps it. New OPEX lines cannot choose it.",
+      "conflictOpex_other": "{{count}} OPEX lines use this account. They keep it. New OPEX lines cannot choose it.",
+      "showLines": "Show these lines"
     },
     "messages": {
       "saveFailed": "Failed to save the account.",

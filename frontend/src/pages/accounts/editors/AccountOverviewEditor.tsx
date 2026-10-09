@@ -8,6 +8,7 @@ import useZodForm from '../../../hooks/useZodForm';
 import StatusLifecycleField from '../../../components/fields/StatusLifecycleField';
 import { accountFormSchema, AccountFormValues } from '../../forms/AccountForm';
 import { z } from 'zod';
+import { ACCOUNT_NATURES, accountNatureLabel, parseAccountNature } from '../../../constants/accountNature';
 import { STATUS_ENABLED, deriveStatusFromDisabledAt, normalizeDisabledAtInput } from '../../../constants/status';
 
 export type AccountOverviewEditorHandle = {
@@ -33,6 +34,7 @@ const DEFAULT_VALUES: AccountUpdateFormValues = {
   consolidation_account_number: null,
   consolidation_account_name: null,
   consolidation_account_description: null,
+  nature: null,
   status: STATUS_ENABLED,
   disabled_at: null,
   coa_id: '',
@@ -54,6 +56,7 @@ function toFormValues(data: any): AccountUpdateFormValues {
     consolidation_account_number: toIntOrNull(data?.consolidation_account_number),
     consolidation_account_name: data?.consolidation_account_name ?? null,
     consolidation_account_description: data?.consolidation_account_description ?? null,
+    nature: parseAccountNature(data?.nature),
     status,
     disabled_at: disabledAt,
     coa_id: data?.coa_id ?? '',
@@ -272,6 +275,27 @@ export default forwardRef<AccountOverviewEditorHandle, Props>(function AccountOv
         helperText={err.consolidation_account_description?.message as string}
         disabled={disabled}
         InputLabelProps={{ shrink: true }}
+      />
+      <Controller
+        control={control}
+        name="nature"
+        render={({ field }) => (
+          <TextField
+            select
+            label={t('accounts.fields.nature')}
+            value={field.value ?? ''}
+            onChange={(e) => field.onChange(parseAccountNature(e.target.value))}
+            error={!!err.nature}
+            helperText={err.nature?.message as string}
+            SelectProps={{ displayEmpty: true }}
+            InputLabelProps={{ shrink: true }}
+            disabled={disabled}
+          >
+            {[null, ...ACCOUNT_NATURES].map((nature) => (
+              <MenuItem key={nature ?? 'both'} value={nature ?? ''}>{accountNatureLabel(t, nature)}</MenuItem>
+            ))}
+          </TextField>
+        )}
       />
       <Controller
         control={control}

@@ -18,8 +18,8 @@ vi.mock('../../../components/fields/CompanySelect', () => ({
   default: (p: { disableClearable?: boolean }) => <div data-testid="company-select" data-clearable={String(!p.disableClearable)} />,
 }));
 vi.mock('../../../components/fields/AccountSelect', () => ({
-  default: (p: { disableClearable?: boolean; required?: boolean }) => (
-    <div data-testid="account-select" data-clearable={String(!p.disableClearable)} data-required={String(!!p.required)} />
+  default: (p: { disableClearable?: boolean; required?: boolean; nature?: string }) => (
+    <div data-testid="account-select" data-clearable={String(!p.disableClearable)} data-required={String(!!p.required)} data-nature={p.nature ?? ''} />
   ),
 }));
 vi.mock('../../../components/fields/UserSelect', () => ({ default: () => null }));
@@ -138,6 +138,11 @@ describe('CapexPropertiesDrawer', () => {
     renderDrawer('edit');
     expect(screen.getByTestId('company-select')).toHaveAttribute('data-clearable', 'false');
     expect(screen.getByTestId('account-select')).toHaveAttribute('data-clearable', 'false');
+  });
+
+  it.each(['create', 'edit'] as const)('offers only the accounts CAPEX lines may use in %s mode', (mode) => {
+    renderDrawer(mode);
+    expect(screen.getByTestId('account-select')).toHaveAttribute('data-nature', 'capex');
   });
 
   it.each(['create', 'edit'] as const)('offers one select per enabled dimension in %s mode, in dimension order, named after it', (mode) => {
