@@ -152,7 +152,7 @@ The number of migrations changes from version to version. On later starts it is 
 | `[CORS] CORS_ORIGINS and APP_BASE_URL are not set: browsers are still allowed from every origin in this version; ...` | Set both. A later version allows only the configured addresses. |
 | `[CORS] CORS_ORIGINS entry ... is a pattern: it is still accepted in this version. ...` | Replace the pattern with the exact address. |
 | `[DB] Connected as PostgreSQL role "kanap" with native RLS enforcement` | Informational. The API uses the application role. |
-| `Admin seeding disabled (set SEED_ADMIN=true to enable)` | Expected on-premise. Nothing to do: the administrator is created from `ADMIN_EMAIL` and `ADMIN_PASSWORD`, not by this option. |
+| `Admin seeding disabled (set SEED_ADMIN=true to enable)` | Expected on-premise. Nothing to do: the administrator is created from `ADMIN_EMAIL` and `ADMIN_PASSWORD`. |
 | `[on-prem] Default chart of accounts created`, `[on-prem] Created tenant '...'`, `[on-prem] Created administrator account ...`, `[on-prem] Created default subscription (On-Prem)` | First start only. |
 | `[on-prem] Administrator account ... left unchanged: the workspace has an active administrator` | Later starts. Nothing to do. |
 | `[on-prem] Restored ... as an enabled administrator: the workspace had no active administrator (password unchanged)` | A warning. No active administrator was left, so KANAP restored the `ADMIN_EMAIL` account. |
@@ -191,7 +191,7 @@ Other visible changes:
 - Extensions: `citext`, `pgcrypto`, `uuid-ossp`
 - User needs CREATE TABLE / ALTER TABLE permissions for migrations
 - Recommended: dedicated database
-- `DATABASE_URL` must use a dedicated application role, not `postgres` or another cluster-admin role
+- `DATABASE_URL` must use a dedicated application role
 - Recommended: create the app role as `NOSUPERUSER NOBYPASSRLS` from the start
 
 **Database setup (example):**

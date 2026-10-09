@@ -59,7 +59,7 @@ Add all five as **configured** permissions on the app registration:
 3. Select `openid`, `profile`, `email`, `offline_access` and `User.Read`
 4. Click **Add permissions**
 
-`User.Read` lets KANAP read the signed-in person's own profile from Microsoft Graph so it can fill in their name, job title, phones, department and company. Keep it. It is a separate permission from `User.Read.All`, not an older version of it. Without it, users are prompted for consent at every sign-in or the sign-in fails.
+`User.Read` lets KANAP read the signed-in person's own profile from Microsoft Graph so it can fill in their name, job title, phones, department and company. Keep it. It is a separate permission from `User.Read.All`. Without it, users are prompted for consent at every sign-in or the sign-in fails.
 
 !!! warning "Add the OIDC scopes before granting admin consent"
     Tenant-wide admin consent rewrites the app's grant to match the **configured** permission list. `openid`, `profile`, `email` and `offline_access` are usually listed under "Other permissions granted" and are not configured by default, so a tenant-wide consent would drop them and break existing sign-ins. The Azure portal shows this warning itself. Add the four scopes as configured delegated permissions first, then grant consent.
