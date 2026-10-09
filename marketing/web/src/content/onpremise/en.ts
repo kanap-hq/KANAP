@@ -29,7 +29,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Compliance-ready',
-        body: 'Row-level security isolates tenants. Argon2 password hashing. An audit log of sign-ins and exports that your log collector reads as CSV. HTTPS with certificates you control. Your VPC, your backups, your SOC.',
+        body: 'Row-level security isolates tenants. Argon2 password hashing. An audit log of changes, sign-ins and exports, with a CSV export your log tools read as is. HTTPS with certificates you control. Your VPC, your backups, your SOC.',
       },
       {
         title: 'Air-gap friendly',

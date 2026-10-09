@@ -29,7 +29,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Compliance-ready',
-        body: 'Row-Level Security isoliert Tenants. Argon2-Passworthashing. Ein Audit-Log der Anmeldungen und Exporte, das Ihr Log-Collector als CSV liest. HTTPS mit Zertifikaten, die Sie kontrollieren. Ihre VPC, Ihre Backups, Ihr SOC.',
+        body: 'Row-Level Security isoliert Tenants. Argon2-Passworthashing. Ein Audit-Log der Änderungen, Anmeldungen und Exporte, mit einem CSV-Export, den Ihre Log-Werkzeuge unverändert lesen. HTTPS mit Zertifikaten, die Sie kontrollieren. Ihre VPC, Ihre Backups, Ihr SOC.',
       },
       {
         title: 'Air-Gap-freundlich',
