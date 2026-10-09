@@ -216,7 +216,7 @@ async function main() {
     const get = async (query: Record<string, string>, user: Person, tenantId = user.tenant_id): Promise<Answer> => {
       const search = new URLSearchParams({ language: 'en', ...query });
       const res = await fetch(`${base}/audit-logs/export?${search.toString()}`, {
-        headers: { authorization: `Bearer ${token(user)}`, 'x-probe-tenant': tenantId },
+        headers: { authorization: `Bearer ${token(user)}`, 'x-probe-tenant': tenantId, 'user-agent': 'Export probe' },
         signal: AbortSignal.timeout(10_000),
       });
       // The bytes as sent (`res.text()` drops a BOM).
@@ -256,7 +256,9 @@ async function main() {
     const [own, created, updated, login, failed] = rows;
     assert.match(own.date, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/, 'ISO 8601 date');
     assert.equal(own.user, 'Alice Admin');
-    assert.deepEqual(JSON.parse(own.after), { resource: 'audit-logs', path: '/audit-logs/export' });
+    assert.deepEqual(JSON.parse(own.after), { resource: 'audit-logs', path: '/audit-logs/export', ip: '127.0.0.1', user_agent: 'Export probe' });
+    assert.equal(own.ip, '127.0.0.1', 'an export row fills the address column');
+    assert.equal(own.user_agent, 'Export probe', 'an export row fills the agent column');
     assert.equal(created.user, 'Alice Admin');
     assert.equal(login.user, 'Alice Admin');
     assert.equal(login.record_id, a.admin.id);
@@ -281,7 +283,7 @@ async function main() {
     for (const person of [a.admin, a.dash, a.reader]) {
       assert.ok(!full.text.includes(person.email), 'a person with a name shows by name only');
     }
-    console.log('ok - flat, stable columns: ISO date, codes, names only, address and agent of sign-in events, compact JSON');
+    console.log('ok - flat, stable columns: ISO date, codes, names only, address and agent of sign-in and export events, compact JSON');
 
     // 2. Cells a spreadsheet would read as a formula are prefixed; a plain negative amount is not touched.
     assert.equal(failed.user_agent, "'=probe agent");
@@ -328,7 +330,7 @@ async function main() {
     const recordedA = await exportRows(tenantA);
     assert.equal(recordedA.length, 7, 'one row per export made in tenant A (seven answered 200)');
     for (const row of recordedA) {
-      assert.deepEqual(row.after_json, { resource: 'audit-logs', path: '/audit-logs/export' });
+      assert.deepEqual(row.after_json, { resource: 'audit-logs', path: '/audit-logs/export', ip: '127.0.0.1', user_agent: 'Export probe' });
     }
     assert.equal(recordedA.filter((row) => row.user_id === a.dash.id).length, 1);
     const recordedB = await exportRows(tenantB);

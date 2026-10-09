@@ -104,7 +104,7 @@ async function main() {
   await app.listen(0, '127.0.0.1');
   const { port } = app.getHttpServer().address() as AddressInfo;
   const call = async (method: string, path: string) => {
-    const res = await fetch(`http://127.0.0.1:${port}${path}`, { method });
+    const res = await fetch(`http://127.0.0.1:${port}${path}`, { method, headers: { 'user-agent': 'Export probe' } });
     await res.text();
     return res.status;
   };
@@ -122,7 +122,7 @@ async function main() {
       user_id: userId,
       source: 'user',
       before_json: null,
-      after_json: { resource, path },
+      after_json: { resource, path, ip: '127.0.0.1', user_agent: 'Export probe' },
     });
     assert.deepEqual(await exportRows(tenantId), [
       row('probe-items', '/probe-items/export'),

@@ -8,7 +8,7 @@ import { assertSetFilterModes, compileAgFilterCondition, createParamNameGenerato
 import { neutralizeCsvRow } from '../common/csv/csv-export.service';
 import { writeCsvHeader, writeCsvRows } from '../common/csv-sheet/write';
 import type { CsvLanguage } from '../common/csv-sheet/types';
-import { AUTH_EVENT_TABLE } from './security-events';
+import { AUTH_EVENT_TABLE, EXPORT_EVENT_TABLE } from './security-events';
 
 type AuditListItem = {
   id: string;
@@ -49,7 +49,7 @@ export const AUDIT_LOG_EXPORT_TRUNCATED_HEADER = 'X-Export-Truncated';
 /**
  * The columns of the export, flat and stable: the date (ISO 8601, UTC), the codes as stored, the
  * person as the audit log page shows them (exportUserLabel), the client address and user agent of
- * a sign-in or session event, then the values before and after as compact JSON.
+ * a sign-in, session or export event, then the values before and after as compact JSON.
  */
 export const AUDIT_LOG_EXPORT_HEADERS = [
   'date',
@@ -161,9 +161,9 @@ export function auditExportRow(row: AuditExportRaw): string[] {
   const after = row.after_json && typeof row.after_json === 'object' && !Array.isArray(row.after_json)
     ? row.after_json as Record<string, unknown>
     : null;
-  // Only sign-in and session events keep a client address and user agent (security-events.ts);
+  // Only sign-in, session and export events keep a client address and user agent (security-events.ts);
   // an `ip` field of another table's row is that record's data and stays in `after`.
-  const details = row.table_name === AUTH_EVENT_TABLE ? after : null;
+  const details = row.table_name === AUTH_EVENT_TABLE || row.table_name === EXPORT_EVENT_TABLE ? after : null;
   return [
     isoDate(row.created_at),
     row.action ?? '',

@@ -51,6 +51,8 @@ type AuditLogItem = {
 
 /** The header the server sets on an export that stopped at its row limit (the limit). */
 const EXPORT_TRUNCATED_HEADER = 'x-export-truncated';
+/** Plain text in the secondary colour, like the other text columns of the grid. */
+const SECONDARY_CELL_STYLE: Record<string, string> = { color: 'var(--kanap-text-secondary)' };
 
 function formatJson(value: any): string {
   if (value == null) return 'null';
@@ -179,14 +181,11 @@ export default function AuditLogsPage() {
           labelFormatter: (value: string | null) => (value ? t(`auditLogs.actions.${value}`, { defaultValue: value }) : t('auditLogs.shared.empty')),
           searchable: false,
         },
-        cellRenderer: (p: any) => {
+        valueFormatter: (p: any) => {
           const value = String(p.value || '').toLowerCase();
-          return (
-            <Typography variant="body2" color="text.secondary">
-              {value ? t(`auditLogs.actions.${value}`, { defaultValue: value }) : t('auditLogs.shared.empty')}
-            </Typography>
-          );
+          return value ? t(`auditLogs.actions.${value}`, { defaultValue: value }) : t('auditLogs.shared.empty');
         },
+        cellStyle: SECONDARY_CELL_STYLE,
       },
       {
         field: 'source',
@@ -199,14 +198,11 @@ export default function AuditLogsPage() {
           labelFormatter: (value: string | null) => t(`auditLogs.sources.${value || 'system'}`, { defaultValue: value || 'system' }),
           searchable: false,
         },
-        cellRenderer: (p: any) => {
+        valueFormatter: (p: any) => {
           const value = String(p.value || 'system').toLowerCase();
-          return (
-            <Typography variant="body2" color="text.secondary">
-              {t(`auditLogs.sources.${value}`, { defaultValue: value })}
-            </Typography>
-          );
+          return t(`auditLogs.sources.${value}`, { defaultValue: value });
         },
+        cellStyle: SECONDARY_CELL_STYLE,
       },
       {
         field: 'record_id',
