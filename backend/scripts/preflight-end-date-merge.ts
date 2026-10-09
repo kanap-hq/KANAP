@@ -39,19 +39,20 @@ import { DataSource, QueryRunner } from 'typeorm';
  *   PREFLIGHT_TENANT_SLUG=<slug> npm run preflight:end-date-merge
  *
  * On a server (QA: .env.qa / compose.qa.yml, prod: .env.prod / compose.prod.yml),
- * in this order, from /opt/kanap after `git pull`:
+ * in this order, from /opt/kanap after `git pull`. The server images run compiled code only:
+ * the TypeScript script runs in the maintenance image, built from the same tree.
  *   1. docker compose --env-file backend/.env.qa -f infra/compose.qa.yml build api web
- *   2. docker compose --env-file backend/.env.qa -f infra/compose.qa.yml run --rm --no-deps api npx ts-node scripts/preflight-end-date-merge.ts
- *      docker compose --env-file backend/.env.qa -f infra/compose.qa.yml run --rm --no-deps api npx ts-node scripts/preflight-end-date-merge.ts --totals
- *      `run` with a command replaces the image CMD, so the new image reads the
- *      database without migrating it. `docker exec` on the running container
- *      does not work here: the old image does not carry this script.
+ *      docker build --target dev -t kanap-api-tools backend
+ *   2. docker run --rm --env-file backend/.env.qa --network infra_default kanap-api-tools \
+ *        npx ts-node scripts/preflight-end-date-merge.ts
+ *      The same command with `--totals` at the end prints the totals.
+ *      The maintenance image reads the database without migrating it.
+ *      `infra_default` is the network of the API container (`docker network ls` lists it).
  *   3. Review the report; resolve conflicts by hand or accept them.
  *   4. docker compose --env-file backend/.env.qa -f infra/compose.qa.yml up -d api web
  *      (the new container migrates at boot).
- *   5. docker compose --env-file backend/.env.qa -f infra/compose.qa.yml exec api npx ts-node scripts/preflight-end-date-merge.ts --totals
- *      and diff with the totals of step 2.
- * On-premise: the same order with the installation's own compose file.
+ *   5. Run the command of step 2 with `--totals` again and diff with the totals of step 2.
+ * On-premise: the same order with the installation's own env file, compose file and network.
  */
 
 type Kind = { label: 'OPEX' | 'CAPEX'; items: string; versions: string; amounts: string; itemFk: string; prefix: string; name: string };

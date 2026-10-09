@@ -3,6 +3,8 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile
+      # The runtime stage: compiled code and production dependencies only.
+      target: runtime
     env_file: ../.env
     extra_hosts:
       - "host.docker.internal:host-gateway"

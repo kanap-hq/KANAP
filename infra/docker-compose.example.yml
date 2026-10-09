@@ -7,10 +7,12 @@
 # listen on 127.0.0.1 only. To reach them from another machine or a VM (for example the nested
 # Windows setup below), set KANAP_DEV_BIND=0.0.0.0 in the shell or in infra/.env.
 # PostgreSQL stays on 127.0.0.1 whatever KANAP_DEV_BIND says; KANAP_DEV_DB_BIND changes it.
+#
+# Images are pinned to the digest of their multi-architecture index, taken on 2026-10-09.
 name: cio
 services:
   db:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81
     restart: unless-stopped
     environment:
       POSTGRES_PASSWORD: postgres
@@ -31,6 +33,9 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile
+      # The development stage (sources and tools for `npm run start:dev`). Servers build the
+      # runtime stage, the default.
+      target: dev
     depends_on:
       db:
         condition: service_healthy
@@ -79,7 +84,7 @@ services:
   # Optional dev proxy to test subdomains with lvh.me
   nginx:
     restart: unless-stopped
-    image: nginx:alpine
+    image: nginx:alpine@sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2
     profiles: ["dev-proxy"]
     depends_on:
       api:
@@ -99,7 +104,7 @@ services:
   # The api container reaches this instance at http://netbox:8080 on the default
   # compose network. From the host it is http://localhost:8084.
   netbox:
-    image: netboxcommunity/netbox:v4.7.1
+    image: netboxcommunity/netbox:v4.7.1@sha256:59e3e5954d0243d8648f2fa7ba82cf7c7770aaeef392026cca8b21cd67411e74
     profiles: ["netbox"]
     restart: unless-stopped
     user: "netbox:root"
@@ -154,7 +159,7 @@ services:
       retries: 40
 
   netbox-postgres:
-    image: postgres:18-alpine
+    image: postgres:18-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
     profiles: ["netbox"]
     restart: unless-stopped
     environment:
@@ -171,7 +176,7 @@ services:
       start_period: 20s
 
   netbox-redis:
-    image: valkey/valkey:9.1-alpine
+    image: valkey/valkey:9.1-alpine@sha256:48332870af354a799964c0012ae1194a0bf2bf894eb508f945810596dc2d8d11
     profiles: ["netbox"]
     restart: unless-stopped
     command: ["valkey-server", "--appendonly", "yes", "--requirepass", "netbox"]

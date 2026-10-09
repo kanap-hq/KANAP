@@ -1,14 +1,20 @@
+/**
+ * Integrated-document repair, for every active tenant (or the one INTEGRATED_DOCS_TENANT_SLUG or
+ * INTEGRATED_DOCS_TENANT_ID names). Compiled with the API (`dist/knowledge/scripts/`): the image
+ * entrypoint (scripts/migrate-and-start.js) runs it with `node` when INTEGRATED_DOCS_AUTO_ROLLOUT
+ * asks for it, and `npm run integrated-docs:backfill` runs it by hand.
+ */
 import 'reflect-metadata';
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { DataSource, EntityManager } from 'typeorm';
-import { AppModule } from '../src/app.module';
-import { seedManagedDocsKnowledgeAssets } from '../src/knowledge/integrated-document-seed';
+import { AppModule } from '../../app.module';
+import { seedManagedDocsKnowledgeAssets } from '../integrated-document-seed';
 import {
   IntegratedDocumentsService,
   RepairSourceEntityResult,
-} from '../src/knowledge/integrated-documents.service';
-import { withTenant } from '../src/common/tenant-runner';
+} from '../integrated-documents.service';
+import { withTenant } from '../../common/tenant-runner';
 
 type TenantRow = {
   id: string;

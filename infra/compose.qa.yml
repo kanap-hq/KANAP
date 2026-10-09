@@ -9,6 +9,8 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile
+      # The runtime stage: compiled code and production dependencies only.
+      target: runtime
     env_file: ../backend/.env.qa
     environment:
       INTEGRATED_DOCS_AUTO_ROLLOUT: ${INTEGRATED_DOCS_AUTO_ROLLOUT:-if-needed}

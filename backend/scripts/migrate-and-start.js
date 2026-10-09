@@ -12,6 +12,10 @@
   - SKIP_MIGRATIONS=true to skip running migrations at boot
   - INTEGRATED_DOCS_AUTO_ROLLOUT=if-needed|always|off to control boot-time integrated-doc repair
   - INTEGRATED_DOCS_AUTO_ROLLOUT_STRICT=true to fail startup when integrated-doc repair fails
+
+  The integrated-doc repair and its verification are compiled with the API
+  (dist/knowledge/scripts/) and run here with node: the image needs no TypeScript tooling. When
+  one of them fails, the API starts anyway (unless strict) and one error line names the step.
 */
 
 const path = require('path');
@@ -37,31 +41,64 @@ function isIntegratedDocsRolloutStrict() {
   return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'strict';
 }
 
-function npmBinary() {
-  return process.platform === 'win32' ? 'npm.cmd' : 'npm';
+/** The steps of the integrated-doc rollout, in order: compiled scripts run with node. */
+function integratedDocsRolloutSteps(backendDir = path.resolve(__dirname, '..')) {
+  return [
+    {
+      label: 'integrated-doc repair',
+      script: path.join(backendDir, 'dist', 'knowledge', 'scripts', 'backfill-integrated-docs.js'),
+    },
+    {
+      label: 'integrated-doc verification',
+      script: path.join(backendDir, 'dist', 'knowledge', 'scripts', 'verify-integrated-docs.js'),
+    },
+  ];
 }
 
-async function runChildCommand(label, args) {
-  console.log(`[entrypoint] ${label}...`);
-  await new Promise((resolve, reject) => {
-    const child = spawn(npmBinary(), args, {
-      cwd: path.resolve(__dirname, '..'),
-      env: process.env,
-      stdio: 'inherit',
-    });
+function errorMessage(error) {
+  return error && error.message ? error.message : String(error);
+}
+
+/** The single error line printed when a rollout step fails and startup goes on. */
+function integratedDocsFailureLine(label, error) {
+  return `[entrypoint] Integrated-doc rollout: the ${label} step failed (${errorMessage(error)}). `
+    + 'The API starts anyway: fix the cause, then run "npm run integrated-docs:backfill" and '
+    + '"npm run integrated-docs:verify" in the API container.';
+}
+
+/** Runs one compiled script with the node binary of this process; rejects when it does not exit 0. */
+function runNodeScript(step, { cwd = path.resolve(__dirname, '..'), env = process.env } = {}) {
+  console.log(`[entrypoint] Running the ${step.label}...`);
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [step.script], { cwd, env, stdio: 'inherit' });
     child.on('error', reject);
     child.on('exit', (code, signal) => {
       if (code === 0) {
         resolve();
         return;
       }
-      if (signal) {
-        reject(new Error(`${label} terminated by signal ${signal}`));
-        return;
-      }
-      reject(new Error(`${label} failed with exit code ${code}`));
+      reject(new Error(signal ? `terminated by signal ${signal}` : `exit code ${code}`));
     });
   });
+}
+
+/**
+ * Runs the steps in order and stops at the first failure. Strict: the failure is thrown.
+ * Otherwise one error line names the failed step and the result is false.
+ */
+async function runIntegratedDocsSteps(steps, { strict = false, runStep = runNodeScript, logError = console.error } = {}) {
+  for (const step of steps) {
+    try {
+      await runStep(step);
+    } catch (error) {
+      if (strict) {
+        throw new Error(`the ${step.label} step failed (${errorMessage(error)})`);
+      }
+      logError(integratedDocsFailureLine(step.label, error));
+      return false;
+    }
+  }
+  return true;
 }
 
 async function listActiveTenants(runner) {
@@ -173,16 +210,9 @@ async function runIntegratedDocsRolloutIfNeeded() {
       return;
     }
 
-    try {
-      await runChildCommand('Running integrated-doc repair', ['run', 'integrated-docs:backfill']);
-      await runChildCommand('Verifying integrated-doc repair', ['run', 'integrated-docs:verify']);
-    } catch (error) {
-      const message = error && error.message ? error.message : String(error);
-      if (isIntegratedDocsRolloutStrict()) {
-        throw error;
-      }
-      console.error(`[entrypoint] Integrated-doc auto rollout failed: ${message}`);
-      console.error('[entrypoint] Continuing startup because schema migrations already completed. Review repair logs and rerun repair after fixing the data issue.');
+    const done = await runIntegratedDocsSteps(integratedDocsRolloutSteps(), { strict: isIntegratedDocsRolloutStrict() });
+    if (done) {
+      console.log('[entrypoint] Integrated-doc rollout complete.');
     }
   } finally {
     try {
@@ -241,11 +271,19 @@ async function runMigrationsIfNeeded() {
   }
 }
 
-(async () => {
+async function main() {
   // Migrations run once, here, before any API process starts: TypeORM takes no lock, so two
   // processes migrating at once would collide.
   await runMigrationsIfNeeded();
-  await runIntegratedDocsRolloutIfNeeded();
+  try {
+    await runIntegratedDocsRolloutIfNeeded();
+  } catch (error) {
+    // The rollout check itself failed (lock, counts). Migrations are done: the API starts.
+    if (isIntegratedDocsRolloutStrict()) {
+      throw error;
+    }
+    console.error(integratedDocsFailureLine('rollout check', error));
+  }
   const mainScript = path.resolve(__dirname, '../dist/main.js');
   const { parseApiWorkers } = require(path.resolve(__dirname, '../dist/common/cluster/process-role.js'));
   const workers = parseApiWorkers(process.env.API_WORKERS);
@@ -257,4 +295,16 @@ async function runMigrationsIfNeeded() {
   // Start the API (compiled output) in this process. The image starts this script with the
   // exec form of CMD, so node gets SIGTERM itself; main.ts drains on it (graceful-shutdown.ts).
   require(mainScript);
-})();
+}
+
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  integratedDocsFailureLine,
+  integratedDocsRolloutSteps,
+  readIntegratedDocsRolloutMode,
+  runIntegratedDocsSteps,
+  runNodeScript,
+};
