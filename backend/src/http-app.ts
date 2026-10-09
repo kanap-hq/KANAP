@@ -31,7 +31,7 @@ export function applyHttpMiddleware(app: INestApplication): void {
   app.use(helmet());
   // Browser origins (common/cors-policy.ts): a refused origin gets a 403 without CORS headers.
   const corsPatterns = parseCorsPatterns();
-  if (corsPatterns.length > 0) {
+  if (corsPatterns.length > 0 && isLeadProcess()) {
     // eslint-disable-next-line no-console
     console.log(`[CORS] Configured ${corsPatterns.length} origin pattern(s)`);
   }

@@ -65,17 +65,14 @@ export class ScheduledTasksService implements OnApplicationBootstrap {
       // Upsert: preserve user-customized cron/enabled
       const existing = await this.taskRepo.findOne({ where: { name: reg.name } });
       if (!existing) {
-        try {
-          await this.taskRepo.save({
-            name: reg.name,
-            description: reg.description,
-            cron_expression: reg.defaultCron,
-            enabled: true,
-          });
-        } catch (err: any) {
-          // Another API process starting at the same time inserted it first (unique name).
-          if (err?.driverError?.code !== '23505' && err?.code !== '23505') throw err;
-        }
+        // Another API process starting at the same time may insert it first (unique name): its
+        // row stands, and no failed statement reaches the database log.
+        await this.taskRepo.query(
+          `INSERT INTO scheduled_tasks (name, description, cron_expression, enabled)
+           VALUES ($1, $2, $3, true)
+           ON CONFLICT (name) DO NOTHING`,
+          [reg.name, reg.description, reg.defaultCron],
+        );
       } else {
         // Update description only (preserve user's cron/enabled)
         if (existing.description !== reg.description) {

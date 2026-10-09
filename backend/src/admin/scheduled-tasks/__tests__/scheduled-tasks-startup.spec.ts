@@ -15,7 +15,11 @@ function harness(stored: StoredTask[]) {
   const taskRepo = {
     findOne: async ({ where }: any) => rows.get(where.name) ?? null,
     findOneBy: async ({ name }: any) => rows.get(name) ?? null,
-    save: async (task: StoredTask) => { rows.set(task.name, { ...task }); return task; },
+    // The insert of a task not stored yet (ON CONFLICT (name) DO NOTHING).
+    query: async (_sql: string, [name, description, cron]: string[]) => {
+      if (!rows.has(name)) rows.set(name, { name, description, cron_expression: cron, enabled: true });
+      return [];
+    },
     update: async () => undefined,
   };
   const registry = {

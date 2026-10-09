@@ -4,7 +4,7 @@ import * as assert from 'node:assert/strict';
 import * as http from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { AddressInfo } from 'node:net';
-import { Controller, Get, INestApplication, Module, Post, Req, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, INestApplication, Module, Post, Req, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory, Reflector } from '@nestjs/core';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { DataSource, QueryFailedError } from 'typeorm';
@@ -36,7 +36,10 @@ import { TenantInterceptor } from '../tenant.interceptor';
 // - a file upload whose body arrives slowly is not ended by the idle limit
 //   (multipart requests get the idle limit of outside work);
 // - no free connection in the pool (after the tenant lookup): 503 busy, from
-//   TenantInitGuard as from TenantInterceptor.
+//   TenantInitGuard as from TenantInterceptor;
+// - a handler that answers itself (@Res(), a download) has its transaction
+//   committed by TenantInterceptor and nothing else: the end of its response
+//   sends no ROLLBACK, and no statement waits behind another on its connection.
 
 const PROBE = 'bounds-probe';
 const DEFAULT_AXIS = `(SELECT id FROM analytics_axes WHERE tenant_id = app_current_tenant() AND is_default)`;
@@ -45,6 +48,8 @@ const SETTINGS_SQL = `SELECT name, setting::int AS ms FROM pg_settings
   WHERE name IN ('lock_timeout', 'statement_timeout', 'idle_in_transaction_session_timeout') ORDER BY name`;
 
 const abortProbe: { finished: boolean; error: unknown } = { finished: false, error: undefined };
+/** What the download probe's connection was sent, and the most statements it had at once. */
+const downloadProbe: { statements: string[]; mostAtOnce: number } = { statements: [], mostAtOnce: 0 };
 let lockedTenantId = '';
 
 /** The idle limit the idle probes run with (the server ends their transaction after it). */
@@ -159,6 +164,25 @@ class BoundsProbeController {
   async upload(@UploadedFile() file: any, @Req() req: any) {
     const [row] = await req.queryRunner.manager.query(`SELECT setting::int AS ms FROM pg_settings WHERE name = 'idle_in_transaction_session_timeout'`);
     return { size: file?.size ?? null, idleMs: Number(row.ms) };
+  }
+
+  // Writes, then answers itself, as a file download does.
+  @Get('download')
+  async download(@Req() req: any, @Res() res: any) {
+    const runner = req.queryRunner;
+    const query = runner.query.bind(runner);
+    let running = 0;
+    downloadProbe.statements = [];
+    downloadProbe.mostAtOnce = 0;
+    runner.query = (sql: string, ...rest: unknown[]) => {
+      downloadProbe.statements.push(String(sql).trim().split(/\s+/)[0].toUpperCase());
+      running += 1;
+      downloadProbe.mostAtOnce = Math.max(downloadProbe.mostAtOnce, running);
+      return query(sql, ...rest).finally(() => { running -= 1; });
+    };
+    await insertProbe(req, `${PROBE}-download-${req.query.run}`);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.send('a;b\n1;2\n');
   }
 
   // A genuine bug, thrown once the client is gone.
@@ -484,6 +508,23 @@ async function testAbortDuringCommit(app: INestApplication, tenantId: string, fa
   if (error.length > 0) failures.push(`abort during commit: errors logged: ${JSON.stringify(error)}`);
 }
 
+/** A download (@Res()): committed once by TenantInterceptor; its response's end sends nothing more. */
+async function testDownloadCommitsAlone(app: INestApplication, tenantId: string, failures: string[]) {
+  const run = randomUUID().slice(0, 8);
+  const { result, warn, error } = await capturingLogs(async () => {
+    const res = await call(app, 'GET', `download?run=${run}`);
+    // 'finish' and 'close' of the response have fired by now.
+    await sleep(100);
+    return res;
+  });
+  if (result.status !== 200 || result.body !== 'a;b\n1;2\n') failures.push(`download: HTTP ${result.status} ${JSON.stringify(result.body)}`);
+  if (await probeRows(tenantId, `${PROBE}-download-${run}`) !== 1) failures.push('download: the write was not committed');
+  const after = downloadProbe.statements.slice(downloadProbe.statements.indexOf('INSERT') + 1);
+  if (JSON.stringify(after) !== JSON.stringify(['COMMIT'])) failures.push(`download: statements after the write ${JSON.stringify(after)}, expected ["COMMIT"]`);
+  if (downloadProbe.mostAtOnce !== 1) failures.push(`download: ${downloadProbe.mostAtOnce} statements at once on the request's connection`);
+  if (warn.length > 0 || error.length > 0) failures.push(`download: logged ${JSON.stringify({ warn, error })}`);
+}
+
 async function main() {
   await dataSource.initialize();
   const tenantId = randomUUID();
@@ -509,6 +550,8 @@ async function main() {
     await testPoolExhausted(tenantId, failures);
     await testErrorAfterAbort(appGuard, failures);
     await testAbortDuringCommit(appGuard, tenantId, failures);
+    await testDownloadCommitsAlone(appGuard, tenantId, failures);
+    await testDownloadCommitsAlone(appInterceptor, tenantId, failures);
   } finally {
     await appGuard.close();
     await appInterceptor.close();

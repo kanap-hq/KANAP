@@ -21,7 +21,11 @@ import { NextFunction } from 'express';
  * An abort that lands while TenantInterceptor's COMMIT is in flight
  * (`req._tenantCommitStarted`) is left to the interceptor, which finishes and
  * releases the runner itself: a ROLLBACK queued behind that COMMIT would
- * undo nothing, and the changes may well be saved. The warning says so.
+ * undo nothing, and the changes may well be saved. The warning says so. The
+ * same holds for a handler that answered itself (`@Res()`, a download): its
+ * response ends while the interceptor commits, and a ROLLBACK from 'finish'
+ * and another from 'close' would wait behind that COMMIT on the same
+ * connection, for nothing.
  *
  * A runner whose connection already ended (released by TypeORM, its
  * transaction gone with the connection) is only marked finished.
@@ -48,6 +52,8 @@ export function createRequestFinalizer() {
     const finalize = async (aborted: boolean) => {
       const runner = req?.queryRunner;
       if (!runner || req?._tenantRunnerReleased) return;
+      // A commit in flight (TenantInterceptor) finishes and releases the runner itself.
+      if (!aborted && req._tenantCommitStarted && !runner.isReleased) return;
       if (aborted && !req._clientAborted) {
         req._clientAborted = true;
         if (req._tenantCommitStarted && !runner.isReleased) {
