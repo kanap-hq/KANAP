@@ -42,6 +42,11 @@ export function isExampleRecipient(entry: unknown): boolean {
   });
 }
 
+/** `text` with every e-mail address replaced by `[address]`, for a log line. */
+export function maskEmailAddresses(text: string): string {
+  return text.replace(ADDRESS_PATTERN, '[address]');
+}
+
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, '&amp;')

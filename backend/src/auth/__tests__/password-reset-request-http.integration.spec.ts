@@ -38,17 +38,24 @@ import { RefreshToken } from '../refresh-token.entity';
 //   goes out or not;
 // - the response does not wait for the e-mail: it comes back while the transport still holds it;
 // - a failed send is an error line in the server log, with the transport and the error code and
-//   without the link, the token or the address, and the request's audit row says the e-mail
-//   was not sent (`email_not_sent`); a sent one keeps no reason;
+//   without the link, the token or any e-mail address (also when the relay's answer quotes the
+//   recipient), and the request's audit row says the e-mail was not sent (`email_not_sent`); a
+//   sent one keeps no reason;
+// - a reset link that cannot be saved changes nothing to the answer: an error line, no e-mail,
+//   the same reason;
+// - an account on a reserved `.example` domain (no e-mail is ever sent there) gets the same answer
+//   and the same reason;
 // - no unhandled rejection.
 
 const USER_AGENT = 'Probe-agent/1.0';
 const CLIENT_ADDRESS = '198.51.100.7';
 
-type Seed = { tenantId: string; slug: string; ada: { id: string; email: string } };
+type Seed = { tenantId: string; slug: string; ada: { id: string; email: string }; eve: { id: string; email: string } };
 
 /** What the e-mail transport does with the next sends. */
-let transportMode: 'fail' | 'send' | 'hold' = 'send';
+let transportMode: 'fail' | 'reject' | 'send' | 'hold' = 'send';
+/** When set, saving a reset link fails as a refused write does. */
+let tokenWriteRefused = false;
 let releaseHeld: () => void = () => undefined;
 const delivered: SendEmailOptions[] = [];
 let transportCalls = 0;
@@ -60,6 +67,14 @@ const probeTransport: EmailTransport = {
     transportCalls += 1;
     if (transportMode === 'fail') {
       throw Object.assign(new Error('unable to verify the first certificate'), { code: 'ESOCKET' });
+    }
+    if (transportMode === 'reject') {
+      // The relay's answer to RCPT TO quotes the recipient, as nodemailer passes it on.
+      const to = [options.to].flat().join(', ');
+      throw Object.assign(
+        new Error(`Can't send mail - all recipients were rejected: 550 5.1.1 <${to}>: Recipient address rejected: User unknown`),
+        { code: 'EENVELOPE', responseCode: 550 },
+      );
     }
     if (transportMode === 'hold') {
       await new Promise<void>((resolve) => { releaseHeld = resolve; });
@@ -107,7 +122,15 @@ function createUsersService() {
     { provide: UsersService, useFactory: createUsersService },
     {
       provide: AuthService,
-      useFactory: (users: UsersService) => new AuthService(users, dataSource.getRepository(RefreshToken), dataSource.getRepository(PasswordResetToken)),
+      useFactory: (users: UsersService) => {
+        const auth = new AuthService(users, dataSource.getRepository(RefreshToken), dataSource.getRepository(PasswordResetToken));
+        const create = auth.createPasswordResetToken.bind(auth);
+        auth.createPasswordResetToken = async (...args) => {
+          if (tokenWriteRefused) throw Object.assign(new Error('permission denied for table password_reset_tokens'), { code: '42501' });
+          return create(...args);
+        };
+        return auth;
+      },
       inject: [UsersService],
     },
     { provide: SecurityEventsService, useFactory: () => new SecurityEventsService(dataSource) },
@@ -195,13 +218,20 @@ async function seedTenant(tag: string): Promise<Seed> {
       `INSERT INTO roles (tenant_id, role_name, role_description, is_system, is_built_in) VALUES ($1, 'Probe member', null, false, false) RETURNING id`,
       [tenantId],
     );
-    const email = `ada-${tenantId.slice(0, 8)}@example.com`;
-    const [{ id }] = await manager.query(
-      `INSERT INTO users (tenant_id, first_name, last_name, email, password_hash, role_id, mfa_enabled, status)
-       VALUES ($1, 'Ada', 'Probe', $2, null, $3, false, 'enabled') RETURNING id`,
-      [tenantId, email, roleId],
-    );
-    return { tenantId, slug, ada: { id, email } };
+    const user = async (email: string) => {
+      const [{ id }] = await manager.query(
+        `INSERT INTO users (tenant_id, first_name, last_name, email, password_hash, role_id, mfa_enabled, status)
+         VALUES ($1, 'Probe', 'Probe', $2, null, $3, false, 'enabled') RETURNING id`,
+        [tenantId, email, roleId],
+      );
+      return { id, email };
+    };
+    return {
+      tenantId,
+      slug,
+      ada: await user(`ada-${tenantId.slice(0, 8)}@example.com`),
+      eve: await user(`eve-${tenantId.slice(0, 8)}@probe.example`),
+    };
   });
 }
 
@@ -275,14 +305,55 @@ async function runMode(app: INestApplication, seed: Seed, mode: string) {
   await settled();
   assert.equal(delivered.length, 2, `${mode}: the held e-mail went out once released`);
 
-  // The audit rows: the failed send says so, a sent one has no reason, an unknown address keeps its reason only.
+  // The relay refuses the recipient and quotes its address: the same answer, no address in the log.
+  transportMode = 'reject';
+  assert.deepEqual(await requestReset(app, seed, seed.ada.email), OK, `${mode}: same answer when the relay refuses the recipient`);
+  await settled();
+  const rejectedLine = logged.filter((line) => line.level === 'error').at(-1)!.message;
+  assert.equal(logged.filter((line) => line.level === 'error').length, 2, `${mode}: one more error line`);
+  assert.match(rejectedLine, /Password reset e-mail not sent/);
+  assert.match(rejectedLine, /code EENVELOPE, response 550/);
+  assert.match(rejectedLine, /550 5\.1\.1 <\[address\]>: Recipient address rejected/);
+  assert.ok(!rejectedLine.includes('@'), `${mode}: the error line holds no e-mail address: ${rejectedLine}`);
+
+  // The reset link cannot be saved: the same answer, an error line, no e-mail.
+  transportMode = 'send';
+  const callsBeforeRefusal = transportCalls;
+  tokenWriteRefused = true;
+  try {
+    assert.deepEqual(await requestReset(app, seed, seed.ada.email), OK, `${mode}: same answer when the link cannot be saved`);
+    await settled();
+  } finally {
+    tokenWriteRefused = false;
+  }
+  assert.equal(transportCalls, callsBeforeRefusal, `${mode}: no e-mail without a saved link`);
+  const refusedLine = logged.filter((line) => line.level === 'error').at(-1)!.message;
+  assert.equal(logged.filter((line) => line.level === 'error').length, 3, `${mode}: one more error line`);
+  assert.match(refusedLine, /Password reset link not created/);
+  assert.match(refusedLine, /code 42501/);
+  assert.match(refusedLine, new RegExp(`user ${seed.ada.id}`));
+
+  // An account on a reserved `.example` domain: the same answer, nothing sent, the same reason.
+  assert.deepEqual(await requestReset(app, seed, seed.eve.email), OK, `${mode}: same answer for a reserved domain`);
+  await settled();
+  assert.equal(transportCalls, callsBeforeRefusal, `${mode}: nothing sent to a reserved domain`);
+  assert.equal(logged.filter((line) => line.level === 'error').length, 3, `${mode}: no error line for a reserved domain`);
+
+  // The audit rows: when nothing goes out the row says so, a sent one has no reason, an unknown
+  // address keeps its reason only.
   assert.deepEqual(await resetRows(seed.tenantId), [
     row(seed.ada.id, 'email_not_sent'),
     row(null, 'unknown_user'),
     row(seed.ada.id, null),
     row(null, 'unknown_user'),
     row(seed.ada.id, null),
+    row(seed.ada.id, 'email_not_sent'),
+    row(seed.ada.id, 'email_not_sent'),
+    row(seed.eve.id, 'email_not_sent'),
   ]);
+  for (const line of logged) {
+    assert.ok(!line.message.includes(seed.ada.email) && !line.message.includes(seed.eve.email), `${mode}: no account address in the log: ${line.message}`);
+  }
 
   // No link, token or address of an e-mail in any log line or audit row.
   const links = delivered.map((sent) => String(sent.text ?? '').match(/https?:\/\/\S*reset-password#token=\S+/)?.[0]).filter(Boolean) as string[];

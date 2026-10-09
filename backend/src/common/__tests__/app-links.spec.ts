@@ -7,6 +7,7 @@ import { PortfolioWeeklyReportController } from '../../portfolio/portfolio-weekl
 import { ScheduledNotificationsService } from '../../notifications/scheduled-notifications.service';
 import { NotificationPreferencesController } from '../../notifications/notification-preferences.controller';
 import { resolveConfiguredAppBaseUrl, resolveNotificationBaseUrl, resolveTenantAppBaseUrl } from '../url';
+import { waitForBackgroundWork } from '../background-work';
 
 // Absolute links to the application (password reset, invitation, sign-in redirects, notification
 // and export links) come from the configuration. The request's Host, X-Forwarded-Host and
@@ -83,6 +84,8 @@ async function resetLinkFor(req: any): Promise<string> {
   const { controller, sent } = createAuthController({ userExists: true });
   const answer = await controller.requestPasswordReset({ email: 'person@example.test' }, req);
   assert.deepEqual(answer, { ok: true });
+  // The link is issued and e-mailed after the answer (background work).
+  assert.equal(await waitForBackgroundWork(Date.now() + 5000), 0);
   assert.equal(sent.length, 1);
   return sent[0].resetUrl;
 }
