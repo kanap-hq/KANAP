@@ -223,8 +223,9 @@ The Overview tab holds the details of the investment and its tasks.
 
 **Analytics dimensions**:
 
-- Each enabled dimension used for CAPEX lines has its own field, named after the dimension, in dimension order. A dimension set to **OPEX only** has none, and a value an item holds on it stays hidden Pick a value or clear the field; the change saves at once
+- Each enabled dimension used for CAPEX lines has its own field, named after the dimension, in dimension order. A dimension set to **OPEX only** has none, and a value an item holds on it stays hidden. Pick a value or clear the field; the change saves at once
 - Each field lists the enabled values of its dimension. A disabled value stays on the items that already have it, and cannot be picked for another item
+- A value used for OPEX lines only is not offered, and is refused as a new choice. An item that already has it keeps it and stays editable. See [OPEX or CAPEX values](analytics.md#opex-or-capex-values)
 - The field cannot create a value: create it in [Analytics dimensions](analytics.md), or let a CSV import create it
 - If the dimensions cannot be loaded, one line replaces these fields: "Dimensions could not be loaded."
 

@@ -9,7 +9,7 @@ import CsvImportDialog from '../../components/csv/CsvImportDialog';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
 import { LinkCellRenderer } from '../../components/grid/renderers';
 import { statusColumnProps } from '../../components/grid/statusColumn';
-import { accountNatureColumnProps } from '../../components/grid/accountNatureColumn';
+import { lineTypeUsageColumnProps } from '../../components/grid/lineTypeUsageColumn';
 import api from '../../api';
 
 type Template = { id: string; country_iso: string | null; template_code: string; template_name: string; version: string; is_global?: boolean };
@@ -81,7 +81,7 @@ export default function AdminStandardAccountsPage() {
       headerName: t('standardAccounts.columns.nature'),
       width: 150,
       // As the status column: the label in the cell (the template list reads the search box only).
-      valueFormatter: accountNatureColumnProps(t).valueFormatter,
+      valueFormatter: lineTypeUsageColumnProps(t).valueFormatter,
       cellRenderer: (params: any) => (
         <LinkCellRenderer {...params} linkType="internal" getHref={getStandardAccountHref} onNavigate={(href) => navigate(href)} />
       ),

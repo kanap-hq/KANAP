@@ -185,6 +185,7 @@ export default function SpendPropertiesDrawer({
                 axisId={axis.id}
                 label={analyticsAxes.label(axis)}
                 hideLabel
+                lineType="opex"
                 value={analyticsValues[axis.id] ?? null}
                 onChange={(v) => onAnalyticsValueChange(axis.id, v)}
                 disabled={disabled}

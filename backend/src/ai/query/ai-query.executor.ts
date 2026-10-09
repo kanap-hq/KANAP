@@ -704,6 +704,7 @@ export class AiQueryExecutor {
       metadata: {
         axis: axis ? analyticsAxisLabel(axis) : null,
         axis_code: axis ? axis.code : null,
+        applies_to: scalar(row.applies_to),
       },
     });
   }

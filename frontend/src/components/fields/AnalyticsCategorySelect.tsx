@@ -7,6 +7,7 @@ import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
 import { useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import { ANALYTICS_VALUES_LOOKUP_ENDPOINT, type AnalyticsValue } from '../../services/analytics';
+import type { LineType } from '../../constants/lineTypeUsage';
 
 type Props = {
   /** The dimension whose values the select offers. */
@@ -22,6 +23,8 @@ type Props = {
   textFieldSx?: SxProps<Theme>;
   /** The current value's label when the caller holds it (the line's analytics values): no request to show it. */
   selectedOption?: Pick<AnalyticsValue, 'id' | 'name'> & Partial<AnalyticsValue> | null;
+  /** Offers only the values this kind of line may use. A held value of the other type still shows. */
+  lineType?: LineType;
 };
 
 /** One dimension's values. The list holds enabled values; the current value stays shown when it is disabled. */
@@ -36,15 +39,17 @@ export default function AnalyticsCategorySelect({
   hideLabel = false,
   textFieldSx,
   selectedOption,
+  lineType,
 }: Props) {
   const { t } = useTranslation(['master-data', 'common']);
   const needsAxisLabel = label === undefined && !hideLabel;
   const axes = useAnalyticsAxes({ enabled: needsAxisLabel });
 
-  // The dimension's values, searched as the user types; the current value keeps its label (disabled or not).
+  // The dimension's values, searched as the user types; the current value keeps its label (disabled,
+  // or restricted to the other line type: the read by id ignores `applies_to`).
   const picker = useLookupPicker<AnalyticsValue>({
     endpoint: ANALYTICS_VALUES_LOOKUP_ENDPOINT,
-    scope: { axis_id: axisId },
+    scope: { axis_id: axisId, applies_to: lineType ?? null },
     enabled: !!axisId,
     value: value ? [value] : [],
     given: [selectedOption as AnalyticsValue | null | undefined],

@@ -1,5 +1,6 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { StatusState } from '../common/status';
+import { AxisAppliesTo } from './analytics-axis.entity';
 
 @Entity('analytics_categories')
 export class AnalyticsCategory {
@@ -18,6 +19,13 @@ export class AnalyticsCategory {
 
   @Column('text', { nullable: true })
   description!: string | null;
+
+  /**
+   * The budget lines that may choose the value: OPEX only, CAPEX only, or both (null). Never the
+   * type its dimension excludes. A line already holding it keeps it.
+   */
+  @Column('text', { nullable: true })
+  applies_to!: AxisAppliesTo | null;
 
   @Column({
     type: 'enum',

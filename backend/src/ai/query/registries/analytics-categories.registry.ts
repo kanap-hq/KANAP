@@ -24,6 +24,16 @@ export const analyticsCategoriesRegistry: AiEntityFilterRegistry = {
       sortable: true,
       groupable: true,
     },
+    applies_to: {
+      ai: 'applies_to',
+      grid: 'applies_to',
+      type: 'set',
+      description: 'The budget lines that may choose the value: opex (OPEX lines only), capex (CAPEX lines only). null is a value for both OPEX and CAPEX lines. A line already holding a value of the other type keeps it.',
+      values: ['opex', 'capex', null],
+      discoverable: true,
+      sortable: true,
+      groupable: true,
+    },
     axis: {
       ai: 'axis',
       grid: 'axis_name',
@@ -47,6 +57,7 @@ export const analyticsCategoriesRegistry: AiEntityFilterRegistry = {
     label: 'name',
     name: 'name',
     status: 'status',
+    applies_to: 'applies_to',
     created_at: 'created_at',
     updated_at: 'updated_at',
   },
@@ -60,6 +71,7 @@ export const analyticsCategoriesRegistry: AiEntityFilterRegistry = {
     groupFields: {
       status: { expression: 'ac.status' },
       name: { expression: 'ac.name' },
+      applies_to: { expression: 'ac.applies_to' },
       axis: { expression: `COALESCE(NULLIF(BTRIM(ax.name), ''), 'Analytics dimension')`, joins: [AXIS_JOIN] },
       axis_code: { expression: 'ax.code', joins: [AXIS_JOIN] },
     },
