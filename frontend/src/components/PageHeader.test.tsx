@@ -23,6 +23,14 @@ function crumbLabels() {
   return Array.from(nav.querySelectorAll('li:not(.MuiBreadcrumbs-separator)')).map((li) => li.textContent);
 }
 
+describe('PageHeader single-crumb pages', () => {
+  it.each(['/settings', '/agents', '/master-data'])('shows no breadcrumb on %s', (path) => {
+    renderAt(path);
+    expect(screen.queryByLabelText('breadcrumb')).toBeNull();
+    expect(screen.getByText('Antoine KANDEL')).toBeTruthy();
+  });
+});
+
 describe('PageHeader breadcrumb title placement', () => {
   it('replaces the id crumb on /:id routes', () => {
     renderAt(`/portfolio/contributors/${UUID}`, 'Antoine KANDEL');
