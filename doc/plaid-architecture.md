@@ -227,7 +227,10 @@ capabilities and also registers provider capability contracts for monitoring,
 ticketing, virtualization, directory, automation, and external MCP tools.
 `AiCapabilityDispatcherService` validates inputs, enforces surface and approval
 rules, checks emergency pauses, executes the handler, records evidence, and
-updates run/step/tool status.
+updates run/step/tool status. The handler runs under its own savepoint: when one
+of its statements fails, only its work is rolled back, the failure is recorded
+with the original error, and later capabilities in the same transaction still
+run.
 
 The main durable records are:
 
