@@ -15,6 +15,7 @@ This document explains the functional model and APIs for Charts of Accounts (CoA
 - Global templates: When loading a platform template marked global, country input is not required; the CoA is created with scope `GLOBAL` (no country). A tenant may mark one CoA as the Global Default; setting a Global Default also assigns it to all companies in the tenant where `companies.coa_id` is NULL.
 - Chart roles: three independent roles, each held by at most one chart (per country for the first one). See [Chart roles](#chart-roles).
 - Consolidation mapping: every account carries a consolidation account number that points at an account of the tenant's consolidation chart. See [Consolidation chart](#consolidation-chart).
+- Account nature (UI label **Used for**): `accounts.nature` says which budget lines may use the account. See [Account nature](#account-nature).
 
 ## Chart roles
 
@@ -52,6 +53,16 @@ Status of an account against the consolidation chart (`consolidation_status`):
 Without a consolidation chart, `consolidationStatus=mapped` and `consolidationStatus=outside` return no account, and `unmapped` still returns the accounts without a number. This matches the chart counts: `accounts_outside_count` is 0 and `accounts_unmapped_count` counts the accounts without a number.
 
 Changing the consolidation chart never remaps accounts. The switch resyncs the derived fields only: every account whose number matches an account of the new consolidation chart takes that account's name and description. Accounts whose number is absent from it become `outside`; the preview endpoint gives the counts before the switch. Reports group by consolidation number (else name) and are not affected by the role itself.
+
+## Account nature
+
+`accounts.nature` is `'opex'`, `'capex'` or NULL (NULL means OPEX and CAPEX, the default). The UI calls the field **Used for**, with the values **OPEX and CAPEX**, **OPEX only** and **CAPEX only**.
+
+- Line writes (`resolveItemWrite` in `backend/src/spend/item-write.util.ts`, which the API, the budget file load and the AI mutations all use) refuse an account whose nature is set and differs from the line's scope. They check it when the line is created and when its `account_id` changes, with HTTP 400 and the message `This account is for CAPEX lines only. Choose an account for OPEX lines.` (OPEX and CAPEX swapped for the other side). A legacy line keeps its account and stays editable: a company-only change or an unrelated edit does not recheck it.
+- The budget file preflight (`backend/src/spend/budget-file/preflight.ts`) fails the row with `Account <number> is for CAPEX lines only.` (or OPEX) on the same two events. The line's current account is exempt.
+- `GET /accounts/lookup?nature=opex|capex` offers the accounts whose nature is NULL or equal to the parameter. Any other value is a 400. Hydration by `ids` ignores it, so a stored account of the other type still displays. The lookup rows carry `nature`.
+- The account workspace reads `line_counts` from `GET /accounts/:id` to show a note when the chosen nature conflicts with lines that already use the account.
+- Migration `1853890000000-account-nature`: adds the column and the CHECK `accounts_nature_check`, adds a `nature` column to every template payload that has none, then backfills the accounts whose nature is NULL, without touching `updated_at` and without audit lines. Order: (a) used by OPEX lines only gives `opex`, by CAPEX lines only gives `capex`, by both stays NULL (all line statuses count); (b) unused accounts of a consolidation chart whose code is `IFRS` take the nature of the account with the same number in the global IFRS template; (c) other unused accounts take the nature of the account of the tenant's consolidation chart that matches their `consolidation_account_number`. It disables row level security on `accounts`, `search_index`, `chart_of_accounts`, `spend_items` and `capex_items` around the backfill, restores it as found and logs the counts per tenant. Rerun-safe.
 
 ## CoA Filtering Logic (Accounts by Company)
 
@@ -177,6 +188,7 @@ RLS is enforced; all queries run with `tenant_id = app.current_tenant()`.
 - `consolidation_account_number int NULL`
 - `consolidation_account_name text NULL`
 - `consolidation_account_description text NULL`
+- `nature text NULL` (`opex` | `capex`, CHECK `accounts_nature_check`; NULL = OPEX and CAPEX, see [Account nature](#account-nature))
 - `status status_state` (enabled|disabled + disabled_at window semantics)
 - `disabled_at timestamptz NULL`
 - `created_at/updated_at timestamptz`
@@ -237,10 +249,12 @@ All role endpoints require `accounts` at manager level (`member`), run in the re
 - `GET /accounts` → paginated list
   - Supports quick search, AG filters, and CoA scoping via `?companyId` or `?coaId`
   - Enriches items with `coa_code` for display and `consolidation_status` (`mapped` | `outside` | `unmapped`, or `null` for a numbered account when the tenant has no consolidation chart; see [Consolidation chart](#consolidation-chart)), computed for the page in one query
+  - Items carry `nature`. The AG set filter on `nature` accepts a blank value for NULL (OPEX and CAPEX).
   - `?consolidationStatus=mapped|outside|unmapped` filters on the server (page and total follow the filter; without a consolidation chart, `mapped` and `outside` return nothing); any other value is a 400. `GET /accounts/ids` accepts it too.
-- `GET /accounts/:id` → detail, with `consolidation_status`
-- `POST /accounts` → create account (requires `coa_id`; UI provides a required selector; API accepts `?coaId=` fallback)
-- `PATCH /accounts/:id` → update account (including moving to a different CoA via `coa_id`)
+- `GET /accounts/lookup?q=&limit=&companyId=|coaId=&nature=opex|capex` → picker lookup (see [Account nature](#account-nature))
+- `GET /accounts/:id` → detail, with `consolidation_status` and `line_counts: { opex, capex }`: the OPEX and CAPEX lines (all statuses) whose `account_id` is this account, scoped to the tenant
+- `POST /accounts` → create account (requires `coa_id`; UI provides a required selector; API accepts `?coaId=` fallback). Accepts `nature: 'opex' | 'capex' | null`
+- `PATCH /accounts/:id` → update account (including moving to a different CoA via `coa_id`). `nature: null` clears the setting, an absent `nature` leaves it unchanged
   - Create, update and import derive the consolidation name and description from the consolidation chart, and an account of the consolidation chart propagates its changes (see [Consolidation chart](#consolidation-chart)).
 - `GET /accounts/export?scope=...&coaId=...` → CSV
   - Global export includes `coa_code` to identify the CoA; scoped export uses `coaId`
@@ -282,7 +296,7 @@ Standard Accounts within a Template (CRUD on the template CSV)
 - `GET /admin/coa-templates/:id/accounts?sort=account_number:ASC&q=&page=1&limit=50` → list rows parsed from the template’s CSV
 - `GET /admin/coa-templates/:id/accounts/ids?sort=...&q=...` → `{ ids: string[] }` ordered for prev/next in workspace
 - `GET /admin/coa-templates/:id/accounts/:accountNumber` → get one row (by `account_number`)
-- `POST /admin/coa-templates/:id/accounts` → create row `{ account_number, account_name, native_name?, description?, consolidation_account_number?, consolidation_account_name?, consolidation_account_description?, status }`
+- `POST /admin/coa-templates/:id/accounts` → create row `{ account_number, account_name, native_name?, description?, consolidation_account_number?, consolidation_account_name?, consolidation_account_description?, status, nature? }`
 - `PATCH /admin/coa-templates/:id/accounts/:accountNumber` → update row; allows renumbering
 - `DELETE /admin/coa-templates/:id/accounts/:accountNumber` → delete row
 - `DELETE /admin/coa-templates/:id/accounts/bulk` → delete many `{ ids: string[] }` (ids are account numbers)
@@ -293,12 +307,12 @@ CSV is semicolon (`;`) delimited, UTF‑8 (export includes BOM for Excel). Heade
 
 Global export/import (`/accounts`):
 ```
-coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status
+coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
 ```
 
 CoA-scoped export/import (`/chart-of-accounts/:id/accounts`):
 ```
-account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status
+account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
 ```
 
 Validation rules:
@@ -306,6 +320,7 @@ Validation rules:
 - `account_name`: required (English UI name)
 - `native_name`: optional (original local-language name)
 - `status`: `enabled|disabled` (defaults to enabled); disable uses `disabled_at` in the model
+- `nature`: optional last column, `opex`, `capex` or empty (NULL). An absent column leaves the stored natures unchanged (it is an optional header, like the optional columns of the cost centers file). An empty cell sets NULL. Another value is a row error: `Invalid nature 'x'. Use 'opex', 'capex' or leave it empty.` Template loading goes through this import and so loads the natures
 - `consolidation_*`: optional; `consolidation_account_number` must be an integer if provided. When it matches an account of the consolidation chart, the file's consolidation name and description are replaced by that account's; when it is empty, they are cleared. Otherwise the file's name and description are kept (an empty cell clears the stored value).
 
 Import behavior:
@@ -356,6 +371,7 @@ Account create/edit:
 - Lists and manages “standard accounts” stored in the selected template’s CSV
 - Actions: New, Import (preflight + load), Export, Delete Selected
 - Workspace: `/admin/standard-accounts/:templateId/:accountNumber/overview` with prev/next navigation
+- Both the grid and the workspace carry the **Used for** field (`nature`), as the tenant pages do
 - Isolation: This UI only edits the template CSV; tenant `accounts` are unaffected until a tenant loads the template into their CoA
 
 ## Seed Templates
@@ -435,6 +451,8 @@ backend/src/seed/coa-templates/
 
 Each file exports a `csv` string constant with BOM prefix (`\ufeff`) and semicolon delimiter, matching the `encodeTemplateRows` convention in `admin-coa-templates.service.ts`. TypeScript string exports were chosen over `.csv` files to avoid adding `copyfiles` to the build pipeline.
 
+The last column, `nature`, carries the account nature of each row: accounts mapped to IFRS 1000 to 1199 (assets) are `capex`, accounts mapped to 2000 to 2999 (operating expenses) are `opex`, and the others (1200 depreciation and amortization, 1300 impairments) are empty, which means both. Loading a template sets the nature of the accounts it creates or updates. The seed migration accepts the 8-column header and the 9-column header with `nature`.
+
 ### Migration
 
 **File**: `backend/src/migrations/1826000000000-seed-coa-templates.ts`
@@ -472,6 +490,7 @@ Country templates include `native_name` in the local language:
 - Backend build: `cd backend && npm run build`
 - Frontend: `cd frontend && npm run build` or `npm run dev`
 
+- Account nature migration (`1853890000000-account-nature`): see [Account nature](#account-nature).
 - Consolidation chart migration (`1853860000000-chart-of-accounts-consolidation`): adds `is_consolidation` and its partial unique index; every tenant without a consolidation chart gets its global default chart (if any) as consolidation chart. It then resyncs the derived names: every account mapped to an account of its tenant's consolidation chart takes that account's name and description where they differ (names typed by hand until then); accounts outside it keep theirs. It disables row level security on `chart_of_accounts`, `accounts` and `search_index` around these writes (the search triggers of charts and accounts write into `search_index`), restores it as found and logs the counts (accounts resynced per tenant). No audit lines. Rerun-safe.
 
 Operational Notes

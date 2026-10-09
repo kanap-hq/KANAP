@@ -30,6 +30,7 @@ OPEX/CAPEX items -> Account selection (filtered to FR-2024 accounts only)
   - Each company has one CoA
   - Accounts belong to one CoA
   - When you create/edit spend items, the account dropdown is filtered by the company's CoA
+  - Each account says whether it is used for OPEX lines, CAPEX lines or both. See [OPEX or CAPEX accounts](#opex-or-capex-accounts)
 
 ## Where to find it
 
@@ -84,6 +85,7 @@ The grid shows accounts for the selected CoA only.
 **Default columns**:
 - **Account #**: The account number. Click to open the account workspace.
 - **Name**: The account name. Click to open the account workspace.
+- **Used for**: **OPEX and CAPEX**, **OPEX only** or **CAPEX only**. See [OPEX or CAPEX accounts](#opex-or-capex-accounts).
 - **Consol. account #**: The consolidation account number.
 - **Consol. name**: The consolidation account name.
 
@@ -97,7 +99,7 @@ The grid shows accounts for the selected CoA only.
 **Filtering**:
 - Quick search: Searches across visible text columns.
 - Status scope: the **Show: All / Enabled / Disabled** toggle above the grid. It defaults to **Enabled**, showing only active accounts. Pick **All** to include disabled accounts.
-- Column filters: Use column header filters (e.g., the **Status** column has a set filter). Clicking **Clear** in the **Status** filter, or unticking both values, lists nothing, whatever **Show** says.
+- Column filters: Use column header filters (e.g., the **Status** and **Used for** columns have a set filter). Clicking **Clear** in the **Status** filter, or unticking both values, lists nothing, whatever **Show** says.
 
 **Sort**: Defaults to **Account #** ascending.
 
@@ -116,12 +118,28 @@ Click any row in the accounts grid to open the account workspace.
 ### Layout
 
 - **Header**: the account number is the reference (you can copy it from there) and the account name is the title. Click the title to rename the account. **Previous** and **Next** move through the accounts of the list you came from, in the same order, with the same search and filters. The back link returns to **Charts of accounts** with your selection kept.
-- **Properties panel** on the right: **Chart of accounts**, **Account number** and **Lifecycle** (the status switch and the **End of validity** date). Use the panel toggle to collapse it or open it again. See [Status and lifecycle](#status-and-lifecycle).
+- **Properties panel** on the right: **Chart of accounts**, **Account number**, **Used for** and **Lifecycle** (the status switch and the **End of validity** date). Use the panel toggle to collapse it or open it again. See [Status and lifecycle](#status-and-lifecycle).
 - **Main column**: **Native name (local language)**, **Description** and the **Consolidation** section.
 
 **Changes save automatically.** Each field saves when you leave it, and there is no Save button. If a value is refused, a message appears under the field. The **Account number** must be a whole number greater than zero.
 
 You need `accounts:manager` to edit. Read-only users see the same page with the fields locked.
+
+### OPEX or CAPEX accounts
+
+The **Used for** field says which budget lines may use the account:
+
+| Value | Meaning |
+|-------|---------|
+| **OPEX and CAPEX** | Both kinds of line can use the account. This is the default |
+| **OPEX only** | Only OPEX lines can use the account |
+| **CAPEX only** | Only CAPEX lines can use the account |
+
+The account picker of an OPEX line shows the accounts for OPEX and for both. The picker of a CAPEX line does the same for CAPEX. A line that already has an account of the other kind keeps it and stays editable. Choosing such an account on a new line, or when you change the account of a line, is refused.
+
+When you set a value that conflicts with lines already using the account, a note appears under the field, for example "12 CAPEX lines use this account. They keep it. New CAPEX lines cannot choose it." Click **Show these lines** to open those lines in the list, in a new tab. The note stays as long as the conflict exists.
+
+When KANAP added this setting, it filled it in for you. An account used only by OPEX lines became **OPEX only**, and an account used only by CAPEX lines became **CAPEX only**. An account used by both stays **OPEX and CAPEX**. An unused account follows its consolidation account: asset accounts of the IFRS consolidation chart are for CAPEX and operating expense accounts are for OPEX. Administrators can change any of them.
 
 ### Consolidation account
 
@@ -172,7 +190,7 @@ Templates are standard account sets managed by platform administrators. They can
   - Click **Check template** to see how many accounts will be added and how many updated
   - Click **Create** to copy the accounts into your CoA
 
-**What gets copied**: Account numbers, names, native names (local language), descriptions, consolidation mappings, and status. The accounts become yours to edit. Changes to the platform template won't affect your CoA unless you explicitly reload it. If your workspace has a consolidation chart, the consolidation name and description of each account are taken from that chart (see [The consolidation chart](#the-consolidation-chart)).
+**What gets copied**: Account numbers, names, native names (local language), descriptions, consolidation mappings, **Used for** and status. The accounts become yours to edit. Changes to the platform template won't affect your CoA unless you explicitly reload it. If your workspace has a consolidation chart, the consolidation name and description of each account are taken from that chart (see [The consolidation chart](#the-consolidation-chart)).
 
 **Tip**: After loading a template, you can add company-specific accounts, rename entries, or disable unused accounts. Templates provide a starting point, not a locked structure.
 
@@ -183,7 +201,7 @@ KANAP ships with **20 pre-configured templates** covering 10 accounting standard
 - **v1.0 (Simple)**: A focused set of ~20 IT-relevant accounts — software licenses, cloud hosting, cybersecurity, telecom, consulting, staff costs, training, and more. Best for organizations that want a lean starting point.
 - **v2.0 (Detailed)**: Everything in v1.0 plus additional granular sub-accounts (~30 accounts). Adds breakdowns like Purchased vs. Internally Developed Software, Network Equipment, SaaS vs. Perpetual Licenses, Mobile Communications, IT Bonuses, IT Insurance, and more. Best for organizations that need finer cost tracking.
 
-Both versions use **real account numbers from each country's official accounting standard** and include native names in the local language.
+Both versions use **real account numbers from each country's official accounting standard** and include native names in the local language. Every account also carries its **Used for** setting: asset accounts are for CAPEX, expense accounts are for OPEX, and depreciation and impairment accounts are for both.
 
 | Template Code | Country | Standard | Accounts (v1 / v2) |
 |---------------|---------|----------|---------------------|
@@ -446,16 +464,16 @@ You can export a list of your CoAs (with metadata like code, name, country, defa
 
 The global `/accounts` CSV includes a `coa_code` column to identify which CoA each account belongs to. **Export CSV** and **Import CSV** use it when no CoA is selected on the page.
 
-  - **Export CSV**: all accounts with their CoA codes, account numbers, names, native names, descriptions, consolidation mappings, and status
+  - **Export CSV**: all accounts with their CoA codes, account numbers, names, native names, descriptions, consolidation mappings, status and **Used for**
   - **Import CSV**: **Download template** in the dialog gives a file with the headers only. Start with **Preflight check** to validate the structure, the encoding, the required fields and the duplicates, then **Load** to apply the inserts and the updates
   - **Matching**: by `(coa_code, account_number)` within your workspace
   - **Required cells**: `coa_code`, `account_number`, `account_name`. All rows of one file must carry the same `coa_code`
-  - **Optional cells**: `native_name`, `description`, consolidation fields, `status`
+  - **Optional cells**: `native_name`, `description`, consolidation fields, `status`, `nature`
   - Duplicates in the file (same coa_code + account_number) are deduplicated; first occurrence wins
 
 **CSV schema** (the export writes the separator of the screen language; shown here with semicolons):
 ```
-coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status
+coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
 ```
 
 ### Accounts (CoA-scoped)
@@ -467,7 +485,7 @@ From the Charts of Accounts page, **Import CSV** and **Export CSV** are automati
 
 **CSV schema** (CoA-scoped; shown here with semicolons):
 ```
-account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status
+account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
 ```
 
 **Notes**:
@@ -475,6 +493,7 @@ account_number;account_name;native_name;description;consolidation_account_number
   - The `coa_code` must match an existing Chart of Accounts in your workspace
   - Account numbers should be unique within a CoA
   - Status values: `enabled` or `disabled` (defaults to enabled)
+  - `nature` is the **Used for** setting, always the last column. Values: `opex`, `capex`, or empty for **OPEX and CAPEX**. A file without this column leaves the settings unchanged. An empty cell sets **OPEX and CAPEX**. Any other value is refused for that row
   - Consolidation columns: when `consolidation_account_number` exists in your consolidation chart, its name and description replace the `consolidation_account_name` and `consolidation_account_description` cells. An empty number clears all three. See [Setting up consolidation mappings](#setting-up-consolidation-mappings)
 
 ## Tips

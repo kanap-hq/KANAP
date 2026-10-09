@@ -30,6 +30,7 @@ Partidas OPEX/CAPEX -> Selección de cuenta (filtrada a cuentas de FR-2024 únic
   - Cada empresa tiene un CoA
   - Las cuentas pertenecen a un CoA
   - Cuando crea/edita partidas de gasto, el desplegable de cuentas se filtra por el CoA de la empresa
+  - Cada cuenta indica si sirve para líneas OPEX, líneas CAPEX o ambas. Consulte [Cuentas OPEX o CAPEX](#cuentas-opex-o-capex)
 
 ## Dónde encontrarlo
 
@@ -84,6 +85,7 @@ La cuadrícula muestra cuentas solo del CoA seleccionado.
 **Columnas predeterminadas**:
 - **N.º de cuenta**: El número de la cuenta. Haga clic para abrir el espacio de trabajo de la cuenta.
 - **Nombre**: El nombre de la cuenta. Haga clic para abrir el espacio de trabajo de la cuenta.
+- **Usada para**: **OPEX y CAPEX**, **Solo OPEX** o **Solo CAPEX**. Consulte [Cuentas OPEX o CAPEX](#cuentas-opex-o-capex).
 - **N.º cuenta consol.**: El número de la cuenta de consolidación.
 - **Nombre consol.**: El nombre de la cuenta de consolidación.
 
@@ -97,7 +99,7 @@ La cuadrícula muestra cuentas solo del CoA seleccionado.
 **Filtrado**:
 - Búsqueda rápida: Busca en las columnas de texto visibles.
 - Alcance de estado: el selector **Mostrar: Todos / Activos / Desactivados** sobre la cuadrícula. Por defecto **Activos**, mostrando solo cuentas activas. Elija **Todos** para incluir cuentas desactivadas.
-- Filtros de columna: Use filtros en los encabezados de columna (p. ej., la columna **Estado** tiene un filtro de conjunto). Si hace clic en **Limpiar** en el filtro **Estado**, o desmarca ambos valores, la lista no muestra nada, sea cual sea la opción de **Mostrar**.
+- Filtros de columna: Use filtros en los encabezados de columna (p. ej., las columnas **Estado** y **Usada para** tienen un filtro de conjunto). Si hace clic en **Limpiar** en el filtro **Estado**, o desmarca ambos valores, la lista no muestra nada, sea cual sea la opción de **Mostrar**.
 
 **Ordenación**: Predeterminada por **N.º de cuenta** ascendente.
 
@@ -116,12 +118,28 @@ Haga clic en cualquier fila de la cuadrícula de cuentas para abrir el espacio d
 ### Disposición
 
 - **Encabezado**: el número de cuenta es la referencia (puede copiarlo desde ahí) y el nombre de la cuenta es el título. Haga clic en el título para renombrar la cuenta. Las flechas **Cuenta anterior** y **Cuenta siguiente** recorren las cuentas de la lista de la que viene, en el mismo orden, con la misma búsqueda y los mismos filtros. El enlace de vuelta lleva a **Planes de cuentas** y conserva su selección.
-- **Panel de propiedades** a la derecha: **Plan de cuentas**, **Número de cuenta** y **Ciclo de vida** (el interruptor de estado y la fecha de **Fin de validez**). El botón del panel permite contraerlo o volver a abrirlo. Consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida).
+- **Panel de propiedades** a la derecha: **Plan de cuentas**, **Número de cuenta**, **Usada para** y **Ciclo de vida** (el interruptor de estado y la fecha de **Fin de validez**). El botón del panel permite contraerlo o volver a abrirlo. Consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida).
 - **Columna principal**: **Nombre local (idioma local)**, **Descripción** y la sección **Consolidación**.
 
 **Los cambios se guardan automáticamente.** Cada campo se guarda al salir de él y no hay botón Guardar. Si se rechaza un valor, aparece un mensaje bajo el campo. El **Número de cuenta** debe ser un número entero mayor que cero.
 
 Necesita `accounts:manager` para editar. Los usuarios de solo lectura ven la misma página con los campos bloqueados.
+
+### Cuentas OPEX o CAPEX
+
+El campo **Usada para** indica qué líneas presupuestarias pueden usar la cuenta:
+
+| Valor | Significado |
+|-------|-------------|
+| **OPEX y CAPEX** | Los dos tipos de línea pueden usar la cuenta. Es el valor predeterminado |
+| **Solo OPEX** | Solo las líneas OPEX pueden usar la cuenta |
+| **Solo CAPEX** | Solo las líneas CAPEX pueden usar la cuenta |
+
+El selector de cuentas de una línea OPEX muestra las cuentas para OPEX y para ambos tipos. El de una línea CAPEX hace lo mismo para CAPEX. Una línea que ya tiene una cuenta del otro tipo la conserva y sigue siendo editable. Elegir una cuenta así en una línea nueva, o al cambiar la cuenta de una línea, se rechaza.
+
+Cuando elige un valor que entra en conflicto con líneas que ya usan la cuenta, aparece una nota bajo el campo, por ejemplo «12 líneas CAPEX usan esta cuenta. La conservan. Las nuevas líneas CAPEX no pueden elegirla.» Haga clic en **Mostrar estas líneas** para abrir esas líneas en la lista, en una pestaña nueva. La nota permanece mientras exista el conflicto.
+
+Al añadir este ajuste, KANAP lo rellenó por usted. Una cuenta usada solo por líneas OPEX pasó a **Solo OPEX**, y una cuenta usada solo por líneas CAPEX pasó a **Solo CAPEX**. Una cuenta usada por ambas sigue como **OPEX y CAPEX**. Una cuenta sin uso sigue a su cuenta de consolidación: las cuentas de activos del plan de consolidación IFRS son para CAPEX y las cuentas de gastos operativos son para OPEX. Los administradores pueden cambiar cualquiera de ellas.
 
 ### Cuenta de consolidación
 
@@ -172,7 +190,7 @@ Las plantillas son conjuntos de cuentas estándar gestionados por los administra
   - Haga clic en **Verificar plantilla** para ver cuántas cuentas se añadirán y cuántas se actualizarán
   - Haga clic en **Crear** para copiar las cuentas en su CoA
 
-**Qué se copia**: Números de cuenta, nombres, nombres locales (idioma local), descripciones, mapeos de consolidación y estado. Las cuentas pasan a ser suyas para editar -- los cambios en la plantilla de la plataforma no afectan a su CoA a menos que la recargue explícitamente. Si su espacio de trabajo tiene un plan de consolidación, el nombre y la descripción de consolidación de cada cuenta se toman de ese plan (consulte [El plan de consolidación](#el-plan-de-consolidacion)).
+**Qué se copia**: Números de cuenta, nombres, nombres locales (idioma local), descripciones, mapeos de consolidación, **Usada para** y estado. Las cuentas pasan a ser suyas para editar -- los cambios en la plantilla de la plataforma no afectan a su CoA a menos que la recargue explícitamente. Si su espacio de trabajo tiene un plan de consolidación, el nombre y la descripción de consolidación de cada cuenta se toman de ese plan (consulte [El plan de consolidación](#el-plan-de-consolidacion)).
 
 **Consejo**: Después de cargar una plantilla, puede añadir cuentas específicas de la empresa, renombrar entradas o deshabilitar cuentas no utilizadas. Las plantillas proporcionan un punto de partida, no una estructura bloqueada.
 
@@ -183,7 +201,7 @@ KANAP incluye **20 plantillas preconfiguradas** que cubren 10 estándares contab
 - **v1.0 (Simple)**: Un conjunto enfocado de ~20 cuentas relevantes para IT -- licencias de software, alojamiento en la nube, ciberseguridad, telecomunicaciones, consultoría, costes de personal, formación y más. Ideal para organizaciones que quieren un punto de partida ligero.
 - **v2.0 (Detallado)**: Todo lo de v1.0 más subcuentas granulares adicionales (~30 cuentas). Añade desgloses como Software comprado vs. Desarrollado internamente, Equipos de red, SaaS vs. Licencias perpetuas, Comunicaciones móviles, Bonificaciones IT, Seguro IT y más. Ideal para organizaciones que necesitan un seguimiento de costes más fino.
 
-Ambas versiones usan **números de cuenta reales del estándar contable oficial de cada país** e incluyen nombres locales en el idioma local.
+Ambas versiones usan **números de cuenta reales del estándar contable oficial de cada país** e incluyen nombres locales en el idioma local. Cada cuenta lleva además su ajuste **Usada para**: las cuentas de activos son para CAPEX, las cuentas de gastos son para OPEX, y las cuentas de amortización y deterioro son para ambos.
 
 | Código plantilla | País | Estándar | Cuentas (v1 / v2) |
 |------------------|------|----------|---------------------|
@@ -446,16 +464,16 @@ Puede exportar una lista de sus CoA (con metadatos como código, nombre, país, 
 
 El CSV global `/accounts` incluye una columna `coa_code` para identificar a qué CoA pertenece cada cuenta. **Exportar CSV** e **Importar CSV** la usan cuando no hay ningún CoA seleccionado en la página.
 
-  - **Exportar CSV**: todas las cuentas con sus códigos de CoA, números de cuenta, nombres, nombres locales, descripciones, mapeos de consolidación y estado
+  - **Exportar CSV**: todas las cuentas con sus códigos de CoA, números de cuenta, nombres, nombres locales, descripciones, mapeos de consolidación, estado y **Usada para**
   - **Importar CSV**: **Descargar plantilla** en el diálogo da un archivo solo con los encabezados. Empiece por la **Verificación previa** para validar la estructura, la codificación, los campos obligatorios y los duplicados, y después **Cargar** para aplicar las inserciones y las actualizaciones
   - **Coincidencia**: por `(coa_code, account_number)` dentro de su espacio de trabajo
   - **Celdas obligatorias**: `coa_code`, `account_number`, `account_name`. Todas las filas de un archivo deben llevar el mismo `coa_code`
-  - **Celdas opcionales**: `native_name`, `description`, campos de consolidación, `status`
+  - **Celdas opcionales**: `native_name`, `description`, campos de consolidación, `status`, `nature`
   - Los duplicados en el archivo (mismo coa_code + account_number) se deduplican; gana la primera ocurrencia
 
 **Esquema CSV** (la exportación escribe el separador del idioma de la pantalla; aquí se muestra con puntos y coma):
 ```
-coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status
+coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
 ```
 
 ### Cuentas (con alcance de CoA)
@@ -467,7 +485,7 @@ Desde la página de Planes de cuentas, **Importar CSV** y **Exportar CSV** se li
 
 **Esquema CSV** (con alcance de CoA; aquí se muestra con puntos y coma):
 ```
-account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status
+account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
 ```
 
 **Notas**:
@@ -475,6 +493,7 @@ account_number;account_name;native_name;description;consolidation_account_number
   - El `coa_code` debe coincidir con un Plan de cuentas existente en su espacio de trabajo
   - Los números de cuenta deben ser únicos dentro de un CoA
   - Valores de estado: `enabled` o `disabled` (predeterminado: enabled)
+  - `nature` es el ajuste **Usada para**, siempre la última columna. Valores: `opex`, `capex` o vacío para **OPEX y CAPEX**. Un archivo sin esta columna deja los ajustes sin cambios. Una celda vacía aplica **OPEX y CAPEX**. Cualquier otro valor se rechaza para esa fila
   - Columnas de consolidación: cuando `consolidation_account_number` existe en su plan de consolidación, su nombre y su descripción sustituyen las celdas `consolidation_account_name` y `consolidation_account_description`. Un número vacío borra las tres. Consulte [Configurar mapeos de consolidación](#configurar-mapeos-de-consolidacion)
 
 ## Consejos

@@ -163,7 +163,7 @@ The budget file finds reference data by business identifiers. Load the reference
 Points that matter when you map another tool to KANAP:
 
 - **Companies** carry their headcount, IT users and turnover per year. The turnover is in millions of the company's base currency. Allocations by headcount, IT users or turnover need the metrics of the year.
-- **Accounts** belong to a chart of accounts, and a company uses one chart. An account number is a whole number, unique within its chart. A budget line's account must exist in the chart of its paying company. See [Chart of Accounts](chart-of-accounts.md).
+- **Accounts** belong to a chart of accounts, and a company uses one chart. An account number is a whole number, unique within its chart. A budget line's account must exist in the chart of its paying company, and each account says whether it serves OPEX lines, CAPEX lines or both. See [Chart of Accounts](chart-of-accounts.md).
 - **Cost centers** form a tree. A group gathers cost centers and other groups, and may span companies. A cost center belongs to one company, has no children and is the only node a line can use. Its budget holder shows on every line it carries. See [Cost centers](cost-centers.md).
 - **Suppliers** are matched by name in their own file. The budget file matches them by ERP ID first, then by name: keep the ERP ID filled when your ERP has one.
 - **Analytics dimensions** are created on their page, each with a code. A line holds at most one value per dimension. See [Analytics dimensions](analytics.md).

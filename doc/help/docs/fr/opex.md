@@ -13,7 +13,7 @@ L'espace de travail s'ouvre en mode création, avec le panneau **Propriétés** 
 **Champs obligatoires** :
   - **Nom du produit** (le titre) : Ce que vous dépensez (ex. : « Licences Salesforce », « Compute AWS »)
   - **Société payeuse** : Quelle société paie cette dépense (obligatoire pour la comptabilité)
-  - **Compte** : Le compte du grand livre pour cette dépense. Seuls les comptes du plan comptable de la société payeuse apparaissent
+  - **Compte** : Le compte du grand livre pour cette dépense. Seuls les comptes du plan comptable de la société payeuse apparaissent, et seulement ceux réglés sur **OPEX et CAPEX** ou **OPEX uniquement** dans [Plans comptables et gestion des comptes](chart-of-accounts.md#comptes-opex-ou-capex). Un poste qui a déjà un compte **CAPEX uniquement** le conserve et reste modifiable. Choisir un tel compte sur un nouveau poste, ou en changeant le compte, est refusé
   - **Devise** : Code ISO (ex. : USD, EUR). Par défaut la devise de votre espace de travail ; modifiable par poste
   - **Début d'effet** : Quand cette dépense commence (JJ/MM/AAAA)
 

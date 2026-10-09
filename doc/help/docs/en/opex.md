@@ -13,7 +13,7 @@ The workspace opens in creation mode, with the **Properties** panel open on the 
 **Required fields**:
   - **Product name** (the title): What you are spending on (e.g., "Salesforce Licenses", "AWS Compute")
   - **Paying company**: Which company pays for this spend (required for accounting)
-  - **Account**: The general ledger account for this spend. Only accounts from the paying company's chart of accounts appear
+  - **Account**: The general ledger account for this spend. Only accounts from the paying company's chart of accounts appear, and only those set as **OPEX and CAPEX** or **OPEX only** in [Chart of Accounts](chart-of-accounts.md#opex-or-capex-accounts). An item that already has a **CAPEX only** account keeps it and stays editable. Choosing such an account on a new item or when you change the account is refused
   - **Currency**: ISO code (e.g., USD, EUR). Defaults to your workspace currency; you can override per item
   - **Effective start**: When this spend begins (DD/MM/YYYY)
 

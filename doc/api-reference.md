@@ -323,7 +323,7 @@ Template Accounts (CSV-backed, addressed by `account_number`)
 - GET `/admin/coa-templates/:id/accounts?sort=account_number:ASC&q=&page=1&limit=50` → list parsed rows
 - GET `/admin/coa-templates/:id/accounts/ids?sort=...&q=...` → `{ ids: string[] }` ordered for prev/next navigation
 - GET `/admin/coa-templates/:id/accounts/:accountNumber` → single row (404 if the number does not exist in the template)
-- POST `/admin/coa-templates/:id/accounts` → create row `{ account_number, account_name, native_name?, description?, consolidation_account_number?, consolidation_account_name?, consolidation_account_description?, status }`
+- POST `/admin/coa-templates/:id/accounts` → create row `{ account_number, account_name, native_name?, description?, consolidation_account_number?, consolidation_account_name?, consolidation_account_description?, status, nature? }` (`nature`: `opex`, `capex` or null for both)
 - PATCH `/admin/coa-templates/:id/accounts/:accountNumber` → update row (supports renumbering; prevents duplicates)
 - DELETE `/admin/coa-templates/:id/accounts/bulk` → bulk delete `{ ids: string[] }` by account numbers
 - DELETE `/admin/coa-templates/:id/accounts/:accountNumber` → delete one row by its `account_number`
@@ -341,9 +341,9 @@ Notes
 
 CSV schema (CoA-scoped):
 ```
-account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status
+account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
 ```
-Notes: `native_name` is optional (original local-language label). `account_number` must be integer-like; `status` is `enabled|disabled`.
+Notes: `native_name` is optional (original local-language label). `account_number` must be integer-like; `status` is `enabled|disabled`; `nature` is `opex`, `capex` or empty.
 
 ## Platform Admin: CoA Templates & Standard Accounts
 - GET `/admin/coa-templates` → list templates `{ id, country_iso, template_code, template_name, version, created_at, updated_at }`
@@ -361,7 +361,7 @@ Standard Accounts within a Template
 - GET `/admin/coa-templates/:id/accounts?sort=account_number:ASC&q=&page=1&limit=50` → list standard accounts parsed from the template CSV
 - GET `/admin/coa-templates/:id/accounts/ids?sort=...&q=...` → `{ ids: string[] }` ordered for workspace navigation
 - GET `/admin/coa-templates/:id/accounts/:accountNumber` → get a single account
-- POST `/admin/coa-templates/:id/accounts` → create `{ account_number, account_name, native_name?, description?, consolidation_account_number?, consolidation_account_name?, consolidation_account_description?, status }`
+- POST `/admin/coa-templates/:id/accounts` → create `{ account_number, account_name, native_name?, description?, consolidation_account_number?, consolidation_account_name?, consolidation_account_description?, status, nature? }` (`nature`: `opex`, `capex` or null for both)
 - PATCH `/admin/coa-templates/:id/accounts/:accountNumber` → update (supports changing `account_number`)
 - DELETE `/admin/coa-templates/:id/accounts/:accountNumber` → delete one
 - DELETE `/admin/coa-templates/:id/accounts/bulk` → delete many `{ ids: string[] }` (ids are account numbers as strings)
@@ -377,7 +377,8 @@ Notes
   - Items include `coa_code` to display CoA in the grid, and `consolidation_status`: `mapped` (the consolidation number exists in the tenant's consolidation chart), `outside` (set but absent from it), `unmapped` (no number), or `null` (a number is set and the tenant has no consolidation chart)
   - `consolidationStatus=mapped|outside|unmapped` filters on the server; page and total follow the filter; without a consolidation chart `mapped` and `outside` return no account (`unmapped` still returns the accounts without a number); any other value is a 400
 - GET `/accounts/ids?sort=...&q=...&filters=...&consolidationStatus=...` → `{ ids, total }` (ordered by current list query)
-- GET `/accounts/:id` → detail, with `consolidation_status`
+- GET `/accounts/:id` → detail, with `consolidation_status` and `line_counts: { opex, capex }` (the OPEX and CAPEX lines, all statuses, that use the account)
+- Accounts carry `nature` (`opex`, `capex` or null for both) on list, detail, POST and PATCH (`null` clears it, absent leaves it unchanged); the list filter on `nature` is a set filter where a blank value means null. A line write that creates a line or changes its account to an account of the other type is a 400: `This account is for CAPEX lines only. Choose an account for OPEX lines.` (swapped for the other side)
 - POST `/accounts`, PATCH `/accounts/:id` and the CSV imports derive `consolidation_account_name` and `consolidation_account_description` from the consolidation chart's account of the given number; without a match (or without a consolidation chart) the values sent are kept, and a new number drops the name and description not sent with it; a null or empty number clears both. When an account of the consolidation chart is created, renamed, described or renumbered, or an account joins the consolidation chart (`coa_id`), every account mapped to its old or new number follows it (number, name, description) in the same transaction, one audit line per account. An account that leaves the consolidation chart takes nobody along (the accounts mapped to it become `outside`).
 - GET `/accounts/export?scope=template|data&coaId=...&language=…`
   - Global export includes `coa_code`; when `coaId` is provided, export is scoped
@@ -387,13 +388,14 @@ Notes
 
 CSV schema (Global):
 ```
-coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status
+coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
 ```
 Validation/behavior:
 - `account_number`: required integer-like (stored as text)
 - `account_name`: required (English UI label)
 - `native_name`: optional (local-language label); exported and visible in UI tooltip
 - `consolidation_*`: optional; number must be integer-like when present
+- `nature`: optional last column, `opex`, `capex` or empty (both). An absent column leaves the stored natures unchanged; another value is a row error
 - Deduplicates by `(account_number, target CoA)`; classifies rows as insert/update in the target CoA; supports `dryRun` preflight
 
 ### Company Metrics (per year)
@@ -1398,7 +1400,7 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
 - Reference lookups (pickers, `common/lookup/`)
   - GET `/<resource>/lookup?q=&limit=&<scope>` searches a reference table as the user types: `q` matches with accents and case folded on both sides (as the list quick search), rows whose label starts with `q` first, then rows where a word starts with it, then the others; `limit` defaults to 30, at most 50; the response is `{ items, has_more }`. Only active rows are offered
   - GET `/<resource>/lookup?ids=a,b` returns the rows of those ids whatever their status (the values already chosen, at most 100 ids), and ignores `q` and the scope
-  - Resources and scopes: `/suppliers/lookup` (`{ id, name, erp_supplier_id, status }`, the ERP id is searched too), `/accounts/lookup?companyId=` (the company's chart, else the global default chart; or `coaId=`; `{ id, account_number, account_name, description, coa_id }`, by number, a typed number ranks first), `/companies/lookup`, `/departments/lookup?company_id=`, `/users/lookup` (people: `{ id, first_name, last_name, email, status }`, names only, searched as "first last" and "last first", sorted by last name; `email` is set only for a person without a name, the only case it is shown or searched), `/analytics-categories/lookup?axis_id=`, `/business-processes/lookup`, `/contracts/lookup`
+  - Resources and scopes: `/suppliers/lookup` (`{ id, name, erp_supplier_id, status }`, the ERP id is searched too), `/accounts/lookup?companyId=` (the company's chart, else the global default chart; or `coaId=`; `nature=opex|capex` offers the accounts of that nature and those for both, `ids=` ignores it, any other value is a 400; `{ id, account_number, account_name, description, coa_id, nature }`, by number, a typed number ranks first), `/companies/lookup`, `/departments/lookup?company_id=`, `/users/lookup` (people: `{ id, first_name, last_name, email, status }`, names only, searched as "first last" and "last first", sorted by last name; `email` is set only for a person without a name, the only case it is shown or searched), `/analytics-categories/lookup?axis_id=`, `/business-processes/lookup`, `/contracts/lookup`
   - Read access (`common/lookup/lookup-requirements.ts`): a search (`q`, blank or not) needs read access on the reference's own page, or the level that edits a page whose forms pick it (member; contributor for incidents); read access on such a page allows `ids` only (the labels of values already chosen), and a search answers 403 `lookup_search_forbidden`. Exception: `/users/lookup` searches for the readers of every page with "Send link" (OPEX, CAPEX, tasks, requests, projects, applications, infrastructure, locations, knowledge). `/companies/lookup` and `/departments/lookup` keep their reader-level search (read-only reports filter on a company)
   - Currency settings are a budget setting. GET `/currency/settings` and GET `/currency/rates` need `budget_ops`, `opex` or `capex` at `reader` (the OPEX and CAPEX forms read their currency picker); PATCH `/currency/settings` and POST `/currency/rates/refresh` need `budget_ops:admin`. The IT landscape `settings` resource grants nothing on currencies. GET `/currency/settings` writes nothing (the currency rows are ensured when the settings are saved)
 - Pagination/sort

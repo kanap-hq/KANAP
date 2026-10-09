@@ -13,7 +13,7 @@ El espacio de trabajo se abre en modo de creación, con el panel **Propiedades**
 **Campos obligatorios**:
   - **Nombre del producto** (el título): En qué gasta (p. ej., "Licencias Salesforce", "AWS Compute")
   - **Empresa pagadora**: Qué empresa paga este gasto (obligatorio para contabilidad)
-  - **Cuenta**: La cuenta contable de este gasto. Solo aparecen las cuentas del plan de cuentas de la empresa pagadora
+  - **Cuenta**: La cuenta contable de este gasto. Solo aparecen las cuentas del plan de cuentas de la empresa pagadora, y solo las que están como **OPEX y CAPEX** o **Solo OPEX** en [Planes de cuentas y gestión de cuentas](chart-of-accounts.md#cuentas-opex-o-capex). Una partida que ya tiene una cuenta **Solo CAPEX** la conserva y sigue siendo editable. Elegir una cuenta así en una partida nueva, o al cambiar la cuenta, se rechaza
   - **Moneda**: Código ISO (p. ej., USD, EUR). Por defecto la moneda de su espacio de trabajo; puede cambiarla por partida
   - **Inicio de vigencia**: Cuándo comienza este gasto (DD/MM/AAAA)
 

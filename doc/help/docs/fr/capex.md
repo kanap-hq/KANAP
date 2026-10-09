@@ -14,7 +14,7 @@ L'espace de travail s'ouvre en mode création, avec le panneau **Propriétés** 
 
 - **Titre** : Ce dans quoi vous investissez (ex. : « Nouvelle infrastructure serveur », « Licence logiciel ERP »). C'est la description du poste, affichée dans la colonne **Description** de la liste
 - **Société payeuse** : Quelle société réalise l'investissement (obligatoire pour la comptabilité)
-- **Compte** : Le compte du grand livre pour cette dépense d'investissement. Seuls les comptes du plan comptable de la société payeuse apparaissent
+- **Compte** : Le compte du grand livre pour cette dépense d'investissement. Seuls les comptes du plan comptable de la société payeuse apparaissent, et seulement ceux réglés sur **OPEX et CAPEX** ou **CAPEX uniquement** dans [Plans comptables et gestion des comptes](chart-of-accounts.md#comptes-opex-ou-capex). Un poste qui a déjà un compte **OPEX uniquement** le conserve et reste modifiable. Choisir un tel compte sur un nouveau poste, ou en changeant le compte, est refusé
 - **Devise** : Code ISO (ex. : USD, EUR). Par défaut la devise CAPEX de votre espace de travail ; modifiable par poste
 - **Type d'immobilisation** : Classification des immobilisations corporelles : Matériel ou Logiciel
 - **Type d'investissement** : Objectif de l'investissement (voir les options ci-dessous)
