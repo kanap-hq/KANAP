@@ -2,6 +2,7 @@ import type { StringValue } from 'ms';
 import * as jwt from 'jsonwebtoken';
 import { getPasswordResetSecret } from './token-secret.util';
 import { PASSWORD_RESET_PURPOSE } from './access-token.util';
+import { ISSUED_TOKEN_ALGORITHM } from './jwt-algorithms';
 
 const DEFAULT_TTL: StringValue | number = '1h';
 
@@ -57,5 +58,5 @@ export function createPasswordResetToken(user: { id: string; email: string; tena
     jti,
   };
   const expiresIn = getPasswordResetTtl();
-  return jwt.sign(payload, secret, { expiresIn });
+  return jwt.sign(payload, secret, { algorithm: ISSUED_TOKEN_ALGORITHM, expiresIn });
 }

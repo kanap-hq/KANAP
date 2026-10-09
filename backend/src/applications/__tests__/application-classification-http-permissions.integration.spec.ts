@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import * as jwt from 'jsonwebtoken';
 import dataSource from '../../data-source';
+import { ACCESS_TOKEN_PURPOSE } from '../../auth/access-token.util';
 
 const DATABASE_URL = process.env.DATABASE_URL ?? '';
 const API_URL = process.env.CLASSIFICATION_TEST_API_URL ?? '';
@@ -41,7 +42,7 @@ async function main() {
   };
 
   const request = async (identity: Identity, path: string, init: RequestInit = {}) => {
-    const token = jwt.sign({ sub: identity.userId, email: identity.email, role: 'temporary', tenant_id: tenantId }, JWT_SECRET, { expiresIn: '5m' });
+    const token = jwt.sign({ purpose: ACCESS_TOKEN_PURPOSE, sub: identity.userId, email: identity.email, role: 'temporary', tenant_id: tenantId }, JWT_SECRET, { expiresIn: '5m' });
     return fetch(`${API_URL}${path}`, {
       ...init,
       signal: AbortSignal.timeout(10_000),

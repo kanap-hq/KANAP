@@ -86,7 +86,7 @@ function assertAccepted(guard: JwtAuthGuard, req: any, label: string) {
   assert.equal(guard.canActivate(createContext(req)), true, label);
 }
 
-function newGuard(clock: { now?: () => number; processStartedAt?: number } = {}) {
+function newGuard(clock: { now?: () => number } = {}) {
   return new JwtAuthGuard(reflectorStub()).setClock(clock);
 }
 
@@ -294,54 +294,100 @@ function testResetTokenRejectedBeforeAndAfterConsumption() {
   assert.equal(store.consume(token).affected, 0, 'a consumed token cannot be consumed twice');
 }
 
-// --- the transition window is bounded ---------------------------------------------------------
+// --- marker-less tokens: refused unless a deadline is configured -------------------------------
 
-function testRefusesUntypedTokenOnceWindowIsClosed() {
-  process.env.JWT_LEGACY_ACCESS_TOKEN_DEADLINE = '2020-01-01T00:00:00.000Z';
+const DEADLINE_ENV = 'JWT_LEGACY_ACCESS_TOKEN_DEADLINE';
+
+/** Runs `fn` with the deadline variable set to `value` (`undefined`: unset), then restores it. */
+function withDeadline(value: string | undefined, fn: () => void) {
+  const previous = process.env[DEADLINE_ENV];
+  if (value === undefined) delete process.env[DEADLINE_ENV];
+  else process.env[DEADLINE_ENV] = value;
   try {
-    const guard = newGuard();
-    assertRejected(guard, requestWith(sign(accessClaims())), 'legacy token after cut-over');
-    // Marked tokens are unaffected.
-    assertAccepted(
-      guard,
-      requestWith(sign(accessClaims({ purpose: ACCESS_TOKEN_PURPOSE }))),
-      'marked access token after cut-over',
-    );
+    fn();
   } finally {
-    process.env.JWT_LEGACY_ACCESS_TOKEN_DEADLINE = '2099-01-01T00:00:00.000Z';
+    if (previous === undefined) delete process.env[DEADLINE_ENV];
+    else process.env[DEADLINE_ENV] = previous;
   }
 }
 
-function testBlankDeadlineCountsAsUnset() {
-  // A whitespace-only value (env file or compose) must not silently pin a window: the policy has
-  // to fall back to the derived deadline AND the start-up line has to say so.
-  const env = {
-    JWT_SECRET,
-    JWT_LEGACY_ACCESS_TOKEN_DEADLINE: '   ',
-    JWT_ACCESS_TOKEN_TTL: '15m',
-    JWT_CLOCK_SKEW_TOLERANCE_SEC: '300',
-  } as NodeJS.ProcessEnv;
-  const startedAt = Date.parse('2026-01-01T00:00:00.000Z');
+function testRefusesUntypedTokenRightAfterStartWithoutDeadline() {
+  // A guard built just now stands for a process that has just started: without a configured
+  // deadline, a token without the marker is refused from the first request on.
+  for (const [label, value] of [['unset', undefined], ['blank', '   ']] as const) {
+    withDeadline(value, () => {
+      const guard = newGuard();
+      assertRejected(guard, requestWith(sign(accessClaims())), `legacy token right after start (${label})`);
+      assertAccepted(
+        guard,
+        requestWith(sign(accessClaims({ purpose: ACCESS_TOKEN_PURPOSE }))),
+        `marked access token right after start (${label})`,
+      );
 
-  const policy = resolveAccessTokenPolicy(env, startedAt, startedAt);
-  assert.equal(policy.derivedFromTtl, true, 'a blank deadline must not act as a configured one');
-  assert.equal(policy.strictPurposeAt, startedAt + (15 * 60 + 300) * 1000);
-
-  const report = describeTokenPurposePolicy(env, startedAt, startedAt);
-  assert.equal(report.level, 'warn', 'the derived window must be reported at start-up');
-  assert.match(report.message, /JWT_LEGACY_ACCESS_TOKEN_DEADLINE=/);
+      const policy = resolveAccessTokenPolicy(process.env);
+      assert.equal(policy.legacyDeadline, null, `no deadline (${label})`);
+      const report = describeTokenPurposePolicy(process.env, Date.now(), Date.now());
+      assert.equal(report.level, 'info', `refusing marker-less tokens needs no operator decision (${label})`);
+      assert.match(report.message, /legacy untyped access tokens: refused\)/);
+      assert.doesNotMatch(report.message, /JWT_LEGACY_ACCESS_TOKEN_DEADLINE=/, 'no deadline is suggested');
+    });
+  }
 }
 
-function testReportedWindowMatchesTheEnforcedWindow() {
-  // The start-up line and the guard must never name different cut-overs.
-  const env = { JWT_SECRET, JWT_ACCESS_TOKEN_TTL: '45m' } as NodeJS.ProcessEnv;
-  const startedAt = Date.parse('2026-01-01T00:00:00.000Z');
-  const policy = resolveAccessTokenPolicy(env, startedAt, startedAt);
-  const report = describeTokenPurposePolicy(env, startedAt, startedAt);
-  assert.ok(
-    report.message.includes(new Date(policy.strictPurposeAt).toISOString()),
-    `report does not name the enforced deadline: ${report.message}`,
-  );
+function testAcceptsUntypedTokenUntilConfiguredDeadline() {
+  const deadline = Date.parse('2030-01-01T00:00:00.000Z');
+  withDeadline('2030-01-01T00:00:00.000Z', () => {
+    const before = newGuard({ now: () => deadline - 1 });
+    assertAccepted(before, requestWith(sign(accessClaims())), 'legacy token before the deadline');
+
+    const at = newGuard({ now: () => deadline });
+    assertRejected(at, requestWith(sign(accessClaims())), 'legacy token at the deadline');
+    assertAccepted(
+      at,
+      requestWith(sign(accessClaims({ purpose: ACCESS_TOKEN_PURPOSE }))),
+      'marked access token at the deadline',
+    );
+
+    // The start-up line names the instant the guard enforces.
+    const report = describeTokenPurposePolicy(process.env, deadline - 1, deadline - 1);
+    assert.equal(report.level, 'info');
+    assert.ok(
+      report.message.includes(`accepted until ${new Date(deadline).toISOString()}`),
+      `report does not name the enforced deadline: ${report.message}`,
+    );
+  });
+}
+
+function testRefusesUntypedTokenOnceDeadlineIsPast() {
+  withDeadline('2020-01-01T00:00:00.000Z', () => {
+    const guard = newGuard();
+    assertRejected(guard, requestWith(sign(accessClaims())), 'legacy token after the deadline');
+    assertAccepted(
+      guard,
+      requestWith(sign(accessClaims({ purpose: ACCESS_TOKEN_PURPOSE }))),
+      'marked access token after the deadline',
+    );
+    const report = describeTokenPurposePolicy(process.env, Date.now(), Date.now());
+    assert.equal(report.level, 'warn');
+    assert.match(report.message, /already past/);
+  });
+}
+
+function testInvalidDeadlineRefusesUntypedTokenAndWarns() {
+  withDeadline('not-a-date', () => {
+    const guard = newGuard();
+    assertRejected(guard, requestWith(sign(accessClaims())), 'legacy token with an unparseable deadline');
+    assertAccepted(
+      guard,
+      requestWith(sign(accessClaims({ purpose: ACCESS_TOKEN_PURPOSE }))),
+      'marked access token with an unparseable deadline',
+    );
+    const policy = resolveAccessTokenPolicy(process.env);
+    assert.deepEqual(policy, { legacyDeadline: null, deadlineInvalid: true });
+    const report = describeTokenPurposePolicy(process.env, Date.now(), Date.now());
+    assert.equal(report.level, 'warn', 'an unparseable deadline is still reported as a warning');
+    assert.match(report.message, /not a parseable instant/);
+  });
 }
 
 // --- mutation: the purpose control must be load-bearing ---------------------------------------
@@ -383,12 +429,13 @@ function run() {
   testRejectsInvalidSignature();
   testRejectsResetTokenThatWouldPassEveryOtherCheckOnPlatformHost();
   testResetTokenRejectedBeforeAndAfterConsumption();
-  testRefusesUntypedTokenOnceWindowIsClosed();
-  testBlankDeadlineCountsAsUnset();
-  testReportedWindowMatchesTheEnforcedWindow();
+  testRefusesUntypedTokenRightAfterStartWithoutDeadline();
+  testAcceptsUntypedTokenUntilConfiguredDeadline();
+  testRefusesUntypedTokenOnceDeadlineIsPast();
+  testInvalidDeadlineRefusesUntypedTokenAndWarns();
   testMutationWithoutPurposeControlAcceptsForeignTokens();
   // eslint-disable-next-line no-console
-  console.log('jwt-auth.guard.spec: OK (19 cases)');
+  console.log('jwt-auth.guard.spec: OK (20 cases)');
 }
 
 run();

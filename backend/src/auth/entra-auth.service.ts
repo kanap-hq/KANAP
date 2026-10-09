@@ -7,6 +7,7 @@ import { DirectoryProfile } from './entra-directory-sync.util';
 import { URL, URLSearchParams } from 'url';
 import { ENTRA_LOGIN_HANDOFF_TYPE, ENTRA_STATE_PURPOSE } from './access-token.util';
 import { getEntraStateSecret } from './token-secret.util';
+import { ENTRA_ID_TOKEN_ALGORITHMS, ISSUED_TOKEN_ALGORITHM, ISSUED_TOKEN_ALGORITHMS } from './jwt-algorithms';
 
 type EntraMode = 'setup' | 'login';
 
@@ -253,7 +254,7 @@ export class EntraAuthService {
 
   private signState(payload: EntraState): string {
     try {
-      return jwt.sign(payload, this.stateSecret, { algorithm: 'HS256', expiresIn: '10m' });
+      return jwt.sign(payload, this.stateSecret, { algorithm: ISSUED_TOKEN_ALGORITHM, expiresIn: '10m' });
     } catch (err: any) {
       this.logger.error(`Failed to sign Entra state: ${err?.message || String(err)}`);
       throw new BadRequestException('Unable to start Entra authentication');
@@ -262,7 +263,7 @@ export class EntraAuthService {
 
   private verifyState(token: string): EntraState {
     try {
-      const decoded = jwt.verify(token, this.stateSecret) as EntraState;
+      const decoded = jwt.verify(token, this.stateSecret, { algorithms: [...ISSUED_TOKEN_ALGORITHMS] }) as EntraState;
       // Explicit typing (RFC 8725 §3.12): an SSO state must be an SSO state, not merely a token
       // this application can verify.
       if (!decoded || decoded.purpose !== ENTRA_STATE_PURPOSE || !decoded.mode || !decoded.tenantId || !decoded.nonce) {
@@ -285,7 +286,7 @@ export class EntraAuthService {
           redirectTo: payload.redirectTo ?? '/',
         } satisfies EntraLoginHandoff,
         this.stateSecret,
-        { algorithm: 'HS256', expiresIn: '2m' },
+        { algorithm: ISSUED_TOKEN_ALGORITHM, expiresIn: '2m' },
       );
     } catch (err: any) {
       this.logger.error(`Failed to sign Entra login handoff: ${err?.message || String(err)}`);
@@ -295,7 +296,7 @@ export class EntraAuthService {
 
   verifyLoginHandoff(token: string): EntraLoginHandoff {
     try {
-      const decoded = jwt.verify(token, this.stateSecret) as EntraLoginHandoff;
+      const decoded = jwt.verify(token, this.stateSecret, { algorithms: [...ISSUED_TOKEN_ALGORITHMS] }) as EntraLoginHandoff;
       if (
         !decoded
         || decoded.type !== ENTRA_LOGIN_HANDOFF_TYPE
@@ -401,7 +402,7 @@ export class EntraAuthService {
     try {
       // Verify signature and audience first
       claims = jwt.verify(tokenResponse.id_token, key, {
-        algorithms: ['RS256'],
+        algorithms: [...ENTRA_ID_TOKEN_ALGORITHMS],
         audience: clientId,
       });
     } catch (err: any) {

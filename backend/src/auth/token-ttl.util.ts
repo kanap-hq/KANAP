@@ -1,4 +1,4 @@
-/** Duration parsing shared by every token family (access, refresh, reset, transition window). */
+/** Duration parsing shared by every token family (access, refresh, reset). */
 
 export const DEFAULT_ACCESS_TOKEN_TTL = '15m';
 export const DEFAULT_REFRESH_TOKEN_TTL = '4h';
