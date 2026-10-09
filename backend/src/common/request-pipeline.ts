@@ -2,6 +2,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, Reflector } from '@nestjs/core';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { DataSource } from 'typeorm';
+import { ExportEventsInterceptor } from '../audit/export-events.interceptor';
 import { ReleaseTenantRunnerFilter } from './filters/release-tenant-runner.filter';
 import { ListContextInterceptor } from './list-context/list-context.interceptor';
 import { ListContextsService } from './list-context/list-contexts.service';
@@ -17,8 +18,11 @@ import { TenantInterceptor } from './tenant.interceptor';
  * 2. TenantInterceptor: commits it on success, rolls it back on an error;
  * 3. ListContextInterceptor, inside that transaction: a GET's `ctx=<id>`
  *    becomes the saved filters in its query;
- * 4. the pipes (class-validator DTOs, Zod DTOs), on the merged query;
- * 5. ReleaseTenantRunnerFilter, on an error: releases a transaction left open.
+ * 4. ExportEventsInterceptor, inside that transaction: a route whose path ends
+ *    with `/export`, or marked `@ExportRoute()`, writes its `export` row to the
+ *    audit log;
+ * 5. the pipes (class-validator DTOs, Zod DTOs), on the merged query;
+ * 6. ReleaseTenantRunnerFilter, on an error: releases a transaction left open.
  */
 export function useRequestPipeline(app: INestApplication, dataSource: DataSource): void {
   const reflector = app.get(Reflector);
@@ -27,7 +31,11 @@ export function useRequestPipeline(app: INestApplication, dataSource: DataSource
     new ZodValidationPipe(),
   );
   app.useGlobalGuards(new TenantInitGuard(dataSource, reflector));
-  app.useGlobalInterceptors(new TenantInterceptor(dataSource, reflector), new ListContextInterceptor(app.get(ListContextsService)));
+  app.useGlobalInterceptors(
+    new TenantInterceptor(dataSource, reflector),
+    new ListContextInterceptor(app.get(ListContextsService)),
+    new ExportEventsInterceptor(),
+  );
   const { httpAdapter } = app.get(HttpAdapterHost);
   app.useGlobalFilters(new ReleaseTenantRunnerFilter(httpAdapter));
 }

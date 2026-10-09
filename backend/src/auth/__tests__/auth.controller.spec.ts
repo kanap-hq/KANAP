@@ -71,6 +71,7 @@ function createController(
     { maybeRefreshOnLogin: async () => undefined } as any,
     dataSource ?? createTenantDataSource().dataSource,
     {} as any,
+    { recordAuthEvent: async () => undefined } as any,
   );
 
   return { controller, auth };
@@ -221,7 +222,7 @@ async function testProvisioningExchangeUsesItsOwnKeyAndRejectsTheLegacyOne() {
         findByEmail: async () => ({ id: 'user-1', email: 'user@example.com', role: 'member' }),
         touchLastLogin: async () => undefined,
       };
-      return await controller.exchangeProvisioningToken({ token });
+      return await controller.exchangeProvisioningToken({ token }, {});
     } finally {
       if (previous === undefined) delete process.env.PROVISIONING_TOKEN_SECRET;
       else process.env.PROVISIONING_TOKEN_SECRET = previous;
@@ -258,11 +259,40 @@ async function testProvisioningExchangeUsesItsOwnKeyAndRejectsTheLegacyOne() {
   );
 }
 
+async function testProvisioningExchangeIsRecordedAsASignIn() {
+  const JWT_SECRET = 'auth-controller-spec-jwt-secret';
+  process.env.JWT_SECRET = JWT_SECRET;
+  delete process.env.PROVISIONING_TOKEN_SECRET;
+  const payload = { purpose: PROVISIONING_PURPOSE, tenant_id: 'tenant-1', email: 'user@example.com', exp: Math.floor(Date.now() / 1000) + 600 };
+  const events: Array<{ tenantId: unknown; event: any }> = [];
+  const exchange = async (token: string, req: any, user: any = { id: 'user-1', email: 'user@example.com', role: 'member' }) => {
+    const { controller } = createController();
+    (controller as any).users = { findByEmail: async () => user };
+    (controller as any).securityEvents = { recordAuthEvent: async (tenantId: unknown, event: any) => { events.push({ tenantId, event }); } };
+    return controller.exchangeProvisioningToken({ token }, req);
+  };
+
+  // A sign-in in the tenant the verified token names.
+  await exchange(jwt.sign(payload, JWT_SECRET), { tenant: { id: 'tenant-host' } });
+  assert.deepEqual(events.pop(), { tenantId: 'tenant-1', event: { action: 'login', userId: 'user-1', reason: 'provisioning' } });
+  // A token that does not verify names no trusted tenant: the host's tenant only, or none.
+  const foreign = jwt.sign(payload, 'another-key');
+  await assert.rejects(() => exchange(foreign, { tenant: { id: 'tenant-host' } }), /invalid or expired token/);
+  assert.deepEqual(events.pop(), { tenantId: 'tenant-host', event: { action: 'login_failed', reason: 'invalid_token' } });
+  await assert.rejects(() => exchange(foreign, {}), /invalid or expired token/);
+  assert.deepEqual(events.pop(), { tenantId: undefined, event: { action: 'login_failed', reason: 'invalid_token' } });
+  // A verified token for an address the tenant does not have.
+  await assert.rejects(() => exchange(jwt.sign(payload, JWT_SECRET), {}, null), /user not found/);
+  assert.deepEqual(events.pop(), { tenantId: 'tenant-1', event: { action: 'login_failed', reason: 'unknown_user' } });
+  assert.equal(events.length, 0);
+}
+
 async function run() {
   await testRefreshPassesTenantIdToAuthService();
   await testLogoutPassesTenantIdToAuthService();
   await testLoginUsesTenantRunnerEvenWhenRequestRunnerIsReleased();
   await testProvisioningExchangeUsesItsOwnKeyAndRejectsTheLegacyOne();
+  await testProvisioningExchangeIsRecordedAsASignIn();
 }
 
 void run();

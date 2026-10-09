@@ -213,6 +213,7 @@ function createProvisioningController() {
     {} as any,
     { createQueryRunner: () => runner } as any,
     {} as any,
+    { recordAuthEvent: async () => undefined } as any,
   );
 }
 
@@ -221,12 +222,12 @@ async function testProvisioningAcceptsEveryHmacAlgorithm() {
   const payload = { purpose: PROVISIONING_PURPOSE, tenant_id: TENANT_ID, email: 'user@example.com' };
   for (const algorithm of ['HS256', ...OTHER_HMAC_ALGORITHMS] as jwt.Algorithm[]) {
     const token = jwt.sign(payload, getProvisioningSecret(), { algorithm, expiresIn: '10m' });
-    const result = await controller.exchangeProvisioningToken({ token });
+    const result = await controller.exchangeProvisioningToken({ token }, {});
     assert.equal(result.access_token, 'access-token', `${algorithm} provisioning token`);
   }
   // The key still decides: an HMAC token on another key is refused.
   const foreign = jwt.sign(payload, 'another-secret', { algorithm: 'HS512', expiresIn: '10m' });
-  await assert.rejects(() => controller.exchangeProvisioningToken({ token: foreign }), /invalid or expired token/);
+  await assert.rejects(() => controller.exchangeProvisioningToken({ token: foreign }, {}), /invalid or expired token/);
 }
 
 async function run() {

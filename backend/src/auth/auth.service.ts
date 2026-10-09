@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, IsNull } from 'typeorm';
 import { UsersService } from '../users/users.service';
@@ -18,6 +18,7 @@ import {
 import { RefreshToken } from './refresh-token.entity';
 import { PasswordResetToken } from './password-reset-token.entity';
 import { isDevelopmentEnv, requireJwtSecret } from '../common/env';
+import { AuthRefusedException } from './auth-refused.exception';
 
 function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
@@ -38,6 +39,20 @@ export function buildAccessTokenPayload(user: { id: string; email: string; role?
   };
 }
 
+// Response bodies of a refused sign-in, a fresh object per refusal.
+const invalidCredentials = () => ({ code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' });
+const userDisabled = () => ({ code: 'USER_DISABLED', message: 'User disabled' });
+
+/**
+ * The hash a sign-in checks the password against when the account has none (unknown address, no
+ * local password): the hash of a random value nobody kept, with the parameters of the account
+ * hashes (`argon2.hash(..., { type: argon2.argon2id })`, users.service.ts). The check costs the
+ * same as for a real account, so the time of a refusal does not tell whether the account exists;
+ * its result is never used.
+ */
+export const FIXED_PASSWORD_HASH =
+  '$argon2id$v=19$m=65536,t=3,p=4$V5LNDp12AiVieMN+ulsB0w$GD7GrvNK44bSx+DBIZDW7iWFBj63NFiIFRow90TNJhs';
+
 function bindTenantId(tenantId: string | null | undefined): string {
   return tenantId ?? '';
 }
@@ -52,12 +67,36 @@ export class AuthService {
     private readonly passwordResetTokenRepo: Repository<PasswordResetToken>,
   ) {}
 
-  async validateUser(email: string, password: string, manager?: import('typeorm').EntityManager) {
-    if (!password || typeof password !== 'string') throw new UnauthorizedException({ code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' });
-    const user = await this.users.findByEmailForSignIn(email, { manager });
-    if (!user || !user.password_hash || typeof user.password_hash !== 'string') {
-      throw new UnauthorizedException({ code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' });
+  /** argon2's password check (a field, so a spec can watch its calls). */
+  private verifyPasswordHash: (hash: string, password: string) => Promise<boolean> = (hash, password) =>
+    argon2.verify(hash, password);
+
+  /**
+   * Whether `password` matches `hash`. Without a hash, the same check runs against
+   * FIXED_PASSWORD_HASH and the answer is no: every refusal costs one argon2 check.
+   */
+  private async passwordMatches(hash: string | null, password: string): Promise<boolean> {
+    try {
+      const matches = await this.verifyPasswordHash(hash ?? FIXED_PASSWORD_HASH, password);
+      return hash !== null && matches === true;
+    } catch {
+      return false;
     }
+  }
+
+  /**
+   * The account `email` names, when `password` is its password and it may sign in. A refusal is an
+   * `AuthRefusedException`: the same 401 for the client, the reason and the account for the
+   * security log. An unknown address and an account without a local password (single sign-on,
+   * invitation not accepted) go through the same argon2 check as a wrong password.
+   */
+  async validateUser(email: string, password: string, manager?: import('typeorm').EntityManager) {
+    if (!password || typeof password !== 'string') throw new AuthRefusedException(invalidCredentials(), 'bad_password');
+    const user = await this.users.findByEmailForSignIn(email, { manager });
+    const hash = typeof user?.password_hash === 'string' && user.password_hash ? user.password_hash : null;
+    const ok = await this.passwordMatches(hash, password);
+    if (!user) throw new AuthRefusedException(invalidCredentials(), 'unknown_user');
+    if (!hash) throw new AuthRefusedException(invalidCredentials(), 'no_password', user.id);
     if (isDevelopmentEnv()) {
       // eslint-disable-next-line no-console
       console.log('login attempt', {
@@ -67,19 +106,13 @@ export class AuthService {
         passType: typeof password,
       });
     }
-    let ok = false;
-    try {
-      ok = await argon2.verify(user.password_hash as string, password);
-    } catch {
-      ok = false;
-    }
-    if (!ok) throw new UnauthorizedException({ code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' });
-    if (user.status !== 'enabled') throw new UnauthorizedException({ code: 'USER_DISABLED', message: 'User disabled' });
-    if (!user.role) throw new UnauthorizedException({ code: 'USER_DISABLED', message: 'User disabled' });
+    if (!ok) throw new AuthRefusedException(invalidCredentials(), 'bad_password', user.id);
+    if (user.status !== 'enabled') throw new AuthRefusedException(userDisabled(), 'disabled', user.id);
+    if (!user.role) throw new AuthRefusedException(userDisabled(), 'not_allowed', user.id);
     const roleName = (user.role.role_name ?? '').toLowerCase();
     const isSystemRole = !!user.role.is_system;
     const canLogin = roleName === 'administrator' || !isSystemRole;
-    if (!canLogin) throw new UnauthorizedException({ code: 'USER_DISABLED', message: 'User disabled' });
+    if (!canLogin) throw new AuthRefusedException(userDisabled(), 'not_allowed', user.id);
     return user;
   }
 
@@ -156,23 +189,23 @@ export class AuthService {
     });
 
     if (!storedToken) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new AuthRefusedException('Invalid refresh token', 'invalid_token');
     }
 
     if (storedToken.expires_at < new Date()) {
       // Token expired, delete it
       await repo.delete({ id: storedToken.id });
-      throw new UnauthorizedException('Refresh token expired');
+      throw new AuthRefusedException('Refresh token expired', 'expired', storedToken.user_id ?? null);
     }
 
     const user = storedToken.user;
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new AuthRefusedException('User not found', 'unknown_user');
     }
     if (user.status !== 'enabled') {
       // A disabled user must not be able to mint new access tokens.
       await repo.delete({ id: storedToken.id });
-      throw new UnauthorizedException({ code: 'USER_DISABLED', message: 'User disabled' });
+      throw new AuthRefusedException(userDisabled(), 'disabled', user.id);
     }
 
     // Extend refresh token expiration (sliding window)
@@ -203,16 +236,25 @@ export class AuthService {
   }
 
   /**
-   * Revoke a specific refresh token (logout from one device).
+   * Revoke a specific refresh token (logout from one device). Returns the account of the session
+   * it closed, or null when no session of the tenant had this token.
    */
   async revokeToken(
     refreshToken: string,
     tenantId: string | null | undefined,
     manager?: import('typeorm').EntityManager,
-  ): Promise<void> {
+  ): Promise<string | null> {
     const tokenHash = hashToken(refreshToken);
     const repo = manager ? manager.getRepository(RefreshToken) : this.refreshTokenRepo;
-    await repo.delete({ token_hash: tokenHash, tenant_id: bindTenantId(tenantId) });
+    // One statement: two sign-outs of the same session at once cannot both report it closed.
+    const result = await repo
+      .createQueryBuilder()
+      .delete()
+      .where('token_hash = :tokenHash AND tenant_id = :tenantId', { tokenHash, tenantId: bindTenantId(tenantId) })
+      .returning('user_id')
+      .execute();
+    const closed = Array.isArray(result.raw) ? result.raw[0] : null;
+    return typeof closed?.user_id === 'string' ? closed.user_id : null;
   }
 
   /**
@@ -251,7 +293,8 @@ export class AuthService {
     return token;
   }
 
-  async resetPasswordWithToken(token: string, nextPassword: string, opts?: { manager?: import('typeorm').EntityManager }) {
+  /** Sets the password of the account a reset link names and closes its sessions; returns the account. */
+  async resetPasswordWithToken(token: string, nextPassword: string, opts?: { manager?: import('typeorm').EntityManager }): Promise<string> {
     const secret = getPasswordResetSecret();
     let payload: any;
     try {
@@ -299,6 +342,7 @@ export class AuthService {
       await this.users.enableUser(user.id, null, { manager: opts?.manager });
     }
     await this.revokeAllTokens(user.id, opts?.manager);
+    return user.id;
   }
 
   getPasswordResetExpirationMinutes() {

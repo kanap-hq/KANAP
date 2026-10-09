@@ -214,6 +214,15 @@
       "create": "Create",
       "delete": "Delete",
       "disable": "Disable",
+      "export": "Export",
+      "login": "Sign-in",
+      "login_failed": "Failed sign-in",
+      "logout": "Sign-out",
+      "password_reset_completed": "Password reset completed",
+      "password_reset_requested": "Password reset requested",
+      "refresh_denied": "Session renewal refused",
+      "sso_login": "Sign-in with Microsoft",
+      "sso_login_failed": "Failed sign-in with Microsoft",
       "update": "Update"
     },
     "columns": {

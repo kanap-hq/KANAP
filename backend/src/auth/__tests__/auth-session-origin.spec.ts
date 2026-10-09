@@ -51,6 +51,7 @@ function createController() {
     {} as any,
     {} as any,
     {} as any,
+    { recordAuthEvent: async () => undefined } as any,
   );
   const cookies: Array<{ name: string; value: string; options: Record<string, any> }> = [];
   const response = {

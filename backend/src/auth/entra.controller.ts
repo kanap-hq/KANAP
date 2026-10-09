@@ -1,4 +1,5 @@
 import { BadRequestException, Body, Controller, Get, Logger, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { Response } from 'express';
 import { DataSource } from 'typeorm';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -16,6 +17,22 @@ import { AuditService } from '../audit/audit.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EntraDirectorySyncService } from './entra-directory-sync.service';
 import { readManagerExternalId } from './entra-directory-sync.util';
+import { SecurityEventsService } from '../audit/security-events.service';
+import { AuthEvent, AuthEventReason } from '../audit/security-events';
+import { NeverRejects } from '../common/never-rejects';
+import { RateLimitGuard } from '../common/rate-limit.guard';
+import { RATE_LIMITS } from '../common/rate-limit';
+
+/** The short code of a failed single sign-on, from the error; the provider's message is not kept. */
+export function ssoFailureReason(error: unknown): AuthEventReason {
+  const message = String((error as { message?: unknown } | null)?.message ?? '');
+  if (message.includes('ENTRA_EMAIL_UNVERIFIED')) return 'email_unverified';
+  if (message.includes('ENTRA_TENANT_MISMATCH')) return 'tenant_mismatch';
+  if (message.includes('SSO_NOT_CONFIGURED')) return 'sso_not_configured';
+  if (message.includes('Invalid Entra state')) return 'invalid_state';
+  if (message.includes('Invalid Entra login session')) return 'invalid_token';
+  return 'sso_failed';
+}
 
 @Controller('auth/entra')
 export class EntraController {
@@ -28,6 +45,7 @@ export class EntraController {
     private readonly audit: AuditService,
     private readonly notifications: NotificationsService,
     private readonly directorySync: EntraDirectorySyncService,
+    private readonly securityEvents: SecurityEventsService,
   ) {}
 
   private readonly logger = new Logger(EntraController.name);
@@ -99,6 +117,8 @@ export class EntraController {
   }
 
   @Get('callback')
+  @UseGuards(RateLimitGuard)
+  @Throttle({ default: RATE_LIMITS.ssoSignIn })
   async callback(@Req() req: any, @Res() res: Response) {
     // Admin-consent round trip (application permissions for the directory
     // sync) reuses this redirect URI; it carries no auth code.
@@ -110,20 +130,56 @@ export class EntraController {
       return;
     }
 
+    // Filled once the state's signature is checked: the tenant and mode it names are then trusted.
+    const verified: { tenantId?: string; mode?: string } = {};
     try {
-      await this.completeCallback(req, res);
+      await this.completeCallback(req, res, verified);
     } catch (err: any) {
+      this.recordCallbackFailure(req, verified, err);
       await this.redirectCallbackError(req, res, err);
     }
   }
 
-  private async completeCallback(req: any, res: Response) {
+  /**
+   * A failed sign-in round trip is recorded in the tenant its verified state names or, before
+   * the state is checked, in the host's tenant when single sign-on is set up for it (see
+   * recordSsoFailure). Setup round trips are not sign-ins.
+   */
+  private recordCallbackFailure(req: any, verified: { tenantId?: string; mode?: string }, err: unknown) {
+    const mode = verified.mode ?? this.entra.peekState(req?.query?.state)?.mode;
+    if (mode === 'setup') return;
+    void this.recordSsoFailure(req, verified.tenantId, { action: 'sso_login_failed', reason: ssoFailureReason(err) });
+  }
+
+  /**
+   * Records a failed single sign-on in a tenant the request establishes: the one a verified state
+   * or hand-off names (`verifiedTenantId`) or, without one, the host's tenant when single sign-on
+   * is set up for it. A request where nothing checks out (no verified state or hand-off, a host
+   * without single sign-on, no host tenant) writes nothing. Not awaited by the routes.
+   */
+  @NeverRejects()
+  private async recordSsoFailure(req: any, verifiedTenantId: string | undefined, event: AuthEvent): Promise<void> {
+    const tenantId = verifiedTenantId ?? (await this.hostTenantWithSso(req));
+    if (!tenantId) return;
+    await this.securityEvents.recordAuthEvent(tenantId, event, req);
+  }
+
+  /** The host's tenant when Entra single sign-on is set up for it, otherwise null. */
+  private async hostTenantWithSso(req: any): Promise<string | null> {
+    const hostTenantId = req?.tenant?.id;
+    if (typeof hostTenantId !== 'string' || !hostTenantId) return null;
+    const tenant = await this.tenants.findById(hostTenantId);
+    return tenant?.sso_provider === 'entra' && tenant.entra_tenant_id ? tenant.id : null;
+  }
+
+  private async completeCallback(req: any, res: Response, verified: { tenantId?: string; mode?: string } = {}) {
     const result = await this.entra.handleCallback({
       code: req.query?.code,
       state: req.query?.state,
     });
 
     const { mode, tenantId, redirectTo, claims, accessToken } = result;
+    verified.mode = mode;
     if (!tenantId) {
       throw new BadRequestException('Missing tenant context');
     }
@@ -132,6 +188,7 @@ export class EntraController {
     if (!tenant) {
       throw new BadRequestException('Tenant not found');
     }
+    verified.tenantId = tenant.id;
 
     const tid = (claims as any)?.tid as string | undefined;
     if (!tid) {
@@ -169,8 +226,24 @@ export class EntraController {
   }
 
   @Post('session')
+  @UseGuards(RateLimitGuard)
+  @Throttle({ default: RATE_LIMITS.ssoSignIn })
   async completeLoginSession(@Body() body: any, @Req() req: any, @Res({ passthrough: true }) res: Response) {
-    const session = await this.issueLoginSession(body?.handoff, req, res);
+    // The account of a verified hand-off for this tenant, once known.
+    const attempt: { userId?: string } = {};
+    let session: Awaited<ReturnType<EntraController['issueLoginSession']>>;
+    try {
+      session = await this.issueLoginSession(body?.handoff, req, res, attempt);
+    } catch (err) {
+      // A verified hand-off for this host names its tenant; otherwise the host must have single sign-on.
+      void this.recordSsoFailure(req, attempt.userId ? req?.tenant?.id : undefined, {
+        action: 'sso_login_failed',
+        reason: ssoFailureReason(err),
+        userId: attempt.userId ?? null,
+      });
+      throw err;
+    }
+    void this.securityEvents.recordAuthEvent(req?.tenant?.id, { action: 'sso_login', userId: attempt.userId ?? null }, req);
     return {
       access_token: session.tokens.access_token,
       expires_in: session.tokens.expires_in,
@@ -183,6 +256,7 @@ export class EntraController {
     handoffToken: string | undefined,
     req: any,
     res: Response,
+    attempt: { userId?: string } = {},
   ): Promise<{
     tokens: { access_token: string; refresh_token: string; expires_in: number; refresh_expires_in: number };
     redirectPath: string;
@@ -203,6 +277,7 @@ export class EntraController {
     if (handoff.tenantId !== tenantMeta.id) {
       throw new BadRequestException('ENTRA_TENANT_MISMATCH');
     }
+    attempt.userId = handoff.userId;
 
     const tenant = await this.tenants.findById(handoff.tenantId);
     if (!tenant) {

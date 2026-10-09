@@ -6,7 +6,7 @@ import { EmailAttachment, EmailService } from '../email/email.service';
 import { StorageService } from '../common/storage/storage.service';
 import { resolveNotificationBaseUrl } from '../common/url';
 import { withTenant } from '../common/tenant-runner';
-import { trackBackgroundWork } from '../common/background-work';
+import { NeverRejects } from '../common/never-rejects';
 import { claimNotificationKeys, NOTIFICATION_DEDUPE_WINDOW_MS, notificationDedupeKey } from './notification-dedupe';
 import { NotificationPreferencesService } from './notification-preferences.service';
 import { NotificationPreferencesData, WorkspaceSettings } from './notifications.constants';
@@ -58,27 +58,9 @@ interface AttachmentMeta {
 type CommentItemType = 'request' | 'project' | 'task';
 
 /**
- * Most callers fire these notifications without awaiting them, so that an email never
- * delays or fails a save. A rejection would then be unhandled, and Node ends the process
- * on an unhandled rejection. The decorated methods log and resolve instead. Each call is
- * tracked as background work: a stop waits for it before it closes the pool (main.ts).
+ * Most callers fire these notifications without awaiting them, so that an email never delays or
+ * fails a save: the sending methods are `@NeverRejects()` (common/never-rejects.ts).
  */
-function NeverRejects(): MethodDecorator {
-  return (_target, propertyKey, descriptor: PropertyDescriptor) => {
-    const original = descriptor.value;
-    descriptor.value = function (this: { logger: Logger }, ...args: unknown[]) {
-      return trackBackgroundWork((async () => {
-        try {
-          return await original.apply(this, args);
-        } catch (error) {
-          this.logger.warn(`${String(propertyKey)} failed: ${error instanceof Error ? error.message : error}`);
-        }
-      })());
-    };
-    return descriptor;
-  };
-}
-
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);

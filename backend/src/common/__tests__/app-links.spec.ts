@@ -74,6 +74,7 @@ function createAuthController(options: { userExists: boolean }) {
     {} as any,
     {} as any,
     {} as any,
+    { recordAuthEvent: async () => undefined } as any,
   );
   return { controller, sent, lookups };
 }
