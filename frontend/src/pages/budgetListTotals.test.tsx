@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -66,7 +66,18 @@ import { DEFAULT_BUDGET_COLUMNS } from '../services/budgetColumns';
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
 
 const textFilter = (col: string, filter: string) => ({ [col]: { filterType: 'text', type: 'contains', filter } });
-const settle = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 700)); });
+const settle = () => act(async () => { await vi.advanceTimersByTimeAsync(700); });
+
+/**
+ * Timers run on virtual time: a wait for the grid to settle (its start-up notifications) costs no
+ * real time. Testing Library's waitFor advances that time itself when it sees Jest's timers, so
+ * `jest` points at Vitest's. Promises, React's scheduler (setImmediate) and the mocked server stay
+ * real.
+ */
+function runOnVirtualTime() {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+  vi.stubGlobal('jest', { advanceTimersByTime: (ms: number) => vi.advanceTimersByTime(ms) });
+}
 
 describe.each([
   { name: 'OPEX list', Page: OpexListPage, totals: '/spend-items/summary/totals', rows: '/spend-items/summary', col: 'product_name', search: '' },
@@ -79,6 +90,7 @@ describe.each([
     grid.api = null;
     get.mockReset();
     window.sessionStorage.clear();
+    runOnVirtualTime();
     // jsdom has no ResizeObserver (the grid only uses it to size itself) and no localStorage
     // (the grid keeps the column layout there).
     vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
@@ -95,7 +107,11 @@ describe.each([
       return { data: { yBudget: 10, reportingCurrency: 'EUR' } };
     });
   });
-  afterEach(() => { vi.unstubAllGlobals(); });
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
 
   const totalsCalls = () => get.mock.calls.filter(([url]) => url === totals);
   const filtersOf = (call: unknown[]) => {
@@ -157,6 +173,5 @@ describe.each([
     await settle();
     expect(totalsCalls()).toHaveLength(3);
     expect((totalsCalls()[2][1] as { params: unknown }).params).toEqual((totalsCalls()[1][1] as { params: unknown }).params);
-    // The real grid mounts four times here: 3 to 4 s alone, more under the full suite's load.
   }, 20_000);
 });
