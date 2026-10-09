@@ -375,7 +375,7 @@ export default function CoaPage() {
     <>
       {canCreateAccount && (
         <Button
-          variant="contained"
+          variant="action-primary"
           onClick={() => {
             const params = buildWorkspaceSearch();
             navigate(`/master-data/accounts/new/overview?${params.toString()}`);
@@ -386,12 +386,12 @@ export default function CoaPage() {
         </Button>
       )}
       {canAdmin && (
-        <Button onClick={() => setImportOpen(true)} disabled={!selectedCoaId}>
+        <Button variant="action" onClick={() => setImportOpen(true)} disabled={!selectedCoaId}>
           {t('shared.labels.importCsv')}
         </Button>
       )}
       {canAdmin && (
-        <Button onClick={() => setExportOpen(true)} disabled={!selectedCoaId}>
+        <Button variant="action" onClick={() => setExportOpen(true)} disabled={!selectedCoaId}>
           {t('shared.labels.exportCsv')}
         </Button>
       )}

@@ -25,7 +25,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
@@ -1163,23 +1163,31 @@ export default function KnowledgePage() {
 
   const documentActions = (
     <>
-      <ButtonGroup variant="contained" size="small">
-        <Button startIcon={<AddIcon />} onClick={goToBlankDocument} disabled={!canManageDocuments || !activeLibrary?.can_write}>
+      {/* Both halves are the bar's primary action; the group squares the inner corners. */}
+      <ButtonGroup variant="action-primary" disableElevation>
+        <Button
+          startIcon={<AddIcon sx={{ fontSize: '14px !important' }} />}
+          onClick={goToBlankDocument}
+          disabled={!canManageDocuments || !activeLibrary?.can_write}
+        >
           {t('actions.newDocument')}
         </Button>
         <Button
           onClick={(e) => setNewDocAnchorEl(e.currentTarget)}
           disabled={!canManageDocuments || !activeLibrary?.can_write}
-          sx={{ px: 0.5, minWidth: 'auto' }}
+          sx={(theme) => ({
+            px: 0.25,
+            minWidth: 'auto',
+            '&:not(.Mui-disabled)': { borderLeftColor: alpha(theme.palette.primary.contrastText, 0.35) },
+          })}
         >
-          <ArrowDropDownIcon />
+          <ArrowDropDownIcon sx={{ fontSize: 16 }} />
         </Button>
       </ButtonGroup>
       <Tooltip title={moveDisabledReason}>
         <span>
           <Button
-            variant="outlined"
-            size="small"
+            variant="action"
             onClick={() => {
               resetMoveDialogState();
               setMoveDialogOpen(true);
@@ -1204,7 +1212,6 @@ export default function KnowledgePage() {
                 setRefreshKey((prev) => prev + 1);
               }}
               disabled={!!deleteDisabledReason}
-              label={t('common:buttons.delete')}
             />
           </span>
         </Tooltip>
@@ -1216,9 +1223,8 @@ export default function KnowledgePage() {
     <>
       {canCreateLibraries && (
         <Button
-          size="small"
-          variant="outlined"
-          startIcon={<AddIcon />}
+          variant="action"
+          startIcon={<AddIcon sx={{ fontSize: '14px !important' }} />}
           aria-label={t('libraries.newLibrary')}
           onClick={() => setCreateLibraryOpen(true)}
         >
@@ -1227,9 +1233,8 @@ export default function KnowledgePage() {
       )}
       {activeLibrary && !activeLibrary.is_system && activeLibrary.can_manage && (
         <Button
-          size="small"
-          variant="outlined"
-          startIcon={<SettingsIcon />}
+          variant="action"
+          startIcon={<SettingsIcon sx={{ fontSize: '14px !important' }} />}
           onClick={() => openLibraryEdit(activeLibrary)}
         >
           {t('libraries.manage')}
@@ -1237,8 +1242,7 @@ export default function KnowledgePage() {
       )}
       {activeLibrary?.slug === TEMPLATE_LIBRARY_SLUG && canAdminLibraries && (
         <Button
-          size="small"
-          variant="outlined"
+          variant="action"
           onClick={() => setTypesManagerOpen(true)}
         >
           {t('actions.manageTypes')}

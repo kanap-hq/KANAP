@@ -340,17 +340,16 @@ export default function InterfacesPage() {
   const actions = (
     <Stack direction="row" spacing={1}>
       {canCreate && (
-        <Button variant="contained" onClick={() => navigate('/it/interfaces/new/overview')}>
+        <Button variant="action-primary" onClick={() => navigate('/it/interfaces/new/overview')}>
           Add interface
         </Button>
       )}
       {canCreate && (
         <Button
-          variant="outlined"
-          startIcon={<ContentCopyIcon />}
+          variant="action"
+          startIcon={<ContentCopyIcon sx={{ fontSize: '14px !important' }} />}
           onClick={handleOpenDuplicateDialog}
           disabled={selectedRows.length !== 1 || duplicating}
-          size="small"
         >
           Duplicate interface
         </Button>

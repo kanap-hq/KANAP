@@ -329,7 +329,7 @@ export default function ConnectionsPage() {
   const actions = (
     <Stack direction="row" spacing={1}>
       {hasLevel('infrastructure', 'member') && (
-        <Button variant="contained" onClick={() => navigate('/it/connections/new/overview')}>
+        <Button variant="action-primary" onClick={() => navigate('/it/connections/new/overview')}>
           Add connection
         </Button>
       )}

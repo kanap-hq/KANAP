@@ -447,9 +447,8 @@ export default function AgentsOverviewPage() {
         title={t('overview.title')}
         actions={canAdmin ? (
           <Button
-            size="small"
-            variant="contained"
-            startIcon={<AddIcon />}
+            variant="action-primary"
+            startIcon={<AddIcon sx={{ fontSize: '14px !important' }} />}
             disabled={data.createAgentMutation.isPending}
             onClick={openWizard}
           >

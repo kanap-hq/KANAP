@@ -222,11 +222,11 @@ export default function RolesPage() {
         actions={canEdit ? (
           <Stack direction="row" spacing={1}>
             {selected && !isSystem && (
-              <Button variant="outlined" onClick={() => duplicateRole()} disabled={duplicating}>
+              <Button variant="action" onClick={() => duplicateRole()} disabled={duplicating}>
                 {duplicating ? t('roles.actions.duplicating') : t('roles.actions.duplicate')}
               </Button>
             )}
-            <Button variant="contained" onClick={() => setCreateOpen(true)}>{t('roles.actions.newRole')}</Button>
+            <Button variant="action-primary" onClick={() => setCreateOpen(true)}>{t('roles.actions.newRole')}</Button>
           </Stack>
         ) : undefined}
       />

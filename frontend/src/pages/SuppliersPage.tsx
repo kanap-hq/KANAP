@@ -106,7 +106,7 @@ export default function SuppliersPage() {
     <Stack direction="row" spacing={1}>
       {canCreate && (
         <Button
-          variant="contained"
+          variant="action-primary"
           onClick={() => {
             const sp = buildWorkspaceSearch();
             navigate(`/master-data/suppliers/new/overview?${sp.toString()}`);
@@ -115,8 +115,8 @@ export default function SuppliersPage() {
           {t('shared.labels.new')}
         </Button>
       )}
-      {canAdmin && <Button onClick={() => setImportOpen(true)}>{t('shared.labels.importCsv')}</Button>}
-      {canAdmin && <Button onClick={() => setExportOpen(true)}>{t('shared.labels.exportCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('shared.labels.importCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('shared.labels.exportCsv')}</Button>}
       {canAdmin && (
         <DeleteSelectedButton
           selectedRows={selectedRows}

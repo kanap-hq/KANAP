@@ -298,7 +298,7 @@ function OpexListPageView() {
     <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
       {canCreate && (
         <Button
-          variant="contained"
+          variant="action-primary"
           onClick={() => {
             const urlParams = new URLSearchParams(window.location.search);
             const stored = storedContext();
@@ -316,8 +316,8 @@ function OpexListPageView() {
           {t('opex.newButton')}
         </Button>
       )}
-      {canAdmin && <Button onClick={() => setImportOpen(true)}>{t('opex.importCsv')}</Button>}
-      {canAdmin && <Button onClick={() => setExportOpen(true)}>{t('opex.exportCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('opex.importCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('opex.exportCsv')}</Button>}
       {canAdmin && (
         <DeleteSelectedButton
           selectedRows={selectedRows}

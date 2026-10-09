@@ -95,7 +95,7 @@ export default function SharedContextProfilesPage() {
       <PageHeader
         title={t('sharedContext.title')}
         actions={canAdmin ? (
-          <Button variant="contained" size="small" onClick={openCreate}>{t('sharedContext.new')}</Button>
+          <Button variant="action-primary" onClick={openCreate}>{t('sharedContext.new')}</Button>
         ) : undefined}
       />
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{t('sharedContext.subtitle')}</Typography>

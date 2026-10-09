@@ -41,6 +41,22 @@ const KANAP_PRIMARY = {
 
 function getComponentOverrides(mode: PaletteMode): ThemeOptions['components'] {
   const isDark = mode === 'dark';
+  const kanap = resolveKanapPalette(mode);
+  const actionPillBase = {
+    padding: '4px 11px',
+    borderRadius: 5,
+    fontSize: 12,
+    fontWeight: 500,
+    textTransform: 'none' as const,
+    minWidth: 0,
+    height: 'auto',
+    boxShadow: 'none',
+  };
+  const actionPillDisabled = {
+    backgroundColor: kanap.pill.bg,
+    borderColor: kanap.pill.border,
+    color: kanap.text.tertiary,
+  };
   return {
     MuiCssBaseline: {
       styleOverrides: (theme) => ({
@@ -300,7 +316,7 @@ function getComponentOverrides(mode: PaletteMode): ThemeOptions['components'] {
       defaultProps: { disableElevation: true },
       styleOverrides: {
         root: ({ theme }) => ({
-          borderRadius: 8,
+          borderRadius: 6,
           textTransform: 'none' as const,
           fontWeight: 500,
           // Native :focus-visible only. MUI's Mui-focusVisible is also set when
@@ -320,45 +336,57 @@ function getComponentOverrides(mode: PaletteMode): ThemeOptions['components'] {
           borderColor: isDark ? 'rgba(255,255,255,0.12)' : '#D1D5DB',
         },
       },
+      // Compact pills for page-level action bars (list and admin page headers, chip bands,
+      // workspace title rows): one `action-primary` at most, `action` for the rest,
+      // `action-danger` for a destructive action on a non-empty selection. Disabled, all three
+      // read as the same neutral pill.
       variants: [
         {
-          props: { variant: 'action' as any },
-          style: {
-            padding: '4px 11px',
-            borderRadius: 5,
-            fontSize: 12,
-            fontWeight: 500,
-            textTransform: 'none',
-            minWidth: 0,
-            height: 'auto',
-            backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F6F7F9',
-            border: `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : '#E5E7EB'}`,
-            color: isDark ? '#9CA3AF' : '#6B7280',
-            boxShadow: 'none',
+          props: { variant: 'action-primary' },
+          style: ({ theme }) => ({
+            ...actionPillBase,
+            // Primary follows tenant branding; without it, it is `kanap.teal` / `tealForeground`.
+            backgroundColor: theme.palette.primary.main,
+            border: `1px solid ${theme.palette.primary.main}`,
+            color: theme.palette.primary.contrastText,
             '&:hover': {
-              backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : '#EDEEF1',
+              backgroundColor: theme.palette.primary.dark,
+              borderColor: theme.palette.primary.dark,
               boxShadow: 'none',
             },
+            // The root override clears the fill on focus; a filled button keeps it.
+            '&:focus-visible, &.Mui-focusVisible': {
+              backgroundColor: theme.palette.primary.main,
+            },
+            '&.Mui-disabled': actionPillDisabled,
+          }),
+        },
+        {
+          props: { variant: 'action' },
+          style: {
+            ...actionPillBase,
+            backgroundColor: kanap.pill.bg,
+            border: `1px solid ${kanap.pill.border}`,
+            color: kanap.text.secondary,
+            '&:hover': {
+              backgroundColor: kanap.pill.hoverBg,
+              boxShadow: 'none',
+            },
+            '&.Mui-disabled': actionPillDisabled,
           },
         },
         {
-          props: { variant: 'action-danger' as any },
+          props: { variant: 'action-danger' },
           style: {
-            padding: '4px 11px',
-            borderRadius: 5,
-            fontSize: 12,
-            fontWeight: 500,
-            textTransform: 'none',
-            minWidth: 0,
-            height: 'auto',
-            backgroundColor: isDark ? 'rgba(248, 113, 113, 0.08)' : 'rgba(220, 38, 38, 0.06)',
-            border: `1px solid ${isDark ? 'rgba(248, 113, 113, 0.25)' : 'rgba(220, 38, 38, 0.20)'}`,
-            color: isDark ? '#F87171' : '#DC2626',
-            boxShadow: 'none',
+            ...actionPillBase,
+            backgroundColor: kanap.pillDanger.bg,
+            border: `1px solid ${kanap.pillDanger.border}`,
+            color: kanap.danger,
             '&:hover': {
-              backgroundColor: isDark ? 'rgba(248, 113, 113, 0.12)' : 'rgba(220, 38, 38, 0.10)',
+              backgroundColor: kanap.pillDanger.hoverBg,
               boxShadow: 'none',
             },
+            '&.Mui-disabled': actionPillDisabled,
           },
         },
       ],

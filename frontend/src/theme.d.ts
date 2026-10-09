@@ -21,7 +21,14 @@ declare module '@mui/material/styles' {
 
 declare module '@mui/material/Button' {
   interface ButtonPropsVariantOverrides {
+    'action-primary': true;
     action: true;
     'action-danger': true;
+  }
+}
+
+declare module '@mui/material/ButtonGroup' {
+  interface ButtonGroupPropsVariantOverrides {
+    'action-primary': true;
   }
 }

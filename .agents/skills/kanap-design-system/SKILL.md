@@ -62,6 +62,7 @@ KANAP uses MUI, but only through constrained patterns:
 - Do not use `Select label="..."`.
 - Do not use `MuiDrawer` for contained side panels.
 - Use label-above-value form rows with `PropertyRow`.
+- Page-level action bars (list and admin page headers, chip bands and their context line, workspace title rows) use only the compact pills: `variant="action-primary"` for the one key action (at most one per bar), `variant="action"` for every other action (import/export CSV, invite, disable, move, manage, edit), `variant="action-danger"` for a destructive action on a non-empty selection. Set the variant at each call site. `contained` / `outlined` stay for dialogs, forms, composers and empty states. Bulk delete goes through `DeleteSelectedButton`, which switches from `action` (disabled, 0 selected) to `action-danger`.
 - Every form field is a discreet bordered box drawn by the theme (`MuiInput` override): 1px `kanap.border.default`, 6px radius, ~32px, teal border on focus, `kanap.bg.drawer` when read-only. Write `TextField variant="standard"` / `Select` with no field sx; never draw or remove the border by hand.
 - Only inline controls (filter selects, composer-footer selects, click-to-edit titles) use `inlineControlSx`; inputs inside a custom surface use `fieldResetSx`; editable table cells use `tableCellFieldSx` / `tableCellTextFieldSx`.
 - Empty editable fields need concrete data-shape placeholders (`e.g., server1`), never instruction copy.

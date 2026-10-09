@@ -889,7 +889,7 @@ export default function ApplicationsPage() {
     <Stack direction="row" spacing={1}>
       {canCreate && (
         <Button
-          variant="contained"
+          variant="action-primary"
           onClick={() => {
             const sp = buildWorkspaceSearch();
             navigate(`/it/applications/new/overview?${sp.toString()}`);
@@ -898,10 +898,10 @@ export default function ApplicationsPage() {
           {t('pages.applications.newAppService')}
         </Button>
       )}
-      {canAdmin && <Button onClick={() => setImportOpen(true)}>{t('pages.assets.importCsv')}</Button>}
-      {canAdmin && <Button onClick={() => setExportOpen(true)}>{t('pages.assets.exportCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('pages.assets.importCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('pages.assets.exportCsv')}</Button>}
       {canCreate && (
-        <Button onClick={() => void handleCopy()} disabled={selectedRows.length !== 1}>{t('pages.applications.copyItem')}</Button>
+        <Button variant="action" onClick={() => void handleCopy()} disabled={selectedRows.length !== 1}>{t('pages.applications.copyItem')}</Button>
       )}
       {canAdmin && (
         <DeleteSelectedButton

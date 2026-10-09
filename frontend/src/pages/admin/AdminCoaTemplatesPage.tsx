@@ -113,10 +113,10 @@ export default function AdminCoaTemplatesPage() {
 
   const actions = (
     <Stack direction="row" spacing={1}>
-      <Button variant="contained" onClick={() => { setEditInitial(undefined); setEditOpen(true); }}>{t('coaTemplates.actions.new')}</Button>
-      <Button disabled={selectedRows.length !== 1} onClick={() => { setEditInitial(selectedRows[0]); setEditOpen(true); }}>{t('coaTemplates.actions.edit')}</Button>
-      <Button disabled={selectedRows.length !== 1} onClick={() => setImportOpen(true)}>{t('coaTemplates.actions.importCsv')}</Button>
-      <Button disabled={selectedRows.length !== 1} onClick={() => setExportOpen(true)}>{t('coaTemplates.actions.exportCsv')}</Button>
+      <Button variant="action-primary" onClick={() => { setEditInitial(undefined); setEditOpen(true); }}>{t('coaTemplates.actions.new')}</Button>
+      <Button variant="action" disabled={selectedRows.length !== 1} onClick={() => { setEditInitial(selectedRows[0]); setEditOpen(true); }}>{t('coaTemplates.actions.edit')}</Button>
+      <Button variant="action" disabled={selectedRows.length !== 1} onClick={() => setImportOpen(true)}>{t('coaTemplates.actions.importCsv')}</Button>
+      <Button variant="action" disabled={selectedRows.length !== 1} onClick={() => setExportOpen(true)}>{t('coaTemplates.actions.exportCsv')}</Button>
       <DeleteSelectedButton
         selectedRows={selectedRows}
         endpoint="/admin/coa-templates/bulk" // not implemented; fall back to single delete below
@@ -127,7 +127,7 @@ export default function AdminCoaTemplatesPage() {
         disabled
       />
       <Button
-        color="error"
+        variant="action-danger"
         disabled={selectedRows.length !== 1}
         onClick={async () => { await api.delete(`/admin/coa-templates/${selectedRows[0].id}`); setRefreshKey((k) => k + 1); }}
       >{t('common:buttons.delete')}</Button>

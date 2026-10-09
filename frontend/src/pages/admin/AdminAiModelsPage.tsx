@@ -305,7 +305,7 @@ export default function AdminAiModelsPage() {
     <Box sx={{ p: 2 }}>
       <PageHeader
         title={t('aiModels.title')}
-        actions={<Button variant="contained" size="small" onClick={openCreate}>{t('aiModels.new')}</Button>}
+        actions={<Button variant="action-primary" onClick={openCreate}>{t('aiModels.new')}</Button>}
       />
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{t('aiModels.subtitle')}</Typography>
       <Stack spacing={2}>
