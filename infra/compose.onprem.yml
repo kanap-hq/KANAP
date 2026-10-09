@@ -14,6 +14,27 @@ services:
     # (SHUTDOWN_DRAIN_TIMEOUT_MS, default 20 s) before it exits; the kill comes after 30 s.
     init: true
     stop_grace_period: 30s
+    # Health: "docker ps" shows healthy once GET /health answers. The first start runs the
+    # migrations, hence the long start period. Status only: Docker restarts nothing on it.
+    # "-Y off": the probe calls the container directly, even when http_proxy is set.
+    healthcheck:
+      test: ["CMD", "wget", "-Y", "off", "-qO", "/dev/null", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+    # Docker logs of this container: at most 5 files of 10 MB, whatever the daemon's default.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 1024
+    # The API runs as the "node" user on port 8080 and needs no Linux capability.
+    cap_drop:
+      - ALL
     # Capacity, set in ../.env (see .env.onprem.example and the operations guide):
     #   API_WORKERS   API processes in this container (default 1). Each adds about 150 to 500 MB
     #                 of memory and up to DB_POOL_MAX database connections.
@@ -32,3 +53,29 @@ services:
       - "127.0.0.1:8081:80"
     restart: unless-stopped
     # nginx serves the built SPA and proxies /api to api:8080
+    # Health: "docker ps" shows healthy once nginx answers on /. "-Y off" as for the API.
+    healthcheck:
+      test: ["CMD", "wget", "-Y", "off", "-qO", "/dev/null", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    # Docker logs of this container: at most 5 files of 10 MB, whatever the daemon's default.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 1024
+    # nginx starts as root, then runs its workers as the "nginx" user: it needs to hand its
+    # cache directories over (CHOWN) and to switch user (SETUID, SETGID). NET_BIND_SERVICE
+    # covers engines that keep port 80 reserved to privileged processes.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - NET_BIND_SERVICE
