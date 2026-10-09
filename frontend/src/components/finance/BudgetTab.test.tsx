@@ -281,12 +281,16 @@ const freezeLoads = () => mocked.get.mock.calls.filter(([url]) => url === '/free
 
 const amountLoads = () => mocked.get.mock.calls.filter(([url]) => url === '/spend-versions/v1/amounts').length;
 
-/** Wait until the amounts have been fetched `loads` times in all and the fields are editable. */
+/**
+ * Wait until the amounts have been fetched `loads` times in all and the fields are editable.
+ * A plain selector finds the first field (the hidden input of a select left aside): a role query
+ * on a freshly drawn tab computes the styles of every element first: a tenth of a second in
+ * every test, a quarter of this file's time.
+ */
 async function waitForAmounts(loads = 1) {
   await waitFor(() => {
     expect(amountLoads()).toBeGreaterThanOrEqual(loads);
-    expect(screen.queryAllByRole('textbox').length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('textbox')[0]).not.toBeDisabled();
+    expect(document.body.querySelector('input[type="text"]:not([aria-hidden="true"])')).not.toBeDisabled();
   });
 }
 
