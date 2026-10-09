@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Paper, Stack, Tooltip } from '@mui/material';
+import { Box, Paper, Stack, Tooltip, Typography } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 
 export type ChipToggleItem = {
@@ -8,6 +8,12 @@ export type ChipToggleItem = {
   tooltip?: React.ReactNode;
   /** Accessible name when the visible label alone would read badly. */
   ariaLabel?: string;
+  /** Drop target handlers, for items that accept something dragged onto them. */
+  onDragOver?: React.DragEventHandler<HTMLElement>;
+  onDragLeave?: React.DragEventHandler<HTMLElement>;
+  onDrop?: React.DragEventHandler<HTMLElement>;
+  /** Marks the item as the drop target under the pointer. */
+  highlighted?: boolean;
 };
 
 type Props = {
@@ -59,6 +65,10 @@ export default function ChipToggleBar({ items, selectedId, onSelect, ariaLabel, 
                 aria-pressed={isSelected}
                 aria-label={item.ariaLabel}
                 onClick={() => onSelect(item.id)}
+                onDragOver={item.onDragOver}
+                onDragLeave={item.onDragLeave}
+                onDrop={item.onDrop}
+                data-highlighted={item.highlighted ? 'true' : undefined}
                 sx={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -66,8 +76,9 @@ export default function ChipToggleBar({ items, selectedId, onSelect, ariaLabel, 
                   py: 0.5,
                   borderRadius: 1,
                   border: '1px solid',
-                  borderColor: isSelected ? 'primary.main' : 'divider',
-                  bgcolor: isSelected ? 'primary.main' : 'transparent',
+                  // A drop target under the pointer reads like a hovered toggle, with a light fill.
+                  borderColor: isSelected || item.highlighted ? 'primary.main' : 'divider',
+                  bgcolor: isSelected ? 'primary.main' : item.highlighted ? 'action.hover' : 'transparent',
                   color: isSelected ? 'primary.contrastText' : 'text.primary',
                   fontSize: '0.8125rem',
                   fontWeight: 500,
@@ -94,5 +105,44 @@ export default function ChipToggleBar({ items, selectedId, onSelect, ariaLabel, 
         )}
       </Stack>
     </Paper>
+  );
+}
+
+/**
+ * The line under the band about the selected toggle: its title (name and count) with the actions on
+ * its items on the right, and optional lines under it.
+ */
+export function ChipToggleContextLine({
+  title,
+  actions,
+  children,
+  testId,
+  sx,
+}: {
+  title?: React.ReactNode;
+  /** Actions on the items listed below, aligned with the title. */
+  actions?: React.ReactNode;
+  /** Secondary lines under the title. */
+  children?: React.ReactNode;
+  testId?: string;
+  sx?: SxProps<Theme>;
+}) {
+  return (
+    <Box data-testid={testId} sx={sx}>
+      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 2, rowGap: 1, minHeight: 32 }}>
+        <Typography
+          component="div"
+          sx={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 500, lineHeight: 1.4, color: 'kanap.text.primary' }}
+        >
+          {title}
+        </Typography>
+        {actions && (
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
+            {actions}
+          </Stack>
+        )}
+      </Box>
+      {children && <Stack spacing={0.5} sx={{ mt: 0.5 }}>{children}</Stack>}
+    </Box>
   );
 }

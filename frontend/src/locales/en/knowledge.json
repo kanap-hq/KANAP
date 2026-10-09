@@ -2,7 +2,7 @@
   "actions": {
     "manageTypes": "Manage types",
     "moveCount": "Move ({{count}})",
-    "new": "New"
+    "newDocument": "New document"
   },
   "columns": {
     "folder": "Folder",
@@ -130,6 +130,15 @@
       "root": "Root"
     }
   },
+  "libraries": {
+    "documentCount_one": "{{count}} document",
+    "documentCount_other": "{{count}} documents",
+    "label": "Libraries",
+    "manage": "Manage library",
+    "newChip": "New",
+    "newLibrary": "New library",
+    "restrictedAccess": "Restricted access"
+  },
   "menus": {
     "blankDocument": "Blank document",
     "fromTemplate": "From template..."
@@ -176,10 +185,10 @@
     "title": "Move documents"
   },
   "scope": {
-    "allDocs": "All docs",
+    "allDocs": "All",
     "allLibraries": "All libraries",
     "myDocs": "My docs",
-    "myTeamsDocs": "My team's docs",
+    "myTeamsDocs": "My team",
     "noTeamAssigned": "You are not assigned to a team.",
     "show": "Show:"
   },

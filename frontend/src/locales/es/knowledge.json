@@ -2,7 +2,7 @@
   "actions": {
     "manageTypes": "Gestionar tipos",
     "moveCount": "Mover ({{count}})",
-    "new": "Nuevo"
+    "newDocument": "Nuevo documento"
   },
   "columns": {
     "folder": "Carpeta",
@@ -130,6 +130,15 @@
       "root": "Raíz"
     }
   },
+  "libraries": {
+    "documentCount_one": "{{count}} documento",
+    "documentCount_other": "{{count}} documentos",
+    "label": "Bibliotecas",
+    "manage": "Gestionar biblioteca",
+    "newChip": "Nueva",
+    "newLibrary": "Nueva biblioteca",
+    "restrictedAccess": "Acceso restringido"
+  },
   "menus": {
     "blankDocument": "Documento en blanco",
     "fromTemplate": "Desde plantilla..."
@@ -176,10 +185,10 @@
     "title": "Mover documentos"
   },
   "scope": {
-    "allDocs": "Todos los documentos",
+    "allDocs": "Todos",
     "allLibraries": "Todas las bibliotecas",
     "myDocs": "Mis documentos",
-    "myTeamsDocs": "Documentos de mi equipo",
+    "myTeamsDocs": "Mi equipo",
     "noTeamAssigned": "No está asignado a ningún equipo.",
     "show": "Mostrar:"
   },

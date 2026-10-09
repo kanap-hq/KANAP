@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Box, Button, Stack, Tooltip, Typography } from '@mui/material';
+import { ChipToggleContextLine } from '../../components/ChipToggleBar';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef, StatusScope } from '../../components/ServerDataGrid';
@@ -370,8 +371,8 @@ export default function CoaPage() {
     return <ForbiddenPage />;
   }
 
-  const actions = (
-    <Stack direction="row" spacing={1}>
+  const accountActions = (canCreateAccount || canAdmin) && (
+    <>
       {canCreateAccount && (
         <Button
           variant="contained"
@@ -404,12 +405,12 @@ export default function CoaPage() {
           onDeleteSuccess={() => setAccountsRefreshKey((key) => key + 1)}
         />
       )}
-    </Stack>
+    </>
   );
 
   return (
     <>
-      <PageHeader title={t('coa.title')} actions={actions} />
+      <PageHeader title={t('coa.title')} />
       <Stack spacing={2}>
         {isError && (
           <Alert severity="error">
@@ -429,10 +430,11 @@ export default function CoaPage() {
         )}
 
         {!!selectedCoa && (
-          <Stack spacing={0.5} data-testid="coa-summary">
-            <Typography variant="h6">
-              {selectedCoa.code} · {t('coa.accountCount', { count: selectedCoa.accounts_count ?? 0 })}
-            </Typography>
+          <ChipToggleContextLine
+            testId="coa-summary"
+            title={`${selectedCoa.code} · ${t('coa.accountCount', { count: selectedCoa.accounts_count ?? 0 })}`}
+            actions={accountActions}
+          >
             <Typography variant="body2" color="text.secondary">
               {[
                 selectedCoa.name,
@@ -441,7 +443,7 @@ export default function CoaPage() {
               ].join(' · ')}
             </Typography>
             {renderConsolidationHealth(selectedCoa)}
-          </Stack>
+          </ChipToggleContextLine>
         )}
 
         {isLoading && <Alert severity="info">{t('coa.loadingCoA')}</Alert>}
