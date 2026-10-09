@@ -106,7 +106,7 @@ docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^
 
 The filter keeps the lines below and leaves out the framework details. Without it, `docker compose -f infra/compose.onprem.yml logs api` shows everything.
 
-**Order.** The lines that KANAP writes itself (`[entrypoint]`, `[ENV]`, `[SECRETS]`, `[RATE-LIMIT]`, `[CORS]`, `[DB]`, `[on-prem]`, `[SECURITY]`) come first. The framework lines (`Starting Nest application...`, email, scheduled jobs, `Nest application successfully started`) follow.
+**Order.** The lines that KANAP writes itself (`[entrypoint]`, `[ENV]`, `[SECRETS]`, `[RATE-LIMIT]`, `[CORS]`, `[DB]`, `[on-prem]`, `[SECURITY]`) come first. The framework lines (`Starting Nest application...`, email, scheduled jobs, `Nest application successfully started`) follow. The `[DB] pool budget` line comes last.
 
 **A clean first start** of the [installation example](installation-example.md#7-build-and-start) shows these lines, in this order (the first `[SECRETS]` line is shortened here):
 
@@ -339,7 +339,7 @@ This rule is for a relay installed on the server. A relay that runs in a Docker 
 
 After a change to the email settings, recreate the API (`docker compose -f infra/compose.onprem.yml up -d api`). The API log then shows `Email transport selected` (see [What the API log shows at start](#what-the-api-log-shows-at-start)). To send a test message, open the sign-in page, choose **Forgot password** and enter the email of an existing account that signs in with a password. The message arrives with a link that starts with your `APP_BASE_URL`. Accounts that sign in with Microsoft Entra receive no reset message.
 
-When sending fails, **Forgot password** shows an error and the API log has an `ERROR [ExceptionsHandler]` line with the reason. For a relay whose certificate the API does not trust, the line reads `Error: unable to verify the first certificate; ...` (or `self-signed certificate`), followed by `code: 'ESOCKET'` a few lines below. The API does not trust the authority that signed the relay's certificate: see [Certificates from an internal authority](#optional-certificates-from-an-internal-authority). Installing the authority on the server itself does not change the container.
+When sending fails, the message does not arrive and the API log has an `ERROR` line with the reason. For a relay whose certificate the API does not trust, the reason is `unable to verify the first certificate` (or `self-signed certificate`) and the code is `ESOCKET`. The API does not trust the authority that signed the relay's certificate: see [Certificates from an internal authority](#optional-certificates-from-an-internal-authority). Installing the authority on the server itself does not change the container.
 
 ## Optional: certificates from an internal authority
 
@@ -548,7 +548,7 @@ These destinations are needed at installation, at each upgrade and at each rollb
 | Ubuntu APT mirrors | 80/443 | System packages (PostgreSQL, nginx, etc.) |
 | `acme-v02.api.letsencrypt.org` | 443 | Certificates, only with Let's Encrypt (also at each renewal) |
 
-Docker can change the download hosts of Docker Hub. Docker keeps the current list in its [allowlist](https://docs.docker.com/desktop/setup/allow-list/): the Docker Hub rows of that page also apply to a server with Docker Engine.
+Docker can change the download hosts of Docker Hub. Docker keeps the current list in its [allowlist](https://docs.docker.com/desktop/enterprise/allow-list/). A pull uses two rows of that page: "Docker Pull/Push" (`registry-1.docker.io`, `production.cloudfront.docker.com`) and "Authentication" (`auth.docker.io`). These rows also apply to a server with Docker Engine.
 
 ### Outbound: runtime (conditional)
 

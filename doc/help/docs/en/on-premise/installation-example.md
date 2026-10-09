@@ -254,7 +254,7 @@ for i in $(seq 1 30); do ss -ltn | grep -q '172.17.0.1:9000' && break; sleep 1; 
 ss -ltn | grep '172.17.0.1:9000'
 ```
 
-The last line must show `172.17.0.1:9000` listening. The `After=docker.service` drop-in makes the service start once Docker has created the bridge address. If Docker uses another bridge address (`ip -4 addr show docker0`), put that address in `RUSTFS_ADDRESS`. If your Docker networks are outside `172.16.0.0/12` (see `docker network inspect`), replace that range in the firewall rules of step 2 and in the `pg_hba.conf` line of step 4.
+The last line must show `172.17.0.1:9000` listening. The `After=docker.service` drop-in makes the service start once Docker has created the bridge address. If Docker uses another bridge address (`ip -4 addr show docker0`), put that address in `RUSTFS_ADDRESS`. Docker creates its networks in the ranges of its `default-address-pools` setting: `172.17.0.0/16` and up in `172.16.0.0/12` by default. After the first start (step 7), `docker network inspect infra_default` shows KANAP's own network. If your Docker networks are outside `172.16.0.0/12`, replace that range in the firewall rules of step 2 and in the `pg_hba.conf` line of step 4.
 
 `RUSTFS_SSE_S3_MASTER_KEY` is the key that encrypts the files at rest. KANAP asks for encryption at rest on uploads. Without the key RustFS refuses the request and the API logs a `PutObject fallback used` warning. **Keep this key with your server configuration backup**: files encrypted with it cannot be read without it.
 

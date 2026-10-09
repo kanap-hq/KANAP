@@ -364,7 +364,7 @@ The answer is JSON. Without the setting the address answers 404. It answers even
 |---|---|
 | `health.status` | `ok`, `warn` or `critical`, from the thresholds below. `health.alerts` lists what is wrong and what to do |
 | `topRoutes` | Requests per route over 5 minutes, with p50, p95 and p99 response times in milliseconds |
-| `process.eventLoopLagMs.p95` | How long the API's main thread kept requests waiting over the last minute |
+| `process.eventLoopLagMs.p95` | How long the API's main thread kept requests waiting over the last minute (the current part of a minute just after a start) |
 | `db.pool.inUse`, `db.pool.inUseMax1m`, `db.pool.waitingCount` | Database connections in use now, the most over the last minute, requests waiting for one |
 | `db.pool.wait.p95Ms1m`, `db.pool.wait.failures5m` | Time to get a database connection; requests that got none (answered "busy") |
 | `windows.5m.statusClasses` | Answers per status class over 5 minutes |
@@ -405,7 +405,7 @@ Start with the API log: `docker compose -f infra/compose.onprem.yml logs --no-lo
 | Migration failed | PostgreSQL version | Must be 16+, extensions available |
 | 502 from reverse proxy | `docker compose -f infra/compose.onprem.yml ps` | Ensure the api container is running on port 8080 |
 | 413 from the reverse proxy on an upload | `client_max_body_size` | Set `client_max_body_size 50m;` in the nginx file |
-| A reset email does not arrive, and the API log shows `unable to verify the first certificate` or `self-signed certificate` | The certificate of the mail relay | The API does not trust the authority that signed the relay's certificate. Give it the authority's file (see [Certificates from an internal authority](configuration.md#optional-certificates-from-an-internal-authority)). Installing the authority on the server itself does not change the container |
+| A reset email does not arrive, and the API log has an `ERROR` line with `unable to verify the first certificate` or `self-signed certificate` and the code `ESOCKET` | The certificate of the mail relay | The API does not trust the authority that signed the relay's certificate. Give it the authority's file (see [Certificates from an internal authority](configuration.md#optional-certificates-from-an-internal-authority)). Installing the authority on the server itself does not change the container |
 | Can't sign in | The password | `.env` creates the administrator at the first start only. Change the password in the application, or use [Password Reset](#password-reset) |
 
 ## Password Reset
