@@ -44,7 +44,7 @@ This table lists the major upgrades that are planned or queued for planning, inc
 | `vitest` | frontend | 2.x | 5.x | Delivery 2 |
 | `react-router-dom` | frontend | 6.x | 7.x | Delivery 2 |
 | `@mdxeditor/editor` | frontend | 3.x | 4.x | Delivery 2 |
-| Node.js | backend, frontend and marketing images, CI | 22 | 24 (LTS) | Delivery 2 |
+| Node.js | backend, frontend and marketing images, CI | 24 | 26 (LTS on 2026-10-28) | To be scheduled |
 | `@nestjs/config` | backend | 4.x | 12.x | To be scheduled |
 | `openai` | backend | 6.x | 7.x | To be scheduled |
 | `ag-charts-react` | frontend | 9.x | 14.x | To be scheduled |
