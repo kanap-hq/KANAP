@@ -61,6 +61,36 @@ describe('StatusLifecycleField', () => {
     expect(onStatusChange).toHaveBeenCalledWith(STATUS_DISABLED);
   });
 
+  it('picks the end of validity in the calendar, as the local end of that day', () => {
+    const { onStatusChange, onDisabledAtChange } = renderField({ status: STATUS_ENABLED });
+    fireEvent.click(screen.getByRole('button', { name: 'Open calendar' }));
+    // Empty field: the calendar opens on today's month; pick its 15th.
+    const now = new Date();
+    const day = new Date(now.getFullYear(), now.getMonth(), 15);
+    const label = new Intl.DateTimeFormat('en', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(day);
+    fireEvent.click(screen.getByRole('button', { name: label }));
+    const iso = new Date(day.getFullYear(), day.getMonth(), 15, 23, 59, 0, 0).toISOString();
+    expect(onDisabledAtChange).toHaveBeenCalledWith(iso);
+    expect(onStatusChange).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('clears the end of validity from the calendar', () => {
+    const { onStatusChange, onDisabledAtChange } = renderField({
+      status: STATUS_DISABLED,
+      disabledAt: '2026-06-30T21:59:00.000Z',
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Open calendar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(onDisabledAtChange).toHaveBeenCalledWith(null);
+    expect(onStatusChange).toHaveBeenCalledWith(STATUS_ENABLED);
+  });
+
+  it('keeps the calendar shut while disabled', () => {
+    renderField({ status: STATUS_ENABLED, disabled: true });
+    expect(screen.getByRole('button', { name: 'Open calendar' })).toBeDisabled();
+  });
+
   describe('end of validity defaults', () => {
     afterEach(async () => {
       await i18n.changeLanguage('en');

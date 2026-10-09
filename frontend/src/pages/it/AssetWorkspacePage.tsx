@@ -36,6 +36,7 @@ import { ymdToEu } from '../../lib/date-eu';
 import AddIcon from '@mui/icons-material/Add';
 import ApplicationSelect from '../../components/fields/ApplicationSelect';
 import DateEUField from '../../components/fields/DateEUField';
+import DateCalendarPopover from '../../components/fields/DateCalendarPopover';
 import { ServerOption } from '../../components/fields/ServerSelect';
 import HardwareInfoPanel, { HardwareInfoPanelHandle } from './editors/HardwareInfoPanel';
 import SupportInfoPanel, { SupportInfoPanelHandle } from './editors/SupportInfoPanel';
@@ -268,7 +269,6 @@ export default function AssetWorkspacePage() {
   const hardwareRef = React.useRef<HardwareInfoPanelHandle>(null);
   const supportRef = React.useRef<SupportInfoPanelHandle>(null);
   const relationsRef = React.useRef<AssetRelationsPanelHandle>(null);
-  const goLiveNativeRef = React.useRef<HTMLInputElement | null>(null);
   const notesSaveTimerRef = React.useRef<number | null>(null);
 
   const [data, setData] = React.useState<AssetRecord | null>(null);
@@ -322,6 +322,7 @@ export default function AssetWorkspacePage() {
   const [connectionsLoading, setConnectionsLoading] = React.useState(false);
   const [assetTypeAnchorEl, setAssetTypeAnchorEl] = React.useState<HTMLElement | null>(null);
   const [locationAnchorEl, setLocationAnchorEl] = React.useState<HTMLElement | null>(null);
+  const [goLiveAnchorEl, setGoLiveAnchorEl] = React.useState<HTMLElement | null>(null);
   const [locationOptions, setLocationOptions] = React.useState<LocationOption[]>([]);
   const workspaceRouteId = data?.asset_reference || (isCreate ? 'new' : routeId);
   const { addToRecent } = useRecentlyViewed();
@@ -1525,50 +1526,22 @@ export default function AssetWorkspacePage() {
             {computedFqdn && <PortfolioMetadataItem mono>{computedFqdn}</PortfolioMetadataItem>}
             <PortfolioMetadataItem
               label={t('workspace.asset.meta.goLive')}
-              onClick={(event) => {
-                const picker = goLiveNativeRef.current;
-                if (!picker) return;
-                const anchorX = event.clientX + 8;
-                const anchorY = event.clientY + 8;
-                picker.style.left = `${Math.min(anchorX, window.innerWidth - 24)}px`;
-                picker.style.top = `${Math.min(anchorY, window.innerHeight - 24)}px`;
-                picker.getBoundingClientRect();
-                try {
-                  picker.showPicker?.();
-                } catch {
-                  picker.click();
-                }
-                if (!picker.showPicker) picker.click();
-              }}
+              onClick={(event) => setGoLiveAnchorEl(event.currentTarget)}
               disabled={!canManage || saving}
               title={t('workspace.asset.meta.editGoLive')}
             >
               {formatShortDate(goLiveDate, locale, { empty: notSetLabel })}
             </PortfolioMetadataItem>
-            <Box
-              component="input"
-              ref={goLiveNativeRef}
-              data-testid="asset-metadata-go-live-date-input"
-              type="date"
-              value={goLiveDate || ''}
-              onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-                const next = event.target.value || '';
+            <DateCalendarPopover
+              anchorEl={goLiveAnchorEl}
+              open={!!goLiveAnchorEl}
+              valueYmd={goLiveDate || ''}
+              onSelect={(next) => {
                 setGoLiveDate(next);
                 updateScalar('go_live_date', (next || null) as AssetRecord['go_live_date']);
               }}
-              aria-hidden="true"
-              disabled={!canManage || saving}
-              tabIndex={-1}
-              sx={{
-                position: 'fixed',
-                left: 0,
-                top: 0,
-                opacity: 0,
-                width: 18,
-                height: 18,
-                pointerEvents: 'none',
-                zIndex: (theme) => theme.zIndex.tooltip,
-              }}
+              onClose={() => setGoLiveAnchorEl(null)}
+              allowClear
             />
           </>
         ) : undefined}
