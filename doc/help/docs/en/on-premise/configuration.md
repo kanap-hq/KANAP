@@ -237,7 +237,7 @@ If a dedicated application role was initially created with too many privileges, 
 - Create the bucket before starting KANAP (it is not created automatically). KANAP does not check it at start: a missing bucket shows at the first upload or download.
 - KANAP calls `PutObject`, `GetObject`, `HeadObject`, `DeleteObject` and `ListObjectsV2`, and builds presigned `GET` links, all on that one bucket. The matching permissions are `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject` and `s3:ListBucket`.
 
-**Encryption at rest.** KANAP asks the store to encrypt every upload (server-side encryption `AES256`). A store that does not support it makes the API write the warning `PutObject fallback used: provider rejected explicit SSE header; upload retried without SSE request header` and keep the file as sent. RustFS accepts the request when `RUSTFS_SSE_S3_MASTER_KEY` is set, which the [installation example](installation-example.md#4-object-storage-rustfs) does. Keep that key with your configuration backup: files encrypted with it cannot be read without it.
+**Encryption at rest.** KANAP asks the store to encrypt every upload (server-side encryption `AES256`). A store that does not support it makes the API write the warning `PutObject fallback used: provider rejected explicit SSE header; upload retried without SSE request header` and keep the file as sent. RustFS accepts the request when `RUSTFS_SSE_S3_MASTER_KEY` is set, which the [installation example](installation-example.md#5-object-storage-rustfs) does. Keep that key with your configuration backup: files encrypted with it cannot be read without it.
 
 KANAP uses the AWS SDK v3 S3 client; any provider with S3-compatible behavior is supported.
 
@@ -395,14 +395,14 @@ The defaults suit a few dozen users. For more users at once, run several API pro
 
 **What each costs.** Every API process uses about 200 MB of memory at start and up to 300 MB under load (measured with 50 users on 5,000 budget lines); with several, a small supervising process adds about 100 MB. Every API process can open up to `DB_POOL_MAX` connections to PostgreSQL. Count:
 
-- memory: `API_WORKERS` × 0.4 GB for the API, plus what PostgreSQL uses if it runs on the same server, plus about 1 GB of headroom (image builds need it during upgrades);
+- memory: `API_WORKERS` × 0.4 GB for the API, plus what PostgreSQL uses if it runs on the same server, plus room for the image build at each upgrade. 6 GB is the minimum for any server: building both images at once took about 4.4 GB on a new installation, with PostgreSQL and the storage running;
 - connections: `API_WORKERS` × `DB_POOL_MAX` must stay under PostgreSQL's `max_connections` (100 by default) minus about 15. The API checks this at start and writes a warning in its log when it does not fit, with a value that would.
 
 **Suggested values.**
 
 | Users working at the same time | `API_WORKERS` | `DB_POOL_MAX` | Server memory (API + PostgreSQL) |
 |---|---|---|---|
-| Up to 20 | 1 | 20 | 4 GB |
+| Up to 20 | 1 | 20 | 6 GB |
 | 20 to 50 | 2 | 15 | 8 GB |
 | 50 and more | 4 | 10 | 8 to 16 GB |
 
@@ -510,14 +510,15 @@ Nothing else needs to be reachable from the network. In particular, PostgreSQL (
 
 ### Outbound: initial setup and build
 
-These destinations are only needed during installation and `docker build`. They can be closed once the application is running.
+These destinations are needed during installation, at each upgrade (`docker build`) and the first time the smoke test runs. They can be closed between upgrades.
 
 | Destination | Port | Purpose |
 |-------------|------|---------|
 | `github.com`, `*.githubusercontent.com` | 443 | Clone KANAP source code; download the RustFS release files (the installation example) |
 | `download.docker.com` | 443 | Docker APT repository |
 | `registry.npmjs.org` | 443 | npm dependencies during `docker build` |
-| `registry-1.docker.io`, `production.cloudflare.docker.com` | 443 | Pull base Docker images (`node:24-alpine`, `nginx:alpine`) |
+| `registry-1.docker.io`, `production.cloudflare.docker.com` | 443 | Pull base Docker images (`node:24-alpine`, `nginx:alpine`), and the smoke test image (`node:24-alpine`) the first time the test runs |
+| `dl-cdn.alpinelinux.org` | 80/443 | Alpine packages during `docker build` (both images install packages with `apk add`) |
 | Ubuntu APT mirrors | 80/443 | System packages (PostgreSQL, nginx, etc.) |
 | `acme-v02.api.letsencrypt.org` | 443 | Certificates, only with Let's Encrypt (also at each renewal) |
 

@@ -4,12 +4,12 @@
 
 **Server requirements:**
 
-- Linux server: Ubuntu 26.04 or 24.04 LTS, Debian 12 or 13, RHEL 9 or 10, or any OS with Docker Engine 24.0+ and Docker Compose v2.20+
+- Linux server: Ubuntu 26.04 or 24.04 LTS, Debian 12 or 13, RHEL 9 or 10, or any OS with Docker Engine 24.0+ and the Docker Compose plugin
 - Docker Engine 24.0+
-- Docker Compose v2.20+
+- Docker Compose plugin 2.20 or later (current releases are 5.x)
 - Git
-- 4 GB RAM minimum, 8 GB recommended. On 4 GB the image build uses almost all of the memory (a peak of about 3.7 GB was measured): run nothing else heavy during the build, or add swap. More API processes need more memory, see [Configuration](configuration.md#optional-capacity-and-performance).
-- 20 GB disk minimum (the images and the build cache take about 7 GB)
+- 6 GB RAM minimum, 8 GB recommended. The image build, at installation and at each upgrade, needs that room. More API processes need more memory, see [Configuration](configuration.md#optional-capacity-and-performance).
+- 20 GB disk minimum. After installation KANAP takes about 4 GB (images 1.3 GB, build cache 2.5 GB). The database, the stored files and the build cache grow over time; the cache grows at each upgrade, and `docker builder prune` reclaims it.
 
 **Customer-provided infrastructure:**
 
