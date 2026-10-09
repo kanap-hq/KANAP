@@ -12,8 +12,8 @@ import { provisionIncidentReviewDocuments } from '../../knowledge/incident-revie
  * PostgreSQL harness for `1853490000000-incident-review-document` (plan:
  * planning/incident-review-document.md §3.1).
  *
- * MANUAL script: it creates and drops two scratch databases, which needs a superuser
- * connection, so it is not wired into CI. Never point it at a database you care
+ * It creates and drops two scratch databases, which needs a superuser connection
+ * (CI runs it as an exclusive database spec). Never point it at a database you care
  * about — it drops `appdb_migtest_full` and `appdb_migtest_upgrade` on both ends.
  *
  *   MIGRATION_TEST_ADMIN_URL=postgres://postgres:postgres@localhost:5432/postgres \
@@ -21,11 +21,13 @@ import { provisionIncidentReviewDocuments } from '../../knowledge/incident-revie
  *   npm run test:incident-review-migration
  *
  * `DATABASE_URL` is only read for the application role, host and port; the scratch
- * databases are created next to it and dropped afterwards.
+ * databases are created next to it and dropped afterwards. Without
+ * `MIGRATION_TEST_ADMIN_URL`, the admin connection is postgres/postgres (as in CI) on
+ * the host and port of `DATABASE_URL`, so both ends always reach the same server.
  */
 
-const ADMIN_URL = process.env.MIGRATION_TEST_ADMIN_URL || 'postgres://postgres:postgres@localhost:5432/postgres';
 const APP_URL = process.env.DATABASE_URL || 'postgres://app:app@localhost:5432/appdb';
+const ADMIN_URL = process.env.MIGRATION_TEST_ADMIN_URL || defaultAdminUrl();
 const FULL_CHAIN_DB = 'appdb_migtest_full';
 const UPGRADE_DB = 'appdb_migtest_upgrade';
 const PREVIOUS_MIGRATION_TIMESTAMP = 1853470000000;
@@ -44,6 +46,14 @@ type PgClient = {
 const { Client: PgClientConstructor } = require('pg') as {
   Client: new (config: { connectionString: string }) => PgClient;
 };
+
+function defaultAdminUrl(): string {
+  const url = new URL(APP_URL);
+  url.username = 'postgres';
+  url.password = 'postgres';
+  url.pathname = '/postgres';
+  return url.toString();
+}
 
 function scratchUrl(databaseName: string): string {
   const url = new URL(APP_URL);
