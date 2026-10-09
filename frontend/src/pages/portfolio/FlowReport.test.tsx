@@ -39,7 +39,28 @@ vi.mock('ag-charts-react', () => ({
   ),
 }));
 
-const period = (periodStart: string, periodEnd: string, created: number, closed: number, openAtEnd: number) => ({
+// jsdom lays nothing out, so every box measures 0. AG Grid takes a header or a cell of 0 for one
+// not drawn yet and measures it again, five times, through jsdom's getComputedStyle, which runs
+// the whole cascade of the page on every ancestor. That was 40% of this file's time, and it
+// timed out on a loaded machine. Heights stay a browser check; the grid is otherwise real.
+vi.mock('ag-grid-react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('ag-grid-react')>();
+  const NO_AUTO_HEIGHT = { autoHeight: false, autoHeaderHeight: false, wrapHeaderText: false };
+  const flat = (defs: any[] | null | undefined): any[] | undefined =>
+    defs?.map((def) => ('children' in def ? { ...def, children: flat(def.children) } : { ...def, ...NO_AUTO_HEIGHT }));
+  return {
+    ...actual,
+    AgGridReact: (props: any) => (
+      <actual.AgGridReact
+        {...props}
+        columnDefs={flat(props.columnDefs)}
+        defaultColDef={{ ...props.defaultColDef, ...NO_AUTO_HEIGHT }}
+      />
+    ),
+  };
+});
+
+const period =(periodStart: string, periodEnd: string, created: number, closed: number, openAtEnd: number) => ({
   periodStart,
   periodEnd,
   created,
@@ -264,13 +285,20 @@ function renderReport(entry = '/portfolio/reports/flow') {
 }
 
 /**
+ * Every link of the page. A plain selector: a role query computes the styles of every element of
+ * the nine grids first, a tenth of a second per call on a freshly drawn report.
+ */
+function links(): HTMLAnchorElement[] {
+  return Array.from(document.body.querySelectorAll<HTMLAnchorElement>('a[href]'));
+}
+
+/**
  * Every link reading exactly `text`, href decoded so the filter JSON stays readable. A query
  * string writes a space as `+`, which is what the list reads it back as: the specs undo it the
  * same way rather than asserting on the encoding.
  */
 function hrefsFor(text: string): string[] {
-  return screen
-    .getAllByRole('link')
+  return links()
     .filter((node) => node.textContent?.trim() === text)
     .map((node) => decodeURIComponent((node.getAttribute('href') ?? '').replace(/\+/g, ' ')));
 }
@@ -284,9 +312,7 @@ function linkHref(text: string, match: (href: string) => boolean = () => true): 
 
 /** Every destination the page offers, decoded the same way. */
 function allHrefs(): string[] {
-  return screen
-    .getAllByRole('link')
-    .map((node) => decodeURIComponent((node.getAttribute('href') ?? '').replace(/\+/g, ' ')));
+  return links().map((node) => decodeURIComponent((node.getAttribute('href') ?? '').replace(/\+/g, ' ')));
 }
 
 /** The clickable figures that open a list inside the report, not a page. */
@@ -397,7 +423,7 @@ describe('FlowReport', { timeout: 20_000 }, () => {
 
     // A created cell opens that period's weekly report; the stock at the end is not a link.
     expect(hrefsFor('4')).toContain('/portfolio/reports/weekly?startDate=2026-06-29&endDate=2026-07-05');
-    expect(screen.getAllByRole('link').filter((node) => node.textContent?.trim() === '10')).toHaveLength(0);
+    expect(links().filter((node) => node.textContent?.trim() === '10')).toHaveLength(0);
 
     fireEvent.click(screen.getByText('Hide the table'));
     await waitFor(() => expect(screen.queryByText('Tasks created')).toBeNull());
@@ -422,7 +448,7 @@ describe('FlowReport', { timeout: 20_000 }, () => {
     );
 
     // A zero is never a link nor a button: the list would open on nothing.
-    expect(screen.getAllByRole('link').some((node) => node.textContent?.trim() === '0')).toBe(false);
+    expect(links().some((node) => node.textContent?.trim() === '0')).toBe(false);
     expect(figureButtons('0')).toHaveLength(0);
   });
 
@@ -629,7 +655,7 @@ describe('FlowReport', { timeout: 20_000 }, () => {
     // Projects closed nothing: an em dash, a plain sentence, and no link at all.
     expect(screen.getByText('Completed projects')).toBeTruthy();
     expect(screen.getByText('No closing in this period')).toBeTruthy();
-    expect(screen.getAllByRole('link').some((node) => node.textContent?.includes('closing in this period'))).toBe(false);
+    expect(links().some((node) => node.textContent?.includes('closing in this period'))).toBe(false);
   });
 
   it('shows the completed-project figures when projects did close', async () => {
@@ -715,7 +741,7 @@ describe('FlowReport', { timeout: 20_000 }, () => {
     expect(screen.getAllByText('No closing in this period')).toHaveLength(3);
     // Every figure of the grids is a zero, so none of them is clickable.
     expect(figureButtons('0')).toHaveLength(0);
-    expect(screen.getAllByRole('link').some((node) => node.textContent?.trim() === '0')).toBe(false);
+    expect(links().some((node) => node.textContent?.trim() === '0')).toBe(false);
   });
 
   it('narrows every figure, every list link and every weekly link to the chosen source', async () => {
@@ -831,11 +857,7 @@ describe('FlowReport', { timeout: 20_000 }, () => {
 
     await waitFor(() => expect(screen.getByText('over 3 closings · 12 months · 2 created already closed')).toBeTruthy());
     // The weekly report holds the five closings, not the three the median was read on.
-    expect(
-      screen
-        .getAllByRole('link')
-        .some((node) => node.textContent?.includes('created already closed')),
-    ).toBe(false);
+    expect(links().some((node) => node.textContent?.includes('created already closed'))).toBe(false);
     // The tasks tile measured every one of its closings, so its caption is still a link.
     expect(linkHref('over 6 closings')).toBe('/portfolio/reports/weekly?startDate=2026-06-29&endDate=2026-07-19');
   });
