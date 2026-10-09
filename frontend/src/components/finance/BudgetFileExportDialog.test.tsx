@@ -55,8 +55,8 @@ describe('BudgetFileExportDialog', () => {
   it('exports the filtered list in the screen language, the shown columns and three years', async () => {
     renderDialog();
     const save = screen.getByRole('button', { name: 'operations.budgetFile.exportFiltered:{"count":120}' });
-    expect(screen.getByRole('checkbox', { name: /^A2 / })).not.toBeChecked();
-    expect(screen.getByRole('checkbox', { name: /^A0 / })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: /^A2/ })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: /^A0/ })).toBeChecked();
     fireEvent.click(save);
     await waitFor(() => expect(get).toHaveBeenCalledTimes(1));
     expect(get).toHaveBeenCalledWith('/capex-items/budget-file/export', {
@@ -76,7 +76,7 @@ describe('BudgetFileExportDialog', () => {
   it('exports every line with All lines, a hidden column and months', async () => {
     renderDialog();
     fireEvent.click(screen.getByRole('checkbox', { name: /operations.budgetFile.allLines/ }));
-    fireEvent.click(screen.getByRole('checkbox', { name: /^A2 / }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /^A2/ }));
     fireEvent.click(screen.getByRole('radio', { name: 'operations.budgetFile.months' }));
     fireEvent.click(screen.getByRole('button', { name: 'operations.budgetFile.exportAll' }));
     await waitFor(() => expect(get).toHaveBeenCalledTimes(1));

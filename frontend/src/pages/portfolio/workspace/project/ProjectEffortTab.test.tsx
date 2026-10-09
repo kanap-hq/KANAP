@@ -65,11 +65,11 @@ const baseForm = {
 function renderEffortTab({
   canManage = true,
   form = baseForm,
-  onUpdate = vi.fn(),
+  onUpdate = vi.fn<(patch: any) => void>(),
 }: {
   canManage?: boolean;
   form?: any;
-  onUpdate?: ReturnType<typeof vi.fn>;
+  onUpdate?: ReturnType<typeof vi.fn<(patch: any) => void>>;
 } = {}) {
   const result = render(
     <ThemeProvider theme={theme}>

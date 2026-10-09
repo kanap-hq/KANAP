@@ -42,11 +42,11 @@ const parentCrumb: TaskCrumb = {
 };
 
 function renderHeader(crumbs: TaskCrumb[], handlers?: {
-  onOriginClick?: ReturnType<typeof vi.fn>;
-  onParentClick?: ReturnType<typeof vi.fn>;
+  onOriginClick?: ReturnType<typeof vi.fn<() => void>>;
+  onParentClick?: ReturnType<typeof vi.fn<(href: string) => void>>;
 }) {
-  const onOriginClick = handlers?.onOriginClick ?? vi.fn();
-  const onParentClick = handlers?.onParentClick ?? vi.fn();
+  const onOriginClick = handlers?.onOriginClick ?? vi.fn<() => void>();
+  const onParentClick = handlers?.onParentClick ?? vi.fn<(href: string) => void>();
   render(
     <ThemeProvider theme={theme}>
       <TaskDetailHeader

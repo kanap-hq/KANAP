@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { stubOffsetParent } from '../test/jsdomOffsetParent';
 
 // The real AG Grid (reactive custom components) through ServerDataGrid: how the column filters
 // follow the models the grid hands them.
@@ -152,6 +153,7 @@ async function mount(props: Omit<GridProps, 'queryClient' | 'onGridApiReady'> = 
 
 describe('ServerDataGrid column filters follow the grid model', () => {
   beforeEach(() => {
+    stubOffsetParent();
     get.mockReset();
     get.mockImplementation(async () => ({ data: { items: [{ id: '1', name: 'one', other: 'x', status: 'Alpha' }], total: 1 } }));
     vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });

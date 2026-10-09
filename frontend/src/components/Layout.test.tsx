@@ -121,7 +121,7 @@ describe('Layout page scroller', () => {
 
     expect(getComputedStyle(main).overflow).toBe('hidden');
     expect(getComputedStyle(scroller).overflow).toBe('auto');
-    expect(getComputedStyle(scroller).minHeight).toBe('0');
+    expect(getComputedStyle(scroller).minHeight).toBe('0px');
   });
 
   it('never shrinks a page below its content, so ordinary pages scroll instead of clipping', () => {

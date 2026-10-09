@@ -224,7 +224,7 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
     const DEAD = 'Gone_0123456789abcdefg';
     const storedFilters = JSON.stringify({ product_name: { filterType: 'text', type: 'contains', filter: 'stored' } });
     window.sessionStorage.setItem('opex-list-context', JSON.stringify({ sort: '', q: '', filters: storedFilters, statusScope: 'enabled' }));
-    const base = mocked.get.getMockImplementation()!;
+    const base = mocked.get.getMockImplementation()! as (...args: any[]) => any;
     mocked.get.mockImplementation(async (url: string, config?: unknown) => {
       if (url === `/list-contexts/${DEAD}`) {
         throw Object.assign(new Error('Request failed with status code 404'), { response: { status: 404, data: { code: 'list_context_not_found' } } });
@@ -245,7 +245,7 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
   it('the footer of an amount column shown again keeps a placeholder until its total arrives, never 0', async () => {
     let release: () => void = () => undefined;
     let slow = false;
-    const base = mocked.get.getMockImplementation()!;
+    const base = mocked.get.getMockImplementation()! as (...args: any[]) => any;
     mocked.get.mockImplementation(async (url: string, config?: { params?: Record<string, string> }) => {
       if (url === TOTALS) {
         if (slow) await new Promise<void>((resolve) => { release = resolve; });

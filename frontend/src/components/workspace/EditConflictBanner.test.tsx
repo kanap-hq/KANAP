@@ -141,7 +141,8 @@ describe('EditConflictBanner', () => {
 
   it('scrolls its rows instead of growing past 40% of the screen', () => {
     renderBanner([conflict({ field: 'notes', current: 'a', mine: 'b' }), conflict({ field: 'supplier_id', current: 'x', mine: 'y' })]);
-    expect(screen.getByRole('region')).toHaveStyle({ maxHeight: '40vh' });
+    // 40vh, which jsdom computes in pixels.
+    expect(screen.getByRole('region')).toHaveStyle({ maxHeight: `${(window.innerHeight * 40) / 100}px` });
     expect(screen.getByTestId('edit-conflict-rows')).toHaveStyle({ overflowY: 'auto' });
   });
 

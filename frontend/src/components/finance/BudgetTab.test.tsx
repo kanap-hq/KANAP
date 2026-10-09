@@ -356,7 +356,7 @@ describe('BudgetTab on the query cache', () => {
 
     // The server now holds the saved total; the next load answers it, a little later.
     let answer: () => void = () => undefined;
-    const served = mocked.get.getMockImplementation()!;
+    const served = mocked.get.getMockImplementation()! as (...args: any[]) => any;
     mocked.get.mockImplementation(async (url: string, config?: unknown) => {
       if (url === '/spend-versions/v1/amounts') {
         await new Promise<void>((resolve) => { answer = resolve; });
@@ -591,7 +591,7 @@ describe('BudgetTab write safety', () => {
     columnsSetting.current = { ...ALL_SHOWN, labels: { ...ALL_SHOWN.labels, committed: 'Run cost' } };
     setupApi({ grain: 'monthly' });
     // The same item, under the CAPEX routes.
-    const spendGet = mocked.get.getMockImplementation()!;
+    const spendGet = mocked.get.getMockImplementation()! as (...args: any[]) => any;
     mocked.get.mockImplementation((url: string, config?: unknown) => spendGet(
       url.replace('/capex-items/', '/spend-items/').replace('/capex-versions/', '/spend-versions/'), config,
     ));
@@ -1536,7 +1536,7 @@ function holdFirstWrite() {
 
 /** From now on the server holds `planned` in every month of Budget (the lines write changed it). */
 function budgetBecomes(planned: string) {
-  const base = mocked.get.getMockImplementation()!;
+  const base = mocked.get.getMockImplementation()! as (...args: any[]) => any;
   mocked.get.mockImplementation(async (url: string, config?: unknown) => {
     const res = await base(url, config);
     if (url !== '/spend-versions/v1/amounts') return res;
@@ -1704,7 +1704,7 @@ describe('BudgetTab edits while a panel write runs', () => {
     const rec = linesRecord();
     (rec.last_calculation as { lines: Array<{ day_counts: string[] | null }> }).lines[0].day_counts = US_DAYS;
     setupApi({ grain: 'monthly', roundInputs: [rec] });
-    const base = mocked.get.getMockImplementation()!;
+    const base = mocked.get.getMockImplementation()! as (...args: any[]) => any;
     let days = US_DAYS;
     let yearLoads = 0;
     mocked.get.mockImplementation(async (url: string, config?: unknown) => {
@@ -1813,7 +1813,7 @@ async function chooseWithKeyboard(steps: number) {
 function serverKeepsLines(initial: RoundLine[]) {
   let lines = initial;
   let seq = 0;
-  const base = mocked.get.getMockImplementation()!;
+  const base = mocked.get.getMockImplementation()! as (...args: any[]) => any;
   mocked.get.mockImplementation(async (url: string, config?: unknown) => {
     const res = await base(url, config);
     if (url !== '/spend-versions/v1/amounts') return res;
@@ -2079,7 +2079,7 @@ describe('BudgetTab edit conflicts (lot 3D)', () => {
   it('every save reloads the year: someone else\'s change shows, a cell typed meanwhile stays', async () => {
     const server = setupApi({ grain: 'monthly' });
     // The reload after the save is answered late: the user types meanwhile.
-    const served = mocked.get.getMockImplementation()!;
+    const served = mocked.get.getMockImplementation()! as (...args: any[]) => any;
     let holdReload = false;
     let answer: () => void = () => undefined;
     mocked.get.mockImplementation(async (url: string, config?: unknown) => {
@@ -2484,7 +2484,7 @@ describe('BudgetTab others\' changes (lot 3G)', () => {
     setupApi({ grain: 'monthly' });
     const { ref } = renderTab();
     await waitForAmounts();
-    const served = mocked.get.getMockImplementation()!;
+    const served = mocked.get.getMockImplementation()! as (...args: any[]) => any;
     mocked.get.mockImplementation(async (url: string, config?: unknown) => {
       if (url === '/spend-versions/v1/amounts') throw new Error('offline');
       return served(url, config);

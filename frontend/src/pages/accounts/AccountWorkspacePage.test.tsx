@@ -279,7 +279,7 @@ describe('AccountWorkspacePage', () => {
 
   it('keeps the consolidation account closed until the consolidation chart accounts are loaded', async () => {
     let releaseOptions: () => void = () => undefined;
-    const base = mocked.get.getMockImplementation()!;
+    const base = mocked.get.getMockImplementation()! as (...args: any[]) => any;
     mocked.get.mockImplementation(async (url: string, config?: { params?: { coaId?: string } }) => {
       if (url === '/accounts' && config?.params?.coaId === 'coa-ifrs') {
         await new Promise<void>((resolve) => { releaseOptions = resolve; });

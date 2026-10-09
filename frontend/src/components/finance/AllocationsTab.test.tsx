@@ -126,7 +126,7 @@ describe('AllocationsTab on the query cache', () => {
   });
 
   it('a failed read of the companies shows an error instead of loading for ever', async () => {
-    const served = mocked.get.getMockImplementation()!;
+    const served = mocked.get.getMockImplementation()! as (...args: any[]) => any;
     mocked.get.mockImplementation(async (url: string, config?: unknown) => {
       if (url === '/companies') throw new Error('network');
       return served(url, config);
@@ -147,7 +147,7 @@ describe('AllocationsTab on the query cache', () => {
   });
 
   it('a failed read of the departments is not kept: the next visit reads them again', async () => {
-    const served = mocked.get.getMockImplementation()!;
+    const served = mocked.get.getMockImplementation()! as (...args: any[]) => any;
     let failDepartments = true;
     mocked.get.mockImplementation(async (url: string, config?: unknown) => {
       if (url === '/departments' && failDepartments) throw new Error('forbidden');

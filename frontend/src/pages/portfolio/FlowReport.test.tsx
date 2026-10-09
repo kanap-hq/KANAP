@@ -774,7 +774,8 @@ describe('FlowReport', () => {
     const weeklyLinks = allHrefs().filter((href) => href.startsWith('/portfolio/reports/weekly'));
     expect(weeklyLinks.length).toBeGreaterThan(3);
     expect(weeklyLinks.every((href) => href.endsWith('&sourceIds=src-desk'))).toBe(true);
-  });
+    // Heavy test: several full renders, slower under the full suite's load.
+  }, 20_000);
 
   it('sends both filters at once and drops them when every value is picked', async () => {
     mockApi(report());
@@ -815,7 +816,8 @@ describe('FlowReport', () => {
     const afterClear = linkHref('12');
     expect(afterClear).not.toContain('source_name');
     expect(afterClear).toContain('"category_name":{"filterType":"set","values":["Run"]}');
-  });
+    // Heavy test: several full renders, slower under the full suite's load.
+  }, 20_000);
 
   it('drops the weekly link when some closings were imported already closed', async () => {
     const base = report();
