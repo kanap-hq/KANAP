@@ -17,7 +17,7 @@ Each on-prem customer **must register their own Entra application** and provide 
 
 ## Prerequisites
 
-- A public HTTPS URL for KANAP (reverse proxy in front of the API)
+- An HTTPS address for KANAP that your users' browsers can reach (reverse proxy in front of the API). An internal name works: Microsoft only redirects the user's browser to it.
 - Ability to create an App Registration and grant admin consent in Entra
 - Outbound connectivity from the KANAP API container to:
   - `login.microsoftonline.com` (OIDC metadata, token exchange, JWKS)
@@ -59,7 +59,7 @@ Add all five as **configured** permissions on the app registration:
 3. Select `openid`, `profile`, `email`, `offline_access` and `User.Read`
 4. Click **Add permissions**
 
-`User.Read` lets KANAP read the signed-in person's own profile from Microsoft Graph so it can fill in their name, job title, phones, department and company. Keep it. It is a separate permission from `User.Read.All`, not an older version of it. Without it, users are prompted for consent at every sign-in or the sign-in fails.
+`User.Read` lets KANAP read the signed-in person's own profile from Microsoft Graph so it can fill in their name, job title, phones, department and company. Keep it. It is a separate permission from `User.Read.All`. Without it, users are prompted for consent at every sign-in or the sign-in fails.
 
 !!! warning "Add the OIDC scopes before granting admin consent"
     Tenant-wide admin consent rewrites the app's grant to match the **configured** permission list. `openid`, `profile`, `email` and `offline_access` are usually listed under "Other permissions granted" and are not configured by default, so a tenant-wide consent would drop them and break existing sign-ins. The Azure portal shows this warning itself. Add the four scopes as configured delegated permissions first, then grant consent.
@@ -94,7 +94,7 @@ This only skips the Microsoft Graph `/me` call made during sign-in. Names and ot
 Set the following in your on-prem `.env`:
 
 ```bash
-# Entra SSO (on-prem)
+# Entra SSO (on-prem): all four are required together
 ENTRA_CLIENT_ID=<application-client-id>
 ENTRA_CLIENT_SECRET=<client-secret>
 ENTRA_AUTHORITY=https://login.microsoftonline.com/<tenant-id>
@@ -108,7 +108,12 @@ Notes:
 
 ## Step 5: Restart KANAP
 
-After updating `.env`, restart your containers so the API picks up the new configuration.
+After updating `.env`, recreate the API container so it picks up the new configuration. A plain `restart` keeps the old values.
+
+```bash
+cd /opt/kanap
+docker compose -f infra/compose.onprem.yml up -d api
+```
 
 ## Step 6: Connect Entra in KANAP
 
@@ -137,7 +142,7 @@ You can also grant the consent from the Azure portal with **Grant admin consent 
 
 ## The daily directory sync
 
-Once authorized, KANAP contacts Microsoft Graph every night at 03:00 server time and, for every user linked to Entra:
+Once authorized, KANAP contacts Microsoft Graph every night at 03:00 UTC (the clock of the API container) and, for every user linked to Entra:
 
 - Refreshes first name, last name, job title, business phone, mobile phone
 - Matches the directory department and company **by name** against existing KANAP records. Nothing is created automatically, and a name with no match leaves the assignment unchanged.
@@ -148,7 +153,7 @@ Empty directory values never clear data already in KANAP.
 
 Disabling an account signs the person out immediately and blocks any further sign-in. Their data and history are kept.
 
-The block on **Admin → Authentication** reports the outcome: **Last synced {date} — N accounts refreshed, N disabled.** after a successful run, or **The last sync failed: {message}** otherwise. **Sync now** runs the same job on demand.
+The block on **Admin → Authentication** reports the outcome: **Last synced {date}: N accounts refreshed, N disabled.** after a successful run, or **The last sync failed: {message}** otherwise. **Sync now** runs the same job on demand.
 
 ## Troubleshooting
 
@@ -159,10 +164,10 @@ The block on **Admin → Authentication** reports the outcome: **Last synced {da
 - **Bad redirect after login**: Check that `APP_BASE_URL` is the exact address users open. The redirect comes from `APP_BASE_URL`, and the `Host` and `X-Forwarded-Host` headers do not change it. Also check that the proxy sends `X-Forwarded-Proto`.
 - **"Not authorized yet" on the directory sync**: either the application permission `User.Read.All` was never added to the app registration, or a Microsoft Entra administrator has not granted tenant-wide consent yet. Check both, then click **Sync now**.
 - **Sign-ins started failing right after granting admin consent**: the consent replaced the app's grant with the configured permission list, dropping `openid`, `profile`, `email` and `offline_access`. Add them as configured delegated permissions and grant consent again.
-- **Expired client secret**: Microsoft returns `AADSTS7000222`. Users only see the generic "Sign-in with Microsoft did not complete. Try again or ask your administrator." on the login page. To confirm the cause, look at **Admin → Authentication → Daily directory sync**: the failure line quotes the Microsoft error code. Re-running **Connect** also shows it. Create a new client secret in **Certificates & secrets**, update `ENTRA_CLIENT_SECRET`, and restart the API.
+- **Expired client secret**: Microsoft returns `AADSTS7000222`. Users only see the generic "Sign-in with Microsoft did not complete. Try again or ask your administrator." on the login page. To confirm the cause, look at **Admin → Authentication → Daily directory sync**: the failure line quotes the Microsoft error code. Re-running **Connect** also shows it. Create a new client secret in **Certificates & secrets**, update `ENTRA_CLIENT_SECRET`, and recreate the API (`docker compose -f infra/compose.onprem.yml up -d api`).
 
 ## Security Notes
 
-- Do not commit `ENTRA_CLIENT_SECRET` to git.
+- Do not commit `ENTRA_CLIENT_SECRET` to git. Keep `.env` readable by its owner only (`chmod 600 .env`).
 - Rotate the secret periodically.
 - Use a dedicated app registration.
