@@ -10,7 +10,7 @@ cd /opt/kanap
 docker compose -f infra/compose.onprem.yml up -d api
 ```
 
-`docker compose restart` keeps the old values.
+`docker compose -f infra/compose.onprem.yml restart api` keeps the old values.
 
 ## Required: deployment mode
 
@@ -287,6 +287,7 @@ Notes:
 - If both SMTP and Resend are configured in single-tenant mode, SMTP takes precedence.
 - `SMTP_FROM` should be an address your SMTP server is allowed to send as.
 - A relay on the KANAP server itself: set `SMTP_HOST=host.docker.internal`, which is how the API container reaches the server. The relay must listen on the Docker bridge address (`172.17.0.1` by default), and the firewall must allow its port from the Docker networks (see the command below).
+- The address `172.17.0.1` exists only once Docker runs. A relay installed on the server that listens on it must start after Docker, as the storage does in the [installation example](installation-example.md#5-object-storage-rustfs). With systemd, create the file `/etc/systemd/system/<relay service>.service.d/override.conf` (the name of the relay's service in place of `<relay service>`) with two lines, `[Unit]` then `After=docker.service`, and run `sudo systemctl daemon-reload`.
 - A relay whose TLS certificate comes from your company's authority needs that authority: see [Certificates from an internal authority](#optional-certificates-from-an-internal-authority).
 - If mail is sent outside your network, configure SPF, DKIM, and DMARC on the sender domain through your mail administrator or provider.
 
@@ -332,9 +333,13 @@ SMTP_PORT=25   # the SMTP_PORT of .env
 sudo ufw allow from 172.16.0.0/12 to any port "$SMTP_PORT" proto tcp
 ```
 
+This rule is for a relay installed on the server. A relay that runs in a Docker container with a published port needs no rule: Docker publishes its ports outside of `ufw`.
+
 ### Test the email
 
 After a change to the email settings, recreate the API (`docker compose -f infra/compose.onprem.yml up -d api`). The API log then shows `Email transport selected` (see [What the API log shows at start](#what-the-api-log-shows-at-start)). To send a test message, open the sign-in page, choose **Forgot password** and enter the email of an existing account that signs in with a password. The message arrives with a link that starts with your `APP_BASE_URL`. Accounts that sign in with Microsoft Entra receive no reset message.
+
+When sending fails, **Forgot password** shows an error and the API log has an `ERROR [ExceptionsHandler]` line with the reason. For a relay whose certificate the API does not trust, the line reads `Error: unable to verify the first certificate; ...` (or `self-signed certificate`), followed by `code: 'ESOCKET'` a few lines below. The API does not trust the authority that signed the relay's certificate: see [Certificates from an internal authority](#optional-certificates-from-an-internal-authority). Installing the authority on the server itself does not change the container.
 
 ## Optional: certificates from an internal authority
 
@@ -356,7 +361,8 @@ docker compose -f infra/compose.onprem.yml up -d api
 Check that the API reads the file:
 
 ```bash
-docker compose -f infra/compose.onprem.yml exec api node -e 'require("tls").createSecureContext()'
+cd /opt/kanap
+docker compose -f infra/compose.onprem.yml exec -T api node -e 'require("tls").createSecureContext()' </dev/null
 ```
 
 The command prints nothing when all is well. A line that starts with `Warning: Ignoring extra certs from` means the API cannot read the file: check the path in `.env`, the file name and its mode. The API log shows the same line after its first TLS connection.

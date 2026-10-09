@@ -86,9 +86,9 @@ The last line of the output reads `0 failed`.
 
 **Rollback.** Migrations only go forward, so a rollback puts back the backup taken before the upgrade, under the previous version:
 
-1. Stop KANAP: `docker compose -f infra/compose.onprem.yml down`.
+1. Stop KANAP: `cd /opt/kanap`, then `docker compose -f infra/compose.onprem.yml down`. A rollback often starts in a new terminal, outside `/opt/kanap`.
 2. Check out the previous version and build it: `git checkout v<previous version>` (for example `git checkout v26.10.1`), then `docker compose -f infra/compose.onprem.yml build --pull`.
-3. Restore the database and the files from the `before-upgrade-...` directory of that upgrade: choose the backup, then run steps 1 to 3 of [Restore](#restore). If you changed `.env` for the new version, compare it with the copy in the `config` directory of the backup.
+3. Restore the database and the files from the `before-upgrade-...` directory of that upgrade: choose the backup, then run steps 1 to 3 of [Restore](#restore) in the same terminal. If you changed `.env` for the new version, compare it with the copy in the `config` directory of the backup.
 4. Start KANAP: `docker compose -f infra/compose.onprem.yml up -d --wait`.
 5. Check it as above.
 
@@ -125,7 +125,7 @@ sudo -u postgres pg_restore --list /var/backups/kanap/db-$(date +%F).dump | head
 sudo rc mirror --overwrite --remove kanapstore/kanap-files /var/backups/kanap/files
 ```
 
-For any other S3 store, `rclone` does the same job (`sudo apt-get install -y rclone`). Replace the example values with those of your store and type the access key and the secret key at the prompts (the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` of `.env`). `rclone check` compares the copy with the bucket:
+For any other S3 store, `rclone` does the same job (`sudo apt-get install -y rclone`). Replace the example values with those of your store and type the access key and the secret key at the prompts (the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` of `.env`). `sudo` passes on only the variables that `KEEP` names: the `sudo` of Ubuntu 26.04 ignores `-E`. `rclone check` compares the copy with the bucket:
 
 ```bash
 export RCLONE_S3_PROVIDER=Other
@@ -135,11 +135,12 @@ export RCLONE_S3_FORCE_PATH_STYLE=true                # S3_FORCE_PATH_STYLE of .
 read -rp 'Access key: ' RCLONE_S3_ACCESS_KEY_ID; export RCLONE_S3_ACCESS_KEY_ID
 read -rsp 'Secret key: ' RCLONE_S3_SECRET_ACCESS_KEY; echo; export RCLONE_S3_SECRET_ACCESS_KEY
 BUCKET=kanap-files                                    # S3_BUCKET of .env
-sudo -E rclone sync ":s3:${BUCKET}" /var/backups/kanap/files
-sudo -E rclone check ":s3:${BUCKET}" /var/backups/kanap/files
+KEEP=RCLONE_S3_PROVIDER,RCLONE_S3_ENDPOINT,RCLONE_S3_REGION,RCLONE_S3_FORCE_PATH_STYLE,RCLONE_S3_ACCESS_KEY_ID,RCLONE_S3_SECRET_ACCESS_KEY
+sudo --preserve-env="$KEEP" rclone sync ":s3:${BUCKET}" /var/backups/kanap/files
+sudo --preserve-env="$KEEP" rclone check ":s3:${BUCKET}" /var/backups/kanap/files
 ```
 
-Use `RCLONE_S3_PROVIDER=AWS` for AWS S3. For RustFS on the server, the endpoint is `http://172.17.0.1:9000`: `host.docker.internal` only exists inside the containers.
+`rclone check` ends with `0 differences found`. rclone may also print `Config file "/root/.config/rclone/rclone.conf" not found - using defaults`: the variables replace that file. Use `RCLONE_S3_PROVIDER=AWS` for AWS S3. For RustFS on the server, the endpoint is `http://172.17.0.1:9000`: `host.docker.internal` only exists inside the containers.
 
 **Configuration.** Keep a copy of `/opt/kanap/.env` and of `/etc/default/rustfs`. The first one holds every secret of the installation, including `AI_SETTINGS_ENCRYPTION_SECRET` when you use it. The second one holds the RustFS encryption key: files encrypted with it cannot be read without it. Also keep the nginx site file (`/etc/nginx/sites-available/kanap`) and the certificate files.
 
@@ -178,7 +179,7 @@ sudo cp -p /opt/kanap/.env /etc/default/rustfs "$B/config/"
 echo "$B"
 ```
 
-The last line prints the directory. Note it: a rollback restores from it. With another S3 store, replace the `rc mirror` line with the `rclone sync` command of the files backup above, with `"$B/files"` as the destination.
+The last line prints the directory. Note it: a rollback restores from it. With another S3 store, replace the `rc mirror` line with the `rclone sync` command of the files backup above, with `"$B/files"` as the destination. Set the variables of that block first, `KEEP` included, in the same terminal.
 
 Keep this directory until the new version has run without trouble for a few weeks. The daily `find ... -mtime +30 -delete` of the cron file removes old daily dumps only. Delete an old `before-upgrade-...` directory yourself: list them with `sudo ls /var/backups/kanap/`, then run `sudo rm -r` followed by the path of the directory.
 
@@ -254,17 +255,19 @@ Then run the smoke test of [Check the upgrade](#upgrade-procedure) and open KANA
 
 ## Maintenance tools image
 
-The API image holds the compiled application only. A maintenance command that needs TypeScript, such as `npm run typeorm`, runs in a second image built from the same sources. Build it from the current checkout right before each use, so that it matches the running version. The build reuses the cached layers of the API image and takes a few seconds:
+The API image holds the compiled application only. A maintenance command that needs TypeScript, such as `npm run typeorm`, runs in a second image built from the same sources. Build it from the current checkout right before each use, so that it matches the running version. The build reuses the cached layers of the API image and takes about 20 seconds when the API image is already built:
 
 ```bash
 cd /opt/kanap
 docker build --target dev -t kanap-api-tools backend
 ```
 
-Run a command in it with the same `.env` as the API. This example lists the migrations and whether they are applied:
+Run a command in it with the same `.env` and the same certificate directory as the API (see [Certificates from an internal authority](configuration.md#optional-certificates-from-an-internal-authority)). This example lists the migrations and whether they are applied:
 
 ```bash
+cd /opt/kanap
 docker run --rm --env-file .env --add-host host.docker.internal:host-gateway \
+  -v /opt/kanap/infra/certs:/etc/kanap/certs:ro \
   kanap-api-tools npm run typeorm -- migration:show
 ```
 
@@ -306,14 +309,15 @@ curl -sSk -w '\n' http://127.0.0.1:8080/health
 curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
 ```
 
-**Containers.** `docker compose ps` shows `healthy` for `api` and `web` once they answer. Docker only reports it: nothing restarts on that status.
+**Containers.** `docker compose -f infra/compose.onprem.yml ps` shows `healthy` for `api` and `web` once they answer. Docker only reports it: nothing restarts on that status.
 
 ```bash
+cd /opt/kanap
 docker compose -f infra/compose.onprem.yml ps
 docker compose -f infra/compose.onprem.yml logs -f api
 ```
 
-Docker keeps at most 5 files of 10 MB of logs per container (about 50 MB), so `docker compose logs` reaches back that far only.
+Docker keeps at most 5 files of 10 MB of logs per container (about 50 MB), so the log reaches back that far only.
 
 **Key metrics:**
 
@@ -322,13 +326,28 @@ Docker keeps at most 5 files of 10 MB of logs per container (about 50 MB), so `d
 - Database connections
 - Storage usage
 
+### After a reboot
+
+Nothing to do: everything starts by itself. PostgreSQL and nginx start as services, the storage of the installation example starts after Docker, and Docker starts the `api` and `web` containers again. The API answers about 10 seconds after the server boots. If PostgreSQL is slower than Docker, the API retries the database (30 times, 2 seconds apart). Three checks:
+
+```bash
+cd /opt/kanap
+docker compose -f infra/compose.onprem.yml ps
+curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
+ss -ltn | grep 172.17.0.1:9000
+```
+
+- `ps` shows `api` and `web` as `healthy`.
+- The health address answers `{"status":"ok"}`.
+- The last command shows one line with `172.17.0.1:9000`: the storage of the installation example listens. With another storage, check it your own way.
+
 ### API metrics for a monitoring tool
 
 Set `OPS_METRICS_TOKEN` in `.env` (24 characters or more, for example `openssl rand -hex 32`) and recreate the API (`docker compose -f infra/compose.onprem.yml up -d api`). Your monitoring tool can then read:
 
 ```bash
 OPS_METRICS_TOKEN=$(grep '^OPS_METRICS_TOKEN=' /opt/kanap/.env | cut -d= -f2-)
-curl -sSk -H "Authorization: Bearer ${OPS_METRICS_TOKEN}" "https://${KANAP_HOST}/api/ops/metrics"
+curl -sSk -w '\n' -H "Authorization: Bearer ${OPS_METRICS_TOKEN}" "https://${KANAP_HOST}/api/ops/metrics"
 ```
 
 The answer is JSON. Without the setting the address answers 404. It answers even when the API is overloaded: the figures that need the database are then marked `db.statsStale`. The fields to watch:
@@ -361,7 +380,7 @@ Start with the API log: `docker compose -f infra/compose.onprem.yml logs --no-lo
 
 | Symptom | Check | Solution |
 |---------|-------|----------|
-| Containers not starting | `docker compose logs api` | Check for start-up errors |
+| Containers not starting | `docker compose -f infra/compose.onprem.yml logs api` | Check for start-up errors |
 | The log repeats `[entrypoint] DB not ready or migration failed (attempt N)` | The text after `attempt N`, `DATABASE_URL`, `pg_hba.conf`, the firewall | The API tries 30 times, 2 seconds apart, then stops. Fix the cause the message names, then `docker compose -f infra/compose.onprem.yml up -d api` |
 | The message above says `self-signed certificate`, `unable to verify the first certificate` or `unable to get local issuer certificate` | The end of `DATABASE_URL` | `sslmode=require` checks the server certificate completely. Use `sslmode=disable` for a PostgreSQL on the same server. When your company's authority signed the certificate, keep `require` and make the API trust the authority (see [Certificates from an internal authority](configuration.md#optional-certificates-from-an-internal-authority)). Otherwise use `sslmode=no-verify` for an encrypted connection without the check. See [Configuration](configuration.md#required-database) |
 | The message above says `The server does not support SSL connections` | The end of `DATABASE_URL` | Use `sslmode=disable`, or enable TLS on PostgreSQL |
@@ -376,8 +395,9 @@ Start with the API log: `docker compose -f infra/compose.onprem.yml logs --no-lo
 | Everyone shares one sign-in limit (`429` for many users) | `RATE_LIMIT_TRUST_PROXY` and the proxy | With a proxy in front, set `true` and make the proxy send `X-Forwarded-For` |
 | `[SECURITY]` warning at each start | `ADMIN_PASSWORD`, `JWT_SECRET` | Change the administrator's password in the application, or see [Password Reset](#password-reset). Use a `JWT_SECRET` of 32 characters or more |
 | Migration failed | PostgreSQL version | Must be 16+, extensions available |
-| 502 from reverse proxy | `docker compose ps` | Ensure the api container is running on port 8080 |
+| 502 from reverse proxy | `docker compose -f infra/compose.onprem.yml ps` | Ensure the api container is running on port 8080 |
 | 413 from the reverse proxy on an upload | `client_max_body_size` | Set `client_max_body_size 50m;` in the nginx file |
+| A reset email does not arrive, and the API log shows `unable to verify the first certificate` or `self-signed certificate` | The certificate of the mail relay | The API does not trust the authority that signed the relay's certificate. Give it the authority's file (see [Certificates from an internal authority](configuration.md#optional-certificates-from-an-internal-authority)). Installing the authority on the server itself does not change the container |
 | Can't sign in | The password | `.env` creates the administrator at the first start only. Change the password in the application, or use [Password Reset](#password-reset) |
 
 ## Password Reset

@@ -36,7 +36,7 @@ docker compose -f infra/compose.onprem.yml up -d api
 ## Check
 
 ```bash
-docker compose -f infra/compose.onprem.yml exec api node -e 'require("tls").createSecureContext()'
+docker compose -f infra/compose.onprem.yml exec -T api node -e 'require("tls").createSecureContext()' </dev/null
 ```
 
 The command prints nothing when the API can read the file. When it cannot, it prints a line that starts with `Warning: Ignoring extra certs from`, followed by the path and the reason. The API log shows the same line after the first secure connection. Check the path in `.env`, the name of the file and its mode.

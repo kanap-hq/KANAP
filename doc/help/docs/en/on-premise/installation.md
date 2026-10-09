@@ -210,7 +210,7 @@ server {
 
 **`host.docker.internal`:** When PostgreSQL or S3 storage runs on the Docker host (not in a container), use `host.docker.internal` as the hostname in `DATABASE_URL` and `S3_ENDPOINT`. The `compose.onprem.yml` file includes the `extra_hosts` mapping that makes this work. It points to the Docker bridge address of the server (`172.17.0.1` by default), so the host services must accept connections from that network (see the [installation example](installation-example.md)).
 
-**Health.** The API answers `GET /health` on its own port (`http://127.0.0.1:8080/health`) and `GET /api/health` through the proxy. Both return `{"status":"ok"}`. `docker compose ps` shows `healthy` for the `api` and `web` containers once they answer.
+**Health.** The API answers `GET /health` on its own port (`http://127.0.0.1:8080/health`) and `GET /api/health` through the proxy. Both return `{"status":"ok"}`. `docker compose -f infra/compose.onprem.yml ps` shows `healthy` for the `api` and `web` containers once they answer.
 
 ## Network architecture
 
