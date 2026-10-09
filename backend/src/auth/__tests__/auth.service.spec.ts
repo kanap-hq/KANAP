@@ -399,8 +399,13 @@ async function testEveryRefusedSignInRunsOnePasswordCheck() {
   assert.deepEqual(checks, [accountHash]);
 
   // The fixed hash has the parameters an account hash gets today: the check costs the same.
-  const parameters = (hash: string) => hash.split('$').slice(1, 4).join('$');
-  assert.equal(parameters(FIXED_PASSWORD_HASH), parameters(accountHash));
+  // Compared as values: argon2 0.45 writes the costs in another order (`m=65536,p=4,t=3`).
+  const parameters = (hash: string) => {
+    const [, algorithm, version, costs] = hash.split('$');
+    const cost = Object.fromEntries(costs.split(',').map((pair) => pair.split('=')));
+    return { algorithm, version, m: cost.m, t: cost.t, p: cost.p };
+  };
+  assert.deepEqual(parameters(FIXED_PASSWORD_HASH), parameters(accountHash));
   assert.equal(await argon2.verify(FIXED_PASSWORD_HASH, 'Right-pass-2026'), false);
 }
 
