@@ -29,7 +29,7 @@ Goals, constraints, assumptions, and relevant background for architectural choic
 
 ## Components
 - **Frontend (`web`)**: React + TypeScript (Vite), MUI + icons, AG Grid community (`ServerDataGrid`), TanStack Query, i18next (en/fr/de/es), zod + react-hook-form, dnd-kit, ag-charts, d3, SVAR Gantt, MDXEditor. Navigation is a top AppBar with workspace tabs (AI, Agents, Portfolio, Knowledge, IT Landscape, Budget Management, Master Data, Admin) plus a per-workspace left drawer; Home is the `/` root. Details in `doc/frontend-architecture.md`.
-- **Backend API (`api`)**: NestJS + TypeORM on Node 22. Modules by domain:
+- **Backend API (`api`)**: NestJS + TypeORM on Node 24. Modules by domain:
   - Budget: spend (OPEX), capex, contracts, accounts / chart of accounts, currency, freeze, analytics, billing, dashboard
   - Master data: companies, departments, suppliers, contacts, locations, users, business processes, master-data operations
   - Portfolio: requests, projects, teams, contributors, time entries; tasks
@@ -39,7 +39,7 @@ Goals, constraints, assumptions, and relevant background for architectural choic
   - Platform and admin: tenants, roles, permissions, auth (local + Entra), audit, branding, CoA templates, ops, scheduled tasks, cleanup
   - Cross-cutting: tenancy, storage, email, notifications, i18n, public endpoints, health, seed
 - **Data store (`db`)**: PostgreSQL 15. Containerized in dev only; host-installed on QA/prod. Row-level security on every tenant-scoped table.
-- **Marketing (`marketing`)**: Astro 5 static site in `marketing/web`, built with Node 22 and served by Nginx. Content notes live next to the site (`marketing/web/*.md`).
+- **Marketing (`marketing`)**: Astro 7 static site in `marketing/web`, built with Node 24 and served by Nginx. Content notes live next to the site (`marketing/web/*.md`).
 - **Integrations**: CSV import/export; GLPI (ticketing) and PRTG (monitoring) providers for agents; Microsoft Entra (SSO + directory sync); Stripe (billing, cloud only); Resend or SMTP (email); Brave Search (web search); S3-compatible object storage; MCP (inbound server and outbound bridge).
 
 ## Ingress & Routing (prod intent)

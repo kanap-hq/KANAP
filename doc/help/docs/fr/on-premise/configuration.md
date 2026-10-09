@@ -353,7 +353,7 @@ Ces destinations ne sont nécessaires que pendant l'installation et `docker buil
 | `download.docker.com` | 443 | Dépôt APT Docker |
 | `dl.min.io` | 443 | Téléchargement des binaires MinIO |
 | `registry.npmjs.org` | 443 | Dépendances npm pendant `docker build` |
-| `registry-1.docker.io`, `production.cloudflare.docker.com` | 443 | Téléchargement des images Docker de base (`node:22-alpine`, `nginx:alpine`) |
+| `registry-1.docker.io`, `production.cloudflare.docker.com` | 443 | Téléchargement des images Docker de base (`node:24-alpine`, `nginx:alpine`) |
 | Miroirs APT Ubuntu | 80/443 | Paquets système (PostgreSQL, nginx, etc.) |
 
 ### Sortant — Exécution (conditionnel)

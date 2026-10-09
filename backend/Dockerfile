@@ -1,4 +1,4 @@
-FROM node:22-alpine
+FROM node:24-alpine
 RUN apk add --no-cache pandoc typst fontconfig font-noto ttf-dejavu \
     font-liberation font-carlito \
     && apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community \

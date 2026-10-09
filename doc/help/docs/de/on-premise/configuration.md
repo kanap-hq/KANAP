@@ -353,7 +353,7 @@ Diese Ziele werden nur während der Installation und `docker build` benötigt. S
 | `download.docker.com` | 443 | Docker APT-Repository |
 | `dl.min.io` | 443 | MinIO-Binary-Download |
 | `registry.npmjs.org` | 443 | npm-Abhängigkeiten während `docker build` |
-| `registry-1.docker.io`, `production.cloudflare.docker.com` | 443 | Basis-Docker-Images pullen (`node:22-alpine`, `nginx:alpine`) |
+| `registry-1.docker.io`, `production.cloudflare.docker.com` | 443 | Basis-Docker-Images pullen (`node:24-alpine`, `nginx:alpine`) |
 | Ubuntu APT-Mirrors | 80/443 | Systempakete (PostgreSQL, nginx usw.) |
 
 ### Ausgehend -- Laufzeit (Bedingt)
