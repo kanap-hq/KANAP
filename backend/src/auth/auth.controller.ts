@@ -9,6 +9,7 @@ import { BillingService } from '../billing/billing.service';
 import * as jwt from 'jsonwebtoken';
 import { EmailService, isExampleRecipient, maskEmailAddresses } from '../email/email.service';
 import { resolveAppBaseUrl } from '../common/url';
+import { clientAddress } from '../common/client-address';
 import { assertRequestOriginAllowed } from '../common/cors-policy';
 import { Features } from '../config/features';
 import { throwFeatureDisabled } from '../common/feature-gates';
@@ -303,7 +304,7 @@ export class AuthController {
       tenantId: req?.tenant?.id,
       user: { id: user.id, email: user.email, tenant_id: user.tenant_id },
       // The event's address and agent, read now: the request is answered before the send ends.
-      requestDetails: { ip: req?.ip, headers: { 'user-agent': req?.headers?.['user-agent'] } },
+      requestDetails: { ip: clientAddress(req), headers: { 'user-agent': req?.headers?.['user-agent'] } },
       baseUrl,
       to: email,
       // `getEmailStrings` / `resolveEmailLocale` treat null and undefined identically.
