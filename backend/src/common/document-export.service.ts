@@ -5,6 +5,7 @@ import * as path from 'node:path';
 import { promisify } from 'node:util';
 import { BadRequestException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { openBoundedArchive } from './archive-limits';
+import { converterEnv } from './converter-env';
 import { ExportFormat } from './dto/export.dto';
 import { isDevelopmentEnv, parseBoolean } from './env';
 import { readStreamWithCaps, StreamLimitError } from './bounded-stream';
@@ -180,11 +181,13 @@ export class DocumentExportService {
    * du PDF (moteur externe, ici Typst) et ne constitue donc pas un confinement de
    * processus : c'est une protection complémentaire. La garantie principale reste
    * qu'aucune ressource n'est résolue par Pandoc — tout est validé puis fourni
-   * sous forme de data: URI.
+   * sous forme de data: URI. Pandoc, et Typst qu'il lance, reçoivent l'environnement
+   * construit par `converterEnv` (common/converter-env.ts), rien d'autre de l'API.
    */
   private async runPandoc(args: string[], cwd: string): Promise<void> {
     await execFileAsync('pandoc', args, {
       cwd,
+      env: await converterEnv(cwd),
       timeout: PANDOC_TIMEOUT_MS,
       maxBuffer: PANDOC_MAX_BUFFER_BYTES,
     });
