@@ -425,6 +425,46 @@ async function testMissingTenantChangesNothing() {
   assert.deepEqual(result, { outcome: 'tenant-missing', warnings: [] });
 }
 
+/**
+ * `logUnchanged` (main.ts passes the lead process only): a run that changes nothing prints its
+ * line only when asked; a creation and a restore are always printed.
+ */
+async function testUnchangedLineOnlyWhenAsked() {
+  const { tenantId, slug } = await newTenant();
+  const email = `admin-${randomUUID().slice(0, 8)}@bootstrap-spec.test`;
+  const quiet = (s: string) => ({ ...paramsFor(s, email, STRONG_PASSWORD), logUnchanged: false });
+  try {
+    const created = await quietly(() => ensureBootstrapAdministrator(dataSource, quiet(slug)));
+    assert.equal(created.result.outcome, 'created');
+    assert.ok(created.lines.some((line) => line.includes(`Created administrator account ${email}`)), 'a creation is printed with logUnchanged: false');
+
+    const asked = await quietly(() => ensureBootstrapAdministrator(dataSource, { ...paramsFor(slug, email, STRONG_PASSWORD), logUnchanged: true }));
+    assert.equal(asked.result.outcome, 'unchanged');
+    assert.ok(asked.lines.some((line) => line.includes(`Administrator account ${email} left unchanged`)), 'logUnchanged: true prints the unchanged line');
+
+    const byDefault = await quietly(() => ensureBootstrapAdministrator(dataSource, paramsFor(slug, email, STRONG_PASSWORD)));
+    assert.ok(byDefault.lines.some((line) => line.includes('left unchanged')), 'printed by default');
+
+    const silent = await quietly(() => ensureBootstrapAdministrator(dataSource, quiet(slug)));
+    assert.equal(silent.result.outcome, 'unchanged');
+    assert.deepEqual(silent.lines, [], 'logUnchanged: false prints nothing for an account left as it was');
+
+    // No active administrator remains: the restore is printed even with logUnchanged: false.
+    const account = (await accountState(tenantId, email))!;
+    await demote(tenantId, account.id);
+    await setStatus(tenantId, account.id, 'disabled');
+    const restored = await quietly(() => ensureBootstrapAdministrator(dataSource, quiet(slug)));
+    assert.equal(restored.result.outcome, 'restored');
+    assert.ok(restored.lines.some((line) => line.includes(`Restored ${email} as an enabled administrator`)), 'a restore is printed with logUnchanged: false');
+
+    const missing = await quietly(() => ensureBootstrapAdministrator(dataSource, quiet(`${slug}-missing`)));
+    assert.equal(missing.result.outcome, 'tenant-missing');
+    assert.deepEqual(missing.lines, [], 'a missing tenant prints nothing with logUnchanged: false');
+  } finally {
+    await cleanupTenants([tenantId]);
+  }
+}
+
 runSpecs('bootstrap-admin.integration.spec', [
   testCreatedOnceThenLeftAlone,
   testDemotedWithAnotherAdministratorStaysDemoted,
@@ -436,6 +476,7 @@ runSpecs('bootstrap-admin.integration.spec', [
   testPasswordLineOnlyWhileTheAccountUsesAdminPassword,
   testShortPasswordReportedAtCreation,
   testMissingTenantChangesNothing,
+  testUnchangedLineOnlyWhenAsked,
 ]).catch((err) => {
   console.error(err);
   process.exit(1);
