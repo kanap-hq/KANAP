@@ -102,7 +102,7 @@ docker compose -f infra/compose.onprem.yml logs -f api
 # After the first start, read the [ENV], [CONFIG], [CORS], [RATE-LIMIT] and [SECURITY] lines of the API log.
 
 # 7. Access application
-# https://kanap.your-domain.com
+# https://kanap.company.com
 # Login with ADMIN_EMAIL / ADMIN_PASSWORD from .env
 ```
 
@@ -123,7 +123,7 @@ docker compose -f infra/compose.onprem.yml logs -f api
 1. Terminate TLS on port 443
 2. Route `/api/*` directly to the API container (port 8080 on `127.0.0.1`), without the `/api` prefix. Do not send `/api/` through the web container (port 8081): its own `/api/` route does not forward `X-Forwarded-For`, so KANAP would count and log every request under the address of the web container.
 3. Route all other requests to the web container (port 8081 on `127.0.0.1`)
-4. Set `X-Forwarded-Proto: https` and preserve `Host`. KANAP builds the links it sends from `APP_BASE_URL` and no longer reads `X-Forwarded-Host` outside local development. When the site uses a non-standard port, add the exact address with its port to `CORS_ORIGINS`.
+4. Set `X-Forwarded-Proto: https` and preserve `Host`. KANAP builds every link it sends from `APP_BASE_URL`. The example also sends `X-Forwarded-Host`, with the same value as `Host`. When the site uses a non-standard port, add the exact address with its port to `CORS_ORIGINS`.
 5. Send `X-Forwarded-For` with the client address (the example does) and set `RATE_LIMIT_TRUST_PROXY=true`. KANAP uses that address for its sign-in limits. The API port must stay bound to `127.0.0.1`, as `compose.onprem.yml` does. With nothing in front of the API, set `RATE_LIMIT_TRUST_PROXY=false`.
 6. Accept bodies of 50 MB (`client_max_body_size 50m`): budget files go up to 48 MB and attachments up to 20 MB.
 

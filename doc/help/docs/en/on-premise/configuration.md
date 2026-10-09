@@ -106,9 +106,9 @@ docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^
 
 The filter keeps the lines below and leaves out the framework details. Without it, `docker compose -f infra/compose.onprem.yml logs api` shows everything.
 
-**Order.** The lines that KANAP writes itself (`[entrypoint]`, `[ENV]`, `[SECRETS]`, `[RATE-LIMIT]`, `[CORS]`, `[DB]`, `[on-prem]`, `[SECURITY]`) come first. The framework lines (`Starting Nest application...`, email, scheduled jobs, `Nest application successfully started`) follow. Two lines come last: `[DB] pool budget` and the first run of `lifecycle-status-sync`.
+**Order.** The lines that KANAP writes itself (`[entrypoint]`, `[ENV]`, `[SECRETS]`, `[RATE-LIMIT]`, `[CORS]`, `[DB]`, `[on-prem]`, `[SECURITY]`) come first. The framework lines (`Starting Nest application...`, email, scheduled jobs, `Nest application successfully started`) follow.
 
-**A clean first start** shows these lines, in this order:
+**A clean first start** of the [installation example](installation-example.md#7-build-and-start) shows these lines, in this order (the `[SECRETS]` lines are shortened here):
 
 ```
 [entrypoint] Initializing DB (attempt 1/30) ...
@@ -123,13 +123,16 @@ The filter keeps the lines below and leaves out the framework details. Without i
 Admin seeding disabled (set SEED_ADMIN=true to enable)
 [on-prem] Default chart of accounts created
 [on-prem] Created tenant 'default'
-[on-prem] Created administrator account admin@company.com: the workspace had no active administrator
+[on-prem] Created administrator account admin@example.internal: the workspace had no active administrator
 [on-prem] Created default subscription (On-Prem)
+... WARN [EmailService] No outbound email transport configured; email sending is disabled.
 ... Nest application successfully started
 [DB] pool budget: 1 process × 20 connections = 20 of 87 usable (...)
 ```
 
-The number of migrations changes from version to version. On later starts it is `0 executed` (or the number of new migrations after an upgrade), and the four `[on-prem]` creation lines give way to `Administrator account ... left unchanged`. The email line depends on your settings: `LOG [EmailService] Email transport selected: ...` with an email transport, `WARN [EmailService] No outbound email transport configured; email sending is disabled.` without one.
+The block leaves out the migration lines: about 40 lines that start with `[Migration]` or `[migration:` follow `Running migrations...`. They are informational. On a new database some of them report changes to built-in reference data or name a tenant id that is not yours: KANAP keeps a system tenant for platform features. They need no action. `...` stands for the `[Nest]` prefix with the process id and the time. The last line of the filtered output is `[DB] pool budget ...`. Log output saved to a file can contain colour codes such as `[33m`.
+
+The number of migrations changes from version to version. On later starts it is `0 executed` (or the number of new migrations after an upgrade), and the four `[on-prem]` creation lines give way to `Administrator account ... left unchanged`. The email line depends on your settings: with an email transport it reads `LOG [EmailService] Email transport selected: ...` instead of the warning.
 
 **Lines to know.**
 
@@ -259,7 +262,7 @@ KANAP uses the AWS SDK v3 S3 client; any provider with S3-compatible behavior is
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `RESEND_API_KEY` | Resend API key | `re_xxxxx` |
-| `RESEND_FROM_EMAIL` | From address. Set it to an address your Resend account may send as: without it, mail is sent from a KANAP address. | `KANAP <noreply@yourdomain.com>` |
+| `RESEND_FROM_EMAIL` | From address. Set it to an address your Resend account may send as: without it, mail is sent from a KANAP address. | `KANAP <noreply@company.com>` |
 
 If not configured, KANAP can still send email through SMTP in single-tenant deployments. If neither Resend nor SMTP is configured, email features are disabled, including user invitations and password reset. See [Password reset](operations.md#password-reset) for the fallback.
 
@@ -411,7 +414,7 @@ The defaults suit a few dozen users. For more users at once, run several API pro
 
 **What each costs.** Every API process uses about 200 MB of memory at start and up to 300 MB under load (measured with 50 users on 5,000 budget lines); with several, a small supervising process adds about 100 MB. Every API process can open up to `DB_POOL_MAX` connections to PostgreSQL. Count:
 
-- memory: `API_WORKERS` × 0.4 GB for the API, plus what PostgreSQL uses if it runs on the same server, plus room for the image build at each upgrade. 6 GB is the minimum for any server: building both images at once took about 4.4 GB on a new installation, with PostgreSQL and the storage running;
+- memory: `API_WORKERS` × 0.4 GB for the API, plus what PostgreSQL uses if it runs on the same server, plus room for the image build at each upgrade. 6 GB is the minimum for any server. On a new installation with PostgreSQL and the storage running, building both images at once took about 3.8 GB in total at its peak (about 3.2 GB for the build itself), so 6 GB keeps about 2 GB free;
 - connections: `API_WORKERS` × `DB_POOL_MAX` must stay under PostgreSQL's `max_connections` (100 by default) minus about 15. The API checks this at start and writes a warning in its log when it does not fit, with a value that would.
 
 **Suggested values.**
@@ -452,10 +455,10 @@ JWT_SECRET=
 APP_ENV=production
 
 # APPLICATION URL (required - the exact address users open)
-APP_BASE_URL=https://kanap.your-domain.com
+APP_BASE_URL=https://kanap.company.com
 
 # ALLOWED BROWSER ORIGINS (required - the exact address users open)
-CORS_ORIGINS=https://kanap.your-domain.com
+CORS_ORIGINS=https://kanap.company.com
 
 # CLIENT ADDRESS (one reverse proxy in front of the API)
 RATE_LIMIT_TRUST_PROXY=true
@@ -475,7 +478,7 @@ S3_FORCE_PATH_STYLE=false
 
 # EMAIL (optional - Resend)
 # RESEND_API_KEY=re_xxxxx
-# RESEND_FROM_EMAIL=KANAP <noreply@yourdomain.com>
+# RESEND_FROM_EMAIL=KANAP <noreply@company.com>
 
 # EMAIL (optional - SMTP, single-tenant only)
 # SMTP_HOST=smtp.company.com
@@ -489,7 +492,7 @@ S3_FORCE_PATH_STYLE=false
 # ENTRA_CLIENT_ID=
 # ENTRA_CLIENT_SECRET=
 # ENTRA_AUTHORITY=https://login.microsoftonline.com/<tenant-id>
-# ENTRA_REDIRECT_URI=https://kanap.your-domain.com/api/auth/entra/callback
+# ENTRA_REDIRECT_URI=https://kanap.company.com/api/auth/entra/callback
 
 # AI (optional - off by default)
 # AI_CHAT_ENABLED=false

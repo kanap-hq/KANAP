@@ -42,7 +42,7 @@ services:
     cap_drop:
       - ALL
     # Capacity, set in ../.env (see .env.onprem.example and the operations guide):
-    #   API_WORKERS   API processes in this container (default 1). Each adds about 150 to 500 MB
+    #   API_WORKERS   API processes in this container (default 1). Each adds about 200 MB (up to 300 MB under load)
     #                 of memory and up to DB_POOL_MAX database connections.
     #   DB_POOL_MAX   database connections per process (default 20). Workers × pool must stay
     #                 under PostgreSQL's max_connections minus about 15; the API warns at start.

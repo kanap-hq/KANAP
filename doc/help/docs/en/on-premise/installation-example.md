@@ -29,15 +29,18 @@ You need:
 - A user with `sudo` rights (not `root`). Every command below runs as that user.
 - The name users type to open KANAP, for example `kanap.example.internal`. See [Name and certificate](installation.md#name-and-certificate). This example uses an internal name with a self-signed certificate. Step 8 shows the other two cases.
 - The email address of the first administrator.
+- The name of your organization.
 
-Choose the three values in the first lines, then paste the whole block. It writes them, with the secrets it generates, to `~/kanap-install.env`, a file readable by you only. Later steps read that file with `. ~/kanap-install.env`, so each block works in a new terminal session. Nothing prints the secrets.
+Choose the four values in the first lines, then paste the whole block. Keep the quotes around the organization name: it can contain spaces. The block writes the values, with the secrets it generates, to `~/kanap-install.env`, a file readable by you only. Later steps read that file with `. ~/kanap-install.env`, so each block works in a new terminal session. Nothing prints the secrets.
 
 ```bash
 PGVER=18                            # 16 on Ubuntu 24.04
 KANAP_HOST=kanap.example.internal   # the name users type, without https://
 ADMIN_EMAIL=admin@example.internal  # email of the first administrator
+ORG_NAME='Example Company'          # name of your organization, set once: the application cannot change it later
 
 install -m 600 /dev/null ~/kanap-install.env
+printf 'ORG_NAME=%q\n' "${ORG_NAME}" >> ~/kanap-install.env
 cat >> ~/kanap-install.env <<EOF
 PGVER=${PGVER}
 KANAP_HOST=${KANAP_HOST}
@@ -90,6 +93,8 @@ Close your session and open a new one so the group applies. Then check that Dock
 docker ps
 ```
 
+It prints one header line that starts with `CONTAINER ID`, and no container yet.
+
 ---
 
 ## 2. Firewall
@@ -107,7 +112,7 @@ sudo ufw --force enable
 sudo ufw status
 ```
 
-The status lists `OpenSSH`, `80/tcp`, `443/tcp`, and the two rules from `172.16.0.0/12`. If SSH listens on another port, allow that port as well before you enable the firewall.
+The status lists `OpenSSH`, `80/tcp`, `443/tcp`, and the two rules from `172.16.0.0/12`. It also lists `OpenSSH (v6)`, `80/tcp (v6)` and `443/tcp (v6)`: the same three rules for IPv6. If SSH listens on another port, allow that port as well before you enable the firewall.
 
 ---
 
@@ -153,6 +158,8 @@ GRANT ALL ON SCHEMA public TO kanap;
 SQL
 ```
 
+The commands print `CREATE DATABASE`, `CREATE ROLE` and `GRANT`, then `CREATE EXTENSION` three times and `GRANT`.
+
 ### Allow connections from Docker containers
 
 PostgreSQL must listen beyond `localhost` and accept the application role from the Docker networks. `172.16.0.0/12` covers every network Docker creates by default. The firewall of step 2 keeps the port closed to the rest of the network.
@@ -180,7 +187,14 @@ sudo systemctl restart postgresql
 sudo -u postgres psql -d kanap -c 'CREATE EXTENSION IF NOT EXISTS pg_stat_statements'
 ```
 
-Read `/etc/postgresql/${PGVER}/main/conf.d/kanap.conf` (its header explains each value). See [Operations](operations.md#postgresql-settings) for the details.
+The last command prints `CREATE EXTENSION`. To read the settings, show the file (its header explains each value):
+
+```bash
+. ~/kanap-install.env
+cat /etc/postgresql/${PGVER}/main/conf.d/kanap.conf
+```
+
+See [Operations](operations.md#postgresql-settings) for the details.
 
 ---
 
@@ -214,7 +228,7 @@ cd ~
 rm -rf "$RUSTFS_TMP"
 ```
 
-Each `sha256sum` line must print `OK`. The last two lines remove the downloaded files. The package creates the `rustfs` user, the data directory `/data/rustfs` and a systemd service. It does not start the service.
+Each `sha256sum` line must print `OK`. The last two lines remove the downloaded files. The package creates the `rustfs` user, the data directory `/data/rustfs`, the directory `/opt/rustfs` and a systemd service. It also installs a commented `/etc/default/rustfs`, which the next block replaces with a file readable by root only (mode 600). It does not start the service.
 
 **Configure and start the service.**
 
@@ -274,6 +288,7 @@ sudo tee /root/kanap-app-policy.json >/dev/null <<'EOF'
 }
 EOF
 sudo rc admin policy create kanapstore kanap-app /root/kanap-app-policy.json
+sudo rm /root/kanap-app-policy.json
 printf '%s' "${S3_SECRET_KEY}" | sudo sh -c 'rc admin user add kanapstore kanap-app "$(cat)"'
 sudo rc admin policy attach kanapstore kanap-app --user kanap-app
 sudo rc admin user info kanapstore kanap-app
@@ -300,7 +315,7 @@ DEPLOYMENT_MODE=single-tenant
 
 # TENANT (set before the first start)
 DEFAULT_TENANT_SLUG=default
-DEFAULT_TENANT_NAME=My Organization
+DEFAULT_TENANT_NAME=${ORG_NAME}
 
 # ADMIN CREDENTIALS (read at the first start only)
 ADMIN_EMAIL=${ADMIN_EMAIL}
@@ -332,7 +347,7 @@ S3_FORCE_PATH_STYLE=true
 
 # EMAIL (optional: choose one transport to enable invitations, password reset, notifications)
 # RESEND_API_KEY=re_xxxxx
-# RESEND_FROM_EMAIL=KANAP <noreply@yourdomain.com>
+# RESEND_FROM_EMAIL=KANAP <noreply@company.com>
 # SMTP_HOST=smtp.company.com
 # SMTP_PORT=587
 # SMTP_SECURE=false
@@ -355,7 +370,7 @@ The smoke test of step 9 reads it from `.env` without showing it. Step 10 shows 
 Notes on the file:
 
 - The administrator account is created at the first start from `ADMIN_EMAIL` and `ADMIN_PASSWORD`. Changing them later changes nothing while an active administrator exists.
-- `DEFAULT_TENANT_NAME` is your organization's name. KANAP reads it at the first start only, and the application has no page to change it. Replace `My Organization` in `.env` before step 7.
+- `DEFAULT_TENANT_NAME` is your organization's name, from step 0. KANAP reads it at the first start only, and the application has no page to change it.
 - The `DATABASE_URL` password and the `JWT_SECRET` were generated in step 0. Do not reuse example values.
 - With `sslmode=disable` the connection to PostgreSQL stays on the server. For another PostgreSQL server, see [`sslmode`](configuration.md#required-database).
 - If you reach KANAP by IP address instead of a name, set `APP_BASE_URL` and `CORS_ORIGINS` to `https://<ip address>`.
@@ -366,7 +381,7 @@ Notes on the file:
 
 ## 7. Build and start
 
-Build the images and start the containers. The build takes about two minutes. `--wait` returns when both containers report `healthy`; the first start runs the database migrations and can take a minute or two.
+Build the images and start the containers. The build takes about a minute or two. `--wait` returns when both containers report `healthy`; the first start runs the database migrations and takes a few seconds to a minute.
 
 ```bash
 cd /opt/kanap
@@ -376,7 +391,7 @@ docker compose -f infra/compose.onprem.yml ps
 docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|^Admin seeding|WARN|ERROR|successfully started|Email transport'
 ```
 
-If the build stops with `signal: killed`, the server ran out of memory. `sudo dmesg | grep -i oom` confirms it. Check the free memory with `free -m` and stop the other services that use it. Check that PostgreSQL and the storage still run (`pg_lsclusters`, `systemctl status rustfs`). Then restart Docker, which stops what is left of the killed build, build the two images one after the other, which needs less memory, and start KANAP:
+If the build stops with `signal: killed`, the server ran out of memory. `sudo dmesg | grep -i oom` confirms it. Check the free memory with `free -m` and stop the other services that use it. Check that PostgreSQL and the storage still run (`pg_lsclusters`, `systemctl status --no-pager rustfs`). Then restart Docker, which stops what is left of the killed build, build the two images one after the other, which needs less memory, and start KANAP:
 
 ```bash
 sudo systemctl restart docker
@@ -408,7 +423,11 @@ Admin seeding disabled (set SEED_ADMIN=true to enable)
 [DB] pool budget: 1 process × 20 connections = 20 of 87 usable (...)
 ```
 
-The number of migrations depends on the version, and the pool figures on your PostgreSQL. On a new database, about 40 `[Migration] ...` lines follow `Running migrations...`. They are informational. Two lines are expected and need no action: `Admin seeding disabled ...` and, until you configure email, the `EmailService` warning. A `[SECURITY]`, `[CONFIG]`, `[CORS]` or `[ENV] APP_ENV is not set` warning means a setting needs attention: [Configuration](configuration.md#what-the-api-log-shows-at-start) explains every line.
+The number of migrations depends on the version, and the pool figures on your PostgreSQL.
+
+The block leaves out the migration lines: about 40 lines that start with `[Migration]` or `[migration:` follow `Running migrations...`. They are informational. On a new database some of them report changes to built-in reference data or name a tenant id that is not yours: KANAP keeps a system tenant for platform features. They need no action. `...` stands for the `[Nest]` prefix with the process id and the time. The last line of the filtered output is `[DB] pool budget ...`. Log output saved to a file can contain colour codes such as `[33m`.
+
+Two lines are expected and need no action: `Admin seeding disabled ...` and, until you configure email, the `EmailService` warning. A `[SECURITY]`, `[CONFIG]`, `[CORS]` or `[ENV] APP_ENV is not set` warning means a setting needs attention: [Configuration](configuration.md#what-the-api-log-shows-at-start) explains every line.
 
 ---
 
@@ -581,7 +600,7 @@ curl -sSk -o /dev/null -w "%{http_code}\n" "https://${KANAP_HOST}/"
 # Expected: 200
 ```
 
-Then run the smoke test. It checks the database, the storage, the sign-in and the exports through the public API, the way the web app does. The server has no Node.js, so it runs in a container. The first line reads the administrator password from `.env` into the environment of the test without showing it. The first run downloads the `node:24-alpine` image from Docker Hub (about 240 MB) and keeps it for later runs. `KANAP_WRITE=1` also creates a temporary task with an attachment, which checks the storage, and deletes it again. Use it right after installation only: it writes to the data. The temporary task uses one task reference (`T-1` on a new installation), so your first task is `T-2`. `KANAP_INSECURE_TLS=1` accepts a certificate the container does not trust: keep it with a self-signed certificate. With a certificate from your internal authority, you can keep it or let the container check the certificate: put the authority's file in `/opt/kanap/infra/certs/` (see [Certificates from an internal authority](configuration.md#optional-certificates-from-an-internal-authority)) and replace `-e KANAP_INSECURE_TLS=1` with `-v /opt/kanap/infra/certs:/certs:ro -e NODE_EXTRA_CA_CERTS=/certs/company-ca.pem`. With Let's Encrypt, remove `-e KANAP_INSECURE_TLS=1`.
+Then run the smoke test. It checks the database, the storage, the sign-in and the exports through the public API, the way the web app does. The server has no Node.js, so it runs in a container. The line that starts with `KANAP_PASSWORD=` reads the administrator password from `.env` into the environment of the test without showing it. The first run downloads the `node:24-alpine` image from Docker Hub (about 240 MB) and keeps it for later runs. `KANAP_WRITE=1` also creates a temporary task with an attachment, which checks the storage, and deletes it again. Use it right after installation only: it writes to the data. The temporary task uses one task reference (`T-1` on a new installation), so your first task is `T-2`. `KANAP_INSECURE_TLS=1` accepts a certificate the container does not trust: keep it with a self-signed certificate. With a certificate from your internal authority, you can keep it or let the container check the certificate: put the authority's file in `/opt/kanap/infra/certs/` (see [Certificates from an internal authority](configuration.md#optional-certificates-from-an-internal-authority)) and replace `-e KANAP_INSECURE_TLS=1` with `-v /opt/kanap/infra/certs:/certs:ro -e NODE_EXTRA_CA_CERTS=/certs/company-ca.pem`. With Let's Encrypt, remove `-e KANAP_INSECURE_TLS=1`.
 
 ```bash
 . ~/kanap-install.env
@@ -593,7 +612,7 @@ docker run --rm --network host \
 unset KANAP_PASSWORD
 ```
 
-The last line of the output reads `0 failed`. A `SKIP` for the AI settings is normal while the AI features are off. Finally, check that the API log shows no storage warning:
+The last line ends with `0 failed`: it reads like `25 OK, 1 skipped, 0 failed (0.5 s)`. With `KANAP_INSECURE_TLS=1`, two TLS warnings at the top of the output are expected. A `SKIP` for the AI settings is normal while the AI features are off. Finally, check that the API log shows no storage warning:
 
 ```bash
 cd /opt/kanap
@@ -605,7 +624,7 @@ docker compose -f infra/compose.onprem.yml logs api | grep 'PutObject fallback' 
 ## 10. First login
 
 1. Open `https://<your name>` in a browser (accept the certificate warning if you use a self-signed certificate; the workstation must resolve the name).
-2. Sign in with `ADMIN_EMAIL` and the administrator password. To see the password, run `grep '^ADMIN_PASSWORD=' /opt/kanap/.env` on the server. It shows on screen, so run it when nobody else can see your screen.
+2. Sign in with `ADMIN_EMAIL` and the administrator password. To see the password, run `grep '^ADMIN_PASSWORD=' /opt/kanap/.env | cut -d= -f2-` on the server. It shows on screen, so run it when nobody else can see your screen.
 3. Change the password in your profile right after this first sign-in. KANAP reads the `.env` value at the first start only.
 4. Add your logo and colors in **Admin → Branding** (optional).
 5. Invite additional users (if email is configured).
@@ -651,7 +670,7 @@ docker compose -f infra/compose.onprem.yml down
 
 # Check all services (pg_lsclusters shows the cluster online)
 pg_lsclusters
-sudo systemctl status nginx rustfs
+sudo systemctl status --no-pager nginx rustfs
 docker compose -f infra/compose.onprem.yml ps
 
 # Which version runs: the checkout, then the API (-k: see step 9)
