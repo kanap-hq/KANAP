@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import type { FreezeService } from '../../freeze/freeze.service';
-import { loadAnalyticsAxes } from '../../analytics/analytics-axes.util';
+import { axisAppliesTo, loadAnalyticsAxes } from '../../analytics/analytics-axes.util';
 import { allocateItemNumbers } from '../../common/item-number.service';
 import { formatCents } from '../../common/amount';
 import { AmountMeasure, AmountsWriteContext, FLAT_PROFILE, assertMeasuresEditable, spreadAnnualRows, writeAmountsPayload } from '../amounts-write.util';
@@ -10,7 +10,7 @@ import { lockBudgetLine, lockBudgetLines, lockBudgetVersions, lockTenantBudgetOp
 import { activeMonths } from '../spread.util';
 import { annualSpreadFields, listRoundInputs, markRoundsManual, recordPayloadRoundInputs } from '../round-inputs.util';
 import { interpretBudgetFile, moneyText, readBudgetCsv } from './interpret';
-import { loadDimensionCodes, loadPreflight } from './load';
+import { loadFileDimensions, loadPreflight } from './load';
 import { periodForYearlyTotal, wholeYearPeriod } from './period';
 import { planBudgetFile } from './preflight';
 import {
@@ -166,11 +166,12 @@ async function prepare(input: {
   canCreateSuppliers: boolean;
   allowedCurrencies: string[] | null;
 }): Promise<Prepared> {
-  const dimensionCodes = await loadDimensionCodes(input.manager, input.tenantId);
+  const dimensions = await loadFileDimensions(input.manager, input.tenantId, input.scope);
   const read = await readBudgetCsv(input.file, {
     scope: input.scope,
     language: input.language,
-    dimensionCodes,
+    dimensionCodes: dimensions.codes,
+    refusedDimensions: dimensions.refused,
     dateOrder: input.dateOrder,
     decimalMark: input.decimalMark,
   });
@@ -259,7 +260,7 @@ async function applyPlans(
   // `FOR SHARE` then never waits on a node in file order against a tree write.
   await lockCsvCostCenters(input.manager, input.tenantId, plans.map((plan) => plan.body.cost_center_id as string | null | undefined));
   const supplierIds = await createSuppliers(input.manager, input.tenantId, plans, audits);
-  const dimensionIds = await createDimensionValues(input.manager, input.tenantId, plans, audits);
+  const dimensionIds = await createDimensionValues(input.manager, input.scope, input.tenantId, plans, audits);
   const storedById = new Map(stored.map((line) => [line.id, line]));
   const rounds = await loadRounds(input, plans, storedById);
 
@@ -777,13 +778,15 @@ async function createSuppliers(
 
 async function createDimensionValues(
   manager: EntityManager,
+  scope: BudgetFileScope,
   tenantId: string,
   plans: BudgetFileLinePlan[],
   audits: AuditRow[],
 ): Promise<Map<string, string>> {
   const axes = await loadAnalyticsAxes(manager, tenantId);
   const ids = new Map<string, string>();
-  for (const axis of axes) if (axis.status === 'enabled') ids.set(`axis:${axis.code}`, axis.id);
+  // The file's columns: enabled dimensions of its line type (the reader refused the others).
+  for (const axis of axes) if (axis.status === 'enabled' && axisAppliesTo(axis, scope)) ids.set(`axis:${axis.code}`, axis.id);
   const wanted = new Map<string, { axisId: string; code: string; name: string }>();
   for (const plan of plans) {
     for (const change of plan.analytics) {

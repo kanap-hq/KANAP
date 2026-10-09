@@ -834,6 +834,51 @@ async function testAnalyticsDimensions(kind: Kind) {
 }
 
 /**
+ * Nature applies to the other line type only: Alpha's and Bravo's values stay
+ * in the database and are hidden. The rows carry no key for it, the quick
+ * search does not find its values, a filter or a sort on it does not fail.
+ * Given to the list's own type, it shows as before.
+ */
+async function testOtherTypeDimensionHidden(kind: Kind) {
+  await withFixture(kind, async (runner, { tenantId, ids }, svc) => {
+    const opts = { manager: runner.manager };
+    const a = await seedAnalytics(runner, tenantId, kind, ids);
+    const natureKey = `analytics_${a.nature}`;
+    const defaultKey = `analytics_${a.defaultAxis}`;
+    const other: Kind = kind === 'opex' ? 'capex' : 'opex';
+    const idsOf = (page: any) => page.items.map((item: any) => item.id).sort();
+
+    await runner.query(`UPDATE analytics_axes SET applies_to = $2 WHERE tenant_id = $1 AND id = $3`, [tenantId, kind, a.nature]);
+    const own = await svc.summary({ ...ALL, limit: 100 }, opts);
+    const alphaOwn = own.items.find((item: any) => item.id === ids.alpha);
+    assert.equal(alphaOwn[natureKey], 'Subscriptions', `${kind}: a dimension of the list's type shows`);
+    assert.deepEqual(idsOf(await svc.summary({ ...ALL, q: 'maintenance' }, opts)), [ids.bravo], `${kind}: and is searched`);
+
+    await runner.query(`UPDATE analytics_axes SET applies_to = $2 WHERE tenant_id = $1 AND id = $3`, [tenantId, other, a.nature]);
+    const { items } = await svc.summary({ ...ALL, limit: 100 }, opts);
+    const alpha = items.find((item: any) => item.id === ids.alpha);
+    assert.ok(!(natureKey in alpha), `${kind}: no key for a dimension of the other type`);
+    assert.deepEqual(alpha.analytics_value_ids, { [a.defaultAxis]: a.licences }, `${kind}: no hidden value id`);
+    assert.equal(alpha[defaultKey], 'Licences', `${kind}: the default dimension is unaffected`);
+    const [stored] = await runner.query(
+      `SELECT count(*)::int AS n FROM ${SUMMARY_SCOPES[kind].analyticsLink.table} WHERE tenant_id = $1 AND axis_id = $2`,
+      [tenantId, a.nature],
+    );
+    assert.equal(stored.n, 2, `${kind}: the hidden values stay in the database`);
+
+    assert.deepEqual(idsOf(await svc.summary({ ...ALL, q: 'maintenance' }, opts)), [], `${kind}: the quick search skips a hidden value`);
+    const bySet = await svc.summary({ ...ALL, filters: filters({ [natureKey]: { filterType: 'set', values: ['Maintenance'] } }) }, opts);
+    assert.deepEqual(idsOf(bySet), [], `${kind}: a filter on a hidden value keeps no line, without an error`);
+    const byId = await svc.summary({ ...ALL, filters: filters({ [`analytics_id_${a.nature}`]: { filterType: 'set', values: [a.maintenance] } }) }, opts);
+    assert.deepEqual(idsOf(byId), [], `${kind}: nor on its value id`);
+    const sorted = await svc.summary({ ...ALL, sort: `${natureKey}:ASC` }, opts);
+    assert.equal(sorted.items.length, 5, `${kind}: a sort on it does not fail`);
+    const values = await svc.summaryFilterValues({ ...ALL, fields: natureKey }, opts);
+    assert.ok(!(values[natureKey] ?? []).some((value: unknown) => value === 'Maintenance' || value === 'Subscriptions'), `${kind}: no hidden filter value`);
+  });
+}
+
+/**
  * FTE on the fixture, as a lines write stores it on the round: Alpha's Budget
  * of Y 1.5, Bravo's 0 (pieces only), Charlie's round has no lines (unknown),
  * Echo holds lines of Y after its end of validity, Alpha's Forecast of Y+3
@@ -987,6 +1032,7 @@ void runSpecs('budget-summary.integration.spec', [
     [`cost center and run or build (${kind})`, () => testCostCenterFields(kind)],
     [`budget holder from the cost center (${kind})`, () => testBudgetHolder(kind)],
     [`analytics dimensions (${kind})`, () => testAnalyticsDimensions(kind)],
+    [`a dimension of the other line type is hidden (${kind})`, () => testOtherTypeDimensionHidden(kind)],
     [`FTE fields and totals (${kind})`, () => testFteFields(kind)],
   ]),
   ['CAPEX enums sort in business order', testCapexEnumsSortInBusinessOrder],

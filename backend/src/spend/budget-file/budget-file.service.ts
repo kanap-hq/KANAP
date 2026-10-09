@@ -7,7 +7,7 @@ import { readBudgetLineMeta } from '../item-meta';
 import { buildBudgetExport, fileNameOfExport, parseAmountYears, parseDetail, parseFileColumns, shownFileColumns } from './export-file';
 import { importBudgetFile, BudgetFileAudit, BudgetFileFreeze, BudgetFileImportResult, BudgetFileItems, parseBudgetSnapshot } from './import-file';
 import { interpretBudgetFile, readBudgetCsv } from './interpret';
-import { loadDimensionCodes, loadExportLines, loadPreflight } from './load';
+import { loadExportLines, loadFileDimensions, loadPreflight } from './load';
 import { buildPreflight, changedSinceText } from './preflight';
 import { BudgetFileReport, BudgetFileScope, emptyCatalog } from './types';
 
@@ -44,8 +44,10 @@ export class BudgetFileService {
     const language = await languageOf(manager, caller.tenantId, caller.userId, options.language);
     const dateOrder = parseDateOrder(options.dateOrder);
     const decimalMark = parseDecimalMark(options.decimalMark);
-    const dimensionCodes = await loadDimensionCodes(manager, caller.tenantId);
-    const read = await readBudgetCsv(file, { scope, language, dimensionCodes, dateOrder, decimalMark });
+    const dimensions = await loadFileDimensions(manager, caller.tenantId, scope);
+    const read = await readBudgetCsv(file, {
+      scope, language, dimensionCodes: dimensions.codes, refusedDimensions: dimensions.refused, dateOrder, decimalMark,
+    });
     const currentYear = new Date().getFullYear();
     if (read.fileErrors.length > 0 || read.headerErrors.length > 0) {
       return buildPreflight({

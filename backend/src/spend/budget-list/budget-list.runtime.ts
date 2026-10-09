@@ -14,7 +14,10 @@ export interface BudgetListRuntime {
   tenantId: string;
   currentYear: number;
   fx?: FxTable;
-  /** The tenant's analytics dimensions; the default one (at most one per tenant). */
+  /**
+   * The tenant's analytics dimensions that apply to the scope's lines (a value held on a
+   * dimension of the other type reads as no value); the default one (at most one per tenant).
+   */
   axes?: { ids: string[]; defaultAxisId: string | null };
   /** Every cost centre of the tenant with the builder's code, name, path and budget holder. */
   costCenters?: Array<{ id: string; code: string; name: string; path: string; holder_id: string | null; holder_name: string | null }>;
@@ -94,7 +97,11 @@ export async function loadBudgetRuntime(
   }
   if (needs.axes) {
     tasks.push(
-      manager.query(`SELECT ax.id, ax.is_default FROM analytics_axes ax WHERE ax.tenant_id = $1`, [tenantId]).then((rows: Array<{ id: string; is_default: boolean }>) => {
+      manager.query(
+        `SELECT ax.id, ax.is_default FROM analytics_axes ax
+          WHERE ax.tenant_id = $1 AND (ax.applies_to IS NULL OR ax.applies_to = $2)`,
+        [tenantId, scope.scope],
+      ).then((rows: Array<{ id: string; is_default: boolean }>) => {
         let defaultAxisId: string | null = null;
         for (const row of rows) if (row.is_default) defaultAxisId = row.id;
         runtime.axes = { ids: rows.map((row) => row.id), defaultAxisId };

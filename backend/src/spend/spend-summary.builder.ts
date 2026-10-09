@@ -693,10 +693,12 @@ async function loadCostCentersForRows(
 type ItemAnalyticsValue = { category_id: string; name: string | null };
 
 /**
- * The tenant's analytics dimensions and the values the items hold on them, in
- * one query: every dimension comes back at least once (with no link when no
- * item has a value on it), then once per link row of the given items. A tenant
- * without dimensions reads as none (read paths never create the default).
+ * The tenant's analytics dimensions that apply to the scope's lines and the
+ * values the items hold on them, in one query: every such dimension comes back
+ * at least once (with no link when no item has a value on it), then once per
+ * link row of the given items. A value held on a dimension of the other line
+ * type stays hidden. A tenant without dimensions reads as none (read paths
+ * never create the default).
  */
 async function loadAnalyticsForRows(
   config: SummaryScopeConfig,
@@ -714,9 +716,9 @@ async function loadAnalyticsForRows(
        LEFT JOIN ${config.analyticsLink.table} v
          ON v.tenant_id = $1 AND v.axis_id = ax.id AND v.item_id = ANY($2::uuid[])
        LEFT JOIN analytics_categories c ON c.id = v.category_id AND c.tenant_id = $1
-       WHERE ax.tenant_id = $1
+       WHERE ax.tenant_id = $1 AND (ax.applies_to IS NULL OR ax.applies_to = $3)
        ORDER BY ax.sort_order, ax.id`, // the dimensions' order, whatever the plan: the rows' keys come in it
-      [tenantId, itemIds],
+      [tenantId, itemIds, config.scope],
     );
   const axisIds = new Set<string>();
   const activeAxisIds = new Set<string>();

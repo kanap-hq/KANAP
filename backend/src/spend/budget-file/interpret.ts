@@ -54,11 +54,16 @@ export async function readBudgetCsv(
     scope: BudgetFileScope;
     language: CsvLanguage;
     dimensionCodes: readonly string[];
+    /** Enabled dimensions of the other line type: code → header error (`loadFileDimensions`). */
+    refusedDimensions?: Readonly<Record<string, string>>;
     dateOrder?: CsvDateOrder;
     decimalMark?: DecimalMark;
   },
 ): Promise<CsvReadResult> {
-  const read = await readCsv(input, budgetFileSchema(options.scope, options.language, options.dimensionCodes, options.dateOrder, options.decimalMark));
+  const read = await readCsv(
+    input,
+    budgetFileSchema(options.scope, options.language, options.dimensionCodes, options.dateOrder, options.decimalMark, options.refusedDimensions),
+  );
   if (!isOldBudgetLayout(read.rawHeaders)) return read;
   return {
     ...read,

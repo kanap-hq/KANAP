@@ -10,6 +10,9 @@ import { Tenant } from '../../tenants/tenant.entity';
 import { TenantsService } from '../../tenants/tenants.service';
 import { UserPageRole } from '../../permissions/user-page-role.entity';
 import { StatusState } from '../../common/status';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
+import { AnalyticsAxisCreateDto, AnalyticsAxisUpdateDto } from '../dto/analytics.dto';
 import {
   ensureDefaultAnalyticsAxis,
   loadAnalyticsAxes,
@@ -30,7 +33,8 @@ import {
 // dimension (one per tenant, locked, an identity that survives renames and
 // reorders), codes and names, deletes, a value's fixed dimension, the same
 // value name in two dimensions, value deletes (single and bulk), the list
-// scope, and the tenant bootstrap. The cross-tenant cases live in
+// scope, the line types a dimension applies to (`applies_to`), and the tenant
+// bootstrap. The cross-tenant cases live in
 // analytics-axes-tenant-isolation.integration.spec.ts.
 
 async function testOneDefaultPerTenant() {
@@ -433,6 +437,78 @@ async function testNewTenantHasItsDefault() {
 
 void dataSource;
 
+async function testAppliesTo() {
+  await withRollback(async (runner) => {
+    const tenantId = await seedTenant(runner, 'applies');
+    const { axes: svc } = services(runner.manager);
+    const ctx = context(runner.manager, tenantId);
+    const defaultId = await ensureDefaultAnalyticsAxis(runner.manager, tenantId);
+
+    // Create: absent is both (null), and each value is stored and returned.
+    const both = await svc.create({ code: 'both', name: 'Both' }, ctx);
+    assert.equal(both.applies_to, null);
+    const opex = await svc.create({ code: 'recurrence', name: 'Recurrence', applies_to: 'opex' }, ctx);
+    assert.equal(opex.applies_to, 'opex');
+    const capex = await svc.create({ code: 'ppe', name: 'PP&E type', applies_to: 'capex' }, ctx);
+    assert.equal(capex.applies_to, 'capex');
+    const explicitNull = await svc.create({ code: 'nulled', name: 'Nulled', applies_to: null }, ctx);
+    assert.equal(explicitNull.applies_to, null);
+
+    // Update: absent keeps, null clears, each value is written.
+    assert.equal((await svc.update(opex.id, { name: 'Recurrence 2' }, ctx)).applies_to, 'opex', 'absent keeps');
+    assert.equal((await svc.update(opex.id, { applies_to: 'capex' }, ctx)).applies_to, 'capex');
+    assert.equal((await svc.update(opex.id, { applies_to: null }, ctx)).applies_to, null, 'null clears');
+    assert.equal((await svc.update(both.id, { applies_to: 'opex' }, ctx)).applies_to, 'opex');
+
+    // The audit carries the field before and after.
+    const [audit] = await runner.query(
+      `SELECT before_json, after_json FROM audit_log
+        WHERE tenant_id = $1 AND table_name = 'analytics_axes' AND record_id = $2 AND action = 'update'
+        ORDER BY created_at DESC, id DESC LIMIT 1`,
+      [tenantId, both.id],
+    );
+    assert.equal(audit.before_json.applies_to, null);
+    assert.equal(audit.after_json.applies_to, 'opex');
+
+    // An invalid value: refused by the service and by the DTO.
+    await expectRefused(runner, /^Used for must be 'opex', 'capex' or empty\./, () =>
+      svc.update(capex.id, { applies_to: 'both' }, ctx));
+    await expectRefused(runner, /^Used for must be/, () =>
+      svc.create({ code: 'bad', name: 'Bad', applies_to: 'everything' }, ctx));
+    for (const Dto of [AnalyticsAxisCreateDto, AnalyticsAxisUpdateDto]) {
+      const invalid = await validate(plainToInstance(Dto, { code: 'x', applies_to: 'both' }));
+      assert.ok(invalid.some((error) => error.property === 'applies_to'), `${Dto.name} refuses 'both'`);
+      for (const valid of ['opex', 'capex', null]) {
+        const errors = await validate(plainToInstance(Dto, { code: 'x', applies_to: valid }));
+        assert.ok(!errors.some((error) => error.property === 'applies_to'), `${Dto.name} accepts ${valid}`);
+      }
+    }
+
+    // The default dimension applies to both: refused by the service, then by the CHECK.
+    await expectRefused(runner, /^The default dimension applies to OPEX and CAPEX lines\./, () =>
+      svc.update(defaultId, { applies_to: 'opex' }, ctx));
+    await svc.update(defaultId, { applies_to: null }, ctx);
+    await expectRefused(runner, /analytics_axes_default_applies_check/, () => runner.query(
+      `UPDATE analytics_axes SET applies_to = 'capex' WHERE tenant_id = $1 AND id = $2`,
+      [tenantId, defaultId],
+    ));
+    await expectRefused(runner, /analytics_axes_applies_to_check/, () => runner.query(
+      `UPDATE analytics_axes SET applies_to = 'both' WHERE tenant_id = $1 AND id = $2`,
+      [tenantId, capex.id],
+    ));
+
+    // List, get and the shared loader return it.
+    const listed = new Map((await svc.list(ctx)).items.map((axis) => [axis.id, axis.applies_to]));
+    assert.equal(listed.get(defaultId), null);
+    assert.equal(listed.get(both.id), 'opex');
+    assert.equal(listed.get(capex.id), 'capex');
+    assert.equal((await svc.get(capex.id, ctx)).applies_to, 'capex');
+    const loaded = new Map((await loadAnalyticsAxes(runner.manager, tenantId)).map((axis) => [axis.id, axis.applies_to]));
+    assert.equal(loaded.get(capex.id), 'capex');
+    assert.equal(loaded.get(opex.id), null);
+  });
+}
+
 runSpecs('analytics-axes.integration.spec', [
   testOneDefaultPerTenant,
   testDefaultIsLocked,
@@ -446,6 +522,7 @@ runSpecs('analytics-axes.integration.spec', [
   testValueDelete,
   testListScopeAndFilters,
   testNewTenantHasItsDefault,
+  testAppliesTo,
 ]).catch((err) => {
   console.error(err);
   process.exit(1);
