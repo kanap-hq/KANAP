@@ -576,7 +576,7 @@ These connections stay on the server: loopback or the Docker networks.
 | API container → object storage | 9000 | Same path. In the installation example the storage listens on `172.17.0.1` only. |
 | API container → mail relay on the server | Its `SMTP_PORT` | Only when the relay runs on the KANAP server. Same path: the relay listens on `172.17.0.1`, and the rule allows its port from `172.16.0.0/12`. |
 
-`172.16.0.0/12` covers every network Docker creates by default. A narrower rule uses the network of the KANAP containers: after the first start, `docker network inspect infra_default` shows its subnet.
+By default, Docker gives its first 15 networks ranges inside `172.16.0.0/12` (`172.17.0.0/16` to `172.31.0.0/16`), then `/20` blocks of `192.168.0.0/16`. On a fresh server the KANAP containers use `172.18.0.0/16`. A server that already has many Docker networks can place them in `192.168.x.x`, outside these rules. After the first start, `docker network inspect infra_default` shows their subnet. If it is outside `172.16.0.0/12`, add it to the firewall rules and to the PostgreSQL `pg_hba.conf` line. The same subnet also gives a narrower rule.
 
 ## Background jobs
 

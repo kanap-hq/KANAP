@@ -162,7 +162,7 @@ The commands print `CREATE DATABASE`, `CREATE ROLE` and `GRANT`, then `CREATE EX
 
 ### Allow connections from Docker containers
 
-PostgreSQL must listen beyond `localhost` and accept the application role from the Docker networks. `172.16.0.0/12` covers every network Docker creates by default. The firewall of step 2 keeps the port closed to the rest of the network.
+PostgreSQL must listen beyond `localhost` and accept the application role from the Docker networks. On a fresh server, Docker puts KANAP's network in `172.16.0.0/12` (usually `172.18.0.0/16`), so the line below allows it. Step 5 shows how to check this after the first start. The firewall of step 2 keeps the port closed to the rest of the network.
 
 ```bash
 . ~/kanap-install.env
@@ -254,7 +254,7 @@ for i in $(seq 1 30); do ss -ltn | grep -q '172.17.0.1:9000' && break; sleep 1; 
 ss -ltn | grep '172.17.0.1:9000'
 ```
 
-The last line must show `172.17.0.1:9000` listening. The `After=docker.service` drop-in makes the service start once Docker has created the bridge address. If Docker uses another bridge address (`ip -4 addr show docker0`), put that address in `RUSTFS_ADDRESS`. Docker creates its networks in the ranges of its `default-address-pools` setting: `172.17.0.0/16` and up in `172.16.0.0/12` by default. After the first start (step 7), `docker network inspect infra_default` shows KANAP's own network. If your Docker networks are outside `172.16.0.0/12`, replace that range in the firewall rules of step 2 and in the `pg_hba.conf` line of step 4.
+The last line must show `172.17.0.1:9000` listening. The `After=docker.service` drop-in makes the service start once Docker has created the bridge address. If Docker uses another bridge address (`ip -4 addr show docker0`), put that address in `RUSTFS_ADDRESS`. By default, Docker gives its first 15 networks the ranges `172.17.0.0/16` to `172.31.0.0/16`, all inside `172.16.0.0/12`. Further networks get `/20` blocks of `192.168.0.0/16`. On a fresh server KANAP's network is `172.18.0.0/16`. On a server that already has 13 or more Docker networks besides the default bridge, it can land in `192.168.x.x`. After the first start (step 7), `docker network inspect infra_default` shows KANAP's network. If it is outside `172.16.0.0/12`, add its range to the firewall rules of step 2 and to the `pg_hba.conf` line of step 4. If your `default-address-pools` setting differs, replace the range instead.
 
 `RUSTFS_SSE_S3_MASTER_KEY` is the key that encrypts the files at rest. KANAP asks for encryption at rest on uploads. Without the key RustFS refuses the request and the API logs a `PutObject fallback used` warning. **Keep this key with your server configuration backup**: files encrypted with it cannot be read without it.
 
