@@ -9,9 +9,7 @@ export function isRateLimitEnabled(): boolean {
   return parseEnvBoolean(process.env.RATE_LIMIT_ENABLED, true);
 }
 
-export function shouldTrustProxyForRateLimit(): boolean {
-  return parseEnvBoolean(process.env.RATE_LIMIT_TRUST_PROXY, false);
-}
+// The limits count per client address: see common/client-address.ts (RATE_LIMIT_TRUST_PROXY).
 
 // TTL values are in milliseconds.
 export const RATE_LIMITS = {

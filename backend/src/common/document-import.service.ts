@@ -5,6 +5,7 @@ import * as path from 'node:path';
 import { promisify } from 'node:util';
 import { BadRequestException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { ARCHIVE_MAX_ENTRY_BYTES, ARCHIVE_MAX_TOTAL_BYTES, openBoundedArchive } from './archive-limits';
+import { converterEnv } from './converter-env';
 import { IMPORTABLE_MIME_TYPES } from './dto/import-document.dto';
 import { validateUploadedFile } from './upload-validation';
 import { VectorImageConversionService } from './vector-image-conversion.service';
@@ -162,6 +163,7 @@ export class DocumentImportService {
       ],
       {
         cwd: tempDir,
+        env: await converterEnv(tempDir),
         timeout: PANDOC_TIMEOUT_MS,
         maxBuffer: PANDOC_MAX_BUFFER_BYTES,
       },
