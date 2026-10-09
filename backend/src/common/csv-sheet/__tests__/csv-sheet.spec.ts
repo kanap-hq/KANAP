@@ -20,6 +20,8 @@ import {
   resolveAmountConvention,
   resolveDateOrder,
   writeCsv,
+  writeCsvHeader,
+  writeCsvRows,
 } from '../index';
 
 // The shared reader and writer. Importers are not involved: this file never
@@ -588,6 +590,20 @@ async function testRoundTrip() {
   assert.deepEqual(readTemplate.fileErrors, []);
 }
 
+function testHeaderWithoutBom() {
+  const headers = ['name', 'notes'];
+  // By default the header line starts with a BOM, like writeCsv.
+  assert.equal(writeCsvHeader('en', headers), '\uFEFFname,notes\n');
+  assert.equal(writeCsvHeader('fr', headers, {}), '\uFEFFname;notes\n');
+  assert.equal(writeCsvHeader('en', headers, { bom: true }), '\uFEFFname,notes\n');
+  // `bom: false` writes the same line without it; quoting and the formula guard are unchanged.
+  assert.equal(writeCsvHeader('en', headers, { bom: false }), 'name,notes\n');
+  assert.equal(writeCsvHeader('en', ['=name', 'a,b'], { bom: false }), `'=name,"a,b"\n`);
+  const rows = writeCsvRows({ language: 'en', headers, rows: [['Café', '=SUM(A1)']] });
+  assert.equal(writeCsvHeader('en', headers, { bom: false }) + rows, "name,notes\nCafé,'=SUM(A1)\n");
+  assert.equal(writeCsvHeader('en', headers) + rows, writeCsv({ language: 'en', headers, rows: [['Café', '=SUM(A1)']] }));
+}
+
 async function testRowCap() {
   const ok = ['name', ...Array.from({ length: 20_000 }, (_, index) => `n${index}`)].join('\n');
   const accepted = await readCsv(ok, { fields: ['name'], language: 'en' });
@@ -616,6 +632,7 @@ async function main() {
   await testReadingShape();
   await testEncodingAndDamage();
   await testRoundTrip();
+  testHeaderWithoutBom();
   await testRowCap();
   console.log('csv-sheet.spec: ok');
 }

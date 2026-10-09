@@ -12,7 +12,7 @@ import type { AuditEntry } from './audit.service';
  *   hash or link, and no e-mail address (an attempt on an unknown address keeps its reason only).
  *   Kept AUTH_EVENT_RETENTION_DAYS days (cleanup/auth-event-retention.service.ts);
  * - exports: `table_name = 'export'`, `action = 'export'`, the person in `user_id`, and
- *   `after_json = { resource, path }` (export-events.interceptor.ts): every route whose path ends
+ *   `after_json = { resource, path, ip, user_agent }` (export-events.interceptor.ts): every route whose path ends
  *   with `/export`, and the other routes that send a file the server produces, marked
  *   `@ExportRoute()`.
  */
@@ -179,8 +179,14 @@ export function exportResource(path: string): string {
   return segments.join('/') || 'document';
 }
 
-/** The audit row of an export: the route's resource and the path asked for, without its query (500 characters at most). */
-export function exportEventEntry(routePath: string, req: { path?: unknown; user?: { sub?: unknown } } | null | undefined): AuditEntry {
+/**
+ * The audit row of an export: the route's resource, the path asked for without its query
+ * (500 characters at most), and the client address and user agent (authEventDetails).
+ */
+export function exportEventEntry(
+  routePath: string,
+  req: ({ path?: unknown; user?: { sub?: unknown } } & NonNullable<RequestLike>) | null | undefined,
+): AuditEntry {
   const userId = typeof req?.user?.sub === 'string' && req.user.sub ? req.user.sub : null;
   const path = (typeof req?.path === 'string' && req.path ? req.path : routePath).slice(0, 500);
   return {
@@ -188,7 +194,7 @@ export function exportEventEntry(routePath: string, req: { path?: unknown; user?
     recordId: null,
     action: EXPORT_EVENT_ACTION,
     before: null,
-    after: { resource: exportResource(routePath), path },
+    after: { resource: exportResource(routePath), path, ...authEventDetails(req) },
     userId,
     source: 'user',
     sourceRef: null,

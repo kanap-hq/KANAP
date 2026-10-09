@@ -6,14 +6,27 @@
 #   ci-changes.sh <base> <head>  jobs for the files changed on <head> since its merge base with <base>
 #   ci-changes.sh --stdin        jobs for the file list read on stdin (local tests)
 #
-# Rules: backend/** -> backend; frontend/** -> frontend; .github/workflows/** and
-# .github/scripts/** -> both; onprem = backend or frontend, or the marketing lockfile (the onprem
-# job checks the integrity hashes of every lockfile). images = a Dockerfile or .dockerignore,
-# infra/**, frontend/nginx/**, marketing/web/nginx.conf, a package.json or a lockfile, the API
-# tsconfig files, start-up script and script helpers, or a CI file (the images job builds the
-# images and checks the compose files). Everything else (doc/, the rest of marketing/, .agents/, root
-# files) runs no job: no job reads it.
+# Rules: backend/** -> backend; frontend/** -> frontend, and backend too for a frontend module that
+# backend code imports (specs that check both sides agree, such as the audit log labels);
+# .github/workflows/** and .github/scripts/** -> both; onprem = backend or frontend, or the
+# marketing lockfile (the onprem job checks the integrity hashes of every lockfile). images = a
+# Dockerfile or .dockerignore, infra/**, frontend/nginx/**, marketing/web/nginx.conf, a package.json
+# or a lockfile, the API tsconfig files, start-up script and script helpers, or a CI file (the images
+# job builds the images and checks the compose files). Everything else (doc/, the rest of
+# marketing/, .agents/, root files) runs no job: no job reads it.
 set -euo pipefail
+
+repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+
+# The frontend modules imported by backend code, one per line, as repository paths without
+# extension (`import ... from '../../../../frontend/src/pages/admin/auditLogLabels'` gives
+# `frontend/src/pages/admin/auditLogLabels`), read from the checked-out tree.
+backend_imported_frontend_modules() {
+  [ -d "$repo_root/backend/src" ] || return 0
+  grep -rhoE --include='*.ts' "from ['\"](\.\./)+frontend/src/[^'\"]+['\"]" "$repo_root/backend/src" 2>/dev/null \
+    | sed -E "s#^from ['\"](\.\./)+##; s#['\"]\$##" \
+    | sort -u || true
+}
 
 emit() {
   echo "Decision: backend=$1 frontend=$2 onprem=$3 images=$4"
@@ -53,13 +66,23 @@ show() {
 }
 
 classify() {
-  local backend=() frontend=() shared=() lockfiles=() images=() other=() f
+  local backend=() frontend=() imported=() shared=() lockfiles=() images=() other=() f module
+  local imported_modules
+  imported_modules=$(backend_imported_frontend_modules)
   while IFS= read -r f; do
     [ -z "$f" ] && continue
     if is_image_file "$f"; then images+=("$f"); fi
     case "$f" in
       backend/*) backend+=("$f") ;;
-      frontend/*) frontend+=("$f") ;;
+      frontend/*)
+        frontend+=("$f")
+        # The module path: no extension, and a folder's index file is the folder.
+        module=${f%.*}
+        module=${module%/index}
+        if [ -n "$imported_modules" ] && grep -qxF -- "$module" <<<"$imported_modules"; then
+          imported+=("$f")
+        fi
+        ;;
       .github/workflows/* | .github/scripts/*) shared+=("$f") ;;
       marketing/web/package-lock.json) lockfiles+=("$f") ;;
       *) is_image_file "$f" || other+=("$f") ;;
@@ -68,13 +91,14 @@ classify() {
 
   show "Backend files" ${backend[@]+"${backend[@]}"}
   show "Frontend files" ${frontend[@]+"${frontend[@]}"}
+  show "Frontend files imported by backend code (run backend too)" ${imported[@]+"${imported[@]}"}
   show "CI files (run every job)" ${shared[@]+"${shared[@]}"}
   show "Other lockfiles (run onprem)" ${lockfiles[@]+"${lockfiles[@]}"}
   show "Image and compose files (run images)" ${images[@]+"${images[@]}"}
   show "Files no job reads" ${other[@]+"${other[@]}"}
 
   local b=false fe=false o=false im=false
-  if [ "${#backend[@]}" -gt 0 ] || [ "${#shared[@]}" -gt 0 ]; then b=true; fi
+  if [ "${#backend[@]}" -gt 0 ] || [ "${#imported[@]}" -gt 0 ] || [ "${#shared[@]}" -gt 0 ]; then b=true; fi
   if [ "${#frontend[@]}" -gt 0 ] || [ "${#shared[@]}" -gt 0 ]; then fe=true; fi
   if [ "$b" = true ] || [ "$fe" = true ] || [ "${#lockfiles[@]}" -gt 0 ]; then o=true; fi
   if [ "${#images[@]}" -gt 0 ] || [ "${#shared[@]}" -gt 0 ]; then im=true; fi

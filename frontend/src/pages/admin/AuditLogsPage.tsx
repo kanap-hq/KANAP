@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Alert,
   Box,
+  Button,
   CircularProgress,
   Dialog,
   DialogContent,
@@ -20,7 +21,16 @@ import CheckboxSetFilter from '../../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
 import { useLocale } from '../../i18n/useLocale';
 import { formatShortDateTime } from '../../lib/dateFormat';
-import { getWithListContext } from '../../lib/listContext';
+import { getWithListContext, withListContext } from '../../lib/listContext';
+import { downloadBlob, extractFilenameFromDisposition } from '../../utils/downloadBlob';
+import {
+  AUTH_EVENT_TABLE,
+  EXPORT_EVENT_TABLE,
+  auditReasonLabel,
+  auditTableFilterLabel,
+  auditTableLabel,
+  auditUserLabel,
+} from './auditLogLabels';
 
 type AuditLogItem = {
   id: string;
@@ -38,6 +48,10 @@ type AuditLogItem = {
   created_at: string;
 };
 
+/** The header the server sets on an export that stopped at its row limit (the limit). */
+const EXPORT_TRUNCATED_HEADER = 'x-export-truncated';
+/** Plain text in the secondary colour, like the other text columns of the grid. */
+const SECONDARY_CELL_STYLE: Record<string, string> = { color: 'var(--kanap-text-secondary)' };
 
 function formatJson(value: any): string {
   if (value == null) return 'null';
@@ -65,6 +79,38 @@ export default function AuditLogsPage() {
   const [open, setOpen] = React.useState(false);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [selectedRow, setSelectedRow] = React.useState<AuditLogItem | null>(null);
+  const lastQueryRef = React.useRef<{ sort: string; filterModel: any; q: string } | null>(null);
+  const [exporting, setExporting] = React.useState(false);
+  const [exportNotice, setExportNotice] = React.useState<{ severity: 'info' | 'error'; text: string } | null>(null);
+
+  // The rows the list shows (its filters, search and sort), as a CSV file made by the server.
+  const handleExport = React.useCallback(async () => {
+    setExporting(true);
+    setExportNotice(null);
+    try {
+      const state = lastQueryRef.current;
+      const params: Record<string, unknown> = {};
+      if (state?.sort) params.sort = state.sort;
+      if (state?.q) params.q = state.q;
+      if (state?.filterModel && Object.keys(state.filterModel).length > 0) params.filters = JSON.stringify(state.filterModel);
+      // Filters too long for a URL go as the list's saved context.
+      const sent = await withListContext('/audit-logs', params);
+      const res = await api.get<Blob>('/audit-logs/export', { params: sent, responseType: 'blob' });
+      const headers = (res.headers ?? {}) as Record<string, unknown>;
+      const disposition = (headers['content-disposition'] ?? headers['Content-Disposition']) as string | undefined;
+      const filename = extractFilenameFromDisposition(disposition) || 'audit-log.csv';
+      downloadBlob(new Blob([res.data], { type: 'text/csv;charset=utf-8' }), filename);
+      const limit = Number(headers[EXPORT_TRUNCATED_HEADER] ?? headers['X-Export-Truncated']);
+      if (Number.isFinite(limit) && limit > 0) {
+        setExportNotice({ severity: 'info', text: t('auditLogs.export.truncated', { limit: limit.toLocaleString(locale) }) });
+      }
+    } catch (error: any) {
+      const status = error?.response?.status;
+      setExportNotice({ severity: 'error', text: t(status === 429 ? 'auditLogs.export.tooMany' : 'auditLogs.export.failed') });
+    } finally {
+      setExporting(false);
+    }
+  }, [locale, t]);
 
   const detailQuery = useQuery({
     queryKey: ['audit-log-entry', selectedId],
@@ -119,7 +165,9 @@ export default function AuditLogsPage() {
         floatingFilterComponent: CheckboxSetFloatingFilter,
         filterParams: {
           getValues: getFilterValues('table_name'),
+          labelFormatter: (value: string | null) => auditTableFilterLabel(value, t),
         },
+        valueFormatter: (p: any) => auditTableLabel(p.data, t),
       },
       {
         field: 'action',
@@ -129,16 +177,14 @@ export default function AuditLogsPage() {
         floatingFilterComponent: CheckboxSetFloatingFilter,
         filterParams: {
           getValues: getFilterValues('action'),
+          labelFormatter: (value: string | null) => (value ? t(`auditLogs.actions.${value}`, { defaultValue: value }) : t('auditLogs.shared.empty')),
           searchable: false,
         },
-        cellRenderer: (p: any) => {
+        valueFormatter: (p: any) => {
           const value = String(p.value || '').toLowerCase();
-          return (
-            <Typography variant="body2" color="text.secondary">
-              {value ? t(`auditLogs.actions.${value}`, { defaultValue: value }) : t('auditLogs.shared.empty')}
-            </Typography>
-          );
+          return value ? t(`auditLogs.actions.${value}`, { defaultValue: value }) : t('auditLogs.shared.empty');
         },
+        cellStyle: SECONDARY_CELL_STYLE,
       },
       {
         field: 'source',
@@ -148,16 +194,14 @@ export default function AuditLogsPage() {
         floatingFilterComponent: CheckboxSetFloatingFilter,
         filterParams: {
           getValues: getFilterValues('source'),
+          labelFormatter: (value: string | null) => t(`auditLogs.sources.${value || 'system'}`, { defaultValue: value || 'system' }),
           searchable: false,
         },
-        cellRenderer: (p: any) => {
+        valueFormatter: (p: any) => {
           const value = String(p.value || 'system').toLowerCase();
-          return (
-            <Typography variant="body2" color="text.secondary">
-              {t(`auditLogs.sources.${value}`, { defaultValue: value })}
-            </Typography>
-          );
+          return t(`auditLogs.sources.${value}`, { defaultValue: value });
         },
+        cellStyle: SECONDARY_CELL_STYLE,
       },
       {
         field: 'record_id',
@@ -175,20 +219,7 @@ export default function AuditLogsPage() {
         field: 'user_email',
         headerName: t('auditLogs.columns.user'),
         width: 220,
-        valueGetter: (p: any) => {
-          const email = p.data?.user_email;
-          const userId = p.data?.user_id;
-          const source = String(p.data?.source || '').toLowerCase();
-          if (email) return email;
-          if (userId) {
-            return t('auditLogs.values.unknownUser', {
-              id: String(userId).slice(0, 8),
-              defaultValue: `Unknown (${String(userId).slice(0, 8)}...)`,
-            });
-          }
-          if (source === 'webhook') return t('auditLogs.sources.webhook');
-          return t('auditLogs.sources.system');
-        },
+        valueGetter: (p: any) => auditUserLabel(p.data, t),
       },
       {
         field: 'user_id',
@@ -208,7 +239,11 @@ export default function AuditLogsPage() {
         headerName: t('auditLogs.columns.sourceRef'),
         width: 220,
         defaultHidden: true,
-        cellStyle: { fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace", fontSize: '12px', color: 'var(--kanap-text-secondary)', fontVariantNumeric: 'tabular-nums' },
+        // A sign-in or session reason reads as text; other references stay technical.
+        valueFormatter: (p: any) => auditReasonLabel(p.data, t),
+        cellStyle: (p: any): Record<string, string> => (p.data?.table_name === AUTH_EVENT_TABLE
+          ? { color: 'var(--kanap-text-secondary)' }
+          : { fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace", fontSize: '12px', color: 'var(--kanap-text-secondary)', fontVariantNumeric: 'tabular-nums' }),
       },
       {
         field: 'tenant_id',
@@ -226,7 +261,19 @@ export default function AuditLogsPage() {
 
   return (
     <>
-      <PageHeader title={t('auditLogs.title')} />
+      <PageHeader
+        title={t('auditLogs.title')}
+        actions={(
+          <Button variant="action" onClick={() => { void handleExport(); }} disabled={exporting}>
+            {t('auditLogs.export.button')}
+          </Button>
+        )}
+      />
+      {exportNotice && (
+        <Alert severity={exportNotice.severity} onClose={() => setExportNotice(null)} sx={{ mb: 1 }}>
+          {exportNotice.text}
+        </Alert>
+      )}
       <ServerDataGrid<AuditLogItem>
         columns={columns}
         endpoint="/audit-logs"
@@ -242,6 +289,9 @@ export default function AuditLogsPage() {
         defaultHiddenColumns={['record_id', 'user_id', 'user_name', 'source_ref', 'tenant_id']}
         initialState={{
           sort: { sortModel: [{ colId: 'created_at', sort: 'desc' }] },
+        }}
+        onQueryStateChange={(state) => {
+          lastQueryRef.current = { sort: state.sort, q: state.q || '', filterModel: state.filterModel || {} };
         }}
         onCellClicked={(e: any) => {
           if (!e?.data?.id) return;
@@ -271,12 +321,14 @@ export default function AuditLogsPage() {
               <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap alignItems="center">
                 <Typography variant="body2" color="text.secondary">{t('auditLogs.details.date', { value: new Date(detail.created_at).toLocaleString(locale) })}</Typography>
                 <Typography component="span" variant="body2" sx={{ fontFamily: "'JetBrains Mono Variable', ui-monospace, monospace", fontSize: '12px', color: 'text.secondary' }}>{t('auditLogs.details.table', { value: detail.table_name })}</Typography>
+                {detail.table_name === EXPORT_EVENT_TABLE && <Typography variant="body2" color="text.secondary">{t('auditLogs.details.exported', { value: auditTableLabel(detail, t) })}</Typography>}
                 <Typography variant="body2" color="text.secondary">{t('auditLogs.details.action', { value: t(`auditLogs.actions.${detail.action}`, { defaultValue: detail.action }) })}</Typography>
                 <Typography variant="body2" color="text.secondary">{t('auditLogs.details.source', { value: t(`auditLogs.sources.${detail.source || 'system'}`, { defaultValue: detail.source || 'system' }) })}</Typography>
-                {detail.source_ref && <Typography component="span" variant="body2" sx={{ fontFamily: "'JetBrains Mono Variable', ui-monospace, monospace", fontSize: '12px', color: 'text.secondary' }}>{t('auditLogs.details.sourceRef', { value: detail.source_ref })}</Typography>}
+                {detail.source_ref && detail.table_name === AUTH_EVENT_TABLE && <Typography variant="body2" color="text.secondary">{t('auditLogs.details.reason', { value: auditReasonLabel(detail, t) })}</Typography>}
+                {detail.source_ref && detail.table_name !== AUTH_EVENT_TABLE && <Typography component="span" variant="body2" sx={{ fontFamily: "'JetBrains Mono Variable', ui-monospace, monospace", fontSize: '12px', color: 'text.secondary' }}>{t('auditLogs.details.sourceRef', { value: detail.source_ref })}</Typography>}
                 <Typography component="span" variant="body2" sx={{ fontFamily: "'JetBrains Mono Variable', ui-monospace, monospace", fontSize: '12px', color: 'text.secondary' }}>{t('auditLogs.details.tenant', { value: detail.tenant_id })}</Typography>
                 {detail.record_id && <Typography component="span" variant="body2" sx={{ fontFamily: "'JetBrains Mono Variable', ui-monospace, monospace", fontSize: '12px', color: 'text.secondary' }}>{t('auditLogs.details.recordId', { value: detail.record_id })}</Typography>}
-                <Typography variant="body2" color="text.secondary">{t('auditLogs.details.user', { value: detail.user_email || detail.user_id || t(`auditLogs.sources.${detail.source === 'webhook' ? 'webhook' : 'system'}`) })}</Typography>
+                <Typography variant="body2" color="text.secondary">{t('auditLogs.details.user', { value: auditUserLabel(detail, t) })}</Typography>
               </Stack>
 
               <Box>

@@ -4,6 +4,13 @@ import { Controller, Get, Post } from '@nestjs/common';
 import { lastValueFrom, of } from 'rxjs';
 import { ExportEventsInterceptor } from '../export-events.interceptor';
 import {
+  AUDIT_EVENT_ACTIONS as SCREEN_ACTIONS,
+  AUTH_EVENT_REASONS as SCREEN_REASONS,
+  EXPORT_RESOURCE_KEYS,
+} from '../../../../frontend/src/pages/admin/auditLogLabels';
+import {
+  AUTH_EVENT_ACTIONS,
+  AUTH_EVENT_REASONS,
   AUTH_EVENT_TABLE,
   authEventEntry,
   exportEventEntry,
@@ -164,6 +171,7 @@ const KNOWN_EXPORT_ROUTES = [
   'GET /analytics-categories/export',
   'GET /applications/export',
   'GET /assets/export',
+  'GET /audit-logs/export',
   'GET /business-processes/export',
   'GET /capex-items/budget-file/export',
   'GET /chart-of-accounts/:id/accounts/export',
@@ -253,7 +261,10 @@ function recordingRequest(extra: Record<string, unknown> = {}) {
   const inserted: any[] = [];
   const order: string[] = [];
   const manager = { getRepository: () => ({ insert: async (row: any) => { order.push('audit'); inserted.push(row); } }) };
-  const req = { tenant: { id: 'tenant-1' }, user: { sub: 'user-9' }, path: '/chart-of-accounts/abc/accounts/export', queryRunner: { manager, isReleased: false }, ...extra };
+  const req = {
+    tenant: { id: 'tenant-1' }, user: { sub: 'user-9' }, path: '/chart-of-accounts/abc/accounts/export',
+    ip: '198.51.100.20', headers: { 'user-agent': 'Probe browser' }, queryRunner: { manager, isReleased: false }, ...extra,
+  };
   return { req, inserted, order };
 }
 
@@ -268,15 +279,22 @@ async function testInterceptorWritesTheExportBeforeTheHandler() {
   assert.equal(inserted[0].table_name, 'export');
   assert.equal(inserted[0].action, 'export');
   assert.equal(inserted[0].user_id, 'user-9');
-  assert.deepEqual(inserted[0].after_json, { resource: 'chart-of-accounts/accounts', path: '/chart-of-accounts/abc/accounts/export' });
-  assert.deepEqual(exportEventEntry('/export', { path: '/export', user: { sub: 'user-9' } }).after, { resource: 'document', path: '/export' });
+  assert.deepEqual(inserted[0].after_json, {
+    resource: 'chart-of-accounts/accounts', path: '/chart-of-accounts/abc/accounts/export', ip: '198.51.100.20', user_agent: 'Probe browser',
+  }, 'the address and agent as for sign-in events');
+  assert.deepEqual(exportEventEntry('/export', { path: '/export', user: { sub: 'user-9' } }).after, { resource: 'document', path: '/export', ip: null, user_agent: null });
+  const unchecked = exportEventEntry('/export', { path: '/export', ip: 'not-an-address', headers: { 'user-agent': `  ${'a'.repeat(300)}  ` } }).after;
+  assert.equal(unchecked.ip, null, 'an address that is not a valid IP is left out');
+  assert.equal(unchecked.user_agent, 'a'.repeat(200), 'the agent is cut like on sign-in events');
   const longPath = `/knowledge/${'x'.repeat(900)}/export`;
   assert.equal(exportEventEntry('/knowledge/:idOrRef/export', { path: longPath }).after.path, longPath.slice(0, 500), 'the path is cut to 500 characters');
 
   // A route marked `@ExportRoute()`: recorded under its own path.
   const marked = recordingRequest({ path: '/chart-of-accounts/abc/report' });
   assert.equal(await lastValueFrom(interceptor.intercept(fakeContext(ChartProbe, ChartProbe.prototype.report, marked.req), { handle: () => of('pdf') })), 'pdf');
-  assert.deepEqual(marked.inserted.map((row) => row.after_json), [{ resource: 'chart-of-accounts/report', path: '/chart-of-accounts/abc/report' }]);
+  assert.deepEqual(marked.inserted.map((row) => row.after_json), [
+    { resource: 'chart-of-accounts/report', path: '/chart-of-accounts/abc/report', ip: '198.51.100.20', user_agent: 'Probe browser' },
+  ]);
 
   // Another route: nothing written. No tenant transaction: nothing written, the handler still runs.
   const other = recordingRequest();
@@ -309,6 +327,15 @@ async function testEventWriterNeverRejects() {
   assert.equal(runners, 1);
 }
 
+// The audit log page (frontend/src/pages/admin/auditLogLabels.ts, imported here) has a plain label
+// for every action, reason and exported resource the API writes.
+function testTheAuditLogPageLabelsEveryEvent() {
+  assert.deepEqual([...SCREEN_ACTIONS].sort(), [...AUTH_EVENT_ACTIONS, 'export'].sort(), 'actions');
+  assert.deepEqual([...SCREEN_REASONS].sort(), [...AUTH_EVENT_REASONS].sort(), 'reasons');
+  const resources = [...new Set(KNOWN_EXPORT_ROUTES.map((route) => exportResource(route.split(' ')[1])))].sort();
+  assert.deepEqual(Object.keys(EXPORT_RESOURCE_KEYS).sort(), resources, 'one label per exported resource');
+}
+
 async function run() {
   testAuthEventRowHoldsAddressAndAgentOnly();
   testValuesOutsideTheListsAreLeftOut();
@@ -318,6 +345,7 @@ async function run() {
   testRoutePathsComeFromNestMetadata();
   testFileSignsAreFound();
   testEveryRouteThatSendsAFileIsRecorded();
+  testTheAuditLogPageLabelsEveryEvent();
   await testInterceptorWritesTheExportBeforeTheHandler();
   await testEventWriterNeverRejects();
   console.log('security-events.spec: all assertions passed');

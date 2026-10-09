@@ -13,7 +13,7 @@ export {
 } from './master-data';
 export { readCsv } from './read';
 export { languageOf, parseDateOrder, parseDecimalMark } from './request-options';
-export { writeCsv } from './write';
+export { writeCsv, writeCsvHeader, writeCsvRows } from './write';
 export {
   BUDGET_AMOUNT_COLUMNS,
   BUDGET_YEAR_MAX,
