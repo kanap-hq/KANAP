@@ -1,6 +1,6 @@
 {
-  "site.title": "KANAP · the open-source platform your IT department runs on",
-  "site.description": "One record for your applications, infrastructure, budgets, projects and documentation, with Plaid and AI agents working on it. Self-host it, or let us run it.",
+  "site.title": "KANAP · Open source IT governance platform",
+  "site.description": "IT budget, application landscape, project portfolio and documentation in one record, with a built-in AI agent. Open source.",
 
   "nav.features": "Features",
   "nav.featuresAgents": "Agents",
@@ -27,7 +27,7 @@
 
   "locale.switch": "Switch language",
 
-  "footer.tagline": "The open-source platform your IT department runs on. Self-host it, or let us run it.",
+  "footer.tagline": "The open source IT governance platform: IT budget, landscape, projects and documentation in one record. Self-host it free, or let us run it.",
   "footer.product": "Product",
   "footer.resources": "Resources",
   "footer.legal": "Legal",

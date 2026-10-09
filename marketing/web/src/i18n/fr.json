@@ -1,6 +1,6 @@
 {
-  "site.title": "KANAP · la plateforme open source de votre DSI",
-  "site.description": "Un seul référentiel pour vos applications, infrastructures, budgets, projets et documentation, avec Plaid et des agents IA qui y travaillent. Auto-hébergez-la, ou laissez-nous la gérer.",
+  "site.title": "KANAP · Plateforme open source de gouvernance IT",
+  "site.description": "Budget IT, cartographie applicative, portefeuille de projets et documentation dans un seul référentiel, avec un agent IA intégré. Open source.",
 
   "nav.features": "Fonctionnalités",
   "nav.featuresAgents": "Agents",
@@ -27,7 +27,7 @@
 
   "locale.switch": "Changer de langue",
 
-  "footer.tagline": "La plateforme open source sur laquelle tourne votre DSI. Auto-hébergez-la, ou laissez-nous la gérer.",
+  "footer.tagline": "La plateforme open source de gouvernance IT : budget, SI, projets et documentation dans un seul référentiel. Auto-hébergement gratuit, ou version hébergée.",
   "footer.product": "Produit",
   "footer.resources": "Ressources",
   "footer.legal": "Mentions légales",
