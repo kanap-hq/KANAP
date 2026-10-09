@@ -4,6 +4,13 @@ import { Controller, Get, Post } from '@nestjs/common';
 import { lastValueFrom, of } from 'rxjs';
 import { ExportEventsInterceptor } from '../export-events.interceptor';
 import {
+  AUDIT_EVENT_ACTIONS as SCREEN_ACTIONS,
+  AUTH_EVENT_REASONS as SCREEN_REASONS,
+  EXPORT_RESOURCE_KEYS,
+} from '../../../../frontend/src/pages/admin/auditLogLabels';
+import {
+  AUTH_EVENT_ACTIONS,
+  AUTH_EVENT_REASONS,
   AUTH_EVENT_TABLE,
   authEventEntry,
   exportEventEntry,
@@ -164,6 +171,7 @@ const KNOWN_EXPORT_ROUTES = [
   'GET /analytics-categories/export',
   'GET /applications/export',
   'GET /assets/export',
+  'GET /audit-logs/export',
   'GET /business-processes/export',
   'GET /capex-items/budget-file/export',
   'GET /chart-of-accounts/:id/accounts/export',
@@ -309,6 +317,15 @@ async function testEventWriterNeverRejects() {
   assert.equal(runners, 1);
 }
 
+// The audit log page (frontend/src/pages/admin/auditLogLabels.ts, imported here) has a plain label
+// for every action, reason and exported resource the API writes.
+function testTheAuditLogPageLabelsEveryEvent() {
+  assert.deepEqual([...SCREEN_ACTIONS].sort(), [...AUTH_EVENT_ACTIONS, 'export'].sort(), 'actions');
+  assert.deepEqual([...SCREEN_REASONS].sort(), [...AUTH_EVENT_REASONS].sort(), 'reasons');
+  const resources = [...new Set(KNOWN_EXPORT_ROUTES.map((route) => exportResource(route.split(' ')[1])))].sort();
+  assert.deepEqual(Object.keys(EXPORT_RESOURCE_KEYS).sort(), resources, 'one label per exported resource');
+}
+
 async function run() {
   testAuthEventRowHoldsAddressAndAgentOnly();
   testValuesOutsideTheListsAreLeftOut();
@@ -318,6 +335,7 @@ async function run() {
   testRoutePathsComeFromNestMetadata();
   testFileSignsAreFound();
   testEveryRouteThatSendsAFileIsRecorded();
+  testTheAuditLogPageLabelsEveryEvent();
   await testInterceptorWritesTheExportBeforeTheHandler();
   await testEventWriterNeverRejects();
   console.log('security-events.spec: all assertions passed');

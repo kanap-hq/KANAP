@@ -14,15 +14,29 @@ export interface CsvWriteRequest {
  * A plain negative amount is left as a number. Zero rows still write the header.
  */
 export function writeCsv(request: CsvWriteRequest): string {
+  return writeCsvHeader(request.language, request.headers) + writeCsvRows(request);
+}
+
+/**
+ * The start of a file written in parts: the BOM and the header line. The rows follow with
+ * `writeCsvRows`; together they are the text `writeCsv` writes.
+ */
+export function writeCsvHeader(language: CsvLanguage, headers: readonly string[]): string {
+  const separator = csvProfile(language).separator;
+  return `\uFEFF${headers.map((cell) => quoteCell(cell, separator)).join(separator)}\n`;
+}
+
+/** Rows of a file written in parts (after `writeCsvHeader`): one line each, ending with a line break. */
+export function writeCsvRows(request: CsvWriteRequest): string {
   const separator = csvProfile(request.language).separator;
-  const lines = [request.headers.map((cell) => quoteCell(cell, separator)).join(separator)];
+  let text = '';
   for (const row of request.rows) {
     if (row.length !== request.headers.length) {
       throw new Error(`A row has ${row.length} cells for ${request.headers.length} headers.`);
     }
-    lines.push(row.map((cell) => quoteCell(cell, separator)).join(separator));
+    text += `${row.map((cell) => quoteCell(cell, separator)).join(separator)}\n`;
   }
-  return `\uFEFF${lines.join('\n')}\n`;
+  return text;
 }
 
 function quoteCell(value: string, separator: string): string {

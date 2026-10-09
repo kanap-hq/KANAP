@@ -118,8 +118,9 @@ Tool-specific or private notes live in each tool's local files, never here.
 - CI runs the backend and frontend suites in the cloud jobs, and builds both sides in on-premise
   mode. A failing spec blocks the PR.
 - On a PR, each job runs only when its side changed (`backend/`, `frontend/`; a CI file change runs
-  all three); a skipped job counts as passed. Every job runs for a push on `main` and in the
-  merge queue. The rules live in `.github/scripts/ci-changes.sh`.
+  all three); a skipped job counts as passed. A frontend module that backend code imports (a spec
+  checking both sides agree) also runs the backend job. Every job runs for a push on `main` and in
+  the merge queue. The rules live in `.github/scripts/ci-changes.sh`.
 - The frontend check runs as a `frontend build` job and three `frontend tests (i/3)` shards in
   parallel (`vitest run --shard`, split by file); the `frontend (cloud)` job only gathers their
   results. To rerun one shard locally: `npm test -- --shard=2/3` in `frontend/`.

@@ -214,6 +214,15 @@
       "create": "Crear",
       "delete": "Eliminar",
       "disable": "Deshabilitar",
+      "export": "Exportación",
+      "login": "Inicio de sesión",
+      "login_failed": "Inicio de sesión fallido",
+      "logout": "Cierre de sesión",
+      "password_reset_completed": "Restablecimiento de contraseña completado",
+      "password_reset_requested": "Restablecimiento de contraseña solicitado",
+      "refresh_denied": "Renovación de sesión rechazada",
+      "sso_login": "Inicio de sesión con Microsoft",
+      "sso_login_failed": "Inicio de sesión con Microsoft fallido",
       "update": "Actualizar"
     },
     "columns": {
@@ -234,7 +243,9 @@
       "before": "Antes",
       "changedFields": "Campos modificados",
       "date": "Fecha: {{value}}",
+      "exported": "Exportado: {{value}}",
       "noFieldChanges": "Sin cambios a nivel de claves",
+      "reason": "Motivo: {{value}}",
       "recordId": "ID del registro: {{value}}",
       "source": "Origen: {{value}}",
       "sourceRef": "Ref. de origen: {{value}}",
@@ -243,8 +254,58 @@
       "title": "Detalles de la entrada de auditoría",
       "user": "Usuario: {{value}}"
     },
+    "export": {
+      "button": "Exportar CSV",
+      "failed": "No se pudo exportar el registro de auditoría.",
+      "tooMany": "Demasiadas exportaciones en poco tiempo. Vuelva a intentarlo en un minuto.",
+      "truncated": "El archivo contiene las primeras {{limit}} entradas. Acote los filtros para exportar el resto."
+    },
+    "exportResources": {
+      "accounts": "Cuentas",
+      "analyticsCategories": "Dimensiones analíticas",
+      "applications": "Aplicaciones",
+      "assets": "Activos",
+      "auditLog": "Registro de auditoría",
+      "businessProcesses": "Procesos de negocio",
+      "capexBudgetFile": "Archivo de presupuesto CAPEX",
+      "chartOfAccounts": "Plan de cuentas",
+      "coaTemplates": "Plantilla CoA",
+      "companies": "Empresas",
+      "contacts": "Contactos",
+      "contracts": "Contratos",
+      "costCenters": "Centros de coste",
+      "departments": "Departamentos",
+      "document": "Documento",
+      "incidentReport": "Informe de incidente",
+      "incidents": "Incidentes",
+      "knowledgeDocument": "Documento de la base de conocimiento",
+      "opexBudgetFile": "Archivo de presupuesto OPEX",
+      "projects": "Proyectos",
+      "requests": "Solicitudes",
+      "suppliers": "Proveedores",
+      "tasks": "Tareas",
+      "users": "Usuarios",
+      "weeklyReport": "Informe semanal",
+      "workingDayCalendars": "Calendarios laborales"
+    },
     "messages": {
       "loadDetailsFailed": "No se pudieron cargar los detalles de la entrada de auditoría."
+    },
+    "reasons": {
+      "bad_password": "Contraseña incorrecta",
+      "disabled": "Cuenta deshabilitada",
+      "email_unverified": "Dirección no verificada por Microsoft",
+      "expired": "Sesión caducada",
+      "external_account": "Cuenta gestionada por el directorio de la empresa",
+      "invalid_state": "No se pudo comprobar el inicio de sesión con Microsoft",
+      "invalid_token": "Enlace o sesión no válidos",
+      "no_password": "Cuenta sin contraseña",
+      "not_allowed": "Rol sin permiso para iniciar sesión",
+      "provisioning": "Enlace de creación del espacio de trabajo",
+      "sso_failed": "El inicio de sesión con Microsoft falló",
+      "sso_not_configured": "Inicio de sesión con Microsoft no configurado",
+      "tenant_mismatch": "El directorio de Microsoft no coincide con el espacio de trabajo",
+      "unknown_user": "Ninguna cuenta con esta dirección"
     },
     "shared": {
       "empty": "-"
@@ -254,8 +315,13 @@
       "user": "Usuario",
       "webhook": "Webhook"
     },
+    "tables": {
+      "auth": "Acceso y sesiones",
+      "export": "Exportación"
+    },
     "title": "Registro de auditoría",
     "values": {
+      "unknownAccount": "Cuenta desconocida",
       "unknownUser": "Desconocido ({{id}}...)"
     }
   },

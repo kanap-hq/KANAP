@@ -214,6 +214,15 @@
       "create": "Erstellen",
       "delete": "Löschen",
       "disable": "Deaktivieren",
+      "export": "Export",
+      "login": "Anmeldung",
+      "login_failed": "Fehlgeschlagene Anmeldung",
+      "logout": "Abmeldung",
+      "password_reset_completed": "Passwort zurückgesetzt",
+      "password_reset_requested": "Zurücksetzen des Passworts angefordert",
+      "refresh_denied": "Sitzungsverlängerung abgelehnt",
+      "sso_login": "Anmeldung mit Microsoft",
+      "sso_login_failed": "Fehlgeschlagene Anmeldung mit Microsoft",
       "update": "Aktualisieren"
     },
     "columns": {
@@ -234,7 +243,9 @@
       "before": "Vorher",
       "changedFields": "Geänderte Felder",
       "date": "Datum: {{value}}",
+      "exported": "Exportiert: {{value}}",
       "noFieldChanges": "Keine Änderungen auf Schlüsselebene",
+      "reason": "Grund: {{value}}",
       "recordId": "Datensatz-ID: {{value}}",
       "source": "Quelle: {{value}}",
       "sourceRef": "Quellreferenz: {{value}}",
@@ -243,8 +254,58 @@
       "title": "Details des Audit-Eintrags",
       "user": "Benutzer: {{value}}"
     },
+    "export": {
+      "button": "CSV exportieren",
+      "failed": "Das Audit-Protokoll konnte nicht exportiert werden.",
+      "tooMany": "Zu viele Exporte in kurzer Zeit. Versuchen Sie es in einer Minute erneut.",
+      "truncated": "Die Datei enthält die ersten {{limit}} Einträge. Grenzen Sie die Filter ein, um den Rest zu exportieren."
+    },
+    "exportResources": {
+      "accounts": "Konten",
+      "analyticsCategories": "Analysedimensionen",
+      "applications": "Anwendungen",
+      "assets": "Assets",
+      "auditLog": "Audit-Protokoll",
+      "businessProcesses": "Geschäftsprozesse",
+      "capexBudgetFile": "CAPEX-Budgetdatei",
+      "chartOfAccounts": "Kontenplan",
+      "coaTemplates": "CoA-Vorlage",
+      "companies": "Unternehmen",
+      "contacts": "Kontakte",
+      "contracts": "Verträge",
+      "costCenters": "Kostenstellen",
+      "departments": "Abteilungen",
+      "document": "Dokument",
+      "incidentReport": "Vorfallbericht",
+      "incidents": "Vorfälle",
+      "knowledgeDocument": "Dokument der Wissensdatenbank",
+      "opexBudgetFile": "OPEX-Budgetdatei",
+      "projects": "Projekte",
+      "requests": "Anfragen",
+      "suppliers": "Lieferanten",
+      "tasks": "Aufgaben",
+      "users": "Benutzer",
+      "weeklyReport": "Wochenbericht",
+      "workingDayCalendars": "Arbeitstagekalender"
+    },
     "messages": {
       "loadDetailsFailed": "Details des Audit-Eintrags konnten nicht geladen werden."
+    },
+    "reasons": {
+      "bad_password": "Falsches Passwort",
+      "disabled": "Konto deaktiviert",
+      "email_unverified": "Adresse nicht von Microsoft bestätigt",
+      "expired": "Sitzung abgelaufen",
+      "external_account": "Konto wird im Unternehmensverzeichnis verwaltet",
+      "invalid_state": "Anmeldung mit Microsoft konnte nicht geprüft werden",
+      "invalid_token": "Link oder Sitzung ungültig",
+      "no_password": "Konto ohne Passwort",
+      "not_allowed": "Rolle darf sich nicht anmelden",
+      "provisioning": "Link zur Einrichtung des Arbeitsbereichs",
+      "sso_failed": "Anmeldung mit Microsoft fehlgeschlagen",
+      "sso_not_configured": "Anmeldung mit Microsoft nicht eingerichtet",
+      "tenant_mismatch": "Microsoft-Verzeichnis passt nicht zum Arbeitsbereich",
+      "unknown_user": "Kein Konto mit dieser Adresse"
     },
     "shared": {
       "empty": "-"
@@ -254,8 +315,13 @@
       "user": "Benutzer",
       "webhook": "Webhook"
     },
+    "tables": {
+      "auth": "Anmeldung und Sitzung",
+      "export": "Export"
+    },
     "title": "Audit-Protokoll",
     "values": {
+      "unknownAccount": "Unbekanntes Konto",
       "unknownUser": "Unbekannt ({{id}}...)"
     }
   },
