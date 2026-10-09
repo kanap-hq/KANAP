@@ -174,6 +174,32 @@ const yearPeriodsOf = (year: number) => Array.from({ length: 12 }, (_, i) => `${
 const sumCents = (months: readonly number[]) => months.reduce((sum, cents) => sum + cents, 0);
 const conflictTint = (theme: Theme) => alpha(theme.palette.warning.main, theme.palette.mode === 'dark' ? 0.12 : 0.08);
 
+type MonthCellProps = {
+  month: number;
+  col: AmountCol;
+  value: number;
+  disabled: boolean;
+  readOnly: boolean;
+  waits: boolean;
+  onMonthChange: (idx: number, key: AmountCol, value: number | '') => void;
+};
+
+/** One month of one column in the monthly grid, drawn again only when its own props change. */
+const MonthCell = React.memo(function MonthCell({ month, col, value, disabled, readOnly, waits, onMonthChange }: MonthCellProps) {
+  return (
+    <Box component="td" data-waiting={waits ? 'true' : undefined} sx={{ px: 0.5, py: '2px', ...(waits ? { bgcolor: conflictTint } : {}) }}>
+      <FormattedNumberField
+        value={value}
+        onChange={(e) => onMonthChange(month, col, e.target.value as unknown as number | '')}
+        variant="standard" size="small" fullWidth
+        disabled={disabled}
+        InputProps={{ readOnly }}
+        sx={tableCellFieldSx}
+      />
+    </Box>
+  );
+});
+
 /** A panel write stopped before sending: the grid edits before it could not be saved. */
 class UnsavedEditsError extends Error {}
 
@@ -890,6 +916,13 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     editCell(monthPeriod(year, idx + 1), key);
     scheduleSave();
   };
+  // The grid's cells take one handler that never changes, so a cell is drawn again only when its own
+  // value or state does: a keystroke otherwise redraws all sixty fields of the year.
+  const onMonthChangeRef = React.useRef(onMonthChange);
+  onMonthChangeRef.current = onMonthChange;
+  const stableMonthChange = React.useCallback((idx: number, key: AmountCol, value: number | '') => {
+    onMonthChangeRef.current(idx, key, value);
+  }, []);
   // Clear every month for a column: convenient when entering a cash-out plan manually
   // (e.g. the whole amount in a single month). Asked first, unless the column is already empty.
   const clearColumn = async (key: AmountCol) => {
@@ -1715,16 +1748,16 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
                         {gridColumns.map(({ col, fr }) => {
                           const waits = cellWaits(monthPeriod(year, mi + 1), col);
                           return (
-                          <Box component="td" key={col} data-waiting={waits ? 'true' : undefined} sx={{ px: 0.5, py: '2px', ...(waits ? { bgcolor: conflictTint } : {}) }}>
-                            <FormattedNumberField
+                            <MonthCell
+                              key={col}
+                              month={mi}
+                              col={col}
                               value={months[mi]?.[col] ?? 0}
-                              onChange={(e) => onMonthChange(mi, col, e.target.value as unknown as number | '')}
-                              variant="standard" size="small" fullWidth
                               disabled={loading || fr}
-                              InputProps={{ readOnly: fr || waits }}
-                              sx={tableCellFieldSx}
+                              readOnly={fr || waits}
+                              waits={waits}
+                              onMonthChange={stableMonthChange}
                             />
-                          </Box>
                           );
                         })}
                       </Box>

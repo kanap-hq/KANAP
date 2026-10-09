@@ -1,9 +1,9 @@
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import { CAPEX_FINANCE_CONFIG, OPEX_FINANCE_CONFIG, type FinanceModuleConfig } from './config';
 import { KanapDialogProvider } from '../design';
@@ -94,6 +94,13 @@ beforeEach(() => {
   permissions.calendarsMember = true;
   permissions.userId = null;
   try { window.localStorage.clear(); } catch { /* none */ }
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+  vi.stubGlobal('jest', { advanceTimersByTime: (ms: number) => vi.advanceTimersByTime(ms) });
+});
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 // jsdom here ships without localStorage.
@@ -314,7 +321,7 @@ function typeAmount(value: string) {
 }
 /** Lets queued writes and reloads run. */
 async function settle() {
-  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)); });
+  await act(async () => { await vi.advanceTimersByTimeAsync(30); });
 }
 
 async function flush(ref: React.RefObject<BudgetTabHandle>) {
@@ -440,6 +447,22 @@ describe('BudgetTab write safety', () => {
     expect(written(bulkCalls()[0][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(3), committed: 450 }] });
   });
 
+  it('a month typed after a year switch is written on the year shown', async () => {
+    setupApi({ grain: 'monthly' });
+    // The tab opens on the next year (no version there), then the user goes to the item's year.
+    const { ref, rerenderYear, container } = renderTab(YEAR + 1);
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/freeze-states', { params: { year: YEAR + 1 } }));
+    // The grid's cells keep one change handler across renders: it must write the year shown now.
+    rerenderYear(YEAR);
+    await waitForAmounts();
+
+    fireEvent.change(cell(monthCells(container), 3, 1), { target: { value: '450' } });
+    await flush(ref);
+
+    expect(bulkCalls()).toHaveLength(1);
+    expect(written(bulkCalls()[0][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(3), committed: 450 }] });
+  });
+
   it('switching mode and reloading send no amounts, and write nothing on the shared version', async () => {
     setupApi({ grain: 'annual' });
     const { ref, rerenderYear, container } = renderTab();
@@ -535,7 +558,7 @@ describe('BudgetTab write safety', () => {
     typeAmount('24000');
     // The spread first retries the unsaved edit; it fails again, so the spread stops there.
     await waitFor(() => expect(bulkCalls()).toHaveLength(2));
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(50); });
 
     expect(bulkCalls().every(([, body]) => body.kind === 'monthly')).toBe(true);
     expect(cell(monthCells(container), 1, 0).value).toBe('1 500');
@@ -693,11 +716,11 @@ const periodLine = (measure: string) => screen.getByTestId(`period-line-${measur
 // How the column was produced, then its period: one line each.
 const captionLines = (measure: string) => Array.from(periodLine(measure).children).map((line) => line.textContent);
 
-/** Wait until the amounts are loaded, without assuming the first field is editable. */
+/** Wait until the amounts are loaded, without assuming the first field is editable (plain selector, see waitForAmounts). */
 async function waitForLoad() {
   await waitFor(() => {
     expect(amountLoads()).toBeGreaterThanOrEqual(1);
-    expect(screen.queryAllByRole('textbox').length).toBeGreaterThan(0);
+    expect(document.body.querySelector('input[type="text"]:not([aria-hidden="true"])')).not.toBeNull();
   });
 }
 
@@ -1520,10 +1543,13 @@ describe('BudgetTab quantity and price', () => {
   });
 });
 
-/** The monthly grid's inputs (the lines table sits above it when the lines tab is open). */
+/**
+ * The monthly grid's inputs (the lines table sits above it when the lines tab is open). A plain
+ * selector, as in monthCells: a role query computes the styles of the whole grid at each call.
+ */
 function gridCells(container: HTMLElement) {
   const tables = Array.from(container.querySelectorAll('table')).filter((table) => table.getAttribute('data-testid') !== 'lines-table');
-  return within(tables[tables.length - 1] as HTMLElement).getAllByRole('textbox') as HTMLInputElement[];
+  return Array.from(tables[tables.length - 1].querySelectorAll<HTMLInputElement>('input[type="text"]'));
 }
 
 /** Bulk writes that answer at once, except the first one, held until `release()`. */
