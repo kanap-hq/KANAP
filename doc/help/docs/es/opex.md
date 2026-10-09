@@ -172,6 +172,7 @@ La pestaña Vista general contiene los campos de texto libre y las tareas de la 
 **Dimensiones analíticas**:
   - Cada dimensión activada usada para las líneas OPEX tiene su propio campo, con el nombre de la dimensión, en el orden de las dimensiones. Una dimensión en **Solo CAPEX** no tiene campo, y el valor que una partida tenga en ella sigue oculto. Elija un valor o vacíe el campo; el cambio se guarda de inmediato
   - Cada campo lista los valores activados de su dimensión. Un valor desactivado se mantiene en las partidas que ya lo tienen y no se puede elegir para otra partida
+  - Un valor que se usa solo para líneas CAPEX no se ofrece, y elegirlo se rechaza. Una partida que ya lo tiene lo conserva y sigue siendo editable. Consulte [Valores OPEX o CAPEX](analytics.md#valores-opex-o-capex)
   - El campo no puede crear un valor: créelo en [Dimensiones analíticas](analytics.md) o deje que lo cree una importación CSV
   - Si las dimensiones no se pueden cargar, una línea sustituye a estos campos: "No se pudieron cargar las dimensiones."
 

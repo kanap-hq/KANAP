@@ -225,6 +225,7 @@ L'onglet Vue d'ensemble contient les détails de l'investissement et ses tâches
 
 - Chaque dimension activée utilisée pour les lignes CAPEX a son propre champ, au nom de la dimension, dans l'ordre des dimensions. Une dimension réglée sur **OPEX uniquement** n'en a pas, et la valeur qu'un poste y porte reste masquée. Choisissez une valeur ou videz le champ ; la modification s'enregistre aussitôt
 - Chaque champ liste les valeurs activées de sa dimension. Une valeur désactivée reste sur les postes qui l'ont déjà, et ne peut pas être choisie pour un autre poste
+- Une valeur utilisée pour les lignes OPEX uniquement n'est pas proposée, et son choix est refusé. Un poste qui l'a déjà la garde et reste modifiable. Voir [Valeurs OPEX ou CAPEX](analytics.md#valeurs-opex-ou-capex)
 - Le champ ne peut pas créer de valeur : créez-la dans [Dimensions analytiques](analytics.md), ou laissez un import CSV la créer
 - Si les dimensions ne peuvent pas être chargées, une ligne remplace ces champs : « Les dimensions n'ont pas pu être chargées. »
 

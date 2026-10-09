@@ -68,6 +68,7 @@ Die Liste zeigt die Werte der ausgewählten Dimension.
 | **Name** | Der Name des Werts |
 | **Beschreibung** | Was der Wert abdeckt |
 | **Status** | **Aktiviert** oder **Deaktiviert** |
+| **Verwendet für** | **OPEX und CAPEX**, **Nur OPEX** oder **Nur CAPEX**. Siehe [OPEX- oder CAPEX-Werte](#opex-oder-capex-werte) |
 | **Aktualisiert** | Datum und Uhrzeit der letzten Änderung |
 
 Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich des Werts zu öffnen.
@@ -76,6 +77,7 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich des Werts zu öffnen
 
 - **Schnellsuche**: durchsucht den Namen und die Beschreibung
 - **Statusfilter**: ein Kontrollkästchen-Filter auf der Spalte **Status**. Wenn Sie darin auf **Leeren** klicken oder beide Werte abwählen, zeigt die Liste nichts mehr an, unabhängig von **Anzeigen**
+- **Filter Verwendet für**: ein Kontrollkästchen-Filter auf der Spalte **Verwendet für**
 - **Statusbereich**: der Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über der Liste. Standardmäßig zeigt die Liste aktivierte Werte
 
 **Aktionen**:
@@ -138,6 +140,13 @@ Eine Zeile behält den Wert, den sie bereits in einer Dimension hat, die für ih
 
 Einer Zeile einen Wert in einer Dimension zu geben, die nicht für sie gilt, wird abgelehnt: in der Anwendung, in einer Budgetdatei und über die API. Wird der Wert gesendet, den die Zeile bereits hat, ändert sich nichts.
 
+Auch ein einzelner Wert kann auf eine Zeilenart beschränkt werden. Die beiden Einstellungen wirken auf verschiedenen Ebenen. Zum Beispiel gilt die Dimension **Nature de coût** für **OPEX und CAPEX**, und ihr Wert **Abonnements SaaS** gilt nur für **Nur OPEX**:
+
+- Die Einstellung der Dimension legt fest, ob das Feld für eine Zeilenart existiert. Fällt das Feld weg, sind die Werte ausgeblendet, die die Zeilen haben.
+- Die Einstellung des Werts filtert die Auswahl. Das Feld bleibt, CAPEX-Zeilen bieten **Abonnements SaaS** nicht mehr an, und eine CAPEX-Zeile, die ihn bereits hat, behält ihn, zeigt ihn an und bleibt bearbeitbar. Siehe [OPEX- oder CAPEX-Werte](#opex-oder-capex-werte).
+
+Die beiden Einstellungen müssen zusammenpassen. Eine Dimension kann nicht auf eine Zeilenart beschränkt werden, solange einige ihrer Werte nur für die andere gelten: KANAP lehnt zum Beispiel „2 values of this dimension are for CAPEX lines only. Set them to OPEX and CAPEX first.“ ab.
+
 ### Eine Dimension löschen
 
 Die Schaltfläche **Löschen** in der Kopfzeile löscht die Dimension sofort (erfordert `analytics:admin`). Solange die Dimension noch Werte hat, ist die Schaltfläche deaktiviert, und eine Zeile unter der Nutzungszeile nennt den Grund: „Um diese Dimension zu löschen, löschen Sie zuerst ihre Werte.“
@@ -152,13 +161,13 @@ Um die Werte stattdessen auf den Zeilen zu behalten, deaktivieren Sie die Dimens
 
 ### Einen Wert erstellen
 
-Klicken Sie auf **Neuer Wert**. Das Feld **Dimension** steht zunächst auf der Dimension, die auf der Seite ausgewählt ist, und bietet nur aktivierte Dimensionen an. Füllen Sie **Name** und bei Bedarf **Beschreibung** aus und klicken Sie dann auf **Erstellen**. Der Arbeitsbereich des neuen Werts öffnet sich. Ein neuer Wert ist aktiviert.
+Klicken Sie auf **Neuer Wert**. Das Feld **Dimension** steht zunächst auf der Dimension, die auf der Seite ausgewählt ist, und bietet nur aktivierte Dimensionen an. Füllen Sie **Name** und bei Bedarf **Beschreibung** aus. **Verwendet für** steht zunächst auf **OPEX und CAPEX**: Ändern Sie es, wenn der Wert nur zu einer Zeilenart passt. Klicken Sie dann auf **Erstellen**. Der Arbeitsbereich des neuen Werts öffnet sich. Ein neuer Wert ist aktiviert.
 
 ### Der Werte-Arbeitsbereich
 
 - **Kopfzeile**: der Name des Werts. Klicken Sie darauf, um den Wert umzubenennen. **Zurück** / **Weiter** bewegen sich durch die Werte derselben Dimension, in der aktuellen Reihenfolge und mit den aktuellen Filtern der Liste. Die Schließen-Schaltfläche führt zur Liste zurück
 - **Hauptbereich**: eine Zeile wie „Verwendet von 3 OPEX-Zeilen und 1 CAPEX-Zeile.“, wenn Budgetzeilen den Wert verwenden, dann die **Beschreibung**
-- **Bereich Eigenschaften** rechts: **Dimension** (schreibgeschützt) und **Lebenszyklus**
+- **Bereich Eigenschaften** rechts: **Dimension** (schreibgeschützt), **Verwendet für** und **Lebenszyklus**
 
 Änderungen werden von selbst gespeichert, wie im Dimensions-Arbeitsbereich. Ein in der Kopfzeile abgelehnter Name wird oben auf der Seite angezeigt.
 
@@ -168,6 +177,22 @@ Klicken Sie auf **Neuer Wert**. Das Feld **Dimension** steht zunächst auf der D
 - **Ein Wert bleibt in seiner Dimension**: Die Dimension wird beim Erstellen des Werts festgelegt und kann sich nicht ändern. Um einen Wert zu verschieben, erstellen Sie ihn in der anderen Dimension, ändern Sie die Zeilen und löschen Sie dann den alten Wert.
 - **Umbenennen behält die Zeilen**: Zeilen verweisen auf den Wert selbst, daher erscheint der neue Name sofort in Listen und Berichten.
 - **Löschen**: Die Schaltfläche **Löschen** in der Kopfzeile löscht den Wert sofort (erfordert `analytics:admin`). Sie ist deaktiviert, wenn Budgetzeilen den Wert verwenden, mit dem Grund, zum Beispiel „Verwendet von 3 OPEX-Zeilen und 1 CAPEX-Zeile. Deaktivieren Sie ihn stattdessen.“ Entfernen Sie den Wert zuerst von diesen Zeilen, oder deaktivieren Sie ihn.
+
+### OPEX- oder CAPEX-Werte
+
+Das Feld **Verwendet für** eines Werts legt fest, welche Budgetzeilen ihn verwenden dürfen:
+
+| Wert | Bedeutung |
+|------|-----------|
+| **OPEX und CAPEX** | OPEX- und CAPEX-Zeilen können den Wert verwenden. Das ist die Standardeinstellung |
+| **Nur OPEX** | Nur OPEX-Zeilen können den Wert verwenden |
+| **Nur CAPEX** | Nur CAPEX-Zeilen können den Wert verwenden |
+
+Das Feld einer OPEX-Zeile bietet die Werte für OPEX und für beide an. Das Feld einer CAPEX-Zeile tut dasselbe für CAPEX. Eine Zeile, die bereits einen Wert der anderen Art hat, behält ihn, zeigt ihn an und bleibt bearbeitbar, wie bei einem deaktivierten Wert. Einen solchen Wert für eine andere Zeile oder beim Ändern des Werts einer Zeile zu wählen, wird abgelehnt: in der Anwendung, in einer Budgetdatei, über die API und in Plaid.
+
+- Gilt die Dimension nur für eine Zeilenart, ist das Feld auf die Einstellung der Dimension gesperrt, mit einer Zeile wie „Die Dimension Nature de coût gilt nur für OPEX-Zeilen.“ Ein Wert kann nicht auf die Zeilenart beschränkt werden, die seine Dimension ausschließt.
+- Haben Zeilen der anderen Art den Wert, erscheint unter dem Feld eine Zeile, zum Beispiel „4 CAPEX-Zeilen haben diesen Wert. Sie behalten ihn, aber neue CAPEX-Zeilen können ihn nicht auswählen.“ Klicken Sie auf **Diese Zeilen anzeigen**, um sie in der Liste in einem neuen Tab zu öffnen. Die Zeile bleibt, solange der Konflikt besteht.
+- Der Bericht Analysedimensionen bietet in seiner Liste **Werte ausschließen** die Werte der gewählten Art an. Siehe [Berichte](reports.md#analysedimensionen).
 
 ---
 
@@ -201,7 +226,7 @@ Die Standarddimension kann nicht deaktiviert werden.
 Im Bereich **Eigenschaften** einer OPEX- oder CAPEX-Position, und wenn Sie eine erstellen, hat jede aktivierte Dimension, die für diese Zeilenart verwendet wird, ein eigenes Feld, nach der Dimension benannt, in der Reihenfolge der Dimensionen. Die Standarddimension erscheint als **Analysedimension**, bis Sie sie umbenennen.
 
 - Wählen Sie einen Wert, oder leeren Sie das Feld, um die Zeile in dieser Dimension ohne Wert zu lassen. Die Änderung wird sofort gespeichert.
-- Das Feld listet die aktivierten Werte seiner Dimension. Ein deaktivierter Wert bleibt auf den Zeilen sichtbar, die ihn haben.
+- Das Feld listet die aktivierten Werte seiner Dimension, die für diese Zeilenart verwendet werden. Ein deaktivierter Wert oder ein Wert, der nur für die andere Zeilenart gilt, bleibt auf den Zeilen sichtbar, die ihn haben. Siehe [OPEX- oder CAPEX-Werte](#opex-oder-capex-werte).
 - Das Feld kann keinen Wert erstellen. Erstellen Sie Werte auf der Seite Analysedimensionen, oder lassen Sie sie von einem OPEX- oder CAPEX-CSV-Import erstellen.
 - Ein Wert gilt für die ganze Zeile, über alle Jahre.
 - Können die Dimensionen nicht geladen werden, ersetzt eine Zeile diese Felder: „Die Dimensionen konnten nicht geladen werden.“
@@ -218,7 +243,7 @@ Der Bericht **Analysedimensionen** (unter **Berichte**) zeigt, wie sich das Budg
 - **Dimension**: die Dimension, nach der der Bericht gruppiert. Sie erscheint, wenn Sie zwei oder mehr aktivierte Dimensionen haben, und steht zunächst auf der Standarddimension
 - **Jahresbereich**: ein einzelnes Jahr (Kreis- oder Balkendiagramm) oder mehrere Jahre (Liniendiagramm)
 - **Kennzahl**: jede Budgetspalte, die Ihre Organisation anzeigt, unter ihrem Namen. Beginnt mit der Standardspalte
-- **Werte ausschließen**: einige Werte weglassen, um sich auf die anderen zu konzentrieren
+- **Werte ausschließen**: einige Werte weglassen, um sich auf die anderen zu konzentrieren. Die Liste bietet die Werte an, die für den gewählten Positionstyp verwendet werden, dazu die Werte, die die Zeilen haben
 
 Die sieben Budgetberichte lassen sich auch auf einen Wert einer Dimension eingrenzen, mit einem Filter pro Dimension. Siehe [Filter nach Kostenstelle, Run oder Build und Analysedimensionen](reports.md#filter-nach-kostenstelle-run-oder-build-und-analysedimensionen).
 
@@ -242,7 +267,7 @@ Um Werte auf Budgetpositionen aus einer Datei zu setzen, verwenden Sie die OPEX-
 
 **CSV-Struktur**:
 
-- Kopfzeilen: `axis_code`, `name`, `description`, `status`, `disabled_at`
+- Kopfzeilen: `axis_code`, `name`, `description`, `status`, `disabled_at`, `applies_to`
 - Der Export schreibt das Trennzeichen der Sprache der Oberfläche. Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
 
 | Spalte | Inhalt |
@@ -253,7 +278,9 @@ Um Werte auf Budgetpositionen aus einer Datei zu setzen, verwenden Sie die OPEX-
 | `status` | `enabled` oder `disabled`. Leer bedeutet `enabled` für einen neuen Wert und behält bei einer Aktualisierung den gespeicherten Status |
 | `disabled_at` | Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Leer, wenn es kein Ende gibt. Bei einer Aktualisierung behalten ein leerer `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum und beendet den Wert sonst heute |
 
-Nur `name` ist eine Pflichtspalte. Fehlt die Spalte `description`, `status` oder `disabled_at`, behalten bestehende Werte, was dafür gespeichert ist, und neue Werte sind aktiviert und ohne Beschreibung. Eine Datei ohne `axis_code` legt jede Zeile in die Standarddimension.
+| `applies_to` | Die Einstellung **Verwendet für**, immer die letzte Spalte. `opex`, `capex` oder leer für **OPEX und CAPEX**. Eine Datei ohne diese Spalte lässt die Einstellungen unverändert. Eine leere Zelle setzt **OPEX und CAPEX** |
+
+Nur `name` ist eine Pflichtspalte. Fehlt die Spalte `description`, `status`, `disabled_at` oder `applies_to`, behalten bestehende Werte, was dafür gespeichert ist, und neue Werte sind aktiviert und ohne Beschreibung. Eine Datei ohne `axis_code` legt jede Zeile in die Standarddimension.
 
 **Import**:
 
@@ -276,6 +303,8 @@ Nur `name` ist eine Pflichtspalte. Fehlt die Spalte `description`, `status` oder
 - **„The ... dimension is disabled. Enable it or leave it out.“**: Eine Zeile erstellt oder ändert einen Wert in einer deaktivierten Dimension. Aktivieren Sie die Dimension, oder entfernen Sie die Zeile.
 - **„... is already on row N.“**: Zwei Zeilen tragen denselben Namen für dieselbe Dimension. Behalten Sie eine.
 - **„Invalid status '...'. Use 'enabled' or 'disabled'.“**: Korrigieren Sie die Zelle `status`.
+- **„Invalid applies_to '...'. Use 'opex', 'capex' or leave it empty.“**: Korrigieren Sie die Zelle `applies_to`.
+- **„The ... dimension is for OPEX lines only.“** (oder CAPEX): Die Zeile beschränkt einen Wert auf die Zeilenart, die seine Dimension ausschließt. Korrigieren Sie die Zelle `applies_to` oder ändern Sie **Verwendet für** der Dimension.
 - **„Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.“**: Die Zeile ist aktiviert, aber ihr Datum ist bereits vorbei. Eine vor diesem Datum exportierte Datei enthält noch `enabled`: Exportieren Sie erneut oder korrigieren Sie die Zelle.
 - **„Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.“**: Die Zeile ist deaktiviert, aber ihr Datum liegt noch in der Zukunft. Korrigieren Sie die Zelle `status` oder `disabled_at`.
 - **„Header mismatch“**: Laden Sie eine neue Vorlage herunter.

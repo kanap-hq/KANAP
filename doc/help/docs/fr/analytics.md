@@ -68,6 +68,7 @@ La liste affiche les valeurs de la dimension sélectionnée.
 | **Nom** | Le nom de la valeur |
 | **Description** | Ce que couvre la valeur |
 | **Statut** | **Activé** ou **Désactivé** |
+| **Utilisé pour** | **OPEX et CAPEX**, **OPEX uniquement** ou **CAPEX uniquement**. Voir [Valeurs OPEX ou CAPEX](#valeurs-opex-ou-capex) |
 | **Mis à jour** | Date et heure de la dernière modification |
 
 Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail de la valeur.
@@ -76,6 +77,7 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail de la valeu
 
 - **Recherche rapide** : recherche dans le nom et la description
 - **Filtre de statut** : un filtre par cases à cocher sur la colonne **Statut**. Cliquer sur **Effacer** dans ce filtre, ou décocher les deux valeurs, n'affiche plus rien, quel que soit le choix de **Afficher**
+- **Filtre Utilisé pour** : un filtre par cases à cocher sur la colonne **Utilisé pour**
 - **Portée du statut** : le bouton bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la liste. Par défaut, la liste affiche les valeurs activées
 
 **Actions** :
@@ -138,6 +140,13 @@ Une ligne garde la valeur qu'elle a déjà sur une dimension qui ne s'applique p
 
 Donner à une ligne une valeur sur une dimension qui ne s'applique pas à elle est refusé, dans l'application, dans un fichier budgétaire et par l'API. Renvoyer la valeur que la ligne porte déjà ne change rien.
 
+Une même valeur peut aussi être réservée à un seul type de ligne. Les deux réglages agissent à des niveaux différents. Par exemple, la dimension **Nature de coût** est utilisée pour **OPEX et CAPEX**, et sa valeur **Abonnements SaaS** est réservée à **OPEX uniquement** :
+
+- Le réglage de la dimension décide si le champ existe pour un type de ligne. Quand le champ disparaît, les valeurs que portent les lignes sont masquées.
+- Le réglage de la valeur filtre les choix. Le champ reste, les lignes CAPEX ne proposent plus **Abonnements SaaS**, et une ligne CAPEX qui l'a déjà le garde, l'affiche et reste modifiable. Voir [Valeurs OPEX ou CAPEX](#valeurs-opex-ou-capex).
+
+Les deux réglages doivent concorder. Une dimension ne peut pas être réglée sur un seul type de ligne tant que certaines de ses valeurs sont réservées à l'autre type : KANAP refuse, par exemple, « 2 values of this dimension are for CAPEX lines only. Set them to OPEX and CAPEX first. »
+
 ### Supprimer une dimension
 
 Le bouton **Supprimer** de l'en-tête supprime la dimension immédiatement (nécessite `analytics:admin`). Tant que la dimension a encore des valeurs, le bouton est désactivé et une ligne sous la ligne d'utilisation en donne la raison : « Pour supprimer cette dimension, supprimez d'abord ses valeurs. »
@@ -152,13 +161,13 @@ Pour conserver plutôt les valeurs sur les lignes, désactivez la dimension.
 
 ### Créer une valeur
 
-Cliquez sur **Nouvelle valeur**. Le champ **Dimension** commence sur la dimension sélectionnée sur la page et ne propose que les dimensions activées. Saisissez le **Nom**, et une **Description** si vous le souhaitez, puis cliquez sur **Créer**. L'espace de travail de la nouvelle valeur s'ouvre. Une nouvelle valeur est activée.
+Cliquez sur **Nouvelle valeur**. Le champ **Dimension** commence sur la dimension sélectionnée sur la page et ne propose que les dimensions activées. Saisissez le **Nom**, et une **Description** si vous le souhaitez. **Utilisé pour** commence sur **OPEX et CAPEX** : changez-le si la valeur ne convient qu'à un type de ligne. Cliquez ensuite sur **Créer**. L'espace de travail de la nouvelle valeur s'ouvre. Une nouvelle valeur est activée.
 
 ### L'espace de travail de la valeur
 
 - **En-tête** : le nom de la valeur. Cliquez dessus pour renommer la valeur. **Précédent** / **Suivant** parcourent les valeurs de la même dimension, dans l'ordre et avec les filtres actuels de la liste. Le bouton de fermeture ramène à la liste
 - **Zone principale** : une ligne comme « Utilisée par 3 lignes OPEX et 1 ligne CAPEX. » lorsque des lignes budgétaires utilisent la valeur, puis la **Description**
-- **Panneau Propriétés** à droite : **Dimension** (en lecture seule) et **Cycle de vie**
+- **Panneau Propriétés** à droite : **Dimension** (en lecture seule), **Utilisé pour** et **Cycle de vie**
 
 Les modifications s'enregistrent d'elles-mêmes, comme dans l'espace de travail de la dimension. Un nom refusé dans l'en-tête s'affiche en haut de la page.
 
@@ -168,6 +177,22 @@ Les modifications s'enregistrent d'elles-mêmes, comme dans l'espace de travail 
 - **Une valeur reste dans sa dimension** : la dimension est fixée à la création de la valeur et ne peut pas changer. Pour déplacer une valeur, créez-la dans l'autre dimension, modifiez les lignes, puis supprimez l'ancienne valeur.
 - **Renommer conserve les lignes** : les lignes pointent vers la valeur elle-même, le nouveau nom s'affiche donc aussitôt dans les listes et les rapports.
 - **Supprimer** : le bouton **Supprimer** de l'en-tête supprime la valeur immédiatement (nécessite `analytics:admin`). Il est désactivé lorsque des lignes budgétaires utilisent la valeur, avec la raison, par exemple « Utilisée par 3 lignes OPEX et 1 ligne CAPEX. Désactivez-la plutôt. » Retirez d'abord la valeur de ces lignes, ou désactivez-la.
+
+### Valeurs OPEX ou CAPEX
+
+Le champ **Utilisé pour** d'une valeur indique quelles lignes budgétaires peuvent l'utiliser :
+
+| Valeur | Signification |
+|--------|---------------|
+| **OPEX et CAPEX** | Les lignes OPEX et CAPEX peuvent utiliser la valeur. C'est le choix par défaut |
+| **OPEX uniquement** | Seules les lignes OPEX peuvent utiliser la valeur |
+| **CAPEX uniquement** | Seules les lignes CAPEX peuvent utiliser la valeur |
+
+Le champ d'une ligne OPEX propose les valeurs pour OPEX et celles pour les deux. Le champ d'une ligne CAPEX fait de même pour CAPEX. Une ligne qui porte déjà une valeur de l'autre type la garde, l'affiche et reste modifiable, comme pour une valeur désactivée. Choisir une telle valeur pour une autre ligne, ou en changeant la valeur d'une ligne, est refusé : dans l'application, dans un fichier budgétaire, par l'API et dans Plaid.
+
+- Lorsque la dimension est utilisée pour un seul type de ligne, le champ est verrouillé sur le réglage de la dimension, avec une ligne comme « La dimension Nature de coût est réservée aux lignes OPEX. » Une valeur ne peut pas être réservée au type de ligne que sa dimension exclut.
+- Lorsque des lignes de l'autre type portent la valeur, une ligne s'affiche sous le champ, par exemple « 4 lignes CAPEX ont cette valeur. Elles la gardent, mais les nouvelles lignes CAPEX ne peuvent pas la choisir. » Cliquez sur **Afficher ces lignes** pour les ouvrir dans la liste, dans un nouvel onglet. La ligne reste tant que le conflit existe.
+- Le rapport Dimensions analytiques propose, dans sa liste **Exclure des valeurs**, les valeurs du type choisi. Voir [Rapports](reports.md#dimensions-analytiques).
 
 ---
 
@@ -201,7 +226,7 @@ La dimension par défaut ne peut pas être désactivée.
 Dans le panneau **Propriétés** d'un poste OPEX ou CAPEX, et lorsque vous en créez un, chaque dimension activée utilisée pour ce type de ligne a son propre champ, au nom de la dimension, dans l'ordre des dimensions. La dimension par défaut s'affiche comme **Dimension analytique** tant que vous ne la renommez pas.
 
 - Choisissez une valeur, ou videz le champ pour laisser la ligne sans valeur sur cette dimension. La modification s'enregistre aussitôt.
-- Le champ liste les valeurs activées de sa dimension. Une valeur désactivée reste affichée sur les lignes qui l'ont.
+- Le champ liste les valeurs activées de sa dimension utilisées pour ce type de ligne. Une valeur désactivée, ou une valeur réservée à l'autre type de ligne, reste affichée sur les lignes qui l'ont. Voir [Valeurs OPEX ou CAPEX](#valeurs-opex-ou-capex).
 - Le champ ne peut pas créer de valeur. Créez les valeurs sur la page Dimensions analytiques, ou laissez un import CSV OPEX ou CAPEX les créer.
 - Une valeur s'applique à toute la ligne, sur toutes les années.
 - Si les dimensions ne peuvent pas être chargées, une ligne remplace ces champs : « Les dimensions n'ont pas pu être chargées. »
@@ -218,7 +243,7 @@ Le rapport **Dimensions analytiques** (sous **Rapports**) montre comment le budg
 - **Dimension** : la dimension sur laquelle le rapport regroupe. Elle s'affiche lorsque vous avez au moins deux dimensions activées, et commence sur la dimension par défaut
 - **Plage d'années** : une seule année (graphique en secteurs ou en barres) ou plusieurs années (graphique en courbe)
 - **Métrique** : toute colonne budgétaire affichée par votre organisation, sous son nom. Démarre sur la colonne par défaut
-- **Exclure des valeurs** : écarter certaines valeurs pour vous concentrer sur les autres
+- **Exclure des valeurs** : écarter certaines valeurs pour vous concentrer sur les autres. La liste propose les valeurs utilisées pour le type de poste choisi, plus celles que portent les lignes
 
 Les sept rapports budgétaires peuvent aussi être restreints à une valeur d'une dimension, avec un filtre par dimension. Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](reports.md#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques).
 
@@ -242,7 +267,7 @@ Pour renseigner des valeurs sur les postes budgétaires depuis un fichier, utili
 
 **Structure du CSV** :
 
-- En-têtes : `axis_code`, `name`, `description`, `status`, `disabled_at`
+- En-têtes : `axis_code`, `name`, `description`, `status`, `disabled_at`, `applies_to`
 - L'export écrit le séparateur de la langue de l'écran. Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
 
 | Colonne | Contenu |
@@ -253,7 +278,9 @@ Pour renseigner des valeurs sur les postes budgétaires depuis un fichier, utili
 | `status` | `enabled` ou `disabled`. Vide signifie `enabled` pour une nouvelle valeur et conserve le statut enregistré lors d'une mise à jour |
 | `disabled_at` | La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. Vide s'il n'y a pas de fin. Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine la valeur aujourd'hui |
 
-Seule la colonne `name` est obligatoire. Lorsque la colonne `description`, `status` ou `disabled_at` manque, les valeurs existantes conservent ce qui est enregistré, et les nouvelles valeurs sont activées, sans description. Un fichier sans `axis_code` place toutes les lignes dans la dimension par défaut.
+| `applies_to` | Le réglage **Utilisé pour**, toujours la dernière colonne. `opex`, `capex`, ou vide pour **OPEX et CAPEX**. Un fichier sans cette colonne laisse les réglages tels quels. Une cellule vide règle sur **OPEX et CAPEX** |
+
+Seule la colonne `name` est obligatoire. Lorsque la colonne `description`, `status`, `disabled_at` ou `applies_to` manque, les valeurs existantes conservent ce qui est enregistré, et les nouvelles valeurs sont activées, sans description. Un fichier sans `axis_code` place toutes les lignes dans la dimension par défaut.
 
 **Import** :
 
@@ -276,6 +303,8 @@ Seule la colonne `name` est obligatoire. Lorsque la colonne `description`, `stat
 - **« The ... dimension is disabled. Enable it or leave it out. »** : une ligne crée ou modifie une valeur dans une dimension désactivée. Activez la dimension, ou retirez la ligne.
 - **« ... is already on row N. »** : deux lignes portent le même nom pour la même dimension. Gardez-en une.
 - **« Invalid status '...'. Use 'enabled' or 'disabled'. »** : corrigez la cellule `status`.
+- **« Invalid applies_to '...'. Use 'opex', 'capex' or leave it empty. »** : corrigez la cellule `applies_to`.
+- **« The ... dimension is for OPEX lines only. »** (ou CAPEX) : la ligne réserve une valeur au type de ligne que sa dimension exclut. Corrigez la cellule `applies_to`, ou changez le réglage **Utilisé pour** de la dimension.
 - **« Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again. »** : la ligne est activée avec une date déjà passée. Un fichier exporté avant cette date indique encore `enabled` : exportez à nouveau, ou corrigez la cellule.
 - **« Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed. »** : la ligne est désactivée avec une date encore à venir. Corrigez la cellule `status` ou `disabled_at`.
 - **« Header mismatch »** : téléchargez un nouveau modèle.
