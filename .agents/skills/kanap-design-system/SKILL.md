@@ -70,6 +70,14 @@ KANAP uses MUI, but only through constrained patterns:
 - Use shared `sx` constants for repeated drawer/select/date/menu styling; do not paste large repeated inline `sx` objects.
 - Required asterisks are orange, not red.
 
+## List Pages
+
+- Plain list: `PageHeader` (breadcrumb, title, action bar) → grid toolbar (quick filter, "Show" scope, filters) → column chooser → grid. Reference: `frontend/src/pages/CompaniesPage.tsx`.
+- List split by collections (charts of accounts, analytics dimensions, knowledge libraries): `PageHeader` without actions → `ChipToggleBar` band with the collection toggles and the collection actions (new, manage) → `ChipToggleContextLine` "<collection> · <n> items" with the item actions on its title row → grid toolbar → grid. Item actions never sit above the band. Reference: `frontend/src/pages/coa/CoaPage.tsx`.
+- A page whose band is its header and whose name is already the top nav tab (knowledge base) has no `PageHeader`.
+- `PageHeader` hides a single-crumb breadcrumb by itself; do not add one back by hand.
+- Full rules: "List pages" in the charter.
+
 ## Workspace Pages
 
 Workspace/detail pages should follow the reference implementation in `frontend/src/pages/tasks/TaskWorkspacePage.tsx` unless the existing shared workspace components have superseded it.

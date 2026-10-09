@@ -649,6 +649,50 @@ Only add drag-to-reorder when the items have an inherent manual order that alpha
 
 ---
 
+## List pages
+
+Reference implementations: `frontend/src/pages/CompaniesPage.tsx` (plain list),
+`frontend/src/pages/coa/CoaPage.tsx` (list split by collections).
+
+### Plain list page
+
+```
+PageHeader: breadcrumb, title ........................ [action bar]
+Grid toolbar: [quick filter] Show: o All o Enabled o Disabled  [extra filters]
+Choose columns   Reset columns
+Grid
+```
+
+The action bar follows "Button variants": one `action-primary` (New X), `action` for the rest,
+`DeleteSelectedButton` for the selection.
+
+### List split by collections (toggle band)
+
+When the grid shows the items of one collection picked among several (charts of accounts,
+analytics dimensions, knowledge libraries), the actions follow what they act on:
+
+```
+PageHeader: breadcrumb, title (no actions)
+ChipToggleBar: [collection] [collection] [collection] ........ [+ New] [Manage X]
+ChipToggleContextLine: <collection name> · <n> items ......... [New item] [Import] [Export] [Delete (n)]
+                       optional secondary line (scope, access, description)
+Grid toolbar, column chooser, grid
+```
+
+- The band (`frontend/src/components/ChipToggleBar.tsx`) holds the collection toggles and the
+  actions on collections (create, manage, edit). Never put item actions on the band.
+- The context line (`ChipToggleContextLine`, same file) names the selected collection with the
+  grid total (title 14px weight 500) and carries the actions on the items, aligned with its title row.
+  The count follows the grid (current scope and folder); never add a backend call only for it.
+- Item actions never sit above the band: the user picks the collection first, then acts in it.
+- When the band is the page's own header and the top nav tab already names the page (knowledge
+  base), the page has no `PageHeader`.
+
+### Breadcrumbs on list pages
+
+`PageHeader` hides a breadcrumb that holds a single crumb: it links nowhere and repeats the top
+nav tab or the title. Multi-level breadcrumbs (`Master data / Charts of accounts`) stay.
+
 ## Workspace pages (detail / edit)
 
 Workspace pages are full-height detail views for a single entity (task, project, request, contract, etc.). They follow a strict layout. Reference implementation: `TaskWorkspacePage.tsx`.
