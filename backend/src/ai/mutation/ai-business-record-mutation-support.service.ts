@@ -18,7 +18,13 @@ import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.ser
 import { PortfolioProjectsService } from '../../portfolio/services';
 import { SpendItemsService } from '../../spend/spend-items.service';
 import { lockBudgetLine } from '../../spend/budget-locks';
-import { itemAnalyticsFields, ItemAnalyticsScope, loadItemAnalyticsValues } from '../../spend/item-analytics.util';
+import {
+  itemAnalyticsFields,
+  ItemAnalyticsScope,
+  loadItemAnalyticsValues,
+  notApplicableValueMessage,
+  valueAppliesTo,
+} from '../../spend/item-analytics.util';
 import { isActiveAt, parseEndOfValidityInput } from '../../common/status';
 import { sameFieldValue } from '../../common/edit-conflicts';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
@@ -560,6 +566,9 @@ export class AiBusinessRecordMutationSupportService {
       if (field.relationTarget === 'analytics_categories' && relation && relation.id !== (existing?.[fieldName] ?? null)) {
         // A new value must be enabled; the line's current one is kept as it is (the write gate checks it again).
         if (relation.row.status === 'disabled' || !isActiveAt(relation.row.disabled_at as any)) throw new BadRequestException('This value is disabled.');
+        const lineType = entityType === 'capex_items' ? 'capex' : 'opex';
+        const value = { name: String(relation.row.name ?? relation.label), applies_to: (relation.row.applies_to as string | null) ?? null };
+        if (!valueAppliesTo(value, lineType)) throw new BadRequestException(notApplicableValueMessage(value, lineType));
       }
       return { value: relation?.id ?? null, displayValue: relation?.label ?? null };
     }

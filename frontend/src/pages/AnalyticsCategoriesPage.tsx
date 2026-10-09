@@ -19,6 +19,7 @@ import AnalyticsDimensionChipBar from './analytics/AnalyticsDimensionChipBar';
 import { ANALYTICS_DIMENSIONS_PATH, ANALYTICS_LIST_PATH } from './analytics/analyticsFields';
 import ForbiddenPage from './ForbiddenPage';
 import { statusColumnProps } from '../components/grid/statusColumn';
+import { lineTypeUsageColumnProps } from '../components/grid/lineTypeUsageColumn';
 
 const DEFAULT_SORT = 'name:ASC';
 
@@ -123,6 +124,14 @@ function AnalyticsValuesList() {
         headerName: t('shared.columns.status'),
         width: 140,
         ...statusColumnProps(t),
+        cellRenderer: link,
+      },
+      {
+        // The lines that may choose the value; blank is OPEX and CAPEX.
+        field: 'applies_to',
+        headerName: t('shared.lineTypeUsage.label'),
+        width: 150,
+        ...lineTypeUsageColumnProps(t),
         cellRenderer: link,
       },
       {

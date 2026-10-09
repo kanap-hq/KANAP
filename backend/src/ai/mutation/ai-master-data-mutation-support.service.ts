@@ -268,6 +268,13 @@ const ENTITY_CONFIG: Record<AiMasterDataEntityType, EntityConfig> = {
     fields: {
       name: { label: 'Name', kind: 'text', requiredOnCreate: true },
       description: { label: 'Description', kind: 'text', nullable: true },
+      applies_to: {
+        label: 'Used for',
+        kind: 'enum',
+        nullable: true,
+        enumValues: ['opex', 'capex'],
+        enumCase: 'lower',
+      },
       status: { label: 'Status', kind: 'status' },
       disabled_at: { label: 'Disabled At', kind: 'date', nullable: true },
     },

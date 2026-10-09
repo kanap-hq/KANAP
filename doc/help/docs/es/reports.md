@@ -417,7 +417,7 @@ Vea datos presupuestarios OPEX o CAPEX agrupados por los valores de una dimensi�
 - **Año de inicio** y **Año de fin**: Año anterior, actual o siguiente
 - **Métrica**: Cualquier columna presupuestaria visible. Empieza en la columna por defecto
 - **Tipo de gráfico**: Gráfico circular o de barras horizontales (solo un año)
-- **Excluir valores**: Autocompletado de selección múltiple para excluir valores concretos de la dimensión elegida. Cambiar el tipo de partida o la dimensión borra esta selección
+- **Excluir valores**: Autocompletado de selección múltiple para excluir valores concretos de la dimensión elegida. Ofrece los valores que se usan para el tipo de partida elegido, además de los que tienen las líneas del informe. Cambiar el tipo de partida o la dimensión borra esta selección
 - **Centro de coste**, **Run o build**, **Partidas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
 
 El subtítulo, el título del gráfico y la primera columna de la tabla indican la dimensión elegida, por ejemplo "OPEX por Nature".

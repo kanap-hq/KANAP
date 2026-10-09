@@ -417,7 +417,7 @@ View OPEX or CAPEX budget data grouped by the values of one analytics dimension.
 - **Start year** and **End year**: Previous, current, or next year
 - **Metric**: Any shown budget column. Starts on the default column
 - **Chart type**: Pie chart or horizontal bar chart (single-year only)
-- **Exclude values**: Multi-select autocomplete to exclude specific values of the chosen dimension. Switching the item type or the dimension clears it
+- **Exclude values**: Multi-select autocomplete to exclude specific values of the chosen dimension. It offers the values used for the selected item type, plus the values the report's lines hold. Switching the item type or the dimension clears it
 - **Cost center**, **Run or build**, **Items** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
 
 The subtitle, the chart title and the first column of the table name the chosen dimension, for example "OPEX by Nature".

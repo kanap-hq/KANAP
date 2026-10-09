@@ -758,6 +758,10 @@ function resolveAnalytics(
         fail(column, `${value.name} is disabled. Pick an enabled value.`);
         continue;
       }
+      if (value.appliesTo && value.appliesTo !== input.scope && !same) {
+        fail(column, `${value.name} is for ${value.appliesTo.toUpperCase()} lines only. Pick a value for ${input.scope.toUpperCase()} lines.`);
+        continue;
+      }
       if (!same) changes.push(column);
       if (creating || !same) draft.analytics.push({ code, categoryId: value.id, createName: null });
       continue;

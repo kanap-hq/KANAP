@@ -46,7 +46,14 @@ const ANALYTICS_VALUES_FIELD = 'analytics_values';
 const CONFLICT_MESSAGE = 'Send the analytics category once: analytics_category_id and analytics_values disagree.';
 const DISABLED_VALUE_MESSAGE = 'This value is disabled.';
 
-type ValueRow = { id: string; axis_id: string; name: string; status: string; disabled_at: Date | string | null };
+type ValueRow = {
+  id: string;
+  axis_id: string;
+  name: string;
+  applies_to: string | null;
+  status: string;
+  disabled_at: Date | string | null;
+};
 
 function isValueActive(row: { status: string; disabled_at: Date | string | null }): boolean {
   return String(row.status ?? '').toLowerCase() !== 'disabled' && isActiveAt(row.disabled_at);
@@ -70,6 +77,16 @@ export function notApplicableDimensionMessage(axis: { name: string | null; appli
   return `${capitalized(dimensionPhrase(axis))} is for ${String(axis.applies_to).toUpperCase()} lines only. Leave it out.`;
 }
 
+/** "Abonnements SaaS is for OPEX lines only. Choose a value for CAPEX lines." (a value of the other line type). */
+export function notApplicableValueMessage(value: { name: string; applies_to: string | null }, scope: ItemAnalyticsScope): string {
+  return `${value.name} is for ${String(value.applies_to).toUpperCase()} lines only. Choose a value for ${scope.toUpperCase()} lines.`;
+}
+
+/** Whether a value may be chosen on the lines of `scope` (null: OPEX and CAPEX lines). */
+export function valueAppliesTo(value: { applies_to?: string | null }, scope: ItemAnalyticsScope): boolean {
+  return value.applies_to == null || value.applies_to === scope;
+}
+
 /** An id cell: null for null or blank, the lower-cased uuid otherwise; anything else names nothing. */
 function idOrNull(value: unknown, notFound: string): string | null {
   if (value == null || value === '') return null;
@@ -87,7 +104,8 @@ function idOrNull(value: unknown, notFound: string): string | null {
  *   (on a disabled one or one of the other type, the line's unchanged value,
  *   or null where it has none, passes as a no-op; the other-type message wins);
  *   a value must be the tenant's and belong to that dimension; a disabled
- *   value is refused unless it is the line's current one.
+ *   value, or one restricted to the other line type, is refused unless it is
+ *   the line's current one.
  * Returns [] when the body names neither field. Throws a 400 on the first problem.
  */
 export async function resolveItemAnalyticsChanges(
@@ -172,7 +190,7 @@ export async function resolveItemAnalyticsChanges(
     // Table names come from ANALYTICS_LINK_TABLES only. FOR KEY SHARE: a value deleted meanwhile
     // makes this read wait, then find nothing (a 400), instead of failing the link insert later.
     const rows: Array<ValueRow & { is_current: boolean }> = await manager.query(
-      `SELECT c.id::text AS id, c.axis_id::text AS axis_id, c.name, c.status::text AS status, c.disabled_at,
+      `SELECT c.id::text AS id, c.axis_id::text AS axis_id, c.name, c.applies_to, c.status::text AS status, c.disabled_at,
               EXISTS (
                 SELECT 1 FROM ${ANALYTICS_LINK_TABLES[scope]} v
                  WHERE v.tenant_id = c.tenant_id AND v.item_id = $3::uuid AND v.axis_id = c.axis_id AND v.category_id = c.id
@@ -197,6 +215,7 @@ export async function resolveItemAnalyticsChanges(
     if (!value) throw new BadRequestException(request.legacy ? 'Analytics category not found.' : 'Analytics value not found.');
     if (value.axis_id !== axis.id) throw new BadRequestException(`${value.name} is not a value of ${dimensionPhrase(axis)}.`);
     if (!value.is_current && !isValueActive(value)) throw new BadRequestException(DISABLED_VALUE_MESSAGE);
+    if (!value.is_current && !valueAppliesTo(value, scope)) throw new BadRequestException(notApplicableValueMessage(value, scope));
     changes.push({ axis_id: axis.id, category_id: value.id });
   }
   return changes;

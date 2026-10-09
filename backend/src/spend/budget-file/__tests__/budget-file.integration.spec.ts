@@ -711,6 +711,22 @@ async function testDimensionCells(runner: { query: Function; manager: EntityMana
   const kept = await preflightBudgetFile(runner.manager, kind, tenantId, csvOf(['item_number', 'analytics:nature'], [{ item_number: ref(kind, alpha.n), 'analytics:nature': 'Retired' }]));
   assert.deepEqual([kept.ok, kept.changes.unchanged], [true, 1], `${kind}: a disabled value that is the line's own is kept (${JSON.stringify(kept.errors)})`);
 
+  // A value restricted to the other line type: refused as new, on a line and a new line; kept as the line's own.
+  const otherType = kind === 'opex' ? 'capex' : 'opex';
+  const reserved = await value(nature, 'Reserved');
+  await runner.query(`UPDATE analytics_categories SET applies_to = $3 WHERE tenant_id = $1 AND id = $2`, [tenantId, reserved, otherType]);
+  const typeMessage = `Reserved is for ${otherType.toUpperCase()} lines only. Pick a value for ${kind.toUpperCase()} lines.`;
+  const refusedType = await preflightBudgetFile(runner.manager, kind, tenantId, csvOf(['item_number', 'analytics:nature'], [{ item_number: ref(kind, alpha.n), 'analytics:nature': 'reserved' }]));
+  assert.deepEqual(rowErrors(refusedType), [`2 analytics:nature: ${typeMessage}`], `${kind}: a value of the other type is refused as new`);
+  const refusedNew = await preflightBudgetFile(runner.manager, kind, tenantId, csvOf(columns, [newLine(kind, 'Delta', { 'analytics:nature': 'Reserved' })]));
+  assert.deepEqual(rowErrors(refusedNew), [`2 analytics:nature: ${typeMessage}`], `${kind}: and on a new line`);
+  await runner.query(
+    `UPDATE ${kind === 'opex' ? 'spend_item_analytics_values' : 'capex_item_analytics_values'} SET category_id = $3 WHERE tenant_id = $1 AND item_id = $2 AND axis_id = $4`,
+    [tenantId, alpha.id, reserved, nature],
+  );
+  const keptType = await preflightBudgetFile(runner.manager, kind, tenantId, csvOf(['item_number', 'analytics:nature'], [{ item_number: ref(kind, alpha.n), 'analytics:nature': 'Reserved' }]));
+  assert.deepEqual([keptType.ok, keptType.changes.unchanged], [true, 1], `${kind}: a value of the other type that is the line's own is kept (${JSON.stringify(keptType.errors)})`);
+
   await loadBudgetFile(runner.manager, kind, tenantId, csvOf(['item_number', 'analytics:nature'], [{ item_number: ref(kind, alpha.n), 'analytics:nature': '-' }]));
   assert.deepEqual(
     (await links()).filter((link: string) => link.startsWith('Alpha')),

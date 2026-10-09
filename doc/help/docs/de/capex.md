@@ -225,6 +225,7 @@ Der Tab Übersicht enthält die Details der Investition und ihre Aufgaben.
 
 - Jede aktivierte Dimension, die für CAPEX-Zeilen verwendet wird, hat ein eigenes Feld, nach der Dimension benannt, in der Reihenfolge der Dimensionen. Eine Dimension mit **Nur OPEX** hat keines, und der Wert, den eine Position dort hat, bleibt ausgeblendet. Wählen Sie einen Wert oder leeren Sie das Feld; die Änderung wird sofort gespeichert
 - Jedes Feld listet die aktivierten Werte seiner Dimension. Ein deaktivierter Wert bleibt auf den Positionen, die ihn bereits haben, und kann für keine andere Position gewählt werden
+- Ein Wert, der nur für OPEX-Zeilen verwendet wird, wird nicht angeboten, und seine Wahl wird abgelehnt. Eine Position, die ihn bereits hat, behält ihn und bleibt bearbeitbar. Siehe [OPEX- oder CAPEX-Werte](analytics.md#opex-oder-capex-werte)
 - Das Feld kann keinen Wert erstellen: Erstellen Sie ihn unter [Analysedimensionen](analytics.md), oder lassen Sie ihn von einem CSV-Import erstellen
 - Können die Dimensionen nicht geladen werden, ersetzt eine Zeile diese Felder: „Die Dimensionen konnten nicht geladen werden.“
 

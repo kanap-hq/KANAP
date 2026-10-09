@@ -6,19 +6,23 @@ import { attentionDotSx, drawerMenuItemSx, drawerSelectSx } from '../../theme/fo
 
 /**
  * "Used for": OPEX and CAPEX lines (stored as null), OPEX lines only or CAPEX lines only. Shared by
- * accounts and analytics dimensions. `label` names the select for assistive technology; the visible
- * label is the surrounding `PropertyRow`'s.
+ * accounts, analytics dimensions and their values. `label` names the select for assistive
+ * technology; the visible label is the surrounding `PropertyRow`'s. `excluded` greys out the
+ * choice of one type (a value under a dimension restricted to the other type); the other choices,
+ * a stored excluded one included, stay as they are.
  */
 export default function LineTypeUsageSelect({
   value,
   label,
   disabled,
+  excluded,
   error,
   onChange,
 }: {
   value: LineType | null;
   label: string;
   disabled?: boolean;
+  excluded?: LineType | null;
   error?: string;
   onChange: (next: LineType | null) => void;
 }) {
@@ -38,7 +42,7 @@ export default function LineTypeUsageSelect({
         renderValue={(selected) => lineTypeUsageLabel(t, selected)}
       >
         {[null, ...LINE_TYPES].map((usage) => (
-          <MenuItem key={usage ?? 'both'} value={usage ?? ''} sx={drawerMenuItemSx}>
+          <MenuItem key={usage ?? 'both'} value={usage ?? ''} disabled={!!excluded && usage === excluded} sx={drawerMenuItemSx}>
             {lineTypeUsageLabel(t, usage)}
           </MenuItem>
         ))}
