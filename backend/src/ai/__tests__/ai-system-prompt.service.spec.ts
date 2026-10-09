@@ -1,6 +1,8 @@
 import * as assert from 'node:assert/strict';
 import { AiSystemPromptService } from '../ai-system-prompt.service';
 import { selectAiContextProfile } from '../ai-context-profile';
+import { AiChatOrchestratorService } from '../ai-chat-orchestrator.service';
+import { analyticsDimensionsAiContext } from '../ai-analytics-dimensions-context';
 
 async function testStructuredReadGuidancePrefersQueryLayerTools() {
   const service = new AiSystemPromptService();
@@ -306,6 +308,64 @@ async function testPromptIncludesDocumentRelationPivotGuidanceFromToolMetadata()
   assert.match(prompt, /`{"document_id":"DOC-14","remove":{"applications":\["Billing App"\]}}`/i);
 }
 
+/**
+ * The analytics dimensions OPEX and CAPEX lines may hold reach the prompt only for users
+ * who read those lines, per readable line type, enabled dimensions used for that type only.
+ */
+async function testAnalyticsDimensionsFollowOpexOrCapexRead() {
+  const axis = (id: string, code: string, name: string | null, extra: Record<string, unknown> = {}) => ({
+    id, code, name, is_default: false, applies_to: null, status: 'enabled', disabled_at: null, sort_order: 1, ...extra,
+  });
+  const rows = [
+    axis('00000000-0000-4000-8000-000000000001', 'default', null, { is_default: true, sort_order: 0 }),
+    axis('00000000-0000-4000-8000-000000000002', 'nature-cost', 'Nature de coût'),
+    axis('00000000-0000-4000-8000-000000000003', 'old', 'Old', { status: 'disabled' }),
+    axis('00000000-0000-4000-8000-000000000004', 'recurrence', 'Recurrence', { applies_to: 'opex' }),
+    axis('00000000-0000-4000-8000-000000000005', 'asset-class', 'Asset class', { applies_to: 'capex' }),
+  ];
+  const queries: unknown[][] = [];
+  const ctx = {
+    tenantId: 'tenant-1',
+    userId: 'user-1',
+    manager: { query: async (...params: unknown[]) => { queries.push(params); return rows; } },
+  } as any;
+  const load = (AiChatOrchestratorService.prototype as any).loadAnalyticsDimensionsPromptContext;
+
+  const both = await load.call({}, ctx, ['tasks', 'spend_items', 'capex_items']);
+  assert.deepEqual(both, {
+    opex_lines: [
+      { key: 'analytics_category', name: 'Analytics dimension', default: true },
+      { key: 'analytics:nature-cost', name: 'Nature de coût', default: false },
+      { key: 'analytics:recurrence', name: 'Recurrence', default: false },
+    ],
+    capex_lines: [
+      { key: 'analytics_category', name: 'Analytics dimension', default: true },
+      { key: 'analytics:nature-cost', name: 'Nature de coût', default: false },
+      { key: 'analytics:asset-class', name: 'Asset class', default: false },
+    ],
+  }, 'enabled dimensions used for each line type; the default keeps analytics_category');
+  assert.deepEqual(Object.keys(await load.call({}, ctx, ['capex_items'])), ['capex_lines'], 'only the readable line types');
+  assert.equal(await load.call({}, ctx, ['tasks', 'projects']), undefined, 'no OPEX or CAPEX read: no block');
+  assert.equal(queries.length, 2, 'dimensions are read only for OPEX or CAPEX readers');
+  assert.deepEqual(queries.map((params) => params[1]), [['tenant-1'], ['tenant-1']], 'for the context tenant');
+
+  const service = new AiSystemPromptService();
+  const base = {
+    tenantName: 'Test Tenant',
+    availableTools: [],
+    readableEntityTypes: ['spend_items'],
+    currentUser: { displayName: 'Alex', email: null, roleNames: [], teamName: null },
+  };
+  const withDimensions = service.build({ ...base, analyticsDimensions: analyticsDimensionsAiContext(rows as any, ['spend_items']) });
+  assert.match(withDimensions, /"analytics_dimensions": \{/);
+  assert.match(withDimensions, /"key": "analytics:nature-cost"/);
+  assert.match(withDimensions, /"name": "Nature de coût"/);
+  assert.doesNotMatch(withDimensions, /analytics:old|analytics:asset-class/, 'neither a disabled dimension nor one of the other line type');
+  assert.match(withDimensions, /To set a line's value on a dimension, put its `key`/);
+  assert.match(withDimensions, /must be created first/);
+  assert.doesNotMatch(service.build(base), /analytics_dimensions/);
+}
+
 async function run() {
   await testStructuredReadGuidancePrefersQueryLayerTools();
   await testWebSearchGuidanceIncludedWhenToolAvailable();
@@ -315,6 +375,7 @@ async function run() {
   await testMinimalProfileSkipsToolsAndLongGuidance();
   await testPromptBuildsWriteGuidanceFromToolMetadata();
   await testPromptIncludesDocumentRelationPivotGuidanceFromToolMetadata();
+  await testAnalyticsDimensionsFollowOpexOrCapexRead();
 }
 
 void run();

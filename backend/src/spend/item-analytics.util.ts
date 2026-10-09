@@ -44,7 +44,7 @@ const LEGACY_ANALYTICS_FIELD = 'analytics_category_id';
 const ANALYTICS_VALUES_FIELD = 'analytics_values';
 
 const CONFLICT_MESSAGE = 'Send the analytics category once: analytics_category_id and analytics_values disagree.';
-const DISABLED_VALUE_MESSAGE = 'This value is disabled.';
+export const DISABLED_VALUE_MESSAGE = 'This value is disabled.';
 
 type ValueRow = {
   id: string;
@@ -55,12 +55,12 @@ type ValueRow = {
   disabled_at: Date | string | null;
 };
 
-function isValueActive(row: { status: string; disabled_at: Date | string | null }): boolean {
+export function isValueActive(row: { status: string; disabled_at: Date | string | null }): boolean {
   return String(row.status ?? '').toLowerCase() !== 'disabled' && isActiveAt(row.disabled_at);
 }
 
 /** "the Nature dimension", or "the analytics dimension" (in-sentence form) for the default one while it has no name. */
-function dimensionPhrase(axis: { name: string | null }): string {
+export function dimensionPhrase(axis: { name: string | null }): string {
   return axis.name && axis.name.trim() ? `the ${axis.name} dimension` : 'the analytics dimension';
 }
 

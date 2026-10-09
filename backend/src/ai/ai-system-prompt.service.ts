@@ -6,6 +6,7 @@ import {
 } from './ai-context-budget.helper';
 import type { AiContextProfile } from './ai-context-profile';
 import type { budgetColumnsAiContext } from '../budget-columns/budget-columns.util';
+import type { AnalyticsDimensionsPromptContext } from './ai-analytics-dimensions-context';
 
 type CurrentUserPromptContext = {
   displayName: string;
@@ -22,6 +23,8 @@ type SystemPromptParams = {
   contextProfile?: AiContextProfile;
   /** The tenant's budget columns, only for users who can read OPEX or CAPEX items. */
   budgetColumns?: ReturnType<typeof budgetColumnsAiContext>;
+  /** The analytics dimensions OPEX and CAPEX lines may be given a value on, only for users who can read those lines. */
+  analyticsDimensions?: AnalyticsDimensionsPromptContext;
 };
 
 type PromptSection = {
@@ -225,6 +228,14 @@ export class AiSystemPromptService {
       'You are Plaid, the integrated AI assistant of KANAP, serving the workspace on the KANAP IT governance platform.',
     );
 
+    const analyticsDimensions = params.analyticsDimensions
+      ? Object.fromEntries(
+        Object.entries(params.analyticsDimensions).map(([lineType, entries]) => [
+          lineType,
+          (entries ?? []).map((entry) => ({ ...entry, name: normalizePromptValue(entry.name) ?? entry.key })),
+        ]),
+      )
+      : null;
     const currentUserContext = {
       tenantName,
       displayName: normalizePromptValue(params.currentUser.displayName) ?? 'Current user',
@@ -242,6 +253,7 @@ export class AiSystemPromptService {
           })),
         }
         : {}),
+      ...(analyticsDimensions ? { analytics_dimensions: analyticsDimensions } : {}),
     };
     addSection(
       'current_user',
@@ -255,6 +267,11 @@ export class AiSystemPromptService {
           'Amount fields are `<year slot>_<ai_field_suffix>`, year slots y_minus2, y_minus1, y, y_plus1 and y_plus2; ' +
           'financial-plan amounts use `measure`. Match a column the user names to `name`, answer with that name, and use the `default` column when the user names none. ' +
           'Hidden columns (`shown: false`) still hold amounts.'
+        : '') +
+      (analyticsDimensions
+        ? '\n`analytics_dimensions` lists, per line type, the analytics dimensions an OPEX or CAPEX line can hold a value on. ' +
+          'To set a line\'s value on a dimension, put its `key` in the `fields` of `create_business_record` or `update_business_record` with the value\'s name (null clears it); ' +
+          'a value missing from the dimension must be created first (`create_master_data_record`, analytics_categories with `dimension`) or asked for.'
         : ''),
     );
 

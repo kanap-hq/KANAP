@@ -42,12 +42,12 @@ export class CreateMasterDataRecordAiMutationOperation implements AiMutationOper
       'contacts: first_name, last_name, job_title, email, phone, mobile, country, notes, active, supplier_id, supplier_role',
       'accounts: coa_id, account_number, account_name, native_name, description, consolidation_account_number, consolidation_account_name, consolidation_account_description, nature, status, disabled_at',
       'chart_of_accounts: code, name, country_iso, scope, is_default',
-      'analytics_categories: name, description, applies_to, status, disabled_at',
+      'analytics_categories: name, description, applies_to, status, disabled_at, dimension (create only: the code or name of the analytics dimension, the default dimension when omitted)',
       'business_processes: name, description, notes, owner_user_id, it_owner_user_id, status, disabled_at',
       'locations: name, hosting_type, operating_company_id, country_iso, city, provider, region, additional_info',
     ],
     reversible: false,
-    prompt_hint: 'For Tier 1 master data creation, use `create_master_data_record`. Set `entity_type` first, then put values in `fields`. Required examples: companies need name/country_iso/city; company and department metrics also need metrics_year/headcount when provided; departments need company_id/name; contacts need email; accounts need coa_id/account_number/account_name; chart_of_accounts need code/name and country_iso unless scope is GLOBAL; locations need name/hosting_type (location_reference is system-generated). Use exact human names/codes/emails for relations when possible. This only creates a preview and still requires explicit approval.',
+    prompt_hint: 'For Tier 1 master data creation, use `create_master_data_record`. Set `entity_type` first, then put values in `fields`. Required examples: companies need name/country_iso/city; company and department metrics also need metrics_year/headcount when provided; departments need company_id/name; contacts need email; accounts need coa_id/account_number/account_name; chart_of_accounts need code/name and country_iso unless scope is GLOBAL; locations need name/hosting_type (location_reference is system-generated); analytics_categories need name and go to the default dimension unless `dimension` names another one (a value cannot change dimension later). Use exact human names/codes/emails for relations when possible. This only creates a preview and still requires explicit approval.',
   };
 
   constructor(private readonly support: AiMasterDataMutationSupportService) {}
