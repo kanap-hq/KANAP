@@ -12,6 +12,7 @@ import type { CostCenterNode } from '../../services/costCenters';
 import {
   axisListColumn,
   NO_LIST_PICKS,
+  oneOffListLink,
   reportListFilters,
   reportListHref,
   reportListLink,
@@ -96,6 +97,19 @@ const WINDOW = {
 /** The filters every link carries besides its group and picks: the report's window. */
 const withWindow = (filters: Record<string, unknown>) => ({ disabled_at: WINDOW, ...filters });
 const statusOf = (href: string) => new URLSearchParams(href.split('?')[1]).get('statusScope');
+
+describe('oneOffListLink: a list opened on given filters', () => {
+  it('opens the list on every status as a one-off view, with the filters alone', () => {
+    const link = oneOffListLink('capex', { account_id: set(['acc-1']) });
+    expect(link.save).toBeUndefined();
+    const [path, search] = link.href.split('?');
+    expect(path).toBe('/ops/capex');
+    const params = new URLSearchParams(search);
+    expect(filtersOf(link.href)).toEqual({ account_id: set(['acc-1']) });
+    expect(params.get('statusScope')).toBe('all');
+    expect(params.get('from')).toBe('report');
+  });
+});
 
 describe('reportListHref: each group kind', () => {
   it('a cost center row opens the list on every status, its window and its label; the row without one on blank', () => {

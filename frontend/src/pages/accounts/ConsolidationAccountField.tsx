@@ -53,7 +53,8 @@ function isDisabled(option: ConsolidationOption) {
   return deriveStatusFromDisabledAt(option.disabled_at) === STATUS_DISABLED;
 }
 
-const attentionDotSx = {
+/** The orange dot before an attention note on the account pages. */
+export const attentionDotSx = {
   display: 'inline-block',
   width: 6,
   height: 6,

@@ -21,6 +21,9 @@ import { ItemAnalyticsChange, resolveItemAnalyticsChanges } from './item-analyti
  * - the resulting account must belong to the resulting company's chart,
  *   checked on create and when the company or the account changes (an older
  *   mismatched line still takes unrelated edits);
+ * - an account for the other type of line only (`accounts.nature`) is refused,
+ *   checked on create and when the account changes (a line that already has
+ *   one keeps it and takes other edits);
  * - analytics values (`analytics_values`, and the legacy
  *   `analytics_category_id` of the default dimension) are resolved into link
  *   changes, which the caller writes after the line (`item-analytics.util.ts`).
@@ -96,6 +99,13 @@ export function parseRunBuild(value: unknown): RunBuild | null | undefined {
   return (RUN_BUILD_VALUES as readonly string[]).includes(text) ? (text as RunBuild) : undefined;
 }
 
+/** The refusal of an account kept for the other type of line. */
+export function accountNatureRefusal(scope: ItemWriteScope): string {
+  return scope === 'opex'
+    ? 'This account is for CAPEX lines only. Choose an account for OPEX lines.'
+    : 'This account is for OPEX lines only. Choose an account for CAPEX lines.';
+}
+
 /** The node of a cost center id in this tenant, locked against a concurrent change of its kind. */
 async function readCostCenter(manager: EntityManager, tenantId: string, id: string): Promise<CostCenterRow | null> {
   const [row] = await manager.query(
@@ -163,6 +173,7 @@ export async function resolveItemWrite(
   const accountId = next('account_id');
   const storedOf = (column: string) => ((existing?.[column] as string | null | undefined) ?? null);
   const checkChart = !!accountId && (!existing || companyId !== storedOf('paying_company_id') || accountId !== storedOf('account_id'));
+  const checkNature = !!accountId && (!existing || accountId !== storedOf('account_id'));
 
   // Every supplied id, plus the resulting company and account for the chart check, in one query.
   const idsByTable = new Map<string, Set<string>>();
@@ -179,18 +190,20 @@ export async function resolveItemWrite(
     want('companies', companyId);
     want('accounts', accountId);
   }
+  if (checkNature) want('accounts', accountId);
 
-  const found = new Map<string, { coa_id: string | null }>();
+  const found = new Map<string, { coa_id: string | null; nature: string | null }>();
   if (idsByTable.size > 0) {
     const params: unknown[] = [tenantId];
     const selects = Array.from(idsByTable.entries()).map(([table, ids]) => {
       params.push(Array.from(ids));
       const coa = table === 'companies' || table === 'accounts' ? 'coa_id::text' : 'NULL::text';
+      const nature = table === 'accounts' ? 'nature' : 'NULL::text';
       // Table names come from REFERENCES only.
-      return `SELECT '${table}' AS tbl, id::text AS id, ${coa} AS coa_id FROM ${table} WHERE tenant_id = $1 AND id = ANY($${params.length}::uuid[])`;
+      return `SELECT '${table}' AS tbl, id::text AS id, ${coa} AS coa_id, ${nature} AS nature FROM ${table} WHERE tenant_id = $1 AND id = ANY($${params.length}::uuid[])`;
     });
-    const rows: Array<{ tbl: string; id: string; coa_id: string | null }> = await manager.query(selects.join(' UNION ALL '), params);
-    for (const row of rows) found.set(`${row.tbl}:${row.id}`, { coa_id: row.coa_id });
+    const rows: Array<{ tbl: string; id: string; coa_id: string | null; nature: string | null }> = await manager.query(selects.join(' UNION ALL '), params);
+    for (const row of rows) found.set(`${row.tbl}:${row.id}`, { coa_id: row.coa_id, nature: row.nature });
   }
   for (const [column, ref] of Object.entries(REFERENCES)) {
     const id = column in values ? (values[column] as string | null) : null;
@@ -203,6 +216,10 @@ export async function resolveItemWrite(
     if (account?.coa_id && company?.coa_id && account.coa_id !== company.coa_id) {
       throw new BadRequestException('Selected account does not belong to the paying company\'s Chart of Accounts');
     }
+  }
+  if (checkNature) {
+    const nature = found.get(`accounts:${accountId}`)?.nature ?? null;
+    if (nature && nature !== scope) throw new BadRequestException(accountNatureRefusal(scope));
   }
 
   const analytics = await resolveItemAnalyticsChanges(manager, scope, tenantId, input, (existing?.id as string | undefined) ?? null);

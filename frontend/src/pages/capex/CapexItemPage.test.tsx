@@ -63,6 +63,7 @@ vi.mock('./workspace/CapexPropertiesDrawer', async () => {
       <button type="button" onClick={() => props.onPayingCompanyChange('company-2')}>pick other company</button>
       <button type="button" onClick={() => props.onPayingCompanyChange('')}>clear company</button>
       <button type="button" onClick={() => props.onAccountChange('account-1')}>pick account</button>
+      <button type="button" onClick={() => props.onAccountChange('account-opex')}>pick account kept for OPEX</button>
       <button type="button" onClick={() => props.onAnalyticsValueChange('axis-default', 'category-1')}>pick category</button>
       <button type="button" onClick={() => props.onAnalyticsValueChange('axis-default', null)}>clear category</button>
       <button type="button" onClick={() => props.onAnalyticsValueChange('axis-nature', 'category-2')}>pick nature value</button>
@@ -300,6 +301,15 @@ describe('CapexItemPage edit', () => {
     });
     // The Account row now asks for an account on the new chart.
     expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', '');
+  });
+
+  it('shows the refusal of an account kept for OPEX lines', async () => {
+    const message = 'This account is for OPEX lines only. Choose an account for CAPEX lines.';
+    mocked.patch.mockRejectedValueOnce(Object.assign(new Error('HTTP 400'), { response: { status: 400, headers: {}, data: { message } } }));
+    renderAt(`/ops/capex/${ITEM_ID}/overview`);
+    await clickOnceLoaded('pick account kept for OPEX');
+    expect(mocked.patch).toHaveBeenCalledWith(`/capex-items/${ITEM_ID}`, { account_id: 'account-opex', base: { account_id: 'account-1' } });
+    expect(await screen.findByText(message)).toBeInTheDocument();
   });
 
   it('keeps the account when the new company uses the same chart', async () => {

@@ -238,6 +238,13 @@ const ENTITY_CONFIG: Record<AiMasterDataEntityType, EntityConfig> = {
       consolidation_account_number: { label: 'Consolidation Account Number', kind: 'integer', nullable: true },
       consolidation_account_name: { label: 'Consolidation Account Name', kind: 'text', nullable: true },
       consolidation_account_description: { label: 'Consolidation Account Description', kind: 'text', nullable: true },
+      nature: {
+        label: 'Used for',
+        kind: 'enum',
+        nullable: true,
+        enumValues: ['opex', 'capex'],
+        enumCase: 'lower',
+      },
       status: { label: 'Status', kind: 'status' },
       disabled_at: { label: 'Disabled At', kind: 'date', nullable: true },
     },

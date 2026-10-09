@@ -14,7 +14,7 @@ Der Arbeitsbereich öffnet sich im Erstellungsmodus, mit geöffnetem Bereich **E
 
 - **Titel**: Was Sie investieren (z. B. „Neue Server-Infrastruktur", „ERP-Softwarelizenz"). Das ist die Beschreibung der Position, die in der Spalte **Beschreibung** der Liste erscheint
 - **Zahlendes Unternehmen**: Welches Unternehmen die Investition tätigt (erforderlich für die Buchhaltung)
-- **Konto**: Das Sachkonto für diese Investitionsausgabe. Es erscheinen nur Konten aus dem Kontenplan des zahlenden Unternehmens
+- **Konto**: Das Sachkonto für diese Investitionsausgabe. Es erscheinen nur Konten aus dem Kontenplan des zahlenden Unternehmens, und zwar nur solche, die in [Kontenpläne und Kontenverwaltung](chart-of-accounts.md#opex-oder-capex-konten) auf **OPEX und CAPEX** oder **Nur CAPEX** gesetzt sind. Eine Position, die bereits ein Konto mit **Nur OPEX** hat, behält es und bleibt bearbeitbar. Ein solches Konto für eine neue Position oder beim Ändern des Kontos zu wählen, wird abgelehnt
 - **Währung**: ISO-Code (z. B. USD, EUR). Standardmäßig Ihre Arbeitsbereich-CAPEX-Währung; kann pro Position überschrieben werden
 - **Anlagentyp**: Sachanlagen-Klassifizierung: Hardware oder Software
 - **Investitionsart**: Zweck der Investition (siehe Optionen unten)

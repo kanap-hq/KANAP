@@ -308,8 +308,8 @@ async function loadCatalog(
   const centers: Array<{ id: string; code: string; kind: string; company_id: string | null; disabled_at: Date | string | null }> = await manager.query(
     `SELECT id::text AS id, code, kind::text AS kind, company_id::text AS company_id, disabled_at FROM cost_centers WHERE tenant_id = $1`, [tenantId],
   );
-  const accounts: Array<{ id: string; account_number: string; coa_id: string | null; disabled_at: Date | string | null }> = await manager.query(
-    `SELECT id::text AS id, account_number::text AS account_number, coa_id::text AS coa_id, disabled_at FROM accounts WHERE tenant_id = $1`, [tenantId],
+  const accounts: Array<{ id: string; account_number: string; coa_id: string | null; disabled_at: Date | string | null; nature: 'opex' | 'capex' | null }> = await manager.query(
+    `SELECT id::text AS id, account_number::text AS account_number, coa_id::text AS coa_id, disabled_at, nature FROM accounts WHERE tenant_id = $1`, [tenantId],
   );
   const users: Array<{ id: string; email: string; status: string }> = await manager.query(
     `SELECT id::text AS id, email, status::text AS status FROM users WHERE tenant_id = $1`, [tenantId],
@@ -331,7 +331,7 @@ async function loadCatalog(
     companies: companies.map((row) => ({ id: row.id, name: row.name, coaId: row.coa_id, disabledAt: iso(row.disabled_at) })),
     suppliers: suppliers.map((row) => ({ id: row.id, name: row.name, erpId: row.erp_supplier_id, disabledAt: iso(row.disabled_at) })),
     costCenters: centers.map((row) => ({ id: row.id, code: row.code, kind: row.kind, companyId: row.company_id, disabledAt: iso(row.disabled_at) })),
-    accounts: accounts.map((row) => ({ id: row.id, number: row.account_number, coaId: row.coa_id, disabledAt: iso(row.disabled_at) })),
+    accounts: accounts.map((row) => ({ id: row.id, number: row.account_number, coaId: row.coa_id, disabledAt: iso(row.disabled_at), nature: row.nature })),
     users: users.map((row) => ({ id: row.id, email: row.email, status: row.status })),
     projects: projects.map((row) => ({ id: row.id, itemNumber: Number(row.item_number) })),
     dimensions,

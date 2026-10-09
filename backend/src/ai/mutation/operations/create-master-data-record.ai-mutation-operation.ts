@@ -40,7 +40,7 @@ export class CreateMasterDataRecordAiMutationOperation implements AiMutationOper
       'departments: company_id, name, description, status, disabled_at, metrics_year, headcount',
       'suppliers: name, erp_supplier_id, notes, status, disabled_at',
       'contacts: first_name, last_name, job_title, email, phone, mobile, country, notes, active, supplier_id, supplier_role',
-      'accounts: coa_id, account_number, account_name, native_name, description, consolidation_account_number, consolidation_account_name, consolidation_account_description, status, disabled_at',
+      'accounts: coa_id, account_number, account_name, native_name, description, consolidation_account_number, consolidation_account_name, consolidation_account_description, nature, status, disabled_at',
       'chart_of_accounts: code, name, country_iso, scope, is_default',
       'analytics_categories: name, description, status, disabled_at',
       'business_processes: name, description, notes, owner_user_id, it_owner_user_id, status, disabled_at',

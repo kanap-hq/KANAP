@@ -49,6 +49,7 @@ export const ACCOUNT_LOOKUP: LookupSpec = {
     account_name: 't.account_name',
     description: 't.description',
     coa_id: 't.coa_id',
+    nature: 't.nature',
   },
   label: 't.account_name',
   prefixes: ['t.account_number::text'],
@@ -151,25 +152,39 @@ export async function lookupDepartments(call: LookupCall, query: any) {
   return lookup(call, DEPARTMENT_LOOKUP, request);
 }
 
+/** An optional account nature (`opex`, `capex`): absent is null, anything else a 400. */
+function optionalNature(value: unknown): 'opex' | 'capex' | null {
+  const raw = value == null ? '' : String(value).trim();
+  if (!raw) return null;
+  if (raw !== 'opex' && raw !== 'capex') throw new BadRequestException(`nature must be 'opex' or 'capex'.`);
+  return raw;
+}
+
 /**
  * Accounts of a company's chart (`companyId`): the company's own chart, else
  * the tenant's global default chart, else the accounts outside any chart, as
- * the accounts list scopes them. `coaId` names a chart directly.
+ * the accounts list scopes them. `coaId` names a chart directly. `nature`
+ * (`opex`, `capex`) offers the accounts a line of that type may use: those of
+ * that nature and those for both (NULL). Hydration by `ids` ignores it, so a
+ * stored account of the other type still shows.
  */
 export async function lookupAccounts(call: LookupCall, query: any) {
   const request = parseLookupRequest(query);
   const companyId = optionalUuid(query?.companyId ?? query?.company_id, 'companyId');
   const coaId = optionalUuid(query?.coaId ?? query?.coa_id, 'coaId');
+  const nature = optionalNature(query?.nature);
+  request.scope = [];
   if (companyId) {
-    request.scope = [(bind: Bind) => {
+    request.scope.push((bind: Bind) => {
       const tenant = bind(call.tenantId, 'uuid');
       return `t.coa_id IS NOT DISTINCT FROM coalesce(
         (SELECT c.coa_id FROM companies c WHERE c.tenant_id = ${tenant} AND c.id = ${bind(companyId, 'uuid')}),
         (SELECT g.id FROM chart_of_accounts g WHERE g.tenant_id = ${tenant} AND g.is_global_default = true ORDER BY g.id LIMIT 1))`;
-    }];
+    });
   } else if (coaId) {
-    request.scope = [(bind: Bind) => `t.coa_id = ${bind(coaId, 'uuid')}`];
+    request.scope.push((bind: Bind) => `t.coa_id = ${bind(coaId, 'uuid')}`);
   }
+  if (nature) request.scope.push((bind: Bind) => `t.nature IS NULL OR t.nature = ${bind(nature, 'text')}`);
   return lookup(call, ACCOUNT_LOOKUP, request);
 }
 

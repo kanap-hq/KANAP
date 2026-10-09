@@ -965,6 +965,7 @@
       "consolidationName": "Nombre de consolidación",
       "description": "Descripción",
       "name": "Nombre",
+      "nature": "Usada para",
       "nativeName": "Nombre nativo",
       "status": "Estado"
     },

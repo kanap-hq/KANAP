@@ -13,7 +13,7 @@ Der Arbeitsbereich öffnet sich im Erstellungsmodus, mit geöffnetem Bereich **E
 **Pflichtfelder**:
   - **Produktname** (der Titel): Was Sie ausgeben (z. B. „Salesforce Lizenzen", „AWS Compute")
   - **Zahlendes Unternehmen**: Welches Unternehmen diese Ausgabe bezahlt (erforderlich für die Buchhaltung)
-  - **Konto**: Das Sachkonto für diese Ausgabe. Es erscheinen nur Konten aus dem Kontenplan des zahlenden Unternehmens
+  - **Konto**: Das Sachkonto für diese Ausgabe. Es erscheinen nur Konten aus dem Kontenplan des zahlenden Unternehmens, und zwar nur solche, die in [Kontenpläne und Kontenverwaltung](chart-of-accounts.md#opex-oder-capex-konten) auf **OPEX und CAPEX** oder **Nur OPEX** gesetzt sind. Eine Position, die bereits ein Konto mit **Nur CAPEX** hat, behält es und bleibt bearbeitbar. Ein solches Konto für eine neue Position oder beim Ändern des Kontos zu wählen, wird abgelehnt
   - **Währung**: ISO-Code (z. B. USD, EUR). Standardmäßig Ihre Arbeitsbereich-Währung; kann pro Position überschrieben werden
   - **Beginn der Gültigkeit**: Wann diese Ausgabe beginnt (TT/MM/JJJJ)
 

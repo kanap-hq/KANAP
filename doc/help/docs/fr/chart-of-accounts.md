@@ -30,6 +30,7 @@ Postes OPEX/CAPEX -> Sélection de compte (filtré aux comptes FR-2024 uniquemen
   - Chaque société a un CoA
   - Un compte appartient à un CoA
   - Lorsque vous créez ou modifiez des postes de dépenses, le menu déroulant des comptes est filtré par le CoA de la société
+  - Chaque compte indique s'il sert aux lignes OPEX, aux lignes CAPEX ou aux deux. Voir [Comptes OPEX ou CAPEX](#comptes-opex-ou-capex)
 
 ## Où trouver cette page
 
@@ -84,6 +85,7 @@ La grille affiche uniquement les comptes du CoA sélectionné.
 **Colonnes par défaut** :
 - **N° de compte** : Le numéro de compte. Cliquez pour ouvrir l'espace de travail du compte.
 - **Nom** : Le nom du compte. Cliquez pour ouvrir l'espace de travail du compte.
+- **Utilisé pour** : **OPEX et CAPEX**, **OPEX uniquement** ou **CAPEX uniquement**. Voir [Comptes OPEX ou CAPEX](#comptes-opex-ou-capex).
 - **N° compte de consolidation** : Le numéro du compte de consolidation.
 - **Nom de consolidation** : Le nom du compte de consolidation.
 
@@ -97,7 +99,7 @@ La grille affiche uniquement les comptes du CoA sélectionné.
 **Filtrage** :
 - Recherche rapide : Recherche dans les colonnes texte visibles.
 - Périmètre par statut : le bouton bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la grille. Par défaut **Activés**, qui n'affiche que les comptes actifs. Choisissez **Tous** pour inclure les comptes désactivés.
-- Filtres de colonnes : Utilisez les filtres des en-têtes de colonnes (par exemple, la colonne **Statut** a un filtre par liste de valeurs). Cliquer sur **Effacer** dans le filtre **Statut**, ou décocher les deux valeurs, n'affiche plus rien, quel que soit le choix de **Afficher**.
+- Filtres de colonnes : Utilisez les filtres des en-têtes de colonnes (par exemple, les colonnes **Statut** et **Utilisé pour** ont un filtre par liste de valeurs). Cliquer sur **Effacer** dans le filtre **Statut**, ou décocher les deux valeurs, n'affiche plus rien, quel que soit le choix de **Afficher**.
 
 **Tri** : Par défaut, **N° de compte** par ordre croissant.
 
@@ -116,12 +118,28 @@ Cliquez sur n'importe quelle ligne de la grille des comptes pour ouvrir l'espace
 ### Disposition
 
 - **En-tête** : le numéro de compte sert de référence (vous pouvez le copier à cet endroit) et le nom du compte sert de titre. Cliquez sur le titre pour renommer le compte. Les flèches **Compte précédent** et **Compte suivant** parcourent les comptes de la liste d'où vous venez, dans le même ordre, avec la même recherche et les mêmes filtres. Le lien de retour ramène à **Plans comptables** en conservant votre sélection.
-- **Panneau des propriétés** à droite : **Plan comptable**, **Numéro de compte** et **Cycle de vie** (l'interrupteur de statut et la date de **Fin de validité**). Le bouton du panneau permet de le réduire ou de le rouvrir. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie).
+- **Panneau des propriétés** à droite : **Plan comptable**, **Numéro de compte**, **Utilisé pour** et **Cycle de vie** (l'interrupteur de statut et la date de **Fin de validité**). Le bouton du panneau permet de le réduire ou de le rouvrir. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie).
 - **Colonne principale** : **Nom local (langue locale)**, **Description** et la section **Consolidation**.
 
 **Les modifications s'enregistrent automatiquement.** Chaque champ s'enregistre lorsque vous le quittez, et il n'y a pas de bouton Enregistrer. Si une valeur est refusée, un message apparaît sous le champ. Le **Numéro de compte** doit être un nombre entier supérieur à zéro.
 
 Vous avez besoin de `accounts:manager` pour modifier. Les utilisateurs en lecture seule voient la même page, avec les champs verrouillés.
+
+### Comptes OPEX ou CAPEX
+
+Le champ **Utilisé pour** indique quelles lignes budgétaires peuvent utiliser le compte :
+
+| Valeur | Signification |
+|--------|---------------|
+| **OPEX et CAPEX** | Les deux types de ligne peuvent utiliser le compte. C'est la valeur par défaut |
+| **OPEX uniquement** | Seules les lignes OPEX peuvent utiliser le compte |
+| **CAPEX uniquement** | Seules les lignes CAPEX peuvent utiliser le compte |
+
+La liste des comptes d'une ligne OPEX affiche les comptes pour OPEX et pour les deux types. Celle d'une ligne CAPEX fait de même pour CAPEX. Une ligne qui a déjà un compte de l'autre type le conserve et reste modifiable. Choisir un tel compte sur une nouvelle ligne, ou en changeant le compte d'une ligne, est refusé.
+
+Lorsque vous choisissez une valeur qui entre en conflit avec des lignes qui utilisent déjà le compte, une note apparaît sous le champ, par exemple « 12 lignes CAPEX utilisent ce compte. Elles le gardent. Les nouvelles lignes CAPEX ne peuvent pas le choisir. » Cliquez sur **Afficher ces lignes** pour ouvrir ces lignes dans la liste, dans un nouvel onglet. La note reste tant que le conflit existe.
+
+Lors de l'ajout de ce réglage, KANAP l'a renseigné pour vous. Un compte utilisé uniquement par des lignes OPEX est devenu **OPEX uniquement**, et un compte utilisé uniquement par des lignes CAPEX est devenu **CAPEX uniquement**. Un compte utilisé par les deux reste **OPEX et CAPEX**. Un compte inutilisé suit son compte de consolidation : les comptes d'actifs du plan de consolidation IFRS sont pour CAPEX et les comptes de charges d'exploitation sont pour OPEX. Les administrateurs peuvent modifier chacun d'eux.
 
 ### Compte de consolidation
 
@@ -172,7 +190,7 @@ Les modèles sont des ensembles de comptes standard gérés par les administrate
   - Cliquez sur **Vérifier le modèle** pour voir combien de comptes seront ajoutés et combien mis à jour
   - Cliquez sur **Créer** pour copier les comptes dans votre CoA
 
-**Ce qui est copié** : Numéros de comptes, noms, noms locaux (langue locale), descriptions, correspondances de consolidation et statut. Les comptes deviennent les vôtres et sont modifiables. Les modifications du modèle de la plateforme n'affectent pas votre CoA, sauf si vous le rechargez explicitement. Si votre espace de travail a un plan de consolidation, le nom et la description de consolidation de chaque compte sont repris de ce plan (voir [Le plan de consolidation](#le-plan-de-consolidation)).
+**Ce qui est copié** : Numéros de comptes, noms, noms locaux (langue locale), descriptions, correspondances de consolidation, **Utilisé pour** et statut. Les comptes deviennent les vôtres et sont modifiables. Les modifications du modèle de la plateforme n'affectent pas votre CoA, sauf si vous le rechargez explicitement. Si votre espace de travail a un plan de consolidation, le nom et la description de consolidation de chaque compte sont repris de ce plan (voir [Le plan de consolidation](#le-plan-de-consolidation)).
 
 **Conseil** : Après avoir chargé un modèle, vous pouvez ajouter des comptes propres à la société, renommer des entrées ou désactiver les comptes inutilisés. Les modèles sont un point de départ, pas une structure figée.
 
@@ -183,7 +201,7 @@ KANAP est livré avec **20 modèles préconfigurés** couvrant 10 normes comptab
 - **v1.0 (Simple)** : Un ensemble ciblé d'environ 20 comptes utiles pour l'IT : licences logicielles, hébergement cloud, cybersécurité, télécoms, conseil, coûts de personnel, formation, etc. Idéal pour les organisations qui veulent un point de départ léger.
 - **v2.0 (Détaillé)** : Tout le contenu de la v1.0, plus des sous-comptes plus fins (environ 30 comptes). Ajoute des distinctions comme Logiciel acheté ou développé en interne, Équipement réseau, Licences SaaS ou perpétuelles, Communications mobiles, Primes IT, Assurance IT, etc. Idéal pour les organisations qui ont besoin d'un suivi des coûts plus fin.
 
-Les deux versions utilisent des **numéros de compte réels issus de la norme comptable officielle de chaque pays** et incluent les noms locaux dans la langue du pays.
+Les deux versions utilisent des **numéros de compte réels issus de la norme comptable officielle de chaque pays** et incluent les noms locaux dans la langue du pays. Chaque compte porte aussi son réglage **Utilisé pour** : les comptes d'actifs sont pour CAPEX, les comptes de charges sont pour OPEX, et les comptes d'amortissement et de dépréciation sont pour les deux.
 
 | Code modèle | Pays | Norme | Comptes (v1 / v2) |
 |---------------|---------|----------|---------------------|
@@ -446,16 +464,16 @@ Vous pouvez exporter la liste de vos CoA (avec des métadonnées comme le code, 
 
 Le CSV global `/accounts` inclut une colonne `coa_code` qui identifie le CoA de chaque compte. **Exporter CSV** et **Importer CSV** l'utilisent lorsqu'aucun CoA n'est sélectionné sur la page.
 
-  - **Exporter CSV** : tous les comptes avec leur code CoA, numéro, nom, nom local, description, correspondances de consolidation et statut
+  - **Exporter CSV** : tous les comptes avec leur code CoA, numéro, nom, nom local, description, correspondances de consolidation, statut et **Utilisé pour**
   - **Importer CSV** : **Télécharger le modèle** dans la fenêtre donne un fichier avec les seuls en-têtes. Commencez par la **Vérification préalable** pour valider la structure, l'encodage, les champs obligatoires et les doublons, puis **Charger** pour appliquer les insertions et les mises à jour
   - **Correspondance** : par `(coa_code, account_number)` dans votre espace de travail
   - **Cellules obligatoires** : `coa_code`, `account_number`, `account_name`. Toutes les lignes d'un fichier doivent porter le même `coa_code`
-  - **Cellules facultatives** : `native_name`, `description`, champs de consolidation, `status`
+  - **Cellules facultatives** : `native_name`, `description`, champs de consolidation, `status`, `nature`
   - Les doublons du fichier (même coa_code + account_number) sont dédoublonnés ; la première occurrence l'emporte
 
 **Schéma CSV** (l'export écrit le séparateur de la langue de l'écran ; montré ici avec des points-virgules) :
 ```
-coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status
+coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
 ```
 
 ### Comptes (limités au CoA)
@@ -467,7 +485,7 @@ Depuis la page Plans comptables, **Import CSV** et **Export CSV** portent automa
 
 **Schéma CSV** (limité au CoA ; montré ici avec des points-virgules) :
 ```
-account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status
+account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
 ```
 
 **Remarques** :
@@ -475,6 +493,7 @@ account_number;account_name;native_name;description;consolidation_account_number
   - Le `coa_code` doit correspondre à un plan comptable existant de votre espace de travail
   - Les numéros de compte doivent être uniques au sein d'un CoA
   - Valeurs de statut : `enabled` ou `disabled` (enabled par défaut)
+  - `nature` est le réglage **Utilisé pour**, toujours la dernière colonne. Valeurs : `opex`, `capex`, ou vide pour **OPEX et CAPEX**. Un fichier sans cette colonne laisse les réglages inchangés. Une cellule vide applique **OPEX et CAPEX**. Toute autre valeur est refusée pour cette ligne
   - Colonnes de consolidation : lorsque `consolidation_account_number` existe dans votre plan de consolidation, son nom et sa description remplacent les cellules `consolidation_account_name` et `consolidation_account_description`. Un numéro vide efface les trois. Voir [Configurer les correspondances de consolidation](#configurer-les-correspondances-de-consolidation)
 
 ## Conseils

@@ -12,14 +12,18 @@ vi.mock('../../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../../../hooks/useCurrencySettings', () => ({ default: () => ({ data: null }) }));
 // The pickers load their options from the API; they only report the props this file checks.
 vi.mock('../../../components/fields/SupplierSelect', () => ({
-  default: (p: { required?: boolean }) => <div data-testid="supplier-select" data-required={String(!!p.required)} />,
+  default: (p: { required?: boolean; hideLabel?: boolean; label?: string }) => (
+    <div data-testid="supplier-select" data-required={String(!!p.required)} data-hide-label={String(!!p.hideLabel)} data-label={p.label ?? ''} />
+  ),
 }));
 vi.mock('../../../components/fields/CompanySelect', () => ({
-  default: (p: { disableClearable?: boolean }) => <div data-testid="company-select" data-clearable={String(!p.disableClearable)} />,
+  default: (p: { disableClearable?: boolean; hideLabel?: boolean; label?: string }) => (
+    <div data-testid="company-select" data-clearable={String(!p.disableClearable)} data-hide-label={String(!!p.hideLabel)} data-label={p.label ?? ''} />
+  ),
 }));
 vi.mock('../../../components/fields/AccountSelect', () => ({
-  default: (p: { disableClearable?: boolean; required?: boolean }) => (
-    <div data-testid="account-select" data-clearable={String(!p.disableClearable)} data-required={String(!!p.required)} />
+  default: (p: { disableClearable?: boolean; required?: boolean; nature?: string; hideLabel?: boolean; label?: string }) => (
+    <div data-testid="account-select" data-clearable={String(!p.disableClearable)} data-required={String(!!p.required)} data-nature={p.nature ?? ''} data-hide-label={String(!!p.hideLabel)} data-label={p.label ?? ''} />
   ),
 }));
 vi.mock('../../../components/fields/AnalyticsCategorySelect', () => ({
@@ -125,6 +129,27 @@ describe('SpendPropertiesDrawer required pickers', () => {
     renderDrawer({ mode: 'edit' });
     expect(screen.getByTestId('company-select')).toHaveAttribute('data-clearable', 'false');
     expect(screen.getByTestId('account-select')).toHaveAttribute('data-clearable', 'false');
+  });
+});
+
+describe('SpendPropertiesDrawer account', () => {
+  it.each(['create', 'edit'] as const)('offers only the accounts OPEX lines may use in %s mode', (mode) => {
+    renderDrawer({ mode });
+    expect(screen.getByTestId('account-select')).toHaveAttribute('data-nature', 'opex');
+  });
+
+  it('shows supplier, company and account in the drawer list style, as the dimension pickers', () => {
+    renderDrawer({ mode: 'edit' });
+    for (const id of ['supplier-select', 'company-select', 'account-select']) {
+      expect(screen.getByTestId(id)).toHaveAttribute('data-hide-label', 'true');
+    }
+  });
+
+  it('names the hidden-label pickers after their row, for assistive technology', () => {
+    renderDrawer({ mode: 'edit' });
+    expect(screen.getByTestId('supplier-select')).toHaveAttribute('data-label', 'opex.fields.supplier');
+    expect(screen.getByTestId('company-select')).toHaveAttribute('data-label', 'opex.fields.payingCompany');
+    expect(screen.getByTestId('account-select')).toHaveAttribute('data-label', 'opex.fields.account');
   });
 });
 

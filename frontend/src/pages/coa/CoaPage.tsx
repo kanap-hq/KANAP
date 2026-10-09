@@ -20,6 +20,8 @@ import { CoaListItem, useCoaList } from './useCoaList';
 import { coaCoverage, coaRoleLabels, useCountryName } from './coaRoles';
 import { tealLinkSx } from '../../theme/formSx';
 import { statusColumnProps } from '../../components/grid/statusColumn';
+import { accountNatureColumnProps } from '../../components/grid/accountNatureColumn';
+import type { AccountNature } from '../../constants/accountNature';
 
 type AccountRow = {
   id: string;
@@ -32,6 +34,8 @@ type AccountRow = {
   consolidation_account_description?: string | null;
   /** Null when the tenant has no consolidation chart. */
   consolidation_status?: 'mapped' | 'outside' | 'unmapped' | null;
+  /** The lines that may use the account: null for OPEX and CAPEX lines. */
+  nature?: AccountNature | null;
   created_at?: string;
   status?: string;
 };
@@ -195,6 +199,15 @@ export default function CoaPage() {
       headerName: t('coa.columns.accountName'),
       flex: 1,
       required: true,
+      cellRenderer: (params: any) => (
+        <LinkCellRenderer {...params} linkType="internal" getHref={getAccountHref} onNavigate={(href) => navigate(href)} />
+      ),
+    },
+    {
+      field: 'nature',
+      headerName: t('coa.columns.nature'),
+      width: 150,
+      ...accountNatureColumnProps(t),
       cellRenderer: (params: any) => (
         <LinkCellRenderer {...params} linkType="internal" getHref={getAccountHref} onNavigate={(href) => navigate(href)} />
       ),

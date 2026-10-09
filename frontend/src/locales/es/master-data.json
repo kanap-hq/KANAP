@@ -427,6 +427,7 @@
     "columns": {
       "accountNumber": "N.º de cuenta",
       "accountName": "Nombre",
+      "nature": "Usada para",
       "nativeName": "Nombre local",
       "consolAccountNumber": "N.º cuenta consol.",
       "consolAccountName": "Nombre consol.",
@@ -559,6 +560,7 @@
       "chartOfAccounts": "Plan de cuentas",
       "accountNumber": "Número de cuenta",
       "accountName": "Nombre de la cuenta",
+      "nature": "Usada para",
       "nativeName": "Nombre local (idioma local)",
       "description": "Descripción",
       "consolidationAccount": "Cuenta de consolidación",
@@ -578,6 +580,16 @@
       "outside": "Este número no existe en el plan de consolidación {{code}}. Elija una cuenta de {{code}}.",
       "noChart": "No hay ningún plan de consolidación definido.",
       "noChartLink": "Elija uno en Planes de cuentas → Gestionar planes."
+    },
+    "nature": {
+      "both": "OPEX y CAPEX",
+      "opex": "Solo OPEX",
+      "capex": "Solo CAPEX",
+      "conflictCapex_one": "{{count}} línea CAPEX usa esta cuenta. La conserva. Las nuevas líneas CAPEX no pueden elegirla.",
+      "conflictCapex_other": "{{count}} líneas CAPEX usan esta cuenta. La conservan. Las nuevas líneas CAPEX no pueden elegirla.",
+      "conflictOpex_one": "{{count}} línea OPEX usa esta cuenta. La conserva. Las nuevas líneas OPEX no pueden elegirla.",
+      "conflictOpex_other": "{{count}} líneas OPEX usan esta cuenta. La conservan. Las nuevas líneas OPEX no pueden elegirla.",
+      "showLines": "Mostrar estas líneas"
     },
     "messages": {
       "saveFailed": "Error al guardar la cuenta.",

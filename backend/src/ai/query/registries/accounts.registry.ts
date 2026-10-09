@@ -37,6 +37,16 @@ export const accountsRegistry: AiEntityFilterRegistry = {
       sortable: true,
       groupable: false,
     },
+    nature: {
+      ai: 'nature',
+      grid: 'nature',
+      type: 'set',
+      description: 'The budget lines that may use the account: opex (OPEX lines only), capex (CAPEX lines only). null is an account for both OPEX and CAPEX lines.',
+      values: ['opex', 'capex', null],
+      discoverable: true,
+      sortable: true,
+      groupable: true,
+    },
   },
   sortFields: {
     label: 'account_name',
@@ -44,6 +54,7 @@ export const accountsRegistry: AiEntityFilterRegistry = {
     coa_code: 'coa_code',
     account_number: 'account_number',
     account_name: 'account_name',
+    nature: 'nature',
     created_at: 'created_at',
     updated_at: 'updated_at',
   },
@@ -61,6 +72,7 @@ export const accountsRegistry: AiEntityFilterRegistry = {
         joins: ['LEFT JOIN chart_of_accounts coa ON coa.id = a.coa_id AND coa.tenant_id = a.tenant_id'],
       },
       account_number: { expression: 'a.account_number' },
+      nature: { expression: 'a.nature' },
     },
   },
 };

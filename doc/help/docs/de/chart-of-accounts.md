@@ -30,6 +30,7 @@ OPEX/CAPEX-Positionen -> Kontoauswahl (gefiltert auf FR-2024-Konten)
   - Jedes Unternehmen hat einen Kontenplan
   - Konten gehören zu einem Kontenplan
   - Beim Erstellen/Bearbeiten von Ausgabenpositionen wird das Konto-Dropdown nach dem Kontenplan des Unternehmens gefiltert
+  - Jedes Konto legt fest, ob es für OPEX-Zeilen, CAPEX-Zeilen oder beides dient. Siehe [OPEX- oder CAPEX-Konten](#opex-oder-capex-konten)
 
 ## Wo Sie es finden
 
@@ -84,6 +85,7 @@ Das Grid zeigt nur Konten für den ausgewählten Kontenplan.
 **Standardspalten**:
 - **Kontonr.**: Die Kontonummer. Zum Öffnen des Konten-Arbeitsbereichs anklicken.
 - **Name**: Der Kontoname. Zum Öffnen des Konten-Arbeitsbereichs anklicken.
+- **Verwendet für**: **OPEX und CAPEX**, **Nur OPEX** oder **Nur CAPEX**. Siehe [OPEX- oder CAPEX-Konten](#opex-oder-capex-konten).
 - **Konsol.-Kontonr.**: Die Konsolidierungs-Kontonummer.
 - **Konsol.-Name**: Der Konsolidierungs-Kontoname.
 
@@ -97,7 +99,7 @@ Das Grid zeigt nur Konten für den ausgewählten Kontenplan.
 **Filtern**:
 - Schnellsuche: Durchsucht sichtbare Textspalten.
 - Statusbereich: der Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über dem Grid. Standard ist **Aktiv**, zeigt nur aktive Konten. Wählen Sie **Alle**, um deaktivierte Konten einzubeziehen.
-- Spaltenfilter: Spaltenüberschriftsfilter verwenden (z. B. die **Status**-Spalte hat einen Set-Filter). Wenn Sie im **Status**-Filter auf **Leeren** klicken oder beide Werte abwählen, zeigt die Liste nichts mehr an, unabhängig von **Anzeigen**.
+- Spaltenfilter: Spaltenüberschriftsfilter verwenden (z. B. haben die Spalten **Status** und **Verwendet für** einen Set-Filter). Wenn Sie im **Status**-Filter auf **Leeren** klicken oder beide Werte abwählen, zeigt die Liste nichts mehr an, unabhängig von **Anzeigen**.
 
 **Sortierung**: Standard ist **Kontonr.** aufsteigend.
 
@@ -116,12 +118,28 @@ Klicken Sie auf eine beliebige Zeile im Konten-Grid, um den Konten-Arbeitsbereic
 ### Aufbau
 
 - **Kopfbereich**: Die Kontonummer dient als Referenz (Sie können sie dort kopieren) und der Kontoname als Titel. Klicken Sie auf den Titel, um das Konto umzubenennen. Die Pfeile **Vorheriges Konto** und **Nächstes Konto** führen durch die Konten der Liste, aus der Sie kommen, in derselben Reihenfolge und mit derselben Suche und denselben Filtern. Der Link zurück führt zu **Kontenpläne** und behält Ihre Auswahl bei.
-- **Eigenschaften-Bereich** rechts: **Kontenplan**, **Kontonummer** und **Lebenszyklus** (der Statusschalter und das Datum **Ende der Gültigkeit**). Mit der Bereichsschaltfläche klappen Sie ihn ein oder wieder aus. Siehe [Status und Lebenszyklus](#status-und-lebenszyklus).
+- **Eigenschaften-Bereich** rechts: **Kontenplan**, **Kontonummer**, **Verwendet für** und **Lebenszyklus** (der Statusschalter und das Datum **Ende der Gültigkeit**). Mit der Bereichsschaltfläche klappen Sie ihn ein oder wieder aus. Siehe [Status und Lebenszyklus](#status-und-lebenszyklus).
 - **Hauptspalte**: **Lokaler Name (Landessprache)**, **Beschreibung** und der Abschnitt **Konsolidierung**.
 
 **Änderungen werden automatisch gespeichert.** Jedes Feld wird gespeichert, sobald Sie es verlassen, und es gibt keine Schaltfläche „Speichern". Wird ein Wert abgelehnt, erscheint unter dem Feld eine Meldung. Die **Kontonummer** muss eine ganze Zahl größer als null sein.
 
 Zum Bearbeiten benötigen Sie `accounts:manager`. Benutzer mit Leserechten sehen dieselbe Seite mit gesperrten Feldern.
+
+### OPEX- oder CAPEX-Konten
+
+Das Feld **Verwendet für** legt fest, welche Budgetpositionen das Konto verwenden dürfen:
+
+| Wert | Bedeutung |
+|------|-----------|
+| **OPEX und CAPEX** | Beide Arten von Zeilen dürfen das Konto verwenden. Das ist der Standard |
+| **Nur OPEX** | Nur OPEX-Zeilen dürfen das Konto verwenden |
+| **Nur CAPEX** | Nur CAPEX-Zeilen dürfen das Konto verwenden |
+
+Die Kontoauswahl einer OPEX-Zeile zeigt die Konten für OPEX und für beides. Die Auswahl einer CAPEX-Zeile verhält sich entsprechend für CAPEX. Eine Zeile, die bereits ein Konto der anderen Art hat, behält es und bleibt bearbeitbar. Ein solches Konto für eine neue Zeile oder beim Ändern des Kontos einer Zeile zu wählen, wird abgelehnt.
+
+Wenn ein gewählter Wert mit Zeilen in Konflikt steht, die das Konto bereits verwenden, erscheint unter dem Feld ein Hinweis, zum Beispiel „12 CAPEX-Zeilen verwenden dieses Konto. Sie behalten es. Neue CAPEX-Zeilen können es nicht auswählen.“ Klicken Sie auf **Diese Zeilen anzeigen**, um diese Zeilen in der Liste in einem neuen Tab zu öffnen. Der Hinweis bleibt, solange der Konflikt besteht.
+
+Beim Hinzufügen dieser Einstellung hat KANAP sie für Sie ausgefüllt. Ein Konto, das nur von OPEX-Zeilen verwendet wird, wurde zu **Nur OPEX**, und ein Konto, das nur von CAPEX-Zeilen verwendet wird, zu **Nur CAPEX**. Ein Konto, das von beiden verwendet wird, bleibt **OPEX und CAPEX**. Ein ungenutztes Konto folgt seinem Konsolidierungskonto: Vermögenskonten des IFRS-Konsolidierungskontenplans sind für CAPEX, Betriebsaufwandskonten für OPEX. Administratoren können jedes davon ändern.
 
 ### Konsolidierungskonto
 
@@ -172,7 +190,7 @@ Vorlagen sind Standard-Kontensets, die von Plattform-Administratoren verwaltet w
   - Klicken Sie auf **Vorlage prüfen**, um zu sehen, wie viele Konten hinzugefügt und wie viele aktualisiert werden
   - Klicken Sie auf **Erstellen**, um die Konten in Ihren Kontenplan zu kopieren
 
-**Was kopiert wird**: Kontonummern, Namen, lokale Namen (Landessprache), Beschreibungen, Konsolidierungszuordnungen und Status. Die Konten werden zu Ihren eigenen, die Sie bearbeiten können -- Änderungen an der Plattform-Vorlage wirken sich nicht auf Ihren Kontenplan aus, es sei denn, Sie laden sie explizit neu. Hat Ihr Arbeitsbereich einen Konsolidierungskontenplan, werden Name und Beschreibung des Konsolidierungskontos jedes Kontos aus diesem Kontenplan übernommen (siehe [Der Konsolidierungskontenplan](#der-konsolidierungskontenplan)).
+**Was kopiert wird**: Kontonummern, Namen, lokale Namen (Landessprache), Beschreibungen, Konsolidierungszuordnungen, **Verwendet für** und Status. Die Konten werden zu Ihren eigenen, die Sie bearbeiten können -- Änderungen an der Plattform-Vorlage wirken sich nicht auf Ihren Kontenplan aus, es sei denn, Sie laden sie explizit neu. Hat Ihr Arbeitsbereich einen Konsolidierungskontenplan, werden Name und Beschreibung des Konsolidierungskontos jedes Kontos aus diesem Kontenplan übernommen (siehe [Der Konsolidierungskontenplan](#der-konsolidierungskontenplan)).
 
 **Tipp**: Nach dem Laden einer Vorlage können Sie unternehmensspezifische Konten hinzufügen, Einträge umbenennen oder ungenutzte Konten deaktivieren. Vorlagen bieten einen Ausgangspunkt, keine gesperrte Struktur.
 
@@ -183,7 +201,7 @@ KANAP wird mit **20 vorkonfigurierten Vorlagen** ausgeliefert, die 10 Buchhaltun
 - **v1.0 (Einfach)**: Ein fokussiertes Set von ~20 IT-relevanten Konten -- Softwarelizenzen, Cloud-Hosting, Cybersicherheit, Telekommunikation, Beratung, Personalkosten, Schulung und mehr. Am besten für Organisationen, die einen schlanken Ausgangspunkt wünschen.
 - **v2.0 (Detailliert)**: Alles aus v1.0 plus zusätzliche granulare Unterkonten (~30 Konten). Fügt Aufschlüsselungen wie Gekaufte vs. Intern Entwickelte Software, Netzwerkausrüstung, SaaS vs. Dauerlizenzen, Mobilfunkkommunikation, IT-Boni, IT-Versicherung und mehr hinzu. Am besten für Organisationen, die eine feinere Kostenverfolgung benötigen.
 
-Beide Versionen verwenden **echte Kontonummern aus dem offiziellen Buchhaltungsstandard jedes Landes** und enthalten lokale Namen in der Landessprache.
+Beide Versionen verwenden **echte Kontonummern aus dem offiziellen Buchhaltungsstandard jedes Landes** und enthalten lokale Namen in der Landessprache. Jedes Konto trägt außerdem seine Einstellung **Verwendet für**: Vermögenskonten sind für CAPEX, Aufwandskonten für OPEX, und Abschreibungs- und Wertminderungskonten für beides.
 
 | Vorlagencode | Land | Standard | Konten (v1 / v2) |
 |--------------|------|----------|-------------------|
@@ -446,16 +464,16 @@ Sie können eine Liste Ihrer Kontenpläne exportieren (mit Metadaten wie Code, N
 
 Der globale `/accounts`-CSV enthält eine `coa_code`-Spalte, um zu identifizieren, zu welchem Kontenplan jedes Konto gehört. **CSV exportieren** und **CSV importieren** nutzen sie, wenn auf der Seite kein Kontenplan ausgewählt ist.
 
-  - **CSV exportieren**: Alle Konten mit ihren Kontenplan-Codes, Kontonummern, Namen, lokalen Namen, Beschreibungen, Konsolidierungszuordnungen und Status
+  - **CSV exportieren**: Alle Konten mit ihren Kontenplan-Codes, Kontonummern, Namen, lokalen Namen, Beschreibungen, Konsolidierungszuordnungen, Status und **Verwendet für**
   - **CSV importieren**: **Vorlage herunterladen** im Dialog liefert eine Datei nur mit den Kopfzeilen. Beginnen Sie mit der **Vorabprüfung**, um Struktur, Kodierung, Pflichtfelder und Duplikate zu prüfen, und dann **Laden**, um die Einfügungen und Aktualisierungen anzuwenden
   - **Zuordnung**: nach `(coa_code, account_number)` innerhalb Ihres Arbeitsbereichs
   - **Pflichtzellen**: `coa_code`, `account_number`, `account_name`. Alle Zeilen einer Datei müssen denselben `coa_code` tragen
-  - **Optionale Zellen**: `native_name`, `description`, Konsolidierungsfelder, `status`
+  - **Optionale Zellen**: `native_name`, `description`, Konsolidierungsfelder, `status`, `nature`
   - Duplikate in der Datei (gleicher coa_code + account_number) werden dedupliziert; erstes Vorkommen gewinnt
 
 **CSV-Schema** (der Export schreibt das Trennzeichen der Sprache der Oberfläche; hier mit Semikolons dargestellt):
 ```
-coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status
+coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
 ```
 
 ### Konten (Kontenplan-bezogen)
@@ -467,7 +485,7 @@ Von der Kontenpläne-Seite aus sind **CSV importieren** und **CSV exportieren** 
 
 **CSV-Schema** (Kontenplan-bezogen; hier mit Semikolons dargestellt):
 ```
-account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status
+account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
 ```
 
 **Hinweise**:
@@ -475,6 +493,7 @@ account_number;account_name;native_name;description;consolidation_account_number
   - Der `coa_code` muss einem bestehenden Kontenplan in Ihrem Arbeitsbereich entsprechen
   - Kontonummern sollten innerhalb eines Kontenplans eindeutig sein
   - Statuswerte: `enabled` oder `disabled` (Standard ist enabled)
+  - `nature` ist die Einstellung **Verwendet für**, immer die letzte Spalte. Werte: `opex`, `capex` oder leer für **OPEX und CAPEX**. Eine Datei ohne diese Spalte lässt die Einstellungen unverändert. Eine leere Zelle setzt **OPEX und CAPEX**. Jeder andere Wert wird für diese Zeile abgelehnt
   - Konsolidierungsspalten: Existiert `consolidation_account_number` in Ihrem Konsolidierungskontenplan, ersetzen dessen Name und Beschreibung die Zellen `consolidation_account_name` und `consolidation_account_description`. Eine leere Nummer löscht alle drei. Siehe [Konsolidierungszuordnungen einrichten](#konsolidierungszuordnungen-einrichten)
 
 ## Tipps

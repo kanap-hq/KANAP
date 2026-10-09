@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeepPartial, EntityManager, Equal, ILike, IsNull, Raw, Repository } from 'typeorm';
-import { Account } from './account.entity';
+import { Account, ACCOUNT_NATURES, AccountNature } from './account.entity';
 import { Company } from '../companies/company.entity';
 import { buildWhereFromAgFilters, parsePagination } from '../common/pagination';
 import { compileAgFilterCondition, createParamNameGenerator, assertSetFilterModes } from '../common/ag-grid-filtering';
@@ -74,6 +74,23 @@ function consolidationNumberEquals(where: any, value: number) {
   return where.consolidation_account_number === undefined ? value : andCondition(where.consolidation_account_number, Equal(value));
 }
 
+/**
+ * The grid's set filter on `nature`: a blank value ('') means "OPEX and CAPEX", stored as NULL,
+ * which the set filter matches through a null value.
+ */
+function withNatureBlanks(filters: any) {
+  const model = filters?.nature;
+  if (!model || model.filterType !== 'set' || !Array.isArray(model.values)) return filters;
+  return { ...filters, nature: { ...model, values: model.values.map((value: unknown) => (value === '' ? null : value)) } };
+}
+
+/** A CSV `nature` cell: '' is null (OPEX and CAPEX), undefined an invalid value. */
+function csvNature(raw: string): AccountNature | null | undefined {
+  const text = raw.trim().toLowerCase();
+  if (text === '') return null;
+  return (ACCOUNT_NATURES as readonly string[]).includes(text) ? (text as AccountNature) : undefined;
+}
+
 function numberOrNull(value: unknown): number | null {
   return value == null ? null : Number(value);
 }
@@ -107,7 +124,7 @@ export class AccountsService {
     assertSetFilterModes(filters, ['status', 'account_number']);
     const consolidationStatus = parseConsolidationStatus(query?.consolidationStatus);
     const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
-    const filtersToApply = sanitizedFilters ?? filters;
+    const filtersToApply = withNatureBlanks(sanitizedFilters ?? filters);
     const effectiveStatus = status ?? statusFromAg;
     const where: any = {};
     let whereArr: any[] | undefined;
@@ -269,7 +286,7 @@ export class AccountsService {
     assertSetFilterModes(filters, ['status', 'account_number']);
     const consolidationStatus = parseConsolidationStatus(query?.consolidationStatus);
     const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
-    const filtersToApply = sanitizedFilters ?? filters;
+    const filtersToApply = withNatureBlanks(sanitizedFilters ?? filters);
     const effectiveStatus = status ?? statusFromAg;
 
     const where: any = {};
@@ -639,12 +656,24 @@ export class AccountsService {
     );
   }
 
-  /** One account with its `consolidation_status` (see `list`). */
+  /**
+   * One account with its `consolidation_status` (see `list`) and `line_counts`: the OPEX and
+   * CAPEX lines that use it, whatever their status.
+   */
   async getWithConsolidationStatus(id: string, opts?: { manager?: EntityManager }) {
     const found = await this.get(id, opts);
     const mg = opts?.manager ?? this.getRepo().manager;
     const lookup = await consolidationLookup(mg, [found.consolidation_account_number]);
-    return { ...found, consolidation_status: consolidationStatusOf(found.consolidation_account_number, lookup) };
+    const [counts] = await mg.query(
+      `SELECT (SELECT COUNT(*)::int FROM spend_items s WHERE s.tenant_id = $1 AND s.account_id = $2) AS opex,
+              (SELECT COUNT(*)::int FROM capex_items c WHERE c.tenant_id = $1 AND c.account_id = $2) AS capex`,
+      [found.tenant_id, found.id],
+    );
+    return {
+      ...found,
+      consolidation_status: consolidationStatusOf(found.consolidation_account_number, lookup),
+      line_counts: { opex: Number(counts?.opex ?? 0), capex: Number(counts?.capex ?? 0) },
+    };
   }
 
   private csvHeaders(includeCoaCode = false): string[] {
@@ -657,6 +686,7 @@ export class AccountsService {
       'consolidation_account_name',
       'consolidation_account_description',
       'status',
+      'nature',
     ];
     return includeCoaCode ? ['coa_code', ...base] : base;
   }
@@ -692,6 +722,7 @@ export class AccountsService {
           a.consolidation_account_name ?? '',
           a.consolidation_account_description ?? '',
           String(a.status ?? 'enabled'),
+          a.nature ?? '',
         ];
         rows.push(includeCoa ? [codeById.get(a.coa_id || '') || '', ...baseRow] : baseRow);
       }
@@ -726,10 +757,13 @@ export class AccountsService {
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: expectedHeaders,
+      // Older files have no `nature` column: it then leaves the natures as they are.
+      optional: ['nature'],
       language: readLanguage,
       dateOrder,
       decimalMark,
     });
+    const hasNature = read.present.includes('nature');
     const errors: { row: number; message: string }[] = [];
     if (read.headerError) {
       return {
@@ -770,6 +804,9 @@ export class AccountsService {
       if (statusRaw && statusRaw !== 'enabled' && statusRaw !== 'disabled') errors.push({ row: line, message: `Invalid status '${statusRaw}'. Use 'enabled' or 'disabled'.` });
       const consolidation_account_number = parseIntStrict(consolNumRaw);
       if (consolNumRaw !== '' && consolidation_account_number == null) errors.push({ row: line, message: 'consolidation_account_number must be an integer when provided' });
+      const natureRaw = cellOf(row, 'nature');
+      const nature = hasNature ? csvNature(natureRaw) : undefined;
+      if (hasNature && nature === undefined) errors.push({ row: line, message: `Invalid nature '${natureRaw}'. Use 'opex', 'capex' or leave it empty.` });
       normalized.push({
         account_number: String(account_number ?? ''),
         account_name: name,
@@ -779,6 +816,8 @@ export class AccountsService {
         consolidation_account_name: cellOf(row, 'consolidation_account_name') || null,
         consolidation_account_description: cellOf(row, 'consolidation_account_description') || null,
         status: statusRaw === 'disabled' ? StatusState.DISABLED : StatusState.ENABLED,
+        // Absent column: undefined, so an update keeps the stored nature.
+        ...(hasNature ? { nature: nature ?? null } : {}),
       });
     });
     if (errors.length > 0) {

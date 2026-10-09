@@ -94,6 +94,8 @@ export interface CatalogAccount {
   number: string;
   coaId: string | null;
   disabledAt: string | null;
+  /** The lines that may use it: OPEX only, CAPEX only; null or absent for both. */
+  nature?: 'opex' | 'capex' | null;
 }
 
 export interface CatalogUser {

@@ -365,6 +365,15 @@ describe('SpendItemPage edit', () => {
     expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { paying_company_id: 'company-2', base: { paying_company_id: 'company-1' } });
   });
 
+  it('shows the refusal of an account kept for CAPEX lines', async () => {
+    const message = 'This account is for CAPEX lines only. Choose an account for OPEX lines.';
+    mocked.patch.mockRejectedValueOnce(Object.assign(new Error('HTTP 400'), { response: { status: 400, headers: {}, data: { message } } }));
+    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    await clickOnceLoaded('pick account of another chart');
+    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { account_id: 'account-other', base: { account_id: 'account-1' } });
+    expect(await screen.findByText(message)).toBeInTheDocument();
+  });
+
   it('saves cleared notes as null after the typing pause', async () => {
     renderAt(`/ops/opex/${ITEM_ID}/overview`);
     const notes = await screen.findByDisplayValue('Renewal');

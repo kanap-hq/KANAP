@@ -96,6 +96,11 @@ describe('CostCenterSelect', () => {
     auth.canCreate = true;
   });
 
+  it('names the combobox after its label when the label is hidden, not after the placeholder', () => {
+    renderSelect({ hideLabel: true });
+    expect(screen.getByRole('combobox', { name: 'selects.costCenter' })).toHaveAttribute('placeholder', 'selects.notSet');
+  });
+
   it('lists the tree in order, each option indented by its depth, labeled code · name', () => {
     const { input } = renderSelect();
     open(input);

@@ -7,6 +7,21 @@ import { format } from '@fast-csv/format';
 import { AuditService } from '../../audit/audit.service';
 import { denormalizeCsvRow } from '../../common/csv/csv-export.service';
 
+/** The OPEX/CAPEX nature of a template account (`nature` column, optional, empty = both). */
+const NATURES = ['opex', 'capex'] as const;
+/** Headers a payload may leave out: older payloads have no `nature` column. */
+const OPTIONAL_HEADERS = ['nature'];
+
+function natureOf(value: unknown): 'opex' | 'capex' | null | undefined {
+  const text = (value ?? '').toString().trim().toLowerCase();
+  if (text === '') return null;
+  return (NATURES as readonly string[]).includes(text) ? (text as 'opex' | 'capex') : undefined;
+}
+
+function invalidNature(value: unknown): string {
+  return `Invalid nature '${(value ?? '').toString().trim()}'. Use 'opex', 'capex' or leave it empty.`;
+}
+
 @Injectable()
 export class AdminCoaTemplatesService {
   constructor(
@@ -35,6 +50,7 @@ export class AdminCoaTemplatesService {
       'consolidation_account_name',
       'consolidation_account_description',
       'status',
+      'nature',
     ];
   }
 
@@ -63,6 +79,8 @@ export class AdminCoaTemplatesService {
             consolidation_account_name: ((row['consolidation_account_name'] ?? '').toString().trim()) || null,
             consolidation_account_description: ((row['consolidation_account_description'] ?? '').toString().trim()) || null,
             status: statusRaw === 'disabled' ? 'disabled' : 'enabled',
+            // A stored value outside the list reads as empty (the editors only write valid ones).
+            nature: natureOf(row['nature']) ?? null,
           });
         })
         .on('end', () => resolve())
@@ -94,6 +112,7 @@ export class AdminCoaTemplatesService {
             consolidation_account_name: r.consolidation_account_name ?? '',
             consolidation_account_description: r.consolidation_account_description ?? '',
             status: r.status ?? 'enabled',
+            nature: r.nature ?? '',
           });
         }
         stream.end();
@@ -120,6 +139,8 @@ export class AdminCoaTemplatesService {
     if (account_number == null) throw new BadRequestException('account_number is required and must be an integer');
     if (!account_name) throw new BadRequestException('account_name is required');
     if (status && status !== 'enabled' && status !== 'disabled') throw new BadRequestException(`Invalid status '${status}'. Use 'enabled' or 'disabled'.`);
+    const nature = natureOf(body?.nature);
+    if (nature === undefined) throw new BadRequestException(invalidNature(body?.nature));
     return {
       account_number,
       account_name,
@@ -129,6 +150,7 @@ export class AdminCoaTemplatesService {
       consolidation_account_name: ((body?.consolidation_account_name ?? '').toString().trim()) || null,
       consolidation_account_description: ((body?.consolidation_account_description ?? '').toString().trim()) || null,
       status: status === 'disabled' ? 'disabled' : 'enabled',
+      nature,
     };
   }
 
@@ -291,19 +313,27 @@ export class AdminCoaTemplatesService {
     const expected = this.csvHeaders();
     let headerOk = false;
     let total = 0;
+    const errors: Array<{ row: number; message: string }> = [];
     await new Promise<void>((resolve, reject) => {
       parseString(content, { headers: true, delimiter, ignoreEmpty: true, trim: true })
         .on('headers', (headers: string[]) => {
-          const missing = expected.filter((h) => !headers.includes(h));
+          const missing = expected.filter((h) => !headers.includes(h) && !OPTIONAL_HEADERS.includes(h));
           const extras = headers.filter((h) => !expected.includes(h));
           headerOk = missing.length === 0 && extras.length === 0;
           if (!headerOk) reject(new BadRequestException(`Header mismatch. Missing: ${missing.join(', ') || '-'}, Extra: ${extras.join(', ') || '-'}`));
         })
-        .on('data', () => { total += 1; })
+        .on('data', (row: Record<string, string>) => {
+          total += 1;
+          const raw = denormalizeCsvRow(row)['nature'];
+          if (natureOf(raw) === undefined) errors.push({ row: total + 1, message: invalidNature(raw) });
+        })
         .on('end', () => resolve())
         .on('error', (err) => reject(err));
     });
     if (!headerOk) throw new BadRequestException('Invalid header');
+    if (errors.length > 0) {
+      return { ok: false, dryRun, total, inserted: 0, updated: 0, errors };
+    }
     if (dryRun) {
       return { ok: true, dryRun: true, total, inserted: total, updated: 0, errors: [] };
     }

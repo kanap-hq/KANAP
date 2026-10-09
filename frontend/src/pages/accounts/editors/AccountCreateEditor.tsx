@@ -7,6 +7,7 @@ import useZodForm from '../../../hooks/useZodForm';
 import StatusLifecycleField from '../../../components/fields/StatusLifecycleField';
 import { accountFormSchema, AccountFormValues } from '../../forms/AccountForm';
 import { z } from 'zod';
+import { ACCOUNT_NATURES, accountNatureLabel, parseAccountNature } from '../../../constants/accountNature';
 import { STATUS_ENABLED, deriveStatusFromDisabledAt } from '../../../constants/status';
 
 export type AccountCreateEditorHandle = {
@@ -31,6 +32,7 @@ const DEFAULT_VALUES: AccountCreateFormValues = {
   consolidation_account_number: null,
   consolidation_account_name: null,
   consolidation_account_description: null,
+  nature: null,
   status: STATUS_ENABLED,
   disabled_at: null,
   coa_id: '',
@@ -202,6 +204,26 @@ export default forwardRef<AccountCreateEditorHandle, Props>(function AccountCrea
       />
       <TextField label="Consolidation Account Name" {...register('consolidation_account_name')} InputLabelProps={{ shrink: true }} />
       <TextField label="Consolidation Account Description" {...register('consolidation_account_description')} InputLabelProps={{ shrink: true }} />
+      <Controller
+        control={control}
+        name="nature"
+        render={({ field }) => (
+          <TextField
+            select
+            label={t('accounts.fields.nature')}
+            value={field.value ?? ''}
+            onChange={(e) => field.onChange(parseAccountNature(e.target.value))}
+            error={!!err.nature}
+            helperText={err.nature?.message as string}
+            SelectProps={{ displayEmpty: true }}
+            InputLabelProps={{ shrink: true }}
+          >
+            {[null, ...ACCOUNT_NATURES].map((nature) => (
+              <MenuItem key={nature ?? 'both'} value={nature ?? ''}>{accountNatureLabel(t, nature)}</MenuItem>
+            ))}
+          </TextField>
+        )}
+      />
       <Controller
         control={control}
         name="status"

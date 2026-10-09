@@ -25,7 +25,10 @@ import {
 //   an explicit company is kept;
 // - the chart of accounts is checked on the resulting company and account
 //   (a CAPEX company change re-checks the stored account);
-// - run_build is run, build or empty.
+// - run_build is run, build or empty;
+// - an account for the other type of line only (`accounts.nature`) is refused on
+//   create and on an account change; an account for both passes; a line that
+//   already has one takes unrelated edits and a company-only change.
 // @database-spec: runSpecs opens the data-source, so run-ci-tests.js runs this file in its serial database lane.
 
 const KINDS: Kind[] = ['opex', 'capex'];
@@ -276,6 +279,61 @@ async function testRunBuild(kind: Kind) {
   });
 }
 
+const OTHER: Record<Kind, Kind> = { opex: 'capex', capex: 'opex' };
+
+function natureRefusal(kind: Kind): string {
+  return kind === 'opex'
+    ? 'This account is for CAPEX lines only. Choose an account for OPEX lines.'
+    : 'This account is for OPEX lines only. Choose an account for CAPEX lines.';
+}
+
+async function testAccountNature(kind: Kind) {
+  await withTenants(async (runner, _a, b) => {
+    const svc = itemService(kind);
+    const opts = { manager: runner.manager };
+    const [{ coa_id: chartId }] = await runner.query(`SELECT coa_id FROM accounts WHERE id = $1`, [b.accountId]);
+    const account = async (number: number, nature: Kind | null): Promise<string> => {
+      const [row] = await runner.query(
+        `INSERT INTO accounts (tenant_id, coa_id, account_number, account_name, nature) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+        [b.tenantId, chartId, number, `Account ${number}`, nature],
+      );
+      return row.id;
+    };
+    const own = await account(6101, kind);
+    const other = await account(6102, OTHER[kind]);
+    const both = await account(6103, null);
+
+    const onCreate = await refusal(runner, () => svc.create(lineBody(kind, 'Other type', { paying_company_id: b.companyId, account_id: other }), undefined, opts));
+    assert.equal(onCreate.message, natureRefusal(kind), `${kind}: create with an account of the other type`);
+    assert.equal((onCreate as any).getStatus?.(), 400, `${kind}: a 400`);
+
+    const line = await svc.create(lineBody(kind, 'Own type', { paying_company_id: b.companyId, account_id: own }), undefined, opts);
+    assert.equal((await readLine(runner, kind, line.id)).account_id, own, `${kind}: an account of the line's type is written`);
+    const forBoth = await svc.create(lineBody(kind, 'Both', { paying_company_id: b.companyId, account_id: both }), undefined, opts);
+    assert.equal((await readLine(runner, kind, forBoth.id)).account_id, both, `${kind}: an account for both types is written`);
+
+    const onChange = await refusal(runner, () => svc.update(line.id, { account_id: other }, undefined, opts));
+    assert.equal(onChange.message, natureRefusal(kind), `${kind}: an account change to the other type`);
+    await svc.update(line.id, { account_id: both }, undefined, opts);
+    assert.equal((await readLine(runner, kind, line.id)).account_id, both, `${kind}: an account change to one for both types`);
+
+    // A line that already has an account of the other type (older data) keeps it through
+    // unrelated edits, a body repeating it and a company-only change within the same chart.
+    await runner.query(`UPDATE ${ITEM_TABLE[kind]} SET account_id = $2 WHERE id = $1`, [line.id, other]);
+    await svc.update(line.id, { notes: 'unrelated edit' }, undefined, opts);
+    await svc.update(line.id, { account_id: other, notes: 'same account' }, undefined, opts);
+    const [sameChart] = await runner.query(
+      `INSERT INTO companies (tenant_id, name, country_iso, city, coa_id) VALUES ($1, 'Same chart company', 'FR', 'Lyon', $2) RETURNING id`,
+      [b.tenantId, chartId],
+    );
+    await svc.update(line.id, { paying_company_id: sameChart.id }, undefined, opts);
+    const row = await readLine(runner, kind, line.id);
+    assert.equal(row.account_id, other, `${kind}: the mismatched account is kept`);
+    assert.equal(row.notes, 'same account', `${kind}: the mismatched line takes unrelated edits`);
+    assert.equal(row.paying_company_id, sameChart.id, `${kind}: the mismatched line takes a company-only change`);
+  });
+}
+
 void runSpecs('item-write-tenant.integration.spec', KINDS.flatMap((kind): Array<[string, () => Promise<void>]> => [
   [`another tenant's ids are refused (${kind})`, () => testForeignIdsRefused(kind)],
   [`own ids are written (${kind})`, () => testOwnIdsAccepted(kind)],
@@ -284,6 +342,7 @@ void runSpecs('item-write-tenant.integration.spec', KINDS.flatMap((kind): Array<
   [`company fill (${kind})`, () => testCompanyFill(kind)],
   [`chart of accounts on the resulting line (${kind})`, () => testChartOfAccountsOnResultingLine(kind)],
   [`run or build (${kind})`, () => testRunBuild(kind)],
+  [`account nature (${kind})`, () => testAccountNature(kind)],
 ])).catch((err) => {
   console.error(err);
   process.exit(1);

@@ -667,6 +667,7 @@ export class AiQueryExecutor {
         native_name: scalar(row.native_name),
         consolidation_account_number: numericScalar(row.consolidation_account_number),
         consolidation_account_name: scalar(row.consolidation_account_name),
+        nature: scalar(row.nature),
       },
     });
   }

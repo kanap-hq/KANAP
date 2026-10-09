@@ -13,8 +13,11 @@ const nav = vi.hoisted(() => ({
   state: null as unknown,
   calls: [] as Array<Record<string, unknown>>,
 }));
-// One stable `t` (a new one per render would loop the effects); interpolated codes stay visible.
-const stableT = vi.hoisted(() => (key: string, options?: { code?: string }) => (options?.code ? `${key}:${options.code}` : key));
+// One stable `t` (a new one per render would loop the effects); interpolated codes and counts stay visible.
+const stableT = vi.hoisted(() => (key: string, options?: { code?: string; count?: number }) => {
+  if (options?.code) return `${key}:${options.code}`;
+  return options?.count != null ? `${key}:${options.count}` : key;
+});
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
@@ -37,6 +40,7 @@ vi.mock('../../hooks/useAccountNav', () => ({
 
 import api from '../../api';
 import AccountWorkspacePage from './AccountWorkspacePage';
+import { STATUS_SCOPE_PARAM } from '../../utils/statusScopeParams';
 
 const mocked = api as unknown as {
   get: ReturnType<typeof vi.fn>;
@@ -101,6 +105,13 @@ function renderAt(path: string) {
       </ThemeProvider>
     </QueryClientProvider>,
   );
+}
+
+const natureSelect = () => screen.getByRole('combobox', { name: 'accounts.fields.nature' });
+
+async function pickNature(label: string) {
+  fireEvent.mouseDown(natureSelect());
+  fireEvent.click(within(await screen.findByRole('listbox')).getByRole('option', { name: label }));
 }
 
 const consolidationSelect = () => screen.getByRole('combobox', { name: 'accounts.fields.consolidationAccount' });
@@ -358,6 +369,59 @@ describe('AccountWorkspacePage', () => {
     }));
   });
 
+  it('shows what the account is used for and saves a new choice at once', async () => {
+    renderAt('/master-data/accounts/acc-1/overview');
+    await screen.findByText('Software subscriptions');
+    // Null: an account for OPEX and CAPEX lines.
+    expect(natureSelect()).toHaveTextContent('master-data:accounts.nature.both');
+    await pickNature('master-data:accounts.nature.opex');
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/accounts/acc-1', { nature: 'opex' }));
+    await waitFor(() => expect(natureSelect()).toHaveTextContent('master-data:accounts.nature.opex'));
+    await pickNature('master-data:accounts.nature.both');
+    await waitFor(() => expect(mocked.patch).toHaveBeenLastCalledWith('/accounts/acc-1', { nature: null }));
+  });
+
+  it('shows a refusal of the choice under the field', async () => {
+    mocked.patch.mockRejectedValueOnce({ response: { status: 400, data: { message: 'Invalid nature.', field: 'nature' } } });
+    renderAt('/master-data/accounts/acc-1/overview');
+    await screen.findByText('Software subscriptions');
+    await pickNature('master-data:accounts.nature.capex');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Invalid nature.');
+  });
+
+  it('says how many lines of the other kind keep the account, and opens them in a new tab', async () => {
+    serve({ account: { ...ACCOUNT, nature: 'opex', line_counts: { opex: 3, capex: 12 } } });
+    renderAt('/master-data/accounts/acc-1/overview');
+    const note = await screen.findByTestId('nature-conflict');
+    expect(note).toHaveTextContent('accounts.nature.conflictCapex:12');
+    const link = within(note).getByRole('link', { name: 'accounts.nature.showLines' });
+    expect(link).toHaveAttribute('target', '_blank');
+    const url = new URL(link.getAttribute('href') as string, 'http://kanap.test');
+    // The CAPEX list on this account, every status, as a one-off view.
+    expect(url.pathname).toBe('/ops/capex');
+    expect(JSON.parse(url.searchParams.get('filters') as string)).toEqual({ account_id: { filterType: 'set', values: ['acc-1'] } });
+    expect(url.searchParams.get(STATUS_SCOPE_PARAM)).toBe('all');
+    expect(url.searchParams.get('from')).toBe('report');
+
+    // The reverse choice: the OPEX lines keep it.
+    await pickNature('master-data:accounts.nature.capex');
+    await waitFor(() => expect(screen.getByTestId('nature-conflict')).toHaveTextContent('accounts.nature.conflictOpex:3'));
+    const opexLink = within(screen.getByTestId('nature-conflict')).getByRole('link', { name: 'accounts.nature.showLines' });
+    expect(new URL(opexLink.getAttribute('href') as string, 'http://kanap.test').pathname).toBe('/ops/opex');
+
+    // Both kinds allowed: no conflict left.
+    await pickNature('master-data:accounts.nature.both');
+    await waitFor(() => expect(screen.queryByTestId('nature-conflict')).toBeNull());
+  });
+
+  it('says nothing when no line of the other kind uses the account', async () => {
+    serve({ account: { ...ACCOUNT, nature: 'capex', line_counts: { opex: 0, capex: 4 } } });
+    renderAt('/master-data/accounts/acc-1/overview');
+    await screen.findByText('Software subscriptions');
+    await waitFor(() => expect(natureSelect()).toHaveTextContent('master-data:accounts.nature.capex'));
+    expect(screen.queryByTestId('nature-conflict')).toBeNull();
+  });
+
   it('shows read-only users disabled fields and no title edit', async () => {
     auth.canEdit = false;
     renderAt('/master-data/accounts/acc-1/overview');
@@ -443,6 +507,7 @@ describe('AccountWorkspacePage', () => {
       native_name: 'Télécoms',
       description: null,
       consolidation_account_number: 1200,
+      nature: null,
       status: 'enabled',
       disabled_at: null,
     }));
@@ -463,6 +528,20 @@ describe('AccountWorkspacePage', () => {
     expect(await screen.findByText(/already exists/)).toBeInTheDocument();
     expect(screen.getByLabelText('accounts.fields.accountNumber')).toHaveAttribute('aria-invalid', 'true');
     expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('creates an account for one kind of line', async () => {
+    mocked.post.mockResolvedValue({ data: { ...ACCOUNT, id: 'acc-new' } });
+    renderAt('/master-data/accounts/new/overview?selected=coa-fr');
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'accounts.fields.chartOfAccounts' })).toHaveTextContent('PCG · French chart'));
+    expect(natureSelect()).toHaveTextContent('master-data:accounts.nature.both');
+    fireEvent.change(screen.getByLabelText('accounts.fields.accountNumber'), { target: { value: '218300' } });
+    fireEvent.change(screen.getByLabelText('accounts.fields.accountName'), { target: { value: 'IT hardware' } });
+    await pickNature('master-data:accounts.nature.capex');
+    fireEvent.click(screen.getByRole('button', { name: 'accounts.actions.create' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/accounts', expect.objectContaining({
+      account_number: 218300, account_name: 'IT hardware', nature: 'capex',
+    })));
   });
 
   it('asks for a chart when the list gave none', async () => {

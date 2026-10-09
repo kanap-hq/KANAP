@@ -114,12 +114,14 @@ export type ReportListLink = {
 };
 
 /**
- * The list of `scope` filtered on a row's group, the bar's picks and the report's window. Filters too
- * long for a URL go as `ctx` once saved in this tab; until then the href carries them inline (copying
- * the link still works) and `save` gives the `ctx` address.
+ * The OPEX or CAPEX list filtered on `filters`, on every status (`?statusScope=all`), as a one-off
+ * view (`?from=report`): it leaves the tab's remembered list state alone. Filters too long for a URL
+ * go as `ctx` once saved in this tab; until then the href carries them inline (copying the link still
+ * works) and `save` gives the `ctx` address. Report rows and the account workspace ("Show these
+ * lines") open it.
  */
-export function reportListLink(scope: BudgetScope, group: ReportListGroup, picks: ReportListPicks, report: ReportListScope): ReportListLink {
-  const filters = JSON.stringify(reportListFilters(group, picks, report));
+export function oneOffListLink(scope: BudgetScope, columnFilters: ColumnFilters): ReportListLink {
+  const filters = JSON.stringify(columnFilters);
   const endpoint = SUMMARY_ENDPOINT[scope];
   const address = (search: string) => `/ops/${scope}?${search}`;
   const params = new URLSearchParams({ filters });
@@ -136,6 +138,11 @@ export function reportListLink(scope: BudgetScope, group: ReportListGroup, picks
       return address(compactListSearchCached(params.toString(), endpoint));
     },
   };
+}
+
+/** The list of `scope` filtered on a row's group, the bar's picks and the report's window (`oneOffListLink`). */
+export function reportListLink(scope: BudgetScope, group: ReportListGroup, picks: ReportListPicks, report: ReportListScope): ReportListLink {
+  return oneOffListLink(scope, reportListFilters(group, picks, report));
 }
 
 /** The href alone (`reportListLink`). */

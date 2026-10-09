@@ -14,7 +14,7 @@ The workspace opens in creation mode, with the **Properties** panel open on the 
 
 - **Title**: What you are investing in (e.g., "New Server Infrastructure", "ERP Software License"). This is the item's description, shown in the **Description** column of the list
 - **Paying company**: Which company is making the investment (required for accounting)
-- **Account**: The general ledger account for this capital expenditure. Only accounts from the paying company's chart of accounts appear
+- **Account**: The general ledger account for this capital expenditure. Only accounts from the paying company's chart of accounts appear, and only those set as **OPEX and CAPEX** or **CAPEX only** in [Chart of Accounts](chart-of-accounts.md#opex-or-capex-accounts). An item that already has an **OPEX only** account keeps it and stays editable. Choosing such an account on a new item or when you change the account is refused
 - **Currency**: ISO code (e.g., USD, EUR). Defaults to your workspace CAPEX currency; you can override per item
 - **PP&E type**: Property, Plant & Equipment classification -- Hardware or Software
 - **Investment type**: Purpose of the investment (see options below)

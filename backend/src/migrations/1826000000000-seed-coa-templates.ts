@@ -23,6 +23,9 @@ export class SeedCoaTemplates1826000000000 implements MigrationInterface {
     'status',
   ];
 
+  /** Optional 9th column: the OPEX/CAPEX nature of the account (`opex`, `capex` or empty). */
+  private readonly OPTIONAL_LAST_HEADER = 'nature';
+
   public async up(queryRunner: QueryRunner): Promise<void> {
     // ── Step 1: Validate all CSV payloads before any DB writes ──
     for (const t of TEMPLATES) {
@@ -77,7 +80,9 @@ export class SeedCoaTemplates1826000000000 implements MigrationInterface {
 
   /**
    * Validates a CSV payload string:
-   * - Headers match the expected 8-column schema
+   * - Headers match the expected 8-column schema, optionally followed by `nature`
+   *   (the template files carry it since migration 1853890000000, and this migration
+   *   inserts the current files)
    * - Every account_number parses as integer
    * - Every non-empty consolidation_account_number parses as integer
    * - status is 'enabled' or 'disabled'
@@ -100,15 +105,17 @@ export class SeedCoaTemplates1826000000000 implements MigrationInterface {
 
     // Validate headers
     const headers = lines[0].split(';').map((h) => h.trim());
-    if (headers.length !== this.EXPECTED_HEADERS.length) {
+    const withNature = headers.length === this.EXPECTED_HEADERS.length + 1;
+    const expected = withNature ? [...this.EXPECTED_HEADERS, this.OPTIONAL_LAST_HEADER] : this.EXPECTED_HEADERS;
+    if (headers.length !== expected.length) {
       throw new Error(
-        `${label}: Expected ${this.EXPECTED_HEADERS.length} columns, got ${headers.length}`,
+        `${label}: Expected ${this.EXPECTED_HEADERS.length} or ${this.EXPECTED_HEADERS.length + 1} columns, got ${headers.length}`,
       );
     }
-    for (let i = 0; i < this.EXPECTED_HEADERS.length; i++) {
-      if (headers[i] !== this.EXPECTED_HEADERS[i]) {
+    for (let i = 0; i < expected.length; i++) {
+      if (headers[i] !== expected[i]) {
         throw new Error(
-          `${label}: Header[${i}] expected "${this.EXPECTED_HEADERS[i]}", got "${headers[i]}"`,
+          `${label}: Header[${i}] expected "${expected[i]}", got "${headers[i]}"`,
         );
       }
     }
@@ -116,9 +123,9 @@ export class SeedCoaTemplates1826000000000 implements MigrationInterface {
     // Validate data rows
     for (let r = 1; r < lines.length; r++) {
       const cols = lines[r].split(';');
-      if (cols.length !== this.EXPECTED_HEADERS.length) {
+      if (cols.length !== expected.length) {
         throw new Error(
-          `${label} row ${r}: Expected ${this.EXPECTED_HEADERS.length} columns, got ${cols.length}`,
+          `${label} row ${r}: Expected ${expected.length} columns, got ${cols.length}`,
         );
       }
 
@@ -141,6 +148,15 @@ export class SeedCoaTemplates1826000000000 implements MigrationInterface {
         throw new Error(
           `${label} row ${r}: status "${status}" must be "enabled" or "disabled"`,
         );
+      }
+
+      if (withNature) {
+        const nature = cols[8].trim();
+        if (nature !== '' && nature !== 'opex' && nature !== 'capex') {
+          throw new Error(
+            `${label} row ${r}: nature "${nature}" must be "opex", "capex" or empty`,
+          );
+        }
       }
     }
   }

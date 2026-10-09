@@ -14,7 +14,7 @@ El espacio de trabajo se abre en modo de creación, con el panel **Propiedades**
 
 - **Título**: En qué invierte (p. ej., "Nueva infraestructura de servidores", "Licencia de software ERP"). Es la descripción de la partida, que aparece en la columna **Descripción** de la lista
 - **Empresa pagadora**: Qué empresa realiza la inversión (obligatorio para contabilidad)
-- **Cuenta**: La cuenta contable de este gasto de capital. Solo aparecen las cuentas del plan de cuentas de la empresa pagadora
+- **Cuenta**: La cuenta contable de este gasto de capital. Solo aparecen las cuentas del plan de cuentas de la empresa pagadora, y solo las que están como **OPEX y CAPEX** o **Solo CAPEX** en [Planes de cuentas y gestión de cuentas](chart-of-accounts.md#cuentas-opex-o-capex). Una partida que ya tiene una cuenta **Solo OPEX** la conserva y sigue siendo editable. Elegir una cuenta así en una partida nueva, o al cambiar la cuenta, se rechaza
 - **Moneda**: Código ISO (p. ej., USD, EUR). Por defecto la moneda CAPEX de su espacio de trabajo; puede cambiarla por partida
 - **Tipo de activo fijo**: Clasificación de propiedad, planta y equipo: Hardware o Software
 - **Tipo de inversión**: Propósito de la inversión (vea las opciones más abajo)

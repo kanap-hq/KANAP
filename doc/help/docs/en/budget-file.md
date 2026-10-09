@@ -127,6 +127,7 @@ An absent column keeps every stored value of that column. A file holding only `i
 - There is no other key. A new row that looks like an existing line, or like another new row of the same file, is a warning you can ignore.
 - Suppliers are matched by `supplier_erp_id` when it is filled, otherwise by `supplier_name`. A supplier the file names and KANAP does not have is created by the load when **Create missing suppliers** is ticked. Without it, the check lists them and asks you to create them in **Master data > Suppliers**.
 - A dimension value that does not exist is created by the load, and listed in the check. Accounts, cost centers, companies and users are never created: an unknown one is a row error naming where to add it.
+- A row that creates a line, or changes its account, is refused when the account is for the other kind of line, with the message "Account 6061 is for CAPEX lines only." (or OPEX). A line keeps its current account, and the account setting is in [Chart of Accounts](chart-of-accounts.md#opex-or-capex-accounts).
 - Projects are matched by their number, such as `PRJ-3`.
 - An ended line is a line whose `end_of_validity` has passed. Set the date to end a line, or write `-` in the cell to clear it and keep the line running. There is no status column.
 

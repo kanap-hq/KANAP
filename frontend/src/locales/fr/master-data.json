@@ -427,6 +427,7 @@
     "columns": {
       "accountNumber": "N° de compte",
       "accountName": "Nom",
+      "nature": "Utilisé pour",
       "nativeName": "Nom local",
       "consolAccountNumber": "N° compte de consolidation",
       "consolAccountName": "Nom de consolidation",
@@ -559,6 +560,7 @@
       "chartOfAccounts": "Plan comptable",
       "accountNumber": "Numéro de compte",
       "accountName": "Nom du compte",
+      "nature": "Utilisé pour",
       "nativeName": "Nom local (langue locale)",
       "description": "Description",
       "consolidationAccount": "Compte de consolidation",
@@ -578,6 +580,16 @@
       "outside": "Ce numéro n'existe pas dans le plan de consolidation {{code}}. Choisissez un compte de {{code}}.",
       "noChart": "Aucun plan de consolidation n'est défini.",
       "noChartLink": "Choisissez-en un dans Plans comptables → Gérer les plans."
+    },
+    "nature": {
+      "both": "OPEX et CAPEX",
+      "opex": "OPEX uniquement",
+      "capex": "CAPEX uniquement",
+      "conflictCapex_one": "{{count}} ligne CAPEX utilise ce compte. Elle le garde. Les nouvelles lignes CAPEX ne peuvent pas le choisir.",
+      "conflictCapex_other": "{{count}} lignes CAPEX utilisent ce compte. Elles le gardent. Les nouvelles lignes CAPEX ne peuvent pas le choisir.",
+      "conflictOpex_one": "{{count}} ligne OPEX utilise ce compte. Elle le garde. Les nouvelles lignes OPEX ne peuvent pas le choisir.",
+      "conflictOpex_other": "{{count}} lignes OPEX utilisent ce compte. Elles le gardent. Les nouvelles lignes OPEX ne peuvent pas le choisir.",
+      "showLines": "Afficher ces lignes"
     },
     "messages": {
       "saveFailed": "Échec de l'enregistrement du compte.",
