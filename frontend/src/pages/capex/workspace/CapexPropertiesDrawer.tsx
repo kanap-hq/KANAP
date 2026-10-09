@@ -163,9 +163,10 @@ export default function CapexPropertiesDrawer({
     ? t('capex.fields.costCenterCompanyHint', { company: costCenter.company_name ?? '' })
     : undefined;
 
-  // One select per enabled dimension, in dimension order. A disabled dimension shows no select;
-  // its value stays on the line. When the dimensions cannot be loaded, one line says so.
-  const analyticsAxes = useAnalyticsAxes();
+  // One select per enabled dimension that applies to CAPEX lines, in dimension order. A disabled
+  // dimension, or one for OPEX lines only, shows no select; its value stays on the line. When the
+  // dimensions cannot be loaded, one line says so.
+  const analyticsAxes = useAnalyticsAxes({ scope: 'capex' });
 
   return (
     <>

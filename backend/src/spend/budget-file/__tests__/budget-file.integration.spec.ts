@@ -637,7 +637,9 @@ async function testCostCenterCells(runner: { query: Function; manager: EntityMan
  * an unknown name is created in that dimension only; a disabled value is
  * refused as a new assignment and kept as the line's own; an absent column
  * keeps, `-` clears that dimension only; an export of two dimensions reads
- * back unchanged.
+ * back unchanged. A dimension of the other line type refuses the file by its
+ * header with its own message; the export leaves it out, and loading that
+ * export back keeps the hidden value the line holds there.
  */
 async function testDimensionCells(runner: { query: Function; manager: EntityManager }, kind: Kind) {
   const tenantId = await seedTenant(runner as any, `csv-c3-dim-${kind}`);
@@ -715,6 +717,56 @@ async function testDimensionCells(runner: { query: Function; manager: EntityMana
     ['Alpha | default | Licences'],
     `${kind}: - clears its dimension only, the absent column keeps`,
   );
+
+  // A dimension of the other line type, on which Alpha holds a value from before.
+  const other = kind === 'opex' ? 'capex' : 'opex';
+  const recurrence = await axis('recurrence', 'Recurrence', 3);
+  const monthly = await value(recurrence, 'Monthly');
+  await runner.query(
+    `INSERT INTO ${kind === 'opex' ? 'spend_item_analytics_values' : 'capex_item_analytics_values'} (tenant_id, item_id, axis_id, category_id)
+     VALUES ($1, $2, $3, $4)`,
+    [tenantId, alpha.id, recurrence, monthly],
+  );
+  // A file checked while Recurrence still applied to both types: a new value on Alpha and a new line.
+  const staleFile = csvOf(newLineColumns(kind, ['analytics:recurrence']), [
+    { ...newLine(kind, 'Alpha'), item_number: ref(kind, alpha.n), 'analytics:recurrence': 'Yearly' },
+    newLine(kind, 'Charlie', { 'analytics:recurrence': 'Monthly' }),
+  ]);
+  const stalePreflight = await preflightBudgetFile(runner.manager, kind, tenantId, staleFile);
+  assert.equal(stalePreflight.ok, true, `${kind}: the file is valid while the dimension applies to both (${JSON.stringify(stalePreflight.errors)})`);
+  await runner.query(`UPDATE analytics_axes SET applies_to = $3 WHERE tenant_id = $1 AND id = $2`, [tenantId, recurrence, other]);
+  const message = `The Recurrence dimension is for ${other.toUpperCase()} lines only. `
+    + `Remove the analytics:recurrence column from this ${kind.toUpperCase()} file.`;
+  // The load reads the file again: refused by its header, nothing written.
+  const linksBeforeLoad = await links();
+  const [{ n: linesBeforeLoad }] = await runner.query(`SELECT count(*)::int AS n FROM ${ITEM_TABLE[kind]} WHERE tenant_id = $1`, [tenantId]);
+  const staleLoad = await budgetFileService().importFile(
+    kind, Buffer.from(staleFile, 'utf8'), stalePreflight.snapshot, { manager: runner.manager, tenantId, userId: null }, BUDGET_FILE_OPTIONS,
+    { items: itemService(kind), audit: captureAudit() as any, freeze: noFreeze },
+  );
+  assert.equal(staleLoad.ok, false, `${kind}: the load refuses a column of the other type`);
+  assert.deepEqual('headerErrors' in staleLoad ? staleLoad.headerErrors : null, [message], `${kind}: with the contract message`);
+  assert.deepEqual(await links(), linksBeforeLoad, `${kind}: the load writes no value`);
+  assert.deepEqual(await valuesOf(recurrence), ['Monthly'], `${kind}: nor creates one`);
+  const [{ n: linesAfterLoad }] = await runner.query(`SELECT count(*)::int AS n FROM ${ITEM_TABLE[kind]} WHERE tenant_id = $1`, [tenantId]);
+  assert.equal(linesAfterLoad, linesBeforeLoad, `${kind}: nor a line`);
+  for (const header of ['analytics:recurrence', 'Analytics:Recurrence']) {
+    const refused = await preflightBudgetFile(runner.manager, kind, tenantId, csvOf(['item_number', header], [{ item_number: ref(kind, alpha.n), [header]: 'Monthly' }]));
+    assert.equal(refused.ok, false, `${kind}: ${header} refuses the file`);
+    assert.deepEqual(refused.headerErrors, [message], `${kind}: ${header} is a header error with its own message`);
+  }
+  // Disabled as well: the unknown dimension error, as for any disabled dimension.
+  await runner.query(`UPDATE analytics_axes SET status = 'disabled', disabled_at = now() - interval '1 day' WHERE tenant_id = $1 AND id = $2`, [tenantId, recurrence]);
+  const disabledOther = await preflightBudgetFile(runner.manager, kind, tenantId, csvOf(['item_number', 'analytics:recurrence'], [{ item_number: ref(kind, alpha.n), 'analytics:recurrence': 'Monthly' }]));
+  assert.deepEqual(disabledOther.headerErrors, ["Unknown dimension 'recurrence'."], `${kind}: a disabled dimension stays unknown`);
+  await runner.query(`UPDATE analytics_axes SET status = 'enabled', disabled_at = NULL WHERE tenant_id = $1 AND id = $2`, [tenantId, recurrence]);
+
+  const withoutHidden = await exportBudgetFile(runner.manager, kind, tenantId, [alpha.id, bravo.id]);
+  const header = withoutHidden.replace(/^\uFEFF/, '').split('\n')[0].split(',');
+  assert.ok(header.includes('analytics:nature'), `${kind}: the export keeps the dimensions of its type`);
+  assert.ok(!header.includes('analytics:recurrence'), `${kind}: the export leaves out a dimension of the other type (${header.join(',')})`);
+  await loadBudgetFile(runner.manager, kind, tenantId, withoutHidden);
+  assert.ok((await links()).includes('Alpha | recurrence | Monthly'), `${kind}: loading the export back keeps the hidden value`);
 }
 
 /**

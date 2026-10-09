@@ -110,7 +110,7 @@ function CapexPageView() {
   const { t } = useTranslation(["ops", "common"]);
   const locale = useLocale();
   const budgetColumns = useBudgetColumns();
-  const analyticsAxes = useAnalyticsAxes();
+  const analyticsAxes = useAnalyticsAxes({ scope: 'capex' });
   const queryClient = useQueryClient();
 
   const Y = new Date().getFullYear();

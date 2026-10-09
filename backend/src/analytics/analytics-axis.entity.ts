@@ -1,6 +1,9 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { StatusState } from '../common/status';
 
+export const AXIS_APPLIES_TO = ['opex', 'capex'] as const;
+export type AxisAppliesTo = (typeof AXIS_APPLIES_TO)[number];
+
 /**
  * An analytics dimension of a tenant ("axis" in code, "dimension" in the UI).
  * Each budget line holds at most one value per dimension. The default
@@ -31,6 +34,10 @@ export class AnalyticsAxis {
 
   @Column('boolean', { default: false })
   is_default!: boolean;
+
+  /** The budget lines the dimension applies to: OPEX only, CAPEX only, or both (null, always for the default). */
+  @Column('text', { nullable: true })
+  applies_to!: AxisAppliesTo | null;
 
   @Column({
     type: 'enum',

@@ -71,7 +71,7 @@ Una partida vive varios años: una licencia de tres años es una partida con tre
 | Cuenta | `account_number` | Sí | En el plan de cuentas de la empresa pagadora |
 | Centro de coste | `cost_center_code` | No | Se rechaza un grupo |
 | Run o build | `run_build` | No | `run` o `build` |
-| Valores analíticos | `analytics:<code>` | No | Una columna por dimensión activa |
+| Valores analíticos | `analytics:<code>` | No | Una columna por dimensión activa usada para el tipo del archivo |
 | Responsable de IT, responsable de negocio | `owner_it_email`, `owner_business_email` | No | Usuarios activos |
 | Proyecto | `project` | No | Un número de proyecto, por ejemplo `PRJ-3` |
 | Moneda | `currency` | Sí | Código ISO de tres letras |

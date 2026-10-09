@@ -82,10 +82,16 @@ vi.mock('../../../hooks/useAnalyticsAxes', async (importOriginal) => {
     dimension('old', 'Old', 2, { status: 'disabled', disabled_at: '2020-01-01T00:00:00.000Z' }),
     dimension('nature', 'Nature', 1),
     dimension('default', null, 0, { is_default: true }),
+    // For OPEX lines only: never shown here, even with a held value.
+    dimension('licence', 'Licence model', 4, { applies_to: 'opex' }),
   ];
   return {
     ...mod,
-    useAnalyticsAxes: () => (dimensions.failed ? mod.buildAnalyticsAxes([], t, true, true) : mod.buildAnalyticsAxes(list as never, t)),
+    useAnalyticsAxes: (options?: { scope?: 'opex' | 'capex' | null }) => (
+      dimensions.failed
+        ? mod.buildAnalyticsAxes([], t, true, true)
+        : mod.buildAnalyticsAxes(list as never, t, true, false, undefined, options?.scope)
+    ),
   };
 });
 
@@ -176,6 +182,12 @@ describe('CapexPropertiesDrawer', () => {
     expect(screen.getByText('master-data:analytics.analyticsCategoryFallback')).toBeInTheDocument();
     expect(screen.queryByText('Old')).toBeNull();
     expect(screen.getByTestId('analytics-select-default')).toHaveTextContent('category-1');
+  });
+
+  it.each(['create', 'edit'] as const)('shows no select for a dimension used for OPEX lines only, even with a held value (%s)', (mode) => {
+    renderDrawer(mode, { analyticsValues: { default: 'category-1', licence: 'category-4' } });
+    expect(screen.queryByTestId('analytics-select-licence')).toBeNull();
+    expect(screen.queryByText('Licence model')).toBeNull();
   });
 
   it.each(['create', 'edit'] as const)('says so in one line when the dimensions cannot be loaded (%s)', (mode) => {

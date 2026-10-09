@@ -44,9 +44,10 @@ vi.mock('../../hooks/useAnalyticsAxes', async (importOriginal) => {
   const t = ((key: string) => (key === 'master-data:analytics.analyticsCategoryFallback' ? 'Analytics dimension' : key)) as unknown as TFunction;
   return {
     ...actual,
-    useAnalyticsAxes: () => {
+    useAnalyticsAxes: (options?: { scope?: 'opex' | 'capex' | null }) => {
       const { list, ready, isError } = axesState;
-      return useMemo(() => actual.buildAnalyticsAxes(list as AnalyticsAxis[], t, ready, isError), [list, ready, isError]);
+      const scope = options?.scope ?? null;
+      return useMemo(() => actual.buildAnalyticsAxes(list as AnalyticsAxis[], t, ready, isError, undefined, scope), [list, ready, isError, scope]);
     },
   };
 });
@@ -92,7 +93,7 @@ const NODES: CostCenterNode[] = [
 ];
 
 function axis(id: string, patch: Partial<AnalyticsAxis>): AnalyticsAxis {
-  return { id, code: id, name: null, description: null, sort_order: 0, is_default: false, status: 'enabled', disabled_at: null, ...patch };
+  return { id, code: id, name: null, description: null, sort_order: 0, is_default: false, applies_to: null, status: 'enabled', disabled_at: null, ...patch };
 }
 
 // The default dimension has no name of its own; Activity is enabled but no line holds a value on it.
@@ -180,12 +181,14 @@ describe('parseAnalyticsParam', () => {
 });
 
 const seen = vi.hoisted(() => ({ search: '', kept: [] as string[], navigation: '' }));
+/** The report's line type. */
+const report = vi.hoisted(() => ({ scope: 'opex' as 'opex' | 'capex' }));
 
 /** The lines the server holds: the bar's options come from them, and the picks keep some of them. */
 const server = vi.hoisted(() => ({ rows: [] as unknown[] }));
 
 function Harness({ rows }: { rows: Row[] }) {
-  const filters = useBudgetReportFilters({ scope: 'opex' });
+  const filters = useBudgetReportFilters({ scope: report.scope });
   const location = useLocation();
   seen.search = location.search;
   seen.navigation = useNavigationType();
@@ -230,6 +233,7 @@ beforeEach(() => {
   axesState.list = AXES;
   axesState.ready = true;
   axesState.isError = false;
+  report.scope = 'opex';
   get.mockReset();
   post.mockReset();
   post.mockImplementation(async (_url: string, body: any) => ({ data: fakeAggregate(server.rows as Row[], body) }));
@@ -457,6 +461,24 @@ describe('BudgetReportFilters dimensions', () => {
     expect(seen.kept).toEqual(['b', 'd', 'f']);
     expect(dimensionSelects()).toEqual(['Analytics dimension', 'Nature']);
     expect(dimensionSelect('Nature').textContent).toBe('No value');
+  });
+
+  it('follows the report type: a dimension for the other type has no select and its pair is ignored', async () => {
+    axesState.list = [...AXES, axis('ax-cap', { name: 'Investment', sort_order: 4, applies_to: 'capex' })];
+    const rows: Row[] = ROWS.map((row) => (row.id === 'a'
+      ? { ...row, analytics_value_ids: { ...row.analytics_value_ids, 'ax-cap': 'i-new' }, 'analytics_ax-cap': 'New' }
+      : row));
+    const capexSelect = () => screen.queryByRole('combobox', { name: 'Investment' });
+    const view = await renderBar('/report?analytics=ax-cap:i-new', rows);
+    // OPEX report: no select, and the pair keeps every line.
+    expect(capexSelect()).toBeNull();
+    expect(seen.kept).toEqual(ids(rows));
+    view.unmount();
+
+    report.scope = 'capex';
+    await renderBar('/report?analytics=ax-cap:i-new', rows);
+    expect(capexSelect()).not.toBeNull();
+    expect(seen.kept).toEqual(['a']);
   });
 
   it('shows no line until the dimensions are loaded when the address names one', async () => {

@@ -294,6 +294,27 @@ describe('SpendItemPage create', () => {
     expect(payload).not.toHaveProperty('analytics_category_id');
   });
 
+  it('never sends a value on a dimension for CAPEX lines only', async () => {
+    mocked.get.mockImplementation(async (url: string) => (url === '/analytics-axes'
+      ? { data: { items: [
+        { id: 'axis-default', code: 'default', name: null, description: null, sort_order: 0, is_default: true, applies_to: null, status: 'enabled', disabled_at: null },
+        { id: 'axis-nature', code: 'nature', name: 'Nature', description: null, sort_order: 1, is_default: false, applies_to: 'capex', status: 'enabled', disabled_at: null },
+      ] } }
+      : { data: {} }));
+    renderAt('/ops/opex/new/overview');
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/analytics-axes'));
+    fireEvent.click(screen.getByRole('button', { name: 'set title' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick default value' }));
+    // Picked before the dimension became CAPEX only: no longer shown, so not sent.
+    fireEvent.click(screen.getByRole('button', { name: 'pick nature value' }));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
+    expect(mocked.post.mock.calls[0][1].analytics_values).toEqual({ 'axis-default': 'value-1' });
+  });
+
   it('sends an empty map when no dimension has a value', async () => {
     renderAt('/ops/opex/new/overview');
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));

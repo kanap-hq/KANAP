@@ -5,6 +5,7 @@ import AddIcon from '@mui/icons-material/Add';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { isAnalyticsActive, type AnalyticsAxis } from '../../services/analytics';
 import ChipToggleBar from '../../components/ChipToggleBar';
+import { lineTypeUsageLabel } from '../../constants/lineTypeUsage';
 
 type Props = {
   axes: AnalyticsAxis[];
@@ -31,17 +32,21 @@ export default function AnalyticsDimensionChipBar({ axes, selectedAxisId, label,
       sx={{ mb: 2 }}
       items={axes.map((axis) => {
         const name = label(axis);
-        const active = isAnalyticsActive(axis);
+        // A disabled dimension, or one used for one type of line only, says so after its name.
+        const marks = [
+          ...(isAnalyticsActive(axis) ? [] : [t('analytics.disabledMark')]),
+          ...(axis.applies_to ? [lineTypeUsageLabel(t, axis.applies_to)] : []),
+        ];
         return {
           id: axis.id,
-          // The visible mark alone would run into the name ("Internal orderDisabled").
-          ariaLabel: active ? undefined : t('analytics.disabledDimension', { name }),
+          // The visible marks alone would run into the name ("Internal orderDisabled").
+          ariaLabel: marks.length > 0 ? t('analytics.markedDimension', { name, marks: marks.join(', ') }) : undefined,
           label: (
             <>
               {name}
-              {!active && (
+              {marks.length > 0 && (
                 <Box component="span" sx={{ ml: 0.75, opacity: 0.7 }}>
-                  {t('analytics.disabledMark')}
+                  {marks.join(' · ')}
                 </Box>
               )}
             </>

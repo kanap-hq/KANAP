@@ -1,5 +1,12 @@
 import { EntityManager } from 'typeorm';
-import { AnalyticsAxisInfo, ANALYTICS_CSV_PREFIX, analyticsFieldKey, isAxisActive, loadAnalyticsAxes } from '../../../analytics/analytics-axes.util';
+import {
+  AnalyticsAxisInfo,
+  ANALYTICS_CSV_PREFIX,
+  analyticsFieldKey,
+  axisAppliesTo,
+  isAxisActive,
+  loadAnalyticsAxes,
+} from '../../../analytics/analytics-axes.util';
 import { AiEntityFilterRegistry, AiFilterFieldDef, AiQueryEntityType } from '../ai-filter.types';
 import { accountsRegistry } from './accounts.registry';
 import { analyticsCategoriesRegistry } from './analytics-categories.registry';
@@ -100,8 +107,8 @@ export function withAnalyticsAxisFields(registry: AiEntityFilterRegistry, axes: 
 
 /**
  * The registry of one entity type for the tenant of the call: OPEX and CAPEX
- * gain their analytics dimension fields (one tenant-predicated query), every
- * other type is the static registry. Resolved once per tool call and passed
+ * gain the fields of the analytics dimensions that apply to their lines (one
+ * tenant-predicated query), every other type is the static registry. Resolved once per tool call and passed
  * down; `getAiEntityRegistry` stays for static callers.
  */
 export async function resolveAiEntityRegistry(
@@ -110,7 +117,9 @@ export async function resolveAiEntityRegistry(
 ): Promise<AiEntityFilterRegistry> {
   const registry = getAiEntityRegistry(entityType);
   if (entityType !== 'spend_items' && entityType !== 'capex_items') return registry;
-  return withAnalyticsAxisFields(registry, await loadAnalyticsAxes(context.manager, context.tenantId));
+  const scope = entityType === 'spend_items' ? 'opex' : 'capex';
+  const axes = await loadAnalyticsAxes(context.manager, context.tenantId);
+  return withAnalyticsAxisFields(registry, axes.filter((axis) => axisAppliesTo(axis, scope)));
 }
 
 /** The `analytics:<code>` fields of a resolved registry with the row key each reads. */
