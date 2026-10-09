@@ -578,7 +578,7 @@ Output: `15 Mar` (same year) or `30 Nov 2025` (different year). The shared imple
 Dates shown in metadata bars should open the date picker immediately when clicked.
 
 - Do not first replace the metadata item with another full-width date field.
-- Anchor the picker to the clicked item or to the mouse cursor position, especially when using native `input[type="date"].showPicker()`.
+- Open the in-page calendar (`components/fields/DateCalendarPopover`) anchored to the clicked item. Never the browser's native picker (`showPicker()`): the page cannot keep it inside the window.
 - Keep the formatted metadata value visible and compact at rest.
 - Use the drawer date field for slower property editing; use the metadata date for direct quick edits.
 
