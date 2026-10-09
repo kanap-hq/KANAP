@@ -31,7 +31,7 @@ You need:
 - The email address of the first administrator.
 - The name of your organization.
 
-Choose the four values in the first lines, then paste the whole block. Keep the quotes around the organization name: it can contain spaces. The block writes the values, with the secrets it generates, to `~/kanap-install.env`, a file readable by you only. Later steps read that file with `. ~/kanap-install.env`, so each block works in a new terminal session. Nothing prints the secrets.
+Choose the four values in the first lines, then paste the whole block. Keep the single quotes around the organization name: it can contain spaces. If the name contains an apostrophe, use double quotes instead: `ORG_NAME="Caisse d'Epargne"`. Leave `$` and backquotes out of the name. The block writes the values, with the secrets it generates, to `~/kanap-install.env`, a file readable by you only. Later steps read that file with `. ~/kanap-install.env`, so each block works in a new terminal session. Nothing prints the secrets.
 
 ```bash
 PGVER=18                            # 16 on Ubuntu 24.04
@@ -254,7 +254,7 @@ for i in $(seq 1 30); do ss -ltn | grep -q '172.17.0.1:9000' && break; sleep 1; 
 ss -ltn | grep '172.17.0.1:9000'
 ```
 
-The last line must show `172.17.0.1:9000` listening. The `After=docker.service` drop-in makes the service start once Docker has created the bridge address. If Docker uses another bridge address (`ip -4 addr show docker0`), use that address in `RUSTFS_ADDRESS` and in the firewall rules.
+The last line must show `172.17.0.1:9000` listening. The `After=docker.service` drop-in makes the service start once Docker has created the bridge address. If Docker uses another bridge address (`ip -4 addr show docker0`), put that address in `RUSTFS_ADDRESS`. If your Docker networks are outside `172.16.0.0/12` (see `docker network inspect`), replace that range in the firewall rules of step 2 and in the `pg_hba.conf` line of step 4.
 
 `RUSTFS_SSE_S3_MASTER_KEY` is the key that encrypts the files at rest. KANAP asks for encryption at rest on uploads. Without the key RustFS refuses the request and the API logs a `PutObject fallback used` warning. **Keep this key with your server configuration backup**: files encrypted with it cannot be read without it.
 
@@ -401,7 +401,7 @@ docker compose -f infra/compose.onprem.yml build --pull web
 docker compose -f infra/compose.onprem.yml up -d --wait
 ```
 
-`ps` shows `api` and `web` as `healthy`. The last command keeps the start-up lines of the API log and leaves out the framework details. On the first start it shows these lines, in this order (the `[SECRETS]` lines are shortened here):
+`ps` shows `api` and `web` as `healthy`. The last command keeps the start-up lines of the API log and leaves out the framework details. On the first start it shows these lines, in this order (the first `[SECRETS]` line is shortened here):
 
 ```
 [entrypoint] Initializing DB (attempt 1/30) ...
@@ -425,7 +425,7 @@ Admin seeding disabled (set SEED_ADMIN=true to enable)
 
 The number of migrations depends on the version, and the pool figures on your PostgreSQL.
 
-The block leaves out the migration lines: about 40 lines that start with `[Migration]` or `[migration:` follow `Running migrations...`. They are informational. On a new database some of them report changes to built-in reference data or name a tenant id that is not yours: KANAP keeps a system tenant for platform features. They need no action. `...` stands for the `[Nest]` prefix with the process id and the time. The last line of the filtered output is `[DB] pool budget ...`. Log output saved to a file can contain colour codes such as `[33m`.
+The block leaves out the migration lines: about 40 lines that start with `[Migration]` or `[migration:` follow `Running migrations...`. They are informational. On a new database some of them report changes to built-in reference data or name a tenant id that is not yours: KANAP keeps a system tenant for platform features. They need no action. `...` stands for the `[Nest]` prefix with the process id and the time, and for the source in brackets (for example `LOG [NestApplication]`). Some of these lines end with a duration such as `+0ms`. The last line of the filtered output is `[DB] pool budget ...`. Log output saved to a file can contain colour codes such as `[33m`.
 
 Two lines are expected and need no action: `Admin seeding disabled ...` and, until you configure email, the `EmailService` warning. A `[SECURITY]`, `[CONFIG]`, `[CORS]` or `[ENV] APP_ENV is not set` warning means a setting needs attention: [Configuration](configuration.md#what-the-api-log-shows-at-start) explains every line.
 
@@ -645,13 +645,15 @@ Next, set up the [backups](operations.md#backup-and-restore).
 |------------|----------------|-------------------------------------------------------|
 | Docker     | systemd        | none                                                  |
 | PostgreSQL | systemd (`postgresql@<version>-main`) | `/etc/postgresql/<version>/main/conf.d/`, `pg_hba.conf` |
-| RustFS     | systemd        | `/etc/default/rustfs` (holds the encryption key)      |
+| RustFS     | systemd        | `/etc/default/rustfs` (holds the encryption key), `/root/.config/rc/config.toml` (holds the storage administrator keys for the `rc` tool) |
 | Firewall   | ufw            | `sudo ufw status`                                     |
 | KANAP API  | Docker Compose | `/opt/kanap/.env` + `infra/compose.onprem.yml`        |
 | KANAP Web  | Docker Compose | `/opt/kanap/.env` + `infra/compose.onprem.yml`        |
 | nginx      | systemd        | `/etc/nginx/sites-available/kanap`                    |
 
 ## Useful commands
+
+Run these commands one at a time. `logs -f` follows the log until you press Ctrl+C, and `down` stops KANAP.
 
 ```bash
 cd /opt/kanap

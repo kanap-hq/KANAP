@@ -108,7 +108,7 @@ The filter keeps the lines below and leaves out the framework details. Without i
 
 **Order.** The lines that KANAP writes itself (`[entrypoint]`, `[ENV]`, `[SECRETS]`, `[RATE-LIMIT]`, `[CORS]`, `[DB]`, `[on-prem]`, `[SECURITY]`) come first. The framework lines (`Starting Nest application...`, email, scheduled jobs, `Nest application successfully started`) follow.
 
-**A clean first start** of the [installation example](installation-example.md#7-build-and-start) shows these lines, in this order (the `[SECRETS]` lines are shortened here):
+**A clean first start** of the [installation example](installation-example.md#7-build-and-start) shows these lines, in this order (the first `[SECRETS]` line is shortened here):
 
 ```
 [entrypoint] Initializing DB (attempt 1/30) ...
@@ -130,7 +130,7 @@ Admin seeding disabled (set SEED_ADMIN=true to enable)
 [DB] pool budget: 1 process × 20 connections = 20 of 87 usable (...)
 ```
 
-The block leaves out the migration lines: about 40 lines that start with `[Migration]` or `[migration:` follow `Running migrations...`. They are informational. On a new database some of them report changes to built-in reference data or name a tenant id that is not yours: KANAP keeps a system tenant for platform features. They need no action. `...` stands for the `[Nest]` prefix with the process id and the time. The last line of the filtered output is `[DB] pool budget ...`. Log output saved to a file can contain colour codes such as `[33m`.
+The block leaves out the migration lines: about 40 lines that start with `[Migration]` or `[migration:` follow `Running migrations...`. They are informational. On a new database some of them report changes to built-in reference data or name a tenant id that is not yours: KANAP keeps a system tenant for platform features. They need no action. `...` stands for the `[Nest]` prefix with the process id and the time, and for the source in brackets (for example `LOG [NestApplication]`). Some of these lines end with a duration such as `+0ms`. The last line of the filtered output is `[DB] pool budget ...`. Log output saved to a file can contain colour codes such as `[33m`.
 
 The number of migrations changes from version to version. On later starts it is `0 executed` (or the number of new migrations after an upgrade), and the four `[on-prem]` creation lines give way to `Administrator account ... left unchanged`. The email line depends on your settings: with an email transport it reads `LOG [EmailService] Email transport selected: ...` instead of the warning.
 
@@ -542,10 +542,13 @@ These destinations are needed during installation, at each upgrade (`docker buil
 | `github.com`, `*.githubusercontent.com` | 443 | Clone KANAP source code; download the RustFS release files (the installation example) |
 | `download.docker.com` | 443 | Docker APT repository |
 | `registry.npmjs.org` | 443 | npm dependencies during `docker build` |
-| `registry-1.docker.io`, `production.cloudflare.docker.com` | 443 | Pull base Docker images (`node:24-alpine`, `nginx:alpine`), and the smoke test image (`node:24-alpine`) the first time the test runs |
+| `registry-1.docker.io`, `auth.docker.io` | 443 | Pull base Docker images (`node:24-alpine`, `nginx:alpine`), and the smoke test image (`node:24-alpine`) the first time the test runs. Each pull first gets a token from `auth.docker.io` |
+| `production.cloudflare.docker.com`, `production.cloudfront.docker.com` | 443 | Download the image layers: Docker Hub redirects each pull to these hosts |
 | `dl-cdn.alpinelinux.org` | 80/443 | Alpine packages during `docker build` (both images install packages with `apk add`) |
 | Ubuntu APT mirrors | 80/443 | System packages (PostgreSQL, nginx, etc.) |
 | `acme-v02.api.letsencrypt.org` | 443 | Certificates, only with Let's Encrypt (also at each renewal) |
+
+Docker can change the download hosts of Docker Hub. Docker keeps the current list in its [allowlist](https://docs.docker.com/desktop/setup/allow-list/): the Docker Hub rows of that page also apply to a server with Docker Engine.
 
 ### Outbound: runtime (conditional)
 
