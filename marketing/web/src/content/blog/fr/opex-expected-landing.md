@@ -1,6 +1,6 @@
 ---
-title: Budget, épisode 1 - L'atterrissage
-description: Dans cette première partie, nous allons fiabiliser notre atterrissage 2026 ligne par ligne, en nous aidant des outils intégrés à KANAP. Ce sera ensuite la base du budget 2027.
+title: "Atterrissage budgétaire de la DSI, ligne par ligne"
+description: "Fiabiliser l'atterrissage du budget IT en cours, poste par poste, pour en faire la base solide du budget de l'année suivante."
 date: 2026-08-29
 topic: cost
 author: Friedrich
@@ -9,7 +9,7 @@ draft: false
 series:
   key: opex-budget
   part: 1
-  title: Préparer le budget OPEX avec KANAP
+  title: "Construire le budget de la DSI"
 ---
 
 Septembre. La direction financière demande une première version du budget 2027, et le fichier Excel de l'an dernier ressort du placard : deux cents lignes, huit onglets, trois versions qui ne disent plus la même chose. C'est reparti pour un tour ?

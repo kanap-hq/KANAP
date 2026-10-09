@@ -253,7 +253,9 @@ Les sept rapports budgétaires peuvent aussi être restreints à une valeur d'un
 
 - Plaid peut filtrer et regrouper les lignes OPEX sur chaque dimension activée utilisée pour les lignes OPEX, et les lignes CAPEX sur chaque dimension activée utilisée pour les lignes CAPEX.
 - Une question sur la catégorie analytique utilise la dimension par défaut, quels que soient son nom ou son ordre.
-- Plaid ne peut modifier la valeur d'une ligne que sur la dimension par défaut. Renseignez les autres dimensions dans l'application ou avec un fichier CSV.
+- Plaid peut définir, modifier ou effacer la valeur d'une ligne sur n'importe quelle dimension lorsqu'il crée ou met à jour une ligne OPEX ou CAPEX. Demandez par exemple : « Mets la Nature de coût de OPX-12 sur Licences et maintenance ». Plaid trouve la valeur par son nom dans cette dimension et affiche dans l'aperçu la dimension et la valeur, avant et après. Rien ne change tant que vous n'avez pas approuvé.
+- Plaid applique les mêmes règles que l'application : uniquement les dimensions activées utilisées pour le type de la ligne, uniquement les valeurs activées utilisées pour le type de la ligne, et une ligne conserve une valeur qu'elle porte déjà.
+- Plaid peut aussi créer une valeur dans la dimension que vous nommez. Sans dimension, la valeur est créée dans la dimension par défaut.
 
 ---
 

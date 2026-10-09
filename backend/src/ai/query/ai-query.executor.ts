@@ -73,6 +73,8 @@ function buildRef(
   if (entityType === 'tasks') return `T-${itemNumber}`;
   if (entityType === 'documents') return `DOC-${itemNumber}`;
   if (entityType === 'incidents') return `INC-${itemNumber}`;
+  if (entityType === 'spend_items') return `OPX-${itemNumber}`;
+  if (entityType === 'capex_items') return `CPX-${itemNumber}`;
   return null;
 }
 
@@ -621,6 +623,7 @@ export class AiQueryExecutor {
       ?? ([row.supplier_name, row.paying_company_name, row.account_display].filter(Boolean).join(' | ') || null);
     return toEntitySummary('spend_items', {
       id: row.id,
+      item_number: row.item_number ?? null,
       label: row.product_name || 'Untitled spend item',
       status: row.status ?? null,
       summary,
@@ -639,6 +642,7 @@ export class AiQueryExecutor {
       ?? ([row.company_name, row.ppe_type, row.investment_type].filter(Boolean).join(' | ') || null);
     return toEntitySummary('capex_items', {
       id: row.id,
+      item_number: row.item_number ?? null,
       label: row.description || 'Untitled CAPEX item',
       status: row.status ?? null,
       summary,
@@ -1568,7 +1572,8 @@ export class AiQueryExecutor {
   ): Promise<string> {
     const value = String(rawId || '').trim();
     if (!value) return value;
-    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) {
+    // Any uuid shape (not only v1-v5): an unmatched one would now throw below.
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
       return value;
     }
     if (entityType === 'documents') {
@@ -1601,7 +1606,9 @@ export class AiQueryExecutor {
     );
     if (exact) return exact.id;
     if (result.items.length === 1) return result.items[0].id;
-    return value;
+    // Not a uuid and nothing matched: the services would cast it to uuid and
+    // fail in Postgres, so answer with a plain "not found" instead.
+    throw new NotFoundException(`No ${entityType} record matches "${value}". Search for it first, then use its id or reference.`);
   }
 
   private toDetailResult(
@@ -2084,7 +2091,8 @@ export class AiQueryExecutor {
       if (row.tenant_id && row.tenant_id !== context.tenantId) throw new NotFoundException('Spend item not found.');
       await this.withoutHiddenAnalyticsValues(context, row, 'opex');
       const registry = await resolveAiEntityRegistry(context, entityType);
-      Object.assign(row, await this.loadSpendItemDeepDetail(context, entityId, registry));
+      // The id, not the reference the caller may have given (`get` accepts both).
+      Object.assign(row, await this.loadSpendItemDeepDetail(context, row.id as string, registry));
       return this.toDetailResult(this.mapSpendItem(row, registry), row);
     }
 

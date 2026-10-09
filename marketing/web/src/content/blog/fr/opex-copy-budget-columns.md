@@ -1,6 +1,6 @@
 ---
-title: Budget, épisode 2 - L'année à venir
-description: "Nous avons un atterrissage solide : nous allons maintenant pouvoir construire le budget 2027, simulations à l'appui."
+title: "Construire le budget DSI de l'année suivante"
+description: "Du budget N+1 à partir de l'atterrissage : recopier ce qui ne change pas, simuler, puis ne retravailler que les lignes qui comptent."
 date: 2026-08-30
 topic: cost
 author: Friedrich
@@ -9,7 +9,7 @@ draft: false
 series:
   key: opex-budget
   part: 2
-  title: Préparer le budget OPEX avec KANAP
+  title: "Construire le budget de la DSI"
 ---
 
 L'épisode 1 a consisté en une revue ciblée : l'atterrissage 2026 a intégré les principaux mouvements et les changements majeurs de 2027 sont déjà enregistrés. Restent toutes les lignes où rien n'a changé. Les identifier et les recopier une à une est le travail le plus ingrat de la saison budgétaire. Dans KANAP, c'est un outil et quelques clics.

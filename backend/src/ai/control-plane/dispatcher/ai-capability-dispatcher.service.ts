@@ -26,6 +26,7 @@ import { AiEvidenceService } from '../evidence/ai-evidence.service';
 import { AiEmergencyPauseService } from '../pause/ai-emergency-pause.service';
 import { AdapterEvidenceSeed } from '../providers/provider.types';
 import { isRecord } from '../../../common/object-guards';
+import { withSavepoint } from '../../../common/savepoint.util';
 
 type DispatchInput = {
   capabilityName: string;
@@ -477,7 +478,11 @@ export class AiCapabilityDispatcherService {
       }
       await this.pause.assertNotPaused(context, contract, { agentDefinitionId });
 
-      const rawOutput = await handler(context, input.input, handlerExecution);
+      // The handler runs under its own savepoint. When one of its statements fails, Postgres
+      // refuses every later statement of the transaction: the rollback to the savepoint undoes
+      // the handler's work only, so the failure bookkeeping below and the caller's next
+      // capabilities in the same transaction still run. The tenant context set before stays.
+      const rawOutput = await withSavepoint(context.manager, () => handler(context, input.input, handlerExecution));
       const output = this.evidence.redact(rawOutput, contract.redaction_policy.fields) as T;
       const outputSummary = this.evidence.summarize(output);
       const status = toOutputStatus(output);

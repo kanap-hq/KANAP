@@ -1,6 +1,6 @@
 ---
-title: Budget, part 2 - The year ahead
-description: "With a solid landing in hand, we can now build the 2027 budget, dry runs included."
+title: "Building next year's IT budget"
+description: "Next year's budget from the expected landing: copy what does not change, run dry runs, then rework only the lines that matter."
 date: 2026-08-30
 topic: cost
 author: Friedrich
@@ -9,7 +9,7 @@ draft: false
 series:
   key: opex-budget
   part: 2
-  title: Preparing the OPEX budget with KANAP
+  title: "Building the IT budget"
 ---
 
 Part 1 was a targeted review: the 2026 landing now reflects the main movements, and 2027's major changes are already recorded. What remains is every line where nothing changed. Finding and retyping them one by one is the most thankless job of budget season. In KANAP, it is one tool and a few clicks.

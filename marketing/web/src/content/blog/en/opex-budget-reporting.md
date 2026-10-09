@@ -1,6 +1,6 @@
 ---
-title: Budget, part 3 - The presentation
-description: "The budget is ready, now it has to be sold. KANAP surfaces the key figures, offers ready-made reports and answers the 'who pays what'."
+title: "Presenting the IT budget for approval"
+description: "The reports that get an IT budget through the committee: key figures, trends, chargeback, then freezing the approved version."
 date: 2026-08-31
 topic: cost
 author: Friedrich
@@ -9,7 +9,7 @@ draft: false
 series:
   key: opex-budget
   part: 3
-  title: Preparing the OPEX budget with KANAP
+  title: "Building the IT budget"
 ---
 
 The budget is built; it still has to be approved. KANAP makes the presentation easier with configurable reports that show the different facets of the budget in a visual, pragmatic way. Once the budget is approved, KANAP locks the columns involved so nothing moves afterwards.

@@ -169,6 +169,8 @@ function buildRef(type: AiSearchEntityType | AiContextEntityType, itemNumber?: n
   if (type === 'tasks') return `T-${itemNumber}`;
   if (type === 'documents') return `DOC-${itemNumber}`;
   if (type === 'incidents') return `INC-${itemNumber}`;
+  if (type === 'spend_items') return `OPX-${itemNumber}`;
+  if (type === 'capex_items') return `CPX-${itemNumber}`;
   return null;
 }
 
@@ -747,7 +749,7 @@ export class AiEntityService {
     const like = `%${query}%`;
     const rows = await context.manager.query<SearchRow[]>(
       `SELECT si.id,
-              NULL::int AS item_number,
+              si.item_number,
               si.product_name AS label,
               COALESCE(
                 NULLIF(si.description, ''),
@@ -1434,7 +1436,7 @@ export class AiEntityService {
     const like = `%${query}%`;
     const rows = await context.manager.query<SearchRow[]>(
       `SELECT ci.id,
-              NULL::int AS item_number,
+              ci.item_number,
               ci.description AS label,
               NULLIF(CONCAT_WS(' | ', comp.name, sup.name, ci.ppe_type::text, ci.investment_type), '') AS summary,
               ci.status,

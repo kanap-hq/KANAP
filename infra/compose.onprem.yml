@@ -8,6 +8,10 @@ services:
     env_file: ../.env
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    # Your internal certificate authority, for SMTP, PostgreSQL or S3 over TLS (see certs/README.md).
+    # Nothing changes while NODE_EXTRA_CA_CERTS in ../.env names no file of this directory.
+    volumes:
+      - ./certs:/etc/kanap/certs:ro
     ports:
       - "127.0.0.1:8080:8080"
     restart: unless-stopped
@@ -38,7 +42,7 @@ services:
     cap_drop:
       - ALL
     # Capacity, set in ../.env (see .env.onprem.example and the operations guide):
-    #   API_WORKERS   API processes in this container (default 1). Each adds about 150 to 500 MB
+    #   API_WORKERS   API processes in this container (default 1). Each adds about 200 MB (up to 300 MB under load)
     #                 of memory and up to DB_POOL_MAX database connections.
     #   DB_POOL_MAX   database connections per process (default 20). Workers × pool must stay
     #                 under PostgreSQL's max_connections minus about 15; the API warns at start.

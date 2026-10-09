@@ -2,192 +2,192 @@ import type { HomeContent } from './types';
 
 const content: HomeContent = {
   meta: {
-    title: 'Agentes de IA open source para su departamento de TI',
+    title: 'Presupuesto, sistemas y proyectos de TI, open source',
     description:
-      'Agentes de IA anclados en la imagen completa de su TI: aplicaciones, infraestructura, presupuestos, proyectos y documentación. Open source bajo AGPL v3. Autoaloje gratis o elija KANAP alojado.',
+      'Presupuesto de TI, mapa de aplicaciones, portafolio de proyectos y documentación en un solo repositorio, con un agente de IA integrado. Open source.',
   },
 
   hero: {
-    eyebrow: 'Open source · autoalojada · pensada para ampliarse',
-    title: 'Agentes de IA que asumen su trabajo repetitivo.',
-    lead: 'KANAP guarda la imagen completa de su departamento de TI, desde las aplicaciones y los servidores hasta los presupuestos y los proyectos. Plaid permite a cualquiera trabajarla en lenguaje natural, y ahora los agentes actúan sobre ese repositorio para quitar a su equipo la carga repetitiva.\nAutoalójela gratis o déjenos operarla por usted.',
-    primaryCta: 'Desplegar gratis',
-    secondaryCta: 'Probar nube alojada',
-    trialNote: 'AGPL v3 · código completo en GitHub · instalación Docker · sin paywall de funcionalidades.',
-  },
-
-  pillars: {
-    eyebrow: 'Por qué KANAP',
-    title: 'Lo que hace diferente a KANAP.',
-    items: [
-      {
-        title: 'Todo el departamento de TI en un solo sistema.',
-        body: 'Las aplicaciones, la infraestructura, los presupuestos, los proyectos y la documentación viven en un único repositorio, en lugar de diez herramientas desconectadas.',
-      },
-      {
-        title: 'Agentes que liberan de trabajo a su equipo.',
-        body: 'Los agentes autónomos se ocupan de la carga repetitiva y ganan más independencia a medida que se demuestran en tareas reales.',
-      },
-      {
-        title: 'Open source, autoalojada, ampliable por usted.',
-        body: 'Código fuente completo bajo AGPL v3. Ejecútela en sus propios servidores, conserve todas las funcionalidades y escriba sus propios agentes y conectores.',
-      },
-    ],
+    eyebrow: 'Open source · diseñada por un CIO, para los CIO',
+    title: 'El presupuesto, los sistemas y los proyectos de TI, en un solo repositorio.',
+    lead: 'El presupuesto de TI sale de la hoja de cálculo y se vincula a lo que lo justifica: aplicaciones, contratos, proyectos. Mapa de sistemas, portafolio y documentación comparten los mismos datos, y Plaid, el agente de IA integrado, responde sobre todo ello. Open source, gratis en autoalojamiento.',
+    primaryCta: 'Probar con datos de ejemplo',
+    secondaryCta: 'Desplegar gratis',
+    trialNote: 'Prueba de la versión alojada · datos de ejemplo cargados en un minuto · AGPL v3, código fuente completo en GitHub.',
   },
 
   layers: {
-    eyebrow: 'Cómo encaja todo',
-    title: 'Una plataforma completa para el departamento de TI.',
+    eyebrow: 'Presupuesto de TI',
+    title: 'El presupuesto de TI, fuera de Excel.',
     intro:
-      'KANAP se construye en tres capas que trabajan sobre la misma información, de modo que cada una hace más útiles a las demás.',
+      'OPEX y CAPEX plurianuales, en columnas que usted nombra: presupuesto, revisión, cierre previsto. Cada versión se copia, se compara y se congela. Se acabaron las pestañas copiadas y las fórmulas rotas.',
     items: [
       {
-        title: 'El repositorio',
-        body: 'KANAP guarda la imagen completa de su departamento de TI: aplicaciones e infraestructura, presupuestos, proyectos y documentación. Un solo lugar en lugar de diez herramientas.',
+        title: 'Cierre previsto y presupuesto del año siguiente',
+        body: 'Afiance el cierre previsto línea por línea, cópielo al presupuesto del año siguiente, ajuste en cantidad × precio y congele la versión aprobada. Los tipos de cambio quedan fijados con ella.',
       },
       {
-        title: 'La interacción',
-        body: 'Plaid permite a cualquier persona de su equipo trabajar con el repositorio en lenguaje natural, hacer preguntas y aplicar cambios sin tener que aprender dónde está cada cosa.',
+        title: 'Repercusión de costes y análisis',
+        body: 'Reparta cada línea entre sociedades, departamentos y centros de coste, repercuta con reglas claras, analice por dimensión analítica y consolide sobre su plan de cuentas.',
       },
       {
-        title: 'La acción',
-        body: 'Los agentes actúan sobre el mismo repositorio, asumen el trabajo repetitivo y lo llevan a cabo según la autonomía que usted les concede.',
+        title: 'Plantilla y coste por FTE',
+        body: 'Declare los FTE en las líneas que los llevan: KANAP deduce la plantilla mensual y el coste por FTE, en importe o en tarifa diaria, junto a los importes.',
       },
     ],
-    outro: 'Cada parte es útil por sí sola, y juntas se refuerzan.',
+    outro: 'Y como cada línea está vinculada al resto del repositorio, el presupuesto deja de ser una lista de importes: es el mapa de lo que TI hace funcionar.',
+  },
+
+  pillars: {
+    eyebrow: 'Todo está vinculado',
+    title: 'Un solo repositorio en lugar de una hoja de cálculo, una wiki y una herramienta de proyectos.',
+    items: [
+      {
+        title: 'Una línea de presupuesto lleva a lo que la justifica.',
+        body: 'Cada partida OPEX o CAPEX está vinculada a sus aplicaciones, contratos, proveedores y proyectos. Sabe lo que paga, y por qué.',
+      },
+      {
+        title: 'Una aplicación muestra lo que cuesta.',
+        body: 'Su ficha reúne entornos, interfaces, servidores, contratos y gastos: suficiente para decidir una racionalización sobre hechos.',
+      },
+      {
+        title: 'Un contrato muestra lo que compromete.',
+        body: 'Importe anual, renovación automática, preaviso, fecha límite de rescisión calculada y líneas de presupuesto vinculadas: las renovaciones se preparan antes del plazo, no después.',
+      },
+    ],
   },
 
   modules: {
-    eyebrow: 'Caja de herramientas de TI completa',
-    title: 'Pensada para cada rol de TI.',
+    eyebrow: 'Toda la gobernanza de TI',
+    title: 'Cuatro pilares, un agente de IA, los mismos datos.',
     intro:
-      'KANAP cubre el terreno esencial que todo departamento de TI necesita para funcionar, desde la primera línea de presupuesto hasta la última aplicación retirada, con Plaid para trabajarlo de forma transversal en lenguaje natural y agentes que asumen la carga repetitiva. Cada módulo es plenamente usable por sí solo, así que puede empezar por donde más duele y añadir el resto cuando esté listo.',
+      'Cada módulo funciona por sí solo: empiece por el presupuesto y añada el mapa de sistemas, el portafolio o la documentación cuando esté listo. Todos trabajan sobre el mismo repositorio.',
     items: [
       {
         slug: '/features/budget',
-        title: 'Gestión de presupuesto',
+        title: 'Presupuesto de TI',
         blurb:
-          'Para CIOs y socios de finanzas. Planificación plurianual, asignaciones inteligentes, repercusión lista para dirección. Defienda el presupuesto de TI con cifras en las que su CFO confiará.',
+          'Para el CIO y sus socios de finanzas. Presupuesto plurianual, cierre previsto y presupuesto del año siguiente, repercusión, consolidación, plantilla. Cifras que su director financiero puede verificar.',
         bullets: [
-          'Planificación presupuestaria plurianual',
-          'Seis métodos de asignación',
-          'Multidivisa con FX del Banco Mundial',
-          'Informes de repercusión para dirección',
+          'OPEX y CAPEX, columnas de presupuesto, revisión y cierre',
+          'Copia y congelación de versiones',
+          'Repercusión, dimensiones analíticas, consolidación',
+          'Plantilla mensual y coste por FTE',
         ],
-        ctaLabel: 'Más información',
+        ctaLabel: 'Descubrir el presupuesto',
       },
       {
         slug: '/features/it-landscape',
-        title: 'Paisaje de TI',
+        title: 'Mapa de sistemas',
         blurb:
-          'Para arquitectos, responsables de aplicación y equipos de infraestructura. Documente aplicaciones, interfaces y servidores. Vea el sistema de un vistazo y planifique los cambios con las dependencias delante.',
+          'Para arquitectos, responsables de aplicaciones y equipos de infraestructura. Aplicaciones, interfaces y servidores documentados, y mapas que muestran el sistema de un vistazo.',
         bullets: [
-          'Portafolio de aplicaciones con instancias por entorno',
-          'Documentación de interfaces con middleware de 3 tramos',
-          'Registro de servidores e infraestructura',
+          'Aplicaciones e instancias por entorno',
+          'Interfaces, flujos y middleware',
+          'Servidores e infraestructura, importación desde NetBox',
           'Mapas interactivos de interfaces y conexiones',
         ],
-        ctaLabel: 'Más información',
+        ctaLabel: 'Descubrir el mapa',
       },
       {
         slug: '/features/portfolio',
-        title: 'Gestión de portafolio',
+        title: 'Portafolio de proyectos',
         blurb:
-          'Para jefes de proyecto y responsables de TI. Puntúe la demanda, simule hojas de ruta conscientes de la capacidad y comprométase con fechas sin cruzar los dedos.',
+          'Para jefes de proyecto y responsables de TI. Puntúe las solicitudes, construya una hoja de ruta que respete la capacidad y siga los proyectos hasta la entrega.',
         bullets: [
           'Puntuación de solicitudes con criterios ponderados',
-          'Planificación automática de la hoja de ruta',
-          'Análisis de cuellos de botella y ocupación',
-          'Seguimiento del ciclo de vida del proyecto',
+          'Hoja de ruta planificada según la capacidad',
+          'Análisis de cuellos de botella y de carga',
+          'Proyectos, hitos y tareas',
         ],
-        ctaLabel: 'Más información',
+        ctaLabel: 'Descubrir el portafolio',
       },
       {
         slug: '/features/knowledge',
-        title: 'Conocimiento',
+        title: 'Documentación',
         blurb:
-          'Para todo el mundo, en especial soporte y operaciones. Editor markdown, bibliotecas, flujos de revisión. Runbooks, decisiones y notas de arquitectura conectados con las aplicaciones y proyectos que describen.',
+          'Para todo el equipo, primero soporte y operaciones. Procedimientos, decisiones y notas de arquitectura, revisados, versionados y vinculados a las aplicaciones y proyectos que describen.',
         bullets: [
-          'Editor markdown con flujos de revisión',
+          'Editor markdown con circuito de revisión',
           'Bibliotecas, carpetas, tipos de documento',
-          'Historial de versiones y exportación a PDF, DOCX, ODT',
-          'Enlaces profundos a aplicaciones, proyectos, activos, tareas',
+          'Versiones y exportación PDF, DOCX, ODT',
+          'Vínculos a aplicaciones, proyectos, activos, tareas',
         ],
-        ctaLabel: 'Más información',
+        ctaLabel: 'Descubrir la documentación',
       },
       {
         slug: '/features/ai',
-        title: 'Plaid, asistente de IA',
+        title: 'Plaid, el agente de IA integrado',
         blurb:
-          'Para cada rol, no solo para los entusiastas de la IA. Pregunte en lenguaje natural y obtenga respuestas estructuradas en todos los módulos. El camino más corto entre una pregunta de TI y los datos que la responden.',
+          'Para cada rol. Haga una pregunta en lenguaje natural sobre el presupuesto, los sistemas o los proyectos: Plaid responde a partir de todo el repositorio y prepara los cambios, que usted valida.',
         bullets: [
-          'Consultas en lenguaje natural en todos los módulos',
-          'Acciones sobre documentos y tareas con vista previa',
-          'Servidor MCP para Claude, Cursor, Windsurf…',
-          'Uso incluido en nube alojada, o use su propia clave',
+          'Preguntas en lenguaje natural sobre todos los módulos',
+          'Cambios preparados como vista previa, aplicados tras validación',
+          'Servidor MCP de solo lectura para sus clientes de IA',
+          'Uso incluido en la versión alojada, o su propia clave',
         ],
-        ctaLabel: 'Más información',
+        ctaLabel: 'Descubrir Plaid',
       },
       {
         slug: '/features/agents',
-        title: 'Agentes',
+        title: 'Agente de helpdesk',
         blurb:
-          'Para equipos sepultados en tickets repetitivos. Un agente lee cada tarea contra sus datos de TI y propone una acción o la lleva a cabo, según la autonomía que usted defina. Hoy hay un conector de mesa de servicio en producción, y el runtime está pensado para ampliarse.',
+          'Para los equipos de soporte. El agente lee cada ticket de su centro de servicios (hoy GLPI) a la luz de sus aplicaciones y su documentación, y propone una respuesta, una nota interna o una actualización del ticket.',
         bullets: [
-          'Razona sobre su repositorio de TI real',
-          'Empieza supervisado y gana más autonomía',
-          'Cada acción registrada, autonomía que puede retirar',
-          'Runtime abierto, escriba su propio conector',
+          'Razona sobre su repositorio real',
+          'Cada tipo de acción empieza con validación',
+          'Paso a automático cuando el historial lo justifica',
+          'Cada acción registrada, autonomía revocable',
         ],
-        ctaLabel: 'Más información',
+        ctaLabel: 'Descubrir el agente',
       },
     ],
   },
 
   crossCutting: {
-    eyebrow: 'Listo para empresas',
-    title: 'Un sistema conectado, bajo su control.',
+    eyebrow: 'Pensada para la empresa',
+    title: 'Un solo sistema, bajo su control.',
     intro:
-      'Los módulos trabajan sobre los mismos datos, que es lo que da a un departamento de TI una gobernanza real. También es lo que permite a un agente actuar sin poner en riesgo su entorno.',
+      'Los módulos comparten los mismos datos: eso da a TI una gobernanza real y permite que la IA ayude sin poner en riesgo su entorno.',
     items: [
       {
+        title: 'Relaciones completas',
+        body: 'Costes vinculados a aplicaciones, aplicaciones a contratos, proyectos y servidores, documentación a todo.',
+      },
+      {
         title: 'Informes y paneles',
-        body: 'Paneles listos para dirección, análisis de tendencias, exportaciones a CSV y PNG.',
+        body: 'Informes de presupuesto listos para usar, tendencias, comparación de versiones, exportación CSV y PNG.',
+      },
+      {
+        title: 'Multisociedad y multidivisa',
+        body: 'Varias sociedades, varias divisas, tipos fijados al congelar el presupuesto y consolidación sobre su plan de cuentas.',
       },
       {
         title: 'Control de acceso por rol',
-        body: 'Permisos granulares por módulo. Niveles lector, colaborador, miembro, administrador.',
-      },
-      {
-        title: 'Relaciones ricas',
-        body: 'Vincule costes con aplicaciones, aplicaciones con proyectos, proyectos con presupuestos, conocimiento con todo.',
+        body: 'Permisos detallados por módulo: lector, colaborador, miembro, administrador.',
       },
       {
         title: 'Registro de auditoría completo',
-        body: 'Cada cambio queda registrado, incluidos los hechos con Plaid. Las acciones de los agentes tienen su propio historial de actividad. Sepa quién cambió qué y cuándo, con historial completo de antes y después.',
+        body: 'Cada cambio registrado, incluidos los hechos con Plaid, con el antes y el después. Las acciones del agente tienen su propio historial.',
       },
       {
-        title: 'Gestión unificada de tareas',
-        body: 'Asigne tareas en OPEX, CAPEX, contratos y proyectos. Un único backlog en toda la plataforma.',
-      },
-      {
-        title: 'SSO vía Microsoft Entra ID',
-        body: 'Inicio de sesión único empresarial. Un solo acceso para toda su organización.',
+        title: 'SSO con Microsoft Entra ID',
+        body: 'Inicio de sesión único para la empresa: una sola identidad para toda la organización.',
       },
     ],
   },
 
   vision: {
-    eyebrow: 'Hacia dónde va esto',
-    title: 'Hacia un departamento de TI aumentado con IA.',
-    body: 'La dirección es un departamento de TI donde los agentes asumen sin ruido la carga repetitiva para que su equipo dedique su tiempo al trabajo que exige criterio real, todo ello sobre software que usted posee y puede leer de principio a fin.',
+    eyebrow: 'IA sobre un repositorio completo',
+    title: 'Una IA útil, porque todo está en el mismo sitio.',
+    body: 'Un asistente de IA solo vale lo que valen los datos que ve. En KANAP ve a la vez el presupuesto, las aplicaciones, los contratos, los proyectos y la documentación, así que puede responder a «¿por qué se desvía el cierre previsto en infraestructura?» o «¿qué aplicaciones dependen de este contrato?».\nPrepara los cambios, usted los valida. Nada cambia sin usted, y todo queda registrado.',
   },
 
   cta: {
-    title: 'Gestione su departamento de TI sobre un sistema que es suyo.',
-    body: 'Despliegue KANAP usted mismo gratis, o déjenos alojarlo. El producto y todas las funcionalidades son los mismos, agentes incluidos.',
-    primary: 'Desplegar gratis',
-    secondary: 'Probar nube alojada',
+    title: 'Gestione su departamento de TI en un sistema que le pertenece.',
+    body: 'Pruebe la versión alojada con datos de ejemplo, o despliegue KANAP gratis en sus propios servidores. El mismo producto, sin funciones recortadas.',
+    primary: 'Probar con datos de ejemplo',
+    secondary: 'Desplegar gratis',
   },
 };
 

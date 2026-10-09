@@ -2,192 +2,192 @@ import type { HomeContent } from './types';
 
 const content: HomeContent = {
   meta: {
-    title: 'Open-source AI agents for your IT department',
+    title: 'IT budget, landscape and projects, open source',
     description:
-      'AI agents grounded in the full picture of your IT: applications, infrastructure, budgets, projects and documentation. Open source under AGPL v3. Self-host free, or choose hosted KANAP.',
+      'IT budget, application landscape, project portfolio and documentation in one record, with a built-in AI agent. Open source.',
   },
 
   hero: {
-    eyebrow: 'Open-source · self-hosted · built to extend',
-    title: 'AI agents that take over your repetitive work.',
-    lead: "KANAP holds your IT department's full picture, from applications and servers to budgets and projects. Plaid lets anyone work with it in plain language, and agents now act on it to take the repetitive load off your team.\nSelf-host it for free, or let us run it for you.",
-    primaryCta: 'Deploy free',
-    secondaryCta: 'Try hosted cloud',
-    trialNote: 'AGPL v3 · full source on GitHub · Docker install · no feature paywall.',
-  },
-
-  pillars: {
-    eyebrow: 'Why KANAP',
-    title: 'What makes KANAP different.',
-    items: [
-      {
-        title: 'The whole IT department in one system.',
-        body: 'Applications, infrastructure, budgets, projects and documentation live in one record instead of ten disconnected tools.',
-      },
-      {
-        title: 'Agents that take work off your team.',
-        body: 'Autonomous agents handle the repetitive load and earn more independence as they prove themselves on real tasks.',
-      },
-      {
-        title: 'Open source, self-hosted, yours to extend.',
-        body: 'Full source under AGPL v3. Run it on your own servers, keep every feature, and write your own agents and connectors.',
-      },
-    ],
+    eyebrow: 'Open source · built by a CIO, for CIOs',
+    title: 'Your IT budget, landscape and projects, in one governed record.',
+    lead: 'The IT budget leaves the spreadsheet and links to what justifies it: applications, contracts, projects. Landscape, portfolio and documentation share the same data, and Plaid, the built-in AI agent, answers across all of it. Open source, free to self-host.',
+    primaryCta: 'Try it with sample data',
+    secondaryCta: 'Deploy for free',
+    trialNote: 'Hosted trial · sample data loaded in a minute · AGPL v3, full source on GitHub.',
   },
 
   layers: {
-    eyebrow: 'How it fits together',
-    title: 'A complete platform for the IT department.',
+    eyebrow: 'IT budget',
+    title: 'The IT budget, out of spreadsheets.',
     intro:
-      'KANAP is built in three layers that work on the same information, so each one makes the others more useful.',
+      'Multi-year OPEX and CAPEX, in columns you name: budget, revision, expected landing. Every version can be copied, compared and frozen. No more copied tabs and broken formulas.',
     items: [
       {
-        title: 'The record',
-        body: 'KANAP holds the full picture of your IT department: applications and infrastructure, budgets, projects and documentation. One place instead of ten tools.',
+        title: 'Landing and next-year budget',
+        body: "Firm up the expected landing line by line, copy it into next year's budget, adjust in quantity × price, then freeze the approved version. Exchange rates are fixed with it.",
       },
       {
-        title: 'The interaction',
-        body: 'Plaid lets anyone on your team work with the record in plain language, asking questions and making changes without learning where everything lives.',
+        title: 'Chargeback and analysis',
+        body: 'Allocate every line across companies, departments and cost centers, charge back with clear rules, analyze by analytics dimension and consolidate on your chart of accounts.',
       },
       {
-        title: 'The action',
-        body: 'Agents act on the same record, picking up repetitive work and carrying it out under the autonomy you grant them.',
+        title: 'Staffing and cost per FTE',
+        body: 'Declare FTE on the lines that carry people: KANAP derives monthly staffing and cost per FTE, as an amount or a daily rate, next to the amounts.',
       },
     ],
-    outro: 'Each part is useful by itself, and they get stronger together.',
+    outro: 'And because every line links to the rest of the record, the budget is no longer a list of amounts: it is the map of what IT runs.',
+  },
+
+  pillars: {
+    eyebrow: 'Everything links',
+    title: 'One record instead of a spreadsheet, a wiki and a project tool.',
+    items: [
+      {
+        title: 'A budget line leads to what justifies it.',
+        body: 'Every OPEX or CAPEX item links to its applications, contracts, suppliers and projects. You know what you pay for, and why.',
+      },
+      {
+        title: 'An application shows what it costs.',
+        body: 'Its record gathers its environments, interfaces, servers, contracts and spend: enough to decide on rationalization from facts.',
+      },
+      {
+        title: 'A contract shows what it commits.',
+        body: 'Yearly amount, auto-renewal, notice period, a computed cancellation deadline and the linked budget lines: renewals are prepared before the deadline, not after.',
+      },
+    ],
   },
 
   modules: {
-    eyebrow: 'Complete IT toolbox',
-    title: 'Built for every IT role.',
+    eyebrow: 'The whole of IT governance',
+    title: 'Four pillars, one AI agent, the same data.',
     intro:
-      'KANAP covers the core territory every IT department needs to run, from the first budget line to the last retired application, with Plaid to work across it in plain language and agents that take on the repetitive load. Every module is fully usable on its own, so you can start where it hurts most and add the rest when you are ready.',
+      'Every module works on its own: start with the budget, add the landscape, the portfolio or the documentation when you are ready. They all work on the same record.',
     items: [
       {
         slug: '/features/budget',
-        title: 'Budget management',
+        title: 'IT budget',
         blurb:
-          'For CIOs and finance partners. Multi-year planning, intelligent allocations, executive-ready chargeback. Defend the IT budget with the numbers your CFO will trust.',
+          'For the CIO and finance partners. Multi-year budget, landing and next-year budget, chargeback, consolidation, staffing. Numbers your CFO can check.',
         bullets: [
-          'Multi-year budget planning',
-          'Six allocation methods',
-          'Multi-currency with World Bank FX',
-          'Executive chargeback reports',
+          'OPEX and CAPEX, budget, revision and landing columns',
+          'Version copy and freeze',
+          'Chargeback, analytics dimensions, consolidation',
+          'Monthly staffing and cost per FTE',
         ],
-        ctaLabel: 'Learn more',
+        ctaLabel: 'Explore the budget',
       },
       {
         slug: '/features/it-landscape',
-        title: 'IT landscape',
+        title: 'Landscape',
         blurb:
-          'For architects, application owners and infrastructure teams. Document apps, interfaces and servers. See the system at a glance, plan changes with the dependencies in front of you.',
+          'For architects, application owners and infrastructure teams. Applications, interfaces and servers documented, and maps that show the landscape at a glance.',
         bullets: [
-          'Application portfolio with per-environment instances',
-          'Interface documentation with 3-leg middleware',
-          'Server and infrastructure registry',
+          'Applications and instances per environment',
+          'Interfaces, flows and middleware',
+          'Servers and infrastructure, NetBox import',
           'Interactive interface and connection maps',
         ],
-        ctaLabel: 'Learn more',
+        ctaLabel: 'Explore the landscape',
       },
       {
         slug: '/features/portfolio',
-        title: 'Portfolio management',
+        title: 'Project portfolio',
         blurb:
-          'For project managers and IT leads. Score the demand, simulate capacity-aware roadmaps, commit dates without crossing your fingers.',
+          'For project managers and IT leads. Score demand, build a roadmap that respects capacity, follow projects through delivery.',
         bullets: [
           'Request scoring with weighted criteria',
-          'Automatic roadmap scheduling',
-          'Bottleneck and occupation analysis',
-          'Project lifecycle tracking',
+          'Capacity-aware roadmap planning',
+          'Bottleneck and workload analysis',
+          'Projects, milestones and tasks',
         ],
-        ctaLabel: 'Learn more',
+        ctaLabel: 'Explore the portfolio',
       },
       {
         slug: '/features/knowledge',
-        title: 'Knowledge',
+        title: 'Documentation',
         blurb:
-          'For everyone, especially support and operations. Markdown editor, libraries, review workflows. Runbooks, decisions and architecture notes connected to the apps and projects they describe.',
+          'For the whole team, support and operations first. Runbooks, decisions and architecture notes, reviewed, versioned and linked to the applications and projects they describe.',
         bullets: [
-          'Markdown editor with review workflows',
+          'Markdown editor with review workflow',
           'Libraries, folders, document types',
-          'Version history and export to PDF, DOCX, ODT',
-          'Deep links to apps, projects, assets, tasks',
+          'Versions and PDF, DOCX, ODT export',
+          'Links to applications, projects, assets, tasks',
         ],
-        ctaLabel: 'Learn more',
+        ctaLabel: 'Explore the documentation',
       },
       {
         slug: '/features/ai',
-        title: 'Plaid, AI assistant',
+        title: 'Plaid, the built-in AI agent',
         blurb:
-          'For every role, not just the AI-curious. Ask in plain language, get structured answers across every module. The shortest path between an IT question and the data that answers it.',
+          'For every role. Ask a question in plain language about the budget, the landscape or the projects: Plaid answers from the whole record and prepares changes, which you approve.',
         bullets: [
-          'Natural-language queries across every module',
-          'Document and task actions with preview',
-          'MCP server for Claude, Cursor, Windsurf…',
-          'Usage included on hosted cloud, or bring your own key',
+          'Natural-language questions across all modules',
+          'Changes prepared as previews, applied after approval',
+          'Read-only MCP server for your AI clients',
+          'Usage included on hosted KANAP, or bring your own key',
         ],
-        ctaLabel: 'Learn more',
+        ctaLabel: 'Explore Plaid',
       },
       {
         slug: '/features/agents',
-        title: 'Agents',
+        title: 'Helpdesk agent',
         blurb:
-          'For teams buried in repetitive tickets. An agent reads each task against your IT data and either proposes an action or carries it out, under the autonomy you set. One service-desk connector runs in production today, and the runtime is built to extend.',
+          'For support teams. The agent reads each ticket of your service desk (GLPI today) against your applications and documentation, and proposes a reply, an internal note or a ticket update.',
         bullets: [
-          'Reasons over your real IT record',
-          'Starts supervised, earns more autonomy',
-          'Every action recorded, autonomy you can withdraw',
-          'Open runtime, write your own connector',
+          'Reasons on your real record',
+          'Every action type starts under approval',
+          'Switched to automatic once its track record justifies it',
+          'Every action logged, autonomy you can withdraw',
         ],
-        ctaLabel: 'Learn more',
+        ctaLabel: 'Explore the agent',
       },
     ],
   },
 
   crossCutting: {
-    eyebrow: 'Enterprise ready',
-    title: 'One connected system, under your control.',
+    eyebrow: 'Built for the enterprise',
+    title: 'One system, under your control.',
     intro:
-      'The modules work from the same data, which is what gives an IT department real governance. It is also what lets an agent act without putting your environment at risk.',
+      'The modules share the same data: that is what gives IT real governance, and what lets AI help without putting your environment at risk.',
     items: [
       {
-        title: 'Reporting & dashboards',
-        body: 'Executive-ready dashboards, trend analysis, exports to CSV and PNG.',
+        title: 'Rich relationships',
+        body: 'Costs linked to applications, applications to contracts, projects and servers, documentation to everything.',
       },
       {
-        title: 'Role-based access',
-        body: 'Fine-grained permissions per module. Reader, contributor, member and admin levels.',
+        title: 'Reports and dashboards',
+        body: 'Ready-made budget reports, trends, version comparisons, CSV and PNG exports.',
       },
       {
-        title: 'Rich relations',
-        body: 'Link costs to apps, apps to projects, projects to budgets, knowledge to everything.',
+        title: 'Multi-company and multi-currency',
+        body: 'Several companies, several currencies, rates fixed when the budget is frozen, and consolidation on your chart of accounts.',
+      },
+      {
+        title: 'Role-based access control',
+        body: 'Fine-grained permissions per module: reader, contributor, member, administrator.',
       },
       {
         title: 'Complete audit trail',
-        body: 'Every change tracked, including changes made through Plaid. Agent actions have their own activity history. Know who changed what, when, with full before and after history.',
+        body: 'Every change logged, including those made through Plaid, with before and after. Agent actions have their own activity history.',
       },
       {
-        title: 'Unified task management',
-        body: 'Assign tasks across OPEX, CAPEX, contracts, and projects. One backlog across the platform.',
-      },
-      {
-        title: 'SSO via Microsoft Entra ID',
-        body: 'Enterprise single sign-on. One login for your entire organisation.',
+        title: 'SSO with Microsoft Entra ID',
+        body: 'Enterprise single sign-on: one identity across the organization.',
       },
     ],
   },
 
   vision: {
-    eyebrow: 'Where this goes',
-    title: 'Toward an AI-augmented IT department.',
-    body: 'The direction is an IT department where agents quietly carry the repetitive load so your team can spend its time on the work that needs real judgment, all of it running on software you own and can read end to end.',
+    eyebrow: 'AI on a complete record',
+    title: 'AI that helps, because everything is in one place.',
+    body: "An AI assistant is only as good as the data it sees. In KANAP it sees the budget, applications, contracts, projects and documentation at once, so it can answer \"why is the landing drifting on infrastructure?\" or \"which applications depend on this contract?\".\nIt prepares the changes, you approve them. Nothing changes without you, and everything is logged.",
   },
 
   cta: {
-    title: 'Run your IT department on a system you own.',
-    body: 'Deploy KANAP yourself for free, or have us host it. The product and every feature are the same, agents included.',
-    primary: 'Deploy free',
-    secondary: 'Try hosted cloud',
+    title: 'Run your IT on a system you own.',
+    body: 'Try hosted KANAP with sample data, or deploy it for free on your own servers. Same product, no feature paywall.',
+    primary: 'Try it with sample data',
+    secondary: 'Deploy for free',
   },
 };
 

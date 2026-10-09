@@ -39,6 +39,9 @@ backend/env.dev
 
 CLAUDE.local.md
 infra/docker-compose.yml
+# On-premise: certificate authority files of the installation (see infra/certs/README.md)
+infra/certs/*
+!infra/certs/README.md
 .obsidian
 
 # Internal files (not for public repo)

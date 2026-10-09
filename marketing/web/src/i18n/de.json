@@ -1,6 +1,6 @@
 {
-  "site.title": "KANAP · die Open-Source-Plattform Ihrer IT-Abteilung",
-  "site.description": "Ein Bestand für Anwendungen, Infrastruktur, Budgets, Projekte und Dokumentation, auf dem Plaid und KI-Agenten arbeiten. Selbst hosten oder von uns betreiben lassen.",
+  "site.title": "KANAP · Open-Source-Plattform für IT-Governance",
+  "site.description": "IT-Budget, Anwendungslandschaft, Projektportfolio und Dokumentation in einem Datenbestand, mit integriertem KI-Agenten. Open Source.",
 
   "nav.features": "Funktionen",
   "nav.featuresAgents": "Agenten",
@@ -27,7 +27,7 @@
 
   "locale.switch": "Sprache wechseln",
 
-  "footer.tagline": "Die Open-Source-Plattform, auf der Ihre IT-Abteilung läuft. Selbst hosten oder von uns betreiben lassen.",
+  "footer.tagline": "Die Open-Source-Plattform für IT-Governance: Budget, Landschaft, Projekte und Dokumentation in einem Datenbestand. Kostenlos selbst hosten oder von uns betreiben lassen.",
   "footer.product": "Produkt",
   "footer.resources": "Ressourcen",
   "footer.legal": "Rechtliches",

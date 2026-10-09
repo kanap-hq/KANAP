@@ -97,7 +97,7 @@ const content: OnPremContent = {
     items: [
       { label: 'SO', value: 'Cualquier Linux con Docker (Ubuntu 22+, Debian 12+, RHEL 9+ recomendados)' },
       { label: 'CPU', value: '2 vCPU mínimo · 4+ recomendadas para 50+ usuarios' },
-      { label: 'RAM', value: '4 GB mínimo · 8 GB recomendados' },
+      { label: 'RAM', value: '6 GB mínimo · 8 GB recomendados' },
       { label: 'Almacenamiento', value: '20 GB para la plataforma + lo que crezcan sus datos, más almacenamiento de objetos compatible con S3' },
       { label: 'Base de datos', value: 'PostgreSQL 16+ con citext, pgcrypto y uuid-ossp (lo aporta usted)' },
       { label: 'Red', value: 'Terminador HTTPS (a su elección, nginx, Traefik, LB en nube)' },

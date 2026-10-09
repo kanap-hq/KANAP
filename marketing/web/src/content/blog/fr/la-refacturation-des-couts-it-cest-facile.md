@@ -1,6 +1,6 @@
 ---
-title: La refacturation des coûts IT, c'est facile
-description: Qui paie quoi ? Comment répartir les coûts IT entre sociétés et départements avec des règles claires, et comment utiliser les rapports de refacturation.
+title: "Refacturation informatique : qui paie quoi ?"
+description: "Répartir les coûts IT entre sociétés et départements avec des règles claires et vérifiables, et en tirer des rapports de refacturation."
 date: 2026-09-12
 topic: cost
 author: Friedrich

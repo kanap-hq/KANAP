@@ -7,7 +7,7 @@
  * - frontend/src/App.tsx route declarations
  *
  * Sub-entities of master-data without a workspace page (accounts, chart_of_accounts,
- * analytics_categories, spend_items) are intentionally absent — better return null
+ * analytics_categories) are intentionally absent — better return null
  * than render a dead link in the @-mention picker.
  */
 const ENTITY_URL_BUILDERS: Record<string, (id: string) => string> = {
@@ -22,6 +22,7 @@ const ENTITY_URL_BUILDERS: Record<string, (id: string) => string> = {
   interfaces: (id) => `/it/interfaces/${id}`,
   locations: (id) => `/it/locations/${id}`,
   contracts: (id) => `/ops/contracts/${id}`,
+  spend_items: (id) => `/ops/opex/${id}`,
   capex_items: (id) => `/ops/capex/${id}`,
   companies: (id) => `/master-data/companies/${id}`,
   contacts: (id) => `/master-data/contacts/${id}`,
@@ -43,7 +44,7 @@ export function isLinkableEntityType(entityType: string): boolean {
  * Map between KANAP type prefixes (case-insensitive) and the canonical entity_type.
  *
  * Two flavours of prefixes coexist here:
- *   1. "Native ref prefixes" (T, DOC, PRJ, REQ, INC) that the backend's buildRef() turns
+ *   1. "Native ref prefixes" (T, DOC, PRJ, REQ, INC, OPX, CPX) that the backend's buildRef() turns
  *      into a real entity ref like "T-5" or "DOC-152". These let us also surface
  *      a tier-1 boost on item_number when the user types `@T-5`.
  *   2. "Type tokens" for entities the data model doesn't number (APP, AST, CONN, …).
@@ -61,6 +62,8 @@ const TYPE_PREFIX_TO_ENTITY_TYPE: Record<string, string> = {
   PRJ: 'projects',
   REQ: 'requests',
   INC: 'incidents',
+  OPX: 'spend_items',
+  CPX: 'capex_items',
   // Type tokens for entities without a built-in ref
   APP: 'applications',
   AST: 'assets',
@@ -68,7 +71,6 @@ const TYPE_PREFIX_TO_ENTITY_TYPE: Record<string, string> = {
   INT: 'interfaces',
   LOC: 'locations',
   CTR: 'contracts',
-  CPX: 'capex_items',
   COMP: 'companies',
   CONT: 'contacts',
   DEPT: 'departments',

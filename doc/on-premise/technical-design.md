@@ -16,7 +16,7 @@ This document describes the technical design for on-premise deployments. User-fa
 
 - **Database & RLS:** PostgreSQL 16 with Row-Level Security works unchanged when `DATABASE_URL` uses a dedicated application role; startup fails instead of running with a role that can bypass RLS
 - **Database requirement, list engine:** PostgreSQL must provide the ICU collation `und-x-icu` (a build with ICU: the official, PGDG and Alpine images are) and the function `public.unaccent(text)` (the `unaccent` extension in schema `public`; the migrations create it when the extension files are installed). The OPEX and CAPEX lists sort, filter and search in SQL with them. Check before deploying, as the application role: `SELECT EXISTS (SELECT 1 FROM pg_collation WHERE collname = 'und-x-icu' AND collprovider = 'i') AS icu, to_regprocedure('public.unaccent(text)') IS NOT NULL AS unaccent;` must return `true, true`. Without either, the API still starts, logs `List engine disabled: missing …` once at startup, and the OPEX and CAPEX list endpoints answer 503 with the same requirement. The database sorts with its own ICU library and the API joins the project names of a line with Node's: both use the root collation, so they agree except on characters one ICU version knows and the other does not
-- **Storage:** S3-compatible storage via AWS SDK v3 S3 client (`S3_ENDPOINT`, supports MinIO/R2/B2/AWS)
+- **Storage:** S3-compatible storage via AWS SDK v3 S3 client (`S3_ENDPOINT`). Any S3-compatible store works; tested with RustFS (the store of the on-premise installation example, since MinIO stopped publishing binaries and images), Garage, MinIO, AWS S3, Cloudflare R2 and Hetzner Object Storage
 - **Billing:** Disabled when `STRIPE_SECRET_KEY` is not set (backend returns `FEATURE_DISABLED`, UI hides billing features)
 - **Migrations:** Run automatically on container startup (`migrate-and-start.js`)
 - **Local Auth:** Username/password works without external dependencies
@@ -461,8 +461,9 @@ All gates read from `useFeatures()` hook (provided by `FeaturesContext.tsx`).
 
 | File | What |
 |------|------|
-| `infra/compose.onprem.yml` | On-prem Docker Compose (api + web only, no DB/storage) |
+| `infra/compose.onprem.yml` | On-prem Docker Compose (api + web only, no DB/storage). The `api` service mounts `infra/certs/` read-only at `/etc/kanap/certs`, so an installation can trust its internal certificate authority with `NODE_EXTRA_CA_CERTS` (SMTP, PostgreSQL, S3 over TLS) |
 | `infra/.env.onprem.example` | Complete env template with `DEPLOYMENT_MODE=single-tenant` |
+| `infra/certs/README.md` | Operator instructions for the internal certificate authority file. Git ignores every other file in `infra/certs/` |
 
 ### Adding a New Feature Gate
 

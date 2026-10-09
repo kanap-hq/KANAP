@@ -363,7 +363,7 @@ async function testSearchAllIndexedBehavior() {
   }
 }
 
-async function testSpendItemRefMatchesButKeepsNullDtoRef() {
+async function testBudgetLineRefMatchesAndIsReturned() {
   const runner = dataSource.createQueryRunner();
   await runner.connect();
   await runner.startTransaction();
@@ -390,9 +390,25 @@ async function testSpendItemRefMatchesButKeepsNullDtoRef() {
       limit: 10,
     });
     assert.equal(search.items[0]?.id, spendItemId);
-    // The legacy DTO never exposed a ref for spend items — byte-compat.
-    assert.equal(search.items[0]?.ref, null);
+    // The result names the line by its reference, so the model can quote it.
+    assert.equal(search.items[0]?.ref, 'OPX-4205');
     assert.equal((search.items[0] as any)?.metadata?.supplier ?? null, null);
+
+    const capexItemId = randomUUID();
+    await runner.query(
+      `INSERT INTO capex_items (
+         id, tenant_id, description, ppe_type, investment_type, priority, currency, effective_start, item_number
+       )
+       VALUES ($1, $2, 'Storage refresh', 'hardware', 'replacement', 'medium', 'EUR', DATE '2026-01-01', 4206)`,
+      [capexItemId, tenantId],
+    );
+    const capexSearch = await service.searchAll(context as any, {
+      query: 'CPX-4206',
+      entity_types: ['capex_items', 'spend_items'],
+      limit: 10,
+    });
+    assert.equal(capexSearch.items[0]?.id, capexItemId);
+    assert.equal(capexSearch.items[0]?.ref, 'CPX-4206');
   } finally {
     await runner.rollbackTransaction();
     await runner.release();
@@ -656,7 +672,7 @@ async function run() {
     await testRelatedRenameGoesStaleUntilReindex();
     await testTaskIndexesRelatedIncidentTitle();
     await testSearchAllIndexedBehavior();
-    await testSpendItemRefMatchesButKeepsNullDtoRef();
+    await testBudgetLineRefMatchesAndIsReturned();
     await testParticipationScopeOnIndexedPath();
     await testDocumentLibraryAclOnIndexedPath();
     await testRlsIsolatesSearchIndex();

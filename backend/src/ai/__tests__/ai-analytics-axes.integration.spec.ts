@@ -293,6 +293,20 @@ async function testDefaultSqlJoin(kind: Kind) {
   });
 }
 
+// A listed line and its detail carry the business reference (OPX-n, CPX-n), so
+// the model can name the line it read.
+async function testLinesCarryTheirReference(kind: Kind) {
+  await withDimensions(kind, async (runner, seed) => {
+    const prefix = kind === 'opex' ? 'OPX' : 'CPX';
+    const ctx = context(runner, seed.tenantId);
+    const listed: any = await queryExecutor(kind).execute(ctx, { entity_type: ENTITY[kind] });
+    const refs = Object.fromEntries(listed.items.map((item: any) => [item.label, item.ref]));
+    assert.deepEqual(refs, { 'Alpha line': `${prefix}-1`, 'Bravo line': `${prefix}-2`, 'Charlie line': `${prefix}-3` }, `${kind}: each listed line has its reference`);
+    const detail: any = await queryExecutor(kind).executeDetail(ctx, { entity_type: ENTITY[kind], entity_id: seed.items.bravo });
+    assert.equal(detail.entity.ref, `${prefix}-2`, `${kind}: the detail has the line's reference`);
+  });
+}
+
 async function testCategoriesEntityCarriesDimension() {
   await withDimensions('opex', async (runner, seed) => {
     const ctx = context(runner, seed.tenantId);
@@ -329,14 +343,32 @@ async function testCategoriesEntityCarriesDimension() {
   });
 }
 
+// The detail of a line asked by its business reference (OPX-1, CPX-1) loads
+// the same line, deep detail included. Lines 10 and 11 make the reference's
+// search ambiguous, so the reference itself reaches the detail (as in a tenant
+// with many lines).
+async function testDetailByReference(kind: Kind) {
+  await withDimensions(kind, async (runner, seed) => {
+    await seedItem(runner, kind, seed.tenantId, 10, 'Delta line');
+    await seedItem(runner, kind, seed.tenantId, 11, 'Echo line');
+    const ref = `${kind === 'opex' ? 'OPX' : 'CPX'}-1`;
+    const detail: any = await queryExecutor(kind).executeDetail(context(runner, seed.tenantId), { entity_type: ENTITY[kind], entity_id: ref });
+    assert.equal(detail.entity.id, seed.items.alpha, `${kind}: ${ref} is the alpha line`);
+    assert.equal(detail.data['analytics:nature'], 'Subscriptions', `${kind}: the detail by reference carries the line's values`);
+    assert.ok(detail.data.financial_summary, `${kind}: the deep detail is loaded`);
+  });
+}
+
 void runSpecs('ai-analytics-axes.integration.spec', [
   ...KINDS.flatMap((kind): Array<[string, () => Promise<void>]> => [
+    [`lines carry their reference (${kind})`, () => testLinesCarryTheirReference(kind)],
     [`resolved registry (${kind})`, () => testResolvedRegistry(kind)],
     [`describe lists the dimensions (${kind})`, () => testDescribeListsDimensions(kind)],
     [`query, aggregate and values on a dimension (${kind})`, () => testQueryAggregateAndValues(kind)],
     [`default survives rename and reorder (${kind})`, () => testDefaultSurvivesRenameAndReorder(kind)],
     [`default SQL group join (${kind})`, () => testDefaultSqlJoin(kind)],
     [`dimensions follow the line type (${kind})`, () => testDimensionsFollowLineType(kind)],
+    [`detail by business reference (${kind})`, () => testDetailByReference(kind)],
   ]),
   ['analytics_categories carries its dimension', testCategoriesEntityCarriesDimension],
 ]).catch((err) => {

@@ -253,7 +253,9 @@ Los siete informes presupuestarios también se pueden limitar a un valor de una 
 
 - Plaid puede filtrar y agrupar las líneas OPEX por cualquier dimensión activada usada para las líneas OPEX, y las líneas CAPEX por cualquier dimensión activada usada para las líneas CAPEX.
 - Una pregunta sobre la categoría analítica usa la dimensión por defecto, sea cual sea su nombre u orden.
-- Plaid solo puede cambiar el valor de una línea en la dimensión por defecto. Defina las demás dimensiones en la aplicación o con un archivo CSV.
+- Plaid puede definir, cambiar o borrar el valor de una línea en cualquier dimensión cuando crea o actualiza una línea OPEX o CAPEX. Pida por ejemplo: «Pon la Nature de coût de OPX-12 en Licences et maintenance». Plaid encuentra el valor por su nombre dentro de esa dimensión y muestra en la vista previa la dimensión y el valor, antes y después. Nada cambia hasta que usted lo apruebe.
+- Plaid aplica las mismas reglas que la aplicación: solo las dimensiones activadas usadas para el tipo de la línea, solo los valores activados usados para el tipo de la línea, y una línea conserva un valor que ya tiene.
+- Plaid también puede crear un valor en la dimensión que usted indique. Sin dimensión, el valor se crea en la dimensión por defecto.
 
 ---
 

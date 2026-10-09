@@ -960,7 +960,7 @@ async function testCapexOwnersAnalyticsAndApplications(harness: Harness) {
         ref: seed.capexItemId,
         fields: { analytics_category_id: foreignCategory.id },
       }),
-      /Analytics Category not found/,
+      /^"[0-9a-f-]{36}" is not a value of the analytics dimension\.$/,
     );
     await expectRejects(
       () => harness.tools.execute(ctx, 'update_business_record', {
@@ -1067,7 +1067,7 @@ async function testItemAnalyticsCategoryThroughTheLinks(harness: Harness) {
         ref: itemId,
         fields: { analytics_category: `Target ${seed.tag}` },
       });
-      assert.equal(preview.changes.analytics_category_id.from, current, `${entityType}: the preview shows the link's current value`);
+      assert.equal(preview.changes.analytics_category_id.from, `Current ${seed.tag}`, `${entityType}: the preview shows the link's current value, by name`);
       assert.equal(preview.changes.analytics_category_id.to, `Target ${seed.tag}`);
       await approvePreview(harness, ctx, preview);
       const rows = await runner.query(
@@ -1081,7 +1081,7 @@ async function testItemAnalyticsCategoryThroughTheLinks(harness: Harness) {
       for (const other of [natureOnly, foreign.id]) {
         await expectRejects(
           () => harness.tools.execute(ctx, 'update_business_record', { entity_type: entityType, ref: itemId, fields: { analytics_category_id: other } }),
-          /Analytics Category not found/,
+          /^"[0-9a-f-]{36}" is not a value of the analytics dimension\.$/,
         );
       }
       await expectRejects(
@@ -1095,6 +1095,311 @@ async function testItemAnalyticsCategoryThroughTheLinks(harness: Harness) {
         new RegExp(`^${otherType} only ${seed.tag} is for ${otherType} lines only\\. Choose a value for ${lineType} lines\\.$`),
       );
     }
+  });
+}
+
+/**
+ * Lot A: the AI writes any analytics dimension of an OPEX or CAPEX line through
+ * `analytics:<code>` (the default one stays `analytics_category`), with the write
+ * gate's rules at preview. The preview stores the dimension id, so a rename between
+ * preview and apply changes nothing; the edit conflict and the undo work per dimension.
+ */
+async function testItemAnalyticsDimensions(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const defaultAxisId = await ensureDefaultAnalyticsAxis(runner.manager, seed.tenantId);
+    const axis = async (code: string, name: string, sort: number, extra: { applies_to?: string; disabled?: boolean } = {}): Promise<string> => {
+      const [row] = await runner.query(
+        `INSERT INTO analytics_axes (tenant_id, code, name, sort_order, applies_to, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+        [seed.tenantId, code, name, sort, extra.applies_to ?? null, extra.disabled ? 'disabled' : 'enabled'],
+      );
+      return row.id;
+    };
+    const value = async (axisId: string, name: string, extra: { applies_to?: string; disabled?: boolean } = {}): Promise<string> => {
+      const [row] = await runner.query(
+        `INSERT INTO analytics_categories (tenant_id, axis_id, name, applies_to, status) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+        [seed.tenantId, axisId, name, extra.applies_to ?? null, extra.disabled ? 'disabled' : 'enabled'],
+      );
+      return row.id;
+    };
+    const nature = await axis('nature-cost', 'Nature de coût', 1);
+    const site = await axis('site', 'Site', 2);
+    const old = await axis('old', 'Old', 3, { disabled: true });
+    const recurrence = await axis('recurrence', 'Recurrence', 4, { applies_to: 'opex' });
+    const assetClass = await axis('asset-class', 'Asset class', 5, { applies_to: 'capex' });
+    const licences = await value(nature, 'Licences');
+    const services = await value(nature, 'Services');
+    await value(nature, 'Hardware');
+    const retired = await value(nature, 'Retired', { disabled: true });
+    await value(nature, 'OPEX only', { applies_to: 'opex' });
+    await value(nature, 'CAPEX only', { applies_to: 'capex' });
+    const paris = await value(site, 'Paris');
+    const siteLicences = await value(site, 'Licences');
+    const legacy = await value(old, 'Legacy');
+    const monthly = await value(recurrence, 'Monthly');
+    const servers = await value(assetClass, 'Servers');
+    const defaultValue = await value(defaultAxisId, `Default ${seed.tag}`);
+    const ctx = context(seed, runner, 'item-dimensions');
+    const key = (axisId: string) => `analytics_axis:${axisId}`;
+
+    for (const line of [
+      {
+        entityType: 'spend_items', itemId: seed.spendItemId, linkTable: 'spend_item_analytics_values', labelPlural: 'spend items',
+        lineType: 'OPEX', otherType: 'CAPEX', ownAxis: recurrence, ownCode: 'recurrence', ownValue: monthly, ownName: 'Monthly',
+        otherCode: 'asset-class', otherName: 'Asset class', otherValueName: 'Servers',
+        createFields: { product_name: `Dimensions ${seed.tag}`, paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01' },
+      },
+      {
+        entityType: 'capex_items', itemId: seed.capexItemId, linkTable: 'capex_item_analytics_values', labelPlural: 'CAPEX items',
+        lineType: 'CAPEX', otherType: 'OPEX', ownAxis: assetClass, ownCode: 'asset-class', ownValue: servers, ownName: 'Servers',
+        otherCode: 'recurrence', otherName: 'Recurrence', otherValueName: 'Monthly',
+        createFields: {
+          description: `Dimensions ${seed.tag}`, ppe_type: 'hardware', investment_type: 'capacity', priority: 'medium',
+          paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01',
+        },
+      },
+    ]) {
+      const { entityType, itemId, linkTable } = line;
+      const links = async (id = itemId): Promise<Record<string, string>> => Object.fromEntries(
+        (await runner.query(`SELECT axis_id, category_id FROM ${linkTable} WHERE tenant_id = $1 AND item_id = $2`, [seed.tenantId, id]))
+          .map((row: any) => [row.axis_id, row.category_id]),
+      );
+      const setLink = (axisId: string, categoryId: string) => runner.query(
+        `INSERT INTO ${linkTable} (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4)
+         ON CONFLICT (tenant_id, item_id, axis_id) DO UPDATE SET category_id = EXCLUDED.category_id`,
+        [seed.tenantId, itemId, axisId, categoryId],
+      );
+      const update = (fields: Record<string, unknown>, conversation = ctx) =>
+        executeToolPreview(harness, conversation, 'update_business_record', { entity_type: entityType, ref: itemId, fields });
+      const refusal = async (fields: Record<string, unknown>): Promise<string> => {
+        try {
+          await harness.tools.execute(ctx, 'update_business_record', { entity_type: entityType, ref: itemId, fields });
+        } catch (error: any) {
+          return String(error?.message);
+        }
+        assert.fail(`${entityType}: expected a refusal for ${JSON.stringify(fields)}`);
+      };
+      const change = (preview: any, field: string) => [preview.changes[field]?.label, preview.changes[field]?.from, preview.changes[field]?.to];
+
+      // Create with several dimensions: the code is matched case-insensitively (its dash kept), the value by name.
+      const created = await executeToolPreview(harness, ctx, 'create_business_record', {
+        entity_type: entityType,
+        fields: { ...line.createFields, 'analytics:Nature-Cost': 'licences', 'analytics:site': 'Paris', [`analytics:${line.ownCode}`]: line.ownName },
+      });
+      assert.deepEqual(change(created, key(nature)), ['Nature de coût', null, 'Licences'], `${entityType}: the dimension's name and the value's name`);
+      assert.deepEqual(change(created, key(site)), ['Site', null, 'Paris']);
+      const [stored] = await runner.query(`SELECT mutation_input FROM ai_mutation_previews WHERE id = $1`, [created.preview_id]);
+      assert.deepEqual(
+        Object.keys(stored.mutation_input.fields).filter((field) => field.startsWith('analytics')).sort(),
+        [key(nature), key(site), key(line.ownAxis)].sort(),
+        `${entityType}: the preview stores the dimensions by id`,
+      );
+      // A create retried before approval returns its pending preview (the current values are part of the signature).
+      const retried = await harness.tools.execute(ctx, 'create_business_record', {
+        entity_type: entityType,
+        fields: { ...line.createFields, 'analytics:Nature-Cost': 'licences', 'analytics:site': 'Paris', [`analytics:${line.ownCode}`]: line.ownName },
+      }) as any;
+      assert.deepEqual([retried.preview_id, retried.status], [created.preview_id, 'pending'], `${entityType}: the retry finds the preview`);
+      const createdId = (await approvePreview(harness, ctx, created)).target.entity_id;
+      assert.deepEqual(await links(createdId), { [nature]: licences, [site]: paris, [line.ownAxis]: line.ownValue }, `${entityType}: created with its values`);
+      const [{ count }] = await runner.query(
+        `SELECT count(*)::int AS count FROM ${entityType} WHERE tenant_id = $1 AND ${entityType === 'spend_items' ? 'product_name' : 'description'} = $2`,
+        [seed.tenantId, `Dimensions ${seed.tag}`],
+      );
+      assert.equal(count, 1, `${entityType}: one line created`);
+
+      // Update by name, then by id; a name present in two dimensions resolves within the addressed one.
+      await setLink(nature, licences);
+      await setLink(site, paris);
+      const byName = await update({ 'analytics:nature-cost': 'services' });
+      assert.deepEqual(change(byName, key(nature)), ['Nature de coût', 'Licences', 'Services'], `${entityType}: "from" and "to" are names`);
+      await approvePreview(harness, ctx, byName);
+      assert.equal((await links())[nature], services);
+      const byId = await update({ 'analytics:nature-cost': licences, 'analytics:site': 'Licences' });
+      assert.deepEqual(change(byId, key(nature)), ['Nature de coût', 'Services', 'Licences']);
+      assert.deepEqual(change(byId, key(site)), ['Site', 'Paris', 'Licences']);
+      await approvePreview(harness, ctx, byId);
+      assert.deepEqual(await links(), { [nature]: licences, [site]: siteLicences }, `${entityType}: the Site value, not the Nature one`);
+
+      // Back and forth in one conversation: the same change asked against another current value is a new preview.
+      const backCtx = context(seed, runner, `item-dimensions-back-${entityType}`);
+      const toServices = await update({ 'analytics:nature-cost': 'Services' }, backCtx);
+      await approvePreview(harness, backCtx, toServices);
+      await approvePreview(harness, backCtx, await update({ 'analytics:nature-cost': 'Hardware' }, backCtx));
+      const servicesAgain = await update({ 'analytics:nature-cost': 'Services' }, backCtx);
+      assert.notEqual(servicesAgain.preview_id, toServices.preview_id, `${entityType}: not the executed preview`);
+      assert.deepEqual(change(servicesAgain, key(nature)), ['Nature de coût', 'Hardware', 'Services']);
+      await approvePreview(harness, backCtx, servicesAgain);
+      assert.equal((await links())[nature], services, `${entityType}: back to Services`);
+
+      // Clear, then undo restores the previous value.
+      const cleared = await update({ 'analytics:site': null });
+      assert.deepEqual(change(cleared, key(site)), ['Site', 'Licences', null]);
+      await approvePreview(harness, ctx, cleared);
+      assert.equal((await links())[site], undefined, `${entityType}: cleared`);
+      const undo = await harness.tools.execute(ctx, 'undo_preview', { preview_id: cleared.preview_id }) as any;
+      assert.equal(undo.status, 'pending');
+      assert.deepEqual(change(undo, key(site)), ['Site', null, 'Licences']);
+      await approvePreview(harness, ctx, undo);
+      assert.equal((await links())[site], siteLicences, `${entityType}: undo restores the value`);
+
+      // The default dimension: `analytics_category` and `analytics:<its code>` are the same field.
+      // Its label is the dimension's name, "Analytics dimension" while it has none.
+      await runner.query(`UPDATE analytics_axes SET name = NULL WHERE id = $1`, [defaultAxisId]);
+      const viaCategory = await update({ analytics_category: `Default ${seed.tag}` });
+      assert.deepEqual(Object.keys(viaCategory.changes), ['analytics_category_id']);
+      assert.deepEqual(change(viaCategory, 'analytics_category_id'), ['Analytics dimension', null, `Default ${seed.tag}`]);
+      await approvePreview(harness, ctx, viaCategory);
+      assert.equal((await links())[defaultAxisId], defaultValue);
+      assert.equal(await refusal({ analytics_category: 'Paris' }), '"Paris" is not a value of the analytics dimension.');
+      await runner.query(`UPDATE analytics_axes SET name = 'Budget class' WHERE id = $1`, [defaultAxisId]);
+      assert.equal(await refusal({ 'analytics:default': 'Paris' }), '"Paris" is not a value of the Budget class dimension.');
+      const viaCode = await update({ 'analytics:default': null });
+      assert.deepEqual(Object.keys(viaCode.changes), ['analytics_category_id']);
+      assert.deepEqual(change(viaCode, 'analytics_category_id'), ['Budget class', `Default ${seed.tag}`, null]);
+      // A value changed in the app meanwhile: the conflict names the default dimension.
+      await setLink(defaultAxisId, defaultValue);
+      const defaultConflictCtx = context(seed, runner, `item-dimensions-default-${entityType}`);
+      const defaultConflict = await update({ analytics_category: null }, defaultConflictCtx);
+      await runner.query(`DELETE FROM ${linkTable} WHERE tenant_id = $1 AND item_id = $2 AND axis_id = $3`, [seed.tenantId, itemId, defaultAxisId]);
+      const defaultFailed = await harness.previews.executePreview(defaultConflictCtx, defaultConflict.preview_id) as any;
+      assert.equal(defaultFailed.error_message, 'Budget class changed after the preview was created.');
+      await setLink(defaultAxisId, defaultValue);
+      await approvePreview(harness, ctx, viaCode);
+      assert.equal((await links())[defaultAxisId], undefined);
+      assert.equal(
+        await refusal({ analytics_category: `Default ${seed.tag}`, 'analytics:default': `Default ${seed.tag}` }),
+        'Field analytics_category_id was provided more than once.',
+      );
+      assert.equal(await refusal({ 'analytics:site': 'Paris', 'analytics:SITE': 'Paris' }), 'Field analytics:site was provided more than once.');
+
+      // Refusals at preview, with the write gate's messages.
+      const unknown = await refusal({ 'analytics:nope': 'x' });
+      assert.match(unknown, new RegExp(`^analytics:nope is not writable for ${line.labelPlural}\\. Writable fields: .*analytics_category_id.*, analytics:nature-cost, analytics:site, analytics:${line.ownCode}\\.$`));
+      assert.doesNotMatch(unknown, /analytics:old|analytics:default/, `${entityType}: neither the disabled dimension nor the default one by code`);
+      assert.doesNotMatch(unknown, new RegExp(`analytics:${line.otherCode}`), `${entityType}: no dimension of the other line type`);
+      assert.equal(await refusal({ 'analytics:old': 'Legacy' }), 'The Old dimension is disabled. Enable it or leave it out.');
+      assert.equal(
+        await refusal({ [`analytics:${line.otherCode}`]: line.otherValueName }),
+        `The ${line.otherName} dimension is for ${line.otherType} lines only. Leave it out.`,
+      );
+      assert.equal(await refusal({ 'analytics:nature-cost': 'Paris' }), '"Paris" is not a value of the Nature de coût dimension.');
+      assert.equal(await refusal({ 'analytics:nature-cost': paris }), `"${paris}" is not a value of the Nature de coût dimension.`);
+      assert.equal(await refusal({ 'analytics:nature-cost': 'Retired' }), 'This value is disabled.');
+      assert.equal(
+        await refusal({ 'analytics:nature-cost': `${line.otherType} only` }),
+        `${line.otherType} only is for ${line.otherType} lines only. Choose a value for ${line.lineType} lines.`,
+      );
+
+      // The line's current value passes as a no-op: a disabled value, a disabled dimension, none on the other type's dimension.
+      await setLink(nature, retired);
+      await setLink(old, legacy);
+      const noOp = await update({
+        'analytics:nature-cost': 'Retired', 'analytics:old': 'Legacy', [`analytics:${line.otherCode}`]: null, notes: `No-op ${seed.tag}`,
+      });
+      assert.deepEqual(Object.keys(noOp.changes), ['notes'], `${entityType}: only the notes change`);
+      await approvePreview(harness, ctx, noOp);
+      assert.equal(await refusal({ 'analytics:old': null }), 'The Old dimension is disabled. Enable it or leave it out.');
+
+      // A rename of the dimension (code and name) between preview and apply changes nothing.
+      const beforeRename = await update({ 'analytics:nature-cost': 'Services' });
+      assert.deepEqual(change(beforeRename, key(nature)), ['Nature de coût', 'Retired', 'Services']);
+      await runner.query(`UPDATE analytics_axes SET code = 'nature-renamed', name = 'Nature renamed' WHERE id = $1`, [nature]);
+      await approvePreview(harness, ctx, beforeRename);
+      assert.equal((await links())[nature], services, `${entityType}: applied after the rename`);
+
+      // A value changed in the app between preview and apply: an edit conflict, named after the dimension.
+      const conflicting = await update({ 'analytics:nature-renamed': 'Licences' });
+      await setLink(nature, retired);
+      const failed = await harness.previews.executePreview(ctx, conflicting.preview_id) as any;
+      assert.equal(failed.status, 'failed');
+      assert.equal(failed.error_message, 'Nature renamed changed after the preview was created.');
+      assert.equal((await links())[nature], retired, `${entityType}: nothing written`);
+      await runner.query(`UPDATE analytics_axes SET code = 'nature-cost', name = 'Nature de coût' WHERE id = $1`, [nature]);
+
+      // An undo whose dimension was deleted since is refused in plain words.
+      const tempCode = `temp-${line.lineType.toLowerCase()}`;
+      const temp = await axis(tempCode, `Temp ${line.lineType}`, 6);
+      await value(temp, 'Temp value');
+      const onTemp = await update({ [`analytics:${tempCode}`]: 'Temp value' });
+      await approvePreview(harness, ctx, onTemp);
+      await runner.query(`DELETE FROM ${linkTable} WHERE tenant_id = $1 AND axis_id = $2`, [seed.tenantId, temp]);
+      await runner.query(`DELETE FROM analytics_categories WHERE tenant_id = $1 AND axis_id = $2`, [seed.tenantId, temp]);
+      await runner.query(`DELETE FROM analytics_axes WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, temp]);
+      await expectRejects(() => harness.tools.execute(ctx, 'undo_preview', { preview_id: onTemp.preview_id }), /^This dimension no longer exists\.$/);
+    }
+  });
+}
+
+/** Lot A: a value created by the AI lands in a named dimension; its dimension cannot change afterwards. */
+async function testAnalyticsValueInANamedDimension(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const defaultAxisId = await ensureDefaultAnalyticsAxis(runner.manager, seed.tenantId);
+    const [nature] = await runner.query(
+      `INSERT INTO analytics_axes (tenant_id, code, name, sort_order) VALUES ($1, 'nature-cost', 'Nature de coût', 1) RETURNING id`,
+      [seed.tenantId],
+    );
+    const ctx = context(seed, runner, 'analytics-values');
+    const create = async (fields: Record<string, unknown>) => {
+      const preview = await executeToolPreview(harness, ctx, 'create_master_data_record', { entity_type: 'analytics_categories', fields });
+      const executed = await approvePreview(harness, ctx, preview);
+      const [row] = await runner.query(
+        `SELECT axis_id, name FROM analytics_categories WHERE tenant_id = $1 AND id = $2`,
+        [seed.tenantId, executed.target.entity_id],
+      );
+      return { preview, row };
+    };
+
+    const named = await create({ name: `Hardware ${seed.tag}`, dimension: 'NATURE de coût' });
+    assert.equal(named.row.axis_id, nature.id, 'by name, case-insensitive');
+    assert.equal(named.preview.changes.dimension.to, 'Nature de coût');
+    assert.equal((await create({ name: `Software ${seed.tag}`, dimension: 'Nature-Cost' })).row.axis_id, nature.id, 'by code');
+    assert.equal((await create({ name: `Default ${seed.tag}` })).row.axis_id, defaultAxisId, 'the default dimension when omitted');
+    // The keys and labels the prompt gives the model.
+    assert.equal((await create({ name: `Keyed ${seed.tag}`, dimension: 'analytics:nature-cost' })).row.axis_id, nature.id, 'analytics:<code>');
+    assert.equal((await create({ name: `Category ${seed.tag}`, dimension: 'analytics_category' })).row.axis_id, defaultAxisId, 'analytics_category');
+    assert.equal((await create({ name: `Label ${seed.tag}`, dimension: 'Analytics dimension' })).row.axis_id, defaultAxisId, 'the default label');
+
+    // Checked at preview as the value service will: an enabled dimension, a coherent "used for".
+    await runner.query(
+      `INSERT INTO analytics_axes (tenant_id, code, name, sort_order, status) VALUES ($1, 'old', 'Old', 2, 'disabled')`,
+      [seed.tenantId],
+    );
+    await runner.query(
+      `INSERT INTO analytics_axes (tenant_id, code, name, sort_order, applies_to) VALUES ($1, 'recurrence', 'Recurrence', 3, 'opex')`,
+      [seed.tenantId],
+    );
+    await expectRejects(
+      () => harness.tools.execute(ctx, 'create_master_data_record', { entity_type: 'analytics_categories', fields: { name: `X ${seed.tag}`, dimension: 'old' } }),
+      /^The Old dimension is disabled\. Enable it to add values\.$/,
+    );
+    await expectRejects(
+      () => harness.tools.execute(ctx, 'create_master_data_record', {
+        entity_type: 'analytics_categories', fields: { name: `X ${seed.tag}`, dimension: 'recurrence', applies_to: 'capex' },
+      }),
+      /^The Recurrence dimension is for OPEX lines only\.$/,
+    );
+
+    await expectRejects(
+      () => harness.tools.execute(ctx, 'create_master_data_record', { entity_type: 'analytics_categories', fields: { name: `X ${seed.tag}`, dimension: 'nope' } }),
+      /^No analytics dimension has the code or name "nope"\.$/,
+    );
+    await expectRejects(
+      () => harness.tools.execute(ctx, 'update_master_data_record', {
+        entity_type: 'analytics_categories', ref: `Hardware ${seed.tag}`, fields: { dimension: 'default' },
+      }),
+      /^A value cannot move to another dimension\. Leave out dimension\.$/,
+    );
+    // Its own dimension is a no-op.
+    const sameDimension = await executeToolPreview(harness, ctx, 'update_master_data_record', {
+      entity_type: 'analytics_categories', ref: `Hardware ${seed.tag}`, fields: { dimension: 'nature-cost', description: 'Kept here' },
+    });
+    assert.deepEqual(Object.keys(sameDimension.changes), ['description']);
+    await expectRejects(
+      () => harness.tools.execute(ctx, 'update_master_data_record', {
+        entity_type: 'analytics_categories', ref: `Hardware ${seed.tag}`, fields: { dimension: 'Nature de coût' },
+      }),
+      /^analytics category already has the requested values\.$/,
+    );
   });
 }
 
@@ -1117,6 +1422,43 @@ async function createHarness(): Promise<Harness> {
   };
 }
 
+/**
+ * A budget line is named by its business reference: OPX-<n> for a spend item,
+ * CPX-<n> for a CAPEX item (case-insensitive). A reference of the other line
+ * type matches nothing.
+ */
+async function testBudgetLinesByBusinessReference(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const [spend] = await runner.query(`SELECT item_number FROM spend_items WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.spendItemId]);
+    const [capex] = await runner.query(`SELECT item_number FROM capex_items WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.capexItemId]);
+    const cases = [
+      { entityType: 'spend_items', itemId: seed.spendItemId, ref: `OPX-${spend.item_number}`, otherRef: `CPX-${capex.item_number}`, labelPlural: 'spend items' },
+      { entityType: 'capex_items', itemId: seed.capexItemId, ref: `cpx-${capex.item_number}`, otherRef: `OPX-${spend.item_number}`, labelPlural: 'CAPEX items' },
+    ];
+    for (const { entityType, itemId, ref, otherRef, labelPlural } of cases) {
+      const ctx = context(seed, runner, `by-reference-${entityType}`);
+      const preview = await executeToolPreview(harness, ctx, 'update_business_record', {
+        entity_type: entityType,
+        ref,
+        fields: { notes: `Notes by reference ${seed.tag}` },
+      });
+      assert.equal(preview.target.entity_id, itemId, `${ref} targets the seeded line`);
+      await approvePreview(harness, ctx, preview);
+      const [row] = await runner.query(`SELECT notes FROM ${entityType} WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, itemId]);
+      assert.equal(row.notes, `Notes by reference ${seed.tag}`, `${ref} updates the line`);
+
+      await expectRejects(
+        () => harness.tools.execute(ctx, 'update_business_record', {
+          entity_type: entityType,
+          ref: otherRef,
+          fields: { notes: 'Never written' },
+        }),
+        new RegExp(`^No ${labelPlural} found matching "${otherRef}"\\.$`),
+      );
+    }
+  });
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -1126,6 +1468,9 @@ async function run() {
     await testBusinessTaskFinancialWritesAndRbac(harness);
     await testCapexOwnersAnalyticsAndApplications(harness);
     await testItemAnalyticsCategoryThroughTheLinks(harness);
+    await testItemAnalyticsDimensions(harness);
+    await testAnalyticsValueInANamedDimension(harness);
+    await testBudgetLinesByBusinessReference(harness);
   } finally {
     await harness.app.close();
   }
