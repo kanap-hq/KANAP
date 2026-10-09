@@ -85,23 +85,39 @@ async function inTenantTransaction<T>(
   }
 }
 
-// Re-creates a cascading FK (NOT VALID, same definition) so its action trigger
-// gets the newest OID and fires after `sibling`. Rolled back with the transaction.
-async function fireLast(runner: QueryRunner, table: string, constraint: string, sibling: string) {
+// Re-creates an FK (NOT VALID, same definition) so its triggers get new OIDs.
+async function recreateForeignKey(runner: QueryRunner, table: string, constraint: string) {
   const [{ def }] = await runner.query(
     `SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = $1 AND conrelid = $2::regclass`,
     [constraint, table],
   );
   await runner.query(`ALTER TABLE ${table} DROP CONSTRAINT ${constraint}`);
   await runner.query(`ALTER TABLE ${table} ADD CONSTRAINT ${constraint} ${def} NOT VALID`);
+}
+
+// Re-creates a cascading FK so its action trigger gets the newest OID and fires
+// after `sibling`. Rolled back with the transaction.
+async function fireLast(runner: QueryRunner, table: string, constraint: string, sibling: string) {
   // Action triggers live on the referenced table; they fire in tgname order.
-  const rows: Array<{ conname: string; tgname: string }> = await runner.query(
-    `SELECT c.conname, t.tgname
+  const triggers = async (): Promise<Array<{ conname: string; tbl: string; tgname: string }>> => runner.query(
+    `SELECT c.conname, c.conrelid::regclass::text AS tbl, t.tgname
        FROM pg_trigger t JOIN pg_constraint c ON c.oid = t.tgconstraint
       WHERE c.conname = ANY($1) AND t.tgrelid = c.confrelid AND t.tgtype & 8 = 8`,
     [[constraint, sibling]],
   );
-  const name = (conname: string) => rows.find((row) => row.conname === conname)?.tgname ?? '';
+  await recreateForeignKey(runner, table, constraint);
+  let rows = await triggers();
+  const find = (conname: string) => rows.find((row) => row.conname === conname);
+  const name = (conname: string) => find(conname)?.tgname ?? '';
+  // tgname compares as text: once the cluster's OID counter gains a digit, the
+  // new name (..._a_1000123) sorts before an older, shorter one (..._a_997583).
+  // Re-create the sibling first so both carry new OIDs of the same length.
+  const siblingTable = find(sibling)?.tbl;
+  if (siblingTable && !(name(constraint) > name(sibling))) {
+    await recreateForeignKey(runner, siblingTable, sibling);
+    await recreateForeignKey(runner, table, constraint);
+    rows = await triggers();
+  }
   assert.ok(name(sibling) && name(constraint) > name(sibling), `${constraint} must now fire after ${sibling}`);
 }
 
