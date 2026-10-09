@@ -61,7 +61,7 @@ import { DEFAULT_BUDGET_COLUMNS } from '../services/budgetColumns';
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
 const paramsOf = (call: unknown[]) => (call[1] as { params: Record<string, string> }).params;
 const QUIET_MS = 500;
-const quiet = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, QUIET_MS)); });
+const quiet = () => act(async () => { await vi.advanceTimersByTimeAsync(QUIET_MS); });
 
 const LISTS = [
   { name: 'OPEX', Page: OpexListPage, path: '/ops/opex', rows: '/spend-items/summary', totals: '/spend-items/summary/totals', storage: 'opex-list-context' },
@@ -80,6 +80,17 @@ const WINDOW = {
 const LINK_FILTERS = { disabled_at: WINDOW, has_fte: set(['yes']), cost_center_label: set(['CC1 · Ops']) };
 /** The user's own list state, remembered in this tab before the report link. */
 const OWN_FILTERS = { supplier_name: set(['Alpha']) };
+
+/**
+ * Timers run on virtual time: a wait for the grid to settle (its start-up notifications, the
+ * debounced search) costs no real time. Testing Library's waitFor advances that time itself
+ * when it sees Jest's timers, so `jest` points at Vitest's. Promises, React's scheduler
+ * (setImmediate) and the mocked server stay real.
+ */
+function runOnVirtualTime() {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+  vi.stubGlobal('jest', { advanceTimersByTime: (ms: number) => vi.advanceTimersByTime(ms) });
+}
 
 /** The address of the page now (the list rewrites it with history replaced). */
 const loc = { search: '', navigate: null as NavigateFunction | null };
@@ -140,6 +151,7 @@ describe.each(LISTS)('$name list: report links, removed filters, End of validity
     grid.api = null;
     get.mockReset();
     window.sessionStorage.clear();
+    runOnVirtualTime();
     vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
     layouts = new Map<string, string>();
     vi.stubGlobal('localStorage', {
@@ -156,6 +168,7 @@ describe.each(LISTS)('$name list: report links, removed filters, End of validity
   });
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
