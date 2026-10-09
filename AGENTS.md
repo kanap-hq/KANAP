@@ -62,6 +62,9 @@ Tool-specific or private notes live in each tool's local files, never here.
 - A failed check or a conflict with `main` drops that PR from the queue, along with the queued
   PRs that contain it. Fix, merge `origin/main` into the branch, push, and queue it again with
   the script.
+- Minor and patch Dependabot PRs enter the queue by themselves, through the `kanap-queue` app
+  (`.github/workflows/dependabot-queue.yml`). One that fails leaves the queue and stays open: an
+  agent finds the cause, fixes it in a separate PR if needed, then queues it with `queue-stack.sh`.
 - One PR at a time per change: no bundling of validated PRs, the queue handles throughput.
 - Releases and deploys to QA and prod are separate from merging and are the maintainer's
   decision; `main` is always releasable.
