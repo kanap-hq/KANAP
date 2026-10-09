@@ -96,7 +96,7 @@ La dernière ligne de la sortie indique `0 failed`. Avec `KANAP_INSECURE_TLS=1`,
 
     Elle liste uniquement les noms qui diffèrent. Pour comparer les valeurs, ouvrez les deux fichiers.
 4. Démarrez KANAP : `docker compose -f infra/compose.onprem.yml up -d --wait`.
-5. Vérifiez-le comme à l'étape 4 ci-dessus (**Vérifiez la mise à jour**). Ses commandes utilisent `KANAP_HOST` et `ADMIN_EMAIL` définis en haut de cette page : dans un nouveau terminal, définissez-les d'abord.
+5. Vérifiez-le comme à l'étape 4 ci-dessus (**Vérifiez la mise à jour**). Ses commandes utilisent `KANAP_HOST` et `ADMIN_EMAIL` définis en haut de cette page : dans un nouveau terminal, définissez-les d'abord. La base restaurée contient les comptes et les mots de passe de la date de la sauvegarde : un mot de passe changé depuis reprend son ancienne valeur. Le test de recette demande donc le mot de passe valable au moment de la sauvegarde.
 
 Construisez la version précédente avant de démarrer KANAP : un démarrage avec la version plus récente exécuterait de nouveau ses migrations sur la base restaurée.
 
@@ -131,19 +131,21 @@ sudo -u postgres pg_restore --list /var/backups/kanap/db-$(date +%F).dump | head
 sudo rc mirror --overwrite --remove kanapstore/kanap-files /var/backups/kanap/files
 ```
 
-Pour tout autre stockage S3, `rclone` fait le même travail (`sudo apt-get install -y rclone`). Remplacez les valeurs d'exemple par celles de votre stockage et saisissez la clé d'accès et la clé secrète aux invites (les `AWS_ACCESS_KEY_ID` et `AWS_SECRET_ACCESS_KEY` de `.env`). `sudo` transmet uniquement les variables que `KEEP` nomme : le `sudo` d'Ubuntu 26.04 ignore `-E`. `rclone check` compare la copie avec le bucket :
+Pour tout autre stockage S3, `rclone` fait le même travail (`sudo apt-get install -y rclone`). Remplacez les valeurs d'exemple par celles de votre stockage. `sudo` transmet uniquement les variables que `KEEP` nomme, et il écrit leurs valeurs dans le journal système. Les deux clés se saisissent donc dans le shell `sudo`, aux invites (les `AWS_ACCESS_KEY_ID` et `AWS_SECRET_ACCESS_KEY` de `.env`). `rclone check` compare ensuite la copie avec le bucket :
 
 ```bash
 export RCLONE_S3_PROVIDER=Other
 export RCLONE_S3_ENDPOINT='https://s3.example.com'   # S3_ENDPOINT de .env, tel que le serveur l'atteint
 export RCLONE_S3_REGION='us-east-1'                   # S3_REGION de .env
 export RCLONE_S3_FORCE_PATH_STYLE=true                # S3_FORCE_PATH_STYLE de .env
-read -rp 'Access key: ' RCLONE_S3_ACCESS_KEY_ID; export RCLONE_S3_ACCESS_KEY_ID
-read -rsp 'Secret key: ' RCLONE_S3_SECRET_ACCESS_KEY; echo; export RCLONE_S3_SECRET_ACCESS_KEY
-BUCKET=kanap-files                                    # S3_BUCKET de .env
-KEEP=RCLONE_S3_PROVIDER,RCLONE_S3_ENDPOINT,RCLONE_S3_REGION,RCLONE_S3_FORCE_PATH_STYLE,RCLONE_S3_ACCESS_KEY_ID,RCLONE_S3_SECRET_ACCESS_KEY
-sudo --preserve-env="$KEEP" rclone sync ":s3:${BUCKET}" /var/backups/kanap/files
-sudo --preserve-env="$KEEP" rclone check ":s3:${BUCKET}" /var/backups/kanap/files
+export BUCKET=kanap-files                             # S3_BUCKET de .env
+export DEST=/var/backups/kanap/files
+KEEP=RCLONE_S3_PROVIDER,RCLONE_S3_ENDPOINT,RCLONE_S3_REGION,RCLONE_S3_FORCE_PATH_STYLE,BUCKET,DEST
+sudo --preserve-env="$KEEP" bash -c '
+  read -rp "Access key: " RCLONE_S3_ACCESS_KEY_ID
+  read -rsp "Secret key: " RCLONE_S3_SECRET_ACCESS_KEY; echo
+  export RCLONE_S3_ACCESS_KEY_ID RCLONE_S3_SECRET_ACCESS_KEY
+  rclone sync ":s3:${BUCKET}" "$DEST" && rclone check ":s3:${BUCKET}" "$DEST"'
 ```
 
 `rclone check` se termine par `0 differences found`. rclone peut aussi afficher `Config file "/root/.config/rclone/rclone.conf" not found - using defaults` : les variables remplacent ce fichier. Utilisez `RCLONE_S3_PROVIDER=AWS` pour AWS S3. Pour RustFS sur le serveur, le point d'accès est `http://172.17.0.1:9000` : `host.docker.internal` n'existe qu'à l'intérieur des conteneurs.
@@ -185,7 +187,7 @@ sudo cp -p /opt/kanap/.env /etc/default/rustfs "$B/config/"
 echo "$B"
 ```
 
-La dernière ligne affiche le répertoire. Notez-le : un retour arrière restaure à partir de lui. Avec un autre stockage S3, remplacez la ligne `rc mirror` par la commande `rclone sync` de la sauvegarde des fichiers ci-dessus, avec `"$B/files"` comme destination. Définissez d'abord les variables de ce bloc, `KEEP` compris, dans le même terminal.
+La dernière ligne affiche le répertoire. Notez-le : un retour arrière restaure à partir de lui. Avec un autre stockage S3, remplacez la ligne `rc mirror` par le bloc `rclone` de la sauvegarde des fichiers ci-dessus. Exécutez-le dans le même terminal, après les autres lignes, avec `export DEST="$B/files"` à la place de sa ligne `DEST`.
 
 Gardez ce répertoire jusqu'à ce que la nouvelle version ait fonctionné sans problème pendant quelques semaines. Le `find ... -mtime +30 -delete` quotidien du fichier cron supprime uniquement les anciens dumps quotidiens. Supprimez vous-même un ancien répertoire `before-upgrade-...` : listez-les avec `sudo ls /var/backups/kanap/`, puis lancez `sudo rm -r` suivi du chemin du répertoire.
 
@@ -257,7 +259,7 @@ cd /opt/kanap
 docker compose -f infra/compose.onprem.yml up -d --wait
 ```
 
-Lancez ensuite le test de recette de [Vérifiez la mise à jour](#procedure-de-mise-a-jour) et ouvrez KANAP dans un navigateur.
+Lancez ensuite le test de recette de [Vérifiez la mise à jour](#procedure-de-mise-a-jour) et ouvrez KANAP dans un navigateur. Les comptes et les mots de passe sont ceux de la date de la sauvegarde : connectez-vous avec le mot de passe valable à ce moment-là.
 
 ## Image des outils de maintenance
 
@@ -345,7 +347,7 @@ curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
 ss -ltn | grep 172.17.0.1:9000
 ```
 
-- `ps` affiche `api` et `web` à l'état `healthy`.
+- `ps` affiche `api` et `web` à l'état `healthy`. Pendant les 30 premières secondes environ après le démarrage, il peut encore afficher `health: starting` : relancez-le.
 - L'adresse de santé répond `{"status":"ok"}`.
 - La dernière commande affiche une ligne avec `172.17.0.1:9000` : le stockage de l'exemple d'installation est à l'écoute. Avec un autre stockage, vérifiez-le à votre manière.
 
@@ -420,13 +422,13 @@ Indiquez l'e-mail du compte dans la première ligne, puis saisissez le nouveau m
 cd /opt/kanap
 USER_EMAIL=admin@example.internal   # le compte à réinitialiser
 read -rsp 'New password: ' NEW_PASSWORD; echo
-HASH=$(docker compose -f infra/compose.onprem.yml exec -T api node -e "require('argon2').hash(process.argv[1]).then(console.log)" "$NEW_PASSWORD" </dev/null)
+HASH=$(printf '%s' "$NEW_PASSWORD" | docker compose -f infra/compose.onprem.yml exec -T api node -e "let p='';process.stdin.on('data',d=>p+=d).on('end',()=>require('argon2').hash(p).then(console.log))")
 unset NEW_PASSWORD
-sudo -u postgres psql -d kanap -v hash="$HASH" -v email="${USER_EMAIL}" <<'SQL'
-UPDATE users SET password_hash = :'hash' WHERE lower(email) = lower(:'email');
+sudo -u postgres psql -d kanap -v email="${USER_EMAIL}" <<SQL
+UPDATE users SET password_hash = '${HASH}' WHERE lower(email) = lower(:'email');
 SQL
 ```
 
-`psql` répond `UPDATE 1`. `UPDATE 0` signifie qu'aucun compte n'a cet e-mail. Le mot de passe est brièvement visible dans la liste des processus du serveur pendant l'exécution de la ligne `HASH=` : connectez-vous, puis changez-le depuis votre profil.
+Le mot de passe et son hash passent par l'entrée standard : aucun des deux n'apparaît dans la liste des processus ni dans le journal système. `psql` répond `UPDATE 1`. `UPDATE 0` signifie qu'aucun compte n'a cet e-mail.
 
 Cette méthode SQL est une solution de dernier recours pour les administrateurs bloqués.

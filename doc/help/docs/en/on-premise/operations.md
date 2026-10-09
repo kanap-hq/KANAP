@@ -96,7 +96,7 @@ The last line of the output reads `0 failed`. With `KANAP_INSECURE_TLS=1`, two T
 
     It lists only the names that differ. To compare the values, open both files.
 4. Start KANAP: `docker compose -f infra/compose.onprem.yml up -d --wait`.
-5. Check it as in step 4 above (**Check the upgrade**). Its commands use `KANAP_HOST` and `ADMIN_EMAIL` from the top of this page: in a new terminal, set them first.
+5. Check it as in step 4 above (**Check the upgrade**). Its commands use `KANAP_HOST` and `ADMIN_EMAIL` from the top of this page: in a new terminal, set them first. The restored database holds the accounts and passwords of the backup time: a password changed since then is back to its former value, so the smoke test needs the password that was valid when the backup was taken.
 
 Build the previous version before you start KANAP: a start with the newer version would run its migrations on the restored database again.
 
@@ -131,19 +131,21 @@ sudo -u postgres pg_restore --list /var/backups/kanap/db-$(date +%F).dump | head
 sudo rc mirror --overwrite --remove kanapstore/kanap-files /var/backups/kanap/files
 ```
 
-For any other S3 store, `rclone` does the same job (`sudo apt-get install -y rclone`). Replace the example values with those of your store and type the access key and the secret key at the prompts (the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` of `.env`). `sudo` passes on only the variables that `KEEP` names: the `sudo` of Ubuntu 26.04 ignores `-E`. `rclone check` compares the copy with the bucket:
+For any other S3 store, `rclone` does the same job (`sudo apt-get install -y rclone`). Replace the example values with those of your store. `sudo` passes on only the variables that `KEEP` names, and it writes their values to the system log. The two keys are therefore typed inside the `sudo` shell, at the prompts (the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` of `.env`). `rclone check` then compares the copy with the bucket:
 
 ```bash
 export RCLONE_S3_PROVIDER=Other
 export RCLONE_S3_ENDPOINT='https://s3.example.com'   # S3_ENDPOINT of .env, as the server reaches it
 export RCLONE_S3_REGION='us-east-1'                   # S3_REGION of .env
 export RCLONE_S3_FORCE_PATH_STYLE=true                # S3_FORCE_PATH_STYLE of .env
-read -rp 'Access key: ' RCLONE_S3_ACCESS_KEY_ID; export RCLONE_S3_ACCESS_KEY_ID
-read -rsp 'Secret key: ' RCLONE_S3_SECRET_ACCESS_KEY; echo; export RCLONE_S3_SECRET_ACCESS_KEY
-BUCKET=kanap-files                                    # S3_BUCKET of .env
-KEEP=RCLONE_S3_PROVIDER,RCLONE_S3_ENDPOINT,RCLONE_S3_REGION,RCLONE_S3_FORCE_PATH_STYLE,RCLONE_S3_ACCESS_KEY_ID,RCLONE_S3_SECRET_ACCESS_KEY
-sudo --preserve-env="$KEEP" rclone sync ":s3:${BUCKET}" /var/backups/kanap/files
-sudo --preserve-env="$KEEP" rclone check ":s3:${BUCKET}" /var/backups/kanap/files
+export BUCKET=kanap-files                             # S3_BUCKET of .env
+export DEST=/var/backups/kanap/files
+KEEP=RCLONE_S3_PROVIDER,RCLONE_S3_ENDPOINT,RCLONE_S3_REGION,RCLONE_S3_FORCE_PATH_STYLE,BUCKET,DEST
+sudo --preserve-env="$KEEP" bash -c '
+  read -rp "Access key: " RCLONE_S3_ACCESS_KEY_ID
+  read -rsp "Secret key: " RCLONE_S3_SECRET_ACCESS_KEY; echo
+  export RCLONE_S3_ACCESS_KEY_ID RCLONE_S3_SECRET_ACCESS_KEY
+  rclone sync ":s3:${BUCKET}" "$DEST" && rclone check ":s3:${BUCKET}" "$DEST"'
 ```
 
 `rclone check` ends with `0 differences found`. rclone may also print `Config file "/root/.config/rclone/rclone.conf" not found - using defaults`: the variables replace that file. Use `RCLONE_S3_PROVIDER=AWS` for AWS S3. For RustFS on the server, the endpoint is `http://172.17.0.1:9000`: `host.docker.internal` only exists inside the containers.
@@ -185,7 +187,7 @@ sudo cp -p /opt/kanap/.env /etc/default/rustfs "$B/config/"
 echo "$B"
 ```
 
-The last line prints the directory. Note it: a rollback restores from it. With another S3 store, replace the `rc mirror` line with the `rclone sync` command of the files backup above, with `"$B/files"` as the destination. Set the variables of that block first, `KEEP` included, in the same terminal.
+The last line prints the directory. Note it: a rollback restores from it. With another S3 store, replace the `rc mirror` line with the `rclone` block of the files backup above, run in the same terminal after the other lines, with `export DEST="$B/files"` in place of its `DEST` line.
 
 Keep this directory until the new version has run without trouble for a few weeks. The daily `find ... -mtime +30 -delete` of the cron file removes old daily dumps only. Delete an old `before-upgrade-...` directory yourself: list them with `sudo ls /var/backups/kanap/`, then run `sudo rm -r` followed by the path of the directory.
 
@@ -257,7 +259,7 @@ cd /opt/kanap
 docker compose -f infra/compose.onprem.yml up -d --wait
 ```
 
-Then run the smoke test of [Check the upgrade](#upgrade-procedure) and open KANAP in a browser.
+Then run the smoke test of [Check the upgrade](#upgrade-procedure) and open KANAP in a browser. Accounts and passwords are those of the backup time: sign in with the password that was valid then.
 
 ## Maintenance tools image
 
@@ -345,7 +347,7 @@ curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
 ss -ltn | grep 172.17.0.1:9000
 ```
 
-- `ps` shows `api` and `web` as `healthy`.
+- `ps` shows `api` and `web` as `healthy`. During the first 30 seconds or so after the boot, it can still show `health: starting`: run it again.
 - The health address answers `{"status":"ok"}`.
 - The last command shows one line with `172.17.0.1:9000`: the storage of the installation example listens. With another storage, check it your own way.
 
@@ -420,13 +422,13 @@ Set the email of the account in the first line, then type the new password at th
 cd /opt/kanap
 USER_EMAIL=admin@example.internal   # the account to reset
 read -rsp 'New password: ' NEW_PASSWORD; echo
-HASH=$(docker compose -f infra/compose.onprem.yml exec -T api node -e "require('argon2').hash(process.argv[1]).then(console.log)" "$NEW_PASSWORD" </dev/null)
+HASH=$(printf '%s' "$NEW_PASSWORD" | docker compose -f infra/compose.onprem.yml exec -T api node -e "let p='';process.stdin.on('data',d=>p+=d).on('end',()=>require('argon2').hash(p).then(console.log))")
 unset NEW_PASSWORD
-sudo -u postgres psql -d kanap -v hash="$HASH" -v email="${USER_EMAIL}" <<'SQL'
-UPDATE users SET password_hash = :'hash' WHERE lower(email) = lower(:'email');
+sudo -u postgres psql -d kanap -v email="${USER_EMAIL}" <<SQL
+UPDATE users SET password_hash = '${HASH}' WHERE lower(email) = lower(:'email');
 SQL
 ```
 
-`psql` answers `UPDATE 1`. `UPDATE 0` means no account has that email. The password is briefly visible in the process list of the server while the `HASH=` line runs: sign in, then change it from your profile.
+The password and its hash go through the standard input, so neither shows in the process list or in the system log. `psql` answers `UPDATE 1`. `UPDATE 0` means no account has that email.
 
 This SQL method is a last-resort fallback for locked-out administrators.
