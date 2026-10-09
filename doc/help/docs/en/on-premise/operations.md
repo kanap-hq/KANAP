@@ -1,59 +1,232 @@
-# On-Premise Operations
+# On-premise operations
 
-## Upgrade Procedure
+The commands on this page run on the KANAP server, in `/opt/kanap` unless stated otherwise. Several of them use two shell variables. Set them once in your terminal session, with your values:
 
 ```bash
-# 1. Backup database and storage (your responsibility)
+KANAP_HOST=kanap.example.internal    # the name users type to open KANAP, without https://
+ADMIN_EMAIL=admin@example.internal   # the email of an administrator account
+```
 
-# 2. Pull the latest changes
-cd kanap
-git pull origin main
+## Upgrade procedure
 
-# 3. Build the images from the pulled sources
+KANAP publishes a new version about once a month. The `stable` branch always points to the latest published version. Every version has an entry in `CHANGELOG.md` at the root of the repository. An entry that needs something from you (a setting to change, a step to run) has "Action required" in its title.
+
+**1. Read the changelog before you pull.** Fetch the new state of `stable` and show only the entries you do not have yet. Read the entries marked "Action required" first, and do what they say. The same entries are on the GitHub releases page of the repository.
+
+```bash
+cd /opt/kanap
+git fetch origin stable
+git diff HEAD origin/stable -- CHANGELOG.md
+```
+
+**2. Back up the database and the files.** See [Backup and restore](#backup-and-restore). Migrations only go forward: a backup is the way back.
+
+**3. Pull, build, start.**
+
+```bash
+cd /opt/kanap
+git checkout stable
+git pull origin stable
 docker compose -f infra/compose.onprem.yml build --pull
-
-# 4. Restart containers (migrations run automatically)
 docker compose -f infra/compose.onprem.yml up -d
 # The old API container first finishes the requests in progress, the emails it queued and
-# its running background jobs (up to 20 s), then stops.
+# its running background jobs (up to 20 s), then stops. Migrations run when the new one starts.
 ```
 
-Docker Compose builds the `api` and `web` images itself, from the sources you just pulled. `--pull` also fetches updated base images. Running `up -d` alone keeps the old version, because Compose reuses the images it already has. Always run `build` first.
+Docker Compose builds the `api` and `web` images itself, from the sources you just pulled. `--pull` also fetches updated base images. Running `up -d` alone keeps the old version, because Compose reuses the images it already has. Always run `build` first. On a server with 4 GB of RAM the build uses almost all of the memory: stop other heavy services while it runs.
 
-**Check the upgrade:**
+**A precise version.** To run a published version other than the latest, fetch the tags and check one out. The checkout is detached: return to `stable` with `git checkout stable` before the next upgrade.
 
 ```bash
-docker compose -f infra/compose.onprem.yml logs --tail=100 api
-curl https://kanap.company.com/api/health
+git fetch --tags
+git checkout v26.10.1
 ```
 
-The API log shows the migrations (`[entrypoint] Migrations complete (N executed).`) and then the start of the API, with no error. The health address answers `{ "status": "ok" }`.
+Then run the `build --pull` and `up -d` commands above.
 
-**Breaking changes:** Check `CHANGELOG.md` before upgrading.
+**Following `main`.** The `main` branch holds every merged change before it is published as a version. Following it is possible; the published versions are the recommended path.
 
-**Rollback:** Restore database from backup. Migrations are forward-only. Then go back to the previous version with `git checkout <previous commit>`, run the same `build --pull` and `up -d` commands, and check the upgrade again. Run `git checkout main` before the next upgrade.
+**Which version runs.**
 
-## Version Support
+```bash
+cd /opt/kanap
+git describe --tags
+curl -sS "https://${KANAP_HOST}/api/config/public"
+```
 
-KANAP is a quickly evolving solution and we recommend upgrading on a monthly basis.
+The first command prints the version of the checkout. The second one answers with a JSON document whose `version` field is the version the API reports.
+
+**4. Check the upgrade.**
+
+```bash
+cd /opt/kanap
+docker compose -f infra/compose.onprem.yml ps
+docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|^Admin seeding|WARN|ERROR|successfully started'
+curl -sS "https://${KANAP_HOST}/api/health"
+```
+
+- `ps` shows `api` and `web` as `healthy` after about a minute.
+- The API log shows the migrations (`[entrypoint] Migrations complete (N executed).`) and then the start of the API (`Nest application successfully started`). Read the other start-up lines too: [Configuration](configuration.md#what-the-api-log-shows-at-start) explains each one.
+- The health address answers `{"status":"ok"}`. Add `-k` to `curl` when the server does not trust the certificate (self-signed, or an internal authority not installed on the server).
+
+Then run the smoke test. It checks the database, the sign-in, the main lists and the exports through the public API. The server has no Node.js, so it runs in a container. Type the administrator password at the prompt; nothing shows as you type. Keep `-e KANAP_INSECURE_TLS=1` when the certificate is self-signed or comes from your internal authority (the container does not trust it); remove it with a certificate from a public authority. Do not add `-e KANAP_WRITE=1` on a production installation: that option creates a temporary task with an attachment to check the storage, which suits a new installation only.
+
+```bash
+read -rsp 'Administrator password: ' KANAP_PASSWORD; echo; export KANAP_PASSWORD
+docker run --rm --network host \
+  -e KANAP_URL="https://${KANAP_HOST}" -e KANAP_EMAIL="${ADMIN_EMAIL}" -e KANAP_PASSWORD \
+  -e KANAP_INSECURE_TLS=1 \
+  -v /opt/kanap/scripts/smoke:/smoke:ro node:24-alpine node /smoke/recette.mjs
+unset KANAP_PASSWORD
+```
+
+The last line of the output reads `0 failed`.
+
+**Rollback.** Migrations only go forward, so a rollback puts back the backups taken before the upgrade, under the previous version:
+
+1. Stop KANAP: `docker compose -f infra/compose.onprem.yml down`.
+2. Check out the previous version and build it: `git checkout v<previous version>` (for example `git checkout v26.10.1`), then `docker compose -f infra/compose.onprem.yml build --pull`.
+3. Restore the database and the files: steps 2 to 4 of [Restore](#restore).
+4. Start KANAP: `docker compose -f infra/compose.onprem.yml up -d --wait`.
+5. Check it as above.
+6. Before the next upgrade, return to the branch: `git checkout stable`.
+
+Build the previous version before you start KANAP: a start with the newer version would run its migrations on the restored database again.
+
+## Version support
+
+KANAP is a quickly evolving solution. Versions are published about once a month, and we recommend upgrading at least monthly.
 For customers under support, an upgrade to the latest version might be requested before handling a support request.
 
-## Backup & Restore
+## Backup and restore
 
-- **PostgreSQL:** Use `pg_dump`/`pg_restore` or managed DB backups
-- **S3 Storage:** Use bucket versioning, replication, or provider backups
+Back up three things: the database, the files in the storage, and the configuration. The commands below match the [installation example](installation-example.md): PostgreSQL and RustFS on the server. With a managed PostgreSQL service or an S3 provider, use the snapshots, versioning or replication they offer, and still back up the configuration.
 
-**Recommendation:** Daily database backups, retain at least 30 days.
-
-## PostgreSQL Settings
-
-PostgreSQL's defaults are sized for a small machine. `infra/postgres/kanap-pg-tune.sh` prints settings sized from your server's memory (memory, SSD costs, slow statement log, statement statistics). Run it on the PostgreSQL server and read the file before applying it: its header explains each value.
+**Prepare the backup directory** (once). It holds personal data and secrets: only `root` and `postgres` can read it.
 
 ```bash
+sudo install -d -o postgres -g postgres -m 0700 /var/backups/kanap
+sudo install -d -m 0700 /var/backups/kanap/files /var/backups/kanap/config
+```
+
+**Database.** `pg_dump -Fc` writes a compressed dump that `pg_restore` reads back.
+
+```bash
+sudo -u postgres pg_dump -Fc -f /var/backups/kanap/db-$(date +%F).dump kanap
+sudo -u postgres pg_restore --list /var/backups/kanap/db-$(date +%F).dump | head -5
+```
+
+**Files.** The `rc` tool of the installation example copies the bucket to a directory. It uses the `kanapstore` alias that the installation defined in root's configuration. The copy mirrors the bucket: files deleted in KANAP disappear from it at the next run. The copy is made through the storage's S3 interface, so it holds the files in the clear. Protect the directory accordingly.
+
+```bash
+sudo rc mirror --overwrite --remove kanapstore/kanap-files /var/backups/kanap/files
+```
+
+For any other S3 store, `rclone` does the same job (`sudo apt-get install -y rclone`). Replace the example values with those of your store and type the access key and the secret key at the prompts (the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` of `.env`). `rclone check` compares the copy with the bucket:
+
+```bash
+export RCLONE_S3_PROVIDER=Other
+export RCLONE_S3_ENDPOINT='https://s3.example.com'   # S3_ENDPOINT of .env, as the server reaches it
+export RCLONE_S3_REGION='us-east-1'                   # S3_REGION of .env
+export RCLONE_S3_FORCE_PATH_STYLE=true                # S3_FORCE_PATH_STYLE of .env
+read -rp 'Access key: ' RCLONE_S3_ACCESS_KEY_ID; export RCLONE_S3_ACCESS_KEY_ID
+read -rsp 'Secret key: ' RCLONE_S3_SECRET_ACCESS_KEY; echo; export RCLONE_S3_SECRET_ACCESS_KEY
+BUCKET=kanap-files                                    # S3_BUCKET of .env
+sudo -E rclone sync ":s3:${BUCKET}" /var/backups/kanap/files
+sudo -E rclone check ":s3:${BUCKET}" /var/backups/kanap/files
+```
+
+Use `RCLONE_S3_PROVIDER=AWS` for AWS S3. For RustFS on the server, the endpoint is `http://172.17.0.1:9000`: `host.docker.internal` only exists inside the containers.
+
+**Configuration.** Keep a copy of `/opt/kanap/.env` and of `/etc/default/rustfs`. The first one holds every secret of the installation, including `AI_SETTINGS_ENCRYPTION_SECRET` when you use it. The second one holds the RustFS encryption key: files encrypted with it cannot be read without it. Also keep the nginx site file (`/etc/nginx/sites-available/kanap`) and the certificate files.
+
+```bash
+sudo cp -p /opt/kanap/.env /etc/default/rustfs /var/backups/kanap/config/
+```
+
+**Every day, with 30 days of history.** This cron file runs the three backups at night and deletes the database dumps older than 30 days. It writes one dump per day; the files copy and the configuration copy keep the latest state.
+
+```bash
+sudo tee /etc/cron.d/kanap-backup >/dev/null <<'EOF'
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+15 2 * * * postgres pg_dump -Fc -f /var/backups/kanap/db-$(date +\%F).dump kanap
+30 2 * * * root rc mirror --overwrite --remove kanapstore/kanap-files /var/backups/kanap/files
+45 2 * * * root cp -p /opt/kanap/.env /etc/default/rustfs /var/backups/kanap/config/
+0 3 * * * root find /var/backups/kanap -maxdepth 1 -name 'db-*.dump' -mtime +30 -delete
+EOF
+```
+
+**Copy the backup directory off the server.** A backup on the same disk does not survive the loss of the server. Copy `/var/backups/kanap` to another machine every day, for example with `rsync -a /var/backups/kanap/ <user>@<backup host>:<directory>/` from a scheduled job, or with the backup tool you already use. The copy holds secrets and personal data: protect its destination.
+
+**Test a restore every few months**, on a spare server, so that you know the backups work before you need them.
+
+### Restore
+
+Run these steps in order. They replace the database and the files with the content of the backups.
+
+```bash
+cd /opt/kanap
+sudo ls /var/backups/kanap/                                  # the dumps, one per day
+DUMP=$(sudo sh -c 'ls -1 /var/backups/kanap/db-*.dump' | tail -n 1)  # the latest; or DUMP=/var/backups/kanap/db-2026-10-09.dump
+echo "$DUMP"
+
+# 1. Stop KANAP
+docker compose -f infra/compose.onprem.yml down
+
+# 2. Recreate the database, owned by the application role
+sudo -u postgres psql <<'SQL'
+DROP DATABASE kanap;
+CREATE DATABASE kanap OWNER kanap TEMPLATE template0;
+SQL
+
+# 3. Restore the dump
+sudo -u postgres pg_restore -d kanap "$DUMP"
+
+# 4. Restore the files (the copy replaces the content of the bucket)
+sudo rc mirror --overwrite --remove /var/backups/kanap/files kanapstore/kanap-files
+
+# 5. Start KANAP
+docker compose -f infra/compose.onprem.yml up -d --wait
+```
+
+Run `pg_restore` as `postgres` and without `--no-owner`. The dump records the owner of every object (`kanap`), so the restore gives the tables back to the application role, with their row-level security settings. With `--no-owner` the tables would belong to `postgres` and the API could not use them. The `kanap` role must exist: on a new server, create it as in the installation example before step 2.
+
+Check the result. The first query prints `0` (no table owned by another role) and the second one prints a number above `0` (the tables that carry row-level security):
+
+```bash
+sudo -u postgres psql -d kanap -Atc "SELECT count(*) FROM pg_tables WHERE schemaname = 'public' AND tableowner <> 'kanap'"
+sudo -u postgres psql -d kanap -Atc "SELECT count(*) FROM pg_class WHERE relrowsecurity AND relforcerowsecurity"
+```
+
+Then run the smoke test of [Check the upgrade](#upgrade-procedure) and open KANAP in a browser. If storage was lost too, set it up again as in the installation example (the same `/etc/default/rustfs`) before step 4.
+
+## Maintenance tools image
+
+The API image holds the compiled application only. A maintenance command that needs TypeScript, such as `npm run typeorm`, runs in a second image built from the same sources. Build it once, and again after each upgrade:
+
+```bash
+cd /opt/kanap
+docker build --target dev -t kanap-api-tools backend
+```
+
+Run a command in it with the same `.env` as the API. This example lists the migrations and whether they are applied:
+
+```bash
+docker run --rm --env-file .env --add-host host.docker.internal:host-gateway \
+  kanap-api-tools npm run typeorm -- migration:show
+```
+
+## PostgreSQL settings
+
+PostgreSQL's defaults are sized for a small machine. `infra/postgres/kanap-pg-tune.sh` prints settings sized from your server's memory (memory, SSD costs, slow statement log, statement statistics). Run it on the PostgreSQL server and read the file before applying it: its header explains each value. The installation example applies it in step 3.
+
+```bash
+cd /opt/kanap
+PGVER=18   # 16 on Ubuntu 24.04
 # The libraries PostgreSQL already preloads (often none): the script keeps them.
 CURRENT=$(sudo -u postgres psql -XAtc 'SHOW shared_preload_libraries')
 # PostgreSQL on the same server as KANAP (add --dedicated if it has the server to itself)
-sh infra/postgres/kanap-pg-tune.sh --preload "$CURRENT" | sudo tee /etc/postgresql/16/main/conf.d/kanap.conf
+sh infra/postgres/kanap-pg-tune.sh --preload "$CURRENT" | sudo tee /etc/postgresql/${PGVER}/main/conf.d/kanap.conf >/dev/null
 sudo systemctl restart postgresql
 sudo -u postgres psql -d kanap -c 'CREATE EXTENSION IF NOT EXISTS pg_stat_statements'
 ```
@@ -74,21 +247,24 @@ KANAP's migrations also make autovacuum start earlier on the two largest tables 
 
 ## Monitoring
 
-**Health endpoint:**
-
-`GET /api/health` → `{ "status": "ok" }`
+**Health.** The API answers `GET /health` on its own port and `GET /api/health` through the reverse proxy. Both return `{"status":"ok"}`:
 
 ```bash
-curl https://kanap.company.com/api/health
+curl -sS http://127.0.0.1:8080/health
+curl -sS "https://${KANAP_HOST}/api/health"
 ```
 
-**Container health:**
+**Containers.** `docker compose ps` shows `healthy` for `api` and `web` once they answer. Docker only reports it: nothing restarts on that status.
+
 ```bash
 docker compose -f infra/compose.onprem.yml ps
 docker compose -f infra/compose.onprem.yml logs -f api
 ```
 
+Docker keeps at most 5 files of 10 MB of logs per container (about 50 MB), so `docker compose logs` reaches back that far only.
+
 **Key metrics:**
+
 - Containers running (`api`, `web`)
 - API memory under ~1 GB per API process
 - Database connections
@@ -96,10 +272,11 @@ docker compose -f infra/compose.onprem.yml logs -f api
 
 ### API metrics for a monitoring tool
 
-Set `OPS_METRICS_TOKEN` in `.env` (24 characters or more, for example `openssl rand -hex 32`) and restart the API. Your monitoring tool can then read:
+Set `OPS_METRICS_TOKEN` in `.env` (24 characters or more, for example `openssl rand -hex 32`) and recreate the API (`docker compose -f infra/compose.onprem.yml up -d api`). Your monitoring tool can then read:
 
 ```bash
-curl -s -H "Authorization: Bearer $OPS_METRICS_TOKEN" https://kanap.company.com/api/ops/metrics
+OPS_METRICS_TOKEN=$(grep '^OPS_METRICS_TOKEN=' /opt/kanap/.env | cut -d= -f2-)
+curl -sS -H "Authorization: Bearer ${OPS_METRICS_TOKEN}" "https://${KANAP_HOST}/api/ops/metrics"
 ```
 
 The answer is JSON. Without the setting the address answers 404. It answers even when the API is overloaded: the figures that need the database are then marked `db.statsStale`. The fields to watch:
@@ -128,37 +305,48 @@ Alert thresholds (`health` applies them; with several API processes, to all of t
 
 ## Troubleshooting
 
+Start with the API log: `docker compose -f infra/compose.onprem.yml logs --no-log-prefix --tail=200 api`.
+
 | Symptom | Check | Solution |
 |---------|-------|----------|
-| Containers not starting | `docker compose logs api` | Check for startup errors |
+| Containers not starting | `docker compose logs api` | Check for start-up errors |
+| The log repeats `[entrypoint] DB not ready or migration failed (attempt N)` | The text after `attempt N`, `DATABASE_URL`, `pg_hba.conf`, the firewall | The API tries 30 times, 2 seconds apart, then stops. Fix the cause the message names, then `docker compose -f infra/compose.onprem.yml up -d api` |
+| The message above says `self-signed certificate`, `unable to verify the first certificate` or `unable to get local issuer certificate` | The end of `DATABASE_URL` | `sslmode=require` checks the server certificate completely. Use `sslmode=disable` for a PostgreSQL on the same server, `sslmode=no-verify` for an encrypted connection to a server with a private certificate. See [Configuration](configuration.md#required-database) |
+| The message above says `The server does not support SSL connections` | The end of `DATABASE_URL` | Use `sslmode=disable`, or enable TLS on PostgreSQL |
+| `curl: (6) Could not resolve host` | The name in the address | The server resolves the name through DNS or `/etc/hosts`. Add the record, or a line `127.0.0.1 <name>` (your name in place of `<name>`) to `/etc/hosts` for the checks run on the server |
 | `[DB] pool budget exceeded` in the API log | `API_WORKERS`, `DB_POOL_MAX`, PostgreSQL `max_connections` | Lower `DB_POOL_MAX` to the value the message gives (or `API_WORKERS`), or raise `max_connections` |
-| "Database connection failed" | Verify `DATABASE_URL` | Check PostgreSQL accessibility/credentials |
-| "S3 error" | Verify S3_* variables | Ensure bucket exists and permissions are correct |
-| Migration failed | Check PostgreSQL version | Must be 16+, extensions available |
-| 502 from reverse proxy | `docker compose ps` | Ensure api container is running on port 8080 |
-| Can’t login | Verify `.env` credentials | Use password reset below |
+| "Database connection failed" | Verify `DATABASE_URL` | Check PostgreSQL accessibility/credentials. A password with `@ : / # ? %` needs percent-encoding in the URL |
+| Uploads or downloads fail ("S3 error", `S3_BUCKET is not configured`) | The `S3_*` variables | Ensure the bucket exists, the keys and the permissions are right |
+| `Authorization header malformed` or `unexpected scope` in a storage error | `S3_REGION` | Use the region your store expects (`us-east-1` for RustFS, the one set in its configuration for Garage) |
+| `getaddrinfo ENOTFOUND <bucket>.host.docker.internal` | `S3_FORCE_PATH_STYLE` | Set `S3_FORCE_PATH_STYLE=true` for RustFS, MinIO, Garage and other self-hosted stores |
+| `PutObject fallback used` warning | The storage encryption | The store refused the encryption request. With RustFS, set `RUSTFS_SSE_S3_MASTER_KEY` in `/etc/default/rustfs` and restart it (`sudo systemctl restart rustfs`) |
+| `[RATE-LIMIT] ... RATE_LIMIT_TRUST_PROXY not set` warning | `.env` | Set `RATE_LIMIT_TRUST_PROXY=true` (nginx in front) or `false` (nothing in front), then `up -d api`. See [Configuration](configuration.md#optional-advanced) |
+| Everyone shares one sign-in limit (`429` for many users) | `RATE_LIMIT_TRUST_PROXY` and the proxy | With a proxy in front, set `true` and make the proxy send `X-Forwarded-For` |
+| `[SECURITY]` warning at each start | `ADMIN_PASSWORD`, `JWT_SECRET` | Change the administrator's password in the application, or see [Password Reset](#password-reset). Use a `JWT_SECRET` of 32 characters or more |
+| Migration failed | PostgreSQL version | Must be 16+, extensions available |
+| 502 from reverse proxy | `docker compose ps` | Ensure the api container is running on port 8080 |
+| 413 from the reverse proxy on an upload | `client_max_body_size` | Set `client_max_body_size 50m;` in the nginx file |
+| Can't sign in | The password | `.env` creates the administrator at the first start only. Change the password in the application, or use [Password Reset](#password-reset) |
 
 ## Password Reset
 
-**Recommended:** Configure email (Resend API or single-tenant SMTP) and use the "Forgot Password" flow.
+**Recommended:** Configure email (Resend API or single-tenant SMTP) and use **Forgot password** on the sign-in page.
 
-**Fallback (SQL):** If email is not configured, reset passwords directly in the database.
+**Fallback (SQL):** If email is not configured, reset the password directly in the database. It takes two steps: hash the new password in the API container, then write the hash as the PostgreSQL superuser. The application role cannot do the second step: row-level security hides every user from it when no workspace is selected.
 
-**1) Generate a password hash:**
+Set the email of the account in the first line, then type the new password at the prompt (nothing shows as you type):
 
 ```bash
-# Using Node.js with argon2
-# (argon2 is a production dependency in the API image)
-docker compose -f infra/compose.onprem.yml exec api \
-  node -e "require('argon2').hash('NewPassword123!').then(h => console.log(h))"
+cd /opt/kanap
+USER_EMAIL=admin@example.internal   # the account to reset
+read -rsp 'New password: ' NEW_PASSWORD; echo
+HASH=$(docker compose -f infra/compose.onprem.yml exec -T api node -e "require('argon2').hash(process.argv[1]).then(console.log)" "$NEW_PASSWORD")
+unset NEW_PASSWORD
+sudo -u postgres psql -d kanap -v hash="$HASH" -v email="${USER_EMAIL}" <<'SQL'
+UPDATE users SET password_hash = :'hash' WHERE lower(email) = lower(:'email');
+SQL
 ```
 
-**2) Update the user in PostgreSQL:**
-
-```sql
-UPDATE users
-SET password_hash = '$argon2id$v=19$m=65536,t=3,p=4$...'
-WHERE email = 'user@company.com';
-```
+`psql` answers `UPDATE 1`. `UPDATE 0` means no account has that email. The password is briefly visible in the process list of the server while the first command runs: sign in, then change it from your profile.
 
 This SQL method is a last-resort fallback for locked-out administrators.

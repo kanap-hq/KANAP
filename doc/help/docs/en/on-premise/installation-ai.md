@@ -1,16 +1,16 @@
-# AI-Assisted Installation
+# AI-assisted installation
 
-Instead of following the [step-by-step walkthrough](installation-example.md) manually, you can delegate the entire installation to a coding AI agent. One prompt, one server, one result.
+Instead of following the [step-by-step walkthrough](installation-example.md) yourself, you can give it to a coding AI agent. The agent reads the walkthrough and runs it on your server, step by step. One prompt, one server, one result.
 
-Tools like [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) or [OpenAI Codex](https://openai.com/index/codex/) can read the KANAP documentation, install every dependency, configure all services, and verify the result — typically in under 15 minutes.
+Tools like [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) or [OpenAI Codex](https://openai.com/index/codex/) can read the KANAP documentation, install every dependency, configure all services, and verify the result, typically in under 20 minutes.
 
 ## Prerequisites
 
 | Requirement | Details |
 |-------------|---------|
-| **Server** | Ubuntu 24.04 LTS (freshly provisioned, with root or sudo access) |
-| **Internet** | The server needs outbound internet access during installation (packages, Docker images, GitHub clone, Let's Encrypt) |
-| **DNS** | An A record pointing your desired hostname to the server's public IP |
+| **Server** | Ubuntu 26.04 LTS (24.04 LTS works), freshly provisioned, with 4 GB of RAM or more, a user with sudo access and outbound internet access during the installation (packages, Docker images, GitHub, and Let's Encrypt if you use it) |
+| **Name** | The name users type to open KANAP. A public DNS record is needed only for Let's Encrypt. Otherwise use a record in your company DNS, or a hosts file entry for a test (see [Name and certificate](installation.md#name-and-certificate)). |
+| **Certificate** | One of three cases: a public name with Let's Encrypt, certificate files from your internal authority already on the server, or a self-signed certificate for a test |
 | **AI agent** | A coding AI agent installed on the server (Claude Code, Codex, or similar) |
 
 ### Passwordless sudo
@@ -20,60 +20,71 @@ The AI agent runs many commands with `sudo`. To avoid being prompted for a passw
 ```bash
 sudo usermod -aG sudo $USER
 echo "$USER ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/90-install-nopasswd
+sudo chmod 0440 /etc/sudoers.d/90-install-nopasswd
 ```
 
-You will remove this at the end of the installation — see [After Installation](#after-installation).
+You will remove this at the end of the installation: see [After installation](#after-installation).
 
-## The Prompt
+## The prompt
 
-Open your AI agent on the server and paste the following prompt, replacing `kanap.example.com` with your actual hostname and `admin@example.com` with the desired admin email address:
+Open your AI agent on the server and paste the following prompt. Replace the values in the **Parameters** list with yours, and keep only one **Certificate** line.
 
 ```
-Install KANAP on this Ubuntu 24.04 LTS server following the official
-documentation:
+Install KANAP on this Ubuntu server by following the official installation
+example step by step, running its commands as written:
 
-- Overview:       https://doc.kanap.net/on-premise/
-- Installation:   https://doc.kanap.net/on-premise/installation/
-- Configuration:  https://doc.kanap.net/on-premise/configuration/
+  https://doc.kanap.net/on-premise/installation-example/
 
-Make the application available at: https://kanap.example.com
-Use admin@example.com as the admin email address.
+Background pages: https://doc.kanap.net/on-premise/installation/ and
+https://doc.kanap.net/on-premise/configuration/
 
-Specifically:
+Parameters:
+- Address users open: https://kanap.example.com
+- Administrator email: admin@example.com
+- Certificate (keep one line):
+  - Public name: get a certificate from Let's Encrypt, with automatic renewal.
+  - Internal certificate: the files are on this server at <path of the full
+    chain> and <path of the private key>.
+  - Test only: create a self-signed certificate.
 
-1. Install Docker Engine, PostgreSQL 16, MinIO, and nginx.
-2. Configure PostgreSQL with extensions citext, pgcrypto, and uuid-ossp,
-   and a dedicated application role (NOSUPERUSER NOBYPASSRLS).
-3. Set up MinIO as a systemd service and create the storage bucket.
-4. Clone KANAP into /opt/kanap, create the .env file, build the Docker
-   images, and start the containers.
-5. Configure nginx as a reverse proxy with TLS certificates from
-   Let's Encrypt (certbot). Set up automatic certificate renewal.
-6. Generate strong random passwords for all credentials
-   (database, MinIO, JWT secret).
-7. Configure outbound email (see details below).
-8. Verify the installation: API health check and frontend accessibility.
-
-Document every phase in ~/kanap-install.md, including all shell commands,
-configuration file contents, and the working .env (with secrets).
+Rules:
+1. Follow the steps of the guide in order. Use the commands as they are
+   written; where the guide shows a choice (Ubuntu 24.04, certificate case),
+   take the one that matches this server and my parameters above.
+2. Generate every secret on the server, as the guide's step 0 does. Never
+   print a secret in the conversation and never write one to the log file.
+3. Keep a log of your work in ~/kanap-install.md: the commands you ran, the
+   configuration files you wrote (without secrets), and what you saw. For the
+   secrets, write only where they are stored: ~/kanap-install.env (deleted at
+   the end), /opt/kanap/.env and /etc/default/rustfs.
+4. If the docker group is not active in your shell yet, put sudo in front of
+   the docker commands.
+5. Keep SSH allowed in the firewall before you enable it.
+6. Run the checks of the guide's step 9, including the smoke test. Read the
+   administrator password from /opt/kanap/.env into the environment of that
+   command without printing it.
+7. When you finish, report: the start-up lines of the API log (the [ENV],
+   [SECRETS], [RATE-LIMIT], [CORS], [DB], [on-prem] and [SECURITY] lines and
+   any WARN), the output of docker compose ps, the last line of the smoke
+   test, and anything that did not work as the guide says.
 ```
 
 ### Email configuration
 
-Append **one** of the following blocks to the prompt to enable outbound email (password reset, invitations, notifications).
+Append **one** of the following blocks to the prompt to enable outbound email (password reset, invitations, notifications). The agent adds the values to the `.env` file.
 
-**Option A — Resend** (cloud email API):
+**Option A: Resend** (cloud email API):
 
 ```
-Email transport — Resend:
+Email transport: Resend
 - RESEND_API_KEY=re_xxxxx
 - RESEND_FROM_EMAIL=KANAP <noreply@example.com>
 ```
 
-**Option B — SMTP** (internal relay or provider):
+**Option B: SMTP** (internal relay or provider):
 
 ```
-Email transport — SMTP:
+Email transport: SMTP
 - SMTP_HOST=smtp.company.com
 - SMTP_PORT=587
 - SMTP_SECURE=false
@@ -82,30 +93,32 @@ Email transport — SMTP:
 - SMTP_FROM=KANAP <noreply@company.com>
 ```
 
-Replace the values with your actual credentials. If you skip email configuration, KANAP will still work — but password reset and invitations will be unavailable until you configure email manually later (see [Configuration](configuration.md)).
+Replace the values with your actual credentials. SMTP_USER and SMTP_PASSWORD go together. If you skip email configuration, KANAP still works, but password reset and invitations are unavailable until you configure email later (see [Configuration](configuration.md)).
 
-## What to Expect
+## What to expect
 
-The agent will read the linked documentation pages, then work through the installation autonomously:
+The agent reads the walkthrough, then works through it:
 
-1. **System packages** — installs Docker, PostgreSQL 16, nginx, certbot
-2. **PostgreSQL** — creates the database, user, and required extensions
-3. **MinIO** — installs the binary, creates a systemd service, provisions a bucket and service account
-4. **KANAP** — clones the repository, generates credentials, writes `.env`, builds Docker images, starts containers
-5. **TLS & nginx** — obtains a Let's Encrypt certificate, configures the reverse proxy with HTTPS, sets up auto-renewal
-6. **Email** — configures the outbound email transport in `.env` (if provided)
-7. **Verification** — checks the API health endpoint and frontend accessibility
+1. **System packages**: installs Docker and Git.
+2. **KANAP files**: clones the repository into `/opt/kanap` and checks out `stable`.
+3. **PostgreSQL**: installs it, creates the database, the application role and the required extensions, and lets the Docker networks connect.
+4. **Object storage**: installs RustFS, creates the bucket, a restricted application user and the encryption key.
+5. **Firewall**: allows SSH, HTTP and HTTPS from the network, and PostgreSQL and the storage from the Docker networks only.
+6. **KANAP**: writes `.env` with the generated secrets, builds the Docker images and starts the containers.
+7. **TLS and nginx**: obtains or creates the certificate, configures the reverse proxy, makes sure the server resolves the name.
+8. **Verification**: checks the API health and the front end, then runs the smoke test (database, storage, sign-in, exports).
 
-The agent will ask for confirmation before running commands on your server. Once complete, the full installation log is saved to `~/kanap-install.md` for your records.
+The agent asks for confirmation before running commands on your server. When it finishes, it gives you the report described in the prompt. The log of the installation is in `~/kanap-install.md`.
 
-## After Installation
+## After installation
 
-1. **Review your `.env` file** at `/opt/kanap/.env` — verify the generated credentials and adjust settings like organization name
-2. **Configure email** if you haven't already — see [Configuration](configuration.md) for SMTP or Resend setup. Email enables password reset, invitations, and notifications.
-3. **Log in** at `https://your-hostname` with the admin credentials from `.env`
-4. **Change the admin password** — use the "Forgot password" link on the login page to receive a reset email (easiest method), or change it via user profile after logging in
-5. **Read the [Operations](operations.md) guide** for upgrades, backups, and monitoring
-6. **Remove passwordless sudo** — the installation is complete, restore normal security:
+1. **Read the report.** Check the start-up lines: a `[SECURITY]`, `[CONFIG]` or `[CORS]` warning, or an `[ENV] APP_ENV is not set` line, means a setting needs attention (see [Configuration](configuration.md#what-the-api-log-shows-at-start)).
+2. **Review your `.env` file** at `/opt/kanap/.env`. It is readable by its owner only and holds every secret. Adjust settings such as the organization name.
+3. **Configure email** if you haven't already: see [Configuration](configuration.md) for SMTP or Resend setup. Email enables password reset, invitations, and notifications.
+4. **Sign in** at `https://your-address` with `ADMIN_EMAIL` and the `ADMIN_PASSWORD` of `.env`: `grep '^ADMIN_PASSWORD=' /opt/kanap/.env` shows it. Change it in your profile if you want one only you know.
+5. **Set up the backups** and read the [Operations](operations.md) guide for upgrades and monitoring.
+6. **Keep the encryption key.** `/etc/default/rustfs` holds the key that encrypts the stored files. Keep it with your configuration backup.
+7. **Remove passwordless sudo.** The installation is complete, restore normal security:
 
     ```bash
     sudo rm /etc/sudoers.d/90-install-nopasswd
