@@ -21,7 +21,7 @@ const UpdateBusinessRecordInputSchema = z.object({
   ref: z.string().trim().min(1)
     .describe('Exact record reference. Use a UUID from a previous tool result, or an exact business reference/name when unique.'),
   fields: z.record(z.string(), z.unknown())
-    .describe('Only fields to change. Unknown fields are rejected. Relation fields accept exact names, references, emails, or UUIDs from previous tool results. Spend and CAPEX items set an analytics dimension with `analytics:<dimension code>` and the value name (null clears it).'),
+    .describe('Only fields to change. Unknown fields are rejected. Relation fields accept exact names, references, emails, or UUIDs from previous tool results. Spend and CAPEX items set an analytics dimension with `analytics:<dimension code>` and the value name; null clears a dimension the line may change.'),
 });
 
 @Injectable()
@@ -32,7 +32,7 @@ export class UpdateBusinessRecordAiMutationOperation implements AiMutationOperat
   readonly inputSummary = {
     entity_type: `One of ${AI_BUSINESS_RECORD_ENTITY_TYPES.join(', ')}.`,
     ref: 'Exact record reference. Prefer UUIDs from prior tool results internally; use exact business references/names when unique.',
-    fields: 'Only fields to change. Unknown fields are rejected; no-op updates are rejected. Relation fields accept exact names/references/emails or UUIDs returned by prior tools. Spend/CAPEX analytics dimensions: `analytics:<dimension code>` with the value name, null clears it.',
+    fields: 'Only fields to change. Unknown fields are rejected; no-op updates are rejected. Relation fields accept exact names/references/emails or UUIDs returned by prior tools. Spend/CAPEX analytics dimensions: `analytics:<dimension code>` with the value name; null clears a dimension the line may change.',
   };
   readonly businessResource = 'applications';
   readonly businessResources = AI_BUSINESS_RECORD_BUSINESS_RESOURCES;
@@ -40,7 +40,7 @@ export class UpdateBusinessRecordAiMutationOperation implements AiMutationOperat
     entity_type: 'business_record',
     fields: this.support.getWritableFieldDescriptions(),
     reversible: true,
-    prompt_hint: 'Use `update_business_record` for Tier 3 workflow/status fields and Tier 4 spend/CAPEX scalar/planning fields. Set `entity_type`, identify one record with `ref`, and put only changed fields in `fields`. Query first when references are ambiguous. On spend and CAPEX items, set or change a value on an analytics dimension with `analytics:<dimension code>` (the default dimension is `analytics_category`) and the value name, or null to clear it; a value missing from the dimension must be created first or asked for. This only creates a preview and still requires explicit approval. Executed update previews can be undone through `undo_preview` when the previous values are still applicable.',
+    prompt_hint: 'Use `update_business_record` for Tier 3 workflow/status fields and Tier 4 spend/CAPEX scalar/planning fields. Set `entity_type`, identify one record with `ref`, and put only changed fields in `fields`. Query first when references are ambiguous. On spend and CAPEX items, set or change a value on an analytics dimension with `analytics:<dimension code>` (the default dimension is `analytics_category`) and the value name, or null to clear a dimension the line may change; a value missing from the dimension must be created first or asked for. This only creates a preview and still requires explicit approval. Executed update previews can be undone through `undo_preview` when the previous values are still applicable.',
   };
 
   constructor(private readonly support: AiBusinessRecordMutationSupportService) {}

@@ -332,19 +332,17 @@ async function testAnalyticsDimensionsFollowOpexOrCapexRead() {
   const load = (AiChatOrchestratorService.prototype as any).loadAnalyticsDimensionsPromptContext;
 
   const both = await load.call({}, ctx, ['tasks', 'spend_items', 'capex_items']);
-  assert.deepEqual(both, {
-    opex_lines: [
-      { key: 'analytics_category', name: 'Analytics dimension', default: true },
-      { key: 'analytics:nature-cost', name: 'Nature de coût', default: false },
-      { key: 'analytics:recurrence', name: 'Recurrence', default: false },
-    ],
-    capex_lines: [
-      { key: 'analytics_category', name: 'Analytics dimension', default: true },
-      { key: 'analytics:nature-cost', name: 'Nature de coût', default: false },
-      { key: 'analytics:asset-class', name: 'Asset class', default: false },
-    ],
-  }, 'enabled dimensions used for each line type; the default keeps analytics_category');
-  assert.deepEqual(Object.keys(await load.call({}, ctx, ['capex_items'])), ['capex_lines'], 'only the readable line types');
+  assert.deepEqual(both, [
+    { key: 'analytics_category', name: 'Analytics dimension', default: true, used_for: ['opex', 'capex'] },
+    { key: 'analytics:nature-cost', name: 'Nature de coût', default: false, used_for: ['opex', 'capex'] },
+    { key: 'analytics:recurrence', name: 'Recurrence', default: false, used_for: ['opex'] },
+    { key: 'analytics:asset-class', name: 'Asset class', default: false, used_for: ['capex'] },
+  ], 'each enabled dimension once, with the line types it is used for; the default keeps analytics_category');
+  assert.deepEqual(
+    (await load.call({}, ctx, ['capex_items'])).map((entry: any) => [entry.key, entry.used_for]),
+    [['analytics_category', ['capex']], ['analytics:nature-cost', ['capex']], ['analytics:asset-class', ['capex']]],
+    'only the readable line types',
+  );
   assert.equal(await load.call({}, ctx, ['tasks', 'projects']), undefined, 'no OPEX or CAPEX read: no block');
   assert.equal(queries.length, 2, 'dimensions are read only for OPEX or CAPEX readers');
   assert.deepEqual(queries.map((params) => params[1]), [['tenant-1'], ['tenant-1']], 'for the context tenant');
@@ -357,7 +355,8 @@ async function testAnalyticsDimensionsFollowOpexOrCapexRead() {
     currentUser: { displayName: 'Alex', email: null, roleNames: [], teamName: null },
   };
   const withDimensions = service.build({ ...base, analyticsDimensions: analyticsDimensionsAiContext(rows as any, ['spend_items']) });
-  assert.match(withDimensions, /"analytics_dimensions": \{/);
+  assert.match(withDimensions, /"analytics_dimensions": \[/);
+  assert.match(withDimensions, /"used_for": \[\s*"opex"\s*\]/);
   assert.match(withDimensions, /"key": "analytics:nature-cost"/);
   assert.match(withDimensions, /"name": "Nature de coût"/);
   assert.doesNotMatch(withDimensions, /analytics:old|analytics:asset-class/, 'neither a disabled dimension nor one of the other line type');

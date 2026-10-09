@@ -635,13 +635,6 @@ export class AiBusinessRecordMutationSupportService {
         if (relation.row.kind !== 'cost_center') throw new BadRequestException('Choose a cost center, not a group.');
         if (!isActiveAt(relation.row.disabled_at as any)) throw new BadRequestException('This cost center is disabled.');
       }
-      if (field.relationTarget === 'analytics_categories' && relation && relation.id !== (existing?.[fieldName] ?? null)) {
-        // A new value must be enabled; the line's current one is kept as it is (the write gate checks it again).
-        if (relation.row.status === 'disabled' || !isActiveAt(relation.row.disabled_at as any)) throw new BadRequestException('This value is disabled.');
-        const lineType = entityType === 'capex_items' ? 'capex' : 'opex';
-        const value = { name: String(relation.row.name ?? relation.label), applies_to: (relation.row.applies_to as string | null) ?? null };
-        if (!valueAppliesTo(value, lineType)) throw new BadRequestException(notApplicableValueMessage(value, lineType));
-      }
       return { value: relation?.id ?? null, displayValue: relation?.label ?? null };
     }
 
@@ -785,18 +778,28 @@ export class AiBusinessRecordMutationSupportService {
         throw new BadRequestException(`Field ${shown} was provided more than once.`);
       }
       let normalized: { value: unknown; displayValue: string | null };
-      if (scope && axis && !axis.is_default) {
-        const dimension = await this.normalizeDimensionValue(context, scope, axis, rawValue, (existing?.[resolved.name] as string | null | undefined) ?? null);
-        // A dimension the line may not change passes its current value as a no-op: nothing to create.
-        if (dimension.locked && mode === 'create') continue;
-        normalized = dimension;
+      let label = resolved.config.label;
+      if (scope && isAnalyticsDimensionField(resolved.name)) {
+        // Any dimension of a line, the default one included (however addressed), takes the gate's rules
+        // and shows the dimension's name. A tenant still without its default dimension holds no value on it.
+        const dimensionAxis = axis ?? (await tenantAxes()).find((candidate) => candidate.is_default) ?? null;
+        label = analyticsAxisLabel(dimensionAxis ?? { name: null });
+        if (dimensionAxis) {
+          const dimension = await this.normalizeDimensionValue(context, scope, dimensionAxis, rawValue, (existing?.[resolved.name] as string | null | undefined) ?? null);
+          // A dimension the line may not change passes its current value as a no-op: nothing to create.
+          if (dimension.locked && mode === 'create') continue;
+          normalized = dimension;
+        } else {
+          const ref = textOrNull(rawValue);
+          if (ref) throw new BadRequestException(`"${ref}" is not a value of ${dimensionPhrase({ name: null })}.`);
+          normalized = { value: null, displayValue: null };
+        }
       } else {
-        // The default dimension is always enabled and used for both line types (database checks).
         normalized = await this.normalizeFieldValue(context, entityType, resolved.name, resolved.config, rawValue, fields, catalog, existing);
       }
       fields[resolved.name] = normalized.value;
       displayValues[resolved.name] = normalized.displayValue;
-      fieldLabels[resolved.name] = resolved.config.label;
+      fieldLabels[resolved.name] = label;
     }
 
     if (END_OF_VALIDITY_ENTITIES.has(entityType) && Object.prototype.hasOwnProperty.call(fields, 'effective_end')) {
@@ -835,7 +838,8 @@ export class AiBusinessRecordMutationSupportService {
    * The dimension a line field names: `analytics:<code>` (code matched case-insensitively,
    * read before `normalizeFieldKey`, which would rewrite a `-` of the code) or the stored
    * `analytics_axis:<dimension id>`. undefined when the field is no dimension key, null
-   * when it names no dimension of the tenant.
+   * when its code names no dimension of the tenant. A stored key whose dimension was deleted
+   * since (an undo) is refused as such.
    */
   private async dimensionOfField(
     rawName: string,
@@ -849,13 +853,15 @@ export class AiBusinessRecordMutationSupportService {
     }
     if (lower.startsWith(ANALYTICS_AXIS_FIELD_PREFIX)) {
       const id = lower.slice(ANALYTICS_AXIS_FIELD_PREFIX.length).trim();
-      return (await tenantAxes()).find((axis) => axis.id.toLowerCase() === id) ?? null;
+      const axis = (await tenantAxes()).find((candidate) => candidate.id.toLowerCase() === id);
+      if (!axis) throw new BadRequestException('This dimension no longer exists.');
+      return axis;
     }
     return undefined;
   }
 
   /**
-   * A line's value on a dimension other than the default one: by name (case-insensitive) or
+   * A line's value on one dimension: by name (case-insensitive) or
    * id, looked up within that dimension only; empty clears it. The write gate's rules, checked
    * at preview (the gate checks again at apply): a dimension that is disabled or used for the
    * other line type only passes the line's current value (`locked`); a disabled value or one
@@ -1102,14 +1108,6 @@ export class AiBusinessRecordMutationSupportService {
         return manager.query(`SELECT * FROM suppliers WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text) OR LOWER(COALESCE(erp_supplier_id, '')) = LOWER($2::text)) ORDER BY name LIMIT 6`, [tenantId, ref]);
       case 'accounts':
         return manager.query(`SELECT * FROM accounts WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}account_number::text = $2::text OR LOWER(account_name) = LOWER($2::text) OR LOWER(CONCAT(account_number, ' - ', account_name)) = LOWER($2::text)) ORDER BY account_number LIMIT 6`, [tenantId, ref]);
-      case 'analytics_categories':
-        // A line's analytics category is a value of the default dimension (the other dimensions: `findDimensionValue`).
-        return manager.query(
-          `SELECT c.* FROM analytics_categories c
-             JOIN analytics_axes ax ON ax.tenant_id = c.tenant_id AND ax.id = c.axis_id AND ax.is_default
-            WHERE c.tenant_id = $1 AND (${uuid ? 'c.id = $2 OR ' : ''}LOWER(c.name) = LOWER($2::text)) ORDER BY c.name LIMIT 6`,
-          [tenantId, ref],
-        );
       case 'business_processes':
         return manager.query(`SELECT * FROM business_processes WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text)) ORDER BY name LIMIT 6`, [tenantId, ref]);
       case 'portfolio_sources':
@@ -1509,6 +1507,10 @@ export class AiBusinessRecordMutationSupportService {
     storedLabels: unknown,
   ): Promise<string> {
     const axisId = analyticsAxisIdOfField(fieldName);
+    if (lineScope(entityType) && fieldName === DEFAULT_ANALYTICS_FIELD) {
+      const axis = (await loadAnalyticsAxes(context.manager, context.tenantId)).find((candidate) => candidate.is_default);
+      return analyticsAxisLabel(axis ?? { name: null });
+    }
     if (axisId) {
       const axis = (await loadAnalyticsAxes(context.manager, context.tenantId)).find((candidate) => candidate.id === axisId);
       if (axis) return analyticsAxisLabel(axis);

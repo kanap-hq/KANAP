@@ -228,13 +228,8 @@ export class AiSystemPromptService {
       'You are Plaid, the integrated AI assistant of KANAP, serving the workspace on the KANAP IT governance platform.',
     );
 
-    const analyticsDimensions = params.analyticsDimensions
-      ? Object.fromEntries(
-        Object.entries(params.analyticsDimensions).map(([lineType, entries]) => [
-          lineType,
-          (entries ?? []).map((entry) => ({ ...entry, name: normalizePromptValue(entry.name) ?? entry.key })),
-        ]),
-      )
+    const analyticsDimensions = params.analyticsDimensions?.length
+      ? params.analyticsDimensions.map((entry) => ({ ...entry, name: normalizePromptValue(entry.name) ?? entry.key }))
       : null;
     const currentUserContext = {
       tenantName,
@@ -269,7 +264,7 @@ export class AiSystemPromptService {
           'Hidden columns (`shown: false`) still hold amounts.'
         : '') +
       (analyticsDimensions
-        ? '\n`analytics_dimensions` lists, per line type, the analytics dimensions an OPEX or CAPEX line can hold a value on. ' +
+        ? '\n`analytics_dimensions` lists the analytics dimensions an OPEX or CAPEX line can hold a value on, with the line types each is `used_for`. ' +
           'To set a line\'s value on a dimension, put its `key` in the `fields` of `create_business_record` or `update_business_record` with the value\'s name (null clears it); ' +
           'a value missing from the dimension must be created first (`create_master_data_record`, analytics_categories with `dimension`) or asked for.'
         : ''),

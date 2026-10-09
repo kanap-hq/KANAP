@@ -19,7 +19,7 @@ const CreateBusinessRecordInputSchema = z.object({
   entity_type: z.enum(AI_BUSINESS_RECORD_ENTITY_TYPES)
     .describe('The business entity family to create.'),
   fields: z.record(z.string(), z.unknown())
-    .describe('Writable field values keyed by field name. Unknown fields are rejected. Relation fields accept exact names, references, emails, or UUIDs from previous tool results. Spend and CAPEX items set an analytics dimension with `analytics:<dimension code>` and the value name (null clears it).'),
+    .describe('Writable field values keyed by field name. Unknown fields are rejected. Relation fields accept exact names, references, emails, or UUIDs from previous tool results. Spend and CAPEX items set an analytics dimension with `analytics:<dimension code>` and the value name.'),
 });
 
 @Injectable()
