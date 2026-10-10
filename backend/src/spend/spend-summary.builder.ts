@@ -717,7 +717,7 @@ async function loadAnalyticsForRows(
          ON v.tenant_id = $1 AND v.axis_id = ax.id AND v.item_id = ANY($2::uuid[])
        LEFT JOIN analytics_categories c ON c.id = v.category_id AND c.tenant_id = $1
        WHERE ax.tenant_id = $1 AND (ax.applies_to IS NULL OR ax.applies_to = $3)
-       ORDER BY ax.sort_order, ax.id`, // the dimensions' order, whatever the plan: the rows' keys come in it
+       ORDER BY ax.sort_order, lower(coalesce(ax.name, '')), ax.code, ax.id`, // the dimensions' order, whatever the plan: the rows' keys come in it
       [tenantId, itemIds, config.scope],
     );
   const axisIds = new Set<string>();

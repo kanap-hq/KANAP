@@ -29,7 +29,7 @@ La dimensión por defecto tiene un papel especial:
 - Se aplica siempre a las líneas OPEX y CAPEX: su campo **Usada para** está bloqueado. Consulte [Dimensiones OPEX o CAPEX](#dimensiones-opex-o-capex).
 - No se puede desactivar ni eliminar. Su espacio de trabajo no tiene botón **Eliminar**, y una línea bajo **Ciclo de vida** explica el motivo: "Esta dimensión no se puede desactivar ni eliminar: los archivos antiguos y las preguntas a la IA la usan."
 - Las preguntas a Plaid sobre la categoría analítica la usan. Consulte [Dimensiones analíticas en Plaid](#dimensiones-analiticas-en-plaid). En un archivo de presupuesto, cada dimensión tiene su propia columna, la dimensión por defecto incluida: consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md).
-- Sigue siendo la dimensión por defecto cuando cambia su nombre, su código o su orden.
+- Sigue siendo la dimensión por defecto cuando cambia su nombre o su código, o la mueve en el orden de las dimensiones.
 - Su etiqueta está reservada: ninguna otra dimensión puede llamarse "Dimensión analítica", en ninguno de los idiomas de la aplicación.
 
 ---
@@ -55,6 +55,7 @@ Bajo el título, una banda gris muestra sus dimensiones en orden, con un botón 
 - Haga clic en un botón para listar los valores de esa dimensión. El botón seleccionado aparece relleno. La dirección de la página conserva su elección, de modo que un enlace guardado se abre en la misma dimensión. Sin elección, la página se abre en la dimensión por defecto.
 - A la derecha de la banda, **Editar** abre el espacio de trabajo de la dimensión seleccionada. Si solo puede consultar las dimensiones, el botón dice **Abrir**.
 - **Nuevo**, a su lado, crea una dimensión (requiere `analytics:member`).
+- **Reordenar** define el orden de las dimensiones (requiere `analytics:member`). El botón está desactivado mientras solo hay una dimensión. Consulte [Ordenar las dimensiones](#ordenar-las-dimensiones).
 
 Con una sola dimensión, la banda muestra un botón y los valores.
 
@@ -100,12 +101,11 @@ Haga clic en **Nuevo** en la barra de selección, complete los campos y haga cli
 
 - **Nombre** es obligatorio.
 - **Código** se propone a partir del nombre: en minúsculas, sin acentos y con los espacios sustituidos por `-`. Puede cambiarlo antes de crear la dimensión.
-- **Orden** se propone para que la nueva dimensión quede la última.
 - **Usada para** empieza en **OPEX y CAPEX**. Consulte [Dimensiones OPEX o CAPEX](#dimensiones-opex-o-capex).
 - **Obligatoria** empieza desactivado. Consulte [Dimensiones obligatorias](#dimensiones-obligatorias).
 - **Descripción** es opcional.
 
-Después vuelva a la página para añadir los valores de la nueva dimensión.
+Una dimensión nueva se coloca la última en el orden de las dimensiones. Después vuelva a la página para añadir sus valores.
 
 ### El espacio de trabajo de la dimensión
 
@@ -113,9 +113,9 @@ Después vuelva a la página para añadir los valores de la nueva dimensión.
 
 - **Encabezado**: el nombre de la dimensión. Haga clic en él para cambiar el nombre de la dimensión. **Ant.** / **Sig.** recorren las dimensiones en orden, y el botón de cierre vuelve a la página en esta dimensión
 - **Zona principal**: una línea de uso, por ejemplo "12 valores. Uso: 27 líneas OPEX y 2 líneas CAPEX.", y después la **Descripción**
-- **Panel Propiedades** a la derecha: **Nombre**, **Código**, **Orden**, **Usada para**, **Obligatoria** y **Ciclo de vida**
+- **Panel Propiedades** a la derecha: **Nombre**, **Código**, **Usada para**, **Obligatoria** y **Ciclo de vida**
 
-**Guardado automático**: Cada cambio se guarda por sí solo. No hay botón Guardar. Los campos de texto se guardan al salir de ellos (en **Nombre**, **Código** y **Orden**, pulse Intro para guardar de inmediato); el interruptor **Obligatoria** y el ciclo de vida se guardan en cuanto los cambia. Cuando se rechaza un cambio, el motivo aparece bajo el campo que lo causó, por ejemplo un código duplicado bajo **Código**. Un nombre rechazado en el encabezado se muestra en la parte superior de la página.
+**Guardado automático**: Cada cambio se guarda por sí solo. No hay botón Guardar. Los campos de texto se guardan al salir de ellos (en **Nombre** y **Código**, pulse Intro para guardar de inmediato); el interruptor **Obligatoria** y el ciclo de vida se guardan en cuanto los cambia. Cuando se rechaza un cambio, el motivo aparece bajo el campo que lo causó, por ejemplo un código duplicado bajo **Código**. Un nombre rechazado en el encabezado se muestra en la parte superior de la página.
 
 ### Campos de la dimensión
 
@@ -123,11 +123,31 @@ Después vuelva a la página para añadir los valores de la nueva dimensión.
 |---|---|
 | **Nombre** | Hasta 200 caracteres. Los nombres son únicos sin distinguir mayúsculas y minúsculas. Obligatorio, salvo en la dimensión por defecto: déjelo vacío en ella para mostrar "Dimensión analítica" en el idioma de cada persona. La etiqueta de la dimensión por defecto está reservada en todos los idiomas de la aplicación ("Analytics dimension", "Dimension analytique", "Analysedimension", "Dimensión analítica"), sin distinguir mayúsculas y minúsculas: otra dimensión con uno de estos nombres se rechaza con "This name is reserved for the default dimension." |
 | **Código** | De 1 a 40 caracteres: letras minúsculas, dígitos, `-` o `_`, empezando por una letra o un dígito. Cada código es único. El código da nombre a la columna de la dimensión en los archivos CSV de OPEX y CAPEX, de modo que cambiarlo cambia el nombre de esa columna. Las líneas de presupuesto conservan sus valores cuando cambia el código |
-| **Orden** | Un número entero. Las dimensiones se listan según este número, de menor a mayor: en esta página, en las líneas de presupuesto, en los filtros de los informes y en el selector de dimensión del informe |
 | **Descripción** | Para qué sirve la dimensión, de modo que sus compañeros clasifiquen las líneas de la misma manera |
 | **Usada para** | **OPEX y CAPEX**, **Solo OPEX** o **Solo CAPEX**. Indica qué líneas de presupuesto pueden tener un valor en esta dimensión. Consulte [Dimensiones OPEX o CAPEX](#dimensiones-opex-o-capex). Bloqueado en la dimensión por defecto, con una línea debajo: "La dimensión predeterminada se aplica a las líneas OPEX y CAPEX." |
 | **Obligatoria** | Un interruptor. Cuando está activado, cada línea nueva de los tipos para los que se usa la dimensión necesita un valor en ella, y una línea que tiene un valor no puede perderlo. Consulte [Dimensiones obligatorias](#dimensiones-obligatorias). La dimensión por defecto también puede ser obligatoria |
 | **Ciclo de vida** | El interruptor de estado, cuya etiqueta muestra el estado actual (**Activado** o **Desactivado**), y la fecha de **Fin de validez**. Consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida). Bloqueado en la dimensión por defecto, con una línea debajo: "Esta dimensión no se puede desactivar ni eliminar: los archivos antiguos y las preguntas a la IA la usan." |
+
+### Ordenar las dimensiones
+
+Las dimensiones tienen un orden, que usted define. KANAP las muestra en este orden:
+
+- en la barra de selección de esta página
+- en el panel **Propiedades** de las partidas OPEX y CAPEX
+- en las columnas de las listas OPEX y CAPEX
+- en las columnas del archivo de presupuesto
+- en los filtros de los informes y en el selector de dimensión del informe
+- en las dimensiones que lista Plaid
+
+Una dimensión nueva se coloca la última.
+
+Para cambiar el orden:
+
+1. Haga clic en **Reordenar** en la barra de selección. El diálogo lista todas las dimensiones, incluidas las desactivadas y las de un solo tipo de línea, cada una con sus indicaciones (**Predeterminada**, **Desactivada**, **Solo OPEX**, **Solo CAPEX**).
+2. Arrastre las dimensiones a su lugar, con el ratón o con el teclado. Las teclas son las mismas que para los valores: consulte [Ordenar los valores](#ordenar-los-valores).
+3. Haga clic en **Guardar**. **Cancelar** deja el orden como estaba.
+
+El nuevo orden aparece de inmediato. El [Registro de auditoría](admin.md#registro-de-auditoria) registra un cambio por cada dimensión movida, con su posición antes y después.
 
 ### Dimensiones OPEX o CAPEX
 
@@ -364,7 +384,7 @@ Solo `name` es una columna obligatoria. Cuando falta la columna `description`, `
 | Nivel | Qué permite |
 |---|---|
 | `analytics:reader` | Ver la página Dimensiones analíticas y abrir las dimensiones y los valores |
-| `analytics:member` | Crear dimensiones y valores, editarlos y definir el orden de los valores |
+| `analytics:member` | Crear dimensiones y valores, editarlos y definir el orden de las dimensiones y de los valores |
 | `analytics:admin` | Todo lo anterior, más la importación y exportación CSV y la eliminación |
 
 El rol integrado Administrador de presupuesto es admin, Miembro de presupuesto es member y Lector de presupuesto es reader. Cualquier persona que pueda leer OPEX, CAPEX o los informes ve las dimensiones y sus valores en las líneas de presupuesto, en las listas y en los informes, sin acceso a esta página.

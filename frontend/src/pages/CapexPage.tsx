@@ -33,8 +33,7 @@ import {
 import { compactListSearchCached, filtersNeedContext, listFiltersOf, getWithListContext } from '../lib/listContext';
 import { isReportView, markReportView, snapshotFilters, useSettledListSearch, writeListSnapshot } from '../hooks/useListContextSearch';
 import { useBudgetColumns } from '../hooks/useBudgetColumns';
-import { useAnalyticsAxes } from '../hooks/useAnalyticsAxes';
-import { analyticsFieldKey } from '../services/analytics';
+import { analyticsListColumns, useAnalyticsAxes } from '../hooks/useAnalyticsAxes';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDate, formatShortDateTime } from '../lib/dateFormat';
 import { statusColumnProps } from '../components/grid/statusColumn';
@@ -607,14 +606,9 @@ function CapexPageView() {
         filterParams: { getValues: getCapexFilterValues('owner_business_name'), searchable: false },
         cellRenderer: linkCell('owner_business_name'),
       },
-      // The default dimension keeps its column id, so saved layouts, links and AI filters still find it;
-      // every other enabled dimension follows it, in dimension order.
-      ...[
-        { field: 'analytics_category_name', label: defaultAnalyticsLabel },
-        ...analyticsAxes.enabled
-          .filter((axis) => !axis.is_default)
-          .map((axis) => ({ field: analyticsFieldKey(axis.id), label: analyticsAxes.label(axis) })),
-      ].map(({ field, label }) => ({
+      // One column per enabled dimension, in dimension order. The default dimension keeps its column
+      // id wherever it stands, so saved layouts, links and AI filters still find it.
+      ...analyticsListColumns(analyticsAxes, defaultAnalyticsLabel).map(({ field, label }) => ({
         field,
         headerName: label,
         width: 200,

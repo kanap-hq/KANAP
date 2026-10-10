@@ -615,6 +615,7 @@
     "openDimension": "Ouvrir {{name}}",
     "markedDimension": "{{name}}, {{marks}}",
     "disabledMark": "Désactivée",
+    "defaultMark": "Par défaut",
     "enableToAddValues": "Activez cette dimension pour ajouter des valeurs.",
     "export": "Exporter les valeurs",
     "import": "Importer les valeurs",
@@ -630,6 +631,19 @@
       "movedTo": "Valeur {{name}} en position {{position}} sur {{count}}.",
       "droppedAt": "Valeur {{name}} déposée en position {{position}} sur {{count}}.",
       "cancelled": "Valeur {{name}} remise à sa place."
+    },
+    "reorderDimensions": {
+      "action": "Réordonner les dimensions",
+      "title": "Réordonner les dimensions",
+      "hint": "Faites glisser les dimensions dans l'ordre où les écrans, les listes et le fichier budget doivent les présenter.",
+      "loadFailed": "Impossible de charger les dimensions.",
+      "saveFailed": "Impossible d'enregistrer l'ordre.",
+      "roleDescription": "dimension déplaçable",
+      "instructions": "Pour déplacer une dimension, appuyez sur Espace ou Entrée, déplacez-la avec les flèches, puis appuyez sur Espace ou Entrée pour la déposer. Échap annule.",
+      "pickedUp": "Dimension {{name}} saisie.",
+      "movedTo": "Dimension {{name}} en position {{position}} sur {{count}}.",
+      "droppedAt": "Dimension {{name}} déposée en position {{position}} sur {{count}}.",
+      "cancelled": "Dimension {{name}} remise à sa place."
     },
     "previousValue": "Valeur précédente",
     "nextValue": "Valeur suivante",
@@ -649,7 +663,6 @@
       "code": "Sert de nom de colonne dans les fichiers CSV : analytics:{{code}}. Le modifier change le nom de la colonne.",
       "codeDefault": "Les anciens fichiers utilisent la colonne analytics_category pour cette dimension ; analytics:{{code}} fonctionne aussi.",
       "codeCreate": "Sert de nom de colonne dans les fichiers CSV. Lettres minuscules, chiffres, - ou _.",
-      "order": "Les dimensions sont classées selon ce nombre, du plus petit au plus grand.",
       "defaultLocked": "Cette dimension ne peut être ni désactivée ni supprimée : les anciens fichiers et les questions posées à l'IA l'utilisent.",
       "appliesToDefault": "La dimension par défaut s'applique aux lignes OPEX et CAPEX.",
       "valueDimensionAppliesTo": {
@@ -726,7 +739,6 @@
       "nameRequired": "Saisissez un nom.",
       "codeRequired": "Saisissez un code.",
       "codeInvalid": "Utilisez des lettres minuscules, des chiffres, - ou _ (40 au maximum).",
-      "orderInvalid": "Saisissez un nombre entier.",
       "dimensionRequired": "Choisissez une dimension."
     }
   },

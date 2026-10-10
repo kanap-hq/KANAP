@@ -132,7 +132,7 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     });
   });
 
-  it('saves name, code, order and description when each field loses focus, with no save button', async () => {
+  it('saves name, code and description when each field loses focus, with no save button', async () => {
     renderAt('/master-data/analytics/dimensions/ax-nature/overview');
     const code = await screen.findByLabelText('analytics.fields.code');
     expect(screen.queryByRole('button', { name: /save/i })).toBeNull();
@@ -140,11 +140,6 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     expect(mocked.updateAnalyticsAxis).not.toHaveBeenCalled();
     fireEvent.blur(code);
     await waitFor(() => expect(mocked.updateAnalyticsAxis).toHaveBeenCalledWith('ax-nature', { code: 'kind' }));
-
-    const order = screen.getByLabelText('analytics.fields.order');
-    fireEvent.change(order, { target: { value: '3' } });
-    fireEvent.blur(order);
-    await waitFor(() => expect(mocked.updateAnalyticsAxis).toHaveBeenCalledWith('ax-nature', { sort_order: 3 }));
 
     const name = screen.getByLabelText('analytics.fields.name');
     fireEvent.change(name, { target: { value: ' Kind of cost ' } });
@@ -157,18 +152,21 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     await waitFor(() => expect(mocked.updateAnalyticsAxis).toHaveBeenCalledWith('ax-nature', { description: 'What the money buys' }));
   });
 
-  it('refuses a malformed code or order under its field without saving', async () => {
+  it('refuses a malformed code under its field without saving', async () => {
     renderAt('/master-data/analytics/dimensions/ax-nature/overview');
     const code = await screen.findByLabelText('analytics.fields.code');
     fireEvent.change(code, { target: { value: 'Kind of cost' } });
     fireEvent.blur(code);
     const message = await screen.findByText('analytics.messages.codeInvalid');
     expect(code.closest('.MuiFormControl-root')).toContainElement(message);
-    const order = screen.getByLabelText('analytics.fields.order');
-    fireEvent.change(order, { target: { value: '1.5' } });
-    fireEvent.blur(order);
-    expect(await screen.findByText('analytics.messages.orderInvalid')).toBeInTheDocument();
     expect(mocked.updateAnalyticsAxis).not.toHaveBeenCalled();
+  });
+
+  it('shows no Order field: the dimensions are reordered from the chip bar', async () => {
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    await screen.findByLabelText('analytics.fields.code');
+    expect(screen.queryByLabelText('analytics.fields.order')).toBeNull();
+    expect(screen.queryByText('analytics.fields.order')).toBeNull();
   });
 
   it('keeps a name on the other dimensions: clearing it restores the stored one', async () => {
@@ -292,19 +290,18 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     expect(navigateMock).toHaveBeenLastCalledWith('/master-data/analytics?axis=ax-nature');
   });
 
-  it('creates with an explicit button, the code proposed from the name and the dimension placed last', async () => {
+  it('creates with an explicit button and the code proposed from the name, with no position (the server places it last)', async () => {
     mocked.createAnalyticsAxis.mockResolvedValue({ ...NATURE, id: 'ax-new' });
     renderAt('/master-data/analytics/dimensions/new/overview');
     expect(screen.queryByRole('complementary')).toBeNull();
     fireEvent.change(screen.getByLabelText('analytics.fields.name'), { target: { value: 'Nature de coût' } });
     expect(screen.getByLabelText('analytics.fields.code')).toHaveValue('nature-de-cout');
-    expect(screen.getByLabelText('analytics.fields.order')).toHaveValue('2');
+    expect(screen.queryByLabelText('analytics.fields.order')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.createAnalyticsAxis).toHaveBeenCalledWith({
       code: 'nature-de-cout',
       name: 'Nature de coût',
       description: null,
-      sort_order: 2,
       applies_to: null,
       required: false,
     }));

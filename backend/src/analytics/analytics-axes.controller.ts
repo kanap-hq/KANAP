@@ -5,7 +5,7 @@ import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
 import { Tenant, TenantRequest } from '../common/decorators';
 import { AnalyticsAxesService } from './analytics-axes.service';
 import { ANALYTICS_READERS, analyticsContext } from './analytics-categories.controller';
-import { AnalyticsAxisCreateDto, AnalyticsAxisUpdateDto } from './dto/analytics.dto';
+import { AnalyticsAxisCreateDto, AnalyticsAxisReorderDto, AnalyticsAxisUpdateDto } from './dto/analytics.dto';
 
 @UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('analytics-axes')
@@ -16,6 +16,13 @@ export class AnalyticsAxesController {
   @Get()
   list(@Tenant() ctx: TenantRequest) {
     return this.svc.list(analyticsContext(ctx));
+  }
+
+  // The order of the dimensions (same permission as PATCH :id), before the `:id` routes.
+  @RequireLevel('analytics', 'member')
+  @Post('reorder')
+  reorder(@Body() body: AnalyticsAxisReorderDto, @Tenant() ctx: TenantRequest) {
+    return this.svc.reorder(body?.axis_ids, analyticsContext(ctx));
   }
 
   @RequireLevel('analytics', 'reader')

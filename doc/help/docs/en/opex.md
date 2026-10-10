@@ -60,7 +60,7 @@ The OPEX list (at **Budget management > OPEX**) is your main view for browsing, 
   - **Effective start**: Start date
   - **End of validity**: Date the item stops (blank means no end)
   - **IT owner** / **Business owner**: Responsible users
-  - **Analytics dimensions**: One column per enabled dimension used for OPEX lines, named after it, with the item's value. The default dimension's column comes first (**Analytics dimension** until it is renamed), then the other dimensions in their order
+  - **Analytics dimensions**: One column per enabled dimension used for OPEX lines, named after it, with the item's value, in the order of the dimensions. The default dimension's column reads **Analytics dimension** until it is renamed
   - **Cost center**: The code and name of the cost center. Hover it to see its full path in the tree; click it to open the cost center
   - **Budget holder**: The budget holder of the item's cost center. It is derived from the cost center, not stored on the item: change the budget holder of a cost center and every item on it follows
   - **Run or build**: **Run** or **Build**

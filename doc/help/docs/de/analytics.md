@@ -29,7 +29,7 @@ Die Standarddimension hat eine besondere Rolle:
 - Sie gilt immer für OPEX- und CAPEX-Zeilen: Ihr Feld **Verwendet für** ist gesperrt. Siehe [OPEX- oder CAPEX-Dimensionen](#opex-oder-capex-dimensionen).
 - Sie kann weder deaktiviert noch gelöscht werden. Ihr Arbeitsbereich hat keine Schaltfläche **Löschen**, und eine Zeile unter **Lebenszyklus** nennt den Grund: „Diese Dimension kann weder deaktiviert noch gelöscht werden: Ältere Dateien und Fragen an die KI verwenden sie.“
 - Fragen an Plaid zur Analysekategorie verwenden sie. Siehe [Analysedimensionen in Plaid](#analysedimensionen-in-plaid). In einer Budgetdatei hat jede Dimension ihre eigene Spalte, die Standarddimension eingeschlossen: Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md).
-- Sie bleibt die Standarddimension, wenn Sie sie umbenennen oder ihren Code oder ihre Reihenfolge ändern.
+- Sie bleibt die Standarddimension, wenn Sie sie umbenennen, ihren Code ändern oder sie in der Reihenfolge der Dimensionen verschieben.
 - Ihre Bezeichnung ist reserviert: Keine andere Dimension kann „Analysedimension“ heißen, und das gilt für jede Sprache der App.
 
 ---
@@ -55,6 +55,7 @@ Unter dem Titel zeigt ein graues Band Ihre Dimensionen in ihrer Reihenfolge, mit
 - Klicken Sie auf eine Schaltfläche, um die Werte dieser Dimension aufzulisten. Die ausgewählte Schaltfläche ist gefüllt. Die Seitenadresse speichert Ihre Wahl, sodass ein gespeicherter Link mit derselben Dimension öffnet. Ohne Wahl öffnet die Seite mit der Standarddimension.
 - Rechts im Band öffnet **Bearbeiten** den Arbeitsbereich der ausgewählten Dimension. Wenn Sie Dimensionen nur lesen dürfen, heißt die Schaltfläche **Öffnen**.
 - **Neu** daneben erstellt eine Dimension (erfordert `analytics:member`).
+- **Neu ordnen** legt die Reihenfolge der Dimensionen fest (erfordert `analytics:member`). Die Schaltfläche ist deaktiviert, solange es nur eine Dimension gibt. Siehe [Dimensionen ordnen](#dimensionen-ordnen).
 
 Mit einer einzigen Dimension zeigt das Band eine Schaltfläche und die Werte.
 
@@ -100,12 +101,11 @@ Klicken Sie in der Auswahlleiste auf **Neu**, füllen Sie die Felder aus und kli
 
 - **Name** ist Pflicht.
 - **Code** wird aus dem Namen vorgeschlagen: Kleinbuchstaben, ohne Akzente, Leerzeichen durch `-` ersetzt. Sie können ihn ändern, bevor Sie die Dimension erstellen.
-- **Reihenfolge** wird so vorgeschlagen, dass die neue Dimension zuletzt kommt.
 - **Verwendet für** beginnt mit **OPEX und CAPEX**. Siehe [OPEX- oder CAPEX-Dimensionen](#opex-oder-capex-dimensionen).
 - **Erforderlich** ist zu Beginn ausgeschaltet. Siehe [Erforderliche Dimensionen](#erforderliche-dimensionen).
 - **Beschreibung** ist optional.
 
-Kehren Sie dann zur Seite zurück, um die Werte der neuen Dimension hinzuzufügen.
+Eine neue Dimension kommt in der Reihenfolge der Dimensionen an die letzte Stelle. Kehren Sie dann zur Seite zurück, um ihre Werte hinzuzufügen.
 
 ### Der Dimensions-Arbeitsbereich
 
@@ -113,9 +113,9 @@ Kehren Sie dann zur Seite zurück, um die Werte der neuen Dimension hinzuzufüge
 
 - **Kopfzeile**: der Name der Dimension. Klicken Sie darauf, um die Dimension umzubenennen. **Zurück** / **Weiter** bewegen sich durch die Dimensionen in ihrer Reihenfolge, und die Schließen-Schaltfläche führt zur Seite mit dieser Dimension zurück
 - **Hauptbereich**: eine Nutzungszeile, zum Beispiel „12 Werte, verwendet von 27 OPEX-Zeilen und 2 CAPEX-Zeilen.“, dann die **Beschreibung**
-- **Bereich Eigenschaften** rechts: **Name**, **Code**, **Reihenfolge**, **Verwendet für**, **Erforderlich** und **Lebenszyklus**
+- **Bereich Eigenschaften** rechts: **Name**, **Code**, **Verwendet für**, **Erforderlich** und **Lebenszyklus**
 
-**Automatisches Speichern**: Jede Änderung wird von selbst gespeichert. Es gibt keine Schaltfläche zum Speichern. Textfelder werden gespeichert, wenn Sie sie verlassen (drücken Sie in **Name**, **Code** und **Reihenfolge** Enter, um sofort zu speichern); der Schalter **Erforderlich** und der Lebenszyklus werden gespeichert, sobald Sie sie ändern. Wird eine Änderung abgelehnt, erscheint der Grund unter dem Feld, das sie verursacht hat, zum Beispiel ein doppelter Code unter **Code**. Ein in der Kopfzeile abgelehnter Name wird oben auf der Seite angezeigt.
+**Automatisches Speichern**: Jede Änderung wird von selbst gespeichert. Es gibt keine Schaltfläche zum Speichern. Textfelder werden gespeichert, wenn Sie sie verlassen (drücken Sie in **Name** und **Code** Enter, um sofort zu speichern); der Schalter **Erforderlich** und der Lebenszyklus werden gespeichert, sobald Sie sie ändern. Wird eine Änderung abgelehnt, erscheint der Grund unter dem Feld, das sie verursacht hat, zum Beispiel ein doppelter Code unter **Code**. Ein in der Kopfzeile abgelehnter Name wird oben auf der Seite angezeigt.
 
 ### Felder einer Dimension
 
@@ -123,11 +123,31 @@ Kehren Sie dann zur Seite zurück, um die Werte der neuen Dimension hinzuzufüge
 |---|---|
 | **Name** | Bis zu 200 Zeichen. Namen sind unabhängig von Groß- und Kleinschreibung eindeutig. Pflicht, außer bei der Standarddimension: Lassen Sie ihn dort leer, um „Analysedimension“ in der Sprache jeder Person anzuzeigen. Die Bezeichnung der Standarddimension ist in jeder Sprache der App reserviert („Analytics dimension“, „Dimension analytique“, „Analysedimension“, „Dimensión analítica“), unabhängig von Groß- und Kleinschreibung: Eine andere Dimension mit einem dieser Namen wird mit „This name is reserved for the default dimension.“ abgelehnt |
 | **Code** | 1 bis 40 Zeichen: Kleinbuchstaben, Ziffern, `-` oder `_`, beginnend mit einem Buchstaben oder einer Ziffer. Jeder Code ist eindeutig. Der Code benennt die Spalte der Dimension in den OPEX- und CAPEX-CSV-Dateien, sodass eine Änderung des Codes diesen Spaltennamen ändert. Budgetzeilen behalten ihre Werte, wenn sich der Code ändert |
-| **Reihenfolge** | Eine ganze Zahl. Dimensionen werden nach dieser Zahl sortiert, die kleinste zuerst: auf dieser Seite, auf Budgetzeilen, in den Berichtsfiltern und in der Dimensionsauswahl des Berichts |
 | **Beschreibung** | Wofür die Dimension da ist, damit Teammitglieder Zeilen einheitlich klassifizieren |
 | **Verwendet für** | **OPEX und CAPEX**, **Nur OPEX** oder **Nur CAPEX**. Legt fest, welche Budgetzeilen einen Wert in dieser Dimension haben können. Siehe [OPEX- oder CAPEX-Dimensionen](#opex-oder-capex-dimensionen). Bei der Standarddimension gesperrt, mit einer Zeile darunter: „Die Standarddimension gilt für OPEX- und CAPEX-Zeilen.“ |
 | **Erforderlich** | Ein Schalter. Ist er eingeschaltet, braucht jede neue Zeile der Arten, für die die Dimension verwendet wird, einen Wert in ihr, und eine Zeile mit einem Wert kann ihn nicht mehr verlieren. Siehe [Erforderliche Dimensionen](#erforderliche-dimensionen). Auch die Standarddimension kann erforderlich sein |
 | **Lebenszyklus** | Der Statusschalter, dessen Beschriftung den aktuellen Zustand zeigt (**Aktiviert** oder **Deaktiviert**), und das Datum **Ende der Gültigkeit**. Siehe [Status und Lebenszyklus](#status-und-lebenszyklus). Bei der Standarddimension gesperrt, mit einer Zeile darunter: „Diese Dimension kann weder deaktiviert noch gelöscht werden: Ältere Dateien und Fragen an die KI verwenden sie.“ |
+
+### Dimensionen ordnen
+
+Die Dimensionen haben eine Reihenfolge, die Sie festlegen. KANAP zeigt sie in dieser Reihenfolge:
+
+- in der Auswahlleiste dieser Seite
+- im Bereich **Eigenschaften** von OPEX- und CAPEX-Positionen
+- in den Spalten der OPEX- und CAPEX-Listen
+- in den Spalten der Budgetdatei
+- in den Berichtsfiltern und in der Dimensionsauswahl des Berichts
+- in den Dimensionen, die Plaid auflistet
+
+Eine neue Dimension kommt an die letzte Stelle.
+
+So ändern Sie die Reihenfolge:
+
+1. Klicken Sie in der Auswahlleiste auf **Neu ordnen**. Der Dialog listet alle Dimensionen, auch deaktivierte und solche für nur eine Zeilenart, jeweils mit ihren Vermerken (**Standard**, **Deaktiviert**, **Nur OPEX**, **Nur CAPEX**).
+2. Ziehen Sie die Dimensionen an ihren Platz, mit der Maus oder mit der Tastatur. Die Tasten sind dieselben wie bei den Werten: Siehe [Werte ordnen](#werte-ordnen).
+3. Klicken Sie auf **Speichern**. **Abbrechen** lässt die Reihenfolge, wie sie war.
+
+Die neue Reihenfolge erscheint sofort. Das [Audit-Protokoll](admin.md#audit-protokoll) erfasst eine Änderung für jede verschobene Dimension, mit ihrer Position vorher und nachher.
 
 ### OPEX- oder CAPEX-Dimensionen
 
@@ -364,7 +384,7 @@ Nur `name` ist eine Pflichtspalte. Fehlt die Spalte `description`, `status`, `di
 | Stufe | Was sie erlaubt |
 |---|---|
 | `analytics:reader` | Die Seite Analysedimensionen ansehen und Dimensionen und Werte öffnen |
-| `analytics:member` | Dimensionen und Werte erstellen und bearbeiten, die Reihenfolge der Werte festlegen |
+| `analytics:member` | Dimensionen und Werte erstellen und bearbeiten, die Reihenfolge der Dimensionen und Werte festlegen |
 | `analytics:admin` | Alles oben Genannte, dazu CSV-Import und -Export sowie Löschen |
 
 Die integrierte Rolle Budget-Administrator ist admin, Budget-Mitglied ist member und Budget-Leser ist reader. Wer OPEX, CAPEX oder Reporting lesen kann, sieht die Dimensionen und ihre Werte auf Budgetzeilen, in den Listen und in den Berichten, ohne Zugriff auf diese Seite zu haben.

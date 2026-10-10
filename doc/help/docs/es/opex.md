@@ -60,7 +60,7 @@ La lista OPEX (en **Gestión presupuestaria > OPEX**) es su vista principal para
   - **Inicio efectivo**: Fecha de inicio
   - **Fin de validez**: Fecha en que la partida termina (en blanco significa sin fin)
   - **Responsable IT** / **Responsable de negocio**: Usuarios responsables
-  - **Dimensiones analíticas**: Una columna por dimensión activada usada para las líneas OPEX, con el nombre de la dimensión y el valor de la partida. La columna de la dimensión por defecto va primero (**Dimensión analítica** hasta que se le da un nombre) y después las demás dimensiones en su orden
+  - **Dimensiones analíticas**: Una columna por dimensión activada usada para las líneas OPEX, con el nombre de la dimensión y el valor de la partida, en el orden de las dimensiones. La columna de la dimensión por defecto se titula **Dimensión analítica** hasta que se le da un nombre
   - **Centro de coste**: El código y el nombre del centro de coste. Pase el cursor por encima para ver su ruta completa en el árbol; haga clic para abrir el centro de coste
   - **Responsable del presupuesto**: El responsable del presupuesto del centro de coste de la partida. Se deriva del centro de coste y no se almacena en la partida: cambie el responsable del presupuesto de un centro de coste y todas sus partidas lo siguen
   - **Run o build**: **Run** o **Build**

@@ -615,6 +615,7 @@
     "openDimension": "Open {{name}}",
     "markedDimension": "{{name}}, {{marks}}",
     "disabledMark": "Disabled",
+    "defaultMark": "Default",
     "enableToAddValues": "Enable this dimension to add values.",
     "export": "Export values",
     "import": "Import values",
@@ -626,6 +627,19 @@
       "saveFailed": "Failed to save the order.",
       "roleDescription": "movable value",
       "instructions": "To move a value, press Space or Enter, move it with the arrow keys, then press Space or Enter to drop it. Escape cancels.",
+      "pickedUp": "Picked up {{name}}.",
+      "movedTo": "{{name}} is at position {{position}} of {{count}}.",
+      "droppedAt": "{{name}} dropped at position {{position}} of {{count}}.",
+      "cancelled": "{{name}} is back in its place."
+    },
+    "reorderDimensions": {
+      "action": "Reorder dimensions",
+      "title": "Reorder dimensions",
+      "hint": "Drag the dimensions into the order screens, lists and the budget file should show them.",
+      "loadFailed": "Failed to load the dimensions.",
+      "saveFailed": "Failed to save the order.",
+      "roleDescription": "movable dimension",
+      "instructions": "To move a dimension, press Space or Enter, move it with the arrow keys, then press Space or Enter to drop it. Escape cancels.",
       "pickedUp": "Picked up {{name}}.",
       "movedTo": "{{name}} is at position {{position}} of {{count}}.",
       "droppedAt": "{{name}} dropped at position {{position}} of {{count}}.",
@@ -649,7 +663,6 @@
       "code": "Used as the column name in CSV files: analytics:{{code}}. Changing it changes the column name.",
       "codeDefault": "Older files use the column analytics_category for this dimension; analytics:{{code}} works too.",
       "codeCreate": "Used as the column name in CSV files. Lowercase letters, digits, - or _.",
-      "order": "Dimensions are listed by this number, lowest first.",
       "defaultLocked": "This dimension cannot be disabled or deleted: older files and AI questions use it.",
       "appliesToDefault": "The default dimension applies to OPEX and CAPEX lines.",
       "valueDimensionAppliesTo": {
@@ -726,7 +739,6 @@
       "nameRequired": "Enter a name.",
       "codeRequired": "Enter a code.",
       "codeInvalid": "Use lowercase letters, digits, - or _ (40 at most).",
-      "orderInvalid": "Enter a whole number.",
       "dimensionRequired": "Choose a dimension."
     }
   },

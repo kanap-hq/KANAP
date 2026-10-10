@@ -31,8 +31,7 @@ import {
 import { compactListSearchCached, filtersNeedContext, listFiltersOf, getWithListContext } from '../lib/listContext';
 import { isReportView, markReportView, snapshotFilters, useSettledListSearch, writeListSnapshot } from '../hooks/useListContextSearch';
 import { useBudgetColumns } from '../hooks/useBudgetColumns';
-import { useAnalyticsAxes } from '../hooks/useAnalyticsAxes';
-import { analyticsFieldKey } from '../services/analytics';
+import { analyticsListColumns, useAnalyticsAxes } from '../hooks/useAnalyticsAxes';
 import { readStoredOpexListContext, writeStoredOpexListContext } from './opex/listContextStorage';
 import { statusScopeParams } from '../utils/statusScopeParams';
 import { useLocale } from '../i18n/useLocale';
@@ -759,14 +758,9 @@ function OpexListPageView() {
         />
       ),
     },
-    // The default dimension keeps its column id, so saved layouts, links and AI filters still find it;
-    // every other enabled dimension follows it, in dimension order.
-    ...[
-      { field: 'analytics_category_name', label: defaultAnalyticsLabel },
-      ...analyticsAxes.enabled
-        .filter((axis) => !axis.is_default)
-        .map((axis) => ({ field: analyticsFieldKey(axis.id), label: analyticsAxes.label(axis) })),
-    ].map(({ field, label }): EnhancedColDef<SummaryRow> => ({
+    // One column per enabled dimension, in dimension order. The default dimension keeps its column
+    // id wherever it stands, so saved layouts, links and AI filters still find it.
+    ...analyticsListColumns(analyticsAxes, defaultAnalyticsLabel).map(({ field, label }): EnhancedColDef<SummaryRow> => ({
       colId: field,
       headerName: label,
       valueGetter: (p) => (p.data as Record<string, unknown> | undefined)?.[field] ?? '',

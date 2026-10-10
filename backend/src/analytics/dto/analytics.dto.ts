@@ -65,6 +65,14 @@ export class AnalyticsAxisUpdateDto extends StatusLifecycleDto {
   required?: boolean;
 }
 
+/** The order of the dimensions; the service checks the ids (they must be the tenant's dimensions). */
+export class AnalyticsAxisReorderDto {
+  @IsArray()
+  @ArrayMaxSize(1000)
+  @IsString({ each: true })
+  axis_ids!: string[];
+}
+
 export class AnalyticsCategoryCreateDto extends StatusLifecycleDto {
   @IsOptional()
   @IsUUID()

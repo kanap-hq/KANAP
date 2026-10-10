@@ -29,7 +29,7 @@ The default dimension has a special role:
 - It always applies to OPEX and CAPEX lines: its **Used for** field is locked. See [OPEX or CAPEX dimensions](#opex-or-capex-dimensions).
 - It cannot be disabled or deleted. Its workspace has no **Delete** button, and one line under **Lifecycle** says why: "This dimension cannot be disabled or deleted: older files and AI questions use it."
 - Questions to Plaid about the analytics category use it. See [Analytics dimensions in Plaid](#analytics-dimensions-in-plaid). In a budget file each dimension has its own column, the default one included: see [Load a budget from a spreadsheet](budget-file.md).
-- It stays the default dimension when you rename it, change its code or change its order.
+- It stays the default dimension when you rename it, change its code or move it in the order of the dimensions.
 - Its label is reserved: no other dimension can be named "Analytics dimension", in any of the app's languages.
 
 ---
@@ -55,6 +55,7 @@ Under the title, a grey band shows your dimensions in order, with one square tog
 - Click a toggle to list the values of that dimension. The selected toggle is filled. The page address keeps your choice, so a bookmarked link opens on the same dimension. Without a choice, the page opens on the default dimension.
 - On the right of the band, **Edit** opens the workspace of the selected dimension. If you can only read dimensions, the button reads **Open**.
 - **New**, next to it, creates a dimension (requires `analytics:member`).
+- **Reorder** sets the order of the dimensions (requires `analytics:member`). The button is disabled while there is only one dimension. See [Ordering dimensions](#ordering-dimensions).
 
 With a single dimension, the band shows one toggle and the values.
 
@@ -100,12 +101,11 @@ Click **New** in the selector bar, fill in the fields, then click **Create**. Th
 
 - **Name** is required.
 - **Code** is proposed from the name: lowercase, accents removed, spaces replaced by `-`. You can change it before you create the dimension.
-- **Order** is proposed so the new dimension comes last.
 - **Used for** starts on **OPEX and CAPEX**. See [OPEX or CAPEX dimensions](#opex-or-capex-dimensions).
 - **Required** starts off. See [Required dimensions](#required-dimensions).
 - **Description** is optional.
 
-Then go back to the page to add the values of the new dimension.
+A new dimension goes last in the order of the dimensions. Then go back to the page to add its values.
 
 ### The dimension workspace
 
@@ -113,9 +113,9 @@ Open it with **Edit** (**Open** if you can only read) in the selector bar, with 
 
 - **Header**: the name of the dimension. Click it to rename the dimension. **Prev** / **Next** move through the dimensions in order, and the close button returns to the page on this dimension
 - **Main area**: a usage line, for example "12 values, used by 27 OPEX lines and 2 CAPEX lines.", then the **Description**
-- **Properties panel** on the right: **Name**, **Code**, **Order**, **Used for**, **Required** and **Lifecycle**
+- **Properties panel** on the right: **Name**, **Code**, **Used for**, **Required** and **Lifecycle**
 
-**Autosave**: Every change saves on its own. There is no Save button. Text fields save when you leave them (in **Name**, **Code** and **Order**, press Enter to save at once); the **Required** switch and the lifecycle save as soon as you change them. When a change is refused, the reason shows under the field that caused it, for example a duplicate code under **Code**. A name refused in the header shows at the top of the page.
+**Autosave**: Every change saves on its own. There is no Save button. Text fields save when you leave them (in **Name** and **Code**, press Enter to save at once); the **Required** switch and the lifecycle save as soon as you change them. When a change is refused, the reason shows under the field that caused it, for example a duplicate code under **Code**. A name refused in the header shows at the top of the page.
 
 ### Dimension fields
 
@@ -123,11 +123,31 @@ Open it with **Edit** (**Open** if you can only read) in the selector bar, with 
 |---|---|
 | **Name** | Up to 200 characters. Names are unique regardless of case. Required, except on the default dimension: leave it empty there to show "Analytics dimension" in each person's language. The default dimension's label is reserved in every app language ("Analytics dimension", "Dimension analytique", "Analysedimension", "Dimensión analítica"), regardless of case: another dimension with one of these names is refused with "This name is reserved for the default dimension." |
 | **Code** | 1 to 40 characters: lowercase letters, digits, `-` or `_`, starting with a letter or a digit. Each code is unique. The code names the dimension's column in the OPEX and CAPEX CSV files, so changing it changes that column name. Budget lines keep their values when the code changes |
-| **Order** | A whole number. Dimensions are listed by this number, lowest first: on this page, on budget lines, in the report filters and in the report's dimension picker |
 | **Description** | What the dimension is for, so teammates classify lines the same way |
 | **Used for** | **OPEX and CAPEX**, **OPEX only** or **CAPEX only**. Says which budget lines can have a value on this dimension. See [OPEX or CAPEX dimensions](#opex-or-capex-dimensions). Locked on the default dimension, with one line under it: "The default dimension applies to OPEX and CAPEX lines." |
 | **Required** | A switch. When it is on, every new line of the kinds the dimension is used for needs a value on it, and a line that holds a value cannot lose it. See [Required dimensions](#required-dimensions). The default dimension can be required too |
 | **Lifecycle** | The status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle). Locked on the default dimension, with one line under it: "This dimension cannot be disabled or deleted: older files and AI questions use it." |
+
+### Ordering dimensions
+
+The dimensions have an order, which you set. KANAP shows them in this order:
+
+- in the selector bar of this page
+- in the **Properties** panel of OPEX and CAPEX items
+- in the OPEX and CAPEX list columns
+- in the columns of the budget file
+- in the report filters and the report's dimension picker
+- in the dimensions Plaid lists
+
+A new dimension goes last.
+
+To change the order:
+
+1. Click **Reorder** in the selector bar. The dialog lists every dimension, disabled ones and dimensions for one kind of line included, each with its marks (**Default**, **Disabled**, **OPEX only**, **CAPEX only**).
+2. Drag the dimensions into place, with the mouse or with the keyboard. The keys are the same as for values: see [Ordering values](#ordering-values).
+3. Click **Save**. **Cancel** leaves the order as it was.
+
+The new order shows at once. The [Audit log](admin.md#audit-log) records one change for each dimension that moved, with its position before and after.
 
 ### OPEX or CAPEX dimensions
 
@@ -364,7 +384,7 @@ Only `name` is a required column. When the `description`, `status`, `disabled_at
 | Level | What it allows |
 |---|---|
 | `analytics:reader` | View the Analytics dimensions page and open dimensions and values |
-| `analytics:member` | Create dimensions and values, edit them and set the order of values |
+| `analytics:member` | Create dimensions and values, edit them and set the order of dimensions and values |
 | `analytics:admin` | Everything above, plus CSV import and export, and deletion |
 
 The built-in Budget Administrator role is admin, Budget Member is member and Budget Reader is reader. Anyone who can read OPEX, CAPEX or reporting sees the dimensions and their values on budget lines, in the lists and in the reports, without access to this page.

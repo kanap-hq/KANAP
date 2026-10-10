@@ -271,6 +271,15 @@ export class AnalyticsCategoriesCsvService {
       // The existing values first, in id order, before any write takes a dimension lock (`persist`):
       // the lock order of every value write, so a concurrent reorder never deadlocks with the import.
       await this.categories.lockValues(ctx, toWrite.flatMap((row) => (row.existing ? [row.existing.id] : [])));
+      // Then every dimension `persist` will lock, in id order: a reorder of the dimensions locks
+      // them all in that order, so an import spanning several dimensions never deadlocks with it.
+      const axisIds = [...new Set(toWrite.filter((row) => !row.existing || row.values.applies_to !== null).map((row) => row.values.axis_id))];
+      if (axisIds.length > 1) {
+        await ctx.manager.query(
+          `SELECT id FROM analytics_axes WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR SHARE`,
+          [ctx.tenantId, axisIds],
+        );
+      }
       for (const row of toWrite) {
         await this.categories.persist(ctx, row.existing, row.values, { name: row.axisName });
       }
