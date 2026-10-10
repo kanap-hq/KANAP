@@ -59,6 +59,8 @@ export type AiFilterFieldDef = {
   aggregable?: boolean;
   aliases?: string[];
   acceptedValueKind?: string;
+  /** Date field that also takes `[null]`: rows with no date. */
+  blankable?: boolean;
   lookupEntity?: AiQueryEntityType;
   examples?: string[];
   doesNotAccept?: string[];

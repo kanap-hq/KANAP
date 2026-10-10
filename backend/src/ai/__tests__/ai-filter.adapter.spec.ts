@@ -6,6 +6,7 @@ import { requestsRegistry } from '../query/registries/requests.registry';
 import { incidentsRegistry } from '../query/registries/incidents.registry';
 import { spendItemsRegistry } from '../query/registries/spend-items.registry';
 import { companiesRegistry } from '../query/registries/companies.registry';
+import { applicationsRegistry } from '../query/registries/applications.registry';
 
 function testSetFilterAdaptation() {
   const adapted = adaptFilters(tasksRegistry, {
@@ -137,8 +138,30 @@ function testExcludeSetFilter() {
   assert.deepEqual(tasks.ignored, ['status']);
 }
 
+function testApplicationLifecycleExcludeOnly() {
+  // The Compliance tile scope: every lifecycle but retired. Other application set columns keep refusing it.
+  const adapted = adaptFilters(applicationsRegistry, { lifecycle: { not: ['retired'] }, criticality: { not: ['low'] } } as any);
+  assert.deepEqual(adapted.filters, { lifecycle: { filterType: 'set', mode: 'exclude', values: ['retired'] } });
+  assert.deepEqual(adapted.applied, ['lifecycle']);
+  assert.deepEqual(adapted.ignored, ['criticality']);
+}
+
+function testBlankableDateFilter() {
+  const adapted = adaptFilters(applicationsRegistry, { last_dr_test: [null] } as any);
+  assert.deepEqual(adapted.filters, { last_dr_test: { filterType: 'date', type: 'blank' } });
+  assert.deepEqual(adapted.applied, ['last_dr_test']);
+  const before = adaptFilters(applicationsRegistry, { last_dr_test: { op: 'before', value: '2025-10-11' } });
+  assert.deepEqual(before.filters, { last_dr_test: { filterType: 'date', type: 'lessThan', dateFrom: '2025-10-11' } });
+  // A date field that is not blankable, or a value that is not only null, is reported as not applied.
+  assert.deepEqual(adaptFilters(projectsRegistry, { planned_start: [null] } as any).ignored, ['planned_start']);
+  assert.deepEqual(adaptFilters(applicationsRegistry, { last_dr_test: [null, '2025-01-01'] } as any).ignored, ['last_dr_test']);
+  assert.deepEqual(adaptFilters(applicationsRegistry, { last_dr_test: [] } as any).ignored, ['last_dr_test']);
+}
+
 function run() {
   testExcludeSetFilter();
+  testApplicationLifecycleExcludeOnly();
+  testBlankableDateFilter();
   testSetFilterAdaptation();
   testStringToSetFilterAdaptation();
   testDateFilterAdaptation();

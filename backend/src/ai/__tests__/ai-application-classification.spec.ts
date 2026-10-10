@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { ConflictException } from '@nestjs/common';
 import { applicationsRegistry } from '../query/registries/applications.registry';
 import { adaptFilters } from '../query/ai-filter.adapter';
+import { compileAgFilterCondition, createParamNameGenerator } from '../../common/ag-grid-filtering';
 import { classificationSqlExpressions } from '../../it-ops-settings/classification-sql';
 import { catalogFromMetadata } from '../../it-ops-settings/classification-catalog';
 import { AiBusinessRecordMutationSupportService } from '../mutation/ai-business-record-mutation-support.service';
@@ -150,6 +151,26 @@ function testRegistryFiltersSortingAggregationAndSql() {
   assert.match(applicationsRegistry.aggregate!.metricFields.cyber_criticality_rank.expression, /tenants classification_tenant/);
 }
 
+function testLastRecoveryTestFilterSortAndMetric() {
+  const field = applicationsRegistry.fields.last_dr_test;
+  assert.deepEqual([field.type, field.grid, field.sortable, field.aggregable, field.blankable], ['date', 'last_dr_test', true, true, true]);
+  assert.equal(applicationsRegistry.sortFields.last_dr_test, 'last_dr_test');
+  assert.deepEqual(applicationsRegistry.aggregate.metricFields?.last_dr_test, { expression: `to_char(a.last_dr_test, 'YYYY-MM-DD')`, type: 'date' });
+  // The list compiles the adapted filters on its last_dr_test target: no test, then a test on or before one year ago.
+  const target = { expression: 'a.last_dr_test', textExpression: 'CAST(a.last_dr_test AS TEXT)', dataType: 'string' as const };
+  const blank = adaptFilters(applicationsRegistry, { last_dr_test: [null] } as any).filters.last_dr_test;
+  assert.equal(compileAgFilterCondition(blank, target, createParamNameGenerator())?.sql, 'a.last_dr_test IS NULL');
+  const before = adaptFilters(applicationsRegistry, { last_dr_test: { op: 'before', value: '2025-10-11' } }).filters.last_dr_test;
+  assert.deepEqual(compileAgFilterCondition(before, target, createParamNameGenerator()), {
+    sql: 'CAST(a.last_dr_test AS DATE) < CAST(:p0 AS DATE)', params: { p0: '2025-10-11' },
+  });
+  // Retired scope of the Compliance tile, as an exclude filter on lifecycle.
+  const lifecycle = adaptFilters(applicationsRegistry, { lifecycle: { not: ['retired'] } } as any).filters.lifecycle;
+  assert.deepEqual(compileAgFilterCondition(lifecycle, { expression: 'a.lifecycle', dataType: 'string' }, createParamNameGenerator()), {
+    sql: 'NOT COALESCE((a.lifecycle IN (:...p0)), FALSE)', params: { p0: ['retired'] },
+  });
+}
+
 async function testCreateAndUpdatePreviews() {
   const { service, context: executionContext } = mutationHarness();
   const create = await service.prepareCreatePreview(executionContext as any, {
@@ -217,6 +238,7 @@ async function testExecutionControlsConflictsAndUndoInputs() {
 async function main() {
   await testFullTenantCatalogAndToolPermission();
   testRegistryFiltersSortingAggregationAndSql();
+  testLastRecoveryTestFilterSortAndMetric();
   await testCreateAndUpdatePreviews();
   await testExecutionControlsConflictsAndUndoInputs();
 }
