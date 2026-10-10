@@ -6,6 +6,7 @@ topic: cost
 author: Friedrich
 authorRole: Fondateur, DSI
 draft: false
+updated: 2026-10-10
 translationKey: it-cost-chargeback-made-simple
 ---
 
@@ -50,9 +51,13 @@ Toutes les clés de répartition sont possibles :
 - **Chiffre d'affaires** : quand la contribution suit la taille économique de l'entité.
 - **Manuel par société** : pour allouer des coûts à une ou plusieurs sociétés en particulier (et toujours : par effectif, par nombre d'utilisateurs IT, par CA).
 - **Manuel par département** : pour allouer des coûts à un ou plusieurs départements en particulier, par effectif uniquement.
-- **Manuel** : pour une liberté d'allocation totale, mais vous devez calculer manuellement les pourcentages.
+- **Pourcentages manuels** : pour une liberté d'allocation totale ; vous saisissez les pourcentages, qui doivent totaliser 100 %, ou vous les répartissez équitablement d'un clic.
 
-Pour éviter de tout reparamétrer chaque année, l'outil « Copier les ventilations » reporte ces règles d'un exercice à l'autre, simulation comprise. La ventilation suit donc le budget sans ressaisie.
+Pour éviter de tout reparamétrer chaque année, l'outil « Copier les ventilations » reporte ces règles d'un exercice à l'autre, pour l'OPEX comme pour le CAPEX, simulation comprise. La ventilation suit donc le budget sans ressaisie.
+
+### Ne pas confondre avec les centres de coûts
+
+Les centres de coûts disent qui porte une ligne et en répond : chaque centre a son responsable budgétaire, et leurs groupes permettent de lire le budget d'une direction entière. Ils n'ont aucun effet sur la refacturation. Une licence portée par le centre de coûts « Infrastructure » peut très bien être refacturée à toutes les sociétés à l'effectif.
 
 ## Les rapports de refacturation
 
@@ -90,7 +95,7 @@ C'est souvent là que se trouvent des pistes sérieuses d'économie, et c'est co
 
 ## Et le CAPEX ?
 
-Les investissements utilisent le même onglet Ventilations et la même mécanique. Un projet financé pour une seule filiale se répartit vers cette filiale, le reste suit la méthode choisie. Les rapports de refacturation couvrent les deux enveloppes, OPEX et CAPEX.
+Les investissements utilisent le même onglet Ventilations et la même mécanique. Un projet financé pour une seule filiale se répartit vers cette filiale, le reste suit la méthode choisie. Les deux rapports de refacturation, eux, portent sur l'OPEX : c'est la dépense récurrente qu'on refacture d'une année sur l'autre.
 
 ## Par où commencer
 
