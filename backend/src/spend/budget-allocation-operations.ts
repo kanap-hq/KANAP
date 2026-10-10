@@ -9,6 +9,7 @@ import { SpendVersion } from './spend-version.entity';
 import { ensureBudgetVersion } from './budget-version-ensure';
 import { lockBudgetLines, lockBudgetVersions, lockTenantBudgetOperations } from './budget-locks';
 import { auditTableOf } from './budget-nature';
+import { presentChild } from './budget-line-presentation';
 
 /**
  * Copy allocations from one year to another, for OPEX and CAPEX alike.
@@ -263,7 +264,7 @@ export async function copyAllocations(
       destinationVersion = ensured.version;
       if (ensured.created) {
         await deps.audit.log(
-          { table: auditTableOf(scope, t.versions), recordId: destinationVersion.id, action: 'create', before: null, after: destinationVersion, userId },
+          { table: auditTableOf(scope, t.versions), recordId: destinationVersion.id, action: 'create', before: null, after: presentChild(scope, destinationVersion), userId },
           { manager: mg },
         );
       }

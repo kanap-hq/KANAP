@@ -41,6 +41,7 @@ import { activeMonths } from './spread.util';
 import { ensureBudgetVersion } from './budget-version-ensure';
 import { lockBudgetLines, lockBudgetVersions, lockTenantBudgetOperations } from './budget-locks';
 import { assertScopeNatures, auditTableOf, natureAnd, type BudgetNature } from './budget-nature';
+import { presentChild } from './budget-line-presentation';
 
 /**
  * Budget column operations (copy a column to another year or column, clear a
@@ -313,7 +314,7 @@ export async function createBudgetVersion(
   const { version, created } = ensured;
   if (created) {
     await deps.audit.log(
-      { table: auditTableOf(scope, SCOPES[scope].versions), recordId: version.id, action: 'create', before: null, after: version, userId },
+      { table: auditTableOf(scope, SCOPES[scope].versions), recordId: version.id, action: 'create', before: null, after: presentChild(scope, version), userId },
       { manager: deps.manager },
     );
   }

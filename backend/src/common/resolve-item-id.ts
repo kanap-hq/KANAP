@@ -84,6 +84,12 @@ const CAPEX_BY_NUMBER = `SELECT id FROM spend_items
 const LINE_NATURE: Partial<Record<EntityType, 'opex' | 'capex'>> = { spend: 'opex', capex: 'capex' };
 
 /**
+ * The 404 for the UUID of a line of the other nature: what the type's routes answer for a line
+ * that does not exist (the CAPEX routes' "CAPEX item not found", kept as before lot Z1).
+ */
+const OTHER_NATURE_NOT_FOUND: Partial<Record<EntityType, string>> = { spend: 'Item not found', capex: 'CAPEX item not found' };
+
+/**
  * Resolve an item reference (UUID, prefixed ref like T-1, or plain number) to a UUID.
  * Item numbers are per tenant: the lookup filters on the request's tenant
  * (`app_current_tenant()`, the session tenant the request transaction sets from
@@ -106,7 +112,7 @@ export async function resolveToUuid(
         `SELECT 1 FROM spend_items WHERE tenant_id = app_current_tenant() AND id = $1 AND nature <> $2 LIMIT 1`,
         [parsed.value, nature],
       );
-      if (other.length > 0) throw new NotFoundException('Item not found');
+      if (other.length > 0) throw new NotFoundException(OTHER_NATURE_NOT_FOUND[entityType] ?? 'Item not found');
     }
     return parsed.value;
   }

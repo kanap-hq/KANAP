@@ -24,6 +24,7 @@ import { lineImportTables } from '../budget-import-statistics';
 import { auditTableOf } from '../budget-nature';
 import { lockCsvCostCenters } from '../item-write.util';
 import type { CsvDateOrder, CsvLanguage, DecimalMark } from '../../common/csv-sheet';
+import { presentChild } from '../budget-line-presentation';
 
 /** The load refuses the file when a counter moved after the preflight. */
 export const PREFLIGHT_STALE = 'Some lines changed since the preflight. Run the preflight again.';
@@ -423,7 +424,7 @@ async function createVersion(
   }
   if (ensured.created) {
     await input.audit.log(
-      { table: auditLabel(input.scope, 'versions'), recordId: ensured.version.id, action: 'create', before: null, after: ensured.version, userId: input.userId, source: 'budget_file' },
+      { table: auditLabel(input.scope, 'versions'), recordId: ensured.version.id, action: 'create', before: null, after: presentChild(input.scope, ensured.version), userId: input.userId, source: 'budget_file' },
       { manager: input.manager },
     );
   }

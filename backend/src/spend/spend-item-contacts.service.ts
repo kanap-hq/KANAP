@@ -31,7 +31,7 @@ export class SpendItemContactsService {
   ) {}
 
   private get itemNotFound(): string {
-    return this.nature === 'capex' ? 'CAPEX item not found' : 'Spend item not found';
+    return this.nature === 'capex' ? 'Capex item not found' : 'Spend item not found';
   }
 
   private getLinkRepo(manager?: EntityManager) {

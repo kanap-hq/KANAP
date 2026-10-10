@@ -190,6 +190,31 @@ async function testCapexSpread(runner: { query: Function; manager: EntityManager
   );
   assert.equal('updated' in result && result.updated, 1);
   assert.equal(await amountSum(runner, 'spend_amounts', versionId), '50');
+
+  // A year with no version yet: the load creates it, audited under the CAPEX label and shape
+  // (the line as capex_item_id, as the CAPEX routes show a version).
+  const twoYears = await service.exportFile('capex', [itemId], caller, { language: 'en', amountYears: '2026,2027', columns: 'budget', detail: 'yearly' });
+  const [headerLine, rowLine] = twoYears.content.replace(/^\uFEFF/, '').split(/\r?\n/);
+  assert.ok(!rowLine.includes('"'), `a plain row to edit (${rowLine})`);
+  const cells = rowLine.split(',');
+  cells[headerLine.split(',').indexOf('budget_2027')] = '30';
+  const nextYear = cells.join(',');
+  const nextFile = twoYears.content.replace(rowLine, nextYear);
+  const nextPreflight = await service.preflight('capex', Buffer.from(nextFile), caller, {
+    language: 'en', dateOrder: '', createSuppliers: false, canCreateSuppliers: false,
+  });
+  await service.importFile(
+    'capex', Buffer.from(nextFile), nextPreflight.snapshot, caller,
+    { language: 'en', dateOrder: '', createSuppliers: false, canCreateSuppliers: false },
+    { items: { create: async () => { throw new Error('no line created'); }, update: async () => { throw new Error('no line updated'); } }, audit, freeze: noFreeze },
+  );
+  const [created] = await runner.query(
+    `SELECT a.table_name, a.after_json FROM audit_log a JOIN spend_versions v ON v.id = a.record_id
+      WHERE a.tenant_id = $1 AND v.spend_item_id = $2 AND v.budget_year = 2027 AND a.action = 'create'`,
+    [tenantId, itemId],
+  );
+  assert.equal(created?.table_name, 'capex_versions', 'the created version is audited as a CAPEX version');
+  assert.deepEqual([created.after_json.capex_item_id, 'spend_item_id' in created.after_json], [itemId, false], 'naming its line capex_item_id');
 }
 
 /**

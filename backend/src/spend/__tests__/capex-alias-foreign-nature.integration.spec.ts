@@ -316,6 +316,21 @@ async function testRoutes() {
         `${label}: the OPEX user ${tasksRoute ? 'passes the tasks guard (and gets the 404 above)' : 'is stopped by the guard'}`);
     }
 
+    // The 404 of an OPEX line's UUID reads as the CAPEX routes' "not found" of before, the same as
+    // for a line that does not exist; the contact routes keep their own text of before.
+    const missing = randomUUID();
+    const notFound: Array<[string, () => Promise<unknown>, string]> = [
+      ['the detail of an OPEX line', () => items.get(O.id, ctx), 'CAPEX item not found'],
+      ['the detail of no line', () => items.get(missing, ctx), 'CAPEX item not found'],
+      ['the versions of an OPEX line', () => versions.listForItem(O.id, req), 'CAPEX item not found'],
+      ['a contact attached to no line', () => items.attachContact(missing, { contactId: w.contactId, role: 'technical' }, ctx), 'Capex item not found'],
+      ['the supplier sync of no line', () => items.syncContactsFromSupplier(missing, ctx), 'Capex item not found'],
+    ];
+    for (const [label, call, message] of notFound) {
+      const answer = await statusOf(runner, call);
+      assert.deepEqual([answer.status, (answer.body as any)?.message], [404, message], `${label}: 404 "${message}"`);
+    }
+
     // An OPX reference is refused by the CAPEX routes as before lot Z1 (400, the reference's form), saying nothing of the line.
     const opx = await statusOf(runner, () => items.get(`OPX-${OPEX_NUMBER}`, ctx));
     assert.deepEqual([opx.status, (opx.body as any).message], [400, `Invalid reference for capex: expected CPX-N, got OPX-${OPEX_NUMBER}`], 'OPX-n on a CAPEX route');
