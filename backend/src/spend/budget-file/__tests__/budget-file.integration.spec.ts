@@ -38,7 +38,7 @@ import { readBudgetCsv } from '../interpret';
 import { ITEM_TABLE, itemService, seedCompany, seedCostCenter, seedUser } from '../../__tests__/cost-center.fixtures';
 import { BUDGET_FILE_OPTIONS, budgetFileService, exportBudgetFile, fileRows, loadBudgetFile, preflightBudgetFile, withCell } from '../../__tests__/budget-file.fixtures';
 import { upsertRoundInput } from '../../round-inputs.util';
-import { ensureDefaultAnalyticsAxis } from '../../../analytics/analytics-axes.util';
+import { ANALYTICS_VALUE_ORDER_SQL, ensureDefaultAnalyticsAxis } from '../../../analytics/analytics-axes.util';
 import { lockTenantBudgetOperations } from '../../budget-locks';
 
 // The loader against the schema. The transaction rolls back, so this writes nothing that stays.
@@ -824,6 +824,35 @@ async function testRequiredDimensionCells(runner: { query: Function; manager: En
 }
 
 /**
+ * The values a load creates go last in their dimension, in file order (not by name), with
+ * consecutive positions after the dimension's highest; the values already there keep theirs.
+ */
+async function testNewDimensionValuesGoLast(runner: { query: Function; manager: EntityManager }, kind: Kind) {
+  const tenantId = await seedTenant(runner as any, `csv-d3-order-${kind}`);
+  await seedCompany(runner as any, tenantId, 'File company');
+  await ensureDefaultAnalyticsAxis(runner.manager, tenantId);
+  const [{ id: menu }] = await runner.query(
+    `INSERT INTO analytics_axes (tenant_id, code, name, sort_order) VALUES ($1, 'menu', 'Menu', 1) RETURNING id`,
+    [tenantId],
+  );
+  await runner.query(
+    `INSERT INTO analytics_categories (tenant_id, axis_id, name, sort_order) VALUES ($1, $2, 'Fromage', 2), ($1, $2, 'Dessert', 1)`,
+    [tenantId, menu],
+  );
+  await loadBudgetFile(runner.manager, kind, tenantId, csvOf(newLineColumns(kind, ['analytics:menu']), [
+    newLine(kind, 'Alpha', { 'analytics:menu': 'Zakouski' }),
+    newLine(kind, 'Bravo', { 'analytics:menu': 'fromage' }),
+    newLine(kind, 'Charlie', { 'analytics:menu': 'Apéritif' }),
+    newLine(kind, 'Delta', { 'analytics:menu': 'Zakouski' }),
+  ]));
+  const order = (await runner.query(
+    `SELECT c.name, c.sort_order FROM analytics_categories c WHERE c.tenant_id = $1 AND c.axis_id = $2 ORDER BY ${ANALYTICS_VALUE_ORDER_SQL}`,
+    [tenantId, menu],
+  )).map((row: { name: string; sort_order: number }) => `${row.sort_order} ${row.name}`);
+  assert.deepEqual(order, ['1 Dessert', '2 Fromage', '3 Zakouski', '4 Apéritif'], `${kind}: new values last, in file order`);
+}
+
+/**
  * Owners, accounts and the currency against the tenant's data: an owner email
  * must name an enabled user of this tenant (another tenant's user, a disabled,
  * invited or contact user is a row error, and nothing of the file is written,
@@ -1115,6 +1144,7 @@ async function main() {
       await testCostCenterCells(runner, kind);
       await testDimensionCells(runner, kind);
       await testRequiredDimensionCells(runner, kind);
+      await testNewDimensionValuesGoLast(runner, kind);
     }
     await testOwnersAccountsAndCurrency(runner);
     await setTenant(runner, tenantId);

@@ -1,4 +1,5 @@
 import { EntityManager } from 'typeorm';
+import { ICU_COLLATION } from '../common/list-engine/sql-fragments';
 import { isActiveAt } from '../common/status';
 import { AxisAppliesTo } from './analytics-axis.entity';
 
@@ -43,6 +44,13 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 export function analyticsFieldKey(axisId: string): string {
   return `${ANALYTICS_FIELD_PREFIX}${axisId}`;
 }
+
+/**
+ * The order of a dimension's values everywhere they are offered (`c` is `analytics_categories`):
+ * the manual position, then the name in ICU order (the pickers' and the list engine's text order,
+ * whatever the database's own collation), then the id.
+ */
+export const ANALYTICS_VALUE_ORDER_SQL = `c.sort_order ASC, c.name COLLATE ${ICU_COLLATION} ASC, c.id ASC`;
 
 /** The axis id when the field is `analytics_<uuid>`, else null. */
 export function parseAnalyticsFieldKey(field: string): string | null {

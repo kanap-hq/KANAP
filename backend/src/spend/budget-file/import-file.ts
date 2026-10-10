@@ -798,10 +798,13 @@ async function createDimensionValues(
   }
   const rows = Array.from(wanted.values());
   if (rows.length === 0) return ids;
+  // New values go last in their dimension, in file order: positions after the dimension's highest.
   const inserted: Array<{ id: string; axis_id: string; name: string }> = await manager.query(
-    `INSERT INTO analytics_categories (tenant_id, axis_id, name, status)
-     SELECT $1, n.axis_id, n.name, 'enabled'::status_state
-       FROM unnest($2::uuid[], $3::text[]) AS n(axis_id, name)
+    `INSERT INTO analytics_categories (tenant_id, axis_id, name, status, sort_order)
+     SELECT $1, n.axis_id, n.name, 'enabled'::status_state,
+            coalesce((SELECT max(c.sort_order) FROM analytics_categories c WHERE c.tenant_id = $1 AND c.axis_id = n.axis_id), 0)
+              + row_number() OVER (PARTITION BY n.axis_id ORDER BY n.ord)
+       FROM unnest($2::uuid[], $3::text[]) WITH ORDINALITY AS n(axis_id, name, ord)
      ON CONFLICT (tenant_id, axis_id, lower(name)) DO NOTHING
      RETURNING id::text AS id, axis_id::text AS axis_id, name`,
     [tenantId, rows.map((row) => row.axisId), rows.map((row) => row.name)],

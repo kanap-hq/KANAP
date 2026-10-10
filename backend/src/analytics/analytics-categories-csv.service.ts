@@ -15,7 +15,13 @@ import {
 } from '../common/csv-sheet';
 import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
 import { AnalyticsContext, normalizeAnalyticsDescription, normalizeAnalyticsName } from './analytics-context';
-import { analyticsAxisSubject, isAxisActive, loadAnalyticsAxes, resolveDefaultAxisId } from './analytics-axes.util';
+import {
+  ANALYTICS_VALUE_ORDER_SQL,
+  analyticsAxisSubject,
+  isAxisActive,
+  loadAnalyticsAxes,
+  resolveDefaultAxisId,
+} from './analytics-axes.util';
 import {
   AnalyticsCategoriesService,
   AnalyticsCategoryValues,
@@ -77,8 +83,9 @@ export class AnalyticsCategoriesCsvService {
       const axes = await loadAnalyticsAxes(ctx.manager, ctx.tenantId);
       const order = new Map(axes.map((axis, index) => [axis.id, index]));
       const codeById = new Map(axes.map((axis) => [axis.id, axis.code]));
+      // The dimensions in their order, each dimension's values in theirs (a stable sort keeps the latter).
       const values: StoredAnalyticsCategory[] = await ctx.manager.query(
-        `SELECT * FROM analytics_categories WHERE tenant_id = $1 ORDER BY lower(name) ASC, id ASC`,
+        `SELECT * FROM analytics_categories c WHERE c.tenant_id = $1 ORDER BY ${ANALYTICS_VALUE_ORDER_SQL}`,
         [ctx.tenantId],
       );
       values.sort((a, b) => (order.get(a.axis_id) ?? 0) - (order.get(b.axis_id) ?? 0));

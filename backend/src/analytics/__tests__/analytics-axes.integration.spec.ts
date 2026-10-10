@@ -709,7 +709,7 @@ async function testValueAppliesTo() {
       values.list({ axis_id: nature.id, filters: JSON.stringify({ applies_to: { filterType: 'set', values: valuesOf } }) }, ctx);
     assert.deepEqual(names(await filtered(['capex'])), ['Matériel']);
     assert.deepEqual(names(await filtered([''])), ['Abonnements SaaS 2', 'Divers'], 'blank is OPEX and CAPEX');
-    assert.deepEqual(names(await filtered([null, 'opex'])), ['Abonnements SaaS 2', 'Divers', 'Licences']);
+    assert.deepEqual(names(await filtered([null, 'opex'])), ['Licences', 'Abonnements SaaS 2', 'Divers'], 'in the dimension order');
     assert.equal(((await values.list({ axis_id: nature.id }, ctx)).items.find((item) => item.id === hardware.id) as any)?.applies_to, 'capex');
     assert.deepEqual(
       names(await values.list({ axis_id: nature.id, sort: 'applies_to:ASC' }, ctx)).slice(0, 2),

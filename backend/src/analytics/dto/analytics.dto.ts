@@ -102,6 +102,17 @@ export class AnalyticsCategoryUpdateDto extends StatusLifecycleDto {
   applies_to?: AxisAppliesTo | null;
 }
 
+/** The order of a dimension's values; the service checks the ids (they must be values of `axis_id`). */
+export class AnalyticsCategoryReorderDto {
+  @IsString()
+  axis_id!: string;
+
+  @IsArray()
+  @ArrayMaxSize(10000)
+  @IsString({ each: true })
+  value_ids!: string[];
+}
+
 export class AnalyticsCategoryBulkDeleteDto {
   @IsArray()
   @ArrayMaxSize(1000)
