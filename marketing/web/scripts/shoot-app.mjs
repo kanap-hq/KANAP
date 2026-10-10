@@ -296,6 +296,48 @@ const PAGES = {
       await sleep(1500); // let the chart redraw
     },
   },
+  // Compliance article (October 2026): application classification, fromage fixture (#487).
+  'compliance-tab': {
+    path: '/it/applications/APP-8/compliance', // SAP S/4HANA: V1, interface to a V2 application
+    waitFor: 'main',
+    async prepare(page) {
+      await openProperties(page);
+      await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('planned in V'), { timeout: 30000 });
+      await sleep(1000);
+    },
+  },
+  'compliance-catalog': {
+    path: '/it/settings',
+    waitFor: 'main',
+    async prepare(page) {
+      // Opens the editor only; nothing is saved.
+      await page.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Edit catalog'), { timeout: 20000 });
+      await clickText(page, 'button', 'Edit catalog');
+      await page.waitForSelector('.MuiDialog-paper', { timeout: 15000 });
+      await sleep(1500);
+    },
+  },
+  'compliance-tile': { path: '/', waitFor: 'main', prepare: waitForWidgets },
+  'compliance-applications': {
+    path: '/it/applications',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      // Classification columns in, unrelated ones out (column choice is kept in localStorage only).
+      await clickText(page, 'button', 'Choose columns');
+      await page.waitForSelector('.MuiPopover-paper', { timeout: 10000 });
+      for (const label of ['Environments', 'Publisher', 'Derived users (Y)', 'Created', 'Cyber criticality', 'Recovery wave', 'RTO', 'RPO', 'Data class', 'Classification review']) {
+        await clickText(page, '.MuiPopover-paper label', label);
+      }
+      await page.keyboard.press('Escape');
+      await sleep(800);
+      // Two clicks: most critical first.
+      for (let i = 0; i < 2; i++) {
+        await page.click('.ag-header-cell[col-id="criticality"] .ag-header-cell-label').catch(() => console.warn('criticality header not found'));
+        await sleep(1200);
+      }
+    },
+  },
   // Budget feature page (October 2026): --out public/screenshots.
   'budget-opex-grid': {
     path: '/ops/opex',
