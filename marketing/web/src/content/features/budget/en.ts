@@ -8,7 +8,7 @@ const content: FeatureContent = {
   },
   header: {
     eyebrow: 'IT budget',
-    title: 'Your IT budget, out of spreadsheets and linked to your whole landscape.',
+    title: 'Your IT budget, from landing to next year, linked to your applications.',
     lead: 'Multi-year OPEX and CAPEX, expected landing and next-year budget, chargeback to companies and departments, staffing and cost per FTE. Every line links to its applications, contracts and projects: you know what you pay for, and why.',
   },
   sections: [
@@ -81,7 +81,7 @@ const content: FeatureContent = {
     ],
   },
   cta: {
-    title: 'See your IT budget fit in one record.',
+    title: 'Try KANAP on a complete IT budget.',
     body: 'Try hosted KANAP with sample data, or deploy it for free on your own servers.',
     primary: 'Deploy for free',
     secondary: 'Try it with sample data',

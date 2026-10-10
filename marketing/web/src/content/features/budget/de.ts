@@ -8,7 +8,7 @@ const content: FeatureContent = {
   },
   header: {
     eyebrow: 'IT-Budget',
-    title: 'Das IT-Budget, raus aus Excel und mit Ihrer ganzen IT-Landschaft verknüpft.',
+    title: 'Das IT-Budget, von der Hochrechnung bis zum Folgejahr, mit Ihren Anwendungen verknüpft.',
     lead: 'OPEX und CAPEX über mehrere Jahre, Hochrechnung und Budget des Folgejahres, Verrechnung an Gesellschaften und Abteilungen, Personal und Kosten pro FTE. Jede Zeile ist mit ihren Anwendungen, Verträgen und Projekten verknüpft: Sie wissen, wofür Sie zahlen, und warum.',
   },
   sections: [
@@ -81,7 +81,7 @@ const content: FeatureContent = {
     ],
   },
   cta: {
-    title: 'Sehen Sie Ihr IT-Budget in einem einzigen Datenbestand.',
+    title: 'Testen Sie KANAP mit einem vollständigen IT-Budget.',
     body: 'Testen Sie die gehostete Version mit Beispieldaten oder stellen Sie KANAP kostenlos auf Ihren eigenen Servern bereit.',
     primary: 'Kostenlos bereitstellen',
     secondary: 'Mit Beispieldaten testen',

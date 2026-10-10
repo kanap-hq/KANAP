@@ -8,7 +8,7 @@ const content: FeatureContent = {
   },
   header: {
     eyebrow: 'Budget IT',
-    title: "Le budget de la DSI, sorti d'Excel et relié à tout votre SI.",
+    title: "Le budget IT, de l'atterrissage au budget N+1, relié à vos applications.",
     lead: "OPEX et CAPEX sur plusieurs années, atterrissage et budget N+1, refacturation aux sociétés et aux départements, effectifs et coût par ETP. Chaque ligne est reliée à ses applications, ses contrats et ses projets : on sait ce que l'on paie, et pourquoi.",
   },
   sections: [
@@ -81,7 +81,7 @@ const content: FeatureContent = {
     ],
   },
   cta: {
-    title: 'Voyez votre budget IT tenir dans un seul référentiel.',
+    title: 'Essayez KANAP sur un budget IT complet.',
     body: "Essayez la version hébergée avec des données d'exemple, ou déployez KANAP gratuitement chez vous.",
     primary: 'Déployer gratuitement',
     secondary: "Essayer avec des données d'exemple",

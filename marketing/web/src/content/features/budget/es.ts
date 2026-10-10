@@ -8,7 +8,7 @@ const content: FeatureContent = {
   },
   header: {
     eyebrow: 'Presupuesto de TI',
-    title: 'El presupuesto de TI, fuera de Excel y vinculado a todos sus sistemas.',
+    title: 'El presupuesto de TI, del cierre previsto al año siguiente, vinculado a sus aplicaciones.',
     lead: 'OPEX y CAPEX plurianuales, cierre previsto y presupuesto del año siguiente, repercusión a sociedades y departamentos, plantilla y coste por FTE. Cada línea está vinculada a sus aplicaciones, contratos y proyectos: sabe lo que paga, y por qué.',
   },
   sections: [
@@ -81,7 +81,7 @@ const content: FeatureContent = {
     ],
   },
   cta: {
-    title: 'Vea su presupuesto de TI en un solo repositorio.',
+    title: 'Pruebe KANAP con un presupuesto de TI completo.',
     body: 'Pruebe la versión alojada con datos de ejemplo, o despliegue KANAP gratis en sus propios servidores.',
     primary: 'Desplegar gratis',
     secondary: 'Probar con datos de ejemplo',

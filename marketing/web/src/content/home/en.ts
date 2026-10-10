@@ -9,8 +9,8 @@ const content: HomeContent = {
 
   hero: {
     eyebrow: 'Open source · built by a CIO, for CIOs',
-    title: 'Your IT budget, landscape and projects, in one governed record.',
-    lead: 'The IT budget leaves the spreadsheet and links to what justifies it: applications, contracts, projects. Landscape, portfolio and documentation share the same data, and Plaid, the built-in AI agent, answers across all of it. Open source, free to self-host.',
+    title: 'IT budget, applications and projects in one governed record.',
+    lead: 'An application carries its budget, its documentation, its projects and its compliance data. Ask Plaid, the built-in AI agent, about all of it. Open source, free to self-host.',
     primaryCta: 'Try it with sample data',
     secondaryCta: 'Deploy for free',
     trialNote: 'Hosted trial · sample data loaded in a minute · AGPL v3, full source on GitHub.',
@@ -18,9 +18,9 @@ const content: HomeContent = {
 
   layers: {
     eyebrow: 'IT budget',
-    title: 'The IT budget, out of spreadsheets.',
+    title: 'Your IT budget, without the spreadsheet.',
     intro:
-      'Multi-year OPEX and CAPEX, in columns you name: budget, revision, expected landing. Every version can be copied, compared and frozen. No more copied tabs and broken formulas.',
+      'Multi-year OPEX and CAPEX, in columns you name: budget, revision, expected landing. Copy a version to next year, compare it with the previous one, freeze it once approved.',
     items: [
       {
         title: 'Landing and next-year budget',
@@ -35,7 +35,7 @@ const content: HomeContent = {
         body: 'Declare FTE on the lines that carry people: KANAP derives monthly staffing and cost per FTE, as an amount or a daily rate, next to the amounts.',
       },
     ],
-    outro: 'And because every line links to the rest of the record, the budget is no longer a list of amounts: it is the map of what IT runs.',
+    outro: 'Every line is attached to its application, contract or project: from the budget, you find what IT runs and what each piece costs.',
   },
 
   pillars: {
@@ -148,7 +148,7 @@ const content: HomeContent = {
     eyebrow: 'Built for the enterprise',
     title: 'One system, under your control.',
     intro:
-      'The modules share the same data: that is what gives IT real governance, and what lets AI help without putting your environment at risk.',
+      'The modules share the same data, the same permissions and the same audit log: a change prepared by Plaid is recorded like any other.',
     items: [
       {
         title: 'Rich relationships',

@@ -9,8 +9,8 @@ const content: HomeContent = {
 
   hero: {
     eyebrow: 'Open source · diseñada por un CIO, para los CIO',
-    title: 'El presupuesto, los sistemas y los proyectos de TI, en un solo repositorio.',
-    lead: 'El presupuesto de TI sale de la hoja de cálculo y se vincula a lo que lo justifica: aplicaciones, contratos, proyectos. Mapa de sistemas, portafolio y documentación comparten los mismos datos, y Plaid, el agente de IA integrado, responde sobre todo ello. Open source, gratis en autoalojamiento.',
+    title: 'Presupuesto de TI, aplicaciones y proyectos en un único repositorio.',
+    lead: 'Una aplicación reúne su presupuesto, su documentación, sus proyectos y sus datos de cumplimiento. Pregunte a Plaid, el agente de IA integrado, sobre todo ello. Software libre, gratis en autoalojamiento.',
     primaryCta: 'Probar con datos de ejemplo',
     secondaryCta: 'Desplegar gratis',
     trialNote: 'Prueba de la versión alojada · datos de ejemplo cargados en un minuto · AGPL v3, código fuente completo en GitHub.',
@@ -18,9 +18,9 @@ const content: HomeContent = {
 
   layers: {
     eyebrow: 'Presupuesto de TI',
-    title: 'El presupuesto de TI, fuera de Excel.',
+    title: 'Su presupuesto de TI, sin hoja de cálculo.',
     intro:
-      'OPEX y CAPEX plurianuales, en columnas que usted nombra: presupuesto, revisión, cierre previsto. Cada versión se copia, se compara y se congela. Se acabaron las pestañas copiadas y las fórmulas rotas.',
+      'OPEX y CAPEX plurianuales, en columnas que usted nombra: presupuesto, revisión, cierre previsto. Copie una versión al año siguiente, compárela con la anterior y congélela una vez aprobada.',
     items: [
       {
         title: 'Cierre previsto y presupuesto del año siguiente',
@@ -35,7 +35,7 @@ const content: HomeContent = {
         body: 'Declare los FTE en las líneas que los llevan: KANAP deduce la plantilla mensual y el coste por FTE, en importe o en tarifa diaria, junto a los importes.',
       },
     ],
-    outro: 'Y como cada línea está vinculada al resto del repositorio, el presupuesto deja de ser una lista de importes: es el mapa de lo que TI hace funcionar.',
+    outro: 'Cada línea está vinculada a su aplicación, su contrato o su proyecto: desde el presupuesto se ve lo que TI hace funcionar y lo que cuesta cada cosa.',
   },
 
   pillars: {
@@ -148,7 +148,7 @@ const content: HomeContent = {
     eyebrow: 'Pensada para la empresa',
     title: 'Un solo sistema, bajo su control.',
     intro:
-      'Los módulos comparten los mismos datos: eso da a TI una gobernanza real y permite que la IA ayude sin poner en riesgo su entorno.',
+      'Los módulos comparten los mismos datos, los mismos permisos y el mismo registro de auditoría: un cambio preparado por Plaid queda registrado como cualquier otro.',
     items: [
       {
         title: 'Relaciones completas',
