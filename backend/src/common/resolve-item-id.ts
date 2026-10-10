@@ -24,7 +24,9 @@ const ALSO_ACCEPTED_PREFIXES: Partial<Record<EntityType, readonly string[]>> = {
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ITEM_REF_RE = /^(T|PRJ|REQ|DOC|OPX|CPX|BL|INC|CTR)-(\d+)$/i;
+const ITEM_REF_RE = /^(T|PRJ|REQ|DOC|OPX|CPX|INC|CTR)-(\d+)$/i;
+/** A reference with a prefix only some types accept (`BL-n`): another type reads it as malformed. */
+const OTHER_REF_RE = /^([A-Z]+)-(\d+)$/i;
 
 export type ParsedItemRef =
   | { type: 'uuid'; value: string }
@@ -43,6 +45,10 @@ export function parseItemRef(raw: string, expectedType: EntityType): ParsedItemR
       );
     }
     return { type: 'item_number', value: parseInt(m[2], 10), prefix };
+  }
+  const other = raw.match(OTHER_REF_RE);
+  if (other && ALSO_ACCEPTED_PREFIXES[expectedType]?.includes(other[1].toUpperCase())) {
+    return { type: 'item_number', value: parseInt(other[2], 10), prefix: other[1].toUpperCase() };
   }
 
   // Also accept plain numbers

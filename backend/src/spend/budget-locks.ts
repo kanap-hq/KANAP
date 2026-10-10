@@ -60,17 +60,20 @@ function versionNature(t: (typeof TABLES)[AmountScope]): string {
   return linkedLineOf(`${t.versions}.tenant_id`, `${t.versions}.${t.itemFk}`, t.nature, t.items);
 }
 
-/** The children of a line a route can address by their own id. */
-export type BudgetLineChild = 'version' | 'attachment' | 'link' | 'contact';
+/**
+ * The children of a line a route addresses by their own id. A contact link is addressed with its
+ * line (`/spend-items/:id/contacts/:linkId`), whose lock names the nature.
+ */
+export type BudgetLineChild = 'version' | 'attachment' | 'link';
 
 // Table names come only from here: never from the caller. Each child names its line in `itemFk`.
 const CHILD_TABLES: Record<AmountScope, Record<BudgetLineChild, string>> = {
-  opex: { version: 'spend_versions', attachment: 'spend_attachments', link: 'spend_links', contact: 'spend_item_contacts' },
-  capex: { version: 'capex_versions', attachment: 'capex_attachments', link: 'capex_links', contact: 'capex_item_contacts' },
+  opex: { version: 'spend_versions', attachment: 'spend_attachments', link: 'spend_links' },
+  capex: { version: 'capex_versions', attachment: 'capex_attachments', link: 'capex_links' },
 };
 
 /**
- * The line a version, attachment, link or contact belongs to, with the line's nature: the one
+ * The line a version, attachment or link belongs to, with the line's nature: the one
  * lookup of every route and function that starts from a child's own id (plan
  * planning/budget-unifie.md, G.7). Null when the child or its line is missing. Reads, never
  * locks: a writer then locks the line, whose lock names the nature too (`lockBudgetLine`).

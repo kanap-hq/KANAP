@@ -7,7 +7,7 @@
  * version, month, attachment, link, contact or analytics value of a line, without the nature.
  * - Every statement that reads or locks `spend_items` names the nature (`natureAnd`, or
  *   `nature` in a TypeORM `where`).
- * - A route or function that starts from the id of a version, attachment, link or contact finds
+ * - A route or function that starts from the id of a version, attachment or link finds
  *   its line through `findBudgetLineOf` / `budgetLineOfChild` (`budget-locks.ts`), or through
  *   a lock that names the nature, before it reads anything else; a line or child of the other
  *   nature answers 404 there, as a line id does (`resolveToUuid`, `common/resolve-item-id.ts`).
