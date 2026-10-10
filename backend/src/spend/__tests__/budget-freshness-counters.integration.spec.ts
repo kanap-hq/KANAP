@@ -126,14 +126,19 @@ async function lineAnalytics(kind: Kind) {
     assert.equal(await bumpOf(rv, () => update({ analytics_values: { [axisId]: null } })), 1, `${kind}: a cleared value bumps`);
     assert.equal(await bumpOf(rv, () => update({ analytics_values: { [axisId]: null } })), 0, `${kind}: clearing an empty value bumps nothing`);
 
-    // The search index holds no analytics value: the line's update that only bumps its counter
-    // (a value written alone, here in SQL: the service also sets the line's updated_at) refreshes nothing.
+    // The line's update that only bumps its counter (as the values' trigger does) refreshes nothing:
+    // the values' own search index trigger (migration 1853940000000) refreshes the line instead.
     const indexed = async () => (await runner.query(`SELECT count(*)::int AS n FROM search_index WHERE entity_type = $1 AND entity_id = $2`, [TABLES[kind].items, itemId]))[0].n;
-    await runner.query(`DELETE FROM search_index WHERE entity_type = $1 AND entity_id = $2`, [TABLES[kind].items, itemId]);
+    const unindex = () => runner.query(`DELETE FROM search_index WHERE entity_type = $1 AND entity_id = $2`, [TABLES[kind].items, itemId]);
+    await unindex();
+    assert.equal(await bumpOf(rv, () => runner.query(`UPDATE ${TABLES[kind].items} SET row_version = row_version + 1 WHERE id = $1`, [itemId])), 1,
+      `${kind}: a counter set alone keeps the value it sets`);
+    assert.equal(await indexed(), 0, `${kind}: a counter-only update of the line does not refresh its search entry`);
     const values = kind === 'opex' ? 'spend_item_analytics_values' : 'capex_item_analytics_values';
     assert.equal(await bumpOf(rv, () => runner.query(`INSERT INTO ${values} (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4)`, [tenantId, itemId, axisId, second])), 1,
       `${kind}: a value written alone bumps its line`);
-    assert.equal(await indexed(), 0, `${kind}: a counter-only update of the line does not refresh its search entry`);
+    assert.equal(await indexed(), 1, `${kind}: a value written alone refreshes the line's search entry (its own trigger)`);
+    await unindex();
     await update({ notes: 'Indexed again' });
     assert.equal(await indexed(), 1, `${kind}: any other update of the line refreshes it`);
 

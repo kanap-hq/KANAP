@@ -405,6 +405,8 @@ const PARTICIPATION_SCOPE_SOURCE_TABLE: Record<ParticipationScopedAiEntityType, 
 // Per-type metadata DTO shape on the indexed path — mirrors the inline
 // metadata objects the legacy searchXxx() helpers build, sourced from
 // search_index.extra_json. Types absent here return metadata: null.
+// Budget lines: `analytics` is "Nature de coût: Matériel; Récurrence: Récurrent", the values they
+// hold on the enabled dimensions of their type (migration 1853940000000), null when none.
 const SEARCH_INDEX_METADATA_KEYS: Partial<Record<AiSearchEntityType, string[]>> = {
   accounts: ['coa_code'],
   applications: [
@@ -412,7 +414,7 @@ const SEARCH_INDEX_METADATA_KEYS: Partial<Record<AiSearchEntityType, string[]>> 
     'version', 'supplier', 'business_owner', 'it_owner',
   ],
   business_processes: ['primary_category'],
-  capex_items: ['paying_company', 'supplier'],
+  capex_items: ['paying_company', 'supplier', 'analytics'],
   companies: ['base_currency'],
   connections: ['source', 'destination'],
   contacts: ['supplier'],
@@ -422,7 +424,7 @@ const SEARCH_INDEX_METADATA_KEYS: Partial<Record<AiSearchEntityType, string[]>> 
   interfaces: ['source_application', 'target_application', 'business_process'],
   projects: ['business_lead', 'it_lead', 'contributors'],
   requests: ['requestor', 'business_lead', 'it_lead', 'contributors'],
-  spend_items: ['supplier', 'paying_company', 'account', 'contract'],
+  spend_items: ['supplier', 'paying_company', 'account', 'contract', 'analytics'],
   suppliers: ['erp_supplier_id'],
   tasks: ['assignee', 'creator'],
   users: [

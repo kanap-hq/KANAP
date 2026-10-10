@@ -224,7 +224,7 @@ async function testIndexedRowsMapToLegacyDtoShape(applicationClassifications: Re
         label: 'License renewal',
         summary: null,
         status: 'active',
-        extra_json: { supplier: 'ACME', paying_company: null, account: null, contract: null },
+        extra_json: { supplier: 'ACME', paying_company: null, account: null, contract: null, analytics: 'Nature: Licences' },
         source_updated_at: updatedAt,
         total_count: 4,
         score: 2,
@@ -289,7 +289,10 @@ async function testIndexedRowsMapToLegacyDtoShape(applicationClassifications: Re
     paying_company: null,
     account: null,
     contract: null,
+    analytics: 'Nature: Licences',
   });
+  // A line without an indexed analytics value has no `analytics` key in extra_json: null.
+  assert.deepEqual(capex.metadata, { paying_company: null, supplier: null, analytics: null });
 }
 
 async function testLegacySearchAllGivesBudgetLineReferences() {
