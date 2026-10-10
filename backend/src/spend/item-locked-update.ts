@@ -7,7 +7,7 @@ import { assertScopeNatures, natureAnd, type BudgetNature } from './budget-natur
 import { findBudgetLine } from './budget-line-presentation';
 import { ItemAnalyticsValue, loadItemAnalyticsValues, writeItemAnalyticsValues } from './item-analytics.util';
 import { assertNoItemEditConflicts } from './item-edit-conflicts';
-import { ItemWriteScope, resolveItemWrite } from './item-write.util';
+import { ItemWriteFields, ItemWriteScope, resolveItemWrite } from './item-write.util';
 import { SpendItem } from './spend-item.entity';
 
 /**
@@ -66,6 +66,8 @@ export async function updateItemUnderLock(
   itemId: string,
   body: unknown,
   now: Date = new Date(),
+  /** How the body names its fields (`item-write.util.ts`): the budget file names the columns. */
+  fields: ItemWriteFields = 'api',
 ): Promise<LockedItemUpdate<ItemRow> | null> {
   if (!(await lockBudgetLine(manager, scope, tenantId, itemId))) return null;
   const nature = LINES[scope].nature!;
@@ -78,7 +80,7 @@ export async function updateItemUnderLock(
   // `base` (lot 3C) is not a column: compared below, never written.
   const { changes, base } = splitEditBase(body);
   // Writable columns only, every id resolved in this tenant, checked against the locked row; see `item-write.util.ts`.
-  const { values, lifecycle: input, analytics } = await resolveItemWrite(manager, scope, changes, before);
+  const { values, lifecycle: input, analytics } = await resolveItemWrite(manager, scope, changes, before, fields);
   let disabledAt: ReturnType<typeof resolveEndOfValidityAlias>;
   try {
     // `disabled_at`, or the deprecated `effective_end` when no end of validity is given (bare date at 12:00 UTC).

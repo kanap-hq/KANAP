@@ -33,6 +33,21 @@ export function natureAnd(alias: string | null, nature: BudgetNature | undefined
   return ` AND ${alias ? `${alias}.` : ''}nature = '${nature}'`;
 }
 
+/**
+ * ` AND <alias>.nature IN (...)`: the predicate of a statement that reads the lines of several
+ * natures at once (the budget file of a caller who may import both, lot C1b). Each value is
+ * checked against the two constants; an empty list reads no line.
+ */
+export function naturesAnd(alias: string | null, natures: readonly BudgetNature[]): string {
+  const column = `${alias ? `${alias}.` : ''}nature`;
+  const unique = Array.from(new Set(natures));
+  for (const nature of unique) {
+    if (nature !== 'opex' && nature !== 'capex') throw new Error(`Unknown budget line nature: ${String(nature)}`);
+  }
+  if (unique.length === 0) return ' AND false';
+  return ` AND ${column} IN (${unique.map((nature) => `'${nature}'`).join(', ')})`;
+}
+
 /** The table of the budget lines: every scope entry that reads it names a nature. */
 export const BUDGET_LINE_TABLE = 'spend_items';
 

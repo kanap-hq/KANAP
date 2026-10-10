@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { SpendItemsService } from './spend-items.service';
+import { CapexItemsService, SpendItemsService } from './spend-items.service';
 import { SpendItemsDeleteService } from './spend-items-delete.service';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -42,6 +42,8 @@ export class SpendItemsController {
     private readonly budgetFile: BudgetFileService,
     private readonly audit: AuditService,
     private readonly freeze: FreezeService,
+    /** The CAPEX lines' service: a budget file may hold lines of both natures, each written by its own (lot C1b). */
+    private readonly capexSvc: CapexItemsService,
   ) {}
 
   /** Every `:id` route takes a UUID or an OPX-N reference; a malformed id is a 400. */
@@ -212,7 +214,7 @@ export class SpendItemsController {
       decimalMark,
       createSuppliers: createSuppliers === 'true' || createSuppliers === '1',
       canCreateSuppliers: canCreateSuppliers(ctx),
-    }, { items: this.svc, audit: this.audit, freeze: this.freeze });
+    }, { items: { opex: this.svc, capex: this.capexSvc }, audit: this.audit, freeze: this.freeze });
     await analyzeAfterLargeImport(req, importAnalyzeTables('opex', result), result);
     return result;
   }

@@ -86,13 +86,12 @@ async function readItem(runner: QueryRunner, kind: Kind, name: string) {
   return { disabled_at: rows[0].disabled_at ? new Date(rows[0].disabled_at).toISOString() : null, status: rows[0].status as string };
 }
 
-/** A budget file of the type: detail columns, then one row per line (`item_number` blank for a new line). */
+/** A budget file: its nature and detail columns, then one row per line (`item_number` blank for a new line, else BL-n). */
 function budgetFile(kind: Kind, rows: Array<{ item?: number; name: string; end: string }>): string {
-  const prefix = kind === 'opex' ? 'OPX' : 'CPX';
-  const header = 'item_number,name,company_name,account_number,currency,effective_start,end_of_validity';
+  const header = 'nature,item_number,name,company_name,account_number,currency,effective_start,end_of_validity';
   const line = (row: { item?: number; name: string; end: string }) => {
-    const number = row.item ? `${prefix}-${row.item}` : '';
-    return `${number},${row.name},${COMPANY},6000,EUR,2019-01-01,${row.end}`;
+    const number = row.item ? `BL-${row.item}` : '';
+    return `${kind},${number},${row.name},${COMPANY},6000,EUR,2019-01-01,${row.end}`;
   };
   return `${header}\n${rows.map(line).join('\n')}\n`;
 }
@@ -117,9 +116,9 @@ async function testBudgetFileEndOfValidity(kind: Kind) {
     assert.deepEqual(await readItem(runner, kind, 'Instant'), { disabled_at: '2031-04-15T08:30:00.000Z', status: 'enabled' }, `${kind} file: a full timestamp is kept`);
     assert.deepEqual(await readItem(runner, kind, 'No end'), { disabled_at: null, status: 'enabled' }, `${kind} file: no date, no end`);
 
-    // The number the file names: a CAPEX line's CPX number (`legacy_number`), an OPEX line's own number.
+    // The number the file names: the line's own number (BL-n), for both natures.
     const numbers: Array<{ n: number; name: string }> = await runner.query(
-      `SELECT ${kind === 'opex' ? 'item_number::int' : `(substring(legacy_number FROM '^CPX-([0-9]+)$'))::int`} AS n, product_name AS name
+      `SELECT item_number::int AS n, product_name AS name
          FROM ${LINES} WHERE tenant_id = $1 AND ${natureIs(kind)} ORDER BY item_number`,
       [tenantId],
     );

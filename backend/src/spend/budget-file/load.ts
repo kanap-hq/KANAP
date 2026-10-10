@@ -1,11 +1,12 @@
 import { EntityManager } from 'typeorm';
-import { AnalyticsAxisInfo, analyticsAxisSubject, axisAppliesTo, loadAnalyticsAxes } from '../../analytics/analytics-axes.util';
+import { loadAnalyticsAxes } from '../../analytics/analytics-axes.util';
 import { toCents } from '../../common/amount';
 import { budgetColumnName, readBudgetColumns } from '../../budget-columns/budget-columns.util';
-import { loadItemAnalyticsValues } from '../item-analytics.util';
-import { assertScopeNatures, lineNumberSql, natureAnd, type BudgetNature } from '../budget-nature';
+import { ItemAnalyticsValue, loadItemAnalyticsValues } from '../item-analytics.util';
+import { BUDGET_NATURES, natureAnd, naturesAnd, type BudgetNature } from '../budget-nature';
 import { AMOUNT_MEASURES } from '../amounts-write.util';
 import { columnOfMeasure } from './columns';
+import { ItemNumberCell } from './interpret';
 import {
   BudgetCatalog,
   BudgetFileScope,
@@ -17,49 +18,22 @@ import {
 
 /**
  * Table and column names come only from here. A request never chooses them.
- * Both natures share the tables (lot Z1) and the shape the file uses; the
- * title is `product_name`. `nature`: every read of the line table names the
- * scope's lines (`budget-nature.ts`); the versions and values are read
- * through those lines. A CAPEX line's number in the file is its CPX number
- * (`lineNumberSql`), as before lot Z1.
+ * Both natures share the tables (lot Z1) and the shape the file uses (lot C1b): the title is
+ * `product_name`, the description `description`, the number the line's own (`BL-n`).
+ * `nature`: every read of the line table names the natures it reads (`budget-nature.ts`): the
+ * route's for an export, the ones the caller may import for a preflight or a load; the versions
+ * and values are read through those lines.
  */
-const SCOPE = {
-  opex: {
-    items: 'spend_items',
-    nature: 'opex' as BudgetNature | undefined,
-    versions: 'spend_versions',
-    amounts: 'spend_amounts',
-    itemFk: 'spend_item_id',
-    name: 'i.product_name',
-    nameColumn: 'product_name',
-    description: 'i.description',
-    analytics: 'opex' as const,
-  },
-  capex: {
-    items: 'spend_items',
-    nature: 'capex' as BudgetNature | undefined,
-    versions: 'spend_versions',
-    amounts: 'spend_amounts',
-    itemFk: 'spend_item_id',
-    name: 'i.product_name',
-    nameColumn: 'product_name',
-    description: 'NULL::text',
-    analytics: 'capex' as const,
-  },
-} as const;
-assertScopeNatures('budget-file load', SCOPE, (t) => t.items);
+const LINES = { items: 'spend_items', versions: 'spend_versions', amounts: 'spend_amounts', itemFk: 'spend_item_id' } as const;
 
-const ITEM_COLUMNS = (scope: BudgetFileScope) => {
-  const t = SCOPE[scope];
-  return `i.id::text AS id, ${lineNumberSql('i', t.nature)}::int AS item_number, i.row_version::int AS row_version,
-    ${t.name} AS name, ${t.description} AS description,
+const ITEM_COLUMNS = `i.id::text AS id, i.nature, i.item_number::int AS item_number, i.legacy_number,
+    i.row_version::int AS row_version, i.product_name AS name, i.description AS description,
     i.paying_company_id::text AS company_id, i.supplier_id::text AS supplier_id,
     i.account_id::text AS account_id, i.cost_center_id::text AS cost_center_id,
     i.run_build::text AS run_build,
     i.owner_it_id::text AS owner_it_id, i.owner_business_id::text AS owner_business_id,
     i.project_id::text AS project_id, btrim(i.currency::text) AS currency,
     to_char(i.effective_start, 'YYYY-MM-DD') AS effective_start, i.disabled_at, i.notes`;
-};
 
 export interface LoadedPreflight {
   catalog: BudgetCatalog;
@@ -69,29 +43,20 @@ export interface LoadedPreflight {
   dimensionCodes: string[];
 }
 
-/**
- * The dimension columns of a file of `scope`: `codes`, the enabled dimensions that apply to its
- * lines (read and exported); `refused`, the enabled ones of the other line type, each with the
- * header error its column gets (the whole file is refused). Unknown and disabled codes keep the
- * reader's unknown dimension error.
- */
-export async function loadFileDimensions(
-  manager: EntityManager,
-  tenantId: string,
-  scope: BudgetFileScope,
-): Promise<{ codes: string[]; refused: Record<string, string> }> {
-  const enabled = (await loadAnalyticsAxes(manager, tenantId)).filter((axis) => axis.status === 'enabled');
-  const refused: Record<string, string> = {};
-  for (const axis of enabled) {
-    if (!axisAppliesTo(axis, scope)) refused[axis.code] = otherTypeColumnMessage(axis, scope);
-  }
-  return { codes: enabled.filter((axis) => axisAppliesTo(axis, scope)).map((axis) => axis.code), refused };
+/** A file's dimension column: its code and the lines it is for. */
+export interface FileDimension {
+  code: string;
+  appliesTo: BudgetNature | null;
 }
 
-/** "The Recurrence dimension is for CAPEX lines only. Remove the analytics:recurrence column from this OPEX file." */
-function otherTypeColumnMessage(axis: AnalyticsAxisInfo, scope: BudgetFileScope): string {
-  return `${analyticsAxisSubject(axis)} is for ${String(axis.applies_to).toUpperCase()} lines only. `
-    + `Remove the analytics:${axis.code} column from this ${scope.toUpperCase()} file.`;
+/**
+ * The dimension columns of a file: every enabled dimension, whatever the lines it is for (a file
+ * holds lines of both natures since lot C1b; a line's own nature decides whether it may hold a
+ * value, `resolveAnalytics`). Unknown and disabled codes keep the reader's unknown dimension error.
+ */
+export async function loadFileDimensions(manager: EntityManager, tenantId: string): Promise<FileDimension[]> {
+  const enabled = (await loadAnalyticsAxes(manager, tenantId)).filter((axis) => axis.status === 'enabled');
+  return enabled.map((axis) => ({ code: axis.code, appliesTo: axis.applies_to ?? null }));
 }
 
 export async function loadColumnLabels(manager: EntityManager, tenantId: string): Promise<Record<string, string>> {
@@ -101,61 +66,86 @@ export async function loadColumnLabels(manager: EntityManager, tenantId: string)
   return labels;
 }
 
+/**
+ * What a preflight compares against: the catalog, and the lines of `natures` (the natures the
+ * caller may import) that the file's numbers name, never a line of another nature.
+ */
 export async function loadPreflight(
   manager: EntityManager,
-  scope: BudgetFileScope,
   tenantId: string,
-  itemNumbers: number[],
+  numbers: ItemNumberCell[],
+  natures: readonly BudgetNature[],
   allowedCurrencies: string[] | null,
 ): Promise<LoadedPreflight> {
   // One connection: the request transaction cannot run these side by side.
-  const catalog = await loadCatalog(manager, tenantId, allowedCurrencies, scope);
-  const names = await loadNames(manager, scope, tenantId);
+  const catalog = await loadCatalog(manager, tenantId, allowedCurrencies);
+  const names = await loadNames(manager, natures, tenantId);
   const labels = await loadColumnLabels(manager, tenantId);
-  const stored = await loadLinesByNumber(manager, scope, tenantId, itemNumbers);
+  const stored = await loadLinesByNumber(manager, natures, tenantId, numbers);
   return { catalog, stored, names, labels, dimensionCodes: catalog.dimensions.map((dimension) => dimension.code) };
 }
 
+/** The lines of an export, of the route's nature only, in the order of `ids`. */
 export async function loadExportLines(
   manager: EntityManager,
   scope: BudgetFileScope,
   tenantId: string,
   ids: readonly string[],
-): Promise<{ lines: StoredLine[]; dimensionCodes: string[]; labels: Record<string, string> }> {
-  const dimensionCodes = (await loadFileDimensions(manager, tenantId, scope)).codes;
+): Promise<{ lines: StoredLine[]; dimensions: FileDimension[]; labels: Record<string, string> }> {
+  const dimensions = await loadFileDimensions(manager, tenantId);
   const labels = await loadColumnLabels(manager, tenantId);
   const lines = await loadLinesById(manager, scope, tenantId, ids);
   const byId = new Map(lines.map((line) => [line.id, line]));
   return {
     lines: ids.map((id) => byId.get(id)).filter((line): line is StoredLine => !!line),
-    dimensionCodes,
+    dimensions,
     labels,
   };
 }
 
-async function loadNames(manager: EntityManager, scope: BudgetFileScope, tenantId: string): Promise<LineHint[]> {
-  const t = SCOPE[scope];
-  const rows: Array<{ item_number: number; name: string; supplier_id: string | null }> = await manager.query(
-    `SELECT ${lineNumberSql('i', t.nature)}::int AS item_number, i.${t.nameColumn} AS name, i.supplier_id::text AS supplier_id
-       FROM ${t.items} i WHERE i.tenant_id = $1${natureAnd('i', t.nature)}`,
+async function loadNames(manager: EntityManager, natures: readonly BudgetNature[], tenantId: string): Promise<LineHint[]> {
+  const rows: Array<{ nature: BudgetNature; item_number: number; name: string; supplier_id: string | null }> = await manager.query(
+    `SELECT i.nature, i.item_number::int AS item_number, i.product_name AS name, i.supplier_id::text AS supplier_id
+       FROM ${LINES.items} i WHERE i.tenant_id = $1${naturesAnd('i', natures)}`,
     [tenantId],
   );
-  return rows.map((row) => ({ itemNumber: Number(row.item_number), name: row.name ?? '', supplierId: row.supplier_id }));
+  return rows.map((row) => ({ nature: row.nature, itemNumber: Number(row.item_number), name: row.name ?? '', supplierId: row.supplier_id }));
 }
 
+/**
+ * The lines the file's numbers may name: by own number (`BL-n`, a bare number), by the number of
+ * before lot C1b (`OPX-n`, `CPX-n`: `legacy_number`, or an OPEX line's own number, which its OPX
+ * number always was; a CAPEX line without a CPX number was shown by its own one), among the lines
+ * of `natures` only. `findStoredLine` (preflight) picks the line of each cell.
+ */
 async function loadLinesByNumber(
   manager: EntityManager,
-  scope: BudgetFileScope,
+  natures: readonly BudgetNature[],
   tenantId: string,
-  itemNumbers: number[],
+  numbers: ItemNumberCell[],
 ): Promise<StoredLine[]> {
-  if (itemNumbers.length === 0) return [];
-  const t = SCOPE[scope];
+  const own = new Set<number>();
+  const legacy = new Set<string>();
+  const opx = new Set<number>();
+  const cpx = new Set<number>();
+  for (const cell of numbers) {
+    if (cell.kind !== 'number') continue;
+    if (cell.prefix === 'BL') own.add(cell.n);
+    else {
+      legacy.add(cell.ref);
+      (cell.prefix === 'OPX' ? opx : cpx).add(cell.n);
+    }
+  }
+  if (own.size + legacy.size === 0) return [];
   const rows: ItemSql[] = await manager.query(
-    `SELECT ${ITEM_COLUMNS(scope)} FROM ${t.items} i WHERE i.tenant_id = $1${natureAnd('i', t.nature)} AND ${lineNumberSql('i', t.nature)} = ANY($2::int[])`,
-    [tenantId, itemNumbers],
+    `SELECT ${ITEM_COLUMNS} FROM ${LINES.items} i
+      WHERE i.tenant_id = $1${naturesAnd('i', natures)}
+        AND (i.item_number = ANY($2::int[]) OR i.legacy_number = ANY($3::text[])
+             OR (i.nature = 'opex' AND i.item_number = ANY($4::int[]))
+             OR (i.nature = 'capex' AND i.item_number = ANY($5::int[])))`,
+    [tenantId, [...own], [...legacy], [...opx], [...cpx]],
   );
-  return hydrate(manager, scope, tenantId, rows);
+  return hydrate(manager, tenantId, rows);
 }
 
 async function loadLinesById(
@@ -165,17 +155,18 @@ async function loadLinesById(
   ids: readonly string[],
 ): Promise<StoredLine[]> {
   if (ids.length === 0) return [];
-  const t = SCOPE[scope];
   const rows: ItemSql[] = await manager.query(
-    `SELECT ${ITEM_COLUMNS(scope)} FROM ${t.items} i WHERE i.tenant_id = $1${natureAnd('i', t.nature)} AND i.id = ANY($2::uuid[])`,
+    `SELECT ${ITEM_COLUMNS} FROM ${LINES.items} i WHERE i.tenant_id = $1${natureAnd('i', scope)} AND i.id = ANY($2::uuid[])`,
     [tenantId, ids],
   );
-  return hydrate(manager, scope, tenantId, rows);
+  return hydrate(manager, tenantId, rows);
 }
 
 interface ItemSql {
   id: string;
+  nature: BudgetNature;
   item_number: number;
+  legacy_number: string | null;
   row_version: number;
   name: string | null;
   description: string | null;
@@ -193,12 +184,17 @@ interface ItemSql {
   notes: string | null;
 }
 
-async function hydrate(manager: EntityManager, scope: BudgetFileScope, tenantId: string, rows: ItemSql[]): Promise<StoredLine[]> {
+/** The rows' details, values and versions. The rows were read with their nature predicate. */
+async function hydrate(manager: EntityManager, tenantId: string, rows: ItemSql[]): Promise<StoredLine[]> {
   if (rows.length === 0) return [];
-  const t = SCOPE[scope];
   const ids = rows.map((row) => row.id);
-  const versions = await loadVersions(manager, t, tenantId, ids);
-  const analytics = await loadItemAnalyticsValues(manager, t.analytics, tenantId, ids);
+  const versions = await loadVersions(manager, tenantId, ids);
+  const analytics = new Map<string, ItemAnalyticsValue[]>();
+  for (const nature of BUDGET_NATURES) {
+    const natureIds = rows.filter((row) => row.nature === nature).map((row) => row.id);
+    if (natureIds.length === 0) continue;
+    for (const [id, values] of await loadItemAnalyticsValues(manager, nature, tenantId, natureIds)) analytics.set(id, values);
+  }
   const companies: Array<{ id: string; name: string }> = await manager.query(
     `SELECT id::text AS id, name FROM companies WHERE tenant_id = $1`, [tenantId],
   );
@@ -231,7 +227,9 @@ async function hydrate(manager: EntityManager, scope: BudgetFileScope, tenantId:
     const run = row.run_build === 'run' || row.run_build === 'build' ? row.run_build : null;
     return {
       id: row.id,
+      nature: row.nature,
       itemNumber: Number(row.item_number),
+      legacyNumber: row.legacy_number ?? null,
       rowVersion: Number(row.row_version),
       name: row.name ?? '',
       description: row.description,
@@ -260,10 +258,10 @@ async function hydrate(manager: EntityManager, scope: BudgetFileScope, tenantId:
 
 async function loadVersions(
   manager: EntityManager,
-  t: (typeof SCOPE)[BudgetFileScope],
   tenantId: string,
   itemIds: string[],
 ): Promise<Map<string, StoredLine['versions']>> {
+  const t = LINES;
   const versionRows: Array<{ id: string; item_id: string; budget_year: number; budget_rev: number }> = await manager.query(
     `SELECT id::text AS id, ${t.itemFk}::text AS item_id, budget_year::int AS budget_year, budget_rev::int AS budget_rev
        FROM ${t.versions} WHERE tenant_id = $1 AND ${t.itemFk} = ANY($2::uuid[])`,
@@ -311,7 +309,6 @@ async function loadCatalog(
   manager: EntityManager,
   tenantId: string,
   allowedCurrencies: string[] | null,
-  scope: BudgetFileScope,
 ): Promise<BudgetCatalog> {
   const companies: Array<{ id: string; name: string; coa_id: string | null; disabled_at: Date | string | null }> = await manager.query(
     `SELECT id::text AS id, name, coa_id::text AS coa_id, disabled_at FROM companies WHERE tenant_id = $1`, [tenantId],
@@ -331,14 +328,15 @@ async function loadCatalog(
   const projects: Array<{ id: string; item_number: number }> = await manager.query(
     `SELECT id::text AS id, item_number::int AS item_number FROM portfolio_projects WHERE tenant_id = $1`, [tenantId],
   );
-  const dimensions = await loadDimensions(manager, tenantId, scope);
+  const dimensions = await loadDimensions(manager, tenantId);
   const chart: Array<{ id: string }> = await manager.query(
     `SELECT id::text AS id FROM chart_of_accounts WHERE tenant_id = $1 AND is_global_default = true LIMIT 1`, [tenantId],
   );
-  const frozen: Array<{ budget_year: number; column_key: string }> = await manager.query(
-    `SELECT budget_year::int AS budget_year, column_key FROM freeze_states
-      WHERE tenant_id = $1 AND scope = $2 AND is_frozen = true`,
-    [tenantId, scope],
+  // The frozen columns of both natures: a line is checked against those of its own (`resolveAmounts`).
+  const frozen: Array<{ scope: string; budget_year: number; column_key: string }> = await manager.query(
+    `SELECT scope, budget_year::int AS budget_year, column_key FROM freeze_states
+      WHERE tenant_id = $1 AND scope IN ('opex', 'capex') AND is_frozen = true`,
+    [tenantId],
   );
   const iso = (value: Date | string | null) => (value ? new Date(value).toISOString() : null);
   return {
@@ -351,14 +349,14 @@ async function loadCatalog(
     dimensions,
     allowedCurrencies,
     defaultCoaId: chart[0]?.id ?? null,
-    frozen: frozen.map((row) => `${Number(row.budget_year)}:${row.column_key}`),
+    frozen: frozen.map((row) => `${row.scope}:${Number(row.budget_year)}:${row.column_key}`),
   };
 }
 
-/** The enabled dimensions that apply to the lines of `scope`, with their values. */
-async function loadDimensions(manager: EntityManager, tenantId: string, scope: BudgetFileScope): Promise<CatalogDimension[]> {
+/** The enabled dimensions, of both natures, with the lines each is for and their values. */
+async function loadDimensions(manager: EntityManager, tenantId: string): Promise<CatalogDimension[]> {
   const axes = await loadAnalyticsAxes(manager, tenantId);
-  const enabled = axes.filter((axis) => axis.status === 'enabled' && axisAppliesTo(axis, scope));
+  const enabled = axes.filter((axis) => axis.status === 'enabled');
   if (enabled.length === 0) return [];
   const values: Array<{
     code: string;
@@ -376,6 +374,7 @@ async function loadDimensions(manager: EntityManager, tenantId: string, scope: B
   return enabled.map((axis) => ({
     code: axis.code,
     name: axis.name ?? axis.code,
+    appliesTo: axis.applies_to ?? null,
     required: axis.required,
     axisName: axis.name,
     values: values.filter((value) => value.code === axis.code).map((value) => ({

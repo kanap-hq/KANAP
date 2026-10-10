@@ -1,7 +1,13 @@
 import { AmountMeasure, AMOUNT_MEASURES } from '../amounts-write.util';
+import { budgetLineReference, type BudgetNature } from '../budget-nature';
 
-/** OPEX or CAPEX. One engine, the list decides which. */
-export type BudgetFileScope = 'opex' | 'capex';
+/**
+ * The list a file is exported from or loaded on (`/spend-items/budget-file/*` or the CAPEX alias):
+ * the lines an export holds, and the nature of a line in a file without a `nature` column (a file
+ * of before lot C1b). One file holds lines of both natures since lot C1b; every check of a line
+ * follows the line's own nature.
+ */
+export type BudgetFileScope = BudgetNature;
 
 export type BudgetFileDetail = 'yearly' | 'months';
 
@@ -29,7 +35,11 @@ export interface StoredVersion {
 /** One line as the preflight compares it and as the export writes it. */
 export interface StoredLine {
   id: string;
+  nature: BudgetNature;
+  /** The line's own number, its `BL-n` reference. */
   itemNumber: number;
+  /** `OPX-n` or `CPX-n`, the number the files of before lot C1b named it by; null when it has none. */
+  legacyNumber: string | null;
   rowVersion: number;
   name: string;
   description: string | null;
@@ -57,8 +67,9 @@ export interface StoredLine {
   versions: StoredVersion[];
 }
 
-/** Every line of the tenant, for the duplicate hint. Not the full row. */
+/** Every line of the tenant the caller may import, for the duplicate hint. Not the full row. */
 export interface LineHint {
+  nature: BudgetNature;
   itemNumber: number;
   name: string;
   supplierId: string | null;
@@ -117,7 +128,12 @@ export interface CatalogValue {
 export interface CatalogDimension {
   code: string;
   name: string;
-  /** A new line must get a value on it, and a held value cannot be cleared (the catalog holds enabled dimensions of the type only). */
+  /** The lines that may hold a value on it: OPEX only, CAPEX only; null or absent for both. */
+  appliesTo?: BudgetNature | null;
+  /**
+   * A new line of a nature it applies to must get a value on it, and such a line cannot clear a
+   * held value (the catalog holds the enabled dimensions, of both natures).
+   */
   required: boolean;
   /** The dimension's own name: null for the unnamed default (`name` then holds its code). */
   axisName: string | null;
@@ -136,7 +152,7 @@ export interface BudgetCatalog {
   /** Null or empty: the tenant has no allowed list, so any three-letter code is accepted. */
   allowedCurrencies: string[] | null;
   defaultCoaId: string | null;
-  /** `year:column`, column being `budget`, `revision`, `forecast`, `actual` or `landing`. */
+  /** `nature:year:column`, column being `budget`, `revision`, `forecast`, `actual` or `landing`: a freeze is per nature. */
   frozen: string[];
 }
 
@@ -167,8 +183,9 @@ export function emptyCatalog(patch: Partial<BudgetCatalog> = {}): BudgetCatalog 
   };
 }
 
-export function lineRef(scope: BudgetFileScope, itemNumber: number): string {
-  return `${scope === 'opex' ? 'OPX' : 'CPX'}-${itemNumber}`;
+/** The reference a file and a report name a line by: `BL-n`, for both natures (decision U3). */
+export function lineRef(itemNumber: number): string {
+  return budgetLineReference(itemNumber) as string;
 }
 
 export interface BudgetFileSnapshotLine {
@@ -249,6 +266,8 @@ export interface BudgetFileAnalyticsChange {
  */
 export interface BudgetFileLinePlan {
   line: number;
+  /** The line's nature: the service, the freeze, the audit label and the numbers of its write follow it. */
+  nature: BudgetNature;
   creating: boolean;
   itemId: string | null;
   itemNumber: number | null;

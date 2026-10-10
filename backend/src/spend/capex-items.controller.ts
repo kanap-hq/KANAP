@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { CapexItemsService } from './spend-items.service';
+import { CapexItemsService, SpendItemsService } from './spend-items.service';
 import { CapexItemsDeleteService } from './spend-items-delete.service';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -48,6 +48,8 @@ export class CapexItemsController {
     private readonly budgetFile: BudgetFileService,
     private readonly audit: AuditService,
     private readonly freeze: FreezeService,
+    /** The OPEX lines' service: a budget file may hold lines of both natures, each written by its own (lot C1b). */
+    private readonly opexSvc: SpendItemsService,
   ) {}
 
   private resolveId(id: string, manager: EntityManager): Promise<string> {
@@ -217,7 +219,7 @@ export class CapexItemsController {
       decimalMark,
       createSuppliers: createSuppliers === 'true' || createSuppliers === '1',
       canCreateSuppliers: canCreateSuppliers(ctx),
-    }, { items: this.svc, audit: this.audit, freeze: this.freeze });
+    }, { items: { opex: this.opexSvc, capex: this.svc }, audit: this.audit, freeze: this.freeze });
     await analyzeAfterLargeImport(req, importAnalyzeTables('capex', result), result);
     return result;
   }

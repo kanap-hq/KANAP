@@ -730,10 +730,14 @@ const BUDGET_YEAR = options.yearShift === null ? new Date().getFullYear() : DATA
 
 const BUDGET_ITEM_FILES = { opex: '14-spend-items.csv', capex: '15-capex-items.csv' };
 
-/** Line name -> item_number, for the lines that already exist in the tenant. */
+/**
+ * Line name -> the line's reference (`BL-n`), for the lines that already exist in the tenant. A
+ * budget file names a line by it; the CAPEX list's `item_number` is the line's CPX number, which a
+ * bare number no longer names (a bare number is a BL number since lot C1b).
+ */
 function numbersByName(index, scope) {
   const field = scope === 'opex' ? 'product_name' : 'description';
-  return new Map([...index[scope].values()].map((item) => [item[field], String(item.item_number)]));
+  return new Map([...index[scope].values()].map((item) => [item[field], String(item.reference)]));
 }
 
 /** The rows the old files marked disabled without an end date. */

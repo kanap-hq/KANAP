@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import type { FreezeService } from '../../freeze/freeze.service';
-import { axisAppliesTo, loadAnalyticsAxes } from '../../analytics/analytics-axes.util';
+import { loadAnalyticsAxes } from '../../analytics/analytics-axes.util';
 import { allocateItemNumbers } from '../../common/item-number.service';
 import { formatCents } from '../../common/amount';
 import { AmountMeasure, AmountsWriteContext, FLAT_PROFILE, assertMeasuresEditable, spreadAnnualRows, writeAmountsPayload } from '../amounts-write.util';
@@ -21,7 +21,7 @@ import {
   BudgetFileSnapshotLine,
 } from './types';
 import { lineImportTables } from '../budget-import-statistics';
-import { auditTableOf } from '../budget-nature';
+import { auditTableOf, BUDGET_NATURES, type BudgetNature } from '../budget-nature';
 import { lockCsvCostCenters } from '../item-write.util';
 import type { CsvDateOrder, CsvLanguage, DecimalMark } from '../../common/csv-sheet';
 import { presentChild } from '../budget-line-presentation';
@@ -33,12 +33,13 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** The single family of both natures (lot Z1); the audit rows keep the label of the line's nature (`auditTableOf`). */
 const TABLES = { items: 'spend_items', amounts: 'spend_amounts', rounds: 'spend_round_inputs', versions: 'spend_versions' } as const;
-const auditLabel = (scope: BudgetFileScope, table: keyof typeof TABLES) => auditTableOf(scope, TABLES[table]);
+const auditLabel = (nature: BudgetNature, table: keyof typeof TABLES) => auditTableOf(nature, TABLES[table]);
 
 /** Column names of an amounts table. Only these are ever interpolated into SQL. */
 const AMOUNT_COLUMNS = ['planned', 'committed', 'forecast', 'actual', 'expected_landing'] as const;
 
 interface FlatSpread {
+  nature: BudgetNature;
   itemId: string;
   versionId: string;
   year: number;
@@ -66,19 +67,27 @@ export function importAnalyzeTables(scope: BudgetFileScope, result: BudgetFileIm
   return [...lineImportTables(scope), ...extra];
 }
 
+/**
+ * The item service of one nature (`SpendItemsService`, `CapexItemsService`). The load names the
+ * fields of a body as the columns of `spend_items` (`fields: 'columns'`: `product_name`,
+ * `description`), never through the CAPEX alias's names.
+ */
 export interface BudgetFileItems {
   create(
     body: Record<string, unknown>,
     userId?: string,
-    opts?: { manager?: EntityManager; itemNumber?: number; legacyNumber?: number; statusEmail?: boolean; source?: string },
+    opts?: { manager?: EntityManager; itemNumber?: number; legacyNumber?: number; statusEmail?: boolean; source?: string; fields?: 'columns' },
   ): Promise<{ id: string }>;
   update(
     id: string,
     body: Record<string, unknown>,
     userId?: string,
-    opts?: { manager?: EntityManager; statusEmail?: boolean; source?: string },
+    opts?: { manager?: EntityManager; statusEmail?: boolean; source?: string; fields?: 'columns' },
   ): Promise<unknown>;
 }
+
+/** The item service of each nature: a line is written by the service of its own nature. */
+export type BudgetFileLineServices = Record<BudgetNature, BudgetFileItems>;
 
 export interface BudgetFileAudit {
   log(entry: {
@@ -110,6 +119,8 @@ interface AuditRow {
  */
 export async function importBudgetFile(input: {
   scope: BudgetFileScope;
+  /** The natures the caller may import (`PreflightInput.natures`). */
+  natures: readonly BudgetNature[];
   file: Buffer;
   snapshot: { lines: BudgetFileSnapshotLine[] };
   manager: EntityManager;
@@ -121,7 +132,7 @@ export async function importBudgetFile(input: {
   createSuppliers: boolean;
   canCreateSuppliers: boolean;
   allowedCurrencies: string[] | null;
-  items: BudgetFileItems;
+  items: BudgetFileLineServices;
   audit: BudgetFileAudit;
   freeze: BudgetFileFreeze;
 }): Promise<BudgetFileImportResult> {
@@ -132,7 +143,11 @@ export async function importBudgetFile(input: {
   const ids = new Set<string>();
   for (const line of input.snapshot.lines) ids.add(line.id);
   for (const line of first.report.snapshot.lines) ids.add(line.id);
-  await lockBudgetLines(input.manager, input.scope, input.tenantId, ids);
+  // In id order within each nature the caller may import; a line of another nature is not locked
+  // (nor read below), so a snapshot that names one no longer matches.
+  for (const nature of BUDGET_NATURES) {
+    if (input.natures.includes(nature)) await lockBudgetLines(input.manager, nature, input.tenantId, ids);
+  }
 
   const second = await prepare(input);
   if (!second.report.ok) return second.report;
@@ -157,6 +172,7 @@ interface Prepared {
 
 async function prepare(input: {
   scope: BudgetFileScope;
+  natures: readonly BudgetNature[];
   file: Buffer;
   manager: EntityManager;
   tenantId: string;
@@ -167,19 +183,18 @@ async function prepare(input: {
   canCreateSuppliers: boolean;
   allowedCurrencies: string[] | null;
 }): Promise<Prepared> {
-  const dimensions = await loadFileDimensions(input.manager, input.tenantId, input.scope);
+  const dimensions = await loadFileDimensions(input.manager, input.tenantId);
   const read = await readBudgetCsv(input.file, {
-    scope: input.scope,
     language: input.language,
-    dimensionCodes: dimensions.codes,
-    refusedDimensions: dimensions.refused,
+    dimensionCodes: dimensions.map((dimension) => dimension.code),
     dateOrder: input.dateOrder,
     decimalMark: input.decimalMark,
   });
-  const numbers = interpretBudgetFile(input.scope, read).flatMap((row) => (row.itemNumber.kind === 'number' ? [row.itemNumber.n] : []));
-  const loaded = await loadPreflight(input.manager, input.scope, input.tenantId, numbers, input.allowedCurrencies);
+  const numbers = interpretBudgetFile(read).map((row) => row.itemNumber);
+  const loaded = await loadPreflight(input.manager, input.tenantId, numbers, input.natures, input.allowedCurrencies);
   const planned = planBudgetFile({
     scope: input.scope,
+    natures: input.natures,
     read,
     catalog: loaded.catalog,
     stored: loaded.stored,
@@ -245,11 +260,10 @@ function parseSnapshotLine(raw: unknown): BudgetFileSnapshotLine {
 
 async function applyPlans(
   input: {
-    scope: BudgetFileScope;
     manager: EntityManager;
     tenantId: string;
     userId: string | null;
-    items: BudgetFileItems;
+    items: BudgetFileLineServices;
     audit: BudgetFileAudit;
     freeze: BudgetFileFreeze;
   },
@@ -261,29 +275,28 @@ async function applyPlans(
   // `FOR SHARE` then never waits on a node in file order against a tree write.
   await lockCsvCostCenters(input.manager, input.tenantId, plans.map((plan) => plan.body.cost_center_id as string | null | undefined));
   const supplierIds = await createSuppliers(input.manager, input.tenantId, plans, audits);
-  const dimensionIds = await createDimensionValues(input.manager, input.scope, input.tenantId, plans, audits);
+  const dimensionIds = await createDimensionValues(input.manager, input.tenantId, plans, audits);
   const storedById = new Map(stored.map((line) => [line.id, line]));
   const rounds = await loadRounds(input, plans, storedById);
 
   const updates = plans.filter((plan) => !plan.creating).sort((a, b) => (a.itemId ?? '').localeCompare(b.itemId ?? ''));
   const creates = plans.filter((plan) => plan.creating);
   // Every new line takes the next BL numbers; a new CAPEX line also the next CPX numbers, its legacy
-  // number (what the CAPEX file and screens show).
+  // number (what the CAPEX screens show until the unified list).
   let nextNumber = 0;
-  let nextLegacy: number | undefined;
-  if (creates.length > 0) {
-    nextNumber = await allocateItemNumbers('spend', input.tenantId, creates.length, input.manager);
-    if (input.scope === 'capex') nextLegacy = await allocateItemNumbers('capex', input.tenantId, creates.length, input.manager);
-  }
+  let nextLegacy = 0;
+  const capexCreates = creates.filter((plan) => plan.nature === 'capex').length;
+  if (creates.length > 0) nextNumber = await allocateItemNumbers('spend', input.tenantId, creates.length, input.manager);
+  if (capexCreates > 0) nextLegacy = await allocateItemNumbers('capex', input.tenantId, capexCreates, input.manager);
   const checkedFreeze = new Set<string>();
   const flats: FlatSpread[] = [];
   for (const plan of updates) {
     await applyLine(input, plan, storedById.get(plan.itemId ?? ''), supplierIds, dimensionIds, rounds, checkedFreeze, audits, flats);
   }
   for (const plan of creates) {
-    await applyLine(input, plan, undefined, supplierIds, dimensionIds, rounds, checkedFreeze, audits, flats, nextNumber, nextLegacy);
+    const legacy = plan.nature === 'capex' ? nextLegacy++ : undefined;
+    await applyLine(input, plan, undefined, supplierIds, dimensionIds, rounds, checkedFreeze, audits, flats, nextNumber, legacy);
     nextNumber += 1;
-    if (nextLegacy !== undefined) nextLegacy += 1;
   }
   await writeFlatSpreads(input, flats, checkedFreeze, audits);
   await insertAudits(input.manager, input.userId, audits);
@@ -295,31 +308,34 @@ async function applyPlans(
   };
 }
 
+/** The round inputs of the versions whose yearly totals the file sets, read per nature. */
 async function loadRounds(
-  input: { scope: BudgetFileScope; manager: EntityManager; tenantId: string },
+  input: { manager: EntityManager; tenantId: string },
   plans: BudgetFileLinePlan[],
   storedById: Map<string, Prepared['stored'][number]>,
-) {
-  const versionIds: string[] = [];
+): Promise<Awaited<ReturnType<typeof listRoundInputs>>> {
+  const versionIds: Record<BudgetNature, string[]> = { opex: [], capex: [] };
   for (const plan of plans) {
     if (!plan.itemId || !plan.amounts.some((amount) => amount.month == null)) continue;
     const line = storedById.get(plan.itemId);
     for (const version of line?.versions ?? []) {
-      if (plan.amounts.some((amount) => amount.month == null && amount.year === version.year)) versionIds.push(version.id);
+      if (plan.amounts.some((amount) => amount.month == null && amount.year === version.year)) versionIds[plan.nature].push(version.id);
     }
   }
-  return versionIds.length > 0
-    ? listRoundInputs(input.manager, input.scope, input.tenantId, versionIds)
-    : new Map();
+  const rounds: Awaited<ReturnType<typeof listRoundInputs>> = new Map();
+  for (const nature of BUDGET_NATURES) {
+    if (versionIds[nature].length === 0) continue;
+    for (const [id, records] of await listRoundInputs(input.manager, nature, input.tenantId, versionIds[nature])) rounds.set(id, records);
+  }
+  return rounds;
 }
 
 async function applyLine(
   input: {
-    scope: BudgetFileScope;
     manager: EntityManager;
     tenantId: string;
     userId: string | null;
-    items: BudgetFileItems;
+    items: BudgetFileLineServices;
     audit: BudgetFileAudit;
     freeze: BudgetFileFreeze;
   },
@@ -335,14 +351,16 @@ async function applyLine(
   legacyNumber?: number,
 ): Promise<void> {
   const body = lineBody(plan, supplierIds, dimensionIds);
-  const file = { manager: input.manager, statusEmail: false as const, source: 'budget_file' };
+  // The service of the line's nature, the fields named as the columns (`product_name`, `description`).
+  const items = input.items[plan.nature];
+  const file = { manager: input.manager, statusEmail: false as const, source: 'budget_file', fields: 'columns' as const };
   let itemId = plan.itemId;
   if (plan.creating) {
-    const saved = await input.items.create(body, input.userId ?? undefined, { ...file, itemNumber, legacyNumber });
+    const saved = await items.create(body, input.userId ?? undefined, { ...file, itemNumber, legacyNumber });
     itemId = saved.id;
-    await lockBudgetLine(input.manager, input.scope, input.tenantId, itemId);
+    await lockBudgetLine(input.manager, plan.nature, input.tenantId, itemId);
   } else if (Object.keys(body).length > 0 && itemId) {
-    await input.items.update(itemId, body, input.userId ?? undefined, file);
+    await items.update(itemId, body, input.userId ?? undefined, file);
   }
   if (!itemId || plan.amounts.length === 0) return;
 
@@ -353,12 +371,13 @@ async function applyLine(
     const existing = stored?.versions.find((version) => version.year === year);
     const version = existing
       ? { id: existing.id, tenant_id: input.tenantId, budget_year: year }
-      : await createVersion(input, itemId, year, grain);
+      : await createVersion(input, plan.nature, itemId, year, grain);
     const amounts = plan.amounts.filter((amount) => amount.year === year);
+    // The freeze, the round inputs and the audit labels of the line's own nature.
     const ctx: AmountsWriteContext = {
       manager: input.manager,
       freeze: input.freeze,
-      scope: input.scope,
+      scope: plan.nature,
       version,
       checkedFreeze,
     };
@@ -366,7 +385,7 @@ async function applyLine(
     if (outcome.flat) flats.push(outcome.flat);
     if (!outcome.wrote) continue;
     audits.push({
-      table: auditLabel(input.scope, 'items'),
+      table: auditLabel(plan.nature, 'items'),
       recordId: itemId,
       action: 'update',
       before: null,
@@ -405,12 +424,13 @@ function lineBody(
 }
 
 async function createVersion(
-  input: { scope: BudgetFileScope; manager: EntityManager; tenantId: string; audit: BudgetFileAudit; userId: string | null },
+  input: { manager: EntityManager; tenantId: string; audit: BudgetFileAudit; userId: string | null },
+  nature: BudgetNature,
   itemId: string,
   year: number,
   grain: 'annual' | 'monthly',
 ): Promise<{ id: string; tenant_id: string; budget_year: number }> {
-  const ensured = await ensureBudgetVersion(input.manager, input.scope, {
+  const ensured = await ensureBudgetVersion(input.manager, nature, {
     tenantId: input.tenantId,
     itemId,
     year,
@@ -424,7 +444,7 @@ async function createVersion(
   }
   if (ensured.created) {
     await input.audit.log(
-      { table: auditLabel(input.scope, 'versions'), recordId: ensured.version.id, action: 'create', before: null, after: presentChild(input.scope, ensured.version), userId: input.userId, source: 'budget_file' },
+      { table: auditLabel(nature, 'versions'), recordId: ensured.version.id, action: 'create', before: null, after: presentChild(nature, ensured.version), userId: input.userId, source: 'budget_file' },
       { manager: input.manager },
     );
   }
@@ -483,7 +503,7 @@ async function writeYear(
       totals[amount.measure] = amount.cents;
       fte[amount.measure] = rounds.find((round) => round.measure === amount.measure)?.fte ?? null;
     }
-    return { wrote: false, flat: { itemId, versionId: ctx.version.id, year, period, totals, fte } };
+    return { wrote: false, flat: { nature: ctx.scope, itemId, versionId: ctx.version.id, year, period, totals, fte } };
   }
   let wrote = false;
   const annual = new Map<string, { period: { start: string; end: string }; totals: Partial<Record<AmountMeasure, string>> }>();
@@ -553,10 +573,9 @@ async function writeYear(
   return { wrote, flat: null };
 }
 
-/** Flat yearly spreads, one statement per measure set. Versions are locked in id order first. */
+/** Flat yearly spreads, one statement per measure set. Versions are locked in id order first (per nature). */
 async function writeFlatSpreads(
   input: {
-    scope: BudgetFileScope;
     manager: EntityManager;
     tenantId: string;
     userId: string | null;
@@ -567,17 +586,21 @@ async function writeFlatSpreads(
   audits: AuditRow[],
 ): Promise<void> {
   if (flats.length === 0) return;
-  await lockBudgetVersions(input.manager, input.scope, input.tenantId, flats.map((flat) => flat.versionId));
+  for (const nature of BUDGET_NATURES) {
+    const versionIds = flats.filter((flat) => flat.nature === nature).map((flat) => flat.versionId);
+    if (versionIds.length > 0) await lockBudgetVersions(input.manager, nature, input.tenantId, versionIds);
+  }
   const seen = new Set<string>();
   for (const flat of flats) {
     const measures = AMOUNT_COLUMNS.filter((measure) => flat.totals[measure] !== undefined);
-    const key = `${flat.year}:${measures.join(',')}`;
+    // The freeze of each nature apart: a column frozen for CAPEX only does not stop an OPEX line.
+    const key = `${flat.nature}:${flat.year}:${measures.join(',')}`;
     if (seen.has(key)) continue;
     seen.add(key);
     await assertMeasuresEditable({
       manager: input.manager,
       freeze: input.freeze,
-      scope: input.scope,
+      scope: flat.nature,
       version: { id: flat.versionId, tenant_id: input.tenantId, budget_year: flat.year },
       checkedFreeze,
     }, flat.year, measures);
@@ -621,7 +644,7 @@ async function writeFlatSpreads(
     }
     audits.push(
       {
-        table: auditLabel(input.scope, 'amounts'),
+        table: auditLabel(flat.nature, 'amounts'),
         recordId: flat.versionId,
         action: 'update',
         before: null,
@@ -632,7 +655,7 @@ async function writeFlatSpreads(
         },
       },
       {
-        table: auditLabel(input.scope, 'items'),
+        table: auditLabel(flat.nature, 'items'),
         recordId: flat.itemId,
         action: 'update',
         before: null,
@@ -662,7 +685,7 @@ interface RoundRow {
 }
 
 async function insertAmountRows(
-  input: { scope: BudgetFileScope; manager: EntityManager; tenantId: string },
+  input: { manager: EntityManager; tenantId: string },
   measures: readonly AmountMeasure[],
   rows: AmountRow[],
 ): Promise<void> {
@@ -690,7 +713,7 @@ async function insertAmountRows(
 }
 
 async function insertRoundRows(
-  input: { scope: BudgetFileScope; manager: EntityManager; tenantId: string; userId: string | null },
+  input: { manager: EntityManager; tenantId: string; userId: string | null },
   rows: RoundRow[],
 ): Promise<void> {
   if (rows.length === 0) return;
@@ -785,15 +808,15 @@ async function createSuppliers(
 
 async function createDimensionValues(
   manager: EntityManager,
-  scope: BudgetFileScope,
   tenantId: string,
   plans: BudgetFileLinePlan[],
   audits: AuditRow[],
 ): Promise<Map<string, string>> {
   const axes = await loadAnalyticsAxes(manager, tenantId);
   const ids = new Map<string, string>();
-  // The file's columns: enabled dimensions of its line type (the reader refused the others).
-  for (const axis of axes) if (axis.status === 'enabled' && axisAppliesTo(axis, scope)) ids.set(`axis:${axis.code}`, axis.id);
+  // The file's columns: the enabled dimensions (the preflight refused a value on a dimension of the
+  // other nature than its line's).
+  for (const axis of axes) if (axis.status === 'enabled') ids.set(`axis:${axis.code}`, axis.id);
   const wanted = new Map<string, { axisId: string; code: string; name: string }>();
   for (const plan of plans) {
     for (const change of plan.analytics) {

@@ -36,7 +36,7 @@ import {
 } from '../../__tests__/round-inputs.fixtures';
 import { readBudgetCsv } from '../interpret';
 import { itemService, seedCompany, seedCostCenter, seedUser } from '../../__tests__/cost-center.fixtures';
-import { BUDGET_FILE_OPTIONS, budgetFileService, exportBudgetFile, fileRows, loadBudgetFile, preflightBudgetFile, withCell } from '../../__tests__/budget-file.fixtures';
+import { BUDGET_FILE_OPTIONS, budgetFileService, exportBudgetFile, fileRows, lineServices, loadBudgetFile, preflightBudgetFile, withCell } from '../../__tests__/budget-file.fixtures';
 import { upsertRoundInput } from '../../round-inputs.util';
 import { ANALYTICS_VALUE_ORDER_SQL, ensureDefaultAnalyticsAxis } from '../../../analytics/analytics-axes.util';
 import { ensureCapexDimensions } from '../../../analytics/capex-dimensions.seed';
@@ -69,11 +69,18 @@ function dbAudit(manager: EntityManager) {
   };
 }
 
+/** The item service of each nature, the OPEX one built bare (no allocations, contacts or notifications needed here). */
 function opexItems(audit: ReturnType<typeof dbAudit>) {
   const args: unknown[] = Array.from({ length: 11 }, () => undefined);
   args[3] = audit;
   args[10] = new ItemNumberService();
-  return new (SpendItemsService as unknown as new (...parts: unknown[]) => SpendItemsService)(...args);
+  return lineServices('opex', audit, new (SpendItemsService as unknown as new (...parts: unknown[]) => SpendItemsService)(...args));
+}
+
+/** Services that refuse any line write: a file that changes amounts only. */
+function noLineWrites(why: string) {
+  const refuse = { create: async (): Promise<{ id: string }> => { throw new Error(why); }, update: async () => { throw new Error(why); } };
+  return { opex: refuse, capex: refuse };
 }
 
 async function amountSum(runner: { query: Function }, table: string, versionId: string): Promise<string> {
@@ -188,7 +195,7 @@ async function testCapexSpread(runner: { query: Function; manager: EntityManager
     preflight.snapshot,
     caller,
     { language: 'en', dateOrder: '', createSuppliers: false, canCreateSuppliers: false },
-    { items: { create: async () => { throw new Error('capex details were not part of this file'); }, update: async () => { throw new Error('capex details were not part of this file'); } }, audit, freeze: noFreeze },
+    { items: noLineWrites('capex details were not part of this file'), audit, freeze: noFreeze },
   );
   assert.equal('updated' in result && result.updated, 1);
   assert.equal(await amountSum(runner, 'spend_amounts', versionId), '50');
@@ -208,7 +215,7 @@ async function testCapexSpread(runner: { query: Function; manager: EntityManager
   await service.importFile(
     'capex', Buffer.from(nextFile), nextPreflight.snapshot, caller,
     { language: 'en', dateOrder: '', createSuppliers: false, canCreateSuppliers: false },
-    { items: { create: async () => { throw new Error('no line created'); }, update: async () => { throw new Error('no line updated'); } }, audit, freeze: noFreeze },
+    { items: noLineWrites('no line written'), audit, freeze: noFreeze },
   );
   const [created] = await runner.query(
     `SELECT a.table_name, a.after_json FROM audit_log a JOIN spend_versions v ON v.id = a.record_id
@@ -399,7 +406,7 @@ async function versionState(runner: { query: Function }, versionId: string): Pro
 async function testOperationRunning(
   service: BudgetFileService,
   caller: { tenantId: string; userId: null },
-  loadDeps: { items: SpendItemsService; audit: ReturnType<typeof dbAudit>; freeze: typeof noFreeze },
+  loadDeps: { items: ReturnType<typeof opexItems>; audit: ReturnType<typeof dbAudit>; freeze: typeof noFreeze },
 ) {
   // The test transaction already holds this tenant's bulk lock. A second connection must be refused.
   const other = dataSource.createQueryRunner();
@@ -780,25 +787,28 @@ async function testDimensionCells(runner: { query: Function; manager: EntityMana
   const stalePreflight = await preflightBudgetFile(runner.manager, kind, tenantId, staleFile);
   assert.equal(stalePreflight.ok, true, `${kind}: the file is valid while the dimension applies to both (${JSON.stringify(stalePreflight.errors)})`);
   await runner.query(`UPDATE analytics_axes SET applies_to = $3 WHERE tenant_id = $1 AND id = $2`, [tenantId, recurrence, other]);
-  const message = `The Recurrence dimension is for ${other.toUpperCase()} lines only. `
-    + `Remove the analytics:recurrence column from this ${kind.toUpperCase()} file.`;
-  // The load reads the file again: refused by its header, nothing written.
+  // Since lot C1b every enabled dimension is a column of the file; a line of the other nature
+  // may not hold a value on it: a row error, the line's own nature deciding.
+  const message = `The Recurrence dimension is for ${other.toUpperCase()} lines only. Leave it out.`;
+  // The load reads the file again: refused on its rows, nothing written.
   const linksBeforeLoad = await links();
   const [{ n: linesBeforeLoad }] = await runner.query(`SELECT count(*)::int AS n FROM spend_items WHERE tenant_id = $1 AND nature = $2`, [tenantId, kind]);
   const staleLoad = await budgetFileService().importFile(
     kind, Buffer.from(staleFile, 'utf8'), stalePreflight.snapshot, { manager: runner.manager, tenantId, userId: null }, BUDGET_FILE_OPTIONS,
-    { items: itemService(kind), audit: captureAudit() as any, freeze: noFreeze },
+    { items: lineServices(kind, captureAudit() as any), audit: captureAudit() as any, freeze: noFreeze },
   );
-  assert.equal(staleLoad.ok, false, `${kind}: the load refuses a column of the other type`);
-  assert.deepEqual('headerErrors' in staleLoad ? staleLoad.headerErrors : null, [message], `${kind}: with the contract message`);
+  assert.equal(staleLoad.ok, false, `${kind}: the load refuses a value on a dimension of the other type`);
+  assert.deepEqual('errors' in staleLoad ? rowErrors(staleLoad) : null, [`2 analytics:recurrence: ${message}`, `3 analytics:recurrence: ${message}`], `${kind}: on each row, with the gate's message`);
+  assert.deepEqual('headerErrors' in staleLoad ? staleLoad.headerErrors : null, [], `${kind}: the column itself is no error`);
   assert.deepEqual(await links(), linksBeforeLoad, `${kind}: the load writes no value`);
   assert.deepEqual(await valuesOf(recurrence), ['Monthly'], `${kind}: nor creates one`);
   const [{ n: linesAfterLoad }] = await runner.query(`SELECT count(*)::int AS n FROM spend_items WHERE tenant_id = $1 AND nature = $2`, [tenantId, kind]);
   assert.equal(linesAfterLoad, linesBeforeLoad, `${kind}: nor a line`);
   for (const header of ['analytics:recurrence', 'Analytics:Recurrence']) {
     const refused = await preflightBudgetFile(runner.manager, kind, tenantId, csvOf(['item_number', header], [{ item_number: ref(kind, alpha.n), [header]: 'Monthly' }]));
-    assert.equal(refused.ok, false, `${kind}: ${header} refuses the file`);
-    assert.deepEqual(refused.headerErrors, [message], `${kind}: ${header} is a header error with its own message`);
+    assert.deepEqual([refused.ok, refused.headerErrors, rowErrors(refused)], [false, [], [`2 analytics:recurrence: ${message}`]], `${kind}: ${header} with a value is a row error`);
+    const blank = await preflightBudgetFile(runner.manager, kind, tenantId, csvOf(['item_number', header], [{ item_number: ref(kind, alpha.n), [header]: '' }]));
+    assert.deepEqual([blank.ok, blank.changes.unchanged], [true, 1], `${kind}: ${header} left empty is read (${JSON.stringify(blank.errors)})`);
   }
   // Disabled as well: the unknown dimension error, as for any disabled dimension.
   await runner.query(`UPDATE analytics_axes SET status = 'disabled', disabled_at = now() - interval '1 day' WHERE tenant_id = $1 AND id = $2`, [tenantId, recurrence]);
@@ -806,11 +816,11 @@ async function testDimensionCells(runner: { query: Function; manager: EntityMana
   assert.deepEqual(disabledOther.headerErrors, ["Unknown dimension 'recurrence'."], `${kind}: a disabled dimension stays unknown`);
   await runner.query(`UPDATE analytics_axes SET status = 'enabled', disabled_at = NULL WHERE tenant_id = $1 AND id = $2`, [tenantId, recurrence]);
 
-  const withoutHidden = await exportBudgetFile(runner.manager, kind, tenantId, [alpha.id, bravo.id]);
-  const header = withoutHidden.replace(/^\uFEFF/, '').split('\n')[0].split(',');
-  assert.ok(header.includes('analytics:nature'), `${kind}: the export keeps the dimensions of its type`);
-  assert.ok(!header.includes('analytics:recurrence'), `${kind}: the export leaves out a dimension of the other type (${header.join(',')})`);
-  await loadBudgetFile(runner.manager, kind, tenantId, withoutHidden);
+  const withHidden = await exportBudgetFile(runner.manager, kind, tenantId, [alpha.id, bravo.id]);
+  const header = withHidden.replace(/^\uFEFF/, '').split('\n')[0].split(',');
+  assert.ok(header.includes('analytics:nature') && header.includes('analytics:recurrence'), `${kind}: the export names every enabled dimension (${header.join(',')})`);
+  assert.deepEqual(fileRows(withHidden).map((row) => row['analytics:recurrence']), ['', ''], `${kind}: a value on a dimension of the other type is not written`);
+  await loadBudgetFile(runner.manager, kind, tenantId, withHidden);
   assert.ok((await links()).includes('Alpha | recurrence | Monthly'), `${kind}: loading the export back keeps the hidden value`);
 }
 
@@ -901,6 +911,150 @@ async function testCapexCriteriaColumns(runner: { query: Function; manager: Enti
   const former = await preflightBudgetFile(runner.manager, 'capex', tenantId,
     'item_number,name,ppe_type,investment_type,priority,company_name,account_number,currency\n,Former,hardware,replacement,medium,File company,6000,EUR\n');
   assert.deepEqual([former.ok, former.fileErrors, former.errors.length], [false, [CRITERIA_COLUMNS_MESSAGE], 0], 'a file with the former columns');
+}
+
+/**
+ * Lot C1b: one file for both natures, read line by line. A tenant with an OPEX line (BL-7, no
+ * legacy number) and a CAPEX line (CPX-2, its BL number after the OPEX ones).
+ * - a mixed file on the OPEX list, by a caller with both Admin levels: each line created or
+ *   updated with its own nature, numbers, description and audit labels;
+ * - the same file with the OPEX level only: the CAPEX rows refused, naming the right, nothing read
+ *   of them; the reverse on the CAPEX list;
+ * - a line named with another nature: refused; `BL-n`, a bare number, `OPX-n`, `CPX-n`;
+ * - the freeze of a line's own nature, at the preflight and at the load;
+ * - the files of before lot C1b (no nature column, OPX and CPX numbers) on their own list;
+ * - an export of each list read back unchanged.
+ */
+async function testSingleBudgetFile(runner: { query: Function; manager: EntityManager }) {
+  const tenantId = await seedTenant(runner as any, 'csv-c1b-single');
+  const { companyId } = await seedCompany(runner as any, tenantId, 'File company');
+  const opexId = await seedItem(runner as any, 'opex', tenantId, 7, 'Licences');
+  const capexId = await seedItem(runner as any, 'capex', tenantId, 2, 'Racks');
+  await runner.query(`UPDATE spend_items SET paying_company_id = $2 WHERE tenant_id = $1 AND nature IN ('opex', 'capex')`, [tenantId, companyId]);
+  for (const [kind, itemId] of [['opex', opexId], ['capex', capexId]] as Array<[Kind, string]>) {
+    const versionId = await seedVersion(runner as any, kind, tenantId, itemId, 2026);
+    await runner.query(`INSERT INTO spend_amounts (tenant_id, version_id, period, planned) VALUES ($1, $2, '2026-01-01', 100)`, [tenantId, versionId]);
+  }
+  const [{ item_number: capexNumber }] = await runner.query(`SELECT item_number::int AS item_number FROM spend_items WHERE id = $1`, [capexId]);
+  const capexRef = `BL-${capexNumber}`;
+  const both: Array<'opex' | 'capex'> = ['opex', 'capex'];
+  const columns = ['nature', 'item_number', 'name', 'description', 'company_name', 'account_number', 'currency', 'budget_2026'];
+  const fresh = (nature: Kind, name: string, cells: Record<string, string> = {}) => ({ nature, name, company_name: 'File company', account_number: '6000', currency: 'EUR', ...cells });
+  const mixed = csvOf(columns, [
+    fresh('opex', 'New OPEX', { budget_2026: '1200' }),
+    fresh('capex', 'New CAPEX', { description: 'Racks for the new room', budget_2026: '2400' }),
+    { nature: 'opex', item_number: 'BL-7', name: 'Licences', budget_2026: '300' },
+    { nature: 'capex', item_number: capexRef, name: 'Racks', description: 'Second room', budget_2026: '400' },
+  ]);
+
+  // The OPEX level only: the CAPEX rows are refused, naming the right; the OPEX ones are read.
+  const opexOnly = await preflightBudgetFile(runner.manager, 'opex', tenantId, mixed);
+  assert.deepEqual(rowErrors(opexOnly), [
+    '3 nature: Importing CAPEX lines needs the Admin level on CAPEX.',
+    '5 nature: Importing CAPEX lines needs the Admin level on CAPEX.',
+  ], 'a mixed file with one right');
+  assert.deepEqual(opexOnly.snapshot.lines.map((line) => line.id), [opexId], 'no CAPEX line is read');
+  const capexOnly = await preflightBudgetFile(runner.manager, 'capex', tenantId, mixed);
+  assert.deepEqual(rowErrors(capexOnly), [
+    '2 nature: Importing OPEX lines needs the Admin level on OPEX.',
+    '4 nature: Importing OPEX lines needs the Admin level on OPEX.',
+  ], 'and on the CAPEX list with the CAPEX right only');
+
+  // Both levels: each line with its nature.
+  const audit = captureAudit();
+  const loaded = await loadBudgetFile(runner.manager, 'opex', tenantId, mixed, audit as any, undefined, both);
+  assert.deepEqual(['inserted' in loaded && loaded.inserted, 'updated' in loaded && loaded.updated], [2, 2], JSON.stringify(loaded));
+  const lines: Array<{ id: string; nature: string; item_number: number; legacy_number: string | null; product_name: string; description: string | null }> = await runner.query(
+    `SELECT id::text AS id, nature, item_number::int AS item_number, legacy_number, product_name, description
+       FROM spend_items WHERE tenant_id = $1 AND nature IN ('opex', 'capex') ORDER BY item_number`,
+    [tenantId],
+  );
+  const byName = new Map(lines.map((line) => [line.product_name, line]));
+  const newOpex = byName.get('New OPEX')!;
+  const newCapex = byName.get('New CAPEX')!;
+  assert.deepEqual([newOpex.nature, newOpex.legacy_number], ['opex', null], 'a new OPEX line: its BL number only');
+  assert.equal(newCapex.nature, 'capex');
+  assert.match(String(newCapex.legacy_number), /^CPX-\d+$/, 'a new CAPEX line: its BL number and a CPX number');
+  assert.equal(newCapex.item_number, newOpex.item_number + 1, 'the BL numbers of the new lines in file order');
+  assert.equal(newCapex.description, 'Racks for the new room', 'a CAPEX line takes its description');
+  assert.equal(byName.get('Racks')!.description, 'Second room');
+  const yearTotal = async (itemId: string) => (await runner.query(
+    `SELECT COALESCE(sum(a.planned), 0)::numeric::float8 AS total FROM spend_amounts a
+       JOIN spend_versions v ON v.tenant_id = a.tenant_id AND v.id = a.version_id
+      WHERE a.tenant_id = $1 AND v.spend_item_id = $2 AND v.budget_year = 2026`,
+    [tenantId, itemId],
+  ))[0].total;
+  assert.deepEqual(
+    [await yearTotal(newOpex.id), await yearTotal(newCapex.id), await yearTotal(opexId), await yearTotal(capexId)],
+    [1200, 2400, 300, 400],
+    'the amounts of each line',
+  );
+  const created = audit.entries.filter((entry) => entry.action === 'create' && [newOpex.id, newCapex.id].includes(String(entry.recordId)));
+  assert.deepEqual(created.map((entry) => entry.table).sort(), ['capex_items', 'spend_items'], 'each line audited under its nature');
+  const amountAudit: Array<{ table_name: string; n: number }> = await runner.query(
+    `SELECT a.table_name, count(*)::int AS n FROM audit_log a
+       JOIN spend_versions v ON v.tenant_id = $1 AND v.id = a.record_id
+      WHERE a.tenant_id = $1 AND a.table_name IN ('spend_amounts', 'capex_amounts') GROUP BY a.table_name ORDER BY a.table_name`,
+    [tenantId],
+  );
+  assert.deepEqual(amountAudit.map((row) => `${row.table_name} ${row.n}`), ['capex_amounts 2', 'spend_amounts 2'], 'the amounts audited under the nature of their line');
+
+  // A line keeps its nature; every form of number names it.
+  const header = 'nature,item_number,name\n';
+  const changed = await preflightBudgetFile(runner.manager, 'opex', tenantId, `${header}capex,BL-7,Licences\nopex,${capexRef},Racks\n`, both);
+  assert.deepEqual(rowErrors(changed), [
+    '2 nature: BL-7 is an OPEX line, not a CAPEX line. A file does not change the type of a line.',
+    `3 nature: ${capexRef} is a CAPEX line, not an OPEX line. A file does not change the type of a line.`,
+  ], 'a nature changed by the file');
+  for (const text of [`opex,OPX-7,Licences\ncapex,CPX-2,Racks\n`, `capex,${capexNumber},Racks\nopex,${newOpex.item_number},New OPEX\n`]) {
+    const numbers = await preflightBudgetFile(runner.manager, 'opex', tenantId, `${header}${text}`, both);
+    assert.deepEqual([numbers.ok, numbers.changes.unchanged], [true, 2], `OPX-7 and CPX-2, then two bare BL numbers (${JSON.stringify(numbers.errors)})`);
+  }
+  const twice = await preflightBudgetFile(runner.manager, 'opex', tenantId, `${header}capex,CPX-2,Racks\ncapex,${capexRef},Racks\n`, both);
+  assert.deepEqual(rowErrors(twice), [`3 item_number: item_number ${capexRef} and CPX-2 on line 2 are the same line, ${capexRef}.`], 'one line named twice');
+  // On the CAPEX list too, a bare number is a BL number, no longer a CPX number.
+  const bare = await preflightBudgetFile(runner.manager, 'capex', tenantId, `item_number,name\n${newCapex.item_number}\n`, both);
+  assert.deepEqual(bare.snapshot.lines.map((line) => line.id), [newCapex.id], `${newCapex.item_number} names BL-${newCapex.item_number}, not CPX-${newCapex.item_number}`);
+
+  // The freeze of a line's own nature.
+  await freezeColumn(runner as any, 'capex', tenantId, 2026, 'budget');
+  const frozen = await preflightBudgetFile(runner.manager, 'opex', tenantId, `nature,item_number,name,budget_2026\nopex,BL-7,Licences,310\ncapex,${capexRef},Racks,410\n`, both);
+  assert.deepEqual(rowErrors(frozen), ['3 budget_2026: Budget for 2026 is frozen.'], 'a year frozen for CAPEX stops the CAPEX line only');
+  const opexRow = `nature,item_number,name,budget_2026\nopex,BL-7,Licences,320\ncapex,${capexRef},Racks,400\n`;
+  const opexReport = await preflightBudgetFile(runner.manager, 'opex', tenantId, opexRow, both);
+  assert.equal(opexReport.ok, true, JSON.stringify(opexReport.errors));
+  const scopes: string[] = [];
+  const freeze = { assertNotFrozen: async (target: { scope: string }) => { scopes.push(target.scope); } };
+  const opexLoad = await budgetFileService().importFile('opex', Buffer.from(opexRow), opexReport.snapshot,
+    { manager: runner.manager, tenantId, userId: null, natures: both }, BUDGET_FILE_OPTIONS,
+    { items: lineServices('opex', captureAudit() as any), audit: captureAudit() as any, freeze: freeze as any });
+  assert.equal('updated' in opexLoad && opexLoad.updated, 1);
+  assert.deepEqual(Array.from(new Set(scopes)), ['opex'], 'the load checks the freeze of the line written');
+  assert.equal(await yearTotal(opexId), 320);
+  await runner.query(`DELETE FROM freeze_states WHERE tenant_id = $1`, [tenantId]);
+
+  // The files of before lot C1b: no nature column, OPX and CPX numbers, read on their own list.
+  const oldOpex = 'item_number,name,currency,budget_2026\nOPX-7,Licences,EUR,320.00\n';
+  const oldCapex = 'item_number,name,currency,budget_2026\nCPX-2,Racks,EUR,400.00\n';
+  for (const [kind, text] of [['opex', oldOpex], ['capex', oldCapex]] as Array<[Kind, string]>) {
+    const report = await preflightBudgetFile(runner.manager, kind, tenantId, text);
+    assert.deepEqual([report.ok, report.changes.unchanged], [true, 1], `${kind}: an old file reads unchanged (${JSON.stringify(report.errors)})`);
+  }
+  const wrongList = await preflightBudgetFile(runner.manager, 'opex', tenantId, oldCapex, both);
+  assert.deepEqual(rowErrors(wrongList), [`2 item_number: ${capexRef} is a CAPEX line, not an OPEX line. A file does not change the type of a line.`], 'an old CAPEX file on the OPEX list');
+
+  // An export of each list: its lines with their nature and BL number, read back unchanged.
+  for (const kind of ['opex', 'capex'] as Kind[]) {
+    const ids = lines.filter((line) => line.nature === kind).map((line) => line.id);
+    const exported = await exportBudgetFile(runner.manager, kind, tenantId, ids);
+    const rows = fileRows(exported);
+    assert.deepEqual(Array.from(new Set(rows.map((row) => row.nature))), [kind], `${kind}: the list's lines, with their nature`);
+    assert.ok(rows.every((row) => /^BL-\d+$/.test(row.item_number)), `${kind}: BL numbers (${rows.map((row) => row.item_number)})`);
+    for (const natures of [[kind], both] as Array<Array<'opex' | 'capex'>>) {
+      const back = await preflightBudgetFile(runner.manager, kind, tenantId, exported, natures);
+      assert.deepEqual([back.ok, back.changes.unchanged, back.changes.updated], [true, ids.length, 0], `${kind} export read back (${JSON.stringify(back.errors)})`);
+    }
+  }
 }
 
 /**
@@ -1054,7 +1208,7 @@ async function testExportAmountSwitch(runner: { query: Function; manager: Entity
   assert.equal(unswitched.ok, true, JSON.stringify(unswitched));
   assert.equal(unswitched.notices.amounts, 'Amounts read with a decimal comma: 12.280 is twelve thousand two hundred eighty.');
   assert.deepEqual(unswitched.changes.updatedLines[0].fields, ['budget 2027']);
-  const interpreted = await readBudgetCsv(resaved, { scope: kind, language: 'de', dimensionCodes: [] });
+  const interpreted = await readBudgetCsv(resaved, { language: 'de', dimensionCodes: [] });
   const amount = interpreted.rows[0].amounts.budget_2027;
   assert.equal(amount.kind === 'value' && amount.decimal.cmp('12.28'), 0);
 
@@ -1097,8 +1251,8 @@ async function main() {
     const exported = await service.exportFile('opex', [itemId], caller, {
       language: 'en', amountYears: '2026', columns: 'budget', detail: 'yearly',
     });
-    assert.equal(exported.filename, 'opex.csv');
-    assert.ok(exported.content.includes('OPX-1'), exported.content);
+    assert.equal(exported.filename, 'budget.csv', 'one file name for both lists');
+    assert.ok(exported.content.includes('opex,BL-1,Widget'), exported.content);
     assert.ok(exported.content.includes('Widget'));
     assert.ok(exported.content.includes('kanap_token'));
     assert.ok(exported.content.includes('100.00'), exported.content);
@@ -1228,6 +1382,7 @@ async function main() {
     }
     await testOwnersAccountsAndCurrency(runner);
     await testCapexCriteriaColumns(runner);
+    await testSingleBudgetFile(runner);
     await setTenant(runner, tenantId);
     await testOperationRunning(service, caller, loadDeps);
 

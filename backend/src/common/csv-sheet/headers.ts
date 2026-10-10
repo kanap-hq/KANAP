@@ -51,11 +51,7 @@ export function classifyHeaders(headers: readonly string[], schema: CsvReadSchem
     if (analytics) {
       if (analytics.unknown) {
         slots.push(null);
-        headerErrors.push(
-          analytics.code === ''
-            ? 'A dimension column has no code.'
-            : refusedDimension(analytics.code, schema.refusedDimensions) ?? `Unknown dimension '${analytics.code}'.`,
-        );
+        headerErrors.push(analytics.code === '' ? 'A dimension column has no code.' : `Unknown dimension '${analytics.code}'.`);
         return;
       }
       if (seenAnalytics.has(analytics.id)) {
@@ -154,14 +150,6 @@ export function validateSchema(schema: CsvReadSchema): void {
   for (const field of schema.dateFields ?? []) {
     if (!schema.fields.includes(field)) throw new Error(`Date field '${field}' is not a column.`);
   }
-}
-
-/** The schema's own refusal for a dimension code outside its list, if it has one. */
-function refusedDimension(code: string, refused: Readonly<Record<string, string>> | undefined): string | null {
-  if (!refused) return null;
-  const key = looseKey(code);
-  const found = Object.keys(refused).find((candidate) => looseKey(candidate) === key);
-  return found ? refused[found] : null;
 }
 
 function matchAnalytics(

@@ -82,16 +82,18 @@ async function testNestInjectsTheNature() {
       'the CAPEX items service syncs supplier contacts with the CAPEX contacts service',
     );
 
-    const controllers: Array<[new (...args: any[]) => object, Nature, string[]]> = [
-      [SpendItemsController, 'opex', ['svc', 'deleteSvc', 'contactsSvc']],
-      [SpendVersionsController, 'opex', ['versions', 'amounts', 'allocations']],
-      [CapexItemsController, 'capex', ['svc', 'deleteSvc', 'contactsSvc']],
-      [CapexVersionsController, 'capex', ['versions', 'amounts', 'allocations']],
+    // A controller's services are of its nature, but for the line service of the other nature that
+    // the budget file writes a line of that nature with (lot C1b: one file for both natures).
+    const controllers: Array<[new (...args: any[]) => object, Nature, string[], Record<string, Nature>]> = [
+      [SpendItemsController, 'opex', ['svc', 'deleteSvc', 'contactsSvc'], { capexSvc: 'capex' }],
+      [SpendVersionsController, 'opex', ['versions', 'amounts', 'allocations'], {}],
+      [CapexItemsController, 'capex', ['svc', 'deleteSvc', 'contactsSvc'], { opexSvc: 'opex' }],
+      [CapexVersionsController, 'capex', ['versions', 'amounts', 'allocations'], {}],
     ];
-    for (const [controller, expected, keys] of controllers) {
+    for (const [controller, expected, keys, other] of controllers) {
       const deps = natureDependencies(app.get(controller, { strict: false }));
-      assert.deepEqual(deps.map(([key]) => key).sort(), [...keys].sort(), `${controller.name}: its services of a nature`);
-      for (const [key, nature] of deps) assert.equal(nature, expected, `${controller.name}.${key}: ${expected}`);
+      assert.deepEqual(deps.map(([key]) => key).sort(), [...keys, ...Object.keys(other)].sort(), `${controller.name}: its services of a nature`);
+      for (const [key, nature] of deps) assert.equal(nature, other[key] ?? expected, `${controller.name}.${key}: ${other[key] ?? expected}`);
     }
 
     // Every instance the application built that carries a nature: its dependencies share it.

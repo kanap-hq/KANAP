@@ -331,6 +331,7 @@ function controllers(runner: QueryRunner) {
     none,
     audit as any,
     none,
+    none,
   ) as any;
   const deps = realSummaryDeps(SUMMARY_SCOPES.opex);
   const versions = new SpendVersionsController(

@@ -64,12 +64,14 @@ function controller(kind: Kind, runner: QueryRunner) {
       undefined as any,
       undefined as any,
       undefined as any,
+      undefined as any,
     )
     : new CapexItemsController(
       svc,
       new CapexItemsDeleteService(
         runner.manager.getRepository(SpendItem), undefined as any, undefined as any, undefined as any, captureAudit() as any, storage as any, aggregates,
       ),
+      undefined as any,
       undefined as any,
       undefined as any,
       undefined as any,

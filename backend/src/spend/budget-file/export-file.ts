@@ -5,7 +5,8 @@ import { exportHeaders, FILE_COLUMNS, isFileColumn, measureOfColumn } from './co
 import { formatToken } from './token';
 import { moneyText } from './interpret';
 import { AmountMeasure } from '../amounts-write.util';
-import { BudgetFileDetail, BudgetFileScope, StoredLine, StoredVersion } from './types';
+import { BudgetFileDetail, lineRef, StoredLine, StoredVersion } from './types';
+import type { FileDimension } from './load';
 
 const FILE_QUERY = new Set(['amountyears', 'columns', 'detail', 'language', 'all', 'dateorder', 'createsuppliers']);
 
@@ -74,34 +75,38 @@ export function shownFileColumns(enabled: Record<AmountMeasure, boolean>): strin
   return FILE_COLUMNS.filter((column) => enabled[measureOfColumn(column)]);
 }
 
+/**
+ * The file of some lines: one row per line, with its `nature` and its `BL-n` number. Every enabled
+ * dimension is a column; a line's cell is left empty on a dimension of the other nature (a value
+ * it keeps there would be refused on the way back).
+ */
 export function buildBudgetExport(input: {
-  scope: BudgetFileScope;
   language: CsvLanguage;
   years: readonly number[];
   columns: readonly string[];
   detail: BudgetFileDetail;
   lines: readonly StoredLine[];
-  dimensionCodes: readonly string[];
+  dimensions: readonly FileDimension[];
 }): { headers: string[]; rows: string[][] } {
-  const headers = exportHeaders(input.scope, input.dimensionCodes, input.years, input.columns, input.detail);
+  const headers = exportHeaders(input.dimensions.map((dimension) => dimension.code), input.years, input.columns, input.detail);
   const rows = input.lines.map((line) => exportRow(input, line, headers));
   return { headers, rows };
 }
 
 function exportRow(
   input: {
-    scope: BudgetFileScope;
     language: CsvLanguage;
     years: readonly number[];
     columns: readonly string[];
     detail: BudgetFileDetail;
-    dimensionCodes: readonly string[];
+    dimensions: readonly FileDimension[];
   },
   line: StoredLine,
   headers: readonly string[],
 ): string[] {
   const values = new Map<string, string>();
-  values.set('item_number', input.scope === 'opex' ? `OPX-${line.itemNumber}` : `CPX-${line.itemNumber}`);
+  values.set('nature', line.nature);
+  values.set('item_number', lineRef(line.itemNumber));
   values.set('name', line.name ?? '');
   values.set('description', line.description ?? '');
   values.set('company_name', line.companyName ?? '');
@@ -110,7 +115,10 @@ function exportRow(
   values.set('account_number', line.accountNumber ?? '');
   values.set('cost_center_code', line.costCenterCode ?? '');
   values.set('run_build', line.runBuild ?? '');
-  for (const code of input.dimensionCodes) values.set(`analytics:${code}`, line.analytics[code] ?? '');
+  for (const dimension of input.dimensions) {
+    const applies = !dimension.appliesTo || dimension.appliesTo === line.nature;
+    values.set(`analytics:${dimension.code}`, applies ? line.analytics[dimension.code] ?? '' : '');
+  }
   values.set('owner_it_email', line.ownerItEmail ?? '');
   values.set('owner_business_email', line.ownerBusinessEmail ?? '');
   values.set('project', line.projectNumber == null ? '' : `PRJ-${line.projectNumber}`);
@@ -164,6 +172,5 @@ function asText(raw: unknown): string {
   return raw == null ? '' : String(raw);
 }
 
-export function fileNameOfExport(scope: BudgetFileScope): string {
-  return scope === 'opex' ? 'opex.csv' : 'capex.csv';
-}
+/** One file for both natures since lot C1b, whatever list it is exported from. */
+export const BUDGET_FILE_NAME = 'budget.csv';
