@@ -158,6 +158,10 @@ TENANT_TABLES=(
   business_process_categories
   business_process_category_links
   business_processes
+  # The capex_* tables (and application_capex_items, asset_capex_items, contract_capex_items,
+  # portfolio_project_capex, portfolio_request_capex) are dormant since lot Z1: the CAPEX lines are in
+  # spend_* with nature = 'capex'. They are still exported, for the down() of migration
+  # 1853970000000, until lot Z2 drops them; their rows are the lines as they were at the move.
   capex_allocations
   capex_amounts
   capex_attachments
@@ -325,6 +329,7 @@ ATTACHMENT_TABLES=(
   portfolio_request_attachments
   task_attachments
   contract_attachments
+  # Dormant since lot Z1 (see TENANT_TABLES): a path may name a file deleted since the move.
   capex_attachments
   spend_attachments
   application_attachments

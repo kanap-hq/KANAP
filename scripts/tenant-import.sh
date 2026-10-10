@@ -511,7 +511,9 @@ WHERE tenant_id = '$SOURCE_TENANT_ID' AND credential_ref_json->>'kind' = 'encryp
 # (ItemNumberService) and 5 text references filled by the assign_*_reference
 # and assign_application_sequential_id triggers (APP-n, AST-n, LOC-n, CONN-n,
 # INT-n). A reference edited by hand that does not end in its prefix and a
-# number is left aside.
+# number is left aside. The CAPEX lines are in spend_items (lot Z1): 'spend' counts their BL
+# numbers with the OPEX ones, and 'capex' the CPX numbers they keep in legacy_number (the dormant
+# capex_items no longer receives the lines created since).
 import_sql+="INSERT INTO item_sequences (tenant_id, entity_type, next_val)
 SELECT '$SOURCE_TENANT_ID', s.entity_type, s.next_val FROM (
   SELECT 'task' AS entity_type, MAX(item_number) + 1 AS next_val FROM tasks WHERE tenant_id = '$SOURCE_TENANT_ID'
@@ -520,7 +522,7 @@ SELECT '$SOURCE_TENANT_ID', s.entity_type, s.next_val FROM (
   UNION ALL SELECT 'document', MAX(item_number) + 1 FROM documents WHERE tenant_id = '$SOURCE_TENANT_ID'
   UNION ALL SELECT 'incident', MAX(item_number) + 1 FROM incidents WHERE tenant_id = '$SOURCE_TENANT_ID'
   UNION ALL SELECT 'spend', MAX(item_number) + 1 FROM spend_items WHERE tenant_id = '$SOURCE_TENANT_ID'
-  UNION ALL SELECT 'capex', MAX(item_number) + 1 FROM capex_items WHERE tenant_id = '$SOURCE_TENANT_ID'
+  UNION ALL SELECT 'capex', MAX(substring(legacy_number FROM '^CPX-([0-9]{1,9})\$')::int) + 1 FROM spend_items WHERE tenant_id = '$SOURCE_TENANT_ID' AND nature = 'capex'
   UNION ALL SELECT 'contributor', MAX(item_number) + 1 FROM portfolio_team_member_configs WHERE tenant_id = '$SOURCE_TENANT_ID'
   UNION ALL SELECT 'application', MAX(substring(sequential_id FROM '^APP-([0-9]{1,9})\$')::int) + 1 FROM applications WHERE tenant_id = '$SOURCE_TENANT_ID'
   UNION ALL SELECT 'asset', MAX(substring(asset_reference FROM '^AST-([0-9]{1,9})\$')::int) + 1 FROM assets WHERE tenant_id = '$SOURCE_TENANT_ID'
