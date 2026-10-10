@@ -19,6 +19,8 @@ import { ApplicationsListService } from '../services/applications-list.service';
 import { catalogToMetadata, DEFAULT_CLASSIFICATION_CATALOG } from '../../it-ops-settings/classification-catalog';
 import { applicationCsvConfig } from '../application-csv.config';
 import { classificationSqlExpressions } from '../../it-ops-settings/classification-sql';
+import { adaptFilters } from '../../ai/query/ai-filter.adapter';
+import { applicationsRegistry } from '../../ai/query/registries/applications.registry';
 
 async function main() {
   if (!process.env.DATABASE_URL?.endsWith('/kanap_classification_v1_test')) throw new Error('Only isolated kanap_classification_v1_test is allowed');
@@ -142,6 +144,39 @@ async function main() {
     const imported=await manager.getRepository(Application).findOneByOrFail({name:'CSV Atlas',tenant_id:tenantA}); assert.equal(imported.criticality,'business_critical'); assert.equal(imported.cyber_criticality,'high'); assert.equal(imported.rpo_minutes,0);
     const exported=await csv.export({manager,tenantId:tenantA,fields:['name','criticality','cyber_criticality'],query:{filters:JSON.stringify({name:{filterType:'text',type:'equals',filter:'CSV Atlas'}})}}); assert.equal(exported.rowCount,1); assert.match(exported.content,/High;CSV Atlas;Critical/,'export writes catalog names, not codes'); assert.doesNotMatch(exported.content,/business_critical/);
     const importedAudit=await manager.query("SELECT source FROM audit_log WHERE record_id=$1 AND table_name='applications'",[imported.id]); assert.ok(importedAudit.length);
+    // Plaid parity with the Compliance tile. The tile reads the dashboard scope (no query: retired left out);
+    // Plaid reads with include_inactive and its adapted filters, as query_entities does.
+    const [{cutoff,dayAfter,recent}]=await manager.query(`SELECT to_char(CURRENT_DATE - INTERVAL '1 year','YYYY-MM-DD') AS cutoff, to_char(CURRENT_DATE - INTERVAL '1 year' + INTERVAL '1 day','YYYY-MM-DD') AS "dayAfter", to_char(CURRENT_DATE - INTERVAL '1 year' + INTERVAL '2 day','YYYY-MM-DD') AS recent`);
+    const retiredApp=await crud.create({name:'Retired critical app',criticality:'high',data_class:'restricted',cyber_criticality:'low'},userId,{manager});
+    await manager.query(`UPDATE applications SET lifecycle='retired' WHERE id=$1 AND tenant_id=$2`,[retiredApp.id,tenantA]);
+    const boundary=await crud.create({name:'Tested exactly a year ago',criticality:'high',recovery_wave:'vital'},userId,{manager});
+    await crud.update(boundary.id,{last_dr_test:cutoff as any},userId,{manager});
+    const fresh=await crud.create({name:'Tested since',criticality:'high',recovery_wave:'vital'},userId,{manager});
+    await crud.update(fresh.id,{last_dr_test:recent as any},userId,{manager});
+    const tile=await list.classificationSummary({},{manager,tenantId:tenantA});
+    const plaid=async(filters:Record<string,any>)=>{
+      const adapted=adaptFilters(applicationsRegistry,filters);
+      assert.deepEqual(adapted.ignored,[],JSON.stringify(filters));
+      return (await list.list({include_inactive:true,limit:200,filters:adapted.filters},{manager,tenantId:tenantA})).total;
+    };
+    const notRetired={lifecycle:{not:['retired']}};
+    assert.equal(await plaid({...notRetired,classification_review_state:['incomplete']}),tile.incomplete,'incomplete count matches the tile');
+    assert.equal(await plaid({classification_review_state:['incomplete']}),tile.incomplete+1,'without the lifecycle filter Plaid also counts the retired application');
+    for (const state of ['reviewed','stale'] as const) assert.equal(await plaid({...notRetired,classification_review_state:[state]}),tile[state]);
+    const tileCatalog=await settings.getClassificationCatalog(tenantA,{manager});
+    const active=(levels:Array<{rank:number;deprecated?:boolean}>)=>levels.filter((level)=>!level.deprecated).map((level)=>level.rank);
+    const topBusiness={business_criticality_rank:{op:'eq' as const,value:Math.max(...active(tileCatalog.businessCriticalityLevels))}};
+    const untested=await plaid({...notRetired,...topBusiness,last_dr_test:[null]});
+    const stale=await plaid({...notRetired,...topBusiness,last_dr_test:{op:'before',value:dayAfter}});
+    assert.ok(stale>=1,'a test exactly one year old counts as not recent, as on the tile');
+    assert.equal(untested+stale,tile.attention.critical_without_recent_test,'no recent test: [null] plus before the day after the cutoff');
+    assert.equal(await plaid({...notRetired,...topBusiness,recovery_wave:[null]}),tile.attention.critical_without_wave);
+    assert.equal(await plaid({...notRetired,data_class_rank:{op:'eq',value:Math.max(...active(tileCatalog.dataClasses))},cyber_criticality_rank:{op:'eq',value:Math.min(...active(tileCatalog.cyberCriticalityLevels))}}),tile.attention.restricted_data_low_cyber);
+    const sortedByTest=await list.list({include_inactive:true,limit:200,sort:'last_dr_test:DESC',filters:adaptFilters(applicationsRegistry,{last_dr_test:{op:'after',value:'2000-01-01'}}).filters},{manager,tenantId:tenantA});
+    const testDates=sortedByTest.items.map((row:any)=>String(row.last_dr_test));
+    assert.ok(testDates.length>=3&&testDates.every((date:string)=>/^\d{4}-\d{2}-\d{2}$/.test(date)),testDates.join(','));
+    assert.deepEqual(testDates,[...testDates].sort().reverse(),'last_dr_test sorts newest first');
+    assert.ok(testDates.indexOf(recent)<testDates.indexOf(cutoff));
     await manager.query(`SELECT set_config('app.current_tenant',$1,true)`,[tenantB]);
     await assert.rejects(()=>crud.get(app.id,{manager}),/not found/i);
     await assert.rejects(()=>list.listRecoveryDependencies(app.id,{manager,tenantId:tenantB}),/not found/i);

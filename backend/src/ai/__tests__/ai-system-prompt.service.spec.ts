@@ -85,6 +85,11 @@ async function testStructuredReadGuidancePrefersQueryLayerTools() {
   assert.match(prompt, /Never base counts, ownership claims, assignee claims, or analytical conclusions on a structured result that contains ignored filters or ignored fields/i);
   assert.doesNotMatch(prompt, /\blist_entities\b/);
   assert.doesNotMatch(prompt, /always search first/i);
+  // Compliance tile parity: retired scope, last recovery test, the three attention points.
+  assert.match(prompt, /add lifecycle \{"not":\["retired"\]\} to match them/);
+  assert.match(prompt, /last_dr_test is the last recovery test date/);
+  assert.match(prompt, /count \[null\] plus before the day after that date; they never overlap/);
+  assert.match(prompt, /top business rank with recovery_wave \[null\]; top data class rank with the lowest cyber rank/);
 }
 
 const baseParams = {

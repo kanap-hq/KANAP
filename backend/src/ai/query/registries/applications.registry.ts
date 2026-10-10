@@ -27,7 +27,7 @@ export const applicationsRegistry: AiEntityFilterRegistry = {
       ai: 'lifecycle',
       grid: 'lifecycle',
       type: 'set',
-      description: 'Application lifecycle.',
+      description: 'Application lifecycle. Takes {"not":["retired"]} for the scope of the Applications list and the Compliance tile, which leave out retired applications.',
       dynamic: true,
       discoverable: true,
       sortable: true,
@@ -127,7 +127,7 @@ export const applicationsRegistry: AiEntityFilterRegistry = {
     },
     classification_review_state: {
       ai: 'classification_review_state', grid: 'classification_review_state', type: 'set',
-      description: 'Human classification review state: incomplete (fields missing), stale (never reviewed or changed since the review), reviewed. Classification mutations never mark an application reviewed implicitly.',
+      description: 'Human classification review state: incomplete (fields missing), stale (never reviewed or changed since the review), reviewed. Classification mutations never mark an application reviewed implicitly. Counts include retired applications unless lifecycle is {"not":["retired"]}, as on the Compliance tile.',
       values: ['incomplete', 'stale', 'reviewed'], discoverable: true, sortable: true, groupable: true,
       aliases: ['review_state', 'etat_revue_classification'],
     },
@@ -136,6 +136,13 @@ export const applicationsRegistry: AiEntityFilterRegistry = {
       description: 'Server timestamp of the latest human classification review, or null when never reviewed.',
       sortable: true, groupable: false, aggregable: true,
       aliases: ['reviewed_at', 'date_revue_classification'],
+    },
+    last_dr_test: {
+      ai: 'last_dr_test', grid: 'last_dr_test', type: 'date',
+      description: 'Date of the last recovery test (Compliance tab), or null when none is recorded. [null] matches applications with no recorded test; a before filter never matches them.',
+      sortable: true, groupable: false, aggregable: true, blankable: true,
+      aliases: ['last_recovery_test', 'dr_test', 'dernier_test_reprise'],
+      examples: ['{"op":"before","value":"2025-10-11"}', '[null]'],
     },
     category: {
       ai: 'category',
@@ -380,6 +387,7 @@ export const applicationsRegistry: AiEntityFilterRegistry = {
     rpo_minutes: 'rpo_minutes',
     classification_review_state: 'classification_review_state',
     classification_reviewed_at: 'classification_reviewed_at',
+    last_dr_test: 'last_dr_test',
     category: 'category',
     editor: 'editor',
     environment: 'environment',
@@ -479,6 +487,8 @@ export const applicationsRegistry: AiEntityFilterRegistry = {
       rto_minutes: { expression: 'a.rto_minutes', type: 'number' },
       rpo_minutes: { expression: 'a.rpo_minutes', type: 'number' },
       classification_reviewed_at: { expression: classificationSql.classification_reviewed_at, type: 'date' },
+      // ISO text: min and max order the same as the date and read back as YYYY-MM-DD.
+      last_dr_test: { expression: `to_char(a.last_dr_test, 'YYYY-MM-DD')`, type: 'date' },
       spend_count: {
         expression: `(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id)`,
         type: 'number',

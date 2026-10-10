@@ -569,6 +569,7 @@ export class AiQueryExecutor {
         classification_review_state: scalar(row.classification_review_state),
         classification_review_reason: scalar(row.classification_review_reason),
         classification_reviewed_at: scalar(row.classification_reviewed_at),
+        last_dr_test: scalar(row.last_dr_test),
         category: scalar(row.category),
         editor: scalar(row.editor),
         environment: scalar(row.environment),
