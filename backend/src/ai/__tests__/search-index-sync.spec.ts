@@ -395,11 +395,12 @@ async function testBudgetLineRefMatchesAndIsReturned() {
     assert.equal((search.items[0] as any)?.metadata?.supplier ?? null, null);
 
     const capexItemId = randomUUID();
+    // A CAPEX line is a spend line of nature 'capex' since lot Z1: its own BL number, its CPX number kept.
     await runner.query(
-      `INSERT INTO capex_items (
-         id, tenant_id, description, ppe_type, investment_type, priority, currency, effective_start, item_number
+      `INSERT INTO spend_items (
+         id, tenant_id, nature, product_name, ppe_type, investment_type, priority, currency, effective_start, item_number, legacy_number
        )
-       VALUES ($1, $2, 'Storage refresh', 'hardware', 'replacement', 'medium', 'EUR', DATE '2026-01-01', 4206)`,
+       VALUES ($1, $2, 'capex', 'Storage refresh', 'hardware', 'replacement', 'medium', 'EUR', DATE '2026-01-01', 504206, 'CPX-4206')`,
       [capexItemId, tenantId],
     );
     const capexSearch = await service.searchAll(context as any, {

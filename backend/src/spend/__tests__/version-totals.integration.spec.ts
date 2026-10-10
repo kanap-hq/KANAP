@@ -8,6 +8,7 @@ import {
   assert,
   inRolledBackTransaction,
   Kind,
+  Measure,
   MEASURES,
   period,
   repeat,
@@ -20,6 +21,7 @@ import {
   setTenant,
   TABLES,
 } from './round-inputs.fixtures';
+import { DORMANT_CAPEX_TABLES, seedDormantCapexItem, seedDormantCapexVersion } from './dormant-capex.fixtures';
 
 // Budget totals per version kept by the amounts triggers (migration
 // 1853720000000), against the database: every way months are written,
@@ -33,7 +35,18 @@ import {
 
 const KINDS: Kind[] = ['opex', 'capex'];
 const YEAR = 2034;
-const TOTALS: Record<Kind, string> = { opex: 'spend_version_totals', capex: 'capex_version_totals' };
+
+/**
+ * The tables a check reads. The OPEX and CAPEX lines share the spend_* tables since lot Z1. The
+ * dormant capex_* tables (dropped by lot Z2) keep their triggers, and the rebuild function and the
+ * migration still repair them: their test seeds its CAPEX case there (`capex_dormant`).
+ */
+type Family = Kind | 'capex_dormant';
+const FAMILY: Record<Family, { versions: string; amounts: string; totals: string }> = {
+  opex: { versions: TABLES.opex.versions, amounts: TABLES.opex.amounts, totals: 'spend_version_totals' },
+  capex: { versions: TABLES.capex.versions, amounts: TABLES.capex.amounts, totals: 'spend_version_totals' },
+  capex_dormant: { versions: DORMANT_CAPEX_TABLES.versions, amounts: DORMANT_CAPEX_TABLES.amounts, totals: DORMANT_CAPEX_TABLES.totals },
+};
 
 const identityFx = {
   resolveRates: async () => ({ map: new Map(), settings: { reportingCurrency: 'EUR' } }),
@@ -45,12 +58,12 @@ type Sums = Record<string, string>;
 const asText = (alias: string) => MEASURES.map((m) => `${alias}.${m}::numeric(20, 2)::text AS ${m}`).join(', ');
 
 /** Per version of the tenant, the sums of its months of its own year, recomputed from the amounts (NULL as 0). */
-async function recomputed(runner: QueryRunner, kind: Kind, tenantId: string): Promise<Map<string, Sums>> {
+async function recomputed(runner: QueryRunner, kind: Family, tenantId: string): Promise<Map<string, Sums>> {
   const rows = await runner.query(
     `SELECT s.version_id, ${asText('s')}
      FROM (SELECT a.version_id, ${MEASURES.map((m) => `sum(coalesce(a.${m}, 0)) AS ${m}`).join(', ')}
-           FROM ${TABLES[kind].amounts} a
-           JOIN ${TABLES[kind].versions} v ON v.id = a.version_id AND v.tenant_id = a.tenant_id
+           FROM ${FAMILY[kind].amounts} a
+           JOIN ${FAMILY[kind].versions} v ON v.id = a.version_id AND v.tenant_id = a.tenant_id
            WHERE a.tenant_id = $1 AND EXTRACT(YEAR FROM a.period) = v.budget_year
            GROUP BY a.version_id) s`,
     [tenantId],
@@ -59,8 +72,8 @@ async function recomputed(runner: QueryRunner, kind: Kind, tenantId: string): Pr
 }
 
 /** The stored totals of the tenant, keyed like `recomputed`. */
-async function stored(runner: QueryRunner, kind: Kind, tenantId: string): Promise<Map<string, Sums>> {
-  const rows = await runner.query(`SELECT t.version_id, ${asText('t')} FROM ${TOTALS[kind]} t WHERE t.tenant_id = $1`, [tenantId]);
+async function stored(runner: QueryRunner, kind: Family, tenantId: string): Promise<Map<string, Sums>> {
+  const rows = await runner.query(`SELECT t.version_id, ${asText('t')} FROM ${FAMILY[kind].totals} t WHERE t.tenant_id = $1`, [tenantId]);
   return new Map(rows.map((row: any) => [row.version_id, Object.fromEntries(MEASURES.map((m) => [m, row[m]]))]));
 }
 
@@ -71,7 +84,7 @@ const sorted = <T>(map: Map<string, T>) => new Map([...map.entries()].sort(([a],
  * different value, and a row of a version without any month in its year
  * holds zeros (the triggers never delete a row).
  */
-async function assertTotalsMatch(runner: QueryRunner, kind: Kind, tenantId: string, label: string) {
+async function assertTotalsMatch(runner: QueryRunner, kind: Family, tenantId: string, label: string) {
   const expected = await recomputed(runner, kind, tenantId);
   const actual = await stored(runner, kind, tenantId);
   for (const versionId of actual.keys()) if (!expected.has(versionId)) expected.set(versionId, zeros);
@@ -79,8 +92,8 @@ async function assertTotalsMatch(runner: QueryRunner, kind: Kind, tenantId: stri
 }
 
 /** The stored row of one version (the five sums as 2-decimal text, and its ctid), or undefined. */
-async function totalsRow(runner: QueryRunner, kind: Kind, versionId: string) {
-  const [row] = await runner.query(`SELECT t.ctid::text AS ctid, ${asText('t')} FROM ${TOTALS[kind]} t WHERE t.version_id = $1`, [versionId]);
+async function totalsRow(runner: QueryRunner, kind: Family, versionId: string) {
+  const [row] = await runner.query(`SELECT t.ctid::text AS ctid, ${asText('t')} FROM ${FAMILY[kind].totals} t WHERE t.version_id = $1`, [versionId]);
   return row as (Sums & { ctid: string }) | undefined;
 }
 
@@ -120,10 +133,10 @@ async function assertSummaryMatchesAggregate(runner: QueryRunner, kind: Kind, te
   assert.deepEqual([...totals.reporting.keys()].sort(), [...expected.keys()].sort(), `${kind}: ${label}: reported versions`);
 }
 
-async function insertMonth(runner: QueryRunner, kind: Kind, tenantId: string, versionId: string, month: string, cells: Record<string, string | null>) {
+async function insertMonth(runner: QueryRunner, kind: Family, tenantId: string, versionId: string, month: string, cells: Record<string, string | null>) {
   const measures = Object.keys(cells);
   await runner.query(
-    `INSERT INTO ${TABLES[kind].amounts} (tenant_id, version_id, period${measures.map((m) => `, ${m}`).join('')})
+    `INSERT INTO ${FAMILY[kind].amounts} (tenant_id, version_id, period${measures.map((m) => `, ${m}`).join('')})
      VALUES ($1, $2, $3${measures.map((_, i) => `, $${i + 4}`).join('')})`,
     [tenantId, versionId, month, ...measures.map((m) => cells[m])],
   );
@@ -290,14 +303,14 @@ async function testCascades(kind: Kind) {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, `vt-cascade-${kind}`);
     const t = TABLES[kind];
-    const itemFk = kind === 'opex' ? 'spend_item_id' : 'capex_item_id';
+    const itemFk = 'spend_item_id';
     const a = await seedLine(runner, kind, tenantId, YEAR, { planned: repeat('1', 12) }, 1);
     const b = await seedLine(runner, kind, tenantId, YEAR, { planned: repeat('2', 12) }, 2);
     const c = await seedLine(runner, kind, tenantId, YEAR, { planned: repeat('3', 12) }, 3);
     const cNext = await seedVersion(runner, kind, tenantId, c.itemId, YEAR + 1);
     await seedMonths(runner, kind, tenantId, cNext, YEAR + 1, { forecast: repeat('4', 12) });
     await seedLine(runner, kind, tenantId, YEAR, { planned: repeat('5', 12) }, 4);
-    const count = async () => Number((await runner.query(`SELECT count(*) AS n FROM ${TOTALS[kind]} WHERE tenant_id = $1`, [tenantId]))[0].n);
+    const count = async () => Number((await runner.query(`SELECT count(*) AS n FROM ${FAMILY[kind].totals} WHERE tenant_id = $1`, [tenantId]))[0].n);
     assert.equal(await count(), 5, `${kind}: one row per version with months`);
 
     await runner.query(`DELETE FROM ${t.versions} WHERE id = $1`, [a.versionId]);
@@ -315,7 +328,7 @@ async function testCascades(kind: Kind) {
     assert.equal(await count(), 1, `${kind}: only the untouched line keeps its row`);
 
     // The tenant purge order: the totals first, then every month of the tenant.
-    await runner.query(`DELETE FROM ${TOTALS[kind]} WHERE tenant_id = $1`, [tenantId]);
+    await runner.query(`DELETE FROM ${FAMILY[kind].totals} WHERE tenant_id = $1`, [tenantId]);
     await runner.query(`DELETE FROM ${t.amounts} WHERE tenant_id = $1`, [tenantId]);
     assert.equal(await count(), 0, `${kind}: nothing left after a purge`);
   });
@@ -326,15 +339,15 @@ async function testTenantIsolation(kind: Kind) {
   await inRolledBackTransaction(async (runner) => {
     const tenantA = await seedTenant(runner, `vt-rls-a-${kind}`);
     const { itemId, versionId } = await seedLine(runner, kind, tenantA, YEAR, { planned: repeat('8', 12) });
-    const [row] = await runner.query(`SELECT tenant_id::text AS tenant_id FROM ${TOTALS[kind]} WHERE version_id = $1`, [versionId]);
+    const [row] = await runner.query(`SELECT tenant_id::text AS tenant_id FROM ${FAMILY[kind].totals} WHERE version_id = $1`, [versionId]);
     assert.equal(row?.tenant_id, tenantA, `${kind}: the row carries the months' tenant`);
     const otherVersion = await seedVersion(runner, kind, tenantA, itemId, YEAR + 1);
 
     await seedTenant(runner, `vt-rls-b-${kind}`);
-    assert.equal((await runner.query(`SELECT 1 FROM ${TOTALS[kind]} WHERE version_id = $1`, [versionId])).length, 0, `${kind}: invisible to another tenant`);
+    assert.equal((await runner.query(`SELECT 1 FROM ${FAMILY[kind].totals} WHERE version_id = $1`, [versionId])).length, 0, `${kind}: invisible to another tenant`);
     await runner.query('SAVEPOINT vt_rls');
     await assert.rejects(
-      runner.query(`INSERT INTO ${TOTALS[kind]} (tenant_id, version_id, planned) VALUES ($1, $2, 1)`, [tenantA, otherVersion]),
+      runner.query(`INSERT INTO ${FAMILY[kind].totals} (tenant_id, version_id, planned) VALUES ($1, $2, 1)`, [tenantA, otherVersion]),
       /row-level security/,
       `${kind}: another tenant cannot write a row of tenant A`,
     );
@@ -342,6 +355,29 @@ async function testTenantIsolation(kind: Kind) {
     await setTenant(runner, tenantA);
     assert.equal((await totalsRow(runner, kind, versionId))?.planned, '96.00');
   });
+}
+
+/**
+ * The families the rebuild function and the migration repair: the spend_* tables (labelled OPEX by
+ * both, the lines of both natures since lot Z1) and the dormant capex_* tables (labelled CAPEX).
+ */
+const REBUILD_FAMILIES = ['opex', 'capex_dormant'] as const;
+type RebuildFamily = typeof REBUILD_FAMILIES[number];
+
+async function seedFamilyItem(runner: QueryRunner, family: RebuildFamily, tenantId: string) {
+  return family === 'opex' ? seedItem(runner, 'opex', tenantId) : seedDormantCapexItem(runner, tenantId);
+}
+
+async function seedFamilyVersion(runner: QueryRunner, family: RebuildFamily, tenantId: string, itemId: string, year: number) {
+  return family === 'opex' ? seedVersion(runner, 'opex', tenantId, itemId, year) : seedDormantCapexVersion(runner, tenantId, itemId, year);
+}
+
+async function seedFamilyMonths(runner: QueryRunner, family: RebuildFamily, tenantId: string, versionId: string, year: number, values: Partial<Record<Measure, string[]>>) {
+  if (family === 'opex') return seedMonths(runner, 'opex', tenantId, versionId, year, values);
+  for (let month = 1; month <= 12; month++) {
+    const measures = Object.keys(values) as Measure[];
+    await insertMonth(runner, family, tenantId, versionId, period(month, year), Object.fromEntries(measures.map((m) => [m, values[m]![month - 1]])));
+  }
 }
 
 /**
@@ -353,19 +389,21 @@ async function testTenantIsolation(kind: Kind) {
 async function testRebuildAndMigrationRerun() {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, 'vt-rebuild');
-    const lines = {} as Record<Kind, { versionId: string; loaded: string; empty: string }>;
-    for (const kind of KINDS) {
-      const { itemId, versionId } = await seedLine(runner, kind, tenantId, YEAR, { planned: repeat('7', 12) });
+    const lines = {} as Record<RebuildFamily, { versionId: string; loaded: string; empty: string }>;
+    for (const kind of REBUILD_FAMILIES) {
+      const itemId = await seedFamilyItem(runner, kind, tenantId);
+      const versionId = await seedFamilyVersion(runner, kind, tenantId, itemId, YEAR);
+      await seedFamilyMonths(runner, kind, tenantId, versionId, YEAR, { planned: repeat('7', 12) });
       // Months loaded with the triggers off, NULL included.
-      await runner.query(`ALTER TABLE ${TABLES[kind].amounts} DISABLE TRIGGER USER`);
-      const loaded = await seedVersion(runner, kind, tenantId, itemId, YEAR + 1);
-      await seedMonths(runner, kind, tenantId, loaded, YEAR + 1, { forecast: repeat('2', 12), actual: repeat('1', 12) });
-      await runner.query(`UPDATE ${TABLES[kind].amounts} SET actual = NULL WHERE version_id = $1 AND period = $2`, [loaded, period(1, YEAR + 1)]);
-      await runner.query(`ALTER TABLE ${TABLES[kind].amounts} ENABLE TRIGGER USER`);
+      await runner.query(`ALTER TABLE ${FAMILY[kind].amounts} DISABLE TRIGGER USER`);
+      const loaded = await seedFamilyVersion(runner, kind, tenantId, itemId, YEAR + 1);
+      await seedFamilyMonths(runner, kind, tenantId, loaded, YEAR + 1, { forecast: repeat('2', 12), actual: repeat('1', 12) });
+      await runner.query(`UPDATE ${FAMILY[kind].amounts} SET actual = NULL WHERE version_id = $1 AND period = $2`, [loaded, period(1, YEAR + 1)]);
+      await runner.query(`ALTER TABLE ${FAMILY[kind].amounts} ENABLE TRIGGER USER`);
       // A wrong value, and a row for a version without any month.
-      await runner.query(`UPDATE ${TOTALS[kind]} SET planned = planned + 1 WHERE version_id = $1`, [versionId]);
-      const empty = await seedVersion(runner, kind, tenantId, itemId, YEAR + 2);
-      await runner.query(`INSERT INTO ${TOTALS[kind]} (tenant_id, version_id, planned) VALUES ($1, $2, 5)`, [tenantId, empty]);
+      await runner.query(`UPDATE ${FAMILY[kind].totals} SET planned = planned + 1 WHERE version_id = $1`, [versionId]);
+      const empty = await seedFamilyVersion(runner, kind, tenantId, itemId, YEAR + 2);
+      await runner.query(`INSERT INTO ${FAMILY[kind].totals} (tenant_id, version_id, planned) VALUES ($1, $2, 5)`, [tenantId, empty]);
       assert.notDeepEqual(sorted(await stored(runner, kind, tenantId)), sorted(await recomputed(runner, kind, tenantId)), `${kind}: damaged`);
       lines[kind] = { versionId, loaded, empty };
     }
@@ -379,20 +417,20 @@ async function testRebuildAndMigrationRerun() {
       { scope: 'CAPEX', tenant_id: tenantId, inserted: 1, corrected: 2 },
       { scope: 'OPEX', tenant_id: tenantId, inserted: 1, corrected: 2 },
     ], 'the rebuild reports what it repaired');
-    for (const kind of KINDS) {
+    for (const kind of REBUILD_FAMILIES) {
       await assertTotalsMatch(runner, kind, tenantId, 'after the rebuild');
       assert.deepEqual(values(await totalsRow(runner, kind, lines[kind].loaded)), { ...zeros, forecast: '24.00', actual: '11.00' }, `${kind}: the loaded months, NULL as 0`);
       assert.deepEqual(values(await totalsRow(runner, kind, lines[kind].empty)), zeros, `${kind}: a row without months is set back to zeros, not deleted`);
     }
     assert.deepEqual(await runner.query(`SELECT * FROM budget_version_totals_rebuild($1)`, [tenantId]), [], 'a second rebuild has nothing to do');
-    for (const kind of KINDS) {
+    for (const kind of REBUILD_FAMILIES) {
       assert.deepEqual(values(await totalsRow(runner, kind, lines[kind].empty)), zeros, `${kind}: the rebuild keeps a row of zeros without months`);
     }
 
     // The migration itself, rerun on a migrated database with new damage: it repairs and stays idempotent.
-    for (const kind of KINDS) {
-      await runner.query(`UPDATE ${TOTALS[kind]} SET forecast = 0 WHERE version_id = $1`, [lines[kind].loaded]);
-      await runner.query(`DELETE FROM ${TOTALS[kind]} WHERE version_id = $1`, [lines[kind].versionId]);
+    for (const kind of REBUILD_FAMILIES) {
+      await runner.query(`UPDATE ${FAMILY[kind].totals} SET forecast = 0 WHERE version_id = $1`, [lines[kind].loaded]);
+      await runner.query(`DELETE FROM ${FAMILY[kind].totals} WHERE version_id = $1`, [lines[kind].versionId]);
     }
     // RLS goes back as it was found: a table found without FORCE stays so.
     await runner.query(`ALTER TABLE capex_versions NO FORCE ROW LEVEL SECURITY`);
@@ -405,7 +443,7 @@ async function testRebuildAndMigrationRerun() {
       console.log = log;
     }
     await setTenant(runner, tenantId);
-    for (const kind of KINDS) await assertTotalsMatch(runner, kind, tenantId, 'after the migration rerun');
+    for (const kind of REBUILD_FAMILIES) await assertTotalsMatch(runner, kind, tenantId, 'after the migration rerun');
     const [{ slug }] = await runner.query(`SELECT slug FROM tenants WHERE id = $1`, [tenantId]);
     assert.deepEqual(logged.filter((line) => line.includes(tenantId)), [
       `[Migration] VersionTotals: tenant ${slug} (${tenantId}) OPEX: 1 row(s) inserted, 1 corrected`,

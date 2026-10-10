@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import { SpendItemsService } from '../spend-items.service';
-import { CapexItemsService } from '../../capex/capex-items.service';
+import { CapexItemsService } from '../spend-items.service';
 import { ItemNumberService } from '../../common/item-number.service';
 import { captureAudit, Kind, noFreeze } from './round-inputs.fixtures';
 
@@ -19,25 +19,15 @@ const noNotifications = { notifyStatusChange: () => undefined, notifyShare: () =
 
 /** The item service of a type: create, update, summary and (CAPEX) CSV. `audit`: an in-memory capture unless given. */
 export function itemService(kind: Kind, audit: unknown = captureAudit()): any {
-  if (kind === 'opex') {
-    const args: any[] = Array.from({ length: 11 }, () => undefined);
-    args[3] = audit;
-    args[4] = noAllocations;
-    args[6] = identityFx;
-    args[8] = noContacts;
-    args[9] = noNotifications;
-    args[10] = new ItemNumberService();
-    return new (SpendItemsService as any)(...args);
-  }
-  const args: any[] = Array.from({ length: 12 }, () => undefined);
+  // One service for both natures since lot Z1: the CAPEX one is its subclass on the CAPEX lines.
+  const args: any[] = Array.from({ length: 11 }, () => undefined);
+  args[3] = audit;
   args[4] = noAllocations;
-  args[5] = audit;
-  args[6] = noFreeze;
-  args[7] = identityFx;
-  args[9] = noContacts;
+  args[6] = identityFx;
+  args[8] = noContacts;
+  args[9] = noNotifications;
   args[10] = new ItemNumberService();
-  args[11] = noNotifications;
-  return new (CapexItemsService as any)(...args);
+  return kind === 'opex' ? new (SpendItemsService as any)(...args) : new (CapexItemsService as any)(...args);
 }
 
 /** A company with its own chart of accounts and one account in it. */
@@ -99,8 +89,6 @@ export function lineBody(kind: Kind, name: string, extra: Record<string, unknown
     : { description: name, ppe_type: 'hardware', investment_type: 'replacement', priority: 'medium', currency: 'EUR', effective_start: '2026-01-01' };
   return { ...base, ...extra };
 }
-
-export const ITEM_TABLE: Record<Kind, string> = { opex: 'spend_items', capex: 'capex_items' };
 
 /** Run `fn` in a savepoint that is always rolled back; returns the error it threw (or fails). */
 export async function refusal(runner: QueryRunner, fn: () => Promise<unknown>): Promise<Error> {

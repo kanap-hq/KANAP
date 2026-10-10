@@ -1,9 +1,9 @@
 import 'dotenv/config';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
-import { CapexItemsService } from '../capex-items.service';
+import { CapexItemsService } from '../spend-items.service';
 import { ItemNumberService } from '../../common/item-number.service';
-import { assert, captureAudit, inRolledBackTransaction, noFreeze, runSpecs, seedTenant } from '../../spend/__tests__/round-inputs.fixtures';
+import { assert, CAPEX_NUMBER_OFFSET, captureAudit, inRolledBackTransaction, noFreeze, runSpecs, seedTenant } from '../../spend/__tests__/round-inputs.fixtures';
 import { loadBudgetFile } from '../../spend/__tests__/budget-file.fixtures';
 
 // A CAPEX status change emails the item's owners, as OPEX does: from the item
@@ -13,13 +13,14 @@ import { loadBudgetFile } from '../../spend/__tests__/budget-file.fixtures';
 // CAPEX as on OPEX.
 
 function service(sent: any[]) {
-  const args: any[] = Array.from({ length: 12 }, () => undefined);
-  args[5] = captureAudit();
-  args[6] = noFreeze;
-  args[7] = { resolveRates: async () => ({ map: new Map(), settings: { allowedCurrencies: null } }) };
-  args[9] = { syncFromSupplier: async () => undefined };
+  // The constructor of the OPEX twin since lot Z1 (`spend-items.service.ts`).
+  const args: any[] = Array.from({ length: 11 }, () => undefined);
+  args[3] = captureAudit();
+  args[5] = noFreeze;
+  args[6] = { resolveRates: async () => ({ map: new Map(), settings: { allowedCurrencies: null } }) };
+  args[8] = { syncFromSupplier: async () => undefined };
+  args[9] = { notifyStatusChange: (payload: any) => { sent.push({ ...payload, manager: undefined }); } };
   args[10] = new ItemNumberService();
-  args[11] = { notifyStatusChange: (payload: any) => { sent.push({ ...payload, manager: undefined }); } };
   return new (CapexItemsService as any)(...args) as CapexItemsService;
 }
 
@@ -47,11 +48,12 @@ async function seedCapexWithOwners(runner: QueryRunner) {
     `INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, 'Status company', 'FR', 'Lyon') RETURNING id`,
     [tenantId],
   );
+  // CPX-7, stored in spend_items since lot Z1 (its CPX number kept as legacy_number).
   const [item] = await runner.query(
-    `INSERT INTO capex_items (tenant_id, description, ppe_type, investment_type, priority, currency, effective_start, item_number,
-                              paying_company_id, owner_it_id, owner_business_id, status)
-     VALUES ($1, 'Storage array', 'hardware', 'replacement', 'medium', 'EUR', '2020-01-01', 7, $2, $3, $4, 'enabled') RETURNING id`,
-    [tenantId, company.id, itOwner.id, businessOwner.id],
+    `INSERT INTO spend_items (tenant_id, nature, product_name, ppe_type, investment_type, priority, currency, effective_start, item_number,
+                              legacy_number, paying_company_id, owner_it_id, owner_business_id, status)
+     VALUES ($1, 'capex', 'Storage array', 'hardware', 'replacement', 'medium', 'EUR', '2020-01-01', $2, 'CPX-7', $3, $4, $5, 'enabled') RETURNING id`,
+    [tenantId, 7 + CAPEX_NUMBER_OFFSET, company.id, itOwner.id, businessOwner.id],
   );
   return { tenantId, itemId: item.id as string, itOwner, businessOwner, disabledOwner, actor };
 }
@@ -81,12 +83,12 @@ async function testUpdateEmailsOwners() {
       'both owners are recipients',
     );
 
-    await runner.query(`UPDATE capex_items SET owner_business_id = $2 WHERE id = $1`, [seed.itemId, seed.disabledOwner.id]);
+    await runner.query(`UPDATE spend_items SET owner_business_id = $2 WHERE id = $1`, [seed.itemId, seed.disabledOwner.id]);
     sent.length = 0;
     await svc.update(seed.itemId, { status: 'enabled' } as any, seed.actor.id, opts);
     assert.deepEqual(sent[0].recipients.map((r: any) => r.userId), [seed.itOwner.id], 'a disabled owner is not a recipient');
 
-    await runner.query(`UPDATE capex_items SET owner_it_id = NULL, owner_business_id = NULL WHERE id = $1`, [seed.itemId]);
+    await runner.query(`UPDATE spend_items SET owner_it_id = NULL, owner_business_id = NULL WHERE id = $1`, [seed.itemId]);
     sent.length = 0;
     await svc.update(seed.itemId, { status: 'disabled' } as any, seed.actor.id, opts);
     assert.equal(sent.length, 0, 'no owner, no email');
@@ -103,7 +105,7 @@ async function testBudgetFileSendsNothing() {
     const result = await loadBudgetFile(runner.manager, 'capex', seed.tenantId, file, captureAudit() as any, service(sent) as any);
     assert.equal(result.ok, true, `load accepted (${JSON.stringify((result as any).errors)})`);
     assert.equal((result as any).updated, 1);
-    const [row] = await runner.query(`SELECT status, owner_it_id, owner_business_id FROM capex_items WHERE id = $1`, [seed.itemId]);
+    const [row] = await runner.query(`SELECT status, owner_it_id, owner_business_id FROM spend_items WHERE id = $1 AND nature = 'capex'`, [seed.itemId]);
     assert.deepEqual(
       [row.status, row.owner_it_id, row.owner_business_id],
       ['disabled', seed.itOwner.id, seed.businessOwner.id],

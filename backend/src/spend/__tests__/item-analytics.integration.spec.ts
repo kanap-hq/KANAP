@@ -5,7 +5,7 @@ import dataSource from '../../data-source';
 import { ensureDefaultAnalyticsAxis } from '../../analytics/analytics-axes.util';
 import { backendPid, closeRunner, committed, openTenantTransaction, waitUntilBlocked } from '../../cost-centers/__tests__/cost-center-test-helpers';
 import { assert, inRolledBackTransaction, Kind, runSpecs, seedTenant, setTenant } from './round-inputs.fixtures';
-import { ITEM_TABLE, itemService, lineBody, refusal, seedCompany } from './cost-center.fixtures';
+import { itemService, lineBody, refusal, seedCompany } from './cost-center.fixtures';
 
 // Analytics values of OPEX and CAPEX lines, one per line and dimension, through
 // the write gate (`item-write.util.ts` → `item-analytics.util.ts`):
@@ -34,7 +34,11 @@ import { ITEM_TABLE, itemService, lineBody, refusal, seedCompany } from './cost-
 // runSpecs opens the data-source, so test:ci runs this file in its database lane.
 
 const KINDS: Kind[] = ['opex', 'capex'];
-const LINK_TABLE: Record<Kind, string> = { opex: 'spend_item_analytics_values', capex: 'capex_item_analytics_values' };
+// Both natures in one family since lot Z1: the lines in spend_items, their values in one table.
+const LINE_TABLE = 'spend_items';
+const LINK_TABLE: Record<Kind, string> = { opex: 'spend_item_analytics_values', capex: 'spend_item_analytics_values' };
+/** The audit label of a line: a CAPEX line keeps its CAPEX label (`auditTableOf`, budget-nature.ts). */
+const AUDIT_TABLE: Record<Kind, string> = { opex: 'spend_items', capex: 'capex_items' };
 const CONFLICT = 'Send the analytics category once: analytics_category_id and analytics_values disagree.';
 
 type Setup = {
@@ -109,7 +113,11 @@ async function links(runner: QueryRunner, kind: Kind, itemId: string): Promise<R
 }
 
 async function linkCount(runner: QueryRunner, kind: Kind, tenantId: string): Promise<number> {
-  const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM ${LINK_TABLE[kind]} WHERE tenant_id = $1`, [tenantId]);
+  const [{ n }] = await runner.query(
+    `SELECT count(*)::int AS n FROM ${LINK_TABLE[kind]} v JOIN ${LINE_TABLE} l ON l.tenant_id = v.tenant_id AND l.id = v.item_id
+      WHERE v.tenant_id = $1 AND l.nature = $2`,
+    [tenantId, kind],
+  );
   return n;
 }
 
@@ -163,7 +171,7 @@ async function testLegacyField(kind: Kind) {
     const opts = { manager: runner.manager };
     const line = await svc.create(lineBody(kind, 'Legacy', { paying_company_id: s.companyId, analytics_category_id: s.licences }), undefined, opts);
     assert.deepEqual(await links(runner, kind, line.id), { [s.main]: s.licences }, `${kind}: the legacy field writes the default dimension`);
-    const [column] = await runner.query(`SELECT analytics_category_id FROM ${ITEM_TABLE[kind]} WHERE id = $1`, [line.id]);
+    const [column] = await runner.query(`SELECT analytics_category_id FROM ${LINE_TABLE} WHERE id = $1`, [line.id]);
     assert.equal(column.analytics_category_id, null, `${kind}: the item column is not written`);
 
     await svc.update(line.id, { analytics_category_id: s.otherMain, analytics_values: { [s.nature]: s.hardware } }, undefined, opts);
@@ -188,9 +196,9 @@ async function testRefusals(kind: Kind) {
     const svc = itemService(kind);
     const opts = { manager: runner.manager };
     const line = await svc.create(lineBody(kind, 'Target', { paying_company_id: s.companyId, analytics_values: { [s.main]: s.licences } }), undefined, opts);
-    const [stored] = await runner.query(`SELECT * FROM ${ITEM_TABLE[kind]} WHERE id = $1`, [line.id]);
+    const [stored] = await runner.query(`SELECT * FROM ${LINE_TABLE} WHERE id = $1`, [line.id]);
     const linksBefore = await linkCount(runner, kind, s.tenantId);
-    const [{ n: linesBefore }] = await runner.query(`SELECT count(*)::int AS n FROM ${ITEM_TABLE[kind]} WHERE tenant_id = $1`, [s.tenantId]);
+    const [{ n: linesBefore }] = await runner.query(`SELECT count(*)::int AS n FROM ${LINE_TABLE} WHERE tenant_id = $1 AND nature = $2`, [s.tenantId, kind]);
 
     const cases: Array<[string, Record<string, unknown>, string]> = [
       ['value of another dimension', { analytics_values: { [s.main]: s.hardware } }, 'Hardware is not a value of the analytics dimension.'],
@@ -211,10 +219,10 @@ async function testRefusals(kind: Kind) {
       const onUpdate = await refusal(runner, () => svc.update(line.id, fields, undefined, opts));
       assert.equal(onUpdate.message, message, `${kind} update, ${label}`);
     }
-    const [{ n: linesAfter }] = await runner.query(`SELECT count(*)::int AS n FROM ${ITEM_TABLE[kind]} WHERE tenant_id = $1`, [s.tenantId]);
+    const [{ n: linesAfter }] = await runner.query(`SELECT count(*)::int AS n FROM ${LINE_TABLE} WHERE tenant_id = $1 AND nature = $2`, [s.tenantId, kind]);
     assert.equal(linesAfter, linesBefore, `${kind}: no line written`);
     assert.equal(await linkCount(runner, kind, s.tenantId), linksBefore, `${kind}: no link written`);
-    assert.deepEqual((await runner.query(`SELECT * FROM ${ITEM_TABLE[kind]} WHERE id = $1`, [line.id]))[0], stored, `${kind}: the line is unchanged`);
+    assert.deepEqual((await runner.query(`SELECT * FROM ${LINE_TABLE} WHERE id = $1`, [line.id]))[0], stored, `${kind}: the line is unchanged`);
     assert.deepEqual(await links(runner, kind, line.id), { [s.main]: s.licences });
   });
 }
@@ -343,7 +351,7 @@ async function testRequiredDimensions(kind: Kind) {
     await runner.query(`UPDATE analytics_axes SET required = true, applies_to = $2 WHERE id = $1`, [recurrence, other]);
 
     // Create: refused without a value, whatever the body names; nothing written.
-    const [{ n: linesBefore }] = await runner.query(`SELECT count(*)::int AS n FROM ${ITEM_TABLE[kind]} WHERE tenant_id = $1`, [s.tenantId]);
+    const [{ n: linesBefore }] = await runner.query(`SELECT count(*)::int AS n FROM ${LINE_TABLE} WHERE tenant_id = $1 AND nature = $2`, [s.tenantId, kind]);
     const linksBefore = await linkCount(runner, kind, s.tenantId);
     const cases: Array<[string, Record<string, unknown>]> = [
       ['no analytics field at all', {}],
@@ -356,7 +364,7 @@ async function testRequiredDimensions(kind: Kind) {
       assert.equal(refused.message, natureMessage, `${kind} create, ${label}`);
       assert.equal((refused as any).getStatus?.(), 400, `${kind} create, ${label}: a 400`);
     }
-    const [{ n: linesAfter }] = await runner.query(`SELECT count(*)::int AS n FROM ${ITEM_TABLE[kind]} WHERE tenant_id = $1`, [s.tenantId]);
+    const [{ n: linesAfter }] = await runner.query(`SELECT count(*)::int AS n FROM ${LINE_TABLE} WHERE tenant_id = $1 AND nature = $2`, [s.tenantId, kind]);
     assert.equal(linesAfter, linesBefore, `${kind}: no line written`);
     assert.equal(await linkCount(runner, kind, s.tenantId), linksBefore, `${kind}: no link written`);
 
@@ -396,7 +404,7 @@ async function testRequiredDimensions(kind: Kind) {
     await svc.update(lacking.id, { analytics_values: { [s.main]: s.licences } }, undefined, opts);
     await svc.update(lacking.id, { analytics_values: { [s.nature]: null } }, undefined, opts);
     assert.deepEqual(await links(runner, kind, lacking.id), { [s.main]: s.licences }, `${kind}: the lacking line stays editable`);
-    const [note] = await runner.query(`SELECT notes FROM ${ITEM_TABLE[kind]} WHERE id = $1`, [lacking.id]);
+    const [note] = await runner.query(`SELECT notes FROM ${LINE_TABLE} WHERE id = $1`, [lacking.id]);
     assert.equal(note.notes, 'edited');
 
     // Disabled: the setting is ignored, a held value may be cleared.
@@ -462,13 +470,13 @@ async function testChangeAloneIsAnEdit(kind: Kind) {
     assert.deepEqual(created.after.analytics_values, { [s.main]: s.licences }, `${kind}: the create snapshot carries the values`);
     assert.equal(created.after.analytics_category_id, s.licences);
 
-    await runner.query(`UPDATE ${ITEM_TABLE[kind]} SET updated_at = '2020-01-01T00:00:00Z' WHERE id = $1`, [line.id]);
+    await runner.query(`UPDATE ${LINE_TABLE} SET updated_at = '2020-01-01T00:00:00Z' WHERE id = $1`, [line.id]);
     await svc.update(line.id, { analytics_values: { [s.nature]: s.hardware } }, undefined, opts);
-    const [row] = await runner.query(`SELECT updated_at FROM ${ITEM_TABLE[kind]} WHERE id = $1`, [line.id]);
+    const [row] = await runner.query(`SELECT updated_at FROM ${LINE_TABLE} WHERE id = $1`, [line.id]);
     assert.ok(new Date(row.updated_at).getUTCFullYear() > 2020, `${kind}: updated_at moves`);
     const entry = svc.audit.entries.filter((e: any) => e.recordId === line.id && e.action === 'update').pop();
     assert.ok(entry, `${kind}: an audit row is written`);
-    assert.equal(entry.table, ITEM_TABLE[kind]);
+    assert.equal(entry.table, AUDIT_TABLE[kind]);
     assert.deepEqual(entry.before.analytics_values, { [s.main]: s.licences }, `${kind}: before snapshot`);
     assert.deepEqual(entry.after.analytics_values, { [s.main]: s.licences, [s.nature]: s.hardware }, `${kind}: after snapshot`);
     assert.equal(entry.before.analytics_category_id, s.licences);
@@ -506,7 +514,7 @@ async function testLegacyListReadsTheLinks(kind: Kind) {
     const opts = { manager: runner.manager };
     const line = await svc.create(lineBody(kind, 'Listed', { paying_company_id: s.companyId, analytics_category_id: s.licences }), undefined, opts);
     // A stale item column (not written any more) is never read.
-    await runner.query(`UPDATE ${ITEM_TABLE[kind]} SET analytics_category_id = $2 WHERE id = $1`, [line.id, s.otherMain]);
+    await runner.query(`UPDATE ${LINE_TABLE} SET analytics_category_id = $2 WHERE id = $1`, [line.id, s.otherMain]);
     const listed = (await svc.list({ limit: 50 }, opts)).items.find((item: any) => item.id === line.id);
     assert.ok(listed, `${kind}: the line is listed`);
     assert.equal(listed.analytics_category_id, s.licences, `${kind}: the list reads the link`);

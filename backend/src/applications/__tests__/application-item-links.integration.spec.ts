@@ -6,6 +6,7 @@ import { EntityManager, QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { ApplicationsInstancesService } from '../services/applications-instances.service';
 import { replaceItemApplications } from '../../spend/item-applications';
+import { CAPEX_NUMBER_OFFSET } from '../../spend/__tests__/round-inputs.fixtures';
 
 // Links between applications and OPEX / CAPEX lines, contracts and projects,
 // written from either side, against a real database:
@@ -54,11 +55,12 @@ async function seedTenant(runner: QueryRunner, tag: string): Promise<TenantSeed>
   await setTenant(runner, tenantId);
   const app = async (name: string) =>
     (await runner.query(`INSERT INTO applications (tenant_id, name) VALUES ($1, $2) RETURNING id`, [tenantId, name]))[0].id;
+  // A CAPEX line lives in spend_items since lot Z1 (title in product_name), numbered past the OPEX lines.
   const capex = async (description: string, itemNumber: number) =>
     (
       await runner.query(
-        `INSERT INTO capex_items (tenant_id, description, ppe_type, investment_type, priority, currency, effective_start, item_number)
-         VALUES ($1, $2, 'hardware', 'replacement', 'medium', 'EUR', '2026-01-01', $3) RETURNING id`,
+        `INSERT INTO spend_items (tenant_id, nature, product_name, ppe_type, investment_type, priority, currency, effective_start, item_number, legacy_number)
+         VALUES ($1, 'capex', $2, 'hardware', 'replacement', 'medium', 'EUR', '2026-01-01', $3::int + ${CAPEX_NUMBER_OFFSET}, 'CPX-' || $3::int) RETURNING id`,
         [tenantId, description, itemNumber],
       )
     )[0].id;
@@ -112,17 +114,27 @@ async function inRolledBackTransaction(fn: (runner: QueryRunner) => Promise<void
   }
 }
 
+// The link tables as the audit names them, and where each is stored: since lot Z1 the OPEX and
+// CAPEX lines share application_spend_items, told apart by the line's nature.
 type LinkTable = 'application_capex_items' | 'application_spend_items' | 'application_contracts' | 'application_projects';
-const ITEM_FK: Record<LinkTable, string> = {
-  application_capex_items: 'capex_item_id',
-  application_spend_items: 'spend_item_id',
-  application_contracts: 'contract_id',
-  application_projects: 'project_id',
+const LINK_STORAGE: Record<LinkTable, { table: string; itemFk: string; nature?: 'opex' | 'capex' }> = {
+  application_capex_items: { table: 'application_spend_items', itemFk: 'spend_item_id', nature: 'capex' },
+  application_spend_items: { table: 'application_spend_items', itemFk: 'spend_item_id', nature: 'opex' },
+  application_contracts: { table: 'application_contracts', itemFk: 'contract_id' },
+  application_projects: { table: 'application_projects', itemFk: 'project_id' },
 };
 
+/** The stored links of `table` (as the audit names it) matching `where` on `l`, as `l.*` plus `item_id`. */
+function storedLinksSql(table: LinkTable, columns: string, where: string, orderBy: string) {
+  const { table: stored, itemFk, nature } = LINK_STORAGE[table];
+  const lineOfNature = nature
+    ? ` JOIN spend_items i ON i.tenant_id = l.tenant_id AND i.id = l.${itemFk} AND i.nature = '${nature}'`
+    : '';
+  return `SELECT ${columns}, l.${itemFk} AS item_id FROM ${stored} l${lineOfNature} WHERE ${where} ORDER BY ${orderBy}`;
+}
+
 async function links(manager: QueryRunner | EntityManager, table: LinkTable, appId: string) {
-  const itemFk = ITEM_FK[table];
-  return manager.query(`SELECT tenant_id, ${itemFk} AS item_id FROM ${table} WHERE application_id = $1 ORDER BY ${itemFk}`, [appId]);
+  return manager.query(storedLinksSql(table, 'l.tenant_id', 'l.application_id = $1', 'item_id'), [appId]);
 }
 
 function isBadRequest(message: string) {
@@ -259,10 +271,7 @@ async function concurrentReplace(
 
     const stored = await dataSource.transaction(async (manager) => {
       await setTenant(manager, seed.tenantId);
-      return manager.query(
-        `SELECT application_id, ${ITEM_FK[table]} AS item_id FROM ${table} WHERE tenant_id = $1 ORDER BY 1, 2`,
-        [seed.tenantId],
-      );
+      return manager.query(storedLinksSql(table, 'l.application_id', 'l.tenant_id = $1', '1, 2'), [seed.tenantId]);
     });
     assert.deepEqual(stored, expected, `${table}: stored links`);
   } finally {
@@ -272,7 +281,7 @@ async function concurrentReplace(
     }
     await dataSource.transaction(async (manager) => {
       await setTenant(manager, seed.tenantId);
-      await manager.query(`DELETE FROM ${table} WHERE tenant_id = $1`, [seed.tenantId]);
+      await manager.query(`DELETE FROM ${LINK_STORAGE[table].table} WHERE tenant_id = $1`, [seed.tenantId]);
     });
   }
 }
@@ -345,7 +354,6 @@ async function testConcurrentReplacements() {
   } finally {
     await dataSource.transaction(async (manager) => {
       await setTenant(manager, seed.tenantId);
-      await manager.query(`DELETE FROM capex_items WHERE tenant_id = $1`, [seed.tenantId]);
       await manager.query(`DELETE FROM spend_items WHERE tenant_id = $1`, [seed.tenantId]);
       await manager.query(`DELETE FROM applications WHERE tenant_id = $1`, [seed.tenantId]);
       await manager.query(`DELETE FROM item_sequences WHERE tenant_id = $1`, [seed.tenantId]);

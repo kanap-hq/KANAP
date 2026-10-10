@@ -4,8 +4,9 @@ import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { SpendItemsService } from '../spend-items.service';
-import { CapexItemsService } from '../../capex/capex-items.service';
+import { CapexItemsService } from '../spend-items.service';
 import { ItemNumberService } from '../../common/item-number.service';
+import { CAPEX_NUMBER_OFFSET } from './round-inputs.fixtures';
 import { exportBudgetFile, loadBudgetFile, preflightBudgetFile } from './budget-file.fixtures';
 
 // One end date per budget item, on OPEX and CAPEX against a real database:
@@ -28,30 +29,21 @@ const identityFx = {
 const noAllocations = { computeForVersions: async () => new Map() };
 
 function itemService(kind: Kind): any {
-  if (kind === 'opex') {
-    const args: any[] = Array.from({ length: 11 }, () => undefined);
-    args[3] = noAudit;
-    args[4] = noAllocations;
-    args[6] = identityFx;
-    args[8] = { syncFromSupplier: async () => undefined };
-    args[9] = { notifyStatusChange: () => undefined };
-    args[10] = new ItemNumberService();
-    return new (SpendItemsService as any)(...args);
-  }
-  const args: any[] = Array.from({ length: 12 }, () => undefined);
+  // Since lot Z1 the CAPEX service is the OPEX one with its nature: the same constructor.
+  const args: any[] = Array.from({ length: 11 }, () => undefined);
+  args[3] = noAudit;
   args[4] = noAllocations;
-  args[5] = noAudit;
-  args[6] = noFreeze;
-  args[7] = identityFx;
-  args[9] = { syncFromSupplier: async () => undefined };
+  args[5] = noFreeze;
+  args[6] = identityFx;
+  args[8] = { syncFromSupplier: async () => undefined };
+  args[9] = { notifyStatusChange: () => undefined };
   args[10] = new ItemNumberService();
-  args[11] = { notifyStatusChange: () => undefined };
-  return new (CapexItemsService as any)(...args);
+  return kind === 'opex' ? new (SpendItemsService as any)(...args) : new (CapexItemsService as any)(...args);
 }
 
-function table(kind: Kind) {
-  return kind === 'opex' ? 'spend_items' : 'capex_items';
-}
+/** The lines of both natures live in `spend_items` since lot Z1; a CAPEX title is its `product_name`. */
+const LINES = 'spend_items';
+const natureIs = (kind: Kind) => `nature = '${kind}'`;
 
 async function withTenant(tag: string, fn: (runner: QueryRunner, tenantId: string, companyId: string) => Promise<void>) {
   const runner = dataSource.createQueryRunner();
@@ -86,9 +78,8 @@ async function withTenant(tag: string, fn: (runner: QueryRunner, tenantId: strin
 }
 
 async function readItem(runner: QueryRunner, kind: Kind, name: string) {
-  const nameColumn = kind === 'opex' ? 'product_name' : 'description';
   const rows = await runner.query(
-    `SELECT disabled_at, status::text AS status FROM ${table(kind)} WHERE tenant_id = current_setting('app.current_tenant')::uuid AND ${nameColumn} = $1`,
+    `SELECT disabled_at, status::text AS status FROM ${LINES} WHERE tenant_id = current_setting('app.current_tenant')::uuid AND ${natureIs(kind)} AND product_name = $1`,
     [name],
   );
   assert.equal(rows.length, 1, `${kind}: one item named ${name}`);
@@ -130,8 +121,10 @@ async function testBudgetFileEndOfValidity(kind: Kind) {
     assert.deepEqual(await readItem(runner, kind, 'Instant'), { disabled_at: '2031-04-15T08:30:00.000Z', status: 'enabled' }, `${kind} file: a full timestamp is kept`);
     assert.deepEqual(await readItem(runner, kind, 'No end'), { disabled_at: null, status: 'enabled' }, `${kind} file: no date, no end`);
 
+    // The number the file names: a CAPEX line's CPX number (`legacy_number`), an OPEX line's own number.
     const numbers: Array<{ n: number; name: string }> = await runner.query(
-      `SELECT item_number::int AS n, ${kind === 'opex' ? 'product_name' : 'description'} AS name FROM ${table(kind)} WHERE tenant_id = $1 ORDER BY item_number`,
+      `SELECT ${kind === 'opex' ? 'item_number::int' : `(substring(legacy_number FROM '^CPX-([0-9]+)$'))::int`} AS n, product_name AS name
+         FROM ${LINES} WHERE tenant_id = $1 AND ${natureIs(kind)} ORDER BY item_number`,
       [tenantId],
     );
     const item = (name: string) => numbers.find((row) => row.name === name)!.n;
@@ -151,13 +144,13 @@ async function testBudgetFileEndOfValidity(kind: Kind) {
 
     // A date set in the app (not noon UTC) exports as an instant and reads back as it is.
     await runner.query(
-      `UPDATE ${table(kind)} SET disabled_at = '2031-09-30T21:59:00Z' WHERE tenant_id = $1 AND ${kind === 'opex' ? 'product_name' : 'description'} = 'Instant'`,
+      `UPDATE ${LINES} SET disabled_at = '2031-09-30T21:59:00Z' WHERE tenant_id = $1 AND ${natureIs(kind)} AND product_name = 'Instant'`,
       [tenantId],
     );
     const names = ['Noon day', 'Past day', 'Instant', 'No end'];
     const read = () => Promise.all(names.map((name) => readItem(runner, kind, name)));
     const before = await read();
-    const ids: Array<{ id: string }> = await runner.query(`SELECT id FROM ${table(kind)} WHERE tenant_id = $1 ORDER BY item_number`, [tenantId]);
+    const ids: Array<{ id: string }> = await runner.query(`SELECT id FROM ${LINES} WHERE tenant_id = $1 AND ${natureIs(kind)} ORDER BY item_number`, [tenantId]);
     const content = await exportBudgetFile(runner.manager, kind, tenantId, ids.map((row) => row.id));
     const report = await preflightBudgetFile(runner.manager, kind, tenantId, content);
     assert.deepEqual([report.ok, report.changes.unchanged, report.changes.updated], [true, 4, 0], `${kind} round trip: every line unchanged (${JSON.stringify(report.errors)})`);
@@ -214,7 +207,7 @@ async function testApiAlias(kind: Kind) {
     const past = await svc.update(plain.id, { effective_end: '2020-06-30' }, undefined, opts);
     assert.equal(past.status, 'disabled', `${kind} update: a past legacy date disables the item`);
 
-    const [row] = await runner.query(`SELECT count(*)::int AS n FROM information_schema.columns WHERE table_name = $1 AND column_name = 'effective_end'`, [table(kind)]);
+    const [row] = await runner.query(`SELECT count(*)::int AS n FROM information_schema.columns WHERE table_name = $1 AND column_name = 'effective_end'`, [LINES]);
     assert.equal(row.n, 0, `${kind}: effective_end is not a column any more`);
   });
 }
@@ -239,9 +232,9 @@ async function seedListItems(runner: QueryRunner, kind: Kind, tenantId: string) 
       );
     } else {
       await runner.query(
-        `INSERT INTO capex_items (tenant_id, description, ppe_type, investment_type, priority, currency, effective_start, item_number, disabled_at, status)
-         VALUES ($1, $2, 'hardware', 'replacement', 'medium', 'EUR', '2020-01-01', $3, $4, $5)`,
-        [tenantId, name, n, disabledAt, status],
+        `INSERT INTO spend_items (tenant_id, nature, product_name, ppe_type, investment_type, priority, currency, effective_start, item_number, legacy_number, disabled_at, status)
+         VALUES ($1, 'capex', $2, 'hardware', 'replacement', 'medium', 'EUR', '2020-01-01', $3, $4, $5, $6)`,
+        [tenantId, name, n + CAPEX_NUMBER_OFFSET, `CPX-${n}`, disabledAt, status],
       );
     }
   }
@@ -254,9 +247,6 @@ async function testListDateFilterKeepsLifecycle(kind: Kind) {
     const nameOf = (row: any) => (kind === 'opex' ? row.product_name : row.description);
     const before2032 = JSON.stringify({ disabled_at: { filterType: 'date', type: 'lessThan', dateFrom: '2032-01-01 00:00:00' } });
     const opts = { manager: runner.manager };
-
-    // CAPEX list rows go through enrichSummaryItems (name lookups): the raw rows are enough here.
-    if (kind === 'capex') svc.enrichSummaryItems = async (rows: any[]) => rows;
 
     const filtered = await svc.list({ filters: before2032, sort: 'item_number:ASC' }, opts);
     assert.deepEqual(filtered.items.map(nameOf), ['Ends 2031'], `${kind} list: date filter AND default lifecycle (enabled)`);
@@ -306,7 +296,7 @@ async function testSummarySortsByDate(kind: Kind) {
     const opts = { manager: runner.manager };
     // "end" matches every seeded name, so the quick search keeps them all and forces the in-memory sort.
     const search = { q: 'end' };
-    const rows = await runner.query(`SELECT id, ${kind === 'opex' ? 'product_name' : 'description'} AS name FROM ${table(kind)} WHERE tenant_id = $1`, [tenantId]);
+    const rows = await runner.query(`SELECT id, product_name AS name FROM ${LINES} WHERE tenant_id = $1 AND ${natureIs(kind)}`, [tenantId]);
     const nameById = new Map(rows.map((r: any) => [r.id, r.name]));
 
     const asc = await svc.summary({ ...search, sort: 'disabled_at:ASC' }, opts);

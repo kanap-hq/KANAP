@@ -32,7 +32,11 @@ export async function seedTenant(runner: QueryRunner, tag: string): Promise<stri
 
 let itemNumber = 910_000;
 
-/** One OPEX or CAPEX line, written directly (the item services are another implementer's). */
+/**
+ * One OPEX or CAPEX line, written directly (the item services are another implementer's). Both
+ * natures live in `spend_items` since lot Z1: a CAPEX line has its title in `product_name` and
+ * its CPX number in `legacy_number`; the counter keeps `item_number` unique across both.
+ */
 export async function seedLine(runner: QueryRunner, kind: 'opex' | 'capex', tenantId: string): Promise<string> {
   itemNumber += 1;
   if (kind === 'opex') {
@@ -44,14 +48,14 @@ export async function seedLine(runner: QueryRunner, kind: 'opex' | 'capex', tena
     return row.id;
   }
   const [row] = await runner.query(
-    `INSERT INTO capex_items (tenant_id, description, ppe_type, investment_type, priority, currency, effective_start, item_number)
-     VALUES ($1, 'Analytics test line', 'hardware', 'replacement', 'medium', 'EUR', '2026-01-01', $2) RETURNING id`,
+    `INSERT INTO spend_items (tenant_id, nature, product_name, ppe_type, investment_type, priority, currency, effective_start, item_number, legacy_number)
+     VALUES ($1, 'capex', 'Analytics test line', 'hardware', 'replacement', 'medium', 'EUR', '2026-01-01', $2, 'CPX-' || $2::int) RETURNING id`,
     [tenantId, itemNumber],
   );
   return row.id;
 }
 
-/** A line's value on one dimension, written raw (the item write gate is another implementer's). */
+/** A line's value on one dimension, written raw (the item write gate is another implementer's); one table for both natures since lot Z1. */
 export async function linkValue(
   runner: QueryRunner,
   kind: 'opex' | 'capex',
@@ -60,9 +64,9 @@ export async function linkValue(
   axisId: string,
   categoryId: string,
 ) {
-  const table = kind === 'opex' ? 'spend_item_analytics_values' : 'capex_item_analytics_values';
+  void kind;
   await runner.query(
-    `INSERT INTO ${table} (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4)`,
+    `INSERT INTO spend_item_analytics_values (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4)`,
     [tenantId, itemId, axisId, categoryId],
   );
 }

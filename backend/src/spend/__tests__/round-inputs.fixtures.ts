@@ -4,8 +4,8 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { SpendAmountsService } from '../spend-amounts.service';
 import { SpendBudgetOperationsService } from '../spend-budget-operations.service';
-import { CapexAmountsService } from '../../capex/capex-amounts.service';
-import { CapexItemsService } from '../../capex/capex-items.service';
+import { CapexAmountsService } from '../spend-amounts.service';
+import { CapexItemsService } from '../spend-items.service';
 import { FreezeService } from '../../freeze/freeze.service';
 
 // Shared fixtures of the round-inputs specs (not a spec itself).
@@ -41,7 +41,7 @@ export function amountsService(kind: Kind, audit: unknown = captureAudit(), free
 } {
   return kind === 'opex'
     ? new SpendAmountsService(undefined as any, undefined as any, undefined as any, audit as any, freeze as any)
-    : new CapexAmountsService(undefined as any, undefined as any, audit as any, freeze as any);
+    : new CapexAmountsService(undefined as any, undefined as any, undefined as any, audit as any, freeze as any);
 }
 
 /** The service each scope's copy and clear routes call. */
@@ -49,21 +49,29 @@ export function budgetOperations(kind: Kind, audit: unknown = captureAudit(), fr
   copyBudgetColumn: (...args: any[]) => Promise<any>;
   clearBudgetColumn: (...args: any[]) => Promise<any>;
 } {
-  if (kind === 'opex') {
-    return new SpendBudgetOperationsService(
-      undefined as any, undefined as any, undefined as any, undefined as any, audit as any, freeze as any, undefined as any,
-    );
-  }
-  const args: any[] = Array.from({ length: 12 }, () => undefined);
-  args[5] = audit;
-  args[6] = freeze;
+  const operations = new SpendBudgetOperationsService(
+    undefined as any, undefined as any, undefined as any, undefined as any, audit as any, freeze as any, undefined as any,
+  );
+  if (kind === 'opex') return operations;
+  // The CAPEX routes' service: the same operations, on the CAPEX lines (lot Z1).
+  const args: any[] = Array.from({ length: 11 }, () => undefined);
+  args[3] = audit;
+  args[5] = operations;
   return new (CapexItemsService as any)(...args);
 }
 
 export const TABLES = {
   opex: { items: 'spend_items', versions: 'spend_versions', amounts: 'spend_amounts', rounds: 'spend_round_inputs', lines: 'spend_round_input_lines' },
-  capex: { items: 'capex_items', versions: 'capex_versions', amounts: 'capex_amounts', rounds: 'capex_round_inputs', lines: 'capex_round_input_lines' },
+  // The CAPEX lines share the tables since lot Z1 (plan planning/budget-unifie.md).
+  capex: { items: 'spend_items', versions: 'spend_versions', amounts: 'spend_amounts', rounds: 'spend_round_inputs', lines: 'spend_round_input_lines' },
 } as const;
+
+/**
+ * The BL number of a CAPEX line seeded with CPX number `n`: far above the OPEX lines a spec seeds
+ * in the same tenant (both natures share the numbering since lot Z1); its CPX number is its legacy
+ * number, what the CAPEX routes show.
+ */
+export const CAPEX_NUMBER_OFFSET = 500000;
 
 export function period(month: number, year: number) {
   return `${year}-${String(month).padStart(2, '0')}-01`;
@@ -94,8 +102,8 @@ export async function seedItem(runner: QueryRunner, kind: Kind, tenantId: string
     );
   } else {
     await runner.query(
-      `INSERT INTO capex_items (id, tenant_id, description, ppe_type, investment_type, priority, currency, effective_start, item_number)
-       VALUES ($1, $2, $3, 'hardware', 'replacement', 'medium', 'EUR', '2020-01-01', $4)`,
+      `INSERT INTO spend_items (id, tenant_id, nature, product_name, ppe_type, investment_type, priority, currency, effective_start, item_number, legacy_number)
+       VALUES ($1, $2, 'capex', $3, 'hardware', 'replacement', 'medium', 'EUR', '2020-01-01', $4::int + ${CAPEX_NUMBER_OFFSET}, 'CPX-' || $4::int)`,
       [itemId, tenantId, name, itemNumber],
     );
   }
@@ -124,7 +132,7 @@ export async function seedVersion(runner: QueryRunner, kind: Kind, tenantId: str
     );
   } else {
     await runner.query(
-      `INSERT INTO capex_versions (id, tenant_id, capex_item_id, version_name, input_grain, as_of_date, budget_year, allocation_method)
+      `INSERT INTO spend_versions (id, tenant_id, spend_item_id, version_name, input_grain, as_of_date, budget_year, allocation_method)
        VALUES ($1, $2, $3, $4, $5, $6, $7, 'default')`,
       [versionId, tenantId, itemId, `Y${year}`, inputGrain, `${year}-01-01`, year],
     );
@@ -257,7 +265,7 @@ export async function seedCalendar(
 }
 
 export async function findVersion(runner: QueryRunner, kind: Kind, itemId: string, year: number) {
-  const column = kind === 'opex' ? 'spend_item_id' : 'capex_item_id';
+  const column = 'spend_item_id';
   const rows = await runner.query(
     `SELECT id, input_grain::text AS input_grain FROM ${TABLES[kind].versions} WHERE ${column} = $1 AND budget_year = $2`,
     [itemId, year],

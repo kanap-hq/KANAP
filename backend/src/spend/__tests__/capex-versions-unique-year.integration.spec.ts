@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { BadRequestException } from '@nestjs/common';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
-import { CapexVersionsService } from '../capex-versions.service';
+import { CapexVersionsService } from '../spend-versions.service';
 
 // One CAPEX version per line and year (migration 1853640000000), against a
 // real database: the unique index refuses a second version, and createForItem
@@ -12,6 +12,10 @@ import { CapexVersionsService } from '../capex-versions.service';
 // a second create of a year (given or default) returns the version that year
 // already has, also when it was created concurrently, without a failed
 // statement; a name used by another year is a 400.
+// Since lot Z1 the CAPEX lines and their versions are in spend_items / spend_versions (nature
+// 'capex'): the service tests run on a CAPEX line there. The capex_* tables are dormant (dropped by
+// lot Z2); the index test keeps proving migration 1853640000000 on capex_versions, with its own
+// line in capex_items.
 
 const YEAR = 2033;
 const NAME_TAKEN = 'Version name already exists for this item';
@@ -27,9 +31,11 @@ function isNameTaken(err: unknown) {
   return err instanceof BadRequestException && err.message === NAME_TAKEN;
 }
 
+/** A tenant, a CAPEX line (`itemId`, in spend_items) and a line of the dormant capex_items (`dormantItemId`). */
 async function seedTenantAndItem(runner: QueryRunner, tag: string) {
   const tenantId = randomUUID();
   const itemId = randomUUID();
+  const dormantItemId = randomUUID();
   await runner.query(
     `INSERT INTO tenants (id, slug, name, status, metadata, branding, created_at, updated_at)
      VALUES ($1, $2, $3, 'active', '{}'::jsonb, '{"logo_version":0,"use_logo_in_dark":true}'::jsonb, now(), now())`,
@@ -37,14 +43,29 @@ async function seedTenantAndItem(runner: QueryRunner, tag: string) {
   );
   await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
   await runner.query(
-    `INSERT INTO capex_items (id, tenant_id, description, ppe_type, investment_type, priority, currency, effective_start, item_number)
-     VALUES ($1, $2, 'Unique year line', 'hardware', 'replacement', 'medium', 'EUR', '${YEAR}-01-01', 1)`,
+    `INSERT INTO spend_items (id, tenant_id, nature, product_name, ppe_type, investment_type, priority, currency, effective_start, item_number, legacy_number)
+     VALUES ($1, $2, 'capex', 'Unique year line', 'hardware', 'replacement', 'medium', 'EUR', '${YEAR}-01-01', 1, 'CPX-1')`,
     [itemId, tenantId],
   );
-  return { tenantId, itemId };
+  await runner.query(
+    `INSERT INTO capex_items (id, tenant_id, description, ppe_type, investment_type, priority, currency, effective_start, item_number)
+     VALUES ($1, $2, 'Unique year line', 'hardware', 'replacement', 'medium', 'EUR', '${YEAR}-01-01', 1)`,
+    [dormantItemId, tenantId],
+  );
+  return { tenantId, itemId, dormantItemId };
 }
 
+/** A version of the CAPEX line, in spend_versions. */
 async function insertVersion(runner: QueryRunner, tenantId: string, itemId: string, name: string, year: number) {
+  await runner.query(
+    `INSERT INTO spend_versions (tenant_id, spend_item_id, version_name, input_grain, as_of_date, budget_year, allocation_method)
+     VALUES ($1, $2, $3, 'annual', '${year}-01-01', ${year}, 'default')`,
+    [tenantId, itemId, name],
+  );
+}
+
+/** A version of the dormant capex_items line, in capex_versions. */
+async function insertDormantVersion(runner: QueryRunner, tenantId: string, itemId: string, name: string, year: number) {
   await runner.query(
     `INSERT INTO capex_versions (tenant_id, capex_item_id, version_name, input_grain, as_of_date, budget_year, allocation_method)
      VALUES ($1, $2, $3, 'annual', '${year}-01-01', ${year}, 'default')`,
@@ -52,7 +73,9 @@ async function insertVersion(runner: QueryRunner, tenantId: string, itemId: stri
   );
 }
 
-async function inRolledBackTransaction(tag: string, fn: (runner: QueryRunner, seed: { tenantId: string; itemId: string }) => Promise<void>) {
+type Seed = { tenantId: string; itemId: string; dormantItemId: string };
+
+async function inRolledBackTransaction(tag: string, fn: (runner: QueryRunner, seed: Seed) => Promise<void>) {
   const runner = dataSource.createQueryRunner();
   await runner.connect();
   await runner.startTransaction();
@@ -66,15 +89,15 @@ async function inRolledBackTransaction(tag: string, fn: (runner: QueryRunner, se
 
 /** A raw second version for the same line and year is refused by the index; another year is not. */
 async function testIndexRefusesSecondVersion() {
-  await inRolledBackTransaction('raw', async (runner, { tenantId, itemId }) => {
+  await inRolledBackTransaction('raw', async (runner, { tenantId, dormantItemId }) => {
     const [index] = await runner.query(
       `SELECT indexdef FROM pg_indexes WHERE tablename = 'capex_versions' AND indexname = 'uniq_capex_item_budget_year'`,
     );
     assert.match(String(index?.indexdef), /CREATE UNIQUE INDEX .* \(capex_item_id, budget_year\)/, 'the unique index exists');
-    await insertVersion(runner, tenantId, itemId, `Budget ${YEAR}`, YEAR);
-    await insertVersion(runner, tenantId, itemId, `Budget ${YEAR + 1}`, YEAR + 1);
+    await insertDormantVersion(runner, tenantId, dormantItemId, `Budget ${YEAR}`, YEAR);
+    await insertDormantVersion(runner, tenantId, dormantItemId, `Budget ${YEAR + 1}`, YEAR + 1);
     await assert.rejects(
-      insertVersion(runner, tenantId, itemId, `Second ${YEAR}`, YEAR),
+      insertDormantVersion(runner, tenantId, dormantItemId, `Second ${YEAR}`, YEAR),
       (err: any) => err?.code === '23505' && err?.constraint === 'uniq_capex_item_budget_year',
     );
   });
@@ -92,7 +115,7 @@ async function testCreateForItemReturnsTheYearsVersion() {
       service.createForItem(itemId, { version_name: `Budget ${YEAR}`, budget_year: YEAR + 1 }, null, { manager: runner.manager }),
       isNameTaken,
     );
-    const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM capex_versions WHERE capex_item_id = $1`, [itemId]);
+    const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM spend_versions WHERE spend_item_id = $1`, [itemId]);
     assert.equal(n, 1, 'one version');
     await runner.query(`SELECT 1`); // the transaction is still usable
   });
@@ -109,7 +132,7 @@ async function testCreateForItemDefaultYear() {
     const version = await versionsService().createForItem(itemId, { version_name: 'No year given' }, null, { manager: runner.manager });
     assert.equal(version.budget_year, currentYear);
     assert.equal(version.version_name, `Budget ${currentYear}`);
-    const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM capex_versions WHERE capex_item_id = $1`, [itemId]);
+    const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM spend_versions WHERE spend_item_id = $1`, [itemId]);
     assert.equal(n, 1, 'no second version, and the transaction is not aborted');
   });
 }
@@ -175,7 +198,7 @@ async function testConcurrentCreateReturnsTheWinner() {
 
     const names = await dataSource.transaction(async (manager) => {
       await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
-      return manager.query(`SELECT version_name FROM capex_versions WHERE capex_item_id = $1`, [itemId]);
+      return manager.query(`SELECT version_name FROM spend_versions WHERE spend_item_id = $1`, [itemId]);
     });
     assert.deepEqual(names.map((row: any) => row.version_name), ['First']);
   } finally {
@@ -185,7 +208,8 @@ async function testConcurrentCreateReturnsTheWinner() {
     }
     await dataSource.transaction(async (manager) => {
       await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
-      await manager.query(`DELETE FROM capex_versions WHERE tenant_id = $1`, [tenantId]);
+      await manager.query(`DELETE FROM spend_versions WHERE tenant_id = $1`, [tenantId]);
+      await manager.query(`DELETE FROM spend_items WHERE tenant_id = $1`, [tenantId]);
       await manager.query(`DELETE FROM capex_items WHERE tenant_id = $1`, [tenantId]);
     });
     await dataSource.query(`DELETE FROM tenants WHERE id = $1`, [tenantId]);

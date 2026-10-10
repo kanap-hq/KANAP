@@ -6,7 +6,7 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { AuditLog } from '../../audit/audit.entity';
 import { AuditService } from '../../audit/audit.service';
-import { CapexAmountsService } from '../../capex/capex-amounts.service';
+import { CapexAmountsService } from '../../spend/spend-amounts.service';
 import { CompaniesService } from '../../companies/companies.service';
 import { Company } from '../../companies/company.entity';
 import { SpendAmountsService } from '../../spend/spend-amounts.service';
@@ -34,17 +34,21 @@ import {
 // calendars: the year route, the suggestions and the calendar a company
 // creation adds stay inside the tenant.
 
+// Both natures share the spend_* round tables since lot Z1. The capex_round_* tables are
+// dormant since lot Z1, dropped by lot Z2: the catalog checks leave them out.
 const KINDS = [
   { kind: 'opex' as const, rounds: 'spend_round_inputs', lines: 'spend_round_input_lines', amounts: 'spend_amounts' },
-  { kind: 'capex' as const, rounds: 'capex_round_inputs', lines: 'capex_round_input_lines', amounts: 'capex_amounts' },
+  { kind: 'capex' as const, rounds: 'spend_round_inputs', lines: 'spend_round_input_lines', amounts: 'spend_amounts' },
 ];
 
-const TABLES = ['working_day_profiles', 'spend_round_inputs', 'capex_round_inputs', 'spend_round_input_lines', 'capex_round_input_lines'];
+const ROUND_TABLES = [{ rounds: 'spend_round_inputs', lines: 'spend_round_input_lines' }];
+
+const TABLES = ['working_day_profiles', 'spend_round_inputs', 'spend_round_input_lines'];
 
 function amountsService(kind: 'opex' | 'capex') {
   return kind === 'opex'
     ? new SpendAmountsService(undefined as any, undefined as any, undefined as any, captureAudit() as any, noFreeze as any)
-    : new CapexAmountsService(undefined as any, undefined as any, captureAudit() as any, noFreeze as any);
+    : new CapexAmountsService(undefined as any, undefined as any, undefined as any, captureAudit() as any, noFreeze as any);
 }
 
 /** A row of `table` in raw SQL; returns its id. */
@@ -124,7 +128,7 @@ async function testSchemaIsTenantIsolated() {
     `SELECT conname, pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conrelid = $1::regclass ORDER BY conname`,
     [table],
   )).map((c: { conname: string; def: string }) => [c.conname, c.def]));
-  for (const { rounds, lines } of KINDS) {
+  for (const { rounds, lines } of ROUND_TABLES) {
     const round = await constraintsOf(rounds);
     assert.equal(round.get(`${rounds}_tenant_id_id_key`), 'UNIQUE (tenant_id, id)');
     assert.match(round.get(`${rounds}_method_check`)!, /'spread'.*'copied'.*'manual'.*'computed'/);
@@ -228,7 +232,8 @@ async function testComputeRefusesOtherTenantsCalendar() {
       const [written] = await runner.query(
         `SELECT (SELECT count(*)::int FROM ${amounts} WHERE tenant_id = $1 AND version_id = $2) AS amounts,
                 (SELECT count(*)::int FROM ${rounds} WHERE tenant_id = $1 AND version_id = $2) AS rounds,
-                (SELECT count(*)::int FROM ${lines} WHERE tenant_id = $1) AS lines`,
+                (SELECT count(*)::int FROM ${lines} l JOIN ${rounds} r ON r.tenant_id = l.tenant_id AND r.id = l.round_input_id
+                  WHERE l.tenant_id = $1 AND r.version_id = $2) AS lines`,
         [tenantB, versionId],
       );
       assert.deepEqual(written, { amounts: 0, rounds: 0, lines: 0 }, `${kind}: nothing written with A's calendar`);

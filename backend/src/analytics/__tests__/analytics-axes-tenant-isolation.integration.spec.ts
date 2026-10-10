@@ -25,7 +25,8 @@ import {
 // Setting A's value on B's line through the item API is covered by the item
 // write-gate spec (spend/__tests__/item-analytics.integration.spec.ts).
 
-const TABLES = ['analytics_axes', 'analytics_categories', 'capex_item_analytics_values', 'spend_item_analytics_values'];
+// capex_item_analytics_values: dormant since lot Z1, dropped by lot Z2 (the values of both natures are in spend_item_analytics_values).
+const TABLES = ['analytics_axes', 'analytics_categories', 'spend_item_analytics_values'];
 
 async function testTablesAreTenantIsolated() {
   const flags = await dataSource.query(
@@ -52,12 +53,12 @@ async function testTablesAreTenantIsolated() {
   }
   const keys = await dataSource.query(
     `SELECT conname, pg_get_constraintdef(oid) AS def FROM pg_constraint
-      WHERE conname IN ('analytics_categories_axis_fk', 'spend_item_analytics_values_category_fk', 'capex_item_analytics_values_category_fk')
+      WHERE conname IN ('analytics_categories_axis_fk', 'spend_item_analytics_values_category_fk')
       ORDER BY conname`,
   );
+  // The key of the dormant capex_item_analytics_values: dropped by lot Z1 (the table goes with lot Z2).
   assert.deepEqual(keys.map((key: any) => [key.conname, key.def]), [
     ['analytics_categories_axis_fk', 'FOREIGN KEY (tenant_id, axis_id) REFERENCES analytics_axes(tenant_id, id) ON DELETE RESTRICT'],
-    ['capex_item_analytics_values_category_fk', 'FOREIGN KEY (tenant_id, category_id, axis_id) REFERENCES analytics_categories(tenant_id, id, axis_id) ON DELETE RESTRICT'],
     ['spend_item_analytics_values_category_fk', 'FOREIGN KEY (tenant_id, category_id, axis_id) REFERENCES analytics_categories(tenant_id, id, axis_id) ON DELETE RESTRICT'],
   ]);
 }
@@ -126,7 +127,8 @@ async function testOtherTenantIsInvisible() {
     ));
     await expectRefused(runner, /spend_item_analytics_values_category_fk/, () =>
       linkValue(runner, 'opex', tenantB, lineB, natureA.id, valueA.id));
-    await expectRefused(runner, /capex_item_analytics_values_category_fk/, () =>
+    // A CAPEX line's value (one table for both natures since lot Z1): the same key refuses A's value.
+    await expectRefused(runner, /spend_item_analytics_values_category_fk/, () =>
       linkValue(runner, 'capex', tenantB, capexB, defaultA, defaultValueA.id));
     // B's own value, named on another of B's dimensions, is refused too.
     await expectRefused(runner, /spend_item_analytics_values_category_fk/, () =>
@@ -134,8 +136,8 @@ async function testOtherTenantIsInvisible() {
     // B's own value on its own dimension is accepted.
     await linkValue(runner, 'opex', tenantB, lineB, natureB.id, valueB.id);
 
-    // B's session neither sees nor changes A's line values.
-    for (const table of ['spend_item_analytics_values', 'capex_item_analytics_values']) {
+    // B's session neither sees nor changes A's line values (both natures in one table since lot Z1).
+    for (const table of ['spend_item_analytics_values']) {
       const [seen] = await runner.query(`SELECT count(*)::int AS n FROM ${table} WHERE tenant_id = $1`, [tenantA]);
       assert.equal(seen.n, 0, `${table}: B reads none of A's rows`);
       const [, updated] = await runner.query(`UPDATE ${table} SET updated_at = now() WHERE tenant_id = $1`, [tenantA]);
@@ -151,10 +153,11 @@ async function testOtherTenantIsInvisible() {
     const axesA = await a.axes.list(ctxA);
     assert.deepEqual(axesA.items.map((axis) => [axis.code, axis.name]), [['default', null], ['nature', 'Nature A']]);
     const linksA = await runner.query(
-      `SELECT 'opex' AS kind, item_id, category_id FROM spend_item_analytics_values WHERE tenant_id = $1
-       UNION ALL
-       SELECT 'capex', item_id, category_id FROM capex_item_analytics_values WHERE tenant_id = $1
-       ORDER BY 1 DESC`,
+      `SELECT s.nature AS kind, v.item_id, v.category_id
+         FROM spend_item_analytics_values v
+         JOIN spend_items s ON s.tenant_id = v.tenant_id AND s.id = v.item_id
+        WHERE v.tenant_id = $1
+        ORDER BY 1 DESC`,
       [tenantA],
     );
     assert.deepEqual(linksA.map((row: any) => [row.kind, row.item_id, row.category_id]), [

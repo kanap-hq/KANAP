@@ -64,10 +64,11 @@ async function seedCapex(runner: QueryRunner, tenantId: string, items: CapexSeed
   let n = 0;
   for (const { name, disabledAt, itOwner = null, businessOwner = null } of items) {
     n += 1;
+    // A CAPEX line lives in spend_items since lot Z1: its title (the old description) in product_name.
     await runner.query(
-      `INSERT INTO capex_items (tenant_id, description, ppe_type, investment_type, priority, currency, effective_start, item_number,
-                                disabled_at, status, owner_it_id, owner_business_id)
-       VALUES ($1, $2, 'hardware', 'replacement', 'medium', 'EUR', '2020-01-01', $3, $4, $5, $6, $7)`,
+      `INSERT INTO spend_items (tenant_id, nature, product_name, ppe_type, investment_type, priority, currency, effective_start, item_number,
+                                legacy_number, disabled_at, status, owner_it_id, owner_business_id)
+       VALUES ($1, 'capex', $2, 'hardware', 'replacement', 'medium', 'EUR', '2020-01-01', $3::int, 'CPX-' || $3::int, $4, $5, $6, $7)`,
       [tenantId, name, n, disabledAt, disabledAt && disabledAt.getTime() <= Date.now() ? 'disabled' : 'enabled', itOwner, businessOwner],
     );
   }

@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import dataSource from '../../data-source';
 import { SpendItemsService } from '../spend-items.service';
-import { CapexItemsService } from '../../capex/capex-items.service';
+import { CapexItemsService } from '../spend-items.service';
 import {
   assert,
   inRolledBackTransaction,
@@ -18,8 +18,10 @@ import {
 const YEAR = 2031;
 
 function yearlyTotals(kind: Kind) {
-  // The method only needs the manager it is given.
-  const svc = Object.create((kind === 'opex' ? SpendItemsService : CapexItemsService).prototype);
+  // The method only needs the manager it is given, and the service's nature: build the service
+  // (an Object.create would skip the field that names its nature) with no dependency.
+  const Service: any = kind === 'opex' ? SpendItemsService : CapexItemsService;
+  const svc = new Service(...Array.from({ length: SpendItemsService.length }, () => undefined));
   return (itemId: string, manager: any) => svc.yearlyTotals(itemId, YEAR, YEAR + 1, { manager });
 }
 

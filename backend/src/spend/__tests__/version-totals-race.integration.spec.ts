@@ -65,7 +65,7 @@ async function seedPlannedMonths(race: Race, kind: Kind, months: Record<number, 
 async function totalsAndSums(race: Race, kind: Kind, versionId: string): Promise<{ stored: Sums | undefined; months: Sums }> {
   const stored = await race.readOne(
     `SELECT ${MEASURES.map((m) => `${m}::numeric(20, 2)::text AS ${m}`).join(', ')}
-     FROM ${kind === 'opex' ? 'spend_version_totals' : 'capex_version_totals'} WHERE version_id = $1`,
+     FROM spend_version_totals WHERE version_id = $1`,
     [versionId],
   );
   const months = await race.readOne(
@@ -174,7 +174,7 @@ async function firstWrites(kind: Kind) {
       { kind: 'monthly', months: [cell(2, { planned: 20, actual: 1.5 })] });
     await assertTotals(race, kind, versionId, { planned: '30.00', actual: '1.50' }, 'two first writes');
     const [{ rows }] = await race.read(
-      `SELECT count(*)::int AS rows FROM ${kind === 'opex' ? 'spend_version_totals' : 'capex_version_totals'} WHERE version_id = $1`,
+      `SELECT count(*)::int AS rows FROM spend_version_totals WHERE version_id = $1`,
       [versionId],
     );
     assert.equal(rows, 1, `${kind}: one totals row`);

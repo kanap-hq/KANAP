@@ -18,8 +18,8 @@ import { ListContextsService } from '../../common/list-context/list-contexts.ser
 import { AGGREGATE_LIMITS } from '../../common/list-engine/list-aggregate';
 import { SpendItemsController } from '../spend-items.controller';
 import { SpendItemsService } from '../spend-items.service';
-import { CapexItemsController } from '../../capex/capex-items.controller';
-import { CapexItemsService } from '../../capex/capex-items.service';
+import { CapexItemsController } from '../capex-items.controller';
+import { CapexItemsService } from '../spend-items.service';
 import { SUMMARY_SCOPES, SummaryScopeConfig } from '../spend-summary.builder';
 import { realSummaryDeps } from './oracle/oracle-deps';
 import { seedListFixture } from './oracle/budget-list.fixture';
@@ -45,9 +45,10 @@ type Answer = { status: number; body?: any };
 
 function itemService(scope: SummaryScopeConfig): any {
   const deps = realSummaryDeps(scope);
-  const args: any[] = Array.from({ length: 12 }, () => undefined);
+  // One constructor for both natures since lot Z1: the CAPEX service is the OPEX one's subclass.
+  const args: any[] = Array.from({ length: 11 }, () => undefined);
   args[4] = deps.allocationCalculator;
-  args[scope.scope === 'opex' ? 6 : 7] = deps.fxRates;
+  args[6] = deps.fxRates;
   return scope.scope === 'opex' ? new (SpendItemsService as any)(...args) : new (CapexItemsService as any)(...args);
 }
 

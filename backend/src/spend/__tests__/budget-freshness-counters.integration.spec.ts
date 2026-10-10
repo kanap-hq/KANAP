@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { QueryRunner } from 'typeorm';
 import { AiFinancialPlanMutationSupportService } from '../../ai/mutation/ai-financial-plan-mutation-support.service';
-import { CapexVersionsService } from '../../capex/capex-versions.service';
+import { CapexVersionsService } from '../spend-versions.service';
 import { syncTableLifecycleStatus } from '../../cleanup/lifecycle-status-sync.service';
 import { FreezeService } from '../../freeze/freeze.service';
 import { copyAllocations, sameAllocationRows, storedAllocationPct } from '../budget-allocation-operations';
@@ -128,13 +128,15 @@ async function lineAnalytics(kind: Kind) {
 
     // The line's update that only bumps its counter (as the values' trigger does) refreshes nothing:
     // the values' own search index trigger (migration 1853940000000) refreshes the line instead.
-    const indexed = async () => (await runner.query(`SELECT count(*)::int AS n FROM search_index WHERE entity_type = $1 AND entity_id = $2`, [TABLES[kind].items, itemId]))[0].n;
-    const unindex = () => runner.query(`DELETE FROM search_index WHERE entity_type = $1 AND entity_id = $2`, [TABLES[kind].items, itemId]);
+    // The search entry of a line has the type of its nature (a CAPEX line: capex_items, lot Z1).
+    const entryType = kind === 'opex' ? 'spend_items' : 'capex_items';
+    const indexed = async () => (await runner.query(`SELECT count(*)::int AS n FROM search_index WHERE entity_type = $1 AND entity_id = $2`, [entryType, itemId]))[0].n;
+    const unindex = () => runner.query(`DELETE FROM search_index WHERE entity_type = $1 AND entity_id = $2`, [entryType, itemId]);
     await unindex();
     assert.equal(await bumpOf(rv, () => runner.query(`UPDATE ${TABLES[kind].items} SET row_version = row_version + 1 WHERE id = $1`, [itemId])), 1,
       `${kind}: a counter set alone keeps the value it sets`);
     assert.equal(await indexed(), 0, `${kind}: a counter-only update of the line does not refresh its search entry`);
-    const values = kind === 'opex' ? 'spend_item_analytics_values' : 'capex_item_analytics_values';
+    const values = 'spend_item_analytics_values'; // both natures since lot Z1
     assert.equal(await bumpOf(rv, () => runner.query(`INSERT INTO ${values} (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4)`, [tenantId, itemId, axisId, second])), 1,
       `${kind}: a value written alone bumps its line`);
     assert.equal(await indexed(), 1, `${kind}: a value written alone refreshes the line's search entry (its own trigger)`);

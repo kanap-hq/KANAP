@@ -15,9 +15,8 @@ import { RolePermission } from '../../permissions/role-permission.entity';
 import { UserPageRole } from '../../permissions/user-page-role.entity';
 import { UsersService } from '../../users/users.service';
 import { User } from '../../users/user.entity';
-import { CapexAllocationCalculatorService } from '../../capex/capex-allocation-calculator.service';
-import { CapexAllocationsService } from '../../capex/capex-allocations.service';
-import { CapexItemsController } from '../../capex/capex-items.controller';
+import { CapexAllocationsService } from '../spend-allocations.service';
+import { CapexItemsController } from '../capex-items.controller';
 import { BudgetChangedAt1853840000000 } from '../../migrations/1853840000000-budget-changed-at';
 import { AllocationCalculatorService } from '../allocation-calculator.service';
 import { SpendAllocationsService } from '../spend-allocations.service';
@@ -74,7 +73,7 @@ async function seedPerson(runner: QueryRunner, tenantId: string, first: string, 
 function allocations(kind: Kind): any {
   return kind === 'opex'
     ? new SpendAllocationsService(undefined as any, undefined as any, new AllocationCalculatorService(undefined as any, undefined as any, undefined as any, undefined as any), realAudit() as any)
-    : new CapexAllocationsService(undefined as any, undefined as any, new CapexAllocationCalculatorService(undefined as any, undefined as any, undefined as any, undefined as any), realAudit() as any);
+    : new CapexAllocationsService(undefined as any, undefined as any, new AllocationCalculatorService(undefined as any, undefined as any, undefined as any, undefined as any), realAudit() as any);
 }
 
 const meta = (tenantId: string, kind: Kind, itemId: string, asTenant = tenantId) => seed(asTenant, (runner) => readBudgetLineMeta(runner.manager, kind, tenantId, itemId));

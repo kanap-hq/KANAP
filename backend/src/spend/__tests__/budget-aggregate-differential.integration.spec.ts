@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { SpendItemsService } from '../spend-items.service';
-import { CapexItemsService } from '../../capex/capex-items.service';
+import { CapexItemsService } from '../spend-items.service';
 import { AiAggregateExecutor } from '../../ai/query/ai-aggregate.executor';
 import { adaptFilters } from '../../ai/query/ai-filter.adapter';
 import type { AiEntityFilterRegistry } from '../../ai/query/ai-filter.types';
@@ -110,9 +110,10 @@ function failed(label: string, e: Settled, o: Settled): boolean {
 // ----- services -----
 
 function itemServiceWith(scope: SummaryScopeConfig, deps: ReturnType<typeof realSummaryDeps>): any {
-  const args: any[] = Array.from({ length: 12 }, () => undefined);
+  // One constructor for both natures since lot Z1: the CAPEX service is the OPEX one's subclass.
+  const args: any[] = Array.from({ length: 11 }, () => undefined);
   args[4] = deps.allocationCalculator;
-  args[scope.scope === 'opex' ? 6 : 7] = deps.fxRates;
+  args[6] = deps.fxRates;
   return scope.scope === 'opex' ? new (SpendItemsService as any)(...args) : new (CapexItemsService as any)(...args);
 }
 

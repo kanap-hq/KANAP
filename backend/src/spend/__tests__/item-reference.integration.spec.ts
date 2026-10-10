@@ -5,17 +5,16 @@ import dataSource from '../../data-source';
 import { SpendItem } from '../spend-item.entity';
 import { SpendItemsController } from '../spend-items.controller';
 import { SpendItemsDeleteService } from '../spend-items-delete.service';
-import { CapexItem } from '../../capex/capex-item.entity';
-import { CapexItemsController } from '../../capex/capex-items.controller';
-import { CapexItemsDeleteService } from '../../capex/capex-items-delete.service';
+import { CapexItemsController } from '../capex-items.controller';
+import { CapexItemsDeleteService } from '../spend-items-delete.service';
 import { UserTimeAggregateService } from '../../portfolio/services/user-time-aggregate.service';
 import { SpendVersionsController } from '../spend-versions.controller';
 import { SpendVersionsService } from '../spend-versions.service';
 import { SpendTasksController } from '../spend-tasks.controller';
 import { SpendTasksService } from '../spend-tasks.service';
-import { CapexVersionsController } from '../../capex/capex-versions.controller';
-import { CapexVersionsService } from '../../capex/capex-versions.service';
-import { CapexTasksController } from '../../capex/capex-tasks.controller';
+import { CapexVersionsController } from '../capex-versions.controller';
+import { CapexVersionsService } from '../spend-versions.service';
+import { CapexTasksController } from '../capex-tasks.controller';
 import { TasksUnifiedService } from '../../tasks/tasks-unified.service';
 import { ContractsService } from '../../contracts/contracts.service';
 import { SpendItemContractsController } from '../../contracts/spend-item-contracts.controller';
@@ -34,14 +33,16 @@ const USER = '00000000-0000-4000-8000-00000000abcd';
 const KINDS: Kind[] = ['opex', 'capex'];
 const REF: Record<Kind, string> = { opex: 'OPX', capex: 'CPX' };
 const OTHER_REF: Record<Kind, string> = { opex: 'CPX', capex: 'OPX' };
+// `apiFk`: the key the routes of the nature name the line by (the CAPEX contract keeps `capex_item_id`);
+// both natures share the tables since lot Z1.
 const T = {
   opex: {
-    items: 'spend_items', links: 'spend_links', linkFk: 'spend_item_id', entity: 'spend',
+    items: 'spend_items', links: 'spend_links', linkFk: 'spend_item_id', apiFk: 'spend_item_id', entity: 'spend',
     versions: 'spend_versions', contracts: 'contract_spend_items', taskType: 'spend_item',
   },
   capex: {
-    items: 'capex_items', links: 'capex_links', linkFk: 'capex_item_id', entity: 'capex',
-    versions: 'capex_versions', contracts: 'contract_capex_items', taskType: 'capex_item',
+    items: 'spend_items', links: 'spend_links', linkFk: 'spend_item_id', apiFk: 'capex_item_id', entity: 'capex',
+    versions: 'spend_versions', contracts: 'contract_spend_items', taskType: 'capex_item',
   },
 } as const;
 
@@ -67,7 +68,7 @@ function controller(kind: Kind, runner: QueryRunner) {
     : new CapexItemsController(
       svc,
       new CapexItemsDeleteService(
-        runner.manager.getRepository(CapexItem), undefined as any, undefined as any, undefined as any, captureAudit() as any, storage as any, aggregates,
+        runner.manager.getRepository(SpendItem), undefined as any, undefined as any, undefined as any, captureAudit() as any, storage as any, aggregates,
       ),
       undefined as any,
       undefined as any,
@@ -116,7 +117,7 @@ async function testUpdateAndDeleteByReference(kind: Kind) {
     assert.deepEqual(await svc.listProjects(`${REF[kind]}-35`, { manager: runner.manager }), { items: [] }, `${kind}: projects by reference`);
     assert.deepEqual(await ctl.bulkReplaceProjects(`${REF[kind]}-35`, { project_ids: [] }, ctx), { items: [] }, `${kind}: project replace by reference`);
     const link = await ctl.createLink(`${REF[kind]}-35`, { url: 'https://example.com/ref' }, ctx);
-    assert.equal(link[T[kind].linkFk], itemId, `${kind}: a link created by reference belongs to the line`);
+    assert.equal(link[T[kind].apiFk], itemId, `${kind}: a link created by reference belongs to the line`);
     assert.deepEqual((await ctl.listLinks(`${REF[kind]}-35`, ctx)).map((l: any) => l.id), [link.id], `${kind}: links by reference`);
     await ctl.deleteLink(`${REF[kind]}-35`, link.id, ctx);
     const [{ n: links }] = await runner.query(`SELECT count(*)::int AS n FROM ${T[kind].links} WHERE ${T[kind].linkFk} = $1`, [itemId]);

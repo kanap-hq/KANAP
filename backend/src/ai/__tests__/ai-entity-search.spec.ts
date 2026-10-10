@@ -33,6 +33,10 @@ function createContext(query: (sql: string, params?: unknown[]) => Promise<unkno
   };
 }
 
+/** The legacy CAPEX search: the spend lines of nature 'capex' since lot Z1. */
+const isCapexSearch = (sql: string) => sql.includes('FROM spend_items ci') && sql.includes(`ci.nature = 'capex'`);
+const isOpexSearch = (sql: string) => sql.includes('FROM spend_items si') && sql.includes(`si.nature = 'opex'`);
+
 async function withFlag<T>(value: string | undefined, run: () => Promise<T>): Promise<T> {
   const previous = process.env.AI_SEARCH_INDEX_ENABLED;
   if (value === undefined) {
@@ -82,7 +86,7 @@ async function testLegacySearchAllReportsPartialEntityFailures() {
   await withFlag('false', async () => {
     const service = createService();
     const context = createContext(async (sql) => {
-      if (sql.includes('FROM capex_items')) {
+      if (isCapexSearch(sql)) {
         throw new Error('invalid input value for enum ppe_type: ""');
       }
       return [];
@@ -300,8 +304,8 @@ async function testLegacySearchAllGivesBudgetLineReferences() {
     const service = createService();
     const context = createContext(async (sql) => {
       const row = { label: 'Line', summary: null, status: 'active', updated_at: null, total_count: 1, score: 3 };
-      if (sql.includes('FROM spend_items')) return [{ ...row, id: 'spend-1', item_number: 12 }];
-      if (sql.includes('FROM capex_items')) return [{ ...row, id: 'capex-1', item_number: 4 }];
+      if (isOpexSearch(sql)) return [{ ...row, id: 'spend-1', item_number: 12 }];
+      if (isCapexSearch(sql)) return [{ ...row, id: 'capex-1', item_number: 4 }];
       return [];
     });
 

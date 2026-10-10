@@ -1,7 +1,7 @@
 import { QueryRunner } from 'typeorm';
 import { AuditService } from '../../audit/audit.service';
 import { EDIT_CONFLICT_CODE, EditConflict } from '../../common/edit-conflicts';
-import { ITEM_TABLE, itemService, lineBody, seedCompany } from './cost-center.fixtures';
+import { itemService, lineBody, seedCompany } from './cost-center.fixtures';
 import { Kind } from './round-inputs.fixtures';
 import { Outcome, Race, assert, assertSucceeded, describe, httpStatus, progress, settle, sql, withRace } from './race-harness';
 
@@ -38,6 +38,11 @@ type Setup = {
 };
 
 const realAudit = () => new AuditService(undefined as any);
+
+// The lines of both natures live in spend_items since lot Z1; the audit rows of a CAPEX line keep
+// the CAPEX table name (`auditTableOf`, `spend/budget-nature.ts`).
+const LINES = 'spend_items';
+const AUDIT_TABLE: Record<Kind, string> = { opex: 'spend_items', capex: 'capex_items' };
 
 async function seedPerson(runner: QueryRunner, tenantId: string, first: string, last: string): Promise<string> {
   const [role] = await runner.query(
@@ -114,8 +119,8 @@ function editConflictOf(outcome: Outcome, who: string): { conflicts: EditConflic
 async function line(race: Race, kind: Kind, itemId: string) {
   return race.readOne(
     `SELECT notes, supplier_id, paying_company_id, currency, effective_start::text AS effective_start, disabled_at, updated_at, row_version
-       FROM ${ITEM_TABLE[kind]} WHERE id = $1`,
-    [itemId],
+       FROM ${LINES} WHERE id = $1 AND nature = $2`,
+    [itemId, kind],
   );
 }
 
@@ -136,7 +141,7 @@ function refusalOf(outcome: Outcome, who: string): { status: number; message: st
 async function aThenB(race: Race, kind: Kind, s: Setup, aBody: Record<string, unknown>, bBody: Record<string, unknown>) {
   const a = await race.open('A (Marie)');
   const b = await race.open('B (Jean)');
-  const aWrote = race.gate(a, { label: 'updated the line', when: 'after', match: sql.update(ITEM_TABLE[kind]) });
+  const aWrote = race.gate(a, { label: 'updated the line', when: 'after', match: sql.update(LINES) });
   const aWork = update(race, a, kind, s, s.marie, aBody);
   assert.equal(await progress(aWork, { party: a, gate: aWrote }), 'gated', 'harness: A must pause after its UPDATE');
   const bWork = update(race, b, kind, s, s.jean, bBody);
@@ -283,7 +288,7 @@ async function analyticsPerDimension(kind: Kind) {
     assert.deepEqual(conflict.labels, { base: 'Licences', current: 'Services', mine: null });
     assert.equal(conflict.changed_by?.name, 'Marie Dupont', 'from the analytics values of her audit row');
     const links = await race.read(
-      `SELECT axis_id, category_id FROM ${kind === 'opex' ? 'spend_item_analytics_values' : 'capex_item_analytics_values'} WHERE item_id = $1 ORDER BY axis_id`,
+      `SELECT axis_id, category_id FROM spend_item_analytics_values WHERE item_id = $1 ORDER BY axis_id`,
       [s.itemId],
     );
     assert.equal(links.find((row: any) => row.axis_id === s.nature)?.category_id, s.services, 'A\'s value stays');
@@ -354,7 +359,7 @@ async function authorFallbackAndNoBase(kind: Kind) {
     const party = await race.open('A');
     assertSucceeded(await settle(update(race, party, kind, s, s.marie, { notes: 'Notes from Marie' })), 'Marie, no base');
     assertSucceeded(await settle(update(race, party, kind, s, s.jean, { description: 'Description from Jean' })), 'Jean, no base');
-    await race.seedWith((runner) => runner.query(`UPDATE ${ITEM_TABLE[kind]} SET notes = 'From a script' WHERE id = $1`, [s.itemId]));
+    await race.seedWith((runner) => runner.query(`UPDATE ${LINES} SET notes = 'From a script' WHERE id = $1`, [s.itemId]));
     const lastUpdate = new Date((await line(race, kind, s.itemId)).updated_at).toISOString();
 
     const [conflict] = editConflictOf(
@@ -365,21 +370,19 @@ async function authorFallbackAndNoBase(kind: Kind) {
     assert.equal(conflict.changed_by, null, 'nobody named: Jean, the line\'s last editor, never touched the notes');
     assert.equal(conflict.changed_at, lastUpdate, 'the line\'s last update');
 
-    // The supplier is deleted: an OPEX line's supplier becomes empty (ON DELETE SET NULL), with no
-    // audit row of the line. (A CAPEX line has no foreign key there: it keeps the deleted id.)
-    if (kind === 'opex') {
-      await race.seedWith((runner) => runner.query(`DELETE FROM suppliers WHERE id = $1`, [s.oldSupplier]));
-      assert.equal((await line(race, kind, s.itemId)).supplier_id, null, 'ON DELETE SET NULL');
-      const [emptied] = editConflictOf(
-        await settle(update(race, party, kind, s, s.jean, { supplier_id: s.newSupplier, base: { supplier_id: s.oldSupplier } })),
-        'Jean, whose supplier was deleted',
-      ).conflicts;
-      assert.equal(emptied.field, 'supplier_id');
-      assert.equal(emptied.current, null);
-      assert.deepEqual(emptied.labels, { base: null, current: null, mine: 'New supplier' }, 'the deleted supplier has no name left');
-      assert.equal(emptied.changed_by, null, 'nobody named for a delete elsewhere');
-      assert.equal(emptied.changed_at, lastUpdate);
-    }
+    // The supplier is deleted: the line's supplier becomes empty (ON DELETE SET NULL), with no
+    // audit row of the line. (A CAPEX line has the foreign key too since lot Z1, in spend_items.)
+    await race.seedWith((runner) => runner.query(`DELETE FROM suppliers WHERE id = $1`, [s.oldSupplier]));
+    assert.equal((await line(race, kind, s.itemId)).supplier_id, null, 'ON DELETE SET NULL');
+    const [emptied] = editConflictOf(
+      await settle(update(race, party, kind, s, s.jean, { supplier_id: s.newSupplier, base: { supplier_id: s.oldSupplier } })),
+      'Jean, whose supplier was deleted',
+    ).conflicts;
+    assert.equal(emptied.field, 'supplier_id');
+    assert.equal(emptied.current, null);
+    assert.deepEqual(emptied.labels, { base: null, current: null, mine: 'New supplier' }, 'the deleted supplier has no name left');
+    assert.equal(emptied.changed_by, null, 'nobody named for a delete elsewhere');
+    assert.equal(emptied.changed_at, lastUpdate);
 
     assertSucceeded(await settle(update(race, party, kind, s, s.marie, { notes: 'Without base' })), 'no base: as before');
     assert.equal((await line(race, kind, s.itemId)).notes, 'Without base');
@@ -407,7 +410,7 @@ async function authorBehindOtherChanges(kind: Kind) {
               jsonb_build_object('notes', 'Notes from Marie', 'description', 'd' || (g + 1)),
               $4, clock_timestamp() + (g || ' ms')::interval
          FROM generate_series(1, 2000) g`,
-      [race.tenantId, ITEM_TABLE[kind], s.itemId, s.jean],
+      [race.tenantId, AUDIT_TABLE[kind], s.itemId, s.jean],
     ));
     const [conflict] = editConflictOf(
       await settle(update(race, party, kind, s, s.jean, { notes: 'Notes from Jean', base: { notes: 'Start' } })),

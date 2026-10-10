@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import type { EntityManager, QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { SpendItemsService } from '../spend-items.service';
-import { CapexItemsService } from '../../capex/capex-items.service';
+import { CapexItemsService } from '../spend-items.service';
 import { SUMMARY_SCOPES, SummaryScopeConfig } from '../spend-summary.builder';
 import { CONSOLIDATION_COUNTS_INACTIVE_ACCOUNTS } from '../budget-list/budget-list.config';
 import { ANALYTICS_VALUE_ORDER_SQL } from '../../analytics/analytics-axes.util';
@@ -231,9 +231,10 @@ function sameOptions(label: string, old: Array<{ id: string; name: string }>, no
 
 function itemService(scope: SummaryScopeConfig): any {
   const deps = realSummaryDeps(scope);
-  const args: any[] = Array.from({ length: 12 }, () => undefined);
+  // One constructor for both natures since lot Z1: the CAPEX service is the OPEX one's subclass.
+  const args: any[] = Array.from({ length: 11 }, () => undefined);
   args[4] = deps.allocationCalculator;
-  args[scope.scope === 'opex' ? 6 : 7] = deps.fxRates;
+  args[6] = deps.fxRates;
   return scope.scope === 'opex' ? new (SpendItemsService as any)(...args) : new (CapexItemsService as any)(...args);
 }
 
@@ -343,8 +344,11 @@ async function loadEnv(scope: Scope, m: EntityManager, tenantId: string): Promis
       ORDER BY ${ANALYTICS_VALUE_ORDER_SQL} LIMIT 1000`,
     [tenantId, axisId],
   );
-  const itemTable = scope === 'opex' ? 'spend_items' : 'capex_items';
-  const used: Array<{ account_id: string }> = await m.query(`SELECT DISTINCT account_id FROM ${itemTable} WHERE tenant_id = $1 AND account_id IS NOT NULL`, [tenantId]);
+  // Both natures live in spend_items since lot Z1: the scope's own lines.
+  const used: Array<{ account_id: string }> = await m.query(
+    `SELECT DISTINCT account_id FROM spend_items WHERE tenant_id = $1 AND nature = $2 AND account_id IS NOT NULL`,
+    [tenantId, scope],
+  );
   return {
     scope,
     m,

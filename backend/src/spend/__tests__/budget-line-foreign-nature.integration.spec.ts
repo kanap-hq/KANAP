@@ -51,7 +51,7 @@ import { realSummaryDeps } from './oracle/oracle-deps';
 import { itemService, seedCompany, seedCostCenter, seedUser } from './cost-center.fixtures';
 import { assert, captureAudit, amountsService, inRolledBackTransaction, period, runSpecs, setTenant } from './round-inputs.fixtures';
 
-// A line of nature `capex` stored in `spend_items` (lot Z1 will move every CAPEX line there),
+// A line of nature `capex` stored in `spend_items` (where every CAPEX line lives since lot Z1),
 // inserted by raw SQL with every child the OPEX module knows: a version with months, an
 // allocation, an analytics value, a website link, a contact, an attachment, links to an
 // application, an asset, a contract, a project and a request, and tasks. The OPEX module never
@@ -60,11 +60,12 @@ import { assert, captureAudit, amountsService, inRolledBackTransaction, period, 
 //   answers 404 to a user with the OPEX right only (who passes the guard); a user with the
 //   CAPEX right only is stopped by the guard (403) on the OPEX routes and gets the same 404 on
 //   the task routes, which the tasks right guards;
-// - the list, the summary routes, the dashboard's aggregate, the chargeback report, the
-//   "used by N lines" counts, the budget years of the currency page, the expiry reminders, the
-//   freeze's FX pin and `lockBudgetYear` answer as if the line did not exist (compared with the
-//   same call once the line is deleted), and each would see it if it were OPEX (the same call
-//   with the line turned OPEX differs: the check is not vacuous);
+// - the list, the summary routes, the dashboard's aggregate, the chargeback report, the OPEX
+//   part of the "used by N lines" counts, the expiry reminders, the freeze's FX pin and
+//   `lockBudgetYear` answer as if the line did not exist (compared with the same call once the
+//   line is deleted), and each would see it if it were OPEX (the same call with the line turned
+//   OPEX differs: the check is not vacuous); since lot Z1 the CAPEX part of those counts and the
+//   budget years of the currency page count it, as a CAPEX line;
 // - a bulk replacement of the OPEX links of an application, an asset, a contract, a project or
 //   a request keeps its link to the line;
 // - the search index holds no OPX entry for it.
@@ -488,27 +489,37 @@ async function testCountsAndPeriphery() {
     const mg = runner.manager;
     const ctx = { manager: mg, tenantId: w.tenantId, userId: w.opexUser } as any;
 
-    // "Used by N lines".
-    await assertInvisible(runner, w, 'account line counts', async () => (await new AccountsService(none, audit).getWithConsolidationStatus(w.accountId, { manager: mg })).line_counts);
+    // "Used by N lines". Since lot Z1 the account counts the CAPEX lines of spend_items under `capex`:
+    // the foreign line counts there, and never under `opex`.
+    const accountCounts = async () => (await new AccountsService(none, audit).getWithConsolidationStatus(w.accountId, { manager: mg })).line_counts;
+    assert.deepEqual(await accountCounts(), { opex: 1, capex: 1 }, 'account line counts: the CAPEX line counts as CAPEX');
+    await assertInvisible(runner, w, 'account OPEX line count', async () => (await accountCounts()).opex);
     const centers = new CostCentersService(audit);
-    await assertInvisible(runner, w, 'cost center counts', async () => ({ detail: (await centers.get(w.costCenterId, ctx)).opex_count, usage: [...(await centers.countUsage(ctx, [w.costCenterId])).values()] }));
+    const centerUsage = async () => [...(await centers.countUsage(ctx, [w.costCenterId])).values()];
+    assert.deepEqual(await centerUsage(), [{ opex: 1, capex: 1 }], 'cost center counts: the CAPEX line counts as CAPEX');
+    await assertInvisible(runner, w, 'cost center OPEX counts', async () => ({ detail: (await centers.get(w.costCenterId, ctx)).opex_count, usage: (await centerUsage()).map((u) => u.opex) }));
     await assertInvisible(runner, w, 'dimension counts', async () => {
       const axis = await new AnalyticsAxesService(audit).get(w.axisId, ctx);
       return { opex_count: (axis as any).opex_count, opex_missing: (axis as any).opex_missing };
     });
-    await assertInvisible(runner, w, 'value counts', async () => [...(await new AnalyticsCategoriesService(none, audit).countUsage(ctx, [w.valueId])).values()]);
+    const valueUsage = async () => [...(await new AnalyticsCategoriesService(none, audit).countUsage(ctx, [w.valueId])).values()];
+    assert.deepEqual(await valueUsage(), [{ opex: 1, capex: 1 }], 'value counts: the CAPEX line counts as CAPEX');
+    await assertInvisible(runner, w, 'value OPEX counts', async () => (await valueUsage()).map((u) => u.opex));
     const references = new ReferenceCheckService();
+    // A company's references name its CAPEX lines too (as before lot Z1): the foreign line is one of them.
+    const companyRefs = async () => (await references.checkCompanyReferences(w.companyId, { manager: mg })).referenceDetails;
+    assert.ok((await companyRefs()).includes('1 CAPEX item(s) reference this as paying company'), 'company references: the CAPEX line counts as CAPEX');
     await assertInvisible(runner, w, 'reference checks', async () => ({
-      company: await references.checkCompanyReferences(w.companyId, { manager: mg }),
+      company: (await companyRefs()).filter((detail) => detail.includes('OPEX')),
       supplier: await references.checkSupplierReferences(w.foreignSupplierId, { manager: mg }),
       account: await references.checkAccountReferences(w.accountId, { manager: mg }),
     }));
 
-    // The budget years of the currency page: the year only the CAPEX line has.
+    // The budget years of the currency page count the months of both natures (the CAPEX ones came
+    // from capex_amounts before lot Z1): the year only the CAPEX line has is one of them.
     const currency = new CurrencyController(none, none, none) as any;
     const years: number[] = await currency.findBudgetYears(mg);
-    assert.ok(years.includes(YEAR) && !years.includes(ONLY_YEAR), `the currency years leave the CAPEX line out (${years})`);
-    await assertInvisible(runner, w, 'currency years', async () => (await currency.findBudgetYears(mg)).sort());
+    assert.ok(years.includes(YEAR) && years.includes(ONLY_YEAR), `the currency years count the CAPEX line's months (${years})`);
 
     // The expiry reminders: one warning, for the OPEX line.
     await runner.query(`UPDATE spend_items SET disabled_at = $3 WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [w.tenantId, [w.opex.id, w.foreign.id], IN_SEVEN_DAYS]);
@@ -559,7 +570,7 @@ async function testBulkReplacements() {
     const apps = new ApplicationsInstancesService(none, none, audit);
     assert.deepEqual((await apps.listLinkedSpendItems(w.applicationId, { manager: mg })).items.map((i: any) => i.id), [w.opex.id], 'an application lists its OPEX line only');
     await apps.bulkReplaceLinkedSpendItems(w.applicationId, [], w.opexUser, { manager: mg });
-    const assets = new AssetsRelationsService(none, none, none, none, none, audit);
+    const assets = new AssetsRelationsService(none, none, none, none, audit);
     assert.deepEqual((await assets.listLinkedSpendItems(w.assetId, { manager: mg, tenantId: w.tenantId })).items.map((i: any) => i.id), [w.opex.id], 'an asset lists its OPEX line only');
     await assets.bulkReplaceLinkedSpendItems(w.assetId, [], w.tenantId, w.opexUser, { manager: mg, tenantId: w.tenantId });
     const contracts = new ContractsService(none, none, none, none, audit, none, none, none, none);
@@ -689,7 +700,7 @@ async function testBulkOperations() {
 runSpecs('budget-line-foreign-nature.integration.spec', [
   ['routes answer 404 for a line of nature capex', testRoutes],
   ['lists, summaries, chargeback and search leave it out', testListsAndSummaries],
-  ['counts, currency years, reminders, freeze and year locks leave it out', testCountsAndPeriphery],
+  ['OPEX counts, reminders, freeze and year locks leave it out; CAPEX counts and currency years count it as CAPEX', testCountsAndPeriphery],
   ['bulk replacements keep its links and refuse its id', testBulkReplacements],
   ['the AI readers and writers leave it out', testAi],
   ['column copies and clears and allocation copies leave it out', testBulkOperations],

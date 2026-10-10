@@ -2,16 +2,14 @@ import 'dotenv/config';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { LIFECYCLE_STATUS_TABLES, LifecycleStatusSyncService, LifecycleStatusTable } from '../lifecycle-status-sync.service';
-import { CapexItemsService } from '../../capex/capex-items.service';
 import { ContractsService } from '../../contracts/contracts.service';
-import { SpendItemsService } from '../../spend/spend-items.service';
+import { CapexItemsService, SpendItemsService } from '../../spend/spend-items.service';
 import { ItemNumberService } from '../../common/item-number.service';
 import { withRlsLifted } from '../../common/__tests__/rls-bypass.fixtures';
 import {
   assert,
   captureAudit,
   inRolledBackTransaction,
-  noFreeze,
   runSpecs,
   seedTenant,
   setTenant,
@@ -33,11 +31,15 @@ const PAST = '2021-06-30T12:00:00.000Z';
 const FUTURE = '2099-06-30T12:00:00.000Z';
 const OLD_UPDATED_AT = '2021-03-04T05:06:07.000Z';
 
-// The tables with an AFTER UPDATE `trg_search_index_*` trigger.
+// The tables with an AFTER UPDATE `trg_search_index_*` trigger (the `spend_items` rows of the
+// table list are OPEX lines, indexed as `spend_items`).
 const INDEXED_TABLES = [
-  'accounts', 'analytics_categories', 'business_processes', 'capex_items', 'companies',
+  'accounts', 'analytics_categories', 'business_processes', 'companies',
   'contracts', 'departments', 'spend_items', 'suppliers',
 ];
+
+// A CAPEX line: a `spend_items` row of nature capex (lot Z1), with what the CAPEX routes require.
+const CAPEX_LINE = { nature: 'capex', ppe_type: 'hardware', investment_type: 'replacement', priority: 'medium' };
 
 type Parents = { coaId: string; axisId: string; companyId: string; supplierId: string };
 const NO_PARENTS = {} as Parents;
@@ -48,10 +50,6 @@ const ROW: Record<LifecycleStatusTable, (p: Parents, n: number, label: string) =
   analytics_axes: (_p, n, label) => ({ code: `sync-${n}`, name: label }),
   analytics_categories: (p, _n, label) => ({ axis_id: p.axisId, name: label }),
   business_processes: (_p, _n, label) => ({ name: label }),
-  capex_items: (_p, n, label) => ({
-    description: label, ppe_type: 'hardware', investment_type: 'replacement', priority: 'medium',
-    currency: 'EUR', effective_start: '2020-01-01', item_number: n,
-  }),
   companies: (_p, _n, label) => ({ name: label, country_iso: 'FR', city: 'Lyon' }),
   contracts: (p, _n, label) => ({ name: label, company_id: p.companyId, supplier_id: p.supplierId, start_date: '2020-01-01' }),
   cost_centers: (_p, n, label) => ({ code: `SYNC-${n}`, kind: 'group', name: label }),
@@ -132,6 +130,8 @@ async function testCatalogMatchesTableList() {
        JOIN information_schema.columns d
          ON d.table_schema = c.table_schema AND d.table_name = c.table_name AND d.column_name = 'disabled_at'
       WHERE c.table_schema = 'public' AND c.column_name = 'status' AND c.udt_name = 'status_state'
+        -- Dormant since lot Z1 (its lines are in spend_items), dropped by lot Z2.
+        AND c.table_name <> 'capex_items'
       ORDER BY 1`,
   );
   assert.deepEqual(
@@ -152,13 +152,23 @@ async function testSetsStatusFromEndOfValidity() {
         ids[table][name] = await seedRow(runner, tenantId, parents, table, state);
       }
     }
+    const capexIds = {} as Record<CaseName, string>;
+    for (const [name, state] of Object.entries(CASES) as Array<[CaseName, (typeof CASES)[CaseName]]>) {
+      capexIds[name] = await seedRow(runner, tenantId, parents, 'spend_items', state, CAPEX_LINE);
+    }
     const auditBefore = await auditCount(runner, tenantId);
 
     const result = await task().syncTenant(tenantId, { manager: runner.manager });
 
     assert.deepEqual([result.skipped, result.errors], [[], []], 'nothing skipped, no error');
+    for (const [name, state] of Object.entries(CASES) as Array<[CaseName, (typeof CASES)[CaseName]]>) {
+      const row = await readRow(runner, 'spend_items', capexIds[name]);
+      assert.equal(row.status, state.expected, `CAPEX line ${name}: status ${state.expected}`);
+      assert.equal(new Date(row.updated_at).toISOString(), OLD_UPDATED_AT, `CAPEX line ${name}: updated_at kept`);
+    }
     for (const table of LIFECYCLE_STATUS_TABLES) {
-      assert.deepEqual(result.changes[table], { disabled: 1, enabled: 2 }, `${table}: one disabled, two enabled`);
+      const expected = table === 'spend_items' ? { disabled: 2, enabled: 4 } : { disabled: 1, enabled: 2 };
+      assert.deepEqual(result.changes[table], expected, `${table}: the stale rows disabled, the others enabled`);
       for (const [name, state] of Object.entries(CASES) as Array<[CaseName, (typeof CASES)[CaseName]]>) {
         const row = await readRow(runner, table, ids[table][name]);
         assert.equal(row.status, state.expected, `${table} ${name}: status ${state.expected}`);
@@ -168,15 +178,15 @@ async function testSetsStatusFromEndOfValidity() {
     assert.equal(await auditCount(runner, tenantId), auditBefore, 'no audit row');
 
     // The AFTER UPDATE search index triggers refresh the indexed status of the rows that changed.
-    const staleIds = LIFECYCLE_STATUS_TABLES.map((table) => ids[table].stale);
+    const staleIds = [...LIFECYCLE_STATUS_TABLES.map((table) => ids[table].stale), capexIds.stale];
     const indexed: Array<{ entity_type: string; status: string }> = await runner.query(
       `SELECT entity_type, status FROM search_index WHERE tenant_id = $1 AND entity_id = ANY($2::uuid[]) ORDER BY entity_type`,
       [tenantId, staleIds],
     );
     assert.deepEqual(
       indexed.map((row) => [row.entity_type, row.status]),
-      INDEXED_TABLES.map((table) => [table, 'disabled']),
-      'the search index reads the new status',
+      [...INDEXED_TABLES, 'capex_items'].sort().map((table) => [table, 'disabled']),
+      'the search index reads the new status (the CAPEX line under its own type)',
     );
 
     const again = await task().syncTenant(tenantId, { manager: runner.manager });
@@ -226,7 +236,7 @@ async function testRunTenantScope() {
         `UPDATE tenants SET status = $2, deleted_at = CASE WHEN $3 THEN now() END WHERE id = $1`,
         [tenantId, status, deleted],
       );
-      seeded[tag] = { tenantId, capexId: await seedRow(runner, tenantId, NO_PARENTS, 'capex_items', CASES.stale) };
+      seeded[tag] = { tenantId, capexId: await seedRow(runner, tenantId, NO_PARENTS, 'spend_items', CASES.stale, CAPEX_LINE) };
     }
     await setTenant(runner, seeded.active.tenantId);
     // An application's status is written with no date: the task never reads that table.
@@ -241,7 +251,7 @@ async function testRunTenantScope() {
     const expected: Record<string, string> = { active: 'disabled', frozen: 'disabled', deleting: 'enabled', 'deleted-at': 'enabled' };
     for (const [tag, row] of Object.entries(seeded)) {
       await setTenant(runner, row.tenantId);
-      assert.equal((await readRow(runner, 'capex_items', row.capexId)).status, expected[tag], `${tag} tenant: ${expected[tag]}`);
+      assert.equal((await readRow(runner, 'spend_items', row.capexId)).status, expected[tag], `${tag} tenant: ${expected[tag]}`);
     }
     await setTenant(runner, seeded.active.tenantId);
     const [stored] = await runner.query(`SELECT status, disabled_at FROM applications WHERE id = $1`, [app.id]);
@@ -259,25 +269,9 @@ function notifier(sent: any[]) {
   return { notifyStatusChange: (payload: any) => { sent.push({ type: payload.itemType, old: payload.oldStatus, next: payload.newStatus }); } };
 }
 
-function capexService(sent: any[]): CapexItemsService {
-  return build(CapexItemsService, {
-    repo: undefined,
-    versions: undefined,
-    amounts: undefined,
-    companies: undefined,
-    allocationCalculator: undefined,
-    audit: captureAudit(),
-    freeze: noFreeze,
-    fxRates: { resolveRates: async () => ({ map: new Map(), settings: { allowedCurrencies: null } }) },
-    storage: undefined,
-    itemContacts: { syncFromSupplier: async () => undefined },
-    itemNumbers: new ItemNumberService(),
-    notifications: notifier(sent),
-  });
-}
-
-function spendService(sent: any[]): SpendItemsService {
-  return build(SpendItemsService, {
+/** A line service of either nature: `CapexItemsService` declares no constructor of its own, the arity is its twin's. */
+function lineService<T>(ctor: typeof SpendItemsService | typeof CapexItemsService, sent: any[]): T {
+  const deps = {
     repo: undefined,
     applications: undefined,
     appSpendLinks: undefined,
@@ -289,7 +283,9 @@ function spendService(sent: any[]): SpendItemsService {
     itemContacts: { syncFromSupplier: async () => undefined },
     notifications: notifier(sent),
     itemNumbers: new ItemNumberService(),
-  });
+  };
+  assert.equal(SpendItemsService.length, Object.keys(deps).length, 'SpendItemsService: the constructor changed, update the stubs');
+  return new (ctor as any)(...Object.values(deps)) as T;
 }
 
 function contractsService(sent: any[]): ContractsService {
@@ -326,13 +322,13 @@ async function testStatusEmails() {
     }
     const [owner, actor] = users;
     // End of validity passed an hour ago, the task has not run: stored status still enabled.
-    const capexId = await seedRow(runner, tenantId, parents, 'capex_items', CASES.stale, { owner_it_id: owner.id, paying_company_id: parents.companyId });
+    const capexId = await seedRow(runner, tenantId, parents, 'spend_items', CASES.stale, { ...CAPEX_LINE, owner_it_id: owner.id, paying_company_id: parents.companyId });
     const opexId = await seedRow(runner, tenantId, parents, 'spend_items', CASES.stale, { owner_it_id: owner.id, paying_company_id: parents.companyId });
     const contractId = await seedRow(runner, tenantId, parents, 'contracts', CASES.stale, { owner_user_id: owner.id });
 
     const sent: any[] = [];
-    const capex = capexService(sent);
-    const opex = spendService(sent);
+    const capex = lineService<CapexItemsService>(CapexItemsService, sent);
+    const opex = lineService<SpendItemsService>(SpendItemsService, sent);
     const contracts = contractsService(sent);
     const opts = { manager: runner.manager };
     const editAll = async (body: Record<string, unknown>) => {
@@ -346,8 +342,8 @@ async function testStatusEmails() {
     await runner.query('SAVEPOINT unrelated_edit');
     await editAll({ notes: 'Unrelated edit' });
     assert.deepEqual(sent, [], 'an edit right after the end of validity passed sends no status-change email');
-    for (const [table, id] of [['capex_items', capexId], ['spend_items', opexId], ['contracts', contractId]] as const) {
-      assert.equal((await readRow(runner, table, id)).status, 'disabled', `${table}: the edit stored the derived status`);
+    for (const [label, table, id] of [['CAPEX line', 'spend_items', capexId], ['OPEX line', 'spend_items', opexId], ['contract', 'contracts', contractId]] as const) {
+      assert.equal((await readRow(runner, table, id)).status, 'disabled', `${label}: the edit stored the derived status`);
     }
     await runner.query('ROLLBACK TO SAVEPOINT unrelated_edit');
 
@@ -368,9 +364,9 @@ async function testStatusEmails() {
 
     const result = await task().syncTenant(tenantId, opts);
     assert.deepEqual(
-      [result.changes.capex_items, result.changes.spend_items, result.changes.contracts],
-      [{ disabled: 1, enabled: 0 }, { disabled: 1, enabled: 0 }, { disabled: 1, enabled: 0 }],
-      'the task disabled the three lines',
+      [result.changes.spend_items, result.changes.contracts],
+      [{ disabled: 2, enabled: 0 }, { disabled: 1, enabled: 0 }],
+      'the task disabled the two budget lines and the contract',
     );
     assert.deepEqual(sent, [], 'the task itself sends nothing');
 
@@ -382,7 +378,10 @@ async function testStatusEmails() {
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /** Committed rows (the task's own transactions must see them), removed afterwards. */
-async function withCommittedTenant(fn: (tenantId: string, seed: (state: { status: string; disabled_at: string | null }, table: 'capex_items' | 'spend_items') => Promise<string>) => Promise<void>) {
+type CommittedTable = 'spend_items' | 'suppliers';
+type CommittedSeed = (state: { status: string; disabled_at: string | null }, table: CommittedTable, extra?: Record<string, unknown>) => Promise<string>;
+
+async function withCommittedTenant(fn: (tenantId: string, seed: CommittedSeed) => Promise<void>) {
   const runner = dataSource.createQueryRunner();
   await runner.connect();
   let tenantId = '';
@@ -390,10 +389,10 @@ async function withCommittedTenant(fn: (tenantId: string, seed: (state: { status
     await runner.startTransaction();
     tenantId = await seedTenant(runner, 'lifecycle-lock');
     await runner.commitTransaction();
-    const seed = async (state: { status: string; disabled_at: string | null }, table: 'capex_items' | 'spend_items') => {
+    const seed: CommittedSeed = async (state, table, extra = {}) => {
       await runner.startTransaction();
       await setTenant(runner, tenantId);
-      const id = await seedRow(runner, tenantId, NO_PARENTS, table, state);
+      const id = await seedRow(runner, tenantId, NO_PARENTS, table, state, extra);
       await runner.commitTransaction();
       return id;
     };
@@ -403,9 +402,9 @@ async function withCommittedTenant(fn: (tenantId: string, seed: (state: { status
     if (tenantId) {
       await dataSource.transaction(async (manager) => {
         await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
-        await manager.query(`DELETE FROM search_index WHERE tenant_id = $1`, [tenantId]);
-        await manager.query(`DELETE FROM capex_items WHERE tenant_id = $1`, [tenantId]);
         await manager.query(`DELETE FROM spend_items WHERE tenant_id = $1`, [tenantId]);
+        await manager.query(`DELETE FROM suppliers WHERE tenant_id = $1`, [tenantId]);
+        await manager.query(`DELETE FROM search_index WHERE tenant_id = $1`, [tenantId]);
       });
       await dataSource.query(`DELETE FROM tenants WHERE id = $1`, [tenantId]);
     }
@@ -414,7 +413,7 @@ async function withCommittedTenant(fn: (tenantId: string, seed: (state: { status
 }
 
 /** A user's transaction holding a row lock until it ends. */
-async function lockRow(tenantId: string, table: 'capex_items' | 'spend_items', id: string): Promise<QueryRunner> {
+async function lockRow(tenantId: string, table: CommittedTable, id: string): Promise<QueryRunner> {
   const blocker = dataSource.createQueryRunner();
   await blocker.connect();
   await blocker.startTransaction();
@@ -439,41 +438,43 @@ async function waitForLockWait(table: string): Promise<void> {
 
 async function testLockedRowSkipsItsTable() {
   await withCommittedTenant(async (tenantId, seed) => {
-    const capexId = await seed(CASES.stale, 'capex_items');
+    const supplierId = await seed(CASES.stale, 'suppliers');
+    const capexId = await seed(CASES.stale, 'spend_items', CAPEX_LINE);
     const opexId = await seed(CASES.stale, 'spend_items');
     const blocker = await lockRow(tenantId, 'spend_items', opexId);
     try {
       const result = await task().syncTenant(tenantId);
-      assert.deepEqual(result, { changes: { capex_items: { disabled: 1, enabled: 0 } }, skipped: ['spend_items'], errors: [] },
-        'the locked table is skipped after the lock timeout, the other tables are done');
+      assert.deepEqual(result, { changes: { suppliers: { disabled: 1, enabled: 0 } }, skipped: ['spend_items'], errors: [] },
+        'the locked table is skipped after the lock timeout (its CAPEX line with it), the other tables are done');
     } finally {
       await blocker.rollbackTransaction();
       await blocker.release();
     }
     const next = await task().syncTenant(tenantId);
-    assert.deepEqual(next, { changes: { spend_items: { disabled: 1, enabled: 0 } }, skipped: [], errors: [] }, 'the next run catches up');
+    assert.deepEqual(next, { changes: { spend_items: { disabled: 2, enabled: 0 } }, skipped: [], errors: [] }, 'the next run catches up');
     const statuses = await dataSource.transaction(async (manager) => {
       await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
       return manager.query(
-        `SELECT (SELECT status::text FROM capex_items WHERE id = $1) AS capex, (SELECT status::text FROM spend_items WHERE id = $2) AS opex`,
-        [capexId, opexId],
+        `SELECT (SELECT status::text FROM spend_items WHERE id = $1) AS capex, (SELECT status::text FROM spend_items WHERE id = $2) AS opex,
+                (SELECT status::text FROM suppliers WHERE id = $3) AS supplier`,
+        [capexId, opexId, supplierId],
       );
     });
-    assert.deepEqual(statuses[0], { capex: 'disabled', opex: 'disabled' });
+    assert.deepEqual(statuses[0], { capex: 'disabled', opex: 'disabled', supplier: 'disabled' });
   });
 }
 
 async function testDisableNowDuringTheWaitIsKept() {
   await withCommittedTenant(async (tenantId, seed) => {
-    const capexId = await seed(CASES.stale, 'capex_items');
-    const blocker = await lockRow(tenantId, 'capex_items', capexId);
+    const capexId = await seed(CASES.stale, 'spend_items', CAPEX_LINE);
+    const blocker = await lockRow(tenantId, 'spend_items', capexId);
     let pending: Promise<unknown> = Promise.resolve();
     try {
       pending = task().syncTenant(tenantId);
-      await waitForLockWait('capex_items');
+      await waitForLockWait('spend_items');
       // The user's edit: disabled, end of validity "now", committed while the task waits on the row.
       await blocker.query(
-        `UPDATE capex_items SET status = 'disabled', disabled_at = clock_timestamp() WHERE tenant_id = $1 AND id = $2`,
+        `UPDATE spend_items SET status = 'disabled', disabled_at = clock_timestamp() WHERE tenant_id = $1 AND id = $2`,
         [tenantId, capexId],
       );
       await blocker.commitTransaction();
@@ -486,7 +487,7 @@ async function testDisableNowDuringTheWaitIsKept() {
     }
     const rows = await dataSource.transaction(async (manager) => {
       await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
-      return manager.query(`SELECT status::text AS status FROM capex_items WHERE id = $1`, [capexId]);
+      return manager.query(`SELECT status::text AS status FROM spend_items WHERE id = $1`, [capexId]);
     });
     assert.equal(rows[0].status, 'disabled', 'the line stays disabled');
   });
