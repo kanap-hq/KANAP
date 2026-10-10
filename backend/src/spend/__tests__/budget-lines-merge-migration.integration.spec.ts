@@ -5,6 +5,7 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { BudgetLinesNature1853960000000 as NatureMigration } from '../../migrations/1853960000000-budget-lines-nature';
 import { BudgetLinesMerge1853970000000 as MergeMigration } from '../../migrations/1853970000000-budget-lines-merge';
+import { undoLotZ1 } from './undo-lot-z1.fixtures';
 
 // Migrations 1853960000000 and 1853970000000 (lot Z1 of plan planning/budget-unifie.md: the CAPEX
 // lines move from the capex_* tables into spend_*), against a real database, each test in a
@@ -25,8 +26,9 @@ import { BudgetLinesMerge1853970000000 as MergeMigration } from '../../migration
 // kept, sums and totals (the stale one computed again), what was left out logged and named, row
 // level security and triggers as found (a table found without FORCE, a trigger found disabled),
 // one search entry per line, sequences, tenant isolation, a second run that changes nothing,
-// refusals before any write, and down() then up() after writes made once moved. The
-// assertions read this test's own rows, never table-wide counts.
+// refusals before any write (a totals trigger found disabled, a line moved without its children),
+// a rerun after a line was deleted (not copied again), and down() then up() after writes made once
+// moved. The assertions read this test's own rows, never table-wide counts.
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file on a database lane.
 
 const natureMigration = new NatureMigration();
@@ -85,6 +87,21 @@ async function inRolledBackTransaction(fn: (runner: QueryRunner) => Promise<void
     await runner.rollbackTransaction();
     await runner.release();
   }
+}
+
+/** The error `fn` throws, with what it logged before (fails when it resolves). */
+async function captureRejection(fn: () => Promise<unknown>): Promise<{ error: Error; lines: string[] }> {
+  const lines: string[] = [];
+  const original = console.log;
+  console.log = (...args: any[]) => { lines.push(args.map(String).join(' ')); };
+  try {
+    await fn();
+  } catch (error) {
+    return { error: error as Error, lines };
+  } finally {
+    console.log = original;
+  }
+  throw new Error('expected a rejection');
 }
 
 async function captureLog<T>(fn: () => Promise<T>): Promise<{ result: T; lines: string[] }> {
@@ -166,12 +183,9 @@ async function seedCapexVersion(runner: QueryRunner, tenantId: string, lineId: s
   return versionId;
 }
 
-/** Lot Z1 undone, then the dirty database before it. Migrations run without a tenant. */
+/** Lot Z1 undone (other specs' residue repaired first, see `undo-lot-z1.fixtures.ts`), then the dirty database before it. */
 async function seedBeforeMigration(runner: QueryRunner): Promise<World> {
-  await captureLog(async () => {
-    await mergeMigration.down(runner);
-    await natureMigration.down(runner);
-  });
+  await captureLog(() => undoLotZ1(runner));
   const { id: a, slug: slugA } = await seedTenant(runner, 'a');
   const { id: b, slug: slugB } = await seedTenant(runner, 'b');
   const companyA = await insert(runner, a, 'companies', { name: 'Z1 company', country_iso: 'FR', city: 'Lyon' });
@@ -471,7 +485,26 @@ async function testSecondRun() {
     await noTenant(runner);
     const third = await captureLog(() => mergeMigration.up(runner));
     assert.equal((await lineOf(runner, world.a, world.c1)).legacy_number, 'CPX-7', 'the CPX number completed');
-    assert.ok(third.lines.some((line) => line.includes(`tenant ${world.slugA} (${world.a}): nothing to move; 1 CAPEX legacy number(s) completed`)), 'and logged');
+    assert.ok(
+      third.lines.some((line) => line === `${LOG_PREFIX} tenant ${world.slugA} (${world.a}): moved by an earlier run, nothing to move; 1 CAPEX legacy number(s) completed`),
+      `and logged: ${third.lines.join(' | ')}`,
+    );
+
+    // A line deleted since the move (as the API deletes it) is not copied again by a rerun: its
+    // tenant was moved; it is named in the log, the other lines are left as they are.
+    await asTenant(runner, world.a);
+    await runner.query(`DELETE FROM spend_links WHERE spend_item_id = $1`, [world.c2]);
+    await runner.query(`DELETE FROM spend_items WHERE id = $1`, [world.c2]);
+    await noTenant(runner);
+    const kept = await lineOf(runner, world.a, world.c1);
+    const fourth = await captureLog(() => mergeMigration.up(runner));
+    assert.deepEqual(await readAs(runner, world.a, `SELECT id FROM spend_items WHERE id = $1`, [world.c2]), [], 'the deleted line stays deleted');
+    assert.deepEqual(await lineOf(runner, world.a, world.c1), kept, 'the other line is left as it is');
+    assert.ok(
+      fourth.lines.some((line) => line === `${LOG_PREFIX} tenant ${world.slugA} (${world.a}): moved by an earlier run, nothing to move; `
+        + `1 line(s) of capex_items not in spend_items (deleted since the move) left alone: ${world.c2}`),
+      `the deleted line is named: ${fourth.lines.join(' | ')}`,
+    );
   });
 }
 
@@ -503,11 +536,33 @@ async function testRefusals() {
       async () => { await asTenant(runner, world.a); await runner.query(`UPDATE spend_items SET legacy_number = 'CPX-7' WHERE id = $1`, [world.o1]); },
       new RegExp(`CAPEX line\\(s\\) ${world.c1}: their CPX number is already another line's legacy number`),
     );
-    await refused(
-      'a totals trigger found disabled',
-      async () => { await runner.query(`ALTER TABLE spend_amounts DISABLE TRIGGER spend_amounts_version_totals_insert`); },
-      /the totals trigger\(s\) spend_amounts_version_totals_insert \(D\) do not fire/,
-    );
+    // A totals trigger found disabled: refused by the checks, before any copy (nothing logged of a tenant's lines).
+    await runner.query('SAVEPOINT disabled_trigger');
+    await runner.query(`ALTER TABLE spend_amounts DISABLE TRIGGER spend_amounts_version_totals_insert`);
+    await noTenant(runner);
+    const disabled = await captureRejection(() => mergeMigration.up(runner));
+    await runner.query('ROLLBACK TO SAVEPOINT disabled_trigger');
+    assert.match(disabled.error.message, /the totals trigger\(s\) spend_amounts_version_totals_insert \(D\) do not fire; nothing was changed/);
+    assert.deepEqual(disabled.lines, [], 'refused before the checks of each tenant and any copy: nothing logged');
+
+    // A CAPEX line already in spend_items without its children (a manual change): its tenant counts
+    // as moved, and the line is refused by name before any write.
+    await runner.query('SAVEPOINT partial_line');
+    await insert(runner, world.a, 'spend_items', {
+      id: world.c1, nature: 'capex', product_name: 'Servers', ppe_type: 'software', investment_type: 'capacity', priority: 'high',
+      currency: 'EUR', effective_start: '2024-01-01', item_number: 90, legacy_number: 'CPX-7',
+    });
+    await noTenant(runner);
+    const partial = await captureRejection(() => mergeMigration.up(runner));
+    await runner.query('ROLLBACK TO SAVEPOINT partial_line');
+    for (const part of [
+      `tenant ${world.slugA} (${world.a}): CAPEX line(s) ${world.c1} are in spend_items without all their children (`,
+      '1 version(s) of capex_versions not in spend_versions; 1 dimension value(s) of capex_item_analytics_values not in spend_item_analytics_values',
+      '1 request link(s) of portfolio_request_capex not in portfolio_request_opex); nothing was changed.',
+    ]) {
+      assert.ok(partial.error.message.includes(part), `the refusal names the line and its missing rows: ${partial.error.message}`);
+    }
+    assert.deepEqual(partial.lines, [], 'refused before any copy: nothing logged');
     const [{ n }] = await readAs(runner, world.a, `SELECT count(*)::int AS n FROM spend_items WHERE id = ANY($1)`, [[world.c1, world.c2]]);
     assert.equal(n, 0, 'nothing moved by a refused run');
 

@@ -57,6 +57,8 @@ type ChildCopy = {
   columns: Array<[string, string]>;
   candidate: (lines: string) => string;
   eligible: string;
+  /** The id of the source row's CAPEX line (`c`), named when a line already moved lacks the row. */
+  lineOf: string;
   /** Temp table that records the ids copied (the parents of the next copies). */
   record?: 'z1_versions' | 'z1_rounds';
   /** Why a candidate left out is left out, for the log. */
@@ -67,6 +69,8 @@ const same = (columns: string[]): Array<[string, string]> => columns.map((column
 const versionsOf = (lines: string) => `(SELECT v.id FROM capex_versions v WHERE v.capex_item_id IN ${lines})`;
 const roundsOf = (lines: string) => `(SELECT r.id FROM capex_round_inputs r JOIN capex_versions v ON v.id = r.version_id WHERE v.capex_item_id IN ${lines})`;
 const OF_VERSION_COPIED = `c.tenant_id = $1 AND c.version_id IN (SELECT id FROM z1_versions)`;
+const LINE_OF_VERSION = '(SELECT v.capex_item_id FROM capex_versions v WHERE v.id = c.version_id)';
+const LINE_OF_ROUND = '(SELECT v.capex_item_id FROM capex_round_inputs r JOIN capex_versions v ON v.id = r.version_id WHERE r.id = c.round_input_id)';
 const OTHER_TENANT = 'row of another tenant than its line';
 const PARENT_LEFT = 'parent left out, or row of another tenant than its line';
 
@@ -78,6 +82,7 @@ const CHILDREN: ChildCopy[] = [
       ...same(['version_name', 'input_grain', 'is_approved', 'as_of_date', 'budget_year', 'notes', 'fx_rate_set_id', 'reporting_currency',
         'allocation_method', 'allocation_driver', 'budget_rev', 'budget_changed_at', 'created_at', 'updated_at']),
     ],
+    lineOf: 'c.capex_item_id',
     candidate: (lines) => `c.capex_item_id IN ${lines}`,
     eligible: 'c.tenant_id = $1',
     record: 'z1_versions',
@@ -86,6 +91,7 @@ const CHILDREN: ChildCopy[] = [
   {
     key: 'months', label: 'month(s)', source: 'capex_amounts', target: 'spend_amounts', identity: ['id'],
     columns: same(['id', 'tenant_id', 'version_id', 'period', ...MEASURES, 'created_at', 'updated_at']),
+    lineOf: LINE_OF_VERSION,
     candidate: (lines) => `c.version_id IN ${versionsOf(lines)}`,
     eligible: OF_VERSION_COPIED,
     removed: PARENT_LEFT,
@@ -93,6 +99,7 @@ const CHILDREN: ChildCopy[] = [
   {
     key: 'totals', label: 'version total(s)', source: 'capex_version_totals', target: 'spend_version_totals', identity: ['version_id'],
     columns: same(['version_id', 'tenant_id', ...MEASURES, 'updated_at']),
+    lineOf: LINE_OF_VERSION,
     candidate: (lines) => `c.version_id IN ${versionsOf(lines)}`,
     eligible: OF_VERSION_COPIED,
     removed: PARENT_LEFT,
@@ -101,6 +108,7 @@ const CHILDREN: ChildCopy[] = [
     key: 'rounds', label: 'column round(s)', source: 'capex_round_inputs', target: 'spend_round_inputs', identity: ['id'],
     columns: same(['id', 'tenant_id', 'version_id', 'measure', 'period_start', 'period_end', 'method', 'spread_profile_name',
       'last_calculation', 'updated_by', 'fte', 'created_at', 'updated_at']),
+    lineOf: LINE_OF_VERSION,
     candidate: (lines) => `c.version_id IN ${versionsOf(lines)}`,
     eligible: OF_VERSION_COPIED,
     record: 'z1_rounds',
@@ -110,6 +118,7 @@ const CHILDREN: ChildCopy[] = [
     key: 'costedLines', label: 'costed line(s)', source: 'capex_round_input_lines', target: 'spend_round_input_lines', identity: ['id'],
     columns: same(['id', 'tenant_id', 'round_input_id', 'sort', 'label', 'quantity_unit', 'quantity', 'unit_price', 'price_basis', 'frequency',
       'days_per_month', 'working_day_profile_id', 'period_start', 'period_end', 'created_at', 'updated_at']),
+    lineOf: LINE_OF_ROUND,
     candidate: (lines) => `c.round_input_id IN ${roundsOf(lines)}`,
     eligible: `c.tenant_id = $1 AND c.round_input_id IN (SELECT id FROM z1_rounds)`,
     removed: PARENT_LEFT,
@@ -118,6 +127,7 @@ const CHILDREN: ChildCopy[] = [
     key: 'allocations', label: 'allocation(s)', source: 'capex_allocations', target: 'spend_allocations', identity: ['id'],
     columns: same(['id', 'tenant_id', 'version_id', 'company_id', 'department_id', 'allocation_pct', 'is_system_generated', 'rule_id',
       'materialized_from', 'created_at', 'updated_at']),
+    lineOf: LINE_OF_VERSION,
     candidate: (lines) => `c.version_id IN ${versionsOf(lines)}`,
     // The OPEX table refuses a company or department that does not exist (foreign keys); the CAPEX one never checked.
     eligible: `${OF_VERSION_COPIED}
@@ -129,6 +139,7 @@ const CHILDREN: ChildCopy[] = [
     key: 'dimensionValues', label: 'dimension value(s)', source: 'capex_item_analytics_values', target: 'spend_item_analytics_values',
     identity: ['tenant_id', 'item_id', 'axis_id'],
     columns: same(['tenant_id', 'item_id', 'axis_id', 'category_id', 'created_at', 'updated_at']),
+    lineOf: 'c.item_id',
     candidate: (lines) => `c.item_id IN ${lines}`,
     eligible: 'c.tenant_id = $1',
     removed: OTHER_TENANT,
@@ -136,6 +147,7 @@ const CHILDREN: ChildCopy[] = [
   {
     key: 'contacts', label: 'contact(s)', source: 'capex_item_contacts', target: 'spend_item_contacts', identity: ['id'],
     columns: [['id', 'c.id'], ['tenant_id', 'c.tenant_id'], ['spend_item_id', 'c.capex_item_id'], ...same(['contact_id', 'role', 'origin', 'created_at', 'updated_at'])],
+    lineOf: 'c.capex_item_id',
     candidate: (lines) => `c.capex_item_id IN ${lines}`,
     eligible: 'c.tenant_id = $1',
     removed: OTHER_TENANT,
@@ -143,6 +155,7 @@ const CHILDREN: ChildCopy[] = [
   {
     key: 'webLinks', label: 'web link(s)', source: 'capex_links', target: 'spend_links', identity: ['id'],
     columns: [['id', 'c.id'], ['tenant_id', 'c.tenant_id'], ['spend_item_id', 'c.capex_item_id'], ...same(['description', 'url', 'created_at'])],
+    lineOf: 'c.capex_item_id',
     candidate: (lines) => `c.capex_item_id IN ${lines}`,
     eligible: 'c.tenant_id = $1',
     removed: OTHER_TENANT,
@@ -151,6 +164,7 @@ const CHILDREN: ChildCopy[] = [
     key: 'attachments', label: 'attachment(s)', source: 'capex_attachments', target: 'spend_attachments', identity: ['id'],
     columns: [['id', 'c.id'], ['tenant_id', 'c.tenant_id'], ['spend_item_id', 'c.capex_item_id'],
       ...same(['original_filename', 'stored_filename', 'mime_type', 'size', 'storage_path', 'uploaded_at'])],
+    lineOf: 'c.capex_item_id',
     candidate: (lines) => `c.capex_item_id IN ${lines}`,
     eligible: 'c.tenant_id = $1',
     removed: OTHER_TENANT,
@@ -158,6 +172,7 @@ const CHILDREN: ChildCopy[] = [
   {
     key: 'applicationLinks', label: 'application link(s)', source: 'application_capex_items', target: 'application_spend_items', identity: ['id'],
     columns: [['id', 'c.id'], ['tenant_id', 'c.tenant_id'], ['application_id', 'c.application_id'], ['spend_item_id', 'c.capex_item_id'], ['created_at', 'c.created_at']],
+    lineOf: 'c.capex_item_id',
     candidate: (lines) => `c.capex_item_id IN ${lines}`,
     eligible: 'c.tenant_id = $1',
     removed: OTHER_TENANT,
@@ -165,6 +180,7 @@ const CHILDREN: ChildCopy[] = [
   {
     key: 'assetLinks', label: 'asset link(s)', source: 'asset_capex_items', target: 'asset_spend_items', identity: ['id'],
     columns: [['id', 'c.id'], ['tenant_id', 'c.tenant_id'], ['asset_id', 'c.asset_id'], ['spend_item_id', 'c.capex_item_id'], ['created_at', 'c.created_at']],
+    lineOf: 'c.capex_item_id',
     candidate: (lines) => `c.capex_item_id IN ${lines}`,
     eligible: 'c.tenant_id = $1',
     removed: OTHER_TENANT,
@@ -172,6 +188,7 @@ const CHILDREN: ChildCopy[] = [
   {
     key: 'contractLinks', label: 'contract link(s)', source: 'contract_capex_items', target: 'contract_spend_items', identity: ['id'],
     columns: [['id', 'c.id'], ['tenant_id', 'c.tenant_id'], ['contract_id', 'c.contract_id'], ['spend_item_id', 'c.capex_item_id'], ['created_at', 'c.created_at']],
+    lineOf: 'c.capex_item_id',
     candidate: (lines) => `c.capex_item_id IN ${lines}`,
     eligible: 'c.tenant_id = $1',
     removed: OTHER_TENANT,
@@ -179,6 +196,7 @@ const CHILDREN: ChildCopy[] = [
   {
     key: 'projectLinks', label: 'project link(s)', source: 'portfolio_project_capex', target: 'portfolio_project_opex', identity: ['id'],
     columns: [['id', 'c.id'], ['tenant_id', 'c.tenant_id'], ['project_id', 'c.project_id'], ['opex_id', 'c.capex_id'], ['created_at', 'c.created_at']],
+    lineOf: 'c.capex_id',
     candidate: (lines) => `c.capex_id IN ${lines}`,
     eligible: 'c.tenant_id = $1',
     removed: OTHER_TENANT,
@@ -186,6 +204,7 @@ const CHILDREN: ChildCopy[] = [
   {
     key: 'requestLinks', label: 'request link(s)', source: 'portfolio_request_capex', target: 'portfolio_request_opex', identity: ['id'],
     columns: [['id', 'c.id'], ['tenant_id', 'c.tenant_id'], ['request_id', 'c.request_id'], ['opex_id', 'c.capex_id'], ['created_at', 'c.created_at']],
+    lineOf: 'c.capex_id',
     candidate: (lines) => `c.capex_id IN ${lines}`,
     eligible: 'c.tenant_id = $1',
     removed: OTHER_TENANT,
@@ -194,7 +213,19 @@ const CHILDREN: ChildCopy[] = [
 
 /** The lines of this run, of this tenant (`z1_lines`), and the lines not moved yet (any tenant), as SQL sets. */
 const RUN_LINES = '(SELECT id FROM z1_lines)';
-const PENDING_LINES = '(SELECT x.id FROM capex_items x WHERE NOT EXISTS (SELECT 1 FROM spend_items l WHERE l.id = x.id))';
+/**
+ * The CAPEX lines still to move: not in spend_items yet, of a tenant no earlier run moved. A tenant
+ * with at least one CAPEX line already in spend_items (its UUID in both tables) was moved before
+ * (`z1_moved_tenants`, filled before any write): a line of capex_items it lacks in spend_items was
+ * deleted since the move, and is left alone (named in the log), never copied again.
+ */
+const PENDING_LINES = `(SELECT x.id FROM capex_items x
+  WHERE NOT EXISTS (SELECT 1 FROM spend_items l WHERE l.id = x.id)
+    AND x.tenant_id NOT IN (SELECT m.tenant_id FROM z1_moved_tenants m))`;
+/** The tenants with a CAPEX line already in spend_items (same UUID, same tenant), as found before any write. */
+const MOVED_TENANTS_SQL = `SELECT DISTINCT s.tenant_id FROM spend_items s
+  JOIN capex_items c ON c.id = s.id AND c.tenant_id = s.tenant_id
+ WHERE s.nature = 'capex'`;
 
 /** A supplier kept only when it exists in the line's tenant (the OPEX table has the foreign key the CAPEX one lacked). */
 const SUPPLIER = `CASE WHEN EXISTS (SELECT 1 FROM suppliers sp WHERE sp.tenant_id = c.tenant_id AND sp.id = c.supplier_id) THEN c.supplier_id END`;
@@ -234,9 +265,10 @@ const tenantName = (tenant: TenantRow) => `${tenant.slug || '(no slug)'} (${tena
  * 0. With row level security lifted on the 32 tables, `search_index` and `item_sequences`, and the
  *    user triggers of the `spend_*` tables off (both restored as found, also on failure: the copy
  *    moves neither `budget_rev`, nor `row_version`, nor a total, nor the search index):
- * 1. Checks, before any write, failing fast with the ids named: the tables and columns exist; no
- *    CAPEX row to move shares its UUID with a row of its twin table; no CPX number to keep is held
- *    by another line; the numbers fit. Per tenant (app.current_tenant set): the lines and rows to
+ * 1. Checks, before any write, failing fast with the ids named: the tables and columns exist; the
+ *    totals triggers fire; the lines an earlier run moved hold their children; no CAPEX row to move
+ *    shares its UUID with a row of its twin table; no CPX number to keep is held by another line;
+ *    the numbers fit. Per tenant (app.current_tenant set): the lines and rows to
  *    move and those left out, logged. CAPEX rows of a tenant that no longer exists stay where they
  *    are (unreachable before as after), counted.
  * 2. OPEX lines without a legacy number get `OPX-<number>` (lot Z0 left the lines created since
@@ -265,16 +297,22 @@ const tenantName = (tenant: TenantRow) => `${tenant.slug || '(no slug)'} (${tena
  * 6. Every CAPEX line of an existing tenant is in `spend_items`, the totals triggers fire: else an
  *    exception. The totals of each nature are logged.
  *
- * A line already in `spend_items` is left alone with its children: a second run moves nothing,
- * renumbers nothing, completes missing legacy numbers and checks again. The `capex_*` tables keep
- * their rows (lot Z2 drops them).
+ * A second run moves nothing, renumbers nothing, completes missing legacy numbers and checks
+ * again. A tenant with a CAPEX line already in `spend_items` was moved by an earlier run: none of
+ * its lines is copied again (a line of capex_items missing from spend_items was deleted since the
+ * move: left alone, named in the log), and each of its lines already there must hold all its
+ * children, else an exception names it before any write. The totals triggers are checked before
+ * any write too. The `capex_*` tables keep their rows (lot Z2 drops them).
  *
  * down() moves the CAPEX lines back: it refuses a CAPEX line the `capex_*` tables cannot hold (an
  * enum empty, a contract set), then, per tenant, deletes the CAPEX rows whose line is gone, copies
  * every CAPEX line and child back (upsert by UUID, `item_number` from the legacy CPX number or the
  * `capex` sequence, `description` = the title, an OPEX description joined to the notes), checks the
  * copy, and deletes the CAPEX lines from `spend_*`. It restores metadata: a stored file deleted
- * since is not brought back.
+ * since is not brought back. The rows up() left out in `capex_*` (an allocation to a company or
+ * department that does not exist, a child of another tenant than its line) are lost: down()
+ * deletes the dormant children of each line before copying back what `spend_*` holds, and they are
+ * not there. up() named them in its log.
  */
 export class BudgetLinesMerge1853970000000 implements MigrationInterface {
   name = 'BudgetLinesMerge1853970000000';
@@ -286,6 +324,10 @@ export class BudgetLinesMerge1853970000000 implements MigrationInterface {
     await withoutRowSecurity(queryRunner, RLS_TABLES, async () => {
       const tenants: TenantRow[] = await queryRunner.query(`SELECT id::text AS id, slug FROM tenants ORDER BY created_at ASC, id ASC`);
       try {
+        // A temporary table, no data written: the tenants an earlier run moved, as found now.
+        await queryRunner.query(`CREATE TEMP TABLE IF NOT EXISTS z1_moved_tenants (tenant_id uuid PRIMARY KEY) ON COMMIT DROP`);
+        await queryRunner.query(`TRUNCATE z1_moved_tenants`);
+        await queryRunner.query(`INSERT INTO z1_moved_tenants (tenant_id) ${MOVED_TENANTS_SQL}`);
         await precheck(queryRunner, tenants);
         await withoutUserTriggers(queryRunner, SPEND_TABLES, async () => {
           await queryRunner.query(`CREATE TEMP TABLE IF NOT EXISTS z1_lines (id uuid PRIMARY KEY) ON COMMIT DROP`);
@@ -380,6 +422,10 @@ async function ids(queryRunner: QueryRunner, sql: string, params: unknown[] = []
 
 /** Step 1: nothing is written before these pass. */
 async function precheck(queryRunner: QueryRunner, tenants: TenantRow[]): Promise<void> {
+  // The totals triggers must fire once the copy is done: a trigger found disabled stays disabled
+  // (withoutUserTriggers restores what it found), so it is refused here, before any write.
+  await assertTotalsTriggersFire(queryRunner);
+  await assertMovedLinesComplete(queryRunner, tenants);
   // A CAPEX line whose UUID another row of spend_items holds (an OPEX line, or a line of another tenant).
   const lineClash = await ids(
     queryRunner,
@@ -452,6 +498,50 @@ async function precheck(queryRunner: QueryRunner, tenants: TenantRow[]): Promise
   }
 }
 
+/**
+ * Step 1, the tenants an earlier run moved (`z1_moved_tenants`): each of their CAPEX lines already in
+ * spend_items must hold there every row the move copies, in each child table (the version totals
+ * apart: derived, kept by the triggers). A run moves a line with its children in one transaction;
+ * a line there without them comes from a manual change, which the migration refuses to guess
+ * about: an exception names the lines and, per table, the rows missing.
+ */
+async function assertMovedLinesComplete(queryRunner: QueryRunner, tenants: TenantRow[]): Promise<void> {
+  const moved: Array<{ id: string }> = await queryRunner.query(`SELECT tenant_id::text AS id FROM z1_moved_tenants ORDER BY 1`);
+  const byId = new Map(tenants.map((tenant) => [tenant.id, tenant]));
+  for (const { id: t } of moved) {
+    const tenant = byId.get(t) ?? { id: t, slug: null };
+    await setTenant(queryRunner, t);
+    const lines = `(SELECT s.id FROM spend_items s JOIN capex_items x ON x.id = s.id AND x.tenant_id = s.tenant_id
+                     WHERE s.tenant_id = $1 AND s.nature = 'capex')`;
+    const missing: string[] = [];
+    const named = new Set<string>();
+    for (const child of CHILDREN) {
+      if (child.key === 'totals') continue;
+      // The rows the move copied: of the line's tenant, their parent moved too (in spend_*).
+      const copied = child.eligible.replace(/z1_versions/g, 'spend_versions').replace(/z1_rounds/g, 'spend_round_inputs');
+      const rows: Array<{ line: string; n: number }> = await queryRunner.query(
+        `SELECT ${child.lineOf}::text AS line, count(*)::int AS n
+           FROM ${child.source} c
+          WHERE ${child.candidate(lines)} AND ${copied}
+            AND NOT EXISTS (SELECT 1 FROM ${child.target} d WHERE ${child.identity.map((key) => `d.${key} = c.${key}`).join(' AND ')})
+          GROUP BY 1 ORDER BY 1`,
+        [t],
+      );
+      if (rows.length === 0) continue;
+      missing.push(`${rows.reduce((sum, row) => sum + Number(row.n), 0)} ${child.label} of ${child.source} not in ${child.target}`);
+      for (const row of rows) named.add(row.line);
+    }
+    if (missing.length > 0) {
+      const shown = [...named].slice(0, 5);
+      throw new Error(
+        `${LOG_PREFIX} tenant ${tenantName(tenant)}: CAPEX line(s) ${shown.join(', ')}${named.size > shown.length ? ` and ${named.size - shown.length} more` : ''}`
+          + ` are in spend_items without all their children (${missing.join('; ')}); nothing was changed.`
+          + ' A run moves a line with its children: this state comes from a manual change, look at it by hand.',
+      );
+    }
+  }
+}
+
 /** Step 3 for one tenant: the CAPEX lines not moved yet, and their children. Returns the lines moved. */
 async function mergeTenant(queryRunner: QueryRunner, tenant: TenantRow): Promise<number> {
   const t = tenant.id;
@@ -465,6 +555,25 @@ async function mergeTenant(queryRunner: QueryRunner, tenant: TenantRow): Promise
         AND NOT EXISTS (SELECT 1 FROM spend_items o WHERE o.tenant_id = s.tenant_id AND o.legacy_number = 'CPX-' || c.item_number)`,
     [t],
   );
+  const [{ moved }] = await queryRunner.query(`SELECT EXISTS (SELECT 1 FROM z1_moved_tenants WHERE tenant_id = $1) AS moved`, [t]);
+  if (moved) {
+    // Moved by an earlier run: its CAPEX lines missing from spend_items were deleted since, left alone.
+    const left: Array<{ id: string }> = await queryRunner.query(
+      `SELECT c.id::text AS id FROM capex_items c
+        WHERE c.tenant_id = $1 AND NOT EXISTS (SELECT 1 FROM spend_items s WHERE s.id = c.id)
+        ORDER BY c.created_at, c.id`,
+      [t],
+    );
+    if (left.length > 0 || completed > 0) {
+      const shown = left.slice(0, NAMED_ROWS).map((row) => row.id);
+      console.log(
+        `${LOG_PREFIX} tenant ${tenantName(tenant)}: moved by an earlier run, nothing to move`
+          + (completed ? `; ${completed} CAPEX legacy number(s) completed` : '')
+          + (left.length ? `; ${left.length} line(s) of capex_items not in spend_items (deleted since the move) left alone: ${shown.join(', ')}${left.length > shown.length ? `; and ${left.length - shown.length} more` : ''}` : ''),
+      );
+    }
+    return 0;
+  }
   const base = await scalar(
     queryRunner,
     `SELECT GREATEST(
@@ -706,7 +815,8 @@ async function finalCheck(queryRunner: QueryRunner, tenants: TenantRow[]): Promi
   const lost = await ids(
     queryRunner,
     `SELECT c.id FROM capex_items c JOIN tenants t ON t.id = c.tenant_id
-      WHERE NOT EXISTS (SELECT 1 FROM spend_items s WHERE s.id = c.id AND s.tenant_id = c.tenant_id AND s.nature = 'capex')
+      WHERE c.tenant_id NOT IN (SELECT m.tenant_id FROM z1_moved_tenants m)
+        AND NOT EXISTS (SELECT 1 FROM spend_items s WHERE s.id = c.id AND s.tenant_id = c.tenant_id AND s.nature = 'capex')
       ORDER BY c.id`,
   );
   if (lost.length > 0) throw new Error(`${LOG_PREFIX} CAPEX line(s) ${lost.join(', ')} are not in spend_items; nothing was changed.`);

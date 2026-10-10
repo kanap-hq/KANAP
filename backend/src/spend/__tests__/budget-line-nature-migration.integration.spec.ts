@@ -5,8 +5,7 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { BudgetLineNature1853950000000 as Migration } from '../../migrations/1853950000000-budget-line-nature';
 import { SearchIndexAnalyticsValues1853940000000 as SearchIndexMigration } from '../../migrations/1853940000000-search-index-analytics-values';
-import { BudgetLinesNature1853960000000 } from '../../migrations/1853960000000-budget-lines-nature';
-import { BudgetLinesMerge1853970000000 } from '../../migrations/1853970000000-budget-lines-merge';
+import { undoLotZ1 as undoLotZ1Migrations } from './undo-lot-z1.fixtures';
 
 // Migration 1853950000000 (the nature of a budget line, lot Z0 of plan
 // planning/budget-unifie.md), against a real database, each test in a
@@ -110,12 +109,9 @@ async function seedLine(
   return { tenantId, id: row.id, itemNumber };
 }
 
-/** Lot Z1 undone (its two migrations, newest first): the CAPEX lines back in capex_*, as before 1853960000000. */
+/** Lot Z1 undone (its two migrations, newest first, other specs' residue repaired first): the CAPEX lines back in capex_*. */
 async function undoLotZ1(runner: QueryRunner) {
-  await captureLog(async () => {
-    await new BudgetLinesMerge1853970000000().down(runner);
-    await new BudgetLinesNature1853960000000().down(runner);
-  });
+  await captureLog(() => undoLotZ1Migrations(runner));
 }
 
 /** The database before the migration, plus both columns added by hand, then the two tenants and their lines. */

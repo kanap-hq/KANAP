@@ -11,8 +11,7 @@ import {
   SearchIndexAnalyticsValues1853940000000 as Migration,
 } from '../../migrations/1853940000000-search-index-analytics-values';
 import { BudgetLineNature1853950000000 as LaterMigration } from '../../migrations/1853950000000-budget-line-nature';
-import { BudgetLinesNature1853960000000 } from '../../migrations/1853960000000-budget-lines-nature';
-import { BudgetLinesMerge1853970000000 } from '../../migrations/1853970000000-budget-lines-merge';
+import { undoLotZ1 } from '../../spend/__tests__/undo-lot-z1.fixtures';
 import { writeItemAnalyticsValues } from '../../spend/item-analytics.util';
 import { linkValue, runSpecs, seedLine, seedTenant, setCurrentTenant, withRollback } from '../../analytics/__tests__/analytics-test-helpers';
 
@@ -492,11 +491,8 @@ async function testMigration() {
     const d = await seedDimensions(runner, 'si-migration');
     const lines = { opex: await seedLine(runner, 'opex', d.tenantId), capex: await seedLine(runner, 'capex', d.tenantId) };
     for (const kind of KINDS) await linkValue(runner, kind, d.tenantId, lines[kind], d.nature, d.materiel);
-    // Lot Z1 undone, newest first: the CAPEX line and its value back in capex_*, with their ids.
-    await asMigration(runner, async () => {
-      await new BudgetLinesMerge1853970000000().down(runner);
-      await new BudgetLinesNature1853960000000().down(runner);
-    });
+    // Lot Z1 undone, newest first (other specs' residue repaired first): the CAPEX line and its value back in capex_*, with their ids.
+    await asMigration(runner, () => undoLotZ1(runner));
 
     const before = await definitions(runner);
     assert.ok(before.functions.every((def) => def !== null), 'every function exists');
