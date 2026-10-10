@@ -17,9 +17,10 @@ import { assert, assertSucceeded, progress, runRaceSpecs, settle, sql, withRace 
 // NOTHING`, and a unique index on the CAPEX link table): no error, no
 // duplicate, the line ends with the applications both users wanted.
 
+// The CAPEX lines share the OPEX link table since lot Z1 (and its unique key `uq_app_spend`).
 const LINKS: Record<Kind, { table: string; itemFk: string }> = {
   opex: { table: 'application_spend_items', itemFk: 'spend_item_id' },
-  capex: { table: 'application_capex_items', itemFk: 'capex_item_id' },
+  capex: { table: 'application_spend_items', itemFk: 'spend_item_id' },
 };
 
 async function twoPanelSaves(kind: Kind) {
@@ -40,7 +41,7 @@ async function twoPanelSaves(kind: Kind) {
     assert.equal(await progress(aWork, { party: a, gate: aInserted }), 'gated', 'harness: A must pause after inserting its links');
 
     const bWork = race.start(b, save([crm, erp]));
-    await progress(bWork, { party: b }); // OPEX: B waits on A's CRM link (unique index); CAPEX: B finishes
+    await progress(bWork, { party: b }); // B waits on A's CRM link (unique index; one link table for both natures since lot Z1)
     aInserted.release();
     const [aDone, bDone] = await Promise.all([settle(aWork), settle(bWork)]);
     assertSucceeded(aDone, 'A');

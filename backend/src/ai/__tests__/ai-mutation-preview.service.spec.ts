@@ -1266,13 +1266,16 @@ async function testCreateTaskPreviewResolvesCapexRelation() {
           : []),
       },
       {
-        pattern: 'FROM capex_items',
-        rows: [{
-          id: 'capex-1',
-          name: 'New SAN',
-          item_number: null,
-          updated_at: '2026-03-28T10:00:00.000Z',
-        }],
+        // Lot Z1: a CAPEX line is a spend line of nature 'capex'.
+        pattern: 'FROM spend_items',
+        rows: (sql: string) => (sql.includes(`target.nature = 'capex'`)
+          ? [{
+              id: 'capex-1',
+              name: 'New SAN',
+              item_number: null,
+              updated_at: '2026-03-28T10:00:00.000Z',
+            }]
+          : []),
       },
     ],
   });

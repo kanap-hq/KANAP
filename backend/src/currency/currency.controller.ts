@@ -142,31 +142,21 @@ export class CurrencyController {
   }
 
   private async findBudgetYears(manager: EntityManager): Promise<number[]> {
-    // The months of OPEX lines only (`spend/budget-nature.ts`); the CAPEX months are read below.
-    const spendRows = await manager.query(`
+    // The months of the budget lines of both natures (one table since lot Z1, `spend/budget-nature.ts`).
+    const rows = await manager.query(`
       SELECT DISTINCT CAST(EXTRACT(YEAR FROM a.period) AS integer) AS year
       FROM spend_amounts a
       JOIN spend_versions v ON v.tenant_id = a.tenant_id AND v.id = a.version_id
-      JOIN spend_items i ON i.tenant_id = v.tenant_id AND i.id = v.spend_item_id AND i.nature = 'opex'
+      JOIN spend_items i ON i.tenant_id = v.tenant_id AND i.id = v.spend_item_id AND i.nature IN ('opex', 'capex')
       WHERE COALESCE(a.planned, 0) <> 0
          OR COALESCE(a.forecast, 0) <> 0
          OR COALESCE(a.committed, 0) <> 0
          OR COALESCE(a.actual, 0) <> 0
          OR COALESCE(a.expected_landing, 0) <> 0
     `);
-    const capexRows = await manager.query(`
-      SELECT DISTINCT CAST(EXTRACT(YEAR FROM period) AS integer) AS year
-      FROM capex_amounts
-      WHERE COALESCE(planned, 0) <> 0
-         OR COALESCE(forecast, 0) <> 0
-         OR COALESCE(committed, 0) <> 0
-         OR COALESCE(actual, 0) <> 0
-         OR COALESCE(expected_landing, 0) <> 0
-    `);
 
     const years = new Set<number>();
-    this.extractYearList(spendRows).forEach((year) => years.add(year));
-    this.extractYearList(capexRows).forEach((year) => years.add(year));
+    this.extractYearList(rows).forEach((year) => years.add(year));
     return Array.from(years.values());
   }
 

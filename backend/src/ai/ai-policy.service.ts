@@ -38,10 +38,11 @@ const SURFACE_RESOURCE: Record<AiSurface, 'ai_chat' | 'ai_mcp'> = {
 
 /**
  * The right each entity type needs. A right goes with the rows its type reads: `spend_items`
- * reads the lines of nature `opex` only (`spend/budget-nature.ts`), so the `opex` right never
- * opens a line of another nature; every AI read of that type, by id, reference or name, names
- * the nature (the item service's `get` and summary, the reference and relation resolvers, the
- * task targets, the registry's `baseWhere`).
+ * reads the lines of nature `opex` only and `capex_items` those of nature `capex`, both in the
+ * table `spend_items` (`spend/budget-nature.ts`), so the `opex` and `capex` rights never open a
+ * line of the other nature; every AI read of either type, by id, reference or name, names the
+ * nature (the item service's `get` and summary, the reference and relation resolvers, the task
+ * targets, the registry's `baseWhere`).
  */
 const ENTITY_RESOURCE: Record<AiSearchEntityType | AiContextEntityType, string> = {
   accounts: 'accounts',

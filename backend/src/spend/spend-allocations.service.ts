@@ -7,6 +7,7 @@ import { AuditService } from '../audit/audit.service';
 import { currentTenantId } from './budget-column-operations';
 import { readVersionYearTotals } from './amounts-write.util';
 import { budgetLineOfChild } from './budget-locks';
+import type { BudgetNature } from './budget-nature';
 import { AllocationCalculatorService } from './allocation-calculator.service';
 import {
   AllocationInput,
@@ -16,9 +17,12 @@ import {
   readAllocationState,
 } from './allocation-save';
 
-/** A version's allocation; the save logic is shared with the other scope (`spend/allocation-save.ts`, lot 3E). */
+/** A version's allocation, for the lines of one nature (`SpendAllocationsService`, `CapexAllocationsService`; save logic in `allocation-save.ts`, lot 3E). */
 @Injectable()
 export class SpendAllocationsService {
+  /** The nature of the lines whose versions this service reads and writes. */
+  protected readonly nature: BudgetNature = 'opex';
+
   constructor(
     @InjectRepository(SpendAllocation) private readonly repo: Repository<SpendAllocation>,
     @InjectRepository(SpendVersion) private readonly versions: Repository<SpendVersion>,
@@ -35,8 +39,8 @@ export class SpendAllocationsService {
     const manager = opts?.manager ?? this.repo.manager;
     const tenantId = opts?.tenantId ?? await currentTenantId(manager);
     // A version of a line of another nature is not found (`budget-nature.ts`); a missing one is refused as before.
-    await budgetLineOfChild(manager, 'opex', 'version', tenantId, versionId, 'Version not found');
-    return bulkUpsertAllocations({ manager, audit: this.audit, calculator: this.calculator }, 'opex', tenantId, versionId, items, userId);
+    await budgetLineOfChild(manager, this.nature, 'version', tenantId, versionId, 'Version not found');
+    return bulkUpsertAllocations({ manager, audit: this.audit, calculator: this.calculator }, this.nature, tenantId, versionId, items, userId);
   }
 
   /**
@@ -47,7 +51,7 @@ export class SpendAllocationsService {
   async put(versionId: string, body: unknown, userId?: string | null, opts?: { manager?: EntityManager; tenantId?: string }) {
     const manager = opts?.manager ?? this.repo.manager;
     const tenantId = opts?.tenantId ?? await currentTenantId(manager);
-    const saved = await putVersionAllocations({ manager, audit: this.audit, calculator: this.calculator }, 'opex', tenantId, versionId, body, userId);
+    const saved = await putVersionAllocations({ manager, audit: this.audit, calculator: this.calculator }, this.nature, tenantId, versionId, body, userId);
     const listed = await this.listForVersion(versionId, { manager, tenantId });
     return { ...listed, updated: saved.updated };
   }
@@ -60,10 +64,10 @@ export class SpendAllocationsService {
     const manager = opts?.manager ?? this.repo.manager;
     const tenantId = opts?.tenantId ?? await currentTenantId(manager);
     // A version of a line of another nature is not found (`budget-nature.ts`); a missing one is refused as before.
-    await budgetLineOfChild(manager, 'opex', 'version', tenantId, versionId, 'Version not found');
+    await budgetLineOfChild(manager, this.nature, 'version', tenantId, versionId, 'Version not found');
     const version = await manager.getRepository(SpendVersion).findOne({ where: { id: versionId, tenant_id: tenantId } });
     if (!version) throw new BadRequestException('Invalid version');
-    const state = await readAllocationState(manager, 'opex', tenantId, versionId);
+    const state = await readAllocationState(manager, this.nature, tenantId, versionId);
 
     const computation = await this.calculator.computeForVersions([version], { manager, tenantId });
     const dist = computation.get(versionId);
@@ -86,7 +90,13 @@ export class SpendAllocationsService {
       // Read with the signature (lot 3G): the tab knows the version's counter as it shows it.
       budget_rev: state?.budgetRev ?? null,
       // The year's totals the tab shows, read after that counter: never older than it.
-      totals: await readVersionYearTotals(manager, 'opex', tenantId, versionId),
+      totals: await readVersionYearTotals(manager, this.nature, tenantId, versionId),
     };
   }
+}
+
+/** The allocations of the CAPEX lines' versions (`/capex-versions/:id/allocations*`, aliases until lot U). */
+@Injectable()
+export class CapexAllocationsService extends SpendAllocationsService {
+  protected override readonly nature: BudgetNature = 'capex';
 }

@@ -67,6 +67,27 @@ import { getSummaryFieldValue, summaryFieldValues } from './summary-field-value.
 
 export type OracleFold = (text: string) => string;
 
+/** The fields of a CAPEX line as the CAPEX list showed them before lot Z1: the former `CapexItem` entity, in its order. */
+const CAPEX_LINE_FIELDS = [
+  'id', 'tenant_id', 'item_number', 'paying_company_id', 'account_id', 'supplier_id', 'description', 'ppe_type', 'investment_type',
+  'priority', 'currency', 'effective_start', 'status', 'disabled_at', 'project_id', 'owner_it_id', 'owner_business_id',
+  'cost_center_id', 'run_build', 'notes', 'created_at', 'updated_at', 'row_version',
+];
+
+/**
+ * A line of `spend_items` (both natures since lot Z1) as its list shows it, written here apart
+ * from the engine's presentation: an OPEX line as read; a CAPEX line in the former `CapexItem`
+ * shape, its title (`product_name`) as `description` and its CPX number (`legacy_number`) as
+ * `item_number`. Both get `reference`, `BL-` and the line's own number.
+ */
+function oracleLine(nature: 'opex' | 'capex', item: Record<string, any>): Record<string, any> {
+  const reference = `BL-${item.item_number}`;
+  if (nature === 'opex') return { ...item, reference };
+  const cpx = /^CPX-(\d+)$/.exec(item.legacy_number ?? '');
+  const shown: Record<string, any> = { ...item, item_number: cpx ? Number(cpx[1]) : item.item_number, description: item.product_name };
+  return { ...Object.fromEntries(CAPEX_LINE_FIELDS.map((field) => [field, shown[field]])), reference };
+}
+
 /** The oracle's own declaration of number and date fields (A5); the engine has its own in its config. */
 function isNumberField(field: string): boolean {
   return !!resolveAmountField(field) || !!resolveFteField(field) || field === 'item_number' || field === 'account_number';
@@ -166,9 +187,14 @@ export class BudgetSummaryOracle {
     let rows = this.rowsCache.get(key);
     if (!rows) {
       rows = (async () => {
-        const where: Record<string, any> = { tenant_id: ctx.tenantId };
+        // Lot Z1: the scope's own nature of `spend_items`; a CAPEX line also reads the columns the entity never selects.
+        const nature = this.config.scope;
+        const where: Record<string, any> = { tenant_id: ctx.tenantId, nature };
         applyDisabledAtWhere(where, scope, ctx.filters);
-        const items = await this.manager.getRepository<any>(this.config.itemEntity as any).find({ where, order: { created_at: 'DESC', id: 'DESC' } });
+        const repository = this.manager.getRepository<any>(this.config.itemEntity as any);
+        const select = nature === 'capex' ? repository.metadata.columns.map((column) => column.propertyName) : undefined;
+        const found = await repository.find({ where, select, order: { created_at: 'DESC', id: 'DESC' } });
+        const items = found.map((item: Record<string, any>) => oracleLine(nature, item));
         return buildBudgetSummaryRows(this.config, this.deps, this.manager, ctx.tenantId, items, {
           years: ctx.years,
           currentYear: ctx.currentYear,
@@ -243,7 +269,7 @@ export class BudgetSummaryOracle {
     const items = ids.length
       ? await this.manager.getRepository<any>(this.config.itemEntity as any)
         .createQueryBuilder('i')
-        .where('i.tenant_id = :tenantId', { tenantId: this.tenantId })
+        .where('i.tenant_id = :tenantId AND i.nature = :nature', { tenantId: this.tenantId, nature: this.config.scope })
         .andWhere('i.id = ANY(:ids)', { ids })
         .getMany()
       : [];

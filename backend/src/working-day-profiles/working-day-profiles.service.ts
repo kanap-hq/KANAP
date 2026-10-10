@@ -607,10 +607,11 @@ export class WorkingDayProfilesService {
                  JOIN spend_versions v ON v.tenant_id = r.tenant_id AND v.id = r.version_id
                  JOIN spend_items i ON i.tenant_id = v.tenant_id AND i.id = v.spend_item_id AND i.nature = 'opex'
                 WHERE l.tenant_id = $1 AND r.tenant_id = $1 AND v.tenant_id = $1 AND l.working_day_profile_id = p.id) AS opex,
-              (SELECT count(DISTINCT v.capex_item_id)::int
-                 FROM capex_round_input_lines l
-                 JOIN capex_round_inputs r ON r.tenant_id = l.tenant_id AND r.id = l.round_input_id
-                 JOIN capex_versions v ON v.tenant_id = r.tenant_id AND v.id = r.version_id
+              (SELECT count(DISTINCT v.spend_item_id)::int
+                 FROM spend_round_input_lines l
+                 JOIN spend_round_inputs r ON r.tenant_id = l.tenant_id AND r.id = l.round_input_id
+                 JOIN spend_versions v ON v.tenant_id = r.tenant_id AND v.id = r.version_id
+                 JOIN spend_items i ON i.tenant_id = v.tenant_id AND i.id = v.spend_item_id AND i.nature = 'capex'
                 WHERE l.tenant_id = $1 AND r.tenant_id = $1 AND v.tenant_id = $1 AND l.working_day_profile_id = p.id) AS capex
          FROM working_day_profiles p
         WHERE p.tenant_id = $1 AND p.id = ANY($2::uuid[])`,

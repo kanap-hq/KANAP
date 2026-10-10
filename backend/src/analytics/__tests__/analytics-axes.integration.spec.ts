@@ -294,13 +294,20 @@ async function testValueDimensionIsFixed() {
     ));
     // A line's value must belong to the dimension the link names.
     const hardware = await values.create({ axis_id: nature.id, name: 'Hardware' }, null, ctx);
+    // A CAPEX line: since lot Z1 a line of spend_items of nature capex, its values in the one
+    // table, guarded by the same key (the dormant capex_* key is gone).
     const other = await seedLine(runner, 'capex', tenantId);
-    await expectRefused(runner, /capex_item_analytics_values_category_fk/, () =>
+    assert.deepEqual(
+      await runner.query(`SELECT nature FROM spend_items WHERE tenant_id = $1 AND id = $2`, [tenantId, other]),
+      [{ nature: 'capex' }],
+      'the line is a CAPEX line of spend_items',
+    );
+    await expectRefused(runner, /spend_item_analytics_values_category_fk/, () =>
       linkValue(runner, 'capex', tenantId, other, defaultId, hardware.id));
     // One value per line and dimension.
     await linkValue(runner, 'capex', tenantId, other, nature.id, hardware.id);
     const soft = await values.create({ axis_id: nature.id, name: 'Software' }, null, ctx);
-    await expectRefused(runner, /capex_item_analytics_values_pkey/, () =>
+    await expectRefused(runner, /spend_item_analytics_values_pkey/, () =>
       linkValue(runner, 'capex', tenantId, other, nature.id, soft.id));
   });
 }

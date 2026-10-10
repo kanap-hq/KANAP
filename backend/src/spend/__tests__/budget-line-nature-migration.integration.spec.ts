@@ -5,6 +5,7 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { BudgetLineNature1853950000000 as Migration } from '../../migrations/1853950000000-budget-line-nature';
 import { SearchIndexAnalyticsValues1853940000000 as SearchIndexMigration } from '../../migrations/1853940000000-search-index-analytics-values';
+import { undoLotZ1 as undoLotZ1Migrations } from './undo-lot-z1.fixtures';
 
 // Migration 1853950000000 (the nature of a budget line, lot Z0 of plan
 // planning/budget-unifie.md), against a real database, each test in a
@@ -25,7 +26,9 @@ import { SearchIndexAnalyticsValues1853940000000 as SearchIndexMigration } from 
 // and otherwise puts back 1853940000000's search body to the character. The
 // search index keeps OPEX lines only. The assertions read this test's own rows,
 // never table-wide counts (except the counts of the hand repair, which only this
-// test's rows can trigger).
+// test's rows can trigger). The later migrations of lot Z1 (1853960000000 and
+// 1853970000000, CAPEX lines moved into spend_items) are undone first, in the
+// same transaction.
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file on a database lane.
 
 const migration = new Migration();
@@ -106,8 +109,14 @@ async function seedLine(
   return { tenantId, id: row.id, itemNumber };
 }
 
+/** Lot Z1 undone (its two migrations, newest first, other specs' residue repaired first): the CAPEX lines back in capex_*. */
+async function undoLotZ1(runner: QueryRunner) {
+  await captureLog(() => undoLotZ1Migrations(runner));
+}
+
 /** The database before the migration, plus both columns added by hand, then the two tenants and their lines. */
 async function seedBeforeMigration(runner: QueryRunner): Promise<World> {
+  await undoLotZ1(runner);
   await migration.down(runner);
   // By hand: no NOT NULL, no CHECK; existing rows get opex, so only this test's rows need a repair.
   await runner.query(`ALTER TABLE spend_items ADD COLUMN nature text DEFAULT 'opex'`);

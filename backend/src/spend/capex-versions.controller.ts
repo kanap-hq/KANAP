@@ -2,9 +2,9 @@ import { Body, Controller, Get, Param, Patch, Post, Put, Query, Req, UseGuards }
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
-import { CapexVersionsService } from './capex-versions.service';
-import { CapexAmountsService } from './capex-amounts.service';
-import { CapexAllocationsService } from './capex-allocations.service';
+import { CapexVersionsService } from './spend-versions.service';
+import { CapexAmountsService } from './spend-amounts.service';
+import { CapexAllocationsService } from './spend-allocations.service';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { EntityManager } from 'typeorm';
 

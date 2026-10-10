@@ -666,7 +666,7 @@ export class AccountsService {
     const lookup = await consolidationLookup(mg, [found.consolidation_account_number]);
     const [counts] = await mg.query(
       `SELECT (SELECT COUNT(*)::int FROM spend_items s WHERE s.tenant_id = $1 AND s.nature = 'opex' AND s.account_id = $2) AS opex,
-              (SELECT COUNT(*)::int FROM capex_items c WHERE c.tenant_id = $1 AND c.account_id = $2) AS capex`,
+              (SELECT COUNT(*)::int FROM spend_items c WHERE c.tenant_id = $1 AND c.nature = 'capex' AND c.account_id = $2) AS capex`,
       [found.tenant_id, found.id],
     );
     return {

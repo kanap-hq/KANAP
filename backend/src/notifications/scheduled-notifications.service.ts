@@ -24,10 +24,10 @@ dayjs.extend(timezone);
 
 // Budget items warned on their end of validity. Table and column names come only from here.
 // `nature`: each pass warns the lines of its own nature only (`spend/budget-nature.ts`), so a
-// line is never warned twice once both natures share `spend_items`.
+// line is never warned twice: both natures share `spend_items` since lot Z1.
 const BUDGET_ITEM_TABLES: Record<'opex' | 'capex', { table: string; name: string; nature?: BudgetNature }> = {
   opex: { table: 'spend_items', name: 'product_name', nature: 'opex' },
-  capex: { table: 'capex_items', name: 'description' },
+  capex: { table: 'spend_items', name: 'product_name', nature: 'capex' },
 };
 assertScopeNatures('scheduled-notifications', BUDGET_ITEM_TABLES, (t) => t.table);
 

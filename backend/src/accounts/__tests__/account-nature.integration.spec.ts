@@ -67,9 +67,10 @@ async function seedLine(runner: QueryRunner, tenantId: string, kind: 'opex' | 'c
       [tenantId, 800000 + itemNumber, accountId, disabled ? 'disabled' : 'enabled', disabledAt],
     );
   } else {
+    // A CAPEX line of spend_items since lot Z1; the shared counter keeps its number unique across both natures.
     await runner.query(
-      `INSERT INTO capex_items (tenant_id, description, ppe_type, investment_type, priority, currency, effective_start, item_number, account_id, status, disabled_at)
-       VALUES ($1, 'Nature line', 'hardware', 'replacement', 'medium', 'EUR', '2026-01-01', $2, $3, $4, $5)`,
+      `INSERT INTO spend_items (tenant_id, nature, product_name, ppe_type, investment_type, priority, currency, effective_start, item_number, legacy_number, account_id, status, disabled_at)
+       VALUES ($1, 'capex', 'Nature line', 'hardware', 'replacement', 'medium', 'EUR', '2026-01-01', $2, 'CPX-' || $2::int, $3, $4, $5)`,
       [tenantId, 800000 + itemNumber, accountId, disabled ? 'disabled' : 'enabled', disabledAt],
     );
   }

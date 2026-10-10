@@ -16,8 +16,9 @@ import {
 
 const YEAR = 2031;
 
-async function pinnedRateSet(runner: QueryRunner, versionId: string, table = 'spend_versions'): Promise<string | null> {
-  const [row] = await runner.query(`SELECT fx_rate_set_id FROM ${table} WHERE id = $1`, [versionId]);
+/** The rate set pinned on a version (both natures' versions live in spend_versions since lot Z1). */
+async function pinnedRateSet(runner: QueryRunner, versionId: string): Promise<string | null> {
+  const [row] = await runner.query(`SELECT fx_rate_set_id FROM spend_versions WHERE id = $1`, [versionId]);
   return row.fx_rate_set_id;
 }
 
@@ -46,7 +47,7 @@ async function testDefaultColumnPinsFx() {
 
     await freeze.freeze(YEAR, [{ scope: 'opex', columns: ['revision'] }], null, opts);
     assert.equal(await pinnedRateSet(runner, opex.versionId), rateSetId, 'freezing the default column pins the rate set');
-    assert.equal(await pinnedRateSet(runner, capex.versionId, 'capex_versions'), null, 'only the frozen scope is pinned');
+    assert.equal(await pinnedRateSet(runner, capex.versionId), null, 'only the frozen scope is pinned');
     assert.deepEqual(refreshed, [YEAR]);
 
     await freeze.unfreeze(YEAR, [{ scope: 'opex', columns: ['budget'] }], null, opts);
@@ -54,9 +55,17 @@ async function testDefaultColumnPinsFx() {
     await freeze.unfreeze(YEAR, [{ scope: 'opex', columns: ['revision'] }], null, opts);
     assert.equal(await pinnedRateSet(runner, opex.versionId), null, 'unfreezing the default column unpins');
 
-    // Freezing every column includes the default one.
+    // Freezing every column includes the default one. Both natures share spend_versions since lot
+    // Z1: a CAPEX freeze pins the CAPEX versions only, and its unfreeze unpins them only.
     await freeze.freeze(YEAR, [{ scope: 'capex' }], null, opts);
-    assert.equal(await pinnedRateSet(runner, capex.versionId, 'capex_versions'), rateSetId);
+    assert.equal(await pinnedRateSet(runner, capex.versionId), rateSetId);
+    assert.equal(await pinnedRateSet(runner, opex.versionId), null, 'a CAPEX freeze leaves the OPEX versions of the year unpinned');
+
+    await freeze.freeze(YEAR, [{ scope: 'opex', columns: ['revision'] }], null, opts);
+    assert.equal(await pinnedRateSet(runner, opex.versionId), rateSetId, 'the OPEX default column pinned again');
+    await freeze.unfreeze(YEAR, [{ scope: 'capex' }], null, opts);
+    assert.equal(await pinnedRateSet(runner, capex.versionId), null, 'the CAPEX unfreeze unpins the CAPEX versions');
+    assert.equal(await pinnedRateSet(runner, opex.versionId), rateSetId, 'and keeps the pin of the OPEX versions');
   });
 }
 

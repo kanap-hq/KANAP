@@ -155,20 +155,21 @@ async function run() {
     assert.ok((top.items[0] as any).versions.y.totals.budget > 1e17, 'the local amount, 1.2e17');
 
     // The CAPEX readers share the totals reader (CAPEX list and export): numeric cents, no bigint cast.
+    // A CAPEX line lives in the spend_* tables since lot Z1 (nature 'capex', its CPX number in legacy_number).
     const capexItem = uuidFrom(ids);
     const capexVersion = uuidFrom(ids);
     await runner.query(
-      `INSERT INTO capex_items (id, tenant_id, item_number, description, ppe_type, investment_type, priority, currency, effective_start)
-       VALUES ($1, $2, 900003, 'Absurd investment', 'hardware', 'other', 'low', 'EUR', '2020-01-01')`,
+      `INSERT INTO spend_items (id, tenant_id, nature, item_number, legacy_number, product_name, ppe_type, investment_type, priority, currency, effective_start)
+       VALUES ($1, $2, 'capex', 900003, 'CPX-900003', 'Absurd investment', 'hardware', 'other', 'low', 'EUR', '2020-01-01')`,
       [capexItem, tenantId],
     );
     await runner.query(
-      `INSERT INTO capex_versions (id, tenant_id, capex_item_id, version_name, as_of_date, budget_year, allocation_method)
+      `INSERT INTO spend_versions (id, tenant_id, spend_item_id, version_name, as_of_date, budget_year, allocation_method)
        VALUES ($1, $2, $3, 'Absurd', $4::date, $5, 'default')`,
       [capexVersion, tenantId, capexItem, `${Y}-01-01`, Y],
     );
     await runner.query(
-      `INSERT INTO capex_amounts (tenant_id, version_id, period, planned, committed, forecast, actual, expected_landing)
+      `INSERT INTO spend_amounts (tenant_id, version_id, period, planned, committed, forecast, actual, expected_landing)
        SELECT $1, $2, make_date($3, mo, 1), $4::numeric, 0, 0, 0, 0 FROM generate_series(1, 12) AS mo`,
       [tenantId, capexVersion, Y, MAX_MONTH],
     );
@@ -198,7 +199,7 @@ async function run() {
       const labels: Array<{ label: string }> = await runner.query(
         `SELECT e.enumlabel AS label
            FROM pg_attribute a JOIN pg_enum e ON e.enumtypid = a.atttypid
-          WHERE a.attrelid = 'capex_items'::regclass AND a.attname = $1
+          WHERE a.attrelid = 'spend_items'::regclass AND a.attname = $1
           ORDER BY e.enumsortorder`,
         [field],
       );

@@ -1,8 +1,8 @@
 import 'dotenv/config';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
-import { CapexItem } from '../capex-item.entity';
-import { CapexItemsDeleteService } from '../capex-items-delete.service';
+import { SpendItem } from '../spend-item.entity';
+import { CapexItemsDeleteService } from '../spend-items-delete.service';
 import { assert, captureAudit, inRolledBackTransaction, runSpecs, seedItem, seedTenant } from '../../spend/__tests__/round-inputs.fixtures';
 
 // Deleting a CAPEX item deletes its tasks, as OPEX does. Another item's tasks,
@@ -28,7 +28,7 @@ async function testDeleteRemovesItsTasks() {
 
     const audit = captureAudit();
     const svc = new CapexItemsDeleteService(
-      runner.manager.getRepository(CapexItem), undefined as any, undefined as any, undefined as any, audit as any,
+      runner.manager.getRepository(SpendItem), undefined as any, undefined as any, undefined as any, audit as any,
       undefined as any, undefined as any,
     );
     await svc.delete(deleted, { manager: runner.manager, userId: null });
@@ -36,7 +36,7 @@ async function testDeleteRemovesItsTasks() {
     const left = await runner.query(`SELECT id FROM tasks WHERE tenant_id = $1 ORDER BY item_number`, [tenantId]);
     assert.deepEqual(left.map((r: any) => r.id), [other, otherType], 'only the deleted item\'s tasks are gone');
     assert.ok(own.every((id) => !left.some((r: any) => r.id === id)));
-    const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM capex_items WHERE id = $1`, [deleted]);
+    const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM spend_items WHERE id = $1`, [deleted]);
     assert.equal(n, 0, 'the item is deleted');
     assert.deepEqual(audit.entries.map((e) => `${e.table}:${e.action}`), ['capex_items:delete']);
   });

@@ -5,7 +5,6 @@ import { AnalyticsCategoriesService } from '../../analytics/analytics-categories
 import { ApplicationsService } from '../../applications/services';
 import { AssetsService } from '../../assets/services';
 import { BusinessProcessesService } from '../../business-processes/business-processes.service';
-import { CapexItemsService } from '../../capex/capex-items.service';
 import { CompaniesService } from '../../companies/companies.service';
 import { ConnectionsService } from '../../connections/services';
 import { ContactsService } from '../../contacts/contacts.service';
@@ -21,7 +20,8 @@ import {
 import { LocationsService } from '../../locations/locations.service';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { PortfolioProjectsService } from '../../portfolio/services';
-import { SpendItemsService } from '../../spend/spend-items.service';
+import { CapexItemsService, SpendItemsService } from '../../spend/spend-items.service';
+import { presentChildren } from '../../spend/budget-line-presentation';
 import { TasksService } from '../../spend/tasks.service';
 import { SuppliersService } from '../../suppliers/suppliers.service';
 import { UsersService } from '../../users/users.service';
@@ -1719,10 +1719,10 @@ export class AiQueryExecutor {
   private async loadFinancialVersions(
     context: AiExecutionContextWithManager,
     params: {
-      versionTable: 'spend_versions' | 'capex_versions';
-      amountTable: 'spend_amounts' | 'capex_amounts';
-      allocationTable: 'spend_allocations' | 'capex_allocations';
-      itemColumn: 'spend_item_id' | 'capex_item_id';
+      versionTable: 'spend_versions';
+      amountTable: 'spend_amounts';
+      allocationTable: 'spend_allocations';
+      itemColumn: 'spend_item_id';
       itemId: string;
     },
   ): Promise<any[]> {
@@ -1776,8 +1776,8 @@ export class AiQueryExecutor {
   private async loadLinkedContacts(
     context: AiExecutionContextWithManager,
     params: {
-      table: 'spend_item_contacts' | 'capex_item_contacts' | 'contract_contacts';
-      foreignKey: 'spend_item_id' | 'capex_item_id' | 'contract_id';
+      table: 'spend_item_contacts' | 'contract_contacts';
+      foreignKey: 'spend_item_id' | 'contract_id';
       id: string;
     },
   ): Promise<any[]> {
@@ -1878,19 +1878,21 @@ export class AiQueryExecutor {
         },
         { manager: context.manager },
       ),
+      // The CAPEX line lives in the `spend_*` family (lot Z1); its id comes from `capexItems.get`,
+      // which answers 404 for a line of the other nature (`spend/budget-nature.ts`).
       this.loadFinancialVersions(context, {
-        versionTable: 'capex_versions',
-        amountTable: 'capex_amounts',
-        allocationTable: 'capex_allocations',
-        itemColumn: 'capex_item_id',
+        versionTable: 'spend_versions',
+        amountTable: 'spend_amounts',
+        allocationTable: 'spend_allocations',
+        itemColumn: 'spend_item_id',
         itemId: capexItemId,
       }),
       this.loadLinkedContacts(context, {
-        table: 'capex_item_contacts',
-        foreignKey: 'capex_item_id',
+        table: 'spend_item_contacts',
+        foreignKey: 'spend_item_id',
         id: capexItemId,
       }).catch(() => []),
-      this.loadCapexLinkedApplications(context, capexItemId).catch(() => ({ items: [] })),
+      this.capexItems.listApplications(capexItemId, { manager: context.manager }).catch(() => ({ items: [] })),
       this.capexItems.listProjects(capexItemId, { manager: context.manager }).catch(() => ({ items: [] })),
       this.contracts.listContractsForCapexItem(capexItemId, { manager: context.manager }).catch(() => ({ items: [] })),
     ]);
@@ -1899,28 +1901,13 @@ export class AiQueryExecutor {
     return {
       ...(summary ?? {}),
       financial_summary: summary ?? null,
-      financial_versions: financialVersions,
-      contacts,
+      // The children name their line as the CAPEX contract does (`capex_item_id`).
+      financial_versions: presentChildren('capex', financialVersions),
+      contacts: presentChildren('capex', contacts),
       linked_applications: linkedApplications,
       projects: linkedProjects,
       linked_contracts: linkedContracts,
     };
-  }
-
-  /** Applications linked to a CAPEX item, in the shape of the OPEX detail's `linked_applications`. */
-  private async loadCapexLinkedApplications(
-    context: AiExecutionContextWithManager,
-    capexItemId: string,
-  ): Promise<{ items: Array<{ id: string; name: string }> }> {
-    const items = await context.manager.query(
-      `SELECT a.id, a.name
-       FROM application_capex_items l
-       JOIN applications a ON a.id = l.application_id AND a.tenant_id = l.tenant_id
-       WHERE l.tenant_id = $1 AND l.capex_item_id = $2
-       ORDER BY a.name ASC`,
-      [context.tenantId, capexItemId],
-    );
-    return { items };
   }
 
   private async loadContractDeepDetail(

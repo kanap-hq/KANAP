@@ -396,7 +396,7 @@ export class ApplicationsListService extends ApplicationsBaseService {
 
     // Derived filter targets
     targets['spend_count'] = { expression: 'a.id', numericExpression: `(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'opex')})`, dataType: 'number' };
-    targets['capex_count'] = { expression: 'a.id', numericExpression: `(SELECT COUNT(*) FROM application_capex_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id)`, dataType: 'number' };
+    targets['capex_count'] = { expression: 'a.id', numericExpression: `(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'capex')})`, dataType: 'number' };
     targets['contracts_count'] = { expression: 'a.id', numericExpression: `(SELECT COUNT(*) FROM application_contracts l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id)`, dataType: 'number' };
     targets['suites_count'] = { expression: 'a.id', numericExpression: `(SELECT COUNT(*) FROM application_suites l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id)`, dataType: 'number' };
     targets['components_count'] = { expression: 'a.id', numericExpression: `(SELECT COUNT(*) FROM application_suites l WHERE l.suite_id = a.id AND l.tenant_id = a.tenant_id)`, dataType: 'number' };
@@ -530,7 +530,7 @@ export class ApplicationsListService extends ApplicationsBaseService {
     } else if (include.has('counts') && sort.field === 'spend_count') {
       qb.addOrderBy(`(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'opex')})`, direction, direction === 'DESC' ? 'NULLS LAST' : 'NULLS FIRST');
     } else if (include.has('counts') && sort.field === 'capex_count') {
-      qb.addOrderBy(`(SELECT COUNT(*) FROM application_capex_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id)`, direction, direction === 'DESC' ? 'NULLS LAST' : 'NULLS FIRST');
+      qb.addOrderBy(`(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'capex')})`, direction, direction === 'DESC' ? 'NULLS LAST' : 'NULLS FIRST');
     } else if (include.has('counts') && sort.field === 'contracts_count') {
       qb.addOrderBy(`(SELECT COUNT(*) FROM application_contracts l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id)`, direction, direction === 'DESC' ? 'NULLS LAST' : 'NULLS FIRST');
     } else if (include.has('structure') && sort.field === 'suites_count') {
@@ -1148,9 +1148,9 @@ export class ApplicationsListService extends ApplicationsBaseService {
         [pageIds],
       );
       const capexRows: Array<{ application_id: string; c: string; first_description: string | null }> = await mg.query(
-        `SELECT l.application_id, COUNT(*)::text as c, MIN(cx.description) as first_description
-         FROM application_capex_items l
-         JOIN capex_items cx ON cx.id = l.capex_item_id AND cx.tenant_id = l.tenant_id
+        `SELECT l.application_id, COUNT(*)::text as c, MIN(cx.product_name) as first_description
+         FROM application_spend_items l
+         JOIN spend_items cx ON cx.id = l.spend_item_id AND cx.tenant_id = l.tenant_id AND cx.nature = 'capex'
          WHERE l.application_id = ANY($1)
          GROUP BY l.application_id`,
         [pageIds],

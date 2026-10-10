@@ -14,7 +14,6 @@ import { AccountsModule } from './accounts/accounts.module';
 import { AuditModule } from './audit/audit.module';
 import { SpendModule } from './spend/spend.module';
 import { AnalyticsModule } from './analytics/analytics.module';
-import { CapexModule } from './capex/capex.module';
 import { RolesModule } from './roles/roles.module';
 import { ContractsModule } from './contracts/contracts.module';
 import { PermissionsModule } from './permissions/permissions.module';
@@ -121,7 +120,6 @@ import { readPoolMax } from './common/db-pool-budget';
     AccountsModule,
     SpendModule,
     AnalyticsModule,
-    CapexModule,
     RolesModule,
     ContractsModule,
     PermissionsModule,

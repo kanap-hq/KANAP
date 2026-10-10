@@ -1,16 +1,15 @@
 import * as assert from 'node:assert/strict';
 import { BadRequestException } from '@nestjs/common';
-import { CapexAllocation } from '../capex-allocation.entity';
-import { CapexAllocationsService } from '../capex-allocations.service';
-import { CapexItemsService } from '../capex-items.service';
-import { CapexVersion } from '../capex-version.entity';
+import { SpendAllocation } from '../spend-allocation.entity';
+import { CapexAllocationsService } from '../spend-allocations.service';
+import { CapexItemsService } from '../spend-items.service';
+import { SpendVersion } from '../spend-version.entity';
 import { Company } from '../../companies/company.entity';
 import { resolveToUuid } from '../../common/resolve-item-id';
 
 function createCapexItemsService(manager: any) {
   return new CapexItemsService(
     { manager } as any,
-    {} as any,
     {} as any,
     {} as any,
     {} as any,
@@ -33,16 +32,23 @@ async function testCapexReferenceResolution() {
     },
   };
 
+  // A CAPEX line lives in spend_items since lot Z1: its CPX number is its legacy number.
   const resolved = await resolveToUuid('CPX-42', 'capex', manager as any);
   assert.equal(resolved, 'capex-id-42');
-  assert.match(queries[0].sql, /FROM capex_items/);
-  assert.match(queries[0].sql, /WHERE tenant_id = app_current_tenant\(\) AND item_number = \$1/, 'the item number is read in the request\'s tenant');
-  assert.deepEqual(queries[0].params, [42]);
+  assert.match(queries[0].sql, /FROM spend_items/);
+  assert.match(queries[0].sql, /WHERE tenant_id = app_current_tenant\(\) AND nature = 'capex'/, 'a CAPEX line of the request\'s tenant');
+  assert.match(queries[0].sql, /legacy_number = \$2/, 'CPX-n is the legacy number');
+  assert.deepEqual(queries[0].params, [42, 'CPX-42']);
 
   queries.length = 0;
   const plain = await resolveToUuid('42', 'capex', manager as any);
   assert.equal(plain, 'capex-id-42');
-  assert.deepEqual(queries[0].params, [42]);
+  assert.deepEqual(queries[0].params, [42, 'CPX-42'], 'a plain number is the CPX number, as before');
+
+  queries.length = 0;
+  const neutral = await resolveToUuid('BL-42', 'capex', manager as any);
+  assert.equal(neutral, 'capex-id-42');
+  assert.deepEqual(queries[0].params, [42, null], 'BL-n is the line\'s own number');
 
   await assert.rejects(
     () => resolveToUuid('OPX-42', 'capex', manager as any),
@@ -83,11 +89,12 @@ async function testSummaryIdsReturnsAlignedItemNumbers() {
   // order are the differential suite's (budget-list-differential.integration.spec.ts).
   const [{ sql, params }] = statements;
   const text = sql.replace(/\s+/g, ' ');
-  assert.match(text, /\bFROM capex_items\b/i, 'the statement reads the CAPEX lines');
+  assert.match(text, /\bFROM spend_items\b/i, 'the statement reads the lines');
+  assert.match(text, /\bnature = 'capex'/i, 'of nature capex');
   const tenantBind = params.indexOf('tenant-1');
   assert.ok(tenantBind >= 0, 'the tenant is bound');
   assert.match(text, new RegExp(`\\btenant_id\\s*=\\s*\\$${tenantBind + 1}(?!\\d)`), 'the statement filters on the bound tenant');
-  assert.match(text, /\bORDER BY\b.*\bitem_number\b/i, 'the order names the item number');
+  assert.match(text, /\bORDER BY\b.*\blegacy_number\b/i, 'the order names the CPX number (legacy number)');
 }
 
 async function testManualPctBulkUpsert() {
@@ -124,20 +131,22 @@ async function testManualPctBulkUpsert() {
   const locks: unknown[][] = [];
   const manager = {
     query: async (sql: string, params: any[]) => {
-      if (/SELECT capex_item_id AS item_id FROM capex_versions WHERE tenant_id = \$1 AND id = \$2$/.test(sql)) return [{ item_id: 'item-1' }];
-      if (/FROM capex_items WHERE tenant_id = \$1 AND id = \$2 FOR NO KEY UPDATE/.test(sql)) {
+      // The version's line and its nature (the route of the nature, `budgetLineOfChild`).
+      if (/SELECT c\.spend_item_id AS item_id, i\.nature AS nature\s+FROM spend_versions c/.test(sql)) return [{ item_id: 'item-1', nature: 'capex' }];
+      if (/SELECT spend_item_id AS item_id FROM spend_versions WHERE tenant_id = \$1 AND id = \$2$/.test(sql)) return [{ item_id: 'item-1' }];
+      if (/FROM spend_items WHERE tenant_id = \$1 AND id = \$2 AND nature = 'capex' FOR NO KEY UPDATE/.test(sql)) {
         locks.push(['line', ...params]);
         return [{ locked: 1 }];
       }
-      if (/FROM capex_versions WHERE tenant_id = \$1 AND id = ANY\(\$2::uuid\[\]\) ORDER BY id FOR NO KEY UPDATE/.test(sql)) {
+      if (/FROM spend_versions WHERE tenant_id = \$1 AND id = ANY\(\$2::uuid\[\]\) AND EXISTS \(.*nature = 'capex'\) ORDER BY id FOR NO KEY UPDATE/s.test(sql)) {
         locks.push(['version', params[0], ...params[1]]);
         return [{ id: params[1][0] }];
       }
       throw new Error(`unexpected query: ${sql}`);
     },
     getRepository: (entity: unknown) => {
-      if (entity === CapexAllocation) return allocationRepo;
-      if (entity === CapexVersion) return versionRepo;
+      if (entity === SpendAllocation) return allocationRepo;
+      if (entity === SpendVersion) return versionRepo;
       if (entity === Company) return companyRepo;
       throw new Error('unexpected repository');
     },

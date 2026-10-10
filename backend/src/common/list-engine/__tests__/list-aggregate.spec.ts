@@ -155,7 +155,9 @@ function testParts() {
   assert.ok(byNumber.includes('(g.k0)::numeric DESC'), 'a number key sorts as a number');
 
   const capex = build({ groupBy: ['priority'], measures: [sum('b', 'yBudget')] }, {}, 'capex').sql;
-  assert.ok(capex.includes('FROM capex_items i') && capex.includes('JOIN capex_version_totals at'), 'CAPEX reads its own tables');
+  // Lot Z1: the CAPEX lines live in the single family, read by their nature.
+  assert.ok(capex.includes('FROM spend_items i') && capex.includes('JOIN spend_version_totals at'), 'CAPEX reads the single family');
+  assert.ok(capex.includes(`WHERE (i.tenant_id = $1 AND i.nature = 'capex')`) && capex.includes(`ai.nature = 'capex'`), 'CAPEX lines only, in the list and in its amounts');
 
   // An explicit key order follows a ranked enum's business order (Q4); the final tie-break stays the key's text.
   const ranked = build({ groupBy: ['priority'], measures: [], order: [{ by: 'key', index: 0, dir: 'ASC' }] }, {}, 'capex').sql;
@@ -253,13 +255,13 @@ function testFteReportFields() {
   assert.ok(/>= \$\d+::numeric(?! \* 100)/.test(delta), 'an FTE bound is compared as is');
 
   const detached = build({ groupBy: [], measures: [sum('f', 'fte_y2026Budget'), sum('x', 'fte_detached_y2026Budget')] }, {}, 'capex').raw;
-  assert.equal((detached.match(/LEFT JOIN capex_round_inputs ri2026_planned/g) ?? []).length, 1, 'one round join for the FTE and its detached part');
+  assert.equal((detached.match(/LEFT JOIN spend_round_inputs ri2026_planned/g) ?? []).length, 1, 'one round join for the FTE and its detached part');
   assert.ok(detached.includes(`(CASE WHEN v2026.id IS NULL THEN NULL WHEN ri2026_planned.method <> 'computed' THEN ri2026_planned.fte END)`), 'detached: a round that is not computed');
   assert.equal(build({ groupBy: [], measures: [sum('x', 'fte_detached_yRevision')] }).raw.includes('ri2026_committed.method'), true, 'a fixed slot');
 
   // Lot 2b: the monthly FTE and the FTE without monthly detail read the same round join, their months once per line.
   for (const scope of ['opex', 'capex'] as const) {
-    const rounds = scope === 'opex' ? 'spend_round_inputs' : 'capex_round_inputs';
+    const rounds = 'spend_round_inputs'; // both natures since lot Z1
     const monthly = build({ groupBy: ['id'], measures: [sum('f', 'fte_y2026Budget'), sum('m3', 'fte_month_03_y2026Budget'), sum('m12', 'fte_month_12_yBudget'), sum('n', 'fte_nodetail_yBudget'), sum('x', 'fte_detached_yBudget')] }, {}, scope).raw;
     assert.equal((monthly.match(new RegExp(`JOIN ${rounds}`, 'g')) ?? []).length, 1, `${scope}: one round join for the FTE, its months and its notices`);
     const calc = 'ri2026_planned.last_calculation';
@@ -275,8 +277,8 @@ function testFteReportFields() {
 
   // Lot 3: the line totals read the same round join, its lines once per line through one lateral.
   for (const scope of ['opex', 'capex'] as const) {
-    const rounds = scope === 'opex' ? 'spend_round_inputs' : 'capex_round_inputs';
-    const versions = scope === 'opex' ? 'spend_versions' : 'capex_versions';
+    const rounds = 'spend_round_inputs'; // both natures since lot Z1
+    const versions = 'spend_versions';
     const { raw, params } = build({
       groupBy: ['id'],
       measures: [sum('c', 'staff_cost_y2026Budget'), sum('f', 'staff_fte_y2026Budget'), sum('dc', 'day_cost_yBudget'), sum('d', 'days_yBudget'), sum('x', 'fte_detached_yBudget'), sum('n', 'fte_nodetail_yBudget')],
@@ -315,9 +317,9 @@ function testFteReportFields() {
 
   for (const scope of ['opex', 'capex'] as const) {
     const { raw, params } = build({ groupBy: ['has_fte'], measures: [] }, { filters: { has_fte: { filterType: 'set', values: ['yes'] } } }, scope);
-    const versions = scope === 'opex' ? 'spend_versions' : 'capex_versions';
-    const rounds = scope === 'opex' ? 'spend_round_inputs' : 'capex_round_inputs';
-    const fk = scope === 'opex' ? 'spend_item_id' : 'capex_item_id';
+    const versions = 'spend_versions';
+    const rounds = 'spend_round_inputs'; // both natures since lot Z1
+    const fk = 'spend_item_id';
     assert.ok(raw.includes(`EXISTS (SELECT 1 FROM ${versions} hfv`), `${scope}: has_fte reads the versions`);
     assert.ok(raw.includes(`JOIN ${rounds} hfr ON hfr.tenant_id = $1 AND hfr.version_id = hfv.id AND hfr.fte IS NOT NULL`), `${scope}: its rounds for the tenant`);
     assert.ok(raw.includes(`WHERE hfv.tenant_id = $1 AND hfv.${fk} = i.id`), `${scope}: its versions for the tenant`);

@@ -623,11 +623,12 @@ export class TasksUnifiedService {
 
     if (type === 'capex_item') {
       const [row] = await manager.query(
-        'SELECT description FROM capex_items WHERE id = $1 LIMIT 1',
+        // A CAPEX line only (lot Z1: in `spend_items`, its title in `product_name`).
+        `SELECT product_name FROM spend_items WHERE id = $1 AND nature = 'capex' LIMIT 1`,
         [id],
       );
       if (!row) return id;
-      return `CAPEX: ${row.description}`;
+      return `CAPEX: ${row.product_name}`;
     }
 
     if (type === 'incident') {
@@ -675,11 +676,12 @@ export class TasksUnifiedService {
       };
     }
 
-    // `where`: a `spend_item` task names an OPEX line (`spend/budget-nature.ts`), never a line of another nature.
+    // `where`: a `spend_item` task names an OPEX line, a `capex_item` task a CAPEX line, both in
+    // `spend_items` (`spend/budget-nature.ts`), never a line of the other nature.
     const tableByType: Record<'spend_item' | 'contract' | 'capex_item' | 'incident', { table: string; label: string; where?: string }> = {
       spend_item: { table: 'spend_items', label: 'Spend item', where: ` AND nature = 'opex'` },
       contract: { table: 'contracts', label: 'Contract' },
-      capex_item: { table: 'capex_items', label: 'CAPEX item' },
+      capex_item: { table: 'spend_items', label: 'CAPEX item', where: ` AND nature = 'capex'` },
       incident: { table: 'incidents', label: 'Incident' },
     };
     const targetMeta = tableByType[target.type];

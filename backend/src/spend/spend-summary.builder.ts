@@ -2,8 +2,6 @@ import { BadRequestException } from '@nestjs/common';
 import { EntityManager, In } from 'typeorm';
 import { SpendItem } from './spend-item.entity';
 import { SpendVersion } from './spend-version.entity';
-import { CapexItem } from '../capex/capex-item.entity';
-import { CapexVersion } from '../capex/capex-version.entity';
 import { Company } from '../companies/company.entity';
 import { Department } from '../departments/department.entity';
 import { Supplier } from '../suppliers/supplier.entity';
@@ -60,15 +58,20 @@ export type SummaryScope = 'opex' | 'capex';
 
 export interface SummaryScopeConfig {
   scope: SummaryScope;
-  itemEntity: typeof SpendItem | typeof CapexItem;
-  versionEntity: typeof SpendVersion | typeof CapexVersion;
+  itemEntity: typeof SpendItem;
+  versionEntity: typeof SpendVersion;
   itemTable: string;
   /**
-   * The nature of the scope's lines in `itemTable` (`spend_items` holds both, lot Z0): every
-   * statement that reads the item table names it (`natureAnd`). None for a table without the
-   * column (`capex_items`, until lot Z1).
+   * The nature of the scope's lines in `itemTable` (`spend_items` holds both since lot Z1): every
+   * statement that reads the item table names it (`natureAnd`).
    */
   nature?: BudgetNature;
+  /**
+   * The column of `itemTable` a field of the list reads when it is not the field's own name: the
+   * CAPEX list's `description` is the line's title, `product_name` (lot Z1). `item_number` reads
+   * the number the nature shows (`lineNumberSql`).
+   */
+  fieldColumns: Readonly<Record<string, string>>;
   versionTable: string;
   /**
    * One row per version with the sums of its months of its own budget year,
@@ -116,6 +119,7 @@ export const SUMMARY_SCOPES: Record<SummaryScope, SummaryScopeConfig> = {
     taskObjectType: 'spend_item',
     refPrefix: 'opx',
     nameField: 'product_name',
+    fieldColumns: {},
     columns: [
       'id', 'item_number', 'product_name', 'description', 'supplier_id', 'account_id', 'paying_company_id', 'currency',
       'effective_start', 'disabled_at', 'status', 'owner_it_id', 'owner_business_id', 'project_id',
@@ -125,25 +129,29 @@ export const SUMMARY_SCOPES: Record<SummaryScope, SummaryScopeConfig> = {
     // Read by OpexListPage.tsx: the cells, their tooltips and links, the row id and the delete
     // confirmation (product_name).
     gridItemColumns: [
-      'id', 'item_number', 'product_name', 'description', 'status', 'currency', 'effective_start', 'disabled_at',
+      'id', 'item_number', 'reference', 'product_name', 'description', 'status', 'currency', 'effective_start', 'disabled_at',
       'notes', 'created_at', 'updated_at',
     ],
   },
+  // The CAPEX lines of the single family (lot Z1), under the CAPEX list's contract of before
+  // (`budget-line-presentation.ts`): `description` is the title, `item_number` the CPX number.
   capex: {
     scope: 'capex',
-    itemEntity: CapexItem,
-    versionEntity: CapexVersion,
-    itemTable: 'capex_items',
-    versionTable: 'capex_versions',
-    totalsTable: 'capex_version_totals',
-    roundTable: 'capex_round_inputs',
-    versionItemFk: 'capex_item_id',
-    contractLink: { table: 'contract_capex_items', itemColumn: 'capex_item_id' },
-    projectLink: { table: 'portfolio_project_capex', itemColumn: 'capex_id' },
-    analyticsLink: { table: 'capex_item_analytics_values' },
+    itemEntity: SpendItem,
+    versionEntity: SpendVersion,
+    itemTable: 'spend_items',
+    nature: 'capex',
+    versionTable: 'spend_versions',
+    totalsTable: 'spend_version_totals',
+    roundTable: 'spend_round_inputs',
+    versionItemFk: 'spend_item_id',
+    contractLink: { table: 'contract_spend_items', itemColumn: 'spend_item_id' },
+    projectLink: { table: 'portfolio_project_opex', itemColumn: 'opex_id' },
+    analyticsLink: { table: 'spend_item_analytics_values' },
     taskObjectType: 'capex_item',
     refPrefix: 'cpx',
-    nameField: 'description',
+    nameField: 'product_name',
+    fieldColumns: { description: 'product_name' },
     columns: [
       'id', 'item_number', 'description', 'paying_company_id', 'supplier_id', 'account_id', 'ppe_type', 'investment_type', 'priority',
       'currency', 'effective_start', 'disabled_at', 'status', 'owner_it_id', 'owner_business_id', 'project_id',
@@ -153,7 +161,7 @@ export const SUMMARY_SCOPES: Record<SummaryScope, SummaryScopeConfig> = {
     // Read by CapexPage.tsx: the cells (the three enums through their labels), their tooltips and
     // links, the row id and the delete confirmation (description).
     gridItemColumns: [
-      'id', 'item_number', 'description', 'ppe_type', 'investment_type', 'priority', 'status', 'currency', 'effective_start',
+      'id', 'item_number', 'reference', 'description', 'ppe_type', 'investment_type', 'priority', 'status', 'currency', 'effective_start',
       'disabled_at', 'notes', 'created_at', 'updated_at',
     ],
   },

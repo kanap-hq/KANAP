@@ -1,6 +1,7 @@
 import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
+import { auditTableOf } from './budget-nature';
 import { toCents } from '../common/amount';
 import {
   AMOUNT_MEASURES,
@@ -42,10 +43,10 @@ import {
 /**
  * Round inputs: for each budget column of a version, the period its last
  * spread used, how the column was produced and, when it has some, the
- * quantity × price lines it is computed from. Shared by OPEX
- * (`spend_round_inputs`, `spend_round_input_lines`) and CAPEX
- * (`capex_round_inputs`, `capex_round_input_lines`); written in the caller's
- * transaction, next to the amounts, with one audit row per record change.
+ * quantity × price lines it is computed from. Shared by OPEX and CAPEX lines
+ * (`spend_round_inputs`, `spend_round_input_lines`, lot Z1); written in the
+ * caller's transaction, next to the amounts, with one audit row per record
+ * change (labelled by the line's nature, `auditTableOf`).
  *
  * The five columns are equal slots: a measure name is a storage key, never a
  * behaviour. What a column means comes from the tenant's settings.
@@ -167,14 +168,15 @@ type StoredRoundInput = Omit<RoundInput, 'updated_at' | 'lines'> & {
 
 type StoredLine = Omit<RoundLine, 'sort'> & { round_input_id: string; sort: number | string };
 
-// Table names come only from here: never from the caller.
-const ROUND_TABLE: Record<AmountScope, 'spend_round_inputs' | 'capex_round_inputs'> = {
+// Table names come only from here: never from the caller. One family for both natures (lot Z1); a
+// CAPEX line's records keep their audit label (`auditTableOf`).
+const ROUND_TABLE: Record<AmountScope, 'spend_round_inputs'> = {
   opex: 'spend_round_inputs',
-  capex: 'capex_round_inputs',
+  capex: 'spend_round_inputs',
 };
-const LINE_TABLE: Record<AmountScope, 'spend_round_input_lines' | 'capex_round_input_lines'> = {
+const LINE_TABLE: Record<AmountScope, 'spend_round_input_lines'> = {
   opex: 'spend_round_input_lines',
-  capex: 'capex_round_input_lines',
+  capex: 'spend_round_input_lines',
 };
 
 const COLUMNS = `id, tenant_id, version_id, measure,
@@ -472,7 +474,7 @@ export async function saveRoundInput(
   }
   await ctx.audit.log(
     {
-      table: ROUND_TABLE[ctx.scope],
+      table: auditTableOf(ctx.scope, ROUND_TABLE[ctx.scope]),
       recordId: saved.id,
       action: stored ? 'update' : 'create',
       // The lines ride along when they change: one audit row per column write.
@@ -523,7 +525,7 @@ export async function deleteRoundInput(ctx: RoundInputsContext, rawMeasure: stri
   );
   await ctx.audit.log(
     {
-      table: ROUND_TABLE[ctx.scope],
+      table: auditTableOf(ctx.scope, ROUND_TABLE[ctx.scope]),
       recordId: stored.id,
       action: 'delete',
       before: lines.length ? { ...stored, lines } : stored,

@@ -3,8 +3,6 @@ import { validate as isUuid } from 'uuid';
 import { BadRequestException, ConflictException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { DeepPartial, EntityManager, In } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
-import { CapexAllocation } from '../capex/capex-allocation.entity';
-import { CapexVersion } from '../capex/capex-version.entity';
 import { Company } from '../companies/company.entity';
 import { EDIT_CONFLICT_CODE, EditConflictAuthor, authorAt, userNames } from '../common/edit-conflicts';
 import { Department } from '../departments/department.entity';
@@ -13,6 +11,7 @@ import { AmountScope } from './amounts-write.util';
 import { AllocationDriver, computeCompanyShares, normalizeWeights } from './allocation-distribution';
 import { sameAllocationRows, storedAllocationPct } from './budget-allocation-operations';
 import { lockVersionWithLine } from './budget-locks';
+import { auditTableOf } from './budget-nature';
 import { SpendAllocation } from './spend-allocation.entity';
 import { SpendVersion } from './spend-version.entity';
 
@@ -46,7 +45,8 @@ import { SpendVersion } from './spend-version.entity';
 // Table and entity names come only from here: never from the caller.
 const SCOPES = {
   opex: { versions: 'spend_versions', allocations: 'spend_allocations', versionEntity: SpendVersion, allocationEntity: SpendAllocation },
-  capex: { versions: 'capex_versions', allocations: 'capex_allocations', versionEntity: CapexVersion, allocationEntity: CapexAllocation },
+  // The same tables since lot Z1: the version was locked for the scope's nature; its audit rows keep the nature's label.
+  capex: { versions: 'spend_versions', allocations: 'spend_allocations', versionEntity: SpendVersion, allocationEntity: SpendAllocation },
 } as const;
 
 export const ALLOCATION_METHODS = ['default', 'headcount', 'it_users', 'turnover', 'manual_company', 'manual_department', 'manual_pct'] as const;
@@ -64,8 +64,8 @@ export type AllocationInput = {
   driver_note?: string | null;
 };
 
-type AllocationVersion = SpendVersion | CapexVersion;
-type AllocationRow = SpendAllocation | CapexAllocation;
+type AllocationVersion = SpendVersion;
+type AllocationRow = SpendAllocation;
 
 export type AllocationSaveDeps = {
   manager: EntityManager;
@@ -299,7 +299,7 @@ async function storeRows(
     const computation = await deps.calculator.computeForVersions([version], { manager, tenantId });
     const total = computation.get(version.id)?.shares.reduce((acc, share) => acc + Number(share.allocation_pct || 0), 0) ?? 0;
     // Keyed by the version: the Allocations tab's conflicts read who changed the allocation from here.
-    await deps.audit.log({ table: t.allocations, recordId: version.id, action: 'update', before, after: [], userId }, { manager });
+    await deps.audit.log({ table: auditTableOf(scope, t.allocations), recordId: version.id, action: 'update', before, after: [], userId }, { manager });
     return { updated: 0, total_pct: round(total) };
   }
 
@@ -307,7 +307,7 @@ async function storeRows(
   if (plan.kind === 'manual' && !sameAllocationRows(before, plan.rows)) {
     await repo.delete({ tenant_id: tenantId, version_id: version.id } as any);
     after = await repo.save(plan.rows);
-    await deps.audit.log({ table: t.allocations, recordId: version.id, action: 'update', before, after, userId }, { manager });
+    await deps.audit.log({ table: auditTableOf(scope, t.allocations), recordId: version.id, action: 'update', before, after, userId }, { manager });
   }
   return { updated: after.length, total_pct: round(after.reduce((acc, row) => acc + Number(row.allocation_pct || 0), 0)) };
 }
@@ -433,12 +433,12 @@ async function allocationAuthor(manager: EntityManager, scope: AmountScope, tena
         )
       ORDER BY l.created_at DESC
       LIMIT 1`,
-    [tenantId, versionId, t.allocations, t.versions],
+    [tenantId, versionId, auditTableOf(scope, t.allocations), auditTableOf(scope, t.versions)],
   );
   let explains = false;
   if (row) {
     const after = row.after_json as any;
-    if (row.table_name === t.allocations) {
+    if (row.table_name === auditTableOf(scope, t.allocations)) {
       // A save writes the rows; the yearly copy writes how many it copied.
       explains = Array.isArray(after)
         ? sameAllocationRows(after, state.rows)
@@ -507,7 +507,7 @@ export async function putVersionAllocations(
       .where('tenant_id = :tenantId AND id = :versionId', { tenantId, versionId })
       .execute();
     await deps.audit.log({
-      table: t.versions,
+      table: auditTableOf(scope, t.versions),
       recordId: versionId,
       action: 'update',
       before: { allocation_method: state.method, allocation_driver: state.driver },

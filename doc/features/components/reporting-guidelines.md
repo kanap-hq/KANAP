@@ -25,9 +25,8 @@ This document describes how the Reporting section is structured, what is impleme
 - Implementation helpers and references:
   - Shared: `backend/src/common/status-filter.ts` (period-aware condition builder)
   - OPEX summary: `backend/src/spend/spend-items.service.ts` and `backend/src/spend/spend-summary.builder.ts`
-  - CAPEX summary: `backend/src/capex/capex-items.service.ts`
-  - OPEX allocations: `backend/src/spend/allocation-calculator.service.ts`
-  - CAPEX allocations: `backend/src/capex/capex-allocation-calculator.service.ts`
+  - CAPEX summary: `backend/src/spend/spend-items.service.ts` (`CapexItemsService`, the same service on the CAPEX lines)
+  - OPEX and CAPEX allocations: `backend/src/spend/allocation-calculator.service.ts` (one calculator for both natures)
   - Chargeback: `backend/src/spend/chargeback-report.service.ts`
 
 ## Phase 1 — Implemented Reports

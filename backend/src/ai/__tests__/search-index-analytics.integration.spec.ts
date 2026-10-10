@@ -11,6 +11,7 @@ import {
   SearchIndexAnalyticsValues1853940000000 as Migration,
 } from '../../migrations/1853940000000-search-index-analytics-values';
 import { BudgetLineNature1853950000000 as LaterMigration } from '../../migrations/1853950000000-budget-line-nature';
+import { undoLotZ1 } from '../../spend/__tests__/undo-lot-z1.fixtures';
 import { writeItemAnalyticsValues } from '../../spend/item-analytics.util';
 import { linkValue, runSpecs, seedLine, seedTenant, setCurrentTenant, withRollback } from '../../analytics/__tests__/analytics-test-helpers';
 
@@ -25,13 +26,18 @@ import { linkValue, runSpecs, seedLine, seedTenant, setCurrentTenant, withRollba
 // reordered) refreshes nothing: the line's next write or the tenant's reindex (the daily job, the
 // admin rebuild) picks it up. A held value that is disabled stays indexed. The migration reruns to
 // the same functions and triggers, reindexes existing lines, and down() puts back the previous
-// refresh bodies, byte for byte.
+// refresh bodies, byte for byte. The migration test first undoes lot Z1 (1853970000000 then
+// 1853960000000, newest first, in the same transaction): its CAPEX lines go back to capex_*, as
+// before 1853960000000 redefined these functions.
 // @database-spec (the data source opens in analytics-test-helpers).
 
 type Kind = 'opex' | 'capex';
 const KINDS: Kind[] = ['opex', 'capex'];
+/** The search entry's type of a line (and its refresh function): one per nature. */
 const ENTITY: Record<Kind, 'spend_items' | 'capex_items'> = { opex: 'spend_items', capex: 'capex_items' };
-const LINKS: Record<Kind, string> = { opex: 'spend_item_analytics_values', capex: 'capex_item_analytics_values' };
+/** Where the lines and their values live: one family for both natures since lot Z1. */
+const LINES: Record<Kind, string> = { opex: 'spend_items', capex: 'spend_items' };
+const LINKS: Record<Kind, string> = { opex: 'spend_item_analytics_values', capex: 'spend_item_analytics_values' };
 
 /** md5 of the refresh bodies of 1853000000000 (OPEX, generated) and 1853220000000 (CAPEX). */
 const PREVIOUS_BODIES = {
@@ -161,7 +167,7 @@ async function reindex(runner: QueryRunner, tenantId: string) {
 
 /** A write of the line that is not about its values: the line's own search trigger refreshes it. */
 async function editLine(runner: QueryRunner, kind: Kind, itemId: string) {
-  await runner.query(`UPDATE ${ENTITY[kind]} SET notes = 'Edited' WHERE id = $1`, [itemId]);
+  await runner.query(`UPDATE ${LINES[kind]} SET notes = 'Edited' WHERE id = $1`, [itemId]);
 }
 
 /** A tenant with "Nature de coût" (Matériel, Logiciel) and "Récurrence" (Récurrent), in that order. */
@@ -257,7 +263,7 @@ async function testValueWritesRefreshTheirLines() {
       assert.equal(await analytics(runner, kind, first), 'Nature de coût: Logiciel; Récurrence: Récurrent', `${kind}: changed in place`);
 
       // A line deleted with its values: its own trigger removes the entry, the values' trigger refreshes nothing.
-      await runner.query(`DELETE FROM ${ENTITY[kind]} WHERE id = $1`, [second]);
+      await runner.query(`DELETE FROM ${LINES[kind]} WHERE id = $1`, [second]);
       assert.deepEqual(await calls(), [], `${kind}: a line deleted with its values is not refreshed`);
       const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM search_index WHERE entity_id = $1`, [second]);
       assert.equal(n, 0, `${kind}: the deleted line has no entry`);
@@ -485,6 +491,8 @@ async function testMigration() {
     const d = await seedDimensions(runner, 'si-migration');
     const lines = { opex: await seedLine(runner, 'opex', d.tenantId), capex: await seedLine(runner, 'capex', d.tenantId) };
     for (const kind of KINDS) await linkValue(runner, kind, d.tenantId, lines[kind], d.nature, d.materiel);
+    // Lot Z1 undone, newest first (other specs' residue repaired first): the CAPEX line and its value back in capex_*, with their ids.
+    await asMigration(runner, () => undoLotZ1(runner));
 
     const before = await definitions(runner);
     assert.ok(before.functions.every((def) => def !== null), 'every function exists');

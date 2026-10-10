@@ -8,6 +8,7 @@ import { upsertRoundInput } from '../round-inputs.util';
 import { SpendBudgetOperationsService } from '../spend-budget-operations.service';
 import { AllocationCalculatorService } from '../allocation-calculator.service';
 import {
+  AUDIT_LABELS,
   amountsService,
   assert,
   budgetOperations,
@@ -145,7 +146,7 @@ async function testCopyKeepsTheShape(kind: Kind) {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, `${kind}-copy`);
     const { itemId, versionId } = await seedLine(runner, kind, tenantId, YEAR, { planned: IRREGULAR });
-    await runner.query(`UPDATE ${kind === 'opex' ? 'spend_versions' : 'capex_versions'} SET input_grain = 'quarterly' WHERE id = $1`, [versionId]);
+    await runner.query(`UPDATE ${TABLES[kind].versions} SET input_grain = 'quarterly' WHERE id = $1`, [versionId]);
     await spreadRecord(runner, kind, tenantId, versionId, YEAR, `${YEAR}-04-01`, `${YEAR}-12-31`);
 
     const preview = await copy(kind, runner, { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR + 1, destinationColumn: 'budget', percentageIncrease: 0, dryRun: true });
@@ -169,6 +170,14 @@ async function testCopyKeepsTheShape(kind: Kind) {
     });
     const roundAudit = audit.entries.find((e) => e.table.endsWith('_round_inputs'));
     assert.equal(roundAudit?.action, 'create', `${kind}: the record is audited`);
+    // The version the copy created is audited under its nature's label and shape (capex_item_id for a CAPEX line).
+    const versionAudit = audit.entries.find((e) => e.table === AUDIT_LABELS[kind].versions && e.action === 'create');
+    const lineKey = kind === 'capex' ? 'capex_item_id' : 'spend_item_id';
+    assert.deepEqual(
+      [versionAudit?.after?.[lineKey], (kind === 'capex' ? 'spend_item_id' : 'capex_item_id') in (versionAudit?.after ?? {})],
+      [itemId, false],
+      `${kind}: the created version's line as ${lineKey}`,
+    );
   });
 }
 
@@ -420,7 +429,7 @@ async function testForecastCopyAndClear(kind: Kind) {
     assert.deepEqual(await readMeasure(runner, kind, destination!.id, 'forecast', YEAR + 1), repeat('7.00', 12));
     assert.deepEqual(await readMeasure(runner, kind, destination!.id, 'planned', YEAR + 1), repeat('0.00', 12), `${kind}: only the destination column is written`);
     const [{ version_name }] = await runner.query(
-      `SELECT version_name FROM ${kind === 'opex' ? 'spend_versions' : 'capex_versions'} WHERE id = $1`,
+      `SELECT version_name FROM ${TABLES[kind].versions} WHERE id = $1`,
       [destination!.id],
     );
     assert.equal(version_name, `Y${YEAR + 1}`, `${kind}: a created version is named after its year`);
@@ -679,7 +688,7 @@ async function payingCompanyWithStandardCalendar(runner: QueryRunner, kind: Kind
 }
 
 const itemAudit = (kind: Kind, audit: ReturnType<typeof captureAudit>, itemId: string) =>
-  audit.entries.find((e) => e.table === TABLES[kind].items && e.recordId === itemId)?.after;
+  audit.entries.find((e) => e.table === AUDIT_LABELS[kind].items && e.recordId === itemId)?.after;
 
 /**
  * A source that follows its lines: the prices take the uplift (exact, 4

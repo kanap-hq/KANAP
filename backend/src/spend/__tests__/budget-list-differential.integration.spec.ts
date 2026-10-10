@@ -88,9 +88,10 @@ function deepSorted(value: any): any {
 // The grid shape of a row (lot 2B, PR B2): what each list's grid reads (OpexListPage.tsx,
 // CapexPage.tsx), nothing else; listed here apart from the builder's own lists.
 const GRID_ITEM_KEYS: Record<SummaryScopeConfig['scope'], string[]> = {
-  opex: ['id', 'item_number', 'product_name', 'description', 'status', 'currency', 'effective_start', 'disabled_at', 'notes', 'created_at', 'updated_at'],
+  // `reference`: the line's `BL-n`, on both lists since lot Z1.
+  opex: ['id', 'item_number', 'reference', 'product_name', 'description', 'status', 'currency', 'effective_start', 'disabled_at', 'notes', 'created_at', 'updated_at'],
   capex: [
-    'id', 'item_number', 'description', 'ppe_type', 'investment_type', 'priority', 'status', 'currency', 'effective_start', 'disabled_at',
+    'id', 'item_number', 'reference', 'description', 'ppe_type', 'investment_type', 'priority', 'status', 'currency', 'effective_start', 'disabled_at',
     'notes', 'created_at', 'updated_at',
   ],
 };
@@ -442,7 +443,8 @@ async function runCase(env: Engines, c: Case, deps: ReturnType<typeof realSummar
         const ov = o.value as any;
         same(label('page total'), ev?.total, ov?.total);
         same(label('page 1 ids'), ev?.items?.map((row: any) => row.id), ov?.items?.map((row: any) => row.id));
-        same(label('page 1 rows'), ev?.items, ov?.items);
+        // Keys sorted: since lot Z1 the engine presents a CAPEX line from spend_items, its keys in another order than the former entity's.
+        same(label('page 1 rows'), deepSorted(JSON.parse(JSON.stringify(ev?.items ?? null))), deepSorted(JSON.parse(JSON.stringify(ov?.items ?? null))));
         if (ov?.total > 0) {
           const limit = Number(c.query.limit ?? 20);
           const lastPage = Math.max(1, Math.ceil(ov.total / limit));

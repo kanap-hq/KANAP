@@ -5,7 +5,8 @@ import { SupplierContactLink, SupplierContactRole } from '../contacts/supplier-c
 import { ExternalContact } from '../contacts/external-contact.entity';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { Supplier } from './supplier.entity';
-import { assertScopeNatures, natureAnd, type BudgetNature } from '../spend/budget-nature';
+import { assertScopeNatures, auditTableOf, natureAnd, type BudgetNature } from '../spend/budget-nature';
+import { presentChild } from '../spend/budget-line-presentation';
 
 /** The request's tenant and user; every statement filters on the tenant, every change is audited for the user. */
 export type SupplierContactsContext = {
@@ -17,11 +18,13 @@ export type SupplierContactsContext = {
 
 // The item link tables a supplier contact propagates to, with the item table and its key.
 // Table names come only from here, never from a caller. `nature`: the lines of `spend_items`
-// this entry covers (`spend/budget-nature.ts`); the CAPEX lines have their own entry.
-const ITEM_LINKS: ReadonlyArray<{ links: string; items: string; itemColumn: string; nature?: BudgetNature }> = [
-  { links: 'spend_item_contacts', items: 'spend_items', itemColumn: 'spend_item_id', nature: 'opex' },
-  { links: 'capex_item_contacts', items: 'capex_items', itemColumn: 'capex_item_id' },
-  { links: 'contract_contacts', items: 'contracts', itemColumn: 'contract_id' },
+// this entry covers (`spend/budget-nature.ts`): the OPEX and CAPEX lines share
+// `spend_item_contacts` since lot Z1, each entry its own nature, so no link is written twice.
+// `audit`: the label of the entry's audit rows (a CAPEX line's contacts keep `capex_item_contacts`).
+const ITEM_LINKS: ReadonlyArray<{ links: string; items: string; itemColumn: string; nature?: BudgetNature; audit: string }> = [
+  { links: 'spend_item_contacts', items: 'spend_items', itemColumn: 'spend_item_id', nature: 'opex', audit: auditTableOf('opex', 'spend_item_contacts') },
+  { links: 'spend_item_contacts', items: 'spend_items', itemColumn: 'spend_item_id', nature: 'capex', audit: auditTableOf('capex', 'spend_item_contacts') },
+  { links: 'contract_contacts', items: 'contracts', itemColumn: 'contract_id', audit: 'contract_contacts' },
 ];
 assertScopeNatures('supplier-contacts ITEM_LINKS', ITEM_LINKS, (t) => t.items);
 
@@ -153,7 +156,7 @@ export class SupplierContactsService {
          RETURNING *`,
         [ctx.tenantId, supplierId, contactId, role],
       ));
-      for (const row of added) await this.log(ctx, t.links, 'create', row.id, null, row);
+      for (const row of added) await this.log(ctx, t.audit, 'create', row.id, null, t.nature ? presentChild(t.nature, row) : row);
     }
   }
 
@@ -172,7 +175,7 @@ export class SupplierContactsService {
          RETURNING l.*`,
         [ctx.tenantId, contactId, role, supplierId],
       ));
-      for (const row of removed) await this.log(ctx, t.links, 'delete', row.id, row, null);
+      for (const row of removed) await this.log(ctx, t.audit, 'delete', row.id, t.nature ? presentChild(t.nature, row) : row, null);
     }
   }
 }

@@ -374,7 +374,7 @@ export class CostCentersService {
     const [row] = await ctx.manager.query(
       `SELECT cc.description,
               (SELECT count(*)::int FROM spend_items si WHERE si.tenant_id = $1 AND si.nature = 'opex' AND si.cost_center_id = cc.id) AS opex_count,
-              (SELECT count(*)::int FROM capex_items ci WHERE ci.tenant_id = $1 AND ci.cost_center_id = cc.id) AS capex_count
+              (SELECT count(*)::int FROM spend_items ci WHERE ci.tenant_id = $1 AND ci.nature = 'capex' AND ci.cost_center_id = cc.id) AS capex_count
          FROM cost_centers cc
         WHERE cc.tenant_id = $1 AND cc.id = $2`,
       [ctx.tenantId, id],
@@ -547,7 +547,7 @@ export class CostCentersService {
     const rows: Array<{ id: string; opex: number; capex: number }> = await ctx.manager.query(
       `SELECT cc.id,
               (SELECT count(*)::int FROM spend_items si WHERE si.tenant_id = $1 AND si.nature = 'opex' AND si.cost_center_id = cc.id) AS opex,
-              (SELECT count(*)::int FROM capex_items ci WHERE ci.tenant_id = $1 AND ci.cost_center_id = cc.id) AS capex
+              (SELECT count(*)::int FROM spend_items ci WHERE ci.tenant_id = $1 AND ci.nature = 'capex' AND ci.cost_center_id = cc.id) AS capex
          FROM cost_centers cc
         WHERE cc.tenant_id = $1 AND cc.id = ANY($2::uuid[])`,
       [ctx.tenantId, ids],

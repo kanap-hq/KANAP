@@ -496,7 +496,8 @@ export const applicationsRegistry: AiEntityFilterRegistry = {
         type: 'number',
       },
       capex_count: {
-        expression: `(SELECT COUNT(*) FROM application_capex_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id)`,
+        // The links to CAPEX lines (`spend/budget-nature.ts`).
+        expression: `(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'capex')})`,
         type: 'number',
       },
       contracts_count: {

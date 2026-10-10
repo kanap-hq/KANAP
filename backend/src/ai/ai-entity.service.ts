@@ -21,6 +21,7 @@ import {
   AiSearchEntityType,
 } from './ai.types';
 import { incidentRelatedLabelSql, incidentRelatedTitleSql, incidentVisibilitySql, resolveIncidentViewer } from '../incidents/incident-visibility';
+import { lineNumberSql } from '../spend/budget-nature';
 import { INCIDENT_REVIEW_SLOT } from '../knowledge/integrated-document.constants';
 import { AiPolicyService } from './ai-policy.service';
 import {
@@ -1295,7 +1296,7 @@ export class AiEntityService {
        LEFT JOIN portfolio_projects rel_proj ON rel_proj.id = t.related_object_id AND t.related_object_type = 'project' AND rel_proj.tenant_id = $4
        LEFT JOIN spend_items rel_si ON rel_si.id = t.related_object_id AND t.related_object_type = 'spend_item' AND rel_si.tenant_id = $4 AND rel_si.nature = 'opex'
        LEFT JOIN contracts rel_ct ON rel_ct.id = t.related_object_id AND t.related_object_type = 'contract' AND rel_ct.tenant_id = $4
-       LEFT JOIN capex_items rel_cx ON rel_cx.id = t.related_object_id AND t.related_object_type = 'capex_item' AND rel_cx.tenant_id = $4
+       LEFT JOIN spend_items rel_cx ON rel_cx.id = t.related_object_id AND t.related_object_type = 'capex_item' AND rel_cx.tenant_id = $4 AND rel_cx.nature = 'capex'
        LEFT JOIN incidents rel_inc ON rel_inc.id = t.related_object_id AND t.related_object_type = 'incident' AND rel_inc.tenant_id = $4
        WHERE t.tenant_id = $4
          ${accessScopeSql}
@@ -1316,7 +1317,7 @@ export class AiEntityService {
            OR COALESCE(rel_proj.name, '') ILIKE $3
            OR COALESCE(rel_si.product_name, '') ILIKE $3
            OR COALESCE(rel_ct.name, '') ILIKE $3
-           OR COALESCE(rel_cx.description, '') ILIKE $3
+           OR COALESCE(rel_cx.product_name, '') ILIKE $3
            OR COALESCE(${incidentRelatedTitleSql('rel_inc')}, '') ILIKE $3
            OR EXISTS (SELECT 1 FROM jsonb_array_elements_text(t.labels) AS lbl WHERE lbl ILIKE $3)
          )
@@ -1438,8 +1439,8 @@ export class AiEntityService {
     const like = `%${query}%`;
     const rows = await context.manager.query<SearchRow[]>(
       `SELECT ci.id,
-              ci.item_number,
-              ci.description AS label,
+              ${lineNumberSql('ci', 'capex')} AS item_number,
+              ci.product_name AS label,
               NULLIF(CONCAT_WS(' | ', comp.name, sup.name, ci.ppe_type::text, ci.investment_type), '') AS summary,
               ci.status,
               ci.updated_at,
@@ -1447,16 +1448,16 @@ export class AiEntityService {
               sup.name AS supplier_name,
               COUNT(*) OVER()::int AS total_count,
               CASE
-                WHEN ci.description ILIKE $1 THEN 3
+                WHEN ci.product_name ILIKE $1 THEN 3
                 WHEN COALESCE(comp.name, '') ILIKE $1 OR COALESCE(sup.name, '') ILIKE $1 THEN 2
                 ELSE 1
               END AS score
-       FROM capex_items ci
+       FROM spend_items ci
        LEFT JOIN companies comp ON comp.id = ci.paying_company_id AND comp.tenant_id = ci.tenant_id
        LEFT JOIN suppliers sup ON sup.id = ci.supplier_id AND sup.tenant_id = ci.tenant_id
-       WHERE ci.tenant_id = $2
+       WHERE ci.tenant_id = $2 AND ci.nature = 'capex'
          AND (
-           ci.description ILIKE $1
+           ci.product_name ILIKE $1
            OR COALESCE(ci.notes, '') ILIKE $1
            OR COALESCE(ci.ppe_type::text, '') ILIKE $1
            OR COALESCE(ci.investment_type::text, '') ILIKE $1
@@ -1465,7 +1466,7 @@ export class AiEntityService {
            OR COALESCE(comp.name, '') ILIKE $1
            OR COALESCE(sup.name, '') ILIKE $1
          )
-       ORDER BY score DESC, ci.updated_at DESC, ci.description ASC
+       ORDER BY score DESC, ci.updated_at DESC, ci.product_name ASC
        LIMIT $3`,
       [like, context.tenantId, limit],
     );
@@ -2031,7 +2032,7 @@ export class AiEntityService {
       `SELECT t.id, t.item_number, COALESCE(t.title, 'Untitled task') AS label, t.description AS summary, t.status, t.updated_at,
               tt.name AS task_type_name,
               t.related_object_type,
-              COALESCE(rel_proj.name, rel_si.product_name, rel_ct.name, rel_cx.description, ${incidentRelatedLabelSql('rel_inc')}) AS related_object_name,
+              COALESCE(rel_proj.name, rel_si.product_name, rel_ct.name, rel_cx.product_name, ${incidentRelatedLabelSql('rel_inc')}) AS related_object_name,
               CONCAT_WS(' ', u_assign.first_name, u_assign.last_name) AS assignee_name,
               t.priority_level
        FROM tasks t
@@ -2040,7 +2041,7 @@ export class AiEntityService {
        LEFT JOIN portfolio_projects rel_proj ON rel_proj.id = t.related_object_id AND t.related_object_type = 'project' AND rel_proj.tenant_id = $1
        LEFT JOIN spend_items rel_si ON rel_si.id = t.related_object_id AND t.related_object_type = 'spend_item' AND rel_si.tenant_id = $1 AND rel_si.nature = 'opex'
        LEFT JOIN contracts rel_ct ON rel_ct.id = t.related_object_id AND t.related_object_type = 'contract' AND rel_ct.tenant_id = $1
-       LEFT JOIN capex_items rel_cx ON rel_cx.id = t.related_object_id AND t.related_object_type = 'capex_item' AND rel_cx.tenant_id = $1
+       LEFT JOIN spend_items rel_cx ON rel_cx.id = t.related_object_id AND t.related_object_type = 'capex_item' AND rel_cx.tenant_id = $1 AND rel_cx.nature = 'capex'
        LEFT JOIN incidents rel_inc ON rel_inc.id = t.related_object_id AND t.related_object_type = 'incident' AND rel_inc.tenant_id = $1
        WHERE t.tenant_id = $1
        ${accessScopeSql}
@@ -3354,7 +3355,7 @@ export class AiEntityService {
               phase.planned_end AS phase_planned_end,
               phase.sequence AS phase_sequence,
               tt.name AS task_type_name,
-              COALESCE(rel_proj.name, rel_si.product_name, rel_ct.name, rel_cx.description, ${incidentRelatedLabelSql('rel_inc')}) AS related_object_name,
+              COALESCE(rel_proj.name, rel_si.product_name, rel_ct.name, rel_cx.product_name, ${incidentRelatedLabelSql('rel_inc')}) AS related_object_name,
               pr.id AS converted_request_id,
               pr.item_number AS converted_request_item_number,
               pr.name AS converted_request_name,
@@ -3369,7 +3370,7 @@ export class AiEntityService {
        LEFT JOIN portfolio_projects rel_proj ON rel_proj.id = t.related_object_id AND t.related_object_type = 'project' AND rel_proj.tenant_id = $2
        LEFT JOIN spend_items rel_si ON rel_si.id = t.related_object_id AND t.related_object_type = 'spend_item' AND rel_si.tenant_id = $2 AND rel_si.nature = 'opex'
        LEFT JOIN contracts rel_ct ON rel_ct.id = t.related_object_id AND t.related_object_type = 'contract' AND rel_ct.tenant_id = $2
-       LEFT JOIN capex_items rel_cx ON rel_cx.id = t.related_object_id AND t.related_object_type = 'capex_item' AND rel_cx.tenant_id = $2
+       LEFT JOIN spend_items rel_cx ON rel_cx.id = t.related_object_id AND t.related_object_type = 'capex_item' AND rel_cx.tenant_id = $2 AND rel_cx.nature = 'capex'
        LEFT JOIN incidents rel_inc ON rel_inc.id = t.related_object_id AND t.related_object_type = 'incident' AND rel_inc.tenant_id = $2
        LEFT JOIN portfolio_requests pr ON pr.origin_task_id = t.id AND pr.tenant_id = $2 ${convertedRequestScopeSql}
        WHERE t.id = $1

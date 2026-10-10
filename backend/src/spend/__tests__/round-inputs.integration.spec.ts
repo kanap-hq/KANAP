@@ -4,6 +4,7 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { upsertRoundInput } from '../round-inputs.util';
 import {
+  AUDIT_LABELS,
   amountsService,
   assert,
   captureAudit,
@@ -308,7 +309,7 @@ async function testIdenticalSpreadWritesNoAmounts(kind: Kind) {
   await withLine(kind, async ({ runner, versionId, tenantId }) => {
     const audit = captureAudit();
     const svc = amountsService(kind, audit);
-    const audits = () => [TABLES[kind].amounts, TABLES[kind].rounds].map((table) => audit.entries.filter((e) => e.table === table).length);
+    const audits = () => [AUDIT_LABELS[kind].amounts, AUDIT_LABELS[kind].rounds].map((table) => audit.entries.filter((e) => e.table === table).length);
     // An UPDATE writes a new row version (ctid) even when the values are the same.
     const rowVersions = async () => (await runner.query(
       `SELECT ctid::text AS ctid FROM ${TABLES[kind].amounts} WHERE version_id = $1 ORDER BY period`,

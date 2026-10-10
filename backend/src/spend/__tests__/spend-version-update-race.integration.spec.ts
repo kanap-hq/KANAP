@@ -1,4 +1,4 @@
-import { CapexVersionsService } from '../../capex/capex-versions.service';
+import { CapexVersionsService } from '../spend-versions.service';
 import { SpendVersionsService } from '../spend-versions.service';
 import { captureAudit, Kind, seedItem, seedVersion } from './round-inputs.fixtures';
 import { assert, assertSucceeded, progress, runRaceSpecs, settle, sql, withRace } from './race-harness';

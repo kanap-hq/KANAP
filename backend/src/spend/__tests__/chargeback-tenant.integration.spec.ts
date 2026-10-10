@@ -4,11 +4,8 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { ChargebackReportService } from '../chargeback-report.service';
 import { AllocationCalculatorService } from '../allocation-calculator.service';
-import { CapexAllocationCalculatorService } from '../../capex/capex-allocation-calculator.service';
 import { SpendVersion } from '../spend-version.entity';
-import { CapexVersion } from '../../capex/capex-version.entity';
-import { SpendAllocationsService } from '../spend-allocations.service';
-import { CapexAllocationsService } from '../../capex/capex-allocations.service';
+import { CapexAllocationsService, SpendAllocationsService } from '../spend-allocations.service';
 import { seedCompany } from './cost-center.fixtures';
 import { withRlsLifted } from '../../common/__tests__/rls-bypass.fixtures';
 import {
@@ -35,9 +32,9 @@ const YEAR = 2033;
 
 // The tables the chargeback and the calculators read, with RLS lifted for
 // `app` (see `withRlsLifted`: never against a database a live API uses).
+// The lines of both natures are in `spend_*` since lot Z1.
 const BYPASS_TABLES = [
   'spend_items', 'spend_versions', 'spend_amounts', 'spend_allocations',
-  'capex_items', 'capex_versions', 'capex_amounts', 'capex_allocations',
   'companies', 'company_metrics', 'departments', 'department_metrics', 'allocation_rules',
 ];
 
@@ -65,7 +62,7 @@ async function seedTenantData(runner: QueryRunner, tag: string, headcounts: numb
   const nextYearVersions = {} as Record<Kind, string>;
   for (const kind of ['opex', 'capex'] as Kind[]) {
     const { itemId, versionId } = await seedLine(runner, kind, tenantId, YEAR, { planned: repeat(monthly, 12) });
-    await runner.query(`UPDATE ${kind === 'opex' ? 'spend_items' : 'capex_items'} SET paying_company_id = $2 WHERE id = $1`, [itemId, companyIds[0]]);
+    await runner.query(`UPDATE spend_items SET paying_company_id = $2 WHERE id = $1`, [itemId, companyIds[0]]);
     versions[kind] = versionId;
     nextYearVersions[kind] = await seedVersion(runner, kind, tenantId, itemId, YEAR + 1);
   }
@@ -82,7 +79,8 @@ async function withTwoTenants(fn: (runner: QueryRunner, a: TenantSeed, b: Tenant
       `SELECT count(*)::int AS n FROM spend_versions WHERE budget_year = $1 AND tenant_id = ANY($2::uuid[])`,
       [YEAR, [a.tenantId, b.tenantId]],
     );
-    assert.equal(n, 2, 'with RLS lifted, the session sees both tenants');
+    // An OPEX and a CAPEX version per tenant, both in spend_versions since lot Z1.
+    assert.equal(n, 4, 'with RLS lifted, the session sees both tenants');
     await fn(runner, a, b);
   });
 }
@@ -151,8 +149,8 @@ async function testCalculatorsReadOneTenant() {
       },
       {
         kind: 'capex' as Kind,
-        calculator: new CapexAllocationCalculatorService(undefined as any, undefined as any, undefined as any, undefined as any),
-        load: (id: string) => runner.manager.getRepository(CapexVersion).findOneByOrFail({ id }),
+        calculator: new AllocationCalculatorService(undefined as any, undefined as any, undefined as any, undefined as any),
+        load: (id: string) => runner.manager.getRepository(SpendVersion).findOneByOrFail({ id }),
       },
     ];
     for (const { kind, calculator, load } of scopes) {
@@ -189,9 +187,9 @@ async function testCalculatorsReadOneTenant() {
 
 const calculators = {
   opex: () => new AllocationCalculatorService(undefined as any, undefined as any, undefined as any, undefined as any),
-  capex: () => new CapexAllocationCalculatorService(undefined as any, undefined as any, undefined as any, undefined as any),
+  capex: () => new AllocationCalculatorService(undefined as any, undefined as any, undefined as any, undefined as any),
 };
-const VERSION_ENTITY = { opex: SpendVersion, capex: CapexVersion } as const;
+const VERSION_ENTITY = { opex: SpendVersion, capex: SpendVersion } as const;
 
 /**
  * One call over two years reads the companies once and keeps, for each year,
@@ -234,8 +232,8 @@ async function testManualPercentagesRefuseForeignCompanies() {
     };
     const opts = { manager: runner.manager, tenantId: a.tenantId };
     for (const kind of ['opex', 'capex'] as Kind[]) {
-      const table = kind === 'opex' ? 'spend_versions' : 'capex_versions';
-      const allocations = kind === 'opex' ? 'spend_allocations' : 'capex_allocations';
+      const table = 'spend_versions';
+      const allocations = 'spend_allocations';
       const versionId = a.versions[kind];
       await runner.query(`UPDATE ${table} SET allocation_method = 'manual_pct' WHERE id = $1`, [versionId]);
 

@@ -1,7 +1,7 @@
 import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { CapexItemsService } from './capex-items.service';
-import { CapexItemsDeleteService } from './capex-items-delete.service';
+import { CapexItemsService } from './spend-items.service';
+import { CapexItemsDeleteService } from './spend-items-delete.service';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { attachmentMulterOptions } from '../common/upload';
@@ -9,28 +9,34 @@ import { contentDisposition } from '../common/content-disposition';
 import { PermissionGuard } from '../auth/permission.guard';
 import { ReadOnlyRoute, RequireLevel } from '../auth/require-level.decorator';
 import { StorageService } from '../common/storage/storage.service';
-import { CapexItemContactsService } from './capex-item-contacts.service';
+import { CapexItemContactsService } from './spend-item-contacts.service';
 import { SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
-import { budgetListAccess } from '../spend/budget-list/budget-list.runtime';
+import { budgetListAccess } from './budget-list/budget-list.runtime';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { EntityManager } from 'typeorm';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
-import type { BudgetColumn } from '../spend/amounts-write.util';
+import type { BudgetColumn } from './amounts-write.util';
 import {
   CreateCapexItemInput,
   UpdateCapexItemInput,
   ListCapexQueryInput,
-} from './dto';
+} from './dto/capex';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { AuditService } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
-import { analyzeAfterLargeImport } from '../spend/budget-import-statistics';
-import { BudgetFileService, canCreateSuppliers } from '../spend/budget-file/budget-file.service';
-import { exportListQuery } from '../spend/budget-file/export-file';
-import { importAnalyzeTables } from '../spend/budget-file/import-file';
-import { BudgetFileSizeInterceptor, budgetFileMulterOptions } from '../spend/budget-file/upload';
+import { analyzeAfterLargeImport } from './budget-import-statistics';
+import { BudgetFileService, canCreateSuppliers } from './budget-file/budget-file.service';
+import { exportListQuery } from './budget-file/export-file';
+import { importAnalyzeTables } from './budget-file/import-file';
+import { BudgetFileSizeInterceptor, budgetFileMulterOptions } from './budget-file/upload';
 
+/**
+ * The CAPEX routes, kept as aliases until the unified screens (plan planning/budget-unifie.md, lot
+ * Z1, G.8): the same paths, guards (`capex` right), route order and messages as before, on the
+ * services of the single family for the lines of nature `capex` (`CapexItemsService`), which keep
+ * the CAPEX contract (`budget-line-presentation.ts`).
+ */
 @UseGuards(JwtAuthGuard)
 @Controller('capex-items')
 export class CapexItemsController {

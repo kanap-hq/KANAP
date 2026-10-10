@@ -5,7 +5,6 @@ import { Repository } from 'typeorm';
 import { Asset } from '../asset.entity';
 import { AssetRelation } from '../asset-relation.entity';
 import { AssetSpendItemLink } from '../asset-spend-item.entity';
-import { AssetCapexItemLink } from '../asset-capex-item.entity';
 import { AssetContractLink } from '../asset-contract.entity';
 import { AuditService } from '../../audit/audit.service';
 import { AssetsBaseService, ServiceOpts } from './assets-base.service';
@@ -19,7 +18,6 @@ export class AssetsRelationsService extends AssetsBaseService {
     @InjectRepository(Asset) assetRepo: Repository<Asset>,
     @InjectRepository(AssetRelation) private readonly relationsRepo: Repository<AssetRelation>,
     @InjectRepository(AssetSpendItemLink) private readonly spendItemsRepo: Repository<AssetSpendItemLink>,
-    @InjectRepository(AssetCapexItemLink) private readonly capexItemsRepo: Repository<AssetCapexItemLink>,
     @InjectRepository(AssetContractLink) private readonly contractsRepo: Repository<AssetContractLink>,
     private readonly audit: AuditService,
   ) {
@@ -232,12 +230,13 @@ export class AssetsRelationsService extends AssetsBaseService {
     await this.ensureAsset(assetId, opts?.manager, tenantId);
     const mg = this.getManager(opts);
 
+    // The CAPEX lines (the same link table as the OPEX ones since lot Z1); the title as `description`.
     const rows: Array<{ id: string; description: string }> = await mg.query(
-      `SELECT ci.id, ci.description
-       FROM asset_capex_items aci
-       JOIN capex_items ci ON ci.id = aci.capex_item_id
-       WHERE aci.asset_id = $1 AND aci.tenant_id = $2 AND ci.tenant_id = $2
-       ORDER BY ci.description`,
+      `SELECT ci.id, ci.product_name AS description
+       FROM asset_spend_items aci
+       JOIN spend_items ci ON ci.id = aci.spend_item_id
+       WHERE aci.asset_id = $1 AND aci.tenant_id = $2 AND ci.tenant_id = $2 AND ci.nature = 'capex'
+       ORDER BY ci.product_name`,
       [assetId, tenantId],
     );
     return { items: rows };
@@ -255,17 +254,23 @@ export class AssetsRelationsService extends AssetsBaseService {
   ) {
     const tenant = this.ensureTenantId(tenantId);
     const asset = await this.ensureAsset(assetId, opts?.manager, tenant);
-    const repo = opts?.manager ? opts.manager.getRepository(AssetCapexItemLink) : this.capexItemsRepo;
+    const repo = opts?.manager ? opts.manager.getRepository(AssetSpendItemLink) : this.spendItemsRepo;
     const mg = this.getManager(opts);
 
-    const existing = await repo.find({ where: { asset_id: assetId, tenant_id: asset.tenant_id } as any });
-    const before = existing.map((r) => r.capex_item_id);
+    // The links to CAPEX lines only (`spend/budget-nature.ts`): the asset's links to OPEX lines,
+    // in the same table since lot Z1, are neither listed, nor replaced, nor removed here.
+    const capexLink = linkedLineOf('l.tenant_id', 'l.spend_item_id', 'capex');
+    const existing: Array<{ spend_item_id: string }> = await mg.query(
+      `SELECT l.spend_item_id FROM asset_spend_items l WHERE l.asset_id = $1 AND l.tenant_id = $2${capexLink}`,
+      [assetId, asset.tenant_id],
+    );
+    const before = existing.map((r) => r.spend_item_id);
 
     const normalizedIds = [...new Set(capexItemIds.filter((id) => id))];
 
     if (normalizedIds.length > 0) {
       const found = await mg.query(
-        `SELECT id FROM capex_items WHERE id = ANY($1::uuid[]) AND tenant_id = $2`,
+        `SELECT id FROM spend_items WHERE id = ANY($1::uuid[]) AND tenant_id = $2 AND nature = 'capex'`,
         [normalizedIds, asset.tenant_id],
       );
       if (found.length !== normalizedIds.length) {
@@ -273,10 +278,10 @@ export class AssetsRelationsService extends AssetsBaseService {
       }
     }
 
-    await repo.delete({ asset_id: assetId, tenant_id: asset.tenant_id } as any);
+    await mg.query(`DELETE FROM asset_spend_items l WHERE l.asset_id = $1 AND l.tenant_id = $2${capexLink}`, [assetId, asset.tenant_id]);
     if (normalizedIds.length > 0) {
       const entities = normalizedIds.map((id) =>
-        repo.create({ tenant_id: asset.tenant_id, asset_id: assetId, capex_item_id: id }),
+        repo.create({ tenant_id: asset.tenant_id, asset_id: assetId, spend_item_id: id }),
       );
       await repo.save(entities);
     }

@@ -1,7 +1,6 @@
 import { Injectable, ConflictException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { SpendItem } from '../spend/spend-item.entity';
-import { CapexItem } from '../capex/capex-item.entity';
 
 export interface ReferenceCheckResult {
   hasReferences: boolean;
@@ -24,21 +23,20 @@ export class ReferenceCheckService {
     }
 
     const spendRepo = mg.getRepository(SpendItem);
-    const capexRepo = mg.getRepository(CapexItem);
 
     const referenceDetails: string[] = [];
     let totalCount = 0;
 
     // Check spend_items (paying_company references)
-    // The OPEX lines only (`spend/budget-nature.ts`); the CAPEX lines are counted below.
+    // The OPEX lines (`spend/budget-nature.ts`); the CAPEX lines, in the same table since lot Z1, below.
     const spendCount = await spendRepo.count({ where: { paying_company_id: companyId, nature: 'opex' } as any });
     if (spendCount > 0) {
       referenceDetails.push(`${spendCount} OPEX item(s) reference this as paying company`);
       totalCount += spendCount;
     }
 
-    // Check capex_items (paying company references)
-    const capexCount = await capexRepo.count({ where: { paying_company_id: companyId } as any });
+    // The CAPEX lines (paying company references)
+    const capexCount = await spendRepo.count({ where: { paying_company_id: companyId, nature: 'capex' } as any });
     if (capexCount > 0) {
       referenceDetails.push(`${capexCount} CAPEX item(s) reference this as paying company`);
       totalCount += capexCount;
@@ -81,7 +79,10 @@ export class ReferenceCheckService {
   }
 
   /**
-   * Check if an account is referenced by any spend items
+   * Check if an account is referenced by budget lines of either nature. A CAPEX line counts too
+   * (lot Z1): `spend_items.account_id` has no delete action, and the old `capex_items` key was
+   * `ON DELETE SET NULL`, which detached the lines in silence. The delete is refused instead,
+   * naming the lines of each nature.
    */
   async checkAccountReferences(
     accountId: string,
@@ -96,16 +97,20 @@ export class ReferenceCheckService {
 
     const referenceDetails: string[] = [];
 
-    // The OPEX lines only (`spend/budget-nature.ts`), as before lot Z0.
+    // Each nature counted and named apart (`spend/budget-nature.ts`).
     const spendCount = await spendRepo.count({ where: { account_id: accountId, nature: 'opex' } });
     if (spendCount > 0) {
       referenceDetails.push(`${spendCount} OPEX item(s) reference this account`);
     }
+    const capexCount = await spendRepo.count({ where: { account_id: accountId, nature: 'capex' } });
+    if (capexCount > 0) {
+      referenceDetails.push(`${capexCount} CAPEX item(s) reference this account`);
+    }
 
     return {
-      hasReferences: spendCount > 0,
+      hasReferences: spendCount + capexCount > 0,
       referenceDetails,
-      totalCount: spendCount,
+      totalCount: spendCount + capexCount,
     };
   }
 

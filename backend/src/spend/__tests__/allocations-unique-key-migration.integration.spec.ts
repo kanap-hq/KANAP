@@ -6,6 +6,7 @@ import dataSource from '../../data-source';
 import { AllocationsUniqueKey1853730000000 as Migration } from '../../migrations/1853730000000-allocations-unique-key';
 import { seedCompany } from './cost-center.fixtures';
 import { Kind, seedItem, seedVersion } from './round-inputs.fixtures';
+import { seedDormantCapexItem, seedDormantCapexVersion } from './dormant-capex.fixtures';
 
 // Migration 1853730000000 (one allocation row per version, company and
 // department), against a real database, each test in a transaction that is
@@ -21,6 +22,9 @@ import { Kind, seedItem, seedVersion } from './round-inputs.fixtures';
 // The assertions read this test's own rows (its tenant and versions), never
 // table-wide counts: the database may hold other tenants' rows.
 // - the index refuses a second row for the same key, NULL department included.
+// The migration treats spend_allocations and capex_allocations. Since lot Z1 the CAPEX lines are in
+// the spend_* tables and capex_* is dormant (dropped by lot Z2): the `capex` case seeds its line and
+// version in capex_items / capex_versions, so the migration is still proven on capex_allocations.
 
 const migration = new Migration();
 const LOG_PREFIX = '[Migration] AllocationsUniqueKey:';
@@ -66,10 +70,10 @@ async function seed(runner: QueryRunner): Promise<Seeded> {
   const c2 = (await seedCompany(runner, tenantId, 'Key company 2', 6002)).companyId;
   const [dept] = await runner.query(`INSERT INTO departments (tenant_id, company_id, name) VALUES ($1, $2, 'Key department') RETURNING id`, [tenantId, c1]);
   const versions = {} as Record<Kind, string>;
-  for (const kind of ['opex', 'capex'] as Kind[]) {
-    const itemId = await seedItem(runner, kind, tenantId, 1);
-    versions[kind] = await seedVersion(runner, kind, tenantId, itemId, 2026);
-  }
+  const itemId = await seedItem(runner, 'opex', tenantId, 1);
+  versions.opex = await seedVersion(runner, 'opex', tenantId, itemId, 2026);
+  const dormantItemId = await seedDormantCapexItem(runner, tenantId, 1);
+  versions.capex = await seedDormantCapexVersion(runner, tenantId, dormantItemId, 2026);
   return { tenantId, versions, c1, c2, dept: dept.id };
 }
 

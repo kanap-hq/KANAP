@@ -1,4 +1,5 @@
 import { QueryRunner } from 'typeorm';
+import { CAPEX_NUMBER_OFFSET } from '../round-inputs.fixtures';
 
 /**
  * The differential fixture of the list engine (lot 2B): a deterministic tenant
@@ -24,6 +25,11 @@ import { QueryRunner } from 'typeorm';
  * - created_at ties and sub-millisecond differences;
  * - CAPEX: every priority, investment type and PPE type, an empty
  *   description (the CAPEX name is required, not null).
+ *
+ * Since lot Z1 the CAPEX lines live in the spend_* tables with nature
+ * 'capex': the title in `product_name`, the CPX number in `legacy_number`,
+ * the line's own number `CAPEX_NUMBER_OFFSET` past it (unique across both
+ * natures), their links, versions, months and rounds in the OPEX tables.
  *
  * Every id comes from the seed too (`uuidFrom`): the same seed gives the same
  * tenant, rows, order and cases on every run. The CAPEX lines draw from their
@@ -64,8 +70,6 @@ const SEEDED_TABLES = [
   'analytics_axes', 'analytics_categories', 'portfolio_categories', 'portfolio_streams', 'portfolio_projects', 'contracts',
   'currency_rate_sets', 'allocation_rules', 'spend_items', 'spend_item_analytics_values', 'contract_spend_items',
   'portfolio_project_opex', 'tasks', 'spend_versions', 'spend_amounts', 'spend_version_totals', 'spend_round_inputs',
-  'capex_items', 'capex_item_analytics_values', 'contract_capex_items', 'portfolio_project_capex', 'capex_versions',
-  'capex_amounts', 'capex_version_totals', 'capex_round_inputs',
 ];
 
 type Column = [name: string, type: string];
@@ -413,7 +417,7 @@ export async function seedListFixture(runner: QueryRunner, seed: number, itemCou
     const createdMicros = i % 4 === 0 ? 0 : i % 4 === 1 ? i * 1000 : i % 4 === 2 ? i * 1000 + 250 : Math.floor(i / 8) * 1000;
     const created = new Date(base + Math.floor(createdMicros / 1000)).toISOString().replace('Z', `${String(createdMicros % 1000).padStart(3, '0')}Z`);
     capexRows.push([
-      id, t, capexNumbers[i], name,
+      id, t, capexNumbers[i] + CAPEX_NUMBER_OFFSET, `CPX-${capexNumbers[i]}`, name,
       rc.pick(['hardware', 'software']),
       rc.pick(['replacement', 'capacity', 'productivity', 'security', 'conformity', 'business_growth', 'other']),
       rc.pick(['mandatory', 'high', 'medium', 'low']),
@@ -433,13 +437,13 @@ export async function seedListFixture(runner: QueryRunner, seed: number, itemCou
       new Date(base + rc.int(0, 300) * 86_400_000 + rc.int(0, 999)).toISOString(),
     ]);
   }
-  await insert(runner, 'capex_items', [
-    ['id', 'uuid'], ['tenant_id', 'uuid'], ['item_number', 'int'], ['description', 'text'], ['ppe_type', 'ppe_type'],
+  await insert(runner, 'spend_items', [
+    ['id', 'uuid'], ['tenant_id', 'uuid'], ['item_number', 'int'], ['legacy_number', 'text'], ['product_name', 'text'], ['ppe_type', 'ppe_type'],
     ['investment_type', 'capex_investment_type'], ['priority', 'priority_level'], ['notes', 'text'], ['currency', 'text'],
     ['effective_start', 'date'], ['disabled_at', 'timestamptz'], ['status', 'status_state'], ['supplier_id', 'uuid'], ['account_id', 'uuid'],
     ['paying_company_id', 'uuid'], ['owner_it_id', 'uuid'], ['owner_business_id', 'uuid'], ['cost_center_id', 'uuid'], ['run_build', 'run_build'],
-    ['project_id', 'uuid'], ['created_at', 'timestamptz'], ['updated_at', 'timestamptz'],
-  ], capexRows);
+    ['project_id', 'uuid'], ['created_at', 'timestamptz'], ['updated_at', 'timestamptz'], ['nature', 'text'],
+  ], capexRows.map((row) => [...row, 'capex']));
 
   const capexAnalytics: unknown[][] = [];
   const capexContracts: unknown[][] = [];
@@ -465,9 +469,9 @@ export async function seedListFixture(runner: QueryRunner, seed: number, itemCou
       }
     }
   }
-  await insert(runner, 'capex_item_analytics_values', [['tenant_id', 'uuid'], ['item_id', 'uuid'], ['axis_id', 'uuid'], ['category_id', 'uuid']], capexAnalytics);
-  await insert(runner, 'contract_capex_items', [['id', 'uuid'], ['tenant_id', 'uuid'], ['contract_id', 'uuid'], ['capex_item_id', 'uuid'], ['created_at', 'timestamptz']], capexContracts);
-  await insert(runner, 'portfolio_project_capex', [['tenant_id', 'uuid'], ['project_id', 'uuid'], ['capex_id', 'uuid']], capexProjects);
+  await insert(runner, 'spend_item_analytics_values', [['tenant_id', 'uuid'], ['item_id', 'uuid'], ['axis_id', 'uuid'], ['category_id', 'uuid']], capexAnalytics);
+  await insert(runner, 'contract_spend_items', [['id', 'uuid'], ['tenant_id', 'uuid'], ['contract_id', 'uuid'], ['spend_item_id', 'uuid'], ['created_at', 'timestamptz']], capexContracts);
+  await insert(runner, 'portfolio_project_opex', [['tenant_id', 'uuid'], ['project_id', 'uuid'], ['opex_id', 'uuid']], capexProjects);
   await insert(runner, 'tasks', [['id', 'uuid'], ['tenant_id', 'uuid'], ['title', 'text'], ['item_number', 'int'], ['status', 'text'], ['related_object_type', 'text'], ['related_object_id', 'uuid'], ['created_at', 'timestamptz']], capexTasks);
 
   const capexVersions: unknown[][] = [];
@@ -495,12 +499,12 @@ export async function seedListFixture(runner: QueryRunner, seed: number, itemCou
       }
     }
   }
-  await insert(runner, 'capex_versions', [['id', 'uuid'], ['tenant_id', 'uuid'], ['capex_item_id', 'uuid'], ['version_name', 'text'], ['input_grain', 'input_grain'],
+  await insert(runner, 'spend_versions', [['id', 'uuid'], ['tenant_id', 'uuid'], ['spend_item_id', 'uuid'], ['version_name', 'text'], ['input_grain', 'input_grain'],
     ['as_of_date', 'date'], ['budget_year', 'int'], ['allocation_method', 'text'], ['fx_rate_set_id', 'uuid']], capexVersions);
-  await insert(runner, 'capex_amounts', [['tenant_id', 'uuid'], ['version_id', 'uuid'], ['period', 'date'], ['planned', 'numeric'], ['committed', 'numeric'],
+  await insert(runner, 'spend_amounts', [['tenant_id', 'uuid'], ['version_id', 'uuid'], ['period', 'date'], ['planned', 'numeric'], ['committed', 'numeric'],
     ['forecast', 'numeric'], ['actual', 'numeric'], ['expected_landing', 'numeric']], capexAmounts);
-  if (capexEmptied.length) await runner.query(`DELETE FROM capex_amounts WHERE tenant_id = $1 AND version_id = ANY($2::uuid[])`, [t, capexEmptied]);
-  await insert(runner, 'capex_round_inputs', [['tenant_id', 'uuid'], ['version_id', 'uuid'], ['measure', 'text'], ['period_start', 'date'], ['period_end', 'date'],
+  if (capexEmptied.length) await runner.query(`DELETE FROM spend_amounts WHERE tenant_id = $1 AND version_id = ANY($2::uuid[])`, [t, capexEmptied]);
+  await insert(runner, 'spend_round_inputs', [['tenant_id', 'uuid'], ['version_id', 'uuid'], ['measure', 'text'], ['period_start', 'date'], ['period_end', 'date'],
     ['method', 'text'], ['fte', 'numeric']], capexRounds);
 
   // Statistics, as on a loaded database: without them the planner reads the fixture tenant as unknown

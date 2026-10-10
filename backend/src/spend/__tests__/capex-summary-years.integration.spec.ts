@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import * as assert from 'node:assert/strict';
 import dataSource from '../../data-source';
-import { CapexItemsService } from '../capex-items.service';
+import { CapexItemsService } from '../spend-items.service';
 import {
   inRolledBackTransaction,
   repeat,
@@ -22,9 +22,10 @@ const identityFx = {
 const noAllocations = { computeForVersions: async () => new Map() };
 
 function capexItems(): { summary: (...args: any[]) => Promise<any> } {
-  const args: any[] = Array.from({ length: 12 }, () => undefined);
+  // The constructor of the OPEX twin since lot Z1 (`spend-items.service.ts`).
+  const args: any[] = Array.from({ length: 11 }, () => undefined);
   args[4] = noAllocations;
-  args[7] = identityFx;
+  args[6] = identityFx;
   return new (CapexItemsService as any)(...args);
 }
 

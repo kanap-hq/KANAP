@@ -17,7 +17,6 @@ import { deriveStatusFromDisabledAt, resolveLifecycleState } from '../common/sta
 import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/status-filter';
 import { ContractUpsertDto } from './dto/contract.dto';
 import { TasksUnifiedService } from '../tasks/tasks-unified.service';
-import { ContractCapexItem } from './contract-capex-item.entity';
 import { StorageService } from '../common/storage/storage.service';
 import { randomUUID } from 'crypto';
 import { validate as isUuid } from 'uuid';
@@ -66,6 +65,7 @@ type ListItem = Contract & {
 
 /** A contract link `l` to an OPEX line (`spend/budget-nature.ts`): the OPEX side lists, counts and replaces those only. */
 const OPEX_LINK = linkedLineOf('l.tenant_id', 'l.spend_item_id', 'opex');
+const CAPEX_LINK = linkedLineOf('l.tenant_id', 'l.spend_item_id', 'capex');
 
 @Injectable()
 export class ContractsService {
@@ -453,20 +453,21 @@ export class ContractsService {
     return found;
   }
 
-  /** Refuses any id that is not a row of `table` in the tenant. */
+  /**
+   * Refuses any id that is not a row of `target` in the tenant: `opex` / `capex`, a line of
+   * `spend_items` of that nature (`spend/budget-nature.ts`), or a contract.
+   */
   private async assertIdsInTenant(
     mg: EntityManager,
-    table: 'spend_items' | 'capex_items' | 'contracts',
+    target: 'opex' | 'capex' | 'contracts',
     tenantId: string,
     ids: string[],
     message: string,
   ) {
     if (ids.length === 0) return;
-    // `spend_items`: its OPEX lines only (`spend/budget-nature.ts`).
-    const rows: Array<{ id: string }> = await mg.query(
-      `SELECT id FROM ${table} WHERE tenant_id = $1 AND id = ANY($2::uuid[])${table === 'spend_items' ? ` AND nature = 'opex'` : ''}`,
-      [tenantId, ids],
-    );
+    const rows: Array<{ id: string }> = target === 'contracts'
+      ? await mg.query(`SELECT id FROM contracts WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [tenantId, ids])
+      : await mg.query(`SELECT id FROM spend_items WHERE tenant_id = $1 AND id = ANY($2::uuid[]) AND nature = $3`, [tenantId, ids, target]);
     if (rows.length !== ids.length) throw new BadRequestException(message);
   }
 
@@ -488,7 +489,7 @@ export class ContractsService {
     const contract = await this.findContract(contractId, mg);
     const tenantId = contract.tenant_id;
     const uniqueIds = Array.from(new Set((spendItemIds || []).filter(Boolean)));
-    await this.assertIdsInTenant(mg, 'spend_items', tenantId, uniqueIds, 'One or more spend items not found.');
+    await this.assertIdsInTenant(mg, 'opex', tenantId, uniqueIds, 'One or more spend items not found.');
     // The contract's links to OPEX lines only: a link to a line of another nature is kept as it is.
     const existing: Array<{ id: string; spend_item_id: string }> = await mg.query(
       `SELECT l.id, l.spend_item_id FROM contract_spend_items l WHERE l.tenant_id = $1 AND l.contract_id = $2${OPEX_LINK}`,
@@ -983,13 +984,18 @@ export class ContractsService {
     return { ok: true, added: toInsert.length, removed: toDelete.length };
   }
 
-  // Symmetric linking from CAPEX side
+  // Symmetric linking from CAPEX side: the CAPEX lines share `contract_spend_items` since lot Z1.
   async listContractsForCapexItem(capexItemId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    // Use dedicated repo for CAPEX join
-    const capexLinksRepo = mg.getRepository(ContractCapexItem);
+    const linksRepo = mg.getRepository(ContractSpendItem);
     const contractRepo = mg.getRepository(Contract);
-    const rows = await capexLinksRepo.find({ where: { tenant_id: sessionTenant(), capex_item_id: capexItemId } });
+    // The contracts of a CAPEX line only (`spend/budget-nature.ts`): none for a line of another nature.
+    const [line] = await mg.query(
+      `SELECT 1 FROM spend_items WHERE tenant_id = app_current_tenant() AND id = $1 AND nature = 'capex'`,
+      [capexItemId],
+    );
+    if (!line) return { items: [] };
+    const rows = await linksRepo.find({ where: { tenant_id: sessionTenant(), spend_item_id: capexItemId } });
     const ids = rows.map((r) => r.contract_id);
     const items = ids.length ? await contractRepo.findBy({ tenant_id: sessionTenant(), id: In(ids) }) : [];
     return { items: items.map((i) => ({ id: i.id, name: i.name })) };
@@ -997,48 +1003,54 @@ export class ContractsService {
 
   async bulkReplaceContractsForCapexItem(capexItemId: string, contractIds: string[], opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    const capexLinksRepo = mg.getRepository(ContractCapexItem);
+    const linksRepo = mg.getRepository(ContractSpendItem);
     const [capex]: Array<{ id: string; tenant_id: string }> = await mg.query(
-      `SELECT id, tenant_id FROM capex_items WHERE tenant_id = app_current_tenant() AND id = $1`,
+      `SELECT id, tenant_id FROM spend_items WHERE tenant_id = app_current_tenant() AND id = $1 AND nature = 'capex'`,
       [capexItemId],
     );
     if (!capex) throw new NotFoundException('CAPEX item not found.');
     const tenantId = capex.tenant_id;
     const uniqueIds = Array.from(new Set((contractIds || []).filter(Boolean)));
     await this.assertIdsInTenant(mg, 'contracts', tenantId, uniqueIds, 'One or more contracts not found.');
-    const existing = await capexLinksRepo.find({ where: { tenant_id: tenantId, capex_item_id: capex.id } });
+    const existing = await linksRepo.find({ where: { tenant_id: tenantId, spend_item_id: capex.id } });
     const toDelete = existing.filter((e) => !uniqueIds.includes(e.contract_id));
     const existingSet = new Set(existing.map((e) => e.contract_id));
     const toInsert = uniqueIds
       .filter((id) => !existingSet.has(id))
-      .map((id) => capexLinksRepo.create({ tenant_id: tenantId, contract_id: id, capex_item_id: capex.id }));
-    if (toDelete.length > 0) await capexLinksRepo.delete({ tenant_id: tenantId, id: In(toDelete.map((e) => e.id)) });
-    if (toInsert.length > 0) await capexLinksRepo.save(toInsert);
+      .map((id) => linksRepo.create({ tenant_id: tenantId, contract_id: id, spend_item_id: capex.id }));
+    if (toDelete.length > 0) await linksRepo.delete({ tenant_id: tenantId, id: In(toDelete.map((e) => e.id)) });
+    if (toInsert.length > 0) await linksRepo.save(toInsert);
     return { ok: true, added: toInsert.length, removed: toDelete.length };
   }
 
-  // Inverse links from Contract side
+  // Inverse links from Contract side: the contract's CAPEX lines, their title as `description`.
   async listLinkedCapexItems(contractId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    const repo = mg.getRepository(ContractCapexItem);
-    const capexRepo = mg.getRepository((await import('../capex/capex-item.entity')).CapexItem);
-    const rows = await repo.find({ where: { tenant_id: sessionTenant(), contract_id: contractId } });
-    const ids = rows.map((r) => r.capex_item_id);
-    const items = ids.length ? await capexRepo.findBy({ tenant_id: sessionTenant(), id: In(ids) }) : [];
-    return { items: items.map((i: any) => ({ id: i.id, description: i.description })) };
+    const items: Array<{ id: string; description: string }> = await mg.query(
+      `SELECT i.id, i.product_name AS description
+         FROM contract_spend_items l
+         JOIN spend_items i ON i.tenant_id = l.tenant_id AND i.id = l.spend_item_id AND i.nature = 'capex'
+        WHERE l.tenant_id = app_current_tenant() AND l.contract_id = $1`,
+      [contractId],
+    );
+    return { items };
   }
 
   async bulkReplaceLinkedCapexItems(contractId: string, capexItemIds: string[], opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    const repo = mg.getRepository(ContractCapexItem);
+    const repo = mg.getRepository(ContractSpendItem);
     const contract = await this.findContract(contractId, mg);
     const tenantId = contract.tenant_id;
     const uniqueIds = Array.from(new Set((capexItemIds || []).filter(Boolean)));
-    await this.assertIdsInTenant(mg, 'capex_items', tenantId, uniqueIds, 'One or more CAPEX items not found.');
-    const existing = await repo.find({ where: { tenant_id: tenantId, contract_id: contract.id } });
-    const toDelete = existing.filter((e) => !uniqueIds.includes(e.capex_item_id));
-    const existingSet = new Set(existing.map((e) => e.capex_item_id));
-    const toInsert = uniqueIds.filter((id) => !existingSet.has(id)).map((id) => repo.create({ tenant_id: tenantId, contract_id: contract.id, capex_item_id: id }));
+    await this.assertIdsInTenant(mg, 'capex', tenantId, uniqueIds, 'One or more CAPEX items not found.');
+    // The contract's links to CAPEX lines only: a link to an OPEX line is kept as it is.
+    const existing: Array<{ id: string; spend_item_id: string }> = await mg.query(
+      `SELECT l.id, l.spend_item_id FROM contract_spend_items l WHERE l.tenant_id = $1 AND l.contract_id = $2${CAPEX_LINK}`,
+      [tenantId, contract.id],
+    );
+    const toDelete = existing.filter((e) => !uniqueIds.includes(e.spend_item_id));
+    const existingSet = new Set(existing.map((e) => e.spend_item_id));
+    const toInsert = uniqueIds.filter((id) => !existingSet.has(id)).map((id) => repo.create({ tenant_id: tenantId, contract_id: contract.id, spend_item_id: id }));
     if (toDelete.length > 0) await repo.delete({ tenant_id: tenantId, id: In(toDelete.map((e) => e.id)) });
     if (toInsert.length > 0) await repo.save(toInsert);
     return { ok: true, added: toInsert.length, removed: toDelete.length };

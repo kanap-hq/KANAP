@@ -380,6 +380,7 @@ Notes
   - `consolidationStatus=mapped|outside|unmapped` filters on the server; page and total follow the filter; without a consolidation chart `mapped` and `outside` return no account (`unmapped` still returns the accounts without a number); any other value is a 400
 - GET `/accounts/ids?sort=...&q=...&filters=...&consolidationStatus=...` → `{ ids, total }` (ordered by current list query)
 - GET `/accounts/:id` → detail, with `consolidation_status` and `line_counts: { opex, capex }` (the OPEX and CAPEX lines, all statuses, that use the account)
+- DELETE `/accounts/:id` (and `DELETE /accounts/bulk`): an account used by budget lines of either nature is refused, 409 `Cannot delete account "6000 - Licences": 2 OPEX item(s) reference this account; 1 CAPEX item(s) reference this account. Please disable instead or remove references first.` (in `failed[].reason` for the bulk delete)
 - Accounts carry `nature` (`opex`, `capex` or null for both) on list, detail, POST and PATCH (`null` clears it, absent leaves it unchanged); the list filter on `nature` is a set filter where a blank value means null. A line write that creates a line or changes its account to an account of the other type is a 400: `This account is for CAPEX lines only. Choose an account for OPEX lines.` (swapped for the other side)
 - POST `/accounts`, PATCH `/accounts/:id` and the CSV imports derive `consolidation_account_name` and `consolidation_account_description` from the consolidation chart's account of the given number; without a match (or without a consolidation chart) the values sent are kept, and a new number drops the name and description not sent with it; a null or empty number clears both. When an account of the consolidation chart is created, renamed, described or renumbered, or an account joins the consolidation chart (`coa_id`), every account mapped to its old or new number follows it (number, name, description) in the same transaction, one audit line per account. An account that leaves the consolidation chart takes nobody along (the accounts mapped to it become `outside`).
 - GET `/accounts/export?scope=template|data&coaId=...&language=…`
@@ -892,8 +893,9 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
   - Permissions: any authenticated member of the tenant for GET, `budget_ops:admin` for PATCH
 
 ## Spend Items & Versions (OPEX)
-- `:id` on every route under `/spend-items/:id` (GET, PATCH, DELETE, and the share, yearly-totals, versions, tasks, contracts, projects, applications, links, attachments and contacts routes) is a UUID, an `OPX-n` reference or its neutral twin `BL-n` (same number), as every route under `/capex-items/:id` takes `CPX-n`; a malformed id is a `400` "Invalid item reference: …", an unknown reference a `404`
-- `/spend-items` serves OPEX lines only (`nature = 'opex'`, see `doc/architecture.md`, "Budget Line Nature"): a line of another nature stored in `spend_items` answers `404` on every route addressed by its id or reference, or by the id of its version, attachment or link (`/spend-versions/:id/*`, `/spend-items/attachments/:attachmentId`), and no list, summary, total, aggregate or report counts it
+- `:id` on every route under `/spend-items/:id` (GET, PATCH, DELETE, and the share, yearly-totals, versions, tasks, contracts, projects, applications, links, attachments and contacts routes) is a UUID, an `OPX-n` reference, its neutral twin `BL-n` (same number) or the plain number; every route under `/capex-items/:id` takes a UUID, `CPX-n`, the plain CPX number or the line's `BL-n`. A malformed id is a `400` "Invalid item reference: …", a reference of the other prefix a `400` "Invalid reference for capex: expected CPX-N, got OPX-12", an unknown reference a `404`
+- Every budget line, OPEX and CAPEX, is stored in `spend_items` with its `nature` since lot Z1 (see `doc/architecture.md`, "Budget Line Nature"). `/spend-items` serves OPEX lines only, `/capex-items` and `/capex-versions` CAPEX lines only: a line of the other nature answers `404` on every route addressed by its id or reference, or by the id of its version, attachment or link (`/spend-versions/:id/*`, `/spend-items/attachments/:attachmentId` and their CAPEX twins), and no list, summary, total, aggregate or report of the other nature counts it
+- `reference`: every line of both natures carries `BL-n` (its `item_number`, one numbering for both natures) on the detail, the create and update responses, the plain lists and the summary rows (full and grid shapes). The OPEX lines keep `item_number` = n and the `OPX-n` reference; the CAPEX routes keep the CPX number (below)
 - POST `/spend-items` → create item
 - PATCH `/spend-items/:id` → update item (any subset of the writable fields)
 - GET `/spend-items/:id` → detail (every item column, `cost_center_id`, `run_build` and `nature` included) plus the analytics values:
@@ -954,6 +956,12 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
   - Error codes: `400` on missing IDs or missing/zero metrics needed for the distribution.
 
 ## CAPEX Items & Versions
+- Since lot Z1 the CAPEX routes are aliases on the lines of nature `capex` of `spend_items`. They keep their paths, rights (`capex`), messages and output for one version, until the unified screens:
+  - a line reads `description` (its title), `item_number` = its CPX number (n of `CPX-n`), `ppe_type`, `investment_type`, `priority`, plus `reference` (`BL-n`); it has no `product_name`, `contract_id`, `nature` or `legacy_number`. Versions, contacts, links and attachments name their line `capex_item_id`
+  - POST `/capex-items` gives the new line a `BL` number and a `CPX` number; the `CPX` number is its `item_number` on these routes
+  - `ppe_type`, `investment_type` and `priority` are required on create and cannot be cleared (`400`)
+  - the audit rows of a CAPEX line keep the CAPEX labels (`capex_items`, `capex_versions`, `capex_amounts`, …) and field names
+  - the budget file keeps `CPX-n` in `item_number` (`capex.csv`); a `kanap_token` exported before the move stays valid
 - POST `/capex-items` → create CAPEX item
 - PATCH `/capex-items/:id` → update CAPEX item (writable fields and write rules as OPEX, see above)
 - GET `/capex-items/:id` → detail (every item column, `cost_center_id` and `run_build` included) plus the analytics values, as OPEX (see above)
@@ -963,7 +971,7 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
 - PATCH `/capex-items/:id/versions` with `{ id, input_grain?, notes?, allocation_method? }`
 
 ## Amounts (CAPEX)
-- POST `/capex-versions/:id/amounts/bulk-upsert` → annual or monthly payload; server writes the appropriate rows to `capex_amounts`
+- POST `/capex-versions/:id/amounts/bulk-upsert` → annual or monthly payload; server writes the appropriate rows to `spend_amounts` (audited as `capex_amounts`)
   - Annual payload: `{ kind: 'annual', year, totals: { planned?, committed?, forecast?, actual?, expected_landing? } }` (at least one; each named column is spread over the year, the others are kept)
   - Monthly payload: `{ kind: 'monthly', year, months: [{ period: 'YYYY-MM-01', planned?, actual?, expected_landing?, committed?, forecast? }] }`
   - Lines payload, response and round inputs as OPEX (see above), with `capex:member`

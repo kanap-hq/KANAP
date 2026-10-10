@@ -4,7 +4,8 @@ import { DataSource, QueryRunner } from 'typeorm';
 /**
  * Read-only verification for migration 1853660000000 (analytics axes: a
  * tenant's analytics dimensions, their values, one value per line and
- * dimension in spend_item_analytics_values / capex_item_analytics_values).
+ * dimension in spend_item_analytics_values, the lines of both natures since
+ * lot Z1; the dormant capex_* tables are not read).
  *
  * Per tenant it checks:
  *   1. exactly one default dimension;
@@ -41,11 +42,28 @@ import { DataSource, QueryRunner } from 'typeorm';
  * On-premise: the same commands with the installation's own env file and network.
  */
 
-type Kind = { label: 'OPEX' | 'CAPEX'; items: string; links: string; prefix: string; name: string };
+type Kind = {
+  label: 'OPEX' | 'CAPEX';
+  nature: 'opex' | 'capex';
+  items: string;
+  links: string;
+  prefix: string;
+  name: string;
+  /** The number a line of the nature shows: an OPEX line's own, a CAPEX line's CPX number. */
+  number: string;
+  /** The links on no line at all are counted once, with the first kind. */
+  countsForeignLinks: boolean;
+};
 
 const KINDS: Kind[] = [
-  { label: 'OPEX', items: 'spend_items', links: 'spend_item_analytics_values', prefix: 'OPX', name: 'product_name' },
-  { label: 'CAPEX', items: 'capex_items', links: 'capex_item_analytics_values', prefix: 'CPX', name: 'description' },
+  {
+    label: 'OPEX', nature: 'opex', items: 'spend_items', links: 'spend_item_analytics_values', prefix: 'OPX', name: 'product_name',
+    number: 'i.item_number', countsForeignLinks: true,
+  },
+  {
+    label: 'CAPEX', nature: 'capex', items: 'spend_items', links: 'spend_item_analytics_values', prefix: 'CPX', name: 'product_name',
+    number: `COALESCE((substring(i.legacy_number FROM '^CPX-([0-9]+)$'))::int, i.item_number)`, countsForeignLinks: false,
+  },
 ];
 
 type TenantRow = { id: string; slug: string };
@@ -116,7 +134,7 @@ async function inspectDimensions(runner: QueryRunner, tenantId: string): Promise
 
 /** Pair check (3) and foreign links (4) for one item type. Returns [pair drift, structural problems]. */
 async function inspectKind(runner: QueryRunner, tenantId: string, kind: Kind): Promise<[number, number]> {
-  const ref = `'${kind.prefix}-' || i.item_number`;
+  const ref = `'${kind.prefix}-' || ${kind.number}`;
   // One row per line holding a legacy value or a default-dimension link.
   const rows = await runner.query(
     `SELECT ${ref} AS ref, i.${kind.name} AS name,
@@ -128,26 +146,29 @@ async function inspectKind(runner: QueryRunner, tenantId: string, kind: Kind): P
                   JOIN analytics_axes a ON a.id = l.axis_id AND a.tenant_id = l.tenant_id AND a.is_default)
          ON l.item_id = i.id AND l.tenant_id = i.tenant_id
        LEFT JOIN analytics_categories kc ON kc.id = l.category_id AND kc.tenant_id = l.tenant_id
-      WHERE i.tenant_id = $1 AND (i.analytics_category_id IS NOT NULL OR l.category_id IS NOT NULL)
-      ORDER BY i.item_number`,
+      WHERE i.tenant_id = $1 AND i.nature = '${kind.nature}' AND (i.analytics_category_id IS NOT NULL OR l.category_id IS NOT NULL)
+      ORDER BY ${kind.number}`,
     [tenantId],
   );
-  const [lines] = await runner.query(`SELECT count(*)::int AS n FROM ${kind.items} WHERE tenant_id = $1`, [tenantId]);
+  const [lines] = await runner.query(`SELECT count(*)::int AS n FROM ${kind.items} WHERE tenant_id = $1 AND nature = '${kind.nature}'`, [tenantId]);
   const [links] = await runner.query(
     `SELECT count(*)::int AS all_links,
             count(*) FILTER (WHERE a.is_default)::int AS default_links
        FROM ${kind.links} l
        JOIN analytics_axes a ON a.id = l.axis_id AND a.tenant_id = l.tenant_id
+       JOIN ${kind.items} li ON li.id = l.item_id AND li.tenant_id = l.tenant_id AND li.nature = '${kind.nature}'
       WHERE l.tenant_id = $1`,
     [tenantId],
   );
-  const [foreignLinks] = await runner.query(
-    `SELECT count(*)::int AS n
-       FROM ${kind.links} l
-      WHERE l.tenant_id = $1
-        AND NOT EXISTS (SELECT 1 FROM ${kind.items} i WHERE i.id = l.item_id AND i.tenant_id = l.tenant_id)`,
-    [tenantId],
-  );
+  const [foreignLinks] = kind.countsForeignLinks
+    ? await runner.query(
+      `SELECT count(*)::int AS n
+         FROM ${kind.links} l
+        WHERE l.tenant_id = $1
+          AND NOT EXISTS (SELECT 1 FROM ${kind.items} i WHERE i.id = l.item_id AND i.tenant_id = l.tenant_id)`,
+      [tenantId],
+    )
+    : [{ n: 0 }];
 
   let pairs = 0;
   const drift: string[] = [];

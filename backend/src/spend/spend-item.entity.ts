@@ -11,25 +11,46 @@ export class SpendItem {
   @Column('uuid')
   tenant_id!: string;
 
-  // Per-tenant sequential business reference (rendered as OPX-N). Assigned on create.
+  // Per-tenant sequential business reference of every line, both natures (rendered as BL-N; an
+  // OPEX line's number is its former OPX number). Assigned on create.
   @Column('int')
   item_number!: number;
 
   /**
-   * OPEX or CAPEX (migration 1853950000000, plan planning/budget-unifie.md). Every line of this
-   * table is OPEX until lot Z1 moves the CAPEX lines in: the OPEX code writes `opex` and reads
-   * only lines of that nature (doc/architecture.md, "Budget line nature"). Read-only for the API.
+   * OPEX or CAPEX (migration 1853950000000, plan planning/budget-unifie.md). The table holds both
+   * natures since lot Z1: every read and write names the nature (doc/architecture.md, "Budget
+   * line nature"). Written on create by the service of the nature; never by a request body.
    */
   @Column('text', { default: 'opex' })
   nature!: BudgetNature;
 
   /**
-   * The reference the line had before the single BL numbering (`OPX-42`), unique per tenant when
-   * set; still accepted where a reference is typed (`common/resolve-item-id.ts`). Not part of the
-   * line as the API returns it: never selected unless asked for.
+   * The reference the line had before the single BL numbering (`OPX-42`, `CPX-7`), unique per
+   * tenant when set; still accepted where a reference is typed (`common/resolve-item-id.ts`). A
+   * CAPEX line created through the CAPEX API gets the next CPX number. Not part of the line as the
+   * API returns it: never selected unless asked for (`budget-line-presentation.ts`).
    */
   @Column('text', { nullable: true, select: false })
   legacy_number!: string | null;
+
+  /**
+   * The CAPEX classification (lot Z1, until lot C1 turns it into dimensions): set on CAPEX lines,
+   * empty on OPEX lines. Never selected unless asked for, so an OPEX line reads as before.
+   */
+  @Column({ type: 'enum', enum: ['hardware', 'software'], enumName: 'ppe_type', nullable: true, select: false })
+  ppe_type!: 'hardware' | 'software' | null;
+
+  @Column({
+    type: 'enum',
+    enum: ['replacement', 'capacity', 'productivity', 'security', 'conformity', 'business_growth', 'other'],
+    enumName: 'capex_investment_type',
+    nullable: true,
+    select: false,
+  })
+  investment_type!: 'replacement' | 'capacity' | 'productivity' | 'security' | 'conformity' | 'business_growth' | 'other' | null;
+
+  @Column({ type: 'enum', enum: ['mandatory', 'high', 'medium', 'low'], enumName: 'priority_level', nullable: true, select: false })
+  priority!: 'mandatory' | 'high' | 'medium' | 'low' | null;
 
   @Column('uuid', { nullable: true })
   paying_company_id!: string | null;

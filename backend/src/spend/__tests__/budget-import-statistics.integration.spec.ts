@@ -26,7 +26,10 @@ async function testWrittenRows() {
   assert.equal(writtenRows({ ...written(5000), ok: false }), 0, 'a refused file writes nothing');
   assert.equal(writtenRows({ ok: true, inserted: 5000, updated: 0 }), 0, 'a result that does not say it was no dry run counts nothing');
   assert.equal(writtenRows(null), 0);
-  assert.deepEqual(lineImportTables('capex'), ['capex_items', 'capex_item_analytics_values', 'capex_versions', 'capex_amounts', 'capex_round_inputs', 'capex_version_totals']);
+  // A CAPEX import writes the spend_* tables since lot Z1: the tables of both natures are one family.
+  const lineTables = ['spend_items', 'spend_item_analytics_values', 'spend_versions', 'spend_amounts', 'spend_round_inputs', 'spend_version_totals'];
+  assert.deepEqual(lineImportTables('capex'), lineTables);
+  assert.deepEqual(lineImportTables('opex'), lineTables);
 }
 
 /** analyze_count of the given tables, read on a connection of its own. */

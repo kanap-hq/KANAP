@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import * as assert from 'node:assert/strict';
 import dataSource from '../../data-source';
-import { CapexItemsService } from '../capex-items.service';
+import { CapexItemsService } from '../spend-items.service';
 import {
   inRolledBackTransaction,
   repeat,
@@ -29,9 +29,10 @@ function capexItems(): {
   summaryTotals: (...args: any[]) => Promise<any>;
   summaryIds: (...args: any[]) => Promise<any>;
 } {
-  const args: any[] = Array.from({ length: 12 }, () => undefined);
+  // The constructor of the OPEX twin since lot Z1 (`spend-items.service.ts`).
+  const args: any[] = Array.from({ length: 11 }, () => undefined);
   args[4] = noAllocations;
-  args[7] = identityFx;
+  args[6] = identityFx;
   return new (CapexItemsService as any)(...args);
 }
 
@@ -49,7 +50,7 @@ async function testYearsAfterTheEndContributeNothing() {
       lines[key] = itemId;
     }
     // End of validity on the last day of Y (still valid today, so every list shows it).
-    await runner.query(`UPDATE capex_items SET disabled_at = $2 WHERE id = $1`, [lines.ending, `${Y}-12-31T12:00:00Z`]);
+    await runner.query(`UPDATE spend_items SET disabled_at = $2 WHERE id = $1`, [lines.ending, `${Y}-12-31T12:00:00Z`]);
 
     const svc = capexItems();
     const query = { includeDisabled: 'true' };
@@ -86,7 +87,7 @@ async function testYearsAfterTheEndContributeNothing() {
     assert.deepEqual([report.changes.unchanged, report.changes.updated], [1, 0], 'the export reads back unchanged');
 
     // The same line without an end of validity counts in both years.
-    await runner.query(`UPDATE capex_items SET disabled_at = NULL WHERE id = $1`, [lines.ending]);
+    await runner.query(`UPDATE spend_items SET disabled_at = NULL WHERE id = $1`, [lines.ending]);
     const reopened = await svc.summaryTotals(query, { manager: runner.manager });
     assert.equal(reopened.yPlus1Budget, 840);
   });

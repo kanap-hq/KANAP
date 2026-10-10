@@ -6,7 +6,7 @@ import { getAiEntityRegistry } from '../query/registries';
 import { AiBusinessRecordMutationSupportService } from '../mutation/ai-business-record-mutation-support.service';
 import { AiExecutionContextWithManager } from '../ai.types';
 import { inRolledBackTransaction, Kind, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
-import { disableCostCenter, ITEM_TABLE, itemService, seedCompany, seedCostCenter } from '../../spend/__tests__/cost-center.fixtures';
+import { disableCostCenter, itemService, seedCompany, seedCostCenter } from '../../spend/__tests__/cost-center.fixtures';
 
 // Cost center and run or build in the AI layer, on OPEX and CAPEX:
 // - both registries declare cost_center (set, dynamic, groupable, joined on
@@ -20,6 +20,8 @@ import { disableCostCenter, ITEM_TABLE, itemService, seedCompany, seedCostCenter
 
 const KINDS: Kind[] = ['opex', 'capex'];
 const ENTITY: Record<Kind, 'spend_items' | 'capex_items'> = { opex: 'spend_items', capex: 'capex_items' };
+/** Both natures are lines of `spend_items` since lot Z1. */
+const LINE_TABLE = 'spend_items';
 
 function testRegistries() {
   for (const kind of KINDS) {
@@ -112,7 +114,7 @@ async function testMutations(kind: Kind) {
     assert.equal((prepared.mutationInput.display_values as any).cost_center_id, 'AI-1 · AI cost center');
 
     const created: any = await support['createRecord'](ctx, entity_type, fields);
-    const [row] = await runner.query(`SELECT cost_center_id, run_build::text AS run_build FROM ${ITEM_TABLE[kind]} WHERE id = $1`, [created.id]);
+    const [row] = await runner.query(`SELECT cost_center_id, run_build::text AS run_build FROM ${LINE_TABLE} WHERE id = $1 AND nature = $2`, [created.id, kind]);
     assert.deepEqual(row, { cost_center_id: costCenterId, run_build: 'build' }, `${kind}: the executed create stores both`);
 
     assert.equal(
@@ -131,7 +133,7 @@ async function testMutations(kind: Kind) {
     );
 
     // A line whose cost center was disabled afterwards keeps it; another change goes through.
-    await runner.query(`UPDATE ${ITEM_TABLE[kind]} SET cost_center_id = $2 WHERE id = $1`, [created.id, retired]);
+    await runner.query(`UPDATE ${LINE_TABLE} SET cost_center_id = $2 WHERE id = $1 AND nature = $3`, [created.id, retired, kind]);
     const update = await support.prepareUpdatePreview(ctx, { entity_type, ref: created.id, fields: { cost_center: 'AI-OLD', run_build: null } });
     assert.deepEqual(update.mutationInput.fields, { run_build: null }, `${kind}: the kept cost center is not a change`);
   });

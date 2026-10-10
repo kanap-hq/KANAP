@@ -35,7 +35,7 @@ type AiTaskTargetQueryConfig = {
   subject: string;
   displayPrefix: string;
   itemPrefix?: string;
-  /** A predicate on the target row: a `spend_item` names an OPEX line (`spend/budget-nature.ts`). */
+  /** A predicate on the target row: a `spend_item` names an OPEX line, a `capex_item` a CAPEX line (`spend/budget-nature.ts`). */
   where?: string;
 };
 
@@ -61,10 +61,12 @@ const TARGET_QUERY_CONFIG: Record<Exclude<AiTaskCreateTargetMode, 'standalone'>,
   capex_item: {
     mode: 'capex_item',
     type: 'capex_item',
-    table: 'capex_items',
-    nameColumn: 'description',
+    table: 'spend_items',
+    // The CAPEX title (lot Z1).
+    nameColumn: 'product_name',
     subject: 'CAPEX item',
     displayPrefix: 'CAPEX',
+    where: `target.nature = 'capex'`,
   },
 };
 

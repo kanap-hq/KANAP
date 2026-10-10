@@ -21,7 +21,7 @@ import {
 } from '../spend-summary.builder';
 import { fxKeyCurrency, fxSetKeySql, fxTableSql } from './budget-fx-table';
 import type { BudgetListRuntime, RuntimeNeeds } from './budget-list.runtime';
-import { natureAnd } from '../budget-nature';
+import { lineNumberSql, natureAnd } from '../budget-nature';
 
 /**
  * The OPEX and CAPEX lists as a list-engine config, built from the scope
@@ -80,6 +80,21 @@ export class BudgetListConfig implements ListConfig {
 
   private get scope() {
     return this.rt.scope;
+  }
+
+  /**
+   * The SQL of an item column field: the column the scope reads for it (`fieldColumns`: the CAPEX
+   * title is `product_name`), the number the nature shows for `item_number` (a CAPEX line's CPX
+   * number, `lineNumberSql`).
+   */
+  private columnSql(key: string): string {
+    if (key === 'item_number') return lineNumberSql('i', this.scope.nature);
+    return `i.${this.scope.fieldColumns[key] ?? key}`;
+  }
+
+  /** The id statements return the number the nature shows (`budgetListIds`, neighbours). */
+  selectColumn(column: string): string {
+    return column === 'item_number' ? `${this.columnSql(column)} AS item_number` : `i.${column}`;
   }
 
   /** The tenant, and the nature of the scope's lines: every statement of the list carries both. */
@@ -579,7 +594,7 @@ export class BudgetListConfig implements ListConfig {
     // Own keys only: a request key such as `constructor` or `__proto__` names no column.
     if (Object.prototype.hasOwnProperty.call(this.columns, key)) {
       const kind = this.columns[key];
-      const column = `i.${key}`;
+      const column = this.columnSql(key);
       switch (kind) {
         case 'uuid':
         case 'enum':
@@ -752,8 +767,8 @@ export class BudgetListConfig implements ListConfig {
       WHERE v.tenant_id = ${t} AND v.budget_year = ${Y} AND ${match(this.allocationLabelSql('v', Y))}`);
 
     const own = Array.from(new Set([
-      'i.item_number::text',
-      `${sqlLiteral(`${s.refPrefix}-`)} || i.item_number::text`,
+      `${this.columnSql('item_number')}::text`,
+      `${sqlLiteral(`${s.refPrefix}-`)} || ${this.columnSql('item_number')}::text`,
       `i.${s.nameField}`,
       'i.description',
       'i.notes',

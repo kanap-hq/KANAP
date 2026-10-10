@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { QueryRunner } from 'typeorm';
 import { SpendItemsService } from '../spend-items.service';
-import { CapexItemsService } from '../../capex/capex-items.service';
+import { CapexItemsService } from '../spend-items.service';
 import { AiQueryExecutor } from '../../ai/query/ai-query.executor';
 import { AiAggregateExecutor } from '../../ai/query/ai-aggregate.executor';
 import { getAiEntityRegistry } from '../../ai/query/registries';
@@ -43,17 +43,12 @@ const identityFx = {
 };
 const noAllocations = { computeForVersions: async () => new Map() };
 
+// One constructor for both natures since lot Z1: the CAPEX service is the OPEX one's subclass.
 function itemService(kind: Kind): any {
-  if (kind === 'opex') {
-    const args: any[] = Array.from({ length: 11 }, () => undefined);
-    args[4] = noAllocations;
-    args[6] = identityFx;
-    return new (SpendItemsService as any)(...args);
-  }
-  const args: any[] = Array.from({ length: 12 }, () => undefined);
+  const args: any[] = Array.from({ length: 11 }, () => undefined);
   args[4] = noAllocations;
-  args[7] = identityFx;
-  return new (CapexItemsService as any)(...args);
+  args[6] = identityFx;
+  return kind === 'opex' ? new (SpendItemsService as any)(...args) : new (CapexItemsService as any)(...args);
 }
 
 const nameOf = (kind: Kind, row: any) => (kind === 'opex' ? row.product_name : row.description);
@@ -104,15 +99,14 @@ async function seedFixture(runner: QueryRunner, kind: Kind): Promise<Fixture> {
     `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date) VALUES ($1, 'Zephyr agreement', $2, $3, '2024-01-01') RETURNING id`,
     [tenantId, company.id, supplier.id],
   );
-  const contractLink = kind === 'opex' ? ['contract_spend_items', 'spend_item_id'] : ['contract_capex_items', 'capex_item_id'];
-  await runner.query(`INSERT INTO ${contractLink[0]} (tenant_id, contract_id, ${contractLink[1]}) VALUES ($1, $2, $3)`, [tenantId, contract.id, ids.alpha]);
+  // Both natures share the link tables since lot Z1.
+  await runner.query(`INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES ($1, $2, $3)`, [tenantId, contract.id, ids.alpha]);
 
   const [project] = await runner.query(
     `INSERT INTO portfolio_projects (tenant_id, name, item_number) VALUES ($1, 'Nebula programme', 1) RETURNING id`,
     [tenantId],
   );
-  const projectLink = kind === 'opex' ? ['portfolio_project_opex', 'opex_id'] : ['portfolio_project_capex', 'capex_id'];
-  await runner.query(`INSERT INTO ${projectLink[0]} (tenant_id, project_id, ${projectLink[1]}) VALUES ($1, $2, $3)`, [tenantId, project.id, ids.bravo]);
+  await runner.query(`INSERT INTO portfolio_project_opex (tenant_id, project_id, opex_id) VALUES ($1, $2, $3)`, [tenantId, project.id, ids.bravo]);
 
   await runner.query(
     `INSERT INTO tasks (tenant_id, title, item_number, status, related_object_type, related_object_id) VALUES ($1, 'Renew licence', 1, 'open', $2, $3)`,
@@ -355,7 +349,8 @@ async function testSeveralLinkedProjects(kind: Kind) {
   await withFixture(kind, async (runner, { tenantId, ids }, svc) => {
     const opts = { manager: runner.manager };
     const [category] = await runner.query(`INSERT INTO portfolio_categories (tenant_id, name) VALUES ($1, 'Run') RETURNING id`, [tenantId]);
-    const link = kind === 'opex' ? ['portfolio_project_opex', 'opex_id'] : ['portfolio_project_capex', 'capex_id'];
+    // Both natures link their projects in portfolio_project_opex since lot Z1.
+    const link = ['portfolio_project_opex', 'opex_id'];
     for (const [itemNumber, project, stream] of [[2, 'Atlas', 'Digital'], [3, 'Borealis', 'Infra']] as const) {
       const [streamRow] = await runner.query(
         `INSERT INTO portfolio_streams (tenant_id, category_id, name) VALUES ($1, $2, $3) RETURNING id`,
@@ -467,7 +462,7 @@ async function testCapexEnumsSortInBusinessOrder() {
     ];
     for (const [id, priority, investment, ppe] of set) {
       await runner.query(
-        `UPDATE capex_items SET priority = $3, investment_type = $4, ppe_type = $5 WHERE tenant_id = $1 AND id = $2`,
+        `UPDATE spend_items SET priority = $3, investment_type = $4, ppe_type = $5 WHERE tenant_id = $1 AND id = $2 AND nature = 'capex'`,
         [tenantId, id, priority, investment, ppe],
       );
     }
@@ -556,7 +551,7 @@ async function testAiCapexDetail() {
   await withFixture('capex', async (runner, { tenantId, ids }, svc) => {
     const [app] = await runner.query(`INSERT INTO applications (tenant_id, name) VALUES ($1, 'Orion portal') RETURNING id`, [tenantId]);
     await runner.query(
-      `INSERT INTO application_capex_items (tenant_id, application_id, capex_item_id) VALUES ($1, $2, $3)`,
+      `INSERT INTO application_spend_items (tenant_id, application_id, spend_item_id) VALUES ($1, $2, $3)`,
       [tenantId, app.id, ids.alpha],
     );
     const args: any[] = Array.from({ length: 23 }, () => ({}));
@@ -577,8 +572,8 @@ async function testAiCapexAggregateIsComplete() {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, 'summary-aggregate');
     await runner.query(
-      `INSERT INTO capex_items (tenant_id, description, ppe_type, investment_type, priority, currency, effective_start, item_number)
-       SELECT $1, 'Bulk line ' || n, 'hardware', 'replacement', 'medium', 'EUR', '2020-01-01', n FROM generate_series(1, 1001) AS n`,
+      `INSERT INTO spend_items (tenant_id, nature, product_name, ppe_type, investment_type, priority, currency, effective_start, item_number, legacy_number)
+       SELECT $1, 'capex', 'Bulk line ' || n, 'hardware', 'replacement', 'medium', 'EUR', '2020-01-01', n, 'CPX-' || n FROM generate_series(1, 1001) AS n`,
       [tenantId],
     );
     const result: any = await aggregateExecutor(itemService('capex')).execute(aiContext(runner, tenantId) as any, {

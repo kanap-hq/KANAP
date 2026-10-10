@@ -1,7 +1,7 @@
 import { EntityManager } from 'typeorm';
 import { AuthorColumns, RecordChange, RecordMeta, counterWriterSql, recordChange } from '../common/record-meta';
 import type { ItemWriteScope } from './item-write.util';
-import { assertScopeNatures, natureAnd, type BudgetNature } from './budget-nature';
+import { assertScopeNatures, auditTableOf, natureAnd, type BudgetNature } from './budget-nature';
 
 /**
  * The meta of an OPEX or CAPEX line (plan planning/perf-scale, lot 3G; contract
@@ -47,10 +47,10 @@ export type BudgetLineMeta = RecordMeta & {
   versions: BudgetVersionMeta[];
 };
 
-// `items` is also the audit label of the line's rows; `nature`: the scope's lines in `spend_items` (`budget-nature.ts`).
-const TABLES: Record<ItemWriteScope, { items: string; versions: string; itemFk: string; rounds: string; nature?: BudgetNature }> = {
-  opex: { items: 'spend_items', versions: 'spend_versions', itemFk: 'spend_item_id', rounds: 'spend_round_inputs', nature: 'opex' },
-  capex: { items: 'capex_items', versions: 'capex_versions', itemFk: 'capex_item_id', rounds: 'capex_round_inputs' },
+// `audit`: the audit label of the line's rows, by nature (`auditTableOf`); `nature`: the scope's lines in `spend_items` (`budget-nature.ts`).
+const TABLES: Record<ItemWriteScope, { items: string; audit: string; versions: string; itemFk: string; rounds: string; nature?: BudgetNature }> = {
+  opex: { items: 'spend_items', audit: auditTableOf('opex', 'spend_items'), versions: 'spend_versions', itemFk: 'spend_item_id', rounds: 'spend_round_inputs', nature: 'opex' },
+  capex: { items: 'spend_items', audit: auditTableOf('capex', 'spend_items'), versions: 'spend_versions', itemFk: 'spend_item_id', rounds: 'spend_round_inputs', nature: 'capex' },
 };
 assertScopeNatures('item-meta', TABLES, (t) => t.items);
 
@@ -81,7 +81,7 @@ function versionWriterSql(t: (typeof TABLES)[ItemWriteScope]): string {
                   ORDER BY a.created_at
                   LIMIT ${OPERATION_WINDOW}
                ) o
-              WHERE o.table_name = '${t.items}' AND o.after_json->>'operation' IS NOT NULL
+              WHERE o.table_name = '${t.audit}' AND o.after_json->>'operation' IS NOT NULL
                 AND COALESCE(o.after_json->>'destinationYear', o.after_json->>'year') = v.budget_year::text
               ORDER BY o.created_at LIMIT 1)
           ) c
@@ -109,7 +109,7 @@ export async function readBudgetLineMeta(manager: EntityManager, scope: ItemWrit
                WHERE v.tenant_id = $1 AND v.${t.itemFk} = i.id
             ), '[]'::json) AS versions
        FROM ${t.items} i
-       LEFT JOIN LATERAL (${counterWriterSql({ tenant: '$1', table: t.items, recordId: 'i.id', counter: 'i.row_version' })}) w ON true
+       LEFT JOIN LATERAL (${counterWriterSql({ tenant: '$1', table: t.audit, recordId: 'i.id', counter: 'i.row_version' })}) w ON true
        LEFT JOIN users u ON u.tenant_id = $1 AND u.id = w.user_id
       WHERE i.tenant_id = $1 AND i.id = $2${natureAnd('i', t.nature)}`,
     [tenantId, itemId],

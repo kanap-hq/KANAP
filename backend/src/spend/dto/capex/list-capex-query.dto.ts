@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ListQuerySchema, ListQuery } from '../../common/dto/list-query.dto';
+import { ListQuerySchema, ListQuery } from '../../../common/dto/list-query.dto';
 import { PpeTypes, InvestmentTypes, PriorityLevels } from './create-capex-item.dto';
 
 /**

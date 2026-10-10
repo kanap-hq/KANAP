@@ -6,7 +6,6 @@ import { AssetHardwareInfo } from './asset-hardware-info.entity';
 import { AssetSupportInfo } from './asset-support-info.entity';
 import { AssetRelation } from './asset-relation.entity';
 import { AssetSpendItemLink } from './asset-spend-item.entity';
-import { AssetCapexItemLink } from './asset-capex-item.entity';
 import { AssetContractLink } from './asset-contract.entity';
 import { AssetLink } from './asset-link.entity';
 import { AssetAttachment } from './asset-attachment.entity';
@@ -47,7 +46,6 @@ import {
       AssetSupportInfo,
       AssetRelation,
       AssetSpendItemLink,
-      AssetCapexItemLink,
       AssetContractLink,
       AssetLink,
       AssetAttachment,

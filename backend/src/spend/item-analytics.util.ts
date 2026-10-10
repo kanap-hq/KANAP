@@ -13,8 +13,8 @@ import {
 
 /**
  * The analytics values of OPEX and CAPEX lines: one value per line and
- * dimension, stored in the link tables (`spend_item_analytics_values`,
- * `capex_item_analytics_values`). The item column `analytics_category_id` is
+ * dimension, stored in `spend_item_analytics_values` (both natures since lot
+ * Z1; the line's id says whose). The item column `analytics_category_id` is
  * no longer read or written; the legacy API field and AI key of that name
  * address the default dimension (`is_default`) through the links.
  *

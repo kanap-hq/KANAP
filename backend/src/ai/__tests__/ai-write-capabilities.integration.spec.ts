@@ -354,6 +354,24 @@ async function seedGraph(runner: QueryRunner): Promise<SeededTenant> {
      VALUES ($1, $2, $3, $4, 'Seeded spend item', $5, 'EUR', DATE '2026-01-01', 'enabled', 'Original spend note', (SELECT COALESCE(MAX(item_number), 0) + 1 FROM spend_items WHERE tenant_id = $2), now(), now())`,
     [spendItemId, tenantId, companyId, `PLAID Capability Spend ${tag}`, supplierId],
   );
+  // Lot Z1: a CAPEX line is a spend line of nature 'capex', its BL number in item_number
+  // (one numbering across both natures) and its CPX number in legacy_number.
+  await runner.query(
+    `INSERT INTO spend_items (
+       id, tenant_id, nature, paying_company_id, supplier_id, product_name, ppe_type,
+       investment_type, priority, currency, effective_start, status, notes,
+       item_number, legacy_number, created_at, updated_at
+     )
+     VALUES (
+       $1, $2, 'capex', $3, $4, $5, 'hardware', 'capacity', 'medium', 'EUR',
+       DATE '2026-01-01', 'enabled', 'Original capex note',
+       (SELECT COALESCE(MAX(item_number), 0) + 1 FROM spend_items WHERE tenant_id = $2),
+       'CPX-' || (SELECT COALESCE(MAX(substring(legacy_number FROM '^CPX-([0-9]+)$')::int), 0) + 1
+                  FROM spend_items WHERE tenant_id = $2 AND nature = 'capex'),
+       now(), now()
+     )`,
+    [capexItemId, tenantId, companyId, supplierId, `PLAID Capability CAPEX ${tag}`],
+  );
   await runner.query(
     `INSERT INTO item_sequences (tenant_id, entity_type, next_val)
      SELECT $1, 'spend', COALESCE(MAX(item_number), 0) + 1
@@ -364,23 +382,10 @@ async function seedGraph(runner: QueryRunner): Promise<SeededTenant> {
     [tenantId],
   );
   await runner.query(
-    `INSERT INTO capex_items (
-       id, tenant_id, paying_company_id, supplier_id, description, ppe_type,
-       investment_type, priority, currency, effective_start, status, notes,
-       item_number, created_at, updated_at
-     )
-     VALUES (
-       $1, $2, $3, $4, $5, 'hardware', 'capacity', 'medium', 'EUR',
-       DATE '2026-01-01', 'enabled', 'Original capex note',
-       (SELECT COALESCE(MAX(item_number), 0) + 1 FROM capex_items WHERE tenant_id = $2), now(), now()
-     )`,
-    [capexItemId, tenantId, companyId, supplierId, `PLAID Capability CAPEX ${tag}`],
-  );
-  await runner.query(
     `INSERT INTO item_sequences (tenant_id, entity_type, next_val)
-     SELECT $1, 'capex', COALESCE(MAX(item_number), 0) + 1
-     FROM capex_items
-     WHERE tenant_id = $1
+     SELECT $1, 'capex', COALESCE(MAX(substring(legacy_number FROM '^CPX-([0-9]+)$')::int), 0) + 1
+     FROM spend_items
+     WHERE tenant_id = $1 AND nature = 'capex'
      ON CONFLICT (tenant_id, entity_type)
      DO UPDATE SET next_val = GREATEST(item_sequences.next_val, EXCLUDED.next_val)`,
     [tenantId],
@@ -646,7 +651,7 @@ async function testRelationWritesAndSupplierPropagationUndo(harness: Harness) {
 
     for (const [table, itemColumn, itemId] of [
       ['spend_item_contacts', 'spend_item_id', seed.spendItemId],
-      ['capex_item_contacts', 'capex_item_id', seed.capexItemId],
+      ['spend_item_contacts', 'spend_item_id', seed.capexItemId], // the CAPEX line's contacts (lot Z1)
       ['contract_contacts', 'contract_id', seed.contractId],
     ] as const) {
       const rows = await runner.query(
@@ -983,9 +988,9 @@ async function testCapexOwnersAnalyticsAndApplications(harness: Harness) {
     await approvePreview(harness, ctx, preview);
     const [capexRow] = await runner.query(
       `SELECT ci.owner_it_id, ci.owner_business_id, v.category_id AS analytics_category_id
-         FROM capex_items ci
-         LEFT JOIN capex_item_analytics_values v ON v.tenant_id = ci.tenant_id AND v.item_id = ci.id AND v.axis_id = $3
-        WHERE ci.tenant_id = $1 AND ci.id = $2`,
+         FROM spend_items ci
+         LEFT JOIN spend_item_analytics_values v ON v.tenant_id = ci.tenant_id AND v.item_id = ci.id AND v.axis_id = $3
+        WHERE ci.tenant_id = $1 AND ci.id = $2 AND ci.nature = 'capex'`,
       [seed.tenantId, seed.capexItemId, axisId],
     );
     assert.deepEqual(
@@ -1003,7 +1008,7 @@ async function testCapexOwnersAnalyticsAndApplications(harness: Harness) {
     });
     await approvePreview(harness, relationCtx, relationPreview);
     const linkRows = () => runner.query(
-      `SELECT application_id FROM application_capex_items WHERE tenant_id = $1 AND capex_item_id = $2`,
+      `SELECT application_id FROM application_spend_items WHERE tenant_id = $1 AND spend_item_id = $2`,
       [seed.tenantId, seed.capexItemId],
     );
     assert.deepEqual((await linkRows()).map((row: any) => row.application_id), [seed.applicationId], 'the CAPEX item is linked to the application');
@@ -1054,7 +1059,7 @@ async function testItemAnalyticsCategoryThroughTheLinks(harness: Harness) {
 
     for (const [entityType, itemId, itemTable, linkTable] of [
       ['spend_items', seed.spendItemId, 'spend_items', 'spend_item_analytics_values'],
-      ['capex_items', seed.capexItemId, 'capex_items', 'capex_item_analytics_values'],
+      ['capex_items', seed.capexItemId, 'spend_items', 'spend_item_analytics_values'], // a CAPEX line's storage since lot Z1
     ] as const) {
       await runner.query(
         `INSERT INTO ${linkTable} (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4)`,
@@ -1149,7 +1154,7 @@ async function testItemAnalyticsDimensions(harness: Harness) {
         createFields: { product_name: `Dimensions ${seed.tag}`, paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01' },
       },
       {
-        entityType: 'capex_items', itemId: seed.capexItemId, linkTable: 'capex_item_analytics_values', labelPlural: 'CAPEX items',
+        entityType: 'capex_items', itemId: seed.capexItemId, linkTable: 'spend_item_analytics_values', labelPlural: 'CAPEX items',
         lineType: 'CAPEX', otherType: 'OPEX', ownAxis: assetClass, ownCode: 'asset-class', ownValue: servers, ownName: 'Servers',
         otherCode: 'recurrence', otherName: 'Recurrence', otherValueName: 'Monthly',
         createFields: {
@@ -1202,8 +1207,9 @@ async function testItemAnalyticsDimensions(harness: Harness) {
       const createdId = (await approvePreview(harness, ctx, created)).target.entity_id;
       assert.deepEqual(await links(createdId), { [nature]: licences, [site]: paris, [line.ownAxis]: line.ownValue }, `${entityType}: created with its values`);
       const [{ count }] = await runner.query(
-        `SELECT count(*)::int AS count FROM ${entityType} WHERE tenant_id = $1 AND ${entityType === 'spend_items' ? 'product_name' : 'description'} = $2`,
-        [seed.tenantId, `Dimensions ${seed.tag}`],
+        // Both natures in spend_items since lot Z1, the CAPEX title in product_name.
+        `SELECT count(*)::int AS count FROM spend_items WHERE tenant_id = $1 AND nature = $3 AND product_name = $2`,
+        [seed.tenantId, `Dimensions ${seed.tag}`, entityType === 'spend_items' ? 'opex' : 'capex'],
       );
       assert.equal(count, 1, `${entityType}: one line created`);
 
@@ -1362,7 +1368,7 @@ async function testItemRequiredDimensions(harness: Harness) {
         createFields: { product_name: `Required ${seed.tag}`, paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01' },
       },
       {
-        entityType: 'capex_items', itemId: seed.capexItemId, linkTable: 'capex_item_analytics_values', label: 'CAPEX item', other: 'opex',
+        entityType: 'capex_items', itemId: seed.capexItemId, linkTable: 'spend_item_analytics_values', label: 'CAPEX item', other: 'opex',
         createFields: {
           description: `Required ${seed.tag}`, ppe_type: 'hardware', investment_type: 'capacity', priority: 'medium',
           paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01',
@@ -1512,7 +1518,11 @@ async function createHarness(): Promise<Harness> {
 async function testBudgetLinesByBusinessReference(harness: Harness) {
   await withSeededTransaction(harness, async (runner, seed) => {
     const [spend] = await runner.query(`SELECT item_number FROM spend_items WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.spendItemId]);
-    const [capex] = await runner.query(`SELECT item_number FROM capex_items WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.capexItemId]);
+    // A CAPEX line's CPX number is its legacy number since lot Z1.
+    const [capex] = await runner.query(
+      `SELECT substring(legacy_number FROM '^CPX-([0-9]+)$')::int AS item_number FROM spend_items WHERE tenant_id = $1 AND id = $2 AND nature = 'capex'`,
+      [seed.tenantId, seed.capexItemId],
+    );
     const cases = [
       { entityType: 'spend_items', itemId: seed.spendItemId, ref: `OPX-${spend.item_number}`, otherRef: `CPX-${capex.item_number}`, labelPlural: 'spend items' },
       { entityType: 'capex_items', itemId: seed.capexItemId, ref: `cpx-${capex.item_number}`, otherRef: `OPX-${spend.item_number}`, labelPlural: 'CAPEX items' },
@@ -1526,7 +1536,7 @@ async function testBudgetLinesByBusinessReference(harness: Harness) {
       });
       assert.equal(preview.target.entity_id, itemId, `${ref} targets the seeded line`);
       await approvePreview(harness, ctx, preview);
-      const [row] = await runner.query(`SELECT notes FROM ${entityType} WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, itemId]);
+      const [row] = await runner.query(`SELECT notes FROM spend_items WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, itemId]);
       assert.equal(row.notes, `Notes by reference ${seed.tag}`, `${ref} updates the line`);
 
       await expectRejects(

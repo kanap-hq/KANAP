@@ -1,5 +1,7 @@
 import { EntityManager } from 'typeorm';
 
+// `capex_attachments` is dormant since lot Z1 (its rows are in `spend_attachments`, same paths):
+// it no longer says whether a file is in use.
 const ATTACHMENT_TABLES = [
   'portfolio_project_attachments',
   'portfolio_request_attachments',
@@ -9,7 +11,6 @@ const ATTACHMENT_TABLES = [
   'interface_attachments',
   'contract_attachments',
   'spend_attachments',
-  'capex_attachments',
   'asset_attachments',
   'incident_attachments',
 ] as const;

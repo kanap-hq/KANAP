@@ -35,13 +35,15 @@ import {
   setTenant,
 } from '../../__tests__/round-inputs.fixtures';
 import { readBudgetCsv } from '../interpret';
-import { ITEM_TABLE, itemService, seedCompany, seedCostCenter, seedUser } from '../../__tests__/cost-center.fixtures';
+import { itemService, seedCompany, seedCostCenter, seedUser } from '../../__tests__/cost-center.fixtures';
 import { BUDGET_FILE_OPTIONS, budgetFileService, exportBudgetFile, fileRows, loadBudgetFile, preflightBudgetFile, withCell } from '../../__tests__/budget-file.fixtures';
 import { upsertRoundInput } from '../../round-inputs.util';
 import { ANALYTICS_VALUE_ORDER_SQL, ensureDefaultAnalyticsAxis } from '../../../analytics/analytics-axes.util';
 import { lockTenantBudgetOperations } from '../../budget-locks';
 
 // The loader against the schema. The transaction rolls back, so this writes nothing that stays.
+// The lines of both natures, their months and analytics values are in the spend_* tables since lot Z1:
+// a CAPEX line has nature 'capex', its title in product_name and its CPX number in legacy_number.
 // @database-spec
 // Run with DATABASE_URL on appdb_csvcopy, not appdb.
 
@@ -170,7 +172,7 @@ async function testCapexSpread(runner: { query: Function; manager: EntityManager
   const itemId = await seedItem(runner as any, 'capex', tenantId, 1, 'Server');
   const versionId = await seedVersion(runner as any, 'capex', tenantId, itemId, 2026);
   await runner.query(
-    `INSERT INTO capex_amounts (tenant_id, version_id, period, planned) VALUES ($1, $2, '2026-01-01', 100)`,
+    `INSERT INTO spend_amounts (tenant_id, version_id, period, planned) VALUES ($1, $2, '2026-01-01', 100)`,
     [tenantId, versionId],
   );
   const caller = { manager: runner.manager, tenantId, userId: null };
@@ -187,7 +189,32 @@ async function testCapexSpread(runner: { query: Function; manager: EntityManager
     { items: { create: async () => { throw new Error('capex details were not part of this file'); }, update: async () => { throw new Error('capex details were not part of this file'); } }, audit, freeze: noFreeze },
   );
   assert.equal('updated' in result && result.updated, 1);
-  assert.equal(await amountSum(runner, 'capex_amounts', versionId), '50');
+  assert.equal(await amountSum(runner, 'spend_amounts', versionId), '50');
+
+  // A year with no version yet: the load creates it, audited under the CAPEX label and shape
+  // (the line as capex_item_id, as the CAPEX routes show a version).
+  const twoYears = await service.exportFile('capex', [itemId], caller, { language: 'en', amountYears: '2026,2027', columns: 'budget', detail: 'yearly' });
+  const [headerLine, rowLine] = twoYears.content.replace(/^\uFEFF/, '').split(/\r?\n/);
+  assert.ok(!rowLine.includes('"'), `a plain row to edit (${rowLine})`);
+  const cells = rowLine.split(',');
+  cells[headerLine.split(',').indexOf('budget_2027')] = '30';
+  const nextYear = cells.join(',');
+  const nextFile = twoYears.content.replace(rowLine, nextYear);
+  const nextPreflight = await service.preflight('capex', Buffer.from(nextFile), caller, {
+    language: 'en', dateOrder: '', createSuppliers: false, canCreateSuppliers: false,
+  });
+  await service.importFile(
+    'capex', Buffer.from(nextFile), nextPreflight.snapshot, caller,
+    { language: 'en', dateOrder: '', createSuppliers: false, canCreateSuppliers: false },
+    { items: { create: async () => { throw new Error('no line created'); }, update: async () => { throw new Error('no line updated'); } }, audit, freeze: noFreeze },
+  );
+  const [created] = await runner.query(
+    `SELECT a.table_name, a.after_json FROM audit_log a JOIN spend_versions v ON v.id = a.record_id
+      WHERE a.tenant_id = $1 AND v.spend_item_id = $2 AND v.budget_year = 2027 AND a.action = 'create'`,
+    [tenantId, itemId],
+  );
+  assert.equal(created?.table_name, 'capex_versions', 'the created version is audited as a CAPEX version');
+  assert.deepEqual([created.after_json.capex_item_id, 'spend_item_id' in created.after_json], [itemId, false], 'naming its line capex_item_id');
 }
 
 /**
@@ -430,12 +457,13 @@ function ref(kind: Kind, n: number): string {
 
 /** The lines of the tenant by name: item number, company, account, cost center, run/build, currency. */
 async function linesByName(runner: { query: Function }, kind: Kind, tenantId: string) {
-  const name = kind === 'opex' ? 'product_name' : 'description';
+  // `n`: the number the file names the line by (`ref`), a CAPEX line's CPX number (its legacy number).
+  const number = kind === 'opex' ? 'item_number::int' : `substring(legacy_number FROM '^CPX-([0-9]+)$')::int`;
   const rows: any[] = await runner.query(
-    `SELECT id, item_number::int AS n, ${name} AS name, paying_company_id, account_id, cost_center_id,
+    `SELECT id, ${number} AS n, product_name AS name, paying_company_id, account_id, cost_center_id,
             run_build::text AS run_build, currency, owner_it_id
-       FROM ${ITEM_TABLE[kind]} WHERE tenant_id = $1`,
-    [tenantId],
+       FROM spend_items WHERE tenant_id = $1 AND nature = $2`,
+    [tenantId, kind],
   );
   return new Map(rows.map((row) => [row.name as string, row]));
 }
@@ -662,13 +690,13 @@ async function testDimensionCells(runner: { query: Function; manager: EntityMana
     `SELECT name FROM analytics_categories WHERE tenant_id = $1 AND axis_id = $2 ORDER BY name`, [tenantId, axisId],
   )).map((row: { name: string }) => row.name);
   const links = async () => (await runner.query(
-    `SELECT i.${kind === 'opex' ? 'product_name' : 'description'} AS line, ax.code, c.name AS value
-       FROM ${kind === 'opex' ? 'spend_item_analytics_values' : 'capex_item_analytics_values'} v
-       JOIN ${ITEM_TABLE[kind]} i ON i.tenant_id = v.tenant_id AND i.id = v.item_id
+    `SELECT i.product_name AS line, ax.code, c.name AS value
+       FROM spend_item_analytics_values v
+       JOIN spend_items i ON i.tenant_id = v.tenant_id AND i.id = v.item_id AND i.nature = $2
        JOIN analytics_axes ax ON ax.tenant_id = v.tenant_id AND ax.id = v.axis_id
        JOIN analytics_categories c ON c.tenant_id = v.tenant_id AND c.id = v.category_id
       WHERE v.tenant_id = $1`,
-    [tenantId],
+    [tenantId, kind],
   )).map((row: { line: string; code: string; value: string }) => `${row.line} | ${row.code} | ${row.value}`).sort();
 
   for (const header of ['analytics:nope', 'analytics:old']) {
@@ -705,7 +733,7 @@ async function testDimensionCells(runner: { query: Function; manager: EntityMana
   assert.deepEqual([roundTrip.ok, roundTrip.changes.unchanged], [true, 2], `${kind}: an export of two dimensions reads back unchanged (${JSON.stringify(roundTrip.errors)})`);
 
   await runner.query(
-    `UPDATE ${kind === 'opex' ? 'spend_item_analytics_values' : 'capex_item_analytics_values'} SET category_id = $3 WHERE tenant_id = $1 AND item_id = $2 AND axis_id = $4`,
+    `UPDATE spend_item_analytics_values SET category_id = $3 WHERE tenant_id = $1 AND item_id = $2 AND axis_id = $4`,
     [tenantId, alpha.id, retired, nature],
   );
   const kept = await preflightBudgetFile(runner.manager, kind, tenantId, csvOf(['item_number', 'analytics:nature'], [{ item_number: ref(kind, alpha.n), 'analytics:nature': 'Retired' }]));
@@ -721,7 +749,7 @@ async function testDimensionCells(runner: { query: Function; manager: EntityMana
   const refusedNew = await preflightBudgetFile(runner.manager, kind, tenantId, csvOf(columns, [newLine(kind, 'Delta', { 'analytics:nature': 'Reserved' })]));
   assert.deepEqual(rowErrors(refusedNew), [`2 analytics:nature: ${typeMessage}`], `${kind}: and on a new line`);
   await runner.query(
-    `UPDATE ${kind === 'opex' ? 'spend_item_analytics_values' : 'capex_item_analytics_values'} SET category_id = $3 WHERE tenant_id = $1 AND item_id = $2 AND axis_id = $4`,
+    `UPDATE spend_item_analytics_values SET category_id = $3 WHERE tenant_id = $1 AND item_id = $2 AND axis_id = $4`,
     [tenantId, alpha.id, reserved, nature],
   );
   const keptType = await preflightBudgetFile(runner.manager, kind, tenantId, csvOf(['item_number', 'analytics:nature'], [{ item_number: ref(kind, alpha.n), 'analytics:nature': 'Reserved' }]));
@@ -739,7 +767,7 @@ async function testDimensionCells(runner: { query: Function; manager: EntityMana
   const recurrence = await axis('recurrence', 'Recurrence', 3);
   const monthly = await value(recurrence, 'Monthly');
   await runner.query(
-    `INSERT INTO ${kind === 'opex' ? 'spend_item_analytics_values' : 'capex_item_analytics_values'} (tenant_id, item_id, axis_id, category_id)
+    `INSERT INTO spend_item_analytics_values (tenant_id, item_id, axis_id, category_id)
      VALUES ($1, $2, $3, $4)`,
     [tenantId, alpha.id, recurrence, monthly],
   );
@@ -755,7 +783,7 @@ async function testDimensionCells(runner: { query: Function; manager: EntityMana
     + `Remove the analytics:recurrence column from this ${kind.toUpperCase()} file.`;
   // The load reads the file again: refused by its header, nothing written.
   const linksBeforeLoad = await links();
-  const [{ n: linesBeforeLoad }] = await runner.query(`SELECT count(*)::int AS n FROM ${ITEM_TABLE[kind]} WHERE tenant_id = $1`, [tenantId]);
+  const [{ n: linesBeforeLoad }] = await runner.query(`SELECT count(*)::int AS n FROM spend_items WHERE tenant_id = $1 AND nature = $2`, [tenantId, kind]);
   const staleLoad = await budgetFileService().importFile(
     kind, Buffer.from(staleFile, 'utf8'), stalePreflight.snapshot, { manager: runner.manager, tenantId, userId: null }, BUDGET_FILE_OPTIONS,
     { items: itemService(kind), audit: captureAudit() as any, freeze: noFreeze },
@@ -764,7 +792,7 @@ async function testDimensionCells(runner: { query: Function; manager: EntityMana
   assert.deepEqual('headerErrors' in staleLoad ? staleLoad.headerErrors : null, [message], `${kind}: with the contract message`);
   assert.deepEqual(await links(), linksBeforeLoad, `${kind}: the load writes no value`);
   assert.deepEqual(await valuesOf(recurrence), ['Monthly'], `${kind}: nor creates one`);
-  const [{ n: linesAfterLoad }] = await runner.query(`SELECT count(*)::int AS n FROM ${ITEM_TABLE[kind]} WHERE tenant_id = $1`, [tenantId]);
+  const [{ n: linesAfterLoad }] = await runner.query(`SELECT count(*)::int AS n FROM spend_items WHERE tenant_id = $1 AND nature = $2`, [tenantId, kind]);
   assert.equal(linesAfterLoad, linesBeforeLoad, `${kind}: nor a line`);
   for (const header of ['analytics:recurrence', 'Analytics:Recurrence']) {
     const refused = await preflightBudgetFile(runner.manager, kind, tenantId, csvOf(['item_number', header], [{ item_number: ref(kind, alpha.n), [header]: 'Monthly' }]));
@@ -810,7 +838,7 @@ async function testRequiredDimensionCells(runner: { query: Function; manager: En
   ]));
   const lines = await linesByName(runner, kind, tenantId);
   const [{ n: linked }] = await runner.query(
-    `SELECT count(*)::int AS n FROM ${kind === 'opex' ? 'spend_item_analytics_values' : 'capex_item_analytics_values'}
+    `SELECT count(*)::int AS n FROM spend_item_analytics_values
       WHERE tenant_id = $1 AND axis_id = $2`,
     [tenantId, menu],
   );
@@ -956,7 +984,7 @@ async function testExportAmountSwitch(runner: { query: Function; manager: Entity
   const tenantId = await seedTenant(runner as any, `csv-p1b-${kind}`);
   const itemId = await seedItem(runner as any, kind, tenantId, 1, 'Amount switch');
   const versionId = await seedVersion(runner as any, kind, tenantId, itemId, 2027);
-  const table = kind === 'opex' ? 'spend_amounts' : 'capex_amounts';
+  const table = 'spend_amounts';
   await runner.query(
     `INSERT INTO ${table} (tenant_id, version_id, period, planned) VALUES ($1, $2, '2027-01-01', 12280)`,
     [tenantId, versionId],

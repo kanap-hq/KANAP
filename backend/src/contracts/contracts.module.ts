@@ -4,7 +4,6 @@ import { Contract } from './contract.entity';
 import { ContractSpendItem } from './contract-spend-item.entity';
 import { ContractLink } from './contract-link.entity';
 import { ContractAttachment } from './contract-attachment.entity';
-import { ContractCapexItem } from './contract-capex-item.entity';
 import { ContractsService } from './contracts.service';
 import { ContractsController } from './contracts.controller';
 import { SpendItemContractsController } from './spend-item-contracts.controller';
@@ -22,7 +21,7 @@ import { SupplierContactLink } from '../contacts/supplier-contact.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Contract, ContractSpendItem, ContractLink, ContractAttachment, ContractCapexItem, ContractContactLink, ExternalContact, SupplierContactLink]), AuditModule, PermissionsModule, forwardRef(() => UsersModule), TasksModule, StorageModule, NotificationsModule],
+  imports: [TypeOrmModule.forFeature([Contract, ContractSpendItem, ContractLink, ContractAttachment, ContractContactLink, ExternalContact, SupplierContactLink]), AuditModule, PermissionsModule, forwardRef(() => UsersModule), TasksModule, StorageModule, NotificationsModule],
   providers: [ContractsService, ContractContactsService],
   controllers: [ContractsController, SpendItemContractsController, CapexItemContractsController],
   exports: [ContractsService],

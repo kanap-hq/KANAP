@@ -211,9 +211,10 @@ async function testSummaryClearMatchesNothing() {
   await withTenant(async (runner, tenantId) => {
     const opts = runner.manager;
     await runner.query(`INSERT INTO spend_items (tenant_id, product_name, currency, effective_start, item_number) VALUES ($1, 'Scope line', 'EUR', '2020-01-01', 1)`, [tenantId]);
+    // A CAPEX line of spend_items since lot Z1: its own BL number, CPX-1 kept as its legacy number.
     await runner.query(
-      `INSERT INTO capex_items (tenant_id, description, ppe_type, investment_type, priority, currency, effective_start, item_number)
-       VALUES ($1, 'Scope line', 'hardware', 'replacement', 'medium', 'EUR', '2020-01-01', 1)`,
+      `INSERT INTO spend_items (tenant_id, nature, product_name, ppe_type, investment_type, priority, currency, effective_start, item_number, legacy_number)
+       VALUES ($1, 'capex', 'Scope line', 'hardware', 'replacement', 'medium', 'EUR', '2020-01-01', 2, 'CPX-1')`,
       [tenantId],
     );
     const deps: any = {

@@ -18,7 +18,6 @@ import { PortfolioRequestDependency } from './portfolio-request-dependency.entit
 import { PortfolioRequestUrl } from './portfolio-request-url.entity';
 import { PortfolioRequestAttachment } from './portfolio-request-attachment.entity';
 import { PortfolioRequestProject } from './portfolio-request-project.entity';
-import { PortfolioRequestCapex } from './portfolio-request-capex.entity';
 import { PortfolioRequestOpex } from './portfolio-request-opex.entity';
 import { PortfolioRequestBusinessProcess } from './portfolio-request-business-process.entity';
 
@@ -28,7 +27,6 @@ import { PortfolioProjectContact } from './portfolio-project-contact.entity';
 import { PortfolioProjectDependency } from './portfolio-project-dependency.entity';
 import { PortfolioProjectUrl } from './portfolio-project-url.entity';
 import { PortfolioProjectAttachment } from './portfolio-project-attachment.entity';
-import { PortfolioProjectCapex } from './portfolio-project-capex.entity';
 import { PortfolioProjectOpex } from './portfolio-project-opex.entity';
 
 // Phase templates and project phases/milestones
@@ -140,7 +138,6 @@ const entities = [
   PortfolioRequestUrl,
   PortfolioRequestAttachment,
   PortfolioRequestProject,
-  PortfolioRequestCapex,
   PortfolioRequestOpex,
   PortfolioRequestBusinessProcess,
   PortfolioProjectTeam,
@@ -148,7 +145,6 @@ const entities = [
   PortfolioProjectDependency,
   PortfolioProjectUrl,
   PortfolioProjectAttachment,
-  PortfolioProjectCapex,
   PortfolioProjectOpex,
   PortfolioPhaseTemplate,
   PortfolioPhaseTemplateItem,

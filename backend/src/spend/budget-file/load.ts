@@ -3,7 +3,7 @@ import { AnalyticsAxisInfo, analyticsAxisSubject, axisAppliesTo, loadAnalyticsAx
 import { toCents } from '../../common/amount';
 import { budgetColumnName, readBudgetColumns } from '../../budget-columns/budget-columns.util';
 import { loadItemAnalyticsValues } from '../item-analytics.util';
-import { assertScopeNatures, natureAnd, type BudgetNature } from '../budget-nature';
+import { assertScopeNatures, lineNumberSql, natureAnd, type BudgetNature } from '../budget-nature';
 import { AMOUNT_MEASURES } from '../amounts-write.util';
 import { columnOfMeasure } from './columns';
 import {
@@ -17,10 +17,11 @@ import {
 
 /**
  * Table and column names come only from here. A request never chooses them.
- * Both item types share the shape the file uses. CAPEX stores its title in
- * `description`. OPEX stores it in `product_name`. `nature`: every read of
- * the line table names the scope's lines (`budget-nature.ts`); the versions
- * and values are read through those lines.
+ * Both natures share the tables (lot Z1) and the shape the file uses; the
+ * title is `product_name`. `nature`: every read of the line table names the
+ * scope's lines (`budget-nature.ts`); the versions and values are read
+ * through those lines. A CAPEX line's number in the file is its CPX number
+ * (`lineNumberSql`), as before lot Z1.
  */
 const SCOPE = {
   opex: {
@@ -38,13 +39,13 @@ const SCOPE = {
     analytics: 'opex' as const,
   },
   capex: {
-    items: 'capex_items',
-    nature: undefined as BudgetNature | undefined,
-    versions: 'capex_versions',
-    amounts: 'capex_amounts',
-    itemFk: 'capex_item_id',
-    name: 'i.description',
-    nameColumn: 'description',
+    items: 'spend_items',
+    nature: 'capex' as BudgetNature | undefined,
+    versions: 'spend_versions',
+    amounts: 'spend_amounts',
+    itemFk: 'spend_item_id',
+    name: 'i.product_name',
+    nameColumn: 'product_name',
     description: 'NULL::text',
     ppe: 'i.ppe_type::text',
     investment: 'i.investment_type::text',
@@ -56,7 +57,7 @@ assertScopeNatures('budget-file load', SCOPE, (t) => t.items);
 
 const ITEM_COLUMNS = (scope: BudgetFileScope) => {
   const t = SCOPE[scope];
-  return `i.id::text AS id, i.item_number::int AS item_number, i.row_version::int AS row_version,
+  return `i.id::text AS id, ${lineNumberSql('i', t.nature)}::int AS item_number, i.row_version::int AS row_version,
     ${t.name} AS name, ${t.description} AS description,
     ${t.ppe} AS ppe_type, ${t.investment} AS investment_type, ${t.priority} AS priority,
     i.paying_company_id::text AS company_id, i.supplier_id::text AS supplier_id,
@@ -142,8 +143,8 @@ export async function loadExportLines(
 async function loadNames(manager: EntityManager, scope: BudgetFileScope, tenantId: string): Promise<LineHint[]> {
   const t = SCOPE[scope];
   const rows: Array<{ item_number: number; name: string; supplier_id: string | null }> = await manager.query(
-    `SELECT item_number::int AS item_number, ${t.nameColumn} AS name, supplier_id::text AS supplier_id
-       FROM ${t.items} WHERE tenant_id = $1${natureAnd(null, t.nature)}`,
+    `SELECT ${lineNumberSql('i', t.nature)}::int AS item_number, i.${t.nameColumn} AS name, i.supplier_id::text AS supplier_id
+       FROM ${t.items} i WHERE i.tenant_id = $1${natureAnd('i', t.nature)}`,
     [tenantId],
   );
   return rows.map((row) => ({ itemNumber: Number(row.item_number), name: row.name ?? '', supplierId: row.supplier_id }));
@@ -158,7 +159,7 @@ async function loadLinesByNumber(
   if (itemNumbers.length === 0) return [];
   const t = SCOPE[scope];
   const rows: ItemSql[] = await manager.query(
-    `SELECT ${ITEM_COLUMNS(scope)} FROM ${t.items} i WHERE i.tenant_id = $1${natureAnd('i', t.nature)} AND i.item_number = ANY($2::int[])`,
+    `SELECT ${ITEM_COLUMNS(scope)} FROM ${t.items} i WHERE i.tenant_id = $1${natureAnd('i', t.nature)} AND ${lineNumberSql('i', t.nature)} = ANY($2::int[])`,
     [tenantId, itemNumbers],
   );
   return hydrate(manager, scope, tenantId, rows);

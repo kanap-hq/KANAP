@@ -216,6 +216,8 @@ or subscriptions must work in both modes.
 - `queryRunner.query()` / `manager.query()` return `[rows, rowCount]` for an `UPDATE` or `DELETE`, even
   with `RETURNING`: `.length` is always 2. Count with `WITH changed AS (UPDATE ... RETURNING 1) SELECT count(*)`.
 - The JWT payload carries the user id in `sub`: use `req.user.sub`, not `req.user.id`.
+- `spend_*` holds the budget lines of both natures (`spend_items.nature`, `opex` or `capex`): every query on
+  them names the nature (`backend/src/spend/budget-nature.ts`). No code reads or writes the dormant `capex_*` tables.
 - Nest matches routes in declaration order: declare `@Get('export')` before `@Get(':id')`.
 - Fire-and-forget notifications must never reject (an unhandled rejection exits Node). Mark them
   `@NeverRejects()` and never hand them the request's entity manager, which may be released first.
