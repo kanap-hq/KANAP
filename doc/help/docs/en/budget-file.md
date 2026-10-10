@@ -66,7 +66,7 @@ The detail columns are the same for both kinds of line.
 | `end_of_validity` | The day the line stops | No end |
 | `notes` | Free text | Optional |
 
-The description of a CAPEX line is read and written by the file. The CAPEX screens do not show it yet.
+On a CAPEX line, `description` is not read or written yet: the export leaves it empty, and a filled cell is ignored with a warning.
 
 ### Amount columns
 
@@ -101,7 +101,7 @@ An absent column keeps every stored value of that column. A file holding only `i
 ## Adding and matching lines
 
 - `item_number` filled: that line is updated. Empty: a new line is created, of the kind its `nature` cell says.
-- `item_number` holds the line's reference, `BL-12`. A bare number is the same reference, on both lists. The `OPX-12` and `CPX-3` numbers of earlier files still name their line. Naming one line twice in a file is a row error.
+- `item_number` holds the line's reference, `BL-12`. In a file with a `nature` column, a bare number is the same reference, on both lists. The `OPX-12` and `CPX-3` numbers of earlier files still name their line. Naming one line twice in a file is a row error.
 - A line keeps its kind. A row that names an existing line with the other `nature` is refused, for example "BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line."
 - A file that holds OPEX and CAPEX lines needs administration rights on both. Without one of them, each line of that kind is refused with the right it needs, for example "Importing CAPEX lines needs the Admin level on CAPEX." The other lines are checked as usual, and the file loads once those rows are removed.
 - Each row is checked against its own kind: the dimensions and values it may hold, its account, the frozen columns and the duplicate warning. A column frozen for CAPEX refuses a change on a CAPEX line only.
@@ -125,7 +125,7 @@ An absent column keeps every stored value of that column. A file holding only `i
 | **Errors** | The rows the load refuses, by line of the file with the column when it knows it. A file with one error loads nothing |
 | **Changes** | The lines to create, the lines to update and the lines the file leaves as they are |
 | **Changed in KANAP since the export** | The lines someone changed after your export, with who and when. Loading the file writes your values over those changes |
-| **Warnings** | A row that looks like another line, columns the file ignores |
+| **Warnings** | A row that looks like another line, columns and cells the file ignores |
 | **Created by the load** | The suppliers and the dimension values the load would add |
 
 3. Click **Load**. The load writes everything or nothing.
@@ -152,7 +152,9 @@ A CAPEX file exported before the PP&E type, investment type and priority became 
 
 Export a fresh file and copy your rows into it.
 
-An OPEX or CAPEX file exported before the `nature` column was added is accepted. Its rows are read as lines of the list you import it on, and its `OPX-12` and `CPX-3` numbers still name their lines: import an earlier OPEX file from the OPEX list and an earlier CAPEX file from the CAPEX list. Its `kanap_token` cells stay valid.
+An OPEX or CAPEX file exported before the `nature` column was added is accepted. Its rows are read as lines of the list you import it on, and its `OPX-12` and `CPX-3` numbers still name their lines: import an earlier OPEX file from the OPEX list and an earlier CAPEX file from the CAPEX list. Its `kanap_token` cells stay valid. A bare number keeps its earlier meaning in such a file: on the CAPEX list, `3` is `CPX-3`; on the OPEX list, it is the number of the OPEX line.
+
+KANAP recognises the `nature` column by its name, whatever the case. An earlier file with a column of your own named Nature must rename it before the import: KANAP would read that column as the kind of each line and refuse its values.
 
 ## Loading a whole budget
 

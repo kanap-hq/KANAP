@@ -56,14 +56,14 @@ A line also links to projects, requests, applications, assets, contracts, contac
 
 ### OPEX and CAPEX lines
 
-A line lives across years: a three-year licence is one line with three budget years. KANAP gives each line a number when it is created, its reference `BL-12`, the same series for OPEX and CAPEX. The lists still show `OPX-12` for an OPEX line and `CPX-3` for a CAPEX line. The budget file names a line by its `BL-12` reference, and reads the `OPX` and `CPX` numbers too.
+A line lives across years: a three-year licence is one line with three budget years. KANAP gives each line a number when it is created, its reference `BL-12`, the same series for OPEX and CAPEX. The lists still show `OPX-12` for an OPEX line and `CPX-3` for a CAPEX line. The budget file names a line by its `BL-12` reference, and reads the `OPX` and `CPX` numbers too. In a file without a `nature` column, a bare number keeps its earlier meaning (`CPX-3` on the CAPEX list).
 
 | Field | Column in the budget file | Required | Notes |
 |---|---|---|---|
 | Nature | `nature` | Yes | `opex` or `capex`. A file does not change the nature of an existing line. A file without this column is read as lines of the list it is imported on |
 | Number | `item_number` | Set by KANAP | `BL-12`. Empty in the file creates a line |
 | Product name (OPEX), title (CAPEX) | `name` | Yes | |
-| Description | `description` | No | |
+| Description (OPEX) | `description` | No | Not read or written on a CAPEX line yet |
 | PP&E type, investment type, priority (CAPEX) | `analytics:ppe_type`, `analytics:investment_type`, `analytics:priority` | For a new line, while the dimension is required | Values of the three CAPEX dimensions, held like the values of any other dimension. See [CAPEX dimensions](analytics.md#capex-dimensions) |
 | Paying company | `company_name` | Yes | Taken from the cost center when only the cost center is given |
 | Supplier | `supplier_name`, `supplier_erp_id` | No | |

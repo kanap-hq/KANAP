@@ -66,7 +66,7 @@ Die Detailspalten sind für beide Arten von Positionen gleich.
 | `end_of_validity` | Der Tag, an dem die Position endet | Kein Ende |
 | `notes` | Freier Text | Optional |
 
-Die Beschreibung einer CAPEX-Position wird von der Datei gelesen und geschrieben. Die CAPEX-Bildschirme zeigen sie noch nicht an.
+Bei einer CAPEX-Position wird `description` noch nicht gelesen oder geschrieben: Der Export lässt die Spalte leer, und eine gefüllte Zelle wird mit einer Warnung ignoriert.
 
 ### Betragsspalten
 
@@ -101,7 +101,7 @@ Eine fehlende Spalte behält alle gespeicherten Werte dieser Spalte. Eine Datei,
 ## Positionen hinzufügen und zuordnen
 
 - `item_number` gefüllt: Diese Position wird aktualisiert. Leer: Es wird eine neue Position angelegt, von der Art, die ihre Zelle `nature` angibt.
-- `item_number` enthält die Referenz der Position, `BL-12`. Eine bloße Zahl ist dieselbe Referenz, in beiden Listen. Die Nummern `OPX-12` und `CPX-3` früherer Dateien bezeichnen weiterhin ihre Position. Dieselbe Position zweimal in einer Datei zu nennen ist ein Zeilenfehler.
+- `item_number` enthält die Referenz der Position, `BL-12`. In einer Datei mit einer Spalte `nature` ist eine bloße Zahl dieselbe Referenz, in beiden Listen. Die Nummern `OPX-12` und `CPX-3` früherer Dateien bezeichnen weiterhin ihre Position. Dieselbe Position zweimal in einer Datei zu nennen ist ein Zeilenfehler.
 - Eine Position behält ihre Art. Eine Zeile, die eine bestehende Position mit der anderen `nature` nennt, wird abgelehnt, zum Beispiel „BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line.“
 - Eine Datei mit OPEX- und CAPEX-Positionen erfordert Administrationsrechte auf beiden. Fehlt eines davon, wird jede Position dieser Art mit dem erforderlichen Recht abgelehnt, zum Beispiel „Importing CAPEX lines needs the Admin level on CAPEX.“ Die übrigen Positionen werden wie gewohnt geprüft, und die Datei lässt sich laden, sobald diese Zeilen entfernt sind.
 - Jede Zeile wird nach ihrer eigenen Art geprüft: die Dimensionen und Werte, die sie haben darf, ihr Konto, die eingefrorenen Spalten und die Warnung vor Duplikaten. Eine für CAPEX eingefrorene Spalte lehnt eine Änderung nur bei einer CAPEX-Position ab.
@@ -125,7 +125,7 @@ Eine fehlende Spalte behält alle gespeicherten Werte dieser Spalte. Eine Datei,
 | **Fehler** | Die Zeilen, die das Laden ablehnt, nach Zeile der Datei mit der Spalte, wenn sie bekannt ist. Eine Datei mit einem einzigen Fehler lädt nichts |
 | **Änderungen** | Die anzulegenden Positionen, die zu aktualisierenden Positionen und die Positionen, die die Datei unverändert lässt |
 | **Seit dem Export in KANAP geändert** | Die Positionen, die jemand nach Ihrem Export geändert hat, mit wer und wann. Das Laden der Datei schreibt Ihre Werte über diese Änderungen |
-| **Warnungen** | Eine Zeile, die einer anderen Position ähnelt, Spalten, die die Datei ignoriert |
+| **Warnungen** | Eine Zeile, die einer anderen Position ähnelt, Spalten und Zellen, die die Datei ignoriert |
 | **Beim Laden angelegt** | Die Lieferanten und Dimensionswerte, die das Laden hinzufügen würde |
 
 3. Klicken Sie auf **Laden**. Das Laden schreibt alles oder nichts.
@@ -152,7 +152,9 @@ Eine CAPEX-Datei, die exportiert wurde, bevor Anlagentyp, Investitionsart und Pr
 
 Exportieren Sie eine neue Datei und übertragen Sie Ihre Zeilen hinein.
 
-Eine OPEX- oder CAPEX-Datei, die exportiert wurde, bevor es die Spalte `nature` gab, wird angenommen. Ihre Zeilen werden als Positionen der Liste gelesen, in der Sie sie importieren, und ihre Nummern `OPX-12` und `CPX-3` bezeichnen weiterhin ihre Positionen: Importieren Sie eine frühere OPEX-Datei aus der OPEX-Liste und eine frühere CAPEX-Datei aus der CAPEX-Liste. Ihre Zellen `kanap_token` bleiben gültig.
+Eine OPEX- oder CAPEX-Datei, die exportiert wurde, bevor es die Spalte `nature` gab, wird angenommen. Ihre Zeilen werden als Positionen der Liste gelesen, in der Sie sie importieren, und ihre Nummern `OPX-12` und `CPX-3` bezeichnen weiterhin ihre Positionen: Importieren Sie eine frühere OPEX-Datei aus der OPEX-Liste und eine frühere CAPEX-Datei aus der CAPEX-Liste. Ihre Zellen `kanap_token` bleiben gültig. Eine bloße Zahl behält in einer solchen Datei ihre frühere Bedeutung: In der CAPEX-Liste ist `3` die Position `CPX-3`, in der OPEX-Liste ist sie die Nummer der OPEX-Position.
+
+KANAP erkennt die Spalte `nature` an ihrem Namen, unabhängig von Groß- und Kleinschreibung. Hat eine frühere Datei eine eigene Spalte namens Nature, benennen Sie diese vor dem Import um: KANAP würde diese Spalte als Art jeder Position lesen und ihre Werte ablehnen.
 
 ## Ein ganzes Budget laden
 

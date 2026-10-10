@@ -56,14 +56,14 @@ Un poste se lie aussi à des projets, des demandes, des applications, des actifs
 
 ### Postes OPEX et CAPEX
 
-Un poste vit sur plusieurs années : une licence sur trois ans est un poste avec trois années budgétaires. KANAP donne un numéro à chaque poste à sa création, sa référence `BL-12`, dans la même série pour l'OPEX et le CAPEX. Les listes affichent toujours `OPX-12` pour un poste OPEX et `CPX-3` pour un poste CAPEX. Le fichier budgétaire désigne un poste par sa référence `BL-12`, et lit aussi les numéros `OPX` et `CPX`.
+Un poste vit sur plusieurs années : une licence sur trois ans est un poste avec trois années budgétaires. KANAP donne un numéro à chaque poste à sa création, sa référence `BL-12`, dans la même série pour l'OPEX et le CAPEX. Les listes affichent toujours `OPX-12` pour un poste OPEX et `CPX-3` pour un poste CAPEX. Le fichier budgétaire désigne un poste par sa référence `BL-12`, et lit aussi les numéros `OPX` et `CPX`. Dans un fichier sans colonne `nature`, un nombre seul garde son sens antérieur (`CPX-3` sur la liste CAPEX).
 
 | Champ | Colonne du fichier budgétaire | Obligatoire | Remarques |
 |---|---|---|---|
 | Nature | `nature` | Oui | `opex` ou `capex`. Un fichier ne change pas la nature d'un poste existant. Un fichier sans cette colonne est lu comme des postes de la liste sur laquelle il est importé |
 | Numéro | `item_number` | Attribué par KANAP | `BL-12`. Vide dans le fichier : crée un poste |
 | Nom du produit (OPEX), titre (CAPEX) | `name` | Oui | |
-| Description | `description` | Non | |
+| Description (OPEX) | `description` | Non | Pas encore lue ni écrite sur un poste CAPEX |
 | Type d'immobilisation, type d'investissement, priorité (CAPEX) | `analytics:ppe_type`, `analytics:investment_type`, `analytics:priority` | Pour une nouvelle ligne, tant que la dimension est obligatoire | Valeurs des trois dimensions CAPEX, portées comme les valeurs de toute autre dimension. Voir [Dimensions CAPEX](analytics.md#dimensions-capex) |
 | Société payeuse | `company_name` | Oui | Reprise du centre de coûts quand seul le centre de coûts est donné |
 | Fournisseur | `supplier_name`, `supplier_erp_id` | Non | |

@@ -66,7 +66,7 @@ Las columnas de detalle son las mismas para los dos tipos de partida.
 | `end_of_validity` | El día en que termina la partida | Sin fin |
 | `notes` | Texto libre | Opcional |
 
-El archivo lee y escribe la descripción de una partida CAPEX. Las pantallas CAPEX aún no la muestran.
+En una partida CAPEX, `description` aún no se lee ni se escribe: la exportación la deja vacía y una celda rellena se ignora con una advertencia.
 
 ### Columnas de importes
 
@@ -101,7 +101,7 @@ Una columna ausente conserva todos los valores guardados de esa columna. Un arch
 ## Añadir y hacer coincidir partidas
 
 - `item_number` relleno: esa partida se actualiza. Vacío: se crea una partida nueva, del tipo que indica su celda `nature`.
-- `item_number` contiene la referencia de la partida, `BL-12`. Un número solo es la misma referencia, en ambas listas. Los números `OPX-12` y `CPX-3` de archivos anteriores siguen designando su partida. Nombrar dos veces la misma partida en un archivo es un error de fila.
+- `item_number` contiene la referencia de la partida, `BL-12`. En un archivo con columna `nature`, un número solo es la misma referencia, en ambas listas. Los números `OPX-12` y `CPX-3` de archivos anteriores siguen designando su partida. Nombrar dos veces la misma partida en un archivo es un error de fila.
 - Una partida conserva su tipo. Una fila que nombra una partida existente con la otra `nature` se rechaza, por ejemplo "BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line."
 - Un archivo con partidas OPEX y CAPEX requiere derechos de administración en ambas. Sin uno de ellos, cada partida de ese tipo se rechaza con el derecho que necesita, por ejemplo "Importing CAPEX lines needs the Admin level on CAPEX." Las demás partidas se comprueban como siempre, y el archivo se carga una vez retiradas esas filas.
 - Cada fila se comprueba según su propio tipo: las dimensiones y los valores que puede tener, su cuenta, las columnas congeladas y la advertencia de duplicado. Una columna congelada para CAPEX rechaza un cambio solo en una partida CAPEX.
@@ -125,7 +125,7 @@ Una columna ausente conserva todos los valores guardados de esa columna. Un arch
 | **Errores** | Las filas que la carga rechaza, por fila del archivo con la columna cuando la conoce. Un archivo con un solo error no carga nada |
 | **Cambios** | Las partidas que se crearán, las que se actualizarán y las que el archivo deja tal como están |
 | **Modificadas en KANAP desde la exportación** | Las partidas que alguien modificó después de su exportación, con quién y cuándo. Cargar el archivo escribe sus valores sobre esos cambios |
-| **Advertencias** | Una fila que se parece a otra partida, columnas que el archivo ignora |
+| **Advertencias** | Una fila que se parece a otra partida, columnas y celdas que el archivo ignora |
 | **Creados por la carga** | Los proveedores y los valores de dimensión que la carga añadiría |
 
 3. Haga clic en **Cargar**. La carga escribe todo o nada.
@@ -152,7 +152,9 @@ Un archivo CAPEX exportado antes de que el tipo de activo fijo, el tipo de inver
 
 Exporte un archivo nuevo y copie en él sus filas.
 
-Se acepta un archivo OPEX o CAPEX exportado antes de que existiera la columna `nature`. Sus filas se leen como partidas de la lista en la que lo importa, y sus números `OPX-12` y `CPX-3` siguen designando sus partidas: importe un archivo OPEX anterior desde la lista OPEX y un archivo CAPEX anterior desde la lista CAPEX. Sus celdas `kanap_token` siguen siendo válidas.
+Se acepta un archivo OPEX o CAPEX exportado antes de que existiera la columna `nature`. Sus filas se leen como partidas de la lista en la que lo importa, y sus números `OPX-12` y `CPX-3` siguen designando sus partidas: importe un archivo OPEX anterior desde la lista OPEX y un archivo CAPEX anterior desde la lista CAPEX. Sus celdas `kanap_token` siguen siendo válidas. En un archivo así, un número solo conserva su significado anterior: en la lista CAPEX, `3` es `CPX-3`; en la lista OPEX, es el número de la partida OPEX.
+
+KANAP reconoce la columna `nature` por su nombre, sin distinguir mayúsculas y minúsculas. Si un archivo anterior tiene una columna propia llamada Nature, cámbiele el nombre antes de importarlo: KANAP leería esa columna como el tipo de cada partida y rechazaría sus valores.
 
 ## Cargar un presupuesto completo
 

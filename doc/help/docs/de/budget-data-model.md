@@ -56,14 +56,14 @@ Eine Position ist außerdem mit Projekten, Anfragen, Anwendungen, Assets, Vertr�
 
 ### OPEX- und CAPEX-Positionen
 
-Eine Position lebt über mehrere Jahre: Eine Lizenz über drei Jahre ist eine Position mit drei Budgetjahren. KANAP vergibt jeder Position beim Anlegen eine Nummer, ihre Referenz `BL-12`, in derselben Reihe für OPEX und CAPEX. Die Listen zeigen weiterhin `OPX-12` für eine OPEX-Position und `CPX-3` für eine CAPEX-Position. Die Budgetdatei bezeichnet eine Position mit ihrer Referenz `BL-12` und liest auch die Nummern `OPX` und `CPX`.
+Eine Position lebt über mehrere Jahre: Eine Lizenz über drei Jahre ist eine Position mit drei Budgetjahren. KANAP vergibt jeder Position beim Anlegen eine Nummer, ihre Referenz `BL-12`, in derselben Reihe für OPEX und CAPEX. Die Listen zeigen weiterhin `OPX-12` für eine OPEX-Position und `CPX-3` für eine CAPEX-Position. Die Budgetdatei bezeichnet eine Position mit ihrer Referenz `BL-12` und liest auch die Nummern `OPX` und `CPX`. In einer Datei ohne Spalte `nature` behält eine bloße Zahl ihre frühere Bedeutung (`CPX-3` in der CAPEX-Liste).
 
 | Feld | Spalte der Budgetdatei | Erforderlich | Hinweise |
 |---|---|---|---|
 | Art | `nature` | Ja | `opex` oder `capex`. Eine Datei ändert die Art einer bestehenden Position nicht. Eine Datei ohne diese Spalte wird als Positionen der Liste gelesen, in der sie importiert wird |
 | Nummer | `item_number` | Von KANAP vergeben | `BL-12`. Leer in der Datei: legt eine Position an |
 | Produktname (OPEX), Titel (CAPEX) | `name` | Ja | |
-| Beschreibung | `description` | Nein | |
+| Beschreibung (OPEX) | `description` | Nein | Bei einer CAPEX-Position noch nicht gelesen oder geschrieben |
 | Anlagentyp, Investitionsart, Priorität (CAPEX) | `analytics:ppe_type`, `analytics:investment_type`, `analytics:priority` | Bei einer neuen Zeile, solange die Dimension erforderlich ist | Werte der drei CAPEX-Dimensionen, gespeichert wie die Werte jeder anderen Dimension. Siehe [CAPEX-Dimensionen](analytics.md#capex-dimensionen) |
 | Zahlendes Unternehmen | `company_name` | Ja | Wird von der Kostenstelle übernommen, wenn nur die Kostenstelle angegeben ist |
 | Lieferant | `supplier_name`, `supplier_erp_id` | Nein | |

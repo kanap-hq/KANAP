@@ -56,14 +56,14 @@ Una partida también se vincula a proyectos, solicitudes, aplicaciones, activos,
 
 ### Partidas OPEX y CAPEX
 
-Una partida vive varios años: una licencia de tres años es una partida con tres años presupuestarios. KANAP da un número a cada partida al crearla, su referencia `BL-12`, en la misma serie para OPEX y CAPEX. Las listas siguen mostrando `OPX-12` para una partida OPEX y `CPX-3` para una partida CAPEX. El archivo de presupuesto nombra una partida por su referencia `BL-12`, y también lee los números `OPX` y `CPX`.
+Una partida vive varios años: una licencia de tres años es una partida con tres años presupuestarios. KANAP da un número a cada partida al crearla, su referencia `BL-12`, en la misma serie para OPEX y CAPEX. Las listas siguen mostrando `OPX-12` para una partida OPEX y `CPX-3` para una partida CAPEX. El archivo de presupuesto nombra una partida por su referencia `BL-12`, y también lee los números `OPX` y `CPX`. En un archivo sin columna `nature`, un número solo conserva su significado anterior (`CPX-3` en la lista CAPEX).
 
 | Campo | Columna del archivo de presupuesto | Obligatorio | Notas |
 |---|---|---|---|
 | Naturaleza | `nature` | Sí | `opex` o `capex`. Un archivo no cambia la naturaleza de una partida existente. Un archivo sin esta columna se lee como partidas de la lista en la que se importa |
 | Número | `item_number` | Lo asigna KANAP | `BL-12`. Vacío en el archivo: crea una partida |
 | Nombre del producto (OPEX), título (CAPEX) | `name` | Sí | |
-| Descripción | `description` | No | |
+| Descripción (OPEX) | `description` | No | Aún no se lee ni se escribe en una partida CAPEX |
 | Tipo de activo fijo, tipo de inversión, prioridad (CAPEX) | `analytics:ppe_type`, `analytics:investment_type`, `analytics:priority` | En una línea nueva, mientras la dimensión sea obligatoria | Valores de las tres dimensiones CAPEX, guardados como los valores de cualquier otra dimensión. Consulte [Dimensiones CAPEX](analytics.md#dimensiones-capex) |
 | Empresa pagadora | `company_name` | Sí | Se toma del centro de coste cuando solo se indica el centro de coste |
 | Proveedor | `supplier_name`, `supplier_erp_id` | No | |

@@ -66,7 +66,7 @@ Les colonnes de détail sont les mêmes pour les deux types de poste.
 | `end_of_validity` | Le jour où le poste s'arrête | Aucune fin |
 | `notes` | Texte libre | Facultatif |
 
-La description d'un poste CAPEX est lue et écrite par le fichier. Les écrans CAPEX ne l'affichent pas encore.
+Sur un poste CAPEX, `description` n'est pas encore lue ni écrite : l'export la laisse vide, et une cellule remplie est ignorée avec un avertissement.
 
 ### Colonnes de montants
 
@@ -101,7 +101,7 @@ Une colonne absente conserve toutes les valeurs enregistrées de cette colonne. 
 ## Ajouter et faire correspondre les postes
 
 - `item_number` rempli : ce poste est mis à jour. Vide : un nouveau poste est créé, du type qu'indique sa cellule `nature`.
-- `item_number` contient la référence du poste, `BL-12`. Un nombre seul est la même référence, sur les deux listes. Les numéros `OPX-12` et `CPX-3` des fichiers antérieurs désignent toujours leur poste. Nommer deux fois le même poste dans un fichier est une erreur de ligne.
+- `item_number` contient la référence du poste, `BL-12`. Dans un fichier avec une colonne `nature`, un nombre seul est la même référence, sur les deux listes. Les numéros `OPX-12` et `CPX-3` des fichiers antérieurs désignent toujours leur poste. Nommer deux fois le même poste dans un fichier est une erreur de ligne.
 - Un poste garde son type. Une ligne qui désigne un poste existant avec l'autre `nature` est refusée, par exemple « BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line. »
 - Un fichier qui contient des postes OPEX et CAPEX demande des droits d'administration sur les deux. Sans l'un d'eux, chaque poste de ce type est refusé avec le droit qu'il demande, par exemple « Importing CAPEX lines needs the Admin level on CAPEX. » Les autres postes sont vérifiés comme d'habitude, et le fichier se charge une fois ces lignes retirées.
 - Chaque ligne est vérifiée selon son propre type : les dimensions et les valeurs qu'elle peut porter, son compte, les colonnes gelées et l'avertissement de doublon. Une colonne gelée pour CAPEX refuse une modification sur un poste CAPEX uniquement.
@@ -125,7 +125,7 @@ Une colonne absente conserve toutes les valeurs enregistrées de cette colonne. 
 | **Erreurs** | Les lignes que le chargement refuse, par ligne du fichier avec la colonne lorsqu'elle est connue. Un fichier avec une seule erreur ne charge rien |
 | **Modifications** | Les postes à créer, les postes à mettre à jour et les postes que le fichier laisse tels quels |
 | **Modifiés dans KANAP depuis l'export** | Les postes modifiés par quelqu'un après votre export, avec qui et quand. Charger le fichier écrit vos valeurs à la place de ces modifications |
-| **Avertissements** | Une ligne qui ressemble à un autre poste, des colonnes que le fichier ignore |
+| **Avertissements** | Une ligne qui ressemble à un autre poste, des colonnes et des cellules que le fichier ignore |
 | **Créés par le chargement** | Les fournisseurs et les valeurs de dimension que le chargement ajouterait |
 
 3. Cliquez sur **Charger**. Le chargement écrit tout ou rien.
@@ -152,7 +152,9 @@ Un fichier CAPEX exporté avant que le type d'immobilisation, le type d'investis
 
 Exportez un nouveau fichier et reportez-y vos lignes.
 
-Un fichier OPEX ou CAPEX exporté avant l'ajout de la colonne `nature` est accepté. Ses lignes sont lues comme des postes de la liste sur laquelle vous l'importez, et ses numéros `OPX-12` et `CPX-3` désignent toujours leurs postes : importez un ancien fichier OPEX depuis la liste OPEX et un ancien fichier CAPEX depuis la liste CAPEX. Ses cellules `kanap_token` restent valides.
+Un fichier OPEX ou CAPEX exporté avant l'ajout de la colonne `nature` est accepté. Ses lignes sont lues comme des postes de la liste sur laquelle vous l'importez, et ses numéros `OPX-12` et `CPX-3` désignent toujours leurs postes : importez un ancien fichier OPEX depuis la liste OPEX et un ancien fichier CAPEX depuis la liste CAPEX. Ses cellules `kanap_token` restent valides. Dans un tel fichier, un nombre seul garde son sens antérieur : sur la liste CAPEX, `3` est `CPX-3` ; sur la liste OPEX, c'est le numéro du poste OPEX.
+
+KANAP reconnaît la colonne `nature` à son nom, quelle que soit la casse. Dans un ancien fichier qui contient une colonne à vous nommée Nature, renommez-la avant l'import : KANAP lirait cette colonne comme le type de chaque poste et refuserait ses valeurs.
 
 ## Charger un budget complet
 
