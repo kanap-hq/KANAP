@@ -268,6 +268,9 @@ export class AnalyticsCategoriesCsvService {
       toWrite.push(row);
     }
     if (!dryRun) {
+      // The existing values first, in id order, before any write takes a dimension lock (`persist`):
+      // the lock order of every value write, so a concurrent reorder never deadlocks with the import.
+      await this.categories.lockValues(ctx, toWrite.flatMap((row) => (row.existing ? [row.existing.id] : [])));
       for (const row of toWrite) {
         await this.categories.persist(ctx, row.existing, row.values, { name: row.axisName });
       }

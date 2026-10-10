@@ -37,6 +37,8 @@ export type KanapDialogProps = {
   /** Defaults to the localized "Cancel"; pass one only for a non-standard label. */
   cancelLabel?: string;
   showCancel?: boolean;
+  /** Escape does not close the dialog (while it means something inside it, such as cancelling a drag). */
+  disableEscapeKeyDown?: boolean;
   sx?: SxProps<Theme>;
 };
 
@@ -73,6 +75,7 @@ export default function KanapDialog({
   saveSx,
   cancelLabel,
   showCancel = true,
+  disableEscapeKeyDown = false,
   sx,
 }: KanapDialogProps) {
   const { t } = useTranslation('common');
@@ -88,6 +91,7 @@ export default function KanapDialog({
     <Dialog
       open={open}
       onClose={onClose}
+      disableEscapeKeyDown={disableEscapeKeyDown}
       fullWidth
       maxWidth={false}
       TransitionProps={onExited || saveAutoFocus ? {

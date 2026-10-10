@@ -360,6 +360,10 @@ async function testCategoriesFollowTheDimensionOrder() {
     const labels = (result: any) => result.items.map((item: any) => item.label);
     const byDefault: any = await queryExecutor('opex').execute(ctx, { entity_type: 'analytics_categories', filters: { axis: ['Nature'] } });
     assert.deepEqual(labels(byDefault), ['Subscriptions', 'Maintenance'], 'the default sort is the dimension order');
+    assert.deepEqual(byDefault.items.map((item: any) => item.metadata.sort_order), [1, 2], 'items carry their position');
+    // Without a dimension filter: the dimensions in their order (default 0, Nature 1, Archive 2), never interleaved.
+    const everything: any = await queryExecutor('opex').execute(ctx, { entity_type: 'analytics_categories' });
+    assert.deepEqual(labels(everything), ['Licences', 'Services', 'Subscriptions', 'Maintenance', 'Old'], 'dimension by dimension');
     const reversed: any = await queryExecutor('opex').execute(ctx, { entity_type: 'analytics_categories', filters: { axis: ['Nature'] }, sort: { field: 'sort_order', direction: 'desc' } });
     assert.deepEqual(labels(reversed), ['Maintenance', 'Subscriptions'], 'sort_order sorts');
     const byName: any = await queryExecutor('opex').execute(ctx, { entity_type: 'analytics_categories', filters: { axis: ['Nature'] }, sort: { field: 'name', direction: 'asc' } });

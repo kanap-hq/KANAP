@@ -626,10 +626,10 @@
       "saveFailed": "Error al guardar el orden.",
       "roleDescription": "valor movible",
       "instructions": "Para mover un valor, pulse Espacio o Intro, muévalo con las flechas y pulse Espacio o Intro para soltarlo. Escape cancela.",
-      "pickedUp": "{{name}} seleccionado.",
-      "movedTo": "{{name}} está en la posición {{position}} de {{count}}.",
-      "droppedAt": "{{name}} soltado en la posición {{position}} de {{count}}.",
-      "cancelled": "{{name}} ha vuelto a su lugar."
+      "pickedUp": "Valor {{name}} seleccionado.",
+      "movedTo": "Valor {{name}} en la posición {{position}} de {{count}}.",
+      "droppedAt": "Valor {{name}} soltado en la posición {{position}} de {{count}}.",
+      "cancelled": "Valor {{name}} devuelto a su lugar."
     },
     "previousValue": "Valor anterior",
     "nextValue": "Valor siguiente",

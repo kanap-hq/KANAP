@@ -393,9 +393,9 @@ async function testListScopeAndFilters() {
     await values.create({ axis_id: nature.id, name: 'Hardware' }, null, ctx);
 
     const names = (result: { items: Array<{ name: string }> }) => result.items.map((item) => item.name);
-    assert.deepEqual(names(await values.list({}, ctx)), ['Hardware', 'Licences'], 'enabled only by default');
-    assert.deepEqual(names(await values.list({ includeDisabled: '1' }, ctx)), ['Hardware', 'Licences', 'Retired']);
-    assert.deepEqual(names(await values.list({ includeDisabled: true }, ctx)), ['Hardware', 'Licences', 'Retired'], 'the AI passes a boolean');
+    assert.deepEqual(names(await values.list({}, ctx)), ['Licences', 'Hardware'], 'enabled only by default, the default dimension first');
+    assert.deepEqual(names(await values.list({ includeDisabled: '1' }, ctx)), ['Licences', 'Retired', 'Hardware']);
+    assert.deepEqual(names(await values.list({ includeDisabled: true }, ctx)), ['Licences', 'Retired', 'Hardware'], 'the AI passes a boolean');
     assert.deepEqual(names(await values.list({ status: 'disabled' }, ctx)), ['Retired']);
     const byAxis = await values.list({ axis_id: nature.id }, ctx);
     assert.deepEqual(names(byAxis), ['Hardware']);
@@ -418,7 +418,7 @@ async function testListScopeAndFilters() {
     assert.equal(ids.total, 3);
     assert.equal(ids.ids.length, 3);
     // Older callers pass only the manager: the tenant comes from the transaction.
-    assert.deepEqual(names(await values.list({}, { manager: runner.manager })), ['Hardware', 'Licences']);
+    assert.deepEqual(names(await values.list({}, { manager: runner.manager })), ['Licences', 'Hardware']);
 
     const listed = await axes.list(ctx);
     assert.deepEqual(listed.items.map((axis) => [axis.code, axis.is_default]), [['default', true], ['nature', false]]);

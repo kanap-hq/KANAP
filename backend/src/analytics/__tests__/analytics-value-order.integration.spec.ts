@@ -37,6 +37,11 @@ import {
 //   none when nothing moves; the values keep their `updated_at`;
 // - a reorder and a create in the same dimension wait for each other: whichever
 //   runs second sees the first (the created value is numbered, or goes last);
+//   a values CSV import (a new value, then an edit) and a reorder of the same
+//   dimension, in both orders, end without a deadlock; an open reorder never
+//   blocks a line linking one of the dimension's values;
+// - without a dimension filter, sorting by position keeps the dimensions in
+//   their order (never interleaved), descending the exact reverse;
 // - `sort_order` is never written by POST or PATCH (DTO whitelist and service);
 // - the route: POST /analytics-categories/reorder, the permission of PATCH :id,
 //   declared before the `:id` routes;
@@ -287,11 +292,31 @@ async function testAccentedTiesInIcuOrder() {
   });
 }
 
-/** Removes a committed race tenant: values before dimensions. */
+async function testOrderAcrossDimensions() {
+  await withRollback(async (runner) => {
+    const tenantId = await seedTenant(runner, 'order-across');
+    const svc = services(runner.manager);
+    const ctx = context(runner.manager, tenantId);
+    const second = await svc.axes.create({ code: 'second', name: 'Second', sort_order: 2 }, ctx);
+    const first = await svc.axes.create({ code: 'first', name: 'First', sort_order: 1 }, ctx);
+    for (const name of ['Aardvark', 'Bee']) await svc.values.create({ axis_id: second.id, name }, null, ctx);
+    const ids: Record<string, string> = {};
+    for (const name of ['Yak', 'Zebra']) ids[name] = (await svc.values.create({ axis_id: first.id, name }, null, ctx)).id;
+    const expected = ['Yak', 'Zebra', 'Aardvark', 'Bee'];
+    assert.deepEqual(names(await svc.values.list({}, ctx)), expected, 'the dimensions in their order, then each one\'s values');
+    assert.deepEqual(names(await svc.values.list({ sort: 'sort_order:DESC' }, ctx)), [...expected].reverse(), 'descending is the exact reverse');
+    assert.deepEqual(names(await svc.values.list({ limit: 3 }, ctx)), expected.slice(0, 3), 'a page keeps it');
+    const listed = (await svc.values.listIds({}, ctx)).ids;
+    assert.deepEqual(listed.slice(0, 2), [ids.Yak, ids.Zebra], 'prev/next follows');
+    assert.equal(listed.length, 4);
+  });
+}
+
+/** Removes a committed race tenant: lines and values before dimensions. */
 async function deleteRaceTenant(tenantId: string) {
   await dataSource.transaction(async (manager) => {
     await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
-    for (const table of ['analytics_categories', 'analytics_axes', 'audit_log']) {
+    for (const table of ['spend_item_analytics_values', 'spend_items', 'analytics_categories', 'analytics_axes', 'audit_log']) {
       await manager.query(`DELETE FROM ${table} WHERE tenant_id = $1`, [tenantId]);
     }
   });
@@ -338,6 +363,82 @@ async function testReorderAndCreateRace() {
   }
 }
 
+/**
+ * A line write takes FOR KEY SHARE on the value it links; the reorder locks the values FOR NO KEY
+ * UPDATE, which does not conflict: a line links a value of the dimension while a reorder of that
+ * dimension is still open (within a short lock timeout, so a block fails instead of hanging).
+ */
+async function testReorderDoesNotBlockLines() {
+  const seed = await committed(async (runner) => {
+    const { tenantId, axisId, ids } = await seedMenu(runner, 'order-lines', ['Low', 'High']);
+    const lineId = await seedLine(runner, 'opex', tenantId);
+    return { tenantId, axisId, ids, lineId };
+  });
+  const leader = await openTenantTransaction(seed.tenantId);
+  const follower = await openTenantTransaction(seed.tenantId);
+  try {
+    await services(leader.manager).values.reorder(seed.axisId, [seed.ids.High], null, context(leader.manager, seed.tenantId));
+    await follower.query(`SET LOCAL lock_timeout = '3s'`);
+    await linkValue(follower, 'opex', seed.tenantId, seed.lineId, seed.axisId, seed.ids.High);
+    const [{ n }] = await follower.query(
+      `SELECT count(*)::int AS n FROM spend_item_analytics_values WHERE tenant_id = $1 AND item_id = $2`,
+      [seed.tenantId, seed.lineId],
+    );
+    assert.equal(n, 1, 'the line holds the value while the reorder is open');
+    await follower.commitTransaction();
+    await leader.commitTransaction();
+  } finally {
+    await closeRunner(follower);
+    await closeRunner(leader);
+    await deleteRaceTenant(seed.tenantId);
+  }
+}
+
+/**
+ * A values CSV import (a new value, then an edit of an existing one) against a reorder of the same
+ * dimension, in both orders. The import locks the existing values it writes before its first write
+ * (and so before `persist` takes the dimension), the reorder locks the values before the dimension:
+ * the second waits for the first, never a deadlock.
+ */
+async function testCsvImportAndReorderRace() {
+  for (const first of ['import', 'reorder'] as const) {
+    const seed = await committed(async (runner) => {
+      const { tenantId, axisId, ids } = await seedMenu(runner, `order-csv-race-${first}`, ['Low', 'High']);
+      return { tenantId, axisId, ids };
+    });
+    const leader = await openTenantTransaction(seed.tenantId);
+    const follower = await openTenantTransaction(seed.tenantId);
+    try {
+      const importFile = (runner: QueryRunner) => services(runner.manager).csv.importCsv({
+        file: csvFile(['axis_code;name;description', 'menu;Medium;', 'menu;High;Changed'].join('\n')),
+        dryRun: false,
+      }, context(runner.manager, seed.tenantId));
+      const reorder = (runner: QueryRunner) =>
+        services(runner.manager).values.reorder(seed.axisId, [seed.ids.High], null, context(runner.manager, seed.tenantId));
+      const led: any = first === 'import' ? await importFile(leader) : await reorder(leader);
+      if (first === 'import') assert.equal(led.ok, true, JSON.stringify(led.errors));
+      const pid = await backendPid(follower);
+      const second = (first === 'import' ? reorder(follower) : importFile(follower)).then((result: any) => result, (err: any) => err);
+      await waitUntilBlocked(pid);
+      await leader.commitTransaction();
+      const outcome = await second;
+      assert.ok(!(outcome instanceof Error), `${first} first: the second write succeeds, no deadlock (${outcome?.message})`);
+      if (first === 'reorder') assert.equal(outcome.ok, true, JSON.stringify(outcome.errors));
+      await follower.commitTransaction();
+      const state = await committed(async (runner) => {
+        await setCurrentTenant(runner, seed.tenantId);
+        const [high] = await runner.query(`SELECT description FROM analytics_categories WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.ids.High]);
+        return { order: await positions(runner, seed.tenantId, seed.axisId), description: high.description };
+      });
+      assert.deepEqual(state, { order: ['1 High', '2 Low', '3 Medium'], description: 'Changed' }, `${first} first: both writes kept`);
+    } finally {
+      await closeRunner(follower);
+      await closeRunner(leader);
+      await deleteRaceTenant(seed.tenantId);
+    }
+  }
+}
+
 runSpecs('analytics-value-order.integration.spec', [
   testCreateAppendsLastAndListFollows,
   testReorder,
@@ -348,4 +449,7 @@ runSpecs('analytics-value-order.integration.spec', [
   testBudgetListFilterValues,
   testReorderAndCreateRace,
   testAccentedTiesInIcuOrder,
+  testOrderAcrossDimensions,
+  testReorderDoesNotBlockLines,
+  testCsvImportAndReorderRace,
 ]);

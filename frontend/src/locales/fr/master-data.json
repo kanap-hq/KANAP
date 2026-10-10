@@ -626,10 +626,10 @@
       "saveFailed": "Impossible d'enregistrer l'ordre.",
       "roleDescription": "valeur déplaçable",
       "instructions": "Pour déplacer une valeur, appuyez sur Espace ou Entrée, déplacez-la avec les flèches, puis appuyez sur Espace ou Entrée pour la déposer. Échap annule.",
-      "pickedUp": "{{name}} saisie.",
-      "movedTo": "{{name}} est en position {{position}} sur {{count}}.",
-      "droppedAt": "{{name}} déposée en position {{position}} sur {{count}}.",
-      "cancelled": "{{name}} est revenue à sa place."
+      "pickedUp": "Valeur {{name}} saisie.",
+      "movedTo": "Valeur {{name}} en position {{position}} sur {{count}}.",
+      "droppedAt": "Valeur {{name}} déposée en position {{position}} sur {{count}}.",
+      "cancelled": "Valeur {{name}} remise à sa place."
     },
     "previousValue": "Valeur précédente",
     "nextValue": "Valeur suivante",

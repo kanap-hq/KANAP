@@ -12,7 +12,8 @@ import { runSpecs, seedTenant, setCurrentTenant, withRollback } from './analytic
 // row level security on `analytics_categories` and `search_index` as it found
 // it; a second up() numbers 0 values; a dimension reordered by hand is left
 // alone by a rerun, while a dimension still all at 0 is numbered; down() drops
-// the index and the column, and up() after it restores both.
+// the index and the column, and up() after it restores both. Without the ICU
+// collation the backfill falls back to `lower(name), name, id` and says so.
 // @database-spec (the data source opens in analytics-test-helpers).
 
 const migration = new Migration();
@@ -81,7 +82,7 @@ async function asMigration(runner: QueryRunner, fn: () => Promise<unknown>): Pro
 }
 
 function numbered(lines: string[]): number | null {
-  const match = lines.map((line) => /, (\d+) value\(s\) numbered,/.exec(line)).find(Boolean);
+  const match = lines.map((line) => /, (\d+) value\(s\) numbered\b/.exec(line)).find(Boolean);
   return match ? Number(match[1]) : null;
 }
 
@@ -152,4 +153,31 @@ async function testDownUp() {
   });
 }
 
-runSpecs('analytics-value-order-migration.integration.spec', [testBackfill, testDownUp]);
+/** The migration on a PostgreSQL built without ICU (an on-premise install may be). */
+class MigrationWithoutIcu extends Migration {
+  protected async hasIcuCollation(): Promise<boolean> {
+    return false;
+  }
+}
+
+async function testWithoutIcu() {
+  await withRollback(async (runner) => {
+    // Rows other specs left at 0 are numbered first, so the count below is this spec's own.
+    await asMigration(runner, () => migration.up(runner));
+    const tenantId = await seedTenant(runner, 'order-migration-no-icu');
+    const axisId = await seedAxis(runner, tenantId, 'menu');
+    const seeded = ['Zinc', 'Énergie', 'matériel', 'Matériel B'];
+    await seedValues(runner, tenantId, axisId, seeded);
+    const lines = await asMigration(runner, () => new MigrationWithoutIcu().up(runner));
+    assert.equal(numbered(lines), 4, `the values are numbered (${lines.join(' / ')})`);
+    assert.ok(lines.some((line) => line.includes('no ICU collation: by lower(name), name')), `the fallback is logged (${lines.join(' / ')})`);
+    // The fallback order is the database's own collation: read it from the database.
+    const expected: Array<{ name: string }> = await runner.query(
+      `SELECT name FROM unnest($1::text[]) AS n(name) ORDER BY lower(name), name`,
+      [seeded],
+    );
+    assert.deepEqual(await order(runner, tenantId, axisId), expected.map((row, index) => `${index + 1} ${row.name}`), 'by lower(name), name');
+  });
+}
+
+runSpecs('analytics-value-order-migration.integration.spec', [testBackfill, testDownUp, testWithoutIcu]);

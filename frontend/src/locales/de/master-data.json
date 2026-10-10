@@ -626,10 +626,10 @@
       "saveFailed": "Die Reihenfolge konnte nicht gespeichert werden.",
       "roleDescription": "verschiebbarer Wert",
       "instructions": "Um einen Wert zu verschieben, drücken Sie die Leertaste oder Eingabe, verschieben Sie ihn mit den Pfeiltasten und drücken Sie dann die Leertaste oder Eingabe, um ihn abzulegen. Escape bricht ab.",
-      "pickedUp": "{{name}} aufgenommen.",
-      "movedTo": "{{name}} ist an Position {{position}} von {{count}}.",
-      "droppedAt": "{{name}} an Position {{position}} von {{count}} abgelegt.",
-      "cancelled": "{{name}} ist wieder an seinem Platz."
+      "pickedUp": "Wert {{name}} aufgenommen.",
+      "movedTo": "Wert {{name}} an Position {{position}} von {{count}}.",
+      "droppedAt": "Wert {{name}} an Position {{position}} von {{count}} abgelegt.",
+      "cancelled": "Wert {{name}} wieder an seinem Platz."
     },
     "previousValue": "Vorheriger Wert",
     "nextValue": "Nächster Wert",

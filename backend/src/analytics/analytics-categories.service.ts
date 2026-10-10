@@ -124,21 +124,36 @@ export function valueAppliesToConflict(
 }
 
 /**
- * Orders the list query by `field`. The position breaks ties on the name (ICU order), then the id, in the same
- * direction (descending is the exact reverse of the dimension's order); every other field on the id.
- * The name key is a selected alias: with a join, TypeORM pages through a subquery that only orders
- * by columns or selected aliases.
+ * Orders the list query by `field`. The position sorts in the dimension order first when the query
+ * joins the dimension (`ax`, the list): its position, name, code and id as the dimensions list
+ * sorts them, so the values of two dimensions never interleave; then the value's position, its
+ * name (ICU order) and id, all in the same direction (descending is the exact reverse). Every
+ * other field breaks ties on the id. The keys are selected aliases: with a join, TypeORM pages
+ * through a subquery that only orders by columns or selected aliases.
  */
-function orderValues<T extends SelectQueryBuilder<any>>(qb: T, field: string, direction: 'ASC' | 'DESC'): T {
-  qb.orderBy(`cat.${field}`, direction);
-  if (field === 'sort_order') {
-    qb.addSelect(`cat.name COLLATE ${ICU_COLLATION}`, 'cat_name_key')
-      .addOrderBy('cat_name_key', direction)
-      .addOrderBy('cat.id', direction);
-  } else {
-    qb.addOrderBy('cat.id', 'ASC');
+function orderValues<T extends SelectQueryBuilder<any>>(
+  qb: T,
+  field: string,
+  direction: 'ASC' | 'DESC',
+  joinsDimension: boolean,
+): T {
+  if (field !== 'sort_order') {
+    return qb.orderBy(`cat.${field}`, direction).addOrderBy('cat.id', 'ASC');
   }
-  return qb;
+  if (joinsDimension) {
+    qb.addSelect('ax.sort_order', 'ax_order_key')
+      .addSelect(`lower(coalesce(ax.name, ''))`, 'ax_name_key')
+      .addSelect('ax.code', 'ax_code_key')
+      .addSelect('ax.id', 'ax_id_key')
+      .addOrderBy('ax_order_key', direction)
+      .addOrderBy('ax_name_key', direction)
+      .addOrderBy('ax_code_key', direction)
+      .addOrderBy('ax_id_key', direction);
+  }
+  return qb.addSelect(`cat.name COLLATE ${ICU_COLLATION}`, 'cat_name_key')
+    .addOrderBy('cat.sort_order', direction)
+    .addOrderBy('cat_name_key', direction)
+    .addOrderBy('cat.id', direction);
 }
 
 /**
@@ -176,7 +191,7 @@ export class AnalyticsCategoriesService {
     const qb = this.buildQuery(ctx, query ?? {});
     const total = await qb.getCount();
     const field = SORT_FIELDS.has(sort.field) ? sort.field : DEFAULT_SORT.field;
-    const items = await orderValues(qb, field, sort.direction)
+    const items = await orderValues(qb, field, sort.direction, true)
       .skip(skip)
       .take(limit)
       .getMany();
@@ -190,7 +205,7 @@ export class AnalyticsCategoriesService {
     const total = await qb.clone().getCount();
     const field = SORT_FIELDS.has(sort.field) ? sort.field : DEFAULT_SORT.field;
     const limit = Math.min(Number(query?.limit) || MAX_IDS, MAX_IDS);
-    const rows = await orderValues(qb.select('cat.id', 'id'), field, sort.direction)
+    const rows = await orderValues(qb.select('cat.id', 'id'), field, sort.direction, true)
       .limit(limit)
       .getRawMany();
     return { ids: rows.map((row: any) => row.id as string).filter(Boolean), total };
@@ -282,26 +297,38 @@ export class AnalyticsCategoriesService {
     );
   }
 
-  /** Each value under its own savepoint: a refusal leaves the others deleted and the transaction usable. */
+  /**
+   * Each value under its own savepoint: a refusal leaves the others deleted and the transaction
+   * usable. The values are deleted (and so locked) in id order, as every multi-value lock
+   * (`lockValues`); the result lists them in the order asked.
+   */
   async bulkDelete(ids: string[], userId?: string | null, opts?: AnalyticsCallOptions): Promise<BulkDeleteResult> {
     const ctx = await this.context(opts, userId ?? null);
-    const result: BulkDeleteResult = { deleted: [], failed: [] };
     const unique = Array.from(new Set((ids ?? []).map((id) => String(id))));
-    for (const id of unique) {
+    const key = (id: string) => id.toLowerCase();
+    const lockOrder = [...unique].sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0));
+    const outcomes = new Map<string, BulkDeleteResult['failed'][number] | null>();
+    for (const id of lockOrder) {
       if (!isUUID(id)) {
-        result.failed.push({ id, name: 'Unknown', reason: 'Analytics value not found.' });
+        outcomes.set(id, { id, name: 'Unknown', reason: 'Analytics value not found.' });
         continue;
       }
       try {
         await withSavepoint(ctx.manager, () => this.delete(id, ctx.userId ?? null, ctx));
-        result.deleted.push(id);
+        outcomes.set(id, null);
       } catch (err: any) {
         const [row] = await ctx.manager.query(
           `SELECT name FROM analytics_categories WHERE tenant_id = $1 AND id = $2`,
           [ctx.tenantId, id],
         );
-        result.failed.push({ id, name: row?.name ?? 'Unknown', reason: err?.message || 'Unknown error' });
+        outcomes.set(id, { id, name: row?.name ?? 'Unknown', reason: err?.message || 'Unknown error' });
       }
+    }
+    const result: BulkDeleteResult = { deleted: [], failed: [] };
+    for (const id of unique) {
+      const failure = outcomes.get(id);
+      if (failure) result.failed.push(failure);
+      else result.deleted.push(id);
     }
     return result;
   }
@@ -312,10 +339,15 @@ export class AnalyticsCategoriesService {
    * must be a value of the dimension, once. Writes one audit row on the dimension (the ordered
    * names before and after) when the order changes; the values keep their `updated_at`.
    *
-   * Locks: the dimension's values FOR UPDATE (by id, as every value write), then the dimension FOR
-   * NO KEY UPDATE, which waits for a create in progress (it holds the dimension FOR SHARE); the
-   * values are read again under that lock, so a value created meanwhile is numbered too. A value
-   * write that locks the dimension does so after its value: the same order, no deadlock.
+   * Locks: the dimension's values FOR NO KEY UPDATE, in id order, then the dimension FOR NO KEY
+   * UPDATE, which waits for a create in progress (it holds the dimension FOR SHARE); the values are
+   * read again under that lock, so a value created meanwhile is numbered too.
+   * - A line write takes FOR KEY SHARE on the value it links: NO KEY UPDATE does not conflict with
+   *   it, so lines (a budget file load included) are never blocked by a reorder.
+   * - Every value write that also locks the dimension locks its existing values first: an update
+   *   locks its value (`lockValues`) before `persist` takes the dimension FOR SHARE, and the values
+   *   CSV import locks every existing value it writes, in id order, before its first write. A
+   *   create locks no existing value. Values before the dimension on every path: no deadlock.
    */
   async reorder(
     axisIdRaw: unknown,
@@ -340,12 +372,12 @@ export class AnalyticsCategoriesService {
       );
       return rows.map((row) => row.id);
     };
-    await this.lockValues(ctx, await dimensionIds());
+    await this.lockValues(ctx, await dimensionIds(), 'NO KEY UPDATE');
     await ctx.manager.query(
       `SELECT id FROM analytics_axes WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`,
       [ctx.tenantId, axis.id],
     );
-    await this.lockValues(ctx, await dimensionIds());
+    await this.lockValues(ctx, await dimensionIds(), 'NO KEY UPDATE');
 
     const current: Array<{ id: string; name: string; sort_order: number }> = await ctx.manager.query(
       `SELECT c.id, c.name, c.sort_order FROM analytics_categories c
@@ -390,18 +422,26 @@ export class AnalyticsCategoriesService {
         .where('cat.tenant_id = :tenantId AND cat.axis_id = :axisId', { tenantId: ctx.tenantId, axisId: axis.id }),
       'sort_order',
       'ASC',
+      false,
     ).getMany();
     return { items };
   }
 
   // Shared with the CSV service ---------------------------------------------
 
-  /** Locks the rows (FOR UPDATE, stable order) and returns them; unknown ids are absent. */
-  async lockValues(ctx: AnalyticsContext, ids: string[]): Promise<StoredAnalyticsCategory[]> {
+  /**
+   * Locks the rows in id order and returns them; unknown ids are absent. FOR UPDATE by default
+   * (a delete, an edit); the reorder takes NO KEY UPDATE, which lets lines link the values.
+   */
+  async lockValues(
+    ctx: AnalyticsContext,
+    ids: string[],
+    mode: 'UPDATE' | 'NO KEY UPDATE' = 'UPDATE',
+  ): Promise<StoredAnalyticsCategory[]> {
     const valid = ids.filter((id) => isUUID(String(id)));
     if (valid.length === 0) return [];
     return ctx.manager.query(
-      `SELECT * FROM analytics_categories WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR UPDATE`,
+      `SELECT * FROM analytics_categories WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR ${mode === 'UPDATE' ? 'UPDATE' : 'NO KEY UPDATE'}`,
       [ctx.tenantId, valid],
     );
   }

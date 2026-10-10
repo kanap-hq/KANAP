@@ -15,7 +15,9 @@ const TABLES = ['analytics_categories', 'search_index'];
  *    value's search trigger rewrites its row), since migrations run without app.current_tenant, and
  *    restored to the state found afterwards: the values of each dimension get 1..n in today's
  *    alphabetical order (the name in ICU order, as the pickers sort it, then the id; the database's
- *    own collation may be byte order), so nothing changes on screen. Only dimensions whose
+ *    own collation may be byte order), so nothing changes on screen. Without the ICU collation (an
+ *    on-premise build) the backfill falls back to `lower(name), name, id`, so the migration and the
+ *    API still start; the values list then needs ICU like the OPEX and CAPEX lists. Only dimensions whose
  *    values all still hold 0 are numbered: a dimension already ordered (by a previous run or by an
  *    admin) is left alone, and a second run changes nothing. The count is logged.
  * 3. Index `(tenant_id, axis_id, sort_order)`.
@@ -27,12 +29,14 @@ export class AnalyticsValueOrder1853930000000 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`ALTER TABLE analytics_categories ADD COLUMN IF NOT EXISTS sort_order integer NOT NULL DEFAULT 0`);
+    const icu = await this.hasIcuCollation(queryRunner);
+    const nameOrder = icu ? `c.name COLLATE ${ICU_COLLATION}` : 'lower(c.name), c.name';
     const numbered = await withoutRowSecurity(queryRunner, TABLES, async () => {
       // An UPDATE through the query runner returns [rows, count]: the count goes through a CTE.
       const [{ n }]: Array<{ n: number }> = await queryRunner.query(
         `WITH ordered AS (
           SELECT c.tenant_id, c.id,
-                 row_number() OVER (PARTITION BY c.tenant_id, c.axis_id ORDER BY c.name COLLATE ${ICU_COLLATION}, c.id) AS position
+                 row_number() OVER (PARTITION BY c.tenant_id, c.axis_id ORDER BY ${nameOrder}, c.id) AS position
             FROM analytics_categories c
            WHERE NOT EXISTS (
              SELECT 1 FROM analytics_categories o
@@ -52,7 +56,18 @@ export class AnalyticsValueOrder1853930000000 implements MigrationInterface {
     await queryRunner.query(
       `CREATE INDEX IF NOT EXISTS ${INDEX} ON analytics_categories (tenant_id, axis_id, sort_order)`,
     );
-    console.log(`${LOG_PREFIX} column sort_order ready, ${numbered} value(s) numbered, index ${INDEX} ready`);
+    console.log(
+      `${LOG_PREFIX} column sort_order ready, ${numbered} value(s) numbered`
+        + `${icu ? '' : ' (no ICU collation: by lower(name), name)'}, index ${INDEX} ready`,
+    );
+  }
+
+  /** Whether PostgreSQL has the ICU collation (an on-premise build may lack it). */
+  protected async hasIcuCollation(queryRunner: QueryRunner): Promise<boolean> {
+    const [row] = await queryRunner.query(
+      `SELECT EXISTS (SELECT 1 FROM pg_collation WHERE collname = 'und-x-icu' AND collprovider = 'i') AS icu`,
+    );
+    return row?.icu === true;
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

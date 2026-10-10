@@ -709,6 +709,8 @@ export class AiQueryExecutor {
         axis: axis ? analyticsAxisLabel(axis) : null,
         axis_code: axis ? axis.code : null,
         applies_to: scalar(row.applies_to),
+        // The value's position in its dimension (the manual order).
+        sort_order: numericScalar(row.sort_order),
       },
     });
   }

@@ -138,6 +138,8 @@ export default function AnalyticsValueOrderDialog({ open, axisId, axisLabel, onC
   const [order, setOrder] = React.useState<AnalyticsValue[] | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  // A value is being moved: Escape then cancels the move instead of closing the dialog.
+  const [dragging, setDragging] = React.useState(false);
   const openedAtRef = React.useRef(0);
 
   // The list read since the dialog opened, never a cached one; edits are never overwritten by a later refetch.
@@ -147,6 +149,7 @@ export default function AnalyticsValueOrderDialog({ open, axisId, axisLabel, onC
       setOrder(null);
       setError(null);
       setSaving(false);
+      setDragging(false);
       return;
     }
     if (!openedAtRef.current) openedAtRef.current = Date.now();
@@ -177,6 +180,7 @@ export default function AnalyticsValueOrderDialog({ open, axisId, axisLabel, onC
   }), [ids.length, nameOf, positionOf, t]);
 
   const handleDragEnd = React.useCallback((event: DragEndEvent) => {
+    setDragging(false);
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     setOrder((current) => {
@@ -217,6 +221,7 @@ export default function AnalyticsValueOrderDialog({ open, axisId, axisLabel, onC
       title={t('analytics.reorder.title', { name: axisLabel })}
       subtitle={t('analytics.reorder.hint')}
       onClose={onClose}
+      disableEscapeKeyDown={dragging}
       onSave={handleSave}
       saveLabel={t('common:buttons.save')}
       saveDisabled={!order}
@@ -232,7 +237,9 @@ export default function AnalyticsValueOrderDialog({ open, axisId, axisLabel, onC
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
+          onDragStart={() => setDragging(true)}
           onDragEnd={handleDragEnd}
+          onDragCancel={() => setDragging(false)}
           accessibility={{
             announcements,
             screenReaderInstructions: { draggable: t('analytics.reorder.instructions') },

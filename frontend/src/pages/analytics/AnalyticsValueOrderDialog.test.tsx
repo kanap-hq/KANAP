@@ -129,6 +129,28 @@ describe('AnalyticsValueOrderDialog', () => {
     ]));
   });
 
+  it('cancels a move with Escape without closing the dialog; Escape with no move closes it', async () => {
+    const { onClose } = renderDialog();
+    await waitFor(() => expect(rows()).toHaveLength(4));
+    const high = rows()[1];
+    high.focus();
+    await act(async () => { fireEvent.keyDown(high, { key: ' ', code: 'Space' }); await tick(); });
+    await act(async () => { fireEvent.keyDown(document, { key: 'ArrowUp', code: 'ArrowUp' }); await tick(); });
+    // Escape where the user presses it: on the row, inside the dialog's portal.
+    await act(async () => { fireEvent.keyDown(high, { key: 'Escape', code: 'Escape' }); await tick(); });
+    expect(onClose).not.toHaveBeenCalled();
+    expect(rowTexts()).toEqual([
+      '1Mandatory',
+      '2High',
+      '3Mediumanalytics.disabledMark',
+      '4Lowmaster-data:shared.lineTypeUsage.capex',
+    ]);
+
+    await act(async () => { fireEvent.keyDown(rows()[1], { key: 'Escape', code: 'Escape' }); await tick(); });
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(post).not.toHaveBeenCalled();
+  });
+
   it('posts nothing on Cancel', async () => {
     const { onClose, onSaved } = renderDialog();
     await waitFor(() => expect(rows()).toHaveLength(4));
