@@ -3,10 +3,11 @@ import { backendPath } from './backend-root';
 
 /**
  * The image entrypoint (`scripts/migrate-and-start.js`) retries the database connection while the
- * database is not ready, and nothing else: a migration that fails exits at once (code 1) with its
- * message, never run again (plan planning/budget-unifie.md, G.13). Before, every error was retried
- * 30 times 2 s apart, a deterministic migration failure included, which kept the API down for the
- * length of 30 failing runs before the container restarted and did it all again.
+ * database is not ready or goes away, and nothing else: a migration that fails on its own exits at
+ * once (code 1) with its message, never run again (plan planning/budget-unifie.md, G.13). Before,
+ * every error was retried 30 times 2 s apart, a deterministic migration failure included, which
+ * kept the API down for the length of 30 failing runs before the container restarted and did it
+ * all again.
  */
 
 type FakeDataSource = {
@@ -26,14 +27,14 @@ type RunOptions = {
   error?: (...args: unknown[]) => void;
 };
 
-type Entrypoint = { runMigrationsIfNeeded(options?: RunOptions): Promise<void> };
+type Entrypoint = { runMigrationsIfNeeded(options?: RunOptions): Promise<void>; isConnectionError(err: unknown): boolean };
 
 // Requiring the entrypoint starts nothing: it runs only as the main module.
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const entrypoint: Entrypoint = require(backendPath('scripts', 'migrate-and-start.js'));
 
-/** A data source whose connection fails `connectFailures` times, then whose migrations answer `migrate`. */
-function fakeDataSource(connectFailures: number, migrate: () => Promise<Array<{ name: string }>>) {
+/** A data source whose connection fails `connectFailures` times, then whose migrations answer `migrate` (given the run's number). */
+function fakeDataSource(connectFailures: number, migrate: (run: number) => Promise<Array<{ name: string }>>) {
   const calls = { initialize: 0, runMigrations: 0, destroy: 0 };
   const ds: FakeDataSource = {
     isInitialized: false,
@@ -44,7 +45,7 @@ function fakeDataSource(connectFailures: number, migrate: () => Promise<Array<{ 
     },
     async runMigrations() {
       calls.runMigrations += 1;
-      return migrate();
+      return migrate(calls.runMigrations);
     },
     async destroy() {
       calls.destroy += 1;
@@ -106,10 +107,50 @@ async function main(): Promise<void> {
     assert.deepEqual(calls, { initialize: 5, runMigrations: 0, destroy: 0 }, 'five tries, never migrated');
     assert.deepEqual(exits, [1]);
     assert.equal(sleeps.length, 4, 'a wait between two tries');
-    assert.match(lines.error[0], /^\[entrypoint\] Failed to initialize DB after max attempts: connect ECONNREFUSED/);
+    assert.match(lines.error[0], /^\[entrypoint\] DB not ready after 5 attempts: connect ECONNREFUSED/);
   }
 
-  // 4. SKIP_MIGRATIONS=true: the data source is not even loaded.
+  // 4. The database goes away during the migrations (57P01, admin shutdown): nothing was applied
+  //    (one transaction), so the connection is retried and the migrations run again.
+  {
+    const shutdown = Object.assign(new Error('terminating connection due to administrator command'), { driverError: { code: '57P01' } });
+    const { ds, calls } = fakeDataSource(0, async (run) => {
+      if (run === 1) throw shutdown;
+      return [{ name: 'A' }];
+    });
+    const { lines, exits, sleeps } = await run(ds);
+    assert.deepEqual(calls, { initialize: 2, runMigrations: 2, destroy: 2 }, 'reconnected and migrated again');
+    assert.deepEqual(exits, [], 'no exit');
+    assert.deepEqual(sleeps, [7]);
+    assert.match(lines.warn[0], /^\[entrypoint\] DB connection lost during the migrations \(rolled back, nothing applied\) \(attempt 1\): terminating connection/);
+    assert.ok(!lines.error.some((line) => line.includes('A migration failed')), 'not reported as a failed migration');
+    assert.ok(lines.log.includes('[entrypoint] Migrations complete (1 executed).'));
+  }
+
+  // 5. The connection keeps dropping during the migrations: MIGRATION_MAX_ATTEMPTS runs, then exit 1.
+  {
+    const reset = Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' });
+    const { ds, calls } = fakeDataSource(0, async () => { throw reset; });
+    const { lines, exits, sleeps } = await run(ds);
+    assert.deepEqual(calls, { initialize: 5, runMigrations: 5, destroy: 5 });
+    assert.deepEqual(exits, [1]);
+    assert.equal(sleeps.length, 4);
+    assert.match(lines.error[0], /^\[entrypoint\] DB connection lost during the migrations \(rolled back, nothing applied\) after 5 attempts: read ECONNRESET/);
+  }
+
+  // 6. What counts as a lost connection.
+  const connection = (code: string) => entrypoint.isConnectionError(Object.assign(new Error('x'), { code }));
+  for (const code of ['ECONNRESET', 'ECONNREFUSED', '57P01', '57P03', '08006', '08001']) {
+    assert.equal(connection(code), true, `${code} is a connection error`);
+  }
+  assert.equal(entrypoint.isConnectionError({ message: 'x', driverError: { code: '57P01' } }), true, 'a driver error TypeORM wraps');
+  assert.equal(entrypoint.isConnectionError(new Error('Connection terminated unexpectedly')), true, 'node-postgres without a code');
+  for (const code of ['23505', '42P01', '22012', 'P0001']) {
+    assert.equal(connection(code), false, `${code} is a migration's own failure`);
+  }
+  assert.equal(entrypoint.isConnectionError(new Error('Tenant acme: 3 CAPEX lines have no equivalent')), false, 'a migration\'s own error');
+
+  // 7. SKIP_MIGRATIONS=true: the data source is not even loaded.
   {
     let loaded = false;
     const exits: number[] = [];
