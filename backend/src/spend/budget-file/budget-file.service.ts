@@ -80,7 +80,7 @@ export class BudgetFileService {
         stored: [], names: [], createSuppliers: false, canCreateSuppliers: false, currentYear, labels: {},
       });
     }
-    const numbers = interpretBudgetFile(read).map((row) => row.itemNumber);
+    const numbers = interpretBudgetFile(read, scope).map((row) => row.itemNumber);
     const settings = await this.currencySettings.getSettings(caller.tenantId, { manager });
     const loaded = await loadPreflight(manager, caller.tenantId, numbers, natures, settings.allowedCurrencies);
     const report = buildPreflight({

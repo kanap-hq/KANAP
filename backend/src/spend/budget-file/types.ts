@@ -232,6 +232,8 @@ export interface BudgetFileReport {
     duplicates: Array<{ line: number; message: string }>;
     ignoredColumns: string[];
     supplierNames: Array<{ line: number; message: string }>;
+    /** Cells a row fills and the load does not read (the description of a CAPEX line, until lot U). */
+    ignoredCells: Array<{ line: number; column: string; message: string }>;
   };
   creates: {
     dimensionValues: Array<{ dimension: string; names: string[] }>;

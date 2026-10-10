@@ -86,6 +86,24 @@ export function natureChangeMessage(ref: string, stored: BudgetNature, said: Bud
 }
 
 /**
+ * An `OPX-n` or `CPX-n` number that names no line the caller may import, while the caller may not
+ * import the nature of its prefix: the right it needs, said from the prefix alone. Nothing is
+ * read, so the sentence is the same whether such a line exists or not.
+ */
+export function prefixRightMessage(ref: string, nature: BudgetNature): string {
+  return `${ref} is ${aNature(nature)} line: importing it needs the Admin level on ${natureLabel(nature)}.`;
+}
+
+/**
+ * The description of a CAPEX line is neither read nor written by the file until the unified
+ * screens (lot U): the CAPEX screens, API and audit rows do not show it yet.
+ */
+export const CAPEX_DESCRIPTION_IGNORED = 'description is ignored on a CAPEX line. Leave the cell empty.';
+
+/** The nature an `OPX` or `CPX` prefix stood for in the files of before lot C1b. */
+const PREFIX_NATURE: Partial<Record<string, BudgetNature>> = { OPX: 'opex', CPX: 'capex' };
+
+/**
  * A text cell and a stored text, read the same way before they are compared: the reader trims a
  * cell, and the load writes it trimmed, so a stored value that ends with a line break (typed in
  * the app) reads as unchanged when an export is loaded back.
@@ -126,6 +144,7 @@ interface Bag {
   dimensions: Map<string, Map<string, string>>;
   duplicates: Array<{ line: number; message: string }>;
   supplierNames: Array<{ line: number; message: string }>;
+  ignoredCells: Array<{ line: number; column: string; message: string }>;
   deleted: Array<{ line: number; itemNumber: string }>;
   changed: BudgetFileReport['changedSinceExport'];
   snapshot: BudgetFileSnapshotLine[];
@@ -164,7 +183,7 @@ export function buildPreflight(input: PreflightInput): BudgetFileReport {
  * The same comparison as the report. Does not read or write the database.
  */
 export function planBudgetFile(input: PreflightInput): { report: BudgetFileReport; plans: BudgetFileLinePlan[] } {
-  const rows = interpretBudgetFile(input.read);
+  const rows = interpretBudgetFile(input.read, input.scope);
   if (input.read.fileErrors.length > 0 || input.read.headerErrors.length > 0) return { report: refused(input, rows), plans: [] };
   return compared(input, rows);
 }
@@ -259,7 +278,10 @@ function resolveRow(
   } else if (!matched) {
     // The stored lines are those of the natures the caller may import: a line of another nature reads as no line.
     const ref = row.itemNumber.ref;
-    if (row.token.kind === 'ok') {
+    const prefixNature = PREFIX_NATURE[row.itemNumber.prefix];
+    if (prefixNature && !input.natures.includes(prefixNature)) {
+      fail('item_number', prefixRightMessage(ref, prefixNature));
+    } else if (row.token.kind === 'ok') {
       fail('item_number', `${ref} was deleted since the export.`);
       bag.deleted.push({ line: row.line, itemNumber: ref });
     } else {
@@ -267,7 +289,10 @@ function resolveRow(
     }
   } else if (nature && matched.nature !== nature) {
     // A line keeps its nature whatever the file says (changing the type is lot M, from the line).
-    fail(row.nature.kind === 'absent' ? 'item_number' : 'nature', natureChangeMessage(lineRef(matched.itemNumber), matched.nature, nature));
+    // Named as the file names it, with its BL number when that differs (`CPX-2 (BL-3)`).
+    const own = lineRef(matched.itemNumber);
+    const ref = row.itemNumber.ref === own ? own : `${row.itemNumber.ref} (${own})`;
+    fail(row.nature.kind === 'absent' ? 'item_number' : 'nature', natureChangeMessage(ref, matched.nature, nature));
     flush();
     return;
   } else {
@@ -287,7 +312,7 @@ function resolveRow(
   const company = resolveCompany(input, row, live, creating, costCenter, blocked, fail, bag, changes, draft);
   resolveAccount(input, nature, row, live, creating, company, blocked, fail, bag, changes, draft);
   const supplier = resolveSupplier(input, row, live, creating, blocked, fail, bag, changes, draft);
-  resolveText(row, live, creating, blocked, fail, changes, draft);
+  resolveText(nature, row, live, creating, blocked, fail, bag, changes, draft);
   resolveEnums(row, live, creating, blocked, fail, changes, draft);
   resolveCurrency(input, row, live, creating, blocked, fail, changes, draft);
   resolveOwners(input, row, live, creating, blocked, fail, bag, changes, draft);
@@ -614,15 +639,18 @@ function opinion(cell: FieldCell): string | null | undefined {
 }
 
 /**
- * The texts, the same for both natures since lot C1b: `name` is the line's `product_name`, and
- * `description` its own description (a CAPEX line has one too; the CAPEX screens show it from lot U).
+ * The texts: `name` is the line's `product_name` for both natures, `description` the description
+ * of an OPEX line. On a CAPEX line a filled `description` cell is ignored with a warning
+ * (`CAPEX_DESCRIPTION_IGNORED`, until lot U).
  */
 function resolveText(
+  nature: BudgetNature,
   row: InterpretedRow,
   live: StoredLine | null,
   creating: boolean,
   blocked: (column: string) => boolean,
   fail: (column: string | null, message: string) => void,
+  bag: Bag,
   changes: string[],
   draft: LineDraft,
 ): void {
@@ -634,6 +662,12 @@ function resolveText(
   for (const field of fields) {
     const cell = row.fields[field.id] ?? { kind: 'absent' as const };
     if (blocked(field.id)) continue;
+    if (nature === 'capex' && field.id === 'description') {
+      if (cell.kind === 'value' || cell.kind === 'clear') {
+        bag.ignoredCells.push({ line: row.line, column: 'description', message: CAPEX_DESCRIPTION_IGNORED });
+      }
+      continue;
+    }
     const key = field.id === 'name' ? 'product_name' : field.id;
     if (cell.kind === 'clear') {
       if (field.required || !CLEARABLE.has(field.id)) fail(field.id, `${field.id} is required.`);
@@ -1109,6 +1143,7 @@ function emptyBag(): Bag {
     dimensions: new Map(),
     duplicates: [],
     supplierNames: [],
+    ignoredCells: [],
     deleted: [],
     changed: [],
     snapshot: [],
@@ -1164,6 +1199,7 @@ function finish(input: PreflightInput, errors: Bag['errors'], bag: Bag, supplier
       duplicates: bag.duplicates.slice(0, PREFLIGHT_LIST_LIMIT),
       ignoredColumns: input.read.ignoredColumns,
       supplierNames: bag.supplierNames.slice(0, PREFLIGHT_LIST_LIMIT),
+      ignoredCells: bag.ignoredCells.slice(0, PREFLIGHT_LIST_LIMIT),
     },
     creates: {
       dimensionValues: [...bag.dimensions.entries()].map(([dimension, names]) => ({

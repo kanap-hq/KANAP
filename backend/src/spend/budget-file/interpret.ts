@@ -1,7 +1,7 @@
 import { CENTS_LIMIT } from '../../common/amount';
 import { CsvDateOrder, CsvLanguage, CsvParsedDate, CsvReadResult, DecimalMark, readCsv } from '../../common/csv-sheet';
 import { AmountMeasure } from '../amounts-write.util';
-import type { BudgetNature } from '../budget-nature';
+import { LEGACY_PREFIX, type BudgetNature } from '../budget-nature';
 import { budgetFileSchema, CRITERIA_COLUMNS_MESSAGE, hasCriteriaColumns, isOldBudgetLayout, OLD_BUDGET_FILE_MESSAGE, schemaFields } from './columns';
 import { parseToken, ParsedToken } from './token';
 
@@ -12,8 +12,9 @@ export type FieldCell =
   | { kind: 'value'; text: string };
 
 /**
- * The prefix a file names a line by: `BL` its own number (a bare number too, since lot C1b);
- * `OPX` and `CPX` the numbers of the files of before lot C1b (`legacy_number`, lot Z1).
+ * The prefix a file names a line by: `BL` its own number; `OPX` and `CPX` the numbers of the
+ * files of before lot C1b (`legacy_number`, lot Z1). A bare number is a `BL` number in a file
+ * with a `nature` column, and keeps its former meaning in a file without one (`interpretBudgetFile`).
  */
 export type ItemNumberPrefix = 'BL' | 'OPX' | 'CPX';
 
@@ -94,12 +95,18 @@ export async function readBudgetCsv(
   };
 }
 
-/** Turn parsed cells into the budget file's own cells. No database. */
-export function interpretBudgetFile(read: CsvReadResult): InterpretedRow[] {
+/**
+ * Turn parsed cells into the budget file's own cells. No database. `scope`, the route's nature,
+ * gives a bare number of a file without a `nature` column (a file of before lot C1b) the meaning
+ * it had there: on the CAPEX list the line's CPX number, on the OPEX list the OPEX line's number.
+ * In a file with the column a bare number is the line's BL number, on both lists.
+ */
+export function interpretBudgetFile(read: CsvReadResult, scope: BudgetNature): InterpretedRow[] {
   const fields = schemaFields();
   const amountColumns = read.columns.filter((column) => column.kind === 'amount');
   const analyticsColumns = read.columns.filter((column) => column.kind === 'analytics');
   const presentFields = new Set(read.columns.filter((column) => column.kind === 'field').map((column) => column.id));
+  const barePrefix: ItemNumberPrefix = presentFields.has('nature') ? 'BL' : LEGACY_PREFIX[scope];
   return read.rows.map((row) => {
     const errors = row.errors.map((error) => ({ column: error.column, message: error.message }));
     const cells: Record<string, FieldCell> = {};
@@ -152,7 +159,7 @@ export function interpretBudgetFile(read: CsvReadResult): InterpretedRow[] {
     return {
       line: row.line,
       nature: parseNature(cells.nature ?? { kind: 'absent' }),
-      itemNumber: parseItemNumber(cells.item_number ?? { kind: 'absent' }),
+      itemNumber: parseItemNumber(cells.item_number ?? { kind: 'absent' }, barePrefix),
       token: tokenRaw == null ? { kind: 'absent' } : parseToken(tokenRaw),
       fields: cells,
       analytics,
@@ -178,8 +185,8 @@ function parseNature(cell: FieldCell): NatureCell {
   return { kind: 'invalid', raw: cell.text.trim() };
 }
 
-/** `BL-n`, `OPX-n`, `CPX-n` (any case) or a bare number, which is the line's own number (`BL-n`). */
-export function parseItemNumber(cell: FieldCell): ItemNumberCell {
+/** `BL-n`, `OPX-n`, `CPX-n` (any case) or a bare number, read with `barePrefix` (`BL` unless the file is one of before). */
+export function parseItemNumber(cell: FieldCell, barePrefix: ItemNumberPrefix = 'BL'): ItemNumberCell {
   if (cell.kind === 'absent' || cell.kind === 'blank') return { kind: 'blank' };
   if (cell.kind === 'clear') return { kind: 'invalid', raw: '-' };
   const text = cell.text.trim();
@@ -188,7 +195,7 @@ export function parseItemNumber(cell: FieldCell): ItemNumberCell {
   if (digits == null) return { kind: 'invalid', raw: text };
   const n = Number(digits);
   if (!Number.isSafeInteger(n) || n < 1) return { kind: 'invalid', raw: text };
-  const prefix = (prefixed ? prefixed[1].toUpperCase() : 'BL') as ItemNumberPrefix;
+  const prefix = (prefixed ? prefixed[1].toUpperCase() : barePrefix) as ItemNumberPrefix;
   return { kind: 'number', prefix, n, raw: text, ref: `${prefix}-${n}` };
 }
 

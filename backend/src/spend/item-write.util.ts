@@ -61,18 +61,21 @@ const FIELD_COLUMNS: Record<ItemWriteScope, Readonly<Record<string, string>>> = 
 
 /**
  * How a body names its fields: `api`, the names of the nature's routes (the CAPEX alias's
- * `description` is the title); `columns`, the columns of `spend_items` for both natures
- * (`product_name` the title, `description` the description), what the budget file writes since
- * lot C1b. A `columns` body writes the same fields for both natures: those of an OPEX line, the
- * contract aside.
+ * `description` is the title); `columns`, the columns of `spend_items` (`product_name` the title,
+ * `description` the description), what the budget file writes since lot C1b: those of an OPEX
+ * line, the contract aside; a CAPEX line's description stays out until the unified screens
+ * (lot U), which show it.
  */
 export type ItemWriteFields = 'api' | 'columns';
 
-const COLUMN_WRITABLE: readonly string[] = WRITABLE_COLUMNS.opex.filter((column) => column !== 'contract_id');
+const COLUMN_WRITABLE: Record<ItemWriteScope, readonly string[]> = {
+  opex: WRITABLE_COLUMNS.opex.filter((column) => column !== 'contract_id'),
+  capex: WRITABLE_COLUMNS.opex.filter((column) => column !== 'contract_id' && column !== 'description'),
+};
 
 /** The fields a line update writes as given (after the id checks below), by their API names. */
 export function itemWritableColumns(scope: ItemWriteScope, fields: ItemWriteFields = 'api'): readonly string[] {
-  return fields === 'columns' ? COLUMN_WRITABLE : WRITABLE_COLUMNS[scope];
+  return fields === 'columns' ? COLUMN_WRITABLE[scope] : WRITABLE_COLUMNS[scope];
 }
 
 /** The column of `spend_items` that a field of the nature writes. */

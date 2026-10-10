@@ -190,7 +190,7 @@ async function prepare(input: {
     dateOrder: input.dateOrder,
     decimalMark: input.decimalMark,
   });
-  const numbers = interpretBudgetFile(read).map((row) => row.itemNumber);
+  const numbers = interpretBudgetFile(read, input.scope).map((row) => row.itemNumber);
   const loaded = await loadPreflight(input.manager, input.tenantId, numbers, input.natures, input.allowedCurrencies);
   const planned = planBudgetFile({
     scope: input.scope,

@@ -7,7 +7,7 @@ import { parseItemNumber, readBudgetCsv } from '../interpret';
 import { periodForYearlyTotal } from '../period';
 import { buildPreflight, planBudgetFile } from '../preflight';
 import { budgetFileSchema, CRITERIA_COLUMNS_MESSAGE, OLD_BUDGET_FILE_MESSAGE } from '../columns';
-import { natureChangeMessage, natureRightMessage } from '../preflight';
+import { CAPEX_DESCRIPTION_IGNORED, natureChangeMessage, natureRightMessage, prefixRightMessage } from '../preflight';
 import type { BudgetNature } from '../../budget-nature';
 import { formatToken, parseToken, tokenError } from '../token';
 import { BUDGET_FILE_MAX_BYTES } from '../upload';
@@ -255,8 +255,11 @@ async function testIdentity() {
   const unknown = await preflight('opex', 'item_number,name,currency\nOPX-9,Gone,EUR\n', []);
   assert.equal(unknown.deletedCount, 0);
   assert.ok(unknown.errors.some((error) => error.message === "item_number 'OPX-9' does not match a line."));
+  // A CPX number on the OPEX list, the CAPEX right missing: the right it needs, from its prefix alone.
   const other = await preflight('opex', 'item_number,name,currency\nCPX-3,Gone,EUR\n', []);
-  assert.deepEqual(other.errors.map((error) => error.message), ["item_number 'CPX-3' does not match a line."], 'a CPX number names no line here');
+  assert.deepEqual(other.errors.map((error) => error.message), ['CPX-3 is a CAPEX line: importing it needs the Admin level on CAPEX.']);
+  const both = await preflight('opex', 'item_number,name,currency\nCPX-3,Gone,EUR\n', [], { natures: ['opex', 'capex'] });
+  assert.deepEqual(both.errors.map((error) => error.message), ["item_number 'CPX-3' does not match a line."], 'with both rights: no such line');
   const twice = await preflight('opex', 'item_number,name,currency\nOPX-3,Widget,EUR\nOPX-3,Widget,EUR\n', [line()]);
   assert.ok(twice.errors.some((error) => error.message === 'item_number OPX-3 already appears on line 2.'));
 
@@ -478,8 +481,8 @@ async function testExportShape() {
   const cell = (row: number, header: string) => both.rows[row][both.headers.indexOf(header)];
   assert.deepEqual(
     ['nature', 'item_number', 'description', 'analytics:default', 'analytics:ppe_type', 'analytics:priority'].map((header) => cell(0, header)),
-    ['capex', 'BL-120', 'Racks', 'Infra', 'Hardware', 'High'],
-    'a CAPEX line: its nature, its BL number, its description and the value names',
+    ['capex', 'BL-120', '', 'Infra', 'Hardware', 'High'],
+    'a CAPEX line: its nature, its BL number, no description (until lot U) and the value names',
   );
   assert.deepEqual(
     ['nature', 'item_number', 'analytics:default', 'analytics:priority'].map((header) => cell(1, header)),
@@ -627,13 +630,13 @@ async function testNatureColumn() {
     [3, 'nature', "nature 'service' is not a value. Use opex or capex."],
     [4, 'nature', 'nature cannot be cleared.'],
     [5, 'nature', natureChangeMessage('BL-120', 'capex', 'opex')],
-    [6, 'nature', natureChangeMessage('BL-3', 'opex', 'capex')],
+    [6, 'nature', natureChangeMessage('OPX-3 (BL-3)', 'opex', 'capex')],
   ]);
   assert.equal(natureChangeMessage('BL-120', 'capex', 'opex'), 'BL-120 is a CAPEX line, not an OPEX line. A file does not change the type of a line.');
 
   // A file of before lot C1b (no nature column): every line is of the route's nature.
   const old = await preflight('opex', 'item_number,name,currency\nCPX-4,Racks,EUR\nOPX-3,Widget,EUR\n', stored, { cat, natures: BOTH });
-  assert.deepEqual(rowErrors(old), [[2, 'item_number', natureChangeMessage('BL-120', 'capex', 'opex')]], 'a CAPEX line in a file of the OPEX list');
+  assert.deepEqual(rowErrors(old), [[2, 'item_number', natureChangeMessage('CPX-4 (BL-120)', 'capex', 'opex')]], 'a CAPEX line in a file of the OPEX list');
   assert.equal(old.changes.unchanged, 1);
 }
 
@@ -650,16 +653,33 @@ async function testItemNumbers() {
     assert.deepEqual(report.snapshot.lines.map((item) => item.id), [expected.id], `${ref} names ${expected.id}`);
   }
   // A CPX number is not a BL number, and the reverse.
-  const missing = await preflight('capex', 'item_number,name\nCPX-120,Racks\nOPX-120,Racks\n4,Racks\n', stored, { cat, natures: BOTH });
+  const missing = await preflight('capex', 'item_number,name\nCPX-120,Racks\nOPX-120,Racks\n', stored, { cat, natures: BOTH });
   assert.deepEqual(rowErrors(missing), [
     [2, 'item_number', "item_number 'CPX-120' does not match a line."],
     [3, 'item_number', "item_number 'OPX-120' does not match a line."],
-    [4, 'item_number', "item_number '4' does not match a line."],
   ]);
+  // A bare number keeps its former meaning in a file without a nature column: on the CAPEX list
+  // its CPX number, on the OPEX list the OPEX line's number. With the column, it is a BL number.
+  for (const [scope, text, expected] of [
+    ['capex', 'item_number,name\n4,Racks\n', capexLine],
+    ['opex', 'item_number,name\n3,Widget\n', opexLine],
+    ['capex', 'nature,item_number,name\ncapex,120,Racks\n', capexLine],
+    ['opex', 'nature,item_number,name\nopex,3,Widget\n', opexLine],
+  ] as Array<[BudgetFileScope, string, StoredLine]>) {
+    const report = await preflight(scope, text, stored, { cat, natures: BOTH });
+    assert.deepEqual(report.snapshot.lines.map((item) => item.id), [expected.id], `${scope}: ${text.split('\n')[1]} (${JSON.stringify(report.errors)})`);
+  }
+  const bareCpx = await preflight('capex', 'item_number,name\n120,Racks\n', stored, { cat, natures: BOTH });
+  assert.deepEqual(rowErrors(bareCpx), [[2, 'item_number', "item_number '120' does not match a line."]], 'on the CAPEX list of before, 120 is CPX-120');
+  const deletedCpx = await preflight('capex', 'item_number,name,kanap_token\n9,Gone,v1\n', stored, { cat, natures: BOTH });
+  assert.deepEqual(rowErrors(deletedCpx), [[2, 'item_number', 'CPX-9 was deleted since the export.']], 'named as before');
   // A CAPEX line moved from OPEX keeps its OPX number (lot M): found by it, still a CAPEX line.
   const moved = line({ id: 'line-9', nature: 'capex', itemNumber: 9, legacyNumber: 'OPX-9', name: 'Moved' });
   const byOpx = await preflight('capex', 'item_number,name\nOPX-9,Moved\n', [moved], { cat, natures: BOTH });
   assert.equal(byOpx.ok, true, JSON.stringify(byOpx.errors));
+  // A line named in a file without a nature column, of the other nature: named as the file names it.
+  const otherList = await preflight('opex', 'item_number,name\nCPX-4,Racks\n', stored, { cat, natures: BOTH });
+  assert.deepEqual(rowErrors(otherList), [[2, 'item_number', natureChangeMessage('CPX-4 (BL-120)', 'capex', 'opex')]]);
   const twice = await preflight('opex', `${header}opex,BL-3,Widget\nopex,OPX-3,Widget\n`, stored, { cat, natures: BOTH });
   assert.deepEqual(rowErrors(twice), [[3, 'item_number', 'item_number OPX-3 and BL-3 on line 2 are the same line, BL-3.']]);
   assert.deepEqual(['x', 'BL-0', 'PRJ-3', 'BL-'].map((raw) => parseItemNumber({ kind: 'value', text: raw }).kind), ['invalid', 'invalid', 'invalid', 'invalid']);
@@ -685,6 +705,17 @@ async function testNatureRights() {
   const capexRoute = await preflight('capex', file, stored, { cat });
   assert.deepEqual(rowErrors(capexRoute).map((error) => error[0]), [2], 'the OPEX line of a file loaded on the CAPEX list');
   assert.equal(capexRoute.errors[0].message, natureRightMessage('opex'));
+  // An OPX or CPX number of a nature the caller may not import: the right it needs, from the prefix
+  // alone, whether such a line exists or not (nothing of that nature is read).
+  for (const [scope, natures, text, message] of [
+    ['opex', ['opex'], 'item_number,name\nCPX-4,Racks\nCPX-99,Nothing\n', 'is a CAPEX line: importing it needs the Admin level on CAPEX.'],
+    ['capex', ['capex'], 'item_number,name\nOPX-3,Widget\nOPX-99,Nothing\n', 'is an OPEX line: importing it needs the Admin level on OPEX.'],
+  ] as Array<[BudgetFileScope, BudgetNature[], string, string]>) {
+    const report = await preflight(scope, text, stored, { cat, natures });
+    assert.deepEqual(rowErrors(report).map((error) => error[2]), text.split('\n').slice(1, 3).map((row) => `${row.split(',')[0]} ${message}`), `${scope} list`);
+    assert.deepEqual(report.snapshot.lines, [], `${scope} list: no line read`);
+  }
+  assert.equal(prefixRightMessage('CPX-4', 'capex'), 'CPX-4 is a CAPEX line: importing it needs the Admin level on CAPEX.');
 }
 
 /** Dimensions by the line's nature: a dimension of the other nature stays empty; a required one binds its nature only. */
@@ -748,6 +779,23 @@ async function testDuplicatesByNature() {
   ]);
 }
 
+/** Until lot U the description of a CAPEX line is neither read nor written: a filled cell is ignored with a warning. */
+async function testCapexDescriptionIgnored() {
+  const { stored, cat } = natureFixture();
+  const header = 'nature,item_number,name,description,company_name,account_number,currency\n';
+  const planned = await planOf('opex', `${header}capex,,Server,A server,Acme,2100,EUR\ncapex,BL-120,Racks,-,,,\nopex,BL-3,Widget,Licences,,,\n`, stored, {
+    cat, natures: BOTH,
+  });
+  assert.equal(planned.report.ok, true, JSON.stringify(planned.report.errors));
+  assert.deepEqual(planned.report.warnings.ignoredCells, [
+    { line: 2, column: 'description', message: CAPEX_DESCRIPTION_IGNORED },
+    { line: 3, column: 'description', message: CAPEX_DESCRIPTION_IGNORED },
+  ]);
+  assert.equal(CAPEX_DESCRIPTION_IGNORED, 'description is ignored on a CAPEX line. Leave the cell empty.');
+  assert.deepEqual(planned.plans.map((plan) => [plan.nature, 'description' in plan.body]), [['capex', false], ['opex', true]], 'nothing written on the CAPEX lines');
+  assert.deepEqual([planned.report.changes.unchanged, planned.report.changes.updated, planned.report.changes.created], [1, 1, 1], 'Racks unchanged');
+}
+
 /** A text the app stored with a line break at its end reads back unchanged: the cell and the stored value are trimmed alike. */
 async function testTrailingLineBreak() {
   const stored = line({ notes: 'test\n', description: '  Monitoring ' });
@@ -781,6 +829,7 @@ async function main() {
   await testFreezeByNature();
   await testDuplicatesByNature();
   await testTrailingLineBreak();
+  await testCapexDescriptionIgnored();
   console.log('budget-file.spec: ok');
 }
 
