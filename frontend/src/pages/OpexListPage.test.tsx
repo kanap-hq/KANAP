@@ -422,7 +422,7 @@ describe('OpexListPage', () => {
     expect(column('analytics_category_name')!.valueGetter!({ data: { analytics_category_name: 'Licences' } })).toBe('Licences');
   });
 
-  it('adds one column per other enabled dimension, hidden, right after the default one, in dimension order', async () => {
+  it('adds one column per enabled dimension, hidden, in dimension order', async () => {
     dimensions.list = [
       dimension('activity', 'Activity', 3),
       dimension('old', 'Old', 2, { status: 'disabled', disabled_at: '2020-01-01T00:00:00.000Z' }),
@@ -478,6 +478,39 @@ describe('OpexListPage', () => {
     const ids = lastProps().columns.map((c) => c.colId ?? c.field);
     expect(ids).toContain('analytics_mine');
     expect(ids).not.toContain('analytics_theirs');
+  });
+
+  it('places the default dimension where the dimension order puts it, and a stored filter and sort on it still apply', async () => {
+    dimensions.list = [
+      dimension('activity', 'Activity', 1),
+      dimension('nature', 'Nature', 2),
+      dimension('default', 'Cost type', 3, { is_default: true }),
+      dimension('site', 'Site', 4),
+    ];
+    const kept = { analytics_category_name: { filterType: 'set', values: ['Licences'] } };
+    window.sessionStorage.setItem('opex-list-context', JSON.stringify({
+      sort: 'analytics_category_name:ASC', q: '', filters: JSON.stringify(kept), statusScope: 'enabled',
+    }));
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/ops/opex']}>
+          <LocationProbe />
+          <OpexListPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(1));
+    const ids = lastProps().columns.map((c) => c.colId ?? c.field);
+    const at = ids.indexOf('analytics_activity');
+    // The default dimension's column keeps its id, third in the block as the dimension is third.
+    expect(ids.slice(at, at + 5)).toEqual(['analytics_activity', 'analytics_nature', 'analytics_category_name', 'analytics_site', 'cost_center_label']);
+    expect(column('analytics_category_name')?.headerName).toBe('Cost type');
+    const params = new URLSearchParams(location.search);
+    expect(params.get('sort')).toBe('analytics_category_name:ASC');
+    expect(JSON.parse(params.get('filters') ?? '{}')).toEqual(kept);
+    const initial = (lastProps() as unknown as { initialState?: { filter?: { filterModel?: unknown } } }).initialState;
+    expect(initial?.filter?.filterModel).toEqual(kept);
   });
 
   it('mounts the grid only once the dimensions are known, so a saved layout finds their columns', async () => {

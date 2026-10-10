@@ -151,6 +151,13 @@ describe('AnalyticsValueOrderDialog', () => {
     expect(post).not.toHaveBeenCalled();
   });
 
+  it('reads nothing without a dimension', async () => {
+    renderDialog({ axisId: '' });
+    await act(async () => { await tick(); });
+    expect(get).not.toHaveBeenCalled();
+    expect(screen.getByText('common:status.loading')).toBeInTheDocument();
+  });
+
   it('posts nothing on Cancel', async () => {
     const { onClose, onSaved } = renderDialog();
     await waitFor(() => expect(rows()).toHaveLength(4));

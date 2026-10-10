@@ -437,7 +437,7 @@ describe('CapexPage', () => {
     });
   });
 
-  it('adds one column per other enabled dimension, hidden, right after the default one, in dimension order', async () => {
+  it('adds one column per enabled dimension, hidden, in dimension order', async () => {
     dimensions.list = [
       dimension('activity', 'Activity', 3),
       dimension('old', 'Old', 2, { status: 'disabled', disabled_at: '2020-01-01T00:00:00.000Z' }),
@@ -516,6 +516,31 @@ describe('CapexPage', () => {
     // Never mounted without the dimension columns.
     for (const [props] of grid.mock.calls) {
       expect((props as GridProps).columns.map((c) => c.colId ?? c.field)).toContain('analytics_nature');
+    }
+  });
+
+  it('places the default dimension where the dimension order puts it, and a stored filter and sort on it still apply', async () => {
+    dimensions.list = [
+      dimension('activity', 'Activity', 1),
+      dimension('nature', 'Nature', 2),
+      dimension('default', 'Cost type', 3, { is_default: true }),
+      dimension('site', 'Site', 4),
+    ];
+    const kept = { analytics_category_name: { filterType: 'set', values: ['Licences'] } };
+    window.sessionStorage.setItem('capex-list-context', JSON.stringify({
+      sort: 'analytics_category_name:ASC', q: '', filters: JSON.stringify(kept), statusScope: 'enabled',
+    }));
+    await renderPage();
+    const ids = lastProps().columns.map((c) => c.colId ?? c.field);
+    const at = ids.indexOf('analytics_activity');
+    // The default dimension's column keeps its id, third in the block as the dimension is third.
+    expect(ids.slice(at, at + 5)).toEqual(['analytics_activity', 'analytics_nature', 'analytics_category_name', 'analytics_site', 'cost_center_label']);
+    expect(column('analytics_category_name')?.headerName).toBe('Cost type');
+    expect(seen.searches.length).toBeGreaterThan(0);
+    for (const search of seen.searches) {
+      const params = new URLSearchParams(search);
+      expect(params.get('sort')).toBe('analytics_category_name:ASC');
+      expect(JSON.parse(params.get('filters') ?? '{}')).toEqual(kept);
     }
   });
 

@@ -5,16 +5,16 @@ import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
-import { backendPid, closeRunner, committed, openTenantTransaction, waitUntilBlocked } from '../../cost-centers/__tests__/cost-center-test-helpers';
+import { backendPid, closeRunner, committed, openTenantTransaction, seedCompany, waitUntilBlocked } from '../../cost-centers/__tests__/cost-center-test-helpers';
 import { REQUIRE_LEVEL_KEY } from '../../auth/require-level.decorator';
 import { AnalyticsAxesController } from '../analytics-axes.controller';
 import { ensureDefaultAnalyticsAxis } from '../analytics-axes.util';
 import { AnalyticsAxisCreateDto, AnalyticsAxisReorderDto, AnalyticsAxisUpdateDto } from '../dto/analytics.dto';
+import { updateItemUnderLock } from '../../spend/item-locked-update';
 import {
   context,
   csvFile,
   expectRefused,
-  linkValue,
   runSpecs,
   seedLine,
   seedTenant,
@@ -189,7 +189,7 @@ function testReorderRoute() {
 async function deleteRaceTenant(tenantId: string) {
   await dataSource.transaction(async (manager) => {
     await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
-    for (const table of ['spend_item_analytics_values', 'spend_items', 'analytics_categories', 'analytics_axes', 'audit_log']) {
+    for (const table of ['spend_item_analytics_values', 'spend_items', 'analytics_categories', 'analytics_axes', 'audit_log', 'companies']) {
       await manager.query(`DELETE FROM ${table} WHERE tenant_id = $1`, [tenantId]);
     }
   });
@@ -241,8 +241,56 @@ async function testValueCreateWaitsForReorder() {
 /**
  * A values import spanning two dimensions locks them in id order before its first write, as the
  * reorder does: whichever comes second waits for the first, in both orders, never a deadlock.
+ *
+ * The lock order itself: a third session holds the lower-id dimension FOR NO KEY UPDATE (a reorder
+ * that has locked it and not yet the next one), and the file lists the higher-id dimension first.
+ * The import must wait on the lower-id dimension before it holds the higher-id one, which a fourth
+ * session then still locks with NOWAIT. Writing in file order instead, the import would hold the
+ * higher-id dimension while waiting for the lower one: the cycle with a reorder.
  */
 async function testImportAcrossDimensionsAndReorder() {
+  const seed = await committed(async (runner) => {
+    const { tenantId, ids } = await seedDimensions(runner, 'axis-order-csv-locks', ['nature', 'site']);
+    const [lower, higher] = await runner.query(
+      `SELECT id, code FROM analytics_axes WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id`,
+      [tenantId, [ids.nature, ids.site]],
+    );
+    return { tenantId, lower: lower as { id: string; code: string }, higher: higher as { id: string; code: string } };
+  });
+  const holder = await openTenantTransaction(seed.tenantId);
+  const importer = await openTenantTransaction(seed.tenantId);
+  const prober = await openTenantTransaction(seed.tenantId);
+  let imported: Promise<any> | undefined;
+  try {
+    await holder.query(
+      `SELECT id FROM analytics_axes WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`,
+      [seed.tenantId, seed.lower.id],
+    );
+    const pid = await backendPid(importer);
+    imported = services(importer.manager).csv.importCsv({
+      file: csvFile(['axis_code;name;description', `${seed.higher.code};Paris;`, `${seed.lower.code};Licences;`].join('\n')),
+      dryRun: false,
+    }, context(importer.manager, seed.tenantId)).then((result: any) => result, (err: any) => err);
+    await waitUntilBlocked(pid);
+    const probe = await prober.query(
+      `SELECT id FROM analytics_axes WHERE tenant_id = $1 AND id = $2 FOR UPDATE NOWAIT`,
+      [seed.tenantId, seed.higher.id],
+    ).then(() => 'free', (err: any) => `held (${err?.code})`);
+    assert.equal(probe, 'free', 'the import waits on the lower-id dimension before it locks the higher-id one');
+    await prober.rollbackTransaction();
+    await holder.rollbackTransaction();
+    const outcome = await imported;
+    assert.ok(!(outcome instanceof Error) && outcome.ok === true, `the import ends once the lock is released (${outcome?.message ?? JSON.stringify(outcome?.errors)})`);
+    await importer.commitTransaction();
+  } finally {
+    // The holder first: an import still waiting on its lock then ends, and its connection closes.
+    await closeRunner(holder);
+    await closeRunner(prober);
+    await imported?.catch(() => undefined);
+    await closeRunner(importer);
+    await deleteRaceTenant(seed.tenantId);
+  }
+
   for (const first of ['import', 'reorder'] as const) {
     const seed = await committed(async (runner) => {
       const { tenantId, ids } = await seedDimensions(runner, `axis-order-csv-${first}`, ['nature', 'site']);
@@ -277,15 +325,19 @@ async function testImportAcrossDimensionsAndReorder() {
 }
 
 /**
- * A line write never locks a dimension (FOR KEY SHARE on the value it links): a line links a value
- * while a reorder of the dimensions is still open (within a short lock timeout, so a block fails
- * instead of hanging).
+ * A line write never locks a dimension (FOR KEY SHARE on the value it links): a line takes a value
+ * through the real update path (the line's lock, the analytics checks, the link write) while a
+ * reorder of the dimensions is still open, within a short lock timeout, so a block fails instead
+ * of hanging.
  */
 async function testReorderDoesNotBlockLines() {
   const seed = await committed(async (runner) => {
     const { tenantId, svc, ctx, ids } = await seedDimensions(runner, 'axis-order-lines', ['nature']);
     const value = await svc.values.create({ axis_id: ids.nature, name: 'Licences' }, null, ctx);
     const lineId = await seedLine(runner, 'opex', tenantId);
+    // The update path checks the whole line: it needs its paying company.
+    const companyId = await seedCompany(runner, tenantId, 'Fromage SA');
+    await runner.query(`UPDATE spend_items SET paying_company_id = $3 WHERE tenant_id = $1 AND id = $2`, [tenantId, lineId, companyId]);
     return { tenantId, ids, valueId: value.id, lineId };
   });
   const leader = await openTenantTransaction(seed.tenantId);
@@ -293,12 +345,14 @@ async function testReorderDoesNotBlockLines() {
   try {
     await services(leader.manager).axes.reorder([seed.ids.nature], context(leader.manager, seed.tenantId));
     await follower.query(`SET LOCAL lock_timeout = '3s'`);
-    await linkValue(follower, 'opex', seed.tenantId, seed.lineId, seed.ids.nature, seed.valueId);
-    const [{ n }] = await follower.query(
-      `SELECT count(*)::int AS n FROM spend_item_analytics_values WHERE tenant_id = $1 AND item_id = $2`,
-      [seed.tenantId, seed.lineId],
+    const updated = await updateItemUnderLock(follower.manager, 'opex', seed.tenantId, seed.lineId, {
+      analytics_values: { [seed.ids.nature]: seed.valueId },
+    });
+    assert.deepEqual(
+      updated?.analyticsAfter.map((value) => [value.axis_id, value.category_id]),
+      [[seed.ids.nature, seed.valueId]],
+      'the line holds the value while the reorder is open',
     );
-    assert.equal(n, 1, 'the line holds the value while the reorder is open');
     await follower.commitTransaction();
     await leader.commitTransaction();
   } finally {

@@ -64,6 +64,7 @@ export default function AnalyticsValueOrderDialog({ open, axisId, axisLabel, onC
       hint={t('analytics.reorder.hint')}
       queryKey={analyticsValueOrderKey(axisId)}
       load={load}
+      canLoad={!!axisId}
       toItem={toItem}
       save={save}
       textsKey="analytics.reorder"

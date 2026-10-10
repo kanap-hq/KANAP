@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { getAnalyticsAxes, isAnalyticsActive, type AnalyticsAxis } from '../services/analytics';
+import { analyticsFieldKey, getAnalyticsAxes, isAnalyticsActive, type AnalyticsAxis } from '../services/analytics';
 import { usageAllowsLineType, type LineType } from '../constants/lineTypeUsage';
 
 export const ANALYTICS_AXES_QUERY_KEY = ['analytics-axes'] as const;
@@ -95,6 +95,25 @@ export function buildAnalyticsAxes(
     defaultAxis: axes.find((axis) => axis.is_default) ?? null,
     label: (axis) => analyticsAxisLabel(axis, t),
   };
+}
+
+/** The OPEX / CAPEX list column of the default dimension, kept for saved layouts, links and AI filters. */
+export const DEFAULT_ANALYTICS_LIST_COLUMN = 'analytics_category_name';
+
+/**
+ * The dimension columns of the OPEX and CAPEX lists: one per enabled dimension, in dimension order.
+ * The default dimension keeps `analytics_category_name` wherever it stands, the others are
+ * `analytics_<id>`. Without the default among them (dimensions not loaded), its column comes first.
+ */
+export function analyticsListColumns(
+  axes: Pick<AnalyticsAxes, 'enabled' | 'label'>,
+  defaultLabel: string,
+): Array<{ field: string; label: string }> {
+  const columns = axes.enabled.map((axis) => (axis.is_default
+    ? { field: DEFAULT_ANALYTICS_LIST_COLUMN, label: defaultLabel }
+    : { field: analyticsFieldKey(axis.id), label: axes.label(axis) }));
+  if (!axes.enabled.some((axis) => axis.is_default)) columns.unshift({ field: DEFAULT_ANALYTICS_LIST_COLUMN, label: defaultLabel });
+  return columns;
 }
 
 const EMPTY: AnalyticsAxis[] = [];

@@ -102,6 +102,8 @@ type Props<T extends { id: string }> = {
   /** The stored order, read each time the dialog opens. */
   queryKey: QueryKey;
   load: (signal?: AbortSignal) => Promise<T[]>;
+  /** False while `load` cannot run yet (no dimension chosen): the dialog then waits. */
+  canLoad?: boolean;
   toItem: (entry: T) => SortableOrderItem;
   /** Stores the order and refreshes the queries that follow it; a rejection stays in the dialog. */
   save: (ids: string[]) => Promise<unknown>;
@@ -128,6 +130,7 @@ export default function SortableOrderDialog<T extends { id: string }>({
   hint,
   queryKey,
   load,
+  canLoad = true,
   toItem,
   save,
   textsKey,
@@ -139,7 +142,7 @@ export default function SortableOrderDialog<T extends { id: string }>({
   const query = useQuery({
     queryKey,
     queryFn: ({ signal }) => load(signal),
-    enabled: open,
+    enabled: open && canLoad,
     // Stale at once: opening the dialog always reads the stored order.
     staleTime: 0,
     retry: false,
