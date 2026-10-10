@@ -1,4 +1,5 @@
 import { classificationSqlExpressions } from '../../../it-ops-settings/classification-sql';
+import { linkedLineOf } from '../../../spend/budget-nature';
 const classificationSql = classificationSqlExpressions('a');
 import { AiEntityFilterRegistry } from '../ai-filter.types';
 
@@ -490,7 +491,8 @@ export const applicationsRegistry: AiEntityFilterRegistry = {
       // ISO text: min and max order the same as the date and read back as YYYY-MM-DD.
       last_dr_test: { expression: `to_char(a.last_dr_test, 'YYYY-MM-DD')`, type: 'date' },
       spend_count: {
-        expression: `(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id)`,
+        // The links to OPEX lines (`spend/budget-nature.ts`).
+        expression: `(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'opex')})`,
         type: 'number',
       },
       capex_count: {

@@ -36,6 +36,8 @@ export class SpendItemContactsService {
 
   async listForItem(itemId: string, opts: ItemContactsOpts) {
     const repo = this.getLinkRepo(opts.manager);
+    // The contacts of an OPEX line only (`budget-nature.ts`): none for a line of another nature.
+    if (!(await this.getItemRepo(opts.manager).exists({ where: { tenant_id: opts.tenantId, id: itemId, nature: 'opex' } }))) return [];
     const items = await repo.find({
       where: { tenant_id: opts.tenantId, spend_item_id: itemId },
       order: { role: 'ASC', created_at: 'DESC' } as any,
@@ -56,7 +58,7 @@ export class SpendItemContactsService {
 
     // Lock order (`budget-locks.ts`): the line, then its contacts.
     const item = (await lockBudgetLine(itemRepo.manager, 'opex', opts.tenantId, itemId))
-      ? await itemRepo.findOne({ where: { tenant_id: opts.tenantId, id: itemId } as any })
+      ? await itemRepo.findOne({ where: { tenant_id: opts.tenantId, id: itemId, nature: 'opex' } as any })
       : null;
     if (!item) throw new NotFoundException('Spend item not found');
 
@@ -90,8 +92,9 @@ export class SpendItemContactsService {
   /** Remove one contact link of the item; a link of another item is not found. */
   async detach(itemId: string, linkId: string, userId: string | null | undefined, opts: ItemContactsOpts) {
     const repo = this.getLinkRepo(opts.manager);
-    // Lock order (`budget-locks.ts`): the line, then its contacts.
-    await lockBudgetLine(repo.manager, 'opex', opts.tenantId, itemId);
+    // Lock order (`budget-locks.ts`): the line, then its contacts. A line of another nature is not
+    // locked, so its contact link is not found.
+    if (!(await lockBudgetLine(repo.manager, 'opex', opts.tenantId, itemId))) throw new NotFoundException('Link not found');
     const existing = await repo.findOne({ where: { tenant_id: opts.tenantId, id: linkId, spend_item_id: itemId } });
     if (!existing) throw new NotFoundException('Link not found');
     await repo.delete({ tenant_id: opts.tenantId, id: linkId, spend_item_id: itemId });
@@ -118,7 +121,7 @@ export class SpendItemContactsService {
     const repo = this.getLinkRepo(opts.manager);
     const itemRepo = this.getItemRepo(opts.manager);
 
-    const item = await itemRepo.findOne({ where: { tenant_id: opts.tenantId, id: itemId } as any });
+    const item = await itemRepo.findOne({ where: { tenant_id: opts.tenantId, id: itemId, nature: 'opex' } as any });
     if (!item) throw new NotFoundException('Spend item not found');
     const tenantId = item.tenant_id;
     const before = await repo.find({ where: { tenant_id: tenantId, spend_item_id: itemId, origin: ContactOrigin.SUPPLIER } });
@@ -163,7 +166,7 @@ export class SpendItemContactsService {
     const itemRepo = this.getItemRepo(opts.manager);
     // Lock order (`budget-locks.ts`): the line, then its contacts; the supplier is read under the lock.
     const item = (await lockBudgetLine(itemRepo.manager, 'opex', opts.tenantId, itemId))
-      ? await itemRepo.findOne({ where: { tenant_id: opts.tenantId, id: itemId } as any })
+      ? await itemRepo.findOne({ where: { tenant_id: opts.tenantId, id: itemId, nature: 'opex' } as any })
       : null;
     if (!item) throw new NotFoundException('Spend item not found');
     await this.syncFromSupplier(itemId, item.supplier_id, userId, opts);

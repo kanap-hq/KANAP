@@ -30,7 +30,8 @@ export class ReferenceCheckService {
     let totalCount = 0;
 
     // Check spend_items (paying_company references)
-    const spendCount = await spendRepo.count({ where: { paying_company_id: companyId } as any });
+    // The OPEX lines only (`spend/budget-nature.ts`); the CAPEX lines are counted below.
+    const spendCount = await spendRepo.count({ where: { paying_company_id: companyId, nature: 'opex' } as any });
     if (spendCount > 0) {
       referenceDetails.push(`${spendCount} OPEX item(s) reference this as paying company`);
       totalCount += spendCount;
@@ -66,7 +67,8 @@ export class ReferenceCheckService {
 
     const referenceDetails: string[] = [];
 
-    const spendCount = await spendRepo.count({ where: { supplier_id: supplierId } });
+    // The OPEX lines only (`spend/budget-nature.ts`), as before lot Z0.
+    const spendCount = await spendRepo.count({ where: { supplier_id: supplierId, nature: 'opex' } });
     if (spendCount > 0) {
       referenceDetails.push(`${spendCount} OPEX item(s) reference this supplier`);
     }
@@ -94,7 +96,8 @@ export class ReferenceCheckService {
 
     const referenceDetails: string[] = [];
 
-    const spendCount = await spendRepo.count({ where: { account_id: accountId } });
+    // The OPEX lines only (`spend/budget-nature.ts`), as before lot Z0.
+    const spendCount = await spendRepo.count({ where: { account_id: accountId, nature: 'opex' } });
     if (spendCount > 0) {
       referenceDetails.push(`${spendCount} OPEX item(s) reference this account`);
     }

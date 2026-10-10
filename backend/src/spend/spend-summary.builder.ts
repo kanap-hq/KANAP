@@ -18,6 +18,7 @@ import { costCenterLabel, loadCostCenterTree } from '../cost-centers/cost-center
 import { analyticsFieldKey } from '../analytics/analytics-axes.util';
 import { Decimal } from '../common/decimal';
 import { naturalCompare } from '../common/list-engine/sql-fragments';
+import { assertScopeNatures, natureAnd, type BudgetNature } from './budget-nature';
 
 /**
  * The summary rows of the OPEX and CAPEX lists, built once for both item types.
@@ -62,6 +63,12 @@ export interface SummaryScopeConfig {
   itemEntity: typeof SpendItem | typeof CapexItem;
   versionEntity: typeof SpendVersion | typeof CapexVersion;
   itemTable: string;
+  /**
+   * The nature of the scope's lines in `itemTable` (`spend_items` holds both, lot Z0): every
+   * statement that reads the item table names it (`natureAnd`). None for a table without the
+   * column (`capex_items`, until lot Z1).
+   */
+  nature?: BudgetNature;
   versionTable: string;
   /**
    * One row per version with the sums of its months of its own budget year,
@@ -98,6 +105,7 @@ export const SUMMARY_SCOPES: Record<SummaryScope, SummaryScopeConfig> = {
     itemEntity: SpendItem,
     versionEntity: SpendVersion,
     itemTable: 'spend_items',
+    nature: 'opex',
     versionTable: 'spend_versions',
     totalsTable: 'spend_version_totals',
     roundTable: 'spend_round_inputs',
@@ -150,6 +158,7 @@ export const SUMMARY_SCOPES: Record<SummaryScope, SummaryScopeConfig> = {
     ],
   },
 };
+assertScopeNatures('SUMMARY_SCOPES', SUMMARY_SCOPES, (scope) => scope.itemTable);
 
 type AllocationShareLike = { company_id: string | null; department_id: string | null; allocation_pct: number };
 type AllocationLike = { resolvedMethod?: string | null; shares?: AllocationShareLike[]; error?: string | null };
@@ -814,7 +823,7 @@ export async function buildBudgetSummaryRows(
        UNION
        SELECT i.id AS item_id, i.project_id
        FROM ${config.itemTable} i
-       WHERE i.tenant_id = $1 AND i.id = ANY($2::uuid[]) AND i.project_id IS NOT NULL
+       WHERE i.tenant_id = $1 AND i.id = ANY($2::uuid[])${natureAnd('i', config.nature)} AND i.project_id IS NOT NULL
      ) l
      JOIN portfolio_projects p ON p.id = l.project_id AND p.tenant_id = $1
      LEFT JOIN portfolio_streams pst ON pst.id = p.stream_id AND pst.tenant_id = p.tenant_id

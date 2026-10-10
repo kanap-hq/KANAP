@@ -336,6 +336,7 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
     (settings.allowedCurrencies ?? []).forEach((code) => currencies.add(code));
 
     const spendCurrencies = await manager
+      // The currencies in use by every budget line, whatever its nature: the FX refresh covers them all.
       .query(`SELECT DISTINCT currency FROM spend_items WHERE currency IS NOT NULL LIMIT 200`);
     spendCurrencies.forEach((row: any) => {
       const code = typeof row.currency === 'string' ? row.currency.trim().toUpperCase() : '';

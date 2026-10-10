@@ -1,4 +1,5 @@
 import { classificationSqlExpressions } from '../../it-ops-settings/classification-sql';
+import { linkedLineOf } from '../../spend/budget-nature';
 import { catalogFromMetadata } from '../../it-ops-settings/classification-catalog';
 import { classificationReadState } from './application-classification';
 import { Injectable, NotFoundException } from '@nestjs/common';
@@ -394,7 +395,7 @@ export class ApplicationsListService extends ApplicationsBaseService {
     }
 
     // Derived filter targets
-    targets['spend_count'] = { expression: 'a.id', numericExpression: `(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id)`, dataType: 'number' };
+    targets['spend_count'] = { expression: 'a.id', numericExpression: `(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'opex')})`, dataType: 'number' };
     targets['capex_count'] = { expression: 'a.id', numericExpression: `(SELECT COUNT(*) FROM application_capex_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id)`, dataType: 'number' };
     targets['contracts_count'] = { expression: 'a.id', numericExpression: `(SELECT COUNT(*) FROM application_contracts l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id)`, dataType: 'number' };
     targets['suites_count'] = { expression: 'a.id', numericExpression: `(SELECT COUNT(*) FROM application_suites l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id)`, dataType: 'number' };
@@ -527,7 +528,7 @@ export class ApplicationsListService extends ApplicationsBaseService {
     } else if (sort.field === 'supplier_name' && needsSupplierJoin) {
       qb.addOrderBy('s.name', direction);
     } else if (include.has('counts') && sort.field === 'spend_count') {
-      qb.addOrderBy(`(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id)`, direction, direction === 'DESC' ? 'NULLS LAST' : 'NULLS FIRST');
+      qb.addOrderBy(`(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'opex')})`, direction, direction === 'DESC' ? 'NULLS LAST' : 'NULLS FIRST');
     } else if (include.has('counts') && sort.field === 'capex_count') {
       qb.addOrderBy(`(SELECT COUNT(*) FROM application_capex_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id)`, direction, direction === 'DESC' ? 'NULLS LAST' : 'NULLS FIRST');
     } else if (include.has('counts') && sort.field === 'contracts_count') {
@@ -1141,7 +1142,7 @@ export class ApplicationsListService extends ApplicationsBaseService {
       const spendRows: Array<{ application_id: string; c: string; first_name: string | null }> = await mg.query(
         `SELECT l.application_id, COUNT(*)::text as c, MIN(si.product_name) as first_name
          FROM application_spend_items l
-         JOIN spend_items si ON si.id = l.spend_item_id AND si.tenant_id = l.tenant_id
+         JOIN spend_items si ON si.id = l.spend_item_id AND si.tenant_id = l.tenant_id AND si.nature = 'opex'
          WHERE l.application_id = ANY($1)
          GROUP BY l.application_id`,
         [pageIds],

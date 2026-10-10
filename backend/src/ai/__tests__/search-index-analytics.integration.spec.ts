@@ -10,6 +10,7 @@ import {
   SEARCH_INDEX_ANALYTICS_TRIGGERS,
   SearchIndexAnalyticsValues1853940000000 as Migration,
 } from '../../migrations/1853940000000-search-index-analytics-values';
+import { BudgetLineNature1853950000000 as LaterMigration } from '../../migrations/1853950000000-budget-line-nature';
 import { writeItemAnalyticsValues } from '../../spend/item-analytics.util';
 import { linkValue, runSpecs, seedLine, seedTenant, setCurrentTenant, withRollback } from '../../analytics/__tests__/analytics-test-helpers';
 
@@ -39,6 +40,12 @@ const PREVIOUS_BODIES = {
 };
 
 const migration = new Migration();
+/**
+ * The later migration that redefines `search_index_refresh_spend_items` (OPEX lines only, lot Z0):
+ * run after each up() of this one, as a deploy runs them in order, so a rerun compares with the
+ * functions the database holds now.
+ */
+const later = new LaterMigration();
 
 function entityService() {
   return new AiEntityService(
@@ -519,6 +526,7 @@ async function testMigration() {
     const rerun = await asMigration(runner, () => migration.up(runner));
     assert.equal(rerun.length, 1, 'one line logged');
     assert.match(rerun[0], /^\[Migration\] SearchIndexAnalyticsValues: .*every tenant's lines reindexed in \d+ ms$/);
+    await asMigration(runner, () => later.up(runner));
     assert.deepEqual(await definitions(runner), before, 'a rerun gives the same functions and triggers');
     await setCurrentTenant(runner, d.tenantId);
     for (const kind of KINDS) {
@@ -537,6 +545,7 @@ async function testMigration() {
     }
 
     await asMigration(runner, () => migration.up(runner));
+    await asMigration(runner, () => later.up(runner));
     assert.deepEqual(await definitions(runner), before, 'up() after down(): the same functions and triggers');
     await setCurrentTenant(runner, d.tenantId);
     for (const kind of KINDS) {

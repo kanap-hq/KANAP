@@ -715,7 +715,7 @@ export class AiRelationMutationSupportService {
       SELECT l.${config.targetColumn} AS target_id,
              ${target.labelSql} AS label
       FROM ${config.table} l
-      JOIN ${target.table} t ON t.id = l.${config.targetColumn} AND t.tenant_id = $1
+      JOIN ${target.table} t ON t.id = l.${config.targetColumn} AND t.tenant_id = $1${target.where ?? ''}
       WHERE l.tenant_id = $1 AND l.${config.sourceColumn} = $2
       ${accessScopeSql}
       ORDER BY label ASC
@@ -729,7 +729,8 @@ export class AiRelationMutationSupportService {
     }));
   }
 
-  private targetSql(target: RelationTarget): { table: string; labelSql: string } {
+  /** `where`: a predicate on the target row `t`; a `spend_items` target is an OPEX line (`spend/budget-nature.ts`). */
+  private targetSql(target: RelationTarget): { table: string; labelSql: string; where?: string } {
     switch (target) {
       case 'applications': return { table: 'applications', labelSql: `COALESCE(NULLIF(CONCAT(COALESCE(t.sequential_id, ''), ' - ', t.name), ' - '), t.name, t.id::text)` };
       case 'assets': return { table: 'assets', labelSql: `COALESCE(NULLIF(CONCAT(COALESCE(t.asset_reference, ''), ' - ', t.name), ' - '), t.name, t.id::text)` };
@@ -741,7 +742,7 @@ export class AiRelationMutationSupportService {
       case 'departments': return { table: 'departments', labelSql: 'COALESCE(t.name, t.id::text)' };
       case 'projects': return { table: 'portfolio_projects', labelSql: `COALESCE(CONCAT('PRJ-', t.item_number::text, ' - ', t.name), t.name, t.id::text)` };
       case 'requests': return { table: 'portfolio_requests', labelSql: `COALESCE(CONCAT('REQ-', t.item_number::text, ' - ', t.name), t.name, t.id::text)` };
-      case 'spend_items': return { table: 'spend_items', labelSql: 'COALESCE(t.product_name, t.id::text)' };
+      case 'spend_items': return { table: 'spend_items', labelSql: 'COALESCE(t.product_name, t.id::text)', where: ` AND t.nature = 'opex'` };
       case 'suppliers': return { table: 'suppliers', labelSql: 'COALESCE(t.name, t.id::text)' };
       case 'users': return { table: 'users', labelSql: `COALESCE(NULLIF(TRIM(CONCAT(COALESCE(t.first_name, ''), ' ', COALESCE(t.last_name, ''))), ''), t.email, t.id::text)` };
     }
@@ -988,7 +989,13 @@ export class AiRelationMutationSupportService {
   }
 
   private async replaceSimpleRelation(context: AiExecutionContextWithManager, config: SimpleRelationConfig, sourceId: string, nextItems: RelationItem[]): Promise<void> {
-    await context.manager.query(`DELETE FROM ${config.table} WHERE tenant_id = $1 AND ${config.sourceColumn} = $2`, [context.tenantId, sourceId]);
+    // A target with a predicate (OPEX lines): only the links to such targets are replaced, a link
+    // to a line of another nature stays.
+    const target = this.targetSql(config.target);
+    const ofTarget = target.where
+      ? ` AND EXISTS (SELECT 1 FROM ${target.table} t WHERE t.tenant_id = l.tenant_id AND t.id = l.${config.targetColumn}${target.where})`
+      : '';
+    await context.manager.query(`DELETE FROM ${config.table} l WHERE l.tenant_id = $1 AND l.${config.sourceColumn} = $2${ofTarget}`, [context.tenantId, sourceId]);
     for (const item of nextItems) {
       const targetId = item.payload[config.targetColumn];
       if (!targetId) continue;
@@ -1276,7 +1283,8 @@ export class AiRelationMutationSupportService {
       case 'requests':
         return manager.query(`SELECT * FROM portfolio_requests WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text) OR item_number = $3) ORDER BY item_number LIMIT 6`, [tenantId, ref, Number.isInteger(itemNumber) ? itemNumber : -1]);
       case 'spend_items':
-        return manager.query(`SELECT * FROM spend_items WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(product_name) = LOWER($2::text)) ORDER BY product_name LIMIT 6`, [tenantId, ref]);
+        // OPEX lines only (`spend/budget-nature.ts`).
+        return manager.query(`SELECT * FROM spend_items WHERE tenant_id = $1 AND nature = 'opex' AND (${uuid ? 'id = $2 OR ' : ''}LOWER(product_name) = LOWER($2::text)) ORDER BY product_name LIMIT 6`, [tenantId, ref]);
       case 'suppliers':
         return manager.query(`SELECT * FROM suppliers WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text) OR LOWER(COALESCE(erp_supplier_id, '')) = LOWER($2::text)) ORDER BY name LIMIT 6`, [tenantId, ref]);
       case 'users':

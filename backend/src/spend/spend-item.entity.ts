@@ -1,5 +1,6 @@
 import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 import { StatusState } from '../common/status';
+import type { BudgetNature } from './budget-nature';
 
 @Entity('spend_items')
 @Index(['tenant_id', 'item_number'], { unique: true })
@@ -13,6 +14,22 @@ export class SpendItem {
   // Per-tenant sequential business reference (rendered as OPX-N). Assigned on create.
   @Column('int')
   item_number!: number;
+
+  /**
+   * OPEX or CAPEX (migration 1853950000000, plan planning/budget-unifie.md). Every line of this
+   * table is OPEX until lot Z1 moves the CAPEX lines in: the OPEX code writes `opex` and reads
+   * only lines of that nature (doc/architecture.md, "Budget line nature"). Read-only for the API.
+   */
+  @Column('text', { default: 'opex' })
+  nature!: BudgetNature;
+
+  /**
+   * The reference the line had before the single BL numbering (`OPX-42`), unique per tenant when
+   * set; still accepted where a reference is typed (`common/resolve-item-id.ts`). Not part of the
+   * line as the API returns it: never selected unless asked for.
+   */
+  @Column('text', { nullable: true, select: false })
+  legacy_number!: string | null;
 
   @Column('uuid', { nullable: true })
   paying_company_id!: string | null;

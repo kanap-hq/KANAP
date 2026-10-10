@@ -1,7 +1,8 @@
 /*
   Simple entrypoint for QA/Prod:
-  - Waits for DB
-  - Runs TypeORM migrations programmatically using compiled DataSource
+  - Waits for DB (the connection is retried while the database is not ready or goes away)
+  - Runs TypeORM migrations programmatically using compiled DataSource; a migration that fails
+    on its own exits at once with its message (never retried)
   - Optionally runs integrated-doc repair + verification
   - Starts the NestJS server
 
@@ -225,48 +226,98 @@ async function runIntegratedDocsRolloutIfNeeded() {
   }
 }
 
-async function runMigrationsIfNeeded() {
-  if ((process.env.SKIP_MIGRATIONS || '').toLowerCase() === 'true') {
-    console.log('[entrypoint] SKIP_MIGRATIONS=true → skipping DB migrations');
+/** The first characters of the statement a failed migration ran, on one line (never its parameters). */
+function failedStatement(err) {
+  const query = err && typeof err.query === 'string' ? err.query.replace(/\s+/g, ' ').trim() : '';
+  return query ? (query.length > 300 ? `${query.slice(0, 300)}...` : query) : '';
+}
+
+/**
+ * PostgreSQL codes of a lost or refused connection: 57P01 (admin shutdown), 57P03 (cannot connect
+ * now), and the connection exception class 08; Node's ECONNRESET and ECONNREFUSED.
+ */
+const CONNECTION_ERROR_CODES = new Set(['ECONNRESET', 'ECONNREFUSED', '57P01', '57P03']);
+
+/**
+ * Whether an error is the database going away or not answering, never a migration's own failure:
+ * one of the codes above (on the error or on the driver error TypeORM wraps), or node-postgres'
+ * "Connection terminated unexpectedly", which carries no code.
+ */
+function isConnectionError(err) {
+  const codes = [err?.code, err?.driverError?.code].filter((code) => code != null).map(String);
+  if (codes.some((code) => CONNECTION_ERROR_CODES.has(code) || /^08[0-9A-Z]{3}$/.test(code))) return true;
+  return /Connection terminated unexpectedly/i.test(String(err?.message || ''));
+}
+
+/** Closes a data source an attempt left open; a failure to close is only a warning. */
+async function closeQuietly(ds, warn) {
+  if (!ds.isInitialized) return;
+  try {
+    await ds.destroy();
+  } catch (destroyErr) {
+    warn('[entrypoint] Failed to reset the DB connection:', destroyErr?.message || destroyErr);
+  }
+}
+
+/**
+ * Runs the pending migrations once the database answers. Only the connection is retried, while
+ * the database is not ready or goes away (`isConnectionError`): `MIGRATION_MAX_ATTEMPTS` tries in
+ * all (30), `MIGRATION_RETRY_DELAY_MS` apart (2 s). A migration that fails on its own exits at once
+ * (code 1) with its message, since running it again would fail the same way and keep the API down
+ * for every retry (plan planning/budget-unifie.md, G.13). The pending migrations run in one
+ * transaction (TypeORM's default): a failure leaves the database as it was before this start, and
+ * the container's restart policy decides what comes next.
+ */
+async function runMigrationsIfNeeded({
+  env = process.env,
+  loadDataSource = () => require(path.resolve(__dirname, '../dist/data-source.js')).default,
+  exit = (code) => process.exit(code),
+  sleepFn = sleep,
+  log = console.log,
+  warn = console.warn,
+  error = console.error,
+} = {}) {
+  if ((env.SKIP_MIGRATIONS || '').toLowerCase() === 'true') {
+    log('[entrypoint] SKIP_MIGRATIONS=true → skipping DB migrations');
     return;
   }
-  const dsPath = path.resolve(__dirname, '../dist/data-source.js');
-  const ds = require(dsPath).default;
-  const maxAttempts = Number(process.env.MIGRATION_MAX_ATTEMPTS || 30);
-  const delayMs = Number(process.env.MIGRATION_RETRY_DELAY_MS || 2000);
+  const ds = loadDataSource();
+  const maxAttempts = Number(env.MIGRATION_MAX_ATTEMPTS || 30);
+  const delayMs = Number(env.MIGRATION_RETRY_DELAY_MS || 2000);
 
-  let attempt = 0;
-  while (true) {
-    attempt += 1;
+  for (let attempt = 1; ; attempt += 1) {
+    let step = 'connect';
     try {
-      console.log(`[entrypoint] Initializing DB (attempt ${attempt}/${maxAttempts}) ...`);
+      log(`[entrypoint] Initializing DB (attempt ${attempt}/${maxAttempts}) ...`);
       await ds.initialize();
-      console.log('[entrypoint] DB initialized. Running migrations...');
+      log('[entrypoint] DB initialized. Running migrations...');
+      step = 'migrate';
       const migrations = await ds.runMigrations();
-      console.log(`[entrypoint] Migrations complete (${migrations.length} executed).`);
+      log(`[entrypoint] Migrations complete (${migrations.length} executed).`);
       await ds.destroy();
       return;
     } catch (err) {
-      if (ds.isInitialized) {
-        try {
-          await ds.destroy();
-        } catch (destroyErr) {
-          console.warn('[entrypoint] Failed to reset DB connection after migration error:', destroyErr?.message || destroyErr);
-        }
+      await closeQuietly(ds, warn);
+      if (step === 'migrate' && !isConnectionError(err)) {
+        error(`[entrypoint] A migration failed, not retried: ${err?.message || err}`);
+        const statement = failedStatement(err);
+        if (statement) error(`[entrypoint] Failed statement: ${statement}`);
+        error('[entrypoint] The pending migrations ran in one transaction and were rolled back: the database is as before this start. Fix the cause or deploy the previous version.');
+        if (env.DEBUG_MIGRATIONS) error('[entrypoint] Error details:', err);
+        exit(1);
+        return;
       }
+      const what = step === 'connect' ? 'DB not ready' : 'DB connection lost during the migrations (rolled back, nothing applied)';
       if (attempt >= maxAttempts) {
-        console.error('[entrypoint] Failed to initialize DB after max attempts:', err?.message || err);
-        if (process.env.DEBUG_MIGRATIONS) {
-          console.error('[entrypoint] Error details:', err);
-        }
-        process.exit(1);
+        error(`[entrypoint] ${what} after ${maxAttempts} attempts: ${err?.message || err}`);
+        if (env.DEBUG_MIGRATIONS) error('[entrypoint] Error details:', err);
+        exit(1);
+        return;
       }
       const msg = err && err.message ? `: ${err.message}` : '';
-      console.warn(`[entrypoint] DB not ready or migration failed (attempt ${attempt})${msg}. Retrying in ${delayMs}ms...`);
-      if (attempt === 1 && process.env.DEBUG_MIGRATIONS) {
-        console.warn('[entrypoint] First failure details:', err);
-      }
-      await sleep(delayMs);
+      warn(`[entrypoint] ${what} (attempt ${attempt})${msg}. Retrying in ${delayMs}ms...`);
+      if (attempt === 1 && env.DEBUG_MIGRATIONS) warn('[entrypoint] First failure details:', err);
+      await sleepFn(delayMs);
     }
   }
 }
@@ -303,8 +354,10 @@ if (require.main === module) {
 
 module.exports = {
   integratedDocsFailureLine,
+  isConnectionError,
   integratedDocsRolloutSteps,
   readIntegratedDocsRolloutMode,
   runIntegratedDocsSteps,
+  runMigrationsIfNeeded,
   runNodeScript,
 };

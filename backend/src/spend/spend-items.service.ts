@@ -42,6 +42,7 @@ import { insertProjectBudgetLinks, lockBudgetLine } from '../portfolio/project-b
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
 import { countItemRelations, loadItemReferences } from './item-workspace.util';
 import { readBudgetLineMeta } from './item-meta';
+import { budgetLineOfChild } from './budget-locks';
 
 @Injectable()
 export class SpendItemsService {
@@ -123,8 +124,15 @@ export class SpendItemsService {
     // Not a filterable field, so no grid filter can replace it.
     const tenantId = await this.resolveTenantId(mg);
     where.tenant_id = tenantId;
+    // The OPEX lines only (`budget-nature.ts`); not a filterable field either.
+    where.nature = 'opex';
     const safeSortField = allowedFields.includes(sort.field) ? sort.field : 'created_at';
-    const [itemsRaw, total] = await repo.findAndCount({ where, order: { [safeSortField]: sort.direction as any }, skip, take: limit });
+    // The id breaks ties (lines imported together share their created_at), as the summary does:
+    // a page never repeats or skips a line of the previous one.
+    const order: Record<string, any> = safeSortField === 'id'
+      ? { id: sort.direction }
+      : { [safeSortField]: sort.direction, id: 'DESC' };
+    const [itemsRaw, total] = await repo.findAndCount({ where, order, skip, take: limit });
     // The default dimension's value, read from the analytics links.
     const analyticsByItem = itemsRaw.length > 0
       ? await loadItemAnalyticsValues(mg, 'opex', tenantId, itemsRaw.map((item) => item.id))
@@ -136,13 +144,18 @@ export class SpendItemsService {
     return { items, total, page, limit };
   }
 
-  /** The stored line of the session tenant (by id or OPX reference), without its analytics values. */
+  /** The stored OPEX line of the session tenant (by id or reference), without its analytics values; a line of another nature is not found. */
   private async findItem(id: string, mg: EntityManager): Promise<SpendItem> {
     const itemId = await resolveToUuid(id, 'spend', mg);
     const tenantId = await this.resolveTenantId(mg);
-    const found = await mg.getRepository(SpendItem).findOne({ where: { id: itemId, tenant_id: tenantId } });
+    const found = await mg.getRepository(SpendItem).findOne({ where: { id: itemId, tenant_id: tenantId, nature: 'opex' } });
     if (!found) throw new NotFoundException('Spend item not found');
     return found;
+  }
+
+  /** Whether `id` is an OPEX line of the tenant: the children read by a line id are read for such a line only. */
+  private async isOpexLine(mg: EntityManager, tenantId: string, id: string): Promise<boolean> {
+    return mg.getRepository(SpendItem).exists({ where: { id, tenant_id: tenantId, nature: 'opex' } });
   }
 
   /** The line with its analytics values (see `item-analytics.util.ts`). */
@@ -194,6 +207,7 @@ export class SpendItemsService {
               COALESCE(SUM(t.actual), 0) AS actual,
               COALESCE(SUM(t.expected_landing), 0) AS landing
        FROM spend_versions v
+       JOIN spend_items i ON i.tenant_id = v.tenant_id AND i.id = v.spend_item_id AND i.nature = 'opex'
        LEFT JOIN spend_version_totals t ON t.tenant_id = v.tenant_id AND t.version_id = v.id
        WHERE v.tenant_id = app_current_tenant() AND v.spend_item_id = $1 AND v.budget_year BETWEEN $2 AND $3
        GROUP BY v.budget_year
@@ -224,7 +238,7 @@ export class SpendItemsService {
       throw new BadRequestException('At least one recipient is required');
     }
     const mg = opts?.manager ?? this.repo.manager;
-    const item = await mg.getRepository(SpendItem).findOne({ where: { id, tenant_id: tenantId }, select: ['id', 'product_name'] });
+    const item = await mg.getRepository(SpendItem).findOne({ where: { id, tenant_id: tenantId, nature: 'opex' }, select: ['id', 'product_name'] });
     if (!item) throw new NotFoundException('Spend item not found');
 
     const senderRows = await mg.query('SELECT first_name, last_name FROM users WHERE tenant_id = $1 AND id = $2', [tenantId, userId]);
@@ -288,6 +302,8 @@ export class SpendItemsService {
       currency: (values.currency as string | null | undefined) ?? undefined,
       effective_start: (values.effective_start as string | null | undefined) ?? undefined,
       item_number,
+      // The API never writes the nature: an OPEX line is created OPEX (`budget-nature.ts`).
+      nature: 'opex',
       status: lifecycle.status,
       disabled_at: lifecycle.disabled_at,
     });
@@ -474,6 +490,7 @@ export class SpendItemsService {
   async listLinks(spendItemId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const tenantId = await this.resolveTenantId(mg);
+    if (!(await this.isOpexLine(mg, tenantId, spendItemId))) return [];
     return mg.getRepository(SpendLink).find({ where: { tenant_id: tenantId, spend_item_id: spendItemId } as any, order: { created_at: 'DESC' as any } });
   }
   async createLink(spendItemId: string, body: Partial<SpendLink>, userId?: string | null, opts?: { manager?: EntityManager }) {
@@ -490,8 +507,9 @@ export class SpendItemsService {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(SpendLink);
     const tenantId = await this.resolveTenantId(mg);
-    // Lock order (`budget-locks.ts`): the line, then its link, read again under the lock.
-    await lockBudgetLine(mg, 'opex', tenantId, spendItemId);
+    // Lock order (`budget-locks.ts`): the line, then its link, read again under the lock. A line of
+    // another nature is not locked, so its link is not found.
+    if (!(await lockBudgetLine(mg, 'opex', tenantId, spendItemId))) throw new NotFoundException('Link not found');
     const where = { id: linkId, spend_item_id: spendItemId, tenant_id: tenantId } as any;
     const locked = await mg.query(
       `SELECT id FROM spend_links WHERE tenant_id = $1 AND id = $2 AND spend_item_id = $3 FOR NO KEY UPDATE`,
@@ -512,6 +530,8 @@ export class SpendItemsService {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(SpendLink);
     const tenantId = await this.resolveTenantId(mg);
+    // A link of a line of another nature is not found (`budget-nature.ts`); a missing one is no error, as before.
+    await budgetLineOfChild(mg, 'opex', 'link', tenantId, linkId, 'Link not found');
     const existing = await repo.findOne({ where: { id: linkId, spend_item_id: spendItemId, tenant_id: tenantId } as any });
     if (!existing) return { ok: true };
     await repo.delete({ id: linkId, spend_item_id: spendItemId, tenant_id: tenantId } as any);
@@ -523,6 +543,7 @@ export class SpendItemsService {
   async listAttachments(spendItemId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const tenantId = await this.resolveTenantId(mg);
+    if (!(await this.isOpexLine(mg, tenantId, spendItemId))) return [];
     return mg.getRepository(SpendAttachment).find({ where: { tenant_id: tenantId, spend_item_id: spendItemId } as any, order: { uploaded_at: 'DESC' as any } });
   }
   async uploadAttachment(spendItemId: string, file: Express.Multer.File, userId?: string | null, opts?: { manager?: EntityManager }) {
@@ -568,6 +589,8 @@ export class SpendItemsService {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(SpendAttachment);
     const tenantId = await this.resolveTenantId(mg);
+    // An attachment of a line of another nature is not found (`budget-nature.ts`).
+    await budgetLineOfChild(mg, 'opex', 'attachment', tenantId, attachmentId, 'Attachment not found');
     const found = await repo.findOne({ where: { id: attachmentId, tenant_id: tenantId } as any });
     if (!found) throw new NotFoundException('Attachment not found');
     return found;
@@ -576,6 +599,8 @@ export class SpendItemsService {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(SpendAttachment);
     const tenantId = await this.resolveTenantId(mg);
+    // An attachment of a line of another nature is not found; a missing one is no error, as before.
+    await budgetLineOfChild(mg, 'opex', 'attachment', tenantId, attachmentId, 'Attachment not found');
     const found = await repo.findOne({ where: { id: attachmentId, tenant_id: tenantId } as any });
     if (!found) return { ok: true };
     await repo.delete({ id: attachmentId, tenant_id: tenantId } as any);

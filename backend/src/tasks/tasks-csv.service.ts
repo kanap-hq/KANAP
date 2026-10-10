@@ -121,9 +121,10 @@ export class TasksCsvService {
     }
 
     // Table mapping
-    const tableMap: Record<string, { table: string; nameColumn: string }> = {
+    // `where`: a `spend_item` names an OPEX line (`spend/budget-nature.ts`).
+    const tableMap: Record<string, { table: string; nameColumn: string; where?: string }> = {
       project: { table: 'portfolio_projects', nameColumn: 'name' },
-      spend_item: { table: 'spend_items', nameColumn: 'product_name' },
+      spend_item: { table: 'spend_items', nameColumn: 'product_name', where: ` AND nature = 'opex'` },
       contract: { table: 'contracts', nameColumn: 'name' },
       capex_item: { table: 'capex_items', nameColumn: 'description' },
       incident: { table: 'incidents', nameColumn: "'INC-' || item_number::text" },
@@ -137,7 +138,7 @@ export class TasksCsvService {
       const ids = [...new Set(typeTasks.map((t) => t.related_object_id))];
 
       const rows = await manager.query(
-        `SELECT id, ${mapping.nameColumn} AS name FROM ${mapping.table} WHERE id = ANY($1) AND tenant_id = $2`,
+        `SELECT id, ${mapping.nameColumn} AS name FROM ${mapping.table} WHERE id = ANY($1) AND tenant_id = $2${mapping.where ?? ''}`,
         [ids, tenantId],
       );
 
@@ -185,9 +186,9 @@ export class TasksCsvService {
     }
 
     // Table mapping for resolving related_object_name (mirrors taskCsvConfig.beforeCommit)
-    const relatedTableMap: Record<string, { table: string; nameColumn: string }> = {
+    const relatedTableMap: Record<string, { table: string; nameColumn: string; where?: string }> = {
       project: { table: 'portfolio_projects', nameColumn: 'name' },
-      spend_item: { table: 'spend_items', nameColumn: 'product_name' },
+      spend_item: { table: 'spend_items', nameColumn: 'product_name', where: ` AND nature = 'opex'` },
       contract: { table: 'contracts', nameColumn: 'name' },
       capex_item: { table: 'capex_items', nameColumn: 'description' },
       incident: { table: 'incidents', nameColumn: "'INC-' || item_number::text" },
@@ -209,7 +210,7 @@ export class TasksCsvService {
       const cacheKey = `${type}||${name.toLowerCase()}`;
       if (!relatedIdCache.has(cacheKey)) {
         const found = await manager.query(
-          `SELECT id FROM ${mapping.table} WHERE tenant_id = $1 AND LOWER(${mapping.nameColumn}) = LOWER($2) LIMIT 1`,
+          `SELECT id FROM ${mapping.table} WHERE tenant_id = $1${mapping.where ?? ''} AND LOWER(${mapping.nameColumn}) = LOWER($2) LIMIT 1`,
           [tenantId, name],
         );
         relatedIdCache.set(cacheKey, found.length ? found[0].id : null);

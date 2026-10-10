@@ -108,7 +108,7 @@ function testTenantOnEveryTableAndValuesBound() {
     'LEFT JOIN spend_round_inputs ri2026_planned ON ri2026_planned.tenant_id = $1', 'FROM suppliers x WHERE x.tenant_id = $1']) {
     assert.ok(raw.includes(table), `reads ${table}`);
   }
-  assert.ok(raw.includes('WHERE (i.tenant_id = $1)'), 'the core names the tenant');
+  assert.ok(raw.includes(`WHERE (i.tenant_id = $1 AND i.nature = 'opex')`), 'the core names the tenant and the OPEX lines');
   assert.ok(raw.includes('WHERE av.tenant_id = $1'), 'the amounts table names the tenant');
   const tables = Array.from(raw.matchAll(/(?:FROM|JOIN) (spend_\w+|suppliers|companies|accounts|users|tasks|portfolio_\w+|analytics_\w+|contract_\w+|contracts) (\w+)/g));
   assert.ok(tables.length >= 8, 'the statement reads several tables');
@@ -215,7 +215,7 @@ function testGroupedCapAndReportFields() {
   assert.ok(consolidation.includes('cons_labels AS (SELECT k.key, min(k.label COLLATE "und-x-icu") AS label'), 'one label per key, the least in the ICU order');
   assert.ok(/FROM accounts ca\s+WHERE ca\.tenant_id = \$1/.test(consolidation), 'the labels read the tenant\'s accounts');
   assert.ok(consolidation.includes('LEFT JOIN accounts acc ON acc.tenant_id = $1'), 'the line\'s account reads the tenant');
-  assert.ok(consolidation.includes('AND EXISTS (SELECT 1 FROM spend_items li WHERE li.tenant_id = $1 AND li.account_id = ca.id)'), 'the labels: accounts the lines use only');
+  assert.ok(consolidation.includes(`AND EXISTS (SELECT 1 FROM spend_items li WHERE li.tenant_id = $1 AND li.nature = 'opex' AND li.account_id = ca.id)`), 'the labels: accounts the OPEX lines use only');
   // A caller who cannot read the accounts page: null keys and labels, as a filter or a sort too, no account read.
   const hidden = build(
     { groupBy: ['account_consolidation_key', 'account_consolidation_label'], measures: [sum('b', 'yBudget')], order: [{ by: 'key', index: 0, dir: 'ASC' }] },

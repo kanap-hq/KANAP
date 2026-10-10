@@ -6,6 +6,7 @@ import { PortfolioProject } from '../../portfolio/portfolio-project.entity';
 import { AuditService } from '../../audit/audit.service';
 import { ApplicationsBaseService, ServiceOpts } from './applications-base.service';
 import { projectParticipantCondition } from '../../auth/business-contributor-scope';
+import { assertScopeNatures, linkedLineOf, natureAnd, type BudgetNature } from '../../spend/budget-nature';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -18,9 +19,14 @@ type LinkedItemRow = {
   contract: { id: string; name: string };
 };
 
+type LinkedItemTable = { links: string; items: string; itemFk: string; label: string; unique: string; notFound: string; nature?: BudgetNature };
+
 // Table and column names come only from here: never from the caller. `unique`
 // is the link table's unique key, the target of the insert's ON CONFLICT.
-const LINKED_ITEMS = {
+// `nature`: the OPEX lines of `spend_items` (`spend/budget-nature.ts`): a
+// replacement lists, checks, keeps and removes the links of those lines only,
+// never a link of the application to a line of another nature.
+const LINKED_ITEMS: Record<LinkedItemKind, LinkedItemTable> = {
   spend: {
     links: 'application_spend_items',
     items: 'spend_items',
@@ -28,6 +34,7 @@ const LINKED_ITEMS = {
     label: 'product_name',
     unique: '(tenant_id, application_id, spend_item_id)',
     notFound: 'One or more OPEX items were not found.',
+    nature: 'opex',
   },
   capex: {
     links: 'application_capex_items',
@@ -53,7 +60,14 @@ const LINKED_ITEMS = {
     unique: '(application_id, project_id)',
     notFound: 'One or more projects were not found.',
   },
-} as const;
+};
+
+assertScopeNatures('applications LINKED_ITEMS', LINKED_ITEMS, (t) => t.items);
+
+/** ` AND` the link `alias` names a line of the entry's nature; empty for an entry without one. */
+function linkedNature(t: LinkedItemTable, alias: string): string {
+  return linkedLineOf(`${alias}.tenant_id`, `${alias}.${t.itemFk}`, t.nature, t.items);
+}
 
 /**
  * Service for managing application relations (spend items, capex items, contracts, projects).
@@ -101,7 +115,7 @@ export class ApplicationsInstancesService extends ApplicationsBaseService {
     return mg.query(
       `SELECT i.id, i.${t.label}
        FROM ${t.links} l
-       JOIN ${t.items} i ON i.id = l.${t.itemFk} AND i.tenant_id = l.tenant_id
+       JOIN ${t.items} i ON i.id = l.${t.itemFk} AND i.tenant_id = l.tenant_id${natureAnd('i', t.nature)}
        WHERE l.tenant_id = $1 AND l.application_id = $2`,
       [app.tenant_id, app.id],
     );
@@ -140,21 +154,21 @@ export class ApplicationsInstancesService extends ApplicationsBaseService {
     if (locked.length === 0) throw new NotFoundException('Application not found');
     if (nextIds.length) {
       const found: Array<{ id: string }> = await mg.query(
-        `SELECT id FROM ${t.items} WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+        `SELECT id FROM ${t.items} WHERE tenant_id = $1 AND id = ANY($2::uuid[])${natureAnd(null, t.nature)}`,
         [tenantId, nextIds],
       );
       if (found.length !== nextIds.length) throw new BadRequestException(t.notFound);
     }
 
     const existing: Array<{ item_id: string }> = await mg.query(
-      `SELECT ${t.itemFk} AS item_id FROM ${t.links} WHERE tenant_id = $1 AND application_id = $2`,
+      `SELECT l.${t.itemFk} AS item_id FROM ${t.links} l WHERE l.tenant_id = $1 AND l.application_id = $2${linkedNature(t, 'l')}`,
       [tenantId, resolvedAppId],
     );
     const beforeState = Array.from(new Set(existing.map((r) => r.item_id))).sort();
     const [{ n: removed }] = await mg.query(
       `WITH d AS (
-         DELETE FROM ${t.links}
-         WHERE tenant_id = $1 AND application_id = $2 AND ${t.itemFk} <> ALL($3::uuid[])
+         DELETE FROM ${t.links} l
+         WHERE l.tenant_id = $1 AND l.application_id = $2 AND l.${t.itemFk} <> ALL($3::uuid[])${linkedNature(t, 'l')}
          RETURNING 1
        )
        SELECT count(*)::int AS n FROM d`,

@@ -21,6 +21,7 @@ import {
 } from '../spend-summary.builder';
 import { fxKeyCurrency, fxSetKeySql, fxTableSql } from './budget-fx-table';
 import type { BudgetListRuntime, RuntimeNeeds } from './budget-list.runtime';
+import { natureAnd } from '../budget-nature';
 
 /**
  * The OPEX and CAPEX lists as a list-engine config, built from the scope
@@ -81,8 +82,9 @@ export class BudgetListConfig implements ListConfig {
     return this.rt.scope;
   }
 
+  /** The tenant, and the nature of the scope's lines: every statement of the list carries both. */
   tenantWhere(stmt: SqlStatement): string {
-    return `i.tenant_id = ${stmt.tenant}`;
+    return `i.tenant_id = ${stmt.tenant}${natureAnd('i', this.scope.nature)}`;
   }
 
   /**
@@ -186,7 +188,7 @@ export class BudgetListConfig implements ListConfig {
           SELECT av.${s.versionItemFk} AS item_id, av.budget_year AS yr,
             ${converted}
           FROM ${s.versionTable} av
-          JOIN ${s.itemTable} ai ON ai.tenant_id = ${t} AND ai.id = av.${s.versionItemFk}
+          JOIN ${s.itemTable} ai ON ai.tenant_id = ${t} AND ai.id = av.${s.versionItemFk}${natureAnd('ai', s.nature)}
           JOIN ${s.totalsTable} at ON at.tenant_id = ${t} AND at.version_id = av.id
           LEFT JOIN ${fxTableSql(stmt, fx)} ON fx.yr = av.budget_year AND fx.cur = ${fxKeyCurrency('ai')} AND fx.set_key = ${fxSetKeySql(stmt, fx, 'av.fx_rate_set_id')}
           WHERE av.tenant_id = ${t} AND av.budget_year = ANY(${stmt.bind(years, 'int[]')})
@@ -433,7 +435,7 @@ export class BudgetListConfig implements ListConfig {
       FROM (
         SELECT pl.${s.projectLink.itemColumn} AS item_id, pl.project_id FROM ${s.projectLink.table} pl WHERE pl.tenant_id = ${stmt.tenant}
         UNION
-        SELECT i2.id, i2.project_id FROM ${s.itemTable} i2 WHERE i2.tenant_id = ${stmt.tenant} AND i2.project_id IS NOT NULL
+        SELECT i2.id, i2.project_id FROM ${s.itemTable} i2 WHERE i2.tenant_id = ${stmt.tenant}${natureAnd('i2', s.nature)} AND i2.project_id IS NOT NULL
       ) l
       JOIN portfolio_projects p ON p.id = l.project_id AND p.tenant_id = ${stmt.tenant}
       LEFT JOIN portfolio_streams st ON st.id = p.stream_id AND st.tenant_id = p.tenant_id
@@ -521,7 +523,7 @@ export class BudgetListConfig implements ListConfig {
     stmt.cte('cons_labels', () => `SELECT k.key, min(k.label COLLATE "und-x-icu") AS label
       FROM (SELECT ${consolidationKeySql('ca')} AS key, ${consolidationLabelSql('ca')} AS label FROM accounts ca
         WHERE ca.tenant_id = ${stmt.tenant}
-          AND EXISTS (SELECT 1 FROM ${s.itemTable} li WHERE li.tenant_id = ${stmt.tenant} AND li.account_id = ca.id)) k
+          AND EXISTS (SELECT 1 FROM ${s.itemTable} li WHERE li.tenant_id = ${stmt.tenant}${natureAnd('li', s.nature)} AND li.account_id = ca.id)) k
       WHERE k.key IS NOT NULL
       GROUP BY k.key`);
     this.join(stmt, 'consl', `LEFT JOIN cons_labels consl ON consl.key = ${consolidationKeySql(acc)}`, [acc]);

@@ -27,6 +27,7 @@ import {
   yearsNamedByFields,
 } from '../spend-summary.builder';
 import { BudgetListConfig, budgetRuntimeNeeds } from './budget-list.config';
+import { natureAnd } from '../budget-nature';
 import { fxKeyCurrency, fxSetKeySql, fxTableSql, RequestFxRates } from './budget-fx-table';
 import { BudgetListRuntime, loadBudgetRuntime, mergeNeeds, RuntimeNeeds } from './budget-list.runtime';
 
@@ -166,7 +167,7 @@ async function itemsInOrder(scope: SummaryScopeConfig, manager: EntityManager, t
   if (!ids.length) return [];
   const items: any[] = await manager.getRepository<any>(scope.itemEntity as any)
     .createQueryBuilder('i')
-    .where('i.tenant_id = :tenantId', { tenantId })
+    .where(`i.tenant_id = :tenantId${natureAnd('i', scope.nature)}`, { tenantId })
     .andWhere('i.id = ANY(:ids)', { ids })
     .orderBy('i.created_at', 'DESC')
     .addOrderBy('i.id', 'DESC')

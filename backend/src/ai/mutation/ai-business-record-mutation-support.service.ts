@@ -1115,7 +1115,8 @@ export class AiBusinessRecordMutationSupportService {
         );
       case 'spend_items':
         return this.withDefaultAnalyticsValue(context, 'opex', await manager.query(
-          `SELECT * FROM spend_items WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(product_name) = LOWER($2::text) OR item_number = $3) ORDER BY product_name LIMIT 6`,
+          // OPEX lines only (`spend/budget-nature.ts`).
+          `SELECT * FROM spend_items WHERE tenant_id = $1 AND nature = 'opex' AND (${uuid ? 'id = $2 OR ' : ''}LOWER(product_name) = LOWER($2::text) OR item_number = $3) ORDER BY product_name LIMIT 6`,
           [tenantId, ref, this.itemNumberOfReference(ref, 'spend')],
         ));
       case 'capex_items':

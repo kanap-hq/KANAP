@@ -507,10 +507,11 @@ export const taskCsvConfig: CsvEntityConfig = {
       ['capex', 'capex_item'],
     ]);
 
-    // Table mapping for related object resolution
-    const tableMap: Record<string, { table: string; nameColumn: string }> = {
+    // Table mapping for related object resolution. `where`: a `spend_item` names an OPEX line
+    // (`spend/budget-nature.ts`), never a line of another nature with the same name.
+    const tableMap: Record<string, { table: string; nameColumn: string; where?: string }> = {
       project: { table: 'portfolio_projects', nameColumn: 'name' },
-      spend_item: { table: 'spend_items', nameColumn: 'product_name' },
+      spend_item: { table: 'spend_items', nameColumn: 'product_name', where: ` AND nature = 'opex'` },
       contract: { table: 'contracts', nameColumn: 'name' },
       capex_item: { table: 'capex_items', nameColumn: 'description' },
       incident: { table: 'incidents', nameColumn: "'INC-' || item_number::text" },
@@ -568,11 +569,11 @@ export const taskCsvConfig: CsvEntityConfig = {
       const mapping = tableMap[type];
       if (!mapping) continue;
 
-      const { table, nameColumn } = mapping;
+      const { table, nameColumn, where } = mapping;
       const names = items.map((i) => i.name.toLowerCase());
 
       const rows = await context.manager.query(
-        `SELECT id, ${nameColumn} AS name FROM ${table} WHERE tenant_id = $1 AND LOWER(${nameColumn}) = ANY($2)`,
+        `SELECT id, ${nameColumn} AS name FROM ${table} WHERE tenant_id = $1${where ?? ''} AND LOWER(${nameColumn}) = ANY($2)`,
         [context.tenantId, names],
       );
 

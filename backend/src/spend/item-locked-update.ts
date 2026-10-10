@@ -4,6 +4,7 @@ import { CapexItem } from '../capex/capex-item.entity';
 import { deriveStatusFromDisabledAt, resolveEndOfValidityAlias, resolveLifecycleState, StatusState } from '../common/status';
 import { splitEditBase } from '../common/edit-conflicts';
 import { lockBudgetLine } from './budget-locks';
+import { assertScopeNatures, natureAnd, type BudgetNature } from './budget-nature';
 import { ItemAnalyticsValue, loadItemAnalyticsValues, writeItemAnalyticsValues } from './item-analytics.util';
 import { assertNoItemEditConflicts } from './item-edit-conflicts';
 import { ItemWriteScope, resolveItemWrite } from './item-write.util';
@@ -39,6 +40,12 @@ import { SpendItem } from './spend-item.entity';
  */
 
 const ENTITIES = { opex: SpendItem, capex: CapexItem } as const;
+/** The table and nature of each scope's lines (`budget-nature.ts`); `capex_items` has no nature column until lot Z1. */
+const LINES: Record<ItemWriteScope, { table: string; nature?: BudgetNature }> = {
+  opex: { table: 'spend_items', nature: 'opex' },
+  capex: { table: 'capex_items' },
+};
+assertScopeNatures('item-locked-update', LINES, (t) => t.table);
 
 type ItemRow = SpendItem | CapexItem;
 
@@ -79,7 +86,8 @@ export async function updateItemUnderLock(
 ): Promise<LockedItemUpdate<ItemRow> | null> {
   if (!(await lockBudgetLine(manager, scope, tenantId, itemId))) return null;
   const repo = manager.getRepository<ItemRow>(ENTITIES[scope]);
-  const read = () => repo.findOne({ where: { id: itemId, tenant_id: tenantId } as any });
+  const nature = LINES[scope].nature;
+  const read = () => repo.findOne({ where: { id: itemId, tenant_id: tenantId, ...(nature ? { nature } : {}) } as any });
   const before = await read();
   if (!before) return null;
   const analyticsBefore = (await loadItemAnalyticsValues(manager, scope, tenantId, [itemId])).get(itemId) ?? [];
@@ -117,7 +125,7 @@ export async function updateItemUnderLock(
     .createQueryBuilder()
     .update(ENTITIES[scope])
     .set(set as any)
-    .where('tenant_id = :tenantId AND id = :itemId', { tenantId, itemId })
+    .where(`tenant_id = :tenantId AND id = :itemId${natureAnd(null, nature)}`, { tenantId, itemId })
     .execute();
   // A change of analytics values alone is an edit too (updated_at above, the audit row of the caller).
   await writeItemAnalyticsValues(manager, scope, tenantId, itemId, analytics);

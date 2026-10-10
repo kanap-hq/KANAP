@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { linkedLineOf } from '../../spend/budget-nature';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Asset } from '../asset.entity';
@@ -159,7 +160,7 @@ export class AssetsRelationsService extends AssetsBaseService {
       `SELECT si.id, si.product_name
        FROM asset_spend_items asi
        JOIN spend_items si ON si.id = asi.spend_item_id
-       WHERE asi.asset_id = $1 AND asi.tenant_id = $2 AND si.tenant_id = $2
+       WHERE asi.asset_id = $1 AND asi.tenant_id = $2 AND si.tenant_id = $2 AND si.nature = 'opex'
        ORDER BY si.product_name`,
       [assetId, tenantId],
     );
@@ -181,7 +182,13 @@ export class AssetsRelationsService extends AssetsBaseService {
     const repo = opts?.manager ? opts.manager.getRepository(AssetSpendItemLink) : this.spendItemsRepo;
     const mg = this.getManager(opts);
 
-    const existing = await repo.find({ where: { asset_id: assetId, tenant_id: asset.tenant_id } as any });
+    // The links to OPEX lines only (`spend/budget-nature.ts`): the asset's links to lines of
+    // another nature are neither listed, nor replaced, nor removed here.
+    const opexLink = linkedLineOf('l.tenant_id', 'l.spend_item_id', 'opex');
+    const existing: Array<{ spend_item_id: string }> = await mg.query(
+      `SELECT l.spend_item_id FROM asset_spend_items l WHERE l.asset_id = $1 AND l.tenant_id = $2${opexLink}`,
+      [assetId, asset.tenant_id],
+    );
     const before = existing.map((r) => r.spend_item_id);
 
     const normalizedIds = [...new Set(spendItemIds.filter((id) => id))];
@@ -189,7 +196,7 @@ export class AssetsRelationsService extends AssetsBaseService {
     // Validate spend items exist
     if (normalizedIds.length > 0) {
       const found = await mg.query(
-        `SELECT id FROM spend_items WHERE id = ANY($1::uuid[]) AND tenant_id = $2`,
+        `SELECT id FROM spend_items WHERE id = ANY($1::uuid[]) AND tenant_id = $2 AND nature = 'opex'`,
         [normalizedIds, asset.tenant_id],
       );
       if (found.length !== normalizedIds.length) {
@@ -197,7 +204,7 @@ export class AssetsRelationsService extends AssetsBaseService {
       }
     }
 
-    await repo.delete({ asset_id: assetId, tenant_id: asset.tenant_id } as any);
+    await mg.query(`DELETE FROM asset_spend_items l WHERE l.asset_id = $1 AND l.tenant_id = $2${opexLink}`, [assetId, asset.tenant_id]);
     if (normalizedIds.length > 0) {
       const entities = normalizedIds.map((id) =>
         repo.create({ tenant_id: asset.tenant_id, asset_id: assetId, spend_item_id: id }),

@@ -542,13 +542,14 @@ export class ChargebackReportService {
     // Year-aware disabled filtering: include items throughout their disabled_at fiscal year.
     // If an item is disabled on 2025-06-30 and the report year is 2025, include it.
     // Exclude it for years strictly greater than disabled year. Fiscal year = calendar year.
+    // The chargeback is an OPEX report: the lines of nature opex only (`budget-nature.ts`).
     const periodStart = new Date(`${String(yr).padStart(4, '0')}-01-01T00:00:00.000Z`);
     const versions = await versionRepo
       .createQueryBuilder('v')
       .innerJoin(
         SpendItem,
         'item',
-        `item.id = v.spend_item_id AND item.tenant_id = v.tenant_id AND (item.disabled_at IS NULL OR item.disabled_at >= :period_start)`,
+        `item.id = v.spend_item_id AND item.tenant_id = v.tenant_id AND item.nature = 'opex' AND (item.disabled_at IS NULL OR item.disabled_at >= :period_start)`,
       )
       .where('v.tenant_id = :tenantId', { tenantId })
       .andWhere('v.budget_year = :year', { year: yr })
@@ -591,7 +592,7 @@ export class ChargebackReportService {
     const itemIds = Array.from(new Set(fullVersions.map((v) => v.spend_item_id)));
     const itemRepo = manager.getRepository(SpendItem);
     const itemEntities = itemIds.length > 0
-      ? await itemRepo.find({ where: { tenant_id: tenantId, id: In(itemIds) as any } as any })
+      ? await itemRepo.find({ where: { tenant_id: tenantId, nature: 'opex', id: In(itemIds) as any } as any })
       : [];
     const itemById = new Map(itemEntities.map((item) => [item.id, item] as const));
 
