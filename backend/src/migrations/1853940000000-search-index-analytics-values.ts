@@ -97,31 +97,50 @@ const UPSERT = `ON CONFLICT (tenant_id, entity_type, entity_id) DO UPDATE SET
         source_updated_at = EXCLUDED.source_updated_at,
         indexed_at = EXCLUDED.indexed_at`;
 
-/** The deletion of entries whose line is gone, then the upsert of the lines (as in 1853000000000). */
-function refreshFunctionSql(type: 'spend_items' | 'capex_items', select: string): string {
+/**
+ * The deletion of entries whose line is gone, then the upsert of the lines (as in 1853000000000),
+ * on two paths with plans of their own: the tenant's lines (`p_ids` NULL: the reindex, the
+ * migrations) and the lines given (a line's own trigger, the values' triggers), found through the
+ * primary keys of the lines and of their entries. The SQL bodies before read
+ * `p_ids IS NULL OR id = ANY(p_ids)`, which PostgreSQL plans for any `p_ids`: each refresh of one
+ * line read the tenant's lines and entries. PL/pgSQL plans each path apart (and keeps the plans
+ * of a session), so the id path reads its lines only.
+ */
+function refreshFunctionSql(type: 'spend_items' | 'capex_items', alias: string, select: string, from: string): string {
+  const byIds = (ids: boolean, column: string) => (ids ? `\n           AND ${column} = ANY (p_ids)` : '');
+  const purge = (ids: boolean) => `DELETE FROM search_index si_del
+         WHERE si_del.tenant_id = p_tenant
+           AND si_del.entity_type = '${type}'${byIds(ids, 'si_del.entity_id')}
+           AND NOT EXISTS (
+             SELECT 1 FROM ${type} src
+             WHERE src.id = si_del.entity_id AND src.tenant_id = p_tenant
+           );`;
+  const upsert = (ids: boolean) => `INSERT INTO search_index (
+          tenant_id, entity_type, entity_id, ref_prefix, ref_number,
+          label, summary, status, extra_json, search_vector, source_updated_at, indexed_at
+        )
+        ${select}
+        ${from}
+         WHERE ${alias}.tenant_id = p_tenant${byIds(ids, `${alias}.id`)}
+        ${UPSERT};`;
   return `
     CREATE OR REPLACE FUNCTION search_index_refresh_${type}(p_tenant uuid, p_ids uuid[] DEFAULT NULL)
-    RETURNS void AS $fn$
-      DELETE FROM search_index si_del
-      WHERE si_del.tenant_id = p_tenant
-        AND si_del.entity_type = '${type}'
-        AND (p_ids IS NULL OR si_del.entity_id = ANY(p_ids))
-        AND NOT EXISTS (
-          SELECT 1 FROM ${type} src
-          WHERE src.id = si_del.entity_id AND src.tenant_id = p_tenant
-        );
-      INSERT INTO search_index (
-        tenant_id, entity_type, entity_id, ref_prefix, ref_number,
-        label, summary, status, extra_json, search_vector, source_updated_at, indexed_at
-      )
-      ${select}
-      ${UPSERT};
-    $fn$ LANGUAGE sql
+    RETURNS void LANGUAGE plpgsql AS $fn$
+    BEGIN
+      IF p_ids IS NULL THEN
+        ${purge(false)}
+        ${upsert(false)}
+      ELSE
+        ${purge(true)}
+        ${upsert(true)}
+      END IF;
+    END
+    $fn$
   `;
 }
 
 /** 1853000000000's OPEX line entry, with the analytics part. */
-const SPEND_REFRESH = refreshFunctionSql('spend_items', `SELECT si.tenant_id,
+const SPEND_REFRESH = refreshFunctionSql('spend_items', 'si', `SELECT si.tenant_id,
              'spend_items',
              si.id,
              'OPX',
@@ -155,21 +174,18 @@ const SPEND_REFRESH = refreshFunctionSql('spend_items', `SELECT si.tenant_id,
                  WHERE csi.spend_item_id = si.id
                ))),
              si.updated_at,
-             now()
-      FROM spend_items si
-      LEFT JOIN suppliers sup ON sup.id = si.supplier_id AND sup.tenant_id = si.tenant_id
-      LEFT JOIN companies comp ON comp.id = si.paying_company_id AND comp.tenant_id = si.tenant_id
-      LEFT JOIN accounts acc ON acc.id = si.account_id AND acc.tenant_id = si.tenant_id
-      ${analyticsJoin('si', 'opex')}
-      WHERE si.tenant_id = p_tenant
-        AND (p_ids IS NULL OR si.id = ANY(p_ids))`);
+             now()`, `FROM spend_items si
+        LEFT JOIN suppliers sup ON sup.id = si.supplier_id AND sup.tenant_id = si.tenant_id
+        LEFT JOIN companies comp ON comp.id = si.paying_company_id AND comp.tenant_id = si.tenant_id
+        LEFT JOIN accounts acc ON acc.id = si.account_id AND acc.tenant_id = si.tenant_id
+        ${analyticsJoin('si', 'opex')}`);
 
 /**
  * 1853220000000's CAPEX line entry, with the analytics part. Lot C1 removes the CAPEX enums
  * (`ppe_type`, `investment_type`, `priority`) from the summary and the B terms only: they become
  * dimension values, indexed by the analytics part.
  */
-const CAPEX_REFRESH = refreshFunctionSql('capex_items', `SELECT ci.tenant_id,
+const CAPEX_REFRESH = refreshFunctionSql('capex_items', 'ci', `SELECT ci.tenant_id,
              'capex_items',
              ci.id,
              'CPX',
@@ -183,13 +199,10 @@ const CAPEX_REFRESH = refreshFunctionSql('capex_items', `SELECT ci.tenant_id,
                || ${ANALYTICS_VECTOR}
                || search_index_tsv('C', CONCAT_WS(' ', ci.notes, comp.name, sup.name)),
              ci.updated_at,
-             now()
-      FROM capex_items ci
-      LEFT JOIN companies comp ON comp.id = ci.paying_company_id AND comp.tenant_id = ci.tenant_id
-      LEFT JOIN suppliers sup ON sup.id = ci.supplier_id AND sup.tenant_id = ci.tenant_id
-      ${analyticsJoin('ci', 'capex')}
-      WHERE ci.tenant_id = p_tenant
-        AND (p_ids IS NULL OR ci.id = ANY(p_ids))`);
+             now()`, `FROM capex_items ci
+        LEFT JOIN companies comp ON comp.id = ci.paying_company_id AND comp.tenant_id = ci.tenant_id
+        LEFT JOIN suppliers sup ON sup.id = ci.supplier_id AND sup.tenant_id = ci.tenant_id
+        ${analyticsJoin('ci', 'capex')}`);
 
 /** down(): the body 1853000000000 generated for OPEX lines, as it stands in the catalog. */
 const SPEND_REFRESH_PREVIOUS = `
@@ -314,6 +327,12 @@ const CAPEX_REFRESH_PREVIOUS = `
  * triggers; the tenant is a constant of the statement, the primary key serves it). A line deleted
  * with its values (ON DELETE CASCADE) has had its entry removed by its own trigger: refreshing it
  * would read the tenant's lines again for each deleted line.
+ *
+ * The lines are locked first, in id order (FOR NO KEY UPDATE, as `spend/budget-locks.ts`): every
+ * other writer of a line's entry holds the line before it writes the entry, so a value or a
+ * dimension changed while an import holds some of its lines waits for the import, instead of
+ * writing the entries of the lines it reaches first and closing a cycle on the next one (a
+ * deadlock, the import aborted). A writer of the line's values already holds it.
  */
 const REFRESH_LINES_SQL = `
   CREATE OR REPLACE FUNCTION ${REFRESH_LINES}(p_scope text, p_tenant uuid, p_items uuid[]) RETURNS void
@@ -325,9 +344,11 @@ const REFRESH_LINES_SQL = `
       RETURN;
     END IF;
     ${SCOPES.map((scope, index) => `${index === 0 ? 'IF' : 'ELSIF'} p_scope = '${scope.scope}' THEN
-      SELECT array_agg(l.id ORDER BY l.id) INTO k_kept
-        FROM ${scope.items} l
-       WHERE l.id = ANY (p_items) AND l.tenant_id = p_tenant;
+      SELECT array_agg(x.id ORDER BY x.id) INTO k_kept
+        FROM (SELECT l.id FROM ${scope.items} l
+               WHERE l.id = ANY (p_items) AND l.tenant_id = p_tenant
+               ORDER BY l.id
+                 FOR NO KEY UPDATE OF l) x;
       IF k_kept IS NOT NULL THEN
         PERFORM ${scope.refresh}(p_tenant, k_kept);
       END IF;`).join('\n    ')}
@@ -493,7 +514,9 @@ async function reindexLines(queryRunner: QueryRunner): Promise<number> {
  * 2. `search_index_refresh_spend_items` and `search_index_refresh_capex_items` redefined with it:
  *    the value names in the vector at weight B, and `extra_json.analytics`
  *    ("Nature de coût: Matériel; Récurrence: Récurrent", in dimension order; absent when the line
- *    holds no indexed value). Label, summary and the other vector parts are unchanged.
+ *    holds no indexed value). Label, summary and the other vector parts are unchanged. Both become
+ *    PL/pgSQL with two paths, the tenant's lines and the lines given: a refresh of one line reads
+ *    that line through the primary keys, never the tenant's table.
  * 3. Freshness. The index's contract (1853000000000) leaves related renames to the daily reindex;
  *    this is its first deliberate cascade, because the values are the line's own classification
  *    (what its drawer shows, edited with the line) and the CAPEX criteria become such values in lot
@@ -514,7 +537,8 @@ async function reindexLines(queryRunner: QueryRunner): Promise<number> {
  *    The functions follow the rules of the budget statement triggers (1853850000000): no join of
  *    the transition tables, one read over all the keys, keys de-duplicated, SET search_path =
  *    public, pg_temp and plan_cache_mode = force_custom_plan, SECURITY INVOKER under the writer's
- *    row level security.
+ *    row level security. They lock the lines they refresh in id order before writing their entries
+ *    (lock order of `spend/budget-locks.ts`).
  *    A line's `row_version` bump by its values (1853740000000) still skips the line's own
  *    search trigger: the values' trigger refreshes the line itself.
  * 4. Every tenant's OPEX and CAPEX lines reindexed (the time is logged).

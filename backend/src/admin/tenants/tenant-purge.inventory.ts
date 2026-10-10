@@ -199,16 +199,11 @@ export const TENANT_PURGE_TABLES = [
   'spend_links',
   'spend_attachments',
   'spend_item_contacts',
-  // Line values reference a value by (tenant, value, dimension) ON DELETE RESTRICT: before the values
-  'spend_item_analytics_values',
-  'capex_item_analytics_values',
+  // Each line table before its analytics values: deleting the lines deletes their values (ON
+  // DELETE CASCADE) with no line left to refresh. Deleting the values first would make their
+  // search index trigger (migration 1853940000000) rewrite the entry of every line about to go.
   'spend_items',
-  'business_process_category_links',
-  'business_processes',
-  'business_process_categories',
-  'analytics_categories',
-  // After the values (a value references its dimension ON DELETE RESTRICT)
-  'analytics_axes',
+  'spend_item_analytics_values',
   'capex_version_totals',
   'capex_amounts',
   'capex_allocations',
@@ -223,6 +218,14 @@ export const TENANT_PURGE_TABLES = [
   // currency rate snapshots per-tenant
   'currency_rate_sets',
   'capex_items',
+  'capex_item_analytics_values',
+  'business_process_category_links',
+  'business_processes',
+  'business_process_categories',
+  // After the line values (a line value references a value by (tenant, value, dimension) ON DELETE RESTRICT)
+  'analytics_categories',
+  // After the values (a value references its dimension ON DELETE RESTRICT)
+  'analytics_axes',
   // After both item tables (lines reference a node), before companies and users (a node references them)
   'cost_centers',
   'freeze_states',

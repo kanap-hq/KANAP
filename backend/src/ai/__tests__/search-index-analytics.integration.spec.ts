@@ -114,22 +114,25 @@ type RefreshCall = { type: string; tenant: string; ids: string[] };
 
 /**
  * From now on, every call of the two line refresh functions is logged in a temporary table: their
- * bodies are rewritten with an INSERT in front, inside the test's transaction. The returned
+ * PL/pgSQL bodies are rewritten with an INSERT first, inside the test's transaction. The returned
  * function reads the calls since the previous read.
  */
 async function recordRefreshes(runner: QueryRunner): Promise<() => Promise<RefreshCall[]>> {
   await runner.query(`CREATE TEMP TABLE IF NOT EXISTS refresh_calls (n serial, type text, tenant uuid, ids uuid[]) ON COMMIT DROP`);
   for (const type of Object.values(ENTITY)) {
-    const [{ body }] = await runner.query(
-      `SELECT prosrc AS body FROM pg_proc WHERE proname = $1 AND pronamespace = 'public'::regnamespace`,
+    const [{ body, language }] = await runner.query(
+      `SELECT p.prosrc AS body, l.lanname AS language FROM pg_proc p JOIN pg_language l ON l.oid = p.prolang
+        WHERE p.proname = $1 AND p.pronamespace = 'public'::regnamespace`,
       [`search_index_refresh_${type}`],
+    );
+    assert.equal(language, 'plpgsql', `search_index_refresh_${type} is PL/pgSQL`);
+    const logged = String(body).replace(
+      /\bBEGIN\b/,
+      `BEGIN\n      INSERT INTO pg_temp.refresh_calls (type, tenant, ids) VALUES ('${type}', p_tenant, p_ids);`,
     );
     await runner.query(`
       CREATE OR REPLACE FUNCTION search_index_refresh_${type}(p_tenant uuid, p_ids uuid[] DEFAULT NULL)
-      RETURNS void AS $fn$
-        INSERT INTO pg_temp.refresh_calls (type, tenant, ids) VALUES ('${type}', p_tenant, p_ids);
-        ${body}
-      $fn$ LANGUAGE sql`);
+      RETURNS void LANGUAGE plpgsql AS $fn$${logged}$fn$`);
   }
   return async () => {
     const rows: RefreshCall[] = await runner.query(
@@ -352,6 +355,48 @@ async function testTenantIsolation() {
   });
 }
 
+/**
+ * The two paths of a refresh function: given lines (the triggers) touch those entries only, an
+ * entry whose line is gone included; the tenant's lines (NULL) rewrite every entry and delete the
+ * orphans.
+ */
+async function testRefreshPaths() {
+  await withRollback(async (runner) => {
+    const d = await seedDimensions(runner, 'si-paths');
+    for (const kind of KINDS) {
+      const first = await seedLine(runner, kind, d.tenantId);
+      const second = await seedLine(runner, kind, d.tenantId);
+      for (const line of [first, second]) await linkValue(runner, kind, d.tenantId, line, d.nature, d.materiel);
+      const orphan = randomUUID();
+      await runner.query(
+        `INSERT INTO search_index (tenant_id, entity_type, entity_id, label, search_vector) VALUES ($1, $2, $3, 'Gone', ''::tsvector)`,
+        [d.tenantId, ENTITY[kind], orphan],
+      );
+      await runner.query(
+        `UPDATE search_index SET extra_json = '{}'::jsonb WHERE tenant_id = $1 AND entity_id = ANY($2::uuid[])`,
+        [d.tenantId, [first, second]],
+      );
+      const refresh = (ids: string[] | null) => runner.query(`SELECT search_index_refresh_${ENTITY[kind]}($1, $2::uuid[])`, [d.tenantId, ids]);
+      const orphanLeft = async () => (await runner.query(`SELECT count(*)::int AS n FROM search_index WHERE entity_id = $1`, [orphan]))[0].n;
+
+      await refresh([first]);
+      assert.equal(await analytics(runner, kind, first), 'Nature de coût: Matériel', `${kind}: the line given is refreshed`);
+      assert.equal(await analytics(runner, kind, second), undefined, `${kind}: another line is left alone`);
+      assert.equal(await orphanLeft(), 1, `${kind}: so is another orphan entry`);
+      await refresh([orphan]);
+      assert.equal(await orphanLeft(), 0, `${kind}: an entry given whose line is gone is deleted`);
+
+      await runner.query(
+        `INSERT INTO search_index (tenant_id, entity_type, entity_id, label, search_vector) VALUES ($1, $2, $3, 'Gone', ''::tsvector)`,
+        [d.tenantId, ENTITY[kind], orphan],
+      );
+      await refresh(null);
+      assert.equal(await analytics(runner, kind, second), 'Nature de coût: Matériel', `${kind}: the tenant's lines are all refreshed`);
+      assert.equal(await orphanLeft(), 0, `${kind}: and the orphans deleted`);
+    }
+  });
+}
+
 type Definitions = { functions: Array<string | null>; refresh: string[]; triggers: Array<{ name: string; def: string }> };
 
 async function definitions(runner: QueryRunner): Promise<Definitions> {
@@ -462,5 +507,6 @@ void runSpecs('search-index-analytics.integration.spec', [
   testValueChanges,
   testDimensionChanges,
   testTenantIsolation,
+  testRefreshPaths,
   testMigration,
 ]);
