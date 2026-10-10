@@ -365,11 +365,11 @@ export default function ShareDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={sending}>
+        <Button variant="action" onClick={onClose} disabled={sending}>
           {t('buttons.close')}
         </Button>
         <Button
-          variant="contained"
+          variant="action-primary"
           onClick={handleSend}
           disabled={sending || recipients.length === 0}
         >

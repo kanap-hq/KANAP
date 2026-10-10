@@ -990,7 +990,7 @@ export function ReasonDialog({
         if (trimmed) onSubmit(trimmed);
       }}
       saveLabel={saveLabel}
-      saveColor={saveColor}
+      saveVariant={saveColor === 'error' ? 'action-danger' : 'action-primary'}
       saveDisabled={!reason.trim() || !!busy}
       saveLoading={!!busy}
     >

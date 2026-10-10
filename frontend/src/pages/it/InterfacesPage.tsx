@@ -429,12 +429,12 @@ export default function InterfacesPage() {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDuplicateDialog} disabled={duplicating}>
+          <Button variant="action" onClick={handleCloseDuplicateDialog} disabled={duplicating}>
             Cancel
           </Button>
           <Button
             onClick={handleConfirmDuplicate}
-            variant="contained"
+            variant="action-primary"
             disabled={duplicating}
             startIcon={duplicating ? <CircularProgress size={16} /> : undefined}
           >

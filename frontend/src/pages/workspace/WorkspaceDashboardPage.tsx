@@ -375,8 +375,8 @@ export default function WorkspaceDashboardPage() {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setTemplatePickerOpen(false)}>{t('buttons.cancel')}</Button>
-          <Button variant="contained" onClick={createFromTemplate} disabled={!selectedTemplateId}>
+          <Button variant="action" onClick={() => setTemplatePickerOpen(false)}>{t('buttons.cancel')}</Button>
+          <Button variant="action-primary" onClick={createFromTemplate} disabled={!selectedTemplateId}>
             {t('dashboard.useTemplate')}
           </Button>
         </DialogActions>

@@ -1556,7 +1556,7 @@ export default function ProjectTimelineTab({
         title={t('workspace.project.timeline.dialogs.replaceAll.title')}
         onClose={() => setReplaceConfirmOpen(false)}
         saveLabel={t('workspace.project.timeline.actions.replaceAll')}
-        saveColor="warning"
+        saveVariant="action-danger"
         saveDisabled={!selectedTemplateId}
         cancelLabel={t('common:buttons.cancel')}
         onSave={async () => {
@@ -1648,11 +1648,11 @@ export default function ProjectTimelineTab({
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setLinkDialogPhase(null)}>
+          <Button variant="action" onClick={() => setLinkDialogPhase(null)}>
             {t('common:buttons.cancel')}
           </Button>
           <Button
-            variant="contained"
+            variant="action-primary"
             disabled={!linkTaskValue}
             onClick={handleConfirmLinkTask}
           >

@@ -450,8 +450,8 @@ export default function ContributorsPage() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setAddDialogOpen(false)}>{t('common:buttons.cancel')}</Button>
-          <Button variant="contained" onClick={handleAdd} disabled={adding || !selectedUser}>
+          <Button variant="action" onClick={() => setAddDialogOpen(false)}>{t('common:buttons.cancel')}</Button>
+          <Button variant="action-primary" onClick={handleAdd} disabled={adding || !selectedUser}>
             {adding ? t('contributors.dialog.adding') : t('common:buttons.add')}
           </Button>
         </DialogActions>

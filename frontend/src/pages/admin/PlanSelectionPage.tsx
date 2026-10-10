@@ -78,24 +78,6 @@ function parseApiError(error: any, t: TFunction): string {
   return getApiErrorMessage(error, t, t('planSelection.messages.requestFailed'));
 }
 
-// A disabled payment button keeps a visible shape and readable text in both modes:
-// the action-pill surface and border with tertiary text, instead of grey on grey.
-const disabledContainedSx = (theme: Theme) => ({
-  '&.Mui-disabled': {
-    color: theme.palette.kanap.text.tertiary,
-    backgroundColor: theme.palette.kanap.pill.bg,
-    boxShadow: `inset 0 0 0 1px ${theme.palette.kanap.pill.border}`,
-  },
-});
-
-const disabledOutlinedSx = (theme: Theme) => ({
-  '&.Mui-disabled': {
-    color: theme.palette.kanap.text.tertiary,
-    backgroundColor: theme.palette.kanap.pill.bg,
-    borderColor: theme.palette.kanap.pill.border,
-  },
-});
-
 const segmentGroupSx = {
   display: 'inline-flex',
   p: '2px',
@@ -327,14 +309,12 @@ export default function PlanSelectionDialog({
       saveLabel={cardLabel}
       saveDisabled={!plan || !isBillingAdmin || isAnyLoading || cardBlocked}
       saveLoading={cardLoading}
-      saveSx={disabledContainedSx}
       secondaryActions={plan && bankTransferEligible ? (
         <Button
-          variant="outlined"
+          variant="action"
           onClick={() => handleBankTransferFlow(plan.plan_key)}
           disabled={!isBillingAdmin || isAnyLoading || bankTransferBlocked}
           startIcon={bankTransferLoading ? <CircularProgress color="inherit" size={14} /> : undefined}
-          sx={disabledOutlinedSx}
         >
           {bankTransferLabel}
         </Button>

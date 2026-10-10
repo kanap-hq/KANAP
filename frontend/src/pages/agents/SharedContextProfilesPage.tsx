@@ -206,7 +206,7 @@ export default function SharedContextProfilesPage() {
           onClose={() => setArchiveTarget(null)}
           onSave={() => archiveMutation.mutate(archiveTarget.id)}
           saveLabel={t('sharedContext.archive')}
-          saveColor="error"
+          saveVariant="action-danger"
           saveLoading={archiveMutation.isPending}
         >
           <Typography variant="body2">{t('sharedContext.archiveBody', { name: archiveTarget.name })}</Typography>

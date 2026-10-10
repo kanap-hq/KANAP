@@ -706,7 +706,7 @@ export default function AgentsOverviewPage() {
           onClose={() => setAgentToDelete(null)}
           onSave={() => data.deleteAgentMutation.mutate(agentToDelete.id, { onSuccess: () => setAgentToDelete(null) })}
           saveLabel={t('overview.deleteConfirm')}
-          saveColor="error"
+          saveVariant="action-danger"
           saveLoading={data.deleteAgentMutation.isPending}
         >
           <Typography variant="body2" color="text.secondary">{t('overview.deleteConfirmBody')}</Typography>

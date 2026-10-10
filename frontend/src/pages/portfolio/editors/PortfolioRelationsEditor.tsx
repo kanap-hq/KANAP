@@ -797,8 +797,8 @@ export default forwardRef<PortfolioRelationsEditorHandle, Props>(function Portfo
             </Stack>
           </DialogContent>
           <DialogActions>
-            <Button onClick={closeLinkDialog}>{t('common:buttons.cancel')}</Button>
-            <Button type="submit" variant="contained" disabled={!String(linkDraft.url || '').trim()}>
+            <Button variant="action" onClick={closeLinkDialog}>{t('common:buttons.cancel')}</Button>
+            <Button type="submit" variant="action-primary" disabled={!String(linkDraft.url || '').trim()}>
               {editingLinkIndex === null ? t('common:buttons.add') : t('common:buttons.save')}
             </Button>
           </DialogActions>

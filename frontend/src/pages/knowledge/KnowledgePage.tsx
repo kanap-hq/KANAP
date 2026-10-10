@@ -1395,7 +1395,7 @@ export default function KnowledgePage() {
         saveLoading={saveLibraryMutation.isPending}
         footerLeft={(
           <Button
-            color="error"
+            variant="action-danger"
             onClick={() => setDeleteLibraryConfirmOpen(true)}
             disabled={!editingLibrary || deleteLibraryMutation.isPending || editingLibraryLoading}
           >
@@ -1540,7 +1540,7 @@ export default function KnowledgePage() {
           <KnowledgeTypesManager />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setTypesManagerOpen(false)}>{t('common:buttons.close')}</Button>
+          <Button variant="action" onClick={() => setTypesManagerOpen(false)}>{t('common:buttons.close')}</Button>
         </DialogActions>
       </Dialog>
 

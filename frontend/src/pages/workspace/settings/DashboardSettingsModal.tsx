@@ -275,9 +275,9 @@ export default function DashboardSettingsModal({
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t('buttons.cancel')}</Button>
+        <Button variant="action" onClick={onClose}>{t('buttons.cancel')}</Button>
         <Button
-          variant="contained"
+          variant="action-primary"
           onClick={handleSave}
           disabled={isUpdating}
         >

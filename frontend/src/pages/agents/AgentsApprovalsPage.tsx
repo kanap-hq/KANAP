@@ -960,7 +960,7 @@ export default function AgentsApprovalsPage({ agentKey }: { agentKey?: string })
           onClose={() => setRejectGroup(null)}
           onSave={() => { if (rejectGroup) rejectAll(rejectGroup, rejectReason); }}
           saveLabel={t('approvals.rejectAll')}
-          saveColor="error"
+          saveVariant="action-danger"
           saveLoading={!!rejectGroup && data.busyTicketKey === rejectGroup.key}
         >
           <Stack spacing={1.25}>
@@ -998,7 +998,7 @@ export default function AgentsApprovalsPage({ agentKey }: { agentKey?: string })
           onClose={() => setTerminalApproval(null)}
           onSave={confirmTerminalApproval}
           saveLabel={approvalActions.length === 1 && approvalActions[0] ? actionLabel(approvalActions[0]) : t('approvals.approveAll')}
-          saveColor="error"
+          saveVariant="action-danger"
           saveLoading={terminalBusy}
         >
           <Stack spacing={1.25}>

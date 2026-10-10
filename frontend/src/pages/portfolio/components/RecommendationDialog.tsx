@@ -205,8 +205,8 @@ export default function RecommendationDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={submitting}>{t('common:buttons.cancel')}</Button>
-        <Button variant="contained" onClick={handleSubmit} disabled={submitting || !decisionOutcome}>
+        <Button variant="action" onClick={onClose} disabled={submitting}>{t('common:buttons.cancel')}</Button>
+        <Button variant="action-primary" onClick={handleSubmit} disabled={submitting || !decisionOutcome}>
           {t('portfolio:dialogs.recommendation.actions.submit')}
         </Button>
       </DialogActions>
