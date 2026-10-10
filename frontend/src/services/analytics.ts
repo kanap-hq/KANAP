@@ -16,6 +16,7 @@ export type AnalyticsAxis = {
   code: string;
   name: string | null;
   description: string | null;
+  /** The dimension's position (read only in the UI, set through `reorderAnalyticsAxes`). */
   sort_order: number;
   is_default: boolean;
   /** The lines the dimension applies to: OPEX only, CAPEX only, or both when null (always both for the default). */
@@ -148,6 +149,15 @@ export async function updateAnalyticsAxis(id: string, patch: AnalyticsAxisPatch)
 
 export async function deleteAnalyticsAxis(id: string): Promise<void> {
   await api.delete(`${ANALYTICS_AXES_ENDPOINT}/${id}`);
+}
+
+/**
+ * Puts the dimensions in the order given (`POST /analytics-axes/reorder`). Dimensions left out keep
+ * their relative order after the listed ones. Returns every dimension in the new order.
+ */
+export async function reorderAnalyticsAxes(axisIds: string[]): Promise<AnalyticsAxis[]> {
+  const res = await api.post<{ items: AnalyticsAxis[] }>(`${ANALYTICS_AXES_ENDPOINT}/reorder`, { axis_ids: axisIds });
+  return Array.isArray(res.data?.items) ? res.data.items : [];
 }
 
 export async function getAnalyticsValue(id: string): Promise<AnalyticsValueDetail> {

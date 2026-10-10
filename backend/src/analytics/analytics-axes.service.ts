@@ -309,6 +309,64 @@ export class AnalyticsAxesService {
     return this.get(id, ctx);
   }
 
+  /**
+   * The order of the dimensions: `axisIds` first, in that order, then the dimensions it leaves out
+   * in their current order, renumbered 1..n in one statement that writes only the positions that
+   * change. Every id must be a dimension of the tenant, once. One audit row per dimension whose
+   * position changes (`sort_order` before and after); the dimensions keep their `updated_at`.
+   *
+   * Locks every dimension of the tenant FOR NO KEY UPDATE, in id order: a dimension update (FOR
+   * UPDATE) and a value write (which holds its dimension FOR SHARE) wait for the reorder or it
+   * waits for them. Line writes never lock a dimension, so they are never blocked.
+   */
+  async reorder(axisIdsRaw: unknown, ctx: AnalyticsContext): Promise<{ items: AnalyticsAxisRow[] }> {
+    if (!Array.isArray(axisIdsRaw)) throw analyticsRefusal('The dimensions must be a list.', 'axis_ids');
+    const axisIds = axisIdsRaw.map((id) => String(id ?? '').trim().toLowerCase());
+    if (new Set(axisIds).size !== axisIds.length) {
+      throw analyticsRefusal('Each dimension can appear only once in the order.', 'axis_ids');
+    }
+    await ctx.manager.query(
+      `SELECT id FROM analytics_axes WHERE tenant_id = $1 ORDER BY id FOR NO KEY UPDATE`,
+      [ctx.tenantId],
+    );
+    const { items: current } = await this.list(ctx);
+    const byId = new Map(current.map((axis) => [axis.id, axis]));
+    if (axisIds.some((id) => !byId.has(id))) {
+      throw analyticsRefusal('A dimension in this order does not exist. Reload the page and try again.', 'axis_ids');
+    }
+    const listed = new Set(axisIds);
+    const next = [...axisIds.map((id) => byId.get(id)!), ...current.filter((axis) => !listed.has(axis.id))];
+
+    // The rows locked above, read under the lock: exactly the rows the UPDATE writes.
+    const moved = next
+      .map((axis, index) => ({ id: axis.id, before: axis.sort_order, after: index + 1 }))
+      .filter((row) => row.before !== row.after);
+    if (moved.length === 0) return { items: next };
+
+    await ctx.manager.query(
+      `UPDATE analytics_axes a SET sort_order = n.position::int
+         FROM unnest($2::uuid[]) WITH ORDINALITY AS n(id, position)
+        WHERE a.tenant_id = $1 AND a.id = n.id AND a.sort_order IS DISTINCT FROM n.position::int`,
+      [ctx.tenantId, next.map((axis) => axis.id)],
+    );
+    for (const row of moved) {
+      await this.audit.log(
+        {
+          table: 'analytics_axes',
+          recordId: row.id,
+          action: 'update',
+          before: { sort_order: row.before },
+          after: { sort_order: row.after },
+          userId: ctx.userId ?? null,
+          source: ctx.audit?.source,
+          sourceRef: ctx.audit?.sourceRef ?? null,
+        },
+        { manager: ctx.manager },
+      );
+    }
+    return this.list(ctx);
+  }
+
   /** Refused for the default dimension and while the dimension holds values. */
   async delete(id: string, ctx: AnalyticsContext): Promise<void> {
     // The row lock comes first: a value created concurrently either committed

@@ -615,6 +615,7 @@
     "openDimension": "Abrir {{name}}",
     "markedDimension": "{{name}}, {{marks}}",
     "disabledMark": "Desactivada",
+    "defaultMark": "Predeterminada",
     "enableToAddValues": "Active esta dimensión para añadir valores.",
     "export": "Exportar valores",
     "import": "Importar valores",
@@ -630,6 +631,19 @@
       "movedTo": "Valor {{name}} en la posición {{position}} de {{count}}.",
       "droppedAt": "Valor {{name}} soltado en la posición {{position}} de {{count}}.",
       "cancelled": "Valor {{name}} devuelto a su lugar."
+    },
+    "reorderDimensions": {
+      "action": "Reordenar las dimensiones",
+      "title": "Reordenar las dimensiones",
+      "hint": "Arrastre las dimensiones al orden en que las pantallas, las listas y el archivo de presupuesto deben mostrarlas.",
+      "loadFailed": "Error al cargar las dimensiones.",
+      "saveFailed": "Error al guardar el orden.",
+      "roleDescription": "dimensión movible",
+      "instructions": "Para mover una dimensión, pulse Espacio o Intro, muévala con las flechas y pulse Espacio o Intro para soltarla. Escape cancela.",
+      "pickedUp": "Dimensión {{name}} seleccionada.",
+      "movedTo": "Dimensión {{name}} en la posición {{position}} de {{count}}.",
+      "droppedAt": "Dimensión {{name}} soltada en la posición {{position}} de {{count}}.",
+      "cancelled": "Dimensión {{name}} devuelta a su lugar."
     },
     "previousValue": "Valor anterior",
     "nextValue": "Valor siguiente",
@@ -649,7 +663,6 @@
       "code": "Se usa como nombre de columna en los archivos CSV: analytics:{{code}}. Cambiarlo cambia el nombre de la columna.",
       "codeDefault": "Los archivos antiguos usan la columna analytics_category para esta dimensión; analytics:{{code}} también funciona.",
       "codeCreate": "Se usa como nombre de columna en los archivos CSV. Letras minúsculas, dígitos, - o _.",
-      "order": "Las dimensiones se ordenan según este número, de menor a mayor.",
       "defaultLocked": "Esta dimensión no se puede desactivar ni eliminar: los archivos antiguos y las preguntas a la IA la usan.",
       "appliesToDefault": "La dimensión predeterminada se aplica a las líneas OPEX y CAPEX.",
       "valueDimensionAppliesTo": {
@@ -726,7 +739,6 @@
       "nameRequired": "Introduzca un nombre.",
       "codeRequired": "Introduzca un código.",
       "codeInvalid": "Use letras minúsculas, dígitos, - o _ (40 como máximo).",
-      "orderInvalid": "Introduzca un número entero.",
       "dimensionRequired": "Elija una dimensión."
     }
   },

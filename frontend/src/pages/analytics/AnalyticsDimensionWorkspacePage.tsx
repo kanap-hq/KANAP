@@ -216,7 +216,6 @@ export default function AnalyticsDimensionWorkspacePage() {
             errors={errors}
             onNameCommit={(name) => void patch({ name }, 'name')}
             onCodeCommit={(code) => void patch({ code }, 'code')}
-            onOrderCommit={(sortOrder) => void patch({ sort_order: sortOrder }, 'sort_order')}
             onAppliesToChange={(appliesTo) => void patch({ applies_to: appliesTo }, 'applies_to')}
             onRequiredChange={(required) => void patch({ required }, 'required')}
             onDisabledAtChange={(disabledAt) => {
@@ -261,7 +260,6 @@ function DimensionProperties({
   errors,
   onNameCommit,
   onCodeCommit,
-  onOrderCommit,
   onAppliesToChange,
   onRequiredChange,
   onDisabledAtChange,
@@ -273,7 +271,6 @@ function DimensionProperties({
   errors: FieldErrors;
   onNameCommit: (name: string | null) => void;
   onCodeCommit: (code: string) => void;
-  onOrderCommit: (sortOrder: number) => void;
   onAppliesToChange: (appliesTo: LineType | null) => void;
   onRequiredChange: (required: boolean) => void;
   onDisabledAtChange: (disabledAt: string | null) => void;
@@ -284,10 +281,8 @@ function DimensionProperties({
   // A refused value stays in its field so it can be corrected; a stored change replaces it.
   const nameDraft = useFieldDraft(axis.name ?? '');
   const codeDraft = useFieldDraft(axis.code);
-  const orderDraft = useFieldDraft(String(axis.sort_order ?? 0));
   const name = nameDraft.draft;
   const code = codeDraft.draft;
-  const order = orderDraft.draft;
 
   const commitName = () => {
     nameDraft.onBlur();
@@ -316,22 +311,6 @@ function DimensionProperties({
       return;
     }
     onCodeCommit(trimmed);
-  };
-
-  const commitOrder = () => {
-    orderDraft.onBlur();
-    onFieldError('sort_order', undefined);
-    const trimmed = order.trim();
-    if (!trimmed) {
-      orderDraft.setDraft(String(axis.sort_order ?? 0));
-      return;
-    }
-    const parsed = Number(trimmed);
-    if (!Number.isInteger(parsed)) {
-      onFieldError('sort_order', t('analytics.messages.orderInvalid'));
-      return;
-    }
-    if (parsed !== axis.sort_order) onOrderCommit(parsed);
   };
 
   const blurOnEnter = (event: React.KeyboardEvent) => {
@@ -383,21 +362,6 @@ function DimensionProperties({
             error={!!errors.code}
             helperText={errors.code}
             inputProps={{ 'aria-label': t('analytics.fields.code'), autoComplete: 'off', spellCheck: false }}
-          />
-        </PropertyRow>
-        <PropertyRow label={t('analytics.fields.order')} helperText={t('analytics.hints.order')}>
-          <TextField
-            value={order}
-            onChange={(event) => orderDraft.setDraft(event.target.value)}
-            onFocus={orderDraft.onFocus}
-            onBlur={commitOrder}
-            onKeyDown={blurOnEnter}
-            variant="standard"
-            sx={drawerFieldValueSx}
-            disabled={disabled}
-            error={!!errors.sort_order}
-            helperText={errors.sort_order}
-            inputProps={{ 'aria-label': t('analytics.fields.order'), inputMode: 'numeric', autoComplete: 'off' }}
           />
         </PropertyRow>
         <PropertyRow
@@ -536,13 +500,12 @@ type CreateForm = {
   name: string;
   code: string;
   description: string;
-  order: string;
   /** Null: OPEX and CAPEX lines. */
   appliesTo: LineType | null;
   required: boolean;
 };
 
-const EMPTY_FORM: CreateForm = { name: '', code: '', description: '', order: '', appliesTo: null, required: false };
+const EMPTY_FORM: CreateForm = { name: '', code: '', description: '', appliesTo: null, required: false };
 
 function DimensionCreate({
   canCreate,
@@ -555,21 +518,13 @@ function DimensionCreate({
 }) {
   const { t } = useTranslation(['master-data', 'common']);
   const queryClient = useQueryClient();
-  const axes = useAnalyticsAxes();
   const [form, setForm] = React.useState<CreateForm>(EMPTY_FORM);
   // The code follows the name until the user types one.
   const [codeTouched, setCodeTouched] = React.useState(false);
-  const [orderTouched, setOrderTouched] = React.useState(false);
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
 
-  // A new dimension goes last unless the user picks another place.
-  const proposedOrder = React.useMemo(
-    () => (axes.axes.length > 0 ? Math.max(...axes.axes.map((axis) => axis.sort_order ?? 0)) + 1 : 0),
-    [axes.axes],
-  );
-  const order = orderTouched ? form.order : (axes.ready ? String(proposedOrder) : '');
   const code = codeTouched ? form.code : proposeDimensionCode(form.name);
 
   const update = (next: Partial<CreateForm>) => setForm((prev) => ({ ...prev, ...next }));
@@ -578,12 +533,10 @@ function DimensionCreate({
     if (!canCreate || submitting) return;
     const name = form.name.trim();
     const trimmedCode = code.trim();
-    const trimmedOrder = order.trim();
     const nextErrors: FieldErrors = {};
     if (!name) nextErrors.name = t('analytics.messages.nameRequired');
     if (!trimmedCode) nextErrors.code = t('analytics.messages.codeRequired');
     else if (!DIMENSION_CODE_PATTERN.test(trimmedCode)) nextErrors.code = t('analytics.messages.codeInvalid');
-    if (trimmedOrder && !Number.isInteger(Number(trimmedOrder))) nextErrors.sort_order = t('analytics.messages.orderInvalid');
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
     setSubmitting(true);
@@ -593,7 +546,6 @@ function DimensionCreate({
         code: trimmedCode,
         name,
         description: form.description.trim() || null,
-        ...(trimmedOrder ? { sort_order: Number(trimmedOrder) } : {}),
         applies_to: form.appliesTo,
         required: form.required,
       });
@@ -602,7 +554,7 @@ function DimensionCreate({
     } catch (e) {
       const message = getApiErrorMessage(e, t, t('analytics.messages.dimensionCreateFailed'));
       const field = analyticsRefusalField(e);
-      if (field === 'name' || field === 'code' || field === 'description' || field === 'sort_order' || field === 'applies_to' || field === 'required') {
+      if (field === 'name' || field === 'code' || field === 'description' || field === 'applies_to' || field === 'required') {
         setErrors({ [field]: message });
       } else {
         setServerError(message);
@@ -656,20 +608,6 @@ function DimensionCreate({
               error={!!errors.code}
               helperText={errors.code}
               inputProps={{ 'aria-label': t('analytics.fields.code'), autoComplete: 'off', spellCheck: false }}
-            />
-          </PropertyRow>
-          <PropertyRow label={t('analytics.fields.order')} helperText={t('analytics.hints.order')} valueSx={{ maxWidth: 520 }}>
-            <TextField
-              value={order}
-              onChange={(e) => {
-                setOrderTouched(true);
-                update({ order: e.target.value });
-              }}
-              variant="standard"
-              sx={drawerFieldValueSx}
-              error={!!errors.sort_order}
-              helperText={errors.sort_order}
-              inputProps={{ 'aria-label': t('analytics.fields.order'), inputMode: 'numeric', autoComplete: 'off' }}
             />
           </PropertyRow>
           <PropertyRow label={t('shared.lineTypeUsage.label')} valueSx={{ maxWidth: 520 }}>

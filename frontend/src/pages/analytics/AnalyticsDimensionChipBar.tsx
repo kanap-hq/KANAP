@@ -3,9 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { Box, Button } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import SwapVertIcon from '@mui/icons-material/SwapVert';
 import { isAnalyticsActive, type AnalyticsAxis } from '../../services/analytics';
 import ChipToggleBar from '../../components/ChipToggleBar';
 import { lineTypeUsageLabel } from '../../constants/lineTypeUsage';
+import AnalyticsDimensionOrderDialog from './AnalyticsDimensionOrderDialog';
 
 type Props = {
   axes: AnalyticsAxis[];
@@ -13,70 +15,85 @@ type Props = {
   label: (axis: AnalyticsAxis) => string;
   onSelect: (axisId: string) => void;
   onEdit: (axisId: string) => void;
-  /** Edit for members; readers only open the dimension, and the button says so. */
+  /** Edit and Reorder for members; readers only open the dimension, and the button says so. */
   canEdit: boolean;
   /** Omitted when the user cannot create a dimension. */
   onCreate?: () => void;
 };
 
-/** One band of dimension toggles above the values grid, with New and Edit (or Open) on the right. */
+/** One band of dimension toggles above the values grid, with New, Reorder and Edit (or Open) on the right. */
 export default function AnalyticsDimensionChipBar({ axes, selectedAxisId, label, onSelect, onEdit, canEdit, onCreate }: Props) {
   const { t } = useTranslation(['master-data', 'common']);
+  const [reorderOpen, setReorderOpen] = React.useState(false);
   const selectedAxis = axes.find((axis) => axis.id === selectedAxisId) ?? null;
-  const hasActions = !!onCreate || !!selectedAxis;
+  const hasActions = !!onCreate || canEdit || !!selectedAxis;
   return (
-    <ChipToggleBar
-      ariaLabel={t('analytics.dimensionsLabel')}
-      selectedId={selectedAxisId}
-      onSelect={onSelect}
-      sx={{ mb: 2 }}
-      items={axes.map((axis) => {
-        const name = label(axis);
-        // A disabled dimension, or one used for one type of line only, says so after its name.
-        const marks = [
-          ...(isAnalyticsActive(axis) ? [] : [t('analytics.disabledMark')]),
-          ...(axis.applies_to ? [lineTypeUsageLabel(t, axis.applies_to)] : []),
-        ];
-        return {
-          id: axis.id,
-          // The visible marks alone would run into the name ("Internal orderDisabled").
-          ariaLabel: marks.length > 0 ? t('analytics.markedDimension', { name, marks: marks.join(', ') }) : undefined,
-          label: (
-            <>
-              {name}
-              {marks.length > 0 && (
-                <Box component="span" sx={{ ml: 0.75, opacity: 0.7 }}>
-                  {marks.join(' · ')}
-                </Box>
-              )}
-            </>
-          ),
-        };
-      })}
-      actions={hasActions && (
-        <>
-          {onCreate && (
-            <Button
-              variant="action"
-              startIcon={<AddIcon sx={{ fontSize: '14px !important' }} />}
-              aria-label={t('analytics.newDimension')}
-              onClick={onCreate}
-            >
-              {t('coa.chipBar.newChip')}
-            </Button>
-          )}
-          {selectedAxis && (
-            <Button
-              variant="action"
-              startIcon={canEdit ? <EditOutlinedIcon sx={{ fontSize: '14px !important' }} /> : undefined}
-              aria-label={t(canEdit ? 'analytics.editDimension' : 'analytics.openDimension', { name: label(selectedAxis) })}
-              onClick={() => onEdit(selectedAxis.id)}
-            >
-              {t(canEdit ? 'common:buttons.edit' : 'common:buttons.open')}
-            </Button>
-          )}
-        </>
-      )}
-    />
+    <>
+      <ChipToggleBar
+        ariaLabel={t('analytics.dimensionsLabel')}
+        selectedId={selectedAxisId}
+        onSelect={onSelect}
+        sx={{ mb: 2 }}
+        items={axes.map((axis) => {
+          const name = label(axis);
+          // A disabled dimension, or one used for one type of line only, says so after its name.
+          const marks = [
+            ...(isAnalyticsActive(axis) ? [] : [t('analytics.disabledMark')]),
+            ...(axis.applies_to ? [lineTypeUsageLabel(t, axis.applies_to)] : []),
+          ];
+          return {
+            id: axis.id,
+            // The visible marks alone would run into the name ("Internal orderDisabled").
+            ariaLabel: marks.length > 0 ? t('analytics.markedDimension', { name, marks: marks.join(', ') }) : undefined,
+            label: (
+              <>
+                {name}
+                {marks.length > 0 && (
+                  <Box component="span" sx={{ ml: 0.75, opacity: 0.7 }}>
+                    {marks.join(' · ')}
+                  </Box>
+                )}
+              </>
+            ),
+          };
+        })}
+        actions={hasActions && (
+          <>
+            {onCreate && (
+              <Button
+                variant="action"
+                startIcon={<AddIcon sx={{ fontSize: '14px !important' }} />}
+                aria-label={t('analytics.newDimension')}
+                onClick={onCreate}
+              >
+                {t('coa.chipBar.newChip')}
+              </Button>
+            )}
+            {canEdit && (
+              <Button
+                variant="action"
+                startIcon={<SwapVertIcon sx={{ fontSize: '14px !important' }} />}
+                aria-label={t('analytics.reorderDimensions.action')}
+                disabled={axes.length < 2}
+                onClick={() => setReorderOpen(true)}
+              >
+                {t('analytics.reorder.action')}
+              </Button>
+            )}
+            {selectedAxis && (
+              <Button
+                variant="action"
+                startIcon={canEdit ? <EditOutlinedIcon sx={{ fontSize: '14px !important' }} /> : undefined}
+                aria-label={t(canEdit ? 'analytics.editDimension' : 'analytics.openDimension', { name: label(selectedAxis) })}
+                onClick={() => onEdit(selectedAxis.id)}
+              >
+                {t(canEdit ? 'common:buttons.edit' : 'common:buttons.open')}
+              </Button>
+            )}
+          </>
+        )}
+      />
+      {canEdit && <AnalyticsDimensionOrderDialog open={reorderOpen} onClose={() => setReorderOpen(false)} />}
+    </>
   );
 }
