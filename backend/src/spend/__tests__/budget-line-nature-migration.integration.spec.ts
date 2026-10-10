@@ -240,7 +240,9 @@ async function testUp() {
 
     const summary = lines.find((line) => line.startsWith(LOG_PREFIX)) ?? '';
     assert.match(summary, /: columns nature and legacy_number ready, \d+ line\(s\) given their legacy number, /, `the counts are logged (${summary})`);
-    assert.ok(Number(/, (\d+) line\(s\) given/.exec(summary)?.[1]) >= 6, 'at least this test\'s lines were numbered');
+    // Five of this test's lines get a number (plain, dupLater, noNature, badNature, otherTenant);
+    // a database that holds lines adds its own, an empty one (CI) adds none.
+    assert.ok(Number(/, (\d+) line\(s\) given/.exec(summary)?.[1]) >= 5, 'at least this test\'s five lines were numbered');
     assert.match(summary, /, 1 OPEX line\(s\) left without one, 2 invalid nature\(s\) set to opex, 1 duplicate legacy number\(s\) cleared, constraint added: spend_items_nature_check;/);
 
     // The search index reads OPEX lines only: a CAPEX line written gets no OPEX entry, an OPEX line
