@@ -179,10 +179,9 @@ Every query must be scoped by `tenant_id`. This is critical for tenant isolation
 - Migrations run with **no** `app.current_tenant`. `FORCE ROW LEVEL SECURITY` also applies to the
   table owner, so a backfill must disable RLS around itself or it silently touches 0 rows
   (precedent: `1824000000000-audit-log-viewer-metadata-indexes.ts`).
-- A migration that updates analytics values, dimensions or a line's values fires triggers that read
-  the budget lines and write `search_index` (`1853940000000`): run it per tenant with
-  `app.current_tenant` set, or lift RLS on `search_index`, `spend_items`, `capex_items` and both
-  `*_item_analytics_values` tables as well.
+- A migration that writes a budget line's analytics values (`*_item_analytics_values`) fires
+  triggers that read the lines and write `search_index` (`1853940000000`): run it per tenant with
+  `app.current_tenant` set. Updates of the values or dimensions themselves do not fire them.
 - A new tenant-scoped table is registered in `backend/src/common/tenant-isolation.inventory.ts`
   and `backend/src/admin/tenants/tenant-purge.inventory.ts` (CI fails otherwise), with a policy
   named `<table>_tenant_isolation` (USING and WITH CHECK). The tenant reset purges it automatically;

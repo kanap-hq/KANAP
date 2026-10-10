@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import { AiEntityService } from '../ai-entity.service';
+import { AiSearchIndexService } from '../search-index/ai-search-index.service';
 import { syncTableLifecycleStatus } from '../../cleanup/lifecycle-status-sync.service';
 import {
   SEARCH_INDEX_ANALYTICS_FUNCTIONS,
@@ -16,13 +17,14 @@ import { linkValue, runSpecs, seedLine, seedTenant, setCurrentTenant, withRollba
 // at the end: an OPEX or CAPEX line's search entry carries the names of the values it holds on the
 // enabled dimensions that apply to its type (vector weight B, accent-insensitive search, never the
 // dimension names) and `extra_json.analytics` ("Nature de coût: Matériel; Récurrence: Récurrent",
-// dimension order, absent without a value); the statement triggers keep it fresh: a value set,
-// changed or cleared, a value renamed (lines of both types), a dimension renamed, disabled, past
-// its end of validity (through the hourly lifecycle sync) or restricted to the other type, each
-// line refreshed once per statement and type, the writer's tenant only. A value's order, line types
-// or own state refresh nothing, and a held value that is disabled stays indexed. The migration
-// reruns to the same functions and triggers, reindexes existing lines, and down() puts back the
-// previous refresh bodies, byte for byte.
+// dimension order, absent without a value). The statement triggers on the line's values refresh
+// it at once: a value set, changed or cleared, each line once per statement and type, the
+// writer's tenant only. A change of the values or dimensions themselves (a value renamed, a
+// dimension renamed, disabled, past its end of validity, restricted to the other type or
+// reordered) refreshes nothing: the line's next write or the tenant's reindex (the daily job, the
+// admin rebuild) picks it up. A held value that is disabled stays indexed. The migration reruns to
+// the same functions and triggers, reindexes existing lines, and down() puts back the previous
+// refresh bodies, byte for byte.
 // @database-spec (the data source opens in analytics-test-helpers).
 
 type Kind = 'opex' | 'capex';
@@ -145,6 +147,16 @@ async function recordRefreshes(runner: QueryRunner): Promise<() => Promise<Refre
 
 const call = (kind: Kind, tenant: string, lines: string[]): RefreshCall => ({ type: ENTITY[kind], tenant, ids: [...lines].sort() });
 
+/** The tenant's reindex, as the daily job and the admin rebuild run it. */
+async function reindex(runner: QueryRunner, tenantId: string) {
+  await new AiSearchIndexService(runner.connection).reindexTenant(runner.manager, tenantId);
+}
+
+/** A write of the line that is not about its values: the line's own search trigger refreshes it. */
+async function editLine(runner: QueryRunner, kind: Kind, itemId: string) {
+  await runner.query(`UPDATE ${ENTITY[kind]} SET notes = 'Edited' WHERE id = $1`, [itemId]);
+}
+
 /** A tenant with "Nature de coût" (Matériel, Logiciel) and "Récurrence" (Récurrent), in that order. */
 async function seedDimensions(runner: QueryRunner, tag: string) {
   const tenantId = await seedTenant(runner, tag);
@@ -252,15 +264,25 @@ async function testValueChanges() {
     const lines = { opex: await seedLine(runner, 'opex', d.tenantId), capex: await seedLine(runner, 'capex', d.tenantId) };
     for (const kind of KINDS) await linkValue(runner, kind, d.tenantId, lines[kind], d.nature, d.materiel);
     const calls = await recordRefreshes(runner);
+    const old = 'Nature de coût: Matériel';
+    const renamed = 'Nature de coût: Équipement';
 
+    // A value renamed refreshes no line (the index's rule for related records, migration header).
     await runner.query(`UPDATE analytics_categories SET name = 'Équipement' WHERE id = $1`, [d.materiel]);
-    assert.deepEqual(await calls(), [call('opex', d.tenantId, [lines.opex]), call('capex', d.tenantId, [lines.capex])],
-      'a value renamed: its lines of both types, one call each');
-    for (const kind of KINDS) {
-      assert.equal(await analytics(runner, kind, lines[kind]), 'Nature de coût: Équipement', `${kind}: the new name`);
-    }
+    assert.deepEqual(await calls(), [], 'a value renamed refreshes nothing');
+    for (const kind of KINDS) assert.equal(await analytics(runner, kind, lines[kind]), old, `${kind}: the entry keeps the old name`);
+    assert.deepEqual(ids(await search(runner, d.tenantId, 'equipement')), [], 'not found by the new name yet');
+
+    // The line's next write picks it up, for that line only.
+    await editLine(runner, 'opex', lines.opex);
+    assert.equal(await analytics(runner, 'opex', lines.opex), renamed, 'opex: written again, the line carries the new name');
+    assert.equal(await analytics(runner, 'capex', lines.capex), old, 'capex: not written, the old name');
+    // The tenant's reindex picks it up for every line.
+    await reindex(runner, d.tenantId);
+    for (const kind of KINDS) assert.equal(await analytics(runner, kind, lines[kind]), renamed, `${kind}: reindexed, the new name`);
     assert.deepEqual(ids(await search(runner, d.tenantId, 'equipement')).sort(), [lines.opex, lines.capex].sort(), 'found by the new name');
     assert.deepEqual(ids(await search(runner, d.tenantId, 'materiel')), [], 'not by the old one');
+    await calls();
 
     await runner.query(`UPDATE analytics_categories SET sort_order = sort_order + 5 WHERE axis_id = $1`, [d.nature]);
     await runner.query(`UPDATE analytics_categories SET applies_to = 'opex' WHERE id = $1`, [d.materiel]);
@@ -268,9 +290,9 @@ async function testValueChanges() {
     assert.deepEqual(await calls(), [], "a value's order, line types or state refresh nothing");
 
     // A disabled value, and one now for OPEX only, that a CAPEX line still holds: shown on the line, indexed.
-    await runner.query(`SELECT search_index_refresh_spend_items($1, NULL), search_index_refresh_capex_items($1, NULL)`, [d.tenantId]);
+    await reindex(runner, d.tenantId);
     for (const kind of KINDS) {
-      assert.equal(await analytics(runner, kind, lines[kind]), 'Nature de coût: Équipement', `${kind}: a disabled value held stays indexed`);
+      assert.equal(await analytics(runner, kind, lines[kind]), renamed, `${kind}: a disabled value held stays indexed`);
     }
   });
 }
@@ -287,41 +309,50 @@ async function testDimensionChanges() {
     const expect = async (shown: Record<Kind, string | undefined>, message: string) => {
       for (const kind of KINDS) assert.equal(await analytics(runner, kind, lines[kind]), shown[kind], `${kind}: ${message}`);
     };
-    const nature = (sql: string) => runner.query(`UPDATE analytics_axes SET ${sql} WHERE id = $1`, [d.nature]);
     const recurrenceOnly = 'Récurrence: Récurrent';
+    // Each dimension change refreshes no line; the tenant's reindex then shows it.
+    let shown: Record<Kind, string | undefined> = { opex: BOTH, capex: BOTH };
+    const change = async (sql: string, after: Record<Kind, string | undefined>, message: string) => {
+      await runner.query(`UPDATE analytics_axes SET ${sql} WHERE id = $1`, [d.nature]);
+      assert.deepEqual(await calls(), [], `${message}: refreshes nothing`);
+      await expect(shown, `${message}: the entry is unchanged until a reindex`);
+      await reindex(runner, d.tenantId);
+      await calls();
+      await expect(after, `${message}: reindexed`);
+      shown = after;
+    };
 
-    await nature(`status = 'disabled', disabled_at = now() - interval '1 day'`);
-    await expect({ opex: recurrenceOnly, capex: recurrenceOnly }, 'a disabled dimension leaves the entry');
-    assert.deepEqual(await calls(), [call('opex', d.tenantId, [lines.opex]), call('capex', d.tenantId, [lines.capex])], 'one call per type');
+    await change(`status = 'disabled', disabled_at = now() - interval '1 day'`, { opex: recurrenceOnly, capex: recurrenceOnly }, 'a disabled dimension');
     assert.deepEqual(ids(await search(runner, d.tenantId, 'materiel')), [], 'not found by a value of a disabled dimension');
-    await nature(`status = 'enabled', disabled_at = NULL`);
-    await expect({ opex: BOTH, capex: BOTH }, 'enabled again: back');
+    await change(`status = 'enabled', disabled_at = NULL`, { opex: BOTH, capex: BOTH }, 'enabled again');
 
-    await nature(`disabled_at = now() - interval '1 hour'`);
-    await expect({ opex: recurrenceOnly, capex: recurrenceOnly }, 'an end of validity in the past leaves the entry');
-    await nature('disabled_at = NULL');
-    await expect({ opex: BOTH, capex: BOTH }, 'no end of validity: back');
+    await change(`disabled_at = now() - interval '1 hour'`, { opex: recurrenceOnly, capex: recurrenceOnly }, 'an end of validity in the past');
+    await change('disabled_at = NULL', { opex: BOTH, capex: BOTH }, 'no end of validity');
 
-    await nature(`applies_to = 'capex'`);
-    await expect({ opex: recurrenceOnly, capex: BOTH }, 'a dimension for CAPEX lines only leaves the OPEX entry');
-    await nature(`applies_to = 'opex'`);
-    await expect({ opex: BOTH, capex: recurrenceOnly }, 'for OPEX lines only');
-    await nature('applies_to = NULL');
-    await expect({ opex: BOTH, capex: BOTH }, 'both types again');
+    await change(`applies_to = 'capex'`, { opex: recurrenceOnly, capex: BOTH }, 'a dimension for CAPEX lines only');
+    await change(`applies_to = 'opex'`, { opex: BOTH, capex: recurrenceOnly }, 'for OPEX lines only');
+    await change('applies_to = NULL', { opex: BOTH, capex: BOTH }, 'both types again');
 
-    await nature(`name = 'Nature'`);
-    await expect({ opex: 'Nature: Matériel; Récurrence: Récurrent', capex: 'Nature: Matériel; Récurrence: Récurrent' }, 'a dimension renamed');
+    const renamed = 'Nature: Matériel; Récurrence: Récurrent';
+    await change(`name = 'Nature'`, { opex: renamed, capex: renamed }, 'a dimension renamed');
+    await change('sort_order = 40', { opex: 'Récurrence: Récurrent; Nature: Matériel', capex: 'Récurrence: Récurrent; Nature: Matériel' }, 'a dimension moved after another');
+    await change('required = NOT required', shown, 'the required setting');
+
+    // A write of the line picks a change up for that line, without a reindex.
+    await runner.query(`UPDATE analytics_axes SET name = 'Nature de coût', sort_order = 10 WHERE id = $1`, [d.nature]);
+    assert.deepEqual(await calls(), [], 'a dimension renamed and moved back: refreshes nothing');
+    await editLine(runner, 'capex', lines.capex);
+    await expect({ opex: 'Récurrence: Récurrent; Nature: Matériel', capex: BOTH }, 'the CAPEX line written again follows, the OPEX line waits');
+
+    // An end of validity passing is no write; nor is the hourly lifecycle sync's status a refresh.
+    await reindex(runner, d.tenantId);
     await calls();
-    await runner.query(`UPDATE analytics_axes SET sort_order = sort_order + 1, required = NOT required WHERE tenant_id = $1`, [d.tenantId]);
-    assert.deepEqual(await calls(), [], "a dimension's order or required setting refreshes nothing");
-
-    // An end of validity passing is no write: the hourly lifecycle sync sets the stored status, which refreshes.
-    await runner.query('ALTER TABLE analytics_axes DISABLE TRIGGER analytics_axes_search_index_lines');
-    await nature(`disabled_at = now() - interval '1 minute'`);
-    await runner.query('ALTER TABLE analytics_axes ENABLE TRIGGER analytics_axes_search_index_lines');
-    await expect({ opex: 'Nature: Matériel; Récurrence: Récurrent', capex: 'Nature: Matériel; Récurrence: Récurrent' }, 'the date passed, no write yet');
+    await runner.query(`UPDATE analytics_axes SET disabled_at = now() - interval '1 minute' WHERE id = $1`, [d.nature]);
     assert.deepEqual(await syncTableLifecycleStatus(runner.manager, d.tenantId, 'analytics_axes'), { disabled: 1, enabled: 0 }, 'the sync disables the dimension');
-    await expect({ opex: recurrenceOnly, capex: recurrenceOnly }, 'the lifecycle sync refreshes the lines');
+    assert.deepEqual(await calls(), [], 'the lifecycle sync refreshes nothing');
+    await expect({ opex: BOTH, capex: BOTH }, 'the date passed and the status synced: unchanged until a reindex');
+    await reindex(runner, d.tenantId);
+    await expect({ opex: recurrenceOnly, capex: recurrenceOnly }, 'reindexed: the dimension past its end of validity leaves the entry');
   });
 }
 
@@ -344,10 +375,9 @@ async function testTenantIsolation() {
     await runner.query(`UPDATE analytics_categories SET name = 'Équipement' WHERE id = $1`, [a.materiel]);
     await runner.query(`UPDATE analytics_axes SET name = 'Nature' WHERE id = $1`, [a.nature]);
     await writeItemAnalyticsValues(runner.manager, 'opex', a.tenantId, lineA, [{ axis_id: a.recurrence, category_id: a.recurrent }]);
-    const made = await calls();
-    assert.equal(made.length, 3, 'three refreshes in tenant A');
-    assert.deepEqual([...new Set(made.map((c) => c.tenant))], [a.tenantId], "the triggers refresh the writer's tenant only");
-    assert.equal(await analytics(runner, 'opex', lineA), 'Nature: Équipement; Récurrence: Récurrent', "tenant A's line follows");
+    assert.deepEqual(await calls(), [call('opex', a.tenantId, [lineA])],
+      "one refresh, of the line whose values were written, in the writer's tenant");
+    assert.equal(await analytics(runner, 'opex', lineA), 'Nature: Équipement; Récurrence: Récurrent', "tenant A's line reads the names as they are now");
 
     await setCurrentTenant(runner, b.tenantId);
     assert.equal(await analytics(runner, 'opex', lineB), 'Nature de coût: Matériel', "tenant B's line is untouched");
@@ -465,6 +495,20 @@ async function testMigration() {
         assert.deepEqual(fn.config, ['search_path=public, pg_temp', 'plan_cache_mode=force_custom_plan'], `${fn.name}: the settings of the budget statement triggers`);
       }
     }
+    // Only the triggers of the line's values refresh lines: no trigger on the values or the
+    // dimensions does (they would write the entries of lines their writer does not hold).
+    const callers: Array<{ name: string }> = await runner.query(
+      `SELECT proname::text AS name FROM pg_proc
+        WHERE pronamespace = 'public'::regnamespace AND prosrc LIKE '%search_index_refresh_budget_lines%' ORDER BY proname`,
+    );
+    assert.deepEqual(callers.map((row) => row.name), ['capex_item_analytics_values_search_index', 'spend_item_analytics_values_search_index'],
+      'the line values triggers are the only callers of the line refresh');
+    const onMasterData: Array<{ name: string }> = await runner.query(
+      `SELECT t.tgname::text AS name FROM pg_trigger t
+        WHERE NOT t.tgisinternal AND t.tgrelid IN ('analytics_categories'::regclass, 'analytics_axes'::regclass)
+          AND t.tgfoid IN (SELECT oid FROM pg_proc WHERE prosrc ~ 'search_index_refresh_(spend|capex)_items|search_index_refresh_budget_lines')`,
+    );
+    assert.deepEqual(onMasterData, [], 'no trigger on the values or the dimensions refreshes budget lines');
 
     // The entries as a database that never ran the migration holds them.
     await runner.query(

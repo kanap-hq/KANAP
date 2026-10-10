@@ -18,19 +18,6 @@ const SCOPES = [
 
 type Scope = (typeof SCOPES)[number];
 
-/**
- * The tables whose rows name what a line's index shows, with the link column that finds the lines
- * holding them and the columns a change of which refreshes those lines: a value's name; a
- * dimension's name (the display string), and what decides whether it is indexed (enabled, end of
- * validity, line types).
- */
-const HOLDERS = [
-  { table: 'analytics_categories', link: 'category_id', compared: ['name'] },
-  { table: 'analytics_axes', link: 'axis_id', compared: ['name', 'status', 'disabled_at', 'applies_to'] },
-] as const;
-
-type Holder = (typeof HOLDERS)[number];
-
 const EVENTS = ['insert', 'update', 'delete'] as const;
 type Event = (typeof EVENTS)[number];
 
@@ -325,14 +312,15 @@ const CAPEX_REFRESH_PREVIOUS = `
  * Refreshes lines of one tenant and type: one call of the type's refresh function with every line
  * given that still exists, read by one statement over all the ids (rule 2 of the budget statement
  * triggers; the tenant is a constant of the statement, the primary key serves it). A line deleted
- * with its values (ON DELETE CASCADE) has had its entry removed by its own trigger: refreshing it
- * would read the tenant's lines again for each deleted line.
+ * with its values (ON DELETE CASCADE) has had its entry removed by its own trigger: it is left
+ * out, and a statement that only deleted lines makes no call.
  *
- * The lines are locked first, in id order (FOR NO KEY UPDATE, as `spend/budget-locks.ts`): every
- * other writer of a line's entry holds the line before it writes the entry, so a value or a
- * dimension changed while an import holds some of its lines waits for the import, instead of
- * writing the entries of the lines it reaches first and closing a cycle on the next one (a
- * deadlock, the import aborted). A writer of the line's values already holds it.
+ * No lock is taken on the lines: every writer of a line's values already holds the line (lock
+ * order of `spend/budget-locks.ts`: the line first). A new line is its creator's until it
+ * commits, an update locks it (`updateItemUnderLock`), the imports lock their lines in id order
+ * before writing any, and a line's delete removes its values with it. A lock taken here would
+ * come after the values were written, too late to order anything, and cost a row lock write on a
+ * line the transaction has just written.
  */
 const REFRESH_LINES_SQL = `
   CREATE OR REPLACE FUNCTION ${REFRESH_LINES}(p_scope text, p_tenant uuid, p_items uuid[]) RETURNS void
@@ -344,11 +332,9 @@ const REFRESH_LINES_SQL = `
       RETURN;
     END IF;
     ${SCOPES.map((scope, index) => `${index === 0 ? 'IF' : 'ELSIF'} p_scope = '${scope.scope}' THEN
-      SELECT array_agg(x.id ORDER BY x.id) INTO k_kept
-        FROM (SELECT l.id FROM ${scope.items} l
-               WHERE l.id = ANY (p_items) AND l.tenant_id = p_tenant
-               ORDER BY l.id
-                 FOR NO KEY UPDATE OF l) x;
+      SELECT array_agg(l.id) INTO k_kept
+        FROM ${scope.items} l
+       WHERE l.id = ANY (p_items) AND l.tenant_id = p_tenant;
       IF k_kept IS NOT NULL THEN
         PERFORM ${scope.refresh}(p_tenant, k_kept);
       END IF;`).join('\n    ')}
@@ -417,59 +403,18 @@ function linkFunctionSql(scope: Scope): string {
   `;
 }
 
-/**
- * The statement trigger function of the values or the dimensions: the rows whose compared columns
- * changed, then, per tenant and per line type, the lines holding one of them (one statement over
- * all the keys, the tenant a constant: the `(tenant_id, category_id)` and
- * `(tenant_id, axis_id, category_id)` indexes serve it), refreshed by one call. Inserting a value
- * or a dimension changes no line, and one that a line holds cannot be deleted (ON DELETE RESTRICT).
- */
-function holdersFunctionSql(holder: Holder): string {
-  const columns = ['r.tenant_id', 'r.id', ...holder.compared.map((column) => `r.${column}`)].join(', ');
-  const compared = ['s.tenant_id', 's.id', ...holder.compared.map((column) => `s.${column}`)].join(', ');
-  return `
-    CREATE OR REPLACE FUNCTION ${holder.table}_search_index_lines() RETURNS trigger
-    LANGUAGE plpgsql ${FUNCTION_SETTINGS} AS $fn$
-    DECLARE
-      k_tenant uuid;
-      k_keys uuid[];
-      k_items uuid[];
-    BEGIN
-      FOR k_tenant, k_keys IN
-        SELECT c.tenant_id, array_agg(DISTINCT c.id)
-          FROM (${changedRows(columns, compared, 's.tenant_id, s.id')}) c
-         GROUP BY c.tenant_id
-         ORDER BY c.tenant_id
-      LOOP
-        ${SCOPES.map((scope) => `SELECT array_agg(DISTINCT v.item_id) INTO k_items
-          FROM ${scope.links} v
-         WHERE v.tenant_id = k_tenant AND v.${holder.link} = ANY (k_keys);
-        PERFORM ${REFRESH_LINES}('${scope.scope}', k_tenant, k_items);`).join('\n        ')}
-      END LOOP;
-      RETURN NULL;
-    END
-    $fn$
-  `;
-}
-
 type TriggerSpec = { table: string; name: string; event: Event; fn: string };
 
 /** Every trigger this migration creates. */
-export const SEARCH_INDEX_ANALYTICS_TRIGGERS: TriggerSpec[] = [
-  ...SCOPES.flatMap((scope) => EVENTS.map((event) => ({
-    table: scope.links, name: `${scope.links}_search_index_${event}`, event, fn: `${scope.links}_search_index`,
-  }))),
-  ...HOLDERS.map((holder) => ({
-    table: holder.table, name: `${holder.table}_search_index_lines`, event: 'update' as const, fn: `${holder.table}_search_index_lines`,
-  })),
-];
+export const SEARCH_INDEX_ANALYTICS_TRIGGERS: TriggerSpec[] = SCOPES.flatMap((scope) => EVENTS.map((event) => ({
+  table: scope.links, name: `${scope.links}_search_index_${event}`, event, fn: `${scope.links}_search_index`,
+})));
 
 /** Every function this migration creates, with its arguments (the refresh functions are replaced, not created). */
 export const SEARCH_INDEX_ANALYTICS_FUNCTIONS = [
   `${LINE_ANALYTICS}(uuid, text, uuid)`,
   `${REFRESH_LINES}(text, uuid, uuid[])`,
   ...SCOPES.map((scope) => `${scope.links}_search_index()`),
-  ...HOLDERS.map((holder) => `${holder.table}_search_index_lines()`),
 ];
 
 const transition = (event: Event) => (event === 'insert' ? 'NEW TABLE AS new_rows'
@@ -517,39 +462,39 @@ async function reindexLines(queryRunner: QueryRunner): Promise<number> {
  *    holds no indexed value). Label, summary and the other vector parts are unchanged. Both become
  *    PL/pgSQL with two paths, the tenant's lines and the lines given: a refresh of one line reads
  *    that line through the primary keys, never the tenant's table.
- * 3. Freshness. The index's contract (1853000000000) leaves related renames to the daily reindex;
- *    this is its first deliberate cascade, because the values are the line's own classification
- *    (what its drawer shows, edited with the line) and the CAPEX criteria become such values in lot
- *    C1. Statement triggers with transition tables, each line refreshed once per (tenant, type) and
- *    statement, by one call with the ids:
- *    - `*_item_analytics_values` INSERT, UPDATE (a changed value, line or dimension), DELETE: the
- *      lines involved (`<table>_search_index_<event>`);
- *    - `analytics_categories` UPDATE of `name`: the lines holding the value, both types
- *      (`analytics_categories_search_index_lines`);
- *    - `analytics_axes` UPDATE of `name`, `status`, `disabled_at` or `applies_to`: the lines holding
- *      a value on it (`analytics_axes_search_index_lines`).
- *    PostgreSQL refuses a column list (`UPDATE OF ...`) on a trigger with transition tables, so
- *    these fire on every UPDATE and compare the old and new rows themselves: a value's
- *    `sort_order`, `applies_to` or `status`, a dimension's `sort_order` or `required`, refresh
- *    nothing. An end of validity passing is no write: the hourly lifecycle-status-sync then sets
- *    the dimension's stored status, which the dimension trigger sees, and the daily reindex
- *    (`cleanup/search-index-reindex.service.ts`) is the backstop for the time between.
- *    The functions follow the rules of the budget statement triggers (1853850000000): no join of
- *    the transition tables, one read over all the keys, keys de-duplicated, SET search_path =
- *    public, pg_temp and plan_cache_mode = force_custom_plan, SECURITY INVOKER under the writer's
- *    row level security. They lock the lines they refresh in id order before writing their entries
- *    (lock order of `spend/budget-locks.ts`).
- *    A line's `row_version` bump by its values (1853740000000) still skips the line's own
- *    search trigger: the values' trigger refreshes the line itself.
+ * 3. Freshness.
+ *    - At once: the values a line holds. They are the line's own data (written with the line,
+ *      under its lock), so writing them refreshes the line: statement triggers with transition
+ *      tables on `*_item_analytics_values` (`<table>_search_index_<event>`), INSERT, UPDATE (a
+ *      changed value, line or dimension) and DELETE, each line refreshed once per (tenant, type)
+ *      and statement by one call with the ids. PostgreSQL refuses a column list (`UPDATE OF ...`)
+ *      on a trigger with transition tables, so the UPDATE trigger compares the old and new rows
+ *      itself: `updated_at` alone refreshes nothing. Every writer of a line's values holds the
+ *      line already, so these triggers only write the entries of lines their writer holds. They
+ *      follow the rules of the budget statement triggers (1853850000000): no join of the
+ *      transition tables, one read over all the keys, keys de-duplicated, SET search_path =
+ *      public, pg_temp and plan_cache_mode = force_custom_plan, SECURITY INVOKER under the
+ *      writer's row level security. A line's `row_version` bump by its values (1853740000000)
+ *      still skips the line's own search trigger: the values' trigger refreshes the line itself.
+ *    - At the daily reindex (`cleanup/search-index-reindex.service.ts`, 03:00), at the line's
+ *      next write, or at once through the admin rebuild (`POST /ai/admin/search-index/reindex`):
+ *      what the entry reads from the values and dimensions themselves: a value renamed; a
+ *      dimension renamed, disabled, past its end of validity, restricted to one line type
+ *      (`applies_to`) or reordered. This is the index's contract for related records
+ *      (1853000000000), as for a supplier or a company renamed. A first version of this
+ *      migration cascaded these changes to the lines holding the value or dimension and was
+ *      dropped: it wrote the entries of lines its writer did not hold, so a value or dimension
+ *      edit, which locks its own row first, waited for the lines an import held while the import
+ *      could ask for that row (the value it links, FOR KEY SHARE), a deadlock.
  * 4. Every tenant's OPEX and CAPEX lines reindexed (the time is logged).
  *
- * Consequence for later migrations: an UPDATE of analytics values or dimensions, or a write of a
- * line's values, now fires these triggers, which read the lines and their values and write
- * `search_index`. Such a migration runs per tenant with app.current_tenant set, or lifts row level
- * security on search_index, spend_items, capex_items and both `*_item_analytics_values` tables as
- * well as on the tables it writes. Otherwise the triggers see no line and the entries stay stale
- * until the daily reindex, or, with the lines visible and search_index still under RLS, the write
- * into search_index is refused.
+ * Consequence for later migrations: a write of a line's values (`*_item_analytics_values`) fires
+ * these triggers, which read the lines, their values and what their entries name, and write
+ * `search_index`. Such a migration runs per tenant with app.current_tenant set (as the reindex
+ * of step 4). With row level security lifted only on the tables it writes, the triggers see no line
+ * and the entries stay stale until the daily reindex; with the lines visible and search_index
+ * still under RLS, the write into search_index is refused. An update of analytics values or
+ * dimensions fires none of these triggers.
  *
  * Idempotent: every function is created or replaced, every trigger dropped and created again, the
  * reindex rewrites the same entries. down() drops the triggers and the new functions, puts back
@@ -565,7 +510,6 @@ export class SearchIndexAnalyticsValues1853940000000 implements MigrationInterfa
     await queryRunner.query(CAPEX_REFRESH);
     await queryRunner.query(REFRESH_LINES_SQL);
     for (const scope of SCOPES) await queryRunner.query(linkFunctionSql(scope));
-    for (const holder of HOLDERS) await queryRunner.query(holdersFunctionSql(holder));
     for (const trigger of SEARCH_INDEX_ANALYTICS_TRIGGERS) {
       await queryRunner.query(`DROP TRIGGER IF EXISTS ${trigger.name} ON ${trigger.table}`);
       await queryRunner.query(`

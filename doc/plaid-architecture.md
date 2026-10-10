@@ -148,10 +148,11 @@ analytics values, accent-insensitive, on the enabled dimensions used for the
 line's type (the ones its drawer shows). Dimension names are not indexed. Their
 `analytics` key lists the values the line holds, in dimension order, for
 example `Nature de coût: Matériel; Récurrence: Récurrent` (null when the line
-holds none). After a reorder of the dimensions, that order follows at the daily
-rebuild of the index. Triggers on the line's values, on value names and on dimensions
-keep these entries current (migration `1853940000000`; see "Knowledge" in
-`architecture.md`).
+holds none). Setting, changing or clearing a line's values refreshes its entry
+at once. A value renamed, or a dimension renamed, disabled, past its end of
+validity, restricted to one line type or reordered, reaches the entry at the
+line's next write or at the daily rebuild of the index (migration
+`1853940000000`; see "Knowledge" in `architecture.md`).
 
 Application classification has a dedicated catalog read. `get_application_classification_catalog`
 uses the tenant and `applications:reader` scope and returns business levels
