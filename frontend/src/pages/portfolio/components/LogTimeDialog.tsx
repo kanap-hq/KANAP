@@ -215,11 +215,11 @@ export default function LogTimeDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose} disabled={saving}>
+        <Button variant="action" onClick={handleClose} disabled={saving}>
           {t('common:buttons.cancel')}
         </Button>
         <Button
-          variant="contained"
+          variant="action-primary"
           onClick={handleSubmit}
           disabled={saving || totalHours <= 0 || !userId}
         >

@@ -289,6 +289,13 @@ The form controls of a filter bar keep their field style. The home dashboard qui
 their outlined look with icons, at the pill height (30px) and radius (5px). Write the variant at each call site; never restyle buttons through a selector on the
 header.
 
+**Dialog footers** use the same three pills, all the same size: `action-primary` for the main
+action of the dialog (Save, Create, Continue), `action` for Cancel, Close, Back and every other
+action, `action-danger` when the main action is destructive (Delete, Replace all, Reject).
+`KanapDialog` renders Cancel as `action` and its main action as `action-primary` by default; pass
+`saveVariant="action-danger"` for a destructive one, or `saveVariant="action"` when the only button
+closes a read-only dialog.
+
 **`variant="action-primary"`**: the one key action of the bar (New X, Add X, or Invite when it is
 the only main action). At most one per bar.
 - Same dimensions as `action`
@@ -315,15 +322,15 @@ Disable (n), Move (n), Manage X, Edit, a "new" chip in a band, Send link, Conver
 **Icons on pills**: 14px (`sx={{ fontSize: '14px !important' }}` on the icon). Keep `+` on "new"
 actions and the trash on delete; import and export carry no icon.
 
-**`variant="contained"`**: primary CTAs in dialogs, create forms and empty states (Submit, Save,
+**`variant="contained"`**: primary CTAs in create forms, composers and empty states (Submit, Save,
 "Create your first chart of accounts"):
 - Background `kanap.teal`, color `kanap.tealForeground`
 - Border-radius: 6px, no shadow (flat)
 - Height: 36px (medium), 32px (small)
 - `textTransform: 'none'`
 
-`contained` and `outlined` stay in dialog footers, forms, composers and empty states; they do not
-appear in page-level action bars.
+`contained` and `outlined` stay in create forms, composers and empty states; they do not appear in
+page-level action bars or dialog footers.
 
 **General rules**: no uppercase, no shadow on any variant. The theme's default button radius is 6px.
 

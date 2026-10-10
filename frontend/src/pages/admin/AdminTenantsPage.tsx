@@ -716,7 +716,7 @@ const renderStatCard = (label: string, value: React.ReactNode) => (
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDetail}>{t('common:buttons.close')}</Button>
+          <Button variant="action" onClick={handleCloseDetail}>{t('common:buttons.close')}</Button>
         </DialogActions>
       </Dialog>
 

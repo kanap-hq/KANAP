@@ -181,7 +181,7 @@ export function KanapDialogProvider({ children }: { children: React.ReactNode })
             active.options.confirmLabel
             ?? (active.type === 'alert' ? t('buttons.close') : t('buttons.continue'))
           }
-          saveVariant={active.type === 'confirm' && intent === 'danger' ? 'action-danger' : 'contained'}
+          saveVariant={active.type === 'confirm' && intent === 'danger' ? 'action-danger' : 'action-primary'}
         >
           {active.type === 'prompt' ? (
             <Box sx={{ display: 'grid', gap: 1.5 }}>

@@ -130,8 +130,8 @@ export default function StatusChangeDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleCancel}>{t('common:buttons.cancel')}</Button>
-        <Button variant="contained" onClick={handleConfirm}>
+        <Button variant="action" onClick={handleCancel}>{t('common:buttons.cancel')}</Button>
+        <Button variant="action-primary" onClick={handleConfirm}>
           {t('portfolio:dialogs.statusChange.actions.confirm')}
         </Button>
       </DialogActions>

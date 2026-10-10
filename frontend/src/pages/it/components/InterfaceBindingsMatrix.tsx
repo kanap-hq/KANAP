@@ -2081,7 +2081,7 @@ export default function InterfaceBindingsMatrix({
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setManageConnections(null)}>Close</Button>
+          <Button variant="action" onClick={() => setManageConnections(null)}>Close</Button>
         </DialogActions>
       </Dialog>
 

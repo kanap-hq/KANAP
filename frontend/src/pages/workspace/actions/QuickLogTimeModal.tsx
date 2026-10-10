@@ -279,9 +279,9 @@ export default function QuickLogTimeModal({
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose}>{t('buttons.cancel')}</Button>
+        <Button variant="action" onClick={handleClose}>{t('buttons.cancel')}</Button>
         <Button
-          variant="contained"
+          variant="action-primary"
           onClick={handleSubmit}
           disabled={logTimeMutation.isPending}
         >

@@ -111,3 +111,22 @@ describe('KanapDialog optional slots', () => {
     expect(onSecondary).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('KanapDialog footer buttons', () => {
+  it('renders Cancel and the main action as pills of one size', () => {
+    renderDialog();
+    expect(screen.getByRole('button', { name: 'buttons.cancel' })).toHaveClass('MuiButton-action');
+    expect(screen.getByRole('button', { name: 'Save' })).toHaveClass('MuiButton-action-primary');
+  });
+
+  it('renders a destructive main action as the danger pill', () => {
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <KanapDialog open title="Dialog" onClose={vi.fn()} onSave={vi.fn()} saveLabel="Delete" saveVariant="action-danger">
+          <div />
+        </KanapDialog>
+      </ThemeProvider>,
+    );
+    expect(screen.getByRole('button', { name: 'Delete' })).toHaveClass('MuiButton-action-danger');
+  });
+});

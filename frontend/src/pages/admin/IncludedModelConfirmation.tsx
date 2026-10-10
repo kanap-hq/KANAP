@@ -128,7 +128,7 @@ export function WithdrawIncludedModelDialog({ open, loading, error, onCancel, on
       onClose={onCancel}
       onSave={onConfirm}
       saveLabel={t('aiAdmin.includedModel.withdraw')}
-      saveColor="error"
+      saveVariant="action-danger"
       saveLoading={loading}
     >
       <Stack spacing={1.5}>

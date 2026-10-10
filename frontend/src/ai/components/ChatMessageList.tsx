@@ -686,20 +686,15 @@ function PreviewBatch({
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button
-            size="small"
-            variant="outlined"
-            color="inherit"
+            variant="action"
             onClick={() => setConfirmOpen(false)}
-            sx={{ textTransform: 'none', fontSize: 12 }}
           >
             {t('messageList.cancel')}
           </Button>
           <Button
-            size="small"
-            variant="contained"
+            variant="action-primary"
             onClick={handleApproveAll}
             disabled={disabled || pendingPreviews.length === 0}
-            sx={{ textTransform: 'none', fontSize: 12 }}
           >
             {t('previewBatch.approveAll')}
           </Button>

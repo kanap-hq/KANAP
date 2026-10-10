@@ -129,9 +129,9 @@ export default function ConvertToRequestDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t('common:buttons.cancel')}</Button>
+        <Button variant="action" onClick={onClose}>{t('common:buttons.cancel')}</Button>
         <Button
-          variant="contained"
+          variant="action-primary"
           onClick={handleSubmit}
           disabled={saving || !name.trim()}
         >

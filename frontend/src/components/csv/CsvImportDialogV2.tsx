@@ -235,9 +235,9 @@ export default function CsvImportDialogV2({
       <DialogActions>
         {phase === 'upload' && (
           <>
-            <Button onClick={handleClose}>{t('buttons.cancel')}</Button>
+            <Button variant="action" onClick={handleClose}>{t('buttons.cancel')}</Button>
             <Button
-              variant="contained"
+              variant="action-primary"
               onClick={() => upload(true)}
               disabled={!canValidate}
             >
@@ -248,10 +248,10 @@ export default function CsvImportDialogV2({
 
         {phase === 'validate' && (
           <>
-            <Button onClick={goBack}>{t('buttons.back')}</Button>
-            <Button onClick={handleClose}>Cancel</Button>
+            <Button variant="action" onClick={goBack}>{t('buttons.back')}</Button>
+            <Button variant="action" onClick={handleClose}>Cancel</Button>
             <Button
-              variant="contained"
+              variant="action-primary"
               onClick={() => upload(false)}
               disabled={!canImport}
             >
@@ -261,7 +261,7 @@ export default function CsvImportDialogV2({
         )}
 
         {phase === 'result' && (
-          <Button onClick={handleClose}>{t('buttons.close')}</Button>
+          <Button variant="action" onClick={handleClose}>{t('buttons.close')}</Button>
         )}
       </DialogActions>
     </Dialog>

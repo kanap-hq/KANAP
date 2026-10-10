@@ -94,11 +94,11 @@ export default function FormModal({
           actions
         ) : (
           <>
-            <Button onClick={onClose} color="inherit">Cancel</Button>
+            <Button variant="action" onClick={onClose}>Cancel</Button>
             <Button
               type="submit"
               form={formId}
-              variant="contained"
+              variant="action-primary"
               disabled={!!disableSave || !!saving}
             >
               {saving ? 'Saving…' : 'Save'}

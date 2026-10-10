@@ -27,11 +27,8 @@ export type KanapDialogProps = {
   onSave: () => void | Promise<void>;
   saveLabel?: string;
   saveVariant?: ButtonProps['variant'];
-  saveColor?: ButtonProps['color'];
   saveDisabled?: boolean;
   saveLoading?: boolean;
-  /** Extra styles for the main action button, merged after the defaults. */
-  saveSx?: SxProps<Theme>;
   /** Defaults to the localized "Cancel"; pass one only for a non-standard label. */
   cancelLabel?: string;
   showCancel?: boolean;
@@ -63,11 +60,9 @@ export default function KanapDialog({
   secondaryActions,
   onSave,
   saveLabel = 'Save',
-  saveVariant = 'contained',
-  saveColor = 'primary',
+  saveVariant = 'action-primary',
   saveDisabled = false,
   saveLoading = false,
-  saveSx,
   cancelLabel,
   showCancel = true,
   sx,
@@ -184,13 +179,8 @@ export default function KanapDialog({
           <Button
             type="submit"
             variant={saveVariant}
-            color={saveColor}
             disabled={saveDisabled || saveLoading}
             startIcon={saveLoading ? <CircularProgress color="inherit" size={14} /> : undefined}
-            sx={[
-              { boxShadow: 'none', '&:hover': { boxShadow: 'none' } },
-              ...(Array.isArray(saveSx) ? saveSx : saveSx ? [saveSx] : []),
-            ]}
           >
             {saveLabel}
           </Button>

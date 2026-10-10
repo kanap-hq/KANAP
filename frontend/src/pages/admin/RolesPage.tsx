@@ -343,8 +343,8 @@ export default function RolesPage() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setCreateOpen(false)}>{t('common:buttons.cancel')}</Button>
-          <Button variant="contained" onClick={() => createRole()} disabled={creating || newName.trim().length === 0}>{t('common:buttons.create')}</Button>
+          <Button variant="action" onClick={() => setCreateOpen(false)}>{t('common:buttons.cancel')}</Button>
+          <Button variant="action-primary" onClick={() => createRole()} disabled={creating || newName.trim().length === 0}>{t('common:buttons.create')}</Button>
         </DialogActions>
       </Dialog>
 
@@ -355,8 +355,8 @@ export default function RolesPage() {
           <Typography variant="body2">{t('roles.dialogs.deleteMessage')}</Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirmDelete(false)}>{t('common:buttons.cancel')}</Button>
-          <Button color="error" variant="contained" onClick={() => doDelete()} disabled={deleting}>{t('common:buttons.delete')}</Button>
+          <Button variant="action" onClick={() => setConfirmDelete(false)}>{t('common:buttons.cancel')}</Button>
+          <Button variant="action-danger" onClick={() => doDelete()} disabled={deleting}>{t('common:buttons.delete')}</Button>
         </DialogActions>
       </Dialog>
 

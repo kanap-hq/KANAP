@@ -58,7 +58,7 @@ export default function DeleteConfirmDialog({
       onClose={() => { if (!loading) onClose(); }}
       onSave={() => onConfirm(cascadeOption ? { deleteRelated } : undefined)}
       saveLabel={loading ? t('status.deleting') : t('buttons.delete')}
-      saveColor="error"
+      saveVariant="action-danger"
       saveLoading={loading}
       cancelLabel={t('buttons.cancel')}
     >

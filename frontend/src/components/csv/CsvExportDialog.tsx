@@ -61,7 +61,7 @@ export default function CsvExportDialog({
         <Button variant="contained" onClick={() => download('data')}>{t('csv.exportData')}</Button>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t('buttons.close')}</Button>
+        <Button variant="action" onClick={onClose}>{t('buttons.close')}</Button>
       </DialogActions>
     </Dialog>
   );

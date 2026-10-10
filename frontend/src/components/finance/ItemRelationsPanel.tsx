@@ -428,8 +428,8 @@ export default forwardRef<RelationsPanelHandle, Props>(function ItemRelationsPan
             </Stack>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setLinkDialogOpen(false)}>{t('common:buttons.cancel')}</Button>
-            <Button type="submit" variant="contained" disabled={!String(linkDraft.url || '').trim()}>{editingLinkIndex === null ? t('common:buttons.add') : t('common:buttons.save')}</Button>
+            <Button variant="action" onClick={() => setLinkDialogOpen(false)}>{t('common:buttons.cancel')}</Button>
+            <Button type="submit" variant="action-primary" disabled={!String(linkDraft.url || '').trim()}>{editingLinkIndex === null ? t('common:buttons.add') : t('common:buttons.save')}</Button>
           </DialogActions>
         </Box>
       </Dialog>
