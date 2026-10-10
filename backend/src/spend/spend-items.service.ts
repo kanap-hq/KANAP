@@ -127,7 +127,12 @@ export class SpendItemsService {
     // The OPEX lines only (`budget-nature.ts`); not a filterable field either.
     where.nature = 'opex';
     const safeSortField = allowedFields.includes(sort.field) ? sort.field : 'created_at';
-    const [itemsRaw, total] = await repo.findAndCount({ where, order: { [safeSortField]: sort.direction as any }, skip, take: limit });
+    // The id breaks ties (lines imported together share their created_at), as the summary does:
+    // a page never repeats or skips a line of the previous one.
+    const order: Record<string, any> = safeSortField === 'id'
+      ? { id: sort.direction }
+      : { [safeSortField]: sort.direction, id: 'DESC' };
+    const [itemsRaw, total] = await repo.findAndCount({ where, order, skip, take: limit });
     // The default dimension's value, read from the analytics links.
     const analyticsByItem = itemsRaw.length > 0
       ? await loadItemAnalyticsValues(mg, 'opex', tenantId, itemsRaw.map((item) => item.id))
