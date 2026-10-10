@@ -1,7 +1,8 @@
 /*
   Simple entrypoint for QA/Prod:
-  - Waits for DB
-  - Runs TypeORM migrations programmatically using compiled DataSource
+  - Waits for DB (the connection is retried while the database is not ready)
+  - Runs TypeORM migrations programmatically using compiled DataSource; a failed migration
+    exits at once with its message (never retried)
   - Optionally runs integrated-doc repair + verification
   - Starts the NestJS server
 
@@ -225,50 +226,92 @@ async function runIntegratedDocsRolloutIfNeeded() {
   }
 }
 
-async function runMigrationsIfNeeded() {
-  if ((process.env.SKIP_MIGRATIONS || '').toLowerCase() === 'true') {
-    console.log('[entrypoint] SKIP_MIGRATIONS=true → skipping DB migrations');
-    return;
-  }
-  const dsPath = path.resolve(__dirname, '../dist/data-source.js');
-  const ds = require(dsPath).default;
-  const maxAttempts = Number(process.env.MIGRATION_MAX_ATTEMPTS || 30);
-  const delayMs = Number(process.env.MIGRATION_RETRY_DELAY_MS || 2000);
+/** The first characters of the statement a failed migration ran, on one line (never its parameters). */
+function failedStatement(err) {
+  const query = err && typeof err.query === 'string' ? err.query.replace(/\s+/g, ' ').trim() : '';
+  return query ? (query.length > 300 ? `${query.slice(0, 300)}...` : query) : '';
+}
 
-  let attempt = 0;
-  while (true) {
-    attempt += 1;
+/**
+ * Opens the database connection, retried while the database is not ready (the container starts
+ * before PostgreSQL accepts connections): `MIGRATION_MAX_ATTEMPTS` tries (30), `MIGRATION_RETRY_DELAY_MS`
+ * apart (2 s). False once every try failed.
+ */
+async function initializeWithRetry(ds, { maxAttempts, delayMs, sleepFn = sleep, log = console.log, warn = console.warn, error = console.error, env = process.env } = {}) {
+  for (let attempt = 1; ; attempt += 1) {
     try {
-      console.log(`[entrypoint] Initializing DB (attempt ${attempt}/${maxAttempts}) ...`);
+      log(`[entrypoint] Initializing DB (attempt ${attempt}/${maxAttempts}) ...`);
       await ds.initialize();
-      console.log('[entrypoint] DB initialized. Running migrations...');
-      const migrations = await ds.runMigrations();
-      console.log(`[entrypoint] Migrations complete (${migrations.length} executed).`);
-      await ds.destroy();
-      return;
+      return true;
     } catch (err) {
       if (ds.isInitialized) {
         try {
           await ds.destroy();
         } catch (destroyErr) {
-          console.warn('[entrypoint] Failed to reset DB connection after migration error:', destroyErr?.message || destroyErr);
+          warn('[entrypoint] Failed to reset DB connection after a connection error:', destroyErr?.message || destroyErr);
         }
       }
       if (attempt >= maxAttempts) {
-        console.error('[entrypoint] Failed to initialize DB after max attempts:', err?.message || err);
-        if (process.env.DEBUG_MIGRATIONS) {
-          console.error('[entrypoint] Error details:', err);
-        }
-        process.exit(1);
+        error('[entrypoint] Failed to initialize DB after max attempts:', err?.message || err);
+        if (env.DEBUG_MIGRATIONS) error('[entrypoint] Error details:', err);
+        return false;
       }
       const msg = err && err.message ? `: ${err.message}` : '';
-      console.warn(`[entrypoint] DB not ready or migration failed (attempt ${attempt})${msg}. Retrying in ${delayMs}ms...`);
-      if (attempt === 1 && process.env.DEBUG_MIGRATIONS) {
-        console.warn('[entrypoint] First failure details:', err);
-      }
-      await sleep(delayMs);
+      warn(`[entrypoint] DB not ready (attempt ${attempt})${msg}. Retrying in ${delayMs}ms...`);
+      if (attempt === 1 && env.DEBUG_MIGRATIONS) warn('[entrypoint] First failure details:', err);
+      await sleepFn(delayMs);
     }
   }
+}
+
+/**
+ * Runs the pending migrations once the database answers. Only the connection is retried: a
+ * migration that fails exits at once (code 1) with its message, since running it again would fail
+ * the same way and keep the API down for every retry (plan planning/budget-unifie.md, G.13). The
+ * pending migrations run in one transaction (TypeORM's default): a failure leaves the database as
+ * it was before this start, and the container's restart policy decides what comes next.
+ */
+async function runMigrationsIfNeeded({
+  env = process.env,
+  loadDataSource = () => require(path.resolve(__dirname, '../dist/data-source.js')).default,
+  exit = (code) => process.exit(code),
+  sleepFn = sleep,
+  log = console.log,
+  warn = console.warn,
+  error = console.error,
+} = {}) {
+  if ((env.SKIP_MIGRATIONS || '').toLowerCase() === 'true') {
+    log('[entrypoint] SKIP_MIGRATIONS=true → skipping DB migrations');
+    return;
+  }
+  const ds = loadDataSource();
+  const maxAttempts = Number(env.MIGRATION_MAX_ATTEMPTS || 30);
+  const delayMs = Number(env.MIGRATION_RETRY_DELAY_MS || 2000);
+
+  if (!(await initializeWithRetry(ds, { maxAttempts, delayMs, sleepFn, log, warn, error, env }))) {
+    exit(1);
+    return;
+  }
+  log('[entrypoint] DB initialized. Running migrations...');
+  let migrations;
+  try {
+    migrations = await ds.runMigrations();
+  } catch (err) {
+    error(`[entrypoint] A migration failed, not retried: ${err?.message || err}`);
+    const statement = failedStatement(err);
+    if (statement) error(`[entrypoint] Failed statement: ${statement}`);
+    error('[entrypoint] The pending migrations ran in one transaction and were rolled back: the database is as before this start. Fix the cause or deploy the previous version.');
+    if (env.DEBUG_MIGRATIONS) error('[entrypoint] Error details:', err);
+    try {
+      await ds.destroy();
+    } catch (destroyErr) {
+      warn('[entrypoint] Failed to close the DB connection after the migration error:', destroyErr?.message || destroyErr);
+    }
+    exit(1);
+    return;
+  }
+  log(`[entrypoint] Migrations complete (${migrations.length} executed).`);
+  await ds.destroy();
 }
 
 async function main() {
@@ -302,9 +345,11 @@ if (require.main === module) {
 }
 
 module.exports = {
+  initializeWithRetry,
   integratedDocsFailureLine,
   integratedDocsRolloutSteps,
   readIntegratedDocsRolloutMode,
   runIntegratedDocsSteps,
+  runMigrationsIfNeeded,
   runNodeScript,
 };
