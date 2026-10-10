@@ -22,6 +22,8 @@ services:
       - "127.0.0.1:8080:8080"
     restart: unless-stopped
     # Use image default CMD → runs migrations then starts the API
+    # The entrypoint retries the database connection only: a failed migration exits at once
+    # (code 1) with its message, the database left as before; restart policy then applies.
     # Stop: SIGTERM reaches node (init + exec CMD), which finishes the requests in flight
     # (SHUTDOWN_DRAIN_TIMEOUT_MS, default 20 s) before it exits; the kill comes after 30 s.
     init: true

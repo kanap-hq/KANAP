@@ -892,10 +892,12 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
   - Permissions: any authenticated member of the tenant for GET, `budget_ops:admin` for PATCH
 
 ## Spend Items & Versions (OPEX)
-- `:id` on every route under `/spend-items/:id` (GET, PATCH, DELETE, and the share, yearly-totals, versions, tasks, contracts, projects, applications, links, attachments and contacts routes) is a UUID or an `OPX-n` reference, as every route under `/capex-items/:id` takes `CPX-n`; a malformed id is a `400` "Invalid item reference: …", an unknown reference a `404`
+- `:id` on every route under `/spend-items/:id` (GET, PATCH, DELETE, and the share, yearly-totals, versions, tasks, contracts, projects, applications, links, attachments and contacts routes) is a UUID, an `OPX-n` reference or its neutral twin `BL-n` (same number), as every route under `/capex-items/:id` takes `CPX-n`; a malformed id is a `400` "Invalid item reference: …", an unknown reference a `404`
+- `/spend-items` serves OPEX lines only (`nature = 'opex'`, see `doc/architecture.md`, "Budget Line Nature"): a line of another nature stored in `spend_items` answers `404` on every route addressed by its id or reference, or by the id of its version, attachment, link or contact (`/spend-versions/:id/*`, `/spend-items/attachments/:attachmentId`), and no list, summary, total, aggregate or report counts it
 - POST `/spend-items` → create item
 - PATCH `/spend-items/:id` → update item (any subset of the writable fields)
-- GET `/spend-items/:id` → detail (every item column, `cost_center_id` and `run_build` included) plus the analytics values:
+- GET `/spend-items/:id` → detail (every item column, `cost_center_id`, `run_build` and `nature` included) plus the analytics values:
+  - `nature`: `opex`, read-only (the API never writes it: a line created through `/spend-items` is OPEX). The plain list and the summary rows (full shape) carry it too; the grid shape (`shape=grid`) does not
   - `analytics_values: [{ axis_id, axis_code, axis_name, is_default, category_id, category_name }]`: every dimension the line holds a value on (disabled dimensions included), in dimension order; `axis_name` is `null` on the default dimension while it has no name
   - `analytics_category_id`, `analytics_category_name`: the default dimension's value, `null` when the line has none. They are read from the line's analytics values; the item column of the same name is no longer read or written (it stays in the database for one release)
   - The create and update responses carry the same fields
