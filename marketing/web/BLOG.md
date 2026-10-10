@@ -25,7 +25,7 @@ Fill in the frontmatter (the block between the `---` lines):
 | `title` | yes | Sentence case, no trailing period. Around 60 characters reads well in the list and in search results. |
 | `description` | yes | One or two sentences. This is the excerpt on the index, the meta description for search, and the RSS summary. |
 | `date` | yes | `YYYY-MM-DD`. A future date keeps the article out of the build until that day (useful to prepare a post ahead of a deploy). |
-| `topic` | yes | One of `agents`, `self-hosting`, `cost`, `glpi`, `product`, `portfolio`. Shown as the chip next to the article. |
+| `topic` | yes | One of `agents`, `self-hosting`, `cost`, `glpi`, `product`, `portfolio`, `compliance`. Shown as the chip next to the article. |
 | `author` | no | Defaults to `KANAP`. |
 | `authorRole` | no | Short line after the name, e.g. `Founder, CIO`. |
 | `draft` | no | `true` while writing: the file is ignored by the build. Set to `false` (or remove the line) to publish. |
