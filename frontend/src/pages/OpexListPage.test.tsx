@@ -446,19 +446,26 @@ describe('OpexListPage', () => {
     const el = column('analytics_nature')!.cellRenderer!({ data, value: 'Licences', colDef: {} });
     expect((el.props as { getHref: (row: unknown) => string | null }).getHref(data)).toMatch(/^\/ops\/opex\/OPX-3\/overview/);
 
-    // A set filter on the values the server lists for that dimension.
+    // A set filter on the values the server lists for that dimension, in the dimension's order
+    // (the server's), blank last.
     get.mockImplementation(async (url: string, config?: { params?: { fields?: string } }) => {
       if (url !== '/spend-items/summary/filter-values') return { data: {} };
       return { data: { [config?.params?.fields ?? '']: [null, 'Services', 'Licences'] } };
     });
-    const options = await column('analytics_nature')!.filterParams!.getValues!({ context: { getQueryState: () => ({}) } });
+    const noState = { context: { getQueryState: () => ({}) } };
+    const options = await column('analytics_nature')!.filterParams!.getValues!(noState);
     expect(options).toEqual([
-      { value: 'Licences', label: 'Licences' },
       { value: 'Services', label: 'Services' },
+      { value: 'Licences', label: 'Licences' },
       { value: null, label: 'shared.blank' },
     ]);
+    // The default dimension too; other columns still list their values by name.
+    expect((await column('analytics_category_name')!.filterParams!.getValues!(noState)).map((o: { value: string | null }) => o.value))
+      .toEqual(['Services', 'Licences', null]);
+    expect((await column('supplier_name')!.filterParams!.getValues!(noState)).map((o: { value: string | null }) => o.value))
+      .toEqual(['Licences', 'Services', null]);
     const calls = get.mock.calls.filter(([url]) => url === '/spend-items/summary/filter-values');
-    expect(calls.map(([, config]) => config.params.fields)).toEqual(['analytics_nature']);
+    expect(calls.map(([, config]) => config.params.fields)).toEqual(['analytics_nature', 'analytics_category_name', 'supplier_name']);
   });
 
   it('adds no column for a dimension used for CAPEX lines only', async () => {

@@ -115,9 +115,12 @@ function OpexListPageView() {
   const location = useLocation();
   const Y = new Date().getFullYear();
 
-  const getOpexFilterValues = useCallback((field: string, opts?: { emptyLabel?: string; labelMap?: Record<string, string> }) => {
+  // `serverOrder`: the options keep the server's order (a dimension's values, in the dimension's
+  // order) instead of their labels' alphabetical order; blank stays last.
+  const getOpexFilterValues = useCallback((field: string, opts?: { emptyLabel?: string; labelMap?: Record<string, string>; serverOrder?: boolean }) => {
     const emptyLabel = opts?.emptyLabel ?? t('shared.blank');
     const labelMap = opts?.labelMap;
+    const serverOrder = !!opts?.serverOrder;
     return async ({ context }: any) => {
       const queryState = context?.getQueryState?.() ?? {};
       const filters = { ...(queryState.filters || {}) };
@@ -138,9 +141,9 @@ function OpexListPageView() {
         return { value, label };
       });
       options.sort((a, b) => {
-        if (a.value == null) return 1;
+        if (a.value == null) return b.value == null ? 0 : 1;
         if (b.value == null) return -1;
-        return (a.label || '').localeCompare(b.label || '');
+        return serverOrder ? 0 : (a.label || '').localeCompare(b.label || '');
       });
       return options;
     };
@@ -772,7 +775,7 @@ function OpexListPageView() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getOpexFilterValues(field),
+        getValues: getOpexFilterValues(field, { serverOrder: true }),
         searchable: false,
       },
       cellRenderer: (params: any) => (

@@ -416,6 +416,22 @@ describe('BudgetReportFilters dimensions', () => {
     expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual(['All', 'Hardware', 'Software', 'No value']);
   });
 
+  it('offers the values in the dimension order, a value the order does not list last', async () => {
+    // Nature's order lists Software first; Hardware is not in it (a value the list could not return).
+    get.mockImplementation(async (url: string, config?: { params?: Record<string, unknown> }) => {
+      if (url !== '/analytics-categories') return { data: {} };
+      const items = config?.params?.axis_id === 'ax-nat' ? [{ id: 'n-sw', name: 'Software' }] : [];
+      return { data: { items, total: items.length } };
+    });
+    await renderBar('/report', ROWS.filter((row) => row.id !== 'e'));
+    expect(get).toHaveBeenCalledWith('/analytics-categories', expect.objectContaining({
+      params: expect.objectContaining({ axis_id: 'ax-nat', sort: 'sort_order:ASC', includeDisabled: '1' }),
+    }));
+    fireEvent.mouseDown(dimensionSelect('Nature'));
+    const listbox = screen.getByRole('listbox');
+    expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual(['All', 'Software', 'Hardware', 'No value']);
+  });
+
   it('shows a dimension the address names although no line holds a value on it', async () => {
     await renderBar('/report?analytics=ax-idle:none');
     expect(dimensionSelects()).toEqual(['Analytics dimension', 'Nature', 'Activity']);

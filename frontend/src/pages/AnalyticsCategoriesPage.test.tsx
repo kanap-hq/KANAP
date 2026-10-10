@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -30,7 +30,7 @@ vi.mock('../auth/AuthContext', () => ({
     },
   }),
 }));
-vi.mock('../api', () => ({ default: { get: vi.fn(async () => ({ data: { items: [] } })) } }));
+vi.mock('../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 vi.mock('../hooks/useAnalyticsAxes', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../hooks/useAnalyticsAxes')>();
   return {
@@ -50,7 +50,12 @@ vi.mock('../components/ServerDataGrid', () => ({
   },
 }));
 
+import api from '../api';
 import AnalyticsCategoriesPage from './AnalyticsCategoriesPage';
+
+const apiGet = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
+/** The dimension's values, disabled ones included, as the Reorder count reads them. */
+const valueCount = vi.hoisted(() => ({ total: 0 }));
 
 const DEFAULT = { id: 'ax-default', code: 'default', name: null, description: null, sort_order: 0, is_default: true, status: 'enabled', disabled_at: null };
 const NATURE = { id: 'ax-nature', code: 'nature', name: 'Nature', description: null, sort_order: 1, is_default: false, status: 'enabled', disabled_at: null };
@@ -89,6 +94,9 @@ describe('AnalyticsCategoriesPage', () => {
     levels.value = 'admin';
     grid.props = null;
     navigateMock.mockReset();
+    valueCount.total = 0;
+    apiGet.mockReset();
+    apiGet.mockImplementation(async () => ({ data: { items: [], total: valueCount.total } }));
   });
 
   it('shows one chip per dimension in order, the unnamed default by its translated label, a disabled one marked', () => {
@@ -127,7 +135,45 @@ describe('AnalyticsCategoriesPage', () => {
     expect(grid.props?.extraParams).toEqual({ axis_id: 'ax-default' });
     expect(grid.props?.columnPreferencesKey).toBe('analytics-values');
     expect(grid.props?.statusScopeConfig).toEqual({ defaultScope: 'enabled' });
-    expect((grid.props?.columns as Array<{ field: string }>).map((c) => c.field)).toEqual(['name', 'description', 'status', 'applies_to', 'updated_at']);
+    expect((grid.props?.columns as Array<{ field: string }>).map((c) => c.field)).toEqual(['sort_order', 'name', 'description', 'status', 'applies_to', 'updated_at']);
+  });
+
+  it('lists the values in the dimension\'s order by default, with a narrow sortable Order column', () => {
+    renderPage();
+    expect(grid.props?.defaultSort).toEqual({ field: 'sort_order', direction: 'ASC' });
+    const column = (grid.props?.columns as Array<any>).find((col) => col.field === 'sort_order');
+    expect(column.headerName).toBe('analytics.fields.order');
+    expect(column.width).toBeLessThanOrEqual(100);
+    expect(column.sortable).not.toBe(false);
+    // The workspace opened from a row walks the list in the same order.
+    const href = column.cellRenderer({ data: { id: 'v-1' } }).props.getHref({ id: 'v-1' });
+    expect(new URLSearchParams(href.split('?')[1]).get('sort')).toBe('sort_order:ASC');
+  });
+
+  it('offers Reorder to members on the context line, once the dimension holds two values, and opens the dialog', async () => {
+    valueCount.total = 1;
+    const first = renderPage('/master-data/analytics?axis=ax-nature');
+    const reorder = within(screen.getByTestId('analytics-context')).getByRole('button', { name: 'analytics.reorder.action' });
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/analytics-categories', {
+      params: { axis_id: 'ax-nature', includeDisabled: '1', limit: 1 },
+    }));
+    expect(reorder).toBeDisabled();
+    first.unmount();
+
+    valueCount.total = 2;
+    levels.value = 'member';
+    renderPage('/master-data/analytics?axis=ax-nature');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'analytics.reorder.action' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'analytics.reorder.action' }));
+    expect(await screen.findByText('analytics.reorder.title:Nature')).toBeInTheDocument();
+  });
+
+  it('hides Reorder from readers', () => {
+    valueCount.total = 3;
+    levels.value = 'reader';
+    renderPage();
+    expect(screen.queryByRole('button', { name: 'analytics.reorder.action' })).toBeNull();
+    expect(apiGet).not.toHaveBeenCalledWith('/analytics-categories', expect.anything());
   });
 
   it('shows which lines may use each value, with a set filter on the three choices', () => {
