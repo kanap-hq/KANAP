@@ -40,6 +40,7 @@ import { ColumnResult, computeColumn, CostingInputError, CostLine, UNIT_PRICE_LI
 import { activeMonths } from './spread.util';
 import { ensureBudgetVersion } from './budget-version-ensure';
 import { lockBudgetLines, lockBudgetVersions, lockTenantBudgetOperations } from './budget-locks';
+import { natureAnd, type BudgetNature } from './budget-nature';
 
 /**
  * Budget column operations (copy a column to another year or column, clear a
@@ -57,11 +58,12 @@ import { lockBudgetLines, lockBudgetVersions, lockTenantBudgetOperations } from 
  * only those months. A clear runs on every item, ended or not.
  */
 
-// Table and column names come only from here: never from the caller.
-const SCOPES = {
-  opex: { items: 'spend_items', itemFk: 'spend_item_id', versions: 'spend_versions', itemName: 'product_name' },
+// Table and column names come only from here: never from the caller. `nature`: the scope's lines in
+// `spend_items` (`budget-nature.ts`); the versions are read through the lines read here.
+const SCOPES: Record<AmountScope, { items: string; itemFk: string; versions: string; itemName: string; nature?: BudgetNature }> = {
+  opex: { items: 'spend_items', itemFk: 'spend_item_id', versions: 'spend_versions', itemName: 'product_name', nature: 'opex' },
   capex: { items: 'capex_items', itemFk: 'capex_item_id', versions: 'capex_versions', itemName: 'description' },
-} as const;
+};
 
 export type BudgetOperationDeps = {
   manager: EntityManager;
@@ -228,7 +230,7 @@ async function loadItems(manager: EntityManager, scope: AmountScope, tenantId: s
             to_char(effective_start, 'YYYY-MM-DD') AS effective_start,
             to_char(disabled_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS end_of_validity
      FROM ${t.items}
-     WHERE tenant_id = $1
+     WHERE tenant_id = $1${natureAnd(null, t.nature)}
      ORDER BY created_at DESC, id DESC`,
     [tenantId],
   );
@@ -398,7 +400,7 @@ async function loadCopyCalendars(
     `SELECT i.id, upper(c.country_iso) AS country_iso
      FROM ${SCOPES[scope].items} i
      JOIN companies c ON c.tenant_id = i.tenant_id AND c.id = i.paying_company_id
-     WHERE i.tenant_id = $1 AND i.id = ANY($2::uuid[])`,
+     WHERE i.tenant_id = $1 AND i.id = ANY($2::uuid[])${natureAnd('i', SCOPES[scope].nature)}`,
     [tenantId, itemIds],
   );
   const countryOf = new Map(countries.filter((row) => row.country_iso).map((row) => [row.id, row.country_iso as string]));

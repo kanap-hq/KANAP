@@ -17,14 +17,23 @@ export class SpendVersionsService {
     private readonly currencySettings: CurrencySettingsService,
   ) {}
 
+  /** The versions of an OPEX line; none for a line of another nature (`budget-nature.ts`). */
   async listForItem(itemId: string, opts?: { manager?: EntityManager }) {
     const repo = (opts?.manager ?? this.repo.manager).getRepository(SpendVersion);
-    return repo.find({ where: { spend_item_id: itemId }, order: { created_at: 'DESC' as any } });
+    return repo.createQueryBuilder('v')
+      .innerJoin(SpendItem, 'i', `i.id = v.spend_item_id AND i.tenant_id = v.tenant_id AND i.nature = 'opex'`)
+      .where('v.spend_item_id = :itemId', { itemId })
+      .orderBy('v.created_at', 'DESC')
+      .getMany();
   }
 
+  /** A version of an OPEX line; a version of another nature's line is not found. */
   async get(id: string, opts?: { manager?: EntityManager }) {
     const repo = (opts?.manager ?? this.repo.manager).getRepository(SpendVersion);
-    const found = await repo.findOne({ where: { id } });
+    const found = await repo.createQueryBuilder('v')
+      .innerJoin(SpendItem, 'i', `i.id = v.spend_item_id AND i.tenant_id = v.tenant_id AND i.nature = 'opex'`)
+      .where('v.id = :id', { id })
+      .getOne();
     if (!found) throw new NotFoundException('Version not found');
     return found;
   }
@@ -48,7 +57,7 @@ export class SpendVersionsService {
     const allocationDriver = ((body as any).allocation_driver as any) ?? (allocationMethod === 'it_users' ? 'it_users' : allocationMethod === 'turnover' ? 'turnover' : 'headcount');
     const mg = opts?.manager ?? this.repo.manager;
     const itemRepo = mg.getRepository(SpendItem);
-    const item = await itemRepo.findOne({ where: { id: itemId } });
+    const item = await itemRepo.findOne({ where: { id: itemId, nature: 'opex' } });
     if (!item) throw new NotFoundException('Spend item not found');
     // Lock order (`budget-locks.ts`): the line first, so a create waits for any writer of the line's budget.
     if (!(await lockBudgetLine(mg, 'opex', item.tenant_id, itemId))) throw new NotFoundException('Spend item not found');

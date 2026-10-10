@@ -9,7 +9,7 @@ import { FreezeService } from '../freeze/freeze.service';
 import { addCents, formatCents } from '../common/amount';
 import { readVersionBudgetRev, readYearAmounts, writeAmountsPayload } from './amounts-write.util';
 import { budgetBaseCheck } from './budget-edit-conflicts';
-import { lockVersionWithLine } from './budget-locks';
+import { budgetLineOfChild, lockVersionWithLine } from './budget-locks';
 import { currentTenantId } from './budget-column-operations';
 import {
   isLinesPayload,
@@ -107,6 +107,8 @@ export class SpendAmountsService {
     const mg = opts?.manager ?? this.repo.manager;
     const versions = mg.getRepository(SpendVersion);
     const repo = mg.getRepository(SpendAmount);
+    // A version of a line of another nature is not found (`budget-nature.ts`); a missing one reads as before.
+    await budgetLineOfChild(mg, 'opex', 'version', await currentTenantId(mg), versionId, 'Version not found');
     const version = await versions.findOne({ where: { id: versionId } });
     let targetYear = year;
     if (!targetYear) {

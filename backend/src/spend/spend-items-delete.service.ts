@@ -60,7 +60,7 @@ export class SpendItemsDeleteService extends BaseDeleteService<SpendItem> {
     // its budget locks it first too, so a save in flight is waited for, and a save that comes
     // after this delete finds no line (404) instead of a version deleted under it.
     const item = (await lockBudgetLine(manager, 'opex', tenantId, itemId, 'update'))
-      ? await itemRepo.findOne({ where: { id: itemId, tenant_id: tenantId } as any })
+      ? await itemRepo.findOne({ where: { id: itemId, tenant_id: tenantId, nature: 'opex' } as any })
       : null;
     if (!item) {
       throw new NotFoundException('Item not found');
@@ -85,7 +85,7 @@ export class SpendItemsDeleteService extends BaseDeleteService<SpendItem> {
       await versionRepo.delete({ tenant_id: tenantId, spend_item_id: itemId });
     }
 
-    await itemRepo.delete({ tenant_id: tenantId, id: itemId } as any);
+    await itemRepo.delete({ tenant_id: tenantId, id: itemId, nature: 'opex' } as any);
 
     if (!skipAudit) {
       await this.audit.log(
@@ -127,7 +127,7 @@ export class SpendItemsDeleteService extends BaseDeleteService<SpendItem> {
       } catch (error: unknown) {
         let name = 'Unknown';
         try {
-          const item = await itemRepo.findOne({ where: { id: itemId, tenant_id: tenantId } as any });
+          const item = await itemRepo.findOne({ where: { id: itemId, tenant_id: tenantId, nature: 'opex' } as any });
           if (item) name = item.product_name;
         } catch (err: any) {
           this.logger.warn(`Failed to fetch spend item name for error reporting: ${err?.message || 'Unknown error'}`);

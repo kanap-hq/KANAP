@@ -1,6 +1,7 @@
 import { ConflictException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import type { AmountScope } from './amounts-write.util';
+import { natureAnd, type BudgetNature } from './budget-nature';
 
 /**
  * The one lock order of every budget writer, OPEX and CAPEX alike (plan
@@ -39,13 +40,77 @@ import type { AmountScope } from './amounts-write.util';
  * meanwhile waits for the delete, which waits for the line: one of the two
  * ends with a deadlock, answered 409 `retry` (lot 1D). Rare (a master data
  * delete during a bulk operation) and retried as is.
+ *
+ * The locks are also the nature gate of every writer (`budget-nature.ts`):
+ * the line, its versions and a year's lines are locked for the scope's nature
+ * only, so a line of the other nature is "gone" for its caller, which answers
+ * 404 or skips it, and nothing is written to it.
  */
 
-// Table names come only from here: never from the caller.
-const TABLES = {
-  opex: { items: 'spend_items', versions: 'spend_versions', itemFk: 'spend_item_id' },
+// Table names come only from here: never from the caller. `nature`: the lines of the scope in
+// `spend_items` (lot Z0); the `capex_*` tables have no nature column until lot Z1.
+const TABLES: Record<AmountScope, { items: string; versions: string; itemFk: string; nature?: BudgetNature }> = {
+  opex: { items: 'spend_items', versions: 'spend_versions', itemFk: 'spend_item_id', nature: 'opex' },
   capex: { items: 'capex_items', versions: 'capex_versions', itemFk: 'capex_item_id' },
-} as const;
+};
+
+/** ` AND` a row of the entry's versions table belongs to a line of the entry's nature; empty for an entry without one. */
+function versionNature(t: (typeof TABLES)[AmountScope]): string {
+  return t.nature
+    ? ` AND EXISTS (SELECT 1 FROM ${t.items} i WHERE i.tenant_id = ${t.versions}.tenant_id AND i.id = ${t.versions}.${t.itemFk}${natureAnd('i', t.nature)})`
+    : '';
+}
+
+/** The children of a line a route can address by their own id. */
+export type BudgetLineChild = 'version' | 'attachment' | 'link' | 'contact';
+
+// Table names come only from here: never from the caller. Each child names its line in `itemFk`.
+const CHILD_TABLES: Record<AmountScope, Record<BudgetLineChild, string>> = {
+  opex: { version: 'spend_versions', attachment: 'spend_attachments', link: 'spend_links', contact: 'spend_item_contacts' },
+  capex: { version: 'capex_versions', attachment: 'capex_attachments', link: 'capex_links', contact: 'capex_item_contacts' },
+};
+
+/**
+ * The line a version, attachment, link or contact belongs to, with the line's nature: the one
+ * lookup of every route and function that starts from a child's own id (plan
+ * planning/budget-unifie.md, G.7). Null when the child or its line is missing. Reads, never
+ * locks: a writer then locks the line, whose lock names the nature too (`lockBudgetLine`).
+ */
+export async function findBudgetLineOf(
+  manager: EntityManager,
+  scope: AmountScope,
+  child: BudgetLineChild,
+  tenantId: string,
+  childId: string,
+): Promise<{ itemId: string; nature: BudgetNature } | null> {
+  const t = TABLES[scope];
+  const [row]: Array<{ item_id: string; nature: BudgetNature }> = await manager.query(
+    `SELECT c.${t.itemFk} AS item_id, ${t.nature ? 'i.nature' : `'${scope}'::text`} AS nature
+       FROM ${CHILD_TABLES[scope][child]} c
+       JOIN ${t.items} i ON i.tenant_id = c.tenant_id AND i.id = c.${t.itemFk}
+      WHERE c.tenant_id = $1 AND c.id = $2`,
+    [tenantId, childId],
+  );
+  return row ? { itemId: row.item_id, nature: row.nature } : null;
+}
+
+/**
+ * `findBudgetLineOf` for a route of the scope: the line's id; a 404 with `notFound` when the
+ * child belongs to a line of another nature; null when the child is missing (the route answers
+ * as it always did for a missing child).
+ */
+export async function budgetLineOfChild(
+  manager: EntityManager,
+  scope: AmountScope,
+  child: BudgetLineChild,
+  tenantId: string,
+  childId: string,
+  notFound: string,
+): Promise<string | null> {
+  const found = await findBudgetLineOf(manager, scope, child, tenantId, childId);
+  if (found && found.nature !== scope) throw new NotFoundException(notFound);
+  return found?.itemId ?? null;
+}
 
 /** Locks the line (FOR NO KEY UPDATE, or FOR UPDATE before its delete); false when it is gone. */
 export async function lockBudgetLine(
@@ -55,8 +120,9 @@ export async function lockBudgetLine(
   itemId: string,
   mode: 'no key update' | 'update' = 'no key update',
 ): Promise<boolean> {
+  const t = TABLES[scope];
   const rows = await manager.query(
-    `SELECT 1 FROM ${TABLES[scope].items} WHERE tenant_id = $1 AND id = $2 FOR ${mode === 'update' ? 'UPDATE' : 'NO KEY UPDATE'}`,
+    `SELECT 1 FROM ${t.items} WHERE tenant_id = $1 AND id = $2${natureAnd(null, t.nature)} FOR ${mode === 'update' ? 'UPDATE' : 'NO KEY UPDATE'}`,
     [tenantId, itemId],
   );
   return rows.length > 0;
@@ -66,19 +132,21 @@ export async function lockBudgetLine(
 export async function lockBudgetLines(manager: EntityManager, scope: AmountScope, tenantId: string, itemIds: Iterable<string>): Promise<Set<string>> {
   const ids = Array.from(new Set(Array.from(itemIds).filter(Boolean)));
   if (ids.length === 0) return new Set();
+  const t = TABLES[scope];
   const rows: Array<{ id: string }> = await manager.query(
-    `SELECT id FROM ${TABLES[scope].items} WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR NO KEY UPDATE`,
+    `SELECT id FROM ${t.items} WHERE tenant_id = $1 AND id = ANY($2::uuid[])${natureAnd(null, t.nature)} ORDER BY id FOR NO KEY UPDATE`,
     [tenantId, ids],
   );
   return new Set(rows.map((row) => row.id));
 }
 
-/** Locks the versions in id order (one statement), once their lines are held; returns the ids still there. */
+/** Locks the versions in id order (one statement), once their lines are held; returns the ids still there (of a line of the scope's nature). */
 export async function lockBudgetVersions(manager: EntityManager, scope: AmountScope, tenantId: string, versionIds: Iterable<string>): Promise<Set<string>> {
   const ids = Array.from(new Set(Array.from(versionIds).filter(Boolean)));
   if (ids.length === 0) return new Set();
+  const t = TABLES[scope];
   const rows: Array<{ id: string }> = await manager.query(
-    `SELECT id FROM ${TABLES[scope].versions} WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR NO KEY UPDATE`,
+    `SELECT id FROM ${t.versions} WHERE tenant_id = $1 AND id = ANY($2::uuid[])${versionNature(t)} ORDER BY id FOR NO KEY UPDATE`,
     [tenantId, ids],
   );
   return new Set(rows.map((row) => row.id));
@@ -88,7 +156,8 @@ export async function lockBudgetVersions(manager: EntityManager, scope: AmountSc
  * Locks a version by its id alone: its line first, then the version. The
  * version's line is read without a lock (a version never changes line); the
  * version is read again under the lock. Null when the version or its line is
- * gone (deleted meanwhile).
+ * gone (deleted meanwhile), or when the line has another nature than the
+ * scope's (the line lock names the nature).
  */
 export async function lockVersionWithLine(
   manager: EntityManager,
@@ -115,23 +184,23 @@ export async function lockVersionWithLineOrFail(manager: EntityManager, scope: A
 }
 
 /**
- * Locks every line of the tenant that has a version of `year`, in id order,
- * then those versions, in id order: what a write over the whole year (the FX
- * pin of a freeze) takes before its UPDATE, after the tenant lock. Returns
- * the ids of the versions locked.
+ * Locks every line of the scope's nature in the tenant that has a version of
+ * `year`, in id order, then those versions, in id order: what a write over the
+ * whole year (the FX pin of a freeze) takes before its UPDATE, after the tenant
+ * lock. Returns the ids of the versions locked: the caller writes those only.
  */
 export async function lockBudgetYear(manager: EntityManager, scope: AmountScope, tenantId: string, year: number): Promise<string[]> {
   const t = TABLES[scope];
   await manager.query(
     `SELECT i.id FROM ${t.items} i
-      WHERE i.tenant_id = $1
+      WHERE i.tenant_id = $1${natureAnd('i', t.nature)}
         AND EXISTS (SELECT 1 FROM ${t.versions} v WHERE v.tenant_id = i.tenant_id AND v.${t.itemFk} = i.id AND v.budget_year = $2)
       ORDER BY i.id
         FOR NO KEY UPDATE OF i`,
     [tenantId, year],
   );
   const rows: Array<{ id: string }> = await manager.query(
-    `SELECT id FROM ${t.versions} WHERE tenant_id = $1 AND budget_year = $2 ORDER BY id FOR NO KEY UPDATE`,
+    `SELECT id FROM ${t.versions} WHERE tenant_id = $1 AND budget_year = $2${versionNature(t)} ORDER BY id FOR NO KEY UPDATE`,
     [tenantId, year],
   );
   return rows.map((row) => row.id);

@@ -3,6 +3,7 @@ import { AnalyticsAxisInfo, analyticsAxisSubject, axisAppliesTo, loadAnalyticsAx
 import { toCents } from '../../common/amount';
 import { budgetColumnName, readBudgetColumns } from '../../budget-columns/budget-columns.util';
 import { loadItemAnalyticsValues } from '../item-analytics.util';
+import { natureAnd, type BudgetNature } from '../budget-nature';
 import { AMOUNT_MEASURES } from '../amounts-write.util';
 import { columnOfMeasure } from './columns';
 import {
@@ -17,11 +18,14 @@ import {
 /**
  * Table and column names come only from here. A request never chooses them.
  * Both item types share the shape the file uses. CAPEX stores its title in
- * `description`. OPEX stores it in `product_name`.
+ * `description`. OPEX stores it in `product_name`. `nature`: every read of
+ * the line table names the scope's lines (`budget-nature.ts`); the versions
+ * and values are read through those lines.
  */
 const SCOPE = {
   opex: {
     items: 'spend_items',
+    nature: 'opex' as BudgetNature | undefined,
     versions: 'spend_versions',
     amounts: 'spend_amounts',
     itemFk: 'spend_item_id',
@@ -35,6 +39,7 @@ const SCOPE = {
   },
   capex: {
     items: 'capex_items',
+    nature: undefined as BudgetNature | undefined,
     versions: 'capex_versions',
     amounts: 'capex_amounts',
     itemFk: 'capex_item_id',
@@ -137,7 +142,7 @@ async function loadNames(manager: EntityManager, scope: BudgetFileScope, tenantI
   const t = SCOPE[scope];
   const rows: Array<{ item_number: number; name: string; supplier_id: string | null }> = await manager.query(
     `SELECT item_number::int AS item_number, ${t.nameColumn} AS name, supplier_id::text AS supplier_id
-       FROM ${t.items} WHERE tenant_id = $1`,
+       FROM ${t.items} WHERE tenant_id = $1${natureAnd(null, t.nature)}`,
     [tenantId],
   );
   return rows.map((row) => ({ itemNumber: Number(row.item_number), name: row.name ?? '', supplierId: row.supplier_id }));
@@ -152,7 +157,7 @@ async function loadLinesByNumber(
   if (itemNumbers.length === 0) return [];
   const t = SCOPE[scope];
   const rows: ItemSql[] = await manager.query(
-    `SELECT ${ITEM_COLUMNS(scope)} FROM ${t.items} i WHERE i.tenant_id = $1 AND i.item_number = ANY($2::int[])`,
+    `SELECT ${ITEM_COLUMNS(scope)} FROM ${t.items} i WHERE i.tenant_id = $1${natureAnd('i', t.nature)} AND i.item_number = ANY($2::int[])`,
     [tenantId, itemNumbers],
   );
   return hydrate(manager, scope, tenantId, rows);
@@ -167,7 +172,7 @@ async function loadLinesById(
   if (ids.length === 0) return [];
   const t = SCOPE[scope];
   const rows: ItemSql[] = await manager.query(
-    `SELECT ${ITEM_COLUMNS(scope)} FROM ${t.items} i WHERE i.tenant_id = $1 AND i.id = ANY($2::uuid[])`,
+    `SELECT ${ITEM_COLUMNS(scope)} FROM ${t.items} i WHERE i.tenant_id = $1${natureAnd('i', t.nature)} AND i.id = ANY($2::uuid[])`,
     [tenantId, ids],
   );
   return hydrate(manager, scope, tenantId, rows);

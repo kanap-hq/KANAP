@@ -2,6 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { AmountScope } from './amounts-write.util';
+import { natureAnd, type BudgetNature } from './budget-nature';
 
 /**
  * Applications linked to an OPEX or CAPEX line, from the line's side: list and
@@ -15,11 +16,12 @@ import { AmountScope } from './amounts-write.util';
  * 1853690000000) makes the second insert wait and skip the committed link.
  */
 
-// Table and column names come only from here: never from the caller.
-const SCOPES = {
-  opex: { links: 'application_spend_items', itemFk: 'spend_item_id', items: 'spend_items', itemNotFound: 'Spend item not found' },
+// Table and column names come only from here: never from the caller. `nature`: the scope's lines in
+// `spend_items` (`budget-nature.ts`); a line of another nature is not found.
+const SCOPES: Record<AmountScope, { links: string; itemFk: string; items: string; itemNotFound: string; nature?: BudgetNature }> = {
+  opex: { links: 'application_spend_items', itemFk: 'spend_item_id', items: 'spend_items', itemNotFound: 'Spend item not found', nature: 'opex' },
   capex: { links: 'application_capex_items', itemFk: 'capex_item_id', items: 'capex_items', itemNotFound: 'CAPEX item not found' },
-} as const;
+};
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const APPLICATIONS_NOT_FOUND = 'One or more applications were not found.';
@@ -64,7 +66,7 @@ export async function replaceItemApplications(
   const nextIds = Array.from(new Set((applicationIds || []).map((id) => String(id || '').trim().toLowerCase()).filter(Boolean))).sort();
   if (nextIds.some((id) => !UUID_RE.test(id))) throw new BadRequestException(APPLICATIONS_NOT_FOUND);
   const locked = await manager.query(
-    `SELECT 1 FROM ${t.items} WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`,
+    `SELECT 1 FROM ${t.items} WHERE tenant_id = $1 AND id = $2${natureAnd(null, t.nature)} FOR NO KEY UPDATE`,
     [item.tenant_id, item.id],
   );
   if (locked.length === 0) throw new NotFoundException(t.itemNotFound);

@@ -6,6 +6,7 @@ import { SpendVersion } from './spend-version.entity';
 import { AuditService } from '../audit/audit.service';
 import { currentTenantId } from './budget-column-operations';
 import { readVersionYearTotals } from './amounts-write.util';
+import { budgetLineOfChild } from './budget-locks';
 import { AllocationCalculatorService } from './allocation-calculator.service';
 import {
   AllocationInput,
@@ -33,6 +34,8 @@ export class SpendAllocationsService {
   async bulkUpsert(versionId: string, items: AllocationInput[], userId?: string | null, opts?: { manager?: EntityManager; tenantId?: string }) {
     const manager = opts?.manager ?? this.repo.manager;
     const tenantId = opts?.tenantId ?? await currentTenantId(manager);
+    // A version of a line of another nature is not found (`budget-nature.ts`); a missing one is refused as before.
+    await budgetLineOfChild(manager, 'opex', 'version', tenantId, versionId, 'Version not found');
     return bulkUpsertAllocations({ manager, audit: this.audit, calculator: this.calculator }, 'opex', tenantId, versionId, items, userId);
   }
 
@@ -56,6 +59,8 @@ export class SpendAllocationsService {
   async listForVersion(versionId: string, opts?: { manager?: EntityManager; tenantId?: string }) {
     const manager = opts?.manager ?? this.repo.manager;
     const tenantId = opts?.tenantId ?? await currentTenantId(manager);
+    // A version of a line of another nature is not found (`budget-nature.ts`); a missing one is refused as before.
+    await budgetLineOfChild(manager, 'opex', 'version', tenantId, versionId, 'Version not found');
     const version = await manager.getRepository(SpendVersion).findOne({ where: { id: versionId, tenant_id: tenantId } });
     if (!version) throw new BadRequestException('Invalid version');
     const state = await readAllocationState(manager, 'opex', tenantId, versionId);
