@@ -67,6 +67,22 @@ export const TABLES = {
 } as const;
 
 /**
+ * The audit labels of each nature, written out: the rows of a CAPEX line keep the CAPEX labels of
+ * before lot Z1 (the history readers find them). Literal on purpose, so a spec does not take them
+ * from the code it tests (`auditTableOf`).
+ */
+export const AUDIT_LABELS = {
+  opex: {
+    items: 'spend_items', versions: 'spend_versions', amounts: 'spend_amounts', allocations: 'spend_allocations',
+    rounds: 'spend_round_inputs', lines: 'spend_round_input_lines',
+  },
+  capex: {
+    items: 'capex_items', versions: 'capex_versions', amounts: 'capex_amounts', allocations: 'capex_allocations',
+    rounds: 'capex_round_inputs', lines: 'capex_round_input_lines',
+  },
+} as const;
+
+/**
  * The BL number of a CAPEX line seeded with CPX number `n`: far above the OPEX lines a spec seeds
  * in the same tenant (both natures share the numbering since lot Z1); its CPX number is its legacy
  * number, what the CAPEX routes show.

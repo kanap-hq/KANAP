@@ -7,8 +7,8 @@ import { Decimal } from '../../common/decimal';
 import { upsertRoundInput } from '../round-inputs.util';
 import { SpendBudgetOperationsService } from '../spend-budget-operations.service';
 import { AllocationCalculatorService } from '../allocation-calculator.service';
-import { auditTableOf } from '../budget-nature';
 import {
+  AUDIT_LABELS,
   amountsService,
   assert,
   budgetOperations,
@@ -170,6 +170,14 @@ async function testCopyKeepsTheShape(kind: Kind) {
     });
     const roundAudit = audit.entries.find((e) => e.table.endsWith('_round_inputs'));
     assert.equal(roundAudit?.action, 'create', `${kind}: the record is audited`);
+    // The version the copy created is audited under its nature's label and shape (capex_item_id for a CAPEX line).
+    const versionAudit = audit.entries.find((e) => e.table === AUDIT_LABELS[kind].versions && e.action === 'create');
+    const lineKey = kind === 'capex' ? 'capex_item_id' : 'spend_item_id';
+    assert.deepEqual(
+      [versionAudit?.after?.[lineKey], (kind === 'capex' ? 'spend_item_id' : 'capex_item_id') in (versionAudit?.after ?? {})],
+      [itemId, false],
+      `${kind}: the created version's line as ${lineKey}`,
+    );
   });
 }
 
@@ -680,7 +688,7 @@ async function payingCompanyWithStandardCalendar(runner: QueryRunner, kind: Kind
 }
 
 const itemAudit = (kind: Kind, audit: ReturnType<typeof captureAudit>, itemId: string) =>
-  audit.entries.find((e) => e.table === auditTableOf(kind, TABLES[kind].items) && e.recordId === itemId)?.after;
+  audit.entries.find((e) => e.table === AUDIT_LABELS[kind].items && e.recordId === itemId)?.after;
 
 /**
  * A source that follows its lines: the prices take the uplift (exact, 4

@@ -25,8 +25,9 @@ import {
 // Setting A's value on B's line through the item API is covered by the item
 // write-gate spec (spend/__tests__/item-analytics.integration.spec.ts).
 
-// capex_item_analytics_values: dormant since lot Z1, dropped by lot Z2 (the values of both natures are in spend_item_analytics_values).
-const TABLES = ['analytics_axes', 'analytics_categories', 'spend_item_analytics_values'];
+// capex_item_analytics_values is dormant since lot Z1 (the values of both natures are in
+// spend_item_analytics_values) but keeps its rows until lot Z2 drops it: row level security still guards it.
+const TABLES = ['analytics_axes', 'analytics_categories', 'capex_item_analytics_values', 'spend_item_analytics_values'];
 
 async function testTablesAreTenantIsolated() {
   const flags = await dataSource.query(
@@ -76,6 +77,17 @@ async function testOtherTenantIsInvisible() {
     const capexA = await seedLine(runner, 'capex', tenantA);
     await linkValue(runner, 'opex', tenantA, lineA, natureA.id, valueA.id);
     await linkValue(runner, 'capex', tenantA, capexA, defaultA, defaultValueA.id);
+    // A dormant row of A in capex_item_analytics_values (kept until lot Z2), under its dormant line.
+    await setCurrentTenant(runner, tenantA);
+    const [dormant] = await runner.query(
+      `INSERT INTO capex_items (tenant_id, description, ppe_type, investment_type, priority, currency, effective_start, item_number)
+       VALUES ($1, 'Dormant A', 'hardware', 'replacement', 'medium', 'EUR', '2024-01-01', 1) RETURNING id`,
+      [tenantA],
+    );
+    await runner.query(
+      `INSERT INTO capex_item_analytics_values (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4)`,
+      [tenantA, dormant.id, defaultA, defaultValueA.id],
+    );
 
     const tenantB = await seedTenant(runner, 'iso-b');
     const b = services(runner.manager);
@@ -136,8 +148,9 @@ async function testOtherTenantIsInvisible() {
     // B's own value on its own dimension is accepted.
     await linkValue(runner, 'opex', tenantB, lineB, natureB.id, valueB.id);
 
-    // B's session neither sees nor changes A's line values (both natures in one table since lot Z1).
-    for (const table of ['spend_item_analytics_values']) {
+    // B's session neither sees nor changes A's line values (both natures in one table since lot Z1),
+    // nor A's dormant rows.
+    for (const table of ['spend_item_analytics_values', 'capex_item_analytics_values']) {
       const [seen] = await runner.query(`SELECT count(*)::int AS n FROM ${table} WHERE tenant_id = $1`, [tenantA]);
       assert.equal(seen.n, 0, `${table}: B reads none of A's rows`);
       const [, updated] = await runner.query(`UPDATE ${table} SET updated_at = now() WHERE tenant_id = $1`, [tenantA]);
@@ -164,6 +177,8 @@ async function testOtherTenantIsInvisible() {
       ['opex', lineA, valueA.id],
       ['capex', capexA, defaultValueA.id],
     ]);
+    const dormantA = await runner.query(`SELECT item_id, category_id FROM capex_item_analytics_values WHERE tenant_id = $1`, [tenantA]);
+    assert.deepEqual(dormantA, [{ item_id: dormant.id, category_id: defaultValueA.id }], "A's dormant row is still there");
   });
 }
 

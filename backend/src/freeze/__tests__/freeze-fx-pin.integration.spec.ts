@@ -55,9 +55,17 @@ async function testDefaultColumnPinsFx() {
     await freeze.unfreeze(YEAR, [{ scope: 'opex', columns: ['revision'] }], null, opts);
     assert.equal(await pinnedRateSet(runner, opex.versionId), null, 'unfreezing the default column unpins');
 
-    // Freezing every column includes the default one.
+    // Freezing every column includes the default one. Both natures share spend_versions since lot
+    // Z1: a CAPEX freeze pins the CAPEX versions only, and its unfreeze unpins them only.
     await freeze.freeze(YEAR, [{ scope: 'capex' }], null, opts);
     assert.equal(await pinnedRateSet(runner, capex.versionId), rateSetId);
+    assert.equal(await pinnedRateSet(runner, opex.versionId), null, 'a CAPEX freeze leaves the OPEX versions of the year unpinned');
+
+    await freeze.freeze(YEAR, [{ scope: 'opex', columns: ['revision'] }], null, opts);
+    assert.equal(await pinnedRateSet(runner, opex.versionId), rateSetId, 'the OPEX default column pinned again');
+    await freeze.unfreeze(YEAR, [{ scope: 'capex' }], null, opts);
+    assert.equal(await pinnedRateSet(runner, capex.versionId), null, 'the CAPEX unfreeze unpins the CAPEX versions');
+    assert.equal(await pinnedRateSet(runner, opex.versionId), rateSetId, 'and keeps the pin of the OPEX versions');
   });
 }
 

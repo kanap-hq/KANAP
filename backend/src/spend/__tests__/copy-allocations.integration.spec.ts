@@ -4,8 +4,8 @@ import dataSource from '../../data-source';
 import { AllocationCalculatorService } from '../allocation-calculator.service';
 import { SpendBudgetOperationsService } from '../spend-budget-operations.service';
 import { CapexItemsService } from '../spend-items.service';
-import { auditTableOf } from '../budget-nature';
 import {
+  AUDIT_LABELS,
   assert,
   captureAudit,
   findVersion,
@@ -33,8 +33,6 @@ const T = {
   opex: { versions: 'spend_versions', allocations: 'spend_allocations' },
   capex: { versions: 'spend_versions', allocations: 'spend_allocations' },
 } as const;
-/** The audit label of a table for a line of `kind` (a CAPEX line keeps the CAPEX names in the audit log). */
-const audited = (kind: Kind, table: string) => auditTableOf(kind, table);
 
 type Op = { sourceYear: number; destinationYear: number; overwrite?: boolean; dryRun?: boolean };
 
@@ -137,9 +135,13 @@ async function testManualCopy(kind: Kind) {
     assert.deepEqual((await readVersion(runner, kind, filled, YEAR + 1))!.rows, [[south, 100]], `${kind}: a filled destination is kept`);
     assert.deepEqual(
       audit.entries.map((e) => `${e.table}:${e.action}`).sort(),
-      [`${audited(kind, T[kind].allocations)}:update`, `${audited(kind, T[kind].versions)}:create`],
+      [`${AUDIT_LABELS[kind].allocations}:update`, `${AUDIT_LABELS[kind].versions}:create`],
       `${kind}: the version and its allocations are audited`,
     );
+    // The created version is audited in its nature's shape: a CAPEX version names its line capex_item_id.
+    const created = audit.entries.find((e) => e.table === AUDIT_LABELS[kind].versions && e.action === 'create')!.after;
+    const lineKey = kind === 'capex' ? 'capex_item_id' : 'spend_item_id';
+    assert.deepEqual([created[lineKey], kind === 'capex' ? 'spend_item_id' in created : 'capex_item_id' in created], [manual, false], `${kind}: the version's line as ${lineKey}`);
 
     await copyAllocations(kind, runner, { sourceYear: YEAR, destinationYear: YEAR + 1, overwrite: true });
     assert.deepEqual((await readVersion(runner, kind, filled, YEAR + 1))!.rows, [[north, 100]], `${kind}: overwrite replaces the destination rows`);
@@ -279,7 +281,7 @@ async function testAllOrNothing(kind: Kind) {
       items.push(itemId);
     }
     let seen = 0;
-    const failOnSecond = captureAudit((entry) => entry.table === audited(kind, T[kind].allocations) && ++seen === 2);
+    const failOnSecond = captureAudit((entry) => entry.table === AUDIT_LABELS[kind].allocations && ++seen === 2);
     await assert.rejects(
       () => underSavepoint(runner, () => copyAllocations(kind, runner, { sourceYear: YEAR, destinationYear: YEAR + 1 }, failOnSecond)),
       /forced failure/,

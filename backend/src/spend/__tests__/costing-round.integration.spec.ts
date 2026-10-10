@@ -7,8 +7,8 @@ import { REQUIRE_LEVEL_KEY } from '../../auth/require-level.decorator';
 import { SpendVersionsController } from '../spend-versions.controller';
 import { CapexVersionsController } from '../capex-versions.controller';
 import { DISABLED_CALENDAR_WARNING } from '../round-inputs.util';
-import { auditTableOf } from '../budget-nature';
 import {
+  AUDIT_LABELS,
   amountsService,
   assert,
   budgetOperations,
@@ -103,7 +103,7 @@ function linesPayload(lines: unknown[], overrides: Record<string, unknown> = {})
 
 const roundAudits = (audit: ReturnType<typeof captureAudit>) => audit.entries.filter((e) => e.table.endsWith('_round_inputs'));
 /** The audit label of the months of a line of `kind` (a CAPEX line keeps the CAPEX names in the audit log). */
-const amountsTable = (kind: Kind) => auditTableOf(kind, TABLES[kind].amounts);
+const amountsTable = (kind: Kind) => AUDIT_LABELS[kind].amounts;
 const shape = (lines: Array<Record<string, any>>) => lines.map((l) => [
   l.sort, l.label, l.quantity_unit, l.quantity, l.unit_price, l.price_basis, l.frequency, l.days_per_month, l.period_start, l.period_end,
 ]);
