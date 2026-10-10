@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -125,6 +125,25 @@ describe('AnalyticsCategorySelect', () => {
     unmount();
     renderSelect({ axisId: 'ax-default' });
     expect(await screen.findByLabelText('master-data:analytics.analyticsCategoryFallback')).toBeInTheDocument();
+  });
+
+  it('can be made not clearable: no clear button, and neither Escape nor an emptied text removes the value', async () => {
+    const held = { value: 'v-lic', selectedOption: { id: 'v-lic', name: 'Licenses' } };
+    const first = renderSelect({ ...held });
+    let input = screen.getByRole('combobox');
+    expect(screen.getByTitle('Clear')).toBeInTheDocument();
+    act(() => { input.focus(); });
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(first.onChange).toHaveBeenCalledWith(null);
+    cleanup();
+
+    const second = renderSelect({ ...held, disableClearable: true });
+    input = screen.getByRole('combobox');
+    expect(screen.queryByTitle('Clear')).toBeNull();
+    act(() => { input.focus(); });
+    fireEvent.keyDown(input, { key: 'Escape' });
+    fireEvent.change(input, { target: { value: '' } });
+    expect(second.onChange).not.toHaveBeenCalled();
   });
 
   it('uses the label it is given, also as the name of a field whose label is hidden', async () => {

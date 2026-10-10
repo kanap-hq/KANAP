@@ -18,6 +18,8 @@ export interface AnalyticsAxisInfo {
   is_default: boolean;
   /** The budget lines it applies to: OPEX only, CAPEX only, or both (null). */
   applies_to: AxisAppliesTo | null;
+  /** The setting; it applies only while the dimension is enabled, to the types it applies to (`axisRequiredFor`). */
+  required: boolean;
   /** The effective state: disabled once the end of validity has passed. */
   status: 'enabled' | 'disabled';
   disabled_at: string | null;
@@ -54,6 +56,17 @@ export function axisAppliesTo(axis: { applies_to?: string | null }, scope: 'opex
   return axis.applies_to == null || axis.applies_to === scope;
 }
 
+/**
+ * Whether a line of `scope` must hold a value on the dimension: required, enabled (effective
+ * status) and applying to that type. A disabled dimension keeps its setting, ignored.
+ */
+export function axisRequiredFor(
+  axis: { required?: boolean; status: string; applies_to?: string | null },
+  scope: 'opex' | 'capex',
+): boolean {
+  return axis.required === true && axis.status === 'enabled' && axisAppliesTo(axis, scope);
+}
+
 /** Enabled and not past its end of validity. */
 export function isAxisActive(
   axis: { status: string; disabled_at: string | Date | null },
@@ -76,11 +89,12 @@ export async function loadAnalyticsAxes(manager: EntityManager, tenantId: string
     name: string | null;
     is_default: boolean;
     applies_to: string | null;
+    required: boolean;
     status: string;
     disabled_at: Date | string | null;
     sort_order: number | string;
   }> = await manager.query(
-    `SELECT id, code, name, is_default, applies_to, status, disabled_at, sort_order
+    `SELECT id, code, name, is_default, applies_to, required, status, disabled_at, sort_order
        FROM analytics_axes
       WHERE tenant_id = $1
       ORDER BY sort_order ASC, lower(coalesce(name, '')) ASC, code ASC, id ASC`,
@@ -93,6 +107,7 @@ export async function loadAnalyticsAxes(manager: EntityManager, tenantId: string
     name: row.name ?? null,
     is_default: row.is_default === true,
     applies_to: row.applies_to === 'opex' || row.applies_to === 'capex' ? row.applies_to : null,
+    required: row.required === true,
     status: isAxisActive(row, now) ? 'enabled' : 'disabled',
     disabled_at: toIso(row.disabled_at),
     sort_order: Number(row.sort_order ?? 0),

@@ -106,7 +106,7 @@ function slot(year: number, amount: number) {
 }
 
 function axis(id: string, patch: Partial<AnalyticsAxis>): AnalyticsAxis {
-  return { id, code: id, name: null, description: null, sort_order: 0, is_default: false, applies_to: null, status: 'enabled', disabled_at: null, ...patch };
+  return { id, code: id, name: null, description: null, sort_order: 0, is_default: false, applies_to: null, required: false, status: 'enabled', disabled_at: null, ...patch };
 }
 
 // The default dimension has no name of its own and reads as the translated default label.

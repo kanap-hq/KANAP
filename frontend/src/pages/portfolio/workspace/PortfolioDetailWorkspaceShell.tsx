@@ -45,6 +45,8 @@ type PortfolioDetailWorkspaceShellProps = {
   forceDrawerOpen?: boolean;
   /** Overrides the stored drawer state on mount only (e.g. a deep link that targets a drawer field). */
   initialDrawerOpen?: boolean;
+  /** Opens the drawer each time this number changes (the page must show one of its fields). */
+  drawerOpenRequest?: number;
   isCreate?: boolean;
   itemReference?: string | null;
   metadata?: React.ReactNode;
@@ -237,6 +239,7 @@ export default function PortfolioDetailWorkspaceShell({
   drawerStorageKey,
   forceDrawerOpen = false,
   initialDrawerOpen,
+  drawerOpenRequest = 0,
   isCreate = false,
   itemReference,
   metadata,
@@ -269,6 +272,10 @@ export default function PortfolioDetailWorkspaceShell({
   const hasTabRow = tabs.length > 1;
   const drawerLift = hasTabRow ? Math.abs(taskDetailTokens.drawer.panelTop) : 0;
   const tabLift = hasTabRow ? Math.abs(taskDetailTokens.drawer.tabTop) : 0;
+
+  React.useEffect(() => {
+    if (drawerOpenRequest > 0) setDrawerOpen(true);
+  }, [drawerOpenRequest]);
 
   React.useEffect(() => {
     if (forceDrawerOpen) return;

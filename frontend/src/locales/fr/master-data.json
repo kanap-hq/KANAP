@@ -628,7 +628,8 @@
       "order": "Ordre",
       "description": "Description",
       "dimension": "Dimension",
-      "lifecycle": "Cycle de vie"
+      "lifecycle": "Cycle de vie",
+      "required": "Obligatoire"
     },
     "hints": {
       "nameDefault": "Laissez vide pour afficher « {{label}} » dans la langue de chaque personne.",
@@ -680,6 +681,25 @@
       "opex_other": "{{count}} lignes OPEX ont cette valeur. Elles la gardent, mais les nouvelles lignes OPEX ne peuvent pas la choisir."
     },
     "showLines": "Afficher ces lignes",
+    "required": {
+      "missing": {
+        "both": "{{opex}} et {{capex}} n'ont pas de valeur.",
+        "opex_one": "{{count}} ligne OPEX n'a pas de valeur.",
+        "opex_other": "{{count}} lignes OPEX n'ont pas de valeur.",
+        "capex_one": "{{count}} ligne CAPEX n'a pas de valeur.",
+        "capex_other": "{{count}} lignes CAPEX n'ont pas de valeur."
+      },
+      "showLines": {
+        "opex": "Afficher les lignes OPEX",
+        "capex": "Afficher les lignes CAPEX"
+      },
+      "disabledHint": "Pas de contrôle tant que la dimension est désactivée.",
+      "unusable": {
+        "opex": "Aucune valeur activée n'est utilisable sur les lignes OPEX. Aucune nouvelle ligne OPEX ne peut être créée.",
+        "capex": "Aucune valeur activée n'est utilisable sur les lignes CAPEX. Aucune nouvelle ligne CAPEX ne peut être créée.",
+        "both": "Aucune valeur activée n'est utilisable sur les lignes OPEX ou CAPEX. Aucune nouvelle ligne ne peut être créée."
+      }
+    },
     "messages": {
       "loadFailed": "Échec du chargement de la valeur.",
       "saveFailed": "Échec de l'enregistrement de la valeur.",

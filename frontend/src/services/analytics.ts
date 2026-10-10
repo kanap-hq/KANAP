@@ -20,6 +20,11 @@ export type AnalyticsAxis = {
   is_default: boolean;
   /** The lines the dimension applies to: OPEX only, CAPEX only, or both when null (always both for the default). */
   applies_to: LineType | null;
+  /**
+   * New lines must hold a value, and a held value cannot be cleared. Checked only while the dimension
+   * is enabled, on the lines it applies to (`axisRequiredFor`). Lines without a value stay editable.
+   */
+  required: boolean;
   status: AnalyticsStatus;
   disabled_at: string | null;
   created_at?: string;
@@ -31,6 +36,11 @@ export type AnalyticsAxisDetail = AnalyticsAxis & {
   value_count: number;
   opex_count: number;
   capex_count: number;
+  /** OPEX / CAPEX lines of every status with no value on the dimension (0 for a type it does not apply to). */
+  opex_missing?: number;
+  capex_missing?: number;
+  /** The types the dimension applies to for which none of its enabled values may be used. */
+  unusable_for?: LineType[];
 };
 
 export type AnalyticsAxisWrite = {
@@ -40,6 +50,8 @@ export type AnalyticsAxisWrite = {
   sort_order?: number;
   /** Null for OPEX and CAPEX lines. On a patch, null clears it and absent leaves it unchanged. */
   applies_to?: LineType | null;
+  /** Absent on a patch leaves it unchanged. */
+  required?: boolean;
   status?: AnalyticsStatus;
   disabled_at?: string | null;
 };

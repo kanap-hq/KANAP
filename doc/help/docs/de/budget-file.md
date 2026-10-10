@@ -58,7 +58,7 @@ Sie sind in beiden Dateien gleich, außer den typspezifischen Spalten am Zeilena
 | `account_number` | Kontonummer, im Kontenplan des zahlenden Unternehmens | Erforderlich |
 | `cost_center_code` | Code der Kostenstelle. Eine Gruppe wird abgelehnt | Optional |
 | `run_build` | `run` oder `build` | Optional |
-| `analytics:<code>` | Der Name des Werts in der Dimension, deren Code dies ist. Eine Spalte pro aktivierter Dimension, die für OPEX-Zeilen verwendet wird, die Standarddimension eingeschlossen | Optional. Ein nicht vorhandener Wert wird beim Laden angelegt |
+| `analytics:<code>` | Der Name des Werts in der Dimension, deren Code dies ist. Eine Spalte pro aktivierter Dimension, die für OPEX-Zeilen verwendet wird, die Standarddimension eingeschlossen | Optional, außer bei einer erforderlichen Dimension. Ein nicht vorhandener Wert wird beim Laden angelegt |
 | `owner_it_email` | E-Mail-Adresse eines aktiven Benutzers | Optional |
 | `owner_business_email` | E-Mail-Adresse eines aktiven Benutzers | Optional |
 | `project` | Projektnummer, zum Beispiel `PRJ-3` | Optional |
@@ -82,7 +82,7 @@ Sie sind in beiden Dateien gleich, außer den typspezifischen Spalten am Zeilena
 | `account_number` | Kontonummer, im Kontenplan des zahlenden Unternehmens | Erforderlich |
 | `cost_center_code` | Code der Kostenstelle. Eine Gruppe wird abgelehnt | Optional |
 | `run_build` | `run` oder `build` | Optional |
-| `analytics:<code>` | Der Name des Werts in der Dimension, deren Code dies ist. Eine Spalte pro aktivierter Dimension, die für CAPEX-Zeilen verwendet wird, die Standarddimension eingeschlossen | Optional. Ein nicht vorhandener Wert wird beim Laden angelegt |
+| `analytics:<code>` | Der Name des Werts in der Dimension, deren Code dies ist. Eine Spalte pro aktivierter Dimension, die für CAPEX-Zeilen verwendet wird, die Standarddimension eingeschlossen | Optional, außer bei einer erforderlichen Dimension. Ein nicht vorhandener Wert wird beim Laden angelegt |
 | `owner_it_email` | E-Mail-Adresse eines aktiven Benutzers | Optional |
 | `owner_business_email` | E-Mail-Adresse eines aktiven Benutzers | Optional |
 | `project` | Projektnummer, zum Beispiel `PRJ-3` | Optional |
@@ -112,7 +112,7 @@ Das sind die Standardnamen. Ihre Organisation kann die fünf Spalten in [Budgets
 ## Was eine Zelle bedeutet
 
 - Eine leere Zelle behält den gespeicherten Wert.
-- `-` löscht ein Detail der Position: Beschreibung, Notizen, Name und ERP-ID des Lieferanten, Kostenstelle, Run oder Build, einen Dimensionswert, einen Verantwortlichen, das Projekt, das Ende der Gültigkeit. In einer Spalte, die eine neue Position füllen muss, ist `-` ein Zeilenfehler.
+- `-` löscht ein Detail der Position: Beschreibung, Notizen, Name und ERP-ID des Lieferanten, Kostenstelle, Run oder Build, einen Dimensionswert, einen Verantwortlichen, das Projekt, das Ende der Gültigkeit. In einer Spalte, die eine neue Position füllen muss, ist `-` ein Zeilenfehler. In einer erforderlichen Dimension ist `-` ein Zeilenfehler, wenn die Zeile einen Wert hat.
 - `0` schreibt null.
 - Eine Jahressumme, die der gespeicherten Summe entspricht, schreibt nichts. Eine abweichende Summe wird über den Zeitraum der Spalte verteilt, genau wie bei der Eingabe der Summe im **Budget-Tab**.
 - Eine Monatszelle schreibt diesen Monat und markiert die Spalte als manuell bearbeitet, wie ein im **Budget-Tab** eingegebener Monat.
@@ -129,6 +129,7 @@ Eine fehlende Spalte behält alle gespeicherten Werte dieser Spalte. Eine Datei,
 - Ein nicht vorhandener Dimensionswert wird beim Laden angelegt und in der Prüfung aufgelistet. Konten, Kostenstellen, Unternehmen und Benutzer werden nie angelegt: Ein unbekanntes Element ist ein Zeilenfehler, der nennt, wo es hinzugefügt wird.
 - Eine Datei mit einer Spalte `analytics:<code>` für eine Dimension, die nur für die andere Zeilenart gilt, wird als Ganzes abgelehnt, zum Beispiel „The Recurrence dimension is for CAPEX lines only. Remove the analytics:recurrence column from this OPEX file.“ Der Export schreibt für eine solche Dimension keine Spalte: Ein ausgeblendeter Wert einer Zeile wird nicht exportiert, und ein Laden lässt ihn unverändert. Die Einstellung finden Sie unter [Analysedimensionen](analytics.md#opex-oder-capex-dimensionen).
 - Ein Wert, der nur für die andere Zeilenart verwendet wird, ist ein Zeilenfehler in seiner Zelle `analytics:<code>`, zum Beispiel „Abonnements SaaS is for OPEX lines only. Pick a value for CAPEX lines.“ Eine Zeile behält den Wert, den sie bereits hat. Werte, die der Import anlegt, werden für OPEX und CAPEX verwendet. Die Einstellung finden Sie unter [Analysedimensionen](analytics.md#opex-oder-capex-werte).
+- Eine neue Zeile braucht einen Wert in jeder erforderlichen Dimension ihrer Art, mit der Meldung „The Nature dimension is required. Choose a value.“ in der Zelle `analytics:<code>`. Das gilt, wenn die Spalte in der Datei fehlt, wenn die Zelle leer ist und wenn sie `-` enthält. Ein Wert, den das Laden anlegt, zählt. Eine bestehende Zeile wird nur bei einem `-` abgelehnt, das ihren Wert löschen würde: Eine leere Zelle oder eine fehlende Spalte lässt sie unverändert. Die Einstellung finden Sie unter [Analysedimensionen](analytics.md#erforderliche-dimensionen).
 - Eine Zeile, die eine Budgetposition anlegt oder deren Konto ändert, wird abgelehnt, wenn das Konto für die andere Art von Position bestimmt ist, mit der Meldung „Account 6061 is for CAPEX lines only.“ (oder OPEX). Eine Budgetposition behält ihr aktuelles Konto. Die Einstellung der Konten steht in [Kontenpläne und Kontenverwaltung](chart-of-accounts.md#opex-oder-capex-konten).
 - Projekte werden über ihre Nummer zugeordnet, zum Beispiel `PRJ-3`.
 - Eine beendete Position ist eine Position, deren `end_of_validity` verstrichen ist. Setzen Sie das Datum, um eine Position zu beenden, oder schreiben Sie `-` in die Zelle, um es zu löschen und die Position weiterlaufen zu lassen. Es gibt keine Statusspalte.

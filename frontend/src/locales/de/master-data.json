@@ -628,7 +628,8 @@
       "order": "Reihenfolge",
       "description": "Beschreibung",
       "dimension": "Dimension",
-      "lifecycle": "Lebenszyklus"
+      "lifecycle": "Lebenszyklus",
+      "required": "Erforderlich"
     },
     "hints": {
       "nameDefault": "Leer lassen, um „{{label}}“ in der Sprache jeder Person anzuzeigen.",
@@ -680,6 +681,25 @@
       "opex_other": "{{count}} OPEX-Zeilen haben diesen Wert. Sie behalten ihn, aber neue OPEX-Zeilen können ihn nicht auswählen."
     },
     "showLines": "Diese Zeilen anzeigen",
+    "required": {
+      "missing": {
+        "both": "{{opex}} und {{capex}} haben keinen Wert.",
+        "opex_one": "{{count}} OPEX-Zeile hat keinen Wert.",
+        "opex_other": "{{count}} OPEX-Zeilen haben keinen Wert.",
+        "capex_one": "{{count}} CAPEX-Zeile hat keinen Wert.",
+        "capex_other": "{{count}} CAPEX-Zeilen haben keinen Wert."
+      },
+      "showLines": {
+        "opex": "OPEX-Zeilen anzeigen",
+        "capex": "CAPEX-Zeilen anzeigen"
+      },
+      "disabledHint": "Wird nicht geprüft, solange die Dimension deaktiviert ist.",
+      "unusable": {
+        "opex": "Kein aktivierter Wert ist für OPEX-Zeilen verwendbar. Neue OPEX-Zeilen können nicht angelegt werden.",
+        "capex": "Kein aktivierter Wert ist für CAPEX-Zeilen verwendbar. Neue CAPEX-Zeilen können nicht angelegt werden.",
+        "both": "Kein aktivierter Wert ist für OPEX- oder CAPEX-Zeilen verwendbar. Neue Zeilen können nicht angelegt werden."
+      }
+    },
     "messages": {
       "loadFailed": "Der Wert konnte nicht geladen werden.",
       "saveFailed": "Der Wert konnte nicht gespeichert werden.",

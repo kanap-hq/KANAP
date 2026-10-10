@@ -18,7 +18,7 @@ import { isoToLocalDateInput, localDateInputToEndOfDayIso } from '../../../lib/d
 import { useLocale } from '../../../i18n/useLocale';
 import { useCostCenterNode } from '../../../hooks/useCostCenterTree';
 import type { CostCenterNode } from '../../../services/costCenters';
-import { useAnalyticsAxes } from '../../../hooks/useAnalyticsAxes';
+import { axisRequiredFor, useAnalyticsAxes } from '../../../hooks/useAnalyticsAxes';
 import { drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
 import { matching, type ItemReferences } from '../../../components/finance/itemReferences';
 import type { CapexPriority } from './CapexMetadataBar';
@@ -262,8 +262,9 @@ export default function CapexPropertiesDrawer({
             {t('shared.dimensionsLoadFailed')}
           </Typography>
         ) : analyticsAxes.enabled.map((axis) => (
-          <PropertyRow key={axis.id} label={analyticsAxes.label(axis)}>
-            <Box sx={hideInnerLabelSx}>
+          <PropertyRow key={axis.id} label={analyticsAxes.label(axis)} required={axisRequiredFor(axis, 'capex')}>
+            {/* Found by the question asked before leaving a line lacking a required value. */}
+            <Box sx={hideInnerLabelSx} data-analytics-axis={axis.id}>
               <AnalyticsCategorySelect
                 axisId={axis.id}
                 label={analyticsAxes.label(axis)}
@@ -272,6 +273,8 @@ export default function CapexPropertiesDrawer({
                 value={analyticsValues[axis.id] ?? null}
                 onChange={(v) => onAnalyticsValueChange(axis.id, v)}
                 disabled={disabled}
+                // A held value on a required dimension can be replaced, not removed. A line without one stays editable.
+                disableClearable={mode === 'edit' && axisRequiredFor(axis, 'capex') && !!analyticsValues[axis.id]}
                 selectedOption={matching(analyticsOptions?.[axis.id], analyticsValues[axis.id])}
               />
             </Box>

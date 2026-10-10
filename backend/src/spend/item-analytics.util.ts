@@ -6,6 +6,7 @@ import {
   ANALYTICS_LINK_TABLES,
   AnalyticsAxisInfo,
   axisAppliesTo,
+  axisRequiredFor,
   loadAnalyticsAxes,
   resolveDefaultAxisId,
 } from '../analytics/analytics-axes.util';
@@ -82,6 +83,26 @@ export function notApplicableValueMessage(value: { name: string; applies_to: str
   return `${value.name} is for ${String(value.applies_to).toUpperCase()} lines only. Choose a value for ${scope.toUpperCase()} lines.`;
 }
 
+/** "The Menu dimension is required. Choose a value." (a new line without a value, or a held value cleared). */
+export function requiredDimensionMessage(axis: { name: string | null }): string {
+  return `${capitalized(dimensionPhrase(axis))} is required. Choose a value.`;
+}
+
+/**
+ * The dimensions a line of `scope` must hold a value on (`axisRequiredFor`: required, enabled,
+ * applying to the type) that have no non-null value in `values` (dimension id → value id), in
+ * the order of `axes`. Pure: used by the write gate, the budget file preflight, the AI preview
+ * and the line move.
+ */
+export function missingRequiredDimensions<A extends Pick<AnalyticsAxisInfo, 'id' | 'required' | 'status' | 'applies_to'>>(
+  axes: A[],
+  values: Map<string, string | null | undefined> | Record<string, string | null | undefined>,
+  scope: ItemAnalyticsScope,
+): A[] {
+  const valueOf = (axisId: string) => (values instanceof Map ? values.get(axisId) : values[axisId]);
+  return axes.filter((axis) => axisRequiredFor(axis, scope) && !valueOf(axis.id));
+}
+
 /** Whether a value may be chosen on the lines of `scope` (null: OPEX and CAPEX lines). */
 export function valueAppliesTo(value: { applies_to?: string | null }, scope: ItemAnalyticsScope): boolean {
   return value.applies_to == null || value.applies_to === scope;
@@ -92,6 +113,26 @@ function idOrNull(value: unknown, notFound: string): string | null {
   if (value == null || value === '') return null;
   if (typeof value !== 'string' || !isUuid(value)) throw new BadRequestException(notFound);
   return value.toLowerCase();
+}
+
+/** The line's current value ids on the given dimensions (dimension id → value id). */
+async function currentItemValues(
+  manager: EntityManager,
+  scope: ItemAnalyticsScope,
+  tenantId: string,
+  itemId: string,
+  axisIds: string[],
+): Promise<Map<string, string>> {
+  const current = new Map<string, string>();
+  if (axisIds.length === 0) return current;
+  const rows: Array<{ axis_id: string; category_id: string }> = await manager.query(
+    `SELECT axis_id::text AS axis_id, category_id::text AS category_id
+       FROM ${ANALYTICS_LINK_TABLES[scope]}
+      WHERE tenant_id = $1 AND item_id = $2 AND axis_id = ANY($3::uuid[])`,
+    [tenantId, itemId, axisIds],
+  );
+  for (const row of rows) current.set(row.axis_id, row.category_id);
+  return current;
 }
 
 /**
@@ -105,8 +146,13 @@ function idOrNull(value: unknown, notFound: string): string | null {
  *   or null where it has none, passes as a no-op; the other-type message wins);
  *   a value must be the tenant's and belong to that dimension; a disabled
  *   value, or one restricted to the other line type, is refused unless it is
- *   the line's current one.
- * Returns [] when the body names neither field. Throws a 400 on the first problem.
+ *   the line's current one;
+ * - a dimension required for the line's type (`axisRequiredFor`): a new line must end with a
+ *   value on it, the body naming no dimension included; an existing line may not clear a value
+ *   it holds (null where it holds none stays a no-op, and a line lacking a value is never
+ *   refused for it on any other change).
+ * Returns [] when the body names neither field (a create still checks the required dimensions).
+ * Throws a 400 on the first problem.
  */
 export async function resolveItemAnalyticsChanges(
   manager: EntityManager,
@@ -118,7 +164,9 @@ export async function resolveItemAnalyticsChanges(
   const supplied = (key: string) => Object.prototype.hasOwnProperty.call(input, key) && input[key] !== undefined;
   const valuesSupplied = supplied(ANALYTICS_VALUES_FIELD);
   const legacySupplied = supplied(LEGACY_ANALYTICS_FIELD);
-  if (!valuesSupplied && !legacySupplied) return [];
+  const creating = !existingItemId;
+  // An update naming no dimension changes none; a create still checks the required ones.
+  if (!valuesSupplied && !legacySupplied && !creating) return [];
 
   // axis id → requested value; `legacy` only chooses the not-found wording.
   const requested = new Map<string, { categoryId: string | null; legacy: boolean }>();
@@ -136,6 +184,15 @@ export async function resolveItemAnalyticsChanges(
   }
 
   let axes: AnalyticsAxisInfo[] = await loadAnalyticsAxes(manager, tenantId);
+  // A new line must end with a value on every required dimension (the resolved changes are its values).
+  const checked = (changes: ItemAnalyticsChange[]): ItemAnalyticsChange[] => {
+    if (creating) {
+      const values = new Map(changes.map((change) => [change.axis_id, change.category_id]));
+      const [missing] = missingRequiredDimensions(axes, values, scope);
+      if (missing) throw new BadRequestException(requiredDimensionMessage(missing));
+    }
+    return changes;
+  };
   if (legacySupplied) {
     const legacyId = idOrNull(input[LEGACY_ANALYTICS_FIELD], 'Analytics category not found.');
     let defaultAxisId = axes.find((axis) => axis.is_default)?.id ?? null;
@@ -150,7 +207,7 @@ export async function resolveItemAnalyticsChanges(
       if (!sent) requested.set(defaultAxisId, { categoryId: legacyId, legacy: true });
     }
   }
-  if (requested.size === 0) return [];
+  if (requested.size === 0) return checked([]);
 
   const axisById = new Map(axes.map((axis) => [axis.id, axis]));
   // Dimensions the line may not change: disabled, or for the other line type.
@@ -162,16 +219,9 @@ export async function resolveItemAnalyticsChanges(
   }
   if (lockedAxisIds.length > 0) {
     // A client echoing the line's values may name such a dimension: only a real change is refused.
-    const current = new Map<string, string>();
-    if (existingItemId) {
-      const rows: Array<{ axis_id: string; category_id: string }> = await manager.query(
-        `SELECT axis_id::text AS axis_id, category_id::text AS category_id
-           FROM ${ANALYTICS_LINK_TABLES[scope]}
-          WHERE tenant_id = $1 AND item_id = $2 AND axis_id = ANY($3::uuid[])`,
-        [tenantId, existingItemId, lockedAxisIds],
-      );
-      for (const row of rows) current.set(row.axis_id, row.category_id);
-    }
+    const current = existingItemId
+      ? await currentItemValues(manager, scope, tenantId, existingItemId, lockedAxisIds)
+      : new Map<string, string>();
     for (const axisId of lockedAxisIds) {
       if ((current.get(axisId) ?? null) !== requested.get(axisId)!.categoryId) {
         const axis = axisById.get(axisId)!;
@@ -181,7 +231,17 @@ export async function resolveItemAnalyticsChanges(
       }
       requested.delete(axisId);
     }
-    if (requested.size === 0) return [];
+    if (requested.size === 0) return checked([]);
+  }
+
+  if (existingItemId) {
+    // A required dimension (never a locked one) cannot lose the value the line holds.
+    const clearedRequired = axes.filter((axis) => requested.get(axis.id)?.categoryId === null && axisRequiredFor(axis, scope));
+    if (clearedRequired.length > 0) {
+      const held = await currentItemValues(manager, scope, tenantId, existingItemId, clearedRequired.map((axis) => axis.id));
+      const lost = clearedRequired.find((axis) => held.has(axis.id));
+      if (lost) throw new BadRequestException(requiredDimensionMessage(lost));
+    }
   }
 
   const categoryIds = Array.from(new Set(Array.from(requested.values()).map((r) => r.categoryId).filter((id): id is string => !!id)));
@@ -218,7 +278,7 @@ export async function resolveItemAnalyticsChanges(
     if (!value.is_current && !valueAppliesTo(value, scope)) throw new BadRequestException(notApplicableValueMessage(value, scope));
     changes.push({ axis_id: axis.id, category_id: value.id });
   }
-  return changes;
+  return checked(changes);
 }
 
 /** Applies resolved changes to one line: one upsert for the values set, one delete for the dimensions cleared. */

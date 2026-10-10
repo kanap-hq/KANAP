@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TFunction } from 'i18next';
-import { axisAppliesTo, buildAnalyticsAxes, isHiddenAxis } from './useAnalyticsAxes';
+import { axisAppliesTo, axisRequiredFor, buildAnalyticsAxes, isHiddenAxis } from './useAnalyticsAxes';
 import { analyticsFieldKey, type AnalyticsAxis } from '../services/analytics';
 
 const t = ((key: string) => (key === 'master-data:analytics.analyticsCategoryFallback' ? 'Analytics dimension' : key)) as unknown as TFunction;
@@ -12,6 +12,7 @@ function axis(partial: Partial<AnalyticsAxis> & Pick<AnalyticsAxis, 'id' | 'code
     sort_order: 0,
     is_default: false,
     applies_to: null,
+    required: false,
     status: 'enabled',
     disabled_at: null,
     ...partial,
@@ -89,6 +90,21 @@ describe('buildAnalyticsAxes', () => {
     expect(isHiddenAxis(opex, 'ax-nature')).toBe(false);
     // Unknown (dimensions not loaded): the server decides.
     expect(isHiddenAxis(opex, 'ax-unknown')).toBe(false);
+  });
+
+  it('requires a value only on a required dimension, enabled now, for the types it applies to', () => {
+    const required = axis({ id: 'ax-req', code: 'req', required: true });
+    expect(axisRequiredFor(required, 'opex')).toBe(true);
+    expect(axisRequiredFor(required, 'capex')).toBe(true);
+    expect(axisRequiredFor({ ...required, required: false }, 'opex')).toBe(false);
+    // Another type: not required for it.
+    expect(axisRequiredFor({ ...required, applies_to: 'capex' }, 'opex')).toBe(false);
+    expect(axisRequiredFor({ ...required, applies_to: 'capex' }, 'capex')).toBe(true);
+    // Disabled: the setting stays, ignored; a future disable date still counts as enabled.
+    expect(axisRequiredFor({ ...required, status: 'disabled', disabled_at: '2026-01-01T00:00:00.000Z' }, 'opex')).toBe(false);
+    expect(axisRequiredFor({ ...required, disabled_at: '2999-01-01T00:00:00.000Z' }, 'opex')).toBe(true);
+    // The default dimension may be required.
+    expect(axisRequiredFor({ ...DEFAULT, required: true }, 'capex')).toBe(true);
   });
 
   it('builds the list field key of a dimension without a colon', () => {

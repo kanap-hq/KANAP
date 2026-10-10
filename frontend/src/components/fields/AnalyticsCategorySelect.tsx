@@ -25,6 +25,8 @@ type Props = {
   selectedOption?: Pick<AnalyticsValue, 'id' | 'name'> & Partial<AnalyticsValue> | null;
   /** Offers only the values this kind of line may use. A held value of the other type still shows. */
   lineType?: LineType;
+  /** The value can be changed but not removed (a required dimension on a line holding a value). */
+  disableClearable?: boolean;
 };
 
 /** One dimension's values. The list holds enabled values; the current value stays shown when it is disabled. */
@@ -40,6 +42,7 @@ export default function AnalyticsCategorySelect({
   textFieldSx,
   selectedOption,
   lineType,
+  disableClearable = false,
 }: Props) {
   const { t } = useTranslation(['master-data', 'common']);
   const needsAxisLabel = label === undefined && !hideLabel;
@@ -109,8 +112,10 @@ export default function AnalyticsCategorySelect({
         />
       )}
       disabled={disabled}
+      disableClearable={disableClearable}
       clearOnBlur
-      clearOnEscape
+      // Escape clears the value even with `disableClearable`.
+      clearOnEscape={!disableClearable}
       noOptionsText={picker.loading ? t('common:status.loading') : t('analytics.noOptions')}
       fullWidth
     />

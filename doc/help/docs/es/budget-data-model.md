@@ -32,7 +32,7 @@ Los archivos descritos aquí son el contrato en el que apoyarse. Sus columnas es
 | | Moneda, entre las monedas permitidas | Una |
 | | Centro de coste | Ninguno o uno. No se puede usar un grupo |
 | | Proveedor | Ninguno o uno |
-| | Valor de cada dimensión analítica activa | Ninguno o uno por dimensión |
+| | Valor de cada dimensión analítica activa | Ninguno o uno por dimensión. Uno en una línea nueva para una dimensión obligatoria |
 | | Responsable de IT y responsable de negocio (usuarios) | Ninguno o uno cada uno |
 | | Años presupuestarios | Uno por año |
 | Año presupuestario de una partida | Columnas presupuestarias | Cinco, cada una con doce importes mensuales |
@@ -71,7 +71,7 @@ Una partida vive varios años: una licencia de tres años es una partida con tre
 | Cuenta | `account_number` | Sí | En el plan de cuentas de la empresa pagadora |
 | Centro de coste | `cost_center_code` | No | Se rechaza un grupo |
 | Run o build | `run_build` | No | `run` o `build` |
-| Valores analíticos | `analytics:<code>` | No | Una columna por dimensión activa usada para el tipo del archivo |
+| Valores analíticos | `analytics:<code>` | Para una dimensión obligatoria | Una columna por dimensión activa usada para el tipo del archivo. Una dimensión obligatoria necesita un valor en una línea nueva |
 | Responsable de IT, responsable de negocio | `owner_it_email`, `owner_business_email` | No | Usuarios activos |
 | Proyecto | `project` | No | Un número de proyecto, por ejemplo `PRJ-3` |
 | Moneda | `currency` | Sí | Código ISO de tres letras |

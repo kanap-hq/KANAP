@@ -29,6 +29,8 @@ export type KanapDialogProps = {
   saveVariant?: ButtonProps['variant'];
   saveDisabled?: boolean;
   saveLoading?: boolean;
+  /** The main action takes the focus when the dialog opens (its answer is the safe one). */
+  saveAutoFocus?: boolean;
   /** Defaults to the localized "Cancel"; pass one only for a non-standard label. */
   cancelLabel?: string;
   showCancel?: boolean;
@@ -63,12 +65,14 @@ export default function KanapDialog({
   saveVariant = 'action-primary',
   saveDisabled = false,
   saveLoading = false,
+  saveAutoFocus = false,
   cancelLabel,
   showCancel = true,
   sx,
 }: KanapDialogProps) {
   const { t } = useTranslation('common');
   const resolvedCancelLabel = cancelLabel ?? t('buttons.cancel');
+  const saveButtonRef = React.useRef<HTMLButtonElement>(null);
   const handleSubmit = React.useCallback((event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (saveDisabled || saveLoading) return;
@@ -81,7 +85,12 @@ export default function KanapDialog({
       onClose={onClose}
       fullWidth
       maxWidth={false}
-      TransitionProps={onExited ? { onExited } : undefined}
+      TransitionProps={onExited || saveAutoFocus ? {
+        ...(onExited ? { onExited } : {}),
+        // The modal's focus trap takes the focus back to the dialog itself
+        // when it opens, after the button's autoFocus: focus it once shown.
+        ...(saveAutoFocus ? { onEntered: () => saveButtonRef.current?.focus() } : {}),
+      } : undefined}
       BackdropProps={{
         sx: (theme: Theme) => ({
           bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.65)' : 'rgba(15, 17, 23, 0.45)',
@@ -177,7 +186,9 @@ export default function KanapDialog({
           ) : null}
           {secondaryActions}
           <Button
+            ref={saveButtonRef}
             type="submit"
+            autoFocus={saveAutoFocus}
             variant={saveVariant}
             disabled={saveDisabled || saveLoading}
             startIcon={saveLoading ? <CircularProgress color="inherit" size={14} /> : undefined}

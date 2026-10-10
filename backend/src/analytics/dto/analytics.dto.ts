@@ -1,4 +1,4 @@
-import { ArrayMaxSize, IsArray, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 import { StatusLifecycleDto } from '../../common/dto/status-lifecycle.dto';
 import { AXIS_APPLIES_TO, AxisAppliesTo } from '../analytics-axis.entity';
 
@@ -28,6 +28,11 @@ export class AnalyticsAxisCreateDto extends StatusLifecycleDto {
   @IsOptional()
   @IsIn(AXIS_APPLIES_TO)
   applies_to?: AxisAppliesTo | null;
+
+  /** A new line must hold a value on it; absent leaves it unchanged. */
+  @IsOptional()
+  @IsBoolean()
+  required?: boolean;
 }
 
 export class AnalyticsAxisUpdateDto extends StatusLifecycleDto {
@@ -53,6 +58,11 @@ export class AnalyticsAxisUpdateDto extends StatusLifecycleDto {
   @IsOptional()
   @IsIn(AXIS_APPLIES_TO)
   applies_to?: AxisAppliesTo | null;
+
+  /** A new line must hold a value on it; absent leaves it unchanged. */
+  @IsOptional()
+  @IsBoolean()
+  required?: boolean;
 }
 
 export class AnalyticsCategoryCreateDto extends StatusLifecycleDto {

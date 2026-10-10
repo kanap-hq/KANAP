@@ -12,12 +12,13 @@ import { isReportView, useListFilters, writeListSnapshot } from '../../hooks/use
 import { STATUS_SCOPE_PARAM } from '../../utils/statusScopeParams';
 import { compactListSearchCached } from '../../lib/listContext';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
-import { isHiddenAxis, useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
+import { axisRequiredFor, isHiddenAxis, useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import { dimensionFieldPredicate, explicitSort, filtersStringOnShownColumns } from '../../components/finance/amountColumns';
 import useAutosave, { autosaveErrorMessage, useAutosaveRegistry } from '../../hooks/useAutosave';
 import { sendPatchBuffer, useSharedPatchBuffer } from '../../hooks/patchBuffer';
 import { ConflictChoice, EditConflict, conflictCompanions, useEditConflicts, useOtherConflictTargets } from '../../hooks/editConflicts';
 import { useLeaveGuard } from '../../hooks/leaveGuard';
+import { useRequiredDimensionsLeave } from '../../hooks/useRequiredDimensionsLeave';
 import EditConflictBanner, { OtherConflictsNotice } from '../../components/workspace/EditConflictBanner';
 import OthersChangesNotice from '../../components/workspace/OthersChangesNotice';
 import { useLineOthersChanges } from '../../components/finance/useLineOthersChanges';
@@ -249,6 +250,9 @@ const composerSx = {
   },
 } as const;
 
+/** A move off the line, once pending edits are handled: all saved, dropped by the user's choice, or stay. */
+type FlushOutcome = 'saved' | 'dropped' | 'stay';
+
 export default function CapexItemPage() {
   const { t, i18n } = useTranslation(['ops', 'common']);
   const locale = i18n.resolvedLanguage || i18n.language || 'en';
@@ -445,7 +449,7 @@ export default function CapexItemPage() {
 
   const dialogs = useKanapDialogs();
   const autosaveRegistry = useAutosaveRegistry();
-  const { profile } = useAuth();
+  const { profile, hasLevel } = useAuth();
   // Fields edited and not saved yet, each with the line it was edited on (the page
   // stays mounted from one line to the next): a field only ever goes to its own line.
   // Each also keeps the value the screen showed when its edit began (its base, lot 3C):
@@ -472,6 +476,17 @@ export default function CapexItemPage() {
   dataRef.current = data;
   const formRef = React.useRef(form);
   formRef.current = form;
+  const rootRef = React.useRef<HTMLDivElement | null>(null);
+  // A line changed during this visit and left without a value on a required dimension: leaving asks (lot D2).
+  const requiredLeave = useRequiredDimensionsLeave({
+    scope: 'capex',
+    lineId: isCreate ? null : idParam,
+    canEdit: hasLevel('capex', 'member'),
+    axes: analyticsAxes,
+    values: () => formRef.current.analytics_values,
+    root: rootRef,
+  });
+  const { noteChange: noteLineChange, isBusy: requiredMissing, confirm: confirmRequired } = requiredLeave;
   // The form from the server copy, except the fields edited and not saved yet
   // (buffered, being sent, or waiting for a conflict choice): they keep the
   // user's values, newer than the server's.
@@ -557,6 +572,7 @@ export default function CapexItemPage() {
   // answer is retried, a refusal shows the stored value again, a conflict asks the user.
   const patchNow = React.useCallback(async (patch: Partial<CapexForm>) => {
     if (isCreate || !uuid || stale) return;
+    noteLineChange();
     const base = baseFor(patch);
     setForm((prev) => mergePatch(prev, patch));
     setSaveError(null);
@@ -570,7 +586,7 @@ export default function CapexItemPage() {
     if (!toSend) return;
     autosave.schedule(flushPending);
     await autosave.flush();
-  }, [isCreate, uuid, stale, baseFor, patchBuffer, autosave, flushPending]);
+  }, [isCreate, uuid, stale, noteLineChange, baseFor, patchBuffer, autosave, flushPending]);
 
   // The server refuses a company on another chart of accounts than the line's account, and the
   // account picker only lists the current company's chart: clear the account in the same write,
@@ -596,11 +612,12 @@ export default function CapexItemPage() {
 
   const patchDebounced = React.useCallback((patch: Partial<CapexForm>) => {
     if (isCreate || !uuid || stale) return;
+    noteLineChange();
     const base = baseFor(patch);
     setForm((prev) => mergePatch(prev, patch));
     // Typed in a field waiting for a choice: it stays with it, nothing is saved yet.
     if (patchBuffer.add(uuid, patch, base)) autosave.schedule(flushPending);
-  }, [isCreate, uuid, stale, autosave, flushPending, patchBuffer, baseFor]);
+  }, [isCreate, uuid, stale, noteLineChange, autosave, flushPending, patchBuffer, baseFor]);
 
   // ----- Edit conflicts (lot 3C): someone else changed a field being saved -----
   const resolveConflict = React.useCallback((field: string, choice: ConflictChoice) => {
@@ -634,7 +651,6 @@ export default function CapexItemPage() {
 
   // After the last choice the banner goes: the focus moves to the field, or to the workspace's
   // content column (keyboard scrolling works from there), never to the page's body.
-  const rootRef = React.useRef<HTMLDivElement | null>(null);
   const notesInputRef = React.useRef<HTMLTextAreaElement | null>(null);
   const returnFocus = React.useCallback((field: string) => {
     const input = field === 'notes' ? notesInputRef.current : null;
@@ -763,12 +779,12 @@ export default function CapexItemPage() {
   // trap the user on the line: leaving is offered, and drops what could not be saved.
   // `keepChoices` (a tab change, opening the line a choice waits on): the page stays, so an edit
   // waiting for a choice neither stops the move nor is dropped; only a failed save asks.
-  const flushOrLeave = React.useCallback(async (options?: { keepChoices?: boolean }): Promise<boolean> => {
+  const flushOrAsk = React.useCallback(async (options?: { keepChoices?: boolean }): Promise<FlushOutcome> => {
     const keepChoices = !!options?.keepChoices;
-    if (await flushAll({ ignoreHeld: keepChoices })) return true;
+    if (await flushAll({ ignoreHeld: keepChoices })) return 'saved';
     const unsaved = keepChoices ? autosave.isSaving() || tabUnsaved() : unsavedWork();
     // Nothing left unsaved (the save was refused and the screen reloaded): stay, the message shows why.
-    if (!unsaved) return false;
+    if (!unsaved) return 'stay';
     const elsewhere = patchBuffer.conflictTargets().filter((lineId) => lineId !== uuid);
     // Leaving the line drops a budget or allocation choice still waiting: the warning names it.
     const columns = keepChoices ? [] : budgetChoices();
@@ -785,7 +801,7 @@ export default function CapexItemPage() {
       confirmLabel: t('common:autosave.leaveConfirm'),
       intent: 'danger',
     });
-    if (!leave) return false;
+    if (!leave) return 'stay';
     autosaveRegistry.discardAll();
     // The budget and allocation choices kept for the line are lost with it.
     if (!keepChoices) {
@@ -795,11 +811,26 @@ export default function CapexItemPage() {
     patchBuffer.discard({ keepChoices });
     setSaveError(null);
     if (dataRef.current) syncForm(dataRef.current);
-    return true;
+    return 'dropped';
   }, [flushAll, autosave, tabUnsaved, unsavedWork, patchBuffer, uuid, t, lineRef, dialogs, autosaveRegistry, syncForm, budgetChoices, allocationChoice, heldChoices, locale]);
 
+  const flushOrLeave = React.useCallback(async (options?: { keepChoices?: boolean }): Promise<boolean> => (
+    (await flushOrAsk(options)) !== 'stay'
+  ), [flushOrAsk]);
+
+  // Leaving the line: what is not saved first, then a required dimension left without a value.
+  // One question per move: a user who already chose to leave and drop their edits is not asked
+  // again. A tab change keeps the line and does not ask about the dimension.
+  const leaveLine = React.useCallback(async (options?: { keepChoices?: boolean }): Promise<boolean> => {
+    const outcome = await flushOrAsk(options);
+    if (outcome === 'stay') return false;
+    if (outcome === 'dropped') return true;
+    return confirmRequired();
+  }, [flushOrAsk, confirmRequired]);
+  const leaveAsks = React.useCallback(() => unsavedWork() || requiredMissing(), [unsavedWork, requiredMissing]);
+
   // A link of the app (left menu, top bar, user menu) asks the same as the close button.
-  useLeaveGuard(unsavedWork, flushOrLeave);
+  useLeaveGuard(leaveAsks, leaveLine);
 
   const goToTab = React.useCallback(async (nextTab: TabKey) => {
     if (isCreate && nextTab !== 'overview') return;
@@ -810,24 +841,24 @@ export default function CapexItemPage() {
 
   // The line a choice waits on: going there keeps the choice.
   const openConflictLine = React.useCallback(async (lineId: string) => {
-    if (!(await flushOrLeave({ keepChoices: true }))) return;
+    if (!(await leaveLine({ keepChoices: true }))) return;
     const sp = buildListContextParams();
     navigate(`/ops/capex/${lineId}/${routeTab}?${sp.toString()}`);
-  }, [flushOrLeave, buildListContextParams, navigate, routeTab]);
+  }, [leaveLine, buildListContextParams, navigate, routeTab]);
 
   const confirmAndNavigate = React.useCallback(async (targetId: string | null) => {
     if (!targetId) return;
-    if (!(await flushOrLeave())) return;
+    if (!(await leaveLine())) return;
     const sp = buildListContextParams();
     navigate(`/ops/capex/${targetId}/${routeTab}?${sp.toString()}`);
-  }, [flushOrLeave, buildListContextParams, navigate, routeTab]);
+  }, [leaveLine, buildListContextParams, navigate, routeTab]);
 
   const closeWorkspace = React.useCallback(async () => {
-    if (!(await flushOrLeave())) return;
+    if (!(await leaveLine())) return;
     const sp = buildListContextParams();
     const qs = sp.toString();
     navigate(`/ops/capex${qs ? `?${qs}` : ''}`);
-  }, [flushOrLeave, buildListContextParams, navigate]);
+  }, [leaveLine, buildListContextParams, navigate]);
 
   const handleCreate = React.useCallback(async () => {
     if (createSubmitting) return; // Ctrl+S bypasses the disabled button — guard double-submit
@@ -850,6 +881,12 @@ export default function CapexItemPage() {
     }
     if (!createForm.account_id) {
       setSaveError(t('capex.editor.accountRequired'));
+      return;
+    }
+    // The server checks it too (and for every other source); the shown dimensions are the ones that apply.
+    const missingDimension = analyticsAxes.enabled.find((axis) => axisRequiredFor(axis, 'capex') && !createForm.analytics_values[axis.id]);
+    if (missingDimension) {
+      setSaveError(t('capex.editor.dimensionRequired', { name: analyticsAxes.label(missingDimension) }));
       return;
     }
 
@@ -984,6 +1021,7 @@ export default function CapexItemPage() {
         }}
         isCreate={isCreate}
         forceDrawerOpen={isCreate}
+        drawerOpenRequest={requiredLeave.drawerOpenRequest}
         nav={!isCreate && total > 0 ? {
           currentIndex: index + 1,
           totalCount: total,
@@ -1173,6 +1211,7 @@ export default function CapexItemPage() {
           </React.Suspense>
         </WorkspaceTabBoundary>
       </PortfolioDetailWorkspaceShell>
+      {requiredLeave.dialog}
     </Box>
   );
 }

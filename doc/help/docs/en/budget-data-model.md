@@ -32,7 +32,7 @@ The files described here are the contract to rely on. Their columns are document
 | | Currency, among the allowed currencies | One |
 | | Cost center | Zero or one. A group cannot be used |
 | | Supplier | Zero or one |
-| | Value of each enabled analytics dimension | Zero or one per dimension |
+| | Value of each enabled analytics dimension | Zero or one per dimension. One on a new line for a required dimension |
 | | IT owner and business owner (users) | Zero or one each |
 | | Budget years | One per year |
 | Budget year of a line | Budget columns | Five, each with twelve monthly amounts |
@@ -71,7 +71,7 @@ A line lives across years: a three-year licence is one line with three budget ye
 | Account | `account_number` | Yes | In the chart of accounts of the paying company |
 | Cost center | `cost_center_code` | No | A group is refused |
 | Run or build | `run_build` | No | `run` or `build` |
-| Analytics values | `analytics:<code>` | No | One column per enabled dimension used for the file's type |
+| Analytics values | `analytics:<code>` | For a required dimension | One column per enabled dimension used for the file's type. A required dimension needs a value on a new line |
 | IT owner, business owner | `owner_it_email`, `owner_business_email` | No | Active users |
 | Project | `project` | No | A project number such as `PRJ-3` |
 | Currency | `currency` | Yes | Three-letter ISO code |

@@ -628,7 +628,8 @@
       "order": "Orden",
       "description": "Descripción",
       "dimension": "Dimensión",
-      "lifecycle": "Ciclo de vida"
+      "lifecycle": "Ciclo de vida",
+      "required": "Obligatoria"
     },
     "hints": {
       "nameDefault": "Déjelo vacío para mostrar «{{label}}» en el idioma de cada persona.",
@@ -680,6 +681,25 @@
       "opex_other": "{{count}} líneas OPEX tienen este valor. Lo conservan, pero las nuevas líneas OPEX no pueden elegirlo."
     },
     "showLines": "Mostrar estas líneas",
+    "required": {
+      "missing": {
+        "both": "{{opex}} y {{capex}} no tienen valor.",
+        "opex_one": "{{count}} línea OPEX no tiene valor.",
+        "opex_other": "{{count}} líneas OPEX no tienen valor.",
+        "capex_one": "{{count}} línea CAPEX no tiene valor.",
+        "capex_other": "{{count}} líneas CAPEX no tienen valor."
+      },
+      "showLines": {
+        "opex": "Mostrar las líneas OPEX",
+        "capex": "Mostrar las líneas CAPEX"
+      },
+      "disabledHint": "No se comprueba mientras la dimensión esté desactivada.",
+      "unusable": {
+        "opex": "Ningún valor activado se puede usar en líneas OPEX. No se pueden crear nuevas líneas OPEX.",
+        "capex": "Ningún valor activado se puede usar en líneas CAPEX. No se pueden crear nuevas líneas CAPEX.",
+        "both": "Ningún valor activado se puede usar en líneas OPEX o CAPEX. No se pueden crear nuevas líneas."
+      }
+    },
     "messages": {
       "loadFailed": "Error al cargar el valor.",
       "saveFailed": "Error al guardar el valor.",
