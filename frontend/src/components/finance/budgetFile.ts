@@ -102,6 +102,8 @@ export type BudgetFileReport = {
     duplicates: Array<{ line: number; message: string }>;
     ignoredColumns: string[];
     supplierNames: Array<{ line: number; message: string }>;
+    /** Cells the load does not read, by line and column (the description of a CAPEX line). */
+    ignoredCells: Array<{ line: number; column: string; message: string }>;
   };
   creates: {
     dimensionValues: Array<{ dimension: string; names: string[] }>;
