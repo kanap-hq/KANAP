@@ -18,7 +18,7 @@ import { PortfolioRequestUrl } from './portfolio-request-url.entity';
 import { PortfolioRequestAttachment } from './portfolio-request-attachment.entity';
 import { PortfolioRequestCapex } from './portfolio-request-capex.entity';
 import { PortfolioRequestOpex } from './portfolio-request-opex.entity';
-import { budgetLineIdsOfKind } from './project-budget-links.util';
+import { budgetLineIdsOfKind, OPEX_ITEMS_NOT_FOUND } from './project-budget-links.util';
 import { PortfolioRequestBusinessProcess } from './portfolio-request-business-process.entity';
 import { PortfolioRequestDependency } from './portfolio-request-dependency.entity';
 import { PortfolioProjectDependency } from './portfolio-project-dependency.entity';
@@ -1978,12 +1978,15 @@ export class PortfolioRequestsService {
     const repo = mg.getRepository(PortfolioRequestOpex);
     const actorId = this.requireActivityAuthor(opts?.userId);
 
-    const unique = Array.from(new Set((opexIds || []).filter(Boolean)));
+    // Stored ids are lower case: an upper-case id must compare equal to its stored twin.
+    const unique = Array.from(new Set((opexIds || []).filter(Boolean).map((id) => String(id).toLowerCase())));
     const request = await this.getRequestOrThrow(requestId, mg);
     // The request's links to OPEX lines only (`spend/budget-nature.ts`): a link to a line of another
-    // nature is neither replaced nor removed, and an id of such a line is not linked.
+    // nature is neither replaced nor removed. Every id given names an OPEX line of the tenant, or
+    // the request is refused before anything is written.
     const stored = await repo.find({ where: { request_id: requestId } });
     const opexLines = await budgetLineIdsOfKind(mg, 'opex', request.tenant_id, [...stored.map((e) => e.opex_id), ...unique]);
+    if (unique.some((id) => !opexLines.has(id))) throw new BadRequestException(OPEX_ITEMS_NOT_FOUND);
     const existing = stored.filter((e) => opexLines.has(e.opex_id));
     const beforeIds = Array.from(new Set(existing.map((e) => e.opex_id)));
 
@@ -1991,7 +1994,7 @@ export class PortfolioRequestsService {
     const existingSet = new Set(existing.map((e) => e.opex_id));
 
     const toInsert = unique
-      .filter((id) => !existingSet.has(id) && opexLines.has(id))
+      .filter((id) => !existingSet.has(id))
       .map((id) => repo.create({
         tenant_id: request.tenant_id,
         request_id: requestId,

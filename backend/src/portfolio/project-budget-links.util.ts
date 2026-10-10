@@ -21,12 +21,18 @@ const TABLES: Record<'opex' | 'capex', { table: string; itemFk: string; items: s
 
 export type ProjectBudgetLinkKind = keyof typeof TABLES;
 
+/** The refusal of a project's or request's OPEX links naming no OPEX line of the tenant (the applications' message). */
+export const OPEX_ITEMS_NOT_FOUND = 'One or more OPEX items were not found.';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
- * The ids among `ids` that name a line of the kind in the tenant: an OPEX link (of a project or
- * a request) names an OPEX line only, never a line of another nature.
+ * The ids among `ids` (lower case) that name a line of the kind in the tenant: an OPEX link (of a
+ * project or a request) names an OPEX line only, never a line of another nature. Not a UUID: not
+ * found.
  */
 export async function budgetLineIdsOfKind(manager: EntityManager, kind: ProjectBudgetLinkKind, tenantId: string, ids: Iterable<string>): Promise<Set<string>> {
-  const list = Array.from(new Set(Array.from(ids).filter(Boolean)));
+  const list = Array.from(new Set(Array.from(ids).filter((id) => !!id && UUID_RE.test(id)).map((id) => id.toLowerCase())));
   if (list.length === 0) return new Set();
   const t = TABLES[kind];
   const rows: Array<{ id: string }> = await manager.query(

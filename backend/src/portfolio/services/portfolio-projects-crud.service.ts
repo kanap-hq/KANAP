@@ -23,7 +23,7 @@ import { detectChanges, PROJECT_TRACKED_FIELDS, resolveDisplayNames } from '../.
 import { normalizeMarkdownRichText } from '../../common/markdown-rich-text';
 import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
 import { ParticipationAccessScope, projectParticipantCondition } from '../../auth/business-contributor-scope';
-import { budgetLineIdsOfKind, insertProjectBudgetLinks, lockProject } from '../project-budget-links.util';
+import { budgetLineIdsOfKind, insertProjectBudgetLinks, lockProject, OPEX_ITEMS_NOT_FOUND } from '../project-budget-links.util';
 
 /**
  * Service for core CRUD operations on portfolio projects.
@@ -943,22 +943,25 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     const repo = mg.getRepository(PortfolioProjectOpex);
     const actorId = this.requireActivityAuthor(opts?.userId);
 
-    const unique = Array.from(new Set((opexIds || []).filter(Boolean)));
+    // Stored ids are lower case: an upper-case id must compare equal to its stored twin.
+    const unique = Array.from(new Set((opexIds || []).filter(Boolean).map((id) => String(id).toLowerCase())));
     const project = await this.ensureProject(projectId, mg);
     // Two saves of the project's lines take turns (the last one wins) and the set is read
     // under the lock; a link the line side stored meanwhile is kept, never a unique
     // violation. See project-budget-links.util.ts.
     if (!(await lockProject(mg, project.tenant_id, projectId))) throw new NotFoundException('Project not found');
     // The project's links to OPEX lines only (`spend/budget-nature.ts`): a link to a line of another
-    // nature is neither replaced nor removed, and an id of such a line is not linked.
+    // nature is neither replaced nor removed. Every id given names an OPEX line of the tenant, or
+    // the request is refused before anything is written.
     const stored = await repo.find({ where: { project_id: projectId } });
     const opexLines = await budgetLineIdsOfKind(mg, 'opex', project.tenant_id, [...stored.map((e) => e.opex_id), ...unique]);
+    if (unique.some((id) => !opexLines.has(id))) throw new BadRequestException(OPEX_ITEMS_NOT_FOUND);
     const existing = stored.filter((e) => opexLines.has(e.opex_id));
     const beforeIds = Array.from(new Set(existing.map((e) => e.opex_id)));
 
     const toDelete = existing.filter((e) => !unique.includes(e.opex_id));
     const existingSet = new Set(existing.map((e) => e.opex_id));
-    const toInsert = unique.filter((id) => !existingSet.has(id) && opexLines.has(id));
+    const toInsert = unique.filter((id) => !existingSet.has(id));
 
     if (toDelete.length > 0) await repo.remove(toDelete);
     await insertProjectBudgetLinks(mg, 'opex', project.tenant_id, toInsert.map((itemId) => ({ projectId, itemId })));
