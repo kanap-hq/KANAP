@@ -3,9 +3,10 @@ import { DataSource, QueryRunner } from 'typeorm';
 
 /**
  * Read-only verification for migration 1853720000000 (budget totals per
- * version, kept by triggers in spend_version_totals / capex_version_totals).
+ * version, kept by triggers in spend_version_totals, the versions of the OPEX
+ * and CAPEX lines alike since lot Z1; the dormant capex_* tables are not read).
  *
- * Per tenant and item type it recomputes, from the amounts, the sums of the
+ * Per tenant and line nature it recomputes, from the amounts, the sums of the
  * five columns of each version over the months of its own budget year (NULL
  * as 0), as the list engine aggregated them, and compares them with the
  * stored rows, both ways. The invariant: a version with months in its year
@@ -31,7 +32,8 @@ import { DataSource, QueryRunner } from 'typeorm';
  *
  * A mismatch is repaired by recomputing the tenant's totals (the same function
  * the migration and the tenant import use), in a transaction with the tenant
- * set. The rebuild takes a SHARE lock on both amounts tables: it waits for
+ * set. Its `scope` column predates lot Z1: 'OPEX' is the spend_* family, the
+ * lines of both natures; 'CAPEX' the dormant capex_* tables (lot Z2 drops them). The rebuild takes a SHARE lock on both amounts tables: it waits for
  * the budget writes already running, and every budget write that comes after
  * waits behind it. Bound that wait with a lock_timeout, and retry when it
  * expires.
@@ -57,12 +59,34 @@ import { DataSource, QueryRunner } from 'typeorm';
 
 const MEASURES = ['planned', 'committed', 'forecast', 'actual', 'expected_landing'] as const;
 
-type Kind = { label: 'OPEX' | 'CAPEX'; items: string; versions: string; itemFk: string; amounts: string; totals: string; prefix: string };
+type Kind = {
+  label: 'OPEX' | 'CAPEX';
+  nature: 'opex' | 'capex';
+  items: string;
+  versions: string;
+  itemFk: string;
+  amounts: string;
+  totals: string;
+  prefix: string;
+  /** The number of a line as its nature shows it: an OPEX line's own, a CAPEX line's CPX number. */
+  number: string;
+};
 
+// One family of tables, both natures (lot Z1): each kind reads the versions of the lines of its nature.
 const KINDS: Kind[] = [
-  { label: 'OPEX', items: 'spend_items', versions: 'spend_versions', itemFk: 'spend_item_id', amounts: 'spend_amounts', totals: 'spend_version_totals', prefix: 'OPX' },
-  { label: 'CAPEX', items: 'capex_items', versions: 'capex_versions', itemFk: 'capex_item_id', amounts: 'capex_amounts', totals: 'capex_version_totals', prefix: 'CPX' },
+  {
+    label: 'OPEX', nature: 'opex', items: 'spend_items', versions: 'spend_versions', itemFk: 'spend_item_id',
+    amounts: 'spend_amounts', totals: 'spend_version_totals', prefix: 'OPX', number: 'i.item_number',
+  },
+  {
+    label: 'CAPEX', nature: 'capex', items: 'spend_items', versions: 'spend_versions', itemFk: 'spend_item_id',
+    amounts: 'spend_amounts', totals: 'spend_version_totals', prefix: 'CPX',
+    number: `COALESCE((substring(i.legacy_number FROM '^CPX-([0-9]+)$'))::int, i.item_number)`,
+  },
 ];
+
+/** ` JOIN` the version `v`'s line, of the kind's nature. */
+const lineOf = (kind: Kind, v: string) => `JOIN ${kind.items} li ON li.tenant_id = ${v}.tenant_id AND li.id = ${v}.${kind.itemFk} AND li.nature = '${kind.nature}'`;
 
 const SHOWN_PER_KIND = 20;
 
@@ -89,17 +113,17 @@ async function resolveTenants(runner: QueryRunner): Promise<TenantRow[]> {
 
 async function migrated(runner: QueryRunner): Promise<boolean> {
   const [row] = await runner.query(
-    `SELECT to_regclass('spend_version_totals') IS NOT NULL AND to_regclass('capex_version_totals') IS NOT NULL AS present`,
+    `SELECT to_regclass('spend_version_totals') IS NOT NULL AS present`,
   );
   return row?.present === true;
 }
 
 /** The triggers the totals rely on that are missing or do not fire on the app's writes (`tgenabled` D or R). */
 async function inspectTriggers(runner: QueryRunner): Promise<string[]> {
-  const expected = KINDS.flatMap((kind) => [
-    ...['insert', 'update', 'delete', 'truncate'].map((event) => ({ table: kind.amounts, name: `${kind.amounts}_version_totals_${event}` })),
-    { table: kind.versions, name: `${kind.versions}_budget_year_guard` },
-  ]);
+  const expected = [
+    ...['insert', 'update', 'delete', 'truncate'].map((event) => ({ table: 'spend_amounts', name: `spend_amounts_version_totals_${event}` })),
+    { table: 'spend_versions', name: 'spend_versions_budget_year_guard' },
+  ];
   const problems: string[] = [];
   for (const { table, name } of expected) {
     const [row] = await runner.query(
@@ -134,6 +158,7 @@ async function inspectKind(runner: QueryRunner, tenantId: string, kind: Kind): P
        SELECT a.version_id, count(*)::int AS months, ${sums}
          FROM ${kind.amounts} a
          JOIN ${kind.versions} v ON v.id = a.version_id AND v.tenant_id = a.tenant_id
+         ${lineOf(kind, 'v')}
         WHERE a.tenant_id = $1
           AND EXTRACT(YEAR FROM a.period) = v.budget_year
         GROUP BY a.version_id
@@ -141,9 +166,11 @@ async function inspectKind(runner: QueryRunner, tenantId: string, kind: Kind): P
      stored AS (
        SELECT t.version_id, ${MEASURES.map((m) => `t.${m}`).join(', ')}
          FROM ${kind.totals} t
+         JOIN ${kind.versions} v ON v.id = t.version_id AND v.tenant_id = t.tenant_id
+         ${lineOf(kind, 'v')}
         WHERE t.tenant_id = $1
      )
-     SELECT '${kind.prefix}-' || i.item_number AS ref,
+     SELECT '${kind.prefix}-' || ${kind.number} AS ref,
             coalesce(e.version_id, s.version_id) AS version_id, v.budget_year,
             coalesce(e.months, 0) AS months, (s.version_id IS NULL) AS missing,
             ${MEASURES.map((m) => `coalesce(e.${m}, 0)::text AS expected_${m}, s.${m}::text AS stored_${m}`).join(', ')}
@@ -152,14 +179,15 @@ async function inspectKind(runner: QueryRunner, tenantId: string, kind: Kind): P
        LEFT JOIN ${kind.versions} v ON v.tenant_id = $1 AND v.id = coalesce(e.version_id, s.version_id)
        LEFT JOIN ${kind.items} i ON i.tenant_id = $1 AND i.id = v.${kind.itemFk}
       WHERE s.version_id IS NULL OR ${expectedOrZero} IS DISTINCT FROM ${storedValues}
-      ORDER BY i.item_number NULLS LAST, v.budget_year, 2`,
+      ORDER BY ${kind.number} NULLS LAST, v.budget_year, 2`,
     [tenantId],
   );
   const [counts] = await runner.query(
-    `SELECT (SELECT count(*)::int FROM ${kind.versions} WHERE tenant_id = $1) AS versions,
-            (SELECT count(*)::int FROM ${kind.amounts} WHERE tenant_id = $1) AS months,
-            (SELECT count(*)::int FROM ${kind.totals} WHERE tenant_id = $1) AS totals,
+    `SELECT (SELECT count(*)::int FROM ${kind.versions} v ${lineOf(kind, 'v')} WHERE v.tenant_id = $1) AS versions,
+            (SELECT count(*)::int FROM ${kind.amounts} a JOIN ${kind.versions} v ON v.id = a.version_id AND v.tenant_id = a.tenant_id ${lineOf(kind, 'v')} WHERE a.tenant_id = $1) AS months,
+            (SELECT count(*)::int FROM ${kind.totals} t JOIN ${kind.versions} v ON v.id = t.version_id AND v.tenant_id = t.tenant_id ${lineOf(kind, 'v')} WHERE t.tenant_id = $1) AS totals,
             (SELECT count(*)::int FROM ${kind.totals} t
+              JOIN ${kind.versions} tv ON tv.id = t.version_id AND tv.tenant_id = t.tenant_id ${lineOf(kind, 'tv')}
               WHERE t.tenant_id = $1 AND (${MEASURES.map((m) => `t.${m}`).join(', ')}) = (${MEASURES.map(() => '0').join(', ')})
                 AND NOT EXISTS (
                   SELECT 1 FROM ${kind.amounts} a JOIN ${kind.versions} v ON v.id = a.version_id AND v.tenant_id = a.tenant_id
