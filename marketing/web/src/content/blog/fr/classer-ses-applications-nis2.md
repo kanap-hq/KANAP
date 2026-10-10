@@ -47,11 +47,11 @@ Modifier un référentiel ne déplace jamais une application et n'invalide aucun
 
 Classer quarante ou deux cents applications prend des semaines. La tuile **Conformité** du tableau de bord dit où en est la campagne : combien d'applications sont revues, à revoir, à compléter. En dessous, trois points d'attention : les applications les plus critiques sans test de reprise depuis douze mois, celles sans vague de reprise, et celles qui portent les données les plus confidentielles avec la criticité cyber la plus faible. Chaque chiffre ouvre la liste des applications concernées.
 
-![La tuile Conformité : avancement de la campagne et points d'attention](/screenshots/blog/compliance-tile-2026-10.png)
+![La tuile Conformité : avancement de la campagne et points d'attention](/screenshots/blog/compliance-tile-2026-10b.png)
 
 La revue n'est pas un tampon annuel. Dès qu'une criticité, une vague, un objectif de reprise ou la résidence des données change après la revue, l'application repasse « À revoir ». La liste des applications affiche les mêmes champs en colonnes, avec des filtres, et s'exporte en CSV pour l'auditeur.
 
-![La liste des applications triée par criticité business, avec la criticité cyber, la vague, le RTO, le RPO et l'état de la revue](/screenshots/blog/compliance-applications-2026-10.png)
+![La liste des applications triée par criticité business, avec la criticité cyber, la vague, le RTO, le RPO et l'état de la revue](/screenshots/blog/compliance-applications-2026-10b.png)
 
 ## Ce qu'un référentiel apporte de plus qu'un tableur
 

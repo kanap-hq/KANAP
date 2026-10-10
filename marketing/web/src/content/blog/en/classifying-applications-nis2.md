@@ -47,11 +47,11 @@ Changing a catalog never moves an application to another level and never invalid
 
 Classifying forty or two hundred applications takes weeks. The **Compliance** tile of the dashboard shows where the campaign stands: how many applications are reviewed, need a review, or are still to complete. Below, three attention points: the most critical applications without a recovery test in the last twelve months, those without a recovery wave, and those holding the most confidential data with the lowest cyber criticality. Each number opens the matching list of applications.
 
-![The Compliance tile: campaign progress and attention points](/screenshots/blog/compliance-tile-2026-10.png)
+![The Compliance tile: campaign progress and attention points](/screenshots/blog/compliance-tile-2026-10b.png)
 
 The review is not a yearly stamp. As soon as a criticality, a wave, a recovery objective or the data residency changes after the review, the application goes back to "Review needed". The application list shows the same fields as columns, with filters, and exports to CSV for the auditor.
 
-![The application list sorted by business criticality, with cyber criticality, wave, RTO, RPO and review state](/screenshots/blog/compliance-applications-2026-10.png)
+![The application list sorted by business criticality, with cyber criticality, wave, RTO, RPO and review state](/screenshots/blog/compliance-applications-2026-10b.png)
 
 ## What a governed record adds to a spreadsheet
 
