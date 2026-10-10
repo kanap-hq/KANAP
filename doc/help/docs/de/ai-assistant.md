@@ -78,7 +78,7 @@ Die Eingabe von `@` öffnet die **Erwähnungsauswahl** über dem Eingabefeld. Da
   - `@DOC` — aktuelle Wissensdokumente
   - `@APP backup` — Anwendungen, die zu „backup“ passen
   - `@PRJ`, `@REQ`, `@INC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@CPX`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
-- **Klartext**: alles andere (`@payroll`, `@server-2`) startet eine typübergreifende Suche, sortiert nach Relevanz.
+- **Klartext**: alles andere (`@payroll`, `@server-2`) startet eine typübergreifende Suche, sortiert nach Relevanz. Sie findet auch OPEX- und CAPEX-Zeilen über die Namen ihrer Analysewerte.
 
 Verwenden Sie die Pfeiltasten, um durch die Vorschläge zu navigieren, **Eingabe** oder **Tab** zum Bestätigen und **Escape**, um die Auswahl zu schließen. Die Ergebnisse sind nach Entitätstyp gruppiert (Wissen, Aufgaben, Projekte, Anwendungen, Assets, Verträge usw.), sodass Sie auf einen Blick erkennen, welche Art von Datensatz Sie einfügen.
 
@@ -108,6 +108,8 @@ Wenn der Stream endet, springt der Fokus zurück zum Eingabefeld, sodass Sie die
 ### Tool-Aufrufe
 
 Plaid verwendet eine kleine Auswahl interner Tools, um Fragen zu beantworten: `Search all`, `Search knowledge`, `Get document`, `Get entity context` und einige weitere. Jeder Tool-Aufruf erscheint als kompakte Zeile unter der Nachricht („Alles durchsuchen verwendet · 8 Ergebnisse“). In der Regel müssen Sie die Tool-Details nicht lesen, aber sie sind vorhanden, falls Sie genau sehen möchten, auf welchen Datensätzen die Antwort beruht.
+
+`Search all` findet OPEX- und CAPEX-Zeilen über die Namen ihrer Analysewerte und teilt Plaid mit, welche Werte jede Zeile hat.
 
 ## Artefakte und Vorschauen
 

@@ -78,7 +78,7 @@ La saisie de `@` ouvre le **sélecteur de mentions** au-dessus du composeur. Il 
   - `@DOC` — les documents récents de la base de connaissances
   - `@APP backup` — les applications correspondant à « backup »
   - `@PRJ`, `@REQ`, `@INC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@CPX`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
-- **Texte libre** : tout le reste (`@payroll`, `@server-2`) lance une recherche multi-types classée par pertinence.
+- **Texte libre** : tout le reste (`@payroll`, `@server-2`) lance une recherche multi-types classée par pertinence. Elle trouve aussi les lignes OPEX et CAPEX par le nom de leurs valeurs analytiques.
 
 Utilisez les touches fléchées pour parcourir les suggestions, **Entrée** ou **Tab** pour confirmer, **Échap** pour fermer le sélecteur. Les résultats sont regroupés par type d'entité (Base de connaissances, Tâches, Projets, Applications, Actifs, Contrats, etc.) afin que vous sachiez d'un coup d'œil quel type d'enregistrement vous vous apprêtez à insérer.
 
@@ -108,6 +108,8 @@ Lorsque la diffusion se termine, le focus revient automatiquement sur le compose
 ### Appels d'outils
 
 Plaid utilise un petit ensemble d'outils internes pour répondre aux questions : `Search all`, `Search knowledge`, `Get document`, `Get entity context` et quelques autres. Chaque appel d'outil apparaît sous forme de ligne compacte sous le message (« a utilisé Search all · 8 résultats »). Vous n'avez généralement pas besoin de lire les détails de l'outil, mais ils sont là si vous voulez voir exactement sur quels enregistrements la réponse s'est appuyée.
+
+`Search all` trouve les lignes OPEX et CAPEX par le nom de leurs valeurs analytiques, et indique à Plaid les valeurs de chaque ligne.
 
 ## Artefacts et aperçus
 
