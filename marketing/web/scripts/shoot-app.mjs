@@ -277,6 +277,40 @@ const PAGES = {
       await sleep(1500); // let the chart redraw
     },
   },
+  // Budget feature page (October 2026), same standard: --out public/screenshots.
+  'budget-opex-grid': {
+    path: '/ops/opex',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      // Same columns as opex-list-filters, minus Task, so the 2026 amounts and their total show.
+      await clickText(page, 'button', 'Choose columns');
+      await page.waitForSelector('.MuiPopover-paper', { timeout: 10000 });
+      for (const label of ['Paying company', 'Contract', 'Allocation', 'Task']) await clickText(page, '.MuiPopover-paper label', label);
+      await page.keyboard.press('Escape');
+      await page.waitForFunction(
+        () => /\d/.test(document.querySelector('.ag-floating-bottom .ag-cell[col-id="yBudget"]')?.textContent || ''),
+        { timeout: 30000 },
+      );
+      await sleep(1000);
+    },
+  },
+  'budget-top-items': {
+    path: '/ops/reports/top-opex',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForReport(page);
+      await pickSelect(page, 'Chart type', 'Pie chart');
+      await hideControls(page, HIDDEN_DIMENSIONS);
+      await page.waitForSelector('.ag-charts-wrapper canvas', { timeout: 20000 }).catch(() => {});
+      // Frame the whole pie: bring the chart card to the top of the view.
+      await page.evaluate(() => {
+        const title = [...document.querySelectorAll('main *')].find((n) => !n.children.length && n.textContent?.trim() === 'Chart');
+        title?.scrollIntoView({ block: 'start' });
+      });
+      await sleep(1500);
+    },
+  },
   // Budget articles (October 2026), blog standard 1440 x 900, English UI.
   'opex-list-filters': {
     path: '/ops/opex',

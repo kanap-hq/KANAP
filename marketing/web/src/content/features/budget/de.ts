@@ -22,7 +22,7 @@ const content: FeatureContent = {
         'Spalten kopieren, zuerst als Probelauf',
         'Versionen einfrieren: Die genehmigte Version bleibt unverändert',
       ],
-      shotAlt: 'OPEX-Budgetraster mit Spalten pro Jahr',
+      shotAlt: 'OPEX-Liste mit den Beträgen 2026 und der Summenzeile',
     },
     {
       title: 'Eine Verrechnung, die jeder versteht',
@@ -34,7 +34,7 @@ const content: FeatureContent = {
         'Von Hand eingegebene Prozentsätze',
         'Eine Methode pro Jahr und pro Zeile',
       ],
-      shotAlt: 'Verteilungseditor einer Budgetzeile',
+      shotAlt: 'Eine Budgetzeile, nach Mitarbeiterzahl auf vier Gesellschaften verteilt',
     },
     {
       title: 'Mehrere Gesellschaften, mehrere Währungen, Konsolidierung',
@@ -46,7 +46,7 @@ const content: FeatureContent = {
         'Länderkontenpläne und Konsolidierungsplan',
         'Kostenstellen und Budgetverantwortliche',
       ],
-      shotAlt: 'Währungseinstellungen mit Wechselkursen',
+      shotAlt: 'Währungseinstellungen: Berichtswährung, zulässige Währungen und Wechselkurse',
     },
     {
       title: 'Ein Bericht für jede Frage',
@@ -58,7 +58,7 @@ const content: FeatureContent = {
         'Monatlicher Personalbestand, Kosten pro FTE und Tagessatz',
         'CSV-Export und Diagramme als Bild',
       ],
-      shotAlt: 'Verrechnungsbericht nach Gesellschaft',
+      shotAlt: 'Die 10 größten OPEX-Posten des Budgets 2026 als Kreisdiagramm',
     },
   ],
   more: {
@@ -68,6 +68,8 @@ const content: FeatureContent = {
       { title: 'Verträge und Fristen', body: 'Jahresbetrag, automatische Verlängerung, Kündigungsfrist und berechneter Kündigungstermin, mit den Budgetzeilen verknüpft.' },
       { title: 'Hin und zurück mit der Tabellenkalkulation', body: 'Exportieren Sie die Zeilen, bearbeiten Sie sie in Excel oder LibreOffice und importieren Sie die Datei zurück: KANAP schreibt nur die geänderten Zellen.' },
       { title: 'Beispieldaten', body: 'Ein Test füllt sich in einer Minute mit dem Budget von Fromage & Co, vier fiktiven Gesellschaften, damit Sie alles sehen, bevor Sie Ihr eigenes erfassen.' },
+      { title: 'Personal und Kosten pro FTE', body: 'Eine Zeile für externe Kräfte in Personen oder Tagen gibt ihre FTE an. Die Berichte zeigen daraus den Personalbestand Monat für Monat und die Kosten pro FTE oder den Tagessatz, nach Lieferant oder Kostenstelle.' },
+      { title: 'Eigene Analyseachsen', body: 'Legen Sie so viele Analysedimensionen an, wie Ihre Fragen verlangen (Bereich, Kostenart, Programm), jede mit eigenen Werten, für OPEX, CAPEX oder beides. Die Budgetberichte lassen sich danach filtern, mehrere gruppieren nach Dimension.' },
     ],
   },
   crossLinks: {

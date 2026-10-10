@@ -22,7 +22,7 @@ const content: FeatureContent = {
         'Column copy with a dry run first',
         'Version freeze: the approved version stays put',
       ],
-      shotAlt: 'OPEX budget grid with columns per year',
+      shotAlt: 'OPEX list with the 2026 amounts and the totals row',
     },
     {
       title: 'Chargeback everyone understands',
@@ -34,7 +34,7 @@ const content: FeatureContent = {
         'Percentages typed by hand',
         'One method per year and per line',
       ],
-      shotAlt: 'Allocation editor of a budget line',
+      shotAlt: 'A budget line split across four companies by headcount',
     },
     {
       title: 'Multi-company, multi-currency, consolidation',
@@ -46,7 +46,7 @@ const content: FeatureContent = {
         'Country charts of accounts and a consolidation chart',
         'Cost centers and budget holders',
       ],
-      shotAlt: 'Currency settings with exchange rates',
+      shotAlt: 'Currency settings: reporting currency, allowed currencies and exchange rates',
     },
     {
       title: 'A report for every question',
@@ -58,7 +58,7 @@ const content: FeatureContent = {
         'Monthly staffing, cost per FTE and daily rate',
         'CSV export and chart images',
       ],
-      shotAlt: 'Chargeback report by company',
+      shotAlt: 'Top 10 OPEX items of the 2026 budget, as a pie chart',
     },
   ],
   more: {
@@ -68,6 +68,8 @@ const content: FeatureContent = {
       { title: 'Contracts and deadlines', body: 'Yearly amount, auto-renewal, notice period and a computed cancellation deadline, linked to the budget lines.' },
       { title: 'Round trip with your spreadsheet', body: 'Export the lines, edit them in Excel or LibreOffice, import the file back: KANAP writes only the cells that changed.' },
       { title: 'Sample data', body: 'A trial fills up in a minute with the budget of Fromage & Co, four fictional companies, so you can see everything before entering yours.' },
+      { title: 'Headcount and cost per FTE', body: 'A contractor line in people or days declares its FTE. Reports turn it into month-by-month headcount and cost per FTE, or the daily rate, by supplier or by cost center.' },
+      { title: 'Your own analysis axes', body: 'Create as many analytics dimensions as your questions need (domain, cost nature, programme), each with its own values, for OPEX, CAPEX or both. Budget reports filter on them, and several group by dimension.' },
     ],
   },
   crossLinks: {

@@ -3,11 +3,11 @@ export const HOME_SCREENSHOT = '/screenshots/home-dashboard.png';
 export const HOME_HERO_SCREENSHOTS = {
   main: '/screenshots/ai-conversation.png',
   map: '/screenshots/it-interface-map.png',
-  budget: '/screenshots/budget-chargeback.png',
+  budget: '/screenshots/budget-top-items.png',
 } as const;
 
 export const FEATURE_HUB_SCREENSHOTS = [
-  '/screenshots/budget-chargeback.png',
+  '/screenshots/budget-top-items.png',
   '/screenshots/it-interface-map.png',
   '/screenshots/portfolio-capacity.png',
   '/screenshots/ai-conversation.png',
@@ -20,7 +20,7 @@ export const FEATURE_SCREENSHOTS = {
     '/screenshots/budget-opex-grid.png',
     '/screenshots/budget-allocations.png',
     '/screenshots/budget-currency.png',
-    '/screenshots/budget-chargeback.png',
+    '/screenshots/budget-top-items.png',
   ],
   'it-landscape': [
     '/screenshots/it-applications.png',

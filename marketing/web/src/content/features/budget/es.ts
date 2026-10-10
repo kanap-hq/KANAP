@@ -22,7 +22,7 @@ const content: FeatureContent = {
         'Copia de columnas con simulación previa',
         'Congelación de versiones: la versión aprobada no se mueve',
       ],
-      shotAlt: 'Cuadrícula de presupuesto OPEX con columnas por año',
+      shotAlt: 'Lista OPEX con los importes de 2026 y la fila de totales',
     },
     {
       title: 'Una repercusión que todos entienden',
@@ -34,7 +34,7 @@ const content: FeatureContent = {
         'Porcentajes introducidos a mano',
         'Un método por año y por línea',
       ],
-      shotAlt: 'Editor de reparto de una línea de presupuesto',
+      shotAlt: 'Una línea de presupuesto repartida entre cuatro sociedades por plantilla',
     },
     {
       title: 'Multisociedad, multidivisa, consolidación',
@@ -46,7 +46,7 @@ const content: FeatureContent = {
         'Planes de cuentas por país y plan de consolidación',
         'Centros de coste y responsables presupuestarios',
       ],
-      shotAlt: 'Configuración de divisas con tipos de cambio',
+      shotAlt: 'Configuración de divisas: divisa de reporting, divisas permitidas y tipos de cambio',
     },
     {
       title: 'Un informe para cada pregunta',
@@ -58,7 +58,7 @@ const content: FeatureContent = {
         'Plantilla mensual, coste por FTE y tarifa diaria',
         'Exportación CSV e imágenes de los gráficos',
       ],
-      shotAlt: 'Informe de repercusión por sociedad',
+      shotAlt: 'Las 10 mayores partidas OPEX del presupuesto 2026, en gráfico circular',
     },
   ],
   more: {
@@ -68,6 +68,8 @@ const content: FeatureContent = {
       { title: 'Contratos y plazos', body: 'Importe anual, renovación automática, preaviso y fecha límite de rescisión calculada, vinculados a las líneas de presupuesto.' },
       { title: 'Ida y vuelta con la hoja de cálculo', body: 'Exporte las líneas, edítelas en Excel o LibreOffice y vuelva a importar el archivo: KANAP solo escribe las celdas que han cambiado.' },
       { title: 'Datos de ejemplo', body: 'Una prueba se llena en un minuto con el presupuesto de Fromage & Co, cuatro sociedades ficticias, para verlo todo antes de introducir el suyo.' },
+      { title: 'Plantilla y coste por FTE', body: 'Una línea de personal externo en personas o días declara sus FTE. Los informes muestran la plantilla mes a mes y el coste por FTE, o la tarifa diaria, por proveedor o por centro de coste.' },
+      { title: 'Sus propios ejes de análisis', body: 'Cree tantas dimensiones analíticas como pidan sus preguntas (dominio, naturaleza de coste, programa), cada una con sus valores, para OPEX, CAPEX o ambos. Los informes de presupuesto se filtran por ellas, y varios agrupan por dimensión.' },
     ],
   },
   crossLinks: {

@@ -22,7 +22,7 @@ const content: FeatureContent = {
         'Copie de colonnes avec essai à blanc, puis copie',
         'Gel des versions : la version validée ne bouge plus',
       ],
-      shotAlt: 'Grille budgétaire OPEX avec colonnes par année',
+      shotAlt: 'Liste OPEX avec les montants 2026 et la ligne de totaux',
     },
     {
       title: 'Une refacturation que chacun comprend',
@@ -34,7 +34,7 @@ const content: FeatureContent = {
         'Pourcentages saisis à la main',
         'Une méthode par année et par ligne',
       ],
-      shotAlt: 'Éditeur de ventilation d’une ligne de budget',
+      shotAlt: 'Ventilation d’une ligne de budget entre quatre sociétés, à l’effectif',
     },
     {
       title: 'Multi-sociétés, multi-devises, consolidation',
@@ -46,7 +46,7 @@ const content: FeatureContent = {
         'Plans de comptes par pays et plan de consolidation',
         'Centres de coûts et responsables budgétaires',
       ],
-      shotAlt: 'Paramètres de devises avec taux de change',
+      shotAlt: 'Paramètres de devises : devise de reporting, devises autorisées et taux de change',
     },
     {
       title: 'Des rapports pour chaque question',
@@ -58,7 +58,7 @@ const content: FeatureContent = {
         'Effectifs par mois, coût par ETP et taux journalier',
         'Export CSV et images des graphiques',
       ],
-      shotAlt: 'Rapport de refacturation par société',
+      shotAlt: 'Top 10 des postes OPEX du budget 2026, en camembert',
     },
   ],
   more: {
@@ -68,6 +68,8 @@ const content: FeatureContent = {
       { title: 'Contrats et échéances', body: 'Montant annuel, reconduction tacite, préavis et date limite de résiliation calculée, liés aux lignes de budget.' },
       { title: 'Aller-retour avec le tableur', body: "Exportez les lignes, modifiez-les dans Excel ou LibreOffice, réimportez : KANAP n'écrit que les cellules qui ont changé." },
       { title: 'Données d’exemple', body: 'Un essai se remplit en une minute avec le budget de Fromage & Co, quatre sociétés fictives, pour tout voir avant de saisir le vôtre.' },
+      { title: 'Effectifs et coût par ETP', body: 'Une ligne de régie en personnes ou en jours déclare ses ETP. Les rapports en tirent les effectifs mois par mois et le coût par ETP, ou le TJM, par fournisseur ou par centre de coûts.' },
+      { title: 'Vos propres axes d’analyse', body: 'Créez autant de dimensions analytiques que vos questions en demandent (domaine, nature de coût, programme), chacune avec ses valeurs, pour l’OPEX, le CAPEX ou les deux. Les rapports budgétaires se filtrent dessus, et plusieurs regroupent par dimension.' },
     ],
   },
   crossLinks: {
