@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
-import { ANALYTICS_VALUES_ENDPOINT } from '../../services/analytics';
+import { ANALYTICS_VALUE_ORDER_SORT, ANALYTICS_VALUES_ENDPOINT } from '../../services/analytics';
 import type { ExclusionOption } from '../../components/reports/ReportExclusionPicker';
 import {
   accountIdOptionsRequest,
@@ -20,7 +20,7 @@ import { compareNames, SUMMARY_QUERY_KEY, useBudgetAggregate } from './useBudget
 
 /**
  * The options of the reports' exclusion pickers, read when a picker first opens (`wanted`): every
- * line of the report's window, filters aside, ordered by name.
+ * line of the report's window, filters aside, ordered by name (a dimension's values in its order).
  */
 
 type Options<T> = { options: T[] | undefined; loading: boolean };
@@ -90,8 +90,8 @@ export function axisValueCatalogueFilters(scope: BudgetScope): string {
 
 /**
  * The values of a dimension (the value exclusion of the Analytics report): the dimension's own
- * values the report's lines may choose, and the ones the lines hold (a value restricted to the
- * other type included), by name.
+ * values the report's lines may choose, in the dimension's order, then the ones only the lines hold
+ * (a disabled value, or one restricted to the other type), by name.
  */
 export function useAxisValueOptions(scope: BudgetScope, axisId: string | null, wanted: boolean): Options<ExclusionOption> {
   const { t } = useTranslation('ops');
@@ -100,7 +100,7 @@ export function useAxisValueOptions(scope: BudgetScope, axisId: string | null, w
     queryKey: ['analytics-categories', 'reporting', axisId, scope],
     queryFn: async () => {
       const res = await api.get<{ items: AnalyticsCategory[] }>(ANALYTICS_VALUES_ENDPOINT, {
-        params: { axis_id: axisId, limit: 1000, sort: 'name:ASC', filters: axisValueCatalogueFilters(scope) },
+        params: { axis_id: axisId, limit: 1000, sort: ANALYTICS_VALUE_ORDER_SORT, filters: axisValueCatalogueFilters(scope) },
       });
       return res.data.items;
     },

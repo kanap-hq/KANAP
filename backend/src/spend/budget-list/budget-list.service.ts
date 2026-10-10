@@ -11,7 +11,7 @@ import { parseListRequest, ParsedListRequest, resolveLifecycleScope } from '../.
 import { compareNullableText, decimal2ToFloat, jsRound, sumJsCents } from '../../common/list-engine/sql-fragments';
 import { SqlStatement } from '../../common/list-engine/sql-statement';
 import type { LifecycleScope } from '../../common/status';
-import { parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
+import { ANALYTICS_VALUE_ORDER_SQL, parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
 import {
   buildBudgetSummaryRows,
   BudgetSummaryRow,
@@ -342,7 +342,47 @@ export async function budgetListFilterValues(
   fields.forEach((field) => { result[field] = []; });
   for (const row of rows) result[fields[Number(row.f)]].push(row.v ?? null);
   for (const field of fields) result[field].sort(compareNullableText);
+  await orderAnalyticsFilterValues(manager, req.tenantId, rt.axes?.defaultAxisId ?? null, result);
   return result;
+}
+
+/**
+ * The values of an analytics column (`analytics_<axis id>`, and the default dimension's
+ * `analytics_category_name`) in the dimension's order (`ANALYTICS_VALUE_ORDER_SQL`), with the
+ * positions of every requested dimension read in one statement. A name the dimension does not
+ * hold (none expected) follows them in text order; null stays last. Sorts `result` in place.
+ */
+async function orderAnalyticsFilterValues(
+  manager: EntityManager,
+  tenantId: string,
+  defaultAxisId: string | null,
+  result: Record<string, Array<string | null>>,
+): Promise<void> {
+  const axisOfField = new Map<string, string>();
+  for (const field of Object.keys(result)) {
+    const axisId = parseAnalyticsFieldKey(field) ?? (field === 'analytics_category_name' ? defaultAxisId : null);
+    if (axisId) axisOfField.set(field, axisId);
+  }
+  if (axisOfField.size === 0) return;
+  const rows: Array<{ axis_id: string; name: string; position: string | number }> = await manager.query(
+    `SELECT c.axis_id::text AS axis_id, c.name,
+            row_number() OVER (PARTITION BY c.axis_id ORDER BY ${ANALYTICS_VALUE_ORDER_SQL}) AS position
+       FROM analytics_categories c
+      WHERE c.tenant_id = $1 AND c.axis_id = ANY($2::uuid[])`,
+    [tenantId, Array.from(new Set(axisOfField.values()))],
+  );
+  const positions = new Map(rows.map((row) => [`${row.axis_id}|${row.name}`, Number(row.position)]));
+  for (const [field, axisId] of axisOfField) {
+    const position = (value: string | null) => (value == null ? undefined : positions.get(`${axisId}|${value}`));
+    result[field].sort((a, b) => {
+      const pa = position(a);
+      const pb = position(b);
+      if (pa !== undefined && pb !== undefined) return pa - pb;
+      if (pa !== undefined) return -1;
+      if (pb !== undefined) return 1;
+      return compareNullableText(a, b);
+    });
+  }
 }
 
 /**

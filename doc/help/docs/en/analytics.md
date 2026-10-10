@@ -60,12 +60,13 @@ With a single dimension, the band shows one toggle and the values.
 
 ### Values list
 
-The list shows the values of the selected dimension.
+The list shows the values of the selected dimension, in the dimension's order. See [Ordering values](#ordering-values).
 
 **Columns**:
 
 | Column | What it shows |
 |---|---|
+| **Order** | The position of the value in its dimension. Disabled values have a position too, so the numbers can skip when the list hides them |
 | **Name** | The name of the value |
 | **Description** | What the value covers |
 | **Status** | **Enabled** or **Disabled** |
@@ -84,6 +85,7 @@ Click any cell to open the value's workspace.
 **Actions**:
 
 - **New value**: create a value in the selected dimension (requires `analytics:member`). While the selected dimension is disabled, the button is disabled and its tooltip says "Enable this dimension to add values."
+- **Reorder**: set the order of the selected dimension's values (requires `analytics:member`). The button is disabled while the dimension has fewer than two values. See [Ordering values](#ordering-values)
 - **Import CSV**: load values from a file (requires `analytics:admin`)
 - **Export CSV**: download the values of every dimension (requires `analytics:admin`)
 - **Delete selected**: delete the selected values (requires `analytics:admin`). Values used by budget lines are kept
@@ -196,6 +198,28 @@ Changes save on their own, as in the dimension workspace. A name refused in the 
 - **Renaming keeps the lines**: lines point to the value itself, so the new name shows at once in lists and reports.
 - **Deleting**: the **Delete** button in the header deletes the value at once (requires `analytics:admin`). It is disabled when budget lines use the value, with the reason, for example "Used by 3 OPEX lines and 1 CAPEX line." Remove the value from these lines first, or disable it.
 
+### Ordering values
+
+The values of a dimension have an order, which you set. KANAP offers the values in this order wherever you choose or filter on them:
+
+- the value fields of OPEX and CAPEX items (when you type in a field, the best matches come first)
+- the dimension's checkbox filters in the OPEX and CAPEX lists
+- the dimension filters of the reports and the **Exclude values** list of the Analytics dimensions report
+- the values CSV export
+- the values Plaid lists
+
+Report rows keep their own order, by amount. Sorting the OPEX or CAPEX list on a dimension's column sorts it by value name.
+
+At first, the values are in alphabetical order. A new value goes last in its dimension.
+
+To change the order:
+
+1. Select the dimension on the page and click **Reorder**. The dialog lists every value of the dimension, disabled ones and values for one kind of line included, each with its mark (**Disabled**, **OPEX only**, **CAPEX only**).
+2. Drag the values into place with the mouse. With the keyboard, move to a value, press Space or Enter to pick it up, move it with the arrow keys, then press Space or Enter to drop it. Escape puts it back.
+3. Click **Save**. **Cancel** leaves the order as it was.
+
+The new order shows at once in the lists and filters. The [Audit log](admin.md#audit-log) records the change on the dimension, with the order before and after.
+
 ### OPEX or CAPEX values
 
 The **Used for** field of a value says which budget lines may use it:
@@ -286,7 +310,7 @@ Load or update the values of every dimension from one file. Dimensions are creat
 
 To set values on budget lines from a file, use the OPEX and CAPEX budget files. In those files, one `analytics:<code>` column holds each dimension, the default dimension included. See [Load a budget from a spreadsheet](budget-file.md).
 
-**Export**: click **Export CSV**, then **Export data**. The file lists the values of every dimension, enabled or disabled, dimension by dimension. For an empty file with the headers only, use **Download template** in the import dialog.
+**Export**: click **Export CSV**, then **Export data**. The file lists the values of every dimension, enabled or disabled, dimension by dimension, each dimension's values in its order. The file has no order column. For an empty file with the headers only, use **Download template** in the import dialog.
 
 **CSV structure**:
 
@@ -300,7 +324,6 @@ To set values on budget lines from a file, use the OPEX and CAPEX budget files. 
 | `description` | Free text |
 | `status` | `enabled` or `disabled`. Empty means `enabled` for a new value and keeps the stored status on an update |
 | `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time. Empty if there is no end. On an update, a blank `status` and a blank `disabled_at` keep the stored values. `enabled` with an empty date clears the end of validity. `disabled` with an empty date keeps a date that has already passed, and otherwise ends the value today |
-
 | `applies_to` | The **Used for** setting, always the last column. `opex`, `capex`, or empty for **OPEX and CAPEX**. A file without this column leaves the settings as they are. An empty cell sets **OPEX and CAPEX** |
 
 Only `name` is a required column. When the `description`, `status`, `disabled_at` or `applies_to` column is missing, existing values keep what is stored for it, and new values are enabled with no description. A file without `axis_code` puts every row in the default dimension.
@@ -319,6 +342,7 @@ Only `name` is a required column. When the `description`, `status`, `disabled_at
 - **Unchanged rows**: a row identical to the stored value changes nothing. Exporting and importing the same file reports every row as unchanged.
 - **Disabled dimensions**: a row of a disabled dimension is accepted when it changes nothing, so an exported file imports as it is. A row that would create or change a value there is refused.
 - **Values missing from the file** are left as they are. The import never deletes.
+- **Order**: existing values keep their place. New values go last in their dimension, in the order of the file. To change the order, use **Reorder** on the page.
 
 **Common errors**:
 
@@ -339,7 +363,7 @@ Only `name` is a required column. When the `description`, `status`, `disabled_at
 | Level | What it allows |
 |---|---|
 | `analytics:reader` | View the Analytics dimensions page and open dimensions and values |
-| `analytics:member` | Create dimensions and values, and edit them |
+| `analytics:member` | Create dimensions and values, edit them and set the order of values |
 | `analytics:admin` | Everything above, plus CSV import and export, and deletion |
 
 The built-in Budget Administrator role is admin, Budget Member is member and Budget Reader is reader. Anyone who can read OPEX, CAPEX or reporting sees the dimensions and their values on budget lines, in the lists and in the reports, without access to this page.

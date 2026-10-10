@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next';
 import { Alert, Box, Button, Tooltip } from '@mui/material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import api from '../api';
 import PageHeader from '../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef, StatusScope } from '../components/ServerDataGrid';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
@@ -14,14 +15,17 @@ import { LinkCellRenderer } from '../components/grid/renderers';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDateTime } from '../lib/dateFormat';
 import { ANALYTICS_AXES_QUERY_KEY, useAnalyticsAxes } from '../hooks/useAnalyticsAxes';
-import { ANALYTICS_VALUES_ENDPOINT, isAnalyticsActive, type AnalyticsValue } from '../services/analytics';
+import { ANALYTICS_VALUE_ORDER_SORT, ANALYTICS_VALUES_ENDPOINT, isAnalyticsActive, type AnalyticsValue } from '../services/analytics';
 import AnalyticsDimensionChipBar from './analytics/AnalyticsDimensionChipBar';
+import AnalyticsValueOrderDialog from './analytics/AnalyticsValueOrderDialog';
 import { ANALYTICS_DIMENSIONS_PATH, ANALYTICS_LIST_PATH } from './analytics/analyticsFields';
 import ForbiddenPage from './ForbiddenPage';
 import { statusColumnProps } from '../components/grid/statusColumn';
 import { lineTypeUsageColumnProps } from '../components/grid/lineTypeUsageColumn';
 
-const DEFAULT_SORT = 'name:ASC';
+// The dimension's own order (position, then name), as pickers and filters offer the values.
+const DEFAULT_SORT = ANALYTICS_VALUE_ORDER_SORT;
+const DEFAULT_SORT_SPEC = { field: 'sort_order', direction: 'ASC' } as const;
 
 export default function AnalyticsCategoriesPage() {
   const { hasLevel } = useAuth();
@@ -52,6 +56,7 @@ function AnalyticsValuesList() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [reorderOpen, setReorderOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState<AnalyticsValue[]>([]);
   /** The grid's row count (its filters and status scope apply), once a page has loaded. */
   const [valueTotal, setValueTotal] = useState<number | null>(null);
@@ -64,6 +69,18 @@ function AnalyticsValuesList() {
     setValueTotal(null);
     gridApiRef.current?.deselectAll?.();
   }, [selectedAxisId]);
+
+  // Every value of the dimension, disabled ones included: Reorder needs two.
+  const { data: dimensionValueCount } = useQuery({
+    queryKey: ['analytics-categories', 'count', selectedAxisId],
+    queryFn: async () => {
+      const res = await api.get<{ total: number }>(ANALYTICS_VALUES_ENDPOINT, {
+        params: { axis_id: selectedAxisId, includeDisabled: '1', limit: 1 },
+      });
+      return Number(res.data?.total ?? 0);
+    },
+    enabled: canCreate && !!selectedAxisId,
+  });
 
   const refresh = useCallback(() => {
     setRefreshKey((k) => k + 1);
@@ -105,6 +122,14 @@ function AnalyticsValuesList() {
       />
     );
     return [
+      {
+        // The value's position in its dimension.
+        field: 'sort_order',
+        headerName: t('analytics.fields.order'),
+        width: 90,
+        filter: false,
+        cellRenderer: link,
+      },
       {
         field: 'name',
         headerName: t('shared.columns.name'),
@@ -163,6 +188,15 @@ function AnalyticsValuesList() {
           <Box component="span" sx={{ display: 'inline-flex' }}>{newValueButton}</Box>
         </Tooltip>
       ) : newValueButton)}
+      {canCreate && selectedAxisId && (
+        <Button
+          variant="action"
+          disabled={(dimensionValueCount ?? 0) < 2}
+          onClick={() => setReorderOpen(true)}
+        >
+          {t('analytics.reorder.action')}
+        </Button>
+      )}
       {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('shared.labels.importCsv')}</Button>}
       {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('shared.labels.exportCsv')}</Button>}
       {canAdmin && (
@@ -215,7 +249,7 @@ function AnalyticsValuesList() {
           extraParams={selectedAxisId ? { axis_id: selectedAxisId } : {}}
           getRowId={(row) => row.id}
           enableSearch
-          defaultSort={{ field: 'name', direction: 'ASC' }}
+          defaultSort={DEFAULT_SORT_SPEC}
           refreshKey={refreshKey}
           columnPreferencesKey="analytics-values"
           enableColumnChooser
@@ -233,6 +267,15 @@ function AnalyticsValuesList() {
               statusScope: state.statusScope ?? 'enabled',
             };
           }}
+        />
+      )}
+      {canCreate && selectedAxis && (
+        <AnalyticsValueOrderDialog
+          open={reorderOpen}
+          axisId={selectedAxis.id}
+          axisLabel={axes.label(selectedAxis)}
+          onClose={() => setReorderOpen(false)}
+          onSaved={refresh}
         />
       )}
       <CsvExportDialog

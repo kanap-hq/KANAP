@@ -460,19 +460,27 @@ describe('CapexPage', () => {
     const el = column('analytics_nature')!.cellRenderer!({ data, value: 'Licences', colDef: {} });
     expect((el.props as { getHref: (row: unknown) => string | null }).getHref(data)).toMatch(/^\/ops\/capex\/CPX-7\/overview/);
 
-    // A set filter on the values the server lists for that dimension.
+    // A set filter on the values the server lists for that dimension, in the dimension's order
+    // (the server's), blank last.
     get.mockImplementation(async (url: string, config?: { params?: { fields?: string } }) => {
       if (url !== '/capex-items/summary/filter-values') return { data: {} };
-      return { data: { [config?.params?.fields ?? '']: ['Licences', null] } };
+      return { data: { [config?.params?.fields ?? '']: [null, 'Software', 'Licences'] } };
     });
     type GetValues = (p: unknown) => Promise<Array<{ value: string | null; label: string }>>;
-    const options = await (column('analytics_nature')!.filterParams!.getValues as GetValues)({ context: { getQueryState: () => ({}) } });
+    const noState = { context: { getQueryState: () => ({}) } };
+    const options = await (column('analytics_nature')!.filterParams!.getValues as GetValues)(noState);
     expect(options).toEqual([
+      { value: 'Software', label: 'Software' },
       { value: 'Licences', label: 'Licences' },
       { value: null, label: 'shared.blank' },
     ]);
+    // The default dimension too; other columns still list their values by name.
+    expect((await (column('analytics_category_name')!.filterParams!.getValues as GetValues)(noState)).map((o) => o.value))
+      .toEqual(['Software', 'Licences', null]);
+    expect((await (column('supplier_name')!.filterParams!.getValues as GetValues)(noState)).map((o) => o.value))
+      .toEqual(['Licences', 'Software', null]);
     const calls = get.mock.calls.filter(([url]) => url === '/capex-items/summary/filter-values');
-    expect(calls.map(([, config]) => config.params.fields)).toEqual(['analytics_nature']);
+    expect(calls.map(([, config]) => config.params.fields)).toEqual(['analytics_nature', 'analytics_category_name', 'supplier_name']);
   });
 
   it('adds no column for a dimension used for OPEX lines only', async () => {

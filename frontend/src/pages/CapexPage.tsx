@@ -206,10 +206,12 @@ function CapexPageView() {
   }, [gridCanMount]);
 
   // `businessOrder`: the options follow the label map's key order (the enum's declaration order, the
-  // order the list sorts them in) instead of their labels' alphabetical order.
-  const getCapexFilterValues = useCallback((field: string, opts?: { emptyLabel?: string; labelMap?: Record<string, string>; businessOrder?: boolean }) => {
+  // order the list sorts them in) instead of their labels' alphabetical order. `serverOrder`: they
+  // keep the server's order (a dimension's values, in the dimension's order). Blank stays last.
+  const getCapexFilterValues = useCallback((field: string, opts?: { emptyLabel?: string; labelMap?: Record<string, string>; businessOrder?: boolean; serverOrder?: boolean }) => {
     const emptyLabel = opts?.emptyLabel ?? t('shared.blank');
     const labelMap = opts?.labelMap;
+    const serverOrder = !!opts?.serverOrder;
     const rank = opts?.businessOrder && labelMap ? Object.keys(labelMap) : null;
     return async ({ context }: any) => {
       const queryState = context?.getQueryState?.() ?? {};
@@ -231,8 +233,9 @@ function CapexPageView() {
         return { value, label };
       });
       options.sort((a, b) => {
-        if (a.value == null) return 1;
+        if (a.value == null) return b.value == null ? 0 : 1;
         if (b.value == null) return -1;
+        if (serverOrder) return 0;
         if (rank) {
           // A value the map does not know goes after the known ones.
           const ra = rank.indexOf(String(a.value));
@@ -618,7 +621,7 @@ function CapexPageView() {
         defaultHidden: true,
         filter: CheckboxSetFilter,
         floatingFilterComponent: CheckboxSetFloatingFilter,
-        filterParams: { getValues: getCapexFilterValues(field), searchable: false },
+        filterParams: { getValues: getCapexFilterValues(field, { serverOrder: true }), searchable: false },
         cellRenderer: linkCell(field),
       })),
       {

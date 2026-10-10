@@ -87,6 +87,7 @@ const VALUE: AnalyticsValueDetail = {
   name: 'Licenses',
   description: null,
   applies_to: null,
+  sort_order: 1,
   status: 'enabled',
   disabled_at: null,
   axis_name: 'Nature',

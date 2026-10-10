@@ -19,12 +19,14 @@ import {
   ftePresenceRequest,
   keepValues,
   localAmountField,
+  mergeAxisValueOptions,
   METRIC_SUFFIX,
   NO_ANALYTICS_VALUE,
   NO_CONSOLIDATION_LINE,
   NO_LINE,
   readAccountIdOptions,
   readAnalytics,
+  readAxisValues,
   readColumnsCompare,
   readConsolidation,
   readConsolidationAccounts,
@@ -39,6 +41,8 @@ import {
   readTopItems,
   readTrend,
   reportFilterModels,
+  sortByValueOrder,
+  valueOrderRank,
   staffCostField,
   staffFteField,
   staffingChartSeries,
@@ -247,6 +251,47 @@ describe('pickers', () => {
       row([null, null, null], {}),
     ], row([], {})), 'Unnamed', compare);
     expect(options).toEqual([{ id: 'a2', label: '[200]' }, { id: 'a1', label: '[6100] Software' }]);
+  });
+});
+
+describe('dimension value order', () => {
+  // The dimension's order: Mandatory, High, Medium, Low.
+  const ORDER = [{ id: 'v-mand' }, { id: 'v-high' }, { id: 'v-med' }, { id: 'v-low' }];
+  const held = result([
+    row(['v-low', 'Low'], {}),
+    row(['v-high', 'High'], {}),
+    row(['v-gone', 'Archived'], {}),
+    row(['v-mand', 'Mandatory'], {}),
+    row([null, null], {}),
+  ], row([], {}));
+
+  it('reads the values the lines hold in the dimension order, the ones it does not rank last by name', () => {
+    expect(readAxisValues(held, 'Unnamed', compare, valueOrderRank(ORDER)).map((o) => o.label)).toEqual(['Mandatory', 'High', 'Low', 'Archived']);
+    // Without the order (not read yet, or unreadable): by name.
+    expect(readAxisValues(held, 'Unnamed', compare).map((o) => o.label)).toEqual(['Archived', 'High', 'Low', 'Mandatory']);
+    expect(readAxisValues(held, 'Unnamed', compare, null).map((o) => o.label)).toEqual(['Archived', 'High', 'Low', 'Mandatory']);
+  });
+
+  it('sorts unranked options by label after the ranked ones', () => {
+    const options = [{ id: 'x', label: 'Zeta' }, { id: 'v-low', label: 'Low' }, { id: 'y', label: 'Alpha' }, { id: 'v-mand', label: 'Mandatory' }];
+    expect(sortByValueOrder(options, valueOrderRank(ORDER), compare).map((o) => o.id)).toEqual(['v-mand', 'v-low', 'y', 'x']);
+  });
+
+  it('lists the exclusion options in the catalogue order, then the values only the lines hold, by name', () => {
+    // The catalogue comes in the dimension's order (`sort=sort_order:ASC`); Archived is a disabled value a line holds.
+    const catalogue = [
+      { id: 'v-mand', name: 'Mandatory' },
+      { id: 'v-high', name: 'High' },
+      { id: 'v-med', name: 'Medium' },
+      { id: 'v-low', name: 'Low' },
+    ];
+    expect(mergeAxisValueOptions(catalogue, held, 'Unnamed', compare)).toEqual([
+      { id: 'v-mand', label: 'Mandatory' },
+      { id: 'v-high', label: 'High' },
+      { id: 'v-med', label: 'Medium' },
+      { id: 'v-low', label: 'Low' },
+      { id: 'v-gone', label: 'Archived' },
+    ]);
   });
 });
 

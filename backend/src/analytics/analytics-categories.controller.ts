@@ -31,6 +31,7 @@ import { lookupAnalyticsValues } from '../common/lookup/reference-lookups';
 import {
   AnalyticsCategoryBulkDeleteDto,
   AnalyticsCategoryCreateDto,
+  AnalyticsCategoryReorderDto,
   AnalyticsCategoryUpdateDto,
 } from './dto/analytics.dto';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
@@ -91,6 +92,14 @@ export class AnalyticsCategoriesController {
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);
+  }
+
+  // The order of one dimension's values (same permission as PATCH :id), before the `:id` routes.
+  @RequireLevel('analytics', 'member')
+  @Post('reorder')
+  reorder(@Body() body: AnalyticsCategoryReorderDto, @Tenant() ctx: TenantRequest) {
+    const context = analyticsContext(ctx);
+    return this.svc.reorder(body?.axis_id, body?.value_ids, context.userId, context);
   }
 
   @RequireAnyLevel(ANALYTICS_READERS)

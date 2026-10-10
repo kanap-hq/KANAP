@@ -109,7 +109,10 @@ export const USER_LOOKUP: LookupSpec = {
   offered: "t.status = 'enabled'",
 };
 
-/** One dimension's values (`axis_id`). */
+/**
+ * One dimension's values (`axis_id`), in the dimension's order (position, then name); a text typed
+ * keeps its rank first, as the accounts lookup.
+ */
 export const ANALYTICS_VALUE_LOOKUP: LookupSpec = {
   table: 'analytics_categories',
   columns: {
@@ -119,9 +122,11 @@ export const ANALYTICS_VALUE_LOOKUP: LookupSpec = {
     description: 't.description',
     applies_to: 't.applies_to',
     status: 't.status',
+    sort_order: 't.sort_order',
   },
   label: 't.name',
   search: ['t.description'],
+  sort: ['t.sort_order', `t.name COLLATE ${ICU_COLLATION}`],
   offered: ACTIVE_BY_DISABLED_AT,
 };
 

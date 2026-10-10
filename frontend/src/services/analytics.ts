@@ -65,6 +65,11 @@ export type AnalyticsValue = {
   description: string | null;
   /** The lines that may use the value: OPEX only, CAPEX only, or both when null. */
   applies_to: LineType | null;
+  /**
+   * The value's position in its dimension (1..n once reordered; read only, set through
+   * `reorderAnalyticsValues`). Pickers, filters and lists offer the values by position, then name.
+   */
+  sort_order: number;
   status: AnalyticsStatus;
   disabled_at: string | null;
   created_at?: string;
@@ -106,6 +111,8 @@ export const ANALYTICS_AXES_ENDPOINT = '/analytics-axes';
 export const ANALYTICS_VALUES_ENDPOINT = '/analytics-categories';
 /** Picker search within one dimension (`axis_id`) and labels by `ids`. */
 export const ANALYTICS_VALUES_LOOKUP_ENDPOINT = `${ANALYTICS_VALUES_ENDPOINT}/lookup`;
+/** The values list in dimension order (`sort` of `GET /analytics-categories`). */
+export const ANALYTICS_VALUE_ORDER_SORT = 'sort_order:ASC';
 
 /** List and summary field of a dimension's value name (`analytics_<axis id>`), never split on a colon. */
 export const ANALYTICS_FIELD_PREFIX = 'analytics_';
@@ -160,4 +167,41 @@ export async function updateAnalyticsValue(id: string, patch: AnalyticsValuePatc
 
 export async function deleteAnalyticsValue(id: string): Promise<void> {
   await api.delete(`${ANALYTICS_VALUES_ENDPOINT}/${id}`);
+}
+
+/** Query key of every value of a dimension in its order (`getAnalyticsValuesInOrder`). */
+export function analyticsValueOrderKey(axisId: string | null) {
+  return ['analytics-categories', 'order', axisId] as const;
+}
+
+/** The most rows `GET /analytics-categories` returns in one page. */
+const VALUES_PAGE_LIMIT = 1000;
+
+/**
+ * Every value of a dimension, disabled ones and both line types included, in the dimension's order.
+ */
+export async function getAnalyticsValuesInOrder(axisId: string, signal?: AbortSignal): Promise<AnalyticsValue[]> {
+  const items: AnalyticsValue[] = [];
+  for (let page = 1; ; page += 1) {
+    const res = await api.get<{ items: AnalyticsValue[]; total: number }>(ANALYTICS_VALUES_ENDPOINT, {
+      params: { axis_id: axisId, includeDisabled: '1', sort: ANALYTICS_VALUE_ORDER_SORT, limit: VALUES_PAGE_LIMIT, page },
+      signal,
+    });
+    const batch = Array.isArray(res.data?.items) ? res.data.items : [];
+    items.push(...batch);
+    if (batch.length < VALUES_PAGE_LIMIT || items.length >= Number(res.data?.total ?? 0)) return items;
+  }
+}
+
+/**
+ * Puts a dimension's values in the order given (`POST /analytics-categories/reorder`). Values left
+ * out keep their relative order after the listed ones. Returns the dimension's values in the new order.
+ */
+export async function reorderAnalyticsValues(axisId: string, valueIds: string[]): Promise<AnalyticsValue[]> {
+  const res = await api.post<AnalyticsValue[] | { items: AnalyticsValue[] }>(`${ANALYTICS_VALUES_ENDPOINT}/reorder`, {
+    axis_id: axisId,
+    value_ids: valueIds,
+  });
+  const data = res.data;
+  return Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
 }

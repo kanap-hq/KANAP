@@ -6,6 +6,7 @@ import { SpendItemsService } from '../spend-items.service';
 import { CapexItemsService } from '../../capex/capex-items.service';
 import { SUMMARY_SCOPES, SummaryScopeConfig } from '../spend-summary.builder';
 import { CONSOLIDATION_COUNTS_INACTIVE_ACCOUNTS } from '../budget-list/budget-list.config';
+import { ANALYTICS_VALUE_ORDER_SQL } from '../../analytics/analytics-axes.util';
 import { realSummaryDeps } from './oracle/oracle-deps';
 import { seedListFixture } from './oracle/budget-list.fixture';
 import * as O from './oracle/report-browser.oracle';
@@ -335,9 +336,11 @@ async function loadEnv(scope: Scope, m: EntityManager, tenantId: string): Promis
   // `/accounts?limit=1000`: the active accounts, newest first.
   const activeAccounts = await m.query(`SELECT ${accountColumns} FROM accounts WHERE tenant_id = $1 AND (disabled_at IS NULL OR disabled_at > now()) ORDER BY created_at DESC, id DESC LIMIT 1000`, [tenantId]);
   const allAccounts = await m.query(`SELECT ${accountColumns} FROM accounts WHERE tenant_id = $1`, [tenantId]);
-  // `/analytics-categories?axis_id=…&limit=1000&sort=name:ASC`: the dimension's active values.
+  // `/analytics-categories?axis_id=…&limit=1000&sort=sort_order:ASC`: the dimension's active values, in its order.
   const catalogue = (axisId: string) => m.query(
-    `SELECT id, name FROM analytics_categories WHERE tenant_id = $1 AND axis_id = $2 AND (disabled_at IS NULL OR disabled_at > now()) ORDER BY name, id LIMIT 1000`,
+    `SELECT c.id, c.name FROM analytics_categories c
+      WHERE c.tenant_id = $1 AND c.axis_id = $2 AND (c.disabled_at IS NULL OR c.disabled_at > now())
+      ORDER BY ${ANALYTICS_VALUE_ORDER_SQL} LIMIT 1000`,
     [tenantId, axisId],
   );
   const itemTable = scope === 'opex' ? 'spend_items' : 'capex_items';

@@ -60,12 +60,13 @@ Mit einer einzigen Dimension zeigt das Band eine Schaltfläche und die Werte.
 
 ### Werteliste
 
-Die Liste zeigt die Werte der ausgewählten Dimension.
+Die Liste zeigt die Werte der ausgewählten Dimension in der Reihenfolge der Dimension. Siehe [Werte ordnen](#werte-ordnen).
 
 **Spalten**:
 
 | Spalte | Was sie zeigt |
 |---|---|
+| **Reihenfolge** | Die Position des Werts in seiner Dimension. Auch deaktivierte Werte haben eine Position, daher können Nummern fehlen, wenn die Liste sie ausblendet |
 | **Name** | Der Name des Werts |
 | **Beschreibung** | Was der Wert abdeckt |
 | **Status** | **Aktiviert** oder **Deaktiviert** |
@@ -84,6 +85,7 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich des Werts zu öffnen
 **Aktionen**:
 
 - **Neuer Wert**: einen Wert in der ausgewählten Dimension erstellen (erfordert `analytics:member`). Solange die ausgewählte Dimension deaktiviert ist, ist die Schaltfläche deaktiviert, und ihr Tooltip lautet „Aktivieren Sie diese Dimension, um Werte hinzuzufügen.“
+- **Neu ordnen**: die Reihenfolge der Werte der ausgewählten Dimension festlegen (erfordert `analytics:member`). Die Schaltfläche ist deaktiviert, solange die Dimension weniger als zwei Werte hat. Siehe [Werte ordnen](#werte-ordnen)
 - **CSV importieren**: Werte aus einer Datei laden (erfordert `analytics:admin`)
 - **CSV exportieren**: die Werte aller Dimensionen herunterladen (erfordert `analytics:admin`)
 - **Auswahl löschen**: die ausgewählten Werte löschen (erfordert `analytics:admin`). Werte, die von Budgetzeilen verwendet werden, bleiben erhalten
@@ -196,6 +198,28 @@ Klicken Sie auf **Neuer Wert**. Das Feld **Dimension** steht zunächst auf der D
 - **Umbenennen behält die Zeilen**: Zeilen verweisen auf den Wert selbst, daher erscheint der neue Name sofort in Listen und Berichten.
 - **Löschen**: Die Schaltfläche **Löschen** in der Kopfzeile löscht den Wert sofort (erfordert `analytics:admin`). Sie ist deaktiviert, wenn Budgetzeilen den Wert verwenden, mit dem Grund, zum Beispiel „Verwendet von 3 OPEX-Zeilen und 1 CAPEX-Zeile.“ Entfernen Sie den Wert zuerst von diesen Zeilen, oder deaktivieren Sie ihn.
 
+### Werte ordnen
+
+Die Werte einer Dimension haben eine Reihenfolge, die Sie festlegen. KANAP bietet die Werte überall in dieser Reihenfolge an, wo Sie sie auswählen oder danach filtern:
+
+- die Wertefelder von OPEX- und CAPEX-Positionen (wenn Sie in ein Feld tippen, stehen die besten Treffer zuerst)
+- die Kontrollkästchen-Filter der Dimension in den OPEX- und CAPEX-Listen
+- die Dimensionsfilter der Berichte und die Liste **Werte ausschließen** des Berichts Analysedimensionen
+- der CSV-Export der Werte
+- die Werte, die Plaid auflistet
+
+Die Zeilen der Berichte behalten ihre eigene Reihenfolge, nach Betrag. Wenn Sie die OPEX- oder CAPEX-Liste nach der Spalte einer Dimension sortieren, wird sie nach dem Namen des Werts sortiert.
+
+Anfangs stehen die Werte in alphabetischer Reihenfolge. Ein neuer Wert kommt in seiner Dimension an die letzte Stelle.
+
+So ändern Sie die Reihenfolge:
+
+1. Wählen Sie die Dimension auf der Seite aus und klicken Sie auf **Neu ordnen**. Der Dialog listet alle Werte der Dimension, auch deaktivierte und solche für nur eine Zeilenart, jeweils mit ihrem Vermerk (**Deaktiviert**, **Nur OPEX**, **Nur CAPEX**).
+2. Ziehen Sie die Werte mit der Maus an ihren Platz. Mit der Tastatur gehen Sie zu einem Wert, drücken Leertaste oder Eingabe, um ihn aufzunehmen, verschieben ihn mit den Pfeiltasten und drücken dann Leertaste oder Eingabe, um ihn abzulegen. Escape setzt ihn an seinen Platz zurück.
+3. Klicken Sie auf **Speichern**. **Abbrechen** lässt die Reihenfolge, wie sie war.
+
+Die neue Reihenfolge erscheint sofort in den Listen und Filtern. Das [Audit-Protokoll](admin.md#audit-protokoll) erfasst die Änderung an der Dimension, mit der Reihenfolge vorher und nachher.
+
 ### OPEX- oder CAPEX-Werte
 
 Das Feld **Verwendet für** eines Werts legt fest, welche Budgetzeilen ihn verwenden dürfen:
@@ -286,7 +310,7 @@ Laden oder aktualisieren Sie die Werte aller Dimensionen aus einer Datei. Dimens
 
 Um Werte auf Budgetpositionen aus einer Datei zu setzen, verwenden Sie die OPEX- und CAPEX-Budgetdateien. In diesen Dateien enthält je eine Spalte `analytics:<code>` jede Dimension, die Standarddimension eingeschlossen. Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md).
 
-**Export**: Klicken Sie auf **CSV exportieren** und dann auf **Daten exportieren**. Die Datei listet die Werte aller Dimensionen, aktiviert oder deaktiviert, Dimension für Dimension. Für eine leere Datei nur mit den Kopfzeilen verwenden Sie **Vorlage herunterladen** im Importdialog.
+**Export**: Klicken Sie auf **CSV exportieren** und dann auf **Daten exportieren**. Die Datei listet die Werte aller Dimensionen, aktiviert oder deaktiviert, Dimension für Dimension, die Werte jeder Dimension in ihrer Reihenfolge. Die Datei hat keine Spalte für die Reihenfolge. Für eine leere Datei nur mit den Kopfzeilen verwenden Sie **Vorlage herunterladen** im Importdialog.
 
 **CSV-Struktur**:
 
@@ -300,7 +324,6 @@ Um Werte auf Budgetpositionen aus einer Datei zu setzen, verwenden Sie die OPEX-
 | `description` | Freitext |
 | `status` | `enabled` oder `disabled`. Leer bedeutet `enabled` für einen neuen Wert und behält bei einer Aktualisierung den gespeicherten Status |
 | `disabled_at` | Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Leer, wenn es kein Ende gibt. Bei einer Aktualisierung behalten ein leerer `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum und beendet den Wert sonst heute |
-
 | `applies_to` | Die Einstellung **Verwendet für**, immer die letzte Spalte. `opex`, `capex` oder leer für **OPEX und CAPEX**. Eine Datei ohne diese Spalte lässt die Einstellungen unverändert. Eine leere Zelle setzt **OPEX und CAPEX** |
 
 Nur `name` ist eine Pflichtspalte. Fehlt die Spalte `description`, `status`, `disabled_at` oder `applies_to`, behalten bestehende Werte, was dafür gespeichert ist, und neue Werte sind aktiviert und ohne Beschreibung. Eine Datei ohne `axis_code` legt jede Zeile in die Standarddimension.
@@ -319,6 +342,7 @@ Nur `name` ist eine Pflichtspalte. Fehlt die Spalte `description`, `status`, `di
 - **Unveränderte Zeilen**: Eine Zeile, die dem gespeicherten Wert entspricht, ändert nichts. Wenn Sie dieselbe Datei exportieren und importieren, werden alle Zeilen als unverändert gemeldet.
 - **Deaktivierte Dimensionen**: Eine Zeile einer deaktivierten Dimension wird akzeptiert, wenn sie nichts ändert, sodass eine exportierte Datei unverändert importiert wird. Eine Zeile, die dort einen Wert erstellen oder ändern würde, wird abgelehnt.
 - **In der Datei fehlende Werte** bleiben unverändert. Der Import löscht nie.
+- **Reihenfolge**: Bestehende Werte behalten ihren Platz. Neue Werte kommen in ihrer Dimension an die letzte Stelle, in der Reihenfolge der Datei. Um die Reihenfolge zu ändern, verwenden Sie **Neu ordnen** auf der Seite.
 
 **Häufige Fehler**:
 
@@ -339,7 +363,7 @@ Nur `name` ist eine Pflichtspalte. Fehlt die Spalte `description`, `status`, `di
 | Stufe | Was sie erlaubt |
 |---|---|
 | `analytics:reader` | Die Seite Analysedimensionen ansehen und Dimensionen und Werte öffnen |
-| `analytics:member` | Dimensionen und Werte erstellen und bearbeiten |
+| `analytics:member` | Dimensionen und Werte erstellen und bearbeiten, die Reihenfolge der Werte festlegen |
 | `analytics:admin` | Alles oben Genannte, dazu CSV-Import und -Export sowie Löschen |
 
 Die integrierte Rolle Budget-Administrator ist admin, Budget-Mitglied ist member und Budget-Leser ist reader. Wer OPEX, CAPEX oder Reporting lesen kann, sieht die Dimensionen und ihre Werte auf Budgetzeilen, in den Listen und in den Berichten, ohne Zugriff auf diese Seite zu haben.

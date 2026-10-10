@@ -310,8 +310,43 @@ export type LabelledOption = { id: string; label: string };
 /** A dimension value as the lines hold it: shown by `label`, its stored `name` as the list filters on it. */
 export type AxisValueOption = LabelledOption & { name: string };
 
-/** The values held, named (`unnamed` for a blank name), by name as `compare` orders. */
-export function readAxisValues(result: AggregateResult | undefined, unnamed: string, compare: (a: string, b: string) => number): AxisValueOption[] {
+/** A dimension's order: each value id's position in its dimension (`valueOrderRank`). */
+export type ValueOrderRank = ReadonlyMap<string, number>;
+
+/** The positions of a dimension's values, from the values listed in its order. */
+export function valueOrderRank(values: ReadonlyArray<{ id: string }>): ValueOrderRank {
+  return new Map(values.map((value, index) => [value.id, index]));
+}
+
+/**
+ * Options in the dimension's order (`rank`); the values it does not hold follow, by label as
+ * `compare` orders. Without a rank (not loaded, or unreadable), every option by label.
+ */
+export function sortByValueOrder<T extends LabelledOption>(
+  options: T[],
+  rank: ValueOrderRank | null | undefined,
+  compare: (a: string, b: string) => number,
+): T[] {
+  return options.sort((a, b) => {
+    const ra = rank?.get(a.id);
+    const rb = rank?.get(b.id);
+    if (ra != null && rb != null && ra !== rb) return ra - rb;
+    if (ra != null && rb == null) return -1;
+    if (ra == null && rb != null) return 1;
+    return compare(a.label, b.label);
+  });
+}
+
+/**
+ * The values held, named (`unnamed` for a blank name), in the dimension's order (`rank`), the
+ * values it does not rank last; by name as `compare` orders without a rank.
+ */
+export function readAxisValues(
+  result: AggregateResult | undefined,
+  unnamed: string,
+  compare: (a: string, b: string) => number,
+  rank?: ValueOrderRank | null,
+): AxisValueOption[] {
   const options: AxisValueOption[] = [];
   for (const group of result?.groups ?? []) {
     const id = group.keys[0];
@@ -319,7 +354,7 @@ export function readAxisValues(result: AggregateResult | undefined, unnamed: str
     const name = group.keys[1] ?? '';
     options.push({ id, label: name.trim() || unnamed, name });
   }
-  return options.sort((a, b) => compare(a.label, b.label));
+  return sortByValueOrder(options, rank, compare);
 }
 
 // ----- exclusion pickers -----
@@ -409,7 +444,10 @@ export function mergeAccountOptions(
   return Array.from(byId.values()).sort((a, b) => compare(a.label, b.label));
 }
 
-/** The Analytics exclusion options: the dimension's own values (the catalogue) and the ones the lines hold, by label. */
+/**
+ * The Analytics exclusion options: the dimension's own values (the catalogue, listed in the
+ * dimension's order) in that order, then the ones only the lines hold, by label.
+ */
 export function mergeAxisValueOptions(
   catalogue: ReadonlyArray<{ id: string; name: string | null }>,
   held: AggregateResult | undefined,
@@ -419,7 +457,7 @@ export function mergeAxisValueOptions(
   const byId = new Map<string, LabelledOption>();
   for (const value of catalogue) byId.set(value.id, { id: value.id, label: (value.name ?? '').trim() || unnamed });
   for (const { id, label } of readAxisValues(held, unnamed, compare)) if (!byId.has(id)) byId.set(id, { id, label });
-  return Array.from(byId.values()).sort((a, b) => compare(a.label, b.label));
+  return sortByValueOrder(Array.from(byId.values()), valueOrderRank(catalogue), compare);
 }
 
 // ----- the FTE notice: declared FTE whose column amount no longer follows its lines -----

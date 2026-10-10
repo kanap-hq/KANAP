@@ -1,12 +1,12 @@
 import React, { useCallback, useMemo } from 'react';
 import { Box, Link as MLink, MenuItem, TextField } from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import CostCenterSelect from '../fields/CostCenterSelect';
 import { useCostCenterCount, useCostCenterTree, type CostCenterTree } from '../../hooks/useCostCenterTree';
 import { useAnalyticsAxes, type AnalyticsAxes } from '../../hooks/useAnalyticsAxes';
-import { getAnalyticsValue } from '../../services/analytics';
+import { analyticsValueOrderKey, getAnalyticsValue, getAnalyticsValuesInOrder } from '../../services/analytics';
 import { drawerMenuItemSx } from '../../theme/formSx';
 import { ReportFilter, reportFilterMenuProps, reportFilterSelectSx } from './ReportLayout';
 import {
@@ -19,10 +19,12 @@ import {
   readRunBuildPresence,
   reportFilterModels,
   runBuildPresenceRequest,
+  valueOrderRank,
   type BudgetScope,
   type ColumnFilters,
   type AxisValueOption,
   type RunBuildPick,
+  type ValueOrderRank,
 } from '../../pages/reports/reportAggregates';
 import { compareNames, useBudgetAggregate, useBudgetAggregates } from '../../pages/reports/useBudgetAggregate';
 
@@ -68,7 +70,7 @@ export type BudgetReportFilterOptions = {
   hasRunBuild: boolean;
   /** A line of the window declares FTE. */
   hasFte: boolean;
-  /** Per enabled dimension, the values the window's lines hold on it, by name. */
+  /** Per enabled dimension, the values the window's lines hold on it, in the dimension's order. */
   analytics: ReadonlyMap<string, AxisValueOption[]>;
   /** The options could not be read: the bar says so, with a retry, instead of hiding its selects. */
   isError: boolean;
@@ -208,12 +210,29 @@ export function useBudgetReportFilters({ scope, years }: { scope: BudgetScope; y
     [axisIdsKey, windowYears],
   );
   const axisValues = useBudgetAggregates(scope, analyticsAxes.ready ? axisRequests : null);
+  // The order of each dimension whose lines hold two values or more, from its values list: its select
+  // offers the values in that order. Until it is read (or when it cannot be), by name.
+  const rankedAxisIds = (axisIdsKey ? axisIdsKey.split(',') : [])
+    .filter((_, i) => (axisValues.data?.[i]?.groups ?? []).filter((group) => group.keys[0]).length > 1);
+  const valueOrders = useQueries({
+    queries: rankedAxisIds.map((axisId) => ({
+      queryKey: analyticsValueOrderKey(axisId),
+      queryFn: ({ signal }: { signal: AbortSignal }) => getAnalyticsValuesInOrder(axisId, signal),
+      retry: false,
+    })),
+  });
+  const ranksKey = `${rankedAxisIds.join(',')}|${valueOrders.map((query) => query.dataUpdatedAt).join(',')}`;
+  const ranks = useMemo<ReadonlyMap<string, ValueOrderRank>>(() => {
+    const out = new Map<string, ValueOrderRank>();
+    valueOrders.forEach((query, i) => { if (query.data) out.set(rankedAxisIds[i], valueOrderRank(query.data)); });
+    return out;
+  }, [ranksKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const unnamed = t('reports.analyticsCategory.unnamed');
   const options = useMemo<BudgetReportFilterOptions>(() => {
     const { lineCount, hasRunBuild } = readRunBuildPresence(presence.data);
     const byAxis = new Map<string, AxisValueOption[]>();
     const ids = axisIdsKey ? axisIdsKey.split(',') : [];
-    ids.forEach((axisId, i) => byAxis.set(axisId, readAxisValues(axisValues.data?.[i], unnamed, compareNames)));
+    ids.forEach((axisId, i) => byAxis.set(axisId, readAxisValues(axisValues.data?.[i], unnamed, compareNames, ranks.get(axisId))));
     return {
       ready: presence.data != null && ftePresence.data != null && (ids.length === 0 || axisValues.data != null),
       lineCount,
@@ -227,7 +246,7 @@ export function useBudgetReportFilters({ scope, years }: { scope: BudgetScope; y
         if (axisValues.isError) axisValues.refetch();
       },
     };
-  }, [presence.data, presence.isError, presence.refetch, ftePresence.data, ftePresence.isError, ftePresence.refetch, axisValues, axisIdsKey, unnamed]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [presence.data, presence.isError, presence.refetch, ftePresence.data, ftePresence.isError, ftePresence.refetch, axisValues, axisIdsKey, unnamed, ranks]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return useMemo(
     () => ({
@@ -260,7 +279,7 @@ type AnalyticsValueOption = { id: string; label: string };
 type AnalyticsDimensionFilter = {
   axisId: string;
   label: string;
-  /** The values the report's lines hold on this dimension, by name. */
+  /** The values the report's lines hold on this dimension, in the dimension's order. */
   options: AnalyticsValueOption[];
 };
 

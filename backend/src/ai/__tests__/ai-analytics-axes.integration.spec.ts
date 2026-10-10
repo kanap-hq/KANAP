@@ -23,6 +23,7 @@ import { itemService } from '../../spend/__tests__/cost-center.fixtures';
 //   predicate on every join (a stale legacy column is ignored);
 // - the `analytics_categories` entity carries its dimension (`axis`, `axis_code`)
 //   and the lines a value is for (`applies_to`, also a filter);
+// - its values come in their dimension's order by default (`sort_order`);
 // - a dimension used for one line type only is a field of that type's entity
 //   only; a value a line holds on a dimension of the other type stays out of
 //   the detail.
@@ -343,6 +344,33 @@ async function testCategoriesEntityCarriesDimension() {
   });
 }
 
+// Without a sort, the values come in their dimension's order (the position an admin sets, then
+// the name); `sort_order` is a sort field and `name` still sorts by name.
+async function testCategoriesFollowTheDimensionOrder() {
+  await withDimensions('opex', async (runner, seed) => {
+    const ctx = context(runner, seed.tenantId);
+    const registry = getAiEntityRegistry('analytics_categories');
+    assert.deepEqual(registry.defaultSort, { field: 'sort_order', direction: 'asc' });
+    assert.equal(registry.sortFields.sort_order, 'sort_order');
+    await runner.query(
+      `UPDATE analytics_categories SET sort_order = CASE name WHEN 'Subscriptions' THEN 1 ELSE 2 END
+        WHERE tenant_id = $1 AND name IN ('Subscriptions', 'Maintenance')`,
+      [seed.tenantId],
+    );
+    const labels = (result: any) => result.items.map((item: any) => item.label);
+    const byDefault: any = await queryExecutor('opex').execute(ctx, { entity_type: 'analytics_categories', filters: { axis: ['Nature'] } });
+    assert.deepEqual(labels(byDefault), ['Subscriptions', 'Maintenance'], 'the default sort is the dimension order');
+    assert.deepEqual(byDefault.items.map((item: any) => item.metadata.sort_order), [1, 2], 'items carry their position');
+    // Without a dimension filter: the dimensions in their order (default 0, Nature 1, Archive 2), never interleaved.
+    const everything: any = await queryExecutor('opex').execute(ctx, { entity_type: 'analytics_categories' });
+    assert.deepEqual(labels(everything), ['Licences', 'Services', 'Subscriptions', 'Maintenance', 'Old'], 'dimension by dimension');
+    const reversed: any = await queryExecutor('opex').execute(ctx, { entity_type: 'analytics_categories', filters: { axis: ['Nature'] }, sort: { field: 'sort_order', direction: 'desc' } });
+    assert.deepEqual(labels(reversed), ['Maintenance', 'Subscriptions'], 'sort_order sorts');
+    const byName: any = await queryExecutor('opex').execute(ctx, { entity_type: 'analytics_categories', filters: { axis: ['Nature'] }, sort: { field: 'name', direction: 'asc' } });
+    assert.deepEqual(labels(byName), ['Maintenance', 'Subscriptions'], 'name still sorts by name');
+  });
+}
+
 // The detail of a line asked by its business reference (OPX-1, CPX-1) loads
 // the same line, deep detail included. Lines 10 and 11 make the reference's
 // search ambiguous, so the reference itself reaches the detail (as in a tenant
@@ -371,6 +399,7 @@ void runSpecs('ai-analytics-axes.integration.spec', [
     [`detail by business reference (${kind})`, () => testDetailByReference(kind)],
   ]),
   ['analytics_categories carries its dimension', testCategoriesEntityCarriesDimension],
+  ['analytics_categories follow the dimension order', testCategoriesFollowTheDimensionOrder],
 ]).catch((err) => {
   console.error(err);
   process.exit(1);
