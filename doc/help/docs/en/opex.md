@@ -174,6 +174,7 @@ The Overview tab holds the free-text fields and the tasks of the item.
   - Each field lists the enabled values of its dimension. A disabled value stays on the items that already have it, and cannot be picked for another item
   - A value used for CAPEX lines only is not offered, and is refused as a new choice. An item that already has it keeps it and stays editable. See [OPEX or CAPEX values](analytics.md#opex-or-capex-values)
   - The field cannot create a value: create it in [Analytics dimensions](analytics.md), or let a CSV import create it
+  - A required dimension is marked with an asterisk. A new item needs a value on it: **Create** stops with "Nature is required" until you pick one. On an item that holds a value, the field cannot be cleared, only changed. An item without a value stays editable. If you change such an item, leaving it asks first: "Nature is required. Choose a value before leaving." **Stay** puts the cursor in the missing field. **Leave anyway** leaves. See [Required dimensions](analytics.md#required-dimensions)
   - If the dimensions cannot be loaded, one line replaces these fields: "Dimensions could not be loaded."
 
 **Tip**: When you create an item, an "Obsolete account" warning means the selected account does not belong to the paying company's chart of accounts. Choose a different account to resolve the warning. An existing item whose account is outside its company's chart can still be edited: the chart is checked only when the company or the account changes.

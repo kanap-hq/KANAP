@@ -628,7 +628,8 @@
       "order": "Order",
       "description": "Description",
       "dimension": "Dimension",
-      "lifecycle": "Lifecycle"
+      "lifecycle": "Lifecycle",
+      "required": "Required"
     },
     "hints": {
       "nameDefault": "Leave empty to show \"{{label}}\" in each person's language.",
@@ -680,6 +681,25 @@
       "opex_other": "{{count}} OPEX lines have this value. They keep it, but new OPEX lines cannot choose it."
     },
     "showLines": "Show these lines",
+    "required": {
+      "missing": {
+        "both": "{{opex}} and {{capex}} have no value.",
+        "opex_one": "{{count}} OPEX line has no value.",
+        "opex_other": "{{count}} OPEX lines have no value.",
+        "capex_one": "{{count}} CAPEX line has no value.",
+        "capex_other": "{{count}} CAPEX lines have no value."
+      },
+      "showLines": {
+        "opex": "Show OPEX lines",
+        "capex": "Show CAPEX lines"
+      },
+      "disabledHint": "Not checked while the dimension is disabled.",
+      "unusable": {
+        "opex": "No enabled value can be used on OPEX lines. New OPEX lines cannot be created.",
+        "capex": "No enabled value can be used on CAPEX lines. New CAPEX lines cannot be created.",
+        "both": "No enabled value can be used on OPEX or CAPEX lines. New lines cannot be created."
+      }
+    },
     "messages": {
       "loadFailed": "Failed to load the value.",
       "saveFailed": "Failed to save the value.",

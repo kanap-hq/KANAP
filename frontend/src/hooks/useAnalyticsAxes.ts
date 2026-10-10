@@ -34,6 +34,17 @@ export function axisAppliesTo(axis: Pick<AnalyticsAxis, 'applies_to'>, scope: Li
 }
 
 /**
+ * Lines of `scope` must hold a value on the dimension: it is required, enabled now and applies to
+ * them. The server's rule; a disabled dimension keeps its setting, ignored.
+ */
+export function axisRequiredFor(
+  axis: Pick<AnalyticsAxis, 'required' | 'applies_to' | 'status' | 'disabled_at'>,
+  scope: LineType,
+): boolean {
+  return !!axis.required && isAnalyticsActive(axis) && axisAppliesTo(axis, scope);
+}
+
+/**
  * A known dimension the screen shows no field for: disabled, or (with a scope) not applying to its
  * lines. A write leaves its value out. An unknown id (dimensions not loaded) is not hidden: the
  * server decides.

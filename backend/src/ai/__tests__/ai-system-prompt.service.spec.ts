@@ -319,8 +319,8 @@ async function testAnalyticsDimensionsFollowOpexOrCapexRead() {
   const rows = [
     axis('00000000-0000-4000-8000-000000000001', 'default', null, { is_default: true, sort_order: 0 }),
     axis('00000000-0000-4000-8000-000000000002', 'nature-cost', 'Nature de coût'),
-    axis('00000000-0000-4000-8000-000000000003', 'old', 'Old', { status: 'disabled' }),
-    axis('00000000-0000-4000-8000-000000000004', 'recurrence', 'Recurrence', { applies_to: 'opex' }),
+    axis('00000000-0000-4000-8000-000000000003', 'old', 'Old', { status: 'disabled', required: true }),
+    axis('00000000-0000-4000-8000-000000000004', 'recurrence', 'Recurrence', { applies_to: 'opex', required: true }),
     axis('00000000-0000-4000-8000-000000000005', 'asset-class', 'Asset class', { applies_to: 'capex' }),
   ];
   const queries: unknown[][] = [];
@@ -333,11 +333,11 @@ async function testAnalyticsDimensionsFollowOpexOrCapexRead() {
 
   const both = await load.call({}, ctx, ['tasks', 'spend_items', 'capex_items']);
   assert.deepEqual(both, [
-    { key: 'analytics_category', name: 'Analytics dimension', default: true, used_for: ['opex', 'capex'] },
-    { key: 'analytics:nature-cost', name: 'Nature de coût', default: false, used_for: ['opex', 'capex'] },
-    { key: 'analytics:recurrence', name: 'Recurrence', default: false, used_for: ['opex'] },
-    { key: 'analytics:asset-class', name: 'Asset class', default: false, used_for: ['capex'] },
-  ], 'each enabled dimension once, with the line types it is used for; the default keeps analytics_category');
+    { key: 'analytics_category', name: 'Analytics dimension', default: true, used_for: ['opex', 'capex'], required: false },
+    { key: 'analytics:nature-cost', name: 'Nature de coût', default: false, used_for: ['opex', 'capex'], required: false },
+    { key: 'analytics:recurrence', name: 'Recurrence', default: false, used_for: ['opex'], required: true },
+    { key: 'analytics:asset-class', name: 'Asset class', default: false, used_for: ['capex'], required: false },
+  ], 'each enabled dimension once, with the line types it is used for and whether it is required; the default keeps analytics_category');
   assert.deepEqual(
     (await load.call({}, ctx, ['capex_items'])).map((entry: any) => [entry.key, entry.used_for]),
     [['analytics_category', ['capex']], ['analytics:nature-cost', ['capex']], ['analytics:asset-class', ['capex']]],
@@ -362,6 +362,8 @@ async function testAnalyticsDimensionsFollowOpexOrCapexRead() {
   assert.doesNotMatch(withDimensions, /analytics:old|analytics:asset-class/, 'neither a disabled dimension nor one of the other line type');
   assert.match(withDimensions, /To set a line's value on a dimension, put its `key`/);
   assert.match(withDimensions, /must be created first/);
+  assert.match(withDimensions, /"required": true/, 'the required flag reaches the prompt');
+  assert.match(withDimensions, /A `required` dimension must be given a value when creating a line\./);
   assert.doesNotMatch(service.build(base), /analytics_dimensions/);
 }
 

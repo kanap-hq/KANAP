@@ -325,6 +325,8 @@ async function testValueAppliesTo() {
     dimensions: [{
       code: 'nature',
       name: 'Nature de coût',
+      required: false,
+      axisName: 'Nature de coût',
       values: [
         { id: 'v1', name: 'Abonnements SaaS', disabledAt: null, appliesTo: 'opex' },
         { id: 'v2', name: 'Matériel', disabledAt: null, appliesTo: 'capex' },
@@ -359,6 +361,62 @@ async function testValueAppliesTo() {
   assert.equal(kept.ok, true, `the line's current value is kept: ${JSON.stringify(kept.errors)}`);
   const cleared = await preflight('opex', 'item_number,name,analytics:nature\nOPX-3,Widget,-\n', [line({ analytics: { nature: 'Matériel' } })], options);
   assert.equal(cleared.ok, true, `clearing it is allowed: ${JSON.stringify(cleared.errors)}`);
+}
+
+/**
+ * A required dimension: a new line needs a value (absent column, blank cell and `-` refused, a
+ * value the load creates counts); an existing line is refused only for a `-` on a value it holds.
+ */
+async function testRequiredDimension() {
+  const cat = catalog({
+    companies: [{ id: 'c1', name: 'Acme', coaId: null, disabledAt: null }],
+    dimensions: [
+      { code: 'menu', name: 'Menu', required: true, axisName: 'Menu', values: [{ id: 'm1', name: 'Fromage', disabledAt: null }] },
+      { code: 'nature', name: 'Nature', required: false, axisName: 'Nature', values: [{ id: 'n1', name: 'Licences', disabledAt: null }] },
+    ],
+  });
+  const options = { cat, dimensions: ['menu', 'nature'] };
+  const message = 'The Menu dimension is required. Choose a value.';
+  const menuErrors = (report: { errors: Array<{ column: string | null; message: string }> }) =>
+    report.errors.filter((error) => error.column === 'analytics:menu').map((error) => error.message);
+
+  const absent = await preflight('opex', 'item_number,name,company_name,currency,analytics:nature\n,Widget,Acme,EUR,Licences\n', [], options);
+  assert.deepEqual(menuErrors(absent), [message], 'a new line, the column absent from the file');
+  for (const [label, cell] of [['blank', ''], ['-', '-']]) {
+    const report = await preflight('opex', `item_number,name,company_name,currency,analytics:menu\n,Widget,Acme,EUR,${cell}\n`, [], options);
+    assert.deepEqual(menuErrors(report), [message], `a new line, ${label} cell`);
+  }
+  for (const value of ['fromage', 'Dessert']) {
+    const report = await preflight('opex', `item_number,name,company_name,currency,analytics:menu\n,Widget,Acme,EUR,${value}\n`, [], options);
+    assert.deepEqual(menuErrors(report), [], `a new line with ${value} (${value === 'Dessert' ? 'created by the load' : 'existing'})`);
+  }
+
+  const held = [line({ analytics: { menu: 'Fromage' } })];
+  const lacking = [line()];
+  const cases: Array<[string, string, StoredLine[]]> = [
+    ['blank cell, value held', 'item_number,name,analytics:menu\nOPX-3,Widget,\n', held],
+    ['column absent, value held', 'item_number,name\nOPX-3,Widget Pro\n', held],
+    ['column absent, no value held', 'item_number,name\nOPX-3,Widget Pro\n', lacking],
+    ['- with no value held', 'item_number,name,analytics:menu\nOPX-3,Widget,-\n', lacking],
+  ];
+  for (const [label, text, stored] of cases) {
+    const report = await preflight('opex', text, stored, options);
+    assert.equal(report.ok, true, `an existing line, ${label}: ${JSON.stringify(report.errors)}`);
+  }
+  const cleared = await preflight('opex', 'item_number,name,analytics:menu\nOPX-3,Widget,-\n', held, options);
+  assert.deepEqual(menuErrors(cleared), [message], 'an existing line may not clear the value it holds');
+
+  // The unnamed default dimension: the gate's wording, not its code.
+  const unnamed = catalog({
+    companies: [{ id: 'c1', name: 'Acme', coaId: null, disabledAt: null }],
+    dimensions: [{ code: 'default', name: 'default', required: true, axisName: null, values: [] }],
+  });
+  const defaultMissing = await preflight('opex', 'item_number,name,company_name,currency\n,Widget,Acme,EUR\n', [], { cat: unnamed, dimensions: ['default'] });
+  assert.deepEqual(
+    defaultMissing.errors.filter((error) => error.column === 'analytics:default').map((error) => error.message),
+    ['The analytics dimension is required. Choose a value.'],
+    'a required default dimension without a name',
+  );
 }
 
 async function testExportShape() {
@@ -460,6 +518,7 @@ async function main() {
   await testCreateRules();
   await testAccountNature();
   await testValueAppliesTo();
+  await testRequiredDimension();
   await testExportShape();
   await testPlan();
   console.log('budget-file.spec: ok');

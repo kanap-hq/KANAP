@@ -9,6 +9,7 @@ A **dimension** is one way of classifying budget lines, for example **Nature** o
 - Each dimension has its own list of values.
 - Each OPEX and CAPEX line can hold one value per dimension. A line can be **Licenses** on Nature and **Workplace** on Program at the same time.
 - A line can also have no value on a dimension. Reports show these lines as "Unassigned".
+- A dimension marked **Required** asks for a value on every new line. See [Required dimensions](#required-dimensions).
 
 For example:
 
@@ -99,6 +100,7 @@ Click **New** in the selector bar, fill in the fields, then click **Create**. Th
 - **Code** is proposed from the name: lowercase, accents removed, spaces replaced by `-`. You can change it before you create the dimension.
 - **Order** is proposed so the new dimension comes last.
 - **Used for** starts on **OPEX and CAPEX**. See [OPEX or CAPEX dimensions](#opex-or-capex-dimensions).
+- **Required** starts off. See [Required dimensions](#required-dimensions).
 - **Description** is optional.
 
 Then go back to the page to add the values of the new dimension.
@@ -109,9 +111,9 @@ Open it with **Edit** (**Open** if you can only read) in the selector bar, with 
 
 - **Header**: the name of the dimension. Click it to rename the dimension. **Prev** / **Next** move through the dimensions in order, and the close button returns to the page on this dimension
 - **Main area**: a usage line, for example "12 values, used by 27 OPEX lines and 2 CAPEX lines.", then the **Description**
-- **Properties panel** on the right: **Name**, **Code**, **Order**, **Used for** and **Lifecycle**
+- **Properties panel** on the right: **Name**, **Code**, **Order**, **Used for**, **Required** and **Lifecycle**
 
-**Autosave**: Every change saves on its own. There is no Save button. Text fields save when you leave them (in **Name**, **Code** and **Order**, press Enter to save at once); the lifecycle saves as soon as you change it. When a change is refused, the reason shows under the field that caused it, for example a duplicate code under **Code**. A name refused in the header shows at the top of the page.
+**Autosave**: Every change saves on its own. There is no Save button. Text fields save when you leave them (in **Name**, **Code** and **Order**, press Enter to save at once); the **Required** switch and the lifecycle save as soon as you change them. When a change is refused, the reason shows under the field that caused it, for example a duplicate code under **Code**. A name refused in the header shows at the top of the page.
 
 ### Dimension fields
 
@@ -122,6 +124,7 @@ Open it with **Edit** (**Open** if you can only read) in the selector bar, with 
 | **Order** | A whole number. Dimensions are listed by this number, lowest first: on this page, on budget lines, in the report filters and in the report's dimension picker |
 | **Description** | What the dimension is for, so teammates classify lines the same way |
 | **Used for** | **OPEX and CAPEX**, **OPEX only** or **CAPEX only**. Says which budget lines can have a value on this dimension. See [OPEX or CAPEX dimensions](#opex-or-capex-dimensions). Locked on the default dimension, with one line under it: "The default dimension applies to OPEX and CAPEX lines." |
+| **Required** | A switch. When it is on, every new line of the kinds the dimension is used for needs a value on it, and a line that holds a value cannot lose it. See [Required dimensions](#required-dimensions). The default dimension can be required too |
 | **Lifecycle** | The status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle). Locked on the default dimension, with one line under it: "This dimension cannot be disabled or deleted: older files and AI questions use it." |
 
 ### OPEX or CAPEX dimensions
@@ -146,6 +149,21 @@ A single value can also be limited to one kind of line. The two settings work at
 - The value setting only filters the choices. The field stays, CAPEX lines no longer offer **Abonnements SaaS**, and a CAPEX line that already has it keeps it, shows it and stays editable. See [OPEX or CAPEX values](#opex-or-capex-values).
 
 The two settings must agree. A dimension cannot be set to one kind of line while some of its values are for the other kind only: KANAP refuses and names the values (up to three, then "and N more"), for example "2 values of this dimension are for CAPEX lines only (Matériel, Projet). Set them to OPEX and CAPEX first."
+
+### Required dimensions
+
+Turn on **Required** when every budget line must be classified on a dimension. KANAP then checks the lines of the kinds the dimension is used for:
+
+- **A new line needs a value on the dimension.** This applies to every way of creating a line: the OPEX and CAPEX screens, a budget file, Plaid and the API. Without a value, the line is not created, with the message "The Nature dimension is required. Choose a value."
+- **A line that holds a value cannot lose it.** You can pick another value. The field cannot be cleared.
+- **A line created before you turned the setting on keeps working.** If it has no value on the dimension, it stays editable and you can save other changes on it. Its field is marked as required. On the OPEX and CAPEX screens, leaving such a line after changing it asks you to choose a value first, with **Stay** and **Leave anyway**. Opening it without changing anything never asks.
+
+The setting is checked only while the dimension is enabled. A disabled dimension keeps its setting, and one line under the switch says "Not checked while the dimension is disabled." A dimension used for one kind of line only is checked on that kind only: a dimension set to **OPEX only** and required asks nothing of CAPEX lines.
+
+While the setting is on, lines under the switch help you complete the existing lines:
+
+- **Lines without a value**: for example "117 OPEX lines and 15 CAPEX lines have no value." Each kind of line has its own link, **Show OPEX lines** and **Show CAPEX lines** (**Show these lines** when only one kind is concerned). The link opens the lines in their list, in a new tab, enabled and disabled lines included.
+- **No value to choose**: when a kind of line the dimension is used for has no enabled value it can use, a warning says so, for example "No enabled value can be used on CAPEX lines. New CAPEX lines cannot be created." Add a value for that kind of line, or enable one. See [OPEX or CAPEX values](#opex-or-capex-values).
 
 ### Deleting a dimension
 
@@ -211,6 +229,7 @@ Dimensions and values each have a status (**Enabled** or **Disabled**) and an op
 
 **A disabled dimension**:
 
+- Is not checked when it is **Required**: lines can be created without a value on it. It keeps the setting for when you enable it again.
 - Disappears from the item forms, the OPEX and CAPEX lists, the report filters, the report's dimension picker, the OPEX and CAPEX CSV exports and Plaid. Only the Analytics dimensions page shows it, marked **Disabled**.
 - Keeps its values on the lines. Enable the dimension again and they show again.
 - Takes no new values. **New value** is disabled while the dimension is selected, and CSV files cannot add or change its values.
@@ -226,6 +245,7 @@ The default dimension cannot be disabled.
 In the **Properties** panel of an OPEX or CAPEX item, and when you create one, each enabled dimension used for that kind of line has its own field, named after the dimension, in dimension order. The default dimension shows as **Analytics dimension** until you rename it.
 
 - Pick a value, or clear the field to leave the line without a value on that dimension. The change saves at once.
+- A required dimension's field is marked with an asterisk. A new item cannot be created without a value on it, with the message "Nature is required". On an item that holds a value, the field offers no clear button: you can only pick another value. See [Required dimensions](#required-dimensions).
 - The field lists the enabled values of its dimension that are used for this kind of line. A disabled value, or a value used for the other kind of line only, stays shown on the lines that have it. See [OPEX or CAPEX values](#opex-or-capex-values).
 - The field cannot create a value. Create values on the Analytics dimensions page, or let an OPEX or CAPEX CSV import create them.
 - A value applies to the whole line, across all years.
@@ -255,6 +275,7 @@ The seven budget reports can also be narrowed to one value of a dimension, with 
 - A question about the analytics category uses the default dimension, whatever its name or order.
 - Plaid can set, change or clear a line's value on any dimension when it creates or updates an OPEX or CAPEX line. Ask for example: "Set the Nature de coût of OPX-12 to Licences et maintenance". Plaid finds the value by its name within that dimension and shows the dimension and the value, before and after, in the preview. Nothing changes until you approve it.
 - Plaid follows the same rules as the app: only enabled dimensions used for the line's type, only enabled values used for the line's type, and a line keeps a value it already has.
+- Plaid knows which dimensions are required. A new line needs a value on each of them, and Plaid cannot clear the value of a required dimension. Plaid refuses a request that breaks the rule and says why, for example "Nature is required for spend item creation."
 - Plaid can also create a value in the dimension you name. Without a dimension, the value goes into the default dimension.
 
 ---
@@ -351,7 +372,7 @@ Start with 5 to 10 per dimension. More than 20 usually means the dimension tries
 **Departments** are formal organizational units with precise allocation drivers. **Cost centers** say who owns and answers for the spend. **Analytics dimensions** are free, optional classifications for reporting, with no allocation or ownership attached.
 
 **Why do some lines show "Unassigned"?**
-In the Analytics dimensions report, lines without a value on the chosen dimension appear as "Unassigned". This is expected: values are optional.
+In the Analytics dimensions report, lines without a value on the chosen dimension appear as "Unassigned". This is expected: values are optional, unless the dimension is required. Even then, lines created before the setting was turned on can lack a value. The dimension's workspace counts them and links to them.
 
 **What happens to the lines when I rename a value or a dimension?**
 Nothing changes on the lines. Lists and reports show the new name at once.

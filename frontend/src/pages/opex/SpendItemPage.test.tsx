@@ -26,7 +26,9 @@ vi.mock('../../hooks/useSpendNav', () => ({
 }));
 vi.mock('../../hooks/useCurrencySettings', () => ({ default: () => ({ data: { defaultSpendCurrency: 'EUR' } }) }));
 // The signed-in user: a conflict with their own change from another window is said so.
-vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: 'me' } }) }));
+// May the user change lines (the required dimensions asked before leaving, lot D2).
+const auth = vi.hoisted(() => ({ canEdit: true }));
+vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: 'me' }, hasLevel: () => auth.canEdit }) }));
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: vi.fn() }) }));
 vi.mock('../../utils/workspaceTabCounts', () => ({ fetchSpendRelationsCount: vi.fn(async () => 0) }));
 vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
@@ -323,6 +325,32 @@ describe('SpendItemPage create', () => {
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     expect(mocked.post.mock.calls[0][1].analytics_values).toEqual({});
+  });
+
+  it('refuses to create a line without a value on a dimension required for OPEX lines, and only those', async () => {
+    mocked.get.mockImplementation(async (url: string) => (url === '/analytics-axes'
+      ? { data: { items: [
+        { id: 'axis-default', code: 'default', name: null, description: null, sort_order: 0, is_default: true, applies_to: null, required: false, status: 'enabled', disabled_at: null },
+        { id: 'axis-nature', code: 'nature', name: 'Nature', description: null, sort_order: 1, is_default: false, applies_to: null, required: true, status: 'enabled', disabled_at: null },
+        // Required, but for CAPEX lines only, or disabled: not checked here.
+        { id: 'axis-other', code: 'other', name: 'Other', description: null, sort_order: 2, is_default: false, applies_to: 'capex', required: true, status: 'enabled', disabled_at: null },
+        { id: 'axis-old', code: 'old', name: 'Old', description: null, sort_order: 3, is_default: false, applies_to: null, required: true, status: 'disabled', disabled_at: '2020-01-01T00:00:00.000Z' },
+      ] } }
+      : { data: {} }));
+    renderAt('/ops/opex/new/overview');
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/analytics-axes'));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+    fireEvent.click(screen.getByRole('button', { name: 'set title' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(await screen.findByText('opex.editor.dimensionRequired')).toBeInTheDocument();
+    expect(mocked.post).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'pick nature value' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
+    expect(mocked.post.mock.calls[0][1].analytics_values).toEqual({ 'axis-nature': 'value-2' });
   });
 
   it('refuses to create a line without an account', async () => {
@@ -1621,5 +1649,118 @@ describe('SpendItemPage cost center across lines', () => {
     await waitFor(() => expect(shown('cc-b')).not.toBeNull());
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
     expect(mocked.get.mock.calls.filter(([url]) => String(url).startsWith('/cost-centers'))).toEqual([]);
+  });
+});
+
+describe('SpendItemPage required dimensions before leaving (lot D2)', () => {
+  const AXES = [
+    { id: 'axis-default', code: 'default', name: null, description: null, sort_order: 0, is_default: true, applies_to: null, required: false, status: 'enabled', disabled_at: null },
+    { id: 'axis-nature', code: 'nature', name: 'Nature', description: null, sort_order: 1, is_default: false, applies_to: null, required: true, status: 'enabled', disabled_at: null },
+    // Required for CAPEX lines only, or disabled: never asked here.
+    { id: 'axis-other', code: 'other', name: 'Other', description: null, sort_order: 2, is_default: false, applies_to: 'capex', required: true, status: 'enabled', disabled_at: null },
+    { id: 'axis-old', code: 'old', name: 'Old', description: null, sort_order: 3, is_default: false, applies_to: null, required: true, status: 'disabled', disabled_at: '2020-01-01T00:00:00.000Z' },
+  ];
+
+  beforeEach(() => {
+    auth.canEdit = true;
+    mocked.get.mockReset();
+    mocked.patch.mockReset();
+    dialogs.confirm.mockReset();
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/analytics-axes') return { data: { items: AXES } };
+      if (url === `/spend-items/${ITEM_ID}`) {
+        return {
+          data: {
+            id: ITEM_ID, item_number: 7, product_name: 'Monitoring', currency: 'EUR', effective_start: '2026-01-01',
+            paying_company_id: 'company-1', account_id: 'account-1', analytics_values: [], notes: 'Monitoring notes',
+          },
+        };
+      }
+      return { data: {} };
+    });
+    mocked.patch.mockResolvedValue({ data: {} });
+  });
+  afterEach(() => {
+    auth.canEdit = true;
+    vi.useRealTimers();
+  });
+
+  async function openLine() {
+    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    await waitFor(() => expect(document.querySelector('[data-mode="edit"]')).not.toBeNull());
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/analytics-axes'));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+  }
+
+  it('asks after a change when a required dimension is empty: Stay keeps the line, Leave anyway leaves', async () => {
+    await openLine();
+    fireEvent.click(screen.getByRole('button', { name: 'pick build' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
+    expect(await screen.findByText('opex.editor.requiredLeaveMessage')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'opex.editor.requiredLeaveStay' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.queryByTestId('list-page')).not.toBeInTheDocument();
+    // The unsaved-work question is not the one asked.
+    expect(dialogs.confirm).not.toHaveBeenCalled();
+
+    // The back link asks the same; the app's links ask through the leave guard.
+    fireEvent.click(screen.getByRole('button', { name: 'back to list' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'opex.editor.requiredLeaveConfirm' }));
+    expect(await screen.findByTestId('list-page')).toBeInTheDocument();
+  });
+
+  it('asks one question per move: leaving without saving drops the edits and does not ask about the dimension', async () => {
+    await openLine();
+    mocked.patch.mockRejectedValue(apiError(503, 'busy'));
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const notes = await screen.findByDisplayValue('Monitoring notes');
+    fireEvent.change(notes, { target: { value: 'never saved' } });
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1), { timeout: 3000 });
+    await act(async () => { await vi.advanceTimersByTimeAsync(8_000); });
+
+    dialogs.confirm.mockResolvedValueOnce(true);
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
+    expect(await screen.findByTestId('list-page')).toBeInTheDocument();
+    expect(dialogs.confirm).toHaveBeenCalledTimes(1);
+    expect(dialogs.confirm).toHaveBeenCalledWith(expect.objectContaining({ title: 'common:autosave.leaveTitle' }));
+    expect(screen.queryByText('opex.editor.requiredLeaveMessage')).not.toBeInTheDocument();
+  });
+
+  it('asks through the leave guard of the app\'s links', async () => {
+    await openLine();
+    fireEvent.click(screen.getByRole('button', { name: 'pick build' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+    let left: Promise<boolean> | null = null;
+    act(() => { left = confirmLeave(); });
+    fireEvent.click(await screen.findByRole('button', { name: 'opex.editor.requiredLeaveConfirm' }));
+    await expect(left).resolves.toBe(true);
+  });
+
+  it('never asks without a change', async () => {
+    await openLine();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
+    expect(await screen.findByTestId('list-page')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('never asks once the required value is picked', async () => {
+    await openLine();
+    fireEvent.click(screen.getByRole('button', { name: 'pick nature value' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
+    expect(await screen.findByTestId('list-page')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('never asks a user who cannot edit the line', async () => {
+    auth.canEdit = false;
+    await openLine();
+    fireEvent.click(screen.getByRole('button', { name: 'pick build' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
+    expect(await screen.findByTestId('list-page')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

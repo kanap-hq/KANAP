@@ -39,6 +39,13 @@ export class AnalyticsAxis {
   @Column('text', { nullable: true })
   applies_to!: AxisAppliesTo | null;
 
+  /**
+   * A new line of a type it applies to must hold a value on it, and a held value cannot be
+   * cleared. Checked only while the dimension is enabled.
+   */
+  @Column('boolean', { default: false })
+  required!: boolean;
+
   @Column({
     type: 'enum',
     enum: StatusState,

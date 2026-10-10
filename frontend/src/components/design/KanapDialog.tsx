@@ -30,6 +30,8 @@ export type KanapDialogProps = {
   saveColor?: ButtonProps['color'];
   saveDisabled?: boolean;
   saveLoading?: boolean;
+  /** The main action takes the focus when the dialog opens (its answer is the safe one). */
+  saveAutoFocus?: boolean;
   /** Extra styles for the main action button, merged after the defaults. */
   saveSx?: SxProps<Theme>;
   /** Defaults to the localized "Cancel"; pass one only for a non-standard label. */
@@ -67,6 +69,7 @@ export default function KanapDialog({
   saveColor = 'primary',
   saveDisabled = false,
   saveLoading = false,
+  saveAutoFocus = false,
   saveSx,
   cancelLabel,
   showCancel = true,
@@ -74,6 +77,7 @@ export default function KanapDialog({
 }: KanapDialogProps) {
   const { t } = useTranslation('common');
   const resolvedCancelLabel = cancelLabel ?? t('buttons.cancel');
+  const saveButtonRef = React.useRef<HTMLButtonElement>(null);
   const handleSubmit = React.useCallback((event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (saveDisabled || saveLoading) return;
@@ -86,7 +90,12 @@ export default function KanapDialog({
       onClose={onClose}
       fullWidth
       maxWidth={false}
-      TransitionProps={onExited ? { onExited } : undefined}
+      TransitionProps={onExited || saveAutoFocus ? {
+        ...(onExited ? { onExited } : {}),
+        // The modal's focus trap takes the focus back to the dialog itself
+        // when it opens, after the button's autoFocus: focus it once shown.
+        ...(saveAutoFocus ? { onEntered: () => saveButtonRef.current?.focus() } : {}),
+      } : undefined}
       BackdropProps={{
         sx: (theme: Theme) => ({
           bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.65)' : 'rgba(15, 17, 23, 0.45)',
@@ -182,7 +191,9 @@ export default function KanapDialog({
           ) : null}
           {secondaryActions}
           <Button
+            ref={saveButtonRef}
             type="submit"
+            autoFocus={saveAutoFocus}
             variant={saveVariant}
             color={saveColor}
             disabled={saveDisabled || saveLoading}

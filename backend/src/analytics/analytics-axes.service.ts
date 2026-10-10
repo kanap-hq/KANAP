@@ -11,7 +11,7 @@ import {
   resolveAnalyticsLifecycle,
   sameInstant,
 } from './analytics-context';
-import { isAxisActive, isReservedAnalyticsAxisName, resolveDefaultAxisId } from './analytics-axes.util';
+import { axisAppliesTo, isAxisActive, isReservedAnalyticsAxisName, resolveDefaultAxisId } from './analytics-axes.util';
 import { AXIS_APPLIES_TO, AxisAppliesTo } from './analytics-axis.entity';
 
 /** A stored row, as `SELECT *` returns it. */
@@ -24,6 +24,7 @@ export interface StoredAnalyticsAxis {
   sort_order: number;
   is_default: boolean;
   applies_to: AxisAppliesTo | null;
+  required: boolean;
   status: StatusState;
   disabled_at: Date | null;
   created_at: Date;
@@ -36,6 +37,7 @@ export interface AnalyticsAxisValues {
   description: string | null;
   sort_order: number;
   applies_to: AxisAppliesTo | null;
+  required: boolean;
   status: StatusState;
   disabled_at: Date | null;
 }
@@ -46,6 +48,11 @@ export type AnalyticsAxisDetail = AnalyticsAxisRow & {
   value_count: number;
   opex_count: number;
   capex_count: number;
+  /** OPEX / CAPEX lines (all statuses) with no value on it; 0 for a type it does not apply to. */
+  opex_missing: number;
+  capex_missing: number;
+  /** The line types it applies to on which none of its enabled values can be chosen. */
+  unusable_for: AxisAppliesTo[];
 };
 
 export interface AnalyticsAxisInput {
@@ -54,6 +61,7 @@ export interface AnalyticsAxisInput {
   description?: unknown;
   sort_order?: unknown;
   applies_to?: unknown;
+  required?: unknown;
   status?: unknown;
   disabled_at?: unknown;
 }
@@ -105,6 +113,16 @@ export function normalizeAppliesTo(raw: unknown): AxisAppliesTo | null {
   return value as AxisAppliesTo;
 }
 
+/** Whether a new line must hold a value on the dimension. The DTO checks the shape; this covers other callers. */
+export function normalizeRequired(raw: unknown): boolean {
+  if (raw == null) return false;
+  if (typeof raw === 'boolean') return raw;
+  const value = String(raw).trim().toLowerCase();
+  if (value === 'true') return true;
+  if (value === 'false' || value === '') return false;
+  throw analyticsRefusal('Required must be true or false.', 'required');
+}
+
 /**
  * "2 values of this dimension are for CAPEX lines only (Matériel, Projet). Set them to OPEX and
  * CAPEX first.": up to three names in name order, then "and N more". The names matter because the
@@ -125,6 +143,7 @@ function toRow(stored: StoredAnalyticsAxis): AnalyticsAxisRow {
     ...stored,
     sort_order: Number(stored.sort_order ?? 0),
     applies_to: stored.applies_to ?? null,
+    required: stored.required === true,
     status: isAxisActive(stored) ? 'enabled' : 'disabled',
   };
 }
@@ -135,6 +154,7 @@ function valuesEqual(stored: StoredAnalyticsAxis, next: AnalyticsAxisValues): bo
     && (stored.description ?? null) === next.description
     && Number(stored.sort_order) === next.sort_order
     && (stored.applies_to ?? null) === next.applies_to
+    && (stored.required === true) === next.required
     // From the stored end of validity: the stored status lags until the hourly sync once that date passes.
     && deriveStatusFromDisabledAt(stored.disabled_at) === next.status
     && sameInstant(stored.disabled_at, next.disabled_at);
@@ -157,23 +177,62 @@ export class AnalyticsAxesService {
     return { items: rows.map(toRow) };
   }
 
+  /**
+   * One dimension with its counts. `opex_missing` / `capex_missing`: the lines of every status
+   * with no value on it (as the list link with every status shows them), 0 for a type it does
+   * not apply to. `unusable_for`: the types it applies to with no enabled value usable on them.
+   * Both are computed whether or not the dimension is required.
+   */
   async get(id: string, ctx: AnalyticsContext): Promise<AnalyticsAxisDetail> {
     const [row] = await ctx.manager.query(
       `SELECT a.*,
               (SELECT count(*)::int FROM analytics_categories c WHERE c.tenant_id = $1 AND c.axis_id = a.id) AS value_count,
               (SELECT count(*)::int FROM spend_item_analytics_values v WHERE v.tenant_id = $1 AND v.axis_id = a.id) AS opex_count,
-              (SELECT count(*)::int FROM capex_item_analytics_values v WHERE v.tenant_id = $1 AND v.axis_id = a.id) AS capex_count
+              (SELECT count(*)::int FROM capex_item_analytics_values v WHERE v.tenant_id = $1 AND v.axis_id = a.id) AS capex_count,
+              CASE WHEN a.applies_to IS NULL OR a.applies_to = 'opex' THEN (
+                SELECT count(*)::int FROM spend_items i
+                 WHERE i.tenant_id = $1
+                   AND NOT EXISTS (
+                     SELECT 1 FROM spend_item_analytics_values v
+                      WHERE v.tenant_id = $1 AND v.item_id = i.id AND v.axis_id = a.id
+                   )
+              ) ELSE 0 END AS opex_missing,
+              CASE WHEN a.applies_to IS NULL OR a.applies_to = 'capex' THEN (
+                SELECT count(*)::int FROM capex_items i
+                 WHERE i.tenant_id = $1
+                   AND NOT EXISTS (
+                     SELECT 1 FROM capex_item_analytics_values v
+                      WHERE v.tenant_id = $1 AND v.item_id = i.id AND v.axis_id = a.id
+                   )
+              ) ELSE 0 END AS capex_missing,
+              EXISTS (
+                SELECT 1 FROM analytics_categories c
+                 WHERE c.tenant_id = $1 AND c.axis_id = a.id
+                   AND c.status = 'enabled' AND (c.disabled_at IS NULL OR c.disabled_at > now())
+                   AND (c.applies_to IS NULL OR c.applies_to = 'opex')
+              ) AS opex_usable,
+              EXISTS (
+                SELECT 1 FROM analytics_categories c
+                 WHERE c.tenant_id = $1 AND c.axis_id = a.id
+                   AND c.status = 'enabled' AND (c.disabled_at IS NULL OR c.disabled_at > now())
+                   AND (c.applies_to IS NULL OR c.applies_to = 'capex')
+              ) AS capex_usable
          FROM analytics_axes a
         WHERE a.tenant_id = $1 AND a.id = $2`,
       [ctx.tenantId, id],
     );
     if (!row) throw new NotFoundException('Dimension not found.');
-    const { value_count, opex_count, capex_count, ...stored } = row;
+    const { value_count, opex_count, capex_count, opex_missing, capex_missing, opex_usable, capex_usable, ...stored } = row;
+    const axis = toRow(stored as StoredAnalyticsAxis);
+    const usable: Record<AxisAppliesTo, boolean> = { opex: opex_usable === true, capex: capex_usable === true };
     return {
-      ...toRow(stored as StoredAnalyticsAxis),
+      ...axis,
       value_count: Number(value_count ?? 0),
       opex_count: Number(opex_count ?? 0),
       capex_count: Number(capex_count ?? 0),
+      opex_missing: Number(opex_missing ?? 0),
+      capex_missing: Number(capex_missing ?? 0),
+      unusable_for: AXIS_APPLIES_TO.filter((scope) => axisAppliesTo(axis, scope) && !usable[scope]),
     };
   }
 
@@ -198,6 +257,7 @@ export class AnalyticsAxesService {
       description: normalizeAnalyticsDescription(body?.description),
       sort_order: sortOrder,
       applies_to: normalizeAppliesTo(body?.applies_to),
+      required: normalizeRequired(body?.required),
       status: lifecycle.status,
       disabled_at: lifecycle.disabled_at,
     };
@@ -237,6 +297,8 @@ export class AnalyticsAxesService {
       description: has('description') ? normalizeAnalyticsDescription(body.description) : existing.description ?? null,
       sort_order: has('sort_order') ? normalizeSortOrder(body.sort_order) : Number(existing.sort_order),
       applies_to: appliesTo,
+      // PATCH: absent (or null) keeps it.
+      required: has('required') && body.required !== null ? normalizeRequired(body.required) : existing.required === true,
       status: lifecycle.status,
       disabled_at: lifecycle.disabled_at,
     };
@@ -341,21 +403,21 @@ export class AnalyticsAxesService {
         ? await ctx.manager.query(
           `UPDATE analytics_axes
               SET code = $3, name = $4, description = $5, sort_order = $6, status = $7, disabled_at = $8,
-                  applies_to = $9, updated_at = now()
+                  applies_to = $9, required = $10, updated_at = now()
             WHERE tenant_id = $1 AND id = $2
         RETURNING *`,
           [
             ctx.tenantId, existing.id, values.code, values.name, values.description, values.sort_order,
-            values.status, values.disabled_at, values.applies_to,
+            values.status, values.disabled_at, values.applies_to, values.required,
           ],
         )
         : await ctx.manager.query(
-          `INSERT INTO analytics_axes (tenant_id, code, name, description, sort_order, is_default, status, disabled_at, applies_to)
-           VALUES ($1, $2, $3, $4, $5, false, $6, $7, $8)
+          `INSERT INTO analytics_axes (tenant_id, code, name, description, sort_order, is_default, status, disabled_at, applies_to, required)
+           VALUES ($1, $2, $3, $4, $5, false, $6, $7, $8, $9)
         RETURNING *`,
           [
             ctx.tenantId, values.code, values.name, values.description, values.sort_order,
-            values.status, values.disabled_at, values.applies_to,
+            values.status, values.disabled_at, values.applies_to, values.required,
           ],
         );
       saved = firstReturnedRow<StoredAnalyticsAxis>(rows);

@@ -28,8 +28,10 @@ import {
   ItemAnalyticsScope,
   ItemAnalyticsValue,
   loadItemAnalyticsValues,
+  missingRequiredDimensions,
   notApplicableDimensionMessage,
   notApplicableValueMessage,
+  requiredDimensionMessage,
   valueAppliesTo,
 } from '../../spend/item-analytics.util';
 import {
@@ -37,6 +39,7 @@ import {
   AnalyticsAxisInfo,
   analyticsAxisLabel,
   axisAppliesTo,
+  axisRequiredFor,
   loadAnalyticsAxes,
 } from '../../analytics/analytics-axes.util';
 import { isActiveAt, parseEndOfValidityInput } from '../../common/status';
@@ -786,9 +789,14 @@ export class AiBusinessRecordMutationSupportService {
         const dimensionAxis = axis ?? (await tenantAxes()).find((candidate) => candidate.is_default) ?? null;
         label = analyticsAxisLabel(dimensionAxis ?? { name: null });
         if (dimensionAxis) {
-          const dimension = await this.normalizeDimensionValue(context, scope, dimensionAxis, rawValue, (existing?.[resolved.name] as string | null | undefined) ?? null);
+          const currentId = (existing?.[resolved.name] as string | null | undefined) ?? null;
+          const dimension = await this.normalizeDimensionValue(context, scope, dimensionAxis, rawValue, currentId);
           // A dimension the line may not change passes its current value as a no-op: nothing to create.
           if (dimension.locked && mode === 'create') continue;
+          // The write gate's rule: a required dimension cannot lose the value the line holds.
+          if (mode === 'update' && dimension.value === null && currentId && axisRequiredFor(dimensionAxis, scope)) {
+            throw new BadRequestException(requiredDimensionMessage(dimensionAxis));
+          }
           normalized = dimension;
         } else {
           const ref = textOrNull(rawValue);
@@ -826,6 +834,18 @@ export class AiBusinessRecordMutationSupportService {
         const value = fields[name];
         if (value == null || value === '' || (Array.isArray(value) && value.length === 0)) {
           throw new BadRequestException(`${field.label} is required for ${config.labelSingular} creation.`);
+        }
+      }
+      if (scope) {
+        // A new line needs a value on each dimension required for its type (the write gate checks again).
+        const lineAxes = await tenantAxes();
+        const values = new Map(lineAxes.map((axis) => [
+          axis.id,
+          (fields[axis.is_default ? DEFAULT_ANALYTICS_FIELD : analyticsAxisFieldKey(axis.id)] as string | null | undefined) ?? null,
+        ]));
+        const [missing] = missingRequiredDimensions(lineAxes, values, scope);
+        if (missing) {
+          throw new BadRequestException(`${analyticsAxisLabel(missing)} is required for ${config.labelSingular} creation.`);
         }
       }
       if (entityType === 'projects' && fields.origin === 'standard') {

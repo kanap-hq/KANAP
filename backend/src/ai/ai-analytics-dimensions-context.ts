@@ -8,6 +8,8 @@ export type AnalyticsDimensionPromptEntry = {
   default: boolean;
   /** The readable line types it applies to. */
   used_for: Array<'opex' | 'capex'>;
+  /** A new line of those types must be given a value on it (`axisRequiredFor`). */
+  required: boolean;
 };
 
 export type AnalyticsDimensionsPromptContext = AnalyticsDimensionPromptEntry[];
@@ -17,6 +19,7 @@ export type AnalyticsDimensionsPromptContext = AnalyticsDimensionPromptEntry[];
  * listed once: the enabled dimensions, in display order, with the line types
  * the user can read that they apply to. The default dimension keeps the key
  * `analytics_category` (as on the query side), the others are `analytics:<code>`.
+ * `required`: a new line of a `used_for` type must be given a value on it.
  * Undefined when the user reads neither line type.
  */
 export function analyticsDimensionsAiContext(
@@ -34,6 +37,8 @@ export function analyticsDimensionsAiContext(
       name: analyticsAxisLabel(axis),
       default: axis.is_default,
       used_for: scopes.filter((scope) => axisAppliesTo(axis, scope)),
+      // Listed dimensions are enabled and apply to every `used_for` type: the setting is the rule.
+      required: axis.required === true,
     }))
     .filter((entry) => entry.used_for.length > 0);
 }
