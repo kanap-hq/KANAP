@@ -14,8 +14,8 @@
  *   node scripts/shoot-app.mjs --inspect-fixed        # debug floating elements
  *
  * Output defaults to 2000x1050 CSS px at deviceScaleFactor 2 (4000x2100 PNG).
- * Blog standard: --width 1440 --height 900 --scale 1 --lang en (1440 px PNG,
- * English UI whatever the article language).
+ * Site and blog standard (Fried, 2026-10-10): --width 1920 --height 1080 --scale 1
+ * --lang en (1920 x 1080 PNG, English UI whatever the page language).
  *
  * Requirements:
  *   - chromium at /usr/bin/chromium (override with CHROMIUM_PATH)
@@ -39,7 +39,7 @@ const OUT_DIR = resolve(flag('out', 'public/screenshots/blog'));
 const THEME = flag('theme', 'light');
 const WIDTH = Number(flag('width', 2000));
 const HEIGHT = Number(flag('height', 1050));
-const SCALE = Number(flag('scale', 2)); // 1 for the blog standard: 1440 x 900 window, 1440 px PNG
+const SCALE = Number(flag('scale', 2)); // 1 for the site standard: 1920 x 1080 window, 1920 px PNG
 const EMAIL = process.env.APP_EMAIL;
 const PASSWORD = process.env.APP_PASSWORD;
 
@@ -277,7 +277,7 @@ const PAGES = {
       await sleep(1500); // let the chart redraw
     },
   },
-  // Budget feature page (October 2026), same standard: --out public/screenshots.
+  // Budget feature page (October 2026): --out public/screenshots.
   'budget-opex-grid': {
     path: '/ops/opex',
     waitFor: 'main',
@@ -303,15 +303,10 @@ const PAGES = {
       await pickSelect(page, 'Chart type', 'Pie chart');
       await hideControls(page, HIDDEN_DIMENSIONS);
       await page.waitForSelector('.ag-charts-wrapper canvas', { timeout: 20000 }).catch(() => {});
-      // Frame the whole pie: bring the chart card to the top of the view.
-      await page.evaluate(() => {
-        const title = [...document.querySelectorAll('main *')].find((n) => !n.children.length && n.textContent?.trim() === 'Chart');
-        title?.scrollIntoView({ block: 'start' });
-      });
       await sleep(1500);
     },
   },
-  // Budget articles (October 2026), blog standard 1440 x 900, English UI.
+  // Budget articles (October 2026).
   'opex-list-filters': {
     path: '/ops/opex',
     waitFor: 'main',
@@ -407,9 +402,6 @@ const PAGES = {
       await hideControls(page, HIDDEN_DIMENSIONS);
       await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('Expected landing (2025)'), { timeout: 30000 });
       await sleep(1500);
-      // Chart and the top of the table; the selection reads in the chart title.
-      await page.evaluate(() => document.querySelector('.ag-root-wrapper')?.scrollIntoView({ block: 'end' }));
-      await sleep(800);
     },
   },
   'cost-per-fte': {
@@ -424,9 +416,6 @@ const PAGES = {
       await hideControls(page, HIDDEN_DIMENSIONS);
       await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('Expected landing 2026'), { timeout: 30000 });
       await sleep(1500);
-      // The table sits under the chart: bring it up, the chart keeps the top.
-      await page.evaluate(() => document.querySelector('.ag-root-wrapper')?.scrollIntoView({ block: 'end' }));
-      await sleep(800);
     },
   },
   'chargeback-default-method': {

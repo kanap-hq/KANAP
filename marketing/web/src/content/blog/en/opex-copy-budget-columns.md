@@ -27,7 +27,7 @@ Second pass: build the 2027 budget. Source: Expected landing 2026. Destination: 
 
 Your work is precious. So "Copy data" stays disabled until a dry run has completed. The dry run lists every item with its source value, its current destination value and the value that would be written. Items already filled in appear marked "Skipped": they will not be modified. The "Overwrite existing data" switch covers the deliberate cases; leave it off unless you mean it.
 
-![The dry run before copying: source values, previewed values and skipped items](/screenshots/blog/copy-budget-columns.png)
+![The dry run before copying: source values, previewed values and skipped items](/screenshots/blog/copy-budget-columns-2026-10.png)
 
 At the bottom, three totals: source, current destination, preview. A number surprises you? Nothing has been written yet. Adjust, rerun, copy.
 

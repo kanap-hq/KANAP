@@ -39,7 +39,7 @@ Then write the body in plain Markdown. What renders well:
 - Paragraphs, **bold**, links, bulleted and numbered lists, tables.
 - `> quote` becomes a pull quote (large, teal opening mark). Use it once or twice, for a sentence that stands alone.
 - Fenced code blocks with a language: ` ```bash `, ` ```yaml `, ` ```env `.
-- Images: `![What the reader sees](/screenshots/agent-proposal.png)`. The image gets the same frame as product screenshots on the feature pages. Put new images in `public/screenshots/` (or `public/blog/`), 1440 px wide PNG, and write the alt text as a full sentence.
+- Images: `![What the reader sees](/screenshots/agent-proposal.png)`. The image gets the same frame as product screenshots on the feature pages. Put new images in `public/screenshots/` (or `public/blog/`), 1920 × 1080 PNG with the English UI (`scripts/shoot-app.mjs --width 1920 --height 1080 --scale 1 --lang en`), under a new file name when an image changes (the CDN and browsers cache images for a week), and write the alt text as a full sentence.
 - A stat callout, the one HTML block worth using:
 
   ```html

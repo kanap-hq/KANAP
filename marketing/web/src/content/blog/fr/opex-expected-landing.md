@@ -29,7 +29,7 @@ C'est aussi le socle du budget de l'année suivante : un atterrissage soigné é
 
 Personne ne relit deux cents lignes d'un bloc. La liste OPEX se manipule comme une feuille de calcul : un filtre rapide en haut, des filtres à cases à cocher sur chaque colonne. Société payeuse, Compte, Centre de coûts, Ventilation, Devise, Responsable IT, Responsable métier, dimensions analytiques : vous cochez, la liste se resserre, et la ligne de totaux recalcule sur la sélection.
 
-![La liste OPEX filtrée, avec la ligne de totaux qui suit la sélection](/screenshots/blog/opex-list-filters.png)
+![La liste OPEX filtrée, avec la ligne de totaux qui suit la sélection](/screenshots/blog/opex-list-filters-2026-10.png)
 
 La revue se découpe alors naturellement : les prestations de service un matin, les licences le lendemain, les postes d'une filiale ensuite. Les filtres sont conservés dans l'URL ; vous ouvrez une ligne, vous revenez, la sélection n'a pas bougé.
 
@@ -39,7 +39,7 @@ Ou bien, si vous êtes pressés, triez simplement par montant et traitez les 20 
 
 Ouvrez le premier poste de la sélection, onglet **Budget**. Les flèches précédent et suivant affichent « 3 sur 42 » et suivent votre liste filtrée, dans son ordre de tri. Vous avancez ligne à ligne et ne corrigez l'atterrissage que là où la réalité a divergé : un contrat renégocié, un projet décalé, une consommation cloud plus haute que prévu.
 
-![L'onglet Budget d'un poste, avec la navigation dans la sélection](/screenshots/blog/opex-budget-tab.png)
+![L'onglet Budget d'un poste, avec la navigation dans la sélection](/screenshots/blog/opex-budget-tab-2026-10.png)
 
 Pour les lignes qui méritent mieux qu'un montant annuel, l'onglet Budget propose un mode **Mensuel** et un outil « Répartir un montant », en linéaire ou en 4-4-5.
 
@@ -49,7 +49,7 @@ Pour les lignes qui méritent mieux qu'un montant annuel, l'onglet Budget propos
 
 Pour une régie, un forfait mensuel ou des licences à l'unité, un montant annuel ne dit pas grand-chose. Dans l'onglet Budget, « Quantité et prix » décompose le montant en lignes : une quantité, une unité (personnes, jours ou pièces), un prix unitaire et une période.
 
-![Un poste de régie construit en quantité × prix : une personne à temps plein à 880 € par jour, soit 1 ETP sur l'année](/screenshots/blog/budget-item-lines.png)
+![Un poste de régie construit en quantité × prix : une personne à temps plein à 880 € par jour, soit 1 ETP sur l'année](/screenshots/blog/budget-item-lines-2026-10.png)
 
 Deux consultants à 650 € par jour, à temps plein de mars à décembre : KANAP calcule chaque mois avec les jours ouvrés du calendrier du pays de la société payeuse, jours fériés déduits. Si la mission s'arrête fin octobre ou si le TJM a été renégocié, vous changez la date ou le prix, et l'atterrissage se recalcule. Plus besoin de refaire la multiplication à la main.
 
@@ -69,7 +69,7 @@ Ces montants saisis à la main ne risquent rien : la copie automatique de l'épi
 
 KANAP gère les budgets multi-devises, mais il faut y penser avant ! Dans Gestion budgétaire → Administration → **Devises**, définissez la devise de reporting, les devises par défaut OPEX et CAPEX et la liste des devises autorisées. Les taux de change se synchronisent automatiquement par exercice, et se figent quand vous gelez la colonne budgétaire par défaut. Chaque poste garde sa devise ; totaux et rapports convertissent en devise de reporting.
 
-![Les paramètres de devise : devise de reporting, devises autorisées et taux de change](/screenshots/blog/currency-settings.png)
+![Les paramètres de devise : devise de reporting, devises autorisées et taux de change](/screenshots/blog/currency-settings-2026-10.png)
 
 ## Et le CAPEX ?
 
