@@ -1,8 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { DeepPartial, EntityManager, In } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
-import { CapexAllocation } from '../capex/capex-allocation.entity';
-import { CapexVersion } from '../capex/capex-version.entity';
 import { AmountScope } from './amounts-write.util';
 import { formatAllocationMethodLabel } from './allocation-utils';
 import { currentTenantId, loadItemsValidIn, loadVersions } from './budget-column-operations';
@@ -10,6 +8,7 @@ import { SpendAllocation } from './spend-allocation.entity';
 import { SpendVersion } from './spend-version.entity';
 import { ensureBudgetVersion } from './budget-version-ensure';
 import { lockBudgetLines, lockBudgetVersions, lockTenantBudgetOperations } from './budget-locks';
+import { auditTableOf } from './budget-nature';
 
 /**
  * Copy allocations from one year to another, for OPEX and CAPEX alike.
@@ -28,17 +27,18 @@ const SCOPES = {
     versions: 'spend_versions', allocations: 'spend_allocations',
     versionEntity: SpendVersion, allocationEntity: SpendAllocation,
   },
+  // The same tables since lot Z1: the lines and versions are read for the scope's nature.
   capex: {
-    itemFk: 'capex_item_id',
-    versions: 'capex_versions', allocations: 'capex_allocations',
-    versionEntity: CapexVersion, allocationEntity: CapexAllocation,
+    itemFk: 'spend_item_id',
+    versions: 'spend_versions', allocations: 'spend_allocations',
+    versionEntity: SpendVersion, allocationEntity: SpendAllocation,
   },
 } as const;
 
 const MANUAL_METHODS = new Set(['manual_company', 'manual_department', 'manual_pct']);
 
-type AllocationVersion = SpendVersion | CapexVersion;
-type AllocationRow = SpendAllocation | CapexAllocation;
+type AllocationVersion = SpendVersion;
+type AllocationRow = SpendAllocation;
 
 export type AllocationOperationDeps = {
   manager: EntityManager;
@@ -263,7 +263,7 @@ export async function copyAllocations(
       destinationVersion = ensured.version;
       if (ensured.created) {
         await deps.audit.log(
-          { table: t.versions, recordId: destinationVersion.id, action: 'create', before: null, after: destinationVersion, userId },
+          { table: auditTableOf(scope, t.versions), recordId: destinationVersion.id, action: 'create', before: null, after: destinationVersion, userId },
           { manager: mg },
         );
       }
@@ -296,7 +296,7 @@ export async function copyAllocations(
       const beforeMethod = locked.allocation_method;
       await versionRepo.update({ id: destinationVersion.id, tenant_id: tenantId } as any, { allocation_method: sourceMethod } as any);
       await deps.audit.log({
-        table: t.versions,
+        table: auditTableOf(scope, t.versions),
         recordId: destinationVersion.id,
         action: 'update',
         before: { allocation_method: beforeMethod },
@@ -333,7 +333,7 @@ export async function copyAllocations(
     }
 
     await deps.audit.log({
-      table: t.allocations,
+      table: auditTableOf(scope, t.allocations),
       recordId: destinationVersion.id,
       action: 'update',
       before: { count: lockedManual },

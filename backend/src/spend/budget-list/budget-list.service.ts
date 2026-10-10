@@ -28,6 +28,7 @@ import {
 } from '../spend-summary.builder';
 import { BudgetListConfig, budgetRuntimeNeeds } from './budget-list.config';
 import { natureAnd } from '../budget-nature';
+import { presentLine, selectLineColumns } from '../budget-line-presentation';
 import { fxKeyCurrency, fxSetKeySql, fxTableSql, RequestFxRates } from './budget-fx-table';
 import { BudgetListRuntime, loadBudgetRuntime, mergeNeeds, RuntimeNeeds } from './budget-list.runtime';
 
@@ -163,16 +164,18 @@ async function run(manager: EntityManager, stmt: SqlStatement, sql: string): Pro
   return manager.query(final.sql, final.params);
 }
 
+/** The lines of the page in their order, as their nature's API shows them (`budget-line-presentation.ts`). */
 async function itemsInOrder(scope: SummaryScopeConfig, manager: EntityManager, tenantId: string, ids: string[]): Promise<any[]> {
   if (!ids.length) return [];
-  const items: any[] = await manager.getRepository<any>(scope.itemEntity as any)
+  const nature = scope.nature ?? scope.scope;
+  const qb = manager.getRepository(scope.itemEntity)
     .createQueryBuilder('i')
     .where(`i.tenant_id = :tenantId${natureAnd('i', scope.nature)}`, { tenantId })
     .andWhere('i.id = ANY(:ids)', { ids })
     .orderBy('i.created_at', 'DESC')
-    .addOrderBy('i.id', 'DESC')
-    .getMany();
-  const byId = new Map(items.map((item) => [item.id, item]));
+    .addOrderBy('i.id', 'DESC');
+  const items = await selectLineColumns(qb, 'i', nature).getMany();
+  const byId = new Map(items.map((item) => [item.id, presentLine(nature, item)]));
   return ids.map((id) => byId.get(id)).filter(Boolean);
 }
 

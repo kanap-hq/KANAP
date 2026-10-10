@@ -8,12 +8,18 @@ import { SpendItem } from './spend-item.entity';
 import { AuditService } from '../audit/audit.service';
 import { attachManualContactLink, LINK_REMOVED } from '../contacts/contact-link-attach.util';
 import { lockBudgetLine } from './budget-locks';
+import { auditTableOf, type BudgetNature } from './budget-nature';
+import { presentChild, presentChildren } from './budget-line-presentation';
 
 /** The request's tenant: every statement filters on it. */
 type ItemContactsOpts = { manager?: EntityManager; tenantId: string };
 
+/** The contacts of the lines of one nature (`SpendItemContactsService`, `CapexItemContactsService`). */
 @Injectable()
 export class SpendItemContactsService {
+  /** The nature of the lines whose contacts this service reads and writes. */
+  protected readonly nature: BudgetNature = 'opex';
+
   constructor(
     @InjectRepository(SpendItemContactLink)
     private readonly linkRepo: Repository<SpendItemContactLink>,
@@ -23,6 +29,10 @@ export class SpendItemContactsService {
     private readonly itemRepo: Repository<SpendItem>,
     private readonly audit: AuditService,
   ) {}
+
+  private get itemNotFound(): string {
+    return this.nature === 'capex' ? 'CAPEX item not found' : 'Spend item not found';
+  }
 
   private getLinkRepo(manager?: EntityManager) {
     return manager ? manager.getRepository(SpendItemContactLink) : this.linkRepo;
@@ -36,14 +46,14 @@ export class SpendItemContactsService {
 
   async listForItem(itemId: string, opts: ItemContactsOpts) {
     const repo = this.getLinkRepo(opts.manager);
-    // The contacts of an OPEX line only (`budget-nature.ts`): none for a line of another nature.
-    if (!(await this.getItemRepo(opts.manager).exists({ where: { tenant_id: opts.tenantId, id: itemId, nature: 'opex' } }))) return [];
+    // The contacts of a line of the nature only (`budget-nature.ts`): none for a line of the other nature.
+    if (!(await this.getItemRepo(opts.manager).exists({ where: { tenant_id: opts.tenantId, id: itemId, nature: this.nature } }))) return [];
     const items = await repo.find({
       where: { tenant_id: opts.tenantId, spend_item_id: itemId },
       order: { role: 'ASC', created_at: 'DESC' } as any,
       relations: ['contact'],
     });
-    return items;
+    return presentChildren(this.nature, items);
   }
 
   async attachManual(
@@ -57,10 +67,10 @@ export class SpendItemContactsService {
     const itemRepo = this.getItemRepo(opts.manager);
 
     // Lock order (`budget-locks.ts`): the line, then its contacts.
-    const item = (await lockBudgetLine(itemRepo.manager, 'opex', opts.tenantId, itemId))
-      ? await itemRepo.findOne({ where: { tenant_id: opts.tenantId, id: itemId, nature: 'opex' } as any })
+    const item = (await lockBudgetLine(itemRepo.manager, this.nature, opts.tenantId, itemId))
+      ? await itemRepo.findOne({ where: { tenant_id: opts.tenantId, id: itemId, nature: this.nature } as any })
       : null;
-    if (!item) throw new NotFoundException('Spend item not found');
+    if (!item) throw new NotFoundException(this.itemNotFound);
 
     const contact = await contactRepo.findOne({ where: { tenant_id: opts.tenantId, id: params.contactId } });
     if (!contact) throw new NotFoundException('Contact not found');
@@ -72,12 +82,13 @@ export class SpendItemContactsService {
       contactId: params.contactId,
       role: params.role,
     });
-    const saved = await repo.findOne({ where: { tenant_id: item.tenant_id, id } });
-    if (!saved) throw new ConflictException(LINK_REMOVED);
+    const found = await repo.findOne({ where: { tenant_id: item.tenant_id, id } });
+    if (!found) throw new ConflictException(LINK_REMOVED);
+    const saved = presentChild(this.nature, found);
     if (!created) return saved;
     await this.audit.log(
       {
-        table: 'spend_item_contacts',
+        table: auditTableOf(this.nature, 'spend_item_contacts'),
         recordId: saved.id,
         action: 'create',
         before: null,
@@ -94,16 +105,16 @@ export class SpendItemContactsService {
     const repo = this.getLinkRepo(opts.manager);
     // Lock order (`budget-locks.ts`): the line, then its contacts. A line of another nature is not
     // locked, so its contact link is not found.
-    if (!(await lockBudgetLine(repo.manager, 'opex', opts.tenantId, itemId))) throw new NotFoundException('Link not found');
+    if (!(await lockBudgetLine(repo.manager, this.nature, opts.tenantId, itemId))) throw new NotFoundException('Link not found');
     const existing = await repo.findOne({ where: { tenant_id: opts.tenantId, id: linkId, spend_item_id: itemId } });
     if (!existing) throw new NotFoundException('Link not found');
     await repo.delete({ tenant_id: opts.tenantId, id: linkId, spend_item_id: itemId });
     await this.audit.log(
       {
-        table: 'spend_item_contacts',
+        table: auditTableOf(this.nature, 'spend_item_contacts'),
         recordId: linkId,
         action: 'delete',
-        before: existing,
+        before: presentChild(this.nature, existing),
         after: null,
         userId: userId ?? null,
       },
@@ -121,8 +132,8 @@ export class SpendItemContactsService {
     const repo = this.getLinkRepo(opts.manager);
     const itemRepo = this.getItemRepo(opts.manager);
 
-    const item = await itemRepo.findOne({ where: { tenant_id: opts.tenantId, id: itemId, nature: 'opex' } as any });
-    if (!item) throw new NotFoundException('Spend item not found');
+    const item = await itemRepo.findOne({ where: { tenant_id: opts.tenantId, id: itemId, nature: this.nature } as any });
+    if (!item) throw new NotFoundException(this.itemNotFound);
     const tenantId = item.tenant_id;
     const before = await repo.find({ where: { tenant_id: tenantId, spend_item_id: itemId, origin: ContactOrigin.SUPPLIER } });
 
@@ -147,7 +158,7 @@ export class SpendItemContactsService {
     if (JSON.stringify(beforeState) !== JSON.stringify(afterState)) {
       await this.audit.log(
         {
-          table: 'spend_item_contacts',
+          table: auditTableOf(this.nature, 'spend_item_contacts'),
           recordId: itemId,
           action: 'update',
           before: beforeState,
@@ -165,10 +176,16 @@ export class SpendItemContactsService {
   async syncFromSupplierForItem(itemId: string, userId: string | null | undefined, opts: ItemContactsOpts) {
     const itemRepo = this.getItemRepo(opts.manager);
     // Lock order (`budget-locks.ts`): the line, then its contacts; the supplier is read under the lock.
-    const item = (await lockBudgetLine(itemRepo.manager, 'opex', opts.tenantId, itemId))
-      ? await itemRepo.findOne({ where: { tenant_id: opts.tenantId, id: itemId, nature: 'opex' } as any })
+    const item = (await lockBudgetLine(itemRepo.manager, this.nature, opts.tenantId, itemId))
+      ? await itemRepo.findOne({ where: { tenant_id: opts.tenantId, id: itemId, nature: this.nature } as any })
       : null;
-    if (!item) throw new NotFoundException('Spend item not found');
+    if (!item) throw new NotFoundException(this.itemNotFound);
     await this.syncFromSupplier(itemId, item.supplier_id, userId, opts);
   }
+}
+
+/** The contacts of the CAPEX lines (`/capex-items/:id/contacts*`, aliases until lot U). */
+@Injectable()
+export class CapexItemContactsService extends SpendItemContactsService {
+  protected override readonly nature: BudgetNature = 'capex';
 }

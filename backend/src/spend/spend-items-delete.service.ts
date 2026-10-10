@@ -20,10 +20,15 @@ import {
   unreferencedPaths,
 } from './item-delete-cleanup';
 import { lockBudgetLine } from './budget-locks';
+import { auditTableOf, type BudgetNature } from './budget-nature';
+import { auditLine, findBudgetLine } from './budget-line-presentation';
 
+/** The delete of the lines of one nature (`SpendItemsDeleteService`, `CapexItemsDeleteService`). */
 @Injectable()
 export class SpendItemsDeleteService extends BaseDeleteService<SpendItem> {
   protected override readonly logger = new Logger(SpendItemsDeleteService.name);
+  /** The nature of the lines this service deletes; a line of the other nature is "not found". */
+  protected readonly nature: BudgetNature = 'opex';
 
   constructor(
     @InjectRepository(SpendItem) repository: Repository<SpendItem>,
@@ -59,17 +64,17 @@ export class SpendItemsDeleteService extends BaseDeleteService<SpendItem> {
     // Lock order (`budget-locks.ts`): the line first, FOR UPDATE since it goes. Every writer of
     // its budget locks it first too, so a save in flight is waited for, and a save that comes
     // after this delete finds no line (404) instead of a version deleted under it.
-    const item = (await lockBudgetLine(manager, 'opex', tenantId, itemId, 'update'))
-      ? await itemRepo.findOne({ where: { id: itemId, tenant_id: tenantId, nature: 'opex' } as any })
+    const item = (await lockBudgetLine(manager, this.nature, tenantId, itemId, 'update'))
+      ? await findBudgetLine(manager, this.nature, tenantId, itemId)
       : null;
     if (!item) {
       throw new NotFoundException('Item not found');
     }
 
     // Refused before anything is removed (a bulk delete reports it for this item).
-    await assertNoFrozenAmounts(manager, 'opex', tenantId, itemId);
+    await assertNoFrozenAmounts(manager, this.nature, tenantId, itemId);
 
-    const paths = await deleteItemDependents(manager, 'opex', tenantId, itemId, {
+    const paths = await deleteItemDependents(manager, this.nature, tenantId, itemId, {
       audit: this.audit,
       timeAggregates: this.timeAggregates,
       userId,
@@ -85,15 +90,15 @@ export class SpendItemsDeleteService extends BaseDeleteService<SpendItem> {
       await versionRepo.delete({ tenant_id: tenantId, spend_item_id: itemId });
     }
 
-    await itemRepo.delete({ tenant_id: tenantId, id: itemId, nature: 'opex' } as any);
+    await itemRepo.delete({ tenant_id: tenantId, id: itemId, nature: this.nature } as any);
 
     if (!skipAudit) {
       await this.audit.log(
         {
-          table: 'spend_items',
+          table: auditTableOf(this.nature, 'spend_items'),
           recordId: itemId,
           action: 'delete',
-          before: item,
+          before: auditLine(this.nature, item),
           after: null,
           userId,
         },
@@ -127,7 +132,7 @@ export class SpendItemsDeleteService extends BaseDeleteService<SpendItem> {
       } catch (error: unknown) {
         let name = 'Unknown';
         try {
-          const item = await itemRepo.findOne({ where: { id: itemId, tenant_id: tenantId, nature: 'opex' } as any });
+          const item = await itemRepo.findOne({ where: { id: itemId, tenant_id: tenantId, nature: this.nature } as any });
           if (item) name = item.product_name;
         } catch (err: any) {
           this.logger.warn(`Failed to fetch spend item name for error reporting: ${err?.message || 'Unknown error'}`);
@@ -150,4 +155,11 @@ export class SpendItemsDeleteService extends BaseDeleteService<SpendItem> {
     result.failed.sort((a, b) => position.get(a.id)! - position.get(b.id)!);
     return result;
   }
+}
+
+/** The delete of the CAPEX lines (`DELETE /capex-items*`, aliases until lot U). */
+@Injectable()
+export class CapexItemsDeleteService extends SpendItemsDeleteService {
+  protected override readonly logger = new Logger(CapexItemsDeleteService.name);
+  protected override readonly nature: BudgetNature = 'capex';
 }

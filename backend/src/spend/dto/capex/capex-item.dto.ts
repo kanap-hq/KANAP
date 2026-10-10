@@ -1,5 +1,5 @@
 import { IsIn, IsISO8601, IsObject, IsOptional, IsString, IsUUID, Length } from 'class-validator';
-import { StatusLifecycleDto } from '../../common/dto/status-lifecycle.dto';
+import { StatusLifecycleDto } from '../../../common/dto/status-lifecycle.dto';
 
 const PPE_TYPES = ['hardware', 'software'] as const;
 const INVESTMENT_TYPES = ['replacement', 'capacity', 'productivity', 'security', 'conformity', 'business_growth', 'other'] as const;

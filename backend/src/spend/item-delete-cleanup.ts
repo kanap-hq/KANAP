@@ -11,7 +11,8 @@ import { deleteTaskActivities } from '../tasks/task-delete-cleanup';
 
 // What an item delete removes besides versions, amounts and allocations. Links,
 // attachments and contract links have no foreign key to the item, so nothing
-// cascades to them; tasks are polymorphic rows. Both item types share this.
+// cascades to them; tasks are polymorphic rows. Both natures share the tables
+// (lot Z1); a CAPEX line's tasks keep their type `capex_item`.
 
 export type ItemDeleteScope = 'opex' | 'capex';
 
@@ -26,12 +27,12 @@ const SCOPES = {
     taskObjectType: 'spend_item',
   },
   capex: {
-    itemColumn: 'capex_item_id',
-    versions: 'capex_versions',
-    amounts: 'capex_amounts',
-    links: 'capex_links',
-    attachments: 'capex_attachments',
-    contractLinks: 'contract_capex_items',
+    itemColumn: 'spend_item_id',
+    versions: 'spend_versions',
+    amounts: 'spend_amounts',
+    links: 'spend_links',
+    attachments: 'spend_attachments',
+    contractLinks: 'contract_spend_items',
     taskObjectType: 'capex_item',
   },
 } as const;

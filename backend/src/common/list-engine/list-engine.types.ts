@@ -46,6 +46,11 @@ export interface ListConfig {
   scopeFields: readonly string[];
   /** The quick search predicate for a trimmed, non-empty needle. */
   quickSearch(stmt: SqlStatement, q: string): string;
+  /**
+   * The select expression of a column the id and neighbour statements return (`<expr> AS <column>`);
+   * absent: the main table's column of that name.
+   */
+  selectColumn?(column: string): string;
 }
 
 /** A parsed list request, common to every list endpoint. */

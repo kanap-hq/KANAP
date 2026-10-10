@@ -17,8 +17,8 @@ import { lockBudgetVersions } from './budget-locks';
 import type { CostLine } from './costing.util';
 
 /**
- * The one way amounts are written, for OPEX (`spend_amounts`) and CAPEX
- * (`capex_amounts`): the amounts services, the item CSV importers and the
+ * The one way amounts are written, for OPEX and CAPEX lines alike
+ * (`spend_amounts`, lot Z1): the amounts services, the item CSV importers and the
  * budget column operations all go through here.
  *
  * A write names its target measures and leaves every other measure as stored.
@@ -53,8 +53,9 @@ export const BUDGET_COLUMN_MEASURE: Record<BudgetColumn, AmountMeasure> = {
 };
 
 export type AmountScope = 'opex' | 'capex';
-// Table names come only from here: never from the caller.
-const AMOUNT_TABLE: Record<AmountScope, string> = { opex: 'spend_amounts', capex: 'capex_amounts' };
+// Table names come only from here: never from the caller. The months of both natures (lot Z1); the
+// scope still decides the freeze and the audit label, the version was read for the scope's nature.
+const AMOUNT_TABLE: Record<AmountScope, string> = { opex: 'spend_amounts', capex: 'spend_amounts' };
 
 export type AmountVersion = { id: string; tenant_id: string; budget_year: number | string };
 
@@ -675,7 +676,7 @@ export async function readYearAmounts(manager: EntityManager, scope: AmountScope
  */
 export async function readVersionYearTotals(manager: EntityManager, scope: AmountScope, tenantId: string, versionId: string): Promise<Record<AmountMeasure, number>> {
   const [row]: Array<Partial<Record<AmountMeasure, string | number>>> = await manager.query(
-    `SELECT ${AMOUNT_MEASURES.join(', ')} FROM ${scope === 'opex' ? 'spend_version_totals' : 'capex_version_totals'} WHERE tenant_id = $1 AND version_id = $2`,
+    `SELECT ${AMOUNT_MEASURES.join(', ')} FROM spend_version_totals WHERE tenant_id = $1 AND version_id = $2`,
     [tenantId, versionId],
   );
   return Object.fromEntries(AMOUNT_MEASURES.map((measure) => [measure, Number(row?.[measure] ?? 0)])) as Record<AmountMeasure, number>;
@@ -687,7 +688,7 @@ export async function readVersionYearTotals(manager: EntityManager, scope: Amoun
  */
 export async function readVersionBudgetRev(manager: EntityManager, scope: AmountScope, version: AmountVersion): Promise<number | null> {
   const [row]: Array<{ budget_rev: number | string }> = await manager.query(
-    `SELECT budget_rev FROM ${scope === 'opex' ? 'spend_versions' : 'capex_versions'} WHERE tenant_id = $1 AND id = $2`,
+    `SELECT budget_rev FROM spend_versions WHERE tenant_id = $1 AND id = $2`,
     [version.tenant_id, version.id],
   );
   return row ? Number(row.budget_rev) : null;

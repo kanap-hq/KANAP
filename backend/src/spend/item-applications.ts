@@ -2,7 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { AmountScope } from './amounts-write.util';
-import { assertScopeNatures, natureAnd, type BudgetNature } from './budget-nature';
+import { assertScopeNatures, auditTableOf, natureAnd, type BudgetNature } from './budget-nature';
 
 /**
  * Applications linked to an OPEX or CAPEX line, from the line's side: list and
@@ -20,7 +20,7 @@ import { assertScopeNatures, natureAnd, type BudgetNature } from './budget-natur
 // `spend_items` (`budget-nature.ts`); a line of another nature is not found.
 const SCOPES: Record<AmountScope, { links: string; itemFk: string; items: string; itemNotFound: string; nature?: BudgetNature }> = {
   opex: { links: 'application_spend_items', itemFk: 'spend_item_id', items: 'spend_items', itemNotFound: 'Spend item not found', nature: 'opex' },
-  capex: { links: 'application_capex_items', itemFk: 'capex_item_id', items: 'capex_items', itemNotFound: 'CAPEX item not found' },
+  capex: { links: 'application_spend_items', itemFk: 'spend_item_id', items: 'spend_items', itemNotFound: 'CAPEX item not found', nature: 'capex' },
 };
 assertScopeNatures('item-applications', SCOPES, (t) => t.items);
 
@@ -97,7 +97,7 @@ export async function replaceItemApplications(
 
   if (JSON.stringify(beforeIds) !== JSON.stringify(nextIds)) {
     await deps.audit.log(
-      { table: t.links, recordId: item.id, action: 'update', before: beforeIds, after: nextIds, userId },
+      { table: auditTableOf(scope, t.links), recordId: item.id, action: 'update', before: beforeIds, after: nextIds, userId },
       { manager },
     );
   }

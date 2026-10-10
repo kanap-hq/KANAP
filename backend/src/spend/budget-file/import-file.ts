@@ -21,6 +21,7 @@ import {
   BudgetFileSnapshotLine,
 } from './types';
 import { lineImportTables } from '../budget-import-statistics';
+import { auditTableOf } from '../budget-nature';
 import { lockCsvCostCenters } from '../item-write.util';
 import type { CsvDateOrder, CsvLanguage, DecimalMark } from '../../common/csv-sheet';
 
@@ -29,10 +30,9 @@ export const PREFLIGHT_STALE = 'Some lines changed since the preflight. Run the 
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const TABLES = {
-  opex: { items: 'spend_items', amounts: 'spend_amounts', rounds: 'spend_round_inputs', versions: 'spend_versions', entity: 'spend' as const },
-  capex: { items: 'capex_items', amounts: 'capex_amounts', rounds: 'capex_round_inputs', versions: 'capex_versions', entity: 'capex' as const },
-};
+/** The single family of both natures (lot Z1); the audit rows keep the label of the line's nature (`auditTableOf`). */
+const TABLES = { items: 'spend_items', amounts: 'spend_amounts', rounds: 'spend_round_inputs', versions: 'spend_versions' } as const;
+const auditLabel = (scope: BudgetFileScope, table: keyof typeof TABLES) => auditTableOf(scope, TABLES[table]);
 
 /** Column names of an amounts table. Only these are ever interpolated into SQL. */
 const AMOUNT_COLUMNS = ['planned', 'committed', 'forecast', 'actual', 'expected_landing'] as const;
@@ -69,7 +69,7 @@ export interface BudgetFileItems {
   create(
     body: Record<string, unknown>,
     userId?: string,
-    opts?: { manager?: EntityManager; itemNumber?: number; statusEmail?: boolean; source?: string },
+    opts?: { manager?: EntityManager; itemNumber?: number; legacyNumber?: number; statusEmail?: boolean; source?: string },
   ): Promise<{ id: string }>;
   update(
     id: string,
@@ -266,9 +266,13 @@ async function applyPlans(
 
   const updates = plans.filter((plan) => !plan.creating).sort((a, b) => (a.itemId ?? '').localeCompare(b.itemId ?? ''));
   const creates = plans.filter((plan) => plan.creating);
+  // Every new line takes the next BL numbers; a new CAPEX line also the next CPX numbers, its legacy
+  // number (what the CAPEX file and screens show).
   let nextNumber = 0;
+  let nextLegacy: number | undefined;
   if (creates.length > 0) {
-    nextNumber = await allocateItemNumbers(TABLES[input.scope].entity, input.tenantId, creates.length, input.manager);
+    nextNumber = await allocateItemNumbers('spend', input.tenantId, creates.length, input.manager);
+    if (input.scope === 'capex') nextLegacy = await allocateItemNumbers('capex', input.tenantId, creates.length, input.manager);
   }
   const checkedFreeze = new Set<string>();
   const flats: FlatSpread[] = [];
@@ -276,8 +280,9 @@ async function applyPlans(
     await applyLine(input, plan, storedById.get(plan.itemId ?? ''), supplierIds, dimensionIds, rounds, checkedFreeze, audits, flats);
   }
   for (const plan of creates) {
-    await applyLine(input, plan, undefined, supplierIds, dimensionIds, rounds, checkedFreeze, audits, flats, nextNumber);
+    await applyLine(input, plan, undefined, supplierIds, dimensionIds, rounds, checkedFreeze, audits, flats, nextNumber, nextLegacy);
     nextNumber += 1;
+    if (nextLegacy !== undefined) nextLegacy += 1;
   }
   await writeFlatSpreads(input, flats, checkedFreeze, audits);
   await insertAudits(input.manager, input.userId, audits);
@@ -326,12 +331,13 @@ async function applyLine(
   audits: AuditRow[],
   flats: FlatSpread[],
   itemNumber?: number,
+  legacyNumber?: number,
 ): Promise<void> {
   const body = lineBody(plan, supplierIds, dimensionIds);
   const file = { manager: input.manager, statusEmail: false as const, source: 'budget_file' };
   let itemId = plan.itemId;
   if (plan.creating) {
-    const saved = await input.items.create(body, input.userId ?? undefined, { ...file, itemNumber });
+    const saved = await input.items.create(body, input.userId ?? undefined, { ...file, itemNumber, legacyNumber });
     itemId = saved.id;
     await lockBudgetLine(input.manager, input.scope, input.tenantId, itemId);
   } else if (Object.keys(body).length > 0 && itemId) {
@@ -359,7 +365,7 @@ async function applyLine(
     if (outcome.flat) flats.push(outcome.flat);
     if (!outcome.wrote) continue;
     audits.push({
-      table: TABLES[input.scope].items,
+      table: auditLabel(input.scope, 'items'),
       recordId: itemId,
       action: 'update',
       before: null,
@@ -417,7 +423,7 @@ async function createVersion(
   }
   if (ensured.created) {
     await input.audit.log(
-      { table: TABLES[input.scope].versions, recordId: ensured.version.id, action: 'create', before: null, after: ensured.version, userId: input.userId, source: 'budget_file' },
+      { table: auditLabel(input.scope, 'versions'), recordId: ensured.version.id, action: 'create', before: null, after: ensured.version, userId: input.userId, source: 'budget_file' },
       { manager: input.manager },
     );
   }
@@ -509,7 +515,7 @@ async function writeYear(
       wrote = true;
       await recordPayloadRoundInputs({ manager: ctx.manager, scope: ctx.scope, version: ctx.version, userId: input.userId, audit: fileAudit(input.audit) }, result);
       await input.audit.log(
-        { table: ctx.scope === 'opex' ? 'spend_amounts' : 'capex_amounts', recordId: ctx.version.id, action: 'update', before: result.before, after: result.after, userId: input.userId, source: 'budget_file' },
+        { table: auditLabel(ctx.scope, 'amounts'), recordId: ctx.version.id, action: 'update', before: result.before, after: result.after, userId: input.userId, source: 'budget_file' },
         { manager: ctx.manager },
       );
     }
@@ -538,7 +544,7 @@ async function writeYear(
       const measures = Array.from(new Set(months.map((amount) => amount.measure)));
       await markRoundsManual(rounds, measures);
       await input.audit.log(
-        { table: ctx.scope === 'opex' ? 'spend_amounts' : 'capex_amounts', recordId: ctx.version.id, action: 'update', before: result.before, after: result.after, userId: input.userId, source: 'budget_file' },
+        { table: auditLabel(ctx.scope, 'amounts'), recordId: ctx.version.id, action: 'update', before: result.before, after: result.after, userId: input.userId, source: 'budget_file' },
         { manager: ctx.manager },
       );
     }
@@ -614,7 +620,7 @@ async function writeFlatSpreads(
     }
     audits.push(
       {
-        table: TABLES[input.scope].amounts,
+        table: auditLabel(input.scope, 'amounts'),
         recordId: flat.versionId,
         action: 'update',
         before: null,
@@ -625,7 +631,7 @@ async function writeFlatSpreads(
         },
       },
       {
-        table: TABLES[input.scope].items,
+        table: auditLabel(input.scope, 'items'),
         recordId: flat.itemId,
         action: 'update',
         before: null,
@@ -671,7 +677,7 @@ async function insertAmountRows(
     const valueLists = columns.map((measure) => slice.map((row) => formatCents(row.cents[measure] ?? 0n)));
     const placeholders = valueLists.map((_, index) => `$${index + 4}::text[]`).join(', ');
     await input.manager.query(
-      `INSERT INTO ${TABLES[input.scope].amounts} (tenant_id, version_id, period, ${columns.join(', ')})
+      `INSERT INTO ${TABLES.amounts} (tenant_id, version_id, period, ${columns.join(', ')})
        SELECT $1::uuid, u.version_id, u.period, ${columns.map((_, index) => `u.c${index}::numeric`).join(', ')}
          FROM unnest($2::uuid[], $3::date[], ${placeholders})
            AS u(version_id, period, ${columns.map((_, index) => `c${index}`).join(', ')})
@@ -691,7 +697,7 @@ async function insertRoundRows(
   for (let start = 0; start < rows.length; start += chunk) {
     const slice = rows.slice(start, start + chunk);
     await input.manager.query(
-      `INSERT INTO ${TABLES[input.scope].rounds}
+      `INSERT INTO ${TABLES.rounds}
          (tenant_id, version_id, measure, period_start, period_end, method, spread_profile_name, last_calculation, fte, updated_by)
        SELECT $1::uuid, u.version_id, u.measure, u.period_start, u.period_end, 'spread', u.profile, u.calculation::jsonb,
               NULLIF(u.fte, '')::numeric, $9::uuid

@@ -40,7 +40,7 @@ import { ColumnResult, computeColumn, CostingInputError, CostLine, UNIT_PRICE_LI
 import { activeMonths } from './spread.util';
 import { ensureBudgetVersion } from './budget-version-ensure';
 import { lockBudgetLines, lockBudgetVersions, lockTenantBudgetOperations } from './budget-locks';
-import { assertScopeNatures, natureAnd, type BudgetNature } from './budget-nature';
+import { assertScopeNatures, auditTableOf, natureAnd, type BudgetNature } from './budget-nature';
 
 /**
  * Budget column operations (copy a column to another year or column, clear a
@@ -62,7 +62,7 @@ import { assertScopeNatures, natureAnd, type BudgetNature } from './budget-natur
 // `spend_items` (`budget-nature.ts`); the versions are read through the lines read here.
 const SCOPES: Record<AmountScope, { items: string; itemFk: string; versions: string; itemName: string; nature?: BudgetNature }> = {
   opex: { items: 'spend_items', itemFk: 'spend_item_id', versions: 'spend_versions', itemName: 'product_name', nature: 'opex' },
-  capex: { items: 'capex_items', itemFk: 'capex_item_id', versions: 'capex_versions', itemName: 'description' },
+  capex: { items: 'spend_items', itemFk: 'spend_item_id', versions: 'spend_versions', itemName: 'product_name', nature: 'capex' },
 };
 assertScopeNatures('budget-column-operations', SCOPES, (t) => t.items);
 
@@ -277,7 +277,7 @@ export async function loadVersions(
      ORDER BY created_at DESC, id DESC`,
     years ? [tenantId, itemIds, years] : [tenantId, itemIds],
   );
-  // Both tables have a unique (item, year) index (capex_versions since 1853640000000); keeping the first, the newest, is only a guard.
+  // The versions are unique per (item, year); keeping the first, the newest, is only a guard.
   for (const row of rows) {
     const key = `${row.item_id}:${Number(row.budget_year)}`;
     if (!byItemYear.has(key)) byItemYear.set(key, { ...row, budget_year: Number(row.budget_year) });
@@ -313,7 +313,7 @@ export async function createBudgetVersion(
   const { version, created } = ensured;
   if (created) {
     await deps.audit.log(
-      { table: SCOPES[scope].versions, recordId: version.id, action: 'create', before: null, after: version, userId },
+      { table: auditTableOf(scope, SCOPES[scope].versions), recordId: version.id, action: 'create', before: null, after: version, userId },
       { manager: deps.manager },
     );
   }
@@ -760,7 +760,7 @@ export async function copyBudgetColumn(
 
     await deps.audit.log(
       {
-        table: SCOPES[scope].items,
+        table: auditTableOf(scope, SCOPES[scope].items),
         recordId: item.id,
         action: 'update',
         before: { [destinationColumn]: toNumber(currentTotal) },
@@ -851,7 +851,7 @@ export async function clearBudgetColumn(
         // the line's meta names who changed its budget from this row).
         await deps.audit.log(
           {
-            table: SCOPES[scope].items,
+            table: auditTableOf(scope, SCOPES[scope].items),
             recordId: item.id,
             action: 'update',
             before: { [column]: 0 },
@@ -875,7 +875,7 @@ export async function clearBudgetColumn(
 
     await deps.audit.log(
       {
-        table: SCOPES[scope].items,
+        table: auditTableOf(scope, SCOPES[scope].items),
         recordId: item.id,
         action: 'update',
         before: { [column]: toNumber(sum(current)) },

@@ -1,7 +1,8 @@
 import { EntityManager } from 'typeorm';
 import { EditBase, EditConflict, EditedField, assertNoEditConflicts, hasBase, sameFieldValue } from '../common/edit-conflicts';
 import { ItemAnalyticsChange, ItemAnalyticsValue } from './item-analytics.util';
-import { ItemWriteScope, itemWritableColumns } from './item-write.util';
+import { ItemWriteScope, itemFieldColumn, itemWritableColumns } from './item-write.util';
+import { auditTableOf } from './budget-nature';
 
 /**
  * The edit conflicts of an OPEX or CAPEX line update (plan planning/perf-scale,
@@ -24,7 +25,8 @@ import { ItemWriteScope, itemWritableColumns } from './item-write.util';
  * line imported or written by the AI may store it in small letters.
  */
 
-const TABLES: Record<ItemWriteScope, string> = { opex: 'spend_items', capex: 'capex_items' };
+/** The audit label of a line of each nature (`auditTableOf`): the history the conflicts read. */
+const TABLES: Record<ItemWriteScope, string> = { opex: auditTableOf('opex', 'spend_items'), capex: auditTableOf('capex', 'spend_items') };
 
 export const ANALYTICS_FIELD_PREFIX = 'analytics_values.';
 
@@ -52,15 +54,17 @@ export function itemEditedFields(
 ): EditedField[] {
   const supplied = (key: string) => Object.prototype.hasOwnProperty.call(changes, key) && changes[key] !== undefined;
   const fields: EditedField[] = [];
-  for (const column of itemWritableColumns(scope)) {
-    if (!supplied(column) || !(column in resolved.values) || !hasBase(base, column)) continue;
+  // By API field (`description` for a CAPEX title, as the screen and the CAPEX audit rows name it), read on its column.
+  for (const field of itemWritableColumns(scope)) {
+    const column = itemFieldColumn(scope, field);
+    if (!supplied(field) || !(column in resolved.values) || !hasBase(base, field)) continue;
     fields.push({
-      field: column,
-      base: base[column],
+      field,
+      base: base[field],
       current: resolved.before[column] ?? null,
       mine: resolved.values[column],
-      auditPath: [column],
-      ...(CASE_INSENSITIVE_COLUMNS.has(column) ? { same: sameCode } : {}),
+      auditPath: [field],
+      ...(CASE_INSENSITIVE_COLUMNS.has(field) ? { same: sameCode } : {}),
     });
   }
   if (hasBase(base, 'disabled_at') && LIFECYCLE_INPUTS.some(supplied)) {

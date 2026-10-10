@@ -12,7 +12,7 @@ import { assertScopeNatures, linkedLineOf, natureAnd, type BudgetNature } from '
  *      set): the tenant's budget-operations
  *      advisory lock (`lockTenantBudgetOperations`), so two of them never run
  *      at once;
- *   1. the line (`spend_items` / `capex_items`) FOR NO KEY UPDATE (FOR UPDATE
+ *   1. the line (`spend_items`, of the scope's nature) FOR NO KEY UPDATE (FOR UPDATE
  *      for its delete); several lines in id order (`lockBudgetLines`, or
  *      `lockBudgetYear` for every line of a year);
  *   2. its versions FOR NO KEY UPDATE; several in id order (`lockBudgetVersions`);
@@ -48,10 +48,10 @@ import { assertScopeNatures, linkedLineOf, natureAnd, type BudgetNature } from '
  */
 
 // Table names come only from here: never from the caller. `nature`: the lines of the scope in
-// `spend_items` (lot Z0); the `capex_*` tables have no nature column until lot Z1.
+// `spend_items`, which holds both natures since lot Z1.
 const TABLES: Record<AmountScope, { items: string; versions: string; itemFk: string; nature?: BudgetNature }> = {
   opex: { items: 'spend_items', versions: 'spend_versions', itemFk: 'spend_item_id', nature: 'opex' },
-  capex: { items: 'capex_items', versions: 'capex_versions', itemFk: 'capex_item_id' },
+  capex: { items: 'spend_items', versions: 'spend_versions', itemFk: 'spend_item_id', nature: 'capex' },
 };
 assertScopeNatures('budget-locks', TABLES, (t) => t.items);
 
@@ -69,7 +69,7 @@ export type BudgetLineChild = 'version' | 'attachment' | 'link';
 // Table names come only from here: never from the caller. Each child names its line in `itemFk`.
 const CHILD_TABLES: Record<AmountScope, Record<BudgetLineChild, string>> = {
   opex: { version: 'spend_versions', attachment: 'spend_attachments', link: 'spend_links' },
-  capex: { version: 'capex_versions', attachment: 'capex_attachments', link: 'capex_links' },
+  capex: { version: 'spend_versions', attachment: 'spend_attachments', link: 'spend_links' },
 };
 
 /**
