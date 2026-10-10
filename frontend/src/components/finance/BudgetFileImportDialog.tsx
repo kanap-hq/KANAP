@@ -7,6 +7,7 @@ import { formatShortDateTime } from '../../lib/dateFormat';
 import { forgetAllAllocations } from './allocationsCache';
 import {
   AmountReading,
+  BUDGET_LIST_QUERY_KEYS,
   BudgetFileLoad,
   BudgetFileReport,
   BudgetFileScope,
@@ -145,7 +146,8 @@ export default function BudgetFileImportDialog({
       }
       setLoaded(data);
       forgetAllAllocations(queryClient);
-      void queryClient.invalidateQueries({ queryKey: [scope === 'opex' ? 'spend-items-summary' : 'capex-items-summary'] });
+      // Both lists: the file may have held lines of both natures.
+      for (const key of BUDGET_LIST_QUERY_KEYS) void queryClient.invalidateQueries({ queryKey: [key] });
       onImported?.();
     } catch (err) {
       if (id !== requestId.current) return;

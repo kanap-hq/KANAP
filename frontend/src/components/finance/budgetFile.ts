@@ -19,10 +19,18 @@ export type { AmountReading, DateReading, ScreenLanguage } from '../csv/readings
 
 /**
  * The budget file of the OPEX and CAPEX lists: export, preflight and load
- * (`/spend-items/budget-file/*`, `/capex-items/budget-file/*`).
+ * (`/spend-items/budget-file/*`, `/capex-items/budget-file/*`). One file holds
+ * lines of both natures (its `nature` column); the list it is exported from or
+ * loaded on gives the nature of a line in a file without that column.
  */
 
 export type BudgetFileScope = 'opex' | 'capex';
+
+/** The name of an exported file, from either list. */
+export const BUDGET_FILE_NAME = 'budget.csv';
+
+/** The list queries a load may change: a file may hold lines of both natures. */
+export const BUDGET_LIST_QUERY_KEYS = ['spend-items-summary', 'capex-items-summary'] as const;
 
 export type BudgetFileLanguage = ScreenLanguage;
 

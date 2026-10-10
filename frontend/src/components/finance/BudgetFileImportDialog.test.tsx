@@ -205,6 +205,19 @@ describe('BudgetFileImportDialog', () => {
     expect(screen.getByRole('button', { name: 'operations.budgetFile.done' })).toBeEnabled();
   });
 
+  it('refreshes both lists after a load: a file may hold lines of both natures', async () => {
+    const invalidate = vi.spyOn(QueryClient.prototype, 'invalidateQueries');
+    post.mockResolvedValueOnce({ data: report() });
+    renderDialog();
+    await screen.findByText('operations.budgetFile.ready');
+    post.mockResolvedValueOnce({ data: { ok: true, dryRun: false, inserted: 1, updated: 1 } });
+    fireEvent.click(screen.getByRole('button', { name: 'operations.budgetFile.load' }));
+    await screen.findByText(/operations.budgetFile.loaded/);
+    const keys = invalidate.mock.calls.map(([filters]) => (filters as { queryKey?: unknown[] } | undefined)?.queryKey?.[0]);
+    expect(keys).toEqual(expect.arrayContaining(['spend-items-summary', 'capex-items-summary']));
+    invalidate.mockRestore();
+  });
+
   it('turns a stale check into a plain sentence with a way to check again', async () => {
     post.mockResolvedValueOnce({ data: report() });
     renderDialog();
