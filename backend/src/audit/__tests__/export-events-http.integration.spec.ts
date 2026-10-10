@@ -17,6 +17,11 @@ import { useRequestPipeline } from '../../common/request-pipeline';
 // writes one `export` row (the person, the resource, the path asked for)
 // committed with the request; an export that fails leaves no row, a refused one
 // neither, and other routes write nothing.
+//
+// A route that answers itself (`@Res()`, a download) sends its response before
+// TenantInterceptor commits, so its row becomes visible a moment after the
+// response arrives: the spec waits for the rows (expectExportRows) instead of
+// reading them once.
 
 @Injectable()
 class RefuseGuard implements CanActivate {
@@ -85,6 +90,17 @@ async function exportRows(tenantId: string): Promise<any[]> {
   });
 }
 
+// Polls until the expected number of rows is committed, or 2 s have passed, then compares.
+async function expectExportRows(tenantId: string, expected: any[]): Promise<void> {
+  const deadline = Date.now() + 2000;
+  let rows = await exportRows(tenantId);
+  while (rows.length < expected.length && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    rows = await exportRows(tenantId);
+  }
+  assert.deepEqual(rows, expected);
+}
+
 async function main() {
   await dataSource.initialize();
   const tenantId = randomUUID();
@@ -124,7 +140,7 @@ async function main() {
       before_json: null,
       after_json: { resource, path, ip: '127.0.0.1', user_agent: 'Export probe' },
     });
-    assert.deepEqual(await exportRows(tenantId), [
+    await expectExportRows(tenantId, [
       row('probe-items', '/probe-items/export'),
       row('probe-items', '/probe-items/DOC-12/export'),
       row('probe-items/report', '/probe-items/INC-3/report'),
