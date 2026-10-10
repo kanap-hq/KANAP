@@ -60,7 +60,7 @@ La liste OPEX (dans **Gestion budgétaire > OPEX**) est votre vue principale pou
   - **Début effectif** : Date de début
   - **Fin de validité** : Date à laquelle le poste s'arrête (vide signifie sans fin)
   - **Responsable IT** / **Responsable métier** : Utilisateurs responsables
-  - **Dimensions analytiques** : Une colonne par dimension activée utilisée pour les lignes OPEX, à son nom, avec la valeur du poste. La colonne de la dimension par défaut vient en premier (**Dimension analytique** tant qu'elle n'est pas renommée), puis les autres dimensions dans leur ordre
+  - **Dimensions analytiques** : Une colonne par dimension activée utilisée pour les lignes OPEX, à son nom, avec la valeur du poste, dans l'ordre des dimensions. La colonne de la dimension par défaut s'intitule **Dimension analytique** tant qu'elle n'est pas renommée
   - **Centre de coûts** : Le code et le nom du centre de coûts. Survolez-le pour voir son chemin complet dans l'arbre ; cliquez dessus pour ouvrir le centre de coûts
   - **Responsable budgétaire** : Le responsable budgétaire du centre de coûts du poste. Il est déduit du centre de coûts et non enregistré sur le poste : changez le responsable budgétaire d'un centre de coûts et tous ses postes suivent
   - **Run ou build** : **Run** ou **Build**

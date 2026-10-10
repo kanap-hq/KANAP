@@ -134,7 +134,7 @@ The dimensions have an order, which you set. KANAP shows them in this order:
 
 - in the selector bar of this page
 - in the **Properties** panel of OPEX and CAPEX items
-- in the OPEX and CAPEX list columns, after the default dimension's column, which stays first
+- in the OPEX and CAPEX list columns
 - in the columns of the budget file
 - in the report filters and the report's dimension picker
 - in the dimensions Plaid lists

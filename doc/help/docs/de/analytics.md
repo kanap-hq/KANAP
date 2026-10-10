@@ -134,7 +134,7 @@ Die Dimensionen haben eine Reihenfolge, die Sie festlegen. KANAP zeigt sie in di
 
 - in der Auswahlleiste dieser Seite
 - im Bereich **Eigenschaften** von OPEX- und CAPEX-Positionen
-- in den Spalten der OPEX- und CAPEX-Listen, nach der Spalte der Standarddimension, die immer zuerst steht
+- in den Spalten der OPEX- und CAPEX-Listen
 - in den Spalten der Budgetdatei
 - in den Berichtsfiltern und in der Dimensionsauswahl des Berichts
 - in den Dimensionen, die Plaid auflistet

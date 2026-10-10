@@ -134,7 +134,7 @@ Las dimensiones tienen un orden, que usted define. KANAP las muestra en este ord
 
 - en la barra de selección de esta página
 - en el panel **Propiedades** de las partidas OPEX y CAPEX
-- en las columnas de las listas OPEX y CAPEX, después de la columna de la dimensión por defecto, que sigue siendo la primera
+- en las columnas de las listas OPEX y CAPEX
 - en las columnas del archivo de presupuesto
 - en los filtros de los informes y en el selector de dimensión del informe
 - en las dimensiones que lista Plaid

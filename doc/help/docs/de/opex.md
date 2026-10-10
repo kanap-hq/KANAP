@@ -60,7 +60,7 @@ Die OPEX-Liste (unter **Budgetverwaltung > OPEX**) ist Ihre Hauptansicht zum Dur
   - **Gültig ab**: Startdatum
   - **Ende der Gültigkeit**: Datum, an dem die Position endet (leer bedeutet kein Ende)
   - **IT-Verantwortlicher** / **Fachbereichsverantwortlicher**: Zuständige Benutzer
-  - **Analysedimensionen**: Eine Spalte pro aktivierter Dimension, die für OPEX-Zeilen verwendet wird, nach ihr benannt, mit dem Wert der Position. Die Spalte der Standarddimension steht zuerst (**Analysedimension**, bis sie umbenannt wird), danach die anderen Dimensionen in ihrer Reihenfolge
+  - **Analysedimensionen**: Eine Spalte pro aktivierter Dimension, die für OPEX-Zeilen verwendet wird, nach ihr benannt, mit dem Wert der Position, in der Reihenfolge der Dimensionen. Die Spalte der Standarddimension heißt **Analysedimension**, bis sie umbenannt wird
   - **Kostenstelle**: Code und Name der Kostenstelle. Fahren Sie mit der Maus darüber, um ihren vollständigen Pfad im Baum zu sehen; klicken Sie darauf, um die Kostenstelle zu öffnen
   - **Budgetverantwortlicher**: Der Budgetverantwortliche der Kostenstelle der Position. Er wird aus der Kostenstelle abgeleitet und nicht auf der Position gespeichert: Ändern Sie den Budgetverantwortlichen einer Kostenstelle, und alle ihre Positionen folgen
   - **Run oder Build**: **Run** oder **Build**
