@@ -38,6 +38,15 @@ import { ReferenceCheckService } from '../../common/reference-check.service';
 import { ScheduledNotificationsService } from '../../notifications/scheduled-notifications.service';
 import { CurrencyController } from '../../currency/currency.controller';
 import { FreezeService } from '../../freeze/freeze.service';
+import { ItemNumberService } from '../../common/item-number.service';
+import { spendItemsRegistry } from '../../ai/query/registries/spend-items.registry';
+import { AiAggregateExecutor } from '../../ai/query/ai-aggregate.executor';
+import { AiFinancialPlanMutationSupportService } from '../../ai/mutation/ai-financial-plan-mutation-support.service';
+import { AiRelationMutationSupportService } from '../../ai/mutation/ai-relation-mutation-support.service';
+import { AiTaskMutationSupportService } from '../../ai/mutation/ai-task-mutation-support.service';
+import { AiBusinessRecordMutationSupportService } from '../../ai/mutation/ai-business-record-mutation-support.service';
+import { clearBudgetColumn, copyBudgetColumn } from '../budget-column-operations';
+import { copyAllocations } from '../budget-allocation-operations';
 import { realSummaryDeps } from './oracle/oracle-deps';
 import { itemService, seedCompany, seedCostCenter, seedUser } from './cost-center.fixtures';
 import { assert, captureAudit, amountsService, inRolledBackTransaction, period, runSpecs, setTenant } from './round-inputs.fixtures';
@@ -222,13 +231,26 @@ async function seedWorld(runner: QueryRunner): Promise<World> {
 }
 
 /** `fn` in a savepoint rolled back afterwards. */
+let savepoints = 0;
+
+/** `fn` in a savepoint of its own, rolled back and released afterwards (they nest). */
 async function inSavepoint<T>(runner: QueryRunner, fn: () => Promise<T>): Promise<T> {
-  await runner.query('SAVEPOINT foreign_variant');
+  const name = `foreign_variant_${++savepoints}`;
+  await runner.query(`SAVEPOINT ${name}`);
   try {
     return await fn();
   } finally {
-    await runner.query('ROLLBACK TO SAVEPOINT foreign_variant');
+    await runner.query(`ROLLBACK TO SAVEPOINT ${name}`);
+    await runner.query(`RELEASE SAVEPOINT ${name}`);
   }
+}
+
+/** `fn` with the foreign line turned OPEX, rolled back afterwards. */
+function asOpexLine<T>(runner: QueryRunner, w: World, fn: () => Promise<T>): Promise<T> {
+  return inSavepoint(runner, async () => {
+    await runner.query(`UPDATE spend_items SET nature = 'opex' WHERE tenant_id = $1 AND id = $2`, [w.tenantId, w.foreign.id]);
+    return fn();
+  });
 }
 
 /**
@@ -243,10 +265,7 @@ async function assertInvisible(runner: QueryRunner, w: World, label: string, rea
     await runner.query(`DELETE FROM spend_items WHERE tenant_id = $1 AND id = $2`, [w.tenantId, w.foreign.id]);
     return json();
   });
-  const asOpex = await inSavepoint(runner, async () => {
-    await runner.query(`UPDATE spend_items SET nature = 'opex' WHERE tenant_id = $1 AND id = $2`, [w.tenantId, w.foreign.id]);
-    return json();
-  });
+  const asOpex = await asOpexLine(runner, w, json);
   assert.deepEqual(seeded, absent, `${label}: the CAPEX line changes nothing`);
   assert.notDeepEqual(asOpex, absent, `${label}: the same line of nature opex would count (the check is not vacuous)`);
 }
@@ -296,7 +315,13 @@ function controllers(runner: QueryRunner) {
   const none = undefined as any;
   const audit = captureAudit();
   const svc = itemService('opex', audit);
-  const storage = { deleteObject: async () => undefined, getObjectStream: async () => { throw new Error('no storage in this spec'); } };
+  // Storage, task numbering and activities stubbed: every route answers as it would for an OPEX line.
+  const storage = {
+    deleteObject: async () => undefined,
+    putObject: async () => undefined,
+    getObjectStream: async () => ({ stream: { pipe: () => undefined }, contentType: 'application/pdf', contentLength: 1 }),
+  };
+  svc.storage = storage;
   const items = new SpendItemsController(
     svc,
     new SpendItemsDeleteService(runner.manager.getRepository(SpendItem), none, none, none, audit as any, storage as any, new UserTimeAggregateService()),
@@ -312,7 +337,10 @@ function controllers(runner: QueryRunner) {
     amountsService('opex', audit) as any,
     new SpendAllocationsService(none, none, deps.allocationCalculator as any, audit as any),
   ) as any;
-  const unified = new TasksUnifiedService(none, none, none, none, none, none, none, none, none);
+  const unified = new TasksUnifiedService(
+    none, audit as any, none, none, { getTaskRecipients: async () => [] } as any, new ItemNumberService(),
+    { logChange: async () => undefined } as any, { cleanupOrphanedImages: async () => undefined } as any, none,
+  );
   const tasks = new SpendTasksController(new SpendTasksService(unified, audit as any)) as any;
   const contracts = new SpendItemContractsController(new ContractsService(none, none, none, none, audit as any, none, none, none, none)) as any;
   return { svc, items, versions, tasks, contracts };
@@ -385,6 +413,9 @@ async function testRoutes() {
       assert.equal(await guardAllows(runner, w, w.opexUser, controller, handler, method), true, `${label}: the OPEX user passes the guard`);
       const answer = await statusOf(runner, call);
       assert.equal(answer.status, 404, `${label}: 404 for the CAPEX line (${JSON.stringify(answer.body)})`);
+      // The same call on the same line turned OPEX answers: the 404 is the nature's, nothing else's.
+      const asOpex = await asOpexLine(runner, w, () => statusOf(runner, call));
+      assert.equal(asOpex.status, 200, `${label}: 200 once the line is OPEX (${JSON.stringify(asOpex.body)?.slice(0, 200)})`);
       const tasksRoute = controller === SpendTasksController;
       assert.equal(await guardAllows(runner, w, w.capexUser, controller, handler, method), tasksRoute,
         `${label}: the CAPEX user ${tasksRoute ? 'passes the tasks guard (and gets the 404 above)' : 'is stopped by the guard'}`);
@@ -548,6 +579,110 @@ async function testBulkReplacements() {
     assert.equal(refusedAsset.status, 400, 'an asset refuses it');
     const refusedContract = await statusOf(runner, () => contracts.bulkReplaceLinkedSpendItems(w.contractId, [w.foreign.id], { manager: mg }));
     assert.equal(refusedContract.status, 400, 'a contract refuses it');
+
+    // A project or a request refuses an unknown id or the CAPEX line's id before writing anything:
+    // no link, no activity (an unknown id was a 409 from the foreign key before lot Z0).
+    const activities = async () => (await runner.query(`SELECT count(*)::int AS n FROM portfolio_activities WHERE tenant_id = $1`, [w.tenantId]))[0].n;
+    const linksBefore = await links();
+    const activitiesBefore = await activities();
+    for (const [label, ids] of [['an unknown id', [w.opex.id, randomUUID()]], ['the CAPEX line', [w.opex.id, w.foreign.id]]] as const) {
+      const project = await statusOf(runner, () => projects.bulkReplaceOpex(w.projectId, [...ids], { manager: mg, userId: w.opexUser }));
+      assert.deepEqual([project.status, (project.body as any)?.message], [400, 'One or more OPEX items were not found.'], `a project refuses ${label}`);
+      const request = await statusOf(runner, () => requests.bulkReplaceOpex(w.requestId, [...ids], { manager: mg, userId: w.opexUser }));
+      assert.deepEqual([request.status, (request.body as any)?.message], [400, 'One or more OPEX items were not found.'], `a request refuses ${label}`);
+    }
+    assert.deepEqual(await links(), linksBefore, 'no link written by a refused replacement');
+    assert.equal(await activities(), activitiesBefore, 'no activity written by a refused replacement');
+    // Control: the OPEX line is linked again, and the CAPEX line's id is accepted once it is OPEX.
+    const relinked = await statusOf(runner, () => projects.bulkReplaceOpex(w.projectId, [w.opex.id], { manager: mg, userId: w.opexUser }));
+    assert.deepEqual(relinked.body, { ok: true, added: 1, removed: 0 }, 'a project takes its OPEX line');
+    const opexProject = await asOpexLine(runner, w, () => statusOf(runner, () => projects.bulkReplaceOpex(w.projectId, [w.opex.id, w.foreign.id], { manager: mg, userId: w.opexUser })));
+    assert.equal(opexProject.status, 200, 'the same ids pass once the line is OPEX');
+  });
+}
+
+/** The AI's readers and writers of OPEX lines: none sees the CAPEX line; each sees it once it is OPEX. */
+async function testAi() {
+  await inRolledBackTransaction(async (runner) => {
+    const w = await seedWorld(runner);
+    const none = undefined as any;
+    const audit = captureAudit() as any;
+    const context: any = { manager: runner.manager, tenantId: w.tenantId, userId: w.opexUser, isPlatformHost: false, surface: 'chat', authMethod: 'jwt' };
+    const fin: any = new AiFinancialPlanMutationSupportService(audit, none, none, none, none, none, none);
+    const task: any = new AiTaskMutationSupportService();
+    const rel: any = new AiRelationMutationSupportService(audit, none, task);
+    const biz: any = new (AiBusinessRecordMutationSupportService as any)(...Array.from({ length: 20 }, (_, i) => (i === 2 ? audit : undefined)));
+    const aggregate: any = new (AiAggregateExecutor as any)();
+    const appSpendItems = {
+      sourceEntity: 'applications', relation: 'spend_items', label: 'Spend Items', table: 'application_spend_items',
+      sourceColumn: 'application_id', targetColumn: 'spend_item_id', target: 'spend_items', businessResource: 'applications', kind: 'simple',
+    };
+    const F = w.foreign.id;
+    const has = (ids: string[]) => ids.includes(F);
+    // [label, probe, does the answer contain the foreign line?]
+    const probes: Array<[string, () => Promise<unknown>, (answer: { status: number; body?: any }) => boolean]> = [
+      ['financial plan: line by id', () => fin.resolveItem(context, 'spend_items', F), (a) => a.status === 200 && a.body.id === F],
+      ['financial plan: line by name', () => fin.resolveItem(context, 'spend_items', `capex line ${FOREIGN_NUMBER}`), (a) => a.status === 200 && a.body.id === F],
+      ['relations: reference candidates', async () => (await rel.queryReferenceCandidates(context, 'spend_items', F)).map((r: any) => r.id), (a) => has(a.body)],
+      ['relations: an application\'s OPEX lines', async () => (await rel.loadRelationItems(context, appSpendItems, w.applicationId)).map((i: any) => i.key), (a) => has(a.body)],
+      ['tasks: exact target', () => task.getExactTarget(context, 'spend_item', F), (a) => a.status === 200 && a.body.id === F],
+      ['tasks: target search', async () => (await task.searchTargetCandidates(context, 'spend_item', 'line', 10)).map((c: any) => c.id), (a) => has(a.body)],
+      ['business records: reference by id', async () => (await biz.queryReferenceCandidates(context, 'spend_items', F)).map((r: any) => r.id), (a) => has(a.body)],
+      ['business records: reference by BL-n', async () => (await biz.queryReferenceCandidates(context, 'spend_items', `BL-${FOREIGN_NUMBER}`)).map((r: any) => r.id), (a) => has(a.body)],
+      ['registry baseWhere: aggregate by ids', async () => (await aggregate.aggregateByIds(context, spendItemsRegistry, 'supplier', [w.opex.id, F], 'count', null)).map((r: any) => r.key),
+        (a) => a.body.includes('CAPEX line supplier')],
+    ];
+    for (const [label, probe, seesForeign] of probes) {
+      const asCapex = await statusOf(runner, probe);
+      assert.ok(asCapex.status === 404 || (asCapex.status === 200 && !seesForeign(asCapex)), `AI ${label}: the CAPEX line is not found (${JSON.stringify(asCapex)})`);
+      const asOpex = await asOpexLine(runner, w, () => statusOf(runner, probe));
+      assert.ok(seesForeign(asOpex), `AI ${label}: found once the line is OPEX (${JSON.stringify(asOpex)})`);
+    }
+    // Replacing an application's OPEX lines through the AI keeps its link to the CAPEX line.
+    const kept = await inSavepoint(runner, async () => {
+      await rel.replaceSimpleRelation(context, appSpendItems, w.applicationId, []);
+      return (await runner.query(`SELECT spend_item_id FROM application_spend_items WHERE tenant_id = $1 AND application_id = $2`, [w.tenantId, w.applicationId]))
+        .map((row: any) => row.spend_item_id);
+    });
+    assert.deepEqual(kept, [F], 'the AI relation replace removes the OPEX link and keeps the CAPEX one');
+  });
+}
+
+/** The column copy and clear and the allocation copy write the OPEX lines only. */
+async function testBulkOperations() {
+  await inRolledBackTransaction(async (runner) => {
+    const w = await seedWorld(runner);
+    const audit = captureAudit() as any;
+    const deps: any = { manager: runner.manager, audit, freeze: { assertNotFrozen: async () => undefined } };
+    const calculator = realSummaryDeps(SUMMARY_SCOPES.opex).allocationCalculator as any;
+    const state = async (itemId: string) => runner.query(
+      `SELECT v.budget_year, v.allocation_method, v.budget_rev, sum(a.planned)::text AS planned, sum(a.committed)::text AS committed,
+              (SELECT count(*) FROM spend_allocations al WHERE al.tenant_id = v.tenant_id AND al.version_id = v.id)::int AS allocations
+         FROM spend_versions v LEFT JOIN spend_amounts a ON a.tenant_id = v.tenant_id AND a.version_id = v.id
+        WHERE v.tenant_id = $1 AND v.spend_item_id = $2
+        GROUP BY v.id ORDER BY v.budget_year`,
+      [w.tenantId, itemId],
+    );
+    const operations: Array<[string, () => Promise<unknown>]> = [
+      ['column copy in the year', () => copyBudgetColumn(deps, 'opex', { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR, destinationColumn: 'revision', percentageIncrease: 0, overwrite: true, dryRun: false, acceptCalendarChanges: true }, w.opexUser)],
+      ['column copy to another year', () => copyBudgetColumn(deps, 'opex', { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR + 1, destinationColumn: 'budget', percentageIncrease: 0, overwrite: true, dryRun: false, acceptCalendarChanges: true }, w.opexUser)],
+      ['column clear', () => clearBudgetColumn(deps, 'opex', { year: YEAR, column: 'budget' }, w.opexUser)],
+      ['allocation copy', () => copyAllocations({ manager: runner.manager, audit, calculator }, 'opex', { sourceYear: YEAR, destinationYear: YEAR + 2, overwrite: true, dryRun: false }, w.opexUser)],
+    ];
+    for (const [label, operation] of operations) {
+      const [opexBefore, foreignBefore] = [await state(w.opex.id), await state(w.foreign.id)];
+      const after = await inSavepoint(runner, async () => {
+        await operation();
+        return { opex: await state(w.opex.id), foreign: await state(w.foreign.id) };
+      });
+      assert.deepEqual(after.foreign, foreignBefore, `${label}: the CAPEX line and its versions are untouched`);
+      assert.notDeepEqual(after.opex, opexBefore, `${label}: the OPEX line is written`);
+      const asOpex = await asOpexLine(runner, w, async () => {
+        await operation();
+        return state(w.foreign.id);
+      });
+      assert.notDeepEqual(asOpex, foreignBefore, `${label}: the same line of nature opex is written`);
+    }
   });
 }
 
@@ -555,5 +690,7 @@ runSpecs('budget-line-foreign-nature.integration.spec', [
   ['routes answer 404 for a line of nature capex', testRoutes],
   ['lists, summaries, chargeback and search leave it out', testListsAndSummaries],
   ['counts, currency years, reminders, freeze and year locks leave it out', testCountsAndPeriphery],
-  ['bulk replacements keep its links', testBulkReplacements],
+  ['bulk replacements keep its links and refuse its id', testBulkReplacements],
+  ['the AI readers and writers leave it out', testAi],
+  ['column copies and clears and allocation copies leave it out', testBulkOperations],
 ]);
