@@ -509,10 +509,13 @@ async function testCountsAndPeriphery() {
     // A company's references name its CAPEX lines too (as before lot Z1): the foreign line is one of them.
     const companyRefs = async () => (await references.checkCompanyReferences(w.companyId, { manager: mg })).referenceDetails;
     assert.ok((await companyRefs()).includes('1 CAPEX item(s) reference this as paying company'), 'company references: the CAPEX line counts as CAPEX');
+    // An account's references name its CAPEX lines too since lot Z1 (a delete would detach them otherwise).
+    const accountRefs = async () => (await references.checkAccountReferences(w.accountId, { manager: mg })).referenceDetails;
+    assert.ok((await accountRefs()).includes('1 CAPEX item(s) reference this account'), 'account references: the CAPEX line counts as CAPEX');
     await assertInvisible(runner, w, 'reference checks', async () => ({
       company: (await companyRefs()).filter((detail) => detail.includes('OPEX')),
       supplier: await references.checkSupplierReferences(w.foreignSupplierId, { manager: mg }),
-      account: await references.checkAccountReferences(w.accountId, { manager: mg }),
+      account: (await accountRefs()).filter((detail) => detail.includes('OPEX')),
     }));
 
     // The budget years of the currency page count the months of both natures (the CAPEX ones came

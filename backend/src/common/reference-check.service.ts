@@ -79,7 +79,10 @@ export class ReferenceCheckService {
   }
 
   /**
-   * Check if an account is referenced by any spend items
+   * Check if an account is referenced by budget lines of either nature. A CAPEX line counts too
+   * (lot Z1): `spend_items.account_id` has no delete action, and the old `capex_items` key was
+   * `ON DELETE SET NULL`, which detached the lines in silence. The delete is refused instead,
+   * naming the lines of each nature.
    */
   async checkAccountReferences(
     accountId: string,
@@ -94,16 +97,20 @@ export class ReferenceCheckService {
 
     const referenceDetails: string[] = [];
 
-    // The OPEX lines only (`spend/budget-nature.ts`), as before lot Z0.
+    // Each nature counted and named apart (`spend/budget-nature.ts`).
     const spendCount = await spendRepo.count({ where: { account_id: accountId, nature: 'opex' } });
     if (spendCount > 0) {
       referenceDetails.push(`${spendCount} OPEX item(s) reference this account`);
     }
+    const capexCount = await spendRepo.count({ where: { account_id: accountId, nature: 'capex' } });
+    if (capexCount > 0) {
+      referenceDetails.push(`${capexCount} CAPEX item(s) reference this account`);
+    }
 
     return {
-      hasReferences: spendCount > 0,
+      hasReferences: spendCount + capexCount > 0,
       referenceDetails,
-      totalCount: spendCount,
+      totalCount: spendCount + capexCount,
     };
   }
 
