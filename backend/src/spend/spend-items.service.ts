@@ -26,7 +26,7 @@ import { StorageService } from '../common/storage/storage.service';
 import { randomUUID } from 'crypto';
 import { Application } from '../applications/application.entity';
 import { ApplicationSpendItemLink } from '../applications/application-spend-item.entity';
-import { SpendItemContactsService } from './spend-item-contacts.service';
+import { CapexItemContactsService, SpendItemContactsService } from './spend-item-contacts.service';
 import { listItemApplications, replaceItemApplications } from './item-applications';
 import { PortfolioProjectOpex } from '../portfolio/portfolio-project-opex.entity';
 import { PortfolioProject } from '../portfolio/portfolio-project.entity';
@@ -810,8 +810,30 @@ export class SpendItemsService {
 /**
  * The CAPEX lines (`/capex-items*`, kept as aliases until the unified screens, lot U): the same
  * service, on the lines of nature `capex`, under the CAPEX contract of before.
+ *
+ * Its own constructor, so that Nest injects the dependencies of the CAPEX nature: without one, a
+ * subclass inherits the parameter types of its parent, and the line's supplier contacts were
+ * synchronized by the OPEX contacts service, which finds no CAPEX line. Every dependency bound to
+ * a nature is the CAPEX one here (`capex-alias-injection.integration.spec.ts` checks it through
+ * Nest).
  */
 @Injectable()
 export class CapexItemsService extends SpendItemsService {
   protected override readonly nature: BudgetNature = 'capex';
+
+  constructor(
+    @InjectRepository(SpendItem) repo: Repository<SpendItem>,
+    @InjectRepository(Application) applications: Repository<Application>,
+    @InjectRepository(ApplicationSpendItemLink) appSpendLinks: Repository<ApplicationSpendItemLink>,
+    audit: AuditService,
+    allocationCalculator: AllocationCalculatorService,
+    budgetOps: SpendBudgetOperationsService,
+    fxRates: FxRateService,
+    storage: StorageService,
+    itemContacts: CapexItemContactsService,
+    notifications: NotificationsService,
+    itemNumbers: ItemNumberService,
+  ) {
+    super(repo, applications, appSpendLinks, audit, allocationCalculator, budgetOps, fxRates, storage, itemContacts, notifications, itemNumbers);
+  }
 }
