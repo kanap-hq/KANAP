@@ -141,7 +141,6 @@ export const DEMO_LOAD_EMPTY_TABLES = [
   'app_instances',
   'assets',
   'business_processes',
-  'capex_items',
   'connections',
   'contacts',
   'contracts',

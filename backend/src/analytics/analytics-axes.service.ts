@@ -189,7 +189,8 @@ export class AnalyticsAxesService {
               (SELECT count(*)::int FROM analytics_categories c WHERE c.tenant_id = $1 AND c.axis_id = a.id) AS value_count,
               (SELECT count(*)::int FROM spend_item_analytics_values v JOIN spend_items si ON si.tenant_id = v.tenant_id AND si.id = v.item_id AND si.nature = 'opex'
                 WHERE v.tenant_id = $1 AND v.axis_id = a.id) AS opex_count,
-              (SELECT count(*)::int FROM capex_item_analytics_values v WHERE v.tenant_id = $1 AND v.axis_id = a.id) AS capex_count,
+              (SELECT count(*)::int FROM spend_item_analytics_values v JOIN spend_items si ON si.tenant_id = v.tenant_id AND si.id = v.item_id AND si.nature = 'capex'
+                WHERE v.tenant_id = $1 AND v.axis_id = a.id) AS capex_count,
               CASE WHEN a.applies_to IS NULL OR a.applies_to = 'opex' THEN (
                 SELECT count(*)::int FROM spend_items i
                  WHERE i.tenant_id = $1 AND i.nature = 'opex'
@@ -199,10 +200,10 @@ export class AnalyticsAxesService {
                    )
               ) ELSE 0 END AS opex_missing,
               CASE WHEN a.applies_to IS NULL OR a.applies_to = 'capex' THEN (
-                SELECT count(*)::int FROM capex_items i
-                 WHERE i.tenant_id = $1
+                SELECT count(*)::int FROM spend_items i
+                 WHERE i.tenant_id = $1 AND i.nature = 'capex'
                    AND NOT EXISTS (
-                     SELECT 1 FROM capex_item_analytics_values v
+                     SELECT 1 FROM spend_item_analytics_values v
                       WHERE v.tenant_id = $1 AND v.item_id = i.id AND v.axis_id = a.id
                    )
               ) ELSE 0 END AS capex_missing,

@@ -7,7 +7,6 @@ import { PortfolioRequest } from '../portfolio-request.entity';
 import { PortfolioRequestProject } from '../portfolio-request-project.entity';
 import { PortfolioProjectTeam } from '../portfolio-project-team.entity';
 import { PortfolioProjectContact } from '../portfolio-project-contact.entity';
-import { PortfolioProjectCapex } from '../portfolio-project-capex.entity';
 import { PortfolioProjectOpex } from '../portfolio-project-opex.entity';
 import { PortfolioProjectDependency } from '../portfolio-project-dependency.entity';
 import { TeamRole } from '../portfolio-request-team.entity';
@@ -24,7 +23,7 @@ import { detectChanges, PROJECT_TRACKED_FIELDS, resolveDisplayNames } from '../.
 import { normalizeMarkdownRichText } from '../../common/markdown-rich-text';
 import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
 import { ParticipationAccessScope, projectParticipantCondition } from '../../auth/business-contributor-scope';
-import { budgetLineIdsOfKind, insertProjectBudgetLinks, lockProject, OPEX_ITEMS_NOT_FOUND } from '../project-budget-links.util';
+import { budgetLineIdsOfKind, CAPEX_ITEMS_NOT_FOUND, insertProjectBudgetLinks, lockProject, OPEX_ITEMS_NOT_FOUND } from '../project-budget-links.util';
 
 /**
  * Service for core CRUD operations on portfolio projects.
@@ -68,10 +67,11 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
 
   private async resolveCapexLabelsByIds(mg: EntityManager, capexIds: string[]): Promise<string[]> {
     if (capexIds.length === 0) return [];
+    // A CAPEX line's title is its `product_name` (lot Z1).
     const rows = await mg.query<Array<{ id: string; description: string | null }>>(
-      `SELECT id, description
-       FROM capex_items
-       WHERE id = ANY($1::uuid[])`,
+      `SELECT id, product_name AS description
+       FROM spend_items
+       WHERE id = ANY($1::uuid[]) AND nature = 'capex'`,
       [capexIds],
     );
     const byId = new Map<string, string>();
@@ -289,10 +289,10 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     // Load CAPEX items
     if (include.has('capex') || include.has('financials')) {
       result.capex_items = await mg.query(
-        `SELECT c.id, c.description, c.ppe_type, c.investment_type, c.priority, c.currency, c.status,
+        `SELECT c.id, c.product_name AS description, c.ppe_type, c.investment_type, c.priority, c.currency, c.status,
                 sup.name as supplier_name
-         FROM portfolio_project_capex pc
-         JOIN capex_items c ON c.id = pc.capex_id
+         FROM portfolio_project_opex pc
+         JOIN spend_items c ON c.id = pc.opex_id AND c.nature = 'capex'
          LEFT JOIN suppliers sup ON sup.id = c.supplier_id
          WHERE pc.project_id = $1`,
         [id]
@@ -893,20 +893,27 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     opts?: ServiceOpts,
   ) {
     const mg = this.getManager(opts);
-    const repo = mg.getRepository(PortfolioProjectCapex);
+    const repo = mg.getRepository(PortfolioProjectOpex);
     const actorId = this.requireActivityAuthor(opts?.userId);
 
-    const unique = Array.from(new Set((capexIds || []).filter(Boolean)));
+    // Stored ids are lower case: an upper-case id must compare equal to its stored twin.
+    const unique = Array.from(new Set((capexIds || []).filter(Boolean).map((id) => String(id).toLowerCase())));
     const project = await this.ensureProject(projectId, mg);
     // Two saves of the project's lines take turns (the last one wins) and the set is read
     // under the lock; a link the line side stored meanwhile is kept, never a unique
     // violation. See project-budget-links.util.ts.
     if (!(await lockProject(mg, project.tenant_id, projectId))) throw new NotFoundException('Project not found');
-    const existing = await repo.find({ where: { project_id: projectId } });
-    const beforeIds = Array.from(new Set(existing.map((e) => e.capex_id)));
+    // The project's links to CAPEX lines only (one table with the OPEX ones since lot Z1,
+    // `spend/budget-nature.ts`): a link to an OPEX line is neither replaced nor removed. Every id
+    // given names a CAPEX line of the tenant, or the request is refused before anything is written.
+    const stored = await repo.find({ where: { project_id: projectId } });
+    const capexLines = await budgetLineIdsOfKind(mg, 'capex', project.tenant_id, [...stored.map((e) => e.opex_id), ...unique]);
+    if (unique.some((id) => !capexLines.has(id))) throw new BadRequestException(CAPEX_ITEMS_NOT_FOUND);
+    const existing = stored.filter((e) => capexLines.has(e.opex_id));
+    const beforeIds = Array.from(new Set(existing.map((e) => e.opex_id)));
 
-    const toDelete = existing.filter((e) => !unique.includes(e.capex_id));
-    const existingSet = new Set(existing.map((e) => e.capex_id));
+    const toDelete = existing.filter((e) => !unique.includes(e.opex_id));
+    const existingSet = new Set(existing.map((e) => e.opex_id));
     const toInsert = unique.filter((id) => !existingSet.has(id));
 
     if (toDelete.length > 0) await repo.remove(toDelete);
@@ -1268,17 +1275,19 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     tenantId: string,
     mg: EntityManager,
   ) {
+    // The request's links to CAPEX lines only (one table with the OPEX ones since lot Z1).
     const capexItems = await mg.query(
-      `SELECT capex_id FROM portfolio_request_capex WHERE request_id = $1`,
+      `SELECT ro.opex_id FROM portfolio_request_opex ro
+        WHERE ro.request_id = $1${linkedLineOf('ro.tenant_id', 'ro.opex_id', 'capex')}`,
       [requestId]
     );
 
-    const projectCapexRepo = mg.getRepository(PortfolioProjectCapex);
+    const projectOpexRepo = mg.getRepository(PortfolioProjectOpex);
     for (const item of capexItems) {
-      await projectCapexRepo.save(projectCapexRepo.create({
+      await projectOpexRepo.save(projectOpexRepo.create({
         tenant_id: tenantId,
         project_id: projectId,
-        capex_id: item.capex_id,
+        opex_id: item.opex_id,
       }));
     }
   }

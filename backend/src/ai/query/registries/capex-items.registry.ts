@@ -263,8 +263,10 @@ export const capexItemsRegistry: AiEntityFilterRegistry = {
     direction: 'desc',
   },
   aggregate: {
-    baseTable: 'capex_items',
+    baseTable: 'spend_items',
     alias: 'ci',
+    // `spend_items` holds both natures (lot Z1): this registry reads the CAPEX lines.
+    baseWhere: `ci.nature = 'capex'`,
     groupFields: {
       status: { expression: 'ci.status' },
       ppe_type: { expression: 'ci.ppe_type' },
@@ -296,7 +298,7 @@ export const capexItemsRegistry: AiEntityFilterRegistry = {
         expression: 'ac.name',
         joins: [
           `LEFT JOIN analytics_axes ax_def ON ax_def.tenant_id = ci.tenant_id AND ax_def.is_default`,
-          `LEFT JOIN capex_item_analytics_values av_def ON av_def.tenant_id = ci.tenant_id AND av_def.item_id = ci.id AND av_def.axis_id = ax_def.id`,
+          `LEFT JOIN spend_item_analytics_values av_def ON av_def.tenant_id = ci.tenant_id AND av_def.item_id = ci.id AND av_def.axis_id = ax_def.id`,
           `LEFT JOIN analytics_categories ac ON ac.id = av_def.category_id AND ac.tenant_id = av_def.tenant_id`,
         ],
       },

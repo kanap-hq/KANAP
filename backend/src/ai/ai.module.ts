@@ -8,7 +8,6 @@ import { AssetsModule } from '../assets/assets.module';
 import { Subscription } from '../billing/subscription.entity';
 import { BillingModule } from '../billing/billing.module';
 import { BusinessProcessesModule } from '../business-processes/business-processes.module';
-import { CapexModule } from '../capex/capex.module';
 import { CompaniesModule } from '../companies/companies.module';
 import { ConnectionsModule } from '../connections/connections.module';
 import { ContactsModule } from '../contacts/contacts.module';
@@ -216,7 +215,6 @@ import { BraveSearchService } from './web-search/brave-search.service';
     AssetsModule,
     BillingModule,
     BusinessProcessesModule,
-    CapexModule,
     CompaniesModule,
     ConnectionsModule,
     ContactsModule,

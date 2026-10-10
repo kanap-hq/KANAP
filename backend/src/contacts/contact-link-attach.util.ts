@@ -4,8 +4,8 @@ import { withSavepoint } from '../common/savepoint.util';
 import { SupplierContactRole } from './supplier-contact.entity';
 
 /**
- * Manual attach of a contact to an OPEX line, a CAPEX line or a contract,
- * idempotent (plan planning/perf-scale, lot 3A, Annexe A #14).
+ * Manual attach of a contact to a budget line (OPEX or CAPEX: one table since
+ * lot Z1) or a contract, idempotent (plan planning/perf-scale, lot 3A, Annexe A #14).
  *
  * Each link table is unique on (tenant_id, owner, contact_id, role). The
  * insert is `ON CONFLICT DO NOTHING` on that key, then the link of the key is
@@ -15,7 +15,6 @@ import { SupplierContactRole } from './supplier-contact.entity';
  */
 const TABLES = {
   spend_item_contacts: 'spend_item_id',
-  capex_item_contacts: 'capex_item_id',
   contract_contacts: 'contract_id',
 } as const;
 

@@ -454,7 +454,8 @@ export class AnalyticsCategoriesService {
       `SELECT c.id,
               (SELECT count(*)::int FROM spend_item_analytics_values v JOIN spend_items si ON si.tenant_id = v.tenant_id AND si.id = v.item_id AND si.nature = 'opex'
                 WHERE v.tenant_id = $1 AND v.category_id = c.id) AS opex,
-              (SELECT count(*)::int FROM capex_item_analytics_values v WHERE v.tenant_id = $1 AND v.category_id = c.id) AS capex
+              (SELECT count(*)::int FROM spend_item_analytics_values v JOIN spend_items si ON si.tenant_id = v.tenant_id AND si.id = v.item_id AND si.nature = 'capex'
+                WHERE v.tenant_id = $1 AND v.category_id = c.id) AS capex
          FROM analytics_categories c
         WHERE c.tenant_id = $1 AND c.id = ANY($2::uuid[])`,
       [ctx.tenantId, ids],
@@ -567,7 +568,8 @@ export class AnalyticsCategoriesService {
       `SELECT c.*, a.name AS axis_name, a.code AS axis_code, a.is_default AS axis_is_default,
               (SELECT count(*)::int FROM spend_item_analytics_values v JOIN spend_items si ON si.tenant_id = v.tenant_id AND si.id = v.item_id AND si.nature = 'opex'
                 WHERE v.tenant_id = $1 AND v.category_id = c.id) AS opex_count,
-              (SELECT count(*)::int FROM capex_item_analytics_values v WHERE v.tenant_id = $1 AND v.category_id = c.id) AS capex_count
+              (SELECT count(*)::int FROM spend_item_analytics_values v JOIN spend_items si ON si.tenant_id = v.tenant_id AND si.id = v.item_id AND si.nature = 'capex'
+                WHERE v.tenant_id = $1 AND v.category_id = c.id) AS capex_count
          FROM analytics_categories c
          JOIN analytics_axes a ON a.id = c.axis_id AND a.tenant_id = c.tenant_id
         WHERE c.tenant_id = $1 AND c.id = $2`,

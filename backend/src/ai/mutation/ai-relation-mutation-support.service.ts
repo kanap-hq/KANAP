@@ -3,6 +3,7 @@ import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
 import { AuditService } from '../../audit/audit.service';
 import { lockBudgetLine } from '../../spend/budget-locks';
+import { auditTableOf } from '../../spend/budget-nature';
 import {
   applicationParticipantCondition,
   resolveBusinessContributorScopeForUser,
@@ -102,39 +103,42 @@ type RelationItem = {
   payload: Record<string, unknown>;
 };
 
+// The CAPEX lines share the link tables of the OPEX lines (`spend_items`, nature `capex`, lot Z1):
+// a relation to `capex_items` reads and replaces the links to CAPEX lines only (`targetSql`), and
+// its audit rows keep their CAPEX table names (`auditTableName`).
 const SIMPLE_RELATIONS: SimpleRelationConfig[] = [
   { sourceEntity: 'applications', relation: 'companies', label: 'Companies', table: 'application_companies', sourceColumn: 'application_id', targetColumn: 'company_id', target: 'companies', businessResource: 'applications', kind: 'simple' },
   { sourceEntity: 'applications', relation: 'departments', label: 'Departments', table: 'application_departments', sourceColumn: 'application_id', targetColumn: 'department_id', target: 'departments', businessResource: 'applications', kind: 'simple' },
   { sourceEntity: 'applications', relation: 'spend_items', label: 'Spend Items', table: 'application_spend_items', sourceColumn: 'application_id', targetColumn: 'spend_item_id', target: 'spend_items', businessResource: 'applications', kind: 'simple' },
-  { sourceEntity: 'applications', relation: 'capex_items', label: 'CAPEX Items', table: 'application_capex_items', sourceColumn: 'application_id', targetColumn: 'capex_item_id', target: 'capex_items', businessResource: 'applications', kind: 'simple' },
+  { sourceEntity: 'applications', relation: 'capex_items', label: 'CAPEX Items', table: 'application_spend_items', sourceColumn: 'application_id', targetColumn: 'spend_item_id', target: 'capex_items', businessResource: 'applications', kind: 'simple' },
   { sourceEntity: 'applications', relation: 'contracts', label: 'Contracts', table: 'application_contracts', sourceColumn: 'application_id', targetColumn: 'contract_id', target: 'contracts', businessResource: 'applications', kind: 'simple' },
   { sourceEntity: 'applications', relation: 'projects', label: 'Projects', table: 'application_projects', sourceColumn: 'application_id', targetColumn: 'project_id', target: 'projects', businessResource: 'applications', kind: 'simple' },
 
   { sourceEntity: 'assets', relation: 'spend_items', label: 'Spend Items', table: 'asset_spend_items', sourceColumn: 'asset_id', targetColumn: 'spend_item_id', target: 'spend_items', businessResource: 'infrastructure', kind: 'simple' },
-  { sourceEntity: 'assets', relation: 'capex_items', label: 'CAPEX Items', table: 'asset_capex_items', sourceColumn: 'asset_id', targetColumn: 'capex_item_id', target: 'capex_items', businessResource: 'infrastructure', kind: 'simple' },
+  { sourceEntity: 'assets', relation: 'capex_items', label: 'CAPEX Items', table: 'asset_spend_items', sourceColumn: 'asset_id', targetColumn: 'spend_item_id', target: 'capex_items', businessResource: 'infrastructure', kind: 'simple' },
   { sourceEntity: 'assets', relation: 'contracts', label: 'Contracts', table: 'asset_contracts', sourceColumn: 'asset_id', targetColumn: 'contract_id', target: 'contracts', businessResource: 'infrastructure', kind: 'simple' },
   { sourceEntity: 'assets', relation: 'projects', label: 'Projects', table: 'asset_projects', sourceColumn: 'asset_id', targetColumn: 'project_id', target: 'projects', businessResource: 'infrastructure', kind: 'simple' },
   { sourceEntity: 'assets', relation: 'cluster_members', label: 'Cluster Members', table: 'asset_cluster_members', sourceColumn: 'cluster_id', targetColumn: 'asset_id', target: 'assets', businessResource: 'infrastructure', kind: 'simple' },
 
   { sourceEntity: 'contracts', relation: 'spend_items', label: 'Spend Items', table: 'contract_spend_items', sourceColumn: 'contract_id', targetColumn: 'spend_item_id', target: 'spend_items', businessResource: 'contracts', kind: 'simple' },
-  { sourceEntity: 'contracts', relation: 'capex_items', label: 'CAPEX Items', table: 'contract_capex_items', sourceColumn: 'contract_id', targetColumn: 'capex_item_id', target: 'capex_items', businessResource: 'contracts', kind: 'simple' },
+  { sourceEntity: 'contracts', relation: 'capex_items', label: 'CAPEX Items', table: 'contract_spend_items', sourceColumn: 'contract_id', targetColumn: 'spend_item_id', target: 'capex_items', businessResource: 'contracts', kind: 'simple' },
 
   { sourceEntity: 'spend_items', relation: 'applications', label: 'Applications', table: 'application_spend_items', sourceColumn: 'spend_item_id', targetColumn: 'application_id', target: 'applications', businessResource: 'opex', kind: 'simple' },
   { sourceEntity: 'spend_items', relation: 'projects', label: 'Projects', table: 'portfolio_project_opex', sourceColumn: 'opex_id', targetColumn: 'project_id', target: 'projects', businessResource: 'opex', kind: 'simple' },
   { sourceEntity: 'spend_items', relation: 'contracts', label: 'Contracts', table: 'contract_spend_items', sourceColumn: 'spend_item_id', targetColumn: 'contract_id', target: 'contracts', businessResource: 'opex', kind: 'simple' },
 
-  { sourceEntity: 'capex_items', relation: 'applications', label: 'Applications', table: 'application_capex_items', sourceColumn: 'capex_item_id', targetColumn: 'application_id', target: 'applications', businessResource: 'capex', kind: 'simple' },
-  { sourceEntity: 'capex_items', relation: 'projects', label: 'Projects', table: 'portfolio_project_capex', sourceColumn: 'capex_id', targetColumn: 'project_id', target: 'projects', businessResource: 'capex', kind: 'simple' },
-  { sourceEntity: 'capex_items', relation: 'contracts', label: 'Contracts', table: 'contract_capex_items', sourceColumn: 'capex_item_id', targetColumn: 'contract_id', target: 'contracts', businessResource: 'capex', kind: 'simple' },
+  { sourceEntity: 'capex_items', relation: 'applications', label: 'Applications', table: 'application_spend_items', sourceColumn: 'spend_item_id', targetColumn: 'application_id', target: 'applications', businessResource: 'capex', kind: 'simple' },
+  { sourceEntity: 'capex_items', relation: 'projects', label: 'Projects', table: 'portfolio_project_opex', sourceColumn: 'opex_id', targetColumn: 'project_id', target: 'projects', businessResource: 'capex', kind: 'simple' },
+  { sourceEntity: 'capex_items', relation: 'contracts', label: 'Contracts', table: 'contract_spend_items', sourceColumn: 'spend_item_id', targetColumn: 'contract_id', target: 'contracts', businessResource: 'capex', kind: 'simple' },
 
   { sourceEntity: 'projects', relation: 'applications', label: 'Applications', table: 'application_projects', sourceColumn: 'project_id', targetColumn: 'application_id', target: 'applications', businessResource: 'portfolio_projects', kind: 'simple' },
   { sourceEntity: 'projects', relation: 'assets', label: 'Assets', table: 'asset_projects', sourceColumn: 'project_id', targetColumn: 'asset_id', target: 'assets', businessResource: 'portfolio_projects', kind: 'simple' },
-  { sourceEntity: 'projects', relation: 'capex_items', label: 'CAPEX Items', table: 'portfolio_project_capex', sourceColumn: 'project_id', targetColumn: 'capex_id', target: 'capex_items', businessResource: 'portfolio_projects', kind: 'simple' },
+  { sourceEntity: 'projects', relation: 'capex_items', label: 'CAPEX Items', table: 'portfolio_project_opex', sourceColumn: 'project_id', targetColumn: 'opex_id', target: 'capex_items', businessResource: 'portfolio_projects', kind: 'simple' },
   { sourceEntity: 'projects', relation: 'spend_items', label: 'Spend Items', table: 'portfolio_project_opex', sourceColumn: 'project_id', targetColumn: 'opex_id', target: 'spend_items', businessResource: 'portfolio_projects', kind: 'simple' },
 
   { sourceEntity: 'requests', relation: 'applications', label: 'Applications', table: 'portfolio_request_applications', sourceColumn: 'request_id', targetColumn: 'application_id', target: 'applications', businessResource: 'portfolio_requests', kind: 'simple' },
   { sourceEntity: 'requests', relation: 'assets', label: 'Assets', table: 'portfolio_request_assets', sourceColumn: 'request_id', targetColumn: 'asset_id', target: 'assets', businessResource: 'portfolio_requests', kind: 'simple' },
-  { sourceEntity: 'requests', relation: 'capex_items', label: 'CAPEX Items', table: 'portfolio_request_capex', sourceColumn: 'request_id', targetColumn: 'capex_id', target: 'capex_items', businessResource: 'portfolio_requests', kind: 'simple' },
+  { sourceEntity: 'requests', relation: 'capex_items', label: 'CAPEX Items', table: 'portfolio_request_opex', sourceColumn: 'request_id', targetColumn: 'opex_id', target: 'capex_items', businessResource: 'portfolio_requests', kind: 'simple' },
   { sourceEntity: 'requests', relation: 'spend_items', label: 'Spend Items', table: 'portfolio_request_opex', sourceColumn: 'request_id', targetColumn: 'opex_id', target: 'spend_items', businessResource: 'portfolio_requests', kind: 'simple' },
   { sourceEntity: 'requests', relation: 'business_processes', label: 'Business Processes', table: 'portfolio_request_business_processes', sourceColumn: 'request_id', targetColumn: 'business_process_id', target: 'business_processes', businessResource: 'portfolio_requests', kind: 'simple' },
 ];
@@ -729,13 +733,13 @@ export class AiRelationMutationSupportService {
     }));
   }
 
-  /** `where`: a predicate on the target row `t`; a `spend_items` target is an OPEX line (`spend/budget-nature.ts`). */
+  /** `where`: a predicate on the target row `t`; a `spend_items` target is an OPEX line, a `capex_items` one a CAPEX line (`spend/budget-nature.ts`). */
   private targetSql(target: RelationTarget): { table: string; labelSql: string; where?: string } {
     switch (target) {
       case 'applications': return { table: 'applications', labelSql: `COALESCE(NULLIF(CONCAT(COALESCE(t.sequential_id, ''), ' - ', t.name), ' - '), t.name, t.id::text)` };
       case 'assets': return { table: 'assets', labelSql: `COALESCE(NULLIF(CONCAT(COALESCE(t.asset_reference, ''), ' - ', t.name), ' - '), t.name, t.id::text)` };
       case 'business_processes': return { table: 'business_processes', labelSql: 'COALESCE(t.name, t.id::text)' };
-      case 'capex_items': return { table: 'capex_items', labelSql: 'COALESCE(t.description, t.id::text)' };
+      case 'capex_items': return { table: 'spend_items', labelSql: 'COALESCE(t.product_name, t.id::text)', where: ` AND t.nature = 'capex'` };
       case 'companies': return { table: 'companies', labelSql: 'COALESCE(t.name, t.id::text)' };
       case 'contacts': return { table: 'contacts', labelSql: `COALESCE(NULLIF(TRIM(CONCAT(COALESCE(t.first_name, ''), ' ', COALESCE(t.last_name, ''))), ''), t.email, t.id::text)` };
       case 'contracts': return { table: 'contracts', labelSql: 'COALESCE(t.name, t.id::text)' };
@@ -772,7 +776,8 @@ export class AiRelationMutationSupportService {
     if (config.sourceEntity === 'assets') return { table: 'asset_support_contacts', sourceColumn: 'asset_id', includeOrigin: false };
     if (config.sourceEntity === 'contracts') return { table: 'contract_contacts', sourceColumn: 'contract_id', includeOrigin: true };
     if (config.sourceEntity === 'spend_items') return { table: 'spend_item_contacts', sourceColumn: 'spend_item_id', includeOrigin: true };
-    return { table: 'capex_item_contacts', sourceColumn: 'capex_item_id', includeOrigin: true };
+    // A CAPEX line (resolved with its nature): its contacts share the OPEX table.
+    return { table: 'spend_item_contacts', sourceColumn: 'spend_item_id', includeOrigin: true };
   }
 
   private async loadContactRoles(context: AiExecutionContextWithManager, config: RelationConfig, sourceId: string): Promise<RelationItem[]> {
@@ -839,7 +844,7 @@ export class AiRelationMutationSupportService {
     if (config.sourceEntity === 'assets') return { table: 'asset_links', sourceColumn: 'asset_id' };
     if (config.sourceEntity === 'contracts') return { table: 'contract_links', sourceColumn: 'contract_id' };
     if (config.sourceEntity === 'spend_items') return { table: 'spend_links', sourceColumn: 'spend_item_id' };
-    if (config.sourceEntity === 'capex_items') return { table: 'capex_links', sourceColumn: 'capex_item_id' };
+    if (config.sourceEntity === 'capex_items') return { table: 'spend_links', sourceColumn: 'spend_item_id' };
     return { table: 'location_links', sourceColumn: 'location_id' };
   }
 
@@ -989,8 +994,8 @@ export class AiRelationMutationSupportService {
   }
 
   private async replaceSimpleRelation(context: AiExecutionContextWithManager, config: SimpleRelationConfig, sourceId: string, nextItems: RelationItem[]): Promise<void> {
-    // A target with a predicate (OPEX lines): only the links to such targets are replaced, a link
-    // to a line of another nature stays.
+    // A target with a predicate (OPEX or CAPEX lines): only the links to such targets are replaced,
+    // a link to a line of the other nature stays.
     const target = this.targetSql(config.target);
     const ofTarget = target.where
       ? ` AND EXISTS (SELECT 1 FROM ${target.table} t WHERE t.tenant_id = l.tenant_id AND t.id = l.${config.targetColumn}${target.where})`
@@ -1188,14 +1193,17 @@ export class AiRelationMutationSupportService {
     }
   }
 
+  /** The table the audit log names: a relation of a CAPEX line keeps its CAPEX table name (`auditTableOf`). */
   private auditTableName(config: RelationConfig): string {
-    if (config.kind === 'simple') return config.table;
+    const capex = config.sourceEntity === 'capex_items' || (config.kind === 'simple' && config.target === 'capex_items');
+    const label = (table: string) => (capex ? auditTableOf('capex', table) : table);
+    if (config.kind === 'simple') return label(config.table);
     switch (config.kind) {
       case 'owner_role': return 'application_owners';
-      case 'contact_role': return this.contactTable(config).table;
+      case 'contact_role': return label(this.contactTable(config).table);
       case 'supplier_contacts': return 'supplier_contacts';
       case 'asset_relations': return 'asset_relations';
-      case 'link': return this.linkTable(config).table;
+      case 'link': return label(this.linkTable(config).table);
       case 'location_internal_contacts': return 'location_user_contacts';
       case 'location_external_contacts': return 'location_contacts';
       case 'sub_locations': return 'location_sub_items';
@@ -1269,7 +1277,8 @@ export class AiRelationMutationSupportService {
       case 'business_processes':
         return manager.query(`SELECT * FROM business_processes WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text)) ORDER BY name LIMIT 6`, [tenantId, ref]);
       case 'capex_items':
-        return manager.query(`SELECT * FROM capex_items WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(description) = LOWER($2::text)) ORDER BY description LIMIT 6`, [tenantId, ref]);
+        // CAPEX lines only (`spend/budget-nature.ts`); the CAPEX title is `product_name` (lot Z1).
+        return manager.query(`SELECT * FROM spend_items WHERE tenant_id = $1 AND nature = 'capex' AND (${uuid ? 'id = $2 OR ' : ''}LOWER(product_name) = LOWER($2::text)) ORDER BY product_name LIMIT 6`, [tenantId, ref]);
       case 'companies':
         return manager.query(`SELECT * FROM companies WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text)) ORDER BY name LIMIT 6`, [tenantId, ref]);
       case 'contacts':
@@ -1301,7 +1310,7 @@ export class AiRelationMutationSupportService {
       case 'projects': return row.item_number == null ? null : `PRJ-${row.item_number}`;
       case 'requests': return row.item_number == null ? null : `REQ-${row.item_number}`;
       case 'spend_items': return textOrNull(row.product_name);
-      case 'capex_items': return textOrNull(row.description);
+      case 'capex_items': return textOrNull(row.product_name);
       case 'locations': return textOrNull(row.location_reference);
       case 'users': return textOrNull(row.email);
       default: return null;
@@ -1312,7 +1321,7 @@ export class AiRelationMutationSupportService {
     switch (entityType) {
       case 'applications': return [row.sequential_id, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled application';
       case 'assets': return [row.asset_reference, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled asset';
-      case 'capex_items': return textOrNull(row.description) || 'Untitled CAPEX item';
+      case 'capex_items': return textOrNull(row.product_name) || 'Untitled CAPEX item';
       case 'contacts': {
         const name = [row.first_name, row.last_name].map(textOrNull).filter(Boolean).join(' ');
         return name || textOrNull(row.email) || 'Untitled contact';

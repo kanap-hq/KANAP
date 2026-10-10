@@ -8,7 +8,6 @@ import {
   applicationParticipantCondition,
   resolveBusinessContributorScopeForUser,
 } from '../../auth/business-contributor-scope';
-import { CapexItemsService } from '../../capex/capex-items.service';
 import { ConnectionsService } from '../../connections/services/connections.service';
 import { ContractsService } from '../../contracts/contracts.service';
 import { InterfacesService } from '../../interfaces/services/interfaces.service';
@@ -16,8 +15,10 @@ import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.serv
 import { ClassificationCatalog, resolveClassificationOption } from '../../it-ops-settings/classification-catalog';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { PortfolioProjectsService } from '../../portfolio/services';
-import { SpendItemsService } from '../../spend/spend-items.service';
+import { CapexItemsService, SpendItemsService } from '../../spend/spend-items.service';
 import { lockBudgetLine } from '../../spend/budget-locks';
+import { auditTableOf, BUDGET_LINE_PREFIX, LEGACY_PREFIX } from '../../spend/budget-nature';
+import { presentLine } from '../../spend/budget-line-presentation';
 import { parseItemRef } from '../../common/resolve-item-id';
 import {
   DISABLED_VALUE_MESSAGE,
@@ -123,6 +124,7 @@ type EntityConfig = {
   labelSingular: string;
   labelPlural: string;
   businessResource: string;
+  /** The table the audit log names for the record: a CAPEX line keeps its CAPEX label (`auditTableOf`). */
   tableName: string;
   fields: Record<string, FieldConfig>;
 };
@@ -400,7 +402,8 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
     labelSingular: 'CAPEX item',
     labelPlural: 'CAPEX items',
     businessResource: 'capex',
-    tableName: 'capex_items',
+    // A CAPEX line lives in `spend_items` (nature `capex`, lot Z1); its audit rows keep `capex_items`.
+    tableName: auditTableOf('capex', 'spend_items'),
     fields: {
       description: { label: 'Description', kind: 'text', requiredOnCreate: true, aliases: ['name'] },
       ppe_type: { label: 'PPE Type', kind: 'enum', enumValues: PPE_TYPES, requiredOnCreate: true },
@@ -1024,14 +1027,32 @@ export class AiBusinessRecordMutationSupportService {
     return this.referenceFromRow(entityType, rows[0]);
   }
 
-  /** The item number of a budget line reference (`OPX-3`, `CPX-3`), or -1 when the reference is not one of this type. */
-  private itemNumberOfReference(ref: string, type: 'spend' | 'capex'): number {
+  /** The item number of an OPEX line reference (`OPX-3`, `BL-3`), or -1 when the reference is not one of this type. */
+  private itemNumberOfReference(ref: string, type: 'spend'): number {
     try {
       const parsed = parseItemRef(ref, type);
       // A bare number stays a name: only the prefixed reference names a line.
       return parsed.type === 'item_number' && ref.includes('-') ? parsed.value : -1;
     } catch {
       return -1;
+    }
+  }
+
+  /**
+   * The numbers a CAPEX line reference names: `CPX-n` its CPX number (`legacy_number`), `BL-n` its
+   * own number; neither for a name or a bare number (a bare number stays a name, as for OPEX).
+   */
+  private capexNumberOfReference(ref: string): { itemNumber: number; legacyNumber: string | null } {
+    const none = { itemNumber: -1, legacyNumber: null };
+    if (!ref.includes('-')) return none;
+    try {
+      const parsed = parseItemRef(ref, 'capex');
+      if (parsed.type !== 'item_number') return none;
+      return parsed.prefix === BUDGET_LINE_PREFIX
+        ? { itemNumber: parsed.value, legacyNumber: null }
+        : { itemNumber: -1, legacyNumber: `${LEGACY_PREFIX.capex}-${parsed.value}` };
+    } catch {
+      return none;
     }
   }
 
@@ -1119,11 +1140,16 @@ export class AiBusinessRecordMutationSupportService {
           `SELECT * FROM spend_items WHERE tenant_id = $1 AND nature = 'opex' AND (${uuid ? 'id = $2 OR ' : ''}LOWER(product_name) = LOWER($2::text) OR item_number = $3) ORDER BY product_name LIMIT 6`,
           [tenantId, ref, this.itemNumberOfReference(ref, 'spend')],
         ));
-      case 'capex_items':
-        return this.withDefaultAnalyticsValue(context, 'capex', await manager.query(
-          `SELECT * FROM capex_items WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(description) = LOWER($2::text) OR item_number = $3) ORDER BY description LIMIT 6`,
-          [tenantId, ref, this.itemNumberOfReference(ref, 'capex')],
-        ));
+      case 'capex_items': {
+        // CAPEX lines only (`spend/budget-nature.ts`), by id, title, CPX number (`legacy_number`)
+        // or BL number; each row in the CAPEX contract (`description` = title, CPX number).
+        const number = this.capexNumberOfReference(ref);
+        const rows: Record<string, unknown>[] = await manager.query(
+          `SELECT * FROM spend_items WHERE tenant_id = $1 AND nature = 'capex' AND (${uuid ? 'id = $2 OR ' : ''}LOWER(product_name) = LOWER($2::text) OR item_number = $3 OR legacy_number = $4::text) ORDER BY product_name LIMIT 6`,
+          [tenantId, ref, number.itemNumber, number.legacyNumber],
+        );
+        return this.withDefaultAnalyticsValue(context, 'capex', rows.map((row) => presentLine('capex', row)));
+      }
       case 'companies':
         return manager.query(`SELECT * FROM companies WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text)) ORDER BY name LIMIT 6`, [tenantId, ref]);
       case 'cost_centers': {

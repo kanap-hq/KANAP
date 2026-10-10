@@ -126,7 +126,7 @@ export class TasksCsvService {
       project: { table: 'portfolio_projects', nameColumn: 'name' },
       spend_item: { table: 'spend_items', nameColumn: 'product_name', where: ` AND nature = 'opex'` },
       contract: { table: 'contracts', nameColumn: 'name' },
-      capex_item: { table: 'capex_items', nameColumn: 'description' },
+      capex_item: { table: 'spend_items', nameColumn: 'product_name', where: ` AND nature = 'capex'` },
       incident: { table: 'incidents', nameColumn: "'INC-' || item_number::text" },
     };
 
@@ -190,7 +190,7 @@ export class TasksCsvService {
       project: { table: 'portfolio_projects', nameColumn: 'name' },
       spend_item: { table: 'spend_items', nameColumn: 'product_name', where: ` AND nature = 'opex'` },
       contract: { table: 'contracts', nameColumn: 'name' },
-      capex_item: { table: 'capex_items', nameColumn: 'description' },
+      capex_item: { table: 'spend_items', nameColumn: 'product_name', where: ` AND nature = 'capex'` },
       incident: { table: 'incidents', nameColumn: "'INC-' || item_number::text" },
     };
     const normalizeType = (raw: string): string => {

@@ -2,13 +2,12 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
 import { AuditService } from '../../audit/audit.service';
-import { CapexAllocationsService } from '../../capex/capex-allocations.service';
-import { CapexAmountsService } from '../../capex/capex-amounts.service';
-import { CapexVersionsService } from '../../capex/capex-versions.service';
-import { SpendAllocationsService } from '../../spend/spend-allocations.service';
+import { CapexAllocationsService, SpendAllocationsService } from '../../spend/spend-allocations.service';
 import { lockBudgetLine, lockBudgetVersions } from '../../spend/budget-locks';
-import { SpendAmountsService } from '../../spend/spend-amounts.service';
-import { SpendVersionsService } from '../../spend/spend-versions.service';
+import { CapexAmountsService, SpendAmountsService } from '../../spend/spend-amounts.service';
+import { CapexVersionsService, SpendVersionsService } from '../../spend/spend-versions.service';
+import { auditTableOf, BudgetNature, natureAnd } from '../../spend/budget-nature';
+import { presentChild } from '../../spend/budget-line-presentation';
 import { AMOUNT_MEASURES, AmountMeasure, assertSpreadProfile, validateAmountValue } from '../../spend/amounts-write.util';
 import { formatAmount, formatCents } from '../../common/amount';
 import { budgetColumnName, BudgetColumnsSettings, readBudgetColumns } from '../../budget-columns/budget-columns.util';
@@ -556,7 +555,7 @@ export class AiFinancialPlanMutationSupportService {
     const item = await this.resolveItemById(context, entityType, itemId);
     // Lock order (`spend/budget-locks.ts`): the line, then the version, before what the preview
     // saw is compared with what is stored, so nothing changes between the check and the write.
-    const scope = entityType === 'spend_items' ? 'opex' : 'capex';
+    const scope = this.nature(entityType);
     if (!(await lockBudgetLine(context.manager, scope, context.tenantId, item.id))) {
       throw new NotFoundException(`${this.itemLabelSingular(entityType)} not found.`);
     }
@@ -571,7 +570,7 @@ export class AiFinancialPlanMutationSupportService {
         version_ref: version.ref,
         version_title: version.label,
       };
-      await this.logAiAudit(context, preview, this.versionTable(entityType), version.id, 'create', null, version.row);
+      await this.logAiAudit(context, preview, this.versionAuditTable(entityType), version.id, 'create', null, version.row);
       return;
     }
 
@@ -586,7 +585,7 @@ export class AiFinancialPlanMutationSupportService {
       this.assertVersionFieldsUnchanged(version.row, previous);
       await this.updateVersion(context, entityType, item.id, version.id, fields);
       const after = await this.resolveVersionById(context, entityType, item.id, version.id);
-      await this.logAiAudit(context, preview, this.versionTable(entityType), version.id, 'update', version.row, after.row);
+      await this.logAiAudit(context, preview, this.versionAuditTable(entityType), version.id, 'update', version.row, after.row);
       return;
     }
 
@@ -601,7 +600,7 @@ export class AiFinancialPlanMutationSupportService {
       }
       await this.upsertAmounts(context, entityType, version.id, amounts);
       const after = await this.listAmounts(context, entityType, version.id, amounts.year);
-      await this.logAiAudit(context, preview, this.amountsTable(entityType), null, 'update', before, after);
+      await this.logAiAudit(context, preview, this.amountsAuditTable(entityType), null, 'update', before, after);
       return;
     }
 
@@ -614,7 +613,7 @@ export class AiFinancialPlanMutationSupportService {
       }
       await this.replaceAllocations(context, entityType, version.id, allocations);
       const after = await this.listAllocations(context, entityType, version.id);
-      await this.logAiAudit(context, preview, this.allocationsTable(entityType), null, 'update', before, after);
+      await this.logAiAudit(context, preview, this.allocationsAuditTable(entityType), null, 'update', before, after);
       return;
     }
 
@@ -894,14 +893,13 @@ export class AiFinancialPlanMutationSupportService {
     if (isUuid(normalized)) {
       return this.resolveItemById(context, entityType, normalized);
     }
-    const table = entityType === 'spend_items' ? 'spend_items' : 'capex_items';
-    const labelColumn = entityType === 'spend_items' ? 'product_name' : 'description';
+    // The title of a line of either nature is `product_name` (lot Z1).
     const rows = await context.manager.query(
       `
       SELECT *
-      FROM ${table}
-      WHERE tenant_id = $1${this.itemNature(entityType)} AND LOWER(${labelColumn}) = LOWER($2::text)
-      ORDER BY ${labelColumn}
+      FROM spend_items
+      WHERE tenant_id = $1${this.itemNature(entityType)} AND LOWER(product_name) = LOWER($2::text)
+      ORDER BY product_name
       LIMIT 6
       `,
       [context.tenantId, normalized],
@@ -916,22 +914,24 @@ export class AiFinancialPlanMutationSupportService {
     entityType: AiFinancialPlanEntityType,
     id: string,
   ): Promise<FinancialItemRef> {
-    const table = entityType === 'spend_items' ? 'spend_items' : 'capex_items';
-    const rows = await context.manager.query(`SELECT * FROM ${table} WHERE tenant_id = $1 AND id = $2${this.itemNature(entityType)} LIMIT 1`, [context.tenantId, id]);
+    // A line of the other nature is not found (`spend/budget-nature.ts`).
+    const rows = await context.manager.query(`SELECT * FROM spend_items WHERE tenant_id = $1 AND id = $2${this.itemNature(entityType)} LIMIT 1`, [context.tenantId, id]);
     if (!rows[0]) throw new NotFoundException(`${this.itemLabelSingular(entityType)} not found.`);
     return this.itemRef(entityType, rows[0]);
   }
 
-  /** `spend_items` holds the OPEX lines this type reads (`spend/budget-nature.ts`); `capex_items` has no nature until lot Z1. */
+  /** `spend_items` holds the lines of both natures: this type reads the lines of its own (`spend/budget-nature.ts`). */
   private itemNature(entityType: AiFinancialPlanEntityType): string {
-    return entityType === 'spend_items' ? ` AND nature = 'opex'` : '';
+    return natureAnd(null, this.nature(entityType));
+  }
+
+  private nature(entityType: AiFinancialPlanEntityType): BudgetNature {
+    return entityType === 'spend_items' ? 'opex' : 'capex';
   }
 
   private itemRef(entityType: AiFinancialPlanEntityType, row: Record<string, unknown>): FinancialItemRef {
     const id = String(row.id || '');
-    const label = entityType === 'spend_items'
-      ? textOrNull(row.product_name) || 'Untitled spend item'
-      : textOrNull(row.description) || 'Untitled CAPEX item';
+    const label = textOrNull(row.product_name) || (entityType === 'spend_items' ? 'Untitled spend item' : 'Untitled CAPEX item');
     return { id, ref: label, label, row };
   }
 
@@ -944,15 +944,14 @@ export class AiFinancialPlanMutationSupportService {
     const normalized = textOrNull(ref);
     if (!normalized) throw new BadRequestException('version_ref is required for this financial plan action.');
     if (isUuid(normalized)) return this.resolveVersionById(context, entityType, itemId, normalized);
-    const table = this.versionTable(entityType);
-    const itemColumn = entityType === 'spend_items' ? 'spend_item_id' : 'capex_item_id';
+    // The versions of a line resolved with its nature (`resolveItemById`): no predicate of their own.
     const numericYear = Number(normalized);
     const rows = await context.manager.query(
       `
       SELECT *
-      FROM ${table}
+      FROM spend_versions
       WHERE tenant_id = $1
-        AND ${itemColumn} = $2
+        AND spend_item_id = $2
         AND (LOWER(version_name) = LOWER($3) OR budget_year = $4)
       ORDER BY created_at DESC
       LIMIT 6
@@ -961,7 +960,7 @@ export class AiFinancialPlanMutationSupportService {
     );
     if (rows.length === 0) throw new NotFoundException(`Financial version "${normalized}" not found.`);
     if (rows.length > 1) throw new BadRequestException(`Multiple financial versions matched "${normalized}". Use a UUID.`);
-    return this.versionRef(rows[0]);
+    return this.versionRef(entityType, rows[0]);
   }
 
   private async resolveVersionById(
@@ -970,17 +969,17 @@ export class AiFinancialPlanMutationSupportService {
     itemId: string,
     id: string,
   ): Promise<FinancialVersionRef> {
-    const table = this.versionTable(entityType);
-    const itemColumn = entityType === 'spend_items' ? 'spend_item_id' : 'capex_item_id';
     const rows = await context.manager.query(
-      `SELECT * FROM ${table} WHERE tenant_id = $1 AND ${itemColumn} = $2 AND id = $3 LIMIT 1`,
+      `SELECT * FROM spend_versions WHERE tenant_id = $1 AND spend_item_id = $2 AND id = $3 LIMIT 1`,
       [context.tenantId, itemId, id],
     );
     if (!rows[0]) throw new NotFoundException('Financial version not found.');
-    return this.versionRef(rows[0]);
+    return this.versionRef(entityType, rows[0]);
   }
 
-  private versionRef(row: Record<string, unknown>): FinancialVersionRef {
+  /** A version row as its nature's API names its line (`capex_item_id` for a CAPEX line): what its audit rows record. */
+  private versionRef(entityType: AiFinancialPlanEntityType, stored: Record<string, unknown>): FinancialVersionRef {
+    const row: Record<string, unknown> = presentChild(this.nature(entityType), stored);
     const id = String(row.id || '');
     const ref = textOrNull(row.version_name) || textOrNull(row.budget_year) || id;
     const year = row.budget_year == null ? null : String(row.budget_year);
@@ -1184,15 +1183,16 @@ export class AiFinancialPlanMutationSupportService {
     return entityType === 'spend_items' ? 'spend items' : 'CAPEX items';
   }
 
-  private versionTable(entityType: AiFinancialPlanEntityType): string {
-    return entityType === 'spend_items' ? 'spend_versions' : 'capex_versions';
+  // The audit labels: the rows of a CAPEX line keep their CAPEX table names (`auditTableOf`).
+  private versionAuditTable(entityType: AiFinancialPlanEntityType): string {
+    return auditTableOf(this.nature(entityType), 'spend_versions');
   }
 
-  private amountsTable(entityType: AiFinancialPlanEntityType): string {
-    return entityType === 'spend_items' ? 'spend_amounts' : 'capex_amounts';
+  private amountsAuditTable(entityType: AiFinancialPlanEntityType): string {
+    return auditTableOf(this.nature(entityType), 'spend_amounts');
   }
 
-  private allocationsTable(entityType: AiFinancialPlanEntityType): string {
-    return entityType === 'spend_items' ? 'spend_allocations' : 'capex_allocations';
+  private allocationsAuditTable(entityType: AiFinancialPlanEntityType): string {
+    return auditTableOf(this.nature(entityType), 'spend_allocations');
   }
 }

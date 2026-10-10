@@ -31,9 +31,10 @@ export interface AnalyticsAxisInfo {
 export const ANALYTICS_FIELD_PREFIX = 'analytics_';
 /** CSV header and AI key prefix; the key is `analytics:<axis code>`. */
 export const ANALYTICS_CSV_PREFIX = 'analytics:';
+/** The values of the lines of each nature: one table since lot Z1 (a line's id says whose values they are). */
 export const ANALYTICS_LINK_TABLES = {
   opex: 'spend_item_analytics_values',
-  capex: 'capex_item_analytics_values',
+  capex: 'spend_item_analytics_values',
 } as const;
 
 /** The code the default dimension gets when it is created (it can be renamed later). */

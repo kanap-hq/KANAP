@@ -28,6 +28,7 @@ import { renderCommentForEmail } from './comment-email-renderer';
 import { renderMarkdownToHtml } from '../common/markdown-to-html';
 import { EmailBranding, resolveEmailBranding } from '../email/email-branding';
 import { getEmailStrings, resolveEmailLocale } from '../i18n/email-i18n';
+import { lineNumberSql } from '../spend/budget-nature';
 
 type ItemType = 'request' | 'project' | 'task' | 'contract' | 'opex' | 'capex' | 'asset' | 'application' | 'location' | 'connection' | 'interface' | 'document';
 type TriggerType = 'status_change' | 'team_added' | 'team_change_as_lead' | 'comment' | 'assignment' | 'expiration_warning';
@@ -231,7 +232,8 @@ export class NotificationsService {
       project: { table: 'portfolio_projects', expression: `'PRJ-' || item_number::text` },
       // An OPEX line only (`spend/budget-nature.ts`): a line of another nature gets no OPX reference.
       opex: { table: 'spend_items', expression: `'OPX-' || item_number::text`, where: ` AND nature = 'opex'` },
-      capex: { table: 'capex_items', expression: `'CPX-' || item_number::text` },
+      // A CAPEX line only (lot Z1: in `spend_items`): its CPX number of before (`legacy_number`).
+      capex: { table: 'spend_items', expression: `'CPX-' || ${lineNumberSql('spend_items', 'capex')}::text`, where: ` AND nature = 'capex'` },
       asset: { table: 'assets', expression: 'asset_reference' },
       application: { table: 'applications', expression: 'sequential_id' },
       location: { table: 'locations', expression: 'location_reference' },

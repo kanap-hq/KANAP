@@ -3,8 +3,9 @@ import { lockBudgetLine as lockLine } from '../spend/budget-locks';
 import { assertScopeNatures, linkedLineOf, natureAnd, type BudgetNature } from '../spend/budget-nature';
 
 /**
- * Links between projects and OPEX / CAPEX lines (portfolio_project_opex,
- * portfolio_project_capex), unique on (project_id, line). Both sides replace
+ * Links between projects and OPEX / CAPEX lines (`portfolio_project_opex`, both
+ * natures since lot Z1, told apart by the line's nature), unique on
+ * (project_id, line). Both sides replace
  * their whole set: the line's relations panel, the project's budget tab.
  *
  * Every replacement first locks its owner row (the line, or the project), so
@@ -13,10 +14,10 @@ import { assertScopeNatures, linkedLineOf, natureAnd, type BudgetNature } from '
  * is kept instead of failing the save with a unique violation (plan
  * planning/perf-scale, lot 3A, Annexe A #15).
  */
-// `nature`: an OPEX link names an OPEX line of `spend_items` (`spend/budget-nature.ts`).
+// `nature`: a link of the kind names a line of `spend_items` of that nature (`spend/budget-nature.ts`).
 const TABLES: Record<'opex' | 'capex', { table: string; itemFk: string; items: string; nature?: BudgetNature }> = {
   opex: { table: 'portfolio_project_opex', itemFk: 'opex_id', items: 'spend_items', nature: 'opex' },
-  capex: { table: 'portfolio_project_capex', itemFk: 'capex_id', items: 'capex_items' },
+  capex: { table: 'portfolio_project_opex', itemFk: 'opex_id', items: 'spend_items', nature: 'capex' },
 };
 assertScopeNatures('project-budget-links', TABLES, (t) => t.items);
 
@@ -24,6 +25,8 @@ export type ProjectBudgetLinkKind = keyof typeof TABLES;
 
 /** The refusal of a project's or request's OPEX links naming no OPEX line of the tenant (the applications' message). */
 export const OPEX_ITEMS_NOT_FOUND = 'One or more OPEX items were not found.';
+/** The same refusal for CAPEX links (lot Z1: a CAPEX link names a CAPEX line of `spend_items`). */
+export const CAPEX_ITEMS_NOT_FOUND = 'One or more CAPEX items were not found.';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
