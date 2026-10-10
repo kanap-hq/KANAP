@@ -60,12 +60,13 @@ Avec une seule dimension, la bande affiche un bouton et les valeurs.
 
 ### Liste des valeurs
 
-La liste affiche les valeurs de la dimension sélectionnée.
+La liste affiche les valeurs de la dimension sélectionnée, dans l'ordre de la dimension. Voir [Ordonner les valeurs](#ordonner-les-valeurs).
 
 **Colonnes** :
 
 | Colonne | Ce qu'elle affiche |
 |---|---|
+| **Ordre** | La position de la valeur dans sa dimension. Les valeurs désactivées ont aussi une position : les numéros peuvent donc sauter quand la liste les masque |
 | **Nom** | Le nom de la valeur |
 | **Description** | Ce que couvre la valeur |
 | **Statut** | **Activé** ou **Désactivé** |
@@ -84,6 +85,7 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail de la valeu
 **Actions** :
 
 - **Nouvelle valeur** : créer une valeur dans la dimension sélectionnée (nécessite `analytics:member`). Tant que la dimension sélectionnée est désactivée, le bouton est désactivé et son info-bulle indique « Activez cette dimension pour ajouter des valeurs. »
+- **Réordonner** : définir l'ordre des valeurs de la dimension sélectionnée (nécessite `analytics:member`). Le bouton est désactivé tant que la dimension a moins de deux valeurs. Voir [Ordonner les valeurs](#ordonner-les-valeurs)
 - **Importer CSV** : charger des valeurs depuis un fichier (nécessite `analytics:admin`)
 - **Exporter CSV** : télécharger les valeurs de toutes les dimensions (nécessite `analytics:admin`)
 - **Supprimer la sélection** : supprimer les valeurs sélectionnées (nécessite `analytics:admin`). Les valeurs utilisées par des lignes budgétaires sont conservées
@@ -196,6 +198,28 @@ Les modifications s'enregistrent d'elles-mêmes, comme dans l'espace de travail 
 - **Renommer conserve les lignes** : les lignes pointent vers la valeur elle-même, le nouveau nom s'affiche donc aussitôt dans les listes et les rapports.
 - **Supprimer** : le bouton **Supprimer** de l'en-tête supprime la valeur immédiatement (nécessite `analytics:admin`). Il est désactivé lorsque des lignes budgétaires utilisent la valeur, avec la raison, par exemple « Utilisée par 3 lignes OPEX et 1 ligne CAPEX. » Retirez d'abord la valeur de ces lignes, ou désactivez-la.
 
+### Ordonner les valeurs
+
+Les valeurs d'une dimension ont un ordre, que vous définissez. KANAP propose les valeurs dans cet ordre partout où vous les choisissez ou filtrez sur elles :
+
+- les champs de valeur des postes OPEX et CAPEX (quand vous tapez dans un champ, les meilleures correspondances viennent en premier)
+- les filtres à cases à cocher de la dimension dans les listes OPEX et CAPEX
+- les filtres de dimension des rapports et la liste **Exclure des valeurs** du rapport Dimensions analytiques
+- l'export CSV des valeurs
+- les valeurs que liste Plaid
+
+Les lignes des rapports gardent leur propre ordre, par montant. Trier la liste OPEX ou CAPEX sur la colonne d'une dimension la trie par nom de valeur.
+
+Au départ, les valeurs sont dans l'ordre alphabétique. Une nouvelle valeur se place en dernier dans sa dimension.
+
+Pour changer l'ordre :
+
+1. Sélectionnez la dimension sur la page et cliquez sur **Réordonner**. La boîte de dialogue liste toutes les valeurs de la dimension, y compris les valeurs désactivées et celles réservées à un type de ligne, chacune avec sa mention (**Désactivée**, **OPEX uniquement**, **CAPEX uniquement**).
+2. Faites glisser les valeurs à leur place avec la souris. Au clavier, placez-vous sur une valeur, appuyez sur Espace ou Entrée pour la saisir, déplacez-la avec les flèches, puis appuyez sur Espace ou Entrée pour la déposer. Échap la remet à sa place.
+3. Cliquez sur **Enregistrer**. **Annuler** laisse l'ordre tel qu'il était.
+
+Le nouvel ordre s'affiche aussitôt dans les listes et les filtres. Le [Journal d'audit](admin.md#journal-daudit) enregistre la modification sur la dimension, avec l'ordre avant et après.
+
 ### Valeurs OPEX ou CAPEX
 
 Le champ **Utilisé pour** d'une valeur indique quelles lignes budgétaires peuvent l'utiliser :
@@ -286,7 +310,7 @@ Chargez ou mettez à jour les valeurs de toutes les dimensions depuis un seul fi
 
 Pour renseigner des valeurs sur les postes budgétaires depuis un fichier, utilisez les fichiers budgétaires OPEX et CAPEX. Dans ces fichiers, une colonne `analytics:<code>` porte chaque dimension, dimension par défaut incluse. Voir [Charger un budget depuis un tableur](budget-file.md).
 
-**Export** : cliquez sur **Exporter CSV**, puis sur **Exporter les données**. Le fichier liste les valeurs de toutes les dimensions, activées ou désactivées, dimension par dimension. Pour un fichier vide avec les seuls en-têtes, utilisez **Télécharger le modèle** dans la boîte de dialogue d'import.
+**Export** : cliquez sur **Exporter CSV**, puis sur **Exporter les données**. Le fichier liste les valeurs de toutes les dimensions, activées ou désactivées, dimension par dimension, les valeurs de chaque dimension dans son ordre. Le fichier n'a pas de colonne d'ordre. Pour un fichier vide avec les seuls en-têtes, utilisez **Télécharger le modèle** dans la boîte de dialogue d'import.
 
 **Structure du CSV** :
 
@@ -300,7 +324,6 @@ Pour renseigner des valeurs sur les postes budgétaires depuis un fichier, utili
 | `description` | Texte libre |
 | `status` | `enabled` ou `disabled`. Vide signifie `enabled` pour une nouvelle valeur et conserve le statut enregistré lors d'une mise à jour |
 | `disabled_at` | La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. Vide s'il n'y a pas de fin. Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine la valeur aujourd'hui |
-
 | `applies_to` | Le réglage **Utilisé pour**, toujours la dernière colonne. `opex`, `capex`, ou vide pour **OPEX et CAPEX**. Un fichier sans cette colonne laisse les réglages tels quels. Une cellule vide règle sur **OPEX et CAPEX** |
 
 Seule la colonne `name` est obligatoire. Lorsque la colonne `description`, `status`, `disabled_at` ou `applies_to` manque, les valeurs existantes conservent ce qui est enregistré, et les nouvelles valeurs sont activées, sans description. Un fichier sans `axis_code` place toutes les lignes dans la dimension par défaut.
@@ -319,6 +342,7 @@ Seule la colonne `name` est obligatoire. Lorsque la colonne `description`, `stat
 - **Lignes inchangées** : une ligne identique à la valeur enregistrée ne change rien. Exporter puis importer le même fichier signale toutes les lignes comme inchangées.
 - **Dimensions désactivées** : une ligne d'une dimension désactivée est acceptée si elle ne change rien. Un fichier exporté s'importe donc tel quel. Une ligne qui créerait ou modifierait une valeur dans cette dimension est refusée.
 - **Les valeurs absentes du fichier** restent telles quelles. L'import ne supprime jamais rien.
+- **Ordre** : les valeurs existantes gardent leur place. Les nouvelles valeurs se placent en dernier dans leur dimension, dans l'ordre du fichier. Pour changer l'ordre, utilisez **Réordonner** sur la page.
 
 **Erreurs courantes** :
 
@@ -339,7 +363,7 @@ Seule la colonne `name` est obligatoire. Lorsque la colonne `description`, `stat
 | Niveau | Ce qu'il permet |
 |---|---|
 | `analytics:reader` | Consulter la page Dimensions analytiques et ouvrir les dimensions et les valeurs |
-| `analytics:member` | Créer des dimensions et des valeurs, et les modifier |
+| `analytics:member` | Créer des dimensions et des valeurs, les modifier et définir l'ordre des valeurs |
 | `analytics:admin` | Tout ce qui précède, plus l'import et l'export CSV, et la suppression |
 
 Le rôle intégré Administrateur budget est admin, Membre budget est member et Lecteur budget est reader. Toute personne qui peut consulter les OPEX, les CAPEX ou les rapports voit les dimensions et leurs valeurs sur les lignes budgétaires, dans les listes et dans les rapports, sans accès à cette page.
