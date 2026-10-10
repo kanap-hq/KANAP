@@ -47,7 +47,7 @@ Cada espacio de trabajo tiene además tres dimensiones que clasifican las línea
 - Cuando el espacio de trabajo ya tenía una dimensión con uno de estos códigos, esa dimensión se conserva tal cual y solo recibe los valores que le faltaban.
 - Una línea CAPEX creada antes de estas dimensiones tiene el valor de su antiguo tipo de activo fijo, tipo de inversión y prioridad.
 - Funcionan como cualquier otra dimensión. Puede cambiar su nombre y el de sus valores, añadir valores, cambiar el orden, cambiar su configuración, desactivarlas o eliminarlas.
-- El código da nombre a la columna de la dimensión en el archivo de presupuesto CAPEX: `analytics:ppe_type`, `analytics:investment_type` y `analytics:priority`. Si cambia un código, un archivo exportado antes del cambio sigue teniendo el nombre de columna antiguo y se rechaza con "Unknown dimension". Exporte un archivo nuevo. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md).
+- El código da nombre a la columna de la dimensión en el archivo de presupuesto: `analytics:ppe_type`, `analytics:investment_type` y `analytics:priority`. Si cambia un código, un archivo exportado antes del cambio sigue teniendo el nombre de columna antiguo y se rechaza con "Unknown dimension". Exporte un archivo nuevo. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md).
 
 ---
 
@@ -176,11 +176,11 @@ El campo **Usada para** indica a qué líneas de presupuesto se aplica la dimens
 | **Solo OPEX** | Solo las líneas OPEX pueden tener un valor |
 | **Solo CAPEX** | Solo las líneas CAPEX pueden tener un valor |
 
-Las pantallas OPEX muestran las dimensiones usadas para las líneas OPEX, y las pantallas CAPEX las usadas para las líneas CAPEX. Esto incluye el panel **Propiedades** de la partida, las columnas, los filtros y la búsqueda rápida de las listas, las columnas del archivo de presupuesto, los selectores y los filtros de dimensión de los informes (siguen la elección **OPEX** / **CAPEX** del informe) y Plaid.
+Las pantallas OPEX muestran las dimensiones usadas para las líneas OPEX, y las pantallas CAPEX las usadas para las líneas CAPEX. Esto incluye el panel **Propiedades** de la partida, las columnas, los filtros y la búsqueda rápida de las listas, los selectores y los filtros de dimensión de los informes (siguen la elección **OPEX** / **CAPEX** del informe) y Plaid. El archivo de presupuesto tiene una columna para cada dimensión activada, y cada fila solo toma valores en las dimensiones de su tipo de línea.
 
 Una línea conserva el valor que ya tiene en una dimensión que deja de aplicarse a su tipo de línea. El valor queda oculto en todas partes y vuelve a mostrarse si abre de nuevo la dimensión a ese tipo de línea. Cuando su elección oculta valores, aparece una nota bajo el campo, por ejemplo "8 líneas CAPEX tienen un valor para esta dimensión. Lo conservan, oculto mientras la dimensión sea solo para líneas OPEX."
 
-Dar a una línea un valor en una dimensión que no se aplica a ella se rechaza, en la aplicación, en un archivo de presupuesto y por la API. Reenviar el valor que la línea ya tiene no cambia nada.
+Dar a una línea un valor en una dimensión que no se aplica a ella se rechaza, en la aplicación, en un archivo de presupuesto y por la API. En la aplicación y por la API, reenviar el valor que la línea ya tiene no cambia nada. En un archivo de presupuesto, deje esa celda vacía: la exportación lo hace.
 
 Un valor también puede limitarse a un solo tipo de línea. Los dos ajustes actúan en niveles distintos. Por ejemplo, la dimensión **Nature de coût** se usa para **OPEX y CAPEX**, y su valor **Abonnements SaaS** es **Solo OPEX**:
 
@@ -347,7 +347,7 @@ Los siete informes presupuestarios también se pueden limitar a un valor de una 
 
 Cargue o actualice los valores de todas las dimensiones desde un solo archivo. Las dimensiones se crean en la página.
 
-Para definir valores en las partidas de presupuesto desde un archivo, use los archivos de presupuesto OPEX y CAPEX. En esos archivos, una columna `analytics:<code>` contiene cada dimensión, la dimensión por defecto incluida. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md).
+Para definir valores en las partidas de presupuesto desde un archivo, use el archivo de presupuesto. En él, una columna `analytics:<code>` contiene cada dimensión activada, la dimensión por defecto incluida. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md).
 
 **Exportar**: haga clic en **Exportar CSV** y después en **Exportar datos**. El archivo lista los valores de todas las dimensiones, activados o desactivados, dimensión por dimensión, los valores de cada dimensión en su orden. El archivo no tiene columna de orden. Para un archivo vacío solo con los encabezados, use **Descargar plantilla** en el diálogo de importación.
 

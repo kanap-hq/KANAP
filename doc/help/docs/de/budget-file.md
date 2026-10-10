@@ -4,14 +4,14 @@ Die meisten Teams erstellen ihr Budget in einer Tabellenkalkulation: eine Zeile 
 
 Die Budgetdatei verbindet beides. Exportieren Sie die Positionen, ändern Sie die Zellen, die Sie bearbeiten möchten, in Excel oder LibreOffice und importieren Sie die Datei anschließend. KANAP vergleicht jede Zelle mit dem gespeicherten Stand und schreibt nur, was sich geändert hat.
 
-Es gibt eine Datei pro Liste. Die OPEX-Liste exportiert und importiert die OPEX-Datei, die CAPEX-Liste die CAPEX-Datei. Beide Dateien tragen dieselben Spalten und folgen denselben Regeln.
+Eine Datei enthält beide Arten von Positionen. Ihre Spalte `nature` gibt an, ob eine Zeile eine OPEX- oder eine CAPEX-Position ist, und jede Zeile wird nach den Regeln ihrer eigenen Art geprüft. Die OPEX-Liste exportiert ihre OPEX-Positionen und die CAPEX-Liste ihre CAPEX-Positionen, im selben Aufbau. Beide Listen importieren eine Datei, die beide Arten enthält.
 
 ## Wo Sie es finden
 
 - Pfad: **Budgetverwaltung > OPEX** oder **Budgetverwaltung > CAPEX**
 - Export: **CSV exportieren** in der Symbolleiste der Liste
 - Import: **CSV importieren** in derselben Symbolleiste
-- Berechtigungen: Beide Schaltflächen erfordern Administrationsrechte auf dieser Liste (`opex:admin` oder `capex:admin`)
+- Berechtigungen: Beide Schaltflächen erfordern Administrationsrechte auf dieser Liste (`opex:admin` oder `capex:admin`). Eine Datei mit OPEX- und CAPEX-Positionen erfordert beide
 
 ## Export
 
@@ -27,7 +27,7 @@ Es gibt eine Datei pro Liste. Die OPEX-Liste exportiert und importiert die OPEX-
 
 3. Klicken Sie auf die Schaltfläche am unteren Rand des Fensters. Sie benennt, was die Datei enthält: **120 gefilterte Positionen exportieren**, **Alle Positionen exportieren**, **3.412 Positionen exportieren** und so weiter.
 
-Die Datei wird in der Sprache geschrieben, in der die Oberfläche angezeigt wird.
+Die Datei wird aus beiden Listen als `budget.csv` gespeichert und in der Sprache geschrieben, in der die Oberfläche angezeigt wird.
 
 | Sprache | Trennzeichen | Beträge | Datumsangaben |
 |---|---|---|---|
@@ -43,14 +43,13 @@ Eine Datei enthält eine Zeile pro Position: die Detailspalten, dann die Betrags
 
 ### Detailspalten
 
-Sie sind in beiden Dateien gleich, außer den typspezifischen Spalten am Zeilenanfang.
-
-**OPEX**
+Die Detailspalten sind für beide Arten von Positionen gleich.
 
 | Spalte | Inhalt | Bei einer neuen Position |
 |---|---|---|
-| `item_number` | Die Nummer der Position: `OPX-12` oder `12` | Leer: Die Zeile legt eine Position an |
-| `name` | Produktname | Erforderlich |
+| `nature` | `opex` oder `capex`, die Art der Position | Erforderlich. Eine Datei ohne diese Spalte wird als Positionen der Liste gelesen, in der Sie sie importieren |
+| `item_number` | Die Referenz der Position: `BL-12` oder `12`. Die Nummern `OPX-12` und `CPX-3` früherer Dateien werden ebenfalls gelesen | Leer: Die Zeile legt eine Position an |
+| `name` | Der Produktname einer OPEX-Position, der Titel einer CAPEX-Investition | Erforderlich |
 | `description` | Die ausführliche Beschreibung | Optional |
 | `company_name` | Zahlendes Unternehmen | Erforderlich, außer die Position hat eine Kostenstelle |
 | `supplier_name` | Name des Lieferanten | Optional |
@@ -58,7 +57,7 @@ Sie sind in beiden Dateien gleich, außer den typspezifischen Spalten am Zeilena
 | `account_number` | Kontonummer, im Kontenplan des zahlenden Unternehmens | Erforderlich |
 | `cost_center_code` | Code der Kostenstelle. Eine Gruppe wird abgelehnt | Optional |
 | `run_build` | `run` oder `build` | Optional |
-| `analytics:<code>` | Der Name des Werts in der Dimension, deren Code dies ist. Eine Spalte pro aktivierter Dimension, die für OPEX-Zeilen verwendet wird, die Standarddimension eingeschlossen | Optional, außer bei einer erforderlichen Dimension. Ein nicht vorhandener Wert wird beim Laden angelegt |
+| `analytics:<code>` | Der Name des Werts in der Dimension, deren Code dies ist, unabhängig von Groß- und Kleinschreibung. Eine Spalte pro aktivierter Dimension, die Standarddimension eingeschlossen. Eine Dimension, die nur für eine Art von Positionen verwendet wird, nimmt nur in den Zeilen dieser Art einen Wert an und bleibt in den anderen leer. Anlagentyp, Investitionsart und Priorität einer CAPEX-Position stehen in `analytics:ppe_type`, `analytics:investment_type` und `analytics:priority`, zum Beispiel `Hardware`, `Business growth` oder `High` | Optional, außer bei einer erforderlichen Dimension der Art der Position, wie den drei CAPEX-Dimensionen bei einer CAPEX-Position. Ein nicht vorhandener Wert wird beim Laden angelegt |
 | `owner_it_email` | E-Mail-Adresse eines aktiven Benutzers | Optional |
 | `owner_business_email` | E-Mail-Adresse eines aktiven Benutzers | Optional |
 | `project` | Projektnummer, zum Beispiel `PRJ-3` | Optional |
@@ -67,26 +66,7 @@ Sie sind in beiden Dateien gleich, außer den typspezifischen Spalten am Zeilena
 | `end_of_validity` | Der Tag, an dem die Position endet | Kein Ende |
 | `notes` | Freier Text | Optional |
 
-**CAPEX**
-
-| Spalte | Inhalt | Bei einer neuen Position |
-|---|---|---|
-| `item_number` | Die Nummer der Position: `CPX-3` oder `3` | Leer: Die Zeile legt eine Position an |
-| `name` | Der Titel der Investition | Erforderlich |
-| `company_name` | Zahlendes Unternehmen | Erforderlich, außer die Position hat eine Kostenstelle |
-| `supplier_name` | Name des Lieferanten | Optional |
-| `supplier_erp_id` | Die ID des Lieferanten in Ihrem ERP | Optional |
-| `account_number` | Kontonummer, im Kontenplan des zahlenden Unternehmens | Erforderlich |
-| `cost_center_code` | Code der Kostenstelle. Eine Gruppe wird abgelehnt | Optional |
-| `run_build` | `run` oder `build` | Optional |
-| `analytics:<code>` | Der Name des Werts in der Dimension, deren Code dies ist, unabhängig von Groß- und Kleinschreibung. Eine Spalte pro aktivierter Dimension, die für CAPEX-Zeilen verwendet wird, die Standarddimension eingeschlossen. Anlagentyp, Investitionsart und Priorität stehen in `analytics:ppe_type`, `analytics:investment_type` und `analytics:priority`, zum Beispiel `Hardware`, `Business growth` oder `High` | Optional, außer bei einer erforderlichen Dimension, wie den drei CAPEX-Dimensionen. Ein nicht vorhandener Wert wird beim Laden angelegt |
-| `owner_it_email` | E-Mail-Adresse eines aktiven Benutzers | Optional |
-| `owner_business_email` | E-Mail-Adresse eines aktiven Benutzers | Optional |
-| `project` | Projektnummer, zum Beispiel `PRJ-3` | Optional |
-| `currency` | ISO-Code mit drei Buchstaben, aus den in Ihrem Arbeitsbereich erlaubten Währungen | Erforderlich |
-| `effective_start` | Der Tag, an dem die Position beginnt | Der 1. Januar des ersten Jahres mit einem Betrag in der Zeile, sonst des laufenden Jahres |
-| `end_of_validity` | Der Tag, an dem die Position endet | Kein Ende |
-| `notes` | Freier Text | Optional |
+Die Beschreibung einer CAPEX-Position wird von der Datei gelesen und geschrieben. Die CAPEX-Bildschirme zeigen sie noch nicht an.
 
 ### Betragsspalten
 
@@ -108,8 +88,8 @@ Das sind die Standardnamen. Ihre Organisation kann die fünf Spalten in [Budgets
 
 ## Was eine Zelle bedeutet
 
-- Eine leere Zelle behält den gespeicherten Wert.
-- `-` löscht ein Detail der Position: Beschreibung, Notizen, Name und ERP-ID des Lieferanten, Kostenstelle, Run oder Build, einen Dimensionswert, einen Verantwortlichen, das Projekt, das Ende der Gültigkeit. In einer Spalte, die eine neue Position füllen muss, ist `-` ein Zeilenfehler. In einer erforderlichen Dimension ist `-` ein Zeilenfehler, wenn die Zeile einen Wert hat.
+- Eine leere Zelle behält den gespeicherten Wert. Eine leere Zelle `nature` behält die Art einer bestehenden Position.
+- `-` löscht ein Detail der Position: Beschreibung, Notizen, Name und ERP-ID des Lieferanten, Kostenstelle, Run oder Build, einen Dimensionswert, einen Verantwortlichen, das Projekt, das Ende der Gültigkeit. In einer Spalte, die eine neue Position füllen muss, und in `nature` ist `-` ein Zeilenfehler. In einer erforderlichen Dimension ist `-` ein Zeilenfehler, wenn die Zeile einen Wert hat.
 - `0` schreibt null.
 - Eine Jahressumme, die der gespeicherten Summe entspricht, schreibt nichts. Eine abweichende Summe wird über den Zeitraum der Spalte verteilt, genau wie bei der Eingabe der Summe im **Budget-Tab**.
 - Eine Monatszelle schreibt diesen Monat und markiert die Spalte als manuell bearbeitet, wie ein im **Budget-Tab** eingegebener Monat.
@@ -120,13 +100,17 @@ Eine fehlende Spalte behält alle gespeicherten Werte dieser Spalte. Eine Datei,
 
 ## Positionen hinzufügen und zuordnen
 
-- `item_number` gefüllt: Diese Position wird aktualisiert. Leer: Es wird eine neue Position angelegt.
-- Es gibt keinen weiteren Schlüssel. Eine neue Zeile, die einer bestehenden Position ähnelt oder einer anderen neuen Zeile derselben Datei, ist eine Warnung, die Sie ignorieren können.
+- `item_number` gefüllt: Diese Position wird aktualisiert. Leer: Es wird eine neue Position angelegt, von der Art, die ihre Zelle `nature` angibt.
+- `item_number` enthält die Referenz der Position, `BL-12`. Eine bloße Zahl ist dieselbe Referenz, in beiden Listen. Die Nummern `OPX-12` und `CPX-3` früherer Dateien bezeichnen weiterhin ihre Position. Dieselbe Position zweimal in einer Datei zu nennen ist ein Zeilenfehler.
+- Eine Position behält ihre Art. Eine Zeile, die eine bestehende Position mit der anderen `nature` nennt, wird abgelehnt, zum Beispiel „BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line.“
+- Eine Datei mit OPEX- und CAPEX-Positionen erfordert Administrationsrechte auf beiden. Fehlt eines davon, wird jede Position dieser Art mit dem erforderlichen Recht abgelehnt, zum Beispiel „Importing CAPEX lines needs the Admin level on CAPEX.“ Die übrigen Positionen werden wie gewohnt geprüft, und die Datei lässt sich laden, sobald diese Zeilen entfernt sind.
+- Jede Zeile wird nach ihrer eigenen Art geprüft: die Dimensionen und Werte, die sie haben darf, ihr Konto, die eingefrorenen Spalten und die Warnung vor Duplikaten. Eine für CAPEX eingefrorene Spalte lehnt eine Änderung nur bei einer CAPEX-Position ab.
+- Es gibt keinen weiteren Schlüssel. Eine neue Zeile, die einer bestehenden Position ihrer Art ähnelt oder einer anderen neuen Zeile derselben Art in der Datei, ist eine Warnung, die Sie ignorieren können.
 - Lieferanten werden über `supplier_erp_id` zugeordnet, wenn er gefüllt ist, sonst über `supplier_name`. Einen Lieferanten, den die Datei nennt und den KANAP nicht kennt, legt das Laden an, wenn **Fehlende Lieferanten anlegen** angehakt ist. Ohne diese Option listet die Prüfung die fehlenden Lieferanten auf und bittet Sie, sie unter **Stammdaten > Lieferanten** anzulegen.
 - Ein nicht vorhandener Dimensionswert wird beim Laden angelegt und in der Prüfung aufgelistet. Konten, Kostenstellen, Unternehmen und Benutzer werden nie angelegt: Ein unbekanntes Element ist ein Zeilenfehler, der nennt, wo es hinzugefügt wird.
-- Eine Datei mit einer Spalte `analytics:<code>` für eine Dimension, die nur für die andere Zeilenart gilt, wird als Ganzes abgelehnt, zum Beispiel „The Recurrence dimension is for CAPEX lines only. Remove the analytics:recurrence column from this OPEX file.“ Der Export schreibt für eine solche Dimension keine Spalte: Ein ausgeblendeter Wert einer Zeile wird nicht exportiert, und ein Laden lässt ihn unverändert. Die Einstellung finden Sie unter [Analysedimensionen](analytics.md#opex-oder-capex-dimensionen).
+- Ein Wert oder `-` in einer Dimension, die nur für die andere Zeilenart gilt, ist ein Zeilenfehler in ihrer Zelle `analytics:<code>`, zum Beispiel „The Recurrence dimension is for CAPEX lines only. Leave it out.“ Der Export lässt eine solche Zelle leer: Ein ausgeblendeter Wert einer Zeile wird nicht exportiert, und ein Laden lässt ihn unverändert. Die Einstellung finden Sie unter [Analysedimensionen](analytics.md#opex-oder-capex-dimensionen).
 - Ein Wert, der nur für die andere Zeilenart verwendet wird, ist ein Zeilenfehler in seiner Zelle `analytics:<code>`, zum Beispiel „Abonnements SaaS is for OPEX lines only. Pick a value for CAPEX lines.“ Eine Zeile behält den Wert, den sie bereits hat. Werte, die der Import anlegt, werden für OPEX und CAPEX verwendet. Die Einstellung finden Sie unter [Analysedimensionen](analytics.md#opex-oder-capex-werte).
-- Eine neue Zeile braucht einen Wert in jeder erforderlichen Dimension ihrer Art, mit der Meldung „The Nature dimension is required. Choose a value.“ in der Zelle `analytics:<code>`. Das gilt, wenn die Spalte in der Datei fehlt, wenn die Zelle leer ist und wenn sie `-` enthält. Ein Wert, den das Laden anlegt, zählt. Eine bestehende Zeile wird nur bei einem `-` abgelehnt, das ihren Wert löschen würde: Eine leere Zelle oder eine fehlende Spalte lässt sie unverändert. Die Einstellung finden Sie unter [Analysedimensionen](analytics.md#erforderliche-dimensionen).
+- Eine neue Zeile braucht einen Wert in jeder erforderlichen Dimension ihrer eigenen Art, mit der Meldung „The Nature dimension is required. Choose a value.“ in der Zelle `analytics:<code>`. Das gilt, wenn die Spalte in der Datei fehlt, wenn die Zelle leer ist und wenn sie `-` enthält. Ein Wert, den das Laden anlegt, zählt. Eine bestehende Zeile wird nur bei einem `-` abgelehnt, das ihren Wert löschen würde: Eine leere Zelle oder eine fehlende Spalte lässt sie unverändert. Die Einstellung finden Sie unter [Analysedimensionen](analytics.md#erforderliche-dimensionen).
 - Eine Zeile, die eine Budgetposition anlegt oder deren Konto ändert, wird abgelehnt, wenn das Konto für die andere Art von Position bestimmt ist, mit der Meldung „Account 6061 is for CAPEX lines only.“ (oder OPEX). Eine Budgetposition behält ihr aktuelles Konto. Die Einstellung der Konten steht in [Kontenpläne und Kontenverwaltung](chart-of-accounts.md#opex-oder-capex-konten).
 - Projekte werden über ihre Nummer zugeordnet, zum Beispiel `PRJ-3`.
 - Eine beendete Position ist eine Position, deren `end_of_validity` verstrichen ist. Setzen Sie das Datum, um eine Position zu beenden, oder schreiben Sie `-` in die Zelle, um es zu löschen und die Position weiterlaufen zu lassen. Es gibt keine Statusspalte.
@@ -168,14 +152,15 @@ Eine CAPEX-Datei, die exportiert wurde, bevor Anlagentyp, Investitionsart und Pr
 
 Exportieren Sie eine neue Datei und übertragen Sie Ihre Zeilen hinein.
 
+Eine OPEX- oder CAPEX-Datei, die exportiert wurde, bevor es die Spalte `nature` gab, wird angenommen. Ihre Zeilen werden als Positionen der Liste gelesen, in der Sie sie importieren, und ihre Nummern `OPX-12` und `CPX-3` bezeichnen weiterhin ihre Positionen: Importieren Sie eine frühere OPEX-Datei aus der OPEX-Liste und eine frühere CAPEX-Datei aus der CAPEX-Liste. Ihre Zellen `kanap_token` bleiben gültig.
+
 ## Ein ganzes Budget laden
 
 Die Budgetdatei enthält Budgetpositionen. Das zahlende Unternehmen, das Konto, die Kostenstelle, der Lieferant und die Benutzer, die eine Position nennt, müssen zuerst existieren. Ein kleines Team lädt sie in dieser Reihenfolge:
 
 1. Einen Kontenplan und seine Konten, unter [Kontenpläne](chart-of-accounts.md)
 2. Die Unternehmen, unter [Unternehmen](companies.md)
-3. Die OPEX-Datei, mit angehaktem **Fehlende Lieferanten anlegen**
-4. Die CAPEX-Datei, mit angehaktem **Fehlende Lieferanten anlegen**
+3. Die Budgetdatei, mit angehaktem **Fehlende Lieferanten anlegen**. Sie enthält die OPEX- und die CAPEX-Positionen zusammen, oder Sie laden eine Datei pro Art
 
 Eine größere Organisation fügt dazwischen die übrigen Stammdaten hinzu:
 
@@ -186,8 +171,7 @@ Eine größere Organisation fügt dazwischen die übrigen Stammdaten hinzu:
 5. Die Lieferanten, unter [Lieferanten](suppliers.md)
 6. Die Dimensionswerte, unter [Analysedimensionen](analytics.md). Die Dimensionen selbst werden auf dieser Seite angelegt
 7. Die Arbeitstagekalender, unter [Arbeitstagekalender](working-day-calendars.md), sobald Positionen Mengen und Preise tragen
-8. Die OPEX-Datei
-9. Die CAPEX-Datei
+8. Die Budgetdatei, OPEX- und CAPEX-Positionen
 
 **Der Kontenplan kommt zuerst.** Klicken Sie auf der Seite Kontenpläne auf **Neu**, geben Sie dem Plan einen Code und einen Namen und wählen Sie unter **Verwendet für** die Option **Alle Länder**. Klicken Sie dann auf **Kontenpläne verwalten**, öffnen Sie das Menü **⋯** des Plans und klicken Sie auf **Als Standard für andere Länder festlegen**. Ein Unternehmen ohne Kontenplan übernimmt diesen, und so werden die Kontonummern einer Budgetdatei aufgelöst. Wählen Sie den Plan auf der Seite aus und klicken Sie dann auf **CSV importieren**, um seine Konten zu laden.
 

@@ -4,14 +4,14 @@ Most teams prepare their budget in a spreadsheet: one row per line, one column p
 
 The budget file is the bridge between the two. Export the lines, change the cells you care about in Excel or LibreOffice, import the file back. KANAP compares every cell with what it holds and writes only what changed.
 
-There is one file per list. The OPEX list exports and imports the OPEX file, the CAPEX list the CAPEX file. Both files carry the same columns and follow the same rules.
+One file holds both kinds of line. Its `nature` column says whether a row is an OPEX or a CAPEX line, and every row is checked against the rules of its own kind. The OPEX list exports its OPEX lines and the CAPEX list its CAPEX lines, in the same layout. Either list imports a file that holds both.
 
 ## Where to find it
 
 - Path: **Budget Management > OPEX**, or **Budget Management > CAPEX**
 - Export: **Export CSV** in the list toolbar
 - Import: **Import CSV** in the same toolbar
-- Permissions: both buttons need administration rights on that list (`opex:admin` or `capex:admin`)
+- Permissions: both buttons need administration rights on that list (`opex:admin` or `capex:admin`). A file that holds OPEX and CAPEX lines needs both
 
 ## Export
 
@@ -27,7 +27,7 @@ There is one file per list. The OPEX list exports and imports the OPEX file, the
 
 3. Click the button at the bottom of the dialog. It names what the file will hold: **Export 120 filtered lines**, **Export all lines**, **Export 3,412 lines**, and so on.
 
-The file is written for the language the screen is shown in.
+The file is saved as `budget.csv`, from either list, and written for the language the screen is shown in.
 
 | Language | Separator | Amounts | Dates |
 |---|---|---|---|
@@ -43,14 +43,13 @@ A file holds one row per line: the detail columns, then the amount columns, then
 
 ### Detail columns
 
-These are the same in both files, except for the type-specific columns near the start.
-
-**OPEX**
+The detail columns are the same for both kinds of line.
 
 | Column | Holds | On a new line |
 |---|---|---|
-| `item_number` | The line's number: `OPX-12` or `12` | Empty: the row adds a line |
-| `name` | Product name | Required |
+| `nature` | `opex` or `capex`, the kind of line | Required. A file without this column is read as lines of the list you import it on |
+| `item_number` | The line's reference: `BL-12`, or `12`. The `OPX-12` and `CPX-3` numbers of earlier files are read too | Empty: the row adds a line |
+| `name` | The product name of an OPEX line, the title of a CAPEX investment | Required |
 | `description` | The long description | Optional |
 | `company_name` | Paying company | Required unless the line has a cost center |
 | `supplier_name` | Supplier name | Optional |
@@ -58,7 +57,7 @@ These are the same in both files, except for the type-specific columns near the 
 | `account_number` | Account number, in the paying company's chart of accounts | Required |
 | `cost_center_code` | Cost center code. A group is refused | Optional |
 | `run_build` | `run` or `build` | Optional |
-| `analytics:<code>` | The value's name in the dimension whose code it is. One column per enabled dimension used for OPEX lines, the default dimension included | Optional, except for a required dimension. A value that does not exist is created by the load |
+| `analytics:<code>` | The value's name in the dimension whose code it is, regardless of case. One column per enabled dimension, the default dimension included. A dimension used for one kind of line only takes a value on the rows of that kind and stays empty on the others. The PP&E type, investment type and priority of a CAPEX line are in `analytics:ppe_type`, `analytics:investment_type` and `analytics:priority`, for example `Hardware`, `Business growth` or `High` | Optional, except for a required dimension of the line's kind, such as the three CAPEX dimensions on a CAPEX line. A value that does not exist is created by the load |
 | `owner_it_email` | Email of an active user | Optional |
 | `owner_business_email` | Email of an active user | Optional |
 | `project` | Project number, such as `PRJ-3` | Optional |
@@ -67,26 +66,7 @@ These are the same in both files, except for the type-specific columns near the 
 | `end_of_validity` | The day the line stops | No end |
 | `notes` | Free text | Optional |
 
-**CAPEX**
-
-| Column | Holds | On a new line |
-|---|---|---|
-| `item_number` | The line's number: `CPX-3` or `3` | Empty: the row adds a line |
-| `name` | The title of the investment | Required |
-| `company_name` | Paying company | Required unless the line has a cost center |
-| `supplier_name` | Supplier name | Optional |
-| `supplier_erp_id` | The supplier's ID in your ERP | Optional |
-| `account_number` | Account number, in the paying company's chart of accounts | Required |
-| `cost_center_code` | Cost center code. A group is refused | Optional |
-| `run_build` | `run` or `build` | Optional |
-| `analytics:<code>` | The value's name in the dimension whose code it is, regardless of case. One column per enabled dimension used for CAPEX lines, the default dimension included. The PP&E type, investment type and priority are in `analytics:ppe_type`, `analytics:investment_type` and `analytics:priority`, for example `Hardware`, `Business growth` or `High` | Optional, except for a required dimension, such as the three CAPEX dimensions. A value that does not exist is created by the load |
-| `owner_it_email` | Email of an active user | Optional |
-| `owner_business_email` | Email of an active user | Optional |
-| `project` | Project number, such as `PRJ-3` | Optional |
-| `currency` | Three-letter ISO code, among the currencies your workspace allows | Required |
-| `effective_start` | The day the line starts | January 1 of the first year with an amount in the row, else of the current year |
-| `end_of_validity` | The day the line stops | No end |
-| `notes` | Free text | Optional |
+The description of a CAPEX line is read and written by the file. The CAPEX screens do not show it yet.
 
 ### Amount columns
 
@@ -108,8 +88,8 @@ These are the standard names. Your organisation can rename the five columns in [
 
 ## What a cell means
 
-- An empty cell keeps the stored value.
-- `-` clears a line detail: description, notes, supplier name and ERP supplier ID, cost center, run or build, a dimension value, an owner, the project, the end of validity. On a column a new line must fill, `-` is a row error. On a required dimension, `-` is a row error when the line holds a value.
+- An empty cell keeps the stored value. An empty `nature` cell keeps the kind of an existing line.
+- `-` clears a line detail: description, notes, supplier name and ERP supplier ID, cost center, run or build, a dimension value, an owner, the project, the end of validity. On a column a new line must fill, and on `nature`, `-` is a row error. On a required dimension, `-` is a row error when the line holds a value.
 - `0` writes zero.
 - A yearly total equal to the stored total writes nothing. A different one is spread over the column's period, exactly as when you type the total in the **Budget** tab.
 - A month cell writes that month, and marks the column as edited by hand, as a month typed in the **Budget** tab does.
@@ -120,13 +100,17 @@ An absent column keeps every stored value of that column. A file holding only `i
 
 ## Adding and matching lines
 
-- `item_number` filled: that line is updated. Empty: a new line is created.
-- There is no other key. A new row that looks like an existing line, or like another new row of the same file, is a warning you can ignore.
+- `item_number` filled: that line is updated. Empty: a new line is created, of the kind its `nature` cell says.
+- `item_number` holds the line's reference, `BL-12`. A bare number is the same reference, on both lists. The `OPX-12` and `CPX-3` numbers of earlier files still name their line. Naming one line twice in a file is a row error.
+- A line keeps its kind. A row that names an existing line with the other `nature` is refused, for example "BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line."
+- A file that holds OPEX and CAPEX lines needs administration rights on both. Without one of them, each line of that kind is refused with the right it needs, for example "Importing CAPEX lines needs the Admin level on CAPEX." The other lines are checked as usual, and the file loads once those rows are removed.
+- Each row is checked against its own kind: the dimensions and values it may hold, its account, the frozen columns and the duplicate warning. A column frozen for CAPEX refuses a change on a CAPEX line only.
+- There is no other key. A new row that looks like an existing line of its kind, or like another new row of the same kind in the file, is a warning you can ignore.
 - Suppliers are matched by `supplier_erp_id` when it is filled, otherwise by `supplier_name`. A supplier the file names and KANAP does not have is created by the load when **Create missing suppliers** is ticked. Without it, the check lists them and asks you to create them in **Master data > Suppliers**.
 - A dimension value that does not exist is created by the load, and listed in the check. Accounts, cost centers, companies and users are never created: an unknown one is a row error naming where to add it.
-- A file with an `analytics:<code>` column for a dimension used for the other kind of line only is refused as a whole, for example "The Recurrence dimension is for CAPEX lines only. Remove the analytics:recurrence column from this OPEX file." The export writes no column for such a dimension, so a value hidden on a line is not exported and a load leaves it in place. The setting is in [Analytics dimensions](analytics.md#opex-or-capex-dimensions).
+- A value, or `-`, on a dimension used for the other kind of line only is a row error on its `analytics:<code>` cell, for example "The Recurrence dimension is for CAPEX lines only. Leave it out." The export leaves such a cell empty, so a value hidden on a line is not exported and a load leaves it in place. The setting is in [Analytics dimensions](analytics.md#opex-or-capex-dimensions).
 - A value used for the other kind of line only is a row error on its `analytics:<code>` cell, for example "Abonnements SaaS is for OPEX lines only. Pick a value for CAPEX lines." A line keeps the value it already holds. Values the load creates are used for OPEX and CAPEX. The setting is in [Analytics dimensions](analytics.md#opex-or-capex-values).
-- A new line needs a value on each required dimension of its kind, with the message "The Nature dimension is required. Choose a value." on the `analytics:<code>` cell. This holds when the column is missing from the file, when the cell is empty and when it holds `-`. A value the load creates counts. An existing line is refused only for a `-` that would clear the value it holds: an empty cell or a missing column leaves it as it is. The setting is in [Analytics dimensions](analytics.md#required-dimensions).
+- A new line needs a value on each required dimension of its own kind, with the message "The Nature dimension is required. Choose a value." on the `analytics:<code>` cell. This holds when the column is missing from the file, when the cell is empty and when it holds `-`. A value the load creates counts. An existing line is refused only for a `-` that would clear the value it holds: an empty cell or a missing column leaves it as it is. The setting is in [Analytics dimensions](analytics.md#required-dimensions).
 - A row that creates a line, or changes its account, is refused when the account is for the other kind of line, with the message "Account 6061 is for CAPEX lines only." (or OPEX). A line keeps its current account, and the account setting is in [Chart of Accounts](chart-of-accounts.md#opex-or-capex-accounts).
 - Projects are matched by their number, such as `PRJ-3`.
 - An ended line is a line whose `end_of_validity` has passed. Set the date to end a line, or write `-` in the cell to clear it and keep the line running. There is no status column.
@@ -168,14 +152,15 @@ A CAPEX file exported before the PP&E type, investment type and priority became 
 
 Export a fresh file and copy your rows into it.
 
+An OPEX or CAPEX file exported before the `nature` column was added is accepted. Its rows are read as lines of the list you import it on, and its `OPX-12` and `CPX-3` numbers still name their lines: import an earlier OPEX file from the OPEX list and an earlier CAPEX file from the CAPEX list. Its `kanap_token` cells stay valid.
+
 ## Loading a whole budget
 
 The budget file holds budget lines. The paying company, the account, the cost center, the supplier and the users a line names must exist first. A small team loads them in this order:
 
 1. A chart of accounts and its accounts, in [Chart of Accounts](chart-of-accounts.md)
 2. The companies, in [Companies](companies.md)
-3. The OPEX file, with **Create missing suppliers** ticked
-4. The CAPEX file, with **Create missing suppliers** ticked
+3. The budget file, with **Create missing suppliers** ticked. It holds the OPEX and the CAPEX lines together, or you load one file per kind
 
 A larger organisation adds the rest of the master data in between:
 
@@ -186,8 +171,7 @@ A larger organisation adds the rest of the master data in between:
 5. The suppliers, in [Suppliers](suppliers.md)
 6. The dimension values, in [Analytics dimensions](analytics.md). The dimensions themselves are created on that page
 7. The working-day calendars, in [Working-day calendars](working-day-calendars.md), once lines carry quantity and price
-8. The OPEX file
-9. The CAPEX file
+8. The budget file, OPEX and CAPEX lines
 
 **The chart of accounts comes first.** On the Charts of Accounts page, click **New**, give the chart a code and a name, and choose **All countries** under **Used for**. Then click **Manage charts**, open the **⋯** menu of the chart and click **Make default for other countries**. A company without a chart takes that one, which is how the account numbers of a budget file resolve. Select the chart on the page, then click **Import CSV** to load its accounts.
 

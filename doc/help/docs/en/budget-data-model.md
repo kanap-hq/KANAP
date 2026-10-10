@@ -56,20 +56,21 @@ A line also links to projects, requests, applications, assets, contracts, contac
 
 ### OPEX and CAPEX lines
 
-A line lives across years: a three-year licence is one line with three budget years. KANAP gives each line a number when it is created: `OPX-12` for OPEX, `CPX-3` for CAPEX. The number identifies the line in the budget file.
+A line lives across years: a three-year licence is one line with three budget years. KANAP gives each line a number when it is created, its reference `BL-12`, the same series for OPEX and CAPEX. The lists still show `OPX-12` for an OPEX line and `CPX-3` for a CAPEX line. The budget file names a line by its `BL-12` reference, and reads the `OPX` and `CPX` numbers too.
 
 | Field | Column in the budget file | Required | Notes |
 |---|---|---|---|
-| Number | `item_number` | Set by KANAP | Empty in the file creates a line |
+| Nature | `nature` | Yes | `opex` or `capex`. A file does not change the nature of an existing line. A file without this column is read as lines of the list it is imported on |
+| Number | `item_number` | Set by KANAP | `BL-12`. Empty in the file creates a line |
 | Product name (OPEX), title (CAPEX) | `name` | Yes | |
-| Description (OPEX) | `description` | No | |
+| Description | `description` | No | |
 | PP&E type, investment type, priority (CAPEX) | `analytics:ppe_type`, `analytics:investment_type`, `analytics:priority` | For a new line, while the dimension is required | Values of the three CAPEX dimensions, held like the values of any other dimension. See [CAPEX dimensions](analytics.md#capex-dimensions) |
 | Paying company | `company_name` | Yes | Taken from the cost center when only the cost center is given |
 | Supplier | `supplier_name`, `supplier_erp_id` | No | |
 | Account | `account_number` | Yes | In the chart of accounts of the paying company |
 | Cost center | `cost_center_code` | No | A group is refused |
 | Run or build | `run_build` | No | `run` or `build` |
-| Analytics values | `analytics:<code>` | For a required dimension | One column per enabled dimension used for the file's type. A required dimension needs a value on a new line |
+| Analytics values | `analytics:<code>` | For a required dimension | One column per enabled dimension. A line takes values only on the dimensions of its nature. A required dimension needs a value on a new line of its nature |
 | IT owner, business owner | `owner_it_email`, `owner_business_email` | No | Active users |
 | Project | `project` | No | A project number such as `PRJ-3` |
 | Currency | `currency` | Yes | Three-letter ISO code |
@@ -174,8 +175,7 @@ Every file below exports and imports from the page that manages the object. Impo
 
 | Object | Export | Import | Matched by | Details |
 |---|---|---|---|---|
-| OPEX lines and their amounts | Yes | Yes | `item_number` | [Load a budget from a spreadsheet](budget-file.md) |
-| CAPEX lines and their amounts | Yes | Yes | `item_number` | [Load a budget from a spreadsheet](budget-file.md) |
+| OPEX and CAPEX lines and their amounts | Yes | Yes | `item_number` (`BL-12`) | [Load a budget from a spreadsheet](budget-file.md) |
 | Companies and their metrics | Yes | Yes | `name` | [Companies](companies.md) |
 | Departments | Yes | Yes | `company_name` and `name` | [Departments](departments.md) |
 | Accounts | Yes | Yes | `account_number` within the chart | [Chart of Accounts](chart-of-accounts.md) |
@@ -189,15 +189,15 @@ Every file below exports and imports from the page that manages the object. Impo
 | Allocations | From the chargeback reports | No | | [Reporting](reports.md) |
 | Quantity and price lines, budget column settings, freezes, currencies | No | No | | Set on the screen |
 
-The budget file reads and writes the amounts of any column and year, as yearly totals or months, with the line details in the same row. It is the way in for a budget prepared elsewhere and the way out for a spreadsheet or a BI tool. Each budget list exports and imports its own file: the OPEX file from **Budget management > OPEX**, the CAPEX file from **Budget management > CAPEX**.
+The budget file reads and writes the amounts of any column and year, as yearly totals or months, with the line details in the same row. It is the way in for a budget prepared elsewhere and the way out for a spreadsheet or a BI tool. One file holds both kinds of line, its `nature` column saying which. **Budget management > OPEX** exports the OPEX lines and **Budget management > CAPEX** the CAPEX lines; either list imports a file that holds both, given administration rights on OPEX and on CAPEX.
 
 ### Moving a budget into KANAP
 
 1. Map each object of your current tool to the tables above, and its identifiers to the **Matched by** column.
 2. Load the reference data in the order given in [Loading a whole budget](budget-file.md#loading-a-whole-budget).
-3. Export the OPEX file and the CAPEX file to get the header row of your organisation, with one column per analytics dimension. A list with no line exports the header row alone.
-4. Fill one row per line, leaving `item_number` empty, with one amount column per budget column and year (`budget_2027`), or per month (`budget_2027_03`).
-5. Import the files. The check reports the errors by line of the file, and nothing is written until you load.
+3. Export the budget file from either list to get the header row of your organisation, with one column per analytics dimension. A list with no line exports the header row alone.
+4. Fill one row per line with its `nature`, leaving `item_number` empty, with one amount column per budget column and year (`budget_2027`), or per month (`budget_2027_03`).
+5. Import the file. The check reports the errors by line of the file, and nothing is written until you load.
 
 A consistent set of sample files, with one fictional company and its reference data, is in the [KANAP repository](https://github.com/kanap-hq/KANAP/tree/main/doc/samples).
 

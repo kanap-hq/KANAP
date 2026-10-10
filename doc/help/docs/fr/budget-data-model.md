@@ -56,20 +56,21 @@ Un poste se lie aussi à des projets, des demandes, des applications, des actifs
 
 ### Postes OPEX et CAPEX
 
-Un poste vit sur plusieurs années : une licence sur trois ans est un poste avec trois années budgétaires. KANAP donne un numéro à chaque poste à sa création : `OPX-12` pour l'OPEX, `CPX-3` pour le CAPEX. Le numéro identifie le poste dans le fichier budgétaire.
+Un poste vit sur plusieurs années : une licence sur trois ans est un poste avec trois années budgétaires. KANAP donne un numéro à chaque poste à sa création, sa référence `BL-12`, dans la même série pour l'OPEX et le CAPEX. Les listes affichent toujours `OPX-12` pour un poste OPEX et `CPX-3` pour un poste CAPEX. Le fichier budgétaire désigne un poste par sa référence `BL-12`, et lit aussi les numéros `OPX` et `CPX`.
 
 | Champ | Colonne du fichier budgétaire | Obligatoire | Remarques |
 |---|---|---|---|
-| Numéro | `item_number` | Attribué par KANAP | Vide dans le fichier : crée un poste |
+| Nature | `nature` | Oui | `opex` ou `capex`. Un fichier ne change pas la nature d'un poste existant. Un fichier sans cette colonne est lu comme des postes de la liste sur laquelle il est importé |
+| Numéro | `item_number` | Attribué par KANAP | `BL-12`. Vide dans le fichier : crée un poste |
 | Nom du produit (OPEX), titre (CAPEX) | `name` | Oui | |
-| Description (OPEX) | `description` | Non | |
+| Description | `description` | Non | |
 | Type d'immobilisation, type d'investissement, priorité (CAPEX) | `analytics:ppe_type`, `analytics:investment_type`, `analytics:priority` | Pour une nouvelle ligne, tant que la dimension est obligatoire | Valeurs des trois dimensions CAPEX, portées comme les valeurs de toute autre dimension. Voir [Dimensions CAPEX](analytics.md#dimensions-capex) |
 | Société payeuse | `company_name` | Oui | Reprise du centre de coûts quand seul le centre de coûts est donné |
 | Fournisseur | `supplier_name`, `supplier_erp_id` | Non | |
 | Compte | `account_number` | Oui | Dans le plan comptable de la société payeuse |
 | Centre de coûts | `cost_center_code` | Non | Un groupe est refusé |
 | Run ou build | `run_build` | Non | `run` ou `build` |
-| Valeurs analytiques | `analytics:<code>` | Pour une dimension obligatoire | Une colonne par dimension active utilisée pour le type du fichier. Une dimension obligatoire demande une valeur sur une nouvelle ligne |
+| Valeurs analytiques | `analytics:<code>` | Pour une dimension obligatoire | Une colonne par dimension active. Un poste ne prend de valeurs que sur les dimensions de sa nature. Une dimension obligatoire demande une valeur sur un nouveau poste de sa nature |
 | Responsable IT, responsable métier | `owner_it_email`, `owner_business_email` | Non | Utilisateurs actifs |
 | Projet | `project` | Non | Un numéro de projet, par exemple `PRJ-3` |
 | Devise | `currency` | Oui | Code ISO à trois lettres |
@@ -174,8 +175,7 @@ Chaque fichier ci-dessous s'exporte et s'importe depuis la page qui gère l'obje
 
 | Objet | Export | Import | Correspondance par | Détails |
 |---|---|---|---|---|
-| Postes OPEX et leurs montants | Oui | Oui | `item_number` | [Charger un budget depuis un tableur](budget-file.md) |
-| Postes CAPEX et leurs montants | Oui | Oui | `item_number` | [Charger un budget depuis un tableur](budget-file.md) |
+| Postes OPEX et CAPEX et leurs montants | Oui | Oui | `item_number` (`BL-12`) | [Charger un budget depuis un tableur](budget-file.md) |
 | Sociétés et leurs indicateurs | Oui | Oui | `name` | [Sociétés](companies.md) |
 | Départements | Oui | Oui | `company_name` et `name` | [Départements](departments.md) |
 | Comptes | Oui | Oui | `account_number` dans le plan | [Plans comptables et gestion des comptes](chart-of-accounts.md) |
@@ -189,15 +189,15 @@ Chaque fichier ci-dessous s'exporte et s'importe depuis la page qui gère l'obje
 | Ventilations | Depuis les rapports de refacturation | Non | | [Rapports](reports.md) |
 | Lignes Quantité et prix, paramètres des colonnes budgétaires, gels, devises | Non | Non | | Réglés à l'écran |
 
-Le fichier budgétaire lit et écrit les montants de n'importe quelle colonne et année, en totaux annuels ou en mois, avec le détail du poste sur la même ligne. C'est la porte d'entrée d'un budget préparé ailleurs et la porte de sortie vers un tableur ou un outil de BI. Chaque liste budgétaire exporte et importe son propre fichier : le fichier OPEX depuis **Gestion budgétaire > OPEX**, le fichier CAPEX depuis **Gestion budgétaire > CAPEX**.
+Le fichier budgétaire lit et écrit les montants de n'importe quelle colonne et année, en totaux annuels ou en mois, avec le détail du poste sur la même ligne. C'est la porte d'entrée d'un budget préparé ailleurs et la porte de sortie vers un tableur ou un outil de BI. Un seul fichier contient les deux types de poste, et sa colonne `nature` indique lequel. **Gestion budgétaire > OPEX** exporte les postes OPEX et **Gestion budgétaire > CAPEX** les postes CAPEX. Les deux listes importent un fichier qui contient les deux, avec des droits d'administration sur OPEX et sur CAPEX.
 
 ### Faire entrer un budget dans KANAP
 
 1. Faites correspondre chaque objet de votre outil actuel aux tableaux ci-dessus, et ses identifiants à la colonne **Correspondance par**.
 2. Chargez les données de référence dans l'ordre donné dans [Charger un budget complet](budget-file.md#charger-un-budget-complet).
-3. Exportez le fichier OPEX et le fichier CAPEX pour obtenir la ligne d'en-tête de votre organisation, avec une colonne par dimension analytique. Une liste sans poste exporte la ligne d'en-tête seule.
-4. Remplissez une ligne par poste, en laissant `item_number` vide, avec une colonne de montant par colonne budgétaire et par année (`budget_2027`), ou par mois (`budget_2027_03`).
-5. Importez les fichiers. La vérification signale les erreurs par ligne du fichier, et rien n'est écrit avant le chargement.
+3. Exportez le fichier budgétaire depuis l'une ou l'autre liste pour obtenir la ligne d'en-tête de votre organisation, avec une colonne par dimension analytique. Une liste sans poste exporte la ligne d'en-tête seule.
+4. Remplissez une ligne par poste avec sa `nature`, en laissant `item_number` vide, avec une colonne de montant par colonne budgétaire et par année (`budget_2027`), ou par mois (`budget_2027_03`).
+5. Importez le fichier. La vérification signale les erreurs par ligne du fichier, et rien n'est écrit avant le chargement.
 
 Un jeu cohérent de fichiers d'exemple, avec une société fictive et ses données de référence, se trouve dans le [dépôt KANAP](https://github.com/kanap-hq/KANAP/tree/main/doc/samples).
 

@@ -56,20 +56,21 @@ Una partida también se vincula a proyectos, solicitudes, aplicaciones, activos,
 
 ### Partidas OPEX y CAPEX
 
-Una partida vive varios años: una licencia de tres años es una partida con tres años presupuestarios. KANAP da un número a cada partida al crearla: `OPX-12` para OPEX, `CPX-3` para CAPEX. El número identifica la partida en el archivo de presupuesto.
+Una partida vive varios años: una licencia de tres años es una partida con tres años presupuestarios. KANAP da un número a cada partida al crearla, su referencia `BL-12`, en la misma serie para OPEX y CAPEX. Las listas siguen mostrando `OPX-12` para una partida OPEX y `CPX-3` para una partida CAPEX. El archivo de presupuesto nombra una partida por su referencia `BL-12`, y también lee los números `OPX` y `CPX`.
 
 | Campo | Columna del archivo de presupuesto | Obligatorio | Notas |
 |---|---|---|---|
-| Número | `item_number` | Lo asigna KANAP | Vacío en el archivo: crea una partida |
+| Naturaleza | `nature` | Sí | `opex` o `capex`. Un archivo no cambia la naturaleza de una partida existente. Un archivo sin esta columna se lee como partidas de la lista en la que se importa |
+| Número | `item_number` | Lo asigna KANAP | `BL-12`. Vacío en el archivo: crea una partida |
 | Nombre del producto (OPEX), título (CAPEX) | `name` | Sí | |
-| Descripción (OPEX) | `description` | No | |
+| Descripción | `description` | No | |
 | Tipo de activo fijo, tipo de inversión, prioridad (CAPEX) | `analytics:ppe_type`, `analytics:investment_type`, `analytics:priority` | En una línea nueva, mientras la dimensión sea obligatoria | Valores de las tres dimensiones CAPEX, guardados como los valores de cualquier otra dimensión. Consulte [Dimensiones CAPEX](analytics.md#dimensiones-capex) |
 | Empresa pagadora | `company_name` | Sí | Se toma del centro de coste cuando solo se indica el centro de coste |
 | Proveedor | `supplier_name`, `supplier_erp_id` | No | |
 | Cuenta | `account_number` | Sí | En el plan de cuentas de la empresa pagadora |
 | Centro de coste | `cost_center_code` | No | Se rechaza un grupo |
 | Run o build | `run_build` | No | `run` o `build` |
-| Valores analíticos | `analytics:<code>` | Para una dimensión obligatoria | Una columna por dimensión activa usada para el tipo del archivo. Una dimensión obligatoria necesita un valor en una línea nueva |
+| Valores analíticos | `analytics:<code>` | Para una dimensión obligatoria | Una columna por dimensión activa. Una partida solo toma valores en las dimensiones de su naturaleza. Una dimensión obligatoria necesita un valor en una partida nueva de su naturaleza |
 | Responsable de IT, responsable de negocio | `owner_it_email`, `owner_business_email` | No | Usuarios activos |
 | Proyecto | `project` | No | Un número de proyecto, por ejemplo `PRJ-3` |
 | Moneda | `currency` | Sí | Código ISO de tres letras |
@@ -174,8 +175,7 @@ Cada archivo de la tabla se exporta y se importa desde la página que gestiona e
 
 | Objeto | Exportación | Importación | Coincidencia por | Detalles |
 |---|---|---|---|---|
-| Partidas OPEX y sus importes | Sí | Sí | `item_number` | [Cargar un presupuesto desde una hoja de cálculo](budget-file.md) |
-| Partidas CAPEX y sus importes | Sí | Sí | `item_number` | [Cargar un presupuesto desde una hoja de cálculo](budget-file.md) |
+| Partidas OPEX y CAPEX y sus importes | Sí | Sí | `item_number` (`BL-12`) | [Cargar un presupuesto desde una hoja de cálculo](budget-file.md) |
 | Empresas y sus indicadores | Sí | Sí | `name` | [Empresas](companies.md) |
 | Departamentos | Sí | Sí | `company_name` y `name` | [Departamentos](departments.md) |
 | Cuentas | Sí | Sí | `account_number` dentro del plan | [Planes de cuentas y gestión de cuentas](chart-of-accounts.md) |
@@ -189,15 +189,15 @@ Cada archivo de la tabla se exporta y se importa desde la página que gestiona e
 | Asignaciones | Desde los informes de contracargo | No | | [Informes](reports.md) |
 | Líneas de Cantidad y precio, configuración de las columnas presupuestarias, congelaciones, monedas | No | No | | Se configuran en pantalla |
 
-El archivo de presupuesto lee y escribe los importes de cualquier columna y año, como totales anuales o por meses, con los detalles de la partida en la misma fila. Es la vía de entrada para un presupuesto preparado en otro sitio y la vía de salida hacia una hoja de cálculo o una herramienta de BI. Cada lista presupuestaria exporta e importa su propio archivo: el archivo OPEX desde **Gestión presupuestaria > OPEX**, el archivo CAPEX desde **Gestión presupuestaria > CAPEX**.
+El archivo de presupuesto lee y escribe los importes de cualquier columna y año, como totales anuales o por meses, con los detalles de la partida en la misma fila. Es la vía de entrada para un presupuesto preparado en otro sitio y la vía de salida hacia una hoja de cálculo o una herramienta de BI. Un solo archivo contiene los dos tipos de partida, y su columna `nature` indica cuál. **Gestión presupuestaria > OPEX** exporta las partidas OPEX y **Gestión presupuestaria > CAPEX** las partidas CAPEX. Cualquiera de las dos listas importa un archivo que contenga ambos tipos, con derechos de administración en OPEX y en CAPEX.
 
 ### Llevar un presupuesto a KANAP
 
 1. Haga corresponder cada objeto de su herramienta actual con las tablas anteriores, y sus identificadores con la columna **Coincidencia por**.
 2. Cargue los datos maestros en el orden indicado en [Cargar un presupuesto completo](budget-file.md#cargar-un-presupuesto-completo).
-3. Exporte el archivo OPEX y el archivo CAPEX para obtener la fila de cabecera de su organización, con una columna por dimensión analítica. Una lista sin partidas exporta solo la fila de cabecera.
-4. Rellene una fila por partida, con `item_number` vacío, con una columna de importe por columna presupuestaria y año (`budget_2027`), o por mes (`budget_2027_03`).
-5. Importe los archivos. La comprobación informa de los errores por línea del archivo, y no se escribe nada hasta que usted carga.
+3. Exporte el archivo de presupuesto desde cualquiera de las dos listas para obtener la fila de cabecera de su organización, con una columna por dimensión analítica. Una lista sin partidas exporta solo la fila de cabecera.
+4. Rellene una fila por partida con su `nature`, con `item_number` vacío, con una columna de importe por columna presupuestaria y año (`budget_2027`), o por mes (`budget_2027_03`).
+5. Importe el archivo. La comprobación informa de los errores por línea del archivo, y no se escribe nada hasta que usted carga.
 
 Un conjunto coherente de archivos de ejemplo, con una empresa ficticia y sus datos maestros, está en el [repositorio de KANAP](https://github.com/kanap-hq/KANAP/tree/main/doc/samples).
 

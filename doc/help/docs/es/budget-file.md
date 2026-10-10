@@ -4,14 +4,14 @@ La mayoría de los equipos preparan su presupuesto en una hoja de cálculo: una 
 
 El archivo de presupuesto une ambas partes. Exporte las partidas, cambie las celdas que le interesen en Excel o LibreOffice y vuelva a importar el archivo. KANAP compara cada celda con lo que contiene y solo escribe lo que ha cambiado.
 
-Hay un archivo por lista. La lista OPEX exporta e importa el archivo OPEX, y la lista CAPEX el archivo CAPEX. Ambos archivos llevan las mismas columnas y siguen las mismas reglas.
+Un solo archivo contiene los dos tipos de partida. Su columna `nature` indica si una fila es una partida OPEX o CAPEX, y cada fila se comprueba con las reglas de su propio tipo. La lista OPEX exporta sus partidas OPEX y la lista CAPEX sus partidas CAPEX, con la misma estructura. Cualquiera de las dos listas importa un archivo que contenga ambos tipos.
 
 ## Dónde encontrarlo
 
 - Ruta: **Gestión presupuestaria > OPEX**, o **Gestión presupuestaria > CAPEX**
 - Exportación: **Exportar CSV** en la barra de herramientas de la lista
 - Importación: **Importar CSV** en la misma barra de herramientas
-- Permisos: ambos botones requieren derechos de administración en esa lista (`opex:admin` o `capex:admin`)
+- Permisos: ambos botones requieren derechos de administración en esa lista (`opex:admin` o `capex:admin`). Un archivo con partidas OPEX y CAPEX requiere ambos
 
 ## Exportación
 
@@ -27,7 +27,7 @@ Hay un archivo por lista. La lista OPEX exporta e importa el archivo OPEX, y la 
 
 3. Haga clic en el botón inferior de la ventana. Nombra lo que contendrá el archivo: **Exportar 120 partidas filtradas**, **Exportar todas las partidas**, **Exportar 3.412 partidas**, etc.
 
-El archivo se escribe en el idioma en que se muestra la pantalla.
+El archivo se guarda como `budget.csv`, desde cualquiera de las dos listas, y se escribe en el idioma en que se muestra la pantalla.
 
 | Idioma | Separador | Importes | Fechas |
 |---|---|---|---|
@@ -43,14 +43,13 @@ Un archivo contiene una fila por partida: las columnas de detalle, después las 
 
 ### Columnas de detalle
 
-Son iguales en ambos archivos, salvo las columnas propias del tipo al principio de la fila.
-
-**OPEX**
+Las columnas de detalle son las mismas para los dos tipos de partida.
 
 | Columna | Contenido | En una partida nueva |
 |---|---|---|
-| `item_number` | El número de la partida: `OPX-12` o `12` | Vacío: la fila añade una partida |
-| `name` | Nombre del producto | Obligatorio |
+| `nature` | `opex` o `capex`, el tipo de partida | Obligatorio. Un archivo sin esta columna se lee como partidas de la lista en la que lo importa |
+| `item_number` | La referencia de la partida: `BL-12`, o `12`. También se leen los números `OPX-12` y `CPX-3` de archivos anteriores | Vacío: la fila añade una partida |
+| `name` | El nombre del producto de una partida OPEX, el título de una inversión CAPEX | Obligatorio |
 | `description` | La descripción larga | Opcional |
 | `company_name` | Empresa pagadora | Obligatorio salvo que la partida tenga un centro de coste |
 | `supplier_name` | Nombre del proveedor | Opcional |
@@ -58,7 +57,7 @@ Son iguales en ambos archivos, salvo las columnas propias del tipo al principio 
 | `account_number` | Número de cuenta, en el plan de cuentas de la empresa pagadora | Obligatorio |
 | `cost_center_code` | Código del centro de coste. Se rechaza un grupo | Opcional |
 | `run_build` | `run` o `build` | Opcional |
-| `analytics:<code>` | El nombre del valor en la dimensión cuyo código es ese. Una columna por dimensión activada usada para las líneas OPEX, la dimensión por defecto incluida | Opcional, salvo para una dimensión obligatoria. La carga crea un valor que no existe |
+| `analytics:<code>` | El nombre del valor en la dimensión cuyo código es ese, sin distinguir mayúsculas y minúsculas. Una columna por dimensión activada, la dimensión por defecto incluida. Una dimensión usada para un solo tipo de partida solo toma un valor en las filas de ese tipo y queda vacía en las demás. El tipo de activo fijo, el tipo de inversión y la prioridad de una partida CAPEX están en `analytics:ppe_type`, `analytics:investment_type` y `analytics:priority`, por ejemplo `Hardware`, `Business growth` o `High` | Opcional, salvo para una dimensión obligatoria del tipo de la partida, como las tres dimensiones CAPEX en una partida CAPEX. La carga crea un valor que no existe |
 | `owner_it_email` | Correo de un usuario activo | Opcional |
 | `owner_business_email` | Correo de un usuario activo | Opcional |
 | `project` | Número de proyecto, por ejemplo `PRJ-3` | Opcional |
@@ -67,26 +66,7 @@ Son iguales en ambos archivos, salvo las columnas propias del tipo al principio 
 | `end_of_validity` | El día en que termina la partida | Sin fin |
 | `notes` | Texto libre | Opcional |
 
-**CAPEX**
-
-| Columna | Contenido | En una partida nueva |
-|---|---|---|
-| `item_number` | El número de la partida: `CPX-3` o `3` | Vacío: la fila añade una partida |
-| `name` | El título de la inversión | Obligatorio |
-| `company_name` | Empresa pagadora | Obligatorio salvo que la partida tenga un centro de coste |
-| `supplier_name` | Nombre del proveedor | Opcional |
-| `supplier_erp_id` | El ID del proveedor en su ERP | Opcional |
-| `account_number` | Número de cuenta, en el plan de cuentas de la empresa pagadora | Obligatorio |
-| `cost_center_code` | Código del centro de coste. Se rechaza un grupo | Opcional |
-| `run_build` | `run` o `build` | Opcional |
-| `analytics:<code>` | El nombre del valor en la dimensión cuyo código es ese, sin distinguir mayúsculas y minúsculas. Una columna por dimensión activada usada para las líneas CAPEX, la dimensión por defecto incluida. El tipo de activo fijo, el tipo de inversión y la prioridad están en `analytics:ppe_type`, `analytics:investment_type` y `analytics:priority`, por ejemplo `Hardware`, `Business growth` o `High` | Opcional, salvo para una dimensión obligatoria, como las tres dimensiones CAPEX. La carga crea un valor que no existe |
-| `owner_it_email` | Correo de un usuario activo | Opcional |
-| `owner_business_email` | Correo de un usuario activo | Opcional |
-| `project` | Número de proyecto, por ejemplo `PRJ-3` | Opcional |
-| `currency` | Código ISO de tres letras, entre las monedas permitidas en su espacio de trabajo | Obligatorio |
-| `effective_start` | El día en que empieza la partida | El 1 de enero del primer año con un importe en la fila, y si no, del año en curso |
-| `end_of_validity` | El día en que termina la partida | Sin fin |
-| `notes` | Texto libre | Opcional |
+El archivo lee y escribe la descripción de una partida CAPEX. Las pantallas CAPEX aún no la muestran.
 
 ### Columnas de importes
 
@@ -108,8 +88,8 @@ Estos son los nombres estándar. Su organización puede renombrar las cinco colu
 
 ## Qué significa una celda
 
-- Una celda vacía conserva el valor guardado.
-- `-` borra un detalle de la partida: descripción, notas, nombre e ID de ERP del proveedor, centro de coste, run o build, un valor de dimensión, un responsable, el proyecto, el fin de validez. En una columna que una partida nueva debe rellenar, `-` es un error de fila. En una dimensión obligatoria, `-` es un error de fila cuando la línea tiene un valor.
+- Una celda vacía conserva el valor guardado. Una celda `nature` vacía conserva el tipo de una partida existente.
+- `-` borra un detalle de la partida: descripción, notas, nombre e ID de ERP del proveedor, centro de coste, run o build, un valor de dimensión, un responsable, el proyecto, el fin de validez. En una columna que una partida nueva debe rellenar, y en `nature`, `-` es un error de fila. En una dimensión obligatoria, `-` es un error de fila cuando la línea tiene un valor.
 - `0` escribe cero.
 - Un total anual igual al total guardado no escribe nada. Un total distinto se reparte por el periodo de la columna, exactamente como cuando escribe el total en la pestaña **Presupuesto**.
 - Una celda de mes escribe ese mes, y marca la columna como editada a mano, igual que un mes escrito en la pestaña **Presupuesto**.
@@ -120,13 +100,17 @@ Una columna ausente conserva todos los valores guardados de esa columna. Un arch
 
 ## Añadir y hacer coincidir partidas
 
-- `item_number` relleno: esa partida se actualiza. Vacío: se crea una partida nueva.
-- No hay otra clave. Una fila nueva que se parezca a una partida existente, o a otra fila nueva del mismo archivo, es una advertencia que puede ignorar.
+- `item_number` relleno: esa partida se actualiza. Vacío: se crea una partida nueva, del tipo que indica su celda `nature`.
+- `item_number` contiene la referencia de la partida, `BL-12`. Un número solo es la misma referencia, en ambas listas. Los números `OPX-12` y `CPX-3` de archivos anteriores siguen designando su partida. Nombrar dos veces la misma partida en un archivo es un error de fila.
+- Una partida conserva su tipo. Una fila que nombra una partida existente con la otra `nature` se rechaza, por ejemplo "BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line."
+- Un archivo con partidas OPEX y CAPEX requiere derechos de administración en ambas. Sin uno de ellos, cada partida de ese tipo se rechaza con el derecho que necesita, por ejemplo "Importing CAPEX lines needs the Admin level on CAPEX." Las demás partidas se comprueban como siempre, y el archivo se carga una vez retiradas esas filas.
+- Cada fila se comprueba según su propio tipo: las dimensiones y los valores que puede tener, su cuenta, las columnas congeladas y la advertencia de duplicado. Una columna congelada para CAPEX rechaza un cambio solo en una partida CAPEX.
+- No hay otra clave. Una fila nueva que se parezca a una partida existente de su tipo, o a otra fila nueva del mismo tipo en el archivo, es una advertencia que puede ignorar.
 - Los proveedores se hacen coincidir por `supplier_erp_id` cuando está relleno, y si no por `supplier_name`. La carga crea un proveedor que el archivo nombra y que KANAP no tiene cuando **Crear los proveedores que faltan** está marcada. Sin esa opción, la verificación lista los que faltan y le pide crearlos en **Datos maestros > Proveedores**.
 - La carga crea un valor de dimensión que no existe y lo lista en la verificación. Las cuentas, los centros de coste, las empresas y los usuarios nunca se crean: un elemento desconocido es un error de fila que indica dónde añadirlo.
-- Un archivo con una columna `analytics:<code>` de una dimensión que solo se usa para el otro tipo de línea se rechaza por completo, por ejemplo "The Recurrence dimension is for CAPEX lines only. Remove the analytics:recurrence column from this OPEX file." La exportación no escribe ninguna columna para esa dimensión: un valor oculto en una línea no se exporta, y una carga lo deja en su sitio. El ajuste está en [Dimensiones analíticas](analytics.md#dimensiones-opex-o-capex).
+- Un valor, o `-`, en una dimensión que solo se usa para el otro tipo de línea es un error de fila en su celda `analytics:<code>`, por ejemplo "The Recurrence dimension is for CAPEX lines only. Leave it out." La exportación deja esa celda vacía: un valor oculto en una línea no se exporta, y una carga lo deja en su sitio. El ajuste está en [Dimensiones analíticas](analytics.md#dimensiones-opex-o-capex).
 - Un valor que se usa solo para el otro tipo de línea es un error de fila en su celda `analytics:<code>`, por ejemplo "Abonnements SaaS is for OPEX lines only. Pick a value for CAPEX lines." Una línea conserva el valor que ya tiene. Los valores que crea la carga se usan para OPEX y CAPEX. El ajuste está en [Dimensiones analíticas](analytics.md#valores-opex-o-capex).
-- Una línea nueva necesita un valor en cada dimensión obligatoria de su tipo, con el mensaje "The Nature dimension is required. Choose a value." en la celda `analytics:<code>`. Esto vale cuando la columna falta en el archivo, cuando la celda está vacía y cuando contiene `-`. Un valor que crea la carga cuenta. Una línea existente solo se rechaza por un `-` que borraría el valor que tiene: una celda vacía o una columna ausente la deja como está. El ajuste está en [Dimensiones analíticas](analytics.md#dimensiones-obligatorias).
+- Una línea nueva necesita un valor en cada dimensión obligatoria de su propio tipo, con el mensaje "The Nature dimension is required. Choose a value." en la celda `analytics:<code>`. Esto vale cuando la columna falta en el archivo, cuando la celda está vacía y cuando contiene `-`. Un valor que crea la carga cuenta. Una línea existente solo se rechaza por un `-` que borraría el valor que tiene: una celda vacía o una columna ausente la deja como está. El ajuste está en [Dimensiones analíticas](analytics.md#dimensiones-obligatorias).
 - Una fila que crea una línea presupuestaria, o que cambia su cuenta, se rechaza cuando la cuenta es del otro tipo de línea, con el mensaje «Account 6061 is for CAPEX lines only.» (o OPEX). Una línea presupuestaria conserva su cuenta actual. El ajuste de las cuentas está en [Planes de cuentas y gestión de cuentas](chart-of-accounts.md#cuentas-opex-o-capex).
 - Los proyectos se hacen coincidir por su número, por ejemplo `PRJ-3`.
 - Una partida finalizada es una partida cuya `end_of_validity` ha pasado. Indique la fecha para finalizar una partida, o escriba `-` en la celda para borrarla y mantener la partida en curso. No hay columna de estado.
@@ -168,14 +152,15 @@ Un archivo CAPEX exportado antes de que el tipo de activo fijo, el tipo de inver
 
 Exporte un archivo nuevo y copie en él sus filas.
 
+Se acepta un archivo OPEX o CAPEX exportado antes de que existiera la columna `nature`. Sus filas se leen como partidas de la lista en la que lo importa, y sus números `OPX-12` y `CPX-3` siguen designando sus partidas: importe un archivo OPEX anterior desde la lista OPEX y un archivo CAPEX anterior desde la lista CAPEX. Sus celdas `kanap_token` siguen siendo válidas.
+
 ## Cargar un presupuesto completo
 
 El archivo de presupuesto contiene partidas presupuestarias. La empresa pagadora, la cuenta, el centro de coste, el proveedor y los usuarios que nombra una partida deben existir antes. Un equipo pequeño los carga en este orden:
 
 1. Un plan de cuentas y sus cuentas, en [Planes de cuentas](chart-of-accounts.md)
 2. Las empresas, en [Empresas](companies.md)
-3. El archivo OPEX, con **Crear los proveedores que faltan** marcada
-4. El archivo CAPEX, con **Crear los proveedores que faltan** marcada
+3. El archivo de presupuesto, con **Crear los proveedores que faltan** marcada. Contiene las partidas OPEX y CAPEX juntas, o carga un archivo por tipo
 
 Una organización más grande añade el resto de los datos maestros entre medias:
 
@@ -186,8 +171,7 @@ Una organización más grande añade el resto de los datos maestros entre medias
 5. Los proveedores, en [Proveedores](suppliers.md)
 6. Los valores de dimensión, en [Dimensiones analíticas](analytics.md). Las dimensiones se crean en esa página
 7. Los calendarios laborales, en [Calendarios laborales](working-day-calendars.md), cuando las partidas lleven cantidades y precios
-8. El archivo OPEX
-9. El archivo CAPEX
+8. El archivo de presupuesto, partidas OPEX y CAPEX
 
 **El plan de cuentas va primero.** En la página Planes de cuentas, haga clic en **Nuevo**, dé un código y un nombre al plan y elija **Todos los países** en **Se usa para**. Después haga clic en **Gestionar planes**, abra el menú **⋯** del plan y haga clic en **Hacer predeterminado para otros países**. Una empresa sin plan de cuentas toma ese, y así se resuelven los números de cuenta de un archivo de presupuesto. Seleccione el plan en la página y haga clic en **Importar CSV** para cargar sus cuentas.
 
