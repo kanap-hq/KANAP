@@ -78,7 +78,7 @@ Typing `@` opens the **mention picker** above the composer. It lets you referenc
   - `@DOC` — recent knowledge documents
   - `@APP backup` — applications matching "backup"
   - `@PRJ`, `@REQ`, `@INC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@CPX`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
-- **Plain text**: anything else (`@payroll`, `@server-2`) runs a cross-type search ranked by relevance.
+- **Plain text**: anything else (`@payroll`, `@server-2`) runs a cross-type search ranked by relevance. It also finds OPEX and CAPEX lines by the names of their analytics values.
 
 Use the arrow keys to move through the suggestions, **Enter** or **Tab** to confirm, **Escape** to dismiss the picker. Results are grouped by entity type (Knowledge, Tasks, Projects, Applications, Assets, Contracts, and so on) so you can tell at a glance what kind of record you are about to insert.
 
@@ -108,6 +108,8 @@ When the stream finishes, focus jumps back to the composer so you can keep the c
 ### Tool calls
 
 Plaid uses a small set of internal tools to answer questions: `Search all`, `Search knowledge`, `Get document`, `Get entity context`, and a handful of others. Each tool call shows up as a compact line under the message ("used Search all · 8 results"). You usually do not need to read the tool details, but they are there if you want to see exactly which records the answer was based on.
+
+`Search all` finds OPEX and CAPEX lines by the names of their analytics values, and tells Plaid which values each line holds.
 
 ## Artifacts and previews
 
