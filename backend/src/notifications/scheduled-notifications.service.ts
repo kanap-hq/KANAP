@@ -17,15 +17,18 @@ import { type EmailBranding, resolveEmailBranding, getDefaultEmailBranding } fro
 import { ScheduledTasksService } from '../admin/scheduled-tasks/scheduled-tasks.service';
 import { resolveEmailLocale } from '../i18n/email-i18n';
 import { calendarDaysUntil, isExpiryReminderDay, utcDateYmd } from './expiry-reminder-schedule';
+import { natureAnd, type BudgetNature } from '../spend/budget-nature';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 // Budget items warned on their end of validity. Table and column names come only from here.
-const BUDGET_ITEM_TABLES = {
-  opex: { table: 'spend_items', name: 'product_name' },
+// `nature`: each pass warns the lines of its own nature only (`spend/budget-nature.ts`), so a
+// line is never warned twice once both natures share `spend_items`.
+const BUDGET_ITEM_TABLES: Record<'opex' | 'capex', { table: string; name: string; nature?: BudgetNature }> = {
+  opex: { table: 'spend_items', name: 'product_name', nature: 'opex' },
   capex: { table: 'capex_items', name: 'description' },
-} as const;
+};
 
 @Injectable()
 export class ScheduledNotificationsService implements OnModuleInit {
@@ -270,7 +273,7 @@ export class ScheduledNotificationsService implements OnModuleInit {
       FROM ${t.table} s
       LEFT JOIN users it_user ON it_user.id = s.owner_it_id AND it_user.tenant_id = s.tenant_id AND it_user.status = 'enabled'
       LEFT JOIN users biz_user ON biz_user.id = s.owner_business_id AND biz_user.tenant_id = s.tenant_id AND biz_user.status = 'enabled'
-      WHERE s.tenant_id = $1
+      WHERE s.tenant_id = $1${natureAnd('s', t.nature)}
         AND s.disabled_at IS NOT NULL
         AND (s.disabled_at AT TIME ZONE 'UTC')::date BETWEEN $2::date AND $2::date + 30
         AND (s.owner_it_id IS NOT NULL OR s.owner_business_id IS NOT NULL)

@@ -330,7 +330,8 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       attachments_count: string | number;
     }> = await mg.query(
       `SELECT
-         (SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()) AS opex_count,
+         (SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()
+            AND EXISTS (SELECT 1 FROM spend_items si WHERE si.tenant_id = l.tenant_id AND si.id = l.spend_item_id AND si.nature = 'opex')) AS opex_count,
          (SELECT COUNT(*) FROM application_capex_items l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()) AS capex_count,
          (SELECT COUNT(*) FROM application_contracts l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()) AS contracts_count,
          (${projectCountSql}) AS projects_count,

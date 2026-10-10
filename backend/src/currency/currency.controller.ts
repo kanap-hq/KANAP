@@ -142,14 +142,17 @@ export class CurrencyController {
   }
 
   private async findBudgetYears(manager: EntityManager): Promise<number[]> {
+    // The months of OPEX lines only (`spend/budget-nature.ts`); the CAPEX months are read below.
     const spendRows = await manager.query(`
-      SELECT DISTINCT CAST(EXTRACT(YEAR FROM period) AS integer) AS year
-      FROM spend_amounts
-      WHERE COALESCE(planned, 0) <> 0
-         OR COALESCE(forecast, 0) <> 0
-         OR COALESCE(committed, 0) <> 0
-         OR COALESCE(actual, 0) <> 0
-         OR COALESCE(expected_landing, 0) <> 0
+      SELECT DISTINCT CAST(EXTRACT(YEAR FROM a.period) AS integer) AS year
+      FROM spend_amounts a
+      JOIN spend_versions v ON v.tenant_id = a.tenant_id AND v.id = a.version_id
+      JOIN spend_items i ON i.tenant_id = v.tenant_id AND i.id = v.spend_item_id AND i.nature = 'opex'
+      WHERE COALESCE(a.planned, 0) <> 0
+         OR COALESCE(a.forecast, 0) <> 0
+         OR COALESCE(a.committed, 0) <> 0
+         OR COALESCE(a.actual, 0) <> 0
+         OR COALESCE(a.expected_landing, 0) <> 0
     `);
     const capexRows = await manager.query(`
       SELECT DISTINCT CAST(EXTRACT(YEAR FROM period) AS integer) AS year

@@ -2299,7 +2299,7 @@ export class AiQueryExecutor {
         `SELECT DISTINCT ${groupField.expression} AS value
          FROM ${registry.aggregate.baseTable} ${alias}
          ${joins}
-         WHERE ${alias}.tenant_id = $1
+         WHERE ${alias}.tenant_id = $1${registry.aggregate.baseWhere ? ` AND ${registry.aggregate.baseWhere}` : ''}
            ${accessScopeSql}
            ${incidentVisibility}
            ${documentAclSql}

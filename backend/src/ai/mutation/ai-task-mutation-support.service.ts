@@ -35,6 +35,8 @@ type AiTaskTargetQueryConfig = {
   subject: string;
   displayPrefix: string;
   itemPrefix?: string;
+  /** A predicate on the target row: a `spend_item` names an OPEX line (`spend/budget-nature.ts`). */
+  where?: string;
 };
 
 const TARGET_QUERY_CONFIG: Record<Exclude<AiTaskCreateTargetMode, 'standalone'>, AiTaskTargetQueryConfig> = {
@@ -54,6 +56,7 @@ const TARGET_QUERY_CONFIG: Record<Exclude<AiTaskCreateTargetMode, 'standalone'>,
     nameColumn: 'product_name',
     subject: 'OPEX item',
     displayPrefix: 'OPEX',
+    where: `target.nature = 'opex'`,
   },
   capex_item: {
     mode: 'capex_item',
@@ -290,7 +293,7 @@ export class AiTaskMutationSupportService {
                 ${config.itemPrefix ? 'target.item_number,' : 'NULL::int AS item_number,'}
                 target.updated_at
          FROM ${config.table} target
-         WHERE target.tenant_id = $1
+         WHERE target.tenant_id = $1${config.where ? ` AND ${config.where}` : ''}
            AND target.id = $2
            ${accessScopeSql}
          LIMIT 1`,
@@ -366,7 +369,7 @@ export class AiTaskMutationSupportService {
               ${config.itemPrefix ? 'target.item_number,' : 'NULL::int AS item_number,'}
               target.updated_at
        FROM ${config.table} target
-       WHERE target.tenant_id = $1
+       WHERE target.tenant_id = $1${config.where ? ` AND ${config.where}` : ''}
          ${accessScopeSql}
          AND (
            COALESCE(target.${config.nameColumn}, '') ILIKE $2

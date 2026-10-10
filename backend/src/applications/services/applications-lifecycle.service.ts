@@ -12,6 +12,7 @@ import { ApplicationLink } from '../application-link.entity';
 import { ApplicationSupportContact } from '../application-support-contact.entity';
 import { ApplicationSpendItemLink } from '../application-spend-item.entity';
 import { ApplicationCapexItemLink } from '../application-capex-item.entity';
+import { SpendItem } from '../../spend/spend-item.entity';
 import { ApplicationContractLink } from '../application-contract.entity';
 import { AppInstance } from '../../app-instances/app-instance.entity';
 import { InterfaceEntity } from '../../interfaces/interface.entity';
@@ -335,8 +336,12 @@ export class ApplicationsLifecycleService extends ApplicationsBaseService {
     }
   }
 
+  /** The source's links to OPEX lines (`spend/budget-nature.ts`); the CAPEX links are copied below. */
   private async copySpendItemsInternal(sourceId: string, targetId: string, mg: EntityManager) {
-    const items = await mg.getRepository(ApplicationSpendItemLink).find({ where: { application_id: sourceId } as any });
+    const items = await mg.getRepository(ApplicationSpendItemLink).createQueryBuilder('l')
+      .innerJoin(SpendItem, 'i', `i.id = l.spend_item_id AND i.tenant_id = l.tenant_id AND i.nature = 'opex'`)
+      .where('l.application_id = :sourceId', { sourceId })
+      .getMany();
     if (items.length) {
       await mg.getRepository(ApplicationSpendItemLink).save(items.map(s => ({ ...s, id: undefined, application_id: targetId })));
     }

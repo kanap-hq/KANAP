@@ -113,8 +113,19 @@ export class FreezeService {
         fx_rate_set_id: rateSet.id,
         reporting_currency: settings.reportingCurrency,
       })
-      .where('tenant_id = :tenantId AND budget_year = :year', { tenantId, year })
+      .where(`tenant_id = :tenantId AND budget_year = :year${this.yearVersionsNature(scope)}`, { tenantId, year })
       .execute();
+  }
+
+  /**
+   * The versions of the year a freeze of `scope` pins or unpins: those of the scope's lines only.
+   * `spend_versions` has no nature: its line's (`spend/budget-nature.ts`), as `lockBudgetYear`
+   * locks them. `capex_versions` holds CAPEX versions only (until lot Z1).
+   */
+  private yearVersionsNature(scope: 'opex' | 'capex'): string {
+    return scope === 'opex'
+      ? ` AND spend_item_id IN (SELECT i.id FROM spend_items i WHERE i.tenant_id = :tenantId AND i.nature = 'opex')`
+      : '';
   }
 
   private async detachFxRates(scope: 'opex' | 'capex', year: number, tenantId: string, manager: EntityManager) {
@@ -123,7 +134,7 @@ export class FreezeService {
     await repo.createQueryBuilder()
       .update()
       .set({ fx_rate_set_id: null })
-      .where('tenant_id = :tenantId AND budget_year = :year', { tenantId, year })
+      .where(`tenant_id = :tenantId AND budget_year = :year${this.yearVersionsNature(scope)}`, { tenantId, year })
       .execute();
   }
 

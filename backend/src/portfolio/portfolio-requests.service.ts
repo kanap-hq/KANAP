@@ -18,6 +18,7 @@ import { PortfolioRequestUrl } from './portfolio-request-url.entity';
 import { PortfolioRequestAttachment } from './portfolio-request-attachment.entity';
 import { PortfolioRequestCapex } from './portfolio-request-capex.entity';
 import { PortfolioRequestOpex } from './portfolio-request-opex.entity';
+import { budgetLineIdsOfKind } from './project-budget-links.util';
 import { PortfolioRequestBusinessProcess } from './portfolio-request-business-process.entity';
 import { PortfolioRequestDependency } from './portfolio-request-dependency.entity';
 import { PortfolioProjectDependency } from './portfolio-project-dependency.entity';
@@ -1104,7 +1105,7 @@ export class PortfolioRequestsService {
         `SELECT s.id, s.product_name, s.description, s.currency, s.status,
                 sup.name as supplier_name
          FROM portfolio_request_opex ro
-         JOIN spend_items s ON s.id = ro.opex_id
+         JOIN spend_items s ON s.id = ro.opex_id AND s.nature = 'opex'
          LEFT JOIN suppliers sup ON sup.id = s.supplier_id
          WHERE ro.request_id = $1`,
         [id]
@@ -1978,16 +1979,19 @@ export class PortfolioRequestsService {
     const actorId = this.requireActivityAuthor(opts?.userId);
 
     const unique = Array.from(new Set((opexIds || []).filter(Boolean)));
-    const existing = await repo.find({ where: { request_id: requestId } });
+    const request = await this.getRequestOrThrow(requestId, mg);
+    // The request's links to OPEX lines only (`spend/budget-nature.ts`): a link to a line of another
+    // nature is neither replaced nor removed, and an id of such a line is not linked.
+    const stored = await repo.find({ where: { request_id: requestId } });
+    const opexLines = await budgetLineIdsOfKind(mg, 'opex', request.tenant_id, [...stored.map((e) => e.opex_id), ...unique]);
+    const existing = stored.filter((e) => opexLines.has(e.opex_id));
     const beforeIds = Array.from(new Set(existing.map((e) => e.opex_id)));
 
     const toDelete = existing.filter((e) => !unique.includes(e.opex_id));
     const existingSet = new Set(existing.map((e) => e.opex_id));
 
-    const request = await this.getRequestOrThrow(requestId, mg);
-
     const toInsert = unique
-      .filter((id) => !existingSet.has(id))
+      .filter((id) => !existingSet.has(id) && opexLines.has(id))
       .map((id) => repo.create({
         tenant_id: request.tenant_id,
         request_id: requestId,
@@ -2436,7 +2440,7 @@ export class PortfolioRequestsService {
     const rows = await mg.query<Array<{ id: string; product_name: string | null; description: string | null }>>(
       `SELECT id, product_name, description
        FROM spend_items
-       WHERE id = ANY($1::uuid[])`,
+       WHERE id = ANY($1::uuid[]) AND nature = 'opex'`,
       [opexIds],
     );
     const byId = new Map<string, string>();

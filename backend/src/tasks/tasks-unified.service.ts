@@ -604,7 +604,8 @@ export class TasksUnifiedService {
 
     if (type === 'spend_item') {
       const [row] = await manager.query(
-        'SELECT product_name FROM spend_items WHERE id = $1 LIMIT 1',
+        // An OPEX line only (`spend/budget-nature.ts`).
+        `SELECT product_name FROM spend_items WHERE id = $1 AND nature = 'opex' LIMIT 1`,
         [id],
       );
       if (!row) return id;
@@ -674,14 +675,15 @@ export class TasksUnifiedService {
       };
     }
 
-    const tableByType: Record<'spend_item' | 'contract' | 'capex_item' | 'incident', { table: string; label: string }> = {
-      spend_item: { table: 'spend_items', label: 'Spend item' },
+    // `where`: a `spend_item` task names an OPEX line (`spend/budget-nature.ts`), never a line of another nature.
+    const tableByType: Record<'spend_item' | 'contract' | 'capex_item' | 'incident', { table: string; label: string; where?: string }> = {
+      spend_item: { table: 'spend_items', label: 'Spend item', where: ` AND nature = 'opex'` },
       contract: { table: 'contracts', label: 'Contract' },
       capex_item: { table: 'capex_items', label: 'CAPEX item' },
       incident: { table: 'incidents', label: 'Incident' },
     };
     const targetMeta = tableByType[target.type];
-    const [row] = await manager.query(`SELECT id FROM ${targetMeta.table} WHERE id = $1 LIMIT 1`, [target.id]);
+    const [row] = await manager.query(`SELECT id FROM ${targetMeta.table} WHERE id = $1${targetMeta.where ?? ''} LIMIT 1`, [target.id]);
     if (!row) throw new NotFoundException(`${targetMeta.label} not found`);
     return { type: target.type, id: target.id };
   }

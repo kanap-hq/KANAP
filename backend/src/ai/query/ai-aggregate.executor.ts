@@ -1050,12 +1050,13 @@ export class AiAggregateExecutor {
     const joins = Array.from(new Set([...(groupField.joins || []), ...(metric?.def.joins || [])])).join('\n');
     const alias = registry.aggregate.alias;
     const idColumn = registry.aggregate.idColumn ?? 'id';
+    const baseWhere = registry.aggregate.baseWhere ? ` AND ${registry.aggregate.baseWhere}` : '';
     if (fn === 'count' || !metric) {
       const rows = await context.manager.query(
         `SELECT ${groupField.expression} AS key, COUNT(*)::int AS count
          FROM ${registry.aggregate.baseTable} ${alias}
          ${joins}
-         WHERE ${alias}.tenant_id = $1
+         WHERE ${alias}.tenant_id = $1${baseWhere}
            AND ${alias}.${idColumn} = ANY($2::uuid[])
          GROUP BY ${groupField.expression}
          ORDER BY count DESC, key ASC NULLS LAST`,
@@ -1074,7 +1075,7 @@ export class AiAggregateExecutor {
       `SELECT ${groupField.expression} AS key, ${aggregateExpression} AS value
        FROM ${registry.aggregate.baseTable} ${alias}
        ${joins}
-       WHERE ${alias}.tenant_id = $1
+       WHERE ${alias}.tenant_id = $1${baseWhere}
          AND ${alias}.${idColumn} = ANY($2::uuid[])
        GROUP BY ${groupField.expression}
        ORDER BY value ${orderDirection} NULLS LAST, key ASC NULLS LAST`,

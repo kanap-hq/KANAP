@@ -900,7 +900,7 @@ export class AiFinancialPlanMutationSupportService {
       `
       SELECT *
       FROM ${table}
-      WHERE tenant_id = $1 AND LOWER(${labelColumn}) = LOWER($2::text)
+      WHERE tenant_id = $1${this.itemNature(entityType)} AND LOWER(${labelColumn}) = LOWER($2::text)
       ORDER BY ${labelColumn}
       LIMIT 6
       `,
@@ -917,9 +917,14 @@ export class AiFinancialPlanMutationSupportService {
     id: string,
   ): Promise<FinancialItemRef> {
     const table = entityType === 'spend_items' ? 'spend_items' : 'capex_items';
-    const rows = await context.manager.query(`SELECT * FROM ${table} WHERE tenant_id = $1 AND id = $2 LIMIT 1`, [context.tenantId, id]);
+    const rows = await context.manager.query(`SELECT * FROM ${table} WHERE tenant_id = $1 AND id = $2${this.itemNature(entityType)} LIMIT 1`, [context.tenantId, id]);
     if (!rows[0]) throw new NotFoundException(`${this.itemLabelSingular(entityType)} not found.`);
     return this.itemRef(entityType, rows[0]);
+  }
+
+  /** `spend_items` holds the OPEX lines this type reads (`spend/budget-nature.ts`); `capex_items` has no nature until lot Z1. */
+  private itemNature(entityType: AiFinancialPlanEntityType): string {
+    return entityType === 'spend_items' ? ` AND nature = 'opex'` : '';
   }
 
   private itemRef(entityType: AiFinancialPlanEntityType, row: Record<string, unknown>): FinancialItemRef {

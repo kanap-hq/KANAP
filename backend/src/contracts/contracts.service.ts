@@ -63,6 +63,9 @@ type ListItem = Contract & {
   latest_task?: { id: string; status?: string; description?: string; created_at?: Date } | null;
 };
 
+/** A contract link `l` to an OPEX line (`spend/budget-nature.ts`): the OPEX side lists, counts and replaces those only. */
+const OPEX_LINK = `EXISTS (SELECT 1 FROM spend_items si WHERE si.tenant_id = l.tenant_id AND si.id = l.spend_item_id AND si.nature = 'opex')`;
+
 @Injectable()
 export class ContractsService {
   constructor(
@@ -240,7 +243,12 @@ export class ContractsService {
 
     const contractIds = items.map(i => i.id);
     const counts: Array<{ contract_id: string; c: string }> = contractIds.length
-      ? await mg.query(`SELECT contract_id, COUNT(*)::text as c FROM contract_spend_items WHERE tenant_id = app_current_tenant() AND contract_id = ANY($1) GROUP BY contract_id`, [contractIds])
+      ? await mg.query(
+          `SELECT l.contract_id, COUNT(*)::text as c FROM contract_spend_items l
+            WHERE l.tenant_id = app_current_tenant() AND l.contract_id = ANY($1) AND ${OPEX_LINK}
+            GROUP BY l.contract_id`,
+          [contractIds],
+        )
       : [];
     const countById = new Map<string, number>(counts.map((r) => [r.contract_id, Number(r.c)]));
 
@@ -290,7 +298,7 @@ export class ContractsService {
     const linked = await linksRepo.find({ where: { tenant_id: tenantId, contract_id: id } });
     const spendIds = linked.map(l => l.spend_item_id);
     const spendItems = spendIds.length
-      ? await mg.query(`SELECT id, product_name FROM spend_items WHERE tenant_id = $1 AND id = ANY($2)`, [tenantId, spendIds])
+      ? await mg.query(`SELECT id, product_name FROM spend_items WHERE tenant_id = $1 AND id = ANY($2) AND nature = 'opex'`, [tenantId, spendIds])
       : [];
     const links = await urlsRepo.find({ where: { tenant_id: tenantId, contract_id: id } });
     const attachments = await attachRepo.find({ where: { tenant_id: tenantId, contract_id: id } });
@@ -453,8 +461,9 @@ export class ContractsService {
     message: string,
   ) {
     if (ids.length === 0) return;
+    // `spend_items`: its OPEX lines only (`spend/budget-nature.ts`).
     const rows: Array<{ id: string }> = await mg.query(
-      `SELECT id FROM ${table} WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      `SELECT id FROM ${table} WHERE tenant_id = $1 AND id = ANY($2::uuid[])${table === 'spend_items' ? ` AND nature = 'opex'` : ''}`,
       [tenantId, ids],
     );
     if (rows.length !== ids.length) throw new BadRequestException(message);
@@ -467,7 +476,7 @@ export class ContractsService {
     const rows = await linksRepo.find({ where: { tenant_id: sessionTenant(), contract_id: contractId } });
     const ids = rows.map(r => r.spend_item_id);
     const items = ids.length
-      ? await mg.query(`SELECT id, product_name FROM spend_items WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [ids])
+      ? await mg.query(`SELECT id, product_name FROM spend_items WHERE tenant_id = app_current_tenant() AND id = ANY($1) AND nature = 'opex'`, [ids])
       : [];
     return { items };
   }
@@ -479,7 +488,11 @@ export class ContractsService {
     const tenantId = contract.tenant_id;
     const uniqueIds = Array.from(new Set((spendItemIds || []).filter(Boolean)));
     await this.assertIdsInTenant(mg, 'spend_items', tenantId, uniqueIds, 'One or more spend items not found.');
-    const existing = await repo.find({ where: { tenant_id: tenantId, contract_id: contract.id } });
+    // The contract's links to OPEX lines only: a link to a line of another nature is kept as it is.
+    const existing: Array<{ id: string; spend_item_id: string }> = await mg.query(
+      `SELECT l.id, l.spend_item_id FROM contract_spend_items l WHERE l.tenant_id = $1 AND l.contract_id = $2 AND ${OPEX_LINK}`,
+      [tenantId, contract.id],
+    );
     const toDelete = existing.filter(e => !uniqueIds.includes(e.spend_item_id));
     const existingSet = new Set(existing.map(e => e.spend_item_id));
     const toInsert = uniqueIds.filter(id => !existingSet.has(id)).map(id => repo.create({ tenant_id: tenantId, contract_id: contract.id, spend_item_id: id }));
@@ -936,6 +949,12 @@ export class ContractsService {
     const mg = opts?.manager ?? this.repo.manager;
     const linksRepo = mg.getRepository(ContractSpendItem);
     const contractRepo = mg.getRepository(Contract);
+    // The contracts of an OPEX line only (`spend/budget-nature.ts`): none for a line of another nature.
+    const [line] = await mg.query(
+      `SELECT 1 FROM spend_items WHERE tenant_id = app_current_tenant() AND id = $1 AND nature = 'opex'`,
+      [spendItemId],
+    );
+    if (!line) return { items: [] };
     const rows = await linksRepo.find({ where: { tenant_id: sessionTenant(), spend_item_id: spendItemId } });
     const ids = rows.map(r => r.contract_id);
     const items = ids.length ? await contractRepo.findBy({ tenant_id: sessionTenant(), id: In(ids) }) : [];
@@ -947,7 +966,7 @@ export class ContractsService {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(ContractSpendItem);
     const [spend]: Array<{ id: string; tenant_id: string }> = await mg.query(
-      `SELECT id, tenant_id FROM spend_items WHERE tenant_id = app_current_tenant() AND id = $1`,
+      `SELECT id, tenant_id FROM spend_items WHERE tenant_id = app_current_tenant() AND id = $1 AND nature = 'opex'`,
       [spendItemId],
     );
     if (!spend) throw new NotFoundException('Spend item not found.');

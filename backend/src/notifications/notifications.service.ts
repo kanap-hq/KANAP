@@ -225,11 +225,12 @@ export class NotificationsService {
   }
 
   private async resolveItemRef(itemType: ItemType, itemId: string, manager: import('typeorm').EntityManager): Promise<string | null> {
-    const tableMap: Record<string, { table: string; expression: string }> = {
+    const tableMap: Record<string, { table: string; expression: string; where?: string }> = {
       task: { table: 'tasks', expression: `'T-' || item_number::text` },
       request: { table: 'portfolio_requests', expression: `'REQ-' || item_number::text` },
       project: { table: 'portfolio_projects', expression: `'PRJ-' || item_number::text` },
-      opex: { table: 'spend_items', expression: `'OPX-' || item_number::text` },
+      // An OPEX line only (`spend/budget-nature.ts`): a line of another nature gets no OPX reference.
+      opex: { table: 'spend_items', expression: `'OPX-' || item_number::text`, where: ` AND nature = 'opex'` },
       capex: { table: 'capex_items', expression: `'CPX-' || item_number::text` },
       asset: { table: 'assets', expression: 'asset_reference' },
       application: { table: 'applications', expression: 'sequential_id' },
@@ -242,7 +243,7 @@ export class NotificationsService {
     if (!config) return null;
     try {
       const rows = await manager.query(
-        `SELECT ${config.expression} AS item_ref FROM ${config.table} WHERE id = $1 LIMIT 1`,
+        `SELECT ${config.expression} AS item_ref FROM ${config.table} WHERE id = $1${config.where ?? ''} LIMIT 1`,
         [itemId],
       );
       if (rows.length > 0 && rows[0].item_ref) {

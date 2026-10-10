@@ -5,6 +5,7 @@ import { SupplierContactLink, SupplierContactRole } from '../contacts/supplier-c
 import { ExternalContact } from '../contacts/external-contact.entity';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { Supplier } from './supplier.entity';
+import { natureAnd, type BudgetNature } from '../spend/budget-nature';
 
 /** The request's tenant and user; every statement filters on the tenant, every change is audited for the user. */
 export type SupplierContactsContext = {
@@ -15,12 +16,13 @@ export type SupplierContactsContext = {
 };
 
 // The item link tables a supplier contact propagates to, with the item table and its key.
-// Table names come only from here, never from a caller.
-const ITEM_LINKS = [
-  { links: 'spend_item_contacts', items: 'spend_items', itemColumn: 'spend_item_id' },
+// Table names come only from here, never from a caller. `nature`: the lines of `spend_items`
+// this entry covers (`spend/budget-nature.ts`); the CAPEX lines have their own entry.
+const ITEM_LINKS: ReadonlyArray<{ links: string; items: string; itemColumn: string; nature?: BudgetNature }> = [
+  { links: 'spend_item_contacts', items: 'spend_items', itemColumn: 'spend_item_id', nature: 'opex' },
   { links: 'capex_item_contacts', items: 'capex_items', itemColumn: 'capex_item_id' },
   { links: 'contract_contacts', items: 'contracts', itemColumn: 'contract_id' },
-] as const;
+];
 
 /** Rows of an INSERT … RETURNING (rows) or a DELETE … RETURNING (TypeORM answers [rows, count]). */
 function returnedRows<T>(result: unknown): T[] {
@@ -145,7 +147,7 @@ export class SupplierContactsService {
         `INSERT INTO ${t.links} (tenant_id, ${t.itemColumn}, contact_id, role, origin)
          SELECT $1::uuid, i.id, $3::uuid, $4::supplier_contact_role, 'supplier'
            FROM ${t.items} i
-          WHERE i.tenant_id = $1 AND i.supplier_id = $2
+          WHERE i.tenant_id = $1 AND i.supplier_id = $2${natureAnd('i', t.nature)}
          ON CONFLICT (tenant_id, ${t.itemColumn}, contact_id, role) DO NOTHING
          RETURNING *`,
         [ctx.tenantId, supplierId, contactId, role],
@@ -165,7 +167,7 @@ export class SupplierContactsService {
       const removed = returnedRows<{ id: string }>(await mg.query(
         `DELETE FROM ${t.links} l
           WHERE l.tenant_id = $1 AND l.contact_id = $2 AND l.role = $3::supplier_contact_role AND l.origin = 'supplier'
-            AND l.${t.itemColumn} IN (SELECT i.id FROM ${t.items} i WHERE i.tenant_id = $1 AND i.supplier_id = $4)
+            AND l.${t.itemColumn} IN (SELECT i.id FROM ${t.items} i WHERE i.tenant_id = $1 AND i.supplier_id = $4${natureAnd('i', t.nature)})
          RETURNING l.*`,
         [ctx.tenantId, contactId, role, supplierId],
       ));

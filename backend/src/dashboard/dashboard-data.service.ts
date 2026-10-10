@@ -518,7 +518,7 @@ export class DashboardDataService {
         GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (NOW() - t.updated_at)) / 86400))::int AS stale_days
       FROM tasks t
       LEFT JOIN users u ON u.id = t.assignee_user_id AND u.tenant_id = t.tenant_id
-      LEFT JOIN spend_items si ON t.related_object_type = 'spend_item' AND t.related_object_id = si.id AND si.tenant_id = t.tenant_id
+      LEFT JOIN spend_items si ON t.related_object_type = 'spend_item' AND t.related_object_id = si.id AND si.tenant_id = t.tenant_id AND si.nature = 'opex'
       LEFT JOIN contracts c ON t.related_object_type = 'contract' AND t.related_object_id = c.id AND c.tenant_id = t.tenant_id
       LEFT JOIN capex_items ci ON t.related_object_type = 'capex_item' AND t.related_object_id = ci.id AND ci.tenant_id = t.tenant_id
       LEFT JOIN portfolio_projects pp ON t.related_object_type = 'project' AND t.related_object_id = pp.id AND pp.tenant_id = t.tenant_id
