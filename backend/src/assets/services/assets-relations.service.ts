@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { linkedLineOf } from '../../spend/budget-nature';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Asset } from '../asset.entity';
@@ -183,9 +184,9 @@ export class AssetsRelationsService extends AssetsBaseService {
 
     // The links to OPEX lines only (`spend/budget-nature.ts`): the asset's links to lines of
     // another nature are neither listed, nor replaced, nor removed here.
-    const opexLink = `EXISTS (SELECT 1 FROM spend_items si WHERE si.tenant_id = l.tenant_id AND si.id = l.spend_item_id AND si.nature = 'opex')`;
+    const opexLink = linkedLineOf('l.tenant_id', 'l.spend_item_id', 'opex');
     const existing: Array<{ spend_item_id: string }> = await mg.query(
-      `SELECT l.spend_item_id FROM asset_spend_items l WHERE l.asset_id = $1 AND l.tenant_id = $2 AND ${opexLink}`,
+      `SELECT l.spend_item_id FROM asset_spend_items l WHERE l.asset_id = $1 AND l.tenant_id = $2${opexLink}`,
       [assetId, asset.tenant_id],
     );
     const before = existing.map((r) => r.spend_item_id);
@@ -203,7 +204,7 @@ export class AssetsRelationsService extends AssetsBaseService {
       }
     }
 
-    await mg.query(`DELETE FROM asset_spend_items l WHERE l.asset_id = $1 AND l.tenant_id = $2 AND ${opexLink}`, [assetId, asset.tenant_id]);
+    await mg.query(`DELETE FROM asset_spend_items l WHERE l.asset_id = $1 AND l.tenant_id = $2${opexLink}`, [assetId, asset.tenant_id]);
     if (normalizedIds.length > 0) {
       const entities = normalizedIds.map((id) =>
         repo.create({ tenant_id: asset.tenant_id, asset_id: assetId, spend_item_id: id }),

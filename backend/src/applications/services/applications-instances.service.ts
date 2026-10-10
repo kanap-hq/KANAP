@@ -6,7 +6,7 @@ import { PortfolioProject } from '../../portfolio/portfolio-project.entity';
 import { AuditService } from '../../audit/audit.service';
 import { ApplicationsBaseService, ServiceOpts } from './applications-base.service';
 import { projectParticipantCondition } from '../../auth/business-contributor-scope';
-import { natureAnd, type BudgetNature } from '../../spend/budget-nature';
+import { assertScopeNatures, linkedLineOf, natureAnd, type BudgetNature } from '../../spend/budget-nature';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -62,11 +62,11 @@ const LINKED_ITEMS: Record<LinkedItemKind, LinkedItemTable> = {
   },
 };
 
+assertScopeNatures('applications LINKED_ITEMS', LINKED_ITEMS, (t) => t.items);
+
 /** ` AND` the link `alias` names a line of the entry's nature; empty for an entry without one. */
 function linkedNature(t: LinkedItemTable, alias: string): string {
-  return t.nature
-    ? ` AND EXISTS (SELECT 1 FROM ${t.items} i WHERE i.tenant_id = ${alias}.tenant_id AND i.id = ${alias}.${t.itemFk}${natureAnd('i', t.nature)})`
-    : '';
+  return linkedLineOf(`${alias}.tenant_id`, `${alias}.${t.itemFk}`, t.nature, t.items);
 }
 
 /**

@@ -1,4 +1,5 @@
 import { BadRequestException, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
+import { linkedLineOf } from '../../spend/budget-nature';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { PortfolioProject, ProjectStatus, ProjectOrigin } from '../portfolio-project.entity';
@@ -1291,8 +1292,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     // The request's links to OPEX lines only (`spend/budget-nature.ts`).
     const opexItems = await mg.query(
       `SELECT ro.opex_id FROM portfolio_request_opex ro
-        WHERE ro.request_id = $1
-          AND EXISTS (SELECT 1 FROM spend_items s WHERE s.tenant_id = ro.tenant_id AND s.id = ro.opex_id AND s.nature = 'opex')`,
+        WHERE ro.request_id = $1${linkedLineOf('ro.tenant_id', 'ro.opex_id', 'opex')}`,
       [requestId]
     );
 

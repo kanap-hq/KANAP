@@ -1,6 +1,6 @@
 import { EntityManager } from 'typeorm';
 import { lockBudgetLine as lockLine } from '../spend/budget-locks';
-import { natureAnd, type BudgetNature } from '../spend/budget-nature';
+import { assertScopeNatures, linkedLineOf, natureAnd, type BudgetNature } from '../spend/budget-nature';
 
 /**
  * Links between projects and OPEX / CAPEX lines (portfolio_project_opex,
@@ -18,6 +18,7 @@ const TABLES: Record<'opex' | 'capex', { table: string; itemFk: string; items: s
   opex: { table: 'portfolio_project_opex', itemFk: 'opex_id', items: 'spend_items', nature: 'opex' },
   capex: { table: 'portfolio_project_capex', itemFk: 'capex_id', items: 'capex_items' },
 };
+assertScopeNatures('project-budget-links', TABLES, (t) => t.items);
 
 export type ProjectBudgetLinkKind = keyof typeof TABLES;
 
@@ -65,12 +66,10 @@ export async function insertProjectBudgetLinks(
 ): Promise<void> {
   if (links.length === 0) return;
   const t = TABLES[kind];
-  const ofNature = t.nature
-    ? `\n     WHERE EXISTS (SELECT 1 FROM ${t.items} i WHERE i.tenant_id = $1 AND i.id = l.item_id${natureAnd('i', t.nature)})`
-    : '';
   await manager.query(
     `INSERT INTO ${t.table} (tenant_id, project_id, ${t.itemFk})
-     SELECT $1, l.project_id, l.item_id FROM unnest($2::uuid[], $3::uuid[]) AS l(project_id, item_id)${ofNature}
+     SELECT $1, l.project_id, l.item_id FROM unnest($2::uuid[], $3::uuid[]) AS l(project_id, item_id)
+      WHERE true${linkedLineOf('$1', 'l.item_id', t.nature, t.items)}
      ON CONFLICT (project_id, ${t.itemFk}) DO NOTHING`,
     [tenantId, links.map((l) => l.projectId), links.map((l) => l.itemId)],
   );

@@ -5,7 +5,7 @@ import { SupplierContactLink, SupplierContactRole } from '../contacts/supplier-c
 import { ExternalContact } from '../contacts/external-contact.entity';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { Supplier } from './supplier.entity';
-import { natureAnd, type BudgetNature } from '../spend/budget-nature';
+import { assertScopeNatures, natureAnd, type BudgetNature } from '../spend/budget-nature';
 
 /** The request's tenant and user; every statement filters on the tenant, every change is audited for the user. */
 export type SupplierContactsContext = {
@@ -23,6 +23,7 @@ const ITEM_LINKS: ReadonlyArray<{ links: string; items: string; itemColumn: stri
   { links: 'capex_item_contacts', items: 'capex_items', itemColumn: 'capex_item_id' },
   { links: 'contract_contacts', items: 'contracts', itemColumn: 'contract_id' },
 ];
+assertScopeNatures('supplier-contacts ITEM_LINKS', ITEM_LINKS, (t) => t.items);
 
 /** Rows of an INSERT … RETURNING (rows) or a DELETE … RETURNING (TypeORM answers [rows, count]). */
 function returnedRows<T>(result: unknown): T[] {

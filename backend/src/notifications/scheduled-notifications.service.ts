@@ -17,7 +17,7 @@ import { type EmailBranding, resolveEmailBranding, getDefaultEmailBranding } fro
 import { ScheduledTasksService } from '../admin/scheduled-tasks/scheduled-tasks.service';
 import { resolveEmailLocale } from '../i18n/email-i18n';
 import { calendarDaysUntil, isExpiryReminderDay, utcDateYmd } from './expiry-reminder-schedule';
-import { natureAnd, type BudgetNature } from '../spend/budget-nature';
+import { assertScopeNatures, natureAnd, type BudgetNature } from '../spend/budget-nature';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -29,6 +29,7 @@ const BUDGET_ITEM_TABLES: Record<'opex' | 'capex', { table: string; name: string
   opex: { table: 'spend_items', name: 'product_name', nature: 'opex' },
   capex: { table: 'capex_items', name: 'description' },
 };
+assertScopeNatures('scheduled-notifications', BUDGET_ITEM_TABLES, (t) => t.table);
 
 @Injectable()
 export class ScheduledNotificationsService implements OnModuleInit {

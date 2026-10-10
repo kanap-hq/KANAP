@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { linkedLineOf } from '../spend/budget-nature';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, DeepPartial, EntityManager, In, Repository, Raw } from 'typeorm';
 import { Contract } from './contract.entity';
@@ -64,7 +65,7 @@ type ListItem = Contract & {
 };
 
 /** A contract link `l` to an OPEX line (`spend/budget-nature.ts`): the OPEX side lists, counts and replaces those only. */
-const OPEX_LINK = `EXISTS (SELECT 1 FROM spend_items si WHERE si.tenant_id = l.tenant_id AND si.id = l.spend_item_id AND si.nature = 'opex')`;
+const OPEX_LINK = linkedLineOf('l.tenant_id', 'l.spend_item_id', 'opex');
 
 @Injectable()
 export class ContractsService {
@@ -245,7 +246,7 @@ export class ContractsService {
     const counts: Array<{ contract_id: string; c: string }> = contractIds.length
       ? await mg.query(
           `SELECT l.contract_id, COUNT(*)::text as c FROM contract_spend_items l
-            WHERE l.tenant_id = app_current_tenant() AND l.contract_id = ANY($1) AND ${OPEX_LINK}
+            WHERE l.tenant_id = app_current_tenant() AND l.contract_id = ANY($1)${OPEX_LINK}
             GROUP BY l.contract_id`,
           [contractIds],
         )
@@ -490,7 +491,7 @@ export class ContractsService {
     await this.assertIdsInTenant(mg, 'spend_items', tenantId, uniqueIds, 'One or more spend items not found.');
     // The contract's links to OPEX lines only: a link to a line of another nature is kept as it is.
     const existing: Array<{ id: string; spend_item_id: string }> = await mg.query(
-      `SELECT l.id, l.spend_item_id FROM contract_spend_items l WHERE l.tenant_id = $1 AND l.contract_id = $2 AND ${OPEX_LINK}`,
+      `SELECT l.id, l.spend_item_id FROM contract_spend_items l WHERE l.tenant_id = $1 AND l.contract_id = $2${OPEX_LINK}`,
       [tenantId, contract.id],
     );
     const toDelete = existing.filter(e => !uniqueIds.includes(e.spend_item_id));

@@ -2,7 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { AmountScope } from './amounts-write.util';
-import { natureAnd, type BudgetNature } from './budget-nature';
+import { assertScopeNatures, natureAnd, type BudgetNature } from './budget-nature';
 
 /**
  * Applications linked to an OPEX or CAPEX line, from the line's side: list and
@@ -22,6 +22,7 @@ const SCOPES: Record<AmountScope, { links: string; itemFk: string; items: string
   opex: { links: 'application_spend_items', itemFk: 'spend_item_id', items: 'spend_items', itemNotFound: 'Spend item not found', nature: 'opex' },
   capex: { links: 'application_capex_items', itemFk: 'capex_item_id', items: 'capex_items', itemNotFound: 'CAPEX item not found' },
 };
+assertScopeNatures('item-applications', SCOPES, (t) => t.items);
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const APPLICATIONS_NOT_FOUND = 'One or more applications were not found.';

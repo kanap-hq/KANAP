@@ -1,7 +1,7 @@
 import { EntityManager } from 'typeorm';
 import { AuthorColumns, RecordChange, RecordMeta, counterWriterSql, recordChange } from '../common/record-meta';
 import type { ItemWriteScope } from './item-write.util';
-import { natureAnd, type BudgetNature } from './budget-nature';
+import { assertScopeNatures, natureAnd, type BudgetNature } from './budget-nature';
 
 /**
  * The meta of an OPEX or CAPEX line (plan planning/perf-scale, lot 3G; contract
@@ -52,6 +52,7 @@ const TABLES: Record<ItemWriteScope, { items: string; versions: string; itemFk: 
   opex: { items: 'spend_items', versions: 'spend_versions', itemFk: 'spend_item_id', rounds: 'spend_round_inputs', nature: 'opex' },
   capex: { items: 'capex_items', versions: 'capex_versions', itemFk: 'capex_item_id', rounds: 'capex_round_inputs' },
 };
+assertScopeNatures('item-meta', TABLES, (t) => t.items);
 
 /** The audit rows that may explain a version's last change, written at or after it; the first one wins. */
 function versionWriterSql(t: (typeof TABLES)[ItemWriteScope]): string {

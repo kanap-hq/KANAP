@@ -1,7 +1,7 @@
 import { ConflictException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import type { AmountScope } from './amounts-write.util';
-import { natureAnd, type BudgetNature } from './budget-nature';
+import { assertScopeNatures, linkedLineOf, natureAnd, type BudgetNature } from './budget-nature';
 
 /**
  * The one lock order of every budget writer, OPEX and CAPEX alike (plan
@@ -53,12 +53,11 @@ const TABLES: Record<AmountScope, { items: string; versions: string; itemFk: str
   opex: { items: 'spend_items', versions: 'spend_versions', itemFk: 'spend_item_id', nature: 'opex' },
   capex: { items: 'capex_items', versions: 'capex_versions', itemFk: 'capex_item_id' },
 };
+assertScopeNatures('budget-locks', TABLES, (t) => t.items);
 
 /** ` AND` a row of the entry's versions table belongs to a line of the entry's nature; empty for an entry without one. */
 function versionNature(t: (typeof TABLES)[AmountScope]): string {
-  return t.nature
-    ? ` AND EXISTS (SELECT 1 FROM ${t.items} i WHERE i.tenant_id = ${t.versions}.tenant_id AND i.id = ${t.versions}.${t.itemFk}${natureAnd('i', t.nature)})`
-    : '';
+  return linkedLineOf(`${t.versions}.tenant_id`, `${t.versions}.${t.itemFk}`, t.nature, t.items);
 }
 
 /** The children of a line a route can address by their own id. */

@@ -3,7 +3,7 @@ import { AnalyticsAxisInfo, analyticsAxisSubject, axisAppliesTo, loadAnalyticsAx
 import { toCents } from '../../common/amount';
 import { budgetColumnName, readBudgetColumns } from '../../budget-columns/budget-columns.util';
 import { loadItemAnalyticsValues } from '../item-analytics.util';
-import { natureAnd, type BudgetNature } from '../budget-nature';
+import { assertScopeNatures, natureAnd, type BudgetNature } from '../budget-nature';
 import { AMOUNT_MEASURES } from '../amounts-write.util';
 import { columnOfMeasure } from './columns';
 import {
@@ -52,6 +52,7 @@ const SCOPE = {
     analytics: 'capex' as const,
   },
 } as const;
+assertScopeNatures('budget-file load', SCOPE, (t) => t.items);
 
 const ITEM_COLUMNS = (scope: BudgetFileScope) => {
   const t = SCOPE[scope];

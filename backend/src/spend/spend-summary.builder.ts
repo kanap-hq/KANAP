@@ -18,7 +18,7 @@ import { costCenterLabel, loadCostCenterTree } from '../cost-centers/cost-center
 import { analyticsFieldKey } from '../analytics/analytics-axes.util';
 import { Decimal } from '../common/decimal';
 import { naturalCompare } from '../common/list-engine/sql-fragments';
-import { natureAnd, type BudgetNature } from './budget-nature';
+import { assertScopeNatures, natureAnd, type BudgetNature } from './budget-nature';
 
 /**
  * The summary rows of the OPEX and CAPEX lists, built once for both item types.
@@ -158,6 +158,7 @@ export const SUMMARY_SCOPES: Record<SummaryScope, SummaryScopeConfig> = {
     ],
   },
 };
+assertScopeNatures('SUMMARY_SCOPES', SUMMARY_SCOPES, (scope) => scope.itemTable);
 
 type AllocationShareLike = { company_id: string | null; department_id: string | null; allocation_pct: number };
 type AllocationLike = { resolvedMethod?: string | null; shares?: AllocationShareLike[]; error?: string | null };

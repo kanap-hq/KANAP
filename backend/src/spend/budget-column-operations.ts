@@ -40,7 +40,7 @@ import { ColumnResult, computeColumn, CostingInputError, CostLine, UNIT_PRICE_LI
 import { activeMonths } from './spread.util';
 import { ensureBudgetVersion } from './budget-version-ensure';
 import { lockBudgetLines, lockBudgetVersions, lockTenantBudgetOperations } from './budget-locks';
-import { natureAnd, type BudgetNature } from './budget-nature';
+import { assertScopeNatures, natureAnd, type BudgetNature } from './budget-nature';
 
 /**
  * Budget column operations (copy a column to another year or column, clear a
@@ -64,6 +64,7 @@ const SCOPES: Record<AmountScope, { items: string; itemFk: string; versions: str
   opex: { items: 'spend_items', itemFk: 'spend_item_id', versions: 'spend_versions', itemName: 'product_name', nature: 'opex' },
   capex: { items: 'capex_items', itemFk: 'capex_item_id', versions: 'capex_versions', itemName: 'description' },
 };
+assertScopeNatures('budget-column-operations', SCOPES, (t) => t.items);
 
 export type BudgetOperationDeps = {
   manager: EntityManager;
