@@ -26,7 +26,7 @@ import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-ti
 import { AuditService } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
 import { analyzeAfterLargeImport } from './budget-import-statistics';
-import { BudgetFileService, canCreateSuppliers } from './budget-file/budget-file.service';
+import { BudgetFileService, budgetFileNatures, canCreateSuppliers } from './budget-file/budget-file.service';
 import { exportListQuery } from './budget-file/export-file';
 import { importAnalyzeTables } from './budget-file/import-file';
 import { BudgetFileSizeInterceptor, budgetFileMulterOptions } from './budget-file/upload';
@@ -182,6 +182,8 @@ export class CapexItemsController {
       manager: ctx.manager as EntityManager,
       tenantId: ctx.tenantId,
       userId: ctx.userId || null,
+      // A file may mix both natures: the lines of a nature need the Admin level on it.
+      natures: budgetFileNatures('capex', ctx),
     }, {
       language,
       dateOrder,
@@ -213,6 +215,7 @@ export class CapexItemsController {
       manager: ctx.manager as EntityManager,
       tenantId: ctx.tenantId,
       userId: ctx.userId || null,
+      natures: budgetFileNatures('capex', ctx),
     }, {
       language,
       dateOrder,

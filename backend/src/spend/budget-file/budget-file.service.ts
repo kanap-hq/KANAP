@@ -22,6 +22,18 @@ export function canCreateSuppliers(ctx: CallerRights): boolean {
   return (LEVEL_RANK[ctx?.permissions?.suppliers ?? ''] ?? 0) >= LEVEL_RANK.member;
 }
 
+/**
+ * The natures whose lines the caller may import, the Admin level on each (`opex:admin`,
+ * `capex:admin`): the route's (its guard asked for it), and the other one when the caller holds
+ * it too. A file that mixes both natures is loaded only by a caller who holds both; otherwise
+ * the lines of the other nature are refused, each with the right it needs.
+ */
+export function budgetFileNatures(scope: BudgetFileScope, ctx: CallerRights): BudgetNature[] {
+  return BUDGET_NATURES.filter((nature) => nature === scope
+    || !!ctx?.isAdmin
+    || (LEVEL_RANK[ctx?.permissions?.[nature] ?? ''] ?? 0) >= LEVEL_RANK.admin);
+}
+
 export interface BudgetFileCaller {
   manager: EntityManager;
   tenantId: string;
