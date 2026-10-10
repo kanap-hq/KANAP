@@ -218,7 +218,7 @@ export class BudgetLineNature1853950000000 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     const [column] = await queryRunner.query(
-      `SELECT 1 FROM information_schema.columns WHERE table_name = 'spend_items' AND column_name = 'nature'`,
+      `SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'spend_items' AND column_name = 'nature'`,
     );
     if (column) {
       const others = await withoutRowSecurity(queryRunner, ['spend_items'], async () => {
