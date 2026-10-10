@@ -34,7 +34,7 @@ Par défaut, KANAP utilise l'effectif des sociétés définies dans les données
 
 Vous pouvez modifier cette règle par défaut dans Administration, Méthode de ventilation par défaut. La règle définie s'appliquera année par année sur les entrées qui n'auront pas encore été personnalisées (vous ne perdez pas le travail déjà effectué).
 
-![La méthode de ventilation par défaut : exercice, sociétés ciblées, critère et répartition calculée](/screenshots/blog/chargeback-default-method.png)
+![La méthode de ventilation par défaut : exercice, sociétés ciblées, critère et répartition calculée](/screenshots/blog/chargeback-default-method-2026-10.png)
 
 ### Gestion au niveau du poste
 
@@ -42,7 +42,7 @@ Chaque poste de dépense porte sa propre règle de ventilation, pour chaque ann�
 
 L'onglet **Ventilations** d'un poste affiche le résultat en temps réel. Ici, la maintenance SAP de 280 000 EUR se répartit à l'effectif : 58,54 % pour Fromage & Co SA, 19,51 % pour Kaasmeester BV, et ainsi de suite jusqu'à 100 %.
 
-![L'onglet Ventilations : méthode, critère, pourcentage et montant par société](/screenshots/blog/chargeback-allocations.png)
+![L'onglet Ventilations : méthode, critère, pourcentage et montant par société](/screenshots/blog/chargeback-allocations-2026-10b.png)
 
 Toutes les clés de répartition sont possibles :
 
@@ -67,7 +67,7 @@ Une fois les règles en place, deux rapports permettent d'explorer toutes les fa
 
 Le premier répond à « comment se répartit la dépense IT entre nos sociétés ? ». Il affiche le total consolidé, la part de chaque société, les montants payés et consommés, puis les flux intersociétés.
 
-![La refacturation globale : total, parts par société et flux intersociétés](/screenshots/blog/chargeback-global.png)
+![La refacturation globale : total, parts par société et flux intersociétés](/screenshots/blog/chargeback-global-2026-10.png)
 
 Les KPI y ajoutent deux métriques clés de tout budget IT :
 
@@ -78,7 +78,7 @@ Les KPI y ajoutent deux métriques clés de tout budget IT :
 
 Ce rapport permet de descendre d'un niveau et d'analyser le détail au niveau d'une société. On y retrouve les coûts IT par département, les postes de refacturation (pour répondre à une filiale : voilà précisément les services pour lesquels on vous facture), le détail des flux entrants et sortants, et un rappel des KPI. C'est le rapport à transmettre aux filiales avec leur facture annuelle.
 
-![La refacturation par société : totaux par département, postes détaillés et KPI](/screenshots/blog/chargeback-company.png)
+![La refacturation par société : totaux par département, postes détaillés et KPI](/screenshots/blog/chargeback-company-2026-10.png)
 
 Les deux rapports sont entièrement paramétrables (année, société, rubriques) et s'exportent en CSV, en PNG ou en PDF. Ils peuvent aussi être présentés directement en revue budgétaire.
 

@@ -29,7 +29,7 @@ It is also the base of next year's budget: a careful landing avoids rolling into
 
 Nobody reviews two hundred lines in one pass. The OPEX list handles like a spreadsheet: a quick filter at the top, checkbox filters on every column. Paying company, Account, Cost center, Allocation, Currency, IT owner, Business owner, analytics dimensions: tick a few boxes, the list narrows, and the totals row recalculates over the selection.
 
-![The filtered OPEX list, with the totals row following the selection](/screenshots/blog/opex-list-filters.png)
+![The filtered OPEX list, with the totals row following the selection](/screenshots/blog/opex-list-filters-2026-10.png)
 
 The review then splits up naturally: services one morning, licences the next day, one subsidiary's items after that. Filters are kept in the URL; open a line, come back, the selection has not moved.
 
@@ -39,7 +39,7 @@ In a hurry? Sort by amount and work through the 20 largest lines, which usually 
 
 Open the first item of the selection, **Budget** tab. The previous and next arrows read "3 of 42" and follow your filtered list, in its sort order. You move line by line and correct the landing only where reality diverged: a renegotiated contract, a delayed project, cloud usage above plan.
 
-![An item's Budget tab, with navigation through the selection](/screenshots/blog/opex-budget-tab.png)
+![An item's Budget tab, with navigation through the selection](/screenshots/blog/opex-budget-tab-2026-10b.png)
 
 For lines that deserve better than an annual amount, the Budget tab offers a **Monthly** mode and a "Spread an amount" helper, flat or 4-4-5.
 
@@ -49,7 +49,7 @@ For lines that deserve better than an annual amount, the Budget tab offers a **M
 
 For contractors, a monthly flat fee or per-unit licences, an annual amount says little. In the Budget tab, "Quantity and price" breaks the amount into lines: a quantity, a unit (people, days or pieces), a unit price and a period.
 
-![A contractor item built from quantity × price: one person full time at €880 a day, 1 FTE over the year](/screenshots/blog/budget-item-lines.png)
+![A contractor item built from quantity × price: one person full time at €880 a day, 1 FTE over the year](/screenshots/blog/budget-item-lines-2026-10b.png)
 
 Two consultants at €650 a day, full time from March to December: KANAP computes each month from the working days in the calendar of the paying company's country, public holidays excluded. If the assignment ends in October or the daily rate was renegotiated, change the date or the price and the landing recalculates. No more redoing the multiplication by hand.
 
@@ -69,7 +69,7 @@ These hand-entered amounts are safe: part 2's automatic copy only fills empty ce
 
 KANAP handles multi-currency budgets, but set them up beforehand. In Budget management → Administration → **Currencies**, define the reporting currency, the default OPEX and CAPEX currencies and the list of allowed currencies. FX rates sync automatically per fiscal year, and they freeze when you freeze the default budget column. Each item keeps its currency; totals and reports convert to the reporting currency.
 
-![Currency settings: reporting currency, allowed currencies and FX rates](/screenshots/blog/currency-settings.png)
+![Currency settings: reporting currency, allowed currencies and FX rates](/screenshots/blog/currency-settings-2026-10.png)
 
 ## What about CAPEX?
 

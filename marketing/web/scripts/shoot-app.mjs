@@ -14,8 +14,8 @@
  *   node scripts/shoot-app.mjs --inspect-fixed        # debug floating elements
  *
  * Output defaults to 2000x1050 CSS px at deviceScaleFactor 2 (4000x2100 PNG).
- * Blog standard: --width 1440 --height 900 --scale 1 --lang en (1440 px PNG,
- * English UI whatever the article language).
+ * Site and blog standard (Fried, 2026-10-10): --width 1920 --height 1080 --scale 1
+ * --lang en (1920 x 1080 PNG, English UI whatever the page language).
  *
  * Requirements:
  *   - chromium at /usr/bin/chromium (override with CHROMIUM_PATH)
@@ -39,7 +39,7 @@ const OUT_DIR = resolve(flag('out', 'public/screenshots/blog'));
 const THEME = flag('theme', 'light');
 const WIDTH = Number(flag('width', 2000));
 const HEIGHT = Number(flag('height', 1050));
-const SCALE = Number(flag('scale', 2)); // 1 for the blog standard: 1440 x 900 window, 1440 px PNG
+const SCALE = Number(flag('scale', 2)); // 1 for the site standard: 1920 x 1080 window, 1920 px PNG
 const EMAIL = process.env.APP_EMAIL;
 const PASSWORD = process.env.APP_PASSWORD;
 
@@ -97,10 +97,11 @@ const pickSelect = async (page, label, option, nth = 1) => {
   if (shown !== option) console.warn(`select '${label}' shows '${shown}', not '${option}'`);
 };
 
-// Hide the filter controls of the given analytics dimensions (label + field).
+// Hide the controls of the given analytics dimensions (label + field), in report
+// filters and in the Properties panel.
 const hideControls = (page, labels) =>
   page.evaluate((labels) => {
-    for (const el of document.querySelectorAll('main label, main p, main span, main div')) {
+    for (const el of document.querySelectorAll('label, p, span, div')) {
       if (el.children.length || !labels.includes(el.textContent?.replace('*', '').trim())) continue;
       let box = el;
       while (box.parentElement && !box.querySelector('.MuiFormControl-root, .MuiSelect-select')) box = box.parentElement;
@@ -108,16 +109,34 @@ const hideControls = (page, labels) =>
     }
   }, labels);
 
-// Collapse the item Properties side panel. The state is kept in localStorage
-// (this browser only), so it may already be closed by an earlier shot.
-const closeProperties = async (page) => {
+// Open the item Properties side panel and leave out the fields of --hide
+// (local test dimensions). The open state is kept in localStorage (this
+// browser only), so it may already be open from an earlier shot.
+const openProperties = async (page) => {
   const close = 'button[aria-label="Close properties"], button[aria-label="Fermer les propriétés"]';
   const open = 'button[aria-label="Open properties"], button[aria-label="Ouvrir les propriétés"]';
   await page.waitForSelector(`${close}, ${open}`, { timeout: 30000 });
-  if (await page.$(close)) {
-    await page.click(close);
+  if (await page.$(open)) {
+    await page.click(open);
     await sleep(800);
   }
+  if (!HIDDEN_DIMENSIONS.length) return;
+  // Each property is a label (.kanap-field-label, with a "*" when required) and
+  // its field, side by side in one row: hide the row.
+  // Dimension fields load after the others: wait until one of them is there.
+  await page
+    .waitForFunction(
+      (labels) => [...document.querySelectorAll('aside .kanap-field-label')].some((el) => labels.includes(el.textContent?.replace('*', '').trim())),
+      { timeout: 20000 },
+      HIDDEN_DIMENSIONS,
+    )
+    .catch(() => {});
+  await sleep(500);
+  await page.evaluate((labels) => {
+    for (const el of document.querySelectorAll('aside .kanap-field-label')) {
+      if (labels.includes(el.textContent?.replace('*', '').trim())) el.parentElement.style.display = 'none';
+    }
+  }, HIDDEN_DIMENSIONS);
 };
 
 // Reports draw once their query answers: wait for a table row or a chart.
@@ -199,7 +218,7 @@ const PAGES = {
     prepare: async (page) => {
       const sel = 'button[aria-label="Quantité et prix"], button[aria-label="Quantity and price"]';
       await page.waitForSelector(sel, { timeout: 30000 });
-      await closeProperties(page); // keeps the analytics dimensions out of the shot
+      await openProperties(page);
       await page.click(sel);
       await page.mouse.move(700, 300); // drop the button tooltip
       await sleep(2000);
@@ -277,7 +296,36 @@ const PAGES = {
       await sleep(1500); // let the chart redraw
     },
   },
-  // Budget articles (October 2026), blog standard 1440 x 900, English UI.
+  // Budget feature page (October 2026): --out public/screenshots.
+  'budget-opex-grid': {
+    path: '/ops/opex',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      // Same columns as opex-list-filters, minus Task, so the 2026 amounts and their total show.
+      await clickText(page, 'button', 'Choose columns');
+      await page.waitForSelector('.MuiPopover-paper', { timeout: 10000 });
+      for (const label of ['Paying company', 'Contract', 'Allocation', 'Task']) await clickText(page, '.MuiPopover-paper label', label);
+      await page.keyboard.press('Escape');
+      await page.waitForFunction(
+        () => /\d/.test(document.querySelector('.ag-floating-bottom .ag-cell[col-id="yBudget"]')?.textContent || ''),
+        { timeout: 30000 },
+      );
+      await sleep(1000);
+    },
+  },
+  'budget-top-items': {
+    path: '/ops/reports/top-opex',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForReport(page);
+      await pickSelect(page, 'Chart type', 'Pie chart');
+      await hideControls(page, HIDDEN_DIMENSIONS);
+      await page.waitForSelector('.ag-charts-wrapper canvas', { timeout: 20000 }).catch(() => {});
+      await sleep(1500);
+    },
+  },
+  // Budget articles (October 2026).
   'opex-list-filters': {
     path: '/ops/opex',
     waitFor: 'main',
@@ -318,7 +366,7 @@ const PAGES = {
     )}`,
     waitFor: 'main',
     async prepare(page) {
-      await closeProperties(page);
+      await openProperties(page);
       await page.waitForFunction(() => / of \d+/.test(document.querySelector('main')?.innerText || ''), { timeout: 20000 });
       await page.waitForSelector('.ag-charts-wrapper canvas', { timeout: 20000 }).catch(() => {});
     },
@@ -373,9 +421,6 @@ const PAGES = {
       await hideControls(page, HIDDEN_DIMENSIONS);
       await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('Expected landing (2025)'), { timeout: 30000 });
       await sleep(1500);
-      // Chart and the top of the table; the selection reads in the chart title.
-      await page.evaluate(() => document.querySelector('.ag-root-wrapper')?.scrollIntoView({ block: 'end' }));
-      await sleep(800);
     },
   },
   'cost-per-fte': {
@@ -390,9 +435,6 @@ const PAGES = {
       await hideControls(page, HIDDEN_DIMENSIONS);
       await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('Expected landing 2026'), { timeout: 30000 });
       await sleep(1500);
-      // The table sits under the chart: bring it up, the chart keeps the top.
-      await page.evaluate(() => document.querySelector('.ag-root-wrapper')?.scrollIntoView({ block: 'end' }));
-      await sleep(800);
     },
   },
   'chargeback-default-method': {
@@ -404,7 +446,7 @@ const PAGES = {
     path: `/ops/opex/${ALLOC_ITEM_ID}/allocations?year=2026`,
     waitFor: 'main',
     async prepare(page) {
-      await closeProperties(page);
+      await openProperties(page);
       await page.waitForFunction(() => /100(\.00)?%/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
     },
   },

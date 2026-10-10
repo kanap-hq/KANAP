@@ -19,7 +19,7 @@ The budget is built; it still has to be approved. KANAP makes the presentation e
 
 The Reporting section offers eleven preconfigured reports, each with a summary table, a chart and exports. Nothing to build: you choose, you run. A line puzzles you? In the top reports, an item's name opens it in a new tab; in the grouped reports, a group's name opens the list of the items behind it.
 
-![The preconfigured budget reports](/screenshots/blog/reporting-landing.png)
+![The preconfigured budget reports](/screenshots/blog/reporting-landing-2026-10.png)
 
 ## Where do we land, what goes up?
 
@@ -27,7 +27,7 @@ The Reporting section offers eleven preconfigured reports, each with a summary t
 
 "Top increase / decrease" then names the lines that explain the gap. Often the most interesting slide of the deck.
 
-![The same report a year earlier: the 10 largest OPEX increases between the 2025 landing and the 2026 budget](/screenshots/blog/top-opex-increase.png)
+![The same report a year earlier: the 10 largest OPEX increases between the 2025 landing and the 2026 budget](/screenshots/blog/top-opex-increase-2026-10.png)
 
 Finally, "Top items" shows at a glance the largest items of your budget, where the budget is usually decided.
 
@@ -39,7 +39,7 @@ In committee, the question about contractors always comes up. Part 1's quantity 
 
 "Staffing by month" shows FTEs month by month, grouped by cost center, supplier, item or analytics dimension, with the year's average and peak. "Cost per FTE" compares up to four columns side by side, for example the 2026 landing and the 2027 budget, and switches to the daily rate in one click. If the external team goes from 12 to 9 FTE while the average daily rate rises 6%, the sentence reads straight off the table.
 
-![Cost per FTE by supplier, 2026 budget and expected landing side by side](/screenshots/blog/cost-per-fte.png)
+![Cost per FTE by supplier, 2026 budget and expected landing side by side](/screenshots/blog/cost-per-fte-2026-10.png)
 
 The budget reports also have a "Measure" selector: Amount or FTE. Top increases, trends and column comparisons then read in people.
 

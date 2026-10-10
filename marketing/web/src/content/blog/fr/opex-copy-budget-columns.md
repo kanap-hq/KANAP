@@ -27,7 +27,7 @@ Deuxième passage : construire le budget 2027. Source : Atterrissage prévu 2026
 
 Votre travail est précieux ! Aussi, « Copier les données » reste grisé tant qu'aucune simulation n'a tourné. La simulation liste chaque poste avec sa valeur source, sa valeur actuelle en destination et la valeur qui serait écrite. Les postes déjà renseignés apparaissent marqués « Ignoré » : ils ne seront pas modifiés. L'interrupteur « Écraser les données existantes » couvre les cas assumés ; laissez-le éteint, sauf cas particulier.
 
-![La simulation avant copie : valeurs sources, valeurs prévisualisées et postes ignorés](/screenshots/blog/copy-budget-columns.png)
+![La simulation avant copie : valeurs sources, valeurs prévisualisées et postes ignorés](/screenshots/blog/copy-budget-columns-2026-10.png)
 
 En bas, trois totaux : source, destination actuelle, prévisualisé. Un chiffre vous surprend ? Rien n'est encore écrit. Ajustez, resimulez, copiez.
 

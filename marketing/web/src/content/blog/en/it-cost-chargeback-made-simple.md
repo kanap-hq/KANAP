@@ -34,7 +34,7 @@ By default, KANAP uses the headcount of the companies defined in the reference d
 
 You can change this default rule in Administration, Default allocation method. The rule you set applies year by year to entries that have not been customised yet (you do not lose work already done).
 
-![The default allocation method: fiscal year, selected companies, driver and computed split](/screenshots/blog/chargeback-default-method.png)
+![The default allocation method: fiscal year, selected companies, driver and computed split](/screenshots/blog/chargeback-default-method-2026-10.png)
 
 ### Managing rules per item
 
@@ -42,7 +42,7 @@ Each spend item carries its own allocation rule, for each year. When the default
 
 An item's **Allocations** tab shows the result in real time. Here, the 280,000 EUR SAP maintenance is split by headcount: 58.54% for Fromage & Co SA, 19.51% for Kaasmeester BV, and so on up to 100%.
 
-![The Allocations tab: method, driver, percentage and amount per company](/screenshots/blog/chargeback-allocations.png)
+![The Allocations tab: method, driver, percentage and amount per company](/screenshots/blog/chargeback-allocations-2026-10b.png)
 
 Every allocation basis is available:
 
@@ -67,7 +67,7 @@ Once the rules are in place, two reports let you explore every facet of chargeba
 
 The first answers "how is IT spend shared across our companies?". It shows the consolidated total, each company's share, amounts paid and consumed, then intercompany flows.
 
-![Global chargeback: total, share per company and intercompany flows](/screenshots/blog/chargeback-global.png)
+![Global chargeback: total, share per company and intercompany flows](/screenshots/blog/chargeback-global-2026-10.png)
 
 The KPIs add two metrics that are key to any IT budget:
 
@@ -78,7 +78,7 @@ The KPIs add two metrics that are key to any IT budget:
 
 This report goes one level deeper and analyses the detail for a single company. It shows IT costs per department, the chargeback items (to answer a subsidiary: here is exactly what you are billed for), the detail of inbound and outbound flows, and a recall of the KPIs. This is the report to send to subsidiaries with their annual invoice.
 
-![Company chargeback: department totals, itemised charges and KPIs](/screenshots/blog/chargeback-company.png)
+![Company chargeback: department totals, itemised charges and KPIs](/screenshots/blog/chargeback-company-2026-10.png)
 
 Both reports are fully parameterisable (year, company, sections) and export to CSV, PNG or PDF. They can also be presented directly in a budget review.
 

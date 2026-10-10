@@ -19,7 +19,7 @@ Le budget est construit ; reste à le faire approuver. KANAP facilite la présen
 
 La section Rapports propose onze rapports préconfigurés, chacun avec tableau récapitulatif, graphique et exports. Rien à construire : vous choisissez, vous exécutez. Une ligne vous intrigue ? Dans les tops, le nom d'un poste ouvre sa fiche dans un nouvel onglet ; dans les rapports par regroupement, le nom d'un groupe ouvre la liste des postes qui le composent.
 
-![Les rapports préconfigurés de la gestion budgétaire](/screenshots/blog/reporting-landing.png)
+![Les rapports préconfigurés de la gestion budgétaire](/screenshots/blog/reporting-landing-2026-10.png)
 
 ## Où atterrit-on, qu'est-ce qui augmente ?
 
@@ -27,7 +27,7 @@ La section Rapports propose onze rapports préconfigurés, chacun avec tableau r
 
 « Top hausse / baisse » nomme ensuite les lignes qui expliquent l'écart. C'est souvent la diapositive la plus intéressante à présenter !
 
-![Le même rapport un an plus tôt : les 10 plus fortes hausses OPEX entre l'atterrissage 2025 et le budget 2026](/screenshots/blog/top-opex-increase.png)
+![Le même rapport un an plus tôt : les 10 plus fortes hausses OPEX entre l'atterrissage 2025 et le budget 2026](/screenshots/blog/top-opex-increase-2026-10.png)
 
 Enfin, « Top postes » montre en un clin d'œil les gros postes de votre budget, ceux où le budget, en général, se joue.
 
@@ -39,7 +39,7 @@ En comité, la question des prestataires arrive toujours. Les lignes en quantit�
 
 « Effectifs par mois » montre les ETP mois par mois, regroupés par centre de coûts, par fournisseur, par poste ou par dimension analytique, avec la moyenne et le pic de l'année. « Coût par ETP » compare jusqu'à quatre colonnes côte à côte, par exemple l'atterrissage 2026 et le budget 2027, et passe en TJM d'un clic. Si l'équipe externe passe de 12 à 9 ETP mais que le TJM moyen monte de 6 %, la phrase se lit directement dans le tableau.
 
-![Le coût par ETP par fournisseur, budget et atterrissage prévu 2026 côte à côte](/screenshots/blog/cost-per-fte.png)
+![Le coût par ETP par fournisseur, budget et atterrissage prévu 2026 côte à côte](/screenshots/blog/cost-per-fte-2026-10.png)
 
 Les rapports budgétaires ont aussi un sélecteur « Mesure » : Montant ou ETP. Le top des hausses, la tendance ou la comparaison de colonnes se lisent alors en personnes.
 
