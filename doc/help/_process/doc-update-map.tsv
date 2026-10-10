@@ -60,7 +60,6 @@ master-data-operations.md	frontend/src/pages/admin/master-data/**/*.tsx
 csv-files.md	frontend/src/components/csv/**/*.tsx
 csv-files.md	frontend/src/components/csv/**/*.ts
 budget-data-model.md	backend/src/spend/*.entity.ts
-budget-data-model.md	backend/src/capex/*.entity.ts
 budget-data-model.md	backend/src/spend/budget-file/columns.ts
 budget-data-model.md	backend/src/budget-columns/budget-columns.util.ts
 budget-data-model.md	backend/src/companies/*.entity.ts

@@ -87,6 +87,6 @@ Provide an at-a-glance, actionable home for Budget Management users with consist
 ## Code References
 
 - Frontend page: `frontend/src/pages/DashboardPage.tsx:1`
-- OPEX/CAPEX totals: `backend/src/spend/spend-items.service.ts:312` (summaryTotals), `backend/src/capex/capex-items.service.ts` (analogous)
+- OPEX/CAPEX totals: `backend/src/spend/spend-items.service.ts:312` (summaryTotals), `CapexItemsService` in the same file (the CAPEX lines)
 - OPEX summary row shape: `backend/src/spend/spend-summary.builder.ts:398`
   - Derived `account_warning` field for CoA mismatch: `backend/src/spend/spend-summary.builder.ts:420`

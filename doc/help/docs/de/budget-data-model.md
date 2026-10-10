@@ -226,7 +226,7 @@ SELECT id FROM tenants;
 CREATE ROLE kanap_bi LOGIN PASSWORD 'change-me' NOSUPERUSER NOBYPASSRLS;
 GRANT CONNECT ON DATABASE kanap TO kanap_bi;
 GRANT USAGE ON SCHEMA public TO kanap_bi;
-GRANT SELECT ON spend_items, capex_items, companies, accounts TO kanap_bi;
+GRANT SELECT ON spend_items, companies, accounts TO kanap_bi;
 ALTER ROLE kanap_bi IN DATABASE kanap SET app.current_tenant = '<id from the first query>';
 ```
 
