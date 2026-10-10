@@ -18,7 +18,7 @@ export const FEATURE_HUB_SCREENSHOTS = [
 export const FEATURE_SCREENSHOTS = {
   budget: [
     '/screenshots/budget-opex-grid-2026-10.png',
-    '/screenshots/budget-allocations-2026-10.png',
+    '/screenshots/budget-allocations-2026-10b.png',
     '/screenshots/budget-currency-2026-10.png',
     '/screenshots/budget-top-items-2026-10.png',
   ],

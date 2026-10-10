@@ -42,7 +42,7 @@ Each spend item carries its own allocation rule, for each year. When the default
 
 An item's **Allocations** tab shows the result in real time. Here, the 280,000 EUR SAP maintenance is split by headcount: 58.54% for Fromage & Co SA, 19.51% for Kaasmeester BV, and so on up to 100%.
 
-![The Allocations tab: method, driver, percentage and amount per company](/screenshots/blog/chargeback-allocations-2026-10.png)
+![The Allocations tab: method, driver, percentage and amount per company](/screenshots/blog/chargeback-allocations-2026-10b.png)
 
 Every allocation basis is available:
 

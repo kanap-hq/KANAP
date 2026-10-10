@@ -39,7 +39,7 @@ In a hurry? Sort by amount and work through the 20 largest lines, which usually 
 
 Open the first item of the selection, **Budget** tab. The previous and next arrows read "3 of 42" and follow your filtered list, in its sort order. You move line by line and correct the landing only where reality diverged: a renegotiated contract, a delayed project, cloud usage above plan.
 
-![An item's Budget tab, with navigation through the selection](/screenshots/blog/opex-budget-tab-2026-10.png)
+![An item's Budget tab, with navigation through the selection](/screenshots/blog/opex-budget-tab-2026-10b.png)
 
 For lines that deserve better than an annual amount, the Budget tab offers a **Monthly** mode and a "Spread an amount" helper, flat or 4-4-5.
 
@@ -49,7 +49,7 @@ For lines that deserve better than an annual amount, the Budget tab offers a **M
 
 For contractors, a monthly flat fee or per-unit licences, an annual amount says little. In the Budget tab, "Quantity and price" breaks the amount into lines: a quantity, a unit (people, days or pieces), a unit price and a period.
 
-![A contractor item built from quantity × price: one person full time at €880 a day, 1 FTE over the year](/screenshots/blog/budget-item-lines-2026-10.png)
+![A contractor item built from quantity × price: one person full time at €880 a day, 1 FTE over the year](/screenshots/blog/budget-item-lines-2026-10b.png)
 
 Two consultants at €650 a day, full time from March to December: KANAP computes each month from the working days in the calendar of the paying company's country, public holidays excluded. If the assignment ends in October or the daily rate was renegotiated, change the date or the price and the landing recalculates. No more redoing the multiplication by hand.
 

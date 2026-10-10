@@ -97,10 +97,11 @@ const pickSelect = async (page, label, option, nth = 1) => {
   if (shown !== option) console.warn(`select '${label}' shows '${shown}', not '${option}'`);
 };
 
-// Hide the filter controls of the given analytics dimensions (label + field).
+// Hide the controls of the given analytics dimensions (label + field), in report
+// filters and in the Properties panel.
 const hideControls = (page, labels) =>
   page.evaluate((labels) => {
-    for (const el of document.querySelectorAll('main label, main p, main span, main div')) {
+    for (const el of document.querySelectorAll('label, p, span, div')) {
       if (el.children.length || !labels.includes(el.textContent?.replace('*', '').trim())) continue;
       let box = el;
       while (box.parentElement && !box.querySelector('.MuiFormControl-root, .MuiSelect-select')) box = box.parentElement;
@@ -108,16 +109,34 @@ const hideControls = (page, labels) =>
     }
   }, labels);
 
-// Collapse the item Properties side panel. The state is kept in localStorage
-// (this browser only), so it may already be closed by an earlier shot.
-const closeProperties = async (page) => {
+// Open the item Properties side panel and leave out the fields of --hide
+// (local test dimensions). The open state is kept in localStorage (this
+// browser only), so it may already be open from an earlier shot.
+const openProperties = async (page) => {
   const close = 'button[aria-label="Close properties"], button[aria-label="Fermer les propriétés"]';
   const open = 'button[aria-label="Open properties"], button[aria-label="Ouvrir les propriétés"]';
   await page.waitForSelector(`${close}, ${open}`, { timeout: 30000 });
-  if (await page.$(close)) {
-    await page.click(close);
+  if (await page.$(open)) {
+    await page.click(open);
     await sleep(800);
   }
+  if (!HIDDEN_DIMENSIONS.length) return;
+  // Each property is a label (.kanap-field-label, with a "*" when required) and
+  // its field, side by side in one row: hide the row.
+  // Dimension fields load after the others: wait until one of them is there.
+  await page
+    .waitForFunction(
+      (labels) => [...document.querySelectorAll('aside .kanap-field-label')].some((el) => labels.includes(el.textContent?.replace('*', '').trim())),
+      { timeout: 20000 },
+      HIDDEN_DIMENSIONS,
+    )
+    .catch(() => {});
+  await sleep(500);
+  await page.evaluate((labels) => {
+    for (const el of document.querySelectorAll('aside .kanap-field-label')) {
+      if (labels.includes(el.textContent?.replace('*', '').trim())) el.parentElement.style.display = 'none';
+    }
+  }, HIDDEN_DIMENSIONS);
 };
 
 // Reports draw once their query answers: wait for a table row or a chart.
@@ -199,7 +218,7 @@ const PAGES = {
     prepare: async (page) => {
       const sel = 'button[aria-label="Quantité et prix"], button[aria-label="Quantity and price"]';
       await page.waitForSelector(sel, { timeout: 30000 });
-      await closeProperties(page); // keeps the analytics dimensions out of the shot
+      await openProperties(page);
       await page.click(sel);
       await page.mouse.move(700, 300); // drop the button tooltip
       await sleep(2000);
@@ -347,7 +366,7 @@ const PAGES = {
     )}`,
     waitFor: 'main',
     async prepare(page) {
-      await closeProperties(page);
+      await openProperties(page);
       await page.waitForFunction(() => / of \d+/.test(document.querySelector('main')?.innerText || ''), { timeout: 20000 });
       await page.waitForSelector('.ag-charts-wrapper canvas', { timeout: 20000 }).catch(() => {});
     },
@@ -427,7 +446,7 @@ const PAGES = {
     path: `/ops/opex/${ALLOC_ITEM_ID}/allocations?year=2026`,
     waitFor: 'main',
     async prepare(page) {
-      await closeProperties(page);
+      await openProperties(page);
       await page.waitForFunction(() => /100(\.00)?%/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
     },
   },

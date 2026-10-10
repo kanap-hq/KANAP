@@ -42,7 +42,7 @@ Chaque poste de dépense porte sa propre règle de ventilation, pour chaque ann�
 
 L'onglet **Ventilations** d'un poste affiche le résultat en temps réel. Ici, la maintenance SAP de 280 000 EUR se répartit à l'effectif : 58,54 % pour Fromage & Co SA, 19,51 % pour Kaasmeester BV, et ainsi de suite jusqu'à 100 %.
 
-![L'onglet Ventilations : méthode, critère, pourcentage et montant par société](/screenshots/blog/chargeback-allocations-2026-10.png)
+![L'onglet Ventilations : méthode, critère, pourcentage et montant par société](/screenshots/blog/chargeback-allocations-2026-10b.png)
 
 Toutes les clés de répartition sont possibles :
 
