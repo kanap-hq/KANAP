@@ -30,7 +30,8 @@
     "selectAll": "Alle auswählen",
     "browse": "Durchsuchen",
     "loadMore": "Mehr laden",
-    "done": "Fertig"
+    "done": "Fertig",
+    "moreActions": "Weitere Aktionen"
   },
   "status": {
     "loading": "Wird geladen...",

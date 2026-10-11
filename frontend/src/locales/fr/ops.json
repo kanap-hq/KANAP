@@ -877,6 +877,59 @@
       "y": "A",
       "yPlus1": "A+1",
       "yPlus2": "A+2"
+    },
+    "changeType": {
+      "menuItem": "Changer le type...",
+      "title": "Changer le type de {{reference}}",
+      "subtitle": {
+        "capex": "Cette ligne OPEX devient une ligne CAPEX.",
+        "opex": "Cette ligne CAPEX devient une ligne OPEX."
+      },
+      "fromLabel": "À partir de",
+      "fromFirstYear": "{{year}}, sa première année : la ligne change de type",
+      "fromYear": "{{year}} : une nouvelle ligne {{type}} à partir de {{year}}",
+      "fromAllYears": "Toutes les années : la ligne n'a pas encore de budget",
+      "datedRefusal": {
+        "successor": "Aucune année ultérieure : cette ligne est déjà remplacée par {{reference}}.",
+        "no_later_year": "Aucune année ultérieure : la ligne n'a pas de budget après sa première année.",
+        "ends": "Aucune année ultérieure : la ligne se termine avant {{year}}.",
+        "starts": "Aucune année ultérieure : la ligne commence en {{year}} ou après."
+      },
+      "effects": {
+        "inPlace": "La ligne garde sa référence, son budget, ses ventilations, ses liens, ses pièces jointes et ses tâches.",
+        "reports": {
+          "capex": "Elle quitte la liste OPEX, les rapports OPEX et la refacturation, et rejoint la liste CAPEX.",
+          "opex": "Elle quitte la liste et les rapports CAPEX, et rejoint la liste OPEX, les rapports OPEX et la refacturation."
+        },
+        "dated_one": "Cette ligne se termine le {{end}} et garde son budget avant {{year}}. Une nouvelle ligne {{type}} porte le budget à partir de {{year}} ({{count}} année), avec les contacts et les liens vers les applications, actifs, contrats, projets et demandes.",
+        "dated_other": "Cette ligne se termine le {{end}} et garde son budget avant {{year}}. Une nouvelle ligne {{type}} porte le budget à partir de {{year}} ({{count}} années), avec les contacts et les liens vers les applications, actifs, contrats, projets et demandes.",
+        "datedStays": "Les pièces jointes, les liens web et les tâches restent sur cette ligne. Les valeurs qui ne s'appliquent pas aux lignes {{type}} ne sont pas reprises."
+      },
+      "frozen": "{{column}} {{year}} est gelé pour les lignes {{type}}, et cette ligne y a des montants.",
+      "frozenHelp": "Dégelez d'abord la colonne, ou changez le type à partir d'une année ultérieure.",
+      "accountLabel": "Compte",
+      "accountUnfit": "{{account}} est réservé aux lignes {{type}}. Choisissez un compte pour les lignes {{target}}, ou gardez-le et changez-le plus tard.",
+      "accountNotCopied": "{{account}} n'est pas repris sur la nouvelle ligne. Choisissez un compte pour les lignes {{target}}, ou laissez le champ vide.",
+      "dimensionFallback": "Dimension analytique",
+      "valueOtherType": "{{value}} est réservé aux lignes {{type}}. Choisissez une autre valeur, ou gardez-la et changez-la plus tard.",
+      "valueOtherTypeDated": "{{value}} est réservé aux lignes {{type}} et n'est pas repris. Choisissez une valeur pour la nouvelle ligne.",
+      "requiredInPlace": "Obligatoire pour les lignes {{type}}. Vous pouvez aussi la renseigner plus tard.",
+      "requiredDated": "Obligatoire pour la nouvelle ligne.",
+      "reasonLabel": "Motif",
+      "reasonPlaceholder": "ex. achat au lieu d'une location",
+      "save": "Changer le type",
+      "failed": "Le type n'a pas pu être changé.",
+      "changedMeanwhile": "La ligne a changé depuis l'ouverture de la fenêtre. Vérifiez ce qu'elle affiche, puis changez à nouveau le type.",
+      "loadFailed": "La ligne n'a pas pu être lue."
+    },
+    "lineage": {
+      "follows": "Succède à <link>{{reference}}</link> ({{type}})",
+      "replacedBy": "Remplacée par <link>{{reference}}</link> ({{type}}) à partir de {{year}}",
+      "replacedByNoYear": "Remplacée par <link>{{reference}}</link> ({{type}})",
+      "type": {
+        "opex": "ligne OPEX",
+        "capex": "ligne CAPEX"
+      }
     }
   },
   "fields": {

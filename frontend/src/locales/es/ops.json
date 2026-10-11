@@ -876,6 +876,59 @@
       "y": "A",
       "yPlus1": "A+1",
       "yPlus2": "A+2"
+    },
+    "changeType": {
+      "menuItem": "Cambiar el tipo...",
+      "title": "Cambiar el tipo de {{reference}}",
+      "subtitle": {
+        "capex": "Esta línea OPEX pasa a ser una línea CAPEX.",
+        "opex": "Esta línea CAPEX pasa a ser una línea OPEX."
+      },
+      "fromLabel": "A partir de",
+      "fromFirstYear": "{{year}}, su primer año: la línea cambia de tipo",
+      "fromYear": "{{year}}: una nueva línea {{type}} a partir de {{year}}",
+      "fromAllYears": "Todos los años: la línea aún no tiene presupuesto",
+      "datedRefusal": {
+        "successor": "No se ofrece un año posterior: esta línea ya está sustituida por {{reference}}.",
+        "no_later_year": "No se ofrece un año posterior: la línea no tiene presupuesto después de su primer año.",
+        "ends": "No se ofrece un año posterior: la línea termina antes de {{year}}.",
+        "starts": "No se ofrece un año posterior: la línea empieza en {{year}} o después."
+      },
+      "effects": {
+        "inPlace": "La línea conserva su referencia, su presupuesto, sus asignaciones, sus vínculos, sus adjuntos y sus tareas.",
+        "reports": {
+          "capex": "Sale de la lista OPEX, de los informes OPEX y del contracargo, y pasa a la lista CAPEX.",
+          "opex": "Sale de la lista y de los informes CAPEX, y pasa a la lista OPEX, a los informes OPEX y al contracargo."
+        },
+        "dated_one": "Esta línea termina el {{end}} y conserva su presupuesto anterior a {{year}}. Una nueva línea {{type}} lleva el presupuesto a partir de {{year}} ({{count}} año), con los contactos y los vínculos con aplicaciones, activos, contratos, proyectos y solicitudes.",
+        "dated_other": "Esta línea termina el {{end}} y conserva su presupuesto anterior a {{year}}. Una nueva línea {{type}} lleva el presupuesto a partir de {{year}} ({{count}} años), con los contactos y los vínculos con aplicaciones, activos, contratos, proyectos y solicitudes.",
+        "datedStays": "Los adjuntos, los enlaces web y las tareas se quedan en esta línea. Los valores que no se aplican a las líneas {{type}} no se copian."
+      },
+      "frozen": "{{column}} {{year}} está congelado para las líneas {{type}}, y esta línea tiene importes en él.",
+      "frozenHelp": "Descongele primero la columna, o cambie el tipo a partir de un año posterior.",
+      "accountLabel": "Cuenta",
+      "accountUnfit": "{{account}} es solo para líneas {{type}}. Elija una cuenta para líneas {{target}}, o consérvela y cámbiela más tarde.",
+      "accountNotCopied": "{{account}} no se copia en la nueva línea. Elija una cuenta para líneas {{target}}, o deje el campo vacío.",
+      "dimensionFallback": "Dimensión analítica",
+      "valueOtherType": "{{value}} es solo para líneas {{type}}. Elija otro valor, o consérvelo y cámbielo más tarde.",
+      "valueOtherTypeDated": "{{value}} es solo para líneas {{type}} y no se copia. Elija un valor para la nueva línea.",
+      "requiredInPlace": "Obligatorio para las líneas {{type}}. También puede completarlo más tarde.",
+      "requiredDated": "Obligatorio para la nueva línea.",
+      "reasonLabel": "Motivo",
+      "reasonPlaceholder": "p. ej., comprado en lugar de alquilado",
+      "save": "Cambiar el tipo",
+      "failed": "No se ha podido cambiar el tipo.",
+      "changedMeanwhile": "La línea ha cambiado desde que se abrió el diálogo. Revise lo que muestra y vuelva a cambiar el tipo.",
+      "loadFailed": "No se ha podido leer la línea."
+    },
+    "lineage": {
+      "follows": "Sucede a <link>{{reference}}</link> ({{type}})",
+      "replacedBy": "Sustituida por <link>{{reference}}</link> ({{type}}) a partir de {{year}}",
+      "replacedByNoYear": "Sustituida por <link>{{reference}}</link> ({{type}})",
+      "type": {
+        "opex": "línea OPEX",
+        "capex": "línea CAPEX"
+      }
     }
   },
   "fields": {

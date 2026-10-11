@@ -30,7 +30,8 @@
     "selectAll": "Select all",
     "browse": "Browse",
     "loadMore": "Load more",
-    "done": "Done"
+    "done": "Done",
+    "moreActions": "More actions"
   },
   "status": {
     "loading": "Loading...",

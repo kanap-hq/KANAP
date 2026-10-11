@@ -876,6 +876,59 @@
       "y": "J",
       "yPlus1": "J+1",
       "yPlus2": "J+2"
+    },
+    "changeType": {
+      "menuItem": "Typ ändern...",
+      "title": "Typ von {{reference}} ändern",
+      "subtitle": {
+        "capex": "Diese OPEX-Zeile wird zu einer CAPEX-Zeile.",
+        "opex": "Diese CAPEX-Zeile wird zu einer OPEX-Zeile."
+      },
+      "fromLabel": "Ab",
+      "fromFirstYear": "{{year}}, ihr erstes Jahr: Die Zeile ändert ihren Typ",
+      "fromYear": "{{year}}: eine neue {{type}}-Zeile ab {{year}}",
+      "fromAllYears": "Alle Jahre: Die Zeile hat noch kein Budget",
+      "datedRefusal": {
+        "successor": "Kein späteres Jahr möglich: Diese Zeile wird bereits durch {{reference}} ersetzt.",
+        "no_later_year": "Kein späteres Jahr möglich: Die Zeile hat nach ihrem ersten Jahr kein Budget.",
+        "ends": "Kein späteres Jahr möglich: Die Zeile endet vor {{year}}.",
+        "starts": "Kein späteres Jahr möglich: Die Zeile beginnt {{year}} oder später."
+      },
+      "effects": {
+        "inPlace": "Die Zeile behält ihre Referenz, ihr Budget, ihre Zuordnungen, Verknüpfungen, Anhänge und Aufgaben.",
+        "reports": {
+          "capex": "Sie verlässt die OPEX-Liste, die OPEX-Berichte und die Leistungsverrechnung und erscheint in der CAPEX-Liste.",
+          "opex": "Sie verlässt die CAPEX-Liste und die CAPEX-Berichte und erscheint in der OPEX-Liste, den OPEX-Berichten und der Leistungsverrechnung."
+        },
+        "dated_one": "Diese Zeile endet am {{end}} und behält ihr Budget vor {{year}}. Eine neue {{type}}-Zeile übernimmt das Budget ab {{year}} ({{count}} Jahr), mit den Kontakten und den Verknüpfungen zu Anwendungen, Assets, Verträgen, Projekten und Anfragen.",
+        "dated_other": "Diese Zeile endet am {{end}} und behält ihr Budget vor {{year}}. Eine neue {{type}}-Zeile übernimmt das Budget ab {{year}} ({{count}} Jahre), mit den Kontakten und den Verknüpfungen zu Anwendungen, Assets, Verträgen, Projekten und Anfragen.",
+        "datedStays": "Anhänge, Weblinks und Aufgaben bleiben bei dieser Zeile. Werte, die nicht für {{type}}-Zeilen gelten, werden nicht übernommen."
+      },
+      "frozen": "{{column}} {{year}} ist für {{type}}-Zeilen eingefroren, und diese Zeile hat dort Beträge.",
+      "frozenHelp": "Heben Sie zuerst das Einfrieren der Spalte auf, oder ändern Sie den Typ ab einem späteren Jahr.",
+      "accountLabel": "Konto",
+      "accountUnfit": "{{account}} gilt nur für {{type}}-Zeilen. Wählen Sie ein Konto für {{target}}-Zeilen, oder behalten Sie es und ändern Sie es später.",
+      "accountNotCopied": "{{account}} wird nicht in die neue Zeile übernommen. Wählen Sie ein Konto für {{target}}-Zeilen, oder lassen Sie das Feld leer.",
+      "dimensionFallback": "Analysedimension",
+      "valueOtherType": "{{value}} gilt nur für {{type}}-Zeilen. Wählen Sie einen anderen Wert, oder behalten Sie ihn und ändern Sie ihn später.",
+      "valueOtherTypeDated": "{{value}} gilt nur für {{type}}-Zeilen und wird nicht übernommen. Wählen Sie einen Wert für die neue Zeile.",
+      "requiredInPlace": "Pflichtfeld für {{type}}-Zeilen. Sie können es auch später ausfüllen.",
+      "requiredDated": "Pflichtfeld für die neue Zeile.",
+      "reasonLabel": "Grund",
+      "reasonPlaceholder": "z. B. gekauft statt geleast",
+      "save": "Typ ändern",
+      "failed": "Der Typ konnte nicht geändert werden.",
+      "changedMeanwhile": "Die Zeile wurde geändert, seit der Dialog geöffnet wurde. Prüfen Sie die Angaben im Dialog und ändern Sie den Typ dann erneut.",
+      "loadFailed": "Die Zeile konnte nicht gelesen werden."
+    },
+    "lineage": {
+      "follows": "Folgt auf <link>{{reference}}</link> ({{type}})",
+      "replacedBy": "Ersetzt durch <link>{{reference}}</link> ({{type}}) ab {{year}}",
+      "replacedByNoYear": "Ersetzt durch <link>{{reference}}</link> ({{type}})",
+      "type": {
+        "opex": "OPEX-Zeile",
+        "capex": "CAPEX-Zeile"
+      }
     }
   },
   "fields": {

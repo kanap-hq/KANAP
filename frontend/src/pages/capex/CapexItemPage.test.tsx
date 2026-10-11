@@ -127,6 +127,15 @@ vi.mock('../../components/finance/AllocationsTab', async () => {
 });
 vi.mock('./editors/RelationsPanel', () => ({ default: () => null }));
 vi.mock('../../components/EntityTasksPanel', () => ({ default: () => null }));
+// The change type dialog (lot M) stands in: « confirm type change » answers as the server does for
+// a change from a later year (a new OPEX line).
+vi.mock('../../components/finance/ChangeTypeDialog', () => ({
+  default: ({ open, nature, onChanged }: { open: boolean; nature: string; onChanged: (result: unknown) => void }) => (open ? (
+    <div data-testid="change-type-dialog" data-nature={nature}>
+      <button type="button" onClick={() => onChanged({ id: 'line-new', reference: 'BL-31', nature: 'opex', predecessor_id: 'x' })}>confirm type change</button>
+    </div>
+  ) : null),
+}));
 
 import api from '../../api';
 import CapexItemPage from './CapexItemPage';
@@ -149,6 +158,12 @@ const CHANGES_DAY = new Date('2026-10-02T12:04:00.000Z');
 // The edits a page keeps for the session (lot 3C review): each test starts without any.
 beforeEach(() => resetSharedPatchBuffers());
 
+/** Stands for the OPEX workspace: shows the path a change of type opened. */
+function OpexPageProbe() {
+  const { pathname } = useLocation();
+  return <div data-testid="opex-page" data-path={pathname} />;
+}
+
 function renderAt(path = '/ops/capex/new/overview') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -157,6 +172,7 @@ function renderAt(path = '/ops/capex/new/overview') {
         <MemoryRouter initialEntries={[path]}>
           <Routes>
             <Route path="/ops/capex/:id/:tab" element={<CapexItemPage />} />
+            <Route path="/ops/opex/:id/:tab" element={<OpexPageProbe />} />
           </Routes>
         </MemoryRouter>
       </ThemeProvider>
@@ -1068,5 +1084,33 @@ describe('CapexItemPage required dimensions before leaving (lot D2)', () => {
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
     expect(await screen.findByTestId('list-page')).toBeInTheDocument();
+  });
+});
+
+describe('CapexItemPage change type (lot M)', () => {
+  beforeEach(() => {
+    mocked.get.mockReset();
+    auth.canEdit = true;
+    mocked.get.mockImplementation(async (url: string) => (url === `/capex-items/${ITEM_ID}`
+      ? { data: { id: ITEM_ID, item_number: 7, description: 'New servers', notes: 'Racks', paying_company_id: 'company-1', currency: 'EUR', effective_start: '2026-01-01' } }
+      : { data: {} }));
+  });
+  afterEach(() => { auth.canEdit = true; });
+
+  it('the « … » pill opens the change of type; once changed, the new line opens in its type', async () => {
+    renderAt(`/ops/capex/${ITEM_ID}/overview`);
+    await screen.findByDisplayValue('Racks');
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.moreActions' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'ops:shared.changeType.menuItem' }));
+    expect(await screen.findByTestId('change-type-dialog')).toHaveAttribute('data-nature', 'capex');
+    fireEvent.click(screen.getByRole('button', { name: 'confirm type change' }));
+    expect(await screen.findByTestId('opex-page')).toHaveAttribute('data-path', '/ops/opex/BL-31/overview');
+  });
+
+  it('is not offered without the budget member level', async () => {
+    auth.canEdit = false;
+    renderAt(`/ops/capex/${ITEM_ID}/overview`);
+    await screen.findByDisplayValue('Racks');
+    expect(screen.queryByRole('button', { name: 'buttons.moreActions' })).toBeNull();
   });
 });

@@ -36,6 +36,10 @@ import {
 } from '../../constants/status';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
+import WorkspaceMoreMenu from '../../components/workspace/WorkspaceMoreMenu';
+import ChangeTypeDialog, { type ChangeTypeResult } from '../../components/finance/ChangeTypeDialog';
+import LineLineage, { type LineageLine } from '../../components/finance/LineLineage';
+import { budgetLinePath, openLineAfterTypeChange } from '../../components/finance/changeTypeNavigation';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import CapexMetadataBar from './workspace/CapexMetadataBar';
 import CapexPropertiesDrawer, { RunBuild } from './workspace/CapexPropertiesDrawer';
@@ -849,6 +853,23 @@ export default function CapexItemPage() {
     navigate(`/ops/capex${qs ? `?${qs}` : ''}`);
   }, [leaveLine, buildListContextParams, navigate]);
 
+  // ----- Change type (lot M): from the "…" menu; pending edits are saved first (the dialog sends the line's row_version) -----
+  const [changeTypeOpen, setChangeTypeOpen] = React.useState(false);
+  const canChangeType = !isCreate && !!uuid && hasLevel('budget', 'member');
+  const openChangeType = React.useCallback(async () => {
+    if ((await flushOrAsk()) === 'stay') return;
+    setChangeTypeOpen(true);
+  }, [flushOrAsk]);
+  const handleTypeChanged = React.useCallback((result: ChangeTypeResult) => {
+    setChangeTypeOpen(false);
+    openLineAfterTypeChange(queryClient, navigate, result);
+  }, [navigate, queryClient]);
+  // The line this one follows or is replaced by: left like any other move off the line.
+  const openLineageLine = React.useCallback(async (line: LineageLine) => {
+    if (!(await leaveLine())) return;
+    navigate(budgetLinePath(line));
+  }, [leaveLine, navigate]);
+
   const handleCreate = React.useCallback(async () => {
     if (createSubmitting) return; // Ctrl+S bypasses the disabled button — guard double-submit
     const description = createForm.description.trim();
@@ -1058,6 +1079,9 @@ export default function CapexItemPage() {
                 itemNumber={data?.item_number}
               />
             )}
+            {canChangeType && (
+              <WorkspaceMoreMenu items={[{ key: 'change-type', label: t('ops:shared.changeType.menuItem'), onClick: () => { void openChangeType(); } }]} />
+            )}
             {isCreate && (
               <Button variant="contained" size="small" onClick={() => void handleCreate()} disabled={createSubmitting}>
                 {t('common:buttons.create')}
@@ -1152,6 +1176,7 @@ export default function CapexItemPage() {
             </Stack>
           ) : (
             <Stack spacing={3} sx={{ pt: 1 }}>
+              <LineLineage lineage={data?.lineage} onOpen={(line) => { void openLineageLine(line); }} />
               <Box>
                 <Typography component="label" sx={sectionLabelSx}>{t('capex.fields.description')}</Typography>
                 <TextField
@@ -1183,6 +1208,17 @@ export default function CapexItemPage() {
           </React.Suspense>
         </WorkspaceTabBoundary>
       </PortfolioDetailWorkspaceShell>
+      {canChangeType && uuid && (
+        <ChangeTypeDialog
+          open={changeTypeOpen}
+          nature="capex"
+          lineId={uuid}
+          lineReference={reference}
+          companyId={form.paying_company_id || null}
+          onClose={() => setChangeTypeOpen(false)}
+          onChanged={handleTypeChanged}
+        />
+      )}
       {requiredLeave.dialog}
     </Box>
   );

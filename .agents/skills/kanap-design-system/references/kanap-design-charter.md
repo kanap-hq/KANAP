@@ -738,6 +738,7 @@ WorkspacePage (full height, flex column)
   - **ID prefix** (`T-49`): monospace 14px, `kanap.text.secondary`, vertical-align 1px, mr 14px, click-to-copy. Always a business display reference (`T-4`, `PRJ-3`, `AST-5`), never a raw or truncated UUID. Add/backfill a reference field if one does not exist yet.
   - **Title**: 22px weight 500, click-to-edit pattern (span -> input on click, save on blur, cancel on Escape)
   - **Actions**: pill buttons on the right, gap 8px, mt 7px. Use `variant="action"` and `variant="action-danger"` (`action-primary` for a single key action). Close button at the end.
+  - **Rare actions** (changing the type of a budget line): a "..." pill at the end of the actions, before the close button (`components/workspace/WorkspaceMoreMenu.tsx`: `variant="action"`, icon only, aria-label "More actions"), opening a flat `Menu` of `drawerMenuItemSx` items anchored under it. Render it only when it holds an action the user may take; each item opens its own `KanapDialog`.
 - **Metadata bar**: flex, gap 22px, flex-wrap, font-size 12px
   - Status chip: colored dot (8px) + label, click -> Menu with all statuses
   - Score chip: colored dot + monospace value, read-only with Tooltip
