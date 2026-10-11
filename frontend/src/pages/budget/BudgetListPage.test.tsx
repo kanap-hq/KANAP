@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('react-i18next', () => {
-  const translation = { t: (key: string, opts?: any) => key === 'budget.titleWithCurrency' ? `${key}:${opts.currency}` : key, i18n: { language: 'en', resolvedLanguage: 'en' } };
+  const translation = { t: (key: string, opts?: any) => key === 'budget.titleWithCurrency' ? `${key}:${opts.currency}` : key === 'budget.totalWithCount' ? `${key}:${opts.count}` : key, i18n: { language: 'en', resolvedLanguage: 'en' } };
   return { useTranslation: () => translation };
 });
 vi.mock('../../api', () => ({ default: { get: vi.fn() } }));
@@ -14,7 +14,7 @@ vi.mock('../../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: '
 const auth = vi.hoisted(() => ({ level: 'admin' }));
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: 'u-1' }, hasLevel: (_resource: string, level: string) => ['reader', 'member', 'manager', 'admin'].indexOf(level) <= ['reader', 'member', 'manager', 'admin'].indexOf(auth.level) }) }));
 const header = vi.hoisted(() => ({ props: null as any }));
-vi.mock('../../components/PageHeader', () => ({ default: (props: any) => { header.props = props; return null; } }));
+vi.mock('../../components/PageHeader', () => ({ default: (props: any) => { header.props = props; return props.actions ?? null; } }));
 vi.mock('../../components/csv/CsvExportDialog', () => ({ default: () => null }));
 vi.mock('../../components/csv/CsvImportDialog', () => ({ default: () => null }));
 const dialogs = vi.hoisted(() => ({ export: null as any, import: null as any, bulk: null as any }));
@@ -814,43 +814,27 @@ describe('BudgetListPage', () => {
     ]);
   });
 
-  it('the toggles filter the grid and totals and remember the explicit choice per user', async () => {
+  it('has no nature toggles: an address nature filter opens the grid on that column filter', async () => {
+    const capex = { nature: { filterType: 'set', values: ['capex'] } };
+    await renderPage('/ops/budget?filters=' + encodeURIComponent(JSON.stringify(capex)));
+    expect(screen.queryByRole('button', { name: 'budget.capex' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'budget.opex' })).toBeNull();
+    expect(lastProps().initialState?.filter?.filterModel).toEqual(capex);
+    await waitFor(() => expect(get.mock.calls.filter(([u]) => u === '/budget-lines/summary/totals').slice(-1)[0][1].params.filters).toBe(JSON.stringify(capex)));
+  });
+
+  it('opens the list unfiltered by nature when the address has no nature filter', async () => {
     await renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'budget.capex' }));
-    expect(screen.getByRole('button', { name: 'budget.capex' })).toHaveAttribute('aria-pressed', 'true');
-    expect(localStorage.getItem('kanap-budget-nature:test:u-1')).toBe('capex');
-    await waitFor(() => expect(get.mock.calls.filter(([u]) => u === '/budget-lines/summary/totals').slice(-1)[0][1].params.filters).toBe(JSON.stringify({ nature: { filterType: 'set', values: ['capex'] } })));
-    fireEvent.click(screen.getByRole('button', { name: 'budget.all' }));
-    expect(localStorage.getItem('kanap-budget-nature:test:u-1')).toBe('all');
-    await waitFor(() => expect(get.mock.calls.filter(([u]) => u === '/budget-lines/summary/totals').slice(-1)[0][1].params.filters).toBeUndefined());
+    expect(lastProps().initialState?.filter?.filterModel?.nature).toBeUndefined();
   });
 
-  it('reads the remembered nature before mounting and leaves the preference untouched', async () => {
-    localStorage.setItem('kanap-budget-nature:test:u-1', 'capex');
-    const set = vi.spyOn(localStorage, 'setItem');
+  it('puts the actions in the page header', async () => {
     await renderPage();
-    expect(lastProps().initialState?.filter?.filterModel).toEqual({ nature: { filterType: 'set', values: ['capex'] } });
-    expect(screen.getByRole('button', { name: 'budget.capex' })).toHaveAttribute('aria-pressed', 'true');
-    expect(set).not.toHaveBeenCalled();
+    expect(header.props.actions).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'budget.newLine' })).toBeInTheDocument();
   });
 
-  it('an opening URL nature overrides memory without writing it', async () => {
-    localStorage.setItem('kanap-budget-nature:test:u-1', 'opex');
-    const set = vi.spyOn(localStorage, 'setItem');
-    await renderPage('/ops/budget?filters=' + encodeURIComponent(JSON.stringify({ nature: { filterType: 'set', values: ['capex'] } })));
-    expect(screen.getByRole('button', { name: 'budget.capex' })).toHaveAttribute('aria-pressed', 'true');
-    expect(localStorage.getItem('kanap-budget-nature:test:u-1')).toBe('opex');
-    expect(set).not.toHaveBeenCalled();
-  });
-
-  it('a nature filter edited in the grid updates the selected toggle and memory', async () => {
-    await renderPage();
-    act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', q: '', statusScope: 'enabled', filterModel: { nature: { filterType: 'set', values: ['opex'] } } }));
-    expect(screen.getByRole('button', { name: 'budget.opex' })).toHaveAttribute('aria-pressed', 'true');
-    expect(localStorage.getItem('kanap-budget-nature:test:u-1')).toBe('opex');
-  });
-
-  it('All offers both create routes; a chosen nature opens its route directly', async () => {
+  it('New line offers both natures without a single nature filter, and opens the filtered nature directly', async () => {
     await renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'budget.newLine' }));
     expect(screen.getByRole('menuitem', { name: 'budget.opexLine' })).toBeInTheDocument();
@@ -858,9 +842,30 @@ describe('BudgetListPage', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'budget.capexLine' }));
     await waitFor(() => expect(location.pathname).toBe('/ops/capex/new'));
     expect(new URLSearchParams(location.search).get('list')).toBe('budget');
-    fireEvent.click(screen.getByRole('button', { name: 'budget.opex' }));
+  });
+
+  it('New line opens the nature kept by the Type filter directly', async () => {
+    await renderPage();
+    act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', q: '', statusScope: 'enabled', filterModel: { nature: { filterType: 'set', values: ['opex'] } } }));
     fireEvent.click(screen.getByRole('button', { name: 'budget.newLine' }));
+    expect(screen.queryByRole('menuitem')).toBeNull();
     await waitFor(() => expect(location.pathname).toBe('/ops/opex/new'));
+  });
+
+  it('New line opens the nature of an address filter directly', async () => {
+    await renderPage('/ops/budget?filters=' + encodeURIComponent(JSON.stringify({ nature: { filterType: 'set', values: ['capex'] } })));
+    fireEvent.click(screen.getByRole('button', { name: 'budget.newLine' }));
+    expect(screen.queryByRole('menuitem')).toBeNull();
+    await waitFor(() => expect(location.pathname).toBe('/ops/capex/new'));
+  });
+
+  it('shows the filtered line count in the total row', async () => {
+    await renderPage();
+    expect(lastProps().pinnedBottomRowData[0].product_name).toBe('shared.total');
+    act(() => (lastProps() as any).onTotalChange(135));
+    expect(lastProps().pinnedBottomRowData[0].product_name).toBe('budget.totalWithCount:135');
+    act(() => (lastProps() as any).onTotalChange(1));
+    expect(lastProps().pinnedBottomRowData[0].product_name).toBe('budget.totalWithCount:1');
   });
 
   it('copies the OPEX grid layout once for this tenant and user', async () => {
@@ -872,7 +877,7 @@ describe('BudgetListPage', () => {
 
   it('opens export and import with the unified filters and the CAPEX fallback, and bulk deletes on the neutral route', async () => {
     await renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'budget.capex' }));
+    act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', q: '', statusScope: 'enabled', filterModel: { nature: { filterType: 'set', values: ['capex'] } } }));
     fireEvent.click(screen.getByRole('button', { name: 'opex.exportCsv' }));
     expect(dialogs.export).toMatchObject({ open: true, scope: 'all', list: { filters: JSON.stringify({ nature: { filterType: 'set', values: ['capex'] } }) } });
     fireEvent.click(screen.getByRole('button', { name: 'opex.importCsv' }));
@@ -882,7 +887,7 @@ describe('BudgetListPage', () => {
     const before = get.mock.calls.filter(([u]) => u === '/budget-lines/summary/totals').length;
     act(() => dialogs.import.onImported());
     await waitFor(() => expect(get.mock.calls.filter(([u]) => u === '/budget-lines/summary/totals').length).toBe(before + 1));
-    fireEvent.click(screen.getByRole('button', { name: 'budget.all' }));
+    act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', q: '', statusScope: 'enabled', filterModel: {} }));
     expect(dialogs.import.scope).toBe('opex');
   });
 

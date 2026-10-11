@@ -27,7 +27,7 @@ import {
   visibleAmountFields,
   visibleFteFields,
 } from '../../components/finance/amountColumns';
-import { canonicalJson, compactListSearch, compactListSearchCached, filtersNeedContext, listFiltersOf, getWithListContext, parseListFilters } from '../../lib/listContext';
+import { compactListSearchCached, filtersNeedContext, listFiltersOf, getWithListContext, parseListFilters } from '../../lib/listContext';
 import { isReportView, markReportView, snapshotFilters, useSettledListSearch, writeListSnapshot } from '../../hooks/useListContextSearch';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { analyticsListColumns, useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
@@ -37,10 +37,10 @@ import { useLocale } from '../../i18n/useLocale';
 import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
 import ForbiddenPage from '../ForbiddenPage';
 import { budgetListFieldPredicate } from './listFields';
-import ChipToggleBar, { ChipToggleContextLine } from '../../components/ChipToggleBar';
 import { useTenant } from '../../tenant/TenantContext';
 import { drawerMenuItemSx } from '../../theme/formSx';
-import { migrateBudgetGridLayout, readBudgetNature, type BudgetNatureScope, natureScopeOf } from './listPreferences';
+import { migrateBudgetGridLayout, type BudgetNatureScope, natureScopeOf } from './listPreferences';
+import { getDotColor, getPillBg } from '../../utils/statusColors';
 import { statusColumnProps } from '../../components/grid/statusColumn';
 
 /**
@@ -112,17 +112,9 @@ export default function BudgetListPage() {
 function BudgetListPageView() {
   const { hasLevel, profile } = useAuth();
   const { tenantSlug } = useTenant();
-  const natureKey = `kanap-budget-nature:${tenantSlug ?? 'unknown'}:${profile?.id ?? 'anon'}`;
-  const [natureScope, setNatureScope] = useState<BudgetNatureScope>(() => readBudgetNature(natureKey));
-  const initialNature = useRef(natureScope);
-  const lastNatureFilter = useRef<string | null>(null);
   const [newAnchor, setNewAnchor] = useState<HTMLElement | null>(null);
   // Run before ServerDataGrid reads its saved columns.
   useMemo(() => migrateBudgetGridLayout(tenantSlug, profile?.id), [tenantSlug, profile?.id]);
-  const rememberNature = (scope: BudgetNatureScope) => {
-    setNatureScope(scope);
-    try { localStorage.setItem(natureKey, scope); } catch { /* unavailable storage */ }
-  };
   const { t } = useTranslation(['ops', 'common']);
   const locale = useLocale();
   const budgetColumns = useBudgetColumns();
@@ -131,6 +123,11 @@ function BudgetListPageView() {
 
   const navigate = useNavigate();
   const location = useLocation();
+  // The nature the Type column's filter keeps: one nature, or 'all' (no filter, both, or none).
+  // It picks what "New line" opens and the import's default nature.
+  const [natureScope, setNatureScope] = useState<BudgetNatureScope>(
+    () => natureScopeOf(parseListFilters(listFiltersOf(new URLSearchParams(location.search)))?.nature),
+  );
   const Y = new Date().getFullYear();
 
   // `serverOrder`: the options keep the server's order (a dimension's values, in the dimension's
@@ -230,8 +227,7 @@ function BudgetListPageView() {
     storedContextRef.current = next;
     writeStoredBudgetListContext(next);
   }, [storedContext]);
-  const [gridMounted, setGridMounted] = useState(false);
-  const settledBase = useSettledListSearch({
+  const settledSearch = useSettledListSearch({
     endpoint: ROWS_ENDPOINT,
     search: location.search,
     readStored,
@@ -241,46 +237,17 @@ function BudgetListPageView() {
     isListField,
     dropStoredFilters,
   });
-  // Seed only the opening state. An explicit URL nature wins and never writes the preference.
-  const entrySearch = useRef(location.search);
-  const settledSearch = useMemo(() => {
-    if (settledBase == null || gridMounted) return settledBase;
-    const sp = new URLSearchParams(settledBase);
-    const entry = parseListFilters(listFiltersOf(new URLSearchParams(entrySearch.current)));
-    if (!entry || !Object.prototype.hasOwnProperty.call(entry, 'nature')) {
-      const model = { ...(parseListFilters(listFiltersOf(sp)) ?? {}) };
-      delete model.nature;
-      if (initialNature.current !== 'all') model.nature = { filterType: 'set', values: [initialNature.current] };
-      sp.delete('ctx');
-      if (Object.keys(model).length) sp.set('filters', JSON.stringify(model)); else sp.delete('filters');
-    }
-    return compactListSearchCached(sp.toString(), ROWS_ENDPOINT);
-  }, [settledBase, gridMounted]);
-  // A remembered nature added to a large state needs its own saved context before mounting.
-  const [compactedOpening, setCompactedOpening] = useState<{ search: string; compact: string } | null>(null);
-  const needsOpeningContext = settledSearch != null && filtersNeedContext(new URLSearchParams(settledSearch).get('filters'));
-  useEffect(() => {
-    if (!needsOpeningContext || settledSearch == null) return;
-    let cancelled = false;
-    void compactListSearch(settledSearch, ROWS_ENDPOINT).then((compact) => {
-      if (!cancelled) setCompactedOpening({ search: settledSearch, compact });
-    });
-    return () => { cancelled = true; };
-  }, [needsOpeningContext, settledSearch]);
-  const openingSearch = needsOpeningContext
-    ? (compactedOpening?.search === settledSearch ? compactedOpening.compact : null)
-    : settledSearch;
   const currentSearch = new URLSearchParams(location.search).toString();
   useEffect(() => {
-    if (openingSearch != null && openingSearch !== currentSearch) navigate({ search: openingSearch }, { replace: true });
-  }, [openingSearch, currentSearch, navigate]);
-  const gridCanMount = gridMounted || (openingSearch != null && openingSearch === currentSearch);
+    if (settledSearch != null && settledSearch !== currentSearch) navigate({ search: settledSearch }, { replace: true });
+  }, [settledSearch, currentSearch, navigate]);
+  const [gridMounted, setGridMounted] = useState(false);
+  const gridCanMount = gridMounted || (settledSearch != null && settledSearch === currentSearch);
   useEffect(() => { if (gridCanMount && !gridMounted) setGridMounted(true); }, [gridCanMount, gridMounted]);
 
   const initialGridState = useMemo(() => {
     if (!gridCanMount) return undefined;
     const raw = listFiltersOf(new URLSearchParams(location.search));
-    lastNatureFilter.current = canonicalJson(parseListFilters(raw)?.nature);
     if (!raw) return undefined;
     try {
       const parsed = JSON.parse(raw);
@@ -329,13 +296,14 @@ function BudgetListPageView() {
     if (!totals.data || totals.isError) return [];
     return [{
       id: '__budget_totals__',
-      product_name: t('shared.total'),
+      // The line count follows the filters: the grid's total of the same query.
+      product_name: filteredCount == null ? t('shared.total') : t('budget.totalWithCount', { count: filteredCount }),
       versions: totalsToVersions(totals.data),
       ...fteTotalsToRow(totals.data?.fte),
       // A column just shown: its placeholder until its total arrives, not 0.
       ...pendingAmountsField(totals.data, columnFields?.amounts),
     }];
-  }, [totals.data, totals.isError, columnFields?.amounts, t]);
+  }, [totals.data, totals.isError, columnFields?.amounts, filteredCount, t]);
 
   // A delete or an import changes the lines without changing the query: ask again for the same one.
   useEffect(() => {
@@ -455,7 +423,9 @@ function BudgetListPageView() {
     {
       colId: 'item_number',
       headerName: t('opex.columns.reference'),
-      width: 96,
+      // Room for the header and its filter text.
+      width: 120,
+      minWidth: 120,
       valueGetter: (p) => (p.data?.item_number != null ? formatItemRef('budget', p.data.item_number) : ''),
       cellStyle: {
         color: 'var(--kanap-text-secondary)',
@@ -483,7 +453,15 @@ function BudgetListPageView() {
         searchable: false,
       },
       cellRenderer: (params: any) => params.node?.rowPinned || !params.value ? null : (
-        <Chip size="small" label={t(`budget.${params.value}`)} sx={{ height: 22, fontSize: 12, fontWeight: 500, bgcolor: 'kanap.bg.hover', color: 'kanap.text.secondary' }} />
+        <Chip
+          size="small"
+          label={t(`budget.${params.value}`)}
+          // Status palette tones (blue, purple): text contrast above 4.5:1 on the tint, light and dark.
+          sx={(theme) => {
+            const tone = params.value === 'capex' ? 'secondary' : 'info';
+            return { height: 22, fontSize: 12, fontWeight: 500, bgcolor: getPillBg(tone, theme.palette.mode), color: getDotColor(tone, theme.palette.mode) };
+          }}
+        />
       ),
     },
     {
@@ -976,24 +954,7 @@ function BudgetListPageView() {
 
   return (
     <>
-      <PageHeader title={t('budget.titleWithCurrency', { currency: reportingCurrency })} />
-      <ChipToggleBar
-        items={(['all', 'opex', 'capex'] as const).map((id) => ({ id, label: t(`budget.${id}`) }))}
-        selectedId={natureScope}
-        ariaLabel={t('budget.type')}
-        onSelect={(id) => {
-          const next = id as BudgetNatureScope;
-          rememberNature(next);
-          if (!gridApiRef.current) initialNature.current = next;
-          const model = { ...(gridApiRef.current?.getFilterModel?.() ?? parseListFilters(listFiltersOf(new URLSearchParams(location.search))) ?? {}) };
-          delete model.nature;
-          if (next !== 'all') model.nature = { filterType: 'set', values: [next] };
-          lastNatureFilter.current = canonicalJson(model.nature);
-          gridApiRef.current?.setFilterModel?.(model);
-        }}
-        sx={{ mb: 1 }}
-      />
-      <ChipToggleContextLine title={t('budget.collectionCount', { type: t(`budget.${natureScope}`), count: filteredCount ?? 0 })} actions={actions} sx={{ mb: 1 }} />
+      <PageHeader title={t('budget.titleWithCurrency', { currency: reportingCurrency })} actions={actions} />
       <Menu anchorEl={newAnchor} open={!!newAnchor} onClose={() => setNewAnchor(null)}>
         <MenuItem sx={drawerMenuItemSx} onClick={() => openNew('opex')}>{t('budget.opexLine')}</MenuItem>
         <MenuItem sx={drawerMenuItemSx} onClick={() => openNew('capex')}>{t('budget.capexLine')}</MenuItem>
@@ -1021,6 +982,7 @@ function BudgetListPageView() {
         refreshKey={refreshKey}
         onGridApiReady={(gridApi) => {
           gridApiRef.current = gridApi;
+          // The settled address carries the opening filters (a link's, or the stored list context's).
           setNatureScope(natureScopeOf(parseListFilters(listFiltersOf(new URLSearchParams(location.search)))?.nature));
           // The saved layout is applied by now; the first totals request follows the query state.
           followColumns(gridApi?.getColumnState?.());
@@ -1035,13 +997,7 @@ function BudgetListPageView() {
         onQueryStateChange={(state) => {
           const normalizedSort = listSort(state.sort);
           const filtersObject = state.filterModel || {};
-          if (gridApiRef.current) {
-            const nature = canonicalJson(filtersObject.nature);
-            const nextScope = natureScopeOf(filtersObject.nature);
-            setNatureScope(nextScope);
-            if (lastNatureFilter.current !== null && lastNatureFilter.current !== nature) rememberNature(nextScope);
-            lastNatureFilter.current = nature;
-          }
+          if (gridApiRef.current) setNatureScope(natureScopeOf(filtersObject.nature));
           const filtersString = filtersObject && Object.keys(filtersObject).length > 0 ? JSON.stringify(filtersObject) : '';
           const scope = state.statusScope ?? 'enabled';
           lastQueryRef.current = { sort: normalizedSort, q: state.q || '', filters: filtersObject, filtersString, statusScope: scope };

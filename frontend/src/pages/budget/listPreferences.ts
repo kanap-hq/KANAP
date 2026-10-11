@@ -7,14 +7,6 @@ export function natureScopeOf(filter: unknown): BudgetNatureScope {
   return values.length === 1 && (values[0] === 'opex' || values[0] === 'capex') ? values[0] : 'all';
 }
 
-export function readBudgetNature(key: string): BudgetNatureScope {
-  try {
-    const value = localStorage.getItem(key);
-    if (value === 'opex' || value === 'capex') return value;
-  } catch { /* unavailable storage */ }
-  return 'all';
-}
-
 /** Preserve the user's OPEX layout the first time the unified grid mounts. */
 export function migrateBudgetGridLayout(tenant: string | null | undefined, user: string | undefined): void {
   if (!tenant || !user) return;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -269,44 +269,18 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
     await act(async () => { release(); });
     await waitFor(() => expect(footer('yRevision')).toBe('1 234'), { timeout: 10_000 });
   }, 30_000);
-  it('the real grid honours an URL nature without writing memory, then remembers a filter edit', async () => {
-    localStorage.setItem('kanap-budget-nature:test:u-1', 'opex');
-    const remember = vi.spyOn(localStorage, 'setItem');
+  it('the real grid opens on an address nature as its Type column filter', async () => {
     const model = { nature: { filterType: 'set', values: ['capex'] } };
     renderAt('/ops/budget?filters=' + encodeURIComponent(JSON.stringify(model)));
     await waitFor(() => expect(grid.api).not.toBeNull());
     await waitFor(() => expect(calls(TOTALS).length).toBeGreaterThan(0));
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 500)); });
     expect(grid.api.getFilterModel()).toEqual(model);
-    expect(screen.getByRole('button', { name: 'budget.capex' })).toHaveAttribute('aria-pressed', 'true');
-    expect(remember.mock.calls.filter(([key]) => key === 'kanap-budget-nature:test:u-1')).toHaveLength(0);
-    expect(localStorage.getItem('kanap-budget-nature:test:u-1')).toBe('opex');
-    await act(async () => { grid.api.setFilterModel({ nature: { filterType: 'set', values: ['opex'] } }); });
-    await waitFor(() => expect(screen.getByRole('button', { name: 'budget.opex' })).toHaveAttribute('aria-pressed', 'true'));
-    expect(localStorage.getItem('kanap-budget-nature:test:u-1')).toBe('opex');
-    expect(remember.mock.calls.filter(([key]) => key === 'kanap-budget-nature:test:u-1')).toHaveLength(1);
+    expect(paramsOf(calls(TOTALS).slice(-1)[0]).filters).toBe(JSON.stringify(model));
+    expect(screen.queryByRole('button', { name: 'budget.capex' })).toBeNull();
   });
 
-  it('the real grid remembers a clicked toggle after reloading, and All clears only the nature', async () => {
-    const view = renderAt('/ops/budget');
-    await waitFor(() => expect(grid.api).not.toBeNull());
-    await waitFor(() => expect(calls(ROWS).length).toBeGreaterThan(0));
-    fireEvent.click(screen.getByRole('button', { name: 'budget.capex' }));
-    await waitFor(() => expect(grid.api.getFilterModel()).toEqual({ nature: { filterType: 'set', values: ['capex'] } }));
-    expect(localStorage.getItem('kanap-budget-nature:test:u-1')).toBe('capex');
-    view.unmount();
-    grid.api = null;
-    renderAt('/ops/budget');
-    await waitFor(() => expect(grid.api).not.toBeNull());
-    await waitFor(() => expect(grid.api.getFilterModel()).toEqual({ nature: { filterType: 'set', values: ['capex'] } }));
-    await act(async () => { grid.api.setFilterModel({ nature: { filterType: 'set', values: ['capex'] }, supplier_name: { filterType: 'set', values: ['Acme'] } }); });
-    fireEvent.click(screen.getByRole('button', { name: 'budget.all' }));
-    await waitFor(() => expect(grid.api.getFilterModel()).toEqual({ supplier_name: { filterType: 'set', values: ['Acme'] } }));
-    expect(localStorage.getItem('kanap-budget-nature:test:u-1')).toBe('all');
-  });
-
-  it('a URL ctx nature wins over memory without writing it', async () => {
-    localStorage.setItem('kanap-budget-nature:test:u-1', 'opex');
+  it('the real grid opens on a nature saved in an address ctx', async () => {
     const saved = { nature: { filterType: 'set', values: ['capex'] }, ...ALL_BUT_ONE };
     const fallback = mocked.get.getMockImplementation()! as (url: string, config?: any) => any;
     mocked.get.mockImplementation(async (url: string, config?: any) => url === `/list-contexts/${ID}`
@@ -315,8 +289,6 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
     renderAt('/ops/budget?ctx=' + ID);
     await waitFor(() => expect(grid.api).not.toBeNull());
     await waitFor(() => expect(grid.api.getFilterModel()).toEqual(saved));
-    expect(localStorage.getItem('kanap-budget-nature:test:u-1')).toBe('opex');
-    expect(screen.getByRole('button', { name: 'budget.capex' })).toHaveAttribute('aria-pressed', 'true');
     expect(mocked.post).not.toHaveBeenCalled();
   });
 

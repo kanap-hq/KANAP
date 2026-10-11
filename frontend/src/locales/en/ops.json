@@ -1441,7 +1441,6 @@
   },
   "budget": {
     "titleWithCurrency": "Budget lines ({{currency}})",
-    "all": "All",
     "type": "Type",
     "newLine": "New line",
     "opexLine": "OPEX line",
@@ -1449,7 +1448,7 @@
     "exportTitle": "Export budget file",
     "opex": "OPEX",
     "capex": "CAPEX",
-    "collectionCount_one": "{{type}} · {{count}} line",
-    "collectionCount_other": "{{type}} · {{count}} lines"
+    "totalWithCount_one": "Total ({{count}} line)",
+    "totalWithCount_other": "Total ({{count}} lines)"
   }
 }

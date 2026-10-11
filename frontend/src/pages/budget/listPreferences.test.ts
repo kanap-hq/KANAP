@@ -1,18 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { migrateBudgetGridLayout, natureScopeOf, readBudgetNature } from './listPreferences';
+import { migrateBudgetGridLayout, natureScopeOf } from './listPreferences';
 let values: Map<string, string>;
 beforeEach(() => {
   values = new Map();
   vi.stubGlobal('localStorage', { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value) });
 });
 describe('budget list preferences', () => {
-  it('defaults to all and accepts only valid stored natures', () => {
-    expect(readBudgetNature('key')).toBe('all');
-    values.set('key', 'capex');
-    expect(readBudgetNature('key')).toBe('capex');
-    values.set('key', 'wrong');
-    expect(readBudgetNature('key')).toBe('all');
-  });
   it('retains an existing budget layout and scopes the copy per user', () => {
     values.set('grid-columns:t:u:budget-summary', 'new');
     values.set('grid-columns:t:u:opex-summary', 'old');
@@ -24,10 +17,9 @@ describe('budget list preferences', () => {
   });
   it('tolerates unavailable storage', () => {
     vi.stubGlobal('localStorage', { getItem: () => { throw new Error('disabled'); } });
-    expect(readBudgetNature('key')).toBe('all');
     expect(() => migrateBudgetGridLayout('t', 'u')).not.toThrow();
   });
-  it('matches include and exclude set filters to the nature toggle', () => {
+  it('matches include and exclude set filters to a single nature', () => {
     expect(natureScopeOf({ filterType: 'set', values: ['capex'] })).toBe('capex');
     expect(natureScopeOf({ filterType: 'set', values: ['opex'] })).toBe('opex');
     expect(natureScopeOf({ filterType: 'set', values: ['opex', 'capex'] })).toBe('all');
