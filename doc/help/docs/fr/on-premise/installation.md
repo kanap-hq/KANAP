@@ -125,7 +125,7 @@ docker compose -f infra/compose.onprem.yml logs -f api
 3. Router toutes les autres requêtes vers le conteneur web (port 8081 sur `127.0.0.1`)
 4. Renseigner `X-Forwarded-Proto: https` et conserver `Host`. KANAP construit chaque lien qu'il envoie à partir de `APP_BASE_URL`. L'exemple envoie aussi `X-Forwarded-Host`, avec la même valeur que `Host`. Lorsque le site utilise un port non standard, ajoutez l'adresse exacte avec son port à `CORS_ORIGINS`.
 5. Envoyer `X-Forwarded-For` avec l'adresse du client (l'exemple le fait) et renseigner `RATE_LIMIT_TRUST_PROXY=true`. KANAP utilise cette adresse pour ses limites de connexion. Le port de l'API doit rester lié à `127.0.0.1`, comme le fait `compose.onprem.yml`. Si rien n'est placé devant l'API, renseignez `RATE_LIMIT_TRUST_PROXY=false`.
-6. Accepter des corps de requête de 50 Mo (`client_max_body_size 50m`) : les fichiers de budget vont jusqu'à 48 Mo et les pièces jointes jusqu'à 20 Mo.
+6. Accepter des corps de requête de 80 Mo (`client_max_body_size 80m`) : le chargement d'un fichier de budget envoie jusqu'à 72 Mo (le fichier, jusqu'à 48 Mo, et le résultat de sa vérification), et les pièces jointes vont jusqu'à 20 Mo.
 
 Comme les conteneurs sont liés à `127.0.0.1`, nginx s'exécute sur le même hôte et relaie vers `localhost`.
 
@@ -145,8 +145,8 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers off;
 
-    # Limite d'envoi : fichiers de budget jusqu'à 48 Mo, pièces jointes jusqu'à 20 Mo
-    client_max_body_size 50m;
+    # Limite d'envoi : chargements de fichiers de budget jusqu'à 72 Mo, pièces jointes jusqu'à 20 Mo
+    client_max_body_size 80m;
 
     # Normaliser /api → /api/
     location = /api { return 301 /api/; }

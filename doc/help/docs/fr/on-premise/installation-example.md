@@ -506,8 +506,8 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers off;
 
-    # Limite d'envoi : fichiers de budget jusqu'à 48 Mo, pièces jointes jusqu'à 20 Mo
-    client_max_body_size 50m;
+    # Limite d'envoi : chargements de fichiers de budget jusqu'à 72 Mo, pièces jointes jusqu'à 20 Mo
+    client_max_body_size 80m;
 
     # Normaliser /api → /api/
     location = /api { return 301 /api/; }

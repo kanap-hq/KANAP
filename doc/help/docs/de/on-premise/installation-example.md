@@ -506,8 +506,8 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers off;
 
-    # Upload-Limit: Budgetdateien bis 48 MB, Anhänge bis 20 MB
-    client_max_body_size 50m;
+    # Upload-Limit: Laden von Budgetdateien bis 72 MB, Anhänge bis 20 MB
+    client_max_body_size 80m;
 
     # /api → /api/ vereinheitlichen
     location = /api { return 301 /api/; }

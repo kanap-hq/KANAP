@@ -16,7 +16,7 @@ import {
   inlineImageMulterOptions,
   MULTIPART_LIMITS,
 } from '../upload';
-import { BUDGET_FILE_MAX_BYTES, budgetFileMulterOptions } from '../../spend/budget-file/upload';
+import { BUDGET_FILE_MAX_BYTES, BUDGET_FILE_SNAPSHOT_MAX_BYTES, budgetFileMulterOptions } from '../../spend/budget-file/upload';
 
 // Every multipart upload is bounded: one file, a few text fields with short,
 // flat names, besides the file size. A refused upload answers 4xx (400 with a
@@ -29,12 +29,16 @@ function testOptionObjects() {
     ['inline image', inlineImageMulterOptions, ATTACHMENT_MAX_BYTES],
     ['document import', documentImportMulterOptions, ATTACHMENT_MAX_BYTES],
     ['CSV import', csvImportMulterOptions, CSV_IMPORT_MAX_BYTES],
-    ['budget file', budgetFileMulterOptions, BUDGET_FILE_MAX_BYTES],
   ];
   for (const [label, options, fileSize] of expected) {
     assert.deepEqual(options.limits, { ...MULTIPART_LIMITS, fileSize }, `${label}: complete limits`);
     assert.equal(typeof options.fileFilter, 'function', `${label}: keeps its file filter`);
   }
+  // The budget file: its own file and snapshot sizes, and room for the snapshot field only.
+  assert.deepEqual(budgetFileMulterOptions.limits, {
+    ...MULTIPART_LIMITS, fileSize: BUDGET_FILE_MAX_BYTES, fieldSize: BUDGET_FILE_SNAPSHOT_MAX_BYTES, fields: 1, parts: 2,
+  }, 'budget file: complete limits');
+  assert.equal(typeof budgetFileMulterOptions.fileFilter, 'function', 'budget file: keeps its file filter');
   assert.equal(MULTIPART_LIMITS.files, 1);
   assert.ok(MULTIPART_LIMITS.fields >= 2, 'room for the one text field the app sends');
   assert.equal(MULTIPART_LIMITS.parts, MULTIPART_LIMITS.files + MULTIPART_LIMITS.fields);
