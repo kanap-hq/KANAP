@@ -23,8 +23,16 @@ function crumbLabels() {
   return Array.from(nav.querySelectorAll('li:not(.MuiBreadcrumbs-separator)')).map((li) => li.textContent);
 }
 
-describe('PageHeader single-crumb pages', () => {
-  it.each(['/settings', '/agents', '/master-data'])('shows no breadcrumb on %s', (path) => {
+describe('PageHeader pages the top navigation already locates', () => {
+  it.each([
+    '/settings',
+    '/agents',
+    '/master-data',
+    '/ops/contracts',
+    '/master-data/companies',
+    '/it/assets',
+    '/settings/profile',
+  ])('shows no breadcrumb on %s', (path) => {
     renderAt(path);
     expect(screen.queryByLabelText('breadcrumb')).toBeNull();
     expect(screen.getByText('Antoine KANDEL')).toBeTruthy();
@@ -34,24 +42,30 @@ describe('PageHeader single-crumb pages', () => {
 describe('PageHeader breadcrumb title placement', () => {
   it('replaces the id crumb on /:id routes', () => {
     renderAt(`/portfolio/contributors/${UUID}`, 'Antoine KANDEL');
-    expect(crumbLabels()).toEqual(['breadcrumbs.portfolio', 'breadcrumbs.contributors', 'Antoine KANDEL']);
+    expect(crumbLabels()).toEqual(['breadcrumbs.contributors', 'Antoine KANDEL']);
   });
 
   it('replaces the id crumb and keeps the tab crumb on /:id/:tab routes', () => {
     renderAt(`/portfolio/contributors/${UUID}/skills`, 'Antoine KANDEL');
-    expect(crumbLabels()).toEqual(['breadcrumbs.portfolio', 'breadcrumbs.contributors', 'Antoine KANDEL', 'Skills']);
+    expect(crumbLabels()).toEqual(['breadcrumbs.contributors', 'Antoine KANDEL', 'Skills']);
     const entityLink = screen.getByRole('link', { name: 'Antoine KANDEL' });
     expect(entityLink.getAttribute('href')).toBe(`/portfolio/contributors/${UUID}`);
   });
 
   it('treats the self-service `me` segment as the entity crumb', () => {
     renderAt('/portfolio/contributors/me/time-logged', 'Antoine KANDEL');
-    expect(crumbLabels()).toEqual(['breadcrumbs.portfolio', 'breadcrumbs.contributors', 'Antoine KANDEL', 'Time Logged']);
+    expect(crumbLabels()).toEqual(['breadcrumbs.contributors', 'Antoine KANDEL', 'Time Logged']);
   });
 
   it('falls back to the last crumb when no entity segment precedes it', () => {
-    renderAt('/ops/reports/summary', 'Quarterly view');
-    expect(crumbLabels()).toEqual(['breadcrumbs.ops', 'breadcrumbs.reports', 'Quarterly view']);
+    renderAt('/ops/operations/currency', 'Currency');
+    expect(crumbLabels()).toEqual(['breadcrumbs.operations', 'Currency']);
+    expect(screen.getByRole('link', { name: 'breadcrumbs.operations' }).getAttribute('href')).toBe('/ops/operations');
+  });
+
+  it('shows no breadcrumb when the entity is the only crumb below the section', () => {
+    renderAt('/agents/budget-watch', 'Budget watch');
+    expect(screen.queryByLabelText('breadcrumb')).toBeNull();
   });
 });
 
@@ -63,7 +77,7 @@ describe('PageHeader IT landscape crumbs', () => {
     ['connections', 'breadcrumbs.connections'],
     ['incidents', 'breadcrumbs.incidents'],
   ])('labels /it/%s from the nav keys', (segment, key) => {
-    renderAt(`/it/${segment}`);
-    expect(crumbLabels()).toEqual(['breadcrumbs.it', key]);
+    renderAt(`/it/${segment}/${UUID}`, 'Entity');
+    expect(crumbLabels()).toEqual([key, 'Entity']);
   });
 });

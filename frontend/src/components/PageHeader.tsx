@@ -124,11 +124,15 @@ export default function PageHeader({
     ));
   }
 
+  // The section crumb repeats the top navigation. Without it, a lone crumb is
+  // the current page (already the title), so the trail shows only on pages
+  // below a navigation entry (`Administration > Currency`).
+  crumbs = crumbs.slice(1);
+
   const location = useLocation();
   const isAdmin = location.pathname.startsWith('/admin');
   return (
     <Stack spacing={1} sx={{ mb: 2 }}>
-      {/* A lone crumb links nowhere and repeats the top nav tab or the title. */}
       {crumbs.length > 1 && (
         <Breadcrumbs aria-label="breadcrumb">
           {crumbs.map((c, idx) => (
