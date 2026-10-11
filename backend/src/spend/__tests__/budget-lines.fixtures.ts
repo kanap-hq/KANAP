@@ -1,3 +1,4 @@
+import { itemService } from './cost-center.fixtures';
 import { SpendItem } from '../spend-item.entity';
 import { QueryRunner } from 'typeorm';
 import { seedTenant, seedLine, setTenant, captureAudit } from './round-inputs.fixtures';
@@ -53,5 +54,6 @@ export function budgetService(runner: QueryRunner) {
   // The repositories used for deletes come from the passed request manager.
   const args: any[] = [runner.manager.getRepository(SpendItem), undefined, undefined, undefined, audit, storage, time];
   return new BudgetLinesService(deps.allocationCalculator as any, deps.fxRates as any,
-    new (SpendItemsDeleteService as any)(...args), new (CapexItemsDeleteService as any)(...args));
+    new (SpendItemsDeleteService as any)(...args), new (CapexItemsDeleteService as any)(...args),
+    itemService('opex', audit) as any, itemService('capex', audit) as any);
 }

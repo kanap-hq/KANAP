@@ -4,6 +4,15 @@ import { budgetAmountFields, budgetAmountSortFields, budgetFteFields, budgetFteS
 export const capexItemsRegistry: AiEntityFilterRegistry = {
   entityType: 'capex_items',
   fields: {
+    description: {
+      ai: 'description', grid: 'description', type: 'text',
+      description: 'CAPEX line title.', sortable: true, groupable: false,
+    },
+    line_description: {
+      ai: 'line_description', grid: 'line_description', type: 'text',
+      description: 'CAPEX line description, separate from its title and notes.',
+      sortable: true, groupable: false,
+    },
     status: {
       ai: 'status',
       grid: 'status',
@@ -199,6 +208,8 @@ export const capexItemsRegistry: AiEntityFilterRegistry = {
     ...budgetFteFields(),
   },
   sortFields: {
+    description: 'description',
+    line_description: 'line_description',
     label: 'description',
     status: 'status',
     currency: 'currency',

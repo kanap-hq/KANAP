@@ -403,7 +403,7 @@ out('14-spend-items.csv', opexRows);
 // ── CAPEX items ──────────────────────────────────────────────────────────────
 // The PP&E type, investment type and priority are the values of the dimensions every tenant
 // starts with (codes ppe_type, investment_type, priority), written by name.
-const CAPEX_HEADER = ['item_number', 'description', 'currency', 'effective_start', 'status', 'disabled_at', 'notes',
+const CAPEX_HEADER = ['item_number', 'product_name', 'description', 'currency', 'effective_start', 'status', 'disabled_at', 'notes',
   'company_name', 'account_number', 'owner_it_email', 'owner_business_email', 'analytics_category', 'analytics:nature', 'analytics:reference', 'analytics:recurrence',
   'analytics:ppe_type', 'analytics:investment_type', 'analytics:priority', 'cost_center_code', 'run_build',
   'y_minus1_budget', 'y_minus1_landing', 'y_budget', 'y_follow_up', 'y_landing', 'y_revision', 'y_plus1_budget', 'y_plus1_revision', 'y_plus2_budget'];
@@ -420,7 +420,7 @@ const EXISTING_CAPEX = [
 ];
 for (const [description, ppe, inv, prio, currency, start, end, notes, company, domain, cc, nature, reference, ratio, budgetBefore, landingBefore, budget] of EXISTING_CAPEX) {
   const landing = round(budget * ratio, 1000);
-  capexRows.push(['', description, currency, start, statusFor(end), end, notes,
+  capexRows.push(['', description, notes, currency, start, statusFor(end), end, '',
     company, assetAccount(company, ppe), OWNER_IT[cc], OWNER_BUSINESS[ccGroup[cc]], domain, NATURE[nature], reference ? REFERENCE[reference][0] : '', RECURRENCE.no,
     ppe, inv, prio, cc, 'build',
     budgetBefore, landingBefore, budget, '', landing, round(budget * between(0.98, 1.05), 1000), '', '', '']);
@@ -463,7 +463,7 @@ for (const [description, ppe, inv, prio, cc, domain, nature, reference, budgetRa
     const endMonth = end?.startsWith('2026-') ? Number(end.slice(5, 7)) : 12;
     pushActuals('capex', description, flat(landing, 1, endMonth));
   }
-  capexRows.push(['', description, CURRENCY[company], start, statusFor(end), end, '',
+  capexRows.push(['', description, '', CURRENCY[company], start, statusFor(end), end, '',
     company, assetAccount(company, ppe), OWNER_IT[cc], OWNER_BUSINESS[ccGroup[cc]], domain, NATURE[nature], reference ? REFERENCE[reference][0] : '', RECURRENCE.no,
     ppe, inv, prio, cc, 'build',
     '', '', budget, '', landing, rnd() < 0.5 ? round(budget * between(0.98, 1.05), 1000) : '', '', '', '']);

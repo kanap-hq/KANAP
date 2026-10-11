@@ -81,12 +81,6 @@ export function natureChangeMessage(ref: string, stored: BudgetNature, said: Bud
 }
 
 /**
- * The description of a CAPEX line is neither read nor written by the file until the unified
- * screens (lot U): the CAPEX screens, API and audit rows do not show it yet.
- */
-export const CAPEX_DESCRIPTION_IGNORED = 'description is ignored on a CAPEX line. Leave the cell empty.';
-
-/**
  * A text cell and a stored text, read the same way before they are compared: the reader trims a
  * cell, and the load writes it trimmed, so a stored value that ends with a line break (typed in
  * the app) reads as unchanged when an export is loaded back.
@@ -121,7 +115,6 @@ interface Bag {
   dimensions: Map<string, Map<string, string>>;
   duplicates: Array<{ line: number; message: string }>;
   supplierNames: Array<{ line: number; message: string }>;
-  ignoredCells: Array<{ line: number; column: string; message: string }>;
   deleted: Array<{ line: number; itemNumber: string }>;
   changed: BudgetFileReport['changedSinceExport'];
   snapshot: BudgetFileSnapshotLine[];
@@ -278,7 +271,7 @@ function resolveRow(
   const company = resolveCompany(input, row, live, creating, costCenter, blocked, fail, bag, changes, draft);
   resolveAccount(input, nature, row, live, creating, company, blocked, fail, bag, changes, draft);
   const supplier = resolveSupplier(input, row, live, creating, blocked, fail, bag, changes, draft);
-  resolveText(nature, row, live, creating, blocked, fail, bag, changes, draft);
+  resolveText(row, live, creating, blocked, fail, changes, draft);
   resolveEnums(row, live, creating, blocked, fail, changes, draft);
   resolveCurrency(input, row, live, creating, blocked, fail, changes, draft);
   resolveOwners(input, row, live, creating, blocked, fail, bag, changes, draft);
@@ -612,17 +605,14 @@ function opinion(cell: FieldCell): string | null | undefined {
 
 /**
  * The texts: `name` is the line's `product_name` for both natures, `description` the description
- * of an OPEX line. On a CAPEX line a filled `description` cell is ignored with a warning
- * (`CAPEX_DESCRIPTION_IGNORED`, until lot U).
+ * of the line. Both natures use the same normalization and writable columns.
  */
 function resolveText(
-  nature: BudgetNature,
   row: InterpretedRow,
   live: StoredLine | null,
   creating: boolean,
   blocked: (column: string) => boolean,
   fail: (column: string | null, message: string) => void,
-  bag: Bag,
   changes: string[],
   draft: LineDraft,
 ): void {
@@ -634,12 +624,6 @@ function resolveText(
   for (const field of fields) {
     const cell = row.fields[field.id] ?? { kind: 'absent' as const };
     if (blocked(field.id)) continue;
-    if (nature === 'capex' && field.id === 'description') {
-      if (cell.kind === 'value' || cell.kind === 'clear') {
-        bag.ignoredCells.push({ line: row.line, column: 'description', message: CAPEX_DESCRIPTION_IGNORED });
-      }
-      continue;
-    }
     const key = field.id === 'name' ? 'product_name' : field.id;
     if (cell.kind === 'clear') {
       if (field.required || !CLEARABLE.has(field.id)) fail(field.id, `${field.id} is required.`);
@@ -1115,7 +1099,6 @@ function emptyBag(): Bag {
     dimensions: new Map(),
     duplicates: [],
     supplierNames: [],
-    ignoredCells: [],
     deleted: [],
     changed: [],
     snapshot: [],
@@ -1171,7 +1154,6 @@ function finish(input: PreflightInput, errors: Bag['errors'], bag: Bag, supplier
       duplicates: bag.duplicates.slice(0, PREFLIGHT_LIST_LIMIT),
       ignoredColumns: input.read.ignoredColumns,
       supplierNames: bag.supplierNames.slice(0, PREFLIGHT_LIST_LIMIT),
-      ignoredCells: bag.ignoredCells.slice(0, PREFLIGHT_LIST_LIMIT),
     },
     creates: {
       dimensionValues: [...bag.dimensions.entries()].map(([dimension, names]) => ({

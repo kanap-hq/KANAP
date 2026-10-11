@@ -118,6 +118,13 @@ test('CAPEX lines file: the same detail columns, its nature, the criteria as dim
   );
 });
 
+test('native CAPEX source keeps its title, description and separate notes', () => {
+  const row = { ...CAPEX_ROW, product_name: 'SAP Cheddar Migration', description: 'S/4HANA upgrade', notes: 'Separate notes' };
+  const csv = buildLinesFile('capex', [row], { year: 2026, defaultDimensionCode: 'default', existingNumbers: new Map() });
+  const { rows } = parse(csv);
+  assert.deepEqual([rows[0].name, rows[0].description, rows[0].notes], ['SAP Cheddar Migration', 'S/4HANA upgrade', 'Separate notes']);
+});
+
 test('relative amount columns land on the year Y passed in', () => {
   const csv = buildLinesFile('opex', [OPEX_ROW], { year: 2030, defaultDimensionCode: 'expense', existingNumbers: new Map() });
   const { header, rows } = parse(csv);

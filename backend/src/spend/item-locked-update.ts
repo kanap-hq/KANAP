@@ -72,7 +72,7 @@ export async function updateItemUnderLock(
   if (!(await lockBudgetLine(manager, scope, tenantId, itemId))) return null;
   const nature = LINES[scope].nature!;
   // A CAPEX line with its hidden columns (legacy number, CAPEX enums): what its API and audit rows show.
-  const read = () => findBudgetLine(manager, nature, tenantId, itemId);
+  const read = () => findBudgetLine(manager, nature, tenantId, itemId, fields === 'columns');
   const before = await read();
   if (!before) return null;
   const analyticsBefore = (await loadItemAnalyticsValues(manager, scope, tenantId, [itemId])).get(itemId) ?? [];
@@ -97,7 +97,7 @@ export async function updateItemUnderLock(
   // Nothing written yet: a conflict refuses the request whole (409 `edit_conflict`).
   await assertNoItemEditConflicts(manager, scope, tenantId, itemId, base, changes, {
     before, analyticsBefore, values, disabledAt: lifecycle.disabled_at, analytics,
-  });
+  }, fields);
 
   // A plain column (no trigger, no @UpdateDateColumn): "recent updates" read it.
   const set: Record<string, unknown> = { ...values, updated_at: now };

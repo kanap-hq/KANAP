@@ -637,9 +637,21 @@ export class AiQueryExecutor {
     });
   }
 
+  /** Read descriptions in one tenant/nature-scoped batch without changing the CAPEX alias. */
+  private async withCapexDescriptions(context: AiExecutionContextWithManager, rows: any[]): Promise<void> {
+    if (!rows.length) return;
+    const descriptions: Array<{ id: string; description: string | null }> = await context.manager.query(
+      `SELECT id, description FROM spend_items
+        WHERE tenant_id = $1 AND nature = 'capex' AND id = ANY($2::uuid[])`,
+      [context.tenantId, rows.map((row) => row.id)],
+    );
+    const byId = new Map(descriptions.map((row) => [row.id, row.description]));
+    for (const row of rows) row.line_description = byId.get(row.id) ?? null;
+  }
+
   private mapCapexItem(row: any, registry: AiEntityFilterRegistry): AiEntitySummaryDto {
     const anchorYear = new Date().getFullYear();
-    const summary = row.notes
+    const summary = row.line_description ?? row.notes
       ?? ([row.company_name, row.supplier_name].filter(Boolean).join(' | ') || null);
     return toEntitySummary('capex_items', {
       id: row.id,
@@ -649,6 +661,7 @@ export class AiQueryExecutor {
       summary,
       updated_at: row.updated_at ?? null,
       metadata: {
+        line_description: scalar(row.line_description),
         ...budgetItemMetadata(row, registry),
         budget_anchor_year: anchorYear,
         ...budgetAmountMetadata(row, anchorYear),
@@ -1184,6 +1197,7 @@ export class AiQueryExecutor {
         },
         { manager: context.manager },
       );
+      await this.withCapexDescriptions(context, result.items || []);
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
       const returned = Array.isArray(result.items) ? result.items.length : 0;
@@ -2089,6 +2103,7 @@ export class AiQueryExecutor {
       // The id, not the reference the caller may have given (`get` accepts both).
       const capexItemId = row.id as string;
       await this.withoutHiddenAnalyticsValues(context, row, 'capex');
+      await this.withCapexDescriptions(context, [row]);
       const registry = await resolveAiEntityRegistry(context, entityType);
       Object.assign(row, await this.loadCapexItemDeepDetail(context, capexItemId, registry));
       row.links = await this.capexItems.listLinks(capexItemId, { manager: context.manager }).catch(() => []);

@@ -34,7 +34,7 @@ const DETAIL_AFTER_DIMENSIONS = [
   'owner_it_email', 'owner_business_email', 'project', 'currency', 'effective_start', 'end_of_validity', 'notes',
 ];
 
-/** Detail columns the source names differently. Everything else keeps its name. A CAPEX source row has no description. */
+/** Detail columns the source names differently. Everything else keeps its name. Older CAPEX sources use description for the title. */
 const DETAIL_RENAME = {
   opex: { product_name: 'name', description: 'description' },
   capex: { description: 'name' },
@@ -157,8 +157,9 @@ export function buildLinesFile(scope, sourceRows, { year, defaultDimensionCode, 
 
   const out = rows.map((row) => {
     const values = new Map();
-    const name = valueOf(row, scope === 'opex' ? 'product_name' : 'description');
-    for (const [source, target] of Object.entries(DETAIL_RENAME[scope])) {
+    const native = scope === 'opex' || sourceHeader.includes('product_name');
+    const name = valueOf(row, native ? 'product_name' : 'description');
+    for (const [source, target] of Object.entries(DETAIL_RENAME[native ? 'opex' : 'capex'])) {
       values.set(target, valueOf(row, source));
     }
     for (const column of DETAIL_SAME_NAME) {

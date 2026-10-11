@@ -114,7 +114,7 @@ test('a shift of one year, file by file', () => {
   assert.equal(notes.disabled_at, '2027-12-31');
   assert.equal(notes.notes, 'End of validity 2027-12-31', 'a date inside a text moves too');
 
-  const sap = find('15-capex-items.csv', (row) => row.description.startsWith('SAP Cheddar Migration'));
+  const sap = find('15-capex-items.csv', (row) => row.product_name.startsWith('SAP Cheddar Migration'));
   assert.deepEqual([sap.effective_start, sap.disabled_at], ['2026-07-01', '2028-12-31']);
 
   const crm = find('16-portfolio-projects.csv', (row) => row.name === 'Legacy CRM Decommission');

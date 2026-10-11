@@ -157,7 +157,7 @@ export class SpendItemsDeleteService extends BaseDeleteService<SpendItem> {
   }
 }
 
-/** The delete of the CAPEX lines (`DELETE /capex-items*`, aliases until lot U). */
+/** The delete of the CAPEX lines (`DELETE /capex-items*`, aliases retained until their removal in Z2). */
 @Injectable()
 export class CapexItemsDeleteService extends SpendItemsDeleteService {
   protected override readonly logger = new Logger(CapexItemsDeleteService.name);

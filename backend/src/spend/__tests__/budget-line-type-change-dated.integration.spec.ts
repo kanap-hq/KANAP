@@ -131,8 +131,8 @@ async function testFromYear() {
     const created = (await storedLine(runner, tenantId, newId))!;
     assert.equal(result.reference, `BL-${created.item_number}`);
     assert.deepEqual(
-      [created.nature, created.effective_start, created.disabled_at, created.predecessor_id, created.product_name, created.description],
-      ['capex', '2026-01-01', null, line.id, `Line ${NUMBER}`, `Description of ${NUMBER}`],
+      [created.nature, created.effective_start, created.disabled_at, created.predecessor_id, created.product_name, created.description, created.notes],
+      ['capex', '2026-01-01', null, line.id, `Line ${NUMBER}`, `Description of ${NUMBER}`, 'Seeded notes'],
     );
     assert.match(String(created.legacy_number), /^CPX-\d+$/, 'a CPX number');
     assert.deepEqual([created.account_id, created.cost_center_id], [null, w.costCenterId], 'the OPEX account stays behind, the cost center is copied');

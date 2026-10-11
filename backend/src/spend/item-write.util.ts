@@ -63,14 +63,13 @@ const FIELD_COLUMNS: Record<ItemWriteScope, Readonly<Record<string, string>>> = 
  * How a body names its fields: `api`, the names of the nature's routes (the CAPEX alias's
  * `description` is the title); `columns`, the columns of `spend_items` (`product_name` the title,
  * `description` the description), what the budget file writes since lot C1b: those of an OPEX
- * line, the contract aside; a CAPEX line's description stays out until the unified screens
- * (lot U), which show it.
+ * line. CAPEX keeps the contract column read-only.
  */
 export type ItemWriteFields = 'api' | 'columns';
 
 const COLUMN_WRITABLE: Record<ItemWriteScope, readonly string[]> = {
-  opex: WRITABLE_COLUMNS.opex.filter((column) => column !== 'contract_id'),
-  capex: WRITABLE_COLUMNS.opex.filter((column) => column !== 'contract_id' && column !== 'description'),
+  opex: WRITABLE_COLUMNS.opex,
+  capex: WRITABLE_COLUMNS.opex.filter((column) => column !== 'contract_id'),
 };
 
 /** The fields a line update writes as given (after the id checks below), by their API names. */

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Query, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Res, UseGuards } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -132,4 +132,27 @@ export class BudgetLinesController {
   resolve(@Param('ref') ref: string, @Tenant() ctx: TenantRequest) {
     return resolveBudgetLine(ref, ctx.manager as EntityManager);
   }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'member')
+  @Post()
+  create(@Body() body: unknown, @Tenant() ctx: TenantRequest) {
+    return this.svc.create(body, ctx.userId || undefined, { manager: ctx.manager as EntityManager });
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'member')
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() body: unknown, @Tenant() ctx: TenantRequest) {
+    return this.svc.update(id, body, ctx.userId || undefined, { manager: ctx.manager as EntityManager });
+  }
+
+  // Keep the generic detail route after every static GET path.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'reader')
+  @Get(':ref')
+  get(@Param('ref') ref: string, @Tenant() ctx: TenantRequest) {
+    return this.svc.get(ref, { manager: ctx.manager as EntityManager });
+  }
+
 }

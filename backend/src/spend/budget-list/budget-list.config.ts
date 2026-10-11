@@ -74,7 +74,7 @@ export class BudgetListConfig implements ListConfig {
 
   constructor(private readonly rt: BudgetListRuntime) {
     this.from = `${rt.scope.itemTable} i`;
-    this.columns = { ...(rt.scope.allNatures ? { nature: 'enum' as const } : {}), ...ITEM_COLUMNS, ...(rt.scope.scope !== 'capex' ? OPEX_ONLY_COLUMNS : {}) };
+    this.columns = { ...(rt.scope.scope === 'capex' ? { line_description: 'text' as const } : {}), ...(rt.scope.allNatures ? { nature: 'enum' as const } : {}), ...ITEM_COLUMNS, ...(rt.scope.scope !== 'capex' ? OPEX_ONLY_COLUMNS : {}) };
   }
 
   private get scope() {
@@ -87,6 +87,7 @@ export class BudgetListConfig implements ListConfig {
    * number, `lineNumberSql`).
    */
   private columnSql(key: string): string {
+    if (key === 'line_description' && this.scope.scope === 'capex') return 'i.description';
     if (key === 'item_number') return lineNumberSql('i', this.scope.nature);
     return `i.${this.scope.fieldColumns[key] ?? key}`;
   }
