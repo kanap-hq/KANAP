@@ -30,7 +30,7 @@ export const AI_FINANCIAL_PLAN_ACTIONS = [
 ] as const;
 export type AiFinancialPlanAction = typeof AI_FINANCIAL_PLAN_ACTIONS[number];
 
-export const AI_FINANCIAL_PLAN_BUSINESS_RESOURCES = ['opex', 'capex'] as const;
+export const AI_FINANCIAL_PLAN_BUSINESS_RESOURCES = ['budget'] as const;
 
 export type AiWriteFinancialPlanInput = {
   entity_type: AiFinancialPlanEntityType;
@@ -118,9 +118,10 @@ const VERSION_FIELD_CONFIG: Record<string, {
   reporting_currency: { label: 'Reporting Currency', kind: 'upper3' },
 };
 
+/** The right a financial plan write needs: `budget`, whatever the nature of the line (lot R). */
 export function getAiFinancialPlanBusinessResource(entityType: unknown): string {
-  const normalized = requireFinancialEntityType(entityType);
-  return normalized === 'spend_items' ? 'opex' : 'capex';
+  requireFinancialEntityType(entityType);
+  return 'budget';
 }
 
 function requireFinancialEntityType(value: unknown): AiFinancialPlanEntityType {

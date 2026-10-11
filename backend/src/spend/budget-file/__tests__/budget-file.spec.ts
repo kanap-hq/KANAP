@@ -7,7 +7,7 @@ import { parseItemNumber, readBudgetCsv } from '../interpret';
 import { periodForYearlyTotal } from '../period';
 import { buildPreflight, planBudgetFile } from '../preflight';
 import { budgetFileSchema, CRITERIA_COLUMNS_MESSAGE, OLD_BUDGET_FILE_MESSAGE } from '../columns';
-import { CAPEX_DESCRIPTION_IGNORED, natureChangeMessage, natureRightMessage, prefixRightMessage } from '../preflight';
+import { CAPEX_DESCRIPTION_IGNORED, natureChangeMessage } from '../preflight';
 import type { BudgetNature } from '../../budget-nature';
 import { formatToken, parseToken, tokenError } from '../token';
 import { BUDGET_FILE_MAX_BYTES } from '../upload';
@@ -79,23 +79,19 @@ async function preflight(
     canCreateSuppliers?: boolean;
     labels?: Record<string, string>;
     dimensions?: string[];
-    /** The natures the caller may import; the route's alone when absent. */
-    natures?: BudgetNature[];
   } = {},
 ) {
   const read = await readBudgetCsv(text, {
     language: options.language ?? 'en',
     dimensionCodes: options.dimensions ?? [],
   });
-  const natures = options.natures ?? [scope];
   return buildPreflight({
     scope,
-    natures,
     read,
     catalog: options.cat ?? catalog(),
-    // The stored lines and names the service reads: those of the natures the caller may import.
-    stored: stored.filter((item) => natures.includes(item.nature)),
-    names: options.names ?? stored.filter((item) => natures.includes(item.nature))
+    // The stored lines and names the service reads: those of both natures (one right, lot R).
+    stored,
+    names: options.names ?? stored
       .map((item) => ({ nature: item.nature, itemNumber: item.itemNumber, name: item.name, supplierId: item.supplierId })),
     createSuppliers: options.createSuppliers ?? false,
     canCreateSuppliers: options.canCreateSuppliers ?? false,
@@ -256,11 +252,9 @@ async function testIdentity() {
   const unknown = await preflight('opex', 'item_number,name,currency\nOPX-9,Gone,EUR\n', []);
   assert.equal(unknown.deletedCount, 0);
   assert.ok(unknown.errors.some((error) => error.message === "item_number 'OPX-9' does not match a line."));
-  // A CPX number on the OPEX list, the CAPEX right missing: the right it needs, from its prefix alone.
+  // A CPX number on the OPEX list that names no line: no such line (one right reads both natures, lot R).
   const other = await preflight('opex', 'item_number,name,currency\nCPX-3,Gone,EUR\n', []);
-  assert.deepEqual(other.errors.map((error) => error.message), ['CPX-3 is a CAPEX line: importing it needs the Admin level on CAPEX.']);
-  const both = await preflight('opex', 'item_number,name,currency\nCPX-3,Gone,EUR\n', [], { natures: ['opex', 'capex'] });
-  assert.deepEqual(both.errors.map((error) => error.message), ["item_number 'CPX-3' does not match a line."], 'with both rights: no such line');
+  assert.deepEqual(other.errors.map((error) => error.message), ["item_number 'CPX-3' does not match a line."]);
   const twice = await preflight('opex', 'item_number,name,currency\nOPX-3,Widget,EUR\nOPX-3,Widget,EUR\n', [line()]);
   assert.ok(twice.errors.some((error) => error.message === 'item_number OPX-3 already appears on line 2.'));
 
@@ -528,11 +522,11 @@ async function planOf(
   scope: BudgetFileScope,
   text: string,
   stored: StoredLine[],
-  options: { cat?: BudgetCatalog; createSuppliers?: boolean; canCreateSuppliers?: boolean; natures?: BudgetNature[] } = {},
+  options: { cat?: BudgetCatalog; createSuppliers?: boolean; canCreateSuppliers?: boolean } = {},
 ) {
   const read = await readBudgetCsv(text, { language: 'en', dimensionCodes: [] });
   return planBudgetFile({
-    scope, natures: options.natures ?? [scope], read, catalog: options.cat ?? catalog(), stored,
+    scope, read, catalog: options.cat ?? catalog(), stored,
     names: stored.map((item) => ({ nature: item.nature, itemNumber: item.itemNumber, name: item.name, supplierId: item.supplierId })),
     createSuppliers: options.createSuppliers ?? false,
     canCreateSuppliers: options.canCreateSuppliers ?? false,
@@ -586,8 +580,6 @@ async function testPlan() {
 
 /* ---- One file for both natures (lot C1b) ---- */
 
-const BOTH: BudgetNature[] = ['opex', 'capex'];
-
 /** An OPEX line BL-3 (OPX-3) and a CAPEX line BL-120 (CPX-4), with the company and accounts a new line needs. */
 function natureFixture() {
   const opexLine = line();
@@ -610,7 +602,7 @@ async function testNatureColumn() {
   const { stored, cat } = natureFixture();
   const header = 'nature,item_number,name,company_name,account_number,currency\n';
   const mixed = await planOf('opex', `${header}opex,,Widget,Acme,6100,EUR\ncapex,,Server,Acme,2100,EUR\nCAPEX,BL-120,Racks v2,,,\n,BL-3,Widget Pro,,,\n`, stored, {
-    cat, natures: BOTH,
+    cat,
   });
   assert.equal(mixed.report.ok, true, JSON.stringify(mixed.report.errors));
   assert.deepEqual(mixed.plans.map((plan) => [plan.line, plan.nature, plan.creating]), [
@@ -625,7 +617,7 @@ async function testNatureColumn() {
     '-,,Widget,Acme,6100,EUR',
     'opex,BL-120,Racks,,,',
     'capex,OPX-3,Widget,,,',
-  ].join('\n'), stored, { cat, natures: BOTH });
+  ].join('\n'), stored, { cat });
   assert.deepEqual(rowErrors(refused), [
     [2, 'nature', 'nature is required.'],
     [3, 'nature', "nature 'service' is not a value. Use opex or capex."],
@@ -636,7 +628,7 @@ async function testNatureColumn() {
   assert.equal(natureChangeMessage('BL-120', 'capex', 'opex'), 'BL-120 is a CAPEX line, not an OPEX line. A file does not change the type of a line.');
 
   // A file of before lot C1b (no nature column): every line is of the route's nature.
-  const old = await preflight('opex', 'item_number,name,currency\nCPX-4,Racks,EUR\nOPX-3,Widget,EUR\n', stored, { cat, natures: BOTH });
+  const old = await preflight('opex', 'item_number,name,currency\nCPX-4,Racks,EUR\nOPX-3,Widget,EUR\n', stored, { cat });
   assert.deepEqual(rowErrors(old), [[2, 'item_number', natureChangeMessage('CPX-4 (BL-120)', 'capex', 'opex')]], 'a CAPEX line in a file of the OPEX list');
   assert.equal(old.changes.unchanged, 1);
 }
@@ -649,12 +641,12 @@ async function testItemNumbers() {
     ['BL-3', 'opex', opexLine], ['bl-3', 'opex', opexLine], ['3', 'opex', opexLine], ['OPX-3', 'opex', opexLine],
     ['BL-120', 'capex', capexLine], ['120', 'capex', capexLine], ['CPX-4', 'capex', capexLine], ['cpx-4', 'capex', capexLine],
   ] as Array<[string, BudgetNature, StoredLine]>) {
-    const report = await preflight('opex', `${header}${nature},${ref},${expected.name}\n`, stored, { cat, natures: BOTH });
+    const report = await preflight('opex', `${header}${nature},${ref},${expected.name}\n`, stored, { cat });
     assert.equal(report.ok, true, `${ref}: ${JSON.stringify(report.errors)}`);
     assert.deepEqual(report.snapshot.lines.map((item) => item.id), [expected.id], `${ref} names ${expected.id}`);
   }
   // A CPX number is not a BL number, and the reverse.
-  const missing = await preflight('capex', 'item_number,name\nCPX-120,Racks\nOPX-120,Racks\n', stored, { cat, natures: BOTH });
+  const missing = await preflight('capex', 'item_number,name\nCPX-120,Racks\nOPX-120,Racks\n', stored, { cat });
   assert.deepEqual(rowErrors(missing), [
     [2, 'item_number', "item_number 'CPX-120' does not match a line."],
     [3, 'item_number', "item_number 'OPX-120' does not match a line."],
@@ -667,56 +659,53 @@ async function testItemNumbers() {
     ['capex', 'nature,item_number,name\ncapex,120,Racks\n', capexLine],
     ['opex', 'nature,item_number,name\nopex,3,Widget\n', opexLine],
   ] as Array<[BudgetFileScope, string, StoredLine]>) {
-    const report = await preflight(scope, text, stored, { cat, natures: BOTH });
+    const report = await preflight(scope, text, stored, { cat });
     assert.deepEqual(report.snapshot.lines.map((item) => item.id), [expected.id], `${scope}: ${text.split('\n')[1]} (${JSON.stringify(report.errors)})`);
   }
-  const bareCpx = await preflight('capex', 'item_number,name\n120,Racks\n', stored, { cat, natures: BOTH });
+  const bareCpx = await preflight('capex', 'item_number,name\n120,Racks\n', stored, { cat });
   assert.deepEqual(rowErrors(bareCpx), [[2, 'item_number', "item_number '120' does not match a line."]], 'on the CAPEX list of before, 120 is CPX-120');
-  const deletedCpx = await preflight('capex', 'item_number,name,kanap_token\n9,Gone,v1\n', stored, { cat, natures: BOTH });
+  const deletedCpx = await preflight('capex', 'item_number,name,kanap_token\n9,Gone,v1\n', stored, { cat });
   assert.deepEqual(rowErrors(deletedCpx), [[2, 'item_number', 'CPX-9 was deleted since the export.']], 'named as before');
   // A CAPEX line moved from OPEX keeps its OPX number (lot M): found by it, still a CAPEX line.
   const moved = line({ id: 'line-9', nature: 'capex', itemNumber: 9, legacyNumber: 'OPX-9', name: 'Moved' });
-  const byOpx = await preflight('capex', 'item_number,name\nOPX-9,Moved\n', [moved], { cat, natures: BOTH });
+  const byOpx = await preflight('capex', 'item_number,name\nOPX-9,Moved\n', [moved], { cat });
   assert.equal(byOpx.ok, true, JSON.stringify(byOpx.errors));
   // A line named in a file without a nature column, of the other nature: named as the file names it.
-  const otherList = await preflight('opex', 'item_number,name\nCPX-4,Racks\n', stored, { cat, natures: BOTH });
+  const otherList = await preflight('opex', 'item_number,name\nCPX-4,Racks\n', stored, { cat });
   assert.deepEqual(rowErrors(otherList), [[2, 'item_number', natureChangeMessage('CPX-4 (BL-120)', 'capex', 'opex')]]);
-  const twice = await preflight('opex', `${header}opex,BL-3,Widget\nopex,OPX-3,Widget\n`, stored, { cat, natures: BOTH });
+  const twice = await preflight('opex', `${header}opex,BL-3,Widget\nopex,OPX-3,Widget\n`, stored, { cat });
   assert.deepEqual(rowErrors(twice), [[3, 'item_number', 'item_number OPX-3 and BL-3 on line 2 are the same line, BL-3.']]);
   assert.deepEqual(['x', 'BL-0', 'PRJ-3', 'BL-'].map((raw) => parseItemNumber({ kind: 'value', text: raw }).kind), ['invalid', 'invalid', 'invalid', 'invalid']);
   assert.deepEqual(parseItemNumber({ kind: 'value', text: ' 12 ' }), { kind: 'number', prefix: 'BL', n: 12, raw: '12', ref: 'BL-12' }, 'a bare number is a BL number');
 }
 
-/** A line of a nature the caller may not import: refused with the right it needs; nothing of it is read. */
-async function testNatureRights() {
+/**
+ * One right for every budget line (lot R): a file holding both natures loads from either list, and
+ * an OPX or CPX number names its line from either list. A file without a `nature` column is still
+ * read as lines of its list, so a number naming a line of the other nature is refused as a change
+ * of type, never for a right.
+ */
+async function testMixedFileFromEitherList() {
   const { stored, cat } = natureFixture();
   const file = 'nature,item_number,name,company_name,account_number,currency\nopex,BL-3,Widget Pro,,,\ncapex,BL-120,Racks v2,,,\ncapex,,Server,Acme,2100,EUR\n';
-  const single = await planOf('opex', file, stored.filter((item) => item.nature === 'opex'), { cat });
-  assert.equal(single.report.ok, false);
-  assert.deepEqual(rowErrors(single.report), [
-    [3, 'nature', natureRightMessage('capex')],
-    [4, 'nature', natureRightMessage('capex')],
-  ], 'each CAPEX line names the right it needs');
-  assert.equal(natureRightMessage('capex'), 'Importing CAPEX lines needs the Admin level on CAPEX.');
-  assert.deepEqual(single.report.snapshot.lines.map((item) => item.id), ['line-1'], 'no CAPEX line is read');
-  const both = await planOf('opex', file, stored, { cat, natures: BOTH });
-  assert.equal(both.report.ok, true, JSON.stringify(both.report.errors));
-  assert.deepEqual(both.plans.map((plan) => plan.nature), ['opex', 'capex', 'capex']);
-  // On the CAPEX list, an OPEX line needs the OPEX right.
-  const capexRoute = await preflight('capex', file, stored, { cat });
-  assert.deepEqual(rowErrors(capexRoute).map((error) => error[0]), [2], 'the OPEX line of a file loaded on the CAPEX list');
-  assert.equal(capexRoute.errors[0].message, natureRightMessage('opex'));
-  // An OPX or CPX number of a nature the caller may not import: the right it needs, from the prefix
-  // alone, whether such a line exists or not (nothing of that nature is read).
-  for (const [scope, natures, text, message] of [
-    ['opex', ['opex'], 'item_number,name\nCPX-4,Racks\nCPX-99,Nothing\n', 'is a CAPEX line: importing it needs the Admin level on CAPEX.'],
-    ['capex', ['capex'], 'item_number,name\nOPX-3,Widget\nOPX-99,Nothing\n', 'is an OPEX line: importing it needs the Admin level on OPEX.'],
-  ] as Array<[BudgetFileScope, BudgetNature[], string, string]>) {
-    const report = await preflight(scope, text, stored, { cat, natures });
-    assert.deepEqual(rowErrors(report).map((error) => error[2]), text.split('\n').slice(1, 3).map((row) => `${row.split(',')[0]} ${message}`), `${scope} list`);
-    assert.deepEqual(report.snapshot.lines, [], `${scope} list: no line read`);
+  for (const scope of ['opex', 'capex'] as const) {
+    const plan = await planOf(scope, file, stored, { cat });
+    assert.equal(plan.report.ok, true, `${scope} list: ${JSON.stringify(plan.report.errors)}`);
+    assert.deepEqual(plan.plans.map((item) => item.nature), ['opex', 'capex', 'capex'], `${scope} list: each line its nature`);
+    assert.deepEqual(plan.report.snapshot.lines.map((item) => item.id), ['line-1', 'line-2'], `${scope} list: both lines read`);
+    assert.ok(!plan.report.errors.some((error) => /Admin level/.test(error.message)), `${scope} list: no right by nature`);
   }
-  assert.equal(prefixRightMessage('CPX-4', 'capex'), 'CPX-4 is a CAPEX line: importing it needs the Admin level on CAPEX.');
+  // Numbers of before lot C1b, in a file without the nature column (read as lines of its list).
+  const opexList = await preflight('opex', 'item_number,name\nCPX-4,Racks\nCPX-99,Nothing\n', stored, { cat });
+  assert.deepEqual(rowErrors(opexList).map((error) => error[2]), [
+    natureChangeMessage('CPX-4 (BL-120)', 'capex', 'opex'),
+    "item_number 'CPX-99' does not match a line.",
+  ], 'OPEX list: the CAPEX line is found, and keeps its nature');
+  const capexList = await preflight('capex', 'item_number,name\nOPX-3,Widget\nOPX-99,Nothing\n', stored, { cat });
+  assert.deepEqual(rowErrors(capexList).map((error) => error[2]), [
+    natureChangeMessage('OPX-3 (BL-3)', 'opex', 'capex'),
+    "item_number 'OPX-99' does not match a line.",
+  ], 'CAPEX list: the OPEX line is found, and keeps its nature');
 }
 
 /** Dimensions by the line's nature: a dimension of the other nature stays empty; a required one binds its nature only. */
@@ -730,7 +719,7 @@ async function testDimensionsByNature() {
       { code: 'nature', name: 'Nature', required: false, axisName: 'Nature', appliesTo: null, values: [{ id: 'n1', name: 'Licences', disabledAt: null }] },
     ],
   });
-  const options = { cat, natures: BOTH, dimensions: ['menu', 'priority', 'nature'] };
+  const options = { cat, dimensions: ['menu', 'priority', 'nature'] };
   const header = 'nature,item_number,name,company_name,account_number,currency,analytics:menu,analytics:priority,analytics:nature\n';
   const fine = await preflight('opex', `${header}opex,,Widget,Acme,6100,EUR,Fromage,,Licences\ncapex,,Server,Acme,2100,EUR,,High,Licences\n`, [], options);
   assert.equal(fine.ok, true, `each line needs the required dimensions of its own nature: ${JSON.stringify(fine.errors)}`);
@@ -754,9 +743,9 @@ async function testFreezeByNature() {
   const { opexLine, capexLine, cat } = natureFixture();
   const stored = [line({ ...opexLine, versions: withJanuary(10000n) }), line({ ...capexLine, versions: withJanuary(10000n) })];
   const file = 'nature,item_number,name,budget_2026\nopex,BL-3,Widget,200.00\ncapex,BL-120,Racks,200.00\n';
-  const capexFrozen = await preflight('opex', file, stored, { cat: catalog({ ...cat, frozen: ['capex:2026:budget'] }), natures: BOTH });
+  const capexFrozen = await preflight('opex', file, stored, { cat: catalog({ ...cat, frozen: ['capex:2026:budget'] }) });
   assert.deepEqual(rowErrors(capexFrozen), [[3, 'budget_2026', 'Budget for 2026 is frozen.']]);
-  const opexFrozen = await preflight('opex', file, stored, { cat: catalog({ ...cat, frozen: ['opex:2026:budget'] }), natures: BOTH });
+  const opexFrozen = await preflight('opex', file, stored, { cat: catalog({ ...cat, frozen: ['opex:2026:budget'] }) });
   assert.deepEqual(rowErrors(opexFrozen), [[2, 'budget_2026', 'Budget for 2026 is frozen.']]);
 }
 
@@ -772,7 +761,7 @@ async function testDuplicatesByNature() {
     'opex,,Twin,Acme,6100,EUR',
     'capex,,Twin,Acme,2100,EUR',
     'capex,,Twin,Acme,2100,EUR',
-  ].join('\n'), stored, { cat, natures: BOTH });
+  ].join('\n'), stored, { cat });
   assert.equal(report.ok, true, JSON.stringify(report.errors));
   assert.deepEqual(report.warnings.duplicates, [
     { line: 4, message: 'row 4 looks like BL-120' },
@@ -785,7 +774,7 @@ async function testCapexDescriptionIgnored() {
   const { stored, cat } = natureFixture();
   const header = 'nature,item_number,name,description,company_name,account_number,currency\n';
   const planned = await planOf('opex', `${header}capex,,Server,A server,Acme,2100,EUR\ncapex,BL-120,Racks,-,,,\nopex,BL-3,Widget,Licences,,,\n`, stored, {
-    cat, natures: BOTH,
+    cat,
   });
   assert.equal(planned.report.ok, true, JSON.stringify(planned.report.errors));
   assert.deepEqual(planned.report.warnings.ignoredCells, [
@@ -825,7 +814,7 @@ async function main() {
   await testPlan();
   await testNatureColumn();
   await testItemNumbers();
-  await testNatureRights();
+  await testMixedFileFromEitherList();
   await testDimensionsByNature();
   await testFreezeByNature();
   await testDuplicatesByNature();

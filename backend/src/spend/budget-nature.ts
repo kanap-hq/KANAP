@@ -35,7 +35,7 @@ export function natureAnd(alias: string | null, nature: BudgetNature | undefined
 
 /**
  * ` AND <alias>.nature IN (...)`: the predicate of a statement that reads the lines of several
- * natures at once (the budget file of a caller who may import both, lot C1b). Each value is
+ * natures at once (the budget file, which reads both since lot C1b). Each value is
  * checked against the two constants; an empty list reads no line.
  */
 export function naturesAnd(alias: string | null, natures: readonly BudgetNature[]): string {

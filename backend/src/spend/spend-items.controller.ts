@@ -26,7 +26,7 @@ import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-ti
 import { AuditService } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
 import { analyzeAfterLargeImport } from './budget-import-statistics';
-import { BudgetFileService, budgetFileNatures, canCreateSuppliers } from './budget-file/budget-file.service';
+import { BudgetFileService, canCreateSuppliers } from './budget-file/budget-file.service';
 import { exportListQuery } from './budget-file/export-file';
 import { importAnalyzeTables } from './budget-file/import-file';
 import { BudgetFileSizeInterceptor, budgetFileMulterOptions } from './budget-file/upload';
@@ -52,7 +52,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'reader')
+  @RequireLevel('budget', 'reader')
   @Get()
   list(
     @Query() query: ListSpendQueryInput,
@@ -62,7 +62,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'reader')
+  @RequireLevel('budget', 'reader')
   @Get('summary')
   summary(
     @Query() query: ListSpendQueryInput,
@@ -72,7 +72,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'reader')
+  @RequireLevel('budget', 'reader')
   @Get('summary/filter-values')
   summaryFilterValues(
     @Query() query: any,
@@ -82,7 +82,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'reader')
+  @RequireLevel('budget', 'reader')
   @Get('summary/ids')
   summaryIds(
     @Query() query: ListSpendQueryInput,
@@ -92,7 +92,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'reader')
+  @RequireLevel('budget', 'reader')
   @Get('summary/neighbors')
   async summaryNeighbors(
     @Query() query: ListSpendQueryInput & { id?: string },
@@ -103,7 +103,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'reader')
+  @RequireLevel('budget', 'reader')
   @Get('summary/totals')
   summaryTotals(
     @Query() query: ListSpendQueryInput,
@@ -119,7 +119,7 @@ export class SpendItemsController {
    */
   @ReadOnlyRoute()
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'reader')
+  @RequireLevel('budget', 'reader')
   @Post('summary/aggregate')
   @HttpCode(200)
   summaryAggregate(
@@ -132,7 +132,7 @@ export class SpendItemsController {
   /** The budget file (C2a). A read: a frozen tenant keeps it. `ctx` is merged on GET. */
   @ReadOnlyRoute()
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'admin')
+  @RequireLevel('budget', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Get('budget-file/export')
   async exportBudgetFile(
@@ -159,7 +159,7 @@ export class SpendItemsController {
 
   @ReadOnlyRoute()
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'admin')
+  @RequireLevel('budget', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('budget-file/preflight')
   @HttpCode(200)
@@ -177,8 +177,6 @@ export class SpendItemsController {
       manager: ctx.manager as EntityManager,
       tenantId: ctx.tenantId,
       userId: ctx.userId || null,
-      // A file may mix both natures: the lines of a nature need the Admin level on it.
-      natures: budgetFileNatures('opex', ctx),
     }, {
       language,
       dateOrder,
@@ -190,7 +188,7 @@ export class SpendItemsController {
 
   /** The load (C2b). Not a read. `analyzeAfterLargeImport` is the last call. */
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'admin')
+  @RequireLevel('budget', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('budget-file/import')
   @HttpCode(200)
@@ -210,7 +208,6 @@ export class SpendItemsController {
       manager: ctx.manager as EntityManager,
       tenantId: ctx.tenantId,
       userId: ctx.userId || null,
-      natures: budgetFileNatures('opex', ctx),
     }, {
       language,
       dateOrder,
@@ -223,7 +220,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'reader')
+  @RequireLevel('budget', 'reader')
   @Get(':id')
   async get(
     @Param('id') idOrRef: string,
@@ -239,7 +236,7 @@ export class SpendItemsController {
    * `budget_rev`, who and when. Same read level as the detail.
    */
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'reader')
+  @RequireLevel('budget', 'reader')
   @Get(':id/meta')
   async meta(
     @Param('id') idOrRef: string,
@@ -250,7 +247,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'reader')
+  @RequireLevel('budget', 'reader')
   @Get(':id/relation-counts')
   async relationCounts(
     @Param('id') idOrRef: string,
@@ -261,7 +258,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'reader')
+  @RequireLevel('budget', 'reader')
   @Get(':id/yearly-totals')
   async yearlyTotals(
     @Param('id') idOrRef: string,
@@ -282,7 +279,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'reader')
+  @RequireLevel('budget', 'reader')
   @Post(':id/share')
   async share(
     @Param('id') idOrRef: string,
@@ -295,7 +292,7 @@ export class SpendItemsController {
 
   // Linked projects (Portfolio workspace)
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'reader')
+  @RequireLevel('budget', 'reader')
   @Get(':id/projects')
   async listProjects(
     @Param('id') idOrRef: string,
@@ -306,7 +303,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'member')
+  @RequireLevel('budget', 'member')
   @Post(':id/projects/bulk-replace')
   async bulkReplaceProjects(
     @Param('id') idOrRef: string,
@@ -319,7 +316,7 @@ export class SpendItemsController {
 
   // Linked applications (Apps & Services workspace)
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'reader')
+  @RequireLevel('budget', 'reader')
   @Get(':id/applications')
   async listApplications(
     @Param('id') idOrRef: string,
@@ -330,7 +327,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'member')
+  @RequireLevel('budget', 'member')
   @Post(':id/applications/bulk-replace')
   async bulkReplaceApplications(
     @Param('id') idOrRef: string,
@@ -343,7 +340,7 @@ export class SpendItemsController {
 
   // Links (OPEX)
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'reader')
+  @RequireLevel('budget', 'reader')
   @Get(':id/links')
   async listLinks(
     @Param('id') idOrRef: string,
@@ -354,7 +351,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'member')
+  @RequireLevel('budget', 'member')
   @Post(':id/links')
   async createLink(
     @Param('id') idOrRef: string,
@@ -366,7 +363,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'member')
+  @RequireLevel('budget', 'member')
   @Patch(':id/links/:linkId')
   async updateLink(
     @Param('id') idOrRef: string,
@@ -379,7 +376,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'member')
+  @RequireLevel('budget', 'member')
   @Delete(':id/links/:linkId')
   async deleteLink(
     @Param('id') idOrRef: string,
@@ -392,7 +389,7 @@ export class SpendItemsController {
 
   // Attachments: downloads use a static segment before :id routing
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'reader')
+  @RequireLevel('budget', 'reader')
   @Get('attachments/:attachmentId')
   async downloadAttachment(
     @Param('attachmentId') attachmentId: string,
@@ -408,7 +405,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'member')
+  @RequireLevel('budget', 'member')
   @Patch('attachments/:attachmentId/delete')
   deleteAttachment(
     @Param('attachmentId') attachmentId: string,
@@ -418,7 +415,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'reader')
+  @RequireLevel('budget', 'reader')
   @Get(':id/attachments')
   async listAttachments(
     @Param('id') idOrRef: string,
@@ -429,7 +426,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'member')
+  @RequireLevel('budget', 'member')
   @Post(':id/attachments')
   @UseInterceptors(FileInterceptor('file', attachmentMulterOptions))
   async uploadAttachment(
@@ -443,7 +440,7 @@ export class SpendItemsController {
 
   // Contacts
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'reader')
+  @RequireLevel('budget', 'reader')
   @Get(':id/contacts')
   async listContacts(
     @Param('id') idOrRef: string,
@@ -454,7 +451,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'member')
+  @RequireLevel('budget', 'member')
   @Post(':id/contacts')
   async attachContact(
     @Param('id') idOrRef: string,
@@ -466,7 +463,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'member')
+  @RequireLevel('budget', 'member')
   @Delete(':id/contacts/:linkId')
   async detachContact(
     @Param('id') idOrRef: string,
@@ -478,7 +475,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'member')
+  @RequireLevel('budget', 'member')
   @Post(':id/contacts/sync-from-supplier')
   async syncContactsFromSupplier(
     @Param('id') idOrRef: string,
@@ -489,7 +486,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'member')
+  @RequireLevel('budget', 'member')
   @Post()
   create(
     @Body() body: CreateSpendItemInput,
@@ -499,7 +496,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'member')
+  @RequireLevel('budget', 'member')
   @Patch(':id')
   async update(
     @Param('id') idOrRef: string,
@@ -511,7 +508,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'admin')
+  @RequireLevel('budget', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('budget-operations/copy-column')
   copyBudgetColumn(
@@ -531,7 +528,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'admin')
+  @RequireLevel('budget', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('budget-operations/copy-allocations')
   copyAllocations(
@@ -547,7 +544,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'admin')
+  @RequireLevel('budget', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('budget-operations/clear-column')
   clearBudgetColumn(
@@ -561,7 +558,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'admin')
+  @RequireLevel('budget', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Delete('bulk')
   bulkDelete(
@@ -572,7 +569,7 @@ export class SpendItemsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'admin')
+  @RequireLevel('budget', 'admin')
   @Delete(':id')
   async delete(
     @Param('id') idOrRef: string,

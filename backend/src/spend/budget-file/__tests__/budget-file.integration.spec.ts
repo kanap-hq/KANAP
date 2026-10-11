@@ -936,11 +936,10 @@ async function testCapexCriteriaColumns(runner: { query: Function; manager: Enti
 /**
  * Lot C1b: one file for both natures, read line by line. A tenant with an OPEX line (BL-7, no
  * legacy number) and a CAPEX line (CPX-2, its BL number after the OPEX ones).
- * - a mixed file on the OPEX list, by a caller with both Admin levels: each line created or
- *   updated with its own nature, numbers and audit labels; a CAPEX line's description is not
- *   written (until lot U), the cell ignored with a warning;
- * - the same file with the OPEX level only: the CAPEX rows refused, naming the right, nothing read
- *   of them; the reverse on the CAPEX list;
+ * - a mixed file, read the same from either list (one right for every budget line, lot R), then
+ *   loaded on the OPEX list: each line created or updated with its own nature, numbers and audit
+ *   labels; a CAPEX line's description is not written (until lot U), the cell ignored with a
+ *   warning;
  * - a line named with another nature: refused; `BL-n`, a bare number, `OPX-n`, `CPX-n`;
  * - the freeze of a line's own nature, at the preflight and at the load;
  * - the files of before lot C1b (no nature column, OPX and CPX numbers) on their own list;
@@ -958,7 +957,6 @@ async function testSingleBudgetFile(runner: { query: Function; manager: EntityMa
   }
   const [{ item_number: capexNumber }] = await runner.query(`SELECT item_number::int AS item_number FROM spend_items WHERE id = $1`, [capexId]);
   const capexRef = `BL-${capexNumber}`;
-  const both: Array<'opex' | 'capex'> = ['opex', 'capex'];
   const columns = ['nature', 'item_number', 'name', 'description', 'company_name', 'account_number', 'currency', 'budget_2026'];
   const fresh = (nature: Kind, name: string, cells: Record<string, string> = {}) => ({ nature, name, company_name: 'File company', account_number: '6000', currency: 'EUR', ...cells });
   const mixed = csvOf(columns, [
@@ -968,24 +966,18 @@ async function testSingleBudgetFile(runner: { query: Function; manager: EntityMa
     { nature: 'capex', item_number: capexRef, name: 'Racks', description: 'Second room', budget_2026: '400' },
   ]);
 
-  // The OPEX level only: the CAPEX rows are refused, naming the right; the OPEX ones are read.
-  const opexOnly = await preflightBudgetFile(runner.manager, 'opex', tenantId, mixed);
-  assert.deepEqual(rowErrors(opexOnly), [
-    '3 nature: Importing CAPEX lines needs the Admin level on CAPEX.',
-    '5 nature: Importing CAPEX lines needs the Admin level on CAPEX.',
-  ], 'a mixed file with one right');
-  assert.deepEqual(opexOnly.snapshot.lines.map((line) => line.id), [opexId], 'no CAPEX line is read');
-  const capexOnly = await preflightBudgetFile(runner.manager, 'capex', tenantId, mixed);
-  assert.deepEqual(rowErrors(capexOnly), [
-    '2 nature: Importing OPEX lines needs the Admin level on OPEX.',
-    '4 nature: Importing OPEX lines needs the Admin level on OPEX.',
-  ], 'and on the CAPEX list with the CAPEX right only');
+  // Either list reads both lines of the file (no right by nature since lot R).
+  for (const kind of ['opex', 'capex'] as Kind[]) {
+    const report = await preflightBudgetFile(runner.manager, kind, tenantId, mixed);
+    assert.equal(report.ok, true, `${kind} list: ${JSON.stringify(report.errors)}`);
+    assert.deepEqual(report.snapshot.lines.map((line) => line.id).sort(), [opexId, capexId].sort(), `${kind} list: both lines read`);
+  }
 
-  // Both levels: each line with its nature. A CAPEX line's description is ignored, with a warning.
-  const checked = await preflightBudgetFile(runner.manager, 'opex', tenantId, mixed, both);
+  // Each line with its nature. A CAPEX line's description is ignored, with a warning.
+  const checked = await preflightBudgetFile(runner.manager, 'opex', tenantId, mixed);
   assert.deepEqual(checked.warnings.ignoredCells.map((cell) => `${cell.line} ${cell.column}`), ['3 description', '5 description']);
   const audit = captureAudit();
-  const loaded = await loadBudgetFile(runner.manager, 'opex', tenantId, mixed, audit as any, undefined, both);
+  const loaded = await loadBudgetFile(runner.manager, 'opex', tenantId, mixed, audit as any);
   assert.deepEqual(['inserted' in loaded && loaded.inserted, 'updated' in loaded && loaded.updated], [2, 2], JSON.stringify(loaded));
   const lines: Array<{ id: string; nature: string; item_number: number; legacy_number: string | null; product_name: string; description: string | null }> = await runner.query(
     `SELECT id::text AS id, nature, item_number::int AS item_number, legacy_number, product_name, description
@@ -1023,35 +1015,35 @@ async function testSingleBudgetFile(runner: { query: Function; manager: EntityMa
 
   // A line keeps its nature; every form of number names it.
   const header = 'nature,item_number,name\n';
-  const changed = await preflightBudgetFile(runner.manager, 'opex', tenantId, `${header}capex,BL-7,Licences\nopex,${capexRef},Racks\n`, both);
+  const changed = await preflightBudgetFile(runner.manager, 'opex', tenantId, `${header}capex,BL-7,Licences\nopex,${capexRef},Racks\n`);
   assert.deepEqual(rowErrors(changed), [
     '2 nature: BL-7 is an OPEX line, not a CAPEX line. A file does not change the type of a line.',
     `3 nature: ${capexRef} is a CAPEX line, not an OPEX line. A file does not change the type of a line.`,
   ], 'a nature changed by the file');
   for (const text of [`opex,OPX-7,Licences\ncapex,CPX-2,Racks\n`, `capex,${capexNumber},Racks\nopex,${newOpex.item_number},New OPEX\n`]) {
-    const numbers = await preflightBudgetFile(runner.manager, 'opex', tenantId, `${header}${text}`, both);
+    const numbers = await preflightBudgetFile(runner.manager, 'opex', tenantId, `${header}${text}`);
     assert.deepEqual([numbers.ok, numbers.changes.unchanged], [true, 2], `OPX-7 and CPX-2, then two bare BL numbers (${JSON.stringify(numbers.errors)})`);
   }
-  const twice = await preflightBudgetFile(runner.manager, 'opex', tenantId, `${header}capex,CPX-2,Racks\ncapex,${capexRef},Racks\n`, both);
+  const twice = await preflightBudgetFile(runner.manager, 'opex', tenantId, `${header}capex,CPX-2,Racks\ncapex,${capexRef},Racks\n`);
   assert.deepEqual(rowErrors(twice), [`3 item_number: item_number ${capexRef} and CPX-2 on line 2 are the same line, ${capexRef}.`], 'one line named twice');
   // A bare number: a BL number in a file with a nature column; a CPX number on the CAPEX list in a file without one, as before.
   const n = newCapex.item_number;
-  const withNature = await preflightBudgetFile(runner.manager, 'capex', tenantId, `nature,item_number\ncapex,${n}\n`, both);
+  const withNature = await preflightBudgetFile(runner.manager, 'capex', tenantId, `nature,item_number\ncapex,${n}\n`);
   assert.deepEqual(withNature.snapshot.lines.map((line) => line.id), [newCapex.id], `with the nature column, ${n} names BL-${n}`);
-  const without = await preflightBudgetFile(runner.manager, 'capex', tenantId, `item_number\n${n}\n`, both);
+  const without = await preflightBudgetFile(runner.manager, 'capex', tenantId, `item_number\n${n}\n`);
   assert.deepEqual(without.snapshot.lines.map((line) => line.id), [capexId], `without it, ${n} names CPX-${n} on the CAPEX list`);
 
   // The freeze of a line's own nature.
   await freezeColumn(runner as any, 'capex', tenantId, 2026, 'budget');
-  const frozen = await preflightBudgetFile(runner.manager, 'opex', tenantId, `nature,item_number,name,budget_2026\nopex,BL-7,Licences,310\ncapex,${capexRef},Racks,410\n`, both);
+  const frozen = await preflightBudgetFile(runner.manager, 'opex', tenantId, `nature,item_number,name,budget_2026\nopex,BL-7,Licences,310\ncapex,${capexRef},Racks,410\n`);
   assert.deepEqual(rowErrors(frozen), ['3 budget_2026: Budget for 2026 is frozen.'], 'a year frozen for CAPEX stops the CAPEX line only');
   const opexRow = `nature,item_number,name,budget_2026\nopex,BL-7,Licences,320\ncapex,${capexRef},Racks,400\n`;
-  const opexReport = await preflightBudgetFile(runner.manager, 'opex', tenantId, opexRow, both);
+  const opexReport = await preflightBudgetFile(runner.manager, 'opex', tenantId, opexRow);
   assert.equal(opexReport.ok, true, JSON.stringify(opexReport.errors));
   const scopes: string[] = [];
   const freeze = { assertNotFrozen: async (target: { scope: string }) => { scopes.push(target.scope); } };
   const opexLoad = await budgetFileService().importFile('opex', Buffer.from(opexRow), opexReport.snapshot,
-    { manager: runner.manager, tenantId, userId: null, natures: both }, BUDGET_FILE_OPTIONS,
+    { manager: runner.manager, tenantId, userId: null }, BUDGET_FILE_OPTIONS,
     { items: lineServices('opex', captureAudit() as any), audit: captureAudit() as any, freeze: freeze as any });
   assert.equal('updated' in opexLoad && opexLoad.updated, 1);
   assert.deepEqual(Array.from(new Set(scopes)), ['opex'], 'the load checks the freeze of the line written');
@@ -1065,7 +1057,7 @@ async function testSingleBudgetFile(runner: { query: Function; manager: EntityMa
     const report = await preflightBudgetFile(runner.manager, kind, tenantId, text);
     assert.deepEqual([report.ok, report.changes.unchanged], [true, 1], `${kind}: an old file reads unchanged (${JSON.stringify(report.errors)})`);
   }
-  const wrongList = await preflightBudgetFile(runner.manager, 'opex', tenantId, oldCapex, both);
+  const wrongList = await preflightBudgetFile(runner.manager, 'opex', tenantId, oldCapex);
   assert.deepEqual(rowErrors(wrongList), [`2 item_number: CPX-2 (${capexRef}) is a CAPEX line, not an OPEX line. A file does not change the type of a line.`], 'an old CAPEX file on the OPEX list');
 
   // An export of each list: its lines with their nature and BL number, read back unchanged.
@@ -1075,10 +1067,8 @@ async function testSingleBudgetFile(runner: { query: Function; manager: EntityMa
     const rows = fileRows(exported);
     assert.deepEqual(Array.from(new Set(rows.map((row) => row.nature))), [kind], `${kind}: the list's lines, with their nature`);
     assert.ok(rows.every((row) => /^BL-\d+$/.test(row.item_number)), `${kind}: BL numbers (${rows.map((row) => row.item_number)})`);
-    for (const natures of [[kind], both] as Array<Array<'opex' | 'capex'>>) {
-      const back = await preflightBudgetFile(runner.manager, kind, tenantId, exported, natures);
-      assert.deepEqual([back.ok, back.changes.unchanged, back.changes.updated], [true, ids.length, 0], `${kind} export read back (${JSON.stringify(back.errors)})`);
-    }
+    const back = await preflightBudgetFile(runner.manager, kind, tenantId, exported);
+    assert.deepEqual([back.ok, back.changes.unchanged, back.changes.updated], [true, ids.length, 0], `${kind} export read back (${JSON.stringify(back.errors)})`);
   }
 }
 

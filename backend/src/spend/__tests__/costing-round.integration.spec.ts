@@ -817,8 +817,8 @@ async function testLinesWriteLocksItsCalendar() {
 
 /** The lines go through bulk-upsert (member); no preview route is left. */
 async function testRoutes() {
-  assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, SpendVersionsController.prototype.upsertAmounts), { resource: 'opex', level: 'member' });
-  assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, CapexVersionsController.prototype.upsertAmounts), { resource: 'capex', level: 'member' });
+  assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, SpendVersionsController.prototype.upsertAmounts), { resource: 'budget', level: 'member' });
+  assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, CapexVersionsController.prototype.upsertAmounts), { resource: 'budget', level: 'member' });
   for (const controller of [SpendVersionsController, CapexVersionsController]) {
     const paths = Object.getOwnPropertyNames(controller.prototype).map((name) => Reflect.getMetadata('path', (controller.prototype as any)[name]));
     assert.equal(paths.some((path) => typeof path === 'string' && path.includes('preview')), false, `${controller.name}: no preview route`);

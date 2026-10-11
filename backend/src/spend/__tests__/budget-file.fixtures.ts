@@ -3,7 +3,6 @@ import { CurrencySettingsService } from '../../currency/currency-settings.servic
 import { BudgetFileService } from '../budget-file/budget-file.service';
 import { BudgetFileAudit, BudgetFileImportResult, BudgetFileItems, BudgetFileLineServices } from '../budget-file/import-file';
 import { BudgetFileReport } from '../budget-file/types';
-import type { BudgetNature } from '../budget-nature';
 import { itemService } from './cost-center.fixtures';
 import { captureAudit, Kind, noFreeze } from './round-inputs.fixtures';
 
@@ -18,9 +17,9 @@ export function budgetFileService(): BudgetFileService {
   return new BudgetFileService({ getSettings: async () => ({ allowedCurrencies: null }) } as unknown as CurrencySettingsService);
 }
 
-/** `natures`: the natures the caller may import (both Admin levels for a mixed file); the route's alone when absent. */
-function caller(manager: EntityManager, tenantId: string, natures?: readonly BudgetNature[]) {
-  return { manager, tenantId, userId: null, ...(natures ? { natures } : {}) };
+/** The caller: one right covers every budget line (lot R), so the file loads lines of both natures. */
+function caller(manager: EntityManager, tenantId: string) {
+  return { manager, tenantId, userId: null };
 }
 
 /** The item service of each nature; `items`, when given, stands for the one of `kind`. */
@@ -47,9 +46,8 @@ export async function preflightBudgetFile(
   kind: Kind,
   tenantId: string,
   csv: string,
-  natures?: readonly BudgetNature[],
 ): Promise<BudgetFileReport> {
-  return budgetFileService().preflight(kind, Buffer.from(csv, 'utf8'), caller(manager, tenantId, natures), BUDGET_FILE_OPTIONS);
+  return budgetFileService().preflight(kind, Buffer.from(csv, 'utf8'), caller(manager, tenantId), BUDGET_FILE_OPTIONS);
 }
 
 /**
@@ -57,8 +55,7 @@ export async function preflightBudgetFile(
  * item service of each nature (`itemService`; `items` stands for the one of
  * `kind` when given). A preflight that is not ok throws with its problems. The
  * load's own result is returned as it is (a report when the file is refused at
- * the load). `natures`: the natures the caller may import (the route's alone
- * when absent).
+ * the load).
  */
 export async function loadBudgetFile(
   manager: EntityManager,
@@ -67,11 +64,10 @@ export async function loadBudgetFile(
   csv: string,
   audit: BudgetFileAudit = captureAudit() as unknown as BudgetFileAudit,
   items?: BudgetFileItems,
-  natures?: readonly BudgetNature[],
 ): Promise<BudgetFileImportResult> {
-  const report = await preflightBudgetFile(manager, kind, tenantId, csv, natures);
+  const report = await preflightBudgetFile(manager, kind, tenantId, csv);
   if (!report.ok) throw new Error(`the ${kind} budget file preflight is not ok: ${reportProblems(report)}`);
-  return budgetFileService().importFile(kind, Buffer.from(csv, 'utf8'), report.snapshot, caller(manager, tenantId, natures), BUDGET_FILE_OPTIONS, {
+  return budgetFileService().importFile(kind, Buffer.from(csv, 'utf8'), report.snapshot, caller(manager, tenantId), BUDGET_FILE_OPTIONS, {
     items: lineServices(kind, audit, items),
     audit,
     freeze: noFreeze,

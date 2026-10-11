@@ -17,7 +17,7 @@ export class SpendItemContractsController {
 
   @Get()
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'reader')
+  @RequireLevel('budget', 'reader')
   async list(@Param('id') idOrRef: string, @Req() req: any) {
     const manager = req?.queryRunner?.manager as EntityManager;
     const spendItemId = await this.resolveItemId(idOrRef, manager);
@@ -26,7 +26,7 @@ export class SpendItemContractsController {
 
   @Post('bulk-replace')
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'member')
+  @RequireLevel('budget', 'member')
   async bulkReplace(@Param('id') idOrRef: string, @Body() body: { contract_ids: string[] }, @Req() req: any) {
     const manager = req?.queryRunner?.manager as EntityManager;
     const spendItemId = await this.resolveItemId(idOrRef, manager);

@@ -57,9 +57,8 @@ import { assert, captureAudit, amountsService, inRolledBackTransaction, period, 
 // application, an asset, a contract, a project and a request, and tasks. The OPEX module never
 // sees it (plan planning/budget-unifie.md, lot Z0; rule in `spend/budget-nature.ts`):
 // - every route of the module addressed by its id, or by the id of one of its children,
-//   answers 404 to a user with the OPEX right only (who passes the guard); a user with the
-//   CAPEX right only is stopped by the guard (403) on the OPEX routes and gets the same 404 on
-//   the task routes, which the tasks right guards;
+//   answers 404 to a user with the budget right (who passes the guard): since lot R one right
+//   covers both natures, so the nature predicate alone keeps the line out;
 // - the list, the summary routes, the dashboard's aggregate, the chargeback report, the OPEX
 //   part of the "used by N lines" counts, the expiry reminders, the freeze's FX pin and
 //   `lockBudgetYear` answer as if the line did not exist (compared with the same call once the
@@ -96,8 +95,7 @@ type World = {
   requestId: string;
   contactId: string;
   ownerId: string;
-  opexUser: string;
-  capexUser: string;
+  budgetUser: string;
   rateSetId: string;
   opex: { id: string; versionId: string };
   foreign: { id: string; versionId: string; onlyVersionId: string; linkId: string; contactLinkId: string; attachmentId: string; taskId: string; capexTaskId: string };
@@ -188,8 +186,7 @@ async function seedWorld(runner: QueryRunner): Promise<World> {
   const requestId = await one(runner, `INSERT INTO portfolio_requests (tenant_id, name, item_number) VALUES ($1, 'Foreign nature request', 990001) RETURNING id`, [tenantId]);
   const contactId = await one(runner, `INSERT INTO contacts (tenant_id, email, first_name, last_name) VALUES ($1, 'contact@example.invalid', 'Con', 'Tact') RETURNING id`, [tenantId]);
   const ownerId = await seedUser(runner, tenantId, `owner-${randomUUID()}@example.invalid`);
-  const opexUser = await seedRole(runner, tenantId, 'opex-only', { opex: 'admin', tasks: 'member' });
-  const capexUser = await seedRole(runner, tenantId, 'capex-only', { capex: 'admin', tasks: 'member' });
+  const budgetUser = await seedRole(runner, tenantId, 'budget-admin', { budget: 'admin', tasks: 'member' });
   const rateSetId = await one(
     runner,
     `INSERT INTO currency_rate_sets (tenant_id, fiscal_year, base_currency, rates) VALUES ($1, $2, 'EUR', '{}'::jsonb) RETURNING id`,
@@ -197,7 +194,7 @@ async function seedWorld(runner: QueryRunner): Promise<World> {
   );
   const base = {
     tenantId, companyId, accountId, supplierId, foreignSupplierId, costCenterId, axisId, valueId, applicationId, assetId, contractId,
-    projectId, requestId, contactId, ownerId, opexUser, capexUser, rateSetId,
+    projectId, requestId, contactId, ownerId, budgetUser, rateSetId,
   };
   const opex = await seedLine(runner, base, 'opex', OPEX_NUMBER, 100, supplierId);
   const foreignLine = await seedLine(runner, base, 'capex', FOREIGN_NUMBER, 1000, foreignSupplierId);
@@ -352,8 +349,8 @@ async function testRoutes() {
   await inRolledBackTransaction(async (runner) => {
     const w = await seedWorld(runner);
     const { items, versions, tasks, contracts } = controllers(runner);
-    const ctx = { manager: runner.manager, tenantId: w.tenantId, userId: w.opexUser } as any;
-    const req = { queryRunner: runner, user: { sub: w.opexUser }, tenant: { id: w.tenantId } };
+    const ctx = { manager: runner.manager, tenantId: w.tenantId, userId: w.budgetUser } as any;
+    const req = { queryRunner: runner, user: { sub: w.budgetUser }, tenant: { id: w.tenantId } };
     const F = w.foreign;
     const res = { setHeader: () => undefined } as any;
     const file = { originalname: 'x.txt', mimetype: 'text/plain', buffer: Buffer.from('x'), size: 1 } as any;
@@ -412,15 +409,12 @@ async function testRoutes() {
     );
     for (const [controller, handler, method, call] of routes) {
       const label = `${controller.name}.${handler}`;
-      assert.equal(await guardAllows(runner, w, w.opexUser, controller, handler, method), true, `${label}: the OPEX user passes the guard`);
+      assert.equal(await guardAllows(runner, w, w.budgetUser, controller, handler, method), true, `${label}: the budget user passes the guard`);
       const answer = await statusOf(runner, call);
       assert.equal(answer.status, 404, `${label}: 404 for the CAPEX line (${JSON.stringify(answer.body)})`);
       // The same call on the same line turned OPEX answers: the 404 is the nature's, nothing else's.
       const asOpex = await asOpexLine(runner, w, () => statusOf(runner, call));
       assert.equal(asOpex.status, 200, `${label}: 200 once the line is OPEX (${JSON.stringify(asOpex.body)?.slice(0, 200)})`);
-      const tasksRoute = controller === SpendTasksController;
-      assert.equal(await guardAllows(runner, w, w.capexUser, controller, handler, method), tasksRoute,
-        `${label}: the CAPEX user ${tasksRoute ? 'passes the tasks guard (and gets the 404 above)' : 'is stopped by the guard'}`);
     }
 
     // A bulk delete names nothing: the line is not found, its name stays hidden, it is kept.
@@ -450,7 +444,7 @@ async function testListsAndSummaries() {
   await inRolledBackTransaction(async (runner) => {
     const w = await seedWorld(runner);
     const { items } = controllers(runner);
-    const ctx = { manager: runner.manager, tenantId: w.tenantId, userId: w.opexUser, isAdmin: true } as any;
+    const ctx = { manager: runner.manager, tenantId: w.tenantId, userId: w.budgetUser, isAdmin: true } as any;
     const query = { includeDisabled: 'true', years: `${YEAR},${ONLY_YEAR}` };
     await assertInvisible(runner, w, 'GET /spend-items', () => items.list({ includeDisabled: 'true' }, ctx));
     await assertInvisible(runner, w, 'GET /spend-items/summary', () => items.summary(query, ctx));
@@ -488,7 +482,7 @@ async function testCountsAndPeriphery() {
     const none = undefined as any;
     const audit = captureAudit() as any;
     const mg = runner.manager;
-    const ctx = { manager: mg, tenantId: w.tenantId, userId: w.opexUser } as any;
+    const ctx = { manager: mg, tenantId: w.tenantId, userId: w.budgetUser } as any;
 
     // "Used by N lines". Since lot Z1 the account counts the CAPEX lines of spend_items under `capex`:
     // the foreign line counts there, and never under `opex`.
@@ -573,24 +567,24 @@ async function testBulkReplacements() {
 
     const apps = new ApplicationsInstancesService(none, none, audit);
     assert.deepEqual((await apps.listLinkedSpendItems(w.applicationId, { manager: mg })).items.map((i: any) => i.id), [w.opex.id], 'an application lists its OPEX line only');
-    await apps.bulkReplaceLinkedSpendItems(w.applicationId, [], w.opexUser, { manager: mg });
+    await apps.bulkReplaceLinkedSpendItems(w.applicationId, [], w.budgetUser, { manager: mg });
     const assets = new AssetsRelationsService(none, none, none, none, audit);
     assert.deepEqual((await assets.listLinkedSpendItems(w.assetId, { manager: mg, tenantId: w.tenantId })).items.map((i: any) => i.id), [w.opex.id], 'an asset lists its OPEX line only');
-    await assets.bulkReplaceLinkedSpendItems(w.assetId, [], w.tenantId, w.opexUser, { manager: mg, tenantId: w.tenantId });
+    await assets.bulkReplaceLinkedSpendItems(w.assetId, [], w.tenantId, w.budgetUser, { manager: mg, tenantId: w.tenantId });
     const contracts = new ContractsService(none, none, none, none, audit, none, none, none, none);
     assert.deepEqual((await contracts.listLinkedSpendItems(w.contractId, { manager: mg })).items.map((i: any) => i.id), [w.opex.id], 'a contract lists its OPEX line only');
     await contracts.bulkReplaceLinkedSpendItems(w.contractId, [], { manager: mg });
     const projects = new PortfolioProjectsCrudService(mg.getRepository('PortfolioProject') as any, none, audit, none, none, none, none);
-    await projects.bulkReplaceOpex(w.projectId, [], { manager: mg, userId: w.opexUser });
+    await projects.bulkReplaceOpex(w.projectId, [], { manager: mg, userId: w.budgetUser });
     const requests = new PortfolioRequestsService(none, audit, none, none, none, none, none, none, none);
-    await requests.bulkReplaceOpex(w.requestId, [], { manager: mg, userId: w.opexUser });
+    await requests.bulkReplaceOpex(w.requestId, [], { manager: mg, userId: w.budgetUser });
     assert.deepEqual(await links(), ['application:capex', 'asset:capex', 'contract:capex', 'project:capex', 'request:capex'],
       'emptying the OPEX links removes the OPEX line\'s links only');
 
     // An id of the CAPEX line is refused (or not linked) through the OPEX side.
-    const refused = await statusOf(runner, () => apps.bulkReplaceLinkedSpendItems(w.applicationId, [w.foreign.id], w.opexUser, { manager: mg }));
+    const refused = await statusOf(runner, () => apps.bulkReplaceLinkedSpendItems(w.applicationId, [w.foreign.id], w.budgetUser, { manager: mg }));
     assert.equal(refused.status, 400, 'an application refuses the CAPEX line as an OPEX line');
-    const refusedAsset = await statusOf(runner, () => assets.bulkReplaceLinkedSpendItems(w.assetId, [w.foreign.id], w.tenantId, w.opexUser, { manager: mg, tenantId: w.tenantId }));
+    const refusedAsset = await statusOf(runner, () => assets.bulkReplaceLinkedSpendItems(w.assetId, [w.foreign.id], w.tenantId, w.budgetUser, { manager: mg, tenantId: w.tenantId }));
     assert.equal(refusedAsset.status, 400, 'an asset refuses it');
     const refusedContract = await statusOf(runner, () => contracts.bulkReplaceLinkedSpendItems(w.contractId, [w.foreign.id], { manager: mg }));
     assert.equal(refusedContract.status, 400, 'a contract refuses it');
@@ -601,17 +595,17 @@ async function testBulkReplacements() {
     const linksBefore = await links();
     const activitiesBefore = await activities();
     for (const [label, ids] of [['an unknown id', [w.opex.id, randomUUID()]], ['the CAPEX line', [w.opex.id, w.foreign.id]]] as const) {
-      const project = await statusOf(runner, () => projects.bulkReplaceOpex(w.projectId, [...ids], { manager: mg, userId: w.opexUser }));
+      const project = await statusOf(runner, () => projects.bulkReplaceOpex(w.projectId, [...ids], { manager: mg, userId: w.budgetUser }));
       assert.deepEqual([project.status, (project.body as any)?.message], [400, 'One or more OPEX items were not found.'], `a project refuses ${label}`);
-      const request = await statusOf(runner, () => requests.bulkReplaceOpex(w.requestId, [...ids], { manager: mg, userId: w.opexUser }));
+      const request = await statusOf(runner, () => requests.bulkReplaceOpex(w.requestId, [...ids], { manager: mg, userId: w.budgetUser }));
       assert.deepEqual([request.status, (request.body as any)?.message], [400, 'One or more OPEX items were not found.'], `a request refuses ${label}`);
     }
     assert.deepEqual(await links(), linksBefore, 'no link written by a refused replacement');
     assert.equal(await activities(), activitiesBefore, 'no activity written by a refused replacement');
     // Control: the OPEX line is linked again, and the CAPEX line's id is accepted once it is OPEX.
-    const relinked = await statusOf(runner, () => projects.bulkReplaceOpex(w.projectId, [w.opex.id], { manager: mg, userId: w.opexUser }));
+    const relinked = await statusOf(runner, () => projects.bulkReplaceOpex(w.projectId, [w.opex.id], { manager: mg, userId: w.budgetUser }));
     assert.deepEqual(relinked.body, { ok: true, added: 1, removed: 0 }, 'a project takes its OPEX line');
-    const opexProject = await asOpexLine(runner, w, () => statusOf(runner, () => projects.bulkReplaceOpex(w.projectId, [w.opex.id, w.foreign.id], { manager: mg, userId: w.opexUser })));
+    const opexProject = await asOpexLine(runner, w, () => statusOf(runner, () => projects.bulkReplaceOpex(w.projectId, [w.opex.id, w.foreign.id], { manager: mg, userId: w.budgetUser })));
     assert.equal(opexProject.status, 200, 'the same ids pass once the line is OPEX');
   });
 }
@@ -622,7 +616,7 @@ async function testAi() {
     const w = await seedWorld(runner);
     const none = undefined as any;
     const audit = captureAudit() as any;
-    const context: any = { manager: runner.manager, tenantId: w.tenantId, userId: w.opexUser, isPlatformHost: false, surface: 'chat', authMethod: 'jwt' };
+    const context: any = { manager: runner.manager, tenantId: w.tenantId, userId: w.budgetUser, isPlatformHost: false, surface: 'chat', authMethod: 'jwt' };
     const fin: any = new AiFinancialPlanMutationSupportService(audit, none, none, none, none, none, none);
     const task: any = new AiTaskMutationSupportService();
     const rel: any = new AiRelationMutationSupportService(audit, none, task);
@@ -679,10 +673,10 @@ async function testBulkOperations() {
       [w.tenantId, itemId],
     );
     const operations: Array<[string, () => Promise<unknown>]> = [
-      ['column copy in the year', () => copyBudgetColumn(deps, 'opex', { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR, destinationColumn: 'revision', percentageIncrease: 0, overwrite: true, dryRun: false, acceptCalendarChanges: true }, w.opexUser)],
-      ['column copy to another year', () => copyBudgetColumn(deps, 'opex', { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR + 1, destinationColumn: 'budget', percentageIncrease: 0, overwrite: true, dryRun: false, acceptCalendarChanges: true }, w.opexUser)],
-      ['column clear', () => clearBudgetColumn(deps, 'opex', { year: YEAR, column: 'budget' }, w.opexUser)],
-      ['allocation copy', () => copyAllocations({ manager: runner.manager, audit, calculator }, 'opex', { sourceYear: YEAR, destinationYear: YEAR + 2, overwrite: true, dryRun: false }, w.opexUser)],
+      ['column copy in the year', () => copyBudgetColumn(deps, 'opex', { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR, destinationColumn: 'revision', percentageIncrease: 0, overwrite: true, dryRun: false, acceptCalendarChanges: true }, w.budgetUser)],
+      ['column copy to another year', () => copyBudgetColumn(deps, 'opex', { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR + 1, destinationColumn: 'budget', percentageIncrease: 0, overwrite: true, dryRun: false, acceptCalendarChanges: true }, w.budgetUser)],
+      ['column clear', () => clearBudgetColumn(deps, 'opex', { year: YEAR, column: 'budget' }, w.budgetUser)],
+      ['allocation copy', () => copyAllocations({ manager: runner.manager, audit, calculator }, 'opex', { sourceYear: YEAR, destinationYear: YEAR + 2, overwrite: true, dryRun: false }, w.budgetUser)],
     ];
     for (const [label, operation] of operations) {
       const [opexBefore, foreignBefore] = [await state(w.opex.id), await state(w.foreign.id)];

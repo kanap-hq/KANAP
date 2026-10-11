@@ -37,12 +37,11 @@ const SURFACE_RESOURCE: Record<AiSurface, 'ai_chat' | 'ai_mcp'> = {
 };
 
 /**
- * The right each entity type needs. A right goes with the rows its type reads: `spend_items`
- * reads the lines of nature `opex` only and `capex_items` those of nature `capex`, both in the
- * table `spend_items` (`spend/budget-nature.ts`), so the `opex` and `capex` rights never open a
- * line of the other nature; every AI read of either type, by id, reference or name, names the
- * nature (the item service's `get` and summary, the reference and relation resolvers, the task
- * targets, the registry's `baseWhere`).
+ * The right each entity type needs. `spend_items` and `capex_items` both need `budget`, the one
+ * right on every budget line (lot R). Each type still reads the lines of its own nature only, both
+ * in the table `spend_items` (`spend/budget-nature.ts`): every AI read of either type, by id,
+ * reference or name, names the nature (the item service's `get` and summary, the reference and
+ * relation resolvers, the task targets, the registry's `baseWhere`).
  */
 const ENTITY_RESOURCE: Record<AiSearchEntityType | AiContextEntityType, string> = {
   accounts: 'accounts',
@@ -50,7 +49,7 @@ const ENTITY_RESOURCE: Record<AiSearchEntityType | AiContextEntityType, string> 
   applications: 'applications',
   assets: 'infrastructure',
   business_processes: 'business_processes',
-  capex_items: 'capex',
+  capex_items: 'budget',
   chart_of_accounts: 'accounts',
   companies: 'companies',
   connections: 'infrastructure',
@@ -62,7 +61,7 @@ const ENTITY_RESOURCE: Record<AiSearchEntityType | AiContextEntityType, string> 
   locations: 'locations',
   projects: 'portfolio_projects',
   requests: 'portfolio_requests',
-  spend_items: 'opex',
+  spend_items: 'budget',
   suppliers: 'suppliers',
   tasks: 'tasks',
   users: 'users',

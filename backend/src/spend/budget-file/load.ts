@@ -67,21 +67,20 @@ export async function loadColumnLabels(manager: EntityManager, tenantId: string)
 }
 
 /**
- * What a preflight compares against: the catalog, and the lines of `natures` (the natures the
- * caller may import) that the file's numbers name, never a line of another nature.
+ * What a preflight compares against: the catalog, and the lines of both natures that the file's
+ * numbers name (one right covers every budget line, lot R).
  */
 export async function loadPreflight(
   manager: EntityManager,
   tenantId: string,
   numbers: ItemNumberCell[],
-  natures: readonly BudgetNature[],
   allowedCurrencies: string[] | null,
 ): Promise<LoadedPreflight> {
   // One connection: the request transaction cannot run these side by side.
   const catalog = await loadCatalog(manager, tenantId, allowedCurrencies);
-  const names = await loadNames(manager, natures, tenantId);
+  const names = await loadNames(manager, tenantId);
   const labels = await loadColumnLabels(manager, tenantId);
-  const stored = await loadLinesByNumber(manager, natures, tenantId, numbers);
+  const stored = await loadLinesByNumber(manager, tenantId, numbers);
   return { catalog, stored, names, labels, dimensionCodes: catalog.dimensions.map((dimension) => dimension.code) };
 }
 
@@ -103,10 +102,10 @@ export async function loadExportLines(
   };
 }
 
-async function loadNames(manager: EntityManager, natures: readonly BudgetNature[], tenantId: string): Promise<LineHint[]> {
+async function loadNames(manager: EntityManager, tenantId: string): Promise<LineHint[]> {
   const rows: Array<{ nature: BudgetNature; item_number: number; name: string; supplier_id: string | null }> = await manager.query(
     `SELECT i.nature, i.item_number::int AS item_number, i.product_name AS name, i.supplier_id::text AS supplier_id
-       FROM ${LINES.items} i WHERE i.tenant_id = $1${naturesAnd('i', natures)}`,
+       FROM ${LINES.items} i WHERE i.tenant_id = $1${naturesAnd('i', BUDGET_NATURES)}`,
     [tenantId],
   );
   return rows.map((row) => ({ nature: row.nature, itemNumber: Number(row.item_number), name: row.name ?? '', supplierId: row.supplier_id }));
@@ -116,11 +115,10 @@ async function loadNames(manager: EntityManager, natures: readonly BudgetNature[
  * The lines the file's numbers may name: by own number (`BL-n`, a bare number), by the number of
  * before lot C1b (`OPX-n`, `CPX-n`: `legacy_number`, or an OPEX line's own number, which its OPX
  * number always was; a CAPEX line without a CPX number was shown by its own one), among the lines
- * of `natures` only. `findStoredLine` (preflight) picks the line of each cell.
+ * of both natures. `findStoredLine` (preflight) picks the line of each cell.
  */
 async function loadLinesByNumber(
   manager: EntityManager,
-  natures: readonly BudgetNature[],
   tenantId: string,
   numbers: ItemNumberCell[],
 ): Promise<StoredLine[]> {
@@ -139,7 +137,7 @@ async function loadLinesByNumber(
   if (own.size + legacy.size === 0) return [];
   const rows: ItemSql[] = await manager.query(
     `SELECT ${ITEM_COLUMNS} FROM ${LINES.items} i
-      WHERE i.tenant_id = $1${naturesAnd('i', natures)}
+      WHERE i.tenant_id = $1${naturesAnd('i', BUDGET_NATURES)}
         AND (i.item_number = ANY($2::int[]) OR i.legacy_number = ANY($3::text[])
              OR (i.nature = 'opex' AND i.item_number = ANY($4::int[]))
              OR (i.nature = 'capex' AND i.item_number = ANY($5::int[])))`,

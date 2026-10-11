@@ -531,7 +531,7 @@ function createService(options?: {
   };
   const writeFinancialPlanOperation = {
     toolName: 'write_financial_plan',
-    businessResource: 'opex',
+    businessResource: 'budget',
     writePreview: { reversible: true },
     presentPreview: () => ({
       target: { entity_type: 'spend_items', entity_id: null, ref: null, title: null },

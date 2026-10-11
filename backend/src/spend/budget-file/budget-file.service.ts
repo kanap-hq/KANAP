@@ -4,7 +4,7 @@ import { languageOf, parseDateOrder, parseDecimalMark, writeCsv } from '../../co
 import { CurrencySettingsService } from '../../currency/currency-settings.service';
 import { readBudgetColumns } from '../../budget-columns/budget-columns.util';
 import { readBudgetLineMeta } from '../item-meta';
-import { BUDGET_NATURES, type BudgetNature } from '../budget-nature';
+import { type BudgetNature } from '../budget-nature';
 import { buildBudgetExport, BUDGET_FILE_NAME, parseAmountYears, parseDetail, parseFileColumns, shownFileColumns } from './export-file';
 import { importBudgetFile, BudgetFileAudit, BudgetFileFreeze, BudgetFileImportResult, BudgetFileLineServices, parseBudgetSnapshot } from './import-file';
 import { interpretBudgetFile, readBudgetCsv } from './interpret';
@@ -22,31 +22,10 @@ export function canCreateSuppliers(ctx: CallerRights): boolean {
   return (LEVEL_RANK[ctx?.permissions?.suppliers ?? ''] ?? 0) >= LEVEL_RANK.member;
 }
 
-/**
- * The natures whose lines the caller may import, the Admin level on each (`opex:admin`,
- * `capex:admin`): the route's (its guard asked for it), and the other one when the caller holds
- * it too. A file that mixes both natures is loaded only by a caller who holds both; otherwise
- * the lines of the other nature are refused, each with the right it needs.
- */
-export function budgetFileNatures(scope: BudgetFileScope, ctx: CallerRights): BudgetNature[] {
-  return BUDGET_NATURES.filter((nature) => nature === scope
-    || !!ctx?.isAdmin
-    || (LEVEL_RANK[ctx?.permissions?.[nature] ?? ''] ?? 0) >= LEVEL_RANK.admin);
-}
-
 export interface BudgetFileCaller {
   manager: EntityManager;
   tenantId: string;
   userId: string | null;
-  /** The natures the caller may import (`budgetFileNatures`); the route's alone when absent. */
-  natures?: readonly BudgetNature[];
-}
-
-/** The caller's natures, the route's always among them. */
-function callerNatures(scope: BudgetFileScope, caller: BudgetFileCaller): BudgetNature[] {
-  const natures = new Set<BudgetNature>(caller.natures ?? []);
-  natures.add(scope);
-  return BUDGET_NATURES.filter((nature) => natures.has(nature));
 }
 
 /**
@@ -68,7 +47,6 @@ export class BudgetFileService {
     const language = await languageOf(manager, caller.tenantId, caller.userId, options.language);
     const dateOrder = parseDateOrder(options.dateOrder);
     const decimalMark = parseDecimalMark(options.decimalMark);
-    const natures = callerNatures(scope, caller);
     const dimensions = await loadFileDimensions(manager, caller.tenantId);
     const read = await readBudgetCsv(file, {
       language, dimensionCodes: dimensions.map((dimension) => dimension.code), dateOrder, decimalMark,
@@ -76,16 +54,15 @@ export class BudgetFileService {
     const currentYear = new Date().getFullYear();
     if (read.fileErrors.length > 0 || read.headerErrors.length > 0) {
       return buildPreflight({
-        scope, natures, read, catalog: emptyCatalog(),
+        scope, read, catalog: emptyCatalog(),
         stored: [], names: [], createSuppliers: false, canCreateSuppliers: false, currentYear, labels: {},
       });
     }
     const numbers = interpretBudgetFile(read, scope).map((row) => row.itemNumber);
     const settings = await this.currencySettings.getSettings(caller.tenantId, { manager });
-    const loaded = await loadPreflight(manager, caller.tenantId, numbers, natures, settings.allowedCurrencies);
+    const loaded = await loadPreflight(manager, caller.tenantId, numbers, settings.allowedCurrencies);
     const report = buildPreflight({
       scope,
-      natures,
       read,
       catalog: loaded.catalog,
       stored: loaded.stored,
@@ -141,7 +118,6 @@ export class BudgetFileService {
     const settings = await this.currencySettings.getSettings(caller.tenantId, { manager });
     return importBudgetFile({
       scope,
-      natures: callerNatures(scope, caller),
       file,
       snapshot: parseBudgetSnapshot(snapshot),
       manager,

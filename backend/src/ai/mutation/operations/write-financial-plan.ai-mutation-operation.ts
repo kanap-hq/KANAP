@@ -47,7 +47,7 @@ export class WriteFinancialPlanAiMutationOperation implements AiMutationOperatio
     amounts: 'Amount payload for upsert_amounts. Annual, quarterly, and monthly payload shapes are supported.',
     allocations: 'Allocation entries for replace_allocations. Use empty array for automatic allocation methods.',
   };
-  readonly businessResource = 'opex';
+  readonly businessResource = 'budget';
   readonly businessResources = AI_FINANCIAL_PLAN_BUSINESS_RESOURCES;
   readonly writePreview = {
     entity_type: 'financial_plan',
