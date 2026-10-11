@@ -31,7 +31,7 @@
       "runBuild": "Run o build"
     },
     "workspace": {
-      "newSpendItem": "Nueva partida OPEX",
+      "newSpendItem": "Nueva línea OPEX",
       "spendItem": "Partida OPEX",
       "spendItems": "Partidas de gasto",
       "itemOf": "Partida {{index}} de {{total}}",
@@ -234,7 +234,7 @@
       "build": "Build"
     },
     "workspace": {
-      "newCapexItem": "Nueva partida CAPEX",
+      "newCapexItem": "Nueva línea CAPEX",
       "capexItem": "Partida CAPEX",
       "itemOf": "Partida {{index}} de {{total}}",
       "prev": "Ant.",
@@ -878,7 +878,7 @@
       "yPlus2": "A+2"
     },
     "changeType": {
-      "menuItem": "Cambiar el tipo...",
+      "menuItem": "Cambiar el tipo…",
       "title": "Cambiar el tipo de {{reference}}",
       "subtitle": {
         "capex": "Esta línea OPEX pasa a ser una línea CAPEX.",
@@ -897,8 +897,8 @@
       "effects": {
         "inPlace": "La línea conserva su referencia, su presupuesto, sus asignaciones, sus vínculos, sus adjuntos y sus tareas.",
         "reports": {
-          "capex": "Sale de la lista OPEX, de los informes OPEX y del contracargo, y pasa a la lista CAPEX.",
-          "opex": "Sale de la lista y de los informes CAPEX, y pasa a la lista OPEX, a los informes OPEX y al contracargo."
+          "capex": "Sale de los informes OPEX y del contracargo, y pasa a los informes CAPEX.",
+          "opex": "Sale de los informes CAPEX y pasa a los informes OPEX y al contracargo."
         },
         "dated_one": "Esta línea termina el {{end}} y conserva su presupuesto anterior a {{year}}. Una nueva línea {{type}} lleva el presupuesto a partir de {{year}} ({{count}} año), con los contactos y los vínculos con aplicaciones, activos, contratos, proyectos y solicitudes.",
         "dated_other": "Esta línea termina el {{end}} y conserva su presupuesto anterior a {{year}}. Una nueva línea {{type}} lleva el presupuesto a partir de {{year}} ({{count}} años), con los contactos y los vínculos con aplicaciones, activos, contratos, proyectos y solicitudes.",

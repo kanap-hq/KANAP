@@ -31,7 +31,7 @@
       "runBuild": "Run or build"
     },
     "workspace": {
-      "newSpendItem": "New OPEX item",
+      "newSpendItem": "New OPEX line",
       "spendItem": "OPEX item",
       "spendItems": "Spend items",
       "itemOf": "Item {{index}} of {{total}}",
@@ -234,7 +234,7 @@
       "build": "Build"
     },
     "workspace": {
-      "newCapexItem": "New CAPEX item",
+      "newCapexItem": "New CAPEX line",
       "capexItem": "CAPEX item",
       "itemOf": "Item {{index}} of {{total}}",
       "prev": "Prev",
@@ -878,7 +878,7 @@
       "yPlus2": "Y+2"
     },
     "changeType": {
-      "menuItem": "Change type...",
+      "menuItem": "Change type…",
       "title": "Change the type of {{reference}}",
       "subtitle": {
         "capex": "This OPEX line becomes a CAPEX line.",
@@ -897,8 +897,8 @@
       "effects": {
         "inPlace": "The line keeps its reference, budget, allocations, links, attachments and tasks.",
         "reports": {
-          "capex": "It leaves the OPEX list, the OPEX reports and the chargeback, and joins the CAPEX list.",
-          "opex": "It leaves the CAPEX list and reports, and joins the OPEX list, the OPEX reports and the chargeback."
+          "capex": "It leaves the OPEX reports and the chargeback, and joins the CAPEX reports.",
+          "opex": "It leaves the CAPEX reports and joins the OPEX reports and the chargeback."
         },
         "dated_one": "This line ends on {{end}} and keeps its budget before {{year}}. A new {{type}} line carries the budget from {{year}} ({{count}} year), with the contacts and the links to applications, assets, contracts, projects and requests.",
         "dated_other": "This line ends on {{end}} and keeps its budget before {{year}}. A new {{type}} line carries the budget from {{year}} ({{count}} years), with the contacts and the links to applications, assets, contracts, projects and requests.",

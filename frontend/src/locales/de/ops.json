@@ -31,7 +31,7 @@
       "runBuild": "Run oder Build"
     },
     "workspace": {
-      "newSpendItem": "Neue OPEX-Position",
+      "newSpendItem": "Neue OPEX-Zeile",
       "spendItem": "OPEX-Position",
       "spendItems": "Ausgabenposten",
       "itemOf": "Position {{index}} von {{total}}",
@@ -234,7 +234,7 @@
       "build": "Build"
     },
     "workspace": {
-      "newCapexItem": "Neue CAPEX-Position",
+      "newCapexItem": "Neue CAPEX-Zeile",
       "capexItem": "CAPEX-Position",
       "itemOf": "Position {{index}} von {{total}}",
       "prev": "Zurück",
@@ -878,7 +878,7 @@
       "yPlus2": "J+2"
     },
     "changeType": {
-      "menuItem": "Typ ändern...",
+      "menuItem": "Typ ändern…",
       "title": "Typ von {{reference}} ändern",
       "subtitle": {
         "capex": "Diese OPEX-Zeile wird zu einer CAPEX-Zeile.",
@@ -897,8 +897,8 @@
       "effects": {
         "inPlace": "Die Zeile behält ihre Referenz, ihr Budget, ihre Zuordnungen, Verknüpfungen, Anhänge und Aufgaben.",
         "reports": {
-          "capex": "Sie verlässt die OPEX-Liste, die OPEX-Berichte und die Leistungsverrechnung und erscheint in der CAPEX-Liste.",
-          "opex": "Sie verlässt die CAPEX-Liste und die CAPEX-Berichte und erscheint in der OPEX-Liste, den OPEX-Berichten und der Leistungsverrechnung."
+          "capex": "Sie verlässt die OPEX-Berichte und die Leistungsverrechnung und erscheint in den CAPEX-Berichten.",
+          "opex": "Sie verlässt die CAPEX-Berichte und erscheint in den OPEX-Berichten und der Leistungsverrechnung."
         },
         "dated_one": "Diese Zeile endet am {{end}} und behält ihr Budget vor {{year}}. Eine neue {{type}}-Zeile übernimmt das Budget ab {{year}} ({{count}} Jahr), mit den Kontakten und den Verknüpfungen zu Anwendungen, Assets, Verträgen, Projekten und Anfragen.",
         "dated_other": "Diese Zeile endet am {{end}} und behält ihr Budget vor {{year}}. Eine neue {{type}}-Zeile übernimmt das Budget ab {{year}} ({{count}} Jahre), mit den Kontakten und den Verknüpfungen zu Anwendungen, Assets, Verträgen, Projekten und Anfragen.",
