@@ -17,7 +17,7 @@ export class UserPageRole {
   user?: User;
 
   @Column({ type: 'text' })
-  resource!: string; // e.g., 'suppliers', 'opex', 'billing'
+  resource!: string; // e.g., 'suppliers', 'budget', 'billing'
 
   @Column({ type: 'text' })
   level!: 'reader' | 'member' | 'admin';

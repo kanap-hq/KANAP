@@ -15,12 +15,17 @@ function normalizePermissionLevel(resource: string, level: PermissionLevel): Per
   if (normalizeResource(resource) === 'knowledge' && level === 'contributor') {
     return 'reader';
   }
+  // A budget row (or an `opex` / `capex` row) may still hold `manager`, a level of before the RBAC
+  // overhaul: read as `member`, the level migration 1853990000000 gives it.
+  if (normalizeResource(resource) === 'budget' && (level as string) === 'manager') {
+    return 'member';
+  }
   return level;
 }
 
 export const RESOURCES = [
-  'opex',
-  'capex',
+  // Every budget line, OPEX and CAPEX alike (lot R): the nature is never a matter of rights.
+  'budget',
   'projects',
   'contracts',
   'applications',
@@ -57,6 +62,10 @@ export const RESOURCES = [
 export type Resource = typeof RESOURCES[number];
 
 const RESOURCE_ALIASES: Record<string, string[]> = {
+  // The two resources of before lot R (migration 1853990000000): a row still named so (a tenant
+  // export or a database of before) is read as `budget`, the higher level of the two; a role
+  // written with these keys is written as `budget`.
+  budget: ['opex', 'capex'],
   reporting: ['reports'],
   budget_ops: ['budget-ops', 'budget_operations', 'budget-admin', 'budget_admin'],
 };
@@ -129,31 +138,45 @@ export class PermissionsService {
     const tenantId = role.tenant_id;
 
     const current = await this.listForRole(roleId, opts);
-    const toSave: { resource: string; level: PermissionLevel }[] = [];
-    const toDelete: string[] = [];
+    // The keys of one call that name the same resource (`opex` and `capex` both name `budget`)
+    // are merged first: the highest level given wins, and a null removes the resource only when
+    // every key naming it is null.
+    const merged = new Map<string, PermissionLevel | null>();
     for (const [resource, level] of Object.entries(permissions)) {
       const normalized = normalizeResource(resource);
+      const next = level == null ? null : normalizePermissionLevel(normalized, level);
+      const previous = merged.get(normalized);
+      if (previous == null || (next != null && (LEVEL_RANK[next] ?? 0) > (LEVEL_RANK[previous] ?? 0))) {
+        merged.set(normalized, next);
+      }
+    }
+    const toSave: { resource: string; level: PermissionLevel }[] = [];
+    const toDelete: string[] = [];
+    for (const [resource, level] of merged) {
       if (level == null) {
-        if (current.has(normalized)) toDelete.push(normalized);
+        if (current.has(resource)) toDelete.push(resource);
       } else {
-        toSave.push({ resource: normalized, level: normalizePermissionLevel(normalized, level) });
+        toSave.push({ resource, level });
       }
     }
 
     // Auto-grant tasks:reader if any operations resource has access
-    const OPERATIONS_RESOURCES = ['opex', 'capex', 'projects', 'contracts'];
+    const OPERATIONS_RESOURCES = ['budget', 'projects', 'contracts'];
     const hasAnyOpsAccess = OPERATIONS_RESOURCES.some(res => {
-      const level = permissions[res];
+      const level = merged.get(res);
       return level === 'reader' || level === 'member' || level === 'admin';
     });
 
     // If user has any operations access and tasks is not explicitly set, auto-grant tasks:reader
-    if (hasAnyOpsAccess && permissions['tasks'] === undefined && !toDelete.includes('tasks')) {
+    if (hasAnyOpsAccess && !merged.has('tasks')) {
       toSave.push({ resource: 'tasks', level: 'reader' });
     }
     for (const r of toSave) {
-      const where = aliasGroup(r.resource).map((alias) => ({ role_id: roleId, resource: alias }));
-      const existing = await repo.findOne({ where });
+      const rows = await repo.find({ where: aliasGroup(r.resource).map((alias) => ({ role_id: roleId, resource: alias })) });
+      const existing = rows.find((row) => row.resource === r.resource) ?? rows[0];
+      // The rows of the resource's other names (`opex`, `capex` for `budget`) go: the level saved is the only one.
+      const others = rows.filter((row) => row !== existing).map((row) => row.id);
+      if (others.length > 0) await repo.delete({ id: In(others) as any });
       if (existing) {
         existing.resource = r.resource;
         existing.level = r.level;
