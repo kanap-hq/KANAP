@@ -63,6 +63,9 @@ type PortfolioDetailWorkspaceShellProps = {
   titleFallback: string;
 };
 
+/** The width the title keeps beside the actions; below it, the actions wrap under the title. */
+const TITLE_MIN_WIDTH = 280;
+
 function getStoredDrawerState(storageKey: string) {
   if (typeof window === 'undefined') return true;
   try {
@@ -383,16 +386,20 @@ export default function PortfolioDetailWorkspaceShell({
         </Box>
 
         <Box sx={{ pt: taskDetailTokens.titleBlock.pt, px: isCompact ? 2 : taskDetailTokens.titleBlock.px, pb: taskDetailTokens.titleBlock.pb }}>
+          {/* The actions sit beside the title while the title keeps TITLE_MIN_WIDTH, and wrap under
+              it otherwise. The row's own width decides, not the window's: the side navigation
+              and the page padding take their share before it. */}
           <Box
             sx={{
               display: 'flex',
               alignItems: 'flex-start',
-              gap: taskDetailTokens.titleRow.gap,
-              flexDirection: isCompact ? 'column' : 'row',
+              flexWrap: 'wrap',
+              columnGap: taskDetailTokens.titleRow.gap,
+              rowGap: taskDetailTokens.titleStack.gap,
               mb: hasTabRow ? (metadata ? taskDetailTokens.titleStack.metadataToTabsGap : taskDetailTokens.titleRow.mb) : 0,
             }}
           >
-            <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: taskDetailTokens.titleStack.gap }}>
+            <Box sx={{ flex: `1 1 ${TITLE_MIN_WIDTH}px`, minWidth: 0, display: 'flex', flexDirection: 'column', gap: taskDetailTokens.titleStack.gap }}>
               <Box
                 component="h1"
                 sx={{
@@ -423,7 +430,7 @@ export default function PortfolioDetailWorkspaceShell({
                     {itemReference}
                   </Box>
                 )}
-                <Box sx={{ flex: 1, minWidth: isCompact ? '100%' : 0 }}>
+                <Box sx={{ flex: 1, minWidth: isCompact ? '100%' : 0, overflowWrap: 'anywhere' }}>
                   <EditableTitle
                     value={title}
                     fallback={titleFallback}
@@ -447,10 +454,9 @@ export default function PortfolioDetailWorkspaceShell({
                   alignItems: 'center',
                   gap: taskDetailTokens.actionPills.gap,
                   flexShrink: 0,
+                  maxWidth: '100%',
                   mt: isCompact ? 0 : '7px',
                   flexWrap: 'wrap',
-                  justifyContent: isCompact ? 'flex-start' : 'flex-end',
-                  width: isCompact ? '100%' : 'auto',
                 }}
               >
                 {actions}
