@@ -27,8 +27,8 @@ import {
   yearsNamedByFields,
 } from '../spend-summary.builder';
 import { BudgetListConfig, budgetRuntimeNeeds } from './budget-list.config';
-import { budgetLineReference, natureAnd, type BudgetNature } from '../budget-nature';
-import { presentLine, selectLineColumns } from '../budget-line-presentation';
+import { natureAnd, type BudgetNature } from '../budget-nature';
+import { presentLine, presentNativeLine, selectLineColumns } from '../budget-line-presentation';
 import { fxKeyCurrency, fxSetKeySql, fxTableSql, RequestFxRates } from './budget-fx-table';
 import { BudgetListRuntime, loadBudgetRuntime, mergeNeeds, RuntimeNeeds } from './budget-list.runtime';
 
@@ -180,7 +180,7 @@ async function itemsInOrder(scope: SummaryReadScopeConfig, manager: EntityManage
   // The all-natures scope presents native fields, without the CAPEX alias mapping.
   const items = await (scope.allNatures ? qb.addSelect('i.legacy_number') : selectLineColumns(qb, 'i', nature)).getMany();
   const byId = new Map(items.map((item) => [item.id, scope.allNatures
-    ? { ...presentLine('opex', item), nature: item.nature, legacy_number: item.legacy_number, reference: budgetLineReference(item.item_number) }
+    ? presentNativeLine(item)
     : presentLine(nature, item)]));
   return ids.map((id) => byId.get(id)).filter(Boolean);
 }

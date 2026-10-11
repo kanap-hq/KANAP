@@ -54,7 +54,7 @@ import { readBudgetLineMeta } from './item-meta';
 import { readLineLineage } from './budget-line-lineage';
 import { budgetLineOfChild } from './budget-locks';
 import { auditTableOf, LEGACY_PREFIX, lineNumberSql, type BudgetNature } from './budget-nature';
-import { auditLine, findBudgetLine, presentChild, presentChildren, presentLine, selectLineColumns } from './budget-line-presentation';
+import { auditLine, findBudgetLine, presentChild, presentChildren, presentLine, presentNativeLine, selectLineColumns } from './budget-line-presentation';
 import type { CopyColumnOperation } from './budget-column-operations';
 import type { CopyAllocationsOperation } from './budget-allocation-operations';
 
@@ -156,8 +156,8 @@ export class SpendItemsService {
   }
 
   /** A line read for its nature's API (`budget-line-presentation.ts`), with `reference` (BL-n). */
-  private present<T extends Record<string, any>>(line: T) {
-    return presentLine(this.nature, line);
+  private present<T extends Record<string, any>>(line: T, native = false) {
+    return native ? presentNativeLine(line) : presentLine(this.nature, line);
   }
 
   async list(query: any, opts?: { manager?: EntityManager }) {
@@ -271,10 +271,10 @@ export class SpendItemsService {
   }
 
   /** The stored line of the nature of the session tenant (by id or reference), without its analytics values; a line of the other nature is not found. */
-  private async findItem(id: string, mg: EntityManager): Promise<SpendItem> {
+  private async findItem(id: string, mg: EntityManager, native = false): Promise<SpendItem> {
     const itemId = await resolveToUuid(id, this.contract.reference, mg);
     const tenantId = await this.resolveTenantId(mg);
-    const found = await findBudgetLine(mg, this.nature, tenantId, itemId);
+    const found = await findBudgetLine(mg, this.nature, tenantId, itemId, native);
     if (!found) throw new NotFoundException(this.contract.notFound);
     return found;
   }
@@ -289,8 +289,8 @@ export class SpendItemsService {
   }
 
   /** The line with its analytics values (see `item-analytics.util.ts`), as its nature's API shows it. */
-  private async withAnalytics(mg: EntityManager, item: SpendItem) {
-    return this.present({ ...item, ...itemAnalyticsFields(await this.loadAnalytics(mg, item)) });
+  private async withAnalytics(mg: EntityManager, item: SpendItem, native = false) {
+    return this.present({ ...item, ...itemAnalyticsFields(await this.loadAnalytics(mg, item)) }, native);
   }
 
   async get(id: string, opts?: { manager?: EntityManager }) {
@@ -302,10 +302,10 @@ export class SpendItemsService {
    * The workspace's read: the line, plus the labels its pickers show (see item-workspace.util.ts)
    * and the lines it follows or is replaced by after a change of type (`budget-line-lineage.ts`).
    */
-  async getDetail(id: string, opts?: { manager?: EntityManager }) {
+  async getDetail(id: string, opts?: { manager?: EntityManager; native?: boolean }) {
     const mg = opts?.manager ?? this.repo.manager;
-    const item = await this.findItem(id, mg);
-    const line = await this.withAnalytics(mg, item);
+    const item = await this.findItem(id, mg, opts?.native);
+    const line = await this.withAnalytics(mg, item, opts?.native);
     return { ...line, references: await loadItemReferences(mg, item), lineage: await readLineLineage(mg, item.tenant_id, item.id) };
   }
 
@@ -429,7 +429,7 @@ export class SpendItemsService {
   async create(
     body: SpendItemUpsertDto | Record<string, unknown>,
     userId?: string,
-    opts?: { manager?: EntityManager; itemNumber?: number; legacyNumber?: number; source?: string; fields?: ItemWriteFields },
+    opts?: { manager?: EntityManager; itemNumber?: number; legacyNumber?: number; source?: string; fields?: ItemWriteFields; native?: boolean },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(SpendItem);
@@ -458,7 +458,7 @@ export class SpendItemsService {
     });
     const saved = await repo.save(entity);
     await writeItemAnalyticsValues(mg, this.nature, tenantId, saved.id, analytics);
-    if (this.nature === 'opex') {
+    if (this.nature === 'opex' && !opts?.native) {
       const created = analytics.length > 0 ? await this.withAnalytics(mg, { ...saved, tenant_id: tenantId }) : this.present({ ...saved, ...itemAnalyticsFields([]) });
       await this.audit.log({
         table: auditTableOf(this.nature, 'spend_items'), recordId: saved.id, action: 'create', before: null,
@@ -467,15 +467,15 @@ export class SpendItemsService {
       }, { manager: mg });
       return created;
     }
-    // CAPEX: the line as stored (database defaults, its hidden columns), as the CAPEX create returned it.
-    const persisted = (await findBudgetLine(mg, this.nature, tenantId, saved.id)) ?? saved;
+    // CAPEX aliases and native writes read the persisted defaults and hidden legacy number.
+    const persisted = (await findBudgetLine(mg, this.nature, tenantId, saved.id, opts?.native)) ?? saved;
     const analyticsValues = analytics.length > 0 ? await this.loadAnalytics(mg, { id: saved.id, tenant_id: tenantId }) : [];
     await this.audit.log({
       table: auditTableOf(this.nature, 'spend_items'), recordId: saved.id, action: 'create', before: null,
-      after: { ...auditLine(this.nature, persisted), ...itemAnalyticsAuditFields(analyticsValues), ...(opts?.source ? { source: opts.source } : {}) },
+      after: { ...(opts?.native ? presentNativeLine(persisted) : auditLine(this.nature, persisted)), ...itemAnalyticsAuditFields(analyticsValues), ...(opts?.source ? { source: opts.source } : {}) },
       userId, source: opts?.source,
     }, { manager: mg });
-    return this.present({ ...persisted, ...itemAnalyticsFields(analyticsValues) });
+    return this.present({ ...persisted, ...itemAnalyticsFields(analyticsValues) }, opts?.native);
   }
 
   /**
@@ -486,7 +486,7 @@ export class SpendItemsService {
     id: string,
     body: SpendItemUpsertDto | Record<string, unknown>,
     userId?: string,
-    opts?: { manager?: EntityManager; statusEmail?: boolean; source?: string; fields?: ItemWriteFields },
+    opts?: { manager?: EntityManager; statusEmail?: boolean; source?: string; fields?: ItemWriteFields; native?: boolean },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const itemId = await resolveToUuid(id, this.contract.reference, mg);
@@ -497,8 +497,8 @@ export class SpendItemsService {
     const { before, after: saved, analyticsBefore, analyticsAfter, statusBefore } = result;
     await this.audit.log({
       table: auditTableOf(this.nature, 'spend_items'), recordId: saved.id, action: 'update',
-      before: { ...auditLine(this.nature, before), ...itemAnalyticsAuditFields(analyticsBefore) },
-      after: { ...auditLine(this.nature, saved), ...itemAnalyticsAuditFields(analyticsAfter), ...(opts?.source ? { source: opts.source } : {}) },
+      before: { ...(opts?.native ? presentNativeLine(before) : auditLine(this.nature, before)), ...itemAnalyticsAuditFields(analyticsBefore) },
+      after: { ...(opts?.native ? presentNativeLine(saved) : auditLine(this.nature, saved)), ...itemAnalyticsAuditFields(analyticsAfter), ...(opts?.source ? { source: opts.source } : {}) },
       userId, source: opts?.source,
     }, { manager: mg });
 
@@ -540,7 +540,7 @@ export class SpendItemsService {
       }
     }
 
-    return this.present({ ...saved, ...itemAnalyticsFields(analyticsAfter) });
+    return this.present({ ...saved, ...itemAnalyticsFields(analyticsAfter) }, opts?.native);
   }
 
   /** The list engine's dependencies; `access` is the caller's (the consolidation fields), from the controller. */

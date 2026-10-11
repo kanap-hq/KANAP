@@ -95,7 +95,7 @@ export class SpendAllocationsService {
   }
 }
 
-/** The allocations of the CAPEX lines' versions (`/capex-versions/:id/allocations*`, aliases until lot U). */
+/** The allocations of the CAPEX lines' versions (`/capex-versions/:id/allocations*`, aliases retained until their removal in Z2). */
 @Injectable()
 export class CapexAllocationsService extends SpendAllocationsService {
   protected override readonly nature: BudgetNature = 'capex';

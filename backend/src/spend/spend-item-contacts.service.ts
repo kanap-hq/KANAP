@@ -184,7 +184,7 @@ export class SpendItemContactsService {
   }
 }
 
-/** The contacts of the CAPEX lines (`/capex-items/:id/contacts*`, aliases until lot U). */
+/** The contacts of the CAPEX lines (`/capex-items/:id/contacts*`, aliases retained until their removal in Z2). */
 @Injectable()
 export class CapexItemContactsService extends SpendItemContactsService {
   protected override readonly nature: BudgetNature = 'capex';

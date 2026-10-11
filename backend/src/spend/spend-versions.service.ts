@@ -120,7 +120,7 @@ export class SpendVersionsService {
   }
 }
 
-/** The versions of the CAPEX lines (`/capex-items/:id/versions`, aliases until lot U). */
+/** The versions of the CAPEX lines (`/capex-items/:id/versions`, aliases retained until their removal in Z2). */
 @Injectable()
 export class CapexVersionsService extends SpendVersionsService {
   protected override readonly nature: BudgetNature = 'capex';

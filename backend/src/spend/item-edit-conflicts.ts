@@ -1,7 +1,7 @@
 import { EntityManager } from 'typeorm';
 import { EditBase, EditConflict, EditedField, assertNoEditConflicts, hasBase, sameFieldValue } from '../common/edit-conflicts';
 import { ItemAnalyticsChange, ItemAnalyticsValue } from './item-analytics.util';
-import { ItemWriteScope, itemFieldColumn, itemWritableColumns } from './item-write.util';
+import { ItemWriteFields, ItemWriteScope, itemFieldColumn, itemWritableColumns } from './item-write.util';
 import { auditTableOf } from './budget-nature';
 
 /**
@@ -51,12 +51,13 @@ export function itemEditedFields(
     disabledAt: Date | null;
     analytics: ItemAnalyticsChange[];
   },
+  fieldsMode: ItemWriteFields = 'api',
 ): EditedField[] {
   const supplied = (key: string) => Object.prototype.hasOwnProperty.call(changes, key) && changes[key] !== undefined;
   const fields: EditedField[] = [];
-  // By API field (`description` for a CAPEX title, as the screen and the CAPEX audit rows name it), read on its column.
-  for (const field of itemWritableColumns(scope)) {
-    const column = itemFieldColumn(scope, field);
+  // Use the caller's field names: alias description is the title; native description is its own column.
+  for (const field of itemWritableColumns(scope, fieldsMode)) {
+    const column = itemFieldColumn(scope, field, fieldsMode);
     if (!supplied(field) || !(column in resolved.values) || !hasBase(base, field)) continue;
     fields.push({
       field,
@@ -162,9 +163,10 @@ export async function assertNoItemEditConflicts(
   base: EditBase | null,
   changes: Record<string, unknown>,
   resolved: Parameters<typeof itemEditedFields>[3],
+  fieldsMode: ItemWriteFields = 'api',
 ): Promise<void> {
   if (!base) return;
-  const fields = itemEditedFields(scope, base, changes, resolved);
+  const fields = itemEditedFields(scope, base, changes, resolved, fieldsMode);
   if (fields.length === 0) return;
   await assertNoEditConflicts(manager, {
     tenantId,

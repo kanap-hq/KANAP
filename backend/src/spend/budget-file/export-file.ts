@@ -108,8 +108,7 @@ function exportRow(
   values.set('nature', line.nature);
   values.set('item_number', lineRef(line.itemNumber));
   values.set('name', line.name ?? '');
-  // A CAPEX line's description is not in the file until lot U (`CAPEX_DESCRIPTION_IGNORED`).
-  values.set('description', line.nature === 'capex' ? '' : line.description ?? '');
+  values.set('description', line.description ?? '');
   values.set('company_name', line.companyName ?? '');
   values.set('supplier_name', line.supplierName ?? '');
   values.set('supplier_erp_id', line.supplierErpId ?? '');

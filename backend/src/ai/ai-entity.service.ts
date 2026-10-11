@@ -1441,7 +1441,7 @@ export class AiEntityService {
       `SELECT ci.id,
               ${lineNumberSql('ci', 'capex')} AS item_number,
               ci.product_name AS label,
-              NULLIF(CONCAT_WS(' | ', comp.name, sup.name), '') AS summary,
+              COALESCE(NULLIF(ci.description, ''), NULLIF(ci.notes, ''), NULLIF(CONCAT_WS(' | ', comp.name, sup.name), '')) AS summary,
               ci.status,
               ci.updated_at,
               comp.name AS company_name,
@@ -1458,6 +1458,7 @@ export class AiEntityService {
        WHERE ci.tenant_id = $2 AND ci.nature = 'capex'
          AND (
            ci.product_name ILIKE $1
+           OR COALESCE(ci.description, '') ILIKE $1
            OR COALESCE(ci.notes, '') ILIKE $1
            OR COALESCE(ci.currency, '') ILIKE $1
            OR COALESCE(comp.name, '') ILIKE $1

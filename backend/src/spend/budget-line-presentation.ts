@@ -34,10 +34,10 @@ export function selectLineColumns<T extends ObjectLiteral>(qb: SelectQueryBuilde
 }
 
 /** A line of the tenant of `nature` by id, with what its nature shows; null when missing or of the other nature. */
-export async function findBudgetLine(manager: EntityManager, nature: BudgetNature, tenantId: string, id: string): Promise<SpendItem | null> {
+export async function findBudgetLine(manager: EntityManager, nature: BudgetNature, tenantId: string, id: string, native = false): Promise<SpendItem | null> {
   const qb = manager.getRepository(SpendItem).createQueryBuilder('i')
     .where('i.tenant_id = :tenantId AND i.id = :id AND i.nature = :nature', { tenantId, id, nature });
-  return selectLineColumns(qb, 'i', nature).getOne();
+  return (native ? qb.addSelect('i.legacy_number') : selectLineColumns(qb, 'i', nature)).getOne();
 }
 
 /** The lines of the tenant of `nature` among `ids`, with what their nature shows (no order). */
@@ -58,6 +58,18 @@ export type PresentedRow = Record<string, any> & { id: string };
  */
 export function presentLine<T extends LineLike>(nature: BudgetNature, line: T): PresentedRow {
   return { ...auditLine(nature, line), reference: budgetLineReference(line.item_number) } as unknown as PresentedRow;
+}
+
+/** The shared native contract of the neutral list, workspace and native writes. */
+export function presentNativeLine<T extends LineLike>(line: T): PresentedRow {
+  return {
+    ...auditLine('opex', line),
+    legacy_number: line.legacy_number ?? null,
+    contract_id: line.nature === 'capex' ? null : line.contract_id ?? null,
+    description: line.description ?? null,
+    notes: line.notes ?? null,
+    reference: budgetLineReference(line.item_number),
+  } as unknown as PresentedRow;
 }
 
 /** A line as its nature's audit rows record it: the API shape without `reference`. */

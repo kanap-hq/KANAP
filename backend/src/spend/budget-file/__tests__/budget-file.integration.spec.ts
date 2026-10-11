@@ -938,8 +938,7 @@ async function testCapexCriteriaColumns(runner: { query: Function; manager: Enti
  * legacy number) and a CAPEX line (CPX-2, its BL number after the OPEX ones).
  * - a mixed file, read the same from either list (one right for every budget line, lot R), then
  *   loaded on the OPEX list: each line created or updated with its own nature, numbers and audit
- *   labels; a CAPEX line's description is not written (until lot U), the cell ignored with a
- *   warning;
+ *   labels and native descriptions;
  * - a line named with another nature: refused; `BL-n`, a bare number, `OPX-n`, `CPX-n`;
  * - the freeze of a line's own nature, at the preflight and at the load;
  * - the files of before lot C1b (no nature column, OPX and CPX numbers) on their own list;
@@ -973,9 +972,9 @@ async function testSingleBudgetFile(runner: { query: Function; manager: EntityMa
     assert.deepEqual(report.snapshot.lines.map((line) => line.id).sort(), [opexId, capexId].sort(), `${kind} list: both lines read`);
   }
 
-  // Each line with its nature. A CAPEX line's description is ignored, with a warning.
+  // Each line writes its native description.
   const checked = await preflightBudgetFile(runner.manager, 'opex', tenantId, mixed);
-  assert.deepEqual(checked.warnings.ignoredCells.map((cell) => `${cell.line} ${cell.column}`), ['3 description', '5 description']);
+  assert.equal(checked.ok, true);
   const audit = captureAudit();
   const loaded = await loadBudgetFile(runner.manager, 'opex', tenantId, mixed, audit as any);
   assert.deepEqual(['inserted' in loaded && loaded.inserted, 'updated' in loaded && loaded.updated], [2, 2], JSON.stringify(loaded));
@@ -991,7 +990,7 @@ async function testSingleBudgetFile(runner: { query: Function; manager: EntityMa
   assert.equal(newCapex.nature, 'capex');
   assert.match(String(newCapex.legacy_number), /^CPX-\d+$/, 'a new CAPEX line: its BL number and a CPX number');
   assert.equal(newCapex.item_number, newOpex.item_number + 1, 'the BL numbers of the new lines in file order');
-  assert.deepEqual([newCapex.description, byName.get('Racks')!.description], [null, null], 'no CAPEX description written (until lot U)');
+  assert.deepEqual([newCapex.description, byName.get('Racks')!.description], ['Racks for the new room', 'Second room'], 'CAPEX descriptions written');
   const yearTotal = async (itemId: string) => (await runner.query(
     `SELECT COALESCE(sum(a.planned), 0)::numeric::float8 AS total FROM spend_amounts a
        JOIN spend_versions v ON v.tenant_id = a.tenant_id AND v.id = a.version_id

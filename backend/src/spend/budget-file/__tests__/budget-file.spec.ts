@@ -7,7 +7,7 @@ import { parseItemNumber, readBudgetCsv } from '../interpret';
 import { periodForYearlyTotal } from '../period';
 import { buildPreflight, planBudgetFile } from '../preflight';
 import { budgetFileSchema, CRITERIA_COLUMNS_MESSAGE, OLD_BUDGET_FILE_MESSAGE } from '../columns';
-import { CAPEX_DESCRIPTION_IGNORED, natureChangeMessage } from '../preflight';
+import { natureChangeMessage } from '../preflight';
 import type { BudgetNature } from '../../budget-nature';
 import { formatToken, parseToken, tokenError } from '../token';
 import { BUDGET_FILE_MAX_BYTES } from '../upload';
@@ -476,8 +476,8 @@ async function testExportShape() {
   const cell = (row: number, header: string) => both.rows[row][both.headers.indexOf(header)];
   assert.deepEqual(
     ['nature', 'item_number', 'description', 'analytics:default', 'analytics:ppe_type', 'analytics:priority'].map((header) => cell(0, header)),
-    ['capex', 'BL-120', '', 'Infra', 'Hardware', 'High'],
-    'a CAPEX line: its nature, its BL number, no description (until lot U) and the value names',
+    ['capex', 'BL-120', 'Racks', 'Infra', 'Hardware', 'High'],
+    'a CAPEX line: its nature, its BL number, its description and the value names',
   );
   assert.deepEqual(
     ['nature', 'item_number', 'analytics:default', 'analytics:priority'].map((header) => cell(1, header)),
@@ -769,21 +769,16 @@ async function testDuplicatesByNature() {
   ]);
 }
 
-/** Until lot U the description of a CAPEX line is neither read nor written: a filled cell is ignored with a warning. */
-async function testCapexDescriptionIgnored() {
+/** Both natures write the description, including clearing an existing text. */
+async function testCapexDescription() {
   const { stored, cat } = natureFixture();
   const header = 'nature,item_number,name,description,company_name,account_number,currency\n';
   const planned = await planOf('opex', `${header}capex,,Server,A server,Acme,2100,EUR\ncapex,BL-120,Racks,-,,,\nopex,BL-3,Widget,Licences,,,\n`, stored, {
     cat,
   });
   assert.equal(planned.report.ok, true, JSON.stringify(planned.report.errors));
-  assert.deepEqual(planned.report.warnings.ignoredCells, [
-    { line: 2, column: 'description', message: CAPEX_DESCRIPTION_IGNORED },
-    { line: 3, column: 'description', message: CAPEX_DESCRIPTION_IGNORED },
-  ]);
-  assert.equal(CAPEX_DESCRIPTION_IGNORED, 'description is ignored on a CAPEX line. Leave the cell empty.');
-  assert.deepEqual(planned.plans.map((plan) => [plan.nature, 'description' in plan.body]), [['capex', false], ['opex', true]], 'nothing written on the CAPEX lines');
-  assert.deepEqual([planned.report.changes.unchanged, planned.report.changes.updated, planned.report.changes.created], [1, 1, 1], 'Racks unchanged');
+  assert.deepEqual(planned.plans.map((plan) => [plan.nature, plan.body.description]), [['capex', 'A server'], ['opex', 'Licences']], 'the CAPEX description is written');
+  assert.deepEqual([planned.report.changes.unchanged, planned.report.changes.updated, planned.report.changes.created], [1, 1, 1]);
 }
 
 /** A text the app stored with a line break at its end reads back unchanged: the cell and the stored value are trimmed alike. */
@@ -819,7 +814,7 @@ async function main() {
   await testFreezeByNature();
   await testDuplicatesByNature();
   await testTrailingLineBreak();
-  await testCapexDescriptionIgnored();
+  await testCapexDescription();
   console.log('budget-file.spec: ok');
 }
 

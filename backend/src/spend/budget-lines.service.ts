@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { BulkDeleteResult } from '../common/delete.types';
 import { FxRateService } from '../currency/fx-rate.service';
@@ -7,7 +7,10 @@ import { SUMMARY_SCOPES, summaryTenantId } from './spend-summary.builder';
 import { BudgetListAccess } from './budget-list/budget-list.runtime';
 import * as budgetList from './budget-list/budget-list.service';
 import { CapexItemsDeleteService, SpendItemsDeleteService } from './spend-items-delete.service';
-import { BUDGET_NATURES, naturesAnd } from './budget-nature';
+import { BUDGET_NATURES, naturesAnd, type BudgetNature } from './budget-nature';
+
+import { resolveBudgetLine } from '../common/resolve-item-id';
+import { CapexItemsService, SpendItemsService } from './spend-items.service';
 
 type ReadOptions = { manager: EntityManager; access?: BudgetListAccess };
 
@@ -19,7 +22,47 @@ export class BudgetLinesService {
     private readonly fxRates: FxRateService,
     private readonly opexDelete: SpendItemsDeleteService,
     private readonly capexDelete: CapexItemsDeleteService,
+    private readonly opexItems: SpendItemsService,
+    private readonly capexItems: CapexItemsService,
   ) {}
+
+  private items(nature: BudgetNature) {
+    return nature === 'opex' ? this.opexItems : this.capexItems;
+  }
+
+  private nativeBody(body: unknown, nature: BudgetNature, updating: boolean): Record<string, unknown> {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      throw new BadRequestException('A budget line body is required.');
+    }
+    const input = body as Record<string, unknown>;
+    if (updating && Object.prototype.hasOwnProperty.call(input, 'nature')) {
+      throw new BadRequestException('Use change-type to change the type of a budget line.');
+    }
+    if (nature === 'capex' && Object.prototype.hasOwnProperty.call(input, 'contract_id')) {
+      throw new BadRequestException('Contract cannot be written on a CAPEX line.');
+    }
+    return input;
+  }
+
+  async get(ref: string, opts: { manager: EntityManager }) {
+    const line = await resolveBudgetLine(ref, opts.manager);
+    return this.items(line.nature).getDetail(line.id, { ...opts, native: true });
+  }
+
+  async create(body: unknown, userId: string | undefined, opts: { manager: EntityManager }) {
+    const nature = (body as any)?.nature;
+    if (nature !== 'opex' && nature !== 'capex') throw new BadRequestException('nature must be opex or capex.');
+    const input = this.nativeBody(body, nature, false);
+    const created = await this.items(nature).create(input, userId, { ...opts, fields: 'columns', native: true });
+    return this.get(created.id, opts);
+  }
+
+  async update(ref: string, body: unknown, userId: string | undefined, opts: { manager: EntityManager }) {
+    const line = await resolveBudgetLine(ref, opts.manager);
+    const input = this.nativeBody(body, line.nature, true);
+    await this.items(line.nature).update(line.id, input, userId, { ...opts, fields: 'columns', native: true });
+    return this.get(line.id, opts);
+  }
 
   private deps(access?: BudgetListAccess) {
     return { allocationCalculator: this.allocationCalculator, fxRates: this.fxRates, access };

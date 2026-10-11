@@ -152,7 +152,7 @@ export class SpendAmountsService {
   }
 }
 
-/** The months of the CAPEX lines' versions (`/capex-versions/:id/amounts*`, aliases until lot U). */
+/** The months of the CAPEX lines' versions (`/capex-versions/:id/amounts*`, aliases retained until their removal in Z2). */
 @Injectable()
 export class CapexAmountsService extends SpendAmountsService {
   protected override readonly nature: BudgetNature = 'capex';

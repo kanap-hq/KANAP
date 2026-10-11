@@ -261,14 +261,14 @@ export async function versionTotals(runner: QueryRunner, tenantId: string, itemI
 /** The line's stored nature, numbers, dates and status. */
 export async function storedLine(runner: QueryRunner, tenantId: string, itemId: string) {
   const [row] = await runner.query(
-    `SELECT nature, item_number, legacy_number, predecessor_id, row_version, account_id, cost_center_id, description, product_name,
+    `SELECT nature, item_number, legacy_number, predecessor_id, row_version, account_id, cost_center_id, description, notes, product_name,
             to_char(effective_start, 'YYYY-MM-DD') AS effective_start, disabled_at, status::text AS status
        FROM spend_items WHERE tenant_id = $1 AND id = $2`,
     [tenantId, itemId],
   );
   return row as {
     nature: Nature; item_number: number; legacy_number: string | null; predecessor_id: string | null; row_version: number;
-    account_id: string | null; cost_center_id: string | null; description: string | null; product_name: string;
+    account_id: string | null; cost_center_id: string | null; description: string | null; notes: string | null; product_name: string;
     effective_start: string; disabled_at: Date | null; status: string;
   } | undefined;
 }
