@@ -33,8 +33,9 @@ function line(patch: Partial<StoredLine> = {}): StoredLine {
     rowVersion: 7,
     name: 'Widget',
     description: null,
-    companyId: null,
-    companyName: null,
+    // A line written through the item service has a paying company (the default catalog's).
+    companyId: 'c1',
+    companyName: 'Acme',
     supplierId: null,
     supplierName: null,
     supplierErpId: null,
@@ -63,7 +64,7 @@ function withJanuary(cents: bigint | null) {
 }
 
 function catalog(patch: Partial<BudgetCatalog> = {}): BudgetCatalog {
-  return emptyCatalog(patch);
+  return emptyCatalog({ companies: [{ id: 'c1', name: 'Acme', coaId: null, disabledAt: null }], ...patch });
 }
 
 async function preflight(

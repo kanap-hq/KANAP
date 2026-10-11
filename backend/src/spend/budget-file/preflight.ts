@@ -320,6 +320,12 @@ function resolveRow(
   resolveAnalytics(input, nature, row, live, creating, blocked, fail, bag, changes, draft);
   resolveDates(input, row, live, creating, blocked, fail, changes, draft);
   resolveAmounts(input, nature, row, live, blocked, fail, changes, draft);
+  // The load updates the line through its item service, which needs a paying company, or a cost
+  // center that has one (`resolveItemWrite`). Amounts alone are written without it.
+  const updatesLine = Object.keys(draft.body).length > 0 || draft.analytics.length > 0 || !!draft.newSupplier;
+  if (live && updatesLine && !company.id && !costCenter?.companyId && !blocked('company_name') && !blocked('cost_center_code')) {
+    fail('company_name', 'company_name is required.');
+  }
 
   if (creating && row.fields.name?.kind === 'value') {
     const hint = duplicateHint(nature, row, supplier, input.names, newKeys);

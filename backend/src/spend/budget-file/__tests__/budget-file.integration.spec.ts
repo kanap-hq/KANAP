@@ -646,6 +646,26 @@ async function testCostCenterCells(runner: { query: Function; manager: EntityMan
     '5 company_name: company_name is required.',
   ], `${kind}: row errors found by the preflight; a new line needs a company or a cost center that has one`);
 
+  // An existing line without a company: the load updates it through its item service, which needs
+  // one. The preflight refuses it as for a new line; a company or a cost center that has one is
+  // enough, and the line read back unchanged needs nothing.
+  const three = lines.get('Line three');
+  await runner.query(`UPDATE spend_items SET paying_company_id = NULL WHERE tenant_id = $1 AND id = $2`, [tenantId, three.id]);
+  const noCompany = csvOf(['item_number', 'notes'], [{ item_number: ref(kind, three.n), notes: 'Changed' }]);
+  assert.deepEqual(
+    rowErrors(await preflightBudgetFile(runner.manager, kind, tenantId, noCompany)),
+    ['2 company_name: company_name is required.'],
+    `${kind}: an update of a line without a company is refused by the preflight`,
+  );
+  const unchanged = await preflightBudgetFile(runner.manager, kind, tenantId, await exportBudgetFile(runner.manager, kind, tenantId, [three.id]));
+  assert.deepEqual([unchanged.ok, unchanged.changes.unchanged], [true, 1], `${kind}: unchanged, it reads back (${JSON.stringify(unchanged.errors)})`);
+  const viaCenter = csvOf(['item_number', 'notes', 'cost_center_code'], [{ item_number: ref(kind, three.n), notes: 'Changed', cost_center_code: 'CC-2' }]);
+  assert.equal((await preflightBudgetFile(runner.manager, kind, tenantId, viaCenter)).ok, true, `${kind}: a cost center with a company is enough`);
+  const withCompany = csvOf(['item_number', 'notes', 'company_name'], [{ item_number: ref(kind, three.n), notes: 'Changed', company_name: 'File company' }]);
+  assert.equal((await loadBudgetFile(runner.manager, kind, tenantId, withCompany) as any).updated, 1, `${kind}: a company is enough`);
+  const [written] = await runner.query(`SELECT paying_company_id, notes FROM spend_items WHERE tenant_id = $1 AND id = $2`, [tenantId, three.id]);
+  assert.deepEqual([written.paying_company_id, written.notes], [three.paying_company_id, 'Changed'], `${kind}: the load writes it`);
+
   // The line's own cost center, disabled since: an export reads back unchanged; another line cannot take it.
   await runner.query(`UPDATE cost_centers SET status = 'disabled', disabled_at = now() - interval '1 day' WHERE tenant_id = $1 AND id = $2`, [tenantId, cc2]);
   const exported = await exportBudgetFile(runner.manager, kind, tenantId, [fromCenter.id, plain.id]);
@@ -1201,6 +1221,9 @@ async function testOwnersAccountsAndCurrency(runner: { query: Function; manager:
 async function testExportLanguageHint(runner: { query: Function; manager: EntityManager }, kind: Kind) {
   const tenantId = await seedTenant(runner as any, `csv-p1-${kind}`);
   const itemId = await seedItem(runner as any, kind, tenantId, 1, 'Convention hint');
+  // A company, as every line written since: the dates read month first are an update of the line.
+  const { companyId } = await seedCompany(runner as any, tenantId, 'Hint company');
+  await runner.query(`UPDATE spend_items SET paying_company_id = $2 WHERE tenant_id = $1 AND id = $3`, [tenantId, companyId, itemId]);
   await setItemDates(runner as any, kind, itemId, {
     effectiveStart: '2027-03-01', disabledAt: '2027-11-05T12:00:00.000Z',
   });
