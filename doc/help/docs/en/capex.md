@@ -188,7 +188,7 @@ The Overview tab holds the details of the investment and its tasks.
 - **Status** filter: All (default), Active (not done), or a specific status. The clear button resets it
 - Click **Add task** to open a new task already linked to this item. Fill in the title, description, priority, assignee, and due date in the task workspace
 - Use the open icon to go to a task, and the delete icon to delete it (you confirm first)
-- Tasks have their own permissions (`tasks:member` to create and edit). CAPEX manager access does not grant task editing rights on its own; check with your admin if you cannot create tasks
+- Tasks have their own permissions (`tasks:member` to create and edit). Member access on Budget does not grant task editing rights on its own; check with your admin if you cannot create tasks
 - Tasks can also be viewed and managed from **Portfolio > Tasks**, which shows all tasks across your organization
 - The latest task title is also shown in the list view's **Task** column (hidden by default)
 
@@ -515,7 +515,7 @@ The Relations tab links this CAPEX item to related objects: Projects, Applicatio
 - Upload files related to this capital item (e.g., quotes, vendor proposals, technical specs, approval memos)
 - Drag and drop files into the attachment area, or click **Select files** to browse
 - Click a file chip to download the file
-- Delete an attachment with the delete icon on its chip (you confirm first; requires `capex:manager` permission)
+- Delete an attachment with the delete icon on its chip (you confirm first; requires `budget:member`)
 
 **Why link?**:
 
@@ -531,11 +531,11 @@ The Relations tab links this CAPEX item to related objects: Projects, Applicatio
 
 ## CSV import/export
 
-**Export CSV** and **Import CSV** sit in the toolbar of the CAPEX list. Both need administration rights on CAPEX (`capex:admin`).
+**Export CSV** and **Import CSV** sit in the toolbar of the CAPEX list. Both need the Admin level on Budget (`budget:admin`).
 
 **Export CSV** writes the budget file of the lines the list shows, as `budget.csv`. **Import CSV** reads a file back: it is checked first, and nothing is written until you click **Load**.
 
-The file holds one row per line: its `nature` (`capex` here), its reference `BL-n`, the line's details, its amounts as columns and `kanap_token`. The same file can also hold OPEX lines, which needs administration rights on OPEX too. A file without a `nature` column, exported by an earlier version, is read as CAPEX lines on this list. [Load a budget from a spreadsheet](budget-file.md) describes the columns, what a cell means, and the two import steps.
+The file holds one row per line: its `nature` (`capex` here), its reference `BL-n`, the line's details, its amounts as columns and `kanap_token`. The same file can also hold OPEX lines. A file without a `nature` column, exported by an earlier version, is read as CAPEX lines on this list. [Load a budget from a spreadsheet](budget-file.md) describes the columns, what a cell means, and the two import steps.
 
 ---
 
@@ -577,11 +577,13 @@ Every CAPEX item has a **status** (Enabled or Disabled) and an optional **End of
 
 ## Permissions
 
-CAPEX access is controlled by three levels:
+CAPEX access is controlled by the Budget resource, which covers OPEX and CAPEX lines alike. It has three levels:
 
-- `capex:reader` -- View CAPEX list, open items, see budgets and allocations (read-only)
-- `capex:manager` -- Create and edit CAPEX items, update budgets and allocations, upload attachments, manage links and contacts
-- `capex:admin` -- All manager rights plus CSV import, budget operations (freeze, copy, reset), and bulk delete
+- `budget:reader` -- View the OPEX and CAPEX lists, open items, see budgets and allocations (read-only), download attachments
+- `budget:member` -- Create and edit items, update budgets and allocations, upload and delete attachments, manage relations, links and contacts
+- `budget:admin` -- All member rights plus CSV import and export, budget operations (copy budget columns, copy allocations, reset budget column), and bulk delete
+
+Freezing budget columns needs Budget administration (`budget_ops:admin`).
 
 Additionally:
 

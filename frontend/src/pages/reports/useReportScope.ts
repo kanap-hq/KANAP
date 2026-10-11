@@ -40,7 +40,7 @@ export function useReportScope(): [BudgetScope, (next: BudgetScope) => void] {
   const { hasLevel } = useAuth();
   const [params, setParams] = useSearchParams();
   const raw = params.get('scope');
-  const scope: BudgetScope = (raw === 'opex' || raw === 'capex') && hasLevel(raw, 'reader') ? raw : fallback;
+  const scope: BudgetScope = (raw === 'opex' || raw === 'capex') && hasLevel('budget', 'reader') ? raw : fallback;
   const setScope = useCallback((next: BudgetScope) => {
     setParams((prev) => {
       const nextParams = new URLSearchParams(prev);

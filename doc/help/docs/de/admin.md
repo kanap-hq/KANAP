@@ -301,12 +301,13 @@ Ressourcen sind zur einfacheren Verwaltung in Gruppen organisiert:
 **Budget & Finanzen**
 | Ressource | Was sie steuert |
 |-----------|-----------------|
-| `opex` | Betriebsausgaben |
-| `capex` | Investitionsausgaben |
+| `budget` | Budgetpositionen, OPEX und CAPEX |
 | `budget_ops` | Budget-Administrationswerkzeuge, einschließlich der Währungseinstellungen |
 | `contracts` | Lieferantenverträge |
 | `analytics` | Analysedimensionen |
 | `reporting` | Berichtszugriff |
+
+Die Ressource Budget gilt für OPEX- und CAPEX-Positionen gleichermaßen. Eine Rolle, die früher getrennte Stufen für OPEX und CAPEX hatte, behält die höhere der beiden auf Budget.
 
 **Portfolio**
 | Ressource | Was sie steuert |

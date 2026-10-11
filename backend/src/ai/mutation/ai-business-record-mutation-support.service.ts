@@ -371,7 +371,7 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
   spend_items: {
     labelSingular: 'spend item',
     labelPlural: 'spend items',
-    businessResource: 'opex',
+    businessResource: 'budget',
     tableName: 'spend_items',
     fields: {
       product_name: { label: 'Product Name', kind: 'text', requiredOnCreate: true, aliases: ['name'] },
@@ -398,7 +398,7 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
   capex_items: {
     labelSingular: 'CAPEX item',
     labelPlural: 'CAPEX items',
-    businessResource: 'capex',
+    businessResource: 'budget',
     // A CAPEX line lives in `spend_items` (nature `capex`, lot Z1); its audit rows keep `capex_items`.
     tableName: auditTableOf('capex', 'spend_items'),
     fields: {

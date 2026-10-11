@@ -189,7 +189,7 @@ Jede der folgenden Dateien wird auf der Seite exportiert und importiert, die das
 | Zuordnungen | Aus den Berichten zur Leistungsverrechnung | Nein | | [Berichte](reports.md) |
 | Zeilen unter Menge und Preis, Einstellungen der Budgetspalten, Einfrierungen, Währungen | Nein | Nein | | In der Oberfläche festgelegt |
 
-Die Budgetdatei liest und schreibt die Beträge jeder Spalte und jedes Jahres, als Jahressummen oder Monate, mit den Details der Position in derselben Zeile. Sie ist der Weg hinein für ein anderswo erstelltes Budget und der Weg hinaus zu einer Tabellenkalkulation oder einem BI-Werkzeug. Eine Datei enthält beide Arten von Positionen, ihre Spalte `nature` gibt die Art an. **Budgetverwaltung > OPEX** exportiert die OPEX-Positionen und **Budgetverwaltung > CAPEX** die CAPEX-Positionen. Beide Listen importieren eine Datei mit beiden Arten, mit Administrationsrechten auf OPEX und auf CAPEX.
+Die Budgetdatei liest und schreibt die Beträge jeder Spalte und jedes Jahres, als Jahressummen oder Monate, mit den Details der Position in derselben Zeile. Sie ist der Weg hinein für ein anderswo erstelltes Budget und der Weg hinaus zu einer Tabellenkalkulation oder einem BI-Werkzeug. Eine Datei enthält beide Arten von Positionen, ihre Spalte `nature` gibt die Art an. **Budgetverwaltung > OPEX** exportiert die OPEX-Positionen und **Budgetverwaltung > CAPEX** die CAPEX-Positionen. Beide Listen importieren eine Datei mit beiden Arten, mit der Administratorstufe auf Budget.
 
 ### Ein Budget nach KANAP übernehmen
 

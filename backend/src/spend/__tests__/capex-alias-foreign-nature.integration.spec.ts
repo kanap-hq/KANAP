@@ -30,10 +30,10 @@ import { assert, captureAudit, amountsService, inRolledBackTransaction, period, 
 // Z1 of plan planning/budget-unifie.md) never reach an OPEX line, the mirror of
 // `budget-line-foreign-nature.integration.spec.ts` (a CAPEX line through the OPEX routes):
 // - every CAPEX route addressed by an OPEX line's id, reference (BL-n, OPX-n, bare number) or the
-//   id of one of its children answers 404 (an OPX-n reference 400, as before) to a user with the CAPEX right only (who passes the
-//   guard); the same call answers once the line is turned CAPEX (the 404 is the nature's); a user
-//   with the OPEX right only is stopped by the guard (403), except on the task routes, which the
-//   tasks right guards and which answer 404 to him too;
+//   id of one of its children answers 404 (an OPX-n reference 400, as before) to a user with the
+//   budget right (who passes the guard: since lot R one right covers both natures, so the nature
+//   predicate alone keeps the line out); the same call answers once the line is turned CAPEX (the
+//   404 is the nature's);
 // - a bulk delete through the CAPEX routes names nothing and keeps the OPEX line and its children;
 // - a CAPEX line answers through the same routes, by UUID, CPX-n, BL-n and bare number, with its
 //   CPX number in `item_number` and its BL number in `reference`.
@@ -51,8 +51,7 @@ type World = {
   contactId: string;
   projectId: string;
   applicationId: string;
-  opexUser: string;
-  capexUser: string;
+  budgetUser: string;
   opex: { id: string; versionId: string; linkId: string; contactLinkId: string; attachmentId: string; taskId: string };
   capex: { id: string; versionId: string };
 };
@@ -112,8 +111,7 @@ async function seedWorld(runner: QueryRunner): Promise<World> {
   const contactId = await one(runner, `INSERT INTO contacts (tenant_id, email) VALUES ($1, 'alias@example.invalid') RETURNING id`, [tenantId]);
   const projectId = await one(runner, `INSERT INTO portfolio_projects (tenant_id, name, item_number) VALUES ($1, 'Alias project', 990201) RETURNING id`, [tenantId]);
   const applicationId = await one(runner, `INSERT INTO applications (tenant_id, name) VALUES ($1, 'Alias app') RETURNING id`, [tenantId]);
-  const opexUser = await seedRole(runner, tenantId, 'opex-only', { opex: 'admin', tasks: 'member' });
-  const capexUser = await seedRole(runner, tenantId, 'capex-only', { capex: 'admin', tasks: 'member' });
+  const budgetUser = await seedRole(runner, tenantId, 'budget-admin', { budget: 'admin', tasks: 'member' });
   const opex = await seedLine(runner, tenantId, companyId, 'opex', OPEX_NUMBER);
   const capex = await seedLine(runner, tenantId, companyId, 'capex', CAPEX_NUMBER);
   const linkId = await one(runner, `INSERT INTO spend_links (tenant_id, spend_item_id, url) VALUES ($1, $2, 'https://example.invalid/o') RETURNING id`, [tenantId, opex.id]);
@@ -134,7 +132,7 @@ async function seedWorld(runner: QueryRunner): Promise<World> {
     [tenantId, opex.id],
   );
   return {
-    tenantId, companyId, contactId, projectId, applicationId, opexUser, capexUser,
+    tenantId, companyId, contactId, projectId, applicationId, budgetUser,
     opex: { ...opex, linkId, contactLinkId, attachmentId, taskId },
     capex,
   };
@@ -246,8 +244,8 @@ async function testRoutes() {
   await inRolledBackTransaction(async (runner) => {
     const w = await seedWorld(runner);
     const { items, versions, tasks } = controllers(runner);
-    const ctx = { manager: runner.manager, tenantId: w.tenantId, userId: w.capexUser } as any;
-    const req = { queryRunner: runner, user: { sub: w.capexUser }, tenant: { id: w.tenantId } };
+    const ctx = { manager: runner.manager, tenantId: w.tenantId, userId: w.budgetUser } as any;
+    const req = { queryRunner: runner, user: { sub: w.budgetUser }, tenant: { id: w.tenantId } };
     const O = w.opex;
     const res = { setHeader: () => undefined } as any;
     const file = { originalname: 'x.txt', mimetype: 'text/plain', buffer: Buffer.from('x'), size: 1 } as any;
@@ -306,15 +304,12 @@ async function testRoutes() {
     const before = await state();
     for (const [controller, handler, method, call] of routes) {
       const label = `${controller.name}.${handler}`;
-      assert.equal(await guardAllows(runner, w, w.capexUser, controller, handler, method), true, `${label}: the CAPEX user passes the guard`);
+      assert.equal(await guardAllows(runner, w, w.budgetUser, controller, handler, method), true, `${label}: the budget user passes the guard`);
       const answer = await statusOf(runner, call);
       assert.equal(answer.status, 404, `${label}: 404 for the OPEX line (${JSON.stringify(answer.body)})`);
       // The same call on the same line turned CAPEX answers: the 404 is the nature's, nothing else's.
       const asCapex = await asCapexLine(runner, w, () => statusOf(runner, call));
       assert.equal(asCapex.status, 200, `${label}: 200 once the line is CAPEX (${JSON.stringify(asCapex.body)?.slice(0, 200)})`);
-      const tasksRoute = controller === CapexTasksController;
-      assert.equal(await guardAllows(runner, w, w.opexUser, controller, handler, method), tasksRoute,
-        `${label}: the OPEX user ${tasksRoute ? 'passes the tasks guard (and gets the 404 above)' : 'is stopped by the guard'}`);
     }
 
     // The 404 of an OPEX line's UUID reads as the CAPEX routes' "not found" of before, the same as

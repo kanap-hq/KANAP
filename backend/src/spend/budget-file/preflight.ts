@@ -75,23 +75,9 @@ function aNature(nature: BudgetNature): string {
   return nature === 'opex' ? 'an OPEX' : 'a CAPEX';
 }
 
-/** A line of a nature the caller may not import: the right it needs, named as the roles page names it. */
-export function natureRightMessage(nature: BudgetNature): string {
-  return `Importing ${natureLabel(nature)} lines needs the Admin level on ${natureLabel(nature)}.`;
-}
-
 /** A line the file names with another nature than its own: the type changes from the line itself (lot M). */
 export function natureChangeMessage(ref: string, stored: BudgetNature, said: BudgetNature): string {
   return `${ref} is ${aNature(stored)} line, not ${aNature(said)} line. A file does not change the type of a line.`;
-}
-
-/**
- * An `OPX-n` or `CPX-n` number that names no line the caller may import, while the caller may not
- * import the nature of its prefix: the right it needs, said from the prefix alone. Nothing is
- * read, so the sentence is the same whether such a line exists or not.
- */
-export function prefixRightMessage(ref: string, nature: BudgetNature): string {
-  return `${ref} is ${aNature(nature)} line: importing it needs the Admin level on ${natureLabel(nature)}.`;
 }
 
 /**
@@ -99,9 +85,6 @@ export function prefixRightMessage(ref: string, nature: BudgetNature): string {
  * screens (lot U): the CAPEX screens, API and audit rows do not show it yet.
  */
 export const CAPEX_DESCRIPTION_IGNORED = 'description is ignored on a CAPEX line. Leave the cell empty.';
-
-/** The nature an `OPX` or `CPX` prefix stood for in the files of before lot C1b. */
-const PREFIX_NATURE: Partial<Record<string, BudgetNature>> = { OPX: 'opex', CPX: 'capex' };
 
 /**
  * A text cell and a stored text, read the same way before they are compared: the reader trims a
@@ -115,12 +98,6 @@ function storedText(value: string | null | undefined): string {
 export interface PreflightInput {
   /** The route's nature: the nature of a line when the file has no `nature` column (a file of before lot C1b). */
   scope: BudgetFileScope;
-  /**
-   * The natures the caller may import (the Admin level on each). The stored lines and names are
-   * of these only: a line of another nature is not read, and a row of that nature is refused
-   * with the right it needs.
-   */
-  natures: readonly BudgetNature[];
   read: CsvReadResult;
   catalog: BudgetCatalog;
   stored: StoredLine[];
@@ -258,13 +235,6 @@ function resolveRow(
 
   // Every check of a row follows its own nature, never the file's or the route's.
   let nature = rowNature(input, row, fail);
-  if (nature && !input.natures.includes(nature)) {
-    // A line of a nature the caller may not import: nothing of it is read, compared or written.
-    fail('nature', natureRightMessage(nature));
-    flush();
-    return;
-  }
-
   if (row.itemNumber.kind === 'blank') {
     creating = true;
     if (row.token.kind === 'ok' || row.token.kind === 'bad') {
@@ -276,12 +246,8 @@ function resolveRow(
       ? 'item_number cannot be cleared. Leave it empty to add a line.'
       : `item_number '${row.itemNumber.raw}' is not a line number.`);
   } else if (!matched) {
-    // The stored lines are those of the natures the caller may import: a line of another nature reads as no line.
     const ref = row.itemNumber.ref;
-    const prefixNature = PREFIX_NATURE[row.itemNumber.prefix];
-    if (prefixNature && !input.natures.includes(prefixNature)) {
-      fail('item_number', prefixRightMessage(ref, prefixNature));
-    } else if (row.token.kind === 'ok') {
+    if (row.token.kind === 'ok') {
       fail('item_number', `${ref} was deleted since the export.`);
       bag.deleted.push({ line: row.line, itemNumber: ref });
     } else {
@@ -1224,7 +1190,6 @@ function finish(input: PreflightInput, errors: Bag['errors'], bag: Bag, supplier
 export function blankPreflightInput(scope: BudgetFileScope, read: CsvReadResult, currentYear: number): PreflightInput {
   return {
     scope,
-    natures: [scope],
     read,
     catalog: emptyCatalog(),
     stored: [],

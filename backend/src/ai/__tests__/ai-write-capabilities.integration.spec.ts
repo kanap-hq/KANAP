@@ -56,8 +56,7 @@ const WRITE_RESOURCES = [
   'applications',
   'infrastructure',
   'contracts',
-  'opex',
-  'capex',
+  'budget',
   'portfolio_projects',
   'portfolio_requests',
   'tasks',
@@ -934,7 +933,7 @@ async function testBusinessTaskFinancialWritesAndRbac(harness: Harness) {
           effective_start: '2026-01-01',
         },
       }),
-      /capex:member|permission|available/i,
+      /budget:member|permission|available/i,
     );
   });
 }

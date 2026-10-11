@@ -1,7 +1,7 @@
 import { ConflictException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import type { AmountScope } from './amounts-write.util';
-import { assertScopeNatures, linkedLineOf, natureAnd, type BudgetNature } from './budget-nature';
+import { assertScopeNatures, BUDGET_NATURES, linkedLineOf, natureAnd, naturesAnd, type BudgetNature } from './budget-nature';
 
 /**
  * The one lock order of every budget writer, OPEX and CAPEX alike (plan
@@ -137,6 +137,21 @@ export async function lockBudgetLines(manager: EntityManager, scope: AmountScope
   const t = TABLES[scope];
   const rows: Array<{ id: string }> = await manager.query(
     `SELECT id FROM ${t.items} WHERE tenant_id = $1 AND id = ANY($2::uuid[])${natureAnd(null, t.nature)} ORDER BY id FOR NO KEY UPDATE`,
+    [tenantId, ids],
+  );
+  return new Set(rows.map((row) => row.id));
+}
+
+/**
+ * Locks the lines of both natures in id order, in one statement (the budget file, which loads the
+ * lines of both natures since lot R); returns the ids of those still there.
+ */
+export async function lockBudgetLinesOfBothNatures(manager: EntityManager, tenantId: string, itemIds: Iterable<string>): Promise<Set<string>> {
+  const ids = Array.from(new Set(Array.from(itemIds).filter(Boolean)));
+  if (ids.length === 0) return new Set();
+  // One table for both natures (lot Z1).
+  const rows: Array<{ id: string }> = await manager.query(
+    `SELECT id FROM ${TABLES.opex.items} WHERE tenant_id = $1 AND id = ANY($2::uuid[])${naturesAnd(null, BUDGET_NATURES)} ORDER BY id FOR NO KEY UPDATE`,
     [tenantId, ids],
   );
   return new Set(rows.map((row) => row.id));

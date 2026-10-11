@@ -33,8 +33,8 @@ function renderPage() {
 const section = (name: string) => screen.getByRole('region', { name });
 const hrefs = (region: HTMLElement) => within(region).getAllByRole('link').map((link) => link.getAttribute('href'));
 
-const BUDGET_ADMIN = { opex: 'admin', capex: 'admin', budget_ops: 'admin' };
-const BUDGET_MEMBER = { opex: 'member', capex: 'member', budget_ops: 'reader', companies: 'reader', departments: 'member' };
+const BUDGET_ADMIN = { budget: 'admin', budget_ops: 'admin' };
+const BUDGET_MEMBER = { budget: 'member', budget_ops: 'reader', companies: 'reader', departments: 'member' };
 
 describe('BudgetOperationsLandingPage', () => {
   beforeEach(() => {
@@ -72,8 +72,8 @@ describe('BudgetOperationsLandingPage', () => {
     expect(screen.queryAllByRole('region')).toHaveLength(0);
   });
 
-  it('shows the item operations only to a CAPEX administrator, and hides the empty settings section', () => {
-    auth.grants = { opex: 'reader', capex: 'admin' };
+  it('shows the item operations only to a budget lines administrator, and hides the empty settings section', () => {
+    auth.grants = { budget: 'admin' };
     renderPage();
 
     expect(screen.queryByRole('region', { name: 'operations.sections.settings' })).not.toBeInTheDocument();

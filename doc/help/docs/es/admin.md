@@ -301,12 +301,13 @@ Los recursos están organizados en grupos para facilitar la gestión:
 **Presupuesto y Finanzas**
 | Recurso | Qué controla |
 |---------|--------------|
-| `opex` | Gastos operativos |
-| `capex` | Gastos de capital |
+| `budget` | Partidas presupuestarias, OPEX y CAPEX |
 | `budget_ops` | Herramientas de administración presupuestaria, incluida la configuración de monedas |
 | `contracts` | Contratos con proveedores |
 | `analytics` | Dimensiones analíticas |
 | `reporting` | Acceso a informes |
+
+El recurso Presupuesto cubre por igual las partidas OPEX y CAPEX. Un rol que antes tenía niveles distintos en OPEX y CAPEX conserva el más alto de los dos en Presupuesto.
 
 **Gestión del Portafolio**
 | Recurso | Qué controla |

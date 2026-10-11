@@ -101,10 +101,10 @@ La lista OPEX (en **Gestión presupuestaria > OPEX**) es su vista principal para
     - **Centro de coste**: Abre el espacio de trabajo del centro de coste
 
 **Acciones**:
-  - **Nuevo**: Crear una nueva partida OPEX (requiere `opex:manager`)
-  - **Importar CSV**: Carga masiva de partidas desde CSV (requiere `opex:admin`)
-  - **Exportar CSV**: Exportar partidas a CSV (requiere `opex:admin`)
-  - **Eliminar seleccionadas**: Eliminación masiva de partidas seleccionadas (requiere `opex:admin`; seleccione filas mediante casillas de verificación). Una partida con importes en una columna congelada no se puede eliminar: las demás se eliminan, y el mensaje nombra cada partida rechazada con su motivo
+  - **Nuevo**: Crear una nueva partida OPEX (requiere `budget:member`)
+  - **Importar CSV**: Carga masiva de partidas desde CSV (requiere `budget:admin`)
+  - **Exportar CSV**: Exportar partidas a CSV (requiere `budget:admin`)
+  - **Eliminar seleccionadas**: Eliminación masiva de partidas seleccionadas (requiere `budget:admin`; seleccione filas mediante casillas de verificación). Una partida con importes en una columna congelada no se puede eliminar: las demás se eliminan, y el mensaje nombra cada partida rechazada con su motivo
 
 **Navegación Anterior/Siguiente**:
   - Cuando abre una partida, el espacio de trabajo muestra botones **Ant.** y **Sig.**
@@ -152,7 +152,7 @@ La pestaña Vista general contiene los campos de texto libre y las tareas de la 
   - Filtro **Estado**: Todos (por defecto), Activas (no completadas), Abierta, En curso, Pendiente, En pruebas, Completada o Cancelada. El botón de borrar lo restablece
   - Haga clic en **Agregar tarea** para abrir una tarea nueva ya vinculada a esta partida. Complete el título, la descripción, la prioridad, el responsable y la fecha de vencimiento en el espacio de trabajo de la tarea
   - Use el icono de abrir para ir a una tarea y el icono de eliminar para borrarla (tras confirmar)
-  - Las tareas tienen sus propios permisos (`tasks:member` para crear y editar). El acceso de manager de OPEX no da por sí solo derechos de edición de tareas; consulte a su administrador si no puede crear tareas
+  - Las tareas tienen sus propios permisos (`tasks:member` para crear y editar). El nivel Miembro en Presupuesto no da por sí solo derechos de edición de tareas; consulte a su administrador si no puede crear tareas
   - Las tareas también se pueden ver y gestionar desde **Portafolio > Tareas**, que muestra todas las tareas de su organización
 
 **Panel Propiedades**:
@@ -434,7 +434,7 @@ La pestaña Relaciones vincula esta partida OPEX con objetos relacionados: Proye
   - Suba archivos relacionados con esta partida (p. ej., contratos, facturas, presupuestos, pliegos, especificaciones técnicas)
   - Arrastre y suelte archivos en la zona de adjuntos, o haga clic en **Seleccionar archivos** para buscarlos
   - Haga clic en el chip de un archivo para descargarlo
-  - Elimine un adjunto con el icono de eliminar de su chip (tras confirmar; requiere `opex:manager`)
+  - Elimine un adjunto con el icono de eliminar de su chip (tras confirmar; requiere `budget:member`)
 
 **Consejo**: Vincule contratos para seguir las renovaciones en varias partidas OPEX. Añada las URL de los portales de proveedores para un acceso rápido. Suba presupuestos y facturas como adjuntos para centralizar toda la documentación del gasto.
 
@@ -442,11 +442,11 @@ La pestaña Relaciones vincula esta partida OPEX con objetos relacionados: Proye
 
 ## Importación/exportación CSV
 
-**Exportar CSV** e **Importar CSV** están en la barra de herramientas de la lista OPEX. Ambos requieren derechos de administración en OPEX (`opex:admin`).
+**Exportar CSV** e **Importar CSV** están en la barra de herramientas de la lista OPEX. Ambos requieren el nivel Administrador en Presupuesto (`budget:admin`).
 
 **Exportar CSV** escribe el archivo de presupuesto de las partidas que muestra la lista, como `budget.csv`. **Importar CSV** vuelve a leer un archivo: primero se comprueba, y no se escribe nada hasta que haga clic en **Cargar**.
 
-El archivo contiene una fila por partida: su `nature` (aquí `opex`), su referencia `BL-n`, los detalles de la partida, sus importes en columnas y `kanap_token`. El mismo archivo también puede contener partidas CAPEX, lo que requiere además derechos de administración en CAPEX. Un archivo sin columna `nature`, exportado por una versión anterior, se lee como partidas OPEX en esta lista. [Cargar un presupuesto desde una hoja de cálculo](budget-file.md) describe las columnas, lo que significa una celda y los dos pasos de la importación.
+El archivo contiene una fila por partida: su `nature` (aquí `opex`), su referencia `BL-n`, los detalles de la partida, sus importes en columnas y `kanap_token`. El mismo archivo también puede contener partidas CAPEX. Un archivo sin columna `nature`, exportado por una versión anterior, se lee como partidas OPEX en esta lista. [Cargar un presupuesto desde una hoja de cálculo](budget-file.md) describe las columnas, lo que significa una celda y los dos pasos de la importación.
 
 ## Estado y ciclo de vida
 
@@ -514,11 +514,13 @@ Cada partida OPEX tiene un **estado** (Habilitado o Deshabilitado) y un **Fin de
 
 ## Permisos
 
-El acceso a OPEX se controla por tres niveles:
+El acceso a OPEX se controla con el recurso Presupuesto, que cubre por igual las partidas OPEX y CAPEX. Tiene tres niveles:
 
-- `opex:reader`: Ver la lista OPEX, abrir partidas, ver presupuestos y asignaciones (solo lectura), descargar adjuntos
-- `opex:manager`: Crear y editar partidas OPEX, actualizar presupuestos y asignaciones, subir y eliminar adjuntos, gestionar relaciones y enlaces
-- `opex:admin`: Todos los derechos de gestor más importación/exportación CSV, operaciones presupuestarias (congelar, copiar, restablecer) y eliminación masiva
+- `budget:reader`: Ver las listas OPEX y CAPEX, abrir partidas, ver presupuestos y asignaciones (solo lectura), descargar adjuntos
+- `budget:member`: Crear y editar partidas, actualizar presupuestos y asignaciones, subir y eliminar adjuntos, gestionar relaciones, enlaces y contactos
+- `budget:admin`: Todos los derechos de miembro más importación y exportación CSV, operaciones presupuestarias (copiar columnas presupuestarias, copiar asignaciones, restablecer columna presupuestaria) y eliminación masiva
+
+Congelar columnas presupuestarias requiere la administración presupuestaria (`budget_ops:admin`).
 
 Adicionalmente:
 - Las tareas tienen permisos separados (`tasks:member` para crear/editar tareas en partidas OPEX)

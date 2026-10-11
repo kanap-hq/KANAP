@@ -44,27 +44,27 @@ const m = (resource: string) => ({ resource, level: 'member' as const });
 /** The lists, pinned: a change to who reads a reference must change this spec. */
 function testPinnedLists() {
   assert.deepEqual(lookupReaders(USER_LOOKUP_ACCESS), [
-    'users', 'opex', 'capex', 'tasks', 'portfolio_requests', 'portfolio_projects', 'applications', 'infrastructure',
+    'users', 'budget', 'tasks', 'portfolio_requests', 'portfolio_projects', 'applications', 'infrastructure',
     'locations', 'knowledge', 'contracts', 'business_processes', 'incidents', 'cost_centers', 'portfolio_settings',
     'portfolio_planning', 'portfolio_reports',
   ].map(r), 'people: no suppliers, companies or departments (no person picker there)');
   assert.deepEqual(lookupSearchers(USER_LOOKUP_ACCESS), [
     r('users'),
-    ...['opex', 'capex', 'tasks', 'portfolio_requests', 'portfolio_projects', 'applications', 'infrastructure', 'locations', 'knowledge'].map(r),
+    ...['budget', 'tasks', 'portfolio_requests', 'portfolio_projects', 'applications', 'infrastructure', 'locations', 'knowledge'].map(r),
     m('contracts'), m('business_processes'), { resource: 'incidents', level: 'contributor' }, m('cost_centers'), m('portfolio_settings'),
   ], 'people: the readers of every page with "Send link" search, the other picking pages at the level that edits them');
 
-  assert.deepEqual(lookupReaders(SUPPLIER_LOOKUP_ACCESS), ['suppliers', 'opex', 'capex', 'contracts', 'applications', 'infrastructure', 'contacts'].map(r));
-  assert.deepEqual(lookupSearchers(SUPPLIER_LOOKUP_ACCESS), [r('suppliers'), ...['opex', 'capex', 'contracts', 'applications', 'infrastructure', 'contacts'].map(m)]);
+  assert.deepEqual(lookupReaders(SUPPLIER_LOOKUP_ACCESS), ['suppliers', 'budget', 'contracts', 'applications', 'infrastructure', 'contacts'].map(r));
+  assert.deepEqual(lookupSearchers(SUPPLIER_LOOKUP_ACCESS), [r('suppliers'), ...['budget', 'contracts', 'applications', 'infrastructure', 'contacts'].map(m)]);
 
-  assert.deepEqual(lookupReaders(ACCOUNT_LOOKUP_ACCESS), ['accounts', 'opex', 'capex'].map(r), 'accounts: no reporting (no account picker there)');
-  assert.deepEqual(lookupSearchers(ACCOUNT_LOOKUP_ACCESS), [r('accounts'), m('opex'), m('capex')]);
+  assert.deepEqual(lookupReaders(ACCOUNT_LOOKUP_ACCESS), ['accounts', 'budget'].map(r), 'accounts: no reporting (no account picker there)');
+  assert.deepEqual(lookupSearchers(ACCOUNT_LOOKUP_ACCESS), [r('accounts'), m('budget')]);
 
   assert.deepEqual(lookupReaders(BUSINESS_PROCESS_LOOKUP_ACCESS), ['business_processes', 'portfolio_requests', 'applications'].map(r));
   assert.deepEqual(lookupSearchers(BUSINESS_PROCESS_LOOKUP_ACCESS), [r('business_processes'), m('portfolio_requests'), m('applications')]);
 
-  assert.deepEqual(lookupReaders(CONTRACT_LOOKUP_ACCESS), ['contracts', 'opex', 'capex', 'infrastructure'].map(r));
-  assert.deepEqual(lookupSearchers(CONTRACT_LOOKUP_ACCESS), [r('contracts'), m('opex'), m('capex'), m('infrastructure')]);
+  assert.deepEqual(lookupReaders(CONTRACT_LOOKUP_ACCESS), ['contracts', 'budget', 'infrastructure'].map(r));
+  assert.deepEqual(lookupSearchers(CONTRACT_LOOKUP_ACCESS), [r('contracts'), m('budget'), m('infrastructure')]);
 
   // The routes carry these lists (the guard reads the handler's metadata).
   for (const [route, access] of LOOKUPS) {
@@ -202,8 +202,8 @@ async function testReaderVersusEditor() {
     };
 
     const roles: Array<[string, Record<string, Level>, Partial<Record<string, 'search' | 'ids' | 'none'>>, string?]> = [
-      ['opex reader', { opex: 'reader' }, { [USERS.name]: 'search', [SUPPLIERS.name]: 'ids', [ACCOUNTS.name]: 'ids', [CONTRACTS.name]: 'ids', [PROCESSES.name]: 'none' }],
-      ['opex member', { opex: 'member' }, { [USERS.name]: 'search', [SUPPLIERS.name]: 'search', [ACCOUNTS.name]: 'search', [CONTRACTS.name]: 'search', [PROCESSES.name]: 'none' }],
+      ['budget reader', { budget: 'reader' }, { [USERS.name]: 'search', [SUPPLIERS.name]: 'ids', [ACCOUNTS.name]: 'ids', [CONTRACTS.name]: 'ids', [PROCESSES.name]: 'none' }],
+      ['budget member', { budget: 'member' }, { [USERS.name]: 'search', [SUPPLIERS.name]: 'search', [ACCOUNTS.name]: 'search', [CONTRACTS.name]: 'search', [PROCESSES.name]: 'none' }],
       ['infrastructure reader', { infrastructure: 'reader' }, { [USERS.name]: 'search', [SUPPLIERS.name]: 'ids', [CONTRACTS.name]: 'ids', [ACCOUNTS.name]: 'none' }],
       ['infrastructure member', { infrastructure: 'member' }, { [SUPPLIERS.name]: 'search', [CONTRACTS.name]: 'search' }],
       ['applications reader', { applications: 'reader' }, { [USERS.name]: 'search', [SUPPLIERS.name]: 'ids', [PROCESSES.name]: 'ids', [CONTRACTS.name]: 'none' }],
@@ -246,8 +246,8 @@ async function testReaderVersusEditor() {
     for (const [route] of LOOKUPS) await expectAccess('administrator', admin, route, 'search');
 
     // A search that names `ids` with nothing valid is still a hydration (no row), never a list.
-    const opexReader = await identity('opex-reader-2', { opex: 'reader' });
-    const garbage = await call(runner, tenantId, opexReader, SUPPLIERS, { ids: 'not-a-uuid', q: 'a' });
+    const budgetReader = await identity('budget-reader-2', { budget: 'reader' });
+    const garbage = await call(runner, tenantId, budgetReader, SUPPLIERS, { ids: 'not-a-uuid', q: 'a' });
     assert.equal(garbage.status, 200);
     assert.deepEqual(garbage.body.items, [], 'invalid ids: an empty hydration, not a search');
   } finally {

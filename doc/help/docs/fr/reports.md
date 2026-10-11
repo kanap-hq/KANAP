@@ -33,7 +33,7 @@ La page d'accueil affiche une carte par rapport disponible avec une courte descr
 
 **Top postes**, **Top hausse / baisse**, **Comptes de consolidation**, **Dimensions analytiques**, **Effectifs par mois** et **Coût par ETP** commencent chacun par un sélecteur **OPEX** / **CAPEX**, la première commande de la barre de filtres.
 
-- Le rapport s'ouvre sur un type que vous pouvez consulter, OPEX en priorité. Un type que vous ne pouvez pas consulter est désactivé.
+- Le rapport s'ouvre sur OPEX. Les deux types demandent l'accès en lecture aux postes budgétaires (`budget:reader`). Sans cet accès, le sélecteur est désactivé.
 - L'adresse de la page conserve le type choisi (`?scope=opex` ou `?scope=capex`) : un lien enregistré en favori ou partagé s'ouvre sur le même type.
 - Le sous-titre et le titre du graphique nomment le type : une impression ou un PNG exporté indique le type couvert.
 - Changer de type efface les postes que vous avez exclus, car chaque type a ses propres postes.

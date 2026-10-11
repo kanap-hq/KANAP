@@ -44,8 +44,7 @@ export function analyticsContext(ctx: TenantRequest): AnalyticsContext {
 /** Item forms, lists and budget reports read the values without access to the page. */
 export const ANALYTICS_READERS = [
   { resource: 'analytics', level: 'reader' as const },
-  { resource: 'opex', level: 'reader' as const },
-  { resource: 'capex', level: 'reader' as const },
+  { resource: 'budget', level: 'reader' as const },
   { resource: 'reporting', level: 'reader' as const },
 ];
 

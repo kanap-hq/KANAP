@@ -641,8 +641,8 @@ function CapexPageView() {
     ];
   }, [Y, analyticsAxes, budgetColumns, defaultAnalyticsLabel, getCapexFilterValues, getCapexHref, RUN_BUILD_LABELS, FTE_DECLARED_LABELS, locale, navigate, queryClient, t]);
 
-  const canCreate = hasLevel('capex','manager');
-  const canAdmin = hasLevel('capex','admin');
+  const canCreate = hasLevel('budget', 'manager');
+  const canAdmin = hasLevel('budget', 'admin');
 
   const actions = (
     <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
@@ -681,7 +681,7 @@ function CapexPageView() {
     </Stack>
   );
 
-  if (!hasLevel('capex', 'reader')) {
+  if (!hasLevel('budget', 'reader')) {
     return <ForbiddenPage />;
   }
 

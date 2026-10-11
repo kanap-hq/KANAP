@@ -405,7 +405,7 @@ Nur `name` ist eine Pflichtspalte. Fehlt die Spalte `description`, `status`, `di
 | `analytics:member` | Dimensionen und Werte erstellen und bearbeiten, die Reihenfolge der Dimensionen und Werte festlegen |
 | `analytics:admin` | Alles oben Genannte, dazu CSV-Import und -Export sowie Löschen |
 
-Die integrierte Rolle Budget-Administrator ist admin, Budget-Mitglied ist member und Budget-Leser ist reader. Wer OPEX, CAPEX oder Reporting lesen kann, sieht die Dimensionen und ihre Werte auf Budgetzeilen, in den Listen und in den Berichten, ohne Zugriff auf diese Seite zu haben.
+Die integrierte Rolle Budget-Administrator ist admin, Budget-Mitglied ist member und Budget-Leser ist reader. Wer Budgetpositionen (Budget) oder Berichte lesen kann, sieht die Dimensionen und ihre Werte auf Budgetzeilen, in den Listen und in den Berichten, ohne Zugriff auf diese Seite zu haben.
 
 ---
 

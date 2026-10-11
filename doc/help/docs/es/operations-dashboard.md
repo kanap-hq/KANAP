@@ -50,7 +50,7 @@ Un recuento se vuelve naranja (rojo para el control del plan de cuentas) cuando 
 
 ### Acciones rápidas
 
-Botones de acceso directo para crear una nueva partida OPEX o CAPEX directamente desde la vista general. Estos botones solo son visibles si su rol le otorga al menos permisos de `opex:manager` o `capex:manager`.
+Botones de acceso directo para crear una nueva partida OPEX o CAPEX directamente desde la vista general. Estos botones se muestran cuando su rol tiene al menos el nivel Miembro en Presupuesto (`budget:member`).
 
 Debajo de los botones, una sección de **Actualizaciones recientes** lista las cinco partidas modificadas más recientemente, OPEX y CAPEX juntas. Cada fila muestra la fecha de la última modificación, el nombre de la partida y su tipo. Haga clic en una fila para abrir la partida.
 
@@ -66,11 +66,11 @@ Las cinco partidas con el mayor incremento en la columna por defecto comparado c
 
 Use las pestañas **OPEX** / **CAPEX** del encabezado del mosaico para elegir el tipo de partida. El mosaico recuerda su elección. Haga clic en **Abrir** para ver el informe completo Top aumento / disminución sobre el mismo tipo.
 
-Un tipo que usted no puede consultar aparece desactivado en las pestañas y no tiene columna en **Calidad de datos**. Si no puede consultar ni OPEX ni CAPEX, estos mosaicos se ocultan.
+Sin acceso de lectura a las partidas presupuestarias (`budget:reader`), estos mosaicos se ocultan.
 
 ## Consejos
 
 - **Qué columna usan los mosaicos**: Un administrador de presupuesto elige la columna por defecto y los nombres de las columnas en [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias). Los mosaicos de top y los informes que abren siguen esa elección.
 - **Números redondeados**: Cada importe de la vista general se redondea a miles para una vista compacta. Abra la lista OPEX o CAPEX, o los informes, cuando necesite cifras exactas.
-- **Botones ausentes**: Si no ve los botones **Nuevo OPEX** o **Nuevo CAPEX**, su rol actual no incluye el permiso de gestor requerido. Solicite a su administrador que verifique su acceso.
+- **Botones ausentes**: Si no ve los botones **Nuevo OPEX** o **Nuevo CAPEX**, su rol actual no tiene el nivel Miembro en Presupuesto. Solicite a su administrador que verifique su acceso.
 - **Mosaicos vacíos**: Un mosaico que muestra "Sin datos" simplemente significa que no hay registros de ese tipo todavía. Una vez que usted o su equipo empiecen a introducir datos, el mosaico se llenará automáticamente.

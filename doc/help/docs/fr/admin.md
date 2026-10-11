@@ -301,12 +301,13 @@ Les ressources sont organisées en groupes pour faciliter la gestion :
 **Budget et finance**
 | Ressource | Ce qu'elle contrôle |
 |-----------|---------------------|
-| `opex` | Dépenses opérationnelles |
-| `capex` | Dépenses d'investissement |
+| `budget` | Postes budgétaires, OPEX et CAPEX |
 | `budget_ops` | Outils d'administration budgétaire, dont les paramètres de devises |
 | `contracts` | Contrats fournisseurs |
 | `analytics` | Dimensions analytiques |
 | `reporting` | Accès aux rapports |
+
+La ressource Budget couvre les postes OPEX et CAPEX de la même façon. Un rôle qui avait auparavant des niveaux OPEX et CAPEX distincts garde le plus élevé des deux sur Budget.
 
 **Gestion du portefeuille**
 | Ressource | Ce qu'elle contrôle |

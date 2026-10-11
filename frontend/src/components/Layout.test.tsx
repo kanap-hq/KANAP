@@ -189,14 +189,14 @@ describe('Layout budget management sidebar', () => {
   }
 
   it('shows the administration entry to a budget administrator', () => {
-    access.grants = { opex: 'admin', capex: 'admin', budget_ops: 'admin' };
+    access.grants = { budget: 'admin', budget_ops: 'admin' };
     renderSidebar();
 
     expect(screen.getByRole('link', { name: 'nav:sidebar.ops.administration' })).toHaveAttribute('href', '/ops/operations');
   });
 
   it('hides the administration entry from a budget member, who can use none of its pages', () => {
-    access.grants = { opex: 'member', capex: 'member', budget_ops: 'reader', companies: 'reader', departments: 'member' };
+    access.grants = { budget: 'member', budget_ops: 'reader', companies: 'reader', departments: 'member' };
     renderSidebar();
 
     expect(screen.getByRole('link', { name: 'nav:sidebar.ops.opex' })).toBeInTheDocument();

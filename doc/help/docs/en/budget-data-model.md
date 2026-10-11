@@ -189,7 +189,7 @@ Every file below exports and imports from the page that manages the object. Impo
 | Allocations | From the chargeback reports | No | | [Reporting](reports.md) |
 | Quantity and price lines, budget column settings, freezes, currencies | No | No | | Set on the screen |
 
-The budget file reads and writes the amounts of any column and year, as yearly totals or months, with the line details in the same row. It is the way in for a budget prepared elsewhere and the way out for a spreadsheet or a BI tool. One file holds both kinds of line, its `nature` column saying which. **Budget management > OPEX** exports the OPEX lines and **Budget management > CAPEX** the CAPEX lines; either list imports a file that holds both, given administration rights on OPEX and on CAPEX.
+The budget file reads and writes the amounts of any column and year, as yearly totals or months, with the line details in the same row. It is the way in for a budget prepared elsewhere and the way out for a spreadsheet or a BI tool. One file holds both kinds of line, its `nature` column saying which. **Budget management > OPEX** exports the OPEX lines and **Budget management > CAPEX** the CAPEX lines; either list imports a file that holds both, given the Admin level on Budget.
 
 ### Moving a budget into KANAP
 

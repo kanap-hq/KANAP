@@ -19,7 +19,7 @@ vi.mock('ag-grid-react', () => ({
     </div>
   ),
 }));
-const readable = new Set(['opex', 'capex']);
+const readable = new Set(['budget']);
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: (resource: string) => readable.has(resource) }),
 }));
@@ -75,8 +75,7 @@ const dryRunResponse = {
 describe('CopyAllocationsPage', () => {
   beforeEach(() => {
     readable.clear();
-    readable.add('opex');
-    readable.add('capex');
+    readable.add('budget');
     post.mockReset();
     post.mockResolvedValue(dryRunResponse);
   });
@@ -115,12 +114,17 @@ describe('CopyAllocationsPage', () => {
     expect(post.mock.calls[0][1]).toMatchObject({ dryRun: true });
   });
 
-  it('opens on CAPEX for a user who cannot read OPEX', async () => {
-    readable.delete('opex');
+  it('opens on OPEX, both types open with the budget right', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'operations.copyAllocations.dryRun' }));
-    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
-    expect(post.mock.calls[0][0]).toBe('/capex-items/budget-operations/copy-allocations');
+    expect(screen.getByRole('tab', { name: 'operations.scope.opex' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'operations.scope.capex' })).not.toBeDisabled();
+  });
+
+  it('disables both types without the budget right (one right covers both)', () => {
+    readable.delete('budget');
+    renderPage();
+    expect(screen.getByRole('tab', { name: 'operations.scope.opex' })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: 'operations.scope.capex' })).toBeDisabled();
   });
 
   it('labels the preview from the locale files', async () => {

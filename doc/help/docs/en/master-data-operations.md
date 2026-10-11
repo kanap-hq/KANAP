@@ -9,7 +9,7 @@ The yearly metrics are the headcount, IT users and turnover of companies and the
 - Workspace: **Budget management**
 - Path: **Budget management > Administration**, section **Operations**, tiles **Freeze master data** and **Copy yearly metrics**
 - Permissions:
-  - Access to the budget (reader access to OPEX, CAPEX or Budget administration), plus one of `companies:admin`, `departments:admin` or `budget_ops:admin`
+  - Access to the budget (reader access to Budget or Budget administration), plus one of `companies:admin`, `departments:admin` or `budget_ops:admin`
   - The tiles are hidden from other users
 
 Master data has no Administration entry of its own.

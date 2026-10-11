@@ -194,7 +194,8 @@ export default function ProtectedRoute() {
       'agent-control': { resource: 'ai_agents', level: 'reader' },
       'scheduled-tasks': { resource: 'users', level: 'admin' },
     };
-    const opsAliases: Record<string, string> = { reports: 'reporting', servers: 'infrastructure' };
+    // One right for the OPEX and CAPEX lists (lot R).
+    const opsAliases: Record<string, string> = { opex: 'budget', capex: 'budget', reports: 'reporting', servers: 'infrastructure' };
     const itAliases: Record<string, string> = {
       locations: 'locations',
       assets: 'infrastructure',

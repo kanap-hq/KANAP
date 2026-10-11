@@ -189,7 +189,7 @@ Chaque fichier ci-dessous s'exporte et s'importe depuis la page qui gère l'obje
 | Ventilations | Depuis les rapports de refacturation | Non | | [Rapports](reports.md) |
 | Lignes Quantité et prix, paramètres des colonnes budgétaires, gels, devises | Non | Non | | Réglés à l'écran |
 
-Le fichier budgétaire lit et écrit les montants de n'importe quelle colonne et année, en totaux annuels ou en mois, avec le détail du poste sur la même ligne. C'est la porte d'entrée d'un budget préparé ailleurs et la porte de sortie vers un tableur ou un outil de BI. Un seul fichier contient les deux types de poste, et sa colonne `nature` indique lequel. **Gestion budgétaire > OPEX** exporte les postes OPEX et **Gestion budgétaire > CAPEX** les postes CAPEX. Les deux listes importent un fichier qui contient les deux, avec des droits d'administration sur OPEX et sur CAPEX.
+Le fichier budgétaire lit et écrit les montants de n'importe quelle colonne et année, en totaux annuels ou en mois, avec le détail du poste sur la même ligne. C'est la porte d'entrée d'un budget préparé ailleurs et la porte de sortie vers un tableur ou un outil de BI. Un seul fichier contient les deux types de poste, et sa colonne `nature` indique lequel. **Gestion budgétaire > OPEX** exporte les postes OPEX et **Gestion budgétaire > CAPEX** les postes CAPEX. Les deux listes importent un fichier qui contient les deux, avec le niveau Admin sur Budget.
 
 ### Faire entrer un budget dans KANAP
 

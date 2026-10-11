@@ -13,8 +13,7 @@ import { CurrencyRateSet } from './currency-rate-set.entity';
 // budget administrators change them.
 const CURRENCY_READERS: RequireAnyLevelMeta = [
   { resource: 'budget_ops', level: 'reader' },
-  { resource: 'opex', level: 'reader' },
-  { resource: 'capex', level: 'reader' },
+  { resource: 'budget', level: 'reader' },
 ];
 
 @UseGuards(JwtAuthGuard)

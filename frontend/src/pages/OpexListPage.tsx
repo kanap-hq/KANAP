@@ -294,8 +294,8 @@ function OpexListPageView() {
     queryClient.invalidateQueries({ queryKey: [TOTALS_QUERY_KEY] });
   }, [refreshKey, queryClient]);
 
-  const canCreate = hasLevel('opex', 'manager');
-  const canAdmin = hasLevel('opex', 'admin');
+  const canCreate = hasLevel('budget', 'manager');
+  const canAdmin = hasLevel('budget', 'admin');
   const actions = (
     <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
       {canCreate && (
@@ -907,7 +907,7 @@ function OpexListPageView() {
     },
   ], [Y, analyticsAxes, budgetColumns, defaultAnalyticsLabel, getOpexFilterValues, getOpexHref, RUN_BUILD_LABELS, FTE_DECLARED_LABELS, locale, navigate, queryClient, t]);
 
-  if (!hasLevel('opex', 'reader')) {
+  if (!hasLevel('budget', 'reader')) {
     return <ForbiddenPage />;
   }
 

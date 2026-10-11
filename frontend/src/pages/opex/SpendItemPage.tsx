@@ -482,7 +482,7 @@ export default function SpendItemPage() {
   const requiredLeave = useRequiredDimensionsLeave({
     scope: 'opex',
     lineId: isCreate ? null : idParam,
-    canEdit: hasLevel('opex', 'member'),
+    canEdit: hasLevel('budget', 'member'),
     axes: analyticsAxes,
     values: () => formRef.current.analytics_values,
     root: rootRef,

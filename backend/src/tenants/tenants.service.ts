@@ -22,9 +22,9 @@ const BUILT_IN_ROLES: Array<{
   // Budget Roles
   {
     name: 'Budget Administrator',
-    description: 'Full control over budget management including OPEX, CAPEX, contracts, and reporting',
+    description: 'Full control over budget management including budget lines, contracts, and reporting',
     permissions: {
-      opex: 'admin', capex: 'admin', budget_ops: 'admin', contracts: 'admin',
+      budget: 'admin', budget_ops: 'admin', contracts: 'admin',
       analytics: 'admin', reporting: 'admin', tasks: 'member', users: 'reader',
       companies: 'member', departments: 'member', cost_centers: 'admin', working_day_profiles: 'admin', suppliers: 'member',
       contacts: 'member', accounts: 'member'
@@ -34,7 +34,7 @@ const BUILT_IN_ROLES: Array<{
     name: 'Budget Member',
     description: 'Can manage budget items, contracts, and view reports',
     permissions: {
-      opex: 'member', capex: 'member', budget_ops: 'reader', contracts: 'member',
+      budget: 'member', budget_ops: 'reader', contracts: 'member',
       analytics: 'member', reporting: 'member', tasks: 'member',
       companies: 'reader', departments: 'member', cost_centers: 'member', working_day_profiles: 'member', suppliers: 'member',
       contacts: 'member', accounts: 'reader'
@@ -44,7 +44,7 @@ const BUILT_IN_ROLES: Array<{
     name: 'Budget Reader',
     description: 'Read-only access to budget data and reports',
     permissions: {
-      opex: 'reader', capex: 'reader', budget_ops: 'reader', contracts: 'reader',
+      budget: 'reader', budget_ops: 'reader', contracts: 'reader',
       analytics: 'reader', reporting: 'reader', tasks: 'reader',
       companies: 'reader', departments: 'reader', cost_centers: 'reader', working_day_profiles: 'reader', suppliers: 'reader',
       contacts: 'reader', accounts: 'reader'
@@ -60,7 +60,7 @@ const BUILT_IN_ROLES: Array<{
       companies: 'reader', departments: 'reader', cost_centers: 'reader', working_day_profiles: 'reader', suppliers: 'member',
       contacts: 'member', accounts: 'member',
       applications: 'reader', infrastructure: 'reader', locations: 'reader', settings: 'reader',
-      opex: 'reader', capex: 'reader', contracts: 'reader'
+      budget: 'reader', contracts: 'reader'
     }
   },
   {
@@ -99,7 +99,7 @@ const BUILT_IN_ROLES: Array<{
       applications: 'admin', infrastructure: 'admin', locations: 'admin', incidents: 'admin', settings: 'admin',
       tasks: 'member', users: 'reader',
       companies: 'reader', departments: 'reader', cost_centers: 'reader', working_day_profiles: 'reader', suppliers: 'member', contacts: 'member',
-      opex: 'reader', capex: 'reader', contracts: 'reader',
+      budget: 'reader', contracts: 'reader',
       portfolio_requests: 'reader', portfolio_projects: 'reader',
       portfolio_planning: 'reader', portfolio_reports: 'reader', portfolio_settings: 'reader'
     }
@@ -111,7 +111,7 @@ const BUILT_IN_ROLES: Array<{
       applications: 'member', infrastructure: 'member', locations: 'member', incidents: 'member', settings: 'member',
       tasks: 'member', users: 'reader',
       companies: 'reader', departments: 'reader', cost_centers: 'reader', working_day_profiles: 'reader', suppliers: 'reader', contacts: 'member',
-      opex: 'reader', capex: 'reader', contracts: 'reader',
+      budget: 'reader', contracts: 'reader',
       portfolio_requests: 'reader', portfolio_projects: 'reader', portfolio_planning: 'reader'
     }
   },

@@ -146,13 +146,13 @@ export const ENTITY_TYPE_CONFIG: Record<
   },
   spend_item: {
     route: (id) => `/ops/opex/${id}`,
-    resource: 'spend',
+    resource: 'budget',
     icon: 'Receipt',
     labelKey: 'dashboard.tiles.entityTypes.opexItem',
   },
   capex_item: {
     route: (id) => `/ops/capex/${id}`,
-    resource: 'capex',
+    resource: 'budget',
     icon: 'AccountBalance',
     labelKey: 'dashboard.tiles.entityTypes.capexItem',
   },

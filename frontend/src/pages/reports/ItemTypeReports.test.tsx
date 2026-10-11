@@ -12,7 +12,7 @@ vi.mock('react-i18next', () => {
   return { useTranslation: () => translation };
 });
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
-const readable: Record<string, boolean> = { opex: true, capex: true };
+const readable: Record<string, boolean> = { budget: true };
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: (resource: string) => readable[resource] ?? true }),
 }));
@@ -97,8 +97,7 @@ const calledUrls = () => [...get.mock.calls, ...post.mock.calls].map(([url]) => 
 
 beforeEach(() => {
   setBudgetColumns();
-  readable.opex = true;
-  readable.capex = true;
+  readable.budget = true;
   get.mockReset();
   get.mockImplementation(async (url: string, config?: { params?: Record<string, string> }) => {
     const fields = String(config?.params?.fields ?? '').split(',');
@@ -190,8 +189,8 @@ describe.each([
 });
 
 describe('Report type from the address', () => {
-  it('falls back to OPEX when ?scope=capex names a type the user cannot read', async () => {
-    readable.capex = false;
+  it('falls back to OPEX when ?scope=capex is asked without the budget right', async () => {
+    readable.budget = false;
     renderReport(<TopOpexReport />, '/report?scope=capex');
     expect(await screen.findByText('Opex line')).toBeInTheDocument();
     expect(calledUrls()).not.toContain(CAPEX_AGGREGATE);

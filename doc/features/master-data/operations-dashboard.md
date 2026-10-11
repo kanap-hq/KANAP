@@ -37,7 +37,7 @@ Provide an at-a-glance, actionable home for Budget Management users with consist
   - Counts computed via summary endpoint totals (fast `limit=1` queries). Future: deep-link chips to prefiltered OPEX list.
 
 - Quick Actions
-  - Buttons: `New OPEX` (opex:manager), `New CAPEX` (capex:manager).
+  - Buttons: `New OPEX` and `New CAPEX` (budget:member).
   - Recent OPEX updates: last 5 items by `updated_at`.
 
 - Insights
@@ -60,8 +60,7 @@ Provide an at-a-glance, actionable home for Budget Management users with consist
 
 - Dashboard route `/` is accessible to authenticated users.
 - Actions are gated:
-  - `New OPEX` requires `opex:manager`
-  - `New CAPEX` requires `capex:manager`
+  - `New OPEX` and `New CAPEX` require `budget:member`
   - Underlying lists and reports enforce their own `RequireLevel` guards server-side
 
 ## Formatting Rules

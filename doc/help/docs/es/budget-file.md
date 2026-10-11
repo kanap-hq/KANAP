@@ -11,7 +11,7 @@ Un solo archivo contiene los dos tipos de partida. Su columna `nature` indica si
 - Ruta: **Gestión presupuestaria > OPEX**, o **Gestión presupuestaria > CAPEX**
 - Exportación: **Exportar CSV** en la barra de herramientas de la lista
 - Importación: **Importar CSV** en la misma barra de herramientas
-- Permisos: ambos botones requieren derechos de administración en esa lista (`opex:admin` o `capex:admin`). Un archivo con partidas OPEX y CAPEX requiere ambos
+- Permisos: ambos botones requieren el nivel Administrador en Presupuesto (`budget:admin`), que cubre por igual las partidas OPEX y CAPEX
 
 ## Exportación
 
@@ -103,7 +103,6 @@ Una columna ausente conserva todos los valores guardados de esa columna. Un arch
 - `item_number` relleno: esa partida se actualiza. Vacío: se crea una partida nueva, del tipo que indica su celda `nature`.
 - `item_number` contiene la referencia de la partida, `BL-12`. En un archivo con columna `nature`, un número solo es la misma referencia, en ambas listas. Los números `OPX-12` y `CPX-3` de archivos anteriores siguen designando su partida. Nombrar dos veces la misma partida en un archivo es un error de fila.
 - Una partida conserva su tipo. Una fila que nombra una partida existente con la otra `nature` se rechaza, por ejemplo "BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line."
-- Un archivo con partidas OPEX y CAPEX requiere derechos de administración en ambas. Sin uno de ellos, cada partida de ese tipo se rechaza con el derecho que necesita, por ejemplo "Importing CAPEX lines needs the Admin level on CAPEX." Las demás partidas se comprueban como siempre, y el archivo se carga una vez retiradas esas filas.
 - Cada fila se comprueba según su propio tipo: las dimensiones y los valores que puede tener, su cuenta, las columnas congeladas y la advertencia de duplicado. Una columna congelada para CAPEX rechaza un cambio solo en una partida CAPEX.
 - No hay otra clave. Una fila nueva que se parezca a una partida existente de su tipo, o a otra fila nueva del mismo tipo en el archivo, es una advertencia que puede ignorar.
 - Los proveedores se hacen coincidir por `supplier_erp_id` cuando está relleno, y si no por `supplier_name`. La carga crea un proveedor que el archivo nombra y que KANAP no tiene cuando **Crear los proveedores que faltan** está marcada. Sin esa opción, la verificación lista los que faltan y le pide crearlos en **Datos maestros > Proveedores**.

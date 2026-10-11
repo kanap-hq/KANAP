@@ -188,7 +188,7 @@ L'onglet Vue d'ensemble contient les détails de l'investissement et ses tâches
 - Filtre **Statut** : Tous (par défaut), Actifs (non terminés) ou un statut précis. Le bouton de réinitialisation l'efface
 - Cliquez sur **Ajouter une tâche** pour ouvrir une nouvelle tâche déjà liée à ce poste. Remplissez le titre, la description, la priorité, le responsable et l'échéance dans l'espace de travail de la tâche
 - Utilisez l'icône d'ouverture pour aller sur une tâche, et l'icône de suppression pour la supprimer (après confirmation)
-- Les tâches ont leurs propres autorisations (`tasks:member` pour créer et modifier). L'accès manager CAPEX ne donne pas à lui seul le droit de modifier les tâches ; vérifiez avec votre admin si vous ne pouvez pas créer de tâches
+- Les tâches ont leurs propres autorisations (`tasks:member` pour créer et modifier). L'accès Membre sur Budget ne donne pas à lui seul le droit de modifier les tâches ; vérifiez avec votre admin si vous ne pouvez pas créer de tâches
 - Les tâches peuvent aussi être consultées et gérées depuis **Portefeuille > Tâches**, qui affiche toutes les tâches de votre organisation
 - Le titre de la dernière tâche apparaît aussi dans la colonne **Tâche** de la liste (masquée par défaut)
 
@@ -515,7 +515,7 @@ L'onglet Relations lie ce poste CAPEX aux objets associés : Projets, Applicatio
 - Téléversez des fichiers liés à ce poste (ex. : devis, propositions fournisseur, spécifications techniques, notes d'approbation)
 - Glissez-déposez des fichiers dans la zone de pièces jointes, ou cliquez sur **Sélectionner des fichiers** pour parcourir
 - Cliquez sur la puce d'un fichier pour le télécharger
-- Supprimez une pièce jointe avec l'icône de suppression de sa puce (après confirmation ; nécessite l'autorisation `capex:manager`)
+- Supprimez une pièce jointe avec l'icône de suppression de sa puce (après confirmation ; nécessite `budget:member`)
 
 **Pourquoi lier ?** :
 
@@ -531,11 +531,11 @@ L'onglet Relations lie ce poste CAPEX aux objets associés : Projets, Applicatio
 
 ## Import/export CSV
 
-**Exporter CSV** et **Importer CSV** se trouvent dans la barre d'outils de la liste CAPEX. Les deux demandent des droits d'administration sur CAPEX (`capex:admin`).
+**Exporter CSV** et **Importer CSV** se trouvent dans la barre d'outils de la liste CAPEX. Les deux demandent le niveau Admin sur Budget (`budget:admin`).
 
 **Exporter CSV** écrit le fichier budgétaire des postes affichés par la liste, sous le nom `budget.csv`. **Importer CSV** relit un fichier : il est d'abord vérifié, et rien n'est écrit avant que vous cliquiez sur **Charger**.
 
-Le fichier contient une ligne par poste : sa `nature` (`capex` ici), sa référence `BL-n`, les détails du poste, ses montants en colonnes et `kanap_token`. Le même fichier peut aussi contenir des postes OPEX, ce qui demande également des droits d'administration sur OPEX. Un fichier sans colonne `nature`, exporté par une version antérieure, est lu comme des postes CAPEX sur cette liste. [Charger un budget depuis un tableur](budget-file.md) décrit les colonnes, ce que signifie une cellule et les deux étapes de l'import.
+Le fichier contient une ligne par poste : sa `nature` (`capex` ici), sa référence `BL-n`, les détails du poste, ses montants en colonnes et `kanap_token`. Le même fichier peut aussi contenir des postes OPEX. Un fichier sans colonne `nature`, exporté par une version antérieure, est lu comme des postes CAPEX sur cette liste. [Charger un budget depuis un tableur](budget-file.md) décrit les colonnes, ce que signifie une cellule et les deux étapes de l'import.
 
 ## Statut et cycle de vie
 
@@ -575,11 +575,13 @@ Chaque poste CAPEX a un **statut** (Activé ou Désactivé) et une **Fin de vali
 
 ## Autorisations
 
-L'accès CAPEX est contrôlé par trois niveaux :
+L'accès CAPEX est contrôlé par la ressource Budget, qui couvre les postes OPEX et CAPEX de la même façon. Elle a trois niveaux :
 
-- `capex:reader` : Consulter la liste CAPEX, ouvrir les postes, voir les budgets et ventilations (lecture seule)
-- `capex:manager` : Créer et modifier les postes CAPEX, mettre à jour les budgets et ventilations, téléverser les pièces jointes, gérer les liens et contacts
-- `capex:admin` : Tous les droits manager plus import CSV, opérations budgétaires (gel, copie, réinitialisation) et suppression en masse
+- `budget:reader` : Consulter les listes OPEX et CAPEX, ouvrir les postes, voir les budgets et ventilations (lecture seule), télécharger les pièces jointes
+- `budget:member` : Créer et modifier les postes, mettre à jour les budgets et ventilations, téléverser et supprimer les pièces jointes, gérer les relations, liens et contacts
+- `budget:admin` : Tous les droits membre plus import et export CSV, opérations budgétaires (copier les colonnes budgétaires, copier les ventilations, réinitialiser une colonne budgétaire) et suppression en masse
+
+Le gel des colonnes budgétaires relève de l'administration budgétaire (`budget_ops:admin`).
 
 De plus :
 

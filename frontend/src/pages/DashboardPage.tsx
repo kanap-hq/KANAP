@@ -312,7 +312,7 @@ function useTileScope(tile: string): [BudgetScope, (next: BudgetScope) => void] 
       return null;
     }
   });
-  const scope = stored && hasLevel(stored, 'reader') ? stored : fallback;
+  const scope = stored && hasLevel('budget', 'reader') ? stored : fallback;
   const setScope = useCallback((next: BudgetScope) => {
     setStored(next);
     try {
@@ -332,8 +332,9 @@ export default function DashboardPage() {
   const Y = new Date().getFullYear();
 
   const mode = useTheme().palette.mode;
-  const canOpex = hasLevel('opex', 'reader');
-  const canCapex = hasLevel('capex', 'reader');
+  // One right for both types of budget line (lot R).
+  const canOpex = hasLevel('budget', 'reader');
+  const canCapex = canOpex;
   const { data: opexTotals, isLoading: opexLoading } = useOpexTotals(canOpex);
   const { data: capexTotals, isLoading: capexLoading } = useCapexTotals(canCapex);
   const canTasks = hasLevel('tasks', 'reader');
@@ -620,10 +621,10 @@ export default function DashboardPage() {
         <Grid item xs={12} md={6} lg={4}>
           <DashboardTile icon="Assignment" title={t('dashboard.quickActions')}>
             <Stack direction="row" spacing={1} sx={{ mt: 1 }} useFlexGap flexWrap="wrap">
-                {hasLevel('opex', 'manager') && (
+                {hasLevel('budget', 'manager') && (
                   <Button variant="contained" size="small" onClick={() => navigate('/ops/opex/new')}>{t('dashboard.newOpex')}</Button>
                 )}
-                {hasLevel('capex', 'manager') && (
+                {hasLevel('budget', 'manager') && (
                   <Button variant="outlined" size="small" onClick={() => navigate('/ops/capex/new')}>{t('dashboard.newCapex')}</Button>
                 )}
               </Stack>

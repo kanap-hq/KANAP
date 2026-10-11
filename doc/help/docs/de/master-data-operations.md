@@ -9,7 +9,7 @@ Die Jahreskennzahlen sind Mitarbeiterzahl, IT-Benutzer und Umsatz der Unternehme
 - Arbeitsbereich: **Budgetverwaltung**
 - Pfad: **Budgetverwaltung > Administration**, Abschnitt **Vorgänge**, Karten **Stammdaten einfrieren** und **Jahreskennzahlen kopieren**
 - Berechtigungen:
-  - Zugriff auf das Budget (Leserechte auf OPEX, CAPEX oder die Budgetadministration) sowie eines der Rechte `companies:admin`, `departments:admin` oder `budget_ops:admin`
+  - Zugriff auf das Budget (Leserechte auf Budget oder die Budgetadministration) sowie eines der Rechte `companies:admin`, `departments:admin` oder `budget_ops:admin`
   - Die Karten sind für andere Benutzer ausgeblendet
 
 Die Stammdaten haben keinen eigenen Administrationseintrag.

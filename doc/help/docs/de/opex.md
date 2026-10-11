@@ -101,10 +101,10 @@ Die OPEX-Liste (unter **Budgetverwaltung > OPEX**) ist Ihre Hauptansicht zum Dur
     - **Kostenstelle**: Öffnet den Kostenstellen-Arbeitsbereich
 
 **Aktionen**:
-  - **Neu**: Neue OPEX-Position erstellen (erfordert `opex:manager`)
-  - **CSV importieren**: Massenladen von Positionen aus CSV (erfordert `opex:admin`)
-  - **CSV exportieren**: Positionen als CSV exportieren (erfordert `opex:admin`)
-  - **Auswahl löschen**: Massenlöschung ausgewählter Positionen (erfordert `opex:admin`; Zeilen über Kontrollkästchen auswählen). Eine Position mit Beträgen in einer eingefrorenen Spalte kann nicht gelöscht werden: Die anderen werden gelöscht, und die Meldung nennt jede abgelehnte Position mit ihrem Grund
+  - **Neu**: Neue OPEX-Position erstellen (erfordert `budget:member`)
+  - **CSV importieren**: Massenladen von Positionen aus CSV (erfordert `budget:admin`)
+  - **CSV exportieren**: Positionen als CSV exportieren (erfordert `budget:admin`)
+  - **Auswahl löschen**: Massenlöschung ausgewählter Positionen (erfordert `budget:admin`; Zeilen über Kontrollkästchen auswählen). Eine Position mit Beträgen in einer eingefrorenen Spalte kann nicht gelöscht werden: Die anderen werden gelöscht, und die Meldung nennt jede abgelehnte Position mit ihrem Grund
 
 **Zurück/Weiter-Navigation**:
   - Wenn Sie eine Position öffnen, zeigt der Arbeitsbereich **Zurück** und **Weiter**-Schaltflächen
@@ -152,7 +152,7 @@ Der Tab Übersicht enthält die Freitextfelder und die Aufgaben der Position.
   - Filter **Status**: Alle (Standard), Aktiv (nicht erledigt), Offen, In Bearbeitung, Ausstehend, Im Test, Erledigt oder Abgebrochen. Die Zurücksetzen-Schaltfläche löscht ihn
   - Klicken Sie auf **Aufgabe hinzufügen**, um eine neue, bereits mit dieser Position verknüpfte Aufgabe zu öffnen. Titel, Beschreibung, Priorität, Zuständigen und Fälligkeitsdatum füllen Sie im Aufgaben-Arbeitsbereich aus
   - Mit dem Öffnen-Symbol gehen Sie zu einer Aufgabe, mit dem Löschsymbol löschen Sie sie (nach Bestätigung)
-  - Aufgaben haben eigene Berechtigungen (`tasks:member` zum Erstellen und Bearbeiten). OPEX-Manager-Zugriff allein berechtigt nicht zum Bearbeiten von Aufgaben; wenden Sie sich an Ihren Administrator, wenn Sie keine Aufgaben erstellen können
+  - Aufgaben haben eigene Berechtigungen (`tasks:member` zum Erstellen und Bearbeiten). Die Stufe Mitglied auf Budget allein berechtigt nicht zum Bearbeiten von Aufgaben; wenden Sie sich an Ihren Administrator, wenn Sie keine Aufgaben erstellen können
   - Aufgaben können auch unter **Portfolio > Aufgaben** angezeigt und verwaltet werden, wo alle Aufgaben Ihrer Organisation erscheinen
 
 **Bereich Eigenschaften**:
@@ -434,7 +434,7 @@ Der Tab Verknüpfungen verbindet diese OPEX-Position mit zugehörigen Objekten: 
   - Laden Sie Dateien zu dieser Position hoch (z. B. Verträge, Rechnungen, Angebote, Leistungsbeschreibungen, technische Spezifikationen)
   - Ziehen Sie Dateien in den Anhangsbereich oder klicken Sie auf **Dateien auswählen**
   - Klicken Sie auf den Chip einer Datei, um sie herunterzuladen
-  - Löschen Sie einen Anhang mit dem Löschsymbol auf seinem Chip (nach Bestätigung; erfordert `opex:manager`)
+  - Löschen Sie einen Anhang mit dem Löschsymbol auf seinem Chip (nach Bestätigung; erfordert `budget:member`)
 
 **Tipp**: Verknüpfen Sie Verträge, um Verlängerungen über mehrere OPEX-Positionen hinweg zu verfolgen. Fügen Sie URLs von Lieferantenportalen für den schnellen Zugriff hinzu. Laden Sie Angebote und Rechnungen als Anhänge hoch, um die gesamte ausgabenbezogene Dokumentation zu bündeln.
 
@@ -442,11 +442,11 @@ Der Tab Verknüpfungen verbindet diese OPEX-Position mit zugehörigen Objekten: 
 
 ## CSV-Import/Export
 
-**CSV exportieren** und **CSV importieren** befinden sich in der Symbolleiste der OPEX-Liste. Beide erfordern Administrationsrechte auf OPEX (`opex:admin`).
+**CSV exportieren** und **CSV importieren** befinden sich in der Symbolleiste der OPEX-Liste. Beide erfordern die Administratorstufe auf Budget (`budget:admin`).
 
 **CSV exportieren** schreibt die Budgetdatei der Positionen, die die Liste zeigt, als `budget.csv`. **CSV importieren** liest eine Datei wieder ein: Sie wird zuerst geprüft, und nichts wird geschrieben, bevor Sie auf **Laden** klicken.
 
-Die Datei enthält eine Zeile pro Position: ihre `nature` (hier `opex`), ihre Referenz `BL-n`, die Details der Position, ihre Beträge als Spalten und `kanap_token`. Dieselbe Datei kann auch CAPEX-Positionen enthalten, was zusätzlich Administrationsrechte auf CAPEX erfordert. Eine Datei ohne Spalte `nature`, die eine frühere Version exportiert hat, wird in dieser Liste als OPEX-Positionen gelesen. [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md) beschreibt die Spalten, die Bedeutung einer Zelle und die beiden Importschritte.
+Die Datei enthält eine Zeile pro Position: ihre `nature` (hier `opex`), ihre Referenz `BL-n`, die Details der Position, ihre Beträge als Spalten und `kanap_token`. Dieselbe Datei kann auch CAPEX-Positionen enthalten. Eine Datei ohne Spalte `nature`, die eine frühere Version exportiert hat, wird in dieser Liste als OPEX-Positionen gelesen. [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md) beschreibt die Spalten, die Bedeutung einer Zelle und die beiden Importschritte.
 
 ## Status und Lebenszyklus
 
@@ -514,11 +514,13 @@ Jede OPEX-Position hat einen **Status** (Aktiviert oder Deaktiviert) und ein opt
 
 ## Berechtigungen
 
-Der OPEX-Zugriff wird durch drei Stufen gesteuert:
+Der OPEX-Zugriff wird durch die Ressource Budget gesteuert, die für OPEX- und CAPEX-Positionen gleichermaßen gilt. Sie hat drei Stufen:
 
-- `opex:reader`: OPEX-Liste anzeigen, Positionen öffnen, Budgets und Zuordnungen einsehen (schreibgeschützt), Anhänge herunterladen
-- `opex:manager`: OPEX-Positionen erstellen und bearbeiten, Budgets und Zuordnungen aktualisieren, Anhänge hochladen und löschen, Verknüpfungen verwalten
-- `opex:admin`: Alle Manager-Rechte plus CSV-Import/Export, Budget-Operationen (Einfrieren, Kopieren, Zurücksetzen) und Massenlöschung
+- `budget:reader`: OPEX- und CAPEX-Liste anzeigen, Positionen öffnen, Budgets und Zuordnungen einsehen (schreibgeschützt), Anhänge herunterladen
+- `budget:member`: Positionen erstellen und bearbeiten, Budgets und Zuordnungen aktualisieren, Anhänge hochladen und löschen, Beziehungen, Verknüpfungen und Kontakte verwalten
+- `budget:admin`: Alle Mitglied-Rechte plus CSV-Import und -Export, Budget-Operationen (Budgetspalten kopieren, Zuordnungen kopieren, Budgetspalte zurücksetzen) und Massenlöschung
+
+Das Einfrieren von Budgetspalten erfordert die Budgetadministration (`budget_ops:admin`).
 
 Zusätzlich:
 - Aufgaben haben separate Berechtigungen (`tasks:member` zum Erstellen/Bearbeiten von Aufgaben an OPEX-Positionen)

@@ -405,7 +405,7 @@ Only `name` is a required column. When the `description`, `status`, `disabled_at
 | `analytics:member` | Create dimensions and values, edit them and set the order of dimensions and values |
 | `analytics:admin` | Everything above, plus CSV import and export, and deletion |
 
-The built-in Budget Administrator role is admin, Budget Member is member and Budget Reader is reader. Anyone who can read OPEX, CAPEX or reporting sees the dimensions and their values on budget lines, in the lists and in the reports, without access to this page.
+The built-in Budget Administrator role is admin, Budget Member is member and Budget Reader is reader. Anyone who can read budget lines (Budget) or reports sees the dimensions and their values on budget lines, in the lists and in the reports, without access to this page.
 
 ---
 

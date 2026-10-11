@@ -39,8 +39,7 @@ function context(ctx: TenantRequest): CostCenterContext {
 /** Who reads the tree: the page, and the item forms and budget reports that pick or filter on a node. */
 export const TREE_READERS: RequireAnyLevelMeta = [
   { resource: 'cost_centers', level: 'reader' },
-  { resource: 'opex', level: 'reader' },
-  { resource: 'capex', level: 'reader' },
+  { resource: 'budget', level: 'reader' },
   { resource: 'reporting', level: 'reader' },
 ];
 

@@ -31,7 +31,7 @@ La page d'accueil comporte deux sections. Chaque carte renvoie à un outil dédi
 | Cartes | Qui les voit |
 |---|---|
 | Devises, Colonnes budgétaires, Méthode de ventilation par défaut, Geler / Dégeler les données | Administration budgétaire au niveau administrateur (`budget_ops:admin`) |
-| Copier les colonnes budgétaires, Copier les ventilations, Réinitialiser une colonne budgétaire | OPEX ou CAPEX au niveau administrateur. Les onglets OPEX et CAPEX suivent la même règle : un administrateur OPEX travaille uniquement sur les postes OPEX |
+| Copier les colonnes budgétaires, Copier les ventilations, Réinitialiser une colonne budgétaire | Budget au niveau administrateur (`budget:admin`). Les onglets OPEX et CAPEX s'ouvrent tous deux avec ce niveau |
 | Geler les données de référence, Copier les indicateurs annuels | Utilisateurs ayant accès au budget qui sont administrateurs de l'administration budgétaire, des sociétés ou des départements. Les administrateurs des sociétés et des départements agissent sur leur propre périmètre |
 
 Le rôle intégré Administrateur budget voit toutes les cartes. Membre budget et Lecteur budget n'en voient aucune : **Administration** ne figure donc pas dans leur menu.
@@ -87,9 +87,9 @@ Geler et dégeler nécessitent `budget_ops:admin`. La carte est masquée pour le
 
 Copiez les données budgétaires d'une année et colonne vers une autre, avec un ajustement en pourcentage optionnel. C'est l'outil principal pour alimenter le budget de l'année suivante à partir de l'année en cours.
 
-Le sélecteur **OPEX** / **CAPEX** en haut de la page choisit les postes sur lesquels la copie s'applique. OPEX est sélectionné par défaut si vous pouvez consulter les postes OPEX, sinon CAPEX.
+Le sélecteur **OPEX** / **CAPEX** en haut de la page choisit les postes sur lesquels la copie s'applique. OPEX est sélectionné par défaut.
 
-Nécessite les droits d'administration sur les OPEX, ou sur les CAPEX pour les postes CAPEX.
+Nécessite le niveau Admin sur Budget (`budget:admin`).
 
 ### Quand l'utiliser
 
@@ -197,7 +197,7 @@ Copiez les méthodes et pourcentages de ventilation d'une année à l'autre. Cel
 
 La bascule **OPEX** / **CAPEX** en haut choisit les postes copiés. Seuls les postes valides l'année de destination sont copiés, avec la même règle que **Copier les colonnes budgétaires**. La copie se fait en bloc : si un poste échoue, rien n'est copié.
 
-Nécessite les droits d'administration sur OPEX, ou sur CAPEX pour les postes CAPEX.
+Nécessite le niveau Admin sur Budget (`budget:admin`).
 
 ### Quand l'utiliser
 
@@ -241,7 +241,7 @@ Effacez toutes les données d'une colonne budgétaire spécifique pour une anné
 
 Le sélecteur **OPEX** / **CAPEX** en haut de la page choisit les postes à effacer. La réinitialisation met à zéro les douze mois de la colonne et retire sa période, ainsi que ses lignes lorsque la colonne était construite à partir de la quantité et du prix. Dans l'onglet Budget, la colonne reçoit alors une nouvelle suggestion à partir des dates du poste. La réinitialisation couvre tous les postes, y compris ceux dont la fin de validité est passée. Elle se fait en tout ou rien : si un poste échoue, rien n'est effacé.
 
-Nécessite les droits d'administration sur les OPEX, ou sur les CAPEX pour les postes CAPEX.
+Nécessite le niveau Admin sur Budget (`budget:admin`).
 
 Une colonne dont les postes ne portent aucun montant peut quand même être réinitialisée : la réinitialisation retire alors seulement les périodes de répartition, et la confirmation l'indique.
 

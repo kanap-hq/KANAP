@@ -139,11 +139,11 @@ export default function Layout() {
 
   const operations: NavEntry[] = [
     { to: '/ops', label: t('nav:sidebar.ops.overview'), icon: <DashboardIcon /> },
-    { to: '/ops/opex', label: t('nav:sidebar.ops.opex'), icon: <AccountBalanceWalletIcon />, resource: 'opex' },
-    { to: '/ops/capex', label: t('nav:sidebar.ops.capex'), icon: <AccountBalanceIcon />, resource: 'capex' },
+    { to: '/ops/opex', label: t('nav:sidebar.ops.opex'), icon: <AccountBalanceWalletIcon />, resource: 'budget' },
+    { to: '/ops/capex', label: t('nav:sidebar.ops.capex'), icon: <AccountBalanceIcon />, resource: 'budget' },
     { to: '/ops/contracts', label: t('nav:sidebar.ops.contracts'), icon: <DescriptionIcon />, resource: 'contracts' },
     { to: '/ops/reports', label: t('nav:sidebar.ops.reporting'), icon: <BarChartIcon />, resource: 'reporting' },
-    { to: '/ops/operations', label: t('nav:sidebar.ops.administration'), icon: <SettingsIcon />, anyResource: ['opex', 'capex', 'budget_ops'] },
+    { to: '/ops/operations', label: t('nav:sidebar.ops.administration'), icon: <SettingsIcon />, anyResource: ['budget', 'budget_ops'] },
   ];
 
   const masterData: NavEntry[] = [

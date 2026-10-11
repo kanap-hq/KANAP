@@ -9,7 +9,7 @@ Los indicadores anuales son la plantilla, los usuarios IT y la facturación de l
 - Espacio de trabajo: **Gestión presupuestaria**
 - Ruta: **Gestión presupuestaria > Administración**, sección **Operaciones**, tarjetas **Congelar datos maestros** y **Copiar indicadores anuales**
 - Permisos:
-  - Acceso al presupuesto (acceso de lector a OPEX, CAPEX o la administración presupuestaria), más uno de los permisos `companies:admin`, `departments:admin` o `budget_ops:admin`
+  - Acceso al presupuesto (acceso de lector a Presupuesto o a la administración presupuestaria), más uno de los permisos `companies:admin`, `departments:admin` o `budget_ops:admin`
   - Las tarjetas se ocultan a los demás usuarios
 
 Los datos maestros no tienen una entrada de Administración propia.

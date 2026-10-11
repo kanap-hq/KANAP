@@ -33,7 +33,7 @@ La página principal muestra una tarjeta para cada informe disponible con una br
 
 **Top partidas**, **Top aumento / disminución**, **Cuentas de consolidación**, **Dimensiones analíticas**, **Plantilla por mes** y **Coste por ETC** empiezan con un conmutador **OPEX** / **CAPEX**, el primer control de la barra de filtros.
 
-- El informe se abre en un tipo que usted puede consultar, primero OPEX. Un tipo que no puede consultar aparece desactivado.
+- El informe se abre en OPEX. Ambos tipos requieren acceso de lectura a las partidas presupuestarias (`budget:reader`). Sin ese acceso, el selector aparece desactivado.
 - La dirección de la página conserva el tipo elegido (`?scope=opex` o `?scope=capex`), de modo que un enlace guardado o compartido se abre en el mismo tipo.
 - El subtítulo y el título del gráfico indican el tipo, de modo que una impresión o un PNG exportado muestra qué tipo cubre.
 - Cambiar de tipo borra las partidas que excluyó, ya que cada tipo tiene sus propias partidas.

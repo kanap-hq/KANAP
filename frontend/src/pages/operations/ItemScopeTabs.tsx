@@ -7,15 +7,14 @@ import type { BudgetScope } from '../../services/budgetOperations';
 
 type ScopeLevel = 'reader' | 'admin';
 
-/** The item type a page opens on: OPEX when the user has `level` on it, else CAPEX. */
-export function useDefaultBudgetScope(level: ScopeLevel = 'reader'): BudgetScope {
-  const { hasLevel } = useAuth();
-  return hasLevel('opex', level) || !hasLevel('capex', level) ? 'opex' : 'capex';
+/** The item type a page opens on: OPEX (one right covers both types, lot R). */
+export function useDefaultBudgetScope(): BudgetScope {
+  return 'opex';
 }
 
 /**
- * OPEX / CAPEX switch; a type the user lacks `level` on is disabled. Reports read
- * (`reader`), the column operations act and pass `admin`.
+ * OPEX / CAPEX switch; both types are disabled without `level` on the budget lines. Reports
+ * read (`reader`), the column operations act and pass `admin`.
  */
 export default function ItemScopeTabs({ value, onChange, level = 'reader' }: {
   value: BudgetScope;
@@ -31,8 +30,8 @@ export default function ItemScopeTabs({ value, onChange, level = 'reader' }: {
       aria-label={t('operations.scope.label')}
       sx={[textTabsSx, { alignSelf: 'center' }]}
     >
-      <Tab value="opex" label={t('operations.scope.opex')} sx={textTabSx(value === 'opex')} disabled={!hasLevel('opex', level)} />
-      <Tab value="capex" label={t('operations.scope.capex')} sx={textTabSx(value === 'capex')} disabled={!hasLevel('capex', level)} />
+      <Tab value="opex" label={t('operations.scope.opex')} sx={textTabSx(value === 'opex')} disabled={!hasLevel('budget', level)} />
+      <Tab value="capex" label={t('operations.scope.capex')} sx={textTabSx(value === 'capex')} disabled={!hasLevel('budget', level)} />
     </Tabs>
   );
 }

@@ -31,7 +31,7 @@ Die Startseite hat zwei Abschnitte. Jede Karte führt zu einem eigenen Werkzeug.
 | Karten | Wer sie sieht |
 |---|---|
 | Währungen, Budgetspalten, Standard-Zuordnungsmethode, Daten einfrieren / auftauen | Budgetadministration auf Administratorebene (`budget_ops:admin`) |
-| Budgetspalten kopieren, Zuordnungen kopieren, Budgetspalte zurücksetzen | OPEX oder CAPEX auf Administratorebene. Die Registerkarten OPEX und CAPEX folgen derselben Regel: Ein OPEX-Administrator arbeitet nur mit OPEX-Positionen |
+| Budgetspalten kopieren, Zuordnungen kopieren, Budgetspalte zurücksetzen | Budget auf Administratorebene (`budget:admin`). Die Registerkarten OPEX und CAPEX öffnen sich beide mit dieser Stufe |
 | Stammdaten einfrieren, Jahreskennzahlen kopieren | Benutzer mit Zugriff auf das Budget, die Administratoren der Budgetadministration, von Unternehmen oder Abteilungen sind. Administratoren von Unternehmen und Abteilungen handeln für ihren eigenen Bereich |
 
 Die integrierte Rolle Budget-Administrator sieht alle Karten. Budget-Mitglied und Budget-Leser sehen keine, daher fehlt **Administration** in ihrem Menü.
@@ -87,9 +87,9 @@ Einfrieren und Auftauen erfordern `budget_ops:admin`. Die Karte ist für andere 
 
 Kopieren Sie Budgetdaten von einem Jahr und einer Spalte in eine andere, mit einer optionalen prozentualen Anpassung. Dies ist das primäre Werkzeug zur Vorbereitung des nächsten Jahresbudgets aus dem aktuellen.
 
-Der Umschalter **OPEX** / **CAPEX** oben auf der Seite legt fest, auf welche Positionen sich die Kopie bezieht. OPEX ist standardmäßig ausgewählt, wenn Sie OPEX-Positionen lesen dürfen, andernfalls CAPEX.
+Der Umschalter **OPEX** / **CAPEX** oben auf der Seite legt fest, auf welche Positionen sich die Kopie bezieht. OPEX ist standardmäßig ausgewählt.
 
-Erfordert Administrationsrechte für OPEX, bzw. für CAPEX bei CAPEX-Positionen.
+Erfordert die Administratorstufe auf Budget (`budget:admin`).
 
 ### Wann verwenden
 
@@ -197,7 +197,7 @@ Kopieren Sie Zuordnungsmethoden und Prozentsätze von einem Jahr in ein anderes.
 
 Der Umschalter **OPEX** / **CAPEX** oben legt fest, welche Positionen kopiert werden. Nur Positionen, die im Zieljahr gültig sind, werden kopiert, nach derselben Regel wie bei **Budgetspalten kopieren**. Die Kopie erfolgt ganz oder gar nicht: Schlägt eine Position fehl, wird nichts kopiert.
 
-Erfordert Administrationsrechte für OPEX, bei CAPEX-Positionen für CAPEX.
+Erfordert die Administratorstufe auf Budget (`budget:admin`).
 
 ### Wann verwenden
 
@@ -241,7 +241,7 @@ Löschen Sie alle Daten einer bestimmten Budgetspalte für ein gegebenes Jahr. D
 
 Der Umschalter **OPEX** / **CAPEX** oben auf der Seite legt fest, welche Positionen geleert werden. Das Zurücksetzen setzt die zwölf Monate der Spalte auf null und entfernt ihren Zeitraum sowie ihre Zeilen, wenn die Spalte aus Menge und Preis aufgebaut wurde. Im Budget-Tab erhält die Spalte danach einen neuen Vorschlag aus den Daten der Position. Das Zurücksetzen erfasst alle Positionen, auch solche, deren Gültigkeit bereits abgelaufen ist. Es gilt ganz oder gar nicht: Schlägt eine Position fehl, wird nichts geleert.
 
-Erfordert Administrationsrechte für OPEX, bzw. für CAPEX bei CAPEX-Positionen.
+Erfordert die Administratorstufe auf Budget (`budget:admin`).
 
 Eine Spalte, deren Positionen keinen Betrag enthalten, kann trotzdem zurückgesetzt werden: Das Zurücksetzen entfernt dann nur die Verteilungszeiträume, und die Bestätigung weist darauf hin.
 

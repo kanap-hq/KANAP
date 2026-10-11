@@ -239,7 +239,7 @@ Load or update calendars and their working days from a file.
 
 Budget administrators are calendar administrators: the built-in Budget Administrator role gets admin. Every other role starts with the level it has on departments, so Master Data Administrator is admin, Budget Member and Master Data Member are members, and the reader roles can read.
 
-Anyone who can read OPEX or CAPEX can pick a calendar in the budget tab without access to this page.
+Anyone who can read budget lines (Budget) can pick a calendar in the budget tab without access to this page.
 
 ---
 

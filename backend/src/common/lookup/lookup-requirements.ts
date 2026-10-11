@@ -80,8 +80,7 @@ export const ORGANISATION_LOOKUP_READERS: RequireAnyLevelMeta = [
   reader('companies'),
   reader('departments'),
   { resource: 'users', level: 'admin' },
-  reader('opex'),
-  reader('capex'),
+  reader('budget'),
   reader('contracts'),
   reader('reporting'),
   reader('tasks'),
@@ -100,8 +99,7 @@ export const ORGANISATION_LOOKUP_READERS: RequireAnyLevelMeta = [
 export const USER_LOOKUP_ACCESS: LookupAccess = {
   own: 'users',
   readerSearch: [
-    'opex',
-    'capex',
+    'budget',
     'tasks',
     'portfolio_requests',
     'portfolio_projects',
@@ -124,8 +122,7 @@ export const USER_LOOKUP_ACCESS: LookupAccess = {
 export const SUPPLIER_LOOKUP_ACCESS: LookupAccess = {
   own: 'suppliers',
   pickers: [
-    at('opex', 'member'),
-    at('capex', 'member'),
+    at('budget', 'member'),
     at('contracts', 'member'),
     at('applications', 'member'),
     at('infrastructure', 'member'),
@@ -136,7 +133,7 @@ export const SUPPLIER_LOOKUP_ACCESS: LookupAccess = {
 /** Accounts: picked on OPEX and CAPEX lines only. */
 export const ACCOUNT_LOOKUP_ACCESS: LookupAccess = {
   own: 'accounts',
-  pickers: [at('opex', 'member'), at('capex', 'member')],
+  pickers: [at('budget', 'member')],
 };
 
 /** Business processes: picked on a request's analysis and on interfaces (applications area). */
@@ -148,7 +145,7 @@ export const BUSINESS_PROCESS_LOOKUP_ACCESS: LookupAccess = {
 /** Contracts: linked from OPEX and CAPEX lines (Relations tab) and from an asset's support panel. */
 export const CONTRACT_LOOKUP_ACCESS: LookupAccess = {
   own: 'contracts',
-  pickers: [at('opex', 'member'), at('capex', 'member'), at('infrastructure', 'member')],
+  pickers: [at('budget', 'member'), at('infrastructure', 'member')],
 };
 
 export const USER_LOOKUP_READERS = lookupReaders(USER_LOOKUP_ACCESS);

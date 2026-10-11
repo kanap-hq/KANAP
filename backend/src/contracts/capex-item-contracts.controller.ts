@@ -17,7 +17,7 @@ export class CapexItemContractsController {
 
   @Get()
   @UseGuards(PermissionGuard)
-  @RequireLevel('capex', 'reader')
+  @RequireLevel('budget', 'reader')
   async list(@Param('id') idOrRef: string, @Req() req: any) {
     const manager = req?.queryRunner?.manager as EntityManager;
     const capexItemId = await this.resolveItemId(idOrRef, manager);
@@ -26,7 +26,7 @@ export class CapexItemContractsController {
 
   @Post('bulk-replace')
   @UseGuards(PermissionGuard)
-  @RequireLevel('capex', 'member')
+  @RequireLevel('budget', 'member')
   async bulkReplace(@Param('id') idOrRef: string, @Body() body: { contract_ids: string[] }, @Req() req: any) {
     const manager = req?.queryRunner?.manager as EntityManager;
     const capexItemId = await this.resolveItemId(idOrRef, manager);

@@ -6,7 +6,7 @@ import { allocateItemNumbers } from '../../common/item-number.service';
 import { formatCents } from '../../common/amount';
 import { AmountMeasure, AmountsWriteContext, FLAT_PROFILE, assertMeasuresEditable, spreadAnnualRows, writeAmountsPayload } from '../amounts-write.util';
 import { ensureBudgetVersion } from '../budget-version-ensure';
-import { lockBudgetLine, lockBudgetLines, lockBudgetVersions, lockTenantBudgetOperations } from '../budget-locks';
+import { lockBudgetLine, lockBudgetLinesOfBothNatures, lockBudgetVersions, lockTenantBudgetOperations } from '../budget-locks';
 import { activeMonths } from '../spread.util';
 import { annualSpreadFields, listRoundInputs, markRoundsManual, recordPayloadRoundInputs } from '../round-inputs.util';
 import { interpretBudgetFile, moneyText, readBudgetCsv } from './interpret';
@@ -119,8 +119,6 @@ interface AuditRow {
  */
 export async function importBudgetFile(input: {
   scope: BudgetFileScope;
-  /** The natures the caller may import (`PreflightInput.natures`). */
-  natures: readonly BudgetNature[];
   file: Buffer;
   snapshot: { lines: BudgetFileSnapshotLine[] };
   manager: EntityManager;
@@ -143,11 +141,8 @@ export async function importBudgetFile(input: {
   const ids = new Set<string>();
   for (const line of input.snapshot.lines) ids.add(line.id);
   for (const line of first.report.snapshot.lines) ids.add(line.id);
-  // In id order within each nature the caller may import; a line of another nature is not locked
-  // (nor read below), so a snapshot that names one no longer matches.
-  for (const nature of BUDGET_NATURES) {
-    if (input.natures.includes(nature)) await lockBudgetLines(input.manager, nature, input.tenantId, ids);
-  }
+  // In id order, the lines of both natures in one statement.
+  await lockBudgetLinesOfBothNatures(input.manager, input.tenantId, ids);
 
   const second = await prepare(input);
   if (!second.report.ok) return second.report;
@@ -172,7 +167,6 @@ interface Prepared {
 
 async function prepare(input: {
   scope: BudgetFileScope;
-  natures: readonly BudgetNature[];
   file: Buffer;
   manager: EntityManager;
   tenantId: string;
@@ -191,10 +185,9 @@ async function prepare(input: {
     decimalMark: input.decimalMark,
   });
   const numbers = interpretBudgetFile(read, input.scope).map((row) => row.itemNumber);
-  const loaded = await loadPreflight(input.manager, input.tenantId, numbers, input.natures, input.allowedCurrencies);
+  const loaded = await loadPreflight(input.manager, input.tenantId, numbers, input.allowedCurrencies);
   const planned = planBudgetFile({
     scope: input.scope,
-    natures: input.natures,
     read,
     catalog: loaded.catalog,
     stored: loaded.stored,

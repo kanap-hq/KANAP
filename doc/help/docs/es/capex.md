@@ -188,7 +188,7 @@ La pestaña Vista general contiene los detalles de la inversión y sus tareas.
 - Filtro **Estado**: Todos (por defecto), Activas (no completadas) o un estado concreto. El botón de borrar lo restablece
 - Haga clic en **Agregar tarea** para abrir una tarea nueva ya vinculada a esta partida. Complete el título, la descripción, la prioridad, el responsable y la fecha de vencimiento en el espacio de trabajo de la tarea
 - Use el icono de abrir para ir a una tarea y el icono de eliminar para borrarla (tras confirmar)
-- Las tareas tienen sus propios permisos (`tasks:member` para crear y editar). El acceso de manager de CAPEX no da por sí solo derechos de edición de tareas; consulte a su administrador si no puede crear tareas
+- Las tareas tienen sus propios permisos (`tasks:member` para crear y editar). El nivel Miembro en Presupuesto no da por sí solo derechos de edición de tareas; consulte a su administrador si no puede crear tareas
 - Las tareas también se pueden ver y gestionar desde **Portafolio > Tareas**, que muestra todas las tareas de su organización
 - El título de la última tarea también aparece en la columna **Tarea** de la lista (oculta por defecto)
 
@@ -515,7 +515,7 @@ La pestaña Relaciones vincula esta partida CAPEX con objetos relacionados: Proy
 - Suba archivos relacionados con esta partida de capital (p. ej., presupuestos, propuestas de proveedores, especificaciones técnicas, memorandos de aprobación)
 - Arrastre y suelte archivos en la zona de adjuntos, o haga clic en **Seleccionar archivos** para buscarlos
 - Haga clic en el chip de un archivo para descargarlo
-- Elimine un adjunto con el icono de eliminar de su chip (tras confirmar; requiere el permiso `capex:manager`)
+- Elimine un adjunto con el icono de eliminar de su chip (tras confirmar; requiere `budget:member`)
 
 **¿Por qué vincular?**:
 
@@ -531,11 +531,11 @@ La pestaña Relaciones vincula esta partida CAPEX con objetos relacionados: Proy
 
 ## Importación/exportación CSV
 
-**Exportar CSV** e **Importar CSV** están en la barra de herramientas de la lista CAPEX. Ambos requieren derechos de administración en CAPEX (`capex:admin`).
+**Exportar CSV** e **Importar CSV** están en la barra de herramientas de la lista CAPEX. Ambos requieren el nivel Administrador en Presupuesto (`budget:admin`).
 
 **Exportar CSV** escribe el archivo de presupuesto de las partidas que muestra la lista, como `budget.csv`. **Importar CSV** vuelve a leer un archivo: primero se comprueba, y no se escribe nada hasta que haga clic en **Cargar**.
 
-El archivo contiene una fila por partida: su `nature` (aquí `capex`), su referencia `BL-n`, los detalles de la partida, sus importes en columnas y `kanap_token`. El mismo archivo también puede contener partidas OPEX, lo que requiere además derechos de administración en OPEX. Un archivo sin columna `nature`, exportado por una versión anterior, se lee como partidas CAPEX en esta lista. [Cargar un presupuesto desde una hoja de cálculo](budget-file.md) describe las columnas, lo que significa una celda y los dos pasos de la importación.
+El archivo contiene una fila por partida: su `nature` (aquí `capex`), su referencia `BL-n`, los detalles de la partida, sus importes en columnas y `kanap_token`. El mismo archivo también puede contener partidas OPEX. Un archivo sin columna `nature`, exportado por una versión anterior, se lee como partidas CAPEX en esta lista. [Cargar un presupuesto desde una hoja de cálculo](budget-file.md) describe las columnas, lo que significa una celda y los dos pasos de la importación.
 
 ## Estado y ciclo de vida
 
@@ -575,11 +575,13 @@ Cada partida CAPEX tiene un **estado** (Habilitado o Deshabilitado) y un **Fin d
 
 ## Permisos
 
-El acceso a CAPEX se controla por tres niveles:
+El acceso a CAPEX se controla con el recurso Presupuesto, que cubre por igual las partidas OPEX y CAPEX. Tiene tres niveles:
 
-- `capex:reader`: Ver la lista CAPEX, abrir partidas, ver presupuestos y asignaciones (solo lectura)
-- `capex:manager`: Crear y editar partidas CAPEX, actualizar presupuestos y asignaciones, subir adjuntos, gestionar enlaces y contactos
-- `capex:admin`: Todos los derechos de gestor más importación CSV, operaciones presupuestarias (congelar, copiar, restablecer) y eliminación masiva
+- `budget:reader`: Ver las listas OPEX y CAPEX, abrir partidas, ver presupuestos y asignaciones (solo lectura), descargar adjuntos
+- `budget:member`: Crear y editar partidas, actualizar presupuestos y asignaciones, subir y eliminar adjuntos, gestionar relaciones, enlaces y contactos
+- `budget:admin`: Todos los derechos de miembro más importación y exportación CSV, operaciones presupuestarias (copiar columnas presupuestarias, copiar asignaciones, restablecer columna presupuestaria) y eliminación masiva
+
+Congelar columnas presupuestarias requiere la administración presupuestaria (`budget_ops:admin`).
 
 Adicionalmente:
 

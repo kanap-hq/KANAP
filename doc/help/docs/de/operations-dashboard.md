@@ -50,7 +50,7 @@ Ein Zähler wird orange (rot bei der Kontenplan-Prüfung), wenn er über null li
 
 ### Schnellaktionen
 
-Verknüpfungsschaltflächen zum direkten Erstellen einer neuen OPEX- oder CAPEX-Position von der Übersicht aus. Diese Schaltflächen sind nur sichtbar, wenn Ihre Rolle Ihnen mindestens die Berechtigung `opex:manager` oder `capex:manager` gewährt.
+Verknüpfungsschaltflächen zum direkten Erstellen einer neuen OPEX- oder CAPEX-Position von der Übersicht aus. Diese Schaltflächen erscheinen, wenn Ihre Rolle mindestens die Stufe Mitglied auf Budget hat (`budget:member`).
 
 Unterhalb der Schaltflächen listet ein Abschnitt **Aktuelle Änderungen** die fünf zuletzt bearbeiteten Positionen auf, OPEX und CAPEX zusammen. Jede Zeile zeigt das Datum der letzten Bearbeitung, den Namen der Position und ihren Typ. Klicken Sie auf eine Zeile, um die Position zu öffnen.
 
@@ -66,11 +66,11 @@ Die fünf Positionen mit dem größten Anstieg in der Standardspalte im Vergleic
 
 Wählen Sie mit den Tabs **OPEX** / **CAPEX** im Kopf der Kachel den Positionstyp. Die Kachel merkt sich Ihre Wahl. Klicken Sie auf **Öffnen**, um den vollständigen Bericht **Top Anstieg / Rückgang** für denselben Typ anzuzeigen.
 
-Ein Typ, den Sie nicht lesen dürfen, ist in den Tabs deaktiviert und hat keine Spalte in **Datenqualität**. Dürfen Sie weder OPEX noch CAPEX lesen, sind diese Kacheln ausgeblendet.
+Ohne Lesezugriff auf Budgetpositionen (`budget:reader`) sind diese Kacheln ausgeblendet.
 
 ## Tipps
 
 - **Welche Spalte die Kacheln verwenden**: Ein Budgetadministrator wählt die Standardspalte und die Spaltennamen unter [Budgetspalten](budget-operations.md#budgetspalten). Die Top-Kacheln und die Berichte, die sie öffnen, folgen dieser Wahl.
 - **Gerundete Zahlen**: Jeder Betrag in der Übersicht ist zur kompakten Darstellung auf Tausender gerundet. Öffnen Sie die OPEX- oder CAPEX-Liste oder die Berichte, wenn Sie genaue Zahlen benötigen.
-- **Fehlende Schaltflächen**: Wenn Sie die Schaltflächen **Neue OPEX** oder **Neue CAPEX** nicht sehen, enthält Ihre aktuelle Rolle nicht die erforderliche Manager-Berechtigung. Bitten Sie Ihren Administrator, Ihren Zugriff zu prüfen.
+- **Fehlende Schaltflächen**: Wenn Sie die Schaltflächen **Neue OPEX** oder **Neue CAPEX** nicht sehen, hat Ihre aktuelle Rolle nicht die Stufe Mitglied auf Budget. Bitten Sie Ihren Administrator, Ihren Zugriff zu prüfen.
 - **Leere Kacheln**: Eine Kachel, die „Keine Daten" zeigt, bedeutet einfach, dass noch keine Datensätze dieses Typs vorhanden sind. Sobald Sie oder Ihr Team mit der Dateneingabe beginnen, wird die Kachel automatisch befüllt.

@@ -11,7 +11,7 @@ One file holds both kinds of line. Its `nature` column says whether a row is an 
 - Path: **Budget Management > OPEX**, or **Budget Management > CAPEX**
 - Export: **Export CSV** in the list toolbar
 - Import: **Import CSV** in the same toolbar
-- Permissions: both buttons need administration rights on that list (`opex:admin` or `capex:admin`). A file that holds OPEX and CAPEX lines needs both
+- Permissions: both buttons need the Admin level on Budget (`budget:admin`), which covers OPEX and CAPEX lines alike
 
 ## Export
 
@@ -103,7 +103,6 @@ An absent column keeps every stored value of that column. A file holding only `i
 - `item_number` filled: that line is updated. Empty: a new line is created, of the kind its `nature` cell says.
 - `item_number` holds the line's reference, `BL-12`. In a file with a `nature` column, a bare number is the same reference, on both lists. The `OPX-12` and `CPX-3` numbers of earlier files still name their line. Naming one line twice in a file is a row error.
 - A line keeps its kind. A row that names an existing line with the other `nature` is refused, for example "BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line."
-- A file that holds OPEX and CAPEX lines needs administration rights on both. Without one of them, each line of that kind is refused with the right it needs, for example "Importing CAPEX lines needs the Admin level on CAPEX." The other lines are checked as usual, and the file loads once those rows are removed.
 - Each row is checked against its own kind: the dimensions and values it may hold, its account, the frozen columns and the duplicate warning. A column frozen for CAPEX refuses a change on a CAPEX line only.
 - There is no other key. A new row that looks like an existing line of its kind, or like another new row of the same kind in the file, is a warning you can ignore.
 - Suppliers are matched by `supplier_erp_id` when it is filled, otherwise by `supplier_name`. A supplier the file names and KANAP does not have is created by the load when **Create missing suppliers** is ticked. Without it, the check lists them and asks you to create them in **Master data > Suppliers**.
