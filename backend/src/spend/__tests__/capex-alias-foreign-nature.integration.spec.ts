@@ -225,6 +225,7 @@ function controllers(runner: QueryRunner) {
     audit as any,
     none,
     none,
+    none,
   ) as any;
   const deps = realSummaryDeps(SUMMARY_SCOPES.capex);
   const versions = new CapexVersionsController(

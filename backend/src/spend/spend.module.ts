@@ -56,6 +56,7 @@ import { KnowledgeModule } from '../knowledge/knowledge.module';
 import { CommonModule } from '../common/common.module';
 import { BudgetFileModule } from './budget-file/budget-file.module';
 import { UserTimeAggregateService } from '../portfolio/services/user-time-aggregate.service';
+import { BudgetLineTypeChangeService } from './budget-line-type-change.service';
 
 @Module({
   imports: [
@@ -99,6 +100,7 @@ import { UserTimeAggregateService } from '../portfolio/services/user-time-aggreg
     CapexAmountsService,
     CapexAllocationsService,
     CapexItemContactsService,
+    BudgetLineTypeChangeService,
   ],
   exports: [
     SpendItemsService,

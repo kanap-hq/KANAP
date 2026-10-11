@@ -60,7 +60,7 @@ Eine Position lebt über mehrere Jahre: Eine Lizenz über drei Jahre ist eine Po
 
 | Feld | Spalte der Budgetdatei | Erforderlich | Hinweise |
 |---|---|---|---|
-| Art | `nature` | Ja | `opex` oder `capex`. Eine Datei ändert die Art einer bestehenden Position nicht. Eine Datei ohne diese Spalte wird als Positionen der Liste gelesen, in der sie importiert wird |
+| Art | `nature` | Ja | `opex` oder `capex`. Eine Datei ändert die Art einer bestehenden Position nicht (siehe [Den Typ einer Position ändern](#den-typ-einer-position-andern)). Eine Datei ohne diese Spalte wird als Positionen der Liste gelesen, in der sie importiert wird |
 | Nummer | `item_number` | Von KANAP vergeben | `BL-12`. Leer in der Datei: legt eine Position an |
 | Produktname (OPEX), Titel (CAPEX) | `name` | Ja | |
 | Beschreibung (OPEX) | `description` | Nein | Bei einer CAPEX-Position noch nicht gelesen oder geschrieben |
@@ -79,6 +79,15 @@ Eine Position lebt über mehrere Jahre: Eine Lizenz über drei Jahre ist eine Po
 | Notizen | `notes` | Nein | |
 
 Eine Position hat keinen eigenen Status zum Laden. Sie ist aktiv bis zum Ende ihrer Gültigkeit und wird danach innerhalb einer Stunde deaktiviert. Der auf einer Position angezeigte Budgetverantwortliche kommt aus ihrer Kostenstelle und wird nicht auf der Position gespeichert.
+
+### Den Typ einer Position ändern
+
+Eine Position wechselt in ihrem Arbeitsbereich von OPEX zu CAPEX oder zurück (**Typ ändern...** im Menü **...**, siehe [OPEX](opex.md#typ-andern) und [CAPEX](capex.md#typ-andern)). Eine Budgetdatei ändert den Typ nie. Die Änderung beginnt am 1. Januar eines Jahres:
+
+- **Ab dem ersten Jahr der Position** ändert die Position selbst ihren Typ. Sie behält ihre `BL`-Nummer, ihre Budgetjahre, Zuordnungen, Verknüpfungen, Anhänge und Aufgaben. Eine Position, die zu CAPEX wird, erhält eine `CPX`-Nummer, die sie behält, wenn sie wieder zu OPEX wird
+- **Ab einem späteren Jahr** endet die Position am 31. Dezember des Vorjahres und behält ihre früheren Budgetjahre. Eine neue Position des anderen Typs mit eigener `BL`-Nummer übernimmt die späteren Budgetjahre, die Kontakte und die Verknüpfungen zu Anwendungen, Assets, Verträgen, Projekten und Anfragen. Die neue Position verzeichnet die Position, auf die sie folgt, und jede der beiden Positionen zeigt die andere an
+
+Eine Position wird durch höchstens eine Position ersetzt. Die Änderung wird abgelehnt, solange eine eingefrorene Spalte Beträge der Position in den betroffenen Jahren enthält.
 
 ### Budgetjahre
 

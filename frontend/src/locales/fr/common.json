@@ -30,7 +30,8 @@
     "selectAll": "Tout sélectionner",
     "browse": "Parcourir",
     "loadMore": "Charger plus",
-    "done": "Terminé"
+    "done": "Terminé",
+    "moreActions": "Plus d'actions"
   },
   "status": {
     "loading": "Chargement...",

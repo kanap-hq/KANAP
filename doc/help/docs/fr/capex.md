@@ -153,7 +153,7 @@ Lorsque vous ouvrez un poste, l'espace de travail affiche les boutons **Préc.**
 
 Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail. Il comporte quatre parties :
 
-- **En-tête** : la référence du poste (ex. : `CPX-7`) avec un bouton de copie, le nom de l'investissement (cliquez dessus pour renommer le poste), **Préc.** / **Suiv.**, **Envoyer le lien** et le bouton de fermeture
+- **En-tête** : la référence du poste (ex. : `CPX-7`) avec un bouton de copie, le nom de l'investissement (cliquez dessus pour renommer le poste), **Préc.** / **Suiv.**, **Envoyer le lien**, le menu **...** (**Changer le type...**, voir [Changer le type](#changer-le-type)) et le bouton de fermeture
 - **Barre de métadonnées** sous le titre : **Statut**, **Responsable IT** et **Responsable métier**, modifiables sur place. Lorsque le centre de coûts du poste a un responsable budgétaire, **Responsable budgétaire** vient ensuite. Il est en lecture seule et déduit du centre de coûts, non enregistré sur le poste : survolez-le pour voir de quel centre de coûts il provient, et modifiez-le sur le centre de coûts (voir [Centres de coûts](cost-centers.md#responsable-budgetaire-sur-les-lignes-budgetaires))
 - **Quatre onglets** : **Vue d'ensemble**, **Budget**, **Ventilations** et **Relations** (l'onglet Relations indique le nombre de liens du poste)
 - **Panneau Propriétés** à droite : les champs principaux du poste. Ouvrez-le ou fermez-le avec le bouton des propriétés ; l'espace de travail mémorise votre choix
@@ -573,12 +573,33 @@ Chaque poste CAPEX a un **statut** (Activé ou Désactivé) et une **Fin de vali
 
 ---
 
+## Changer le type
+
+Une ligne CAPEX qui s'avère être une dépense de fonctionnement devient une ligne OPEX avec **Changer le type...** dans le menu **...** de l'en-tête de l'espace de travail. Il faut le niveau membre sur Budget (`budget:member`). Les modifications pas encore enregistrées sont enregistrées avant l'ouverture de la fenêtre.
+
+**À partir de** fixe le début du changement :
+
+- **La première année de la ligne** (par défaut) : la ligne elle-même devient une ligne OPEX. Elle garde son numéro `BL`, ses budgets, ventilations, liens, pièces jointes et tâches, et s'ouvre dans l'espace de travail OPEX. Elle quitte la liste et les rapports CAPEX, et rejoint la liste OPEX, les rapports OPEX et la refacturation. Son numéro `CPX` est conservé : la ligne le reprend si elle redevient CAPEX plus tard
+- **Une année ultérieure** : cette ligne se termine le 31 décembre de l'année précédente et garde ses budgets antérieurs. Une nouvelle ligne OPEX porte le budget à partir de cette année, avec les contacts et les liens vers les applications, actifs, contrats, projets et demandes. Les pièces jointes, les sites web pertinents et les tâches restent sur cette ligne. Le haut de l'onglet **Vue d'ensemble** relie les deux lignes : **Remplacée par** sur cette ligne, **Succède à** sur la nouvelle
+
+La fenêtre demande aussi :
+
+- **Compte** : un compte pour les lignes OPEX. Lorsque le compte de la ligne est réservé aux lignes CAPEX, la ligne qui change elle-même de type le garde, sauf si vous en choisissez un autre ; une nouvelle ligne à partir d'une année ultérieure ne le reçoit que s'il convient aux lignes OPEX
+- **Dimensions** : les dimensions obligatoires pour les lignes OPEX, et les valeurs de la ligne réservées aux lignes CAPEX. Si la ligne change elle-même de type, vous pouvez les renseigner maintenant ou plus tard. À partir d'une année ultérieure, la nouvelle ligne a besoin des dimensions obligatoires, et les valeurs réservées aux lignes CAPEX ne sont pas reprises. Les [dimensions CAPEX](#dimensions-capex) ne s'appliquent pas aux lignes OPEX : une ligne qui change elle-même de type garde leurs valeurs sans les afficher, et les affiche de nouveau si elle redevient CAPEX plus tard
+- **Motif** : facultatif, conservé dans le journal d'audit de la ligne
+
+Le changement est refusé lorsque la ligne a des montants dans une colonne gelée, des lignes OPEX ou CAPEX, sur les années qui changent. Dégelez d'abord la colonne, ou faites commencer le changement à une année ultérieure. Une année ultérieure est proposée lorsqu'elle suit la première année budgétaire de la ligne, que la ligne a un budget cette année-là ou une année suivante, commence avant le 1er janvier de cette année et est encore valide ce jour-là, et n'est pas déjà remplacée par une autre ligne. Un changement commence toujours le 1er janvier.
+
+Un lien vers la ligne enregistré avant le changement (un favori, un e-mail) ouvre l'espace de travail CAPEX et ne trouve aucune ligne : ouvrez-la depuis la liste OPEX. Dans un fichier budgétaire exporté avant le changement, la ligne est retrouvée par son numéro `BL`.
+
+---
+
 ## Autorisations
 
 L'accès CAPEX est contrôlé par la ressource Budget, qui couvre les postes OPEX et CAPEX de la même façon. Elle a trois niveaux :
 
 - `budget:reader` : Consulter les listes OPEX et CAPEX, ouvrir les postes, voir les budgets et ventilations (lecture seule), télécharger les pièces jointes
-- `budget:member` : Créer et modifier les postes, mettre à jour les budgets et ventilations, téléverser et supprimer les pièces jointes, gérer les relations, liens et contacts
+- `budget:member` : Créer et modifier les postes, changer leur type, mettre à jour les budgets et ventilations, téléverser et supprimer les pièces jointes, gérer les relations, liens et contacts
 - `budget:admin` : Tous les droits membre plus import et export CSV, opérations budgétaires (copier les colonnes budgétaires, copier les ventilations, réinitialiser une colonne budgétaire) et suppression en masse
 
 Le gel des colonnes budgétaires relève de l'administration budgétaire (`budget_ops:admin`).

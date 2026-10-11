@@ -27,8 +27,8 @@ async function testControllers() {
   const audit = { log: async () => undefined };
   const freeze = { assertNotFrozen: async () => undefined };
   const routes: Array<['opex' | 'capex', (budgetFile: unknown) => any]> = [
-    ['opex', (budgetFile) => new SpendItemsController(opexSvc as any, undefined as any, undefined as any, undefined as any, budgetFile as any, audit as any, freeze as any, capexSvc as any)],
-    ['capex', (budgetFile) => new CapexItemsController(capexSvc as any, undefined as any, undefined as any, undefined as any, budgetFile as any, audit as any, freeze as any, opexSvc as any)],
+    ['opex', (budgetFile) => new SpendItemsController(opexSvc as any, undefined as any, undefined as any, undefined as any, budgetFile as any, audit as any, freeze as any, capexSvc as any, undefined as any)],
+    ['capex', (budgetFile) => new CapexItemsController(capexSvc as any, undefined as any, undefined as any, undefined as any, budgetFile as any, audit as any, freeze as any, opexSvc as any, undefined as any)],
   ];
   for (const [scope, build] of routes) {
     const calls: Array<{ method: string; scope: string; caller: Record<string, unknown>; items?: unknown }> = [];

@@ -153,7 +153,7 @@ Cuando abre una partida, el espacio de trabajo muestra botones **Ant.** y **Sig.
 
 Haga clic en cualquier fila de la lista para abrir el espacio de trabajo. Tiene cuatro partes:
 
-- **Cabecera**: la referencia de la partida (p. ej., `CPX-7`) con un botón para copiarla, el nombre de la inversión (haga clic en él para cambiar el nombre de la partida), **Ant.** / **Sig.**, **Enviar enlace** y el botón de cierre
+- **Cabecera**: la referencia de la partida (p. ej., `CPX-7`) con un botón para copiarla, el nombre de la inversión (haga clic en él para cambiar el nombre de la partida), **Ant.** / **Sig.**, **Enviar enlace**, el menú **...** (**Cambiar el tipo...**, consulte [Cambiar el tipo](#cambiar-el-tipo)) y el botón de cierre
 - **Barra de metadatos** bajo el título: **Estado**, **Responsable de TI** y **Responsable de negocio**, editables en el sitio. Cuando el centro de coste de la partida tiene un responsable del presupuesto, **Responsable del presupuesto** aparece a continuación. Es de solo lectura y se deriva del centro de coste, no se almacena en la partida: pase el cursor por encima para ver de qué centro de coste procede, y cámbielo en el centro de coste (consulte [Centros de coste](cost-centers.md#responsable-del-presupuesto-en-las-lineas-de-presupuesto))
 - **Cuatro pestañas**: **Vista general**, **Presupuesto**, **Asignaciones** y **Relaciones** (la pestaña Relaciones muestra cuántos vínculos tiene la partida)
 - **Panel Propiedades** a la derecha: los campos principales de la partida. Ábralo o ciérrelo con el botón de propiedades; el espacio de trabajo recuerda su elección
@@ -573,12 +573,33 @@ Cada partida CAPEX tiene un **estado** (Habilitado o Deshabilitado) y un **Fin d
 
 ---
 
+## Cambiar el tipo
+
+Una línea CAPEX que resulta ser un gasto operativo pasa a ser una línea OPEX con **Cambiar el tipo...** en el menú **...** de la cabecera del espacio de trabajo. Necesita el nivel miembro en Presupuesto (`budget:member`). Los cambios aún no guardados se guardan antes de que se abra el diálogo.
+
+**A partir de** fija dónde empieza el cambio:
+
+- **El primer año de la línea** (por defecto): la propia línea pasa a ser una línea OPEX. Conserva su número `BL`, sus presupuestos, asignaciones, vínculos, adjuntos y tareas, y se abre en el espacio de trabajo OPEX. Sale de la lista y de los informes CAPEX, y pasa a la lista OPEX, a los informes OPEX y al contracargo. Su número `CPX` se conserva: la línea lo recupera si vuelve a ser CAPEX más adelante
+- **Un año posterior**: esta línea termina el 31 de diciembre del año anterior y conserva sus presupuestos anteriores. Una nueva línea OPEX lleva el presupuesto a partir de ese año, con los contactos y los vínculos con aplicaciones, activos, contratos, proyectos y solicitudes. Los adjuntos, los sitios web relevantes y las tareas se quedan en esta línea. La parte superior de la pestaña **Vista general** enlaza las dos líneas: **Sustituida por** en esta línea, **Sucede a** en la nueva
+
+El diálogo también pide:
+
+- **Cuenta**: una cuenta para líneas OPEX. Cuando la cuenta de la línea es solo para líneas CAPEX, la línea que cambia ella misma de tipo la conserva, salvo que elija otra; una nueva línea a partir de un año posterior solo la recibe si sirve para líneas OPEX
+- **Dimensiones**: las dimensiones obligatorias para las líneas OPEX, y los valores de la línea que son solo para líneas CAPEX. Si la propia línea cambia de tipo, puede completarlos ahora o más tarde. A partir de un año posterior, la nueva línea necesita las dimensiones obligatorias, y los valores solo para líneas CAPEX no se copian. Las [dimensiones CAPEX](#dimensiones-capex) no se aplican a las líneas OPEX: si la propia línea cambia de tipo, conserva sus valores sin mostrarlos, y los vuelve a mostrar si vuelve a ser CAPEX más adelante
+- **Motivo**: opcional, se guarda en el registro de auditoría de la línea
+
+El cambio se rechaza cuando la línea tiene importes en una columna congelada, de líneas OPEX o CAPEX, en los años que cambian. Descongele primero la columna, o haga empezar el cambio en un año posterior. Se ofrece un año posterior cuando sigue al primer año de presupuesto de la línea, la línea tiene presupuesto en ese año o en uno posterior, empieza antes del 1 de enero de ese año y sigue vigente ese día, y aún no ha sido sustituida por otra línea. Un cambio siempre empieza el 1 de enero.
+
+Un enlace a la línea guardado antes del cambio (un marcador, un correo) abre el espacio de trabajo CAPEX y no encuentra ninguna línea: ábrala desde la lista OPEX. En un archivo de presupuesto exportado antes del cambio, la línea se encuentra por su número `BL`.
+
+---
+
 ## Permisos
 
 El acceso a CAPEX se controla con el recurso Presupuesto, que cubre por igual las partidas OPEX y CAPEX. Tiene tres niveles:
 
 - `budget:reader`: Ver las listas OPEX y CAPEX, abrir partidas, ver presupuestos y asignaciones (solo lectura), descargar adjuntos
-- `budget:member`: Crear y editar partidas, actualizar presupuestos y asignaciones, subir y eliminar adjuntos, gestionar relaciones, enlaces y contactos
+- `budget:member`: Crear y editar partidas, cambiar su tipo, actualizar presupuestos y asignaciones, subir y eliminar adjuntos, gestionar relaciones, enlaces y contactos
 - `budget:admin`: Todos los derechos de miembro más importación y exportación CSV, operaciones presupuestarias (copiar columnas presupuestarias, copiar asignaciones, restablecer columna presupuestaria) y eliminación masiva
 
 Congelar columnas presupuestarias requiere la administración presupuestaria (`budget_ops:admin`).

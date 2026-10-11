@@ -6,9 +6,14 @@ import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 
-vi.mock('react-i18next', () => {
+vi.mock('react-i18next', async () => {
+  const React = await import('react');
   const translation = { t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } };
-  return { useTranslation: () => translation };
+  // `Trans` (the lineage of a line, lot M): its key, then its link holding the reference.
+  const Trans = ({ i18nKey, values, components }: { i18nKey: string; values?: Record<string, unknown>; components?: { link?: React.ReactElement } }) => (
+    <span>{i18nKey} {components?.link ? React.cloneElement(components.link, {}, String(values?.reference ?? '')) : null}</span>
+  );
+  return { useTranslation: () => translation, Trans };
 });
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn() } }));
 // The page asks before leaving with changes it could not save.
@@ -142,6 +147,15 @@ vi.mock('../../components/finance/BudgetTab', async () => {
 vi.mock('../../components/finance/AllocationsTab', () => ({ default: () => null }));
 vi.mock('./editors/RelationsPanel', () => ({ default: () => null }));
 vi.mock('../../components/EntityTasksPanel', () => ({ default: () => null }));
+// The change type dialog (lot M) stands in: open, it says for which line, and « confirm type change »
+// answers as the server does for a change in place.
+vi.mock('../../components/finance/ChangeTypeDialog', () => ({
+  default: ({ open, nature, lineId, onChanged }: { open: boolean; nature: string; lineId: string; onChanged: (result: unknown) => void }) => (open ? (
+    <div data-testid="change-type-dialog" data-nature={nature} data-line={lineId}>
+      <button type="button" onClick={() => onChanged({ id: lineId, reference: 'BL-7', nature: 'capex' })}>confirm type change</button>
+    </div>
+  ) : null),
+}));
 
 import api from '../../api';
 import SpendItemPage from './SpendItemPage';
@@ -185,6 +199,12 @@ function ListPageProbe() {
   return <div data-testid="list-page" data-search={search} />;
 }
 
+/** Stands for the CAPEX workspace: shows the path a change of type opened. */
+function CapexPageProbe() {
+  const { pathname } = useLocation();
+  return <div data-testid="capex-page" data-path={pathname} />;
+}
+
 // The routers here render like the app's (`useTransitions={false}` in main.tsx).
 function renderAt(path: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -195,6 +215,7 @@ function renderAt(path: string) {
           <Routes>
             <Route path="/ops/opex/:id/:tab" element={<SpendItemPage />} />
             <Route path="/ops/opex" element={<ListPageProbe />} />
+            <Route path="/ops/capex/:id/:tab" element={<CapexPageProbe />} />
           </Routes>
         </MemoryRouter>
       </ThemeProvider>
@@ -438,6 +459,8 @@ describe('SpendItemPage edit', () => {
   it('clears the supplier as null, not as an empty string', async () => {
     renderAt(`/ops/opex/${ITEM_ID}/overview`);
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, expect.objectContaining({ signal: expect.any(AbortSignal) })));
+    // The form shows the line (the click below starts from what the screen shows: its base).
+    await waitFor(() => expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', 'account-1'));
     // Writes wait for the line to load; retry the click until one goes through.
     await waitFor(() => {
       fireEvent.click(screen.getByRole('button', { name: 'clear supplier' }));
@@ -1762,5 +1785,58 @@ describe('SpendItemPage required dimensions before leaving (lot D2)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
     expect(await screen.findByTestId('list-page')).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
+describe('SpendItemPage change type (lot M)', () => {
+  let detail: Record<string, unknown>;
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.patch.mockReset();
+    auth.canEdit = true;
+    detail = {
+      id: ITEM_ID, item_number: 7, product_name: 'Monitoring', notes: 'Renewal', row_version: 3,
+      paying_company_id: 'company-1', account_id: 'account-1', currency: 'EUR', effective_start: '2026-01-01',
+    };
+    mocked.get.mockImplementation(async (url: string) => (url === `/spend-items/${ITEM_ID}` ? { data: detail } : { data: {} }));
+    mocked.patch.mockResolvedValue({ data: { row_version: 4 } });
+  });
+  afterEach(() => { auth.canEdit = true; });
+
+  it('the « … » pill opens the change of type; once changed, the line opens in its new type', async () => {
+    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    await screen.findByDisplayValue('Renewal');
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.moreActions' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'ops:shared.changeType.menuItem' }));
+    const dialog = await screen.findByTestId('change-type-dialog');
+    expect(dialog).toHaveAttribute('data-nature', 'opex');
+    expect(dialog).toHaveAttribute('data-line', ITEM_ID);
+    fireEvent.click(screen.getByRole('button', { name: 'confirm type change' }));
+    expect(await screen.findByTestId('capex-page')).toHaveAttribute('data-path', '/ops/capex/BL-7/overview');
+  });
+
+  it('saves the notes still typed before the dialog reads the line', async () => {
+    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    const notes = await screen.findByDisplayValue('Renewal');
+    fireEvent.change(notes, { target: { value: 'Renewal in March' } });
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.moreActions' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'ops:shared.changeType.menuItem' }));
+    await screen.findByTestId('change-type-dialog');
+    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { notes: 'Renewal in March', base: { notes: 'Renewal' } });
+  });
+
+  it('is not offered without the budget member level', async () => {
+    auth.canEdit = false;
+    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    await screen.findByDisplayValue('Renewal');
+    expect(screen.queryByRole('button', { name: 'buttons.moreActions' })).toBeNull();
+  });
+
+  it('names the line that replaces this one; it opens in its own type', async () => {
+    detail = { ...detail, lineage: { predecessor: null, successor: { id: 'line-2', reference: 'BL-9', nature: 'capex', from_year: 2026 } } };
+    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    expect(await screen.findByText(/shared\.lineage\.replacedBy/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'BL-9' }));
+    expect(await screen.findByTestId('capex-page')).toHaveAttribute('data-path', '/ops/capex/BL-9/overview');
   });
 });

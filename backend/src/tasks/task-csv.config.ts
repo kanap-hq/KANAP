@@ -599,6 +599,30 @@ export const taskCsvConfig: CsvEntityConfig = {
       }
     }
 
+    // A budget line named by its id: the task takes the type of the line's nature (`spend_item` for
+    // an OPEX line, `capex_item` for a CAPEX line), whatever the file says. A file exported before
+    // the line changed type (lot M) keeps naming the type of before; a task of that type on the line
+    // would be shown by no reader. An id that names no budget line is left as it is.
+    const budgetLineTasks = entities.filter(
+      (e) => (e.related_object_type === 'spend_item' || e.related_object_type === 'capex_item') && e.related_object_id,
+    );
+    if (budgetLineTasks.length > 0) {
+      const lineIds = [...new Set(budgetLineTasks.map((e) => String(e.related_object_id)))]
+        .filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+      const lineRows: Array<{ id: string; nature: string }> = lineIds.length > 0
+        ? await context.manager.query(
+          // Both natures on purpose: the nature read here is the answer (`spend/budget-nature.ts`).
+          `SELECT id::text AS id, nature FROM spend_items WHERE tenant_id = $1 AND id = ANY($2::uuid[]) AND nature IN ('opex', 'capex')`,
+          [context.tenantId, lineIds],
+        )
+        : [];
+      const natureById = new Map(lineRows.map((row) => [row.id.toLowerCase(), row.nature]));
+      for (const entity of budgetLineTasks) {
+        const nature = natureById.get(String(entity.related_object_id).toLowerCase());
+        if (nature) entity.related_object_type = nature === 'capex' ? 'capex_item' : 'spend_item';
+      }
+    }
+
     // Re-scope phase_id: the generic FK resolver matches phase names
     // tenant-wide, so a repeated name ("Design", "Build") can resolve to
     // another project's phase. Re-anchor each phase to the task's project.

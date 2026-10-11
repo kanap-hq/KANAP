@@ -153,7 +153,7 @@ When you open an item, the workspace shows **Prev** and **Next** buttons. These 
 
 Click any row in the list to open the workspace. It has four parts:
 
-- **Header**: the item reference (e.g., `CPX-7`) with a copy button, the investment's name (click it to rename the item), **Prev** / **Next**, **Send link**, and the close button
+- **Header**: the item reference (e.g., `CPX-7`) with a copy button, the investment's name (click it to rename the item), **Prev** / **Next**, **Send link**, the **...** menu (**Change type...**, see [Changing the type](#changing-the-type)), and the close button
 - **Metadata bar** under the title: **Status**, **IT owner**, and **Business owner**, each editable in place. When the item's cost center has a budget holder, **Budget holder** follows them. It is read only and derived from the cost center, not stored on the item: hover it to see which cost center it comes from, and change it on the cost center (see [Cost centers](cost-centers.md#budget-holder-on-budget-lines))
 - **Four tabs**: **Overview**, **Budget**, **Allocations**, and **Relations** (the Relations tab shows how many links the item has)
 - **Properties panel** on the right: the item's main fields. Open or close it with the properties button; the workspace remembers your choice
@@ -575,12 +575,33 @@ Every CAPEX item has a **status** (Enabled or Disabled) and an optional **End of
 
 ---
 
+## Changing the type
+
+A CAPEX line that turns out to be operating spend becomes an OPEX line with **Change type...** in the **...** menu of the workspace header. You need the Member level on Budget (`budget:member`). Edits not saved yet are saved before the dialog opens.
+
+**From** sets where the change starts:
+
+- **The line's first year** (the default): the line itself becomes an OPEX line. It keeps its `BL` number, its budgets, allocations, links, attachments and tasks, and opens in the OPEX workspace. It leaves the CAPEX list and reports, and joins the OPEX list, the OPEX reports and the chargeback. Its `CPX` number is kept: the line takes it again if it becomes CAPEX later
+- **A later year**: this line ends on 31 December of the year before and keeps its earlier budgets. A new OPEX line carries the budget from that year on, with the contacts and the links to applications, assets, contracts, projects and requests. Attachments, relevant websites and tasks stay on this line. The top of the **Overview** tab links the two lines: **Replaced by** on this line, **Follows** on the new one
+
+The dialog also asks for:
+
+- **Account**: an account for OPEX lines. When the line's account is for CAPEX lines only, the line keeps it in place unless you choose another one; a new line from a later year gets it only when it suits OPEX lines
+- **Dimensions**: the dimensions required for OPEX lines, and the values of the line that are for CAPEX lines only. In place, you can set them now or later. From a later year, the new line needs the required ones, and values for CAPEX lines only are not copied. The [CAPEX dimensions](#capex-dimensions) do not apply to OPEX lines: in place, the line keeps their values without showing them, and shows them again if it becomes CAPEX later
+- **Reason**: optional, kept in the line's audit trail
+
+The change is refused when the line has amounts in a frozen column, of OPEX or CAPEX lines, in the years that change. Unfreeze the column first, or start the change from a later year. A later year is offered when it comes after the line's first budget year, the line has a budget in that year or a later one, starts before 1 January of that year and is still valid on that day, and has not been replaced by another line already. A change always starts on 1 January.
+
+A link to the line saved before the change (a bookmark, an e-mail) opens the CAPEX workspace and finds no line: open it from the OPEX list. In a budget file exported before the change, the line is found by its `BL` number.
+
+---
+
 ## Permissions
 
 CAPEX access is controlled by the Budget resource, which covers OPEX and CAPEX lines alike. It has three levels:
 
 - `budget:reader` -- View the OPEX and CAPEX lists, open items, see budgets and allocations (read-only), download attachments
-- `budget:member` -- Create and edit items, update budgets and allocations, upload and delete attachments, manage relations, links and contacts
+- `budget:member` -- Create and edit items, change their type, update budgets and allocations, upload and delete attachments, manage relations, links and contacts
 - `budget:admin` -- All member rights plus CSV import and export, budget operations (copy budget columns, copy allocations, reset budget column), and bulk delete
 
 Freezing budget columns needs Budget administration (`budget_ops:admin`).

@@ -33,6 +33,16 @@ export class SpendItem {
   @Column('text', { nullable: true, select: false })
   legacy_number!: string | null;
 
+  /**
+   * The line this one continues (migration 1854000000000, lot M): set on the new line when the type
+   * of a line changes from a later year than its first one. Same tenant (composite key), one
+   * successor per line, cleared when that line is deleted. Written by the type change only
+   * (`budget-line-type-change.service.ts`), never by a request body; never selected unless asked
+   * for: the workspace reads both directions (`readLineLineage`).
+   */
+  @Column('uuid', { nullable: true, select: false })
+  predecessor_id!: string | null;
+
   @Column('uuid', { nullable: true })
   paying_company_id!: string | null;
 

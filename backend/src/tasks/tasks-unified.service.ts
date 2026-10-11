@@ -15,6 +15,7 @@ import { TaskActivitiesService } from './task-activities.service';
 import { TaskAttachmentsService } from './task-attachments.service';
 import { detectChanges, resolveDisplayNames, TASK_TRACKED_FIELDS, FieldConfig } from '../common/change-detection';
 import { normalizeMarkdownRichText } from '../common/markdown-rich-text';
+import { writeTaskColumns } from './task-column-write';
 import { ParticipationAccessScope, taskParticipantCondition } from '../auth/business-contributor-scope';
 
 export type RelatedType = 'spend_item' | 'contract' | 'capex_item' | 'project' | 'incident' | null;
@@ -677,15 +678,18 @@ export class TasksUnifiedService {
     }
 
     // `where`: a `spend_item` task names an OPEX line, a `capex_item` task a CAPEX line, both in
-    // `spend_items` (`spend/budget-nature.ts`), never a line of the other nature.
-    const tableByType: Record<'spend_item' | 'contract' | 'capex_item' | 'incident', { table: string; label: string; where?: string }> = {
-      spend_item: { table: 'spend_items', label: 'Spend item', where: ` AND nature = 'opex'` },
+    // `spend_items` (`spend/budget-nature.ts`), never a line of the other nature. `lock`: the line is
+    // read FOR SHARE, so a change of its type (lot M, which holds it FOR NO KEY UPDATE and moves its
+    // tasks to the other type) is waited for: the task is then refused for a line of the other
+    // nature (404) instead of being written with a type nobody reads.
+    const tableByType: Record<'spend_item' | 'contract' | 'capex_item' | 'incident', { table: string; label: string; where?: string; lock?: string }> = {
+      spend_item: { table: 'spend_items', label: 'Spend item', where: ` AND nature = 'opex'`, lock: ' FOR SHARE' },
       contract: { table: 'contracts', label: 'Contract' },
-      capex_item: { table: 'spend_items', label: 'CAPEX item', where: ` AND nature = 'capex'` },
+      capex_item: { table: 'spend_items', label: 'CAPEX item', where: ` AND nature = 'capex'`, lock: ' FOR SHARE' },
       incident: { table: 'incidents', label: 'Incident' },
     };
     const targetMeta = tableByType[target.type];
-    const [row] = await manager.query(`SELECT id FROM ${targetMeta.table} WHERE id = $1${targetMeta.where ?? ''} LIMIT 1`, [target.id]);
+    const [row] = await manager.query(`SELECT id FROM ${targetMeta.table} WHERE id = $1${targetMeta.where ?? ''} LIMIT 1${targetMeta.lock ?? ''}`, [target.id]);
     if (!row) throw new NotFoundException(`${targetMeta.label} not found`);
     return { type: target.type, id: target.id };
   }
@@ -719,6 +723,10 @@ export class TasksUnifiedService {
     const applicationIds = hasApplicationIds ? this.normalizeLinkIds(payloadRecord.application_ids, 'application_ids') : [];
     const assetIds = hasAssetIds ? this.normalizeLinkIds(payloadRecord.asset_ids, 'asset_ids') : [];
     if (!payload?.title || !payload.title.toString().trim()) throw new BadRequestException('title required');
+    // A task of a budget line: the line of the type's nature, read FOR SHARE until the task is saved,
+    // so a change of the line's type (lot M) never leaves it with the type of before (see
+    // `resolveTargetContext`).
+    if (target.type === 'spend_item' || target.type === 'capex_item') await this.resolveTargetContext(target, manager);
 
     const isStandalone = target.type === null;
 
@@ -868,11 +876,12 @@ export class TasksUnifiedService {
       }
     }
 
-    const next = { ...existing, ...payload } as Task;
-    if (this.hasOwn(payload, 'description')) {
-      next.description = normalizedDescription as any;
-    }
-    const saved = await repo.save(next);
+    // The fields the body sends, and those only (`task-column-write.ts`): the task read above may be
+    // older than its relation, which this route never changes (a move goes through `updateById`).
+    const { id: _id, related_object_type: _type, related_object_id: _relatedId, ...fields } = payload as Record<string, unknown>;
+    void _id; void _type; void _relatedId;
+    if (this.hasOwn(payload, 'description')) fields.description = normalizedDescription;
+    const saved = await writeTaskColumns(repo, existing, fields);
     await this.audit.log({
       table: 'tasks',
       recordId: saved.id,
@@ -1049,13 +1058,12 @@ export class TasksUnifiedService {
       }
     }
 
-    const next = {
-      ...existing,
+    // The fields the body changes, and the relation only when it moves, checked above under the
+    // target's lock (`task-column-write.ts`): never the rest of the task read above.
+    const saved = await writeTaskColumns(repo, existing, {
       ...nextPayload,
-      related_object_type: resolvedTarget.type,
-      related_object_id: resolvedTarget.id,
-    } as Task;
-    const saved = await repo.save(next);
+      ...(relationChanged ? { related_object_type: resolvedTarget.type, related_object_id: resolvedTarget.id } : {}),
+    } as Record<string, unknown>);
     await this.audit.log({
       table: 'tasks',
       recordId: saved.id,

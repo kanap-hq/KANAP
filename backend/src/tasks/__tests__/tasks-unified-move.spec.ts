@@ -41,12 +41,14 @@ function makeTask(overrides: Record<string, unknown> = {}) {
 function makeService(existingTask: any) {
   const recalculatedProjects: string[] = [];
   const savedTasks: any[] = [];
+  // The task as stored: a write sets the columns it names (`task-column-write.ts`), a read returns it.
+  const stored = { ...existingTask };
   const taskRepo = {
-    findOne: async () => ({ ...existingTask }),
-    save: async (task: any) => {
-      const saved = { ...task };
-      savedTasks.push(saved);
-      return saved;
+    metadata: { columns: Object.keys(makeTask()).map((propertyName) => ({ propertyName })) },
+    findOne: async () => ({ ...stored }),
+    update: async (_where: unknown, set: Record<string, unknown>) => {
+      Object.assign(stored, set);
+      savedTasks.push({ ...stored });
     },
   };
   const manager = {

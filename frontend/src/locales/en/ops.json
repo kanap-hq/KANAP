@@ -876,6 +876,59 @@
       "y": "Y",
       "yPlus1": "Y+1",
       "yPlus2": "Y+2"
+    },
+    "changeType": {
+      "menuItem": "Change type...",
+      "title": "Change the type of {{reference}}",
+      "subtitle": {
+        "capex": "This OPEX line becomes a CAPEX line.",
+        "opex": "This CAPEX line becomes an OPEX line."
+      },
+      "fromLabel": "From",
+      "fromFirstYear": "{{year}}, its first year: the line changes type",
+      "fromYear": "{{year}}: a new {{type}} line from {{year}}",
+      "fromAllYears": "All years: the line has no budget yet",
+      "datedRefusal": {
+        "successor": "A later year is not offered: this line is already replaced by {{reference}}.",
+        "no_later_year": "A later year is not offered: the line has no budget after its first year.",
+        "ends": "A later year is not offered: the line ends before {{year}}.",
+        "starts": "A later year is not offered: the line starts in {{year}} or later."
+      },
+      "effects": {
+        "inPlace": "The line keeps its reference, budget, allocations, links, attachments and tasks.",
+        "reports": {
+          "capex": "It leaves the OPEX list, the OPEX reports and the chargeback, and joins the CAPEX list.",
+          "opex": "It leaves the CAPEX list and reports, and joins the OPEX list, the OPEX reports and the chargeback."
+        },
+        "dated_one": "This line ends on {{end}} and keeps its budget before {{year}}. A new {{type}} line carries the budget from {{year}} ({{count}} year), with the contacts and the links to applications, assets, contracts, projects and requests.",
+        "dated_other": "This line ends on {{end}} and keeps its budget before {{year}}. A new {{type}} line carries the budget from {{year}} ({{count}} years), with the contacts and the links to applications, assets, contracts, projects and requests.",
+        "datedStays": "Attachments, web links and tasks stay on this line. Values that do not apply to {{type}} lines are not copied."
+      },
+      "frozen": "{{column}} {{year}} is frozen for {{type}} lines, and this line has amounts in it.",
+      "frozenHelp": "Unfreeze the column first, or change the type from a later year.",
+      "accountLabel": "Account",
+      "accountUnfit": "{{account}} is for {{type}} lines only. Choose an account for {{target}} lines, or keep it and change it later.",
+      "accountNotCopied": "{{account}} is not copied to the new line. Choose an account for {{target}} lines, or leave it empty.",
+      "dimensionFallback": "Analytics dimension",
+      "valueOtherType": "{{value}} is for {{type}} lines only. Choose another value, or keep it and change it later.",
+      "valueOtherTypeDated": "{{value}} is for {{type}} lines only and is not copied. Choose a value for the new line.",
+      "requiredInPlace": "Required for {{type}} lines. You can also set it later.",
+      "requiredDated": "Required for the new line.",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "e.g., bought outright instead of leased",
+      "save": "Change type",
+      "failed": "The type could not be changed.",
+      "changedMeanwhile": "The line changed since the dialog opened. Check what the dialog shows, then change the type again.",
+      "loadFailed": "The line could not be read."
+    },
+    "lineage": {
+      "follows": "Follows <link>{{reference}}</link> ({{type}})",
+      "replacedBy": "Replaced by <link>{{reference}}</link> ({{type}}) from {{year}}",
+      "replacedByNoYear": "Replaced by <link>{{reference}}</link> ({{type}})",
+      "type": {
+        "opex": "OPEX line",
+        "capex": "CAPEX line"
+      }
     }
   },
   "fields": {

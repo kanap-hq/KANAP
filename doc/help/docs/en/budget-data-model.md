@@ -60,7 +60,7 @@ A line lives across years: a three-year licence is one line with three budget ye
 
 | Field | Column in the budget file | Required | Notes |
 |---|---|---|---|
-| Nature | `nature` | Yes | `opex` or `capex`. A file does not change the nature of an existing line. A file without this column is read as lines of the list it is imported on |
+| Nature | `nature` | Yes | `opex` or `capex`. A file does not change the nature of an existing line (see [Changing the type of a line](#changing-the-type-of-a-line)). A file without this column is read as lines of the list it is imported on |
 | Number | `item_number` | Set by KANAP | `BL-12`. Empty in the file creates a line |
 | Product name (OPEX), title (CAPEX) | `name` | Yes | |
 | Description (OPEX) | `description` | No | Not read or written on a CAPEX line yet |
@@ -79,6 +79,15 @@ A line lives across years: a three-year licence is one line with three budget ye
 | Notes | `notes` | No | |
 
 A line has no status of its own to load. It is enabled until its end of validity, then disabled within the hour. The budget holder shown on a line comes from its cost center and is not stored on the line.
+
+### Changing the type of a line
+
+A line changes from OPEX to CAPEX, or back, in its workspace (**Change type...** in the **...** menu, see [OPEX](opex.md#changing-the-type) and [CAPEX](capex.md#changing-the-type)). A budget file never changes it. The change starts on 1 January of a year:
+
+- **From the line's first year**, the line itself changes type. It keeps its `BL` number, its budget years, allocations, links, attachments and tasks. A line that becomes CAPEX gets a `CPX` number, which it keeps if it becomes OPEX again
+- **From a later year**, the line ends on 31 December of the year before and keeps its earlier budget years. A new line of the other type, with its own `BL` number, carries the later budget years, the contacts and the links to applications, assets, contracts, projects and requests. The new line records the line it follows, and each line shows the other
+
+A line is replaced by one line at most. The change is refused while a frozen column holds amounts of the line in the years that change.
 
 ### Budget years
 

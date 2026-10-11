@@ -60,7 +60,7 @@ Un poste vit sur plusieurs années : une licence sur trois ans est un poste avec
 
 | Champ | Colonne du fichier budgétaire | Obligatoire | Remarques |
 |---|---|---|---|
-| Nature | `nature` | Oui | `opex` ou `capex`. Un fichier ne change pas la nature d'un poste existant. Un fichier sans cette colonne est lu comme des postes de la liste sur laquelle il est importé |
+| Nature | `nature` | Oui | `opex` ou `capex`. Un fichier ne change pas la nature d'un poste existant (voir [Changer le type d'un poste](#changer-le-type-dun-poste)). Un fichier sans cette colonne est lu comme des postes de la liste sur laquelle il est importé |
 | Numéro | `item_number` | Attribué par KANAP | `BL-12`. Vide dans le fichier : crée un poste |
 | Nom du produit (OPEX), titre (CAPEX) | `name` | Oui | |
 | Description (OPEX) | `description` | Non | Pas encore lue ni écrite sur un poste CAPEX |
@@ -79,6 +79,15 @@ Un poste vit sur plusieurs années : une licence sur trois ans est un poste avec
 | Notes | `notes` | Non | |
 
 Un poste n'a pas de statut à charger. Il est actif jusqu'à sa fin de validité, puis désactivé dans l'heure. Le responsable budgétaire affiché sur un poste vient de son centre de coûts et n'est pas enregistré sur le poste.
+
+### Changer le type d'un poste
+
+Un poste passe d'OPEX à CAPEX, ou l'inverse, dans son espace de travail (**Changer le type...** dans le menu **...**, voir [OPEX](opex.md#changer-le-type) et [CAPEX](capex.md#changer-le-type)). Un fichier budgétaire ne le change jamais. Le changement commence le 1er janvier d'une année :
+
+- **À partir de la première année du poste**, le poste lui-même change de type. Il garde son numéro `BL`, ses années budgétaires, ventilations, liens, pièces jointes et tâches. Un poste qui devient CAPEX reçoit un numéro `CPX`, qu'il garde s'il redevient OPEX
+- **À partir d'une année ultérieure**, le poste se termine le 31 décembre de l'année précédente et garde ses années budgétaires antérieures. Un nouveau poste de l'autre type, avec son propre numéro `BL`, porte les années budgétaires suivantes, les contacts et les liens vers les applications, actifs, contrats, projets et demandes. Le nouveau poste enregistre le poste auquel il succède, et chaque poste affiche l'autre
+
+Un poste est remplacé par un seul poste au plus. Le changement est refusé tant qu'une colonne gelée contient des montants du poste sur les années qui changent.
 
 ### Années budgétaires
 

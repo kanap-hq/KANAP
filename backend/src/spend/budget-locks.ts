@@ -41,6 +41,16 @@ import { assertScopeNatures, BUDGET_NATURES, linkedLineOf, natureAnd, naturesAnd
  * ends with a deadlock, answered 409 `retry` (lot 1D). Rare (a master data
  * delete during a bulk operation) and retried as is.
  *
+ * A second one, of the same kind (lot M): deleting a line that another line
+ * continues sets that successor's `predecessor_id` to NULL (`ON DELETE SET NULL
+ * (predecessor_id)`), which locks the successor while the delete holds the
+ * line, outside the id order. A writer that locks several lines in id order
+ * (the budget file's `lockBudgetLinesOfBothNatures`, a column operation when
+ * both lines have its nature) and holds the successor while it waits for the
+ * deleted line ends in a deadlock with the delete, answered 409 `retry` the
+ * same way. Rare (deleting a line continued by another during a bulk write of
+ * both) and retried as is.
+ *
  * The locks are also the nature gate of every writer (`budget-nature.ts`):
  * the line, its versions and a year's lines are locked for the scope's nature
  * only, so a line of the other nature is "gone" for its caller, which answers
@@ -171,10 +181,19 @@ export async function lockBudgetVersions(manager: EntityManager, scope: AmountSc
 
 /**
  * Locks a version by its id alone: its line first, then the version. The
- * version's line is read without a lock (a version never changes line); the
- * version is read again under the lock. Null when the version or its line is
- * gone (deleted meanwhile), or when the line has another nature than the
- * scope's (the line lock names the nature).
+ * version's line is read without a lock, then the version is locked only if it
+ * still belongs to that line and the line has the scope's nature (the line lock
+ * names the nature). Null when the version or its line is gone (deleted
+ * meanwhile), when the line has another nature than the scope's, or when the
+ * version moved to another line meanwhile.
+ *
+ * A version moves to another line in one case: the type change of a line from
+ * a later year (lot M, `budget-line-type-change.service.ts`) moves the versions
+ * of that year and after to a new line, under the lock of the line they leave.
+ * A writer that read the old line before the move, then waited for its lock,
+ * finds the version on another line and answers "gone" (404): it never writes a
+ * version through a line it does not hold, whatever the natures of the two
+ * lines are by then (the new line may have changed type again in place).
  */
 export async function lockVersionWithLine(
   manager: EntityManager,
@@ -189,8 +208,14 @@ export async function lockVersionWithLine(
   );
   if (!found) return null;
   if (!(await lockBudgetLine(manager, scope, tenantId, found.item_id))) return null;
-  const locked = await lockBudgetVersions(manager, scope, tenantId, [versionId]);
-  return locked.has(versionId) ? { itemId: found.item_id } : null;
+  // Read again under the line's lock: the version, of a line of the scope's nature, still on the line locked.
+  const locked: Array<{ id: string }> = await manager.query(
+    `SELECT id FROM ${t.versions}
+      WHERE tenant_id = $1 AND id = $2 AND ${t.itemFk} = $3${versionNature(t)}
+        FOR NO KEY UPDATE`,
+    [tenantId, versionId, found.item_id],
+  );
+  return locked.length > 0 ? { itemId: found.item_id } : null;
 }
 
 /** `lockVersionWithLine`, refusing a missing version with a 404. */

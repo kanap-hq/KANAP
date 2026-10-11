@@ -30,6 +30,7 @@ import { BudgetFileService, canCreateSuppliers } from './budget-file/budget-file
 import { exportListQuery } from './budget-file/export-file';
 import { importAnalyzeTables } from './budget-file/import-file';
 import { BudgetFileSizeInterceptor, budgetFileMulterOptions } from './budget-file/upload';
+import { BudgetLineTypeChangeService } from './budget-line-type-change.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('spend-items')
@@ -44,6 +45,8 @@ export class SpendItemsController {
     private readonly freeze: FreezeService,
     /** The CAPEX lines' service: a budget file may hold lines of both natures, each written by its own (lot C1b). */
     private readonly capexSvc: CapexItemsService,
+    /** The change of type of a line (lot M), shared by both natures' routes. */
+    private readonly typeChange: BudgetLineTypeChangeService,
   ) {}
 
   /** Every `:id` route takes a UUID or an OPX-N reference; a malformed id is a 400. */
@@ -483,6 +486,41 @@ export class SpendItemsController {
   ) {
     const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.contactsSvc.syncFromSupplierForItem(id, ctx.userId || null, { manager: ctx.manager, tenantId: ctx.tenantId });
+  }
+
+  /**
+   * What the "Change the type" dialog shows (lot M, `budget-line-type-change.service.ts`): the years
+   * the change may start from, the frozen columns that refuse it, the account and dimensions to ask
+   * for, what it carries. `from_year`: the year chosen (none: the first one). Same level as the change.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'member')
+  @Get(':id/change-type/check')
+  async changeTypeCheck(
+    @Param('id') idOrRef: string,
+    @Query('from_year') fromYear: string,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
+    return this.typeChange.check('opex', id, { from_year: fromYear }, { manager: ctx.manager as EntityManager, tenantId: ctx.tenantId });
+  }
+
+  /**
+   * Changes the type of the line, in place from its first year or from a later year with a new line
+   * of the other type (lot M). Body: `row_version` (the one the dialog read), `from_year`,
+   * `account_id`, `analytics_values`, `reason`. The level of a line's creation and update.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'member')
+  @Post(':id/change-type')
+  @HttpCode(200)
+  async changeType(
+    @Param('id') idOrRef: string,
+    @Body() body: unknown,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
+    return this.typeChange.change('opex', id, body, ctx.userId || null, { manager: ctx.manager as EntityManager, tenantId: ctx.tenantId });
   }
 
   @UseGuards(PermissionGuard)
