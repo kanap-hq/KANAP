@@ -643,7 +643,11 @@ function copiedValue(axis: AnalyticsAxisInfo, value: CurrentValue, target: Budge
   return axis.status === 'enabled' && axisAppliesTo(axis, target) && valueAppliesTo(value, target) && isValueActive(value);
 }
 
-/** What the change moves, for the dialog: in place (`fromYear` null), everything; dated, the versions from the year. */
+/**
+ * What the change carries to the line of the new type, for the dialog. In place (`fromYear`
+ * null): everything. Dated: the versions from the year, the contacts and the five link families,
+ * which are copied; the tasks, attachments and web links stay on the old line (0 carried).
+ */
 async function countCarried(manager: EntityManager, nature: BudgetNature, tenantId: string, itemId: string, fromYear: number | null): Promise<ChangeTypeCheck['carried']> {
   const [row] = await manager.query(
     `SELECT (SELECT count(*) FROM spend_versions WHERE tenant_id = $1 AND spend_item_id = $2 AND ($3::int IS NULL OR budget_year >= $3::int))::int AS versions,
@@ -658,7 +662,7 @@ async function countCarried(manager: EntityManager, nature: BudgetNature, tenant
             (SELECT count(*) FROM portfolio_request_opex WHERE tenant_id = $1 AND opex_id = $2)::int AS requests`,
     [tenantId, itemId, fromYear, TASK_TYPE[nature]],
   );
-  return row;
+  return fromYear === null ? row : { ...row, tasks: 0, attachments: 0, links: 0 };
 }
 
 /** A line as the audit rows of `nature` record it, with its analytics values. */

@@ -96,7 +96,10 @@ async function testFromYear() {
       [[w.requiredAxis.id, 'required', true], [w.sharedAxis.id, 'value_other_type', false]],
       'the new line needs the required CAPEX dimension; the OPEX-only value stays behind',
     );
-    assert.deepEqual([check.carried.versions, check.carried.tasks, check.account.carried], [2, 1, false], 'two versions move; the OPEX account is not copied');
+    assert.deepEqual(check.carried, {
+      versions: 2, tasks: 0, attachments: 0, links: 0, contacts: 1, applications: 1, assets: 1, contracts: 1, projects: 1, requests: 1,
+    }, 'two versions move; tasks, attachments and web links stay; contacts and links are copied');
+    assert.equal(check.account.carried, false, 'the OPEX account is not copied');
 
     // The new line passes the creation of its type: without the required dimension it is refused.
     const missing = await statusOf(runner, () => opex.changeType(line.id, { row_version: check.row_version, from_year: 2026 }, ctx));

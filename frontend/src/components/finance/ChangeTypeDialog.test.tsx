@@ -59,7 +59,7 @@ const DATED: ChangeTypeCheck = {
     { axis_id: 'axis-kind', axis_name: 'Investment kind', reason: 'required', required: true, current: null },
     { axis_id: 'axis-pool', axis_name: 'Cost pool', reason: 'value_other_type', required: false, current: { id: 'v-subs', name: 'Subscriptions' } },
   ],
-  carried: { ...BASE.carried, versions: 2 },
+  carried: { ...BASE.carried, versions: 2, tasks: 0, attachments: 0, links: 0 },
 };
 
 function renderDialog(onChanged = vi.fn(), onClose = vi.fn()) {
