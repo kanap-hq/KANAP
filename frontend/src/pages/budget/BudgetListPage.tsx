@@ -40,7 +40,6 @@ import { budgetListFieldPredicate } from './listFields';
 import { useTenant } from '../../tenant/TenantContext';
 import { drawerMenuItemSx } from '../../theme/formSx';
 import { migrateBudgetGridLayout, type BudgetNatureScope, natureScopeOf } from './listPreferences';
-import { getDotColor, getPillBg } from '../../utils/statusColors';
 import { statusColumnProps } from '../../components/grid/statusColumn';
 
 /**
@@ -424,8 +423,8 @@ function BudgetListPageView() {
       colId: 'item_number',
       headerName: t('opex.columns.reference'),
       // Room for the header and its filter text.
-      width: 120,
-      minWidth: 120,
+      width: 100,
+      minWidth: 100,
       valueGetter: (p) => (p.data?.item_number != null ? formatItemRef('budget', p.data.item_number) : ''),
       cellStyle: {
         color: 'var(--kanap-text-secondary)',
@@ -456,11 +455,7 @@ function BudgetListPageView() {
         <Chip
           size="small"
           label={t(`budget.${params.value}`)}
-          // Status palette tones (blue, purple): text contrast above 4.5:1 on the tint, light and dark.
-          sx={(theme) => {
-            const tone = params.value === 'capex' ? 'secondary' : 'info';
-            return { height: 22, fontSize: 12, fontWeight: 500, bgcolor: getPillBg(tone, theme.palette.mode), color: getDotColor(tone, theme.palette.mode) };
-          }}
+          sx={{ height: 22, fontSize: 12, fontWeight: 500 }}
         />
       ),
     },
