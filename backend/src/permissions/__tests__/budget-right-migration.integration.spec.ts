@@ -7,16 +7,22 @@ import { BudgetRight1853990000000 as Migration } from '../../migrations/18539900
 
 // Migration 1853990000000 (one budget right, lot R), against a real database, each test in a
 // transaction that is rolled back. The database is migrated already: each test seeds roles that
-// still hold `opex` / `capex` rows, as a database of before lot R does, then runs up():
+// still hold `opex` / `capex` rows, as a database of before lot R does, then runs up(). The rule:
+// each role keeps the access it had, `budget` = the highest effective `opex`/`capex` level as the
+// guard of before lot R read it.
 // - tenant A: a role with `opex:admin` and `capex:reader` (admin), `opex` only (member), `capex`
-//   only (reader), `opex:manager` and `capex:reader` (member: `manager` counts as member), a
-//   `budget:admin` row already there with `opex`/`capex` at reader (admin kept), both at member
-//   (member, not logged), another right left alone (`tasks`), and an `opex` row whose tenant is
-//   not its role's (never read: deleted, no `budget`);
-// - tenant B: a role with `opex:reader` and `capex:admin` (admin), logged under its tenant;
+//   only (reader), `opex:manager` and `capex:reader` (reader: `manager` gave no access),
+//   `manager` on both (no budget right), a `budget:admin` row of before with `opex`/`capex` at
+//   reader (lowered to reader), a `budget:admin` row alone (deleted), both at member (member, not
+//   listed), another right left alone (`tasks`), an `opex` row whose tenant is not its role's
+//   (never read: no budget right, named with both tenants' slugs), and the built-in Budget
+//   Administrator with the description seeded before lot R (updated);
+// - tenant B: a role with `opex:reader` and `capex:admin` (admin), listed under its tenant, and a
+//   built-in Budget Administrator whose description was changed by hand (left as it is);
+// - tenant C, merged already (a `budget` row, no `opex`/`capex`): left alone;
 // - row level security on role_permissions and roles as found;
-// - a second run writes nothing; down() puts the merged level back on `opex` and `capex` and
-//   removes `budget`, up() again merges them back;
+// - a second run writes nothing; down() puts the merged level back on `opex` and `capex`, removes
+//   `budget` and puts the description back, up() again merges them back;
 // - a merge that does not hold (a trigger lowers one level) is refused with the role named, and
 //   nothing is left half done.
 // The assertions read this test's own rows, never table-wide counts. Runs on an empty migrated
@@ -64,6 +70,10 @@ async function seedTenant(runner: QueryRunner, tag: string): Promise<{ id: strin
   return { id, slug };
 }
 
+const BUDGET_ADMIN_BEFORE = 'Full control over budget management including OPEX, CAPEX, contracts, and reporting';
+const BUDGET_ADMIN_AFTER = 'Full control over budget management including budget lines, contracts, and reporting';
+const HAND_WRITTEN = 'Our budget owners, OPEX and CAPEX';
+
 /** A role of the tenant with these rows, each written as the tenant given (its own by default). */
 async function seedRole(
   runner: QueryRunner,
@@ -71,21 +81,30 @@ async function seedRole(
   name: string,
   rights: Record<string, string>,
   rowTenant: Record<string, string> = {},
+  role: { description?: string; builtIn?: boolean } = {},
 ): Promise<string> {
   await asTenant(runner, tenantId);
-  const [role] = await runner.query(
-    `INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, $2, 'seeded') RETURNING id::text AS id`,
-    [tenantId, name],
+  const [created] = await runner.query(
+    `INSERT INTO roles (tenant_id, role_name, role_description, is_built_in) VALUES ($1, $2, $3, $4) RETURNING id::text AS id`,
+    [tenantId, name, role.description ?? 'seeded', role.builtIn ?? false],
   );
+  const roleRow = created;
   for (const [resource, level] of Object.entries(rights)) {
     const owner = rowTenant[resource] ?? tenantId;
     await asTenant(runner, owner);
     await runner.query(
       `INSERT INTO role_permissions (role_id, resource, level, tenant_id) VALUES ($1, $2, $3, $4)`,
-      [role.id, resource, level, owner],
+      [roleRow.id, resource, level, owner],
     );
   }
-  return role.id;
+  return roleRow.id;
+}
+
+/** The description of a role, read as its tenant. */
+async function descriptionOf(runner: QueryRunner, tenantId: string, roleId: string): Promise<string> {
+  await asTenant(runner, tenantId);
+  const [row] = await runner.query(`SELECT role_description FROM roles WHERE id = $1`, [roleId]);
+  return row.role_description;
 }
 
 /** Every right of the roles, as each seeded tenant sees it (`role → resource → level`). */
@@ -117,36 +136,48 @@ let seededTenants: string[] = [];
 interface Seeded {
   a: { id: string; slug: string };
   b: { id: string; slug: string };
+  c: { id: string; slug: string };
   roles: Record<string, string>;
 }
 
 async function seedBeforeMigration(runner: QueryRunner): Promise<Seeded> {
   const a = await seedTenant(runner, 'a');
   const b = await seedTenant(runner, 'b');
-  seededTenants = [a.id, b.id];
+  const c = await seedTenant(runner, 'c');
+  seededTenants = [a.id, b.id, c.id];
   const roles: Record<string, string> = {
     asymmetric: await seedRole(runner, a.id, 'Asymmetric', { opex: 'admin', capex: 'reader' }),
     opexOnly: await seedRole(runner, a.id, 'OPEX only', { opex: 'member', tasks: 'reader' }),
     capexOnly: await seedRole(runner, a.id, 'CAPEX only', { capex: 'reader' }),
     manager: await seedRole(runner, a.id, 'Legacy manager', { opex: 'manager', capex: 'reader' }),
+    managerOnly: await seedRole(runner, a.id, 'Manager only', { opex: 'manager', capex: 'manager' }),
     higherBudget: await seedRole(runner, a.id, 'Budget already', { budget: 'admin', opex: 'reader', capex: 'reader' }),
+    budgetOnly: await seedRole(runner, a.id, 'Budget alone', { budget: 'admin' }),
     symmetric: await seedRole(runner, a.id, 'Symmetric', { opex: 'member', capex: 'member', contracts: 'reader' }),
     stray: await seedRole(runner, a.id, 'Stray row', { opex: 'admin' }, { opex: b.id }),
+    budgetAdminA: await seedRole(runner, a.id, 'Budget Administrator', { opex: 'admin', capex: 'admin' }, {}, { description: BUDGET_ADMIN_BEFORE, builtIn: true }),
     otherTenant: await seedRole(runner, b.id, 'Other tenant', { opex: 'reader', capex: 'admin' }),
+    budgetAdminB: await seedRole(runner, b.id, 'Budget Administrator', { opex: 'admin', capex: 'admin' }, {}, { description: HAND_WRITTEN, builtIn: true }),
+    merged: await seedRole(runner, c.id, 'Merged already', { budget: 'member' }),
   };
   await runner.query(`SELECT set_config('app.current_tenant', '', true)`);
-  return { a, b, roles };
+  return { a, b, c, roles };
 }
 
 const EXPECTED_AFTER_UP = (roles: Record<string, string>) => ({
   [roles.asymmetric]: { budget: 'admin' },
   [roles.opexOnly]: { budget: 'member', tasks: 'reader' },
   [roles.capexOnly]: { budget: 'reader' },
-  [roles.manager]: { budget: 'member' },
-  [roles.higherBudget]: { budget: 'admin' },
+  [roles.manager]: { budget: 'reader' },
+  [roles.managerOnly]: {},
+  [roles.higherBudget]: { budget: 'reader' },
+  [roles.budgetOnly]: {},
   [roles.symmetric]: { budget: 'member', contracts: 'reader' },
   [roles.stray]: {},
+  [roles.budgetAdminA]: { budget: 'admin' },
   [roles.otherTenant]: { budget: 'admin' },
+  [roles.budgetAdminB]: { budget: 'admin' },
+  [roles.merged]: { budget: 'member' },
 });
 
 function linesOf(lines: string[], text: string): string[] {
@@ -155,7 +186,7 @@ function linesOf(lines: string[], text: string): string[] {
 
 async function testMerge() {
   await inRolledBackTransaction(async (runner) => {
-    const { a, b, roles } = await seedBeforeMigration(runner);
+    const { a, b, c, roles } = await seedBeforeMigration(runner);
     const security = {
       role_permissions: await rowSecurity(runner, 'role_permissions'),
       roles: await rowSecurity(runner, 'roles'),
@@ -167,24 +198,36 @@ async function testMerge() {
       assert.deepEqual(await rowSecurity(runner, table), security[table], `${table}: row level security as found`);
     }
 
-    // The log: roles merged per tenant, each role that differed, the stray row, a summary.
-    assert.equal(linesOf(lines, `tenant ${a.slug} (${a.id}): 6 role(s) merged into budget`).length, 1, lines.join('\n'));
-    assert.equal(linesOf(lines, `tenant ${b.slug} (${b.id}): 1 role(s) merged into budget`).length, 1, lines.join('\n'));
-    const named = (name: string) => linesOf(lines, `role "${name}" (`);
-    assert.match(named('Asymmetric')[0] ?? '', /opex=admin, capex=reader -> budget=admin$/);
-    assert.match(named('OPEX only')[0] ?? '', /opex=member, capex=none -> budget=member$/);
-    assert.match(named('CAPEX only')[0] ?? '', /opex=none, capex=reader -> budget=reader$/);
-    assert.match(named('Legacy manager')[0] ?? '', /opex=manager, capex=reader -> budget=member$/);
-    assert.match(named('Budget already')[0] ?? '', /opex=reader, capex=reader, budget=admin -> budget=admin$/);
-    assert.match(named('Other tenant')[0] ?? '', new RegExp(`tenant ${b.slug} .*opex=reader, capex=admin -> budget=admin$`));
+    // The built-in Budget Administrator: the description seeded before lot R is updated, one changed by hand is kept.
+    assert.equal(await descriptionOf(runner, a.id, roles.budgetAdminA), BUDGET_ADMIN_AFTER);
+    assert.equal(await descriptionOf(runner, b.id, roles.budgetAdminB), HAND_WRITTEN);
+
+    // The log: roles merged per tenant, each role listed with its rows before and its level after, a summary.
+    assert.equal(linesOf(lines, `tenant ${a.slug} (${a.id}): 10 role(s) merged into budget`).length, 1, lines.join('\n'));
+    assert.equal(linesOf(lines, `tenant ${b.slug} (${b.id}): 2 role(s) merged into budget`).length, 1, lines.join('\n'));
+    assert.equal(linesOf(lines, c.slug).length, 0, 'a tenant merged already is not touched');
+    const named = (name: string, tenant = a) => linesOf(lines, `tenant ${tenant.slug} (${tenant.id}): role "${name}" (`);
+    const ends = (name: string, text: string, tenant = a) => {
+      const found = named(name, tenant);
+      assert.equal(found.length, 1, `${name}: one line\n${lines.join('\n')}`);
+      assert.ok(found[0].endsWith(`: ${text}`), `${name}: ${found[0]}`);
+    };
+    ends('Asymmetric', 'opex=admin, capex=reader -> budget=admin');
+    ends('OPEX only', 'opex=member, capex=none -> budget=member');
+    ends('CAPEX only', 'opex=none, capex=reader -> budget=reader');
+    ends('Legacy manager', 'opex=manager (no access), capex=reader -> budget=reader');
+    ends('Manager only', 'opex=manager (no access), capex=manager (no access) -> no budget right');
+    ends('Budget already', 'opex=reader, capex=reader, budget=admin (no effect before lot R) -> budget=reader');
+    ends('Budget alone', 'opex=none, capex=none, budget=admin (no effect before lot R) -> no budget right');
+    ends('Stray row', `opex=admin (row of tenant ${b.slug} (${b.id}), never read), capex=none -> no budget right`);
+    ends('Other tenant', 'opex=reader, capex=admin -> budget=admin', b);
     assert.equal(named('Symmetric').length, 0, 'a role with the same level on both is not listed');
-    assert.equal(named('Stray row').length, 0, 'a row of another tenant merges nothing');
+    assert.equal(named('Budget Administrator').length + named('Budget Administrator', b).length, 0, 'admin on both: not listed');
+    assert.ok(lines.every((line) => line.startsWith(LOG_PREFIX)), 'every line is prefixed');
     assert.ok(
-      lines.some((line) => line.endsWith(`1 opex/capex row(s) of another tenant than their role (never read) deleted: role ${roles.stray} of tenant ${a.id}: opex=admin written for tenant ${b.id}`)),
+      lines.some((line) => /done in \d+ ms: \d+ role\(s\) of \d+ tenant\(s\) merged, \d+ with a budget right, \d+ without; \d+ listed above; \d+ opex\/capex row\(s\) removed; \d+ built-in Budget Administrator description\(s\) updated$/.test(line)),
       lines.join('\n'),
     );
-    assert.ok(lines.every((line) => line.startsWith(LOG_PREFIX)), 'every line is prefixed');
-    assert.ok(lines.some((line) => /done in \d+ ms: \d+ role\(s\) of \d+ tenant\(s\) hold budget/.test(line)), lines.join('\n'));
   });
 }
 
@@ -194,7 +237,7 @@ async function testRerun() {
     await captureLog(() => migration.up(runner));
     const stamps = async () => {
       const out: string[] = [];
-      for (const tenantId of [a.id, b.id]) {
+      for (const tenantId of seededTenants) {
         await asTenant(runner, tenantId);
         const rows: Array<{ id: string; updated_at: Date }> = await runner.query(
           `SELECT id::text AS id, updated_at FROM role_permissions WHERE role_id = ANY ($1::uuid[]) ORDER BY id`,
@@ -215,26 +258,34 @@ async function testRerun() {
 
 async function testDownThenUp() {
   await inRolledBackTransaction(async (runner) => {
-    const { roles } = await seedBeforeMigration(runner);
+    const { a, b, roles } = await seedBeforeMigration(runner);
     await captureLog(() => migration.up(runner));
     const { lines } = await captureLog(() => migration.down(runner));
     assert.deepEqual(await rightsOf(runner, Object.values(roles)), {
-      // The merged level on both: the levels that differed before up() are not restorable.
+      // The merged level on both: the levels that differed before up() and the rows it deleted are not restorable.
       [roles.asymmetric]: { opex: 'admin', capex: 'admin' },
       [roles.opexOnly]: { opex: 'member', capex: 'member', tasks: 'reader' },
       [roles.capexOnly]: { opex: 'reader', capex: 'reader' },
-      [roles.manager]: { opex: 'member', capex: 'member' },
-      [roles.higherBudget]: { opex: 'admin', capex: 'admin' },
+      [roles.manager]: { opex: 'reader', capex: 'reader' },
+      [roles.managerOnly]: {},
+      [roles.higherBudget]: { opex: 'reader', capex: 'reader' },
+      [roles.budgetOnly]: {},
       [roles.symmetric]: { opex: 'member', capex: 'member', contracts: 'reader' },
       [roles.stray]: {},
+      [roles.budgetAdminA]: { opex: 'admin', capex: 'admin' },
       [roles.otherTenant]: { opex: 'admin', capex: 'admin' },
+      [roles.budgetAdminB]: { opex: 'admin', capex: 'admin' },
+      [roles.merged]: { opex: 'member', capex: 'member' },
     });
     const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM role_permissions WHERE resource = 'budget'`);
     assert.equal(n, 0, 'no budget row is left (for the tenant set, none at all)');
+    assert.equal(await descriptionOf(runner, a.id, roles.budgetAdminA), BUDGET_ADMIN_BEFORE, 'the description of before is back');
+    assert.equal(await descriptionOf(runner, b.id, roles.budgetAdminB), HAND_WRITTEN, 'a description changed by hand is kept');
     assert.ok(lines.some((line) => /reverted in \d+ ms: .*not restorable/.test(line)), lines.join('\n'));
 
     await captureLog(() => migration.up(runner));
     assert.deepEqual(await rightsOf(runner, Object.values(roles)), EXPECTED_AFTER_UP(roles));
+    assert.equal(await descriptionOf(runner, a.id, roles.budgetAdminA), BUDGET_ADMIN_AFTER);
   });
 }
 

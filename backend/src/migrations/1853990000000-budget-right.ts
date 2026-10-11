@@ -2,39 +2,64 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 
 const LOG_PREFIX = '[Migration] BudgetRight:';
 
-/** The order of the levels. `manager`, a level of before the RBAC overhaul the CHECK still accepts, counts as `member`. */
-const LEVEL_RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, manager: 3, admin: 4 };
+/**
+ * The levels the permission guard of before lot R gave access with (`permission.guard.ts`, `RANK`).
+ * `manager`, a level of before the RBAC overhaul that the CHECK still accepts, is not among them:
+ * the guard ranked it 0, so such a row opened no route, and it opens none after this migration.
+ */
+const EFFECTIVE_RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
 
+/** The description `seedTenantDefaults` gave the built-in Budget Administrator role, before and since lot R. */
+const BUDGET_ADMIN_ROLE = 'Budget Administrator';
+const BUDGET_ADMIN_BEFORE = 'Full control over budget management including OPEX, CAPEX, contracts, and reporting';
+const BUDGET_ADMIN_AFTER = 'Full control over budget management including budget lines, contracts, and reporting';
+
+/** One `opex`, `capex` or `budget` row, with its role and the tenants of both. */
 type RightRow = {
   role_id: string;
-  tenant_id: string;
-  slug: string | null;
   role_name: string;
-  opex: string | null;
-  capex: string | null;
-  budget: string | null;
+  role_tenant: string;
+  role_slug: string | null;
+  resource: 'opex' | 'capex' | 'budget';
+  level: string;
+  row_tenant: string | null;
+  row_slug: string | null;
 };
 
-type Planned = RightRow & { level: string };
+/** A role and the `budget` level it ends with (null: no budget right). */
+type RolePlan = { role_id: string; role_name: string; tenant_id: string; slug: string | null; rows: RightRow[]; level: string | null };
 
-/** An `opex` or `capex` row whose tenant is not its role's, deleted unmerged. */
-type Stray = { role_id: string; role_tenant: string; row_tenant: string | null; resource: string; level: string };
-
-/** Rows named in a log line (precedent 1853970000000). */
-const NAMED_ROWS = 50;
-
-/** The highest of the levels given (`manager` written `member`), or null when none is. */
-function highest(levels: Array<string | null>): string | null {
-  let best: string | null = null;
-  for (const level of levels) {
-    if (!level) continue;
-    if (!best || (LEVEL_RANK[level] ?? 0) > (LEVEL_RANK[best] ?? 0)) best = level;
-  }
-  return best === 'manager' ? 'member' : best;
+/** A row the guard of before lot R read and gave access with: of its role's tenant (row level security), at a ranked level. */
+function isEffective(row: RightRow): boolean {
+  return row.row_tenant === row.role_tenant && EFFECTIVE_RANK[row.level] !== undefined;
 }
 
-const tenantName = (row: { slug: string | null; tenant_id: string }) => `${row.slug || '(no slug)'} (${row.tenant_id})`;
-const shown = (level: string | null) => level ?? 'none';
+/** The highest effective level of the rows, or null when none gives access. */
+function highestEffective(rows: RightRow[]): string | null {
+  let best: string | null = null;
+  for (const row of rows) {
+    if (!isEffective(row)) continue;
+    if (!best || EFFECTIVE_RANK[row.level] > EFFECTIVE_RANK[best]) best = row.level;
+  }
+  return best;
+}
+
+const tenantName = (slug: string | null, id: string | null) => `${slug || '(no slug)'} (${id ?? 'none'})`;
+
+/** The roles of the rows, in their order, each with its rows. */
+function byRole(rows: RightRow[], level: (rows: RightRow[]) => string | null): RolePlan[] {
+  const plans = new Map<string, RolePlan>();
+  for (const row of rows) {
+    let plan = plans.get(row.role_id);
+    if (!plan) {
+      plan = { role_id: row.role_id, role_name: row.role_name, tenant_id: row.role_tenant, slug: row.role_slug, rows: [], level: null };
+      plans.set(row.role_id, plan);
+    }
+    plan.rows.push(row);
+  }
+  for (const plan of plans.values()) plan.level = level(plan.rows);
+  return [...plans.values()];
+}
 
 /**
  * One right for every budget line (plan planning/budget-unifie.md, amendment of U5, lot R): the
@@ -42,26 +67,38 @@ const shown = (level: string | null) => level ?? 'none';
  * nature of the line. The nature stays a property of the line (the nature predicate of every
  * query, the `/capex-items*` aliases, the freeze by nature under `budget_ops` do not change).
  *
- * up(), with row level security lifted on `role_permissions` and `roles` and put back as found:
- * 1. For each role with an `opex` or `capex` row: `budget` = the highest of its `opex`, `capex`
- *    and any `budget` row already there (`reader < contributor < member < admin`, `manager` read
- *    as `member`); a role with one of the two rows gets that row's level. Nobody loses access; a
- *    role whose levels differed, or that had one of the two rows only, gains the higher level on
- *    every budget line. Only the rows of the role's own tenant count: a row whose `tenant_id` is
- *    not its role's was never read (row level security), so it opens nothing and is deleted.
- * 2. `INSERT ... ON CONFLICT (role_id, resource) DO UPDATE` writes that level with the role's
- *    tenant (an existing `budget` row is part of the maximum, so a higher one is kept), then every
- *    `opex` and `capex` row goes.
- * 3. One log line per tenant (roles merged), one per role whose levels differed or that had a
- *    single row (tenant, role, levels before, level after), and a summary.
- * 4. Checks, an exception otherwise (so the transaction is rolled back): no `opex` or `capex` row
- *    is left, and every role merged holds `budget` at the level expected.
- * A second run finds no `opex` or `capex` row: it writes nothing and checks again.
+ * The rule: after the migration, each role opens what it opened before on its better nature. Its
+ * `budget` level is the highest of its effective `opex` and `capex` levels, as the permission
+ * guard of before lot R read them (`reader < contributor < member < admin`); a row that guard gave
+ * no access with gives none: a `manager` row (ranked 0), a row whose `tenant_id` is not its role's
+ * (row level security hid it). A role whose two levels differed, or that had one of the two only,
+ * gets the higher on every budget line, as decided.
  *
- * down() copies each role's `budget` level onto `opex` and `capex` (the highest of `budget` and
- * of any `opex` or `capex` row there, as the code of lot R reads them), then deletes `budget`. The
- * levels a role had on OPEX and CAPEX before up(), when they differed, are not restorable: both
- * get the merged level (like 1837000000000, which cannot restore what it folded).
+ * up(), with row level security lifted on `role_permissions` and `roles` and put back as found:
+ * 1. The tenants of before lot R are those with an `opex` or `capex` row on one of their roles
+ *    (every tenant of before has one: its Administrator role holds all of them). In those tenants
+ *    only, every role with an `opex`, `capex` or `budget` row is planned: `budget` = its highest
+ *    effective `opex` or `capex` level, or no `budget` right when none is effective. A `budget` row
+ *    already there (no code read it before lot R) does not count: it is replaced, or deleted.
+ * 2. `INSERT ... ON CONFLICT (role_id, resource) DO UPDATE` writes each planned level with the
+ *    role's tenant; the `budget` row of a role left without a level is deleted; then every `opex`
+ *    and `capex` row goes.
+ * 3. The built-in Budget Administrator role whose description is still the one seeded before lot R
+ *    gets the one seeded since; a description changed by hand is left as it is. Counted.
+ * 4. One log line per tenant (roles merged), one per role whose two levels differed, that had one
+ *    of them only, a row that gave no access (`manager`, another tenant's, named with both
+ *    tenants) or a `budget` row already (levels before, level after), and a summary.
+ * 5. Checks, an exception otherwise (so the transaction is rolled back): no `opex` or `capex` row
+ *    is left, and every planned role holds `budget` at its level, or none.
+ * A second run finds no tenant of before lot R: it changes no right (the `budget` rows of a tenant
+ * already merged are its own) and checks again.
+ *
+ * down() copies each role's `budget` level onto `opex` and `capex` (the highest effective level of
+ * its `budget` row and of any `opex` or `capex` row left), deletes `budget`, and puts the
+ * description of before back on a built-in Budget Administrator that still has the one of up().
+ * The levels a role had on OPEX and CAPEX before up(), when they differed, the `manager` rows and
+ * the rows up() deleted are not restorable: both natures get the merged level (like
+ * 1837000000000, which cannot restore what it folded).
  */
 export class BudgetRight1853990000000 implements MigrationInterface {
   name = 'BudgetRight1853990000000';
@@ -69,10 +106,12 @@ export class BudgetRight1853990000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     const started = Date.now();
     await withoutRowSecurity(queryRunner, ['role_permissions', 'roles'], async () => {
-      const rows = await rightsOf(queryRunner, ['opex', 'capex']);
-      const planned: Planned[] = rows.map((row) => ({ ...row, level: highest([row.opex, row.capex, row.budget]) as string }));
+      const rows = await rowsOfTenantsBeforeR(queryRunner);
+      const plans = byRole(rows, (own) => highestEffective(own.filter((row) => row.resource !== 'budget')));
+      const kept = plans.filter((plan) => plan.level !== null);
+      const dropped = plans.filter((plan) => plan.level === null && plan.rows.some((row) => row.resource === 'budget'));
 
-      if (planned.length > 0) {
+      if (kept.length > 0) {
         await queryRunner.query(
           `INSERT INTO role_permissions (role_id, resource, level, tenant_id)
            SELECT p.role_id, 'budget', p.level, p.tenant_id
@@ -81,31 +120,35 @@ export class BudgetRight1853990000000 implements MigrationInterface {
              SET level = EXCLUDED.level, tenant_id = EXCLUDED.tenant_id, updated_at = now()
            WHERE role_permissions.level IS DISTINCT FROM EXCLUDED.level
               OR role_permissions.tenant_id IS DISTINCT FROM EXCLUDED.tenant_id`,
-          [planned.map((p) => p.role_id), planned.map((p) => p.level), planned.map((p) => p.tenant_id)],
+          [kept.map((p) => p.role_id), kept.map((p) => p.level), kept.map((p) => p.tenant_id)],
         );
       }
-      const strays: Stray[] = await queryRunner.query(
-        `WITH gone AS (
-           DELETE FROM role_permissions rp USING roles r
-            WHERE rp.role_id = r.id AND rp.resource IN ('opex', 'capex') AND rp.tenant_id IS DISTINCT FROM r.tenant_id
-           RETURNING rp.role_id::text AS role_id, r.tenant_id::text AS role_tenant, rp.tenant_id::text AS row_tenant, rp.resource, rp.level)
-         SELECT * FROM gone ORDER BY role_id, resource`,
-      );
+      if (dropped.length > 0) {
+        await queryRunner.query(
+          `DELETE FROM role_permissions WHERE resource = 'budget' AND role_id = ANY ($1::uuid[])`,
+          [dropped.map((p) => p.role_id)],
+        );
+      }
       const removed = await countOf(queryRunner, `DELETE FROM role_permissions WHERE resource IN ('opex', 'capex')`);
+      const described = await countOf(
+        queryRunner,
+        `UPDATE roles SET role_description = $1 WHERE is_built_in AND role_name = $2 AND role_description = $3`,
+        [BUDGET_ADMIN_AFTER, BUDGET_ADMIN_ROLE, BUDGET_ADMIN_BEFORE],
+      );
 
       await assertNoneLeft(queryRunner, ['opex', 'capex'], 'up');
-      await assertLevels(queryRunner, planned.map((p) => ({ role_id: p.role_id, resource: 'budget', level: p.level })), 'up');
+      await assertLevels(queryRunner, plans.map((p) => ({ role_id: p.role_id, resource: 'budget', level: p.level })), 'up');
 
-      logMerge(planned, strays);
+      logMerge(plans);
       const ms = Date.now() - started;
-      if (planned.length === 0 && removed + strays.length === 0) {
-        console.log(`${LOG_PREFIX} no opex or capex right left; nothing to merge (${ms} ms)`);
+      const descriptions = `${described} built-in ${BUDGET_ADMIN_ROLE} description(s) updated`;
+      if (plans.length === 0 && removed === 0) {
+        console.log(`${LOG_PREFIX} no opex or capex right left; nothing to merge; ${descriptions} (${ms} ms)`);
       } else {
-        const tenants = new Set(planned.map((p) => p.tenant_id)).size;
-        const differing = planned.filter(differs).length;
+        const tenants = new Set(plans.map((p) => p.tenant_id)).size;
         console.log(
-          `${LOG_PREFIX} done in ${ms} ms: ${planned.length} role(s) of ${tenants} tenant(s) hold budget, `
-          + `${differing} of them with different levels, a single row or a budget row before (listed above); ${removed + strays.length} opex/capex row(s) removed`,
+          `${LOG_PREFIX} done in ${ms} ms: ${plans.length} role(s) of ${tenants} tenant(s) merged, ${kept.length} with a budget right, `
+          + `${plans.length - kept.length} without; ${plans.filter(isListed).length} listed above; ${removed} opex/capex row(s) removed; ${descriptions}`,
         );
       }
     });
@@ -114,9 +157,10 @@ export class BudgetRight1853990000000 implements MigrationInterface {
   public async down(queryRunner: QueryRunner): Promise<void> {
     const started = Date.now();
     await withoutRowSecurity(queryRunner, ['role_permissions', 'roles'], async () => {
-      const rows = await rightsOf(queryRunner, ['budget']);
-      const planned: Planned[] = rows.map((row) => ({ ...row, level: highest([row.budget, row.opex, row.capex]) as string }));
-      if (planned.length > 0) {
+      const rows = await rowsOfRolesWithBudget(queryRunner);
+      const plans = byRole(rows, highestEffective);
+      const kept = plans.filter((plan) => plan.level !== null);
+      if (kept.length > 0) {
         await queryRunner.query(
           `INSERT INTO role_permissions (role_id, resource, level, tenant_id)
            SELECT p.role_id, n.resource, p.level, p.tenant_id
@@ -126,77 +170,110 @@ export class BudgetRight1853990000000 implements MigrationInterface {
              SET level = EXCLUDED.level, tenant_id = EXCLUDED.tenant_id, updated_at = now()
            WHERE role_permissions.level IS DISTINCT FROM EXCLUDED.level
               OR role_permissions.tenant_id IS DISTINCT FROM EXCLUDED.tenant_id`,
-          [planned.map((p) => p.role_id), planned.map((p) => p.level), planned.map((p) => p.tenant_id)],
+          [kept.map((p) => p.role_id), kept.map((p) => p.level), kept.map((p) => p.tenant_id)],
         );
       }
       const removed = await countOf(queryRunner, `DELETE FROM role_permissions WHERE resource = 'budget'`);
+      const described = await countOf(
+        queryRunner,
+        `UPDATE roles SET role_description = $1 WHERE is_built_in AND role_name = $2 AND role_description = $3`,
+        [BUDGET_ADMIN_BEFORE, BUDGET_ADMIN_ROLE, BUDGET_ADMIN_AFTER],
+      );
       await assertNoneLeft(queryRunner, ['budget'], 'down');
       await assertLevels(
         queryRunner,
-        planned.flatMap((p) => [
+        kept.flatMap((p) => [
           { role_id: p.role_id, resource: 'opex', level: p.level },
           { role_id: p.role_id, resource: 'capex', level: p.level },
         ]),
         'down',
       );
       console.log(
-        `${LOG_PREFIX} reverted in ${Date.now() - started} ms: ${planned.length} role(s) hold opex and capex at their budget level `
-        + `(${removed} budget row(s) removed); the levels that differed before up() are not restorable`,
+        `${LOG_PREFIX} reverted in ${Date.now() - started} ms: ${kept.length} role(s) hold opex and capex at their budget level `
+        + `(${removed} budget row(s) removed; ${described} built-in ${BUDGET_ADMIN_ROLE} description(s) put back); `
+        + 'the levels that differed before up() and the rows up() deleted are not restorable',
       );
     });
   }
 }
 
+const RIGHT_ROW_COLUMNS = `r.id::text AS role_id, r.role_name, r.tenant_id::text AS role_tenant, rt.slug::text AS role_slug,
+       rp.resource, rp.level, rp.tenant_id::text AS row_tenant, wt.slug::text AS row_slug`;
+
 /**
- * Each role with a row of `resources`, of its own tenant, with its `opex`, `capex` and `budget`
- * levels (one row each at most: UNIQUE (role_id, resource)). Ordered for the log.
+ * The `opex`, `capex` and `budget` rows of the roles of the tenants of before lot R (a tenant with
+ * an `opex` or `capex` row on one of its roles), ordered for the log.
  */
-async function rightsOf(queryRunner: QueryRunner, resources: string[]): Promise<RightRow[]> {
+async function rowsOfTenantsBeforeR(queryRunner: QueryRunner): Promise<RightRow[]> {
   return queryRunner.query(
-    `SELECT r.id::text AS role_id, r.tenant_id::text AS tenant_id, t.slug::text AS slug, r.role_name,
-            max(rp.level) FILTER (WHERE rp.resource = 'opex') AS opex,
-            max(rp.level) FILTER (WHERE rp.resource = 'capex') AS capex,
-            max(rp.level) FILTER (WHERE rp.resource = 'budget') AS budget
+    `SELECT ${RIGHT_ROW_COLUMNS}
        FROM role_permissions rp
-       JOIN roles r ON r.id = rp.role_id AND r.tenant_id = rp.tenant_id
-       LEFT JOIN tenants t ON t.id = r.tenant_id
+       JOIN roles r ON r.id = rp.role_id
+       LEFT JOIN tenants rt ON rt.id = r.tenant_id
+       LEFT JOIN tenants wt ON wt.id = rp.tenant_id
       WHERE rp.resource IN ('opex', 'capex', 'budget')
-      GROUP BY r.id, r.tenant_id, t.slug, r.role_name
-     HAVING bool_or(rp.resource = ANY ($1::text[]))
-      ORDER BY t.slug NULLS LAST, r.tenant_id, r.role_name, r.id`,
-    [resources],
+        AND r.tenant_id IN (SELECT r2.tenant_id FROM role_permissions rp2 JOIN roles r2 ON r2.id = rp2.role_id
+                             WHERE rp2.resource IN ('opex', 'capex'))
+      ORDER BY rt.slug NULLS LAST, r.tenant_id, r.role_name, r.id, rp.resource DESC`,
   );
 }
 
-/**
- * A role whose levels differed, that had one of the two rows only, a `manager` row, or a `budget`
- * row already (no code read it before lot R: from now on it counts).
- */
-function differs(p: Planned): boolean {
-  return p.opex !== p.capex || p.opex === 'manager' || p.budget !== null;
+/** The `opex`, `capex` and `budget` rows of the roles that hold a `budget` row (down()). */
+async function rowsOfRolesWithBudget(queryRunner: QueryRunner): Promise<RightRow[]> {
+  return queryRunner.query(
+    `SELECT ${RIGHT_ROW_COLUMNS}
+       FROM role_permissions rp
+       JOIN roles r ON r.id = rp.role_id
+       LEFT JOIN tenants rt ON rt.id = r.tenant_id
+       LEFT JOIN tenants wt ON wt.id = rp.tenant_id
+      WHERE rp.resource IN ('opex', 'capex', 'budget')
+        AND r.id IN (SELECT role_id FROM role_permissions WHERE resource = 'budget')
+      ORDER BY rt.slug NULLS LAST, r.tenant_id, r.role_name, r.id, rp.resource DESC`,
+  );
 }
 
-function logMerge(planned: Planned[], strays: Stray[]): void {
-  const byTenant = new Map<string, Planned[]>();
-  for (const p of planned) {
-    const list = byTenant.get(p.tenant_id) ?? [];
-    list.push(p);
-    byTenant.set(p.tenant_id, list);
+const ofResource = (plan: RolePlan, resource: RightRow['resource']) => plan.rows.filter((row) => row.resource === resource);
+
+/**
+ * A role named in the log: its effective OPEX and CAPEX levels differed (one of them absent
+ * included), or it had a row that gave no access (`manager`, another tenant's) or a `budget` row.
+ */
+function isListed(plan: RolePlan): boolean {
+  const opex = highestEffective(ofResource(plan, 'opex'));
+  const capex = highestEffective(ofResource(plan, 'capex'));
+  return opex !== capex || plan.rows.some((row) => row.resource === 'budget' || !isEffective(row));
+}
+
+/** `opex=admin`, `capex=manager (no access)`, `opex=admin (row of tenant x (id), never read)`, `budget=admin (no effect before lot R)`. */
+function describeRow(row: RightRow): string {
+  const notes: string[] = [];
+  if (row.row_tenant !== row.role_tenant) notes.push(`row of tenant ${tenantName(row.row_slug, row.row_tenant)}, never read`);
+  else if (EFFECTIVE_RANK[row.level] === undefined) notes.push('no access');
+  if (row.resource === 'budget') notes.push('no effect before lot R');
+  return `${row.resource}=${row.level}${notes.length > 0 ? ` (${notes.join(', ')})` : ''}`;
+}
+
+function logMerge(plans: RolePlan[]): void {
+  const byTenant = new Map<string, RolePlan[]>();
+  for (const plan of plans) {
+    const list = byTenant.get(plan.tenant_id) ?? [];
+    list.push(plan);
+    byTenant.set(plan.tenant_id, list);
   }
   for (const roles of byTenant.values()) {
-    const tenant = tenantName(roles[0]);
+    const tenant = tenantName(roles[0].slug, roles[0].tenant_id);
     console.log(`${LOG_PREFIX} tenant ${tenant}: ${roles.length} role(s) merged into budget`);
-    for (const p of roles.filter(differs)) {
-      const before = `opex=${shown(p.opex)}, capex=${shown(p.capex)}${p.budget ? `, budget=${p.budget}` : ''}`;
-      console.log(`${LOG_PREFIX} tenant ${tenant}: role "${p.role_name}" (${p.role_id}): ${before} -> budget=${p.level}`);
+    for (const plan of roles.filter(isListed)) {
+      const before = (['opex', 'capex', 'budget'] as const)
+        .flatMap((resource) => {
+          const own = ofResource(plan, resource);
+          if (own.length === 0) return resource === 'budget' ? [] : [`${resource}=none`];
+          return own.map(describeRow);
+        })
+        .join(', ');
+      const after = plan.level ? `budget=${plan.level}` : 'no budget right';
+      console.log(`${LOG_PREFIX} tenant ${tenant}: role "${plan.role_name}" (${plan.role_id}): ${before} -> ${after}`);
     }
-  }
-  if (strays.length > 0) {
-    const named = strays.slice(0, NAMED_ROWS)
-      .map((row) => `role ${row.role_id} of tenant ${row.role_tenant}: ${row.resource}=${row.level} written for tenant ${row.row_tenant ?? 'none'}`)
-      .join('; ');
-    const more = strays.length > NAMED_ROWS ? `; and ${strays.length - NAMED_ROWS} more` : '';
-    console.log(`${LOG_PREFIX} ${strays.length} opex/capex row(s) of another tenant than their role (never read) deleted: ${named}${more}`);
   }
 }
 
@@ -210,11 +287,12 @@ async function assertNoneLeft(queryRunner: QueryRunner, resources: string[], ste
 
 async function assertLevels(
   queryRunner: QueryRunner,
-  expected: Array<{ role_id: string; resource: string; level: string }>,
+  expected: Array<{ role_id: string; resource: string; level: string | null }>,
   step: string,
 ): Promise<void> {
   if (expected.length === 0) return;
-  const wrong: Array<{ role_id: string; resource: string; expected: string; found: string | null }> = await queryRunner.query(
+  // An expected level of null: no row of that resource.
+  const wrong: Array<{ role_id: string; resource: string; expected: string | null; found: string | null }> = await queryRunner.query(
     `SELECT e.role_id::text AS role_id, e.resource, e.level AS expected, rp.level AS found
        FROM unnest($1::uuid[], $2::text[], $3::text[]) AS e(role_id, resource, level)
        LEFT JOIN role_permissions rp ON rp.role_id = e.role_id AND rp.resource = e.resource
@@ -223,14 +301,14 @@ async function assertLevels(
     [expected.map((e) => e.role_id), expected.map((e) => e.resource), expected.map((e) => e.level)],
   );
   if (wrong.length > 0) {
-    const named = wrong.map((w) => `${w.role_id} ${w.resource}=${w.found ?? 'none'} (expected ${w.expected})`).join(', ');
+    const named = wrong.map((w) => `${w.role_id} ${w.resource}=${w.found ?? 'none'} (expected ${w.expected ?? 'none'})`).join(', ');
     throw new Error(`${LOG_PREFIX} ${step}: role(s) ${named}; nothing was changed.`);
   }
 }
 
-/** A DELETE through the query runner returns [rows, count]: the count goes through a CTE. */
-async function countOf(queryRunner: QueryRunner, statement: string): Promise<number> {
-  const [{ n }]: Array<{ n: number }> = await queryRunner.query(`WITH changed AS (${statement} RETURNING 1) SELECT count(*)::int AS n FROM changed`);
+/** An UPDATE or DELETE through the query runner returns [rows, count]: the count goes through a CTE. */
+async function countOf(queryRunner: QueryRunner, statement: string, params: unknown[] = []): Promise<number> {
+  const [{ n }]: Array<{ n: number }> = await queryRunner.query(`WITH changed AS (${statement} RETURNING 1) SELECT count(*)::int AS n FROM changed`, params);
   return n;
 }
 

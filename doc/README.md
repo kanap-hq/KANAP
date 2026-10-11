@@ -129,7 +129,7 @@ One consistent set of sample files, in the order the manual loads them. English 
 - Master data: `companies.csv`, `departments.csv`, `suppliers.csv`, `accounts.csv` (imported into a chart of accounts), `cost-centers.csv`, `users.csv`
 - Budget file: `budget.csv`, OPEX and CAPEX lines in the budget file layout (its `nature` column), with amounts for 2027
 
-`companies.csv` carries metrics for 2025 to 2027: set the Year selector of the Companies list to 2026, or edit the three years in the header. The budget file carries `kanap_token` empty and `item_number` empty, so it adds new lines. Loading it needs administration rights on OPEX and on CAPEX. See [Load a budget from a spreadsheet](help/docs/en/budget-file.md).
+`companies.csv` carries metrics for 2025 to 2027: set the Year selector of the Companies list to 2026, or edit the three years in the header. The budget file carries `kanap_token` empty and `item_number` empty, so it adds new lines. Loading it needs the Admin level on Budget (`budget:admin`). See [Load a budget from a spreadsheet](help/docs/en/budget-file.md).
 
 ### `/archive` - Historical Documentation
 - **`archive/fixes/`**: Historical fix documentation (connection pool fix, RBAC multi-role fix, etc.)

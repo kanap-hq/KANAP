@@ -79,7 +79,8 @@ async function testLeftoverRowsAreReadAsBudget() {
 
     assert.deepEqual(await perms.getRolePermissionsMap(asymmetric, { manager }), { budget: 'admin' });
     assert.deepEqual(await perms.getRolePermissionsMap(opexOnly, { manager }), { budget: 'member' });
-    assert.deepEqual(await perms.getRolePermissionsMap(manager_, { manager }), { budget: 'member' }, 'manager reads as member');
+    // A `manager` row is read as stored: the guard ranks it 0 (no access), as it did on `opex` and `capex`.
+    assert.deepEqual(await perms.getRolePermissionsMap(manager_, { manager }), { budget: 'manager' }, 'manager gives no level');
     assert.deepEqual(await perms.getRolePermissionsMap(mixed, { manager }), { budget: 'member' }, 'the higher of the rows');
     // A user's rights are the union of their roles (the guard and /auth/me read this).
     const union = await perms.listForRoles([opexOnly, manager_], { manager });

@@ -15,11 +15,6 @@ function normalizePermissionLevel(resource: string, level: PermissionLevel): Per
   if (normalizeResource(resource) === 'knowledge' && level === 'contributor') {
     return 'reader';
   }
-  // A budget row (or an `opex` / `capex` row) may still hold `manager`, a level of before the RBAC
-  // overhaul: read as `member`, the level migration 1853990000000 gives it.
-  if (normalizeResource(resource) === 'budget' && (level as string) === 'manager') {
-    return 'member';
-  }
   return level;
 }
 
