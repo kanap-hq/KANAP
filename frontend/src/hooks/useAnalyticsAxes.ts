@@ -105,14 +105,15 @@ export const DEFAULT_ANALYTICS_LIST_COLUMN = 'analytics_category_name';
  * The default dimension keeps `analytics_category_name` wherever it stands, the others are
  * `analytics_<id>`. Without the default among them (dimensions not loaded), its column comes first.
  * `required`: the dimension is required for the lines of `scope` (`axisRequiredFor`); the lists show
- * those columns by default (lot C1, decision 3).
+ * those columns by default (lot C1, decision 3). Without a scope, required dimensions of either
+ * nature are shown (the unified budget list).
  */
 export function analyticsListColumns(
   axes: Pick<AnalyticsAxes, 'enabled' | 'label'>,
   defaultLabel: string,
   scope?: LineType,
 ): Array<{ field: string; label: string; required: boolean }> {
-  const required = (axis: AnalyticsAxis) => !!scope && axisRequiredFor(axis, scope);
+  const required = (axis: AnalyticsAxis) => scope ? axisRequiredFor(axis, scope) : !!axis.required && isAnalyticsActive(axis);
   const columns = axes.enabled.map((axis) => (axis.is_default
     ? { field: DEFAULT_ANALYTICS_LIST_COLUMN, label: defaultLabel, required: required(axis) }
     : { field: analyticsFieldKey(axis.id), label: axes.label(axis), required: required(axis) }));

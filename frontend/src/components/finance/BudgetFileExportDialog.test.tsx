@@ -28,13 +28,13 @@ const columns: BudgetFileColumnChoice[] = [
   { key: 'landing', label: 'Landing', shown: false },
 ];
 
-function renderDialog(list = { sort: 'item_number:asc', q: 'cloud', filters: '', statusScope: 'enabled' }) {
+function renderDialog(list = { sort: 'item_number:asc', q: 'cloud', filters: '', statusScope: 'enabled' }, scope: 'all' | 'capex' = 'capex') {
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
       <BudgetFileExportDialog
         open
         onClose={() => undefined}
-        scope="capex"
+        scope={scope}
         columns={columns}
         columnsReady
         list={list}
@@ -107,4 +107,14 @@ describe('BudgetFileExportDialog', () => {
     renderDialog({ sort: '', q: '', filters: '', statusScope: 'enabled' });
     expect(screen.getByRole('button', { name: 'operations.budgetFile.exportCount:{"count":120}' })).toBeInTheDocument();
   });
+  it('exports the unified list on budget-lines with the exact nature filter', async () => {
+    const filters = JSON.stringify({ nature: { filterType: 'set', values: ['capex'] }, supplier_name: { filterType: 'set', values: ['Acme'] } });
+    renderDialog({ sort: 'product_name:ASC', q: '', filters, statusScope: 'all' }, 'all');
+    expect(screen.getByText('budget.exportTitle')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'operations.budgetFile.exportFiltered:{"count":120}' }));
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(1));
+    expect(get.mock.calls[0][0]).toBe('/budget-lines/budget-file/export');
+    expect(get.mock.calls[0][1].params).toMatchObject({ filters, sort: 'product_name:ASC', includeDisabled: '1' });
+  });
+
 });

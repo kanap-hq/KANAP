@@ -398,8 +398,8 @@ describe('AccountWorkspacePage', () => {
     expect(link).toHaveAttribute('target', '_blank');
     const url = new URL(link.getAttribute('href') as string, 'http://kanap.test');
     // The CAPEX list on this account, every status, as a one-off view.
-    expect(url.pathname).toBe('/ops/capex');
-    expect(JSON.parse(url.searchParams.get('filters') as string)).toEqual({ account_id: { filterType: 'set', values: ['acc-1'] } });
+    expect(url.pathname).toBe('/ops/budget');
+    expect(JSON.parse(url.searchParams.get('filters') as string)).toEqual({ account_id: { filterType: 'set', values: ['acc-1'] }, nature: { filterType: 'set', values: ['capex'] } });
     expect(url.searchParams.get(STATUS_SCOPE_PARAM)).toBe('all');
     expect(url.searchParams.get('from')).toBe('report');
 
@@ -407,7 +407,7 @@ describe('AccountWorkspacePage', () => {
     await pickNature('master-data:shared.lineTypeUsage.capex');
     await waitFor(() => expect(screen.getByTestId('nature-conflict')).toHaveTextContent('accounts.nature.conflictOpex:3'));
     const opexLink = within(screen.getByTestId('nature-conflict')).getByRole('link', { name: 'accounts.nature.showLines' });
-    expect(new URL(opexLink.getAttribute('href') as string, 'http://kanap.test').pathname).toBe('/ops/opex');
+    expect(new URL(opexLink.getAttribute('href') as string, 'http://kanap.test').pathname).toBe('/ops/budget');
 
     // Both kinds allowed: no conflict left.
     await pickNature('master-data:shared.lineTypeUsage.both');

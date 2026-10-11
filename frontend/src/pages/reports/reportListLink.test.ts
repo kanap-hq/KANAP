@@ -103,9 +103,9 @@ describe('oneOffListLink: a list opened on given filters', () => {
     const link = oneOffListLink('capex', { account_id: set(['acc-1']) });
     expect(link.save).toBeUndefined();
     const [path, search] = link.href.split('?');
-    expect(path).toBe('/ops/capex');
+    expect(path).toBe('/ops/budget');
     const params = new URLSearchParams(search);
-    expect(filtersOf(link.href)).toEqual({ account_id: set(['acc-1']) });
+    expect(filtersOf(link.href)).toEqual({ account_id: set(['acc-1']), nature: set(['capex']) });
     expect(params.get('statusScope')).toBe('all');
     expect(params.get('from')).toBe('report');
   });
@@ -115,29 +115,29 @@ describe('reportListHref: each group kind', () => {
   it('a cost center row opens the list on every status, its window and its label; the row without one on blank', () => {
     const href = reportListHref('opex', { kind: 'costCenter', label: 'CC1 · Ops' }, NO_LIST_PICKS, REPORT);
     const filters = withWindow({ cost_center_label: set(['CC1 · Ops']) });
-    expect(href).toBe(`/ops/opex?${new URLSearchParams({ filters: JSON.stringify(filters), statusScope: 'all', from: 'report' })}`);
+    expect(href).toBe(`/ops/budget?${new URLSearchParams({ filters: JSON.stringify({ ...filters, nature: set(['opex']) }), statusScope: 'all', from: 'report' })}`);
     expect(statusOf(href)).toBe('all');
-    expect(filtersOf(reportListHref('opex', { kind: 'costCenter', label: null }, NO_LIST_PICKS, REPORT))).toEqual(withWindow({ cost_center_label: set([null]) }));
+    expect(filtersOf(reportListHref('opex', { kind: 'costCenter', label: null }, NO_LIST_PICKS, REPORT))).toEqual(withWindow({ nature: set(['opex']), cost_center_label: set([null]) }));
   });
 
   it('a supplier row filters the supplier column, No supplier the blank value', () => {
-    expect(filtersOf(reportListHref('capex', { kind: 'supplier', name: 'Acme' }, NO_LIST_PICKS, REPORT))).toEqual(withWindow({ supplier_name: set(['Acme']) }));
-    expect(reportListHref('capex', { kind: 'supplier', name: null }, NO_LIST_PICKS, REPORT).startsWith('/ops/capex?filters=')).toBe(true);
-    expect(filtersOf(reportListHref('capex', { kind: 'supplier', name: null }, NO_LIST_PICKS, REPORT))).toEqual(withWindow({ supplier_name: set([null]) }));
+    expect(filtersOf(reportListHref('capex', { kind: 'supplier', name: 'Acme' }, NO_LIST_PICKS, REPORT))).toEqual(withWindow({ nature: set(['capex']), supplier_name: set(['Acme']) }));
+    expect(reportListHref('capex', { kind: 'supplier', name: null }, NO_LIST_PICKS, REPORT).startsWith('/ops/budget?filters=')).toBe(true);
+    expect(filtersOf(reportListHref('capex', { kind: 'supplier', name: null }, NO_LIST_PICKS, REPORT))).toEqual(withWindow({ nature: set(['capex']), supplier_name: set([null]) }));
   });
 
   it('a dimension value row filters that dimension column: the default one keeps analytics_category_name', () => {
     expect(axisListColumn(DEFAULT_AXIS)).toBe('analytics_category_name');
     expect(axisListColumn(NATURE)).toBe('analytics_ax-nat');
     expect(filtersOf(reportListHref('opex', { kind: 'axis', column: axisListColumn(NATURE), name: 'Hardware' }, NO_LIST_PICKS, REPORT)))
-      .toEqual(withWindow({ 'analytics_ax-nat': set(['Hardware']) }));
+      .toEqual(withWindow({ nature: set(['opex']), 'analytics_ax-nat': set(['Hardware']) }));
     expect(filtersOf(reportListHref('opex', { kind: 'axis', column: axisListColumn(DEFAULT_AXIS), name: null }, NO_LIST_PICKS, REPORT)))
-      .toEqual(withWindow({ analytics_category_name: set([null]) }));
+      .toEqual(withWindow({ nature: set(['opex']), analytics_category_name: set([null]) }));
   });
 
   it('a consolidation line filters the account ids (the link-only column), blank for the lines without an account', () => {
     expect(filtersOf(reportListHref('opex', { kind: 'account', ids: ['acc-1', 'acc-2', null] }, NO_LIST_PICKS, REPORT)))
-      .toEqual(withWindow({ account_id: set(['acc-1', 'acc-2', null]) }));
+      .toEqual(withWindow({ nature: set(['opex']), account_id: set(['acc-1', 'acc-2', null]) }));
   });
 
   it('rowListGroup: the stored name, null without one, no link for a blank name', () => {
@@ -230,18 +230,18 @@ describe('reportListLink: filters too long for a URL', () => {
     expect(encodeURIComponent(JSON.stringify(reportListFilters(group, picks, REPORT))).length).toBeGreaterThan(LIST_CONTEXT_INLINE_LIMIT);
 
     const before = reportListLink('opex', group, picks, REPORT);
-    expect(filtersOf(before.href)).toEqual(reportListFilters(group, picks, REPORT));
+    expect(filtersOf(before.href)).toEqual({ ...reportListFilters(group, picks, REPORT), nature: set(['opex']) });
     expect(statusOf(before.href)).toBe('all');
     expect(before.save).toBeTypeOf('function');
     expect(post).not.toHaveBeenCalled();
 
     post.mockResolvedValue({ data: { id: 'ctx-1' } });
-    await expect(before.save!()).resolves.toBe('/ops/opex?statusScope=all&from=report&ctx=ctx-1');
-    expect(post).toHaveBeenCalledWith('/list-contexts', { list: 'spend-items', state: { filters: reportListFilters(group, picks, REPORT) } });
-    expect(cachedListContextId('/spend-items/summary', JSON.stringify(reportListFilters(group, picks, REPORT)))).toBe('ctx-1');
+    await expect(before.save!()).resolves.toBe('/ops/budget?statusScope=all&from=report&ctx=ctx-1');
+    expect(post).toHaveBeenCalledWith('/list-contexts', { list: 'budget-lines', state: { filters: { ...reportListFilters(group, picks, REPORT), nature: set(['opex']) } } });
+    expect(cachedListContextId('/budget-lines/summary', JSON.stringify({ ...reportListFilters(group, picks, REPORT), nature: set(['opex']) }))).toBe('ctx-1');
 
     const after = reportListLink('opex', group, picks, REPORT);
-    expect(after.href).toBe('/ops/opex?statusScope=all&from=report&ctx=ctx-1');
+    expect(after.href).toBe('/ops/budget?statusScope=all&from=report&ctx=ctx-1');
     expect(after.save).toBeUndefined();
   });
 

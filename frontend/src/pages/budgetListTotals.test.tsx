@@ -59,8 +59,7 @@ vi.mock('../components/ServerDataGrid', async (importOriginal) => {
 });
 
 import api from '../api';
-import OpexListPage from './OpexListPage';
-import CapexPage from './CapexPage';
+import BudgetListPage from './budget/BudgetListPage';
 import { DEFAULT_BUDGET_COLUMNS } from '../services/budgetColumns';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
@@ -80,10 +79,8 @@ function runOnVirtualTime() {
 }
 
 describe.each([
-  { name: 'OPEX list', Page: OpexListPage, totals: '/spend-items/summary/totals', rows: '/spend-items/summary', col: 'product_name', search: '' },
-  { name: 'OPEX list with a filter in the URL', Page: OpexListPage, totals: '/spend-items/summary/totals', rows: '/spend-items/summary', col: 'product_name', search: '?filters=' + encodeURIComponent(JSON.stringify(textFilter('product_name', 'cloud'))) },
-  { name: 'CAPEX list', Page: CapexPage, totals: '/capex-items/summary/totals', rows: '/capex-items/summary', col: 'description', search: '' },
-  { name: 'CAPEX list with a filter in the URL', Page: CapexPage, totals: '/capex-items/summary/totals', rows: '/capex-items/summary', col: 'description', search: '?filters=' + encodeURIComponent(JSON.stringify(textFilter('description', 'cloud'))) },
+  { name: 'OPEX list', Page: BudgetListPage, totals: '/budget-lines/summary/totals', rows: '/budget-lines/summary', col: 'product_name', search: '' },
+  { name: 'OPEX list with a filter in the URL', Page: BudgetListPage, totals: '/budget-lines/summary/totals', rows: '/budget-lines/summary', col: 'product_name', search: '?filters=' + encodeURIComponent(JSON.stringify(textFilter('product_name', 'cloud'))) },
 ])('$name footer totals', ({ Page, totals, rows, col, search }) => {
   let stored = new Map<string, string>();
   beforeEach(() => {
@@ -131,7 +128,7 @@ describe.each([
   };
 
   it('asks once on load when the saved layout shows an FTE column, with the filter and the FTE column', async () => {
-    const key = Page === OpexListPage ? 'opex-summary' : 'capex-summary';
+    const key = 'budget-summary';
     stored.set(`grid-columns:test:u-1:${key}`, JSON.stringify([{ colId: 'fte_yBudget', hide: false }]));
     renderPage();
     await waitFor(() => expect(grid.api).not.toBeNull());

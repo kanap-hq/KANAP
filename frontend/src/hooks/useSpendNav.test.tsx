@@ -185,4 +185,34 @@ describe('useSpendNav (neighbours, lot 1C)', () => {
     expect(params.ctx).toBe('Ctx_0123456789abcdefghi');
     expect(params.filters).toBeUndefined();
   });
+  it.each(['opex', 'capex'] as const)('budget context from %s walks native BL neighbours and prefetches by nature', async (nature) => {
+    mocked.get.mockImplementation(async (url: string, config?: { params?: Record<string, string> }) => {
+      if (url === '/budget-columns') return { data: setting };
+      if (url === '/budget-lines/summary/neighbors') {
+        const response = neighborsOf(String(config!.params!.id).replace(/^BL-/, 'OPX-'));
+        return { data: { ...response, prev: response.prev && { ...response.prev, nature: 'capex' }, next: response.next && { ...response.next, nature: 'opex' } } };
+      }
+      return { data: {} };
+    });
+    const useNav = nature === 'opex' ? useSpendNav : useCapexNav;
+    const filters = JSON.stringify({ nature: { filterType: 'set', values: ['opex', 'capex'] } });
+    const { result } = renderHook(() => useNav({ id: 'BL-3', sort: 'product_name:ASC', filters, statusScope: 'all' }, true), { wrapper });
+    await waitFor(() => expect(result.current).toMatchObject({ index: 2, total: 5, prevId: 'BL-2', nextId: 'BL-4', prevPath: '/ops/capex/BL-2', nextPath: '/ops/opex/BL-4' }));
+    expect(calls('/budget-lines/summary/neighbors')[0][1].params).toMatchObject({ id: 'BL-3', filters, sort: 'product_name:ASC', includeDisabled: '1' });
+    await waitFor(() => expect(calls('/capex-items/BL-2')).toHaveLength(1));
+    await waitFor(() => expect(calls('/spend-items/BL-4')).toHaveLength(1));
+    expect(calls('/spend-items/summary/neighbors')).toHaveLength(0);
+    expect(calls('/capex-items/summary/neighbors')).toHaveLength(0);
+  });
+
+  it('budget context uses the budget-lines key for filters too long for a URL', async () => {
+    mocked.get.mockImplementation(async (url: string) => url === '/budget-columns' ? { data: setting } : { data: { index: 0, total: 1, prev: null, next: null } });
+    const values = Array.from({ length: 1500 }, (_, i) => `Supplier ${i}`);
+    const filters = JSON.stringify({ supplier_name: { filterType: 'set', values } });
+    const { result } = renderHook(() => useSpendNav({ id: 'BL-1', sort: 'yBudget:DESC', filters }, true), { wrapper });
+    await waitFor(() => expect(result.current.total).toBe(1));
+    expect(mocked.post).toHaveBeenCalledWith('/list-contexts', { list: 'budget-lines', state: { filters: JSON.parse(filters) } });
+    expect(calls('/budget-lines/summary/neighbors')[0][1].params.ctx).toBe('Ctx_0123456789abcdefghi');
+  });
+
 });

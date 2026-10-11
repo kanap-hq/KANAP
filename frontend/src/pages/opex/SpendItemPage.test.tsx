@@ -22,11 +22,12 @@ vi.mock('../../components/design', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../components/design')>()),
   useKanapDialogs: () => dialogs,
 }));
-const nav = vi.hoisted(() => ({ calls: [] as Array<{ sort?: string | null; filters?: string | null; enabled?: boolean }> }));
+const nav = vi.hoisted(() => ({ result: null as any, unified: false, calls: [] as Array<{ sort?: string | null; filters?: string | null; enabled?: boolean }> }));
 vi.mock('../../hooks/useSpendNav', () => ({
-  useSpendNav: (params: { sort?: string | null; filters?: string | null; enabled?: boolean }) => {
+  useSpendNav: (params: { sort?: string | null; filters?: string | null; enabled?: boolean }, unified = false) => {
+    nav.unified = unified;
     nav.calls.push(params);
-    return { index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null };
+    return nav.result ?? { index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null };
   },
 }));
 vi.mock('../../hooks/useCurrencySettings', () => ({ default: () => ({ data: { defaultSpendCurrency: 'EUR' } }) }));
@@ -37,9 +38,9 @@ vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: 'me'
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: vi.fn() }) }));
 vi.mock('../../utils/workspaceTabCounts', () => ({ fetchSpendRelationsCount: vi.fn(async () => 0) }));
 vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
-  default: ({ properties, actions, children, onTitleSave, onBack, onTabChange, metadata }: {
+  default: ({ properties, actions, children, onTitleSave, onBack, onTabChange, metadata, nav: navigation }: {
     properties?: React.ReactNode; actions?: React.ReactNode; children?: React.ReactNode; onTitleSave: (v: string) => void;
-    onBack?: () => void; onTabChange?: (tab: string) => void; metadata?: React.ReactNode;
+    onBack?: () => void; onTabChange?: (tab: string) => void; metadata?: React.ReactNode; nav?: { onNext?: () => void };
   }) => (
     <div>
       <button type="button" onClick={() => onTitleSave('Monitoring')}>set title</button>
@@ -47,6 +48,7 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
       <button type="button" onClick={() => onBack?.()}>close workspace</button>
       <button type="button" onClick={() => onTabChange?.('budget')}>budget tab</button>
       <button type="button" onClick={() => onTabChange?.('overview')}>overview tab</button>
+      <button type="button" onClick={() => navigation?.onNext?.()}>next budget line</button>
       {metadata}{actions}{properties}{children}
     </div>
   ),
@@ -178,7 +180,7 @@ const ITEM_ID = '11111111-2222-3333-4444-555555555555';
 const CHANGES_DAY = new Date('2026-10-02T12:04:00.000Z');
 
 // The edits a page keeps for the session (lot 3C review): each test starts without any.
-beforeEach(() => resetSharedPatchBuffers());
+beforeEach(() => { resetSharedPatchBuffers(); nav.result = null; nav.unified = false; });
 
 /**
  * The PATCH bodies without their `base` (lot 3C), checking that each base
@@ -214,6 +216,7 @@ function renderAt(path: string) {
         <MemoryRouter initialEntries={[path]} useTransitions={false}>
           <Routes>
             <Route path="/ops/opex/:id/:tab" element={<SpendItemPage />} />
+            <Route path="/ops/budget" element={<ListPageProbe />} />
             <Route path="/ops/opex" element={<ListPageProbe />} />
             <Route path="/ops/capex/:id/:tab" element={<CapexPageProbe />} />
           </Routes>
@@ -649,15 +652,25 @@ describe('SpendItemPage list context', () => {
     });
   });
 
+  it('a unified list context enables mixed navigation and opens a CAPEX neighbour with the list state', async () => {
+    nav.result = { index: 0, total: 2, hasPrev: false, hasNext: true, prevId: null, nextId: 'BL-12', nextPath: '/ops/capex/BL-12' };
+    renderAt(`/ops/opex/${ITEM_ID}/overview?list=budget&sort=product_name:ASC`);
+    await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
+    expect(nav.unified).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'next budget line' }));
+    const page = await screen.findByTestId('capex-page');
+    expect(page.getAttribute('data-path')).toBe('/ops/capex/BL-12/overview');
+  });
+
   it('sends prev/next no sort for the default one, and keeps a sort the user picked', async () => {
-    window.sessionStorage.setItem('opex-list-context', JSON.stringify({ sort: 'yBudget:DESC', q: '', filters: '', statusScope: 'enabled' }));
+    window.sessionStorage.setItem('budget-list-context', JSON.stringify({ sort: 'yBudget:DESC', q: '', filters: '', statusScope: 'enabled' }));
     const first = renderAt(`/ops/opex/${ITEM_ID}/overview`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
     expect(nav.calls.filter((c) => c.enabled).every((c) => (c.sort ?? null) === null)).toBe(true);
     first.unmount();
 
     nav.calls = [];
-    window.sessionStorage.setItem('opex-list-context', JSON.stringify({ sort: 'yRevision:ASC', q: '', filters: '', statusScope: 'enabled' }));
+    window.sessionStorage.setItem('budget-list-context', JSON.stringify({ sort: 'yRevision:ASC', q: '', filters: '', statusScope: 'enabled' }));
     renderAt(`/ops/opex/${ITEM_ID}/overview`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
     expect(nav.calls.filter((c) => c.enabled).every((c) => c.sort === 'yRevision:ASC')).toBe(true);
@@ -665,7 +678,7 @@ describe('SpendItemPage list context', () => {
 
   it('walks prev/next like the list: a sort or filter on a hidden column falls back', async () => {
     const filters = JSON.stringify({ yForecast: { filterType: 'number', type: 'greaterThan', filter: 1 }, yBudget: { filterType: 'number', type: 'greaterThan', filter: 2 } });
-    renderAt(`/ops/opex/${ITEM_ID}/overview?sort=yForecast:ASC&filters=${encodeURIComponent(filters)}`);
+    renderAt(`/ops/opex/${ITEM_ID}/overview?list=budget&sort=yForecast:ASC&filters=${encodeURIComponent(filters)}`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
     const ready = nav.calls.filter((c) => c.enabled);
     for (const call of ready) {
@@ -674,14 +687,14 @@ describe('SpendItemPage list context', () => {
       expect(JSON.parse(call.filters ?? '{}')).toEqual({ yBudget: { filterType: 'number', type: 'greaterThan', filter: 2 } });
     }
     // The stored list context gets the same, once the setting is known.
-    const stored = JSON.parse(window.sessionStorage.getItem('opex-list-context') ?? '{}');
+    const stored = JSON.parse(window.sessionStorage.getItem('budget-list-context') ?? '{}');
     expect(stored.sort).toBe('');
     expect(stored.filters).not.toContain('yForecast');
   });
 
   it('opened from a list a report link opened (`from=report`): walks its scope and filters, leaves the stored context alone, goes back to that view', async () => {
     const own = { sort: '', q: '', filters: JSON.stringify({ supplier_name: { filterType: 'set', values: ['Alpha'] } }), statusScope: 'enabled' };
-    window.sessionStorage.setItem('opex-list-context', JSON.stringify(own));
+    window.sessionStorage.setItem('budget-list-context', JSON.stringify(own));
     const filters = JSON.stringify({ has_fte: { filterType: 'set', values: ['yes'] } });
     renderAt(`/ops/opex/${ITEM_ID}/overview?${new URLSearchParams({ filters, statusScope: 'all', from: 'report' })}`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
@@ -689,13 +702,13 @@ describe('SpendItemPage list context', () => {
       expect(call.statusScope).toBe('all');
       expect(JSON.parse(call.filters ?? '{}')).toEqual(JSON.parse(filters));
     }
-    expect(JSON.parse(window.sessionStorage.getItem('opex-list-context') ?? '{}')).toEqual(own);
+    expect(JSON.parse(window.sessionStorage.getItem('budget-list-context') ?? '{}')).toEqual(own);
     fireEvent.click(screen.getByRole('button', { name: 'back to list' }));
     const search = new URLSearchParams((await screen.findByTestId('list-page')).getAttribute('data-search') ?? '');
     expect(search.get('from')).toBe('report');
     expect(search.get('statusScope')).toBe('all');
     expect(search.get('filters')).toBe(filters);
-    expect(JSON.parse(window.sessionStorage.getItem('opex-list-context') ?? '{}')).toEqual(own);
+    expect(JSON.parse(window.sessionStorage.getItem('budget-list-context') ?? '{}')).toEqual(own);
   });
 });
 
@@ -711,7 +724,7 @@ describe('SpendItemPage list context too long for a URL (ctx)', () => {
     mocked.post.mockReset();
     mocked.get.mockImplementation(async (url: string) => {
       if (url === '/budget-columns') return { data: DEFAULT_BUDGET_COLUMNS };
-      if (url === `/list-contexts/${CTX}`) return { data: { id: CTX, list: 'spend-items', state: { filters: BIG } } };
+      if (url === `/list-contexts/${CTX}`) return { data: { id: CTX, list: 'budget-lines', state: { filters: BIG } } };
       if (url === `/spend-items/${ITEM_ID}`) return { data: { id: ITEM_ID, item_number: 7, product_name: 'Monitoring', currency: 'EUR' } };
       return { data: {} };
     });
@@ -725,7 +738,7 @@ describe('SpendItemPage list context too long for a URL (ctx)', () => {
     expect(mocked.get.mock.calls.filter(([url]) => url === `/list-contexts/${CTX}`)).toHaveLength(1);
     expect(mocked.post).not.toHaveBeenCalled();
     // The stored list context keeps the id, not 31 KB.
-    await waitFor(() => expect(JSON.parse(window.sessionStorage.getItem('opex-list-context') ?? '{}')).toMatchObject({ filters: '', ctx: CTX }));
+    await waitFor(() => expect(JSON.parse(window.sessionStorage.getItem('budget-list-context') ?? '{}')).toMatchObject({ filters: '', ctx: CTX }));
     fireEvent.click(screen.getByRole('button', { name: 'back to list' }));
     const list = await screen.findByTestId('list-page');
     const search = new URLSearchParams(list.getAttribute('data-search') ?? '');
@@ -772,7 +785,7 @@ describe('SpendItemPage list context and dimensions', () => {
       [`analytics_${OLD}`]: { filterType: 'set', values: ['Hardware'] },
       [`analytics_${GONE}`]: { filterType: 'set', values: [null] },
     };
-    window.sessionStorage.setItem('opex-list-context', JSON.stringify({
+    window.sessionStorage.setItem('budget-list-context', JSON.stringify({
       sort: `analytics_${OLD}:ASC`, q: '', filters: JSON.stringify(filters), statusScope: 'enabled',
     }));
     renderAt(`/ops/opex/${ITEM_ID}/overview`);
@@ -782,13 +795,13 @@ describe('SpendItemPage list context and dimensions', () => {
       expect(call.sort ?? null).toBeNull();
       expect(JSON.parse(call.filters ?? '{}')).toEqual(kept);
     }
-    const stored = JSON.parse(window.sessionStorage.getItem('opex-list-context') ?? '{}');
+    const stored = JSON.parse(window.sessionStorage.getItem('budget-list-context') ?? '{}');
     expect(stored.sort).toBe('');
     expect(JSON.parse(stored.filters)).toEqual(kept);
   });
 
   it('keeps a sort on an enabled dimension', async () => {
-    window.sessionStorage.setItem('opex-list-context', JSON.stringify({
+    window.sessionStorage.setItem('budget-list-context', JSON.stringify({
       sort: `analytics_${NATURE}:DESC`, q: '', filters: '', statusScope: 'enabled',
     }));
     renderAt(`/ops/opex/${ITEM_ID}/overview`);
@@ -839,6 +852,7 @@ describe('SpendItemPage autosave across lines, refusals and a busy server', () =
             <NavigateProbe />
             <Routes>
               <Route path="/ops/opex/:id/:tab" element={<SpendItemPage />} />
+              <Route path="/ops/budget" element={<div>opex list</div>} />
               <Route path="/ops/opex" element={<div>opex list</div>} />
             </Routes>
           </MemoryRouter>
@@ -1020,6 +1034,7 @@ describe('SpendItemPage edit conflicts (lot 3C)', () => {
             <LocationProbe />
             <Routes>
               <Route path="/ops/opex/:id/:tab" element={<SpendItemPage />} />
+              <Route path="/ops/budget" element={<div>opex list</div>} />
               <Route path="/ops/opex" element={<div>opex list</div>} />
             </Routes>
           </MemoryRouter>

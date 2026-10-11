@@ -222,8 +222,8 @@ describe('AnalyticsWorkspacePage', () => {
     expect(link).toHaveAttribute('target', '_blank');
     const url = new URL(link.getAttribute('href') as string, 'http://kanap.test');
     // The CAPEX list on this value of the dimension, every status, as a one-off view.
-    expect(url.pathname).toBe('/ops/capex');
-    expect(JSON.parse(url.searchParams.get('filters') as string)).toEqual({ 'analytics_ax-nature': { filterType: 'set', values: ['Licenses'] } });
+    expect(url.pathname).toBe('/ops/budget');
+    expect(JSON.parse(url.searchParams.get('filters') as string)).toEqual({ 'analytics_ax-nature': { filterType: 'set', values: ['Licenses'] }, nature: { filterType: 'set', values: ['capex'] } });
     expect(url.searchParams.get(STATUS_SCOPE_PARAM)).toBe('all');
     expect(url.searchParams.get('from')).toBe('report');
 
@@ -231,7 +231,7 @@ describe('AnalyticsWorkspacePage', () => {
     await pickUsage('master-data:shared.lineTypeUsage.capex');
     await waitFor(() => expect(screen.getByTestId('analytics-value-applies-to-conflict')).toHaveTextContent('analytics.valueAppliesToConflict.opex:3'));
     const opexLink = within(screen.getByTestId('analytics-value-applies-to-conflict')).getByRole('link', { name: 'analytics.showLines' });
-    expect(new URL(opexLink.getAttribute('href') as string, 'http://kanap.test').pathname).toBe('/ops/opex');
+    expect(new URL(opexLink.getAttribute('href') as string, 'http://kanap.test').pathname).toBe('/ops/budget');
 
     // Both types allowed: no conflict left.
     await pickUsage('master-data:shared.lineTypeUsage.both');
@@ -244,8 +244,8 @@ describe('AnalyticsWorkspacePage', () => {
     const note = await screen.findByTestId('analytics-value-applies-to-conflict');
     expect(note).toHaveTextContent('analytics.valueAppliesToConflict.opex:2');
     const url = new URL(within(note).getByRole('link').getAttribute('href') as string, 'http://kanap.test');
-    expect(url.pathname).toBe('/ops/opex');
-    expect(JSON.parse(url.searchParams.get('filters') as string)).toEqual({ analytics_category_name: { filterType: 'set', values: ['Licenses'] } });
+    expect(url.pathname).toBe('/ops/budget');
+    expect(JSON.parse(url.searchParams.get('filters') as string)).toEqual({ analytics_category_name: { filterType: 'set', values: ['Licenses'] }, nature: { filterType: 'set', values: ['opex'] } });
   });
 
   it('says nothing about lines of the other type under a disabled dimension', async () => {

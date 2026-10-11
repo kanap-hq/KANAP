@@ -179,7 +179,9 @@ describe('Layout budget management sidebar', () => {
           <Routes>
             <Route element={<Layout />}>
               <Route path="/ops" element={<div>overview</div>} />
+              <Route path="/ops/budget" element={<div>budget</div>} />
               <Route path="/ops/opex" element={<div>opex</div>} />
+              <Route path="/ops/capex/:id" element={<div>capex item</div>} />
               <Route path="/ops/opex/:id" element={<div>opex item</div>} />
             </Route>
           </Routes>
@@ -199,26 +201,34 @@ describe('Layout budget management sidebar', () => {
     access.grants = { budget: 'member', budget_ops: 'reader', companies: 'reader', departments: 'member' };
     renderSidebar();
 
-    expect(screen.getByRole('link', { name: 'nav:sidebar.ops.opex' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'nav:sidebar.ops.budgetLines' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'nav:sidebar.ops.administration' })).not.toBeInTheDocument();
   });
 
   it('selects OPEX, not Overview, on an OPEX item', () => {
     renderSidebar('/ops/opex/OPX-1');
-    expect(screen.getByRole('link', { name: 'nav:sidebar.ops.opex' })).toHaveClass('Mui-selected');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.ops.budgetLines' })).toHaveClass('Mui-selected');
     expect(screen.getByRole('link', { name: 'nav:sidebar.ops.overview' })).not.toHaveClass('Mui-selected');
   });
 
   it('selects Overview on the overview page itself', () => {
     renderSidebar('/ops');
     expect(screen.getByRole('link', { name: 'nav:sidebar.ops.overview' })).toHaveClass('Mui-selected');
-    expect(screen.getByRole('link', { name: 'nav:sidebar.ops.opex' })).not.toHaveClass('Mui-selected');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.ops.budgetLines' })).not.toHaveClass('Mui-selected');
   });
 
   it('does not select Overview on the OPEX list', () => {
     renderSidebar('/ops/opex');
-    expect(screen.getByRole('link', { name: 'nav:sidebar.ops.opex' })).toHaveClass('Mui-selected');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.ops.budgetLines' })).toHaveClass('Mui-selected');
     expect(screen.getByRole('link', { name: 'nav:sidebar.ops.overview' })).not.toHaveClass('Mui-selected');
+  });
+  it.each(['/ops/budget', '/ops/capex/BL-30', '/ops/opex/BL-1'])('selects the single budget entry on %s', (path) => {
+    renderSidebar(path);
+    const entry = screen.getByRole('link', { name: 'nav:sidebar.ops.budgetLines' });
+    expect(entry).toHaveAttribute('href', '/ops/budget');
+    expect(entry).toHaveClass('Mui-selected');
+    expect(screen.queryByRole('link', { name: 'nav:sidebar.ops.opex' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'nav:sidebar.ops.capex' })).toBeNull();
   });
 });
 
@@ -277,4 +287,6 @@ describe('Layout administration sidebar: sample data', () => {
     expect(screen.getByRole('link', { name: 'nav:sidebar.admin.branding' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'nav:sidebar.admin.sampleData' })).not.toBeInTheDocument();
   });
+
+
 });

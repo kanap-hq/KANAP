@@ -50,13 +50,13 @@ vi.mock('../components/ServerDataGrid', async (importOriginal) => {
 });
 
 import api from '../api';
-import OpexListPage from './OpexListPage';
+import BudgetListPage from './budget/BudgetListPage';
 import { DEFAULT_BUDGET_COLUMNS } from '../services/budgetColumns';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
-const ROWS = '/spend-items/summary';
-const TOTALS = '/spend-items/summary/totals';
-const VALUES = '/spend-items/summary/filter-values';
+const ROWS = '/budget-lines/summary';
+const TOTALS = '/budget-lines/summary/totals';
+const VALUES = '/budget-lines/summary/filter-values';
 const SUPPLIERS = ['Alpha', 'Bravo', 'Charlie'];
 
 const calls = (url: string) => get.mock.calls.filter(([u]) => u === url);
@@ -80,12 +80,12 @@ function floatingFilterCell(colId: string): HTMLElement {
   return document.querySelector(`.ag-floating-filter[aria-colindex="${index}"]`) as HTMLElement;
 }
 
-function renderPage(path = '/ops/opex') {
+function renderPage(path = '/ops/budget') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[path]}>
-        <OpexListPage />
+        <BudgetListPage />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -119,9 +119,9 @@ const LINK_FILTERS = {
   cost_center_label: set(['CC1 · Ops']),
   account_id: set(['acc-1']),
 };
-const linkPath = (filters: Record<string, unknown> = LINK_FILTERS) => `/ops/opex?${new URLSearchParams({ filters: JSON.stringify(filters), statusScope: 'all', from: 'report' })}`;
+const linkPath = (filters: Record<string, unknown> = LINK_FILTERS) => `/ops/budget?${new URLSearchParams({ filters: JSON.stringify(filters), statusScope: 'all', from: 'report' })}`;
 const visible = (colId: string) => grid.api.getColumn(colId)?.isVisible();
-const savedLayout = (stored: Map<string, string>) => JSON.parse(stored.get('grid-columns:test:u-1:opex-summary') ?? '[]') as Array<{ colId: string; hide?: boolean }>;
+const savedLayout = (stored: Map<string, string>) => JSON.parse(stored.get('grid-columns:test:u-1:budget-summary') ?? '[]') as Array<{ colId: string; hide?: boolean }>;
 
 describe('OPEX list opened from a report link', () => {
   let stored = new Map<string, string>();
@@ -138,7 +138,7 @@ describe('OPEX list opened from a report link', () => {
     });
     get.mockImplementation(async (url: string) => {
       if (url === '/budget-columns') return { data: DEFAULT_BUDGET_COLUMNS };
-      if (url === ROWS) return { data: { items: [{ id: 'o-1', item_number: 1, product_name: 'Cloud' }], total: 1, page: 1, limit: 50 } };
+      if (url === ROWS) return { data: { items: [{ id: 'o-1', nature: 'opex', item_number: 1, product_name: 'Cloud' }], total: 1, page: 1, limit: 50 } };
       if (url === TOTALS) return { data: { yBudget: 10 } };
       return { data: { items: [] } };
     });
@@ -202,7 +202,7 @@ describe('OPEX list opened from a report link', () => {
   }, 30_000);
 
   it('without a scope in the address: the list default (enabled)', async () => {
-    await openList('/ops/opex');
+    await openList('/ops/budget');
     expect(paramsOf(calls(ROWS)[0]).status).toBe('enabled');
     expect((document.querySelector('input[type="radio"][value="enabled"]') as HTMLInputElement).checked).toBe(true);
   }, 30_000);

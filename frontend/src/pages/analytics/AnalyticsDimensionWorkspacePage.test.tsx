@@ -390,12 +390,12 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     const capex = within(note).getByRole('link', { name: 'analytics.required.showLines.capex' });
     expect(opex).toHaveAttribute('target', '_blank');
     expect(linkTarget(opex.getAttribute('href'))).toEqual({
-      path: '/ops/opex',
-      filters: { 'analytics_ax-nature': { filterType: 'set', values: [null] } },
+      path: '/ops/budget',
+      filters: { 'analytics_ax-nature': { filterType: 'set', values: [null] }, nature: { filterType: 'set', values: ['opex'] } },
       statusScope: 'all',
       from: 'report',
     });
-    expect(linkTarget(capex.getAttribute('href')).path).toBe('/ops/capex');
+    expect(linkTarget(capex.getAttribute('href')).path).toBe('/ops/budget');
     expect(screen.queryByTestId('analytics-dimension-required-unusable')).toBeNull();
     expect(screen.queryByTestId('analytics-dimension-required-disabled')).toBeNull();
 
@@ -430,8 +430,8 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     expect(links).toHaveLength(1);
     expect(links[0]).toHaveTextContent('analytics.showLines');
     expect(linkTarget(links[0].getAttribute('href'))).toMatchObject({
-      path: '/ops/opex',
-      filters: { analytics_category_name: { filterType: 'set', values: [null] } },
+      path: '/ops/budget',
+      filters: { analytics_category_name: { filterType: 'set', values: [null] }, nature: { filterType: 'set', values: ['opex'] } },
     });
   });
 

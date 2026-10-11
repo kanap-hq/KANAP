@@ -2,24 +2,23 @@ import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ColDef } from 'ag-grid-community';
-import ServerDataGrid, { DATE_COLUMN_FILTER, DATE_COLUMN_FILTER_TWO_CONDITIONS, EnhancedColDef, StatusScope, gridSortModel } from '../components/ServerDataGrid';
-import PageHeader from '../components/PageHeader';
-import { Button, Stack, Typography } from '@mui/material';
-import CheckboxSetFilter from '../components/CheckboxSetFilter';
-import { withCostCenterGroups } from '../components/grid/costCenterFilter';
-import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
+import ServerDataGrid, { DATE_COLUMN_FILTER, DATE_COLUMN_FILTER_TWO_CONDITIONS, EnhancedColDef, StatusScope, gridSortModel } from '../../components/ServerDataGrid';
+import PageHeader from '../../components/PageHeader';
+import { Button, Chip, Menu, MenuItem, Stack, Typography } from '@mui/material';
+import CheckboxSetFilter from '../../components/CheckboxSetFilter';
+import { withCostCenterGroups } from '../../components/grid/costCenterFilter';
+import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../auth/AuthContext';
-import BudgetFileExportDialog from '../components/finance/BudgetFileExportDialog';
-import BudgetFileImportDialog from '../components/finance/BudgetFileImportDialog';
-import DeleteSelectedButton from '../components/DeleteSelectedButton';
-import { LinkCellRenderer } from '../components/grid/renderers';
-import { formatItemRef } from '../utils/item-ref';
+import { useAuth } from '../../auth/AuthContext';
+import BudgetFileExportDialog from '../../components/finance/BudgetFileExportDialog';
+import BudgetFileImportDialog from '../../components/finance/BudgetFileImportDialog';
+import DeleteSelectedButton from '../../components/DeleteSelectedButton';
+import { LinkCellRenderer } from '../../components/grid/renderers';
+import { formatItemRef } from '../../utils/item-ref';
 import {
   amountColumnYear,
   buildAmountColumnDefs,
   buildFteColumnDefs,
-  dimensionFieldPredicate,
   explicitSort,
   fteTotalsToRow,
   SummaryVersions,
@@ -27,26 +26,32 @@ import {
   totalsToVersions,
   visibleAmountFields,
   visibleFteFields,
-} from '../components/finance/amountColumns';
-import { compactListSearchCached, filtersNeedContext, listFiltersOf, getWithListContext } from '../lib/listContext';
-import { isReportView, markReportView, snapshotFilters, useSettledListSearch, writeListSnapshot } from '../hooks/useListContextSearch';
-import { useBudgetColumns } from '../hooks/useBudgetColumns';
-import { analyticsListColumns, useAnalyticsAxes } from '../hooks/useAnalyticsAxes';
-import { readStoredOpexListContext, writeStoredOpexListContext } from './opex/listContextStorage';
-import { statusScopeParams } from '../utils/statusScopeParams';
-import { useLocale } from '../i18n/useLocale';
-import { formatShortDate, formatShortDateTime } from '../lib/dateFormat';
-import ForbiddenPage from './ForbiddenPage';
-import { statusColumnProps } from '../components/grid/statusColumn';
+} from '../../components/finance/amountColumns';
+import { canonicalJson, compactListSearch, compactListSearchCached, filtersNeedContext, listFiltersOf, getWithListContext, parseListFilters } from '../../lib/listContext';
+import { isReportView, markReportView, snapshotFilters, useSettledListSearch, writeListSnapshot } from '../../hooks/useListContextSearch';
+import { useBudgetColumns } from '../../hooks/useBudgetColumns';
+import { analyticsListColumns, useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
+import { readStoredBudgetListContext, writeStoredBudgetListContext } from './listContextStorage';
+import { statusScopeParams } from '../../utils/statusScopeParams';
+import { useLocale } from '../../i18n/useLocale';
+import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
+import ForbiddenPage from '../ForbiddenPage';
+import { budgetListFieldPredicate } from './listFields';
+import ChipToggleBar, { ChipToggleContextLine } from '../../components/ChipToggleBar';
+import { useTenant } from '../../tenant/TenantContext';
+import { drawerMenuItemSx } from '../../theme/formSx';
+import { migrateBudgetGridLayout, readBudgetNature, type BudgetNatureScope, natureScopeOf } from './listPreferences';
+import { statusColumnProps } from '../../components/grid/statusColumn';
 
 /**
- * A line as the list reads it: the grid shape of `/spend-items/summary` (`shape=grid`), which
+ * A line as the list reads it: the grid shape of `/budget-lines/summary` (`shape=grid`), which
  * carries these keys only (backend `gridRow`), plus `analytics_<axis id>` for the enabled
  * dimensions and the `fte_*` keys of the FTE columns shown.
  */
 type SummaryRow = {
   id: string;
   item_number: number;
+  nature: 'opex' | 'capex';
   product_name: string;
   description?: string | null;
   supplier_name?: string | null;
@@ -81,10 +86,10 @@ type SummaryRow = {
 /** The query the footer totals follow: the list state without the sort, plus the amount and FTE columns shown. */
 type TotalsQuery = { q: string; filters: string; statusScope: StatusScope; fte: string; amounts: string };
 
-const TOTALS_QUERY_KEY = 'opex-summary-totals';
-const ROWS_ENDPOINT = '/spend-items/summary';
-const TOTALS_ENDPOINT = '/spend-items/summary/totals';
-const VALUES_ENDPOINT = '/spend-items/summary/filter-values';
+const TOTALS_QUERY_KEY = 'budget-summary-totals';
+const ROWS_ENDPOINT = '/budget-lines/summary';
+const TOTALS_ENDPOINT = '/budget-lines/summary/totals';
+const VALUES_ENDPOINT = '/budget-lines/summary/filter-values';
 
 /**
  * Parameters of the page requests: the lean grid rows, with the FTE keys of the FTE columns shown
@@ -97,17 +102,31 @@ const pageParams = (state: Parameters<typeof visibleFteFields>[0]) => ({ shape: 
  * (`?from=report`): the menu's link to the list, followed from that view, then opens on the tab's own
  * list state instead of keeping the report's filters and Show scope on screen.
  */
-export default function OpexListPage() {
+export default function BudgetListPage() {
   const location = useLocation();
-  return <OpexListPageView key={isReportView(location.search) ? 'report' : 'list'} />;
+  const { profile } = useAuth();
+  const { tenantSlug } = useTenant();
+  return <BudgetListPageView key={`${tenantSlug}:${profile?.id}:${isReportView(location.search) ? 'report' : 'list'}`} />;
 }
 
-function OpexListPageView() {
-  const { hasLevel } = useAuth();
+function BudgetListPageView() {
+  const { hasLevel, profile } = useAuth();
+  const { tenantSlug } = useTenant();
+  const natureKey = `kanap-budget-nature:${tenantSlug ?? 'unknown'}:${profile?.id ?? 'anon'}`;
+  const [natureScope, setNatureScope] = useState<BudgetNatureScope>(() => readBudgetNature(natureKey));
+  const initialNature = useRef(natureScope);
+  const lastNatureFilter = useRef<string | null>(null);
+  const [newAnchor, setNewAnchor] = useState<HTMLElement | null>(null);
+  // Run before ServerDataGrid reads its saved columns.
+  useMemo(() => migrateBudgetGridLayout(tenantSlug, profile?.id), [tenantSlug, profile?.id]);
+  const rememberNature = (scope: BudgetNatureScope) => {
+    setNatureScope(scope);
+    try { localStorage.setItem(natureKey, scope); } catch { /* unavailable storage */ }
+  };
   const { t } = useTranslation(['ops', 'common']);
   const locale = useLocale();
   const budgetColumns = useBudgetColumns();
-  const analyticsAxes = useAnalyticsAxes({ scope: 'opex' });
+  const analyticsAxes = useAnalyticsAxes();
   const queryClient = useQueryClient();
 
   const navigate = useNavigate();
@@ -116,7 +135,7 @@ function OpexListPageView() {
 
   // `serverOrder`: the options keep the server's order (a dimension's values, in the dimension's
   // order) instead of their labels' alphabetical order; blank stays last.
-  const getOpexFilterValues = useCallback((field: string, opts?: { emptyLabel?: string; labelMap?: Record<string, string>; serverOrder?: boolean }) => {
+  const getBudgetFilterValues = useCallback((field: string, opts?: { emptyLabel?: string; labelMap?: Record<string, string>; serverOrder?: boolean }) => {
     const emptyLabel = opts?.emptyLabel ?? t('shared.blank');
     const labelMap = opts?.labelMap;
     const serverOrder = !!opts?.serverOrder;
@@ -166,11 +185,11 @@ function OpexListPageView() {
   // the tab's stored list context, its state lives in its address only.
   const reportViewRef = useRef(isReportView(location.search));
   reportViewRef.current = isReportView(location.search);
-  const storedContextRef = useRef(reportViewRef.current ? null : readStoredOpexListContext());
+  const storedContextRef = useRef(reportViewRef.current ? null : readStoredBudgetListContext());
   /** The tab's stored list context; none in a one-off view. */
   const storedContext = useCallback(() => {
     if (reportViewRef.current) return null;
-    const stored = storedContextRef.current || readStoredOpexListContext();
+    const stored = storedContextRef.current || readStoredBudgetListContext();
     if (stored && !storedContextRef.current) storedContextRef.current = stored;
     return stored;
   }, []);
@@ -180,7 +199,7 @@ function OpexListPageView() {
   budgetColumnsRef.current = budgetColumns;
   // The dimension columns the list builds: a sort or filter on another dimension falls back like a hidden amount column.
   const isListField = useMemo(
-    () => dimensionFieldPredicate(analyticsAxes.enabled.filter((axis) => !axis.is_default).map((axis) => axis.id)),
+    () => budgetListFieldPredicate(analyticsAxes.enabled.filter((axis) => !axis.is_default).map((axis) => axis.id)),
     [analyticsAxes],
   );
   const isListFieldRef = useRef(isListField);
@@ -209,9 +228,10 @@ function OpexListPageView() {
     const { ctx: _ctx, ...rest } = stored;
     const next = { ...rest, filters: '' };
     storedContextRef.current = next;
-    writeStoredOpexListContext(next);
+    writeStoredBudgetListContext(next);
   }, [storedContext]);
-  const settledSearch = useSettledListSearch({
+  const [gridMounted, setGridMounted] = useState(false);
+  const settledBase = useSettledListSearch({
     endpoint: ROWS_ENDPOINT,
     search: location.search,
     readStored,
@@ -221,17 +241,46 @@ function OpexListPageView() {
     isListField,
     dropStoredFilters,
   });
+  // Seed only the opening state. An explicit URL nature wins and never writes the preference.
+  const entrySearch = useRef(location.search);
+  const settledSearch = useMemo(() => {
+    if (settledBase == null || gridMounted) return settledBase;
+    const sp = new URLSearchParams(settledBase);
+    const entry = parseListFilters(listFiltersOf(new URLSearchParams(entrySearch.current)));
+    if (!entry || !Object.prototype.hasOwnProperty.call(entry, 'nature')) {
+      const model = { ...(parseListFilters(listFiltersOf(sp)) ?? {}) };
+      delete model.nature;
+      if (initialNature.current !== 'all') model.nature = { filterType: 'set', values: [initialNature.current] };
+      sp.delete('ctx');
+      if (Object.keys(model).length) sp.set('filters', JSON.stringify(model)); else sp.delete('filters');
+    }
+    return compactListSearchCached(sp.toString(), ROWS_ENDPOINT);
+  }, [settledBase, gridMounted]);
+  // A remembered nature added to a large state needs its own saved context before mounting.
+  const [compactedOpening, setCompactedOpening] = useState<{ search: string; compact: string } | null>(null);
+  const needsOpeningContext = settledSearch != null && filtersNeedContext(new URLSearchParams(settledSearch).get('filters'));
+  useEffect(() => {
+    if (!needsOpeningContext || settledSearch == null) return;
+    let cancelled = false;
+    void compactListSearch(settledSearch, ROWS_ENDPOINT).then((compact) => {
+      if (!cancelled) setCompactedOpening({ search: settledSearch, compact });
+    });
+    return () => { cancelled = true; };
+  }, [needsOpeningContext, settledSearch]);
+  const openingSearch = needsOpeningContext
+    ? (compactedOpening?.search === settledSearch ? compactedOpening.compact : null)
+    : settledSearch;
   const currentSearch = new URLSearchParams(location.search).toString();
   useEffect(() => {
-    if (settledSearch != null && settledSearch !== currentSearch) navigate({ search: settledSearch }, { replace: true });
-  }, [settledSearch, currentSearch, navigate]);
-  const [gridMounted, setGridMounted] = useState(false);
-  const gridCanMount = gridMounted || (settledSearch != null && settledSearch === currentSearch);
+    if (openingSearch != null && openingSearch !== currentSearch) navigate({ search: openingSearch }, { replace: true });
+  }, [openingSearch, currentSearch, navigate]);
+  const gridCanMount = gridMounted || (openingSearch != null && openingSearch === currentSearch);
   useEffect(() => { if (gridCanMount && !gridMounted) setGridMounted(true); }, [gridCanMount, gridMounted]);
 
   const initialGridState = useMemo(() => {
     if (!gridCanMount) return undefined;
     const raw = listFiltersOf(new URLSearchParams(location.search));
+    lastNatureFilter.current = canonicalJson(parseListFilters(raw)?.nature);
     if (!raw) return undefined;
     try {
       const parsed = JSON.parse(raw);
@@ -279,7 +328,7 @@ function OpexListPageView() {
   const pinnedTotals = useMemo(() => {
     if (!totals.data || totals.isError) return [];
     return [{
-      id: '__opex_totals__',
+      id: '__budget_totals__',
       product_name: t('shared.total'),
       versions: totalsToVersions(totals.data),
       ...fteTotalsToRow(totals.data?.fte),
@@ -294,6 +343,17 @@ function OpexListPageView() {
     queryClient.invalidateQueries({ queryKey: [TOTALS_QUERY_KEY] });
   }, [refreshKey, queryClient]);
 
+  const lastCurrencyRef = useRef<string | null>(null);
+  if (typeof totals.data?.reportingCurrency === 'string') lastCurrencyRef.current = totals.data.reportingCurrency;
+  const reportingCurrency = lastCurrencyRef.current ?? 'EUR';
+
+  const openNew = (nature: 'opex' | 'capex') => {
+    const sp = buildGridSearch();
+    sp.set('list', 'budget');
+    setNewAnchor(null);
+    navigate(`/ops/${nature}/new?${compactListSearchCached(sp.toString(), ROWS_ENDPOINT)}`);
+  };
+
   const canCreate = hasLevel('budget', 'manager');
   const canAdmin = hasLevel('budget', 'admin');
   const actions = (
@@ -301,21 +361,9 @@ function OpexListPageView() {
       {canCreate && (
         <Button
           variant="action-primary"
-          onClick={() => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const stored = storedContext();
-            const sort = listSort(urlParams.get('sort') || stored?.sort);
-            const q = urlParams.get('q') || stored?.q || '';
-            const filters = listFiltersOf(urlParams) || snapshotFilters(stored);
-            const sp = new URLSearchParams();
-            if (sort) sp.set('sort', sort);
-            if (q) sp.set('q', q);
-            if (filters) sp.set('filters', filters);
-            if (reportViewRef.current) markReportView(sp, lastQueryRef.current?.statusScope);
-            navigate(`/ops/opex/new?${compactListSearchCached(sp.toString(), ROWS_ENDPOINT)}`);
-          }}
+          onClick={(event) => natureScope === 'all' ? setNewAnchor(event.currentTarget) : openNew(natureScope)}
         >
-          {t('opex.newButton')}
+          {t('budget.newLine')}
         </Button>
       )}
       {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('opex.importCsv')}</Button>}
@@ -323,7 +371,7 @@ function OpexListPageView() {
       {canAdmin && (
         <DeleteSelectedButton
           selectedRows={selectedRows}
-          endpoint="/spend-items/bulk"
+          endpoint="/budget-lines/bulk"
           getItemId={(row) => row.id}
           getItemName={(row) => row.product_name}
           gridApi={gridApiRef.current}
@@ -374,7 +422,7 @@ function OpexListPageView() {
     return search;
   }, [buildGridSearch]);
 
-  const getOpexHref = useCallback((row: unknown, colId?: string) => {
+  const getBudgetHref = useCallback((row: unknown, colId?: string) => {
     const item = row as SummaryRow | null | undefined;
     if (!item?.id) return null;
     if (colId === 'contract_name') {
@@ -385,6 +433,7 @@ function OpexListPageView() {
       return item.cost_center_id ? `/master-data/cost-centers/${item.cost_center_id}/overview` : null;
     }
     const next = new URLSearchParams(gridSearch());
+    next.set('list', 'budget');
     let tab = 'overview';
     const amountYear = amountColumnYear(colId, Y);
     if (colId === 'allocation_label') {
@@ -396,8 +445,8 @@ function OpexListPageView() {
     } else if (colId === 'latest_task_text') {
       tab = 'overview'; // tasks now live in the overview tab
     }
-    const ref = item.item_number != null ? formatItemRef('opex', item.item_number) : item.id;
-    return `/ops/opex/${ref}/${tab}?${next.toString()}`;
+    const ref = item.item_number != null ? formatItemRef('budget', item.item_number) : item.id;
+    return `/ops/${item.nature}/${ref}/${tab}?${next.toString()}`;
   }, [Y, gridSearch]);
 
   const defaultAnalyticsLabel = analyticsAxes.label(analyticsAxes.defaultAxis ?? { name: null });
@@ -405,9 +454,9 @@ function OpexListPageView() {
   const columns: ColDef<SummaryRow>[] = useMemo(() => [
     {
       colId: 'item_number',
-      headerName: t('opex.columns.reference', 'Ref'),
+      headerName: t('opex.columns.reference'),
       width: 96,
-      valueGetter: (p) => (p.data?.item_number != null ? formatItemRef('opex', p.data.item_number) : ''),
+      valueGetter: (p) => (p.data?.item_number != null ? formatItemRef('budget', p.data.item_number) : ''),
       cellStyle: {
         color: 'var(--kanap-text-secondary)',
         fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace",
@@ -418,9 +467,23 @@ function OpexListPageView() {
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'product_name')}
+          getHref={(row) => getBudgetHref(row, 'product_name')}
           onNavigate={(href) => navigate(href)}
         />
+      ),
+    },
+    {
+      field: 'nature',
+      headerName: t('budget.type'),
+      width: 110,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        getValues: getBudgetFilterValues('nature', { labelMap: { opex: t('budget.opex'), capex: t('budget.capex') } }),
+        searchable: false,
+      },
+      cellRenderer: (params: any) => params.node?.rowPinned || !params.value ? null : (
+        <Chip size="small" label={t(`budget.${params.value}`)} sx={{ height: 22, fontSize: 12, fontWeight: 500, bgcolor: 'kanap.bg.hover', color: 'kanap.text.secondary' }} />
       ),
     },
     {
@@ -432,7 +495,7 @@ function OpexListPageView() {
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'product_name')}
+          getHref={(row) => getBudgetHref(row, 'product_name')}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -445,14 +508,14 @@ function OpexListPageView() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getOpexFilterValues('supplier_name'),
+        getValues: getBudgetFilterValues('supplier_name'),
         searchable: false,
       },
       cellRenderer: (params: any) => (
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'supplier_name')}
+          getHref={(row) => getBudgetHref(row, 'supplier_name')}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -464,14 +527,14 @@ function OpexListPageView() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getOpexFilterValues('paying_company_name'),
+        getValues: getBudgetFilterValues('paying_company_name'),
         searchable: false,
       },
       cellRenderer: (params: any) => (
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'paying_company_name')}
+          getHref={(row) => getBudgetHref(row, 'paying_company_name')}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -485,7 +548,7 @@ function OpexListPageView() {
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'contract_name')}
+          getHref={(row) => getBudgetHref(row, 'contract_name')}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -496,7 +559,7 @@ function OpexListPageView() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getOpexFilterValues('account_display'),
+        getValues: getBudgetFilterValues('account_display'),
         searchable: false,
       },
       // "6110 - Software", or the number alone for an account without a name (the server's text,
@@ -507,7 +570,7 @@ function OpexListPageView() {
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'account_display')}
+          getHref={(row) => getBudgetHref(row, 'account_display')}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -541,7 +604,7 @@ function OpexListPageView() {
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'account_display')}
+          getHref={(row) => getBudgetHref(row, 'account_display')}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -552,7 +615,7 @@ function OpexListPageView() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getOpexFilterValues('allocation_label'),
+        getValues: getBudgetFilterValues('allocation_label'),
         searchable: false,
       },
       valueGetter: (p) => p.data?.allocation_method_label ?? '',
@@ -562,7 +625,7 @@ function OpexListPageView() {
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'allocation_label')}
+          getHref={(row) => getBudgetHref(row, 'allocation_label')}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -575,7 +638,7 @@ function OpexListPageView() {
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, colId)}
+          getHref={(row) => getBudgetHref(row, colId)}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -589,7 +652,7 @@ function OpexListPageView() {
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, colId)}
+          getHref={(row) => getBudgetHref(row, colId)}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -604,14 +667,14 @@ function OpexListPageView() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getOpexFilterValues('has_fte', { labelMap: FTE_DECLARED_LABELS, emptyLabel: t('shared.fteDeclaredNo') }),
+        getValues: getBudgetFilterValues('has_fte', { labelMap: FTE_DECLARED_LABELS, emptyLabel: t('shared.fteDeclaredNo') }),
         searchable: false,
       },
       cellRenderer: (params: any) => (
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'has_fte')}
+          getHref={(row) => getBudgetHref(row, 'has_fte')}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -627,7 +690,7 @@ function OpexListPageView() {
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'latest_task_text')}
+          getHref={(row) => getBudgetHref(row, 'latest_task_text')}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -641,7 +704,7 @@ function OpexListPageView() {
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'status')}
+          getHref={(row) => getBudgetHref(row, 'status')}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -656,7 +719,7 @@ function OpexListPageView() {
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'description')}
+          getHref={(row) => getBudgetHref(row, 'description')}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -669,14 +732,14 @@ function OpexListPageView() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getOpexFilterValues('currency'),
+        getValues: getBudgetFilterValues('currency'),
         searchable: false,
       },
       cellRenderer: (params: any) => (
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'currency')}
+          getHref={(row) => getBudgetHref(row, 'currency')}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -692,7 +755,7 @@ function OpexListPageView() {
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'effective_start')}
+          getHref={(row) => getBudgetHref(row, 'effective_start')}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -711,7 +774,7 @@ function OpexListPageView() {
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'disabled_at')}
+          getHref={(row) => getBudgetHref(row, 'disabled_at')}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -722,7 +785,7 @@ function OpexListPageView() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getOpexFilterValues('owner_it_name'),
+        getValues: getBudgetFilterValues('owner_it_name'),
         searchable: false,
       },
       valueGetter: (p) => p.data?.owner_it_name ?? '',
@@ -732,7 +795,7 @@ function OpexListPageView() {
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'owner_it_name')}
+          getHref={(row) => getBudgetHref(row, 'owner_it_name')}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -743,7 +806,7 @@ function OpexListPageView() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getOpexFilterValues('owner_business_name'),
+        getValues: getBudgetFilterValues('owner_business_name'),
         searchable: false,
       },
       valueGetter: (p) => p.data?.owner_business_name ?? '',
@@ -753,7 +816,7 @@ function OpexListPageView() {
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'owner_business_name')}
+          getHref={(row) => getBudgetHref(row, 'owner_business_name')}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -761,7 +824,7 @@ function OpexListPageView() {
     // One column per enabled dimension, in dimension order. The default dimension keeps its column
     // id wherever it stands, so saved layouts, links and AI filters still find it. A dimension
     // required for OPEX lines shows by default (lot C1, decision 3); a saved layout still decides.
-    ...analyticsListColumns(analyticsAxes, defaultAnalyticsLabel, 'opex').map(({ field, label, required }): EnhancedColDef<SummaryRow> => ({
+    ...analyticsListColumns(analyticsAxes, defaultAnalyticsLabel).map(({ field, label, required }): EnhancedColDef<SummaryRow> => ({
       colId: field,
       headerName: label,
       valueGetter: (p) => (p.data as Record<string, unknown> | undefined)?.[field] ?? '',
@@ -770,14 +833,14 @@ function OpexListPageView() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getOpexFilterValues(field, { serverOrder: true }),
+        getValues: getBudgetFilterValues(field, { serverOrder: true }),
         searchable: false,
       },
       cellRenderer: (params: any) => (
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, field)}
+          getHref={(row) => getBudgetHref(row, field)}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -791,14 +854,14 @@ function OpexListPageView() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: withCostCenterGroups(getOpexFilterValues('cost_center_label'), queryClient),
+        getValues: withCostCenterGroups(getBudgetFilterValues('cost_center_label'), queryClient),
         searchable: true,
       },
       cellRenderer: (params: any) => (
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'cost_center_label')}
+          getHref={(row) => getBudgetHref(row, 'cost_center_label')}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -811,14 +874,14 @@ function OpexListPageView() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getOpexFilterValues('budget_holder_name'),
+        getValues: getBudgetFilterValues('budget_holder_name'),
         searchable: false,
       },
       cellRenderer: (params: any) => (
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'budget_holder_name')}
+          getHref={(row) => getBudgetHref(row, 'budget_holder_name')}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -831,7 +894,7 @@ function OpexListPageView() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getOpexFilterValues('run_build', { labelMap: RUN_BUILD_LABELS }),
+        getValues: getBudgetFilterValues('run_build', { labelMap: RUN_BUILD_LABELS }),
         searchable: false,
       },
       valueFormatter: (p) => (p.value != null ? (RUN_BUILD_LABELS[String(p.value)] || String(p.value)) : ''),
@@ -839,7 +902,7 @@ function OpexListPageView() {
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'run_build')}
+          getHref={(row) => getBudgetHref(row, 'run_build')}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -854,7 +917,7 @@ function OpexListPageView() {
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'project_name')}
+          getHref={(row) => getBudgetHref(row, 'project_name')}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -868,7 +931,7 @@ function OpexListPageView() {
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'notes')}
+          getHref={(row) => getBudgetHref(row, 'notes')}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -884,7 +947,7 @@ function OpexListPageView() {
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'created_at')}
+          getHref={(row) => getBudgetHref(row, 'created_at')}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -900,12 +963,12 @@ function OpexListPageView() {
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'updated_at')}
+          getHref={(row) => getBudgetHref(row, 'updated_at')}
           onNavigate={(href) => navigate(href)}
         />
       ),
     },
-  ], [Y, analyticsAxes, budgetColumns, defaultAnalyticsLabel, getOpexFilterValues, getOpexHref, RUN_BUILD_LABELS, FTE_DECLARED_LABELS, locale, navigate, queryClient, t]);
+  ], [Y, analyticsAxes, budgetColumns, defaultAnalyticsLabel, getBudgetFilterValues, getBudgetHref, RUN_BUILD_LABELS, FTE_DECLARED_LABELS, locale, navigate, queryClient, t]);
 
   if (!hasLevel('budget', 'reader')) {
     return <ForbiddenPage />;
@@ -913,7 +976,28 @@ function OpexListPageView() {
 
   return (
     <>
-      <PageHeader title={t("opex.title")} actions={actions} />
+      <PageHeader title={t('budget.titleWithCurrency', { currency: reportingCurrency })} />
+      <ChipToggleBar
+        items={(['all', 'opex', 'capex'] as const).map((id) => ({ id, label: t(`budget.${id}`) }))}
+        selectedId={natureScope}
+        ariaLabel={t('budget.type')}
+        onSelect={(id) => {
+          const next = id as BudgetNatureScope;
+          rememberNature(next);
+          if (!gridApiRef.current) initialNature.current = next;
+          const model = { ...(gridApiRef.current?.getFilterModel?.() ?? parseListFilters(listFiltersOf(new URLSearchParams(location.search))) ?? {}) };
+          delete model.nature;
+          if (next !== 'all') model.nature = { filterType: 'set', values: [next] };
+          lastNatureFilter.current = canonicalJson(model.nature);
+          gridApiRef.current?.setFilterModel?.(model);
+        }}
+        sx={{ mb: 1 }}
+      />
+      <ChipToggleContextLine title={t('budget.collectionCount', { type: t(`budget.${natureScope}`), count: filteredCount ?? 0 })} actions={actions} sx={{ mb: 1 }} />
+      <Menu anchorEl={newAnchor} open={!!newAnchor} onClose={() => setNewAnchor(null)}>
+        <MenuItem sx={drawerMenuItemSx} onClick={() => openNew('opex')}>{t('budget.opexLine')}</MenuItem>
+        <MenuItem sx={drawerMenuItemSx} onClick={() => openNew('capex')}>{t('budget.capexLine')}</MenuItem>
+      </Menu>
       {!gridCanMount && (
         // One line while the budget columns setting and the dimensions load: the grid waits for the
         // default sort and the dimension columns.
@@ -922,8 +1006,8 @@ function OpexListPageView() {
       {gridCanMount && <ServerDataGrid<SummaryRow>
         columns={columns}
         endpoint={ROWS_ENDPOINT}
-        queryKey="spend-items-summary"
-        getRowId={(r) => r.id || '__opex_totals__'}
+        queryKey="budget-lines-summary"
+        getRowId={(r) => r.id || '__budget_totals__'}
         enableSearch
         pinnedBottomRowData={pinnedTotals}
         defaultSort={gridDefaultSort}
@@ -932,11 +1016,12 @@ function OpexListPageView() {
         // Next to the name, so they are on screen: the reason the list is narrowed.
         filteredColumnsAfter="product_name"
         statusScopeConfig={{ defaultScope: 'enabled' }}
-        columnPreferencesKey="opex-summary"
+        columnPreferencesKey="budget-summary"
         initialState={initialGridState}
         refreshKey={refreshKey}
         onGridApiReady={(gridApi) => {
           gridApiRef.current = gridApi;
+          setNatureScope(natureScopeOf(parseListFilters(listFiltersOf(new URLSearchParams(location.search)))?.nature));
           // The saved layout is applied by now; the first totals request follows the query state.
           followColumns(gridApi?.getColumnState?.());
         }}
@@ -950,6 +1035,13 @@ function OpexListPageView() {
         onQueryStateChange={(state) => {
           const normalizedSort = listSort(state.sort);
           const filtersObject = state.filterModel || {};
+          if (gridApiRef.current) {
+            const nature = canonicalJson(filtersObject.nature);
+            const nextScope = natureScopeOf(filtersObject.nature);
+            setNatureScope(nextScope);
+            if (lastNatureFilter.current !== null && lastNatureFilter.current !== nature) rememberNature(nextScope);
+            lastNatureFilter.current = nature;
+          }
           const filtersString = filtersObject && Object.keys(filtersObject).length > 0 ? JSON.stringify(filtersObject) : '';
           const scope = state.statusScope ?? 'enabled';
           lastQueryRef.current = { sort: normalizedSort, q: state.q || '', filters: filtersObject, filtersString, statusScope: scope };
@@ -957,7 +1049,7 @@ function OpexListPageView() {
           if (!reportViewRef.current) {
             const snapshot = { sort: normalizedSort, q: state.q || '', filters: filtersString, statusScope: scope };
             storedContextRef.current = snapshot;
-            writeListSnapshot(ROWS_ENDPOINT, snapshot, readStoredOpexListContext, writeStoredOpexListContext);
+            writeListSnapshot(ROWS_ENDPOINT, snapshot, readStoredBudgetListContext, writeStoredBudgetListContext);
           }
           // Before the grid is ready it reports its URL sync without the initial filter yet.
           if (gridApiRef.current) followTotalsQuery({ q: state.q || '', filters: filtersString, statusScope: scope });
@@ -968,7 +1060,7 @@ function OpexListPageView() {
       <BudgetFileExportDialog
         open={exportOpen}
         onClose={() => setExportOpen(false)}
-        scope="opex"
+        scope="all"
         columnsReady={budgetColumns.ready}
         columns={budgetColumns.all.map((column) => ({ key: column.freezeKey, label: column.label, shown: column.enabled }))}
         filteredCount={filteredCount}
@@ -982,7 +1074,7 @@ function OpexListPageView() {
       <BudgetFileImportDialog
         open={importOpen}
         onClose={() => setImportOpen(false)}
-        scope="opex"
+        scope={natureScope === 'capex' ? 'capex' : 'opex'}
         canCreateSuppliers={hasLevel('suppliers', 'member')}
         onImported={() => setRefreshKey((k) => k + 1)}
       />

@@ -6,19 +6,20 @@ import { statusScopeParams } from '../utils/statusScopeParams';
 import { useBudgetColumns } from './useBudgetColumns';
 import { getWithListContext } from '../lib/listContext';
 
-type Neighbor = { id: string; item_number: number | null } | null;
+type Neighbor = { id: string; item_number: number | null; nature?: 'opex' | 'capex' } | null;
 type NeighborsResponse = { index: number | null; total: number; prev: Neighbor; next: Neighbor };
 
 /** Where a line stands in its list: `at` is the id or reference it was asked for. */
-type Neighbors = { at: string; index: number | null; total: number; prevRef: string | null; nextRef: string | null };
+type Neighbors = { at: string; index: number | null; total: number; prevRef: string | null; nextRef: string | null; atNature?: 'opex' | 'capex'; prevNature?: 'opex' | 'capex'; nextNature?: 'opex' | 'capex' };
 
 export type BudgetItemNavConfig = {
-  kind: 'opex' | 'capex';
+  kind: 'opex' | 'capex' | 'budget';
+  nature?: 'opex' | 'capex';
   /** `/spend-items/summary/neighbors` */
   endpoint: string;
   queryKey: string;
   /** The workspace's detail query of a line, by the id or reference in its route. */
-  detailQuery: (ref: string) => { queryKey: unknown[]; queryFn: (context: QueryFunctionContext) => Promise<unknown> };
+  detailQuery: (ref: string, nature?: 'opex' | 'capex') => { queryKey: unknown[]; queryFn: (context: QueryFunctionContext) => Promise<unknown> };
 };
 
 /** How long a neighbour answer or a prefetched detail is reused without asking again. */
@@ -35,7 +36,7 @@ const NAV_STALE_MS = 30_000;
  */
 export function useBudgetItemNav(params: ModuleItemNavParams, config: BudgetItemNavConfig): ModuleItemNavResult {
   const { id, sort, q, filters, statusScope, enabled = true } = params;
-  const { kind, endpoint, queryKey, detailQuery } = config;
+  const { kind, nature, endpoint, queryKey, detailQuery } = config;
   const budgetColumns = useBudgetColumns();
   const queryClient = useQueryClient();
   // Without a sort from the list, the default column's sort, once the setting is known.
@@ -50,15 +51,15 @@ export function useBudgetItemNav(params: ModuleItemNavParams, config: BudgetItem
   }), [effectiveSort, q, filters, statusScope]);
   const listKey = JSON.stringify(listParams);
 
-  const neighborsQuery = useMemo(() => (at: string) => ({
+  const neighborsQuery = useMemo(() => (at: string, atNature = nature) => ({
     queryKey: [queryKey, listKey, at],
     queryFn: async ({ signal }: { signal?: AbortSignal }): Promise<Neighbors> => {
       const res = await getWithListContext<NeighborsResponse>(endpoint, { ...listParams, id: at }, { signal });
       const ref = (n: Neighbor) => (n ? (n.item_number != null ? formatItemRef(kind, n.item_number) : n.id) : null);
-      return { at, index: res.data?.index ?? null, total: res.data?.total ?? 0, prevRef: ref(res.data?.prev ?? null), nextRef: ref(res.data?.next ?? null) };
+      return { at, atNature, index: res.data?.index ?? null, total: res.data?.total ?? 0, prevRef: ref(res.data?.prev ?? null), nextRef: ref(res.data?.next ?? null), prevNature: res.data?.prev?.nature, nextNature: res.data?.next?.nature };
     },
     staleTime: NAV_STALE_MS,
-  }), [endpoint, kind, listKey, listParams, queryKey]);
+  }), [endpoint, kind, nature, listKey, listParams, queryKey]);
 
   const ready = enabled && !!id && (!!sort || budgetColumns.ready);
   const { data, isPlaceholderData } = useQuery({
@@ -67,8 +68,8 @@ export function useBudgetItemNav(params: ModuleItemNavParams, config: BudgetItem
     // One step from a known line: its index and total follow, the far neighbour is not known yet.
     placeholderData: (previous: Neighbors | undefined) => {
       if (!previous || previous.index == null || previous.at === id) return undefined;
-      if (previous.nextRef === id) return { at: id, index: previous.index + 1, total: previous.total, prevRef: previous.at, nextRef: null };
-      if (previous.prevRef === id) return { at: id, index: previous.index - 1, total: previous.total, prevRef: null, nextRef: previous.at };
+      if (previous.nextRef === id) return { at: id, index: previous.index + 1, total: previous.total, prevRef: previous.at, nextRef: null, atNature: previous.nextNature, prevNature: previous.atNature };
+      if (previous.prevRef === id) return { at: id, index: previous.index - 1, total: previous.total, prevRef: null, nextRef: previous.at, atNature: previous.prevNature, nextNature: previous.atNature };
       return undefined;
     },
   });
@@ -78,18 +79,20 @@ export function useBudgetItemNav(params: ModuleItemNavParams, config: BudgetItem
   const nextRef = data && !isPlaceholderData ? data.nextRef : null;
   useEffect(() => {
     if (!ready) return;
-    for (const ref of [nextRef, prevRef]) {
+    for (const [ref, nature] of [[nextRef, data?.nextNature], [prevRef, data?.prevNature]] as const) {
       if (!ref) continue;
-      void queryClient.prefetchQuery({ ...detailQuery(ref), staleTime: NAV_STALE_MS });
-      void queryClient.prefetchQuery(neighborsQuery(ref));
+      void queryClient.prefetchQuery({ ...detailQuery(ref, nature), staleTime: NAV_STALE_MS });
+      void queryClient.prefetchQuery(neighborsQuery(ref, nature));
     }
-  }, [ready, prevRef, nextRef, queryClient, detailQuery, neighborsQuery]);
+  }, [ready, prevRef, nextRef, queryClient, detailQuery, neighborsQuery, data?.nextNature, data?.prevNature]);
 
   return useMemo(() => {
     // A line the list does not hold (filtered out, or not loaded yet) gets no previous / next:
     // never a silent jump to the first row.
     const found = !!data && data.at === id && data.index != null;
     return {
+      prevPath: found && data?.prevRef && data.prevNature ? `/ops/${data.prevNature}/${data.prevRef}` : null,
+      nextPath: found && data?.nextRef && data.nextNature ? `/ops/${data.nextNature}/${data.nextRef}` : null,
       ids: [],
       index: found ? data!.index! : 0,
       total: found ? data!.total : 0,

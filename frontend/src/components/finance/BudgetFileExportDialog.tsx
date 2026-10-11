@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import KanapDialog from '../design/KanapDialog';
 import { drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import {
-  BudgetFileScope,
+  BudgetFileExportScope,
   BudgetListState,
   FileColumnKey,
   MAX_EXPORT_YEARS,
@@ -48,7 +48,7 @@ export default function BudgetFileExportDialog({
 }: {
   open: boolean;
   onClose: () => void;
-  scope: BudgetFileScope;
+  scope: BudgetFileExportScope;
   columns: BudgetFileColumnChoice[];
   columnsReady: boolean;
   /** The list's current sort, search, filters and status. */
@@ -141,7 +141,7 @@ export default function BudgetFileExportDialog({
     <KanapDialog
       open={open}
       onClose={onClose}
-      title={t(scope === 'opex' ? 'opex.exportTitle' : 'capex.exportTitle')}
+      title={t(scope === 'all' ? 'budget.exportTitle' : scope === 'opex' ? 'opex.exportTitle' : 'capex.exportTitle')}
       onSave={onSave}
       saveLabel={saveLabel}
       saveDisabled={selectedColumns.length === 0}

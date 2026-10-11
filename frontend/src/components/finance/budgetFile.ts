@@ -25,12 +25,13 @@ export type { AmountReading, DateReading, ScreenLanguage } from '../csv/readings
  */
 
 export type BudgetFileScope = 'opex' | 'capex';
+export type BudgetFileExportScope = BudgetFileScope | 'all';
 
 /** The name of an exported file, from either list. */
 export const BUDGET_FILE_NAME = 'budget.csv';
 
 /** The list queries a load may change: a file may hold lines of both natures. */
-export const BUDGET_LIST_QUERY_KEYS = ['spend-items-summary', 'capex-items-summary'] as const;
+export const BUDGET_LIST_QUERY_KEYS = ['budget-lines-summary', 'spend-items-summary', 'capex-items-summary'] as const;
 
 export type BudgetFileLanguage = ScreenLanguage;
 
@@ -46,7 +47,8 @@ export function budgetFileBase(scope: BudgetFileScope): string {
 }
 
 /** The list whose filters a long export saves as `ctx`. */
-export function budgetListEndpoint(scope: BudgetFileScope): string {
+export function budgetListEndpoint(scope: BudgetFileExportScope): string {
+  if (scope === 'all') return '/budget-lines/summary';
   return scope === 'opex' ? '/spend-items/summary' : '/capex-items/summary';
 }
 
@@ -249,13 +251,13 @@ export function exportParams(list: BudgetListState | null, options: ExportOption
 }
 
 export async function exportBudgetFile(
-  scope: BudgetFileScope,
+  scope: BudgetFileExportScope,
   list: BudgetListState | null,
   options: ExportOptions,
 ): Promise<AxiosResponse<Blob>> {
   const params = exportParams(list, options);
   const sent = options.all ? params : await withListContext(budgetListEndpoint(scope), params);
-  return api.get<Blob>(`${budgetFileBase(scope)}/export`, { params: sent, responseType: 'blob' });
+  return api.get<Blob>(`${scope === 'all' ? '/budget-lines/budget-file' : budgetFileBase(scope)}/export`, { params: sent, responseType: 'blob' });
 }
 
 export type CheckOptions = {

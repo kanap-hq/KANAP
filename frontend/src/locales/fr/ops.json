@@ -1439,5 +1439,18 @@
       "yearChange_other": "Une autre personne a modifié les colonnes {{columns}} pendant que vous les modifiiez, et vous n'avez pas choisi quelles valeurs garder. Changer d'année quand même et perdre vos valeurs dans ces colonnes, ou rester et choisir.",
       "yearChangeConfirm": "Changer d'année"
     }
+  },
+  "budget": {
+    "titleWithCurrency": "Lignes budgétaires ({{currency}})",
+    "all": "Tout",
+    "type": "Type",
+    "newLine": "Nouvelle ligne",
+    "opexLine": "Ligne OPEX",
+    "capexLine": "Ligne CAPEX",
+    "exportTitle": "Exporter le fichier budget",
+    "opex": "OPEX",
+    "capex": "CAPEX",
+    "collectionCount_one": "{{type}} · {{count}} ligne",
+    "collectionCount_other": "{{type}} · {{count}} lignes"
   }
 }
