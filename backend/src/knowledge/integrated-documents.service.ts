@@ -2151,7 +2151,7 @@ export class IntegratedDocumentsService {
 
     const effectivePermissions = await this.permissions.listForRoles(roleIds, { manager });
     const currentLevel = effectivePermissions.get(config.permissionResource);
-    if (!currentLevel || PERMISSION_RANK[currentLevel] < PERMISSION_RANK[requiredLevel]) {
+    if (!currentLevel || (PERMISSION_RANK[currentLevel] ?? 0) < PERMISSION_RANK[requiredLevel]) {
       throw new ForbiddenException(`${config.permissionResource}:${requiredLevel} permission is required`);
     }
   }
