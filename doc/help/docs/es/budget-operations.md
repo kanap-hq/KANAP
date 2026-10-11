@@ -31,7 +31,7 @@ La página principal tiene dos secciones. Cada tarjeta enlaza a una herramienta 
 | Tarjetas | Quién las ve |
 |---|---|
 | Monedas, Columnas presupuestarias, Método de asignación por defecto, Congelar / Descongelar datos | Administración presupuestaria con nivel de administrador (`budget_ops:admin`) |
-| Copiar columnas presupuestarias, Copiar asignaciones, Restablecer columna presupuestaria | OPEX o CAPEX con nivel de administrador. Las pestañas OPEX y CAPEX siguen la misma regla: un administrador de OPEX trabaja solo con partidas de OPEX |
+| Copiar columnas presupuestarias, Copiar asignaciones, Restablecer columna presupuestaria | Presupuesto con nivel de administrador (`budget:admin`). Las pestañas OPEX y CAPEX se abren ambas con este nivel |
 | Congelar datos maestros, Copiar indicadores anuales | Usuarios con acceso al presupuesto que son administradores de la administración presupuestaria, de empresas o de departamentos. Los administradores de empresas y departamentos actúan sobre su propio alcance |
 
 El rol integrado Administrador de presupuesto ve todas las tarjetas. Miembro de presupuesto y Lector de presupuesto no ven ninguna, así que **Administración** no aparece en su menú.
@@ -87,9 +87,9 @@ Congelar y descongelar requieren `budget_ops:admin`. La tarjeta se oculta a los 
 
 Copie datos presupuestarios de un año y columna a otro, con un ajuste porcentual opcional. Esta es la herramienta principal para inicializar el presupuesto del próximo año a partir del actual.
 
-El selector **OPEX** / **CAPEX** de la parte superior elige las partidas sobre las que se aplica la copia. OPEX está seleccionado por defecto si puede consultar las partidas OPEX; de lo contrario, CAPEX.
+El selector **OPEX** / **CAPEX** de la parte superior elige las partidas sobre las que se aplica la copia. OPEX está seleccionado por defecto.
 
-Requiere permisos de administración sobre OPEX, o sobre CAPEX para las partidas CAPEX.
+Requiere el nivel Administrador en Presupuesto (`budget:admin`).
 
 ### Cuándo usarla
 
@@ -197,7 +197,7 @@ Copie métodos y porcentajes de asignación de un año a otro. Esto le ahorra te
 
 El conmutador **OPEX** / **CAPEX** de la parte superior elige qué partidas se copian. Solo se copian las partidas válidas en el año de destino, con la misma regla que **Copiar columnas presupuestarias**. La copia es de todo o nada: si una partida falla, no se copia nada.
 
-Requiere derechos de administración sobre OPEX, o sobre CAPEX para las partidas CAPEX.
+Requiere el nivel Administrador en Presupuesto (`budget:admin`).
 
 ### Cuándo usarla
 
@@ -241,7 +241,7 @@ Borre todos los datos de una columna presupuestaria específica para un año det
 
 El selector **OPEX** / **CAPEX** de la parte superior elige las partidas que se borran. El restablecimiento pone a cero los doce meses de la columna y quita su periodo, así como sus líneas cuando la columna se construyó a partir de cantidad y precio. En la pestaña Presupuesto, la columna recibe entonces una nueva sugerencia a partir de las fechas de la partida. El restablecimiento abarca todas las partidas, incluidas aquellas cuyo fin de validez ya ha pasado. Es de todo o nada: si una partida falla, no se borra nada.
 
-Requiere permisos de administración sobre OPEX, o sobre CAPEX para las partidas CAPEX.
+Requiere el nivel Administrador en Presupuesto (`budget:admin`).
 
 Una columna cuyas partidas no tienen ningún importe también puede restablecerse: en ese caso solo se quitan los periodos de reparto, y la confirmación lo indica.
 

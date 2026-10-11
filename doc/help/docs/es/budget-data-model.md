@@ -189,7 +189,7 @@ Cada archivo de la tabla se exporta y se importa desde la página que gestiona e
 | Asignaciones | Desde los informes de contracargo | No | | [Informes](reports.md) |
 | Líneas de Cantidad y precio, configuración de las columnas presupuestarias, congelaciones, monedas | No | No | | Se configuran en pantalla |
 
-El archivo de presupuesto lee y escribe los importes de cualquier columna y año, como totales anuales o por meses, con los detalles de la partida en la misma fila. Es la vía de entrada para un presupuesto preparado en otro sitio y la vía de salida hacia una hoja de cálculo o una herramienta de BI. Un solo archivo contiene los dos tipos de partida, y su columna `nature` indica cuál. **Gestión presupuestaria > OPEX** exporta las partidas OPEX y **Gestión presupuestaria > CAPEX** las partidas CAPEX. Cualquiera de las dos listas importa un archivo que contenga ambos tipos, con derechos de administración en OPEX y en CAPEX.
+El archivo de presupuesto lee y escribe los importes de cualquier columna y año, como totales anuales o por meses, con los detalles de la partida en la misma fila. Es la vía de entrada para un presupuesto preparado en otro sitio y la vía de salida hacia una hoja de cálculo o una herramienta de BI. Un solo archivo contiene los dos tipos de partida, y su columna `nature` indica cuál. **Gestión presupuestaria > OPEX** exporta las partidas OPEX y **Gestión presupuestaria > CAPEX** las partidas CAPEX. Cualquiera de las dos listas importa un archivo que contenga ambos tipos, con el nivel Administrador en Presupuesto.
 
 ### Llevar un presupuesto a KANAP
 

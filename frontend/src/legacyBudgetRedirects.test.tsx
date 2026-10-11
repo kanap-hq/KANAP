@@ -64,7 +64,7 @@ function renderAt(path: string) {
 
 describe('legacy budget redirects', () => {
   beforeEach(() => {
-    auth.grants = { opex: 'admin', capex: 'admin', budget_ops: 'admin' };
+    auth.grants = { budget: 'admin', budget_ops: 'admin' };
   });
 
   it('sends /master-data/operations to the administration landing', () => {
@@ -96,7 +96,7 @@ const tileHrefs = () => screen.getAllByRole('region')
   .flatMap((region) => within(region).getAllByRole('link'))
   .map((link) => link.getAttribute('href'));
 
-const BUDGET_MEMBER = { opex: 'member', capex: 'member', budget_ops: 'reader', companies: 'reader', departments: 'member' };
+const BUDGET_MEMBER = { budget: 'member', budget_ops: 'reader', companies: 'reader', departments: 'member' };
 
 describe('budget administration access', () => {
   it.each(['/ops/operations', '/ops/operations/'])('opens %s to a budget administrator', (path) => {
@@ -137,8 +137,8 @@ describe('budget administration access', () => {
     expect(screen.getByText('page /ops/operations/master-data-freeze')).toBeInTheDocument();
   });
 
-  it('keeps the budget settings closed to an OPEX administrator', () => {
-    auth.grants = { opex: 'admin', budget_ops: 'reader' };
+  it('keeps the budget settings closed to a budget lines administrator', () => {
+    auth.grants = { budget: 'admin', budget_ops: 'reader' };
     renderAt('/ops/operations/currency');
     expect(screen.getByText('forbidden')).toBeInTheDocument();
   });

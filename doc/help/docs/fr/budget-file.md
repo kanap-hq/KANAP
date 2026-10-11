@@ -11,7 +11,7 @@ Un seul fichier contient les deux types de poste. Sa colonne `nature` indique si
 - Chemin : **Gestion budgétaire > OPEX**, ou **Gestion budgétaire > CAPEX**
 - Export : **Exporter CSV** dans la barre d'outils de la liste
 - Import : **Importer CSV** dans la même barre d'outils
-- Autorisations : les deux boutons demandent des droits d'administration sur cette liste (`opex:admin` ou `capex:admin`). Un fichier qui contient des postes OPEX et CAPEX demande les deux
+- Autorisations : les deux boutons demandent le niveau Admin sur Budget (`budget:admin`), qui couvre les postes OPEX et CAPEX de la même façon
 
 ## Export
 
@@ -103,7 +103,6 @@ Une colonne absente conserve toutes les valeurs enregistrées de cette colonne. 
 - `item_number` rempli : ce poste est mis à jour. Vide : un nouveau poste est créé, du type qu'indique sa cellule `nature`.
 - `item_number` contient la référence du poste, `BL-12`. Dans un fichier avec une colonne `nature`, un nombre seul est la même référence, sur les deux listes. Les numéros `OPX-12` et `CPX-3` des fichiers antérieurs désignent toujours leur poste. Nommer deux fois le même poste dans un fichier est une erreur de ligne.
 - Un poste garde son type. Une ligne qui désigne un poste existant avec l'autre `nature` est refusée, par exemple « BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line. »
-- Un fichier qui contient des postes OPEX et CAPEX demande des droits d'administration sur les deux. Sans l'un d'eux, chaque poste de ce type est refusé avec le droit qu'il demande, par exemple « Importing CAPEX lines needs the Admin level on CAPEX. » Les autres postes sont vérifiés comme d'habitude, et le fichier se charge une fois ces lignes retirées.
 - Chaque ligne est vérifiée selon son propre type : les dimensions et les valeurs qu'elle peut porter, son compte, les colonnes gelées et l'avertissement de doublon. Une colonne gelée pour CAPEX refuse une modification sur un poste CAPEX uniquement.
 - Il n'y a pas d'autre clé. Une nouvelle ligne qui ressemble à un poste existant de son type, ou à une autre nouvelle ligne du même type dans le fichier, est un avertissement que vous pouvez ignorer.
 - Les fournisseurs sont mis en correspondance par `supplier_erp_id` lorsqu'il est rempli, sinon par `supplier_name`. Un fournisseur nommé par le fichier et absent de KANAP est créé par le chargement lorsque **Créer les fournisseurs manquants** est cochée. Sans cette option, la vérification les liste et vous demande de les créer dans **Données de référence > Fournisseurs**.

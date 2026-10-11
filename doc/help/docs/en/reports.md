@@ -33,7 +33,7 @@ The landing page shows a card for each available report with a short description
 
 **Top items**, **Top increase / decrease**, **Consolidation accounts**, **Analytics dimensions**, **Staffing by month** and **Cost per FTE** each start with an **OPEX** / **CAPEX** switch, the first control of the filter bar.
 
-- The report opens on a type you can read, OPEX first. A type you cannot read is disabled.
+- The report opens on OPEX. Both types need read access to budget lines (`budget:reader`). Without it, the switch is disabled.
 - The page address keeps the chosen type (`?scope=opex` or `?scope=capex`), so a bookmarked or shared link opens on the same type.
 - The subtitle and the chart title name the type, so a printout or an exported PNG shows which type it covers.
 - Switching the type clears the items you excluded, since each type has its own items.

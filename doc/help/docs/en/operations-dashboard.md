@@ -50,7 +50,7 @@ A count turns orange (red for the chart check) when it is above zero. Click a co
 
 ### Quick actions
 
-Shortcut buttons to create a new OPEX or CAPEX item directly from the overview. These buttons are only visible if your role grants you at least `opex:manager` or `capex:manager` permissions.
+Shortcut buttons to create a new OPEX or CAPEX item directly from the overview. These buttons show when your role has at least the Member level on Budget (`budget:member`).
 
 Below the buttons, a **Recent updates** section lists the five most recently edited items, OPEX and CAPEX together. Each row shows the date of the last edit, the item name and its type. Click a row to open the item.
 
@@ -66,11 +66,11 @@ The five items with the largest increase in the default column compared to the p
 
 Use the **OPEX** / **CAPEX** tabs in the tile header to choose the item type. The tile remembers your choice. Click **Open** to view the full Top increase / decrease report on the same type.
 
-A type you cannot read is disabled in the tabs and has no column in **Data hygiene**. If you can read neither OPEX nor CAPEX, these tiles are hidden.
+Without read access to budget lines (`budget:reader`), these tiles are hidden.
 
 ## Tips
 
 - **Which column the tiles use**: A budget administrator chooses the default column and the column names in [Budget columns](budget-operations.md#budget-columns). The top tiles and the reports they open follow that choice.
 - **Rounded numbers**: Every amount on the overview is rounded to thousands for a compact view. Open the OPEX or CAPEX list, or the reports, when you need exact figures.
-- **Missing buttons**: If you do not see the **New OPEX** or **New CAPEX** buttons, your current role does not include the required manager permission. Ask your administrator to check your access.
+- **Missing buttons**: If you do not see the **New OPEX** or **New CAPEX** buttons, your current role does not have the Member level on Budget. Ask your administrator to check your access.
 - **Empty tiles**: A tile that shows "No data" simply means there are no records of that type yet. Once you or your team start entering data, the tile will populate automatically.

@@ -301,12 +301,13 @@ Resources are organized into groups for easier management:
 **Budget & Finance**
 | Resource | What it controls |
 |----------|------------------|
-| `opex` | Operating Expenses |
-| `capex` | Capital Expenses |
+| `budget` | Budget lines, OPEX and CAPEX |
 | `budget_ops` | Budget Administration tools, including the currency settings |
 | `contracts` | Vendor contracts |
 | `analytics` | Analytics dimensions |
 | `reporting` | Reports access |
+
+The Budget resource covers OPEX and CAPEX lines alike. A role that once had separate OPEX and CAPEX levels keeps the higher of the two on Budget.
 
 **Portfolio Management**
 | Resource | What it controls |

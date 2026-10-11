@@ -239,7 +239,7 @@ Laden oder aktualisieren Sie Kalender und ihre Arbeitstage aus einer Datei.
 
 Budget-Administratoren sind Kalender-Administratoren: Die integrierte Rolle Budget-Administrator erhält admin. Jede andere Rolle beginnt mit der Stufe, die sie für Abteilungen hat. Stammdaten-Administrator ist also admin, Budget-Mitglied und Stammdaten-Mitglied sind Mitglieder, und die Leserollen können lesen.
 
-Wer OPEX oder CAPEX lesen kann, kann im Budget-Tab einen Kalender wählen, ohne Zugriff auf diese Seite zu haben.
+Wer Budgetpositionen (Budget) lesen kann, kann im Budget-Tab einen Kalender wählen, ohne Zugriff auf diese Seite zu haben.
 
 ---
 

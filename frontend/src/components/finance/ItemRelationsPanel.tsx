@@ -55,8 +55,8 @@ type RelationsData = {
 };
 
 const KINDS = {
-  opex: { itemsApi: '/spend-items', resource: 'opex', i18n: 'opex', contactsItemType: 'spend-items' },
-  capex: { itemsApi: '/capex-items', resource: 'capex', i18n: 'capex', contactsItemType: 'capex-items' },
+  opex: { itemsApi: '/spend-items', resource: 'budget', i18n: 'opex', contactsItemType: 'spend-items' },
+  capex: { itemsApi: '/capex-items', resource: 'budget', i18n: 'capex', contactsItemType: 'capex-items' },
 } as const;
 
 /** The picker searches: projects and applications through their lists (their access rules apply), contracts through their lookup. */

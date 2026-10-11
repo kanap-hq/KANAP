@@ -13,7 +13,7 @@ type ConcretePermissionLevel = Exclude<PermissionLevel, null>;
 // Permission groups for organized display
 const PERMISSION_GROUPS = {
   'AI': ['ai_chat', 'ai_mcp', 'ai_agents', 'ai_settings'],
-  'Budget & Finance': ['opex', 'capex', 'budget_ops', 'contracts', 'analytics', 'reporting'],
+  'Budget & Finance': ['budget', 'budget_ops', 'contracts', 'analytics', 'reporting'],
   'Portfolio Management': ['portfolio_requests', 'portfolio_projects', 'portfolio_planning', 'portfolio_reports', 'portfolio_settings'],
   'IT Landscape': ['applications', 'infrastructure', 'locations', 'incidents', 'settings'],
   'Master Data': ['companies', 'departments', 'cost_centers', 'working_day_profiles', 'suppliers', 'contacts', 'accounts', 'business_processes'],
@@ -31,8 +31,7 @@ const RESOURCE_LABELS: Record<string, string> = {
   ai_mcp: 'AI MCP',
   ai_agents: 'AI Agents',
   ai_settings: 'AI Settings',
-  opex: 'Operating Expenses',
-  capex: 'Capital Expenses',
+  budget: 'Budget',
   budget_ops: 'Budget Administration',
   contracts: 'Contracts',
   analytics: 'Analytics Dimensions',

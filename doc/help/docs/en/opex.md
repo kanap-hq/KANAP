@@ -101,10 +101,10 @@ The OPEX list (at **Budget management > OPEX**) is your main view for browsing, 
     - **Cost center**: Opens the cost center workspace
 
 **Actions**:
-  - **New**: Create a new OPEX item (requires `opex:manager`)
-  - **Import CSV**: Bulk-load items from CSV (requires `opex:admin`)
-  - **Export CSV**: Export items to CSV (requires `opex:admin`)
-  - **Delete selected**: Bulk-delete selected items (requires `opex:admin`; select rows via checkboxes). An item with amounts in a frozen column cannot be deleted: the others are deleted, and the message names each refused item with its reason
+  - **New**: Create a new OPEX item (requires `budget:member`)
+  - **Import CSV**: Bulk-load items from CSV (requires `budget:admin`)
+  - **Export CSV**: Export items to CSV (requires `budget:admin`)
+  - **Delete selected**: Bulk-delete selected items (requires `budget:admin`; select rows via checkboxes). An item with amounts in a frozen column cannot be deleted: the others are deleted, and the message names each refused item with its reason
 
 **Prev/Next navigation**:
   - When you open an item, the workspace shows **Prev** and **Next** buttons
@@ -152,7 +152,7 @@ The Overview tab holds the free-text fields and the tasks of the item.
   - **Status** filter: All (default), Active (not done), Open, In progress, Pending, In testing, Done, or Cancelled. The clear button resets it
   - Click **Add task** to open a new task already linked to this item. Fill in the title, description, priority, assignee, and due date in the task workspace
   - Use the open icon to go to a task, and the delete icon to delete it (you confirm first)
-  - Tasks have their own permissions (`tasks:member` to create and edit). OPEX manager access does not grant task editing rights on its own; check with your admin if you cannot create tasks
+  - Tasks have their own permissions (`tasks:member` to create and edit). Member access on Budget does not grant task editing rights on its own; check with your admin if you cannot create tasks
   - Tasks can also be viewed and managed from **Portfolio > Tasks**, which shows all tasks across your organization
 
 **Properties panel**:
@@ -434,7 +434,7 @@ The Relations tab links this OPEX item to related objects: Projects, Application
   - Upload files related to this spend item (e.g., contracts, invoices, quotes, SOWs, technical specs)
   - Drag and drop files into the attachment area, or click **Select files** to browse
   - Click a file chip to download the file
-  - Delete an attachment with the delete icon on its chip (you confirm first; requires `opex:manager`)
+  - Delete an attachment with the delete icon on its chip (you confirm first; requires `budget:member`)
 
 **Tip**: Link contracts to track renewals across multiple OPEX items. Add vendor portal URLs for quick access. Upload quotes and invoices as attachments to centralize all spend-related documentation.
 
@@ -442,11 +442,11 @@ The Relations tab links this OPEX item to related objects: Projects, Application
 
 ## CSV import/export
 
-**Export CSV** and **Import CSV** sit in the toolbar of the OPEX list. Both need administration rights on OPEX (`opex:admin`).
+**Export CSV** and **Import CSV** sit in the toolbar of the OPEX list. Both need the Admin level on Budget (`budget:admin`).
 
 **Export CSV** writes the budget file of the lines the list shows, as `budget.csv`. **Import CSV** reads a file back: it is checked first, and nothing is written until you click **Load**.
 
-The file holds one row per line: its `nature` (`opex` here), its reference `BL-n`, the line's details, its amounts as columns and `kanap_token`. The same file can also hold CAPEX lines, which needs administration rights on CAPEX too. A file without a `nature` column, exported by an earlier version, is read as OPEX lines on this list. [Load a budget from a spreadsheet](budget-file.md) describes the columns, what a cell means, and the two import steps.
+The file holds one row per line: its `nature` (`opex` here), its reference `BL-n`, the line's details, its amounts as columns and `kanap_token`. The same file can also hold CAPEX lines. A file without a `nature` column, exported by an earlier version, is read as OPEX lines on this list. [Load a budget from a spreadsheet](budget-file.md) describes the columns, what a cell means, and the two import steps.
 
 ---
 
@@ -516,11 +516,13 @@ Every OPEX item has a **status** (Enabled or Disabled) and an optional **End of 
 
 ## Permissions
 
-OPEX access is controlled by three levels:
+OPEX access is controlled by the Budget resource, which covers OPEX and CAPEX lines alike. It has three levels:
 
-- `opex:reader` -- View the OPEX list, open items, see budgets and allocations (read-only), download attachments
-- `opex:manager` -- Create and edit OPEX items, update budgets and allocations, upload and delete attachments, manage relations and links
-- `opex:admin` -- All manager rights plus CSV import/export, budget operations (freeze, copy, reset), and bulk delete
+- `budget:reader` -- View the OPEX and CAPEX lists, open items, see budgets and allocations (read-only), download attachments
+- `budget:member` -- Create and edit items, update budgets and allocations, upload and delete attachments, manage relations, links and contacts
+- `budget:admin` -- All member rights plus CSV import and export, budget operations (copy budget columns, copy allocations, reset budget column), and bulk delete
+
+Freezing budget columns needs Budget administration (`budget_ops:admin`).
 
 Additionally:
 - Tasks have separate permissions (`tasks:member` to create/edit tasks on OPEX items)

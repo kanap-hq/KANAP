@@ -224,7 +224,7 @@ Load or update the whole tree from a file.
 | `cost_centers:member` | Create cost centers and groups, and edit them |
 | `cost_centers:admin` | Everything above, plus CSV import and export, and deletion |
 
-Each role starts with the level it has on departments, except the built-in Budget Administrator role, which gets admin. So Budget Administrator and Master Data Administrator are admins, Budget Member and Master Data Member are members, and the reader roles can read. Anyone who can read OPEX, CAPEX or reporting can pick a cost center on a line or in a report filter without access to this page.
+Each role starts with the level it has on departments, except the built-in Budget Administrator role, which gets admin. So Budget Administrator and Master Data Administrator are admins, Budget Member and Master Data Member are members, and the reader roles can read. Anyone who can read budget lines (Budget) or reports can pick a cost center on a line or in a report filter without access to this page.
 
 ---
 

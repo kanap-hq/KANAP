@@ -9,7 +9,7 @@ Les indicateurs annuels sont l'effectif, les utilisateurs IT et le chiffre d'aff
 - Espace de travail : **Gestion budgétaire**
 - Chemin : **Gestion budgétaire > Administration**, section **Opérations**, cartes **Geler les données de référence** et **Copier les indicateurs annuels**
 - Autorisations :
-  - Accès au budget (accès lecteur à l'OPEX, au CAPEX ou à l'administration budgétaire), plus l'un des droits `companies:admin`, `departments:admin` ou `budget_ops:admin`
+  - Accès au budget (accès lecteur au Budget ou à l'administration budgétaire), plus l'un des droits `companies:admin`, `departments:admin` ou `budget_ops:admin`
   - Les cartes sont masquées pour les autres utilisateurs
 
 Les données de référence n'ont pas d'entrée Administration propre.

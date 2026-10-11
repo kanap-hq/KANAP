@@ -19,7 +19,7 @@ vi.mock('../hooks/useBudgetColumns', async (importOriginal) => {
 });
 vi.mock('../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
-const readable: Record<string, boolean> = { opex: true, capex: true };
+const readable: Record<string, boolean> = { budget: true };
 const PROFILE = { id: 'user-1', email: 'thomas.berger@example.com', first_name: 'Thomas', last_name: 'Berger' };
 vi.mock('../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: (resource: string) => readable[resource] ?? true, profile: PROFILE }),
@@ -184,8 +184,7 @@ describe('DashboardPage budget tiles', () => {
     setBudgetColumns();
     get.mockReset();
     post.mockReset();
-    readable.opex = true;
-    readable.capex = true;
+    readable.budget = true;
     try { window.localStorage.clear(); } catch { /* storage unavailable */ }
     mockBudgetEndpoints();
   });
@@ -314,28 +313,27 @@ describe('DashboardPage budget tiles', () => {
     expect(capexRow.compareDocumentPosition(opexRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('shows no CAPEX column or tab to a user who cannot read CAPEX', async () => {
-    readable.capex = false;
+  it('shows both types to a budget reader: one right covers OPEX and CAPEX lines', async () => {
     renderPage();
     const hygiene = await screen.findByRole('region', { name: 'dashboard.dataHygiene' });
-    expect(within(hygiene).queryByText('ops:operations.scope.capex')).not.toBeInTheDocument();
+    expect(within(hygiene).getByText('ops:operations.scope.opex')).toBeInTheDocument();
+    expect(within(hygiene).getByText('ops:operations.scope.capex')).toBeInTheDocument();
     const top = screen.getByRole('region', { name: TOP_ITEMS });
-    expect(within(top).getByRole('tab', { name: 'operations.scope.capex' })).toBeDisabled();
-    await waitFor(() => expect(within(top).getByText('Opex top')).toBeInTheDocument());
-    expect(screen.queryByRole('region', { name: 'dashboard.capexSnapshot' })).not.toBeInTheDocument();
+    expect(within(top).getByRole('tab', { name: 'operations.scope.capex' })).not.toBeDisabled();
     expect(screen.getByRole('region', { name: 'dashboard.opexSnapshot' })).toBeInTheDocument();
-    expect([...get.mock.calls, ...post.mock.calls].some(([url]) => (url as string).startsWith('/capex-items/'))).toBe(false);
+    expect(screen.getByRole('region', { name: 'dashboard.capexSnapshot' })).toBeInTheDocument();
   });
 
-  it('hides the OPEX snapshot and sends no OPEX request to a user who cannot read OPEX', async () => {
-    readable.opex = false;
+  it('hides every budget tile and sends no budget request without the budget right', async () => {
+    readable.budget = false;
     renderPage();
-    const top = await screen.findByRole('region', { name: TOP_ITEMS });
-    await waitFor(() => expect(within(top).getByText('Capex top')).toBeInTheDocument());
-    expect(screen.queryByRole('region', { name: 'dashboard.opexSnapshot' })).not.toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'dashboard.capexSnapshot' })).toBeInTheDocument();
-    expect([...get.mock.calls, ...post.mock.calls].some(([url]) => (url as string).startsWith('/spend-items/'))).toBe(false);
+    await screen.findByRole('region', { name: 'dashboard.quickActions' });
+    for (const name of ['dashboard.opexSnapshot', 'dashboard.capexSnapshot', 'dashboard.dataHygiene', TOP_ITEMS]) {
+      expect(screen.queryByRole('region', { name })).not.toBeInTheDocument();
+    }
+    expect([...get.mock.calls, ...post.mock.calls].some(([url]) => /^\/(spend|capex)-items\//.test(url as string))).toBe(false);
   });
+
   it('ranks the top items by the default column and names it in the title', async () => {
     setBudgetColumns({ labels: TENANT_NAMES, enabled: ALL_SHOWN, default_column: 'forecast' });
     renderPage();

@@ -470,7 +470,7 @@ export default function CapexItemPage() {
   const requiredLeave = useRequiredDimensionsLeave({
     scope: 'capex',
     lineId: isCreate ? null : idParam,
-    canEdit: hasLevel('capex', 'member'),
+    canEdit: hasLevel('budget', 'member'),
     axes: analyticsAxes,
     values: () => formRef.current.analytics_values,
     root: rootRef,

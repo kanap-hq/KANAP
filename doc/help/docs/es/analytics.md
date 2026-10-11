@@ -405,7 +405,7 @@ Solo `name` es una columna obligatoria. Cuando falta la columna `description`, `
 | `analytics:member` | Crear dimensiones y valores, editarlos y definir el orden de las dimensiones y de los valores |
 | `analytics:admin` | Todo lo anterior, más la importación y exportación CSV y la eliminación |
 
-El rol integrado Administrador de presupuesto es admin, Miembro de presupuesto es member y Lector de presupuesto es reader. Cualquier persona que pueda leer OPEX, CAPEX o los informes ve las dimensiones y sus valores en las líneas de presupuesto, en las listas y en los informes, sin acceso a esta página.
+El rol integrado Administrador de presupuesto es admin, Miembro de presupuesto es member y Lector de presupuesto es reader. Cualquier persona que pueda leer las partidas presupuestarias (Presupuesto) o los informes ve las dimensiones y sus valores en las líneas de presupuesto, en las listas y en los informes, sin acceso a esta página.
 
 ---
 

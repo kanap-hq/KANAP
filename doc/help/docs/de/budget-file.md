@@ -11,7 +11,7 @@ Eine Datei enthält beide Arten von Positionen. Ihre Spalte `nature` gibt an, ob
 - Pfad: **Budgetverwaltung > OPEX** oder **Budgetverwaltung > CAPEX**
 - Export: **CSV exportieren** in der Symbolleiste der Liste
 - Import: **CSV importieren** in derselben Symbolleiste
-- Berechtigungen: Beide Schaltflächen erfordern Administrationsrechte auf dieser Liste (`opex:admin` oder `capex:admin`). Eine Datei mit OPEX- und CAPEX-Positionen erfordert beide
+- Berechtigungen: Beide Schaltflächen erfordern die Administratorstufe auf Budget (`budget:admin`), die für OPEX- und CAPEX-Positionen gleichermaßen gilt
 
 ## Export
 
@@ -103,7 +103,6 @@ Eine fehlende Spalte behält alle gespeicherten Werte dieser Spalte. Eine Datei,
 - `item_number` gefüllt: Diese Position wird aktualisiert. Leer: Es wird eine neue Position angelegt, von der Art, die ihre Zelle `nature` angibt.
 - `item_number` enthält die Referenz der Position, `BL-12`. In einer Datei mit einer Spalte `nature` ist eine bloße Zahl dieselbe Referenz, in beiden Listen. Die Nummern `OPX-12` und `CPX-3` früherer Dateien bezeichnen weiterhin ihre Position. Dieselbe Position zweimal in einer Datei zu nennen ist ein Zeilenfehler.
 - Eine Position behält ihre Art. Eine Zeile, die eine bestehende Position mit der anderen `nature` nennt, wird abgelehnt, zum Beispiel „BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line.“
-- Eine Datei mit OPEX- und CAPEX-Positionen erfordert Administrationsrechte auf beiden. Fehlt eines davon, wird jede Position dieser Art mit dem erforderlichen Recht abgelehnt, zum Beispiel „Importing CAPEX lines needs the Admin level on CAPEX.“ Die übrigen Positionen werden wie gewohnt geprüft, und die Datei lässt sich laden, sobald diese Zeilen entfernt sind.
 - Jede Zeile wird nach ihrer eigenen Art geprüft: die Dimensionen und Werte, die sie haben darf, ihr Konto, die eingefrorenen Spalten und die Warnung vor Duplikaten. Eine für CAPEX eingefrorene Spalte lehnt eine Änderung nur bei einer CAPEX-Position ab.
 - Es gibt keinen weiteren Schlüssel. Eine neue Zeile, die einer bestehenden Position ihrer Art ähnelt oder einer anderen neuen Zeile derselben Art in der Datei, ist eine Warnung, die Sie ignorieren können.
 - Lieferanten werden über `supplier_erp_id` zugeordnet, wenn er gefüllt ist, sonst über `supplier_name`. Einen Lieferanten, den die Datei nennt und den KANAP nicht kennt, legt das Laden an, wenn **Fehlende Lieferanten anlegen** angehakt ist. Ohne diese Option listet die Prüfung die fehlenden Lieferanten auf und bittet Sie, sie unter **Stammdaten > Lieferanten** anzulegen.

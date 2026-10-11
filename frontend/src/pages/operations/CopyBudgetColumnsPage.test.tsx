@@ -24,7 +24,7 @@ vi.mock('ag-grid-react', () => ({
     </ul>
   ),
 }));
-const readable = new Set(['opex', 'capex']);
+const readable = new Set(['budget']);
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: (resource: string) => readable.has(resource) }),
 }));
@@ -98,8 +98,7 @@ describe('CopyBudgetColumnsPage', () => {
   beforeEach(() => {
     columnsSetting.current = DEFAULT_BUDGET_COLUMNS;
     readable.clear();
-    readable.add('opex');
-    readable.add('capex');
+    readable.add('budget');
     operation.mockReset();
     operation.mockResolvedValue({ data: { success: true, dryRun: true, summary: { totalItems: 1, processed: 1, skipped: 0, errors: 0 }, results: [] } });
     server.opex = [summaryRow('product_name', 'Licences')];
@@ -181,14 +180,17 @@ describe('CopyBudgetColumnsPage', () => {
     expect((field as HTMLInputElement).value).toBe('3');
   });
 
-  it('opens on CAPEX for a user who can read CAPEX only', async () => {
-    readable.delete('opex');
+  it('opens on OPEX, both types open with the budget right', () => {
+    renderPage();
+    expect(screen.getByRole('tab', { name: 'operations.scope.opex' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'operations.scope.capex' })).not.toBeDisabled();
+  });
+
+  it('disables both types without the budget right (one right covers both)', () => {
+    readable.delete('budget');
     renderPage();
     expect(screen.getByRole('tab', { name: 'operations.scope.opex' })).toBeDisabled();
-    await linesLoaded();
-    fireEvent.click(screen.getByRole('button', { name: 'operations.copyBudgetColumns.dryRun' }));
-    await waitFor(() => expect(operation).toHaveBeenCalledTimes(1));
-    expect(operation.mock.calls[0][0]).toBe('/capex-items/budget-operations/copy-column');
+    expect(screen.getByRole('tab', { name: 'operations.scope.capex' })).toBeDisabled();
   });
 
   it('a row the dry run did not answer shows as skipped and keeps its destination value', async () => {

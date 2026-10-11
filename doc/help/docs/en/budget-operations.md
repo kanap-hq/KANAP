@@ -31,7 +31,7 @@ The landing page has two sections. Each card links to a dedicated tool. An empty
 | Cards | Who sees them |
 |---|---|
 | Currencies, Budget columns, Default allocation method, Freeze / unfreeze data | Budget administration at admin level (`budget_ops:admin`) |
-| Copy budget columns, Copy allocations, Reset budget column | OPEX or CAPEX at admin level. The OPEX and CAPEX tabs follow the same rule: an OPEX administrator works on OPEX items only |
+| Copy budget columns, Copy allocations, Reset budget column | Budget at admin level (`budget:admin`). The OPEX and CAPEX tabs both open with it |
 | Freeze master data, Copy yearly metrics | Users with access to the budget who are admins of Budget administration, companies or departments. Company and department admins act on their own scope |
 
 The built-in Budget Administrator role sees every card. Budget Member and Budget Reader see none, so **Administration** is not in their menu.
@@ -87,9 +87,9 @@ Freezing and unfreezing need `budget_ops:admin`. The card is hidden from other u
 
 Copy budget data from one year and column to another, with an optional percentage adjustment. This is the primary tool for seeding next year's budget from the current one.
 
-The **OPEX** / **CAPEX** switch at the top chooses which items the copy runs on. OPEX is selected by default when you can read OPEX items, otherwise CAPEX.
+The **OPEX** / **CAPEX** switch at the top chooses which items the copy runs on. OPEX is selected by default.
 
-Needs administration rights on OPEX, or on CAPEX for CAPEX lines.
+Needs the Admin level on Budget (`budget:admin`).
 
 ### When to use it
 
@@ -197,7 +197,7 @@ Copy allocation methods and percentages from one year to another. This saves you
 
 The **OPEX** / **CAPEX** switch at the top chooses which items are copied. Only items valid in the destination year are copied, with the same rule as **Copy budget columns**. The copy is all or nothing: if one item fails, nothing is copied.
 
-Needs administration rights on OPEX, or on CAPEX for CAPEX lines.
+Needs the Admin level on Budget (`budget:admin`).
 
 ### When to use it
 
@@ -241,7 +241,7 @@ Clear all data from a specific budget column for a given year. This is a destruc
 
 The **OPEX** / **CAPEX** switch at the top chooses which items are cleared. The reset sets the twelve months of the column to zero and removes its period, and its lines when the column was built from quantity and price. In the Budget tab, the column then gets a new suggestion from the item's dates. The reset covers every item, including items whose end of validity has passed. The reset is all or nothing: if one item fails, nothing is cleared.
 
-Needs administration rights on OPEX, or on CAPEX for CAPEX lines.
+Needs the Admin level on Budget (`budget:admin`).
 
 A column whose items hold no amount can still be reset: the reset then only removes the spread periods, and the confirmation says so.
 
