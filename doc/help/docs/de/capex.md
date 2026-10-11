@@ -153,7 +153,7 @@ Wenn Sie eine Position öffnen, zeigt der Arbeitsbereich die Schaltflächen **Zu
 
 Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich zu öffnen. Er besteht aus vier Teilen:
 
-- **Kopfzeile**: die Referenz der Position (z. B. `CPX-7`) mit einer Kopierschaltfläche, der Name der Investition (anklicken, um die Position umzubenennen), **Zurück** / **Weiter**, **Link senden** und die Schaltfläche zum Schließen
+- **Kopfzeile**: die Referenz der Position (z. B. `CPX-7`) mit einer Kopierschaltfläche, der Name der Investition (anklicken, um die Position umzubenennen), **Zurück** / **Weiter**, **Link senden**, das Menü **...** (**Typ ändern...**, siehe [Typ ändern](#typ-andern)) und die Schaltfläche zum Schließen
 - **Metadatenleiste** unter dem Titel: **Status**, **IT-Verantwortlicher** und **Fachverantwortlicher**, direkt bearbeitbar. Hat die Kostenstelle der Position einen Budgetverantwortlichen, folgt **Budgetverantwortlicher** danach. Er ist schreibgeschützt und aus der Kostenstelle abgeleitet, nicht auf der Position gespeichert: Fahren Sie mit der Maus darüber, um zu sehen, aus welcher Kostenstelle er stammt, und ändern Sie ihn auf der Kostenstelle (siehe [Kostenstellen](cost-centers.md#budgetverantwortlicher-auf-budgetzeilen))
 - **Vier Tabs**: **Übersicht**, **Budget**, **Zuordnungen** und **Verknüpfungen** (der Tab Verknüpfungen zeigt die Anzahl der Verknüpfungen der Position)
 - **Bereich Eigenschaften** rechts: die Hauptfelder der Position. Öffnen oder schließen Sie ihn mit der Eigenschaften-Schaltfläche; der Arbeitsbereich merkt sich Ihre Wahl
@@ -573,12 +573,33 @@ Jede CAPEX-Position hat einen **Status** (Aktiviert oder Deaktiviert) und ein op
 
 ---
 
+## Typ ändern
+
+Eine CAPEX-Zeile, die sich als Betriebsausgabe herausstellt, wird mit **Typ ändern...** im Menü **...** der Kopfzeile des Arbeitsbereichs zu einer OPEX-Zeile. Sie benötigen die Stufe Mitglied für Budget (`budget:member`). Noch nicht gespeicherte Änderungen werden gespeichert, bevor sich der Dialog öffnet.
+
+**Ab** legt fest, wo die Änderung beginnt:
+
+- **Das erste Jahr der Zeile** (Standard): Die Zeile selbst wird zu einer OPEX-Zeile. Sie behält ihre `BL`-Nummer, ihre Budgets, Zuordnungen, Verknüpfungen, Anhänge und Aufgaben und öffnet sich im OPEX-Arbeitsbereich. Sie verlässt die CAPEX-Liste und die CAPEX-Berichte und erscheint in der OPEX-Liste, den OPEX-Berichten und der Leistungsverrechnung. Ihre `CPX`-Nummer bleibt erhalten: Die Zeile erhält sie wieder, wenn sie später wieder zu CAPEX wird
+- **Ein späteres Jahr**: Diese Zeile endet am 31. Dezember des Vorjahres und behält ihre früheren Budgets. Eine neue OPEX-Zeile übernimmt das Budget ab diesem Jahr, mit den Kontakten und den Verknüpfungen zu Anwendungen, Assets, Verträgen, Projekten und Anfragen. Anhänge, relevante Websites und Aufgaben bleiben bei dieser Zeile. Oben im Tab **Übersicht** sind die beiden Zeilen verknüpft: **Ersetzt durch** auf dieser Zeile, **Folgt auf** auf der neuen
+
+Der Dialog fragt außerdem nach:
+
+- **Konto**: ein Konto für OPEX-Zeilen. Gilt das Konto der Zeile nur für CAPEX-Zeilen, behält die Zeile es, wenn sie selbst ihren Typ ändert, sofern Sie kein anderes wählen; eine neue Zeile ab einem späteren Jahr erhält es nur, wenn es zu OPEX-Zeilen passt
+- **Dimensionen**: die für OPEX-Zeilen erforderlichen Dimensionen und die Werte der Zeile, die nur für CAPEX-Zeilen gelten. Ändert die Zeile selbst ihren Typ, können Sie sie jetzt oder später festlegen. Ab einem späteren Jahr braucht die neue Zeile die erforderlichen Dimensionen, und Werte nur für CAPEX-Zeilen werden nicht übernommen. Die [CAPEX-Dimensionen](#capex-dimensionen) gelten nicht für OPEX-Zeilen: Ändert die Zeile selbst ihren Typ, behält sie deren Werte, ohne sie anzuzeigen, und zeigt sie wieder an, wenn sie später wieder zu CAPEX wird
+- **Grund**: optional, wird im Audit-Protokoll der Zeile gespeichert
+
+Die Änderung wird abgelehnt, wenn die Zeile in den betroffenen Jahren Beträge in einer eingefrorenen Spalte hat, ob für OPEX- oder CAPEX-Zeilen. Heben Sie zuerst das Einfrieren der Spalte auf, oder lassen Sie die Änderung in einem späteren Jahr beginnen. Ein späteres Jahr wird angeboten, wenn die Zeile ein Budget dafür hat, vor diesem Jahr beginnt, am 1. Januar dieses Jahres noch gültig ist und noch nicht durch eine andere Zeile ersetzt wurde. Eine Änderung beginnt immer am 1. Januar.
+
+Ein vor der Änderung gespeicherter Link zur Zeile (ein Lesezeichen, eine E-Mail) öffnet den CAPEX-Arbeitsbereich und findet keine Zeile: Öffnen Sie sie aus der OPEX-Liste. In einer vor der Änderung exportierten Budgetdatei wird die Zeile über ihre `BL`-Nummer gefunden.
+
+---
+
 ## Berechtigungen
 
 Der CAPEX-Zugriff wird durch die Ressource Budget gesteuert, die für OPEX- und CAPEX-Positionen gleichermaßen gilt. Sie hat drei Stufen:
 
 - `budget:reader`: OPEX- und CAPEX-Liste anzeigen, Positionen öffnen, Budgets und Zuordnungen einsehen (schreibgeschützt), Anhänge herunterladen
-- `budget:member`: Positionen erstellen und bearbeiten, Budgets und Zuordnungen aktualisieren, Anhänge hochladen und löschen, Beziehungen, Verknüpfungen und Kontakte verwalten
+- `budget:member`: Positionen erstellen und bearbeiten, ihren Typ ändern, Budgets und Zuordnungen aktualisieren, Anhänge hochladen und löschen, Beziehungen, Verknüpfungen und Kontakte verwalten
 - `budget:admin`: Alle Mitglied-Rechte plus CSV-Import und -Export, Budget-Operationen (Budgetspalten kopieren, Zuordnungen kopieren, Budgetspalte zurücksetzen) und Massenlöschung
 
 Das Einfrieren von Budgetspalten erfordert die Budgetadministration (`budget_ops:admin`).

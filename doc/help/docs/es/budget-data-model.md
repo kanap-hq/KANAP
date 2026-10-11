@@ -60,7 +60,7 @@ Una partida vive varios años: una licencia de tres años es una partida con tre
 
 | Campo | Columna del archivo de presupuesto | Obligatorio | Notas |
 |---|---|---|---|
-| Naturaleza | `nature` | Sí | `opex` o `capex`. Un archivo no cambia la naturaleza de una partida existente. Un archivo sin esta columna se lee como partidas de la lista en la que se importa |
+| Naturaleza | `nature` | Sí | `opex` o `capex`. Un archivo no cambia la naturaleza de una partida existente (consulte [Cambiar el tipo de una partida](#cambiar-el-tipo-de-una-partida)). Un archivo sin esta columna se lee como partidas de la lista en la que se importa |
 | Número | `item_number` | Lo asigna KANAP | `BL-12`. Vacío en el archivo: crea una partida |
 | Nombre del producto (OPEX), título (CAPEX) | `name` | Sí | |
 | Descripción (OPEX) | `description` | No | Aún no se lee ni se escribe en una partida CAPEX |
@@ -79,6 +79,15 @@ Una partida vive varios años: una licencia de tres años es una partida con tre
 | Notas | `notes` | No | |
 
 Una partida no tiene un estado propio que cargar. Está activa hasta su fin de validez y se desactiva en el plazo de una hora. El responsable del presupuesto que se muestra en una partida viene de su centro de coste y no se guarda en la partida.
+
+### Cambiar el tipo de una partida
+
+Una partida pasa de OPEX a CAPEX, o al revés, en su espacio de trabajo (**Cambiar el tipo...** en el menú **...**, consulte [OPEX](opex.md#cambiar-el-tipo) y [CAPEX](capex.md#cambiar-el-tipo)). Un archivo de presupuesto nunca cambia el tipo. El cambio empieza el 1 de enero de un año:
+
+- **A partir del primer año de la partida**, la propia partida cambia de tipo. Conserva su número `BL`, sus años presupuestarios, asignaciones, vínculos, adjuntos y tareas. Una partida que pasa a CAPEX recibe un número `CPX`, que conserva si vuelve a OPEX
+- **A partir de un año posterior**, la partida termina el 31 de diciembre del año anterior y conserva sus años presupuestarios anteriores. Una nueva partida del otro tipo, con su propio número `BL`, lleva los años presupuestarios posteriores, los contactos y los vínculos con aplicaciones, activos, contratos, proyectos y solicitudes. La nueva partida registra la partida a la que sucede, y cada una muestra la otra
+
+Una partida se sustituye como máximo por una sola partida. El cambio se rechaza mientras una columna congelada contenga importes de la partida en los años que cambian.
 
 ### Años presupuestarios
 
