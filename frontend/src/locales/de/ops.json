@@ -1440,6 +1440,7 @@
     }
   },
   "budget": {
+    "title": "Budgetzeilen",
     "titleWithCurrency": "Budgetzeilen ({{currency}})",
     "type": "Typ",
     "newLine": "Neue Zeile",

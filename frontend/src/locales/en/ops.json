@@ -1440,6 +1440,7 @@
     }
   },
   "budget": {
+    "title": "Budget lines",
     "titleWithCurrency": "Budget lines ({{currency}})",
     "type": "Type",
     "newLine": "New line",

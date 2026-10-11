@@ -1440,6 +1440,7 @@
     }
   },
   "budget": {
+    "title": "Líneas presupuestarias",
     "titleWithCurrency": "Líneas presupuestarias ({{currency}})",
     "type": "Tipo",
     "newLine": "Nueva línea",

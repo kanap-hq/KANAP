@@ -1441,6 +1441,7 @@
     }
   },
   "budget": {
+    "title": "Lignes budgétaires",
     "titleWithCurrency": "Lignes budgétaires ({{currency}})",
     "type": "Type",
     "newLine": "Nouvelle ligne",
