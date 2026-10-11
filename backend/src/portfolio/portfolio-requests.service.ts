@@ -52,6 +52,7 @@ import { Task } from '../tasks/task.entity';
 import { requestInvolvesUsersSql, requestLinkedToProjectsSql } from './services/portfolio-report-filters';
 import { TaskAttachment } from '../tasks/task-attachment.entity';
 import { TaskActivitiesService } from '../tasks/task-activities.service';
+import { writeTaskColumns } from '../tasks/task-column-write';
 import {
   ParticipationAccessScope,
   applyRequestParticipantScope,
@@ -1376,9 +1377,8 @@ export class PortfolioRequestsService {
 
     if (overrides?.close_task === true && task.status !== 'done') {
       const beforeTask = { ...task };
-      task.status = 'done';
-      task.updated_at = new Date();
-      const savedTask = await taskRepo.save(task);
+      // The status and its time only, never the task read above (`tasks/task-column-write.ts`).
+      const savedTask = await writeTaskColumns(taskRepo, task, { status: 'done', updated_at: new Date() });
 
       await this.audit.log({
         table: 'tasks',

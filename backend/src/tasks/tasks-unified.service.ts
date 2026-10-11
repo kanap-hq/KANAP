@@ -15,6 +15,7 @@ import { TaskActivitiesService } from './task-activities.service';
 import { TaskAttachmentsService } from './task-attachments.service';
 import { detectChanges, resolveDisplayNames, TASK_TRACKED_FIELDS, FieldConfig } from '../common/change-detection';
 import { normalizeMarkdownRichText } from '../common/markdown-rich-text';
+import { writeTaskColumns } from './task-column-write';
 import { ParticipationAccessScope, taskParticipantCondition } from '../auth/business-contributor-scope';
 
 export type RelatedType = 'spend_item' | 'contract' | 'capex_item' | 'project' | 'incident' | null;
@@ -875,11 +876,12 @@ export class TasksUnifiedService {
       }
     }
 
-    const next = { ...existing, ...payload } as Task;
-    if (this.hasOwn(payload, 'description')) {
-      next.description = normalizedDescription as any;
-    }
-    const saved = await repo.save(next);
+    // The fields the body sends, and those only (`task-column-write.ts`): the task read above may be
+    // older than its relation, which this route never changes (a move goes through `updateById`).
+    const { id: _id, related_object_type: _type, related_object_id: _relatedId, ...fields } = payload as Record<string, unknown>;
+    void _id; void _type; void _relatedId;
+    if (this.hasOwn(payload, 'description')) fields.description = normalizedDescription;
+    const saved = await writeTaskColumns(repo, existing, fields);
     await this.audit.log({
       table: 'tasks',
       recordId: saved.id,
@@ -1056,13 +1058,12 @@ export class TasksUnifiedService {
       }
     }
 
-    const next = {
-      ...existing,
+    // The fields the body changes, and the relation only when it moves, checked above under the
+    // target's lock (`task-column-write.ts`): never the rest of the task read above.
+    const saved = await writeTaskColumns(repo, existing, {
       ...nextPayload,
-      related_object_type: resolvedTarget.type,
-      related_object_id: resolvedTarget.id,
-    } as Task;
-    const saved = await repo.save(next);
+      ...(relationChanged ? { related_object_type: resolvedTarget.type, related_object_id: resolvedTarget.id } : {}),
+    } as Record<string, unknown>);
     await this.audit.log({
       table: 'tasks',
       recordId: saved.id,
