@@ -420,8 +420,8 @@ function BudgetListPageView() {
       colId: 'item_number',
       headerName: t('opex.columns.reference'),
       // Room for the header and its filter text.
-      width: 100,
-      minWidth: 100,
+      width: 130,
+      minWidth: 130,
       valueGetter: (p) => (p.data?.item_number != null ? formatItemRef('budget', p.data.item_number) : ''),
       cellStyle: {
         color: 'var(--kanap-text-secondary)',
