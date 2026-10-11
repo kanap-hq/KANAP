@@ -834,13 +834,10 @@ describe('BudgetListPage', () => {
     expect(screen.getByRole('button', { name: 'budget.newLine' })).toBeInTheDocument();
   });
 
-  it('New line offers both natures without a single nature filter, and opens the filtered nature directly', async () => {
+  it('New line defaults to OPEX without a single nature filter', async () => {
     await renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'budget.newLine' }));
-    expect(screen.getByRole('menuitem', { name: 'budget.opexLine' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'budget.capexLine' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('menuitem', { name: 'budget.capexLine' }));
-    await waitFor(() => expect(location.pathname).toBe('/ops/capex/new'));
+    await waitFor(() => expect(location.pathname).toBe('/ops/opex/new'));
     expect(new URLSearchParams(location.search).get('list')).toBe('budget');
   });
 

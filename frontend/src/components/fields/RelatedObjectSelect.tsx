@@ -3,6 +3,7 @@ import { Autocomplete, TextField, CircularProgress, Stack, Box, Typography } fro
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
+import { budgetLineLabel, type BudgetLineLabel } from '../finance/budgetLineLabel';
 import EnumAutocomplete from './EnumAutocomplete';
 import { FieldLabel } from '../design';
 
@@ -67,26 +68,20 @@ export default function RelatedObjectSelect({
           );
           return (res.data?.items || []).map((p) => ({ id: p.id, name: p.name }));
         }
-        case 'spend_item': {
-          const res = await api.get<{ items: Array<{ id: string; product_name: string }> }>(
-            '/spend-items',
-            { params }
+        case 'spend_item':
+        case 'capex_item': {
+          const nature = relationType === 'spend_item' ? 'opex' : 'capex';
+          const res = await api.get<{ items: Array<BudgetLineLabel & { id: string }> }>(
+            '/budget-lines/summary',
+            { params: { ...params, filters: JSON.stringify({ nature: { filterType: 'set', values: [nature] } }) } }
           );
-          return (res.data?.items || []).map((s) => ({ id: s.id, name: s.product_name }));
+          return (res.data?.items || []).map((line) => ({ id: line.id, name: budgetLineLabel(line) || '' }));
         }
         case 'contract': {
           const res = await api.get<{ items: Array<{ id: string; name: string }> }>(
-            '/contracts',
-            { params }
+            '/contracts', { params }
           );
-          return (res.data?.items || []).map((c) => ({ id: c.id, name: c.name }));
-        }
-        case 'capex_item': {
-          const res = await api.get<{ items: Array<{ id: string; description: string }> }>(
-            '/capex-items',
-            { params }
-          );
-          return (res.data?.items || []).map((c) => ({ id: c.id, name: c.description }));
+          return (res.data?.items || []).map((contract) => ({ id: contract.id, name: contract.name }));
         }
         case 'incident': {
           const res = await api.get<{ items: Array<{ id: string; item_number: number; title: string }> }>(

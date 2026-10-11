@@ -1449,6 +1449,10 @@
     "opex": "OPEX",
     "capex": "CAPEX",
     "totalWithCount_one": "Gesamt ({{count}} Zeile)",
-    "totalWithCount_other": "Gesamt ({{count}} Zeilen)"
+    "totalWithCount_other": "Gesamt ({{count}} Zeilen)",
+    "changeType": "Typ ändern…",
+    "typeOpex": "OPEX",
+    "typeCapex": "CAPEX",
+    "line": "Budgetzeile"
   }
 }

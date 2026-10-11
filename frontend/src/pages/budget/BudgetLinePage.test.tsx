@@ -23,8 +23,8 @@ vi.mock('../../components/design', async (importOriginal) => ({
   useKanapDialogs: () => dialogs,
 }));
 const nav = vi.hoisted(() => ({ result: null as any, unified: false, calls: [] as Array<{ sort?: string | null; filters?: string | null; enabled?: boolean }> }));
-vi.mock('../../hooks/useSpendNav', () => ({
-  useSpendNav: (params: { sort?: string | null; filters?: string | null; enabled?: boolean }, unified = false) => {
+vi.mock('../../hooks/useBudgetLineNav', () => ({
+  useBudgetLineNav: (params: { sort?: string | null; filters?: string | null; enabled?: boolean }, _nature: string, unified = false) => {
     nav.unified = unified;
     nav.calls.push(params);
     return nav.result ?? { index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null };
@@ -36,13 +36,14 @@ vi.mock('../../hooks/useCurrencySettings', () => ({ default: () => ({ data: { de
 const auth = vi.hoisted(() => ({ canEdit: true }));
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: 'me' }, hasLevel: () => auth.canEdit }) }));
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: vi.fn() }) }));
-vi.mock('../../utils/workspaceTabCounts', () => ({ fetchSpendRelationsCount: vi.fn(async () => 0) }));
+vi.mock('../../utils/workspaceTabCounts', () => ({ fetchBudgetRelationsCount: vi.fn(async () => 0) }));
 vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
-  default: ({ properties, actions, children, onTitleSave, onBack, onTabChange, metadata, nav: navigation }: {
-    properties?: React.ReactNode; actions?: React.ReactNode; children?: React.ReactNode; onTitleSave: (v: string) => void;
+  default: ({ properties, actions, children, onTitleSave, onBack, onTabChange, metadata, itemReference, backLabel, nav: navigation }: {
+    itemReference?: string | null; backLabel?: string; properties?: React.ReactNode; actions?: React.ReactNode; children?: React.ReactNode; onTitleSave: (v: string) => void;
     onBack?: () => void; onTabChange?: (tab: string) => void; metadata?: React.ReactNode; nav?: { onNext?: () => void };
   }) => (
     <div>
+      <span data-testid="line-reference">{itemReference}</span><span>{backLabel}</span>
       <button type="button" onClick={() => onTitleSave('Monitoring')}>set title</button>
       <button type="button" onClick={() => onBack?.()}>back to list</button>
       <button type="button" onClick={() => onBack?.()}>close workspace</button>
@@ -54,11 +55,12 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
   ),
 }));
 // The drawer stands in for the pickers: each button sets one field.
-vi.mock('./workspace/SpendPropertiesDrawer', async () => {
+vi.mock('./workspace/BudgetPropertiesDrawer', async () => {
   // The real cost center hook, called as the drawer calls it: a tree request would show in the API calls.
   const { useCostCenterNode } = await import('../../hooks/useCostCenterTree');
   return { default: (props: {
     costCenterId?: string;
+    nature: string; onNatureChange: (v: string) => void; onChangeType?: () => void;
     mode: string; payingCompanyId: string; accountId: string; onPayingCompanyChange: (v: string) => void;
     onAccountChange: (v: string) => void; onSupplierChange: (v: string) => void; onCostCenterChange: (v: string, node: { id: string; company_id: string | null } | null) => void;
     onRunBuildChange: (v: string) => void; analyticsValues: Record<string, string | null>;
@@ -74,6 +76,12 @@ vi.mock('./workspace/SpendPropertiesDrawer', async () => {
       data-references={JSON.stringify(props.references ?? null)}
       data-analytics-options={JSON.stringify(props.analyticsOptions ?? null)}
     >
+      {props.mode === 'create' ? (
+        <select aria-label="budget.type" value={props.nature} onChange={(e) => props.onNatureChange(e.target.value)}>
+          <option value="opex">OPEX</option><option value="capex">CAPEX</option>
+        </select>
+      ) : <span data-testid="line-type">{props.nature}</span>}
+      {props.onChangeType && <button type="button" onClick={props.onChangeType}>budget.changeType</button>}
       <button type="button" onClick={() => props.onPayingCompanyChange('company-1')}>pick company</button>
       <button type="button" onClick={() => props.onPayingCompanyChange('company-2')}>pick other company</button>
       <button type="button" onClick={() => props.onPayingCompanyChange('')}>clear company</button>
@@ -96,7 +104,7 @@ vi.mock('./workspace/SpendPropertiesDrawer', async () => {
     );
   } };
 });
-vi.mock('./workspace/SpendMetadataBar', async () => {
+vi.mock('./workspace/BudgetMetadataBar', async () => {
   const { useCostCenterNode } = await import('../../hooks/useCostCenterTree');
   return {
     default: ({ onStatusChange, costCenterId, costCenter }: {
@@ -147,29 +155,36 @@ vi.mock('../../components/finance/BudgetTab', async () => {
   return { default: BudgetTabStandIn };
 });
 vi.mock('../../components/finance/AllocationsTab', () => ({ default: () => null }));
-vi.mock('./editors/RelationsPanel', () => ({ default: () => null }));
+vi.mock('../../components/finance/ItemRelationsPanel', () => ({ default: () => null }));
 vi.mock('../../components/EntityTasksPanel', () => ({ default: () => null }));
 // The change type dialog (lot M) stands in: open, it says for which line, and « confirm type change »
 // answers as the server does for a change in place.
 vi.mock('../../components/finance/ChangeTypeDialog', () => ({
   default: ({ open, nature, lineId, onChanged }: { open: boolean; nature: string; lineId: string; onChanged: (result: unknown) => void }) => (open ? (
     <div data-testid="change-type-dialog" data-nature={nature} data-line={lineId}>
-      <button type="button" onClick={() => onChanged({ id: lineId, reference: 'BL-7', nature: 'capex' })}>confirm type change</button>
+      <button type="button" onClick={() => onChanged({ id: lineId, reference: 'BL-7', nature: otherNature() })}>confirm type change</button>
     </div>
   ) : null),
 }));
 
 import api from '../../api';
-import SpendItemPage from './SpendItemPage';
+import BudgetLinePage from './BudgetLinePage';
+import { BUDGET_NATURE_CONFIG } from './natureConfig';
+
+let nature: 'opex' | 'capex' = 'opex';
+const otherNature = () => BUDGET_NATURE_CONFIG[nature].otherNature;
+const legacyPrefix = () => BUDGET_NATURE_CONFIG[nature].legacyPrefix;
 import { resetSharedPatchBuffers } from '../../hooks/patchBuffer';
 import { confirmLeave } from '../../hooks/leaveGuard';
-import { fetchSpendRelationsCount } from '../../utils/workspaceTabCounts';
+import { fetchBudgetRelationsCount } from '../../utils/workspaceTabCounts';
 import { DEFAULT_BUDGET_COLUMNS } from '../../services/budgetColumns';
 import { resetListContextCache } from '../../lib/listContext';
 
 const mocked = api as unknown as {
   get: ReturnType<typeof vi.fn>; post: ReturnType<typeof vi.fn>; patch: ReturnType<typeof vi.fn>;
 };
+
+const charts = vi.hoisted(() => ({ company2: 'coa-b' }));
 
 const ITEM_ID = '11111111-2222-3333-4444-555555555555';
 
@@ -207,18 +222,27 @@ function CapexPageProbe() {
   return <div data-testid="capex-page" data-path={pathname} />;
 }
 
+function CreateTargetProbe() {
+  const { pathname, search } = useLocation();
+  const navigate = useNavigate();
+  return <div data-testid="create-target" data-path={pathname} data-search={search}>
+    <button onClick={() => navigate(-1)}>browser back</button>
+  </div>;
+}
+
 // The routers here render like the app's (`useTransitions={false}` in main.tsx).
-function renderAt(path: string) {
+function renderAt(path: string, previous?: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
-        <MemoryRouter initialEntries={[path]} useTransitions={false}>
+        <MemoryRouter initialEntries={previous ? [previous, path] : [path]} useTransitions={false}>
           <Routes>
-            <Route path="/ops/opex/:id/:tab" element={<SpendItemPage />} />
+            <Route path={`/ops/${nature}/:id/:tab`} element={<BudgetLinePage nature={nature} />} />
             <Route path="/ops/budget" element={<ListPageProbe />} />
             <Route path="/ops/opex" element={<ListPageProbe />} />
-            <Route path="/ops/capex/:id/:tab" element={<CapexPageProbe />} />
+            <Route path={`/ops/${otherNature()}/:id/:tab`} element={<CapexPageProbe />} />
+            <Route path={`/ops/${otherNature()}/new`} element={<CreateTargetProbe />} />
           </Routes>
         </MemoryRouter>
       </ThemeProvider>
@@ -226,7 +250,9 @@ function renderAt(path: string) {
   );
 }
 
-describe('SpendItemPage create', () => {
+describe.each(['opex', 'capex'] as const)('BudgetLinePage %s', (lineNature) => {
+  beforeEach(() => { nature = lineNature; });
+describe('BudgetLinePage create', () => {
   beforeEach(() => {
     mocked.get.mockReset();
     mocked.post.mockReset();
@@ -236,14 +262,14 @@ describe('SpendItemPage create', () => {
   });
 
   it('creates a line without a supplier and sends none', async () => {
-    renderAt('/ops/opex/new/overview');
+    renderAt(`/ops/${nature}/new/overview`);
     expect(document.querySelector('[data-mode="create"]')).not.toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
-    expect(mocked.post.mock.calls[0][0]).toBe('/spend-items');
+    expect(mocked.post.mock.calls[0][0]).toBe('/budget-lines');
     expect(mocked.post.mock.calls[0][1]).toMatchObject({
       product_name: 'Monitoring',
       supplier_id: null,
@@ -253,7 +279,7 @@ describe('SpendItemPage create', () => {
   });
 
   it('fills an empty paying company from the picked cost center and sends both new fields', async () => {
-    renderAt('/ops/opex/new/overview');
+    renderAt(`/ops/${nature}/new/overview`);
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
     expect(document.querySelector('[data-mode="create"]')).toHaveAttribute('data-company', 'company-2');
@@ -269,7 +295,7 @@ describe('SpendItemPage create', () => {
   });
 
   it('keeps a paying company picked first, and sends no cost center or run or build when none is picked', async () => {
-    renderAt('/ops/opex/new/overview');
+    renderAt(`/ops/${nature}/new/overview`);
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
     expect(document.querySelector('[data-mode="create"]')).toHaveAttribute('data-company', 'company-1');
@@ -282,7 +308,7 @@ describe('SpendItemPage create', () => {
   });
 
   it('lets a company filled from the cost center follow the next cost center, until an account is picked', async () => {
-    renderAt('/ops/opex/new/overview');
+    renderAt(`/ops/${nature}/new/overview`);
     const drawer = () => document.querySelector('[data-mode="create"]');
     fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
     expect(drawer()).toHaveAttribute('data-company', 'company-2');
@@ -294,7 +320,7 @@ describe('SpendItemPage create', () => {
   });
 
   it('stops following the cost center once the user picks a company', async () => {
-    renderAt('/ops/opex/new/overview');
+    renderAt(`/ops/${nature}/new/overview`);
     const drawer = () => document.querySelector('[data-mode="create"]');
     fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
@@ -303,7 +329,7 @@ describe('SpendItemPage create', () => {
   });
 
   it('sends the value of each dimension given one, and never the old single field', async () => {
-    renderAt('/ops/opex/new/overview');
+    renderAt(`/ops/${nature}/new/overview`);
     const drawer = () => document.querySelector('[data-mode="create"]');
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
@@ -324,10 +350,10 @@ describe('SpendItemPage create', () => {
     mocked.get.mockImplementation(async (url: string) => (url === '/analytics-axes'
       ? { data: { items: [
         { id: 'axis-default', code: 'default', name: null, description: null, sort_order: 0, is_default: true, applies_to: null, status: 'enabled', disabled_at: null },
-        { id: 'axis-nature', code: 'nature', name: 'Nature', description: null, sort_order: 1, is_default: false, applies_to: 'capex', status: 'enabled', disabled_at: null },
+        { id: 'axis-nature', code: 'nature', name: 'Nature', description: null, sort_order: 1, is_default: false, applies_to: lineNature === 'opex' ? 'capex' : 'opex', status: 'enabled', disabled_at: null },
       ] } }
       : { data: {} }));
-    renderAt('/ops/opex/new/overview');
+    renderAt(`/ops/${nature}/new/overview`);
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/analytics-axes'));
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
@@ -342,7 +368,7 @@ describe('SpendItemPage create', () => {
   });
 
   it('sends an empty map when no dimension has a value', async () => {
-    renderAt('/ops/opex/new/overview');
+    renderAt(`/ops/${nature}/new/overview`);
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
@@ -357,11 +383,11 @@ describe('SpendItemPage create', () => {
         { id: 'axis-default', code: 'default', name: null, description: null, sort_order: 0, is_default: true, applies_to: null, required: false, status: 'enabled', disabled_at: null },
         { id: 'axis-nature', code: 'nature', name: 'Nature', description: null, sort_order: 1, is_default: false, applies_to: null, required: true, status: 'enabled', disabled_at: null },
         // Required, but for CAPEX lines only, or disabled: not checked here.
-        { id: 'axis-other', code: 'other', name: 'Other', description: null, sort_order: 2, is_default: false, applies_to: 'capex', required: true, status: 'enabled', disabled_at: null },
+        { id: 'axis-other', code: 'other', name: 'Other', description: null, sort_order: 2, is_default: false, applies_to: lineNature === 'opex' ? 'capex' : 'opex', required: true, status: 'enabled', disabled_at: null },
         { id: 'axis-old', code: 'old', name: 'Old', description: null, sort_order: 3, is_default: false, applies_to: null, required: true, status: 'disabled', disabled_at: '2020-01-01T00:00:00.000Z' },
       ] } }
       : { data: {} }));
-    renderAt('/ops/opex/new/overview');
+    renderAt(`/ops/${nature}/new/overview`);
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/analytics-axes'));
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
@@ -378,7 +404,7 @@ describe('SpendItemPage create', () => {
   });
 
   it('refuses to create a line without an account', async () => {
-    renderAt('/ops/opex/new/overview');
+    renderAt(`/ops/${nature}/new/overview`);
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
@@ -388,15 +414,15 @@ describe('SpendItemPage create', () => {
 });
 
 // Charts of accounts: the account and the first company on one, the second company on another.
-const charts = vi.hoisted(() => ({ company2: 'coa-b' }));
 
-describe('SpendItemPage edit', () => {
+
+describe('BudgetLinePage edit', () => {
   beforeEach(() => {
     mocked.get.mockReset();
     mocked.patch.mockReset();
     charts.company2 = 'coa-b';
     mocked.get.mockImplementation(async (url: string) => {
-      if (url === `/spend-items/${ITEM_ID}`) {
+      if (url === `/budget-lines/${ITEM_ID}`) {
         return {
           data: {
             id: ITEM_ID, item_number: 7, product_name: 'Monitoring', supplier_id: 'supplier-1', notes: 'Renewal',
@@ -419,11 +445,11 @@ describe('SpendItemPage edit', () => {
   }
 
   it('clears the account in the same write when the new company uses another chart', async () => {
-    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
     await clickOnceLoaded('pick other company');
     expect(mocked.patch).toHaveBeenCalledTimes(1);
     // Each field with the value the screen showed before (its base, lot 3C).
-    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, {
+    expect(mocked.patch).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}`, {
       paying_company_id: 'company-2', account_id: null, base: { paying_company_id: 'company-1', account_id: 'account-1' },
     });
     // The Account row now asks for an account on the new chart.
@@ -432,23 +458,23 @@ describe('SpendItemPage edit', () => {
 
   it('keeps the account when the new company uses the same chart', async () => {
     charts.company2 = 'coa-a';
-    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
     await clickOnceLoaded('pick other company');
     expect(mocked.patch).toHaveBeenCalledTimes(1);
-    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { paying_company_id: 'company-2', base: { paying_company_id: 'company-1' } });
+    expect(mocked.patch).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}`, { paying_company_id: 'company-2', base: { paying_company_id: 'company-1' } });
   });
 
   it('shows the refusal of an account kept for CAPEX lines', async () => {
     const message = 'This account is for CAPEX lines only. Choose an account for OPEX lines.';
     mocked.patch.mockRejectedValueOnce(Object.assign(new Error('HTTP 400'), { response: { status: 400, headers: {}, data: { message } } }));
-    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
     await clickOnceLoaded('pick account of another chart');
-    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { account_id: 'account-other', base: { account_id: 'account-1' } });
+    expect(mocked.patch).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}`, { account_id: 'account-other', base: { account_id: 'account-1' } });
     expect(await screen.findByText(message)).toBeInTheDocument();
   });
 
   it('saves cleared notes as null after the typing pause', async () => {
-    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
     const notes = await screen.findByDisplayValue('Renewal');
     // The debounced write goes through flushPending, which normalises like the immediate one.
     await waitFor(() => {
@@ -456,12 +482,12 @@ describe('SpendItemPage edit', () => {
       expect(notes).toHaveValue('');
     });
     await waitFor(() => expect(mocked.patch).toHaveBeenCalled(), { timeout: 3000 });
-    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { notes: null, base: { notes: 'Renewal' } });
+    expect(mocked.patch).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}`, { notes: null, base: { notes: 'Renewal' } });
   });
 
   it('clears the supplier as null, not as an empty string', async () => {
-    renderAt(`/ops/opex/${ITEM_ID}/overview`);
-    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, expect.objectContaining({ signal: expect.any(AbortSignal) })));
+    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}`, expect.objectContaining({ signal: expect.any(AbortSignal) })));
     // The form shows the line (the click below starts from what the screen shows: its base).
     await waitFor(() => expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', 'account-1'));
     // Writes wait for the line to load; retry the click until one goes through.
@@ -473,8 +499,8 @@ describe('SpendItemPage edit', () => {
   });
 
   it('patches the cost center and run or build, as null when cleared', async () => {
-    renderAt(`/ops/opex/${ITEM_ID}/overview`);
-    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, expect.objectContaining({ signal: expect.any(AbortSignal) })));
+    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}`, expect.objectContaining({ signal: expect.any(AbortSignal) })));
     await waitFor(() => expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', 'account-1'));
     // One pick at a time (picks made while a save runs go together in the next one).
     const picks = ['pick cost center', 'clear cost center', 'pick build', 'clear run or build'];
@@ -491,11 +517,11 @@ describe('SpendItemPage edit', () => {
   });
 });
 
-describe('SpendItemPage picker labels from the detail', () => {
+describe('BudgetLinePage picker labels from the detail', () => {
   beforeEach(() => {
     mocked.get.mockReset();
     mocked.get.mockImplementation(async (url: string) => {
-      if (url === `/spend-items/${ITEM_ID}`) {
+      if (url === `/budget-lines/${ITEM_ID}`) {
         return {
           data: {
             id: ITEM_ID, item_number: 7, product_name: 'Monitoring', supplier_id: 'supplier-1', currency: 'EUR',
@@ -516,7 +542,7 @@ describe('SpendItemPage picker labels from the detail', () => {
   });
 
   it("hands the detail's labels to the pickers, which then read no list", async () => {
-    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
     await waitFor(() => expect(document.querySelector('[data-mode="edit"]')?.getAttribute('data-references')).toContain('Société Test'));
     const drawer = document.querySelector('[data-mode="edit"]')!;
     expect(JSON.parse(drawer.getAttribute('data-references')!).account.account_number).toBe(6110);
@@ -526,30 +552,30 @@ describe('SpendItemPage picker labels from the detail', () => {
   });
 });
 
-describe('SpendItemPage first wave', () => {
+describe('BudgetLinePage first wave', () => {
   beforeEach(() => {
     mocked.get.mockReset();
-    vi.mocked(fetchSpendRelationsCount).mockClear();
+    vi.mocked(fetchBudgetRelationsCount).mockClear();
   });
 
   it("asks for the Relations badge with the route's reference, with the detail, not after it", async () => {
     let answerDetail: () => void = () => undefined;
     mocked.get.mockImplementation(async (url: string) => {
-      if (url === '/spend-items/OPX-7') {
+      if (url === `/budget-lines/${legacyPrefix()}-7`) {
         await new Promise<void>((resolve) => { answerDetail = resolve; });
         return { data: { id: ITEM_ID, item_number: 7, product_name: 'Monitoring', currency: 'EUR', effective_start: '2026-01-01' } };
       }
       return { data: {} };
     });
-    renderAt('/ops/opex/OPX-7/overview');
-    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/spend-items/OPX-7', expect.objectContaining({ signal: expect.any(AbortSignal) })));
+    renderAt(`/ops/${nature}/${legacyPrefix()}-7/overview`);
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith(`/budget-lines/${legacyPrefix()}-7`, expect.objectContaining({ signal: expect.any(AbortSignal) })));
     // The detail is not answered yet: the badge's request is already out.
-    await waitFor(() => expect(fetchSpendRelationsCount).toHaveBeenCalledWith('OPX-7', expect.any(AbortSignal)));
+    await waitFor(() => expect(fetchBudgetRelationsCount).toHaveBeenCalledWith(BUDGET_NATURE_CONFIG[nature], `${legacyPrefix()}-7`, expect.any(AbortSignal)));
     await act(async () => { answerDetail(); });
   });
 });
 
-describe('SpendItemPage notes typed during a save', () => {
+describe('BudgetLinePage notes typed during a save', () => {
   // What the server holds; a PATCH applies to it only when the test resolves it.
   const server: Record<string, unknown> = {};
   const saves: Array<() => void> = [];
@@ -560,7 +586,7 @@ describe('SpendItemPage notes typed during a save', () => {
     saves.length = 0;
     Object.assign(server, { notes: 'Renewal', account_id: 'account-1' });
     mocked.get.mockImplementation(async (url: string) => {
-      if (url === `/spend-items/${ITEM_ID}`) {
+      if (url === `/budget-lines/${ITEM_ID}`) {
         return { data: { id: ITEM_ID, item_number: 7, product_name: 'Monitoring', currency: 'EUR', effective_start: '2026-01-01', paying_company_id: 'company-1', ...server } };
       }
       return { data: {} };
@@ -574,7 +600,7 @@ describe('SpendItemPage notes typed during a save', () => {
   });
 
   it('keeps text typed while the save and its refetch run, and saves it next', async () => {
-    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
     const notes = await screen.findByDisplayValue('Renewal');
     // Writes wait for the line to load; retry the change until it sticks.
     await waitFor(() => {
@@ -594,17 +620,17 @@ describe('SpendItemPage notes typed during a save', () => {
     // Started from the text being saved: once that save lands, it is the stored one.
     expect(mocked.patch.mock.calls[1][1]).toEqual({ notes: 'Renewal AB', base: { notes: 'Renewal A' } });
     saves[1]();
-    await waitFor(() => expect(mocked.get.mock.calls.filter(([u]) => u === `/spend-items/${ITEM_ID}`).length).toBeGreaterThanOrEqual(3));
+    await waitFor(() => expect(mocked.get.mock.calls.filter(([u]) => u === `/budget-lines/${ITEM_ID}`).length).toBeGreaterThanOrEqual(3));
     expect(notes).toHaveValue('Renewal AB');
   });
 });
 
-describe('SpendItemPage analytics dimensions', () => {
+describe('BudgetLinePage analytics dimensions', () => {
   beforeEach(() => {
     mocked.get.mockReset();
     mocked.patch.mockReset();
     mocked.get.mockImplementation(async (url: string) => {
-      if (url === `/spend-items/${ITEM_ID}`) {
+      if (url === `/budget-lines/${ITEM_ID}`) {
         return {
           data: {
             id: ITEM_ID, item_number: 7, product_name: 'Monitoring', currency: 'EUR', effective_start: '2026-01-01',
@@ -623,7 +649,7 @@ describe('SpendItemPage analytics dimensions', () => {
   });
 
   it('patches one dimension at a time, as null when cleared, and keeps the others on screen', async () => {
-    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
     const drawer = () => document.querySelector('[data-mode="edit"]');
     // The drawer reads the line's values from the detail's list, by dimension.
     await waitFor(() => expect(drawer()).toHaveAttribute('data-analytics', JSON.stringify({ 'axis-default': 'value-1' })));
@@ -640,45 +666,45 @@ describe('SpendItemPage analytics dimensions', () => {
   });
 });
 
-describe('SpendItemPage list context', () => {
+describe('BudgetLinePage list context', () => {
   beforeEach(() => {
     nav.calls = [];
     window.sessionStorage.clear();
     mocked.get.mockReset();
     mocked.get.mockImplementation(async (url: string) => {
       if (url === '/budget-columns') return { data: DEFAULT_BUDGET_COLUMNS };
-      if (url === `/spend-items/${ITEM_ID}`) return { data: { id: ITEM_ID, item_number: 7, product_name: 'Monitoring', currency: 'EUR' } };
+      if (url === `/budget-lines/${ITEM_ID}`) return { data: { id: ITEM_ID, item_number: 7, product_name: 'Monitoring', currency: 'EUR' } };
       return { data: {} };
     });
   });
 
   it('a unified list context enables mixed navigation and opens a CAPEX neighbour with the list state', async () => {
-    nav.result = { index: 0, total: 2, hasPrev: false, hasNext: true, prevId: null, nextId: 'BL-12', nextPath: '/ops/capex/BL-12' };
-    renderAt(`/ops/opex/${ITEM_ID}/overview?list=budget&sort=product_name:ASC`);
+    nav.result = { index: 0, total: 2, hasPrev: false, hasNext: true, prevId: null, nextId: 'BL-12', nextPath: `/ops/${otherNature()}/BL-12` };
+    renderAt(`/ops/${nature}/${ITEM_ID}/overview?list=budget&sort=product_name:ASC`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
     expect(nav.unified).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'next budget line' }));
     const page = await screen.findByTestId('capex-page');
-    expect(page.getAttribute('data-path')).toBe('/ops/capex/BL-12/overview');
+    expect(page.getAttribute('data-path')).toBe(`/ops/${otherNature()}/BL-12/overview`);
   });
 
   it('sends prev/next no sort for the default one, and keeps a sort the user picked', async () => {
     window.sessionStorage.setItem('budget-list-context', JSON.stringify({ sort: 'yBudget:DESC', q: '', filters: '', statusScope: 'enabled' }));
-    const first = renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    const first = renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
     expect(nav.calls.filter((c) => c.enabled).every((c) => (c.sort ?? null) === null)).toBe(true);
     first.unmount();
 
     nav.calls = [];
     window.sessionStorage.setItem('budget-list-context', JSON.stringify({ sort: 'yRevision:ASC', q: '', filters: '', statusScope: 'enabled' }));
-    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
     expect(nav.calls.filter((c) => c.enabled).every((c) => c.sort === 'yRevision:ASC')).toBe(true);
   });
 
   it('walks prev/next like the list: a sort or filter on a hidden column falls back', async () => {
     const filters = JSON.stringify({ yForecast: { filterType: 'number', type: 'greaterThan', filter: 1 }, yBudget: { filterType: 'number', type: 'greaterThan', filter: 2 } });
-    renderAt(`/ops/opex/${ITEM_ID}/overview?list=budget&sort=yForecast:ASC&filters=${encodeURIComponent(filters)}`);
+    renderAt(`/ops/${nature}/${ITEM_ID}/overview?list=budget&sort=yForecast:ASC&filters=${encodeURIComponent(filters)}`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
     const ready = nav.calls.filter((c) => c.enabled);
     for (const call of ready) {
@@ -696,7 +722,7 @@ describe('SpendItemPage list context', () => {
     const own = { sort: '', q: '', filters: JSON.stringify({ supplier_name: { filterType: 'set', values: ['Alpha'] } }), statusScope: 'enabled' };
     window.sessionStorage.setItem('budget-list-context', JSON.stringify(own));
     const filters = JSON.stringify({ has_fte: { filterType: 'set', values: ['yes'] } });
-    renderAt(`/ops/opex/${ITEM_ID}/overview?${new URLSearchParams({ filters, statusScope: 'all', from: 'report' })}`);
+    renderAt(`/ops/${nature}/${ITEM_ID}/overview?${new URLSearchParams({ filters, statusScope: 'all', from: 'report' })}`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
     for (const call of nav.calls.filter((c) => c.enabled) as Array<{ filters?: string | null; statusScope?: string }>) {
       expect(call.statusScope).toBe('all');
@@ -712,7 +738,7 @@ describe('SpendItemPage list context', () => {
   });
 });
 
-describe('SpendItemPage list context too long for a URL (ctx)', () => {
+describe('BudgetLinePage list context too long for a URL (ctx)', () => {
   const CTX = 'Opx_allButOne_0123456';
   const BIG = { supplier_name: { filterType: 'set', values: Array.from({ length: 1152 }, (_, i) => `Fournisseur ${i} Société Générale`) } };
 
@@ -725,13 +751,13 @@ describe('SpendItemPage list context too long for a URL (ctx)', () => {
     mocked.get.mockImplementation(async (url: string) => {
       if (url === '/budget-columns') return { data: DEFAULT_BUDGET_COLUMNS };
       if (url === `/list-contexts/${CTX}`) return { data: { id: CTX, list: 'budget-lines', state: { filters: BIG } } };
-      if (url === `/spend-items/${ITEM_ID}`) return { data: { id: ITEM_ID, item_number: 7, product_name: 'Monitoring', currency: 'EUR' } };
+      if (url === `/budget-lines/${ITEM_ID}`) return { data: { id: ITEM_ID, item_number: 7, product_name: 'Monitoring', currency: 'EUR' } };
       return { data: {} };
     });
   });
 
   it('a link opened in a new tab: reads the saved filters, walks prev/next with them, goes back to the list with ctx', async () => {
-    renderAt(`/ops/opex/${ITEM_ID}/overview?sort=product_name:ASC&ctx=${CTX}`);
+    renderAt(`/ops/${nature}/${ITEM_ID}/overview?sort=product_name:ASC&ctx=${CTX}`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
     // Not enabled before the saved filters are read: prev/next never walks the unfiltered list.
     for (const call of nav.calls.filter((c) => c.enabled)) expect(JSON.parse(call.filters ?? '{}')).toEqual(BIG);
@@ -748,7 +774,7 @@ describe('SpendItemPage list context too long for a URL (ctx)', () => {
   });
 });
 
-describe('SpendItemPage list context and dimensions', () => {
+describe('BudgetLinePage list context and dimensions', () => {
   const NATURE = '11111111-1111-4111-8111-111111111111';
   const OLD = '22222222-2222-4222-8222-222222222222';
   const GONE = '33333333-3333-4333-8333-333333333333';
@@ -773,7 +799,7 @@ describe('SpendItemPage list context and dimensions', () => {
           },
         };
       }
-      if (url === `/spend-items/${ITEM_ID}`) return { data: { id: ITEM_ID, item_number: 7, product_name: 'Line', currency: 'EUR' } };
+      if (url === `/budget-lines/${ITEM_ID}`) return { data: { id: ITEM_ID, item_number: 7, product_name: 'Line', currency: 'EUR' } };
       return { data: {} };
     });
   });
@@ -788,7 +814,7 @@ describe('SpendItemPage list context and dimensions', () => {
     window.sessionStorage.setItem('budget-list-context', JSON.stringify({
       sort: `analytics_${OLD}:ASC`, q: '', filters: JSON.stringify(filters), statusScope: 'enabled',
     }));
-    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
     // Never enabled before the dimensions are known.
     for (const call of nav.calls.filter((c) => c.enabled)) {
@@ -800,11 +826,33 @@ describe('SpendItemPage list context and dimensions', () => {
     expect(JSON.parse(stored.filters)).toEqual(kept);
   });
 
+  it('walks prev/next like the list: a sort or filter on a former CAPEX criterion falls back', async () => {
+    const kept = { [`analytics_${NATURE}`]: { filterType: 'set', values: ['Licences'] } };
+    const filters = {
+      ...kept,
+      priority: { filterType: 'set', values: ['high'] },
+      ppe_type: { filterType: 'set', values: ['hardware'] },
+    };
+    window.sessionStorage.setItem('budget-list-context', JSON.stringify({
+      sort: 'priority:ASC', q: '', filters: JSON.stringify(filters), statusScope: 'enabled',
+    }));
+    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
+    await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
+    for (const call of nav.calls.filter((c) => c.enabled)) {
+      expect(call.sort ?? null).toBeNull();
+      expect(JSON.parse(call.filters ?? '{}')).toEqual(kept);
+    }
+    // The stored list context is written back without them.
+    const stored = JSON.parse(window.sessionStorage.getItem('budget-list-context') ?? '{}');
+    expect(stored.sort).toBe('');
+    expect(JSON.parse(stored.filters)).toEqual(kept);
+  });
+
   it('keeps a sort on an enabled dimension', async () => {
     window.sessionStorage.setItem('budget-list-context', JSON.stringify({
       sort: `analytics_${NATURE}:DESC`, q: '', filters: '', statusScope: 'enabled',
     }));
-    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
     expect(nav.calls.filter((c) => c.enabled).every((c) => c.sort === `analytics_${NATURE}:DESC`)).toBe(true);
   });
@@ -815,7 +863,7 @@ function apiError(status: number, code: string) {
   return Object.assign(new Error(`HTTP ${status}`), { response: { status, data: { code, message: code }, headers: {} } });
 }
 
-describe('SpendItemPage autosave across lines, refusals and a busy server', () => {
+describe('BudgetLinePage autosave across lines, refusals and a busy server', () => {
   const LINE_A = 'aaaaaaaa-0000-4000-8000-000000000001';
   const LINE_B = 'bbbbbbbb-0000-4000-8000-000000000002';
   const line = (id: string, n: number, name: string) => ({
@@ -828,8 +876,8 @@ describe('SpendItemPage autosave across lines, refusals and a busy server', () =
     mocked.patch.mockReset();
     dialogs.confirm.mockReset();
     mocked.get.mockImplementation(async (url: string) => {
-      if (url === `/spend-items/${LINE_A}`) return { data: line(LINE_A, 1, 'Line A') };
-      if (url === `/spend-items/${LINE_B}`) return { data: line(LINE_B, 2, 'Line B') };
+      if (url === `/budget-lines/${LINE_A}`) return { data: line(LINE_A, 1, 'Line A') };
+      if (url === `/budget-lines/${LINE_B}`) return { data: line(LINE_B, 2, 'Line B') };
       return { data: {} };
     });
   });
@@ -851,7 +899,7 @@ describe('SpendItemPage autosave across lines, refusals and a busy server', () =
           <MemoryRouter initialEntries={[path]} useTransitions={false}>
             <NavigateProbe />
             <Routes>
-              <Route path="/ops/opex/:id/:tab" element={<SpendItemPage />} />
+              <Route path={`/ops/${nature}/:id/:tab`} element={<BudgetLinePage nature={nature} />} />
               <Route path="/ops/budget" element={<div>opex list</div>} />
               <Route path="/ops/opex" element={<div>opex list</div>} />
             </Routes>
@@ -874,22 +922,22 @@ describe('SpendItemPage autosave across lines, refusals and a busy server', () =
 
   it('never sends a description refused on line A to line B, and shows A\'s stored text again', async () => {
     mocked.patch.mockImplementation(async (url: string, patch: Record<string, unknown>) => {
-      if (url === `/spend-items/${LINE_A}` && 'description' in patch) throw apiError(409, 'duplicate');
+      if (url === `/budget-lines/${LINE_A}` && 'description' in patch) throw apiError(409, 'duplicate');
       return { data: {} };
     });
-    const router = renderLines(`/ops/opex/${LINE_A}/overview`);
+    const router = renderLines(`/ops/${nature}/${LINE_A}/overview`);
     await typeInto('Line A stored', 'X');
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1), { timeout: 3000 });
     // Refused for good: the message shows and the stored text is back.
     expect(await screen.findByText('errors:duplicate')).toBeInTheDocument();
     expect(await screen.findByDisplayValue('Line A stored')).toBeInTheDocument();
 
-    act(() => { router.navigate(`/ops/opex/${LINE_B}/overview`); });
+    act(() => { router.navigate(`/ops/${nature}/${LINE_B}/overview`); });
     await typeInto('Line B notes', 'Line B notes, edited');
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2), { timeout: 3000 });
     expect(mocked.patch.mock.calls).toEqual([
-      [`/spend-items/${LINE_A}`, { description: 'X', base: { description: 'Line A stored' } }],
-      [`/spend-items/${LINE_B}`, { notes: 'Line B notes, edited', base: { notes: 'Line B notes' } }],
+      [`/budget-lines/${LINE_A}`, { description: 'X', base: { description: 'Line A stored' } }],
+      [`/budget-lines/${LINE_B}`, { notes: 'Line B notes, edited', base: { notes: 'Line B notes' } }],
     ]);
   });
 
@@ -900,7 +948,7 @@ describe('SpendItemPage autosave across lines, refusals and a busy server', () =
       return { data: {} };
     });
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    const router = renderLines(`/ops/opex/${LINE_A}/overview`);
+    const router = renderLines(`/ops/${nature}/${LINE_A}/overview`);
     await typeInto('Line A notes', 'A edited');
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1), { timeout: 3000 });
     // Three retries by itself, then kept and shown as not saved yet.
@@ -910,19 +958,19 @@ describe('SpendItemPage autosave across lines, refusals and a busy server', () =
 
     // The user goes to line B another way (no flush): the edit for A stays bound to A.
     busy = false;
-    act(() => { router.navigate(`/ops/opex/${LINE_B}/overview`); });
+    act(() => { router.navigate(`/ops/${nature}/${LINE_B}/overview`); });
     await typeInto('Line B notes', 'B edited');
-    await waitFor(() => expect(mocked.patch.mock.calls.filter(([url]) => url === `/spend-items/${LINE_B}`)).toHaveLength(1), { timeout: 3000 });
+    await waitFor(() => expect(mocked.patch.mock.calls.filter(([url]) => url === `/budget-lines/${LINE_B}`)).toHaveLength(1), { timeout: 3000 });
     const sent = mocked.patch.mock.calls.slice(4);
-    expect(sent).toContainEqual([`/spend-items/${LINE_A}`, { notes: 'A edited', base: { notes: 'Line A notes' } }]);
-    expect(sent).toContainEqual([`/spend-items/${LINE_B}`, { notes: 'B edited', base: { notes: 'Line B notes' } }]);
+    expect(sent).toContainEqual([`/budget-lines/${LINE_A}`, { notes: 'A edited', base: { notes: 'Line A notes' } }]);
+    expect(sent).toContainEqual([`/budget-lines/${LINE_B}`, { notes: 'B edited', base: { notes: 'Line B notes' } }]);
     expect(sent).toHaveLength(2);
   });
 
   it('asks before leaving while the server keeps the edit busy, then drops it for good', async () => {
     mocked.patch.mockRejectedValue(apiError(503, 'busy'));
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    renderLines(`/ops/opex/${LINE_A}/overview`);
+    renderLines(`/ops/${nature}/${LINE_A}/overview`);
     await typeInto('Line A notes', 'never saved');
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1), { timeout: 3000 });
     await act(async () => { await vi.advanceTimersByTimeAsync(8_000); });
@@ -947,7 +995,7 @@ describe('SpendItemPage autosave across lines, refusals and a busy server', () =
   });
 });
 
-describe('SpendItemPage edit conflicts (lot 3C)', () => {
+describe('BudgetLinePage edit conflicts (lot 3C)', () => {
   const LINE_A = 'aaaaaaaa-0000-4000-8000-0000000000a1';
   const LINE_B = 'bbbbbbbb-0000-4000-8000-0000000000b2';
   // What the server holds, per line. A PATCH is checked first (400, as resolveItemWrite), then
@@ -1033,7 +1081,7 @@ describe('SpendItemPage edit conflicts (lot 3C)', () => {
             <NavigateProbe />
             <LocationProbe />
             <Routes>
-              <Route path="/ops/opex/:id/:tab" element={<SpendItemPage />} />
+              <Route path={`/ops/${nature}/:id/:tab`} element={<BudgetLinePage nature={nature} />} />
               <Route path="/ops/budget" element={<div>opex list</div>} />
               <Route path="/ops/opex" element={<div>opex list</div>} />
             </Routes>
@@ -1055,12 +1103,12 @@ describe('SpendItemPage edit conflicts (lot 3C)', () => {
 
   /** Marie saved other notes on line A after the screen read them; the user's notes are refused. */
   async function conflictOnNotes() {
-    const router = renderLines(`/ops/opex/${LINE_A}/overview`);
+    const router = renderLines(`/ops/${nature}/${LINE_A}/overview`);
     await screen.findByDisplayValue('Line A notes');
     stored[LINE_A].notes = 'Notes from Marie';
     const notes = await typeInto('Line A notes', 'My notes');
     await screen.findByTestId('edit-conflict-notes', undefined, { timeout: 3000 });
-    expect(mocked.patch.mock.calls[0]).toEqual([`/spend-items/${LINE_A}`, { notes: 'My notes', base: { notes: 'Line A notes' } }]);
+    expect(mocked.patch.mock.calls[0]).toEqual([`/budget-lines/${LINE_A}`, { notes: 'My notes', base: { notes: 'Line A notes' } }]);
     return { router, notes };
   }
 
@@ -1069,14 +1117,14 @@ describe('SpendItemPage edit conflicts (lot 3C)', () => {
   it('shows the conflict, keeps the user\'s text through the reload, and applies it over theirs on request', async () => {
     const { notes } = await conflictOnNotes();
     // The line reloads (Marie's notes are stored), the box keeps the user's text.
-    await waitFor(() => expect(mocked.get.mock.calls.filter(([url]) => url === `/spend-items/${LINE_A}`).length).toBeGreaterThanOrEqual(2));
+    await waitFor(() => expect(mocked.get.mock.calls.filter(([url]) => url === `/budget-lines/${LINE_A}`).length).toBeGreaterThanOrEqual(2));
     expect(notes).toHaveValue('My notes');
     expect(screen.queryByText('opex.editor.failedToSave')).toBeNull();
     expect(mocked.patch).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole('button', { name: 'editConflict.applyMine: opex.fields.notes' }));
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2));
-    expect(mocked.patch.mock.calls[1]).toEqual([`/spend-items/${LINE_A}`, { notes: 'My notes', base: { notes: 'Notes from Marie' } }]);
+    expect(mocked.patch.mock.calls[1]).toEqual([`/budget-lines/${LINE_A}`, { notes: 'My notes', base: { notes: 'Notes from Marie' } }]);
     await waitFor(() => expect(screen.queryByTestId('edit-conflict-notes')).toBeNull());
     expect(stored[LINE_A].notes).toBe('My notes');
     // The focus goes back to the field, not to the page's body.
@@ -1139,7 +1187,7 @@ describe('SpendItemPage edit conflicts (lot 3C)', () => {
   });
 
   it('a pick goes after the text still waiting for its typing pause, each in its own request', async () => {
-    renderLines(`/ops/opex/${LINE_A}/overview`);
+    renderLines(`/ops/${nature}/${LINE_A}/overview`);
     await typeInto('Line A notes', 'Typed just before');
     // Picked before the pause ends: the server refuses the cost center.
     fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
@@ -1154,7 +1202,7 @@ describe('SpendItemPage edit conflicts (lot 3C)', () => {
   });
 
   it('disabling a line with no end of validity sends the status alone: two windows doing it are no conflict', async () => {
-    renderLines(`/ops/opex/${LINE_A}/overview`);
+    renderLines(`/ops/${nature}/${LINE_A}/overview`);
     await screen.findByDisplayValue('Line A notes');
     // Another window disabled the line meanwhile (its own clock's now).
     stored[LINE_A].disabled_at = '2026-10-02T12:00:00.000Z';
@@ -1166,7 +1214,7 @@ describe('SpendItemPage edit conflicts (lot 3C)', () => {
   });
 
   it('two ends of validity on the same day show their time', async () => {
-    renderLines(`/ops/opex/${LINE_A}/overview`);
+    renderLines(`/ops/${nature}/${LINE_A}/overview`);
     await screen.findByDisplayValue('Line A notes');
     stored[LINE_A].disabled_at = '2026-12-31T16:00:00.000Z';
     fireEvent.click(screen.getByRole('button', { name: 'end on 31 December' }));
@@ -1184,11 +1232,11 @@ describe('SpendItemPage edit conflicts (lot 3C)', () => {
   it('a tab change keeps the choice: no question, the banner and the text stay', async () => {
     const { notes } = await conflictOnNotes();
     fireEvent.click(screen.getByRole('button', { name: 'budget tab' }));
-    await waitFor(() => expect(path()).toBe(`/ops/opex/${LINE_A}/budget`));
+    await waitFor(() => expect(path()).toBe(`/ops/${nature}/${LINE_A}/budget`));
     expect(dialogs.confirm).not.toHaveBeenCalled();
     expect(screen.getByTestId('edit-conflict-notes')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'overview tab' }));
-    await waitFor(() => expect(path()).toBe(`/ops/opex/${LINE_A}/overview`));
+    await waitFor(() => expect(path()).toBe(`/ops/${nature}/${LINE_A}/overview`));
     expect(await screen.findByDisplayValue('My notes')).toBeInTheDocument();
     expect(notes).toBeDefined();
   });
@@ -1213,17 +1261,17 @@ describe('SpendItemPage edit conflicts (lot 3C)', () => {
   });
 
   it('a budget column waiting for a choice: a tab change keeps it, leaving the line names it, then drops it', async () => {
-    renderLines(`/ops/opex/${LINE_A}/budget`);
+    renderLines(`/ops/${nature}/${LINE_A}/budget`);
     fireEvent.click(await screen.findByRole('button', { name: 'budget refused' }));
 
     // Another tab of the line: no question, the choice is kept for the line.
     fireEvent.click(screen.getByRole('button', { name: 'overview tab' }));
-    await waitFor(() => expect(path()).toBe(`/ops/opex/${LINE_A}/overview`));
+    await waitFor(() => expect(path()).toBe(`/ops/${nature}/${LINE_A}/overview`));
     expect(dialogs.confirm).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'budget tab' }));
     expect(await screen.findByTestId('budget-waiting')).toHaveTextContent('Budget');
     fireEvent.click(screen.getByRole('button', { name: 'overview tab' }));
-    await waitFor(() => expect(path()).toBe(`/ops/opex/${LINE_A}/overview`));
+    await waitFor(() => expect(path()).toBe(`/ops/${nature}/${LINE_A}/overview`));
 
     // Leaving the line, from another tab: the warning names the column waiting.
     dialogs.confirm.mockResolvedValueOnce(false);
@@ -1255,10 +1303,10 @@ describe('SpendItemPage edit conflicts (lot 3C)', () => {
   it('a line left another way keeps its choice for the session: back on it, the banner and the text are there', async () => {
     const { router } = await conflictOnNotes();
     // The browser's back button: no question, the page goes.
-    act(() => { router.navigate('/ops/opex'); });
+    act(() => { router.navigate('/ops/budget'); });
     expect(await screen.findByText('opex list')).toBeInTheDocument();
     expect(dialogs.confirm).not.toHaveBeenCalled();
-    act(() => { router.navigate(`/ops/opex/${LINE_A}/overview`); });
+    act(() => { router.navigate(`/ops/${nature}/${LINE_A}/overview`); });
     expect(await screen.findByTestId('edit-conflict-notes')).toBeInTheDocument();
     expect(await screen.findByDisplayValue('My notes')).toBeInTheDocument();
     await settleSaves();
@@ -1266,16 +1314,16 @@ describe('SpendItemPage edit conflicts (lot 3C)', () => {
   });
 
   it('a save answered with a conflict once the page went is kept for the next visit', async () => {
-    const router = renderLines(`/ops/opex/${LINE_A}/overview`);
+    const router = renderLines(`/ops/${nature}/${LINE_A}/overview`);
     await screen.findByDisplayValue('Line A notes');
     stored[LINE_A].notes = 'Notes from Marie';
     await typeInto('Line A notes', 'Typed before leaving');
     // Gone before the typing pause: the page sends the text as it unmounts, the answer is a 409.
-    act(() => { router.navigate('/ops/opex'); });
+    act(() => { router.navigate('/ops/budget'); });
     expect(await screen.findByText('opex list')).toBeInTheDocument();
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
     await settleSaves();
-    act(() => { router.navigate(`/ops/opex/${LINE_A}/overview`); });
+    act(() => { router.navigate(`/ops/${nature}/${LINE_A}/overview`); });
     expect(await screen.findByTestId('edit-conflict-notes')).toBeInTheDocument();
     expect(await screen.findByDisplayValue('Typed before leaving')).toBeInTheDocument();
   });
@@ -1283,11 +1331,11 @@ describe('SpendItemPage edit conflicts (lot 3C)', () => {
   it('never carries a conflict of line A to line B, names line A there, and opens it without a question', async () => {
     const { router } = await conflictOnNotes();
     // Another way to line B (no flush): no banner there, B's edit goes to B alone.
-    act(() => { router.navigate(`/ops/opex/${LINE_B}/overview`); });
+    act(() => { router.navigate(`/ops/${nature}/${LINE_B}/overview`); });
     await typeInto('Line B notes', 'B edited');
     expect(screen.queryByTestId('edit-conflict-notes')).toBeNull();
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2), { timeout: 3000 });
-    expect(mocked.patch.mock.calls[1]).toEqual([`/spend-items/${LINE_B}`, { notes: 'B edited', base: { notes: 'Line B notes' } }]);
+    expect(mocked.patch.mock.calls[1]).toEqual([`/budget-lines/${LINE_B}`, { notes: 'B edited', base: { notes: 'Line B notes' } }]);
     expect(stored[LINE_A].notes).toBe('Notes from Marie');
     // Line A's waiting choice is named here, and leaving says which line it is on.
     expect(screen.getByTestId('edit-conflict-elsewhere')).toHaveTextContent('editConflict.elsewhere');
@@ -1306,7 +1354,7 @@ describe('SpendItemPage edit conflicts (lot 3C)', () => {
   describe('a company and its account', () => {
     /** Someone else saves `theirs` after the screen read the line, then the user picks a company on another chart (the account is cleared with it). */
     async function pickOtherCompany(theirs: Record<string, unknown>) {
-      renderLines(`/ops/opex/${LINE_A}/overview`);
+      renderLines(`/ops/${nature}/${LINE_A}/overview`);
       await waitFor(() => expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', 'account-1'));
       Object.assign(stored[LINE_A], theirs);
       fireEvent.click(screen.getByRole('button', { name: 'pick other company' }));
@@ -1355,7 +1403,7 @@ describe('SpendItemPage edit conflicts (lot 3C)', () => {
   });
 });
 
-describe('SpendItemPage others\' changes (lot 3G)', () => {
+describe('BudgetLinePage others\' changes (lot 3G)', () => {
   const LINE = 'aaaaaaaa-0000-4000-8000-0000000000a1';
   const YEAR = new Date().getFullYear();
   // What the server holds: the line with its counter, who wrote it, and the year's version counter.
@@ -1368,8 +1416,8 @@ describe('SpendItemPage others\' changes (lot 3G)', () => {
     Object.assign(stored, fields, { row_version: Number(stored.row_version) + 1 });
     author = by;
   };
-  const detailReads = () => mocked.get.mock.calls.filter(([url]) => url === `/spend-items/${LINE}`).length;
-  const metaReads = () => mocked.get.mock.calls.filter(([url]) => url === `/spend-items/${LINE}/meta`).length;
+  const detailReads = () => mocked.get.mock.calls.filter(([url]) => url === `/budget-lines/${LINE}`).length;
+  const metaReads = () => mocked.get.mock.calls.filter(([url]) => url === `${BUDGET_NATURE_CONFIG[nature].itemsApi}/${LINE}/meta`).length;
 
   beforeEach(() => {
     mocked.get.mockReset();
@@ -1386,8 +1434,8 @@ describe('SpendItemPage others\' changes (lot 3G)', () => {
       currency: 'EUR', effective_start: '2026-01-01', paying_company_id: 'company-1', account_id: 'account-1', row_version: 5,
     };
     mocked.get.mockImplementation(async (url: string) => {
-      if (url === `/spend-items/${LINE}`) return { data: { ...stored } };
-      if (url === `/spend-items/${LINE}/meta`) {
+      if (url === `/budget-lines/${LINE}`) return { data: { ...stored } };
+      if (url === `${BUDGET_NATURE_CONFIG[nature].itemsApi}/${LINE}/meta`) {
         return {
           data: {
             id: LINE, row_version: stored.row_version, changed_by: author, changed_at: '2026-10-02T12:02:00.000Z',
@@ -1441,7 +1489,7 @@ describe('SpendItemPage others\' changes (lot 3G)', () => {
   }
 
   it('reads the meta every 30 seconds while the line is shown', async () => {
-    renderAt(`/ops/opex/${LINE}/overview`);
+    renderAt(`/ops/${nature}/${LINE}/overview`);
     await screen.findByDisplayValue('Start');
     expect(metaReads()).toBe(0);
     await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
@@ -1449,7 +1497,7 @@ describe('SpendItemPage others\' changes (lot 3G)', () => {
   });
 
   it('idle: someone else\'s change is shown in place, with who changed it', async () => {
-    renderAt(`/ops/opex/${LINE}/overview`);
+    renderAt(`/ops/${nature}/${LINE}/overview`);
     const notes = await screen.findByDisplayValue('Start');
     othersWrite({ notes: 'Notes from Marie' });
     const reads = detailReads();
@@ -1461,7 +1509,7 @@ describe('SpendItemPage others\' changes (lot 3G)', () => {
   });
 
   it('the page\'s own saves say nothing', async () => {
-    renderAt(`/ops/opex/${LINE}/overview`);
+    renderAt(`/ops/${nature}/${LINE}/overview`);
     await typeInto('Start', 'My notes');
     await settleSaves();
     expect(mocked.patch).toHaveBeenCalledTimes(1);
@@ -1474,7 +1522,7 @@ describe('SpendItemPage others\' changes (lot 3G)', () => {
   });
 
   it('the user\'s own change in another window says so', async () => {
-    renderAt(`/ops/opex/${LINE}/overview`);
+    renderAt(`/ops/${nature}/${LINE}/overview`);
     await screen.findByDisplayValue('Start');
     othersWrite({ notes: 'From my other window' }, { id: 'me', name: 'Me' });
     await poll();
@@ -1482,7 +1530,7 @@ describe('SpendItemPage others\' changes (lot 3G)', () => {
   });
 
   it('typing in a field: nothing is refreshed, the badge shows; Reload shows the change and keeps the text typed', async () => {
-    renderAt(`/ops/opex/${LINE}/overview`);
+    renderAt(`/ops/${nature}/${LINE}/overview`);
     const description = await screen.findByDisplayValue('About');
     description.focus();
     othersWrite({ notes: 'Notes from Marie' });
@@ -1505,7 +1553,7 @@ describe('SpendItemPage others\' changes (lot 3G)', () => {
   });
 
   it('a choice waiting: no mark beside its banner, nothing refreshed; once the choice is made, the change is said', async () => {
-    renderAt(`/ops/opex/${LINE}/overview`);
+    renderAt(`/ops/${nature}/${LINE}/overview`);
     await screen.findByDisplayValue('Start');
     stored.notes = 'Notes from Marie';
     const notes = await typeInto('Start', 'My notes');
@@ -1530,7 +1578,7 @@ describe('SpendItemPage others\' changes (lot 3G)', () => {
   });
 
   it('Budget tab: the year\'s version moved, the tab reloads in place; a cell typed gets the badge; a column waiting for a choice gets neither', async () => {
-    renderAt(`/ops/opex/${LINE}/budget`);
+    renderAt(`/ops/${nature}/${LINE}/budget`);
     await waitFor(() => expect(screen.getByTestId('budget-waiting')).toBeInTheDocument());
     budgetRev = 4;
     await poll();
@@ -1556,7 +1604,7 @@ describe('SpendItemPage others\' changes (lot 3G)', () => {
   });
 
   it('a reload that fails is not counted as shown: the badge stays, and the next read tries again', async () => {
-    renderAt(`/ops/opex/${LINE}/budget`);
+    renderAt(`/ops/${nature}/${LINE}/budget`);
     await waitFor(() => expect(screen.getByTestId('budget-waiting')).toBeInTheDocument());
     budgetStandIn.failReload = true;
     budgetRev = 4;
@@ -1569,12 +1617,12 @@ describe('SpendItemPage others\' changes (lot 3G)', () => {
   });
 
   it('a detail that cannot be read again is not counted as shown', async () => {
-    renderAt(`/ops/opex/${LINE}/overview`);
+    renderAt(`/ops/${nature}/${LINE}/overview`);
     const notes = await screen.findByDisplayValue('Start');
     othersWrite({ notes: 'Notes from Marie' });
     const served = mocked.get.getMockImplementation()! as (...args: any[]) => any;
     mocked.get.mockImplementation(async (url: string, config?: unknown) => {
-      if (url === `/spend-items/${LINE}`) throw Object.assign(new Error('HTTP 503'), { response: { status: 503, headers: {}, data: { code: 'busy' } } });
+      if (url === `/budget-lines/${LINE}`) throw Object.assign(new Error('HTTP 503'), { response: { status: 503, headers: {}, data: { code: 'busy' } } });
       return served(url, config);
     });
     await poll();
@@ -1586,11 +1634,11 @@ describe('SpendItemPage others\' changes (lot 3G)', () => {
   });
 
   it('a line deleted elsewhere says so, and is not read again', async () => {
-    renderAt(`/ops/opex/${LINE}/overview`);
+    renderAt(`/ops/${nature}/${LINE}/overview`);
     await screen.findByDisplayValue('Start');
     const served = mocked.get.getMockImplementation()! as (...args: any[]) => any;
     mocked.get.mockImplementation(async (url: string, config?: unknown) => {
-      if (url === `/spend-items/${LINE}/meta`) throw Object.assign(new Error('HTTP 404'), { response: { status: 404, headers: {}, data: {} } });
+      if (url === `${BUDGET_NATURE_CONFIG[nature].itemsApi}/${LINE}/meta`) throw Object.assign(new Error('HTTP 404'), { response: { status: 404, headers: {}, data: {} } });
       return served(url, config);
     });
     await poll();
@@ -1607,26 +1655,26 @@ describe('SpendItemPage others\' changes (lot 3G)', () => {
         <ThemeProvider theme={createAppTheme('light')}>
           <MemoryRouter initialEntries={[path]} useTransitions={false}>
             <Routes>
-              <Route path="/ops/opex/:id/:tab" element={<SpendItemPage />} />
+              <Route path={`/ops/${nature}/:id/:tab`} element={<BudgetLinePage nature={nature} />} />
             </Routes>
           </MemoryRouter>
         </ThemeProvider>
       </QueryClientProvider>
     );
-    const first = render(ui(`/ops/opex/${LINE}/overview`));
+    const first = render(ui(`/ops/${nature}/${LINE}/overview`));
     await screen.findByDisplayValue('Start');
     first.unmount();
     // Marie changes the line while it is closed; the copy kept goes stale.
     othersWrite({ notes: 'Notes from Marie' });
     await act(async () => { await vi.advanceTimersByTimeAsync(31_000); });
-    render(ui(`/ops/opex/${LINE}/overview`));
+    render(ui(`/ops/${nature}/${LINE}/overview`));
     await screen.findByDisplayValue('Notes from Marie');
     await poll();
     expect(screen.queryByTestId('others-changes-notice')).toBeNull();
   });
 
   it('back on the window, a stale line is read again only when nothing is pending', async () => {
-    renderAt(`/ops/opex/${LINE}/overview`);
+    renderAt(`/ops/${nature}/${LINE}/overview`);
     const notes = await screen.findByDisplayValue('Start');
     await act(async () => { await vi.advanceTimersByTimeAsync(31_000); });
     othersWrite({ notes: 'Notes from Marie' });
@@ -1638,7 +1686,7 @@ describe('SpendItemPage others\' changes (lot 3G)', () => {
 });
 
 
-describe('SpendItemPage cost center across lines', () => {
+describe('BudgetLinePage cost center across lines', () => {
   const LINE_A = 'aaaaaaaa-0000-4000-8000-0000000000c1';
   const LINE_B = 'bbbbbbbb-0000-4000-8000-0000000000c2';
   // Each line names its cost center in the detail (`references.cost_center`).
@@ -1656,8 +1704,8 @@ describe('SpendItemPage cost center across lines', () => {
     mocked.get.mockReset();
     mocked.patch.mockReset();
     mocked.get.mockImplementation(async (url: string) => {
-      if (url === `/spend-items/${LINE_A}`) return { data: line(LINE_A, 1, ref('cc-a', 'CC-A')) };
-      if (url === `/spend-items/${LINE_B}`) return { data: line(LINE_B, 2, ref('cc-b', 'CC-B')) };
+      if (url === `/budget-lines/${LINE_A}`) return { data: line(LINE_A, 1, ref('cc-a', 'CC-A')) };
+      if (url === `/budget-lines/${LINE_B}`) return { data: line(LINE_B, 2, ref('cc-b', 'CC-B')) };
       return { data: {} };
     });
   });
@@ -1672,10 +1720,10 @@ describe('SpendItemPage cost center across lines', () => {
     render(
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={createAppTheme('light')}>
-          <MemoryRouter initialEntries={[`/ops/opex/${LINE_A}/overview`]} useTransitions={false}>
+          <MemoryRouter initialEntries={[`/ops/${nature}/${LINE_A}/overview`]} useTransitions={false}>
             <NavigateProbe />
             <Routes>
-              <Route path="/ops/opex/:id/:tab" element={<SpendItemPage />} />
+              <Route path={`/ops/${nature}/:id/:tab`} element={<BudgetLinePage nature={nature} />} />
             </Routes>
           </MemoryRouter>
         </ThemeProvider>
@@ -1683,19 +1731,19 @@ describe('SpendItemPage cost center across lines', () => {
     );
     const shown = (id: string) => document.querySelector(`[data-mode="edit"][data-cost-center="${id}"]`);
     await waitFor(() => expect(shown('cc-a')).not.toBeNull());
-    act(() => { router.navigate!(`/ops/opex/${LINE_B}/overview`); });
+    act(() => { router.navigate!(`/ops/${nature}/${LINE_B}/overview`); });
     await waitFor(() => expect(shown('cc-b')).not.toBeNull());
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
     expect(mocked.get.mock.calls.filter(([url]) => String(url).startsWith('/cost-centers'))).toEqual([]);
   });
 });
 
-describe('SpendItemPage required dimensions before leaving (lot D2)', () => {
+describe('BudgetLinePage required dimensions before leaving (lot D2)', () => {
   const AXES = [
     { id: 'axis-default', code: 'default', name: null, description: null, sort_order: 0, is_default: true, applies_to: null, required: false, status: 'enabled', disabled_at: null },
     { id: 'axis-nature', code: 'nature', name: 'Nature', description: null, sort_order: 1, is_default: false, applies_to: null, required: true, status: 'enabled', disabled_at: null },
     // Required for CAPEX lines only, or disabled: never asked here.
-    { id: 'axis-other', code: 'other', name: 'Other', description: null, sort_order: 2, is_default: false, applies_to: 'capex', required: true, status: 'enabled', disabled_at: null },
+    { id: 'axis-other', code: 'other', name: 'Other', description: null, sort_order: 2, is_default: false, applies_to: lineNature === 'opex' ? 'capex' : 'opex', required: true, status: 'enabled', disabled_at: null },
     { id: 'axis-old', code: 'old', name: 'Old', description: null, sort_order: 3, is_default: false, applies_to: null, required: true, status: 'disabled', disabled_at: '2020-01-01T00:00:00.000Z' },
   ];
 
@@ -1706,7 +1754,7 @@ describe('SpendItemPage required dimensions before leaving (lot D2)', () => {
     dialogs.confirm.mockReset();
     mocked.get.mockImplementation(async (url: string) => {
       if (url === '/analytics-axes') return { data: { items: AXES } };
-      if (url === `/spend-items/${ITEM_ID}`) {
+      if (url === `/budget-lines/${ITEM_ID}`) {
         return {
           data: {
             id: ITEM_ID, item_number: 7, product_name: 'Monitoring', currency: 'EUR', effective_start: '2026-01-01',
@@ -1724,7 +1772,7 @@ describe('SpendItemPage required dimensions before leaving (lot D2)', () => {
   });
 
   async function openLine() {
-    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
     await waitFor(() => expect(document.querySelector('[data-mode="edit"]')).not.toBeNull());
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/analytics-axes'));
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
@@ -1736,8 +1784,8 @@ describe('SpendItemPage required dimensions before leaving (lot D2)', () => {
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
 
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
-    expect(await screen.findByText('opex.editor.requiredLeaveMessage')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'opex.editor.requiredLeaveStay' }));
+    expect(await screen.findByText(`${nature}.editor.requiredLeaveMessage`)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: `${nature}.editor.requiredLeaveStay` }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.queryByTestId('list-page')).not.toBeInTheDocument();
     // The unsaved-work question is not the one asked.
@@ -1745,7 +1793,7 @@ describe('SpendItemPage required dimensions before leaving (lot D2)', () => {
 
     // The back link asks the same; the app's links ask through the leave guard.
     fireEvent.click(screen.getByRole('button', { name: 'back to list' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'opex.editor.requiredLeaveConfirm' }));
+    fireEvent.click(await screen.findByRole('button', { name: `${nature}.editor.requiredLeaveConfirm` }));
     expect(await screen.findByTestId('list-page')).toBeInTheDocument();
   });
 
@@ -1763,7 +1811,7 @@ describe('SpendItemPage required dimensions before leaving (lot D2)', () => {
     expect(await screen.findByTestId('list-page')).toBeInTheDocument();
     expect(dialogs.confirm).toHaveBeenCalledTimes(1);
     expect(dialogs.confirm).toHaveBeenCalledWith(expect.objectContaining({ title: 'common:autosave.leaveTitle' }));
-    expect(screen.queryByText('opex.editor.requiredLeaveMessage')).not.toBeInTheDocument();
+    expect(screen.queryByText(`${nature}.editor.requiredLeaveMessage`)).not.toBeInTheDocument();
   });
 
   it('asks through the leave guard of the app\'s links', async () => {
@@ -1772,7 +1820,7 @@ describe('SpendItemPage required dimensions before leaving (lot D2)', () => {
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
     let left: Promise<boolean> | null = null;
     act(() => { left = confirmLeave(); });
-    fireEvent.click(await screen.findByRole('button', { name: 'opex.editor.requiredLeaveConfirm' }));
+    fireEvent.click(await screen.findByRole('button', { name: `${nature}.editor.requiredLeaveConfirm` }));
     await expect(left).resolves.toBe(true);
   });
 
@@ -1803,7 +1851,7 @@ describe('SpendItemPage required dimensions before leaving (lot D2)', () => {
   });
 });
 
-describe('SpendItemPage change type (lot M)', () => {
+describe('BudgetLinePage change type (lot M)', () => {
   let detail: Record<string, unknown>;
   beforeEach(() => {
     mocked.get.mockReset();
@@ -1813,45 +1861,136 @@ describe('SpendItemPage change type (lot M)', () => {
       id: ITEM_ID, item_number: 7, product_name: 'Monitoring', notes: 'Renewal', row_version: 3,
       paying_company_id: 'company-1', account_id: 'account-1', currency: 'EUR', effective_start: '2026-01-01',
     };
-    mocked.get.mockImplementation(async (url: string) => (url === `/spend-items/${ITEM_ID}` ? { data: detail } : { data: {} }));
+    mocked.get.mockImplementation(async (url: string) => (url === `/budget-lines/${ITEM_ID}` ? { data: detail } : { data: {} }));
     mocked.patch.mockResolvedValue({ data: { row_version: 4 } });
   });
   afterEach(() => { auth.canEdit = true; });
 
   it('the « … » pill opens the change of type; once changed, the line opens in its new type', async () => {
-    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
     await screen.findByDisplayValue('Renewal');
     fireEvent.click(screen.getByRole('button', { name: 'buttons.moreActions' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'ops:shared.changeType.menuItem' }));
     const dialog = await screen.findByTestId('change-type-dialog');
-    expect(dialog).toHaveAttribute('data-nature', 'opex');
+    expect(dialog).toHaveAttribute('data-nature', nature);
     expect(dialog).toHaveAttribute('data-line', ITEM_ID);
     fireEvent.click(screen.getByRole('button', { name: 'confirm type change' }));
-    expect(await screen.findByTestId('capex-page')).toHaveAttribute('data-path', '/ops/capex/BL-7/overview');
+    expect(await screen.findByTestId('capex-page')).toHaveAttribute('data-path', `/ops/${otherNature()}/BL-7/overview`);
   });
 
   it('saves the notes still typed before the dialog reads the line', async () => {
-    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
     const notes = await screen.findByDisplayValue('Renewal');
     fireEvent.change(notes, { target: { value: 'Renewal in March' } });
     fireEvent.click(screen.getByRole('button', { name: 'buttons.moreActions' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'ops:shared.changeType.menuItem' }));
     await screen.findByTestId('change-type-dialog');
-    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { notes: 'Renewal in March', base: { notes: 'Renewal' } });
+    expect(mocked.patch).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}`, { notes: 'Renewal in March', base: { notes: 'Renewal' } });
   });
 
   it('is not offered without the budget member level', async () => {
     auth.canEdit = false;
-    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
     await screen.findByDisplayValue('Renewal');
     expect(screen.queryByRole('button', { name: 'buttons.moreActions' })).toBeNull();
   });
 
   it('names the line that replaces this one; it opens in its own type', async () => {
-    detail = { ...detail, lineage: { predecessor: null, successor: { id: 'line-2', reference: 'BL-9', nature: 'capex', from_year: 2026 } } };
-    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    detail = { ...detail, lineage: { predecessor: null, successor: { id: 'line-2', reference: 'BL-9', nature: otherNature(), from_year: 2026 } } };
+    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
     expect(await screen.findByText(/shared\.lineage\.replacedBy/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'BL-9' }));
-    expect(await screen.findByTestId('capex-page')).toHaveAttribute('data-path', '/ops/capex/BL-9/overview');
+    expect(await screen.findByTestId('capex-page')).toHaveAttribute('data-path', `/ops/${otherNature()}/BL-9/overview`);
   });
+});
+
+describe('native contract and Type', () => {
+  let stored: Record<string, unknown>;
+  beforeEach(() => {
+    auth.canEdit = true;
+    mocked.get.mockReset(); mocked.patch.mockReset(); mocked.post.mockReset();
+    stored = { id: ITEM_ID, item_number: 127, nature, product_name: 'Investment', description: 'Long description', notes: 'Private notes', currency: 'EUR' };
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url.startsWith('/budget-lines/')) return { data: stored };
+      return { data: {} };
+    });
+    mocked.patch.mockImplementation(async (_url, body) => { stored = { ...stored, ...body }; return { data: stored }; });
+  });
+
+  it.each(['BL-127', '127', 'legacy', ITEM_ID])('reads the native detail by %s and displays its BL reference', async (input) => {
+    const ref = input === 'legacy' ? `${legacyPrefix()}-7` : input;
+    renderAt(`/ops/${nature}/${ref}/overview`);
+    await screen.findByDisplayValue('Long description');
+    expect(mocked.get).toHaveBeenCalledWith(`/budget-lines/${ref}`, expect.objectContaining({ signal: expect.any(AbortSignal) }));
+    expect(screen.getByTestId('line-reference')).toHaveTextContent('BL-127');
+    expect(screen.getByText('budget.title')).toBeInTheDocument();
+    expect(document.title).toBe('BL-127 · Investment | KANAP');
+    expect(mocked.get.mock.calls.some(([url]) => url === `${BUDGET_NATURE_CONFIG[nature].itemsApi}/${ref}`)).toBe(false);
+  });
+
+  it('saves title, description and notes under their native keys and reloads them', async () => {
+    const view = renderAt(`/ops/${nature}/BL-127/overview`);
+    await screen.findByDisplayValue('Long description');
+    fireEvent.click(screen.getByRole('button', { name: 'set title' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}`, { product_name: 'Monitoring', base: { product_name: 'Investment' } }));
+    fireEvent.change(screen.getByDisplayValue('Long description'), { target: { value: 'Description kept' } });
+    fireEvent.change(screen.getByDisplayValue('Private notes'), { target: { value: 'Notes kept' } });
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}`, expect.objectContaining({ description: 'Description kept', notes: 'Notes kept' })));
+    expect(mocked.patch.mock.calls.every(([url]) => url === `/budget-lines/${ITEM_ID}`)).toBe(true);
+    view.unmount();
+    renderAt(`/ops/${nature}/BL-127/overview`);
+    await screen.findByDisplayValue('Description kept');
+    expect(screen.getByDisplayValue('Notes kept')).toBeInTheDocument();
+  });
+
+  it('offers the same change-type action in the drawer and the menu', async () => {
+    renderAt(`/ops/${nature}/BL-127/overview`);
+    await screen.findByDisplayValue('Long description');
+    expect(screen.getByTestId('line-type')).toHaveTextContent(nature);
+    fireEvent.click(screen.getByRole('button', { name: 'budget.changeType' }));
+    expect(await screen.findByTestId('change-type-dialog')).toHaveAttribute('data-nature', nature);
+  });
+
+  it('hides the drawer change-type action without the member permission', async () => {
+    auth.canEdit = false;
+    renderAt(`/ops/${nature}/BL-127/overview`);
+    await screen.findByDisplayValue('Long description');
+    expect(screen.queryByRole('button', { name: 'budget.changeType' })).not.toBeInTheDocument();
+  });
+
+  it('defaults the create Type to the route and changes it with the query preserved', async () => {
+    renderAt(`/ops/${nature}/new/overview?list=budget&year=2027&sort=product_name:ASC`, '/ops/budget?origin=history');
+    expect(screen.getByRole('combobox', { name: 'budget.type' })).toHaveValue(nature);
+    fireEvent.change(screen.getByRole('combobox', { name: 'budget.type' }), { target: { value: otherNature() } });
+    const target = await screen.findByTestId('create-target');
+    expect(target).toHaveAttribute('data-path', `/ops/${otherNature()}/new`);
+    const search = new URLSearchParams(target.getAttribute('data-search') ?? '');
+    expect(search.get('year')).toBe('2027'); expect(search.get('list')).toBe('budget'); expect(search.get('sort')).toBe('product_name:ASC');
+    fireEvent.click(screen.getByRole('button', { name: 'browser back' }));
+    const list = await screen.findByTestId('list-page');
+    expect(new URLSearchParams(list.getAttribute('data-search') ?? '').get('origin')).toBe('history');
+  });
+
+  it('creates through the native API with the route nature and all three texts', async () => {
+    mocked.post.mockResolvedValue({ data: { id: 'new-id' } });
+    renderAt(`/ops/${nature}/new/overview`);
+    fireEvent.click(screen.getByRole('button', { name: 'set title' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
+    const texts = screen.getAllByRole('textbox');
+    fireEvent.change(texts[0], { target: { value: 'Created description' } });
+    fireEvent.change(texts[1], { target: { value: 'Created notes' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/budget-lines', expect.objectContaining({ nature, product_name: 'Monitoring', description: 'Created description', notes: 'Created notes' })));
+  });
+
+  it('removes the internal list marker when returning to the budget list', async () => {
+    renderAt(`/ops/${nature}/BL-127/overview?list=budget&year=2027`);
+    await screen.findByDisplayValue('Long description');
+    fireEvent.click(screen.getByRole('button', { name: 'back to list' }));
+    const list = await screen.findByTestId('list-page');
+    expect(new URLSearchParams(list.getAttribute('data-search') ?? '').has('list')).toBe(false);
+  });
+});
+
 });

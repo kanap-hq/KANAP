@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ColDef } from 'ag-grid-community';
 import ServerDataGrid, { DATE_COLUMN_FILTER, DATE_COLUMN_FILTER_TWO_CONDITIONS, EnhancedColDef, StatusScope, gridSortModel } from '../../components/ServerDataGrid';
 import PageHeader from '../../components/PageHeader';
-import { Button, Chip, Menu, MenuItem, Stack, Typography } from '@mui/material';
+import { Button, Chip, Stack, Typography } from '@mui/material';
 import CheckboxSetFilter from '../../components/CheckboxSetFilter';
 import { withCostCenterGroups } from '../../components/grid/costCenterFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
@@ -38,7 +38,6 @@ import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
 import ForbiddenPage from '../ForbiddenPage';
 import { budgetListFieldPredicate } from './listFields';
 import { useTenant } from '../../tenant/TenantContext';
-import { drawerMenuItemSx } from '../../theme/formSx';
 import { migrateBudgetGridLayout, type BudgetNatureScope, natureScopeOf } from './listPreferences';
 import { statusColumnProps } from '../../components/grid/statusColumn';
 
@@ -111,7 +110,6 @@ export default function BudgetListPage() {
 function BudgetListPageView() {
   const { hasLevel, profile } = useAuth();
   const { tenantSlug } = useTenant();
-  const [newAnchor, setNewAnchor] = useState<HTMLElement | null>(null);
   // Run before ServerDataGrid reads its saved columns.
   useMemo(() => migrateBudgetGridLayout(tenantSlug, profile?.id), [tenantSlug, profile?.id]);
   const { t } = useTranslation(['ops', 'common']);
@@ -317,7 +315,6 @@ function BudgetListPageView() {
   const openNew = (nature: 'opex' | 'capex') => {
     const sp = buildGridSearch();
     sp.set('list', 'budget');
-    setNewAnchor(null);
     navigate(`/ops/${nature}/new?${compactListSearchCached(sp.toString(), ROWS_ENDPOINT)}`);
   };
 
@@ -328,7 +325,7 @@ function BudgetListPageView() {
       {canCreate && (
         <Button
           variant="action-primary"
-          onClick={(event) => natureScope === 'all' ? setNewAnchor(event.currentTarget) : openNew(natureScope)}
+          onClick={() => openNew(natureScope === 'all' ? 'opex' : natureScope)}
         >
           {t('budget.newLine')}
         </Button>
@@ -950,10 +947,6 @@ function BudgetListPageView() {
   return (
     <>
       <PageHeader title={t('budget.titleWithCurrency', { currency: reportingCurrency })} actions={actions} />
-      <Menu anchorEl={newAnchor} open={!!newAnchor} onClose={() => setNewAnchor(null)}>
-        <MenuItem sx={drawerMenuItemSx} onClick={() => openNew('opex')}>{t('budget.opexLine')}</MenuItem>
-        <MenuItem sx={drawerMenuItemSx} onClick={() => openNew('capex')}>{t('budget.capexLine')}</MenuItem>
-      </Menu>
       {!gridCanMount && (
         // One line while the budget columns setting and the dimensions load: the grid waits for the
         // default sort and the dimension columns.

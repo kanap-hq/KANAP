@@ -40,29 +40,16 @@ vi.mock('../../services/costCenters', async (importOriginal) => {
   };
 });
 
-import SpendMetadataBar from '../../pages/opex/workspace/SpendMetadataBar';
+import BudgetMetadataBar from '../../pages/budget/workspace/BudgetMetadataBar';
 import type { CostCenterRef } from '../../services/costCenters';
-import CapexMetadataBar from '../../pages/capex/workspace/CapexMetadataBar';
 
 const noop = () => undefined;
 
 type Known = CostCenterRef | null;
 
 const BARS: Array<[string, (costCenterId: string | null, known?: Known) => React.ReactElement]> = [
-  ['OPEX', (costCenterId, known = null) => (
-    <SpendMetadataBar
-      status="enabled"
-      ownerItId={null}
-      ownerBizId={null}
-      costCenterId={costCenterId}
-      costCenter={known}
-      onStatusChange={noop}
-      onOwnerItChange={noop}
-      onOwnerBizChange={noop}
-    />
-  )],
-  ['CAPEX', (costCenterId, known = null) => (
-    <CapexMetadataBar
+  ['Budget', (costCenterId, known = null) => (
+    <BudgetMetadataBar
       status="enabled"
       ownerItId={null}
       ownerBizId={null}

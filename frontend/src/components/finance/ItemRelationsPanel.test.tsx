@@ -3,22 +3,25 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createAppTheme } from '../../../config/ThemeContext';
+import { createAppTheme } from '../../config/ThemeContext';
 
 vi.mock('react-i18next', () => {
   const translation = { t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } };
   return { useTranslation: () => translation };
 });
-vi.mock('../../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
-vi.mock('../../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
-vi.mock('../../../components/contacts/ItemContactsSection', () => ({ default: () => null }));
-vi.mock('../../../components/design', () => ({
+vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
+vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
+vi.mock('../../components/contacts/ItemContactsSection', () => ({ default: () => null }));
+vi.mock('../../components/design', () => ({
   RelevantWebsitesList: () => null,
   useKanapDialogs: () => ({ confirm: vi.fn(async () => true) }),
 }));
 
-import api from '../../../api';
-import RelationsPanel, { RelationsPanelHandle } from './RelationsPanel';
+import api from '../../api';
+import RelationsPanel, { RelationsPanelHandle } from './ItemRelationsPanel';
+
+let nature: 'opex' | 'capex' = 'opex';
+const itemsApi = () => nature === 'opex' ? '/spend-items' : '/capex-items';
 
 const mocked = api as unknown as { get: ReturnType<typeof vi.fn>; post: ReturnType<typeof vi.fn> };
 
@@ -26,19 +29,21 @@ function renderPanel(ref: React.Ref<RelationsPanelHandle>, client = new QueryCli
   const view = render(
     <QueryClientProvider client={client}>
       <ThemeProvider theme={createAppTheme('light')}>
-        <RelationsPanel ref={ref} id="item-1" autoSave={false} />
+        <RelationsPanel kind={nature} ref={ref} id="item-1" autoSave={false} />
       </ThemeProvider>
     </QueryClientProvider>,
   );
   return { ...view, client };
 }
 
+describe.each(['opex', 'capex'] as const)('ItemRelationsPanel %s', (lineNature) => {
+  beforeEach(() => { nature = lineNature; });
 describe('CAPEX RelationsPanel applications', () => {
   beforeEach(() => {
     mocked.get.mockReset();
     mocked.post.mockReset();
     mocked.get.mockImplementation(async (url: string) => {
-      if (url === '/capex-items/item-1/applications') return { data: { items: [{ id: 'app-1', name: 'Payroll' }, { id: 'app-2', name: 'Ledger' }] } };
+      if (url === `${itemsApi()}/item-1/applications`) return { data: { items: [{ id: 'app-1', name: 'Payroll' }, { id: 'app-2', name: 'Ledger' }] } };
       if (url.endsWith('/links') || url.endsWith('/attachments')) return { data: [] };
       return { data: { items: [] } };
     });
@@ -49,25 +54,25 @@ describe('CAPEX RelationsPanel applications', () => {
     const ref = React.createRef<RelationsPanelHandle>();
     renderPanel(ref);
 
-    expect(screen.getByText('capex.relations.applications')).toBeInTheDocument();
+    expect(screen.getByText(`${nature}.relations.applications`)).toBeInTheDocument();
     const chip = await screen.findByRole('button', { name: 'Payroll' });
     expect(screen.getByRole('button', { name: 'Ledger' })).toBeInTheDocument();
-    expect(mocked.get).toHaveBeenCalledWith('/capex-items/item-1/applications', expect.objectContaining({ signal: expect.any(AbortSignal) }));
+    expect(mocked.get).toHaveBeenCalledWith(`${itemsApi()}/item-1/applications`, expect.objectContaining({ signal: expect.any(AbortSignal) }));
 
     // Unlink one application, then save.
     fireEvent.click(within(chip).getByTestId('CancelIcon'));
     await waitFor(() => expect(ref.current?.isDirty()).toBe(true));
     await act(async () => { await ref.current?.save(); });
 
-    expect(mocked.post).toHaveBeenCalledWith('/capex-items/item-1/applications/bulk-replace', { application_ids: ['app-2'] });
+    expect(mocked.post).toHaveBeenCalledWith(`${itemsApi()}/item-1/applications/bulk-replace`, { application_ids: ['app-2'] });
     // Projects and contracts did not change: nothing is posted for them.
     expect(mocked.post).toHaveBeenCalledTimes(1);
   });
 
   it('never posts a set whose load failed, and keeps it read-only', async () => {
     mocked.get.mockImplementation(async (url: string) => {
-      if (url === '/capex-items/item-1/applications') throw new Error('network');
-      if (url === '/capex-items/item-1/projects') return { data: { items: [{ id: 'prj-1', name: 'Migration' }] } };
+      if (url === `${itemsApi()}/item-1/applications`) throw new Error('network');
+      if (url === `${itemsApi()}/item-1/projects`) return { data: { items: [{ id: 'prj-1', name: 'Migration' }] } };
       if (url.endsWith('/links') || url.endsWith('/attachments')) return { data: [] };
       return { data: { items: [] } };
     });
@@ -75,15 +80,15 @@ describe('CAPEX RelationsPanel applications', () => {
     renderPanel(ref);
 
     const chip = await screen.findByRole('button', { name: 'Migration' });
-    expect(screen.getByText('capex.relations.failedToLoad')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('capex.relations.selectApplications')).toBeDisabled();
+    expect(screen.getByText(`${nature}.relations.failedToLoad`)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(`${nature}.relations.selectApplications`)).toBeDisabled();
 
     fireEvent.click(within(chip).getByTestId('CancelIcon'));
     await waitFor(() => expect(ref.current?.isDirty()).toBe(true));
     await act(async () => { await ref.current?.save(); });
 
-    expect(mocked.post).toHaveBeenCalledWith('/capex-items/item-1/projects/bulk-replace', { project_ids: [] });
-    expect(mocked.post.mock.calls.map((c) => c[0])).not.toContain('/capex-items/item-1/applications/bulk-replace');
+    expect(mocked.post).toHaveBeenCalledWith(`${itemsApi()}/item-1/projects/bulk-replace`, { project_ids: [] });
+    expect(mocked.post.mock.calls.map((c) => c[0])).not.toContain(`${itemsApi()}/item-1/applications/bulk-replace`);
     expect(mocked.post).toHaveBeenCalledTimes(1);
   });
 
@@ -101,7 +106,7 @@ describe('CAPEX RelationsPanel applications', () => {
     let hold = false;
     let answer: () => void = () => undefined;
     mocked.get.mockImplementation(async (url: string) => {
-      if (url === '/capex-items/item-1/contracts') {
+      if (url === `${itemsApi()}/item-1/contracts`) {
         if (hold) await new Promise<void>((resolve) => { answer = resolve; });
         return { data: { items: contracts } };
       }
@@ -120,21 +125,21 @@ describe('CAPEX RelationsPanel applications', () => {
     renderPanel(ref, first.client);
     // First render: the cached set, no blank tab; but no edit on it while it is read again.
     expect(screen.getByRole('button', { name: 'Maintenance' })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('capex.relations.selectContracts')).toBeDisabled();
-    await waitFor(() => expect(mocked.get.mock.calls.filter(([url]) => url === '/capex-items/item-1/contracts')).toHaveLength(2));
-    expect(screen.getByPlaceholderText('capex.relations.selectContracts')).toBeDisabled();
+    expect(screen.getByPlaceholderText(`${nature}.relations.selectContracts`)).toBeDisabled();
+    await waitFor(() => expect(mocked.get.mock.calls.filter(([url]) => url === `${itemsApi()}/item-1/contracts`)).toHaveLength(2));
+    expect(screen.getByPlaceholderText(`${nature}.relations.selectContracts`)).toBeDisabled();
 
     hold = false;
     await act(async () => { answer(); });
     const chip = await screen.findByRole('button', { name: 'Maintenance' });
     expect(await screen.findByRole('button', { name: 'Licences' })).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByPlaceholderText('capex.relations.selectContracts')).not.toBeDisabled());
+    await waitFor(() => expect(screen.getByPlaceholderText(`${nature}.relations.selectContracts`)).not.toBeDisabled());
 
     // Unlink one: the set posted is the fresh one, the contract linked elsewhere stays.
     fireEvent.click(within(chip).getByTestId('CancelIcon'));
     await waitFor(() => expect(ref.current?.isDirty()).toBe(true));
     await act(async () => { await ref.current?.save(); });
-    expect(mocked.post).toHaveBeenCalledWith('/capex-items/item-1/contracts/bulk-replace', { contract_ids: ['c-2'] });
+    expect(mocked.post).toHaveBeenCalledWith(`${itemsApi()}/item-1/contracts/bulk-replace`, { contract_ids: ['c-2'] });
   });
 
   it('searches contracts on the server as the user types, never page by page', async () => {
@@ -148,7 +153,7 @@ describe('CAPEX RelationsPanel applications', () => {
       return { data: { items: [] } };
     });
     renderPanel(React.createRef<RelationsPanelHandle>());
-    const input = await screen.findByPlaceholderText('capex.relations.selectContracts');
+    const input = await screen.findByPlaceholderText(`${nature}.relations.selectContracts`);
     await waitFor(() => expect(input).not.toBeDisabled());
     // Nothing is read for the pickers until one opens.
     expect(mocked.get.mock.calls.map((c) => c[0])).not.toContain('/contracts/lookup');
@@ -164,4 +169,6 @@ describe('CAPEX RelationsPanel applications', () => {
     // One page per search: no `page` parameter, no list endpoint walked page by page.
     expect(mocked.get.mock.calls.filter((c) => c[0] === '/contracts')).toHaveLength(0);
   });
+});
+
 });

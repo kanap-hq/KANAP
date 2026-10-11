@@ -3,6 +3,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import { useTenant } from '../../../tenant/TenantContext';
 
 const MAX_ITEMS = 10;
+const isBudgetLine = (type: RecentEntityType) => type === 'spend_item' || type === 'capex_item';
 
 export type RecentEntityType =
   | 'project'
@@ -36,7 +37,9 @@ function loadFromStorage(storageKey: string): RecentItem[] {
   try {
     const stored = localStorage.getItem(storageKey);
     const parsed = stored ? (JSON.parse(stored) as RecentItem[]) : [];
-    return parsed.slice(0, MAX_ITEMS);
+    return parsed.filter((item, index) => !parsed.slice(0, index).some((previous) =>
+      previous.id === item.id && (previous.type === item.type || (isBudgetLine(previous.type) && isBudgetLine(item.type)))
+    )).slice(0, MAX_ITEMS);
   } catch {
     return [];
   }
@@ -69,7 +72,7 @@ export function useRecentlyViewed() {
     (type: RecentEntityType, id: string, label: string, ref?: string) => {
       setItems((prev) => {
         // Remove existing entry for the same item
-        const filtered = prev.filter((r) => !(r.type === type && r.id === id));
+        const filtered = prev.filter((r) => !(r.id === id && (r.type === type || (isBudgetLine(r.type) && isBudgetLine(type)))));
         // Add new entry at the beginning
         const entry: RecentItem = { type, id, label, viewedAt: Date.now(), ...(ref ? { ref } : {}) };
         const updated = [entry, ...filtered].slice(

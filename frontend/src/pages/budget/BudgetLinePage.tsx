@@ -6,8 +6,10 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
-import { useSpendNav } from '../../hooks/useSpendNav';
-import { spendDetailQuery } from '../../hooks/budgetItemDetailQuery';
+import { useBudgetLineNav } from '../../hooks/useBudgetLineNav';
+import type { LineType } from '../../constants/lineTypeUsage';
+import { BUDGET_NATURE_CONFIG } from './natureConfig';
+import { budgetLineDetailQuery } from '../../hooks/budgetItemDetailQuery';
 import { isReportView, useListFilters, writeListSnapshot } from '../../hooks/useListContextSearch';
 import { STATUS_SCOPE_PARAM } from '../../utils/statusScopeParams';
 import { cachedListContext, compactListSearchCached, parseListFilters } from '../../lib/listContext';
@@ -40,17 +42,16 @@ import ChangeTypeDialog, { type ChangeTypeResult } from '../../components/financ
 import LineLineage, { type LineageLine } from '../../components/finance/LineLineage';
 import { budgetLinePath, openLineAfterTypeChange } from '../../components/finance/changeTypeNavigation';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
-import SpendMetadataBar from './workspace/SpendMetadataBar';
-import SpendPropertiesDrawer, { RunBuild } from './workspace/SpendPropertiesDrawer';
+import BudgetMetadataBar from './workspace/BudgetMetadataBar';
+import BudgetPropertiesDrawer, { RunBuild } from './workspace/BudgetPropertiesDrawer';
 import type { BudgetTabHandle } from '../../components/finance/BudgetTab';
 import type { AllocationsTabHandle } from '../../components/finance/AllocationsTab';
 import { namesInSentence, useHeldChoices } from '../../components/finance/heldChoices';
-import { OPEX_FINANCE_CONFIG } from '../../components/finance/config';
-import type { RelationsPanelHandle } from './editors/RelationsPanel';
+import type { RelationsPanelHandle } from '../../components/finance/ItemRelationsPanel';
 import EntityTasksPanel from '../../components/EntityTasksPanel';
-import { budgetListFieldPredicate } from '../budget/listFields';
-import { readStoredBudgetListContext, writeStoredBudgetListContext } from '../budget/listContextStorage';
-import { fetchSpendRelationsCount } from '../../utils/workspaceTabCounts';
+import { budgetListFieldPredicate } from './listFields';
+import { readStoredBudgetListContext, writeStoredBudgetListContext } from './listContextStorage';
+import { fetchBudgetRelationsCount } from '../../utils/workspaceTabCounts';
 import useCurrencySettings from '../../hooks/useCurrencySettings';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { isoToLocalDateInput } from '../../lib/datetime';
@@ -65,7 +66,7 @@ import type { CostCenterNode } from '../../services/costCenters';
 // a tab whose code fails to load shows a retry button in its place (WorkspaceTabBoundary).
 const budgetTab = retryableLazy(() => import('../../components/finance/BudgetTab'));
 const allocationsTab = retryableLazy(() => import('../../components/finance/AllocationsTab'));
-const relationsPanel = retryableLazy(() => import('./editors/RelationsPanel'));
+const relationsPanel = retryableLazy(() => import('../../components/finance/ItemRelationsPanel'));
 const BudgetTab = budgetTab.Component;
 const AllocationsTab = allocationsTab.Component;
 const RelationsPanel = relationsPanel.Component;
@@ -81,7 +82,7 @@ function retryTabs() {
 type TabKey = 'overview' | 'budget' | 'allocations' | 'relations';
 const TAB_KEYS: TabKey[] = ['overview', 'budget', 'allocations', 'relations'];
 
-type SpendForm = {
+type BudgetLineForm = {
   id?: string;
   item_number?: number;
   product_name: string;
@@ -106,7 +107,7 @@ type SpendForm = {
 /** The line's value per dimension id; null clears that dimension. */
 type AnalyticsValues = Record<string, string | null>;
 
-const EMPTY_FORM: SpendForm = {
+const EMPTY_FORM: BudgetLineForm = {
   product_name: '', description: '', supplier_id: '', currency: 'EUR', account_id: '',
   paying_company_id: '', effective_start: '', status: 'enabled', disabled_at: null,
   owner_it_id: '', owner_business_id: '', analytics_values: {}, cost_center_id: '', run_build: '',
@@ -117,7 +118,7 @@ function todayYmd() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function createEmptySpendForm(currency = 'EUR'): SpendForm {
+function createEmptyBudgetLineForm(currency = 'EUR'): BudgetLineForm {
   return {
     ...EMPTY_FORM,
     currency,
@@ -164,7 +165,7 @@ function toAnalyticsValues(data: any): AnalyticsValues {
   return Object.fromEntries(list.filter((v) => !!v?.axis_id).map((v) => [String(v.axis_id), v.category_id ?? null]));
 }
 
-function toForm(data: any): SpendForm {
+function toForm(data: any): BudgetLineForm {
   const normalizedDisabledAt = data?.disabled_at ? new Date(data.disabled_at).toISOString() : null;
   return {
     id: data?.id,
@@ -214,11 +215,12 @@ const isLongTextField = (field: string) => LONG_TEXT_FIELDS.has(field);
  * is on their company's chart); an end of validity goes with the status it sets.
  */
 const CONFLICT_GROUPS = [['paying_company_id', 'account_id'], ['disabled_at', 'status']] as const;
-/** The OPX reference of each line shown in the session: a choice waiting on another line is named by it. */
+/** The BL reference of each line shown in the session: a choice waiting on another line is named by it. */
 const lineRefs = new Map<string, string>();
+const lineNatures = new Map<string, LineType>();
 
 /** The form with the stored value the server answered for a conflicting field (`analytics_values.<id>` per dimension). */
-function withTheirValue(form: SpendForm, field: string, value: unknown): SpendForm {
+function withTheirValue(form: BudgetLineForm, field: string, value: unknown): BudgetLineForm {
   if (field.startsWith(ANALYTICS_CONFLICT_PREFIX)) {
     const axisId = field.slice(ANALYTICS_CONFLICT_PREFIX.length);
     return { ...form, analytics_values: { ...form.analytics_values, [axisId]: typeof value === 'string' && value ? value : null } };
@@ -226,7 +228,7 @@ function withTheirValue(form: SpendForm, field: string, value: unknown): SpendFo
   // The form's own shape for a stored value: '' for empty, capitals for a currency, a date's day.
   const theirs = toForm({ [field]: value });
   if (field === 'disabled_at') return { ...form, disabled_at: theirs.disabled_at, status: theirs.status };
-  return field in theirs ? { ...form, [field]: theirs[field as keyof SpendForm] } : form;
+  return field in theirs ? { ...form, [field]: theirs[field as keyof BudgetLineForm] } : form;
 }
 
 const sectionLabelSx = { fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', mb: 1, display: 'block' } as const;
@@ -246,7 +248,8 @@ const composerSx = {
 /** A move off the line, once pending edits are handled: all saved, dropped by the user's choice, or stay. */
 type FlushOutcome = 'saved' | 'dropped' | 'stay';
 
-export default function SpendItemPage() {
+export default function BudgetLinePage({ nature }: { nature: LineType }) {
+  const config = BUDGET_NATURE_CONFIG[nature];
   const { t, i18n } = useTranslation(['ops', 'common']);
   const locale = i18n.resolvedLanguage || i18n.language || 'en';
   const navigate = useNavigate();
@@ -262,7 +265,7 @@ export default function SpendItemPage() {
     || !!parseListFilters(searchParams.get('filters'))?.nature
     || cachedListContext(searchParams.get('ctx'))?.list === 'budget-lines'
     || !!readStoredBudgetListContext();
-  const LIST_ENDPOINT = unifiedList ? '/budget-lines/summary' : '/spend-items/summary';
+  const LIST_ENDPOINT = unifiedList ? '/budget-lines/summary' : `${config.itemsApi}/summary`;
   const storedListContext = React.useMemo(() => (isReportView(location.search) ? null : readStoredBudgetListContext()), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const idParam = String(params.id || '');
@@ -274,7 +277,7 @@ export default function SpendItemPage() {
   const noteRowVersionRef = React.useRef<(lineId: string, rowVersion: unknown) => void>(() => undefined);
   const { data, error, isPlaceholderData, isFetchedAfterMount, isStale } = useQuery({
     // Shared with the neighbours' prefetch (previous / next show at once).
-    ...spendDetailQuery(idParam),
+    ...budgetLineDetailQuery(idParam),
     enabled: !isCreate,
     // Back on the tab, the line is read again when it is stale, unless something of the user is
     // pending (lot 3G): the poll below then says it changed elsewhere instead.
@@ -291,14 +294,14 @@ export default function SpendItemPage() {
   // Resolved UUID — every child tab / nested request keys off this, never the route param.
   const uuid = (data?.id as string | undefined) || (isCreate ? idParam : undefined);
 
-  // Show the OPX-N reference in the address bar (router state keeps the UUID it matched).
+  // Show the BL-n reference in the address bar (router state keeps the UUID it matched).
   React.useEffect(() => {
-    if (!data?.item_number) return;
+    if (stale || isCreate || !data?.item_number) return;
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(idParam);
     if (!isUuid) return;
-    const ref = formatItemRef('opex', data.item_number);
-    window.history.replaceState(null, '', `/ops/opex/${ref}/${routeTab}${location.search}`);
-  }, [data?.item_number, idParam, routeTab, location.search]);
+    const ref = formatItemRef('budget', data.item_number);
+    window.history.replaceState(null, '', `/ops/${nature}/${ref}/${routeTab}${location.search}`);
+  }, [data?.item_number, idParam, routeTab, location.search, nature, stale, isCreate]);
 
   // The other tabs' code loads in the background once a line is shown, so a tab switch does not wait for it.
   const lineShown = !!data?.id;
@@ -310,10 +313,10 @@ export default function SpendItemPage() {
 
   // Tab badge counts.
   const relationsCountQuery = useQuery({
-    // Keyed on the route's id or reference (`OPX-12`, which the endpoint resolves): it starts with the
+    // Keyed on the route's id or reference (`BL-12`, which the endpoint resolves): it starts with the
     // detail, not after it.
-    queryKey: ['spend-relations-count', idParam],
-    queryFn: ({ signal }) => fetchSpendRelationsCount(idParam, signal),
+    queryKey: ['budget-relations-count', nature, idParam],
+    queryFn: ({ signal }) => fetchBudgetRelationsCount(config, idParam, signal),
     enabled: !!idParam && !isCreate,
   });
 
@@ -322,19 +325,19 @@ export default function SpendItemPage() {
     () => currencySettings?.defaultSpendCurrency?.toUpperCase() ?? 'EUR',
     [currencySettings],
   );
-  const [form, setForm] = React.useState<SpendForm>(EMPTY_FORM);
-  const [createForm, setCreateForm] = React.useState<SpendForm>(() => createEmptySpendForm());
+  const [form, setForm] = React.useState<BudgetLineForm>(EMPTY_FORM);
+  const [createForm, setCreateForm] = React.useState<BudgetLineForm>(() => createEmptyBudgetLineForm());
   const [createCurrencyTouched, setCreateCurrencyTouched] = React.useState(false);
   const [createCompanyFromCostCenter, setCreateCompanyFromCostCenter] = React.useState(false);
   const [createSubmitting, setCreateSubmitting] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
   React.useEffect(() => {
     if (!isCreate) return;
-    setCreateForm(createEmptySpendForm(defaultSpendCurrency));
+    setCreateForm(createEmptyBudgetLineForm(defaultSpendCurrency));
     setCreateCurrencyTouched(false);
     setCreateCompanyFromCostCenter(false);
     setSaveError(null);
-  }, [isCreate, idParam]);
+  }, [isCreate, idParam, nature]);
   React.useEffect(() => {
     if (!isCreate || createCurrencyTouched) return;
     setCreateForm((prev) => (
@@ -342,7 +345,7 @@ export default function SpendItemPage() {
     ));
   }, [createCurrencyTouched, defaultSpendCurrency, isCreate]);
 
-  const updateCreateForm = React.useCallback((patch: Partial<SpendForm>) => {
+  const updateCreateForm = React.useCallback((patch: Partial<BudgetLineForm>) => {
     setCreateForm((prev) => mergePatch(prev, patch));
     setSaveError(null);
   }, []);
@@ -404,8 +407,8 @@ export default function SpendItemPage() {
   const budgetColumns = useBudgetColumns();
   // The list builds a column for each enabled dimension besides the default one; a sort or filter
   // on another dimension falls back there, and here too.
-  const analyticsAxes = useAnalyticsAxes({ scope: 'opex' });
-  const listAxes = useAnalyticsAxes({ scope: unifiedList ? null : 'opex' });
+  const analyticsAxes = useAnalyticsAxes({ scope: nature });
+  const listAxes = useAnalyticsAxes({ scope: unifiedList ? null : nature });
   const isListField = React.useMemo(
     () => budgetListFieldPredicate(listAxes.enabled.filter((axis) => !axis.is_default).map((axis) => axis.id)),
     [listAxes],
@@ -437,7 +440,7 @@ export default function SpendItemPage() {
   }, [filters, q, searchParamsString, sort, LIST_ENDPOINT]);
 
   // The route's line, not the loaded detail: the position follows a click at once (fast clicks).
-  const nav = useSpendNav({ id: idParam, sort: sort || null, q, filters, statusScope, enabled: listContextReady && !isCreate }, unifiedList);
+  const nav = useBudgetLineNav({ id: idParam, sort: sort || null, q, filters, statusScope, enabled: listContextReady && !isCreate }, nature, unifiedList);
   const { index, total, hasPrev, hasNext, prevId, nextId } = isCreate
     ? { index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null as any, nextId: null as any }
     : nav;
@@ -467,7 +470,7 @@ export default function SpendItemPage() {
   // the server refuses a field someone else changed meanwhile (409 edit_conflict).
   // Kept for the session, not the page: a line left by the browser's back button, or a
   // save answered once the page went, keeps its choice for the next visit (lot 3C review).
-  const patchBuffer = useSharedPatchBuffer<Partial<SpendForm>>('opex', mergePatch);
+  const patchBuffer = useSharedPatchBuffer<Partial<BudgetLineForm>>('budget-line', mergePatch);
   const autosave = useAutosave({
     onError: (e) => setSaveError(autosaveErrorMessage(e, t, t('opex.editor.failedToSave'))),
     registry: autosaveRegistry,
@@ -478,9 +481,12 @@ export default function SpendItemPage() {
   // Lines left with a choice waiting (the browser's back button): named on this one.
   const otherConflictLines = useOtherConflictTargets(patchBuffer, isCreate ? null : uuid);
   React.useEffect(() => {
-    if (data?.id && data?.item_number) lineRefs.set(data.id, formatItemRef('opex', data.item_number));
-  }, [data?.id, data?.item_number]);
-  const lineRef = React.useCallback((lineId: string) => lineRefs.get(lineId) ?? t('opex.workspace.spendItem'), [t]);
+    if (data?.id && data?.item_number) {
+      lineRefs.set(data.id, formatItemRef('budget', data.item_number));
+      lineNatures.set(data.id, data.nature ?? nature);
+    }
+  }, [data?.id, data?.item_number, data?.nature, nature]);
+  const lineRef = React.useCallback((lineId: string) => lineRefs.get(lineId) ?? t('budget.line'), [t]);
   const uuidRef = React.useRef(uuid);
   uuidRef.current = uuid;
   const dataRef = React.useRef(data);
@@ -490,7 +496,7 @@ export default function SpendItemPage() {
   const rootRef = React.useRef<HTMLDivElement | null>(null);
   // A line changed during this visit and left without a value on a required dimension: leaving asks (lot D2).
   const requiredLeave = useRequiredDimensionsLeave({
-    scope: 'opex',
+    scope: nature,
     lineId: isCreate ? null : idParam,
     canEdit: hasLevel('budget', 'member'),
     axes: analyticsAxes,
@@ -515,20 +521,20 @@ export default function SpendItemPage() {
   // Per field of an edit, the value the screen showed before it: the base the
   // server compares with what is stored (lot 3C). The status follows the end of
   // validity and has none of its own.
-  const baseFor = React.useCallback((patch: Partial<SpendForm>): Partial<SpendForm> => {
+  const baseFor = React.useCallback((patch: Partial<BudgetLineForm>): Partial<BudgetLineForm> => {
     const shown = formRef.current;
     const base: Record<string, unknown> = {};
-    for (const key of Object.keys(patch) as Array<keyof SpendForm>) {
+    for (const key of Object.keys(patch) as Array<keyof BudgetLineForm>) {
       if (key === 'status') continue;
       base[key] = key === 'analytics_values'
         ? Object.fromEntries(Object.keys(patch.analytics_values ?? {}).map((axisId) => [axisId, shown.analytics_values[axisId] ?? null]))
         : shown[key];
     }
-    return base as Partial<SpendForm>;
+    return base as Partial<BudgetLineForm>;
   }, []);
 
   const invalidateLine = React.useCallback((lineId: string) => queryClient.invalidateQueries({
-    queryKey: ['spend'],
+    queryKey: ['budget-line'],
     predicate: (q) => (q.state.data as { id?: string } | undefined)?.id === lineId,
   }), [queryClient]);
 
@@ -537,14 +543,14 @@ export default function SpendItemPage() {
     async (lineId, patch, base) => {
       const body = normalizePatch({ ...patch });
       const baseBody = normalizePatch({ ...base });
-      const res = await api.patch(`/spend-items/${lineId}`, Object.keys(baseBody).length > 0 ? { ...body, base: baseBody } : body);
+      const res = await api.patch(`/budget-lines/${lineId}`, Object.keys(baseBody).length > 0 ? { ...body, base: baseBody } : body);
       // The counter this save left: not someone else's change (lot 3G).
       noteRowVersionRef.current(lineId, res?.data?.row_version);
     },
     {
       onSaved: async (lineId) => {
         await invalidateLine(lineId);
-        queryClient.invalidateQueries({ queryKey: ['spend-summary'] });
+        queryClient.invalidateQueries({ queryKey: ['budget-summary'] });
       },
       // Refused for good: the screen shows the line's stored values again for those fields.
       onRefused: (lineId, patch) => {
@@ -553,7 +559,7 @@ export default function SpendItemPage() {
           setForm((prev) => {
             if (prev.id !== lineId) return prev;
             const server = toForm(stored);
-            const fields = (Object.keys(patch) as Array<keyof SpendForm>).filter((field) => !patchBuffer.holds(lineId, field));
+            const fields = (Object.keys(patch) as Array<keyof BudgetLineForm>).filter((field) => !patchBuffer.holds(lineId, field));
             return fields.length ? { ...prev, ...Object.fromEntries(fields.map((field) => [field, server[field]])) } : prev;
           });
         }
@@ -581,7 +587,7 @@ export default function SpendItemPage() {
   // Immediate persist — selects, dates, pickers, status, title-on-blur. Through the same
   // buffer as typing, sent at once: the field goes to its own line with its base, a busy
   // answer is retried, a refusal shows the stored value again, a conflict asks the user.
-  const patchNow = React.useCallback(async (patch: Partial<SpendForm>) => {
+  const patchNow = React.useCallback(async (patch: Partial<BudgetLineForm>) => {
     if (isCreate || !uuid || stale) return;
     noteLineChange();
     const base = baseFor(patch);
@@ -622,7 +628,7 @@ export default function SpendItemPage() {
   }, [form.account_id, form.paying_company_id, patchNow]);
 
   // Debounced persist — long-form notes / description while typing.
-  const patchDebounced = React.useCallback((patch: Partial<SpendForm>) => {
+  const patchDebounced = React.useCallback((patch: Partial<BudgetLineForm>) => {
     if (isCreate || !uuid || stale) return;
     noteLineChange();
     const base = baseFor(patch);
@@ -647,7 +653,7 @@ export default function SpendItemPage() {
         for (const path of [field, ...companions]) {
           const conflict = asked.find((entry) => entry.field === path);
           if (conflict) next = withTheirValue(next, path, conflict.current);
-          else if (stored && path in stored && path !== 'status') next = { ...next, [path]: stored[path as keyof SpendForm] };
+          else if (stored && path in stored && path !== 'status') next = { ...next, [path]: stored[path as keyof BudgetLineForm] };
         }
         return next;
       });
@@ -715,7 +721,7 @@ export default function SpendItemPage() {
 
   // ----- What others changed (lot 3G): the line, and the year's version on Budget and Allocations -----
   const others = useLineOthersChanges({
-    itemsApi: '/spend-items',
+    itemsApi: config.itemsApi,
     lineId: !isCreate && !stale ? uuid ?? null : null,
     // The counter the page starts from: a copy read since the page shows the line, or a fresh one
     // (a copy kept from an earlier visit is read again first: a change made meanwhile is not said).
@@ -736,7 +742,7 @@ export default function SpendItemPage() {
       const shown = Number(dataRef.current?.row_version);
       if (!lineId || (rowVersion !== null && Number.isFinite(shown) && shown >= rowVersion)) return;
       await queryClient.invalidateQueries({
-        queryKey: ['spend'],
+        queryKey: ['budget-line'],
         predicate: (q) => (q.state.data as { id?: string } | undefined)?.id === lineId,
       }, { throwOnError: true });
     },
@@ -852,33 +858,34 @@ export default function SpendItemPage() {
     if (isCreate && nextTab !== 'overview') return;
     if (!(await flushOrLeave({ keepChoices: true }))) return;
     const sp = buildListContextParams();
-    navigate(`/ops/opex/${idParam}/${nextTab}?${sp.toString()}`);
-  }, [isCreate, flushOrLeave, buildListContextParams, navigate, idParam]);
+    navigate(`/ops/${nature}/${idParam}/${nextTab}?${sp.toString()}`);
+  }, [isCreate, flushOrLeave, buildListContextParams, navigate, idParam, nature]);
 
   // The line a choice waits on: going there keeps the choice.
   const openConflictLine = React.useCallback(async (lineId: string) => {
     if (!(await leaveLine({ keepChoices: true }))) return;
     const sp = buildListContextParams();
-    navigate(`/ops/opex/${lineId}/${routeTab}?${sp.toString()}`);
-  }, [leaveLine, buildListContextParams, navigate, routeTab]);
+    navigate(`/ops/${lineNatures.get(lineId) ?? nature}/${lineId}/${routeTab}?${sp.toString()}`);
+  }, [leaveLine, buildListContextParams, navigate, routeTab, nature]);
 
   const confirmAndNavigate = React.useCallback(async (targetId: string | null) => {
     if (!targetId) return;
     if (!(await leaveLine())) return;
     const sp = buildListContextParams();
-    navigate(`${targetId.startsWith('/ops/') ? targetId : `/ops/opex/${targetId}`}/${routeTab}?${sp.toString()}`);
-  }, [leaveLine, buildListContextParams, navigate, routeTab]);
+    navigate(`${targetId.startsWith('/ops/') ? targetId : `/ops/${nature}/${targetId}`}/${routeTab}?${sp.toString()}`);
+  }, [leaveLine, buildListContextParams, navigate, routeTab, nature]);
 
   const closeWorkspace = React.useCallback(async () => {
     if (!(await leaveLine())) return;
     const sp = buildListContextParams();
+    sp.delete('list');
     const qs = sp.toString();
-    navigate(`${unifiedList ? '/ops/budget' : '/ops/opex'}${qs ? `?${qs}` : ''}`);
-  }, [leaveLine, buildListContextParams, navigate, unifiedList]);
+    navigate(`/ops/budget${qs ? `?${qs}` : ''}`);
+  }, [leaveLine, buildListContextParams, navigate]);
 
   // ----- Change type (lot M): from the "…" menu; pending edits are saved first (the dialog sends the line's row_version) -----
   const [changeTypeOpen, setChangeTypeOpen] = React.useState(false);
-  const canChangeType = !isCreate && !!uuid && hasLevel('budget', 'member');
+  const canChangeType = !isCreate && !stale && !!uuid && hasLevel('budget', 'member');
   const openChangeType = React.useCallback(async () => {
     if ((await flushOrAsk()) === 'stay') return;
     setChangeTypeOpen(true);
@@ -897,7 +904,7 @@ export default function SpendItemPage() {
     if (createSubmitting) return; // Ctrl+S bypasses the disabled button — guard double-submit
     const productName = createForm.product_name.trim();
     if (!productName) {
-      setSaveError(t('opex.editor.productNameRequired'));
+      setSaveError(t(config.titleRequired));
       return;
     }
     if ((createForm.currency || '').trim().length !== 3) {
@@ -917,7 +924,7 @@ export default function SpendItemPage() {
       return;
     }
     // The server checks it too (and for every other source); the shown dimensions are the ones that apply.
-    const missingDimension = analyticsAxes.enabled.find((axis) => axisRequiredFor(axis, 'opex') && !createForm.analytics_values[axis.id]);
+    const missingDimension = analyticsAxes.enabled.find((axis) => axisRequiredFor(axis, nature) && !createForm.analytics_values[axis.id]);
     if (missingDimension) {
       setSaveError(t('opex.editor.dimensionRequired', { name: analyticsAxes.label(missingDimension) }));
       return;
@@ -927,6 +934,7 @@ export default function SpendItemPage() {
     setSaveError(null);
     try {
       const payload = {
+        nature,
         product_name: productName,
         description: toNull(createForm.description),
         supplier_id: toNull(createForm.supplier_id),
@@ -947,19 +955,20 @@ export default function SpendItemPage() {
         run_build: toNull(createForm.run_build),
         notes: toNull(createForm.notes),
       };
-      const res = await api.post('/spend-items', payload);
+      const res = await api.post('/budget-lines', payload);
       const newId = res.data?.id as string | undefined;
-      if (!newId) throw new Error(t('opex.editor.failedToCreate'));
-      queryClient.invalidateQueries({ queryKey: ['spend-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['spend-items-summary-neighbors'] });
+      if (!newId) throw new Error(t(config.createFailed));
+      queryClient.invalidateQueries({ queryKey: ['budget-summary'] });
+      queryClient.invalidateQueries({ queryKey: [config.navQueryKey] });
+      queryClient.invalidateQueries({ queryKey: ['budget-lines-summary-neighbors'] });
       const sp = buildListContextParams();
-      navigate(`/ops/opex/${newId}/overview?${sp.toString()}`);
+      navigate(`/ops/${nature}/${newId}/overview?${sp.toString()}`);
     } catch (e) {
-      setSaveError(getApiErrorMessage(e, t, t('opex.editor.failedToCreate')));
+      setSaveError(getApiErrorMessage(e, t, t(config.createFailed)));
     } finally {
       setCreateSubmitting(false);
     }
-  }, [analyticsAxes, buildListContextParams, createForm, createSubmitting, navigate, queryClient, t]);
+  }, [analyticsAxes, buildListContextParams, createForm, createSubmitting, navigate, queryClient, t, nature, config]);
 
   // ----- Status lifecycle handlers -----
   const handleStatusChange = (next: StatusValue) => {
@@ -986,11 +995,17 @@ export default function SpendItemPage() {
   const shownCostCenterId = data?.id && form.id !== data.id ? (data.cost_center_id || '') : form.cost_center_id;
   const analyticsOptions = React.useMemo(() => analyticsValueOptions(data), [data]);
 
-  const reference = data?.item_number ? formatItemRef('opex', data.item_number) : null;
+  const reference = data?.item_number ? formatItemRef('budget', data.item_number) : null;
+  React.useEffect(() => {
+    if (!isCreate && !stale && reference && data?.product_name) {
+      document.title = `${reference} · ${data.product_name} | KANAP`;
+    }
+    return () => { document.title = 'KANAP'; };
+  }, [isCreate, stale, reference, data?.product_name]);
   const { addToRecent } = useRecentlyViewed();
   React.useEffect(() => {
-    if (!isCreate && data?.id && data?.product_name) addToRecent('spend_item', data.id, data.product_name, reference || undefined);
-  }, [addToRecent, data?.id, data?.product_name, isCreate, reference]);
+    if (!isCreate && !stale && data?.id && data?.product_name) addToRecent(config.taskType, data.id, data.product_name, reference || undefined);
+  }, [addToRecent, data?.id, data?.product_name, isCreate, stale, reference, config.taskType]);
 
   const tabs = React.useMemo(() => ([
     { key: 'overview', label: t('opex.tabs.overview') },
@@ -1036,13 +1051,13 @@ export default function SpendItemPage() {
           badge: tab.key === 'relations' ? (relationsCountQuery.data || undefined) : undefined,
         }))}
         onTabChange={(next) => { void goToTab(next as TabKey); }}
-        drawerStorageKey="kanap.opex.drawerOpen"
-        backLabel={t('opex.workspace.spendItems', 'Spend items')}
+        drawerStorageKey="kanap.budget.drawerOpen"
+        backLabel={t('budget.title')}
         onBack={() => { void closeWorkspace(); }}
         itemReference={reference}
         onCopyReference={reference ? () => { void navigator.clipboard?.writeText(reference); } : undefined}
         title={isCreate ? createForm.product_name : form.product_name}
-        titleFallback={isCreate ? t('opex.workspace.newSpendItem') : t('opex.workspace.spendItem')}
+        titleFallback={isCreate ? t(config.newTitle) : t('budget.line')}
         canEditTitle
         onTitleSave={(value) => {
           if (isCreate) {
@@ -1066,7 +1081,7 @@ export default function SpendItemPage() {
         } : undefined}
         onSaveShortcut={() => { if (isCreate) { void handleCreate(); } else { void flushAll(); } }}
         metadata={!isCreate ? (
-          <SpendMetadataBar
+          <BudgetMetadataBar
             ownerItName={ownerName(references.owner_it, form.owner_it_id)}
             ownerBizName={ownerName(references.owner_business, form.owner_business_id)}
             status={form.status}
@@ -1098,10 +1113,10 @@ export default function SpendItemPage() {
             )}
             {!isCreate && uuid && (
               <SendLinkButton
-                itemType="opex"
+                itemType={nature}
                 itemId={uuid}
-                itemName={form.product_name || t('opex.workspace.spendItem')}
-                itemNumber={data?.item_number}
+                itemName={form.product_name || t('budget.line')}
+                itemRef={reference}
               />
             )}
             {canChangeType && (
@@ -1118,7 +1133,9 @@ export default function SpendItemPage() {
           </>
         )}
         properties={isCreate ? (
-          <SpendPropertiesDrawer
+          <BudgetPropertiesDrawer
+            nature={nature}
+            onNatureChange={(next) => navigate(`/ops/${next}/new${location.search}`, { replace: true })}
             mode="create"
             supplierId={createForm.supplier_id}
             payingCompanyId={createForm.paying_company_id}
@@ -1151,7 +1168,9 @@ export default function SpendItemPage() {
             onOwnerBusinessChange={(v) => updateCreateForm({ owner_business_id: v })}
           />
         ) : (
-          <SpendPropertiesDrawer
+          <BudgetPropertiesDrawer
+            nature={nature}
+            onChangeType={canChangeType ? () => { void openChangeType(); } : undefined}
             mode="edit"
             references={references}
             analyticsOptions={analyticsOptions}
@@ -1235,7 +1254,7 @@ export default function SpendItemPage() {
                   sx={composerSx}
                 />
               </Box>
-              {uuid && <EntityTasksPanel key={uuid} entityType="spend_item" entityId={uuid} />}
+              {!stale && uuid && <EntityTasksPanel key={uuid} entityType={config.taskType} entityId={uuid} />}
             </Stack>
           )
         )}
@@ -1243,14 +1262,14 @@ export default function SpendItemPage() {
         {/* No progress bar while a tab's code loads: the empty tab, then its content. */}
         <WorkspaceTabBoundary resetKey={routeTab} onRetry={retryTabs}>
           <React.Suspense fallback={null}>
-            {routeTab === 'budget' && !isCreate && uuid && (
-              <BudgetTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={OPEX_FINANCE_CONFIG} effectiveStart={form.effective_start} endOfValidity={isoToLocalDateInput(form.disabled_at)} payingCompanyCountry={payingCompanyCountry} held={heldChoices.budget} onBudgetRev={noteBudgetRev} ref={budgetRef} />
+            {routeTab === 'budget' && !isCreate && !stale && uuid && (
+              <BudgetTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={config.finance} effectiveStart={form.effective_start} endOfValidity={isoToLocalDateInput(form.disabled_at)} payingCompanyCountry={payingCompanyCountry} held={heldChoices.budget} onBudgetRev={noteBudgetRev} ref={budgetRef} />
             )}
-            {routeTab === 'allocations' && !isCreate && uuid && (
-              <AllocationsTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={OPEX_FINANCE_CONFIG} held={heldChoices.allocation} onBudgetRev={noteBudgetRev} knownBudgetRev={knownBudgetRev} ref={allocRef} />
+            {routeTab === 'allocations' && !isCreate && !stale && uuid && (
+              <AllocationsTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={config.finance} held={heldChoices.allocation} onBudgetRev={noteBudgetRev} knownBudgetRev={knownBudgetRev} ref={allocRef} />
             )}
-            {routeTab === 'relations' && !isCreate && uuid && (
-              <RelationsPanel key={uuid} id={uuid} ref={relationsRef} autoSave onRelationsChange={() => { void relationsCountQuery.refetch(); }} />
+            {routeTab === 'relations' && !isCreate && !stale && uuid && (
+              <RelationsPanel key={uuid} kind={config.relationsKind} id={uuid} ref={relationsRef} autoSave onRelationsChange={() => { void relationsCountQuery.refetch(); }} />
             )}
           </React.Suspense>
         </WorkspaceTabBoundary>
@@ -1258,7 +1277,7 @@ export default function SpendItemPage() {
       {canChangeType && uuid && (
         <ChangeTypeDialog
           open={changeTypeOpen}
-          nature="opex"
+          nature={nature}
           lineId={uuid}
           lineReference={reference}
           companyId={form.paying_company_id || null}

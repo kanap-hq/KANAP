@@ -1449,6 +1449,10 @@
     "opex": "OPEX",
     "capex": "CAPEX",
     "totalWithCount_one": "Total ({{count}} line)",
-    "totalWithCount_other": "Total ({{count}} lines)"
+    "totalWithCount_other": "Total ({{count}} lines)",
+    "changeType": "Change type…",
+    "typeOpex": "OPEX",
+    "typeCapex": "CAPEX",
+    "line": "Budget line"
   }
 }

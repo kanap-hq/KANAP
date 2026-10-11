@@ -1,5 +1,5 @@
 import React from 'react';
-import { Autocomplete, Box, MenuItem, TextField, Typography } from '@mui/material';
+import { Autocomplete, Box, Button, Chip, MenuItem, Select, TextField, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { PropertyGroup, PropertyRow } from '../../../components/design/PropertyRow';
 import SupplierSelect from '../../../components/fields/SupplierSelect';
@@ -22,9 +22,15 @@ import { axisRequiredFor, useAnalyticsAxes } from '../../../hooks/useAnalyticsAx
 import { drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
 import { matching, type ItemReferences } from '../../../components/finance/itemReferences';
 
+import type { LineType } from '../../../constants/lineTypeUsage';
+import { BUDGET_NATURE_CONFIG } from '../natureConfig';
+
 export type RunBuild = 'run' | 'build';
 
 type Props = {
+  nature: LineType;
+  onNatureChange?: (next: LineType) => void;
+  onChangeType?: () => void;
   mode?: 'create' | 'edit';
   supplierId: string;
   payingCompanyId: string;
@@ -67,7 +73,10 @@ const hideInnerLabelSx = {
   '& .MuiFormControl-root': { m: 0 },
 } as const;
 
-export default function SpendPropertiesDrawer({
+export default function BudgetPropertiesDrawer({
+  nature,
+  onNatureChange,
+  onChangeType,
   mode = 'edit',
   supplierId,
   payingCompanyId,
@@ -100,6 +109,7 @@ export default function SpendPropertiesDrawer({
 }: Props) {
   const { t } = useTranslation(['ops', 'common']);
   const locale = useLocale();
+  const config = BUDGET_NATURE_CONFIG[nature];
   const { data: currencySettings } = useCurrencySettings();
 
   const currencyOptions = React.useMemo<CurrencyOption[]>(() => {
@@ -124,14 +134,39 @@ export default function SpendPropertiesDrawer({
     ? t('opex.fields.costCenterCompanyHint', { company: costCenter.company_name ?? '' })
     : undefined;
 
-  // One select per enabled dimension that applies to OPEX lines, in dimension order. A disabled
-  // dimension, or one for CAPEX lines only, shows no select; its value stays on the line. When the
+  // One select per enabled dimension that applies to this nature, in dimension order. A disabled
+  // dimension, or one for the other nature only, shows no select; its value stays on the line. When the
   // dimensions cannot be loaded, one line says so.
-  const analyticsAxes = useAnalyticsAxes({ scope: 'opex' });
+  const analyticsAxes = useAnalyticsAxes({ scope: nature });
 
   return (
     <>
       <PropertyGroup>
+        <PropertyRow label={t('budget.type')}>
+          {mode === 'create' ? (
+            <Select
+              variant="standard"
+              value={nature}
+              onChange={(event) => onNatureChange?.(event.target.value as LineType)}
+              SelectDisplayProps={{ 'aria-label': t('budget.type') }}
+              sx={drawerSelectSx}
+              disabled={disabled}
+            >
+              {Object.entries(BUDGET_NATURE_CONFIG).map(([value, option]) => (
+                <MenuItem key={value} value={value} sx={drawerMenuItemSx}>{t(option.typeLabel)}</MenuItem>
+              ))}
+            </Select>
+          ) : (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Chip size="small" label={t(config.typeLabel)} sx={{ height: 22, bgcolor: 'kanap.bg.hover', color: 'kanap.text.secondary' }} />
+              {onChangeType && (
+                <Button onClick={onChangeType} disabled={disabled} sx={{ p: 0, minWidth: 0, fontSize: 12 }}>
+                  {t('budget.changeType')}
+                </Button>
+              )}
+            </Box>
+          )}
+        </PropertyRow>
         <PropertyRow label={t('opex.fields.supplier')}>
           <Box sx={hideInnerLabelSx}>
             <SupplierSelect hideLabel label={t('opex.fields.supplier')} value={supplierId} onChange={(v) => onSupplierChange(v ?? '')} disabled={disabled} selectedOption={matching(references?.supplier, supplierId)} />
@@ -157,7 +192,7 @@ export default function SpendPropertiesDrawer({
         </PropertyRow>
         <PropertyRow label={t('opex.fields.account')} required>
           <Box sx={hideInnerLabelSx}>
-            <AccountSelect hideLabel label={t('opex.fields.account')} nature="opex" value={accountId} onChange={(v) => onAccountChange(v ?? '')} companyId={payingCompanyId || undefined} disabled={disabled || !payingCompanyId} required disableClearable={mode === 'edit'} selectedOption={matching(references?.account, accountId)} />
+            <AccountSelect hideLabel label={t('opex.fields.account')} nature={nature} value={accountId} onChange={(v) => onAccountChange(v ?? '')} companyId={payingCompanyId || undefined} disabled={disabled || !payingCompanyId} required disableClearable={mode === 'edit'} selectedOption={matching(references?.account, accountId)} />
           </Box>
         </PropertyRow>
         <PropertyRow label={t('opex.fields.currency')} required>
@@ -179,19 +214,19 @@ export default function SpendPropertiesDrawer({
             {t('shared.dimensionsLoadFailed')}
           </Typography>
         ) : analyticsAxes.enabled.map((axis) => (
-          <PropertyRow key={axis.id} label={analyticsAxes.label(axis)} required={axisRequiredFor(axis, 'opex')}>
+          <PropertyRow key={axis.id} label={analyticsAxes.label(axis)} required={axisRequiredFor(axis, nature)}>
             {/* Found by the question asked before leaving a line lacking a required value. */}
             <Box sx={hideInnerLabelSx} data-analytics-axis={axis.id}>
               <AnalyticsCategorySelect
                 axisId={axis.id}
                 label={analyticsAxes.label(axis)}
                 hideLabel
-                lineType="opex"
+                lineType={nature}
                 value={analyticsValues[axis.id] ?? null}
                 onChange={(v) => onAnalyticsValueChange(axis.id, v)}
                 disabled={disabled}
                 // A held value on a required dimension can be replaced, not removed. A line without one stays editable.
-                disableClearable={mode === 'edit' && axisRequiredFor(axis, 'opex') && !!analyticsValues[axis.id]}
+                disableClearable={mode === 'edit' && axisRequiredFor(axis, nature) && !!analyticsValues[axis.id]}
                 selectedOption={matching(analyticsOptions?.[axis.id], analyticsValues[axis.id])}
               />
             </Box>
