@@ -533,9 +533,9 @@ La pestaña Relaciones vincula esta partida CAPEX con objetos relacionados: Proy
 
 **Exportar CSV** e **Importar CSV** están en la barra de herramientas de la lista CAPEX. Ambos requieren derechos de administración en CAPEX (`capex:admin`).
 
-**Exportar CSV** escribe el archivo de presupuesto CAPEX de las partidas que muestra la lista. **Importar CSV** vuelve a leer un archivo: primero se comprueba, y no se escribe nada hasta que haga clic en **Cargar**.
+**Exportar CSV** escribe el archivo de presupuesto de las partidas que muestra la lista, como `budget.csv`. **Importar CSV** vuelve a leer un archivo: primero se comprueba, y no se escribe nada hasta que haga clic en **Cargar**.
 
-El archivo contiene una fila por partida, los detalles de la partida, sus importes en columnas y `kanap_token`. [Cargar un presupuesto desde una hoja de cálculo](budget-file.md) describe las columnas, lo que significa una celda y los dos pasos de la importación.
+El archivo contiene una fila por partida: su `nature` (aquí `capex`), su referencia `BL-n`, los detalles de la partida, sus importes en columnas y `kanap_token`. El mismo archivo también puede contener partidas OPEX, lo que requiere además derechos de administración en OPEX. Un archivo sin columna `nature`, exportado por una versión anterior, se lee como partidas CAPEX en esta lista. [Cargar un presupuesto desde una hoja de cálculo](budget-file.md) describe las columnas, lo que significa una celda y los dos pasos de la importación.
 
 ## Estado y ciclo de vida
 

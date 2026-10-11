@@ -47,7 +47,7 @@ Every workspace also has three dimensions that classify CAPEX lines. They are us
 - When the workspace already had a dimension with one of these codes, that dimension is kept as it is and only gets the values it lacked.
 - A CAPEX line created before these dimensions holds the value of its earlier PP&E type, investment type and priority.
 - They work like any other dimension. You can rename them and their values, add values, change the order, change their settings, disable or delete them.
-- The code names the dimension's column in the CAPEX budget file: `analytics:ppe_type`, `analytics:investment_type` and `analytics:priority`. When you change a code, a file exported before the change still has the old column name and is refused with "Unknown dimension". Export a fresh file. See [Load a budget from a spreadsheet](budget-file.md).
+- The code names the dimension's column in the budget file: `analytics:ppe_type`, `analytics:investment_type` and `analytics:priority`. When you change a code, a file exported before the change still has the old column name and is refused with "Unknown dimension". Export a fresh file. See [Load a budget from a spreadsheet](budget-file.md).
 
 ---
 
@@ -176,11 +176,11 @@ The **Used for** field says which budget lines the dimension applies to:
 | **OPEX only** | Only OPEX lines can have a value |
 | **CAPEX only** | Only CAPEX lines can have a value |
 
-OPEX screens show the dimensions used for OPEX lines, and CAPEX screens show the dimensions used for CAPEX lines. This covers the item **Properties** panel, the list columns, filters and quick search, the budget file columns, the dimension pickers and filters of the reports (they follow the report's **OPEX** / **CAPEX** choice) and Plaid.
+OPEX screens show the dimensions used for OPEX lines, and CAPEX screens show the dimensions used for CAPEX lines. This covers the item **Properties** panel, the list columns, filters and quick search, the dimension pickers and filters of the reports (they follow the report's **OPEX** / **CAPEX** choice) and Plaid. The budget file has a column for every enabled dimension, and each row takes values only on the dimensions of its kind of line.
 
 A line keeps the value it already has on a dimension that no longer applies to its kind of line. The value is hidden everywhere and shows again if you open the dimension to that kind of line again. When your choice hides values, a note appears under the field, for example "8 CAPEX lines have a value for this dimension. They keep it, hidden while the dimension is for OPEX lines only."
 
-Giving a line a value on a dimension that does not apply to it is refused, in the app, in a budget file and through the API. Sending the value the line already holds changes nothing.
+Giving a line a value on a dimension that does not apply to it is refused, in the app, in a budget file and through the API. In the app and through the API, sending the value the line already holds changes nothing. In a budget file, leave that cell empty: the export does so.
 
 A single value can also be limited to one kind of line. The two settings work at different levels. For example, the dimension **Nature de coût** is used for **OPEX and CAPEX**, and its value **Abonnements SaaS** is for **OPEX only**:
 
@@ -347,7 +347,7 @@ The seven budget reports can also be narrowed to one value of a dimension, with 
 
 Load or update the values of every dimension from one file. Dimensions are created on the page.
 
-To set values on budget lines from a file, use the OPEX and CAPEX budget files. In those files, one `analytics:<code>` column holds each dimension, the default dimension included. See [Load a budget from a spreadsheet](budget-file.md).
+To set values on budget lines from a file, use the budget file. In it, one `analytics:<code>` column holds each enabled dimension, the default dimension included. See [Load a budget from a spreadsheet](budget-file.md).
 
 **Export**: click **Export CSV**, then **Export data**. The file lists the values of every dimension, enabled or disabled, dimension by dimension, each dimension's values in its order. The file has no order column. For an empty file with the headers only, use **Download template** in the import dialog.
 

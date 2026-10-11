@@ -11,6 +11,7 @@ import {
   budgetFileFailure,
   defaultYearRange,
   exportBudgetFile,
+  BUDGET_FILE_NAME,
   filenameFromDisposition,
   offerableYears,
   saveBlob,
@@ -114,7 +115,7 @@ export default function BudgetFileExportDialog({
         all: allLines,
       });
       const header = (response.headers?.['content-disposition'] ?? response.headers?.['Content-Disposition']) as string | undefined;
-      saveBlob(filenameFromDisposition(header, `${scope}.csv`), response.data);
+      saveBlob(filenameFromDisposition(header, BUDGET_FILE_NAME), response.data);
       onClose();
     } catch (err) {
       setError(failureText(await budgetFileFailure(err), t, 'export'));

@@ -56,20 +56,21 @@ Eine Position ist außerdem mit Projekten, Anfragen, Anwendungen, Assets, Vertr�
 
 ### OPEX- und CAPEX-Positionen
 
-Eine Position lebt über mehrere Jahre: Eine Lizenz über drei Jahre ist eine Position mit drei Budgetjahren. KANAP vergibt jeder Position beim Anlegen eine Nummer: `OPX-12` für OPEX, `CPX-3` für CAPEX. Die Nummer identifiziert die Position in der Budgetdatei.
+Eine Position lebt über mehrere Jahre: Eine Lizenz über drei Jahre ist eine Position mit drei Budgetjahren. KANAP vergibt jeder Position beim Anlegen eine Nummer, ihre Referenz `BL-12`, in derselben Reihe für OPEX und CAPEX. Die Listen zeigen weiterhin `OPX-12` für eine OPEX-Position und `CPX-3` für eine CAPEX-Position. Die Budgetdatei bezeichnet eine Position mit ihrer Referenz `BL-12` und liest auch die Nummern `OPX` und `CPX`. In einer Datei ohne Spalte `nature` behält eine bloße Zahl ihre frühere Bedeutung (`CPX-3` in der CAPEX-Liste).
 
 | Feld | Spalte der Budgetdatei | Erforderlich | Hinweise |
 |---|---|---|---|
-| Nummer | `item_number` | Von KANAP vergeben | Leer in der Datei: legt eine Position an |
+| Art | `nature` | Ja | `opex` oder `capex`. Eine Datei ändert die Art einer bestehenden Position nicht. Eine Datei ohne diese Spalte wird als Positionen der Liste gelesen, in der sie importiert wird |
+| Nummer | `item_number` | Von KANAP vergeben | `BL-12`. Leer in der Datei: legt eine Position an |
 | Produktname (OPEX), Titel (CAPEX) | `name` | Ja | |
-| Beschreibung (OPEX) | `description` | Nein | |
+| Beschreibung (OPEX) | `description` | Nein | Bei einer CAPEX-Position noch nicht gelesen oder geschrieben |
 | Anlagentyp, Investitionsart, Priorität (CAPEX) | `analytics:ppe_type`, `analytics:investment_type`, `analytics:priority` | Bei einer neuen Zeile, solange die Dimension erforderlich ist | Werte der drei CAPEX-Dimensionen, gespeichert wie die Werte jeder anderen Dimension. Siehe [CAPEX-Dimensionen](analytics.md#capex-dimensionen) |
 | Zahlendes Unternehmen | `company_name` | Ja | Wird von der Kostenstelle übernommen, wenn nur die Kostenstelle angegeben ist |
 | Lieferant | `supplier_name`, `supplier_erp_id` | Nein | |
 | Konto | `account_number` | Ja | Im Kontenplan des zahlenden Unternehmens |
 | Kostenstelle | `cost_center_code` | Nein | Eine Gruppe wird abgelehnt |
 | Run oder Build | `run_build` | Nein | `run` oder `build` |
-| Analysewerte | `analytics:<code>` | Bei einer erforderlichen Dimension | Eine Spalte pro aktiver Dimension, die für die Art der Datei verwendet wird. Eine erforderliche Dimension braucht einen Wert auf einer neuen Zeile |
+| Analysewerte | `analytics:<code>` | Bei einer erforderlichen Dimension | Eine Spalte pro aktiver Dimension. Eine Position nimmt nur in den Dimensionen ihrer Art Werte an. Eine erforderliche Dimension braucht einen Wert auf einer neuen Position ihrer Art |
 | IT-Verantwortlicher, Fachverantwortlicher | `owner_it_email`, `owner_business_email` | Nein | Aktive Benutzer |
 | Projekt | `project` | Nein | Eine Projektnummer, zum Beispiel `PRJ-3` |
 | Währung | `currency` | Ja | ISO-Code mit drei Buchstaben |
@@ -174,8 +175,7 @@ Jede der folgenden Dateien wird auf der Seite exportiert und importiert, die das
 
 | Objekt | Export | Import | Zugeordnet über | Details |
 |---|---|---|---|---|
-| OPEX-Positionen und ihre Beträge | Ja | Ja | `item_number` | [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md) |
-| CAPEX-Positionen und ihre Beträge | Ja | Ja | `item_number` | [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md) |
+| OPEX- und CAPEX-Positionen und ihre Beträge | Ja | Ja | `item_number` (`BL-12`) | [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md) |
 | Unternehmen und ihre Kennzahlen | Ja | Ja | `name` | [Unternehmen](companies.md) |
 | Abteilungen | Ja | Ja | `company_name` und `name` | [Abteilungen](departments.md) |
 | Konten | Ja | Ja | `account_number` innerhalb des Kontenplans | [Kontenpläne und Kontenverwaltung](chart-of-accounts.md) |
@@ -189,15 +189,15 @@ Jede der folgenden Dateien wird auf der Seite exportiert und importiert, die das
 | Zuordnungen | Aus den Berichten zur Leistungsverrechnung | Nein | | [Berichte](reports.md) |
 | Zeilen unter Menge und Preis, Einstellungen der Budgetspalten, Einfrierungen, Währungen | Nein | Nein | | In der Oberfläche festgelegt |
 
-Die Budgetdatei liest und schreibt die Beträge jeder Spalte und jedes Jahres, als Jahressummen oder Monate, mit den Details der Position in derselben Zeile. Sie ist der Weg hinein für ein anderswo erstelltes Budget und der Weg hinaus zu einer Tabellenkalkulation oder einem BI-Werkzeug. Jede Budgetliste exportiert und importiert ihre eigene Datei: die OPEX-Datei unter **Budgetverwaltung > OPEX**, die CAPEX-Datei unter **Budgetverwaltung > CAPEX**.
+Die Budgetdatei liest und schreibt die Beträge jeder Spalte und jedes Jahres, als Jahressummen oder Monate, mit den Details der Position in derselben Zeile. Sie ist der Weg hinein für ein anderswo erstelltes Budget und der Weg hinaus zu einer Tabellenkalkulation oder einem BI-Werkzeug. Eine Datei enthält beide Arten von Positionen, ihre Spalte `nature` gibt die Art an. **Budgetverwaltung > OPEX** exportiert die OPEX-Positionen und **Budgetverwaltung > CAPEX** die CAPEX-Positionen. Beide Listen importieren eine Datei mit beiden Arten, mit Administrationsrechten auf OPEX und auf CAPEX.
 
 ### Ein Budget nach KANAP übernehmen
 
 1. Bilden Sie jedes Objekt Ihres bisherigen Werkzeugs auf die Tabellen oben ab, und seine Kennungen auf die Spalte **Zugeordnet über**.
 2. Laden Sie die Stammdaten in der Reihenfolge aus [Ein ganzes Budget laden](budget-file.md#ein-ganzes-budget-laden).
-3. Exportieren Sie die OPEX-Datei und die CAPEX-Datei, um die Kopfzeile Ihrer Organisation zu erhalten, mit einer Spalte pro Analysedimension. Eine Liste ohne Position exportiert nur die Kopfzeile.
-4. Füllen Sie eine Zeile pro Position, mit leerer `item_number`, mit einer Betragsspalte pro Budgetspalte und Jahr (`budget_2027`) oder pro Monat (`budget_2027_03`).
-5. Importieren Sie die Dateien. Die Prüfung meldet die Fehler nach Zeile der Datei, und nichts wird geschrieben, bevor Sie laden.
+3. Exportieren Sie die Budgetdatei aus einer der beiden Listen, um die Kopfzeile Ihrer Organisation zu erhalten, mit einer Spalte pro Analysedimension. Eine Liste ohne Position exportiert nur die Kopfzeile.
+4. Füllen Sie eine Zeile pro Position mit ihrer `nature`, mit leerer `item_number`, mit einer Betragsspalte pro Budgetspalte und Jahr (`budget_2027`) oder pro Monat (`budget_2027_03`).
+5. Importieren Sie die Datei. Die Prüfung meldet die Fehler nach Zeile der Datei, und nichts wird geschrieben, bevor Sie laden.
 
 Ein stimmiger Satz von Beispieldateien, mit einem fiktiven Unternehmen und seinen Stammdaten, liegt im [KANAP-Repository](https://github.com/kanap-hq/KANAP/tree/main/doc/samples).
 

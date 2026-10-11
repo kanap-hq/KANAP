@@ -1,7 +1,7 @@
 import { AmountMeasure } from '../amounts-write.util';
 import { BUDGET_AMOUNT_COLUMNS, CsvDateOrder, CsvLanguage, CsvReadSchema, DecimalMark } from '../../common/csv-sheet';
 import { looseKey } from '../../common/csv-sheet/text';
-import { BudgetFileDetail, BudgetFileScope } from './types';
+import { BudgetFileDetail } from './types';
 import { parseToken } from './token';
 
 /**
@@ -55,17 +55,17 @@ export function columnOfMeasure(measure: AmountMeasure): FileColumn {
 }
 
 /**
- * Detail columns in file order. `dimensionCodes` inserts `analytics:<code>`
- * after `run_build` (the PP&E type, investment type and priority of a CAPEX
- * line among them since lot C1). The token is not here: it is the last column,
- * after amounts.
+ * Detail columns in file order, the same for both natures since lot C1b: `nature` first (the
+ * line's type, `opex` or `capex`), then `item_number` (`BL-n`). `dimensionCodes` inserts
+ * `analytics:<code>` after `run_build`, one column per enabled dimension whatever the lines it is
+ * for (the PP&E type, investment type and priority of a CAPEX line among them since lot C1). The
+ * token is not here: it is the last column, after amounts.
  */
-export function detailColumns(scope: BudgetFileScope, dimensionCodes: readonly string[]): string[] {
-  const columns = ['item_number', 'name'];
-  if (scope === 'opex') columns.push('description');
-  columns.push(
+export function detailColumns(dimensionCodes: readonly string[]): string[] {
+  const columns = [
+    'nature', 'item_number', 'name', 'description',
     'company_name', 'supplier_name', 'supplier_erp_id', 'account_number', 'cost_center_code', 'run_build',
-  );
+  ];
   for (const code of dimensionCodes) columns.push(`analytics:${code}`);
   columns.push(
     'owner_it_email', 'owner_business_email', 'project', 'currency', 'effective_start', 'end_of_validity', 'notes',
@@ -74,8 +74,8 @@ export function detailColumns(scope: BudgetFileScope, dimensionCodes: readonly s
 }
 
 /** Columns csv-sheet matches as fields. Analytics columns are declared separately. */
-export function schemaFields(scope: BudgetFileScope): string[] {
-  return [...detailColumns(scope, []), 'kanap_token'];
+export function schemaFields(): string[] {
+  return [...detailColumns([]), 'kanap_token'];
 }
 
 export function amountHeaders(years: readonly number[], columns: readonly string[], detail: BudgetFileDetail): string[] {
@@ -95,28 +95,25 @@ export function amountHeaders(years: readonly number[], columns: readonly string
 }
 
 export function exportHeaders(
-  scope: BudgetFileScope,
   dimensionCodes: readonly string[],
   years: readonly number[],
   columns: readonly string[],
   detail: BudgetFileDetail,
 ): string[] {
-  return [...detailColumns(scope, dimensionCodes), ...amountHeaders(years, columns, detail), 'kanap_token'];
+  return [...detailColumns(dimensionCodes), ...amountHeaders(years, columns, detail), 'kanap_token'];
 }
 
+/** The reader's schema. Every enabled dimension is a column; a line's own nature decides whether it may hold a value. */
 export function budgetFileSchema(
-  scope: BudgetFileScope,
   language: CsvLanguage,
   dimensionCodes: readonly string[],
   dateOrder?: CsvDateOrder,
   decimalMark?: DecimalMark,
-  refusedDimensions?: Readonly<Record<string, string>>,
 ): CsvReadSchema {
   return {
-    fields: schemaFields(scope),
+    fields: schemaFields(),
     amounts: BUDGET_AMOUNT_COLUMNS,
     dimensions: dimensionCodes,
-    ...(refusedDimensions ? { refusedDimensions } : {}),
     dateFields: ['effective_start', 'end_of_validity'],
     language,
     dateOrder,

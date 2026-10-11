@@ -47,7 +47,7 @@ function renderDialog(list = { sort: 'item_number:asc', q: 'cloud', filters: '',
 describe('BudgetFileExportDialog', () => {
   beforeEach(() => {
     get.mockReset();
-    get.mockResolvedValue({ data: new Blob(['x']), headers: { 'content-disposition': 'attachment; filename="capex.csv"' } });
+    get.mockResolvedValue({ data: new Blob(['x']), headers: { 'content-disposition': 'attachment; filename="budget.csv"' } });
     window.URL.createObjectURL = vi.fn(() => 'blob:x');
     window.URL.revokeObjectURL = vi.fn();
   });
@@ -89,6 +89,18 @@ describe('BudgetFileExportDialog', () => {
       sort: 'item_number:asc',
       all: 'true',
     });
+  });
+
+  it('saves budget.csv, the one file name of both lists, when the answer names none', async () => {
+    get.mockResolvedValueOnce({ data: new Blob(['x']), headers: {} });
+    const saved: string[] = [];
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      saved.push(this.download);
+    });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'operations.budgetFile.exportFiltered:{"count":120}' }));
+    await waitFor(() => expect(saved).toEqual(['budget.csv']));
+    click.mockRestore();
   });
 
   it('labels an unfiltered list with its line count', () => {

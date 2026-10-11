@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { CapexItemsService } from './spend-items.service';
+import { CapexItemsService, SpendItemsService } from './spend-items.service';
 import { CapexItemsDeleteService } from './spend-items-delete.service';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -26,7 +26,7 @@ import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-ti
 import { AuditService } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
 import { analyzeAfterLargeImport } from './budget-import-statistics';
-import { BudgetFileService, canCreateSuppliers } from './budget-file/budget-file.service';
+import { BudgetFileService, budgetFileNatures, canCreateSuppliers } from './budget-file/budget-file.service';
 import { exportListQuery } from './budget-file/export-file';
 import { importAnalyzeTables } from './budget-file/import-file';
 import { BudgetFileSizeInterceptor, budgetFileMulterOptions } from './budget-file/upload';
@@ -48,6 +48,8 @@ export class CapexItemsController {
     private readonly budgetFile: BudgetFileService,
     private readonly audit: AuditService,
     private readonly freeze: FreezeService,
+    /** The OPEX lines' service: a budget file may hold lines of both natures, each written by its own (lot C1b). */
+    private readonly opexSvc: SpendItemsService,
   ) {}
 
   private resolveId(id: string, manager: EntityManager): Promise<string> {
@@ -180,6 +182,8 @@ export class CapexItemsController {
       manager: ctx.manager as EntityManager,
       tenantId: ctx.tenantId,
       userId: ctx.userId || null,
+      // A file may mix both natures: the lines of a nature need the Admin level on it.
+      natures: budgetFileNatures('capex', ctx),
     }, {
       language,
       dateOrder,
@@ -211,13 +215,14 @@ export class CapexItemsController {
       manager: ctx.manager as EntityManager,
       tenantId: ctx.tenantId,
       userId: ctx.userId || null,
+      natures: budgetFileNatures('capex', ctx),
     }, {
       language,
       dateOrder,
       decimalMark,
       createSuppliers: createSuppliers === 'true' || createSuppliers === '1',
       canCreateSuppliers: canCreateSuppliers(ctx),
-    }, { items: this.svc, audit: this.audit, freeze: this.freeze });
+    }, { items: { opex: this.opexSvc, capex: this.svc }, audit: this.audit, freeze: this.freeze });
     await analyzeAfterLargeImport(req, importAnalyzeTables('capex', result), result);
     return result;
   }

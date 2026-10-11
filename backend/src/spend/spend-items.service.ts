@@ -37,7 +37,7 @@ import { ItemNumberService } from '../common/item-number.service';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import type { BudgetColumn } from './amounts-write.util';
-import { resolveItemWrite } from './item-write.util';
+import { ItemWriteFields, resolveItemWrite } from './item-write.util';
 import { updateItemUnderLock } from './item-locked-update';
 import {
   itemAnalyticsAuditFields,
@@ -419,18 +419,19 @@ export class SpendItemsService {
   /**
    * A new line of the nature. `itemNumber`: its BL number when the caller allocated it (the budget
    * file, a block); a CAPEX line also gets a CPX number from the `capex` sequence (`legacyNumber`
-   * when allocated by the caller): what the CAPEX API and screens show as its number.
+   * when allocated by the caller): what the CAPEX API and screens show as its number. `fields`:
+   * `columns` when the body names the columns of `spend_items` (the budget file), not the API's names.
    */
   async create(
     body: SpendItemUpsertDto | Record<string, unknown>,
     userId?: string,
-    opts?: { manager?: EntityManager; itemNumber?: number; legacyNumber?: number; source?: string },
+    opts?: { manager?: EntityManager; itemNumber?: number; legacyNumber?: number; source?: string; fields?: ItemWriteFields },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(SpendItem);
     // Writable fields only (a CAPEX title in `product_name`, `company_id` the CAPEX alias of the paying
     // company), every id resolved in this tenant; see `item-write.util.ts`.
-    const { values, lifecycle: input, analytics } = await resolveItemWrite(mg, this.nature, body, null);
+    const { values, lifecycle: input, analytics } = await resolveItemWrite(mg, this.nature, body, null, opts?.fields);
     const disabled_at = this.endOfValidityInput(input.disabled_at, input.effective_end);
     const lifecycle = resolveLifecycleState({ nextStatus: input.status, nextDisabledAt: disabled_at });
     const tenantId = await this.resolveTenantId(mg);
@@ -473,13 +474,21 @@ export class SpendItemsService {
     return this.present({ ...persisted, ...itemAnalyticsFields(analyticsValues) });
   }
 
-  /** `statusEmail: false` skips the owners' status-change email (the budget file load sends none). */
-  async update(id: string, body: SpendItemUpsertDto | Record<string, unknown>, userId?: string, opts?: { manager?: EntityManager; statusEmail?: boolean; source?: string }) {
+  /**
+   * `statusEmail: false` skips the owners' status-change email (the budget file load sends none).
+   * `fields`: `columns` when the body names the columns of `spend_items` (the budget file).
+   */
+  async update(
+    id: string,
+    body: SpendItemUpsertDto | Record<string, unknown>,
+    userId?: string,
+    opts?: { manager?: EntityManager; statusEmail?: boolean; source?: string; fields?: ItemWriteFields },
+  ) {
     const mg = opts?.manager ?? this.repo.manager;
     const itemId = await resolveToUuid(id, this.contract.reference, mg);
     const tenantId = await this.resolveTenantId(mg);
     // Only the columns the body supplied, written under the line's row lock; see `item-locked-update.ts`.
-    const result = await updateItemUnderLock(mg, this.nature, tenantId, itemId, body);
+    const result = await updateItemUnderLock(mg, this.nature, tenantId, itemId, body, new Date(), opts?.fields);
     if (!result) throw new NotFoundException(this.contract.notFound);
     const { before, after: saved, analyticsBefore, analyticsAfter, statusBefore } = result;
     await this.audit.log({

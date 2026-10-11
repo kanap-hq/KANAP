@@ -3,10 +3,12 @@ import { BadRequestException } from '@nestjs/common';
 import { parseDecimalMark } from '../../../common/csv-sheet';
 import { writeCsv } from '../../../common/csv-sheet';
 import { buildBudgetExport, exportListQuery, parseAmountYears, parseFileColumns } from '../export-file';
-import { readBudgetCsv } from '../interpret';
+import { parseItemNumber, readBudgetCsv } from '../interpret';
 import { periodForYearlyTotal } from '../period';
 import { buildPreflight, planBudgetFile } from '../preflight';
 import { budgetFileSchema, CRITERIA_COLUMNS_MESSAGE, OLD_BUDGET_FILE_MESSAGE } from '../columns';
+import { CAPEX_DESCRIPTION_IGNORED, natureChangeMessage, natureRightMessage, prefixRightMessage } from '../preflight';
+import type { BudgetNature } from '../../budget-nature';
 import { formatToken, parseToken, tokenError } from '../token';
 import { BUDGET_FILE_MAX_BYTES } from '../upload';
 import {
@@ -25,7 +27,9 @@ const YEAR = 2026;
 function line(patch: Partial<StoredLine> = {}): StoredLine {
   return {
     id: 'line-1',
+    nature: 'opex',
     itemNumber: 3,
+    legacyNumber: 'OPX-3',
     rowVersion: 7,
     name: 'Widget',
     description: null,
@@ -74,19 +78,24 @@ async function preflight(
     canCreateSuppliers?: boolean;
     labels?: Record<string, string>;
     dimensions?: string[];
+    /** The natures the caller may import; the route's alone when absent. */
+    natures?: BudgetNature[];
   } = {},
 ) {
   const read = await readBudgetCsv(text, {
-    scope,
     language: options.language ?? 'en',
     dimensionCodes: options.dimensions ?? [],
   });
+  const natures = options.natures ?? [scope];
   return buildPreflight({
     scope,
+    natures,
     read,
     catalog: options.cat ?? catalog(),
-    stored,
-    names: options.names ?? stored.map((item) => ({ itemNumber: item.itemNumber, name: item.name, supplierId: item.supplierId })),
+    // The stored lines and names the service reads: those of the natures the caller may import.
+    stored: stored.filter((item) => natures.includes(item.nature)),
+    names: options.names ?? stored.filter((item) => natures.includes(item.nature))
+      .map((item) => ({ nature: item.nature, itemNumber: item.itemNumber, name: item.name, supplierId: item.supplierId })),
     createSuppliers: options.createSuppliers ?? false,
     canCreateSuppliers: options.canCreateSuppliers ?? false,
     currentYear: YEAR,
@@ -130,30 +139,17 @@ async function testTokenLanguages() {
     assert.equal(tokenError(raw), `kanap_token '${raw}' is not a line token. Export the line again.`);
   }
   for (const cell of ['', 'v7', 'v7.it']) {
-    assert.equal(budgetFileSchema('opex', 'en', []).conventionHint!.languageOf(cell), null);
+    assert.equal(budgetFileSchema('en', []).conventionHint!.languageOf(cell), null);
   }
-  const hinted = budgetFileSchema('opex', 'en', []).conventionHint!.languageOf('V7.FR');
+  const hinted = budgetFileSchema('en', []).conventionHint!.languageOf('V7.FR');
   assert.equal(hinted, 'fr');
 }
 
-/** A column of a dimension of the other line type is a header error with the reader's own message; no row is read. */
-async function testOtherTypeDimensionHeader() {
-  const message = 'The Recurrence dimension is for CAPEX lines only. Remove the analytics:recurrence column from this OPEX file.';
-  const options = { scope: 'opex' as const, language: 'en' as const, dimensionCodes: ['nature'], refusedDimensions: { recurrence: message } };
-  const refused = await readBudgetCsv('item_number,analytics:nature,Analytics: Recurrence\nOPX-3,Hardware,Monthly\n', options);
-  assert.deepEqual(refused.headerErrors, [message]);
-  assert.ok(refused.columns.some((column) => column.kind === 'analytics' && column.code === 'nature'), 'the other columns are read');
-  const report = await preflight('opex', 'item_number,analytics:recurrence\nOPX-3,Monthly\n', [line()]);
-  assert.deepEqual(report.headerErrors, ["Unknown dimension 'recurrence'."], 'without the refusal map: unknown, as before');
-  const unknown = await readBudgetCsv('item_number,analytics:nope\nOPX-3,x\n', options);
-  assert.deepEqual(unknown.headerErrors, ["Unknown dimension 'nope'."], 'another code stays unknown');
-}
-
 async function testOldFiles() {
-  const opex = await readBudgetCsv('product_name;y_budget\nWidget;10\n', { scope: 'opex', language: 'en', dimensionCodes: [] });
+  const opex = await readBudgetCsv('product_name;y_budget\nWidget;10\n', { language: 'en', dimensionCodes: [] });
   assert.deepEqual(opex.fileErrors, [OLD_BUDGET_FILE_MESSAGE]);
   assert.equal(opex.rows.length, 0, 'an old file produces no row errors');
-  const rows = await readBudgetCsv('item_type,measure,jan\nopex,budget,1\n', { scope: 'opex', language: 'en', dimensionCodes: [] });
+  const rows = await readBudgetCsv('item_type,measure,jan\nopex,budget,1\n', { language: 'en', dimensionCodes: [] });
   assert.deepEqual(rows.fileErrors, [OLD_BUDGET_FILE_MESSAGE]);
   // A CAPEX file of before lot C1 (its three criteria columns together), on either route: refused
   // as a whole, never read as dimensions.
@@ -161,7 +157,7 @@ async function testOldFiles() {
     ['capex', 'item_number,name,ppe_type,investment_type,priority,currency'],
     ['opex', 'item_number,name,PPE type,Investment-Type,Priority,currency'],
   ] as Array<[BudgetFileScope, string]>) {
-    const criteria = await readBudgetCsv(`${header}\nCPX-3,Server,hardware,replacement,high,EUR\n`, { scope, language: 'en', dimensionCodes: ['priority'] });
+    const criteria = await readBudgetCsv(`${header}\nCPX-3,Server,hardware,replacement,high,EUR\n`, { language: 'en', dimensionCodes: ['priority'] });
     assert.deepEqual(criteria.fileErrors, [CRITERIA_COLUMNS_MESSAGE], `${scope}: ${header}`);
     assert.equal(criteria.rows.length, 0, 'no row errors besides');
   }
@@ -171,13 +167,14 @@ async function testOldFiles() {
     ['capex', 'item_number,name,currency,ppe_type,priority\nCPX-3,Widget,EUR,hardware,high\n', ['ppe_type', 'priority']],
   ] as Array<[BudgetFileScope, string, string[]]>) {
     const header = text.split('\n')[0];
-    const partial = await preflight(scope, text, [line()]);
+    const stored = scope === 'opex' ? line() : line({ nature: 'capex', itemNumber: 120, legacyNumber: 'CPX-3' });
+    const partial = await preflight(scope, text, [stored]);
     assert.deepEqual(partial.fileErrors, [], `${scope}: ${header}`);
     assert.deepEqual(partial.warnings.ignoredColumns, ignored, `${scope}: ${header} ignored`);
     assert.equal(partial.changes.unchanged, 1, `${scope}: the line is read, unchanged`);
   }
   const dimensions = await readBudgetCsv('item_number,name,analytics:priority,currency\nCPX-3,Server,High,EUR\n', {
-    scope: 'capex', language: 'en', dimensionCodes: ['ppe_type', 'investment_type', 'priority'],
+    language: 'en', dimensionCodes: ['ppe_type', 'investment_type', 'priority'],
   });
   assert.deepEqual(dimensions.fileErrors, [], 'the dimension columns are the new form');
   const fresh = await preflight('opex', 'item_number,name,currency,status\nOPX-3,Widget,EUR,enabled\n', [line()]);
@@ -192,7 +189,7 @@ async function testRoundTrip() {
     endOfValidity: '2027-03-01T12:00:00.000Z',
   });
   const built = buildBudgetExport({
-    scope: 'opex', language: 'en', years: [YEAR], columns: ['budget'], detail: 'yearly', lines: [stored], dimensionCodes: [],
+    language: 'en', years: [YEAR], columns: ['budget'], detail: 'yearly', lines: [stored], dimensions: [],
   });
   const csv = writeCsv({ language: 'en', headers: built.headers, rows: built.rows });
   assert.ok(csv.startsWith('\uFEFF'));
@@ -209,8 +206,8 @@ async function testRoundTrip() {
   assert.equal(report.snapshot.lines[0].years[0].budgetRev, 3);
 
   const french = buildBudgetExport({
-    scope: 'opex', language: 'fr', years: [2027], columns: ['budget'], detail: 'yearly',
-    lines: [line({ effectiveStart: '2027-03-01' })], dimensionCodes: [],
+    language: 'fr', years: [2027], columns: ['budget'], detail: 'yearly',
+    lines: [line({ effectiveStart: '2027-03-01' })], dimensions: [],
   });
   const frenchCsv = writeCsv({ language: 'fr', headers: french.headers, rows: french.rows });
   assert.ok(frenchCsv.includes('01/03/2027'));
@@ -229,12 +226,12 @@ async function testAmounts() {
   assert.equal(different.changes.updated, 1);
   assert.ok(different.changes.updatedLines[0].fields.includes('budget 2026'));
   const frozen = await preflight('opex', 'item_number,name,currency,budget_2026\nOPX-3,Widget,EUR,200.00\n', [stored], {
-    cat: catalog({ frozen: ['2026:budget'] }),
+    cat: catalog({ frozen: ['opex:2026:budget'] }),
   });
   assert.equal(frozen.ok, false);
   assert.ok(frozen.errors.some((error) => error.message === 'Budget for 2026 is frozen.'));
   const frozenSame = await preflight('opex', 'item_number,name,currency,budget_2026\nOPX-3,Widget,EUR,100.00\n', [stored], {
-    cat: catalog({ frozen: ['2026:budget'] }),
+    cat: catalog({ frozen: ['opex:2026:budget'] }),
   });
   assert.equal(frozenSame.ok, true, 'a frozen column that the file does not change is not an error');
 
@@ -258,8 +255,11 @@ async function testIdentity() {
   const unknown = await preflight('opex', 'item_number,name,currency\nOPX-9,Gone,EUR\n', []);
   assert.equal(unknown.deletedCount, 0);
   assert.ok(unknown.errors.some((error) => error.message === "item_number 'OPX-9' does not match a line."));
+  // A CPX number on the OPEX list, the CAPEX right missing: the right it needs, from its prefix alone.
   const other = await preflight('opex', 'item_number,name,currency\nCPX-3,Gone,EUR\n', []);
-  assert.ok(other.errors.some((error) => error.message.includes('CAPEX list')));
+  assert.deepEqual(other.errors.map((error) => error.message), ['CPX-3 is a CAPEX line: importing it needs the Admin level on CAPEX.']);
+  const both = await preflight('opex', 'item_number,name,currency\nCPX-3,Gone,EUR\n', [], { natures: ['opex', 'capex'] });
+  assert.deepEqual(both.errors.map((error) => error.message), ["item_number 'CPX-3' does not match a line."], 'with both rights: no such line');
   const twice = await preflight('opex', 'item_number,name,currency\nOPX-3,Widget,EUR\nOPX-3,Widget,EUR\n', [line()]);
   assert.ok(twice.errors.some((error) => error.message === 'item_number OPX-3 already appears on line 2.'));
 
@@ -268,7 +268,7 @@ async function testIdentity() {
   assert.equal(changed.ok, true, 'a token mismatch does not block');
   assert.equal(changed.changedSinceExportCount, 1);
   assert.equal(changed.changedSinceExport[0].rowMismatch, true);
-  assert.equal(changed.changedSinceExport[0].message, 'OPX-3 was changed since the export.');
+  assert.equal(changed.changedSinceExport[0].message, 'BL-3 was changed since the export.', 'the report names a line by its BL number');
   const bad = await preflight('opex', 'item_number,name,currency,kanap_token\nOPX-3,Widget,EUR,v7.2026\n', [stored]);
   assert.ok(bad.errors.some((error) => error.message.includes('not a line token')));
 }
@@ -295,7 +295,7 @@ async function testSuppliersAndDuplicates() {
   assert.equal(on.changes.created, 1);
 
   const hint = await preflight('opex', 'item_number,name,currency\n,Widget,EUR\n', [line()]);
-  assert.ok(hint.warnings.duplicates.some((warning) => warning.message === 'row 2 looks like OPX-3'));
+  assert.ok(hint.warnings.duplicates.some((warning) => warning.message === 'row 2 looks like BL-3'));
 }
 
 async function testCreateRules() {
@@ -456,34 +456,54 @@ async function testRequiredDimension() {
 }
 
 async function testExportShape() {
-  const capexHeaders = buildBudgetExport({
-    scope: 'capex', language: 'en', years: [YEAR], columns: ['budget'], detail: 'yearly', lines: [],
-    dimensionCodes: ['default', 'ppe_type', 'investment_type', 'priority'],
+  const dimensions = [
+    { code: 'default', appliesTo: null },
+    { code: 'ppe_type', appliesTo: 'capex' as const },
+    { code: 'investment_type', appliesTo: 'capex' as const },
+    { code: 'priority', appliesTo: 'capex' as const },
+  ];
+  const headers = buildBudgetExport({
+    language: 'en', years: [YEAR], columns: ['budget'], detail: 'yearly', lines: [], dimensions,
   }).headers;
-  assert.deepEqual(capexHeaders.slice(0, 13), [
-    'item_number', 'name', 'company_name', 'supplier_name', 'supplier_erp_id', 'account_number', 'cost_center_code', 'run_build',
+  assert.deepEqual(headers.slice(0, 15), [
+    'nature', 'item_number', 'name', 'description',
+    'company_name', 'supplier_name', 'supplier_erp_id', 'account_number', 'cost_center_code', 'run_build',
     'analytics:default', 'analytics:ppe_type', 'analytics:investment_type', 'analytics:priority', 'owner_it_email',
-  ], 'a CAPEX file: the criteria as dimension columns, after run_build');
-  const capexRow = buildBudgetExport({
-    scope: 'capex', language: 'en', years: [YEAR], columns: ['budget'], detail: 'yearly', dimensionCodes: ['ppe_type', 'priority'],
-    lines: [line({ analytics: { ppe_type: 'Hardware', priority: 'High' } })],
+  ], 'one file for both natures: nature first, every enabled dimension after run_build');
+  const both = buildBudgetExport({
+    language: 'en', years: [YEAR], columns: ['budget'], detail: 'yearly', dimensions,
+    lines: [
+      line({ nature: 'capex', itemNumber: 120, legacyNumber: 'CPX-4', description: 'Racks', analytics: { default: 'Infra', ppe_type: 'Hardware', priority: 'High' } }),
+      // An OPEX line that keeps a value on a CAPEX dimension (set while it applied to both): not written.
+      line({ analytics: { default: 'Apps', priority: 'Low' } }),
+    ],
   });
-  const cell = (header: string) => capexRow.rows[0][capexRow.headers.indexOf(header)];
-  assert.deepEqual([cell('analytics:ppe_type'), cell('analytics:priority')], ['Hardware', 'High'], 'the value names');
+  const cell = (row: number, header: string) => both.rows[row][both.headers.indexOf(header)];
+  assert.deepEqual(
+    ['nature', 'item_number', 'description', 'analytics:default', 'analytics:ppe_type', 'analytics:priority'].map((header) => cell(0, header)),
+    ['capex', 'BL-120', '', 'Infra', 'Hardware', 'High'],
+    'a CAPEX line: its nature, its BL number, no description (until lot U) and the value names',
+  );
+  assert.deepEqual(
+    ['nature', 'item_number', 'analytics:default', 'analytics:priority'].map((header) => cell(1, header)),
+    ['opex', 'BL-3', 'Apps', ''],
+    'an OPEX line: no value on a dimension of the other nature',
+  );
   const built = buildBudgetExport({
-    scope: 'opex', language: 'en', years: [YEAR], columns: ['budget'], detail: 'months', lines: [], dimensionCodes: ['nature'],
+    language: 'en', years: [YEAR], columns: ['budget'], detail: 'months', lines: [], dimensions: [{ code: 'nature', appliesTo: null }],
   });
   assert.equal(built.rows.length, 0);
-  assert.equal(built.headers[0], 'item_number');
+  assert.equal(built.headers[0], 'nature');
+  assert.equal(built.headers[1], 'item_number');
   assert.ok(built.headers.includes('analytics:nature'));
   assert.ok(built.headers.includes('budget_2026_01'));
   assert.equal(built.headers[built.headers.length - 1], 'kanap_token');
   assert.deepEqual(parseAmountYears('', 2026), [2025, 2026, 2027]);
   assert.deepEqual(parseFileColumns('actual,budget', ['revision']), ['budget', 'actual']);
   const sample = buildBudgetExport({
-    scope: 'opex', language: 'en', years: [2026, 2027, 2028],
+    language: 'en', years: [2026, 2027, 2028],
     columns: ['budget', 'revision', 'forecast', 'actual', 'landing'],
-    detail: 'months', lines: [line({ notes: 'A ordinary note for the row size.' })], dimensionCodes: [],
+    detail: 'months', lines: [line({ notes: 'A ordinary note for the row size.' })], dimensions: [],
   });
   const csv = writeCsv({ language: 'en', headers: sample.headers, rows: sample.rows });
   const rowBytes = Buffer.byteLength(csv.split('\n')[1] ?? '', 'utf8');
@@ -503,11 +523,16 @@ async function testExportShape() {
   assert.equal(kept.includeDisabled, undefined);
 }
 
-async function planOf(scope: BudgetFileScope, text: string, stored: StoredLine[], options: { cat?: BudgetCatalog; createSuppliers?: boolean; canCreateSuppliers?: boolean } = {}) {
-  const read = await readBudgetCsv(text, { scope, language: 'en', dimensionCodes: [] });
+async function planOf(
+  scope: BudgetFileScope,
+  text: string,
+  stored: StoredLine[],
+  options: { cat?: BudgetCatalog; createSuppliers?: boolean; canCreateSuppliers?: boolean; natures?: BudgetNature[] } = {},
+) {
+  const read = await readBudgetCsv(text, { language: 'en', dimensionCodes: [] });
   return planBudgetFile({
-    scope, read, catalog: options.cat ?? catalog(), stored,
-    names: stored.map((item) => ({ itemNumber: item.itemNumber, name: item.name, supplierId: item.supplierId })),
+    scope, natures: options.natures ?? [scope], read, catalog: options.cat ?? catalog(), stored,
+    names: stored.map((item) => ({ nature: item.nature, itemNumber: item.itemNumber, name: item.name, supplierId: item.supplierId })),
     createSuppliers: options.createSuppliers ?? false,
     canCreateSuppliers: options.canCreateSuppliers ?? false,
     currentYear: YEAR,
@@ -540,6 +565,7 @@ async function testPlan() {
   });
   assert.equal(created.report.ok, true, JSON.stringify(created.report.errors));
   assert.equal(created.plans[0].creating, true);
+  assert.equal(created.plans[0].nature, 'opex', 'a file without a nature column: the route\'s');
   assert.equal(created.plans[0].body.product_name, 'Widget');
   assert.equal(created.plans[0].body.paying_company_id, 'c1');
   assert.equal(created.plans[0].body.account_id, 'a1');
@@ -556,11 +582,236 @@ async function testPlan() {
   assert.deepEqual(whole, { start: '2026-03-01', end: '2026-12-31' });
 }
 
+
+/* ---- One file for both natures (lot C1b) ---- */
+
+const BOTH: BudgetNature[] = ['opex', 'capex'];
+
+/** An OPEX line BL-3 (OPX-3) and a CAPEX line BL-120 (CPX-4), with the company and accounts a new line needs. */
+function natureFixture() {
+  const opexLine = line();
+  const capexLine = line({ id: 'line-2', nature: 'capex', itemNumber: 120, legacyNumber: 'CPX-4', name: 'Racks' });
+  const cat = catalog({
+    companies: [{ id: 'c1', name: 'Acme', coaId: 'chart', disabledAt: null }],
+    accounts: [
+      { id: 'a1', number: '6100', coaId: 'chart', disabledAt: null, nature: 'opex' },
+      { id: 'a2', number: '2100', coaId: 'chart', disabledAt: null, nature: 'capex' },
+    ],
+  });
+  return { opexLine, capexLine, stored: [opexLine, capexLine], cat };
+}
+
+const rowErrors = (report: { errors: Array<{ line: number; column: string | null; message: string }> }) =>
+  report.errors.map((error) => [error.line, error.column, error.message]);
+
+/** The `nature` column: required on a new line, the line's own when blank, never changed by a file. */
+async function testNatureColumn() {
+  const { stored, cat } = natureFixture();
+  const header = 'nature,item_number,name,company_name,account_number,currency\n';
+  const mixed = await planOf('opex', `${header}opex,,Widget,Acme,6100,EUR\ncapex,,Server,Acme,2100,EUR\nCAPEX,BL-120,Racks v2,,,\n,BL-3,Widget Pro,,,\n`, stored, {
+    cat, natures: BOTH,
+  });
+  assert.equal(mixed.report.ok, true, JSON.stringify(mixed.report.errors));
+  assert.deepEqual(mixed.plans.map((plan) => [plan.line, plan.nature, plan.creating]), [
+    [2, 'opex', true], [3, 'capex', true], [4, 'capex', false], [5, 'opex', false],
+  ], 'each line written with its own nature; a blank cell keeps the line\'s');
+  assert.equal(mixed.plans[2].body.product_name, 'Racks v2', 'the title of a CAPEX line is its product_name');
+
+  const refused = await preflight('opex', [
+    header.trim(),
+    ',,No nature,Acme,6100,EUR',
+    'service,,Odd,Acme,6100,EUR',
+    '-,,Widget,Acme,6100,EUR',
+    'opex,BL-120,Racks,,,',
+    'capex,OPX-3,Widget,,,',
+  ].join('\n'), stored, { cat, natures: BOTH });
+  assert.deepEqual(rowErrors(refused), [
+    [2, 'nature', 'nature is required.'],
+    [3, 'nature', "nature 'service' is not a value. Use opex or capex."],
+    [4, 'nature', 'nature cannot be cleared.'],
+    [5, 'nature', natureChangeMessage('BL-120', 'capex', 'opex')],
+    [6, 'nature', natureChangeMessage('OPX-3 (BL-3)', 'opex', 'capex')],
+  ]);
+  assert.equal(natureChangeMessage('BL-120', 'capex', 'opex'), 'BL-120 is a CAPEX line, not an OPEX line. A file does not change the type of a line.');
+
+  // A file of before lot C1b (no nature column): every line is of the route's nature.
+  const old = await preflight('opex', 'item_number,name,currency\nCPX-4,Racks,EUR\nOPX-3,Widget,EUR\n', stored, { cat, natures: BOTH });
+  assert.deepEqual(rowErrors(old), [[2, 'item_number', natureChangeMessage('CPX-4 (BL-120)', 'capex', 'opex')]], 'a CAPEX line in a file of the OPEX list');
+  assert.equal(old.changes.unchanged, 1);
+}
+
+/** `BL-n`, a bare number (its BL number), `OPX-n` and `CPX-n` (the numbers of before lot C1b). */
+async function testItemNumbers() {
+  const { opexLine, capexLine, stored, cat } = natureFixture();
+  const header = 'nature,item_number,name\n';
+  for (const [ref, nature, expected] of [
+    ['BL-3', 'opex', opexLine], ['bl-3', 'opex', opexLine], ['3', 'opex', opexLine], ['OPX-3', 'opex', opexLine],
+    ['BL-120', 'capex', capexLine], ['120', 'capex', capexLine], ['CPX-4', 'capex', capexLine], ['cpx-4', 'capex', capexLine],
+  ] as Array<[string, BudgetNature, StoredLine]>) {
+    const report = await preflight('opex', `${header}${nature},${ref},${expected.name}\n`, stored, { cat, natures: BOTH });
+    assert.equal(report.ok, true, `${ref}: ${JSON.stringify(report.errors)}`);
+    assert.deepEqual(report.snapshot.lines.map((item) => item.id), [expected.id], `${ref} names ${expected.id}`);
+  }
+  // A CPX number is not a BL number, and the reverse.
+  const missing = await preflight('capex', 'item_number,name\nCPX-120,Racks\nOPX-120,Racks\n', stored, { cat, natures: BOTH });
+  assert.deepEqual(rowErrors(missing), [
+    [2, 'item_number', "item_number 'CPX-120' does not match a line."],
+    [3, 'item_number', "item_number 'OPX-120' does not match a line."],
+  ]);
+  // A bare number keeps its former meaning in a file without a nature column: on the CAPEX list
+  // its CPX number, on the OPEX list the OPEX line's number. With the column, it is a BL number.
+  for (const [scope, text, expected] of [
+    ['capex', 'item_number,name\n4,Racks\n', capexLine],
+    ['opex', 'item_number,name\n3,Widget\n', opexLine],
+    ['capex', 'nature,item_number,name\ncapex,120,Racks\n', capexLine],
+    ['opex', 'nature,item_number,name\nopex,3,Widget\n', opexLine],
+  ] as Array<[BudgetFileScope, string, StoredLine]>) {
+    const report = await preflight(scope, text, stored, { cat, natures: BOTH });
+    assert.deepEqual(report.snapshot.lines.map((item) => item.id), [expected.id], `${scope}: ${text.split('\n')[1]} (${JSON.stringify(report.errors)})`);
+  }
+  const bareCpx = await preflight('capex', 'item_number,name\n120,Racks\n', stored, { cat, natures: BOTH });
+  assert.deepEqual(rowErrors(bareCpx), [[2, 'item_number', "item_number '120' does not match a line."]], 'on the CAPEX list of before, 120 is CPX-120');
+  const deletedCpx = await preflight('capex', 'item_number,name,kanap_token\n9,Gone,v1\n', stored, { cat, natures: BOTH });
+  assert.deepEqual(rowErrors(deletedCpx), [[2, 'item_number', 'CPX-9 was deleted since the export.']], 'named as before');
+  // A CAPEX line moved from OPEX keeps its OPX number (lot M): found by it, still a CAPEX line.
+  const moved = line({ id: 'line-9', nature: 'capex', itemNumber: 9, legacyNumber: 'OPX-9', name: 'Moved' });
+  const byOpx = await preflight('capex', 'item_number,name\nOPX-9,Moved\n', [moved], { cat, natures: BOTH });
+  assert.equal(byOpx.ok, true, JSON.stringify(byOpx.errors));
+  // A line named in a file without a nature column, of the other nature: named as the file names it.
+  const otherList = await preflight('opex', 'item_number,name\nCPX-4,Racks\n', stored, { cat, natures: BOTH });
+  assert.deepEqual(rowErrors(otherList), [[2, 'item_number', natureChangeMessage('CPX-4 (BL-120)', 'capex', 'opex')]]);
+  const twice = await preflight('opex', `${header}opex,BL-3,Widget\nopex,OPX-3,Widget\n`, stored, { cat, natures: BOTH });
+  assert.deepEqual(rowErrors(twice), [[3, 'item_number', 'item_number OPX-3 and BL-3 on line 2 are the same line, BL-3.']]);
+  assert.deepEqual(['x', 'BL-0', 'PRJ-3', 'BL-'].map((raw) => parseItemNumber({ kind: 'value', text: raw }).kind), ['invalid', 'invalid', 'invalid', 'invalid']);
+  assert.deepEqual(parseItemNumber({ kind: 'value', text: ' 12 ' }), { kind: 'number', prefix: 'BL', n: 12, raw: '12', ref: 'BL-12' }, 'a bare number is a BL number');
+}
+
+/** A line of a nature the caller may not import: refused with the right it needs; nothing of it is read. */
+async function testNatureRights() {
+  const { stored, cat } = natureFixture();
+  const file = 'nature,item_number,name,company_name,account_number,currency\nopex,BL-3,Widget Pro,,,\ncapex,BL-120,Racks v2,,,\ncapex,,Server,Acme,2100,EUR\n';
+  const single = await planOf('opex', file, stored.filter((item) => item.nature === 'opex'), { cat });
+  assert.equal(single.report.ok, false);
+  assert.deepEqual(rowErrors(single.report), [
+    [3, 'nature', natureRightMessage('capex')],
+    [4, 'nature', natureRightMessage('capex')],
+  ], 'each CAPEX line names the right it needs');
+  assert.equal(natureRightMessage('capex'), 'Importing CAPEX lines needs the Admin level on CAPEX.');
+  assert.deepEqual(single.report.snapshot.lines.map((item) => item.id), ['line-1'], 'no CAPEX line is read');
+  const both = await planOf('opex', file, stored, { cat, natures: BOTH });
+  assert.equal(both.report.ok, true, JSON.stringify(both.report.errors));
+  assert.deepEqual(both.plans.map((plan) => plan.nature), ['opex', 'capex', 'capex']);
+  // On the CAPEX list, an OPEX line needs the OPEX right.
+  const capexRoute = await preflight('capex', file, stored, { cat });
+  assert.deepEqual(rowErrors(capexRoute).map((error) => error[0]), [2], 'the OPEX line of a file loaded on the CAPEX list');
+  assert.equal(capexRoute.errors[0].message, natureRightMessage('opex'));
+  // An OPX or CPX number of a nature the caller may not import: the right it needs, from the prefix
+  // alone, whether such a line exists or not (nothing of that nature is read).
+  for (const [scope, natures, text, message] of [
+    ['opex', ['opex'], 'item_number,name\nCPX-4,Racks\nCPX-99,Nothing\n', 'is a CAPEX line: importing it needs the Admin level on CAPEX.'],
+    ['capex', ['capex'], 'item_number,name\nOPX-3,Widget\nOPX-99,Nothing\n', 'is an OPEX line: importing it needs the Admin level on OPEX.'],
+  ] as Array<[BudgetFileScope, BudgetNature[], string, string]>) {
+    const report = await preflight(scope, text, stored, { cat, natures });
+    assert.deepEqual(rowErrors(report).map((error) => error[2]), text.split('\n').slice(1, 3).map((row) => `${row.split(',')[0]} ${message}`), `${scope} list`);
+    assert.deepEqual(report.snapshot.lines, [], `${scope} list: no line read`);
+  }
+  assert.equal(prefixRightMessage('CPX-4', 'capex'), 'CPX-4 is a CAPEX line: importing it needs the Admin level on CAPEX.');
+}
+
+/** Dimensions by the line's nature: a dimension of the other nature stays empty; a required one binds its nature only. */
+async function testDimensionsByNature() {
+  const { stored, cat: base } = natureFixture();
+  const cat = catalog({
+    ...base,
+    dimensions: [
+      { code: 'menu', name: 'Menu', required: true, axisName: 'Menu', appliesTo: 'opex', values: [{ id: 'm1', name: 'Fromage', disabledAt: null }] },
+      { code: 'priority', name: 'Priority', required: true, axisName: 'Priority', appliesTo: 'capex', values: [{ id: 'p1', name: 'High', disabledAt: null }] },
+      { code: 'nature', name: 'Nature', required: false, axisName: 'Nature', appliesTo: null, values: [{ id: 'n1', name: 'Licences', disabledAt: null }] },
+    ],
+  });
+  const options = { cat, natures: BOTH, dimensions: ['menu', 'priority', 'nature'] };
+  const header = 'nature,item_number,name,company_name,account_number,currency,analytics:menu,analytics:priority,analytics:nature\n';
+  const fine = await preflight('opex', `${header}opex,,Widget,Acme,6100,EUR,Fromage,,Licences\ncapex,,Server,Acme,2100,EUR,,High,Licences\n`, [], options);
+  assert.equal(fine.ok, true, `each line needs the required dimensions of its own nature: ${JSON.stringify(fine.errors)}`);
+  const refused = await preflight('opex', [
+    header.trim(),
+    'opex,,Widget,Acme,6100,EUR,Fromage,High,',
+    'capex,,Server,Acme,2100,EUR,Fromage,High,',
+    'capex,BL-120,Racks,,,,-,,',
+    'capex,,Bare,Acme,2100,EUR,,,',
+  ].join('\n'), stored, options);
+  assert.deepEqual(rowErrors(refused), [
+    [2, 'analytics:priority', 'The Priority dimension is for CAPEX lines only. Leave it out.'],
+    [3, 'analytics:menu', 'The Menu dimension is for OPEX lines only. Leave it out.'],
+    [4, 'analytics:menu', 'The Menu dimension is for OPEX lines only. Leave it out.'],
+    [5, 'analytics:priority', 'The Priority dimension is required. Choose a value.'],
+  ]);
+}
+
+/** The freeze of a line's own nature: a year frozen for CAPEX only stops the CAPEX lines, not the OPEX ones. */
+async function testFreezeByNature() {
+  const { opexLine, capexLine, cat } = natureFixture();
+  const stored = [line({ ...opexLine, versions: withJanuary(10000n) }), line({ ...capexLine, versions: withJanuary(10000n) })];
+  const file = 'nature,item_number,name,budget_2026\nopex,BL-3,Widget,200.00\ncapex,BL-120,Racks,200.00\n';
+  const capexFrozen = await preflight('opex', file, stored, { cat: catalog({ ...cat, frozen: ['capex:2026:budget'] }), natures: BOTH });
+  assert.deepEqual(rowErrors(capexFrozen), [[3, 'budget_2026', 'Budget for 2026 is frozen.']]);
+  const opexFrozen = await preflight('opex', file, stored, { cat: catalog({ ...cat, frozen: ['opex:2026:budget'] }), natures: BOTH });
+  assert.deepEqual(rowErrors(opexFrozen), [[2, 'budget_2026', 'Budget for 2026 is frozen.']]);
+}
+
+/** The duplicate hint compares a new line with the lines of its own nature (OPEX by name and supplier, CAPEX by name). */
+async function testDuplicatesByNature() {
+  const { stored, cat } = natureFixture();
+  const header = 'nature,item_number,name,company_name,account_number,currency\n';
+  const report = await preflight('opex', [
+    header.trim(),
+    'capex,,Widget,Acme,2100,EUR',
+    'opex,,Racks,Acme,6100,EUR',
+    'capex,,Racks,Acme,2100,EUR',
+    'opex,,Twin,Acme,6100,EUR',
+    'capex,,Twin,Acme,2100,EUR',
+    'capex,,Twin,Acme,2100,EUR',
+  ].join('\n'), stored, { cat, natures: BOTH });
+  assert.equal(report.ok, true, JSON.stringify(report.errors));
+  assert.deepEqual(report.warnings.duplicates, [
+    { line: 4, message: 'row 4 looks like BL-120' },
+    { line: 7, message: 'row 7 looks like row 6' },
+  ]);
+}
+
+/** Until lot U the description of a CAPEX line is neither read nor written: a filled cell is ignored with a warning. */
+async function testCapexDescriptionIgnored() {
+  const { stored, cat } = natureFixture();
+  const header = 'nature,item_number,name,description,company_name,account_number,currency\n';
+  const planned = await planOf('opex', `${header}capex,,Server,A server,Acme,2100,EUR\ncapex,BL-120,Racks,-,,,\nopex,BL-3,Widget,Licences,,,\n`, stored, {
+    cat, natures: BOTH,
+  });
+  assert.equal(planned.report.ok, true, JSON.stringify(planned.report.errors));
+  assert.deepEqual(planned.report.warnings.ignoredCells, [
+    { line: 2, column: 'description', message: CAPEX_DESCRIPTION_IGNORED },
+    { line: 3, column: 'description', message: CAPEX_DESCRIPTION_IGNORED },
+  ]);
+  assert.equal(CAPEX_DESCRIPTION_IGNORED, 'description is ignored on a CAPEX line. Leave the cell empty.');
+  assert.deepEqual(planned.plans.map((plan) => [plan.nature, 'description' in plan.body]), [['capex', false], ['opex', true]], 'nothing written on the CAPEX lines');
+  assert.deepEqual([planned.report.changes.unchanged, planned.report.changes.updated, planned.report.changes.created], [1, 1, 1], 'Racks unchanged');
+}
+
+/** A text the app stored with a line break at its end reads back unchanged: the cell and the stored value are trimmed alike. */
+async function testTrailingLineBreak() {
+  const stored = line({ notes: 'test\n', description: '  Monitoring ' });
+  const built = buildBudgetExport({ language: 'en', years: [YEAR], columns: ['budget'], detail: 'yearly', lines: [stored], dimensions: [] });
+  const csv = writeCsv({ language: 'en', headers: built.headers, rows: built.rows });
+  const report = await preflight('opex', csv, [stored]);
+  assert.equal(report.ok, true, JSON.stringify(report.errors));
+  assert.deepEqual([report.changes.unchanged, report.changes.updated], [1, 0], 'an export read back changes nothing');
+  const edited = await planOf('opex', 'item_number,name,notes\nBL-3,Widget,test 2\n', [stored]);
+  assert.deepEqual(edited.plans.map((plan) => plan.body), [{ notes: 'test 2' }], 'a real change still writes');
+}
+
 async function main() {
   await testTokenLanguages();
   await testDecimalMarkParameter();
   await testOldFiles();
-  await testOtherTypeDimensionHeader();
   await testRoundTrip();
   await testAmounts();
   await testIdentity();
@@ -571,6 +822,14 @@ async function main() {
   await testRequiredDimension();
   await testExportShape();
   await testPlan();
+  await testNatureColumn();
+  await testItemNumbers();
+  await testNatureRights();
+  await testDimensionsByNature();
+  await testFreezeByNature();
+  await testDuplicatesByNature();
+  await testTrailingLineBreak();
+  await testCapexDescriptionIgnored();
   console.log('budget-file.spec: ok');
 }
 

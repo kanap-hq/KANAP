@@ -444,9 +444,9 @@ The Relations tab links this OPEX item to related objects: Projects, Application
 
 **Export CSV** and **Import CSV** sit in the toolbar of the OPEX list. Both need administration rights on OPEX (`opex:admin`).
 
-**Export CSV** writes the OPEX budget file for the lines the list shows. **Import CSV** reads a file back: it is checked first, and nothing is written until you click **Load**.
+**Export CSV** writes the budget file of the lines the list shows, as `budget.csv`. **Import CSV** reads a file back: it is checked first, and nothing is written until you click **Load**.
 
-The file holds one row per line, the line's details, its amounts as columns and `kanap_token`. [Load a budget from a spreadsheet](budget-file.md) describes the columns, what a cell means, and the two import steps.
+The file holds one row per line: its `nature` (`opex` here), its reference `BL-n`, the line's details, its amounts as columns and `kanap_token`. The same file can also hold CAPEX lines, which needs administration rights on CAPEX too. A file without a `nature` column, exported by an earlier version, is read as OPEX lines on this list. [Load a budget from a spreadsheet](budget-file.md) describes the columns, what a cell means, and the two import steps.
 
 ---
 

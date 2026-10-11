@@ -4,14 +4,14 @@ La plupart des équipes préparent leur budget dans un tableur : une ligne par p
 
 Le fichier budgétaire fait le lien entre les deux. Exportez les postes, modifiez les cellules qui vous intéressent dans Excel ou LibreOffice, puis importez le fichier. KANAP compare chaque cellule avec ce qu'il contient et n'écrit que ce qui a changé.
 
-Il y a un fichier par liste. La liste OPEX exporte et importe le fichier OPEX, la liste CAPEX le fichier CAPEX. Les deux fichiers portent les mêmes colonnes et suivent les mêmes règles.
+Un seul fichier contient les deux types de poste. Sa colonne `nature` indique si une ligne est un poste OPEX ou CAPEX, et chaque ligne est vérifiée selon les règles de son propre type. La liste OPEX exporte ses postes OPEX et la liste CAPEX ses postes CAPEX, dans la même présentation. Les deux listes importent un fichier qui contient les deux.
 
 ## Où la trouver
 
 - Chemin : **Gestion budgétaire > OPEX**, ou **Gestion budgétaire > CAPEX**
 - Export : **Exporter CSV** dans la barre d'outils de la liste
 - Import : **Importer CSV** dans la même barre d'outils
-- Autorisations : les deux boutons demandent des droits d'administration sur cette liste (`opex:admin` ou `capex:admin`)
+- Autorisations : les deux boutons demandent des droits d'administration sur cette liste (`opex:admin` ou `capex:admin`). Un fichier qui contient des postes OPEX et CAPEX demande les deux
 
 ## Export
 
@@ -27,7 +27,7 @@ Il y a un fichier par liste. La liste OPEX exporte et importe le fichier OPEX, l
 
 3. Cliquez sur le bouton en bas de la fenêtre. Il nomme ce que le fichier contiendra : **Exporter 120 postes filtrés**, **Exporter tous les postes**, **Exporter 3 412 postes**, etc.
 
-Le fichier est écrit dans la langue d'affichage de l'écran.
+Le fichier est enregistré sous le nom `budget.csv`, depuis l'une ou l'autre liste, et écrit dans la langue d'affichage de l'écran.
 
 | Langue | Séparateur | Montants | Dates |
 |---|---|---|---|
@@ -43,14 +43,13 @@ Un fichier contient une ligne par poste : les colonnes de détail, puis les colo
 
 ### Colonnes de détail
 
-Elles sont identiques dans les deux fichiers, sauf les colonnes propres au type en début de ligne.
-
-**OPEX**
+Les colonnes de détail sont les mêmes pour les deux types de poste.
 
 | Colonne | Contenu | Sur un nouveau poste |
 |---|---|---|
-| `item_number` | Le numéro du poste : `OPX-12` ou `12` | Vide : la ligne ajoute un poste |
-| `name` | Nom du produit | Obligatoire |
+| `nature` | `opex` ou `capex`, le type de poste | Obligatoire. Un fichier sans cette colonne est lu comme des postes de la liste sur laquelle vous l'importez |
+| `item_number` | La référence du poste : `BL-12`, ou `12`. Les numéros `OPX-12` et `CPX-3` des fichiers antérieurs sont lus aussi | Vide : la ligne ajoute un poste |
+| `name` | Le nom du produit d'un poste OPEX, le titre d'un investissement CAPEX | Obligatoire |
 | `description` | La description longue | Facultative |
 | `company_name` | Société payeuse | Obligatoire sauf si le poste a un centre de coûts |
 | `supplier_name` | Nom du fournisseur | Facultatif |
@@ -58,7 +57,7 @@ Elles sont identiques dans les deux fichiers, sauf les colonnes propres au type 
 | `account_number` | Numéro de compte, dans le plan comptable de la société payeuse | Obligatoire |
 | `cost_center_code` | Code du centre de coûts. Un groupe est refusé | Facultatif |
 | `run_build` | `run` ou `build` | Facultatif |
-| `analytics:<code>` | Le nom de la valeur dans la dimension dont c'est le code. Une colonne par dimension activée utilisée pour les lignes OPEX, dimension par défaut incluse | Facultatif, sauf pour une dimension obligatoire. Une valeur inexistante est créée par le chargement |
+| `analytics:<code>` | Le nom de la valeur dans la dimension dont c'est le code, sans tenir compte de la casse. Une colonne par dimension activée, dimension par défaut incluse. Une dimension utilisée pour un seul type de poste ne prend une valeur que sur les lignes de ce type et reste vide sur les autres. Le type d'immobilisation, le type d'investissement et la priorité d'un poste CAPEX sont dans `analytics:ppe_type`, `analytics:investment_type` et `analytics:priority`, par exemple `Hardware`, `Business growth` ou `High` | Facultatif, sauf pour une dimension obligatoire du type du poste, comme les trois dimensions CAPEX sur un poste CAPEX. Une valeur inexistante est créée par le chargement |
 | `owner_it_email` | E-mail d'un utilisateur actif | Facultatif |
 | `owner_business_email` | E-mail d'un utilisateur actif | Facultatif |
 | `project` | Numéro de projet, par exemple `PRJ-3` | Facultatif |
@@ -67,26 +66,7 @@ Elles sont identiques dans les deux fichiers, sauf les colonnes propres au type 
 | `end_of_validity` | Le jour où le poste s'arrête | Aucune fin |
 | `notes` | Texte libre | Facultatif |
 
-**CAPEX**
-
-| Colonne | Contenu | Sur un nouveau poste |
-|---|---|---|
-| `item_number` | Le numéro du poste : `CPX-3` ou `3` | Vide : la ligne ajoute un poste |
-| `name` | Le titre de l'investissement | Obligatoire |
-| `company_name` | Société payeuse | Obligatoire sauf si le poste a un centre de coûts |
-| `supplier_name` | Nom du fournisseur | Facultatif |
-| `supplier_erp_id` | L'ID du fournisseur dans votre ERP | Facultatif |
-| `account_number` | Numéro de compte, dans le plan comptable de la société payeuse | Obligatoire |
-| `cost_center_code` | Code du centre de coûts. Un groupe est refusé | Facultatif |
-| `run_build` | `run` ou `build` | Facultatif |
-| `analytics:<code>` | Le nom de la valeur dans la dimension dont c'est le code, sans tenir compte de la casse. Une colonne par dimension activée utilisée pour les lignes CAPEX, dimension par défaut incluse. Le type d'immobilisation, le type d'investissement et la priorité sont dans `analytics:ppe_type`, `analytics:investment_type` et `analytics:priority`, par exemple `Hardware`, `Business growth` ou `High` | Facultatif, sauf pour une dimension obligatoire, comme les trois dimensions CAPEX. Une valeur inexistante est créée par le chargement |
-| `owner_it_email` | E-mail d'un utilisateur actif | Facultatif |
-| `owner_business_email` | E-mail d'un utilisateur actif | Facultatif |
-| `project` | Numéro de projet, par exemple `PRJ-3` | Facultatif |
-| `currency` | Code ISO à trois lettres, parmi les devises autorisées dans votre espace de travail | Obligatoire |
-| `effective_start` | Le jour où le poste commence | Le 1er janvier de la première année portant un montant sur la ligne, sinon de l'année en cours |
-| `end_of_validity` | Le jour où le poste s'arrête | Aucune fin |
-| `notes` | Texte libre | Facultatif |
+Sur un poste CAPEX, `description` n'est pas encore lue ni écrite : l'export la laisse vide, et une cellule remplie est ignorée avec un avertissement.
 
 ### Colonnes de montants
 
@@ -108,8 +88,8 @@ Ce sont les noms standard. Votre organisation peut renommer les cinq colonnes da
 
 ## Ce que signifie une cellule
 
-- Une cellule vide conserve la valeur enregistrée.
-- `-` efface un détail du poste : description, notes, nom et ID ERP du fournisseur, centre de coûts, run ou build, une valeur de dimension, un responsable, le projet, la fin de validité. Sur une colonne qu'un nouveau poste doit remplir, `-` est une erreur de ligne. Sur une dimension obligatoire, `-` est une erreur de ligne lorsque la ligne porte une valeur.
+- Une cellule vide conserve la valeur enregistrée. Une cellule `nature` vide conserve le type d'un poste existant.
+- `-` efface un détail du poste : description, notes, nom et ID ERP du fournisseur, centre de coûts, run ou build, une valeur de dimension, un responsable, le projet, la fin de validité. Sur une colonne qu'un nouveau poste doit remplir, et sur `nature`, `-` est une erreur de ligne. Sur une dimension obligatoire, `-` est une erreur de ligne lorsque la ligne porte une valeur.
 - `0` écrit zéro.
 - Un total annuel égal au total enregistré n'écrit rien. Un total différent est réparti sur la période de la colonne, exactement comme lorsque vous saisissez le total dans l'onglet **Budget**.
 - Une cellule de mois écrit ce mois, et marque la colonne comme modifiée à la main, comme un mois saisi dans l'onglet **Budget**.
@@ -120,13 +100,17 @@ Une colonne absente conserve toutes les valeurs enregistrées de cette colonne. 
 
 ## Ajouter et faire correspondre les postes
 
-- `item_number` rempli : ce poste est mis à jour. Vide : un nouveau poste est créé.
-- Il n'y a pas d'autre clé. Une nouvelle ligne qui ressemble à un poste existant, ou à une autre nouvelle ligne du même fichier, est un avertissement que vous pouvez ignorer.
+- `item_number` rempli : ce poste est mis à jour. Vide : un nouveau poste est créé, du type qu'indique sa cellule `nature`.
+- `item_number` contient la référence du poste, `BL-12`. Dans un fichier avec une colonne `nature`, un nombre seul est la même référence, sur les deux listes. Les numéros `OPX-12` et `CPX-3` des fichiers antérieurs désignent toujours leur poste. Nommer deux fois le même poste dans un fichier est une erreur de ligne.
+- Un poste garde son type. Une ligne qui désigne un poste existant avec l'autre `nature` est refusée, par exemple « BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line. »
+- Un fichier qui contient des postes OPEX et CAPEX demande des droits d'administration sur les deux. Sans l'un d'eux, chaque poste de ce type est refusé avec le droit qu'il demande, par exemple « Importing CAPEX lines needs the Admin level on CAPEX. » Les autres postes sont vérifiés comme d'habitude, et le fichier se charge une fois ces lignes retirées.
+- Chaque ligne est vérifiée selon son propre type : les dimensions et les valeurs qu'elle peut porter, son compte, les colonnes gelées et l'avertissement de doublon. Une colonne gelée pour CAPEX refuse une modification sur un poste CAPEX uniquement.
+- Il n'y a pas d'autre clé. Une nouvelle ligne qui ressemble à un poste existant de son type, ou à une autre nouvelle ligne du même type dans le fichier, est un avertissement que vous pouvez ignorer.
 - Les fournisseurs sont mis en correspondance par `supplier_erp_id` lorsqu'il est rempli, sinon par `supplier_name`. Un fournisseur nommé par le fichier et absent de KANAP est créé par le chargement lorsque **Créer les fournisseurs manquants** est cochée. Sans cette option, la vérification les liste et vous demande de les créer dans **Données de référence > Fournisseurs**.
 - Une valeur de dimension inexistante est créée par le chargement, et listée dans la vérification. Les comptes, les centres de coûts, les sociétés et les utilisateurs ne sont jamais créés : un élément inconnu est une erreur de ligne qui indique où l'ajouter.
-- Un fichier qui contient une colonne `analytics:<code>` pour une dimension réservée à l'autre type de ligne est refusé en entier, par exemple « The Recurrence dimension is for CAPEX lines only. Remove the analytics:recurrence column from this OPEX file. » L'export n'écrit aucune colonne pour une telle dimension : une valeur masquée sur une ligne n'est donc pas exportée, et un chargement la laisse en place. Le réglage se trouve dans [Dimensions analytiques](analytics.md#dimensions-opex-ou-capex).
+- Une valeur, ou `-`, sur une dimension réservée à l'autre type de ligne est une erreur de ligne sur sa cellule `analytics:<code>`, par exemple « The Recurrence dimension is for CAPEX lines only. Leave it out. » L'export laisse une telle cellule vide : une valeur masquée sur une ligne n'est donc pas exportée, et un chargement la laisse en place. Le réglage se trouve dans [Dimensions analytiques](analytics.md#dimensions-opex-ou-capex).
 - Une valeur utilisée pour l'autre type de ligne uniquement est une erreur de ligne sur sa cellule `analytics:<code>`, par exemple « Abonnements SaaS is for OPEX lines only. Pick a value for CAPEX lines. » Une ligne garde la valeur qu'elle porte déjà. Les valeurs que crée l'import sont utilisées pour OPEX et CAPEX. Le réglage se trouve dans [Dimensions analytiques](analytics.md#valeurs-opex-ou-capex).
-- Une nouvelle ligne doit avoir une valeur sur chaque dimension obligatoire de son type, avec le message « The Nature dimension is required. Choose a value. » sur la cellule `analytics:<code>`. Cela vaut lorsque la colonne manque dans le fichier, lorsque la cellule est vide et lorsqu'elle contient `-`. Une valeur que crée le chargement compte. Une ligne existante n'est refusée que pour un `-` qui effacerait la valeur qu'elle porte : une cellule vide ou une colonne absente la laisse telle quelle. Le réglage se trouve dans [Dimensions analytiques](analytics.md#dimensions-obligatoires).
+- Une nouvelle ligne doit avoir une valeur sur chaque dimension obligatoire de son propre type, avec le message « The Nature dimension is required. Choose a value. » sur la cellule `analytics:<code>`. Cela vaut lorsque la colonne manque dans le fichier, lorsque la cellule est vide et lorsqu'elle contient `-`. Une valeur que crée le chargement compte. Une ligne existante n'est refusée que pour un `-` qui effacerait la valeur qu'elle porte : une cellule vide ou une colonne absente la laisse telle quelle. Le réglage se trouve dans [Dimensions analytiques](analytics.md#dimensions-obligatoires).
 - Une ligne du fichier qui crée une ligne budgétaire, ou qui change son compte, est refusée lorsque le compte est réservé à l'autre type de ligne, avec le message « Account 6061 is for CAPEX lines only. » (ou OPEX). Une ligne budgétaire garde son compte actuel. Le réglage des comptes se trouve dans [Plans comptables et gestion des comptes](chart-of-accounts.md#comptes-opex-ou-capex).
 - Les projets sont mis en correspondance par leur numéro, par exemple `PRJ-3`.
 - Un poste terminé est un poste dont la `end_of_validity` est passée. Indiquez la date pour terminer un poste, ou écrivez `-` dans la cellule pour l'effacer et laisser le poste en cours. Il n'y a pas de colonne de statut.
@@ -141,7 +125,7 @@ Une colonne absente conserve toutes les valeurs enregistrées de cette colonne. 
 | **Erreurs** | Les lignes que le chargement refuse, par ligne du fichier avec la colonne lorsqu'elle est connue. Un fichier avec une seule erreur ne charge rien |
 | **Modifications** | Les postes à créer, les postes à mettre à jour et les postes que le fichier laisse tels quels |
 | **Modifiés dans KANAP depuis l'export** | Les postes modifiés par quelqu'un après votre export, avec qui et quand. Charger le fichier écrit vos valeurs à la place de ces modifications |
-| **Avertissements** | Une ligne qui ressemble à un autre poste, des colonnes que le fichier ignore |
+| **Avertissements** | Une ligne qui ressemble à un autre poste, des colonnes et des cellules que le fichier ignore |
 | **Créés par le chargement** | Les fournisseurs et les valeurs de dimension que le chargement ajouterait |
 
 3. Cliquez sur **Charger**. Le chargement écrit tout ou rien.
@@ -168,14 +152,17 @@ Un fichier CAPEX exporté avant que le type d'immobilisation, le type d'investis
 
 Exportez un nouveau fichier et reportez-y vos lignes.
 
+Un fichier OPEX ou CAPEX exporté avant l'ajout de la colonne `nature` est accepté. Ses lignes sont lues comme des postes de la liste sur laquelle vous l'importez, et ses numéros `OPX-12` et `CPX-3` désignent toujours leurs postes : importez un ancien fichier OPEX depuis la liste OPEX et un ancien fichier CAPEX depuis la liste CAPEX. Ses cellules `kanap_token` restent valides. Dans un tel fichier, un nombre seul garde son sens antérieur : sur la liste CAPEX, `3` est `CPX-3` ; sur la liste OPEX, c'est le numéro du poste OPEX.
+
+KANAP reconnaît la colonne `nature` à son nom, quelle que soit la casse. Dans un ancien fichier qui contient une colonne à vous nommée Nature, renommez-la avant l'import : KANAP lirait cette colonne comme le type de chaque poste et refuserait ses valeurs.
+
 ## Charger un budget complet
 
 Le fichier budgétaire contient des postes budgétaires. La société payeuse, le compte, le centre de coûts, le fournisseur et les utilisateurs nommés par un poste doivent exister d'abord. Une petite équipe les charge dans cet ordre :
 
 1. Un plan comptable et ses comptes, dans [Plans comptables](chart-of-accounts.md)
 2. Les sociétés, dans [Sociétés](companies.md)
-3. Le fichier OPEX, avec **Créer les fournisseurs manquants** cochée
-4. Le fichier CAPEX, avec **Créer les fournisseurs manquants** cochée
+3. Le fichier budgétaire, avec **Créer les fournisseurs manquants** cochée. Il contient les postes OPEX et CAPEX ensemble, ou vous chargez un fichier par type
 
 Une organisation plus grande ajoute le reste des données de référence entre les deux :
 
@@ -186,8 +173,7 @@ Une organisation plus grande ajoute le reste des données de référence entre l
 5. Les fournisseurs, dans [Fournisseurs](suppliers.md)
 6. Les valeurs de dimension, dans [Dimensions analytiques](analytics.md). Les dimensions elles-mêmes sont créées sur cette page
 7. Les calendriers de jours ouvrés, dans [Calendriers de jours ouvrés](working-day-calendars.md), une fois que des postes portent des quantités et des prix
-8. Le fichier OPEX
-9. Le fichier CAPEX
+8. Le fichier budgétaire, postes OPEX et CAPEX
 
 **Le plan comptable vient en premier.** Sur la page Plans comptables, cliquez sur **Nouveau**, donnez un code et un nom au plan, et choisissez **Tous les pays** sous **Utilisé pour**. Cliquez ensuite sur **Gérer les plans**, ouvrez le menu **⋯** du plan et cliquez sur **Définir par défaut pour les autres pays**. Une société sans plan comptable prend celui-ci, et c'est ainsi que les numéros de compte d'un fichier budgétaire sont résolus. Sélectionnez le plan sur la page, puis cliquez sur **Importer CSV** pour charger ses comptes.
 

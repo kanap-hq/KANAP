@@ -10,6 +10,8 @@
 // This module converts those shapes into the budget file layout at load time
 // and runs the two calls. Layout and rules:
 //   backend/src/spend/budget-file/columns.ts
+// One layout for both natures: a `nature` column first (`opex`, `capex`), then
+// `item_number` (a line's reference, `BL-n`), `name` and `description`.
 //
 // Files are written in English conventions (`,` separator, `.` decimal,
 // `YYYY-MM-DD` dates) and both routes are called with `language=en`.
@@ -18,13 +20,11 @@
 const FILE_COLUMNS = ['budget', 'revision', 'forecast', 'actual', 'landing'];
 
 /**
- * Detail columns before the dimension columns, per scope. The PP&E type, investment type and
- * priority of a CAPEX line are dimension columns (`analytics:<code>`), copied like the others.
+ * Detail columns before the dimension columns, the same for both natures. The PP&E type,
+ * investment type and priority of a CAPEX line are dimension columns (`analytics:<code>`), copied
+ * like the others.
  */
-const DETAIL_START = {
-  opex: ['item_number', 'name', 'description'],
-  capex: ['item_number', 'name'],
-};
+const DETAIL_START = ['nature', 'item_number', 'name', 'description'];
 
 const DETAIL_BEFORE_DIMENSIONS = [
   'company_name', 'supplier_name', 'supplier_erp_id', 'account_number', 'cost_center_code', 'run_build',
@@ -34,7 +34,7 @@ const DETAIL_AFTER_DIMENSIONS = [
   'owner_it_email', 'owner_business_email', 'project', 'currency', 'effective_start', 'end_of_validity', 'notes',
 ];
 
-/** Detail columns the source names differently. Everything else keeps its name. */
+/** Detail columns the source names differently. Everything else keeps its name. A CAPEX source row has no description. */
 const DETAIL_RENAME = {
   opex: { product_name: 'name', description: 'description' },
   capex: { description: 'name' },
@@ -122,13 +122,14 @@ export function endOfValidityOf(row, year) {
 }
 
 /**
- * The lines file of one scope (OPEX or CAPEX), from a source file's rows.
+ * The lines file of one scope (OPEX or CAPEX), from a source file's rows: every
+ * row's `nature` is the scope.
  *
  * `year` is Y, the calendar year the relative `y_*` columns are read against.
  * `defaultDimensionCode` is the tenant's default analytics dimension, which
  * receives the source's `analytics_category` values. `existingNumbers` maps a
- * line name to its `item_number`: a name found there is an update, anything
- * else is a new line (blank `item_number`).
+ * line name to its reference (`BL-n`): a name found there is an update,
+ * anything else is a new line (blank `item_number`).
  */
 export function buildLinesFile(scope, sourceRows, { year, defaultDimensionCode, existingNumbers } = {}) {
   if (scope !== 'opex' && scope !== 'capex') throw new Error(`Unknown scope '${scope}'.`);
@@ -144,7 +145,7 @@ export function buildLinesFile(scope, sourceRows, { year, defaultDimensionCode, 
     .sort((a, b) => a.year - b.year || FILE_COLUMNS.indexOf(a.column) - FILE_COLUMNS.indexOf(b.column));
 
   const header = [
-    ...DETAIL_START[scope],
+    ...DETAIL_START,
     ...DETAIL_BEFORE_DIMENSIONS,
     ...dimensions,
     ...DETAIL_AFTER_DIMENSIONS,
@@ -167,6 +168,7 @@ export function buildLinesFile(scope, sourceRows, { year, defaultDimensionCode, 
       const source = column === `analytics:${defaultDimensionCode}` ? 'analytics_category' : column;
       values.set(column, valueOf(row, source));
     }
+    values.set('nature', scope);
     values.set('item_number', numbers.get(name) ?? '');
     values.set('end_of_validity', endOfValidityOf(row, year));
     for (const amount of amounts) values.set(amount.header, valueOf(row, amount.source));
@@ -180,10 +182,11 @@ export function buildLinesFile(scope, sourceRows, { year, defaultDimensionCode, 
  * The monthly file of one scope, from the rows of 29-budget-rows.csv (both
  * scopes may be passed: rows of the other scope are ignored).
  *
- * One output row per line, with `item_number` from `numbersByName` (name ->
- * `item_number`). Rows whose item is not in that map are skipped: the caller
- * warns, as the old loader did. Only month headers are written: a yearly
- * header and the months of the same column and year never share a file.
+ * One output row per line, its `nature` the scope and its `item_number` from
+ * `numbersByName` (name -> reference, `BL-n`). Rows whose item is not in that
+ * map are skipped: the caller warns, as the old loader did. Only month headers
+ * are written: a yearly header and the months of the same column and year
+ * never share a file.
  */
 export function buildMonthlyFile(scope, budgetRows, { numbersByName } = {}) {
   if (scope !== 'opex' && scope !== 'capex') throw new Error(`Unknown scope '${scope}'.`);
@@ -220,7 +223,7 @@ export function buildMonthlyFile(scope, budgetRows, { numbersByName } = {}) {
     })
     .sort((a, b) => a.year - b.year || FILE_COLUMNS.indexOf(a.column) - FILE_COLUMNS.indexOf(b.column));
 
-  const header = ['item_number'];
+  const header = ['nature', 'item_number'];
   for (const group of groups) {
     for (let month = 1; month <= 12; month += 1) {
       header.push(`${group.column}_${group.year}_${PAD(month)}`);
@@ -229,7 +232,10 @@ export function buildMonthlyFile(scope, budgetRows, { numbersByName } = {}) {
 
   const out = order.map((number) => {
     const item = byNumber.get(number);
-    return header.map((column) => (column === 'item_number' ? number : item.get(column) ?? ''));
+    return header.map((column) => {
+      if (column === 'nature') return scope;
+      return column === 'item_number' ? number : item.get(column) ?? '';
+    });
   });
 
   return toCsv(header, out);
@@ -298,7 +304,7 @@ export async function loadBudgetFile({ request, scope, csvText, filename }) {
   if (scope !== 'opex' && scope !== 'capex') throw new Error(`Unknown scope '${scope}'.`);
   const bytes = Buffer.from(String(csvText ?? ''), 'utf8');
   const rows = countRows(String(csvText ?? ''));
-  const name = filename || `${scope}.csv`;
+  const name = filename || 'budget.csv';
   const base = scope === 'opex' ? '/spend-items/budget-file' : '/capex-items/budget-file';
   const query = '?language=en&createSuppliers=true';
 

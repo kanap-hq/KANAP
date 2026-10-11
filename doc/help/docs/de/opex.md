@@ -444,9 +444,9 @@ Der Tab Verknüpfungen verbindet diese OPEX-Position mit zugehörigen Objekten: 
 
 **CSV exportieren** und **CSV importieren** befinden sich in der Symbolleiste der OPEX-Liste. Beide erfordern Administrationsrechte auf OPEX (`opex:admin`).
 
-**CSV exportieren** schreibt die OPEX-Budgetdatei für die Positionen, die die Liste zeigt. **CSV importieren** liest eine Datei wieder ein: Sie wird zuerst geprüft, und nichts wird geschrieben, bevor Sie auf **Laden** klicken.
+**CSV exportieren** schreibt die Budgetdatei der Positionen, die die Liste zeigt, als `budget.csv`. **CSV importieren** liest eine Datei wieder ein: Sie wird zuerst geprüft, und nichts wird geschrieben, bevor Sie auf **Laden** klicken.
 
-Die Datei enthält eine Zeile pro Position, die Details der Position, ihre Beträge als Spalten und `kanap_token`. [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md) beschreibt die Spalten, die Bedeutung einer Zelle und die beiden Importschritte.
+Die Datei enthält eine Zeile pro Position: ihre `nature` (hier `opex`), ihre Referenz `BL-n`, die Details der Position, ihre Beträge als Spalten und `kanap_token`. Dieselbe Datei kann auch CAPEX-Positionen enthalten, was zusätzlich Administrationsrechte auf CAPEX erfordert. Eine Datei ohne Spalte `nature`, die eine frühere Version exportiert hat, wird in dieser Liste als OPEX-Positionen gelesen. [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md) beschreibt die Spalten, die Bedeutung einer Zelle und die beiden Importschritte.
 
 ## Status und Lebenszyklus
 

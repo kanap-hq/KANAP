@@ -47,7 +47,7 @@ Chaque espace de travail a aussi trois dimensions qui classent les lignes CAPEX.
 - Quand l'espace de travail avait déjà une dimension avec l'un de ces codes, cette dimension est conservée telle quelle et reçoit seulement les valeurs qui lui manquaient.
 - Une ligne CAPEX créée avant ces dimensions porte la valeur de son ancien type d'immobilisation, type d'investissement et priorité.
 - Elles fonctionnent comme toute autre dimension. Vous pouvez les renommer, renommer leurs valeurs, ajouter des valeurs, changer l'ordre, modifier leurs réglages, les désactiver ou les supprimer.
-- Le code donne son nom à la colonne de la dimension dans le fichier budgétaire CAPEX : `analytics:ppe_type`, `analytics:investment_type` et `analytics:priority`. Si vous changez un code, un fichier exporté avant le changement porte encore l'ancien nom de colonne et il est refusé avec « Unknown dimension ». Exportez un nouveau fichier. Voir [Charger un budget depuis un tableur](budget-file.md).
+- Le code donne son nom à la colonne de la dimension dans le fichier budgétaire : `analytics:ppe_type`, `analytics:investment_type` et `analytics:priority`. Si vous changez un code, un fichier exporté avant le changement porte encore l'ancien nom de colonne et il est refusé avec « Unknown dimension ». Exportez un nouveau fichier. Voir [Charger un budget depuis un tableur](budget-file.md).
 
 ---
 
@@ -176,11 +176,11 @@ Le champ **Utilisé pour** indique à quelles lignes budgétaires la dimension s
 | **OPEX uniquement** | Seules les lignes OPEX peuvent avoir une valeur |
 | **CAPEX uniquement** | Seules les lignes CAPEX peuvent avoir une valeur |
 
-Les écrans OPEX affichent les dimensions utilisées pour les lignes OPEX, et les écrans CAPEX celles utilisées pour les lignes CAPEX. Cela concerne le panneau **Propriétés** du poste, les colonnes, les filtres et la recherche rapide des listes, les colonnes du fichier budgétaire, les sélecteurs et les filtres de dimension des rapports (ils suivent le choix **OPEX** / **CAPEX** du rapport) et Plaid.
+Les écrans OPEX affichent les dimensions utilisées pour les lignes OPEX, et les écrans CAPEX celles utilisées pour les lignes CAPEX. Cela concerne le panneau **Propriétés** du poste, les colonnes, les filtres et la recherche rapide des listes, les sélecteurs et les filtres de dimension des rapports (ils suivent le choix **OPEX** / **CAPEX** du rapport) et Plaid. Le fichier budgétaire a une colonne pour chaque dimension activée, et chaque ligne ne prend de valeurs que sur les dimensions de son type de ligne.
 
 Une ligne garde la valeur qu'elle a déjà sur une dimension qui ne s'applique plus à son type de ligne. La valeur est masquée partout et réapparaît si vous rouvrez la dimension à ce type de ligne. Lorsque votre choix masque des valeurs, une note s'affiche sous le champ, par exemple « 8 lignes CAPEX ont une valeur pour cette dimension. Elles la gardent, masquée tant que la dimension est réservée aux lignes OPEX. »
 
-Donner à une ligne une valeur sur une dimension qui ne s'applique pas à elle est refusé, dans l'application, dans un fichier budgétaire et par l'API. Renvoyer la valeur que la ligne porte déjà ne change rien.
+Donner à une ligne une valeur sur une dimension qui ne s'applique pas à elle est refusé, dans l'application, dans un fichier budgétaire et par l'API. Dans l'application et par l'API, renvoyer la valeur que la ligne porte déjà ne change rien. Dans un fichier budgétaire, laissez cette cellule vide : l'export le fait.
 
 Une même valeur peut aussi être réservée à un seul type de ligne. Les deux réglages agissent à des niveaux différents. Par exemple, la dimension **Nature de coût** est utilisée pour **OPEX et CAPEX**, et sa valeur **Abonnements SaaS** est réservée à **OPEX uniquement** :
 
@@ -347,7 +347,7 @@ Les sept rapports budgétaires peuvent aussi être restreints à une valeur d'un
 
 Chargez ou mettez à jour les valeurs de toutes les dimensions depuis un seul fichier. Les dimensions se créent sur la page.
 
-Pour renseigner des valeurs sur les postes budgétaires depuis un fichier, utilisez les fichiers budgétaires OPEX et CAPEX. Dans ces fichiers, une colonne `analytics:<code>` porte chaque dimension, dimension par défaut incluse. Voir [Charger un budget depuis un tableur](budget-file.md).
+Pour renseigner des valeurs sur les postes budgétaires depuis un fichier, utilisez le fichier budgétaire. Une colonne `analytics:<code>` y porte chaque dimension activée, dimension par défaut incluse. Voir [Charger un budget depuis un tableur](budget-file.md).
 
 **Export** : cliquez sur **Exporter CSV**, puis sur **Exporter les données**. Le fichier liste les valeurs de toutes les dimensions, activées ou désactivées, dimension par dimension, les valeurs de chaque dimension dans son ordre. Le fichier n'a pas de colonne d'ordre. Pour un fichier vide avec les seuls en-têtes, utilisez **Télécharger le modèle** dans la boîte de dialogue d'import.
 

@@ -95,21 +95,22 @@ const CAPEX_ROW = {
   y_plus2_budget: '',
 };
 
-const OPEX_HEADER = 'item_number,name,description,company_name,supplier_name,supplier_erp_id,account_number,cost_center_code,run_build,analytics:default,analytics:nature,analytics:reference,owner_it_email,owner_business_email,project,currency,effective_start,end_of_validity,notes,budget_2025,landing_2025,budget_2026,revision_2026,actual_2026,landing_2026,budget_2027,revision_2027,kanap_token';
-const CAPEX_HEADER = 'item_number,name,company_name,supplier_name,supplier_erp_id,account_number,cost_center_code,run_build,analytics:default,analytics:nature,analytics:ppe_type,analytics:investment_type,analytics:priority,owner_it_email,owner_business_email,project,currency,effective_start,end_of_validity,notes,budget_2025,landing_2025,budget_2026,revision_2026,actual_2026,landing_2026,budget_2027,revision_2027,budget_2028,kanap_token';
+const OPEX_HEADER = 'nature,item_number,name,description,company_name,supplier_name,supplier_erp_id,account_number,cost_center_code,run_build,analytics:default,analytics:nature,analytics:reference,owner_it_email,owner_business_email,project,currency,effective_start,end_of_validity,notes,budget_2025,landing_2025,budget_2026,revision_2026,actual_2026,landing_2026,budget_2027,revision_2027,kanap_token';
+const CAPEX_HEADER = 'nature,item_number,name,description,company_name,supplier_name,supplier_erp_id,account_number,cost_center_code,run_build,analytics:default,analytics:nature,analytics:ppe_type,analytics:investment_type,analytics:priority,owner_it_email,owner_business_email,project,currency,effective_start,end_of_validity,notes,budget_2025,landing_2025,budget_2026,revision_2026,actual_2026,landing_2026,budget_2027,revision_2027,budget_2028,kanap_token';
 
-test('OPEX lines file: column order, dimension column, token last', () => {
+test('OPEX lines file: nature first, column order, dimension column, token last', () => {
   const csv = buildLinesFile('opex', [OPEX_ROW], { year: 2026, defaultDimensionCode: 'default', existingNumbers: new Map() });
-  const { header } = parse(csv);
+  const { header, rows } = parse(csv);
   assert.equal(header.join(','), OPEX_HEADER);
   assert.equal(header.at(-1), 'kanap_token');
+  assert.deepEqual([rows[0].nature, rows[0].name, rows[0].description], ['opex', 'Microsoft Enterprise', 'M365 E3']);
 });
 
-test('CAPEX lines file: column order, CAPEX has no description column, the criteria as dimension columns', () => {
+test('CAPEX lines file: the same detail columns, its nature, the criteria as dimension columns', () => {
   const csv = buildLinesFile('capex', [CAPEX_ROW], { year: 2026, defaultDimensionCode: 'default', existingNumbers: new Map() });
   const { header, rows } = parse(csv);
   assert.equal(header.join(','), CAPEX_HEADER);
-  assert.ok(!header.includes('description'));
+  assert.deepEqual([rows[0].nature, rows[0].name, rows[0].description], ['capex', 'SAP Cheddar Migration', ''], 'the source title is the name; no description');
   for (const former of ['ppe_type', 'investment_type', 'priority']) assert.ok(!header.includes(former), `no ${former} column`);
   assert.deepEqual(
     [rows[0]['analytics:ppe_type'], rows[0]['analytics:investment_type'], rows[0]['analytics:priority']],
@@ -170,12 +171,12 @@ test('cells holding a comma or a quote are quoted, inner quotes doubled', () => 
   assert.equal(rows[0].description, 'M365 E3, plus "GitHub" seats');
 });
 
-test('a line whose name already exists gets its item_number, a new one stays blank', () => {
-  const existing = new Map([['Microsoft Enterprise', 'OPX-7']]);
+test('a line whose name already exists gets its reference, a new one stays blank', () => {
+  const existing = new Map([['Microsoft Enterprise', 'BL-7']]);
   const { rows } = parse(buildLinesFile('opex', [OPEX_ROW, { ...OPEX_ROW, product_name: 'New line' }], {
     year: 2026, defaultDimensionCode: 'default', existingNumbers: existing,
   }));
-  assert.equal(rows[0].item_number, 'OPX-7');
+  assert.equal(rows[0].item_number, 'BL-7');
   assert.equal(rows[1].item_number, '');
 });
 
@@ -187,7 +188,7 @@ test('the CAPEX item_number of the source is ignored', () => {
 });
 
 test('monthly file: one row per item, measures mapped to file columns', () => {
-  const names = new Map([['Licences', 'OPX-1'], ['Support', 'OPX-2']]);
+  const names = new Map([['Licences', 'BL-1'], ['Support', 'BL-2']]);
   const rows = [
     { item_type: 'opex', item_name: 'Licences', year: '2026', measure: 'planned', period_start: '2026-01-01', period_end: '2026-12-31', jan: '100', feb: '0', mar: '', apr: '', may: '', jun: '', jul: '', aug: '', sep: '', oct: '', nov: '', dec: '' },
     { item_type: 'opex', item_name: 'Support', year: '2026', measure: 'expected_landing', period_start: '2026-01-01', period_end: '2026-06-30', jan: '1', feb: '2', mar: '3', apr: '4', may: '5', jun: '6', jul: '0', aug: '0', sep: '0', oct: '0', nov: '0', dec: '0' },
@@ -196,9 +197,8 @@ test('monthly file: one row per item, measures mapped to file columns', () => {
   ];
   const { header, rows: out } = parse(buildMonthlyFile('opex', rows, { numbersByName: names }));
   assert.equal(out.length, 2);
-  assert.deepEqual(header.slice(0, 1), ['item_number']);
-  assert.equal(out[0].item_number, 'OPX-1');
-  assert.equal(out[1].item_number, 'OPX-2');
+  assert.deepEqual(header.slice(0, 2), ['nature', 'item_number']);
+  assert.deepEqual(out.map((row) => [row.nature, row.item_number]), [['opex', 'BL-1'], ['opex', 'BL-2']]);
   assert.equal(out[0].budget_2026_01, '100');
   assert.equal(out[0].budget_2026_02, '0');
   assert.equal(out[0].budget_2026_03, '');
@@ -207,7 +207,7 @@ test('monthly file: one row per item, measures mapped to file columns', () => {
 });
 
 test('monthly file: storage keys and file names are both accepted', () => {
-  const names = new Map([['A', 'OPX-1']]);
+  const names = new Map([['A', 'BL-1']]);
   const row = (measure) => ({ item_type: 'opex', item_name: 'A', year: '2026', measure, jan: '1', feb: '', mar: '', apr: '', may: '', jun: '', jul: '', aug: '', sep: '', oct: '', nov: '', dec: '' });
   for (const [measure, column] of [['committed', 'revision'], ['forecast', 'forecast'], ['actual', 'actual'], ['budget', 'budget'], ['revision', 'revision'], ['landing', 'landing'], ['follow_up', 'actual']]) {
     const { rows } = parse(buildMonthlyFile('opex', [row(measure)], { numbersByName: names }));
@@ -217,11 +217,11 @@ test('monthly file: storage keys and file names are both accepted', () => {
 });
 
 test('monthly file: twelve month headers per column and year, never a yearly header', () => {
-  const names = new Map([['A', 'OPX-1']]);
+  const names = new Map([['A', 'BL-1']]);
   const row = { item_type: 'opex', item_name: 'A', year: '2026', measure: 'planned', jan: '1', feb: '', mar: '', apr: '', may: '', jun: '', jul: '', aug: '', sep: '', oct: '', nov: '', dec: '' };
   const { header } = parse(buildMonthlyFile('opex', [row], { numbersByName: names }));
-  assert.equal(header.length, 13);
-  assert.deepEqual(header.slice(1), Array.from({ length: 12 }, (_, i) => `budget_2026_${String(i + 1).padStart(2, '0')}`));
+  assert.equal(header.length, 14);
+  assert.deepEqual(header.slice(2), Array.from({ length: 12 }, (_, i) => `budget_2026_${String(i + 1).padStart(2, '0')}`));
   assert.ok(!header.some((column) => /^(budget|revision|forecast|actual|landing)_\d{4}$/.test(column)));
   assert.ok(!header.includes('name'));
   assert.ok(!header.includes('measure'));
@@ -229,7 +229,7 @@ test('monthly file: twelve month headers per column and year, never a yearly hea
 });
 
 test('monthly file: several years and measures group per year then per file column order', () => {
-  const names = new Map([['A', 'OPX-1']]);
+  const names = new Map([['A', 'BL-1']]);
   const row = (year, measure) => ({ item_type: 'opex', item_name: 'A', year, measure, jan: '1', feb: '1', mar: '1', apr: '1', may: '1', jun: '1', jul: '1', aug: '1', sep: '1', oct: '1', nov: '1', dec: '1' });
   const { header } = parse(buildMonthlyFile('opex', [
     row('2027', 'committed'), row('2026', 'planned'), row('2026', 'actual'),

@@ -444,9 +444,9 @@ L'onglet Relations lie ce poste OPEX aux objets associés : Projets, Application
 
 **Exporter CSV** et **Importer CSV** se trouvent dans la barre d'outils de la liste OPEX. Les deux demandent des droits d'administration sur OPEX (`opex:admin`).
 
-**Exporter CSV** écrit le fichier budgétaire OPEX pour les postes affichés par la liste. **Importer CSV** relit un fichier : il est d'abord vérifié, et rien n'est écrit avant que vous cliquiez sur **Charger**.
+**Exporter CSV** écrit le fichier budgétaire des postes affichés par la liste, sous le nom `budget.csv`. **Importer CSV** relit un fichier : il est d'abord vérifié, et rien n'est écrit avant que vous cliquiez sur **Charger**.
 
-Le fichier contient une ligne par poste, les détails du poste, ses montants en colonnes et `kanap_token`. [Charger un budget depuis un tableur](budget-file.md) décrit les colonnes, ce que signifie une cellule et les deux étapes de l'import.
+Le fichier contient une ligne par poste : sa `nature` (`opex` ici), sa référence `BL-n`, les détails du poste, ses montants en colonnes et `kanap_token`. Le même fichier peut aussi contenir des postes CAPEX, ce qui demande également des droits d'administration sur CAPEX. Un fichier sans colonne `nature`, exporté par une version antérieure, est lu comme des postes OPEX sur cette liste. [Charger un budget depuis un tableur](budget-file.md) décrit les colonnes, ce que signifie une cellule et les deux étapes de l'import.
 
 ## Statut et cycle de vie
 
