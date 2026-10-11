@@ -94,7 +94,7 @@ export class PortfolioRequestsController {
 
     const permissions = await this.permissionsSvc.listForRoles(roleIds, { manager });
     const tasksLevel = permissions.get('tasks');
-    if (!tasksLevel || RANK[tasksLevel] < RANK.member) {
+    if (!tasksLevel || (RANK[tasksLevel] ?? 0) < RANK.member) {
       throw new ForbiddenException('tasks:member permission is required');
     }
   }

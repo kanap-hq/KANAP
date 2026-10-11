@@ -195,7 +195,7 @@ export class PermissionsService {
       for (const [resource, level] of rolePerms.entries()) {
         const existing = merged.get(resource);
         // Union logic: keep the higher permission level
-        if (!existing || LEVEL_RANK[level] > LEVEL_RANK[existing]) {
+        if (!existing || (LEVEL_RANK[level] ?? 0) > (LEVEL_RANK[existing] ?? 0)) {
           merged.set(resource, level);
         }
       }
