@@ -495,7 +495,7 @@ El diálogo también pide:
   - **Dimensiones**: las dimensiones obligatorias para las líneas CAPEX, y los valores de la línea que son solo para líneas OPEX. Si la propia línea cambia de tipo, puede completarlos ahora o más tarde. A partir de un año posterior, la nueva línea necesita las dimensiones obligatorias, y los valores solo para líneas OPEX no se copian
   - **Motivo**: opcional, se guarda en el registro de auditoría de la línea
 
-El cambio se rechaza cuando la línea tiene importes en una columna congelada, de líneas OPEX o CAPEX, en los años que cambian. Descongele primero la columna, o haga empezar el cambio en un año posterior. Se ofrece un año posterior cuando la línea tiene presupuesto para ese año, empieza antes de él, sigue vigente el 1 de enero de ese año y aún no ha sido sustituida por otra línea. Un cambio siempre empieza el 1 de enero.
+El cambio se rechaza cuando la línea tiene importes en una columna congelada, de líneas OPEX o CAPEX, en los años que cambian. Descongele primero la columna, o haga empezar el cambio en un año posterior. Se ofrece un año posterior cuando sigue al primer año de presupuesto de la línea, la línea tiene presupuesto en ese año o en uno posterior, empieza antes del 1 de enero de ese año y sigue vigente ese día, y aún no ha sido sustituida por otra línea. Un cambio siempre empieza el 1 de enero.
 
 Un enlace a la línea guardado antes del cambio (un marcador, un correo) abre el espacio de trabajo OPEX y no encuentra ninguna línea: ábrala desde la lista CAPEX. En un archivo de presupuesto exportado antes del cambio, indique la línea por su número `BL`: su número `OPX` ya no la encuentra.
 

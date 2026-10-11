@@ -590,7 +590,7 @@ The dialog also asks for:
 - **Dimensions**: the dimensions required for OPEX lines, and the values of the line that are for CAPEX lines only. In place, you can set them now or later. From a later year, the new line needs the required ones, and values for CAPEX lines only are not copied. The [CAPEX dimensions](#capex-dimensions) do not apply to OPEX lines: in place, the line keeps their values without showing them, and shows them again if it becomes CAPEX later
 - **Reason**: optional, kept in the line's audit trail
 
-The change is refused when the line has amounts in a frozen column, of OPEX or CAPEX lines, in the years that change. Unfreeze the column first, or start the change from a later year. A later year is offered when the line has a budget for it, starts before it, is still valid on 1 January of that year, and has not been replaced by another line already. A change always starts on 1 January.
+The change is refused when the line has amounts in a frozen column, of OPEX or CAPEX lines, in the years that change. Unfreeze the column first, or start the change from a later year. A later year is offered when it comes after the line's first budget year, the line has a budget in that year or a later one, starts before 1 January of that year and is still valid on that day, and has not been replaced by another line already. A change always starts on 1 January.
 
 A link to the line saved before the change (a bookmark, an e-mail) opens the CAPEX workspace and finds no line: open it from the OPEX list. In a budget file exported before the change, the line is found by its `BL` number.
 
