@@ -18,6 +18,8 @@ import { CapexAmountsService, SpendAmountsService } from './spend-amounts.servic
 import { CapexAllocationsService, SpendAllocationsService } from './spend-allocations.service';
 import { SpendTasksService } from './spend-tasks.service';
 import { TasksService } from './tasks.service';
+import { BudgetLinesController } from './budget-lines.controller';
+import { BudgetLinesService } from './budget-lines.service';
 import { SpendItemsController } from './spend-items.controller';
 import { SpendVersionsController } from './spend-versions.controller';
 import { SpendTasksController } from './spend-tasks.controller';
@@ -76,10 +78,11 @@ import { BudgetLineTypeChangeService } from './budget-line-type-change.service';
   // The CAPEX lines live in the same tables (plan planning/budget-unifie.md, lot Z1): their routes
   // are aliases on the same services, for the lines of nature `capex`.
   controllers: [
-    SpendItemsController, SpendVersionsController, SpendTasksController, AllocationRulesController, TasksController, ChargebackReportController,
+    BudgetLinesController, SpendItemsController, SpendVersionsController, SpendTasksController, AllocationRulesController, TasksController, ChargebackReportController,
     CapexItemsController, CapexVersionsController, CapexTasksController,
   ],
   providers: [
+    BudgetLinesService,
     ListEngineStartupCheck,
     SpendItemsService,
     SpendBudgetOperationsService,

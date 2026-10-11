@@ -893,6 +893,32 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
   - Hidden columns keep their amounts: the summary API, CSV files, budget file imports, freezes and AI keys still carry every column
   - Permissions: any authenticated member of the tenant for GET, `budget_ops:admin` for PATCH
 
+## Budget lines (both natures)
+
+These neutral routes use the existing budget SQL list engine with an explicit `all` scope. The `/spend-items` and `/capex-items` routes retain their contracts and nature-specific behavior. All reads stay within the request's tenant. Consolidation fields retain the accounts reader gate used by the existing lists.
+
+| Route | Required access | Response |
+|---|---|---|
+| GET `/budget-lines/summary` | `budget:reader` | `{ items, total, page, limit }` |
+| GET `/budget-lines/summary/totals` | `budget:reader` | Amount totals and `reportingCurrency`, plus requested FTE totals |
+| GET `/budget-lines/summary/filter-values` | `budget:reader` | `{ [field]: [value, ...] }`, including `nature` |
+| GET `/budget-lines/summary/ids` | `budget:reader` | `{ ids, item_numbers, total }` |
+| GET `/budget-lines/summary/neighbors` | `budget:reader` | `{ index, total, prev, next }`; neighbors are `{ id, item_number, nature }` or `null` |
+| POST `/budget-lines/summary/aggregate` | `budget:reader` | `{ groups, others, total, groupCount, reportingCurrency }` |
+| GET `/budget-lines/resolve/:ref` | `budget:reader` | `{ id, nature, reference }` |
+| DELETE `/budget-lines/bulk` | `budget:admin` | `{ deleted, failed }` |
+| GET `/budget-lines/budget-file/export` | `budget:admin` | CSV attachment `budget.csv` |
+
+The summary routes take the same query parameters and response shapes as their `/spend-items/summary` equivalents: `page`, `limit`, `sort`, `q`, `filters`, lifecycle/status options, `years`, `shape`, `amounts`, `fte` and saved filter `ctx`, as applicable to each route. The summary uses the existing year-window default; ids and neighbors use the existing enabled-lines default. The native row has `product_name` as its title, `description` as its description, `item_number` as its shared BL number, `nature` (`opex` or `capex`), `reference` (`BL-n`) and `legacy_number`. `shape=grid` preserves these fields. Nature supports set filtering and sorting; filter values include both natures subject to the other filters. Analytics columns include shared and nature-specific dimensions. Quick search matches existing text plus `BL-n`, a bare BL number and case-insensitive legacy `OPX-n` and `CPX-n` references.
+
+Aggregate body: `{ query, spec }`, with the same validation, limits and measures as the existing aggregate route. `groupBy: ['nature']` returns one group per selected nature. This POST is read-only and remains available to frozen subscriptions.
+
+Neighbors take `id` as a UUID or any reference accepted by the neutral resolver. Resolution accepts a tenant line UUID, case-insensitive `BL-n` or a bare number by `item_number`, and `OPX-n` or `CPX-n` by `legacy_number`. A reclassified line keeps resolving through its persisted legacy reference. Malformed references answer 400; missing or foreign-tenant lines answer 404.
+
+Bulk-delete body: `{ ids: string[] }`, identical to the existing bulk route. A mixed selection delegates each line to its nature's delete service, including its existing freeze, cleanup, savepoint and audit behavior. Unknown and foreign-tenant ids are reported as existing per-item failures, without revealing the foreign line.
+
+Budget-file export takes the same filtering and file options as the existing export (`all`, `language`, `amountYears`, `columns`, `detail`, list parameters and `ctx`). It reads the filtered ids from the neutral list and explicitly exports both natures. The file name, format and headers are unchanged. `all=true` (or `1`) keeps the existing export's meaning of dropping list filters. Existing nature-specific exports and import/preflight routes keep their behavior.
+
 ## Spend Items & Versions (OPEX)
 - `:id` on every route under `/spend-items/:id` (GET, PATCH, DELETE, and the share, yearly-totals, versions, tasks, contracts, projects, applications, links, attachments and contacts routes) is a UUID, an `OPX-n` reference, its neutral twin `BL-n` (same number) or the plain number; every route under `/capex-items/:id` takes a UUID, `CPX-n`, the plain CPX number or the line's `BL-n`. A malformed id is a `400` "Invalid item reference: …", a reference of the other prefix a `400` "Invalid reference for capex: expected CPX-N, got OPX-12", an unknown reference a `404`
 - Every budget line, OPEX and CAPEX, is stored in `spend_items` with its `nature` since lot Z1 (see `doc/architecture.md`, "Budget Line Nature"). `/spend-items` serves OPEX lines only, `/capex-items` and `/capex-versions` CAPEX lines only: a line of the other nature answers `404` on every route addressed by its id or reference, or by the id of its version, attachment or link (`/spend-versions/:id/*`, `/spend-items/attachments/:attachmentId` and their CAPEX twins), and no list, summary, total, aggregate or report of the other nature counts it

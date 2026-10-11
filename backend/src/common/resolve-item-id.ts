@@ -144,3 +144,28 @@ export async function resolveToUuid(
   }
   return rows[0].id;
 }
+
+/** Resolve a native budget reference across explicitly named natures in the request's tenant. */
+export async function resolveBudgetLine(raw: string, manager: EntityManager): Promise<{ id: string; nature: 'opex' | 'capex'; reference: string }> {
+  const match = raw.match(/^(?:(BL|OPX|CPX)-)?(\d+)$/i);
+  let predicate: string;
+  let value: string | number;
+  if (UUID_RE.test(raw)) {
+    predicate = 'id = $1';
+    value = raw;
+  } else if (match) {
+    const number = Number(match[2]);
+    if (!Number.isSafeInteger(number) || number > 2147483647) throw new BadRequestException('Malformed budget line reference');
+    const prefix = match[1]?.toUpperCase();
+    predicate = prefix && prefix !== 'BL' ? 'legacy_number = $1' : 'item_number = $1';
+    value = prefix && prefix !== 'BL' ? `${prefix}-${number}` : number;
+  } else {
+    throw new BadRequestException('Malformed budget line reference');
+  }
+  const [line] = await manager.query(
+    `SELECT id, nature, item_number FROM spend_items
+     WHERE tenant_id = app_current_tenant() AND nature IN ('opex', 'capex') AND ${predicate} LIMIT 1`, [value],
+  );
+  if (!line) throw new NotFoundException('Budget line not found');
+  return { id: line.id, nature: line.nature, reference: `BL-${line.item_number}` };
+}

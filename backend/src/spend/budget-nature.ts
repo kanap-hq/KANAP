@@ -5,7 +5,7 @@
  * `spend_items` and its family hold both natures since lot Z1 (migration 1853970000000 moved the
  * CAPEX lines in; the `capex_*` tables stay, dormant, until lot Z2). The rule: no code reads nor
  * writes a line, nor a version, month, attachment, link, contact or analytics value of a line,
- * without its nature.
+ * without its nature or an explicit all-natures read scope.
  * - Every statement that reads or locks `spend_items` names the nature (`natureAnd`, or
  *   `nature` in a TypeORM `where`).
  * - A route or function that starts from the id of a version, attachment or link finds
@@ -16,7 +16,8 @@
  *   these, and need no predicate of their own.
  *
  * The scope tables of `spend/` (`opex` / `capex` to table names) point both entries at the
- * `spend_*` tables, each with its `nature` (`assertScopeNatures` refuses an entry without one).
+ * `spend_*` tables, each with its `nature`; the unified read scope alone carries `allNatures: true`.
+ * `assertScopeNatures` refuses an entry without either.
  * The `/capex-items*` and `/capex-versions*` routes are aliases on the same services, with the
  * CAPEX contract of before (`budget-line-presentation.ts`).
  */
@@ -64,18 +65,18 @@ export function linkedLineOf(tenant: string, line: string, nature: BudgetNature 
 
 /**
  * Checks a scope table when its module loads: an entry whose line table is `spend_items` names its
- * nature, or the module refuses to load. Without it the entry's statements would read the lines
- * of both natures without a word. `lineTable` gives an entry's line table (`items`, `itemTable`,
+ * nature or explicitly carries `allNatures: true`, or the module refuses to load. Without either
+ * the entry's statements would read both natures without a word. `lineTable` gives an entry's line table (`items`, `itemTable`,
  * `table`).
  */
-export function assertScopeNatures<E extends { nature?: BudgetNature }>(
+export function assertScopeNatures<E extends { nature?: BudgetNature; allNatures?: boolean }>(
   name: string,
   entries: Readonly<Record<string, E>> | ReadonlyArray<E>,
   lineTable: (entry: E) => string,
 ): void {
   for (const [key, entry] of Object.entries(entries) as Array<[string, E]>) {
-    if (lineTable(entry) === BUDGET_LINE_TABLE && !entry.nature) {
-      throw new Error(`${name}: the entry "${key}" reads ${BUDGET_LINE_TABLE} without a nature; give it one (spend/budget-nature.ts).`);
+    if (lineTable(entry) === BUDGET_LINE_TABLE && !entry.nature && entry.allNatures !== true) {
+      throw new Error(`${name}: the entry "${key}" reads ${BUDGET_LINE_TABLE} without a nature; give it one or explicitly mark allNatures: true (spend/budget-nature.ts).`);
     }
   }
 }

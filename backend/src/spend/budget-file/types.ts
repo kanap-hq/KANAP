@@ -8,6 +8,8 @@ import { budgetLineReference, type BudgetNature } from '../budget-nature';
  * follows the line's own nature.
  */
 export type BudgetFileScope = BudgetNature;
+/** Only exports accept both natures; import and preflight retain their route's default. */
+export type BudgetFileExportScope = BudgetFileScope | 'all';
 
 export type BudgetFileDetail = 'yearly' | 'months';
 
