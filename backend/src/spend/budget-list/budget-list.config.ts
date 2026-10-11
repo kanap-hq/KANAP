@@ -74,7 +74,7 @@ export class BudgetListConfig implements ListConfig {
 
   constructor(private readonly rt: BudgetListRuntime) {
     this.from = `${rt.scope.itemTable} i`;
-    this.columns = { ...ITEM_COLUMNS, ...(rt.scope.scope === 'opex' ? OPEX_ONLY_COLUMNS : {}) };
+    this.columns = { ...(rt.scope.allNatures ? { nature: 'enum' as const } : {}), ...ITEM_COLUMNS, ...(rt.scope.scope !== 'capex' ? OPEX_ONLY_COLUMNS : {}) };
   }
 
   private get scope() {
@@ -465,7 +465,7 @@ export class BudgetListConfig implements ListConfig {
   private latestTask(stmt: SqlStatement): string {
     stmt.cte('ltask', () => `SELECT DISTINCT ON (t.related_object_id) t.related_object_id AS item_id, t.title
       FROM tasks t
-      WHERE t.tenant_id = ${stmt.tenant} AND t.related_object_type = ${stmt.bind(this.scope.taskObjectType, 'text')}
+      WHERE t.tenant_id = ${stmt.tenant} AND t.related_object_type = ANY(${stmt.bind(this.scope.taskObjectTypes ?? [this.scope.taskObjectType], 'text[]')})
         AND t.status = ANY(${stmt.bind(ACTIVE_TASK_STATUSES, 'text[]')})
       ORDER BY t.related_object_id, t.created_at DESC, t.id DESC`);
     return this.join(stmt, 'ltask', `LEFT JOIN ltask ON ltask.item_id = i.id`);
@@ -771,6 +771,7 @@ export class BudgetListConfig implements ListConfig {
       `${sqlLiteral(`${s.refPrefix}-`)} || ${this.columnSql('item_number')}::text`,
       `i.${s.nameField}`,
       'i.description',
+      ...(s.allNatures ? ['i.legacy_number'] : []),
       'i.notes',
       'i.currency::text',
       ...s.extraFields.map((field) => `i.${field}::text`),

@@ -172,6 +172,7 @@ const KNOWN_EXPORT_ROUTES = [
   'GET /applications/export',
   'GET /assets/export',
   'GET /audit-logs/export',
+  'GET /budget-lines/budget-file/export',
   'GET /business-processes/export',
   'GET /capex-items/budget-file/export',
   'GET /chart-of-accounts/:id/accounts/export',

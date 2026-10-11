@@ -16,7 +16,7 @@ import { costCenterLabel, loadCostCenterTree } from '../cost-centers/cost-center
 import { analyticsFieldKey } from '../analytics/analytics-axes.util';
 import { Decimal } from '../common/decimal';
 import { naturalCompare } from '../common/list-engine/sql-fragments';
-import { assertScopeNatures, natureAnd, type BudgetNature } from './budget-nature';
+import { assertScopeNatures, natureAnd, BUDGET_NATURES, type BudgetNature } from './budget-nature';
 
 /**
  * The summary rows of the OPEX and CAPEX lists, built once for both item types.
@@ -54,10 +54,11 @@ export const FIXED_SLOTS = [
 
 export type FixedSlot = (typeof FIXED_SLOTS)[number];
 
-export type SummaryScope = 'opex' | 'capex';
+export type SummaryScope = 'opex' | 'capex' | 'all';
 
-export interface SummaryScopeConfig {
-  scope: SummaryScope;
+/** Defaults to nature-specific configs for callers that only support the two legacy lists. */
+export interface SummaryScopeConfig<S extends SummaryScope = BudgetNature> {
+  scope: S;
   itemEntity: typeof SpendItem;
   versionEntity: typeof SpendVersion;
   itemTable: string;
@@ -66,6 +67,8 @@ export interface SummaryScopeConfig {
    * statement that reads the item table names it (`natureAnd`).
    */
   nature?: BudgetNature;
+  /** Explicit permission to read both natures (the unified read scope only). */
+  allNatures?: true;
   /**
    * The column of `itemTable` a field of the list reads when it is not the field's own name: the
    * CAPEX list's `description` is the line's title, `product_name` (lot Z1). `item_number` reads
@@ -87,6 +90,7 @@ export interface SummaryScopeConfig {
   /** One value per line and analytics dimension (`item_id`, `axis_id`, `category_id`). */
   analyticsLink: { table: string };
   taskObjectType: string;
+  taskObjectTypes?: readonly string[];
   refPrefix: string;
   nameField: string;
   /** Columns of the item table: the fields the plain item list (`GET /<items>`) filters and sorts on. */
@@ -102,7 +106,9 @@ export interface SummaryScopeConfig {
 }
 
 // Table and column names come only from here: never from the caller.
-export const SUMMARY_SCOPES: Record<SummaryScope, SummaryScopeConfig> = {
+export type SummaryReadScopeConfig = SummaryScopeConfig<SummaryScope>;
+
+export const SUMMARY_SCOPES: { [S in BudgetNature]: SummaryScopeConfig<S> } & Readonly<Record<string, SummaryReadScopeConfig>> = {
   opex: {
     scope: 'opex',
     itemEntity: SpendItem,
@@ -164,6 +170,36 @@ export const SUMMARY_SCOPES: Record<SummaryScope, SummaryScopeConfig> = {
     gridItemColumns: [
       'id', 'item_number', 'reference', 'description', 'status', 'currency', 'effective_start',
       'disabled_at', 'notes', 'created_at', 'updated_at',
+    ],
+  },
+  all: {
+    scope: 'all',
+    itemEntity: SpendItem,
+    versionEntity: SpendVersion,
+    itemTable: 'spend_items',
+    allNatures: true,
+    versionTable: 'spend_versions',
+    totalsTable: 'spend_version_totals',
+    roundTable: 'spend_round_inputs',
+    versionItemFk: 'spend_item_id',
+    contractLink: { table: 'contract_spend_items', itemColumn: 'spend_item_id' },
+    projectLink: { table: 'portfolio_project_opex', itemColumn: 'opex_id' },
+    analyticsLink: { table: 'spend_item_analytics_values' },
+    taskObjectType: 'spend_item',
+    taskObjectTypes: ['spend_item', 'capex_item'],
+    refPrefix: 'BL',
+    nameField: 'product_name',
+    fieldColumns: {},
+    columns: [
+      'id', 'nature', 'legacy_number', 'item_number', 'product_name', 'description', 'supplier_id', 'account_id', 'paying_company_id', 'currency',
+      'effective_start', 'disabled_at', 'status', 'owner_it_id', 'owner_business_id', 'project_id',
+      'contract_id', 'cost_center_id', 'run_build', 'notes', 'created_at', 'updated_at',
+    ],
+    extraFields: [],
+    // Native line fields on the unified grid, including the shared BL number.
+    gridItemColumns: [
+      'id', 'nature', 'legacy_number', 'item_number', 'reference', 'product_name', 'description', 'status', 'currency', 'effective_start', 'disabled_at',
+      'notes', 'created_at', 'updated_at',
     ],
   },
 };
@@ -535,7 +571,7 @@ export function summaryRowProjectNames(row: any, field: string): string[] {
  * and each version converted to the reporting currency once.
  */
 export async function loadVersionTotals(
-  config: SummaryScopeConfig,
+  config: SummaryReadScopeConfig,
   deps: Pick<SummaryDeps, 'fxRates'>,
   manager: EntityManager,
   tenantId: string,
@@ -624,7 +660,7 @@ export async function loadVersionTotals(
  * months leaves it as the lines gave it.
  */
 async function loadVersionFte(
-  config: SummaryScopeConfig,
+  config: SummaryReadScopeConfig,
   manager: EntityManager,
   tenantId: string,
   versionIds: string[],
@@ -716,7 +752,7 @@ type ItemAnalyticsValue = { category_id: string; name: string | null };
  * never create the default).
  */
 async function loadAnalyticsForRows(
-  config: SummaryScopeConfig,
+  config: SummaryReadScopeConfig,
   manager: EntityManager,
   tenantId: string,
   itemIds: string[],
@@ -731,9 +767,9 @@ async function loadAnalyticsForRows(
        LEFT JOIN ${config.analyticsLink.table} v
          ON v.tenant_id = $1 AND v.axis_id = ax.id AND v.item_id = ANY($2::uuid[])
        LEFT JOIN analytics_categories c ON c.id = v.category_id AND c.tenant_id = $1
-       WHERE ax.tenant_id = $1 AND (ax.applies_to IS NULL OR ax.applies_to = $3)
+       WHERE ax.tenant_id = $1 AND (ax.applies_to IS NULL OR ax.applies_to = ANY($3::text[]))
        ORDER BY ax.sort_order, lower(coalesce(ax.name, '')), ax.code, ax.id`, // the dimensions' order, whatever the plan: the rows' keys come in it
-      [tenantId, itemIds, config.scope],
+      [tenantId, itemIds, config.allNatures ? BUDGET_NATURES : [config.scope]],
     );
   const axisIds = new Set<string>();
   const activeAxisIds = new Set<string>();
@@ -756,7 +792,7 @@ async function loadAnalyticsForRows(
 
 /** One summary row per item (same order), for the years given; slots after the end of validity are empty. */
 export async function buildBudgetSummaryRows(
-  config: SummaryScopeConfig,
+  config: SummaryReadScopeConfig,
   deps: SummaryDeps,
   manager: EntityManager,
   tenantId: string,
@@ -849,11 +885,11 @@ export async function buildBudgetSummaryRows(
       `SELECT DISTINCT ON (related_object_id) id, related_object_id, title, description, status, created_at
        FROM tasks
        WHERE tenant_id = $1
-         AND related_object_type = $2
+         AND related_object_type = ANY($2::text[])
          AND related_object_id = ANY($3::uuid[])
          AND status = ANY($4)
        ORDER BY related_object_id, created_at DESC, id DESC`,
-      [tenantId, config.taskObjectType, itemIds, ACTIVE_TASK_STATUSES],
+      [tenantId, config.taskObjectTypes ?? [config.taskObjectType], itemIds, ACTIVE_TASK_STATUSES],
     );
     for (const { related_object_id: itemId, ...task } of tasks) {
       if (grid) delete (task as any).description;

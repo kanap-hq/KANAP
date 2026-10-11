@@ -1,7 +1,7 @@
 import type { EntityManager } from 'typeorm';
 import type { FxLookupKey, FxRateService, FxResolvedRate } from '../../currency/fx-rate.service';
 import type { CurrencySettings } from '../../currency/currency-settings.service';
-import type { SummaryScopeConfig } from '../spend-summary.builder';
+import type { SummaryReadScopeConfig } from '../spend-summary.builder';
 import type { SqlStatement } from '../../common/list-engine/sql-statement';
 import { jsTrim, jsUpper } from '../../common/list-engine/sql-fragments';
 import { natureAnd } from '../budget-nature';
@@ -115,7 +115,7 @@ export class RequestFxRates implements FxRates {
 }
 
 export async function buildFxTable(
-  config: SummaryScopeConfig,
+  config: SummaryReadScopeConfig,
   fxRates: FxRates,
   manager: EntityManager,
   tenantId: string,

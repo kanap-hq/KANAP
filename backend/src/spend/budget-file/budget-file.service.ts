@@ -10,7 +10,7 @@ import { importBudgetFile, BudgetFileAudit, BudgetFileFreeze, BudgetFileImportRe
 import { interpretBudgetFile, readBudgetCsv } from './interpret';
 import { loadExportLines, loadFileDimensions, loadPreflight } from './load';
 import { buildPreflight, changedSinceText } from './preflight';
-import { BudgetFileReport, BudgetFileScope, emptyCatalog } from './types';
+import { BudgetFileReport, BudgetFileExportScope, BudgetFileScope, emptyCatalog } from './types';
 
 const LEVEL_RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
 
@@ -78,7 +78,7 @@ export class BudgetFileService {
   }
 
   async exportFile(
-    scope: BudgetFileScope,
+    scope: BudgetFileExportScope,
     ids: readonly string[],
     caller: BudgetFileCaller,
     options: { language: unknown; amountYears: unknown; columns: unknown; detail: unknown },
@@ -90,7 +90,7 @@ export class BudgetFileService {
     const columns = parseFileColumns(options.columns, shownFileColumns(settings.enabled));
     const years = parseAmountYears(options.amountYears, currentYear);
     const detail = parseDetail(options.detail);
-    // The lines of the list the export starts from (its nature), each with its `nature` cell.
+    // The lines of the source list (one nature or explicitly both), each with its nature cell.
     const loaded = await loadExportLines(manager, scope, caller.tenantId, ids);
     const built = buildBudgetExport({
       language, years, columns, detail, lines: loaded.lines, dimensions: loaded.dimensions,

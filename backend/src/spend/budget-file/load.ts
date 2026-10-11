@@ -9,7 +9,7 @@ import { columnOfMeasure } from './columns';
 import { ItemNumberCell } from './interpret';
 import {
   BudgetCatalog,
-  BudgetFileScope,
+  BudgetFileExportScope,
   CatalogDimension,
   LineHint,
   StoredLine,
@@ -84,10 +84,10 @@ export async function loadPreflight(
   return { catalog, stored, names, labels, dimensionCodes: catalog.dimensions.map((dimension) => dimension.code) };
 }
 
-/** The lines of an export, of the route's nature only, in the order of `ids`. */
+/** The export's lines in id order: one route's nature, or explicitly both for the unified list. */
 export async function loadExportLines(
   manager: EntityManager,
-  scope: BudgetFileScope,
+  scope: BudgetFileExportScope,
   tenantId: string,
   ids: readonly string[],
 ): Promise<{ lines: StoredLine[]; dimensions: FileDimension[]; labels: Record<string, string> }> {
@@ -148,13 +148,13 @@ async function loadLinesByNumber(
 
 async function loadLinesById(
   manager: EntityManager,
-  scope: BudgetFileScope,
+  scope: BudgetFileExportScope,
   tenantId: string,
   ids: readonly string[],
 ): Promise<StoredLine[]> {
   if (ids.length === 0) return [];
   const rows: ItemSql[] = await manager.query(
-    `SELECT ${ITEM_COLUMNS} FROM ${LINES.items} i WHERE i.tenant_id = $1${natureAnd('i', scope)} AND i.id = ANY($2::uuid[])`,
+    `SELECT ${ITEM_COLUMNS} FROM ${LINES.items} i WHERE i.tenant_id = $1${scope === 'all' ? naturesAnd('i', BUDGET_NATURES) : natureAnd('i', scope)} AND i.id = ANY($2::uuid[])`,
     [tenantId, ids],
   );
   return hydrate(manager, tenantId, rows);

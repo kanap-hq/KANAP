@@ -52,6 +52,7 @@ export const EXPORT_RESOURCE_KEYS: Readonly<Record<string, string>> = {
   applications: 'applications',
   assets: 'assets',
   'audit-logs': 'auditLog',
+  'budget-lines/budget-file': 'budgetFile',
   'business-processes': 'businessProcesses',
   'capex-items/budget-file': 'capexBudgetFile',
   'chart-of-accounts/accounts': 'chartOfAccounts',
