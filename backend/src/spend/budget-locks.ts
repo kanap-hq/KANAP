@@ -171,10 +171,19 @@ export async function lockBudgetVersions(manager: EntityManager, scope: AmountSc
 
 /**
  * Locks a version by its id alone: its line first, then the version. The
- * version's line is read without a lock (a version never changes line); the
- * version is read again under the lock. Null when the version or its line is
- * gone (deleted meanwhile), or when the line has another nature than the
- * scope's (the line lock names the nature).
+ * version's line is read without a lock; the version is read again under the
+ * lock. Null when the version or its line is gone (deleted meanwhile), or when
+ * the line has another nature than the scope's (the line lock names the nature).
+ *
+ * A version changes line in one case only: the type change of a line from a
+ * later year (lot M, `budget-line-type-change.service.ts`) moves the versions
+ * of that year and after to a new line, always of the other nature, under the
+ * lock of the line they leave. A writer that read the old line, then waited for
+ * it, finds the version on a line of the other nature: the version lock names
+ * the scope's nature (`versionNature`), so the version is "gone" for it (404),
+ * never written through the line it left. Moving versions to a line of the same
+ * nature would break this: that move must first make this read check the line
+ * again (`AND spend_item_id = <the line locked>`).
  */
 export async function lockVersionWithLine(
   manager: EntityManager,

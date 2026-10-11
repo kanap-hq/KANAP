@@ -677,15 +677,18 @@ export class TasksUnifiedService {
     }
 
     // `where`: a `spend_item` task names an OPEX line, a `capex_item` task a CAPEX line, both in
-    // `spend_items` (`spend/budget-nature.ts`), never a line of the other nature.
-    const tableByType: Record<'spend_item' | 'contract' | 'capex_item' | 'incident', { table: string; label: string; where?: string }> = {
-      spend_item: { table: 'spend_items', label: 'Spend item', where: ` AND nature = 'opex'` },
+    // `spend_items` (`spend/budget-nature.ts`), never a line of the other nature. `lock`: the line is
+    // read FOR SHARE, so a change of its type (lot M, which holds it FOR NO KEY UPDATE and moves its
+    // tasks to the other type) is waited for: the task is then refused for a line of the other
+    // nature (404) instead of being written with a type nobody reads.
+    const tableByType: Record<'spend_item' | 'contract' | 'capex_item' | 'incident', { table: string; label: string; where?: string; lock?: string }> = {
+      spend_item: { table: 'spend_items', label: 'Spend item', where: ` AND nature = 'opex'`, lock: ' FOR SHARE' },
       contract: { table: 'contracts', label: 'Contract' },
-      capex_item: { table: 'spend_items', label: 'CAPEX item', where: ` AND nature = 'capex'` },
+      capex_item: { table: 'spend_items', label: 'CAPEX item', where: ` AND nature = 'capex'`, lock: ' FOR SHARE' },
       incident: { table: 'incidents', label: 'Incident' },
     };
     const targetMeta = tableByType[target.type];
-    const [row] = await manager.query(`SELECT id FROM ${targetMeta.table} WHERE id = $1${targetMeta.where ?? ''} LIMIT 1`, [target.id]);
+    const [row] = await manager.query(`SELECT id FROM ${targetMeta.table} WHERE id = $1${targetMeta.where ?? ''} LIMIT 1${targetMeta.lock ?? ''}`, [target.id]);
     if (!row) throw new NotFoundException(`${targetMeta.label} not found`);
     return { type: target.type, id: target.id };
   }
@@ -719,6 +722,10 @@ export class TasksUnifiedService {
     const applicationIds = hasApplicationIds ? this.normalizeLinkIds(payloadRecord.application_ids, 'application_ids') : [];
     const assetIds = hasAssetIds ? this.normalizeLinkIds(payloadRecord.asset_ids, 'asset_ids') : [];
     if (!payload?.title || !payload.title.toString().trim()) throw new BadRequestException('title required');
+    // A task of a budget line: the line of the type's nature, read FOR SHARE until the task is saved,
+    // so a change of the line's type (lot M) never leaves it with the type of before (see
+    // `resolveTargetContext`).
+    if (target.type === 'spend_item' || target.type === 'capex_item') await this.resolveTargetContext(target, manager);
 
     const isStandalone = target.type === null;
 

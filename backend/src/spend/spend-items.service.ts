@@ -51,6 +51,7 @@ import { insertProjectBudgetLinks, lockBudgetLine } from '../portfolio/project-b
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
 import { countItemRelations, loadItemReferences } from './item-workspace.util';
 import { readBudgetLineMeta } from './item-meta';
+import { readLineLineage } from './budget-line-lineage';
 import { budgetLineOfChild } from './budget-locks';
 import { auditTableOf, LEGACY_PREFIX, lineNumberSql, type BudgetNature } from './budget-nature';
 import { auditLine, findBudgetLine, presentChild, presentChildren, presentLine, selectLineColumns } from './budget-line-presentation';
@@ -297,12 +298,15 @@ export class SpendItemsService {
     return this.withAnalytics(mg, await this.findItem(id, mg));
   }
 
-  /** The workspace's read: the line, plus the labels its pickers show (see item-workspace.util.ts). */
+  /**
+   * The workspace's read: the line, plus the labels its pickers show (see item-workspace.util.ts)
+   * and the lines it follows or is replaced by after a change of type (`budget-line-lineage.ts`).
+   */
   async getDetail(id: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const item = await this.findItem(id, mg);
     const line = await this.withAnalytics(mg, item);
-    return { ...line, references: await loadItemReferences(mg, item) };
+    return { ...line, references: await loadItemReferences(mg, item), lineage: await readLineLineage(mg, item.tenant_id, item.id) };
   }
 
   /** The line's meta (lot 3G, `item-meta.ts`): its freshness counters, who changed it and when. */

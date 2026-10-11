@@ -37,6 +37,42 @@ const SCOPES = {
   },
 } as const;
 
+/** A (year, column) of a line holding a non-zero amount while that column is frozen for `scope`. */
+export type FrozenAmount = { budget_year: number; measure: AmountMeasure; scope: ItemDeleteScope };
+
+/**
+ * The (year, column, scope) where a line holds a non-zero amount in a column frozen for one of
+ * `scopes`, in year order, each once; from `fromYear` on when given. One query joining the
+ * versions, their months and the freezes. Reads only: the caller holds the line.
+ */
+export async function findFrozenAmounts(
+  manager: EntityManager,
+  tenantId: string,
+  itemId: string,
+  opts: { scopes: readonly ItemDeleteScope[]; fromYear?: number | null; limit?: number },
+): Promise<FrozenAmount[]> {
+  // Both natures share the tables since lot Z1: either entry names them.
+  const s = SCOPES.opex;
+  const measures = AMOUNT_MEASURES
+    .map((measure) => `('${measure}', '${MEASURE_FREEZE_COLUMN[measure]}', a.${measure})`)
+    .join(', ');
+  const rows: Array<{ budget_year: number | string; measure: AmountMeasure; scope: ItemDeleteScope }> = await manager.query(
+    `SELECT DISTINCT v.budget_year, m.measure, f.scope
+       FROM ${s.versions} v
+       JOIN ${s.amounts} a ON a.tenant_id = v.tenant_id AND a.version_id = v.id
+       CROSS JOIN LATERAL (VALUES ${measures}) AS m(measure, column_key, amount)
+       JOIN freeze_states f
+         ON f.tenant_id = v.tenant_id AND f.budget_year = v.budget_year
+        AND f.scope = ANY($3::text[]) AND f.column_key = m.column_key AND f.is_frozen
+      WHERE v.tenant_id = $1 AND v.${s.itemColumn} = $2 AND m.amount <> 0
+        AND ($4::int IS NULL OR v.budget_year >= $4::int)
+      ORDER BY v.budget_year, m.measure, f.scope
+      ${opts.limit ? `LIMIT ${Math.max(1, Math.floor(opts.limit))}` : ''}`,
+    [tenantId, itemId, Array.from(new Set(opts.scopes)), opts.fromYear ?? null],
+  );
+  return rows.map((row) => ({ budget_year: Number(row.budget_year), measure: row.measure, scope: row.scope }));
+}
+
 /**
  * An item with a non-zero amount in a frozen (year, column) cannot be deleted:
  * the delete would change that frozen column. One query per item finds the
@@ -49,27 +85,11 @@ export async function assertNoFrozenAmounts(
   tenantId: string,
   itemId: string,
 ): Promise<void> {
-  const s = SCOPES[scope];
-  const measures = AMOUNT_MEASURES
-    .map((measure) => `('${measure}', '${MEASURE_FREEZE_COLUMN[measure]}', a.${measure})`)
-    .join(', ');
-  const [frozen]: Array<{ budget_year: number | string; measure: AmountMeasure }> = await manager.query(
-    `SELECT v.budget_year, m.measure
-       FROM ${s.versions} v
-       JOIN ${s.amounts} a ON a.tenant_id = v.tenant_id AND a.version_id = v.id
-       CROSS JOIN LATERAL (VALUES ${measures}) AS m(measure, column_key, amount)
-       JOIN freeze_states f
-         ON f.tenant_id = v.tenant_id AND f.budget_year = v.budget_year
-        AND f.scope = $3 AND f.column_key = m.column_key AND f.is_frozen
-      WHERE v.tenant_id = $1 AND v.${s.itemColumn} = $2 AND m.amount <> 0
-      ORDER BY v.budget_year, m.measure
-      LIMIT 1`,
-    [tenantId, itemId, scope],
-  );
+  const [frozen] = await findFrozenAmounts(manager, tenantId, itemId, { scopes: [scope], limit: 1 });
   if (!frozen) return;
   const label = budgetColumnName(await readBudgetColumns(manager, tenantId), frozen.measure);
   throw new ForbiddenException(
-    `This line has amounts in ${label} ${Number(frozen.budget_year)}, a frozen budget column. Unfreeze the column first, or set an end of validity date instead of deleting the line.`,
+    `This line has amounts in ${label} ${frozen.budget_year}, a frozen budget column. Unfreeze the column first, or set an end of validity date instead of deleting the line.`,
   );
 }
 
