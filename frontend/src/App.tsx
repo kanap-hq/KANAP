@@ -8,7 +8,8 @@ const LoginPage = React.lazy(() => import('./pages/LoginPage'));
 const ForgotPasswordPage = React.lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = React.lazy(() => import('./pages/ResetPasswordPage'));
 const AcceptInvitePage = React.lazy(() => import('./pages/AcceptInvitePage'));
-const OpexListPage = React.lazy(() => import('./pages/OpexListPage'));
+const BudgetListPage = React.lazy(() => import('./pages/budget/BudgetListPage'));
+const BudgetListRedirect = React.lazy(() => import('./pages/budget/listRedirect'));
 const SpendItemPage = React.lazy(() => import('./pages/opex/SpendItemPage'));
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
@@ -25,7 +26,6 @@ const SuppliersPage = React.lazy(() => import('./pages/SuppliersPage'));
 const SupplierWorkspacePage = React.lazy(() => import('./pages/suppliers/SupplierWorkspacePage'));
 const AccountWorkspacePage = React.lazy(() => import('./pages/accounts/AccountWorkspacePage'));
 const UsersPage = React.lazy(() => import('./pages/UsersPage'));
-const CapexPage = React.lazy(() => import('./pages/CapexPage'));
 const ProjectsPage = React.lazy(() => import('./pages/ProjectsPage'));
 const CapexItemPage = React.lazy(() => import('./pages/capex/CapexItemPage'));
 const AnalyticsCategoriesPage = React.lazy(() => import('./pages/AnalyticsCategoriesPage'));
@@ -247,10 +247,11 @@ function AppRoutes() {
           <Route element={<Layout />}>
           <Route path="/" element={<HomeRoute />} />
           <Route path="/ops" element={<DashboardPage />} />
-          <Route path="/ops/opex" element={<OpexListPage />} />
+          <Route path="/ops/budget" element={<BudgetListPage />} />
+          <Route path="/ops/opex" element={<BudgetListRedirect nature="opex" />} />
           <Route path="/ops/opex/:id" element={<SpendItemPage />} />
           <Route path="/ops/opex/:id/:tab" element={<SpendItemPage />} />
-          <Route path="/ops/capex" element={<CapexPage />} />
+          <Route path="/ops/capex" element={<BudgetListRedirect nature="capex" />} />
           <Route path="/ops/capex/:id" element={<CapexItemPage />} />
           <Route path="/ops/capex/:id/:tab" element={<CapexItemPage />} />
           <Route path="/ops/contracts" element={<ContractsPage />} />

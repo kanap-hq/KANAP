@@ -54,8 +54,7 @@ vi.mock('../components/ServerDataGrid', async (importOriginal) => {
 });
 
 import api from '../api';
-import OpexListPage from './OpexListPage';
-import CapexPage from './CapexPage';
+import BudgetListPage from './budget/BudgetListPage';
 import { DEFAULT_BUDGET_COLUMNS } from '../services/budgetColumns';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
@@ -64,8 +63,7 @@ const QUIET_MS = 500;
 const quiet = () => act(async () => { await vi.advanceTimersByTimeAsync(QUIET_MS); });
 
 const LISTS = [
-  { name: 'OPEX', Page: OpexListPage, path: '/ops/opex', rows: '/spend-items/summary', totals: '/spend-items/summary/totals', storage: 'opex-list-context' },
-  { name: 'CAPEX', Page: CapexPage, path: '/ops/capex', rows: '/capex-items/summary', totals: '/capex-items/summary/totals', storage: 'capex-list-context' },
+  { name: 'OPEX', Page: BudgetListPage, path: '/ops/budget', rows: '/budget-lines/summary', totals: '/budget-lines/summary/totals', storage: 'budget-list-context' },
 ] as const;
 
 const set = (values: Array<string | null>) => ({ filterType: 'set', values });
@@ -161,7 +159,7 @@ describe.each(LISTS)('$name list: report links, removed filters, End of validity
     });
     get.mockImplementation(async (url: string) => {
       if (url === '/budget-columns') return { data: DEFAULT_BUDGET_COLUMNS };
-      if (url === list.rows) return { data: { items: [{ id: 'i-1', item_number: 1, product_name: 'Cloud', description: 'Cloud' }], total: 1, page: 1, limit: 50 } };
+      if (url === list.rows) return { data: { items: [{ id: 'i-1', nature: 'opex', item_number: 1, product_name: 'Cloud', description: 'Cloud' }], total: 1, page: 1, limit: 50 } };
       if (url === list.totals) return { data: { yBudget: 10 } };
       return { data: { items: [] } };
     });
@@ -237,7 +235,7 @@ describe.each(LISTS)('$name list: report links, removed filters, End of validity
 
     it('its item links keep the view and its Show scope, so the item page walks the same lines', async () => {
       await openList(linkPath());
-      const link = document.querySelector(`.ag-cell a[href^="${list.path}/"]`) as HTMLAnchorElement;
+      const link = document.querySelector(`.ag-cell a[href^="/ops/opex/"]`) as HTMLAnchorElement;
       expect(link).not.toBeNull();
       const params = new URLSearchParams(link.getAttribute('href')!.split('?')[1]);
       expect(params.get('from')).toBe('report');
@@ -249,7 +247,7 @@ describe.each(LISTS)('$name list: report links, removed filters, End of validity
       await openList(linkPath({ statusScope: 'all' }));
       expect(JSON.parse(stored().filters)).toEqual(LINK_FILTERS);
       expect(stored().statusScope).toBe('all');
-      const link = document.querySelector(`.ag-cell a[href^="${list.path}/"]`) as HTMLAnchorElement;
+      const link = document.querySelector(`.ag-cell a[href^="/ops/opex/"]`) as HTMLAnchorElement;
       expect(new URLSearchParams(link.getAttribute('href')!.split('?')[1]).get('from')).toBeNull();
     }, 60_000);
   });

@@ -17,11 +17,12 @@ vi.mock('../../components/design', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../components/design')>()),
   useKanapDialogs: () => dialogs,
 }));
-const nav = vi.hoisted(() => ({ calls: [] as Array<{ sort?: string | null; filters?: string | null; enabled?: boolean }> }));
+const nav = vi.hoisted(() => ({ result: null as any, unified: false, calls: [] as Array<{ sort?: string | null; filters?: string | null; enabled?: boolean }> }));
 vi.mock('../../hooks/useCapexNav', () => ({
-  useCapexNav: (params: { sort?: string | null; filters?: string | null; enabled?: boolean }) => {
+  useCapexNav: (params: { sort?: string | null; filters?: string | null; enabled?: boolean }, unified = false) => {
+    nav.unified = unified;
     nav.calls.push(params);
-    return { index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null };
+    return nav.result ?? { index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null };
   },
 }));
 vi.mock('../../hooks/useCurrencySettings', () => ({ default: () => ({ data: { defaultCapexCurrency: 'EUR' } }) }));
@@ -32,13 +33,14 @@ vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: 'me'
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: vi.fn() }) }));
 vi.mock('../../utils/workspaceTabCounts', () => ({ fetchCapexRelationsCount: vi.fn(async () => 0) }));
 vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
-  default: ({ properties, actions, children, onTitleSave, onTabChange, metadata }: {
+  default: ({ properties, actions, children, onTitleSave, onTabChange, metadata, nav: navigation }: {
     properties?: React.ReactNode; actions?: React.ReactNode; children?: React.ReactNode; onTitleSave: (v: string) => void;
-    onTabChange?: (tab: string) => void; metadata?: React.ReactNode;
+    onTabChange?: (tab: string) => void; metadata?: React.ReactNode; nav?: { onNext?: () => void };
   }) => (
     <div>
       <button type="button" onClick={() => onTitleSave('New servers')}>set title</button>
       <button type="button" onClick={() => onTabChange?.('allocations')}>allocations tab</button>
+      <button type="button" onClick={() => navigation?.onNext?.()}>next budget line</button>
       {metadata}{actions}{properties}{children}
     </div>
   ),
@@ -156,7 +158,7 @@ const ITEM_ID = '11111111-2222-3333-4444-555555555555';
 const CHANGES_DAY = new Date('2026-10-02T12:04:00.000Z');
 
 // The edits a page keeps for the session (lot 3C review): each test starts without any.
-beforeEach(() => resetSharedPatchBuffers());
+beforeEach(() => { resetSharedPatchBuffers(); nav.result = null; nav.unified = false; });
 
 /** Stands for the OPEX workspace: shows the path a change of type opened. */
 function OpexPageProbe() {
@@ -532,6 +534,16 @@ describe('CapexItemPage list context and dimensions', () => {
     });
   });
 
+  it('a unified list context enables mixed navigation and opens an OPEX neighbour', async () => {
+    nav.result = { index: 0, total: 2, hasPrev: false, hasNext: true, prevId: null, nextId: 'BL-12', nextPath: '/ops/opex/BL-12' };
+    renderAt(`/ops/capex/${ITEM_ID}/overview?list=budget&sort=product_name:ASC`);
+    await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
+    expect(nav.unified).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'next budget line' }));
+    const page = await screen.findByTestId('opex-page');
+    expect(page.getAttribute('data-path')).toBe('/ops/opex/BL-12/overview');
+  });
+
   it('walks prev/next like the list: a sort or filter on a dimension it has no column for falls back', async () => {
     const kept = { [`analytics_${NATURE}`]: { filterType: 'set', values: ['Licences'] } };
     const filters = {
@@ -539,7 +551,7 @@ describe('CapexItemPage list context and dimensions', () => {
       [`analytics_${OLD}`]: { filterType: 'set', values: ['Hardware'] },
       [`analytics_${GONE}`]: { filterType: 'set', values: [null] },
     };
-    window.sessionStorage.setItem('capex-list-context', JSON.stringify({
+    window.sessionStorage.setItem('budget-list-context', JSON.stringify({
       sort: `analytics_${OLD}:ASC`, q: '', filters: JSON.stringify(filters), statusScope: 'enabled',
     }));
     renderAt(`/ops/capex/${ITEM_ID}/overview`);
@@ -549,7 +561,7 @@ describe('CapexItemPage list context and dimensions', () => {
       expect(call.sort ?? null).toBeNull();
       expect(JSON.parse(call.filters ?? '{}')).toEqual(kept);
     }
-    const stored = JSON.parse(window.sessionStorage.getItem('capex-list-context') ?? '{}');
+    const stored = JSON.parse(window.sessionStorage.getItem('budget-list-context') ?? '{}');
     expect(stored.sort).toBe('');
     expect(JSON.parse(stored.filters)).toEqual(kept);
   });
@@ -561,7 +573,7 @@ describe('CapexItemPage list context and dimensions', () => {
       priority: { filterType: 'set', values: ['high'] },
       ppe_type: { filterType: 'set', values: ['hardware'] },
     };
-    window.sessionStorage.setItem('capex-list-context', JSON.stringify({
+    window.sessionStorage.setItem('budget-list-context', JSON.stringify({
       sort: 'priority:ASC', q: '', filters: JSON.stringify(filters), statusScope: 'enabled',
     }));
     renderAt(`/ops/capex/${ITEM_ID}/overview`);
@@ -571,13 +583,13 @@ describe('CapexItemPage list context and dimensions', () => {
       expect(JSON.parse(call.filters ?? '{}')).toEqual(kept);
     }
     // The stored list context is written back without them.
-    const stored = JSON.parse(window.sessionStorage.getItem('capex-list-context') ?? '{}');
+    const stored = JSON.parse(window.sessionStorage.getItem('budget-list-context') ?? '{}');
     expect(stored.sort).toBe('');
     expect(JSON.parse(stored.filters)).toEqual(kept);
   });
 
   it('keeps a sort on an enabled dimension', async () => {
-    window.sessionStorage.setItem('capex-list-context', JSON.stringify({
+    window.sessionStorage.setItem('budget-list-context', JSON.stringify({
       sort: `analytics_${NATURE}:DESC`, q: '', filters: '', statusScope: 'enabled',
     }));
     renderAt(`/ops/capex/${ITEM_ID}/overview`);
@@ -587,7 +599,7 @@ describe('CapexItemPage list context and dimensions', () => {
 
   it('opened from a list a report link opened (`from=report`): walks its scope and filters, leaves the stored context alone', async () => {
     const own = { sort: '', q: '', filters: JSON.stringify({ supplier_name: { filterType: 'set', values: ['Alpha'] } }), statusScope: 'enabled' };
-    window.sessionStorage.setItem('capex-list-context', JSON.stringify(own));
+    window.sessionStorage.setItem('budget-list-context', JSON.stringify(own));
     const filters = JSON.stringify({ has_fte: { filterType: 'set', values: ['yes'] } });
     renderAt(`/ops/capex/${ITEM_ID}/overview?${new URLSearchParams({ filters, statusScope: 'all', from: 'report' })}`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
@@ -595,7 +607,7 @@ describe('CapexItemPage list context and dimensions', () => {
       expect(call.statusScope).toBe('all');
       expect(JSON.parse(call.filters ?? '{}')).toEqual(JSON.parse(filters));
     }
-    expect(JSON.parse(window.sessionStorage.getItem('capex-list-context') ?? '{}')).toEqual(own);
+    expect(JSON.parse(window.sessionStorage.getItem('budget-list-context') ?? '{}')).toEqual(own);
   });
 });
 
@@ -1035,6 +1047,7 @@ describe('CapexItemPage required dimensions before leaving (lot D2)', () => {
           <MemoryRouter initialEntries={[`/ops/capex/${ITEM_ID}/overview`]}>
             <Routes>
               <Route path="/ops/capex/:id/:tab" element={<CapexItemPage />} />
+              <Route path="/ops/budget" element={<div data-testid="list-page" />} />
               <Route path="/ops/capex" element={<div data-testid="list-page" />} />
             </Routes>
           </MemoryRouter>

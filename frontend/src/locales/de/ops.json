@@ -1438,5 +1438,17 @@
       "yearChange_other": "Eine andere Person hat die Spalten {{columns}} geändert, während Sie sie bearbeitet haben, und Sie haben noch nicht gewählt, welche Werte bleiben. Trotzdem das Jahr wechseln und Ihre Werte in diesen Spalten verlieren, oder bleiben und wählen.",
       "yearChangeConfirm": "Jahr wechseln"
     }
+  },
+  "budget": {
+    "titleWithCurrency": "Budgetzeilen ({{currency}})",
+    "type": "Typ",
+    "newLine": "Neue Zeile",
+    "opexLine": "OPEX-Zeile",
+    "capexLine": "CAPEX-Zeile",
+    "exportTitle": "Budgetdatei exportieren",
+    "opex": "OPEX",
+    "capex": "CAPEX",
+    "totalWithCount_one": "Gesamt ({{count}} Zeile)",
+    "totalWithCount_other": "Gesamt ({{count}} Zeilen)"
   }
 }

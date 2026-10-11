@@ -49,13 +49,13 @@ vi.mock('../components/ServerDataGrid', async (importOriginal) => {
 });
 
 import api from '../api';
-import OpexListPage from './OpexListPage';
+import BudgetListPage from './budget/BudgetListPage';
 import { DEFAULT_BUDGET_COLUMNS } from '../services/budgetColumns';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
-const ROWS = '/spend-items/summary';
-const TOTALS = '/spend-items/summary/totals';
-const VALUES = '/spend-items/summary/filter-values';
+const ROWS = '/budget-lines/summary';
+const TOTALS = '/budget-lines/summary/totals';
+const VALUES = '/budget-lines/summary/filter-values';
 const SUPPLIERS = ['Alpha', 'Bravo', 'Charlie'];
 
 const calls = (url: string) => get.mock.calls.filter(([u]) => u === url);
@@ -88,8 +88,8 @@ function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={['/ops/opex']}>
-        <OpexListPage />
+      <MemoryRouter initialEntries={['/ops/budget']}>
+        <BudgetListPage />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -124,7 +124,7 @@ describe('OPEX list requests per action', () => {
     get.mockImplementation(async (url: string, config?: { params?: Record<string, string> }) => {
       if (url === '/budget-columns') return { data: DEFAULT_BUDGET_COLUMNS };
       if (url === ROWS) {
-        return { data: { items: [{ id: 'o-1', item_number: 1, product_name: 'Cloud', supplier: { id: 's', name: 'Alpha' } }], total: 1, page: 1, limit: 50 } };
+        return { data: { items: [{ id: 'o-1', nature: 'opex', item_number: 1, product_name: 'Cloud', supplier: { id: 's', name: 'Alpha' } }], total: 1, page: 1, limit: 50 } };
       }
       if (url === VALUES) return { data: { [config?.params?.fields ?? '']: SUPPLIERS } };
       if (url === TOTALS) return { data: { yBudget: 10 } };
@@ -192,14 +192,14 @@ describe('OPEX list requests per action', () => {
     await act(async () => { grid.api.setFilterModel({ product_name: { filterType: 'text', type: 'contains', filter: 'cloud' } }); });
     await waitFor(() => expect(paramsOf(calls(ROWS).slice(-1)[0]).filters).toBeDefined(), { timeout: 10_000 });
     await waitFor(() => {
-      const context = JSON.parse(window.sessionStorage.getItem('opex-list-context') ?? '{}');
+      const context = JSON.parse(window.sessionStorage.getItem('budget-list-context') ?? '{}');
       expect(context.filters).toContain('cloud');
     }, { timeout: 10_000 });
-    const context = JSON.parse(window.sessionStorage.getItem('opex-list-context') ?? '{}');
+    const context = JSON.parse(window.sessionStorage.getItem('budget-list-context') ?? '{}');
     expect(context.sort).toBe('product_name:ASC');
     expect(paramsOf(calls(ROWS).slice(-1)[0]).sort).toBe('product_name:ASC');
     await waitFor(() => {
-      const link = document.querySelector('a[href^="/ops/opex/OPX-1"]') as HTMLAnchorElement | null;
+      const link = document.querySelector('a[href^="/ops/opex/BL-1"]') as HTMLAnchorElement | null;
       expect(link?.getAttribute('href')).toContain('sort=product_name%3AASC');
     }, { timeout: 10_000 });
   }, 30_000);

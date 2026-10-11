@@ -4,7 +4,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// The OPEX list with the real grid and set filter (lot 2B, PR B2):
+// The budget list with the real grid and set filter (lot 2B, PR B2):
 // - a 31 KB "every supplier but one" state travels as ctx in the API calls, the page URL, the cell
 //   links and the stored list context, survives a reload and a link opened in a new tab;
 // - the page requests ask for the lean grid rows with the FTE columns shown; the footer totals for
@@ -51,13 +51,13 @@ vi.mock('../components/ServerDataGrid', async (importOriginal) => {
 });
 
 import api from '../api';
-import OpexListPage from './OpexListPage';
+import BudgetListPage from './budget/BudgetListPage';
 import { DEFAULT_BUDGET_COLUMNS } from '../services/budgetColumns';
 import { resetListContextCache } from '../lib/listContext';
 
 const mocked = api as unknown as { get: ReturnType<typeof vi.fn>; post: ReturnType<typeof vi.fn> };
-const ROWS = '/spend-items/summary';
-const TOTALS = '/spend-items/summary/totals';
+const ROWS = '/budget-lines/summary';
+const TOTALS = '/budget-lines/summary/totals';
 const ID = 'Opx_allButOne_0123456';
 // "Every supplier but one": 1,152 names, about 31 KB once in a URL.
 const SUPPLIERS = Array.from({ length: 1153 }, (_, i) => `Fournisseur ${String(i).padStart(4, '0')} Société Générale`);
@@ -78,7 +78,7 @@ function renderAt(url: string) {
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[url]}>
-        <OpexListPage />
+        <BudgetListPage />
         <LocationProbe />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -103,9 +103,9 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
     mocked.post.mockResolvedValue({ data: { id: ID } });
     mocked.get.mockImplementation(async (url: string) => {
       if (url === '/budget-columns') return { data: DEFAULT_BUDGET_COLUMNS };
-      if (url === `/list-contexts/${ID}`) return { data: { id: ID, list: 'spend-items', state: { filters: ALL_BUT_ONE } } };
+      if (url === `/list-contexts/${ID}`) return { data: { id: ID, list: 'budget-lines', state: { filters: ALL_BUT_ONE } } };
       if (url === ROWS) {
-        return { data: { items: [{ id: 'o-1', item_number: 1, product_name: 'Cloud', supplier: { id: 's', name: 'Fournisseur 0002 Société Générale' } }], total: 1, page: 1, limit: 50 } };
+        return { data: { items: [{ id: 'o-1', nature: 'opex', item_number: 1, product_name: 'Cloud', supplier: { id: 's', name: 'Fournisseur 0002 Société Générale' } }], total: 1, page: 1, limit: 50 } };
       }
       if (url === TOTALS) return { data: { yBudget: 10, reportingCurrency: 'EUR' } };
       return { data: { items: [] } };
@@ -118,14 +118,14 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
 
   it('a 31 KB filter in the stored list context: page URL, API calls, cell links and storage carry ctx', async () => {
     expect(encodeURIComponent(ALL_BUT_ONE_TEXT).length).toBeGreaterThan(30_000);
-    window.sessionStorage.setItem('opex-list-context', JSON.stringify({ sort: '', q: '', filters: ALL_BUT_ONE_TEXT, statusScope: 'enabled' }));
-    renderAt('/ops/opex');
+    window.sessionStorage.setItem('budget-list-context', JSON.stringify({ sort: '', q: '', filters: ALL_BUT_ONE_TEXT, statusScope: 'enabled' }));
+    renderAt('/ops/budget');
     await waitFor(() => expect(calls(ROWS).length).toBeGreaterThan(0), { timeout: 10_000 });
     await waitFor(() => expect(calls(TOTALS).length).toBeGreaterThan(0), { timeout: 10_000 });
 
     // Saved once, for every place the state goes.
     expect(mocked.post).toHaveBeenCalledTimes(1);
-    expect(mocked.post).toHaveBeenCalledWith('/list-contexts', { list: 'spend-items', state: { filters: ALL_BUT_ONE } });
+    expect(mocked.post).toHaveBeenCalledWith('/list-contexts', { list: 'budget-lines', state: { filters: ALL_BUT_ONE } });
     // The page URL.
     const url = new URLSearchParams(location.search);
     expect(url.get('ctx')).toBe(ID);
@@ -138,14 +138,14 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
     // The grid shows the filter.
     expect(grid.api.getFilterModel()).toEqual(ALL_BUT_ONE);
     // The cell links (open in a new tab).
-    await waitFor(() => expect(document.querySelector('a[href^="/ops/opex/OPX-1"]')).not.toBeNull(), { timeout: 10_000 });
-    const href = document.querySelector('a[href^="/ops/opex/OPX-1"]')!.getAttribute('href')!;
+    await waitFor(() => expect(document.querySelector('a[href^="/ops/opex/BL-1"]')).not.toBeNull(), { timeout: 10_000 });
+    const href = document.querySelector('a[href^="/ops/opex/BL-1"]')!.getAttribute('href')!;
     expect(href).toContain(`ctx=${ID}`);
     expect(href).not.toContain('filters=');
     expect(href.length).toBeLessThan(120);
     // The stored list context.
     await waitFor(() => {
-      const stored = JSON.parse(window.sessionStorage.getItem('opex-list-context') ?? '{}');
+      const stored = JSON.parse(window.sessionStorage.getItem('budget-list-context') ?? '{}');
       expect(stored).toMatchObject({ filters: '', ctx: ID });
     });
     expect(mocked.post).toHaveBeenCalledTimes(1);
@@ -156,7 +156,7 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
   }, 30_000);
 
   it('a reload of the page URL: the context is read once, the list loads once, filtered', async () => {
-    renderAt(`/ops/opex?ctx=${ID}`);
+    renderAt(`/ops/budget?ctx=${ID}`);
     await waitFor(() => expect(calls(ROWS).length).toBeGreaterThan(0), { timeout: 10_000 });
     await new Promise((resolve) => setTimeout(resolve, 500));
     expect(calls(ROWS)).toHaveLength(1);
@@ -169,7 +169,7 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
   }, 30_000);
 
   it('page requests ask for the lean rows and the FTE columns shown; the footer for the amount columns shown', async () => {
-    renderAt('/ops/opex');
+    renderAt('/ops/budget');
     await waitFor(() => expect(calls(TOTALS).length).toBeGreaterThan(0), { timeout: 10_000 });
     await new Promise((resolve) => setTimeout(resolve, 400));
     expect(calls(ROWS)).toHaveLength(1);
@@ -202,7 +202,7 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
     const linked = { product_name: { filterType: 'text', type: 'contains', filter: 'linked' } };
     const first = { product_name: { filterType: 'text', type: 'contains', filter: 'first' } };
     const second = { product_name: { filterType: 'text', type: 'contains', filter: 'second' } };
-    const view = renderAt(`/ops/opex?filters=${encodeURIComponent(JSON.stringify(linked))}`);
+    const view = renderAt(`/ops/budget?filters=${encodeURIComponent(JSON.stringify(linked))}`);
     await waitFor(() => expect(calls(ROWS).length).toBeGreaterThan(0), { timeout: 10_000 });
     expect(JSON.parse(paramsOf(calls(ROWS)[0]).filters)).toEqual(linked);
     await act(async () => { grid.api.setFilterModel(first); });
@@ -223,7 +223,7 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
   it('a link whose saved filters are gone: one line says so, the list opens unfiltered, not with the stored filters', async () => {
     const DEAD = 'Gone_0123456789abcdefg';
     const storedFilters = JSON.stringify({ product_name: { filterType: 'text', type: 'contains', filter: 'stored' } });
-    window.sessionStorage.setItem('opex-list-context', JSON.stringify({ sort: '', q: '', filters: storedFilters, statusScope: 'enabled' }));
+    window.sessionStorage.setItem('budget-list-context', JSON.stringify({ sort: '', q: '', filters: storedFilters, statusScope: 'enabled' }));
     const base = mocked.get.getMockImplementation()! as (...args: any[]) => any;
     mocked.get.mockImplementation(async (url: string, config?: unknown) => {
       if (url === `/list-contexts/${DEAD}`) {
@@ -231,7 +231,7 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
       }
       return base(url, config);
     });
-    renderAt(`/ops/opex?ctx=${DEAD}`);
+    renderAt(`/ops/budget?ctx=${DEAD}`);
     await waitFor(() => expect(calls(ROWS).length).toBeGreaterThan(0), { timeout: 10_000 });
     expect(paramsOf(calls(ROWS)[0]).filters).toBeUndefined();
     expect(paramsOf(calls(ROWS)[0]).ctx).toBeUndefined();
@@ -254,7 +254,7 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
       }
       return base(url, config);
     });
-    renderAt('/ops/opex');
+    renderAt('/ops/budget');
     await waitFor(() => expect(calls(TOTALS)).toHaveLength(1), { timeout: 10_000 });
     const footer = (colId: string) => document.querySelector(`.ag-floating-bottom [col-id="${colId}"]`)?.textContent ?? null;
     await waitFor(() => expect(footer('yBudget')).toBe('1 234'), { timeout: 10_000 });
@@ -269,4 +269,27 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
     await act(async () => { release(); });
     await waitFor(() => expect(footer('yRevision')).toBe('1 234'), { timeout: 10_000 });
   }, 30_000);
+  it('the real grid opens on an address nature as its Type column filter', async () => {
+    const model = { nature: { filterType: 'set', values: ['capex'] } };
+    renderAt('/ops/budget?filters=' + encodeURIComponent(JSON.stringify(model)));
+    await waitFor(() => expect(grid.api).not.toBeNull());
+    await waitFor(() => expect(calls(TOTALS).length).toBeGreaterThan(0));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 500)); });
+    expect(grid.api.getFilterModel()).toEqual(model);
+    expect(paramsOf(calls(TOTALS).slice(-1)[0]).filters).toBe(JSON.stringify(model));
+    expect(screen.queryByRole('button', { name: 'budget.capex' })).toBeNull();
+  });
+
+  it('the real grid opens on a nature saved in an address ctx', async () => {
+    const saved = { nature: { filterType: 'set', values: ['capex'] }, ...ALL_BUT_ONE };
+    const fallback = mocked.get.getMockImplementation()! as (url: string, config?: any) => any;
+    mocked.get.mockImplementation(async (url: string, config?: any) => url === `/list-contexts/${ID}`
+      ? { data: { list: 'budget-lines', state: { filters: saved } } }
+      : fallback(url, config));
+    renderAt('/ops/budget?ctx=' + ID);
+    await waitFor(() => expect(grid.api).not.toBeNull());
+    await waitFor(() => expect(grid.api.getFilterModel()).toEqual(saved));
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
+
 });

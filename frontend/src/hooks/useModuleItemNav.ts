@@ -70,6 +70,9 @@ export interface ModuleItemNavResult {
   hasNext: boolean;
   /** ID of previous item, or null */
   prevId: string | null;
+  /** The neighbour's workspace path when the list spans several natures. */
+  prevPath?: string | null;
+  nextPath?: string | null;
   /** ID of next item, or null */
   nextId: string | null;
 }

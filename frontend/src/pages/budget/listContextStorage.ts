@@ -1,4 +1,4 @@
-export type OpexListContextSnapshot = {
+export type BudgetListContextSnapshot = {
   sort: string;
   q: string;
   filters: string;
@@ -15,9 +15,9 @@ export type OpexListContextSnapshot = {
   ctx?: string;
 };
 
-const STORAGE_KEY = 'opex-list-context';
+const STORAGE_KEY = 'budget-list-context';
 
-function isOpexListContextSnapshot(value: any): value is OpexListContextSnapshot {
+function isBudgetListContextSnapshot(value: any): value is BudgetListContextSnapshot {
   return value && typeof value === 'object'
     && typeof value.sort === 'string'
     && typeof value.q === 'string'
@@ -27,20 +27,20 @@ function isOpexListContextSnapshot(value: any): value is OpexListContextSnapshot
     && (value.ctx === undefined || typeof value.ctx === 'string');
 }
 
-export function readStoredOpexListContext(): OpexListContextSnapshot | null {
+export function readStoredBudgetListContext(): BudgetListContextSnapshot | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = window.sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (!isOpexListContextSnapshot(parsed)) return null;
+    if (!isBudgetListContextSnapshot(parsed)) return null;
     return parsed;
   } catch {
     return null;
   }
 }
 
-export function writeStoredOpexListContext(snapshot: OpexListContextSnapshot): void {
+export function writeStoredBudgetListContext(snapshot: BudgetListContextSnapshot): void {
   if (typeof window === 'undefined') return;
   try {
     window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));

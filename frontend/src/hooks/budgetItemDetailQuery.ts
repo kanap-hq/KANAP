@@ -20,3 +20,7 @@ export function capexDetailQuery(ref: string) {
     queryFn: async ({ signal }: QueryFunctionContext) => (await api.get(`/capex-items/${ref}`, { signal })).data,
   };
 }
+
+/** A neighbour of a mixed list opens its own nature's workspace. */
+export const budgetNeighborDetailQuery = (ref: string, nature?: 'opex' | 'capex') =>
+  nature === 'capex' ? capexDetailQuery(ref) : spendDetailQuery(ref);

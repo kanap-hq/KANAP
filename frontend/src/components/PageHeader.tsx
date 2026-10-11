@@ -36,6 +36,7 @@ function useBreadcrumbs(): Crumb[] {
       'master-data': 'masterData',
       'portfolio': 'portfolio',
       'ai': 'ai',
+      'budget': 'budget',
       'opex': 'opex',
       'capex': 'capex',
       'projects': 'projects',

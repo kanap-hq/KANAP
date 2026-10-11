@@ -10,11 +10,10 @@ import { useCapexNav } from '../../hooks/useCapexNav';
 import { capexDetailQuery } from '../../hooks/budgetItemDetailQuery';
 import { isReportView, useListFilters, writeListSnapshot } from '../../hooks/useListContextSearch';
 import { STATUS_SCOPE_PARAM } from '../../utils/statusScopeParams';
-import { compactListSearchCached } from '../../lib/listContext';
+import { cachedListContext, compactListSearchCached, parseListFilters } from '../../lib/listContext';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { axisRequiredFor, isHiddenAxis, useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import { explicitSort, filtersStringOnShownColumns } from '../../components/finance/amountColumns';
-import { capexListFieldPredicate } from './listFields';
 import useAutosave, { autosaveErrorMessage, useAutosaveRegistry } from '../../hooks/useAutosave';
 import { sendPatchBuffer, useSharedPatchBuffer } from '../../hooks/patchBuffer';
 import { ConflictChoice, EditConflict, conflictCompanions, useEditConflicts, useOtherConflictTargets } from '../../hooks/editConflicts';
@@ -49,7 +48,8 @@ import { namesInSentence, useHeldChoices } from '../../components/finance/heldCh
 import { CAPEX_FINANCE_CONFIG } from '../../components/finance/config';
 import type { RelationsPanelHandle } from './editors/RelationsPanel';
 import EntityTasksPanel from '../../components/EntityTasksPanel';
-import { readStoredCapexListContext, writeStoredCapexListContext } from './listContextStorage';
+import { budgetListFieldPredicate } from '../budget/listFields';
+import { readStoredBudgetListContext, writeStoredBudgetListContext } from '../budget/listContextStorage';
 import { fetchCapexRelationsCount } from '../../utils/workspaceTabCounts';
 import useCurrencySettings from '../../hooks/useCurrencySettings';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
@@ -77,7 +77,6 @@ function retryTabs() {
   LAZY_TABS.forEach((tab) => tab.retry());
 }
 
-const LIST_ENDPOINT = '/capex-items/summary';
 
 type TabKey = 'overview' | 'budget' | 'allocations' | 'relations';
 const TAB_KEYS: TabKey[] = ['overview', 'budget', 'allocations', 'relations'];
@@ -257,7 +256,12 @@ export default function CapexItemPage() {
   // An item opened from a one-off list view (a report link, `?from=report`) leaves the stored list
   // context alone: the view's state travels in the address.
   const reportView = React.useMemo(() => isReportView(location.search), [location.search]);
-  const storedListContext = React.useMemo(() => (isReportView(location.search) ? null : readStoredCapexListContext()), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const unifiedList = searchParams.get('list') === 'budget'
+    || !!parseListFilters(searchParams.get('filters'))?.nature
+    || cachedListContext(searchParams.get('ctx'))?.list === 'budget-lines'
+    || !!readStoredBudgetListContext();
+  const LIST_ENDPOINT = unifiedList ? '/budget-lines/summary' : '/capex-items/summary';
+  const storedListContext = React.useMemo(() => (isReportView(location.search) ? null : readStoredBudgetListContext()), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const idParam = String(params.id || '');
   const isCreate = idParam === 'new';
@@ -390,13 +394,14 @@ export default function CapexItemPage() {
   // on another dimension, or on a field the list no longer has (the former CAPEX criteria), falls
   // back there, and here too.
   const analyticsAxes = useAnalyticsAxes({ scope: 'capex' });
+  const listAxes = useAnalyticsAxes({ scope: unifiedList ? null : 'capex' });
   const isListField = React.useMemo(
-    () => capexListFieldPredicate(analyticsAxes.enabled.filter((axis) => !axis.is_default).map((axis) => axis.id)),
-    [analyticsAxes],
+    () => budgetListFieldPredicate(listAxes.enabled.filter((axis) => !axis.is_default).map((axis) => axis.id)),
+    [listAxes],
   );
   // Filters saved as a context (`ctx`: a link opened in a new tab, a reload) are read first.
   const listFilters = useListFilters(searchParams, storedListContext);
-  const listContextReady = budgetColumns.ready && analyticsAxes.ready && listFilters.ready;
+  const listContextReady = budgetColumns.ready && listAxes.ready && listFilters.ready;
   const sort = explicitSort(searchParams.get('sort') || storedListContext?.sort, budgetColumns.shown, budgetColumns.defaultSort, isListField);
   const q = searchParams.get('q') || storedListContext?.q || '';
   // A filter on a column that is not shown falls back like the list's, so prev/next walks the rows on screen.
@@ -406,8 +411,8 @@ export default function CapexItemPage() {
   // walks a different set from the one on screen.
   const statusScope = searchParams.get(STATUS_SCOPE_PARAM) || storedListContext?.statusScope || 'enabled';
   React.useEffect(() => {
-    if (listContextReady && !reportView) writeListSnapshot(LIST_ENDPOINT, { sort, q, filters, statusScope }, readStoredCapexListContext, writeStoredCapexListContext);
-  }, [listContextReady, reportView, sort, q, filters, statusScope]);
+    if (listContextReady && unifiedList && !reportView) writeListSnapshot(LIST_ENDPOINT, { sort, q, filters, statusScope }, readStoredBudgetListContext, writeStoredBudgetListContext);
+  }, [listContextReady, unifiedList, reportView, sort, q, filters, statusScope, LIST_ENDPOINT]);
   const buildListContextParams = React.useCallback(() => {
     const sp = new URLSearchParams(searchParamsString);
     if (sort) sp.set('sort', sort); else sp.delete('sort');
@@ -418,10 +423,10 @@ export default function CapexItemPage() {
     }
     // Filters too long for a URL go as `ctx` (saved by the navigation request already).
     return new URLSearchParams(compactListSearchCached(sp.toString(), LIST_ENDPOINT));
-  }, [filters, q, searchParamsString, sort]);
+  }, [filters, q, searchParamsString, sort, LIST_ENDPOINT]);
 
   // The route's line, not the loaded detail: the position follows a click at once (fast clicks).
-  const nav = useCapexNav({ id: idParam, sort: sort || null, q, filters, statusScope, enabled: listContextReady && !isCreate });
+  const nav = useCapexNav({ id: idParam, sort: sort || null, q, filters, statusScope, enabled: listContextReady && !isCreate }, unifiedList);
   const { index, total, hasPrev, hasNext, prevId, nextId } = isCreate
     ? { index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null as any, nextId: null as any }
     : nav;
@@ -843,15 +848,15 @@ export default function CapexItemPage() {
     if (!targetId) return;
     if (!(await leaveLine())) return;
     const sp = buildListContextParams();
-    navigate(`/ops/capex/${targetId}/${routeTab}?${sp.toString()}`);
+    navigate(`${targetId.startsWith('/ops/') ? targetId : `/ops/capex/${targetId}`}/${routeTab}?${sp.toString()}`);
   }, [leaveLine, buildListContextParams, navigate, routeTab]);
 
   const closeWorkspace = React.useCallback(async () => {
     if (!(await leaveLine())) return;
     const sp = buildListContextParams();
     const qs = sp.toString();
-    navigate(`/ops/capex${qs ? `?${qs}` : ''}`);
-  }, [leaveLine, buildListContextParams, navigate]);
+    navigate(`${unifiedList ? '/ops/budget' : '/ops/capex'}${qs ? `?${qs}` : ''}`);
+  }, [leaveLine, buildListContextParams, navigate, unifiedList]);
 
   // ----- Change type (lot M): from the "…" menu; pending edits are saved first (the dialog sends the line's row_version) -----
   const [changeTypeOpen, setChangeTypeOpen] = React.useState(false);
@@ -1034,8 +1039,8 @@ export default function CapexItemPage() {
           totalCount: total,
           hasPrev,
           hasNext,
-          onPrev: () => { void confirmAndNavigate(prevId); },
-          onNext: () => { void confirmAndNavigate(nextId); },
+          onPrev: () => { void confirmAndNavigate(nav.prevPath ?? prevId); },
+          onNext: () => { void confirmAndNavigate(nav.nextPath ?? nextId); },
           previousLabel: t('capex.workspace.prev'),
           nextLabel: t('capex.workspace.next'),
         } : undefined}
