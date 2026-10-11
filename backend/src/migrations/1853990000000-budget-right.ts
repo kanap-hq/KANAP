@@ -17,6 +17,12 @@ type RightRow = {
 
 type Planned = RightRow & { level: string };
 
+/** An `opex` or `capex` row whose tenant is not its role's, deleted unmerged. */
+type Stray = { role_id: string; role_tenant: string; row_tenant: string | null; resource: string; level: string };
+
+/** Rows named in a log line (precedent 1853970000000). */
+const NAMED_ROWS = 50;
+
 /** The highest of the levels given (`manager` written `member`), or null when none is. */
 function highest(levels: Array<string | null>): string | null {
   let best: string | null = null;
@@ -78,10 +84,12 @@ export class BudgetRight1853990000000 implements MigrationInterface {
           [planned.map((p) => p.role_id), planned.map((p) => p.level), planned.map((p) => p.tenant_id)],
         );
       }
-      const strays = await countOf(
-        queryRunner,
-        `DELETE FROM role_permissions rp USING roles r
-          WHERE rp.role_id = r.id AND rp.resource IN ('opex', 'capex') AND rp.tenant_id IS DISTINCT FROM r.tenant_id`,
+      const strays: Stray[] = await queryRunner.query(
+        `WITH gone AS (
+           DELETE FROM role_permissions rp USING roles r
+            WHERE rp.role_id = r.id AND rp.resource IN ('opex', 'capex') AND rp.tenant_id IS DISTINCT FROM r.tenant_id
+           RETURNING rp.role_id::text AS role_id, r.tenant_id::text AS role_tenant, rp.tenant_id::text AS row_tenant, rp.resource, rp.level)
+         SELECT * FROM gone ORDER BY role_id, resource`,
       );
       const removed = await countOf(queryRunner, `DELETE FROM role_permissions WHERE resource IN ('opex', 'capex')`);
 
@@ -90,14 +98,14 @@ export class BudgetRight1853990000000 implements MigrationInterface {
 
       logMerge(planned, strays);
       const ms = Date.now() - started;
-      if (planned.length === 0 && removed === 0) {
+      if (planned.length === 0 && removed + strays.length === 0) {
         console.log(`${LOG_PREFIX} no opex or capex right left; nothing to merge (${ms} ms)`);
       } else {
         const tenants = new Set(planned.map((p) => p.tenant_id)).size;
         const differing = planned.filter(differs).length;
         console.log(
           `${LOG_PREFIX} done in ${ms} ms: ${planned.length} role(s) of ${tenants} tenant(s) hold budget, `
-          + `${differing} of them with different levels, a single row or a budget row before (listed above); ${removed + strays} opex/capex row(s) removed`,
+          + `${differing} of them with different levels, a single row or a budget row before (listed above); ${removed + strays.length} opex/capex row(s) removed`,
         );
       }
     });
@@ -168,7 +176,7 @@ function differs(p: Planned): boolean {
   return p.opex !== p.capex || p.opex === 'manager' || p.budget !== null;
 }
 
-function logMerge(planned: Planned[], strays: number): void {
+function logMerge(planned: Planned[], strays: Stray[]): void {
   const byTenant = new Map<string, Planned[]>();
   for (const p of planned) {
     const list = byTenant.get(p.tenant_id) ?? [];
@@ -183,8 +191,12 @@ function logMerge(planned: Planned[], strays: number): void {
       console.log(`${LOG_PREFIX} tenant ${tenant}: role "${p.role_name}" (${p.role_id}): ${before} -> budget=${p.level}`);
     }
   }
-  if (strays > 0) {
-    console.log(`${LOG_PREFIX} ${strays} opex/capex row(s) of another tenant than their role (never read) deleted`);
+  if (strays.length > 0) {
+    const named = strays.slice(0, NAMED_ROWS)
+      .map((row) => `role ${row.role_id} of tenant ${row.role_tenant}: ${row.resource}=${row.level} written for tenant ${row.row_tenant ?? 'none'}`)
+      .join('; ');
+    const more = strays.length > NAMED_ROWS ? `; and ${strays.length - NAMED_ROWS} more` : '';
+    console.log(`${LOG_PREFIX} ${strays.length} opex/capex row(s) of another tenant than their role (never read) deleted: ${named}${more}`);
   }
 }
 

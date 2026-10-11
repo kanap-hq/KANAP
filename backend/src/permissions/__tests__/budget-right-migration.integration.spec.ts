@@ -179,7 +179,10 @@ async function testMerge() {
     assert.match(named('Other tenant')[0] ?? '', new RegExp(`tenant ${b.slug} .*opex=reader, capex=admin -> budget=admin$`));
     assert.equal(named('Symmetric').length, 0, 'a role with the same level on both is not listed');
     assert.equal(named('Stray row').length, 0, 'a row of another tenant merges nothing');
-    assert.ok(lines.some((line) => /1 opex\/capex row\(s\) of another tenant than their role \(never read\) deleted/.test(line)), lines.join('\n'));
+    assert.ok(
+      lines.some((line) => line.endsWith(`1 opex/capex row(s) of another tenant than their role (never read) deleted: role ${roles.stray} of tenant ${a.id}: opex=admin written for tenant ${b.id}`)),
+      lines.join('\n'),
+    );
     assert.ok(lines.every((line) => line.startsWith(LOG_PREFIX)), 'every line is prefixed');
     assert.ok(lines.some((line) => /done in \d+ ms: \d+ role\(s\) of \d+ tenant\(s\) hold budget/.test(line)), lines.join('\n'));
   });
