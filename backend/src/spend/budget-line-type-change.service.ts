@@ -163,16 +163,24 @@ const NOT_FOUND: Record<BudgetNature, string> = { opex: 'Spend item not found', 
 
 /**
  * The tables a dated change copies to the new line, with the column naming the line: the links to
- * other objects and the contacts. Names come only from here.
+ * other objects and the contacts. `target` and `name`: what each copied row names, as the audit row
+ * of the change says it (business references for projects and requests, names only for contacts).
+ * Names come only from here.
  */
-const COPIED_LINKS: ReadonlyArray<{ table: string; key: string; owner: string; columns: string[] }> = [
-  { table: 'spend_item_contacts', key: 'contacts', owner: 'spend_item_id', columns: ['contact_id', 'role', 'origin'] },
-  { table: 'application_spend_items', key: 'applications', owner: 'spend_item_id', columns: ['application_id'] },
-  { table: 'asset_spend_items', key: 'assets', owner: 'spend_item_id', columns: ['asset_id'] },
-  { table: 'contract_spend_items', key: 'contracts', owner: 'spend_item_id', columns: ['contract_id'] },
-  { table: 'portfolio_project_opex', key: 'projects', owner: 'opex_id', columns: ['project_id'] },
-  { table: 'portfolio_request_opex', key: 'requests', owner: 'opex_id', columns: ['request_id'] },
+const COPIED_LINKS: ReadonlyArray<{ table: string; key: string; owner: string; columns: string[]; target: string; name: string }> = [
+  {
+    table: 'spend_item_contacts', key: 'contacts', owner: 'spend_item_id', columns: ['contact_id', 'role', 'origin'],
+    target: 'contacts', name: `NULLIF(btrim(concat_ws(' ', o.first_name, o.last_name)), '')`,
+  },
+  { table: 'application_spend_items', key: 'applications', owner: 'spend_item_id', columns: ['application_id'], target: 'applications', name: 'o.name' },
+  { table: 'asset_spend_items', key: 'assets', owner: 'spend_item_id', columns: ['asset_id'], target: 'assets', name: 'o.name' },
+  { table: 'contract_spend_items', key: 'contracts', owner: 'spend_item_id', columns: ['contract_id'], target: 'contracts', name: 'o.name' },
+  { table: 'portfolio_project_opex', key: 'projects', owner: 'opex_id', columns: ['project_id'], target: 'portfolio_projects', name: `'PRJ-' || o.item_number || ': ' || o.name` },
+  { table: 'portfolio_request_opex', key: 'requests', owner: 'opex_id', columns: ['request_id'], target: 'portfolio_requests', name: `'REQ-' || o.item_number || ': ' || o.name` },
 ];
+
+/** What a dated change copied, per family, as its audit row records it: how many, and which. */
+export type CopiedLinks = Record<string, { count: number; items: Array<{ id: string; name: string | null; role?: string }> }>;
 
 const REASON_MAX = 1000;
 
@@ -484,19 +492,24 @@ export class BudgetLineTypeChangeService {
       [tenantId, line.id, end, deriveStatusFromDisabledAt(end, now), now],
     );
     // Its contacts and links to other objects; tasks, attachments and web links stay with it.
-    const copied: Record<string, number> = {};
+    const copied: CopiedLinks = {};
     for (const link of COPIED_LINKS) {
       const columns = link.columns.join(', ');
-      const [{ n }]: Array<{ n: number }> = await manager.query(
+      const contact = link.key === 'contacts';
+      const rows: Array<{ id: string; name: string | null; role?: string }> = await manager.query(
         `WITH copied AS (
            INSERT INTO ${link.table} (tenant_id, ${link.owner}, ${columns})
            SELECT tenant_id, $3, ${columns} FROM ${link.table} WHERE tenant_id = $1 AND ${link.owner} = $2
            ON CONFLICT DO NOTHING
-           RETURNING 1
-         ) SELECT count(*)::int AS n FROM copied`,
+           RETURNING ${link.columns[0]} AS id${contact ? ', role::text AS role' : ''}
+         )
+         SELECT c.id::text AS id, ${link.name} AS name${contact ? ', c.role' : ''}
+           FROM copied c
+           LEFT JOIN ${link.target} o ON o.tenant_id = $1 AND o.id = c.id
+          ORDER BY 2, 1`,
         [tenantId, line.id, newId],
       );
-      copied[link.key] = n;
+      copied[link.key] = { count: rows.length, items: rows.map((row) => (contact ? { id: row.id, name: row.name, role: row.role } : { id: row.id, name: row.name })) };
     }
 
     // The new line names the one it continues; a CAPEX line's description is not written by its

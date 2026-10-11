@@ -154,7 +154,15 @@ async function testFromYear() {
     const [newRow] = await changeAuditRows(runner, tenantId, newId);
     assert.deepEqual([oldRow.table_name, oldRow.after_json.successor_id, oldRow.after_json.from_year, oldRow.after_json.reason], ['spend_items', newId, 2026, 'Capitalised from 2026']);
     assert.deepEqual([newRow.table_name, newRow.after_json.predecessor_id, newRow.after_json.to_reference], ['capex_items', line.id, created.legacy_number]);
-    assert.deepEqual(newRow.after_json.copied, { contacts: 1, applications: 1, assets: 1, contracts: 1, projects: 1, requests: 1 });
+    // What was copied, counted and named per family (no audit row per link).
+    assert.deepEqual(newRow.after_json.copied, {
+      contacts: { count: 1, items: [{ id: w.contactId, name: 'Con Tact', role: 'commercial' }] },
+      applications: { count: 1, items: [{ id: w.applicationId, name: 'Type change app' }] },
+      assets: { count: 1, items: [{ id: w.assetId, name: 'Type change asset' }] },
+      contracts: { count: 1, items: [{ id: w.contractId, name: 'Type change contract' }] },
+      projects: { count: 1, items: [{ id: w.projectId, name: 'PRJ-990301: Type change project' }] },
+      requests: { count: 1, items: [{ id: w.requestId, name: 'REQ-990301: Type change request' }] },
+    });
     assert.equal((await readBudgetLineMeta(runner.manager, 'opex', tenantId, line.id))?.changed_by?.id, member);
     assert.equal((await readBudgetLineMeta(runner.manager, 'capex', tenantId, newId))?.changed_by?.id, member);
 

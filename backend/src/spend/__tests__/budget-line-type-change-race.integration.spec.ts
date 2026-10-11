@@ -1,4 +1,5 @@
 import { ItemNumberService } from '../../common/item-number.service';
+import { TaskActivitiesService } from '../../tasks/task-activities.service';
 import { TasksUnifiedService } from '../../tasks/tasks-unified.service';
 import { seedRoleUser, seedTypeChangeLine, seedTypeChangeWorld, typeChangeService } from './budget-line-type-change.fixtures';
 import { amountsService, captureAudit, noFreeze } from './round-inputs.fixtures';
@@ -18,6 +19,12 @@ import { assert, assertClean, assertSucceeded, describe, httpStatus, progress, r
 //    SHARE, so it waits for the change, then finds a line of the other nature (404). Without that
 //    lock it saved a task of the type of before, which no reader shows (an orphan).
 // 4. The task created first: the change waits for it, then moves it with the others.
+// 5. A change from 2026, then the new line changed back in place to the old line's nature: a cell
+//    save that read the version's old line before both still finds the version gone (404). The
+//    version lock checks that the version is on the line locked, whatever the natures by then.
+// 6. A task's status changed from its activity box (`createUnified`) and a task edited through the
+//    line's route (`updateForTarget`), each having read the task before an in-place change: each
+//    writes its own columns only, so the task keeps the type the change gave it.
 // Each race runs on its own committed tenant, removed afterwards; never on `appdb`.
 
 const SET = 2026;
@@ -162,9 +169,81 @@ async function taskBeforeChange() {
   });
 }
 
+async function cellAfterDoubleChange() {
+  await withRace('type-change-double', async (race) => {
+    const { w, member, line, rowVersion } = await seedRace(race);
+    const version = line.versions[SET];
+    const cell = await race.open('budget cell');
+    const changer = await race.open('type change');
+    const back = await race.open('type change back');
+
+    const read = race.gate(cell, { label: 'read the version\'s line', when: 'after', match: sql.select('spend_versions') });
+    const cellWork = race.start(cell, (manager) => amountsService('opex', captureAudit(), noFreeze).bulkUpsert(
+      version, { kind: 'monthly', year: SET, months: [{ period: `${SET}-03-01`, planned: 123 }] }, null, { manager },
+    ));
+    assert.equal(await progress(cellWork, { party: cell, gate: read }), 'gated', 'harness: the cell save pauses after reading the version');
+
+    // OPEX to CAPEX from 2026, then the new line back to OPEX in place: the version's new line has the old line's nature.
+    const changeDone = await settle(race.start(changer, (manager) => typeChangeService(undefined as any, captureAudit()).change(
+      'opex', line.id, datedBody(w, rowVersion), member, { manager, tenantId: race.tenantId },
+    )));
+    assertSucceeded(changeDone, 'the type change');
+    const newId = (changeDone as { value: { id: string } }).value.id;
+    const [{ row_version: newRowVersion }] = await race.read(`SELECT row_version FROM spend_items WHERE id = $1`, [newId]);
+    const backDone = await settle(race.start(back, (manager) => typeChangeService(undefined as any, captureAudit()).change(
+      'capex', newId, { row_version: Number(newRowVersion) }, member, { manager, tenantId: race.tenantId },
+    )));
+    assertSucceeded(backDone, 'the change back');
+
+    read.release();
+    const cellDone = await settle(cellWork);
+    assert.ok(!cellDone.ok && httpStatus(cellDone.error) === 404, `the cell save finds the version gone (404); it ended with ${describe(cellDone)}`);
+    const [state] = await race.read(
+      `SELECT v.spend_item_id, i.nature, (SELECT planned::text FROM spend_amounts WHERE version_id = v.id AND period = '${SET}-03-01') AS march
+         FROM spend_versions v JOIN spend_items i ON i.id = v.spend_item_id WHERE v.id = $1`,
+      [version],
+    );
+    assert.deepEqual(state, { spend_item_id: newId, nature: 'opex', march: '100.00' }, 'the version on the new line, its month not written');
+  });
+}
+
+async function taskWritesDuringChange() {
+  for (const write of ['status', 'edit'] as const) {
+    await withRace(`type-change-task-${write}`, async (race) => {
+      const { member, line, rowVersion } = await seedRace(race);
+      const writer = await race.open(`task ${write}`);
+      const changer = await race.open('type change');
+
+      const read = race.gate(writer, { label: 'read the task', when: 'after', match: sql.select('tasks') });
+      const writeWork = race.start<unknown>(writer, (manager) => (write === 'status'
+        ? new TaskActivitiesService(undefined as any, undefined as any, { getTaskRecipients: async () => [] } as any, undefined as any, captureAudit() as any)
+          .createUnified(line.taskId, { type: 'unified', status: 'in_progress' }, race.tenantId, null, { manager })
+        : tasksService().updateForTarget(
+          { type: 'spend_item', id: line.id, payload: { id: line.taskId, title: 'Edited during the change' } as any },
+          member, { manager, tenantId: race.tenantId },
+        )));
+      assert.equal(await progress(writeWork, { party: writer, gate: read }), 'gated', `harness: the task ${write} pauses after reading the task`);
+
+      const changeDone = await settle(race.start(changer, (manager) => typeChangeService(undefined as any, captureAudit()).change(
+        'opex', line.id, { row_version: rowVersion }, member, { manager, tenantId: race.tenantId },
+      )));
+      assertSucceeded(changeDone, 'the type change');
+      read.release();
+      assertSucceeded(await settle(writeWork), `the task ${write}`);
+      const [task] = await race.read(`SELECT title, status, related_object_type FROM tasks WHERE id = $1`, [line.taskId]);
+      assert.deepEqual(task, write === 'status'
+        ? { title: 'Type change task', status: 'in_progress', related_object_type: 'capex_item' }
+        : { title: 'Edited during the change', status: 'open', related_object_type: 'capex_item' },
+      `the task ${write} is saved and the task keeps the type of its line`);
+    });
+  }
+}
+
 void runRaceSpecs('Budget line type change races', [
   ['a cell save of a moved version, its line read before the change: 404, nothing written through the old line', cellAfterChange],
   ['a cell save holding the line: the change waits, then moves the version with the cell', cellBeforeChange],
   ['a task created during an in-place change: it waits, then 404, no task of the type of before', taskAfterChange],
   ['a task created before the change: the change waits, then moves it', taskBeforeChange],
+  ['a cell save that read the old line, then a change and a change back: 404, nothing written', cellAfterDoubleChange],
+  ['a task status or edit that read the task before an in-place change: saved, the task keeps its new type', taskWritesDuringChange],
 ]);

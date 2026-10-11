@@ -138,6 +138,11 @@ async function testManualPctBulkUpsert() {
         locks.push(['line', ...params]);
         return [{ locked: 1 }];
       }
+      // The version, locked only while it is still on the line locked (`lockVersionWithLine`).
+      if (/FROM spend_versions\s+WHERE tenant_id = \$1 AND id = \$2 AND spend_item_id = \$3 AND EXISTS \(.*nature = 'capex'\)\s+FOR NO KEY UPDATE/s.test(sql)) {
+        locks.push(['version', params[0], params[1]]);
+        return params[2] === 'item-1' ? [{ id: params[1] }] : [];
+      }
       if (/FROM spend_versions WHERE tenant_id = \$1 AND id = ANY\(\$2::uuid\[\]\) AND EXISTS \(.*nature = 'capex'\) ORDER BY id FOR NO KEY UPDATE/s.test(sql)) {
         locks.push(['version', params[0], ...params[1]]);
         return [{ id: params[1][0] }];
