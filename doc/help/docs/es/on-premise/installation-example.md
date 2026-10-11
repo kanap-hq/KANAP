@@ -506,8 +506,8 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers off;
 
-    # Upload limit: budget files up to 48 MB, attachments up to 20 MB
-    client_max_body_size 50m;
+    # Upload limit: budget file loads up to 72 MB, attachments up to 20 MB
+    client_max_body_size 80m;
 
     # Canonicalize /api → /api/
     location = /api { return 301 /api/; }

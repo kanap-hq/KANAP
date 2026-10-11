@@ -406,7 +406,7 @@ Commencez par le journal de l'API : `docker compose -f infra/compose.onprem.yml 
 | Avertissement `[SECURITY]` à chaque démarrage | `ADMIN_PASSWORD`, `JWT_SECRET` | Changez le mot de passe de l'administrateur dans l'application, ou voir [Réinitialisation du mot de passe](#reinitialisation-du-mot-de-passe). Utilisez un `JWT_SECRET` de 32 caractères ou plus |
 | Échec de migration | Version de PostgreSQL | Doit être 16+, extensions disponibles |
 | 502 renvoyé par le reverse proxy | `docker compose -f infra/compose.onprem.yml ps` | Vérifiez que le conteneur api tourne sur le port 8080 |
-| 413 renvoyé par le reverse proxy lors d'un envoi | `client_max_body_size` | Renseignez `client_max_body_size 50m;` dans le fichier nginx |
+| 413 renvoyé par le reverse proxy lors d'un envoi | `client_max_body_size` | Renseignez `client_max_body_size 80m;` dans le fichier nginx |
 | Un e-mail de réinitialisation n'arrive pas, et le journal de l'API contient une ligne `ERROR` avec `unable to verify the first certificate` ou `self-signed certificate` et le code `ESOCKET` | Le certificat du relais de messagerie | L'API ne fait pas confiance à l'autorité qui a signé le certificat du relais. Donnez-lui le fichier de l'autorité (voir [Certificats d'une autorité interne](configuration.md#facultatif-certificats-dune-autorite-interne)). Installer l'autorité sur le serveur lui-même ne change rien pour le conteneur |
 | Impossible de se connecter | Le mot de passe | `.env` crée l'administrateur au premier démarrage uniquement. Changez le mot de passe dans l'application, ou utilisez la [réinitialisation du mot de passe](#reinitialisation-du-mot-de-passe) |
 
