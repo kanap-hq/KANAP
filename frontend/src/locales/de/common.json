@@ -99,6 +99,7 @@
     "clearSearch": "Suche löschen"
   },
   "labels": {
+    "positionOf": "{{index}} von {{total}}",
     "show": "Anzeigen",
     "all": "Alle",
     "enabled": "Aktiv",

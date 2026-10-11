@@ -84,6 +84,7 @@ function isTypingTarget(target: EventTarget | null) {
 }
 
 function NavChip({ nav }: { nav: PortfolioDetailWorkspaceNav }) {
+  const { t } = useTranslation('common');
   if (nav.totalCount <= 0) return null;
 
   const navButtonSx = (theme: Theme) => ({
@@ -127,7 +128,7 @@ function NavChip({ nav }: { nav: PortfolioDetailWorkspaceNav }) {
           userSelect: 'none',
         })}
       >
-        {nav.currentIndex} of {nav.totalCount}
+        {t('labels.positionOf', { index: nav.currentIndex, total: nav.totalCount })}
       </Box>
       <IconButton onClick={nav.onNext} disabled={!nav.hasNext} aria-label={nav.nextLabel} sx={navButtonSx} size="small">
         <ChevronRightIcon sx={{ fontSize: 16 }} />
