@@ -7,7 +7,7 @@ import { AiAggregateExecutor } from '../query/ai-aggregate.executor';
 import { AiQueryExecutor } from '../query/ai-query.executor';
 import { getAiEntityRegistry, resolveAiEntityRegistry } from '../query/registries';
 import { SUMMARY_SCOPES } from '../../spend/spend-summary.builder';
-import { captureAudit, assert, inRolledBackTransaction, Kind, runSpecs, seedItem, seedTenant, setTenant, TABLES } from '../../spend/__tests__/round-inputs.fixtures';
+import { CAPEX_NUMBER_OFFSET, captureAudit, assert, inRolledBackTransaction, Kind, runSpecs, seedItem, seedTenant, setTenant, TABLES } from '../../spend/__tests__/round-inputs.fixtures';
 import { itemService } from '../../spend/__tests__/cost-center.fixtures';
 
 // Analytics dimensions in the AI layer, on OPEX and CAPEX, against the database:
@@ -294,17 +294,17 @@ async function testDefaultSqlJoin(kind: Kind) {
   });
 }
 
-// A listed line and its detail carry the business reference (OPX-n, CPX-n), so
+// A listed line and its detail carry the native business reference (BL-n), so
 // the model can name the line it read.
 async function testLinesCarryTheirReference(kind: Kind) {
   await withDimensions(kind, async (runner, seed) => {
-    const prefix = kind === 'opex' ? 'OPX' : 'CPX';
+    const offset = kind === 'opex' ? 0 : CAPEX_NUMBER_OFFSET;
     const ctx = context(runner, seed.tenantId);
     const listed: any = await queryExecutor(kind).execute(ctx, { entity_type: ENTITY[kind] });
     const refs = Object.fromEntries(listed.items.map((item: any) => [item.label, item.ref]));
-    assert.deepEqual(refs, { 'Alpha line': `${prefix}-1`, 'Bravo line': `${prefix}-2`, 'Charlie line': `${prefix}-3` }, `${kind}: each listed line has its reference`);
+    assert.deepEqual(refs, { 'Alpha line': `BL-${offset + 1}`, 'Bravo line': `BL-${offset + 2}`, 'Charlie line': `BL-${offset + 3}` }, `${kind}: each listed line has its reference`);
     const detail: any = await queryExecutor(kind).executeDetail(ctx, { entity_type: ENTITY[kind], entity_id: seed.items.bravo });
-    assert.equal(detail.entity.ref, `${prefix}-2`, `${kind}: the detail has the line's reference`);
+    assert.equal(detail.entity.ref, `BL-${offset + 2}`, `${kind}: the detail has the line's reference`);
   });
 }
 
@@ -379,11 +379,14 @@ async function testDetailByReference(kind: Kind) {
   await withDimensions(kind, async (runner, seed) => {
     await seedItem(runner, kind, seed.tenantId, 10, 'Delta line');
     await seedItem(runner, kind, seed.tenantId, 11, 'Echo line');
-    const ref = `${kind === 'opex' ? 'OPX' : 'CPX'}-1`;
-    const detail: any = await queryExecutor(kind).executeDetail(context(runner, seed.tenantId), { entity_type: ENTITY[kind], entity_id: ref });
-    assert.equal(detail.entity.id, seed.items.alpha, `${kind}: ${ref} is the alpha line`);
-    assert.equal(detail.data['analytics:nature'], 'Subscriptions', `${kind}: the detail by reference carries the line's values`);
-    assert.ok(detail.data.financial_summary, `${kind}: the deep detail is loaded`);
+    const native = `BL-${kind === 'opex' ? 1 : CAPEX_NUMBER_OFFSET + 1}`;
+    for (const ref of [`${kind === 'opex' ? 'OPX' : 'CPX'}-1`, native]) {
+      const detail: any = await queryExecutor(kind).executeDetail(context(runner, seed.tenantId), { entity_type: ENTITY[kind], entity_id: ref });
+      assert.equal(detail.entity.id, seed.items.alpha, `${kind}: ${ref} is the alpha line`);
+      assert.equal(detail.entity.ref, native, `${kind}: legacy input yields the native reference`);
+      assert.equal(detail.data['analytics:nature'], 'Subscriptions', `${kind}: the detail by reference carries the line's values`);
+      assert.ok(detail.data.financial_summary, `${kind}: the deep detail is loaded`);
+    }
   });
 }
 

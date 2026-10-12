@@ -144,7 +144,27 @@
   },
   "mention": {
     "noResults": "Aucun résultat",
-    "searching": "Recherche..."
+    "searching": "Recherche...",
+    "entityTypes": {
+      "knowledge": "Connaissances",
+      "tasks": "Tâches",
+      "projects": "Projets",
+      "requests": "Demandes",
+      "applications": "Applications",
+      "assets": "Actifs",
+      "connections": "Connexions",
+      "interfaces": "Interfaces",
+      "locations": "Sites",
+      "contracts": "Contrats",
+      "budgetLines": "Lignes budgétaires",
+      "incidents": "Incidents",
+      "companies": "Sociétés",
+      "contacts": "Contacts",
+      "departments": "Départements",
+      "suppliers": "Fournisseurs",
+      "businessProcesses": "Processus métier",
+      "users": "Utilisateurs"
+    }
   },
   "previewCard": {
     "after": "Après",

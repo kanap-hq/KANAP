@@ -10,6 +10,7 @@ import {
   SEARCH_INDEX_ANALYTICS_TRIGGERS,
   SearchIndexAnalyticsValues1853940000000 as Migration,
 } from '../../migrations/1853940000000-search-index-analytics-values';
+import { BudgetLineSearchRef1854020000000 as NativeMigration } from '../../migrations/1854020000000-budget-line-search-ref';
 import { BudgetLineNature1853950000000 as LaterMigration } from '../../migrations/1853950000000-budget-line-nature';
 import { undoLotZ1 } from '../../spend/__tests__/undo-lot-z1.fixtures';
 import { writeItemAnalyticsValues } from '../../spend/item-analytics.util';
@@ -39,6 +40,11 @@ const ENTITY: Record<Kind, 'spend_items' | 'capex_items'> = { opex: 'spend_items
 const LINES: Record<Kind, string> = { opex: 'spend_items', capex: 'spend_items' };
 const LINKS: Record<Kind, string> = { opex: 'spend_item_analytics_values', capex: 'spend_item_analytics_values' };
 
+// Current native-reference functions. Keep the historical down() oracle below unchanged.
+const NATIVE_BODIES = {
+  spend_items: 'ba4c55c53c6bf8c1e30ef1bd8402c308',
+  capex_items: '6c6de8f464d72fe85b84098567a60834',
+};
 /** md5 of the refresh bodies of 1853000000000 (OPEX, generated) and 1853220000000 (CAPEX). */
 const PREVIOUS_BODIES = {
   spend_items: '7335d167980a8b5829d99c591b7680b8',
@@ -492,6 +498,7 @@ async function testMigration() {
     const lines = { opex: await seedLine(runner, 'opex', d.tenantId), capex: await seedLine(runner, 'capex', d.tenantId) };
     for (const kind of KINDS) await linkValue(runner, kind, d.tenantId, lines[kind], d.nature, d.materiel);
     // Lot Z1 undone, newest first (other specs' residue repaired first): the CAPEX line and its value back in capex_*, with their ids.
+    await asMigration(runner, () => new NativeMigration().down(runner));
     await asMigration(runner, () => undoLotZ1(runner));
 
     const before = await definitions(runner);
@@ -562,7 +569,14 @@ async function testMigration() {
   });
 }
 
+async function nativeFunctionBodies() {
+  await withRollback(async (runner) => {
+    assert.deepEqual(await bodies(runner), NATIVE_BODIES, 'native BL refresh fingerprints');
+  });
+}
+
 void runSpecs('search-index-analytics.integration.spec', [
+  nativeFunctionBodies,
   testLinkedValuesAreIndexed,
   testValueWritesRefreshTheirLines,
   testValueChanges,

@@ -71,6 +71,7 @@ function compactDomainVocabulary(mode: AiContextProfile['promptMode']): string {
     '- Documents: docs, articles, pages, knowledge base entries.',
     '- Spend items: budget lines, expenses, recurring costs, subscriptions, OpEx.',
     '- Capex items: investments, capital expenditure, CapEx, purchases.',
+    '- Budget lines of both families are cited as BL-n. Accept OPX-n and CPX-n as legacy input references; search for them to resolve the native BL-n reference.',
     '- Applications/assets/projects/requests/contracts/suppliers/users/companies/departments/locations/incidents are standard KANAP families. Company/department year-backed metrics use headcount_year, it_users_year, turnover_year, and metrics_frozen; pass `year` on query_entities or get_entity_detail when the user names a year.',
     '- "me/my/mine" means the current user scope. "my team" means the current user team scope.',
   ];

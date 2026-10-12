@@ -21,7 +21,7 @@ import {
   AiSearchEntityType,
 } from './ai.types';
 import { incidentRelatedLabelSql, incidentRelatedTitleSql, incidentVisibilitySql, resolveIncidentViewer } from '../incidents/incident-visibility';
-import { lineNumberSql } from '../spend/budget-nature';
+import { budgetLineReference } from '../spend/budget-nature';
 import { INCIDENT_REVIEW_SLOT } from '../knowledge/integrated-document.constants';
 import { AiPolicyService } from './ai-policy.service';
 import {
@@ -170,8 +170,7 @@ function buildRef(type: AiSearchEntityType | AiContextEntityType, itemNumber?: n
   if (type === 'tasks') return `T-${itemNumber}`;
   if (type === 'documents') return `DOC-${itemNumber}`;
   if (type === 'incidents') return `INC-${itemNumber}`;
-  if (type === 'spend_items') return `OPX-${itemNumber}`;
-  if (type === 'capex_items') return `CPX-${itemNumber}`;
+  if (type === 'spend_items' || type === 'capex_items') return budgetLineReference(itemNumber);
   return null;
 }
 
@@ -386,11 +385,8 @@ function aiSearchIndexEnabled(): boolean {
   return process.env.AI_SEARCH_INDEX_ENABLED !== 'false';
 }
 
-// Indexed-path ref parsing. Superset of parseNumericPrefix: also accepts the
-// OPX prefix that the OPEX revamp renders for spend items. The query prefix is
-// only used to PRIORITIZE the matching entity type (score tier 4); the bare
-// digits still match every type's ref_number, like the legacy path did.
-const INDEXED_REF_QUERY_RE = /^(PRJ|REQ|T|DOC|APP|AST|CONN|INT|LOC|CTR|CPX|SI|OPX|COMP|CONT|DEPT|SUP|BP|INC)-?(\d+)$/i;
+// BL numbers are native; OPX/CPX (and the former SI alias) name persisted legacy references.
+const INDEXED_REF_QUERY_RE = /^(PRJ|REQ|T|DOC|APP|AST|CONN|INT|LOC|CTR|BL|CPX|SI|OPX|COMP|CONT|DEPT|SUP|BP|INC)-?(\d+)$/i;
 
 const QUERY_PREFIX_TO_INDEX_REF_PREFIX: Record<string, string> = {
   SI: 'OPX',
@@ -1439,7 +1435,7 @@ export class AiEntityService {
     const like = `%${query}%`;
     const rows = await context.manager.query<SearchRow[]>(
       `SELECT ci.id,
-              ${lineNumberSql('ci', 'capex')} AS item_number,
+              ci.item_number,
               ci.product_name AS label,
               COALESCE(NULLIF(ci.description, ''), NULLIF(ci.notes, ''), NULLIF(CONCAT_WS(' | ', comp.name, sup.name), '')) AS summary,
               ci.status,
@@ -2149,7 +2145,9 @@ export class AiEntityService {
     const prefixed = q.match(INDEXED_REF_QUERY_RE);
     const bare = q.match(/^(\d+)$/);
     const digits = prefixed?.[2] ?? bare?.[1] ?? null;
-    const numericPrefix = digits && Number.isSafeInteger(Number(digits)) ? digits : null;
+    const legacyPrefix = prefixed && ['OPX', 'CPX', 'SI'].includes(prefixed[1].toUpperCase());
+    const legacyRef = legacyPrefix ? `${prefixed![1].toUpperCase() === 'SI' ? 'OPX' : prefixed![1].toUpperCase()}-${Number(digits)}` : null;
+    const numericPrefix = !legacyPrefix && digits && Number.isSafeInteger(Number(digits)) ? digits : null;
     const ref = numericPrefix != null ? Number(numericPrefix) : null;
     const queryPrefix = prefixed ? prefixed[1].toUpperCase() : null;
     const refPrefix = queryPrefix
@@ -2182,6 +2180,7 @@ export class AiEntityService {
     const numPrefixRef = push(numericPrefix);
     const refPrefixRef = push(refPrefix);
     const prefixRef = push(prefixTsQueryInput);
+    const legacyRefParam = push(legacyRef);
     const tsq = bilingualDocumentTsQuerySql(qRef);
     const prefixTsq = `(to_tsquery('kanap_fr', ${prefixRef}) || to_tsquery('kanap_en', ${prefixRef}))`;
 
@@ -2264,6 +2263,7 @@ export class AiEntityService {
               extra_json, source_updated_at,
               COUNT(*) OVER()::int AS total_count,
               CASE
+                WHEN ${legacyRefParam}::text IS NOT NULL AND extra_json->>'legacy_number' = ${legacyRefParam} THEN 4
                 WHEN ${refRef}::int IS NOT NULL AND ref_number = ${refRef}
                      AND (${refPrefixRef}::text IS NULL OR ref_prefix = ${refPrefixRef}) THEN 4
                 WHEN LOWER(COALESCE(extra_json->>'email', '')) = LOWER(${qRef}) THEN 4
@@ -2277,7 +2277,8 @@ export class AiEntityService {
        WHERE tenant_id = ${tenantRef}
          AND entity_type = ANY(${typesRef}::text[])
          AND (
-               (${refRef}::int IS NOT NULL AND ref_number = ${refRef})
+               (${legacyRefParam}::text IS NOT NULL AND extra_json->>'legacy_number' = ${legacyRefParam})
+            OR (${refRef}::int IS NOT NULL AND ref_number = ${refRef})
             OR (${numPrefixRef}::text IS NOT NULL AND ref_number::text LIKE ${numPrefixRef} || '%')
             OR label ILIKE ${likeRef}
             OR similarity(label, ${qRef}) > 0.35

@@ -73,8 +73,7 @@ function buildRef(
   if (entityType === 'tasks') return `T-${itemNumber}`;
   if (entityType === 'documents') return `DOC-${itemNumber}`;
   if (entityType === 'incidents') return `INC-${itemNumber}`;
-  if (entityType === 'spend_items') return `OPX-${itemNumber}`;
-  if (entityType === 'capex_items') return `CPX-${itemNumber}`;
+  if (entityType === 'spend_items' || entityType === 'capex_items') return `BL-${itemNumber}`;
   return null;
 }
 
@@ -270,6 +269,7 @@ function toEntitySummary(
   row: {
     id: string;
     item_number?: number | null;
+    reference?: string | null;
     label: string;
     status: string | null;
     summary?: string | null;
@@ -280,7 +280,7 @@ function toEntitySummary(
   return {
     type: entityType,
     id: row.id,
-    ref: buildRef(entityType, row.item_number ?? null),
+    ref: row.reference ?? buildRef(entityType, row.item_number ?? null),
     label: row.label,
     status: row.status ?? null,
     summary: row.summary ?? null,
@@ -624,6 +624,7 @@ export class AiQueryExecutor {
       ?? ([row.supplier_name, row.paying_company_name, row.account_display].filter(Boolean).join(' | ') || null);
     return toEntitySummary('spend_items', {
       id: row.id,
+      reference: row.reference,
       item_number: row.item_number ?? null,
       label: row.product_name || 'Untitled spend item',
       status: row.status ?? null,
@@ -655,6 +656,7 @@ export class AiQueryExecutor {
       ?? ([row.company_name, row.supplier_name].filter(Boolean).join(' | ') || null);
     return toEntitySummary('capex_items', {
       id: row.id,
+      reference: row.reference,
       item_number: row.item_number ?? null,
       label: row.description || 'Untitled CAPEX item',
       status: row.status ?? null,
@@ -1588,6 +1590,10 @@ export class AiQueryExecutor {
     if (!value) return value;
     // Any uuid shape (not only v1-v5): an unmatched one would now throw below.
     if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
+      return value;
+    }
+    if ((entityType === 'spend_items' || entityType === 'capex_items') && /^(?:BL|OPX|CPX)-\d+$/i.test(value)) {
+      // The nature-specific item service resolves native and legacy references before loading.
       return value;
     }
     if (entityType === 'documents') {
