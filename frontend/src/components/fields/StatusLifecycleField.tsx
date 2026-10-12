@@ -8,6 +8,8 @@ import { FieldLabel } from '../design';
 import { STATUS_ENABLED, STATUS_DISABLED, StatusValue, deriveStatusFromDisabledAt } from '../../constants/status';
 import { isoToEuDate, euDateToIsoEndOfDay, formatEuPartial } from '../../lib/date-eu';
 import { isoToLocalDateInput } from '../../lib/datetime';
+import { formatShortDate } from '../../lib/dateFormat';
+import { useLocale } from '../../i18n/useLocale';
 
 type StatusLifecycleFieldProps = {
   status: StatusValue;
@@ -78,6 +80,13 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
 
   // Local text state to allow free typing (dd/mm/yyyy) without fighting controlled updates
   const [inputText, setInputText] = React.useState<string>('');
+  const [focused, setFocused] = React.useState(false);
+  const locale = useLocale();
+  // At rest the date shows the charter display format, as DateEUField; numeric dd/mm/yyyy only while editing.
+  const restYmd = isoToLocalDateInput(disabledAt);
+  const shownText = !focused && restYmd && inputText === isoToEuDate(disabledAt)
+    ? formatShortDate(restYmd, locale, { year: 'always' })
+    : inputText;
   // Sync from prop
   React.useEffect(() => {
     const formatted = isoToEuDate(disabledAt);
@@ -96,6 +105,7 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
   }, [onDisabledAtChange, onStatusChange]);
 
   const handleDisabledAtBlur = React.useCallback(() => {
+    setFocused(false);
     const iso = euDateToIsoEndOfDay(inputText);
     if (!iso && inputText.trim() !== '') {
       // Invalid → keep text as-is for user correction; do not change outer value
@@ -147,8 +157,9 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
             <FieldLabel>{disabledAtLabel ?? t('lifecycleField.endOfValidity')}</FieldLabel>
             <TextField
             placeholder={t('labels.datePlaceholder')}
-            value={inputText}
+            value={shownText}
             onChange={handleDisabledAtTextChange}
+            onFocus={() => setFocused(true)}
             onBlur={handleDisabledAtBlur}
             onKeyDown={(event) => {
               // Alt+Down opens the calendar from the keyboard; its button is out of the tab order.

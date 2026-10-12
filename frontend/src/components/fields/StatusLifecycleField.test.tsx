@@ -24,6 +24,17 @@ function renderField(props: Partial<React.ComponentProps<typeof StatusLifecycleF
 }
 
 describe('StatusLifecycleField', () => {
+  it('shows the end of validity in the display format at rest and dd/mm/yyyy while editing', () => {
+    renderField({ status: STATUS_ENABLED, disabledAt: '2027-12-31T12:00:00.000Z' });
+    const input = screen.getByPlaceholderText(i18n.t('common:labels.datePlaceholder')) as HTMLInputElement;
+    expect(input.value).not.toBe('31/12/2027');
+    expect(input.value).toContain('2027');
+    fireEvent.focus(input);
+    expect(input.value).toBe('31/12/2027');
+    fireEvent.blur(input);
+    expect(input.value).not.toBe('31/12/2027');
+  });
+
   it('shows the on label while enabled', () => {
     renderField({ status: STATUS_ENABLED });
     expect(screen.getByText('Enabled')).toBeInTheDocument();
