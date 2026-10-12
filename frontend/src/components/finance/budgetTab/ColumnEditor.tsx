@@ -1,12 +1,13 @@
 import React from 'react';
-import { Box, Button, Checkbox, FormControlLabel, Link, Tab, Tabs, Typography } from '@mui/material';
+import { Box, Button, Checkbox, FormControlLabel, Link, MenuItem, Tab, Tabs, TextField, Typography } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { formatAmount } from '../../../i18n/formatters';
 import LinesPanel from '../LinesPanel';
-import { activeMonths, followsLines, formatMoney, hasLines, joinList, monthSpanText, periodForEdit, periodProblem, type RoundInput } from '../roundPeriod';
+import { columnPeriodProblem, followsLines, formatMoney, hasLines, isOneDay, joinList, monthSpanText, periodForEdit, periodMonths, type RoundInput } from '../roundPeriod';
+import { drawerMenuItemSx, drawerSelectSx, selectKeepsFocus } from '../../../theme/formSx';
 import AmountEditor from './AmountEditor';
 import { ColumnHowText } from './ColumnCards';
-import type { BudgetTabState, ColumnMode, ModeSwitch } from './useBudgetTab';
+import type { AmountCol, BudgetTabState, ColumnMode, ModeSwitch } from './useBudgetTab';
 
 const captionSx = { fontSize: 12, color: 'kanap.text.tertiary', lineHeight: 1.4 } as const;
 const MODES: ColumnMode[] = ['amount', 'lines', 'monthly'];
@@ -27,8 +28,8 @@ function switchMessage(tab: BudgetTabState, change: ModeSwitch): string {
   const keepsLines = hasLines(record) ? ` ${t('budgetTab.switch.linesStay')}` : '';
   if (change.to === 'amount') {
     // The months the spread will cover: the column's period within the line's dates.
-    const span = defaultPeriod && !periodProblem(year, defaultPeriod.start, defaultPeriod.end)
-      ? monthSpanText(t, locale, activeMonths(year, defaultPeriod.start, defaultPeriod.end))
+    const span = defaultPeriod && !columnPeriodProblem(year, defaultPeriod.start, defaultPeriod.end)
+      ? monthSpanText(t, locale, periodMonths(year, defaultPeriod.start, defaultPeriod.end))
       : '';
     const question = span ? t('budgetTab.switch.toAmountSpan', { amount, span }) : t('budgetTab.switch.toAmount', { amount });
     return `${question}${keepsLines}`;
@@ -38,6 +39,61 @@ function switchMessage(tab: BudgetTabState, change: ModeSwitch): string {
   return `${t('budgetTab.switch.toLines')} ${reference
     ? t('budgetTab.switch.reuseLines', { count: record!.lines.length })
     : t('budgetTab.switch.replaced', { amount })}`;
+}
+
+/** A percentage as typed ("-10", "2,5"): a number above -100, else null. */
+export function parsePercentage(text: string): number | null {
+  const compact = text.trim().replace(/\s/g, '').replace(',', '.');
+  if (compact === '') return null;
+  const value = Number(compact);
+  return Number.isFinite(value) && value > -100 ? value : null;
+}
+
+/**
+ * « Start from »: an empty column takes another shown column with amounts, adjusted by a percentage
+ * (0 by default), as « Copy budget columns » would on this line and year.
+ */
+function StartFrom({ tab, disabled }: { tab: BudgetTabState; disabled: boolean }) {
+  const { t, startSources, startFrom, totals } = tab;
+  const [source, setSource] = React.useState<AmountCol>(startSources[0].measure);
+  const [percentage, setPercentage] = React.useState('0');
+  const picked = startSources.some((c) => c.measure === source) ? source : startSources[0].measure;
+  const value = parsePercentage(percentage);
+  const textSx = { fontSize: 12, color: 'kanap.text.secondary' } as const;
+  return (
+    <Box data-testid="start-from" sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1, rowGap: 0.75 }}>
+      <Typography component="span" sx={textSx}>{t('budgetTab.start.label')}</Typography>
+      <TextField
+        select size="small" variant="standard" value={picked}
+        disabled={disabled}
+        onChange={(e) => setSource(e.target.value as AmountCol)}
+        inputProps={{ 'aria-label': t('budgetTab.start.source') }}
+        SelectProps={selectKeepsFocus}
+        sx={[drawerSelectSx, { width: 'auto', minWidth: 180 }]}
+      >
+        {startSources.map((c) => (
+          <MenuItem key={c.measure} value={c.measure} sx={drawerMenuItemSx}>
+            {t('budgetTab.start.option', { column: c.label, amount: formatAmount(totals[c.measure]) })}
+          </MenuItem>
+        ))}
+      </TextField>
+      <Typography component="span" sx={textSx}>{t('budgetTab.start.adjusted')}</Typography>
+      <TextField
+        size="small" variant="standard" value={percentage}
+        disabled={disabled}
+        onChange={(e) => setPercentage(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter' && value !== null && !disabled) startFrom(picked, value); }}
+        inputProps={{ 'aria-label': t('budgetTab.start.percentage'), inputMode: 'decimal' }}
+        error={value === null}
+        sx={{ width: 72, '& input': { textAlign: 'right', fontVariantNumeric: 'tabular-nums' } }}
+      />
+      <Typography component="span" sx={textSx}>%</Typography>
+      <Button variant="action" disabled={disabled || value === null} onClick={() => { if (value !== null) startFrom(picked, value); }}>
+        {t('budgetTab.start.apply')}
+      </Button>
+      <Typography component="span" sx={captionSx}>{t('budgetTab.start.orBelow')}</Typography>
+    </Box>
+  );
 }
 
 type Props = {
@@ -144,6 +200,9 @@ export default function ColumnEditor({ tab, i18nPrefix, effectiveStart, endOfVal
       </>
     );
   } else if (activeMode === 'lines') {
+    // New lines start on the column's period; an amount at a date gives them the line's dates instead.
+    const own = periodForEdit(year, record, storedAmounts[col], suggestion);
+    const linesPeriod = own && isOneDay(own.start, own.end) ? suggestion ?? own : own;
     // One panel per year and column: it starts from the column's stored lines and keeps what is
     // typed across its own saves.
     body = (
@@ -152,7 +211,7 @@ export default function ColumnEditor({ tab, i18nPrefix, effectiveStart, endOfVal
           key={`${year}:${col}`}
           year={year}
           record={record}
-          period={periodForEdit(year, record, storedAmounts[col], suggestion)}
+          period={linesPeriod}
           itemStart={effectiveStart}
           itemEnd={endOfValidity}
           frozen={waits}
@@ -228,6 +287,11 @@ export default function ColumnEditor({ tab, i18nPrefix, effectiveStart, endOfVal
           ))}
         </Tabs>
       </Box>
+      {/* An empty column can start from another one. */}
+      {loaded && !pending && !waits && tab.startSources.length > 0 && <StartFrom key={`${year}:${col}`} tab={tab} disabled={disabled} />}
+      {tab.startNote && (
+        <Typography data-testid="start-note" sx={captionSx}>{t('budgetTab.start.prorated', { column: labelFor(tab.startNote.source) })}</Typography>
+      )}
       {body}
       {footer}
     </Box>

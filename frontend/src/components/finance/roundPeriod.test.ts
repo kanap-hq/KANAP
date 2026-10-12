@@ -16,7 +16,12 @@ import {
   chipUnits,
   columnLabel,
   columnPeriod,
+  columnPeriodProblem,
+  dateResultText,
   dayChangeText,
+  isOneDay,
+  longDate,
+  periodMonths,
   formatFteValue,
   formatMoney,
   formatUplift,
@@ -404,5 +409,53 @@ describe('columns built from lines', () => {
     expect(formatFteValue('1')).toBe('1.00');
     expect(formatFteValue('0.75')).toBe('0.75');
     expect(formatFteValue('1234.5')).toBe('1 234.50');
+  });
+});
+
+describe('an amount at a date (lot F2)', () => {
+  it('a period of one day puts everything in the month of its date; longer periods keep the 15th rule', () => {
+    expect(isOneDay('2026-02-10', '2026-02-10')).toBe(true);
+    expect(isOneDay('2026-02-10', '2026-02-11')).toBe(false);
+    expect(isOneDay('', '')).toBe(false);
+    expect(periodMonths(2026, '2026-02-10', '2026-02-10')).toEqual([2]);
+    expect(periodMonths(2026, '2026-12-31', '2026-12-31')).toEqual([12]);
+    expect(periodMonths(2026, '2025-02-10', '2025-02-10')).toEqual([]);
+    expect(periodMonths(2026, '2026-02-10', '2026-02-11')).toEqual([]);
+    expect(periodMonths(2026, '2026-04-01', '2026-12-31')).toEqual(activeMonths(2026, '2026-04-01', '2026-12-31'));
+  });
+
+  it('a period of one day is no problem for a column; lines keep their own rule', () => {
+    expect(columnPeriodProblem(2026, '2026-02-10', '2026-02-10')).toBeNull();
+    expect(periodProblem(2026, '2026-02-10', '2026-02-10')).toBe('noMonth');
+    expect(columnPeriodProblem(2026, '2026-02-10', '2026-02-11')).toBe('noMonth');
+    expect(columnPeriodProblem(2026, '2025-02-10', '2025-02-10')).toBe('outsideYear');
+    expect(columnPeriodProblem(2026, '', '')).toBe('missing');
+  });
+
+  it('a column at a date keeps its date when proposed for an edit, even outside the line dates', () => {
+    const atDate = record({ period_start: '2026-02-10', period_end: '2026-02-10' });
+    expect(periodForEdit(2026, atDate, true, { start: '2026-04-01', end: '2026-12-31' })).toEqual({ start: '2026-02-10', end: '2026-02-10' });
+    expect(columnPeriod(2026, atDate, true, null)).toEqual({ start: '2026-02-10', end: '2026-02-10' });
+  });
+
+  it('says the date in words, the French first of the month as an ordinal', () => {
+    expect(longDate('fr', '2026-02-10')).toBe('10 février 2026');
+    expect(longDate('fr', '2026-04-01')).toBe('1er avril 2026');
+    expect(longDate('en-GB', '2026-02-10')).toBe('10 February 2026');
+    expect(longDate('en-GB', '2026-04-01')).toBe('1 April 2026');
+  });
+
+  it('the sentence of an amount at a date names its month', () => {
+    expect(dateResultText(fr(), 'fr', '40 000', '2026-02-10')).toBe('40 000 le 10 février 2026, portés sur février.');
+    expect(dateResultText(fr(), 'fr', '', '2026-08-03')).toBe('Saisissez un montant : il ira en août.');
+    expect(dateResultText(en(), 'en-GB', '40 000', '2026-02-10')).toBe('40 000 on 10 February 2026, all in February.');
+    expect(dateResultText(en(), 'en', '', '2026-02-10')).toBe('Enter an amount: it will go in February.');
+    expect(fr()('budgetTab.atDate', { date: longDate('fr', '2026-02-10') })).toBe('Le 10 février 2026');
+  });
+
+  it('a spread at a date names no distribution: the date says how it is built', () => {
+    const atDate = record({ period_start: '2026-02-10', period_end: '2026-02-10' });
+    expect(chipText(en(), 'en', atDate)).toBe('');
+    expect(chipText(en(), 'en', record({ period_start: '2026-02-10', period_end: '2026-02-10', method: 'manual' }))).toBe('Edited by hand');
   });
 });

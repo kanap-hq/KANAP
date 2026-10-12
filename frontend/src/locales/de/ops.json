@@ -1429,7 +1429,16 @@
       "enter445": "Geben Sie einen Betrag ein: Er wird {{span}} nach 4-4-5 verteilt.",
       "title": "Ergebnis pro Monat",
       "quarter": "Q{{n}}",
-      "cellHint": "Pro Monat erfassen"
+      "cellHint": "Pro Monat erfassen",
+      "atDate": "{{amount}} am {{date}}, ganz im {{month}}.",
+      "enterDate": "Geben Sie einen Betrag ein: Er fällt in den {{month}}.",
+      "show": "Details anzeigen",
+      "hide": "Details ausblenden",
+      "folded_one": "Die Spalte ist linear über das ganze Jahr verteilt: Die Monatswerte zeigen nichts Neues.",
+      "folded_other": "Alle Spalten sind linear über das ganze Jahr verteilt: Die Monatswerte zeigen nichts Neues.",
+      "foldedEmpty": "Noch kein Betrag: Die Monatswerte zeigen nichts Neues.",
+      "differenceWith": "Abweichung zu",
+      "differenceRow": "Abweichung zu {{column}}"
     },
     "monthlyHint": "Geben Sie die Beträge in der Spalte {{column}} der Tabelle unten ein.",
     "reference_one": "{{count}} Zeile als Referenz behalten.",
@@ -1457,6 +1466,37 @@
     "frozen": {
       "title": "Die Spalte {{column}} {{year}} ist eingefroren",
       "hint": "Schreibgeschützt. Ein Administrator hebt das Einfrieren unter Administration › Daten einfrieren / auftauen auf."
+    },
+    "atADate": "An einem Datum",
+    "date": "Datum",
+    "atDate": "Am {{date}}",
+    "start": {
+      "label": "Ausgehend von",
+      "source": "Ausgangsspalte",
+      "option": "{{column}} ({{amount}})",
+      "adjusted": "angepasst um",
+      "percentage": "Anpassung in Prozent",
+      "apply": "Übernehmen",
+      "orBelow": "oder unten eingeben.",
+      "prorated": "Monate der Spalte {{column}} außerhalb der Daten der Zeile wurden nicht übernommen."
+    },
+    "restore": {
+      "changes_one": "{{count}} Spalte seit {{time}} geändert",
+      "changes_other": "{{count}} Spalten seit {{time}} geändert",
+      "action": "Zurück zu den Werten beim Öffnen",
+      "done": "Werte beim Öffnen wiederhergestellt: {{columns}}.",
+      "none": "Keine Spalte wiederhergestellt.",
+      "frozen": "{{column}}: inzwischen eingefroren, nicht wiederhergestellt.",
+      "waiting": "{{column}}: wartet auf Ihre Wahl, nicht wiederhergestellt.",
+      "changedByAt": "{{column}}: von {{name}} um {{time}} geändert, nicht wiederhergestellt. Wählen Sie oben, was gilt.",
+      "changedBy": "{{column}}: von {{name}} geändert, nicht wiederhergestellt. Wählen Sie oben, was gilt.",
+      "changed": "{{column}}: von einer anderen Person geändert, nicht wiederhergestellt. Wählen Sie oben, was gilt.",
+      "refused": "{{column}}: nicht wiederhergestellt. {{message}}",
+      "failed": "Die Spalte konnte nicht wiederhergestellt werden.",
+      "frozenNow": "{{column}} wurde inzwischen eingefroren: Sie wurde nicht wiederhergestellt.",
+      "others": "{{column}}: seit dem Öffnen von einer anderen Person geändert, nicht wiederhergestellt.",
+      "othersAt": "{{column}}: um {{time}} von einer anderen Person geändert, nicht wiederhergestellt.",
+      "notRun": "Nichts wurde wiederhergestellt: Eine Änderung konnte vorher nicht gespeichert werden."
     }
   },
   "budget": {

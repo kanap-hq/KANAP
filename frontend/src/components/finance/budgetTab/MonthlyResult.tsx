@@ -1,10 +1,10 @@
 import React from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Link, MenuItem, TextField, Typography } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import FormattedNumberField from '../../inputs/FormattedNumberField';
 import { StatusDot } from '../../design/StatusDot';
 import { formatAmount } from '../../../i18n/formatters';
-import { tableCellFieldSx } from '../../../theme/formSx';
+import { drawerMenuItemSx, drawerSelectSx, inlineControlSx, selectKeepsFocus, tableCellFieldSx } from '../../../theme/formSx';
 import { centsToDecimal, formatMoney, toCents } from '../roundPeriod';
 import { conflictTint } from './ColumnCards';
 import { monthPeriod, type AmountCol, type BudgetTabState } from './useBudgetTab';
@@ -50,16 +50,31 @@ const MonthCell = React.memo(function MonthCell({ month, col, label, value, disa
 /** A month as the table reads it: grouped thousands, cents only when there are some. */
 const cellText = (value: number) => formatMoney(centsToDecimal(toCents(value)));
 
+/** A difference with the reference column: "+12 000 (+1.8%)", "-500", "0"; the percentage only over a total that is not zero. */
+export function differenceText(locale: string, total: number, reference: number): string {
+  const cents = toCents(total) - toCents(reference);
+  // Whole units, as the totals above: a sign only on a difference that shows.
+  const units = Math.round(cents / 100);
+  const amount = `${units > 0 ? '+' : ''}${formatAmount(units)}`;
+  const base = toCents(reference);
+  if (base === 0 || cents === 0) return amount;
+  const pct = new Intl.NumberFormat(locale, { style: 'percent', signDisplay: 'exceptZero', maximumFractionDigits: 1 }).format(cents / base);
+  return `${amount} (${pct})`;
+}
+
 /**
- * The year month by month for every shown column, with quarter and year totals. Read only, except
- * the active column while it is typed by month. A click in a month of another column that is not
- * frozen makes it the active column and offers to type it by month.
+ * The year month by month for every shown column, with quarter and year totals, then the difference
+ * of each column with the one picked above the table. Read only, except the active column while it
+ * is typed by month. A click in a month of another column that is not frozen makes it the active
+ * column and offers to type it by month. Folded into a sentence while every column is an amount
+ * spread flat over the whole year (or empty); « Show / Hide the detail » for the visit.
  */
 export default function MonthlyResult({ tab, i18nPrefix, currency }: { tab: BudgetTabState; i18nPrefix: string; currency?: string }) {
   const {
     t, locale, year, loading, loaded, shown, months, totals, activeCol, activeMode, isFrozen, waitingSet, cellWaits,
-    modeSwitch, stableMonthChange, registerCell, onCellClick, labelFor,
+    modeSwitch, stableMonthChange, registerCell, onCellClick, labelFor, gridOpen, gridForced, toggleGrid, allEmpty, diffCol, setDiffCol,
   } = tab;
+  const compared = shown.length > 1;
   // The active column is typed in the table while it is built month by month (and not about to change).
   const editableCol = loaded && activeMode === 'monthly' && !isFrozen(activeCol) && !modeSwitch ? activeCol : null;
   const headCellSx = { textAlign: 'right', fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary', px: 1, py: 0.75, whiteSpace: 'nowrap' } as const;
@@ -69,12 +84,44 @@ export default function MonthlyResult({ tab, i18nPrefix, currency }: { tab: Budg
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-      {/* The tools of the result (F2: the difference with a column, show or hide) sit on this row. */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 1.5, flexWrap: 'wrap' }}>
+      {/* The tools of the result: the column the differences are taken with, show or hide the detail. */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', minHeight: 28 }}>
         <Typography component="h3" sx={{ fontSize: 14, fontWeight: 500, color: 'kanap.text.primary' }}>
           {t('budgetTab.result.title')}{currency ? ` · ${currency.toUpperCase()}` : ''}
         </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+          {gridOpen && compared && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+              <Typography component="span" sx={{ fontSize: 12, color: 'kanap.text.secondary' }}>{t('budgetTab.result.differenceWith')}</Typography>
+              <TextField
+                select size="small" variant="standard" value={diffCol}
+                onChange={(e) => setDiffCol(e.target.value as typeof diffCol)}
+                inputProps={{ 'aria-label': t('budgetTab.result.differenceWith') }}
+                SelectProps={selectKeepsFocus}
+                sx={[drawerSelectSx, inlineControlSx, { width: 'auto', minWidth: 110 }]}
+              >
+                {shown.map((c) => <MenuItem key={c.measure} value={c.measure} sx={drawerMenuItemSx}>{c.label}</MenuItem>)}
+              </TextField>
+            </Box>
+          )}
+          {/* Kept open while a column waits for a choice or is typed by month: nothing to hide then. */}
+          {!gridForced && (
+            <Link component="button" type="button" onClick={toggleGrid} aria-expanded={gridOpen} sx={{ fontSize: 12 }}>
+              {gridOpen ? t('budgetTab.result.hide') : t('budgetTab.result.show')}
+            </Link>
+          )}
+        </Box>
       </Box>
+      {!gridOpen ? (
+        <Box
+          data-testid="result-folded"
+          sx={{ border: '1px solid', borderColor: 'kanap.border.default', borderRadius: '8px', bgcolor: 'kanap.bg.primary', px: 1.5, py: 1.25 }}
+        >
+          <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>
+            {allEmpty ? t('budgetTab.result.foldedEmpty') : t('budgetTab.result.folded', { count: shown.length })}
+          </Typography>
+        </Box>
+      ) : (
       <Box sx={{ overflowX: 'auto', border: '1px solid', borderColor: 'kanap.border.default', borderRadius: '8px', bgcolor: 'kanap.bg.primary' }}>
         <Box
           component="table"
@@ -168,12 +215,26 @@ export default function MonthlyResult({ tab, i18nPrefix, currency }: { tab: Budg
             <Box component="tr">
               <Box component="td" sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.primary', px: 1, py: 0.75, borderBottom: 0 }}>{t(`${i18nPrefix}.budget.total`)}</Box>
               {shown.map((c) => (
-                <Box component="td" key={c.measure} data-testid={`total-${c.measure}`} sx={{ ...numCellSx, fontWeight: 500, py: 0.75, borderBottom: 0 }}>{formatAmount(totals[c.measure])}</Box>
+                <Box component="td" key={c.measure} data-testid={`total-${c.measure}`} sx={{ ...numCellSx, fontWeight: 500, py: 0.75, ...(compared ? {} : { borderBottom: 0 }) }}>{formatAmount(totals[c.measure])}</Box>
               ))}
             </Box>
+            {/* The difference of every other column with the one picked above (two columns or more). */}
+            {compared && (
+              <Box component="tr" data-testid="difference-row">
+                <Box component="td" sx={{ fontSize: 12, color: 'kanap.text.secondary', px: 1, py: 0.75, borderBottom: 0, whiteSpace: 'nowrap' }}>
+                  {t('budgetTab.result.differenceRow', { column: labelFor(diffCol) })}
+                </Box>
+                {shown.map((c) => (
+                  <Box component="td" key={c.measure} data-testid={`difference-${c.measure}`} sx={{ ...numCellSx, fontSize: 12, color: 'kanap.text.secondary', py: 0.75, borderBottom: 0 }}>
+                    {c.measure === diffCol ? '—' : differenceText(locale, totals[c.measure], totals[diffCol])}
+                  </Box>
+                ))}
+              </Box>
+            )}
           </Box>
         </Box>
       </Box>
+      )}
     </Box>
   );
 }

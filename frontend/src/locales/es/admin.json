@@ -221,6 +221,7 @@
       "password_reset_completed": "Restablecimiento de contraseña completado",
       "password_reset_requested": "Restablecimiento de contraseña solicitado",
       "refresh_denied": "Renovación de sesión rechazada",
+      "restored": "Restaurar",
       "sso_login": "Inicio de sesión con Microsoft",
       "sso_login_failed": "Inicio de sesión con Microsoft fallido",
       "update": "Actualizar"

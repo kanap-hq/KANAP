@@ -1429,7 +1429,16 @@
       "enter445": "Enter an amount: it will be spread 4-4-5 {{span}}.",
       "title": "Monthly result",
       "quarter": "Q{{n}}",
-      "cellHint": "Enter by month"
+      "cellHint": "Enter by month",
+      "atDate": "{{amount}} on {{date}}, all in {{month}}.",
+      "enterDate": "Enter an amount: it will go in {{month}}.",
+      "show": "Show the detail",
+      "hide": "Hide the detail",
+      "folded_one": "The column is spread flat over the whole year: the monthly detail adds nothing.",
+      "folded_other": "All columns are spread flat over the whole year: the monthly detail adds nothing.",
+      "foldedEmpty": "No amount yet: the monthly detail adds nothing.",
+      "differenceWith": "Difference with",
+      "differenceRow": "Difference with {{column}}"
     },
     "monthlyHint": "Enter the amounts in the {{column}} column of the table below.",
     "reference_one": "{{count}} line kept as a reference.",
@@ -1457,6 +1466,37 @@
     "frozen": {
       "title": "The {{column}} {{year}} column is frozen",
       "hint": "Read only. An administrator can unfreeze it in Administration › Freeze / unfreeze data."
+    },
+    "atADate": "At a date",
+    "date": "Date",
+    "atDate": "On {{date}}",
+    "start": {
+      "label": "Start from",
+      "source": "Column to start from",
+      "option": "{{column}} ({{amount}})",
+      "adjusted": "adjusted by",
+      "percentage": "Adjustment in percent",
+      "apply": "Copy",
+      "orBelow": "or enter it below.",
+      "prorated": "Months of the {{column}} column outside the line's dates were not copied."
+    },
+    "restore": {
+      "changes_one": "{{count}} column changed since {{time}}",
+      "changes_other": "{{count}} columns changed since {{time}}",
+      "action": "Back to the opening values",
+      "done": "Opening values restored: {{columns}}.",
+      "none": "No column restored.",
+      "frozen": "{{column}}: frozen meanwhile, not restored.",
+      "waiting": "{{column}}: waiting for your choice, not restored.",
+      "changedByAt": "{{column}}: changed by {{name}} at {{time}}, not restored. Choose above what to keep.",
+      "changedBy": "{{column}}: changed by {{name}}, not restored. Choose above what to keep.",
+      "changed": "{{column}}: changed by someone else, not restored. Choose above what to keep.",
+      "refused": "{{column}}: not restored. {{message}}",
+      "failed": "The column could not be restored.",
+      "frozenNow": "{{column}} was frozen meanwhile: it was not restored.",
+      "others": "{{column}}: changed by someone else since the opening, not restored.",
+      "othersAt": "{{column}}: changed by someone else at {{time}}, not restored.",
+      "notRun": "Nothing was restored: a change could not be saved first."
     }
   },
   "budget": {

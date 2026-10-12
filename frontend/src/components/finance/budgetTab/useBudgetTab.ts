@@ -18,21 +18,22 @@ import type { FinanceModuleConfig } from '../config';
 import { patchYearlyTotalsCache } from '../yearlyTotals';
 import { AMOUNT_COLUMNS } from '../amountColumns';
 import { budgetConflictsOf, centsByColumn, monthsBase, unreadableConflict, type BudgetConflict } from '../budgetConflicts';
-import { namesInSentence, type HeldBudgetChoices } from '../heldChoices';
+import { namesInSentence, type HeldBudgetChoices, type OpeningValues, type OpeningYear } from '../heldChoices';
 import {
   AmountMeasure,
   LinePayload,
   LinesRequest,
   Period,
   RoundInput,
-  activeMonths,
   centsToDecimal,
   columnPeriod,
+  columnPeriodProblem,
   followsLines,
   hasLines,
+  isOneDay,
   linePayloadOf,
   periodForEdit,
-  periodProblem,
+  periodMonths,
   suggestedPeriod,
   toCents,
   wholeYear,
@@ -81,6 +82,11 @@ export type BudgetTabProps = {
   /** The line's choices kept by the item page while the user is on another tab (`heldChoices.ts`). */
   held?: React.MutableRefObject<HeldBudgetChoices | null>;
   /**
+   * The line's opening values, kept by the item page for the visit (`heldChoices.ts`): each year as
+   * first read. Without it, the tab keeps them for as long as it is shown.
+   */
+  openings?: React.MutableRefObject<OpeningValues | null>;
+  /**
    * The version counter of a year as this tab loaded or wrote it (null: the year has no version):
    * the item page then tells someone else's change from the tab's own saves (lot 3G).
    */
@@ -106,8 +112,8 @@ export function storedMode(record: RoundInput | null | undefined, cents: number)
 /** A mode change the user asked for on a column with amounts: confirmed in the editor first. `month`: the cell clicked. */
 export type ModeSwitch = { col: AmountCol; to: ColumnMode; month?: number };
 
-/** "When" of the amount editor: the whole year or a period of it (F2 adds a single date). */
-export type AmountWhen = 'year' | 'range';
+/** "When" of the amount editor: the whole year, a period of it, or a single date (its month takes it all). */
+export type AmountWhen = 'year' | 'range' | 'date';
 
 type Version = { id: string; input_grain: 'annual' | 'quarterly' | 'monthly'; budget_year?: number; budget_rev?: number };
 
@@ -128,6 +134,8 @@ type BulkUpsertResponse = {
   items?: YearAmounts['items'];
   /** The version's counter after the write. */
   budget_rev?: number;
+  /** A copy from another column (`kind: 'copy'`): months of the source outside the line's dates were left out. */
+  copy?: { prorated?: boolean; from_lines?: boolean };
 };
 
 /**
@@ -135,7 +143,7 @@ type BulkUpsertResponse = {
  * or lines). `cells`: the months of a monthly entry that were refused, the only ones waiting (the
  * other months of the column go on); null: the whole column (a panel write).
  */
-type WaitingColumn = BudgetConflict & { source: 'grid' | 'panel'; cells: Set<string> | null };
+type WaitingColumn = BudgetConflict & { source: 'grid' | 'panel' | 'restore'; cells: Set<string> | null };
 
 /** A panel write refused with a 409, kept until the user chose for each of its columns. */
 type ParkedPanel = {
@@ -145,6 +153,51 @@ type ParkedPanel = {
   /** Every column the write touches: they stay read-only until it is sent or dropped. */
   columns: Set<AmountCol>;
 };
+
+/** How a restore of a column's opening values ended. */
+type RestoreOutcome =
+  | { status: 'restored' }
+  | { status: 'conflict'; conflict: BudgetConflict | null }
+  | { status: 'frozen' }
+  | { status: 'refused'; message: string };
+
+/** What « Back to the opening values » did, column by column: said under the years until closed. */
+export type RestoreNotice = {
+  /** Nothing was sent: what was under way could not be saved first. */
+  notRun?: boolean;
+  restored: AmountCol[];
+  skipped: Array<
+    | { col: AmountCol; reason: 'frozen' | 'waiting' }
+    | { col: AmountCol; reason: 'changed'; conflict: BudgetConflict | null }
+    | { col: AmountCol; reason: 'refused'; message: string }
+    // Changed by someone else and never written by this screen: never sent. `at`: when, if its record says.
+    | { col: AmountCol; reason: 'others'; at: string | null }
+  >;
+};
+
+/** A column's record in what it says, without when or by whom it was written: two reads of the same record compare equal. */
+function recordSignature(record: RoundInput | null | undefined): string {
+  if (!record) return 'none';
+  return JSON.stringify([
+    record.method, record.period_start, record.period_end, record.spread_profile_name ?? null, record.fte ?? null,
+    record.last_calculation ?? null, (record.lines ?? []).map(linePayloadOf),
+  ]);
+}
+
+/** A year's columns as the server answered them: the opening values when it is the first read of the visit. */
+function openingOf(year: number, snapshot: BudgetYear): OpeningYear {
+  const cents = centsByColumn(year, snapshot.amounts?.items ?? []);
+  const inputs = snapshot.amounts?.round_inputs ?? [];
+  return {
+    at: Date.now(),
+    columns: perColumn((col) => {
+      const record = inputs.find((r) => r.measure === col);
+      // Sent back as read: a copy nothing else on screen can change.
+      return { months: [...cents[col]], record: record ? JSON.parse(JSON.stringify(record)) as RoundInput : null };
+    }),
+    written: {},
+  };
+}
 
 /** How a panel write ended: saved, refused for a choice the user must make, or not sent (a column waits for one). */
 type PanelOutcome = { status: 'saved'; data: BulkUpsertResponse | undefined } | { status: 'conflict' } | { status: 'waiting' };
@@ -210,7 +263,7 @@ const isWholeYear = (year: number, period: Period) => period.start === `${year}-
 type FocusRequest = { kind: 'amount' } | { kind: 'cell'; month: number };
 
 export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<BudgetTabHandle>) {
-  const { id, year, onYearChange, config, effectiveStart, endOfValidity, held, onBudgetRev } = props;
+  const { id, year, onYearChange, config, effectiveStart, endOfValidity, held, openings, onBudgetRev } = props;
   const { t } = useTranslation(['ops', 'common']);
   const locale = useLocale();
   const queryClient = useQueryClient();
@@ -230,6 +283,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
   // Overlay the chart only once this `year`'s amounts are in local state: otherwise
   // a year-tab switch would paint the previous year's figures onto the new year.
   const [loadedYear, setLoadedYear] = React.useState<number | null>(null);
+  const loaded = loadedYear === year;
   // How each column was produced and over which period, as stored.
   const [roundInputs, setRoundInputs] = React.useState<RoundInput[]>([]);
   // Columns that held a non-zero month when loaded: without a stored period they read as the whole year.
@@ -322,6 +376,8 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
   const setWaiting = (next: WaitingColumn[]) => { waitingRef.current = next; setWaitingColumns(next); };
   // A refused panel write, kept for the choice; its columns stay read-only until it is sent or dropped.
   const parkedPanelRef = React.useRef<ParkedPanel | null>(null);
+  // Restores of the opening values refused with a 409, one per column, kept for the choice.
+  const parkedRestoresRef = React.useRef(new Map<AmountCol, Record<string, unknown>>());
   const [resolving, setResolving] = React.useState(false);
   // Bumped by « Reload the column » on a panel write: the lines panel starts again from the stored lines.
   const [linesReload, setLinesReload] = React.useState(0);
@@ -345,6 +401,61 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
   const restoreRef = React.useRef<HeldBudgetChoices | null>(
     held?.current && held.current.lineId === id ? held.current : null,
   );
+
+  // The opening values (lot F2): every column of each year as first read during the visit, kept by
+  // the item page (a tab or year change keeps them, a reload of the page does not).
+  const ownOpenings = React.useRef<OpeningValues | null>(null);
+  const openingsRef = openings ?? ownOpenings;
+  const [, setOpeningTick] = React.useState(0);
+  // A year shown from the cache, until its refresh comes back: the opening values if a write goes first.
+  const openingCandidateRef = React.useRef<{ year: number; snapshot: BudgetYear } | null>(null);
+  const openingOfYear = (forYear: number): OpeningYear | null => (
+    openingsRef.current?.lineId === id ? openingsRef.current.years.get(forYear) ?? null : null
+  );
+  const noteOpening = (forYear: number, snapshot: BudgetYear) => {
+    if (openingOfYear(forYear)) return;
+    if (openingsRef.current?.lineId !== id) openingsRef.current = { lineId: id, years: new Map() };
+    openingsRef.current!.years.set(forYear, openingOf(forYear, snapshot));
+    setOpeningTick((n) => n + 1);
+  };
+  // A write is about to go: the year's opening values are known before it (from the cache when its refresh has not come back).
+  const noteOpeningBeforeWrite = (forYear: number) => {
+    const candidate = openingCandidateRef.current;
+    if (candidate && candidate.year === forYear) noteOpening(forYear, candidate.snapshot);
+  };
+  const noteOpeningRef = React.useRef(noteOpening); noteOpeningRef.current = noteOpening;
+  // A write of this screen succeeded: what it wrote of each column, as the answer says it is now, is
+  // the base its restore will be sent with. `cols` maps each column to the months it sent (indexes),
+  // or null for the whole column (its twelve months and its lines). A month the write did not send
+  // keeps what the screen last wrote there, else its opening value: a change someone else made there
+  // is never taken as the screen's, so its restore is refused (409). Lines come from the answer for a
+  // whole column; a monthly save leaves them as the screen last wrote them, else as first read. An
+  // answer without the months (an older server) leaves the months as the screen knows them.
+  const noteWritten = (forYear: number, data: BulkUpsertResponse | undefined, cols: Map<AmountCol, ReadonlySet<number> | null>) => {
+    const opening = openingOfYear(forYear);
+    if (!opening) return;
+    const stored = Array.isArray(data?.items) ? centsByColumn(forYear, data!.items!) : null;
+    const inputs = Array.isArray(data?.round_inputs) ? data!.round_inputs! : null;
+    for (const [col, sent] of cols) {
+      const now = stored ? stored[col] : serverMonthsRef.current[col];
+      if (sent === null) {
+        opening.written[col] = {
+          months: [...now],
+          lines: inputs ? (inputs.find((r) => r.measure === col)?.lines ?? []).map(linePayloadOf) : [...serverLinesRef.current[col]],
+        };
+        continue;
+      }
+      const prev = opening.written[col];
+      opening.written[col] = {
+        months: now.map((cents, i) => (sent.has(i) ? cents : prev ? prev.months[i] : opening.columns[col].months[i])),
+        lines: prev ? [...prev.lines] : (opening.columns[col].record?.lines ?? []).map(linePayloadOf),
+      };
+    }
+    setOpeningTick((n) => n + 1);
+  };
+  const wholeColumns = (cols: Iterable<AmountCol>) => new Map<AmountCol, ReadonlySet<number> | null>([...cols].map((col) => [col, null]));
+  const noteWrittenRef = React.useRef(noteWritten); noteWrittenRef.current = noteWritten;
+  const noteOpeningBeforeWriteRef = React.useRef(noteOpeningBeforeWrite); noteOpeningBeforeWriteRef.current = noteOpeningBeforeWrite;
 
   const autosave = useAutosave({
     onError: (e) => setError(getApiErrorMessage(e, t, t(`${config.i18nPrefix}.budget.failedToSave`))),
@@ -462,6 +573,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
       setSpreadWhen(null);
       setWaiting(restore ? restore.waiting.map((c) => ({ ...c, cells: c.cells ? new Set(c.cells) : null })) : []);
       parkedPanelRef.current = restore?.parkedPanel ? { ...restore.parkedPanel, columns: new Set(restore.parkedPanel.columns) } : null;
+      parkedRestoresRef.current = new Map((restore?.parkedRestores ?? []).map((p) => [p.measure, p.body]));
     }
     // The waiting columns come back in the mode they were shown in.
     if (restore?.modes && Object.keys(restore.modes).length > 0) setModeChoice((prev) => ({ ...prev, ...restore.modes }));
@@ -558,6 +670,9 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
       }
       if (background && editSeqRef.current === quietSince) applyYear(snapshot);
       else applyYear(snapshot, { quietSince, others });
+      // The first read of the year from the server in this visit: its opening values (a read after a
+      // write of this visit is never one, the year was read before it).
+      if (!quiet || background) noteOpeningRef.current(year, snapshot);
       // What the screen now shows of the year: the counter the item page compares with (lot 3G). A
       // reload after the tab's own write leaves it to that write's answer.
       if (!quiet || background || others) noteRev(year, snapshot.version ? snapshot.version.budget_rev ?? null : null);
@@ -579,6 +694,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     const key = budgetYearKey(config.itemsApi, id, year);
     const cached = queryClient.getQueryData<BudgetYear>(key);
     if (cached && !queryClient.getQueryState(key)?.isInvalidated) {
+      openingCandidateRef.current = { year, snapshot: cached };
       applyYear(cached);
       void load({ quietSince: editSeqRef.current, background: true });
     } else {
@@ -666,6 +782,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     try {
       markYearStaleRef.current();
       const v = await ensureVersion('monthly');
+      noteOpeningBeforeWriteRef.current(year);
       writeGenRef.current += 1;
       const res = await api.post<BulkUpsertResponse>(`${config.versionsApi}/${v.id}/amounts/bulk-upsert`, body);
       noteRev(year, res?.data?.budget_rev);
@@ -673,8 +790,13 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
       keepWritten(res?.data, [], sentCells);
       // Once written too: an Allocations tab opened while the save ran read the old totals.
       forgetAllocationsYear(queryClient, config.itemsApi, id, year);
-      const savedColumns = new Set([...sentCells.values()].flatMap((cols) => [...cols]));
-      if (savedColumns.has(activeColRef.current)) followSavedTotal();
+      // Only the months it sent: the column's other months may hold someone else's change.
+      const savedMonths = new Map<AmountCol, Set<number>>();
+      sentCells.forEach((cols, period) => cols.forEach((col) => {
+        savedMonths.set(col, (savedMonths.get(col) ?? new Set<number>()).add(monthIndexOf(period)));
+      }));
+      noteWrittenRef.current(year, res?.data, savedMonths);
+      if (savedMonths.has(activeColRef.current)) followSavedTotal();
       // Show what others changed meanwhile; what is typed since stays as typed.
       void loadRef.current({ quietSince: savedUpTo });
     } catch (e) {
@@ -769,6 +891,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
       });
     }
     parkedPanelRef.current = null;
+    parkedRestoresRef.current = new Map();
     restoreRef.current = null;
     setWaiting([]);
     autosaveRef.current.resetConflict();
@@ -797,12 +920,15 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
 
   // A costed line not complete or not sent yet (`LinesPanel`): a refresh must not move it.
   const linesPendingRef = React.useRef<(() => boolean) | null>(null);
+  // « Back to the opening values » is running (lot F2).
+  const restoringRef = React.useRef(false);
   useImperativeHandle(ref, () => ({
     flush: flushAll,
-    isDirty: () => autosave.isBusy() || hasUnsavedEdits() || writesPendingRef.current > 0,
+    // A restore of the opening values under way is a save under way (its writes are queued one by one).
+    isDirty: () => autosave.isBusy() || hasUnsavedEdits() || writesPendingRef.current > 0 || restoringRef.current,
     waitingColumns: waitingLabels,
-    isSaving: () => autosave.isSaving() || writesPendingRef.current > 0,
-    hasPending: () => autosave.isBusy() || hasUnsavedEdits() || writesPendingRef.current > 0
+    isSaving: () => autosave.isSaving() || writesPendingRef.current > 0 || restoringRef.current,
+    hasPending: () => autosave.isBusy() || hasUnsavedEdits() || writesPendingRef.current > 0 || restoringRef.current
       || waitingRef.current.length > 0 || !!parkedPanelRef.current || !!restoreRef.current
       || spreadAmountRef.current !== committedAmountRef.current || spreadChoicePending() || !!linesPendingRef.current?.(),
     reloadFromServer: async () => {
@@ -838,6 +964,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
         parkedPanel: parked ? { ...parked, columns: [...parked.columns] } : null,
         cells,
         modes: Object.fromEntries(Object.entries(modeChoiceRef.current).filter(([col]) => waitingCols.has(col as AmountCol))),
+        parkedRestores: [...parkedRestoresRef.current].map(([measure, body]) => ({ measure, body })),
       };
     };
     // Mount and unmount only: the refs hold the latest state.
@@ -896,15 +1023,19 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     && (storedPeriod.start !== defaultPeriod.start || storedPeriod.end !== defaultPeriod.end)
     ? { stored: storedPeriod, proposed: defaultPeriod }
     : null;
-  const spreadKind: AmountWhen = spreadWhen ?? (isWholeYear(year, spreadPeriod) ? 'year' : 'range');
-  const spreadProblem = periodProblem(year, spreadPeriod.start, spreadPeriod.end);
-  const spreadActive = spreadProblem ? [] : activeMonths(year, spreadPeriod.start, spreadPeriod.end);
+  const spreadKind: AmountWhen = spreadWhen
+    ?? (isOneDay(spreadPeriod.start, spreadPeriod.end) ? 'date' : isWholeYear(year, spreadPeriod) ? 'year' : 'range');
+  const spreadProblem = columnPeriodProblem(year, spreadPeriod.start, spreadPeriod.end);
+  const spreadActive = spreadProblem ? [] : periodMonths(year, spreadPeriod.start, spreadPeriod.end);
   const spreadBeyondItem = !spreadProblem && (
     (!!effectiveStart && spreadPeriod.start < effectiveStart) || (!!endOfValidity && spreadPeriod.end > endOfValidity)
   );
 
   // A column's current total in cents: the sum of its months as shown.
   const currentCents = (col: AmountCol): number => monthsCents(months, col);
+  // A column with nothing entered: every month at zero and no lines, whatever its record says (a
+  // copy or a seed can leave a record « spread flat, 0 » on a column nobody filled).
+  const isEmptyColumn = (col: AmountCol): boolean => months.every((row) => toCents(row[col]) === 0) && !hasLines(recordFor(col));
 
   // The amount editor starts again from the column: its total, its distribution, its period.
   const resetSpreadFields = (measure: AmountCol) => {
@@ -970,11 +1101,23 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     try {
       markYearStaleRef.current();
       const v = await ensureVersion('annual');
+      noteOpeningBeforeWriteRef.current(year);
+      // The totals the screen knows before the write: a column the write spreads from its stored
+      // total, with no base, is the screen's write only if that total is still the one the server spread.
+      const knownTotals = perColumn((col) => sumCents(serverMonthsRef.current[col]));
       writeGenRef.current += 1;
       const res = await api.post<BulkUpsertResponse>(`${config.versionsApi}/${v.id}/amounts/bulk-upsert`, body);
       noteRev(year, res?.data?.budget_rev);
       keepRoundInputs(res?.data);
       keepWritten(res?.data, columns);
+      // A column sent with its base is the screen's write. One sent without (« Use for other columns
+      // too » on an amount) whose total moved meanwhile holds someone else's change: it stays as the
+      // screen last wrote it, so its restore is refused or never sent.
+      const compared = (body.base as { columns?: Record<string, unknown> } | undefined)?.columns ?? {};
+      const stored = Array.isArray(res?.data?.items) ? centsByColumn(year, res!.data!.items!) : null;
+      noteWrittenRef.current(year, res?.data, wholeColumns(columns.filter((col) => (
+        col in compared || (!!stored && sumCents(stored[col]) === knownTotals[col])
+      ))));
       forgetAllocationsYear(queryClient, config.itemsApi, id, year);
       await loadRef.current({ quietSince: savedUpTo });
       return { status: 'saved', data: res?.data };
@@ -1005,9 +1148,12 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     const main = (body as { measure?: AmountCol }).measure ?? columns[0];
     // Compared: the columns the user's screen shows this write replacing. An amount used for other
     // columns spreads them from their stored totals: they carry no base.
-    const isLines = (body as { kind?: string }).kind === 'lines';
+    const kind = (body as { kind?: string }).kind;
+    const isLines = kind === 'lines';
     const compared = isLines ? columns : [main];
-    const base = panelBase(compared, isLines ? { main, startedFrom: linesBase ?? [] } : undefined);
+    // Lines and a copy say which lines they replace: the lines the panel started from, or the column's own.
+    const withLines = isLines || kind === 'copy';
+    const base = panelBase(compared, withLines ? { main, startedFrom: linesBase ?? serverLinesRef.current[main] } : undefined);
     return sendPanel({ ...body, base }, columns, main);
   });
 
@@ -1020,7 +1166,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     const typed = next.amount !== undefined ? next.amount : spreadAmount;
     const dates = next.dates ?? spreadPeriod;
     const amount = Number(typed || 0);
-    if (!amount || isFrozen(measure) || isWaiting(measure) || periodProblem(year, dates.start, dates.end)) return;
+    if (!amount || isFrozen(measure) || isWaiting(measure) || columnPeriodProblem(year, dates.start, dates.end)) return;
     if (!next.switching && modeOf(measure) !== 'amount') return;
     // The total in cents, sent as a two-decimal string: no float sum reaches the server. The other
     // columns are spread by the server from their stored totals (never the screen's); those that
@@ -1040,7 +1186,8 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
         year,
         totals: { [measure]: centsToDecimal(toCents(amount)) },
         ...(also.length > 0 ? { also_measures: also } : {}),
-        spread_profile_name: next.profile ?? spreadProfile,
+        // At a date the month of the date takes it all: no distribution (the server keeps it flat).
+        ...(isOneDay(dates.start, dates.end) ? {} : { spread_profile_name: next.profile ?? spreadProfile }),
         period_start: dates.start,
         period_end: dates.end,
       },
@@ -1072,13 +1219,28 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     setSpreadWhen('range');
     commitSpread({ dates });
   };
-  // "Whole year" spreads over the twelve months at once; "A period" opens From and To on the period shown.
+  // "Whole year" spreads over the twelve months at once; "A period" opens From and To on the period
+  // shown (the line's dates when an amount at a date is shown); "At a date" puts the amount in the
+  // month of the period's first day at once. Each writes when what it shows is not what is stored.
   const onSpreadWhenChange = (when: AmountWhen) => {
     setSpreadWhen(when);
     pinActive();
-    if (when !== 'year') return;
-    const dates = wholeYear(year);
+    let dates: Period | null = null;
+    if (when === 'year') dates = wholeYear(year);
+    else if (when === 'range' && isOneDay(spreadPeriod.start, spreadPeriod.end)) dates = suggestion ?? wholeYear(year);
+    else if (when === 'date' && !isOneDay(spreadPeriod.start, spreadPeriod.end)) {
+      const first = spreadPeriod.start.slice(0, 4) === String(year) ? spreadPeriod.start : (suggestion ?? wholeYear(year)).start;
+      dates = { start: first, end: first };
+    }
+    if (!dates) return;
     setSpreadDates(dates);
+    commitSpread({ dates });
+  };
+  // The date of an amount at a date: the period of one day.
+  const onSpreadSingleDateChange = (value: string) => {
+    const dates = { start: value, end: value };
+    setSpreadDates(dates);
+    setSpreadWhen('date');
     commitSpread({ dates });
   };
 
@@ -1135,6 +1297,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     setModeSwitch(null);
     chooseMode(col, to);
     if (to === 'amount') requestFocus({ kind: 'amount' });
+    if (to === 'monthly') openGrid();
   };
   const cancelModeSwitch = () => setModeSwitch(null);
   // The confirmed change: an amount spreads the current total flat over the column's period (the
@@ -1157,6 +1320,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
       return;
     }
     if (to === 'monthly') {
+      openGrid();
       if (change.month !== undefined) requestFocus({ kind: 'cell', month: change.month });
       return;
     }
@@ -1225,6 +1389,73 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     });
   };
 
+  /* ---- « Start from »: an empty column takes another column's, with a percentage (lot F2) ---- */
+
+  // The active column holds nothing (no month, no line; a record of zeros counts as nothing): any
+  // other shown column with amounts can be its start, a frozen one included (it is only read). The
+  // copy replaces the column's record under its base.
+  const activeEmpty = loaded && isEmptyColumn(activeCol);
+  const startSources = activeEmpty && !isFrozen(activeCol) && !isWaiting(activeCol)
+    ? shown.filter((c) => c.measure !== activeCol && currentCents(c.measure) !== 0)
+    : [];
+  // What the last start said about the column it filled: months of the source left out by the line's dates.
+  const [startNote, setStartNote] = React.useState<{ col: AmountCol; year: number; source: AmountCol } | null>(null);
+  // The copy of the operation « Copy budget columns », on this line and year (`kind: 'copy'`), over
+  // the column as the screen knows it (`base`, its lines included). A 409 waits for the user's choice.
+  const startFrom = (source: AmountCol, percentage: number) => {
+    const col = activeCol;
+    if (isFrozen(col) || isWaiting(col) || !startSources.some((c) => c.measure === source)) return;
+    pinActive();
+    setError(null);
+    setModeSwitch(null);
+    setAlsoOpen(false);
+    setStartNote(null);
+    writePanel(() => ({ body: { kind: 'copy', year, source, measure: col, percentage }, columns: [col] })).then((outcome) => {
+      if (outcome.status !== 'saved') return;
+      // The column shows how it is built now: an amount copied, or the lines it follows.
+      setModeChoice((prev) => { const next = { ...prev }; delete next[col]; return next; });
+      if (outcome.data?.copy?.prorated) setStartNote({ col, year, source });
+      if (activeColRef.current !== col || yearRef.current !== year) return;
+      setSpreadDates(null);
+      setSpreadWhen(null);
+      setSpreadProfile(profileOf(col, outcome.data?.round_inputs ?? roundInputsRef.current));
+      if (Array.isArray(outcome.data?.items)) showSpreadAmount(amountOrEmpty(sumCents(centsByColumn(year, outcome.data!.items!)[col])));
+    }).catch((e) => {
+      if (e instanceof UnsavedEditsError) return;
+      setError(getApiErrorMessage(e, t, t(`${config.i18nPrefix}.budget.failedToSave`)));
+    });
+  };
+
+  /* ---- The result table: shown when it teaches something, and the difference with a column (lot F2) ---- */
+
+  // A column the table teaches nothing about: empty, or an amount spread flat over the whole year.
+  const plainColumn = (col: AmountCol) => {
+    if (isWaiting(col) || modeOf(col) !== 'amount') return false;
+    const record = recordFor(col);
+    if ((record?.lines.length ?? 0) > 0) return false;
+    // Nothing entered, a record of zeros included.
+    if (isEmptyColumn(col)) return true;
+    // Amounts with no record, a copy, a quarterly spread: their months may have any shape.
+    if (!record || record.method !== 'spread' || record.last_calculation?.kind === 'quarterly') return false;
+    return isWholeYear(year, { start: record.period_start, end: record.period_end }) && (record.spread_profile_name ?? 'flat') === 'flat';
+  };
+  const gridAuto = !loaded || !shown.every((c) => plainColumn(c.measure));
+  // « Show / Hide the detail »: the user's choice for the visit, else the rule above. Always open
+  // while a column waits for a choice (its months are shown there) or the active column is typed by month.
+  const [gridChoice, setGridChoice] = React.useState<boolean | null>(null);
+  const gridForced = waitingColumns.length > 0 || activeMode === 'monthly';
+  const gridOpen = gridForced ? true : (gridChoice ?? gridAuto);
+  const toggleGrid = () => setGridChoice(!gridOpen);
+  // Typed by month: the table opens, the months are typed there.
+  function openGrid() { setGridChoice((prev) => (prev === false ? true : prev)); }
+  const allEmpty = shown.every((c) => isEmptyColumn(c.measure));
+  // « Difference with »: the column picked for the visit, else the tenant's default column.
+  const [diffPick, setDiffPick] = React.useState<AmountCol | null>(null);
+  const defaultMeasure = budgetColumns.defaultColumn.measure;
+  const diffCol: AmountCol = diffPick && shown.some((c) => c.measure === diffPick)
+    ? diffPick
+    : (shown.some((c) => c.measure === defaultMeasure) ? defaultMeasure : shown[0].measure);
+
   /* ---- The user's choice for a column waiting after a refused save (lot 3D) ---- */
 
   const dropWaiting = (cols: Iterable<AmountCol>) => {
@@ -1274,6 +1505,39 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     if (!conflict) return;
     const col = conflict.measure;
     restoreRef.current = null;
+    if (conflict.source === 'restore') {
+      // A restore of the opening values someone else's change stopped: « Overwrite » sends it again
+      // over the column as the server answered it; « Reload the column » keeps theirs.
+      const body = parkedRestoresRef.current.get(col);
+      parkedRestoresRef.current.delete(col);
+      dropWaiting([col]);
+      if (choice === 'mine' && body) {
+        const base = { columns: { [col]: { months: monthsBase(conflict.current), lines: conflict.currentLines ?? serverLinesRef.current[col] } } };
+        const forYear = year;
+        setResolving(true);
+        void enqueueWrite(() => sendRestore(col, body, base)).then(async (outcome) => {
+          if (outcome.status === 'conflict') return;
+          settleChoices();
+          if (outcome.status === 'frozen') setError(t('budgetTab.restore.frozenNow', { column: labelFor(col) }));
+          if (outcome.status === 'refused') setError(outcome.message);
+          if (outcome.status !== 'restored' || yearRef.current !== forYear) return;
+          await loadRef.current({ quietSince: editSeqRef.current });
+          const opening = openingOfYear(forYear);
+          if (opening) afterRestored([col], opening);
+        }).finally(() => setResolving(false));
+        return;
+      }
+      takeTheirs(conflict);
+      setModeChoice((prev) => { const next = { ...prev }; delete next[col]; return next; });
+      if (activeColRef.current === col) {
+        setSpreadDates(null);
+        setSpreadWhen(null);
+        showSpreadAmount(amountOrEmpty(sumCents(conflict.current)));
+      }
+      settleChoices();
+      void loadRef.current({ quietSince: editSeqRef.current }).then(() => setLinesReload((n) => n + 1));
+      return;
+    }
     if (conflict.source === 'grid') {
       if (choice === 'mine') {
         // « Overwrite »: the waiting months go again over theirs, from what the server answered. The
@@ -1338,6 +1602,134 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     sendParkedPanel();
   };
 
+  /* ---- « Back to the opening values » (lot F2) ---- */
+
+  // One column back to its opening values (`kind: 'restore'`): its twelve months and its record as
+  // first read, over `base`: the column as this screen's last write left it (or as the server
+  // answered a refused restore, for « Overwrite »). A 409 parks the restore for the user's choice:
+  // nothing of the other person is overwritten. The caller holds the queue.
+  async function sendRestore(col: AmountCol, body: Record<string, unknown>, base: Record<string, unknown>): Promise<RestoreOutcome> {
+    const sentBase = base;
+    try {
+      markYearStaleRef.current();
+      const v = await ensureVersion('annual');
+      writeGenRef.current += 1;
+      const res = await api.post<BulkUpsertResponse>(`${config.versionsApi}/${v.id}/amounts/bulk-upsert`, { ...body, base: sentBase });
+      noteRev(year, res?.data?.budget_rev);
+      keepRoundInputs(res?.data);
+      keepWritten(res?.data, [col]);
+      noteWrittenRef.current(year, res?.data, wholeColumns([col]));
+      forgetAllocationsYear(queryClient, config.itemsApi, id, year);
+      return { status: 'restored' };
+    } catch (e) {
+      const conflict = budgetConflictsOf(e)?.find((c) => c.measure === col) ?? null;
+      if (conflict) {
+        parkedRestoresRef.current.set(col, body);
+        setWaiting([...waitingRef.current.filter((c) => c.measure !== col), { ...conflict, source: 'restore', cells: null }]);
+        return { status: 'conflict', conflict };
+      }
+      if ((e as { response?: { status?: number } } | null)?.response?.status === 403) {
+        // Frozen meanwhile: the freeze state follows, the column turns read only.
+        void queryClient.invalidateQueries({ queryKey: ['freeze-state', year] });
+        return { status: 'frozen' };
+      }
+      return { status: 'refused', message: getApiErrorMessage(unreadableConflict(e) ?? e, t, t('budgetTab.restore.failed')) };
+    }
+  }
+
+  // The restored columns show how they are built now, the editor and the lines start again from them.
+  function afterRestored(cols: AmountCol[], opening: OpeningYear) {
+    setModeChoice((prev) => { const next = { ...prev }; cols.forEach((col) => { delete next[col]; }); return next; });
+    setModeSwitch(null);
+    setAlsoOpen(false);
+    setStartNote(null);
+    const active = activeColRef.current;
+    if (cols.includes(active)) {
+      setSpreadDates(null);
+      setSpreadWhen(null);
+      setSpreadProfile(opening.columns[active].record?.spread_profile_name === '4-4-5' ? '4-4-5' : 'flat');
+      showSpreadAmount(amountOrEmpty(sumCents(opening.columns[active].months)));
+    }
+    setLinesReload((n) => n + 1);
+  }
+
+  // A shown column whose months or record are no longer what the visit first read.
+  const differsFromOpening = (opening: OpeningYear, col: AmountCol, cents: readonly number[], record: RoundInput | null | undefined) => (
+    cents.some((value, i) => value !== opening.columns[col].months[i]) || recordSignature(record) !== recordSignature(opening.columns[col].record)
+  );
+  const opening = loaded ? openingOfYear(year) : null;
+  // Counted: the columns this screen wrote that are no longer at their opening values (only those can go back).
+  const changedColumns: AmountCol[] = opening
+    ? shown.map((c) => c.measure).filter((col) => !!opening.written[col] && differsFromOpening(opening, col, months.map((row) => toCents(row[col])), recordFor(col)))
+    : [];
+
+  const [restoring, setRestoring] = React.useState(false);
+  const [restoreNotice, setRestoreNotice] = React.useState<RestoreNotice | null>(null);
+  // No confirmation (fried): what is under way goes first (the months typed, the writes queued), then
+  // one restore per column this screen changed, over its last write of it, each refused on its own
+  // (frozen, changed by someone else since, a calendar), then a normal reload. A column waiting for
+  // the user's choice is left as it is; one changed by someone else only is never sent.
+  const restoreOpening = async () => {
+    const forYear = year;
+    const start = openingOfYear(forYear);
+    if (!start || restoringRef.current || !loaded) return;
+    const columns = shown.map((c) => c.measure);
+    // What the screen showed as changed when clicked, written by this screen or not (a month waiting for a choice).
+    const clicked = columns.filter((col) => differsFromOpening(start, col, months.map((row) => toCents(row[col])), recordFor(col)));
+    restoringRef.current = true;
+    setRestoring(true);
+    setRestoreNotice(null);
+    setError(null);
+    try {
+      // A choice waiting on a column does not stop the others. A save that failed does: said, nothing sent.
+      const flushed = await flushAll({ ignoreHeld: true });
+      if (yearRef.current !== forYear) return;
+      if (!flushed) {
+        setRestoreNotice({ notRun: true, restored: [], skipped: [] });
+        return;
+      }
+      const notice: RestoreNotice = { restored: [], skipped: [] };
+      for (const col of columns) {
+        // As the server holds it now that nothing is under way.
+        const differs = differsFromOpening(start, col, serverMonthsRef.current[col], roundInputsRef.current.find((r) => r.measure === col));
+        if (isWaiting(col)) {
+          if (differs || clicked.includes(col)) notice.skipped.push({ col, reason: 'waiting' });
+          continue;
+        }
+        if (!differs) continue;
+        const mine = start.written[col];
+        if (!mine) {
+          // Someone else's change, already on screen: said, never sent. When, if its record moved since the opening.
+          const now = roundInputsRef.current.find((r) => r.measure === col);
+          const recordMoved = recordSignature(now) !== recordSignature(start.columns[col].record);
+          const at = recordMoved && now?.updated_at && Date.parse(now.updated_at) >= start.at ? now.updated_at : null;
+          notice.skipped.push({ col, reason: 'others', at });
+          continue;
+        }
+        if (frozenRef.current[FREEZE_KEY[col]]) { notice.skipped.push({ col, reason: 'frozen' }); continue; }
+        const body = { kind: 'restore', year: forYear, measure: col, months: monthsBase(start.columns[col].months), record: start.columns[col].record };
+        const base = { columns: { [col]: { months: monthsBase(mine.months), lines: mine.lines } } };
+        const outcome = await enqueueWrite(() => sendRestore(col, body, base));
+        if (outcome.status === 'restored') notice.restored.push(col);
+        else if (outcome.status === 'conflict') notice.skipped.push({ col, reason: 'changed', conflict: outcome.conflict });
+        else if (outcome.status === 'frozen') notice.skipped.push({ col, reason: 'frozen' });
+        else notice.skipped.push({ col, reason: 'refused', message: outcome.message });
+        if (yearRef.current !== forYear) return;
+      }
+      if (notice.restored.length > 0) {
+        await loadRef.current({ quietSince: editSeqRef.current });
+        if (yearRef.current !== forYear) return;
+        afterRestored(notice.restored, start);
+      }
+      setRestoreNotice(notice);
+    } finally {
+      restoringRef.current = false;
+      setRestoring(false);
+    }
+  };
+  // The notice belongs to the year it was given for.
+  React.useEffect(() => { setRestoreNotice(null); setStartNote(null); }, [year]);
+
   // Totals per column: the live sum of its months.
   const totals = React.useMemo<Record<AmountCol, number>>(() => perColumn((col) => monthsCents(months, col) / 100), [months]);
 
@@ -1400,7 +1792,6 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     ? t('common:status.saving', 'Saving…')
     : autosave.status === 'saved' ? t('common:status.saved', 'Saved') : null;
 
-  const loaded = loadedYear === year;
   const parked = parkedPanelRef.current;
 
   return {
@@ -1434,6 +1825,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     confirmModeSwitch,
     onCellClick,
     currentCents,
+    isEmptyColumn,
     waitingSet,
     isWaiting,
     cellWaits,
@@ -1457,6 +1849,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     spreadKind,
     onSpreadWhenChange,
     onSpreadDateChange,
+    onSpreadSingleDateChange,
     spreadProblem,
     spreadActive,
     spreadBeyondItem,
@@ -1480,6 +1873,24 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     closeAlso: () => setAlsoOpen(false),
     toggleAlso,
     applyAlso,
+    // « Start from ».
+    startSources,
+    startFrom,
+    startNote: startNote && startNote.col === activeCol && startNote.year === year ? startNote : null,
+    // The result table.
+    gridOpen,
+    gridForced,
+    toggleGrid,
+    allEmpty,
+    diffCol,
+    setDiffCol: setDiffPick,
+    // « Back to the opening values ».
+    changedColumns,
+    openingAt: opening?.at ?? null,
+    restoring,
+    restoreOpening,
+    restoreNotice,
+    closeRestoreNotice: () => setRestoreNotice(null),
   };
 }
 
