@@ -15,6 +15,7 @@ import BudgetFileImportDialog from '../../components/finance/BudgetFileImportDia
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
 import { LinkCellRenderer } from '../../components/grid/renderers';
 import { formatItemRef } from '../../utils/item-ref';
+import { budgetTypeChipSx } from './budgetTypeChipSx';
 import {
   amountColumnYear,
   buildAmountColumnDefs,
@@ -452,7 +453,7 @@ function BudgetListPageView() {
         <Chip
           size="small"
           label={t(`budget.${params.value}`)}
-          sx={{ height: 22, fontSize: 12, fontWeight: 500 }}
+          sx={budgetTypeChipSx}
         />
       ),
     },
