@@ -7,7 +7,7 @@ import { formatCents } from '../../common/amount';
 import { AmountMeasure, AmountsWriteContext, FLAT_PROFILE, assertMeasuresEditable, spreadAnnualRows, writeAmountsPayload } from '../amounts-write.util';
 import { ensureBudgetVersion } from '../budget-version-ensure';
 import { lockBudgetLine, lockBudgetLinesOfBothNatures, lockBudgetVersions, lockTenantBudgetOperations } from '../budget-locks';
-import { periodMonths } from '../spread.util';
+import { activeMonths, NO_ACTIVE_MONTH_MESSAGE, periodMonths } from '../spread.util';
 import { annualSpreadFields, listRoundInputs, markRoundsManual, recordPayloadRoundInputs } from '../round-inputs.util';
 import { interpretBudgetFile, moneyText, readBudgetCsv } from './interpret';
 import { loadFileDimensions, loadPreflight } from './load';
@@ -445,6 +445,17 @@ async function createVersion(
 }
 
 /**
+ * A yearly total of the file goes over `period`. A period of one day counts
+ * the month of its date only when it is the column's own period, set "at a
+ * date" in the budget tab; one that the line's dates happen to give (a line
+ * valid one day of the year) keeps the 15th rule and is refused, as before.
+ */
+function assertFilePeriod(year: number, period: { start: string; end: string }, record: { period_start: string; period_end: string } | undefined): void {
+  const atADate = !!record && record.period_start === record.period_end && record.period_start === period.start && record.period_end === period.end;
+  if (!atADate && activeMonths(year, period.start, period.end).length === 0) throw new BadRequestException(NO_ACTIVE_MONTH_MESSAGE);
+}
+
+/**
  * A yearly flat spread with no costed lines, over the column's stored period
  * (or the period a new column is given). Those share one set of statements.
  * Anything else, including a month edit, stays on `writeAmountsPayload`.
@@ -469,6 +480,7 @@ function flatPeriod(
       dates.start,
       dates.end,
     ) ?? wholeYearPeriod(year);
+    assertFilePeriod(year, period, record);
     if (record && (record.period_start !== period.start || record.period_end !== period.end)) return null;
     periods.add(`${period.start}|${period.end}`);
   }
@@ -511,6 +523,7 @@ async function writeYear(
       dates.start,
       dates.end,
     ) ?? wholeYearPeriod(year);
+    assertFilePeriod(year, period, record);
     const key = `${period.start}|${period.end}`;
     const group = annual.get(key) ?? { period, totals: {} };
     group.totals[amount.measure] = moneyText(amount.cents);
