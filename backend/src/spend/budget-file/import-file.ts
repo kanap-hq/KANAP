@@ -7,7 +7,7 @@ import { formatCents } from '../../common/amount';
 import { AmountMeasure, AmountsWriteContext, FLAT_PROFILE, assertMeasuresEditable, spreadAnnualRows, writeAmountsPayload } from '../amounts-write.util';
 import { ensureBudgetVersion } from '../budget-version-ensure';
 import { lockBudgetLine, lockBudgetLinesOfBothNatures, lockBudgetVersions, lockTenantBudgetOperations } from '../budget-locks';
-import { activeMonths } from '../spread.util';
+import { periodMonths } from '../spread.util';
 import { annualSpreadFields, listRoundInputs, markRoundsManual, recordPayloadRoundInputs } from '../round-inputs.util';
 import { interpretBudgetFile, moneyText, readBudgetCsv } from './interpret';
 import { loadFileDimensions, loadPreflight } from './load';
@@ -603,7 +603,8 @@ async function writeFlatSpreads(
   const roundRows: RoundRow[] = [];
   for (const flat of flats) {
     const measures = AMOUNT_COLUMNS.filter((measure) => flat.totals[measure] !== undefined);
-    const months = activeMonths(flat.year, flat.period.start, flat.period.end);
+    // A column at a date (start = end) puts its total in that month, as the budget tab does.
+    const months = periodMonths(flat.year, flat.period.start, flat.period.end);
     if (months.length === 0) {
       throw new BadRequestException('No month of the period counts: a month counts when the period covers its 15th.');
     }

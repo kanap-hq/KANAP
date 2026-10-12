@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import {
   activeMonths,
   FLAT_WEIGHTS,
+  periodMonths,
   profileWeights,
   SpreadInputError,
   spreadAnnualToMonths,
@@ -262,6 +263,44 @@ function testQuarterlyWindow() {
   );
 }
 
+// ── At a date ─────────────────────────────────────────────────────────────
+// A period of one day (start = end) counts the month of that date, whatever
+// its day; longer periods keep the 15th rule (plan budget-tab-redesign, B1).
+
+function testPeriodMonthsAtADate() {
+  assert.deepEqual(periodMonths(YEAR, `${YEAR}-03-03`, `${YEAR}-03-03`), [3], 'the 3rd of March: March');
+  assert.deepEqual(periodMonths(YEAR, `${YEAR}-03-15`, `${YEAR}-03-15`), [3], 'the 15th: March, as before');
+  assert.deepEqual(periodMonths(YEAR, `${YEAR}-03-31`, `${YEAR}-03-31`), [3], 'the 31st: March');
+  assert.deepEqual(periodMonths(YEAR, `${YEAR}-01-01`, `${YEAR}-01-01`), [1]);
+  assert.deepEqual(periodMonths(YEAR, `${YEAR}-12-31`, `${YEAR}-12-31`), [12]);
+  assert.deepEqual(periodMonths(YEAR, ` ${YEAR}-07-20 `, `${YEAR}-07-20`), [7], 'trimmed like activeMonths');
+  // Two days or more: the 15th rule, unchanged.
+  assert.deepEqual(periodMonths(YEAR, `${YEAR}-03-03`, `${YEAR}-03-04`), [], 'two days without a 15th: nothing');
+  assert.deepEqual(periodMonths(YEAR, `${YEAR}-04-16`, `${YEAR}-05-14`), []);
+  assert.deepEqual(periodMonths(YEAR, `${YEAR}-04-10`, `${YEAR}-12-31`), months(4, 12));
+  assert.deepEqual(periodMonths(YEAR), months(1, 12));
+  assert.deepEqual(periodMonths(YEAR, null, `${YEAR}-03-31`), months(1, 3));
+  // The same refusals as activeMonths.
+  refused(() => periodMonths(YEAR, `${YEAR}-02-30`, `${YEAR}-02-30`), /not a date/);
+  refused(() => periodMonths(YEAR, `${YEAR + 1}-03-03`, `${YEAR + 1}-03-03`), new RegExp(`within ${YEAR}`));
+  // activeMonths itself keeps the 15th alone (validity windows, lines counted per month).
+  assert.deepEqual(activeMonths(YEAR, `${YEAR}-03-03`, `${YEAR}-03-03`), []);
+}
+
+function testSpreadsAtADate() {
+  // The whole total in the month of the date, flat or 4-4-5 alike.
+  assert.deepEqual(windowed(1_200_000n, `${YEAR}-03-03`, `${YEAR}-03-03`), [0n, 0n, 1_200_000n, 0n, 0n, 0n, 0n, 0n, 0n, 0n, 0n, 0n]);
+  const fourFourFive = Array.from({ length: 12 }, (_, i) => ((i + 1) % 3 === 0 ? 5n : 4n));
+  assert.deepEqual(windowed(-777n, `${YEAR}-11-28`, `${YEAR}-11-28`, fourFourFive), [...Array.from({ length: 10 }, () => 0n), -777n, 0n]);
+  // A profile with no weight on that month is refused, as for a period.
+  const firstHalfOnly = Array.from({ length: 12 }, (_, i) => (i < 6 ? 1n : 0n));
+  refused(() => spreadAnnualToMonths(YEAR, { planned: 100n }, firstHalfOnly, { start: `${YEAR}-09-09`, end: `${YEAR}-09-09` }), /no weight/);
+  // Quarters: the date's quarter goes to its month; another quarter with an amount is refused.
+  const quarterly = spreadQuarterlyToMonths(YEAR, 'planned', { Q2: 900n }, 'equal', { start: `${YEAR}-05-20`, end: `${YEAR}-05-20` });
+  assert.deepEqual(quarterly.map((r) => r.planned), [0n, 0n, 0n, 0n, 900n, 0n, 0n, 0n, 0n, 0n, 0n, 0n]);
+  refused(() => spreadQuarterlyToMonths(YEAR, 'planned', { Q1: 1n, Q2: 900n }, 'equal', { start: `${YEAR}-05-20`, end: `${YEAR}-05-20` }), /^Q1 has an amount/);
+}
+
 function main() {
   testFlatSpread();
   testSplitTowardZero();
@@ -276,6 +315,8 @@ function main() {
   testAnnualWindow();
   testAnnualWindowRefusals();
   testQuarterlyWindow();
+  testPeriodMonthsAtADate();
+  testSpreadsAtADate();
   console.log('spread.util.spec: ok');
 }
 

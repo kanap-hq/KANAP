@@ -37,7 +37,7 @@ import {
   wholeYear,
 } from './round-inputs.util';
 import { ColumnResult, computeColumn, CostingInputError, CostLine, UNIT_PRICE_LIMITS } from './costing.util';
-import { activeMonths } from './spread.util';
+import { activeMonths, periodMonths } from './spread.util';
 import { ensureBudgetVersion } from './budget-version-ensure';
 import { lockBudgetLines, lockBudgetVersions, lockTenantBudgetOperations } from './budget-locks';
 import { assertScopeNatures, auditTableOf, natureAnd, type BudgetNature } from './budget-nature';
@@ -249,13 +249,14 @@ export async function loadItemsValidIn(manager: EntityManager, scope: AmountScop
 
 /**
  * The copied period within the item's validity. When they share no month
- * (no 15th), the validity window itself.
+ * (no 15th, or the date of a period of one day: `periodMonths`), the validity
+ * window itself.
  */
 export function periodWithinValidity(period: { period_start: string; period_end: string }, validity: YearValidity) {
   const start = period.period_start > validity.start ? period.period_start : validity.start;
   const end = period.period_end < validity.end ? period.period_end : validity.end;
   const year = Number(validity.start.slice(0, 4));
-  return start <= end && activeMonths(year, start, end).length > 0
+  return start <= end && periodMonths(year, start, end).length > 0
     ? { period_start: start, period_end: end }
     : { period_start: validity.start, period_end: validity.end };
 }
@@ -375,8 +376,8 @@ export function lineWithinValidity(line: CostLine, validity: YearValidity): Cost
   const end = line.period_end < validity.end ? line.period_end : validity.end;
   if (start > end) return null;
   const year = Number(validity.start.slice(0, 4));
-  const oneDate = line.frequency === 'once' && start === end;
-  return activeMonths(year, start, end).length > 0 || oneDate ? { ...line, period_start: start, period_end: end } : null;
+  const months = (line.frequency === 'once' ? periodMonths : activeMonths)(year, start, end);
+  return months.length > 0 ? { ...line, period_start: start, period_end: end } : null;
 }
 
 /** The calendars a copy of lines reads, keyed by id, and the country of each item's paying company. */
