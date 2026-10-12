@@ -890,8 +890,8 @@
       "effects": {
         "inPlace": "La línea conserva su referencia, su presupuesto, sus asignaciones, sus vínculos, sus adjuntos y sus tareas.",
         "reports": {
-          "capex": "Sale de los informes OPEX y del contracargo, y pasa a los informes CAPEX.",
-          "opex": "Sale de los informes CAPEX y pasa a los informes OPEX y al contracargo."
+          "capex": "Sale de los informes OPEX y pasa a los informes CAPEX. El contracargo la cuenta como CAPEX.",
+          "opex": "Sale de los informes CAPEX y pasa a los informes OPEX. El contracargo la cuenta como OPEX."
         },
         "dated_one": "Esta línea termina el {{end}} y conserva su presupuesto anterior a {{year}}. Una nueva línea {{type}} lleva el presupuesto a partir de {{year}} ({{count}} año), con los contactos y los vínculos con aplicaciones, activos, contratos, proyectos y solicitudes.",
         "dated_other": "Esta línea termina el {{end}} y conserva su presupuesto anterior a {{year}}. Una nueva línea {{type}} lleva el presupuesto a partir de {{year}} ({{count}} años), con los contactos y los vínculos con aplicaciones, activos, contratos, proyectos y solicitudes.",
@@ -978,6 +978,7 @@
     },
     "shared": {
       "loadingReport": "Cargando informe…",
+      "capexYearAmountNote": "Las líneas CAPEX se reparten según su importe del año, no según su amortización.",
       "loadingData": "Cargando datos…",
       "run": "Ejecutar",
       "refreshing": "Actualizando…",
