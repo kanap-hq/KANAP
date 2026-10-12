@@ -229,17 +229,17 @@ describe('DashboardPage budget tiles', () => {
   it('opens each top increase on its line, by its reference', async () => {
     renderPage();
     const tile = await screen.findByRole('region', { name: TOP_INCREASES });
-    expect(await within(tile).findByRole('link', { name: /Opex grows/ })).toHaveAttribute('href', '/ops/opex/OPX-21');
+    expect(await within(tile).findByRole('link', { name: /Opex grows/ })).toHaveAttribute('href', '/ops/budget/BL-21');
     fireEvent.click(within(tile).getByRole('tab', { name: 'operations.scope.capex' }));
-    expect(await within(tile).findByRole('link', { name: /Capex grows/ })).toHaveAttribute('href', '/ops/capex/CPX-22');
+    expect(await within(tile).findByRole('link', { name: /Capex grows/ })).toHaveAttribute('href', '/ops/budget/c1');
   });
 
   it('opens each top item on its line, by its reference', async () => {
     renderPage();
     const tile = await screen.findByRole('region', { name: TOP_ITEMS });
-    expect(await within(tile).findByRole('link', { name: /Opex top/ })).toHaveAttribute('href', '/ops/opex/OPX-11');
+    expect(await within(tile).findByRole('link', { name: /Opex top/ })).toHaveAttribute('href', '/ops/budget/BL-11');
     fireEvent.click(within(tile).getByRole('tab', { name: 'operations.scope.capex' }));
-    expect(await within(tile).findByRole('link', { name: /Capex top/ })).toHaveAttribute('href', '/ops/capex/CPX-12');
+    expect(await within(tile).findByRole('link', { name: /Capex top/ })).toHaveAttribute('href', '/ops/budget/c1');
   });
 
   it("counts the user's open tasks only and opens each task by its reference", async () => {
@@ -286,13 +286,13 @@ describe('DashboardPage budget tiles', () => {
     expect(within(tile).getByText('ops:operations.scope.capex')).toBeInTheDocument();
     const filtersOf = (el: HTMLElement) => JSON.parse(new URLSearchParams(el.getAttribute('href')!.split('?')[1]).get('filters')!);
     const capexNoItOwner = await within(tile).findByLabelText('dashboard.hygiene.noItOwner, ops:operations.scope.capex: 4');
-    expect(capexNoItOwner.getAttribute('href')!.split('?')[0]).toBe('/ops/capex');
-    expect(filtersOf(capexNoItOwner)).toEqual({ owner_it_name: { filterType: 'set', values: [null] } });
+    expect(capexNoItOwner.getAttribute('href')!.split('?')[0]).toBe('/ops/budget');
+    expect(filtersOf(capexNoItOwner)).toEqual({ owner_it_name: { filterType: 'set', values: [null] } , nature: { filterType: 'set', values: ['capex'] } });
     const opexNoBusinessOwner = within(tile).getByLabelText('dashboard.hygiene.noBusinessOwner, ops:operations.scope.opex: 2');
-    expect(opexNoBusinessOwner.getAttribute('href')!.split('?')[0]).toBe('/ops/opex');
-    expect(filtersOf(opexNoBusinessOwner)).toEqual({ owner_business_name: { filterType: 'set', values: [null] } });
+    expect(opexNoBusinessOwner.getAttribute('href')!.split('?')[0]).toBe('/ops/budget');
+    expect(filtersOf(opexNoBusinessOwner)).toEqual({ owner_business_name: { filterType: 'set', values: [null] } , nature: { filterType: 'set', values: ['opex'] } });
     expect(filtersOf(within(tile).getByLabelText('dashboard.hygiene.accountOutsideChart, ops:operations.scope.capex: 1')))
-      .toEqual({ account_warning: { filterType: 'set', values: ['coa_mismatch'] } });
+      .toEqual({ account_warning: { filterType: 'set', values: ['coa_mismatch'] }, nature: { filterType: 'set', values: ['capex'] } });
     // A count of zero opens nothing.
     expect(within(tile).getByLabelText('dashboard.hygiene.noPayingCompany, ops:operations.scope.opex: 0')).not.toHaveAttribute('href');
     // The count and the link use the same filter, on the lines the list shows by default (enabled).
@@ -308,8 +308,8 @@ describe('DashboardPage budget tiles', () => {
     const tile = await screen.findByRole('region', { name: 'dashboard.quickActions' });
     const capexRow = await within(tile).findByRole('link', { name: /Capex edited/ });
     const opexRow = await within(tile).findByRole('link', { name: /Opex edited/ });
-    expect(capexRow).toHaveAttribute('href', '/ops/capex/CPX-2');
-    expect(opexRow).toHaveAttribute('href', '/ops/opex/OPX-1');
+    expect(capexRow).toHaveAttribute('href', '/ops/budget/c2');
+    expect(opexRow).toHaveAttribute('href', '/ops/budget/BL-1');
     expect(capexRow.compareDocumentPosition(opexRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
@@ -362,14 +362,14 @@ describe('DashboardPage budget tiles', () => {
     renderPage();
     const tile = await screen.findByRole('region', { name: MY_BUDGET });
     const itOwner = await within(tile).findByRole('link', { name: /roles\.itOwner/ });
-    expect(itOwner.getAttribute('href')!.split('?')[0]).toBe('/ops/opex');
-    expect(filtersOf(itOwner)).toEqual({ owner_it_name: { filterType: 'set', values: ['Thomas Berger'] } });
+    expect(itOwner.getAttribute('href')!.split('?')[0]).toBe('/ops/budget');
+    expect(filtersOf(itOwner)).toEqual({ owner_it_name: { filterType: 'set', values: ['Thomas Berger'] } , nature: { filterType: 'set', values: ['opex'] } });
     expect(itOwner).toHaveTextContent('3k');
     const business = within(tile).getByRole('link', { name: /roles\.businessOwner/ });
-    expect(filtersOf(business)).toEqual({ owner_business_name: { filterType: 'set', values: ['Thomas Berger'] } });
+    expect(filtersOf(business)).toEqual({ owner_business_name: { filterType: 'set', values: ['Thomas Berger'] } , nature: { filterType: 'set', values: ['opex'] } });
     expect(business).toHaveTextContent('1k');
     expect(filtersOf(within(tile).getByRole('link', { name: /roles\.budgetHolder/ })))
-      .toEqual({ budget_holder_name: { filterType: 'set', values: ['Thomas Berger'] } });
+      .toEqual({ budget_holder_name: { filterType: 'set', values: ['Thomas Berger'] }, nature: { filterType: 'set', values: ['opex'] } });
     // Each count and sum uses the link's filter, on the lines the list shows by default, this year's default column.
     expect(aggregateCalls('/spend-items/summary/aggregate')).toContainEqual({
       query: { filters: { owner_it_name: { filterType: 'set', values: ['Thomas Berger'] } }, status: 'enabled' },
@@ -391,11 +391,11 @@ describe('DashboardPage budget tiles', () => {
     renderPage();
     const tile = await screen.findByRole('region', { name: BY_COST_CENTER });
     const first = await within(tile).findByRole('link', { name: /IT-1 · Infrastructure/ });
-    expect(first.getAttribute('href')!.split('?')[0]).toBe('/ops/opex');
-    expect(filtersOf(first)).toEqual({ cost_center_label: { filterType: 'set', values: ['IT-1 · Infrastructure'] } });
+    expect(first.getAttribute('href')!.split('?')[0]).toBe('/ops/budget');
+    expect(filtersOf(first)).toEqual({ cost_center_label: { filterType: 'set', values: ['IT-1 · Infrastructure'] } , nature: { filterType: 'set', values: ['opex'] } });
     expect(first).toHaveTextContent('3k');
     const none = within(tile).getByRole('link', { name: /dashboard\.noCostCenter/ });
-    expect(filtersOf(none)).toEqual({ cost_center_label: { filterType: 'set', values: [null] } });
+    expect(filtersOf(none)).toEqual({ cost_center_label: { filterType: 'set', values: [null] } , nature: { filterType: 'set', values: ['opex'] } });
     const rows = within(tile).getAllByRole('link').map((el) => el.textContent);
     expect(rows).toEqual(['IT-1 · Infrastructure3k', 'dashboard.noCostCenter1k', 'IT-2 · Workplace1k']);
     expect(aggregateCalls('/spend-items/summary/aggregate')).toContainEqual({
@@ -415,12 +415,12 @@ describe('DashboardPage budget tiles', () => {
     renderPage();
     const tile = await screen.findByRole('region', { name: 'dashboard.dataHygiene' });
     const noCostCenter = await within(tile).findByLabelText('dashboard.hygiene.noCostCenter, ops:operations.scope.opex: 3');
-    expect(filtersOf(noCostCenter)).toEqual({ cost_center_label: { filterType: 'set', values: [null] } });
+    expect(filtersOf(noCostCenter)).toEqual({ cost_center_label: { filterType: 'set', values: [null] } , nature: { filterType: 'set', values: ['opex'] } });
     expect(within(tile).getByLabelText('dashboard.hygiene.noCostCenter, ops:operations.scope.capex: 0')).not.toHaveAttribute('href');
     // Next year's amount of the default column (column 3 here) is zero: no version that year reads zero.
     const noNextYear = await within(tile).findByLabelText('dashboard.hygiene.noBudgetNextYear (A2), ops:operations.scope.capex: 2');
-    expect(noNextYear.getAttribute('href')!.split('?')[0]).toBe('/ops/capex');
-    expect(filtersOf(noNextYear)).toEqual({ yPlus1Forecast: { filterType: 'number', type: 'equals', filter: 0 } });
+    expect(noNextYear.getAttribute('href')!.split('?')[0]).toBe('/ops/budget');
+    expect(filtersOf(noNextYear)).toEqual({ yPlus1Forecast: { filterType: 'number', type: 'equals', filter: 0 } , nature: { filterType: 'set', values: ['capex'] } });
     const countQueries = aggregateCalls('/capex-items/summary/aggregate').filter((body) => body.query.filters).map((body) => body.query);
     expect(countQueries).toContainEqual({ filters: { yPlus1Forecast: { filterType: 'number', type: 'equals', filter: 0 } }, status: 'enabled' });
   });

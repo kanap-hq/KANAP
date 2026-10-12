@@ -293,7 +293,7 @@ describe('Staffing by month group links', () => {
 
   it('an item opens its page', async () => {
     renderReport(<StaffingByMonthReport />, '/report?group=item');
-    expect((await linkOf('Line a')).href).toBe('/ops/opex/a');
+    expect((await linkOf('Line a')).href).toBe('/ops/budget/a');
     await expectPlainTotal();
   });
 });
@@ -310,7 +310,7 @@ describe('Cost per FTE group links', () => {
     expect((await linkOf('Hardware')).filters).toEqual(staffed({ 'analytics_ax-nat': set(['Hardware']) }));
     view.unmount();
     renderReport(<CostPerFteReport />, '/report?view=rate&group=item&scope=capex');
-    expect((await linkOf('Line b')).href).toBe('/ops/capex/b');
+    expect((await linkOf('Line b')).href).toBe('/ops/budget/b');
     await expectPlainTotal();
   });
 });

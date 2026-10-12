@@ -9,7 +9,7 @@ describe('budget line mentions', () => {
   });
 
   it('links a mentioned line to its workspace', () => {
-    expect(buildEntityUrl('spend_items', 'abc')).toBe('/ops/opex/abc');
-    expect(buildEntityUrl('capex_items', 'abc')).toBe('/ops/capex/abc');
+    expect(buildEntityUrl('spend_items', 'abc')).toBe('/ops/budget/abc');
+    expect(buildEntityUrl('capex_items', 'abc')).toBe('/ops/budget/abc');
   });
 });

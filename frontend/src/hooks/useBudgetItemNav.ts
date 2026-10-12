@@ -91,8 +91,8 @@ export function useBudgetItemNav(params: ModuleItemNavParams, config: BudgetItem
     // never a silent jump to the first row.
     const found = !!data && data.at === id && data.index != null;
     return {
-      prevPath: found && data?.prevRef && data.prevNature ? `/ops/${data.prevNature}/${data.prevRef}` : null,
-      nextPath: found && data?.nextRef && data.nextNature ? `/ops/${data.nextNature}/${data.nextRef}` : null,
+      prevPath: found && data?.prevRef && data.prevNature ? `/ops/budget/${data.prevRef}` : null,
+      nextPath: found && data?.nextRef && data.nextNature ? `/ops/budget/${data.nextRef}` : null,
       ids: [],
       index: found ? data!.index! : 0,
       total: found ? data!.total : 0,

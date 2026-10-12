@@ -283,7 +283,7 @@ describe('BudgetListPage', () => {
     const Y = new Date().getFullYear();
     const data = { id: 'o-1', nature: 'opex', item_number: 3, fte_yPlus1Budget: 0.75 };
     const el = (column('fte_yPlus1Budget')!.cellRendererSelector!({ node: {} }).component as (p: unknown) => React.ReactElement)({ data, value: 0.75, colDef: {} });
-    expect((el.props as { getHref: (row: unknown) => string | null }).getHref(data)).toMatch(new RegExp(`^/ops/opex/BL-3/budget\\?.*year=${Y + 1}`));
+    expect((el.props as { getHref: (row: unknown) => string | null }).getHref(data)).toMatch(new RegExp(`^/ops/budget/BL-3/budget\\?.*year=${Y + 1}`));
   });
 
   it('asks the totals for the FTE columns shown only, and follows them when they are shown or hidden', async () => {
@@ -436,7 +436,7 @@ describe('BudgetListPage', () => {
     const data = { id: 'o-1', nature: 'opex', item_number: 3, cost_center_id: 'cc-1', budget_holder_name: 'Ada Holder' };
     const el = holder!.cellRenderer!({ data, value: 'Ada Holder', colDef: {} });
     const href = (el.props as { getHref: (row: unknown) => string | null }).getHref(data);
-    expect(href).toMatch(/^\/ops\/opex\/BL-3\/overview/);
+    expect(href).toMatch(/^\/ops\/budget\/BL-3\/overview/);
   });
 
   it('names the default dimension column after the dimension, hidden by default as before', async () => {
@@ -472,7 +472,7 @@ describe('BudgetListPage', () => {
     // The cell opens the line.
     const data = { id: 'o-1', nature: 'opex', item_number: 3, analytics_nature: 'Licences' };
     const el = column('analytics_nature')!.cellRenderer!({ data, value: 'Licences', colDef: {} });
-    expect((el.props as { getHref: (row: unknown) => string | null }).getHref(data)).toMatch(/^\/ops\/opex\/BL-3\/overview/);
+    expect((el.props as { getHref: (row: unknown) => string | null }).getHref(data)).toMatch(/^\/ops\/budget\/BL-3\/overview/);
 
     // A set filter on the values the server lists for that dimension, in the dimension's order
     // (the server's), blank last.
@@ -707,7 +707,7 @@ describe('BudgetListPage', () => {
     const row = { id: 'c-1', nature: 'capex', item_number: 7, latest_contract_id: 'k-1' };
     expect(hrefOf('contract_name', row)).toBe('/ops/contracts/k-1/overview');
     const Y = new Date().getFullYear();
-    expect(hrefOf('yPlus1Revision', row)).toMatch(new RegExp(`^/ops/capex/BL-7/budget\\?.*year=${Y + 1}`));
+    expect(hrefOf('yPlus1Revision', row)).toMatch(new RegExp(`^/ops/budget/BL-7/budget\\?.*year=${Y + 1}`));
   });
 
   it('keeps the last known currency in the title while the totals reload or when they fail', async () => {
@@ -837,7 +837,7 @@ describe('BudgetListPage', () => {
   it('New line defaults to OPEX without a single nature filter', async () => {
     await renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'budget.newLine' }));
-    await waitFor(() => expect(location.pathname).toBe('/ops/opex/new'));
+    await waitFor(() => expect(location.pathname).toBe('/ops/budget/new'));
     expect(new URLSearchParams(location.search).get('list')).toBe('budget');
   });
 
@@ -846,14 +846,14 @@ describe('BudgetListPage', () => {
     act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', q: '', statusScope: 'enabled', filterModel: { nature: { filterType: 'set', values: ['opex'] } } }));
     fireEvent.click(screen.getByRole('button', { name: 'budget.newLine' }));
     expect(screen.queryByRole('menuitem')).toBeNull();
-    await waitFor(() => expect(location.pathname).toBe('/ops/opex/new'));
+    await waitFor(() => expect(location.pathname).toBe('/ops/budget/new'));
   });
 
   it('New line opens the nature of an address filter directly', async () => {
     await renderPage('/ops/budget?filters=' + encodeURIComponent(JSON.stringify({ nature: { filterType: 'set', values: ['capex'] } })));
     fireEvent.click(screen.getByRole('button', { name: 'budget.newLine' }));
     expect(screen.queryByRole('menuitem')).toBeNull();
-    await waitFor(() => expect(location.pathname).toBe('/ops/capex/new'));
+    await waitFor(() => expect(location.pathname).toBe('/ops/budget/new'));
   });
 
   it('shows the filtered line count in the total row', async () => {

@@ -238,11 +238,13 @@ function renderAt(path: string, previous?: string) {
       <ThemeProvider theme={createAppTheme('light')}>
         <MemoryRouter initialEntries={previous ? [previous, path] : [path]} useTransitions={false}>
           <Routes>
-            <Route path={`/ops/${nature}/:id/:tab`} element={<BudgetLinePage nature={nature} />} />
+            <Route path={`/ops/budget/:ref/:tab`} element={<BudgetLinePage nature={nature} />} />
             <Route path="/ops/budget" element={<ListPageProbe />} />
             <Route path="/ops/opex" element={<ListPageProbe />} />
-            <Route path={`/ops/${otherNature()}/:id/:tab`} element={<CapexPageProbe />} />
-            <Route path={`/ops/${otherNature()}/new`} element={<CreateTargetProbe />} />
+            <Route path="/ops/budget/BL-7/:tab" element={<CapexPageProbe />} />
+            <Route path="/ops/budget/BL-12/:tab" element={<CapexPageProbe />} />
+            <Route path="/ops/budget/BL-9/:tab" element={<CapexPageProbe />} />
+            <Route path={`/ops/budget/new`} element={<CreateTargetProbe />} />
           </Routes>
         </MemoryRouter>
       </ThemeProvider>
@@ -262,7 +264,7 @@ describe('BudgetLinePage create', () => {
   });
 
   it('creates a line without a supplier and sends none', async () => {
-    renderAt(`/ops/${nature}/new/overview`);
+    renderAt(`/ops/budget/new/overview`);
     expect(document.querySelector('[data-mode="create"]')).not.toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
@@ -279,7 +281,7 @@ describe('BudgetLinePage create', () => {
   });
 
   it('fills an empty paying company from the picked cost center and sends both new fields', async () => {
-    renderAt(`/ops/${nature}/new/overview`);
+    renderAt(`/ops/budget/new/overview`);
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
     expect(document.querySelector('[data-mode="create"]')).toHaveAttribute('data-company', 'company-2');
@@ -295,7 +297,7 @@ describe('BudgetLinePage create', () => {
   });
 
   it('keeps a paying company picked first, and sends no cost center or run or build when none is picked', async () => {
-    renderAt(`/ops/${nature}/new/overview`);
+    renderAt(`/ops/budget/new/overview`);
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
     expect(document.querySelector('[data-mode="create"]')).toHaveAttribute('data-company', 'company-1');
@@ -308,7 +310,7 @@ describe('BudgetLinePage create', () => {
   });
 
   it('lets a company filled from the cost center follow the next cost center, until an account is picked', async () => {
-    renderAt(`/ops/${nature}/new/overview`);
+    renderAt(`/ops/budget/new/overview`);
     const drawer = () => document.querySelector('[data-mode="create"]');
     fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
     expect(drawer()).toHaveAttribute('data-company', 'company-2');
@@ -320,7 +322,7 @@ describe('BudgetLinePage create', () => {
   });
 
   it('stops following the cost center once the user picks a company', async () => {
-    renderAt(`/ops/${nature}/new/overview`);
+    renderAt(`/ops/budget/new/overview`);
     const drawer = () => document.querySelector('[data-mode="create"]');
     fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
@@ -329,7 +331,7 @@ describe('BudgetLinePage create', () => {
   });
 
   it('sends the value of each dimension given one, and never the old single field', async () => {
-    renderAt(`/ops/${nature}/new/overview`);
+    renderAt(`/ops/budget/new/overview`);
     const drawer = () => document.querySelector('[data-mode="create"]');
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
@@ -353,7 +355,7 @@ describe('BudgetLinePage create', () => {
         { id: 'axis-nature', code: 'nature', name: 'Nature', description: null, sort_order: 1, is_default: false, applies_to: lineNature === 'opex' ? 'capex' : 'opex', status: 'enabled', disabled_at: null },
       ] } }
       : { data: {} }));
-    renderAt(`/ops/${nature}/new/overview`);
+    renderAt(`/ops/budget/new/overview`);
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/analytics-axes'));
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
@@ -368,7 +370,7 @@ describe('BudgetLinePage create', () => {
   });
 
   it('sends an empty map when no dimension has a value', async () => {
-    renderAt(`/ops/${nature}/new/overview`);
+    renderAt(`/ops/budget/new/overview`);
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
@@ -387,7 +389,7 @@ describe('BudgetLinePage create', () => {
         { id: 'axis-old', code: 'old', name: 'Old', description: null, sort_order: 3, is_default: false, applies_to: null, required: true, status: 'disabled', disabled_at: '2020-01-01T00:00:00.000Z' },
       ] } }
       : { data: {} }));
-    renderAt(`/ops/${nature}/new/overview`);
+    renderAt(`/ops/budget/new/overview`);
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/analytics-axes'));
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
@@ -404,7 +406,7 @@ describe('BudgetLinePage create', () => {
   });
 
   it('refuses to create a line without an account', async () => {
-    renderAt(`/ops/${nature}/new/overview`);
+    renderAt(`/ops/budget/new/overview`);
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
@@ -445,7 +447,7 @@ describe('BudgetLinePage edit', () => {
   }
 
   it('clears the account in the same write when the new company uses another chart', async () => {
-    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
     await clickOnceLoaded('pick other company');
     expect(mocked.patch).toHaveBeenCalledTimes(1);
     // Each field with the value the screen showed before (its base, lot 3C).
@@ -458,7 +460,7 @@ describe('BudgetLinePage edit', () => {
 
   it('keeps the account when the new company uses the same chart', async () => {
     charts.company2 = 'coa-a';
-    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
     await clickOnceLoaded('pick other company');
     expect(mocked.patch).toHaveBeenCalledTimes(1);
     expect(mocked.patch).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}`, { paying_company_id: 'company-2', base: { paying_company_id: 'company-1' } });
@@ -467,14 +469,14 @@ describe('BudgetLinePage edit', () => {
   it('shows the refusal of an account kept for CAPEX lines', async () => {
     const message = 'This account is for CAPEX lines only. Choose an account for OPEX lines.';
     mocked.patch.mockRejectedValueOnce(Object.assign(new Error('HTTP 400'), { response: { status: 400, headers: {}, data: { message } } }));
-    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
     await clickOnceLoaded('pick account of another chart');
     expect(mocked.patch).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}`, { account_id: 'account-other', base: { account_id: 'account-1' } });
     expect(await screen.findByText(message)).toBeInTheDocument();
   });
 
   it('saves cleared notes as null after the typing pause', async () => {
-    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
     const notes = await screen.findByDisplayValue('Renewal');
     // The debounced write goes through flushPending, which normalises like the immediate one.
     await waitFor(() => {
@@ -486,7 +488,7 @@ describe('BudgetLinePage edit', () => {
   });
 
   it('clears the supplier as null, not as an empty string', async () => {
-    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}`, expect.objectContaining({ signal: expect.any(AbortSignal) })));
     // The form shows the line (the click below starts from what the screen shows: its base).
     await waitFor(() => expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', 'account-1'));
@@ -499,7 +501,7 @@ describe('BudgetLinePage edit', () => {
   });
 
   it('patches the cost center and run or build, as null when cleared', async () => {
-    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}`, expect.objectContaining({ signal: expect.any(AbortSignal) })));
     await waitFor(() => expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', 'account-1'));
     // One pick at a time (picks made while a save runs go together in the next one).
@@ -542,7 +544,7 @@ describe('BudgetLinePage picker labels from the detail', () => {
   });
 
   it("hands the detail's labels to the pickers, which then read no list", async () => {
-    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
     await waitFor(() => expect(document.querySelector('[data-mode="edit"]')?.getAttribute('data-references')).toContain('Société Test'));
     const drawer = document.querySelector('[data-mode="edit"]')!;
     expect(JSON.parse(drawer.getAttribute('data-references')!).account.account_number).toBe(6110);
@@ -567,7 +569,7 @@ describe('BudgetLinePage first wave', () => {
       }
       return { data: {} };
     });
-    renderAt(`/ops/${nature}/${legacyPrefix()}-7/overview`);
+    renderAt(`/ops/budget/${legacyPrefix()}-7/overview`);
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith(`/budget-lines/${legacyPrefix()}-7`, expect.objectContaining({ signal: expect.any(AbortSignal) })));
     // The detail is not answered yet: the badge's request is already out.
     await waitFor(() => expect(fetchBudgetRelationsCount).toHaveBeenCalledWith(BUDGET_NATURE_CONFIG[nature], `${legacyPrefix()}-7`, expect.any(AbortSignal)));
@@ -600,7 +602,7 @@ describe('BudgetLinePage notes typed during a save', () => {
   });
 
   it('keeps text typed while the save and its refetch run, and saves it next', async () => {
-    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
     const notes = await screen.findByDisplayValue('Renewal');
     // Writes wait for the line to load; retry the change until it sticks.
     await waitFor(() => {
@@ -649,7 +651,7 @@ describe('BudgetLinePage analytics dimensions', () => {
   });
 
   it('patches one dimension at a time, as null when cleared, and keeps the others on screen', async () => {
-    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
     const drawer = () => document.querySelector('[data-mode="edit"]');
     // The drawer reads the line's values from the detail's list, by dimension.
     await waitFor(() => expect(drawer()).toHaveAttribute('data-analytics', JSON.stringify({ 'axis-default': 'value-1' })));
@@ -679,32 +681,32 @@ describe('BudgetLinePage list context', () => {
   });
 
   it('a unified list context enables mixed navigation and opens a CAPEX neighbour with the list state', async () => {
-    nav.result = { index: 0, total: 2, hasPrev: false, hasNext: true, prevId: null, nextId: 'BL-12', nextPath: `/ops/${otherNature()}/BL-12` };
-    renderAt(`/ops/${nature}/${ITEM_ID}/overview?list=budget&sort=product_name:ASC`);
+    nav.result = { index: 0, total: 2, hasPrev: false, hasNext: true, prevId: null, nextId: 'BL-12', nextPath: `/ops/budget/BL-12` };
+    renderAt(`/ops/budget/${ITEM_ID}/overview?list=budget&sort=product_name:ASC`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
     expect(nav.unified).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'next budget line' }));
     const page = await screen.findByTestId('capex-page');
-    expect(page.getAttribute('data-path')).toBe(`/ops/${otherNature()}/BL-12/overview`);
+    expect(page.getAttribute('data-path')).toBe(`/ops/budget/BL-12/overview`);
   });
 
   it('sends prev/next no sort for the default one, and keeps a sort the user picked', async () => {
     window.sessionStorage.setItem('budget-list-context', JSON.stringify({ sort: 'yBudget:DESC', q: '', filters: '', statusScope: 'enabled' }));
-    const first = renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
+    const first = renderAt(`/ops/budget/${ITEM_ID}/overview`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
     expect(nav.calls.filter((c) => c.enabled).every((c) => (c.sort ?? null) === null)).toBe(true);
     first.unmount();
 
     nav.calls = [];
     window.sessionStorage.setItem('budget-list-context', JSON.stringify({ sort: 'yRevision:ASC', q: '', filters: '', statusScope: 'enabled' }));
-    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
     expect(nav.calls.filter((c) => c.enabled).every((c) => c.sort === 'yRevision:ASC')).toBe(true);
   });
 
   it('walks prev/next like the list: a sort or filter on a hidden column falls back', async () => {
     const filters = JSON.stringify({ yForecast: { filterType: 'number', type: 'greaterThan', filter: 1 }, yBudget: { filterType: 'number', type: 'greaterThan', filter: 2 } });
-    renderAt(`/ops/${nature}/${ITEM_ID}/overview?list=budget&sort=yForecast:ASC&filters=${encodeURIComponent(filters)}`);
+    renderAt(`/ops/budget/${ITEM_ID}/overview?list=budget&sort=yForecast:ASC&filters=${encodeURIComponent(filters)}`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
     const ready = nav.calls.filter((c) => c.enabled);
     for (const call of ready) {
@@ -722,7 +724,7 @@ describe('BudgetLinePage list context', () => {
     const own = { sort: '', q: '', filters: JSON.stringify({ supplier_name: { filterType: 'set', values: ['Alpha'] } }), statusScope: 'enabled' };
     window.sessionStorage.setItem('budget-list-context', JSON.stringify(own));
     const filters = JSON.stringify({ has_fte: { filterType: 'set', values: ['yes'] } });
-    renderAt(`/ops/${nature}/${ITEM_ID}/overview?${new URLSearchParams({ filters, statusScope: 'all', from: 'report' })}`);
+    renderAt(`/ops/budget/${ITEM_ID}/overview?${new URLSearchParams({ filters, statusScope: 'all', from: 'report' })}`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
     for (const call of nav.calls.filter((c) => c.enabled) as Array<{ filters?: string | null; statusScope?: string }>) {
       expect(call.statusScope).toBe('all');
@@ -757,7 +759,7 @@ describe('BudgetLinePage list context too long for a URL (ctx)', () => {
   });
 
   it('a link opened in a new tab: reads the saved filters, walks prev/next with them, goes back to the list with ctx', async () => {
-    renderAt(`/ops/${nature}/${ITEM_ID}/overview?sort=product_name:ASC&ctx=${CTX}`);
+    renderAt(`/ops/budget/${ITEM_ID}/overview?sort=product_name:ASC&ctx=${CTX}`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
     // Not enabled before the saved filters are read: prev/next never walks the unfiltered list.
     for (const call of nav.calls.filter((c) => c.enabled)) expect(JSON.parse(call.filters ?? '{}')).toEqual(BIG);
@@ -814,7 +816,7 @@ describe('BudgetLinePage list context and dimensions', () => {
     window.sessionStorage.setItem('budget-list-context', JSON.stringify({
       sort: `analytics_${OLD}:ASC`, q: '', filters: JSON.stringify(filters), statusScope: 'enabled',
     }));
-    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
     // Never enabled before the dimensions are known.
     for (const call of nav.calls.filter((c) => c.enabled)) {
@@ -836,7 +838,7 @@ describe('BudgetLinePage list context and dimensions', () => {
     window.sessionStorage.setItem('budget-list-context', JSON.stringify({
       sort: 'priority:ASC', q: '', filters: JSON.stringify(filters), statusScope: 'enabled',
     }));
-    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
     for (const call of nav.calls.filter((c) => c.enabled)) {
       expect(call.sort ?? null).toBeNull();
@@ -852,7 +854,7 @@ describe('BudgetLinePage list context and dimensions', () => {
     window.sessionStorage.setItem('budget-list-context', JSON.stringify({
       sort: `analytics_${NATURE}:DESC`, q: '', filters: '', statusScope: 'enabled',
     }));
-    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
     expect(nav.calls.filter((c) => c.enabled).every((c) => c.sort === `analytics_${NATURE}:DESC`)).toBe(true);
   });
@@ -899,7 +901,7 @@ describe('BudgetLinePage autosave across lines, refusals and a busy server', () 
           <MemoryRouter initialEntries={[path]} useTransitions={false}>
             <NavigateProbe />
             <Routes>
-              <Route path={`/ops/${nature}/:id/:tab`} element={<BudgetLinePage nature={nature} />} />
+              <Route path={`/ops/budget/:ref/:tab`} element={<BudgetLinePage nature={nature} />} />
               <Route path="/ops/budget" element={<div>opex list</div>} />
               <Route path="/ops/opex" element={<div>opex list</div>} />
             </Routes>
@@ -925,14 +927,14 @@ describe('BudgetLinePage autosave across lines, refusals and a busy server', () 
       if (url === `/budget-lines/${LINE_A}` && 'description' in patch) throw apiError(409, 'duplicate');
       return { data: {} };
     });
-    const router = renderLines(`/ops/${nature}/${LINE_A}/overview`);
+    const router = renderLines(`/ops/budget/${LINE_A}/overview`);
     await typeInto('Line A stored', 'X');
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1), { timeout: 3000 });
     // Refused for good: the message shows and the stored text is back.
     expect(await screen.findByText('errors:duplicate')).toBeInTheDocument();
     expect(await screen.findByDisplayValue('Line A stored')).toBeInTheDocument();
 
-    act(() => { router.navigate(`/ops/${nature}/${LINE_B}/overview`); });
+    act(() => { router.navigate(`/ops/budget/${LINE_B}/overview`); });
     await typeInto('Line B notes', 'Line B notes, edited');
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2), { timeout: 3000 });
     expect(mocked.patch.mock.calls).toEqual([
@@ -948,7 +950,7 @@ describe('BudgetLinePage autosave across lines, refusals and a busy server', () 
       return { data: {} };
     });
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    const router = renderLines(`/ops/${nature}/${LINE_A}/overview`);
+    const router = renderLines(`/ops/budget/${LINE_A}/overview`);
     await typeInto('Line A notes', 'A edited');
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1), { timeout: 3000 });
     // Three retries by itself, then kept and shown as not saved yet.
@@ -958,7 +960,7 @@ describe('BudgetLinePage autosave across lines, refusals and a busy server', () 
 
     // The user goes to line B another way (no flush): the edit for A stays bound to A.
     busy = false;
-    act(() => { router.navigate(`/ops/${nature}/${LINE_B}/overview`); });
+    act(() => { router.navigate(`/ops/budget/${LINE_B}/overview`); });
     await typeInto('Line B notes', 'B edited');
     await waitFor(() => expect(mocked.patch.mock.calls.filter(([url]) => url === `/budget-lines/${LINE_B}`)).toHaveLength(1), { timeout: 3000 });
     const sent = mocked.patch.mock.calls.slice(4);
@@ -970,7 +972,7 @@ describe('BudgetLinePage autosave across lines, refusals and a busy server', () 
   it('asks before leaving while the server keeps the edit busy, then drops it for good', async () => {
     mocked.patch.mockRejectedValue(apiError(503, 'busy'));
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    renderLines(`/ops/${nature}/${LINE_A}/overview`);
+    renderLines(`/ops/budget/${LINE_A}/overview`);
     await typeInto('Line A notes', 'never saved');
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1), { timeout: 3000 });
     await act(async () => { await vi.advanceTimersByTimeAsync(8_000); });
@@ -1081,7 +1083,7 @@ describe('BudgetLinePage edit conflicts (lot 3C)', () => {
             <NavigateProbe />
             <LocationProbe />
             <Routes>
-              <Route path={`/ops/${nature}/:id/:tab`} element={<BudgetLinePage nature={nature} />} />
+              <Route path={`/ops/budget/:ref/:tab`} element={<BudgetLinePage nature={nature} />} />
               <Route path="/ops/budget" element={<div>opex list</div>} />
               <Route path="/ops/opex" element={<div>opex list</div>} />
             </Routes>
@@ -1103,7 +1105,7 @@ describe('BudgetLinePage edit conflicts (lot 3C)', () => {
 
   /** Marie saved other notes on line A after the screen read them; the user's notes are refused. */
   async function conflictOnNotes() {
-    const router = renderLines(`/ops/${nature}/${LINE_A}/overview`);
+    const router = renderLines(`/ops/budget/${LINE_A}/overview`);
     await screen.findByDisplayValue('Line A notes');
     stored[LINE_A].notes = 'Notes from Marie';
     const notes = await typeInto('Line A notes', 'My notes');
@@ -1187,7 +1189,7 @@ describe('BudgetLinePage edit conflicts (lot 3C)', () => {
   });
 
   it('a pick goes after the text still waiting for its typing pause, each in its own request', async () => {
-    renderLines(`/ops/${nature}/${LINE_A}/overview`);
+    renderLines(`/ops/budget/${LINE_A}/overview`);
     await typeInto('Line A notes', 'Typed just before');
     // Picked before the pause ends: the server refuses the cost center.
     fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
@@ -1202,7 +1204,7 @@ describe('BudgetLinePage edit conflicts (lot 3C)', () => {
   });
 
   it('disabling a line with no end of validity sends the status alone: two windows doing it are no conflict', async () => {
-    renderLines(`/ops/${nature}/${LINE_A}/overview`);
+    renderLines(`/ops/budget/${LINE_A}/overview`);
     await screen.findByDisplayValue('Line A notes');
     // Another window disabled the line meanwhile (its own clock's now).
     stored[LINE_A].disabled_at = '2026-10-02T12:00:00.000Z';
@@ -1214,7 +1216,7 @@ describe('BudgetLinePage edit conflicts (lot 3C)', () => {
   });
 
   it('two ends of validity on the same day show their time', async () => {
-    renderLines(`/ops/${nature}/${LINE_A}/overview`);
+    renderLines(`/ops/budget/${LINE_A}/overview`);
     await screen.findByDisplayValue('Line A notes');
     stored[LINE_A].disabled_at = '2026-12-31T16:00:00.000Z';
     fireEvent.click(screen.getByRole('button', { name: 'end on 31 December' }));
@@ -1232,11 +1234,11 @@ describe('BudgetLinePage edit conflicts (lot 3C)', () => {
   it('a tab change keeps the choice: no question, the banner and the text stay', async () => {
     const { notes } = await conflictOnNotes();
     fireEvent.click(screen.getByRole('button', { name: 'budget tab' }));
-    await waitFor(() => expect(path()).toBe(`/ops/${nature}/${LINE_A}/budget`));
+    await waitFor(() => expect(path()).toBe(`/ops/budget/${LINE_A}/budget`));
     expect(dialogs.confirm).not.toHaveBeenCalled();
     expect(screen.getByTestId('edit-conflict-notes')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'overview tab' }));
-    await waitFor(() => expect(path()).toBe(`/ops/${nature}/${LINE_A}/overview`));
+    await waitFor(() => expect(path()).toBe(`/ops/budget/${LINE_A}/overview`));
     expect(await screen.findByDisplayValue('My notes')).toBeInTheDocument();
     expect(notes).toBeDefined();
   });
@@ -1261,17 +1263,17 @@ describe('BudgetLinePage edit conflicts (lot 3C)', () => {
   });
 
   it('a budget column waiting for a choice: a tab change keeps it, leaving the line names it, then drops it', async () => {
-    renderLines(`/ops/${nature}/${LINE_A}/budget`);
+    renderLines(`/ops/budget/${LINE_A}/budget`);
     fireEvent.click(await screen.findByRole('button', { name: 'budget refused' }));
 
     // Another tab of the line: no question, the choice is kept for the line.
     fireEvent.click(screen.getByRole('button', { name: 'overview tab' }));
-    await waitFor(() => expect(path()).toBe(`/ops/${nature}/${LINE_A}/overview`));
+    await waitFor(() => expect(path()).toBe(`/ops/budget/${LINE_A}/overview`));
     expect(dialogs.confirm).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'budget tab' }));
     expect(await screen.findByTestId('budget-waiting')).toHaveTextContent('Budget');
     fireEvent.click(screen.getByRole('button', { name: 'overview tab' }));
-    await waitFor(() => expect(path()).toBe(`/ops/${nature}/${LINE_A}/overview`));
+    await waitFor(() => expect(path()).toBe(`/ops/budget/${LINE_A}/overview`));
 
     // Leaving the line, from another tab: the warning names the column waiting.
     dialogs.confirm.mockResolvedValueOnce(false);
@@ -1306,7 +1308,7 @@ describe('BudgetLinePage edit conflicts (lot 3C)', () => {
     act(() => { router.navigate('/ops/budget'); });
     expect(await screen.findByText('opex list')).toBeInTheDocument();
     expect(dialogs.confirm).not.toHaveBeenCalled();
-    act(() => { router.navigate(`/ops/${nature}/${LINE_A}/overview`); });
+    act(() => { router.navigate(`/ops/budget/${LINE_A}/overview`); });
     expect(await screen.findByTestId('edit-conflict-notes')).toBeInTheDocument();
     expect(await screen.findByDisplayValue('My notes')).toBeInTheDocument();
     await settleSaves();
@@ -1314,7 +1316,7 @@ describe('BudgetLinePage edit conflicts (lot 3C)', () => {
   });
 
   it('a save answered with a conflict once the page went is kept for the next visit', async () => {
-    const router = renderLines(`/ops/${nature}/${LINE_A}/overview`);
+    const router = renderLines(`/ops/budget/${LINE_A}/overview`);
     await screen.findByDisplayValue('Line A notes');
     stored[LINE_A].notes = 'Notes from Marie';
     await typeInto('Line A notes', 'Typed before leaving');
@@ -1323,7 +1325,7 @@ describe('BudgetLinePage edit conflicts (lot 3C)', () => {
     expect(await screen.findByText('opex list')).toBeInTheDocument();
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
     await settleSaves();
-    act(() => { router.navigate(`/ops/${nature}/${LINE_A}/overview`); });
+    act(() => { router.navigate(`/ops/budget/${LINE_A}/overview`); });
     expect(await screen.findByTestId('edit-conflict-notes')).toBeInTheDocument();
     expect(await screen.findByDisplayValue('Typed before leaving')).toBeInTheDocument();
   });
@@ -1331,7 +1333,7 @@ describe('BudgetLinePage edit conflicts (lot 3C)', () => {
   it('never carries a conflict of line A to line B, names line A there, and opens it without a question', async () => {
     const { router } = await conflictOnNotes();
     // Another way to line B (no flush): no banner there, B's edit goes to B alone.
-    act(() => { router.navigate(`/ops/${nature}/${LINE_B}/overview`); });
+    act(() => { router.navigate(`/ops/budget/${LINE_B}/overview`); });
     await typeInto('Line B notes', 'B edited');
     expect(screen.queryByTestId('edit-conflict-notes')).toBeNull();
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2), { timeout: 3000 });
@@ -1354,7 +1356,7 @@ describe('BudgetLinePage edit conflicts (lot 3C)', () => {
   describe('a company and its account', () => {
     /** Someone else saves `theirs` after the screen read the line, then the user picks a company on another chart (the account is cleared with it). */
     async function pickOtherCompany(theirs: Record<string, unknown>) {
-      renderLines(`/ops/${nature}/${LINE_A}/overview`);
+      renderLines(`/ops/budget/${LINE_A}/overview`);
       await waitFor(() => expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', 'account-1'));
       Object.assign(stored[LINE_A], theirs);
       fireEvent.click(screen.getByRole('button', { name: 'pick other company' }));
@@ -1489,7 +1491,7 @@ describe('BudgetLinePage others\' changes (lot 3G)', () => {
   }
 
   it('reads the meta every 30 seconds while the line is shown', async () => {
-    renderAt(`/ops/${nature}/${LINE}/overview`);
+    renderAt(`/ops/budget/${LINE}/overview`);
     await screen.findByDisplayValue('Start');
     expect(metaReads()).toBe(0);
     await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
@@ -1497,7 +1499,7 @@ describe('BudgetLinePage others\' changes (lot 3G)', () => {
   });
 
   it('idle: someone else\'s change is shown in place, with who changed it', async () => {
-    renderAt(`/ops/${nature}/${LINE}/overview`);
+    renderAt(`/ops/budget/${LINE}/overview`);
     const notes = await screen.findByDisplayValue('Start');
     othersWrite({ notes: 'Notes from Marie' });
     const reads = detailReads();
@@ -1509,7 +1511,7 @@ describe('BudgetLinePage others\' changes (lot 3G)', () => {
   });
 
   it('the page\'s own saves say nothing', async () => {
-    renderAt(`/ops/${nature}/${LINE}/overview`);
+    renderAt(`/ops/budget/${LINE}/overview`);
     await typeInto('Start', 'My notes');
     await settleSaves();
     expect(mocked.patch).toHaveBeenCalledTimes(1);
@@ -1522,7 +1524,7 @@ describe('BudgetLinePage others\' changes (lot 3G)', () => {
   });
 
   it('the user\'s own change in another window says so', async () => {
-    renderAt(`/ops/${nature}/${LINE}/overview`);
+    renderAt(`/ops/budget/${LINE}/overview`);
     await screen.findByDisplayValue('Start');
     othersWrite({ notes: 'From my other window' }, { id: 'me', name: 'Me' });
     await poll();
@@ -1530,7 +1532,7 @@ describe('BudgetLinePage others\' changes (lot 3G)', () => {
   });
 
   it('typing in a field: nothing is refreshed, the badge shows; Reload shows the change and keeps the text typed', async () => {
-    renderAt(`/ops/${nature}/${LINE}/overview`);
+    renderAt(`/ops/budget/${LINE}/overview`);
     const description = await screen.findByDisplayValue('About');
     description.focus();
     othersWrite({ notes: 'Notes from Marie' });
@@ -1553,7 +1555,7 @@ describe('BudgetLinePage others\' changes (lot 3G)', () => {
   });
 
   it('a choice waiting: no mark beside its banner, nothing refreshed; once the choice is made, the change is said', async () => {
-    renderAt(`/ops/${nature}/${LINE}/overview`);
+    renderAt(`/ops/budget/${LINE}/overview`);
     await screen.findByDisplayValue('Start');
     stored.notes = 'Notes from Marie';
     const notes = await typeInto('Start', 'My notes');
@@ -1578,7 +1580,7 @@ describe('BudgetLinePage others\' changes (lot 3G)', () => {
   });
 
   it('Budget tab: the year\'s version moved, the tab reloads in place; a cell typed gets the badge; a column waiting for a choice gets neither', async () => {
-    renderAt(`/ops/${nature}/${LINE}/budget`);
+    renderAt(`/ops/budget/${LINE}/budget`);
     await waitFor(() => expect(screen.getByTestId('budget-waiting')).toBeInTheDocument());
     budgetRev = 4;
     await poll();
@@ -1604,7 +1606,7 @@ describe('BudgetLinePage others\' changes (lot 3G)', () => {
   });
 
   it('a reload that fails is not counted as shown: the badge stays, and the next read tries again', async () => {
-    renderAt(`/ops/${nature}/${LINE}/budget`);
+    renderAt(`/ops/budget/${LINE}/budget`);
     await waitFor(() => expect(screen.getByTestId('budget-waiting')).toBeInTheDocument());
     budgetStandIn.failReload = true;
     budgetRev = 4;
@@ -1617,7 +1619,7 @@ describe('BudgetLinePage others\' changes (lot 3G)', () => {
   });
 
   it('a detail that cannot be read again is not counted as shown', async () => {
-    renderAt(`/ops/${nature}/${LINE}/overview`);
+    renderAt(`/ops/budget/${LINE}/overview`);
     const notes = await screen.findByDisplayValue('Start');
     othersWrite({ notes: 'Notes from Marie' });
     const served = mocked.get.getMockImplementation()! as (...args: any[]) => any;
@@ -1634,7 +1636,7 @@ describe('BudgetLinePage others\' changes (lot 3G)', () => {
   });
 
   it('a line deleted elsewhere says so, and is not read again', async () => {
-    renderAt(`/ops/${nature}/${LINE}/overview`);
+    renderAt(`/ops/budget/${LINE}/overview`);
     await screen.findByDisplayValue('Start');
     const served = mocked.get.getMockImplementation()! as (...args: any[]) => any;
     mocked.get.mockImplementation(async (url: string, config?: unknown) => {
@@ -1655,26 +1657,26 @@ describe('BudgetLinePage others\' changes (lot 3G)', () => {
         <ThemeProvider theme={createAppTheme('light')}>
           <MemoryRouter initialEntries={[path]} useTransitions={false}>
             <Routes>
-              <Route path={`/ops/${nature}/:id/:tab`} element={<BudgetLinePage nature={nature} />} />
+              <Route path={`/ops/budget/:ref/:tab`} element={<BudgetLinePage nature={nature} />} />
             </Routes>
           </MemoryRouter>
         </ThemeProvider>
       </QueryClientProvider>
     );
-    const first = render(ui(`/ops/${nature}/${LINE}/overview`));
+    const first = render(ui(`/ops/budget/${LINE}/overview`));
     await screen.findByDisplayValue('Start');
     first.unmount();
     // Marie changes the line while it is closed; the copy kept goes stale.
     othersWrite({ notes: 'Notes from Marie' });
     await act(async () => { await vi.advanceTimersByTimeAsync(31_000); });
-    render(ui(`/ops/${nature}/${LINE}/overview`));
+    render(ui(`/ops/budget/${LINE}/overview`));
     await screen.findByDisplayValue('Notes from Marie');
     await poll();
     expect(screen.queryByTestId('others-changes-notice')).toBeNull();
   });
 
   it('back on the window, a stale line is read again only when nothing is pending', async () => {
-    renderAt(`/ops/${nature}/${LINE}/overview`);
+    renderAt(`/ops/budget/${LINE}/overview`);
     const notes = await screen.findByDisplayValue('Start');
     await act(async () => { await vi.advanceTimersByTimeAsync(31_000); });
     othersWrite({ notes: 'Notes from Marie' });
@@ -1720,10 +1722,10 @@ describe('BudgetLinePage cost center across lines', () => {
     render(
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={createAppTheme('light')}>
-          <MemoryRouter initialEntries={[`/ops/${nature}/${LINE_A}/overview`]} useTransitions={false}>
+          <MemoryRouter initialEntries={[`/ops/budget/${LINE_A}/overview`]} useTransitions={false}>
             <NavigateProbe />
             <Routes>
-              <Route path={`/ops/${nature}/:id/:tab`} element={<BudgetLinePage nature={nature} />} />
+              <Route path={`/ops/budget/:ref/:tab`} element={<BudgetLinePage nature={nature} />} />
             </Routes>
           </MemoryRouter>
         </ThemeProvider>
@@ -1731,7 +1733,7 @@ describe('BudgetLinePage cost center across lines', () => {
     );
     const shown = (id: string) => document.querySelector(`[data-mode="edit"][data-cost-center="${id}"]`);
     await waitFor(() => expect(shown('cc-a')).not.toBeNull());
-    act(() => { router.navigate!(`/ops/${nature}/${LINE_B}/overview`); });
+    act(() => { router.navigate!(`/ops/budget/${LINE_B}/overview`); });
     await waitFor(() => expect(shown('cc-b')).not.toBeNull());
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
     expect(mocked.get.mock.calls.filter(([url]) => String(url).startsWith('/cost-centers'))).toEqual([]);
@@ -1772,7 +1774,7 @@ describe('BudgetLinePage required dimensions before leaving (lot D2)', () => {
   });
 
   async function openLine() {
-    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
     await waitFor(() => expect(document.querySelector('[data-mode="edit"]')).not.toBeNull());
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/analytics-axes'));
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
@@ -1867,7 +1869,7 @@ describe('BudgetLinePage change type (lot M)', () => {
   afterEach(() => { auth.canEdit = true; });
 
   it('the « … » pill opens the change of type; once changed, the line opens in its new type', async () => {
-    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
     await screen.findByDisplayValue('Renewal');
     fireEvent.click(screen.getByRole('button', { name: 'buttons.moreActions' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'ops:shared.changeType.menuItem' }));
@@ -1875,11 +1877,11 @@ describe('BudgetLinePage change type (lot M)', () => {
     expect(dialog).toHaveAttribute('data-nature', nature);
     expect(dialog).toHaveAttribute('data-line', ITEM_ID);
     fireEvent.click(screen.getByRole('button', { name: 'confirm type change' }));
-    expect(await screen.findByTestId('capex-page')).toHaveAttribute('data-path', `/ops/${otherNature()}/BL-7/overview`);
+    expect(await screen.findByTestId('capex-page')).toHaveAttribute('data-path', `/ops/budget/BL-7/overview`);
   });
 
   it('saves the notes still typed before the dialog reads the line', async () => {
-    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
     const notes = await screen.findByDisplayValue('Renewal');
     fireEvent.change(notes, { target: { value: 'Renewal in March' } });
     fireEvent.click(screen.getByRole('button', { name: 'buttons.moreActions' }));
@@ -1890,17 +1892,17 @@ describe('BudgetLinePage change type (lot M)', () => {
 
   it('is not offered without the budget member level', async () => {
     auth.canEdit = false;
-    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
     await screen.findByDisplayValue('Renewal');
     expect(screen.queryByRole('button', { name: 'buttons.moreActions' })).toBeNull();
   });
 
   it('names the line that replaces this one; it opens in its own type', async () => {
     detail = { ...detail, lineage: { predecessor: null, successor: { id: 'line-2', reference: 'BL-9', nature: otherNature(), from_year: 2026 } } };
-    renderAt(`/ops/${nature}/${ITEM_ID}/overview`);
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
     expect(await screen.findByText(/shared\.lineage\.replacedBy/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'BL-9' }));
-    expect(await screen.findByTestId('capex-page')).toHaveAttribute('data-path', `/ops/${otherNature()}/BL-9/overview`);
+    expect(await screen.findByTestId('capex-page')).toHaveAttribute('data-path', `/ops/budget/BL-9/overview`);
   });
 });
 
@@ -1919,7 +1921,7 @@ describe('native contract and Type', () => {
 
   it.each(['BL-127', '127', 'legacy', ITEM_ID])('reads the native detail by %s and displays its BL reference', async (input) => {
     const ref = input === 'legacy' ? `${legacyPrefix()}-7` : input;
-    renderAt(`/ops/${nature}/${ref}/overview`);
+    renderAt(`/ops/budget/${ref}/overview`);
     await screen.findByDisplayValue('Long description');
     expect(mocked.get).toHaveBeenCalledWith(`/budget-lines/${ref}`, expect.objectContaining({ signal: expect.any(AbortSignal) }));
     expect(screen.getByTestId('line-reference')).toHaveTextContent('BL-127');
@@ -1929,7 +1931,7 @@ describe('native contract and Type', () => {
   });
 
   it('saves title, description and notes under their native keys and reloads them', async () => {
-    const view = renderAt(`/ops/${nature}/BL-127/overview`);
+    const view = renderAt(`/ops/budget/BL-127/overview`);
     await screen.findByDisplayValue('Long description');
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}`, { product_name: 'Monitoring', base: { product_name: 'Investment' } }));
@@ -1938,13 +1940,13 @@ describe('native contract and Type', () => {
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}`, expect.objectContaining({ description: 'Description kept', notes: 'Notes kept' })));
     expect(mocked.patch.mock.calls.every(([url]) => url === `/budget-lines/${ITEM_ID}`)).toBe(true);
     view.unmount();
-    renderAt(`/ops/${nature}/BL-127/overview`);
+    renderAt(`/ops/budget/BL-127/overview`);
     await screen.findByDisplayValue('Description kept');
     expect(screen.getByDisplayValue('Notes kept')).toBeInTheDocument();
   });
 
   it('offers the same change-type action in the drawer and the menu', async () => {
-    renderAt(`/ops/${nature}/BL-127/overview`);
+    renderAt(`/ops/budget/BL-127/overview`);
     await screen.findByDisplayValue('Long description');
     expect(screen.getByTestId('line-type')).toHaveTextContent(nature);
     fireEvent.click(screen.getByRole('button', { name: 'budget.changeType' }));
@@ -1953,17 +1955,18 @@ describe('native contract and Type', () => {
 
   it('hides the drawer change-type action without the member permission', async () => {
     auth.canEdit = false;
-    renderAt(`/ops/${nature}/BL-127/overview`);
+    renderAt(`/ops/budget/BL-127/overview`);
     await screen.findByDisplayValue('Long description');
     expect(screen.queryByRole('button', { name: 'budget.changeType' })).not.toBeInTheDocument();
   });
 
   it('defaults the create Type to the route and changes it with the query preserved', async () => {
-    renderAt(`/ops/${nature}/new/overview?list=budget&year=2027&sort=product_name:ASC`, '/ops/budget?origin=history');
+    renderAt(`/ops/budget/new/overview?list=budget&year=2027&sort=product_name:ASC`, '/ops/budget?origin=history');
     expect(screen.getByRole('combobox', { name: 'budget.type' })).toHaveValue(nature);
     fireEvent.change(screen.getByRole('combobox', { name: 'budget.type' }), { target: { value: otherNature() } });
     const target = await screen.findByTestId('create-target');
-    expect(target).toHaveAttribute('data-path', `/ops/${otherNature()}/new`);
+    expect(target).toHaveAttribute('data-path', `/ops/budget/new`);
+    expect(new URLSearchParams(target.getAttribute('data-search') ?? '').get('nature')).toBe(otherNature());
     const search = new URLSearchParams(target.getAttribute('data-search') ?? '');
     expect(search.get('year')).toBe('2027'); expect(search.get('list')).toBe('budget'); expect(search.get('sort')).toBe('product_name:ASC');
     fireEvent.click(screen.getByRole('button', { name: 'browser back' }));
@@ -1973,7 +1976,7 @@ describe('native contract and Type', () => {
 
   it('creates through the native API with the route nature and all three texts', async () => {
     mocked.post.mockResolvedValue({ data: { id: 'new-id' } });
-    renderAt(`/ops/${nature}/new/overview`);
+    renderAt(`/ops/budget/new/overview`);
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
@@ -1985,7 +1988,7 @@ describe('native contract and Type', () => {
   });
 
   it('removes the internal list marker when returning to the budget list', async () => {
-    renderAt(`/ops/${nature}/BL-127/overview?list=budget&year=2027`);
+    renderAt(`/ops/budget/BL-127/overview?list=budget&year=2027`);
     await screen.findByDisplayValue('Long description');
     fireEvent.click(screen.getByRole('button', { name: 'back to list' }));
     const list = await screen.findByTestId('list-page');

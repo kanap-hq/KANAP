@@ -196,7 +196,7 @@ describe('useBudgetLineNav (neighbours, lot 1C)', () => {
 
     const filters = JSON.stringify({ nature: { filterType: 'set', values: ['opex', 'capex'] } });
     const { result } = renderHook(() => useBudgetLineNav({ id: 'BL-3', sort: 'product_name:ASC', filters, statusScope: 'all' }, nature, true), { wrapper });
-    await waitFor(() => expect(result.current).toMatchObject({ index: 2, total: 5, prevId: 'BL-2', nextId: 'BL-4', prevPath: '/ops/capex/BL-2', nextPath: '/ops/opex/BL-4' }));
+    await waitFor(() => expect(result.current).toMatchObject({ index: 2, total: 5, prevId: 'BL-2', nextId: 'BL-4', prevPath: '/ops/budget/BL-2', nextPath: '/ops/budget/BL-4' }));
     expect(calls('/budget-lines/summary/neighbors')[0][1].params).toMatchObject({ id: 'BL-3', filters, sort: 'product_name:ASC', includeDisabled: '1' });
     await waitFor(() => expect(calls('/budget-lines/BL-2')).toHaveLength(1));
     await waitFor(() => expect(calls('/budget-lines/BL-4')).toHaveLength(1));

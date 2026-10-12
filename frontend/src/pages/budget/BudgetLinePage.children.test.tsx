@@ -61,8 +61,8 @@ describe.each(['opex', 'capex'] as const)('BudgetLinePage %s real child tabs', (
     render(
       <QueryClientProvider client={client}>
         <ThemeProvider theme={createAppTheme('dark')}>
-          <KanapDialogProvider><MemoryRouter initialEntries={[`/ops/${nature}/BL-127/budget?year=2027`]} useTransitions={false}>
-            <Routes><Route path={`/ops/${nature}/:id/:tab`} element={<BudgetLinePage nature={nature} />} /></Routes>
+          <KanapDialogProvider><MemoryRouter initialEntries={[`/ops/budget/BL-127/budget?year=2027`]} useTransitions={false}>
+            <Routes><Route path={`/ops/budget/:ref/:tab`} element={<BudgetLinePage nature={nature} />} /></Routes>
           </MemoryRouter></KanapDialogProvider>
         </ThemeProvider>
       </QueryClientProvider>,

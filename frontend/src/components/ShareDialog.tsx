@@ -52,9 +52,9 @@ function buildItemPath(itemType: ShareItemType, itemId: string): string {
     case 'request':
       return `/portfolio/requests/${itemId}`;
     case 'opex':
-      return `/ops/opex/${itemId}`;
+      return `/ops/budget/${itemId}`;
     case 'capex':
-      return `/ops/capex/${itemId}`;
+      return `/ops/budget/${itemId}`;
     case 'asset':
       return `/it/assets/${itemId}/overview`;
     case 'application':
@@ -118,7 +118,7 @@ export default function ShareDialog({
   const [error, setError] = React.useState<string | null>(null);
   const [copied, setCopied] = React.useState(false);
 
-  const displayRef = itemRef || (itemNumber ? formatItemRef(itemType, itemNumber) : null);
+  const displayRef = itemRef || (itemNumber ? formatItemRef(itemType === 'opex' || itemType === 'capex' ? 'budget' : itemType, itemNumber) : null);
   const refOrId = displayRef || itemId;
   const itemUrl = `${window.location.origin}${buildItemPath(itemType, refOrId)}`;
 

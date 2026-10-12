@@ -17,8 +17,8 @@ export function buildItemPath(type: ItemType, idOrRef: string): string {
     connection: '/it/connections',
     interface: '/it/interfaces',
     budget: '/ops/budget',
-    opex: '/ops/opex',
-    capex: '/ops/capex',
+    opex: '/ops/budget',
+    capex: '/ops/budget',
     incident: '/it/incidents',
     contributor: '/portfolio/contributors',
   };

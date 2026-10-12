@@ -10,7 +10,8 @@ const ResetPasswordPage = React.lazy(() => import('./pages/ResetPasswordPage'));
 const AcceptInvitePage = React.lazy(() => import('./pages/AcceptInvitePage'));
 const BudgetListPage = React.lazy(() => import('./pages/budget/BudgetListPage'));
 const BudgetListRedirect = React.lazy(() => import('./pages/budget/listRedirect'));
-const BudgetLinePage = React.lazy(() => import('./pages/budget/BudgetLinePage'));
+const BudgetLineRoute = React.lazy(() => import('./pages/budget/BudgetLineRoute'));
+import LegacyBudgetLineRedirect from './pages/budget/LegacyBudgetLineRedirect';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import { legacyBudgetRedirectRoutes } from './legacyBudgetRedirects';
@@ -247,12 +248,15 @@ function AppRoutes() {
           <Route path="/" element={<HomeRoute />} />
           <Route path="/ops" element={<DashboardPage />} />
           <Route path="/ops/budget" element={<BudgetListPage />} />
+          <Route path="/ops/budget/new" element={<BudgetLineRoute />} />
+          <Route path="/ops/budget/:ref" element={<BudgetLineRoute />} />
+          <Route path="/ops/budget/:ref/:tab" element={<BudgetLineRoute />} />
           <Route path="/ops/opex" element={<BudgetListRedirect nature="opex" />} />
-          <Route path="/ops/opex/:id" element={<BudgetLinePage nature="opex" />} />
-          <Route path="/ops/opex/:id/:tab" element={<BudgetLinePage nature="opex" />} />
+          <Route path="/ops/opex/:id" element={<LegacyBudgetLineRedirect nature="opex" />} />
+          <Route path="/ops/opex/:id/:tab" element={<LegacyBudgetLineRedirect nature="opex" />} />
           <Route path="/ops/capex" element={<BudgetListRedirect nature="capex" />} />
-          <Route path="/ops/capex/:id" element={<BudgetLinePage nature="capex" />} />
-          <Route path="/ops/capex/:id/:tab" element={<BudgetLinePage nature="capex" />} />
+          <Route path="/ops/capex/:id" element={<LegacyBudgetLineRedirect nature="capex" />} />
+          <Route path="/ops/capex/:id/:tab" element={<LegacyBudgetLineRedirect nature="capex" />} />
           <Route path="/ops/contracts" element={<ContractsPage />} />
           <Route path="/ops/contracts/:id" element={<ContractWorkspacePage />} />
           <Route path="/ops/contracts/:id/:tab" element={<ContractWorkspacePage />} />
