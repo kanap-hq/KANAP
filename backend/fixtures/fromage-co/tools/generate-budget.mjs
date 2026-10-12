@@ -119,12 +119,138 @@ out('26-cost-centers.csv', ccRows);
 const ccCompany = Object.fromEntries(CC.map((c) => [c[0], c[3]]));
 const ccOwner = Object.fromEntries(CC.map((c) => [c[0], c[4]]));
 
-// ── Analytics dimensions (values; the axes are created by the runner) ───────
-const NATURE = {
-  licence: 'Licenses and maintenance', saas: 'SaaS subscriptions', cloud: 'Cloud and hosting', telecom: 'Telecom and network',
-  staff: 'Staff augmentation', cdc: 'Competence center', managed: 'Managed services', hardware: 'Hardware',
-  consulting: 'Consulting and audit', training: 'Training', travel: 'Travel and expenses',
+// ── Analytics dimensions ────────────────────────────────────────────────────
+// Cost pool (the default dimension), IT tower, purpose, priority and recurrence are the
+// recommended dimensions a tenant starts with (backend/src/analytics/recommended-dimensions.seed.ts,
+// recurrence added by the runner): the files name their values in English, as the seed of an
+// English tenant does, and the runner maps them to the tenant's language. Business domain and
+// budget reference are the fixture's own dimensions: their values are in 27-analytics-values.csv,
+// the runner creates the axes.
+//
+// Each line still carries the kind of expense of the earlier fixture (licence, saas, cloud…):
+// it gives the cost pool, and its domain gives the IT tower and the business domain, unless the
+// line's name says otherwise (CLASSIFY_LINE).
+const COST_POOLS = ['Hardware', 'Software', 'Internal labor', 'External labor', 'Outside services', 'Facilities and power', 'Telecom', 'Other'];
+const IT_TOWERS = ['Data center', 'Compute', 'Storage', 'Network', 'Platform', 'Output', 'End user', 'Application', 'Delivery', 'Security and compliance', 'IT management'];
+const PURPOSES = ['Replacement', 'Capacity', 'Productivity', 'Security', 'Compliance', 'Business growth', 'Other'];
+const PRIORITIES = ['Mandatory', 'High', 'Medium', 'Low'];
+const POOL_OF_KIND = {
+  licence: 'Software', saas: 'Software', cloud: 'Outside services', telecom: 'Telecom', staff: 'External labor',
+  cdc: 'External labor', managed: 'Outside services', hardware: 'Hardware', consulting: 'External labor', training: 'Other', travel: 'Other',
 };
+const BUSINESS_DOMAINS = [
+  ['ERP', 'Finance, purchasing, sales administration and logistics on SAP and Sage'],
+  ['CRM', 'Customer relationship management for distribution and subscribers'],
+  ['E-commerce', 'Online shops, B2B portal and payment'],
+  ['Retail', 'Shops and points of sale'],
+  ['Supply chain', 'Warehouses, EDI, product information and logistics'],
+  ['Traceability', 'Cold chain, cave monitoring and product traceability'],
+  ['HR', 'Human capital management and payroll'],
+  ['Data and analytics', 'Data platform, BI and reporting'],
+  ['Shared IT', 'Infrastructure, workplace, security and IT management that serve every business'],
+];
+// The domain of a line (the earlier fixture's default dimension) -> [IT tower, business domain].
+const OF_DOMAIN = {
+  Productivity: ['End user', 'Shared IT'],
+  ERP: ['Application', 'ERP'],
+  CRM: ['Application', 'CRM'],
+  'E-commerce': ['Application', 'E-commerce'],
+  Retail: ['Application', 'Retail'],
+  'Supply Chain': ['Application', 'Supply chain'],
+  Traceability: ['Application', 'Traceability'],
+  ITSM: ['Delivery', 'Shared IT'],
+  HR: ['Application', 'HR'],
+  Security: ['Security and compliance', 'Shared IT'],
+  Infrastructure: ['Compute', 'Shared IT'],
+  Network: ['Network', 'Shared IT'],
+  Workplace: ['End user', 'Shared IT'],
+  Monitoring: ['Delivery', 'Shared IT'],
+  IoT: ['Application', 'Traceability'],
+  Analytics: ['Platform', 'Data and analytics'],
+  'IT Management': ['IT management', 'Shared IT'],
+};
+// Lines (by name, or by profile for external staffing) whose name, supplier or account says more
+// than their kind and domain.
+const CLASSIFY_LINE = {
+  'Data center de Paris — hébergement et énergie': { pool: 'Facilities and power', tower: 'Data center' },
+  'Impression — contrat au coût à la page': { pool: 'Outside services', tower: 'Output' },
+  'Annual penetration tests': { pool: 'Outside services' },
+  'License audit': { pool: 'Outside services' },
+  'E-commerce — UX research and user testing': { pool: 'Outside services' },
+  'E-commerce — product photos and content': { pool: 'Outside services' },
+  'Distribution — performance testing': { pool: 'Outside services' },
+  'Analyst research subscriptions': { pool: 'Outside services' },
+  'Recrutement informatique': { pool: 'Internal labor' },
+  'US Office IT Services': { pool: 'Software' },
+  'Veeam Backup & Replication': { tower: 'Storage' },
+  'Network & Telecom Services': { tower: 'Network' },
+  'Kaasmeester — KPN connectivity': { tower: 'Network' },
+  'US Telecom & Internet': { tower: 'Network' },
+  'Generix EDI Platform': { tower: 'Platform' },
+  'Fromage B2B Portal hosting': { tower: 'Compute' },
+  'La Boutique — CDN and application security': { tower: 'Network' },
+  'Boutiques — maintenance des caisses et imprimantes': { tower: 'End user' },
+  'Boutiques — secours 4G': { business: 'Retail' },
+  'AWS Cloud Hosting': { business: 'E-commerce' },
+  'US e-commerce — AWS hosting': { business: 'E-commerce' },
+  'Managed services — Axians': { tower: 'Delivery' },
+  'Old Intranet — hosting': { tower: 'Compute' },
+  'IT Staff Augmentation': { tower: 'Application' },
+  'Power BI Premium': { tower: 'Application' },
+  'Azure — data consumption': { tower: 'Compute' },
+  'Data analyst': { tower: 'Application' },
+  'Level 2 till support': { tower: 'End user' },
+  'Sistemista punti vendita': { tower: 'End user' },
+  'Sviluppatore integrazioni': { tower: 'Platform' },
+  'Integration architect': { tower: 'Platform' },
+  'SAP Basis administrator': { tower: 'Platform' },
+  'E-commerce DevOps engineer': { tower: 'Platform' },
+  'Site reliability engineer': { tower: 'Platform' },
+  'S/4HANA — HANA servers': { tower: 'Compute' },
+  'Boutiques — renouvellement des caisses': { tower: 'End user' },
+  'Formaggio — nuove casse punti vendita': { tower: 'End user' },
+  'CaveGuard — rollout to all 8 caves': { tower: 'End user' },
+  'Data platform — build': { tower: 'Platform' },
+};
+// Why an OPEX project line (run/build = build) is spent: by its budget reference, else by name.
+// Run lines have no purpose.
+const PURPOSE_OF_REFERENCE = { sap: 'Replacement', ecom: 'Business growth', zt: 'Security', data: 'Business growth' };
+const PURPOSE_OF_LINE = {
+  'Cybersecurity Consulting & Audits': 'Security',
+  'Distribution — performance testing': 'Capacity',
+  'Distribution — formation des utilisateurs': 'Productivity',
+  'E-commerce — product photos and content': 'Business growth',
+  'Cabinet de conseil — schéma directeur SI': 'Other',
+  'EDI project manager': 'Productivity',
+  'Sales business analyst': 'Business growth',
+  'Integration architect': 'Replacement',
+  'B2B portal developer': 'Business growth',
+  'Projectleider WMS': 'Replacement',
+  'Sviluppatore integrazioni': 'Productivity',
+  'E-commerce engineer': 'Business growth',
+  'DC refresh project manager': 'Replacement',
+  'Workday project manager': 'Replacement',
+  'Workday payroll consultant': 'Replacement',
+};
+const oneOf = (list, value, what, key) => {
+  if (!list.includes(value)) throw new Error(`${key}: '${value}' is no ${what}`);
+  return value;
+};
+/** [cost pool, IT tower, business domain] of a line, from its kind of expense, its domain and its name. */
+function classify(key, kind, domain) {
+  const line = CLASSIFY_LINE[key] ?? {};
+  const [tower, business] = OF_DOMAIN[domain] ?? [];
+  return [
+    oneOf(COST_POOLS, line.pool ?? POOL_OF_KIND[kind], 'cost pool', key),
+    oneOf(IT_TOWERS, line.tower ?? tower, 'IT tower', key),
+    oneOf(BUSINESS_DOMAINS.map(([name]) => name), line.business ?? business, 'business domain', key),
+  ];
+}
+/** The purpose of an OPEX line: project lines only. */
+function opexPurpose(key, runBuild, reference) {
+  if (runBuild !== 'build') return '';
+  return oneOf(PURPOSES, PURPOSE_OF_LINE[key] ?? PURPOSE_OF_REFERENCE[reference], 'purpose', key);
+}
 const REFERENCE = {
   ecom: ['REF-ECOM-CDC', 'E-commerce competence center: outsourced squad, OPEX and CAPEX lines, changing suppliers'],
   sap: ['REF-SAP-S4', 'S/4HANA program: functional and technical contractors, hardware and capitalized development'],
@@ -133,9 +259,8 @@ const REFERENCE = {
 };
 const RECURRENCE = { yes: 'Recurring', no: 'One-off' };
 const valueRows = [['axis_code', 'name', 'description', 'status']];
-for (const v of Object.values(NATURE)) valueRows.push(['nature', v, '', 'enabled']);
+for (const [name, description] of BUSINESS_DOMAINS) valueRows.push(['business_domain', name, description, 'enabled']);
 for (const [code, description] of Object.values(REFERENCE)) valueRows.push(['reference', code, description, 'enabled']);
-for (const v of Object.values(RECURRENCE)) valueRows.push(['recurrence', v, '', 'enabled']);
 out('27-analytics-values.csv', valueRows);
 
 // ── Accounts per legal entity ───────────────────────────────────────────────
@@ -155,39 +280,39 @@ const ASSET = {
   [IT]: { intangible: '205000', tangible: '215000' },
   [US]: { intangible: '151000', tangible: '161000' },
 };
-const assetAccount = (company, ppe) => ASSET[company][ppe === 'Hardware' ? 'tangible' : 'intangible'];
+const assetAccount = (company, asset) => ASSET[company][asset === 'Hardware' ? 'tangible' : 'intangible'];
 
 // ── OPEX items ──────────────────────────────────────────────────────────────
 // Existing lines of the fixture, now attached to a cost centre and classified.
-// [product_name, cost centre, run/build, nature, recurrence, reference]
+// [product_name, cost centre, run/build, kind, recurrence, reference, domain]
 const EXISTING = [
-  ['Microsoft Enterprise (M365 + Azure + GitHub)', 'FR-TRV-500', 'run', 'licence', 'yes', ''],
-  ['SAP S/4HANA Maintenance', 'FR-DIS-300', 'run', 'licence', 'yes', ''],
-  ['SAP BW/4HANA License', 'FR-TRV-700', 'run', 'licence', 'yes', 'data'],
-  ['Salesforce (Sales + Service Cloud)', 'FR-DIS-300', 'run', 'saas', 'yes', ''],
-  ['ServiceNow ITSM Platform', 'FR-TRV-500', 'run', 'saas', 'yes', ''],
-  ['Workday HCM', 'FR-TRV-500', 'run', 'saas', 'yes', ''],
-  ['OVHcloud Infrastructure', 'FR-TRV-400', 'run', 'cloud', 'yes', ''],
-  ['AWS Cloud Hosting', 'FR-BOU-310', 'run', 'cloud', 'yes', 'ecom'],
-  ['Datadog Monitoring', 'FR-TRV-400', 'run', 'saas', 'yes', ''],
-  ['Okta Workforce Identity', 'FR-TRV-600', 'run', 'saas', 'yes', 'zt'],
-  ['Sophos Enterprise Security', 'FR-TRV-600', 'run', 'licence', 'yes', ''],
-  ['VMware vSphere Licensing', 'FR-TRV-400', 'run', 'licence', 'yes', ''],
-  ['CaveGuard IoT Platform', 'FR-DIS-300', 'run', 'saas', 'yes', ''],
-  ['CheeseTrack SaaS', 'FR-DIS-300', 'run', 'saas', 'yes', ''],
-  ['Network & Telecom Services', 'FR-TRV-400', 'run', 'telecom', 'yes', ''],
-  ['IT Staff Augmentation', 'FR-TRV-700', 'run', 'staff', 'no', ''],
-  ['Managed services — Axians', 'FR-TRV-400', 'run', 'managed', 'yes', ''],
-  ['Cybersecurity Consulting & Audits', 'FR-TRV-600', 'build', 'consulting', 'no', 'zt'],
-  ['Various SaaS Bundle', 'FR-TRV-500', 'run', 'saas', 'yes', ''],
-  ['Fortinet FortiCare & FortiGuard', 'FR-TRV-600', 'run', 'licence', 'yes', ''],
-  ['IT Training & Certification', 'FR-TRV-700', 'run', 'training', 'yes', ''],
-  ['IT Travel & Events', 'FR-TRV-700', 'run', 'travel', 'yes', ''],
-  ['Sage X3 Licenties — Kaasmeester', 'NL-DIS-300', 'run', 'licence', 'yes', ''],
-  ['Sage X3 Licenze — Formaggio Supremo', 'IT-BOU-310', 'run', 'licence', 'yes', ''],
-  ['US Office IT Services', 'US-BOU-310', 'run', 'managed', 'yes', ''],
-  ['US Managed IT Services', 'US-BOU-310', 'run', 'managed', 'yes', ''],
-  ['US Telecom & Internet', 'US-BOU-310', 'run', 'telecom', 'yes', ''],
+  ['Microsoft Enterprise (M365 + Azure + GitHub)', 'FR-TRV-500', 'run', 'licence', 'yes', '', 'Productivity'],
+  ['SAP S/4HANA Maintenance', 'FR-DIS-300', 'run', 'licence', 'yes', '', 'ERP'],
+  ['SAP BW/4HANA License', 'FR-TRV-700', 'run', 'licence', 'yes', 'data', 'Analytics'],
+  ['Salesforce (Sales + Service Cloud)', 'FR-DIS-300', 'run', 'saas', 'yes', '', 'CRM'],
+  ['ServiceNow ITSM Platform', 'FR-TRV-500', 'run', 'saas', 'yes', '', 'ITSM'],
+  ['Workday HCM', 'FR-TRV-500', 'run', 'saas', 'yes', '', 'HR'],
+  ['OVHcloud Infrastructure', 'FR-TRV-400', 'run', 'cloud', 'yes', '', 'Infrastructure'],
+  ['AWS Cloud Hosting', 'FR-BOU-310', 'run', 'cloud', 'yes', 'ecom', 'Infrastructure'],
+  ['Datadog Monitoring', 'FR-TRV-400', 'run', 'saas', 'yes', '', 'Monitoring'],
+  ['Okta Workforce Identity', 'FR-TRV-600', 'run', 'saas', 'yes', 'zt', 'Security'],
+  ['Sophos Enterprise Security', 'FR-TRV-600', 'run', 'licence', 'yes', '', 'Security'],
+  ['VMware vSphere Licensing', 'FR-TRV-400', 'run', 'licence', 'yes', '', 'Infrastructure'],
+  ['CaveGuard IoT Platform', 'FR-DIS-300', 'run', 'saas', 'yes', '', 'IoT'],
+  ['CheeseTrack SaaS', 'FR-DIS-300', 'run', 'saas', 'yes', '', 'Traceability'],
+  ['Network & Telecom Services', 'FR-TRV-400', 'run', 'telecom', 'yes', '', 'Infrastructure'],
+  ['IT Staff Augmentation', 'FR-TRV-700', 'run', 'staff', 'no', '', 'IT Management'],
+  ['Managed services — Axians', 'FR-TRV-400', 'run', 'managed', 'yes', '', 'Workplace'],
+  ['Cybersecurity Consulting & Audits', 'FR-TRV-600', 'build', 'consulting', 'no', 'zt', 'Security'],
+  ['Various SaaS Bundle', 'FR-TRV-500', 'run', 'saas', 'yes', '', 'Productivity'],
+  ['Fortinet FortiCare & FortiGuard', 'FR-TRV-600', 'run', 'licence', 'yes', '', 'Security'],
+  ['IT Training & Certification', 'FR-TRV-700', 'run', 'training', 'yes', '', 'IT Management'],
+  ['IT Travel & Events', 'FR-TRV-700', 'run', 'travel', 'yes', '', 'IT Management'],
+  ['Sage X3 Licenties — Kaasmeester', 'NL-DIS-300', 'run', 'licence', 'yes', '', 'ERP'],
+  ['Sage X3 Licenze — Formaggio Supremo', 'IT-BOU-310', 'run', 'licence', 'yes', '', 'ERP'],
+  ['US Office IT Services', 'US-BOU-310', 'run', 'managed', 'yes', '', 'Productivity'],
+  ['US Managed IT Services', 'US-BOU-310', 'run', 'managed', 'yes', '', 'Workplace'],
+  ['US Telecom & Internet', 'US-BOU-310', 'run', 'telecom', 'yes', '', 'Infrastructure'],
 ];
 // Landing stories on existing lines (ratio landing / budget 2026), else a small drift.
 const EXISTING_LANDING = {
@@ -201,7 +326,8 @@ const existingRows = parseCsv(readFileSync(path.join(ROOT, '14-spend-items.csv')
 const byName = Object.fromEntries(existingRows.map((r) => [r.product_name, r]));
 
 const OPEX_HEADER = ['product_name', 'description', 'supplier_name', 'company_name', 'account_number', 'currency', 'effective_start', 'status', 'disabled_at',
-  'owner_it_email', 'owner_business_email', 'analytics_category', 'analytics:nature', 'analytics:reference', 'analytics:recurrence', 'cost_center_code', 'run_build', 'notes',
+  'owner_it_email', 'owner_business_email', 'analytics:default', 'analytics:it_tower', 'analytics:business_domain', 'analytics:purpose',
+  'analytics:reference', 'analytics:recurrence', 'cost_center_code', 'run_build', 'notes',
   'y_minus1_budget', 'y_minus1_landing', 'y_budget', 'y_follow_up', 'y_landing', 'y_revision', 'y_plus1_budget', 'y_plus1_revision'];
 
 const opexRows = [OPEX_HEADER];
@@ -226,7 +352,7 @@ function pushForecast(type, name, months) {
 }
 
 // Existing lines: keep every value, attach the organisation, empty 2027.
-for (const [name, cc, runBuild, nature, recurrence, reference] of EXISTING) {
+for (const [name, cc, runBuild, kind, recurrence, reference, domain] of EXISTING) {
   const r = byName[name];
   if (!r) throw new Error(`Existing line not found: ${name}`);
   const budget = Number(r.y_budget);
@@ -234,7 +360,8 @@ for (const [name, cc, runBuild, nature, recurrence, reference] of EXISTING) {
   const landing = round(budget * ratio, 500);
   const revision = rnd() < 0.5 ? round(budget * between(0.98, 1.02), 500) : '';
   opexRows.push([r.product_name, r.description, r.supplier_name, r.company_name, r.account_number, r.currency, r.effective_start, statusFor(r.disabled_at), r.disabled_at,
-    r.owner_it_email, r.owner_business_email, r.analytics_category, NATURE[nature], reference ? REFERENCE[reference][0] : '', RECURRENCE[recurrence], cc, runBuild, r.notes,
+    r.owner_it_email, r.owner_business_email, ...classify(name, kind, domain), opexPurpose(name, runBuild, reference),
+    reference ? REFERENCE[reference][0] : '', RECURRENCE[recurrence], cc, runBuild, r.notes,
     r.y_minus1_budget, r.y_minus1_landing, budget, '', landing, revision, '', '']);
   const endMonth = r.disabled_at?.startsWith('2026-') ? Number(r.disabled_at.slice(5, 7)) : 12;
   const landingMonths = flat(landing, 1, endMonth);
@@ -242,7 +369,7 @@ for (const [name, cc, runBuild, nature, recurrence, reference] of EXISTING) {
   if (rnd() < 0.3) pushForecast('opex', name, flat(round(budget * between(0.98, 1.04), 500)));
 }
 
-// New non-staffing lines. [name, description, supplier, cost centre, account key, domain, nature, run/build, recurrence, reference, budget 2026, start, end, landing ratio]
+// New non-staffing lines. [name, description, supplier, cost centre, account key, domain, kind, run/build, recurrence, reference, budget 2026, start, end, landing ratio]
 const NEW_LINES = [
   // Distribution & food service
   ['Generix EDI Platform', 'EDI exchanges with retail chains and contract catering', 'Generix Group', 'FR-DIS-300', 'saas', 'Supply Chain', 'saas', 'run', 'yes', '', 96000, '2023-01-01', '', 1.0],
@@ -309,14 +436,15 @@ const OWNER_IT = { 'FR-DIS-100': 'clara.dupont@fromage-co.example', 'FR-DIS-200'
 const OWNER_BUSINESS = { 'DIV-DIS': 'isabelle.moreau@fromage-co.example', 'DIV-BOU': 'isabelle.moreau@fromage-co.example', 'DIV-TRV': 'thomas.berger@fromage-co.example' };
 const ccGroup = Object.fromEntries(CC.map((c) => [c[0], c[2]]));
 
-for (const [name, description, supplier, cc, accountKey, domain, nature, runBuild, recurrence, reference, budget, start, end, landingRatio] of NEW_LINES) {
+for (const [name, description, supplier, cc, accountKey, domain, kind, runBuild, recurrence, reference, budget, start, end, landingRatio] of NEW_LINES) {
   const company = ccCompany[cc];
   const budget2025 = start >= '2026-01-01' ? '' : round(budget * between(0.9, 0.97), 500);
   const landing2025 = budget2025 === '' ? '' : round(budget2025 * between(0.97, 1.04), 500);
   const landing = round(budget * landingRatio, 500);
   const revision = rnd() < 0.5 ? round(budget * between(0.98, 1.03), 500) : '';
   opexRows.push([name, description, supplier, company, ACCOUNT[company][accountKey], CURRENCY[company], start, statusFor(end), end,
-    OWNER_IT[cc], OWNER_BUSINESS[ccGroup[cc]], domain, NATURE[nature], reference ? REFERENCE[reference][0] : '', RECURRENCE[recurrence], cc, runBuild,
+    OWNER_IT[cc], OWNER_BUSINESS[ccGroup[cc]], ...classify(name, kind, domain), opexPurpose(name, runBuild, reference),
+    reference ? REFERENCE[reference][0] : '', RECURRENCE[recurrence], cc, runBuild,
     end ? `End of validity ${end}` : '', budget2025, landing2025, budget, '', landing, revision, '', '']);
   const endMonth = end?.startsWith('2026-') ? Number(end.slice(5, 7)) : 12;
   pushActuals('opex', name, flat(landing, 1, endMonth));
@@ -324,7 +452,7 @@ for (const [name, description, supplier, cc, accountKey, domain, nature, runBuil
 }
 
 // External staffing: people priced per working day, computed from a calendar.
-// [cost centre, profile, supplier, unit price, quantity, run/build, nature, reference, domain, budget period, landing period (null = same)]
+// [cost centre, profile, supplier, unit price, quantity, run/build, kind, reference, domain, budget period, landing period (null = same)]
 const STAFFING = [
   ['FR-DIS-100', 'EDI project manager', 'Fromatech Consulting', 850, 1, 'build', 'staff', '', 'Supply Chain', ['01-01', '12-31'], null],
   ['FR-DIS-100', 'Sales business analyst', 'Fromatech Consulting', 720, 1, 'build', 'staff', '', 'CRM', ['01-01', '12-31'], null],
@@ -376,7 +504,7 @@ function staffMonths(year, calendarCode, quantity, unitPrice, [start, end]) {
 }
 const sum = (a) => Math.round(a.reduce((x, y) => x + y, 0));
 
-for (const [cc, profile, supplier, price, quantity, runBuild, nature, reference, domain, budgetPeriod, landingPeriodRaw] of STAFFING) {
+for (const [cc, profile, supplier, price, quantity, runBuild, kind, reference, domain, budgetPeriod, landingPeriodRaw] of STAFFING) {
   const company = ccCompany[cc];
   const calendar = STAFF_CAL[company];
   const name = `Contractor · ${profile} · ${SHORT[cc]}`;
@@ -387,7 +515,8 @@ for (const [cc, profile, supplier, price, quantity, runBuild, nature, reference,
   const qtyText = quantity > 1 ? `${quantity} people` : '1 person';
   const description = `${profile}, staff augmentation: ${qtyText} × ${price} ${CURRENCY[company]} per day, ${calendar} calendar`;
   opexRows.push([name, description, supplier, company, ACCOUNT[company].staff, CURRENCY[company], '2025-01-01', 'enabled', '',
-    OWNER_IT[cc], OWNER_BUSINESS[ccGroup[cc]], domain, NATURE[nature], reference ? REFERENCE[reference][0] : '', RECURRENCE.no, cc, runBuild,
+    OWNER_IT[cc], OWNER_BUSINESS[ccGroup[cc]], ...classify(profile, kind, domain), opexPurpose(profile, runBuild, reference),
+    reference ? REFERENCE[reference][0] : '', RECURRENCE.no, cc, runBuild,
     '', budget2025, round(budget2025 * between(0.97, 1.03), 500), sum(budgetMonths), '', sum(landingMonths), '', '', '']);
   for (const [measure, period] of [['planned', budgetPeriod], ['expected_landing', landingPeriod]]) {
     lineRows.push(['opex', name, 2026, measure, profile, 'people', quantity, price, 'per_day', 'per_month', '', `2026-${period[0]}`, `2026-${period[1]}`, calendar]);
@@ -401,15 +530,15 @@ for (const [cc, profile, supplier, price, quantity, runBuild, nature, reference,
 out('14-spend-items.csv', opexRows);
 
 // ── CAPEX items ──────────────────────────────────────────────────────────────
-// The PP&E type, investment type and priority are the values of the dimensions every tenant
-// starts with (codes ppe_type, investment_type, priority), written by name.
+// The asset type (hardware or software) only chooses the capitalised account; the purpose and the
+// priority are the values of the recommended dimensions of those codes, written by name.
 const CAPEX_HEADER = ['item_number', 'product_name', 'description', 'currency', 'effective_start', 'status', 'disabled_at', 'notes',
-  'company_name', 'account_number', 'owner_it_email', 'owner_business_email', 'analytics_category', 'analytics:nature', 'analytics:reference', 'analytics:recurrence',
-  'analytics:ppe_type', 'analytics:investment_type', 'analytics:priority', 'cost_center_code', 'run_build',
+  'company_name', 'account_number', 'owner_it_email', 'owner_business_email', 'analytics:default', 'analytics:it_tower', 'analytics:business_domain',
+  'analytics:purpose', 'analytics:priority', 'analytics:reference', 'analytics:recurrence', 'cost_center_code', 'run_build',
   'y_minus1_budget', 'y_minus1_landing', 'y_budget', 'y_follow_up', 'y_landing', 'y_revision', 'y_plus1_budget', 'y_plus1_revision', 'y_plus2_budget'];
 const capexRows = [CAPEX_HEADER];
-// Existing CAPEX lines, re-attached: [description, PP&E type, investment type, priority, currency, effective start,
-// end of validity, notes, company, domain, cost centre, nature, reference, landing ratio, budget Y-1, landing Y-1, budget]
+// Existing CAPEX lines, re-attached: [description, asset type, purpose, priority, currency, effective start,
+// end of validity, notes, company, domain, cost centre, kind, reference, landing ratio, budget Y-1, landing Y-1, budget]
 const EXISTING_CAPEX = [
   ['SAP Cheddar Migration — S/4HANA upgrade', 'Software', 'Replacement', 'Mandatory', 'EUR', '2025-07-01', '2027-12-31',
     'Migration from SAP ECC to S/4HANA with cheese industry customizations — 2.5 year program', FR, 'ERP', 'FR-DIS-200', 'cdc', 'sap', 1.09, 50000, 45000, 350000],
@@ -418,16 +547,17 @@ const EXISTING_CAPEX = [
   ['D2C E-commerce Platform — La Boutique', 'Software', 'Business growth', 'High', 'EUR', '2025-06-01', '2026-09-30',
     'Fromage-as-a-Service — custom e-commerce platform on AWS (React + Node.js)', FR, 'E-commerce', 'FR-BOU-100', 'cdc', 'ecom', 0.96, 80000, 90000, 120000],
 ];
-for (const [description, ppe, inv, prio, currency, start, end, notes, company, domain, cc, nature, reference, ratio, budgetBefore, landingBefore, budget] of EXISTING_CAPEX) {
+for (const [description, asset, purpose, prio, currency, start, end, notes, company, domain, cc, kind, reference, ratio, budgetBefore, landingBefore, budget] of EXISTING_CAPEX) {
   const landing = round(budget * ratio, 1000);
   capexRows.push(['', description, notes, currency, start, statusFor(end), end, '',
-    company, assetAccount(company, ppe), OWNER_IT[cc], OWNER_BUSINESS[ccGroup[cc]], domain, NATURE[nature], reference ? REFERENCE[reference][0] : '', RECURRENCE.no,
-    ppe, inv, prio, cc, 'build',
+    company, assetAccount(company, asset), OWNER_IT[cc], OWNER_BUSINESS[ccGroup[cc]], ...classify(description, kind, domain),
+    oneOf(PURPOSES, purpose, 'purpose', description), oneOf(PRIORITIES, prio, 'priority', description),
+    reference ? REFERENCE[reference][0] : '', RECURRENCE.no, cc, 'build',
     budgetBefore, landingBefore, budget, '', landing, round(budget * between(0.98, 1.05), 1000), '', '', '']);
   const endMonth = end?.startsWith('2026-') ? Number(end.slice(5, 7)) : 12;
   pushActuals('capex', description, flat(landing, 1, endMonth));
 }
-// New CAPEX lines. [description, PP&E type, investment type, priority, cost centre, domain, nature, reference, budget 2026, start, end, landing ratio, staffing line | null]
+// New CAPEX lines. [description, asset type, purpose, priority, cost centre, domain, kind, reference, budget 2026, start, end, landing ratio, staffing line | null]
 const NEW_CAPEX = [
   ['S/4HANA — capitalized custom development', 'Software', 'Replacement', 'Mandatory', 'FR-DIS-200', 'ERP', 'cdc', 'sap', 0, '2026-01-01', '2027-06-30', 1.0,
     ['SAP ABAP developer', 'Nearshore Digital Lisboa', 520, 2, ['01-01', '12-31'], ['01-01', '12-31']]],
@@ -441,11 +571,11 @@ const NEW_CAPEX = [
   ['CaveGuard — rollout to all 8 caves', 'Hardware', 'Business growth', 'High', 'FR-DIS-300', 'IoT', 'hardware', '', 75000, '2026-01-01', '2026-12-31', 1.0, null],
   ['Data platform — build', 'Software', 'Business growth', 'High', 'FR-TRV-700', 'Analytics', 'cdc', 'data', 0, '2026-01-01', '2026-12-31', 1.0,
     ['Platform data engineer', 'Alpine Data Experts', 780, 2, ['01-01', '12-31'], ['01-01', '12-31']]],
-  ['Zero Trust — plant network segmentation', 'Hardware', 'Replacement', 'Mandatory', 'FR-TRV-600', 'Security', 'hardware', 'zt', 120000, '2026-01-01', '2026-12-31', 1.05, null],
+  ['Zero Trust — plant network segmentation', 'Hardware', 'Security', 'Mandatory', 'FR-TRV-600', 'Security', 'hardware', 'zt', 120000, '2026-01-01', '2026-12-31', 1.05, null],
   ['Workstations — plant refresh', 'Hardware', 'Replacement', 'High', 'FR-TRV-500', 'Workplace', 'hardware', '', 85000, '2026-01-01', '2026-12-31', 1.0, null],
   ['Réseau Wi-Fi des caves et des entrepôts', 'Hardware', 'Replacement', 'High', 'FR-TRV-400', 'Network', 'hardware', '', 55000, '2026-01-01', '2026-12-31', 1.0, null],
 ];
-for (const [description, ppe, inv, prio, cc, domain, nature, reference, budgetRaw, start, end, ratio, staffing] of NEW_CAPEX) {
+for (const [description, asset, purpose, prio, cc, domain, kind, reference, budgetRaw, start, end, ratio, staffing] of NEW_CAPEX) {
   const company = ccCompany[cc];
   let budget = budgetRaw, landing;
   if (staffing) {
@@ -464,8 +594,9 @@ for (const [description, ppe, inv, prio, cc, domain, nature, reference, budgetRa
     pushActuals('capex', description, flat(landing, 1, endMonth));
   }
   capexRows.push(['', description, '', CURRENCY[company], start, statusFor(end), end, '',
-    company, assetAccount(company, ppe), OWNER_IT[cc], OWNER_BUSINESS[ccGroup[cc]], domain, NATURE[nature], reference ? REFERENCE[reference][0] : '', RECURRENCE.no,
-    ppe, inv, prio, cc, 'build',
+    company, assetAccount(company, asset), OWNER_IT[cc], OWNER_BUSINESS[ccGroup[cc]], ...classify(description, kind, domain),
+    oneOf(PURPOSES, purpose, 'purpose', description), oneOf(PRIORITIES, prio, 'priority', description),
+    reference ? REFERENCE[reference][0] : '', RECURRENCE.no, cc, 'build',
     '', '', budget, '', landing, rnd() < 0.5 ? round(budget * between(0.98, 1.05), 1000) : '', '', '', '']);
 }
 out('15-capex-items.csv', capexRows);

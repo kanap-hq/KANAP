@@ -20,9 +20,9 @@
 const FILE_COLUMNS = ['budget', 'revision', 'forecast', 'actual', 'landing'];
 
 /**
- * Detail columns before the dimension columns, the same for both natures. The PP&E type,
- * investment type and priority of a CAPEX line are dimension columns (`analytics:<code>`), copied
- * like the others.
+ * Detail columns before the dimension columns, the same for both natures. Every `analytics:<code>`
+ * column of the source is copied as it is (the fixture maps the recommended dimensions to the
+ * tenant's codes and value names before).
  */
 const DETAIL_START = ['nature', 'item_number', 'name', 'description'];
 
