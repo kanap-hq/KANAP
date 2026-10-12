@@ -222,7 +222,7 @@ async function testIndexedRowsMapToLegacyDtoShape(applicationClassifications: Re
       {
         entity_type: 'spend_items',
         entity_id: 'spend-1',
-        ref_prefix: 'OPX',
+        ref_prefix: 'BL',
         ref_number: 9,
         label: 'License renewal',
         summary: null,
@@ -235,7 +235,7 @@ async function testIndexedRowsMapToLegacyDtoShape(applicationClassifications: Re
       {
         entity_type: 'capex_items',
         entity_id: 'capex-1',
-        ref_prefix: 'CPX',
+        ref_prefix: 'BL',
         ref_number: 3,
         label: 'Server refresh',
         summary: null,
@@ -285,8 +285,8 @@ async function testIndexedRowsMapToLegacyDtoShape(applicationClassifications: Re
   });
 
   // …while budget lines build theirs from the item number.
-  assert.equal(spend.ref, 'OPX-9');
-  assert.equal(capex.ref, 'CPX-3');
+  assert.equal(spend.ref, 'BL-9');
+  assert.equal(capex.ref, 'BL-3');
   assert.deepEqual(spend.metadata, {
     supplier: 'ACME',
     paying_company: null,
@@ -315,7 +315,7 @@ async function testLegacySearchAllGivesBudgetLineReferences() {
     });
 
     const refs = Object.fromEntries((result.items as any[]).map((item) => [item.type, item.ref]));
-    assert.deepEqual(refs, { spend_items: 'OPX-12', capex_items: 'CPX-4' });
+    assert.deepEqual(refs, { spend_items: 'BL-12', capex_items: 'BL-4' });
   });
 }
 

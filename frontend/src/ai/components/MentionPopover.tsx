@@ -26,26 +26,26 @@ export type MentionPopoverHandle = {
 };
 
 const SEARCH_DEBOUNCE_MS = 150;
-const ENTITY_TYPE_LABELS: Record<string, string> = {
-  documents: 'Knowledge',
-  tasks: 'Tasks',
-  projects: 'Projects',
-  requests: 'Requests',
-  applications: 'Applications',
-  assets: 'Assets',
-  connections: 'Connections',
-  interfaces: 'Interfaces',
-  locations: 'Locations',
-  contracts: 'Contracts',
-  spend_items: 'Opex',
-  capex_items: 'Capex',
-  incidents: 'Incidents',
-  companies: 'Companies',
-  contacts: 'Contacts',
-  departments: 'Departments',
-  suppliers: 'Suppliers',
-  business_processes: 'Business processes',
-  users: 'Users',
+const ENTITY_TYPE_LABEL_KEYS: Record<string, string> = {
+  documents: 'mention.entityTypes.knowledge',
+  tasks: 'mention.entityTypes.tasks',
+  projects: 'mention.entityTypes.projects',
+  requests: 'mention.entityTypes.requests',
+  applications: 'mention.entityTypes.applications',
+  assets: 'mention.entityTypes.assets',
+  connections: 'mention.entityTypes.connections',
+  interfaces: 'mention.entityTypes.interfaces',
+  locations: 'mention.entityTypes.locations',
+  contracts: 'mention.entityTypes.contracts',
+  spend_items: 'mention.entityTypes.budgetLines',
+  capex_items: 'mention.entityTypes.budgetLines',
+  incidents: 'mention.entityTypes.incidents',
+  companies: 'mention.entityTypes.companies',
+  contacts: 'mention.entityTypes.contacts',
+  departments: 'mention.entityTypes.departments',
+  suppliers: 'mention.entityTypes.suppliers',
+  business_processes: 'mention.entityTypes.businessProcesses',
+  users: 'mention.entityTypes.users',
 };
 
 const MentionPopover = React.forwardRef<MentionPopoverHandle, MentionPopoverProps>(
@@ -83,8 +83,8 @@ const MentionPopover = React.forwardRef<MentionPopoverHandle, MentionPopoverProp
         try {
           // Two distinct search modes:
           //  - Type-token prefix recognised or partially typed (`@APP`, `@DO`,
-          //    `@T-5`): narrow to the matching entity_type(s). Strip the prefix;
-          //    the backend can apply the item_number boost on the bare number.
+          //    `@T-5`): narrow to the matching entity_type(s). Budget references
+          //    keep their prefix so legacy numbers resolve independently of BL numbers.
           //  - No prefix (`@backup`, `@server`): no narrow, cross-type text search
           //    with tier-based ranking.
           const items = await aiSearchApi.searchEntities(searchTerm, {
@@ -211,11 +211,10 @@ const MentionPopover = React.forwardRef<MentionPopoverHandle, MentionPopoverProp
                 fontWeight: 500,
                 color: theme.palette.kanap.text.tertiary,
                 letterSpacing: 0.4,
-                textTransform: 'uppercase',
                 bgcolor: theme.palette.kanap.bg.drawer,
               })}
             >
-              {ENTITY_TYPE_LABELS[group.entity_type] || group.entity_type}
+              {t(ENTITY_TYPE_LABEL_KEYS[group.entity_type] || 'mention.entityTypes.budgetLines')}
             </Typography>
             {group.items.map((item) => {
               runningIdx += 1;

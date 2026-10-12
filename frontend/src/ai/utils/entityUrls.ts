@@ -44,7 +44,7 @@ export function isLinkableEntityType(entityType: string): boolean {
  * Map between KANAP type prefixes (case-insensitive) and the canonical entity_type.
  *
  * Two flavours of prefixes coexist here:
- *   1. "Native ref prefixes" (T, DOC, PRJ, REQ, INC, OPX, CPX) that the backend's buildRef() turns
+ *   1. "Native ref prefixes" (T, DOC, PRJ, REQ, INC, BL) that the backend's buildRef() turns
  *      into a real entity ref like "T-5" or "DOC-152". These let us also surface
  *      a tier-1 boost on item_number when the user types `@T-5`.
  *   2. "Type tokens" for entities the data model doesn't number (APP, AST, CONN, …).
@@ -85,6 +85,8 @@ const TYPE_PREFIX_TO_ENTITY_TYPE: Record<string, string> = {
  * Recognised patterns (case-insensitive):
  *   "T"          → { entityType: 'tasks',        searchTerm: '' }     // bare prefix → recent tasks
  *   "T-"         → { entityType: 'tasks',        searchTerm: '' }     // dash alone, same as bare
+ *   "BL-12"      → both budget families, searchTerm: 'BL-12'
+ *   "CPX-3"      → both budget families, searchTerm: 'CPX-3' (legacy number)
  *   "T-5"        → { entityType: 'tasks',        searchTerm: '5' }    // T-5 + tasks containing "5"
  *   "PRJ"        → { entityType: 'projects',     searchTerm: '' }
  *   "APP"        → { entityType: 'applications', searchTerm: '' }
@@ -99,8 +101,14 @@ export function parseAtMentionQuery(query: string): { entityType: string | null;
   const match = trimmed.match(/^([A-Za-z]+)(?:-(.*))?$/);
   if (!match) return { entityType: null, searchTerm: trimmed };
   const prefix = match[1].toUpperCase();
+  const suffix = match[2] || '';
+  const budgetRef = ['BL', 'OPX', 'CPX'].includes(prefix) && /^\d+$/.test(suffix);
+  const searchTerm = budgetRef ? `${prefix}-${suffix}` : suffix;
+  if (prefix === 'BL' || budgetRef) {
+    return { entityType: null, entityTypes: ['spend_items', 'capex_items'], searchTerm };
+  }
   const entityType = TYPE_PREFIX_TO_ENTITY_TYPE[prefix];
-  if (entityType) return { entityType, entityTypes: [entityType], searchTerm: match[2] || '' };
+  if (entityType) return { entityType, entityTypes: [entityType], searchTerm };
 
   // While the user is still typing a known token (`@D`, `@DO`, `@AS`, `@CO`, ...),
   // narrow to matching entity families instead of firing a noisy cross-type text search.

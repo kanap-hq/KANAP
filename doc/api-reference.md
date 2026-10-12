@@ -911,6 +911,13 @@ These neutral routes use the existing budget SQL list engine with an explicit `a
 
 The summary routes take the same query parameters and response shapes as their `/spend-items/summary` equivalents: `page`, `limit`, `sort`, `q`, `filters`, lifecycle/status options, `years`, `shape`, `amounts`, `fte` and saved filter `ctx`, as applicable to each route. The summary uses the existing year-window default; ids and neighbors use the existing enabled-lines default. The native row has `product_name` as its title, `description` as its description, `item_number` as its shared BL number, `nature` (`opex` or `capex`), `reference` (`BL-n`) and `legacy_number`. `shape=grid` preserves these fields. Nature supports set filtering and sorting; filter values include both natures subject to the other filters. Analytics columns include shared and nature-specific dimensions. Quick search matches existing text plus `BL-n`, a bare BL number and case-insensitive legacy `OPX-n` and `CPX-n` references.
 
+Plaid search, entity summaries, query results and mentions cite both budget line types as `BL-n`.
+Search accepts `BL-n`, and resolves persisted `OPX-n` and `CPX-n` legacy references to the native
+reference, including after a type change. Numbered budget mentions search both `spend_items` and
+`capex_items`; the two AI entity families and their permissions stay separate. The search index
+stores `ref_prefix = BL`, the native `item_number` as `ref_number`, and the persisted `legacy_number`
+in its searchable text.
+
 Aggregate body: `{ query, spec }`, with the same validation, limits and measures as the existing aggregate route. `groupBy: ['nature']` returns one group per selected nature. This POST is read-only and remains available to frozen subscriptions.
 
 Neighbors take `id` as a UUID or any reference accepted by the neutral resolver. Resolution accepts a tenant line UUID, case-insensitive `BL-n` or a bare number by `item_number`, and `OPX-n` or `CPX-n` by `legacy_number`. A reclassified line keeps resolving through its persisted legacy reference. Malformed references answer 400; missing or foreign-tenant lines answer 404.
