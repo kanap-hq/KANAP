@@ -168,6 +168,8 @@ export type RestoreNotice = {
     | { col: AmountCol; reason: 'frozen' | 'waiting' }
     | { col: AmountCol; reason: 'changed'; conflict: BudgetConflict | null }
     | { col: AmountCol; reason: 'refused'; message: string }
+    // Changed by someone else and never written by this screen: never sent. `at`: when, if its record says.
+    | { col: AmountCol; reason: 'others'; at: string | null }
   >;
 };
 
@@ -191,6 +193,7 @@ function openingOf(year: number, snapshot: BudgetYear): OpeningYear {
       // Sent back as read: a copy nothing else on screen can change.
       return { months: [...cents[col]], record: record ? JSON.parse(JSON.stringify(record)) as RoundInput : null };
     }),
+    written: {},
   };
 }
 
@@ -419,6 +422,23 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     if (candidate && candidate.year === forYear) noteOpening(forYear, candidate.snapshot);
   };
   const noteOpeningRef = React.useRef(noteOpening); noteOpeningRef.current = noteOpening;
+  // A write of this screen succeeded: each column it wrote, as the answer says it is now (the twelve
+  // months and the lines), is the base its restore will be sent with. An answer without the months
+  // (an older server) leaves the columns as the screen knows them.
+  const noteWritten = (forYear: number, data: BulkUpsertResponse | undefined, cols: Iterable<AmountCol>) => {
+    const opening = openingOfYear(forYear);
+    if (!opening) return;
+    const stored = Array.isArray(data?.items) ? centsByColumn(forYear, data!.items!) : null;
+    const inputs = Array.isArray(data?.round_inputs) ? data!.round_inputs! : null;
+    for (const col of cols) {
+      opening.written[col] = {
+        months: stored ? [...stored[col]] : [...serverMonthsRef.current[col]],
+        lines: inputs ? (inputs.find((r) => r.measure === col)?.lines ?? []).map(linePayloadOf) : [...serverLinesRef.current[col]],
+      };
+    }
+    setOpeningTick((n) => n + 1);
+  };
+  const noteWrittenRef = React.useRef(noteWritten); noteWrittenRef.current = noteWritten;
   const noteOpeningBeforeWriteRef = React.useRef(noteOpeningBeforeWrite); noteOpeningBeforeWriteRef.current = noteOpeningBeforeWrite;
 
   const autosave = useAutosave({
@@ -755,6 +775,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
       // Once written too: an Allocations tab opened while the save ran read the old totals.
       forgetAllocationsYear(queryClient, config.itemsApi, id, year);
       const savedColumns = new Set([...sentCells.values()].flatMap((cols) => [...cols]));
+      noteWrittenRef.current(year, res?.data, savedColumns);
       if (savedColumns.has(activeColRef.current)) followSavedTotal();
       // Show what others changed meanwhile; what is typed since stays as typed.
       void loadRef.current({ quietSince: savedUpTo });
@@ -1060,6 +1081,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
       noteRev(year, res?.data?.budget_rev);
       keepRoundInputs(res?.data);
       keepWritten(res?.data, columns);
+      noteWrittenRef.current(year, res?.data, columns);
       forgetAllocationsYear(queryClient, config.itemsApi, id, year);
       await loadRef.current({ quietSince: savedUpTo });
       return { status: 'saved', data: res?.data };
@@ -1543,11 +1565,11 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
   /* ---- « Back to the opening values » (lot F2) ---- */
 
   // One column back to its opening values (`kind: 'restore'`): its twelve months and its record as
-  // first read, over the column as the screen knows it on the server (`base`, its lines included).
-  // A 409 parks the restore for the user's choice: nothing of the other person is overwritten. The
-  // caller holds the queue.
-  async function sendRestore(col: AmountCol, body: Record<string, unknown>, base?: Record<string, unknown>): Promise<RestoreOutcome> {
-    const sentBase = base ?? { columns: { [col]: { months: monthsBase(serverMonthsRef.current[col]), lines: serverLinesRef.current[col] } } };
+  // first read, over `base`: the column as this screen's last write left it (or as the server
+  // answered a refused restore, for « Overwrite »). A 409 parks the restore for the user's choice:
+  // nothing of the other person is overwritten. The caller holds the queue.
+  async function sendRestore(col: AmountCol, body: Record<string, unknown>, base: Record<string, unknown>): Promise<RestoreOutcome> {
+    const sentBase = base;
     try {
       markYearStaleRef.current();
       const v = await ensureVersion('annual');
@@ -1556,6 +1578,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
       noteRev(year, res?.data?.budget_rev);
       keepRoundInputs(res?.data);
       keepWritten(res?.data, [col]);
+      noteWrittenRef.current(year, res?.data, [col]);
       forgetAllocationsYear(queryClient, config.itemsApi, id, year);
       return { status: 'restored' };
     } catch (e) {
@@ -1595,22 +1618,25 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     cents.some((value, i) => value !== opening.columns[col].months[i]) || recordSignature(record) !== recordSignature(opening.columns[col].record)
   );
   const opening = loaded ? openingOfYear(year) : null;
+  // Counted: the columns this screen wrote that are no longer at their opening values (only those can go back).
   const changedColumns: AmountCol[] = opening
-    ? shown.map((c) => c.measure).filter((col) => differsFromOpening(opening, col, months.map((row) => toCents(row[col])), recordFor(col)))
+    ? shown.map((c) => c.measure).filter((col) => !!opening.written[col] && differsFromOpening(opening, col, months.map((row) => toCents(row[col])), recordFor(col)))
     : [];
 
   const [restoring, setRestoring] = React.useState(false);
   const restoringRef = React.useRef(false);
   const [restoreNotice, setRestoreNotice] = React.useState<RestoreNotice | null>(null);
   // No confirmation (fried): what is under way goes first (the months typed, the writes queued), then
-  // one restore per column changed, each refused on its own (frozen, changed by someone else, a
-  // calendar), then a normal reload. A column waiting for the user's choice is left as it is.
+  // one restore per column this screen changed, over its last write of it, each refused on its own
+  // (frozen, changed by someone else since, a calendar), then a normal reload. A column waiting for
+  // the user's choice is left as it is; one changed by someone else only is never sent.
   const restoreOpening = async () => {
     const forYear = year;
     const start = openingOfYear(forYear);
     if (!start || restoringRef.current || !loaded) return;
-    const clicked = changedColumns;
     const columns = shown.map((c) => c.measure);
+    // What the screen showed as changed when clicked, written by this screen or not (a month waiting for a choice).
+    const clicked = columns.filter((col) => differsFromOpening(start, col, months.map((row) => toCents(row[col])), recordFor(col)));
     restoringRef.current = true;
     setRestoring(true);
     setRestoreNotice(null);
@@ -1627,9 +1653,19 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
           continue;
         }
         if (!differs) continue;
+        const mine = start.written[col];
+        if (!mine) {
+          // Someone else's change, already on screen: said, never sent. When, if its record moved since the opening.
+          const now = roundInputsRef.current.find((r) => r.measure === col);
+          const recordMoved = recordSignature(now) !== recordSignature(start.columns[col].record);
+          const at = recordMoved && now?.updated_at && Date.parse(now.updated_at) >= start.at ? now.updated_at : null;
+          notice.skipped.push({ col, reason: 'others', at });
+          continue;
+        }
         if (frozenRef.current[FREEZE_KEY[col]]) { notice.skipped.push({ col, reason: 'frozen' }); continue; }
         const body = { kind: 'restore', year: forYear, measure: col, months: monthsBase(start.columns[col].months), record: start.columns[col].record };
-        const outcome = await enqueueWrite(() => sendRestore(col, body));
+        const base = { columns: { [col]: { months: monthsBase(mine.months), lines: mine.lines } } };
+        const outcome = await enqueueWrite(() => sendRestore(col, body, base));
         if (outcome.status === 'restored') notice.restored.push(col);
         else if (outcome.status === 'conflict') notice.skipped.push({ col, reason: 'changed', conflict: outcome.conflict });
         else if (outcome.status === 'frozen') notice.skipped.push({ col, reason: 'frozen' });

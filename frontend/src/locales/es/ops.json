@@ -1492,7 +1492,9 @@
       "changed": "{{column}}: modificada por otra persona, no restaurada. Elija arriba qué conservar.",
       "refused": "{{column}}: no restaurada. {{message}}",
       "failed": "No se pudo restaurar la columna.",
-      "frozenNow": "{{column}} se congeló mientras tanto: no se restauró."
+      "frozenNow": "{{column}} se congeló mientras tanto: no se restauró.",
+      "others": "{{column}}: modificada por otra persona desde la apertura, no restaurada.",
+      "othersAt": "{{column}}: modificada por otra persona a las {{time}}, no restaurada."
     }
   },
   "budget": {

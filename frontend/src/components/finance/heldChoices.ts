@@ -1,7 +1,7 @@
 import React from 'react';
 import type { EditConflict } from '../../hooks/editConflicts';
 import type { BudgetConflict } from './budgetConflicts';
-import type { AmountMeasure, RoundInput } from './roundPeriod';
+import type { AmountMeasure, LinePayload, RoundInput } from './roundPeriod';
 
 /**
  * Choices the Budget and Allocations tabs wait on (plan planning/perf-scale, lots 3D and 3E),
@@ -40,8 +40,16 @@ export type HeldBudgetChoices = {
 /** A column as the Budget tab first read it during the visit: its months in cents, January first, and its record as read (null: none). */
 export type OpeningColumn = { months: number[]; record: RoundInput | null };
 
-/** The columns of a year as first read during the visit, and when (ms since the epoch). */
-export type OpeningYear = { at: number; columns: Record<AmountMeasure, OpeningColumn> };
+/** A column as this screen's last write of it left it: the twelve months in cents and its lines, as the write answered. */
+export type WrittenColumn = { months: number[]; lines: LinePayload[] };
+
+/**
+ * The columns of a year as first read during the visit, and when (ms since the epoch). `written`:
+ * the columns this screen wrote during the visit, as its last write of each left them. Only those
+ * go back to the opening values, over that state: a change someone else made since is refused (409),
+ * even once the screen shows it (fried: a column changed by someone else is never restored).
+ */
+export type OpeningYear = { at: number; columns: Record<AmountMeasure, OpeningColumn>; written: Partial<Record<AmountMeasure, WrittenColumn>> };
 
 /**
  * The opening values of a line (plan planning/budget-tab-redesign, lot F2): for each year the

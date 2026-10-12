@@ -20,6 +20,12 @@ function RestoreNoticeBox({ tab }: { tab: BudgetTabState }) {
   const reason = (item: NonNullable<BudgetTabState['restoreNotice']>['skipped'][number]) => {
     const column = labelFor(item.col);
     if (item.reason === 'refused') return t('budgetTab.restore.refused', { column, message: item.message });
+    if (item.reason === 'others') {
+      const when = item.at ? new Date(item.at) : null;
+      return when && !Number.isNaN(when.getTime())
+        ? t('budgetTab.restore.othersAt', { column, time: formatTime(when, locale) })
+        : t('budgetTab.restore.others', { column });
+    }
     if (item.reason !== 'changed') return t(`budgetTab.restore.${item.reason}`, { column });
     // Someone else changed it since the screen read it: the banner above asks what to keep.
     const name = item.conflict?.changed_by ? item.conflict.changed_by.name || t('common:editConflict.aUser') : null;

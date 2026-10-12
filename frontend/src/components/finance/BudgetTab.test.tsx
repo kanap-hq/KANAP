@@ -2658,7 +2658,9 @@ function serveRestores(state: ReturnType<typeof setupApi>, refuse: (body: Record
       });
       state.items.forEach((row, i) => { row[col] = body.months[i]; });
     }
-    return { data: { updated: 12 } };
+    // Every write answers the year's months and records as stored after it.
+    const items = replayWrites(state.items, savedAmountBodies());
+    return { data: { updated: 12, items, ...(state.roundInputs ? { round_inputs: state.roundInputs } : {}) } };
   });
 }
 
@@ -2682,8 +2684,9 @@ describe('BudgetTab back to the opening values', () => {
     expect(openingChanges()).toHaveTextContent(/^1 column changed since \d{2}:\d{2}\D*$/);
 
     // A month typed and not saved yet: the restore sends it first.
+    // Not counted until it is written; the restore writes it first, then restores it too.
     typeMonth('committed', 3, '450');
-    expect(openingChanges()).toHaveTextContent(/^2 columns changed since/);
+    expect(openingChanges()).toHaveTextContent(/^1 column changed since/);
     fireEvent.click(restoreButton());
     await waitFor(() => expect(screen.getByTestId('restore-notice')).toHaveTextContent('Opening values restored: Budget and Revision.'));
 
@@ -2795,6 +2798,69 @@ describe('BudgetTab back to the opening values', () => {
     await waitFor(() => expect(screen.queryByRole('region')).toBeNull());
   });
 
+  it("someone else's change, already reloaded, on a column this screen never wrote: never sent, said in the note", async () => {
+    const state = setupApi({ roundInputs: [wholeYearFlat('planned'), wholeYearFlat('committed'), wholeYearFlat('actual')] });
+    serveRestores(state);
+    const { ref } = renderTab();
+    await waitForAmounts();
+    typeAmount('24000');
+    await settle();
+    // Two colleagues change Revision (months only) and Actuals (months and record); the page shows it (lot 3G).
+    state.items.forEach((row) => { row.committed = '950'; row.actual = '850'; });
+    const changedAt = new Date(Date.now() + 60_000).toISOString();
+    state.roundInputs = [wholeYearFlat('planned'), wholeYearFlat('committed'), { ...wholeYearFlat('actual'), spread_profile_name: '4-4-5', updated_at: changedAt }];
+    await act(async () => { await ref.current!.reloadFromServer(); });
+    await waitFor(() => expect(card('committed')).toHaveTextContent('11 400'));
+    // Counted: the column this screen wrote only.
+    expect(openingChanges()).toHaveTextContent(/^1 column changed/);
+
+    fireEvent.click(restoreButton());
+    const notice = await screen.findByTestId('restore-notice');
+    expect(notice).toHaveTextContent('Opening values restored: Budget.');
+    expect(notice).toHaveTextContent('Revision: changed by someone else since the opening, not restored.');
+    expect(notice).toHaveTextContent(/Actuals: changed by someone else at \d{2}:\d{2}[^,]*, not restored\./);
+    expect(bulkBodies('restore').map((b) => b.measure)).toEqual(['planned']);
+    expect(screen.queryByRole('region')).toBeNull();
+    expect(card('committed')).toHaveTextContent('11 400');
+  });
+
+  it("this screen's write then someone else's, already reloaded: the base is the screen's write, and the 409 reaches the banner", async () => {
+    const state = setupApi({ roundInputs: [wholeYearFlat('planned')] });
+    serveRestores(state);
+    const { ref } = renderTab();
+    await waitForAmounts();
+    typeAmount('24000');
+    await settle();
+    state.items.forEach((row) => { row.planned = '2100'; });
+    await act(async () => { await ref.current!.reloadFromServer(); });
+    await waitFor(() => expect(card('planned')).toHaveTextContent('25 200'));
+
+    serveRestores(state, (body) => (body.kind === 'restore' ? columnConflict('planned', twelve('2100.00'), { current_lines: [] }) : null));
+    fireEvent.click(restoreButton());
+    const banner = await screen.findByRole('region');
+    expect(bulkBodies('restore')).toHaveLength(1);
+    expect(bulkBodies('restore')[0].base).toEqual({ columns: { planned: { months: twelve('2000.00'), lines: [] } } });
+    expect(await screen.findByTestId('restore-notice')).toHaveTextContent(/Budget: changed by Marie Dupont at /);
+    expect(card('planned')).toHaveAttribute('data-waiting', 'true');
+    expect(within(banner).getByRole('button', { name: /editConflict\.column\.applyMine/ })).toBeInTheDocument();
+  });
+
+  it('a column written twice goes back over its second write', async () => {
+    const state = setupApi({ roundInputs: [wholeYearFlat('planned')] });
+    serveRestores(state);
+    renderTab();
+    await waitForAmounts();
+    typeAmount('24000');
+    await settle();
+    typeAmount('36000');
+    await settle();
+    fireEvent.click(restoreButton());
+    await screen.findByTestId('restore-notice');
+    expect(bulkBodies('restore')[0]).toMatchObject({
+      measure: 'planned', months: twelve('1000.00'), base: { columns: { planned: { months: twelve('3000.00'), lines: [] } } },
+    });
+  });
+
   it('a column waiting for a choice is not restored and says so; the others are', async () => {
     const state = setupApi();
     renderTab();
@@ -2806,7 +2872,8 @@ describe('BudgetTab back to the opening values', () => {
     pick('planned');
     typeAmount('24000');
     await settle();
-    expect(openingChanges()).toHaveTextContent(/^2 columns changed/);
+    // Counted: the columns this screen wrote (the refused months were never written).
+    expect(openingChanges()).toHaveTextContent(/^1 column changed/);
     fireEvent.click(restoreButton());
     const notice = await screen.findByTestId('restore-notice');
     expect(notice).toHaveTextContent('Opening values restored: Budget.');

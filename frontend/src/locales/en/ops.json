@@ -1492,7 +1492,9 @@
       "changed": "{{column}}: changed by someone else, not restored. Choose above what to keep.",
       "refused": "{{column}}: not restored. {{message}}",
       "failed": "The column could not be restored.",
-      "frozenNow": "{{column}} was frozen meanwhile: it was not restored."
+      "frozenNow": "{{column}} was frozen meanwhile: it was not restored.",
+      "others": "{{column}}: changed by someone else since the opening, not restored.",
+      "othersAt": "{{column}}: changed by someone else at {{time}}, not restored."
     }
   },
   "budget": {
