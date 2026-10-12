@@ -29,6 +29,9 @@ The product needs a flexible way to allocate OPEX items across companies and dep
 - Backwards-compatible: default rule is headcount; manual methods provide explicit control
 - Reporting: allocation shares are recomputed on demand from the active method and metrics, ensuring reports stay aligned with the latest master data while keeping manual overrides auditable
 
+## Note (2026-10-12): CAPEX lines in the chargeback
+Since the unified budget, OPEX and CAPEX lines share `spend_versions` and the same allocation model. The chargeback reports take a scope: OPEX (the default, the report as before), CAPEX, or both. A CAPEX line is spread on its amount of the year in the chosen column, with its own allocation or the year's default rule. Depreciation plays no part in the chargeback.
+
 ## Alternatives Considered
 - Placeholder “All Companies” entity: rejected due to data model confusion and leaky semantics
 - Forcing frozen metrics to compute: rejected; estimation workflows benefit from calculating before freeze

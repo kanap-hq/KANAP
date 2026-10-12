@@ -890,8 +890,8 @@
       "effects": {
         "inPlace": "The line keeps its reference, budget, allocations, links, attachments and tasks.",
         "reports": {
-          "capex": "It leaves the OPEX reports and the chargeback, and joins the CAPEX reports.",
-          "opex": "It leaves the CAPEX reports and joins the OPEX reports and the chargeback."
+          "capex": "It leaves the OPEX reports and joins the CAPEX reports. The chargeback counts it under CAPEX.",
+          "opex": "It leaves the CAPEX reports and joins the OPEX reports. The chargeback counts it under OPEX."
         },
         "dated_one": "This line ends on {{end}} and keeps its budget before {{year}}. A new {{type}} line carries the budget from {{year}} ({{count}} year), with the contacts and the links to applications, assets, contracts, projects and requests.",
         "dated_other": "This line ends on {{end}} and keeps its budget before {{year}}. A new {{type}} line carries the budget from {{year}} ({{count}} years), with the contacts and the links to applications, assets, contracts, projects and requests.",
@@ -978,6 +978,7 @@
     },
     "shared": {
       "loadingReport": "Loading report…",
+      "capexYearAmountNote": "CAPEX lines count for their amount of the year, without depreciation.",
       "loadingData": "Loading data…",
       "run": "Run",
       "refreshing": "Refreshing…",
