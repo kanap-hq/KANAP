@@ -560,7 +560,7 @@ export function storedLinesResult(stored: Pick<RoundInput, 'fte' | 'last_calcula
  * its calculation as `lines_result` (none: the fields as they are). The
  * spread keeps the stored FTE itself.
  */
-function carryLinesResult(fields: RoundInputFields, stored: Pick<RoundInput, 'fte' | 'last_calculation'> | null): RoundInputFields {
+export function carryLinesResult(fields: RoundInputFields, stored: Pick<RoundInput, 'fte' | 'last_calculation'> | null): RoundInputFields {
   const result = storedLinesResult(stored);
   const calculation = fields.last_calculation;
   if (!result || !calculation || calculation.kind === 'computed') return fields;
@@ -592,6 +592,28 @@ export function annualSpreadFields(
   };
 }
 
+/** The round-input fields a quarterly spread stores. */
+export function quarterlySpreadFields(
+  quarters: Record<'Q1' | 'Q2' | 'Q3' | 'Q4', bigint>,
+  distribution: 'equal' | '445',
+  period: { period_start: string; period_end: string; active_months: number[] },
+  fte: string | null,
+): RoundInputFields {
+  return {
+    period_start: period.period_start,
+    period_end: period.period_end,
+    method: 'spread',
+    spread_profile_name: distribution === '445' ? '4-4-5' : 'flat',
+    last_calculation: {
+      kind: 'quarterly',
+      quarters: { Q1: centsToDecimal(quarters.Q1), Q2: centsToDecimal(quarters.Q2), Q3: centsToDecimal(quarters.Q3), Q4: centsToDecimal(quarters.Q4) },
+      distribution,
+      active_months: period.active_months,
+    },
+    fte,
+  };
+}
+
 /**
  * The records a spread writes: one `spread` record per measure it replaced,
  * with the period, the profile and what was computed. The lines and the FTE
@@ -614,20 +636,10 @@ export async function recordSpread(ctx: RoundInputsContext, spread: PayloadSprea
     }
     return;
   }
-  const q = spread.quarters;
-  await saveRoundInput(ctx, spread.measure, (stored) => carryLinesResult({
-    period_start,
-    period_end,
-    method: 'spread',
-    spread_profile_name: spread.distribution === '445' ? '4-4-5' : 'flat',
-    last_calculation: {
-      kind: 'quarterly',
-      quarters: { Q1: centsToDecimal(q.Q1), Q2: centsToDecimal(q.Q2), Q3: centsToDecimal(q.Q3), Q4: centsToDecimal(q.Q4) },
-      distribution: spread.distribution,
-      active_months,
-    },
-    fte: stored?.fte ?? null,
-  }, stored));
+  await saveRoundInput(ctx, spread.measure, (stored) => carryLinesResult(
+    quarterlySpreadFields(spread.quarters, spread.distribution, { period_start, period_end, active_months }, stored?.fte ?? null),
+    stored,
+  ));
 }
 
 /**
