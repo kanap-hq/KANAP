@@ -27,6 +27,7 @@ import {
   seedCalendar,
   seedLine,
   seedTenant,
+  setItemDates,
   underSavepoint,
 } from './round-inputs.fixtures';
 import { exportBudgetFile, loadBudgetFile, withCell } from './budget-file.fixtures';
@@ -91,6 +92,9 @@ function licences(overrides: Record<string, unknown> = {}) {
   };
 }
 
+const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+const wholeYear = { period_start: `${YEAR}-01-01`, period_end: `${YEAR}-12-31` };
+
 const CONSULTANT_MONTHS = ['0.00', '7200.00', '8000.00', '8000.00', '6000.00', '8000.00', '6000.00', '6400.00', '8000.00', '7600.00', '0.00', '0.00'];
 
 /** The column as the budget tab reads it (`GET …/amounts`): its twelve months and its record, through JSON. */
@@ -111,9 +115,15 @@ function comparable(record: any) {
   return { ...rest, lines: lines.map(({ id: _id, ...line }: any) => line) };
 }
 
-function restoreBody(measure: Measure, opening: { months: string[]; record: unknown }, base: string[], extra: Record<string, unknown> = {}) {
-  return { kind: 'restore', year: YEAR, measure, months: opening.months, record: opening.record, base: { columns: { [measure]: { months: base } } }, ...extra };
+/** A restore of `measure` to `opening`; the base is the column as the screen last knew it, months and lines. */
+function restoreBody(measure: Measure, opening: { months: string[]; record: unknown }, base: string[], baseLines: unknown[] = []) {
+  return { kind: 'restore', year: YEAR, measure, months: opening.months, record: opening.record, base: { columns: { [measure]: { months: base, lines: baseLines } } } };
 }
+
+/** The lines of `measure` in a write's answer (`[]` without any): the base of the next write of that column. */
+const linesOf = (answer: any, measure: Measure) => answer.round_inputs.find((r: any) => r.measure === measure)?.lines ?? [];
+
+const restoreBodyOf = restoreBody;
 
 const write = (kind: Kind, runner: QueryRunner, versionId: string, body: Record<string, unknown>, audit: unknown = captureAudit(), userId: string | null = null, freeze?: unknown) =>
   amountsService(kind, audit, freeze).bulkUpsert(versionId, body, userId, { manager: runner.manager });
@@ -171,14 +181,32 @@ async function testBudgetFileKeepsTheDate(kind: Kind) {
   });
 }
 
+/**
+ * A line valid one day of the year with no 15th (it starts on 31 December):
+ * the budget file refuses its yearly total, as before. The rule of the date is
+ * for a column set at a date, not for a validity that happens to be one day.
+ */
+async function testBudgetFileOneDayValidity(kind: Kind) {
+  await withLine(kind, async ({ runner, tenantId, itemId, versionId }) => {
+    await setItemDates(runner, kind, itemId, { effectiveStart: `${YEAR}-12-31` });
+    const content = await exportBudgetFile(runner.manager, kind, tenantId, [itemId], { amountYears: String(YEAR), columns: 'budget' });
+    await assert.rejects(
+      () => underSavepoint(runner, () => loadBudgetFile(runner.manager, kind, tenantId, withCell(content, `budget_${YEAR}`, '1000'))),
+      (err: any) => err instanceof BadRequestException && /^No month of the period counts/.test(err.message),
+      `${kind}: refused, as before`,
+    );
+    assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), repeat('0.00', 12), `${kind}: nothing written`);
+  });
+}
+
 /* ── B2. Restore ───────────────────────────────────────────────────────────── */
 
 /**
  * Opening: Budget follows its lines, Revision holds an amount with lines kept
  * as a reference. The user spreads an amount over Budget and uses the lines
  * again on Revision; restoring each column gives back the months, the record
- * and the lines read at the opening, nothing computed again, audited
- * `restored`.
+ * and the lines read at the opening (what the lines give computed again, the
+ * same), audited `restored`.
  */
 async function testRestoreLinesColumns(kind: Kind) {
   await withLine(kind, async ({ runner, versionId, calendarId }) => {
@@ -196,10 +224,10 @@ async function testRestoreLinesColumns(kind: Kind) {
     const now = (response: any, measure: Measure) => Array.from({ length: 12 }, (_, i) => response.items.find((r: any) => r.period === period(i + 1, YEAR))[measure]);
 
     const audit = captureAudit();
-    const answer = await write(kind, runner, versionId, restoreBody('planned', planned, now(typed, 'planned')), audit);
+    const answer = await write(kind, runner, versionId, restoreBody('planned', planned, now(typed, 'planned'), linesOf(typed, 'planned')), audit);
     assert.deepEqual(Object.keys(answer).sort(), ['budget_rev', 'items', 'round_inputs', 'updated'], `${kind}: the answer of every write`);
     assert.equal(answer.updated, 12);
-    await write(kind, runner, versionId, restoreBody('committed', committed, now(relined, 'committed')), audit);
+    await write(kind, runner, versionId, restoreBody('committed', committed, now(relined, 'committed'), linesOf(relined, 'committed')), audit);
 
     for (const [measure, opening] of [['planned', planned], ['committed', committed]] as const) {
       const after = await screenRead(kind, runner, versionId, measure);
@@ -223,7 +251,7 @@ async function testRestoreLinesColumns(kind: Kind) {
 
     // The same restore again changes nothing and writes nothing.
     const again = captureAudit();
-    const same = await write(kind, runner, versionId, restoreBody('planned', planned, planned.months), again);
+    const same = await write(kind, runner, versionId, restoreBody('planned', planned, planned.months, planned.record.lines), again);
     assert.deepEqual([same.updated, again.entries.length], [0, 0], `${kind}: a no-op`);
   });
 }
@@ -302,7 +330,9 @@ async function testRestoreConflictOnOneColumn(kind: Kind) {
       ['committed', [period(5, YEAR)], repeat('300.00', 12), '999.00', repeat('200.00', 12), 'Claire Dubois'],
       `${kind}: May moved, Claire changed it, mine is the opening`,
     );
-    assert.deepEqual(Object.keys(entry).sort(), ['base', 'changed_at', 'changed_by', 'current', 'field', 'labels', 'mine', 'periods']);
+    // The lines of the base are compared too, so the column's lines come back with it (none here).
+    assert.deepEqual(Object.keys(entry).sort(), ['base', 'changed_at', 'changed_by', 'current', 'current_lines', 'field', 'labels', 'mine', 'periods']);
+    assert.deepEqual(entry.current_lines, []);
 
     assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), repeat('100.00', 12), `${kind}: Budget restored`);
     const revision = await readMeasure(runner, kind, versionId, 'committed', YEAR);
@@ -347,7 +377,9 @@ async function testRestoreRefusals(kind: Kind) {
   await withLine(kind, async ({ runner, versionId }) => {
     await write(kind, runner, versionId, { kind: 'lines', year: YEAR, measure: 'planned', lines: [licences()] });
     const opening = await screenRead(kind, runner, versionId, 'planned');
-    const base = opening.months;
+    const months = opening.months;
+    const restoreBody = (measure: Measure, column: { months: string[]; record: unknown }, base: string[]) => restoreBodyOf(measure, column, base, opening.record.lines);
+    const base = months;
     const refused = async (label: string, body: Record<string, unknown>, pattern: RegExp) => {
       await assert.rejects(
         () => underSavepoint(runner, () => write(kind, runner, versionId, body)),
@@ -357,25 +389,166 @@ async function testRestoreRefusals(kind: Kind) {
     };
     const record = opening.record;
     const spreadRecord = { ...record, method: 'spread', last_calculation: { kind: 'annual', total: '24000.00', profile: 'flat', active_months: [1], weights: ['1'] } };
-    await refused('no record key', { kind: 'restore', year: YEAR, measure: 'planned', months: base, base: { columns: { planned: { months: base } } } }, /^record must be/);
+    await refused('no record key', { kind: 'restore', year: YEAR, measure: 'planned', months: base, base: { columns: { planned: { months: base, lines: record.lines } } } }, /^record must be/);
     await refused('eleven months', restoreBody('planned', { months: base.slice(1), record }, base), /twelve months/);
     await refused('a month that is not a number', restoreBody('planned', { months: ['x', ...base.slice(1)], record }, base), /^Month 1 must be a number/);
     await refused('unknown column', { ...restoreBody('planned', opening, base), measure: 'budget' }, /Unknown amount 'budget'/);
     await refused('the record of another column', restoreBody('planned', { months: base, record: { ...record, measure: 'forecast' } }, base), /record of forecast, not of planned/);
     await refused('unknown method', restoreBody('planned', { months: base, record: { ...record, method: 'typed' } }, base), /Unknown method 'typed'/);
     await refused('period outside the year', restoreBody('planned', { months: base, record: { ...record, period_start: `${YEAR - 1}-12-01` } }, base), /within 2026/);
-    await refused('computed without lines', restoreBody('planned', { months: base, record: { ...record, lines: [], fte: null } }, base), /computed record needs the lines/);
+    await refused('computed without lines', restoreBody('planned', { months: base, record: { ...record, lines: [], fte: null } }, base), /computed calculation needs the lines/);
     await refused('computed with a spread calculation', restoreBody('planned', { months: base, record: { ...record, last_calculation: spreadRecord.last_calculation } }, base), /computed record needs a calculation of kind computed/);
     await refused('spread without calculation', restoreBody('planned', { months: base, record: { ...record, method: 'spread', last_calculation: null } }, base), /spread record needs a calculation of kind annual or quarterly/);
     await refused('months against the total', restoreBody('planned', { months: repeat('1000', 12), record }, base), /The months add up to 12000\.00, but the record's calculation gives 24000\.00/);
     await refused('months against the spread total', restoreBody('planned', { months: base, record: { ...spreadRecord, last_calculation: { ...spreadRecord.last_calculation, total: '1.00' } } }, base), /gives 1\.00/);
     await refused('lines without FTE', restoreBody('planned', { months: base, record: { ...record, fte: null } }, base), /lines needs their FTE/);
-    await refused('FTE without lines', restoreBody('planned', { months: base, record: { ...record, method: 'manual', lines: [] } }, base), /without lines has no FTE/);
+    await refused('FTE without lines', restoreBody('planned', { months: base, record: { ...record, method: 'manual', lines: [], last_calculation: null } }, base), /without lines has no FTE/);
     await refused('a negative FTE', restoreBody('planned', { months: base, record: { ...record, fte: '-1' } }, base), /FTE of the record cannot be below 0/);
     await refused('a line that is not one', restoreBody('planned', { months: base, record: { ...record, lines: [{ ...licences(), quantity_unit: 'weeks' }] } }, base), /^Line 1: unknown unit 'weeks'/);
     await refused('a calendar not found', restoreBody('planned', { months: base, record: { ...record, method: 'manual', lines: [consultant('00000000-0000-4000-8000-000000000000')] } }, base), /^Line 1: the calendar was not found\./);
     await refused('an unknown calculation', restoreBody('planned', { months: base, record: { ...record, method: 'manual', last_calculation: { kind: 'guess' } } }, base), /last_calculation must be null or a calculation/);
     assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), repeat('2000.00', 12), `${kind}: nothing written`);
+  });
+}
+
+/**
+ * The calculation is not trusted (review probes). The reports cast its FTE
+ * months and line totals: a key no writer writes, a value that is not a
+ * decimal, a spread whose months are not where its period says, are refused;
+ * what lines give is computed again, never stored as sent.
+ */
+async function testRestoreUntrustedCalculation(kind: Kind) {
+  await withLine(kind, async ({ runner, versionId, calendarId }) => {
+    await write(kind, runner, versionId, { kind: 'lines', year: YEAR, measure: 'planned', lines: [licences()] });
+    const planned = await screenRead(kind, runner, versionId, 'planned');
+    const refused = async (label: string, body: Record<string, unknown>, pattern: RegExp) => {
+      await assert.rejects(
+        () => underSavepoint(runner, () => write(kind, runner, versionId, body)),
+        (err: any) => err instanceof BadRequestException && pattern.test(err.message),
+        `${kind}: ${label}`,
+      );
+    };
+    const calc = planned.record.last_calculation;
+    const asManual = (last_calculation: unknown) => restoreBody('planned', { months: planned.months, record: { ...planned.record, method: 'manual', last_calculation } }, planned.months, planned.record.lines);
+
+    // Probe 1: a manual record keeping a forged computed calculation, 200 KB of junk included.
+    const probe = { kind: 'computed', fte: 'zz', fte_months: repeat('x', 12), lines: [{ total: 'abc', active_months: 5 }], junk: 'j'.repeat(200 * 1024) };
+    await refused('the probe', asManual(probe), /holds 'junk', which no calculation holds/);
+    const { junk: _junk, ...noJunk } = probe;
+    await refused('the probe without junk', asManual(noJunk), /has no /);
+    await refused('fte not a number', asManual({ ...calc, fte: 'zz' }), /fte must be a number/);
+    await refused('an FTE month not a number', asManual({ ...calc, fte_months: ['x', ...calc.fte_months.slice(1)] }), /fte_months\[0\] must be a number/);
+    await refused('a line total not a number', asManual({ ...calc, lines: [{ ...calc.lines[0], total: 'abc' }] }), /lines\[0\]\.total must be a number/);
+    await refused('active months not a list', asManual({ ...calc, lines: [{ ...calc.lines[0], active_months: 5 }] }), /lines\[0\]\.active_months must list months/);
+    await refused('an amount over the column', asManual({ ...calc, total: '1e20' }), /total (is too large|must be a number)/);
+    await refused('a line key nobody writes', asManual({ ...calc, lines: [{ ...calc.lines[0], note: 'x' }] }), /lines\[0\] holds 'note'/);
+    await refused('lines_result without lines', restoreBody(
+      'planned',
+      { months: planned.months, record: { ...planned.record, method: 'manual', lines: [], fte: null, last_calculation: { kind: 'annual', total: '24000.00', profile: 'flat', active_months: [1], weights: ['1'], lines_result: {} } } },
+      planned.months,
+      planned.record.lines,
+    ), /without lines has no lines_result/);
+
+    // Probe 2: a spread over January to June with all its months in December.
+    const spread = (months: string[], last_calculation: Record<string, unknown>, period = { period_start: `${YEAR}-01-01`, period_end: `${YEAR}-06-30` }) => restoreBody(
+      'planned',
+      { months, record: { measure: 'planned', ...period, method: 'spread', spread_profile_name: 'flat', last_calculation, fte: null, lines: [] } },
+      planned.months,
+      planned.record.lines,
+    );
+    const firstHalf = { kind: 'annual', total: '1200.00', profile: 'flat', active_months: [1, 2, 3, 4, 5, 6], weights: repeat('1', 6) };
+    await refused('the probe: everything in December', spread([...repeat('0', 11), '1200'], firstHalf), /Month 12 holds an amount outside the months of the record's period/);
+    await refused('active months that are not the period\'s', spread(repeat('100', 12), { ...firstHalf, active_months: MONTHS, weights: repeat('1', 12) }), /active_months must be the months its period counts \(1, 2, 3, 4, 5, 6\)/);
+    await refused('a weight missing', spread([...repeat('200', 6), ...repeat('0', 6)], { ...firstHalf, weights: repeat('1', 5) }), /one weight per active month/);
+    await refused('a flat spread weighing 2', spread([...repeat('200', 6), ...repeat('0', 6)], { ...firstHalf, weights: repeat('2', 6) }), /a flat spread weighs every month 1/);
+    await refused(
+      'a quarter in the wrong quarter',
+      spread([...repeat('0', 3), '1200', ...repeat('0', 8)], { kind: 'quarterly', quarters: { Q1: '1200.00', Q2: '0.00', Q3: '0.00', Q4: '0.00' }, distribution: 'equal', active_months: MONTHS }, wholeYear),
+      /The months of Q1 add up to 0\.00, but the record's calculation gives 1200\.00/,
+    );
+    // A spread at a date restores: its one month is where its period says.
+    await write(kind, runner, versionId, spread(
+      [...repeat('0', 2), '1200', ...repeat('0', 9)],
+      { kind: 'annual', total: '1200.00', profile: 'flat', active_months: [3], weights: ['1'] },
+      { period_start: `${YEAR}-03-03`, period_end: `${YEAR}-03-03` },
+    ));
+    assert.deepEqual((await readRecords(runner, kind, versionId)).planned.period_start, `${YEAR}-03-03`, `${kind}: at a date, restored`);
+
+    // A computed record whose months are not what its lines give.
+    const now = await screenRead(kind, runner, versionId, 'planned');
+    await refused('computed months that its lines do not give', restoreBody(
+      'planned',
+      { months: repeat('1000', 12), record: { ...planned.record, last_calculation: { ...calc, total: '12000.00' } } },
+      now.months,
+      now.record.lines,
+    ), /The months are not what the record's lines give/);
+
+    // Probe 3: reference lines of one person whose result says 500 FTE: what the lines give is computed again.
+    await write(kind, runner, versionId, { kind: 'lines', year: YEAR, measure: 'committed', lines: [consultant(calendarId)] });
+    const spreadOver = await write(kind, runner, versionId, { kind: 'annual', year: YEAR, totals: { committed: 12000 } });
+    const opening = await screenRead(kind, runner, versionId, 'committed');
+    const forged = {
+      ...opening.record,
+      fte: '500',
+      last_calculation: {
+        ...opening.record.last_calculation,
+        lines_result: { ...opening.record.last_calculation.lines_result, fte: '500', fte_months: repeat('500', 12) },
+      },
+    };
+    await write(kind, runner, versionId, restoreBody('committed', { months: opening.months, record: forged }, opening.months, linesOf(spreadOver, 'committed')));
+    const { committed } = await readRecords(runner, kind, versionId);
+    const twelveFte = ['0', ...repeat('1', 9), '0', '0'];
+    assert.deepEqual(
+      [committed.fte, committed.last_calculation.lines_result.fte, committed.last_calculation.lines_result.fte_months],
+      ['0.75', '0.75', twelveFte],
+      `${kind}: the FTE the line gives, not the one sent`,
+    );
+  });
+}
+
+/**
+ * A colleague's change of the lines that leaves the months as they were is a
+ * change: the restore compares the lines of its base. The same for a restore
+ * to no record, which would delete the lines.
+ */
+async function testRestoreComparesTheLines(kind: Kind) {
+  await withLine(kind, async ({ runner, tenantId, versionId }) => {
+    const claire = await seedPerson(runner, tenantId, 'Claire', 'Dubois');
+    await write(kind, runner, versionId, { kind: 'lines', year: YEAR, measure: 'committed', lines: [licences()] });
+    const committed = await screenRead(kind, runner, versionId, 'committed');
+    const forecast = await screenRead(kind, runner, versionId, 'forecast');
+    // The user: a total with the same months; Forecast filled.
+    const mine = await write(kind, runner, versionId, { kind: 'annual', year: YEAR, totals: { committed: 24000, forecast: 1200 } });
+    const known = (measure: Measure) => Array.from({ length: 12 }, (_, i) => mine.items[i][measure]);
+    // Claire: lines that give the same months, on both columns.
+    await write(kind, runner, versionId, { kind: 'lines', year: YEAR, measure: 'committed', lines: [licences({ quantity: '20', unit_price: '100' })] }, realAudit(), claire);
+    await write(kind, runner, versionId, { kind: 'lines', year: YEAR, measure: 'forecast', lines: [licences({ quantity: '1', unit_price: '100' })] }, realAudit(), claire);
+
+    for (const [measure, opening] of [['committed', committed], ['forecast', forecast]] as const) {
+      let conflict: any;
+      await assert.rejects(
+        () => underSavepoint(runner, () => write(kind, runner, versionId, restoreBody(measure, opening, known(measure), linesOf(mine, measure)), realAudit())),
+        (err: any) => {
+          conflict = err;
+          return err instanceof BudgetEditConflictException;
+        },
+        `${kind} ${measure}: refused`,
+      );
+      const [entry] = conflict.getResponse().conflicts;
+      assert.deepEqual(
+        [entry.field, entry.periods, entry.current_lines.map((l: any) => l.quantity), entry.changed_by?.name],
+        [measure, [], [measure === 'committed' ? '20' : '1'], 'Claire Dubois'],
+        `${kind} ${measure}: no month moved, the lines did`,
+      );
+    }
+    assert.deepEqual((await readLines(runner, kind, versionId, 'committed')).map((l) => l.quantity), ['20.000'], `${kind}: Claire's lines kept`);
+    assert.equal((await readLines(runner, kind, versionId, 'forecast')).length, 1, `${kind}: Claire's lines not deleted`);
+
+    await assert.rejects(
+      () => write(kind, runner, versionId, { ...restoreBody('committed', committed, known('committed')), base: { columns: { committed: { months: known('committed') } } } }),
+      (err: any) => err instanceof BadRequestException && /^A restore needs the base of its column: .*base\.columns\.committed\.lines/.test(err.message),
+      `${kind}: a base without its lines`,
+    );
   });
 }
 
@@ -408,7 +581,7 @@ async function operationResult(runner: QueryRunner, kind: Kind, versionId: strin
 }
 
 const copyBody = (source: Measure, measure: Measure, percentage: number | string, base: string[] = repeat('0', 12)) => (
-  { kind: 'copy', year: YEAR, source, measure, percentage, base: { columns: { [measure]: { months: base } } } }
+  { kind: 'copy', year: YEAR, source, measure, percentage, base: { columns: { [measure]: { months: base, lines: [] } } } }
 );
 
 /** An amount spread over April to December copied at −10 %: whole units, the period kept, the origin said. */
@@ -502,6 +675,24 @@ async function testCopyConflict(kind: Kind) {
   });
 }
 
+/** A copy replaces the destination, lines included: its base is required, months and lines. */
+async function testCopyNeedsItsBase(kind: Kind) {
+  await withLine(kind, async ({ runner, versionId }) => {
+    await write(kind, runner, versionId, { kind: 'annual', year: YEAR, totals: { planned: 1200, committed: 600 } });
+    const refused = async (label: string, base: unknown) => {
+      await assert.rejects(
+        () => underSavepoint(runner, () => write(kind, runner, versionId, { ...copyBody('planned', 'committed', 0), base })),
+        (err: any) => err instanceof BadRequestException && /^A copy needs the base of its column/.test(err.message),
+        `${kind}: ${label}`,
+      );
+    };
+    await refused('no base', undefined);
+    await refused('no lines', { columns: { committed: { months: repeat('50', 12) } } });
+    await refused('another column only', { columns: { forecast: { months: repeat('0', 12), lines: [] } } });
+    assert.deepEqual(await readMeasure(runner, kind, versionId, 'committed', YEAR), repeat('50.00', 12), `${kind}: the destination kept`);
+  });
+}
+
 /** Refusals: a frozen destination, the column onto itself, an empty source, −100 %, unknown columns. */
 async function testCopyRefusals(kind: Kind) {
   await withLine(kind, async ({ runner, tenantId, versionId }) => {
@@ -529,14 +720,18 @@ void runSpecs('budget-tab-writes.integration.spec', [
   ...KINDS.flatMap((kind) => [
     [`testAnnualAtADate(${kind})`, () => testAnnualAtADate(kind)],
     [`testBudgetFileKeepsTheDate(${kind})`, () => testBudgetFileKeepsTheDate(kind)],
+    [`testBudgetFileOneDayValidity(${kind})`, () => testBudgetFileOneDayValidity(kind)],
     [`testRestoreLinesColumns(${kind})`, () => testRestoreLinesColumns(kind)],
     [`testRestoreMonthlyAndEmptyColumns(${kind})`, () => testRestoreMonthlyAndEmptyColumns(kind)],
     [`testRestoreConflictOnOneColumn(${kind})`, () => testRestoreConflictOnOneColumn(kind)],
     [`testRestoreFrozenColumn(${kind})`, () => testRestoreFrozenColumn(kind)],
     [`testRestoreRefusals(${kind})`, () => testRestoreRefusals(kind)],
+    [`testRestoreUntrustedCalculation(${kind})`, () => testRestoreUntrustedCalculation(kind)],
+    [`testRestoreComparesTheLines(${kind})`, () => testRestoreComparesTheLines(kind)],
     [`testCopyAmountColumn(${kind})`, () => testCopyAmountColumn(kind)],
     [`testCopyLinesColumns(${kind})`, () => testCopyLinesColumns(kind)],
     [`testCopyConflict(${kind})`, () => testCopyConflict(kind)],
+    [`testCopyNeedsItsBase(${kind})`, () => testCopyNeedsItsBase(kind)],
     [`testCopyRefusals(${kind})`, () => testCopyRefusals(kind)],
   ] as Array<[string, () => Promise<void>]>),
 ]);
