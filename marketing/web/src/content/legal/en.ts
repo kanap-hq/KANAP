@@ -189,11 +189,11 @@ const content: LegalContent = {
     header: {
       eyebrow: 'Legal',
       title: 'General terms and conditions of sale',
-      lastUpdated: 'Last updated: 1 February 2026',
+      lastUpdated: 'Last updated: 12 October 2026',
     },
     body: `
 <h2>Article 1. Purpose</h2>
-<p>These General Terms and Conditions of Sale (GTC) govern the sale by KANAP (hereinafter "the Vendor"), an EURL (single-member limited liability company) registered with the RCS Saverne under number 939 098 190, whose registered office is located at 2, rue du Finhay, 67210 Obernai, France, of subscriptions to the online IT management platform "KANAP".</p>
+<p>These General Terms and Conditions of Sale (GTC) govern the sale by KANAP (hereinafter "the Vendor"), an EURL (single-member limited liability company) with a share capital of €1,000, registered with the RCS Saverne under number 939 098 190, whose registered office is located at 2, rue du Finhay, 67210 Obernai, France, of subscriptions to the online IT management platform "KANAP".</p>
 
 <h2>Article 2. Acceptance of the GTC</h2>
 <p>Acceptance of these GTC is mandatory before any subscription and implies full acceptance by the Customer of these conditions.</p>
@@ -202,19 +202,22 @@ const content: LegalContent = {
 <p>KANAP is an online IT management platform designed for technology leaders and IT departments. The specific features are those described on the website at the time of subscription.</p>
 
 <h2>Article 4. Subscription and pricing</h2>
-<p>4.1. Access to the Service is offered under the subscription offers described on the pricing page. Rates are indicated in euros (EUR) and are exclusive of taxes. Applicable VAT will be added to the invoice according to the customer's location and tax status.</p>
+<p>4.1. Access to the Service is offered under the subscription offers described on the pricing page. Rates are indicated in euros (EUR). The Vendor benefits from the VAT exemption of Article 293 B of the French General Tax Code (franchise en base de TVA): no VAT is charged, and invoices state "TVA non applicable, art. 293 B du CGI". Should the Vendor's VAT status change, VAT will apply to invoices issued after the date of that change.</p>
 <p>4.2. Subscriptions include an unlimited number of users and workspaces. No per-user fee applies.</p>
 <p>4.3. The rates applicable for subscriptions are displayed on the website at the time of subscription. Rates may be modified at any time, but such modifications will only apply to subscriptions entered into after the modification.</p>
 <p>4.4. The customer will be informed in advance of any rate modification before the automatic renewal of their subscription.</p>
 <p>4.5. Paying subscribers receive a 20% discount on consulting services. Consulting services and fixed-price service engagements are billed separately at rates displayed on the website.</p>
 
 <h2>Article 5. Payment terms</h2>
-<p>5.1. Payment is made by credit card via a secure payment platform (Stripe).</p>
-<p>5.2. For monthly subscriptions, the first payment is made upon subscription; subsequent payments each month on the anniversary date.</p>
-<p>5.3. For annual subscriptions, payment is made in full at the time of subscription.</p>
-<p>5.4. For invoiced customers (annual plans only), payment terms are NET 30 days. In case of late payment, access to the Service may be suspended.</p>
+<p>5.1. Payment is made by credit card via a secure payment platform (Stripe) or, for annual subscriptions only, by bank transfer on invoice. Direct debit is not offered.</p>
+<p>5.2. For monthly subscriptions, the first payment is made upon subscription; subsequent payments each month on the anniversary date. Card payments are charged when the invoice is issued.</p>
+<p>5.3. For annual subscriptions, the full annual amount is invoiced at the time of subscription, then at each renewal. It is charged to the card at once or, for payment by bank transfer, payable under 5.4.</p>
+<p>5.4. Invoices paid by bank transfer (annual plans only) are payable within 30 days of the invoice date. In case of late payment, access to the Service may be suspended.</p>
 <p>5.5. In case of payment refusal or failure, the Customer is notified and access may be suspended.</p>
 <p>5.6. An invoice is issued for each payment and made available in the account area or sent by email.</p>
+<p>5.7. Any amount unpaid on its due date bears, automatically and without prior notice, late-payment penalties at an annual rate equal to three times the French legal interest rate in force, from the day after the due date until full payment.</p>
+<p>5.8. Any professional customer paying late also owes, by operation of law, a fixed recovery indemnity of €40 per invoice (Articles L441-10 and D441-5 of the French Commercial Code). The Vendor may claim additional compensation on supporting evidence when recovery costs exceed this amount.</p>
+<p>5.9. No discount is granted for early payment.</p>
 
 <h2>Article 6. Subscription duration and renewal</h2>
 <p>6.1. <strong>Monthly subscription:</strong> entered into for one month, automatically renewable by tacit renewal. The Customer may cancel at any time from the account area, with 48h notice before renewal. Cancellation takes effect at the end of the current month.</p>
@@ -222,8 +225,7 @@ const content: LegalContent = {
 <p>6.3. <strong>Subscription changes:</strong> Customers may switch from monthly to annual billing at any time (prorated difference charged immediately) or from annual to monthly at the end of the current billing period. Customers may switch between cloud and self-hosted deployment at any time by contacting support.</p>
 
 <h2>Article 7. Right of withdrawal</h2>
-<p>7.1. Since KANAP is a B2B service, the legal right of withdrawal applicable to consumers does not apply.</p>
-<p>7.2. For customers who qualify as consumers (micro-enterprises, sole proprietorships), a 14-day right of withdrawal may apply. To exercise, send clear notification to <a href="mailto:admin@kanap.net">admin@kanap.net</a> before the expiration of the 14-day period.</p>
+<p>The Services are offered exclusively to professionals acting for the purposes of their business. No right of withdrawal applies.</p>
 
 <h2>Article 8. Warranty and liability</h2>
 <p>8.1. The Vendor undertakes to provide a Service in accordance with its description.</p>
@@ -252,22 +254,25 @@ const content: LegalContent = {
     header: {
       eyebrow: 'Legal',
       title: 'Legal notice',
-      lastUpdated: 'Last updated: 7 October 2026',
+      lastUpdated: 'Last updated: 12 October 2026',
     },
     body: `
 <h2>Site publisher</h2>
 <p><strong>KANAP</strong><br/>
-EURL registered with the RCS Saverne under number 939 098 190<br/>
-Share capital: €1,000<br/>
-Registered office: 2, rue du Finhay – 67210 Obernai – France</p>
+EURL with a share capital of €1,000<br/>
+RCS Saverne 939 098 190<br/>
+SIRET: 939 098 190 00019<br/>
+VAT number: FR04939098190 (VAT not applicable, art. 293 B of the French General Tax Code)<br/>
+Registered office: 2, rue du Finhay, 67210 Obernai, France</p>
+<p>Director of publication: Friedrich Eva</p>
 
 <h2>Contact</h2>
-<p>Email: <a href="mailto:admin@kanap.net">admin@kanap.net</a></p>
+<p>Email: <a href="mailto:support@kanap.net">support@kanap.net</a></p>
 
 <h2>Hosting</h2>
 <p>The website kanap.net is hosted by Hetzner Online GmbH, whose registered office is located at:</p>
 <p>Hetzner Online GmbH<br/>
-Industriestr. 25 – 91710 Gunzenhausen – Germany</p>
+Industriestr. 25, 91710 Gunzenhausen, Germany</p>
 <p>The servers are located in Nuremberg, Germany. Traffic to the website passes through Cloudflare, which provides the content delivery network and TLS protection.</p>
 
 <h2>Applicable law and jurisdiction</h2>

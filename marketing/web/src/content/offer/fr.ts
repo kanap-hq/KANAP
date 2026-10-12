@@ -136,7 +136,7 @@ const content: OfferContent = {
     consulting: {
       title: 'Conseil',
       subtitle: 'Payant · facturé à la journée',
-      body: 'Aide optionnelle pour tirer plus de valeur de KANAP : appels programmés, travail approfondi, advisory. Tarif : 1 150 € la journée, 900 € pour les clients sous contrat de support ou d\'hébergement, hors TVA.',
+      body: 'Aide optionnelle pour tirer plus de valeur de KANAP : appels programmés, travail approfondi, advisory. Tarif : 1 150 € la journée, 900 € pour les clients sous contrat de support ou d\'hébergement, TVA non applicable (art. 293 B du CGI).',
       items: [
         'Installation, configuration, onboarding, formation',
         'Conception de workflows et bonnes pratiques',
@@ -148,7 +148,7 @@ const content: OfferContent = {
 
   pilot: {
     title: 'Pilote accompagné',
-    subtitle: '2 900 € forfait · hors TVA',
+    subtitle: '2 900 € forfait · TVA non applicable (art. 293 B du CGI)',
     body: 'Un engagement qui lance votre équipe sur KANAP : nous l\'installons avec vous, importons vos données, formons vos équipes et laissons votre premier agent au travail.',
     items: [
       'Installation sur vos serveurs, ou mise en place hébergée',

@@ -136,7 +136,7 @@ const content: OfferContent = {
     consulting: {
       title: 'Beratung',
       subtitle: 'Kostenpflichtig · Abrechnung pro Tag',
-      body: 'Optionale Hilfe, um mehr Wert aus KANAP zu ziehen: geplante Calls, tiefergehende Arbeit, Advisory. Tarif: 1.150 € pro Tag, 900 € für Kunden mit Support- oder Hosting-Vertrag, zzgl. MwSt.',
+      body: 'Optionale Hilfe, um mehr Wert aus KANAP zu ziehen: geplante Calls, tiefergehende Arbeit, Advisory. Tarif: 1.150 € pro Tag, 900 € für Kunden mit Support- oder Hosting-Vertrag, MwSt. entfällt (Art. 293 B CGI).',
       items: [
         'Einrichtung, Konfiguration, Onboarding, Schulung',
         'Workflow-Design und Best Practices',
@@ -148,7 +148,7 @@ const content: OfferContent = {
 
   pilot: {
     title: 'Begleiteter Pilot',
-    subtitle: '2.900 € Festpreis · zzgl. MwSt.',
+    subtitle: '2.900 € Festpreis · MwSt. entfällt (Art. 293 B CGI)',
     body: 'Ein Engagement, das Ihr Team auf KANAP startet: Wir richten die Plattform mit Ihnen ein, importieren Ihre Daten, schulen Ihr Team, und am Ende arbeitet Ihr erster Agent.',
     items: [
       'Installation auf Ihren Servern oder Einrichtung in der Hosted Cloud',
