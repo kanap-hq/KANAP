@@ -9,6 +9,15 @@ function run() {
 
   assert.deepEqual(listMeta, { resource: 'contracts', level: 'reader' });
   assert.deepEqual(uploadMeta, { resource: 'contracts', level: 'member' });
+
+  // The contract's relations: read with the contracts, written by their members.
+  const proto = ContractsController.prototype as any;
+  for (const route of ['relationCounts', 'listBudgetLines', 'listApplications', 'listAssets']) {
+    assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, proto[route]), { resource: 'contracts', level: 'reader' }, route);
+  }
+  for (const route of ['bulkReplaceBudgetLines', 'bulkReplaceApplications', 'bulkReplaceAssets']) {
+    assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, proto[route]), { resource: 'contracts', level: 'member' }, route);
+  }
 }
 
 run();

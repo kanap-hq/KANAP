@@ -35,6 +35,14 @@ import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.se
 import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attach.util';
 import { contractTermFields, contractTermsSql, sqlDateLiteral, type ContractTermFields } from './contract-terms';
 import { utcDateYmd } from '../notifications/expiry-reminder-schedule';
+import {
+  contractRelationCounts,
+  listContractApplications,
+  listContractAssets,
+  listContractBudgetLines,
+  replaceContractRelations,
+  type ContractRelationSet,
+} from './contract-relations';
 
 /**
  * The session tenant as a find condition: `app_current_tenant()`, the tenant RLS checks too,
@@ -287,7 +295,28 @@ export class ContractsService {
          WHERE tenant_id = $1 AND related_object_type = 'contract' AND related_object_id = $2
          ORDER BY created_at DESC LIMIT 1`, [tenantId, id]);
     const latest_task = latestTaskRows?.[0] ?? null;
-    return { ...found, ...terms, linked_spend_items: spendItems, links, attachments, latest_task };
+    // The names the page's header shows, read with the contract (no request per picker).
+    const [names]: Array<{ supplier_name: string | null; company_name: string | null; owner_name: string | null }> = await mg.query(
+      `SELECT sup.name AS supplier_name, comp.name AS company_name,
+              NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '') AS owner_name
+         FROM contracts c
+         LEFT JOIN suppliers sup ON sup.tenant_id = c.tenant_id AND sup.id = c.supplier_id
+         LEFT JOIN companies comp ON comp.tenant_id = c.tenant_id AND comp.id = c.company_id
+         LEFT JOIN users u ON u.tenant_id = c.tenant_id AND u.id = c.owner_user_id
+        WHERE c.tenant_id = $1 AND c.id = $2`,
+      [tenantId, id],
+    );
+    return {
+      ...found,
+      ...terms,
+      supplier_name: names?.supplier_name ?? null,
+      company_name: names?.company_name ?? null,
+      owner_name: names?.owner_name ?? null,
+      linked_spend_items: spendItems,
+      links,
+      attachments,
+      latest_task,
+    };
   }
 
   private validateInput(body: {
@@ -1033,5 +1062,33 @@ export class ContractsService {
     if (toDelete.length > 0) await repo.delete({ tenant_id: tenantId, id: In(toDelete.map((e) => e.id)) });
     if (toInsert.length > 0) await repo.save(toInsert);
     return { ok: true, added: toInsert.length, removed: toDelete.length };
+  }
+
+  // Relations from the contract's side (`contract-relations.ts`): budget lines of both natures,
+  // applications, assets, and the counts of the page's tabs.
+  async listBudgetLines(contractId: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    return listContractBudgetLines(mg, await this.findContract(contractId, mg));
+  }
+
+  async listApplications(contractId: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    return listContractApplications(mg, await this.findContract(contractId, mg));
+  }
+
+  async listAssets(contractId: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    return listContractAssets(mg, await this.findContract(contractId, mg));
+  }
+
+  async replaceRelations(contractId: string, set: ContractRelationSet, ids: string[], userId?: string | null, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const contract = await this.findContract(contractId, mg);
+    return replaceContractRelations({ manager: mg, audit: this.audit }, set, contract, ids, userId ?? null);
+  }
+
+  async relationCounts(contractId: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    return contractRelationCounts(mg, await this.findContract(contractId, mg));
   }
 }
