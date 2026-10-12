@@ -62,7 +62,6 @@ import OpexDeltaReport from './OpexDeltaReport';
 import ConsolidationReport from './ConsolidationReport';
 import AnalyticsCategoryReport from './AnalyticsCategoryReport';
 import ComparisonReport from './ComparisonReport';
-import CapexBudgetTrendReport from './CapexBudgetTrendReport';
 import BudgetColumnsCompareReport from './BudgetColumnsCompareReport';
 import GlobalChargebackReport from './GlobalChargebackReport';
 import CompanyChargebackReport from './CompanyChargebackReport';
@@ -183,7 +182,6 @@ describe('Top increase / decrease report', () => {
 
 describe.each([
   ['OPEX trend', ComparisonReport],
-  ['CAPEX trend', CapexBudgetTrendReport],
 ])('%s report', (_name, Report) => {
   it('starts on the default column and the last shown column', async () => {
     renderReport(<Report />);

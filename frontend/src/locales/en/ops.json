@@ -963,10 +963,6 @@
           "title": "Budget comparison",
           "description": "Compare budget metrics across years"
         },
-        "budgetTrendCapex": {
-          "title": "Budget trend (CAPEX)",
-          "description": "Compare CAPEX metrics across years"
-        },
         "budgetColumnsCompare": {
           "title": "Budget column comparison",
           "description": "Pick up to 10 year+column totals (OPEX or CAPEX)"
@@ -1208,10 +1204,6 @@
     },
     "budgetTrendOpex": {
       "title": "Budget comparison",
-      "subtitle": "Compare selected metrics across a year range"
-    },
-    "budgetTrendCapex": {
-      "title": "Budget trend (CAPEX)",
       "subtitle": "Compare selected metrics across a year range"
     },
     "budgetColumnsCompare": {

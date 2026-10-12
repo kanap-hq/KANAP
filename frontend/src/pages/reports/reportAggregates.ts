@@ -1191,7 +1191,7 @@ export function readDailyRate(
   return { ...read, monthly };
 }
 
-// ----- sums per year and column (ComparisonReport, CapexBudgetTrendReport, BudgetColumnsCompareReport) -----
+// ----- sums per year and column (ComparisonReport, BudgetColumnsCompareReport) -----
 
 const columnMeasureId = (metric: MetricKey, year: number) => `${metric}_${year}`;
 

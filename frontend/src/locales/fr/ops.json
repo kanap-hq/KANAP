@@ -964,10 +964,6 @@
           "title": "Comparaison budgétaire",
           "description": "Comparer les métriques budgétaires sur plusieurs années"
         },
-        "budgetTrendCapex": {
-          "title": "Tendance budgétaire (CAPEX)",
-          "description": "Comparer les métriques CAPEX sur plusieurs années"
-        },
         "budgetColumnsCompare": {
           "title": "Comparaison de colonnes budgétaires",
           "description": "Choisissez jusqu'à 10 totaux année+colonne (OPEX ou CAPEX)"
@@ -1209,10 +1205,6 @@
     },
     "budgetTrendOpex": {
       "title": "Comparaison budgétaire",
-      "subtitle": "Comparer les métriques sélectionnées sur une plage d'années"
-    },
-    "budgetTrendCapex": {
-      "title": "Tendance budgétaire (CAPEX)",
       "subtitle": "Comparer les métriques sélectionnées sur une plage d'années"
     },
     "budgetColumnsCompare": {

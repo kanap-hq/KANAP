@@ -72,7 +72,6 @@ import { setBudgetColumns } from './budgetColumnsTestState';
 import TopOpexReport from './TopOpexReport';
 import OpexDeltaReport from './OpexDeltaReport';
 import ComparisonReport from './ComparisonReport';
-import CapexBudgetTrendReport from './CapexBudgetTrendReport';
 import BudgetColumnsCompareReport from './BudgetColumnsCompareReport';
 import ConsolidationReport from './ConsolidationReport';
 import AnalyticsCategoryReport from './AnalyticsCategoryReport';
@@ -213,7 +212,6 @@ describe('Top increase / decrease with a cost center group', () => {
 
 describe.each([
   ['OPEX trend', ComparisonReport],
-  ['CAPEX trend', CapexBudgetTrendReport],
 ])('%s with run only', (_name, Report) => {
   it('sums the run lines per year', async () => {
     renderReport(<Report />, '/report?runBuild=run');
@@ -297,8 +295,8 @@ describe('Reports with a dimension value picked', () => {
     expect(gridRows()[0].pct_of_total).toBe(Math.round((1000 / 1100) * 100));
   });
 
-  it('CAPEX trend: sums the lines holding no value on the dimension', async () => {
-    renderReport(<CapexBudgetTrendReport />, '/report?analytics=ax-nat:none');
+  it('Comparison on CAPEX: sums the lines holding no value on the dimension', async () => {
+    renderReport(<ComparisonReport />, '/report?scope=capex&analytics=ax-nat:none');
     await waitFor(() => expect(gridRows()[0]?.[String(Y)]).toBe(7020));
     expect(gridRows()[0][String(Y - 1)]).toBe(5);
   });
@@ -568,7 +566,6 @@ describe('Reports with the FTE measure', () => {
 
   it.each([
     ['OPEX trend', ComparisonReport],
-    ['CAPEX trend', CapexBudgetTrendReport],
   ])('%s: FTE per year, a year nobody declares empty, no point for it', async (_name, Report) => {
     renderReport(<Report />, '/report?measure=fte');
     await waitFor(() => expect(gridRows()[0]?.[String(Y)]).toBe(4.25));

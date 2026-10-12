@@ -20,7 +20,6 @@ export default function ReportsLandingPage() {
     { title: t('reports.landing.cards.topOpex.title'), description: t('reports.landing.cards.topOpex.description'), to: '/ops/reports/top-opex' },
     { title: t('reports.landing.cards.opexDelta.title'), description: t('reports.landing.cards.opexDelta.description'), to: '/ops/reports/opex-delta' },
     { title: t('reports.landing.cards.budgetTrendOpex.title'), description: t('reports.landing.cards.budgetTrendOpex.description'), to: '/ops/reports/comparison' },
-    { title: t('reports.landing.cards.budgetTrendCapex.title'), description: t('reports.landing.cards.budgetTrendCapex.description'), to: '/ops/reports/capex/trend' },
     { title: t('reports.landing.cards.budgetColumnsCompare.title'), description: t('reports.landing.cards.budgetColumnsCompare.description'), to: '/ops/reports/budget-columns-compare' },
     { title: t('reports.landing.cards.consolidation.title'), description: t('reports.landing.cards.consolidation.description'), to: '/ops/reports/consolidation' },
     { title: t('reports.landing.cards.analytics.title'), description: t('reports.landing.cards.analytics.description'), to: '/ops/reports/analytics' },

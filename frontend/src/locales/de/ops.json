@@ -963,10 +963,6 @@
           "title": "Budgetvergleich",
           "description": "Budgetmetriken über mehrere Jahre vergleichen"
         },
-        "budgetTrendCapex": {
-          "title": "Budgettrend (CAPEX)",
-          "description": "CAPEX-Metriken über Jahre hinweg vergleichen"
-        },
         "budgetColumnsCompare": {
           "title": "Budgetspaltenvergleich",
           "description": "Wählen Sie bis zu 10 Jahr+Spalte-Totale (OPEX oder CAPEX)"
@@ -1208,10 +1204,6 @@
     },
     "budgetTrendOpex": {
       "title": "Budgetvergleich",
-      "subtitle": "Ausgewählte Metriken über einen Jahresbereich vergleichen"
-    },
-    "budgetTrendCapex": {
-      "title": "Budgettrend (CAPEX)",
       "subtitle": "Ausgewählte Metriken über einen Jahresbereich vergleichen"
     },
     "budgetColumnsCompare": {
