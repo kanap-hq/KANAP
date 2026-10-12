@@ -127,6 +127,11 @@ export class AnalyticsCategoryBulkDeleteDto {
   @ArrayMaxSize(1000)
   @IsUUID(undefined, { each: true })
   ids!: string[];
+
+  /** Deletes the values in use too: the lines lose them. */
+  @IsOptional()
+  @IsBoolean()
+  force?: boolean;
 }
 
 /** The recommended dimensions to add (`recommended-dimensions.seed.ts`) and the language of their names. */

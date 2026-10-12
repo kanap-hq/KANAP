@@ -14,6 +14,13 @@ import {
 import { axisAppliesTo, isAxisActive, isReservedAnalyticsAxisName, resolveDefaultAxisId } from './analytics-axes.util';
 import { AXIS_APPLIES_TO, AxisAppliesTo } from './analytics-axis.entity';
 import {
+  deleteValuesAndLinks,
+  dimensionValueIds,
+  ForcedDeleteCounts,
+  lockLinesUsing,
+  lockValueRows,
+} from './analytics-forced-delete';
+import {
   ensureRecommendedDimensions,
   findRecommendedDimensions,
   RECOMMENDED_DIMENSION_KEYS,
@@ -397,8 +404,16 @@ export class AnalyticsAxesService {
     return this.list(ctx);
   }
 
-  /** Refused for the default dimension and while the dimension holds values. */
-  async delete(id: string, ctx: AnalyticsContext): Promise<void> {
+  /**
+   * Refused for the default dimension, even forced. Without `force`, refused while the dimension
+   * holds values. With it, the dimension goes with its values and the lines lose their value on it
+   * (`analytics-forced-delete.ts`).
+   */
+  async delete(id: string, ctx: AnalyticsContext, opts?: { force?: boolean }): Promise<void> {
+    if (opts?.force) {
+      await this.forceDelete(id, ctx);
+      return;
+    }
     // The row lock comes first: a value created concurrently either committed
     // before (and is counted) or waits for this delete and then fails its key.
     const existing = await this.lock(ctx, id);
@@ -435,6 +450,50 @@ export class AnalyticsAxesService {
       },
       { manager: ctx.manager },
     );
+  }
+
+  /**
+   * The dimension, its values and every line's value on it, in one transaction. Locks the lines,
+   * then the values, then the dimension (`analytics-forced-delete.ts`); the values are read again
+   * under the dimension's lock, so a value created meanwhile goes too. One audit row for the
+   * dimension with the counts, besides the rows of the values and of the lines.
+   */
+  private async forceDelete(id: string, ctx: AnalyticsContext): Promise<ForcedDeleteCounts> {
+    // Read without a lock first: refusals come before any lock is taken.
+    const [found] = await ctx.manager.query(
+      `SELECT id, is_default FROM analytics_axes WHERE tenant_id = $1 AND id = $2::uuid`,
+      [ctx.tenantId, id],
+    );
+    if (!found) throw new NotFoundException('Dimension not found.');
+    if (found.is_default) throw new ConflictException(DEFAULT_AXIS_DELETE_MESSAGE);
+
+    await lockLinesUsing(ctx, { axisId: id });
+    await lockValueRows(ctx, await dimensionValueIds(ctx, id));
+    const existing = await this.lock(ctx, id);
+    if (!existing) throw new NotFoundException('Dimension not found.');
+    if (existing.is_default) throw new ConflictException(DEFAULT_AXIS_DELETE_MESSAGE);
+    const values = await lockValueRows<{ id: string }>(ctx, await dimensionValueIds(ctx, id));
+
+    const counts = await deleteValuesAndLinks(ctx, this.audit, { axisId: id }, values, {
+      operation: 'analytics_dimension_delete',
+      axis_id: id,
+      axis_name: existing.name ?? null,
+    });
+    await ctx.manager.query(`DELETE FROM analytics_axes WHERE tenant_id = $1 AND id = $2`, [ctx.tenantId, id]);
+    await this.audit.log(
+      {
+        table: 'analytics_axes',
+        recordId: id,
+        action: 'delete',
+        before: existing,
+        after: { forced: true, ...counts },
+        userId: ctx.userId ?? null,
+        source: ctx.audit?.source,
+        sourceRef: ctx.audit?.sourceRef ?? null,
+      },
+      { manager: ctx.manager },
+    );
+    return counts;
   }
 
   // Recommended dimensions ---------------------------------------------------

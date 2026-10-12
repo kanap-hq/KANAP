@@ -1,9 +1,11 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
 import { Tenant, TenantRequest } from '../common/decorators';
+import { BULK_WRITE_TIMEOUTS, LongRunningRequest } from '../common/request-db-timeouts';
 import { AnalyticsAxesService } from './analytics-axes.service';
+import { isForced } from './analytics-forced-delete';
 import { ANALYTICS_READERS, analyticsContext } from './analytics-categories.controller';
 import { AnalyticsAxisCreateDto, AnalyticsAxisReorderDto, AnalyticsAxisUpdateDto, AnalyticsRecommendedDimensionsDto } from './dto/analytics.dto';
 
@@ -56,9 +58,15 @@ export class AnalyticsAxesController {
     return this.svc.update(id, body, analyticsContext(ctx));
   }
 
+  // `?force=true` deletes the dimension with its values; the lines lose their value on it.
   @RequireLevel('analytics', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Delete(':id')
-  delete(@Param('id', new ParseUUIDPipe()) id: string, @Tenant() ctx: TenantRequest) {
-    return this.svc.delete(id, analyticsContext(ctx));
+  delete(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Query('force') force: string | undefined,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.svc.delete(id, analyticsContext(ctx), { force: isForced(force) });
   }
 }
