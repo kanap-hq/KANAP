@@ -536,22 +536,17 @@
     },
     "freeze": {
       "title": "Daten einfrieren / auftauen",
-      "frozenSuccess": "Spalten erfolgreich eingefroren.",
-      "unfrozenSuccess": "Spalten erfolgreich aufgetaut.",
       "freezeError": "Spalten konnten nicht eingefroren werden.",
       "unfreezeError": "Spalten konnten nicht aufgetaut werden.",
       "loadError": "Einfrierstatus konnte nicht geladen werden. Versuchen Sie, ein anderes Jahr auszuwählen.",
       "year": "Jahr",
-      "opexColumns": "OPEX-Spalten",
-      "capexColumns": "CAPEX-Spalten",
-      "freezeData": "Daten einfrieren",
-      "freezing": "Einfrieren…",
-      "unfreezeData": "Daten auftauen",
-      "unfreezing": "Auftauen…",
-      "updating": "Einfrierstatus wird aktualisiert…",
       "frozen": "Eingefroren",
-      "editable": "Bearbeitbar",
-      "hidden": "Ausgeblendet"
+      "open": "Offen",
+      "hidden": "Ausgeblendet",
+      "column": "Spalte",
+      "cell": "{{column}}, {{nature}}",
+      "freezeBoth": "Beide einfrieren",
+      "unfreezeBoth": "Beide auftauen"
     },
     "columnReset": {
       "title": "Budgetspalte zurücksetzen",
@@ -1448,6 +1443,8 @@
     "changeType": "Typ ändern…",
     "typeOpex": "OPEX",
     "typeCapex": "CAPEX",
-    "line": "Budgetzeile"
+    "line": "Budgetzeile",
+    "totalOpex": "Gesamt OPEX",
+    "totalCapex": "Gesamt CAPEX"
   }
 }

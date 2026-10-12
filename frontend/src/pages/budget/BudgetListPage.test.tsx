@@ -8,7 +8,7 @@ vi.mock('react-i18next', () => {
   const translation = { t: (key: string, opts?: any) => key === 'budget.titleWithCurrency' ? `${key}:${opts.currency}` : key === 'budget.totalWithCount' ? `${key}:${opts.count}` : key, i18n: { language: 'en', resolvedLanguage: 'en' } };
   return { useTranslation: () => translation };
 });
-vi.mock('../../api', () => ({ default: { get: vi.fn() } }));
+vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'test' }) }));
 const auth = vi.hoisted(() => ({ level: 'admin' }));
@@ -154,7 +154,7 @@ async function renderPage(path = '/ops/budget') {
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(1));
+  await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(lastProps().initialState?.filter?.filterModel?.nature?.values?.length === 1 ? 1 : 3));
 }
 
 describe('BudgetListPage', () => {
@@ -212,7 +212,7 @@ describe('BudgetListPage', () => {
           </MemoryRouter>
         </QueryClientProvider>,
       );
-      await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(1));
+      await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(3));
       return view;
     };
     const stored = () => JSON.parse(window.sessionStorage.getItem('budget-list-context') ?? '{}');
@@ -303,16 +303,16 @@ describe('BudgetListPage', () => {
     // The saved layout shows one FTE column: the first request from the grid asks for it.
     act(() => lastProps().onGridApiReady({ getColumnState: () => [{ colId: 'product_name', hide: false }, { colId: 'fte_yPlus1Budget', hide: false }, { colId: 'fte_yBudget', hide: true }] }));
     act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', filterModel: {}, q: '', statusScope: 'enabled' }));
-    await waitFor(() => expect(lastProps().pinnedBottomRowData[0].fte_yPlus1Budget).toBe(12.5));
+    await waitFor(() => expect(lastProps().pinnedBottomRowData.slice(-1)[0].fte_yPlus1Budget).toBe(12.5));
     expect(totalsCalls().slice(-1)[0][1].params.fte).toBe('fte_yPlus1Budget');
 
     // Showing another one refetches with both; the footer shows the sum and the unknown lines in a tooltip.
     let count = totalsCalls().length;
     act(() => lastProps().onColumnStateChange([{ colId: 'fte_yPlus1Budget', hide: false }, { colId: 'fte_yBudget', hide: false }]));
-    await waitFor(() => expect(totalsCalls()).toHaveLength(count + 1));
+    await waitFor(() => expect(totalsCalls()).toHaveLength(count + 3));
     expect(totalsCalls().slice(-1)[0][1].params.fte).toBe('fte_yPlus1Budget,fte_yBudget');
-    await waitFor(() => expect(lastProps().pinnedBottomRowData[0].fte_yBudget).toBe(12.5));
-    const pinned = lastProps().pinnedBottomRowData[0];
+    await waitFor(() => expect(lastProps().pinnedBottomRowData.slice(-1)[0].fte_yBudget).toBe(12.5));
+    const pinned = lastProps().pinnedBottomRowData.slice(-1)[0];
     expect(column('fte_yBudget')!.valueFormatter!({ value: column('fte_yBudget')!.valueGetter!({ data: pinned }) })).toBe('12.50');
     expect(column('fte_yBudget')!.tooltipValueGetter!({ data: pinned, node: { rowPinned: 'bottom' } })).toBe('ops:shared.fteUnknownLines');
 
@@ -324,9 +324,9 @@ describe('BudgetListPage', () => {
 
     // Hiding them all: back to the totals without FTE.
     act(() => lastProps().onColumnStateChange([{ colId: 'fte_yPlus1Budget', hide: true }, { colId: 'fte_yBudget', hide: true }]));
-    await waitFor(() => expect(totalsCalls()).toHaveLength(count + 1));
+    await waitFor(() => expect(totalsCalls()).toHaveLength(count + 3));
     expect(totalsCalls().slice(-1)[0][1].params.fte).toBeUndefined();
-    await waitFor(() => expect(lastProps().pinnedBottomRowData[0].fte_yBudget).toBeUndefined());
+    await waitFor(() => expect(lastProps().pinnedBottomRowData.slice(-1)[0].fte_yBudget).toBeUndefined());
   });
 
   it('filters every date column with date models, from the menu and from the box under the header', async () => {
@@ -341,7 +341,7 @@ describe('BudgetListPage', () => {
 
   it('fills the footer from the totals keys of the same name', async () => {
     await renderPage();
-    const versions = lastProps().pinnedBottomRowData[0].versions!;
+    const versions = lastProps().pinnedBottomRowData.slice(-1)[0].versions!;
     expect(versions.yPlus2.totals?.budget).toBe(80);
     expect(versions.yPlus2.totals?.landing).toBe(60);
     expect(versions.y.totals?.forecast).toBe(5);
@@ -528,7 +528,7 @@ describe('BudgetListPage', () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(1));
+    await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(3));
     const ids = lastProps().columns.map((c) => c.colId ?? c.field);
     const at = ids.indexOf('analytics_activity');
     // The default dimension's column keeps its id, third in the block as the dimension is third.
@@ -594,7 +594,7 @@ describe('BudgetListPage', () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(1));
+    await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(3));
     const params = new URLSearchParams(location.search);
     expect(params.get('sort')).toBeNull();
     expect(JSON.parse(params.get('filters') ?? '{}')).toEqual(kept);
@@ -603,7 +603,8 @@ describe('BudgetListPage', () => {
     expect(initial?.filter?.filterModel).toEqual(kept);
     const totals = get.mock.calls.filter(([url]) => url === '/budget-lines/summary/totals');
     expect(totals.length).toBeGreaterThan(0);
-    for (const [, config] of totals) expect(JSON.parse(config.params.filters)).toEqual(kept);
+    expect(JSON.parse(totals[0][1].params.filters)).toEqual(kept);
+    for (const [, config] of totals.slice(1)) expect(JSON.parse(config.params.filters)).toMatchObject(kept);
   });
 
   it('keeps a stored sort on an enabled dimension', async () => {
@@ -621,7 +622,7 @@ describe('BudgetListPage', () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(1));
+    await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(3));
     expect(new URLSearchParams(location.search).get('sort')).toBe(`analytics_${NATURE}:ASC`);
   });
   it('offers every shown column of every list year, filtered with number models', async () => {
@@ -701,7 +702,9 @@ describe('BudgetListPage', () => {
   it('links the contract cell to the contract and an amount cell to the budget of its year', async () => {
     await renderPage();
     const hrefOf = (id: string, data: Record<string, unknown>) => {
-      const el = column(id)!.cellRenderer!({ data, value: '', colDef: {} });
+      const col = column(id)!;
+      const renderer = col.cellRenderer ?? col.cellRendererSelector!({ node: {} }).component as (p: any) => React.ReactElement;
+      const el = renderer({ data, value: '', colDef: {} });
       return (el.props as { getHref: (row: unknown) => string | null }).getHref(data);
     };
     const row = { id: 'c-1', nature: 'capex', item_number: 7, latest_contract_id: 'k-1' };
@@ -717,7 +720,7 @@ describe('BudgetListPage', () => {
     const totalsCalls = () => get.mock.calls.filter(([url]) => url === '/budget-lines/summary/totals').length;
     const before = totalsCalls();
     act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', filterModel: {}, q: 'cloud', statusScope: 'enabled' }));
-    await waitFor(() => expect(totalsCalls()).toBe(before + 1));
+    await waitFor(() => expect(totalsCalls()).toBe(before + 3));
     await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(0));
     expect(header.props.title).toBe('budget.titleWithCurrency:X');
   });
@@ -858,11 +861,11 @@ describe('BudgetListPage', () => {
 
   it('shows the filtered line count in the total row', async () => {
     await renderPage();
-    expect(lastProps().pinnedBottomRowData[0].product_name).toBe('shared.total');
+    expect(lastProps().pinnedBottomRowData.slice(-1)[0].product_name).toBe('shared.total');
     act(() => (lastProps() as any).onTotalChange(135));
-    expect(lastProps().pinnedBottomRowData[0].product_name).toBe('budget.totalWithCount:135');
+    expect(lastProps().pinnedBottomRowData.slice(-1)[0].product_name).toBe('budget.totalWithCount:135');
     act(() => (lastProps() as any).onTotalChange(1));
-    expect(lastProps().pinnedBottomRowData[0].product_name).toBe('budget.totalWithCount:1');
+    expect(lastProps().pinnedBottomRowData.slice(-1)[0].product_name).toBe('budget.totalWithCount:1');
   });
 
   it('copies the OPEX grid layout once for this tenant and user', async () => {
@@ -881,6 +884,7 @@ describe('BudgetListPage', () => {
     expect(dialogs.import).toMatchObject({ open: true, scope: 'capex' });
     act(() => lastProps().onSelectionChanged([{ id: 'capex-id', product_name: 'Servers' }]));
     expect(dialogs.bulk).toMatchObject({ endpoint: '/budget-lines/bulk', selectedRows: [{ id: 'capex-id', product_name: 'Servers' }] });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
     const before = get.mock.calls.filter(([u]) => u === '/budget-lines/summary/totals').length;
     act(() => dialogs.import.onImported());
     await waitFor(() => expect(get.mock.calls.filter(([u]) => u === '/budget-lines/summary/totals').length).toBe(before + 1));
@@ -899,6 +903,53 @@ describe('BudgetListPage', () => {
     act(() => lastProps().onQueryStateChange({ sort: '', filterModel: {}, q: 'refresh', statusScope: 'enabled' }));
     expect(screen.getByRole('button', { name: 'budget.newLine' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'opex.exportCsv' })).toBeNull();
+  });
+
+  it('shows three rows from totals GETs with distinct nature amounts and FTE', async () => {
+    get.mockImplementation(async (url, config) => {
+      if (url === '/budget-columns') return { data: columnsSetting };
+      if (url !== '/budget-lines/summary/totals') return { data: { items: [] } };
+      const nature = JSON.parse(config.params.filters || '{}').nature?.values?.[0];
+      const value = nature === 'opex' ? 100 : nature === 'capex' ? 200 : 300;
+      return { data: { yBudget: value, fte: { fte_yBudget: { total: value / 100, unknown: nature === 'opex' ? 1 : 0 } }, reportingCurrency: 'EUR' } };
+    });
+    await renderPage();
+    expect(lastProps().pinnedBottomRowData.map((row) => row.product_name)).toEqual(['budget.totalOpex', 'budget.totalCapex', 'shared.total']);
+    expect(lastProps().pinnedBottomRowData.map((row) => row.versions?.y.totals?.budget)).toEqual([100, 200, 300]);
+    expect(lastProps().pinnedBottomRowData.map((row) => row.fte_yBudget)).toEqual([1, 2, 3]);
+    expect(get.mock.calls.filter(([url]) => url === '/budget-lines/summary/totals')).toHaveLength(3);
+    const cell = (column('yBudget')!.cellRendererSelector!({ node: { rowPinned: 'bottom' } }).component as (p: any) => React.ReactElement)({ data: lastProps().pinnedBottomRowData[0], valueFormatted: '100' });
+    expect(cell.props).toMatchObject({ colId: 'yBudget', nature: 'opex', children: '100' });
+  });
+
+  it.each(['opex', 'capex'])('shows one footer row and sends one request for a single %s Type filter', async (nature) => {
+    await renderPage('/ops/budget?filters=' + encodeURIComponent(JSON.stringify({ nature: { filterType: 'set', values: [nature] } })));
+    expect(lastProps().pinnedBottomRowData).toHaveLength(1);
+    expect(lastProps().pinnedBottomRowData[0]).toMatchObject({ product_name: 'shared.total', nature });
+    expect(get.mock.calls.filter(([url]) => url === '/budget-lines/summary/totals')).toHaveLength(1);
+  });
+
+  it('preserves both Type values, list filters, search, lifecycle and more than eight measures in each totals request', async () => {
+    await renderPage();
+    const filters = { nature: { filterType: 'set', values: ['opex', 'capex'] }, supplier_name: { filterType: 'set', mode: 'exclude', values: ['Vendor'] } };
+    const amounts = lastProps().columns.filter((col) => col.filter === 'agNumberColumnFilter' && !col.colId?.startsWith('fte_')).map((col) => col.colId!);
+    const fte = amounts.map((colId) => 'fte_' + colId);
+    act(() => lastProps().onColumnStateChange([...amounts, ...fte].map((colId) => ({ colId }))));
+    act(() => lastProps().onQueryStateChange({ sort: 'yBudget:ASC', q: 'cloud', statusScope: 'all', filterModel: filters }));
+    await waitFor(() => {
+      const calls = get.mock.calls.filter(([url, config]) => url === '/budget-lines/summary/totals' && config.params.q === 'cloud');
+      expect(calls).toHaveLength(3);
+      for (const [, config] of calls) {
+        expect(config.params).toMatchObject({ q: 'cloud', includeDisabled: '1', amounts: amounts.join(','), fte: fte.join(',') });
+        expect(JSON.parse(config.params.filters).supplier_name).toEqual(filters.supplier_name);
+      }
+      expect(JSON.parse(calls[0][1].params.filters)).toEqual(filters);
+      expect(JSON.parse(calls[1][1].params.filters).nature).toEqual({ operator: 'AND', conditions: [filters.nature, { filterType: 'set', values: ['opex'] }] });
+      expect(JSON.parse(calls[2][1].params.filters).nature).toEqual({ operator: 'AND', conditions: [filters.nature, { filterType: 'set', values: ['capex'] }] });
+    });
+    expect(amounts.length + fte.length).toBeGreaterThan(8);
+    expect(lastProps().pinnedBottomRowData).toHaveLength(3);
+    expect((api as any).post).not.toHaveBeenCalled();
   });
 
 });

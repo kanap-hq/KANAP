@@ -20,6 +20,7 @@ vi.mock('react-i18next', () => {
   return { useTranslation: () => translation };
 });
 vi.mock('../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
+vi.mock('../hooks/useFreezeState', () => ({ useFreezeState: () => ({ data: undefined }) }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true, profile: { id: 'u-1' } }) }));
 vi.mock('../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'test' }) }));

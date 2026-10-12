@@ -17,6 +17,7 @@ vi.mock('react-i18next', () => {
   return { useTranslation: () => translation };
 });
 vi.mock('../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
+vi.mock('../hooks/useFreezeState', () => ({ useFreezeState: () => ({ data: undefined }) }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true, profile: { id: 'u-1' } }) }));
 vi.mock('../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'test' }) }));
@@ -123,8 +124,8 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
     await waitFor(() => expect(calls(ROWS).length).toBeGreaterThan(0), { timeout: 10_000 });
     await waitFor(() => expect(calls(TOTALS).length).toBeGreaterThan(0), { timeout: 10_000 });
 
-    // Saved once, for every place the state goes.
-    expect(mocked.post).toHaveBeenCalledTimes(1);
+    // One context for the list, plus one for each nature subtotal.
+    expect(mocked.post).toHaveBeenCalledTimes(3);
     expect(mocked.post).toHaveBeenCalledWith('/list-contexts', { list: 'budget-lines', state: { filters: ALL_BUT_ONE } });
     // The page URL.
     const url = new URLSearchParams(location.search);
@@ -148,11 +149,11 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
       const stored = JSON.parse(window.sessionStorage.getItem('budget-list-context') ?? '{}');
       expect(stored).toMatchObject({ filters: '', ctx: ID });
     });
-    expect(mocked.post).toHaveBeenCalledTimes(1);
-    // Request counts as before: one page, one totals.
+    expect(mocked.post).toHaveBeenCalledTimes(3);
+    // One page request and one totals request per scope.
     await new Promise((resolve) => setTimeout(resolve, 500));
     expect(calls(ROWS)).toHaveLength(1);
-    expect(calls(TOTALS)).toHaveLength(1);
+    expect(calls(TOTALS)).toHaveLength(3);
   }, 30_000);
 
   it('a reload of the page URL: the context is read once, the list loads once, filtered', async () => {
@@ -161,7 +162,7 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
     await new Promise((resolve) => setTimeout(resolve, 500));
     expect(calls(ROWS)).toHaveLength(1);
     expect(calls(`/list-contexts/${ID}`)).toHaveLength(1);
-    expect(mocked.post).not.toHaveBeenCalled();
+    expect(mocked.post.mock.calls.every(([, body]) => body.state.filters.nature != null)).toBe(true);
     expect(paramsOf(calls(ROWS)[0])).toMatchObject({ ctx: ID, shape: 'grid' });
     expect(paramsOf(calls(ROWS)[0]).filters).toBeUndefined();
     expect(grid.api.getFilterModel()).toEqual(ALL_BUT_ONE);
@@ -173,7 +174,7 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
     await waitFor(() => expect(calls(TOTALS).length).toBeGreaterThan(0), { timeout: 10_000 });
     await new Promise((resolve) => setTimeout(resolve, 400));
     expect(calls(ROWS)).toHaveLength(1);
-    expect(calls(TOTALS)).toHaveLength(1);
+    expect(calls(TOTALS)).toHaveLength(3);
     const first = paramsOf(calls(ROWS)[0]);
     expect(first.shape).toBe('grid');
     expect(first.fte).toBeUndefined();
@@ -183,18 +184,18 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
     expect(shownAmounts.length).toBeGreaterThan(0);
     expect(paramsOf(calls(TOTALS)[0]).amounts).toBe(shownAmounts.join(','));
 
-    // Showing an FTE column: one page and one totals request, both with it.
+    // Showing an FTE column reloads the page and all three totals with that column.
     await act(async () => { grid.api.setColumnsVisible(['fte_yBudget'], true); });
     await waitFor(() => expect(calls(ROWS)).toHaveLength(2), { timeout: 10_000 });
-    await waitFor(() => expect(calls(TOTALS)).toHaveLength(2), { timeout: 10_000 });
+    await waitFor(() => expect(calls(TOTALS)).toHaveLength(6), { timeout: 10_000 });
     expect(paramsOf(calls(ROWS)[1])).toMatchObject({ shape: 'grid', fte: 'fte_yBudget' });
-    expect(paramsOf(calls(TOTALS)[1]).fte).toBe('fte_yBudget');
+    expect(paramsOf(calls(TOTALS)[3]).fte).toBe('fte_yBudget');
 
     // Hiding an amount column: the footer asks again without it, the rows do not reload.
     const hidden = shownAmounts[0];
     await act(async () => { grid.api.setColumnsVisible([hidden], false); });
-    await waitFor(() => expect(calls(TOTALS)).toHaveLength(3), { timeout: 10_000 });
-    expect(paramsOf(calls(TOTALS)[2]).amounts.split(',')).not.toContain(hidden);
+    await waitFor(() => expect(calls(TOTALS)).toHaveLength(9), { timeout: 10_000 });
+    expect(paramsOf(calls(TOTALS)[6]).amounts.split(',')).not.toContain(hidden);
     await new Promise((resolve) => setTimeout(resolve, 400));
     expect(calls(ROWS)).toHaveLength(2);
   }, 30_000);
@@ -243,30 +244,30 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
   }, 30_000);
 
   it('the footer of an amount column shown again keeps a placeholder until its total arrives, never 0', async () => {
-    let release: () => void = () => undefined;
+    const releases: Array<() => void> = [];
     let slow = false;
     const base = mocked.get.getMockImplementation()! as (...args: any[]) => any;
     mocked.get.mockImplementation(async (url: string, config?: { params?: Record<string, string> }) => {
       if (url === TOTALS) {
-        if (slow) await new Promise<void>((resolve) => { release = resolve; });
+        if (slow) await new Promise<void>((resolve) => { releases.push(resolve); });
         const amounts = String(config?.params?.amounts ?? '').split(',').filter(Boolean);
         return { data: { ...Object.fromEntries(amounts.map((key) => [key, 1234])), reportingCurrency: 'EUR' } };
       }
       return base(url, config);
     });
     renderAt('/ops/budget');
-    await waitFor(() => expect(calls(TOTALS)).toHaveLength(1), { timeout: 10_000 });
+    await waitFor(() => expect(calls(TOTALS)).toHaveLength(3), { timeout: 10_000 });
     const footer = (colId: string) => document.querySelector(`.ag-floating-bottom [col-id="${colId}"]`)?.textContent ?? null;
     await waitFor(() => expect(footer('yBudget')).toBe('1 234'), { timeout: 10_000 });
     // A column shown whose total was never asked: the previous totals stay on screen meanwhile,
     // without it.
     slow = true;
     await act(async () => { grid.api.setColumnsVisible(['yRevision'], true); });
-    await waitFor(() => expect(calls(TOTALS)).toHaveLength(2), { timeout: 10_000 });
-    expect(paramsOf(calls(TOTALS)[1]).amounts.split(',')).toContain('yRevision');
+    await waitFor(() => expect(calls(TOTALS)).toHaveLength(6), { timeout: 10_000 });
+    expect(paramsOf(calls(TOTALS)[3]).amounts.split(',')).toContain('yRevision');
     await waitFor(() => expect(footer('yRevision')).toBe('…'), { timeout: 10_000 });
     expect(footer('yBudget')).toBe('1 234');
-    await act(async () => { release(); });
+    await act(async () => { releases.forEach((release) => release()); });
     await waitFor(() => expect(footer('yRevision')).toBe('1 234'), { timeout: 10_000 });
   }, 30_000);
   it('the real grid opens on an address nature as its Type column filter', async () => {

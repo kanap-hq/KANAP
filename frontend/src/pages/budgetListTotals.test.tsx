@@ -14,6 +14,8 @@ vi.mock('react-i18next', () => {
   return { useTranslation: () => translation };
 });
 vi.mock('../api', () => ({ default: { get: vi.fn() } }));
+const frozen = vi.hoisted(() => ({ opex: false, capex: false }));
+vi.mock('../hooks/useFreezeState', () => ({ useFreezeState: () => ({ data: { summary: { scopes: { opex: { budget: { frozen: frozen.opex } }, capex: { budget: { frozen: frozen.capex } } } } } }) }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true, profile: { id: 'u-1' } }) }));
 vi.mock('../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'test' }) }));
@@ -85,6 +87,7 @@ describe.each([
   let stored = new Map<string, string>();
   beforeEach(() => {
     grid.api = null;
+    frozen.opex = frozen.capex = false;
     get.mockReset();
     window.sessionStorage.clear();
     runOnVirtualTime();
@@ -127,26 +130,26 @@ describe.each([
     );
   };
 
-  it('asks once on load when the saved layout shows an FTE column, with the filter and the FTE column', async () => {
+  it('asks once per scope on load when the saved layout shows an FTE column, with the filter and the FTE column', async () => {
     const key = 'budget-summary';
     stored.set(`grid-columns:test:u-1:${key}`, JSON.stringify([{ colId: 'fte_yBudget', hide: false }]));
     renderPage();
     await waitFor(() => expect(grid.api).not.toBeNull());
     await waitFor(() => expect(get.mock.calls.some(([url]) => url === rows)).toBe(true));
     await settle();
-    expect(totalsCalls()).toHaveLength(1);
+    expect(totalsCalls()).toHaveLength(3);
     expect(filtersOf(totalsCalls()[0])).toEqual(search ? textFilter(col, 'cloud') : {});
     expect((totalsCalls()[0][1] as { params: { fte?: string } }).params.fte).toBe('fte_yBudget');
   }, 20_000);
 
-  it('asks the totals once per distinct query: once on load, once more on a filter change, none on a sort', async () => {
+  it('asks the totals once per scope and query: on load and filter changes, none on a sort', async () => {
     renderPage();
     await waitFor(() => expect(grid.api).not.toBeNull());
     await waitFor(() => expect(get.mock.calls.some(([url]) => url === rows)).toBe(true));
     await settle();
-    // The grid reports its query several times while it starts; the footer asks once, with the
-    // filter the grid applied (never a first request without it).
-    expect(totalsCalls()).toHaveLength(1);
+    // The grid reports its query several times while it starts; each scope asks once, with the
+    // filter the grid applied for each scope.
+    expect(totalsCalls()).toHaveLength(3);
     expect(filtersOf(totalsCalls()[0])).toEqual(search ? textFilter(col, 'cloud') : {});
 
     // A sort changes no total.
@@ -155,20 +158,30 @@ describe.each([
     });
     await settle();
     expect(get.mock.calls.some(([url, config]) => url === rows && config?.params?.sort === `${col}:ASC`)).toBe(true);
-    expect(totalsCalls()).toHaveLength(1);
+    expect(totalsCalls()).toHaveLength(3);
 
-    // A filter change asks once more, with the new filter.
+    // A filter change reloads each scope with the new filter.
     await act(async () => {
       grid.api.setFilterModel(textFilter(col, 'licence'));
     });
     await settle();
-    expect(totalsCalls()).toHaveLength(2);
-    expect(filtersOf(totalsCalls()[1])).toEqual(textFilter(col, 'licence'));
+    expect(totalsCalls()).toHaveLength(6);
+    expect(filtersOf(totalsCalls()[3])).toEqual(textFilter(col, 'licence'));
 
     // A delete changes the lines, not the query: the same query is asked again.
     fireEvent.click(screen.getByRole('button', { name: 'delete-selected' }));
     await settle();
-    expect(totalsCalls()).toHaveLength(3);
-    expect((totalsCalls()[2][1] as { params: unknown }).params).toEqual((totalsCalls()[1][1] as { params: unknown }).params);
+    expect(totalsCalls()).toHaveLength(9);
+    expect((totalsCalls()[6][1] as { params: unknown }).params).toEqual((totalsCalls()[3][1] as { params: unknown }).params);
   }, 20_000);
+  it('the real grid renders a lock only on the frozen nature and keeps Total unlocked', async () => {
+    frozen.opex = true;
+    renderPage();
+    await waitFor(() => expect(grid.api).not.toBeNull());
+    await settle();
+    const cells = () => Array.from(document.querySelectorAll('.ag-floating-bottom [aria-label="operations.freeze.frozen"]'));
+    await waitFor(() => expect(cells()).toHaveLength(1));
+    expect(cells()[0].closest('.ag-row')?.querySelector('[col-id="product_name"]')).toHaveTextContent('budget.totalOpex');
+  }, 20_000);
+
 });

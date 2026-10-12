@@ -536,22 +536,17 @@
     },
     "freeze": {
       "title": "Congelar / Descongelar datos",
-      "frozenSuccess": "Columnas congeladas correctamente.",
-      "unfrozenSuccess": "Columnas descongeladas correctamente.",
       "freezeError": "No se pudieron congelar las columnas.",
       "unfreezeError": "No se pudieron descongelar las columnas.",
       "loadError": "No se pudo cargar el estado de congelación. Intente seleccionar otro año.",
       "year": "Año",
-      "opexColumns": "Columnas OPEX",
-      "capexColumns": "Columnas CAPEX",
-      "freezeData": "Congelar datos",
-      "freezing": "Congelando…",
-      "unfreezeData": "Descongelar datos",
-      "unfreezing": "Descongelando…",
-      "updating": "Actualizando estado de congelación…",
       "frozen": "Congelado",
-      "editable": "Editable",
-      "hidden": "Oculta"
+      "open": "Abierto",
+      "hidden": "Oculta",
+      "column": "Columna",
+      "cell": "{{column}}, {{nature}}",
+      "freezeBoth": "Congelar ambas",
+      "unfreezeBoth": "Descongelar ambas"
     },
     "columnReset": {
       "title": "Restablecer columna presupuestaria",
@@ -1448,6 +1443,8 @@
     "changeType": "Cambiar tipo…",
     "typeOpex": "OPEX",
     "typeCapex": "CAPEX",
-    "line": "Línea presupuestaria"
+    "line": "Línea presupuestaria",
+    "totalOpex": "Total OPEX",
+    "totalCapex": "Total CAPEX"
   }
 }

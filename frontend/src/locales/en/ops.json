@@ -536,22 +536,17 @@
     },
     "freeze": {
       "title": "Freeze / unfreeze data",
-      "frozenSuccess": "Columns frozen successfully.",
-      "unfrozenSuccess": "Columns unfrozen successfully.",
       "freezeError": "Unable to freeze columns.",
       "unfreezeError": "Unable to unfreeze columns.",
       "loadError": "Failed to load freeze status. Try selecting a different year.",
       "year": "Year",
-      "opexColumns": "OPEX columns",
-      "capexColumns": "CAPEX columns",
-      "freezeData": "Freeze data",
-      "freezing": "Freezing…",
-      "unfreezeData": "Unfreeze data",
-      "unfreezing": "Unfreezing…",
-      "updating": "Updating freeze status…",
       "frozen": "Frozen",
-      "editable": "Editable",
-      "hidden": "Hidden"
+      "open": "Open",
+      "hidden": "Hidden",
+      "column": "Column",
+      "cell": "{{column}}, {{nature}}",
+      "freezeBoth": "Freeze both",
+      "unfreezeBoth": "Unfreeze both"
     },
     "columnReset": {
       "title": "Reset budget column",
@@ -1448,6 +1443,8 @@
     "changeType": "Change type…",
     "typeOpex": "OPEX",
     "typeCapex": "CAPEX",
-    "line": "Budget line"
+    "line": "Budget line",
+    "totalOpex": "Total OPEX",
+    "totalCapex": "Total CAPEX"
   }
 }
