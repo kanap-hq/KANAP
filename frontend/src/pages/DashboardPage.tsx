@@ -1,6 +1,9 @@
 import { Fragment, useCallback, useMemo, useState } from 'react';
-import { Box, Grid, Typography, Stack, Button, Divider, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
+import { Box, Typography, Stack, Button, Divider, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import { useTheme, type Theme } from '@mui/material/styles';
+import SettingsIcon from '@mui/icons-material/Settings';
+import BudgetDashboardSettingsModal from './workspace/settings/BudgetDashboardSettingsModal';
+import { useBudgetDashboardConfig } from './workspace/hooks/useBudgetDashboardConfig';
 import AddIcon from '@mui/icons-material/Add';
 import { getDotColor } from '../utils/statusColors';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
@@ -37,6 +40,18 @@ type ServerListResponse<T> = { items: T[]; total: number; page: number; limit: n
 
 /** The header actions, styled as the main dashboard's quick actions. */
 const QUICK_ACTION_SX = { height: 30, borderRadius: '5px' } as const;
+
+// Small tiles fill the end of a row before a wide Budget tile, preserving the saved visual order.
+const tileLayoutSx = (wide = false) => (theme: Theme) => ({
+  minWidth: 0,
+  flexGrow: wide ? 0 : 1,
+  flexShrink: 0,
+  flexBasis: {
+    xs: '100%',
+    md: wide ? '100%' : `calc((100% - ${theme.spacing(3)}) / 2)`,
+    lg: wide ? `calc((100% - ${theme.spacing(6)}) * 2 / 3 + ${theme.spacing(3)})` : `calc((100% - ${theme.spacing(6)}) / 3)`,
+  },
+});
 
 /** A tile row that opens what it names: neutral text, the hover background only. */
 const ROW_LINK_SX = { color: 'inherit', textDecoration: 'none', borderRadius: '5px', mx: -0.5, px: 0.5, '&:hover': { bgcolor: 'kanap.bg.hover' } } as const;
@@ -369,6 +384,10 @@ export default function DashboardPage() {
   const locale = useLocale();
   const Y = new Date().getFullYear();
 
+  const dashboardSettings = useBudgetDashboardConfig();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const tileEnabled = (id: string) => !dashboardSettings.isLoading && dashboardSettings.config.tiles.some((tile) => tile.id === id && tile.enabled);
+
   const mode = useTheme().palette.mode;
   // One right for both types of budget line (lot R).
   const canOpex = hasLevel('budget', 'reader');
@@ -378,43 +397,43 @@ export default function DashboardPage() {
   // The creation rights of the budget and contract lists.
   const canCreateLines = hasLevel('budget', 'manager');
   const canCreateContracts = hasLevel('contracts', 'manager');
-  const { data: myTasks, isLoading: tasksLoading } = useMyTasksSummary(profile?.id, canTasks);
-  const { data: nextContract, isLoading: contractsLoading } = useNextContractRenewal(canContracts);
+  const { data: myTasks, isLoading: tasksLoading } = useMyTasksSummary(profile?.id, canTasks && tileEnabled('my-tasks'));
+  const { data: nextContract, isLoading: contractsLoading } = useNextContractRenewal(canContracts && tileEnabled('renewals'));
   const readableScopes = (['opex', 'capex'] as const).filter((scope) => (scope === 'opex' ? canOpex : canCapex));
   const scopeLabel = (scope: NatureScope) => t(`ops:operations.scope.${scope}`);
   const budgetColumns = useBudgetColumns();
   const defaultColumn = budgetColumns.defaultColumn;
-  const snapshot = useBudgetSnapshot(canOpex);
+  const snapshot = useBudgetSnapshot(canOpex && tileEnabled('budget'));
 
   // Next year's check names the default column: the checks wait for the setting.
   const checks = useMemo(() => (budgetColumns.ready ? hygieneChecks(defaultColumn.key) : null), [budgetColumns.ready, defaultColumn.key]);
   const hygieneByScope = {
-    opex: useHygieneCounts('opex', checks, canOpex),
-    capex: useHygieneCounts('capex', checks, canCapex),
+    opex: useHygieneCounts('opex', checks, canOpex && tileEnabled('hygiene')),
+    capex: useHygieneCounts('capex', checks, canCapex && tileEnabled('hygiene')),
   };
   const hygieneLoading = readableScopes.some((scope) => hygieneByScope[scope].isLoading);
   const hygieneError = readableScopes.some((scope) => hygieneByScope[scope].isError);
 
-  const { data: recentUpdates = [] } = useRecentUpdates(canOpex);
+  const { data: recentUpdates = [] } = useRecentUpdates(canOpex && tileEnabled('recent-updates'));
 
   const [topScope, setTopScope] = useTileScope('topItems');
   // Both tiles wait for the default column so the list is not fetched twice.
   const { data: topItems, isLoading: topQueryLoading } = useTopItemsCurrentYear(
     topScope,
-    readableScopes.length > 0 && budgetColumns.ready,
+    readableScopes.length > 0 && tileEnabled('top-lines') && budgetColumns.ready,
     defaultColumn.key,
     budgetColumns.defaultSort,
     5,
   );
   const topLoading = topQueryLoading || (readableScopes.length > 0 && !budgetColumns.ready);
   const [increaseScope, setIncreaseScope] = useTileScope('topIncreases');
-  const { items: topIncreases, isLoading: increasesLoading } = useTopIncreases(increaseScope, readableScopes.length > 0, defaultColumn.key, budgetColumns.ready, 5);
+  const { items: topIncreases, isLoading: increasesLoading } = useTopIncreases(increaseScope, readableScopes.length > 0 && tileEnabled('top-increases'), defaultColumn.key, budgetColumns.ready, 5);
 
   const [myBudgetScope, setMyBudgetScope] = useTileScope('myBudget');
-  const myBudget = useMyBudget(myBudgetScope, profile, defaultColumn.key, readableScopes.length > 0 && budgetColumns.ready);
+  const myBudget = useMyBudget(myBudgetScope, profile, defaultColumn.key, readableScopes.length > 0 && tileEnabled('my-budget') && budgetColumns.ready);
   const myBudgetLoading = myBudget.isLoading || (readableScopes.length > 0 && !budgetColumns.ready);
   const [costCenterScope, setCostCenterScope] = useTileScope('byCostCenter');
-  const costCenters = useCostCenterTotals(costCenterScope, defaultColumn.key, readableScopes.length > 0 && budgetColumns.ready);
+  const costCenters = useCostCenterTotals(costCenterScope, defaultColumn.key, readableScopes.length > 0 && tileEnabled('cost-centers') && budgetColumns.ready);
   const costCentersLoading = costCenters.isLoading || (readableScopes.length > 0 && !budgetColumns.ready);
   const largestCostCenter = Math.max(0, ...costCenters.rows.map((r) => r.value));
 
@@ -438,35 +457,13 @@ export default function DashboardPage() {
     })) as Record<AmountColumnKey, number>,
   })));
   // Keep a column if either nature has a value, even when the combined total is zero.
-  const snapshotColumns = budgetColumns.shown.filter((column) => snapshotRows.some((row) => row.values[column.key] !== 0));
+  const chosenColumns = dashboardSettings.config.tiles.find((tile) => tile.id === 'budget')?.config.columns as AmountColumnKey[] | null | undefined;
+  const snapshotColumns = budgetColumns.shown.filter((column) => chosenColumns == null || chosenColumns.includes(column.key)).filter((column) => snapshotRows.some((row) => row.values[column.key] !== 0));
 
-  return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <PageHeader
-        title={t('dashboard.overview')}
-        actions={(canCreateLines || canCreateContracts) ? (
-          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-            {canCreateLines && (
-              <Button variant="outlined" size="small" startIcon={<AddIcon />} sx={QUICK_ACTION_SX} onClick={() => navigate('/ops/budget/new?nature=opex')}>
-                {t('dashboard.newOpexLine')}
-              </Button>
-            )}
-            {canCreateLines && (
-              <Button variant="outlined" size="small" startIcon={<AddIcon />} sx={QUICK_ACTION_SX} onClick={() => navigate('/ops/budget/new?nature=capex')}>
-                {t('dashboard.newCapexLine')}
-              </Button>
-            )}
-            {canCreateContracts && (
-              <Button variant="outlined" size="small" startIcon={<AddIcon />} sx={QUICK_ACTION_SX} onClick={() => navigate('/ops/contracts/new/overview')}>
-                {t('dashboard.newContract')}
-              </Button>
-            )}
-          </Stack>
-        ) : undefined}
-      />
-      <Grid container spacing={3}>
-        {canOpex && (
-          <Grid item xs={12} lg={8}>
+  const canViewTile = (id: string) => id === 'my-tasks' ? canTasks : id === 'renewals' ? canContracts : canOpex;
+  const tiles: Record<string, React.ReactNode> = {
+    'budget': (canOpex) ? (
+          <Box key="budget" sx={tileLayoutSx(true)}>
             <DashboardTile
               icon="AccountBalanceWallet"
               title={t('dashboard.budgetSnapshot')}
@@ -508,12 +505,10 @@ export default function DashboardPage() {
                 </TableContainer>
               )}
             </DashboardTile>
-          </Grid>
-        )}
-
-        {/* Data hygiene: the same four checks for each type the user reads */}
-        {readableScopes.length > 0 && (
-          <Grid item xs={12} md={6} lg={4}>
+          </Box>
+    ) : null,
+    'hygiene': (readableScopes.length > 0) ? (
+          <Box key="hygiene" sx={tileLayoutSx()}>
             <DashboardTile
               icon="ReportProblemOutlined"
               title={t('dashboard.dataHygiene')}
@@ -560,12 +555,10 @@ export default function DashboardPage() {
                 })}
               </Box>
             </DashboardTile>
-          </Grid>
-        )}
-
-        {/* My budget: the lines in the user's name, per role, each opening the list on that role */}
-        {readableScopes.length > 0 && (
-          <Grid item xs={12} md={6} lg={4}>
+          </Box>
+    ) : null,
+    'my-budget': (readableScopes.length > 0) ? (
+          <Box key="my-budget" sx={tileLayoutSx()}>
             <DashboardTile
               icon="VerifiedUser"
               title={t('dashboard.myBudget.title')}
@@ -619,12 +612,10 @@ export default function DashboardPage() {
                 </Stack>
               )}
             </DashboardTile>
-          </Grid>
-        )}
-
-        {/* My tasks: the open tasks assigned to the user, the next ones by due date */}
-        {canTasks && (
-          <Grid item xs={12} md={6} lg={4}>
+          </Box>
+    ) : null,
+    'my-tasks': (canTasks) ? (
+          <Box key="my-tasks" sx={tileLayoutSx()}>
             <DashboardTile icon="Assignment" title={t('dashboard.myTasks')} isLoading={tasksLoading} action={<Button size="small" onClick={() => navigate('/portfolio/tasks?taskScope=my')}>{t('buttons.viewAll')}</Button>}>
               <Typography variant="h5">{openTasks}</Typography>
               <Stack spacing={0.5} sx={{ mt: 1.5 }}>
@@ -652,12 +643,10 @@ export default function DashboardPage() {
                 )}
               </Stack>
             </DashboardTile>
-          </Grid>
-        )}
-
-        {/* Next contract renewals */}
-        {canContracts && (
-          <Grid item xs={12} md={6} lg={4}>
+          </Box>
+    ) : null,
+    'renewals': (canContracts) ? (
+          <Box key="renewals" sx={tileLayoutSx()}>
             <DashboardTile icon="EventAvailable" title={t('dashboard.nextRenewals')} isLoading={contractsLoading} action={<Button size="small" onClick={() => navigate('/ops/contracts')}>{t('buttons.viewAll')}</Button>}>
               <Stack spacing={0.5}>
                 {upcomingRenewals.map((r) => (
@@ -671,12 +660,10 @@ export default function DashboardPage() {
                 )}
               </Stack>
             </DashboardTile>
-          </Grid>
-        )}
-
-        {/* Insights: top items and top increases, OPEX or CAPEX per tile */}
-        {readableScopes.length > 0 && (
-          <Grid item xs={12} md={6} lg={4}>
+          </Box>
+    ) : null,
+    'top-lines': (readableScopes.length > 0) ? (
+          <Box key="top-lines" sx={tileLayoutSx()}>
             <DashboardTile
               icon="Leaderboard"
               title={t('dashboard.topItems')}
@@ -701,11 +688,10 @@ export default function DashboardPage() {
                 )}
               </Stack>
             </DashboardTile>
-          </Grid>
-        )}
-
-        {readableScopes.length > 0 && (
-          <Grid item xs={12} md={6} lg={4}>
+          </Box>
+    ) : null,
+    'top-increases': (readableScopes.length > 0) ? (
+          <Box key="top-increases" sx={tileLayoutSx()}>
             <DashboardTile
               icon="TrendingUp"
               title={t('dashboard.topIncreases')}
@@ -730,12 +716,10 @@ export default function DashboardPage() {
                 )}
               </Stack>
             </DashboardTile>
-          </Grid>
-        )}
-
-        {/* This year by cost center: the five largest, each opening the list on that cost center */}
-        {readableScopes.length > 0 && (
-          <Grid item xs={12} md={6} lg={4}>
+          </Box>
+    ) : null,
+    'cost-centers': (readableScopes.length > 0) ? (
+          <Box key="cost-centers" sx={tileLayoutSx()}>
             <DashboardTile
               icon="Groups"
               title={t('dashboard.byCostCenter')}
@@ -770,12 +754,10 @@ export default function DashboardPage() {
                 )}
               </Stack>
             </DashboardTile>
-          </Grid>
-        )}
-
-        {/* Recent updates: the last lines edited, both types mixed */}
-        {readableScopes.length > 0 && (
-          <Grid item xs={12} md={6} lg={4}>
+          </Box>
+    ) : null,
+    'recent-updates': (readableScopes.length > 0) ? (
+          <Box key="recent-updates" sx={tileLayoutSx()}>
             <DashboardTile icon="Update" title={t('dashboard.recentUpdates')}>
               <Stack spacing={0.5} sx={{ mt: 1 }}>
                 {recentUpdates.map((r) => (
@@ -799,9 +781,42 @@ export default function DashboardPage() {
                 )}
               </Stack>
             </DashboardTile>
-          </Grid>
+          </Box>
+    ) : null,
+  };
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <PageHeader
+        title={t('dashboard.overview')}
+        actions={(
+          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ width: '100%' }}>
+            {canCreateLines && (
+              <Button variant="outlined" size="small" startIcon={<AddIcon />} sx={QUICK_ACTION_SX} onClick={() => navigate('/ops/budget/new?nature=opex')}>
+                {t('dashboard.newOpexLine')}
+              </Button>
+            )}
+            {canCreateLines && (
+              <Button variant="outlined" size="small" startIcon={<AddIcon />} sx={QUICK_ACTION_SX} onClick={() => navigate('/ops/budget/new?nature=capex')}>
+                {t('dashboard.newCapexLine')}
+              </Button>
+            )}
+            {canCreateContracts && (
+              <Button variant="outlined" size="small" startIcon={<AddIcon />} sx={QUICK_ACTION_SX} onClick={() => navigate('/ops/contracts/new/overview')}>
+                {t('dashboard.newContract')}
+              </Button>
+            )}
+            <Box sx={{ flex: 1 }} />
+            <Button variant="action" size="small" startIcon={<SettingsIcon />} onClick={() => setSettingsOpen(true)} disabled={dashboardSettings.isLoading}>
+              {t('dashboard.budgetSettings.customize')}
+            </Button>
+          </Stack>
         )}
-      </Grid>
+      />
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, alignItems: 'start' }}>
+        {dashboardSettings.config.tiles.filter((tile) => tile.enabled).slice().sort((a, b) => a.order - b.order).map((tile) => tiles[tile.id])}
+      </Box>
+      <BudgetDashboardSettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} settings={dashboardSettings} columns={budgetColumns} canViewTile={canViewTile} />
     </Box>
   );
 }

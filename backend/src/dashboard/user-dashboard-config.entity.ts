@@ -31,6 +31,13 @@ export const DEFAULT_DASHBOARD_CONFIG: DashboardTileConfig[] = [
   { id: 'netbox-sync', enabled: false, order: 12, config: {} },
 ];
 
+export const BUDGET_AMOUNT_COLUMN_KEYS = ['budget', 'revision', 'forecast', 'follow_up', 'landing'] as const;
+
+export const DEFAULT_BUDGET_DASHBOARD_CONFIG: DashboardTileConfig[] = [
+  'budget', 'hygiene', 'my-budget', 'my-tasks', 'renewals',
+  'top-lines', 'top-increases', 'cost-centers', 'recent-updates',
+].map((id, index) => ({ id, enabled: true, order: index + 1, config: id === 'budget' ? { columns: null } : {} }));
+
 @Entity('user_dashboard_config')
 export class UserDashboardConfig {
   @PrimaryColumn('uuid')
@@ -45,6 +52,9 @@ export class UserDashboardConfig {
 
   @Column('jsonb', { default: '[]' })
   tiles!: DashboardTileConfig[];
+
+  @Column('jsonb', { default: '[]' })
+  budget_tiles!: DashboardTileConfig[];
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;

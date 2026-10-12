@@ -17,7 +17,7 @@ vi.mock('../hooks/useBudgetColumns', async (importOriginal) => {
   const state = await import('./reports/budgetColumnsTestState');
   return { ...actual, useBudgetColumns: () => state.mockedBudgetColumns(actual.resolveBudgetColumns) };
 });
-vi.mock('../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
+vi.mock('../api', () => ({ default: { get: vi.fn(), post: vi.fn(), put: vi.fn() } }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 const readable: Record<string, boolean> = { budget: true };
 let budgetWriter = true;
@@ -41,6 +41,9 @@ vi.mock('./workspace/tiles/DashboardTile', () => ({
 
 import api from '../api';
 import DashboardPage from './DashboardPage';
+import { DEFAULT_BUDGET_TILES } from './workspace/hooks/useBudgetDashboardConfig';
+let savedDashboard = { tiles: DEFAULT_BUDGET_TILES };
+beforeEach(() => { savedDashboard = { tiles: DEFAULT_BUDGET_TILES }; });
 import { setBudgetColumns } from './reports/budgetColumnsTestState';
 import { fakeAggregate } from '../test/fakeBudgetAggregate';
 
@@ -87,6 +90,7 @@ describe('DashboardPage budget snapshot', () => {
     post.mockResolvedValue({ data: fakeAggregate([], { query: {}, spec: { groupBy: [], measures: [] } }) });
     get.mockReset();
     get.mockImplementation(async (url: string) => {
+      if (url === '/dashboard/budget-config') return { data: savedDashboard };
       if (url === '/spend-items/summary/totals') return { data: { yBudget: 12000, yMinus1Revision: 3000, yForecast: 7000, yPlus1FollowUp: 9000 } };
       if (url === '/capex-items/summary/totals') return { data: { yBudget: 4000, yMinus1Revision: 2000, yForecast: 1000, yPlus1FollowUp: 6000 } };
       // Deliberately different from the sum: the Total row must use this response directly.
@@ -143,6 +147,7 @@ describe('DashboardPage budget snapshot', () => {
 
   it('keeps a column when the two natures cancel each other out', async () => {
     get.mockImplementation(async (url) => {
+      if (url === '/dashboard/budget-config') return { data: savedDashboard };
       if (url === '/spend-items/summary/totals') return { data: { yBudget: 4000 } };
       if (url === '/capex-items/summary/totals') return { data: { yBudget: -4000 } };
       if (url === '/budget-lines/summary/totals') return { data: { yBudget: 0 } };
@@ -156,6 +161,7 @@ describe('DashboardPage budget snapshot', () => {
 
   it('shows zero for missing amounts in the CAPEX totals response', async () => {
     get.mockImplementation(async (url) => {
+      if (url === '/dashboard/budget-config') return { data: savedDashboard };
       if (url === '/spend-items/summary/totals') return { data: { yBudget: 4000 } };
       if (url === '/capex-items/summary/totals') return { data: {} };
       if (url === '/budget-lines/summary/totals') return { data: { yBudget: 6000 } };
@@ -189,6 +195,7 @@ const budgetSlots = (previous: number, current: number) => ({
 /** Answers the summary endpoints by the kind of request the dashboard makes. */
 function mockBudgetEndpoints() {
   get.mockImplementation(async (url: string, config?: { params?: Record<string, any> }) => {
+    if (url === '/dashboard/budget-config') return { data: savedDashboard };
     const params = config?.params ?? {};
     if (url.endsWith('/summary/totals')) return { data: {} };
     if (url === '/tasks') {
@@ -317,7 +324,7 @@ describe('DashboardPage budget tiles', () => {
   ])('offers %s in the page header, opening its creation page', async (name, target) => {
     renderPage();
     const header = screen.getByRole('banner', { name: 'page header' });
-    expect(within(header).getAllByRole('button').map((b) => b.textContent)).toEqual(['dashboard.newOpexLine', 'dashboard.newCapexLine', 'dashboard.newContract']);
+    expect(within(header).getAllByRole('button').map((b) => b.textContent)).toEqual(['dashboard.newOpexLine', 'dashboard.newCapexLine', 'dashboard.newContract', 'dashboard.budgetSettings.customize']);
     fireEvent.click(within(header).getByRole('button', { name }));
     expect(screen.getByTestId('location')).toHaveTextContent(target);
     await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
@@ -327,19 +334,19 @@ describe('DashboardPage budget tiles', () => {
     budgetWriter = false;
     renderPage();
     await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
-    expect(within(screen.getByRole('banner', { name: 'page header' })).getAllByRole('button').map((b) => b.textContent)).toEqual(['dashboard.newContract']);
+    expect(within(screen.getByRole('banner', { name: 'page header' })).getAllByRole('button').map((b) => b.textContent)).toEqual(['dashboard.newContract', 'dashboard.budgetSettings.customize']);
   });
 
-  it('shows the budget line buttons without the contract right, and no header action without either', async () => {
+  it('keeps customization available when creation actions are hidden', async () => {
     contractsWriter = false;
     const view = renderPage();
     await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
-    expect(within(screen.getByRole('banner', { name: 'page header' })).getAllByRole('button').map((b) => b.textContent)).toEqual(['dashboard.newOpexLine', 'dashboard.newCapexLine']);
+    expect(within(screen.getByRole('banner', { name: 'page header' })).getAllByRole('button').map((b) => b.textContent)).toEqual(['dashboard.newOpexLine', 'dashboard.newCapexLine', 'dashboard.budgetSettings.customize']);
     view.unmount();
     budgetWriter = false;
     renderPage();
     await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
-    expect(within(screen.getByRole('banner', { name: 'page header' })).queryAllByRole('button')).toHaveLength(0);
+    expect(within(screen.getByRole('banner', { name: 'page header' })).getAllByRole('button').map((button) => button.textContent)).toEqual(['dashboard.budgetSettings.customize']);
   });
 
   it('orders the tiles: budget and hygiene, then the user\'s tiles, then the reports, recent updates last', async () => {
@@ -644,4 +651,46 @@ describe('DashboardPage budget tiles', () => {
     await waitFor(() => expect(summaryCalls('/budget-lines/summary').some((p) => p.sort === 'updated_at:DESC')).toBe(true));
     expect(summaryCalls('/budget-lines/summary').some((p) => /^y[A-Z]/.test(String(p.sort)))).toBe(false);
   });
+  it('uses the saved order and omits a hidden tile after loading the server settings', async () => {
+    savedDashboard = { tiles: DEFAULT_BUDGET_TILES.map((tile) => ({ ...tile, enabled: tile.id !== 'hygiene', order: 10 - tile.order })) };
+    renderPage();
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'dashboard.dataHygiene' })).not.toBeInTheDocument());
+    expect(screen.getAllByRole('region').map((tile) => tile.getAttribute('aria-label'))).toEqual([
+      'dashboard.recentUpdates', BY_COST_CENTER, TOP_INCREASES, TOP_ITEMS,
+      'dashboard.nextRenewals', 'dashboard.myTasks', MY_BUDGET, 'dashboard.budgetSnapshot',
+    ]);
+  });
+
+  it('keeps only the selected amount column and drops it when the tenant disables it', async () => {
+    savedDashboard = { tiles: DEFAULT_BUDGET_TILES.map((tile) => ({ ...tile, config: tile.id === 'budget' ? { columns: ['budget', 'forecast'] } : tile.config })) };
+    setBudgetColumns({ labels: TENANT_NAMES, enabled: { ...ALL_SHOWN, forecast: false } });
+    const original = get.getMockImplementation()! as (...args: any[]) => any;
+    get.mockImplementation((url: string, options?: any) => url.endsWith('/summary/totals') ? Promise.resolve({ data: { yBudget: 9000, yForecast: 5000 } }) : original(url, options));
+    renderPage();
+    const tile = await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
+    await within(tile).findByText('A0');
+    expect(within(tile).getAllByRole('columnheader').map((header) => header.textContent)).toEqual(['labels.year', 'ops:budget.type', 'A0']);
+  });
+
+  it('saves customization through the budget hook and restores defaults through its reset route', async () => {
+    const put = vi.mocked(api.put);
+    put.mockImplementation(async (_url: any, value: any) => { savedDashboard = value; return { data: value } as any; });
+    renderPage();
+    const button = await screen.findByRole('button', { name: 'dashboard.budgetSettings.customize' });
+    await waitFor(() => expect(button).toBeEnabled());
+    fireEvent.click(button);
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: 'dashboard.dataHygiene' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.save' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(put).toHaveBeenCalledWith('/dashboard/budget-config', expect.objectContaining({ tiles: expect.arrayContaining([expect.objectContaining({ id: 'hygiene', enabled: false })]) }));
+    expect(screen.queryByRole('region', { name: 'dashboard.dataHygiene' })).not.toBeInTheDocument();
+    const originalPost = post.getMockImplementation()! as (...args: any[]) => any;
+    post.mockImplementation((url: string, body?: any) => url === '/dashboard/budget-config/reset' ? Promise.resolve({ data: { tiles: DEFAULT_BUDGET_TILES } }) : originalPost(url, body));
+    fireEvent.click(button);
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'dashboard.settings.resetToDefaults' }));
+    await screen.findByRole('region', { name: 'dashboard.dataHygiene' });
+    expect(post).toHaveBeenCalledWith('/dashboard/budget-config/reset');
+  });
+
 });

@@ -381,7 +381,15 @@
       "netboxErrors_one": "{{count}} erreur",
       "netboxErrors_other": "{{count}} erreurs"
     },
-    "welcome": "Bienvenue"
+    "welcome": "Bienvenue",
+    "budgetSettings": {
+      "customize": "Personnaliser",
+      "title": "Réglages du tableau de bord du budget",
+      "columns": "Colonnes de montant",
+      "tenantColumns": "Colonnes du locataire",
+      "atLeastOne": "Choisissez au moins une colonne de montant.",
+      "saveFailed": "Impossible d’enregistrer les réglages du tableau de bord."
+    }
   },
   "csv": {
     "exportTitle": "Exporter en CSV",

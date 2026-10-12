@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, EntityManager } from 'typeorm';
+import { Repository, EntityManager, Raw } from 'typeorm';
 import {
   UserDashboardConfig,
   DashboardTileConfig,
   DEFAULT_DASHBOARD_CONFIG,
+  DEFAULT_BUDGET_DASHBOARD_CONFIG,
+  BUDGET_AMOUNT_COLUMN_KEYS,
 } from './user-dashboard-config.entity';
 import { UpdateDashboardConfigDto } from './dto/update-dashboard-config.dto';
 
@@ -59,7 +61,7 @@ export class DashboardService {
   ): Promise<{ tiles: DashboardTileConfig[] }> {
     const repo = this.getRepo(opts?.manager);
     const config = await repo.findOne({
-      where: { user_id: userId },
+      where: { user_id: userId, tenant_id: Raw((alias) => `${alias} = app_current_tenant()`) },
     });
 
     if (config) {
@@ -85,25 +87,15 @@ export class DashboardService {
   ): Promise<{ tiles: DashboardTileConfig[] }> {
     const repo = this.getRepo(opts?.manager);
 
-    // Check if config exists
-    const existing = await repo.findOne({
-      where: { user_id: userId },
-    });
+    const tiles = this.mergeWithDefaults(dto.tiles, true);
+    await this.writeTiles(repo, userId, 'tiles', tiles);
+    return { tiles };
+  }
 
-    if (existing) {
-      // Update existing config
-      existing.tiles = this.mergeWithDefaults(dto.tiles, true);
-      await repo.save(existing);
-      return { tiles: existing.tiles };
-    }
-
-    // Create new config (tenant_id will be set by default via app_current_tenant())
-    const newConfig = repo.create({
-      user_id: userId,
-      tiles: this.mergeWithDefaults(dto.tiles, true),
-    });
-    await repo.save(newConfig);
-    return { tiles: newConfig.tiles };
+  /** Update only the selected dashboard, including when two first saves race. */
+  private async writeTiles(repo: Repository<UserDashboardConfig>, userId: string, column: 'tiles' | 'budget_tiles', tiles: DashboardTileConfig[]) {
+    await repo.createQueryBuilder().insert().values({ user_id: userId, [column]: tiles, updated_at: new Date() })
+      .orUpdate([column, 'updated_at'], ['tenant_id', 'user_id']).execute();
   }
 
   /**
@@ -115,8 +107,8 @@ export class DashboardService {
   ): Promise<{ tiles: DashboardTileConfig[] }> {
     const repo = this.getRepo(opts?.manager);
 
-    // Delete existing config if any
-    await repo.delete({ user_id: userId });
+    // Preserve the budget dashboard when resetting the main dashboard.
+    await this.writeTiles(repo, userId, 'tiles', []);
 
     // Return default configuration
     return {
@@ -125,5 +117,43 @@ export class DashboardService {
         config: { ...tile.config },
       })),
     };
+  }
+
+  private mergeBudgetDefaults(tiles: DashboardTileConfig[]): DashboardTileConfig[] {
+    const byId = new Map(tiles.map((tile) => [tile.id, tile]));
+    return DEFAULT_BUDGET_DASHBOARD_CONFIG.map((fallback) => {
+      const existing = byId.get(fallback.id);
+      return { ...fallback, ...existing, config: { ...fallback.config, ...existing?.config } };
+    }).sort((a, b) => a.order - b.order).map((tile, index) => ({ ...tile, order: index + 1 }));
+  }
+
+  async getBudgetConfig(userId: string, opts?: ServiceOptions): Promise<{ tiles: DashboardTileConfig[] }> {
+    const row = await this.getRepo(opts?.manager).findOne({
+      where: { user_id: userId, tenant_id: Raw((alias) => `${alias} = app_current_tenant()`) },
+    });
+    return { tiles: this.mergeBudgetDefaults(row?.budget_tiles ?? []) };
+  }
+
+  async saveBudgetConfig(userId: string, dto: UpdateDashboardConfigDto, opts?: ServiceOptions): Promise<{ tiles: DashboardTileConfig[] }> {
+    const knownIds = new Set(DEFAULT_BUDGET_DASHBOARD_CONFIG.map((tile) => tile.id));
+    const seen = new Set<string>();
+    for (const tile of dto.tiles) {
+      if (!knownIds.has(tile.id) || seen.has(tile.id)) throw new BadRequestException('Unknown or duplicate budget tile');
+      seen.add(tile.id);
+      if (tile.id === 'budget' && tile.config.columns !== undefined && tile.config.columns !== null) {
+        const columns = tile.config.columns;
+        if (!Array.isArray(columns) || columns.length === 0 || columns.some((key) => !BUDGET_AMOUNT_COLUMN_KEYS.includes(key))) {
+          throw new BadRequestException('Choose at least one known amount column');
+        }
+      }
+    }
+    const tiles = this.mergeBudgetDefaults(dto.tiles);
+    await this.writeTiles(this.getRepo(opts?.manager), userId, 'budget_tiles', tiles);
+    return { tiles };
+  }
+
+  async resetBudgetConfig(userId: string, opts?: ServiceOptions): Promise<{ tiles: DashboardTileConfig[] }> {
+    await this.writeTiles(this.getRepo(opts?.manager), userId, 'budget_tiles', []);
+    return { tiles: this.mergeBudgetDefaults([]) };
   }
 }

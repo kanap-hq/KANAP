@@ -53,6 +53,21 @@ export class DashboardController {
     return this.svc.resetConfig(ctx.userId!, { manager: ctx.manager });
   }
 
+  @Get('budget-config')
+  async getBudgetConfig(@Tenant() ctx: TenantRequest) {
+    return this.svc.getBudgetConfig(ctx.userId!, { manager: ctx.manager });
+  }
+
+  @Put('budget-config')
+  async saveBudgetConfig(@Tenant() ctx: TenantRequest, @Body() dto: UpdateDashboardConfigDto) {
+    return this.svc.saveBudgetConfig(ctx.userId!, dto, { manager: ctx.manager });
+  }
+
+  @Post('budget-config/reset')
+  async resetBudgetConfig(@Tenant() ctx: TenantRequest) {
+    return this.svc.resetBudgetConfig(ctx.userId!, { manager: ctx.manager });
+  }
+
   // ==================== TILE DATA ENDPOINTS ====================
   // These require specific permissions based on the data they access
 
