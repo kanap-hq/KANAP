@@ -24,11 +24,10 @@ export type HeldBudgetChoices = {
   /** The waiting columns as the tenant names them, for the leave warning. */
   labels: string[];
   waiting: HeldWaitingColumn[];
-  /** A refused panel write (spread or lines), kept whole until each of its columns has a choice. */
+  /** A refused panel write (an amount or lines), kept whole until each of its columns has a choice. */
   parkedPanel: { body: Record<string, unknown>; main: AmountMeasure; columns: AmountMeasure[] } | null;
-  /** The values typed in the waiting cells and totals. */
+  /** The values typed in the waiting months. */
   cells: Array<{ period: string; col: AmountMeasure; value: number }>;
-  totals: Array<{ col: AmountMeasure; value: number | '' }>;
 };
 
 export type HeldAllocationChoice = {
