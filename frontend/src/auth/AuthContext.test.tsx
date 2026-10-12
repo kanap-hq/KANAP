@@ -1,12 +1,14 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import '../i18n';
 import { AuthProvider, useAuth } from './AuthContext';
 import { getAccessToken, setAccessToken } from './accessTokenStore';
 import { bumpSessionGeneration } from '../api';
 import ProtectedRoute from '../components/ProtectedRoute';
+import { cachedListContext, resetListContextCache, saveListContext } from '../lib/listContext';
+import { readStoredBudgetListContext, writeStoredBudgetListContext } from '../pages/budget/listContextStorage';
 
 // The real api.ts runs on a mocked axios: `refreshPost` is the /auth/refresh call, `instance`
 // serves every other request, `errorHandlers[0]` is the response interceptor of api.ts.
@@ -62,6 +64,15 @@ const me = {
   },
 };
 
+const otherUser = {
+  data: {
+    profile: { id: 'user-2', email: 'other@example.com' },
+    claims: { isGlobalAdmin: false, isBillingAdmin: false, permissions: { budget: 'reader' } },
+    subscription: null,
+    tenantAuth: null,
+  },
+};
+
 const serverUnavailableLine = 'Cannot reach the server. Retrying.';
 
 function networkError() {
@@ -111,7 +122,18 @@ function LocationProbe() {
 
 function IdentityProbe() {
   const { profile, claims } = useAuth();
-  return <div data-testid="identity">{profile || claims ? 'identity loaded' : 'no identity'}</div>;
+  return <div data-testid="identity">{profile || claims ? `identity loaded ${profile?.id ?? ''}` : 'no identity'}</div>;
+}
+
+function LoginPageStub() {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  return (
+    <div>
+      <div>Login Page</div>
+      <button type="button" onClick={() => { login(freshTokens.data); navigate('/', { replace: true }); }}>Sign in</button>
+    </div>
+  );
 }
 
 function HomePage() {
@@ -124,8 +146,10 @@ function HomePage() {
   );
 }
 
+let queryClient: QueryClient;
+
 function renderApp() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <MemoryRouter initialEntries={['/']}>
       <QueryClientProvider client={queryClient}>
@@ -133,7 +157,7 @@ function renderApp() {
           <LocationProbe />
           <IdentityProbe />
           <Routes>
-            <Route path="/login" element={<div>Login Page</div>} />
+            <Route path="/login" element={<LoginPageStub />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<HomePage />} />
             </Route>
@@ -170,6 +194,8 @@ describe('AuthProvider and ProtectedRoute', () => {
     // The api is down for /auth/logout unless a test says otherwise.
     http.instance.post.mockReset();
     http.instance.post.mockRejectedValue(networkError());
+    window.sessionStorage.clear();
+    resetListContextCache();
   });
 
   afterEach(() => {
@@ -277,5 +303,69 @@ describe('AuthProvider and ProtectedRoute', () => {
     expect(screen.getByTestId('identity')).toHaveTextContent('no identity');
     expect(screen.getByText('Login Page')).toBeInTheDocument();
     expect(screen.getByTestId('location')).toHaveTextContent('/login?sessionExpired=true');
+  });
+  describe('per-user state in the browser', () => {
+    const BUDGET_ROWS = ['budget-lines', 'summary', 'user-1'];
+    const BLANK_OWNER = JSON.stringify({ business_owner: { filterType: 'set', values: [null] } });
+
+    // What user 1 leaves in this tab: a budget list filter, cached rows, a saved list context.
+    async function leaveUserState() {
+      writeStoredBudgetListContext({ sort: '', q: '', filters: BLANK_OWNER, statusScope: 'enabled' });
+      queryClient.setQueryData(BUDGET_ROWS, { items: [{ id: 'line-1' }] });
+      http.instance.post.mockResolvedValueOnce({ data: { id: 'ctx-user-1' } });
+      await act(async () => {
+        await saveListContext('/budget-lines/summary', BLANK_OWNER);
+      });
+      expect(readStoredBudgetListContext()?.filters).toBe(BLANK_OWNER);
+      expect(queryClient.getQueryData(BUDGET_ROWS)).toBeDefined();
+      expect(cachedListContext('ctx-user-1')).toBeDefined();
+    }
+
+    function expectNoUserState() {
+      expect(readStoredBudgetListContext()).toBeNull();
+      expect(queryClient.getQueryData(BUDGET_ROWS)).toBeUndefined();
+      expect(cachedListContext('ctx-user-1')).toBeUndefined();
+    }
+
+    it('sign out then another user signs in: nothing of the first user is left in the tab', async () => {
+      await renderSignedIn();
+      await leaveUserState();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+      await advance();
+      expect(screen.getByText('Login Page')).toBeInTheDocument();
+      expectNoUserState();
+
+      http.instance.get.mockResolvedValue(otherUser);
+      fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+      await advance();
+      await advance();
+      expect(screen.getByText('Home Page')).toBeInTheDocument();
+      expect(screen.getByTestId('identity')).toHaveTextContent('identity loaded user-2');
+      expectNoUserState();
+    });
+
+    it('another user behind a new token (signed in from another tab): the first user\'s state is dropped', async () => {
+      await renderSignedIn();
+      await leaveUserState();
+
+      http.instance.get.mockResolvedValue(otherUser);
+      act(() => setAccessToken('other-user-token', Date.now() + 900_000));
+      await advance();
+      expect(screen.getByTestId('identity')).toHaveTextContent('identity loaded user-2');
+      expectNoUserState();
+    });
+
+    it('a new token for the same user keeps the state of the tab', async () => {
+      await renderSignedIn();
+      await leaveUserState();
+
+      act(() => setAccessToken('next-access-token', Date.now() + 900_000));
+      await advance();
+      expect(screen.getByTestId('identity')).toHaveTextContent('identity loaded user-1');
+      expect(readStoredBudgetListContext()?.filters).toBe(BLANK_OWNER);
+      expect(queryClient.getQueryData(BUDGET_ROWS)).toBeDefined();
+      expect(cachedListContext('ctx-user-1')).toBeDefined();
+    });
   });
 });

@@ -48,3 +48,13 @@ export function writeStoredBudgetListContext(snapshot: BudgetListContextSnapshot
     // ignore storage errors (quota, disabled storage, etc.)
   }
 }
+
+/** Forgets the stored list context: it belongs to the user signed in (`clearUserClientState`). */
+export function clearStoredBudgetListContext(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore storage errors (disabled storage, etc.)
+  }
+}
