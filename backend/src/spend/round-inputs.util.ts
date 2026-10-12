@@ -190,6 +190,8 @@ export type RoundInputsContext = {
   version: AmountVersion;
   userId: string | null;
   audit: Pick<AuditService, 'log'>;
+  /** The action of the record's audit rows; by default `create`, `update` or `delete`. A restore writes `restored`. */
+  auditAction?: 'restored';
 };
 
 export function isRoundMeasure(value: unknown): value is AmountMeasure {
@@ -476,7 +478,7 @@ export async function saveRoundInput(
     {
       table: auditTableOf(ctx.scope, ROUND_TABLE[ctx.scope]),
       recordId: saved.id,
-      action: stored ? 'update' : 'create',
+      action: ctx.auditAction ?? (stored ? 'update' : 'create'),
       // The lines ride along when they change: one audit row per column write.
       before: stored && linesChanged ? { ...stored, lines: storedLines } : stored,
       after: linesChanged ? { ...saved, lines: savedLines } : saved,
@@ -527,7 +529,7 @@ export async function deleteRoundInput(ctx: RoundInputsContext, rawMeasure: stri
     {
       table: auditTableOf(ctx.scope, ROUND_TABLE[ctx.scope]),
       recordId: stored.id,
-      action: 'delete',
+      action: ctx.auditAction ?? 'delete',
       before: lines.length ? { ...stored, lines } : stored,
       after: null,
       userId: ctx.userId,
