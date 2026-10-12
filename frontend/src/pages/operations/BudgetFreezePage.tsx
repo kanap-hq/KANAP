@@ -82,64 +82,67 @@ export default function BudgetFreezePage() {
       {!canModify && <Alert severity="info">{t('operations.budgetAdminOnly')}</Alert>}
       {errorMessage && <Alert severity="error" onClose={() => setErrorMessage(null)}>{errorMessage}</Alert>}
       {error && <Alert severity="error">{t('operations.freeze.loadError')}</Alert>}
-      <YearTabs currentYear={year} availableYears={years} disabled={pending.size > 0}
-        onYearChange={(y) => { setYear(y); setErrorMessage(null); }} />
-      <Box sx={{ overflowX: 'auto' }}>
-        <Table size="small" aria-label={t('operations.freeze.title')} sx={{
-          maxWidth: 640,
-          '& th': { fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', borderColor: 'kanap.border.default' },
-          '& tbody th': { fontSize: 13, fontWeight: 400, color: 'kanap.text.primary', borderColor: 'kanap.border.soft' },
-          '& td': { fontSize: 13, fontWeight: 400, color: 'kanap.text.primary', borderColor: 'kanap.border.soft' },
-        }}>
-          <TableHead><TableRow>
-            <TableCell>{t('operations.freeze.column')}</TableCell>
-            {NATURES.map((nature) => <TableCell key={nature}>{t(`budget.${nature}`)}</TableCell>)}
-            {canModify && <TableCell />}
-          </TableRow></TableHead>
-          <TableBody>
-            {budgetColumns.all.map(({ freezeKey: col, label, enabled }) => {
-              const allFrozen = NATURES.every((nature) => isFrozen(nature, col));
-              const rowPending = NATURES.some((nature) => pending.has(cellKey(nature, col)));
-              return <TableRow key={col}>
-                <TableCell component="th" scope="row">
-                  {label}
-                  {!enabled && <Typography component="span" sx={{ ml: 1, fontSize: 12, color: 'kanap.text.tertiary' }}>{t('operations.freeze.hidden')}</Typography>}
-                </TableCell>
-                {NATURES.map((nature) => {
-                  const frozen = isFrozen(nature, col);
-                  const stateLabel = frozen ? t('operations.freeze.frozen') : t('operations.freeze.open');
-                  const icon = frozen ? <LockOutlinedIcon /> : <LockOpenOutlinedIcon />;
-                  const cellLabel = t('operations.freeze.cell', { column: label, nature: t(`budget.${nature}`) });
-                  return <TableCell key={nature}>
-                    {!data ? null : canModify ? (
-                      <Button
-                        size="small" aria-label={cellLabel} aria-pressed={frozen} sx={cellSx(frozen)}
-                        startIcon={icon} disabled={!editable || pending.has(cellKey(nature, col))}
-                        onClick={() => change(!frozen, [nature], col)}
-                      >
-                        {stateLabel}
-                      </Button>
-                    ) : (
-                      <Stack direction="row" alignItems="center" spacing={0.5} aria-label={`${cellLabel}: ${stateLabel}`}
-                        sx={{ fontSize: 12, fontWeight: frozen ? 500 : 400, color: frozen ? 'kanap.text.primary' : 'kanap.text.tertiary', '& .MuiSvgIcon-root': { fontSize: 14 } }}>
-                        {icon}<span>{stateLabel}</span>
-                      </Stack>
-                    )}
-                  </TableCell>;
-                })}
-                {canModify && <TableCell>
-                  {data && <Button
-                    variant="text" size="small" sx={rowActionSx} disabled={!editable || rowPending}
-                    // Only the natures to change: freezing a frozen Budget again would pin the latest FX rates.
-                    onClick={() => change(!allFrozen, NATURES.filter((nature) => isFrozen(nature, col) === allFrozen), col)}
-                  >
-                    {allFrozen ? t('operations.freeze.unfreezeBoth') : t('operations.freeze.freezeBoth')}
-                  </Button>}
-                </TableCell>}
-              </TableRow>;
-            })}
-          </TableBody>
-        </Table>
+      {/* The year tabs sit centred over the matrix, which keeps its width. */}
+      <Box sx={{ maxWidth: 640, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <YearTabs currentYear={year} availableYears={years} disabled={pending.size > 0}
+          onYearChange={(y) => { setYear(y); setErrorMessage(null); }} />
+        <Box sx={{ overflowX: 'auto' }}>
+          <Table size="small" aria-label={t('operations.freeze.title')} sx={{
+            maxWidth: 640,
+            '& th': { fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', borderColor: 'kanap.border.default' },
+            '& tbody th': { fontSize: 13, fontWeight: 400, color: 'kanap.text.primary', borderColor: 'kanap.border.soft' },
+            '& td': { fontSize: 13, fontWeight: 400, color: 'kanap.text.primary', borderColor: 'kanap.border.soft' },
+          }}>
+            <TableHead><TableRow>
+              <TableCell>{t('operations.freeze.column')}</TableCell>
+              {NATURES.map((nature) => <TableCell key={nature}>{t(`budget.${nature}`)}</TableCell>)}
+              {canModify && <TableCell />}
+            </TableRow></TableHead>
+            <TableBody>
+              {budgetColumns.all.map(({ freezeKey: col, label, enabled }) => {
+                const allFrozen = NATURES.every((nature) => isFrozen(nature, col));
+                const rowPending = NATURES.some((nature) => pending.has(cellKey(nature, col)));
+                return <TableRow key={col}>
+                  <TableCell component="th" scope="row">
+                    {label}
+                    {!enabled && <Typography component="span" sx={{ ml: 1, fontSize: 12, color: 'kanap.text.tertiary' }}>{t('operations.freeze.hidden')}</Typography>}
+                  </TableCell>
+                  {NATURES.map((nature) => {
+                    const frozen = isFrozen(nature, col);
+                    const stateLabel = frozen ? t('operations.freeze.frozen') : t('operations.freeze.open');
+                    const icon = frozen ? <LockOutlinedIcon /> : <LockOpenOutlinedIcon />;
+                    const cellLabel = t('operations.freeze.cell', { column: label, nature: t(`budget.${nature}`) });
+                    return <TableCell key={nature}>
+                      {!data ? null : canModify ? (
+                        <Button
+                          size="small" aria-label={cellLabel} aria-pressed={frozen} sx={cellSx(frozen)}
+                          startIcon={icon} disabled={!editable || pending.has(cellKey(nature, col))}
+                          onClick={() => change(!frozen, [nature], col)}
+                        >
+                          {stateLabel}
+                        </Button>
+                      ) : (
+                        <Stack direction="row" alignItems="center" spacing={0.5} aria-label={`${cellLabel}: ${stateLabel}`}
+                          sx={{ fontSize: 12, fontWeight: frozen ? 500 : 400, color: frozen ? 'kanap.text.primary' : 'kanap.text.tertiary', '& .MuiSvgIcon-root': { fontSize: 14 } }}>
+                          {icon}<span>{stateLabel}</span>
+                        </Stack>
+                      )}
+                    </TableCell>;
+                  })}
+                  {canModify && <TableCell>
+                    {data && <Button
+                      variant="text" size="small" sx={rowActionSx} disabled={!editable || rowPending}
+                      // Only the natures to change: freezing a frozen Budget again would pin the latest FX rates.
+                      onClick={() => change(!allFrozen, NATURES.filter((nature) => isFrozen(nature, col) === allFrozen), col)}
+                    >
+                      {allFrozen ? t('operations.freeze.unfreezeBoth') : t('operations.freeze.freezeBoth')}
+                    </Button>}
+                  </TableCell>}
+                </TableRow>;
+              })}
+            </TableBody>
+          </Table>
+        </Box>
       </Box>
     </Box>
   );
