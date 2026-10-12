@@ -95,7 +95,7 @@ describe('DashboardPage budget snapshot', () => {
     expect(screen.queryByRole('region', { name: 'dashboard.opexSnapshot' })).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'dashboard.capexSnapshot' })).not.toBeInTheDocument();
     const headers = within(tile).getAllByRole('columnheader').map((h) => h.textContent);
-    expect(headers).toEqual(['labels.year', 'ops:operations.scope.label', 'A0', 'A1', 'A2', 'A3']);
+    expect(headers).toEqual(['labels.year', 'ops:budget.type', 'A0', 'A1', 'A2', 'A3']);
     const rows = within(tile).getAllByRole('row').slice(1);
     const amounts = rows.map((row) => within(row).getAllByRole('link').map((link) => link.textContent));
     expect(amounts).toEqual([
@@ -126,7 +126,7 @@ describe('DashboardPage budget snapshot', () => {
     await within(tile).findByText('ops:operations.budgetColumns.budget');
     const headers = within(tile).getAllByRole('columnheader').map((h) => h.textContent);
     expect(headers).toEqual([
-      'labels.year', 'ops:operations.scope.label',
+      'labels.year', 'ops:budget.type',
       'ops:operations.budgetColumns.budget',
       'ops:operations.budgetColumns.revision',
       'ops:operations.budgetColumns.followUp',

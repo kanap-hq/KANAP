@@ -404,7 +404,7 @@ export default function DashboardPage() {
       <PageHeader title={t('dashboard.overview')} />
       <Grid container spacing={3}>
         {canOpex && (
-          <Grid item xs={12} md={6} lg={4}>
+          <Grid item xs={12} lg={8}>
             <DashboardTile
               icon="AccountBalanceWallet"
               title={t('dashboard.budgetSnapshot')}
@@ -417,11 +417,11 @@ export default function DashboardPage() {
                 <Typography variant="body1" color="text.secondary">{t('labels.noData')}</Typography>
               ) : (
                 <TableContainer>
-                  <Table size="small" sx={{ '& th, & td': { py: 0.75 } }}>
+                  <Table size="small" sx={{ '& th, & td': { py: 0.75, whiteSpace: 'nowrap' }, '& td[rowspan]': { verticalAlign: 'top' } }}>
                     <TableHead>
                       <TableRow>
                         <TableCell sx={{ fontWeight: 500 }}>{t('labels.year')}</TableCell>
-                        <TableCell sx={{ fontWeight: 500 }}>{t('ops:operations.scope.label')}</TableCell>
+                        <TableCell sx={{ fontWeight: 500 }}>{t('ops:budget.type')}</TableCell>
                         {snapshotColumns.map((column) => (
                           <TableCell key={column.key} align="right" sx={{ fontWeight: 500, minWidth: 76 }}>{column.label}</TableCell>
                         ))}
