@@ -1,13 +1,13 @@
 import React from 'react';
 import {
-  Alert, Box, Button, MenuItem, Select, Stack,
+  Alert, Box, Button, Stack,
   Table, TableBody, TableCell, TableHead, TableRow, Typography,
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined';
 import PageHeader from '../../components/PageHeader';
 import { PropertyRow } from '../../components/design/PropertyRow';
-import { drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
+import YearTabs from '../../components/navigation/YearTabs';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import { FreezeColumn, freezeTargets, FreezeTarget, unfreezeTargets } from '../../services/freeze';
@@ -82,17 +82,8 @@ export default function BudgetFreezePage() {
       {!canModify && <Alert severity="info">{t('operations.budgetAdminOnly')}</Alert>}
       {errorMessage && <Alert severity="error" onClose={() => setErrorMessage(null)}>{errorMessage}</Alert>}
       {error && <Alert severity="error">{t('operations.freeze.loadError')}</Alert>}
-      <Stack direction="row" spacing={2} alignItems="center">
-        <PropertyRow label={t('operations.freeze.year')}>
-          <Select
-            variant="standard" sx={{ ...drawerSelectSx, width: 120 }} value={year}
-            SelectDisplayProps={{ 'aria-label': t('operations.freeze.year') }} disabled={pending.size > 0}
-            onChange={(e) => { setYear(Number(e.target.value)); setErrorMessage(null); }}
-          >
-            {years.map((y) => <MenuItem key={y} value={y} sx={drawerMenuItemSx}>{y}</MenuItem>)}
-          </Select>
-        </PropertyRow>
-      </Stack>
+      <YearTabs currentYear={year} availableYears={years} disabled={pending.size > 0}
+        onYearChange={(y) => { setYear(y); setErrorMessage(null); }} />
       <Box sx={{ overflowX: 'auto' }}>
         <Table size="small" aria-label={t('operations.freeze.title')} sx={{
           maxWidth: 640,

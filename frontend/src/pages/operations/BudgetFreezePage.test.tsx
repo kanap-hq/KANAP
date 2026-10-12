@@ -95,8 +95,7 @@ describe('BudgetFreezePage', () => {
 
   it('freezes one open cell with one request and one entry', async () => {
     renderPage();
-    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'operations.freeze.year' }));
-    fireEvent.click(screen.getByRole('option', { name: '2027' }));
+    fireEvent.click(screen.getByRole('tab', { name: '2027' }));
     fireEvent.click(cell('A0', 'budget.capex'));
     await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
     expect(post).toHaveBeenCalledWith('/freeze-states/freeze', { year: 2027, scopes: [{ scope: 'capex', columns: ['budget'] }] });
@@ -146,7 +145,7 @@ describe('BudgetFreezePage', () => {
     frozenOpex.columns = ['budget'];
     renderPage();
     expect(screen.getByText('operations.budgetAdminOnly')).toBeInTheDocument();
-    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    expect(within(screen.getByRole('table')).queryAllByRole('button')).toHaveLength(0);
     expect(screen.getByLabelText('A0, budget.opex: operations.freeze.frozen')).toBeInTheDocument();
     fireEvent.click(screen.getByLabelText('A0, budget.capex: operations.freeze.open'));
     expect(post).not.toHaveBeenCalled();
