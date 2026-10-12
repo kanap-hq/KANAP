@@ -1494,7 +1494,8 @@
       "failed": "No se pudo restaurar la columna.",
       "frozenNow": "{{column}} se congeló mientras tanto: no se restauró.",
       "others": "{{column}}: modificada por otra persona desde la apertura, no restaurada.",
-      "othersAt": "{{column}}: modificada por otra persona a las {{time}}, no restaurada."
+      "othersAt": "{{column}}: modificada por otra persona a las {{time}}, no restaurada.",
+      "notRun": "No se restauró nada: un cambio no se pudo guardar antes."
     }
   },
   "budget": {

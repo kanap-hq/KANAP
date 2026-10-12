@@ -570,6 +570,8 @@ describe('BudgetTab columns and cards', () => {
   it('the save response refreshes the card', async () => {
     const server = setupApi({ empty: true });
     routePosts(async () => {
+      // Spread over April to December, as the server stores it.
+      server.items = Array.from({ length: 9 }, (_, i) => ({ period: period(i + 4), planned: '1333.33' }));
       server.roundInputs = [record({})];
       return { updated: 9, round_inputs: [record({})] };
     });
@@ -2626,13 +2628,21 @@ describe('BudgetTab start from another column', () => {
     });
   });
 
-  it('is offered on an empty column only: not on one with a record, not on a frozen one, not without a source', async () => {
-    setupApi({ monthValues: { forecast: '0', actual: '0' }, frozen: ['actual'], roundInputs: [record({ measure: 'forecast', period_start: '2026-01-01' })] });
+  it('is offered on an empty column only: not on one with lines, not on a frozen one, not without a source', async () => {
+    // Forecast keeps lines with its zeros: something is entered.
+    setupApi({ monthValues: { forecast: '0', actual: '0' }, frozen: ['actual'], roundInputs: [record({ measure: 'forecast', period_start: '2026-01-01', method: 'manual', lines: [storedLine()] })] });
     renderTab();
     await waitForAmounts();
     pick('forecast');
     expect(screen.queryByTestId('start-from')).toBeNull();
     pick('actual');
+    expect(screen.queryByTestId('start-from')).toBeNull();
+    cleanup();
+
+    // No other column holds an amount: nothing to start from.
+    setupApi({ empty: true });
+    renderTab();
+    await waitForAmounts();
     expect(screen.queryByTestId('start-from')).toBeNull();
   });
 });
@@ -2956,6 +2966,210 @@ describe('BudgetTab back to the opening values', () => {
     view.rerender(<Page lineId="line-2" />);
     expect(seen[2]).not.toBe(kept);
     expect(seen[2]!.lineId).toBe('line-2');
+  });
+});
+
+/** The column's months as the server holds them now, as a restore's base says them. */
+function storedColumn(state: ReturnType<typeof setupApi>, col: string) {
+  return replayWrites(state.items, savedAmountBodies()).map((m) => Number(m[col] || 0).toFixed(2));
+}
+
+/** Restores the server compares with its months, as lot B does: a base that is not what it holds is refused (409). */
+function serveComparedRestores(state: ReturnType<typeof setupApi>) {
+  serveRestores(state, (body) => {
+    if (body.kind !== 'restore') return null;
+    const now = storedColumn(state, body.measure);
+    return JSON.stringify(body.base.columns[body.measure].months) === JSON.stringify(now) ? null : columnConflict(body.measure, now, { current_lines: [] });
+  });
+}
+
+describe('BudgetTab back to the opening values, what the screen wrote (fix round 2)', () => {
+  it("a monthly save takes only the months it sent: someone else's month in between is never restored over", async () => {
+    const state = setupApi({ roundInputs: [wholeYearFlat('planned')] });
+    serveComparedRestores(state);
+    const { ref } = renderTab();
+    await waitForAmounts();
+    // January saved by this screen.
+    typeMonth('planned', 1, '2000');
+    expect(await flush(ref)).toBe(true);
+    // A colleague sets June; the next save of February answers it, and the reload shows it.
+    state.items[5].planned = '5000';
+    typeMonth('planned', 2, '2000');
+    expect(await flush(ref)).toBe(true);
+    await waitFor(() => expect(cellValue('planned', 6)).toBe('5 000'));
+
+    fireEvent.click(restoreButton());
+    const banner = await screen.findByRole('region');
+    // The base: the two months this screen wrote, the opening value elsewhere (June included).
+    const base = twelve('1000.00'); base[0] = '2000.00'; base[1] = '2000.00';
+    expect(bulkBodies('restore')).toHaveLength(1);
+    expect(bulkBodies('restore')[0].base).toEqual({ columns: { planned: { months: base, lines: [] } } });
+    expect(await screen.findByTestId('restore-notice')).toHaveTextContent(/Budget: changed by Marie Dupont at /);
+    expect(card('planned')).toHaveAttribute('data-waiting', 'true');
+    expect(within(banner).getByRole('button', { name: /editConflict\.column\.applyMine/ })).toBeInTheDocument();
+    // June stays the colleague's.
+    expect(storedColumn(state, 'planned')[5]).toBe('5000.00');
+  });
+
+  it('a monthly save on a column with lines keeps the lines first read as its base', async () => {
+    const lines = record({ measure: 'committed', period_start: '2026-01-01', method: 'manual', lines: [storedLine()], fte: '0.40' });
+    const state = setupApi({ roundInputs: [lines] });
+    serveRestores(state);
+    const { ref } = renderTab();
+    await waitForAmounts();
+    typeMonth('committed', 3, '450');
+    expect(await flush(ref)).toBe(true);
+    fireEvent.click(restoreButton());
+    await screen.findByTestId('restore-notice');
+    const typed = twelve('900.00'); typed[2] = '450.00';
+    expect(bulkBodies('restore')[0].base).toEqual({ columns: { committed: { months: typed, lines: [linePayloadOf(storedLine())] } } });
+  });
+
+  it("« Use for other columns too » counts a column as written only when the server spread the total the screen knew", async () => {
+    const openings = { current: null } as React.MutableRefObject<OpeningValues | null>;
+    const state = setupApi({ roundInputs: COLUMNS.map((c) => wholeYearFlat(c)) });
+    serveRestores(state);
+    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { openings });
+    await waitForAmounts();
+    typeAmount('24000');
+    await settle();
+    // A colleague changes Revision; this screen has not reloaded it.
+    state.items.forEach((row) => { row.committed = '950'; });
+
+    fireEvent.click(within(editor()).getByRole('button', { name: 'Use for other columns too…' }));
+    for (const box of within(editor()).getAllByRole('checkbox')) {
+      const name = box.closest('label')?.textContent;
+      const wanted = name === 'Revision' || name === 'Actuals';
+      if ((box as HTMLInputElement).checked !== wanted) fireEvent.click(box);
+    }
+    fireEvent.click(within(editor()).getByRole('button', { name: 'Apply' }));
+    await waitFor(() => expect(bulkBodies('annual')).toHaveLength(2));
+    expect(bulkBodies('annual')[1].also_measures).toEqual(['committed', 'actual']);
+    await settle();
+    // The server spread each one from its stored total: Actuals' is the one the screen knew, Revision's is not.
+    const written = openings.current!.years.get(YEAR)!.written;
+    expect(written.actual?.months).toEqual(Array.from({ length: 12 }, () => 80000));
+    expect(written.committed).toBeUndefined();
+    await waitFor(() => expect(card('committed')).toHaveTextContent('11 400'));
+
+    fireEvent.click(restoreButton());
+    const notice = await screen.findByTestId('restore-notice');
+    expect(notice).toHaveTextContent('Revision: changed by someone else since the opening, not restored.');
+    expect(bulkBodies('restore').map((b) => b.measure)).toEqual(['planned']);
+    expect(storedColumn(state, 'committed')).toEqual(twelve('950.00'));
+  });
+
+  it('a restore under way is pending and saving until its reload is shown', async () => {
+    const state = setupApi({ roundInputs: [wholeYearFlat('planned')] });
+    serveRestores(state);
+    const { ref } = renderTab();
+    await waitForAmounts();
+    typeAmount('24000');
+    await settle();
+    expect(ref.current!.hasPending()).toBe(false);
+
+    // The reload after the restore is held.
+    const serve = mocked.get.getMockImplementation() as (url: string, ...rest: unknown[]) => Promise<unknown>;
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    mocked.get.mockImplementation(async (url: string, ...rest: unknown[]) => {
+      if (url === '/spend-versions/v1/amounts' && bulkBodies('restore').length > 0) await held;
+      return serve(url, ...rest);
+    });
+    fireEvent.click(restoreButton());
+    await waitFor(() => expect(bulkBodies('restore')).toHaveLength(1));
+    await settle();
+    expect(screen.queryByTestId('restore-notice')).toBeNull();
+    expect(ref.current!.hasPending()).toBe(true);
+    expect(ref.current!.isSaving()).toBe(true);
+    expect(ref.current!.isDirty()).toBe(true);
+
+    await act(async () => { release(); });
+    await screen.findByTestId('restore-notice');
+    expect(ref.current!.hasPending()).toBe(false);
+    expect(ref.current!.isSaving()).toBe(false);
+  });
+
+  it('a save that fails before the restore stops it, and the note says nothing was restored', async () => {
+    const state = setupApi({ roundInputs: [wholeYearFlat('planned')] });
+    serveRestores(state);
+    renderTab();
+    await waitForAmounts();
+    typeAmount('24000');
+    await settle();
+    typeMonth('committed', 3, '450');
+    mocked.post.mockRejectedValueOnce(new Error('network down'));
+    fireEvent.click(restoreButton());
+    const notice = await screen.findByTestId('restore-notice');
+    expect(notice).toHaveTextContent(/^Nothing was restored: a change could not be saved first\./);
+    expect(bulkBodies('restore')).toHaveLength(0);
+  });
+});
+
+describe('BudgetTab table kept open (fix round 2)', () => {
+  it('a column waiting for a choice opens the table, even after Hide, and offers no Hide meanwhile', async () => {
+    setupApi({ roundInputs: COLUMNS.map((c) => wholeYearFlat(c)) });
+    renderTab();
+    await waitForAmounts();
+    showDetail();
+    fireEvent.click(screen.getByRole('button', { name: 'Hide the detail' }));
+    expect(screen.queryByTestId('monthly-result')).toBeNull();
+
+    refuseBulk((body, call) => (call === 1 ? columnConflict('planned', twelve('1100.00'), { periods: [] }) : null));
+    typeAmount('24000');
+    const banner = await screen.findByRole('region');
+    expect(screen.getByTestId('monthly-result')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Hide the detail' })).toBeNull();
+
+    // The choice made, the user's Hide applies again.
+    fireEvent.click(within(banner).getByRole('button', { name: /editConflict\.column\.keepTheirs/ }));
+    await waitFor(() => expect(screen.queryByRole('region')).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId('monthly-result')).toBeNull());
+  });
+
+  it('typed by month: the table stays open with no Hide', async () => {
+    setupApi({ roundInputs: COLUMNS.map((c) => wholeYearFlat(c)) });
+    renderTab();
+    await waitForAmounts();
+    fireEvent.click(modeTab('By month'));
+    fireEvent.click(switchButton());
+    expect(screen.getByTestId('monthly-result')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Hide the detail' })).toBeNull();
+  });
+});
+
+describe('BudgetTab column empty with a record of zeros (fix round 2)', () => {
+  it('reads « Not entered yet », offers « Start from », folds the table, and the copy goes over its base', async () => {
+    // A copy or a seed left Revision « spread flat » over the year, at zero.
+    const state = setupApi({ monthValues: { committed: '0' }, roundInputs: COLUMNS.map((c) => wholeYearFlat(c)) });
+    routePosts(async (body) => {
+      if (body.kind === 'copy') state.items.forEach((row) => { row.committed = '1000'; });
+      return { updated: 12 };
+    });
+    renderTab();
+    await waitForAmounts();
+    expect(periodLine('committed')).toHaveTextContent(/^Not entered yet$/);
+    expect(screen.getByTestId('result-folded')).toHaveTextContent('All columns are spread flat over the whole year');
+
+    pick('committed');
+    const start = screen.getByTestId('start-from');
+    fireEvent.click(within(start).getByRole('button', { name: 'Copy' }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1]).toEqual({
+      kind: 'copy', year: YEAR, source: 'planned', measure: 'committed', percentage: 0,
+      base: { columns: { committed: { months: twelve('0.00'), lines: [] } } },
+    });
+    await waitFor(() => expect(card('committed')).toHaveTextContent('12 000'));
+    expect(screen.queryByTestId('start-from')).toBeNull();
+  });
+
+  it('months at zero with lines are entered: no « Start from », the card says the lines', async () => {
+    setupApi({ monthValues: { committed: '0' }, roundInputs: [linesRecord([storedLine()], { measure: 'committed' })] });
+    renderTab();
+    await waitForAmounts();
+    expect(periodLine('committed')).not.toHaveTextContent('Not entered yet');
+    pick('committed');
+    expect(screen.queryByTestId('start-from')).toBeNull();
   });
 });
 

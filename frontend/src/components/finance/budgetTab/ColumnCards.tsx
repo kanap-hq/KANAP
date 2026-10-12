@@ -19,7 +19,7 @@ const multilineTooltip = { tooltip: { sx: { whiteSpace: 'pre-line' } } } as cons
  * month in the year says that. Hover lists the column's lines.
  */
 export function ColumnHowText({ tab, col, testId }: { tab: BudgetTabState; col: AmountCol; testId?: string }) {
-  const { t, locale, year, loaded, recordFor, periodFor, roundInputs, storedAmounts, currentCents, labelFor } = tab;
+  const { t, locale, year, loaded, recordFor, periodFor, roundInputs, storedAmounts, isEmptyColumn, labelFor } = tab;
   // Until this year's data is in, the previous year's periods would be read against this year.
   if (!loaded) return <Box data-testid={testId} sx={{ minHeight: '1.4em' }} />;
   const record = recordFor(col);
@@ -29,7 +29,8 @@ export function ColumnHowText({ tab, col, testId }: { tab: BudgetTabState; col: 
     : isOneDay(period.start, period.end) && periodMonths(year, period.start, period.end).length > 0
       ? t('budgetTab.atDate', { date: longDate(locale, period.start) })
       : periodText(t, locale, periodMonths(year, period.start, period.end));
-  const empty = !record && currentCents(col) === 0;
+  // Nothing entered, whatever record a copy or a seed left with its zeros.
+  const empty = isEmptyColumn(col);
   // The chip, one block per line of it, as units that wrap whole ("Quantity and price ·" then "3
   // lines · 1.00 FTE"); a unit longer than the line still wraps inside it.
   const chip = chipLines(t, locale, record, labelFor).map((units, line) => (

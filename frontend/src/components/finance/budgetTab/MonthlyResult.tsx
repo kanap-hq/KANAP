@@ -72,7 +72,7 @@ export function differenceText(locale: string, total: number, reference: number)
 export default function MonthlyResult({ tab, i18nPrefix, currency }: { tab: BudgetTabState; i18nPrefix: string; currency?: string }) {
   const {
     t, locale, year, loading, loaded, shown, months, totals, activeCol, activeMode, isFrozen, waitingSet, cellWaits,
-    modeSwitch, stableMonthChange, registerCell, onCellClick, labelFor, gridOpen, toggleGrid, allEmpty, diffCol, setDiffCol,
+    modeSwitch, stableMonthChange, registerCell, onCellClick, labelFor, gridOpen, gridForced, toggleGrid, allEmpty, diffCol, setDiffCol,
   } = tab;
   const compared = shown.length > 1;
   // The active column is typed in the table while it is built month by month (and not about to change).
@@ -104,9 +104,12 @@ export default function MonthlyResult({ tab, i18nPrefix, currency }: { tab: Budg
               </TextField>
             </Box>
           )}
-          <Link component="button" type="button" onClick={toggleGrid} aria-expanded={gridOpen} sx={{ fontSize: 12 }}>
-            {gridOpen ? t('budgetTab.result.hide') : t('budgetTab.result.show')}
-          </Link>
+          {/* Kept open while a column waits for a choice or is typed by month: nothing to hide then. */}
+          {!gridForced && (
+            <Link component="button" type="button" onClick={toggleGrid} aria-expanded={gridOpen} sx={{ fontSize: 12 }}>
+              {gridOpen ? t('budgetTab.result.hide') : t('budgetTab.result.show')}
+            </Link>
+          )}
         </Box>
       </Box>
       {!gridOpen ? (

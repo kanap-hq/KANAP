@@ -1495,7 +1495,8 @@
       "failed": "La colonne n'a pas pu être restaurée.",
       "frozenNow": "{{column}} a été gelée entre-temps : elle n'a pas été restaurée.",
       "others": "{{column}} : modifiée par une autre personne depuis l'ouverture, non restaurée.",
-      "othersAt": "{{column}} : modifiée par une autre personne à {{time}}, non restaurée."
+      "othersAt": "{{column}} : modifiée par une autre personne à {{time}}, non restaurée.",
+      "notRun": "Rien n'a été restauré : une modification n'a pas pu être enregistrée avant."
     }
   },
   "budget": {

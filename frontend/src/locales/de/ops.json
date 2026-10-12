@@ -1494,7 +1494,8 @@
       "failed": "Die Spalte konnte nicht wiederhergestellt werden.",
       "frozenNow": "{{column}} wurde inzwischen eingefroren: Sie wurde nicht wiederhergestellt.",
       "others": "{{column}}: seit dem Öffnen von einer anderen Person geändert, nicht wiederhergestellt.",
-      "othersAt": "{{column}}: um {{time}} von einer anderen Person geändert, nicht wiederhergestellt."
+      "othersAt": "{{column}}: um {{time}} von einer anderen Person geändert, nicht wiederhergestellt.",
+      "notRun": "Nichts wurde wiederhergestellt: Eine Änderung konnte vorher nicht gespeichert werden."
     }
   },
   "budget": {

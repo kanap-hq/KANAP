@@ -1494,7 +1494,8 @@
       "failed": "The column could not be restored.",
       "frozenNow": "{{column}} was frozen meanwhile: it was not restored.",
       "others": "{{column}}: changed by someone else since the opening, not restored.",
-      "othersAt": "{{column}}: changed by someone else at {{time}}, not restored."
+      "othersAt": "{{column}}: changed by someone else at {{time}}, not restored.",
+      "notRun": "Nothing was restored: a change could not be saved first."
     }
   },
   "budget": {

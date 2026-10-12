@@ -46,7 +46,8 @@ function RestoreNoticeBox({ tab }: { tab: BudgetTabState }) {
     >
       <Box sx={{ minWidth: 0, fontSize: 12, color: 'kanap.text.secondary' }}>
         <Typography sx={{ fontSize: 12, color: 'kanap.text.primary' }}>
-          {notice.restored.length > 0 ? t('budgetTab.restore.done', { columns: columns(notice.restored) }) : t('budgetTab.restore.none')}
+          {notice.notRun ? t('budgetTab.restore.notRun')
+            : notice.restored.length > 0 ? t('budgetTab.restore.done', { columns: columns(notice.restored) }) : t('budgetTab.restore.none')}
         </Typography>
         {notice.skipped.length > 0 && (
           <Box component="ul" sx={{ m: 0, mt: 0.5, pl: 2.25 }}>
