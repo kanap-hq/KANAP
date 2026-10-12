@@ -23,6 +23,7 @@ import {
   planColumnCopy,
   upliftPct,
 } from './budget-column-operations';
+import { assertColumnBase } from './budget-edit-conflicts';
 import { auditTableOf } from './budget-nature';
 import { CostLine, missingCalendarYearMessage } from './costing.util';
 import { RoundInputFields, RoundInputsContext, upsertRoundInput, versionRoundInputs } from './round-inputs.util';
@@ -42,8 +43,8 @@ import { RoundInputFields, RoundInputsContext, upsertRoundInput, versionRoundInp
  *
  * It needs the ordinary right to write the budget (`budget:member`), unlike
  * the operation (`budget:admin`), and goes through the budget tab's contract:
- * the destination's freeze, its `base` (409 `edit_conflict`), the answer of
- * every `bulk-upsert`. Refused: a frozen destination, a source that is the
+ * the destination's freeze, its `base`, required with its months and its
+ * lines (409 `edit_conflict`), the answer of every `bulk-upsert`. Refused: a frozen destination, a source that is the
  * destination, a source with nothing to copy within the line's dates, a
  * percentage at or below −100, a line with no month in the year, and a line
  * whose calendar has no working days for the year (the operation asks to
@@ -61,7 +62,8 @@ export type CopyAmountsPayload = {
   measure: AmountMeasure;
   /** Percent, above −100; absent or blank is 0. */
   percentage?: number | string | null;
-  base?: unknown;
+  /** The destination as the screen last knew it: `base.columns.<measure>` with its twelve months and its lines (`[]` without any). */
+  base: unknown;
 };
 
 export function isCopyPayload(payload: unknown): payload is CopyAmountsPayload {
@@ -116,6 +118,8 @@ export async function writeCopyPayload(ctx: AmountsWriteContext, itemId: string,
   const measure = measureOf(payload.measure, 'measure');
   if (source === measure) throw new BadRequestException('A column cannot be copied onto itself: choose another column.');
   const pct = upliftPct(payload.percentage, 'percentage');
+  // The copy replaces the destination, lines included: it says what the screen showed of it.
+  assertColumnBase(payload.base, measure, 'copy');
   // A frozen destination refuses the copy before anything is read, locked or written.
   await assertMeasuresEditable(ctx, year, [measure]);
 
