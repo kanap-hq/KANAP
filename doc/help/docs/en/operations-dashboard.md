@@ -65,7 +65,7 @@ Lists the next five contract cancellation deadlines that are still in the future
 
 Click **View all** to open the Contracts page.
 
-### Top items
+### Top lines
 
 The five largest lines for the current year, ranked by the default column. The subtitle names the column, for example **Budget, Y**. Amounts are rounded to thousands with a "k" suffix.
 
@@ -93,7 +93,7 @@ Click **Customize** to open **Budget dashboard settings**. Your choices apply to
 
 - **Show or hide a tile**: tick or untick it. The dialog lists the tiles your role can see
 - **Change the order**: drag a tile by its handle on the right
-- **Amount columns of the Budget tile**: **Tenant columns**, ticked by default, follows the columns your organisation shows. Untick it to choose the columns yourself. Keep at least one: the dialog says "Choose at least one amount column." otherwise
+- **Amount columns of the Budget tile**: **Workspace columns**, ticked by default, follows the columns your organisation shows. Untick it to choose the columns yourself. Keep at least one: the dialog says "Choose at least one amount column." otherwise
 - **Save** applies your choices. **Reset to defaults** shows every tile again, in the default order, with the organisation's columns
 
 ## Tips

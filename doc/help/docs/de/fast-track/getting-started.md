@@ -183,7 +183,7 @@ Das Minimum, das Sie brauchen:
 
 ### Aufgaben mit Projekten, Verträgen oder Budgets verknüpfen
 
-Beim Erstellen einer Aufgabe können Sie sie mit einem **Projekt**, einer **OPEX-Position**, einem **Vertrag** oder einer **CAPEX-Position** verknüpfen. Dies lässt die Aufgabe sowohl in der Aufgabenliste als auch im übergeordneten Arbeitsbereich erscheinen.
+Beim Erstellen einer Aufgabe können Sie sie mit einem **Projekt**, einer **OPEX-Zeile**, einem **Vertrag** oder einer **CAPEX-Zeile** verknüpfen. Dies lässt die Aufgabe sowohl in der Aufgabenliste als auch im übergeordneten Arbeitsbereich erscheinen.
 
 !!! tip "Aus dem Kontext erstellen"
     Der schnellste Weg, eine verknüpfte Aufgabe zu erstellen, ist aus dem übergeordneten Arbeitsbereich. Öffnen Sie ein Projekt > Aufgaben-Tab > Neu. Die Verknüpfung ist vorausgefüllt.

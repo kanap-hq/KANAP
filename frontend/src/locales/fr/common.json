@@ -214,7 +214,7 @@
       "noBudgetNextYear": "Sans {{column}} l'an prochain",
       "accountOutsideChart": "Compte hors du plan de la société"
     },
-    "topItems": "Top postes",
+    "topItems": "Top lignes",
     "columnY": "{{column}}, A",
     "topIncreases": "Plus fortes hausses",
     "columnYvsYminus1": "{{column}}, A vs A-1",
@@ -358,8 +358,8 @@
         "connection": "Connexion",
         "contract": "Contrat",
         "task": "Tâche",
-        "opexItem": "Élément OPEX",
-        "capexItem": "Élément CAPEX",
+        "opexItem": "Ligne OPEX",
+        "capexItem": "Ligne CAPEX",
         "incident": "Incident",
         "location": "Site",
         "document": "Document"
@@ -386,7 +386,7 @@
       "customize": "Personnaliser",
       "title": "Réglages du tableau de bord du budget",
       "columns": "Colonnes de montant",
-      "tenantColumns": "Colonnes du locataire",
+      "tenantColumns": "Colonnes de l'espace de travail",
       "atLeastOne": "Choisissez au moins une colonne de montant.",
       "saveFailed": "Impossible d’enregistrer les réglages du tableau de bord."
     }
@@ -767,13 +767,13 @@
     "changedAt": "Modifié ailleurs à {{time}}",
     "changedOn": "Modifié ailleurs le {{date}} à {{time}}",
     "changed": "Modifié ailleurs",
-    "changedByYouAt": "Vous avez modifié ce poste ailleurs à {{time}}",
-    "changedByYouOn": "Vous avez modifié ce poste ailleurs le {{date}} à {{time}}",
-    "changedByYou": "Vous avez modifié ce poste ailleurs",
+    "changedByYouAt": "Vous avez modifié cette ligne ailleurs à {{time}}",
+    "changedByYouOn": "Vous avez modifié cette ligne ailleurs le {{date}} à {{time}}",
+    "changedByYou": "Vous avez modifié cette ligne ailleurs",
     "aUser": "un utilisateur",
     "badge": "Modifié ailleurs",
     "reload": "Recharger",
     "reloadHint": "Recharger affiche ces modifications. Ce que vous êtes en train de modifier reste à l'écran.",
-    "deleted": "Ce poste a été supprimé"
+    "deleted": "Cette ligne a été supprimée"
   }
 }

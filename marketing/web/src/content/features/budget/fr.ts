@@ -16,13 +16,13 @@ const content: FeatureContent = {
       title: "De l'atterrissage au budget N+1",
       body: "Les colonnes standard (budget, révision, réalisé, atterrissage) se renomment et se masquent selon vos usages, de N-2 à N+2, en saisie annuelle ou mensuelle. Fiabilisez l'atterrissage ligne par ligne, copiez-le vers le budget de l'année suivante, puis gelez la version validée.",
       bullets: [
-        'OPEX et CAPEX dans des listes dédiées',
+        'OPEX et CAPEX dans une seule liste, filtrable par type',
         'Colonnes budget, révision, réalisé et atterrissage, renommables',
         'Montants en quantité × prix, ou répartis par mois',
         'Copie de colonnes avec essai à blanc, puis copie',
         'Gel des versions : la version validée ne bouge plus',
       ],
-      shotAlt: 'Liste OPEX avec les montants 2026 et la ligne de totaux',
+      shotAlt: 'Liste des lignes budgétaires avec les montants 2026 et la ligne de totaux',
     },
     {
       title: 'Une refacturation que chacun comprend',
@@ -53,18 +53,18 @@ const content: FeatureContent = {
       body: "Refacturation globale et par société, tendances, plus fortes hausses et baisses, comparaison de deux versions, dimensions analytiques, comptes de consolidation, effectifs par mois et coût par ETP. Chaque ligne d'un rapport ouvre la liste filtrée correspondante, et Plaid répond aux mêmes questions en langage naturel.",
       bullets: [
         'Refacturation globale et par société',
-        'Comparaison de colonnes et tendances OPEX et CAPEX',
+        'Comparaison budgétaire sur plusieurs années, pour toutes les lignes, l’OPEX ou le CAPEX',
         'Dimensions analytiques et comptes de consolidation',
         'Effectifs par mois, coût par ETP et taux journalier',
         'Export CSV et images des graphiques',
       ],
-      shotAlt: 'Top 10 des postes OPEX du budget 2026, en camembert',
+      shotAlt: 'Top 10 des lignes OPEX du budget 2026, en camembert',
     },
   ],
   more: {
     title: 'Et aussi',
     items: [
-      { title: 'Relié aux applications et aux projets', body: "Chaque dépense mène à ses applications, ses projets et ses fournisseurs. La fiche d'une application montre ce qu'elle coûte." },
+      { title: 'Relié aux applications et aux projets', body: "Chaque ligne budgétaire mène à ses applications, ses projets et ses fournisseurs. La fiche d'une application montre ce qu'elle coûte." },
       { title: 'Contrats et échéances', body: 'Montant annuel, reconduction tacite, préavis et date limite de résiliation calculée, liés aux lignes de budget.' },
       { title: 'Aller-retour avec le tableur', body: "Exportez les lignes, modifiez-les dans Excel ou LibreOffice, réimportez : KANAP n'écrit que les cellules qui ont changé." },
       { title: 'Données d’exemple', body: 'Un essai se remplit en une minute avec le budget de Fromage & Co, quatre sociétés fictives, pour tout voir avant de saisir le vôtre.' },

@@ -214,7 +214,7 @@
       "noBudgetNextYear": "No {{column}} for next year",
       "accountOutsideChart": "Account not in the company's chart"
     },
-    "topItems": "Top items",
+    "topItems": "Top lines",
     "columnY": "{{column}}, Y",
     "topIncreases": "Top increases",
     "columnYvsYminus1": "{{column}}, Y vs Y-1",
@@ -358,8 +358,8 @@
         "connection": "Connection",
         "contract": "Contract",
         "task": "Task",
-        "opexItem": "OPEX item",
-        "capexItem": "CAPEX item",
+        "opexItem": "OPEX line",
+        "capexItem": "CAPEX line",
         "incident": "Incident",
         "location": "Location",
         "document": "Document"
@@ -386,7 +386,7 @@
       "customize": "Customize",
       "title": "Budget dashboard settings",
       "columns": "Amount columns",
-      "tenantColumns": "Tenant columns",
+      "tenantColumns": "Workspace columns",
       "atLeastOne": "Choose at least one amount column.",
       "saveFailed": "Could not save the dashboard settings."
     }
@@ -767,13 +767,13 @@
     "changedAt": "Changed elsewhere at {{time}}",
     "changedOn": "Changed elsewhere on {{date}} at {{time}}",
     "changed": "Changed elsewhere",
-    "changedByYouAt": "You changed this item elsewhere at {{time}}",
-    "changedByYouOn": "You changed this item elsewhere on {{date}} at {{time}}",
-    "changedByYou": "You changed this item elsewhere",
+    "changedByYouAt": "You changed this line elsewhere at {{time}}",
+    "changedByYouOn": "You changed this line elsewhere on {{date}} at {{time}}",
+    "changedByYou": "You changed this line elsewhere",
     "aUser": "a user",
     "badge": "Changed elsewhere",
     "reload": "Reload",
     "reloadHint": "Reload shows these changes. What you are editing stays on screen.",
-    "deleted": "This item was deleted"
+    "deleted": "This line was deleted"
   }
 }

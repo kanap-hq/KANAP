@@ -150,7 +150,7 @@ Una dimensión nueva se coloca la última en el orden de las dimensiones. Despu�
 Las dimensiones tienen un orden, que usted define. KANAP las muestra en este orden:
 
 - en la barra de selección de esta página
-- en el panel **Propiedades** de las partidas OPEX y CAPEX
+- en el panel **Propiedades** de las líneas OPEX y CAPEX
 - en las columnas de la lista de líneas presupuestarias
 - en las columnas del archivo de presupuesto
 - en los filtros de los informes y en el selector de dimensión del informe
@@ -176,7 +176,7 @@ El campo **Usada para** indica a qué líneas de presupuesto se aplica la dimens
 | **Solo OPEX** | Solo las líneas OPEX pueden tener un valor |
 | **Solo CAPEX** | Solo las líneas CAPEX pueden tener un valor |
 
-Las pantallas OPEX muestran las dimensiones usadas para las líneas OPEX, y las pantallas CAPEX las usadas para las líneas CAPEX. Esto incluye el panel **Propiedades** de la partida, las columnas, los filtros y la búsqueda rápida de las listas, los selectores y los filtros de dimensión de los informes (siguen la elección **OPEX** / **CAPEX** del informe) y Plaid. El archivo de presupuesto tiene una columna para cada dimensión activada, y cada fila solo toma valores en las dimensiones de su tipo de línea.
+Las pantallas OPEX muestran las dimensiones usadas para las líneas OPEX, y las pantallas CAPEX las usadas para las líneas CAPEX. Esto incluye el panel **Propiedades** de la línea, las columnas, los filtros y la búsqueda rápida de las listas, los selectores y los filtros de dimensión de los informes (siguen la elección **OPEX** / **CAPEX** del informe) y Plaid. El archivo de presupuesto tiene una columna para cada dimensión activada, y cada fila solo toma valores en las dimensiones de su tipo de línea.
 
 Una línea conserva el valor que ya tiene en una dimensión que deja de aplicarse a su tipo de línea. El valor queda oculto en todas partes y vuelve a mostrarse si abre de nuevo la dimensión a ese tipo de línea. Cuando su elección oculta valores, aparece una nota bajo el campo, por ejemplo "8 líneas CAPEX tienen un valor para esta dimensión. Lo conservan, oculto mientras la dimensión sea solo para líneas OPEX."
 
@@ -239,7 +239,7 @@ Los cambios se guardan por sí solos, como en el espacio de trabajo de la dimens
 
 Los valores de una dimensión tienen un orden, que usted define. KANAP ofrece los valores en este orden en todos los lugares donde los elige o filtra por ellos:
 
-- los campos de valor de las partidas OPEX y CAPEX (cuando escribe en un campo, las mejores coincidencias aparecen primero)
+- los campos de valor de las líneas OPEX y CAPEX (cuando escribe en un campo, las mejores coincidencias aparecen primero)
 - los filtros de casillas de la dimensión en la lista de líneas presupuestarias
 - los filtros de dimensión de los informes y la lista **Excluir valores** del informe Dimensiones analíticas
 - la exportación CSV de los valores
@@ -291,7 +291,7 @@ Las dimensiones y los valores tienen cada uno un estado (**Activado** o **Desact
 **Una dimensión desactivada**:
 
 - No se comprueba cuando es **Obligatoria**: se pueden crear líneas sin valor en ella. Conserva el ajuste para cuando vuelva a activarla.
-- Desaparece de los formularios de las partidas, de la lista de líneas presupuestarias, de los filtros de los informes, del selector de dimensión del informe, de las exportaciones CSV de OPEX y CAPEX y de Plaid. Solo la página Dimensiones analíticas la muestra, marcada como **Desactivado**.
+- Desaparece de los formularios de las líneas, de la lista de líneas presupuestarias, de los filtros de los informes, del selector de dimensión del informe, de las exportaciones CSV de OPEX y CAPEX y de Plaid. Solo la página Dimensiones analíticas la muestra, marcada como **Desactivado**.
 - Conserva sus valores en las líneas. Vuelva a activar la dimensión y se muestran de nuevo.
 - No admite valores nuevos. **Nuevo valor** está desactivado mientras la dimensión está seleccionada, y los archivos CSV no pueden añadir ni cambiar sus valores.
 
@@ -303,10 +303,10 @@ La dimensión por defecto no se puede desactivar.
 
 ## Valores en las líneas de presupuesto
 
-En el panel **Propiedades** de una partida OPEX o CAPEX, y al crear una, cada dimensión activada que se usa para ese tipo de línea tiene su propio campo, con el nombre de la dimensión, en el orden de las dimensiones. La dimensión por defecto se muestra como **Dimensión analítica** hasta que le dé un nombre.
+En el panel **Propiedades** de una línea OPEX o CAPEX, y al crear una, cada dimensión activada que se usa para ese tipo de línea tiene su propio campo, con el nombre de la dimensión, en el orden de las dimensiones. La dimensión por defecto se muestra como **Dimensión analítica** hasta que le dé un nombre.
 
 - Elija un valor, o vacíe el campo para dejar la línea sin valor en esa dimensión. El cambio se guarda de inmediato.
-- El campo de una dimensión obligatoria está marcado con un asterisco. No se puede crear una partida nueva sin valor en ella, con el mensaje "El campo Nature es obligatorio". En una partida que tiene un valor, el campo no tiene botón para vaciarlo: solo puede elegir otro valor. Consulte [Dimensiones obligatorias](#dimensiones-obligatorias).
+- El campo de una dimensión obligatoria está marcado con un asterisco. No se puede crear una línea nueva sin valor en ella, con el mensaje "El campo Nature es obligatorio". En una línea que tiene un valor, el campo no tiene botón para vaciarlo: solo puede elegir otro valor. Consulte [Dimensiones obligatorias](#dimensiones-obligatorias).
 - El campo lista los valores activados de su dimensión que se usan para este tipo de línea. Un valor desactivado, o un valor solo para el otro tipo de línea, sigue mostrándose en las líneas que lo tienen. Consulte [Valores OPEX o CAPEX](#valores-opex-o-capex).
 - El campo no puede crear un valor. Cree los valores en la página Dimensiones analíticas, o deje que los cree una importación CSV de OPEX o CAPEX.
 - Un valor se aplica a toda la línea, en todos los años.
@@ -320,11 +320,11 @@ La lista de líneas presupuestarias tiene una columna por dimensión activada, c
 
 El informe **Dimensiones analíticas** (en **Informes**) muestra cómo se reparte el presupuesto de sus líneas OPEX o CAPEX entre los valores de una dimensión. Consulte [Informes](reports.md#dimensiones-analiticas) para la descripción completa.
 
-- **Tipo de partida**: OPEX o CAPEX
+- **Tipo de línea**: OPEX o CAPEX
 - **Dimensión**: la dimensión por la que agrupa el informe. Aparece cuando tiene dos o más dimensiones activadas, y empieza en la dimensión por defecto
 - **Rango de años**: un solo año (gráfico circular o de barras) o varios años (gráfico de líneas)
 - **Métrica**: cualquier columna presupuestaria que muestre su organización, con su nombre. Empieza en la columna por defecto
-- **Excluir valores**: deje fuera algunos valores para centrarse en los demás. La lista ofrece los valores que se usan para el tipo de partida elegido, además de los que tienen las líneas
+- **Excluir valores**: deje fuera algunos valores para centrarse en los demás. La lista ofrece los valores que se usan para el tipo de línea elegido, además de los que tienen las líneas
 
 Los siete informes presupuestarios también se pueden limitar a un valor de una dimensión, con un filtro por dimensión. Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](reports.md#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas).
 
@@ -347,7 +347,7 @@ Los siete informes presupuestarios también se pueden limitar a un valor de una 
 
 Cargue o actualice los valores de todas las dimensiones desde un solo archivo. Las dimensiones se crean en la página.
 
-Para definir valores en las partidas de presupuesto desde un archivo, use el archivo de presupuesto. En él, una columna `analytics:<code>` contiene cada dimensión activada, la dimensión por defecto incluida. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md).
+Para definir valores en las líneas de presupuesto desde un archivo, use el archivo de presupuesto. En él, una columna `analytics:<code>` contiene cada dimensión activada, la dimensión por defecto incluida. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md).
 
 **Exportar**: haga clic en **Exportar CSV** y después en **Exportar datos**. El archivo lista los valores de todas las dimensiones, activados o desactivados, dimensión por dimensión, los valores de cada dimensión en su orden. El archivo no tiene columna de orden. Para un archivo vacío solo con los encabezados, use **Descargar plantilla** en el diálogo de importación.
 
@@ -405,7 +405,7 @@ Solo `name` es una columna obligatoria. Cuando falta la columna `description`, `
 | `analytics:member` | Crear dimensiones y valores, editarlos y definir el orden de las dimensiones y de los valores |
 | `analytics:admin` | Todo lo anterior, más la importación y exportación CSV y la eliminación |
 
-El rol integrado Administrador de presupuesto es admin, Miembro de presupuesto es member y Lector de presupuesto es reader. Cualquier persona que pueda leer las partidas presupuestarias (Presupuesto) o los informes ve las dimensiones y sus valores en las líneas de presupuesto, en las listas y en los informes, sin acceso a esta página.
+El rol integrado Administrador de presupuesto es admin, Miembro de presupuesto es member y Lector de presupuesto es reader. Cualquier persona que pueda leer las líneas presupuestarias (Presupuesto) o los informes ve las dimensiones y sus valores en las líneas de presupuesto, en las listas y en los informes, sin acceso a esta página.
 
 ---
 

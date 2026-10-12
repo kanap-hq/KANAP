@@ -9,7 +9,7 @@ Para información sobre conceptos de moneda y mecánicas de conversión, consult
 Las monedas son un ajuste presupuestario. La página está junto a los demás ajustes presupuestarios, en la [Administración presupuestaria](budget-operations.md).
 
 - **Abrir la página, cambiar los ajustes y lanzar la sincronización de tipos de cambio**: administración presupuestaria con nivel de administrador. La tarjeta se oculta a los demás usuarios.
-- **Usar monedas en las partidas**: los usuarios de OPEX y CAPEX eligen entre las monedas permitidas en los formularios de sus partidas, sin abrir esta página.
+- **Usar monedas en las líneas**: los usuarios de OPEX y CAPEX eligen entre las monedas permitidas en los formularios de sus líneas, sin abrir esta página.
 
 El permiso **Configuración** del panorama IT no da acceso a las monedas. Solo cubre la configuración del panorama IT.
 
@@ -26,17 +26,17 @@ La **moneda de todo el espacio de trabajo** utilizada para todos los informes, t
 **Consejo**: Elija una moneda de reporte que coincida con el estándar de reporte financiero de su grupo (p. ej., EUR para sede europea, USD para grupos con sede en EE. UU.).
 
 ### Moneda OPEX predeterminada
-La moneda que se **prerellena** cuando crea una nueva partida OPEX (gasto). Esto no restringe qué monedas puede seleccionar -- solo ahorra tiempo ofreciendo un valor predeterminado sensato.
+La moneda que se **prerellena** cuando crea una nueva línea OPEX (gasto). Esto no restringe qué monedas puede seleccionar -- solo ahorra tiempo ofreciendo un valor predeterminado sensato.
 
 **Ejemplo**: Si la mayoría de su gasto recurrente es en EUR, establézcala como EUR. Los usuarios aún pueden seleccionar manualmente GBP, USD o cualquier otra moneda permitida.
 
 ### Moneda CAPEX predeterminada
-La moneda que se **prerellena** cuando crea una nueva partida CAPEX. Funciona igual que la Moneda OPEX predeterminada, pero para gastos de capital.
+La moneda que se **prerellena** cuando crea una nueva línea CAPEX. Funciona igual que la Moneda OPEX predeterminada, pero para gastos de capital.
 
 **Consejo**: Si su CAPEX se adquiere mayoritariamente en una moneda diferente al OPEX diario (p. ej., USD para compras de hardware), establezca un valor predeterminado diferente aquí.
 
 ### Monedas permitidas (opcional)
-Una **lista separada por comas** de códigos ISO que restringe qué monedas pueden seleccionar los usuarios al crear o editar partidas OPEX y CAPEX.
+Una **lista separada por comas** de códigos ISO que restringe qué monedas pueden seleccionar los usuarios al crear o editar líneas OPEX y CAPEX.
 
   - **Vacío (predeterminado)**: Los usuarios pueden seleccionar cualquier código de moneda ISO de 3 letras válido
   - **Lista especificada** (p. ej., `EUR, USD, GBP`): Solo estas monedas aparecen en los desplegables
@@ -125,7 +125,7 @@ SaaS License;Acme UK;6200;GBP;10000;12000;12000;12000
 ```
 
 ### Importar
-Al importar partidas OPEX o CAPEX, la columna `Currency` debe contener **códigos ISO estándar de 3 letras**.
+Al importar líneas OPEX o CAPEX, la columna `Currency` debe contener **códigos ISO estándar de 3 letras**.
 
 **Validación**:
   - Si las **Monedas permitidas** están configuradas, las importaciones que usen códigos no listados se rechazan
@@ -232,7 +232,7 @@ R: La fuente de datos (Banco Mundial o ExchangeRate-API) puede no publicar esa m
 R: Cada 30 días, cuando cualquier usuario inicia sesión, el sistema actualiza las tasas para A-1, A y A+1. También puede desencadenar una actualización manual en cualquier momento usando Forzar sincronización FX.
 
 **P: ¿Los cambios de tasas FX afectan mis datos almacenados?**
-R: No. Los tipos de cambio solo afectan la **conversión y visualización**. Cada partida OPEX y CAPEX almacena su propia moneda y montos, que nunca cambian cuando las tasas se actualizan. Solo los valores convertidos mostrados en informes y listas cambian.
+R: No. Los tipos de cambio solo afectan la **conversión y visualización**. Cada línea OPEX y CAPEX almacena su propia moneda y montos, que nunca cambian cuando las tasas se actualizan. Solo los valores convertidos mostrados en informes y listas cambian.
 
 **P: ¿Puedo importar tasas históricas manualmente?**
 R: No. El sistema obtiene las tasas automáticamente de fuentes externas (Banco Mundial, ExchangeRate-API). Si necesita tasas personalizadas, contacte con soporte o considere usar una moneda donde pueda aceptar las tasas publicadas.

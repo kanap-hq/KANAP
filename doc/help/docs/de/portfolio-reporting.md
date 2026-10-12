@@ -53,7 +53,7 @@ Erstellt und abgeschlossen stammen aus der Änderungshistorie. Sie erfassen dami
 
 ### Welche Aufgaben zählen
 
-Jede Aufgabenzahl zählt nur eigenständige Aufgaben und Projektaufgaben. Aufgaben an einem Vertrag, einer Ausgabenposition, einer CAPEX-Position oder einem Vorfall gehören zu jenen Abläufen und bleiben in diesem Streifen überall außen vor.
+Jede Aufgabenzahl zählt nur eigenständige Aufgaben und Projektaufgaben. Aufgaben an einem Vertrag, einer Ausgabenzeile, einer CAPEX-Zeile oder einem Vorfall gehören zu jenen Abläufen und bleiben in diesem Streifen überall außen vor.
 
 ### Handlungsbedarf
 
@@ -81,7 +81,7 @@ Jede Zeile nennt, wie viele dieser Elemente keine Quelle, keine Kategorie und ke
 
 ### Welche Aufgaben ausgeschlossen sind
 
-Gezählt werden nur eigenständige Aufgaben und Projektaufgaben. Aufgaben an einem Vertrag, einer Ausgabenposition, einer CAPEX-Position oder einem Vorfall tragen nie eine Klassifizierung. Sie zu zählen würde eine Lücke melden, die niemand schließen kann.
+Gezählt werden nur eigenständige Aufgaben und Projektaufgaben. Aufgaben an einem Vertrag, einer Ausgabenzeile, einer CAPEX-Zeile oder einem Vorfall tragen nie eine Klassifizierung. Sie zu zählen würde eine Lücke melden, die niemand schließen kann.
 
 Eine Projektaufgabe ohne eigene Klassifizierung erbt die ihres Projekts, und die Aufgabenliste zeigt diesen geerbten Wert. Die Zähler folgen derselben Regel. Eine Zahl führt Sie daher nie zu einer Liste, in der die Spalte bereits gefüllt ist.
 
@@ -199,7 +199,7 @@ Jede Liste zeigt ihre Anzahl in der Überschrift. Eine leere Liste bleibt einzei
 
 ### Welche Aufgaben zählen
 
-Der Abschnitt Aufgaben umfasst nur Portfolio-Aufgaben: eigenständige Aufgaben und Aufgaben an einem Projekt. Aufgaben an einem Vertrag, einer Ausgabenposition, einer CAPEX-Position oder einem Vorfall bleiben außen vor. Das ist enger gefasst als in früheren Fassungen des Berichts, die jede Aufgabe gezählt haben.
+Der Abschnitt Aufgaben umfasst nur Portfolio-Aufgaben: eigenständige Aufgaben und Aufgaben an einem Projekt. Aufgaben an einem Vertrag, einer Ausgabenzeile, einer CAPEX-Zeile oder einem Vorfall bleiben außen vor. Das ist enger gefasst als in früheren Fassungen des Berichts, die jede Aufgabe gezählt haben.
 
 ### Woher ein Projekt stammt
 

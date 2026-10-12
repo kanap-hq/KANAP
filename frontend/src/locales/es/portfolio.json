@@ -1768,7 +1768,7 @@
         "businessLead": "Responsable de negocio",
         "businessSponsor": "Patrocinador de negocio",
         "businessTeam": "Equipo de negocio",
-        "capexItems": "Partidas CAPEX",
+        "capexItems": "Líneas CAPEX",
         "category": "Categoría",
         "company": "Empresa",
         "createdFromRequest": "Creado a partir de solicitud",
@@ -1786,7 +1786,7 @@
         "itLead": "Responsable IT",
         "itSponsor": "Patrocinador IT",
         "name": "Nombre",
-        "opexItems": "Partidas OPEX",
+        "opexItems": "Líneas OPEX",
         "originTask": "Tarea de origen",
         "overrideJustification": "Justificación de la sobrescritura",
         "overrideValue": "Valor de sobrescritura",
@@ -2133,10 +2133,10 @@
         }
       },
       "fields": {
-        "capexItems": "Partidas CAPEX",
+        "capexItems": "Líneas CAPEX",
         "linkDescription": "Descripción del enlace",
         "name": "Nombre",
-        "opexItems": "Partidas OPEX",
+        "opexItems": "Líneas OPEX",
         "url": "URL"
       },
       "messages": {
@@ -2148,15 +2148,15 @@
       "placeholders": {
         "applications": "Buscar aplicaciones",
         "assets": "Buscar activos",
-        "capexItems": "Seleccionar partidas CAPEX",
+        "capexItems": "Seleccionar líneas CAPEX",
         "linkDescription": "Opcional",
-        "opexItems": "Seleccionar partidas OPEX",
+        "opexItems": "Seleccionar líneas OPEX",
         "url": "https://example.com"
       },
       "sections": {
         "appsAndAssets": "Aplicaciones y activos",
         "attachments": "Adjuntos",
-        "budgetItems": "Partidas presupuestarias",
+        "budgetItems": "Líneas presupuestarias",
         "externalLinks": "Sitios web relevantes"
       },
       "states": {

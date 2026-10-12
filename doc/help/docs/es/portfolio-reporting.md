@@ -53,7 +53,7 @@ Creadas y cerradas proceden del historial de cambios, así que cubren todas las 
 
 ### Qué tareas cuentan
 
-Cada cifra de tareas cuenta solo las tareas independientes y las tareas de proyecto. Las tareas vinculadas a un contrato, a una partida de gasto, a una partida CAPEX o a un incidente pertenecen a esos procesos y quedan fuera en toda la franja.
+Cada cifra de tareas cuenta solo las tareas independientes y las tareas de proyecto. Las tareas vinculadas a un contrato, a una línea de gasto, a una línea CAPEX o a un incidente pertenecen a esos procesos y quedan fuera en toda la franja.
 
 ### Requiere atención
 
@@ -81,7 +81,7 @@ Cada línea indica cuántos de esos elementos no tienen Origen, ni Categoría, n
 
 ### Qué tareas se excluyen
 
-Solo se cuentan las tareas independientes y las tareas de proyecto. Las tareas vinculadas a un contrato, a una partida de gasto, a una partida CAPEX o a un incidente nunca llevan clasificación. Contarlas señalaría una brecha que nadie puede cerrar.
+Solo se cuentan las tareas independientes y las tareas de proyecto. Las tareas vinculadas a un contrato, a una línea de gasto, a una línea CAPEX o a un incidente nunca llevan clasificación. Contarlas señalaría una brecha que nadie puede cerrar.
 
 Una tarea de proyecto sin clasificación propia hereda la de su proyecto, y la lista de tareas muestra ese valor heredado. Los recuentos siguen la misma regla, así que una cifra nunca le lleva a una lista donde la columna ya está rellenada.
 
@@ -199,7 +199,7 @@ Cada lista indica su recuento en el título. Una lista vacía ocupa una sola lí
 
 ### Qué tareas cuentan
 
-La sección Tareas cubre solo las tareas del portafolio: las tareas independientes y las tareas asociadas a un proyecto. Las tareas asociadas a un contrato, a una partida de gasto, a una partida CAPEX o a un incidente quedan fuera. Es más restrictivo que en versiones anteriores del informe, que contaban todas las tareas.
+La sección Tareas cubre solo las tareas del portafolio: las tareas independientes y las tareas asociadas a un proyecto. Las tareas asociadas a un contrato, a una línea de gasto, a una línea CAPEX o a un incidente quedan fuera. Es más restrictivo que en versiones anteriores del informe, que contaban todas las tareas.
 
 ### De dónde viene un proyecto
 

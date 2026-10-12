@@ -65,11 +65,11 @@ Liste les cinq prochaines échéances de résiliation de contrats encore dans le
 
 Cliquez sur **Tout voir** pour ouvrir la page Contrats.
 
-### Top postes
+### Top lignes
 
 Les cinq plus grandes lignes de l'année en cours, classées selon la colonne par défaut. Le sous-titre nomme la colonne, par exemple **Budget, A**. Les montants sont arrondis au millier avec un suffixe « k ».
 
-Utilisez les onglets **Tous** / **OPEX** / **CAPEX** pour choisir le type. Cliquez sur **Ouvrir** pour voir le rapport Top postes complet sur le même type.
+Utilisez les onglets **Tous** / **OPEX** / **CAPEX** pour choisir le type. Cliquez sur **Ouvrir** pour voir le rapport Top lignes complet sur le même type.
 
 ### Plus fortes hausses
 
@@ -93,7 +93,7 @@ Cliquez sur **Personnaliser** pour ouvrir **Réglages du tableau de bord du budg
 
 - **Afficher ou masquer une tuile** : cochez-la ou décochez-la. La fenêtre liste les tuiles que votre rôle peut voir
 - **Changer l'ordre** : faites glisser une tuile par sa poignée, à droite
-- **Colonnes de montant de la tuile Budget** : **Colonnes du locataire**, cochée par défaut, suit les colonnes affichées par votre organisation. Décochez-la pour choisir les colonnes vous-même. Gardez-en au moins une : sinon, la fenêtre affiche « Choisissez au moins une colonne de montant. »
+- **Colonnes de montant de la tuile Budget** : **Colonnes de l'espace de travail**, cochée par défaut, suit les colonnes affichées par votre espace de travail. Décochez-la pour choisir les colonnes vous-même. Gardez-en au moins une : sinon, la fenêtre affiche « Choisissez au moins une colonne de montant. »
 - **Enregistrer** applique vos choix. **Rétablir les valeurs par défaut** affiche de nouveau toutes les tuiles, dans l'ordre par défaut, avec les colonnes de l'organisation
 
 ## Conseils

@@ -1,6 +1,6 @@
 # Companies
 
-Companies are the foundation of your master data. They represent the legal entities you allocate IT spend to and report chargebacks for. Every allocation, cost item, and many reports reference a company, so keeping this data accurate is important.
+Companies are the foundation of your master data. They represent the legal entities you allocate IT spend to and report chargebacks for. Every allocation, cost line, and many reports reference a company, so keeping this data accurate is important.
 
 When your workspace is created, it starts with one company named after your organization. Its country is the one you selected during trial signup, and it will auto-assign to the default Chart of Accounts for that country when available. You can rename it or add more.
 
@@ -129,7 +129,7 @@ The Details tab manages **yearly metrics**. Use the year tabs at the top to swit
 
 ## Chart of Accounts
 
-Each company can be linked to a **Chart of Accounts** (CoA), which defines the set of accounts available when recording OPEX or CAPEX items for that company.
+Each company can be linked to a **Chart of Accounts** (CoA), which defines the set of accounts available when recording OPEX or CAPEX lines for that company.
 
 **How it works**:
 
@@ -137,17 +137,17 @@ Each company can be linked to a **Chart of Accounts** (CoA), which defines the s
 - You can change the CoA assignment in the **Properties** panel using the **Chart of accounts** selector. The selector shows CoAs matching the company's country plus any global-scope CoAs.
 - When you change the company's country, the CoA follows if the current one belongs to another country: it switches to the new country's default. A global CoA stays in place.
 - On an existing company, the CoA cannot be emptied. You can only replace it with another one.
-- The CoA you select determines which accounts appear in the account dropdown when creating or editing spend items for this company.
+- The CoA you select determines which accounts appear in the account dropdown when creating or editing OPEX lines for this company.
 
 **What this means for your workflow**:
 
 - **Companies with a CoA**: when recording OPEX/CAPEX, you can only select accounts that belong to that company's Chart of Accounts. This ensures accounting consistency.
 - **Companies without a CoA** (legacy): can use accounts that do not belong to any Chart of Accounts. This supports gradual migration to the CoA system.
-- **Changing CoAs**: if you switch a company to a different CoA, existing spend items keep their current accounts (with a warning if they do not match the new CoA), but new items will use accounts from the new CoA.
+- **Changing CoAs**: if you switch a company to a different CoA, existing OPEX lines keep their current accounts (with a warning if they do not match the new CoA), but new lines will use accounts from the new CoA.
 
 **Setting up Charts of Accounts**: go to **Master Data > Charts of Accounts** to view, create, or manage your CoA sets. You can create CoAs from scratch or load them from platform templates (country-specific standard account sets). Each country can have one default CoA (**Country default ({country})**), which is proposed when you create a company in that country. Companies in a country without a default use the **Default for other countries** chart. See [Chart roles](chart-of-accounts.md#chart-roles).
 
-**Tip**: if you see an "obsolete account" warning when editing OPEX/CAPEX items, it means the account does not belong to the company's current Chart of Accounts. Update the account to one from the correct CoA to resolve this.
+**Tip**: if you see an "obsolete account" warning when editing OPEX/CAPEX lines, it means the account does not belong to the company's current Chart of Accounts. Update the account to one from the correct CoA to resolve this.
 
 ## Status and lifecycle
 
@@ -218,7 +218,7 @@ The columns, in this order. The metric columns follow the year selected in the l
 ## Tips
 
 - **Disable over delete**: keep history consistent and reports meaningful.
-- **Chart of Accounts**: assign CoAs to companies to ensure consistent account usage across OPEX/CAPEX items.
+- **Chart of Accounts**: assign CoAs to companies to ensure consistent account usage across OPEX/CAPEX lines.
 - **Turnover**: enter values in millions of the company's base currency (e.g., 2.5 = 2.5 million in that currency).
 - **Headcount** is the most common allocation driver; keep it up to date for the current year.
 - **Frozen metrics**: you can still review them, but edits are blocked until a budget administrator unfreezes the year in **Budget management > Administration > Freeze master data**.

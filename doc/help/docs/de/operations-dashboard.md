@@ -65,11 +65,11 @@ Listet die nächsten fünf Vertragskündigungsfristen auf, die noch in der Zukun
 
 Klicken Sie auf **Alle anzeigen**, um die Verträge-Seite zu öffnen.
 
-### Top-Positionen
+### Top-Zeilen
 
 Die fünf größten Zeilen für das aktuelle Jahr, nach der Standardspalte sortiert. Der Untertitel nennt die Spalte, zum Beispiel **Budget, J**. Beträge sind auf Tausender gerundet mit dem Suffix „k“.
 
-Wählen Sie den Typ mit den Tabs **Alle** / **OPEX** / **CAPEX**. Klicken Sie auf **Öffnen**, um den vollständigen Bericht **Top-Positionen** für denselben Typ anzuzeigen.
+Wählen Sie den Typ mit den Tabs **Alle** / **OPEX** / **CAPEX**. Klicken Sie auf **Öffnen**, um den vollständigen Bericht **Top-Zeilen** für denselben Typ anzuzeigen.
 
 ### Stärkste Zuwächse
 

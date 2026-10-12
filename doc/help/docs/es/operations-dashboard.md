@@ -65,11 +65,11 @@ Lista los próximos cinco plazos de cancelación de contratos que aún están en
 
 Haga clic en **Ver todo** para abrir la página de Contratos.
 
-### Top partidas
+### Top líneas
 
 Las cinco líneas más grandes para el año actual, clasificadas por la columna por defecto. El subtítulo nombra la columna, por ejemplo **Presupuesto, A**. Los importes se redondean a miles con sufijo "k".
 
-Use las pestañas **Todo** / **OPEX** / **CAPEX** para elegir el tipo. Haga clic en **Abrir** para ver el informe completo Top partidas sobre el mismo tipo.
+Use las pestañas **Todo** / **OPEX** / **CAPEX** para elegir el tipo. Haga clic en **Abrir** para ver el informe completo Top líneas sobre el mismo tipo.
 
 ### Mayores incrementos
 
@@ -93,7 +93,7 @@ Haga clic en **Personalizar** para abrir **Configuración del panel de control d
 
 - **Mostrar u ocultar un mosaico**: márquelo o desmárquelo. El diálogo lista los mosaicos que su rol puede ver
 - **Cambiar el orden**: arrastre un mosaico por su asa a la derecha
-- **Columnas de importes del mosaico Presupuesto**: **Columnas del cliente**, marcada por defecto, sigue las columnas que muestra su organización. Desmárquela para elegir usted mismo las columnas. Conserve al menos una: si no, el diálogo indica «Seleccione al menos una columna de importes.»
+- **Columnas de importes del mosaico Presupuesto**: **Columnas del espacio de trabajo**, marcada por defecto, sigue las columnas que muestra su espacio de trabajo. Desmárquela para elegir usted mismo las columnas. Conserve al menos una: si no, el diálogo indica «Seleccione al menos una columna de importes.»
 - **Guardar** aplica sus elecciones. **Restablecer valores predeterminados** vuelve a mostrar todos los mosaicos, en el orden por defecto, con las columnas de la organización
 
 ## Consejos

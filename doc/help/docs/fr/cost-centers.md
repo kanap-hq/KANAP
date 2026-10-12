@@ -224,7 +224,7 @@ Chargez ou mettez à jour l'arbre entier depuis un fichier.
 | `cost_centers:member` | Créer des centres de coûts et des groupes, et les modifier |
 | `cost_centers:admin` | Tout ce qui précède, plus l'import et l'export CSV, et la suppression |
 
-Chaque rôle reçoit le niveau qu'il a sur les départements, sauf le rôle intégré Administrateur budget, qui reçoit admin. Ainsi, Administrateur budget et Administrateur données de référence sont admins, Membre budget et Membre données de référence sont membres, et les rôles lecteurs peuvent consulter. Toute personne qui peut consulter les postes budgétaires (Budget) ou les rapports peut choisir un centre de coûts sur une ligne ou dans un filtre de rapport sans accès à cette page.
+Chaque rôle reçoit le niveau qu'il a sur les départements, sauf le rôle intégré Administrateur budget, qui reçoit admin. Ainsi, Administrateur budget et Administrateur données de référence sont admins, Membre budget et Membre données de référence sont membres, et les rôles lecteurs peuvent consulter. Toute personne qui peut consulter les lignes budgétaires (Budget) ou les rapports peut choisir un centre de coûts sur une ligne ou dans un filtre de rapport sans accès à cette page.
 
 ---
 

@@ -584,9 +584,9 @@ La API ejecuta 15 trabajos programados. Las horas siguientes son los valores pre
 
 | Trabajo | Cuándo | Qué hace |
 |-----|------|--------------|
-| `check-expirations` | Diario 08:00 | Envía un correo a los responsables de contratos y partidas OPEX 30, 14, 7 y 1 día(s) antes de una fecha límite de cancelación, una fecha de fin o el fin de validez. Solo los reciben los usuarios que activaron estas notificaciones, una vez al día. |
+| `check-expirations` | Diario 08:00 | Envía un correo a los responsables de contratos y líneas OPEX 30, 14, 7 y 1 día(s) antes de una fecha límite de cancelación, una fecha de fin o el fin de validez. Solo los reciben los usuarios que activaron estas notificaciones, una vez al día. |
 | `send-weekly-reviews` | Cada hora | Envía el resumen de la revisión semanal a los usuarios que lo activaron, en su propio día y zona horaria. |
-| `lifecycle-status-sync` | Cada hora, y una vez al arrancar | Pasa a desactivados los datos maestros, contratos y partidas OPEX y CAPEX cuyo fin de validez ha pasado. |
+| `lifecycle-status-sync` | Cada hora, y una vez al arrancar | Pasa a desactivados los datos maestros, contratos y líneas OPEX y CAPEX cuyo fin de validez ha pasado. |
 | `entra-directory-sync` | Diario 03:00 | Actualiza los atributos de los usuarios y desactiva las cuentas eliminadas o desactivadas en el directorio. Solo funciona cuando el SSO con Entra está conectado y aprobado. Consulte [SSO con Microsoft Entra](sso-entra.md). |
 | `attachment-orphan-cleanup` | Diario 03:00 | Elimina los registros de adjuntos de imágenes insertadas que ya no usa ningún texto. |
 | `storage-ghost-cleanup` | Domingo 04:00 | Elimina los archivos almacenados que no tienen registro de adjunto y tienen más de 7 días. |

@@ -150,7 +150,7 @@ Open it with **Edit** (**Open** if you can only read) in the selector bar, with 
 The dimensions have an order, which you set. KANAP shows them in this order:
 
 - in the selector bar of this page
-- in the **Properties** panel of OPEX and CAPEX items
+- in the **Properties** panel of OPEX and CAPEX lines
 - in the columns of the budget lines list
 - in the columns of the budget file
 - in the report filters and the report's dimension picker
@@ -176,7 +176,7 @@ The **Used for** field says which budget lines the dimension applies to:
 | **OPEX only** | Only OPEX lines can have a value |
 | **CAPEX only** | Only CAPEX lines can have a value |
 
-OPEX screens show the dimensions used for OPEX lines, and CAPEX screens show the dimensions used for CAPEX lines. This covers the item **Properties** panel, the list columns, filters and quick search, the dimension pickers and filters of the reports (they follow the report's **OPEX** / **CAPEX** choice) and Plaid. The budget file has a column for every enabled dimension, and each row takes values only on the dimensions of its kind of line.
+OPEX screens show the dimensions used for OPEX lines, and CAPEX screens show the dimensions used for CAPEX lines. This covers the line **Properties** panel, the list columns, filters and quick search, the dimension pickers and filters of the reports (they follow the report's **OPEX** / **CAPEX** choice) and Plaid. The budget file has a column for every enabled dimension, and each row takes values only on the dimensions of its kind of line.
 
 A line keeps the value it already has on a dimension that no longer applies to its kind of line. The value is hidden everywhere and shows again if you open the dimension to that kind of line again. When your choice hides values, a note appears under the field, for example "8 CAPEX lines have a value for this dimension. They keep it, hidden while the dimension is for OPEX lines only."
 
@@ -239,7 +239,7 @@ Changes save on their own, as in the dimension workspace. A name refused in the 
 
 The values of a dimension have an order, which you set. KANAP offers the values in this order wherever you choose or filter on them:
 
-- the value fields of OPEX and CAPEX items (when you type in a field, the best matches come first)
+- the value fields of OPEX and CAPEX lines (when you type in a field, the best matches come first)
 - the dimension's checkbox filters in the budget lines list
 - the dimension filters of the reports and the **Exclude values** list of the Analytics dimensions report
 - the values CSV export
@@ -291,7 +291,7 @@ Dimensions and values each have a status (**Enabled** or **Disabled**) and an op
 **A disabled dimension**:
 
 - Is not checked when it is **Required**: lines can be created without a value on it. It keeps the setting for when you enable it again.
-- Disappears from the item forms, the budget lines list, the report filters, the report's dimension picker, the OPEX and CAPEX CSV exports and Plaid. Only the Analytics dimensions page shows it, marked **Disabled**.
+- Disappears from the line forms, the budget lines list, the report filters, the report's dimension picker, the OPEX and CAPEX CSV exports and Plaid. Only the Analytics dimensions page shows it, marked **Disabled**.
 - Keeps its values on the lines. Enable the dimension again and they show again.
 - Takes no new values. **New value** is disabled while the dimension is selected, and CSV files cannot add or change its values.
 
@@ -303,10 +303,10 @@ The default dimension cannot be disabled.
 
 ## Values on budget lines
 
-In the **Properties** panel of an OPEX or CAPEX item, and when you create one, each enabled dimension used for that kind of line has its own field, named after the dimension, in dimension order. The default dimension shows as **Analytics dimension** until you rename it.
+In the **Properties** panel of an OPEX or CAPEX line, and when you create one, each enabled dimension used for that kind of line has its own field, named after the dimension, in dimension order. The default dimension shows as **Analytics dimension** until you rename it.
 
 - Pick a value, or clear the field to leave the line without a value on that dimension. The change saves at once.
-- A required dimension's field is marked with an asterisk. A new item cannot be created without a value on it, with the message "Nature is required". On an item that holds a value, the field offers no clear button: you can only pick another value. See [Required dimensions](#required-dimensions).
+- A required dimension's field is marked with an asterisk. A new line cannot be created without a value on it, with the message "Nature is required". On a line that holds a value, the field offers no clear button: you can only pick another value. See [Required dimensions](#required-dimensions).
 - The field lists the enabled values of its dimension that are used for this kind of line. A disabled value, or a value used for the other kind of line only, stays shown on the lines that have it. See [OPEX or CAPEX values](#opex-or-capex-values).
 - The field cannot create a value. Create values on the Analytics dimensions page, or let an OPEX or CAPEX CSV import create them.
 - A value applies to the whole line, across all years.
@@ -320,11 +320,11 @@ The budget lines list has one column per enabled dimension, with checkbox filter
 
 The **Analytics dimensions** report (under **Reporting**) shows how the budget of your OPEX or CAPEX lines is spread across the values of one dimension. See [Reporting](reports.md#analytics-dimensions) for the full description.
 
-- **Item type**: OPEX or CAPEX
+- **Line type**: OPEX or CAPEX
 - **Dimension**: the dimension the report groups on. It shows when you have two or more enabled dimensions, and starts on the default dimension
 - **Year range**: single year (pie or bar chart) or several years (line chart)
 - **Metric**: any budget column your organization shows, under its name. Starts on the default column
-- **Exclude values**: leave out some values to focus on the others. The list offers the values used for the selected item type, plus the values the lines hold
+- **Exclude values**: leave out some values to focus on the others. The list offers the values used for the selected line type, plus the values the lines hold
 
 The seven budget reports can also be narrowed to one value of a dimension, with one filter per dimension. See [Cost center, run or build and analytics filters](reports.md#cost-center-run-or-build-and-analytics-filters).
 

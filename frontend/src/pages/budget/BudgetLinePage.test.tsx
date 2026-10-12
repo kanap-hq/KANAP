@@ -405,6 +405,16 @@ describe('BudgetLinePage create', () => {
     expect(mocked.post.mock.calls[0][1].analytics_values).toEqual({ 'axis-nature': 'value-2' });
   });
 
+  it('refuses to create a line without a title, with the title message for both types', async () => {
+    renderAt(`/ops/budget/new/overview`);
+    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(await screen.findByText('opex.editor.productNameRequired')).toBeInTheDocument();
+    expect(screen.queryByText('capex.editor.descriptionRequired')).not.toBeInTheDocument();
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
+
   it('refuses to create a line without an account', async () => {
     renderAt(`/ops/budget/new/overview`);
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));

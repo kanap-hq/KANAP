@@ -102,7 +102,7 @@ Die Liste (unter **Budgetverwaltung > Budgetzeilen**) enthält die OPEX- und CAP
 
 - **Betragsspalten**: Jede angezeigte Budgetspalte für J-1, J, J+1 und J+2, unter den Namen, die Ihre Organisation gewählt hat. Die Überschrift nennt die Spalte, das Jahr relativ zu heute und das Kalenderjahr, zum Beispiel **Revision J+1 (2027)**. Ausgeblendete Spalten werden nicht angeboten
 - **VZÄ-Spalten**: Die VZÄ jeder angezeigten Budgetspalte für J-1, J, J+1 und J+2, unter den Namen, die Ihre Organisation gewählt hat, in der Spaltenauswahl direkt nach den Betragsspalten. Die Überschrift nennt die Spalte und das Kalenderjahr, zum Beispiel **VZÄ Budget (2026)**. Die VZÄ einer Zeile sind die Summe der VZÄ ihrer Zeilen unter Menge und Preis in dieser Spalte. Siehe [VZÄ](#vza). Die Zelle ist leer, wenn die Spalte keine solchen Zeilen hat
-- **VZÄ gemeldet**: **Ja**, wenn die Zeile in mindestens einer Budgetspalte eines beliebigen Jahres VZÄ meldet, sonst leer. Das sind die Zeilen, die der Filter **Positionen mit VZÄ** der Berichte behält
+- **VZÄ gemeldet**: **Ja**, wenn die Zeile in mindestens einer Budgetspalte eines beliebigen Jahres VZÄ meldet, sonst leer. Das sind die Zeilen, die der Filter **Zeilen mit VZÄ** der Berichte behält
 - **Aktiviert**: Status der Zeile (aktiviert oder deaktiviert)
 - **Beschreibung**: Die Beschreibung der Zeile
 - **Währung**: ISO-Währungscode
@@ -172,7 +172,7 @@ Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl an Spal
 
 **Zurück/Weiter-Navigation**:
 
-- Wenn Sie eine Zeile öffnen, zeigt der Arbeitsbereich die Schaltflächen **Zurück** und **Weiter** und einen Zähler, zum Beispiel „Position 3 von 47“
+- Wenn Sie eine Zeile öffnen, zeigt der Arbeitsbereich die Schaltflächen **Zurück** und **Weiter** und einen Zähler, zum Beispiel „Zeile 3 von 47“
 - Diese navigieren durch die Liste in der aktuellen Sortierreihenfolge unter Berücksichtigung von Filtern und Suche
 - Der Wechsel zu einer anderen Zeile speichert zuerst Ihre ausstehenden Änderungen
 - Ihr Listenkontext (Sortierung, Filter, Suche) bleibt erhalten, wenn Sie den Arbeitsbereich schließen
@@ -287,7 +287,7 @@ Im Budget-Tab geben Sie Finanzdaten pro Jahr ein. Er unterstützt mehrere Budget
 **Jährlich oder Monatlich**:
 
 - **Jährlich**: Geben Sie eine Summe pro Spalte ein. Die Summe wird gleichmäßig auf die Monate des Zeitraums der Spalte verteilt, und die Monate außerhalb des Zeitraums werden auf null gesetzt. Der Zeitraum wird unter jeder Summe angezeigt, bevor Sie etwas eingeben, zum Beispiel „9 Monate, April bis Dezember“. Nur die Summe, die Sie bearbeiten, wird gespeichert. Die anderen Spalten behalten ihre Monatsbeträge.
-- Klicken Sie auf das Stiftsymbol neben dem Zeitraum unter einer Summe (**Zeitraum ändern**), um das Verteilungsfeld für diese Spalte mit ihrer aktuellen Summe zu öffnen. Lassen die Daten der Zeile keinen Monat im Jahr übrig, ist die Summe deaktiviert und zeigt „Kein Monat von 2026 liegt innerhalb der Daten der Position.“ Klicken Sie auf das Stiftsymbol daneben (**Zeitraum wählen**), um selbst einen festzulegen.
+- Klicken Sie auf das Stiftsymbol neben dem Zeitraum unter einer Summe (**Zeitraum ändern**), um das Verteilungsfeld für diese Spalte mit ihrer aktuellen Summe zu öffnen. Lassen die Daten der Zeile keinen Monat im Jahr übrig, ist die Summe deaktiviert und zeigt „Kein Monat von 2026 liegt innerhalb der Daten der Zeile.“ Klicken Sie auf das Stiftsymbol daneben (**Zeitraum wählen**), um selbst einen festzulegen.
 - Klicken Sie auf das Rechnersymbol neben dem Stift (**Menge und Preis**), um dasselbe Feld mit den Zeilen dieser Spalte zu öffnen. Siehe [Menge und Preis](#menge-und-preis).
 - Eine Spalte, die ihren Zeilen folgt (ihre Beträge wurden aus ihren Zeilen unter Menge und Preis berechnet), hat eine schreibgeschützte Summe. Klicken Sie auf die Summe oder drücken Sie darauf Enter, um **Menge und Preis** für diese Spalte zu öffnen. Der Stift tut dasselbe. Zeigen Sie mit der Maus auf die Summe, um „Aus den Zeilen berechnet. Öffnen Sie Menge und Preis, um den Betrag zu ändern.“ zu lesen
 - **Monatlich**: Geben Sie Beträge pro Monat (Jan-Dez) für jede angezeigte Spalte ein, zum Beispiel um einem Auszahlungsplan oder den Meilensteinen eines Projekts zu folgen. Quartalszwischensummen und eine Jahressumme werden angezeigt. Nur die Monate, die Sie ändern, werden gespeichert.
@@ -413,7 +413,7 @@ Klicken Sie unter der Tabelle auf **Zeile hinzufügen**, um eine Zeile hinzuzuf�
 
 - Die VZÄ der Zeilen, wenn eine Zeile Personen oder Tage zählt, zum Beispiel „VZÄ im Zeitraum 0.24 · Jahresdurchschnitt 0.12“. Siehe [VZÄ](#vza). Die Summe der Spalte steht in der Spalte selbst
 - Woher die Beträge stammen, wenn sie nicht mehr aus den Zeilen stammen: einer der Sätze im nächsten Teil
-- Hinweise, wenn sie zutreffen: „Der Zeitraum reicht über die Daten der Position hinaus.“, ein inzwischen deaktivierter Kalender, zum Beispiel „Mitarbeitende am Hauptsitz ist deaktiviert. Die Zeilen verwenden ihn weiterhin.“, und seit der letzten Speicherung der Zeilen geänderte Arbeitstage
+- Hinweise, wenn sie zutreffen: „Der Zeitraum reicht über die Daten der Zeile hinaus.“, ein inzwischen deaktivierter Kalender, zum Beispiel „Mitarbeitende am Hauptsitz ist deaktiviert. Die Zeilen verwenden ihn weiterhin.“, und seit der letzten Speicherung der Zeilen geänderte Arbeitstage
 - **Diese Zeilen auf alle Spalten anwenden**: ein Schalter für dieselben Spalten wie der Schalter im Tab für die Verteilung, hier standardmäßig ausgeschaltet. Das Einschalten schreibt die Zeilen sofort in jede folgende Spalte, und der Schalter bleibt eingeschaltet: Jede spätere Speicherung schreibt die Zeilen auch in diese Spalten. Das Ausschalten allein ändert nichts
 
 **Wenn sich die Beträge auf anderem Weg ändern**: Die Zeilen bleiben als Referenz bei der Spalte, und der Tab nennt, woher die Beträge jetzt stammen, gefolgt vom Link **Die Zeilen wieder verwenden**. Die Zeilen sind dann schreibgeschützt: Sie können keine Zeile hinzufügen, entfernen oder ändern, und der Tab zeigt weder einen Betrag pro Zeile noch VZÄ noch **Diese Zeilen auf alle Spalten anwenden**. Der Link speichert die Zeilen, wie sie sind, und berechnet die Spalte erneut aus ihnen, und die Zeilen sind wieder bearbeitbar. Um eine als Referenz behaltene Zeile zu ändern, klicken Sie zuerst auf **Die Zeilen wieder verwenden** und ändern Sie sie dann.
@@ -524,7 +524,7 @@ Der Tab Verknüpfungen verbindet die Zeile mit zugehörigen Objekten: Projekte, 
 **Kontakte**:
 
 - Verknüpfen Sie Kontakte mit der Zeile: Wählen Sie einen Kontakt und dann seine Rolle (**Vertrieb**, **Technik**, **Support** oder **Sonstige**). Die Wahl der Rolle fügt den Kontakt hinzu
-- Die Tabelle zeigt Rolle, Vorname, Nachname, Position, E-Mail und Mobilnummer. Fahren Sie mit der Maus über die Rolle, um zu sehen, ob der Kontakt vom Lieferanten stammt oder manuell hinzugefügt wurde
+- Die Tabelle zeigt Rolle, Vorname, Nachname, Budgetzeile, E-Mail und Mobilnummer. Fahren Sie mit der Maus über die Rolle, um zu sehen, ob der Kontakt vom Lieferanten stammt oder manuell hinzugefügt wurde
 - Entfernen Sie einen Kontakt mit dem Entfernen-Symbol
 - Nützlich, um zu wissen, wen Sie bei Verlängerungen, Supportfällen oder Verhandlungen ansprechen
 

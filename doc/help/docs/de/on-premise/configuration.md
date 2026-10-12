@@ -418,7 +418,7 @@ Die Standardwerte passen für einige Dutzend Benutzer. Für mehr gleichzeitige B
 | `SHUTDOWN_DRAIN_TIMEOUT_MS` | Wie lange die API beim Stoppen oder bei einem Upgrade laufende Anfragen, die von ihnen gestarteten Benachrichtigungen, laufende Hintergrundjobs und E-Mails in der Warteschlange abschließen lässt (Millisekunden, höchstens 120000). Der Container wird in jedem Fall nach 30 s gestoppt. | `20000` |
 | `OPS_METRICS_TOKEN` | Aktiviert `GET /api/ops/metrics` für Ihr Monitoring-Tool (mindestens 24 Zeichen, zum Beispiel `openssl rand -hex 32`; ein kürzerer Wert lässt es deaktiviert, und die API meldet das beim Start). Siehe [Betrieb](operations.md#api-metriken-fur-ein-monitoring-tool). | *nicht gesetzt (deaktiviert)* |
 
-**Was jede Einstellung kostet.** Jeder API-Prozess belegt beim Start etwa 200 MB Arbeitsspeicher und unter Last bis zu 300 MB (gemessen mit 50 Benutzern auf 5.000 Budgetpositionen); bei mehreren Prozessen kommt ein kleiner überwachender Prozess mit etwa 100 MB hinzu. Jeder API-Prozess kann bis zu `DB_POOL_MAX` Verbindungen zu PostgreSQL öffnen. Rechnen Sie:
+**Was jede Einstellung kostet.** Jeder API-Prozess belegt beim Start etwa 200 MB Arbeitsspeicher und unter Last bis zu 300 MB (gemessen mit 50 Benutzern auf 5.000 Budgetzeilen); bei mehreren Prozessen kommt ein kleiner überwachender Prozess mit etwa 100 MB hinzu. Jeder API-Prozess kann bis zu `DB_POOL_MAX` Verbindungen zu PostgreSQL öffnen. Rechnen Sie:
 
 - Arbeitsspeicher: `API_WORKERS` × 0,4 GB für die API, plus den Bedarf von PostgreSQL, wenn es auf demselben Server läuft, plus Platz für den Image-Build bei jedem Upgrade. 6 GB sind das Minimum für jeden Server. Auf einer neuen Installation mit laufendem PostgreSQL und Speicher brauchte der gleichzeitige Build beider Images in der Spitze insgesamt etwa 3,8 GB (etwa 3,2 GB für den Build selbst), mit 6 GB bleiben also etwa 2 GB frei;
 - Verbindungen: `API_WORKERS` × `DB_POOL_MAX` muss unter `max_connections` von PostgreSQL (standardmäßig 100) minus etwa 15 bleiben. Die API prüft das beim Start und schreibt eine Warnung in ihr Protokoll, wenn es nicht passt, mit einem Wert, der passen würde.
@@ -431,7 +431,7 @@ Die Standardwerte passen für einige Dutzend Benutzer. Für mehr gleichzeitige B
 | 20 bis 50 | 2 | 15 | 8 GB |
 | 50 und mehr | 4 | 10 | 8 bis 16 GB |
 
-Gemessen auf 5.000 Budgetpositionen: Bei 10 Benutzern antwortet ein Prozess so schnell wie vier. Bei 50 Benutzern dauerte das Öffnen einer Position 237 ms (95. Perzentil) mit einem Prozess, 142 ms mit zwei und 82 ms mit vier, und ein einzelner Prozess hielt alle seine Datenbankverbindungen beschäftigt.
+Gemessen auf 5.000 Budgetzeilen: Bei 10 Benutzern antwortet ein Prozess so schnell wie vier. Bei 50 Benutzern dauerte das Öffnen einer Budgetzeile 237 ms (95. Perzentil) mit einem Prozess, 142 ms mit zwei und 82 ms mit vier, und ein einzelner Prozess hielt alle seine Datenbankverbindungen beschäftigt.
 
 Halten Sie `API_WORKERS` höchstens bei der Zahl der CPU-Kerne, die der Server KANAP zur Verfügung stellt. Änderungen werden wirksam, wenn der API-Container neu erstellt wird (`docker compose -f infra/compose.onprem.yml up -d api`).
 
@@ -584,9 +584,9 @@ Die API führt 15 geplante Jobs aus. Die folgenden Zeiten sind die Standardwerte
 
 | Job | Wann | Was er tut |
 |-----|------|--------------|
-| `check-expirations` | Täglich 08:00 | Schreibt den Verantwortlichen von Verträgen und OPEX-Positionen 30, 14, 7 und 1 Tag(e) vor einer Kündigungsfrist, einem Enddatum oder dem Ende der Gültigkeit eine E-Mail. Nur Benutzer, die diese Benachrichtigungen eingeschaltet haben, erhalten sie, einmal pro Tag. |
+| `check-expirations` | Täglich 08:00 | Schreibt den Verantwortlichen von Verträgen und OPEX-Zeilen 30, 14, 7 und 1 Tag(e) vor einer Kündigungsfrist, einem Enddatum oder dem Ende der Gültigkeit eine E-Mail. Nur Benutzer, die diese Benachrichtigungen eingeschaltet haben, erhalten sie, einmal pro Tag. |
 | `send-weekly-reviews` | Stündlich | Sendet den Wochenrückblick an Benutzer, die ihn abonniert haben, an ihrem eigenen Tag und in ihrer eigenen Zeitzone. |
-| `lifecycle-status-sync` | Stündlich und einmal beim Start | Setzt Stammdaten, Verträge, OPEX- und CAPEX-Positionen auf deaktiviert, sobald ihr Gültigkeitsende überschritten ist. |
+| `lifecycle-status-sync` | Stündlich und einmal beim Start | Setzt Stammdaten, Verträge, OPEX- und CAPEX-Zeilen auf deaktiviert, sobald ihr Gültigkeitsende überschritten ist. |
 | `entra-directory-sync` | Täglich 03:00 | Aktualisiert Benutzerattribute und deaktiviert Konten, die im Verzeichnis entfernt oder deaktiviert wurden. Funktioniert nur, wenn Entra SSO verbunden und genehmigt ist. Siehe [Microsoft Entra SSO](sso-entra.md). |
 | `attachment-orphan-cleanup` | Täglich 03:00 | Entfernt die Anhangsdatensätze eingebetteter Bilder, die kein Text mehr verwendet. |
 | `storage-ghost-cleanup` | Sonntag 04:00 | Entfernt gespeicherte Dateien ohne Anhangsdatensatz, die älter als 7 Tage sind. |

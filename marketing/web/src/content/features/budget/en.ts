@@ -16,13 +16,13 @@ const content: FeatureContent = {
       title: 'From landing to next-year budget',
       body: 'The standard columns (budget, revision, actuals, expected landing) can be renamed and hidden to match your practice, from Y-2 to Y+2, with annual or monthly entry. Firm up the landing line by line, copy it into next year’s budget, then freeze the approved version.',
       bullets: [
-        'OPEX and CAPEX in dedicated lists',
+        'OPEX and CAPEX in one list, filterable by type',
         'Budget, revision, actuals and landing columns, renamable',
         'Amounts as quantity × price, or spread by month',
         'Column copy with a dry run first',
         'Version freeze: the approved version stays put',
       ],
-      shotAlt: 'OPEX list with the 2026 amounts and the totals row',
+      shotAlt: 'Budget lines list with the 2026 amounts and the totals row',
     },
     {
       title: 'Chargeback everyone understands',
@@ -53,18 +53,18 @@ const content: FeatureContent = {
       body: 'Global and per-company chargeback, trends, top increases and decreases, comparison of two versions, analytics dimensions, consolidation accounts, monthly staffing and cost per FTE. Every report row opens the matching filtered list, and Plaid answers the same questions in plain language.',
       bullets: [
         'Global and per-company chargeback',
-        'Column comparison and OPEX and CAPEX trends',
+        'Budget comparison across years, for all lines, OPEX or CAPEX',
         'Analytics dimensions and consolidation accounts',
         'Monthly staffing, cost per FTE and daily rate',
         'CSV export and chart images',
       ],
-      shotAlt: 'Top 10 OPEX items of the 2026 budget, as a pie chart',
+      shotAlt: 'Top 10 OPEX lines of the 2026 budget, as a pie chart',
     },
   ],
   more: {
     title: 'And also',
     items: [
-      { title: 'Linked to applications and projects', body: 'Every spend item leads to its applications, projects and suppliers. An application record shows what it costs.' },
+      { title: 'Linked to applications and projects', body: 'Every budget line leads to its applications, projects and suppliers. An application record shows what it costs.' },
       { title: 'Contracts and deadlines', body: 'Yearly amount, auto-renewal, notice period and a computed cancellation deadline, linked to the budget lines.' },
       { title: 'Round trip with your spreadsheet', body: 'Export the lines, edit them in Excel or LibreOffice, import the file back: KANAP writes only the cells that changed.' },
       { title: 'Sample data', body: 'A trial fills up in a minute with the budget of Fromage & Co, four fictional companies, so you can see everything before entering yours.' },

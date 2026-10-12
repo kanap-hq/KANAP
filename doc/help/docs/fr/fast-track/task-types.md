@@ -118,7 +118,7 @@ Les tâches sont l'**unité atomique de travail** dans KANAP. Elles traversent l
 
 Une **action clairement périmètrée** avec un responsable défini, un statut et une échéance.
 
-- Peut être **autonome** ou liée à un **Projet**, un **poste OPEX**, un **Contrat** ou un **poste CAPEX**
+- Peut être **autonome** ou liée à un **Projet**, une **ligne OPEX**, un **Contrat** ou une **ligne CAPEX**
 - Porte un effort concret
 - L'impact sur les utilisateurs ou les services est contenu et bien compris
 - Ne nécessite pas de coordination entre plusieurs équipes -- même si elle prend longtemps, elle reste portée par une seule personne sans nécessiter d'analyse transversale

@@ -1,6 +1,6 @@
 # Kontenpläne und Kontenverwaltung
 
-Kontenpläne (CoA) organisieren Ihre Buchhaltungsstruktur, indem sie Konten in benannten Sets gruppieren. Jedes Unternehmen kann mit einem Kontenplan verknüpft werden, der bestimmt, welche Konten beim Erfassen von OPEX- oder CAPEX-Positionen verfügbar sind.
+Kontenpläne (CoA) organisieren Ihre Buchhaltungsstruktur, indem sie Konten in benannten Sets gruppieren. Jedes Unternehmen kann mit einem Kontenplan verknüpft werden, der bestimmt, welche Konten beim Erfassen von OPEX- oder CAPEX-Zeilen verfügbar sind.
 
 ## Warum Kontenpläne verwenden?
 
@@ -22,14 +22,14 @@ Kontenplan (FR-2024)
   -> zugewiesen an
 Unternehmen (Acme Frankreich)
   -> verwendet beim Erfassen
-OPEX/CAPEX-Positionen -> Kontoauswahl (gefiltert auf FR-2024-Konten)
+OPEX/CAPEX-Zeilen -> Kontoauswahl (gefiltert auf FR-2024-Konten)
 ```
 
 **Wichtige Punkte**:
   - Ein Kontenplan kann mehreren Unternehmen zugewiesen werden
   - Jedes Unternehmen hat einen Kontenplan
   - Konten gehören zu einem Kontenplan
-  - Beim Erstellen/Bearbeiten von Ausgabenpositionen wird das Konto-Dropdown nach dem Kontenplan des Unternehmens gefiltert
+  - Beim Erstellen/Bearbeiten von Ausgabenzeilen wird das Konto-Dropdown nach dem Kontenplan des Unternehmens gefiltert
   - Jedes Konto legt fest, ob es für OPEX-Zeilen, CAPEX-Zeilen oder beides dient. Siehe [OPEX- oder CAPEX-Konten](#opex-oder-capex-konten)
 
 ## Wo Sie es finden
@@ -127,7 +127,7 @@ Zum Bearbeiten benötigen Sie `accounts:manager`. Benutzer mit Leserechten sehen
 
 ### OPEX- oder CAPEX-Konten
 
-Das Feld **Verwendet für** legt fest, welche Budgetpositionen das Konto verwenden dürfen:
+Das Feld **Verwendet für** legt fest, welche Budgetzeilen das Konto verwenden dürfen:
 
 | Wert | Bedeutung |
 |------|-----------|
@@ -281,7 +281,7 @@ Jede Zeile hat ein Menü **⋯**, das nur die Aktionen anbietet, die für diesen
 - **Als Länderstandard festlegen** / **Nicht mehr Länderstandard** (`accounts:manager`): für Kontenpläne eines Landes.
 - **Als Standard für andere Länder festlegen** / **Nicht mehr Standard für andere Länder** (`accounts:manager`): für Kontenpläne für alle Länder. Wenn Sie ihn zum Standard machen, wird er auch Unternehmen ohne Kontenplan zugewiesen.
 - **Als Konsolidierungskontenplan festlegen** / **Nicht mehr Konsolidierungskontenplan** (`accounts:manager`): für jeden Kontenplan. Siehe [Den Konsolidierungskontenplan wechseln](#den-konsolidierungskontenplan-wechseln).
-- **Löschen** (`accounts:admin`): Löscht den Kontenplan samt seinen Konten. Enthält der Kontenplan Konten, nennt eine Bestätigung, wie viele gelöscht werden. Ist er der Konsolidierungskontenplan, weist die Bestätigung darauf hin, dass das Konzernreporting dann keinen Referenzkontenplan mehr hat. Das Löschen wird abgelehnt, solange Unternehmen den Kontenplan verwenden oder OPEX-/CAPEX-Positionen seine Konten nutzen. Der Dialog nennt den Grund.
+- **Löschen** (`accounts:admin`): Löscht den Kontenplan samt seinen Konten. Enthält der Kontenplan Konten, nennt eine Bestätigung, wie viele gelöscht werden. Ist er der Konsolidierungskontenplan, weist die Bestätigung darauf hin, dass das Konzernreporting dann keinen Referenzkontenplan mehr hat. Das Löschen wird abgelehnt, solange Unternehmen den Kontenplan verwenden oder OPEX-/CAPEX-Zeilen seine Konten nutzen. Der Dialog nennt den Grund.
 
 Die Rollen ändern sich, sobald Sie eine Aktion wählen. Die Tabelle wird sofort aktualisiert.
 
@@ -404,13 +404,13 @@ Diese duale Sicht erfüllt sowohl lokale Compliance-Anforderungen als auch Konze
   1. Kontenpläne für Ihre Unternehmen erstellen oder laden
   2. Kontenpläne den Unternehmen zuweisen (im Unternehmens-Übersichts-Tab)
   3. Ihren Legacy-Konten `coa_id` zuweisen (per CSV-Import mit `coa_code` oder Massenbearbeitung)
-  4. Bestehende OPEX/CAPEX-Positionen aktualisieren, die Warnungen „Veraltetes Konto" zeigen
+  4. Bestehende OPEX/CAPEX-Zeilen aktualisieren, die Warnungen „Veraltetes Konto" zeigen
 
 **Tipp**: Sie müssen nicht alles auf einmal migrieren. Unternehmen ohne Kontenplan arbeiten weiterhin mit Legacy-Konten, was eine schrittweise Einführung ermöglicht.
 
 ## Warnungen bei veralteten Konten
 
-Beim Bearbeiten von OPEX- oder CAPEX-Positionen sehen Sie möglicherweise:
+Beim Bearbeiten von OPEX- oder CAPEX-Zeilen sehen Sie möglicherweise:
 
 ```
 Veraltetes Konto erkannt. Das ausgewählte Konto gehört nicht zum
@@ -418,16 +418,16 @@ Kontenplan des Unternehmens. Bitte aktualisieren Sie das Konto.
 ```
 
 **Warum das passiert**:
-  - Das Konto der Position gehört zum Kontenplan „A"
-  - Das Unternehmen der Position gehört zum Kontenplan „B"
+  - Das Konto der Budgetzeile gehört zum Kontenplan „A"
+  - Das Unternehmen der Budgetzeile gehört zum Kontenplan „B"
   - Nichtübereinstimmung erkannt
 
 **Häufige Szenarien**:
-  - Sie haben ein Unternehmen zu einem neuen Kontenplan migriert, aber alte Ausgabenpositionen noch nicht aktualisiert
+  - Sie haben ein Unternehmen zu einem neuen Kontenplan migriert, aber alte Ausgabenzeilen noch nicht aktualisiert
   - Ein Konto wurde manuell einem anderen Kontenplan zugewiesen
   - Sie betrachten historische Daten von vor der Kontenplan-Migration
 
-**Behebung**: Bearbeiten Sie die Position und wählen Sie ein Konto aus dem aktuellen Kontenplan des Unternehmens. Die Warnung verschwindet, sobald das Konto zum Kontenplan des Unternehmens passt.
+**Behebung**: Bearbeiten Sie die Budgetzeile und wählen Sie ein Konto aus dem aktuellen Kontenplan des Unternehmens. Die Warnung verschwindet, sobald das Konto zum Kontenplan des Unternehmens passt.
 
 ## Status und Lebenszyklus
 
@@ -438,8 +438,8 @@ Konten verwenden das gleiche Lebenszyklusmanagement wie andere Stammdaten:
   - Wenn Sie das Konto ohne Datum auf **Deaktiviert** setzen, wird das Ende der Gültigkeit auf heute gesetzt
   - Sobald das Ende der Gültigkeit vorbei ist, wechselt der Status innerhalb einer Stunde von selbst auf **Deaktiviert**
   - Nach dem Ende der Gültigkeit:
-      - Das Konto erscheint nicht mehr in Auswahl-Dropdowns für neue Positionen
-      - Historische Daten bleiben erhalten; bestehende Positionen behalten ihre Kontozuweisungen
+      - Das Konto erscheint nicht mehr in Auswahl-Dropdowns für neue Budgetzeilen
+      - Historische Daten bleiben erhalten; bestehende Budgetzeilen behalten ihre Kontozuweisungen
       - Berichte für Jahre, in denen das Konto aktiv war, enthalten es weiterhin
   - Das Konten-Grid zeigt standardmäßig nur **aktivierte** Konten. Wählen Sie im Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** die Option **Alle**, um deaktivierte Konten einzubeziehen.
 
@@ -452,7 +452,7 @@ Wenn ein Arbeitsbereich (Mandant) von einem Plattform-Administrator gelöscht wi
 
 Die Löschung ist sofort und irreversibel. Der Mandantendatensatz bleibt für die Nachvollziehbarkeit erhalten, und sein Slug wird zur Wiederverwendung freigegeben.
 
-**Tipp**: Bevorzugen Sie das Deaktivieren gegenüber dem Löschen. Das Löschen ist nur erlaubt, wenn keine OPEX/CAPEX-Positionen das Konto referenzieren.
+**Tipp**: Bevorzugen Sie das Deaktivieren gegenüber dem Löschen. Das Löschen ist nur erlaubt, wenn keine OPEX/CAPEX-Zeilen das Konto referenzieren.
 
 ## CSV-Import/Export
 
@@ -532,7 +532,7 @@ Sie haben 50 Konten und 5 Unternehmen, die alle eingerichtet wurden, bevor es Ko
   3. Fügen Sie allen Zeilen eine Spalte `coa_code` hinzu (z. B. `US-GAAP`)
   4. Importieren Sie die aktualisierte CSV (die Konten gehören nun zum Kontenplan)
   5. Weisen Sie den Kontenplan Ihren Unternehmen zu
-  6. Bearbeiten Sie alle OPEX/CAPEX-Positionen, die Warnungen zu veralteten Konten anzeigen
+  6. Bearbeiten Sie alle OPEX/CAPEX-Zeilen, die Warnungen zu veralteten Konten anzeigen
 
 ### Szenario 3: Ein Unternehmen auf einen neuen Kontenplan umstellen
 
@@ -542,8 +542,8 @@ Ihre britische Tochtergesellschaft stellt von UK GAAP auf IFRS um.
   1. Erstellen Sie einen neuen Kontenplan: `UK-IFRS` (oder laden Sie ihn aus einer Vorlage)
   2. Ändern Sie im Übersicht-Tab des Unternehmens den Kontenplan auf `UK-IFRS`
   3. Ab sofort können Benutzer nur noch Konten aus `UK-IFRS` auswählen
-  4. Bestehende OPEX/CAPEX-Positionen behalten ihre alten Konten, zeigen aber Warnungen an
-  5. Aktualisieren Sie die Positionen nach Bedarf (oder lassen Sie historische Daten unverändert, wenn die Berichterstattung es zulässt)
+  4. Bestehende OPEX/CAPEX-Zeilen behalten ihre alten Konten, zeigen aber Warnungen an
+  5. Aktualisieren Sie die Budgetzeilen nach Bedarf (oder lassen Sie historische Daten unverändert, wenn die Berichterstattung es zulässt)
 
 ### Szenario 4: Konzernkonsolidierung einrichten (mehrere Länder)
 
@@ -576,10 +576,10 @@ Ihr Konzern hat Tochtergesellschaften in Frankreich, im Vereinigten Königreich 
 A: Nein. Jedes Konto gehört zu genau einem Kontenplan (oder zu keinem bei Legacy-Konten). Wenn Sie die gleiche Kontenstruktur in mehreren Kontenplänen benötigen, laden Sie die Vorlage in jeden einzelnen oder verwenden Sie CSV-Export/Import mit unterschiedlichen `coa_code`-Werten.
 
 **F: Was passiert, wenn ich einen Kontenplan lösche?**
-A: Das Löschen ist gesperrt, wenn Unternehmen ihn referenzieren oder OPEX/CAPEX-Positionen seine Konten verwenden. Weisen Sie zuerst Unternehmen neu zu und aktualisieren Sie Positionen, dann können Sie den Kontenplan löschen. Das Löschen eines Kontenplans löscht auch alle darin enthaltenen Konten, die nicht anderweitig referenziert werden.
+A: Das Löschen ist gesperrt, wenn Unternehmen ihn referenzieren oder OPEX/CAPEX-Zeilen seine Konten verwenden. Weisen Sie zuerst Unternehmen neu zu und aktualisieren Sie Budgetzeilen, dann können Sie den Kontenplan löschen. Das Löschen eines Kontenplans löscht auch alle darin enthaltenen Konten, die nicht anderweitig referenziert werden.
 
 **F: Kann ich Kontonummern umbenennen?**
-A: Ja, im Konten-Arbeitsbereich. Das Ändern der Kontonummer aktualisiert automatisch alle Referenzen in OPEX/CAPEX-Positionen (die UUID des Kontos bleibt intern gleich).
+A: Ja, im Konten-Arbeitsbereich. Das Ändern der Kontonummer aktualisiert automatisch alle Referenzen in OPEX/CAPEX-Zeilen (die UUID des Kontos bleibt intern gleich).
 
 **F: Wie sehe ich, welche Unternehmen einen bestimmten Kontenplan verwenden?**
 A: Öffnen Sie **Kontenpläne verwalten** auf der Kontenpläne-Seite und lesen Sie die Spalte **Gesellschaften** in der Zeile des Kontenplans. Sie können auch die Unternehmensseite nach Kontenplan filtern.
@@ -600,7 +600,7 @@ A: Nein, sie sind optional. Wenn Sie nur in einem Land tätig sind oder keine Ko
 A: Ja, genau das ist der Sinn! Viele lokale Konten über verschiedene Kontenpläne hinweg können dem gleichen Konsolidierungskonto zugeordnet werden. So aggregieren Sie Kosten aus verschiedenen Ländern in eine einzige konsolidierte Kategorie.
 
 **F: Was passiert, wenn ich eine Konsolidierungszuordnung ändere?**
-A: Bestehende OPEX/CAPEX-Positionen speichern Konsolidierungsdaten nicht direkt -- sie referenzieren das Konto, das die Konsolidierungszuordnung hat. Wenn Sie eine Zuordnung ändern, werden alle historischen und zukünftigen Positionen, die dieses Konto verwenden, unter dem neuen Konsolidierungskonto berichtet. Ändern Sie Zuordnungen mit Bedacht, wenn Sie historische Berichtskategorien beibehalten müssen.
+A: Bestehende OPEX/CAPEX-Zeilen speichern Konsolidierungsdaten nicht direkt -- sie referenzieren das Konto, das die Konsolidierungszuordnung hat. Wenn Sie eine Zuordnung ändern, werden alle historischen und zukünftigen Budgetzeilen, die dieses Konto verwenden, unter dem neuen Konsolidierungskonto berichtet. Ändern Sie Zuordnungen mit Bedacht, wenn Sie historische Berichtskategorien beibehalten müssen.
 
 **F: Muss der Konsolidierungskontenplan der Standard für andere Länder sein?**
 A: Nein. Die beiden Rollen sind unabhängig. In der üblichen Einrichtung hat ein IFRS-Kontenplan beide, und Sie können sie jederzeit in **Kontenpläne verwalten** verschiedenen Kontenplänen geben.

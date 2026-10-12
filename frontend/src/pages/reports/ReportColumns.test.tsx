@@ -216,7 +216,7 @@ describe('Budget column comparison report', () => {
 
   it('names the item type through the translations', () => {
     renderReport(<BudgetColumnsCompareReport />);
-    expect(combo('reports.filters.itemType').textContent).toBe('operations.scope.all');
+    expect(screen.getByRole('tab', { name: 'operations.scope.all' })).toHaveAttribute('aria-selected', 'true');
   });
 });
 

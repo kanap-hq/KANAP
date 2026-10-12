@@ -221,8 +221,8 @@ The Relations tab connects this asset to other records across KANAP. The tab bad
 - **Contained by** / **Depended on by**: Read-only reverse views, shown only when other assets reference this one
 
 **Financials & projects**:
-- **OPEX items**: Link to operational expenditure items
-- **CAPEX items**: Link to capital expenditure items
+- **OPEX lines**: Link to operational expenditure lines
+- **CAPEX lines**: Link to capital expenditure lines
 - **Contracts**: Link to contract records
 - **Projects**: Link to portfolio projects related to this asset
 
@@ -364,6 +364,6 @@ PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
 - **Track lifecycle**: Mark deprecated and retired assets to keep inventory counts accurate.
 - **Link to locations**: Assign assets to locations so hosting type, country and city are populated automatically.
 - **Assign to applications**: Use the Overview tab to link assets to application deployments. The same assignments appear under the application's Deployments tab.
-- **Use the Relations tab**: Connect assets to OPEX/CAPEX items, contracts, and projects for financial visibility.
+- **Use the Relations tab**: Connect assets to OPEX/CAPEX lines, contracts, and projects for financial visibility.
 - **Tasks come from the Tasks page**: To attach a task to an asset, set the Asset field on the task itself; it will then appear under Relations > Tasks.
 - **Attach documentation**: Upload configuration files, architecture diagrams, or vendor docs directly to the Relations tab.

@@ -1768,7 +1768,7 @@
         "businessLead": "Business lead",
         "businessSponsor": "Business sponsor",
         "businessTeam": "Business team",
-        "capexItems": "CAPEX items",
+        "capexItems": "CAPEX lines",
         "category": "Category",
         "company": "Company",
         "createdFromRequest": "Created from request",
@@ -1786,7 +1786,7 @@
         "itLead": "IT lead",
         "itSponsor": "IT sponsor",
         "name": "Name",
-        "opexItems": "OPEX items",
+        "opexItems": "OPEX lines",
         "originTask": "Origin task",
         "overrideJustification": "Override justification",
         "overrideValue": "Override value",
@@ -2133,10 +2133,10 @@
         }
       },
       "fields": {
-        "capexItems": "CAPEX items",
+        "capexItems": "CAPEX lines",
         "linkDescription": "Link description",
         "name": "Name",
-        "opexItems": "OPEX items",
+        "opexItems": "OPEX lines",
         "url": "URL"
       },
       "messages": {
@@ -2148,15 +2148,15 @@
       "placeholders": {
         "applications": "Search applications",
         "assets": "Search assets",
-        "capexItems": "Select CAPEX items",
+        "capexItems": "Select CAPEX lines",
         "linkDescription": "Optional",
-        "opexItems": "Select OPEX items",
+        "opexItems": "Select OPEX lines",
         "url": "https://example.com"
       },
       "sections": {
         "appsAndAssets": "Apps and assets",
         "attachments": "Attachments",
-        "budgetItems": "Budget items",
+        "budgetItems": "Budget lines",
         "externalLinks": "Relevant websites"
       },
       "states": {

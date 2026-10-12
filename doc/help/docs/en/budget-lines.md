@@ -102,7 +102,7 @@ The list (at **Budget management > Budget lines**) holds the OPEX and CAPEX line
 
 - **Amount columns**: Every shown budget column for Y-1, Y, Y+1 and Y+2, under the names your organisation chose. The header gives the column, the year relative to today and the calendar year, for example **Revision Y+1 (2027)**. Hidden columns are not offered
 - **FTE columns**: The FTE of every shown budget column for Y-1, Y, Y+1 and Y+2, under the names your organisation chose, right after the amount columns in the column chooser. The header gives the column and the calendar year, for example **Budget FTE (2026)**. A line's FTE is the sum of the FTE of its quantity and price lines in that column. See [FTE](#fte). The cell is empty when the column has no lines
-- **FTE declared**: **Yes** when the line declares FTE in at least one budget column of any year, otherwise empty. These are the lines the **Items with FTE** filter of the reports keeps
+- **FTE declared**: **Yes** when the line declares FTE in at least one budget column of any year, otherwise empty. These are the lines the **Lines with FTE** filter of the reports keeps
 - **Enabled**: Line status (enabled or disabled)
 - **Description**: The line's description
 - **Currency**: ISO currency code
@@ -172,7 +172,7 @@ A column layout you saved keeps its own choice of columns. The layout you had sa
 
 **Prev/Next navigation**:
 
-- When you open a line, the workspace shows **Prev** and **Next** buttons and a counter, for example "Item 3 of 47"
+- When you open a line, the workspace shows **Prev** and **Next** buttons and a counter, for example "Line 3 of 47"
 - These navigate through the list in the current sort order, respecting filters and search
 - Moving to another line saves your pending edits first
 - Your list context (sort, filters, search) is preserved when you close the workspace
@@ -287,7 +287,7 @@ The Budget tab is where you enter financial data per year. It supports multiple 
 **Flat vs Monthly**:
 
 - **Flat**: Enter one total per column. The total is spread evenly over the months of the column's period, and the months outside it are set to zero. The period shows under each total before you type, for example "9 months, April to December". Only the total you edit is saved. The other columns keep their monthly amounts.
-- Click the pencil icon next to the period under a total (**Change period**) to open the spread panel on that column, with its current total. If the line's dates leave no month in the year, the total is disabled and reads "No month of 2026 is within the item's dates." Click the pencil icon next to it (**Choose the period**) to set one yourself.
+- Click the pencil icon next to the period under a total (**Change period**) to open the spread panel on that column, with its current total. If the line's dates leave no month in the year, the total is disabled and reads "No month of 2026 is within the line's dates." Click the pencil icon next to it (**Choose the period**) to set one yourself.
 - Click the calculator icon next to the pencil (**Quantity and price**) to open the same box on the lines of that column. See [Quantity and price](#quantity-and-price).
 - A column that follows its lines (its amounts were computed from its Quantity and price lines) has a read-only total. Click the total, or press Enter on it, to open **Quantity and price** on that column. The pencil does the same. Hover the total to read "Calculated from its lines. Open Quantity and price to change it."
 - **Monthly**: Enter amounts per month (Jan-Dec) for each shown column, for example to follow a cash-out plan or the milestones of a project. Quarter subtotals and a yearly total are shown. Only the months you change are saved.
@@ -413,7 +413,7 @@ Click **Add a line** under the table to add a line, and the cross at the end of 
 
 - The FTE of the lines, when a line counts people or days, for example "FTE over the period 0.24 · Full-year average 0.12". See [FTE](#fte). The total of the column shows in the column itself
 - Where the amounts come from, when they no longer come from the lines: one of the sentences in the next part
-- Notes when they apply: "The period goes beyond the item's dates.", a calendar disabled since, for example "Head office staff is disabled. The lines still use it.", and working days changed since the last save of the lines
+- Notes when they apply: "The period goes beyond the line's dates.", a calendar disabled since, for example "Head office staff is disabled. The lines still use it.", and working days changed since the last save of the lines
 - **Apply these lines to all columns**: a switch for the same columns as the spread tab's switch, off by default here. Turning it on writes the lines to every column that follows at once, and it stays on: each later save writes the lines to those columns too. Turning it off changes nothing by itself
 
 **When the amounts change another way**: the lines stay with the column as a reference, and the tab says where the amounts come from now, followed by a **Use the lines again** link. The lines are then read only: you cannot add, remove or edit a line, and the tab shows no amount per line, no FTE and no **Apply these lines to all columns**. The link saves the lines as they are and computes the column from them again, and the lines become editable again. To change a line kept as a reference, click **Use the lines again** first, then edit it.

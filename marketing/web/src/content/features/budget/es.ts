@@ -16,13 +16,13 @@ const content: FeatureContent = {
       title: 'Del cierre previsto al presupuesto del año siguiente',
       body: 'Las columnas estándar (presupuesto, revisión, real, cierre previsto) se renombran y se ocultan según su práctica, de A-2 a A+2, con entrada anual o mensual. Afiance el cierre línea por línea, cópielo al presupuesto del año siguiente y congele la versión aprobada.',
       bullets: [
-        'OPEX y CAPEX en listas dedicadas',
+        'OPEX y CAPEX en una sola lista, filtrable por tipo',
         'Columnas de presupuesto, revisión, real y cierre, renombrables',
         'Importes en cantidad × precio, o repartidos por mes',
         'Copia de columnas con simulación previa',
         'Congelación de versiones: la versión aprobada no se mueve',
       ],
-      shotAlt: 'Lista OPEX con los importes de 2026 y la fila de totales',
+      shotAlt: 'Lista de líneas presupuestarias con los importes de 2026 y la fila de totales',
     },
     {
       title: 'Una repercusión que todos entienden',
@@ -53,18 +53,18 @@ const content: FeatureContent = {
       body: 'Repercusión global y por sociedad, tendencias, mayores subidas y bajadas, comparación de dos versiones, dimensiones analíticas, cuentas de consolidación, plantilla mensual y coste por FTE. Cada fila de un informe abre la lista filtrada correspondiente, y Plaid responde a las mismas preguntas en lenguaje natural.',
       bullets: [
         'Repercusión global y por sociedad',
-        'Comparación de columnas y tendencias OPEX y CAPEX',
+        'Comparación presupuestaria entre años, para todas las líneas, OPEX o CAPEX',
         'Dimensiones analíticas y cuentas de consolidación',
         'Plantilla mensual, coste por FTE y tarifa diaria',
         'Exportación CSV e imágenes de los gráficos',
       ],
-      shotAlt: 'Las 10 mayores partidas OPEX del presupuesto 2026, en gráfico circular',
+      shotAlt: 'Las 10 mayores líneas OPEX del presupuesto 2026, en gráfico circular',
     },
   ],
   more: {
     title: 'Y además',
     items: [
-      { title: 'Vinculado a aplicaciones y proyectos', body: 'Cada gasto lleva a sus aplicaciones, proyectos y proveedores. La ficha de una aplicación muestra lo que cuesta.' },
+      { title: 'Vinculado a aplicaciones y proyectos', body: 'Cada línea presupuestaria lleva a sus aplicaciones, proyectos y proveedores. La ficha de una aplicación muestra lo que cuesta.' },
       { title: 'Contratos y plazos', body: 'Importe anual, renovación automática, preaviso y fecha límite de rescisión calculada, vinculados a las líneas de presupuesto.' },
       { title: 'Ida y vuelta con la hoja de cálculo', body: 'Exporte las líneas, edítelas en Excel o LibreOffice y vuelva a importar el archivo: KANAP solo escribe las celdas que han cambiado.' },
       { title: 'Datos de ejemplo', body: 'Una prueba se llena en un minuto con el presupuesto de Fromage & Co, cuatro sociedades ficticias, para verlo todo antes de introducir el suyo.' },

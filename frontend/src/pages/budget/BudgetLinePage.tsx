@@ -889,7 +889,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     if (createSubmitting) return; // Ctrl+S bypasses the disabled button — guard double-submit
     const productName = createForm.product_name.trim();
     if (!productName) {
-      setSaveError(t(config.titleRequired));
+      setSaveError(t('opex.editor.productNameRequired'));
       return;
     }
     if ((createForm.currency || '').trim().length !== 3) {

@@ -301,13 +301,13 @@ Les ressources sont organisées en groupes pour faciliter la gestion :
 **Budget et finance**
 | Ressource | Ce qu'elle contrôle |
 |-----------|---------------------|
-| `budget` | Postes budgétaires, OPEX et CAPEX |
+| `budget` | Lignes budgétaires, OPEX et CAPEX |
 | `budget_ops` | Outils d'administration budgétaire, dont les paramètres de devises |
 | `contracts` | Contrats fournisseurs |
 | `analytics` | Dimensions analytiques |
 | `reporting` | Accès aux rapports |
 
-La ressource Budget couvre les postes OPEX et CAPEX de la même façon. Un rôle qui avait auparavant des niveaux OPEX et CAPEX distincts garde le plus élevé des deux sur Budget.
+La ressource Budget couvre les lignes OPEX et CAPEX de la même façon. Un rôle qui avait auparavant des niveaux OPEX et CAPEX distincts garde le plus élevé des deux sur Budget.
 
 **Gestion du portefeuille**
 | Ressource | Ce qu'elle contrôle |
@@ -611,7 +611,7 @@ Contrôlez quelles notifications par e-mail vous recevez.
 | **Tâches** | Assignation (comme responsable, demandeur ou observateur), changements de statut, commentaires |
 | **Budget** | Alertes d'expiration, changements de statut, commentaires |
 
-Les **Alertes d'expiration** envoient un e-mail aux responsables d'un contrat, d'un poste OPEX ou d'un poste CAPEX 30, 14, 7 et 1 jour(s) avant ses dates : la date limite de résiliation et la date de fin d'un contrat, la fin de validité d'un poste OPEX ou CAPEX. Seuls les responsables qui ont activé les notifications Budget et les **Alertes d'expiration** les reçoivent. La vérification a lieu chaque jour à 08h00 UTC. Chaque rappel est envoyé une seule fois par jour à chaque destinataire, même si la vérification s'exécute à nouveau ce jour-là, par exemple après un redémarrage.
+Les **Alertes d'expiration** envoient un e-mail aux responsables d'un contrat, d'une ligne OPEX ou d'une ligne CAPEX 30, 14, 7 et 1 jour(s) avant ses dates : la date limite de résiliation et la date de fin d'un contrat, la fin de validité d'une ligne OPEX ou CAPEX. Seuls les responsables qui ont activé les notifications Budget et les **Alertes d'expiration** les reçoivent. La vérification a lieu chaque jour à 08h00 UTC. Chaque rappel est envoyé une seule fois par jour à chaque destinataire, même si la vérification s'exécute à nouveau ce jour-là, par exemple après un redémarrage.
 
 **E-mail de revue hebdomadaire** : Recevez un résumé périodique de votre activité et des éléments à venir. Configurez :
 - **Jour de la semaine** (ex. : lundi)

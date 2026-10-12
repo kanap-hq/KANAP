@@ -150,7 +150,7 @@ Eine neue Dimension kommt in der Reihenfolge der Dimensionen an die letzte Stell
 Die Dimensionen haben eine Reihenfolge, die Sie festlegen. KANAP zeigt sie in dieser Reihenfolge:
 
 - in der Auswahlleiste dieser Seite
-- im Bereich **Eigenschaften** von OPEX- und CAPEX-Positionen
+- im Bereich **Eigenschaften** von OPEX- und CAPEX-Zeilen
 - in den Spalten der Liste der Budgetzeilen
 - in den Spalten der Budgetdatei
 - in den Berichtsfiltern und in der Dimensionsauswahl des Berichts
@@ -176,7 +176,7 @@ Das Feld **Verwendet für** legt fest, für welche Budgetzeilen die Dimension gi
 | **Nur OPEX** | Nur OPEX-Zeilen können einen Wert haben |
 | **Nur CAPEX** | Nur CAPEX-Zeilen können einen Wert haben |
 
-OPEX-Ansichten zeigen die für OPEX-Zeilen verwendeten Dimensionen, CAPEX-Ansichten die für CAPEX-Zeilen verwendeten. Das betrifft den Bereich **Eigenschaften** der Position, die Spalten, Filter und die Schnellsuche der Listen, die Dimensionsauswahl und die Dimensionsfilter der Berichte (sie folgen der Auswahl **OPEX** / **CAPEX** des Berichts) sowie Plaid. Die Budgetdatei hat eine Spalte für jede aktivierte Dimension, und jede Zeile nimmt nur in den Dimensionen ihrer Zeilenart Werte an.
+OPEX-Ansichten zeigen die für OPEX-Zeilen verwendeten Dimensionen, CAPEX-Ansichten die für CAPEX-Zeilen verwendeten. Das betrifft den Bereich **Eigenschaften** der Budgetzeile, die Spalten, Filter und die Schnellsuche der Listen, die Dimensionsauswahl und die Dimensionsfilter der Berichte (sie folgen der Auswahl **OPEX** / **CAPEX** des Berichts) sowie Plaid. Die Budgetdatei hat eine Spalte für jede aktivierte Dimension, und jede Zeile nimmt nur in den Dimensionen ihrer Zeilenart Werte an.
 
 Eine Zeile behält den Wert, den sie bereits in einer Dimension hat, die für ihre Zeilenart nicht mehr gilt. Der Wert ist überall ausgeblendet und erscheint wieder, wenn Sie die Dimension erneut für diese Zeilenart öffnen. Blendet Ihre Einstellung Werte aus, erscheint unter dem Feld ein Hinweis, zum Beispiel „8 CAPEX-Zeilen haben einen Wert für diese Dimension. Sie behalten ihn, ausgeblendet, solange die Dimension nur für OPEX-Zeilen gilt.“
 
@@ -239,7 +239,7 @@ Klicken Sie auf **Neuer Wert**. Das Feld **Dimension** steht zunächst auf der D
 
 Die Werte einer Dimension haben eine Reihenfolge, die Sie festlegen. KANAP bietet die Werte überall in dieser Reihenfolge an, wo Sie sie auswählen oder danach filtern:
 
-- die Wertefelder von OPEX- und CAPEX-Positionen (wenn Sie in ein Feld tippen, stehen die besten Treffer zuerst)
+- die Wertefelder von OPEX- und CAPEX-Zeilen (wenn Sie in ein Feld tippen, stehen die besten Treffer zuerst)
 - die Kontrollkästchen-Filter der Dimension in der Liste der Budgetzeilen
 - die Dimensionsfilter der Berichte und die Liste **Werte ausschließen** des Berichts Analysedimensionen
 - der CSV-Export der Werte
@@ -291,7 +291,7 @@ Dimensionen und Werte haben jeweils einen Status (**Aktiviert** oder **Deaktivie
 **Eine deaktivierte Dimension**:
 
 - Wird nicht geprüft, wenn sie **Erforderlich** ist: Zeilen können ohne Wert in ihr angelegt werden. Sie behält die Einstellung für den Fall, dass Sie sie wieder aktivieren.
-- Verschwindet aus den Positionsformularen, der Liste der Budgetzeilen, den Berichtsfiltern, der Dimensionsauswahl des Berichts, den OPEX- und CAPEX-CSV-Exporten und aus Plaid. Nur die Seite Analysedimensionen zeigt sie, als **Deaktiviert** markiert.
+- Verschwindet aus den Zeilenformularen, der Liste der Budgetzeilen, den Berichtsfiltern, der Dimensionsauswahl des Berichts, den OPEX- und CAPEX-CSV-Exporten und aus Plaid. Nur die Seite Analysedimensionen zeigt sie, als **Deaktiviert** markiert.
 - Behält ihre Werte auf den Zeilen. Aktivieren Sie die Dimension wieder, und die Werte erscheinen wieder.
 - Nimmt keine neuen Werte auf. **Neuer Wert** ist deaktiviert, solange die Dimension ausgewählt ist, und CSV-Dateien können ihre Werte weder hinzufügen noch ändern.
 
@@ -303,10 +303,10 @@ Die Standarddimension kann nicht deaktiviert werden.
 
 ## Werte auf Budgetzeilen
 
-Im Bereich **Eigenschaften** einer OPEX- oder CAPEX-Position, und wenn Sie eine erstellen, hat jede aktivierte Dimension, die für diese Zeilenart verwendet wird, ein eigenes Feld, nach der Dimension benannt, in der Reihenfolge der Dimensionen. Die Standarddimension erscheint als **Analysedimension**, bis Sie sie umbenennen.
+Im Bereich **Eigenschaften** einer OPEX- oder CAPEX-Zeile, und wenn Sie eine erstellen, hat jede aktivierte Dimension, die für diese Zeilenart verwendet wird, ein eigenes Feld, nach der Dimension benannt, in der Reihenfolge der Dimensionen. Die Standarddimension erscheint als **Analysedimension**, bis Sie sie umbenennen.
 
 - Wählen Sie einen Wert, oder leeren Sie das Feld, um die Zeile in dieser Dimension ohne Wert zu lassen. Die Änderung wird sofort gespeichert.
-- Das Feld einer erforderlichen Dimension ist mit einem Sternchen markiert. Eine neue Position kann ohne Wert in ihr nicht angelegt werden, mit der Meldung „Nature ist erforderlich“. Bei einer Position mit einem Wert hat das Feld keine Schaltfläche zum Leeren: Sie können nur einen anderen Wert wählen. Siehe [Erforderliche Dimensionen](#erforderliche-dimensionen).
+- Das Feld einer erforderlichen Dimension ist mit einem Sternchen markiert. Eine neue Budgetzeile kann ohne Wert in ihr nicht angelegt werden, mit der Meldung „Nature ist erforderlich“. Bei einer Budgetzeile mit einem Wert hat das Feld keine Schaltfläche zum Leeren: Sie können nur einen anderen Wert wählen. Siehe [Erforderliche Dimensionen](#erforderliche-dimensionen).
 - Das Feld listet die aktivierten Werte seiner Dimension, die für diese Zeilenart verwendet werden. Ein deaktivierter Wert oder ein Wert, der nur für die andere Zeilenart gilt, bleibt auf den Zeilen sichtbar, die ihn haben. Siehe [OPEX- oder CAPEX-Werte](#opex-oder-capex-werte).
 - Das Feld kann keinen Wert erstellen. Erstellen Sie Werte auf der Seite Analysedimensionen, oder lassen Sie sie von einem OPEX- oder CAPEX-CSV-Import erstellen.
 - Ein Wert gilt für die ganze Zeile, über alle Jahre.
@@ -320,11 +320,11 @@ Die Liste der Budgetzeilen hat eine Spalte pro aktivierter Dimension, mit Kontro
 
 Der Bericht **Analysedimensionen** (unter **Berichte**) zeigt, wie sich das Budget Ihrer OPEX- oder CAPEX-Zeilen auf die Werte einer Dimension verteilt. Die vollständige Beschreibung finden Sie unter [Berichte](reports.md#analysedimensionen).
 
-- **Positionstyp**: OPEX oder CAPEX
+- **Zeilentyp**: OPEX oder CAPEX
 - **Dimension**: die Dimension, nach der der Bericht gruppiert. Sie erscheint, wenn Sie zwei oder mehr aktivierte Dimensionen haben, und steht zunächst auf der Standarddimension
 - **Jahresbereich**: ein einzelnes Jahr (Kreis- oder Balkendiagramm) oder mehrere Jahre (Liniendiagramm)
 - **Kennzahl**: jede Budgetspalte, die Ihre Organisation anzeigt, unter ihrem Namen. Beginnt mit der Standardspalte
-- **Werte ausschließen**: einige Werte weglassen, um sich auf die anderen zu konzentrieren. Die Liste bietet die Werte an, die für den gewählten Positionstyp verwendet werden, dazu die Werte, die die Zeilen haben
+- **Werte ausschließen**: einige Werte weglassen, um sich auf die anderen zu konzentrieren. Die Liste bietet die Werte an, die für den gewählten Zeilentyp verwendet werden, dazu die Werte, die die Zeilen haben
 
 Die sieben Budgetberichte lassen sich auch auf einen Wert einer Dimension eingrenzen, mit einem Filter pro Dimension. Siehe [Filter nach Kostenstelle, Run oder Build und Analysedimensionen](reports.md#filter-nach-kostenstelle-run-oder-build-und-analysedimensionen).
 
@@ -347,7 +347,7 @@ Die sieben Budgetberichte lassen sich auch auf einen Wert einer Dimension eingre
 
 Laden oder aktualisieren Sie die Werte aller Dimensionen aus einer Datei. Dimensionen werden auf der Seite erstellt.
 
-Um Werte auf Budgetpositionen aus einer Datei zu setzen, verwenden Sie die Budgetdatei. Darin enthält je eine Spalte `analytics:<code>` jede aktivierte Dimension, die Standarddimension eingeschlossen. Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md).
+Um Werte auf Budgetzeilen aus einer Datei zu setzen, verwenden Sie die Budgetdatei. Darin enthält je eine Spalte `analytics:<code>` jede aktivierte Dimension, die Standarddimension eingeschlossen. Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md).
 
 **Export**: Klicken Sie auf **CSV exportieren** und dann auf **Daten exportieren**. Die Datei listet die Werte aller Dimensionen, aktiviert oder deaktiviert, Dimension für Dimension, die Werte jeder Dimension in ihrer Reihenfolge. Die Datei hat keine Spalte für die Reihenfolge. Für eine leere Datei nur mit den Kopfzeilen verwenden Sie **Vorlage herunterladen** im Importdialog.
 
@@ -405,7 +405,7 @@ Nur `name` ist eine Pflichtspalte. Fehlt die Spalte `description`, `status`, `di
 | `analytics:member` | Dimensionen und Werte erstellen und bearbeiten, die Reihenfolge der Dimensionen und Werte festlegen |
 | `analytics:admin` | Alles oben Genannte, dazu CSV-Import und -Export sowie Löschen |
 
-Die integrierte Rolle Budget-Administrator ist admin, Budget-Mitglied ist member und Budget-Leser ist reader. Wer Budgetpositionen (Budget) oder Berichte lesen kann, sieht die Dimensionen und ihre Werte auf Budgetzeilen, in den Listen und in den Berichten, ohne Zugriff auf diese Seite zu haben.
+Die integrierte Rolle Budget-Administrator ist admin, Budget-Mitglied ist member und Budget-Leser ist reader. Wer Budgetzeilen (Budget) oder Berichte lesen kann, sieht die Dimensionen und ihre Werte auf Budgetzeilen, in den Listen und in den Berichten, ohne Zugriff auf diese Seite zu haben.
 
 ---
 

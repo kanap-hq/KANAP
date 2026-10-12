@@ -790,11 +790,11 @@ describe('BudgetTab periods', () => {
     renderTab(YEAR, { effectiveStart: '2027-02-01' });
     await waitForLoad();
 
-    await waitFor(() => expect(periodLine('planned')).toHaveTextContent("No month of 2026 is within the item's dates."));
+    await waitFor(() => expect(periodLine('planned')).toHaveTextContent("No month of 2026 is within the line's dates."));
     expect(screen.getAllByRole('textbox')[0]).toBeDisabled();
     // Every shown column, Forecast and Actuals included.
     expect(screen.getAllByRole('button', { name: 'Choose the period' })).toHaveLength(5);
-    expect(periodLine('actual')).toHaveTextContent("No month of 2026 is within the item's dates.");
+    expect(periodLine('actual')).toHaveTextContent("No month of 2026 is within the line's dates.");
   });
 
   it('the save response refreshes the chip', async () => {
@@ -840,7 +840,7 @@ describe('BudgetTab periods', () => {
     // The date fields show the period: the panel only says what falls outside it.
     expect(screen.getByTestId('spread-notes')).toHaveTextContent(/^January to March will be set to zero\.$/);
     expect(screen.queryByText(/9 months, April to December/)).not.toBeInTheDocument();
-    expect(screen.queryByText("The period goes beyond the item's dates.")).not.toBeInTheDocument();
+    expect(screen.queryByText("The period goes beyond the line's dates.")).not.toBeInTheDocument();
 
     const rule = screen.getByLabelText('A month counts when the period covers its 15th.');
     fireEvent.mouseOver(rule);
@@ -852,7 +852,7 @@ describe('BudgetTab periods', () => {
     fireEvent.blur(from);
 
     expect(await screen.findByText('January will be set to zero.')).toBeInTheDocument();
-    expect(screen.getByText("The period goes beyond the item's dates.")).toBeInTheDocument();
+    expect(screen.getByText("The period goes beyond the line's dates.")).toBeInTheDocument();
 
     // An empty column: no amount, so the date changes wrote nothing.
     expect(bulkCalls()).toHaveLength(0);

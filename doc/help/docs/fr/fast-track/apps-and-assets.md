@@ -133,8 +133,8 @@ Allez dans l'onglet **Relations** pour relier votre application au reste de vos 
 
 | Type de lien | Ce que vous reliez | Pourquoi |
 |-----------|----------------------|-----|
-| **Postes OPEX** | Coûts récurrents (licences, abonnements SaaS) | Voir le coût complet |
-| **Postes CAPEX** | Projets d'investissement | Suivre l'investissement |
+| **Lignes OPEX** | Coûts récurrents (licences, abonnements SaaS) | Voir le coût complet |
+| **Lignes CAPEX** | Projets d'investissement | Suivre l'investissement |
 | **Contrats** | Accords fournisseurs | Savoir quand les renouvellements arrivent |
 | **Projets** | Projets du portefeuille | Relier à votre portefeuille de projets |
 | **Sites web pertinents** | Documentation, wikis, runbooks | Accès rapide aux ressources externes |

@@ -118,7 +118,7 @@ Aufgaben sind die **atomare Arbeitseinheit** in KANAP. Sie übergreifen die Run/
 
 Eine **klar umrissene Aktion** mit einem definierten Verantwortlichen, Status und Termin.
 
-- Kann **eigenständig** sein oder mit einem **Projekt**, einer **OPEX-Position**, einem **Vertrag** oder einer **CAPEX-Position** verknüpft werden
+- Kann **eigenständig** sein oder mit einem **Projekt**, einer **OPEX-Zeile**, einem **Vertrag** oder einer **CAPEX-Zeile** verknüpft werden
 - Trägt einen konkreten Aufwand
 - Der Einfluss auf Benutzer oder Dienste ist begrenzt und gut verstanden
 - Erfordert keine Koordination über mehrere Teams -- auch wenn es lange dauert, wird es von einer einzelnen Person getragen, ohne bereichsübergreifende Analyse zu erfordern

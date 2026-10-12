@@ -53,7 +53,7 @@ Créés et clôturés proviennent de l'historique des modifications. Ils couvren
 
 ### Quelles tâches sont comptées
 
-Chaque chiffre de tâche ne compte que les tâches autonomes et les tâches de projet. Les tâches rattachées à un contrat, à une ligne de dépense, à un poste CAPEX ou à un incident relèvent de ces processus et sont exclues partout dans ce bandeau.
+Chaque chiffre de tâche ne compte que les tâches autonomes et les tâches de projet. Les tâches rattachées à un contrat, à une ligne de dépense, à une ligne CAPEX ou à un incident relèvent de ces processus et sont exclues partout dans ce bandeau.
 
 ### À traiter
 
@@ -81,7 +81,7 @@ Chaque ligne indique combien de ces éléments n'ont ni Source, ni Catégorie, n
 
 ### Quelles tâches sont exclues
 
-Seules les tâches autonomes et les tâches de projet sont comptées. Les tâches rattachées à un contrat, à une ligne de dépense, à un poste CAPEX ou à un incident ne portent jamais de classification. Les compter signalerait un écart que personne ne peut combler.
+Seules les tâches autonomes et les tâches de projet sont comptées. Les tâches rattachées à un contrat, à une ligne de dépense, à une ligne CAPEX ou à un incident ne portent jamais de classification. Les compter signalerait un écart que personne ne peut combler.
 
 Une tâche de projet sans classification propre hérite de celle de son projet, et la liste des tâches affiche cette valeur héritée. Les compteurs suivent la même règle : un chiffre ne vous envoie donc jamais vers une liste où la colonne est déjà remplie.
 
@@ -199,7 +199,7 @@ Chaque liste indique son nombre dans son titre. Une liste vide tient sur une seu
 
 ### Quelles tâches sont comptées
 
-La section Tâches ne couvre que les tâches du portefeuille : les tâches autonomes et les tâches rattachées à un projet. Les tâches rattachées à un contrat, à une ligne de dépense, à un poste CAPEX ou à un incident sont exclues. C'est plus restreint que dans les versions précédentes du rapport, qui comptaient toutes les tâches.
+La section Tâches ne couvre que les tâches du portefeuille : les tâches autonomes et les tâches rattachées à un projet. Les tâches rattachées à un contrat, à une ligne de dépense, à une ligne CAPEX ou à un incident sont exclues. C'est plus restreint que dans les versions précédentes du rapport, qui comptaient toutes les tâches.
 
 ### D'où vient un projet
 

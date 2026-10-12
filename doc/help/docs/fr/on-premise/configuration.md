@@ -584,9 +584,9 @@ L'API exécute 15 tâches planifiées. Les heures ci-dessous sont les valeurs pa
 
 | Tâche | Quand | Ce qu'elle fait |
 |-----|------|--------------|
-| `check-expirations` | Tous les jours à 08:00 | Envoie un e-mail aux responsables des contrats et des postes OPEX 30, 14, 7 et 1 jour(s) avant une date limite de résiliation, une date de fin ou la fin de validité. Seuls les utilisateurs qui ont activé ces notifications les reçoivent, une fois par jour. |
+| `check-expirations` | Tous les jours à 08:00 | Envoie un e-mail aux responsables des contrats et des lignes OPEX 30, 14, 7 et 1 jour(s) avant une date limite de résiliation, une date de fin ou la fin de validité. Seuls les utilisateurs qui ont activé ces notifications les reçoivent, une fois par jour. |
 | `send-weekly-reviews` | Toutes les heures | Envoie le récapitulatif de la revue hebdomadaire aux utilisateurs qui l'ont demandé, au jour et dans le fuseau horaire qu'ils ont choisis. |
-| `lifecycle-status-sync` | Toutes les heures, et une fois au démarrage | Passe à l'état désactivé les master data, contrats, postes OPEX et CAPEX dont la fin de validité est dépassée. |
+| `lifecycle-status-sync` | Toutes les heures, et une fois au démarrage | Passe à l'état désactivé les master data, contrats, lignes OPEX et CAPEX dont la fin de validité est dépassée. |
 | `entra-directory-sync` | Tous les jours à 03:00 | Actualise les attributs des utilisateurs et désactive les comptes retirés ou désactivés dans l'annuaire. Fonctionne uniquement quand le SSO Entra est connecté et approuvé. Voir [SSO Microsoft Entra](sso-entra.md). |
 | `attachment-orphan-cleanup` | Tous les jours à 03:00 | Supprime les enregistrements de pièces jointes des images intégrées qu'aucun texte n'utilise plus. |
 | `storage-ghost-cleanup` | Le dimanche à 04:00 | Supprime les fichiers stockés qui n'ont aucun enregistrement de pièce jointe et datent de plus de 7 jours. |
