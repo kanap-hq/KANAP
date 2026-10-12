@@ -16,10 +16,14 @@ import { AXIS_APPLIES_TO, AxisAppliesTo } from './analytics-axis.entity';
 import {
   ensureRecommendedDimensions,
   findRecommendedDimensions,
+  findRecommendedValues,
   RECOMMENDED_DIMENSION_KEYS,
   RecommendedDimensionKey,
+  RecommendedValueMatch,
   resolveSeedLanguage,
+  SeedLanguage,
   STARTING_DIMENSION_KEYS,
+  tenantSeedLanguage,
 } from './recommended-dimensions.seed';
 
 /** A stored row, as `SELECT *` returns it. */
@@ -79,9 +83,13 @@ export interface RecommendedDimensionState {
   code: RecommendedDimensionKey;
   present: boolean;
   axis_id: string | null;
+  /** The code of the tenant's dimension: `default` when the cost pool is on the default dimension. */
+  axis_code: string | null;
   name: string | null;
   /** A new tenant starts with it (the dialog ticks it); the others are the optional pack. */
   starting: boolean;
+  /** Its seed values and the tenant's value of each (`findRecommendedValues`); empty when absent. */
+  values: RecommendedValueMatch[];
 }
 
 /** One recommended dimension in the answer of `addRecommended`. */
@@ -439,16 +447,25 @@ export class AnalyticsAxesService {
 
   // Recommended dimensions ---------------------------------------------------
 
-  /** Each recommended dimension, in display order, and whether the tenant already has it. */
-  async recommended(ctx: AnalyticsContext): Promise<{ items: RecommendedDimensionState[] }> {
+  /**
+   * Each recommended dimension, in display order, whether the tenant already has it, and the
+   * tenant's value of each seed value. `language` is the tenant's seed language
+   * (`tenants.metadata.language`, English when it holds none).
+   */
+  async recommended(ctx: AnalyticsContext): Promise<{ language: SeedLanguage; items: RecommendedDimensionState[] }> {
     const found = await findRecommendedDimensions(ctx.manager, ctx.tenantId);
+    const values = await findRecommendedValues(ctx.manager, ctx.tenantId, found);
+    const [tenant]: Array<{ metadata: unknown }> = await ctx.manager.query(`SELECT metadata FROM tenants WHERE id = $1`, [ctx.tenantId]);
     return {
+      language: tenantSeedLanguage(tenant?.metadata),
       items: found.map(({ key, axis }) => ({
         code: key,
         present: !!axis,
         axis_id: axis?.id ?? null,
+        axis_code: axis?.code ?? null,
         name: axis?.name ?? null,
         starting: STARTING_DIMENSION_KEYS.includes(key),
+        values: values.get(key) ?? [],
       })),
     };
   }

@@ -7,6 +7,7 @@ import {
   RECOMMENDED_DIMENSION_KEYS,
   RECOMMENDED_DIMENSIONS,
   recommendedDimensionNameCandidate,
+  recommendedValueKeysByName,
   resolveSeedLanguage,
   SEED_LANGUAGES,
   STARTING_DIMENSION_KEYS,
@@ -59,7 +60,25 @@ function testHelpers() {
   assert.deepEqual([0, 1, 2].map((attempt) => recommendedDimensionNameCandidate('Priority', attempt)), ['Priority', 'Priority (2)', 'Priority (3)']);
 }
 
-const tests = [testLanguagesMatch, testNamesAndDescriptions, testHelpers];
+// A value name stands for one value of its dimension over the four languages: the tenant's value
+// for "Hardware" is found by name whatever the seed language (`findRecommendedValues`).
+function testValueNamesAcrossLanguages() {
+  for (const key of RECOMMENDED_DIMENSION_KEYS) {
+    const seen = new Map<string, string>();
+    for (const language of SEED_LANGUAGES) {
+      for (const value of RECOMMENDED_DIMENSIONS[language].find((dimension) => dimension.key === key)!.values) {
+        const name = value.name.toLowerCase();
+        assert.equal(seen.get(name) ?? value.key, value.key, `${key}: "${value.name}" (${language}) names one value only`);
+        seen.set(name, value.key);
+      }
+    }
+    assert.deepEqual(recommendedValueKeysByName(key), seen);
+  }
+  assert.equal(recommendedValueKeysByName('cost_pool').get('matériel'), 'hardware');
+  assert.equal(recommendedValueKeysByName('it_tower').get('data center'), 'data_center', 'the same name in English and French');
+}
+
+const tests = [testLanguagesMatch, testNamesAndDescriptions, testHelpers, testValueNamesAcrossLanguages];
 const failures: string[] = [];
 for (const test of tests) {
   try {
