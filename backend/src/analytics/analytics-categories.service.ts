@@ -20,6 +20,7 @@ import {
   resolveDefaultAxisId,
 } from './analytics-axes.util';
 import { normalizeAppliesTo } from './analytics-axes.service';
+import { deleteValuesAndLinks, ForcedDeleteCounts, lockLinesUsing } from './analytics-forced-delete';
 import { AxisAppliesTo } from './analytics-axis.entity';
 import {
   AnalyticsCallOptions,
@@ -198,6 +199,24 @@ export class AnalyticsCategoriesService {
     return { items, total, page, limit };
   }
 
+  /**
+   * A page of `list` with each value's OPEX and CAPEX line counts (one more query for the page):
+   * the values grid asks for a confirmation before deleting values in use.
+   */
+  async listWithUsage(query: any, opts?: AnalyticsCallOptions) {
+    const ctx = await this.context(opts);
+    const result = await this.list(query, ctx);
+    const usage = await this.countUsage(ctx, result.items.map((item) => item.id));
+    return {
+      ...result,
+      items: result.items.map((item) => ({
+        ...item,
+        opex_count: usage.get(item.id)?.opex ?? 0,
+        capex_count: usage.get(item.id)?.capex ?? 0,
+      })),
+    };
+  }
+
   async listIds(query: any, opts?: AnalyticsCallOptions): Promise<{ ids: string[]; total: number }> {
     const ctx = await this.context(opts);
     const { sort } = parsePagination({ ...(query ?? {}), page: 1 }, DEFAULT_SORT);
@@ -264,9 +283,21 @@ export class AnalyticsCategoriesService {
     return this.detail(ctx, id);
   }
 
-  /** Refused with a readable 409 while a line uses the value; disabling stays possible. */
-  async delete(id: string, userId?: string | null, opts?: AnalyticsCallOptions): Promise<void> {
+  /**
+   * Without `force`, refused with a readable 409 while a line uses the value; disabling stays
+   * possible. With it, the lines lose the value and it is deleted (`analytics-forced-delete.ts`).
+   */
+  async delete(
+    id: string,
+    userId?: string | null,
+    opts?: AnalyticsCallOptions,
+    options?: { force?: boolean },
+  ): Promise<void> {
     const ctx = await this.context(opts, userId ?? null);
+    if (options?.force) {
+      await this.forceDelete(ctx, id);
+      return;
+    }
     // The row lock comes before the count: a line linked concurrently either
     // committed first (and is counted) or waits for this delete and then fails its key.
     const [existing] = await this.lockValues(ctx, [id]);
@@ -297,14 +328,37 @@ export class AnalyticsCategoriesService {
     );
   }
 
+  /** The lines lose the value, then it is deleted: lines locked first, then the value. */
+  private async forceDelete(ctx: AnalyticsContext, id: string): Promise<ForcedDeleteCounts> {
+    if (!isUUID(String(id))) throw new NotFoundException('Analytics value not found.');
+    await lockLinesUsing(ctx, { valueIds: [id] });
+    const [existing] = await this.lockValues(ctx, [id]);
+    if (!existing) throw new NotFoundException('Analytics value not found.');
+    return deleteValuesAndLinks(ctx, this.audit, { valueIds: [id] }, [existing], {
+      operation: 'analytics_value_delete',
+      axis_id: existing.axis_id,
+      category_id: existing.id,
+      category_name: existing.name,
+    });
+  }
+
   /**
    * Each value under its own savepoint: a refusal leaves the others deleted and the transaction
    * usable. The values are deleted (and so locked) in id order, as every multi-value lock
-   * (`lockValues`); the result lists them in the order asked.
+   * (`lockValues`); the result lists them in the order asked. With `force`, the lines holding any
+   * of the values are locked first, all at once, so the lock order stays lines then values
+   * (`analytics-forced-delete.ts`).
    */
-  async bulkDelete(ids: string[], userId?: string | null, opts?: AnalyticsCallOptions): Promise<BulkDeleteResult> {
+  async bulkDelete(
+    ids: string[],
+    userId?: string | null,
+    opts?: AnalyticsCallOptions,
+    options?: { force?: boolean },
+  ): Promise<BulkDeleteResult> {
     const ctx = await this.context(opts, userId ?? null);
     const unique = Array.from(new Set((ids ?? []).map((id) => String(id))));
+    const force = options?.force === true;
+    if (force) await lockLinesUsing(ctx, { valueIds: unique });
     const key = (id: string) => id.toLowerCase();
     const lockOrder = [...unique].sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0));
     const outcomes = new Map<string, BulkDeleteResult['failed'][number] | null>();
@@ -314,7 +368,7 @@ export class AnalyticsCategoriesService {
         continue;
       }
       try {
-        await withSavepoint(ctx.manager, () => this.delete(id, ctx.userId ?? null, ctx));
+        await withSavepoint(ctx.manager, () => this.delete(id, ctx.userId ?? null, ctx, { force }));
         outcomes.set(id, null);
       } catch (err: any) {
         const [row] = await ctx.manager.query(

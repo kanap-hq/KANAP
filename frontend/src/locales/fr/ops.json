@@ -887,8 +887,8 @@
       "effects": {
         "inPlace": "La ligne garde sa référence, son budget, ses ventilations, ses liens, ses pièces jointes et ses tâches.",
         "reports": {
-          "capex": "Elle quitte les rapports OPEX et la refacturation, et rejoint les rapports CAPEX.",
-          "opex": "Elle quitte les rapports CAPEX et rejoint les rapports OPEX et la refacturation."
+          "capex": "Elle quitte les rapports OPEX et rejoint les rapports CAPEX. La refacturation la compte en CAPEX.",
+          "opex": "Elle quitte les rapports CAPEX et rejoint les rapports OPEX. La refacturation la compte en OPEX."
         },
         "dated_one": "Cette ligne se termine le {{end}} et garde son budget avant {{year}}. Une nouvelle ligne {{type}} porte le budget à partir de {{year}} ({{count}} année), avec les contacts et les liens vers les applications, actifs, contrats, projets et demandes.",
         "dated_other": "Cette ligne se termine le {{end}} et garde son budget avant {{year}}. Une nouvelle ligne {{type}} porte le budget à partir de {{year}} ({{count}} années), avec les contacts et les liens vers les applications, actifs, contrats, projets et demandes.",
@@ -975,6 +975,7 @@
     },
     "shared": {
       "loadingReport": "Chargement du rapport…",
+      "capexYearAmountNote": "Les CAPEX comptent pour leur montant de l'année, sans amortissement.",
       "loadingData": "Chargement des données…",
       "run": "Exécuter",
       "refreshing": "Actualisation…",

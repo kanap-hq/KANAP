@@ -31,7 +31,7 @@ function axis(id: string, name: string, sortOrder: number, patch: Partial<Analyt
 const DEFAULT = axis('ax-default', 'Category', 0, { is_default: true });
 const NATURE = axis('ax-nature', 'Nature', 1);
 
-function renderBar(props: { axes: AnalyticsAxis[]; canEdit: boolean }) {
+function renderBar(props: { axes: AnalyticsAxis[]; canEdit: boolean; onRecommendedAdded?: () => void }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
@@ -44,6 +44,7 @@ function renderBar(props: { axes: AnalyticsAxis[]; canEdit: boolean }) {
           onEdit={vi.fn()}
           canEdit={props.canEdit}
           onCreate={props.canEdit ? vi.fn() : undefined}
+          onRecommendedAdded={props.onRecommendedAdded}
         />
       </ThemeProvider>
     </QueryClientProvider>,
@@ -79,6 +80,26 @@ describe('AnalyticsDimensionChipBar', () => {
   it('disables Reorder with fewer than two dimensions', () => {
     renderBar({ axes: [DEFAULT], canEdit: true });
     expect(reorderButton()).toBeDisabled();
+  });
+
+  it('shows no Add recommended dimensions without the administrator right', () => {
+    renderBar({ axes: [DEFAULT, NATURE], canEdit: true });
+    expect(screen.queryByRole('button', { name: 'analytics.recommended.action' })).toBeNull();
+  });
+
+  it('opens the recommended dimensions dialog from the band', async () => {
+    get.mockResolvedValue({ data: { items: [] } });
+    renderBar({ axes: [DEFAULT, NATURE], canEdit: true, onRecommendedAdded: vi.fn() });
+    const actions = screen.getAllByRole('button').filter((button) => !button.hasAttribute('aria-pressed'));
+    expect(actions.map((button) => button.textContent)).toEqual([
+      'coa.chipBar.newChip',
+      'analytics.recommended.action',
+      'analytics.reorder.action',
+      'common:buttons.edit',
+    ]);
+    fireEvent.click(screen.getByRole('button', { name: 'analytics.recommended.action' }));
+    expect(await screen.findByText('analytics.recommended.title')).toBeInTheDocument();
+    expect(get).toHaveBeenCalledWith('/analytics-axes/recommended');
   });
 
   it('hides Reorder from readers', () => {

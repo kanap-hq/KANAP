@@ -26,13 +26,15 @@ Write the value exactly. A misspelled value (`single_tenant`) starts KANAP in cl
 | --------------------- | -------- | ----------------- | --------------------------------------------------------------- |
 | `DEFAULT_TENANT_SLUG` | No       | `default`         | Internal identifier for the tenant (URL-safe, lowercase)        |
 | `DEFAULT_TENANT_NAME` | No       | `My Organization` | Your organization's name: the text alternative of the logo, and the name the AI assistant uses |
+| `DEFAULT_TENANT_LANGUAGE` | No | `en` | The language of the analytics dimensions the workspace starts with: `en`, `fr`, `de` or `es` |
 
 On first boot, KANAP creates a tenant using these values. The defaults work for most deployments. A new installation also receives the default IFRS chart of accounts, set as its default and consolidation chart (upgrading an existing installation does not add it).
 
-Set both before the first start:
+Set them before the first start:
 
 - Changing `DEFAULT_TENANT_SLUG` later makes KANAP create a second, empty workspace and serve that one. The first workspace stays in the database, out of reach.
 - Changing `DEFAULT_TENANT_NAME` later has no effect, and the application has no page to rename the organization. Set the name before the first start.
+- Changing `DEFAULT_TENANT_LANGUAGE` later has no effect: the dimensions keep their names. You can rename them in **Master data > Analytics dimensions**.
 
 To give KANAP the look of your organization, add your logo and colors in **Admin → Branding**.
 
@@ -448,6 +450,7 @@ DEPLOYMENT_MODE=single-tenant
 # TENANT CONFIGURATION (optional - defaults shown; set before the first start)
 DEFAULT_TENANT_SLUG=default
 DEFAULT_TENANT_NAME=My Organization
+DEFAULT_TENANT_LANGUAGE=en
 
 # ADMIN CREDENTIALS (required - read at the first start only)
 # Replace the example password with a value of your own, 12 characters or more.

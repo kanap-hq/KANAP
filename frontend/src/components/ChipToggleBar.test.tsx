@@ -72,6 +72,33 @@ describe('ChipToggleBar', () => {
   });
 });
 
+describe('ChipToggleBar full names', () => {
+  const LONG_NAMES = Array.from({ length: 15 }, (_, index) => `Dimension with a rather long name number ${index + 1}`);
+
+  it('renders every name in full, in a group that wraps, with no truncation style', () => {
+    renderBar({
+      items: LONG_NAMES.map((name, index) => ({ id: String(index), label: name })),
+      selectedId: '0',
+      actions: <button type="button">New</button>,
+    });
+    const group = screen.getByRole('group', { name: 'Things' });
+    const groupStyle = window.getComputedStyle(group);
+    expect(groupStyle.flexWrap).toBe('wrap');
+    expect(groupStyle.overflowX).not.toBe('auto');
+    const toggles = within(group).getAllByRole('button');
+    expect(toggles.map((el) => el.textContent)).toEqual(LONG_NAMES);
+    for (const toggle of toggles) {
+      const style = window.getComputedStyle(toggle);
+      expect(style.textOverflow).not.toBe('ellipsis');
+      expect(style.whiteSpace).not.toBe('nowrap');
+      expect(style.overflow).not.toBe('hidden');
+      expect(style.flexShrink).toBe('0');
+    }
+    // The actions sit outside the toggles, in a box that wraps when the band is narrow.
+    expect(window.getComputedStyle(screen.getByTestId('chip-toggle-bar-actions')).flexWrap).toBe('wrap');
+  });
+});
+
 describe('ChipToggleContextLine', () => {
   it('renders the title, the actions on its line and the secondary lines', () => {
     render(

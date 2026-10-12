@@ -15,10 +15,10 @@ import { LinkCellRenderer } from '../components/grid/renderers';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDateTime } from '../lib/dateFormat';
 import { ANALYTICS_AXES_QUERY_KEY, useAnalyticsAxes } from '../hooks/useAnalyticsAxes';
-import { ANALYTICS_VALUE_ORDER_SORT, ANALYTICS_VALUES_ENDPOINT, isAnalyticsActive, type AnalyticsValue } from '../services/analytics';
+import { ANALYTICS_VALUE_ORDER_SORT, ANALYTICS_VALUES_ENDPOINT, isAnalyticsActive, type AnalyticsValue, type RecommendedDimensionResult } from '../services/analytics';
 import AnalyticsDimensionChipBar from './analytics/AnalyticsDimensionChipBar';
 import AnalyticsValueOrderDialog from './analytics/AnalyticsValueOrderDialog';
-import { ANALYTICS_DIMENSIONS_PATH, ANALYTICS_LIST_PATH } from './analytics/analyticsFields';
+import { ANALYTICS_DIMENSIONS_PATH, ANALYTICS_LIST_PATH, valuesInUseMessage } from './analytics/analyticsFields';
 import ForbiddenPage from './ForbiddenPage';
 import { statusColumnProps } from '../components/grid/statusColumn';
 import { lineTypeUsageColumnProps } from '../components/grid/lineTypeUsageColumn';
@@ -58,10 +58,15 @@ function AnalyticsValuesList() {
   const [importOpen, setImportOpen] = useState(false);
   const [reorderOpen, setReorderOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState<AnalyticsValue[]>([]);
+  /** What the last "Add recommended dimensions" created, until dismissed. */
+  const [recommendedMessage, setRecommendedMessage] = useState<string | null>(null);
   /** The grid's row count (its filters and status scope apply), once a page has loaded. */
   const [valueTotal, setValueTotal] = useState<number | null>(null);
   const gridApiRef = useRef<any>(null);
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any; statusScope?: StatusScope } | null>(null);
+
+  // The selected values used by budget lines (the list rows carry their counts): the delete asks "Delete anyway".
+  const forceDeleteMessage = useMemo(() => valuesInUseMessage(t, selectedRows), [selectedRows, t]);
 
   // A selection never spans two dimensions.
   useEffect(() => {
@@ -105,6 +110,13 @@ function AnalyticsValuesList() {
     (row: AnalyticsValue) => (row?.id ? `${ANALYTICS_LIST_PATH}/${row.id}/overview?${buildWorkspaceSearch().toString()}` : null),
     [buildWorkspaceSearch],
   );
+
+  const onRecommendedAdded = useCallback((result: { created: RecommendedDimensionResult[] }) => {
+    const names = result.created.map((item) => item.name).filter(Boolean).join(', ');
+    setRecommendedMessage(result.created.length > 0
+      ? t('analytics.recommended.created', { count: result.created.length, names })
+      : t('analytics.recommended.nothingCreated'));
+  }, [t]);
 
   const selectAxis = useCallback((axisId: string) => {
     const next = new URLSearchParams(searchParams);
@@ -207,6 +219,12 @@ function AnalyticsValuesList() {
           getItemName={(row) => row.name}
           gridApi={gridApiRef.current}
           onDeleteSuccess={refresh}
+          // Values used by budget lines go too once confirmed: the lines lose them (the list gives the counts).
+          forceOption={forceDeleteMessage ? {
+            message: forceDeleteMessage,
+            confirmLabel: t('analytics.forceDelete.confirmAnyway'),
+            apiKey: 'force',
+          } : undefined}
         />
       )}
     </>
@@ -236,7 +254,13 @@ function AnalyticsValuesList() {
           onEdit={(axisId) => navigate(`${ANALYTICS_DIMENSIONS_PATH}/${axisId}/overview`)}
           canEdit={canCreate}
           onCreate={canCreate ? () => navigate(`${ANALYTICS_DIMENSIONS_PATH}/new/overview`) : undefined}
+          onRecommendedAdded={canAdmin ? onRecommendedAdded : undefined}
         />
+      )}
+      {recommendedMessage && (
+        <Alert severity="success" role="status" onClose={() => setRecommendedMessage(null)} sx={{ mb: 1.5 }}>
+          {recommendedMessage}
+        </Alert>
       )}
       {(contextTitle || actions) && (
         <ChipToggleContextLine testId="analytics-context" title={contextTitle} actions={actions} sx={{ mb: 2 }} />

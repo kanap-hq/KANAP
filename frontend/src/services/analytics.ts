@@ -75,14 +75,15 @@ export type AnalyticsValue = {
   disabled_at: string | null;
   created_at?: string;
   updated_at?: string;
+  /** The OPEX and CAPEX lines holding it: the list (`GET /analytics-categories`) and the detail give them. */
+  opex_count?: number;
+  capex_count?: number;
 };
 
 /** `GET /analytics-categories/:id`, and the create and update responses. */
 export type AnalyticsValueDetail = AnalyticsValue & {
   axis_name?: string | null;
   axis_is_default?: boolean;
-  opex_count?: number;
-  capex_count?: number;
 };
 
 export type AnalyticsValueWrite = {
@@ -147,8 +148,12 @@ export async function updateAnalyticsAxis(id: string, patch: AnalyticsAxisPatch)
   return res.data;
 }
 
-export async function deleteAnalyticsAxis(id: string): Promise<void> {
-  await api.delete(`${ANALYTICS_AXES_ENDPOINT}/${id}`);
+/**
+ * Deletes a dimension. Without `force` the server refuses one that still has values; with it the
+ * values go too and the budget lines lose their value on it. The default dimension is never deleted.
+ */
+export async function deleteAnalyticsAxis(id: string, opts?: { force?: boolean }): Promise<void> {
+  await api.delete(`${ANALYTICS_AXES_ENDPOINT}/${id}`, opts?.force ? { params: { force: 'true' } } : undefined);
 }
 
 /**
@@ -175,8 +180,9 @@ export async function updateAnalyticsValue(id: string, patch: AnalyticsValuePatc
   return res.data;
 }
 
-export async function deleteAnalyticsValue(id: string): Promise<void> {
-  await api.delete(`${ANALYTICS_VALUES_ENDPOINT}/${id}`);
+/** Deletes a value. Without `force` the server refuses one in use; with it the budget lines lose it. */
+export async function deleteAnalyticsValue(id: string, opts?: { force?: boolean }): Promise<void> {
+  await api.delete(`${ANALYTICS_VALUES_ENDPOINT}/${id}`, opts?.force ? { params: { force: 'true' } } : undefined);
 }
 
 /** Query key of every value of a dimension in its order (`getAnalyticsValuesInOrder`). */
@@ -214,4 +220,43 @@ export async function reorderAnalyticsValues(axisId: string, valueIds: string[])
   });
   const data = res.data;
   return Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
+}
+
+/** The recommended dimensions an administrator can add (`/analytics-axes/recommended`), in display order. */
+export const RECOMMENDED_DIMENSION_CODES = ['cost_pool', 'it_tower', 'purpose', 'priority', 'recurrence'] as const;
+export type RecommendedDimensionCode = (typeof RECOMMENDED_DIMENSION_CODES)[number];
+
+/** A recommended dimension and whether the tenant already has it. `starting`: ticked by default (the others are the optional pack). */
+export type RecommendedDimensionState = {
+  code: RecommendedDimensionCode;
+  present: boolean;
+  axis_id: string | null;
+  name: string | null;
+  starting: boolean;
+};
+
+/** One dimension the call created or found. `axis_code` is `default` when the cost pool went on the default dimension. */
+export type RecommendedDimensionResult = {
+  code: RecommendedDimensionCode;
+  axis_code: string;
+  axis_id: string;
+  name: string | null;
+  values_created: number;
+};
+
+export async function getRecommendedDimensions(): Promise<RecommendedDimensionState[]> {
+  const res = await api.get<{ items: RecommendedDimensionState[] }>(`${ANALYTICS_AXES_ENDPOINT}/recommended`);
+  return Array.isArray(res.data?.items) ? res.data.items : [];
+}
+
+/** Creates the recommended dimensions of `codes` the tenant lacks, named in `language`. */
+export async function addRecommendedDimensions(
+  codes: RecommendedDimensionCode[],
+  language: string,
+): Promise<{ created: RecommendedDimensionResult[]; existing: RecommendedDimensionResult[] }> {
+  const res = await api.post<{ created: RecommendedDimensionResult[]; existing: RecommendedDimensionResult[] }>(
+    `${ANALYTICS_AXES_ENDPOINT}/recommended`,
+    { codes, language },
+  );
+  return { created: res.data?.created ?? [], existing: res.data?.existing ?? [] };
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -30,7 +30,7 @@ vi.mock('../auth/AuthContext', () => ({
     },
   }),
 }));
-vi.mock('../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
+vi.mock('../api', () => ({ default: { get: vi.fn(), post: vi.fn(), delete: vi.fn() } }));
 vi.mock('../hooks/useAnalyticsAxes', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../hooks/useAnalyticsAxes')>();
   return {
@@ -268,6 +268,36 @@ describe('AnalyticsCategoriesPage', () => {
     expect(screen.getByRole('button', { name: 'shared.labels.importCsv' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'shared.labels.exportCsv' })).toBeInTheDocument();
     expect(grid.props?.enableRowSelection).toBe(true);
+  });
+
+  it('asks "Delete anyway" and forces the bulk delete when a selected value is used by lines', async () => {
+    const apiDelete = (api as unknown as { delete: ReturnType<typeof vi.fn> }).delete;
+    apiDelete.mockReset();
+    apiDelete.mockResolvedValue({ data: { deleted: ['v-used', 'v-free'], failed: [] } });
+    renderPage('/master-data/analytics?axis=ax-nature');
+    // The list rows carry their line counts.
+    act(() => grid.props?.onSelectionChanged([
+      { id: 'v-used', name: 'Licenses', opex_count: 2, capex_count: 1 },
+      { id: 'v-free', name: 'Spare', opex_count: 0, capex_count: 0 },
+    ]));
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.deleteSelected (2)' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('analytics.forceDelete.valuesUsed')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'analytics.forceDelete.confirmAnyway' }));
+    await waitFor(() => expect(apiDelete).toHaveBeenCalledWith('/analytics-categories/bulk', { data: { ids: ['v-used', 'v-free'], force: true } }));
+  });
+
+  it('keeps the plain bulk delete when no selected value is used', async () => {
+    const apiDelete = (api as unknown as { delete: ReturnType<typeof vi.fn> }).delete;
+    apiDelete.mockReset();
+    apiDelete.mockResolvedValue({ data: { deleted: ['v-free'], failed: [] } });
+    renderPage('/master-data/analytics?axis=ax-nature');
+    act(() => grid.props?.onSelectionChanged([{ id: 'v-free', name: 'Spare', opex_count: 0, capex_count: 0 }]));
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.deleteSelected (1)' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).queryByText('analytics.forceDelete.valuesUsed')).toBeNull();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.delete' }));
+    await waitFor(() => expect(apiDelete).toHaveBeenCalledWith('/analytics-categories/bulk', { data: { ids: ['v-free'] } }));
   });
 
   it('waits for the dimensions before listing, and says when they failed to load', () => {

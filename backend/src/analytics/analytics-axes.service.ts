@@ -13,6 +13,21 @@ import {
 } from './analytics-context';
 import { axisAppliesTo, isAxisActive, isReservedAnalyticsAxisName, resolveDefaultAxisId } from './analytics-axes.util';
 import { AXIS_APPLIES_TO, AxisAppliesTo } from './analytics-axis.entity';
+import {
+  deleteValuesAndLinks,
+  dimensionValueIds,
+  ForcedDeleteCounts,
+  lockLinesUsing,
+  lockValueRows,
+} from './analytics-forced-delete';
+import {
+  ensureRecommendedDimensions,
+  findRecommendedDimensions,
+  RECOMMENDED_DIMENSION_KEYS,
+  RecommendedDimensionKey,
+  resolveSeedLanguage,
+  STARTING_DIMENSION_KEYS,
+} from './recommended-dimensions.seed';
 
 /** A stored row, as `SELECT *` returns it. */
 export interface StoredAnalyticsAxis {
@@ -64,6 +79,26 @@ export interface AnalyticsAxisInput {
   required?: unknown;
   status?: unknown;
   disabled_at?: unknown;
+}
+
+/** A recommended dimension (`recommended-dimensions.seed.ts`) and the dimension of the tenant that stands for it. */
+export interface RecommendedDimensionState {
+  code: RecommendedDimensionKey;
+  present: boolean;
+  axis_id: string | null;
+  name: string | null;
+  /** A new tenant starts with it (the dialog ticks it); the others are the optional pack. */
+  starting: boolean;
+}
+
+/** One recommended dimension in the answer of `addRecommended`. */
+export interface RecommendedDimensionResult {
+  code: RecommendedDimensionKey;
+  /** The dimension's own code: `default` when the cost pool went on the default dimension. */
+  axis_code: string;
+  axis_id: string;
+  name: string | null;
+  values_created: number;
 }
 
 export const ANALYTICS_AXIS_CODE_PATTERN = /^[a-z0-9][a-z0-9_-]{0,39}$/;
@@ -369,8 +404,16 @@ export class AnalyticsAxesService {
     return this.list(ctx);
   }
 
-  /** Refused for the default dimension and while the dimension holds values. */
-  async delete(id: string, ctx: AnalyticsContext): Promise<void> {
+  /**
+   * Refused for the default dimension, even forced. Without `force`, refused while the dimension
+   * holds values. With it, the dimension goes with its values and the lines lose their value on it
+   * (`analytics-forced-delete.ts`).
+   */
+  async delete(id: string, ctx: AnalyticsContext, opts?: { force?: boolean }): Promise<void> {
+    if (opts?.force) {
+      await this.forceDelete(id, ctx);
+      return;
+    }
     // The row lock comes first: a value created concurrently either committed
     // before (and is counted) or waits for this delete and then fails its key.
     const existing = await this.lock(ctx, id);
@@ -407,6 +450,131 @@ export class AnalyticsAxesService {
       },
       { manager: ctx.manager },
     );
+  }
+
+  /**
+   * The dimension, its values and every line's value on it, in one transaction. Locks the lines,
+   * then the values, then the dimension (`analytics-forced-delete.ts`); the values are read again
+   * under the dimension's lock, so a value created meanwhile goes too. One audit row for the
+   * dimension with the counts, besides the rows of the values and of the lines.
+   */
+  private async forceDelete(id: string, ctx: AnalyticsContext): Promise<ForcedDeleteCounts> {
+    // Read without a lock first: refusals come before any lock is taken.
+    const [found] = await ctx.manager.query(
+      `SELECT id, is_default FROM analytics_axes WHERE tenant_id = $1 AND id = $2::uuid`,
+      [ctx.tenantId, id],
+    );
+    if (!found) throw new NotFoundException('Dimension not found.');
+    if (found.is_default) throw new ConflictException(DEFAULT_AXIS_DELETE_MESSAGE);
+
+    await lockLinesUsing(ctx, { axisId: id });
+    await lockValueRows(ctx, await dimensionValueIds(ctx, id));
+    const existing = await this.lock(ctx, id);
+    if (!existing) throw new NotFoundException('Dimension not found.');
+    if (existing.is_default) throw new ConflictException(DEFAULT_AXIS_DELETE_MESSAGE);
+    const values = await lockValueRows<{ id: string }>(ctx, await dimensionValueIds(ctx, id));
+
+    const counts = await deleteValuesAndLinks(ctx, this.audit, { axisId: id }, values, {
+      operation: 'analytics_dimension_delete',
+      axis_id: id,
+      axis_name: existing.name ?? null,
+    });
+    await ctx.manager.query(`DELETE FROM analytics_axes WHERE tenant_id = $1 AND id = $2`, [ctx.tenantId, id]);
+    await this.audit.log(
+      {
+        table: 'analytics_axes',
+        recordId: id,
+        action: 'delete',
+        before: existing,
+        after: { forced: true, ...counts },
+        userId: ctx.userId ?? null,
+        source: ctx.audit?.source,
+        sourceRef: ctx.audit?.sourceRef ?? null,
+      },
+      { manager: ctx.manager },
+    );
+    return counts;
+  }
+
+  // Recommended dimensions ---------------------------------------------------
+
+  /** Each recommended dimension, in display order, and whether the tenant already has it. */
+  async recommended(ctx: AnalyticsContext): Promise<{ items: RecommendedDimensionState[] }> {
+    const found = await findRecommendedDimensions(ctx.manager, ctx.tenantId);
+    return {
+      items: found.map(({ key, axis }) => ({
+        code: key,
+        present: !!axis,
+        axis_id: axis?.id ?? null,
+        name: axis?.name ?? null,
+        starting: STARTING_DIMENSION_KEYS.includes(key),
+      })),
+    };
+  }
+
+  /**
+   * Creates the recommended dimensions of `codes` the tenant lacks, named in `language`
+   * (`ensureRecommendedDimensions`): the cost pool goes on the default dimension only while it has
+   * neither a name nor a value, otherwise it is a new dimension of code `cost_pool`. A dimension
+   * already there is left as it is. Answers what was created and what already existed; one audit
+   * entry per dimension created or named and per value created.
+   */
+  async addRecommended(
+    body: { codes?: unknown; language?: unknown },
+    ctx: AnalyticsContext,
+  ): Promise<{ created: RecommendedDimensionResult[]; existing: RecommendedDimensionResult[] }> {
+    const raw = Array.isArray(body?.codes) ? body.codes.map((code) => String(code ?? '').trim()) : [];
+    const keys = RECOMMENDED_DIMENSION_KEYS.filter((key) => raw.includes(key));
+    if (keys.length === 0 || raw.some((code) => !(RECOMMENDED_DIMENSION_KEYS as readonly string[]).includes(code))) {
+      throw analyticsRefusal('Choose at least one recommended dimension.', 'codes');
+    }
+    // The default comes first: a tenant inserted without the bootstrap gets it before any other dimension.
+    await resolveDefaultAxisId(ctx.manager, ctx.tenantId, { create: true });
+    const outcomes = await ensureRecommendedDimensions(ctx.manager, ctx.tenantId, resolveSeedLanguage(body?.language), keys);
+    await this.auditRecommended(ctx, outcomes);
+    const toResult = (outcome: (typeof outcomes)[number]): RecommendedDimensionResult => ({
+      code: outcome.key,
+      axis_code: outcome.code,
+      axis_id: outcome.axisId,
+      name: outcome.name,
+      values_created: outcome.valueIds.length,
+    });
+    return {
+      created: outcomes.filter((outcome) => outcome.created).map(toResult),
+      existing: outcomes.filter((outcome) => !outcome.created).map(toResult),
+    };
+  }
+
+  private async auditRecommended(ctx: AnalyticsContext, outcomes: Awaited<ReturnType<typeof ensureRecommendedDimensions>>) {
+    const created = outcomes.filter((outcome) => outcome.created);
+    if (created.length === 0) return;
+    const entry = { userId: ctx.userId ?? null, source: ctx.audit?.source, sourceRef: ctx.audit?.sourceRef ?? null };
+    const axes: StoredAnalyticsAxis[] = await ctx.manager.query(
+      `SELECT * FROM analytics_axes WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [ctx.tenantId, created.map((outcome) => outcome.axisId)],
+    );
+    const axisById = new Map(axes.map((axis) => [axis.id, axis]));
+    for (const outcome of created) {
+      const after = axisById.get(outcome.axisId) ?? null;
+      await this.audit.log(
+        outcome.defaultBefore
+          ? { table: 'analytics_axes', recordId: outcome.axisId, action: 'update', before: outcome.defaultBefore, after, ...entry }
+          : { table: 'analytics_axes', recordId: outcome.axisId, action: 'create', before: null, after, ...entry },
+        { manager: ctx.manager },
+      );
+    }
+    const valueIds = created.flatMap((outcome) => outcome.valueIds);
+    if (valueIds.length === 0) return;
+    const values: Array<{ id: string }> = await ctx.manager.query(
+      `SELECT * FROM analytics_categories WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [ctx.tenantId, valueIds],
+    );
+    for (const value of values) {
+      await this.audit.log(
+        { table: 'analytics_categories', recordId: value.id, action: 'create', before: null, after: value, ...entry },
+        { manager: ctx.manager },
+      );
+    }
   }
 
   // Internals ----------------------------------------------------------------

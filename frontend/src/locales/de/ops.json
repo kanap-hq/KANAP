@@ -886,8 +886,8 @@
       "effects": {
         "inPlace": "Die Zeile behält ihre Referenz, ihr Budget, ihre Zuordnungen, Verknüpfungen, Anhänge und Aufgaben.",
         "reports": {
-          "capex": "Sie verlässt die OPEX-Berichte und die Leistungsverrechnung und erscheint in den CAPEX-Berichten.",
-          "opex": "Sie verlässt die CAPEX-Berichte und erscheint in den OPEX-Berichten und der Leistungsverrechnung."
+          "capex": "Sie verlässt die OPEX-Berichte und erscheint in den CAPEX-Berichten. Die Leistungsverrechnung zählt sie unter CAPEX.",
+          "opex": "Sie verlässt die CAPEX-Berichte und erscheint in den OPEX-Berichten. Die Leistungsverrechnung zählt sie unter OPEX."
         },
         "dated_one": "Diese Zeile endet am {{end}} und behält ihr Budget vor {{year}}. Eine neue {{type}}-Zeile übernimmt das Budget ab {{year}} ({{count}} Jahr), mit den Kontakten und den Verknüpfungen zu Anwendungen, Assets, Verträgen, Projekten und Anfragen.",
         "dated_other": "Diese Zeile endet am {{end}} und behält ihr Budget vor {{year}}. Eine neue {{type}}-Zeile übernimmt das Budget ab {{year}} ({{count}} Jahre), mit den Kontakten und den Verknüpfungen zu Anwendungen, Assets, Verträgen, Projekten und Anfragen.",
@@ -974,6 +974,7 @@
     },
     "shared": {
       "loadingReport": "Bericht wird geladen…",
+      "capexYearAmountNote": "CAPEX-Zeilen zählen mit ihrem Betrag des Jahres, ohne Abschreibung.",
       "loadingData": "Daten werden geladen…",
       "run": "Ausführen",
       "refreshing": "Wird aktualisiert…",
