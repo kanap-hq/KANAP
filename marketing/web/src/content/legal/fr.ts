@@ -100,7 +100,7 @@ const content: LegalContent = {
   <li>Droit à la portabilité des données</li>
   <li>Droit de retirer votre consentement</li>
 </ul>
-<p>Pour exercer vos droits, vous pouvez contacter KANAP à l'adresse <a href="mailto:admin@kanap.net">admin@kanap.net</a>. Vous disposez également du droit d'introduire une réclamation auprès de la Commission nationale de l'informatique et des libertés (CNIL).</p>
+<p>Pour exercer vos droits, vous pouvez contacter KANAP à l'adresse <a href="mailto:support@kanap.net">support@kanap.net</a>. Vous disposez également du droit d'introduire une réclamation auprès de la Commission nationale de l'informatique et des libertés (CNIL).</p>
 
 <h2>9. Transferts internationaux de données</h2>
 <p>La Plateforme est hébergée dans l'Union européenne, en Allemagne. Certains prestataires mentionnés à la section 5 peuvent traiter des données personnelles hors de l'Union européenne, par exemple Cloudflare pour le trafic réseau. Dans ce cas, KANAP s'assure que des garanties appropriées sont en place (le cadre de protection des données UE-États-Unis ou des clauses contractuelles types).</p>
@@ -112,7 +112,7 @@ const content: LegalContent = {
 <h2>11. Modifications de la politique</h2>
 <p>KANAP se réserve le droit de modifier la présente Politique à tout moment. Les utilisateurs sont informés des modifications par tout moyen, notamment par une notification sur la Plateforme ou par e-mail.</p>
 
-<p class="mk-legal__foot">Pour toute question relative à la présente politique de confidentialité, contactez <a href="mailto:admin@kanap.net">admin@kanap.net</a>.</p>
+<p class="mk-legal__foot">Pour toute question relative à la présente politique de confidentialité, contactez <a href="mailto:support@kanap.net">support@kanap.net</a>.</p>
 `,
   },
 
@@ -160,8 +160,8 @@ const content: LegalContent = {
 <p>5.5. En cas d'incident de sécurité affectant les données, KANAP informera les clients concernés dans un délai de 72 heures.</p>
 
 <h2>Article 6. Propriété intellectuelle</h2>
-<p>6.1. La Plateforme et l'ensemble de ses éléments sont la propriété exclusive de KANAP et sont protégés par le droit d'auteur et le droit des marques.</p>
-<p>6.2. L'utilisateur n'acquiert aucun droit de propriété intellectuelle sur la Plateforme.</p>
+<p>6.1. Le logiciel KANAP est publié par KANAP sous licence GNU Affero General Public License version 3 (AGPL-3.0). Les droits de l'utilisateur sur son code source sont ceux que lui confère cette licence.</p>
+<p>6.2. Le nom et le logo KANAP appartiennent à KANAP. L'utilisation de la Plateforme ne confère aucun droit sur ceux-ci.</p>
 <p>6.3. Les contenus créés par l'utilisateur restent sa propriété, mais KANAP se réserve le droit d'utiliser des données agrégées et anonymisées à des fins d'amélioration du service.</p>
 
 <h2>Article 7. Suspension ou résiliation du compte</h2>
@@ -177,7 +177,7 @@ const content: LegalContent = {
 <h2>Article 10. Droit applicable et litiges</h2>
 <p>Les présentes Conditions générales d'utilisation sont régies par le droit français. Tout litige relève de la compétence exclusive des tribunaux français.</p>
 
-<p class="mk-legal__foot">Pour toute question, contactez <a href="mailto:admin@kanap.net">admin@kanap.net</a>.</p>
+<p class="mk-legal__foot">Pour toute question, contactez <a href="mailto:support@kanap.net">support@kanap.net</a>.</p>
 `,
   },
 
@@ -222,7 +222,7 @@ const content: LegalContent = {
 <h2>Article 6. Durée et renouvellement de l'abonnement</h2>
 <p>6.1. <strong>Abonnement mensuel :</strong> souscrit pour un mois, renouvelable automatiquement par tacite reconduction. Le Client peut résilier à tout moment depuis son espace client, avec un préavis de 48 heures avant le renouvellement. La résiliation prend effet à la fin du mois en cours.</p>
 <p>6.2. <strong>Abonnement annuel :</strong> souscrit pour un an, renouvelable automatiquement par tacite reconduction sauf résiliation. Le Client est informé par e-mail 30 jours avant le renouvellement. La résiliation requiert un préavis de 30 jours avant la date anniversaire. L'abonnement annuel ne donne lieu à aucun remboursement en cas de résiliation anticipée.</p>
-<p>6.3. <strong>Changements d'abonnement :</strong> le Client peut passer à tout moment de la facturation mensuelle à la facturation annuelle (la différence au prorata est facturée immédiatement), ou de l'annuelle à la mensuelle à la fin de la période de facturation en cours. Le Client peut passer à tout moment du déploiement cloud au déploiement auto-hébergé, et inversement, en contactant le support.</p>
+<p>6.3. <strong>Changements d'abonnement :</strong> le Client peut passer à tout moment de la facturation mensuelle à la facturation annuelle (la différence au prorata est facturée immédiatement et payable selon l'article 5), ou de l'annuelle à la mensuelle à la fin de la période de facturation en cours. Le Client peut passer du Service hébergé à un déploiement auto-hébergé, et inversement, en contactant le support. Le Client peut exporter ses données à tout moment. L'accompagnement d'un tel changement (installation, transfert des données, configuration) est une prestation chiffrée et facturée séparément.</p>
 
 <h2>Article 7. Droit de rétractation</h2>
 <p>Les Services sont proposés exclusivement à des professionnels agissant dans le cadre de leur activité. Aucun droit de rétractation ne s'applique.</p>
@@ -233,7 +233,10 @@ const content: LegalContent = {
 <p>8.3. La responsabilité du Vendeur est limitée au montant de l'abonnement payé par le Client au cours des 12 derniers mois.</p>
 
 <h2>Article 9. Propriété intellectuelle</h2>
-<p>La plateforme KANAP est la propriété exclusive du Vendeur. Le Client n'acquiert aucun droit de propriété intellectuelle sur la Plateforme.</p>
+<p>9.1. Le logiciel KANAP est publié par le Vendeur sous licence GNU Affero General Public License version 3 (AGPL-3.0). Les droits du Client sur son code source sont ceux que lui confère cette licence.</p>
+<p>9.2. L'abonnement confère au Client le droit d'utiliser le Service hébergé pendant sa durée. Il ne transfère aucun droit de propriété intellectuelle.</p>
+<p>9.3. Le nom et le logo KANAP appartiennent au Vendeur. L'abonnement ne confère aucun droit sur ceux-ci.</p>
+<p>9.4. Les données saisies par le Client restent sa propriété.</p>
 
 <h2>Article 10. Données personnelles</h2>
 <p>Les données personnelles sont traitées conformément à la politique de confidentialité du Vendeur.</p>
@@ -242,7 +245,7 @@ const content: LegalContent = {
 <p>11.1. Les présentes CGV sont régies par le droit français. Tout litige relève de la compétence exclusive des tribunaux français.</p>
 <p>11.2. En cas de litige, les parties s'engagent à rechercher une solution amiable avant toute action en justice.</p>
 
-<p class="mk-legal__foot">Pour toute question, contactez <a href="mailto:admin@kanap.net">admin@kanap.net</a>.</p>
+<p class="mk-legal__foot">Pour toute question, contactez <a href="mailto:support@kanap.net">support@kanap.net</a>.</p>
 `,
   },
 
