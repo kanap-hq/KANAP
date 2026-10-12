@@ -34,7 +34,7 @@ Unified Tasks Model
 
 Frontend Editors
 - Overview editor: Name, Supplier, Contracting Company, Owner, Enabled/Disabled date, Notes.
-- Details editor: Start Date, Duration (months), Notice (months), Yearly amount, Currency, Billing frequency, Auto‑renewal. Computed End Date and Cancellation Deadline update live.
+- Details editor: Start Date, Duration (months), Notice (months), Yearly amount, Currency, Billing frequency, Auto‑renewal. The current term end and the next cancellation deadline update live (`pages/contracts/contractTerms.ts`, the frontend copy of `backend/src/contracts/contract-terms.ts`), tacit renewals and the end of validity included.
 - Relations editor: Linked OPEX multi‑select, Linked CAPEX multi‑select, Link Manager modal shortcut, Websites CRUD (create/update/delete), Attachments upload/list/download/delete.
 - Tasks panel: Same UX as OPEX; statuses are open|in_progress|done|cancelled; Title required.
 
