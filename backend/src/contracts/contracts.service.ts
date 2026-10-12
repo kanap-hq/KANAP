@@ -33,6 +33,8 @@ import {
 } from '../common/ag-grid-filtering';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
 import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attach.util';
+import { contractTermFields, contractTermsSql, sqlDateLiteral, type ContractTermFields } from './contract-terms';
+import { utcDateYmd } from '../notifications/expiry-reminder-schedule';
 
 /**
  * The session tenant as a find condition: `app_current_tenant()`, the tenant RLS checks too,
@@ -54,11 +56,9 @@ const CONTRACT_REFERENCES = {
 // Never written from a body: the row's identity, tenant and timestamps.
 const NOT_WRITABLE = ['id', 'tenant_id', 'created_at', 'updated_at'] as const;
 
-type ListItem = Contract & {
+type ListItem = Contract & ContractTermFields & {
   supplier?: { id: string; name: string } | null;
   company?: { id: string; name: string } | null;
-  end_date?: string;
-  cancellation_deadline?: string;
   linked_opex_count?: number;
   latest_task?: { id: string; status?: string; description?: string; created_at?: Date } | null;
 };
@@ -81,25 +81,12 @@ export class ContractsService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  private computeEndDate(start: string, durationMonths: number): string {
-    const d = new Date(start + 'T00:00:00Z');
-    const end = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + (durationMonths || 0), d.getUTCDate()));
-    end.setUTCDate(end.getUTCDate() - 1); // minus 1 day
-    return end.toISOString().slice(0, 10);
-    }
-
-  private addMonthsIso(dateIso: string, delta: number): string {
-    const d = new Date(dateIso + 'T00:00:00Z');
-    const out = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + delta, d.getUTCDate()));
-    return out.toISOString().slice(0, 10);
-  }
-
-  private computeCancellationDeadline(endDateIso: string, noticeMonths: number): string {
-    const raw = this.addMonthsIso(endDateIso, -noticeMonths);
-    return raw;
-  }
-
-  private contractFilterTargets(): Record<string, FilterTargetConfig> {
+  /**
+   * The list's filter targets. The end date and the cancellation deadline are those of the
+   * current term as of `today` (`contract-terms.ts`), like the values the list returns.
+   */
+  private contractFilterTargets(today: string): Record<string, FilterTargetConfig> {
+    const terms = contractTermsSql('c', sqlDateLiteral(today));
     return {
       id: { expression: 'c.id', dataType: 'string' },
       name: { expression: 'c.name', dataType: 'string' },
@@ -108,14 +95,8 @@ export class ContractsService {
       supplier_id: { expression: 'c.supplier_id', dataType: 'string' },
       owner_user_id: { expression: 'c.owner_user_id', dataType: 'string' },
       start_date: { expression: 'c.start_date', dataType: 'string' },
-      end_date: {
-        expression: `(c.start_date + COALESCE(c.duration_months, 0) * INTERVAL '1 month' - INTERVAL '1 day')::date`,
-        dataType: 'string',
-      },
-      cancellation_deadline: {
-        expression: `(c.start_date + (COALESCE(c.duration_months, 0) - COALESCE(c.notice_period_months, 0)) * INTERVAL '1 month')::date`,
-        dataType: 'string',
-      },
+      end_date: { expression: terms.currentTermEnd, dataType: 'string' },
+      cancellation_deadline: { expression: terms.cancellationDeadline, dataType: 'string' },
       duration_months: {
         expression: 'c.duration_months',
         numericExpression: 'c.duration_months',
@@ -153,7 +134,8 @@ export class ContractsService {
       : parsePagination(query, { field: 'created_at', direction: 'DESC' });
     const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
-    const filterTargets = this.contractFilterTargets();
+    const today = utcDateYmd(new Date());
+    const filterTargets = this.contractFilterTargets(today);
     const nextParam = createParamNameGenerator('c');
     const compiledFilters: CompiledCondition[] = [];
     if (filtersToApply && typeof filtersToApply === 'object') {
@@ -205,8 +187,8 @@ export class ContractsService {
       company_name: 'comp.name',
       supplier_name: 'sup.name',
       start_date: 'c.start_date',
-      end_date: `(c.start_date + COALESCE(c.duration_months, 0) * INTERVAL '1 month' - INTERVAL '1 day')::date`,
-      cancellation_deadline: `(c.start_date + (COALESCE(c.duration_months, 0) - COALESCE(c.notice_period_months, 0)) * INTERVAL '1 month')::date`,
+      end_date: filterTargets.end_date.expression,
+      cancellation_deadline: filterTargets.cancellation_deadline.expression,
       duration_months: 'c.duration_months',
       auto_renewal: 'c.auto_renewal',
       notice_period_months: 'c.notice_period_months',
@@ -262,16 +244,13 @@ export class ContractsService {
     const latestById = new Map(latestTasks.map(t => [t.related_object_id, t]));
 
     const enriched: ListItem[] = items.map((i) => {
-      const end = this.computeEndDate(i.start_date, i.duration_months || 0);
-      const cancel = this.computeCancellationDeadline(end, i.notice_period_months || 0);
       return {
         ...i,
+        ...contractTermFields(i, today),
         // From the end of validity, like the filter: the stored status stays enabled once the date passes.
         status: deriveStatusFromDisabledAt(i.disabled_at),
         supplier: i.supplier_id ? { id: i.supplier_id, name: sById.get(i.supplier_id)?.name ?? '' } : null,
         company: i.company_id ? { id: i.company_id, name: cById.get(i.company_id)?.name ?? '' } : null,
-        end_date: end,
-        cancellation_deadline: cancel,
         linked_opex_count: countById.get(i.id) ?? 0,
         latest_task: latestById.get(i.id) ? {
           id: latestById.get(i.id)!.id,
@@ -294,8 +273,7 @@ export class ContractsService {
     const found = await repo.findOne({ where: { id, tenant_id: sessionTenant() } });
     if (!found) throw new NotFoundException('Contract not found');
     const tenantId = found.tenant_id;
-    const end = this.computeEndDate(found.start_date, found.duration_months || 0);
-    const cancel = this.computeCancellationDeadline(end, found.notice_period_months || 0);
+    const terms = contractTermFields(found, utcDateYmd(new Date()));
     const linked = await linksRepo.find({ where: { tenant_id: tenantId, contract_id: id } });
     const spendIds = linked.map(l => l.spend_item_id);
     const spendItems = spendIds.length
@@ -309,7 +287,7 @@ export class ContractsService {
          WHERE tenant_id = $1 AND related_object_type = 'contract' AND related_object_id = $2
          ORDER BY created_at DESC LIMIT 1`, [tenantId, id]);
     const latest_task = latestTaskRows?.[0] ?? null;
-    return { ...found, end_date: end, cancellation_deadline: cancel, linked_spend_items: spendItems, links, attachments, latest_task };
+    return { ...found, ...terms, linked_spend_items: spendItems, links, attachments, latest_task };
   }
 
   private validateInput(body: {
@@ -565,7 +543,8 @@ export class ContractsService {
     const limit = Math.min(Number(query?.limit) || 10000, 10000);
     const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
-    const filterTargets = this.contractFilterTargets();
+    const today = utcDateYmd(new Date());
+    const filterTargets = this.contractFilterTargets(today);
     const nextParam = createParamNameGenerator('c');
     const compiledFilters: CompiledCondition[] = [];
     if (filtersToApply && typeof filtersToApply === 'object') {
@@ -611,8 +590,8 @@ export class ContractsService {
       company_name: 'comp.name',
       supplier_name: 'sup.name',
       start_date: 'c.start_date',
-      end_date: `(c.start_date + COALESCE(c.duration_months, 0) * INTERVAL '1 month' - INTERVAL '1 day')::date`,
-      cancellation_deadline: `(c.start_date + (COALESCE(c.duration_months, 0) - COALESCE(c.notice_period_months, 0)) * INTERVAL '1 month')::date`,
+      end_date: filterTargets.end_date.expression,
+      cancellation_deadline: filterTargets.cancellation_deadline.expression,
       duration_months: 'c.duration_months',
       auto_renewal: 'c.auto_renewal',
       notice_period_months: 'c.notice_period_months',

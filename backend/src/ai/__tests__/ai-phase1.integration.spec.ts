@@ -3798,11 +3798,14 @@ async function testAiQueryExecutorClosesRemainingMilestone1aGapFields() {
     const supplierId = await seedSupplier(runner, tenantId, 'ERP Vendor', 'SUP-001');
     const otherSupplierId = await seedSupplier(runner, tenantId, 'Legacy Vendor', 'SUP-999');
 
+    // Starts next year, so its end is that of its first term whatever the day the spec runs
+    // (a renewing contract's end date is its current term's, contracts/contract-terms.ts).
+    const contractYear = new Date().getUTCFullYear() + 1;
     const matchingContractId = await seedContract(runner, tenantId, {
       companyId,
       supplierId,
       name: 'ERP Renewal',
-      startDate: '2026-01-01',
+      startDate: `${contractYear}-01-01`,
       durationMonths: 6,
       autoRenewal: true,
       noticePeriodMonths: 1,
@@ -3913,7 +3916,7 @@ async function testAiQueryExecutorClosesRemainingMilestone1aGapFields() {
         supplier: ['ERP Vendor'],
         company: ['Tenant A Holdings'],
         auto_renewal: ['true'],
-        end_date: { op: 'before', value: '2026-07-15' },
+        end_date: { op: 'before', value: `${contractYear}-07-15` },
       },
       sort: { field: 'end_date', direction: 'asc' },
       limit: 10,
@@ -3927,7 +3930,7 @@ async function testAiQueryExecutorClosesRemainingMilestone1aGapFields() {
     assert.equal(contractResult.items[0].metadata.duration_months, 6);
     assert.equal(contractResult.items[0].metadata.notice_period_months, 1);
     assert.equal(contractResult.items[0].metadata.yearly_amount_at_signature, 1200);
-    assert.equal(contractResult.items[0].metadata.end_date, '2026-06-30');
+    assert.equal(contractResult.items[0].metadata.end_date, `${contractYear}-06-30`);
 
     const companyResult = await queryExecutor.execute(context, {
       entity_type: 'companies',
