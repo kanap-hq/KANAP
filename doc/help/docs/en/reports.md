@@ -19,34 +19,33 @@ The landing page shows a card for each available report with a short description
 |--------|----------------|
 | **Global chargeback** | Company-level allocation totals, KPIs, and intercompany flows (OPEX) |
 | **Company chargeback** | Single-company drilldown with departments, items, and KPIs (OPEX) |
-| **Top items** | Largest OPEX or CAPEX items for a selected year (custom top N) |
-| **Top increase / decrease** | Biggest OPEX or CAPEX changes between two budget columns (custom top N) |
-| **Budget trend (OPEX)** | Compare OPEX metrics across a year range |
-| **Budget trend (CAPEX)** | Compare CAPEX metrics across a year range |
-| **Budget column comparison** | Pick up to 10 year+column totals for OPEX or CAPEX |
-| **Consolidation accounts** | OPEX or CAPEX budget grouped by consolidation account |
-| **Analytics dimensions** | OPEX or CAPEX budget grouped by analytics dimension |
+| **Top items** | Largest budget lines for a selected year (custom top N) |
+| **Top increase / decrease** | Biggest changes between two budget columns (custom top N) |
+| **Budget comparison** | Compare budget metrics across a year range |
+| **Budget column comparison** | Pick up to 10 year+column totals |
+| **Consolidation accounts** | Budget grouped by consolidation account |
+| **Analytics dimensions** | Budget grouped by analytics dimension |
 | **Staffing by month** | Monthly FTE by cost center, item, supplier or analytics dimension |
 | **Cost per FTE** | Yearly cost of one FTE or average daily rate, by cost center, item, supplier or analytics dimension, across budget columns and years |
 
-### Choosing OPEX or CAPEX
+### Choosing the type of lines
 
-**Top items**, **Top increase / decrease**, **Consolidation accounts**, **Analytics dimensions**, **Staffing by month** and **Cost per FTE** each start with an **OPEX** / **CAPEX** switch, the first control of the filter bar.
+**Top items**, **Top increase / decrease**, **Budget comparison**, **Consolidation accounts**, **Analytics dimensions**, **Staffing by month** and **Cost per FTE** each start with **All**, **OPEX** and **CAPEX** tabs, the first control of the filter bar. **Budget column comparison** has an **Item type** select with the same three choices. It starts on **All** and its choice is not kept in the page address.
 
-- The report opens on OPEX. Both types need read access to budget lines (`budget:reader`). Without it, the switch is disabled.
-- The page address keeps the chosen type (`?scope=opex` or `?scope=capex`), so a bookmarked or shared link opens on the same type.
-- The subtitle and the chart title name the type, so a printout or an exported PNG shows which type it covers.
-- Switching the type clears the items you excluded, since each type has its own items.
+- The report opens on **All**: the OPEX and CAPEX lines together. **OPEX** or **CAPEX** keeps the lines of that type. All three need read access to budget lines (`budget:reader`). Without it, the tabs are disabled.
+- The page address keeps the chosen type (`?scope=all`, `?scope=opex` or `?scope=capex`), so a bookmarked or shared link opens on the same type.
+- The subtitle and the chart title name the type, so a printout or an exported PNG shows which lines it covers.
+- Switching the type clears the items you excluded.
 
-The two chargeback reports cover OPEX only.
+The two chargeback reports cover OPEX lines only.
 
 ### Choosing amount or FTE
 
-The seven budget reports have a **Measure** select. It sits right after the **OPEX** / **CAPEX** switch, or first when the report has no switch. It offers **Amount** (the default) and **FTE**. The two chargeback reports have no measure.
+The six budget reports have a **Measure** select. It sits right after the type tabs, or first when the report has none. It offers **Amount** (the default) and **FTE**. The two chargeback reports have no measure.
 
 With **FTE**, a report sums people instead of money:
 
-- Each budget column shows the full-year average FTE that its quantity and price lines declare. Lines in people or days add FTE. Lines in pieces count 0. A column without lines declares no FTE and is left out: only declared FTE count. See [Quantity and price](opex.md#quantity-and-price) and [FTE](opex.md#fte).
+- Each budget column shows the full-year average FTE that its quantity and price lines declare. Lines in people or days add FTE. Lines in pieces count 0. A column without lines declares no FTE and is left out: only declared FTE count. See [Quantity and price](budget-lines.md#quantity-and-price) and [FTE](budget-lines.md#fte).
 - A year or column where no item declares FTE shows an empty cell, with no bar or point in the chart.
 - **Top items**, **Consolidation accounts** and **Analytics dimensions** leave out the items and groups that declare no FTE. Shares are shares of the FTE total.
 - **Top increase / decrease** compares the FTE of the two columns item by item. An item that declares FTE on one side only counts 0 on the other.
@@ -62,7 +61,7 @@ Every column or metric picker offers the budget columns your organisation shows,
 
 ### Cost center, run or build and analytics filters
 
-The seven budget reports (**Top items**, **Top increase / decrease**, **Budget trend (OPEX)**, **Budget trend (CAPEX)**, **Budget column comparison**, **Consolidation accounts** and **Analytics dimensions**), **Staffing by month** and **Cost per FTE** can be narrowed to one part of the budget with these filters:
+The budget reports (**Top items**, **Top increase / decrease**, **Budget comparison**, **Budget column comparison**, **Consolidation accounts** and **Analytics dimensions**), **Staffing by month** and **Cost per FTE** can be narrowed to one part of the budget with these filters:
 
 - **Cost center**: pick a cost center or a group. A group includes everything below it, disabled cost centers included, since their lines still belong to the group. **All cost centers** removes the filter. See [Cost centers](cost-centers.md).
 - **Run or build**: **All**, **Run**, **Build**, or **Not set** for the lines that have neither.
@@ -74,7 +73,7 @@ When the filters appear:
 - **Cost center** shows once your workspace has at least one cost center or group.
 - **Run or build** shows once a line of the report is marked **Run** or **Build**, or when the page address already carries the filter.
 - **Items** shows once an item of the report declares FTE, or when the page address already carries the filter.
-- A dimension's filter shows once a line of the report has a value on that dimension, or when the page address already carries it. Disabled dimensions have no filter. A report shows only the dimensions used for the lines it covers: switching between **OPEX** and **CAPEX** changes the list. A dimension set to **OPEX only** has no filter in a CAPEX report, and the reverse. See [OPEX or CAPEX dimensions](analytics.md#opex-or-capex-dimensions).
+- A dimension's filter shows once a line of the report has a value on that dimension, or when the page address already carries it. Disabled dimensions have no filter. A report shows only the dimensions used for the lines it covers: switching the type changes the list. A dimension set to **OPEX only** has no filter in a CAPEX report, and the reverse. **All** shows the dimensions of both types. See [OPEX or CAPEX dimensions](analytics.md#opex-or-capex-dimensions).
 - With none of these, the filter bar shows only the report's own controls.
 
 How they work:
@@ -89,15 +88,15 @@ How they work:
 
 ### Opening the list from a report
 
-In **Staffing by month**, **Cost per FTE**, **Analytics dimensions** and **Consolidation accounts**, a group name is a link that opens the OPEX or CAPEX list in a new tab, on the items the row counts:
+In **Staffing by month**, **Cost per FTE**, **Analytics dimensions** and **Consolidation accounts**, a group name is a link that opens the [budget lines list](budget-lines.md) in a new tab, on the items the row counts:
 
-- the items of the group, narrowed by the filter bar;
+- the items of the group, narrowed by the filter bar, and by the **Type** filter when the report is on **OPEX** or **CAPEX**;
 - every status (**Show: All**), with an **End of validity** filter "blank, or after 31 December" of the year before the report's first year. A report counts the items still active on 1 January of its first year, including the ones disabled since;
 - in **Staffing by month** and **Cost per FTE**, and with the **FTE** measure, only the items that declare FTE (the **FTE declared** filter).
 
 The filtered columns show right after the item name for this visit, so you see why the list is narrowed. A consolidation account filters on its accounts without a column of its own.
 
-This list is a view of the report. What you change in it stays in its address, and opening **OPEX** or **CAPEX** from the menu afterwards shows your own sort, search and filters.
+This list is a view of the report. What you change in it stays in its address, and opening **Budget lines** from the menu afterwards shows your own sort, search and filters.
 
 ---
 
@@ -193,7 +192,7 @@ Drill down into a single company's chargeback allocations across departments, bu
 
 - Item name, allocation method, amount, share of total
 - Pinned totals row at the bottom
-- The item name is a link that opens the OPEX item in a new tab. Common costs and totals are plain text.
+- The item name is a link that opens the budget line in a new tab. Common costs and totals are plain text.
 
 **Intercompany flows** (when enabled):
 
@@ -213,11 +212,11 @@ Drill down into a single company's chargeback allocations across departments, bu
 
 ## Top items
 
-Identify your largest OPEX or CAPEX items for a given year.
+Identify your largest budget lines for a given year.
 
 ### Controls
 
-- **Item type**: OPEX or CAPEX (see [Choosing OPEX or CAPEX](#choosing-opex-or-capex))
+- **Item type**: **All**, **OPEX** or **CAPEX** (see [Choosing the type of lines](#choosing-the-type-of-lines))
 - **Measure**: **Amount** or **FTE** (see [Choosing amount or FTE](#choosing-amount-or-fte))
 - **Year**: Previous, current, or next year
 - **Metric**: Any shown budget column. Starts on the default column
@@ -237,7 +236,7 @@ Identify your largest OPEX or CAPEX items for a given year.
 - Value for the selected metric and year
 - Share of total (percentage)
 
-The item name is a link that opens the OPEX or CAPEX item in a new tab.
+The item name is a link that opens the budget line in a new tab.
 
 **Summary cards below the table**:
 
@@ -254,11 +253,11 @@ Use this report to quickly spot where most of your IT budget goes and identify c
 
 ## Top increase / decrease
 
-Identify the biggest OPEX or CAPEX changes between two budget columns (any combination of year and metric).
+Identify the biggest changes between two budget columns (any combination of year and metric).
 
 ### Controls
 
-- **Item type**: OPEX or CAPEX (see [Choosing OPEX or CAPEX](#choosing-opex-or-capex))
+- **Item type**: **All**, **OPEX** or **CAPEX** (see [Choosing the type of lines](#choosing-the-type-of-lines))
 - **Measure**: **Amount** or **FTE** (see [Choosing amount or FTE](#choosing-amount-or-fte))
 - **Source year** and **Source metric**: The baseline column to compare from
 - **Destination year** and **Destination metric**: The target column to compare to
@@ -285,7 +284,7 @@ When **Both** is selected, the pie chart option is disabled and the report autom
 - Delta (absolute change)
 - Percentage increase
 
-The item name is a link that opens the OPEX or CAPEX item in a new tab.
+The item name is a link that opens the budget line in a new tab.
 
 **Summary cards below the table**:
 
@@ -299,12 +298,13 @@ Use this report for identifying cost overruns, spotting savings opportunities, a
 
 ---
 
-## Budget trend (OPEX)
+## Budget comparison
 
-Compare OPEX metrics across multiple years on a single line chart.
+Compare budget metrics across multiple years on a single line chart. The address of the former **Budget trend (CAPEX)** report opens this report on CAPEX.
 
 ### Controls
 
+- **Item type**: **All**, **OPEX** or **CAPEX** (see [Choosing the type of lines](#choosing-the-type-of-lines))
 - **Measure**: **Amount** or **FTE** (see [Choosing amount or FTE](#choosing-amount-or-fte))
 - **Start year**: Beginning of the range (current year minus 2 through plus 2)
 - **End year**: End of the range
@@ -325,30 +325,13 @@ Compare OPEX metrics across multiple years on a single line chart.
 
 ---
 
-## Budget trend (CAPEX)
-
-Identical layout to the OPEX trend report, but pulls from CAPEX budget data.
-
-### Controls
-
-- **Measure**: **Amount** or **FTE** (see [Choosing amount or FTE](#choosing-amount-or-fte))
-- **Start year**, **End year**, **Metrics**: Same as the OPEX trend report
-- **Cost center**, **Run or build**, **Items** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
-
-### What you'll see
-
-- Line chart of CAPEX totals by metric across years
-- Summary table with year columns
-
----
-
 ## Budget column comparison
 
-Flexibly compare up to 10 year+column combinations for either OPEX or CAPEX.
+Flexibly compare up to 10 year+column combinations.
 
 ### Controls
 
-- **Item type**: OPEX or CAPEX toggle
+- **Item type**: **All** (the default), **OPEX** or **CAPEX**
 - **Measure**: **Amount** or **FTE** (see [Choosing amount or FTE](#choosing-amount-or-fte))
 - **Selections**: Each selection has a year picker and a column picker with the shown budget columns. The report starts with two selections: the default column of the current year and of next year. **Add** adds the default column of the current year, and the delete icon removes a selection. Maximum of 10 selections; minimum of 1.
 - **Year grouping** (checkbox): When enabled and at least two years share a metric, switches to a grouped line chart with one series per metric and years on the X axis. When disabled, shows a flat line chart with each selection as a data point.
@@ -376,11 +359,11 @@ Flexibly compare up to 10 year+column combinations for either OPEX or CAPEX.
 
 ## Consolidation accounts
 
-View OPEX or CAPEX budget data grouped by consolidation account, with chart type adapting to the year range.
+View budget data grouped by consolidation account, with chart type adapting to the year range.
 
 ### Controls
 
-- **Item type**: OPEX or CAPEX (see [Choosing OPEX or CAPEX](#choosing-opex-or-capex))
+- **Item type**: **All**, **OPEX** or **CAPEX** (see [Choosing the type of lines](#choosing-the-type-of-lines))
 - **Measure**: **Amount** or **FTE** (see [Choosing amount or FTE](#choosing-amount-or-fte))
 - **Start year** and **End year**: Previous, current, or next year
 - **Metric**: Any shown budget column. Starts on the default column
@@ -407,11 +390,11 @@ A line on a consolidation account that has since been disabled still counts, und
 
 ## Analytics dimensions
 
-View OPEX or CAPEX budget data grouped by the values of one analytics dimension. The layout mirrors the Consolidation accounts report. See [Analytics dimensions](analytics.md) to set up dimensions and values.
+View budget data grouped by the values of one analytics dimension. The layout mirrors the Consolidation accounts report. See [Analytics dimensions](analytics.md) to set up dimensions and values.
 
 ### Controls
 
-- **Item type**: OPEX or CAPEX (see [Choosing OPEX or CAPEX](#choosing-opex-or-capex))
+- **Item type**: **All**, **OPEX** or **CAPEX** (see [Choosing the type of lines](#choosing-the-type-of-lines))
 - **Measure**: **Amount** or **FTE** (see [Choosing amount or FTE](#choosing-amount-or-fte))
 - **Dimension**: the dimension the report groups on. It offers the enabled dimensions used for the selected item type, shows when there are two or more, and the report opens on the default dimension. Switching the item type to one that does not use the chosen dimension returns to the default dimension. The page address keeps your choice, so a bookmarked or shared link opens on the same dimension
 - **Start year** and **End year**: Previous, current, or next year
@@ -441,11 +424,11 @@ A value opens the list of its items in a new tab ("Unassigned": the items withou
 
 ## Staffing by month
 
-See how many people each part of the budget plans, month by month. The report reads the monthly FTE that the quantity and price lines of a budget column declare. See [Quantity and price](opex.md#quantity-and-price) and [FTE](opex.md#fte).
+See how many people each part of the budget plans, month by month. The report reads the monthly FTE that the quantity and price lines of a budget column declare. See [Quantity and price](budget-lines.md#quantity-and-price) and [FTE](budget-lines.md#fte).
 
 ### Controls
 
-- **Item type**: OPEX or CAPEX (see [Choosing OPEX or CAPEX](#choosing-opex-or-capex))
+- **Item type**: **All**, **OPEX** or **CAPEX** (see [Choosing the type of lines](#choosing-the-type-of-lines))
 - **Cost center**, **Run or build**, **Items** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
 - **Year**: Previous, current, or next year
 - **Column**: Any shown budget column. Starts on the default column
@@ -467,7 +450,7 @@ The page address keeps the grouping (`?group=item`, `?group=supplier` or `?group
 
 A pinned **Total** row gives the monthly totals, their average and their peak. Values show with two decimals. Only declared FTE count: items without quantity and price lines in the column are left out.
 
-A group name is a link that opens in a new tab. An item opens its page. A cost center, a supplier or a value opens the OPEX or CAPEX list on the group's items that declare FTE, in the report's window and narrowed by the filter bar (see [Opening the list from a report](#opening-the-list-from-a-report)). "No cost center", "No supplier" and "No value" open the items without one. The **Total** row is plain text. The CSV export keeps the plain names.
+A group name is a link that opens in a new tab. An item opens its page. A cost center, a supplier or a value opens the budget lines list on the group's items that declare FTE, in the report's window and narrowed by the filter bar (see [Opening the list from a report](#opening-the-list-from-a-report)). "No cost center", "No supplier" and "No value" open the items without one. The **Total** row is plain text. The CSV export keeps the plain names.
 
 ### Notices
 
@@ -486,11 +469,11 @@ One line under the table for each case, when it applies:
 
 ## Cost per FTE
 
-See what one FTE costs in each part of the budget, and how that cost moves across budget columns and years. The report divides the cost of the quantity and price lines in people or days by their FTE. It can also show the average daily rate of the lines priced per day (see [Daily rate](#daily-rate)). See [Quantity and price](opex.md#quantity-and-price) and [FTE](opex.md#fte).
+See what one FTE costs in each part of the budget, and how that cost moves across budget columns and years. The report divides the cost of the quantity and price lines in people or days by their FTE. It can also show the average daily rate of the lines priced per day (see [Daily rate](#daily-rate)). See [Quantity and price](budget-lines.md#quantity-and-price) and [FTE](budget-lines.md#fte).
 
 ### Controls
 
-- **Item type**: OPEX or CAPEX (see [Choosing OPEX or CAPEX](#choosing-opex-or-capex))
+- **Item type**: **All**, **OPEX** or **CAPEX** (see [Choosing the type of lines](#choosing-the-type-of-lines))
 - **Cost center**, **Run or build**, **Items** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
 - **Group by** and **Dimension**: the same choices as in [Staffing by month](#staffing-by-month). The page address keeps the grouping in the same way
 - **Show**: **Cost per FTE** (the default) or **Daily rate**. Switching keeps the type, the grouping, the pairs and the filters. The page address keeps the daily rate (`?view=rate`), so a bookmarked or shared link opens on it

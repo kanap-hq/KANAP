@@ -1,21 +1,21 @@
 # Ein Budget aus einer Tabellenkalkulation laden
 
-Die meisten Teams erstellen ihr Budget in einer Tabellenkalkulation: eine Zeile pro Position, eine Spalte pro Jahr oder pro Monat. KANAP führt dieselben Positionen in seinen OPEX- und CAPEX-Listen, wo sie die Zuordnungen, Berichte und die Übersicht speisen.
+Die meisten Teams erstellen ihr Budget in einer Tabellenkalkulation: eine Zeile pro Position, eine Spalte pro Jahr oder pro Monat. KANAP führt dieselben Positionen in seiner Liste der Budgetzeilen, wo sie die Zuordnungen, Berichte und die Übersicht speisen.
 
 Die Budgetdatei verbindet beides. Exportieren Sie die Positionen, ändern Sie die Zellen, die Sie bearbeiten möchten, in Excel oder LibreOffice und importieren Sie die Datei anschließend. KANAP vergleicht jede Zelle mit dem gespeicherten Stand und schreibt nur, was sich geändert hat.
 
-Eine Datei enthält beide Arten von Positionen. Ihre Spalte `nature` gibt an, ob eine Zeile eine OPEX- oder eine CAPEX-Position ist, und jede Zeile wird nach den Regeln ihrer eigenen Art geprüft. Die OPEX-Liste exportiert ihre OPEX-Positionen und die CAPEX-Liste ihre CAPEX-Positionen, im selben Aufbau. Beide Listen importieren eine Datei, die beide Arten enthält.
+Eine Datei enthält beide Arten von Positionen. Ihre Spalte `nature` gibt an, ob eine Zeile eine OPEX- oder eine CAPEX-Position ist, und jede Zeile wird nach den Regeln ihrer eigenen Art geprüft. Die Liste exportiert die Positionen, die sie zeigt, OPEX und CAPEX zusammen. Filtern Sie die Spalte **Typ**, um nur eine Art zu exportieren.
 
 ## Wo Sie es finden
 
-- Pfad: **Budgetverwaltung > OPEX** oder **Budgetverwaltung > CAPEX**
+- Pfad: **Budgetverwaltung > Budgetzeilen**
 - Export: **CSV exportieren** in der Symbolleiste der Liste
 - Import: **CSV importieren** in derselben Symbolleiste
 - Berechtigungen: Beide Schaltflächen erfordern die Administratorstufe auf Budget (`budget:admin`), die für OPEX- und CAPEX-Positionen gleichermaßen gilt
 
 ## Export
 
-1. Klicken Sie in der OPEX- oder CAPEX-Liste auf **CSV exportieren**.
+1. Klicken Sie in der Liste auf **CSV exportieren**.
 2. Wählen Sie, was die Datei enthält:
 
 | Einstellung | Wirkung |
@@ -27,7 +27,7 @@ Eine Datei enthält beide Arten von Positionen. Ihre Spalte `nature` gibt an, ob
 
 3. Klicken Sie auf die Schaltfläche am unteren Rand des Fensters. Sie benennt, was die Datei enthält: **120 gefilterte Positionen exportieren**, **Alle Positionen exportieren**, **3.412 Positionen exportieren** und so weiter.
 
-Die Datei wird aus beiden Listen als `budget.csv` gespeichert und in der Sprache geschrieben, in der die Oberfläche angezeigt wird.
+Die Datei wird als `budget.csv` gespeichert und in der Sprache geschrieben, in der die Oberfläche angezeigt wird.
 
 | Sprache | Trennzeichen | Beträge | Datumsangaben |
 |---|---|---|---|
@@ -47,9 +47,9 @@ Die Detailspalten sind für beide Arten von Positionen gleich.
 
 | Spalte | Inhalt | Bei einer neuen Position |
 |---|---|---|
-| `nature` | `opex` oder `capex`, die Art der Position | Erforderlich. Eine Datei ohne diese Spalte wird als Positionen der Liste gelesen, in der Sie sie importieren |
+| `nature` | `opex` oder `capex`, die Art der Position | Erforderlich. Eine Datei ohne diese Spalte wird als OPEX-Positionen gelesen, oder als CAPEX-Positionen, wenn der Filter **Typ** der Liste nur CAPEX behält |
 | `item_number` | Die Referenz der Position: `BL-12` oder `12`. Die Nummern `OPX-12` und `CPX-3` früherer Dateien werden ebenfalls gelesen | Leer: Die Zeile legt eine Position an |
-| `name` | Der Produktname einer OPEX-Position, der Titel einer CAPEX-Investition | Erforderlich |
+| `name` | Der Titel der Position, angezeigt in der Spalte **Produktname** der Liste | Erforderlich |
 | `description` | Die ausführliche Beschreibung | Optional |
 | `company_name` | Zahlendes Unternehmen | Erforderlich, außer die Position hat eine Kostenstelle |
 | `supplier_name` | Name des Lieferanten | Optional |
@@ -65,8 +65,6 @@ Die Detailspalten sind für beide Arten von Positionen gleich.
 | `effective_start` | Der Tag, an dem die Position beginnt | Der 1. Januar des ersten Jahres mit einem Betrag in der Zeile, sonst des laufenden Jahres |
 | `end_of_validity` | Der Tag, an dem die Position endet | Kein Ende |
 | `notes` | Freier Text | Optional |
-
-Bei einer CAPEX-Position wird `description` noch nicht gelesen oder geschrieben: Der Export lässt die Spalte leer, und eine gefüllte Zelle wird mit einer Warnung ignoriert.
 
 ### Betragsspalten
 
@@ -101,7 +99,7 @@ Eine fehlende Spalte behält alle gespeicherten Werte dieser Spalte. Eine Datei,
 ## Positionen hinzufügen und zuordnen
 
 - `item_number` gefüllt: Diese Position wird aktualisiert. Leer: Es wird eine neue Position angelegt, von der Art, die ihre Zelle `nature` angibt.
-- `item_number` enthält die Referenz der Position, `BL-12`. In einer Datei mit einer Spalte `nature` ist eine bloße Zahl dieselbe Referenz, in beiden Listen. Die Nummern `OPX-12` und `CPX-3` früherer Dateien bezeichnen weiterhin ihre Position. Dieselbe Position zweimal in einer Datei zu nennen ist ein Zeilenfehler.
+- `item_number` enthält die Referenz der Position, `BL-12`. In einer Datei mit einer Spalte `nature` ist eine bloße Zahl dieselbe Referenz. Die Nummern `OPX-12` und `CPX-3` früherer Dateien bezeichnen weiterhin ihre Position. Dieselbe Position zweimal in einer Datei zu nennen ist ein Zeilenfehler.
 - Eine Position behält ihre Art. Eine Zeile, die eine bestehende Position mit der anderen `nature` nennt, wird abgelehnt, zum Beispiel „BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line.“
 - Jede Zeile wird nach ihrer eigenen Art geprüft: die Dimensionen und Werte, die sie haben darf, ihr Konto, die eingefrorenen Spalten und die Warnung vor Duplikaten. Eine für CAPEX eingefrorene Spalte lehnt eine Änderung nur bei einer CAPEX-Position ab.
 - Es gibt keinen weiteren Schlüssel. Eine neue Zeile, die einer bestehenden Position ihrer Art ähnelt oder einer anderen neuen Zeile derselben Art in der Datei, ist eine Warnung, die Sie ignorieren können.
@@ -151,7 +149,7 @@ Eine CAPEX-Datei, die exportiert wurde, bevor Anlagentyp, Investitionsart und Pr
 
 Exportieren Sie eine neue Datei und übertragen Sie Ihre Zeilen hinein.
 
-Eine OPEX- oder CAPEX-Datei, die exportiert wurde, bevor es die Spalte `nature` gab, wird angenommen. Ihre Zeilen werden als Positionen der Liste gelesen, in der Sie sie importieren, und ihre Nummern `OPX-12` und `CPX-3` bezeichnen weiterhin ihre Positionen: Importieren Sie eine frühere OPEX-Datei aus der OPEX-Liste und eine frühere CAPEX-Datei aus der CAPEX-Liste. Ihre Zellen `kanap_token` bleiben gültig. Eine bloße Zahl behält in einer solchen Datei ihre frühere Bedeutung: In der CAPEX-Liste ist `3` die Position `CPX-3`, in der OPEX-Liste ist sie die Nummer der OPEX-Position.
+Eine OPEX- oder CAPEX-Datei, die exportiert wurde, bevor es die Spalte `nature` gab, wird angenommen. Ihre Zeilen werden als OPEX-Positionen gelesen, oder als CAPEX-Positionen, wenn der Filter **Typ** der Liste nur CAPEX behält, und ihre Nummern `OPX-12` und `CPX-3` bezeichnen weiterhin ihre Positionen: Importieren Sie eine frühere OPEX-Datei mit der Liste auf OPEX oder beiden Typen und eine frühere CAPEX-Datei mit der auf CAPEX gefilterten Liste. Ihre Zellen `kanap_token` bleiben gültig. Eine bloße Zahl behält in einer solchen Datei ihre frühere Bedeutung: Auf CAPEX gefiltert ist `3` die Position `CPX-3`, sonst ist sie die Nummer der OPEX-Position.
 
 KANAP erkennt die Spalte `nature` an ihrem Namen, unabhängig von Groß- und Kleinschreibung. Hat eine frühere Datei eine eigene Spalte namens Nature, benennen Sie diese vor dem Import um: KANAP würde diese Spalte als Art jeder Position lesen und ihre Werte ablehnen.
 

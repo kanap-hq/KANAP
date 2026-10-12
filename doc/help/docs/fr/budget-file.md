@@ -1,21 +1,21 @@
 # Charger un budget depuis un tableur
 
-La plupart des équipes préparent leur budget dans un tableur : une ligne par poste, une colonne par année ou par mois. KANAP conserve les mêmes postes dans ses listes OPEX et CAPEX, où ils alimentent les ventilations, les rapports et la vue d'ensemble.
+La plupart des équipes préparent leur budget dans un tableur : une ligne par poste, une colonne par année ou par mois. KANAP conserve les mêmes postes dans sa liste des lignes budgétaires, où ils alimentent les ventilations, les rapports et la vue d'ensemble.
 
 Le fichier budgétaire fait le lien entre les deux. Exportez les postes, modifiez les cellules qui vous intéressent dans Excel ou LibreOffice, puis importez le fichier. KANAP compare chaque cellule avec ce qu'il contient et n'écrit que ce qui a changé.
 
-Un seul fichier contient les deux types de poste. Sa colonne `nature` indique si une ligne est un poste OPEX ou CAPEX, et chaque ligne est vérifiée selon les règles de son propre type. La liste OPEX exporte ses postes OPEX et la liste CAPEX ses postes CAPEX, dans la même présentation. Les deux listes importent un fichier qui contient les deux.
+Un seul fichier contient les deux types de poste. Sa colonne `nature` indique si une ligne est un poste OPEX ou CAPEX, et chaque ligne est vérifiée selon les règles de son propre type. La liste exporte les postes qu'elle affiche, OPEX et CAPEX ensemble. Filtrez la colonne **Type** pour n'exporter qu'un seul type.
 
 ## Où la trouver
 
-- Chemin : **Gestion budgétaire > OPEX**, ou **Gestion budgétaire > CAPEX**
+- Chemin : **Gestion budgétaire > Lignes budgétaires**
 - Export : **Exporter CSV** dans la barre d'outils de la liste
 - Import : **Importer CSV** dans la même barre d'outils
 - Autorisations : les deux boutons demandent le niveau Admin sur Budget (`budget:admin`), qui couvre les postes OPEX et CAPEX de la même façon
 
 ## Export
 
-1. Cliquez sur **Exporter CSV** dans la liste OPEX ou CAPEX.
+1. Cliquez sur **Exporter CSV** dans la liste.
 2. Choisissez ce que le fichier contient :
 
 | Réglage | Effet |
@@ -27,7 +27,7 @@ Un seul fichier contient les deux types de poste. Sa colonne `nature` indique si
 
 3. Cliquez sur le bouton en bas de la fenêtre. Il nomme ce que le fichier contiendra : **Exporter 120 postes filtrés**, **Exporter tous les postes**, **Exporter 3 412 postes**, etc.
 
-Le fichier est enregistré sous le nom `budget.csv`, depuis l'une ou l'autre liste, et écrit dans la langue d'affichage de l'écran.
+Le fichier est enregistré sous le nom `budget.csv` et écrit dans la langue d'affichage de l'écran.
 
 | Langue | Séparateur | Montants | Dates |
 |---|---|---|---|
@@ -47,9 +47,9 @@ Les colonnes de détail sont les mêmes pour les deux types de poste.
 
 | Colonne | Contenu | Sur un nouveau poste |
 |---|---|---|
-| `nature` | `opex` ou `capex`, le type de poste | Obligatoire. Un fichier sans cette colonne est lu comme des postes de la liste sur laquelle vous l'importez |
+| `nature` | `opex` ou `capex`, le type de poste | Obligatoire. Un fichier sans cette colonne est lu comme des postes OPEX, ou comme des postes CAPEX quand le filtre **Type** de la liste ne garde que CAPEX |
 | `item_number` | La référence du poste : `BL-12`, ou `12`. Les numéros `OPX-12` et `CPX-3` des fichiers antérieurs sont lus aussi | Vide : la ligne ajoute un poste |
-| `name` | Le nom du produit d'un poste OPEX, le titre d'un investissement CAPEX | Obligatoire |
+| `name` | Le titre du poste, affiché dans la colonne **Nom du produit** de la liste | Obligatoire |
 | `description` | La description longue | Facultative |
 | `company_name` | Société payeuse | Obligatoire sauf si le poste a un centre de coûts |
 | `supplier_name` | Nom du fournisseur | Facultatif |
@@ -65,8 +65,6 @@ Les colonnes de détail sont les mêmes pour les deux types de poste.
 | `effective_start` | Le jour où le poste commence | Le 1er janvier de la première année portant un montant sur la ligne, sinon de l'année en cours |
 | `end_of_validity` | Le jour où le poste s'arrête | Aucune fin |
 | `notes` | Texte libre | Facultatif |
-
-Sur un poste CAPEX, `description` n'est pas encore lue ni écrite : l'export la laisse vide, et une cellule remplie est ignorée avec un avertissement.
 
 ### Colonnes de montants
 
@@ -101,7 +99,7 @@ Une colonne absente conserve toutes les valeurs enregistrées de cette colonne. 
 ## Ajouter et faire correspondre les postes
 
 - `item_number` rempli : ce poste est mis à jour. Vide : un nouveau poste est créé, du type qu'indique sa cellule `nature`.
-- `item_number` contient la référence du poste, `BL-12`. Dans un fichier avec une colonne `nature`, un nombre seul est la même référence, sur les deux listes. Les numéros `OPX-12` et `CPX-3` des fichiers antérieurs désignent toujours leur poste. Nommer deux fois le même poste dans un fichier est une erreur de ligne.
+- `item_number` contient la référence du poste, `BL-12`. Dans un fichier avec une colonne `nature`, un nombre seul est la même référence. Les numéros `OPX-12` et `CPX-3` des fichiers antérieurs désignent toujours leur poste. Nommer deux fois le même poste dans un fichier est une erreur de ligne.
 - Un poste garde son type. Une ligne qui désigne un poste existant avec l'autre `nature` est refusée, par exemple « BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line. »
 - Chaque ligne est vérifiée selon son propre type : les dimensions et les valeurs qu'elle peut porter, son compte, les colonnes gelées et l'avertissement de doublon. Une colonne gelée pour CAPEX refuse une modification sur un poste CAPEX uniquement.
 - Il n'y a pas d'autre clé. Une nouvelle ligne qui ressemble à un poste existant de son type, ou à une autre nouvelle ligne du même type dans le fichier, est un avertissement que vous pouvez ignorer.
@@ -151,7 +149,7 @@ Un fichier CAPEX exporté avant que le type d'immobilisation, le type d'investis
 
 Exportez un nouveau fichier et reportez-y vos lignes.
 
-Un fichier OPEX ou CAPEX exporté avant l'ajout de la colonne `nature` est accepté. Ses lignes sont lues comme des postes de la liste sur laquelle vous l'importez, et ses numéros `OPX-12` et `CPX-3` désignent toujours leurs postes : importez un ancien fichier OPEX depuis la liste OPEX et un ancien fichier CAPEX depuis la liste CAPEX. Ses cellules `kanap_token` restent valides. Dans un tel fichier, un nombre seul garde son sens antérieur : sur la liste CAPEX, `3` est `CPX-3` ; sur la liste OPEX, c'est le numéro du poste OPEX.
+Un fichier OPEX ou CAPEX exporté avant l'ajout de la colonne `nature` est accepté. Ses lignes sont lues comme des postes OPEX, ou comme des postes CAPEX quand le filtre **Type** de la liste ne garde que CAPEX, et ses numéros `OPX-12` et `CPX-3` désignent toujours leurs postes : importez un ancien fichier OPEX avec la liste sur OPEX ou sur les deux types, et un ancien fichier CAPEX avec la liste filtrée sur CAPEX. Ses cellules `kanap_token` restent valides. Dans un tel fichier, un nombre seul garde son sens antérieur : avec la liste filtrée sur CAPEX, `3` est `CPX-3` ; sinon, c'est le numéro du poste OPEX.
 
 KANAP reconnaît la colonne `nature` à son nom, quelle que soit la casse. Dans un ancien fichier qui contient une colonne à vous nommée Nature, renommez-la avant l'import : KANAP lirait cette colonne comme le type de chaque poste et refuserait ses valeurs.
 

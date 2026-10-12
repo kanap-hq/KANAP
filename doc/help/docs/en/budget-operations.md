@@ -38,7 +38,7 @@ The built-in Budget Administrator role sees every card. Budget Member and Budget
 
 The budget columns are Budget, Revision, Forecast, Actuals and Expected landing. These are the standard names. Your organisation can rename them, hide some and choose a default column in [Budget columns](#budget-columns). Every page below shows the names your organisation chose.
 
-While one of these operations is running, OPEX and CAPEX items cannot be saved: an edit shows the message "Another budget operation is running. Try again when it has finished." until the operation completes.
+While one of these operations is running, budget lines cannot be saved: an edit shows the message "Another budget operation is running. Try again when it has finished." until the operation completes.
 
 ---
 
@@ -54,28 +54,34 @@ Lock budget columns so they cannot be edited, imported into, or modified in any 
 
 ### How it works
 
-1. **Select a year** from the dropdown (range: current year minus one through current year plus four)
-2. **Select scopes**: tick **OPEX**, **CAPEX**, or both
-3. **Select columns** for each scope. The list offers all five columns. Hidden columns are marked **Hidden**. Every column is selected by default, so freezing a year freezes every column, hidden ones included. Untick a column to leave it out
-4. Click **Freeze data** to lock, or **Unfreeze data** to unlock. Both buttons stay disabled while a selected scope has no column picked
+The page shows one year at a time. Pick it with the year tabs at the top, from last year to four years ahead.
+
+Below the tabs, a table has one row per budget column and one column per type, **OPEX** and **CAPEX**. Hidden columns are listed too, marked **Hidden**. Each cell shows the state of that column for that type, **Open** or **Frozen**, with a lock icon:
+
+- Click a cell to switch it. One click freezes or unfreezes that column for that type
+- The action at the end of a row acts on both types at once. It reads **Freeze both** while one of the two cells is open, and freezes the open one. Once both are frozen, it reads **Unfreeze both**
+- A cell stays disabled while its change is saving. The year tabs wait for every change to finish
+
+Without the Admin level on Budget administration, the page shows the states read only, with the message "You need budget administrator rights to use this page."
 
 ### What freezing does
 
-- Prevents edits to frozen columns in OPEX and CAPEX workspaces
+- Prevents edits to frozen columns in the workspace of the lines of that type. The inputs show a lock icon
 - Blocks CSV imports to frozen columns
 - Blocks copy and reset operations targeting frozen columns
+- Refuses to delete a line, or to change its type, while it has amounts in a frozen column of the years concerned
 - Does **not** affect read access: data remains visible
 - Applies to hidden columns too. A frozen column stays frozen when it is hidden, and imports into it are still refused
 
+### Lock icons in the list
+
+The totals rows of [the budget lines list](budget-lines.md#working-with-the-list) show a lock icon before the total of a frozen column. When the list holds both types, the **Total OPEX** and **Total CAPEX** rows each follow the freeze of their type, and the **Total** row shows the lock when the column is frozen for both. Filtered on one type, the **Total** row follows that type. Hover the icon to read **Frozen**.
+
 ### Freezing the default column fixes the exchange rates
 
-Freezing the [default column](#budget-columns) for a year also fixes that year's exchange rates for the scope you freeze. KANAP refreshes the rates for the year, then keeps the latest set for every OPEX or CAPEX amount of that year. Reports then convert those amounts with the same rates, even when newer rates arrive. Unfreezing the default column releases them.
+Freezing the [default column](#budget-columns) for a year also fixes that year's exchange rates for the type you freeze. KANAP refreshes the rates for the year, then keeps the latest set for every OPEX or CAPEX amount of that year. Reports then convert those amounts with the same rates, even when newer rates arrive. Unfreezing the default column releases them.
 
-Freezing another column does not touch the rates. Changing the default column later does not fix or release anything by itself: the rates follow the next freeze or unfreeze of the new default column.
-
-### Current status
-
-Below the controls, two cards show the real-time freeze state of all five columns in OPEX and CAPEX. Each column displays either **Frozen** (in red) or **Editable**. Hidden columns are marked **Hidden**.
+Freezing another column does not touch the rates. Changing the default column later does not fix or release anything by itself: the rates follow the next freeze or unfreeze of the new default column. **Freeze both** freezes only the open cell, so a type whose default column is already frozen keeps the rates it fixed.
 
 ### Permissions
 
@@ -157,7 +163,7 @@ Below the grid, a stats bar shows:
 
 ### Copying a column built from lines
 
-A column can be built from lines, each a quantity times a unit price. See [Quantity and price](opex.md#quantity-and-price). The copy treats such a column in one of two ways.
+A column can be built from lines, each a quantity times a unit price. See [Quantity and price](budget-lines.md#quantity-and-price). The copy treats such a column in one of two ways.
 
 **The amounts are calculated from the lines.** The column stays calculated from its lines in the destination.
 
@@ -370,8 +376,8 @@ By default, Budget, Revision, Actuals and Expected landing are shown and Forecas
 
 ### What the settings change
 
-- **Hidden columns** leave the lists, the column chooser, the Budget tab, the report pickers, the copy and reset pages and the overview. They keep their amounts: hiding a column never clears data, and showing it again brings the amounts back. Hidden columns still accept imports through the budget file, and freezes still apply to them. The freeze page lists hidden columns too, marked **Hidden**, so freezing a year freezes them along with the others
-- **The default column** is preselected in every report. It sorts the OPEX and CAPEX lists, their previous and next navigation, and the **Top items** and **Top increases** tiles of the overview. The lists show it for the current year, next to the last shown column. It is also the reference amount of the Allocations tab and the column the spread panel opens on. Freezing it for a year fixes that year's exchange rates (see [Freezing the default column fixes the exchange rates](#freezing-the-default-column-fixes-the-exchange-rates))
+- **Hidden columns** leave the lists, the column chooser, the Budget tab, the report pickers, the copy and reset pages and the overview. They keep their amounts: hiding a column never clears data, and showing it again brings the amounts back. Hidden columns still accept imports through the budget file, and freezes still apply to them. The freeze page lists hidden columns too, marked **Hidden**, so you can freeze them like the others
+- **The default column** is preselected in every report. It sorts the budget lines list and its previous and next navigation. The **Top items**, **Top increases**, **My budget** and **By cost center** tiles of the overview use it. The list shows it for the current year, next to the last shown column. It is also the reference amount of the Allocations tab and the column the spread panel opens on. Freezing it for a year fixes that year's exchange rates (see [Freezing the default column fixes the exchange rates](#freezing-the-default-column-fixes-the-exchange-rates))
 - **Follows the spread and the lines** decides which columns move together when a spread is applied to all columns, and which columns take the lines when **Apply these lines to all columns** is on. Frozen columns never change, whatever this setting says
 
 ### Saving

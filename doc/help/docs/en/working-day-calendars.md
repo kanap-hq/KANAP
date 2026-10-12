@@ -7,7 +7,7 @@ A calendar is one of two kinds:
 - **Standard**: created from a country, and a region when the country has them. The working days of any year are the weekdays of each month minus the country's public holidays. There is nothing to type, and you can still change any month of any year
 - **Custom**: you enter the working days of each year yourself, for example for a working time agreement with its own days off
 
-On the budget tab of an OPEX or CAPEX item, every line priced per day uses one calendar. Lines priced per month or per piece need none. See [Quantity and price](opex.md#quantity-and-price).
+On the budget tab of a budget line, every quantity and price line priced per day uses one calendar. Lines priced per month or per piece need none. See [Quantity and price](budget-lines.md#quantity-and-price).
 
 ---
 

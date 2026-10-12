@@ -162,9 +162,9 @@ Der Rest dieses Leitfadens behandelt die praktischen Grundlagen. Für vollständ
 |---------|-----------------|--------------|
 | **Eigenständig** | Unabhängige Arbeit, mit nichts verknüpft | **Portfolio > Aufgaben > Neu** |
 | **Projekt** | Ergebnis innerhalb eines Projekts | Projekt-Arbeitsbereich **Aufgaben**-Tab, oder **Zeitstrahl**-Phasen-Verknüpfung |
-| **OPEX** | Aktion gebunden an eine OPEX-Position | OPEX-Arbeitsbereich, Bereich **Aufgaben** im Tab **Übersicht** |
+| **OPEX** | Aktion gebunden an eine OPEX-Zeile | Arbeitsbereich der Budgetzeile, Bereich **Aufgaben** im Tab **Übersicht** |
 | **Vertrag** | Aktion gebunden an einen Vertrag | Vertrags-Arbeitsbereich **Aufgaben**-Tab |
-| **CAPEX** | Aktion gebunden an eine CAPEX-Position | CAPEX-Arbeitsbereich, Bereich **Aufgaben** im Tab **Übersicht** |
+| **CAPEX** | Aktion gebunden an eine CAPEX-Zeile | Arbeitsbereich der Budgetzeile, Bereich **Aufgaben** im Tab **Übersicht** |
 
 Alle Aufgaben erscheinen in der zentralen **Portfolio > Aufgaben**-Liste unabhängig vom Kontext, sodass Sie immer einen Ort haben, um alles zu sehen.
 
@@ -253,8 +253,7 @@ Die Liste in diesem Leitfaden ist ein Ausgangspunkt. Passen Sie sie an die tats�
 ## Weiterführend
 
 - [Aufgaben](../tasks.md) -- vollständige Referenz für Status, CSV-Import/Export, Zeiterfassung und jede Arbeitsbereich-Funktion
-- [OPEX](../opex.md) -- OPEX-Positionen und ihre Aufgaben verwalten
-- [CAPEX](../capex.md) -- CAPEX-Positionen und ihre Aufgaben verwalten
+- [Budgetzeilen](../budget-lines.md): OPEX- und CAPEX-Zeilen und ihre Aufgaben verwalten
 - [Verträge](../contracts.md) -- Verträge und ihre Aufgaben verwalten
 - [Portfolio-Projekte](../portfolio-projects.md) -- Projektumsetzung, Phasen, Aufwandsverfolgung und Projektaufgaben
 - [Erste Schritte](getting-started.md) -- wenn Sie neu bei KANAP sind

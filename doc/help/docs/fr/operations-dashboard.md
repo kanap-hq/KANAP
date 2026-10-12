@@ -1,29 +1,57 @@
 # Vue d'ensemble de la gestion budgétaire
 
-La vue d'ensemble de la gestion budgétaire vous offre une vision globale de l'état de vos dépenses IT : aperçus OPEX et CAPEX, échéances à venir, indicateurs de qualité des données et éléments qui méritent le plus votre attention, le tout en un seul endroit.
+La vue d'ensemble de la gestion budgétaire vous offre une vision globale de l'état de vos dépenses IT : le budget par type et par année, vos propres lignes budgétaires, les échéances à venir, des indicateurs de qualité des données et les lignes qui méritent le plus votre attention, le tout en un seul endroit.
 
 ## Où le trouver
 
 - Chemin : **Gestion budgétaire > Vue d'ensemble** (`/ops`)
 - La page qui s'ouvre après la connexion est votre [tableau de bord](my-dashboard.md) personnel. Ouvrez cette vue d'ensemble depuis l'espace **Gestion budgétaire**.
 
+## Actions de l'en-tête
+
+L'en-tête contient des boutons de raccourci :
+
+- **Nouvelle ligne OPEX** et **Nouvelle ligne CAPEX** ouvrent une nouvelle ligne budgétaire de ce type. Ils s'affichent lorsque votre rôle a au moins le niveau Membre sur Budget (`budget:member`)
+- **Nouveau contrat** ouvre un nouveau contrat. Il s'affiche lorsque votre rôle peut créer des contrats
+- **Personnaliser**, à droite, ouvre les réglages de cette vue d'ensemble. Voir [Personnaliser la vue d'ensemble](#personnaliser-la-vue-densemble)
+
 ## Disposition
 
-La vue d'ensemble est composée de tuiles disposées en grille responsive : trois colonnes sur un écran large, deux sur tablette et une seule colonne sur mobile. Chaque tuile comporte une icône, un titre et généralement un bouton **Voir** qui vous amène directement à la page complète derrière les données.
+La vue d'ensemble est composée de tuiles disposées en grille responsive : trois colonnes sur un écran large, deux sur tablette et une seule colonne sur mobile. La tuile **Budget** est plus large : deux colonnes sur un écran large, toute la largeur sur tablette. Chaque tuile comporte une icône, un titre et généralement un bouton qui vous amène à la page complète derrière les données.
+
+Plusieurs tuiles ont des onglets **Tous**, **OPEX** et **CAPEX** dans leur en-tête pour choisir le type de lignes qu'elles couvrent. Chaque tuile mémorise votre choix dans votre navigateur.
 
 ## Tuiles
 
-### Aperçu OPEX
+Les tuiles ci-dessous sont présentées dans leur ordre par défaut.
 
-Un tableau compact couvrant trois exercices fiscaux : l'année dernière (A-1), l'année en cours (A) et l'année prochaine (A+1). Jusqu'à cinq colonnes de valeurs apparaissent : les colonnes budgétaires affichées par votre organisation, sous leurs noms (**Budget**, **Révision**, **Réalisé** et **Atterrissage prévu** avec les réglages standard, plus **Prévision** quand elle est affichée). Une colonne s'affiche dès qu'elle contient un montant pour au moins une des trois années. Les colonnes masquées n'apparaissent jamais. Les tuiles OPEX et CAPEX affichent les mêmes colonnes. Tous les montants sont arrondis au millier le plus proche et affichés avec un suffixe « k » (par exemple, `7 846k`).
+### Budget
 
-Cliquez sur **Voir** pour ouvrir la liste OPEX.
+Un tableau couvrant trois exercices : l'année dernière (A-1), l'année en cours (A) et l'année prochaine (A+1). Chaque année a trois lignes : **OPEX**, **CAPEX** et **Total**. Les colonnes de valeurs sont les colonnes budgétaires affichées par votre organisation, sous leurs noms (**Budget**, **Révision**, **Réalisé** et **Atterrissage prévu** avec les réglages standard, plus **Prévision** quand elle est affichée). Vous pouvez en garder moins dans [Personnaliser](#personnaliser-la-vue-densemble). Une colonne s'affiche dès qu'elle contient un montant pour au moins une ligne. Les colonnes masquées n'apparaissent jamais. Tous les montants sont arrondis au millier le plus proche et affichés avec un suffixe « k » (par exemple, `7 846k`).
 
-### Aperçu CAPEX
+Cliquez sur un montant pour ouvrir la [liste des lignes budgétaires](budget-lines.md) sur ce type. Un montant **Total** ouvre la liste sur les deux types. Cliquez sur **Voir** pour ouvrir la liste.
 
-Même disposition et formatage que l'aperçu OPEX, mais basé sur vos données de dépenses d'investissement.
+### Hygiène des données
 
-Cliquez sur **Voir** pour ouvrir la liste CAPEX.
+Des contrôles qui vous aident à repérer les lignes incomplètes en un coup d'œil. La tuile affiche une colonne de compteurs par type : **OPEX** et **CAPEX** côte à côte. Les compteurs portent sur les lignes que la liste affiche par défaut (**Afficher : Activés**).
+
+- **Sans responsable IT** : lignes sans responsable IT
+- **Sans responsable métier** : lignes sans responsable métier
+- **Sans société payeuse** : lignes sans société payeuse
+- **Sans centre de coûts** : lignes sans centre de coûts
+- **Sans Budget l'an prochain** : lignes dont la colonne par défaut est nulle ou vide pour l'année prochaine. Le contrôle nomme votre colonne par défaut
+- **Compte hors du plan de la société** : lignes dont le compte n'appartient pas au plan comptable de la société payeuse
+
+Un compteur devient orange (rouge pour le contrôle du plan comptable) lorsqu'il est supérieur à zéro. Cliquez sur un compteur pour ouvrir la liste sur exactement les lignes qu'il compte.
+
+### Mon budget
+
+Les lignes à votre nom, sur la colonne par défaut de l'année en cours (le sous-titre la nomme, par exemple **Budget, A**). Utilisez les onglets **Tous** / **OPEX** / **CAPEX** pour choisir le type.
+
+- **Comme responsable IT**, **Comme responsable métier** et **Comme responsable budgétaire** : combien de lignes vous portez dans chaque rôle, et leur total. Cliquez sur une ligne du tableau pour ouvrir la liste sur ces lignes budgétaires
+- **Mes lignes** : vos trois plus grandes lignes, quel que soit le rôle, avec leur référence. Cliquez sur l'une d'elles pour l'ouvrir
+
+La tuile affiche « Aucune ligne budgétaire à votre nom » lorsque vous n'avez aucune ligne.
 
 ### Mes tâches
 
@@ -37,40 +65,40 @@ Liste les cinq prochaines échéances de résiliation de contrats encore dans le
 
 Cliquez sur **Tout voir** pour ouvrir la page Contrats.
 
-### Hygiène des données
+### Top postes
 
-Quatre contrôles qui vous aident à repérer les enregistrements incomplets en un coup d'œil. La tuile affiche une colonne de compteurs par type de poste que vous pouvez consulter : **OPEX** et **CAPEX** côte à côte.
+Les cinq plus grandes lignes de l'année en cours, classées selon la colonne par défaut. Le sous-titre nomme la colonne, par exemple **Budget, A**. Les montants sont arrondis au millier avec un suffixe « k ».
 
-- **Sans responsable IT** : postes sans responsable IT
-- **Sans responsable métier** : postes sans responsable métier
-- **Sans société payeuse** : postes sans société payeuse
-- **Compte hors du plan de la société** : postes dont le compte n'appartient pas au plan comptable de la société payeuse
+Utilisez les onglets **Tous** / **OPEX** / **CAPEX** pour choisir le type. Cliquez sur **Ouvrir** pour voir le rapport Top postes complet sur le même type.
 
-Un compteur devient orange (rouge pour le contrôle du plan comptable) lorsqu'il est supérieur à zéro. Cliquez sur un compteur pour ouvrir la liste du type correspondant.
+### Plus fortes hausses
 
-### Actions rapides
+Les cinq lignes avec la plus forte augmentation de la colonne par défaut par rapport à l'année précédente. Le sous-titre nomme la colonne, par exemple **Budget, A vs A-1**. Les lignes dont le montant est stable ou en baisse n'apparaissent pas.
 
-Boutons de raccourci pour créer un nouveau poste OPEX ou CAPEX directement depuis la vue d'ensemble. Ces boutons s'affichent lorsque votre rôle a au moins le niveau Membre sur Budget (`budget:member`).
+Utilisez les onglets **Tous** / **OPEX** / **CAPEX** pour choisir le type. Cliquez sur **Ouvrir** pour voir le rapport Top hausse / baisse complet sur le même type.
 
-Sous les boutons, une section **Mises à jour récentes** liste les cinq postes les plus récemment modifiés, OPEX et CAPEX confondus. Chaque ligne affiche la date de la dernière modification, le nom du poste et son type. Cliquez sur une ligne pour ouvrir le poste.
+### Par centre de coûts
 
-### Top postes (A)
+Les cinq centres de coûts au total le plus élevé sur la colonne par défaut de l'année en cours, avec une barre pour chacun. Les lignes sans centre de coûts comptent ensemble sous **Sans centre de coûts**. Utilisez les onglets **Tous** / **OPEX** / **CAPEX** pour choisir le type. Cliquez sur une ligne du tableau pour ouvrir la liste sur les lignes budgétaires de ce centre de coûts.
 
-Les cinq postes les plus importants de l'année en cours, classés selon la colonne par défaut. Le titre nomme la colonne, par exemple **Top postes (Budget, A)**. Les montants sont arrondis au millier avec un suffixe « k ».
+### Mises à jour récentes
 
-Utilisez les onglets **OPEX** / **CAPEX** de l'en-tête de la tuile pour choisir le type de poste. La tuile mémorise votre choix. Cliquez sur **Ouvrir** pour voir le rapport Top postes complet sur le même type.
+Les cinq lignes budgétaires modifiées le plus récemment, OPEX et CAPEX confondues. Chaque ligne du tableau affiche la date de la dernière modification, la référence de la ligne budgétaire, son nom et son type. Cliquez sur une ligne du tableau pour ouvrir la ligne budgétaire.
 
-### Plus fortes hausses (A vs A-1)
+Sans accès en lecture aux lignes budgétaires (`budget:reader`), les tuiles du budget sont masquées. **Mes tâches** demande l'accès en lecture aux tâches, et **Prochains renouvellements** l'accès en lecture aux contrats.
 
-Les cinq postes avec la plus forte augmentation de la colonne par défaut par rapport à l'année précédente, calculée sur tous les postes du type. Le titre nomme la colonne, par exemple **Plus fortes hausses (Budget, A vs A-1)**. Les postes dont le montant est stable ou en baisse n'apparaissent pas. Les montants sont arrondis au millier avec un suffixe « k ».
+## Personnaliser la vue d'ensemble
 
-Utilisez les onglets **OPEX** / **CAPEX** de l'en-tête de la tuile pour choisir le type de poste. La tuile mémorise votre choix. Cliquez sur **Ouvrir** pour voir le rapport Top hausse / baisse complet sur le même type.
+Cliquez sur **Personnaliser** pour ouvrir **Réglages du tableau de bord du budget**. Vos choix ne s'appliquent qu'à votre propre vue d'ensemble.
 
-Sans accès en lecture aux postes budgétaires (`budget:reader`), ces tuiles sont masquées.
+- **Afficher ou masquer une tuile** : cochez-la ou décochez-la. La fenêtre liste les tuiles que votre rôle peut voir
+- **Changer l'ordre** : faites glisser une tuile par sa poignée, à droite
+- **Colonnes de montant de la tuile Budget** : **Colonnes du locataire**, cochée par défaut, suit les colonnes affichées par votre organisation. Décochez-la pour choisir les colonnes vous-même. Gardez-en au moins une : sinon, la fenêtre affiche « Choisissez au moins une colonne de montant. »
+- **Enregistrer** applique vos choix. **Rétablir les valeurs par défaut** affiche de nouveau toutes les tuiles, dans l'ordre par défaut, avec les colonnes de l'organisation
 
 ## Conseils
 
-- **Colonne utilisée par les tuiles** : Un administrateur budgétaire choisit la colonne par défaut et les noms des colonnes dans [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires). Les tuiles Top et les rapports qu'elles ouvrent suivent ce choix.
-- **Montants arrondis** : Tous les montants de la vue d'ensemble sont arrondis au millier pour une vue compacte. Ouvrez la liste OPEX ou CAPEX, ou les rapports, lorsque vous avez besoin de chiffres exacts.
-- **Boutons manquants** : Si vous ne voyez pas les boutons **Nouveau OPEX** ou **Nouveau CAPEX**, votre rôle actuel n'a pas le niveau Membre sur Budget. Demandez à votre administrateur de vérifier votre accès.
+- **Colonne utilisée par les tuiles** : Un administrateur budgétaire choisit la colonne par défaut et les noms des colonnes dans [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires). Les tuiles et les rapports qu'elles ouvrent suivent ce choix.
+- **Montants arrondis** : Tous les montants de la vue d'ensemble sont arrondis au millier pour une vue compacte. Ouvrez la liste des lignes budgétaires, ou les rapports, lorsque vous avez besoin de chiffres exacts.
+- **Boutons manquants** : Si vous ne voyez pas les boutons **Nouvelle ligne OPEX** ou **Nouvelle ligne CAPEX**, votre rôle actuel n'a pas le niveau Membre sur Budget. Demandez à votre administrateur de vérifier votre accès.
 - **Tuiles vides** : Une tuile qui affiche « Pas de données » signifie simplement qu'il n'y a pas encore d'enregistrements de ce type. Dès que vous ou votre équipe commencez à saisir des données, la tuile se remplira automatiquement.

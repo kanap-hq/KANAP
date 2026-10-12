@@ -8,8 +8,8 @@ Los archivos descritos aquí son el contrato en el que apoyarse. Sus columnas es
 
 | Objeto | Qué contiene | Dónde gestionarlo |
 |---|---|---|
-| **Partida OPEX** | Un coste recurrente, que se mantiene de un año a otro | **Gestión presupuestaria > OPEX** |
-| **Partida CAPEX** | Una inversión, que se mantiene de un año a otro | **Gestión presupuestaria > CAPEX** |
+| **Partida OPEX** | Un coste recurrente, que se mantiene de un año a otro | **Gestión presupuestaria > Líneas presupuestarias** |
+| **Partida CAPEX** | Una inversión, que se mantiene de un año a otro | **Gestión presupuestaria > Líneas presupuestarias** |
 | **Columnas presupuestarias** | Las cinco columnas de importes que cada partida tiene para cada año | **Gestión presupuestaria > Administración > Columnas presupuestarias** |
 | **Líneas de Cantidad y precio** | Las líneas a partir de las que se puede calcular una columna | La pestaña **Presupuesto** de una partida |
 | **Asignación** | Cómo se reparte el coste de un año de una partida entre empresas o departamentos | La pestaña **Asignaciones** de una partida |
@@ -56,14 +56,14 @@ Una partida también se vincula a proyectos, solicitudes, aplicaciones, activos,
 
 ### Partidas OPEX y CAPEX
 
-Una partida vive varios años: una licencia de tres años es una partida con tres años presupuestarios. KANAP da un número a cada partida al crearla, su referencia `BL-12`, en la misma serie para OPEX y CAPEX. Las listas siguen mostrando `OPX-12` para una partida OPEX y `CPX-3` para una partida CAPEX. El archivo de presupuesto nombra una partida por su referencia `BL-12`, y también lee los números `OPX` y `CPX`. En un archivo sin columna `nature`, un número solo conserva su significado anterior (`CPX-3` en la lista CAPEX).
+Una partida vive varios años: una licencia de tres años es una partida con tres años presupuestarios. KANAP da un número a cada partida al crearla, su referencia `BL-12`, en la misma serie para OPEX y CAPEX. La lista, el espacio de trabajo y la dirección de la página la muestran. Las partidas creadas antes de esta serie también tenían un número `OPX-12` o `CPX-3`: los enlaces, las búsquedas y el archivo de presupuesto siguen encontrando una partida por él. En un archivo sin columna `nature`, un número solo conserva su significado anterior (`CPX-3` cuando la lista está filtrada por CAPEX). Consulte [Referencias](budget-lines.md#referencias).
 
 | Campo | Columna del archivo de presupuesto | Obligatorio | Notas |
 |---|---|---|---|
-| Naturaleza | `nature` | Sí | `opex` o `capex`. Un archivo no cambia la naturaleza de una partida existente (consulte [Cambiar el tipo de una partida](#cambiar-el-tipo-de-una-partida)). Un archivo sin esta columna se lee como partidas de la lista en la que se importa |
+| Naturaleza | `nature` | Sí | `opex` o `capex`. Un archivo no cambia la naturaleza de una partida existente (consulte [Cambiar el tipo de una partida](#cambiar-el-tipo-de-una-partida)). Un archivo sin esta columna se lee como partidas OPEX, o como partidas CAPEX cuando la lista está filtrada por CAPEX |
 | Número | `item_number` | Lo asigna KANAP | `BL-12`. Vacío en el archivo: crea una partida |
-| Nombre del producto (OPEX), título (CAPEX) | `name` | Sí | |
-| Descripción (OPEX) | `description` | No | Aún no se lee ni se escribe en una partida CAPEX |
+| Título | `name` | Sí | La columna **Nombre del producto** de la lista |
+| Descripción | `description` | No | |
 | Tipo de activo fijo, tipo de inversión, prioridad (CAPEX) | `analytics:ppe_type`, `analytics:investment_type`, `analytics:priority` | En una línea nueva, mientras la dimensión sea obligatoria | Valores de las tres dimensiones CAPEX, guardados como los valores de cualquier otra dimensión. Consulte [Dimensiones CAPEX](analytics.md#dimensiones-capex) |
 | Empresa pagadora | `company_name` | Sí | Se toma del centro de coste cuando solo se indica el centro de coste |
 | Proveedor | `supplier_name`, `supplier_erp_id` | No | |
@@ -82,9 +82,9 @@ Una partida no tiene un estado propio que cargar. Está activa hasta su fin de v
 
 ### Cambiar el tipo de una partida
 
-Una partida pasa de OPEX a CAPEX, o al revés, en su espacio de trabajo (**Cambiar el tipo...** en el menú **...**, consulte [OPEX](opex.md#cambiar-el-tipo) y [CAPEX](capex.md#cambiar-el-tipo)). Un archivo de presupuesto nunca cambia el tipo. El cambio empieza el 1 de enero de un año:
+Una partida pasa de OPEX a CAPEX, o al revés, en su espacio de trabajo (**Cambiar el tipo...** en el menú **...**, consulte [Cambiar el tipo](budget-lines.md#cambiar-el-tipo)). Un archivo de presupuesto nunca cambia el tipo. El cambio empieza el 1 de enero de un año:
 
-- **A partir del primer año de la partida**, la propia partida cambia de tipo. Conserva su número `BL`, sus años presupuestarios, asignaciones, vínculos, adjuntos y tareas. Una partida que pasa a CAPEX recibe un número `CPX`, que conserva si vuelve a OPEX
+- **A partir del primer año de la partida**, la propia partida cambia de tipo. Conserva su número `BL`, sus años presupuestarios, asignaciones, vínculos, adjuntos y tareas
 - **A partir de un año posterior**, la partida termina el 31 de diciembre del año anterior y conserva sus años presupuestarios anteriores. Una nueva partida del otro tipo, con su propio número `BL`, lleva los años presupuestarios posteriores, los contactos y los vínculos con aplicaciones, activos, contratos, proyectos y solicitudes. La nueva partida registra la partida a la que sucede, y cada una muestra la otra
 
 Una partida se sustituye como máximo por una sola partida. El cambio se rechaza mientras una columna congelada contenga importes de la partida en los años que cambian.
@@ -109,7 +109,7 @@ Cada partida tiene las mismas cinco columnas para cada año. Se definen una vez 
 
 - Un administrador del presupuesto puede renombrar una columna (hasta 40 caracteres), ocultarla y elegir la columna por defecto. El nombre en los archivos no cambia, así que un archivo sigue funcionando después de un cambio de nombre. Consulte [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias).
 - Una columna oculta conserva sus importes y sigue aceptando importaciones.
-- Las columnas se congelan por año, por columna y por ámbito (OPEX o CAPEX). Una columna congelada rechaza las modificaciones, las importaciones, las copias y los restablecimientos. Consulte [Congelar / Descongelar datos](budget-operations.md#congelar-descongelar-datos).
+- Las columnas se congelan por año, por columna y por tipo (OPEX o CAPEX). Una columna congelada rechaza las modificaciones, las importaciones, las copias y los restablecimientos. Consulte [Congelar / Descongelar datos](budget-operations.md#congelar-descongelar-datos).
 
 No hay una sexta columna. Para conservar varias rondas presupuestarias, use una columna por ronda, o copie una columna a otro año u otra columna con [Copiar columnas presupuestarias](budget-operations.md#copiar-columnas-presupuestarias).
 
@@ -121,7 +121,7 @@ Cada columna registra también su periodo dentro del año y el origen de sus imp
 
 ### Líneas de Cantidad y precio
 
-Una columna se puede calcular a partir de líneas, cada una una cantidad por un precio unitario. Cada línea tiene una descripción (hasta 200 caracteres), una cantidad (hasta 3 decimales), una unidad (**personas**, **días** o **piezas**), un precio unitario (hasta 4 decimales), una frecuencia, un periodo o una fecha, y un calendario laboral cuando el precio es por día. El ETC de la columna se deduce de las líneas. Consulte [Cantidad y precio](opex.md#cantidad-y-precio).
+Una columna se puede calcular a partir de líneas, cada una una cantidad por un precio unitario. Cada línea tiene una descripción (hasta 200 caracteres), una cantidad (hasta 3 decimales), una unidad (**personas**, **días** o **piezas**), un precio unitario (hasta 4 decimales), una frecuencia, un periodo o una fecha, y un calendario laboral cuando el precio es por día. El ETC de la columna se deduce de las líneas. Consulte [Cantidad y precio](budget-lines.md#cantidad-y-precio).
 
 Estas líneas se introducen en la pestaña **Presupuesto**. Ningún archivo las contiene. Un archivo de presupuesto escribe los importes mensuales de una columna, y las líneas se quedan con ella como referencia.
 
@@ -198,13 +198,13 @@ Cada archivo de la tabla se exporta y se importa desde la página que gestiona e
 | Asignaciones | Desde los informes de contracargo | No | | [Informes](reports.md) |
 | Líneas de Cantidad y precio, configuración de las columnas presupuestarias, congelaciones, monedas | No | No | | Se configuran en pantalla |
 
-El archivo de presupuesto lee y escribe los importes de cualquier columna y año, como totales anuales o por meses, con los detalles de la partida en la misma fila. Es la vía de entrada para un presupuesto preparado en otro sitio y la vía de salida hacia una hoja de cálculo o una herramienta de BI. Un solo archivo contiene los dos tipos de partida, y su columna `nature` indica cuál. **Gestión presupuestaria > OPEX** exporta las partidas OPEX y **Gestión presupuestaria > CAPEX** las partidas CAPEX. Cualquiera de las dos listas importa un archivo que contenga ambos tipos, con el nivel Administrador en Presupuesto.
+El archivo de presupuesto lee y escribe los importes de cualquier columna y año, como totales anuales o por meses, con los detalles de la partida en la misma fila. Es la vía de entrada para un presupuesto preparado en otro sitio y la vía de salida hacia una hoja de cálculo o una herramienta de BI. Un solo archivo contiene los dos tipos de partida, y su columna `nature` indica cuál. **Gestión presupuestaria > Líneas presupuestarias** exporta las partidas que muestra, de ambos tipos, e importa un archivo que contenga ambos tipos, con el nivel Administrador en Presupuesto.
 
 ### Llevar un presupuesto a KANAP
 
 1. Haga corresponder cada objeto de su herramienta actual con las tablas anteriores, y sus identificadores con la columna **Coincidencia por**.
 2. Cargue los datos maestros en el orden indicado en [Cargar un presupuesto completo](budget-file.md#cargar-un-presupuesto-completo).
-3. Exporte el archivo de presupuesto desde cualquiera de las dos listas para obtener la fila de cabecera de su organización, con una columna por dimensión analítica. Una lista sin partidas exporta solo la fila de cabecera.
+3. Exporte el archivo de presupuesto desde la lista para obtener la fila de cabecera de su organización, con una columna por dimensión analítica. Una lista sin partidas exporta solo la fila de cabecera.
 4. Rellene una fila por partida con su `nature`, con `item_number` vacío, con una columna de importe por columna presupuestaria y año (`budget_2027`), o por mes (`budget_2027_03`).
 5. Importe el archivo. La comprobación informa de los errores por línea del archivo, y no se escribe nada hasta que usted carga.
 

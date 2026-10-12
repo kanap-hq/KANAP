@@ -77,8 +77,9 @@ Typing `@` opens the **mention picker** above the composer. It lets you referenc
   - `@T-5` — task with the reference T-5
   - `@DOC` — recent knowledge documents
   - `@APP backup` — applications matching "backup"
-  - `@PRJ`, `@REQ`, `@INC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@CPX`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
-- **Plain text**: anything else (`@payroll`, `@server-2`) runs a cross-type search ranked by relevance. It also finds OPEX and CAPEX lines by the names of their analytics values.
+  - `@BL-12`: the budget line with the reference BL-12. `@BL` alone lists budget lines of both types, and `@OPX` or `@CPX` narrows them to OPEX or CAPEX lines. The former numbers still work: `@OPX-12` or `@CPX-3` finds its line
+  - `@PRJ`, `@REQ`, `@INC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
+- **Plain text**: anything else (`@payroll`, `@server-2`) runs a cross-type search ranked by relevance. It also finds budget lines by the names of their analytics values.
 
 Use the arrow keys to move through the suggestions, **Enter** or **Tab** to confirm, **Escape** to dismiss the picker. Results are grouped by entity type (Knowledge, Tasks, Projects, Applications, Assets, Contracts, and so on) so you can tell at a glance what kind of record you are about to insert.
 
@@ -109,7 +110,7 @@ When the stream finishes, focus jumps back to the composer so you can keep the c
 
 Plaid uses a small set of internal tools to answer questions: `Search all`, `Search knowledge`, `Get document`, `Get entity context`, and a handful of others. Each tool call shows up as a compact line under the message ("used Search all · 8 results"). You usually do not need to read the tool details, but they are there if you want to see exactly which records the answer was based on.
 
-`Search all` finds OPEX and CAPEX lines by the names of their analytics values, and tells Plaid which values each line holds.
+`Search all` finds budget lines by the names of their analytics values, and tells Plaid which values each line holds. Plaid names a budget line by its `BL-12` reference, and its links open the line.
 
 ## Artifacts and previews
 

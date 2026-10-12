@@ -38,7 +38,7 @@ Le rôle intégré Administrateur budget voit toutes les cartes. Membre budget e
 
 Les colonnes budgétaires sont Budget, Révision, Prévision, Réalisé et Atterrissage prévu. Ce sont les noms standard. Votre organisation peut les renommer, en masquer certaines et choisir une colonne par défaut dans [Colonnes budgétaires](#colonnes-budgetaires). Chaque page ci-dessous affiche les noms choisis par votre organisation.
 
-Tant qu'une de ces opérations est en cours, les postes OPEX et CAPEX ne peuvent pas être enregistrés : une modification affiche le message « Une autre opération sur le budget est en cours. Réessayez quand elle sera terminée. » jusqu'à la fin de l'opération.
+Tant qu'une de ces opérations est en cours, les lignes budgétaires ne peuvent pas être enregistrés : une modification affiche le message « Une autre opération sur le budget est en cours. Réessayez quand elle sera terminée. » jusqu'à la fin de l'opération.
 
 ---
 
@@ -54,28 +54,34 @@ Verrouillez les colonnes budgétaires pour qu'elles ne puissent être ni modifi�
 
 ### Comment ça fonctionne
 
-1. **Sélectionnez une année** dans le menu déroulant (plage : année en cours moins un à année en cours plus quatre)
-2. **Sélectionnez les périmètres** : cochez **OPEX**, **CAPEX** ou les deux
-3. **Sélectionnez les colonnes** pour chaque périmètre. La liste propose les cinq colonnes. Les colonnes masquées portent la mention **Masquée**. Toutes les colonnes sont sélectionnées par défaut : geler une année gèle donc chaque colonne, masquées comprises. Décochez une colonne pour l'exclure
-4. Cliquez sur **Geler les données** pour verrouiller, ou **Dégeler les données** pour déverrouiller. Les deux boutons restent désactivés tant qu'un périmètre sélectionné n'a aucune colonne cochée
+La page affiche une année à la fois. Choisissez-la avec les onglets d'année en haut, de l'année dernière à quatre ans plus tard.
+
+Sous les onglets, un tableau a une ligne par colonne budgétaire et une colonne par type, **OPEX** et **CAPEX**. Les colonnes masquées y figurent aussi, avec la mention **Masquée**. Chaque cellule affiche l'état de cette colonne pour ce type, **Ouvert** ou **Gelé**, avec un cadenas :
+
+- Cliquez sur une cellule pour la basculer. Un clic gèle ou dégèle cette colonne pour ce type
+- L'action en bout de ligne agit sur les deux types à la fois. Elle affiche **Geler les deux** tant que l'une des deux cellules est ouverte, et gèle celle qui est ouverte. Une fois les deux gelées, elle affiche **Dégeler les deux**
+- Une cellule reste désactivée pendant l'enregistrement de son changement. Les onglets d'année attendent la fin de chaque changement
+
+Sans le niveau Admin sur l'administration budgétaire, la page affiche les états en lecture seule, avec le message « Vous devez disposer des droits d'administrateur budgétaire pour utiliser cette page. »
 
 ### Ce que fait le gel
 
-- Empêche les modifications des colonnes gelées dans les espaces de travail OPEX et CAPEX
+- Empêche les modifications des colonnes gelées dans l'espace de travail des lignes de ce type. Les champs affichent un cadenas
 - Bloque les imports CSV vers les colonnes gelées
 - Bloque les opérations de copie et de réinitialisation ciblant les colonnes gelées
+- Refuse de supprimer une ligne, ou de changer son type, tant qu'elle a des montants dans une colonne gelée des années concernées
 - N'affecte **pas** l'accès en lecture : les données restent visibles
 - S'applique aussi aux colonnes masquées. Une colonne gelée reste gelée quand elle est masquée, et les imports vers elle restent refusés
 
+### Cadenas dans la liste
+
+Les lignes de totaux de [la liste des lignes budgétaires](budget-lines.md#travailler-avec-la-liste) affichent un cadenas devant le total d'une colonne gelée. Quand la liste contient les deux types, les lignes **Total OPEX** et **Total CAPEX** suivent chacune le gel de leur type, et la ligne **Total** affiche le cadenas quand la colonne est gelée pour les deux. Filtrée sur un type, la ligne **Total** suit ce type. Survolez l'icône pour lire **Gelé**.
+
 ### Geler la colonne par défaut fige les taux de change
 
-Geler la [colonne par défaut](#colonnes-budgetaires) pour une année fige aussi les taux de change de cette année pour le périmètre que vous gelez. KANAP actualise les taux de l'année, puis conserve le dernier jeu de taux pour chaque montant OPEX ou CAPEX de cette année. Les rapports convertissent ensuite ces montants avec les mêmes taux, même quand des taux plus récents arrivent. Dégeler la colonne par défaut les libère.
+Geler la [colonne par défaut](#colonnes-budgetaires) pour une année fige aussi les taux de change de cette année pour le type que vous gelez. KANAP actualise les taux de l'année, puis conserve le dernier jeu de taux pour chaque montant OPEX ou CAPEX de cette année. Les rapports convertissent ensuite ces montants avec les mêmes taux, même quand des taux plus récents arrivent. Dégeler la colonne par défaut les libère.
 
-Geler une autre colonne ne touche pas aux taux. Changer ensuite de colonne par défaut ne fige ni ne libère rien à lui seul : les taux suivent le prochain gel ou dégel de la nouvelle colonne par défaut.
-
-### Statut actuel
-
-Sous les contrôles, deux cartes affichent l'état de gel en temps réel des cinq colonnes en OPEX et CAPEX. Chaque colonne affiche soit **Gelé** (en rouge) soit **Modifiable**. Les colonnes masquées portent la mention **Masquée**.
+Geler une autre colonne ne touche pas aux taux. Changer ensuite de colonne par défaut ne fige ni ne libère rien à lui seul : les taux suivent le prochain gel ou dégel de la nouvelle colonne par défaut. **Geler les deux** ne gèle que la cellule ouverte : un type dont la colonne par défaut est déjà gelée garde les taux qu'il a figés.
 
 ### Autorisations
 
@@ -157,7 +163,7 @@ Sous la grille, une barre de statistiques affiche :
 
 ### Copier une colonne construite à partir de lignes
 
-Une colonne peut être construite à partir de lignes, chacune étant une quantité multipliée par un prix unitaire. Voir [Quantité et prix](opex.md#quantite-et-prix). La copie traite une telle colonne de l'une des deux façons suivantes.
+Une colonne peut être construite à partir de lignes, chacune étant une quantité multipliée par un prix unitaire. Voir [Quantité et prix](budget-lines.md#quantite-et-prix). La copie traite une telle colonne de l'une des deux façons suivantes.
 
 **Les montants sont calculés à partir des lignes.** La colonne reste calculée à partir de ses lignes dans la destination.
 
@@ -370,8 +376,8 @@ Par défaut, Budget, Révision, Réalisé et Atterrissage prévu sont affichées
 
 ### Ce que changent les réglages
 
-- **Les colonnes masquées** disparaissent des listes, du sélecteur de colonnes, de l'onglet Budget, des sélecteurs des rapports, des pages de copie et de réinitialisation et de la vue d'ensemble. Elles gardent leurs montants : masquer une colonne n'efface jamais de données, et l'afficher de nouveau fait revenir les montants. Les colonnes masquées acceptent toujours les imports par le fichier budgétaire, et les gels s'appliquent toujours à elles. La page de gel liste aussi les colonnes masquées, avec la mention **Masquée** : geler une année les gèle donc avec les autres
-- **La colonne par défaut** est présélectionnée dans chaque rapport. Elle trie les listes OPEX et CAPEX, leur navigation précédent et suivant, et les tuiles **Top postes** et **Plus fortes hausses** de la vue d'ensemble. Les listes l'affichent pour l'année en cours, à côté de la dernière colonne affichée. C'est aussi le montant de référence de l'onglet Ventilations et la colonne sur laquelle s'ouvre le panneau de répartition. La geler pour une année fige les taux de change de cette année (voir [Geler la colonne par défaut fige les taux de change](#geler-la-colonne-par-defaut-fige-les-taux-de-change))
+- **Les colonnes masquées** disparaissent des listes, du sélecteur de colonnes, de l'onglet Budget, des sélecteurs des rapports, des pages de copie et de réinitialisation et de la vue d'ensemble. Elles gardent leurs montants : masquer une colonne n'efface jamais de données, et l'afficher de nouveau fait revenir les montants. Les colonnes masquées acceptent toujours les imports par le fichier budgétaire, et les gels s'appliquent toujours à elles. La page de gel liste aussi les colonnes masquées, avec la mention **Masquée** : vous pouvez les geler comme les autres
+- **La colonne par défaut** est présélectionnée dans chaque rapport. Elle trie la liste des lignes budgétaires et sa navigation précédent et suivant. Les tuiles **Top postes**, **Plus fortes hausses**, **Mon budget** et **Par centre de coûts** de la vue d'ensemble l'utilisent. La liste l'affiche pour l'année en cours, à côté de la dernière colonne affichée. C'est aussi le montant de référence de l'onglet Ventilations et la colonne sur laquelle s'ouvre le panneau de répartition. La geler pour une année fige les taux de change de cette année (voir [Geler la colonne par défaut fige les taux de change](#geler-la-colonne-par-defaut-fige-les-taux-de-change))
 - **Suit la répartition et les lignes** décide quelles colonnes bougent ensemble quand une répartition est appliquée à toutes les colonnes, et quelles colonnes reçoivent les lignes quand **Appliquer ces lignes à toutes les colonnes** est activé. Les colonnes gelées ne changent jamais, quel que soit ce réglage
 
 ### Enregistrement

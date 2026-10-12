@@ -151,7 +151,7 @@ The dimensions have an order, which you set. KANAP shows them in this order:
 
 - in the selector bar of this page
 - in the **Properties** panel of OPEX and CAPEX items
-- in the OPEX and CAPEX list columns
+- in the columns of the budget lines list
 - in the columns of the budget file
 - in the report filters and the report's dimension picker
 - in the dimensions Plaid lists
@@ -240,12 +240,12 @@ Changes save on their own, as in the dimension workspace. A name refused in the 
 The values of a dimension have an order, which you set. KANAP offers the values in this order wherever you choose or filter on them:
 
 - the value fields of OPEX and CAPEX items (when you type in a field, the best matches come first)
-- the dimension's checkbox filters in the OPEX and CAPEX lists
+- the dimension's checkbox filters in the budget lines list
 - the dimension filters of the reports and the **Exclude values** list of the Analytics dimensions report
 - the values CSV export
 - the values Plaid lists
 
-Sorting the OPEX or CAPEX list on a dimension's column follows this order too, then the value name. Lines without a value come last in ascending order. Report rows keep their own order, by amount.
+Sorting the budget lines list on a dimension's column follows this order too, then the value name. Lines without a value come last in ascending order. Report rows keep their own order, by amount.
 
 At first, the values are in alphabetical order. A new value goes last in its dimension.
 
@@ -291,7 +291,7 @@ Dimensions and values each have a status (**Enabled** or **Disabled**) and an op
 **A disabled dimension**:
 
 - Is not checked when it is **Required**: lines can be created without a value on it. It keeps the setting for when you enable it again.
-- Disappears from the item forms, the OPEX and CAPEX lists, the report filters, the report's dimension picker, the OPEX and CAPEX CSV exports and Plaid. Only the Analytics dimensions page shows it, marked **Disabled**.
+- Disappears from the item forms, the budget lines list, the report filters, the report's dimension picker, the OPEX and CAPEX CSV exports and Plaid. Only the Analytics dimensions page shows it, marked **Disabled**.
 - Keeps its values on the lines. Enable the dimension again and they show again.
 - Takes no new values. **New value** is disabled while the dimension is selected, and CSV files cannot add or change its values.
 
@@ -312,7 +312,7 @@ In the **Properties** panel of an OPEX or CAPEX item, and when you create one, e
 - A value applies to the whole line, across all years.
 - If the dimensions cannot be loaded, one line replaces these fields: "Dimensions could not be loaded."
 
-The OPEX and CAPEX lists have one column per enabled dimension used for that kind of line, with checkbox filters. The column of a dimension required for that kind of line shows by default, and the other columns are hidden. A column layout you saved keeps its own choice. See [OPEX](opex.md) and [CAPEX](capex.md).
+The budget lines list has one column per enabled dimension, with checkbox filters. The column of a dimension required for OPEX or CAPEX lines shows by default, and the other columns are hidden. A column layout you saved keeps its own choice. See [Budget lines](budget-lines.md).
 
 ---
 
@@ -335,7 +335,7 @@ The seven budget reports can also be narrowed to one value of a dimension, with 
 - Plaid can filter and group OPEX lines on every enabled dimension used for OPEX lines, and CAPEX lines on every enabled dimension used for CAPEX lines.
 - A question about the analytics category uses the default dimension, whatever its name or order.
 - Plaid's search and the `@` mentions in the chat find an OPEX or CAPEX line by the name of a value it holds on a dimension shown for its type, with or without accents.
-- Plaid can set, change or clear a line's value on any dimension when it creates or updates an OPEX or CAPEX line. Ask for example: "Set the Nature de coût of OPX-12 to Licences et maintenance". Plaid finds the value by its name within that dimension and shows the dimension and the value, before and after, in the preview. Nothing changes until you approve it.
+- Plaid can set, change or clear a line's value on any dimension when it creates or updates an OPEX or CAPEX line. Ask for example: "Set the Nature de coût of BL-12 to Licences et maintenance". Plaid finds the value by its name within that dimension and shows the dimension and the value, before and after, in the preview. Nothing changes until you approve it.
 - Plaid follows the same rules as the app: only enabled dimensions used for the line's type, only enabled values used for the line's type, and a line keeps a value it already has.
 - When Plaid creates a line, it needs a value on each required dimension of the line's type. For a CAPEX line, this includes **PP&E type**, **Investment type** and **Priority**.
 - Plaid knows which dimensions are required. A new line needs a value on each of them, and Plaid cannot clear the value of a required dimension. Plaid refuses a request that breaks the rule and says why, for example "Nature is required for spend item creation."

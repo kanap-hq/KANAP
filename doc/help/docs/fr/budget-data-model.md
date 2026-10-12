@@ -8,8 +8,8 @@ Les fichiers décrits ici sont le contrat sur lequel s'appuyer. Leurs colonnes s
 
 | Objet | Ce qu'il contient | Où le gérer |
 |---|---|---|
-| **Poste OPEX** | Un coût récurrent, reporté d'une année sur l'autre | **Gestion budgétaire > OPEX** |
-| **Poste CAPEX** | Un investissement, reporté d'une année sur l'autre | **Gestion budgétaire > CAPEX** |
+| **Poste OPEX** | Un coût récurrent, reporté d'une année sur l'autre | **Gestion budgétaire > Lignes budgétaires** |
+| **Poste CAPEX** | Un investissement, reporté d'une année sur l'autre | **Gestion budgétaire > Lignes budgétaires** |
 | **Colonnes budgétaires** | Les cinq colonnes de montants que chaque poste a pour chaque année | **Gestion budgétaire > Administration > Colonnes budgétaires** |
 | **Lignes Quantité et prix** | Les lignes à partir desquelles une colonne peut être calculée | L'onglet **Budget** d'un poste |
 | **Ventilation** | La répartition du coût d'une année d'un poste entre sociétés ou départements | L'onglet **Ventilations** d'un poste |
@@ -56,14 +56,14 @@ Un poste se lie aussi à des projets, des demandes, des applications, des actifs
 
 ### Postes OPEX et CAPEX
 
-Un poste vit sur plusieurs années : une licence sur trois ans est un poste avec trois années budgétaires. KANAP donne un numéro à chaque poste à sa création, sa référence `BL-12`, dans la même série pour l'OPEX et le CAPEX. Les listes affichent toujours `OPX-12` pour un poste OPEX et `CPX-3` pour un poste CAPEX. Le fichier budgétaire désigne un poste par sa référence `BL-12`, et lit aussi les numéros `OPX` et `CPX`. Dans un fichier sans colonne `nature`, un nombre seul garde son sens antérieur (`CPX-3` sur la liste CAPEX).
+Un poste vit sur plusieurs années : une licence sur trois ans est un poste avec trois années budgétaires. KANAP donne un numéro à chaque poste à sa création, sa référence `BL-12`, dans la même série pour l'OPEX et le CAPEX. La liste, l'espace de travail et l'adresse de la page l'affichent. Les postes créés avant cette série avaient aussi un numéro `OPX-12` ou `CPX-3` : les liens, les recherches et le fichier budgétaire retrouvent toujours un poste par ce numéro. Dans un fichier sans colonne `nature`, un nombre seul garde son sens antérieur (`CPX-3` quand la liste est filtrée sur CAPEX). Voir [Références](budget-lines.md#references).
 
 | Champ | Colonne du fichier budgétaire | Obligatoire | Remarques |
 |---|---|---|---|
-| Nature | `nature` | Oui | `opex` ou `capex`. Un fichier ne change pas la nature d'un poste existant (voir [Changer le type d'un poste](#changer-le-type-dun-poste)). Un fichier sans cette colonne est lu comme des postes de la liste sur laquelle il est importé |
+| Nature | `nature` | Oui | `opex` ou `capex`. Un fichier ne change pas la nature d'un poste existant (voir [Changer le type d'un poste](#changer-le-type-dun-poste)). Un fichier sans cette colonne est lu comme des postes OPEX, ou comme des postes CAPEX quand la liste est filtrée sur CAPEX |
 | Numéro | `item_number` | Attribué par KANAP | `BL-12`. Vide dans le fichier : crée un poste |
-| Nom du produit (OPEX), titre (CAPEX) | `name` | Oui | |
-| Description (OPEX) | `description` | Non | Pas encore lue ni écrite sur un poste CAPEX |
+| Titre | `name` | Oui | La colonne **Nom du produit** de la liste |
+| Description | `description` | Non | |
 | Type d'immobilisation, type d'investissement, priorité (CAPEX) | `analytics:ppe_type`, `analytics:investment_type`, `analytics:priority` | Pour une nouvelle ligne, tant que la dimension est obligatoire | Valeurs des trois dimensions CAPEX, portées comme les valeurs de toute autre dimension. Voir [Dimensions CAPEX](analytics.md#dimensions-capex) |
 | Société payeuse | `company_name` | Oui | Reprise du centre de coûts quand seul le centre de coûts est donné |
 | Fournisseur | `supplier_name`, `supplier_erp_id` | Non | |
@@ -82,9 +82,9 @@ Un poste n'a pas de statut à charger. Il est actif jusqu'à sa fin de validité
 
 ### Changer le type d'un poste
 
-Un poste passe d'OPEX à CAPEX, ou l'inverse, dans son espace de travail (**Changer le type...** dans le menu **...**, voir [OPEX](opex.md#changer-le-type) et [CAPEX](capex.md#changer-le-type)). Un fichier budgétaire ne le change jamais. Le changement commence le 1er janvier d'une année :
+Un poste passe d'OPEX à CAPEX, ou l'inverse, dans son espace de travail (**Changer le type...** dans le menu **...**, voir [Changer le type](budget-lines.md#changer-le-type)). Un fichier budgétaire ne le change jamais. Le changement commence le 1er janvier d'une année :
 
-- **À partir de la première année du poste**, le poste lui-même change de type. Il garde son numéro `BL`, ses années budgétaires, ventilations, liens, pièces jointes et tâches. Un poste qui devient CAPEX reçoit un numéro `CPX`, qu'il garde s'il redevient OPEX
+- **À partir de la première année du poste**, le poste lui-même change de type. Il garde son numéro `BL`, ses années budgétaires, ventilations, liens, pièces jointes et tâches
 - **À partir d'une année ultérieure**, le poste se termine le 31 décembre de l'année précédente et garde ses années budgétaires antérieures. Un nouveau poste de l'autre type, avec son propre numéro `BL`, porte les années budgétaires suivantes, les contacts et les liens vers les applications, actifs, contrats, projets et demandes. Le nouveau poste enregistre le poste auquel il succède, et chaque poste affiche l'autre
 
 Un poste est remplacé par un seul poste au plus. Le changement est refusé tant qu'une colonne gelée contient des montants du poste sur les années qui changent.
@@ -109,7 +109,7 @@ Chaque poste a les mêmes cinq colonnes pour chaque année. Elles sont définies
 
 - Un administrateur du budget peut renommer une colonne (jusqu'à 40 caractères), la masquer et choisir la colonne par défaut. Le nom dans les fichiers reste le même : un fichier continue de fonctionner après un renommage. Voir [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires).
 - Une colonne masquée garde ses montants et accepte toujours les imports.
-- Les colonnes sont gelées par année, par colonne et par périmètre (OPEX ou CAPEX). Une colonne gelée refuse les modifications, les imports, les copies et les réinitialisations. Voir [Geler / Dégeler les données](budget-operations.md#geler-degeler-les-donnees).
+- Les colonnes sont gelées par année, par colonne et par type (OPEX ou CAPEX). Une colonne gelée refuse les modifications, les imports, les copies et les réinitialisations. Voir [Geler / Dégeler les données](budget-operations.md#geler-degeler-les-donnees).
 
 Il n'y a pas de sixième colonne. Pour conserver plusieurs tours budgétaires, utilisez une colonne par tour, ou copiez une colonne vers une autre année ou une autre colonne avec [Copier les colonnes budgétaires](budget-operations.md#copier-les-colonnes-budgetaires).
 
@@ -121,7 +121,7 @@ Chaque colonne enregistre aussi sa période dans l'année et l'origine de ses mo
 
 ### Lignes Quantité et prix
 
-Une colonne peut être calculée à partir de lignes, chacune une quantité multipliée par un prix unitaire. Chaque ligne a une description (jusqu'à 200 caractères), une quantité (jusqu'à 3 décimales), une unité (**personnes**, **jours** ou **pièces**), un prix unitaire (jusqu'à 4 décimales), une fréquence, une période ou une date, et un calendrier de jours ouvrés quand le prix est par jour. L'ETP de la colonne est déduit des lignes. Voir [Quantité et prix](opex.md#quantite-et-prix).
+Une colonne peut être calculée à partir de lignes, chacune une quantité multipliée par un prix unitaire. Chaque ligne a une description (jusqu'à 200 caractères), une quantité (jusqu'à 3 décimales), une unité (**personnes**, **jours** ou **pièces**), un prix unitaire (jusqu'à 4 décimales), une fréquence, une période ou une date, et un calendrier de jours ouvrés quand le prix est par jour. L'ETP de la colonne est déduit des lignes. Voir [Quantité et prix](budget-lines.md#quantite-et-prix).
 
 Ces lignes se saisissent dans l'onglet **Budget**. Aucun fichier ne les porte. Un fichier budgétaire écrit les montants mensuels d'une colonne, et les lignes restent avec elle comme référence.
 
@@ -198,13 +198,13 @@ Chaque fichier ci-dessous s'exporte et s'importe depuis la page qui gère l'obje
 | Ventilations | Depuis les rapports de refacturation | Non | | [Rapports](reports.md) |
 | Lignes Quantité et prix, paramètres des colonnes budgétaires, gels, devises | Non | Non | | Réglés à l'écran |
 
-Le fichier budgétaire lit et écrit les montants de n'importe quelle colonne et année, en totaux annuels ou en mois, avec le détail du poste sur la même ligne. C'est la porte d'entrée d'un budget préparé ailleurs et la porte de sortie vers un tableur ou un outil de BI. Un seul fichier contient les deux types de poste, et sa colonne `nature` indique lequel. **Gestion budgétaire > OPEX** exporte les postes OPEX et **Gestion budgétaire > CAPEX** les postes CAPEX. Les deux listes importent un fichier qui contient les deux, avec le niveau Admin sur Budget.
+Le fichier budgétaire lit et écrit les montants de n'importe quelle colonne et année, en totaux annuels ou en mois, avec le détail du poste sur la même ligne. C'est la porte d'entrée d'un budget préparé ailleurs et la porte de sortie vers un tableur ou un outil de BI. Un seul fichier contient les deux types de poste, et sa colonne `nature` indique lequel. **Gestion budgétaire > Lignes budgétaires** exporte les postes qu'elle affiche, des deux types, et importe un fichier qui contient les deux, avec le niveau Admin sur Budget.
 
 ### Faire entrer un budget dans KANAP
 
 1. Faites correspondre chaque objet de votre outil actuel aux tableaux ci-dessus, et ses identifiants à la colonne **Correspondance par**.
 2. Chargez les données de référence dans l'ordre donné dans [Charger un budget complet](budget-file.md#charger-un-budget-complet).
-3. Exportez le fichier budgétaire depuis l'une ou l'autre liste pour obtenir la ligne d'en-tête de votre organisation, avec une colonne par dimension analytique. Une liste sans poste exporte la ligne d'en-tête seule.
+3. Exportez le fichier budgétaire depuis la liste pour obtenir la ligne d'en-tête de votre organisation, avec une colonne par dimension analytique. Une liste sans poste exporte la ligne d'en-tête seule.
 4. Remplissez une ligne par poste avec sa `nature`, en laissant `item_number` vide, avec une colonne de montant par colonne budgétaire et par année (`budget_2027`), ou par mois (`budget_2027_03`).
 5. Importez le fichier. La vérification signale les erreurs par ligne du fichier, et rien n'est écrit avant le chargement.
 

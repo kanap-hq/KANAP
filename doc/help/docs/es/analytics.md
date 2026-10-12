@@ -151,7 +151,7 @@ Las dimensiones tienen un orden, que usted define. KANAP las muestra en este ord
 
 - en la barra de selección de esta página
 - en el panel **Propiedades** de las partidas OPEX y CAPEX
-- en las columnas de las listas OPEX y CAPEX
+- en las columnas de la lista de líneas presupuestarias
 - en las columnas del archivo de presupuesto
 - en los filtros de los informes y en el selector de dimensión del informe
 - en las dimensiones que lista Plaid
@@ -240,12 +240,12 @@ Los cambios se guardan por sí solos, como en el espacio de trabajo de la dimens
 Los valores de una dimensión tienen un orden, que usted define. KANAP ofrece los valores en este orden en todos los lugares donde los elige o filtra por ellos:
 
 - los campos de valor de las partidas OPEX y CAPEX (cuando escribe en un campo, las mejores coincidencias aparecen primero)
-- los filtros de casillas de la dimensión en las listas OPEX y CAPEX
+- los filtros de casillas de la dimensión en la lista de líneas presupuestarias
 - los filtros de dimensión de los informes y la lista **Excluir valores** del informe Dimensiones analíticas
 - la exportación CSV de los valores
 - los valores que lista Plaid
 
-Ordenar la lista OPEX o CAPEX por la columna de una dimensión también sigue este orden, y después el nombre del valor. Las líneas sin valor van al final en orden ascendente. Las filas de los informes mantienen su propio orden, por importe.
+Ordenar la lista de líneas presupuestarias por la columna de una dimensión también sigue este orden, y después el nombre del valor. Las líneas sin valor van al final en orden ascendente. Las filas de los informes mantienen su propio orden, por importe.
 
 Al principio, los valores están en orden alfabético. Un valor nuevo se coloca el último en su dimensión.
 
@@ -291,7 +291,7 @@ Las dimensiones y los valores tienen cada uno un estado (**Activado** o **Desact
 **Una dimensión desactivada**:
 
 - No se comprueba cuando es **Obligatoria**: se pueden crear líneas sin valor en ella. Conserva el ajuste para cuando vuelva a activarla.
-- Desaparece de los formularios de las partidas, de las listas OPEX y CAPEX, de los filtros de los informes, del selector de dimensión del informe, de las exportaciones CSV de OPEX y CAPEX y de Plaid. Solo la página Dimensiones analíticas la muestra, marcada como **Desactivado**.
+- Desaparece de los formularios de las partidas, de la lista de líneas presupuestarias, de los filtros de los informes, del selector de dimensión del informe, de las exportaciones CSV de OPEX y CAPEX y de Plaid. Solo la página Dimensiones analíticas la muestra, marcada como **Desactivado**.
 - Conserva sus valores en las líneas. Vuelva a activar la dimensión y se muestran de nuevo.
 - No admite valores nuevos. **Nuevo valor** está desactivado mientras la dimensión está seleccionada, y los archivos CSV no pueden añadir ni cambiar sus valores.
 
@@ -312,7 +312,7 @@ En el panel **Propiedades** de una partida OPEX o CAPEX, y al crear una, cada di
 - Un valor se aplica a toda la línea, en todos los años.
 - Si las dimensiones no se pueden cargar, una línea sustituye a estos campos: "No se pudieron cargar las dimensiones."
 
-Las listas OPEX y CAPEX tienen una columna por dimensión activada que se usa para ese tipo de línea, con filtros de casillas. La columna de una dimensión obligatoria para ese tipo de línea se muestra por defecto, y las demás columnas están ocultas. Una disposición de columnas que haya guardado conserva su propia elección. Consulte [OPEX](opex.md) y [CAPEX](capex.md).
+La lista de líneas presupuestarias tiene una columna por dimensión activada, con filtros de casillas. La columna de una dimensión obligatoria para las líneas OPEX o CAPEX se muestra por defecto, y las demás columnas están ocultas. Una disposición de columnas que haya guardado conserva su propia elección. Consulte [Líneas presupuestarias](budget-lines.md).
 
 ---
 
@@ -335,7 +335,7 @@ Los siete informes presupuestarios también se pueden limitar a un valor de una 
 - Plaid puede filtrar y agrupar las líneas OPEX por cualquier dimensión activada usada para las líneas OPEX, y las líneas CAPEX por cualquier dimensión activada usada para las líneas CAPEX.
 - Una pregunta sobre la categoría analítica usa la dimensión por defecto, sea cual sea su nombre u orden.
 - La búsqueda de Plaid y las menciones `@` del chat encuentran una línea OPEX o CAPEX por el nombre de un valor que tiene en una dimensión mostrada para su tipo, con o sin acentos.
-- Plaid puede definir, cambiar o borrar el valor de una línea en cualquier dimensión cuando crea o actualiza una línea OPEX o CAPEX. Pida por ejemplo: «Pon la Nature de coût de OPX-12 en Licences et maintenance». Plaid encuentra el valor por su nombre dentro de esa dimensión y muestra en la vista previa la dimensión y el valor, antes y después. Nada cambia hasta que usted lo apruebe.
+- Plaid puede definir, cambiar o borrar el valor de una línea en cualquier dimensión cuando crea o actualiza una línea OPEX o CAPEX. Pida por ejemplo: «Pon la Nature de coût de BL-12 en Licences et maintenance». Plaid encuentra el valor por su nombre dentro de esa dimensión y muestra en la vista previa la dimensión y el valor, antes y después. Nada cambia hasta que usted lo apruebe.
 - Plaid aplica las mismas reglas que la aplicación: solo las dimensiones activadas usadas para el tipo de la línea, solo los valores activados usados para el tipo de la línea, y una línea conserva un valor que ya tiene.
 - Cuando Plaid crea una línea, necesita un valor en cada dimensión obligatoria del tipo de la línea. Para una línea CAPEX, esto incluye **PP&E type**, **Investment type** y **Priority**.
 - Plaid sabe qué dimensiones son obligatorias. Una línea nueva necesita un valor en cada una de ellas, y Plaid no puede borrar el valor de una dimensión obligatoria. Plaid rechaza una petición que no cumple la regla e indica el motivo, por ejemplo "Nature is required for spend item creation."

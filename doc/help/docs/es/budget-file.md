@@ -1,21 +1,21 @@
 # Cargar un presupuesto desde una hoja de cálculo
 
-La mayoría de los equipos preparan su presupuesto en una hoja de cálculo: una fila por partida, una columna por año o por mes. KANAP conserva las mismas partidas en sus listas OPEX y CAPEX, donde alimentan las asignaciones, los informes y la vista general.
+La mayoría de los equipos preparan su presupuesto en una hoja de cálculo: una fila por partida, una columna por año o por mes. KANAP conserva las mismas partidas en su lista de líneas presupuestarias, donde alimentan las asignaciones, los informes y la vista general.
 
 El archivo de presupuesto une ambas partes. Exporte las partidas, cambie las celdas que le interesen en Excel o LibreOffice y vuelva a importar el archivo. KANAP compara cada celda con lo que contiene y solo escribe lo que ha cambiado.
 
-Un solo archivo contiene los dos tipos de partida. Su columna `nature` indica si una fila es una partida OPEX o CAPEX, y cada fila se comprueba con las reglas de su propio tipo. La lista OPEX exporta sus partidas OPEX y la lista CAPEX sus partidas CAPEX, con la misma estructura. Cualquiera de las dos listas importa un archivo que contenga ambos tipos.
+Un solo archivo contiene los dos tipos de partida. Su columna `nature` indica si una fila es una partida OPEX o CAPEX, y cada fila se comprueba con las reglas de su propio tipo. La lista exporta las partidas que muestra, OPEX y CAPEX juntas. Filtre la columna **Tipo** para exportar un solo tipo.
 
 ## Dónde encontrarlo
 
-- Ruta: **Gestión presupuestaria > OPEX**, o **Gestión presupuestaria > CAPEX**
+- Ruta: **Gestión presupuestaria > Líneas presupuestarias**
 - Exportación: **Exportar CSV** en la barra de herramientas de la lista
 - Importación: **Importar CSV** en la misma barra de herramientas
 - Permisos: ambos botones requieren el nivel Administrador en Presupuesto (`budget:admin`), que cubre por igual las partidas OPEX y CAPEX
 
 ## Exportación
 
-1. Haga clic en **Exportar CSV** en la lista OPEX o CAPEX.
+1. Haga clic en **Exportar CSV** en la lista.
 2. Elija lo que contendrá el archivo:
 
 | Ajuste | Efecto |
@@ -27,7 +27,7 @@ Un solo archivo contiene los dos tipos de partida. Su columna `nature` indica si
 
 3. Haga clic en el botón inferior de la ventana. Nombra lo que contendrá el archivo: **Exportar 120 partidas filtradas**, **Exportar todas las partidas**, **Exportar 3.412 partidas**, etc.
 
-El archivo se guarda como `budget.csv`, desde cualquiera de las dos listas, y se escribe en el idioma en que se muestra la pantalla.
+El archivo se guarda como `budget.csv` y se escribe en el idioma en que se muestra la pantalla.
 
 | Idioma | Separador | Importes | Fechas |
 |---|---|---|---|
@@ -47,9 +47,9 @@ Las columnas de detalle son las mismas para los dos tipos de partida.
 
 | Columna | Contenido | En una partida nueva |
 |---|---|---|
-| `nature` | `opex` o `capex`, el tipo de partida | Obligatorio. Un archivo sin esta columna se lee como partidas de la lista en la que lo importa |
+| `nature` | `opex` o `capex`, el tipo de partida | Obligatorio. Un archivo sin esta columna se lee como partidas OPEX, o como partidas CAPEX cuando el filtro **Tipo** de la lista conserva solo CAPEX |
 | `item_number` | La referencia de la partida: `BL-12`, o `12`. También se leen los números `OPX-12` y `CPX-3` de archivos anteriores | Vacío: la fila añade una partida |
-| `name` | El nombre del producto de una partida OPEX, el título de una inversión CAPEX | Obligatorio |
+| `name` | El título de la partida, que aparece en la columna **Nombre del producto** de la lista | Obligatorio |
 | `description` | La descripción larga | Opcional |
 | `company_name` | Empresa pagadora | Obligatorio salvo que la partida tenga un centro de coste |
 | `supplier_name` | Nombre del proveedor | Opcional |
@@ -65,8 +65,6 @@ Las columnas de detalle son las mismas para los dos tipos de partida.
 | `effective_start` | El día en que empieza la partida | El 1 de enero del primer año con un importe en la fila, y si no, del año en curso |
 | `end_of_validity` | El día en que termina la partida | Sin fin |
 | `notes` | Texto libre | Opcional |
-
-En una partida CAPEX, `description` aún no se lee ni se escribe: la exportación la deja vacía y una celda rellena se ignora con una advertencia.
 
 ### Columnas de importes
 
@@ -101,7 +99,7 @@ Una columna ausente conserva todos los valores guardados de esa columna. Un arch
 ## Añadir y hacer coincidir partidas
 
 - `item_number` relleno: esa partida se actualiza. Vacío: se crea una partida nueva, del tipo que indica su celda `nature`.
-- `item_number` contiene la referencia de la partida, `BL-12`. En un archivo con columna `nature`, un número solo es la misma referencia, en ambas listas. Los números `OPX-12` y `CPX-3` de archivos anteriores siguen designando su partida. Nombrar dos veces la misma partida en un archivo es un error de fila.
+- `item_number` contiene la referencia de la partida, `BL-12`. En un archivo con columna `nature`, un número solo es la misma referencia. Los números `OPX-12` y `CPX-3` de archivos anteriores siguen designando su partida. Nombrar dos veces la misma partida en un archivo es un error de fila.
 - Una partida conserva su tipo. Una fila que nombra una partida existente con la otra `nature` se rechaza, por ejemplo "BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line."
 - Cada fila se comprueba según su propio tipo: las dimensiones y los valores que puede tener, su cuenta, las columnas congeladas y la advertencia de duplicado. Una columna congelada para CAPEX rechaza un cambio solo en una partida CAPEX.
 - No hay otra clave. Una fila nueva que se parezca a una partida existente de su tipo, o a otra fila nueva del mismo tipo en el archivo, es una advertencia que puede ignorar.
@@ -151,7 +149,7 @@ Un archivo CAPEX exportado antes de que el tipo de activo fijo, el tipo de inver
 
 Exporte un archivo nuevo y copie en él sus filas.
 
-Se acepta un archivo OPEX o CAPEX exportado antes de que existiera la columna `nature`. Sus filas se leen como partidas de la lista en la que lo importa, y sus números `OPX-12` y `CPX-3` siguen designando sus partidas: importe un archivo OPEX anterior desde la lista OPEX y un archivo CAPEX anterior desde la lista CAPEX. Sus celdas `kanap_token` siguen siendo válidas. En un archivo así, un número solo conserva su significado anterior: en la lista CAPEX, `3` es `CPX-3`; en la lista OPEX, es el número de la partida OPEX.
+Se acepta un archivo OPEX o CAPEX exportado antes de que existiera la columna `nature`. Sus filas se leen como partidas OPEX, o como partidas CAPEX cuando el filtro **Tipo** de la lista conserva solo CAPEX, y sus números `OPX-12` y `CPX-3` siguen designando sus partidas: importe un archivo OPEX anterior con la lista en OPEX o en ambos tipos, y un archivo CAPEX anterior con la lista filtrada por CAPEX. Sus celdas `kanap_token` siguen siendo válidas. En un archivo así, un número solo conserva su significado anterior: con el filtro en CAPEX, `3` es `CPX-3`; si no, es el número de la partida OPEX.
 
 KANAP reconoce la columna `nature` por su nombre, sin distinguir mayúsculas y minúsculas. Si un archivo anterior tiene una columna propia llamada Nature, cámbiele el nombre antes de importarlo: KANAP leería esa columna como el tipo de cada partida y rechazaría sus valores.
 

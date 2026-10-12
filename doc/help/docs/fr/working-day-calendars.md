@@ -7,7 +7,7 @@ Un calendrier est de l'un de deux types :
 - **Standard** : créé à partir d'un pays, et d'une région lorsque le pays en a. Les jours ouvrés de chaque année sont les jours de semaine de chaque mois, moins les jours fériés du pays. Il n'y a rien à saisir, et vous pouvez tout de même modifier n'importe quel mois de n'importe quelle année
 - **Personnalisé** : vous saisissez vous-même les jours ouvrés de chaque année, par exemple pour un accord sur le temps de travail qui a ses propres jours de repos
 
-Dans l'onglet Budget d'un poste OPEX ou CAPEX, chaque ligne au prix par jour utilise un calendrier. Les lignes au prix par mois ou par pièce n'en ont pas besoin. Voir [Quantité et prix](opex.md#quantite-et-prix).
+Dans l'onglet Budget d'une ligne budgétaire, chaque ligne de quantité et prix au prix par jour utilise un calendrier. Les lignes au prix par mois ou par pièce n'en ont pas besoin. Voir [Quantité et prix](budget-lines.md#quantite-et-prix).
 
 ---
 
