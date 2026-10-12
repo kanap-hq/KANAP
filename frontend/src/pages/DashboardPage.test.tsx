@@ -76,25 +76,18 @@ describe('DashboardPage budget snapshot', () => {
     budgetWriter = true;
     storage.clear();
     post.mockReset();
-    post.mockImplementation(async (url: string, body: any) => {
-      expect(url).toMatch(/summary\/aggregate$/);
-      const data = fakeAggregate([
-        { nature: 'opex', versions: {
-          yMinus1: { totals: { revision: 3000 } },
-          y: { totals: { budget: 12000, forecast: 7000 } },
-          yPlus1: { totals: { follow_up: 9000 } },
-        } },
-        { nature: 'capex', versions: { y: { totals: { budget: 4000 } } } },
-      ], body);
-      // The snapshot must sum its groups instead of trusting a separate server total.
-      if (body.spec.groupBy[0] === 'nature') data.total.values.yBudget = 999999;
-      return { data };
-    });
+    post.mockResolvedValue({ data: fakeAggregate([], { query: {}, spec: { groupBy: [], measures: [] } }) });
     get.mockReset();
-    get.mockResolvedValue({ data: { items: [], total: 0, page: 1, limit: 5 } });
+    get.mockImplementation(async (url: string) => {
+      if (url === '/spend-items/summary/totals') return { data: { yBudget: 12000, yMinus1Revision: 3000, yForecast: 7000, yPlus1FollowUp: 9000 } };
+      if (url === '/capex-items/summary/totals') return { data: { yBudget: 4000, yMinus1Revision: 2000, yForecast: 1000, yPlus1FollowUp: 6000 } };
+      // Deliberately different from the sum: the Total row must use this response directly.
+      if (url === '/budget-lines/summary/totals') return { data: { yBudget: 21000, yMinus1Revision: 8000, yForecast: 11000, yPlus1FollowUp: 18000 } };
+      return { data: { items: [], total: 0, page: 1, limit: 5 } };
+    });
   });
 
-  it.each(['light', 'dark'] as const)('renders one budget tile with three rows per year and summed totals in %s mode', async (mode) => {
+  it.each(['light', 'dark'] as const)('renders one budget tile with three rows per year, each read from its own totals response in %s mode', async (mode) => {
     setBudgetColumns({ labels: TENANT_NAMES, enabled: ALL_SHOWN });
     renderPage(mode);
     const tile = await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
@@ -106,9 +99,9 @@ describe('DashboardPage budget snapshot', () => {
     const rows = within(tile).getAllByRole('row').slice(1);
     const amounts = rows.map((row) => within(row).getAllByRole('link').map((link) => link.textContent));
     expect(amounts).toEqual([
-      ['0k', '3k', '0k', '0k'], ['0k', '0k', '0k', '0k'], ['0k', '3k', '0k', '0k'],
-      ['12k', '0k', '7k', '0k'], ['4k', '0k', '0k', '0k'], ['16k', '0k', '7k', '0k'],
-      ['0k', '0k', '0k', '9k'], ['0k', '0k', '0k', '0k'], ['0k', '0k', '0k', '9k'],
+      ['0k', '3k', '0k', '0k'], ['0k', '2k', '0k', '0k'], ['0k', '8k', '0k', '0k'],
+      ['12k', '0k', '7k', '0k'], ['4k', '0k', '1k', '0k'], ['21k', '0k', '11k', '0k'],
+      ['0k', '0k', '0k', '9k'], ['0k', '0k', '0k', '6k'], ['0k', '0k', '0k', '18k'],
     ]);
     rows.forEach((row, index) => {
       const scope = ['opex', 'capex', 'all'][index % 3];
@@ -119,11 +112,12 @@ describe('DashboardPage budget snapshot', () => {
         expect(JSON.parse(url.searchParams.get('filters')!)).toEqual(scope === 'all' ? {} : { nature: { filterType: 'set', values: [scope] } });
       });
     });
-    const requests = aggregateCalls('/budget-lines/summary/aggregate').filter((body) => body.spec.groupBy[0] === 'nature');
-    expect(requests).toHaveLength(1);
-    expect(requests[0].query).toEqual({ status: 'enabled' });
-    expect(requests[0].spec.measures).toHaveLength(15);
-    expect(get.mock.calls.some(([url]) => String(url).endsWith('/summary/totals'))).toBe(false);
+    const requests = get.mock.calls.filter(([url]) => String(url).endsWith('/summary/totals'));
+    expect(requests.map(([url]) => url)).toEqual([
+      '/spend-items/summary/totals', '/capex-items/summary/totals', '/budget-lines/summary/totals',
+    ]);
+    // Each request reads every year and column; no narrowed amount or year selection.
+    requests.forEach(([, config]) => expect(config).not.toHaveProperty('params'));
   });
 
   it('leaves hidden columns out, whatever they hold (Forecast is hidden by default)', async () => {
@@ -140,25 +134,40 @@ describe('DashboardPage budget snapshot', () => {
   });
 
   it('keeps a column when the two natures cancel each other out', async () => {
-    post.mockImplementation(async (_url, body) => ({ data: fakeAggregate([
-      { nature: 'opex', versions: { y: { totals: { budget: 4000 } } } },
-      { nature: 'capex', versions: { y: { totals: { budget: -4000 } } } },
-    ], body) }));
+    get.mockImplementation(async (url) => {
+      if (url === '/spend-items/summary/totals') return { data: { yBudget: 4000 } };
+      if (url === '/capex-items/summary/totals') return { data: { yBudget: -4000 } };
+      if (url === '/budget-lines/summary/totals') return { data: { yBudget: 0 } };
+      return { data: { items: [], total: 0 } };
+    });
     renderPage();
     const tile = await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
     expect(await within(tile).findByText('-4k')).toBeInTheDocument();
     expect(within(tile).getAllByRole('row')).toHaveLength(10);
   });
 
-  it('shows zero CAPEX and the OPEX total when that nature has no group', async () => {
-    post.mockImplementation(async (_url, body) => ({ data: fakeAggregate([
-      { nature: 'opex', versions: { y: { totals: { budget: 4000 } } } },
-    ], body) }));
+  it('shows zero for missing amounts in the CAPEX totals response', async () => {
+    get.mockImplementation(async (url) => {
+      if (url === '/spend-items/summary/totals') return { data: { yBudget: 4000 } };
+      if (url === '/capex-items/summary/totals') return { data: {} };
+      if (url === '/budget-lines/summary/totals') return { data: { yBudget: 6000 } };
+      return { data: { items: [], total: 0 } };
+    });
     renderPage();
     const tile = await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
     await within(tile).findAllByText('4k');
     const rows = within(tile).getAllByRole('row').slice(4, 7);
-    expect(rows.map((row) => within(row).getByRole('link').textContent)).toEqual(['4k', '0k', '4k']);
+    expect(rows.map((row) => within(row).getByRole('link').textContent)).toEqual(['4k', '0k', '6k']);
+  });
+
+  it('fetches the snapshot without calling any summary/aggregate endpoint', async () => {
+    // Other tiles wait for the column setting. Snapshot totals need no setting or aggregate.
+    setBudgetColumns({}, false);
+    renderPage();
+    const tile = await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
+    await within(tile).findByText('21k');
+    expect(get.mock.calls.filter(([url]) => String(url).endsWith('/summary/totals'))).toHaveLength(3);
+    expect(post.mock.calls.filter(([url]) => String(url).endsWith('/summary/aggregate'))).toHaveLength(0);
   });
 });
 

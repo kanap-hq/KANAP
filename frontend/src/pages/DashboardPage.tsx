@@ -19,8 +19,6 @@ import type { BudgetSummaryRow } from './reports/useReportScope';
 import {
   type ColumnFilters,
   type ReportScope,
-  type AggregateRequest,
-  sumAmounts,
   costCenterTotalsRequest,
   countRequest,
   keepValues,
@@ -69,19 +67,25 @@ function formatThousandsK(v: any) {
   return `${sign}${formatted}k`;
 }
 
-/** The same Enabled lines as the list footer, in one aggregate grouped by nature. */
-function useBudgetSnapshot(columns: ReturnType<typeof useBudgetColumns>, enabled: boolean) {
-  const request = useMemo<AggregateRequest>(() => ({
-    query: { status: 'enabled' },
-    spec: {
-      groupBy: ['nature'],
-      measures: (['yMinus1', 'y', 'yPlus1'] as const).flatMap((slot) => columns.shown.map((column) => {
-        const field = amountFieldKey(slot, column);
-        return { id: field, fn: 'sum' as const, field };
-      })),
+/** Every year and column from each list's totals; the combined total comes from the server. */
+function useBudgetSnapshot(enabled: boolean) {
+  return useQuery({
+    queryKey: ['budget-lines-summary', 'dashboard', 'snapshot'],
+    enabled,
+    queryFn: async ({ signal }) => {
+      const endpoints = [
+        ['opex', '/spend-items/summary/totals'],
+        ['capex', '/capex-items/summary/totals'],
+        ['all', '/budget-lines/summary/totals'],
+      ] as const;
+      const totals = await Promise.all(endpoints.map(async ([scope, endpoint]) => {
+        const res = await api.get<Record<string, number>>(endpoint, { signal });
+        return [scope, res.data] as const;
+      }));
+      return Object.fromEntries(totals) as Record<ReportScope, Record<string, number>>;
     },
-  }), [columns.shown]);
-  return useBudgetAggregate('all', columns.ready ? request : null, { enabled });
+    staleTime: 5 * 60 * 1000,
+  });
 }
 
 type MyTask = { id: string; item_number: number | null; title: string | null; due_date: string | null };
@@ -342,7 +346,7 @@ export default function DashboardPage() {
   const scopeLabel = (scope: BudgetScope) => t(`ops:operations.scope.${scope}`);
   const budgetColumns = useBudgetColumns();
   const defaultColumn = budgetColumns.defaultColumn;
-  const snapshot = useBudgetSnapshot(budgetColumns, canOpex);
+  const snapshot = useBudgetSnapshot(canOpex);
 
   // Next year's check names the default column: the checks wait for the setting.
   const checks = useMemo(() => (budgetColumns.ready ? hygieneChecks(defaultColumn.key) : null), [budgetColumns.ready, defaultColumn.key]);
@@ -389,8 +393,7 @@ export default function DashboardPage() {
     label: scope === 'all' ? t('ops:shared.total') : scopeLabel(scope),
     values: Object.fromEntries(budgetColumns.shown.map((column) => {
       const field = amountFieldKey(slot, column);
-      const value = (nature: BudgetScope) => snapshot.data?.groups.find((group) => group.keys[0] === nature)?.values[field] ?? 0;
-      return [column.key, scope === 'all' ? sumAmounts([value('opex'), value('capex')]) : value(scope)];
+      return [column.key, snapshot.data?.[scope][field] ?? 0];
     })) as Record<AmountColumnKey, number>,
   })));
   // Keep a column if either nature has a value, even when the combined total is zero.
