@@ -29,18 +29,19 @@ import {
   DIMENSION_CODE_PATTERN,
   analyticsRefusalField,
   dimensionDeleteBlock,
-  dimensionUsageLine,
   proposeDimensionCode,
   requiredMissingLine,
   requiredUnusableLine,
+  usedLineCount,
   type AnalyticsField,
 } from './analyticsFields';
+import AnalyticsLinesUsage from './AnalyticsLinesUsage';
 import AnalyticsDescriptionField from './AnalyticsDescriptionField';
 import { useFieldDraft } from '../../hooks/useFieldDraft';
 import LineTypeUsageSelect, { LineTypeUsageConflictNote } from '../../components/fields/LineTypeUsageSelect';
 import { lineTypeUsageConflict, parseLineTypeUsage, type LineType } from '../../constants/lineTypeUsage';
 import { axisListColumn, oneOffListLink } from '../reports/reportListLink';
-import { keepValues } from '../reports/reportAggregates';
+import { dropValues, keepValues } from '../reports/reportAggregates';
 import ListLinkAnchor from '../reports/ListLinkAnchor';
 
 type FieldErrors = Partial<Record<AnalyticsField, string>>;
@@ -158,7 +159,7 @@ export default function AnalyticsDimensionWorkspacePage() {
 
   const isDefault = !!data?.is_default;
   const disabled = !canEdit;
-  const usage = data ? dimensionUsageLine(t, data.value_count ?? 0, data.opex_count ?? 0, data.capex_count ?? 0) : null;
+  const valueCount = data?.value_count ?? 0;
   // The server refuses this delete anyway; the page already knows, so it says why up front.
   const deleteBlock = data ? dimensionDeleteBlock(t, data.value_count ?? 0) : null;
 
@@ -230,7 +231,21 @@ export default function AnalyticsDimensionWorkspacePage() {
           <Stack spacing={2.5} sx={{ maxWidth: 900 }}>
             <Box>
               <Typography data-testid="analytics-dimension-usage" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
-                {usage}
+                {valueCount > 0 ? (
+                  <>
+                    {t('analytics.usage.values', { count: valueCount })}
+                    {' · '}
+                    {/*
+                      Every line with a value on this dimension: the list's column, blank left out. The list has
+                      no column for a disabled dimension and would drop the filter: plain text then.
+                    */}
+                    <AnalyticsLinesUsage
+                      kind="dimension"
+                      lineCount={usedLineCount(data.opex_count, data.capex_count)}
+                      filters={isAnalyticsActive(data) ? { [axisListColumn(data)]: dropValues([null]) } : null}
+                    />
+                  </>
+                ) : t('analytics.usage.noValues')}
               </Typography>
               {canDelete && !isDefault && deleteBlock && (
                 <Typography data-testid="analytics-dimension-delete-block" sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>

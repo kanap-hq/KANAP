@@ -16,7 +16,9 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
       if (key === 'master-data:analytics.analyticsCategoryFallback' || key === 'analytics.analyticsCategoryFallback') return 'Analytics dimension';
-      return opts && 'code' in opts ? `${key}:${opts.code}` : key;
+      if (opts && 'code' in opts) return `${key}:${opts.code}`;
+      // The usage line's count shows after its key, so a test sees the number of lines.
+      return key.startsWith('analytics.usage.') && opts && 'count' in opts ? `${key}:${opts.count}` : key;
     },
     i18n: { language: 'en', resolvedLanguage: 'en' },
   }),
@@ -196,7 +198,12 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     expect(within(drawer).getByRole('checkbox', { name: 'statuses.enabled' })).toBeDisabled();
     expect(within(drawer).getByTestId('analytics-dimension-locked')).toHaveTextContent('analytics.hints.defaultLocked');
     expect(screen.getAllByText('analytics.hints.defaultLocked')).toHaveLength(1);
-    expect(screen.getByTestId('analytics-dimension-usage')).toHaveTextContent('analytics.usage.dimensionOne');
+    // 27 OPEX lines and no CAPEX line: one link, on the default dimension's list column.
+    const usage = screen.getByTestId('analytics-dimension-usage');
+    expect(usage).toHaveTextContent('analytics.usage.values:15 · analytics.usage.dimensionLines:27');
+    expect(linkTarget(within(usage).getByRole('link').getAttribute('href')).filters).toEqual({
+      analytics_category_name: { filterType: 'set', mode: 'exclude', values: [null] },
+    });
     expect(screen.queryByTestId('analytics-dimension-delete-block')).toBeNull();
     expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
   });
@@ -250,6 +257,41 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(screen.queryByText('Nature still has values. Delete them first.')).toBeNull();
     expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('counts the lines of both natures once and links to exactly those lines', async () => {
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    const usage = await screen.findByTestId('analytics-dimension-usage');
+    // 2 OPEX and 2 CAPEX lines: 4 lines, never split by nature.
+    expect(usage).toHaveTextContent('analytics.usage.values:3 · analytics.usage.dimensionLines:4');
+    expect(usage).not.toHaveTextContent('analytics.usage.opex');
+    const link = within(usage).getByRole('link', { name: 'analytics.usage.dimensionLines:4' });
+    expect(link).toHaveAttribute('target', '_blank');
+    // Both natures (no nature filter), every status, the lines with any value of the dimension.
+    expect(linkTarget(link.getAttribute('href'))).toEqual({
+      path: '/ops/budget',
+      filters: { 'analytics_ax-nature': { filterType: 'set', mode: 'exclude', values: [null] } },
+      statusScope: 'all',
+      from: 'report',
+    });
+  });
+
+  it('gives no link for a disabled dimension: the list has no column to filter on', async () => {
+    mocked.getAnalyticsAxis.mockResolvedValue({ ...NATURE, status: 'disabled', disabled_at: '2026-01-01T00:00:00.000Z' });
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    const usage = await screen.findByTestId('analytics-dimension-usage');
+    expect(usage).toHaveTextContent('analytics.usage.values:3 · analytics.usage.dimensionLines:4');
+    expect(within(usage).queryByRole('link')).toBeNull();
+  });
+
+  it('says a dimension with values and no line is not used yet, without a link', async () => {
+    mocked.getAnalyticsAxis.mockResolvedValue({ ...NATURE, opex_count: 0, capex_count: 0 });
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    const usage = await screen.findByTestId('analytics-dimension-usage');
+    expect(usage).toHaveTextContent('analytics.usage.values:3 · analytics.usage.dimensionUnused');
+    expect(within(usage).queryByRole('link')).toBeNull();
+    // The reason Delete is disabled stays.
+    expect(screen.getByTestId('analytics-dimension-delete-block')).toHaveTextContent('analytics.deleteBlocked.dimensionHasValues');
   });
 
   it('disables Delete while the dimension has values, and deletes an empty one', async () => {

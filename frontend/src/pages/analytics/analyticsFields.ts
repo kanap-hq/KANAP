@@ -49,29 +49,20 @@ export function analyticsRefusalField(error: unknown): AnalyticsField | null {
   return typeof field === 'string' && REFUSAL_FIELDS.has(field) ? (field as AnalyticsField) : null;
 }
 
-function linesUsage(t: TFunction, opexCount: number, capexCount: number): { opex: string | null; capex: string | null } {
-  return {
-    opex: opexCount > 0 ? t('analytics.usage.opex', { count: opexCount }) : null,
-    capex: capexCount > 0 ? t('analytics.usage.capex', { count: capexCount }) : null,
-  };
+/**
+ * The number of budget lines using a dimension or a value. A line has one nature and at most one value
+ * per dimension (the link's key is tenant, line, dimension), so the per-nature counts add up to
+ * distinct lines.
+ */
+export function usedLineCount(opexCount: number | null | undefined, capexCount: number | null | undefined): number {
+  return (opexCount ?? 0) + (capexCount ?? 0);
 }
 
-/** "Used by 3 OPEX lines and 1 CAPEX line.", or null when no line uses the value. */
-export function valueUsageLine(t: TFunction, opexCount: number, capexCount: number): string | null {
-  const { opex, capex } = linesUsage(t, opexCount, capexCount);
-  if (opex && capex) return t('analytics.usage.valueBoth', { opex, capex });
-  if (opex || capex) return t('analytics.usage.valueOne', { lines: opex ?? capex });
-  return null;
-}
-
-/** "12 values, used by 27 OPEX lines and 2 CAPEX lines." */
-export function dimensionUsageLine(t: TFunction, valueCount: number, opexCount: number, capexCount: number): string {
-  if (valueCount <= 0) return t('analytics.usage.noValues');
-  const values = t('analytics.usage.values', { count: valueCount });
-  const { opex, capex } = linesUsage(t, opexCount, capexCount);
-  if (opex && capex) return t('analytics.usage.dimensionBoth', { values, opex, capex });
-  if (opex || capex) return t('analytics.usage.dimensionOne', { values, lines: opex ?? capex });
-  return t('analytics.usage.dimensionUnused', { values });
+/** "Used by 6 lines", or "Not used yet" without a line. */
+export function linesUsageText(t: TFunction, kind: 'dimension' | 'value', lineCount: number): string {
+  return lineCount > 0
+    ? t(`analytics.usage.${kind}Lines`, { count: lineCount })
+    : t(`analytics.usage.${kind}Unused`);
 }
 
 /** The line that explains a disabled Delete on a dimension other than the default, or null when it can be deleted. */

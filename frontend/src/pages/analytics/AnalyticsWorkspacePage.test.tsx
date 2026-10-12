@@ -273,14 +273,23 @@ describe('AnalyticsWorkspacePage', () => {
     const first = renderAt('/master-data/analytics/v-1/overview?axis=ax-nature');
     expect(await screen.findByLabelText('analytics.fields.description')).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
-    expect(screen.getByTestId('analytics-value-usage')).toHaveTextContent('analytics.usage.valueBoth');
+    // 3 OPEX lines and 1 CAPEX line: 4 lines, a link to exactly those lines.
+    const usage = screen.getByTestId('analytics-value-usage');
+    expect(usage).toHaveTextContent('analytics.usage.valueLines:4');
+    const link = within(usage).getByRole('link', { name: 'analytics.usage.valueLines:4' });
+    expect(link).toHaveAttribute('target', '_blank');
+    const url = new URL(link.getAttribute('href') as string, 'http://kanap.test');
+    expect(url.pathname).toBe('/ops/budget');
+    // Both natures, every status, this value of the dimension.
+    expect(JSON.parse(url.searchParams.get('filters') as string)).toEqual({ 'analytics_ax-nature': { filterType: 'set', values: ['Licenses'] } });
+    expect(url.searchParams.get(STATUS_SCOPE_PARAM)).toBe('all');
     first.unmount();
 
     levels.value = 'admin';
     const second = renderAt('/master-data/analytics/v-1/overview?axis=ax-nature');
     await findTitle();
     expect(screen.getByRole('button', { name: 'common:buttons.delete' })).toBeDisabled();
-    expect(screen.getByTestId('analytics-value-usage')).toHaveTextContent('analytics.usage.valueBoth');
+    expect(screen.getByTestId('analytics-value-usage')).toHaveTextContent('analytics.usage.valueLines:4');
     expect(screen.getByTestId('analytics-value-usage')).not.toHaveTextContent('analytics.deleteBlocked');
     second.unmount();
 
@@ -288,10 +297,20 @@ describe('AnalyticsWorkspacePage', () => {
     mocked.deleteAnalyticsValue.mockResolvedValue(undefined);
     renderAt('/master-data/analytics/v-1/overview?axis=ax-nature');
     await findTitle();
-    expect(screen.queryByTestId('analytics-value-usage')).toBeNull();
+    expect(screen.getByTestId('analytics-value-usage')).toHaveTextContent('analytics.usage.valueUnused');
+    expect(within(screen.getByTestId('analytics-value-usage')).queryByRole('link')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
     await waitFor(() => expect(mocked.deleteAnalyticsValue).toHaveBeenCalledWith('v-1'));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics?axis=ax-nature'));
+  });
+
+  it('gives no link while the value\'s dimension is disabled: the list has no column to filter on', async () => {
+    axesState.list = AXES.map((axis) => (axis.id === 'ax-nature' ? { ...axis, status: 'disabled', disabled_at: '2026-01-01T00:00:00.000Z' } : axis));
+    renderAt('/master-data/analytics/v-1/overview?axis=ax-nature');
+    await findTitle();
+    const usage = screen.getByTestId('analytics-value-usage');
+    expect(usage).toHaveTextContent('analytics.usage.valueLines:4');
+    expect(within(usage).queryByRole('link')).toBeNull();
   });
 
   it('shows a refused rename above the workspace', async () => {

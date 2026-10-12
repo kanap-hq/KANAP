@@ -33,9 +33,10 @@ import AnalyticsDescriptionField from './AnalyticsDescriptionField';
 import {
   ANALYTICS_LIST_PATH,
   analyticsRefusalField,
-  valueUsageLine,
+  usedLineCount,
   type AnalyticsField,
 } from './analyticsFields';
+import AnalyticsLinesUsage from './AnalyticsLinesUsage';
 
 type FieldErrors = Partial<Record<AnalyticsField, string>>;
 
@@ -186,9 +187,9 @@ export default function AnalyticsWorkspacePage() {
 
   const axis = data ? axes.byId.get(data.axis_id) : undefined;
   const dimensionLabel = axis ? axes.label(axis) : analyticsAxisLabel({ name: data?.axis_name ?? null }, t);
-  const usage = data ? valueUsageLine(t, data.opex_count ?? 0, data.capex_count ?? 0) : null;
-  // The server refuses deleting a value in use: Delete stays disabled while the usage line shows.
-  const inUse = !!usage;
+  const lineCount = usedLineCount(data?.opex_count, data?.capex_count);
+  // The server refuses deleting a value in use: Delete stays disabled while a line uses it.
+  const inUse = lineCount > 0;
   const disabled = !canEdit;
 
   const actions = canDelete && data ? (
@@ -272,11 +273,17 @@ export default function AnalyticsWorkspacePage() {
       >
         {data && (
           <Stack spacing={2.5} sx={{ maxWidth: 900 }}>
-            {usage && (
-              <Typography data-testid="analytics-value-usage" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
-                {usage}
-              </Typography>
-            )}
+            <Typography data-testid="analytics-value-usage" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+              {/*
+                The lines holding this value, by its name in the dimension's list column. The list has no column
+                for a disabled dimension and would drop the filter: plain text then (and while the dimension loads).
+              */}
+              <AnalyticsLinesUsage
+                kind="value"
+                lineCount={lineCount}
+                filters={axis && isAnalyticsActive(axis) ? { [axisListColumn(axis)]: keepValues([data.name]) } : null}
+              />
+            </Typography>
             <AnalyticsDescriptionField
               key={data.id}
               value={data.description ?? ''}

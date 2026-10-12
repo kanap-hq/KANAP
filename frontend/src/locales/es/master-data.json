@@ -685,11 +685,12 @@
       "capex_one": "{{count}} línea CAPEX",
       "capex_other": "{{count}} líneas CAPEX",
       "noValues": "Todavía no hay valores.",
-      "dimensionUnused": "{{values}}. Uso: ninguna línea por ahora.",
-      "dimensionOne": "{{values}}. Uso: {{lines}}.",
-      "dimensionBoth": "{{values}}. Uso: {{opex}} y {{capex}}.",
-      "valueOne": "Usado por {{lines}}.",
-      "valueBoth": "Usado por {{opex}} y {{capex}}."
+      "dimensionLines_one": "Usada por {{count}} línea",
+      "dimensionLines_other": "Usada por {{count}} líneas",
+      "dimensionUnused": "Aún sin usar",
+      "valueLines_one": "Usado por {{count}} línea",
+      "valueLines_other": "Usado por {{count}} líneas",
+      "valueUnused": "Aún sin usar"
     },
     "deleteBlocked": {
       "dimensionHasValues": "Para eliminar esta dimensión, elimine primero sus valores."

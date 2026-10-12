@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DIMENSION_CODE_PATTERN, proposeDimensionCode } from './analyticsFields';
+import type { TFunction } from 'i18next';
+import { DIMENSION_CODE_PATTERN, linesUsageText, proposeDimensionCode, usedLineCount } from './analyticsFields';
 
 describe('proposeDimensionCode', () => {
   it('lowercases, strips accents and turns spaces into dashes', () => {
@@ -25,5 +26,22 @@ describe('proposeDimensionCode', () => {
     for (const name of ['Nature de coût', 'Œuvres', 'Straße', `${'x'.repeat(60)}`, 'Ordre interne 2027']) {
       expect(proposeDimensionCode(name)).toMatch(DIMENSION_CODE_PATTERN);
     }
+  });
+});
+
+describe('lines usage', () => {
+  const t = ((key: string, opts?: { count?: number }) => (opts?.count !== undefined ? `${key}:${opts.count}` : key)) as unknown as TFunction;
+
+  it('adds the two natures: a line has one nature and one value per dimension', () => {
+    expect(usedLineCount(3, 3)).toBe(6);
+    expect(usedLineCount(0, 2)).toBe(2);
+    expect(usedLineCount(undefined, null)).toBe(0);
+  });
+
+  it('says how many lines, or that none uses it yet', () => {
+    expect(linesUsageText(t, 'dimension', 6)).toBe('analytics.usage.dimensionLines:6');
+    expect(linesUsageText(t, 'value', 1)).toBe('analytics.usage.valueLines:1');
+    expect(linesUsageText(t, 'dimension', 0)).toBe('analytics.usage.dimensionUnused');
+    expect(linesUsageText(t, 'value', 0)).toBe('analytics.usage.valueUnused');
   });
 });
