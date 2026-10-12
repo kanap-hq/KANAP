@@ -139,7 +139,8 @@ export default function BudgetFreezePage() {
                 {canModify && <TableCell>
                   {data && <Button
                     variant="text" size="small" sx={rowActionSx} disabled={!editable || rowPending}
-                    onClick={() => change(!allFrozen, NATURES, col)}
+                    // Only the natures to change: freezing a frozen Budget again would pin the latest FX rates.
+                    onClick={() => change(!allFrozen, NATURES.filter((nature) => isFrozen(nature, col) === allFrozen), col)}
                   >
                     {allFrozen ? t('operations.freeze.unfreezeBoth') : t('operations.freeze.freezeBoth')}
                   </Button>}

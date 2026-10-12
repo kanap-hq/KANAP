@@ -121,10 +121,19 @@ describe('BudgetFreezePage', () => {
     await waitFor(() => expect(cell('A0', 'budget.opex')).not.toBeDisabled());
   });
 
-  it('freezes both natures of a row with one request and two entries', async () => {
+  it('freezes both natures of a row with one request, sending only the open one', async () => {
     frozenOpex.columns = ['budget'];
     renderPage();
     expect(row('A0').queryByRole('button', { name: 'operations.freeze.unfreezeBoth' })).toBeNull();
+    fireEvent.click(row('A0').getByRole('button', { name: 'operations.freeze.freezeBoth' }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    expect(post).toHaveBeenCalledWith('/freeze-states/freeze', { year: new Date().getFullYear(), scopes: [
+      { scope: 'capex', columns: ['budget'] },
+    ] });
+  });
+
+  it('freezes two open natures of a row with one request and two entries', async () => {
+    renderPage();
     fireEvent.click(row('A0').getByRole('button', { name: 'operations.freeze.freezeBoth' }));
     await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
     expect(post).toHaveBeenCalledWith('/freeze-states/freeze', { year: new Date().getFullYear(), scopes: [
