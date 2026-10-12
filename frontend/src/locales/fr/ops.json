@@ -544,14 +544,17 @@
       "year": "Année",
       "opexColumns": "Colonnes OPEX",
       "capexColumns": "Colonnes CAPEX",
-      "freezeData": "Geler les données",
+      "freezeData": "Geler",
       "freezing": "Gel en cours…",
-      "unfreezeData": "Dégeler les données",
+      "unfreezeData": "Dégeler",
       "unfreezing": "Dégel en cours…",
       "updating": "Mise à jour de l'état de gel…",
       "frozen": "Gelé",
       "editable": "Modifiable",
-      "hidden": "Masquée"
+      "hidden": "Masquée",
+      "column": "Colonne",
+      "both": "Les deux",
+      "selectCell": "{{column}} : {{nature}}"
     },
     "columnReset": {
       "title": "Réinitialiser une colonne budgétaire",
@@ -1455,6 +1458,8 @@
     "changeType": "Changer le type…",
     "typeOpex": "OPEX",
     "typeCapex": "CAPEX",
-    "line": "Ligne budgétaire"
+    "line": "Ligne budgétaire",
+    "totalOpex": "Total OPEX",
+    "totalCapex": "Total CAPEX"
   }
 }

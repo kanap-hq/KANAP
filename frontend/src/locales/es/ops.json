@@ -544,14 +544,17 @@
       "year": "Año",
       "opexColumns": "Columnas OPEX",
       "capexColumns": "Columnas CAPEX",
-      "freezeData": "Congelar datos",
+      "freezeData": "Congelar",
       "freezing": "Congelando…",
-      "unfreezeData": "Descongelar datos",
+      "unfreezeData": "Descongelar",
       "unfreezing": "Descongelando…",
       "updating": "Actualizando estado de congelación…",
       "frozen": "Congelado",
       "editable": "Editable",
-      "hidden": "Oculta"
+      "hidden": "Oculta",
+      "column": "Columna",
+      "both": "Ambas",
+      "selectCell": "{{column}}: {{nature}}"
     },
     "columnReset": {
       "title": "Restablecer columna presupuestaria",
@@ -1454,6 +1457,8 @@
     "changeType": "Cambiar tipo…",
     "typeOpex": "OPEX",
     "typeCapex": "CAPEX",
-    "line": "Línea presupuestaria"
+    "line": "Línea presupuestaria",
+    "totalOpex": "Total OPEX",
+    "totalCapex": "Total CAPEX"
   }
 }

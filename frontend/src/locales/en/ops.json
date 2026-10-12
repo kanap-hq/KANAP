@@ -544,14 +544,17 @@
       "year": "Year",
       "opexColumns": "OPEX columns",
       "capexColumns": "CAPEX columns",
-      "freezeData": "Freeze data",
+      "freezeData": "Freeze",
       "freezing": "Freezing…",
-      "unfreezeData": "Unfreeze data",
+      "unfreezeData": "Unfreeze",
       "unfreezing": "Unfreezing…",
       "updating": "Updating freeze status…",
       "frozen": "Frozen",
       "editable": "Editable",
-      "hidden": "Hidden"
+      "hidden": "Hidden",
+      "column": "Column",
+      "both": "Both",
+      "selectCell": "{{column}}: {{nature}}"
     },
     "columnReset": {
       "title": "Reset budget column",
@@ -1454,6 +1457,8 @@
     "changeType": "Change type…",
     "typeOpex": "OPEX",
     "typeCapex": "CAPEX",
-    "line": "Budget line"
+    "line": "Budget line",
+    "totalOpex": "Total OPEX",
+    "totalCapex": "Total CAPEX"
   }
 }

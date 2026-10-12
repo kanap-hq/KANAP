@@ -13,7 +13,9 @@ vi.mock('react-i18next', () => {
   };
   return { useTranslation: () => translation };
 });
-vi.mock('../api', () => ({ default: { get: vi.fn() } }));
+vi.mock('../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
+const frozen = vi.hoisted(() => ({ opex: false, capex: false }));
+vi.mock('../hooks/useFreezeState', () => ({ useFreezeState: () => ({ data: { summary: { scopes: { opex: { budget: { frozen: frozen.opex } }, capex: { budget: { frozen: frozen.capex } } } } } }) }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true, profile: { id: 'u-1' } }) }));
 vi.mock('../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'test' }) }));
@@ -59,10 +61,12 @@ vi.mock('../components/ServerDataGrid', async (importOriginal) => {
 });
 
 import api from '../api';
+import { budgetFooterFixture } from '../test/budgetFooterFixture';
 import BudgetListPage from './budget/BudgetListPage';
 import { DEFAULT_BUDGET_COLUMNS } from '../services/budgetColumns';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
+const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
 
 const textFilter = (col: string, filter: string) => ({ [col]: { filterType: 'text', type: 'contains', filter } });
 const settle = () => act(async () => { await vi.advanceTimersByTimeAsync(700); });
@@ -79,13 +83,16 @@ function runOnVirtualTime() {
 }
 
 describe.each([
-  { name: 'OPEX list', Page: BudgetListPage, totals: '/budget-lines/summary/totals', rows: '/budget-lines/summary', col: 'product_name', search: '' },
-  { name: 'OPEX list with a filter in the URL', Page: BudgetListPage, totals: '/budget-lines/summary/totals', rows: '/budget-lines/summary', col: 'product_name', search: '?filters=' + encodeURIComponent(JSON.stringify(textFilter('product_name', 'cloud'))) },
+  { name: 'OPEX list', Page: BudgetListPage, totals: '/budget-lines/summary/aggregate', rows: '/budget-lines/summary', col: 'product_name', search: '' },
+  { name: 'OPEX list with a filter in the URL', Page: BudgetListPage, totals: '/budget-lines/summary/aggregate', rows: '/budget-lines/summary', col: 'product_name', search: '?filters=' + encodeURIComponent(JSON.stringify(textFilter('product_name', 'cloud'))) },
 ])('$name footer totals', ({ Page, totals, rows, col, search }) => {
   let stored = new Map<string, string>();
   beforeEach(() => {
     grid.api = null;
+    frozen.opex = frozen.capex = false;
     get.mockReset();
+    post.mockReset();
+    post.mockImplementation(async (_url, body) => budgetFooterFixture(body.spec.measures));
     window.sessionStorage.clear();
     runOnVirtualTime();
     // jsdom has no ResizeObserver (the grid only uses it to size itself) and no localStorage
@@ -110,10 +117,9 @@ describe.each([
     vi.unstubAllGlobals();
   });
 
-  const totalsCalls = () => get.mock.calls.filter(([url]) => url === totals);
+  const totalsCalls = () => post.mock.calls.filter(([url]) => url === totals);
   const filtersOf = (call: unknown[]) => {
-    const raw = (call[1] as { params: { filters?: string } }).params.filters;
-    return raw ? JSON.parse(raw) : {};
+    return (call[1] as { query: { filters: unknown } }).query.filters;
   };
 
   const renderPage = () => {
@@ -136,7 +142,7 @@ describe.each([
     await settle();
     expect(totalsCalls()).toHaveLength(1);
     expect(filtersOf(totalsCalls()[0])).toEqual(search ? textFilter(col, 'cloud') : {});
-    expect((totalsCalls()[0][1] as { params: { fte?: string } }).params.fte).toBe('fte_yBudget');
+    expect(totalsCalls()[0][1].spec.measures).toContainEqual({ id: 'fte_yBudget', fn: 'sum', field: 'fte_yBudget' });
   }, 20_000);
 
   it('asks the totals once per distinct query: once on load, once more on a filter change, none on a sort', async () => {
@@ -169,6 +175,16 @@ describe.each([
     fireEvent.click(screen.getByRole('button', { name: 'delete-selected' }));
     await settle();
     expect(totalsCalls()).toHaveLength(3);
-    expect((totalsCalls()[2][1] as { params: unknown }).params).toEqual((totalsCalls()[1][1] as { params: unknown }).params);
+    expect(totalsCalls()[2][1]).toEqual(totalsCalls()[1][1]);
   }, 20_000);
+  it('the real grid renders a lock only on the frozen nature and keeps Total unlocked', async () => {
+    frozen.opex = true;
+    renderPage();
+    await waitFor(() => expect(grid.api).not.toBeNull());
+    await settle();
+    const cells = () => Array.from(document.querySelectorAll('.ag-floating-bottom [aria-label="operations.freeze.frozen"]'));
+    await waitFor(() => expect(cells()).toHaveLength(1));
+    expect(cells()[0].closest('.ag-row')?.querySelector('[col-id="product_name"]')).toHaveTextContent('budget.totalOpex');
+  }, 20_000);
+
 });

@@ -544,14 +544,17 @@
       "year": "Jahr",
       "opexColumns": "OPEX-Spalten",
       "capexColumns": "CAPEX-Spalten",
-      "freezeData": "Daten einfrieren",
+      "freezeData": "Einfrieren",
       "freezing": "Einfrieren…",
-      "unfreezeData": "Daten auftauen",
+      "unfreezeData": "Auftauen",
       "unfreezing": "Auftauen…",
       "updating": "Einfrierstatus wird aktualisiert…",
       "frozen": "Eingefroren",
       "editable": "Bearbeitbar",
-      "hidden": "Ausgeblendet"
+      "hidden": "Ausgeblendet",
+      "column": "Spalte",
+      "both": "Beide",
+      "selectCell": "{{column}}: {{nature}}"
     },
     "columnReset": {
       "title": "Budgetspalte zurücksetzen",
@@ -1454,6 +1457,8 @@
     "changeType": "Typ ändern…",
     "typeOpex": "OPEX",
     "typeCapex": "CAPEX",
-    "line": "Budgetzeile"
+    "line": "Budgetzeile",
+    "totalOpex": "Gesamt OPEX",
+    "totalCapex": "Gesamt CAPEX"
   }
 }
