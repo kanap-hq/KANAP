@@ -742,11 +742,12 @@
       "dimensionRequired": "Wählen Sie eine Dimension."
     },
     "recommended": {
-      "action": "Empfohlene Dimensionen hinzufügen",
+      "action": "Empfohlene Dimensionen",
       "title": "Empfohlene Dimensionen hinzufügen",
       "subtitle": "Vorgefertigte Dimensionen mit ihren Werten, für OPEX- und CAPEX-Positionen. Sie können sie danach umbenennen, ändern oder löschen.",
       "dimensions": "Dimensionen",
       "present": "Bereits vorhanden",
+      "presentAs": "Bereits vorhanden ({{name}})",
       "language": "Sprache der Namen",
       "submit": "Hinzufügen",
       "names": {

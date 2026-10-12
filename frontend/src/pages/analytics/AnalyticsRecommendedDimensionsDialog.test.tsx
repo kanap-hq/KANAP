@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 
 const translation = vi.hoisted(() => {
-  const t = (key: string) => key;
+  const t = (key: string, opts?: Record<string, unknown>) => (opts && 'name' in opts ? `${key}:${opts.name}` : key);
   return { t, i18n: { language: 'fr', resolvedLanguage: 'fr' } };
 });
 vi.mock('react-i18next', () => ({
@@ -21,11 +21,11 @@ import AnalyticsRecommendedDimensionsDialog from './AnalyticsRecommendedDimensio
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
 const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
 
-// An older tenant: its priority is there (the CAPEX one), the rest is not.
+// An older tenant: its priority is there (the CAPEX one), its investment type stands for the purpose.
 const STATE = [
   { code: 'cost_pool', present: false, axis_id: null, name: null, starting: true },
   { code: 'it_tower', present: false, axis_id: null, name: null, starting: true },
-  { code: 'purpose', present: false, axis_id: null, name: null, starting: true },
+  { code: 'purpose', present: true, axis_id: 'ax-investment', name: 'Investment type', starting: true },
   { code: 'priority', present: true, axis_id: 'ax-priority', name: 'Priority', starting: true },
   { code: 'recurrence', present: false, axis_id: null, name: null, starting: false },
 ];
@@ -57,9 +57,12 @@ describe('AnalyticsRecommendedDimensionsDialog', () => {
     expect(get).toHaveBeenCalledWith('/analytics-axes/recommended');
     expect(box('it_tower').checked).toBe(true);
     expect(box('purpose').checked).toBe(true);
+    expect(box('purpose').disabled).toBe(true);
     expect(box('priority').checked).toBe(true);
     expect(box('priority').disabled).toBe(true);
-    expect(screen.getAllByText('analytics.recommended.present')).toHaveLength(1);
+    // Greyed with the name of the dimension that stands for it.
+    expect(screen.getByText('analytics.recommended.presentAs:Investment type')).toBeInTheDocument();
+    expect(screen.getByText('analytics.recommended.presentAs:Priority')).toBeInTheDocument();
     expect(box('recurrence').checked).toBe(false);
     expect(box('recurrence').disabled).toBe(false);
     // The screen language by default.
@@ -74,7 +77,8 @@ describe('AnalyticsRecommendedDimensionsDialog', () => {
     fireEvent.click(box('recurrence'));
     fireEvent.click(screen.getByRole('button', { name: 'analytics.recommended.submit' }));
     await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
-    expect(post).toHaveBeenCalledWith('/analytics-axes/recommended', { codes: ['cost_pool', 'purpose', 'recurrence'], language: 'fr' });
+    // The purpose is never sent: the investment type stands for it.
+    expect(post).toHaveBeenCalledWith('/analytics-axes/recommended', { codes: ['cost_pool', 'recurrence'], language: 'fr' });
     await waitFor(() => expect(onAdded).toHaveBeenCalledWith({
       created: [{ code: 'cost_pool', axis_code: 'default', axis_id: 'a1', name: 'Nature de coût', values_created: 8 }],
       existing: [],

@@ -742,11 +742,12 @@
       "dimensionRequired": "Choisissez une dimension."
     },
     "recommended": {
-      "action": "Ajouter les dimensions recommandées",
+      "action": "Dimensions recommandées",
       "title": "Ajouter les dimensions recommandées",
       "subtitle": "Des dimensions prêtes à l'emploi avec leurs valeurs, pour les lignes OPEX et CAPEX. Vous pourrez les renommer, les modifier ou les supprimer ensuite.",
       "dimensions": "Dimensions",
       "present": "Déjà présente",
+      "presentAs": "Déjà présente ({{name}})",
       "language": "Langue des noms",
       "submit": "Ajouter",
       "names": {

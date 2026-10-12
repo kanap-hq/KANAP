@@ -116,7 +116,8 @@ export default function AnalyticsRecommendedDimensionsDialog({ open, onClose, on
                   </Typography>
                   {item.present && (
                     <Typography component="span" sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>
-                      {t('analytics.recommended.present')}
+                      {/* The dimension that stands for it, by its own name (an older tenant's Investment type for the purpose). */}
+                      {item.name ? t('analytics.recommended.presentAs', { name: item.name }) : t('analytics.recommended.present')}
                     </Typography>
                   )}
                 </Box>
