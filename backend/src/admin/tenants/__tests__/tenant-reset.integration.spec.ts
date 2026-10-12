@@ -33,7 +33,8 @@ import {
 // its purge loop. Tenants are committed (the services open their own connections) and removed
 // at the end of each spec.
 
-const DEFAULT_METADATA = { it_ops: catalogToMetadata(DEFAULT_CLASSIFICATION_CATALOG) };
+// A new tenant stores its seed language (lot D): English when it is created without one.
+const DEFAULT_METADATA = { it_ops: catalogToMetadata(DEFAULT_CLASSIFICATION_CATALOG), language: 'en' };
 
 async function tenantRow(tenantId: string) {
   const [row] = await dataSource.query(

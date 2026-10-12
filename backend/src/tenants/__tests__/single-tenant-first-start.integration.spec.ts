@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import dataSource from '../../data-source';
-import { createSingleTenantOnFirstStart } from '../single-tenant-provisioning';
+import { createSingleTenantOnFirstStart, defaultTenantLanguage } from '../single-tenant-provisioning';
 import {
   buildServices,
   cleanupTenants,
@@ -14,7 +14,8 @@ import {
 
 // First start of a single-tenant installation (main.ts): the tenant it creates gets the default
 // global chart of accounts, as a cloud tenant does at activation; a second start creates
-// nothing more, and an installation whose tenant already exists is never changed.
+// nothing more, and an installation whose tenant already exists is never changed. The recommended
+// dimensions come in the language of DEFAULT_TENANT_LANGUAGE, stored with the tenant.
 
 async function chartsOf(tenantId: string) {
   return inTenant(tenantId, (manager) => manager.query(
@@ -77,7 +78,36 @@ async function testExistingInstallationUnchanged() {
   }
 }
 
+async function testFirstStartLanguage() {
+  assert.deepEqual(
+    [{}, { DEFAULT_TENANT_LANGUAGE: 'de' }, { DEFAULT_TENANT_LANGUAGE: 'fr-FR' }, { DEFAULT_TENANT_LANGUAGE: 'it' }].map((env) => defaultTenantLanguage(env)),
+    ['en', 'de', 'fr', 'en'],
+  );
+  const svc = buildServices();
+  const slug = `rs-onprem-de-${randomUUID().slice(0, 8)}`;
+  let tenantId: string | undefined;
+  try {
+    const log = console.log;
+    console.log = () => undefined;
+    try {
+      const language = defaultTenantLanguage({ DEFAULT_TENANT_LANGUAGE: 'de' });
+      assert.equal(await createSingleTenantOnFirstStart(dataSource, svc.tenants, svc.baseline, { slug, name: 'On-prem DE', language }), true);
+    } finally {
+      console.log = log;
+    }
+    const [row] = await dataSource.query(`SELECT id, metadata->>'language' AS language FROM tenants WHERE slug = $1`, [slug]);
+    tenantId = row.id;
+    assert.equal(row.language, 'de', 'stored with the tenant');
+    const names = await inTenant(tenantId!, (manager) => manager.query(
+      `SELECT name FROM analytics_axes WHERE tenant_id = $1 ORDER BY sort_order`, [tenantId]));
+    assert.deepEqual(names.map((axis: { name: string }) => axis.name), ['Kostenart', 'IT-Bereich', 'Zweck', 'Priorität']);
+  } finally {
+    await cleanupTenants([tenantId]);
+  }
+}
+
 runSpecs('single-tenant-first-start.integration.spec', [
+  testFirstStartLanguage,
   testFirstStartProvisionsTheChart,
   testExistingInstallationUnchanged,
 ]).catch((err) => {

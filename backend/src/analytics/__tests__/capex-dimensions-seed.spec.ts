@@ -10,9 +10,10 @@ import {
   CAPEX_DIMENSION_SQL as MIGRATION_SQL,
 } from '../../migrations/1853980000000-capex-criteria-dimensions';
 
-// The seed of the three CAPEX dimensions (`seedTenantDefaults`) and migration 1853980000000, which
-// gives the existing tenants the same dimensions with its own copy of the table and of the SQL: both
-// copies must stay equal (codes, names, values and their order, statements). No database.
+// The frozen table of the three CAPEX dimensions older tenants received (`capex-dimensions.seed.ts`)
+// and migration 1853980000000, which gave the tenants of its time the same dimensions with its own
+// copy of the table and of the SQL: both copies must stay equal (codes, names, values and their
+// order, statements). New tenants get the recommended dimensions instead. No database.
 
 function testTablesAreEqual() {
   const migration = CAPEX_CRITERIA.map((criterion) => ({
@@ -28,7 +29,7 @@ function testStatementsAreEqual() {
 }
 
 function testTable() {
-  assert.deepEqual(CAPEX_DIMENSION_LANGUAGES, ['en'], 'English only until lot T');
+  assert.deepEqual(CAPEX_DIMENSION_LANGUAGES, ['en'], 'English only: the table is frozen');
   const table = capexDimensionTable();
   assert.deepEqual(table.map((dimension) => dimension.code), ['ppe_type', 'investment_type', 'priority'], 'codes, in their order');
   assert.deepEqual(table.map((dimension) => dimension.name), ['PP&E type', 'Investment type', 'Priority']);

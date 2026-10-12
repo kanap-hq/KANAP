@@ -67,15 +67,16 @@ This document describes how the Reporting section is structured, what is impleme
 
 ### Chargeback (Phase 2 foundation)
 
+- Both chargeback reports open on OPEX lines; a line type switch (All, OPEX, CAPEX, kept in `?scope=`) adds the CAPEX lines, spread on their amount of the year, with a one-line note saying so under the filters. The type goes into the request, the query key and the exported file names.
 - Global Chargeback (`/reports/chargeback/global`)
-  - Filters: Year, Column (budget/follow_up/landing/revision), section toggles (Detailed allocations, Company totals, KPIs).
+  - Filters: Line type, Year, Column (budget/follow_up/landing/revision), section toggles (Detailed allocations, Company totals, KPIs).
   - Company section: grid of company totals (reporting currency) plus a horizontal bar chart mirroring the table; shown ahead of the detailed allocations.
   - Detailed table: grouped by company with subtotal rows, department lines underneath, and extra columns for headcount and cost-per-user (includes a “Common Costs” bucket when no department is assigned). Each row exposes both converted (`amount`) and raw (`amountRaw`) values.
   - KPI deck: tabular metrics per company (IT costs vs turnover, cost per user/IT user) with a totals row that recomputes ratios from the converted totals; raw fields are retained for CSV/analytics.
   - Exports: CSV wired to the detailed table; PNG export for the bar chart; print view leverages `ReportLayout`.
   - Backend: `GET /reports/chargeback/global` recomputes allocation shares from the active method, resolves FX rates per version, aggregates reporting currency totals alongside raw amounts (`total`, `totalRaw`), and enriches the result with headcount/IT user/turnover data (millions → absolute currency).
 - Company Chargeback (`/reports/chargeback/company`)
-  - Filters: Company, Year, Column (budget/follow_up/landing/revision), section toggles (Department totals, Chargeback items, KPIs).
+  - Filters: Line type, Company, Year, Column (budget/follow_up/landing/revision), section toggles (Department totals, Chargeback items, KPIs).
   - Department totals: aggregates the selected company’s allocations per department with “Common Costs” capturing unassigned spend, plus a mirrored bar chart. Shares and cost-per-user values are computed from the reporting currency total while still exposing `amountRaw`.
   - Chargeback items: itemised spend contributing to the company chargeback with allocation method, share of total, and a pinned footer total (reporting currency). Raw totals remain available for exports.
   - KPI deck: mirrors the global layout but scoped to the selected company, and appends a global KPI comparison row. Ratios rely on converted totals; raw values persist for auditing.
@@ -150,15 +151,16 @@ This document describes how the Reporting section is structured, what is impleme
 
 ### Data Access — Chargeback
 
-- Global: `GET /reports/chargeback/global?year=2025&metric=budget`
+- Both routes (and the `GET /reports/chargeback` alias of the global one) take `scope`: `opex` (default), `capex` or `all`; any other value is a 400. The response echoes `scope`.
+- Global: `GET /reports/chargeback/global?year=2025&metric=budget&scope=opex`
   - Returns reporting totals (`total`), raw totals (`totalRaw`), `reportingCurrency`, and the `detailed`, `companies`, and `kpis` collections.
   - `detailed`: allocation rows per company/department (residual company costs emitted as “Common Costs”) with both converted (`amount`) and raw (`amountRaw`) values, plus headcount/cost-per-user metadata for subtotal calculations.
   - `companies`: per-company reporting totals feeding the grid and bar chart; `amountRaw` accompanies each record for exports.
   - `kpis`: enriched totals with raw amount (`amountRaw`) and turnover (`turnoverRaw`) for accurate ratio rollups; converted fields are pre-rounded to two decimals.
-- Company: `GET /reports/chargeback/company?companyId=:id&year=2025&metric=budget`
+- Company: `GET /reports/chargeback/company?companyId=:id&year=2025&metric=budget&scope=opex`
   - Returns company summary, `departments`, `items`, and `kpis` for the selected company, alongside `total`, `totalRaw`, and `reportingCurrency`.
   - `departments`: per-department aggregation with reporting totals, raw totals, share of total, headcount, and cost-per-user metrics.
-  - `items`: itemised allocations including allocation method labels, reporting totals, raw totals, and share of total.
+  - `items`: itemised allocations including the line's `itemNumber` (its BL reference) and `nature`, allocation method labels, reporting totals, raw totals, and share of total.
   - `kpis`: single-row KPI view mirroring the global layout (amount, headcount, IT users, turnover, ratios) with dual reporting/raw fields for downstream processing.
 
 ## Adding a New Report (Checklist)
@@ -181,10 +183,10 @@ To support arbitrary year ranges, groupings, and chargeback:
   - Params: `metric`, `groupBy`, `year|fromYear&toYear`, `top`, `order`, `filters[...]`.
   - Returns: aggregated totals grouped by dimension (and optionally by year).
 - `GET /reports/chargeback/global`:
-  - Params: `year`, `metric`.
+  - Params: `year`, `metric`, `scope`.
   - Returns: per-company summary, department allocations, and KPIs across all companies.
 - `GET /reports/chargeback/company`:
-  - Params: `companyId`, `year`, `metric`.
+  - Params: `companyId`, `year`, `metric`, `scope`.
   - Returns: department rollups, allocation items, and KPIs for the selected company (used for invoicing detail).
 - Performance: cache by tenant + params; consider materialized views for annual summaries and chargeback.
 

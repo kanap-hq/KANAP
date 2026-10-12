@@ -1,18 +1,20 @@
 import { EntityManager } from 'typeorm';
 
 /**
- * The three CAPEX dimensions every tenant starts with (plan planning/budget-unifie.md, lot C1):
- * the PP&E type, the investment type and the priority of a CAPEX line, as ordinary analytics
- * dimensions with fixed codes. Used for CAPEX lines, required, enabled, their values in their
- * business order. An administrator may rename, extend, disable or delete them like any other.
+ * The three CAPEX dimensions the tenants created before the recommended dimensions received
+ * (plan planning/budget-unifie.md, lot C1): the PP&E type, the investment type and the priority
+ * of a CAPEX line, as ordinary analytics dimensions with fixed codes. Used for CAPEX lines,
+ * required, enabled, their values in their business order. Those tenants keep them; an
+ * administrator may rename, extend, disable or delete them like any other.
  *
- * `ensureCapexDimensions` creates what a tenant lacks, called by `seedTenantDefaults` (tenant
- * creation, trial activation, reset, first start on-premise). Migration 1853980000000 gives the
- * existing tenants the same dimensions with its own copy of this table and of the SQL below (a
- * migration never depends on application code); a spec checks both copies are equal.
+ * A frozen table: new tenants get the recommended dimensions instead
+ * (`recommended-dimensions.seed.ts`). Migration 1853980000000 gave the tenants of its time the
+ * same dimensions with its own copy of this table and of the SQL below; a spec checks both copies
+ * are equal. The sample data's empty-space check still accepts these values, and specs use
+ * `ensureCapexDimensions` to build a tenant with the three dimensions.
  */
 
-/** The languages the names exist in. Lot T adds fr, de and es without touching the logic. */
+/** The languages the names exist in: English only (the table is frozen). */
 export type CapexDimensionLanguage = 'en';
 
 export const CAPEX_DIMENSION_LANGUAGES: readonly CapexDimensionLanguage[] = ['en'];

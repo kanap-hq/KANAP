@@ -152,7 +152,7 @@ describe('Top increase / decrease report item links', () => {
 });
 
 describe('Company chargeback report item links', () => {
-  it('links an OPEX line, and leaves common costs and the total row as text', async () => {
+  it('links an OPEX and a CAPEX line, and leaves common costs and the total row as text', async () => {
     get.mockImplementation(async (url: string) => {
       if (url === '/reports/chargeback/company') {
         return {
@@ -166,6 +166,7 @@ describe('Company chargeback report item links', () => {
             items: [
               { versionId: 'v1', itemId: 'o1', itemName: 'Opex line', allocationMethod: 'headcount', allocationMethodLabel: 'Headcount', amount: 200, amountRaw: 200, sharePct: 66.67 },
               { versionId: 'v2', itemId: null, itemName: 'Common costs', allocationMethod: 'default', allocationMethodLabel: 'Default', amount: 100, amountRaw: 100, sharePct: 33.33 },
+              { versionId: 'v3', itemId: 'c1', itemNumber: 119, nature: 'capex', itemName: 'Capex line', allocationMethod: 'it_users', allocationMethodLabel: 'IT users', amount: 0, amountRaw: 0, sharePct: 0 },
             ],
             itemsTotal: 300,
             itemsTotalRaw: 300,
@@ -180,9 +181,10 @@ describe('Company chargeback report item links', () => {
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     const grid = await screen.findByTestId('grid-itemName');
     expectNewTabLink(grid, 'Opex line', '/ops/budget/o1');
+    expectNewTabLink(grid, 'Capex line', '/ops/budget/BL-119');
     expect(within(grid).getByText('Common costs').closest('a')).toBeNull();
     expect(within(grid).getByText('reports.columns.total').closest('a')).toBeNull();
-    expect(within(grid).getAllByRole('link')).toHaveLength(1);
+    expect(within(grid).getAllByRole('link')).toHaveLength(2);
   });
 });
 

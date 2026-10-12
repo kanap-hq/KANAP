@@ -18,6 +18,10 @@ export interface DeleteConfirmDialogProps {
   onConfirm: (options?: { deleteRelated?: boolean }) => void;
   title?: string;
   message?: string;
+  /** Replaces the generic warning (which says a referenced item is kept) when the delete removes the references too. */
+  warning?: string;
+  /** The main action's label; "Delete" by default ("Delete anyway" when the delete removes dependants). */
+  confirmLabel?: string;
   itemCount: number;
   items?: Array<{ id: string; name: string }>;
   loading?: boolean;
@@ -35,6 +39,8 @@ export default function DeleteConfirmDialog({
   onConfirm,
   title,
   message,
+  warning,
+  confirmLabel,
   itemCount,
   items = [],
   loading = false,
@@ -57,13 +63,13 @@ export default function DeleteConfirmDialog({
       title={title || t('delete.confirmTitle')}
       onClose={() => { if (!loading) onClose(); }}
       onSave={() => onConfirm(cascadeOption ? { deleteRelated } : undefined)}
-      saveLabel={loading ? t('status.deleting') : t('buttons.delete')}
+      saveLabel={loading ? t('status.deleting') : confirmLabel ?? t('buttons.delete')}
       saveVariant="action-danger"
       saveLoading={loading}
       cancelLabel={t('buttons.cancel')}
     >
       <Alert severity="warning" sx={{ mb: 2 }}>
-        {t('delete.warningMessage')}
+        {warning ?? t('delete.warningMessage')}
       </Alert>
 
       {message && (

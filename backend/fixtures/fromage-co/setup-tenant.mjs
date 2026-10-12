@@ -631,6 +631,10 @@ const ANALYTICS_AXES = [
   { code: 'nature', name: 'Cost type', description: 'What the expense pays for: licenses, staff augmentation, cloud, hardware…', sort_order: 10 },
   { code: 'reference', name: 'Budget reference', description: 'Groups the OPEX and CAPEX lines of one order or one competence center, whatever the supplier', sort_order: 20 },
   { code: 'recurrence', name: 'Recurrence', description: 'Recurring or one-off expense', sort_order: 30 },
+  // The CAPEX columns of 15-capex-items.csv. Tenants created before the recommended dimensions
+  // have these three already; a newer tenant has a priority for both natures and lacks the other two.
+  { code: 'ppe_type', name: 'PP&E type', description: 'Hardware or software asset', applies_to: 'capex', sort_order: 40 },
+  { code: 'investment_type', name: 'Investment type', description: 'Why the investment is made', applies_to: 'capex', sort_order: 50 },
 ];
 
 async function ensureAnalyticsAxes() {

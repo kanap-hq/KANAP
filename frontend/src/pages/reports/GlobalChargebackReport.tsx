@@ -25,6 +25,8 @@ import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
 import api from '../../api';
 import { MetricKey, horizontalBarChartHeight, metricFileName, useReportMetric } from './reportMetrics';
 import { escapeTooltipText } from './tooltipText';
+import { useReportScope } from './useReportScope';
+import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useLocale } from '../../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
@@ -128,6 +130,9 @@ export default function GlobalChargebackReport() {
 
   const [year, setYear] = useState<number>(currentYear);
   const [metric, setMetric] = useReportMetric(budgetColumns);
+  // OPEX by default: the chargeback of before; CAPEX or both on request.
+  const [scope, setScope] = useReportScope('opex');
+  const scopeLabel = t(`operations.scope.${scope}`);
   const [showCompanies, setShowCompanies] = useState(true);
   const [showDetailed, setShowDetailed] = useState(true);
   const [showKpis, setShowKpis] = useState(true);
@@ -149,14 +154,14 @@ export default function GlobalChargebackReport() {
     [locale],
   );
 
-  const queryKey = ['global-chargeback-report', year, metric];
+  const queryKey = ['global-chargeback-report', scope, year, metric];
   const { data, isLoading, isFetching, refetch } = useQuery<GlobalChargebackReportResponse>({
     queryKey,
     // The preselected column is the tenant's default: wait for it rather than fetch twice.
     enabled: budgetColumns.ready,
     queryFn: async () => {
       const response = await api.get<GlobalChargebackReportResponse>('/reports/chargeback/global', {
-        params: { year, metric },
+        params: { year, metric, scope },
       });
       return response.data;
     },
@@ -399,7 +404,7 @@ export default function GlobalChargebackReport() {
 
   const flowsGridApiRef = useRef<any>(null);
   const exportFlowsCsv = () => {
-    flowsGridApiRef.current?.exportDataAsCsv?.({ fileName: `global-chargeback-flows-netted-${year}-${metricFile}.csv` });
+    flowsGridApiRef.current?.exportDataAsCsv?.({ fileName: `global-chargeback-flows-netted-${scope}-${year}-${metricFile}.csv` });
   };
 
   const chartOptions = useMemo(() => {
@@ -450,11 +455,11 @@ export default function GlobalChargebackReport() {
   }, [chartData, formatCurrency, formatNumber, metricLabel, t, totalAmount, year]);
 
   const exportCsv = () => {
-    detailedGridApiRef.current?.exportDataAsCsv?.({ fileName: `global-chargeback-detailed-${year}-${metricFile}.csv` });
+    detailedGridApiRef.current?.exportDataAsCsv?.({ fileName: `global-chargeback-detailed-${scope}-${year}-${metricFile}.csv` });
   };
 
   const exportChart = () => {
-    chartRef.current?.download(`global-chargeback-company-${year}-${metricFile}`);
+    chartRef.current?.download(`global-chargeback-company-${scope}-${year}-${metricFile}`);
   };
 
   const kpiTotals = useMemo(() => {
@@ -494,6 +499,7 @@ export default function GlobalChargebackReport() {
       subtitle={t("reports.globalChargeback.subtitle")}
       filters={(
         <>
+          <ItemScopeTabs allowAll value={scope} onChange={setScope} />
           <TextField
             select
             size="small"
@@ -545,12 +551,17 @@ export default function GlobalChargebackReport() {
       onExportChartPng={exportChart}
     >
       <Stack spacing={2}>
+        {scope !== 'opex' && (
+          <Typography role="note" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+            {t('reports.shared.capexYearAmountNote')}
+          </Typography>
+        )}
         <Paper variant="outlined" sx={{ p: 2 }} className="report-print-summary">
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="space-between">
             <Box>
               <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{t("reports.globalChargeback.overallTotal")}</Typography>
               <Typography variant="h5" sx={{ fontWeight: 600 }}>{formatCurrency(totalAmount)}</Typography>
-              <Typography variant="body2" color="text.secondary">{`${metricLabel} • ${year}`}</Typography>
+              <Typography variant="body2" color="text.secondary">{`${scopeLabel} • ${metricLabel} • ${year}`}</Typography>
             </Box>
             <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(3, minmax(0, 1fr))' } }}>
               <Box>

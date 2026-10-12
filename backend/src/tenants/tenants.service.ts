@@ -11,7 +11,7 @@ import { DEFAULT_TASK_TYPES } from '../portfolio/portfolio-task-type.entity';
 import { DEFAULT_EMPLOYMENT_TYPES } from '../portfolio/portfolio-employment-type.entity';
 import { seedManagedDocsKnowledgeAssets } from '../knowledge/integrated-document-seed';
 import { ensureDefaultAnalyticsAxis } from '../analytics/analytics-axes.util';
-import { ensureCapexDimensions } from '../analytics/capex-dimensions.seed';
+import { ensureRecommendedDimensions, SeedLanguage, TENANT_LANGUAGE_METADATA_KEY, tenantSeedLanguage } from '../analytics/recommended-dimensions.seed';
 
 // Built-in roles configuration for newly created tenants.
 const BUILT_IN_ROLES: Array<{
@@ -367,14 +367,18 @@ export class TenantsService {
     );
   }
 
-  async createTenant(params: { slug: string; name: string }, opts?: { manager?: EntityManager }) {
+  /**
+   * `language`: the language of the seeded names (`seedTenantDefaults`), English when absent,
+   * stored in `metadata.language` of a new tenant. An existing tenant keeps its own.
+   */
+  async createTenant(params: { slug: string; name: string; language?: SeedLanguage }, opts?: { manager?: EntityManager }) {
     if (opts?.manager) {
       return this.createWithManager(params, opts.manager);
     }
     return this.repo.manager.transaction((manager) => this.createWithManager(params, manager));
   }
 
-  private async createWithManager(params: { slug: string; name: string }, manager: EntityManager) {
+  private async createWithManager(params: { slug: string; name: string; language?: SeedLanguage }, manager: EntityManager) {
     const repo = manager.getRepository(Tenant);
     const slug = normalizeTenantSlug(params.slug);
     if (isReservedTenantSlug(slug)) {
@@ -383,26 +387,35 @@ export class TenantsService {
     // Ignore tenants that were previously deleted when checking for existing
     const existing = await repo.findOne({ where: { slug, deleted_at: IsNull() } });
     if (existing) {
-      await this.seedTenantDefaults(manager, existing.id);
+      // An existing tenant keeps its stored language.
+      await this.seedTenantDefaults(manager, existing.id, { language: tenantSeedLanguage(existing.metadata) });
       return existing;
     }
-    const tenant = repo.create({ slug, name: params.name, status: TenantStatus.ACTIVE, metadata: { it_ops: catalogToMetadata(DEFAULT_CLASSIFICATION_CATALOG) } });
+    // The seed language is stored with the tenant: the reset seeds the dimensions in it again.
+    const language = params.language ?? 'en';
+    const tenant = repo.create({
+      slug,
+      name: params.name,
+      status: TenantStatus.ACTIVE,
+      metadata: { it_ops: catalogToMetadata(DEFAULT_CLASSIFICATION_CATALOG), [TENANT_LANGUAGE_METADATA_KEY]: language },
+    });
     const saved = await repo.save(tenant);
-    await this.seedTenantDefaults(manager, saved.id);
+    await this.seedTenantDefaults(manager, saved.id, { language });
     return saved;
   }
 
   /**
    * The defaults every tenant starts with: system and built-in roles with their permissions,
-   * the default analytics dimension and the three CAPEX dimensions (PP&E type, investment type,
-   * priority) with their values, task types, employment types, and the document libraries with
-   * their folders, types and templates. Idempotent: existing rows are kept. Also used to rebuild
-   * a tenant's starting state (TenantBaselineService).
+   * the default analytics dimension named as the cost pool and the other recommended dimensions
+   * (IT tower, purpose, priority) with their values, in `language` (English when absent; see
+   * `recommended-dimensions.seed.ts`), task types, employment types, and the document libraries
+   * with their folders, types and templates. Idempotent: existing rows are kept. Also used to
+   * rebuild a tenant's starting state (TenantBaselineService).
    */
-  async seedTenantDefaults(manager: EntityManager, tenantId: string) {
+  async seedTenantDefaults(manager: EntityManager, tenantId: string, opts?: { language?: SeedLanguage }) {
     await this.ensureSystemRoles(manager, tenantId);
     await ensureDefaultAnalyticsAxis(manager, tenantId);
-    await ensureCapexDimensions(manager, tenantId);
+    await ensureRecommendedDimensions(manager, tenantId, opts?.language ?? 'en');
     await this.seedDefaultTaskTypes(manager, tenantId);
     await this.seedDefaultEmploymentTypes(manager, tenantId);
     await this.seedDefaultDocumentLibraries(manager, tenantId);

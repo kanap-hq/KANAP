@@ -443,12 +443,12 @@ async function testNewTenantHasItsDefault() {
     const slug = `ax-boot-${randomUUID().slice(0, 8)}`;
     const tenant = await tenants.createTenant({ slug, name: 'Analytics bootstrap' }, { manager });
     const axes = await loadAnalyticsAxes(manager, tenant.id);
-    // The default, then the three CAPEX dimensions (lot C1).
+    // The default named as the cost pool, then the other recommended dimensions (lot D), for both natures, optional.
     const expected = [
-      ['default', null, true, null, false],
-      ['ppe_type', 'PP&E type', false, 'capex', true],
-      ['investment_type', 'Investment type', false, 'capex', true],
-      ['priority', 'Priority', false, 'capex', true],
+      ['default', 'Cost pool', true, null, false],
+      ['it_tower', 'IT tower', false, null, false],
+      ['purpose', 'Purpose', false, null, false],
+      ['priority', 'Priority', false, null, false],
     ];
     assert.deepEqual(axes.map((axis) => [axis.code, axis.name, axis.is_default, axis.applies_to, axis.required]), expected);
     // Creating the same slug again runs the seeds on the existing tenant: still one default, nothing more.

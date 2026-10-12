@@ -2,12 +2,14 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box, Button } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import PlaylistAddOutlinedIcon from '@mui/icons-material/PlaylistAddOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
-import { isAnalyticsActive, type AnalyticsAxis } from '../../services/analytics';
+import { isAnalyticsActive, type AnalyticsAxis, type RecommendedDimensionResult } from '../../services/analytics';
 import ChipToggleBar from '../../components/ChipToggleBar';
 import { lineTypeUsageLabel } from '../../constants/lineTypeUsage';
 import AnalyticsDimensionOrderDialog from './AnalyticsDimensionOrderDialog';
+import AnalyticsRecommendedDimensionsDialog from './AnalyticsRecommendedDimensionsDialog';
 
 type Props = {
   axes: AnalyticsAxis[];
@@ -19,14 +21,20 @@ type Props = {
   canEdit: boolean;
   /** Omitted when the user cannot create a dimension. */
   onCreate?: () => void;
+  /** Analytics administrators: adds the recommended dimensions, then reports what it created. Omitted otherwise. */
+  onRecommendedAdded?: (result: { created: RecommendedDimensionResult[]; existing: RecommendedDimensionResult[] }) => void;
 };
 
-/** One band of dimension toggles above the values grid, with New, Reorder and Edit (or Open) on the right. */
-export default function AnalyticsDimensionChipBar({ axes, selectedAxisId, label, onSelect, onEdit, canEdit, onCreate }: Props) {
+/**
+ * One band of dimension toggles above the values grid, with New, Add recommended (administrators),
+ * Reorder and Edit (or Open) on the right.
+ */
+export default function AnalyticsDimensionChipBar({ axes, selectedAxisId, label, onSelect, onEdit, canEdit, onCreate, onRecommendedAdded }: Props) {
   const { t } = useTranslation(['master-data', 'common']);
   const [reorderOpen, setReorderOpen] = React.useState(false);
+  const [recommendedOpen, setRecommendedOpen] = React.useState(false);
   const selectedAxis = axes.find((axis) => axis.id === selectedAxisId) ?? null;
-  const hasActions = !!onCreate || canEdit || !!selectedAxis;
+  const hasActions = !!onCreate || !!onRecommendedAdded || canEdit || !!selectedAxis;
   return (
     <>
       <ChipToggleBar
@@ -69,6 +77,15 @@ export default function AnalyticsDimensionChipBar({ axes, selectedAxisId, label,
                 {t('coa.chipBar.newChip')}
               </Button>
             )}
+            {onRecommendedAdded && (
+              <Button
+                variant="action"
+                startIcon={<PlaylistAddOutlinedIcon sx={{ fontSize: '14px !important' }} />}
+                onClick={() => setRecommendedOpen(true)}
+              >
+                {t('analytics.recommended.action')}
+              </Button>
+            )}
             {canEdit && (
               <Button
                 variant="action"
@@ -94,6 +111,13 @@ export default function AnalyticsDimensionChipBar({ axes, selectedAxisId, label,
         )}
       />
       {canEdit && <AnalyticsDimensionOrderDialog open={reorderOpen} onClose={() => setReorderOpen(false)} />}
+      {onRecommendedAdded && (
+        <AnalyticsRecommendedDimensionsDialog
+          open={recommendedOpen}
+          onClose={() => setRecommendedOpen(false)}
+          onAdded={onRecommendedAdded}
+        />
+      )}
     </>
   );
 }
