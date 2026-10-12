@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { TFunction } from 'i18next';
-import { DIMENSION_CODE_PATTERN, linesUsageText, proposeDimensionCode, usedLineCount } from './analyticsFields';
+import {
+  DIMENSION_CODE_PATTERN,
+  deleteConfirmation,
+  linesUsageText,
+  proposeDimensionCode,
+  usedLineCount,
+  valuesInUseMessage,
+} from './analyticsFields';
 
 describe('proposeDimensionCode', () => {
   it('lowercases, strips accents and turns spaces into dashes', () => {
@@ -43,5 +50,51 @@ describe('lines usage', () => {
     expect(linesUsageText(t, 'value', 1)).toBe('analytics.usage.valueLines:1');
     expect(linesUsageText(t, 'dimension', 0)).toBe('analytics.usage.dimensionUnused');
     expect(linesUsageText(t, 'value', 0)).toBe('analytics.usage.valueUnused');
+  });
+});
+
+describe('delete confirmations', () => {
+  // Every interpolation shows after the key, nested phrases included.
+  const t = ((key: string, opts?: Record<string, unknown>) => (
+    opts ? `${key}(${Object.entries(opts).map(([name, value]) => `${name}=${value}`).join(', ')})` : key
+  )) as unknown as TFunction;
+
+  it('deletes a dimension without values, or a value no line uses, without asking', () => {
+    expect(deleteConfirmation(t, { kind: 'dimension', name: 'Menu', valueCount: 0, lineCount: 0 })).toBeNull();
+    expect(deleteConfirmation(t, { kind: 'value', name: 'Dessert', lineCount: 0 })).toBeNull();
+  });
+
+  it('says the values of a dimension no line uses go too, with a plain Delete', () => {
+    expect(deleteConfirmation(t, { kind: 'dimension', name: 'Menu', valueCount: 3, lineCount: 0 })).toEqual({
+      title: 'analytics.forceDelete.title(name=Menu)',
+      body: 'analytics.forceDelete.dimensionValues(count=3)',
+      confirmLabel: 'common:buttons.delete',
+    });
+  });
+
+  it('gives the values and the distinct lines a used dimension loses, with Delete anyway', () => {
+    expect(deleteConfirmation(t, { kind: 'dimension', name: 'Menu', valueCount: 3, lineCount: 6 })).toEqual({
+      title: 'analytics.forceDelete.title(name=Menu)',
+      body: 'analytics.forceDelete.dimensionUsed(values=analytics.forceDelete.dimensionUsedValues(count=3), '
+        + 'lines=analytics.forceDelete.budgetLines(count=6))',
+      confirmLabel: 'analytics.forceDelete.confirmAnyway',
+    });
+  });
+
+  it('gives the lines a used value is removed from, with Delete anyway', () => {
+    expect(deleteConfirmation(t, { kind: 'value', name: 'Dessert', lineCount: 4 })).toEqual({
+      title: 'analytics.forceDelete.title(name=Dessert)',
+      body: 'analytics.forceDelete.valueUsed(count=4)',
+      confirmLabel: 'analytics.forceDelete.confirmAnyway',
+    });
+  });
+
+  it('counts the used values of a grid selection and the lines they leave', () => {
+    expect(valuesInUseMessage(t, [{ opex_count: 0, capex_count: 0 }, {}])).toBeNull();
+    expect(valuesInUseMessage(t, [
+      { opex_count: 2, capex_count: 1 },
+      { opex_count: 0, capex_count: 0 },
+      { opex_count: 0, capex_count: 3 },
+    ])).toBe('analytics.forceDelete.valuesUsed(count=2, lines=analytics.forceDelete.budgetLines(count=6))');
   });
 });

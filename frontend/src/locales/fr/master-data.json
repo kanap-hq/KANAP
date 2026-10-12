@@ -692,8 +692,20 @@
       "valueLines_other": "Utilisée par {{count}} lignes",
       "valueUnused": "Pas encore utilisée"
     },
-    "deleteBlocked": {
-      "dimensionHasValues": "Pour supprimer cette dimension, supprimez d'abord ses valeurs."
+    "forceDelete": {
+      "title": "Supprimer {{name}} ?",
+      "dimensionValues_one": "Sa valeur est supprimée aussi.",
+      "dimensionValues_other": "Ses {{count}} valeurs sont supprimées aussi.",
+      "dimensionUsedValues_one": "Sa valeur est supprimée",
+      "dimensionUsedValues_other": "Ses {{count}} valeurs sont supprimées",
+      "dimensionUsed": "{{values}}, et elle est retirée de {{lines}}. Ces données ne peuvent pas être récupérées.",
+      "valueUsed_one": "Elle est retirée de {{count}} ligne budgétaire. Ces données ne peuvent pas être récupérées.",
+      "valueUsed_other": "Elle est retirée de {{count}} lignes budgétaires. Ces données ne peuvent pas être récupérées.",
+      "valuesUsed_one": "{{count}} valeur sélectionnée est utilisée : elle est retirée de {{lines}}. Ces données ne peuvent pas être récupérées.",
+      "valuesUsed_other": "{{count}} valeurs sélectionnées sont utilisées : elles sont retirées de {{lines}}. Ces données ne peuvent pas être récupérées.",
+      "budgetLines_one": "{{count}} ligne budgétaire",
+      "budgetLines_other": "{{count}} lignes budgétaires",
+      "confirmAnyway": "Supprimer quand même"
     },
     "appliesToConflict": {
       "capex_one": "{{count}} ligne CAPEX a une valeur pour cette dimension. Elle la garde, masquée tant que la dimension est réservée aux lignes OPEX.",

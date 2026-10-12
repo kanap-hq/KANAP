@@ -692,8 +692,20 @@
       "valueLines_other": "Usado por {{count}} líneas",
       "valueUnused": "Aún sin usar"
     },
-    "deleteBlocked": {
-      "dimensionHasValues": "Para eliminar esta dimensión, elimine primero sus valores."
+    "forceDelete": {
+      "title": "¿Eliminar {{name}}?",
+      "dimensionValues_one": "También se elimina su valor.",
+      "dimensionValues_other": "También se eliminan sus {{count}} valores.",
+      "dimensionUsedValues_one": "Se elimina su valor",
+      "dimensionUsedValues_other": "Se eliminan sus {{count}} valores",
+      "dimensionUsed": "{{values}}, y se quita de {{lines}}. Estos datos no se pueden recuperar.",
+      "valueUsed_one": "Se quita de {{count}} línea presupuestaria. Estos datos no se pueden recuperar.",
+      "valueUsed_other": "Se quita de {{count}} líneas presupuestarias. Estos datos no se pueden recuperar.",
+      "valuesUsed_one": "{{count}} valor seleccionado está en uso: se quita de {{lines}}. Estos datos no se pueden recuperar.",
+      "valuesUsed_other": "{{count}} valores seleccionados están en uso: se quitan de {{lines}}. Estos datos no se pueden recuperar.",
+      "budgetLines_one": "{{count}} línea presupuestaria",
+      "budgetLines_other": "{{count}} líneas presupuestarias",
+      "confirmAnyway": "Eliminar de todos modos"
     },
     "appliesToConflict": {
       "capex_one": "{{count}} línea CAPEX tiene un valor para esta dimensión. Lo conserva, oculto mientras la dimensión sea solo para líneas OPEX.",

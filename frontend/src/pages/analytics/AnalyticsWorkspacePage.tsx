@@ -7,7 +7,7 @@ import { Alert, Box, Button, MenuItem, Stack, TextField, Typography } from '@mui
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useAuth } from '../../auth/AuthContext';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
-import { PropertyGroup, PropertyRow } from '../../components/design';
+import { KanapDialog, PropertyGroup, PropertyRow } from '../../components/design';
 import StatusLifecycleField from '../../components/fields/StatusLifecycleField';
 import LineTypeUsageSelect, { LineTypeUsageConflictNote } from '../../components/fields/LineTypeUsageSelect';
 import { ANALYTICS_AXES_QUERY_KEY, analyticsAxisLabel, axisAppliesTo, useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
@@ -33,6 +33,7 @@ import AnalyticsDescriptionField from './AnalyticsDescriptionField';
 import {
   ANALYTICS_LIST_PATH,
   analyticsRefusalField,
+  deleteConfirmation,
   usedLineCount,
   type AnalyticsField,
 } from './analyticsFields';
@@ -68,6 +69,7 @@ export default function AnalyticsWorkspacePage() {
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [pageError, setPageError] = React.useState<string | null>(null);
   const [deleting, setDeleting] = React.useState(false);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
   // Autosave never blocks the fields: writes queue one after the other, so a response never
   // overwrites a newer one, and results for a record the user has left are dropped.
   const chainRef = React.useRef<Promise<unknown>>(Promise.resolve());
@@ -152,19 +154,26 @@ export default function AnalyticsWorkspacePage() {
     [afterWrite, canEdit, data?.id, queryClient, t],
   );
 
-  const handleDelete = async () => {
+  /** `force`: the budget lines using the value lose it (the confirmation said so). */
+  const handleDelete = async (force: boolean) => {
     if (!data || !canDelete) return;
     const recordId = data.id;
     setDeleting(true);
     setPageError(null);
     try {
-      await deleteAnalyticsValue(recordId);
+      await (force ? deleteAnalyticsValue(recordId, { force: true }) : deleteAnalyticsValue(recordId));
+      setConfirmOpen(false);
       queryClient.removeQueries({ queryKey: ['analytics-categories', 'detail', recordId] });
       afterWrite(recordId);
       // The user may have moved to another value meanwhile: the result is not theirs to see.
       if (currentIdRef.current === recordId) handleClose();
     } catch (e) {
-      if (currentIdRef.current === recordId) setPageError(getApiErrorMessage(e, t, t('analytics.messages.deleteFailed')));
+      setConfirmOpen(false);
+      if (currentIdRef.current === recordId) {
+        setPageError(getApiErrorMessage(e, t, t('analytics.messages.deleteFailed')));
+        // Its counts may be stale (a line linked elsewhere): the next Delete asks with the new ones.
+        void queryClient.invalidateQueries({ queryKey: ['analytics-categories', 'detail', recordId] });
+      }
     } finally {
       setDeleting(false);
     }
@@ -188,8 +197,8 @@ export default function AnalyticsWorkspacePage() {
   const axis = data ? axes.byId.get(data.axis_id) : undefined;
   const dimensionLabel = axis ? axes.label(axis) : analyticsAxisLabel({ name: data?.axis_name ?? null }, t);
   const lineCount = usedLineCount(data?.opex_count, data?.capex_count);
-  // The server refuses deleting a value in use: Delete stays disabled while a line uses it.
-  const inUse = lineCount > 0;
+  // Unused, it goes at once; used, the dialog says the lines lose it ("Delete anyway"). Disabling stays possible.
+  const confirmation = data ? deleteConfirmation(t, { kind: 'value', name: data.name, lineCount }) : null;
   const disabled = !canEdit;
 
   const actions = canDelete && data ? (
@@ -197,8 +206,8 @@ export default function AnalyticsWorkspacePage() {
       variant="action-danger"
       startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}
       size="small"
-      onClick={() => void handleDelete()}
-      disabled={deleting || inUse}
+      onClick={() => (confirmation ? setConfirmOpen(true) : void handleDelete(false))}
+      disabled={deleting}
     >
       {t('common:buttons.delete')}
     </Button>
@@ -295,6 +304,21 @@ export default function AnalyticsWorkspacePage() {
           </Stack>
         )}
       </PortfolioDetailWorkspaceShell>
+      {confirmation && (
+        <KanapDialog
+          open={confirmOpen}
+          title={confirmation.title}
+          onClose={() => { if (!deleting) setConfirmOpen(false); }}
+          onSave={() => handleDelete(true)}
+          saveLabel={confirmation.confirmLabel}
+          saveVariant="action-danger"
+          saveLoading={deleting}
+        >
+          <Typography data-testid="analytics-delete-confirmation" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+            {confirmation.body}
+          </Typography>
+        </KanapDialog>
+      )}
     </Box>
   );
 }

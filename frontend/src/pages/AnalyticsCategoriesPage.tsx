@@ -18,7 +18,7 @@ import { ANALYTICS_AXES_QUERY_KEY, useAnalyticsAxes } from '../hooks/useAnalytic
 import { ANALYTICS_VALUE_ORDER_SORT, ANALYTICS_VALUES_ENDPOINT, isAnalyticsActive, type AnalyticsValue, type RecommendedDimensionResult } from '../services/analytics';
 import AnalyticsDimensionChipBar from './analytics/AnalyticsDimensionChipBar';
 import AnalyticsValueOrderDialog from './analytics/AnalyticsValueOrderDialog';
-import { ANALYTICS_DIMENSIONS_PATH, ANALYTICS_LIST_PATH } from './analytics/analyticsFields';
+import { ANALYTICS_DIMENSIONS_PATH, ANALYTICS_LIST_PATH, valuesInUseMessage } from './analytics/analyticsFields';
 import ForbiddenPage from './ForbiddenPage';
 import { statusColumnProps } from '../components/grid/statusColumn';
 import { lineTypeUsageColumnProps } from '../components/grid/lineTypeUsageColumn';
@@ -64,6 +64,9 @@ function AnalyticsValuesList() {
   const [valueTotal, setValueTotal] = useState<number | null>(null);
   const gridApiRef = useRef<any>(null);
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any; statusScope?: StatusScope } | null>(null);
+
+  // The selected values used by budget lines (the list rows carry their counts): the delete asks "Delete anyway".
+  const forceDeleteMessage = useMemo(() => valuesInUseMessage(t, selectedRows), [selectedRows, t]);
 
   // A selection never spans two dimensions.
   useEffect(() => {
@@ -216,6 +219,12 @@ function AnalyticsValuesList() {
           getItemName={(row) => row.name}
           gridApi={gridApiRef.current}
           onDeleteSuccess={refresh}
+          // Values used by budget lines go too once confirmed: the lines lose them (the list gives the counts).
+          forceOption={forceDeleteMessage ? {
+            message: forceDeleteMessage,
+            confirmLabel: t('analytics.forceDelete.confirmAnyway'),
+            apiKey: 'force',
+          } : undefined}
         />
       )}
     </>

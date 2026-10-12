@@ -22,6 +22,16 @@ export interface DeleteSelectedButtonProps<T> {
     /** The key to send in the API body when cascade is enabled */
     apiKey: string;
   };
+  /**
+   * Some selected rows have dependants the delete removes too: the dialog's warning says so
+   * (`message`, with the exact count) in place of the generic one, its main action reads `confirmLabel` ("Delete anyway"), and the body sends
+   * `apiKey: true`. Undefined: the usual confirmation.
+   */
+  forceOption?: {
+    message: string;
+    confirmLabel: string;
+    apiKey: string;
+  };
 }
 
 export default function DeleteSelectedButton<T>({
@@ -34,6 +44,7 @@ export default function DeleteSelectedButton<T>({
   disabled = false,
   label,
   cascadeOption,
+  forceOption,
 }: DeleteSelectedButtonProps<T>) {
   const { t } = useTranslation('common');
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -62,6 +73,7 @@ export default function DeleteSelectedButton<T>({
       if (options?.deleteRelated && cascadeOption) {
         data[cascadeOption.apiKey] = true;
       }
+      if (forceOption) data[forceOption.apiKey] = true;
       const response = await api.delete(endpoint, { data });
 
       const { deleted = [], failed = [] } = response.data;
@@ -131,6 +143,8 @@ export default function DeleteSelectedButton<T>({
         onClose={handleCloseConfirm}
         onConfirm={handleConfirmDelete}
         title={t('delete.deleteSelectedTitle')}
+        warning={forceOption?.message}
+        confirmLabel={forceOption?.confirmLabel}
         itemCount={selectedRows.length}
         items={items}
         loading={loading}
