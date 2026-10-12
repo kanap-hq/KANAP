@@ -5,6 +5,7 @@ import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import EnumAutocomplete from '../../../components/fields/EnumAutocomplete';
 import DateEUField from '../../../components/fields/DateEUField';
 import api from '../../../api';
+import { computeContractTerms, utcTodayYmd } from '../contractTerms';
 
 export type ContractDetailsEditorHandle = {
   save: () => Promise<void>;
@@ -16,24 +17,6 @@ type Props = {
   readOnly?: boolean;
   onDirtyChange?: (dirty: boolean) => void;
 };
-
-function computeEndDate(start: string, durationMonths: number): string {
-  if (!start) return '';
-  const d = new Date(start + 'T00:00:00Z');
-  const end = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + (durationMonths || 0), d.getUTCDate()));
-  end.setUTCDate(end.getUTCDate() - 1);
-  return end.toISOString().slice(0,10);
-}
-function addMonths(dateIso: string, delta: number): string {
-  if (!dateIso) return '';
-  const d = new Date(dateIso + 'T00:00:00Z');
-  const out = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + delta, d.getUTCDate()));
-  return out.toISOString().slice(0,10);
-}
-function computeCancelDeadline(endDateIso: string, noticeMonths: number): string {
-  if (!endDateIso) return '';
-  return addMonths(endDateIso, -noticeMonths);
-}
 
 export default forwardRef<ContractDetailsEditorHandle, Props>(function ContractDetailsEditor({ id, readOnly, onDirtyChange }, ref) {
   const { t } = useTranslation(['ops', 'common']);
@@ -48,6 +31,8 @@ export default forwardRef<ContractDetailsEditorHandle, Props>(function ContractD
   const [currency, setCurrency] = React.useState<string>('EUR');
   const [billingFrequency, setBillingFrequency] = React.useState<'monthly'|'quarterly'|'annual'|'other'>('annual');
   const [autoRenewal, setAutoRenewal] = React.useState<boolean>(true);
+  // The end of validity is edited on the overview; it stops the renewals shown here.
+  const [disabledAt, setDisabledAt] = React.useState<string | null>(null);
 
   const durationMonths = React.useMemo(() => {
     const n = parseInt((durationMonthsStr || '').replace(/[^0-9]/g, ''), 10);
@@ -62,8 +47,16 @@ export default forwardRef<ContractDetailsEditorHandle, Props>(function ContractD
     return Number.isFinite(n) ? n : 0;
   }, [yearlyAmountStr]);
 
-  const endDate = React.useMemo(() => computeEndDate(startDate, durationMonths), [startDate, durationMonths]);
-  const cancelDeadline = React.useMemo(() => computeCancelDeadline(endDate, noticeMonths), [endDate, noticeMonths]);
+  const terms = React.useMemo(
+    () => computeContractTerms({
+      start_date: startDate,
+      duration_months: durationMonths,
+      notice_period_months: noticeMonths,
+      auto_renewal: autoRenewal,
+      disabled_at: disabledAt,
+    }, utcTodayYmd()),
+    [startDate, durationMonths, noticeMonths, autoRenewal, disabledAt],
+  );
 
   const baselineRef = React.useRef<any>(null);
   const dirty = React.useMemo(() => {
@@ -85,6 +78,7 @@ export default forwardRef<ContractDetailsEditorHandle, Props>(function ContractD
       setCurrency((d.currency || 'EUR').toUpperCase());
       setBillingFrequency((d.billing_frequency || 'annual'));
       setAutoRenewal(Boolean(d.auto_renewal ?? true));
+      setDisabledAt(d.disabled_at ?? null);
       baselineRef.current = {
         startDate: d.start_date || new Date().toISOString().slice(0,10),
         durationMonths: Number(d.duration_months ?? 12),
@@ -164,8 +158,8 @@ export default forwardRef<ContractDetailsEditorHandle, Props>(function ContractD
       <TextField label="Currency" value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase().slice(0,3))} InputLabelProps={{ shrink: true }} disabled={readOnly} />
       <EnumAutocomplete label="Billing frequency" value={billingFrequency} onChange={(v) => setBillingFrequency(v as any)} options={['monthly','quarterly','annual','other']} required />
       <FormControlLabel control={<Checkbox checked={autoRenewal} onChange={(e) => setAutoRenewal(e.target.checked)} />} label="Auto-renewal" />
-      <TextField label="End date" value={endDate} InputLabelProps={{ shrink: true }} disabled />
-      <TextField label="Cancellation deadline" value={cancelDeadline} InputLabelProps={{ shrink: true }} disabled />
+      <TextField label={t('contracts.details.currentTermEnd')} value={terms?.current_term_end ?? ''} InputLabelProps={{ shrink: true }} disabled />
+      <TextField label={t('contracts.details.nextCancellationDeadline')} value={terms?.next_cancellation_deadline ?? '\u2014'} InputLabelProps={{ shrink: true }} disabled />
     </Stack>
   );
 });

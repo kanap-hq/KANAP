@@ -403,7 +403,7 @@
       "durationMonths": "Laufzeit (M)",
       "autoRenewal": "Auto-Verlängerung",
       "noticeMonths": "Kündigungsfrist (M)",
-      "end": "Ende",
+      "end": "Laufzeitende",
       "cancelBy": "Kündigung bis",
       "yearlyAmount": "Jahresbetrag",
       "currency": "Währ.",
@@ -444,6 +444,8 @@
       "autoRenewal": "Automatische Verlängerung",
       "endDate": "Enddatum",
       "cancellationDeadline": "Kündigungsfrist",
+      "currentTermEnd": "Ende der aktuellen Laufzeit",
+      "nextCancellationDeadline": "Nächste Kündigungsfrist",
       "failedToLoad": "Details konnten nicht geladen werden",
       "failedToSave": "Details konnten nicht gespeichert werden"
     },

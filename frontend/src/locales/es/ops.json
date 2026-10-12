@@ -403,7 +403,7 @@
       "durationMonths": "Duración (m)",
       "autoRenewal": "Renovación auto.",
       "noticeMonths": "Preaviso (m)",
-      "end": "Fin",
+      "end": "Fin del periodo",
       "cancelBy": "Cancelar antes de",
       "yearlyAmount": "Importe anual",
       "currency": "Mon.",
@@ -444,6 +444,8 @@
       "autoRenewal": "Renovación automática",
       "endDate": "Fecha de fin",
       "cancellationDeadline": "Plazo de cancelación",
+      "currentTermEnd": "Fin del periodo en curso",
+      "nextCancellationDeadline": "Próximo plazo de cancelación",
       "failedToLoad": "No se pudieron cargar los detalles",
       "failedToSave": "No se pudieron guardar los detalles"
     },

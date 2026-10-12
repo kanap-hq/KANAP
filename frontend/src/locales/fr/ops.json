@@ -403,7 +403,7 @@
       "durationMonths": "Durée (m)",
       "autoRenewal": "Renouvellement auto.",
       "noticeMonths": "Préavis (m)",
-      "end": "Fin",
+      "end": "Fin du terme",
       "cancelBy": "Résiliation avant",
       "yearlyAmount": "Montant annuel",
       "currency": "Dev.",
@@ -444,6 +444,8 @@
       "autoRenewal": "Renouvellement automatique",
       "endDate": "Date de fin",
       "cancellationDeadline": "Date limite de résiliation",
+      "currentTermEnd": "Fin du terme en cours",
+      "nextCancellationDeadline": "Prochaine date limite de résiliation",
       "failedToLoad": "Impossible de charger les détails",
       "failedToSave": "Impossible d'enregistrer les détails"
     },
