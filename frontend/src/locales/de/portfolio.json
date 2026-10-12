@@ -2133,10 +2133,8 @@
         }
       },
       "fields": {
-        "capexItems": "CAPEX-Zeilen",
         "linkDescription": "Linkbeschreibung",
         "name": "Name",
-        "opexItems": "OPEX-Zeilen",
         "url": "URL"
       },
       "messages": {
@@ -2148,9 +2146,7 @@
       "placeholders": {
         "applications": "Anwendungen suchen",
         "assets": "Assets suchen",
-        "capexItems": "CAPEX-Zeilen auswählen",
         "linkDescription": "Optional",
-        "opexItems": "OPEX-Zeilen auswählen",
         "url": "https://example.com"
       },
       "sections": {
