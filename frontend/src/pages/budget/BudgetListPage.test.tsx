@@ -141,23 +141,6 @@ const dimension = (id: string, name: string | null, sort_order: number, extra: R
 const DEFAULT_DIMENSION = dimension('default', null, 0, { is_default: true });
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
-const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
-/** Existing grid fixtures use flat amount/FTE keys; expose them as aggregate groups for the footer. */
-function mockResponses(fixture: (url: string, config?: any) => Promise<any>) {
-  get.mockImplementation(fixture);
-  post.mockImplementation(async (url: string, body: any) => {
-    const fte = body.spec.measures.filter((m: any) => m.field.startsWith('fte_')).map((m: any) => m.field).join(',');
-    const { data } = await fixture(url, { params: { ...body.query, fte } });
-    const { fte: fteValues, reportingCurrency, ...values } = data;
-    const unknown: Record<string, number> = {};
-    for (const [key, entry] of Object.entries(fteValues ?? {}) as Array<[string, any]>) {
-      values[key] = entry.total;
-      unknown[key] = entry.unknown;
-    }
-    const total = { keys: [], count: 135, values, unknown };
-    return { data: { total, groups: [{ ...total, keys: ['opex'] }], reportingCurrency, groupCount: 1, others: null } };
-  });
-}
 const lastProps = () => grid.mock.calls[grid.mock.calls.length - 1][0] as GridProps;
 const column = (id: string) => lastProps().columns.find((c) => (c.colId ?? c.field) === id);
 
@@ -182,12 +165,11 @@ describe('BudgetListPage', () => {
     dialogs.bulk = dialogs.import = dialogs.export = null;
     grid.mockReset();
     get.mockReset();
-    post.mockReset();
     window.sessionStorage.clear();
     columnsSetting = DEFAULT_BUDGET_COLUMNS;
     dimensions.list = [DEFAULT_DIMENSION];
     dimensions.ready = true;
-    mockResponses(async (url: string) => {
+    get.mockImplementation(async (url: string) => {
       if (url === '/users') return { data: { items: [] } };
       if (url === '/budget-columns') return { data: columnsSetting };
       return { data: { yPlus2Budget: 80, yPlus2Landing: 60, yForecast: 5, reportingCurrency: 'X' } };
@@ -258,7 +240,7 @@ describe('BudgetListPage', () => {
 
   it('shows one loading line until the setting arrives', async () => {
     let answer: (value: unknown) => void = () => undefined;
-    mockResponses(async (url: string) => {
+    get.mockImplementation(async (url: string) => {
       if (url === '/budget-columns') return new Promise((resolve) => { answer = resolve; });
       if (url === '/users') return { data: { items: [] } };
       return { data: {} };
@@ -305,7 +287,7 @@ describe('BudgetListPage', () => {
   });
 
   it('asks the totals for the FTE columns shown only, and follows them when they are shown or hidden', async () => {
-    mockResponses(async (url: string, config?: { params?: { fte?: string } }) => {
+    get.mockImplementation(async (url: string, config?: { params?: { fte?: string } }) => {
       if (url === '/users') return { data: { items: [] } };
       if (url === '/budget-columns') return { data: columnsSetting };
       const fte = config?.params?.fte
@@ -314,21 +296,21 @@ describe('BudgetListPage', () => {
       return { data: { yBudget: 10, ...(fte ? { fte } : {}) } };
     });
     await renderPage();
-    const totalsCalls = () => post.mock.calls.filter(([url]) => url === '/budget-lines/summary/aggregate');
+    const totalsCalls = () => get.mock.calls.filter(([url]) => url === '/budget-lines/summary/totals');
     // Nothing shown: no FTE asked.
-    for (const [, body] of totalsCalls()) expect(body.spec.measures.filter((m: any) => m.field.startsWith('fte_'))).toEqual([]);
+    for (const [, config] of totalsCalls()) expect(config.params.fte).toBeUndefined();
 
     // The saved layout shows one FTE column: the first request from the grid asks for it.
     act(() => lastProps().onGridApiReady({ getColumnState: () => [{ colId: 'product_name', hide: false }, { colId: 'fte_yPlus1Budget', hide: false }, { colId: 'fte_yBudget', hide: true }] }));
     act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', filterModel: {}, q: '', statusScope: 'enabled' }));
     await waitFor(() => expect(lastProps().pinnedBottomRowData.slice(-1)[0].fte_yPlus1Budget).toBe(12.5));
-    expect(totalsCalls().slice(-1)[0][1].spec.measures.map((m: any) => m.field)).toEqual(['fte_yPlus1Budget']);
+    expect(totalsCalls().slice(-1)[0][1].params.fte).toBe('fte_yPlus1Budget');
 
     // Showing another one refetches with both; the footer shows the sum and the unknown lines in a tooltip.
     let count = totalsCalls().length;
     act(() => lastProps().onColumnStateChange([{ colId: 'fte_yPlus1Budget', hide: false }, { colId: 'fte_yBudget', hide: false }]));
-    await waitFor(() => expect(totalsCalls()).toHaveLength(count + 1));
-    expect(totalsCalls().slice(-1)[0][1].spec.measures.map((m: any) => m.field)).toEqual(['fte_yPlus1Budget', 'fte_yBudget']);
+    await waitFor(() => expect(totalsCalls()).toHaveLength(count + 3));
+    expect(totalsCalls().slice(-1)[0][1].params.fte).toBe('fte_yPlus1Budget,fte_yBudget');
     await waitFor(() => expect(lastProps().pinnedBottomRowData.slice(-1)[0].fte_yBudget).toBe(12.5));
     const pinned = lastProps().pinnedBottomRowData.slice(-1)[0];
     expect(column('fte_yBudget')!.valueFormatter!({ value: column('fte_yBudget')!.valueGetter!({ data: pinned }) })).toBe('12.50');
@@ -342,8 +324,8 @@ describe('BudgetListPage', () => {
 
     // Hiding them all: back to the totals without FTE.
     act(() => lastProps().onColumnStateChange([{ colId: 'fte_yPlus1Budget', hide: true }, { colId: 'fte_yBudget', hide: true }]));
-    await waitFor(() => expect(totalsCalls()).toHaveLength(count + 1));
-    expect(totalsCalls().slice(-1)[0][1].spec.measures).toEqual([]);
+    await waitFor(() => expect(totalsCalls()).toHaveLength(count + 3));
+    expect(totalsCalls().slice(-1)[0][1].params.fte).toBeUndefined();
     await waitFor(() => expect(lastProps().pinnedBottomRowData.slice(-1)[0].fte_yBudget).toBeUndefined());
   });
 
@@ -376,7 +358,7 @@ describe('BudgetListPage', () => {
     expect(declared!.valueGetter!({ data: { has_fte: null } })).toBe('');
     expect(declared!.valueGetter!({ data: undefined })).toBe('');
 
-    mockResponses(async (url: string, config?: { params?: { fields?: string } }) => {
+    get.mockImplementation(async (url: string, config?: { params?: { fields?: string } }) => {
       if (url !== '/budget-lines/summary/filter-values') return { data: {} };
       return { data: { [config?.params?.fields ?? '']: [null, 'yes'] } };
     });
@@ -401,7 +383,7 @@ describe('BudgetListPage', () => {
     expect(ids.indexOf('run_build')).toBe(ids.indexOf('analytics_category_name') + 3);
     expect(runBuild?.valueFormatter?.({ value: 'run' })).toBe('opex.runBuild.run');
 
-    mockResponses(async (url: string, config?: { params?: { fields?: string } }) => {
+    get.mockImplementation(async (url: string, config?: { params?: { fields?: string } }) => {
       if (url !== '/budget-lines/summary/filter-values') return { data: {} };
       const field = config?.params?.fields ?? '';
       return { data: { [field]: field === 'run_build' ? ['build', null, 'run'] : ['IT-200 · Applications'] } };
@@ -438,7 +420,7 @@ describe('BudgetListPage', () => {
     const ids = lastProps().columns.map((c) => c.colId ?? c.field);
     expect(ids.indexOf('budget_holder_name')).toBe(ids.indexOf('cost_center_label') + 1);
 
-    mockResponses(async (url: string, config?: { params?: { fields?: string } }) => {
+    get.mockImplementation(async (url: string, config?: { params?: { fields?: string } }) => {
       if (url !== '/budget-lines/summary/filter-values') return { data: {} };
       return { data: { [config?.params?.fields ?? '']: ['Ada Holder', null] } };
     });
@@ -494,7 +476,7 @@ describe('BudgetListPage', () => {
 
     // A set filter on the values the server lists for that dimension, in the dimension's order
     // (the server's), blank last.
-    mockResponses(async (url: string, config?: { params?: { fields?: string } }) => {
+    get.mockImplementation(async (url: string, config?: { params?: { fields?: string } }) => {
       if (url !== '/budget-lines/summary/filter-values') return { data: {} };
       return { data: { [config?.params?.fields ?? '']: [null, 'Services', 'Licences'] } };
     });
@@ -575,7 +557,7 @@ describe('BudgetListPage', () => {
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
     expect(screen.getByText('common:status.loading')).toBeInTheDocument();
     expect(grid).not.toHaveBeenCalled();
-    expect(post.mock.calls.some(([url]) => url === '/budget-lines/summary/aggregate')).toBe(false);
+    expect(get.mock.calls.some(([url]) => url === '/budget-lines/summary/totals')).toBe(false);
 
     act(() => dimensions.set({ ready: true, list: [DEFAULT_DIMENSION, dimension('nature', 'Nature', 1)] }));
     await waitFor(() => expect(grid).toHaveBeenCalled());
@@ -619,9 +601,10 @@ describe('BudgetListPage', () => {
     // The grid mounts with the kept filter only, and the footer totals use the same.
     const initial = (lastProps() as unknown as { initialState?: { filter?: { filterModel?: unknown } } }).initialState;
     expect(initial?.filter?.filterModel).toEqual(kept);
-    const totals = post.mock.calls.filter(([url]) => url === '/budget-lines/summary/aggregate');
+    const totals = get.mock.calls.filter(([url]) => url === '/budget-lines/summary/totals');
     expect(totals.length).toBeGreaterThan(0);
-    for (const [, config] of totals) expect(config.query.filters).toEqual(kept);
+    expect(JSON.parse(totals[0][1].params.filters)).toEqual(kept);
+    for (const [, config] of totals.slice(1)) expect(JSON.parse(config.params.filters)).toMatchObject(kept);
   });
 
   it('keeps a stored sort on an enabled dimension', async () => {
@@ -733,11 +716,11 @@ describe('BudgetListPage', () => {
   it('keeps the last known currency in the title while the totals reload or when they fail', async () => {
     await renderPage();
     expect(header.props.title).toBe('budget.titleWithCurrency:X');
-    post.mockRejectedValue(new Error('down'));
-    const totalsCalls = () => post.mock.calls.filter(([url]) => url === '/budget-lines/summary/aggregate').length;
+    get.mockRejectedValue(new Error('down'));
+    const totalsCalls = () => get.mock.calls.filter(([url]) => url === '/budget-lines/summary/totals').length;
     const before = totalsCalls();
     act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', filterModel: {}, q: 'cloud', statusScope: 'enabled' }));
-    await waitFor(() => expect(totalsCalls()).toBe(before + 1));
+    await waitFor(() => expect(totalsCalls()).toBe(before + 3));
     await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(0));
     expect(header.props.title).toBe('budget.titleWithCurrency:X');
   });
@@ -750,8 +733,8 @@ describe('BudgetListPage', () => {
     act(() => lastProps().onGridApiReady({ getColumnState: () => [{ colId: 'yBudget', hide: false }, { colId: 'yRevision', hide: true }, { colId: 'yPlus1Forecast' }] }));
     act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', filterModel: {}, q: '', statusScope: 'enabled' }));
     await waitFor(() => {
-      const totals = post.mock.calls.filter(([url]) => url === '/budget-lines/summary/aggregate');
-      expect(totals.slice(-1)[0][1].spec.measures).toEqual([{ id: 'yBudget', fn: 'sum', field: 'yBudget' }, { id: 'yPlus1Forecast', fn: 'sum', field: 'yPlus1Forecast' }]);
+      const totals = get.mock.calls.filter(([url]) => url === '/budget-lines/summary/totals');
+      expect(totals.slice(-1)[0][1].params.amounts).toBe('yBudget,yPlus1Forecast');
     });
   });
 
@@ -840,7 +823,7 @@ describe('BudgetListPage', () => {
     expect(screen.queryByRole('button', { name: 'budget.capex' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'budget.opex' })).toBeNull();
     expect(lastProps().initialState?.filter?.filterModel).toEqual(capex);
-    await waitFor(() => expect(post.mock.calls.filter(([u]) => u === '/budget-lines/summary/aggregate').slice(-1)[0][1].query.filters).toEqual(capex));
+    await waitFor(() => expect(get.mock.calls.filter(([u]) => u === '/budget-lines/summary/totals').slice(-1)[0][1].params.filters).toBe(JSON.stringify(capex)));
   });
 
   it('opens the list unfiltered by nature when the address has no nature filter', async () => {
@@ -901,11 +884,10 @@ describe('BudgetListPage', () => {
     expect(dialogs.import).toMatchObject({ open: true, scope: 'capex' });
     act(() => lastProps().onSelectionChanged([{ id: 'capex-id', product_name: 'Servers' }]));
     expect(dialogs.bulk).toMatchObject({ endpoint: '/budget-lines/bulk', selectedRows: [{ id: 'capex-id', product_name: 'Servers' }] });
-    // Let the newly filtered request settle before invalidating it after the import.
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
-    const before = post.mock.calls.filter(([u]) => u === '/budget-lines/summary/aggregate').length;
+    const before = get.mock.calls.filter(([u]) => u === '/budget-lines/summary/totals').length;
     act(() => dialogs.import.onImported());
-    await waitFor(() => expect(post.mock.calls.filter(([u]) => u === '/budget-lines/summary/aggregate').length).toBe(before + 1));
+    await waitFor(() => expect(get.mock.calls.filter(([u]) => u === '/budget-lines/summary/totals').length).toBe(before + 1));
     act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', q: '', statusScope: 'enabled', filterModel: {} }));
     expect(dialogs.import.scope).toBe('opex');
   });
@@ -923,39 +905,51 @@ describe('BudgetListPage', () => {
     expect(screen.queryByRole('button', { name: 'opex.exportCsv' })).toBeNull();
   });
 
-  it('shows three rows from one nature aggregate, with distinct amounts and FTE', async () => {
-    post.mockResolvedValue({ data: {
-      groups: [
-        { keys: ['opex'], count: 2, values: { yBudget: 100, fte_yBudget: 1.25 }, unknown: { fte_yBudget: 1 } },
-        { keys: ['capex'], count: 1, values: { yBudget: 200, fte_yBudget: 2 }, unknown: {} },
-      ],
-      total: { keys: [], count: 3, values: { yBudget: 300, fte_yBudget: 3.25 }, unknown: { fte_yBudget: 1 } },
-      reportingCurrency: 'EUR', groupCount: 2, others: null,
-    } });
+  it('shows three rows from totals GETs with distinct nature amounts and FTE', async () => {
+    get.mockImplementation(async (url, config) => {
+      if (url === '/budget-columns') return { data: columnsSetting };
+      if (url !== '/budget-lines/summary/totals') return { data: { items: [] } };
+      const nature = JSON.parse(config.params.filters || '{}').nature?.values?.[0];
+      const value = nature === 'opex' ? 100 : nature === 'capex' ? 200 : 300;
+      return { data: { yBudget: value, fte: { fte_yBudget: { total: value / 100, unknown: nature === 'opex' ? 1 : 0 } }, reportingCurrency: 'EUR' } };
+    });
     await renderPage();
-    act(() => lastProps().onColumnStateChange([{ colId: 'yBudget' }, { colId: 'fte_yBudget' }]));
-    await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
     expect(lastProps().pinnedBottomRowData.map((row) => row.product_name)).toEqual(['budget.totalOpex', 'budget.totalCapex', 'shared.total']);
     expect(lastProps().pinnedBottomRowData.map((row) => row.versions?.y.totals?.budget)).toEqual([100, 200, 300]);
-    expect(lastProps().pinnedBottomRowData.map((row) => row.fte_yBudget)).toEqual([1.25, 2, 3.25]);
-    expect(post.mock.calls.slice(-1)[0][1].spec.groupBy).toEqual(['nature']);
-    expect(get.mock.calls.some(([url]) => url === '/budget-lines/summary/totals')).toBe(false);
+    expect(lastProps().pinnedBottomRowData.map((row) => row.fte_yBudget)).toEqual([1, 2, 3]);
+    expect(get.mock.calls.filter(([url]) => url === '/budget-lines/summary/totals')).toHaveLength(3);
     const cell = (column('yBudget')!.cellRendererSelector!({ node: { rowPinned: 'bottom' } }).component as (p: any) => React.ReactElement)({ data: lastProps().pinnedBottomRowData[0], valueFormatted: '100' });
     expect(cell.props).toMatchObject({ colId: 'yBudget', nature: 'opex', children: '100' });
   });
 
-  it.each(['opex', 'capex'])('shows one footer row for a single %s Type filter', async (nature) => {
+  it.each(['opex', 'capex'])('shows one footer row and sends one request for a single %s Type filter', async (nature) => {
     await renderPage('/ops/budget?filters=' + encodeURIComponent(JSON.stringify({ nature: { filterType: 'set', values: [nature] } })));
     expect(lastProps().pinnedBottomRowData).toHaveLength(1);
     expect(lastProps().pinnedBottomRowData[0]).toMatchObject({ product_name: 'shared.total', nature });
+    expect(get.mock.calls.filter(([url]) => url === '/budget-lines/summary/totals')).toHaveLength(1);
   });
 
-  it('keeps three rows when both Type values are selected, carrying every list filter and search', async () => {
+  it('preserves both Type values, list filters, search, lifecycle and more than eight measures in each totals request', async () => {
     await renderPage();
     const filters = { nature: { filterType: 'set', values: ['opex', 'capex'] }, supplier_name: { filterType: 'set', mode: 'exclude', values: ['Vendor'] } };
+    const amounts = lastProps().columns.filter((col) => col.filter === 'agNumberColumnFilter' && !col.colId?.startsWith('fte_')).map((col) => col.colId!);
+    const fte = amounts.map((colId) => 'fte_' + colId);
+    act(() => lastProps().onColumnStateChange([...amounts, ...fte].map((colId) => ({ colId }))));
     act(() => lastProps().onQueryStateChange({ sort: 'yBudget:ASC', q: 'cloud', statusScope: 'all', filterModel: filters }));
-    await waitFor(() => expect(post.mock.calls.slice(-1)[0][1].query).toEqual({ q: 'cloud', filters, includeDisabled: '1' }));
+    await waitFor(() => {
+      const calls = get.mock.calls.filter(([url, config]) => url === '/budget-lines/summary/totals' && config.params.q === 'cloud');
+      expect(calls).toHaveLength(3);
+      for (const [, config] of calls) {
+        expect(config.params).toMatchObject({ q: 'cloud', includeDisabled: '1', amounts: amounts.join(','), fte: fte.join(',') });
+        expect(JSON.parse(config.params.filters).supplier_name).toEqual(filters.supplier_name);
+      }
+      expect(JSON.parse(calls[0][1].params.filters)).toEqual(filters);
+      expect(JSON.parse(calls[1][1].params.filters).nature).toEqual({ operator: 'AND', conditions: [filters.nature, { filterType: 'set', values: ['opex'] }] });
+      expect(JSON.parse(calls[2][1].params.filters).nature).toEqual({ operator: 'AND', conditions: [filters.nature, { filterType: 'set', values: ['capex'] }] });
+    });
+    expect(amounts.length + fte.length).toBeGreaterThan(8);
     expect(lastProps().pinnedBottomRowData).toHaveLength(3);
+    expect((api as any).post).not.toHaveBeenCalled();
   });
 
 });

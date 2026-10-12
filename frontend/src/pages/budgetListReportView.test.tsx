@@ -55,18 +55,16 @@ vi.mock('../components/ServerDataGrid', async (importOriginal) => {
 });
 
 import api from '../api';
-import { budgetFooterFixture } from '../test/budgetFooterFixture';
 import BudgetListPage from './budget/BudgetListPage';
 import { DEFAULT_BUDGET_COLUMNS } from '../services/budgetColumns';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
-const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
 const paramsOf = (call: unknown[]) => (call[1] as { params: Record<string, string> }).params;
 const QUIET_MS = 500;
 const quiet = () => act(async () => { await vi.advanceTimersByTimeAsync(QUIET_MS); });
 
 const LISTS = [
-  { name: 'OPEX', Page: BudgetListPage, path: '/ops/budget', rows: '/budget-lines/summary', totals: '/budget-lines/summary/aggregate', storage: 'budget-list-context' },
+  { name: 'OPEX', Page: BudgetListPage, path: '/ops/budget', rows: '/budget-lines/summary', totals: '/budget-lines/summary/totals', storage: 'budget-list-context' },
 ] as const;
 
 const set = (values: Array<string | null>) => ({ filterType: 'set', values });
@@ -151,8 +149,6 @@ describe.each(LISTS)('$name list: report links, removed filters, End of validity
   beforeEach(() => {
     grid.api = null;
     get.mockReset();
-    post.mockReset();
-    post.mockImplementation(async (_url, body) => budgetFooterFixture(body.spec.measures));
     window.sessionStorage.clear();
     runOnVirtualTime();
     vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });

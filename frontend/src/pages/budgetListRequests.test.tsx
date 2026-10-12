@@ -14,7 +14,7 @@ vi.mock('react-i18next', () => {
   };
   return { useTranslation: () => translation };
 });
-vi.mock('../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
+vi.mock('../api', () => ({ default: { get: vi.fn() } }));
 vi.mock('../hooks/useFreezeState', () => ({ useFreezeState: () => ({ data: undefined }) }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true, profile: { id: 'u-1' } }) }));
@@ -50,18 +50,16 @@ vi.mock('../components/ServerDataGrid', async (importOriginal) => {
 });
 
 import api from '../api';
-import { budgetFooterFixture } from '../test/budgetFooterFixture';
 import BudgetListPage from './budget/BudgetListPage';
 import { DEFAULT_BUDGET_COLUMNS } from '../services/budgetColumns';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
-const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
 const ROWS = '/budget-lines/summary';
-const TOTALS = '/budget-lines/summary/aggregate';
+const TOTALS = '/budget-lines/summary/totals';
 const VALUES = '/budget-lines/summary/filter-values';
 const SUPPLIERS = ['Alpha', 'Bravo', 'Charlie'];
 
-const calls = (url: string) => (url === TOTALS ? post : get).mock.calls.filter(([u]) => u === url);
+const calls = (url: string) => get.mock.calls.filter(([u]) => u === url);
 const counts = () => ({ rows: calls(ROWS).length, totals: calls(TOTALS).length, values: calls(VALUES).length });
 // After the counts are reached: longer than the grid's block delay (150 ms) and the filters' quiet
 // delay (300 ms), so a request sent twice would show.
@@ -116,8 +114,6 @@ describe('OPEX list requests per action', () => {
     stubOffsetParent();
     grid.api = null;
     get.mockReset();
-    post.mockReset();
-    post.mockImplementation(async (_url, body) => budgetFooterFixture(body.spec.measures));
     window.sessionStorage.clear();
     vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
     stored = new Map<string, string>();
@@ -143,7 +139,7 @@ describe('OPEX list requests per action', () => {
 
   it('open: one page and one totals request, nothing else from the grid', async () => {
     await openList();
-    await expectCounts({ rows: 1, totals: 1, values: 0 });
+    await expectCounts({ rows: 1, totals: 3, values: 0 });
     // No user list: the rows carry the owner names.
     expect(calls('/users')).toHaveLength(0);
     // The fixed year slots are enough: no `years` parameter.
@@ -171,7 +167,7 @@ describe('OPEX list requests per action', () => {
     expect(before.values).toBe(1);
     const bravo = Array.from(document.querySelectorAll('label')).find((label) => label.textContent === 'Bravo')!;
     fireEvent.click(bravo.querySelector('input')!);
-    await expectCounts({ rows: before.rows + 1, totals: before.totals + 1, values: before.values });
+    await expectCounts({ rows: before.rows + 1, totals: before.totals + 3, values: before.values });
     // The OPEX list has exclude mode: unticking one value from "All" excludes it (decision Q3).
     expect(JSON.parse(paramsOf(calls(ROWS).slice(-1)[0]).filters)).toEqual({ supplier_name: { filterType: 'set', mode: 'exclude', values: ['Bravo'] } });
   }, 30_000);
@@ -184,7 +180,7 @@ describe('OPEX list requests per action', () => {
       fireEvent.change(box, { target: { value } });
       await act(async () => { await new Promise((resolve) => setTimeout(resolve, 60)); });
     }
-    await expectCounts({ ...before, rows: before.rows + 1, totals: before.totals + 1 });
+    await expectCounts({ ...before, rows: before.rows + 1, totals: before.totals + 3 });
     expect(JSON.parse(paramsOf(calls(ROWS).slice(-1)[0]).filters)).toEqual({ product_name: { filterType: 'text', type: 'contains', filter: 'cloud' } });
   }, 30_000);
 

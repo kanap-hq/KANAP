@@ -15,7 +15,7 @@ vi.mock('react-i18next', () => {
   };
   return { useTranslation: () => translation };
 });
-vi.mock('../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
+vi.mock('../api', () => ({ default: { get: vi.fn() } }));
 vi.mock('../hooks/useFreezeState', () => ({ useFreezeState: () => ({ data: undefined }) }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true, profile: { id: 'u-1' } }) }));
@@ -51,18 +51,16 @@ vi.mock('../components/ServerDataGrid', async (importOriginal) => {
 });
 
 import api from '../api';
-import { budgetFooterFixture } from '../test/budgetFooterFixture';
 import BudgetListPage from './budget/BudgetListPage';
 import { DEFAULT_BUDGET_COLUMNS } from '../services/budgetColumns';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
-const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
 const ROWS = '/budget-lines/summary';
-const TOTALS = '/budget-lines/summary/aggregate';
+const TOTALS = '/budget-lines/summary/totals';
 const VALUES = '/budget-lines/summary/filter-values';
 const SUPPLIERS = ['Alpha', 'Bravo', 'Charlie'];
 
-const calls = (url: string) => (url === TOTALS ? post : get).mock.calls.filter(([u]) => u === url);
+const calls = (url: string) => get.mock.calls.filter(([u]) => u === url);
 const counts = () => ({ rows: calls(ROWS).length, totals: calls(TOTALS).length, values: calls(VALUES).length });
 // After the counts are reached: longer than the grid's block delay (150 ms) and the filters' quiet
 // delay (300 ms), so a request sent twice would show.
@@ -131,8 +129,6 @@ describe('OPEX list opened from a report link', () => {
   beforeEach(() => {
     grid.api = null;
     get.mockReset();
-    post.mockReset();
-    post.mockImplementation(async (_url, body) => budgetFooterFixture(body.spec.measures));
     window.sessionStorage.clear();
     vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
     stored = new Map<string, string>();
@@ -201,7 +197,7 @@ describe('OPEX list opened from a report link', () => {
     expect(params.status).toBeUndefined();
     expect(JSON.parse(params.filters)).toEqual(LINK_FILTERS);
     // Totals follow the same scope.
-    expect(calls(TOTALS).slice(-1)[0][1].query.includeDisabled).toBe('1');
+    expect(paramsOf(calls(TOTALS).slice(-1)[0]).includeDisabled).toBe('1');
     // The Show switch says All.
     expect((document.querySelector('input[type="radio"][value="all"]') as HTMLInputElement).checked).toBe(true);
   }, 30_000);

@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // The budget list with the real grid and set filter (lot 2B, PR B2):
-// - a 31 KB "every supplier but one" state travels as ctx in GET requests, the page URL, the cell
+// - a 31 KB "every supplier but one" state travels as ctx in the API calls, the page URL, the cell
 //   links and the stored list context, survives a reload and a link opened in a new tab;
 // - the page requests ask for the lean grid rows with the FTE columns shown; the footer totals for
 //   the amount columns shown; showing or hiding a column asks again what depends on it.
@@ -52,21 +52,20 @@ vi.mock('../components/ServerDataGrid', async (importOriginal) => {
 });
 
 import api from '../api';
-import { budgetFooterFixture } from '../test/budgetFooterFixture';
 import BudgetListPage from './budget/BudgetListPage';
 import { DEFAULT_BUDGET_COLUMNS } from '../services/budgetColumns';
 import { resetListContextCache } from '../lib/listContext';
 
 const mocked = api as unknown as { get: ReturnType<typeof vi.fn>; post: ReturnType<typeof vi.fn> };
 const ROWS = '/budget-lines/summary';
-const TOTALS = '/budget-lines/summary/aggregate';
+const TOTALS = '/budget-lines/summary/totals';
 const ID = 'Opx_allButOne_0123456';
 // "Every supplier but one": 1,152 names, about 31 KB once in a URL.
 const SUPPLIERS = Array.from({ length: 1153 }, (_, i) => `Fournisseur ${String(i).padStart(4, '0')} Société Générale`);
 const ALL_BUT_ONE = { supplier_name: { filterType: 'set', values: SUPPLIERS.slice(1) } };
 const ALL_BUT_ONE_TEXT = JSON.stringify(ALL_BUT_ONE);
 
-const calls = (url: string) => (url === TOTALS ? mocked.post : mocked.get).mock.calls.filter(([u]) => u === url);
+const calls = (url: string) => mocked.get.mock.calls.filter(([u]) => u === url);
 const paramsOf = (call: unknown[]) => (call[1] as { params: Record<string, string> }).params;
 const location = vi.hoisted(() => ({ search: '' }));
 
@@ -102,7 +101,7 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
       setItem: (key: string, value: string) => { stored.set(key, value); },
       removeItem: (key: string) => { stored.delete(key); },
     });
-    mocked.post.mockImplementation(async (url, body) => url === TOTALS ? budgetFooterFixture(body.spec.measures) : { data: { id: ID } });
+    mocked.post.mockResolvedValue({ data: { id: ID } });
     mocked.get.mockImplementation(async (url: string) => {
       if (url === '/budget-columns') return { data: DEFAULT_BUDGET_COLUMNS };
       if (url === `/list-contexts/${ID}`) return { data: { id: ID, list: 'budget-lines', state: { filters: ALL_BUT_ONE } } };
@@ -125,19 +124,18 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
     await waitFor(() => expect(calls(ROWS).length).toBeGreaterThan(0), { timeout: 10_000 });
     await waitFor(() => expect(calls(TOTALS).length).toBeGreaterThan(0), { timeout: 10_000 });
 
-    // Saved once, for every place the state goes.
-    expect(mocked.post.mock.calls.filter(([url]) => url === '/list-contexts')).toHaveLength(1);
+    // One context for the list, plus one for each nature subtotal.
+    expect(mocked.post).toHaveBeenCalledTimes(3);
     expect(mocked.post).toHaveBeenCalledWith('/list-contexts', { list: 'budget-lines', state: { filters: ALL_BUT_ONE } });
     // The page URL.
     const url = new URLSearchParams(location.search);
     expect(url.get('ctx')).toBe(ID);
     expect(url.get('filters')).toBeNull();
-    // GET uses ctx; the aggregate POST carries the same filters inline.
-    for (const call of calls(ROWS)) {
+    // The API calls.
+    for (const call of [...calls(ROWS), ...calls(TOTALS)]) {
       expect(paramsOf(call).ctx).toBe(ID);
       expect(paramsOf(call).filters).toBeUndefined();
     }
-    expect(calls(TOTALS)[0][1].query.filters).toEqual(ALL_BUT_ONE);
     // The grid shows the filter.
     expect(grid.api.getFilterModel()).toEqual(ALL_BUT_ONE);
     // The cell links (open in a new tab).
@@ -151,11 +149,11 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
       const stored = JSON.parse(window.sessionStorage.getItem('budget-list-context') ?? '{}');
       expect(stored).toMatchObject({ filters: '', ctx: ID });
     });
-    expect(mocked.post.mock.calls.filter(([url]) => url === '/list-contexts')).toHaveLength(1);
-    // Request counts as before: one page, one totals.
+    expect(mocked.post).toHaveBeenCalledTimes(3);
+    // One page request and one totals request per scope.
     await new Promise((resolve) => setTimeout(resolve, 500));
     expect(calls(ROWS)).toHaveLength(1);
-    expect(calls(TOTALS)).toHaveLength(1);
+    expect(calls(TOTALS)).toHaveLength(3);
   }, 30_000);
 
   it('a reload of the page URL: the context is read once, the list loads once, filtered', async () => {
@@ -164,7 +162,7 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
     await new Promise((resolve) => setTimeout(resolve, 500));
     expect(calls(ROWS)).toHaveLength(1);
     expect(calls(`/list-contexts/${ID}`)).toHaveLength(1);
-    expect(mocked.post.mock.calls.filter(([url]) => url === '/list-contexts')).toHaveLength(0);
+    expect(mocked.post.mock.calls.every(([, body]) => body.state.filters.nature != null)).toBe(true);
     expect(paramsOf(calls(ROWS)[0])).toMatchObject({ ctx: ID, shape: 'grid' });
     expect(paramsOf(calls(ROWS)[0]).filters).toBeUndefined();
     expect(grid.api.getFilterModel()).toEqual(ALL_BUT_ONE);
@@ -176,7 +174,7 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
     await waitFor(() => expect(calls(TOTALS).length).toBeGreaterThan(0), { timeout: 10_000 });
     await new Promise((resolve) => setTimeout(resolve, 400));
     expect(calls(ROWS)).toHaveLength(1);
-    expect(calls(TOTALS)).toHaveLength(1);
+    expect(calls(TOTALS)).toHaveLength(3);
     const first = paramsOf(calls(ROWS)[0]);
     expect(first.shape).toBe('grid');
     expect(first.fte).toBeUndefined();
@@ -184,20 +182,20 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
       .filter((c) => /^y(Minus1|Plus1|Plus2)?(Budget|Revision|Forecast|FollowUp|Landing)$/.test(c.colId) && !c.hide)
       .map((c) => c.colId);
     expect(shownAmounts.length).toBeGreaterThan(0);
-    expect(calls(TOTALS)[0][1].spec.measures.map((m: any) => m.field)).toEqual(shownAmounts);
+    expect(paramsOf(calls(TOTALS)[0]).amounts).toBe(shownAmounts.join(','));
 
-    // Showing an FTE column: one page and one totals request, both with it.
+    // Showing an FTE column reloads the page and all three totals with that column.
     await act(async () => { grid.api.setColumnsVisible(['fte_yBudget'], true); });
     await waitFor(() => expect(calls(ROWS)).toHaveLength(2), { timeout: 10_000 });
-    await waitFor(() => expect(calls(TOTALS)).toHaveLength(2), { timeout: 10_000 });
+    await waitFor(() => expect(calls(TOTALS)).toHaveLength(6), { timeout: 10_000 });
     expect(paramsOf(calls(ROWS)[1])).toMatchObject({ shape: 'grid', fte: 'fte_yBudget' });
-    expect(calls(TOTALS)[1][1].spec.measures).toContainEqual({ id: 'fte_yBudget', fn: 'sum', field: 'fte_yBudget' });
+    expect(paramsOf(calls(TOTALS)[3]).fte).toBe('fte_yBudget');
 
     // Hiding an amount column: the footer asks again without it, the rows do not reload.
     const hidden = shownAmounts[0];
     await act(async () => { grid.api.setColumnsVisible([hidden], false); });
-    await waitFor(() => expect(calls(TOTALS)).toHaveLength(3), { timeout: 10_000 });
-    expect(calls(TOTALS)[2][1].spec.measures.map((m: any) => m.field)).not.toContain(hidden);
+    await waitFor(() => expect(calls(TOTALS)).toHaveLength(9), { timeout: 10_000 });
+    expect(paramsOf(calls(TOTALS)[6]).amounts.split(',')).not.toContain(hidden);
     await new Promise((resolve) => setTimeout(resolve, 400));
     expect(calls(ROWS)).toHaveLength(2);
   }, 30_000);
@@ -246,25 +244,30 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
   }, 30_000);
 
   it('the footer of an amount column shown again keeps a placeholder until its total arrives, never 0', async () => {
-    let release: () => void = () => undefined;
+    const releases: Array<() => void> = [];
     let slow = false;
-    mocked.post.mockImplementation(async (_url, body) => {
-      if (slow) await new Promise<void>((resolve) => { release = resolve; });
-      return budgetFooterFixture(body.spec.measures, 1234);
+    const base = mocked.get.getMockImplementation()! as (...args: any[]) => any;
+    mocked.get.mockImplementation(async (url: string, config?: { params?: Record<string, string> }) => {
+      if (url === TOTALS) {
+        if (slow) await new Promise<void>((resolve) => { releases.push(resolve); });
+        const amounts = String(config?.params?.amounts ?? '').split(',').filter(Boolean);
+        return { data: { ...Object.fromEntries(amounts.map((key) => [key, 1234])), reportingCurrency: 'EUR' } };
+      }
+      return base(url, config);
     });
     renderAt('/ops/budget');
-    await waitFor(() => expect(calls(TOTALS)).toHaveLength(1), { timeout: 10_000 });
+    await waitFor(() => expect(calls(TOTALS)).toHaveLength(3), { timeout: 10_000 });
     const footer = (colId: string) => document.querySelector(`.ag-floating-bottom [col-id="${colId}"]`)?.textContent ?? null;
     await waitFor(() => expect(footer('yBudget')).toBe('1 234'), { timeout: 10_000 });
     // A column shown whose total was never asked: the previous totals stay on screen meanwhile,
     // without it.
     slow = true;
     await act(async () => { grid.api.setColumnsVisible(['yRevision'], true); });
-    await waitFor(() => expect(calls(TOTALS)).toHaveLength(2), { timeout: 10_000 });
-    expect(calls(TOTALS)[1][1].spec.measures.map((m: any) => m.field)).toContain('yRevision');
+    await waitFor(() => expect(calls(TOTALS)).toHaveLength(6), { timeout: 10_000 });
+    expect(paramsOf(calls(TOTALS)[3]).amounts.split(',')).toContain('yRevision');
     await waitFor(() => expect(footer('yRevision')).toBe('…'), { timeout: 10_000 });
     expect(footer('yBudget')).toBe('1 234');
-    await act(async () => { release(); });
+    await act(async () => { releases.forEach((release) => release()); });
     await waitFor(() => expect(footer('yRevision')).toBe('1 234'), { timeout: 10_000 });
   }, 30_000);
   it('the real grid opens on an address nature as its Type column filter', async () => {
@@ -274,7 +277,7 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
     await waitFor(() => expect(calls(TOTALS).length).toBeGreaterThan(0));
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 500)); });
     expect(grid.api.getFilterModel()).toEqual(model);
-    expect(calls(TOTALS).slice(-1)[0][1].query.filters).toEqual(model);
+    expect(paramsOf(calls(TOTALS).slice(-1)[0]).filters).toBe(JSON.stringify(model));
     expect(screen.queryByRole('button', { name: 'budget.capex' })).toBeNull();
   });
 
@@ -287,7 +290,7 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
     renderAt('/ops/budget?ctx=' + ID);
     await waitFor(() => expect(grid.api).not.toBeNull());
     await waitFor(() => expect(grid.api.getFilterModel()).toEqual(saved));
-    expect(mocked.post.mock.calls.filter(([url]) => url === '/list-contexts')).toHaveLength(0);
+    expect(mocked.post).not.toHaveBeenCalled();
   });
 
 });

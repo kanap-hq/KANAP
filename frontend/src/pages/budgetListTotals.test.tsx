@@ -13,7 +13,7 @@ vi.mock('react-i18next', () => {
   };
   return { useTranslation: () => translation };
 });
-vi.mock('../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
+vi.mock('../api', () => ({ default: { get: vi.fn() } }));
 const frozen = vi.hoisted(() => ({ opex: false, capex: false }));
 vi.mock('../hooks/useFreezeState', () => ({ useFreezeState: () => ({ data: { summary: { scopes: { opex: { budget: { frozen: frozen.opex } }, capex: { budget: { frozen: frozen.capex } } } } } }) }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
@@ -61,12 +61,10 @@ vi.mock('../components/ServerDataGrid', async (importOriginal) => {
 });
 
 import api from '../api';
-import { budgetFooterFixture } from '../test/budgetFooterFixture';
 import BudgetListPage from './budget/BudgetListPage';
 import { DEFAULT_BUDGET_COLUMNS } from '../services/budgetColumns';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
-const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
 
 const textFilter = (col: string, filter: string) => ({ [col]: { filterType: 'text', type: 'contains', filter } });
 const settle = () => act(async () => { await vi.advanceTimersByTimeAsync(700); });
@@ -83,16 +81,14 @@ function runOnVirtualTime() {
 }
 
 describe.each([
-  { name: 'OPEX list', Page: BudgetListPage, totals: '/budget-lines/summary/aggregate', rows: '/budget-lines/summary', col: 'product_name', search: '' },
-  { name: 'OPEX list with a filter in the URL', Page: BudgetListPage, totals: '/budget-lines/summary/aggregate', rows: '/budget-lines/summary', col: 'product_name', search: '?filters=' + encodeURIComponent(JSON.stringify(textFilter('product_name', 'cloud'))) },
+  { name: 'OPEX list', Page: BudgetListPage, totals: '/budget-lines/summary/totals', rows: '/budget-lines/summary', col: 'product_name', search: '' },
+  { name: 'OPEX list with a filter in the URL', Page: BudgetListPage, totals: '/budget-lines/summary/totals', rows: '/budget-lines/summary', col: 'product_name', search: '?filters=' + encodeURIComponent(JSON.stringify(textFilter('product_name', 'cloud'))) },
 ])('$name footer totals', ({ Page, totals, rows, col, search }) => {
   let stored = new Map<string, string>();
   beforeEach(() => {
     grid.api = null;
     frozen.opex = frozen.capex = false;
     get.mockReset();
-    post.mockReset();
-    post.mockImplementation(async (_url, body) => budgetFooterFixture(body.spec.measures));
     window.sessionStorage.clear();
     runOnVirtualTime();
     // jsdom has no ResizeObserver (the grid only uses it to size itself) and no localStorage
@@ -117,9 +113,10 @@ describe.each([
     vi.unstubAllGlobals();
   });
 
-  const totalsCalls = () => post.mock.calls.filter(([url]) => url === totals);
+  const totalsCalls = () => get.mock.calls.filter(([url]) => url === totals);
   const filtersOf = (call: unknown[]) => {
-    return (call[1] as { query: { filters: unknown } }).query.filters;
+    const raw = (call[1] as { params: { filters?: string } }).params.filters;
+    return raw ? JSON.parse(raw) : {};
   };
 
   const renderPage = () => {
@@ -133,26 +130,26 @@ describe.each([
     );
   };
 
-  it('asks once on load when the saved layout shows an FTE column, with the filter and the FTE column', async () => {
+  it('asks once per scope on load when the saved layout shows an FTE column, with the filter and the FTE column', async () => {
     const key = 'budget-summary';
     stored.set(`grid-columns:test:u-1:${key}`, JSON.stringify([{ colId: 'fte_yBudget', hide: false }]));
     renderPage();
     await waitFor(() => expect(grid.api).not.toBeNull());
     await waitFor(() => expect(get.mock.calls.some(([url]) => url === rows)).toBe(true));
     await settle();
-    expect(totalsCalls()).toHaveLength(1);
+    expect(totalsCalls()).toHaveLength(3);
     expect(filtersOf(totalsCalls()[0])).toEqual(search ? textFilter(col, 'cloud') : {});
-    expect(totalsCalls()[0][1].spec.measures).toContainEqual({ id: 'fte_yBudget', fn: 'sum', field: 'fte_yBudget' });
+    expect((totalsCalls()[0][1] as { params: { fte?: string } }).params.fte).toBe('fte_yBudget');
   }, 20_000);
 
-  it('asks the totals once per distinct query: once on load, once more on a filter change, none on a sort', async () => {
+  it('asks the totals once per scope and query: on load and filter changes, none on a sort', async () => {
     renderPage();
     await waitFor(() => expect(grid.api).not.toBeNull());
     await waitFor(() => expect(get.mock.calls.some(([url]) => url === rows)).toBe(true));
     await settle();
-    // The grid reports its query several times while it starts; the footer asks once, with the
-    // filter the grid applied (never a first request without it).
-    expect(totalsCalls()).toHaveLength(1);
+    // The grid reports its query several times while it starts; each scope asks once, with the
+    // filter the grid applied for each scope.
+    expect(totalsCalls()).toHaveLength(3);
     expect(filtersOf(totalsCalls()[0])).toEqual(search ? textFilter(col, 'cloud') : {});
 
     // A sort changes no total.
@@ -161,21 +158,21 @@ describe.each([
     });
     await settle();
     expect(get.mock.calls.some(([url, config]) => url === rows && config?.params?.sort === `${col}:ASC`)).toBe(true);
-    expect(totalsCalls()).toHaveLength(1);
+    expect(totalsCalls()).toHaveLength(3);
 
-    // A filter change asks once more, with the new filter.
+    // A filter change reloads each scope with the new filter.
     await act(async () => {
       grid.api.setFilterModel(textFilter(col, 'licence'));
     });
     await settle();
-    expect(totalsCalls()).toHaveLength(2);
-    expect(filtersOf(totalsCalls()[1])).toEqual(textFilter(col, 'licence'));
+    expect(totalsCalls()).toHaveLength(6);
+    expect(filtersOf(totalsCalls()[3])).toEqual(textFilter(col, 'licence'));
 
     // A delete changes the lines, not the query: the same query is asked again.
     fireEvent.click(screen.getByRole('button', { name: 'delete-selected' }));
     await settle();
-    expect(totalsCalls()).toHaveLength(3);
-    expect(totalsCalls()[2][1]).toEqual(totalsCalls()[1][1]);
+    expect(totalsCalls()).toHaveLength(9);
+    expect((totalsCalls()[6][1] as { params: unknown }).params).toEqual((totalsCalls()[3][1] as { params: unknown }).params);
   }, 20_000);
   it('the real grid renders a lock only on the frozen nature and keeps Total unlocked', async () => {
     frozen.opex = true;

@@ -21,6 +21,9 @@ import {
   buildAmountColumnDefs,
   buildFteColumnDefs,
   explicitSort,
+  fteTotalsToRow,
+  pendingAmountsField,
+  totalsToVersions,
   SummaryVersions,
   visibleAmountFields,
   visibleFteFields,
@@ -37,10 +40,8 @@ import ForbiddenPage from '../ForbiddenPage';
 import { budgetListFieldPredicate } from './listFields';
 import { useTenant } from '../../tenant/TenantContext';
 import { migrateBudgetGridLayout, type BudgetNatureScope, natureScopeOf } from './listPreferences';
-import api from '../../api';
 import BudgetTotalCell from './BudgetTotalCell';
-import { listTotalRow, natureTotal } from './listTotals';
-import type { AggregateResult } from '../reports/reportAggregates';
+import { withFilter, type ColumnFilters } from '../reports/reportAggregates';
 import { statusColumnProps } from '../../components/grid/statusColumn';
 
 /**
@@ -88,8 +89,32 @@ type TotalsQuery = { q: string; filters: string; statusScope: StatusScope; fte: 
 
 const TOTALS_QUERY_KEY = 'budget-summary-totals';
 const ROWS_ENDPOINT = '/budget-lines/summary';
-const TOTALS_ENDPOINT = '/budget-lines/summary/aggregate';
+const TOTALS_ENDPOINT = '/budget-lines/summary/totals';
 const VALUES_ENDPOINT = '/budget-lines/summary/filter-values';
+
+/** Fixed hooks retain each scope's previous amounts while newly shown columns load. */
+function useListTotals(query: TotalsQuery | null, nature: 'opex' | 'capex' | null, enabled = true) {
+  return useQuery({
+    queryKey: [TOTALS_QUERY_KEY, nature, query],
+    queryFn: async ({ signal }) => {
+      const params: Record<string, any> = {};
+      if (query!.q) params.q = query!.q;
+      const filters = parseListFilters(query!.filters) ?? {};
+      if (nature) {
+        params.filters = JSON.stringify(withFilter(filters as ColumnFilters, 'nature', { filterType: 'set', values: [nature] }));
+      } else if (query!.filters) params.filters = query!.filters;
+      Object.assign(params, statusScopeParams(query!.statusScope));
+      if (query!.fte) params.fte = query!.fte;
+      params.amounts = query!.amounts;
+      const res = await getWithListContext(TOTALS_ENDPOINT, params, { signal });
+      return res.data;
+    },
+    enabled: query != null && enabled,
+    placeholderData: keepPreviousData,
+    staleTime: 0,
+    retry: false,
+  });
+}
 
 /**
  * Parameters of the page requests: the lean grid rows, with the FTE keys of the FTE columns shown
@@ -259,7 +284,7 @@ function BudgetListPageView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gridCanMount]);
   // The footer follows the query the grid reports once it is ready (see onQueryStateChange), and
-  // the FTE columns it shows: one request per distinct query, none on a sort (the key leaves it
+  // the FTE columns it shows: one request per scope and distinct query, none on a sort (the key leaves it
   // out). The grid reports the same query several times while it starts (URL sync, initial sort,
   // grid ready); the key stays the same. A superseded request is cancelled through its signal.
   const [totalsQuery, setTotalsQuery] = useState<Omit<TotalsQuery, 'fte' | 'amounts'> | null>(null);
@@ -273,41 +298,31 @@ function BudgetListPageView() {
     const amounts = visibleAmountFields(state).join(',');
     setColumnFields((prev) => (prev && prev.fte === fte && prev.amounts === amounts ? prev : { fte, amounts }));
   }, []);
-  const totals = useQuery({
-    queryKey: [TOTALS_QUERY_KEY, totalsQuery && columnFields ? { ...totalsQuery, ...columnFields } : null],
-    queryFn: async ({ signal }) => {
-      const query = {
-        q: totalsQuery!.q,
-        filters: parseListFilters(totalsQuery!.filters) ?? {},
-        ...statusScopeParams(totalsQuery!.statusScope),
-      };
-      const measures = [columnFields!.amounts, columnFields!.fte].flatMap((fields) => fields.split(',').filter(Boolean))
-        .map((field) => ({ id: field, fn: 'sum', field }));
-      const res = await api.post<AggregateResult>(TOTALS_ENDPOINT, { query, spec: { groupBy: ['nature'], measures } }, { signal });
-      return res.data;
-    },
-    enabled: totalsQuery != null && columnFields != null,
-    placeholderData: keepPreviousData,
-    staleTime: 0,
-    retry: false,
-  });
+  const totalsScope = natureScopeOf(parseListFilters(totalsQuery?.filters)?.nature);
+  const footerQuery = totalsQuery && columnFields ? { ...totalsQuery, ...columnFields } : null;
+  const totals = useListTotals(footerQuery, null);
+  const opexTotals = useListTotals(footerQuery, 'opex', totalsScope === 'all');
+  const capexTotals = useListTotals(footerQuery, 'capex', totalsScope === 'all');
+  const totalsResults = totalsScope === 'all' ? [totals, opexTotals, capexTotals] : [totals];
   const pinnedTotals = useMemo(() => {
-    if (!totals.data || totals.isError) return [];
-    const result = totals.data;
-    const scope = natureScopeOf(parseListFilters(totalsQuery?.filters)?.nature);
-    const row = (group: AggregateResult['total'] | undefined) => listTotalRow(group, columnFields?.amounts ?? '', columnFields?.fte ?? '');
+    if (totalsResults.some((result) => !result.data || result.isError)) return [];
+    const row = (data: any) => ({
+      versions: totalsToVersions(data),
+      ...fteTotalsToRow(data.fte),
+      ...pendingAmountsField(data, columnFields?.amounts),
+    });
     const total = {
       id: '__budget_totals__',
       product_name: filteredCount == null ? t('shared.total') : t('budget.totalWithCount', { count: filteredCount }),
-      ...(scope === 'all' ? {} : { nature: scope }),
-      ...row(result.total),
+      ...(totalsScope === 'all' ? {} : { nature: totalsScope }),
+      ...row(totals.data),
     };
-    return scope === 'all' ? [
-      { id: '__budget_totals_opex__', nature: 'opex', product_name: t('budget.totalOpex'), ...row(natureTotal(result, 'opex')) },
-      { id: '__budget_totals_capex__', nature: 'capex', product_name: t('budget.totalCapex'), ...row(natureTotal(result, 'capex')) },
+    return totalsScope === 'all' ? [
+      { id: '__budget_totals_opex__', nature: 'opex', product_name: t('budget.totalOpex'), ...row(totalsResults[1].data) },
+      { id: '__budget_totals_capex__', nature: 'capex', product_name: t('budget.totalCapex'), ...row(totalsResults[2].data) },
       total,
     ] : [total];
-  }, [totals.data, totals.isError, totalsQuery?.filters, columnFields, filteredCount, t]);
+  }, [totalsResults[0].data, totalsResults[0].isError, totalsResults[1]?.data, totalsResults[1]?.isError, totalsResults[2]?.data, totalsResults[2]?.isError, totalsScope, columnFields, filteredCount, t]);
 
   // A delete or an import changes the lines without changing the query: ask again for the same one.
   useEffect(() => {
