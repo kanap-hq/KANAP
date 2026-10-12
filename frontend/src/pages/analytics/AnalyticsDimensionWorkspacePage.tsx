@@ -6,7 +6,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
-import { PropertyGroup, PropertyRow } from '../../components/design';
+import { KanapDialog, PropertyGroup, PropertyRow } from '../../components/design';
 import StatusLifecycleField from '../../components/fields/StatusLifecycleField';
 import { ANALYTICS_AXES_QUERY_KEY, useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import { useAnalyticsDimensionNav } from '../../hooks/useAnalyticsNav';
@@ -28,7 +28,7 @@ import {
   ANALYTICS_LIST_PATH,
   DIMENSION_CODE_PATTERN,
   analyticsRefusalField,
-  dimensionDeleteBlock,
+  deleteConfirmation,
   proposeDimensionCode,
   requiredMissingLine,
   requiredUnusableLine,
@@ -75,6 +75,7 @@ export default function AnalyticsDimensionWorkspacePage() {
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [pageError, setPageError] = React.useState<string | null>(null);
   const [deleting, setDeleting] = React.useState(false);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
   // Autosave never blocks the fields: writes queue one after the other, so a response never
   // overwrites a newer one, and results for a record the user has left are dropped.
   const chainRef = React.useRef<Promise<unknown>>(Promise.resolve());
@@ -133,20 +134,28 @@ export default function AnalyticsDimensionWorkspacePage() {
     [canEdit, data?.id, queryClient, t],
   );
 
-  const handleDelete = async () => {
+  /** `force`: the values go too, and the lines lose their value on it (the confirmation said so). */
+  const handleDelete = async (force: boolean) => {
     if (!data || !canDelete) return;
     const recordId = data.id;
     setDeleting(true);
     setPageError(null);
     try {
-      await deleteAnalyticsAxis(recordId);
+      await (force ? deleteAnalyticsAxis(recordId, { force: true }) : deleteAnalyticsAxis(recordId));
+      setConfirmOpen(false);
       queryClient.removeQueries({ queryKey: [...ANALYTICS_AXIS_DETAIL_KEY, recordId] });
       void queryClient.invalidateQueries({ queryKey: ANALYTICS_AXES_QUERY_KEY, exact: true });
+      // The values and the lines' values on it are gone too.
+      void queryClient.invalidateQueries({ queryKey: ['analytics-categories'] });
+      void queryClient.invalidateQueries({ queryKey: ['analytics-ids'] });
       // The user may have moved to another dimension meanwhile: the result is not theirs to see.
       if (currentIdRef.current === recordId) navigate(ANALYTICS_LIST_PATH);
     } catch (e) {
+      setConfirmOpen(false);
       if (currentIdRef.current === recordId) {
         setPageError(getApiErrorMessage(e, t, t('analytics.messages.dimensionDeleteFailed')));
+        // Its counts may be stale (a value added elsewhere): the next Delete asks with the new ones.
+        void queryClient.invalidateQueries({ queryKey: [...ANALYTICS_AXIS_DETAIL_KEY, recordId] });
       }
     } finally {
       setDeleting(false);
@@ -160,8 +169,13 @@ export default function AnalyticsDimensionWorkspacePage() {
   const isDefault = !!data?.is_default;
   const disabled = !canEdit;
   const valueCount = data?.value_count ?? 0;
-  // The server refuses this delete anyway; the page already knows, so it says why up front.
-  const deleteBlock = data ? dimensionDeleteBlock(t, data.value_count ?? 0) : null;
+  // Without values it goes at once; with values the dialog says what goes with it (from the detail's counts).
+  const confirmation = data ? deleteConfirmation(t, {
+    kind: 'dimension',
+    name: axes.label(data),
+    valueCount,
+    lineCount: usedLineCount(data.opex_count, data.capex_count),
+  }) : null;
 
   // The default dimension is never deleted: no button, its reason sits under the lifecycle.
   const actions = canDelete && data && !isDefault ? (
@@ -169,8 +183,8 @@ export default function AnalyticsDimensionWorkspacePage() {
       variant="action-danger"
       startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}
       size="small"
-      onClick={() => void handleDelete()}
-      disabled={deleting || !!deleteBlock}
+      onClick={() => (confirmation ? setConfirmOpen(true) : void handleDelete(false))}
+      disabled={deleting}
     >
       {t('common:buttons.delete')}
     </Button>
@@ -247,11 +261,6 @@ export default function AnalyticsDimensionWorkspacePage() {
                   </>
                 ) : t('analytics.usage.noValues')}
               </Typography>
-              {canDelete && !isDefault && deleteBlock && (
-                <Typography data-testid="analytics-dimension-delete-block" sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>
-                  {deleteBlock}
-                </Typography>
-              )}
             </Box>
             <AnalyticsDescriptionField
               key={data.id}
@@ -264,6 +273,21 @@ export default function AnalyticsDimensionWorkspacePage() {
           </Stack>
         )}
       </PortfolioDetailWorkspaceShell>
+      {confirmation && (
+        <KanapDialog
+          open={confirmOpen}
+          title={confirmation.title}
+          onClose={() => { if (!deleting) setConfirmOpen(false); }}
+          onSave={() => handleDelete(true)}
+          saveLabel={confirmation.confirmLabel}
+          saveVariant="action-danger"
+          saveLoading={deleting}
+        >
+          <Typography data-testid="analytics-delete-confirmation" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+            {confirmation.body}
+          </Typography>
+        </KanapDialog>
+      )}
     </Box>
   );
 }

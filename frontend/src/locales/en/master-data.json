@@ -692,8 +692,20 @@
       "valueLines_other": "Used by {{count}} lines",
       "valueUnused": "Not used yet"
     },
-    "deleteBlocked": {
-      "dimensionHasValues": "To delete this dimension, delete its values first."
+    "forceDelete": {
+      "title": "Delete {{name}}?",
+      "dimensionValues_one": "Its value is deleted too.",
+      "dimensionValues_other": "Its {{count}} values are deleted too.",
+      "dimensionUsedValues_one": "Its value is deleted",
+      "dimensionUsedValues_other": "Its {{count}} values are deleted",
+      "dimensionUsed": "{{values}}, and it is removed from {{lines}}. This data cannot be recovered.",
+      "valueUsed_one": "It is removed from {{count}} budget line. This data cannot be recovered.",
+      "valueUsed_other": "It is removed from {{count}} budget lines. This data cannot be recovered.",
+      "valuesUsed_one": "{{count}} selected value is used: it is removed from {{lines}}. This data cannot be recovered.",
+      "valuesUsed_other": "{{count}} selected values are used: they are removed from {{lines}}. This data cannot be recovered.",
+      "budgetLines_one": "{{count}} budget line",
+      "budgetLines_other": "{{count}} budget lines",
+      "confirmAnyway": "Delete anyway"
     },
     "appliesToConflict": {
       "capex_one": "{{count}} CAPEX line has a value for this dimension. It keeps it, hidden while the dimension is for OPEX lines only.",

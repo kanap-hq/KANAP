@@ -17,6 +17,8 @@ vi.mock('react-i18next', () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
       if (key === 'master-data:analytics.analyticsCategoryFallback' || key === 'analytics.analyticsCategoryFallback') return 'Analytics dimension';
       if (opts && 'code' in opts) return `${key}:${opts.code}`;
+      // A delete confirmation shows what it carries: the name, the counts, the nested phrases.
+      if (key.startsWith('analytics.forceDelete.') && opts) return `${key}:${Object.values(opts).join('|')}`;
       // The usage line's count shows after its key, so a test sees the number of lines.
       return key.startsWith('analytics.usage.') && opts && 'count' in opts ? `${key}:${opts.count}` : key;
     },
@@ -290,25 +292,67 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     const usage = await screen.findByTestId('analytics-dimension-usage');
     expect(usage).toHaveTextContent('analytics.usage.values:3 · analytics.usage.dimensionUnused');
     expect(within(usage).queryByRole('link')).toBeNull();
-    // The reason Delete is disabled stays.
-    expect(screen.getByTestId('analytics-dimension-delete-block')).toHaveTextContent('analytics.deleteBlocked.dimensionHasValues');
   });
 
-  it('disables Delete while the dimension has values, and deletes an empty one', async () => {
-    const { unmount } = renderAt('/master-data/analytics/dimensions/ax-nature/overview');
-    expect(await screen.findByTestId('analytics-dimension-delete-block')).toHaveTextContent('analytics.deleteBlocked.dimensionHasValues');
-    expect(screen.getByRole('button', { name: 'common:buttons.delete' })).toBeDisabled();
-    expect(within(screen.getByRole('complementary')).getByRole('checkbox', { name: 'statuses.enabled' })).toBeEnabled();
-    unmount();
-
+  it('deletes a dimension without values at once, with no dialog', async () => {
     mocked.getAnalyticsAxis.mockResolvedValue({ ...NATURE, value_count: 0, opex_count: 0, capex_count: 0 });
     mocked.deleteAnalyticsAxis.mockResolvedValue(undefined);
     renderAt('/master-data/analytics/dimensions/ax-nature/overview');
     expect(await screen.findByTestId('analytics-dimension-usage')).toHaveTextContent('analytics.usage.noValues');
-    expect(screen.queryByTestId('analytics-dimension-delete-block')).toBeNull();
+    expect(screen.queryByText(/deleteBlocked/)).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
     await waitFor(() => expect(mocked.deleteAnalyticsAxis).toHaveBeenCalledWith('ax-nature'));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics'));
+  });
+
+  it('asks before deleting a dimension whose values no line uses: its values go too', async () => {
+    mocked.getAnalyticsAxis.mockResolvedValue({ ...NATURE, opex_count: 0, capex_count: 0 });
+    mocked.deleteAnalyticsAxis.mockResolvedValue(undefined);
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    await screen.findByTestId('analytics-dimension-usage');
+    // The sentence that blocked Delete is gone: the button works.
+    expect(screen.queryByText(/deleteBlocked/)).toBeNull();
+    expect(within(screen.getByRole('complementary')).getByRole('checkbox', { name: 'statuses.enabled' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('analytics.forceDelete.title:Nature')).toBeInTheDocument();
+    expect(within(dialog).getByTestId('analytics-delete-confirmation')).toHaveTextContent('analytics.forceDelete.dimensionValues:3');
+    expect(mocked.deleteAnalyticsAxis).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.delete' }));
+    await waitFor(() => expect(mocked.deleteAnalyticsAxis).toHaveBeenCalledWith('ax-nature', { force: true }));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics'));
+  });
+
+  it('asks "Delete anyway" before deleting a dimension used by lines, with the exact counts', async () => {
+    mocked.deleteAnalyticsAxis.mockResolvedValue(undefined);
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    await screen.findByTestId('analytics-dimension-usage');
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    const dialog = await screen.findByRole('dialog');
+    // 3 values; 2 OPEX and 2 CAPEX lines: 4 distinct budget lines.
+    expect(within(dialog).getByTestId('analytics-delete-confirmation')).toHaveTextContent(
+      'analytics.forceDelete.dimensionUsed:analytics.forceDelete.dimensionUsedValues:3|analytics.forceDelete.budgetLines:4',
+    );
+    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(mocked.deleteAnalyticsAxis).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'analytics.forceDelete.confirmAnyway' }));
+    await waitFor(() => expect(mocked.deleteAnalyticsAxis).toHaveBeenCalledWith('ax-nature', { force: true }));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics'));
+  });
+
+  it('shows the refusal and closes the dialog when the forced delete fails', async () => {
+    mocked.deleteAnalyticsAxis.mockRejectedValue({ response: { status: 409, data: { message: 'This dimension cannot be deleted.' } } });
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    await screen.findByTestId('analytics-dimension-usage');
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'analytics.forceDelete.confirmAnyway' }));
+    expect(await screen.findByText('This dimension cannot be deleted.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(navigateMock).not.toHaveBeenCalled();
   });
 
   it('offers no Delete to members, and no editing to readers', async () => {

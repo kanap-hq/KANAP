@@ -65,9 +65,53 @@ export function linesUsageText(t: TFunction, kind: 'dimension' | 'value', lineCo
     : t(`analytics.usage.${kind}Unused`);
 }
 
-/** The line that explains a disabled Delete on a dimension other than the default, or null when it can be deleted. */
-export function dimensionDeleteBlock(t: TFunction, valueCount: number): string | null {
-  return valueCount > 0 ? t('analytics.deleteBlocked.dimensionHasValues') : null;
+/** What a delete confirmation says: its title, its body and the label of its main action. */
+export type DeleteConfirmation = { title: string; body: string; confirmLabel: string };
+
+/**
+ * The confirmation of a delete, or null when it needs none (nothing depends on the target).
+ * A dimension with values: "Its 3 values are deleted too." (Delete). A dimension or a value used by
+ * budget lines: what the lines lose, "This data cannot be recovered." (Delete anyway). `name` is the
+ * name the screen shows; `lineCount` the distinct lines using it (`usedLineCount`).
+ */
+export function deleteConfirmation(
+  t: TFunction,
+  target: { kind: 'dimension'; name: string; valueCount: number; lineCount: number } | { kind: 'value'; name: string; lineCount: number },
+): DeleteConfirmation | null {
+  const title = t('analytics.forceDelete.title', { name: target.name });
+  const anyway = t('analytics.forceDelete.confirmAnyway');
+  if (target.kind === 'value') {
+    return target.lineCount > 0
+      ? { title, body: t('analytics.forceDelete.valueUsed', { count: target.lineCount }), confirmLabel: anyway }
+      : null;
+  }
+  if (target.valueCount <= 0) return null;
+  if (target.lineCount <= 0) {
+    return { title, body: t('analytics.forceDelete.dimensionValues', { count: target.valueCount }), confirmLabel: t('common:buttons.delete') };
+  }
+  return {
+    title,
+    body: t('analytics.forceDelete.dimensionUsed', {
+      values: t('analytics.forceDelete.dimensionUsedValues', { count: target.valueCount }),
+      lines: t('analytics.forceDelete.budgetLines', { count: target.lineCount }),
+    }),
+    confirmLabel: anyway,
+  };
+}
+
+/**
+ * The values grid's bulk delete when some selected values are used by budget lines: "2 selected
+ * values are used: they are removed from 6 budget lines. This data cannot be recovered."; null when
+ * none is. The values of the grid belong to one dimension, so their line counts add up to distinct lines.
+ */
+export function valuesInUseMessage(
+  t: TFunction,
+  values: ReadonlyArray<{ opex_count?: number | null; capex_count?: number | null }>,
+): string | null {
+  const used = values.map((value) => usedLineCount(value.opex_count, value.capex_count)).filter((count) => count > 0);
+  if (used.length === 0) return null;
+  const lines = used.reduce((sum, count) => sum + count, 0);
+  return t('analytics.forceDelete.valuesUsed', { count: used.length, lines: t('analytics.forceDelete.budgetLines', { count: lines }) });
 }
 
 /**

@@ -288,9 +288,8 @@ describe('AnalyticsWorkspacePage', () => {
     levels.value = 'admin';
     const second = renderAt('/master-data/analytics/v-1/overview?axis=ax-nature');
     await findTitle();
-    expect(screen.getByRole('button', { name: 'common:buttons.delete' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'common:buttons.delete' })).toBeEnabled();
     expect(screen.getByTestId('analytics-value-usage')).toHaveTextContent('analytics.usage.valueLines:4');
-    expect(screen.getByTestId('analytics-value-usage')).not.toHaveTextContent('analytics.deleteBlocked');
     second.unmount();
 
     mocked.getAnalyticsValue.mockResolvedValue({ ...VALUE, opex_count: 0, capex_count: 0 });
@@ -300,7 +299,32 @@ describe('AnalyticsWorkspacePage', () => {
     expect(screen.getByTestId('analytics-value-usage')).toHaveTextContent('analytics.usage.valueUnused');
     expect(within(screen.getByTestId('analytics-value-usage')).queryByRole('link')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    // Unused: deleted at once, no dialog, no force.
+    expect(screen.queryByRole('dialog')).toBeNull();
     await waitFor(() => expect(mocked.deleteAnalyticsValue).toHaveBeenCalledWith('v-1'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics?axis=ax-nature'));
+  });
+
+  it('asks "Delete anyway" before deleting a value used by lines, with the exact line count', async () => {
+    levels.value = 'admin';
+    mocked.deleteAnalyticsValue.mockResolvedValue(undefined);
+    renderAt('/master-data/analytics/v-1/overview?axis=ax-nature');
+    await findTitle();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('analytics.forceDelete.title')).toBeInTheDocument();
+    // 3 OPEX lines and 1 CAPEX line: removed from 4 budget lines.
+    expect(within(dialog).getByTestId('analytics-delete-confirmation')).toHaveTextContent('analytics.forceDelete.valueUsed:4');
+    expect(mocked.deleteAnalyticsValue).not.toHaveBeenCalled();
+
+    // Cancel deletes nothing.
+    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(mocked.deleteAnalyticsValue).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'analytics.forceDelete.confirmAnyway' }));
+    await waitFor(() => expect(mocked.deleteAnalyticsValue).toHaveBeenCalledWith('v-1', { force: true }));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics?axis=ax-nature'));
   });
 
@@ -419,7 +443,7 @@ describe('AnalyticsWorkspacePage', () => {
     expect(navigateMock).toHaveBeenLastCalledWith('/master-data/analytics?axis=ax-nature');
   });
 
-  it('refreshes the dimension counts once a value is deleted, so its Delete opens', async () => {
+  it('refreshes the dimension counts once a value is deleted, so its Delete asks no more', async () => {
     levels.value = 'admin';
     // The app keeps data fresh for 30 s: only an invalidation brings the new counts.
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30_000 } } });
@@ -429,8 +453,11 @@ describe('AnalyticsWorkspacePage', () => {
     };
     mocked.getAnalyticsAxis.mockResolvedValue(nature);
     const first = renderAt('/master-data/analytics/dimensions/ax-nature/overview', queryClient);
-    expect(await screen.findByTestId('analytics-dimension-delete-block')).toHaveTextContent('analytics.deleteBlocked.dimensionHasValues');
-    expect(screen.getByRole('button', { name: 'common:buttons.delete' })).toBeDisabled();
+    expect(await screen.findByTestId('analytics-dimension-usage')).toHaveTextContent('analytics.usage.values:1');
+    // One value: Delete asks first, its value goes too.
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    expect(within(await screen.findByRole('dialog')).getByTestId('analytics-delete-confirmation'))
+      .toHaveTextContent('analytics.forceDelete.dimensionValues:1');
     first.unmount();
 
     mocked.getAnalyticsValue.mockResolvedValue({ ...VALUE, opex_count: 0, capex_count: 0 });
@@ -444,7 +471,6 @@ describe('AnalyticsWorkspacePage', () => {
     mocked.getAnalyticsAxis.mockResolvedValue({ ...nature, value_count: 0 });
     renderAt('/master-data/analytics/dimensions/ax-nature/overview', queryClient);
     await waitFor(() => expect(screen.getByTestId('analytics-dimension-usage')).toHaveTextContent('analytics.usage.noValues'));
-    expect(screen.queryByTestId('analytics-dimension-delete-block')).toBeNull();
     expect(screen.getByRole('button', { name: 'common:buttons.delete' })).toBeEnabled();
   });
 
