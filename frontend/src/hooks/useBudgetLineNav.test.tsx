@@ -11,8 +11,7 @@ vi.mock('react-i18next', () => {
 vi.mock('../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 
 import api from '../api';
-import { useSpendNav } from './useSpendNav';
-import { useCapexNav } from './useCapexNav';
+import { useBudgetLineNav } from './useBudgetLineNav';
 import { DEFAULT_BUDGET_COLUMNS, type BudgetColumnsSettings } from '../services/budgetColumns';
 import { resetListContextCache } from '../lib/listContext';
 
@@ -39,7 +38,7 @@ const calls = (url: string) => mocked.get.mock.calls.filter(([u]) => u === url);
 const neighborCalls = () => calls('/spend-items/summary/neighbors');
 const idsCalls = () => calls('/spend-items/summary/ids');
 
-describe('useSpendNav (neighbours, lot 1C)', () => {
+describe('useBudgetLineNav (neighbours, lot 1C)', () => {
   beforeEach(() => {
     setting = DEFAULT_BUDGET_COLUMNS;
     queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -49,7 +48,7 @@ describe('useSpendNav (neighbours, lot 1C)', () => {
     mocked.get.mockImplementation(async (url: string, config?: { params?: Record<string, string> }) => {
       if (url === '/budget-columns') return { data: setting };
       if (url === '/spend-items/summary/neighbors') return { data: neighborsOf(config!.params!.id) };
-      if (url.startsWith('/spend-items/')) return { data: { id: `uuid-${url.split('-').pop()}`, product_name: url } };
+      if (url.startsWith('/budget-lines/')) return { data: { id: `uuid-${url.split('-').pop()}`, product_name: url } };
       return { data: {} };
     });
     mocked.post.mockImplementation(async () => ({ data: { id: 'Ctx_0123456789abcdefghi' } }));
@@ -57,20 +56,20 @@ describe('useSpendNav (neighbours, lot 1C)', () => {
 
   it('without a sort, walks the current default column, once the setting is known', async () => {
     setting = { ...DEFAULT_BUDGET_COLUMNS, default_column: 'committed' };
-    renderHook(() => useSpendNav({ id: 'OPX-2', sort: null, statusScope: 'enabled' }), { wrapper });
+    renderHook(() => useBudgetLineNav({ id: 'OPX-2', sort: null, statusScope: 'enabled' }, 'opex'), { wrapper });
     await waitFor(() => expect(neighborCalls().length).toBeGreaterThan(0));
     expect(neighborCalls()[0][1].params.sort).toBe('yRevision:DESC');
   });
 
   it('keeps a sort the user picked', async () => {
     setting = { ...DEFAULT_BUDGET_COLUMNS, default_column: 'committed' };
-    renderHook(() => useSpendNav({ id: 'OPX-2', sort: 'yBudget:ASC', statusScope: 'enabled' }), { wrapper });
+    renderHook(() => useBudgetLineNav({ id: 'OPX-2', sort: 'yBudget:ASC', statusScope: 'enabled' }, 'opex'), { wrapper });
     await waitFor(() => expect(neighborCalls().length).toBeGreaterThan(0));
     expect(neighborCalls()[0][1].params.sort).toBe('yBudget:ASC');
   });
 
   it('asks the server where the route line stands, never every id of the list', async () => {
-    const { result } = renderHook(() => useSpendNav({ id: 'OPX-3', sort: 'yBudget:DESC', q: 'cloud', statusScope: 'all' }), { wrapper });
+    const { result } = renderHook(() => useBudgetLineNav({ id: 'OPX-3', sort: 'yBudget:DESC', q: 'cloud', statusScope: 'all' }, 'opex'), { wrapper });
     await waitFor(() => expect(result.current.total).toBe(5));
     expect(result.current).toMatchObject({ index: 2, total: 5, hasPrev: true, hasNext: true, prevId: 'OPX-2', nextId: 'OPX-4' });
     const params = neighborCalls()[0][1].params;
@@ -79,24 +78,24 @@ describe('useSpendNav (neighbours, lot 1C)', () => {
   });
 
   it('gives no previous / next to a line the list does not hold', async () => {
-    const { result } = renderHook(() => useSpendNav({ id: 'OPX-9', sort: 'yBudget:DESC', statusScope: 'enabled' }), { wrapper });
+    const { result } = renderHook(() => useBudgetLineNav({ id: 'OPX-9', sort: 'yBudget:DESC', statusScope: 'enabled' }, 'opex'), { wrapper });
     await waitFor(() => expect(neighborCalls().length).toBeGreaterThan(0));
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(result.current).toMatchObject({ total: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null });
   });
 
   it('prefetches the details and the positions of the previous and next lines', async () => {
-    renderHook(() => useSpendNav({ id: 'OPX-3', sort: 'yBudget:DESC', statusScope: 'enabled' }), { wrapper });
+    renderHook(() => useBudgetLineNav({ id: 'OPX-3', sort: 'yBudget:DESC', statusScope: 'enabled' }, 'opex'), { wrapper });
     await waitFor(() => {
-      expect(calls('/spend-items/OPX-2')).toHaveLength(1);
-      expect(calls('/spend-items/OPX-4')).toHaveLength(1);
+      expect(calls('/budget-lines/OPX-2')).toHaveLength(1);
+      expect(calls('/budget-lines/OPX-4')).toHaveLength(1);
     });
     await waitFor(() => expect(neighborCalls().map((c) => c[1].params.id).sort()).toEqual(['OPX-2', 'OPX-3', 'OPX-4']));
-    expect(queryClient.getQueryData(['spend', 'OPX-4'])).toEqual({ id: 'uuid-4', product_name: '/spend-items/OPX-4' });
+    expect(queryClient.getQueryData(['budget-line', 'OPX-4'])).toEqual({ id: 'uuid-4', product_name: '/budget-lines/OPX-4' });
   });
 
   it('fast clicks keep moving: the next line\'s position is there at once, while its detail still loads', async () => {
-    const { result, rerender } = renderHook(({ id }) => useSpendNav({ id, sort: 'yBudget:DESC', statusScope: 'enabled' }), {
+    const { result, rerender } = renderHook(({ id }) => useBudgetLineNav({ id, sort: 'yBudget:DESC', statusScope: 'enabled' }, 'opex'), {
       wrapper,
       initialProps: { id: 'OPX-1' },
     });
@@ -117,7 +116,7 @@ describe('useSpendNav (neighbours, lot 1C)', () => {
   });
 
   it('a step to a line whose position is not loaded yet keeps the index and the way back', async () => {
-    const { result, rerender } = renderHook(({ id }) => useSpendNav({ id, sort: 'yBudget:DESC', statusScope: 'enabled' }), {
+    const { result, rerender } = renderHook(({ id }) => useBudgetLineNav({ id, sort: 'yBudget:DESC', statusScope: 'enabled' }, 'opex'), {
       wrapper,
       initialProps: { id: 'OPX-2' },
     });
@@ -143,7 +142,7 @@ describe('useSpendNav (neighbours, lot 1C)', () => {
     const values = Array.from({ length: 1500 }, (_, i) => `Supplier ${i}`);
     const filters = JSON.stringify({ supplier_name: { filterType: 'set', values } });
     expect(encodeURIComponent(filters).length).toBeGreaterThan(20_000);
-    const { result } = renderHook(() => useSpendNav({ id: 'OPX-3', sort: 'yBudget:DESC', filters, statusScope: 'enabled' }), { wrapper });
+    const { result } = renderHook(() => useBudgetLineNav({ id: 'OPX-3', sort: 'yBudget:DESC', filters, statusScope: 'enabled' }, 'opex'), { wrapper });
     await waitFor(() => expect(result.current.total).toBe(5));
     expect(mocked.post).toHaveBeenCalledWith('/list-contexts', { list: 'spend-items', state: { filters: { supplier_name: { filterType: 'set', values } } } });
     const params = neighborCalls()[0][1].params;
@@ -163,10 +162,10 @@ describe('useSpendNav (neighbours, lot 1C)', () => {
       }
       return { data: {} };
     });
-    const { result } = renderHook(() => useCapexNav({ id: 'CPX-1', sort: 'yBudget:DESC', statusScope: 'enabled' }), { wrapper });
+    const { result } = renderHook(() => useBudgetLineNav({ id: 'CPX-1', sort: 'yBudget:DESC', statusScope: 'enabled' }, 'capex'), { wrapper });
     await waitFor(() => expect(result.current.nextId).toBe('CPX-2'));
     expect(result.current).toMatchObject({ index: 0, total: 5, hasPrev: false, hasNext: true });
-    await waitFor(() => expect(calls('/capex-items/CPX-2')).toHaveLength(1));
+    await waitFor(() => expect(calls('/budget-lines/CPX-2')).toHaveLength(1));
     expect(calls('/capex-items/summary/ids')).toHaveLength(0);
   });
 
@@ -178,7 +177,7 @@ describe('useSpendNav (neighbours, lot 1C)', () => {
     });
     const values = Array.from({ length: 1500 }, (_, i) => `Supplier ${i}`);
     const filters = JSON.stringify({ supplier_name: { filterType: 'set', values } });
-    const { result } = renderHook(() => useCapexNav({ id: 'CPX-1', sort: 'yBudget:DESC', filters, statusScope: 'enabled' }), { wrapper });
+    const { result } = renderHook(() => useBudgetLineNav({ id: 'CPX-1', sort: 'yBudget:DESC', filters, statusScope: 'enabled' }, 'capex'), { wrapper });
     await waitFor(() => expect(result.current.total).toBe(1));
     expect(mocked.post).toHaveBeenCalledWith('/list-contexts', { list: 'capex-items', state: { filters: { supplier_name: { filterType: 'set', values } } } });
     const params = calls('/capex-items/summary/neighbors')[0][1].params;
@@ -194,13 +193,13 @@ describe('useSpendNav (neighbours, lot 1C)', () => {
       }
       return { data: {} };
     });
-    const useNav = nature === 'opex' ? useSpendNav : useCapexNav;
+
     const filters = JSON.stringify({ nature: { filterType: 'set', values: ['opex', 'capex'] } });
-    const { result } = renderHook(() => useNav({ id: 'BL-3', sort: 'product_name:ASC', filters, statusScope: 'all' }, true), { wrapper });
+    const { result } = renderHook(() => useBudgetLineNav({ id: 'BL-3', sort: 'product_name:ASC', filters, statusScope: 'all' }, nature, true), { wrapper });
     await waitFor(() => expect(result.current).toMatchObject({ index: 2, total: 5, prevId: 'BL-2', nextId: 'BL-4', prevPath: '/ops/capex/BL-2', nextPath: '/ops/opex/BL-4' }));
     expect(calls('/budget-lines/summary/neighbors')[0][1].params).toMatchObject({ id: 'BL-3', filters, sort: 'product_name:ASC', includeDisabled: '1' });
-    await waitFor(() => expect(calls('/capex-items/BL-2')).toHaveLength(1));
-    await waitFor(() => expect(calls('/spend-items/BL-4')).toHaveLength(1));
+    await waitFor(() => expect(calls('/budget-lines/BL-2')).toHaveLength(1));
+    await waitFor(() => expect(calls('/budget-lines/BL-4')).toHaveLength(1));
     expect(calls('/spend-items/summary/neighbors')).toHaveLength(0);
     expect(calls('/capex-items/summary/neighbors')).toHaveLength(0);
   });
@@ -209,7 +208,7 @@ describe('useSpendNav (neighbours, lot 1C)', () => {
     mocked.get.mockImplementation(async (url: string) => url === '/budget-columns' ? { data: setting } : { data: { index: 0, total: 1, prev: null, next: null } });
     const values = Array.from({ length: 1500 }, (_, i) => `Supplier ${i}`);
     const filters = JSON.stringify({ supplier_name: { filterType: 'set', values } });
-    const { result } = renderHook(() => useSpendNav({ id: 'BL-1', sort: 'yBudget:DESC', filters }, true), { wrapper });
+    const { result } = renderHook(() => useBudgetLineNav({ id: 'BL-1', sort: 'yBudget:DESC', filters }, 'opex', true), { wrapper });
     await waitFor(() => expect(result.current.total).toBe(1));
     expect(mocked.post).toHaveBeenCalledWith('/list-contexts', { list: 'budget-lines', state: { filters: JSON.parse(filters) } });
     expect(calls('/budget-lines/summary/neighbors')[0][1].params.ctx).toBe('Ctx_0123456789abcdefghi');

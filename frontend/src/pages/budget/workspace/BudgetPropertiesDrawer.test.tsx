@@ -81,7 +81,11 @@ vi.mock('../../../hooks/useCostCenterTree', () => {
   };
 });
 
-import SpendPropertiesDrawer from './SpendPropertiesDrawer';
+import { BUDGET_NATURE_CONFIG } from '../natureConfig';
+import BudgetPropertiesDrawer from './BudgetPropertiesDrawer';
+
+let nature: 'opex' | 'capex' = 'opex';
+const otherNature = () => BUDGET_NATURE_CONFIG[nature].otherNature;
 
 const noop = () => undefined;
 
@@ -96,10 +100,11 @@ const DIMENSIONS = [
   dimension('default', null, 0, { is_default: true }),
 ];
 
-function renderDrawer(props: Partial<React.ComponentProps<typeof SpendPropertiesDrawer>>) {
+function renderDrawer(props: Partial<React.ComponentProps<typeof BudgetPropertiesDrawer>>) {
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
-      <SpendPropertiesDrawer
+      <BudgetPropertiesDrawer
+        nature={nature}
         supplierId=""
         payingCompanyId=""
         accountId=""
@@ -122,7 +127,9 @@ function renderDrawer(props: Partial<React.ComponentProps<typeof SpendProperties
   );
 }
 
-describe('SpendPropertiesDrawer required pickers', () => {
+describe.each(['opex', 'capex'] as const)('BudgetPropertiesDrawer %s', (lineNature) => {
+  beforeEach(() => { nature = lineNature; });
+describe('BudgetPropertiesDrawer required pickers', () => {
   it('leaves the supplier optional and lets company and account be cleared only on create', () => {
     const { unmount } = renderDrawer({ mode: 'create' });
     expect(screen.getByTestId('supplier-select')).toHaveAttribute('data-required', 'false');
@@ -137,10 +144,10 @@ describe('SpendPropertiesDrawer required pickers', () => {
   });
 });
 
-describe('SpendPropertiesDrawer account', () => {
+describe('BudgetPropertiesDrawer account', () => {
   it.each(['create', 'edit'] as const)('offers only the accounts OPEX lines may use in %s mode', (mode) => {
     renderDrawer({ mode });
-    expect(screen.getByTestId('account-select')).toHaveAttribute('data-nature', 'opex');
+    expect(screen.getByTestId('account-select')).toHaveAttribute('data-nature', nature);
   });
 
   it('shows supplier, company and account in the drawer list style, as the dimension pickers', () => {
@@ -158,7 +165,7 @@ describe('SpendPropertiesDrawer account', () => {
   });
 });
 
-describe('SpendPropertiesDrawer end of validity', () => {
+describe('BudgetPropertiesDrawer end of validity', () => {
   it('offers one optional end date on create, as the local end of that day', () => {
     const onDisabledAtChange = vi.fn();
     renderDrawer({ mode: 'create', disabledAt: null, onDisabledAtChange });
@@ -190,7 +197,7 @@ describe('SpendPropertiesDrawer end of validity', () => {
     const onDisabledAtChange = vi.fn();
     const onStatusChange = vi.fn();
     // A caller still wiring a status handler must not get a second write from the same pick.
-    const legacy = { onStatusChange } as Partial<React.ComponentProps<typeof SpendPropertiesDrawer>>;
+    const legacy = { onStatusChange } as Partial<React.ComponentProps<typeof BudgetPropertiesDrawer>>;
     renderDrawer({ mode: 'edit', status: 'enabled', disabledAt: null, onDisabledAtChange, ...legacy });
 
     // The calendar inside the lifecycle group (the dates group has its own), picking today.
@@ -205,7 +212,7 @@ describe('SpendPropertiesDrawer end of validity', () => {
   });
 });
 
-describe('SpendPropertiesDrawer cost center and run or build', () => {
+describe('BudgetPropertiesDrawer cost center and run or build', () => {
   it.each(['create', 'edit'] as const)('shows both rows in %s mode, the cost center picking cost centers only', (mode) => {
     renderDrawer({ mode, costCenterId: 'cc-1', payingCompanyId: 'company-1' });
     expect(screen.getByText('opex.fields.costCenter')).toBeInTheDocument();
@@ -271,7 +278,7 @@ describe('SpendPropertiesDrawer cost center and run or build', () => {
   });
 });
 
-describe('SpendPropertiesDrawer analytics dimensions', () => {
+describe('BudgetPropertiesDrawer analytics dimensions', () => {
   beforeEach(() => {
     dimensions.list = DIMENSIONS;
     dimensions.isError = false;
@@ -293,14 +300,14 @@ describe('SpendPropertiesDrawer analytics dimensions', () => {
     expect(screen.getByTestId('analytics-select-default')).toHaveTextContent('value-1');
     expect(screen.getByTestId('analytics-select-nature')).not.toHaveTextContent('value');
     // Each select offers only the values OPEX lines may use.
-    expect(selects.map((el) => el.getAttribute('data-line-type'))).toEqual(['opex', 'opex', 'opex']);
+    expect(selects.map((el) => el.getAttribute('data-line-type'))).toEqual([nature, nature, nature]);
   });
 
   it.each(['create', 'edit'] as const)('shows no select for a dimension used for CAPEX lines only, even with a held value (%s)', (mode) => {
     dimensions.list = [
       ...DIMENSIONS,
-      dimension('investment', 'Investment type', 4, { applies_to: 'capex' }),
-      dimension('licence', 'Licence model', 5, { applies_to: 'opex' }),
+      dimension('investment', 'Investment type', 4, { applies_to: lineNature === 'opex' ? 'capex' : 'opex' }),
+      dimension('licence', 'Licence model', 5, { applies_to: lineNature }),
     ];
     renderDrawer({ mode, analyticsValues: { default: 'value-1', investment: 'value-7' } });
     expect(screen.getAllByTestId(/^analytics-select-/).map((el) => el.getAttribute('data-testid'))).toEqual([
@@ -338,7 +345,7 @@ describe('SpendPropertiesDrawer analytics dimensions', () => {
     dimensions.list = [
       ...DIMENSIONS.map((entry) => (entry.id === 'nature' ? { ...entry, required: true } : entry)),
       // Required for CAPEX lines only: no select here at all.
-      dimension('investment', 'Investment type', 4, { applies_to: 'capex', required: true }),
+      dimension('investment', 'Investment type', 4, { applies_to: lineNature === 'opex' ? 'capex' : 'opex', required: true }),
     ];
     renderDrawer({ mode: 'edit' });
     const label = (name: string) => screen.getByText(name).closest('.kanap-field-label');
@@ -372,4 +379,27 @@ describe('SpendPropertiesDrawer analytics dimensions', () => {
     renderDrawer({ mode: 'edit', currency: 'EUR' });
     expect(screen.getByDisplayValue(/^EUR · /)).toBeInTheDocument();
   });
+});
+
+  it('shows Type first, with a neutral badge and an optional change action', () => {
+    const onChangeType = vi.fn();
+    renderDrawer({ onChangeType });
+    const labels = screen.getAllByText('budget.type');
+    expect(labels).toHaveLength(1);
+    expect(labels[0].compareDocumentPosition(screen.getByText('opex.fields.supplier')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByText(BUDGET_NATURE_CONFIG[nature].typeLabel)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'budget.changeType' }));
+    expect(onChangeType).toHaveBeenCalledOnce();
+  });
+
+  it('offers both Types on create and reports the selected nature', () => {
+    const onNatureChange = vi.fn();
+    renderDrawer({ mode: 'create', onNatureChange });
+    const select = screen.getByRole('combobox', { name: 'budget.type' });
+    expect(select).toHaveTextContent(BUDGET_NATURE_CONFIG[nature].typeLabel);
+    fireEvent.mouseDown(select);
+    fireEvent.click(screen.getByRole('option', { name: BUDGET_NATURE_CONFIG[otherNature()].typeLabel }));
+    expect(onNatureChange).toHaveBeenCalledWith(otherNature());
+  });
+
 });

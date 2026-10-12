@@ -26,7 +26,7 @@ type Props = {
   onOwnerBizChange: (next: string | null) => void;
 };
 
-export default function SpendMetadataBar({
+export default function BudgetMetadataBar({
   status,
   ownerItId,
   ownerBizId,

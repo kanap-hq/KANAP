@@ -19,6 +19,8 @@ beforeEach(() => {
   mocked.post.mockReset();
 });
 
+import { BUDGET_NATURE_CONFIG } from './natureConfig';
+
 describe.each(['opex', 'capex'] as const)('legacy %s list', (nature) => {
   it('adds the nature and keeps every other URL parameter', async () => {
     const filters = { supplier_name: set(['Acme']) };
@@ -28,16 +30,16 @@ describe.each(['opex', 'capex'] as const)('legacy %s list', (nature) => {
   });
 
   it('loads and rewrites a saved context under budget-lines, including explicit filters', async () => {
-    mocked.get.mockResolvedValue({ data: { list: nature === 'opex' ? 'spend-items' : 'capex-items', state: { filters: { description: set(['Servers']), item_number: set(['12']), supplier_name: set(['Acme']) } } } });
+    mocked.get.mockResolvedValue({ data: { list: BUDGET_NATURE_CONFIG[nature].legacyListKey, state: { filters: { description: set(['Servers']), item_number: set(['12']), supplier_name: set(['Acme']) } } } });
     mocked.post.mockResolvedValue({ data: { id: 'new-context' } });
     const search = await budgetListRedirectSearch(state({ ctx: 'old-context', sort: 'description:ASC', statusScope: 'all', filters: JSON.stringify({ supplier_name: set(['Other']) }) }), nature);
-    const expected = nature === 'capex'
+    const expected = BUDGET_NATURE_CONFIG[nature].legacyTitleAlias
       ? { product_name: set(['Servers']), supplier_name: set(['Other']), nature: set(['capex']) }
       : { description: set(['Servers']), item_number: set(['12']), supplier_name: set(['Other']), nature: set(['opex']) };
     expect(mocked.post).toHaveBeenCalledWith('/list-contexts', { list: 'budget-lines', state: { filters: expected } });
     expect(new URLSearchParams(search).get('ctx')).toBe('new-context');
     expect(new URLSearchParams(search).has('filters')).toBe(false);
-    expect(new URLSearchParams(search).get('sort')).toBe(nature === 'capex' ? 'product_name:ASC' : 'description:ASC');
+    expect(new URLSearchParams(search).get('sort')).toBe(BUDGET_NATURE_CONFIG[nature].legacyTitleAlias ? 'product_name:ASC' : 'description:ASC');
     expect(new URLSearchParams(search).get('statusScope')).toBe('all');
   });
 

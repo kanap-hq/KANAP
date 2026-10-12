@@ -31,7 +31,7 @@
       "runBuild": "Run ou build"
     },
     "workspace": {
-      "newSpendItem": "Nouveau poste OPEX",
+      "newSpendItem": "Nouvelle ligne OPEX",
       "spendItem": "Poste OPEX",
       "spendItems": "Postes de dépense",
       "itemOf": "Poste {{index}} sur {{total}}",
@@ -234,7 +234,7 @@
       "build": "Build"
     },
     "workspace": {
-      "newCapexItem": "Nouveau poste CAPEX",
+      "newCapexItem": "Nouvelle ligne CAPEX",
       "capexItem": "Poste CAPEX",
       "itemOf": "Poste {{index}} sur {{total}}",
       "prev": "Préc.",
@@ -879,7 +879,7 @@
       "yPlus2": "A+2"
     },
     "changeType": {
-      "menuItem": "Changer le type...",
+      "menuItem": "Changer le type…",
       "title": "Changer le type de {{reference}}",
       "subtitle": {
         "capex": "Cette ligne OPEX devient une ligne CAPEX.",
@@ -898,8 +898,8 @@
       "effects": {
         "inPlace": "La ligne garde sa référence, son budget, ses ventilations, ses liens, ses pièces jointes et ses tâches.",
         "reports": {
-          "capex": "Elle quitte la liste OPEX, les rapports OPEX et la refacturation, et rejoint la liste CAPEX.",
-          "opex": "Elle quitte la liste et les rapports CAPEX, et rejoint la liste OPEX, les rapports OPEX et la refacturation."
+          "capex": "Elle quitte les rapports OPEX et la refacturation, et rejoint les rapports CAPEX.",
+          "opex": "Elle quitte les rapports CAPEX et rejoint les rapports OPEX et la refacturation."
         },
         "dated_one": "Cette ligne se termine le {{end}} et garde son budget avant {{year}}. Une nouvelle ligne {{type}} porte le budget à partir de {{year}} ({{count}} année), avec les contacts et les liens vers les applications, actifs, contrats, projets et demandes.",
         "dated_other": "Cette ligne se termine le {{end}} et garde son budget avant {{year}}. Une nouvelle ligne {{type}} porte le budget à partir de {{year}} ({{count}} années), avec les contacts et les liens vers les applications, actifs, contrats, projets et demandes.",
@@ -1441,6 +1441,7 @@
     }
   },
   "budget": {
+    "title": "Lignes budgétaires",
     "titleWithCurrency": "Lignes budgétaires ({{currency}})",
     "type": "Type",
     "newLine": "Nouvelle ligne",
@@ -1450,6 +1451,10 @@
     "opex": "OPEX",
     "capex": "CAPEX",
     "totalWithCount_one": "Total ({{count}} ligne)",
-    "totalWithCount_other": "Total ({{count}} lignes)"
+    "totalWithCount_other": "Total ({{count}} lignes)",
+    "changeType": "Changer le type…",
+    "typeOpex": "OPEX",
+    "typeCapex": "CAPEX",
+    "line": "Ligne budgétaire"
   }
 }

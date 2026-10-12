@@ -29,7 +29,7 @@ async function advance(ms: number) {
 
 type Call = [string, Record<string, unknown>];
 
-/** The page's wiring (SpendItemPage, CapexItemPage, IncidentWorkspacePage, ContributorWorkspacePage), on the real helpers. */
+/** The page's wiring (BudgetLinePage, IncidentWorkspacePage, ContributorWorkspacePage), on the real helpers. */
 function usePage(itemId: string, calls: Call[], answer: (id: string, patch: Record<string, unknown>) => unknown) {
   const buffer = usePatchBuffer<Record<string, unknown>>();
   const refused: string[] = [];
