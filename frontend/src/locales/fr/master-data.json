@@ -685,14 +685,27 @@
       "capex_one": "{{count}} ligne CAPEX",
       "capex_other": "{{count}} lignes CAPEX",
       "noValues": "Aucune valeur pour le moment.",
-      "dimensionUnused": "{{values}}. Utilisation : aucune ligne pour le moment.",
-      "dimensionOne": "{{values}}. Utilisation : {{lines}}.",
-      "dimensionBoth": "{{values}}. Utilisation : {{opex}} et {{capex}}.",
-      "valueOne": "Utilisée par {{lines}}.",
-      "valueBoth": "Utilisée par {{opex}} et {{capex}}."
+      "dimensionLines_one": "Utilisée par {{count}} ligne",
+      "dimensionLines_other": "Utilisée par {{count}} lignes",
+      "dimensionUnused": "Pas encore utilisée",
+      "valueLines_one": "Utilisée par {{count}} ligne",
+      "valueLines_other": "Utilisée par {{count}} lignes",
+      "valueUnused": "Pas encore utilisée"
     },
-    "deleteBlocked": {
-      "dimensionHasValues": "Pour supprimer cette dimension, supprimez d'abord ses valeurs."
+    "forceDelete": {
+      "title": "Supprimer {{name}} ?",
+      "dimensionValues_one": "Sa valeur est supprimée aussi.",
+      "dimensionValues_other": "Ses {{count}} valeurs sont supprimées aussi.",
+      "dimensionUsedValues_one": "Sa valeur est supprimée",
+      "dimensionUsedValues_other": "Ses {{count}} valeurs sont supprimées",
+      "dimensionUsed": "{{values}}, et elle est retirée de {{lines}}. Ces données ne peuvent pas être récupérées.",
+      "valueUsed_one": "Elle est retirée de {{count}} ligne budgétaire. Ces données ne peuvent pas être récupérées.",
+      "valueUsed_other": "Elle est retirée de {{count}} lignes budgétaires. Ces données ne peuvent pas être récupérées.",
+      "valuesUsed_one": "{{count}} valeur sélectionnée est utilisée : elle est retirée de {{lines}}. Ces données ne peuvent pas être récupérées.",
+      "valuesUsed_other": "{{count}} valeurs sélectionnées sont utilisées : elles sont retirées de {{lines}}. Ces données ne peuvent pas être récupérées.",
+      "budgetLines_one": "{{count}} ligne budgétaire",
+      "budgetLines_other": "{{count}} lignes budgétaires",
+      "confirmAnyway": "Supprimer quand même"
     },
     "appliesToConflict": {
       "capex_one": "{{count}} ligne CAPEX a une valeur pour cette dimension. Elle la garde, masquée tant que la dimension est réservée aux lignes OPEX.",
@@ -740,6 +753,35 @@
       "codeRequired": "Saisissez un code.",
       "codeInvalid": "Utilisez des lettres minuscules, des chiffres, - ou _ (40 au maximum).",
       "dimensionRequired": "Choisissez une dimension."
+    },
+    "recommended": {
+      "action": "Dimensions recommandées",
+      "title": "Ajouter les dimensions recommandées",
+      "subtitle": "Des dimensions prêtes à l'emploi avec leurs valeurs, pour les lignes OPEX et CAPEX. Vous pourrez les renommer, les modifier ou les supprimer ensuite.",
+      "dimensions": "Dimensions",
+      "present": "Déjà présente",
+      "presentAs": "Déjà présente ({{name}})",
+      "language": "Langue des noms",
+      "submit": "Ajouter",
+      "names": {
+        "cost_pool": "Nature de coût",
+        "it_tower": "Domaine IT",
+        "purpose": "Motif",
+        "priority": "Priorité",
+        "recurrence": "Récurrence"
+      },
+      "hints": {
+        "cost_pool": "Ce que la dépense paie : matériel, logiciel, main-d'œuvre interne et externe… Les cost pools de TBM.",
+        "it_tower": "La partie de l'IT servie : calcul, stockage, réseau, poste de travail… Les towers IT de TBM.",
+        "purpose": "Pourquoi la dépense est engagée : remplacement, capacité, conformité, croissance…",
+        "priority": "Obligatoire, haute, moyenne ou basse.",
+        "recurrence": "Récurrent ou ponctuel."
+      },
+      "created_one": "{{count}} dimension ajoutée : {{names}}.",
+      "created_other": "{{count}} dimensions ajoutées : {{names}}.",
+      "nothingCreated": "Rien n'a été ajouté : ces dimensions sont déjà présentes.",
+      "failed": "Les dimensions n'ont pas pu être ajoutées.",
+      "loadFailed": "Les dimensions recommandées n'ont pas pu être chargées."
     }
   },
   "businessProcesses": {

@@ -4,6 +4,7 @@ import { ChartOfAccountsService } from '../accounts/chart-of-accounts.service';
 import { CompaniesService } from '../companies/companies.service';
 import { StatusState } from '../common/status';
 import { withSavepoint } from '../common/savepoint.util';
+import { SeedLanguage } from '../analytics/recommended-dimensions.seed';
 import { TenantsService } from './tenants.service';
 
 /** What happened to the default global chart of accounts: created, no template to create it from, or failed. */
@@ -42,14 +43,16 @@ export class TenantBaselineService {
 
   /**
    * The tenant defaults, then the default global chart of accounts, then the starting company.
-   * Returns what happened to the chart of accounts.
+   * `language` names the seeded dimensions (English when absent). Returns what happened to the
+   * chart of accounts.
    */
   async ensureBaseline(
     manager: EntityManager,
     tenantId: string,
     company: StartingCompany,
+    opts?: { language?: SeedLanguage },
   ): Promise<{ chartOfAccounts: DefaultChartOutcome }> {
-    await this.tenants.seedTenantDefaults(manager, tenantId);
+    await this.tenants.seedTenantDefaults(manager, tenantId, { language: opts?.language });
     await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
     const chartOfAccounts = await this.provisionDefaultGlobalCoa(manager);
     await this.createStartingCompany(manager, company);
