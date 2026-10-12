@@ -228,7 +228,7 @@ Cuando la partida sustituye a otra, o fue sustituida a partir de un año posteri
 
 **Panel Propiedades**:
 
-- **Tipo**: **OPEX** o **CAPEX**. En una partida existente, **Cambiar tipo…** junto a él abre el mismo diálogo que el menú **...**
+- **Tipo**: **OPEX** o **CAPEX**. En una partida existente, **Cambiar el tipo…** junto a él abre el mismo diálogo que el menú **...**
 - **Proveedor**, **Centro de coste**, **Empresa pagadora**, **Cuenta** (filtrada por el plan de cuentas de la empresa pagadora y el tipo de la partida), **Moneda** (solo las monedas permitidas en su espacio de trabajo), un campo por dimensión analítica usada para el tipo de la partida, **Run o build** e **Inicio de vigencia**
 - **Ciclo de vida**: el interruptor de estado, cuya etiqueta muestra el estado actual (**Activado** o **Desactivado**), y la fecha de **Fin de validez**. Consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida)
 - Fechas **Creado** y **Actualizado** (solo lectura)
@@ -592,7 +592,7 @@ Cada partida tiene un **estado** (Habilitado o Deshabilitado) y un **Fin de vali
 
 ## Cambiar el tipo
 
-Una partida OPEX que resulta ser una inversión pasa a ser una partida CAPEX, y una partida CAPEX que resulta ser gasto operativo pasa a ser una partida OPEX. Use **Cambiar el tipo…** en el menú **...** de la cabecera del espacio de trabajo, o **Cambiar tipo…** junto a **Tipo** en el panel **Propiedades**. Necesita el nivel Miembro en Presupuesto (`budget:member`). Los cambios aún no guardados se guardan antes de que se abra el diálogo.
+Una partida OPEX que resulta ser una inversión pasa a ser una partida CAPEX, y una partida CAPEX que resulta ser gasto operativo pasa a ser una partida OPEX. Use **Cambiar el tipo…** en el menú **...** de la cabecera del espacio de trabajo, o **Cambiar el tipo…** junto a **Tipo** en el panel **Propiedades**. Necesita el nivel Miembro en Presupuesto (`budget:member`). Los cambios aún no guardados se guardan antes de que se abra el diálogo.
 
 **A partir de** fija dónde empieza el cambio:
 

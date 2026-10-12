@@ -93,7 +93,7 @@ Haga clic en **Personalizar** para abrir **Configuración del panel de control d
 
 - **Mostrar u ocultar un mosaico**: márquelo o desmárquelo. El diálogo lista los mosaicos que su rol puede ver
 - **Cambiar el orden**: arrastre un mosaico por su asa a la derecha
-- **Columnas de importes del mosaico Presupuesto**: **Columnas del cliente**, marcada por defecto, sigue las columnas que muestra su organización. Desmárquela para elegir usted mismo las columnas. Conserve al menos una: si no, el diálogo indica «Seleccione al menos una columna de importes.»
+- **Columnas de importes del mosaico Presupuesto**: **Columnas del espacio de trabajo**, marcada por defecto, sigue las columnas que muestra su espacio de trabajo. Desmárquela para elegir usted mismo las columnas. Conserve al menos una: si no, el diálogo indica «Seleccione al menos una columna de importes.»
 - **Guardar** aplica sus elecciones. **Restablecer valores predeterminados** vuelve a mostrar todos los mosaicos, en el orden por defecto, con las columnas de la organización
 
 ## Consejos

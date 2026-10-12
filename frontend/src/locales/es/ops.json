@@ -1436,7 +1436,7 @@
     "capex": "CAPEX",
     "totalWithCount_one": "Total ({{count}} línea)",
     "totalWithCount_other": "Total ({{count}} líneas)",
-    "changeType": "Cambiar tipo…",
+    "changeType": "Cambiar el tipo…",
     "typeOpex": "OPEX",
     "typeCapex": "CAPEX",
     "line": "Línea presupuestaria",

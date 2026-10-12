@@ -386,7 +386,7 @@
       "customize": "Personnaliser",
       "title": "Réglages du tableau de bord du budget",
       "columns": "Colonnes de montant",
-      "tenantColumns": "Colonnes du locataire",
+      "tenantColumns": "Colonnes de l'espace de travail",
       "atLeastOne": "Choisissez au moins une colonne de montant.",
       "saveFailed": "Impossible d’enregistrer les réglages du tableau de bord."
     }

@@ -93,7 +93,7 @@ Cliquez sur **Personnaliser** pour ouvrir **Réglages du tableau de bord du budg
 
 - **Afficher ou masquer une tuile** : cochez-la ou décochez-la. La fenêtre liste les tuiles que votre rôle peut voir
 - **Changer l'ordre** : faites glisser une tuile par sa poignée, à droite
-- **Colonnes de montant de la tuile Budget** : **Colonnes du locataire**, cochée par défaut, suit les colonnes affichées par votre organisation. Décochez-la pour choisir les colonnes vous-même. Gardez-en au moins une : sinon, la fenêtre affiche « Choisissez au moins une colonne de montant. »
+- **Colonnes de montant de la tuile Budget** : **Colonnes de l'espace de travail**, cochée par défaut, suit les colonnes affichées par votre espace de travail. Décochez-la pour choisir les colonnes vous-même. Gardez-en au moins une : sinon, la fenêtre affiche « Choisissez au moins une colonne de montant. »
 - **Enregistrer** applique vos choix. **Rétablir les valeurs par défaut** affiche de nouveau toutes les tuiles, dans l'ordre par défaut, avec les colonnes de l'organisation
 
 ## Conseils
