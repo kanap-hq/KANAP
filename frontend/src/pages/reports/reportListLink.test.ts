@@ -249,3 +249,23 @@ describe('reportListLink: filters too long for a URL', () => {
     expect(reportListLink('opex', { kind: 'supplier', name: 'Acme' }, NO_LIST_PICKS, REPORT).save).toBeUndefined();
   });
 });
+
+describe('All report drill-down', () => {
+  it('keeps the group, report window and FTE filters without a nature filter', () => {
+    const link = reportListLink('all', { kind: 'supplier', name: 'Acme' }, NO_LIST_PICKS, REPORT);
+    expect(link.href.split('?')[0]).toBe('/ops/budget');
+    expect(filtersOf(link.href)).toEqual(withWindow({ supplier_name: set(['Acme']) }));
+    expect(filtersOf(link.href)).not.toHaveProperty('nature');
+    expect(statusOf(link.href)).toBe('all');
+    expect(new URLSearchParams(link.href.split('?')[1]).get('from')).toBe('report');
+  });
+
+  it('saves a long mixed view under budget-lines without a nature filter', async () => {
+    const filters = { supplier_name: set(Array.from({ length: 120 }, (_, i) => `Supplier number ${i}`)) };
+    const link = oneOffListLink('all', filters);
+    expect(post).not.toHaveBeenCalled();
+    post.mockResolvedValue({ data: { id: 'ctx-all' } });
+    await expect(link.save!()).resolves.toBe('/ops/budget?statusScope=all&from=report&ctx=ctx-all');
+    expect(post).toHaveBeenCalledWith('/list-contexts', { list: 'budget-lines', state: { filters } });
+  });
+});

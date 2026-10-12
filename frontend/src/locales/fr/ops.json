@@ -702,7 +702,9 @@
       "forecast": "Prévision"
     },
     "scope": {
+      "all": "Tout",
       "label": "Type de poste",
+      "all": "Tout",
       "opex": "OPEX",
       "capex": "CAPEX"
     },
@@ -959,12 +961,8 @@
           "description": "Plus grandes variations OPEX ou CAPEX vs année précédente (top N personnalisable)"
         },
         "budgetTrendOpex": {
-          "title": "Tendance budgétaire (OPEX)",
-          "description": "Comparer les métriques OPEX sur plusieurs années"
-        },
-        "budgetTrendCapex": {
-          "title": "Tendance budgétaire (CAPEX)",
-          "description": "Comparer les métriques CAPEX sur plusieurs années"
+          "title": "Comparaison budgétaire",
+          "description": "Comparer les métriques budgétaires sur plusieurs années"
         },
         "budgetColumnsCompare": {
           "title": "Comparaison de colonnes budgétaires",
@@ -1206,16 +1204,12 @@
       "directionToggle": "Hausse ou baisse"
     },
     "budgetTrendOpex": {
-      "title": "Tendance budgétaire (OPEX)",
-      "subtitle": "Comparer les métriques sélectionnées sur une plage d'années"
-    },
-    "budgetTrendCapex": {
-      "title": "Tendance budgétaire (CAPEX)",
+      "title": "Comparaison budgétaire",
       "subtitle": "Comparer les métriques sélectionnées sur une plage d'années"
     },
     "budgetColumnsCompare": {
       "title": "Comparaison de colonnes budgétaires",
-      "subtitle": "Comparer jusqu'à dix colonnes budgétaires pour OPEX ou CAPEX",
+      "subtitle": "Comparer jusqu’à dix colonnes budgétaires",
       "yearGroupingSubtitle": "{{type}} : regroupement par année",
       "selectionsSubtitle": "{{type}} : {{count}} sélection(s)",
       "addSelection": "Ajouter"

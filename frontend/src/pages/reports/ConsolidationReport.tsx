@@ -251,7 +251,7 @@ export default function ConsolidationReport() {
       subtitle={t('reports.consolidation.subtitle', { type: scopeLabel })}
       filters={(
         <>
-          <ItemScopeTabs value={scope} onChange={setScope} />
+          <ItemScopeTabs allowAll value={scope} onChange={setScope} />
           <ReportMeasureSelect value={measure} onChange={setMeasure} />
           <BudgetReportFilters filters={reportFilters} />
           <TextField select size="small" label={t("reports.filters.startYear")} value={startYear} onChange={(e) => {

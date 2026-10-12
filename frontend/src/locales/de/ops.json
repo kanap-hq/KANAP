@@ -702,7 +702,9 @@
       "forecast": "Prognose"
     },
     "scope": {
+      "all": "Alle",
       "label": "Positionstyp",
+      "all": "Alle",
       "opex": "OPEX",
       "capex": "CAPEX"
     },
@@ -958,12 +960,8 @@
           "description": "Größte OPEX- oder CAPEX-Veränderungen vs. Vorjahr (benutzerdefiniertes Top N)"
         },
         "budgetTrendOpex": {
-          "title": "Budgettrend (OPEX)",
-          "description": "OPEX-Metriken über Jahre hinweg vergleichen"
-        },
-        "budgetTrendCapex": {
-          "title": "Budgettrend (CAPEX)",
-          "description": "CAPEX-Metriken über Jahre hinweg vergleichen"
+          "title": "Budgetvergleich",
+          "description": "Budgetmetriken über mehrere Jahre vergleichen"
         },
         "budgetColumnsCompare": {
           "title": "Budgetspaltenvergleich",
@@ -1205,16 +1203,12 @@
       "directionToggle": "Anstieg oder Rückgang"
     },
     "budgetTrendOpex": {
-      "title": "Budgettrend (OPEX)",
-      "subtitle": "Ausgewählte Metriken über einen Jahresbereich vergleichen"
-    },
-    "budgetTrendCapex": {
-      "title": "Budgettrend (CAPEX)",
+      "title": "Budgetvergleich",
       "subtitle": "Ausgewählte Metriken über einen Jahresbereich vergleichen"
     },
     "budgetColumnsCompare": {
       "title": "Budgetspaltenvergleich",
-      "subtitle": "Bis zu zehn Budgetspalten für OPEX oder CAPEX vergleichen",
+      "subtitle": "Bis zu zehn Budgetspalten vergleichen",
       "yearGroupingSubtitle": "{{type}}: Jahresgruppierung",
       "selectionsSubtitle": "{{type}}: {{count}} Auswahl(en)",
       "addSelection": "Hinzufügen"

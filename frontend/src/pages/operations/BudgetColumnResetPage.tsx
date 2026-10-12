@@ -19,7 +19,7 @@ import { operationLinesRequest, readOperationLines } from '../reports/reportAggr
 import { useBudgetAggregate } from '../reports/useBudgetAggregate';
 import { useQueryClient } from '@tanstack/react-query';
 import { forgetAllAllocations } from '../../components/finance/allocationsCache';
-import { clearBudgetColumn, BudgetColumn, BudgetScope } from '../../services/budgetOperations';
+import { clearBudgetColumn, BudgetColumn, BudgetOperationScope as BudgetScope } from '../../services/budgetOperations';
 import { useFreezeState } from '../../hooks/useFreezeState';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { selectPlaceholderSx } from '../../theme/formSx';

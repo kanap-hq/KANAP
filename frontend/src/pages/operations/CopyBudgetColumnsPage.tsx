@@ -23,7 +23,7 @@ import { operationLinesRequest, readOperationLines } from '../reports/reportAggr
 import { useBudgetAggregate } from '../reports/useBudgetAggregate';
 import { useQueryClient } from '@tanstack/react-query';
 import { forgetAllAllocations } from '../../components/finance/allocationsCache';
-import { copyBudgetColumn, BudgetColumn, BudgetOperationResult, BudgetScope, CalendarIssue } from '../../services/budgetOperations';
+import { copyBudgetColumn, BudgetColumn, BudgetOperationResult, BudgetOperationScope as BudgetScope, CalendarIssue } from '../../services/budgetOperations';
 import { useFreezeState } from '../../hooks/useFreezeState';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useLocale } from '../../i18n/useLocale';

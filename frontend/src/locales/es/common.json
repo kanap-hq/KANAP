@@ -191,11 +191,14 @@
     "selectTemplate": "Seleccionar plantilla",
     "useTemplate": "Usar plantilla",
     "noTemplatesAvailable": "No hay plantillas publicadas disponibles.",
+    "newOpexLine": "Nueva línea OPEX",
+    "newCapexLine": "Nueva línea CAPEX",
+    "newContract": "Nuevo contrato",
     "newOpex": "Nuevo OPEX",
     "newCapex": "Nuevo CAPEX",
     "recentUpdates": "Actualizaciones recientes",
     "noRecentUpdates": "Sin actualizaciones recientes",
-    "quickActions": "Acciones rápidas",
+    "budgetSnapshot": "Presupuesto",
     "opexSnapshot": "Resumen OPEX",
     "capexSnapshot": "Resumen CAPEX",
     "myTasks": "Mis tareas",
@@ -211,11 +214,13 @@
       "noBudgetNextYear": "Sin {{column}} para el próximo año",
       "accountOutsideChart": "Cuenta fuera del plan de la empresa"
     },
-    "topItemsY": "Top partidas ({{column}}, A)",
-    "topIncreasesYvsYminus1": "Mayores incrementos ({{column}}, A vs A-1)",
+    "topItems": "Top partidas",
+    "columnY": "{{column}}, A",
+    "topIncreases": "Mayores incrementos",
+    "columnYvsYminus1": "{{column}}, A vs A-1",
     "noIncreases": "Sin incrementos",
     "myBudget": {
-      "title": "Mi presupuesto ({{column}}, A)",
+      "title": "Mi presupuesto",
       "roles": {
         "itOwner": "Como responsable IT",
         "businessOwner": "Como responsable de negocio",
@@ -223,9 +228,10 @@
       },
       "lineCount_one": "{{count}} línea",
       "lineCount_other": "{{count}} líneas",
-      "none": "No hay líneas de presupuesto a su nombre"
+      "none": "No hay líneas de presupuesto a su nombre",
+      "myLines": "Mis líneas"
     },
-    "byCostCenterY": "Por centro de coste ({{column}}, A)",
+    "byCostCenter": "Por centro de coste",
     "noCostCenter": "Sin centro de coste",
     "settings": {
       "title": "Configuración del panel",

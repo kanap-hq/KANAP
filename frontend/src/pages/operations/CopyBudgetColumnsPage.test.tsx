@@ -352,3 +352,10 @@ describe('CopyBudgetColumnsPage', () => {
     expect(operation.mock.calls[0][1]).toMatchObject({ sourceColumn: 'budget', destinationColumn: 'forecast' });
   });
 });
+
+
+it('offers only OPEX and CAPEX for budget operations', () => {
+  renderPage();
+  expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['operations.scope.opex', 'operations.scope.capex']);
+  expect(screen.queryByRole('tab', { name: 'operations.scope.all' })).toBeNull();
+});

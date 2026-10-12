@@ -191,11 +191,14 @@
     "selectTemplate": "Vorlage auswählen",
     "useTemplate": "Vorlage verwenden",
     "noTemplatesAvailable": "Keine veröffentlichten Vorlagen verfügbar.",
+    "newOpexLine": "Neue OPEX-Zeile",
+    "newCapexLine": "Neue CAPEX-Zeile",
+    "newContract": "Neuer Vertrag",
     "newOpex": "Neuer OPEX",
     "newCapex": "Neuer CAPEX",
     "recentUpdates": "Aktuelle Änderungen",
     "noRecentUpdates": "Keine aktuellen Änderungen",
-    "quickActions": "Schnellaktionen",
+    "budgetSnapshot": "Budget",
     "opexSnapshot": "OPEX-Überblick",
     "capexSnapshot": "CAPEX-Überblick",
     "myTasks": "Meine Aufgaben",
@@ -211,11 +214,13 @@
       "noBudgetNextYear": "Ohne {{column}} im nächsten Jahr",
       "accountOutsideChart": "Konto nicht im Kontenplan des Unternehmens"
     },
-    "topItemsY": "Top-Positionen ({{column}}, J)",
-    "topIncreasesYvsYminus1": "Stärkste Zuwächse ({{column}}, J vs J-1)",
+    "topItems": "Top-Positionen",
+    "columnY": "{{column}}, J",
+    "topIncreases": "Stärkste Zuwächse",
+    "columnYvsYminus1": "{{column}}, J vs J-1",
     "noIncreases": "Keine Zuwächse",
     "myBudget": {
-      "title": "Mein Budget ({{column}}, J)",
+      "title": "Mein Budget",
       "roles": {
         "itOwner": "Als IT-Verantwortlicher",
         "businessOwner": "Als Fachbereichsverantwortlicher",
@@ -223,9 +228,10 @@
       },
       "lineCount_one": "{{count}} Zeile",
       "lineCount_other": "{{count}} Zeilen",
-      "none": "Keine Budgetzeilen auf Ihren Namen"
+      "none": "Keine Budgetzeilen auf Ihren Namen",
+      "myLines": "Meine Zeilen"
     },
-    "byCostCenterY": "Nach Kostenstelle ({{column}}, J)",
+    "byCostCenter": "Nach Kostenstelle",
     "noCostCenter": "Ohne Kostenstelle",
     "settings": {
       "title": "Dashboard-Einstellungen",

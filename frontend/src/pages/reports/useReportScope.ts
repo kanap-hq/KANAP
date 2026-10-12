@@ -2,7 +2,6 @@ import { useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import type { BudgetScope } from '../../services/budgetOperations';
-import { useDefaultBudgetScope } from '../operations/ItemScopeTabs';
 
 /** The fields of a summary row (`/spend-items/summary`, `/capex-items/summary`) the dashboard lists read. */
 export type BudgetSummaryRow = {
@@ -17,6 +16,7 @@ export type BudgetSummaryRow = {
 
 /** List endpoint of each item type's summary. */
 export const SUMMARY_ENDPOINT: Record<BudgetScope, string> = {
+  all: '/budget-lines/summary',
   opex: '/spend-items/summary',
   capex: '/capex-items/summary',
 };
@@ -27,20 +27,19 @@ export function itemName(scope: BudgetScope, row: Pick<BudgetSummaryRow, 'produc
 }
 
 /** Page of a line of the given type; null when the row is not a line (no id). */
-export function itemHref(scope: BudgetScope, id: string | null | undefined): string | null {
-  return id ? `/ops/budget/${encodeURIComponent(id)}` : null;
+export function itemHref(scope: BudgetScope, id: string | null | undefined, itemNumber?: number | null): string | null {
+  return id ? `/ops/budget/${encodeURIComponent(itemNumber != null ? `BL-${itemNumber}` : id)}` : null;
 }
 
 /**
  * Item type of a budget report, kept in `?scope=` so links can open a report on CAPEX.
- * A missing, unknown or unreadable type falls back to the user's default type.
+ * A missing, unknown or unreadable type falls back to all budget lines.
  */
 export function useReportScope(): [BudgetScope, (next: BudgetScope) => void] {
-  const fallback = useDefaultBudgetScope();
   const { hasLevel } = useAuth();
   const [params, setParams] = useSearchParams();
   const raw = params.get('scope');
-  const scope: BudgetScope = (raw === 'opex' || raw === 'capex') && hasLevel('budget', 'reader') ? raw : fallback;
+  const scope: BudgetScope = (raw === 'all' || raw === 'opex' || raw === 'capex') && hasLevel('budget', 'reader') ? raw : 'all';
   const setScope = useCallback((next: BudgetScope) => {
     setParams((prev) => {
       const nextParams = new URLSearchParams(prev);

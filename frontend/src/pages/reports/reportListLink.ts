@@ -113,14 +113,14 @@ export type ReportListLink = {
 };
 
 /**
- * The budget list filtered on `filters` and the chosen nature, on every status (`?statusScope=all`), as a one-off
+ * The budget list filtered on `filters` and, for a per-nature scope, that nature, on every status (`?statusScope=all`), as a one-off
  * view (`?from=report`): it leaves the tab's remembered list state alone. Filters too long for a URL
  * go as `ctx` once saved in this tab; until then the href carries them inline (copying the link still
  * works) and `save` gives the `ctx` address. Report rows and the account workspace ("Show these
  * lines") open it.
  */
 export function oneOffListLink(scope: BudgetScope, columnFilters: ColumnFilters): ReportListLink {
-  const filters = JSON.stringify({ ...columnFilters, nature: keepValues([scope]) });
+  const filters = JSON.stringify(scope === 'all' ? columnFilters : { ...columnFilters, nature: keepValues([scope]) });
   const endpoint = '/budget-lines/summary';
   const address = (search: string) => `/ops/budget?${search}`;
   const params = new URLSearchParams({ filters });

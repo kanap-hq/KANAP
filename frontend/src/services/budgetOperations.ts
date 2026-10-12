@@ -3,10 +3,12 @@ import api from '../api';
 /** A column in the copy and clear API (summary key vocabulary). */
 export type BudgetColumn = 'budget' | 'revision' | 'forecast' | 'follow_up' | 'landing';
 
-/** Which items a column operation runs on. */
-export type BudgetScope = 'opex' | 'capex';
+/** Which budget lines a read targets. */
+export type BudgetScope = 'opex' | 'capex' | 'all';
+/** Write operations always target one nature. */
+export type BudgetOperationScope = Exclude<BudgetScope, 'all'>;
 
-const OPERATIONS_BASE: Record<BudgetScope, string> = {
+const OPERATIONS_BASE: Record<BudgetOperationScope, string> = {
   opex: '/spend-items/budget-operations',
   capex: '/capex-items/budget-operations',
 };
@@ -66,7 +68,7 @@ export type BudgetOperationResponse = {
   results: BudgetOperationResult[];
 };
 
-export const copyBudgetColumn = async (scope: BudgetScope, operation: BudgetColumnOperation): Promise<BudgetOperationResponse> => {
+export const copyBudgetColumn = async (scope: BudgetOperationScope, operation: BudgetColumnOperation): Promise<BudgetOperationResponse> => {
   const response = await api.post<BudgetOperationResponse>(`${OPERATIONS_BASE[scope]}/copy-column`, operation);
   return response.data;
 };
@@ -105,7 +107,7 @@ export type AllocationCopyResponse = {
   results: AllocationCopyResult[];
 };
 
-export const copyAllocations = async (scope: BudgetScope, operation: AllocationCopyOperation): Promise<AllocationCopyResponse> => {
+export const copyAllocations = async (scope: BudgetOperationScope, operation: AllocationCopyOperation): Promise<AllocationCopyResponse> => {
   const response = await api.post<AllocationCopyResponse>(`${OPERATIONS_BASE[scope]}/copy-allocations`, operation);
   return response.data;
 };
@@ -125,7 +127,7 @@ export type ClearColumnResponse = {
   };
 };
 
-export const clearBudgetColumn = async (scope: BudgetScope, operation: ClearColumnOperation): Promise<ClearColumnResponse> => {
+export const clearBudgetColumn = async (scope: BudgetOperationScope, operation: ClearColumnOperation): Promise<ClearColumnResponse> => {
   const response = await api.post<ClearColumnResponse>(`${OPERATIONS_BASE[scope]}/clear-column`, operation);
   return response.data;
 };

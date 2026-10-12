@@ -114,8 +114,10 @@ describe('CopyAllocationsPage', () => {
     expect(post.mock.calls[0][1]).toMatchObject({ dryRun: true });
   });
 
-  it('opens on OPEX, both types open with the budget right', () => {
+  it('opens on OPEX and offers exactly two nature tabs with the budget right', () => {
     renderPage();
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['operations.scope.opex', 'operations.scope.capex']);
+    expect(screen.queryByRole('tab', { name: 'operations.scope.all' })).toBeNull();
     expect(screen.getByRole('tab', { name: 'operations.scope.opex' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'operations.scope.capex' })).not.toBeDisabled();
   });

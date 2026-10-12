@@ -35,7 +35,6 @@ const ReportsLandingPage = React.lazy(() => import('./pages/reports/ReportsLandi
 const TopOpexReport = React.lazy(() => import('./pages/reports/TopOpexReport'));
 const OpexDeltaReport = React.lazy(() => import('./pages/reports/OpexDeltaReport'));
 const ComparisonReport = React.lazy(() => import('./pages/reports/ComparisonReport'));
-const CapexBudgetTrendReport = React.lazy(() => import('./pages/reports/CapexBudgetTrendReport'));
 const BudgetColumnsCompareReport = React.lazy(() => import('./pages/reports/BudgetColumnsCompareReport'));
 const ConsolidationReport = React.lazy(() => import('./pages/reports/ConsolidationReport'));
 const AnalyticsCategoryReport = React.lazy(() => import('./pages/reports/AnalyticsCategoryReport'));
@@ -277,7 +276,7 @@ function AppRoutes() {
           <Route path="/ops/reports/top-opex" element={<TopOpexReport />} />
           <Route path="/ops/reports/opex-delta" element={<OpexDeltaReport />} />
           <Route path="/ops/reports/comparison" element={<ComparisonReport />} />
-          <Route path="/ops/reports/capex/trend" element={<CapexBudgetTrendReport />} />
+          <Route path="/ops/reports/capex/trend" element={<Navigate to="/ops/reports/comparison?scope=capex" replace />} />
           <Route path="/ops/reports/budget-columns-compare" element={<BudgetColumnsCompareReport />} />
           <Route path="/ops/reports/consolidation" element={<ConsolidationReport />} />
           <Route path="/ops/reports/analytics" element={<AnalyticsCategoryReport />} />

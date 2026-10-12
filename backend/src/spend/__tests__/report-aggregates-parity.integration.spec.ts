@@ -56,7 +56,8 @@ import * as R from '../../../../frontend/src/pages/reports/reportAggregates';
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file in its serial database lane.
 
 type Row = Record<string, any>;
-type Scope = R.BudgetScope;
+// This oracle covers the two legacy per-nature contracts.
+type Scope = Exclude<R.BudgetScope, 'all'>;
 
 const SEED = Number(process.env.REPORT_PARITY_SEED ?? 20261002);
 const TENANT_SLUG = process.env.REPORT_PARITY_TENANT || null;
