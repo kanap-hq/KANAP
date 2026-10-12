@@ -109,3 +109,15 @@ describe('ShareDialog recipients', () => {
     expect(await screen.findByText('selects.moreResults')).toBeInTheDocument();
   });
 });
+
+
+describe('ShareDialog budget links', () => {
+  it.each(['opex', 'capex'] as const)('shares %s by its native BL number', (itemType) => {
+    const client = new QueryClient();
+    render(<QueryClientProvider client={client}><ThemeProvider theme={createAppTheme('light')}>
+      <ShareDialog open onClose={() => undefined} itemType={itemType} itemId="uuid" itemName="Line" itemNumber={127} />
+    </ThemeProvider></QueryClientProvider>);
+    expect(screen.getByText(`${window.location.origin}/ops/budget/BL-127`)).toBeInTheDocument();
+    expect(screen.getByText('BL-127')).toBeInTheDocument();
+  });
+});

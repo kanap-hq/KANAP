@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict';
 import {
+  budgetLineRefFromUrl,
   filterProviderToolsForProfile,
   selectAiContextProfile,
   selectAiContextProfileForTurn,
@@ -179,6 +180,13 @@ async function testReadOnlyModifiedDocumentFollowUpKeepsInspectionTools() {
 }
 
 async function run() {
+  for (const url of ['/ops/budget/BL-127', '/ops/opex/OPX-7', '/ops/capex/CPX-2']) {
+    assert.equal(selectAiContextProfile(`Update the notes of [line](${url})`).name, 'write_financial');
+  }
+  assert.equal(budgetLineRefFromUrl('/ops/budget/BL-127/budget?year=2027'), 'BL-127');
+  assert.equal(budgetLineRefFromUrl('/ops/capex/7/overview'), 'CPX-7');
+  assert.equal(budgetLineRefFromUrl('/ops/opex/7/overview'), 'OPX-7');
+  assert.equal(budgetLineRefFromUrl('/ops/budget/new'), null);
   await testSelectsMinimalProfileForDirectGreeting();
   await testSelectsKnowledgeProfileForDocumentSearch();
   await testSelectsWriteProfileForDocumentCreationFromEntity();

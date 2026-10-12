@@ -560,7 +560,7 @@ export default function Layout() {
               return next !== undefined && isNavItem(next);
             });
             // One item selected: the one whose path matches the page most closely, so a section's
-            // home (`/ops`) is not selected on every page under it (`/ops/opex`).
+            // home (`/ops`) is not selected on every page under it (`/ops/budget`).
             const matches = (to: string) => location.pathname === to || location.pathname.startsWith(to + '/')
               || (to === '/ops/budget' && /^\/ops\/(opex|capex)(\/|$)/.test(location.pathname));
             const selectedTo = visible.filter(isNavItem).map((entry) => entry.to).filter(matches)

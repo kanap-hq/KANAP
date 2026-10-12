@@ -169,7 +169,7 @@ function hygieneChecks(metric: AmountColumnKey): HygieneCheck[] {
 
 /** The OPEX or CAPEX list opened on exactly these filters (the list restores no stored search over them). */
 function listHref(scope: BudgetScope, filters: ColumnFilters): string {
-  return `/ops/${scope}?${new URLSearchParams({ filters: JSON.stringify(filters) }).toString()}`;
+  return `/ops/budget?${new URLSearchParams({ filters: JSON.stringify({ ...filters, nature: keepValues([scope]) }) }).toString()}`;
 }
 
 /** The hygiene counts of one type: Enabled lines (not ended before 1 January, the list's default) passing each check, no row built. */
@@ -247,7 +247,7 @@ function useRecentUpdates(scope: BudgetScope, enabled: boolean) {
       return (res.data.items || []).map((row) => ({
         scope,
         id: row.id,
-        ref: row.item_number != null ? formatItemRef(scope, row.item_number) : row.id,
+        ref: scope === 'opex' && row.item_number != null ? formatItemRef('budget', row.item_number) : row.id,
         name: itemName(scope, row),
         at: row.updated_at || row.created_at || null,
       }));
@@ -276,7 +276,7 @@ function useTopItemsCurrentYear(scope: BudgetScope, enabled: boolean, column: Am
       const items = res.data.items || [];
       return items.map((row) => ({
         id: row.id,
-        path: buildItemPath(scope, row.item_number != null ? formatItemRef(scope, row.item_number) : row.id),
+        path: buildItemPath(scope, scope === 'opex' && row.item_number != null ? formatItemRef('budget', row.item_number) : row.id),
         name: itemName(scope, row) || '\u2014',
         y: getColumnValueFromRow(row, 'y', column),
         yMinus1: getColumnValueFromRow(row, 'yMinus1', column),
@@ -294,7 +294,7 @@ function useTopIncreases(scope: BudgetScope, enabled: boolean, column: AmountCol
     ...row,
     name: row.name || '\u2014',
     // The line's reference; its id only when it has none (the page opens either).
-    path: buildItemPath(scope, row.itemNumber != null ? formatItemRef(scope, row.itemNumber) : row.id),
+    path: buildItemPath(scope, scope === 'opex' && row.itemNumber != null ? formatItemRef('budget', row.itemNumber) : row.id),
   })), [query.data, scope]);
   return { items, isLoading: enabled && (query.isLoading || !columnReady) };
 }
@@ -440,7 +440,7 @@ export default function DashboardPage() {
         {/* OPEX snapshot, for users who read OPEX */}
         {canOpex && (
           <Grid item xs={12} md={6} lg={4}>
-            <DashboardTile icon="AccountBalanceWallet" title={t('dashboard.opexSnapshot')} action={<Button size="small" onClick={() => navigate('/ops/opex')}>{t('buttons.view')}</Button>}>
+            <DashboardTile icon="AccountBalanceWallet" title={t('dashboard.opexSnapshot')} action={<Button size="small" onClick={() => navigate(listHref('opex', {}))}>{t('buttons.view')}</Button>}>
               {opexLoading ? (
                 <Skeleton variant="rounded" width="100%" height={80} />
               ) : (
@@ -457,7 +457,7 @@ export default function DashboardPage() {
         {/* CAPEX snapshot, for users who read CAPEX */}
         {canCapex && (
           <Grid item xs={12} md={6} lg={4}>
-            <DashboardTile icon="AccountBalance" title={t('dashboard.capexSnapshot')} action={<Button size="small" onClick={() => navigate('/ops/capex')}>{t('buttons.view')}</Button>}>
+            <DashboardTile icon="AccountBalance" title={t('dashboard.capexSnapshot')} action={<Button size="small" onClick={() => navigate(listHref('capex', {}))}>{t('buttons.view')}</Button>}>
               {capexLoading ? (
                 <Skeleton variant="rounded" width="100%" height={80} />
               ) : (
@@ -622,10 +622,10 @@ export default function DashboardPage() {
           <DashboardTile icon="Assignment" title={t('dashboard.quickActions')}>
             <Stack direction="row" spacing={1} sx={{ mt: 1 }} useFlexGap flexWrap="wrap">
                 {hasLevel('budget', 'manager') && (
-                  <Button variant="contained" size="small" onClick={() => navigate('/ops/opex/new')}>{t('dashboard.newOpex')}</Button>
+                  <Button variant="contained" size="small" onClick={() => navigate('/ops/budget/new?nature=opex')}>{t('dashboard.newOpex')}</Button>
                 )}
                 {hasLevel('budget', 'manager') && (
-                  <Button variant="outlined" size="small" onClick={() => navigate('/ops/capex/new')}>{t('dashboard.newCapex')}</Button>
+                  <Button variant="outlined" size="small" onClick={() => navigate('/ops/budget/new?nature=capex')}>{t('dashboard.newCapex')}</Button>
                 )}
               </Stack>
               {readableScopes.length > 0 && (

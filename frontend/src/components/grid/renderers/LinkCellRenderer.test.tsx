@@ -19,12 +19,12 @@ describe('LinkCellRenderer', () => {
         {...params(row)}
         linkType="internal"
         newTab
-        getHref={(data) => (data.id ? `/ops/opex/${data.id}` : null)}
+        getHref={(data) => (data.id ? `/ops/budget/${data.id}` : null)}
         onNavigate={onNavigate}
       />,
     );
     const link = screen.getByRole('link', { name: 'Opex line' });
-    expect(link).toHaveAttribute('href', '/ops/opex/o1');
+    expect(link).toHaveAttribute('href', '/ops/budget/o1');
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     expect(link.querySelector('svg')).toBeNull();
@@ -36,7 +36,7 @@ describe('LinkCellRenderer', () => {
   });
 
   it('with newTab and no href, renders plain text', () => {
-    render(<LinkCellRenderer<Row> {...params({ id: null, name: 'Common costs' })} newTab getHref={(data) => (data.id ? `/ops/opex/${data.id}` : null)} />);
+    render(<LinkCellRenderer<Row> {...params({ id: null, name: 'Common costs' })} newTab getHref={(data) => (data.id ? `/ops/budget/${data.id}` : null)} />);
     expect(screen.getByText('Common costs')).toBeInTheDocument();
     expect(screen.queryByRole('link')).toBeNull();
   });
@@ -44,11 +44,11 @@ describe('LinkCellRenderer', () => {
   it('without newTab, an internal link still navigates in place', () => {
     const onNavigate = vi.fn();
     const row = { id: 'o1', name: 'Opex line' };
-    render(<LinkCellRenderer<Row> {...params(row)} linkType="internal" getHref={() => '/ops/opex/o1'} onNavigate={onNavigate} />);
+    render(<LinkCellRenderer<Row> {...params(row)} linkType="internal" getHref={() => '/ops/budget/o1'} onNavigate={onNavigate} />);
     const link = screen.getByRole('link', { name: 'Opex line' });
     expect(link).not.toHaveAttribute('target');
     expect(link).not.toHaveAttribute('rel');
     fireEvent.click(link);
-    expect(onNavigate).toHaveBeenCalledWith('/ops/opex/o1', row);
+    expect(onNavigate).toHaveBeenCalledWith('/ops/budget/o1', row);
   });
 });

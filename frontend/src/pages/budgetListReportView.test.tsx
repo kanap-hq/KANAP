@@ -235,7 +235,7 @@ describe.each(LISTS)('$name list: report links, removed filters, End of validity
 
     it('its item links keep the view and its Show scope, so the item page walks the same lines', async () => {
       await openList(linkPath());
-      const link = document.querySelector(`.ag-cell a[href^="/ops/opex/"]`) as HTMLAnchorElement;
+      const link = document.querySelector(`.ag-cell a[href^="/ops/budget/"]`) as HTMLAnchorElement;
       expect(link).not.toBeNull();
       const params = new URLSearchParams(link.getAttribute('href')!.split('?')[1]);
       expect(params.get('from')).toBe('report');
@@ -247,7 +247,7 @@ describe.each(LISTS)('$name list: report links, removed filters, End of validity
       await openList(linkPath({ statusScope: 'all' }));
       expect(JSON.parse(stored().filters)).toEqual(LINK_FILTERS);
       expect(stored().statusScope).toBe('all');
-      const link = document.querySelector(`.ag-cell a[href^="/ops/opex/"]`) as HTMLAnchorElement;
+      const link = document.querySelector(`.ag-cell a[href^="/ops/budget/"]`) as HTMLAnchorElement;
       expect(new URLSearchParams(link.getAttribute('href')!.split('?')[1]).get('from')).toBeNull();
     }, 60_000);
   });

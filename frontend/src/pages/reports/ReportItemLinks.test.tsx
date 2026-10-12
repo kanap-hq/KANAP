@@ -121,7 +121,7 @@ describe('Top items report item links', () => {
     renderReport(<TopOpexReport />);
     const grid = await screen.findByTestId('grid-name');
     await waitFor(() => expect(grid.textContent).toContain('Opex line'));
-    expectNewTabLink(grid, 'Opex line', '/ops/opex/o1');
+    expectNewTabLink(grid, 'Opex line', '/ops/budget/o1');
     expect(within(grid).getByText('No line').closest('a')).toBeNull();
   });
 
@@ -129,7 +129,7 @@ describe('Top items report item links', () => {
     renderReport(<TopOpexReport />, '/report?scope=capex');
     const grid = await screen.findByTestId('grid-name');
     await waitFor(() => expect(grid.textContent).toContain('Capex growth'));
-    expectNewTabLink(grid, 'Capex growth', '/ops/capex/c1');
+    expectNewTabLink(grid, 'Capex growth', '/ops/budget/c1');
   });
 });
 
@@ -138,7 +138,7 @@ describe('Top increase / decrease report item links', () => {
     renderReport(<OpexDeltaReport />);
     const grid = await screen.findByTestId('grid-name');
     await waitFor(() => expect(grid.textContent).toContain('Opex line'));
-    expectNewTabLink(grid, 'Opex line', '/ops/opex/o1');
+    expectNewTabLink(grid, 'Opex line', '/ops/budget/o1');
     expect(within(grid).getByText('No line').closest('a')).toBeNull();
   });
 
@@ -146,7 +146,7 @@ describe('Top increase / decrease report item links', () => {
     renderReport(<OpexDeltaReport />, '/report?scope=capex');
     const grid = await screen.findByTestId('grid-name');
     await waitFor(() => expect(grid.textContent).toContain('Capex growth'));
-    expectNewTabLink(grid, 'Capex growth', '/ops/capex/c1');
+    expectNewTabLink(grid, 'Capex growth', '/ops/budget/c1');
   });
 });
 
@@ -178,7 +178,7 @@ describe('Company chargeback report item links', () => {
     renderReport(<CompanyChargebackReport />);
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     const grid = await screen.findByTestId('grid-itemName');
-    expectNewTabLink(grid, 'Opex line', '/ops/opex/o1');
+    expectNewTabLink(grid, 'Opex line', '/ops/budget/o1');
     expect(within(grid).getByText('Common costs').closest('a')).toBeNull();
     expect(within(grid).getByText('reports.columns.total').closest('a')).toBeNull();
     expect(within(grid).getAllByRole('link')).toHaveLength(1);

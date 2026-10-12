@@ -12,7 +12,7 @@ import { BUDGET_NATURE_CONFIG } from './natureConfig';
 import { budgetLineDetailQuery } from '../../hooks/budgetItemDetailQuery';
 import { isReportView, useListFilters, writeListSnapshot } from '../../hooks/useListContextSearch';
 import { STATUS_SCOPE_PARAM } from '../../utils/statusScopeParams';
-import { cachedListContext, compactListSearchCached, parseListFilters } from '../../lib/listContext';
+import { compactListSearchCached } from '../../lib/listContext';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { axisRequiredFor, isHiddenAxis, useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import { explicitSort, filtersStringOnShownColumns } from '../../components/finance/amountColumns';
@@ -217,7 +217,6 @@ const isLongTextField = (field: string) => LONG_TEXT_FIELDS.has(field);
 const CONFLICT_GROUPS = [['paying_company_id', 'account_id'], ['disabled_at', 'status']] as const;
 /** The BL reference of each line shown in the session: a choice waiting on another line is named by it. */
 const lineRefs = new Map<string, string>();
-const lineNatures = new Map<string, LineType>();
 
 /** The form with the stored value the server answered for a conflicting field (`analytics_values.<id>` per dimension). */
 function withTheirValue(form: BudgetLineForm, field: string, value: unknown): BudgetLineForm {
@@ -261,14 +260,10 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   // An item opened from a one-off list view (a report link, `?from=report`) leaves the stored list
   // context alone: the view's state travels in the address.
   const reportView = React.useMemo(() => isReportView(location.search), [location.search]);
-  const unifiedList = searchParams.get('list') === 'budget'
-    || !!parseListFilters(searchParams.get('filters'))?.nature
-    || cachedListContext(searchParams.get('ctx'))?.list === 'budget-lines'
-    || !!readStoredBudgetListContext();
-  const LIST_ENDPOINT = unifiedList ? '/budget-lines/summary' : `${config.itemsApi}/summary`;
+  const LIST_ENDPOINT = '/budget-lines/summary';
   const storedListContext = React.useMemo(() => (isReportView(location.search) ? null : readStoredBudgetListContext()), []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const idParam = String(params.id || '');
+  const idParam = String(params.ref || (location.pathname.endsWith('/new') ? 'new' : ''));
   const isCreate = idParam === 'new';
   const routeTab: TabKey = TAB_KEYS.includes(params.tab as TabKey) ? (params.tab as TabKey) : 'overview';
 
@@ -293,15 +288,6 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
 
   // Resolved UUID — every child tab / nested request keys off this, never the route param.
   const uuid = (data?.id as string | undefined) || (isCreate ? idParam : undefined);
-
-  // Show the BL-n reference in the address bar (router state keeps the UUID it matched).
-  React.useEffect(() => {
-    if (stale || isCreate || !data?.item_number) return;
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(idParam);
-    if (!isUuid) return;
-    const ref = formatItemRef('budget', data.item_number);
-    window.history.replaceState(null, '', `/ops/${nature}/${ref}/${routeTab}${location.search}`);
-  }, [data?.item_number, idParam, routeTab, location.search, nature, stale, isCreate]);
 
   // The other tabs' code loads in the background once a line is shown, so a tab switch does not wait for it.
   const lineShown = !!data?.id;
@@ -408,7 +394,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   // The list builds a column for each enabled dimension besides the default one; a sort or filter
   // on another dimension falls back there, and here too.
   const analyticsAxes = useAnalyticsAxes({ scope: nature });
-  const listAxes = useAnalyticsAxes({ scope: unifiedList ? null : nature });
+  const listAxes = useAnalyticsAxes({ scope: null });
   const isListField = React.useMemo(
     () => budgetListFieldPredicate(listAxes.enabled.filter((axis) => !axis.is_default).map((axis) => axis.id)),
     [listAxes],
@@ -425,8 +411,8 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   // walks a different set from the one on screen.
   const statusScope = searchParams.get(STATUS_SCOPE_PARAM) || storedListContext?.statusScope || 'enabled';
   React.useEffect(() => {
-    if (listContextReady && unifiedList && !reportView) writeListSnapshot(LIST_ENDPOINT, { sort, q, filters, statusScope }, readStoredBudgetListContext, writeStoredBudgetListContext);
-  }, [listContextReady, unifiedList, reportView, sort, q, filters, statusScope, LIST_ENDPOINT]);
+    if (listContextReady && !reportView) writeListSnapshot(LIST_ENDPOINT, { sort, q, filters, statusScope }, readStoredBudgetListContext, writeStoredBudgetListContext);
+  }, [listContextReady, reportView, sort, q, filters, statusScope, LIST_ENDPOINT]);
   const buildListContextParams = React.useCallback(() => {
     const sp = new URLSearchParams(searchParamsString);
     if (sort) sp.set('sort', sort); else sp.delete('sort');
@@ -440,7 +426,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   }, [filters, q, searchParamsString, sort, LIST_ENDPOINT]);
 
   // The route's line, not the loaded detail: the position follows a click at once (fast clicks).
-  const nav = useBudgetLineNav({ id: idParam, sort: sort || null, q, filters, statusScope, enabled: listContextReady && !isCreate }, nature, unifiedList);
+  const nav = useBudgetLineNav({ id: idParam, sort: sort || null, q, filters, statusScope, enabled: listContextReady && !isCreate }, nature, true);
   const { index, total, hasPrev, hasNext, prevId, nextId } = isCreate
     ? { index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null as any, nextId: null as any }
     : nav;
@@ -483,7 +469,6 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   React.useEffect(() => {
     if (data?.id && data?.item_number) {
       lineRefs.set(data.id, formatItemRef('budget', data.item_number));
-      lineNatures.set(data.id, data.nature ?? nature);
     }
   }, [data?.id, data?.item_number, data?.nature, nature]);
   const lineRef = React.useCallback((lineId: string) => lineRefs.get(lineId) ?? t('budget.line'), [t]);
@@ -858,21 +843,21 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     if (isCreate && nextTab !== 'overview') return;
     if (!(await flushOrLeave({ keepChoices: true }))) return;
     const sp = buildListContextParams();
-    navigate(`/ops/${nature}/${idParam}/${nextTab}?${sp.toString()}`);
+    navigate(`/ops/budget/${idParam}/${nextTab}?${sp.toString()}`);
   }, [isCreate, flushOrLeave, buildListContextParams, navigate, idParam, nature]);
 
   // The line a choice waits on: going there keeps the choice.
   const openConflictLine = React.useCallback(async (lineId: string) => {
     if (!(await leaveLine({ keepChoices: true }))) return;
     const sp = buildListContextParams();
-    navigate(`/ops/${lineNatures.get(lineId) ?? nature}/${lineId}/${routeTab}?${sp.toString()}`);
+    navigate(`/ops/budget/${lineId}/${routeTab}?${sp.toString()}`);
   }, [leaveLine, buildListContextParams, navigate, routeTab, nature]);
 
   const confirmAndNavigate = React.useCallback(async (targetId: string | null) => {
     if (!targetId) return;
     if (!(await leaveLine())) return;
     const sp = buildListContextParams();
-    navigate(`${targetId.startsWith('/ops/') ? targetId : `/ops/${nature}/${targetId}`}/${routeTab}?${sp.toString()}`);
+    navigate(`${targetId.startsWith('/ops/') ? targetId : `/ops/budget/${targetId}`}/${routeTab}?${sp.toString()}`);
   }, [leaveLine, buildListContextParams, navigate, routeTab, nature]);
 
   const closeWorkspace = React.useCallback(async () => {
@@ -956,13 +941,13 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
         notes: toNull(createForm.notes),
       };
       const res = await api.post('/budget-lines', payload);
-      const newId = res.data?.id as string | undefined;
+      const newId = (res.data?.reference || (res.data?.item_number != null ? formatItemRef('budget', res.data.item_number) : res.data?.id)) as string | undefined;
       if (!newId) throw new Error(t(config.createFailed));
       queryClient.invalidateQueries({ queryKey: ['budget-summary'] });
       queryClient.invalidateQueries({ queryKey: [config.navQueryKey] });
       queryClient.invalidateQueries({ queryKey: ['budget-lines-summary-neighbors'] });
       const sp = buildListContextParams();
-      navigate(`/ops/${nature}/${newId}/overview?${sp.toString()}`);
+      navigate(`/ops/budget/${newId}/overview?${sp.toString()}`);
     } catch (e) {
       setSaveError(getApiErrorMessage(e, t, t(config.createFailed)));
     } finally {
@@ -1135,7 +1120,11 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
         properties={isCreate ? (
           <BudgetPropertiesDrawer
             nature={nature}
-            onNatureChange={(next) => navigate(`/ops/${next}/new${location.search}`, { replace: true })}
+            onNatureChange={(next) => {
+              const sp = new URLSearchParams(location.search);
+              sp.set('nature', next);
+              navigate(`/ops/budget/new?${sp.toString()}`, { replace: true });
+            }}
             mode="create"
             supplierId={createForm.supplier_id}
             payingCompanyId={createForm.paying_company_id}

@@ -138,8 +138,8 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
     // The grid shows the filter.
     expect(grid.api.getFilterModel()).toEqual(ALL_BUT_ONE);
     // The cell links (open in a new tab).
-    await waitFor(() => expect(document.querySelector('a[href^="/ops/opex/BL-1"]')).not.toBeNull(), { timeout: 10_000 });
-    const href = document.querySelector('a[href^="/ops/opex/BL-1"]')!.getAttribute('href')!;
+    await waitFor(() => expect(document.querySelector('a[href^="/ops/budget/BL-1"]')).not.toBeNull(), { timeout: 10_000 });
+    const href = document.querySelector('a[href^="/ops/budget/BL-1"]')!.getAttribute('href')!;
     expect(href).toContain(`ctx=${ID}`);
     expect(href).not.toContain('filters=');
     expect(href.length).toBeLessThan(120);
@@ -214,7 +214,7 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
     view.unmount();
     grid.api = null;
     mocked.get.mockClear();
-    renderAt(`/ops/opex${reloaded}`);
+    renderAt(`/ops/budget${reloaded}`);
     await waitFor(() => expect(calls(ROWS).length).toBeGreaterThan(0), { timeout: 10_000 });
     expect(JSON.parse(paramsOf(calls(ROWS)[0]).filters)).toEqual(second);
     expect(grid.api.getFilterModel()).toEqual(second);

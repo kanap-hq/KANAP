@@ -28,7 +28,7 @@ export function itemName(scope: BudgetScope, row: Pick<BudgetSummaryRow, 'produc
 
 /** Page of a line of the given type; null when the row is not a line (no id). */
 export function itemHref(scope: BudgetScope, id: string | null | undefined): string | null {
-  return id ? `/ops/${scope}/${encodeURIComponent(id)}` : null;
+  return id ? `/ops/budget/${encodeURIComponent(id)}` : null;
 }
 
 /**

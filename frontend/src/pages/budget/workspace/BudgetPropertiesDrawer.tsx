@@ -24,6 +24,7 @@ import { matching, type ItemReferences } from '../../../components/finance/itemR
 
 import type { LineType } from '../../../constants/lineTypeUsage';
 import { BUDGET_NATURE_CONFIG } from '../natureConfig';
+import { budgetTypeChipSx } from '../budgetTypeChipSx';
 
 export type RunBuild = 'run' | 'build';
 
@@ -158,7 +159,7 @@ export default function BudgetPropertiesDrawer({
             </Select>
           ) : (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Chip size="small" label={t(config.typeLabel)} sx={{ height: 22, bgcolor: 'kanap.bg.hover', color: 'kanap.text.secondary' }} />
+              <Chip size="small" label={t(config.typeLabel)} sx={budgetTypeChipSx} />
               {onChangeType && (
                 <Button onClick={onChangeType} disabled={disabled} sx={{ p: 0, minWidth: 0, fontSize: 12 }}>
                   {t('budget.changeType')}

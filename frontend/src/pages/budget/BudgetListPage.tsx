@@ -15,6 +15,7 @@ import BudgetFileImportDialog from '../../components/finance/BudgetFileImportDia
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
 import { LinkCellRenderer } from '../../components/grid/renderers';
 import { formatItemRef } from '../../utils/item-ref';
+import { budgetTypeChipSx } from './budgetTypeChipSx';
 import {
   amountColumnYear,
   buildAmountColumnDefs,
@@ -315,7 +316,7 @@ function BudgetListPageView() {
   const openNew = (nature: 'opex' | 'capex') => {
     const sp = buildGridSearch();
     sp.set('list', 'budget');
-    navigate(`/ops/${nature}/new?${compactListSearchCached(sp.toString(), ROWS_ENDPOINT)}`);
+    navigate(`/ops/budget/new?nature=${nature}&${compactListSearchCached(sp.toString(), ROWS_ENDPOINT)}`);
   };
 
   const canCreate = hasLevel('budget', 'manager');
@@ -410,7 +411,7 @@ function BudgetListPageView() {
       tab = 'overview'; // tasks now live in the overview tab
     }
     const ref = item.item_number != null ? formatItemRef('budget', item.item_number) : item.id;
-    return `/ops/${item.nature}/${ref}/${tab}?${next.toString()}`;
+    return `/ops/budget/${ref}/${tab}?${next.toString()}`;
   }, [Y, gridSearch]);
 
   const defaultAnalyticsLabel = analyticsAxes.label(analyticsAxes.defaultAxis ?? { name: null });
@@ -452,7 +453,7 @@ function BudgetListPageView() {
         <Chip
           size="small"
           label={t(`budget.${params.value}`)}
-          sx={{ height: 22, fontSize: 12, fontWeight: 500 }}
+          sx={budgetTypeChipSx}
         />
       ),
     },

@@ -199,7 +199,7 @@ describe('OPEX list requests per action', () => {
     expect(context.sort).toBe('product_name:ASC');
     expect(paramsOf(calls(ROWS).slice(-1)[0]).sort).toBe('product_name:ASC');
     await waitFor(() => {
-      const link = document.querySelector('a[href^="/ops/opex/BL-1"]') as HTMLAnchorElement | null;
+      const link = document.querySelector('a[href^="/ops/budget/BL-1"]') as HTMLAnchorElement | null;
       expect(link?.getAttribute('href')).toContain('sort=product_name%3AASC');
     }, { timeout: 10_000 });
   }, 30_000);

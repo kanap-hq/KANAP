@@ -27,5 +27,5 @@ export function openLineAfterTypeChange(
 
 /** The workspace of a line of either type, by its BL reference (its id without one). */
 export function budgetLinePath(line: { id: string; reference: string | null; nature: LineType }): string {
-  return `/ops/${line.nature}/${line.reference ?? line.id}/overview`;
+  return `/ops/budget/${line.reference ?? line.id}/overview`;
 }

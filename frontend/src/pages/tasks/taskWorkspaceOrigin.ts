@@ -86,8 +86,8 @@ const ORIGIN_ID_PARAMS: Record<RelatedKind, string> = {
 
 const ORIGIN_PATH_TAB_PATTERNS: Record<RelatedKind, RegExp> = {
   project: /^\/portfolio\/projects\/[^/]+\/([^/?#]+)/,
-  spend_item: /^\/ops\/opex\/[^/]+\/([^/?#]+)/,
-  capex_item: /^\/ops\/capex\/[^/]+\/([^/?#]+)/,
+  spend_item: /^\/ops\/(?:budget|opex)\/[^/]+\/([^/?#]+)/,
+  capex_item: /^\/ops\/(?:budget|capex)\/[^/]+\/([^/?#]+)/,
   contract: /^\/ops\/contracts\/[^/]+\/([^/?#]+)/,
   incident: /^\/it\/incidents\/[^/]+\/([^/?#]+)/,
 };
@@ -165,8 +165,8 @@ export function buildOriginPath(origin: TaskOrigin, search: URLSearchParams): st
     return `/portfolio/projects/${origin.id}/${tab}${qs ? `?${qs}` : ''}`;
   }
   const filterQs = entityTaskListFiltersSearch(search);
-  if (origin.kind === 'spend_item') return `/ops/opex/${origin.id}/${tab}${filterQs ? `?${filterQs}` : ''}`;
-  if (origin.kind === 'capex_item') return `/ops/capex/${origin.id}/${tab}${filterQs ? `?${filterQs}` : ''}`;
+  if (origin.kind === 'spend_item') return `/ops/budget/${origin.id}/${tab}${filterQs ? `?${filterQs}` : ''}`;
+  if (origin.kind === 'capex_item') return `/ops/budget/${origin.id}/${tab}${filterQs ? `?${filterQs}` : ''}`;
   if (origin.kind === 'incident') return `/it/incidents/${origin.id}/${tab}${filterQs ? `?${filterQs}` : ''}`;
   return `/ops/contracts/${origin.id}/${tab}${filterQs ? `?${filterQs}` : ''}`;
 }
@@ -176,9 +176,9 @@ export function buildParentPath(type: RelatedKind, id: string): string {
     case 'project':
       return `/portfolio/projects/${id}/summary`;
     case 'spend_item':
-      return `/ops/opex/${id}/overview`;
+      return `/ops/budget/${id}/overview`;
     case 'capex_item':
-      return `/ops/capex/${id}/overview`;
+      return `/ops/budget/${id}/overview`;
     case 'contract':
       return `/ops/contracts/${id}/overview`;
     case 'incident':
