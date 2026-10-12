@@ -26,13 +26,15 @@ Schreiben Sie den Wert exakt. Ein falsch geschriebener Wert (`single_tenant`) st
 | --------------------- | -------- | ----------------- | --------------------------------------------------------------- |
 | `DEFAULT_TENANT_SLUG` | Nein     | `default`         | Interne Kennung des Mandanten (URL-tauglich, Kleinbuchstaben)   |
 | `DEFAULT_TENANT_NAME` | Nein     | `My Organization` | Der Name Ihrer Organisation: der Alternativtext des Logos und der Name, den der KI-Assistent verwendet |
+| `DEFAULT_TENANT_LANGUAGE` | Nein | `en` | Die Sprache der Analysedimensionen, mit denen der Arbeitsbereich startet: `en`, `fr`, `de` oder `es` |
 
 Beim ersten Start legt KANAP mit diesen Werten einen Mandanten an. Die Standardwerte passen für die meisten Bereitstellungen. Eine neue Installation erhält außerdem den Standard-IFRS-Kontenplan, eingerichtet als Standard- und Konsolidierungskontenplan (ein Upgrade einer bestehenden Installation fügt ihn nicht hinzu).
 
-Setzen Sie beide vor dem ersten Start:
+Setzen Sie diese Werte vor dem ersten Start:
 
 - Eine spätere Änderung von `DEFAULT_TENANT_SLUG` lässt KANAP einen zweiten, leeren Arbeitsbereich anlegen und diesen bereitstellen. Der erste Arbeitsbereich bleibt unerreichbar in der Datenbank.
 - Eine spätere Änderung von `DEFAULT_TENANT_NAME` hat keine Wirkung, und die Anwendung hat keine Seite, um die Organisation umzubenennen. Setzen Sie den Namen vor dem ersten Start.
+- Eine spätere Änderung von `DEFAULT_TENANT_LANGUAGE` hat keine Wirkung: Die Dimensionen behalten ihre Namen. Sie können sie unter **Stammdaten > Analysedimensionen** umbenennen.
 
 Um KANAP das Erscheinungsbild Ihrer Organisation zu geben, fügen Sie unter **Administration → Branding** Ihr Logo und Ihre Farben hinzu.
 
@@ -448,6 +450,7 @@ DEPLOYMENT_MODE=single-tenant
 # MANDANTENKONFIGURATION (optional - Standardwerte gezeigt; vor dem ersten Start setzen)
 DEFAULT_TENANT_SLUG=default
 DEFAULT_TENANT_NAME=My Organization
+DEFAULT_TENANT_LANGUAGE=en
 
 # ADMIN-ZUGANGSDATEN (erforderlich - werden nur beim ersten Start gelesen)
 # Ersetzen Sie das Beispielpasswort durch einen eigenen Wert mit mindestens 12 Zeichen.

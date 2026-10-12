@@ -26,13 +26,15 @@ Escriba el valor exactamente. Un valor mal escrito (`single_tenant`) arranca KAN
 | --------------------- | -------- | ----------------- | --------------------------------------------------------------- |
 | `DEFAULT_TENANT_SLUG` | No       | `default`         | Identificador interno del espacio de trabajo (apto para URL, en minúsculas) |
 | `DEFAULT_TENANT_NAME` | No       | `My Organization` | El nombre de su organización: el texto alternativo del logotipo y el nombre que usa el asistente de IA |
+| `DEFAULT_TENANT_LANGUAGE` | No | `en` | El idioma de las dimensiones analíticas con las que empieza el espacio de trabajo: `en`, `fr`, `de` o `es` |
 
 En el primer arranque, KANAP crea un espacio de trabajo con estos valores. Los valores predeterminados sirven para la mayoría de los despliegues. Una instalación nueva recibe también el plan de cuentas IFRS predeterminado, definido como su plan predeterminado y de consolidación (actualizar una instalación existente no lo añade).
 
-Defina ambos antes del primer arranque:
+Defínalos antes del primer arranque:
 
 - Cambiar `DEFAULT_TENANT_SLUG` más tarde hace que KANAP cree un segundo espacio de trabajo vacío y sirva ese. El primer espacio de trabajo permanece en la base de datos, fuera de alcance.
 - Cambiar `DEFAULT_TENANT_NAME` más tarde no tiene ningún efecto, y la aplicación no tiene ninguna página para cambiar el nombre de la organización. Defina el nombre antes del primer arranque.
+- Cambiar `DEFAULT_TENANT_LANGUAGE` más tarde no tiene ningún efecto: las dimensiones conservan sus nombres. Puede cambiarles el nombre en **Datos maestros > Dimensiones analíticas**.
 
 Para dar a KANAP la imagen de su organización, añada su logotipo y sus colores en **Administración → Personalización**.
 
@@ -448,6 +450,7 @@ DEPLOYMENT_MODE=single-tenant
 # ESPACIO DE TRABAJO (opcional - se muestran los valores predeterminados; definir antes del primer arranque)
 DEFAULT_TENANT_SLUG=default
 DEFAULT_TENANT_NAME=My Organization
+DEFAULT_TENANT_LANGUAGE=en
 
 # CREDENCIALES DE ADMINISTRADOR (obligatorio - leídas solo en el primer arranque)
 # Sustituya la contraseña de ejemplo por un valor propio de 12 caracteres o más.

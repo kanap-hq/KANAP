@@ -26,13 +26,15 @@ docker compose -f infra/compose.onprem.yml up -d api
 | --------------------- | -------- | ----------------- | --------------------------------------------------------------- |
 | `DEFAULT_TENANT_SLUG` | Non      | `default`         | Identifiant interne du tenant (compatible URL, en minuscules)   |
 | `DEFAULT_TENANT_NAME` | Non      | `My Organization` | Le nom de votre organisation : le texte alternatif du logo, et le nom qu'utilise l'assistant IA |
+| `DEFAULT_TENANT_LANGUAGE` | Non | `en` | La langue des dimensions analytiques de départ de l'espace de travail : `en`, `fr`, `de` ou `es` |
 
 Au premier démarrage, KANAP crée un tenant avec ces valeurs. Les valeurs par défaut conviennent à la plupart des déploiements. Une nouvelle installation reçoit aussi le plan comptable IFRS par défaut, défini comme plan par défaut et plan de consolidation (la mise à jour d'une installation existante ne l'ajoute pas).
 
-Définissez les deux avant le premier démarrage :
+Définissez-les avant le premier démarrage :
 
 - Modifier `DEFAULT_TENANT_SLUG` par la suite fait créer à KANAP un second espace de travail, vide, et c'est celui-là qui est servi. Le premier espace de travail reste dans la base de données, hors d'atteinte.
 - Modifier `DEFAULT_TENANT_NAME` par la suite n'a aucun effet, et l'application n'a aucune page pour renommer l'organisation. Définissez le nom avant le premier démarrage.
+- Modifier `DEFAULT_TENANT_LANGUAGE` par la suite n'a aucun effet : les dimensions gardent leurs noms. Vous pouvez les renommer dans **Données de référence > Dimensions analytiques**.
 
 Pour donner à KANAP l'apparence de votre organisation, ajoutez votre logo et vos couleurs dans **Administration → Personnalisation**.
 
@@ -448,6 +450,7 @@ DEPLOYMENT_MODE=single-tenant
 # CONFIGURATION DU TENANT (facultatif - valeurs par défaut indiquées ; à définir avant le premier démarrage)
 DEFAULT_TENANT_SLUG=default
 DEFAULT_TENANT_NAME=My Organization
+DEFAULT_TENANT_LANGUAGE=en
 
 # IDENTIFIANTS ADMINISTRATEUR (requis - lus au premier démarrage uniquement)
 # Remplacez le mot de passe d'exemple par une valeur qui vous est propre, de 12 caractères ou plus.
