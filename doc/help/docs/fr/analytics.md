@@ -150,7 +150,7 @@ Ouvrez-le avec **Modifier** (**Ouvrir** si vous pouvez seulement consulter) dans
 Les dimensions ont un ordre, que vous définissez. KANAP les présente dans cet ordre :
 
 - dans la barre de sélection de cette page
-- dans le panneau **Propriétés** des postes OPEX et CAPEX
+- dans le panneau **Propriétés** des lignes OPEX et CAPEX
 - dans les colonnes de la liste des lignes budgétaires
 - dans les colonnes du fichier budgétaire
 - dans les filtres des rapports et le sélecteur de dimension du rapport
@@ -176,7 +176,7 @@ Le champ **Utilisé pour** indique à quelles lignes budgétaires la dimension s
 | **OPEX uniquement** | Seules les lignes OPEX peuvent avoir une valeur |
 | **CAPEX uniquement** | Seules les lignes CAPEX peuvent avoir une valeur |
 
-Les écrans OPEX affichent les dimensions utilisées pour les lignes OPEX, et les écrans CAPEX celles utilisées pour les lignes CAPEX. Cela concerne le panneau **Propriétés** du poste, les colonnes, les filtres et la recherche rapide des listes, les sélecteurs et les filtres de dimension des rapports (ils suivent le choix **OPEX** / **CAPEX** du rapport) et Plaid. Le fichier budgétaire a une colonne pour chaque dimension activée, et chaque ligne ne prend de valeurs que sur les dimensions de son type de ligne.
+Les écrans OPEX affichent les dimensions utilisées pour les lignes OPEX, et les écrans CAPEX celles utilisées pour les lignes CAPEX. Cela concerne le panneau **Propriétés** de la ligne, les colonnes, les filtres et la recherche rapide des listes, les sélecteurs et les filtres de dimension des rapports (ils suivent le choix **OPEX** / **CAPEX** du rapport) et Plaid. Le fichier budgétaire a une colonne pour chaque dimension activée, et chaque ligne ne prend de valeurs que sur les dimensions de son type de ligne.
 
 Une ligne garde la valeur qu'elle a déjà sur une dimension qui ne s'applique plus à son type de ligne. La valeur est masquée partout et réapparaît si vous rouvrez la dimension à ce type de ligne. Lorsque votre choix masque des valeurs, une note s'affiche sous le champ, par exemple « 8 lignes CAPEX ont une valeur pour cette dimension. Elles la gardent, masquée tant que la dimension est réservée aux lignes OPEX. »
 
@@ -239,7 +239,7 @@ Les modifications s'enregistrent d'elles-mêmes, comme dans l'espace de travail 
 
 Les valeurs d'une dimension ont un ordre, que vous définissez. KANAP propose les valeurs dans cet ordre partout où vous les choisissez ou filtrez sur elles :
 
-- les champs de valeur des postes OPEX et CAPEX (quand vous tapez dans un champ, les meilleures correspondances viennent en premier)
+- les champs de valeur des lignes OPEX et CAPEX (quand vous tapez dans un champ, les meilleures correspondances viennent en premier)
 - les filtres à cases à cocher de la dimension dans la liste des lignes budgétaires
 - les filtres de dimension des rapports et la liste **Exclure des valeurs** du rapport Dimensions analytiques
 - l'export CSV des valeurs
@@ -291,7 +291,7 @@ Les dimensions et les valeurs ont chacune un statut (**Activé** ou **Désactiv�
 **Une dimension désactivée** :
 
 - N'est pas contrôlée lorsqu'elle est **Obligatoire** : des lignes peuvent être créées sans valeur sur elle. Elle garde le réglage pour le jour où vous la réactivez.
-- Disparaît des formulaires des postes, de la liste des lignes budgétaires, des filtres des rapports, du sélecteur de dimension du rapport, des exports CSV OPEX et CAPEX et de Plaid. Seule la page Dimensions analytiques l'affiche, marquée **Désactivé**.
+- Disparaît des formulaires des lignes, de la liste des lignes budgétaires, des filtres des rapports, du sélecteur de dimension du rapport, des exports CSV OPEX et CAPEX et de Plaid. Seule la page Dimensions analytiques l'affiche, marquée **Désactivé**.
 - Conserve ses valeurs sur les lignes. Réactivez la dimension et elles s'affichent de nouveau.
 - Ne reçoit plus de nouvelles valeurs. **Nouvelle valeur** est désactivé tant que la dimension est sélectionnée, et les fichiers CSV ne peuvent ni ajouter ni modifier ses valeurs.
 
@@ -303,10 +303,10 @@ La dimension par défaut ne peut pas être désactivée.
 
 ## Valeurs sur les lignes budgétaires
 
-Dans le panneau **Propriétés** d'un poste OPEX ou CAPEX, et lorsque vous en créez un, chaque dimension activée utilisée pour ce type de ligne a son propre champ, au nom de la dimension, dans l'ordre des dimensions. La dimension par défaut s'affiche comme **Dimension analytique** tant que vous ne la renommez pas.
+Dans le panneau **Propriétés** d'une ligne OPEX ou CAPEX, et lorsque vous en créez une, chaque dimension activée utilisée pour ce type de ligne a son propre champ, au nom de la dimension, dans l'ordre des dimensions. La dimension par défaut s'affiche comme **Dimension analytique** tant que vous ne la renommez pas.
 
 - Choisissez une valeur, ou videz le champ pour laisser la ligne sans valeur sur cette dimension. La modification s'enregistre aussitôt.
-- Le champ d'une dimension obligatoire est marqué d'un astérisque. Un nouveau poste ne peut pas être créé sans valeur sur cette dimension, avec le message « Nature est obligatoire ». Sur un poste qui porte une valeur, le champ n'a pas de bouton d'effacement : vous pouvez seulement choisir une autre valeur. Voir [Dimensions obligatoires](#dimensions-obligatoires).
+- Le champ d'une dimension obligatoire est marqué d'un astérisque. Une nouvelle ligne ne peut pas être créée sans valeur sur cette dimension, avec le message « Nature est obligatoire ». Sur une ligne qui porte une valeur, le champ n'a pas de bouton d'effacement : vous pouvez seulement choisir une autre valeur. Voir [Dimensions obligatoires](#dimensions-obligatoires).
 - Le champ liste les valeurs activées de sa dimension utilisées pour ce type de ligne. Une valeur désactivée, ou une valeur réservée à l'autre type de ligne, reste affichée sur les lignes qui l'ont. Voir [Valeurs OPEX ou CAPEX](#valeurs-opex-ou-capex).
 - Le champ ne peut pas créer de valeur. Créez les valeurs sur la page Dimensions analytiques, ou laissez un import CSV OPEX ou CAPEX les créer.
 - Une valeur s'applique à toute la ligne, sur toutes les années.
@@ -320,11 +320,11 @@ La liste des lignes budgétaires a une colonne par dimension activée, avec un f
 
 Le rapport **Dimensions analytiques** (sous **Rapports**) montre comment le budget de vos lignes OPEX ou CAPEX se répartit entre les valeurs d'une dimension. Voir [Rapports](reports.md#dimensions-analytiques) pour la description complète.
 
-- **Type de poste** : OPEX ou CAPEX
+- **Type de ligne** : OPEX ou CAPEX
 - **Dimension** : la dimension sur laquelle le rapport regroupe. Elle s'affiche lorsque vous avez au moins deux dimensions activées, et commence sur la dimension par défaut
 - **Plage d'années** : une seule année (graphique en secteurs ou en barres) ou plusieurs années (graphique en courbe)
 - **Métrique** : toute colonne budgétaire affichée par votre organisation, sous son nom. Démarre sur la colonne par défaut
-- **Exclure des valeurs** : écarter certaines valeurs pour vous concentrer sur les autres. La liste propose les valeurs utilisées pour le type de poste choisi, plus celles que portent les lignes
+- **Exclure des valeurs** : écarter certaines valeurs pour vous concentrer sur les autres. La liste propose les valeurs utilisées pour le type de ligne choisi, plus celles que portent les lignes
 
 Les sept rapports budgétaires peuvent aussi être restreints à une valeur d'une dimension, avec un filtre par dimension. Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](reports.md#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques).
 
@@ -347,7 +347,7 @@ Les sept rapports budgétaires peuvent aussi être restreints à une valeur d'un
 
 Chargez ou mettez à jour les valeurs de toutes les dimensions depuis un seul fichier. Les dimensions se créent sur la page.
 
-Pour renseigner des valeurs sur les postes budgétaires depuis un fichier, utilisez le fichier budgétaire. Une colonne `analytics:<code>` y porte chaque dimension activée, dimension par défaut incluse. Voir [Charger un budget depuis un tableur](budget-file.md).
+Pour renseigner des valeurs sur les lignes budgétaires depuis un fichier, utilisez le fichier budgétaire. Une colonne `analytics:<code>` y porte chaque dimension activée, dimension par défaut incluse. Voir [Charger un budget depuis un tableur](budget-file.md).
 
 **Export** : cliquez sur **Exporter CSV**, puis sur **Exporter les données**. Le fichier liste les valeurs de toutes les dimensions, activées ou désactivées, dimension par dimension, les valeurs de chaque dimension dans son ordre. Le fichier n'a pas de colonne d'ordre. Pour un fichier vide avec les seuls en-têtes, utilisez **Télécharger le modèle** dans la boîte de dialogue d'import.
 
@@ -405,7 +405,7 @@ Seule la colonne `name` est obligatoire. Lorsque la colonne `description`, `stat
 | `analytics:member` | Créer des dimensions et des valeurs, les modifier et définir l'ordre des dimensions et des valeurs |
 | `analytics:admin` | Tout ce qui précède, plus l'import et l'export CSV, et la suppression |
 
-Le rôle intégré Administrateur budget est admin, Membre budget est member et Lecteur budget est reader. Toute personne qui peut consulter les postes budgétaires (Budget) ou les rapports voit les dimensions et leurs valeurs sur les lignes budgétaires, dans les listes et dans les rapports, sans accès à cette page.
+Le rôle intégré Administrateur budget est admin, Membre budget est member et Lecteur budget est reader. Toute personne qui peut consulter les lignes budgétaires (Budget) ou les rapports voit les dimensions et leurs valeurs sur les lignes budgétaires, dans les listes et dans les rapports, sans accès à cette page.
 
 ---
 

@@ -133,8 +133,8 @@ Gehen Sie zum Tab **Beziehungen**, um Ihre Anwendung mit Ihren übrigen IT-Manag
 
 | Verknüpfungstyp | Was Sie verbinden | Warum |
 |-----------|----------------------|-----|
-| **OPEX-Positionen** | Wiederkehrende Kosten (Lizenzen, SaaS-Gebühren) | Das vollständige Kostenbild sehen |
-| **CAPEX-Positionen** | Investitionsprojekte | Investitionen verfolgen |
+| **OPEX-Zeilen** | Wiederkehrende Kosten (Lizenzen, SaaS-Gebühren) | Das vollständige Kostenbild sehen |
+| **CAPEX-Zeilen** | Investitionsprojekte | Investitionen verfolgen |
 | **Verträge** | Lieferantenverträge | Wissen, wann Verlängerungen fällig sind |
 | **Projekte** | Portfolio-Projekte | Mit Ihrem Projektportfolio verbinden |
 | **Relevante Websites** | Dokumentation, Wikis, Runbooks | Schneller Zugriff auf externe Ressourcen |

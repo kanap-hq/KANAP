@@ -221,8 +221,8 @@ L'onglet Relations connecte cet actif à d'autres enregistrements dans KANAP. Le
 - **Contenu par** / **Dépendu par** : Vues inverses en lecture seule, affichées uniquement lorsque d'autres actifs référencent celui-ci
 
 **Finance et projets** :
-- **Postes OPEX** : Lien vers des postes de dépenses opérationnelles
-- **Postes CAPEX** : Lien vers des postes de dépenses d'investissement
+- **Lignes OPEX** : Lien vers des lignes de dépenses opérationnelles
+- **Lignes CAPEX** : Lien vers des lignes de dépenses d'investissement
 - **Contrats** : Lien vers des enregistrements de contrats
 - **Projets** : Lien vers des projets du portefeuille liés à cet actif
 
@@ -364,6 +364,6 @@ PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
 - **Suivez le cycle de vie** : Marquez les actifs obsolètes et retirés pour garder les comptes d'inventaire précis.
 - **Liez aux sites** : Assignez les actifs aux sites pour que le type d'hébergement, le pays et la ville soient renseignés automatiquement.
 - **Assignez aux applications** : Utilisez l'onglet Vue d'ensemble pour lier les actifs aux déploiements d'applications. Les mêmes assignations apparaissent sous l'onglet Déploiements de l'application.
-- **Utilisez l'onglet Relations** : Connectez les actifs aux postes OPEX/CAPEX, contrats et projets pour la visibilité financière.
+- **Utilisez l'onglet Relations** : Connectez les actifs aux lignes OPEX/CAPEX, contrats et projets pour la visibilité financière.
 - **Les tâches viennent de la page Tâches** : Pour rattacher une tâche à un actif, définissez le champ Actif sur la tâche elle-même ; elle apparaîtra alors sous Relations > Tâches.
 - **Attachez la documentation** : Téléversez les fichiers de configuration, diagrammes d'architecture ou documents fournisseurs directement dans l'onglet Relations.

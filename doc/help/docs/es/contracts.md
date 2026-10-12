@@ -1,6 +1,6 @@
 # Contratos
 
-Los Contratos documentan sus acuerdos con proveedores -- licencias de software, contratos de mantenimiento, suscripciones SaaS y acuerdos de servicio. Haga seguimiento de fechas clave, costes, condiciones de renovación y vincule contratos a sus partidas OPEX y CAPEX para una visibilidad completa de costes.
+Los Contratos documentan sus acuerdos con proveedores -- licencias de software, contratos de mantenimiento, suscripciones SaaS y acuerdos de servicio. Haga seguimiento de fechas clave, costes, condiciones de renovación y vincule contratos a sus líneas OPEX y CAPEX para una visibilidad completa de costes.
 
 ## Primeros pasos
 
@@ -43,7 +43,7 @@ La cuadrícula de Contratos proporciona una visión general de todos sus acuerdo
 - **Importe anual**: Valor anual del contrato (formateado con separadores de espacio)
 - **Moneda**: Código de moneda
 - **Facturación**: Frecuencia de facturación (Mensual, Trimestral, Anual, Otra)
-- **OPEX vinculados**: Número de partidas OPEX vinculadas (haga clic para abrir el espacio de trabajo)
+- **OPEX vinculados**: Número de líneas OPEX vinculadas (haga clic para abrir el espacio de trabajo)
 - **Estado**: **Activado** o **Desactivado**, según el fin de validez
 
 **Columnas adicionales** (mediante el selector de columnas):
@@ -125,13 +125,13 @@ La pestaña Relaciones vincula contratos a otras entidades en su registro.
 
 **Vínculos disponibles**:
 
-- **Partidas OPEX**: Costes recurrentes asociados a este contrato -- utilice la selección múltiple con búsqueda para encontrar y vincular elementos por nombre del producto
-- **Partidas CAPEX**: Partidas de gasto de capital vinculadas a este contrato -- misma interfaz de selección múltiple con búsqueda
+- **Líneas OPEX**: Costes recurrentes asociados a este contrato -- utilice la selección múltiple con búsqueda para encontrar y vincular elementos por nombre del producto
+- **Líneas CAPEX**: Líneas de gasto de capital vinculadas a este contrato -- misma interfaz de selección múltiple con búsqueda
 - **Contactos**: Personas asociadas a este contrato, cada una con un rol (Comercial, Técnico, Soporte u Otro). Los contactos heredados del proveedor se muestran con una insignia rellena; los añadidos manualmente aparecen con una insignia delineada. Haga clic en una fila de contacto para abrir su perfil.
 - **Sitios web relevantes**: Enlaces a documentos externos como PDFs de contratos o portales de proveedores. Cada enlace tiene una descripción y una URL.
 - **Adjuntos**: Suba archivos arrastrando y soltando o usando el selector de archivos. Haga clic en un chip de adjunto para descargarlo; haga clic en el icono de eliminar para borrarlo.
 
-**Consejo**: Vincular partidas OPEX y CAPEX a contratos le da una trazabilidad completa de costes -- desde líneas presupuestarias hasta acuerdos con proveedores.
+**Consejo**: Vincular líneas OPEX y CAPEX a contratos le da una trazabilidad completa de costes -- desde líneas presupuestarias hasta acuerdos con proveedores.
 
 ---
 
@@ -191,7 +191,7 @@ Mantenga su registro de contratos sincronizado con sistemas externos usando CSV.
 ## Consejos
 
 - **Vigile la columna Cancelar antes de**: La lista ordena por plazo límite de cancelación por defecto, así que los contratos que necesitan atención aparecen primero.
-- **Vincule a OPEX y CAPEX temprano**: Conecte contratos a partidas de coste al crearlos para un seguimiento completo de costes.
+- **Vincule a OPEX y CAPEX temprano**: Conecte contratos a líneas de coste al crearlos para un seguimiento completo de costes.
 - **Use tareas para renovaciones**: Cree una tarea 3--6 meses antes del plazo límite de cancelación para la revisión de renovación.
 - **Registre importes anuales**: Incluso si la facturación es mensual, registre el importe anual para facilitar la comparación año a año.
 - **Enlace directo desde la lista**: Puede compartir un enlace directo a cualquier contrato -- la URL del espacio de trabajo incluye el ID del contrato y preserva su contexto de lista (búsqueda, orden, filtros) para que el botón atrás le devuelva exactamente donde estaba.

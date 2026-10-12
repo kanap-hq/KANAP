@@ -9,7 +9,7 @@ Pour des informations de fond sur les concepts de devises et les mécanismes de 
 Les devises sont un paramètre budgétaire. La page se trouve avec les autres paramètres budgétaires dans l'[Administration budgétaire](budget-operations.md).
 
 - **Ouvrir la page, modifier les paramètres et lancer la synchronisation des taux de change** : administration budgétaire au niveau administrateur. La carte est masquée pour les autres utilisateurs.
-- **Utiliser les devises sur les postes** : les utilisateurs OPEX et CAPEX choisissent parmi les devises autorisées dans leurs formulaires de poste, sans ouvrir cette page.
+- **Utiliser les devises sur les lignes** : les utilisateurs OPEX et CAPEX choisissent parmi les devises autorisées dans leurs formulaires de ligne, sans ouvrir cette page.
 
 Le droit **Paramètres** de la cartographie SI ne donne pas accès aux devises. Il couvre uniquement les paramètres de la cartographie SI.
 
@@ -21,22 +21,22 @@ La **devise au niveau du tenant** utilisée pour tous les rapports, totaux et af
   - Les totaux dans les rapports sont recalculés avec la nouvelle base
   - **Vos données stockées restent inchangées** -- seuls l'affichage et la conversion sont affectés
 
-**Exemple** : Si vous passez de EUR à USD, les totaux de votre liste OPEX s'afficheront en USD, mais la devise stockée de chaque poste (EUR, GBP, etc.) reste la même.
+**Exemple** : Si vous passez de EUR à USD, les totaux de votre liste OPEX s'afficheront en USD, mais la devise stockée de chaque ligne (EUR, GBP, etc.) reste la même.
 
 **Conseil** : Choisissez une devise de reporting qui correspond à la norme de reporting financier de votre groupe (ex. : EUR pour un siège européen, USD pour un groupe basé aux États-Unis).
 
 ### Devise OPEX par défaut
-La devise qui **est pré-remplie** lorsque vous créez un nouveau poste OPEX (dépense). Cela ne restreint pas les devises sélectionnables -- cela fait simplement gagner du temps en proposant une valeur par défaut judicieuse.
+La devise qui **est pré-remplie** lorsque vous créez une nouvelle ligne OPEX (dépense). Cela ne restreint pas les devises sélectionnables -- cela fait simplement gagner du temps en proposant une valeur par défaut judicieuse.
 
 **Exemple** : Si la majeure partie de vos dépenses récurrentes est en EUR, définissez EUR. Les utilisateurs peuvent toujours sélectionner manuellement GBP, USD ou toute autre devise autorisée.
 
 ### Devise CAPEX par défaut
-La devise qui **est pré-remplie** lorsque vous créez un nouveau poste CAPEX. Fonctionne de la même manière que la devise OPEX par défaut, mais pour les dépenses d'investissement.
+La devise qui **est pré-remplie** lorsque vous créez une nouvelle ligne CAPEX. Fonctionne de la même manière que la devise OPEX par défaut, mais pour les dépenses d'investissement.
 
 **Conseil** : Si vos CAPEX sont principalement approvisionnés dans une devise différente des OPEX quotidiens (ex. : USD pour les achats de matériel), définissez une valeur par défaut différente ici.
 
 ### Devises autorisées (optionnel)
-Une **liste séparée par des virgules** de codes ISO qui restreint les devises que les utilisateurs peuvent sélectionner lors de la création ou modification de postes OPEX et CAPEX.
+Une **liste séparée par des virgules** de codes ISO qui restreint les devises que les utilisateurs peuvent sélectionner lors de la création ou modification de lignes OPEX et CAPEX.
 
   - **Vide (par défaut)** : Les utilisateurs peuvent sélectionner n'importe quel code de devise ISO à 3 lettres valide
   - **Liste spécifiée** (ex. : `EUR, USD, GBP`) : Seules ces devises apparaissent dans les menus déroulants
@@ -81,7 +81,7 @@ Le bouton **Forcer la synchronisation des taux** déclenche manuellement un rafr
 
 **Rafraîchissement automatique** : Le système rafraîchit aussi les taux automatiquement tous les 30 jours lorsqu'un utilisateur se connecte (couvre A-1, A, A+1). La synchronisation manuelle vous donne le contrôle lorsque vous avez besoin de mises à jour immédiates.
 
-**Conseil** : Si vous ajoutez une nouvelle devise aux devises autorisées, lancez immédiatement la synchronisation des taux pour remplir les taux avant que les utilisateurs ne commencent à créer des postes dans cette devise.
+**Conseil** : Si vous ajoutez une nouvelle devise aux devises autorisées, lancez immédiatement la synchronisation des taux pour remplir les taux avant que les utilisateurs ne commencent à créer des lignes dans cette devise.
 
 ## Tableau des instantanés de taux de change
 
@@ -116,7 +116,7 @@ Si votre devise de reporting est EUR :
 ## Import et export CSV
 
 ### Export
-Les exports OPEX et CAPEX incluent les données des postes et les montants annuels dans la **propre devise de chaque poste** -- pas la devise de reporting. Cela préserve les données originales pour la réimportation ou l'analyse externe.
+Les exports OPEX et CAPEX incluent les données des lignes et les montants annuels dans la **propre devise de chaque ligne** -- pas la devise de reporting. Cela préserve les données originales pour la réimportation ou l'analyse externe.
 
 **Exemple de ligne CSV** (OPEX) :
 ```
@@ -125,7 +125,7 @@ SaaS License;Acme UK;6200;GBP;10000;12000;12000;12000
 ```
 
 ### Import
-Lors de l'import de postes OPEX ou CAPEX, la colonne `Currency` doit contenir des **codes ISO standard à 3 lettres**.
+Lors de l'import de lignes OPEX ou CAPEX, la colonne `Currency` doit contenir des **codes ISO standard à 3 lettres**.
 
 **Validation** :
   - Si des **devises autorisées** sont configurées, les imports utilisant des codes non listés sont rejetés
@@ -133,7 +133,7 @@ Lors de l'import de postes OPEX ou CAPEX, la colonne `Currency` doit contenir de
   - La devise de reporting et les devises par défaut sont toujours acceptées
 
 **Exemple** :
-Si Devises autorisées = `EUR, USD, GBP` et vous importez un poste avec `Currency=CHF`, l'import échoue avec :
+Si Devises autorisées = `EUR, USD, GBP` et vous importez une ligne avec `Currency=CHF`, l'import échoue avec :
 ```
 Currency "CHF" is not allowed. Allowed currencies: EUR, USD, GBP
 ```
@@ -144,8 +144,8 @@ Currency "CHF" is not allowed. Allowed currencies: EUR, USD, GBP
 
 Lorsque vous changez les paramètres :
   - **Devise de reporting** : Affecte l'affichage immédiatement ; les données historiques restent intactes et sont converties en utilisant les taux qui étaient actifs lors de la saisie des données
-  - **Devises par défaut** : N'affectent que les nouveaux postes ; les postes existants conservent leurs devises
-  - **Devises autorisées** : Les postes existants ne sont pas validés rétroactivement -- les restrictions s'appliquent uniquement aux postes nouveaux ou modifiés
+  - **Devises par défaut** : N'affectent que les nouvelles lignes ; les lignes existantes conservent leurs devises
+  - **Devises autorisées** : Les lignes existantes ne sont pas validées rétroactivement -- les restrictions s'appliquent uniquement aux lignes nouvelles ou modifiées
 
 ## Mécanismes de conversion (référence rapide)
 
@@ -181,7 +181,7 @@ Votre groupe passe d'un reporting basé EUR à un reporting basé USD.
   4. Vérifiez que le tableau des instantanés de taux affiche USD comme base (tous les taux devraient maintenant être relatifs à USD)
   5. Vérifiez les listes OPEX et CAPEX -- les totaux et colonnes annuelles s'affichent maintenant en USD
 
-**Résultat** : Tous les rapports, tableaux de bord et listes affichent USD. Vos données stockées (la propre devise de chaque poste) restent inchangées.
+**Résultat** : Tous les rapports, tableaux de bord et listes affichent USD. Vos données stockées (la propre devise de chaque ligne) restent inchangées.
 
 ### Scénario 2 : Restreindre les devises pour la conformité
 Votre équipe financière exige que toutes les dépenses soient enregistrées en EUR, USD ou GBP uniquement.
@@ -192,7 +192,7 @@ Votre équipe financière exige que toutes les dépenses soient enregistrées en
   3. Cliquez sur **Enregistrer**
   4. Lancez **Forcer la synchronisation des taux** pour vous assurer que les taux sont disponibles pour les trois devises
 
-**Résultat** : Les utilisateurs ne peuvent sélectionner que EUR, USD ou GBP lors de la création ou modification de postes. Les tentatives d'import d'autres devises échoueront avec un message d'erreur clair.
+**Résultat** : Les utilisateurs ne peuvent sélectionner que EUR, USD ou GBP lors de la création ou modification de lignes. Les tentatives d'import d'autres devises échoueront avec un message d'erreur clair.
 
 ### Scénario 3 : Ajouter une nouvelle devise en cours d'année
 Votre entreprise commence des opérations en Suisse et doit suivre les dépenses en CHF.
@@ -204,7 +204,7 @@ Votre entreprise commence des opérations en Suisse et doit suivre les dépenses
   4. Cliquez sur **Forcer la synchronisation des taux** pour récupérer les taux CHF immédiatement
   5. Vérifiez que CHF apparaît dans le tableau des instantanés de taux avec des taux valides
 
-**Résultat** : Les utilisateurs peuvent maintenant sélectionner CHF pour les nouveaux postes. Le tableau des taux inclut CHF avec les taux actuels et historiques pour des conversions précises.
+**Résultat** : Les utilisateurs peuvent maintenant sélectionner CHF pour les nouvelles lignes. Le tableau des taux inclut CHF avec les taux actuels et historiques pour des conversions précises.
 
 ### Scénario 4 : Préparer les cycles budgétaires annuels
 Nous sommes en décembre, et vous préparez la planification budgétaire de l'année prochaine.
@@ -223,7 +223,7 @@ Nous sommes en décembre, et vous préparez la planification budgétaire de l'an
 R : Tous les rapports et listes sont immédiatement convertis vers la nouvelle devise. Les données historiques restent intactes -- seule la devise d'affichage change. Planifiez ce changement avec soin pour éviter la confusion pendant les périodes de reporting actives.
 
 **Q : Puis-je définir des devises de reporting différentes pour différentes sociétés ?**
-R : Non. La devise de reporting est au niveau du tenant. Toutes les sociétés, rapports et totaux utilisent la même devise de reporting. Les postes individuels stockent leur propre devise, mais les conversions ciblent toujours la devise de reporting du tenant.
+R : Non. La devise de reporting est au niveau du tenant. Toutes les sociétés, rapports et totaux utilisent la même devise de reporting. Les lignes individuelles stockent leur propre devise, mais les conversions ciblent toujours la devise de reporting du tenant.
 
 **Q : Pourquoi je ne vois pas de taux pour une devise spécifique ?**
 R : La source de données (Banque Mondiale ou ExchangeRate-API) peut ne pas publier cette devise. Vérifiez que le code ISO est correct et couramment publié. Si nécessaire, limitez les devises autorisées aux codes avec une couverture de données fiable.
@@ -232,7 +232,7 @@ R : La source de données (Banque Mondiale ou ExchangeRate-API) peut ne pas publ
 R : Tous les 30 jours, lorsqu'un utilisateur se connecte, le système rafraîchit les taux pour A-1, A et A+1. Vous pouvez aussi déclencher manuellement un rafraîchissement à tout moment via Forcer la synchronisation des taux.
 
 **Q : Les changements de taux affectent-ils mes données stockées ?**
-R : Non. Les taux de change n'affectent que la **conversion et l'affichage**. Chaque poste OPEX et CAPEX stocke sa propre devise et ses montants, qui ne changent jamais lors de la mise à jour des taux. Seules les valeurs converties affichées dans les rapports et les listes changent.
+R : Non. Les taux de change n'affectent que la **conversion et l'affichage**. Chaque ligne OPEX et CAPEX stocke sa propre devise et ses montants, qui ne changent jamais lors de la mise à jour des taux. Seules les valeurs converties affichées dans les rapports et les listes changent.
 
 **Q : Puis-je importer des taux historiques manuellement ?**
 R : Non. Le système récupère les taux automatiquement depuis des sources externes (Banque Mondiale, ExchangeRate-API). Si vous avez besoin de taux personnalisés, contactez le support ou envisagez d'utiliser une devise dont vous pouvez accepter les taux publiés.

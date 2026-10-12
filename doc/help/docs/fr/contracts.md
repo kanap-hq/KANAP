@@ -1,6 +1,6 @@
 # Contrats
 
-Les contrats documentent vos accords fournisseurs — licences logicielles, contrats de maintenance, abonnements SaaS et accords de service. Suivez les dates clés, les coûts, les conditions de renouvellement et liez les contrats à vos postes OPEX et CAPEX pour une visibilité complète des coûts.
+Les contrats documentent vos accords fournisseurs : licences logicielles, contrats de maintenance, abonnements SaaS et accords de service. Suivez les dates clés, les coûts, les conditions de renouvellement et liez les contrats à vos lignes OPEX et CAPEX pour une visibilité complète des coûts.
 
 ## Premiers pas
 
@@ -43,7 +43,7 @@ La grille Contrats fournit une vue d'ensemble de tous vos accords fournisseurs. 
 - **Montant annuel** : Valeur annuelle du contrat (formatée avec des séparateurs d'espaces)
 - **Dev.** : Code devise
 - **Facturation** : Fréquence de facturation (Mensuelle, Trimestrielle, Annuelle, Autre)
-- **OPEX liés** : Nombre de postes OPEX liés (cliquez pour ouvrir l'espace de travail)
+- **OPEX liés** : Nombre de lignes OPEX liées (cliquez pour ouvrir l'espace de travail)
 - **Statut** : **Activé** ou **Désactivé**, lu dans la fin de validité
 
 **Colonnes supplémentaires** (via le sélecteur de colonnes) :
@@ -125,13 +125,13 @@ L'onglet Relations lie les contrats à d'autres entités de votre registre.
 
 **Liens disponibles** :
 
-- **Postes OPEX** : Coûts récurrents associés à ce contrat — utilisez la multi-sélection avec recherche pour trouver et lier des éléments par nom de produit
-- **Postes CAPEX** : Postes de dépenses d'investissement liés à ce contrat — même interface de multi-sélection avec recherche
+- **Lignes OPEX** : Coûts récurrents associés à ce contrat. Utilisez la multi-sélection avec recherche pour trouver et lier des éléments par nom de produit
+- **Lignes CAPEX** : Lignes de dépenses d'investissement liées à ce contrat, avec la même multi-sélection avec recherche
 - **Contacts** : Personnes associées à ce contrat, chacune avec un rôle (Commercial, Technique, Support ou Autre). Les contacts hérités du fournisseur sont affichés avec un badge plein ; ceux ajoutés manuellement apparaissent avec un badge contour. Cliquez sur une ligne de contact pour ouvrir son profil.
 - **Sites web pertinents** : Liens vers des documents externes comme les PDF de contrats ou les portails fournisseurs. Chaque lien a une description et une URL.
 - **Pièces jointes** : Téléchargez des fichiers par glisser-déposer ou en utilisant le sélecteur de fichiers. Cliquez sur une pastille de pièce jointe pour la télécharger ; cliquez sur l'icône de suppression pour la retirer.
 
-**Conseil** : Lier des postes OPEX et CAPEX aux contrats vous donne une traçabilité complète des coûts — des lignes budgétaires aux accords fournisseurs.
+**Conseil** : Lier des lignes OPEX et CAPEX aux contrats vous donne une traçabilité complète des coûts, des lignes budgétaires aux accords fournisseurs.
 
 ---
 
@@ -191,7 +191,7 @@ Maintenez votre registre de contrats synchronisé avec les systèmes externes vi
 ## Conseils
 
 - **Surveillez la colonne Résilier avant** : La liste trie par défaut par date limite de résiliation, donc les contrats nécessitant une attention apparaissent en premier.
-- **Liez aux OPEX et CAPEX tôt** : Connectez les contrats aux postes de coûts lors de leur création pour un suivi complet des coûts.
+- **Liez aux OPEX et CAPEX tôt** : Connectez les contrats aux lignes de coûts lors de leur création pour un suivi complet des coûts.
 - **Utilisez les tâches pour les renouvellements** : Créez une tâche 3 à 6 mois avant la date limite de résiliation pour la revue de renouvellement.
 - **Suivez les montants annuels** : Même si la facturation est mensuelle, enregistrez le montant annuel pour une comparaison plus facile d'année en année.
 - **Liens profonds depuis la liste** : Vous pouvez partager un lien direct vers n'importe quel contrat — l'URL de l'espace de travail inclut l'ID du contrat et préserve votre contexte de liste (recherche, tri, filtres) pour que le bouton retour vous ramène exactement là où vous étiez.

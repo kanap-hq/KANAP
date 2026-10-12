@@ -8,14 +8,14 @@ Les fichiers décrits ici sont le contrat sur lequel s'appuyer. Leurs colonnes s
 
 | Objet | Ce qu'il contient | Où le gérer |
 |---|---|---|
-| **Poste OPEX** | Un coût récurrent, reporté d'une année sur l'autre | **Gestion budgétaire > Lignes budgétaires** |
-| **Poste CAPEX** | Un investissement, reporté d'une année sur l'autre | **Gestion budgétaire > Lignes budgétaires** |
-| **Colonnes budgétaires** | Les cinq colonnes de montants que chaque poste a pour chaque année | **Gestion budgétaire > Administration > Colonnes budgétaires** |
-| **Lignes Quantité et prix** | Les lignes à partir desquelles une colonne peut être calculée | L'onglet **Budget** d'un poste |
-| **Ventilation** | La répartition du coût d'une année d'un poste entre sociétés ou départements | L'onglet **Ventilations** d'un poste |
+| **Ligne OPEX** | Un coût récurrent, reporté d'une année sur l'autre | **Gestion budgétaire > Lignes budgétaires** |
+| **Ligne CAPEX** | Un investissement, reporté d'une année sur l'autre | **Gestion budgétaire > Lignes budgétaires** |
+| **Colonnes budgétaires** | Les cinq colonnes de montants que chaque ligne budgétaire a pour chaque année | **Gestion budgétaire > Administration > Colonnes budgétaires** |
+| **Lignes Quantité et prix** | Les lignes à partir desquelles une colonne peut être calculée | L'onglet **Budget** d'une ligne |
+| **Ventilation** | La répartition du coût d'une année d'une ligne entre sociétés ou départements | L'onglet **Ventilations** d'une ligne |
 | **Société** | Une entité juridique qui paie, avec ses indicateurs annuels | **Données de référence > Sociétés** |
 | **Département** | Une unité d'une société, avec son effectif annuel | **Données de référence > Départements** |
-| **Plan comptable** et **compte** | Les comptes sur lesquels une société impute ses postes | **Données de référence > Plans comptables** |
+| **Plan comptable** et **compte** | Les comptes sur lesquels une société impute ses lignes budgétaires | **Données de référence > Plans comptables** |
 | **Centre de coûts** | Qui porte la dépense, dans une arborescence de groupes | **Données de référence > Centres de coûts** |
 | **Fournisseur** | Qui est payé | **Données de référence > Fournisseurs** |
 | **Dimension analytique** et **valeur** | Des classifications libres pour le reporting | **Données de référence > Dimensions analytiques** |
@@ -27,7 +27,7 @@ Les fichiers décrits ici sont le contrat sur lequel s'appuyer. Leurs colonnes s
 
 | Objet | Fait référence à | Combien |
 |---|---|---|
-| Poste OPEX ou CAPEX | Société payeuse | Une |
+| Ligne OPEX ou CAPEX | Société payeuse | Une |
 | | Compte, dans le plan comptable de la société payeuse | Un |
 | | Devise, parmi les devises autorisées | Une |
 | | Centre de coûts | Zéro ou un. Un groupe ne peut pas être utilisé |
@@ -35,7 +35,7 @@ Les fichiers décrits ici sont le contrat sur lequel s'appuyer. Leurs colonnes s
 | | Valeur de chaque dimension analytique active | Zéro ou une par dimension. Une sur une nouvelle ligne pour une dimension obligatoire |
 | | Responsable IT et responsable métier (utilisateurs) | Zéro ou un chacun |
 | | Années budgétaires | Une par année |
-| Année budgétaire d'un poste | Colonnes budgétaires | Cinq, chacune avec douze montants mensuels |
+| Année budgétaire d'une ligne | Colonnes budgétaires | Cinq, chacune avec douze montants mensuels |
 | | Lignes Quantité et prix | Jusqu'à 50 par colonne |
 | | Ventilation | Une méthode, avec ses sociétés ou ses départements |
 | Ligne Quantité et prix avec un prix par jour | Calendrier de jours ouvrés | Un |
@@ -50,18 +50,18 @@ Les fichiers décrits ici sont le contrat sur lequel s'appuyer. Leurs colonnes s
 | Compte | Plan comptable | Un |
 | Valeur analytique | Dimension analytique | Une |
 
-Un poste se lie aussi à des projets, des demandes, des applications, des actifs, des contrats, des contacts, des tâches, des sites web et des pièces jointes. Voir [Liens vers d'autres objets](#liens-vers-dautres-objets).
+Une ligne se lie aussi à des projets, des demandes, des applications, des actifs, des contrats, des contacts, des tâches, des sites web et des pièces jointes. Voir [Liens vers d'autres objets](#liens-vers-dautres-objets).
 
-## Les postes budgétaires
+## Les lignes budgétaires
 
-### Postes OPEX et CAPEX
+### Lignes OPEX et CAPEX
 
-Un poste vit sur plusieurs années : une licence sur trois ans est un poste avec trois années budgétaires. KANAP donne un numéro à chaque poste à sa création, sa référence `BL-12`, dans la même série pour l'OPEX et le CAPEX. La liste, l'espace de travail et l'adresse de la page l'affichent. Les postes créés avant cette série avaient aussi un numéro `OPX-12` ou `CPX-3` : les liens, les recherches et le fichier budgétaire retrouvent toujours un poste par ce numéro. Dans un fichier sans colonne `nature`, un nombre seul garde son sens antérieur (`CPX-3` quand la liste est filtrée sur CAPEX). Voir [Références](budget-lines.md#references).
+Une ligne vit sur plusieurs années : une licence sur trois ans est une ligne avec trois années budgétaires. KANAP donne un numéro à chaque ligne budgétaire à sa création, sa référence `BL-12`, dans la même série pour l'OPEX et le CAPEX. La liste, l'espace de travail et l'adresse de la page l'affichent. Les lignes budgétaires créées avant cette série avaient aussi un numéro `OPX-12` ou `CPX-3` : les liens, les recherches et le fichier budgétaire retrouvent toujours une ligne par ce numéro. Dans un fichier sans colonne `nature`, un nombre seul garde son sens antérieur (`CPX-3` quand la liste est filtrée sur CAPEX). Voir [Références](budget-lines.md#references).
 
 | Champ | Colonne du fichier budgétaire | Obligatoire | Remarques |
 |---|---|---|---|
-| Nature | `nature` | Oui | `opex` ou `capex`. Un fichier ne change pas la nature d'un poste existant (voir [Changer le type d'un poste](#changer-le-type-dun-poste)). Un fichier sans cette colonne est lu comme des postes OPEX, ou comme des postes CAPEX quand la liste est filtrée sur CAPEX |
-| Numéro | `item_number` | Attribué par KANAP | `BL-12`. Vide dans le fichier : crée un poste |
+| Nature | `nature` | Oui | `opex` ou `capex`. Un fichier ne change pas la nature d'une ligne existante (voir [Changer le type d'une ligne](#changer-le-type-dune-ligne)). Un fichier sans cette colonne est lu comme des lignes OPEX, ou comme des lignes CAPEX quand la liste est filtrée sur CAPEX |
+| Numéro | `item_number` | Attribué par KANAP | `BL-12`. Vide dans le fichier : crée une ligne |
 | Titre | `name` | Oui | La colonne **Nom du produit** de la liste |
 | Description | `description` | Non | |
 | Type d'immobilisation, type d'investissement, priorité (CAPEX) | `analytics:ppe_type`, `analytics:investment_type`, `analytics:priority` | Pour une nouvelle ligne, tant que la dimension est obligatoire | Valeurs des trois dimensions CAPEX, portées comme les valeurs de toute autre dimension. Voir [Dimensions CAPEX](analytics.md#dimensions-capex) |
@@ -70,34 +70,34 @@ Un poste vit sur plusieurs années : une licence sur trois ans est un poste avec
 | Compte | `account_number` | Oui | Dans le plan comptable de la société payeuse |
 | Centre de coûts | `cost_center_code` | Non | Un groupe est refusé |
 | Run ou build | `run_build` | Non | `run` ou `build` |
-| Valeurs analytiques | `analytics:<code>` | Pour une dimension obligatoire | Une colonne par dimension active. Un poste ne prend de valeurs que sur les dimensions de sa nature. Une dimension obligatoire demande une valeur sur un nouveau poste de sa nature |
+| Valeurs analytiques | `analytics:<code>` | Pour une dimension obligatoire | Une colonne par dimension active. Une ligne ne prend de valeurs que sur les dimensions de sa nature. Une dimension obligatoire demande une valeur sur une nouvelle ligne de sa nature |
 | Responsable IT, responsable métier | `owner_it_email`, `owner_business_email` | Non | Utilisateurs actifs |
 | Projet | `project` | Non | Un numéro de projet, par exemple `PRJ-3` |
 | Devise | `currency` | Oui | Code ISO à trois lettres |
 | Début d'effet | `effective_start` | Oui | Dans un fichier, le 1er janvier de la première année portant un montant dans la ligne, sinon de l'année en cours |
-| Fin de validité | `end_of_validity` | Non | La seule date de fin d'un poste |
+| Fin de validité | `end_of_validity` | Non | La seule date de fin d'une ligne |
 | Notes | `notes` | Non | |
 
-Un poste n'a pas de statut à charger. Il est actif jusqu'à sa fin de validité, puis désactivé dans l'heure. Le responsable budgétaire affiché sur un poste vient de son centre de coûts et n'est pas enregistré sur le poste.
+Une ligne n'a pas de statut à charger. Elle est active jusqu'à sa fin de validité, puis désactivée dans l'heure. Le responsable budgétaire affiché sur une ligne vient de son centre de coûts et n'est pas enregistré sur la ligne.
 
-### Changer le type d'un poste
+### Changer le type d'une ligne
 
-Un poste passe d'OPEX à CAPEX, ou l'inverse, dans son espace de travail (**Changer le type...** dans le menu **...**, voir [Changer le type](budget-lines.md#changer-le-type)). Un fichier budgétaire ne le change jamais. Le changement commence le 1er janvier d'une année :
+Une ligne passe d'OPEX à CAPEX, ou l'inverse, dans son espace de travail (**Changer le type...** dans le menu **...**, voir [Changer le type](budget-lines.md#changer-le-type)). Un fichier budgétaire ne le change jamais. Le changement commence le 1er janvier d'une année :
 
-- **À partir de la première année du poste**, le poste lui-même change de type. Il garde son numéro `BL`, ses années budgétaires, ventilations, liens, pièces jointes et tâches
-- **À partir d'une année ultérieure**, le poste se termine le 31 décembre de l'année précédente et garde ses années budgétaires antérieures. Un nouveau poste de l'autre type, avec son propre numéro `BL`, porte les années budgétaires suivantes, les contacts et les liens vers les applications, actifs, contrats, projets et demandes. Le nouveau poste enregistre le poste auquel il succède, et chaque poste affiche l'autre
+- **À partir de la première année de la ligne**, la ligne elle-même change de type. Elle garde son numéro `BL`, ses années budgétaires, ventilations, liens, pièces jointes et tâches
+- **À partir d'une année ultérieure**, la ligne se termine le 31 décembre de l'année précédente et garde ses années budgétaires antérieures. Une nouvelle ligne de l'autre type, avec son propre numéro `BL`, porte les années budgétaires suivantes, les contacts et les liens vers les applications, actifs, contrats, projets et demandes. La nouvelle ligne enregistre la ligne à laquelle elle succède, et chaque ligne budgétaire affiche l'autre
 
-Un poste est remplacé par un seul poste au plus. Le changement est refusé tant qu'une colonne gelée contient des montants du poste sur les années qui changent.
+Une ligne est remplacée par une seule ligne au plus. Le changement est refusé tant qu'une colonne gelée contient des montants de la ligne sur les années qui changent.
 
 ### Années budgétaires
 
-Chaque poste porte un budget par année. L'onglet **Budget** affiche l'année en cours, les deux années précédentes et les deux suivantes. Un fichier budgétaire peut exporter jusqu'à douze années à la fois.
+Chaque ligne budgétaire porte un budget par année. L'onglet **Budget** affiche l'année en cours, les deux années précédentes et les deux suivantes. Un fichier budgétaire peut exporter jusqu'à douze années à la fois.
 
 Une année budgétaire contient les cinq colonnes budgétaires avec leurs montants mensuels, les lignes Quantité et prix de chaque colonne et la ventilation de l'année.
 
 ### Colonnes budgétaires
 
-Chaque poste a les mêmes cinq colonnes pour chaque année. Elles sont définies une fois pour toute l'organisation, pour l'OPEX comme pour le CAPEX.
+Chaque ligne budgétaire a les mêmes cinq colonnes pour chaque année. Elles sont définies une fois pour toute l'organisation, pour l'OPEX comme pour le CAPEX.
 
 | Position | Nom standard | Nom dans les fichiers |
 |---|---|---|
@@ -115,7 +115,7 @@ Il n'y a pas de sixième colonne. Pour conserver plusieurs tours budgétaires, u
 
 ### Montants mensuels
 
-Chaque colonne d'une année budgétaire contient douze montants mensuels, à deux décimales, dans la devise du poste. Le total annuel est la somme des mois. Un fichier peut porter le total annuel ou les douze mois d'une colonne : un total annuel est réparti sur la période de la colonne, comme dans l'onglet **Budget**.
+Chaque colonne d'une année budgétaire contient douze montants mensuels, à deux décimales, dans la devise de la ligne. Le total annuel est la somme des mois. Un fichier peut porter le total annuel ou les douze mois d'une colonne : un total annuel est réparti sur la période de la colonne, comme dans l'onglet **Budget**.
 
 Chaque colonne enregistre aussi sa période dans l'année et l'origine de ses montants : une répartition, une copie, une saisie à la main ou ses lignes Quantité et prix. Les rapports convertissent les montants dans la devise de reporting avec les taux de change de l'année. Voir [Paramètres de devises](currencies.md).
 
@@ -127,7 +127,7 @@ Ces lignes se saisissent dans l'onglet **Budget**. Aucun fichier ne les porte. U
 
 ### Ventilations
 
-Chaque année budgétaire d'un poste a une méthode de ventilation :
+Chaque année budgétaire d'une ligne a une méthode de ventilation :
 
 | Méthode | Répartition selon |
 |---|---|
@@ -143,19 +143,19 @@ Les ventilations alimentent les rapports de refacturation. Aucun fichier ne les 
 
 | Lien | Où il se crée | Dans un fichier |
 |---|---|---|
-| Projets | L'onglet **Relations** du poste, ou du projet | Le fichier budgétaire porte un projet par poste dans `project`. Les liens de l'onglet **Relations** ne sont pas dans le fichier. Les listes affichent les deux |
+| Projets | L'onglet **Relations** de la ligne, ou du projet | Le fichier budgétaire porte un projet par ligne budgétaire dans `project`. Les liens de l'onglet **Relations** ne sont pas dans le fichier. Les listes affichent les deux |
 | Demandes | L'onglet **Relations** de la demande | Non |
-| Applications | L'onglet **Relations** du poste, ou de l'application | Non |
+| Applications | L'onglet **Relations** de la ligne, ou de l'application | Non |
 | Actifs | L'onglet **Relations** de l'actif | Non |
-| Contrats | L'onglet **Relations** du poste, ou du contrat | Non |
-| Contacts, sites web, pièces jointes | L'onglet **Relations** du poste | Non |
-| Tâches | L'onglet **Vue d'ensemble** du poste | Non |
+| Contrats | L'onglet **Relations** de la ligne, ou du contrat | Non |
+| Contacts, sites web, pièces jointes | L'onglet **Relations** de la ligne | Non |
+| Tâches | L'onglet **Vue d'ensemble** de la ligne | Non |
 
 ## Données de référence
 
 Le fichier budgétaire retrouve les données de référence par des identifiants métier. Chargez d'abord les données de référence. Le fichier budgétaire crée les fournisseurs manquants quand **Créer les fournisseurs manquants** est cochée, ainsi que les valeurs analytiques manquantes. Il ne crée rien d'autre.
 
-| Objet | Identifié dans les fichiers par | Obligatoire | Sur un poste budgétaire |
+| Objet | Identifié dans les fichiers par | Obligatoire | Sur une ligne budgétaire |
 |---|---|---|---|
 | Société | `name` | Nom, pays, devise de base. L'écran demande aussi une ville | `company_name` |
 | Département | `company_name` et `name` | Société, nom | Utilisé par les ventilations |
@@ -171,10 +171,10 @@ Le fichier budgétaire retrouve les données de référence par des identifiants
 Les points qui comptent quand vous faites correspondre un autre outil à KANAP :
 
 - **Les sociétés** portent leur effectif, leurs utilisateurs IT et leur chiffre d'affaires par année. Le chiffre d'affaires est en millions de la devise de base de la société. Les ventilations par effectif, utilisateurs IT ou chiffre d'affaires ont besoin des indicateurs de l'année.
-- **Les comptes** appartiennent à un plan comptable, et une société utilise un plan. Un numéro de compte est un nombre entier, unique dans son plan. Le compte d'un poste budgétaire doit exister dans le plan de sa société payeuse, et chaque compte indique s'il sert aux lignes OPEX, aux lignes CAPEX ou aux deux. Voir [Plans comptables et gestion des comptes](chart-of-accounts.md).
-- **Les centres de coûts** forment une arborescence. Un groupe rassemble des centres de coûts et d'autres groupes, et peut couvrir plusieurs sociétés. Un centre de coûts appartient à une société, n'a pas d'enfants et est le seul nœud qu'un poste peut utiliser. Son responsable budgétaire s'affiche sur chaque poste qu'il porte. Voir [Centres de coûts](cost-centers.md).
+- **Les comptes** appartiennent à un plan comptable, et une société utilise un plan. Un numéro de compte est un nombre entier, unique dans son plan. Le compte d'une ligne budgétaire doit exister dans le plan de sa société payeuse, et chaque compte indique s'il sert aux lignes OPEX, aux lignes CAPEX ou aux deux. Voir [Plans comptables et gestion des comptes](chart-of-accounts.md).
+- **Les centres de coûts** forment une arborescence. Un groupe rassemble des centres de coûts et d'autres groupes, et peut couvrir plusieurs sociétés. Un centre de coûts appartient à une société, n'a pas d'enfants et est le seul nœud qu'une ligne peut utiliser. Son responsable budgétaire s'affiche sur chaque ligne budgétaire qu'il porte. Voir [Centres de coûts](cost-centers.md).
 - **Les fournisseurs** sont mis en correspondance par leur nom dans leur propre fichier. Le fichier budgétaire les retrouve d'abord par l'ID ERP, puis par le nom : renseignez l'ID ERP quand votre ERP en a un.
-- **Les dimensions analytiques** se créent sur leur page, chacune avec un code. Un poste porte au plus une valeur par dimension. Voir [Dimensions analytiques](analytics.md).
+- **Les dimensions analytiques** se créent sur leur page, chacune avec un code. Une ligne porte au plus une valeur par dimension. Voir [Dimensions analytiques](analytics.md).
 - **Les calendriers de jours ouvrés** sont standard (ils suivent les jours fériés d'un pays) ou personnalisés. Ils contiennent les jours ouvrés de chaque mois, année par année. Voir [Calendriers de jours ouvrés](working-day-calendars.md).
 - **Les devises** sont des codes ISO à trois lettres. Les devises autorisées, la devise de reporting et les taux de change se règlent à l'écran et n'ont pas de fichier.
 
@@ -184,7 +184,7 @@ Chaque fichier ci-dessous s'exporte et s'importe depuis la page qui gère l'obje
 
 | Objet | Export | Import | Correspondance par | Détails |
 |---|---|---|---|---|
-| Postes OPEX et CAPEX et leurs montants | Oui | Oui | `item_number` (`BL-12`) | [Charger un budget depuis un tableur](budget-file.md) |
+| Lignes OPEX et CAPEX et leurs montants | Oui | Oui | `item_number` (`BL-12`) | [Charger un budget depuis un tableur](budget-file.md) |
 | Sociétés et leurs indicateurs | Oui | Oui | `name` | [Sociétés](companies.md) |
 | Départements | Oui | Oui | `company_name` et `name` | [Départements](departments.md) |
 | Comptes | Oui | Oui | `account_number` dans le plan | [Plans comptables et gestion des comptes](chart-of-accounts.md) |
@@ -194,18 +194,18 @@ Chaque fichier ci-dessous s'exporte et s'importe depuis la page qui gère l'obje
 | Valeurs analytiques | Oui | Oui | `axis_code` et `name` | [Dimensions analytiques](analytics.md) |
 | Calendriers de jours ouvrés | Oui | Oui | `code`, une ligne par calendrier et par année | [Calendriers de jours ouvrés](working-day-calendars.md) |
 | Utilisateurs | Oui | Oui | `email` | [Fichier CSV des utilisateurs](admin.md#fichier-csv-des-utilisateurs) |
-| Contrats | Oui | Oui | `name` et `supplier_name` | [Contrats](contracts.md). Le fichier ne porte pas les liens vers les postes budgétaires |
+| Contrats | Oui | Oui | `name` et `supplier_name` | [Contrats](contracts.md). Le fichier ne porte pas les liens vers les lignes budgétaires |
 | Ventilations | Depuis les rapports de refacturation | Non | | [Rapports](reports.md) |
 | Lignes Quantité et prix, paramètres des colonnes budgétaires, gels, devises | Non | Non | | Réglés à l'écran |
 
-Le fichier budgétaire lit et écrit les montants de n'importe quelle colonne et année, en totaux annuels ou en mois, avec le détail du poste sur la même ligne. C'est la porte d'entrée d'un budget préparé ailleurs et la porte de sortie vers un tableur ou un outil de BI. Un seul fichier contient les deux types de poste, et sa colonne `nature` indique lequel. **Gestion budgétaire > Lignes budgétaires** exporte les postes qu'elle affiche, des deux types, et importe un fichier qui contient les deux, avec le niveau Admin sur Budget.
+Le fichier budgétaire lit et écrit les montants de n'importe quelle colonne et année, en totaux annuels ou en mois, avec le détail de la ligne budgétaire sur la même ligne du fichier. C'est la porte d'entrée d'un budget préparé ailleurs et la porte de sortie vers un tableur ou un outil de BI. Un seul fichier contient les deux types de ligne, et sa colonne `nature` indique lequel. **Gestion budgétaire > Lignes budgétaires** exporte les lignes budgétaires qu'elle affiche, des deux types, et importe un fichier qui contient les deux, avec le niveau Admin sur Budget.
 
 ### Faire entrer un budget dans KANAP
 
 1. Faites correspondre chaque objet de votre outil actuel aux tableaux ci-dessus, et ses identifiants à la colonne **Correspondance par**.
 2. Chargez les données de référence dans l'ordre donné dans [Charger un budget complet](budget-file.md#charger-un-budget-complet).
-3. Exportez le fichier budgétaire depuis la liste pour obtenir la ligne d'en-tête de votre organisation, avec une colonne par dimension analytique. Une liste sans poste exporte la ligne d'en-tête seule.
-4. Remplissez une ligne par poste avec sa `nature`, en laissant `item_number` vide, avec une colonne de montant par colonne budgétaire et par année (`budget_2027`), ou par mois (`budget_2027_03`).
+3. Exportez le fichier budgétaire depuis la liste pour obtenir la ligne d'en-tête de votre organisation, avec une colonne par dimension analytique. Une liste sans ligne budgétaire exporte la ligne d'en-tête seule.
+4. Remplissez une ligne par ligne budgétaire avec sa `nature`, en laissant `item_number` vide, avec une colonne de montant par colonne budgétaire et par année (`budget_2027`), ou par mois (`budget_2027_03`).
 5. Importez le fichier. La vérification signale les erreurs par ligne du fichier, et rien n'est écrit avant le chargement.
 
 Un jeu cohérent de fichiers d'exemple, avec une société fictive et ses données de référence, se trouve dans le [dépôt KANAP](https://github.com/kanap-hq/KANAP/tree/main/doc/samples).

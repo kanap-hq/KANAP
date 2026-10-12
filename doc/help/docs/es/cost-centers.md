@@ -224,7 +224,7 @@ Cargue o actualice todo el árbol desde un archivo.
 | `cost_centers:member` | Crear centros de coste y grupos, y editarlos |
 | `cost_centers:admin` | Todo lo anterior, más la importación y exportación CSV y la eliminación |
 
-Cada rol empieza con el nivel que tiene en departamentos, salvo el rol integrado Administrador de presupuesto, que recibe admin. Así, Administrador de presupuesto y Administrador de datos maestros son administradores, Miembro de presupuesto y Miembro de datos maestros son miembros, y los roles de lectura pueden leer. Cualquier persona que pueda leer las partidas presupuestarias (Presupuesto) o los informes puede elegir un centro de coste en una línea o en un filtro de informe sin acceso a esta página.
+Cada rol empieza con el nivel que tiene en departamentos, salvo el rol integrado Administrador de presupuesto, que recibe admin. Así, Administrador de presupuesto y Administrador de datos maestros son administradores, Miembro de presupuesto y Miembro de datos maestros son miembros, y los roles de lectura pueden leer. Cualquier persona que pueda leer las líneas presupuestarias (Presupuesto) o los informes puede elegir un centro de coste en una línea o en un filtro de informe sin acceso a esta página.
 
 ---
 

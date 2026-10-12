@@ -214,7 +214,7 @@
       "noBudgetNextYear": "Ohne {{column}} im nächsten Jahr",
       "accountOutsideChart": "Konto nicht im Kontenplan des Unternehmens"
     },
-    "topItems": "Top-Positionen",
+    "topItems": "Top-Zeilen",
     "columnY": "{{column}}, J",
     "topIncreases": "Stärkste Zuwächse",
     "columnYvsYminus1": "{{column}}, J vs J-1",
@@ -358,8 +358,8 @@
         "connection": "Verbindung",
         "contract": "Vertrag",
         "task": "Aufgabe",
-        "opexItem": "OPEX-Posten",
-        "capexItem": "CAPEX-Posten",
+        "opexItem": "OPEX-Zeile",
+        "capexItem": "CAPEX-Zeile",
         "incident": "Vorfall",
         "location": "Standort",
         "document": "Dokument"
@@ -767,13 +767,13 @@
     "changedAt": "Anderswo geändert um {{time}}",
     "changedOn": "Anderswo geändert am {{date}} um {{time}}",
     "changed": "Anderswo geändert",
-    "changedByYouAt": "Sie haben diese Position um {{time}} anderswo geändert",
-    "changedByYouOn": "Sie haben diese Position am {{date}} um {{time}} anderswo geändert",
-    "changedByYou": "Sie haben diese Position anderswo geändert",
+    "changedByYouAt": "Sie haben diese Zeile um {{time}} anderswo geändert",
+    "changedByYouOn": "Sie haben diese Zeile am {{date}} um {{time}} anderswo geändert",
+    "changedByYou": "Sie haben diese Zeile anderswo geändert",
     "aUser": "einem Benutzer",
     "badge": "Anderswo geändert",
     "reload": "Neu laden",
     "reloadHint": "Neu laden zeigt diese Änderungen. Was Sie gerade bearbeiten, bleibt auf dem Bildschirm.",
-    "deleted": "Diese Position wurde gelöscht"
+    "deleted": "Diese Zeile wurde gelöscht"
   }
 }

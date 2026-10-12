@@ -1,6 +1,6 @@
 # Lieferanten
 
-Lieferanten (auch als Anbieter bezeichnet) repräsentieren die Unternehmen, bei denen Sie Software, Dienstleistungen und Support einkaufen. Verknüpfen Sie Lieferanten mit Anwendungen, Verträgen und OPEX-Positionen, um Lieferantenbeziehungen und Ausgaben in Ihrem gesamten IT-Portfolio zu verfolgen.
+Lieferanten (auch als Anbieter bezeichnet) repräsentieren die Unternehmen, bei denen Sie Software, Dienstleistungen und Support einkaufen. Verknüpfen Sie Lieferanten mit Anwendungen, Verträgen und OPEX-Zeilen, um Lieferantenbeziehungen und Ausgaben in Ihrem gesamten IT-Portfolio zu verfolgen.
 
 ## Erste Schritte
 

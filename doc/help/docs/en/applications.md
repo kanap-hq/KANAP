@@ -61,7 +61,7 @@ Classification fields are optional when you create an application. **Business cr
 
 Once you save, the workspace unlocks all tabs for detailed documentation.
 
-**Tip**: Start by documenting your most critical applications. Use the **Deployments** tab to capture which environments exist (Prod, QA, Dev) and which servers run them, then link interfaces, contracts and budget items as you go.
+**Tip**: Start by documenting your most critical applications. Use the **Deployments** tab to capture which environments exist (Prod, QA, Dev) and which servers run them, then link interfaces, contracts and budget lines as you go.
 
 **Permissions**:
 - View: `applications:reader`
@@ -340,7 +340,7 @@ Classification and continuity values are copied, but the new version starts with
 | Data residency | On |
 | Links | On |
 | Support contacts | On |
-| Budget items (OPEX + CAPEX, paired) | On |
+| Budget lines (OPEX + CAPEX, paired) | On |
 | Contracts | On |
 | Deployments | Off |
 | Deployment bindings | Off (only available when Deployments is selected) |
@@ -372,7 +372,7 @@ Use this when you want to create an independent duplicate of an application -- t
 3. The system creates a copy with " (copy)" appended to the name
 4. You're navigated to the new application to make changes
 
-**What gets copied**: All core fields (except last DR test date), including classification and continuity values, owners, companies, departments, suites, OPEX/CAPEX items, contracts, links, data residency, and support contacts. The copied application's review is reset.
+**What gets copied**: All core fields (except last DR test date), including classification and continuity values, owners, companies, departments, suites, OPEX/CAPEX lines, contracts, links, data residency, and support contacts. The copied application's review is reset.
 
 **What does NOT get copied**: Deployments, interfaces, server assignments, attachments, version fields (version, go-live date, end of support).
 
@@ -397,8 +397,8 @@ Use this when you want to create an independent duplicate of an application -- t
 | Links | Yes | Optional (default: yes) |
 | Support contacts | Yes | Optional (default: yes) |
 | Suites (membership) | Yes | No |
-| OPEX items | Yes | Optional (default: yes) |
-| CAPEX items | Yes | Optional (default: yes) |
+| OPEX lines | Yes | Optional (default: yes) |
+| CAPEX lines | Yes | Optional (default: yes) |
 | Contracts | Yes | Optional (default: yes) |
 | Deployments | No | Optional (default: no) |
 | Bindings | No | Optional (default: no) |

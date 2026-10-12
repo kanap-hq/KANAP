@@ -224,7 +224,7 @@ Laden oder aktualisieren Sie den gesamten Baum aus einer Datei.
 | `cost_centers:member` | Kostenstellen und Gruppen erstellen und bearbeiten |
 | `cost_centers:admin` | Alles oben Genannte, dazu CSV-Import und -Export sowie Löschen |
 
-Jede Rolle beginnt mit der Stufe, die sie für Abteilungen hat, mit Ausnahme der integrierten Rolle Budget-Administrator, die admin erhält. Budget-Administrator und Stammdaten-Administrator sind also Administratoren, Budget-Mitglied und Stammdaten-Mitglied sind Mitglieder, und die Leserollen können lesen. Wer Budgetpositionen (Budget) oder Berichte lesen kann, kann eine Kostenstelle auf einer Zeile oder in einem Berichtsfilter wählen, ohne Zugriff auf diese Seite zu haben.
+Jede Rolle beginnt mit der Stufe, die sie für Abteilungen hat, mit Ausnahme der integrierten Rolle Budget-Administrator, die admin erhält. Budget-Administrator und Stammdaten-Administrator sind also Administratoren, Budget-Mitglied und Stammdaten-Mitglied sind Mitglieder, und die Leserollen können lesen. Wer Budgetzeilen (Budget) oder Berichte lesen kann, kann eine Kostenstelle auf einer Zeile oder in einem Berichtsfilter wählen, ohne Zugriff auf diese Seite zu haben.
 
 ---
 

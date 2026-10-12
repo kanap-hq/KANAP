@@ -61,7 +61,7 @@ Los campos de clasificación son opcionales al crear una aplicación. La **Criti
 
 Una vez que guarde, el espacio de trabajo desbloquea todas las pestañas para documentación detallada.
 
-**Consejo**: Comience documentando sus aplicaciones más críticas. Utilice la pestaña **Despliegues** para capturar qué entornos existen (Prod, QA, Dev) y qué servidores los ejecutan, luego vincule interfaces, contratos y partidas presupuestarias a medida que avance.
+**Consejo**: Comience documentando sus aplicaciones más críticas. Utilice la pestaña **Despliegues** para capturar qué entornos existen (Prod, QA, Dev) y qué servidores los ejecutan, luego vincule interfaces, contratos y líneas presupuestarias a medida que avance.
 
 **Permisos**:
 - Ver: `applications:reader`
@@ -100,7 +100,7 @@ La cuadrícula de Aplicaciones proporciona una vista completa de su portafolio d
 - **Acceso externo**: Si la app es accesible desde internet
 - **SSO habilitado** / **MFA habilitado**: Características de autenticación
 - **Integración de datos / ETL**: Si la app participa en integraciones de datos
-- **Partidas OPEX** / **Partidas CAPEX** / **Contratos**: Gasto y contratos vinculados
+- **Líneas OPEX** / **Líneas CAPEX** / **Contratos**: Gasto y contratos vinculados
 - **Componentes**: Aplicaciones hijas (si es una suite)
 - **Clase de datos** / **Contiene PII** / **Residencia de datos**: Información de conformidad
 - **Criticidad cibernética**, **Ola de recuperación**, **RTO**, **RPO**, **Estado/fecha de revisión**: Campos de clasificación y continuidad
@@ -283,8 +283,8 @@ La pestaña Relaciones vincula esta aplicación a sus registros financieros, de 
 **Componentes** (solo cuando está activado "Puede tener apps hijas"): una tabla que lista las aplicaciones hijas de esta Suite, con su ciclo de vida y criticidad. Haga clic en una fila para abrir el espacio de trabajo del hijo.
 
 **Relaciones**:
-- **Partidas OPEX**: costes recurrentes asociados a esta aplicación
-- **Partidas CAPEX**: proyectos de gasto de capital
+- **Líneas OPEX**: costes recurrentes asociados a esta aplicación
+- **Líneas CAPEX**: proyectos de gasto de capital
 - **Contratos**: contratos con proveedores
 - **Proyectos**: proyectos del portafolio vinculados a esta aplicación
 - **Tareas**: tareas vinculadas a esta aplicación. Esta lista es de solo lectura aquí -- las tareas ganan o pierden este vínculo cuando establece el campo **App / Servicio** en una tarea desde la página de Tareas.
@@ -340,7 +340,7 @@ Los valores de clasificación y continuidad se copian, pero la nueva versión em
 | Residencia de datos | Activado |
 | Enlaces | Activado |
 | Contactos de soporte | Activado |
-| Partidas presupuestarias (OPEX + CAPEX, emparejadas) | Activado |
+| Líneas presupuestarias (OPEX + CAPEX, emparejadas) | Activado |
 | Contratos | Activado |
 | Despliegues | Desactivado |
 | Enlaces de despliegue | Desactivado (solo disponible cuando se selecciona Despliegues) |
@@ -372,7 +372,7 @@ Utilice esto cuando desee crear un duplicado independiente de una aplicación --
 3. El sistema crea una copia con " (copia)" añadido al nombre
 4. Se le lleva a la nueva aplicación para hacer cambios
 
-**Qué se copia**: Todos los campos principales (excepto fecha de última prueba DR), incluidos los valores de clasificación y continuidad, responsables, empresas, departamentos, suites, partidas OPEX/CAPEX, contratos, enlaces, residencia de datos y contactos de soporte. La revisión de la copia se restablece.
+**Qué se copia**: Todos los campos principales (excepto fecha de última prueba DR), incluidos los valores de clasificación y continuidad, responsables, empresas, departamentos, suites, líneas OPEX/CAPEX, contratos, enlaces, residencia de datos y contactos de soporte. La revisión de la copia se restablece.
 
 **Qué NO se copia**: Despliegues, interfaces, asignaciones de servidores, adjuntos, campos de versión (versión, fecha de puesta en marcha, fin de soporte).
 
@@ -397,8 +397,8 @@ Utilice esto cuando desee crear un duplicado independiente de una aplicación --
 | Enlaces | Sí | Opcional (predeterminado: sí) |
 | Contactos de soporte | Sí | Opcional (predeterminado: sí) |
 | Suites (pertenencia) | Sí | No |
-| Partidas OPEX | Sí | Opcional (predeterminado: sí) |
-| Partidas CAPEX | Sí | Opcional (predeterminado: sí) |
+| Líneas OPEX | Sí | Opcional (predeterminado: sí) |
+| Líneas CAPEX | Sí | Opcional (predeterminado: sí) |
 | Contratos | Sí | Opcional (predeterminado: sí) |
 | Despliegues | No | Opcional (predeterminado: no) |
 | Enlaces | No | Opcional (predeterminado: no) |
@@ -591,7 +591,7 @@ Custom ERP;lob;;Moderate;Active;2018-03-20;false
 
 - **Empiece por las apps críticas**: Documente primero sus aplicaciones críticas para el negocio, luego avance en los niveles de criticidad.
 - **Use Suites para agrupar**: Active "Puede tener apps hijas" en la pestaña Operaciones para marcar una aplicación como Suite que agrupa componentes relacionados (p. ej., módulos SAP bajo una Suite SAP).
-- **Vincule al gasto temprano**: Conecte partidas OPEX, CAPEX y contratos en la pestaña Relaciones para ver el panorama completo de costes de cada aplicación.
+- **Vincule al gasto temprano**: Conecte líneas OPEX, CAPEX y contratos en la pestaña Relaciones para ver el panorama completo de costes de cada aplicación.
 - **Mantenga los despliegues actualizados**: La pestaña Despliegues alimenta los chips de entorno en la lista -- manténgala actualizada para una visibilidad precisa.
 - **Documente la audiencia**: Defina la audiencia de empresas y departamentos en el panel de propiedades; el conteo de usuarios se deriva entonces automáticamente y se utiliza en los informes.
 - **Aproveche el filtrado por categoría**: Utilice el filtro de columna Categoría para centrarse en tipos específicos de aplicaciones (p. ej., mostrar solo apps de Línea de negocio, o excluir herramientas de Productividad).

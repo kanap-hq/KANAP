@@ -1768,7 +1768,7 @@
         "businessLead": "Fachbereichsleiter",
         "businessSponsor": "Fachbereichssponsor",
         "businessTeam": "Fachbereichsteam",
-        "capexItems": "CAPEX-Positionen",
+        "capexItems": "CAPEX-Zeilen",
         "category": "Kategorie",
         "company": "Unternehmen",
         "createdFromRequest": "Erstellt aus Anfrage",
@@ -1786,7 +1786,7 @@
         "itLead": "IT-Leiter",
         "itSponsor": "IT-Sponsor",
         "name": "Name",
-        "opexItems": "OPEX-Positionen",
+        "opexItems": "OPEX-Zeilen",
         "originTask": "Ursprungsaufgabe",
         "overrideJustification": "Begründung der Überschreibung",
         "overrideValue": "Überschreibungswert",
@@ -2133,10 +2133,10 @@
         }
       },
       "fields": {
-        "capexItems": "CAPEX-Positionen",
+        "capexItems": "CAPEX-Zeilen",
         "linkDescription": "Linkbeschreibung",
         "name": "Name",
-        "opexItems": "OPEX-Positionen",
+        "opexItems": "OPEX-Zeilen",
         "url": "URL"
       },
       "messages": {
@@ -2148,15 +2148,15 @@
       "placeholders": {
         "applications": "Anwendungen suchen",
         "assets": "Assets suchen",
-        "capexItems": "CAPEX-Positionen auswählen",
+        "capexItems": "CAPEX-Zeilen auswählen",
         "linkDescription": "Optional",
-        "opexItems": "OPEX-Positionen auswählen",
+        "opexItems": "OPEX-Zeilen auswählen",
         "url": "https://example.com"
       },
       "sections": {
         "appsAndAssets": "Apps und Assets",
         "attachments": "Anhänge",
-        "budgetItems": "Budgetposten",
+        "budgetItems": "Budgetzeilen",
         "externalLinks": "Relevante Websites"
       },
       "states": {

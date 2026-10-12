@@ -65,11 +65,11 @@ Lista los próximos cinco plazos de cancelación de contratos que aún están en
 
 Haga clic en **Ver todo** para abrir la página de Contratos.
 
-### Top partidas
+### Top líneas
 
 Las cinco líneas más grandes para el año actual, clasificadas por la columna por defecto. El subtítulo nombra la columna, por ejemplo **Presupuesto, A**. Los importes se redondean a miles con sufijo "k".
 
-Use las pestañas **Todo** / **OPEX** / **CAPEX** para elegir el tipo. Haga clic en **Abrir** para ver el informe completo Top partidas sobre el mismo tipo.
+Use las pestañas **Todo** / **OPEX** / **CAPEX** para elegir el tipo. Haga clic en **Abrir** para ver el informe completo Top líneas sobre el mismo tipo.
 
 ### Mayores incrementos
 

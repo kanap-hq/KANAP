@@ -8,14 +8,14 @@ Die hier beschriebenen Dateien sind der Vertrag, auf den Sie sich stützen. Ihre
 
 | Objekt | Was es enthält | Wo Sie es verwalten |
 |---|---|---|
-| **OPEX-Position** | Laufende Kosten, von Jahr zu Jahr fortgeführt | **Budgetverwaltung > Budgetzeilen** |
-| **CAPEX-Position** | Eine Investition, von Jahr zu Jahr fortgeführt | **Budgetverwaltung > Budgetzeilen** |
-| **Budgetspalten** | Die fünf Betragsspalten, die jede Position für jedes Jahr hat | **Budgetverwaltung > Administration > Budgetspalten** |
-| **Zeilen unter Menge und Preis** | Die Zeilen, aus denen eine Spalte berechnet werden kann | Der Tab **Budget** einer Position |
-| **Zuordnung** | Wie die Kosten eines Jahres einer Position auf Unternehmen oder Abteilungen verteilt werden | Der Tab **Zuordnungen** einer Position |
+| **OPEX-Zeile** | Laufende Kosten, von Jahr zu Jahr fortgeführt | **Budgetverwaltung > Budgetzeilen** |
+| **CAPEX-Zeile** | Eine Investition, von Jahr zu Jahr fortgeführt | **Budgetverwaltung > Budgetzeilen** |
+| **Budgetspalten** | Die fünf Betragsspalten, die jede Budgetzeile für jedes Jahr hat | **Budgetverwaltung > Administration > Budgetspalten** |
+| **Zeilen unter Menge und Preis** | Die Zeilen, aus denen eine Spalte berechnet werden kann | Der Tab **Budget** einer Budgetzeile |
+| **Zuordnung** | Wie die Kosten eines Jahres einer Budgetzeile auf Unternehmen oder Abteilungen verteilt werden | Der Tab **Zuordnungen** einer Budgetzeile |
 | **Unternehmen** | Eine juristische Person, die zahlt, mit ihren jährlichen Kennzahlen | **Stammdaten > Unternehmen** |
 | **Abteilung** | Eine Einheit eines Unternehmens, mit ihrer jährlichen Mitarbeiterzahl | **Stammdaten > Abteilungen** |
-| **Kontenplan** und **Konto** | Die Konten, auf die ein Unternehmen seine Positionen bucht | **Stammdaten > Kontenpläne** |
+| **Kontenplan** und **Konto** | Die Konten, auf die ein Unternehmen seine Budgetzeilen bucht | **Stammdaten > Kontenpläne** |
 | **Kostenstelle** | Wer die Ausgabe verantwortet, in einem Baum aus Gruppen | **Stammdaten > Kostenstellen** |
 | **Lieferant** | Wer bezahlt wird | **Stammdaten > Lieferanten** |
 | **Analysedimension** und **Wert** | Freie Klassifizierungen für das Reporting | **Stammdaten > Analysedimensionen** |
@@ -27,7 +27,7 @@ Die hier beschriebenen Dateien sind der Vertrag, auf den Sie sich stützen. Ihre
 
 | Objekt | Verweist auf | Wie viele |
 |---|---|---|
-| OPEX- oder CAPEX-Position | Zahlendes Unternehmen | Eines |
+| OPEX- oder CAPEX-Zeile | Zahlendes Unternehmen | Eines |
 | | Konto, aus dem Kontenplan des zahlenden Unternehmens | Eines |
 | | Währung, aus den erlaubten Währungen | Eine |
 | | Kostenstelle | Keine oder eine. Eine Gruppe ist nicht verwendbar |
@@ -35,7 +35,7 @@ Die hier beschriebenen Dateien sind der Vertrag, auf den Sie sich stützen. Ihre
 | | Wert jeder aktiven Analysedimension | Keiner oder einer pro Dimension. Einer auf einer neuen Zeile für eine erforderliche Dimension |
 | | IT-Verantwortlicher und Fachverantwortlicher (Benutzer) | Je keiner oder einer |
 | | Budgetjahre | Eines pro Jahr |
-| Budgetjahr einer Position | Budgetspalten | Fünf, jede mit zwölf Monatsbeträgen |
+| Budgetjahr einer Budgetzeile | Budgetspalten | Fünf, jede mit zwölf Monatsbeträgen |
 | | Zeilen unter Menge und Preis | Bis zu 50 pro Spalte |
 | | Zuordnung | Eine Methode, mit ihren Unternehmen oder Abteilungen |
 | Zeile unter Menge und Preis mit Preis pro Tag | Arbeitstagekalender | Einer |
@@ -50,18 +50,18 @@ Die hier beschriebenen Dateien sind der Vertrag, auf den Sie sich stützen. Ihre
 | Konto | Kontenplan | Einer |
 | Analysewert | Analysedimension | Eine |
 
-Eine Position ist außerdem mit Projekten, Anfragen, Anwendungen, Assets, Verträgen, Kontakten, Aufgaben, Websites und Anhängen verknüpft. Siehe [Verknüpfungen mit anderen Objekten](#verknupfungen-mit-anderen-objekten).
+Eine Budgetzeile ist außerdem mit Projekten, Anfragen, Anwendungen, Assets, Verträgen, Kontakten, Aufgaben, Websites und Anhängen verknüpft. Siehe [Verknüpfungen mit anderen Objekten](#verknupfungen-mit-anderen-objekten).
 
-## Budgetpositionen
+## Budgetzeilen
 
-### OPEX- und CAPEX-Positionen
+### OPEX- und CAPEX-Zeilen
 
-Eine Position lebt über mehrere Jahre: Eine Lizenz über drei Jahre ist eine Position mit drei Budgetjahren. KANAP vergibt jeder Position beim Anlegen eine Nummer, ihre Referenz `BL-12`, in derselben Reihe für OPEX und CAPEX. Die Liste, der Arbeitsbereich und die Seitenadresse zeigen sie. Positionen, die vor dieser Reihe angelegt wurden, hatten zusätzlich eine Nummer `OPX-12` oder `CPX-3`: Links, Suchen und die Budgetdatei finden eine Position weiterhin darüber. In einer Datei ohne Spalte `nature` behält eine bloße Zahl ihre frühere Bedeutung (`CPX-3`, wenn die Liste auf CAPEX gefiltert ist). Siehe [Referenzen](budget-lines.md#referenzen).
+Eine Budgetzeile lebt über mehrere Jahre: Eine Lizenz über drei Jahre ist eine Budgetzeile mit drei Budgetjahren. KANAP vergibt jeder Budgetzeile beim Anlegen eine Nummer, ihre Referenz `BL-12`, in derselben Reihe für OPEX und CAPEX. Die Liste, der Arbeitsbereich und die Seitenadresse zeigen sie. Budgetzeilen, die vor dieser Reihe angelegt wurden, hatten zusätzlich eine Nummer `OPX-12` oder `CPX-3`: Links, Suchen und die Budgetdatei finden eine Budgetzeile weiterhin darüber. In einer Datei ohne Spalte `nature` behält eine bloße Zahl ihre frühere Bedeutung (`CPX-3`, wenn die Liste auf CAPEX gefiltert ist). Siehe [Referenzen](budget-lines.md#referenzen).
 
 | Feld | Spalte der Budgetdatei | Erforderlich | Hinweise |
 |---|---|---|---|
-| Art | `nature` | Ja | `opex` oder `capex`. Eine Datei ändert die Art einer bestehenden Position nicht (siehe [Den Typ einer Position ändern](#den-typ-einer-position-andern)). Eine Datei ohne diese Spalte wird als OPEX-Positionen gelesen, oder als CAPEX-Positionen, wenn die Liste auf CAPEX gefiltert ist |
-| Nummer | `item_number` | Von KANAP vergeben | `BL-12`. Leer in der Datei: legt eine Position an |
+| Art | `nature` | Ja | `opex` oder `capex`. Eine Datei ändert die Art einer bestehenden Budgetzeile nicht (siehe [Den Typ einer Budgetzeile ändern](#den-typ-einer-budgetzeile-andern)). Eine Datei ohne diese Spalte wird als OPEX-Zeilen gelesen, oder als CAPEX-Zeilen, wenn die Liste auf CAPEX gefiltert ist |
+| Nummer | `item_number` | Von KANAP vergeben | `BL-12`. Leer in der Datei: legt eine Budgetzeile an |
 | Titel | `name` | Ja | Die Spalte **Produktname** der Liste |
 | Beschreibung | `description` | Nein | |
 | Anlagentyp, Investitionsart, Priorität (CAPEX) | `analytics:ppe_type`, `analytics:investment_type`, `analytics:priority` | Bei einer neuen Zeile, solange die Dimension erforderlich ist | Werte der drei CAPEX-Dimensionen, gespeichert wie die Werte jeder anderen Dimension. Siehe [CAPEX-Dimensionen](analytics.md#capex-dimensionen) |
@@ -70,34 +70,34 @@ Eine Position lebt über mehrere Jahre: Eine Lizenz über drei Jahre ist eine Po
 | Konto | `account_number` | Ja | Im Kontenplan des zahlenden Unternehmens |
 | Kostenstelle | `cost_center_code` | Nein | Eine Gruppe wird abgelehnt |
 | Run oder Build | `run_build` | Nein | `run` oder `build` |
-| Analysewerte | `analytics:<code>` | Bei einer erforderlichen Dimension | Eine Spalte pro aktiver Dimension. Eine Position nimmt nur in den Dimensionen ihrer Art Werte an. Eine erforderliche Dimension braucht einen Wert auf einer neuen Position ihrer Art |
+| Analysewerte | `analytics:<code>` | Bei einer erforderlichen Dimension | Eine Spalte pro aktiver Dimension. Eine Budgetzeile nimmt nur in den Dimensionen ihrer Art Werte an. Eine erforderliche Dimension braucht einen Wert auf einer neuen Budgetzeile ihrer Art |
 | IT-Verantwortlicher, Fachverantwortlicher | `owner_it_email`, `owner_business_email` | Nein | Aktive Benutzer |
 | Projekt | `project` | Nein | Eine Projektnummer, zum Beispiel `PRJ-3` |
 | Währung | `currency` | Ja | ISO-Code mit drei Buchstaben |
 | Gültig ab | `effective_start` | Ja | In einer Datei der 1. Januar des ersten Jahres mit einem Betrag in der Zeile, sonst des laufenden Jahres |
-| Ende der Gültigkeit | `end_of_validity` | Nein | Das einzige Enddatum einer Position |
+| Ende der Gültigkeit | `end_of_validity` | Nein | Das einzige Enddatum einer Budgetzeile |
 | Notizen | `notes` | Nein | |
 
-Eine Position hat keinen eigenen Status zum Laden. Sie ist aktiv bis zum Ende ihrer Gültigkeit und wird danach innerhalb einer Stunde deaktiviert. Der auf einer Position angezeigte Budgetverantwortliche kommt aus ihrer Kostenstelle und wird nicht auf der Position gespeichert.
+Eine Budgetzeile hat keinen eigenen Status zum Laden. Sie ist aktiv bis zum Ende ihrer Gültigkeit und wird danach innerhalb einer Stunde deaktiviert. Der auf einer Budgetzeile angezeigte Budgetverantwortliche kommt aus ihrer Kostenstelle und wird nicht auf der Budgetzeile gespeichert.
 
-### Den Typ einer Position ändern
+### Den Typ einer Budgetzeile ändern
 
-Eine Position wechselt in ihrem Arbeitsbereich von OPEX zu CAPEX oder zurück (**Typ ändern...** im Menü **...**, siehe [Typ ändern](budget-lines.md#typ-andern)). Eine Budgetdatei ändert den Typ nie. Die Änderung beginnt am 1. Januar eines Jahres:
+Eine Budgetzeile wechselt in ihrem Arbeitsbereich von OPEX zu CAPEX oder zurück (**Typ ändern...** im Menü **...**, siehe [Typ ändern](budget-lines.md#typ-andern)). Eine Budgetdatei ändert den Typ nie. Die Änderung beginnt am 1. Januar eines Jahres:
 
-- **Ab dem ersten Jahr der Position** ändert die Position selbst ihren Typ. Sie behält ihre `BL`-Nummer, ihre Budgetjahre, Zuordnungen, Verknüpfungen, Anhänge und Aufgaben
-- **Ab einem späteren Jahr** endet die Position am 31. Dezember des Vorjahres und behält ihre früheren Budgetjahre. Eine neue Position des anderen Typs mit eigener `BL`-Nummer übernimmt die späteren Budgetjahre, die Kontakte und die Verknüpfungen zu Anwendungen, Assets, Verträgen, Projekten und Anfragen. Die neue Position verzeichnet die Position, auf die sie folgt, und jede der beiden Positionen zeigt die andere an
+- **Ab dem ersten Jahr der Zeile** ändert die Budgetzeile selbst ihren Typ. Sie behält ihre `BL`-Nummer, ihre Budgetjahre, Zuordnungen, Verknüpfungen, Anhänge und Aufgaben
+- **Ab einem späteren Jahr** endet die Budgetzeile am 31. Dezember des Vorjahres und behält ihre früheren Budgetjahre. Eine neue Budgetzeile des anderen Typs mit eigener `BL`-Nummer übernimmt die späteren Budgetjahre, die Kontakte und die Verknüpfungen zu Anwendungen, Assets, Verträgen, Projekten und Anfragen. Die neue Budgetzeile verzeichnet die Budgetzeile, auf die sie folgt, und jede der beiden Budgetzeilen zeigt die andere an
 
-Eine Position wird durch höchstens eine Position ersetzt. Die Änderung wird abgelehnt, solange eine eingefrorene Spalte Beträge der Position in den betroffenen Jahren enthält.
+Eine Budgetzeile wird durch höchstens eine Budgetzeile ersetzt. Die Änderung wird abgelehnt, solange eine eingefrorene Spalte Beträge der Budgetzeile in den betroffenen Jahren enthält.
 
 ### Budgetjahre
 
-Jede Position hat ein Budget pro Jahr. Der Tab **Budget** zeigt das laufende Jahr, die zwei Jahre davor und die zwei Jahre danach. Eine Budgetdatei kann bis zu zwölf Jahre auf einmal exportieren.
+Jede Budgetzeile hat ein Budget pro Jahr. Der Tab **Budget** zeigt das laufende Jahr, die zwei Jahre davor und die zwei Jahre danach. Eine Budgetdatei kann bis zu zwölf Jahre auf einmal exportieren.
 
 Ein Budgetjahr enthält die fünf Budgetspalten mit ihren Monatsbeträgen, die Zeilen unter Menge und Preis jeder Spalte und die Zuordnung des Jahres.
 
 ### Budgetspalten
 
-Jede Position hat für jedes Jahr dieselben fünf Spalten. Sie werden einmal für die ganze Organisation festgelegt, für OPEX und CAPEX gleichermaßen.
+Jede Budgetzeile hat für jedes Jahr dieselben fünf Spalten. Sie werden einmal für die ganze Organisation festgelegt, für OPEX und CAPEX gleichermaßen.
 
 | Position | Standardname | Name in Dateien |
 |---|---|---|
@@ -115,7 +115,7 @@ Eine sechste Spalte gibt es nicht. Um mehrere Budgetrunden aufzubewahren, verwen
 
 ### Monatsbeträge
 
-Jede Spalte eines Budgetjahres enthält zwölf Monatsbeträge mit zwei Dezimalstellen, in der Währung der Position. Die Jahressumme ist die Summe der Monate. Eine Datei kann die Jahressumme oder die zwölf Monate einer Spalte enthalten: Eine Jahressumme wird über den Zeitraum der Spalte verteilt, wie im Tab **Budget**.
+Jede Spalte eines Budgetjahres enthält zwölf Monatsbeträge mit zwei Dezimalstellen, in der Währung der Budgetzeile. Die Jahressumme ist die Summe der Monate. Eine Datei kann die Jahressumme oder die zwölf Monate einer Spalte enthalten: Eine Jahressumme wird über den Zeitraum der Spalte verteilt, wie im Tab **Budget**.
 
 Jede Spalte speichert außerdem ihren Zeitraum innerhalb des Jahres und die Herkunft ihrer Beträge: eine Verteilung, eine Kopie, eine Eingabe von Hand oder ihre Zeilen unter Menge und Preis. Berichte rechnen die Beträge mit den Wechselkursen des Jahres in die Reportingwährung um. Siehe [Währungseinstellungen](currencies.md).
 
@@ -127,7 +127,7 @@ Diese Zeilen werden im Tab **Budget** erfasst. Keine Datei enthält sie. Eine Bu
 
 ### Zuordnungen
 
-Jedes Budgetjahr einer Position hat eine Zuordnungsmethode:
+Jedes Budgetjahr einer Budgetzeile hat eine Zuordnungsmethode:
 
 | Methode | Verteilt nach |
 |---|---|
@@ -143,19 +143,19 @@ Zuordnungen speisen die Berichte zur Leistungsverrechnung. Keine Datei importier
 
 | Verknüpfung | Wo sie angelegt wird | In einer Datei |
 |---|---|---|
-| Projekte | Der Tab **Verknüpfungen** der Position oder des Projekts | Die Budgetdatei enthält ein Projekt pro Position in `project`. Die Verknüpfungen des Tabs **Verknüpfungen** sind nicht in der Datei. Die Listen zeigen beides |
+| Projekte | Der Tab **Verknüpfungen** der Budgetzeile oder des Projekts | Die Budgetdatei enthält ein Projekt pro Budgetzeile in `project`. Die Verknüpfungen des Tabs **Verknüpfungen** sind nicht in der Datei. Die Listen zeigen beides |
 | Anfragen | Der Tab **Verknüpfungen** der Anfrage | Nein |
-| Anwendungen | Der Tab **Verknüpfungen** der Position oder der Anwendung | Nein |
+| Anwendungen | Der Tab **Verknüpfungen** der Budgetzeile oder der Anwendung | Nein |
 | Assets | Der Tab **Verknüpfungen** des Assets | Nein |
-| Verträge | Der Tab **Verknüpfungen** der Position oder des Vertrags | Nein |
-| Kontakte, Websites, Anhänge | Der Tab **Verknüpfungen** der Position | Nein |
-| Aufgaben | Der Tab **Übersicht** der Position | Nein |
+| Verträge | Der Tab **Verknüpfungen** der Budgetzeile oder des Vertrags | Nein |
+| Kontakte, Websites, Anhänge | Der Tab **Verknüpfungen** der Budgetzeile | Nein |
+| Aufgaben | Der Tab **Übersicht** der Budgetzeile | Nein |
 
 ## Stammdaten
 
 Die Budgetdatei findet Stammdaten über fachliche Kennungen. Laden Sie die Stammdaten zuerst. Die Budgetdatei legt fehlende Lieferanten an, wenn **Fehlende Lieferanten anlegen** angehakt ist, sowie fehlende Analysewerte. Sonst legt sie nichts an.
 
-| Objekt | In Dateien identifiziert über | Erforderlich | Auf einer Budgetposition |
+| Objekt | In Dateien identifiziert über | Erforderlich | Auf einer Budgetzeile |
 |---|---|---|---|
 | Unternehmen | `name` | Name, Land, Basiswährung. Die Oberfläche verlangt außerdem einen Ort | `company_name` |
 | Abteilung | `company_name` und `name` | Unternehmen, Name | Von Zuordnungen verwendet |
@@ -171,10 +171,10 @@ Die Budgetdatei findet Stammdaten über fachliche Kennungen. Laden Sie die Stamm
 Worauf es ankommt, wenn Sie ein anderes Werkzeug auf KANAP abbilden:
 
 - **Unternehmen** tragen ihre Mitarbeiterzahl, ihre IT-Benutzer und ihren Umsatz pro Jahr. Der Umsatz wird in Millionen der Basiswährung des Unternehmens angegeben. Zuordnungen nach Mitarbeiterzahl, IT-Benutzern oder Umsatz brauchen die Kennzahlen des Jahres.
-- **Konten** gehören zu einem Kontenplan, und ein Unternehmen verwendet einen Kontenplan. Eine Kontonummer ist eine ganze Zahl, eindeutig innerhalb ihres Kontenplans. Das Konto einer Budgetposition muss im Kontenplan ihres zahlenden Unternehmens existieren, und jedes Konto legt fest, ob es für OPEX-Zeilen, CAPEX-Zeilen oder beides dient. Siehe [Kontenpläne und Kontenverwaltung](chart-of-accounts.md).
-- **Kostenstellen** bilden einen Baum. Eine Gruppe fasst Kostenstellen und andere Gruppen zusammen und kann mehrere Unternehmen umfassen. Eine Kostenstelle gehört zu einem Unternehmen, hat keine Kinder und ist der einzige Knoten, den eine Position verwenden kann. Ihr Budgetverantwortlicher erscheint auf jeder Position, die sie trägt. Siehe [Kostenstellen](cost-centers.md).
+- **Konten** gehören zu einem Kontenplan, und ein Unternehmen verwendet einen Kontenplan. Eine Kontonummer ist eine ganze Zahl, eindeutig innerhalb ihres Kontenplans. Das Konto einer Budgetzeile muss im Kontenplan ihres zahlenden Unternehmens existieren, und jedes Konto legt fest, ob es für OPEX-Zeilen, CAPEX-Zeilen oder beides dient. Siehe [Kontenpläne und Kontenverwaltung](chart-of-accounts.md).
+- **Kostenstellen** bilden einen Baum. Eine Gruppe fasst Kostenstellen und andere Gruppen zusammen und kann mehrere Unternehmen umfassen. Eine Kostenstelle gehört zu einem Unternehmen, hat keine Kinder und ist der einzige Knoten, den eine Budgetzeile verwenden kann. Ihr Budgetverantwortlicher erscheint auf jeder Budgetzeile, die sie trägt. Siehe [Kostenstellen](cost-centers.md).
 - **Lieferanten** werden in ihrer eigenen Datei über den Namen zugeordnet. Die Budgetdatei ordnet sie zuerst über die ERP-ID zu, dann über den Namen: Füllen Sie die ERP-ID, wenn Ihr ERP eine hat.
-- **Analysedimensionen** werden auf ihrer Seite angelegt, jede mit einem Code. Eine Position hat höchstens einen Wert pro Dimension. Siehe [Analysedimensionen](analytics.md).
+- **Analysedimensionen** werden auf ihrer Seite angelegt, jede mit einem Code. Eine Budgetzeile hat höchstens einen Wert pro Dimension. Siehe [Analysedimensionen](analytics.md).
 - **Arbeitstagekalender** sind Standardkalender (sie folgen den Feiertagen eines Landes) oder benutzerdefinierte Kalender. Sie enthalten die Arbeitstage jedes Monats, Jahr für Jahr. Siehe [Arbeitstagekalender](working-day-calendars.md).
 - **Währungen** sind ISO-Codes mit drei Buchstaben. Die erlaubten Währungen, die Reportingwährung und die Wechselkurse werden in der Oberfläche festgelegt und haben keine Datei.
 
@@ -184,7 +184,7 @@ Jede der folgenden Dateien wird auf der Seite exportiert und importiert, die das
 
 | Objekt | Export | Import | Zugeordnet über | Details |
 |---|---|---|---|---|
-| OPEX- und CAPEX-Positionen und ihre Beträge | Ja | Ja | `item_number` (`BL-12`) | [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md) |
+| OPEX- und CAPEX-Zeilen und ihre Beträge | Ja | Ja | `item_number` (`BL-12`) | [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md) |
 | Unternehmen und ihre Kennzahlen | Ja | Ja | `name` | [Unternehmen](companies.md) |
 | Abteilungen | Ja | Ja | `company_name` und `name` | [Abteilungen](departments.md) |
 | Konten | Ja | Ja | `account_number` innerhalb des Kontenplans | [Kontenpläne und Kontenverwaltung](chart-of-accounts.md) |
@@ -194,18 +194,18 @@ Jede der folgenden Dateien wird auf der Seite exportiert und importiert, die das
 | Analysewerte | Ja | Ja | `axis_code` und `name` | [Analysedimensionen](analytics.md) |
 | Arbeitstagekalender | Ja | Ja | `code`, eine Zeile pro Kalender und Jahr | [Arbeitstagekalender](working-day-calendars.md) |
 | Benutzer | Ja | Ja | `email` | [CSV-Datei der Benutzer](admin.md#csv-datei-der-benutzer) |
-| Verträge | Ja | Ja | `name` und `supplier_name` | [Verträge](contracts.md). Die Datei enthält nicht die Verknüpfungen zu Budgetpositionen |
+| Verträge | Ja | Ja | `name` und `supplier_name` | [Verträge](contracts.md). Die Datei enthält nicht die Verknüpfungen zu Budgetzeilen |
 | Zuordnungen | Aus den Berichten zur Leistungsverrechnung | Nein | | [Berichte](reports.md) |
 | Zeilen unter Menge und Preis, Einstellungen der Budgetspalten, Einfrierungen, Währungen | Nein | Nein | | In der Oberfläche festgelegt |
 
-Die Budgetdatei liest und schreibt die Beträge jeder Spalte und jedes Jahres, als Jahressummen oder Monate, mit den Details der Position in derselben Zeile. Sie ist der Weg hinein für ein anderswo erstelltes Budget und der Weg hinaus zu einer Tabellenkalkulation oder einem BI-Werkzeug. Eine Datei enthält beide Arten von Positionen, ihre Spalte `nature` gibt die Art an. **Budgetverwaltung > Budgetzeilen** exportiert die angezeigten Positionen beider Typen und importiert eine Datei mit beiden Arten, mit der Administratorstufe auf Budget.
+Die Budgetdatei liest und schreibt die Beträge jeder Spalte und jedes Jahres, als Jahressummen oder Monate, mit den Details der Budgetzeile in derselben Zeile. Sie ist der Weg hinein für ein anderswo erstelltes Budget und der Weg hinaus zu einer Tabellenkalkulation oder einem BI-Werkzeug. Eine Datei enthält beide Arten von Budgetzeilen, ihre Spalte `nature` gibt die Art an. **Budgetverwaltung > Budgetzeilen** exportiert die angezeigten Budgetzeilen beider Typen und importiert eine Datei mit beiden Arten, mit der Administratorstufe auf Budget.
 
 ### Ein Budget nach KANAP übernehmen
 
 1. Bilden Sie jedes Objekt Ihres bisherigen Werkzeugs auf die Tabellen oben ab, und seine Kennungen auf die Spalte **Zugeordnet über**.
 2. Laden Sie die Stammdaten in der Reihenfolge aus [Ein ganzes Budget laden](budget-file.md#ein-ganzes-budget-laden).
-3. Exportieren Sie die Budgetdatei aus der Liste, um die Kopfzeile Ihrer Organisation zu erhalten, mit einer Spalte pro Analysedimension. Eine Liste ohne Position exportiert nur die Kopfzeile.
-4. Füllen Sie eine Zeile pro Position mit ihrer `nature`, mit leerer `item_number`, mit einer Betragsspalte pro Budgetspalte und Jahr (`budget_2027`) oder pro Monat (`budget_2027_03`).
+3. Exportieren Sie die Budgetdatei aus der Liste, um die Kopfzeile Ihrer Organisation zu erhalten, mit einer Spalte pro Analysedimension. Eine Liste ohne Budgetzeile exportiert nur die Kopfzeile.
+4. Füllen Sie eine Zeile pro Budgetzeile mit ihrer `nature`, mit leerer `item_number`, mit einer Betragsspalte pro Budgetspalte und Jahr (`budget_2027`) oder pro Monat (`budget_2027_03`).
 5. Importieren Sie die Datei. Die Prüfung meldet die Fehler nach Zeile der Datei, und nichts wird geschrieben, bevor Sie laden.
 
 Ein stimmiger Satz von Beispieldateien, mit einem fiktiven Unternehmen und seinen Stammdaten, liegt im [KANAP-Repository](https://github.com/kanap-hq/KANAP/tree/main/doc/samples).

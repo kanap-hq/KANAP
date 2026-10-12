@@ -301,13 +301,13 @@ Ressourcen sind zur einfacheren Verwaltung in Gruppen organisiert:
 **Budget & Finanzen**
 | Ressource | Was sie steuert |
 |-----------|-----------------|
-| `budget` | Budgetpositionen, OPEX und CAPEX |
+| `budget` | Budgetzeilen, OPEX und CAPEX |
 | `budget_ops` | Budget-Administrationswerkzeuge, einschließlich der Währungseinstellungen |
 | `contracts` | Lieferantenverträge |
 | `analytics` | Analysedimensionen |
 | `reporting` | Berichtszugriff |
 
-Die Ressource Budget gilt für OPEX- und CAPEX-Positionen gleichermaßen. Eine Rolle, die früher getrennte Stufen für OPEX und CAPEX hatte, behält die höhere der beiden auf Budget.
+Die Ressource Budget gilt für OPEX- und CAPEX-Zeilen gleichermaßen. Eine Rolle, die früher getrennte Stufen für OPEX und CAPEX hatte, behält die höhere der beiden auf Budget.
 
 **Portfolio**
 | Ressource | Was sie steuert |
@@ -611,7 +611,7 @@ Steuern Sie, welche E-Mail-Benachrichtigungen Sie erhalten.
 | **Aufgaben** | Zuweisung (als Beauftragter, Antragsteller oder Betrachter), Statusänderungen, Kommentare |
 | **Budget** | Ablaufwarnungen, Statusänderungen, Kommentare |
 
-**Ablaufwarnungen** senden den Verantwortlichen eines Vertrags, einer OPEX-Position oder einer CAPEX-Position 30, 14, 7 und 1 Tag(e) vor deren Terminen eine E-Mail: Kündigungsfrist und Enddatum eines Vertrags, Ende der Gültigkeit einer OPEX- oder CAPEX-Position. Nur Verantwortliche, die die Budget-Benachrichtigungen und die **Ablaufwarnungen** eingeschaltet haben, erhalten sie. Die Prüfung läuft jeden Tag um 08:00 UTC. Jede Erinnerung geht pro Tag nur einmal an jeden Empfänger, auch wenn die Prüfung an diesem Tag erneut läuft, etwa nach einem Neustart.
+**Ablaufwarnungen** senden den Verantwortlichen eines Vertrags, einer OPEX-Zeile oder einer CAPEX-Zeile 30, 14, 7 und 1 Tag(e) vor deren Terminen eine E-Mail: Kündigungsfrist und Enddatum eines Vertrags, Ende der Gültigkeit einer OPEX- oder CAPEX-Zeile. Nur Verantwortliche, die die Budget-Benachrichtigungen und die **Ablaufwarnungen** eingeschaltet haben, erhalten sie. Die Prüfung läuft jeden Tag um 08:00 UTC. Jede Erinnerung geht pro Tag nur einmal an jeden Empfänger, auch wenn die Prüfung an diesem Tag erneut läuft, etwa nach einem Neustart.
 
 **Wöchentliche Zusammenfassungs-E-Mail**: Erhalten Sie eine regelmäßige Zusammenfassung Ihrer Aktivitäten und anstehenden Termine. Konfigurieren Sie:
 - **Wochentag** (z. B. Montag)

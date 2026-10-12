@@ -36,7 +36,7 @@ Die Seite zeigt eine Statuskarte für jeden Bereich:
 Das Einfrieren sperrt die Jahreskennzahlen im **Details**-Tab von Unternehmen (Mitarbeiterzahl, IT-Benutzer, Umsatz) oder Abteilungen (Mitarbeiterzahl). Es beeinflusst nicht:
 
 - Den Übersichts-Tab (Name, Beschreibung und andere allgemeine Felder)
-- OPEX- oder CAPEX-Positionen
+- OPEX- oder CAPEX-Zeilen
 
 ### Berechtigungen
 
@@ -155,8 +155,8 @@ Sie haben 2025 eingefroren, aber einen Fehler in der Mitarbeiterzahl eines Unter
 **Was passiert, wenn ich versuche, ein eingefrorenes Jahr zu bearbeiten?**
 Der Details-Tab für Unternehmen oder Abteilungen wird für dieses Jahr schreibgeschützt. Sie sehen eine Meldung, dass die Daten eingefroren sind. Geben Sie sie frei, um Änderungen vorzunehmen.
 
-**Beeinflusst das Einfrieren OPEX- oder CAPEX-Positionen?**
-Nein. Das Einfrieren sperrt nur Jahreskennzahlen (Mitarbeiterzahl, IT-Benutzer, Umsatz) bei Unternehmen und Abteilungen. OPEX- und CAPEX-Positionen sind nicht betroffen.
+**Beeinflusst das Einfrieren OPEX- oder CAPEX-Zeilen?**
+Nein. Das Einfrieren sperrt nur Jahreskennzahlen (Mitarbeiterzahl, IT-Benutzer, Umsatz) bei Unternehmen und Abteilungen. OPEX- und CAPEX-Zeilen sind nicht betroffen.
 
 **Kann ich Daten in ein eingefrorenes Jahr kopieren?**
 Nein. Das Kopier-Werkzeug zeigt einen Fehler und deaktiviert die Aktionsschaltflächen. Geben Sie zuerst das Zieljahr frei.

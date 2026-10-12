@@ -584,9 +584,9 @@ The API runs 15 scheduled jobs. The times below are the defaults, in UTC (the cl
 
 | Job | When | What it does |
 |-----|------|--------------|
-| `check-expirations` | Daily 08:00 | Emails the owners of contracts and OPEX items 30, 14, 7 and 1 day(s) before a cancellation deadline, an end date or the end of validity. Only users who switched these notifications on receive them, once per day. |
+| `check-expirations` | Daily 08:00 | Emails the owners of contracts and OPEX lines 30, 14, 7 and 1 day(s) before a cancellation deadline, an end date or the end of validity. Only users who switched these notifications on receive them, once per day. |
 | `send-weekly-reviews` | Hourly | Sends the weekly review digest to users who opted in, at their own day and time zone. |
-| `lifecycle-status-sync` | Hourly, and once at start | Switches master data, contracts, OPEX and CAPEX items to disabled once their end of validity has passed. |
+| `lifecycle-status-sync` | Hourly, and once at start | Switches master data, contracts, OPEX and CAPEX lines to disabled once their end of validity has passed. |
 | `entra-directory-sync` | Daily 03:00 | Refreshes user attributes and disables accounts removed or deactivated in the directory. Works only when Entra SSO is connected and approved. See [Microsoft Entra SSO](sso-entra.md). |
 | `attachment-orphan-cleanup` | Daily 03:00 | Removes the attachment records of inline images that no text uses any more. |
 | `storage-ghost-cleanup` | Sunday 04:00 | Removes stored files that have no attachment record and are older than 7 days. |

@@ -53,7 +53,7 @@ Created and closed come from the change history, so they include every way an it
 
 ### Which tasks count
 
-Every task figure counts standalone tasks and project tasks only. Tasks attached to a contract, a spend item, a capex item or an incident belong to those workflows and are left out everywhere in this strip.
+Every task figure counts standalone tasks and project tasks only. Tasks attached to a contract, an OPEX line, a CAPEX line or an incident belong to those workflows and are left out everywhere in this strip.
 
 ### Needs attention
 
@@ -81,7 +81,7 @@ Each line reports how many of those items have no Source, no Category and no Str
 
 ### Which tasks are excluded
 
-Only standalone tasks and project tasks are counted. Tasks attached to a contract, a spend item, a capex item or an incident never carry a classification, so counting them would report a gap nobody can close.
+Only standalone tasks and project tasks are counted. Tasks attached to a contract, an OPEX line, a CAPEX line or an incident never carry a classification, so counting them would report a gap nobody can close.
 
 A project task with no classification of its own inherits the one of its project, and the task list shows that inherited value. The counts follow the same rule, so a figure never sends you to a list where the column is already filled.
 
@@ -199,7 +199,7 @@ Each list shows the count in its heading. A list with nothing in it stays on a s
 
 ### Which tasks count
 
-The Tasks section covers portfolio tasks only: standalone tasks and tasks attached to a project. Tasks attached to a contract, a spend item, a CAPEX line or an incident are left out. This is narrower than earlier versions of the report, which counted every task.
+The Tasks section covers portfolio tasks only: standalone tasks and tasks attached to a project. Tasks attached to a contract, an OPEX line, a CAPEX line or an incident are left out. This is narrower than earlier versions of the report, which counted every task.
 
 ### Where a project came from
 

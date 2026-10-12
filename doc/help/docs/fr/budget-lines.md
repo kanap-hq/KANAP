@@ -102,7 +102,7 @@ La liste (dans **Gestion budgétaire > Lignes budgétaires**) contient les ligne
 
 - **Colonnes de montants** : Chaque colonne budgétaire affichée pour A-1, A, A+1 et A+2, sous les noms choisis par votre organisation. L'en-tête indique la colonne, l'année par rapport à aujourd'hui et l'année civile, par exemple **Révision A+1 (2027)**. Les colonnes masquées ne sont pas proposées
 - **Colonnes ETP** : L'ETP de chaque colonne budgétaire affichée pour A-1, A, A+1 et A+2, sous les noms choisis par votre organisation, juste après les colonnes de montants dans le sélecteur de colonnes. L'en-tête indique la colonne et l'année civile, par exemple **ETP Budget (2026)**. L'ETP d'une ligne est la somme des ETP de ses lignes de quantité et prix dans cette colonne. Voir [ETP](#etp). La cellule est vide lorsque la colonne n'a aucune ligne
-- **ETP déclarés** : **Oui** lorsque la ligne déclare des ETP dans au moins une colonne budgétaire, toutes années confondues, sinon vide. Ce sont les lignes que garde le filtre **Postes avec ETP** des rapports
+- **ETP déclarés** : **Oui** lorsque la ligne déclare des ETP dans au moins une colonne budgétaire, toutes années confondues, sinon vide. Ce sont les lignes que garde le filtre **Lignes avec ETP** des rapports
 - **Activé** : Statut de la ligne (activée ou désactivée)
 - **Description** : La description de la ligne
 - **Devise** : Code devise ISO
@@ -172,7 +172,7 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 
 **Navigation Préc./Suiv.** :
 
-- Lorsque vous ouvrez une ligne, l'espace de travail affiche les boutons **Préc.** et **Suiv.** et un compteur, par exemple « Poste 3 sur 47 »
+- Lorsque vous ouvrez une ligne, l'espace de travail affiche les boutons **Préc.** et **Suiv.** et un compteur, par exemple « Ligne 3 sur 47 »
 - Ceux-ci naviguent dans la liste selon le tri actuel, en respectant les filtres et la recherche
 - Passer à une autre ligne enregistre d'abord vos modifications en attente
 - Votre contexte de liste (tri, filtres, recherche) est préservé lorsque vous fermez l'espace de travail
@@ -287,7 +287,7 @@ L'onglet Budget est l'endroit où vous saisissez les données financières par a
 **Annuel ou Mensuel** :
 
 - **Annuel** : Saisissez un total par colonne. Le total est réparti uniformément sur les mois de la période de la colonne, et les mois hors de cette période sont mis à zéro. La période s'affiche sous chaque total avant la saisie, par exemple « 9 mois, avril à décembre ». Seul le total que vous modifiez est enregistré. Les autres colonnes gardent leurs montants mensuels.
-- Cliquez sur l'icône crayon à côté de la période sous un total (**Modifier la période**) pour ouvrir le panneau de répartition sur cette colonne, avec son total actuel. Si les dates de la ligne ne laissent aucun mois dans l'année, le total est désactivé et indique « Aucun mois de 2026 n'est compris dans les dates du poste. » Cliquez sur l'icône crayon à côté (**Choisir la période**) pour la définir vous-même.
+- Cliquez sur l'icône crayon à côté de la période sous un total (**Modifier la période**) pour ouvrir le panneau de répartition sur cette colonne, avec son total actuel. Si les dates de la ligne ne laissent aucun mois dans l'année, le total est désactivé et indique « Aucun mois de 2026 n'est compris dans les dates de la ligne. » Cliquez sur l'icône crayon à côté (**Choisir la période**) pour la définir vous-même.
 - Cliquez sur l'icône calculatrice à côté du crayon (**Quantité et prix**) pour ouvrir le même encadré sur les lignes de cette colonne. Voir [Quantité et prix](#quantite-et-prix).
 - Une colonne qui suit ses lignes (ses montants ont été calculés à partir de ses lignes de Quantité et prix) a un total en lecture seule. Cliquez sur le total, ou appuyez sur Entrée dessus, pour ouvrir **Quantité et prix** sur cette colonne. Le crayon fait de même. Survolez le total pour lire « Calculé à partir de ses lignes. Ouvrez Quantité et prix pour le modifier. »
 - **Mensuel** : Saisissez les montants par mois (Jan-Déc) pour chaque colonne affichée, par exemple pour suivre un plan de décaissement ou les jalons d'un projet. Des sous-totaux par trimestre et un total annuel sont affichés. Seuls les mois que vous modifiez sont enregistrés.
@@ -413,7 +413,7 @@ Cliquez sur **Ajouter une ligne** sous le tableau pour ajouter une ligne, et sur
 
 - L'ETP des lignes, lorsqu'une ligne compte des personnes ou des jours, par exemple « ETP sur la période 0.24 · Moyenne sur l'année 0.12 ». Voir [ETP](#etp). Le total de la colonne s'affiche dans la colonne elle-même
 - D'où viennent les montants, lorsqu'ils ne viennent plus des lignes : l'une des phrases de la partie suivante
-- Des remarques lorsqu'elles s'appliquent : « La période dépasse les dates du poste. », un calendrier désactivé depuis, par exemple « Personnel du siège est désactivé. Les lignes l'utilisent encore. », et les jours ouvrés modifiés depuis le dernier enregistrement des lignes
+- Des remarques lorsqu'elles s'appliquent : « La période dépasse les dates de la ligne. », un calendrier désactivé depuis, par exemple « Personnel du siège est désactivé. Les lignes l'utilisent encore. », et les jours ouvrés modifiés depuis le dernier enregistrement des lignes
 - **Appliquer ces lignes à toutes les colonnes** : un interrupteur pour les mêmes colonnes que celui de l'onglet de répartition, désactivé par défaut ici. L'activer écrit aussitôt les lignes dans chaque colonne qui suit, et il reste activé : chaque enregistrement suivant écrit aussi les lignes dans ces colonnes. Le désactiver ne change rien en soi
 
 **Lorsque les montants changent autrement** : les lignes restent sur la colonne comme référence, et l'onglet indique d'où viennent désormais les montants, suivi d'un lien **Utiliser à nouveau les lignes**. Les lignes sont alors en lecture seule : vous ne pouvez ni ajouter, ni supprimer, ni modifier une ligne, et l'onglet n'affiche ni montant par ligne, ni ETP, ni **Appliquer ces lignes à toutes les colonnes**. Le lien enregistre les lignes telles quelles et recalcule la colonne à partir d'elles, et les lignes redeviennent modifiables. Pour modifier une ligne gardée comme référence, cliquez d'abord sur **Utiliser à nouveau les lignes**, puis modifiez-la.

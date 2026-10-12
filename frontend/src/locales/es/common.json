@@ -214,7 +214,7 @@
       "noBudgetNextYear": "Sin {{column}} para el próximo año",
       "accountOutsideChart": "Cuenta fuera del plan de la empresa"
     },
-    "topItems": "Top partidas",
+    "topItems": "Top líneas",
     "columnY": "{{column}}, A",
     "topIncreases": "Mayores incrementos",
     "columnYvsYminus1": "{{column}}, A vs A-1",
@@ -358,8 +358,8 @@
         "connection": "Conexión",
         "contract": "Contrato",
         "task": "Tarea",
-        "opexItem": "Elemento OPEX",
-        "capexItem": "Elemento CAPEX",
+        "opexItem": "Línea OPEX",
+        "capexItem": "Línea CAPEX",
         "incident": "Incidente",
         "location": "Ubicación",
         "document": "Documento"
@@ -767,13 +767,13 @@
     "changedAt": "Modificado en otro lugar a las {{time}}",
     "changedOn": "Modificado en otro lugar el {{date}} a las {{time}}",
     "changed": "Modificado en otro lugar",
-    "changedByYouAt": "Usted modificó esta partida en otro lugar a las {{time}}",
-    "changedByYouOn": "Usted modificó esta partida en otro lugar el {{date}} a las {{time}}",
-    "changedByYou": "Usted modificó esta partida en otro lugar",
+    "changedByYouAt": "Usted modificó esta línea en otro lugar a las {{time}}",
+    "changedByYouOn": "Usted modificó esta línea en otro lugar el {{date}} a las {{time}}",
+    "changedByYou": "Usted modificó esta línea en otro lugar",
     "aUser": "un usuario",
     "badge": "Modificado en otro lugar",
     "reload": "Recargar",
     "reloadHint": "Recargar muestra estos cambios. Lo que está modificando se queda en pantalla.",
-    "deleted": "Esta partida se ha eliminado"
+    "deleted": "Esta línea se ha eliminado"
   }
 }

@@ -15,7 +15,7 @@ La página principal tiene dos secciones. Cada tarjeta enlaza a una herramienta 
 |-------------|-----------|
 | **Monedas** | Definir las monedas de reporting y predeterminadas, y consultar los tipos de cambio. Consulte [Configuración de monedas](currencies.md) |
 | **Columnas presupuestarias** | Nombrar las cinco columnas presupuestarias, elegir cuáles se muestran y cuál es la columna por defecto |
-| **Método de asignación por defecto** | Definir el método que las partidas de OPEX y CAPEX siguen por defecto |
+| **Método de asignación por defecto** | Definir el método que las líneas de OPEX y CAPEX siguen por defecto |
 
 **Operaciones**
 
@@ -93,7 +93,7 @@ Congelar y descongelar requieren `budget_ops:admin`. La tarjeta se oculta a los 
 
 Copie datos presupuestarios de un año y columna a otro, con un ajuste porcentual opcional. Esta es la herramienta principal para inicializar el presupuesto del próximo año a partir del actual.
 
-El selector **OPEX** / **CAPEX** de la parte superior elige las partidas sobre las que se aplica la copia. OPEX está seleccionado por defecto.
+El selector **OPEX** / **CAPEX** de la parte superior elige las líneas sobre las que se aplica la copia. OPEX está seleccionado por defecto.
 
 Requiere el nivel Administrador en Presupuesto (`budget:admin`).
 
@@ -120,7 +120,7 @@ La página se abre con la columna por defecto del año actual como origen y la c
 
 1. Haga clic en **Simulación** para generar una vista previa sin cambiar ningún dato
 2. Revise la cuadrícula de vista previa, que muestra:
-   - Nombre de la **Partida** (las partidas marcadas como **Omitida** conservan su valor actual; las marcadas como **Prorrateada** empiezan o terminan durante el año de destino y solo reciben los meses dentro de su periodo de validez)
+   - Nombre de la **Línea** (las líneas marcadas como **Omitida** conservan su valor actual; las marcadas como **Prorrateada** empiezan o terminan durante el año de destino y solo reciben los meses dentro de su periodo de validez)
    - **Valor de origen** (del año/columna de origen)
    - **Valor actual de destino**
    - **Valor de vista previa** (lo que será el destino después de la copia)
@@ -151,15 +151,15 @@ Debajo de la cuadrícula, una barra de estadísticas muestra:
 
 - Esta parte describe las columnas cuyos importes se escriben, se reparten o se copian, y los meses de las líneas de referencia. Una columna calculada a partir de sus líneas sigue [sus propias reglas](#copiar-una-columna-construida-a-partir-de-lineas)
 - La copia conserva el reparto mensual. Cada uno de los doce meses se copia al mismo mes del destino, de modo que una columna repartida de abril a diciembre sigue repartida de abril a diciembre
-- Solo se copian las partidas válidas en el año de destino. Una partida cuenta para los meses cuyo día 15 cae entre su **Inicio de vigencia** y su **Fin de validez**. Una partida sin ninguno de esos meses se excluye, ya que la pestaña Presupuesto tampoco la muestra
-- Una partida válida solo una parte del año de destino recibe únicamente esos meses. Los demás meses conservan su importe, y el periodo se ajusta a las fechas de la partida. Por ejemplo, un origen de doce meses copiado a una partida que termina el 30 de junio da de enero a junio
+- Solo se copian las líneas válidas en el año de destino. Una línea cuenta para los meses cuyo día 15 cae entre su **Inicio de vigencia** y su **Fin de validez**. Una línea sin ninguno de esos meses se excluye, ya que la pestaña Presupuesto tampoco la muestra
+- Una línea válida solo una parte del año de destino recibe únicamente esos meses. Los demás meses conservan su importe, y el periodo se ajusta a las fechas de la línea. Por ejemplo, un origen de doce meses copiado a una línea que termina el 30 de junio da de enero a junio
 - Sin porcentaje, los importes se copian exactamente, al céntimo
 - Con un porcentaje, cada mes se redondea a un importe entero, y el total anual sigue siendo el total de origen con el porcentaje aplicado, redondeado a un importe entero. Las unidades que deja el redondeo van a los meses que perdieron las fracciones más grandes, primero el mes más tardío en caso de empate. Ningún mes cambia de signo. Por ejemplo, 12.000 repartidos de abril a diciembre (1.333,33 al mes y 1.333,36 en diciembre) copiados con +2 % dan 1.360 al mes y 12.240 para el año
 - El periodo de la columna se desplaza con la copia: de abril a diciembre de 2026 pasa a ser de abril a diciembre de 2027. Un periodo que termina el 29 de febrero termina el 28 de febrero en un año que no lo tiene
 - Un origen sin periodo da un periodo de todo el año
 - En la pestaña Presupuesto, la columna de destino muestra «Copiado de Presupuesto 2026 +2 %»
 - Copiar una columna sobre sí misma (mismo año y misma columna) se rechaza
-- La copia es de todo o nada: si una partida falla, no se guarda nada
+- La copia es de todo o nada: si una línea falla, no se guarda nada
 
 ### Copiar una columna construida a partir de líneas
 
@@ -170,13 +170,13 @@ Una columna puede construirse a partir de líneas, cada una una cantidad por un 
 - El porcentaje de incremento sube el precio unitario de cada línea, redondeado a 4 decimales. Las cantidades no cambian
 - Los meses se recalculan a partir de las líneas con los calendarios laborales del año de destino. El total copiado puede diferir ligeramente del total de origen con el porcentaje aplicado, porque el número de días laborables cambia de un año a otro
 - Las líneas pasan al año de destino con su descripción, cantidad, unidad, frecuencia y calendario. Sus periodos se desplazan igual que el periodo de la columna: de marzo a diciembre de 2026 pasa a ser de marzo a diciembre de 2027, y una línea que termina el 29 de febrero termina el 28 de febrero en un año que no lo tiene. Una pieza comprada una vez el 15 de marzo de 2026 se compra el 15 de marzo de 2027. El ETC se recalcula a partir de las líneas
-- Una línea que se conserva solo para una parte del año de destino, por la vigencia de la partida, se ajusta a ese periodo. Una línea que se queda sin ningún mes se elimina
+- Una línea que se conserva solo para una parte del año de destino, por la vigencia de la línea, se ajusta a ese periodo. Una línea que se queda sin ningún mes se elimina
 - La columna muestra sus líneas como de costumbre en la pestaña Presupuesto. No lleva la indicación «Copiado de»
 
 **Las líneas son solo una referencia.** Es el caso cuando los importes de origen se escribieron a mano, se repartieron o se copiaron.
 
 - El porcentaje de incremento se aplica a los meses, como en cualquier otra columna. Los precios unitarios de las líneas no cambian
-- Las líneas pasan al año de destino con su descripción, cantidad, unidad, frecuencia y calendario, y sus periodos se desplazan igual que el periodo de la columna. Una línea que se conserva solo para una parte del año de destino, por la vigencia de la partida, se ajusta a ese periodo, y una línea que se queda sin ningún mes se elimina
+- Las líneas pasan al año de destino con su descripción, cantidad, unidad, frecuencia y calendario, y sus periodos se desplazan igual que el periodo de la columna. Una línea que se conserva solo para una parte del año de destino, por la vigencia de la línea, se ajusta a ese periodo, y una línea que se queda sin ningún mes se elimina
 - El ETC se recalcula a partir de las líneas copiadas con los calendarios laborales del año de destino
 - En la pestaña Presupuesto, la columna de destino muestra «Copiado de Presupuesto 2026», y su pestaña **Cantidad y precio** indica «Los importes se copiaron de Presupuesto 2026. Usar de nuevo las líneas.»
 - Las líneas copiadas son una referencia de solo lectura. Haga clic en **Usar de nuevo las líneas** en la pestaña **Cantidad y precio** para calcular la columna a partir de ellas, con sus precios actuales. Para planificar el año de destino con sus propios precios, cambie después los precios unitarios: cada cambio vuelve a calcular la columna
@@ -185,9 +185,9 @@ Una copia desde una columna sin líneas deja el destino sin líneas, y su ETC qu
 
 #### Calendarios sin días para el año de destino
 
-Una línea con precio por día necesita un calendario que contenga el año de destino. Cuando el calendario de una línea no tiene días laborables para ese año, la copia usa en su lugar el calendario estándar del país de la empresa pagadora de la partida. Es el calendario creado con la empresa. Esto vale para una columna construida a partir de líneas y para una columna cuyas líneas son solo una referencia. Si no existe ninguno, la partida se copia de la forma habitual: meses por el porcentaje. Las líneas se conservan sin cambios como referencia, y el ETC sigue siendo el de la columna de origen.
+Una línea con precio por día necesita un calendario que contenga el año de destino. Cuando el calendario de una línea no tiene días laborables para ese año, la copia usa en su lugar el calendario estándar del país de la empresa pagadora de la línea. Es el calendario creado con la empresa. Esto vale para una columna construida a partir de líneas y para una columna cuyas líneas son solo una referencia. Si no existe ninguno, la línea se copia de la forma habitual: meses por el porcentaje. Las líneas se conservan sin cambios como referencia, y el ETC sigue siendo el de la columna de origen.
 
-La simulación señala estas partidas con una nota **Calendario**, con una información emergente por línea, y muestra una advertencia sobre la vista previa. La vista previa señala también una partida para la que no existe ningún calendario de sustitución. Para copiar de todos modos, marque **Copiar de todos modos con estos cambios de calendario**. Lo mejor es añadir los días del año en la página **Calendarios laborales** y volver a ejecutar la simulación.
+La simulación señala estas líneas con una nota **Calendario**, con una información emergente por línea, y muestra una advertencia sobre la vista previa. La vista previa señala también una línea para la que no existe ningún calendario de sustitución. Para copiar de todos modos, marque **Copiar de todos modos con estos cambios de calendario**. Lo mejor es añadir los días del año en la página **Calendarios laborales** y volver a ejecutar la simulación.
 
 Un calendario desactivado se sigue usando. La simulación lo anota y no pide confirmación.
 
@@ -201,7 +201,7 @@ Si la columna de destino está congelada, tanto **Simulación** como **Copiar da
 
 Copie métodos y porcentajes de asignación de un año a otro. Esto le ahorra tener que volver a introducir las configuraciones de contracargo al configurar un nuevo ejercicio fiscal.
 
-El conmutador **OPEX** / **CAPEX** de la parte superior elige qué partidas se copian. Solo se copian las partidas válidas en el año de destino, con la misma regla que **Copiar columnas presupuestarias**. La copia es de todo o nada: si una partida falla, no se copia nada.
+El conmutador **OPEX** / **CAPEX** de la parte superior elige qué líneas se copian. Solo se copian las líneas válidas en el año de destino, con la misma regla que **Copiar columnas presupuestarias**. La copia es de todo o nada: si una línea falla, no se copia nada.
 
 Requiere el nivel Administrador en Presupuesto (`budget:admin`).
 
@@ -222,8 +222,8 @@ Requiere el nivel Administrador en Presupuesto (`budget:admin`).
 ### Proceso en dos pasos: Simulación, luego Copiar
 
 1. Haga clic en **Simulación** para ver una vista previa
-2. La cuadrícula de vista previa muestra cada partida OPEX o CAPEX con:
-   - Nombre de la **Partida**
+2. La cuadrícula de vista previa muestra cada línea OPEX o CAPEX con:
+   - Nombre de la **Línea**
    - **Acción**: qué sucederá (Se copiará, Omitida – sin año de origen, Omitida – sin asignaciones en el origen, Omitida – el destino tiene datos, Error)
    - Método y etiqueta del **Origen**
    - Método y etiqueta del **Destino** actual
@@ -245,11 +245,11 @@ Después de una simulación, un banner muestra el conteo de elementos listos par
 
 Borre todos los datos de una columna presupuestaria específica para un año determinado. Esta es una operación destructiva: utilícela cuando necesite comenzar de cero.
 
-El selector **OPEX** / **CAPEX** de la parte superior elige las partidas que se borran. El restablecimiento pone a cero los doce meses de la columna y quita su periodo, así como sus líneas cuando la columna se construyó a partir de cantidad y precio. En la pestaña Presupuesto, la columna recibe entonces una nueva sugerencia a partir de las fechas de la partida. El restablecimiento abarca todas las partidas, incluidas aquellas cuyo fin de validez ya ha pasado. Es de todo o nada: si una partida falla, no se borra nada.
+El selector **OPEX** / **CAPEX** de la parte superior elige las líneas que se borran. El restablecimiento pone a cero los doce meses de la columna y quita su periodo, así como sus líneas cuando la columna se construyó a partir de cantidad y precio. En la pestaña Presupuesto, la columna recibe entonces una nueva sugerencia a partir de las fechas de la línea. El restablecimiento abarca todas las líneas, incluidas aquellas cuyo fin de validez ya ha pasado. Es de todo o nada: si una línea falla, no se borra nada.
 
 Requiere el nivel Administrador en Presupuesto (`budget:admin`).
 
-Una columna cuyas partidas no tienen ningún importe también puede restablecerse: en ese caso solo se quitan los periodos de reparto, y la confirmación lo indica.
+Una columna cuyas líneas no tienen ningún importe también puede restablecerse: en ese caso solo se quitan los periodos de reparto, y la confirmación lo indica.
 
 ### Cuándo usarla
 
@@ -266,10 +266,10 @@ Una columna cuyas partidas no tienen ningún importe también puede restablecers
 
 ### Vista previa
 
-Antes de elegir una columna, una línea sustituye a la cuadrícula: «Elija una columna para ver los importes que contiene.» Una vez elegida la columna, una cuadrícula muestra cada partida OPEX o CAPEX y su valor actual en esa columna. Los importes que se borrarán aparecen en peso medio; los valores vacíos aparecen atenuados. Debajo de la cuadrícula aparecen tres estadísticas:
+Antes de elegir una columna, una línea sustituye a la cuadrícula: «Elija una columna para ver los importes que contiene.» Una vez elegida la columna, una cuadrícula muestra cada línea OPEX o CAPEX y su valor actual en esa columna. Los importes que se borrarán aparecen en peso medio; los valores vacíos aparecen atenuados. Debajo de la cuadrícula aparecen tres estadísticas:
 
 - **Total de elementos**
-- **Partidas con un total distinto de cero**
+- **Líneas con un total distinto de cero**
 - **Valor total actual**
 
 ### Confirmación
@@ -285,7 +285,7 @@ Debe hacer clic en **Borrar columna** en el diálogo para proceder, o **Cancelar
 
 ### Medidas de seguridad
 
-- El botón **Borrar columna** sigue disponible cuando ninguna partida tiene importe, para poder quitar igualmente los periodos de reparto
+- El botón **Borrar columna** sigue disponible cuando ninguna línea tiene importe, para poder quitar igualmente los periodos de reparto
 - No hay ninguna columna preseleccionada, así que siempre elige usted la columna que se borra
 - Las columnas congeladas no pueden restablecerse. Descongélelas primero
 - El diálogo de confirmación requiere reconocimiento explícito
@@ -294,13 +294,13 @@ Debe hacer clic en **Borrar columna** en el diálogo para proceder, o **Cancelar
 
 ## Método de asignación por defecto
 
-Defina el método que siguen las partidas de OPEX y las inversiones de CAPEX cuando se dejan en la asignación por defecto. La configuración es por ejercicio: cada año resuelve su propio valor por defecto, por lo que puede cambiar la base de un año sin tocar los demás.
+Defina el método que siguen las líneas de OPEX y las inversiones de CAPEX cuando se dejan en la asignación por defecto. La configuración es por ejercicio: cada año resuelve su propio valor por defecto, por lo que puede cambiar la base de un año sin tocar los demás.
 
 ### Cuándo usarla
 
 - Su modelo de contracargo no se basa en la plantilla (por ejemplo, se guía por la facturación)
 - El presupuesto de IT lo asume una sola entidad y no debe repartirse entre todas las filiales
-- Desea que las nuevas partidas sigan una base compartida sin editarlas una por una
+- Desea que las nuevas líneas sigan una base compartida sin editarlas una por una
 - Está preparando un ejercicio cuya base de asignación difiere de la anterior
 
 ### Campos
@@ -329,8 +329,8 @@ Defina el método que siguen las partidas de OPEX y las inversiones de CAPEX cua
 
 ### Qué afecta
 
-- Todas las partidas de OPEX y las inversiones de CAPEX cuyo método de asignación sea **por defecto**, mostradas como *Plantilla (por defecto)* (o *Por defecto (n sociedades)*) en la pestaña Asignaciones hasta que se defina un valor por defecto para la organización
-- Las partidas con un método explícito (Plantilla, Usuarios IT o Facturación fijados en la partida) o una asignación manual conservan su propia configuración
+- Todas las líneas de OPEX y las inversiones de CAPEX cuyo método de asignación sea **por defecto**, mostradas como *Plantilla (por defecto)* (o *Por defecto (n sociedades)*) en la pestaña Asignaciones hasta que se defina un valor por defecto para la organización
+- Las líneas con un método explícito (Plantilla, Usuarios IT o Facturación fijados en la línea) o una asignación manual conservan su propia configuración
 - Los importes asignados se recalculan la próxima vez que se muestren las asignaciones. Los importes presupuestarios en sí nunca se modifican
 
 ### Método estándar
@@ -339,7 +339,7 @@ Mientras una organización no configure un valor por defecto, se aplica el méto
 
 ### Cambiar el valor por defecto a posteriori
 
-El valor por defecto se resuelve cada vez que se muestran las asignaciones, por lo que editarlo recalcula todas las partidas que siguen en el valor por defecto. Si una sociedad incluida en la selección pierde después su valor de generador o se desactiva, las partidas afectadas muestran un error en lugar de un reparto reequilibrado en silencio. La página le advierte de los problemas con la selección actual.
+El valor por defecto se resuelve cada vez que se muestran las asignaciones, por lo que editarlo recalcula todas las líneas que siguen en el valor por defecto. Si una sociedad incluida en la selección pierde después su valor de generador o se desactiva, las líneas afectadas muestran un error en lugar de un reparto reequilibrado en silencio. La página le advierte de los problemas con la selección actual.
 
 ### Permisos
 
@@ -377,7 +377,7 @@ Por defecto, Presupuesto, Revisión, Realizado y Aterrizaje previsto están visi
 ### Qué cambia la configuración
 
 - **Las columnas ocultas** desaparecen de las listas, del selector de columnas, de la pestaña Presupuesto, de los selectores de los informes, de las páginas de copia y de restablecimiento y del panel. Conservan sus importes: ocultar una columna nunca borra datos, y volver a mostrarla recupera los importes. Las columnas ocultas siguen aceptando importaciones mediante el archivo de presupuesto, y las congelaciones se les siguen aplicando. La página de congelación también muestra las columnas ocultas, con la marca **Oculta**, para que pueda congelarlas como las demás
-- **La columna por defecto** está preseleccionada en todos los informes. Ordena la lista de líneas presupuestarias y su navegación anterior y siguiente. Los mosaicos **Top partidas**, **Mayores incrementos**, **Mi presupuesto** y **Por centro de coste** del panel la usan. La lista la muestra para el año actual, junto a la última columna visible. También es el importe de referencia de la pestaña Asignaciones y la columna en la que se abre el panel de reparto. Congelarla para un año fija los tipos de cambio de ese año (consulte [Congelar la columna por defecto fija los tipos de cambio](#congelar-la-columna-por-defecto-fija-los-tipos-de-cambio))
+- **La columna por defecto** está preseleccionada en todos los informes. Ordena la lista de líneas presupuestarias y su navegación anterior y siguiente. Los mosaicos **Top líneas**, **Mayores incrementos**, **Mi presupuesto** y **Por centro de coste** del panel la usan. La lista la muestra para el año actual, junto a la última columna visible. También es el importe de referencia de la pestaña Asignaciones y la columna en la que se abre el panel de reparto. Congelarla para un año fija los tipos de cambio de ese año (consulte [Congelar la columna por defecto fija los tipos de cambio](#congelar-la-columna-por-defecto-fija-los-tipos-de-cambio))
 - **Sigue el reparto y las líneas** decide qué columnas se mueven juntas cuando un reparto se aplica a todas las columnas, y qué columnas reciben las líneas cuando **Aplicar estas líneas a todas las columnas** está activado. Las columnas congeladas nunca cambian, diga lo que diga esta configuración
 
 ### Guardar
@@ -425,5 +425,5 @@ A continuación se muestra una secuencia típica usando estas herramientas, con 
 - **Congele después de la aprobación**: Bloquear columnas después de la aprobación mantiene su registro de auditoría y previene ediciones accidentales.
 - **Use ajustes porcentuales**: Al copiar entre años, aplique un factor de inflación o crecimiento para no tener que ajustar cada línea manualmente.
 - **Verifique el estado de congelación antes de operaciones masivas**: Las columnas congeladas bloquean las operaciones de copia y restablecimiento. Si un botón está en gris, verifique primero la página de congelación.
-- **Defina el valor por defecto del año antes de introducir presupuestos**: Si su base de asignación no es la plantilla, configúrela primero en Método de asignación por defecto, para que las partidas se creen sobre la base correcta en lugar de recalcularse después.
+- **Defina el valor por defecto del año antes de introducir presupuestos**: Si su base de asignación no es la plantilla, configúrela primero en Método de asignación por defecto, para que las líneas se creen sobre la base correcta en lugar de recalcularse después.
 - **Restablezca con precaución**: El restablecimiento de columna es irreversible. Compruebe el año y la columna antes de confirmar.

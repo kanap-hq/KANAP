@@ -36,7 +36,7 @@ The page shows a status card for each scope:
 Freezing locks the yearly metrics on the **Details** tab of Companies (headcount, IT users, turnover) or Departments (headcount). It does not affect:
 
 - The Overview tab (name, description, and other general fields)
-- OPEX or CAPEX items
+- OPEX or CAPEX lines
 
 ### Permissions
 
@@ -155,8 +155,8 @@ You froze 2025 but spotted an error in one company's headcount.
 **What happens if I try to edit a frozen year?**
 The Details tab for Companies or Departments becomes read-only for that year. You will see a message indicating the data is frozen. Unfreeze to make changes.
 
-**Does freezing affect OPEX or CAPEX items?**
-No. Freezing only locks yearly metrics (headcount, IT users, turnover) on Companies and Departments. OPEX and CAPEX items are unaffected.
+**Does freezing affect OPEX or CAPEX lines?**
+No. Freezing only locks yearly metrics (headcount, IT users, turnover) on Companies and Departments. OPEX and CAPEX lines are unaffected.
 
 **Can I copy data to a frozen year?**
 No. The Copy tool will show an error and disable the action buttons. Unfreeze the destination year first.

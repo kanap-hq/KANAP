@@ -118,7 +118,7 @@ Las Tareas son la **unidad atómica de trabajo** en KANAP. Cruzan la frontera en
 
 Una **acción claramente delimitada** con una persona responsable definida, estado y fecha límite.
 
-- Puede ser **independiente** o vinculada a un **Proyecto**, **partida OPEX**, **Contrato** o **partida CAPEX**
+- Puede ser **independiente** o vinculada a un **Proyecto**, **línea OPEX**, **Contrato** o **línea CAPEX**
 - Conlleva un esfuerzo concreto
 - El impacto en usuarios o servicios está contenido y bien entendido
 - No requiere coordinación entre múltiples equipos — incluso si toma mucho tiempo, permanece llevada por una sola persona sin requerir análisis interfuncional

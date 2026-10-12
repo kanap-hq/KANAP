@@ -239,7 +239,7 @@ Chargez ou mettez à jour des calendriers et leurs jours ouvrés depuis un fichi
 
 Les administrateurs budgétaires sont administrateurs des calendriers : le rôle intégré Administrateur budget reçoit admin. Chaque autre rôle reçoit au départ le niveau qu'il a sur les départements. Ainsi, Administrateur données de référence est admin, Membre budget et Membre données de référence sont membres, et les rôles lecteurs peuvent consulter.
 
-Toute personne qui peut consulter les postes budgétaires (Budget) peut choisir un calendrier dans l'onglet Budget sans accès à cette page.
+Toute personne qui peut consulter les lignes budgétaires (Budget) peut choisir un calendrier dans l'onglet Budget sans accès à cette page.
 
 ---
 

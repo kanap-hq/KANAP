@@ -1,6 +1,6 @@
 # Proveedores
 
-Los Proveedores (también conocidos como vendedores) representan las empresas a las que compra software, servicios y soporte. Vincule proveedores a aplicaciones, contratos y partidas OPEX para hacer seguimiento de las relaciones con proveedores y el gasto en todo su portafolio IT.
+Los Proveedores (también conocidos como vendedores) representan las empresas a las que compra software, servicios y soporte. Vincule proveedores a aplicaciones, contratos y líneas OPEX para hacer seguimiento de las relaciones con proveedores y el gasto en todo su portafolio IT.
 
 ## Primeros pasos
 

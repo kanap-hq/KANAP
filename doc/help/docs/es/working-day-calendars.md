@@ -239,7 +239,7 @@ Cargue o actualice calendarios y sus días laborables desde un archivo.
 
 Los administradores de presupuesto son administradores de calendarios: el rol integrado Administrador de presupuesto recibe admin. Cada uno de los demás roles empieza con el nivel que tiene en departamentos, de modo que Administrador de datos maestros es admin, Miembro de presupuesto y Miembro de datos maestros son miembros, y los roles de lectura pueden leer.
 
-Cualquier persona que pueda leer las partidas presupuestarias (Presupuesto) puede elegir un calendario en la pestaña Presupuesto sin acceso a esta página.
+Cualquier persona que pueda leer las líneas presupuestarias (Presupuesto) puede elegir un calendario en la pestaña Presupuesto sin acceso a esta página.
 
 ---
 

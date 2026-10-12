@@ -65,11 +65,11 @@ Liste les cinq prochaines échéances de résiliation de contrats encore dans le
 
 Cliquez sur **Tout voir** pour ouvrir la page Contrats.
 
-### Top postes
+### Top lignes
 
 Les cinq plus grandes lignes de l'année en cours, classées selon la colonne par défaut. Le sous-titre nomme la colonne, par exemple **Budget, A**. Les montants sont arrondis au millier avec un suffixe « k ».
 
-Utilisez les onglets **Tous** / **OPEX** / **CAPEX** pour choisir le type. Cliquez sur **Ouvrir** pour voir le rapport Top postes complet sur le même type.
+Utilisez les onglets **Tous** / **OPEX** / **CAPEX** pour choisir le type. Cliquez sur **Ouvrir** pour voir le rapport Top lignes complet sur le même type.
 
 ### Plus fortes hausses
 

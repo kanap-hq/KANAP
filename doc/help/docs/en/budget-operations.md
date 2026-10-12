@@ -15,7 +15,7 @@ The landing page has two sections. Each card links to a dedicated tool. An empty
 |------|---------|
 | **Currencies** | Set the reporting and default currencies, and review the FX rates. See [Currency Settings](currencies.md) |
 | **Budget columns** | Name the five budget columns, choose which ones are shown and which one is the default |
-| **Default allocation method** | Set the method OPEX and CAPEX items follow by default |
+| **Default allocation method** | Set the method OPEX and CAPEX lines follow by default |
 
 **Operations**
 
@@ -93,7 +93,7 @@ Freezing and unfreezing need `budget_ops:admin`. The card is hidden from other u
 
 Copy budget data from one year and column to another, with an optional percentage adjustment. This is the primary tool for seeding next year's budget from the current one.
 
-The **OPEX** / **CAPEX** switch at the top chooses which items the copy runs on. OPEX is selected by default.
+The **OPEX** / **CAPEX** switch at the top chooses which lines the copy runs on. OPEX is selected by default.
 
 Needs the Admin level on Budget (`budget:admin`).
 
@@ -112,7 +112,7 @@ Needs the Admin level on Budget (`budget:admin`).
 | **Destination year** | Year to copy to (same range) |
 | **Destination column** | Any shown column. Starts on the default column |
 | **Percentage increase** | Adjustment applied to every copied month (e.g., `3` = +3%). On a column calculated from its lines, it raises the unit price of each line instead. See [Copying a column built from lines](#copying-a-column-built-from-lines). Defaults to 0. Accepts decimals and negative values. A percentage of -100% or less is refused. |
-| **Overwrite existing data** | Toggle. When off, items that already have a value in the destination are skipped. When on, all destination values are replaced. |
+| **Overwrite existing data** | Toggle. When off, lines that already have a value in the destination are skipped. When on, all destination values are replaced. |
 
 The page opens on the default column of the current year as the source and the default column of next year as the destination. Hidden columns are not offered.
 
@@ -120,7 +120,7 @@ The page opens on the default column of the current year as the source and the d
 
 1. Click **Dry run** to generate a preview without changing any data
 2. Review the preview grid, which shows:
-   - **Item** name (items marked **Skipped** keep their current value; items marked **Prorated** start or end during the destination year and get only the months within their validity)
+   - **Item** name (lines marked **Skipped** keep their current value; lines marked **Prorated** start or end during the destination year and get only the months within their validity)
    - **Source value** (from the source year/column)
    - **Current destination value**
    - **Preview value** (what the destination will become after copy)
@@ -151,15 +151,15 @@ Below the grid, a stats bar shows:
 
 - The copy keeps the monthly shape. Each of the twelve months is copied to the same month of the destination, so a column spread from April to December stays April to December
 - This part describes columns whose amounts are typed, spread or copied, and the months of reference lines. A column calculated from its lines follows [its own rules](#copying-a-column-built-from-lines)
-- Only items valid in the destination year are copied. An item counts for the months whose 15th falls between its **Effective start** and its **End of validity**. An item without such a month is left out, as the Budget tab does not show it either
-- An item valid for part of the destination year gets only those months. The other months keep their amount, and the period is cut to the item's dates. For example, a twelve-month source copied to an item ending on June 30 gives January to June
+- Only lines valid in the destination year are copied. A line counts for the months whose 15th falls between its **Effective start** and its **End of validity**. A line without such a month is left out, as the Budget tab does not show it either
+- A line valid for part of the destination year gets only those months. The other months keep their amount, and the period is cut to the line's dates. For example, a twelve-month source copied to a line ending on June 30 gives January to June
 - Without a percentage, amounts are copied exactly, to the cent
 - With a percentage, each month is rounded to a whole amount, and the year total stays the source total with the percentage applied, rounded to a whole amount. The units left over by the rounding go to the months that dropped the largest fractions, the latest month first on a tie. No month changes sign. For example, 12,000 spread from April to December (1,333.33 a month and 1,333.36 in December) copied with +2% gives 1,360 a month and 12,240 for the year
 - The column's period moves with the copy: April to December 2026 becomes April to December 2027. A period that ends on February 29 ends on February 28 in a year without one
 - A source without a period gives a whole-year period
 - In the Budget tab, the destination column shows "Copied from Budget 2026 +2%"
 - Copying a column onto itself (same year and same column) is refused
-- The copy is all or nothing: if one item fails, nothing is saved
+- The copy is all or nothing: if one line fails, nothing is saved
 
 ### Copying a column built from lines
 
@@ -170,13 +170,13 @@ A column can be built from lines, each a quantity times a unit price. See [Quant
 - The percentage increase raises the unit price of each line, rounded to 4 decimals. Quantities do not change
 - The months are recalculated from the lines with the working-day calendars of the destination year. The copied total can differ slightly from the source total with the percentage applied, because the number of working days changes from one year to the next
 - The lines move to the destination year with their description, quantity, unit, how often and calendar. Their periods move like the column's period: March to December 2026 becomes March to December 2027, and a line that ends on February 29 ends on February 28 in a year without one. A piece bought once on March 15, 2026 is bought on March 15, 2027. The FTE is recalculated from the lines
-- A line kept for only part of the destination year, because of the item's validity, is cut to that period. A line left with no month is dropped
+- A line kept for only part of the destination year, because of the line's validity, is cut to that period. A line left with no month is dropped
 - The column shows its lines as usual in the Budget tab. It has no "Copied from" label
 
 **The lines are only a reference.** This is the case when the source amounts were typed by hand, spread, or copied.
 
 - The percentage increase applies to the months, as for any other column. The unit prices of the lines do not change
-- The lines move to the destination year with their description, quantity, unit, how often and calendar, and their periods move like the column's period. A line kept for only part of the destination year, because of the item's validity, is cut to that period, and a line left with no month is dropped
+- The lines move to the destination year with their description, quantity, unit, how often and calendar, and their periods move like the column's period. A line kept for only part of the destination year, because of the line's validity, is cut to that period, and a line left with no month is dropped
 - The FTE is recalculated from the copied lines with the working-day calendars of the destination year
 - In the Budget tab, the destination column shows "Copied from Budget 2026", and its **Quantity and price** tab says "Amounts were copied from Budget 2026. Use the lines again."
 - The copied lines are a read-only reference. Click **Use the lines again** on the **Quantity and price** tab to compute the column from them at their current prices. To plan the destination year at its own prices, change the unit prices after that: each change computes the column again
@@ -185,9 +185,9 @@ A copy from a column without lines leaves the destination without lines, and its
 
 #### Calendars without days for the destination year
 
-A line priced per day needs a calendar that holds the destination year. When the calendar of a line has no working days for that year, the copy uses the company standard calendar of the country of the item's paying company instead. This is the calendar created with the company. This holds for a column built from lines and for a column whose lines are only a reference. If there is none, the item is copied the usual way: months times the percentage. The lines are kept unchanged as a reference, and the FTE stays the FTE of the source column.
+A line priced per day needs a calendar that holds the destination year. When the calendar of a line has no working days for that year, the copy uses the company standard calendar of the country of the line's paying company instead. This is the calendar created with the company. This holds for a column built from lines and for a column whose lines are only a reference. If there is none, the line is copied the usual way: months times the percentage. The lines are kept unchanged as a reference, and the FTE stays the FTE of the source column.
 
-The dry run flags these items with a **Calendar** note, with a tooltip for each line, and shows a warning above the preview. The preview also reports an item for which no replacement calendar exists. To copy anyway, tick **Copy anyway with these calendar changes**. The better fix is to add the year's days on the **Working-day calendars** page, then run the dry run again.
+The dry run flags these lines with a **Calendar** note, with a tooltip for each line, and shows a warning above the preview. The preview also reports a line for which no replacement calendar exists. To copy anyway, tick **Copy anyway with these calendar changes**. The better fix is to add the year's days on the **Working-day calendars** page, then run the dry run again.
 
 A disabled calendar is still used. The dry run notes it and asks for no confirmation.
 
@@ -201,7 +201,7 @@ If the destination column is frozen, both **Dry run** and **Copy data** are disa
 
 Copy allocation methods and percentages from one year to another. This saves you from re-entering chargeback configurations when setting up a new fiscal year.
 
-The **OPEX** / **CAPEX** switch at the top chooses which items are copied. Only items valid in the destination year are copied, with the same rule as **Copy budget columns**. The copy is all or nothing: if one item fails, nothing is copied.
+The **OPEX** / **CAPEX** switch at the top chooses which lines are copied. Only lines valid in the destination year are copied, with the same rule as **Copy budget columns**. The copy is all or nothing: if one line fails, nothing is copied.
 
 Needs the Admin level on Budget (`budget:admin`).
 
@@ -217,12 +217,12 @@ Needs the Admin level on Budget (`budget:admin`).
 |-------|-------------|
 | **Source year** | Year to copy allocations from (range: current year minus one through current year plus five) |
 | **Destination year** | Year to copy allocations to (same range). Must differ from the source year. |
-| **Overwrite existing data** | Toggle. When off, items that already have allocations in the destination are skipped. |
+| **Overwrite existing data** | Toggle. When off, lines that already have allocations in the destination are skipped. |
 
 ### Two-step process: Dry Run, then Copy
 
 1. Click **Dry run** to see a preview
-2. The preview grid shows each OPEX or CAPEX item with:
+2. The preview grid shows each OPEX or CAPEX line with:
    - **Item** name
    - **Action**: what will happen (Will copy, Skip – no source year, Skip – no allocations in source, Skip – destination has data, Error)
    - **Source** method and label
@@ -237,7 +237,7 @@ Needs the Admin level on Budget (`budget:admin`).
 
 ### Summary
 
-After a dry run, a banner shows the count of items ready to copy, skipped, and errored. If items were skipped because the destination already has allocations, a separate warning suggests enabling overwrite.
+After a dry run, a banner shows the count of lines ready to copy, skipped, and errored. If lines were skipped because the destination already has allocations, a separate warning suggests enabling overwrite.
 
 ---
 
@@ -245,11 +245,11 @@ After a dry run, a banner shows the count of items ready to copy, skipped, and e
 
 Clear all data from a specific budget column for a given year. This is a destructive operation: use it when you need to start fresh.
 
-The **OPEX** / **CAPEX** switch at the top chooses which items are cleared. The reset sets the twelve months of the column to zero and removes its period, and its lines when the column was built from quantity and price. In the Budget tab, the column then gets a new suggestion from the item's dates. The reset covers every item, including items whose end of validity has passed. The reset is all or nothing: if one item fails, nothing is cleared.
+The **OPEX** / **CAPEX** switch at the top chooses which lines are cleared. The reset sets the twelve months of the column to zero and removes its period, and its lines when the column was built from quantity and price. In the Budget tab, the column then gets a new suggestion from the line's dates. The reset covers every line, including lines whose end of validity has passed. The reset is all or nothing: if one line fails, nothing is cleared.
 
 Needs the Admin level on Budget (`budget:admin`).
 
-A column whose items hold no amount can still be reset: the reset then only removes the spread periods, and the confirmation says so.
+A column whose lines hold no amount can still be reset: the reset then only removes the spread periods, and the confirmation says so.
 
 ### When to use it
 
@@ -266,7 +266,7 @@ A column whose items hold no amount can still be reset: the reset then only remo
 
 ### Preview
 
-Before you choose a column, one line replaces the grid: "Choose a column to see the amounts it holds." Once you choose a column, a grid shows every OPEX or CAPEX item and its current value in that column. Amounts that will be cleared are shown in medium weight; empty values are muted. Below the grid, three stats appear:
+Before you choose a column, one line replaces the grid: "Choose a column to see the amounts it holds." Once you choose a column, a grid shows every OPEX or CAPEX line and its current value in that column. Amounts that will be cleared are shown in medium weight; empty values are muted. Below the grid, three stats appear:
 
 - **Total items**
 - **Items with a non-zero total**
@@ -277,7 +277,7 @@ Before you choose a column, one line replaces the grid: "Choose a column to see 
 Clicking **Clear column** opens a confirmation dialog that shows:
 
 - The column and year being reset
-- The number of items affected
+- The number of lines affected
 - The total value being deleted
 - A clear warning that this action cannot be undone
 
@@ -285,7 +285,7 @@ You must click **Clear column** in the dialog to proceed, or **Cancel** to abort
 
 ### Safety features
 
-- The **Clear column** button stays available when no item has an amount, so the spread periods can still be removed
+- The **Clear column** button stays available when no line has an amount, so the spread periods can still be removed
 - No column is preselected, so you always choose the column to clear
 - Frozen columns cannot be reset. Unfreeze them first
 - The confirmation dialog requires explicit acknowledgement
@@ -294,13 +294,13 @@ You must click **Clear column** in the dialog to proceed, or **Cancel** to abort
 
 ## Default Allocation Method
 
-Set the method that OPEX items and CAPEX investments follow when they are left on the default allocation. The setting is per fiscal year: each year resolves its own default, so you can change the basis for one year without touching the others.
+Set the method that OPEX lines and CAPEX investments follow when they are left on the default allocation. The setting is per fiscal year: each year resolves its own default, so you can change the basis for one year without touching the others.
 
 ### When to use it
 
 - Your chargeback model is not headcount-based (for example revenue-driven)
 - The IT budget is carried by one entity and must not be spread over every subsidiary
-- You want new items to follow a shared basis without editing them one by one
+- You want new lines to follow a shared basis without editing them one by one
 - You are preparing a fiscal year whose allocation basis differs from the previous one
 
 ### Fields
@@ -329,8 +329,8 @@ Set the method that OPEX items and CAPEX investments follow when they are left o
 
 ### What it affects
 
-- Every OPEX item and CAPEX investment whose allocation method is **default**, shown as *Headcount (default)* (or *Default (n companies)*) in the Allocations tab until an organisation default is set
-- Items with an explicit method (Headcount, IT Users, or Turnover pinned on the item) or a manual allocation keep their own setting
+- Every OPEX line and CAPEX investment whose allocation method is **default**, shown as *Headcount (default)* (or *Default (n companies)*) in the Allocations tab until an organisation default is set
+- Lines with an explicit method (Headcount, IT Users, or Turnover pinned on the line) or a manual allocation keep their own setting
 - Allocated amounts are recomputed the next time allocations are displayed. Budget amounts themselves are never modified
 
 ### Standard method
@@ -339,7 +339,7 @@ Until an organisation configures a default, the standard applies: **Headcount** 
 
 ### Changing the default after the fact
 
-The default is resolved every time allocations are displayed, so editing it re-drives every item left on the default. If a company included in the selection later loses its driver value or is disabled, the affected items show an error instead of a silently rebalanced split. The page warns you about the current selection.
+The default is resolved every time allocations are displayed, so editing it re-drives every line left on the default. If a company included in the selection later loses its driver value or is disabled, the affected lines show an error instead of a silently rebalanced split. The page warns you about the current selection.
 
 ### Permissions
 
@@ -425,5 +425,5 @@ Here is a typical sequence using these tools, with the standard column names and
 - **Freeze after approval**: Locking columns after approval maintains your audit trail and prevents accidental edits.
 - **Use percentage adjustments**: When copying between years, apply an inflation or growth factor so you do not have to adjust every line manually.
 - **Check freeze status before bulk operations**: Frozen columns block copy and reset operations. If a button is greyed out, check the freeze page first.
-- **Set the year's default before entering budgets**: If your allocation basis is not headcount, configure it in Default Allocation Method first, so items are created on the right basis instead of being re-driven later.
+- **Set the year's default before entering budgets**: If your allocation basis is not headcount, configure it in Default Allocation Method first, so lines are created on the right basis instead of being re-driven later.
 - **Reset with caution**: Column reset is irreversible. Double-check the year and column before confirming.

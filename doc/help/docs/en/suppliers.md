@@ -1,6 +1,6 @@
 # Suppliers
 
-Suppliers (also known as vendors) represent the companies you purchase software, services, and support from. Link suppliers to applications, contracts, and OPEX items to track vendor relationships and spending across your IT portfolio.
+Suppliers (also known as vendors) represent the companies you purchase software, services, and support from. Link suppliers to applications, contracts, and OPEX lines to track vendor relationships and spending across your IT portfolio.
 
 ## Getting started
 
