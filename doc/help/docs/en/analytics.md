@@ -320,7 +320,7 @@ The budget lines list has one column per enabled dimension, with checkbox filter
 
 The **Analytics dimensions** report (under **Reporting**) shows how the budget of your OPEX or CAPEX lines is spread across the values of one dimension. See [Reporting](reports.md#analytics-dimensions) for the full description.
 
-- **Item type**: OPEX or CAPEX
+- **Line type**: OPEX or CAPEX
 - **Dimension**: the dimension the report groups on. It shows when you have two or more enabled dimensions, and starts on the default dimension
 - **Year range**: single year (pie or bar chart) or several years (line chart)
 - **Metric**: any budget column your organization shows, under its name. Starts on the default column

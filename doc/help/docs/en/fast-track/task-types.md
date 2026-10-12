@@ -118,7 +118,7 @@ Tasks are the **atomic unit of work** in KANAP. They cross the Run/Build boundar
 
 A **clearly scoped action** with a defined responsible person, status, and deadline.
 
-- Can be **standalone** or linked to a **Project**, **OPEX item**, **Contract**, or **CAPEX item**
+- Can be **standalone** or linked to a **Project**, **OPEX line**, **Contract**, or **CAPEX line**
 - Carries a concrete effort
 - Impact on users or services is contained and well-understood
 - Does not require coordination across multiple teams — even if it takes a long time, it remains carried by a single person without requiring cross-functional analysis

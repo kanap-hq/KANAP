@@ -221,8 +221,8 @@ The Relations tab connects this asset to other records across KANAP. The tab bad
 - **Contained by** / **Depended on by**: Read-only reverse views, shown only when other assets reference this one
 
 **Financials & projects**:
-- **OPEX items**: Link to operational expenditure items
-- **CAPEX items**: Link to capital expenditure items
+- **OPEX lines**: Link to operational expenditure lines
+- **CAPEX lines**: Link to capital expenditure lines
 - **Contracts**: Link to contract records
 - **Projects**: Link to portfolio projects related to this asset
 

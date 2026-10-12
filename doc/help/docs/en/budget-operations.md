@@ -120,7 +120,7 @@ The page opens on the default column of the current year as the source and the d
 
 1. Click **Dry run** to generate a preview without changing any data
 2. Review the preview grid, which shows:
-   - **Item** name (lines marked **Skipped** keep their current value; lines marked **Prorated** start or end during the destination year and get only the months within their validity)
+   - **Line** name (lines marked **Skipped** keep their current value; lines marked **Prorated** start or end during the destination year and get only the months within their validity)
    - **Source value** (from the source year/column)
    - **Current destination value**
    - **Preview value** (what the destination will become after copy)
@@ -132,8 +132,8 @@ The **Copy data** button is only enabled after a successful dry run.
 
 Below the grid, a stats bar shows:
 
-- **Total items** in the dataset
-- **Items to be processed** (non-skipped)
+- **Total lines** in the dataset
+- **Lines to be processed** (non-skipped)
 - **Source total** (sum of source values)
 - **Current destination total**
 - **Preview total** (shown after dry run)
@@ -223,7 +223,7 @@ Needs the Admin level on Budget (`budget:admin`).
 
 1. Click **Dry run** to see a preview
 2. The preview grid shows each OPEX or CAPEX line with:
-   - **Item** name
+   - **Line** name
    - **Action**: what will happen (Will copy, Skip – no source year, Skip – no allocations in source, Skip – destination has data, Error)
    - **Source** method and label
    - **Destination** current method and label
@@ -268,8 +268,8 @@ A column whose lines hold no amount can still be reset: the reset then only remo
 
 Before you choose a column, one line replaces the grid: "Choose a column to see the amounts it holds." Once you choose a column, a grid shows every OPEX or CAPEX line and its current value in that column. Amounts that will be cleared are shown in medium weight; empty values are muted. Below the grid, three stats appear:
 
-- **Total items**
-- **Items with a non-zero total**
+- **Total lines**
+- **Lines with a non-zero total**
 - **Current total value**
 
 ### Confirmation
@@ -377,7 +377,7 @@ By default, Budget, Revision, Actuals and Expected landing are shown and Forecas
 ### What the settings change
 
 - **Hidden columns** leave the lists, the column chooser, the Budget tab, the report pickers, the copy and reset pages and the overview. They keep their amounts: hiding a column never clears data, and showing it again brings the amounts back. Hidden columns still accept imports through the budget file, and freezes still apply to them. The freeze page lists hidden columns too, marked **Hidden**, so you can freeze them like the others
-- **The default column** is preselected in every report. It sorts the budget lines list and its previous and next navigation. The **Top items**, **Top increases**, **My budget** and **By cost center** tiles of the overview use it. The list shows it for the current year, next to the last shown column. It is also the reference amount of the Allocations tab and the column the spread panel opens on. Freezing it for a year fixes that year's exchange rates (see [Freezing the default column fixes the exchange rates](#freezing-the-default-column-fixes-the-exchange-rates))
+- **The default column** is preselected in every report. It sorts the budget lines list and its previous and next navigation. The **Top lines**, **Top increases**, **My budget** and **By cost center** tiles of the overview use it. The list shows it for the current year, next to the last shown column. It is also the reference amount of the Allocations tab and the column the spread panel opens on. Freezing it for a year fixes that year's exchange rates (see [Freezing the default column fixes the exchange rates](#freezing-the-default-column-fixes-the-exchange-rates))
 - **Follows the spread and the lines** decides which columns move together when a spread is applied to all columns, and which columns take the lines when **Apply these lines to all columns** is on. Frozen columns never change, whatever this setting says
 
 ### Saving

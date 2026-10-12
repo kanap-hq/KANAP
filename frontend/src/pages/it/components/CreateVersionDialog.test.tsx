@@ -21,7 +21,7 @@ const CASES = [
     defaultName: 'Billing hub - new version',
     next: 'Next',
     deployments: 'Deployments',
-    budget: 'Budget items',
+    budget: 'Budget lines',
     asRole: 'Billing hub → Ledger (as source)',
     selected: '0 of 2 selected',
   },

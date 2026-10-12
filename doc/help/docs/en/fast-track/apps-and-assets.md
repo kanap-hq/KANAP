@@ -133,8 +133,8 @@ Go to the **Relations** tab to connect your application to the rest of your IT m
 
 | Link type | What you're connecting | Why |
 |-----------|----------------------|-----|
-| **OPEX items** | Recurring costs (licenses, SaaS fees) | See the full cost picture |
-| **CAPEX items** | Capital expenditure projects | Track investment |
+| **OPEX lines** | Recurring costs (licenses, SaaS fees) | See the full cost picture |
+| **CAPEX lines** | Capital expenditure projects | Track investment |
 | **Contracts** | Vendor agreements | Know when renewals are due |
 | **Projects** | Portfolio projects | Connect to your project portfolio |
 | **Relevant websites** | Documentation, wikis, runbooks | Quick access to external resources |

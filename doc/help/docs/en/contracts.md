@@ -125,8 +125,8 @@ The Relations tab links contracts to other entities in your registry.
 
 **Available links**:
 
-- **OPEX items**: Recurring costs associated with this contract -- use the searchable multi-select to find and link items by product name
-- **CAPEX items**: Capital expenditure lines linked to this contract -- same searchable multi-select interface
+- **OPEX lines**: Recurring costs associated with this contract -- use the searchable multi-select to find and link lines by product name
+- **CAPEX lines**: Capital expenditure lines linked to this contract -- same searchable multi-select interface
 - **Contacts**: People associated with this contract, each with a role (Commercial, Technical, Support, or Other). Contacts inherited from the supplier are shown with a filled badge; manually added ones appear with an outlined badge. Click a contact row to open their profile.
 - **Relevant websites**: Links to external documents such as contract PDFs or vendor portals. Each link has a description and a URL.
 - **Attachments**: Upload files by drag-and-drop or using the file picker. Click an attachment chip to download it; click the delete icon to remove it.

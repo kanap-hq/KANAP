@@ -31,13 +31,13 @@
     },
     "workspace": {
       "newSpendItem": "New OPEX line",
-      "spendItem": "OPEX item",
-      "spendItems": "Spend items",
-      "itemOf": "Item {{index}} of {{total}}",
+      "spendItem": "OPEX line",
+      "spendItems": "Budget lines",
+      "itemOf": "Line {{index}} of {{total}}",
       "prev": "Prev",
       "next": "Next",
-      "failedToLoad": "Failed to load item.",
-      "tabsAfterCreate": "Other tabs will be available after you create the item."
+      "failedToLoad": "Failed to load line.",
+      "tabsAfterCreate": "Other tabs will be available after you create the line."
     },
     "status": {
       "enabled": "Enabled",
@@ -93,9 +93,9 @@
       "requiredLeaveStay": "Stay",
       "requiredLeaveConfirm": "Leave anyway",
       "effectiveStartRequired": "Effective start is required",
-      "failedToCreate": "Failed to create item",
+      "failedToCreate": "Failed to create line",
       "failedToSave": "Failed to save",
-      "failedToLoad": "Failed to load item",
+      "failedToLoad": "Failed to load line",
       "obsoleteAccount": "Obsolete account detected. The selected account does not belong to the company's Chart of Accounts. Please update the account."
     },
     "budget": {
@@ -233,20 +233,20 @@
     },
     "workspace": {
       "newCapexItem": "New CAPEX line",
-      "capexItem": "CAPEX item",
-      "itemOf": "Item {{index}} of {{total}}",
+      "capexItem": "CAPEX line",
+      "itemOf": "Line {{index}} of {{total}}",
       "prev": "Prev",
       "next": "Next",
-      "failedToLoad": "Failed to load item.",
-      "tabsAfterCreate": "Other tabs will be available after you create the item.",
-      "capexItems": "CAPEX items"
+      "failedToLoad": "Failed to load line.",
+      "tabsAfterCreate": "Other tabs will be available after you create the line.",
+      "capexItems": "CAPEX lines"
     },
     "editor": {
       "currencyMust3": "Currency must be 3 letters",
       "effectiveStartRequired": "Effective start is required",
-      "failedToCreate": "Failed to create item",
+      "failedToCreate": "Failed to create line",
       "failedToSave": "Failed to save",
-      "failedToLoad": "Failed to load item",
+      "failedToLoad": "Failed to load line",
       "obsoleteAccount": "Obsolete account detected. The selected account does not belong to the company's Chart of Accounts. Please update the account.",
       "payingCompanyRequired": "Paying company is required",
       "accountRequired": "Account is required",
@@ -449,11 +449,11 @@
     },
     "relations": {
       "linkedOpex": "Linked OPEX",
-      "opexItems": "OPEX items",
-      "selectOpexItems": "Select OPEX items",
+      "opexItems": "OPEX lines",
+      "selectOpexItems": "Select OPEX lines",
       "linkedCapex": "Linked CAPEX",
-      "capexItems": "CAPEX items",
-      "selectCapexItems": "Select CAPEX items",
+      "capexItems": "CAPEX lines",
+      "selectCapexItems": "Select CAPEX lines",
       "relevantWebsites": "Relevant websites",
       "addUrl": "Add URL",
       "attachments": "Attachments",
@@ -488,7 +488,7 @@
       "resetColumnTitle": "Reset budget column",
       "resetColumnDesc": "Clear all data from a budget column for a specific year",
       "allocationDefaultTitle": "Default allocation method",
-      "allocationDefaultDesc": "Choose the method applied to OPEX and CAPEX items left on the default allocation",
+      "allocationDefaultDesc": "Choose the method applied to OPEX and CAPEX lines left on the default allocation",
       "budgetColumnsTitle": "Budget columns",
       "budgetColumnsDesc": "Name the five budget columns, choose which ones are shown and which one is the default",
       "currencyTitle": "Currencies",
@@ -512,7 +512,7 @@
       "companiesHint": "Select at least one company: the selection is saved when the list closes.",
       "companiesPlaceholder": "Select companies",
       "method": "Default method",
-      "methodHelp": "Applies to every OPEX and CAPEX item that uses the default method. Items with an explicit method or a manual allocation are not affected.",
+      "methodHelp": "Applies to every OPEX and CAPEX line that uses the default method. Lines with an explicit method or a manual allocation are not affected.",
       "sharesTitle": "Computed split",
       "sharesEmpty": "No split yet. Select at least one company to see the percentages.",
       "companyColumn": "Company",
@@ -521,7 +521,7 @@
       "standardNote": "Standard method — no override configured for this year.",
       "overriddenNote": "Configured for your organisation. Standard method: {{method}}.",
       "resetToStandard": "Use the standard method",
-      "scopeNote": "The method is resolved when allocations are computed: either from the headcount, IT users or turnover of every company enabled for the year, or from the driver value of the companies selected for the default. Changing it re-drives every item left on the default method; manual allocations keep their percentages.",
+      "scopeNote": "The method is resolved when allocations are computed: either from the headcount, IT users or turnover of every company enabled for the year, or from the driver value of the companies selected for the default. Changing it re-drives every line left on the default method; manual allocations keep their percentages.",
       "loadError": "Could not load the default allocation method.",
       "saveError": "Could not save the default allocation method.",
       "noPermission": "You need budget administration rights to change the default. The current setting stays visible.",
@@ -552,10 +552,10 @@
       "budgetColumn": "Budget column",
       "processing": "Processing…",
       "clearColumn": "Clear column",
-      "product": "Item",
+      "product": "Line",
       "dataPreview": "Data preview",
-      "totalItems": "Total items",
-      "itemsWithData": "Items with a non-zero total",
+      "totalItems": "Total lines",
+      "itemsWithData": "Lines with a non-zero total",
       "currentTotalValue": "Current total value",
       "columnFrozenError": "The {{year}} {{column}} column is frozen. Unfreeze it before clearing data.",
       "noDataInfo": "The {{column}} column of {{year}} holds no amount. Clearing only removes its spread periods.",
@@ -564,13 +564,13 @@
       "clearFailed": "The reset failed. Nothing was changed.",
       "loadingData": "Loading data…",
       "currentHeader": "{{column}} {{year}}, current",
-      "clearWarning_one": "Clearing removes the {{column}} amounts and period of {{year}} for {{count}} item. This cannot be undone.",
-      "clearWarning_other": "Clearing removes the {{column}} amounts and period of {{year}} for {{count}} items. This cannot be undone.",
+      "clearWarning_one": "Clearing removes the {{column}} amounts and period of {{year}} for {{count}} line. This cannot be undone.",
+      "clearWarning_other": "Clearing removes the {{column}} amounts and period of {{year}} for {{count}} lines. This cannot be undone.",
       "confirmMessage": "Clear the {{column}} column for {{year}}?",
-      "confirmAffected_one": "{{count}} item is affected, for a total of {{value}}.",
-      "confirmAffected_other": "{{count}} items are affected, for a total of {{value}}.",
-      "clearDone_one": "Cleared {{count}} item.",
-      "clearDone_other": "Cleared {{count}} items.",
+      "confirmAffected_one": "{{count}} line is affected, for a total of {{value}}.",
+      "confirmAffected_other": "{{count}} lines are affected, for a total of {{value}}.",
+      "clearDone_one": "Cleared {{count}} line.",
+      "clearDone_other": "Cleared {{count}} lines.",
       "confirmPeriodsOnly": "The {{column}} column for {{year}} holds no amount. Only its spread periods will be removed.",
       "chooseColumn": "Choose a column",
       "chooseColumnFirst": "Choose a column to see the amounts it holds."
@@ -586,15 +586,15 @@
       "processing": "Processing...",
       "sameYearWarning": "Source and destination years must be different.",
       "preview": "Preview",
-      "product": "Item",
+      "product": "Line",
       "action": "Action",
       "sourceLabel": "Source ({{year}})",
       "destinationLabel": "Destination ({{year}})",
       "resultAfterCopy": "Result after copy",
-      "showingItems": "Showing {{total}} items. {{toCopy}} will be copied, {{skipped}} skipped, {{errors}} errors.",
+      "showingItems": "Showing {{total}} lines. {{toCopy}} will be copied, {{skipped}} skipped, {{errors}} errors.",
       "dryRunPrompt": "Run a dry run to preview how allocation methods will be copied.",
-      "skippedDueToDestination": "{{count}} items already have allocations in {{year}}. Enable overwrite to replace them.",
-      "summaryReady": "{{processed}} items ready to copy, {{skipped}} skipped, {{errors}} errors.",
+      "skippedDueToDestination": "{{count}} lines already have allocations in {{year}}. Enable overwrite to replace them.",
+      "summaryReady": "{{processed}} lines ready to copy, {{skipped}} skipped, {{errors}} errors.",
       "copyCompleted": "Copy completed.\nProcessed: {{processed}}\nSkipped: {{skipped}}\nErrors: {{errors}}",
       "dryRunFailed": "Dry run failed. Check the console for details.",
       "copyFailed": "Copy failed. Check the console for details.",
@@ -607,7 +607,7 @@
       },
       "defaultManualLabel": "selected companies ({{count}})",
       "defaultManualLabel_one": "selected company ({{count}})",
-      "defaultBasisWarning": "{{count}} items are left on the default allocation: {{destinationYear}} uses {{destinationLabel}} while {{sourceYear}} uses {{sourceLabel}}. Copied items keep following the default of their own year — configure {{destinationYear}} in Budget administration if the basis should stay the same."
+      "defaultBasisWarning": "{{count}} lines are left on the default allocation: {{destinationYear}} uses {{destinationLabel}} while {{sourceYear}} uses {{sourceLabel}}. Copied lines keep following the default of their own year. Configure {{destinationYear}} in Budget administration if the basis should stay the same."
     },
     "copyBudgetColumns": {
       "title": "Copy budget columns",
@@ -621,10 +621,10 @@
       "dryRun": "Dry run",
       "copyData": "Copy data",
       "processing": "Processing…",
-      "product": "Item",
+      "product": "Line",
       "dataPreview": "Data preview",
-      "totalItems": "Total items",
-      "itemsToProcess": "Items to be processed",
+      "totalItems": "Total lines",
+      "itemsToProcess": "Lines to be processed",
       "sourceTotal": "Source total",
       "currentDestTotal": "Current destination total",
       "previewTotal": "Preview total",
@@ -646,14 +646,14 @@
         "missing": "{{line}}: {{calendar}} has no working days for {{year}} and no replacement calendar. The amounts are copied without recalculation.",
         "disabled": "{{line}}: {{calendar}} is disabled and is still used."
       },
-      "previewInfo_one": "{{count}} item in the preview: {{toProcess}} to copy, {{skipped}} skipped. Skipped items keep their current value.",
-      "previewInfo_other": "{{count}} items in the preview: {{toProcess}} to copy, {{skipped}} skipped. Skipped items keep their current value.",
-      "existingDataWarning_one": "{{count}} item already has an amount in the destination column and will be skipped. Turn on \"Overwrite existing data\" to replace it.",
-      "existingDataWarning_other": "{{count}} items already have an amount in the destination column and will be skipped. Turn on \"Overwrite existing data\" to replace them.",
-      "copyDone_one": "Copied {{count}} item.",
-      "copyDone_other": "Copied {{count}} items.",
-      "calendarAlert_one": "{{count}} item has lines on a calendar with no working days for {{year}}. To recalculate it with its own calendar, add the year's days on the Working-day calendars page, then run the dry run again.",
-      "calendarAlert_other": "{{count}} items have lines on a calendar with no working days for {{year}}. To recalculate them with their own calendars, add the year's days on the Working-day calendars page, then run the dry run again.",
+      "previewInfo_one": "{{count}} line in the preview: {{toProcess}} to copy, {{skipped}} skipped. Skipped lines keep their current value.",
+      "previewInfo_other": "{{count}} lines in the preview: {{toProcess}} to copy, {{skipped}} skipped. Skipped lines keep their current value.",
+      "existingDataWarning_one": "{{count}} line already has an amount in the destination column and will be skipped. Turn on \"Overwrite existing data\" to replace it.",
+      "existingDataWarning_other": "{{count}} lines already have an amount in the destination column and will be skipped. Turn on \"Overwrite existing data\" to replace them.",
+      "copyDone_one": "Copied {{count}} line.",
+      "copyDone_other": "Copied {{count}} lines.",
+      "calendarAlert_one": "{{count}} line has quantity and price lines on a calendar with no working days for {{year}}. To recalculate it with its own calendar, add the year's days on the Working-day calendars page, then run the dry run again.",
+      "calendarAlert_other": "{{count}} lines have quantity and price lines on a calendar with no working days for {{year}}. To recalculate them with their own calendars, add the year's days on the Working-day calendars page, then run the dry run again.",
       "acceptCalendarChanges": "Copy anyway with these calendar changes"
     },
     "currency": {
@@ -669,9 +669,9 @@
       "reportingCurrency": "Reporting currency",
       "reportingCurrencyHelp": "Primary currency used for reports and totals",
       "defaultOpexCurrency": "Default OPEX currency",
-      "defaultOpexCurrencyHelp": "Prefills currency when creating new OPEX items",
+      "defaultOpexCurrencyHelp": "Prefills currency when creating new OPEX lines",
       "defaultCapexCurrency": "Default CAPEX currency",
-      "defaultCapexCurrencyHelp": "Prefills currency when creating new CAPEX items",
+      "defaultCapexCurrencyHelp": "Prefills currency when creating new CAPEX lines",
       "allowedCurrencies": "Allowed currencies",
       "allowedCurrenciesHelp": "Optional comma-separated list (e.g. EUR, USD, GBP)",
       "forceFxSync": "Force FX rates sync",
@@ -695,7 +695,7 @@
     },
     "scope": {
       "all": "All",
-      "label": "Item type",
+      "label": "Line type",
       "opex": "OPEX",
       "capex": "CAPEX"
     },
@@ -829,10 +829,10 @@
       }
     },
     "results": {
-      "skipped_one": "{{count}} item skipped.",
-      "skipped_other": "{{count}} items skipped.",
-      "failed_one": "{{count}} item failed.",
-      "failed_other": "{{count}} items failed."
+      "skipped_one": "{{count}} line skipped.",
+      "skipped_other": "{{count}} lines skipped.",
+      "failed_one": "{{count}} line failed.",
+      "failed_other": "{{count}} lines failed."
     }
   },
   "confirmations": {
@@ -842,8 +842,8 @@
     "deleteAttachment": "Delete attachment \"{{name}}\"?"
   },
   "shared": {
-    "noSpendItemsFound": "No OPEX items found",
-    "noCapexItemsFound": "No CAPEX items found",
+    "noSpendItemsFound": "No OPEX lines found",
+    "noCapexItemsFound": "No CAPEX lines found",
     "blank": "(Blank)",
     "budgetHolder": "Budget holder",
     "budgetHolderSource": "From the cost center {{code}} · {{name}}.",
@@ -940,11 +940,11 @@
         },
         "companyChargeback": {
           "title": "Company chargeback",
-          "description": "Zoom into a single company with department totals and items"
+          "description": "Zoom into a single company with department totals and lines"
         },
         "topOpex": {
-          "title": "Top items",
-          "description": "Largest OPEX or CAPEX items for a selected year (custom top N)"
+          "title": "Top lines",
+          "description": "Largest OPEX or CAPEX lines for a selected year (custom top N)"
         },
         "opexDelta": {
           "title": "Top increase / decrease",
@@ -968,11 +968,11 @@
         },
         "staffing": {
           "title": "Staffing by month",
-          "description": "Monthly FTE by cost center, item, supplier or analytics dimension"
+          "description": "Monthly FTE by cost center, line, supplier or analytics dimension"
         },
         "costPerFte": {
           "title": "Cost per FTE",
-          "description": "Yearly cost of one FTE or average daily rate, by cost center, item, supplier or analytics dimension, across budget columns and years"
+          "description": "Yearly cost of one FTE or average daily rate, by cost center, line, supplier or analytics dimension, across budget columns and years"
         }
       }
     },
@@ -1012,19 +1012,19 @@
       "sourceMetric": "Source metric",
       "destinationYear": "Destination year",
       "destinationMetric": "Destination metric",
-      "excludeItems": "Exclude items",
-      "excludeItemsPlaceholder": "Select items to exclude",
+      "excludeItems": "Exclude lines",
+      "excludeItemsPlaceholder": "Select lines to exclude",
       "excludeAccounts": "Exclude accounts",
       "excludeAccountsPlaceholder": "Select accounts to exclude",
       "excludeCategories": "Exclude values",
       "excludeCategoriesPlaceholder": "Select values to exclude",
-      "noMatchingItems": "No matching items",
+      "noMatchingItems": "No matching lines",
       "noMatchingAccounts": "No matching accounts",
       "noMatchingCategories": "No matching values",
       "noYearsAvailable": "No years available",
       "noMetricsAvailable": "No metrics available",
-      "itemSelected_one": "1 item selected",
-      "itemSelected_other": "{{count}} items selected",
+      "itemSelected_one": "1 line selected",
+      "itemSelected_other": "{{count}} lines selected",
       "accountSelected_one": "1 account selected",
       "accountSelected_other": "{{count}} accounts selected",
       "categorySelected_one": "1 value selected",
@@ -1039,9 +1039,9 @@
       "runBuildRun": "Run",
       "runBuildBuild": "Build",
       "runBuildNone": "Not set",
-      "fteItems": "Items",
-      "fteItemsAll": "All items",
-      "fteItemsWith": "Items with FTE",
+      "fteItems": "Lines",
+      "fteItemsAll": "All lines",
+      "fteItemsWith": "Lines with FTE",
       "dimension": "Dimension",
       "analyticsAll": "All",
       "analyticsNone": "No value",
@@ -1055,11 +1055,11 @@
       "columnFte": "{{column}} FTE",
       "chartTitleFte": "{{title}} · FTE",
       "totalFte": "Total FTE",
-      "detachedSingle_one": "{{count}} item declares {{fte}} FTE while its amount no longer follows its lines.",
-      "detachedSingle_other": "{{count}} items declare {{fte}} FTE while their amount no longer follows their lines.",
+      "detachedSingle_one": "{{count}} line declares {{fte}} FTE while its amount no longer follows its quantity and price lines.",
+      "detachedSingle_other": "{{count}} lines declare {{fte}} FTE while their amount no longer follows their quantity and price lines.",
       "detachedList": "Amount no longer follows the lines for: {{list}}.",
-      "detachedEntry_one": "{{column}} ({{count}} item, {{fte}} FTE)",
-      "detachedEntry_other": "{{column}} ({{count}} items, {{fte}} FTE)"
+      "detachedEntry_one": "{{column}} ({{count}} line, {{fte}} FTE)",
+      "detachedEntry_other": "{{column}} ({{count}} lines, {{fte}} FTE)"
     },
     "columns": {
       "company": "Company",
@@ -1078,7 +1078,7 @@
       "itCostsVsTurnover": "IT costs vs turnover",
       "itCostsPerUser": "IT costs per user",
       "itCostsPerItUser": "IT costs per IT user",
-      "item": "Item",
+      "item": "Line",
       "allocationMethod": "Allocation method",
       "receivables": "Receivables",
       "payables": "Payables",
@@ -1121,7 +1121,7 @@
     },
     "companyChargeback": {
       "title": "Company chargeback",
-      "subtitle": "Detailed chargeback allocation per company across departments, items, and KPIs",
+      "subtitle": "Detailed chargeback allocation per company across departments, lines, and KPIs",
       "selectCompanyTitle": "Select a company to explore chargeback details",
       "selectCompanyDescription": "Choose a company, year, and budget column to generate the detailed chargeback view. Department totals, itemised allocations, and KPIs will appear once the report runs.",
       "selectCompany": "Select a company",
@@ -1130,9 +1130,9 @@
       "departmentDistribution": "Department distribution",
       "departmentDistributionDescription": "Horizontal bar chart mirroring the table totals.",
       "noDepartmentAllocations": "No department-level allocations for the selected configuration.",
-      "chargebackItems": "Chargeback items",
+      "chargebackItems": "Chargeback lines",
       "chargebackItemsDescription": "Itemised spend contributing to the company chargeback, including the allocation method and share of the total amount.",
-      "noChargebackItems": "No chargeback items for the selected configuration.",
+      "noChargebackItems": "No chargeback lines for the selected configuration.",
       "flowsTitle": "Intercompany flows",
       "flowsDescription": "Partner companies with receivables (you paid for them), payables (they paid for you), and the net total. Self-consumption excluded.",
       "noFlows": "No intercompany flows for the selected configuration.",
@@ -1146,8 +1146,8 @@
       "chartFootnote": "Overall {{metric}}: {{total}}"
     },
     "topOpex": {
-      "title": "Top items",
-      "subtitle": "Largest {{type}} items by selected year ({{metric}})",
+      "title": "Top lines",
+      "subtitle": "Largest {{type}} lines by selected year ({{metric}})",
       "topTotal": "Top {{count}} total",
       "totalMetric": "{{metric}}, total",
       "ofFilteredMetric": "{{pct}}% of the filtered total",
@@ -1165,11 +1165,11 @@
       "increases": "Increases",
       "decreases": "Decreases",
       "both": "Both",
-      "netIncrease": "Net increase (all items)",
-      "netDecrease": "Net decrease (all items)",
-      "grossChanges": "Gross changes (all items)",
-      "grossIncrease": "Gross increase (all items)",
-      "grossDecrease": "Gross decrease (all items)",
+      "netIncrease": "Net increase (all lines)",
+      "netDecrease": "Net decrease (all lines)",
+      "grossChanges": "Gross changes (all lines)",
+      "grossIncrease": "Gross increase (all lines)",
+      "grossDecrease": "Gross decrease (all lines)",
       "coverageNa": "Coverage — n/a",
       "coveragePct": "Coverage — {{pct}}% covered",
       "coverageSplit": "Coverage — {{detail}}",
@@ -1234,13 +1234,13 @@
       "groupBy": "Group by",
       "groups": {
         "costCenter": "Cost center",
-        "item": "Item",
+        "item": "Line",
         "supplier": "Supplier",
         "axis": "Analytics dimension"
       },
       "groupsInSentence": {
         "costCenter": "cost center",
-        "item": "item",
+        "item": "line",
         "supplier": "supplier"
       },
       "none": {
@@ -1251,8 +1251,8 @@
       "average": "Average",
       "peak": "Peak",
       "others": "Others",
-      "noDetail_one": "{{count}} item declares {{fte}} FTE without monthly detail. It is not in the months.",
-      "noDetail_other": "{{count}} items declare {{fte}} FTE without monthly detail. They are not in the months."
+      "noDetail_one": "{{count}} line declares {{fte}} FTE without monthly detail. It is not in the months.",
+      "noDetail_other": "{{count}} lines declare {{fte}} FTE without monthly detail. They are not in the months."
     },
     "costPerFte": {
       "title": "Cost per FTE",
@@ -1281,13 +1281,13 @@
     "zeroedMonths_other": "{{months}} will be set to zero.",
     "changePeriod": "Change period",
     "choosePeriod": "Choose the period",
-    "noMonthInItemDates": "No month of {{year}} is within the item's dates.",
+    "noMonthInItemDates": "No month of {{year}} is within the line's dates.",
     "column": "Column",
     "distribution": "Distribution",
     "from": "From",
     "to": "To",
     "convention": "A month counts when the period covers its 15th.",
-    "beyondItemDates": "The period goes beyond the item's dates.",
+    "beyondItemDates": "The period goes beyond the line's dates.",
     "problem": {
       "missing": "Choose a start and an end date.",
       "invalid": "Enter valid dates.",

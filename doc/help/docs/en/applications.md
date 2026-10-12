@@ -100,7 +100,7 @@ The Applications grid provides a comprehensive view of your application portfoli
 - **External Facing**: Whether the app is internet-accessible
 - **SSO Enabled** / **MFA Enabled**: Authentication features
 - **Data Integration / ETL**: Whether the app participates in data integrations
-- **OPEX Items** / **CAPEX Items** / **Contracts**: Linked spend and contracts
+- **OPEX lines** / **CAPEX lines** / **Contracts**: Linked spend and contracts
 - **Components**: Child applications (if this is a suite)
 - **Data Class** / **Contains PII** / **Data Residency**: Compliance information
 - **Cyber criticality**, **Recovery wave**, **RTO**, **RPO**, **Review state/date**: Classification and continuity fields
@@ -283,8 +283,8 @@ The Relations tab links this application to your financial, contract, project an
 **Components** (only when "Can have child apps" is enabled): a table listing the child applications of this Suite, with their lifecycle and criticality. Click a row to open the child workspace.
 
 **Relations**:
-- **OPEX items**: recurring costs associated with this application
-- **CAPEX items**: capital expenditure projects
+- **OPEX lines**: recurring costs associated with this application
+- **CAPEX lines**: capital expenditure projects
 - **Contracts**: vendor contracts
 - **Projects**: portfolio projects linked to this application
 - **Tasks**: tasks linked to this application. This list is read-only here -- tasks gain or lose this link when you set the **App / Service** field on a task in the Tasks page.

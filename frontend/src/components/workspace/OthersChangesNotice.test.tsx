@@ -57,7 +57,7 @@ describe('othersChangeMessage', () => {
     try {
       expect(othersChangeMessage({ by: MARIE, at }, t as never, 'en-GB', new Date(today))).toBe('Changed by Marie Dupont at 14:02');
       expect(othersChangeMessage({ by: { id: 'me', name: 'Me' }, at }, t as never, 'en-GB', new Date(today), 'me'))
-        .toBe('You changed this item elsewhere at 14:02');
+        .toBe('You changed this line elsewhere at 14:02');
       expect(othersChangeMessage({ by: { id: 'u-9', name: null }, at }, t as never, 'en-GB', new Date(today))).toBe('Changed by a user at 14:02');
     } finally {
       void instance.changeLanguage('fr');
