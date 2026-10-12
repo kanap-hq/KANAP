@@ -138,7 +138,7 @@ const content: OfferContent = {
     consulting: {
       title: 'Consultoría',
       subtitle: 'De pago · facturada por jornada',
-      body: 'Ayuda opcional para sacar más valor de KANAP: llamadas programadas, trabajo más profundo, asesoramiento. Tarifa: 1 150 € la jornada, 900 € para clientes con contrato de soporte o alojamiento, sin IVA.',
+      body: 'Ayuda opcional para sacar más valor de KANAP: llamadas programadas, trabajo más profundo, asesoramiento. Tarifa: 1 150 € la jornada, 900 € para clientes con contrato de soporte o alojamiento, IVA no aplicable (art. 293 B CGI).',
       items: [
         'Instalación, configuración, onboarding, formación',
         'Diseño de flujos de trabajo y buenas prácticas',
@@ -150,7 +150,7 @@ const content: OfferContent = {
 
   pilot: {
     title: 'Piloto guiado',
-    subtitle: '2 900 € precio fijo · sin IVA',
+    subtitle: '2 900 € precio fijo · IVA no aplicable (art. 293 B CGI)',
     body: 'Un compromiso que pone a su equipo en marcha con KANAP: la instalamos con usted, traemos sus datos, formamos a su gente y su primer agente queda trabajando.',
     items: [
       'Instalación en sus servidores, o puesta en marcha alojada',

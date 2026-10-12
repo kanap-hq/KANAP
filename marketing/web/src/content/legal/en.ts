@@ -14,7 +14,7 @@ const content: LegalContent = {
     header: {
       eyebrow: 'Legal',
       title: 'Privacy policy',
-      lastUpdated: 'Last updated: 7 October 2026',
+      lastUpdated: 'Last updated: 12 October 2026',
     },
     body: `
 <h2>Preamble</h2>
@@ -100,7 +100,7 @@ const content: LegalContent = {
   <li>Right to data portability</li>
   <li>Right to withdraw consent</li>
 </ul>
-<p>To exercise your rights, you can contact KANAP at <a href="mailto:admin@kanap.net">admin@kanap.net</a>. You also have the right to lodge a complaint with the French Data Protection Authority (CNIL).</p>
+<p>To exercise your rights, you can contact KANAP at <a href="mailto:support@kanap.net">support@kanap.net</a>. You also have the right to lodge a complaint with the French Data Protection Authority (CNIL).</p>
 
 <h2>9. International data transfers</h2>
 <p>The Platform is hosted in the European Union, in Germany. Some providers listed in section 5 may process personal data outside the European Union, for example Cloudflare for network traffic. In that case, KANAP ensures that appropriate safeguards are in place (the EU-US Data Privacy Framework or standard contractual clauses).</p>
@@ -112,7 +112,7 @@ const content: LegalContent = {
 <h2>11. Modifications to the policy</h2>
 <p>KANAP reserves the right to modify this Policy at any time. Users will be notified of changes by any means, including a notification on the Platform or by email.</p>
 
-<p class="mk-legal__foot">For any questions regarding this privacy policy, please contact <a href="mailto:admin@kanap.net">admin@kanap.net</a>.</p>
+<p class="mk-legal__foot">For any questions regarding this privacy policy, please contact <a href="mailto:support@kanap.net">support@kanap.net</a>.</p>
 `,
   },
 
@@ -124,7 +124,7 @@ const content: LegalContent = {
     header: {
       eyebrow: 'Legal',
       title: 'Terms of use',
-      lastUpdated: 'Last updated: 7 October 2026',
+      lastUpdated: 'Last updated: 12 October 2026',
     },
     body: `
 <h2>Preamble</h2>
@@ -160,8 +160,8 @@ const content: LegalContent = {
 <p>5.5. In the event of a data security incident, KANAP will notify affected clients within 72 hours.</p>
 
 <h2>Article 6. Intellectual property</h2>
-<p>6.1. The Platform and all its elements are the exclusive property of KANAP and are protected by copyright and trademark law.</p>
-<p>6.2. The user acquires no intellectual property rights over the Platform.</p>
+<p>6.1. The KANAP software is published by KANAP under the GNU Affero General Public License version 3 (AGPL-3.0). The user's rights over its source code are those granted by that licence.</p>
+<p>6.2. The KANAP name and logo belong to KANAP. Use of the Platform grants no right over them.</p>
 <p>6.3. Content created by the user remains the property of the user, but KANAP reserves the right to use aggregated and anonymized data for service improvement purposes.</p>
 
 <h2>Article 7. Suspension or termination of account</h2>
@@ -177,7 +177,7 @@ const content: LegalContent = {
 <h2>Article 10. Applicable law and disputes</h2>
 <p>These Terms of Use are governed by French law. Any dispute will be subject to the exclusive jurisdiction of the French courts.</p>
 
-<p class="mk-legal__foot">For any questions, please contact <a href="mailto:admin@kanap.net">admin@kanap.net</a>.</p>
+<p class="mk-legal__foot">For any questions, please contact <a href="mailto:support@kanap.net">support@kanap.net</a>.</p>
 `,
   },
 
@@ -189,11 +189,11 @@ const content: LegalContent = {
     header: {
       eyebrow: 'Legal',
       title: 'General terms and conditions of sale',
-      lastUpdated: 'Last updated: 1 February 2026',
+      lastUpdated: 'Last updated: 12 October 2026',
     },
     body: `
 <h2>Article 1. Purpose</h2>
-<p>These General Terms and Conditions of Sale (GTC) govern the sale by KANAP (hereinafter "the Vendor"), an EURL (single-member limited liability company) registered with the RCS Saverne under number 939 098 190, whose registered office is located at 2, rue du Finhay, 67210 Obernai, France, of subscriptions to the online IT management platform "KANAP".</p>
+<p>These General Terms and Conditions of Sale (GTC) govern the sale by KANAP (hereinafter "the Vendor"), an EURL (single-member limited liability company) with a share capital of €1,000, registered with the RCS Saverne under number 939 098 190, whose registered office is located at 2, rue du Finhay, 67210 Obernai, France, of subscriptions to the online IT management platform "KANAP".</p>
 
 <h2>Article 2. Acceptance of the GTC</h2>
 <p>Acceptance of these GTC is mandatory before any subscription and implies full acceptance by the Customer of these conditions.</p>
@@ -202,28 +202,30 @@ const content: LegalContent = {
 <p>KANAP is an online IT management platform designed for technology leaders and IT departments. The specific features are those described on the website at the time of subscription.</p>
 
 <h2>Article 4. Subscription and pricing</h2>
-<p>4.1. Access to the Service is offered under the subscription offers described on the pricing page. Rates are indicated in euros (EUR) and are exclusive of taxes. Applicable VAT will be added to the invoice according to the customer's location and tax status.</p>
+<p>4.1. Access to the Service is offered under the subscription offers described on the pricing page. Rates are indicated in euros (EUR). The Vendor benefits from the VAT exemption of Article 293 B of the French General Tax Code (franchise en base de TVA): no VAT is charged, and invoices state "TVA non applicable, art. 293 B du CGI". Should the Vendor's VAT status change, VAT will apply to invoices issued after the date of that change.</p>
 <p>4.2. Subscriptions include an unlimited number of users and workspaces. No per-user fee applies.</p>
 <p>4.3. The rates applicable for subscriptions are displayed on the website at the time of subscription. Rates may be modified at any time, but such modifications will only apply to subscriptions entered into after the modification.</p>
 <p>4.4. The customer will be informed in advance of any rate modification before the automatic renewal of their subscription.</p>
 <p>4.5. Paying subscribers receive a 20% discount on consulting services. Consulting services and fixed-price service engagements are billed separately at rates displayed on the website.</p>
 
 <h2>Article 5. Payment terms</h2>
-<p>5.1. Payment is made by credit card via a secure payment platform (Stripe).</p>
-<p>5.2. For monthly subscriptions, the first payment is made upon subscription; subsequent payments each month on the anniversary date.</p>
-<p>5.3. For annual subscriptions, payment is made in full at the time of subscription.</p>
-<p>5.4. For invoiced customers (annual plans only), payment terms are NET 30 days. In case of late payment, access to the Service may be suspended.</p>
+<p>5.1. Payment is made by credit card via a secure payment platform (Stripe) or, for annual subscriptions only, by bank transfer on invoice. Direct debit is not offered.</p>
+<p>5.2. For monthly subscriptions, the first payment is made upon subscription; subsequent payments each month on the anniversary date. Card payments are charged when the invoice is issued.</p>
+<p>5.3. For annual subscriptions, the full annual amount is invoiced at the time of subscription, then at each renewal. It is charged to the card at once or, for payment by bank transfer, payable under 5.4.</p>
+<p>5.4. Invoices paid by bank transfer (annual plans only) are payable within 30 days of the invoice date. In case of late payment, access to the Service may be suspended.</p>
 <p>5.5. In case of payment refusal or failure, the Customer is notified and access may be suspended.</p>
 <p>5.6. An invoice is issued for each payment and made available in the account area or sent by email.</p>
+<p>5.7. Any amount unpaid on its due date bears, automatically and without prior notice, late-payment penalties at an annual rate equal to three times the French legal interest rate in force, from the day after the due date until full payment.</p>
+<p>5.8. Any professional customer paying late also owes, by operation of law, a fixed recovery indemnity of €40 per invoice (Articles L441-10 and D441-5 of the French Commercial Code). The Vendor may claim additional compensation on supporting evidence when recovery costs exceed this amount.</p>
+<p>5.9. No discount is granted for early payment.</p>
 
 <h2>Article 6. Subscription duration and renewal</h2>
 <p>6.1. <strong>Monthly subscription:</strong> entered into for one month, automatically renewable by tacit renewal. The Customer may cancel at any time from the account area, with 48h notice before renewal. Cancellation takes effect at the end of the current month.</p>
 <p>6.2. <strong>Annual subscription:</strong> entered into for one year, automatically renewable by tacit renewal unless cancelled. The customer is notified by email 30 days before renewal. Cancellation requires 30 days' notice before the anniversary date. Annual subscription does not entitle to a refund in case of early cancellation.</p>
-<p>6.3. <strong>Subscription changes:</strong> Customers may switch from monthly to annual billing at any time (prorated difference charged immediately) or from annual to monthly at the end of the current billing period. Customers may switch between cloud and self-hosted deployment at any time by contacting support.</p>
+<p>6.3. <strong>Subscription changes:</strong> Customers may switch from monthly to annual billing at any time (prorated difference invoiced immediately, payable under Article 5) or from annual to monthly at the end of the current billing period. Customers may move between the hosted Service and a self-hosted deployment by contacting support. Data exports available in the application are free of charge. Assistance with such a move (installation, data transfer, configuration) is a service quoted and billed separately.</p>
 
 <h2>Article 7. Right of withdrawal</h2>
-<p>7.1. Since KANAP is a B2B service, the legal right of withdrawal applicable to consumers does not apply.</p>
-<p>7.2. For customers who qualify as consumers (micro-enterprises, sole proprietorships), a 14-day right of withdrawal may apply. To exercise, send clear notification to <a href="mailto:admin@kanap.net">admin@kanap.net</a> before the expiration of the 14-day period.</p>
+<p>The Services are offered exclusively to professionals acting for the purposes of their business. No right of withdrawal applies.</p>
 
 <h2>Article 8. Warranty and liability</h2>
 <p>8.1. The Vendor undertakes to provide a Service in accordance with its description.</p>
@@ -231,7 +233,10 @@ const content: LegalContent = {
 <p>8.3. The Vendor's liability is limited to the amount of the subscription paid by the Customer over the preceding 12 months.</p>
 
 <h2>Article 9. Intellectual property</h2>
-<p>The KANAP platform is the exclusive property of the Vendor. The Customer acquires no intellectual property rights over the Platform.</p>
+<p>9.1. The KANAP software is published by the Vendor under the GNU Affero General Public License version 3 (AGPL-3.0). The Customer's rights over its source code are those granted by that licence.</p>
+<p>9.2. The subscription grants the Customer the right to use the hosted Service for its duration. It transfers no intellectual property right.</p>
+<p>9.3. The KANAP name and logo belong to the Vendor. The subscription grants no right over them.</p>
+<p>9.4. The data entered by the Customer remains its property.</p>
 
 <h2>Article 10. Personal data</h2>
 <p>Personal data is processed in accordance with the Vendor's privacy policy.</p>
@@ -240,7 +245,7 @@ const content: LegalContent = {
 <p>11.1. These GTC are governed by French law. All disputes shall be subject to the exclusive jurisdiction of the French courts.</p>
 <p>11.2. In the event of a dispute, the parties agree to seek an amicable resolution before initiating any legal proceedings.</p>
 
-<p class="mk-legal__foot">For any questions, please contact <a href="mailto:admin@kanap.net">admin@kanap.net</a>.</p>
+<p class="mk-legal__foot">For any questions, please contact <a href="mailto:support@kanap.net">support@kanap.net</a>.</p>
 `,
   },
 
@@ -252,22 +257,25 @@ const content: LegalContent = {
     header: {
       eyebrow: 'Legal',
       title: 'Legal notice',
-      lastUpdated: 'Last updated: 7 October 2026',
+      lastUpdated: 'Last updated: 12 October 2026',
     },
     body: `
 <h2>Site publisher</h2>
 <p><strong>KANAP</strong><br/>
-EURL registered with the RCS Saverne under number 939 098 190<br/>
-Share capital: €1,000<br/>
-Registered office: 2, rue du Finhay – 67210 Obernai – France</p>
+EURL with a share capital of €1,000<br/>
+RCS Saverne 939 098 190<br/>
+SIRET: 939 098 190 00019<br/>
+VAT number: FR04939098190 (VAT not applicable, art. 293 B of the French General Tax Code)<br/>
+Registered office: 2, rue du Finhay, 67210 Obernai, France</p>
+<p>Director of publication: Friedrich Eva</p>
 
 <h2>Contact</h2>
-<p>Email: <a href="mailto:admin@kanap.net">admin@kanap.net</a></p>
+<p>Email: <a href="mailto:support@kanap.net">support@kanap.net</a></p>
 
 <h2>Hosting</h2>
 <p>The website kanap.net is hosted by Hetzner Online GmbH, whose registered office is located at:</p>
 <p>Hetzner Online GmbH<br/>
-Industriestr. 25 – 91710 Gunzenhausen – Germany</p>
+Industriestr. 25, 91710 Gunzenhausen, Germany</p>
 <p>The servers are located in Nuremberg, Germany. Traffic to the website passes through Cloudflare, which provides the content delivery network and TLS protection.</p>
 
 <h2>Applicable law and jurisdiction</h2>
