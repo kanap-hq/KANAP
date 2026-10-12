@@ -1,16 +1,34 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { Section, PageHeader } from './sections';
-import { getLocaleFromUrl, DEFAULT_LOCALE } from '../i18n/ui';
+import { getLocaleFromUrl, relocatePath } from '../i18n/ui';
+import type { Locale } from '../i18n/ui';
 import type { LegalDoc } from '../content/legal/types';
 
 interface Props {
   doc: LegalDoc;
 }
 
+// The French version is binding. Other locales point to it.
+const NOTICES: Partial<Record<Locale, { text: string; link: string }>> = {
+  en: {
+    text: 'This document is a translation. The French version is the legally binding one and prevails in case of discrepancy.',
+    link: 'French version',
+  },
+  de: {
+    text: 'Dieses Dokument ist auf Französisch und Englisch verfügbar. Die französische Fassung ist rechtsverbindlich.',
+    link: 'Französische Fassung',
+  },
+  es: {
+    text: 'Este documento está disponible en francés y en inglés. La versión francesa es la jurídicamente vinculante.',
+    link: 'Versión francesa',
+  },
+};
+
 const { doc } = Astro.props;
 const locale = getLocaleFromUrl(Astro.url);
-const showEnglishNotice = locale !== DEFAULT_LOCALE;
+const notice = NOTICES[locale];
+const frenchHref = relocatePath(Astro.url, 'fr');
 ---
 
 <BaseLayout title={doc.meta.title} description={doc.meta.description}>
@@ -21,9 +39,9 @@ const showEnglishNotice = locale !== DEFAULT_LOCALE;
   </PageHeader>
 
   <Section tone="default">
-    {showEnglishNotice && (
+    {notice && (
       <aside class="mk-legal-lang-notice">
-        <p>This document is currently available in English only. A localised translation will follow. The English version is legally binding.</p>
+        <p>{notice.text} <a href={frenchHref} hreflang="fr">{notice.link}</a></p>
       </aside>
     )}
     <article class="mk-legal" set:html={doc.body} />
@@ -41,6 +59,10 @@ const showEnglishNotice = locale !== DEFAULT_LOCALE;
     font-size: 13px;
     line-height: 1.55;
     margin-bottom: 32px;
+  }
+
+  .mk-legal-lang-notice a {
+    color: var(--kanap-teal);
   }
 
   .mk-legal {
