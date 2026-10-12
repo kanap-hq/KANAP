@@ -381,7 +381,15 @@
       "netboxErrors_one": "{{count}} error",
       "netboxErrors_other": "{{count}} errores"
     },
-    "welcome": "Bienvenido"
+    "welcome": "Bienvenido",
+    "budgetSettings": {
+      "customize": "Personalizar",
+      "title": "Configuración del panel de control del presupuesto",
+      "columns": "Columnas de importes",
+      "tenantColumns": "Columnas del cliente",
+      "atLeastOne": "Seleccione al menos una columna de importes.",
+      "saveFailed": "No se pudo guardar la configuración del panel de control."
+    }
   },
   "csv": {
     "exportTitle": "Exportar CSV",

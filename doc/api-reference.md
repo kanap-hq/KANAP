@@ -1745,3 +1745,13 @@ Requires JWT authentication. All endpoints operate on the current user's prefere
 ## Health
 
 - GET `/health` → `{ status: 'ok' }` — liveness probe
+
+### Personal budget dashboard settings
+
+These routes require an authenticated user, as `/dashboard/config` does. The tenant comes from the request context and the user from the access token. Each user reads and writes only their own settings.
+
+- GET `/dashboard/budget-config`: returns `{ tiles: [{ id, enabled, order, config }] }`. Without saved settings, all nine tiles are enabled in this order: `budget`, `hygiene`, `my-budget`, `my-tasks`, `renewals`, `top-lines`, `top-increases`, `cost-centers`, `recent-updates`. Missing tiles receive their defaults when read or saved, so newly introduced tiles appear enabled.
+- PUT `/dashboard/budget-config`: saves the same shape. Unknown or duplicate tile ids return 400. The `budget` tile accepts `config: { columns: null }` (the tenant's enabled columns) or a non-empty array of amount column keys: `budget`, `revision`, `forecast`, `follow_up`, `landing`. Unknown column keys return 400. The UI intersects the saved selection with the tenant's currently enabled columns. `order` sets the tile order; the response numbers it from 1.
+- POST `/dashboard/budget-config/reset`: restores the default budget tiles and tenant columns.
+
+Budget settings are stored in `user_dashboard_config.budget_tiles`, independently of the main dashboard's `tiles`. Saving or resetting either dashboard preserves the other. Existing tenant RLS applies to both columns.

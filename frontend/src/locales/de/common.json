@@ -381,7 +381,15 @@
       "netboxErrors_one": "{{count}} Fehler",
       "netboxErrors_other": "{{count}} Fehler"
     },
-    "welcome": "Willkommen"
+    "welcome": "Willkommen",
+    "budgetSettings": {
+      "customize": "Anpassen",
+      "title": "Einstellungen des Budget-Dashboards",
+      "columns": "Betragsspalten",
+      "tenantColumns": "Spalten des Mandanten",
+      "atLeastOne": "Wählen Sie mindestens eine Betragsspalte.",
+      "saveFailed": "Die Dashboard-Einstellungen konnten nicht gespeichert werden."
+    }
   },
   "csv": {
     "exportTitle": "CSV exportieren",

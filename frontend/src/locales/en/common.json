@@ -381,7 +381,15 @@
       "netboxErrors_one": "{{count}} error",
       "netboxErrors_other": "{{count}} errors"
     },
-    "welcome": "Welcome"
+    "welcome": "Welcome",
+    "budgetSettings": {
+      "customize": "Customize",
+      "title": "Budget dashboard settings",
+      "columns": "Amount columns",
+      "tenantColumns": "Tenant columns",
+      "atLeastOne": "Choose at least one amount column.",
+      "saveFailed": "Could not save the dashboard settings."
+    }
   },
   "csv": {
     "exportTitle": "Export CSV",
