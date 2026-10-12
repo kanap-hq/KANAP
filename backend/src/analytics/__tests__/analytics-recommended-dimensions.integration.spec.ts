@@ -41,16 +41,22 @@ async function testOlderTenantWithEmptyDefault() {
     await ensureDefaultAnalyticsAxis(runner.manager, tenantId);
     await ensureCapexDimensions(runner.manager, tenantId);
     assert.deepEqual(await presentCodes(runner, tenantId), [
-      ['cost_pool', false, true], ['it_tower', false, true], ['purpose', false, true], ['priority', true, true], ['recurrence', false, false],
-    ], 'its priority is there by code; the recurrence is the optional pack');
+      ['cost_pool', false, true], ['it_tower', false, true], ['purpose', true, true], ['priority', true, true], ['recurrence', false, false],
+    ], 'its priority is there by code, its investment type stands for the purpose; the recurrence is the optional pack');
+    const { items } = await axes.recommended(ctx);
+    assert.equal(items.find((item) => item.code === 'purpose')?.name, 'Investment type', 'the dimension that stands for it');
 
     const first = await axes.addRecommended({ codes: ['cost_pool', 'it_tower', 'purpose', 'priority'], language: 'fr' }, ctx);
     assert.deepEqual(summary(first.created), [
       ['cost_pool', 'default', 'Nature de coût', 8],
       ['it_tower', 'it_tower', 'Domaine IT', 11],
-      ['purpose', 'purpose', 'Motif', 7],
-    ], 'the default dimension is named and filled; the others are created');
-    assert.deepEqual(summary(first.existing), [['priority', 'priority', 'Priority', 0]], 'the CAPEX priority is kept as it is');
+    ], 'the default dimension is named and filled; the IT tower is created');
+    assert.deepEqual(summary(first.existing), [
+      ['purpose', 'investment_type', 'Investment type', 0],
+      ['priority', 'priority', 'Priority', 0],
+    ], 'the CAPEX investment type and priority are kept as they are; no purpose next to the investment type');
+    const [purposeCount] = await runner.query(`SELECT count(*)::int AS n FROM analytics_axes WHERE tenant_id = $1 AND code = 'purpose'`, [tenantId]);
+    assert.equal(purposeCount.n, 0);
 
     const [defaultAxis] = await runner.query(
       `SELECT name, description, applies_to, required, (SELECT count(*)::int FROM analytics_categories c WHERE c.axis_id = a.id) AS n
@@ -74,7 +80,7 @@ async function testOlderTenantWithEmptyDefault() {
       [tenantId],
     );
     assert.deepEqual(audit.map((row: any) => [row.table_name, row.action, row.n]), [
-      ['analytics_axes', 'create', 2], ['analytics_axes', 'update', 1], ['analytics_categories', 'create', 26],
+      ['analytics_axes', 'create', 1], ['analytics_axes', 'update', 1], ['analytics_categories', 'create', 19],
     ]);
 
     const second = await axes.addRecommended({ codes: ['cost_pool', 'it_tower', 'purpose', 'priority'], language: 'fr' }, ctx);

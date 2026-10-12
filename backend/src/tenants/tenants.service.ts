@@ -11,7 +11,7 @@ import { DEFAULT_TASK_TYPES } from '../portfolio/portfolio-task-type.entity';
 import { DEFAULT_EMPLOYMENT_TYPES } from '../portfolio/portfolio-employment-type.entity';
 import { seedManagedDocsKnowledgeAssets } from '../knowledge/integrated-document-seed';
 import { ensureDefaultAnalyticsAxis } from '../analytics/analytics-axes.util';
-import { ensureRecommendedDimensions, SeedLanguage } from '../analytics/recommended-dimensions.seed';
+import { ensureRecommendedDimensions, SeedLanguage, TENANT_LANGUAGE_METADATA_KEY, tenantSeedLanguage } from '../analytics/recommended-dimensions.seed';
 
 // Built-in roles configuration for newly created tenants.
 const BUILT_IN_ROLES: Array<{
@@ -367,7 +367,10 @@ export class TenantsService {
     );
   }
 
-  /** `language`: the language of the seeded names (`seedTenantDefaults`), English when absent. */
+  /**
+   * `language`: the language of the seeded names (`seedTenantDefaults`), English when absent,
+   * stored in `metadata.language` of a new tenant. An existing tenant keeps its own.
+   */
   async createTenant(params: { slug: string; name: string; language?: SeedLanguage }, opts?: { manager?: EntityManager }) {
     if (opts?.manager) {
       return this.createWithManager(params, opts.manager);
@@ -384,12 +387,20 @@ export class TenantsService {
     // Ignore tenants that were previously deleted when checking for existing
     const existing = await repo.findOne({ where: { slug, deleted_at: IsNull() } });
     if (existing) {
-      await this.seedTenantDefaults(manager, existing.id, { language: params.language });
+      // An existing tenant keeps its stored language.
+      await this.seedTenantDefaults(manager, existing.id, { language: tenantSeedLanguage(existing.metadata) });
       return existing;
     }
-    const tenant = repo.create({ slug, name: params.name, status: TenantStatus.ACTIVE, metadata: { it_ops: catalogToMetadata(DEFAULT_CLASSIFICATION_CATALOG) } });
+    // The seed language is stored with the tenant: the reset seeds the dimensions in it again.
+    const language = params.language ?? 'en';
+    const tenant = repo.create({
+      slug,
+      name: params.name,
+      status: TenantStatus.ACTIVE,
+      metadata: { it_ops: catalogToMetadata(DEFAULT_CLASSIFICATION_CATALOG), [TENANT_LANGUAGE_METADATA_KEY]: language },
+    });
     const saved = await repo.save(tenant);
-    await this.seedTenantDefaults(manager, saved.id, { language: params.language });
+    await this.seedTenantDefaults(manager, saved.id, { language });
     return saved;
   }
 

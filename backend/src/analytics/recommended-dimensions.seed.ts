@@ -25,6 +25,19 @@ export function resolveSeedLanguage(raw: unknown): SeedLanguage {
   return (SEED_LANGUAGES as readonly string[]).includes(base) ? (base as SeedLanguage) : 'en';
 }
 
+/**
+ * The key of `tenants.metadata` that holds the tenant's seed language: set when the tenant is
+ * created (the browser language at trial activation, `DEFAULT_TENANT_LANGUAGE` at the first
+ * start on-premise), kept by the reset, which seeds the dimensions in it again.
+ */
+export const TENANT_LANGUAGE_METADATA_KEY = 'language';
+
+/** The seed language stored in a tenant's metadata; English when it holds none. */
+export function tenantSeedLanguage(metadata: unknown): SeedLanguage {
+  const value = metadata && typeof metadata === 'object' ? (metadata as Record<string, unknown>)[TENANT_LANGUAGE_METADATA_KEY] : null;
+  return resolveSeedLanguage(value);
+}
+
 export type RecommendedDimensionKey = 'cost_pool' | 'it_tower' | 'purpose' | 'priority' | 'recurrence';
 
 /** Every recommended dimension, in display order. */
@@ -432,9 +445,20 @@ export interface RecommendedDimensionOutcome {
 type Query = (sql: string, params: unknown[]) => Promise<any[]>;
 
 /**
+ * Codes of older dimensions that stand for a recommended one: the investment type of the tenants
+ * created before lot D (`capex-dimensions.seed.ts`) is their purpose, so `purpose` is never
+ * created next to it.
+ */
+export const RECOMMENDED_DIMENSION_EQUIVALENTS: Readonly<Partial<Record<RecommendedDimensionKey, readonly string[]>>> = {
+  purpose: ['investment_type'],
+};
+
+/**
  * The dimension of the tenant that already stands for a recommended dimension, or null. The cost
  * pool is the dimension of code `cost_pool`, or the default dimension when its name is the cost
- * pool's in one of the four languages (the seed named it). The others go by their code.
+ * pool's in one of the four languages (the seed named it). The purpose is the dimension of code
+ * `purpose`, or else `investment_type` (RECOMMENDED_DIMENSION_EQUIVALENTS). The others go by
+ * their code.
  */
 async function findPresent(
   query: Query,
@@ -443,6 +467,10 @@ async function findPresent(
 ): Promise<{ id: string; code: string; name: string | null } | null> {
   const [byCode] = await query(RECOMMENDED_DIMENSION_SQL.findAxis, [tenantId, seed.code]);
   if (byCode) return byCode;
+  for (const code of RECOMMENDED_DIMENSION_EQUIVALENTS[seed.key] ?? []) {
+    const [equivalent] = await query(RECOMMENDED_DIMENSION_SQL.findAxis, [tenantId, code]);
+    if (equivalent) return equivalent;
+  }
   if (seed.key !== 'cost_pool') return null;
   const [found] = await query(
     `SELECT id::text AS id, code, name FROM analytics_axes

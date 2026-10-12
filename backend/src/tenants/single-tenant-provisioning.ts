@@ -1,4 +1,5 @@
 import { DataSource } from 'typeorm';
+import { resolveSeedLanguage, SeedLanguage } from '../analytics/recommended-dimensions.seed';
 import { DefaultChartOutcome, TenantBaselineService } from './tenant-baseline.service';
 import { TenantsService } from './tenants.service';
 
@@ -9,8 +10,18 @@ const DEFAULT_CHART_LOG: Record<DefaultChartOutcome, string> = {
 };
 
 /**
+ * The language of the recommended dimensions a single-tenant installation starts with:
+ * `DEFAULT_TENANT_LANGUAGE` (en, fr, de or es; a locale such as `fr-FR` counts), English otherwise.
+ * Read at the first start only, then stored with the tenant.
+ */
+export function defaultTenantLanguage(env: NodeJS.ProcessEnv = process.env): SeedLanguage {
+  return resolveSeedLanguage(env.DEFAULT_TENANT_LANGUAGE);
+}
+
+/**
  * First start of a single-tenant installation: creates the tenant when no tenant has its slug
- * yet, with the tenant defaults and the default global chart of accounts (the one a cloud tenant
+ * yet, with the tenant defaults (the recommended dimensions in `language`, from
+ * `DEFAULT_TENANT_LANGUAGE`) and the default global chart of accounts (the one a cloud tenant
  * receives at activation), in one transaction. An existing installation is never changed.
  * Returns whether the tenant was created.
  */
@@ -18,7 +29,7 @@ export async function createSingleTenantOnFirstStart(
   dataSource: DataSource,
   tenants: TenantsService,
   baseline: TenantBaselineService,
-  params: { slug: string; name: string },
+  params: { slug: string; name: string; language?: SeedLanguage },
 ): Promise<boolean> {
   const existing = await dataSource.query('SELECT id FROM tenants WHERE slug = $1 LIMIT 1', [params.slug]);
   if (existing?.[0]) return false;

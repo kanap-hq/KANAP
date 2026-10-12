@@ -127,6 +127,23 @@ async function testResetGivesThemBack() {
   }
 }
 
+async function testResetKeepsTheLanguage() {
+  const svc = buildServices();
+  let tenant: Awaited<ReturnType<typeof createActivatedTenant>> | undefined;
+  try {
+    tenant = await createActivatedTenant(svc, { tag: 'recdim-fr', orgName: 'Dimensions Reset FR', language: 'fr' });
+    const languageOf = async () => (await dataSource.query(`SELECT metadata->>'language' AS language FROM tenants WHERE id = $1`, [tenant!.tenantId]))[0].language;
+    assert.equal(await languageOf(), 'fr', 'the seed language is stored with the tenant');
+    assert.deepEqual(await dimensionsOf(tenant.tenantId), starting('fr'));
+    await inTenant(tenant.tenantId, (manager) => manager.query(`UPDATE analytics_axes SET name = 'Tour' WHERE tenant_id = $1 AND code = 'it_tower'`, [tenant!.tenantId]));
+    await svc.reset.reset(tenant.tenantId, tenant.ownerId);
+    assert.equal(await languageOf(), 'fr', 'the reset keeps it');
+    assert.deepEqual(await dimensionsOf(tenant.tenantId), starting('fr'), 'after a reset: the French dimensions again');
+  } finally {
+    await cleanupTenants([tenant?.tenantId]);
+  }
+}
+
 async function rawTenant(tag: string): Promise<string> {
   const tenantId = randomUUID();
   await dataSource.query(
@@ -197,6 +214,7 @@ runSpecs('tenant-recommended-dimensions.integration.spec', [
   testNewTenantInFrench,
   testNewTenantInEnglish,
   testResetGivesThemBack,
+  testResetKeepsTheLanguage,
   testExistingCodeAndTakenName,
   testCapexHelper,
 ]);

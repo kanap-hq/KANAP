@@ -8,6 +8,7 @@ import { Features } from '../../config/features';
 import { catalogToMetadata, DEFAULT_CLASSIFICATION_CATALOG } from '../../it-ops-settings/classification-catalog';
 import { DefaultChartOutcome, TenantBaselineService } from '../../tenants/tenant-baseline.service';
 import { TenantStatus } from '../../tenants/tenant.entity';
+import { TENANT_LANGUAGE_METADATA_KEY, tenantSeedLanguage } from '../../analytics/recommended-dimensions.seed';
 import { deleteStorageObjects, purgeTenantTables, TenantPurgeReport } from './tenant-data-purge';
 import {
   assertTenantResetConfiguration,
@@ -68,7 +69,8 @@ export async function lockTenantReset(manager: EntityManager, tenantId: string):
 /**
  * Brings a cloud tenant back to its state right after trial activation: every tenant table is
  * purged except the kept ones (tenant-reset.inventory.ts), the sample data users (`*.example`
- * e-mails) are removed, the tenant metadata goes back to its defaults, and the starting state
+ * e-mails) are removed, the tenant metadata goes back to its defaults (its sample data state and
+ * seed language kept), and the starting state
  * is created again (TenantBaselineService). The tenant row (name, address, branding, sign-in,
  * billing, status), the real users, the subscription, the AI settings and the history stay.
  * One transaction; the attachments' storage objects are deleted after it commits.
@@ -111,9 +113,9 @@ export class TenantResetService {
     await lockTenantReset(manager, tenantId);
 
     if (Features.SINGLE_TENANT) throwNotAvailableInMode();
-    const [tenant]: Array<{ id: string; slug: string; name: string; status: string; is_system_tenant: boolean | null }> =
+    const [tenant]: Array<{ id: string; slug: string; name: string; status: string; is_system_tenant: boolean | null; metadata: unknown }> =
       await manager.query(
-        `SELECT id, slug, name, status, is_system_tenant FROM tenants WHERE id = $1 FOR UPDATE`,
+        `SELECT id, slug, name, status, is_system_tenant, metadata FROM tenants WHERE id = $1 FOR UPDATE`,
         [tenantId],
       );
     if (!tenant) throw new NotFoundException('Tenant not found');
@@ -132,7 +134,10 @@ export class TenantResetService {
     await this.resetMetadata(manager, tenantId);
 
     const company = await this.baseline.resolveStartingCompany(manager, tenant);
-    const { chartOfAccounts } = await this.baseline.ensureBaseline(manager, tenantId, { ...company, actorId });
+    // The dimensions come back in the tenant's seed language (metadata.language, kept above).
+    const { chartOfAccounts } = await this.baseline.ensureBaseline(
+      manager, tenantId, { ...company, actorId }, { language: tenantSeedLanguage(tenant.metadata) },
+    );
 
     await this.audit.log(
       {
@@ -186,14 +191,18 @@ export class TenantResetService {
    * statement on the column alone: the other columns of the row are never written back.
    */
   private async resetMetadata(manager: EntityManager, tenantId: string) {
+    // Keeps `demo` and the seed language (`language`, recommended-dimensions.seed.ts).
     await manager.query(
       `UPDATE tenants
           SET metadata = jsonb_build_object('it_ops', $2::jsonb)
             || CASE WHEN jsonb_typeof(metadata) = 'object' AND metadata ? 'demo'
                     THEN jsonb_build_object('demo', metadata->'demo')
                     ELSE '{}'::jsonb END
+            || CASE WHEN jsonb_typeof(metadata) = 'object' AND metadata ? $3
+                    THEN jsonb_build_object($3::text, metadata->$3)
+                    ELSE '{}'::jsonb END
         WHERE id = $1`,
-      [tenantId, JSON.stringify(catalogToMetadata(DEFAULT_CLASSIFICATION_CATALOG))],
+      [tenantId, JSON.stringify(catalogToMetadata(DEFAULT_CLASSIFICATION_CATALOG)), TENANT_LANGUAGE_METADATA_KEY],
     );
   }
 }
