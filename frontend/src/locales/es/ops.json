@@ -5,7 +5,6 @@
     "importCsv": "Importar CSV",
     "exportCsv": "Exportar CSV",
     "exportTitle": "Exportar OPEX",
-    "importTitle": "Importar OPEX",
     "columns": {
       "reference": "Ref",
       "productName": "Nombre del producto",
@@ -200,7 +199,6 @@
     "importCsv": "Importar CSV",
     "exportCsv": "Exportar CSV",
     "exportTitle": "Exportar CAPEX",
-    "importTitle": "Importar CAPEX",
     "columns": {
       "description": "Descripción",
       "company": "Empresa",
@@ -244,7 +242,6 @@
       "capexItems": "Partidas CAPEX"
     },
     "editor": {
-      "descriptionRequired": "La descripción es obligatoria",
       "currencyMust3": "La moneda debe tener 3 letras",
       "effectiveStartRequired": "La fecha de inicio efectivo es obligatoria",
       "failedToCreate": "No se pudo crear la partida",
@@ -699,7 +696,6 @@
     "scope": {
       "all": "Todo",
       "label": "Tipo de partida",
-      "all": "Todo",
       "opex": "OPEX",
       "capex": "CAPEX"
     },
@@ -1012,7 +1008,6 @@
       "pieChart": "Gráfico circular",
       "horizontalBarChart": "Gráfico de barras horizontal",
       "company": "Empresa",
-      "itemType": "Tipo de partida",
       "sourceYear": "Año de origen",
       "sourceMetric": "Métrica de origen",
       "destinationYear": "Año de destino",
@@ -1436,6 +1431,7 @@
     "opexLine": "Línea OPEX",
     "capexLine": "Línea CAPEX",
     "exportTitle": "Exportar archivo presupuestario",
+    "importTitle": "Importar líneas presupuestarias",
     "opex": "OPEX",
     "capex": "CAPEX",
     "totalWithCount_one": "Total ({{count}} línea)",

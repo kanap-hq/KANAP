@@ -30,7 +30,7 @@ La página principal muestra una tarjeta para cada informe disponible con una br
 
 ### Elegir el tipo de líneas
 
-**Top partidas**, **Top aumento / disminución**, **Comparación presupuestaria**, **Cuentas de consolidación**, **Dimensiones analíticas**, **Plantilla por mes** y **Coste por ETC** empiezan con las pestañas **Todo**, **OPEX** y **CAPEX**, el primer control de la barra de filtros. **Comparación de columnas presupuestarias** tiene un selector **Tipo de partida** con las mismas tres opciones. Empieza en **Todo** y su elección no se conserva en la dirección de la página.
+**Top partidas**, **Top aumento / disminución**, **Comparación presupuestaria**, **Comparación de columnas presupuestarias**, **Cuentas de consolidación**, **Dimensiones analíticas**, **Plantilla por mes** y **Coste por ETC** empiezan con las pestañas **Todo**, **OPEX** y **CAPEX**, el primer control de la barra de filtros.
 
 - El informe se abre en **Todo**: las líneas OPEX y CAPEX juntas. **OPEX** o **CAPEX** conserva las líneas de ese tipo. Las tres opciones requieren acceso de lectura a las líneas presupuestarias (`budget:reader`). Sin ese acceso, las pestañas aparecen desactivadas.
 - La dirección de la página conserva el tipo elegido (`?scope=all`, `?scope=opex` o `?scope=capex`), de modo que un enlace guardado o compartido se abre en el mismo tipo.
@@ -41,7 +41,7 @@ Los dos informes de contracargo cubren solo las líneas OPEX.
 
 ### Elegir importe o ETC
 
-Los seis informes presupuestarios tienen un selector **Medida**. Está justo después de las pestañas de tipo, o en primer lugar cuando el informe no las tiene. Ofrece **Importe** (por defecto) y **ETC**. Los dos informes de contracargo no tienen medida.
+Los seis informes presupuestarios tienen un selector **Medida**. Está justo después de las pestañas de tipo. Ofrece **Importe** (por defecto) y **ETC**. Los dos informes de contracargo no tienen medida.
 
 Con **ETC**, un informe suma personas en lugar de dinero:
 
@@ -331,7 +331,7 @@ Compare de forma flexible hasta 10 combinaciones de año+columna.
 
 ### Controles
 
-- **Tipo de partida**: **Todo** (por defecto), **OPEX** o **CAPEX**
+- **Tipo de partida**: **Todo**, **OPEX** o **CAPEX** (ver [Elegir el tipo de líneas](#elegir-el-tipo-de-lineas))
 - **Medida**: **Importe** o **ETC** (consulte [Elegir importe o ETC](#elegir-importe-o-etc))
 - **Selecciones**: Cada selección tiene un selector de año y un selector de columna con las columnas presupuestarias visibles. El informe empieza con dos selecciones: la columna por defecto del año actual y la del año siguiente. **Añadir** añade la columna por defecto del año actual, y el icono de borrar elimina una selección. Máximo de 10 selecciones; mínimo de 1.
 - **Agrupación por año** (casilla): Cuando está habilitada y al menos dos años comparten una métrica, cambia a un gráfico de líneas agrupado con una serie por métrica y años en el eje X. Cuando está deshabilitada, muestra un gráfico de líneas plano con cada selección como punto de datos.

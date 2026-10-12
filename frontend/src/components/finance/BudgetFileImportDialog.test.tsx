@@ -47,7 +47,7 @@ const report = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-function renderDialog(props: { canCreateSuppliers?: boolean; onImported?: () => void } = {}) {
+function renderDialog(props: { canCreateSuppliers?: boolean; onImported?: () => void; scope?: 'opex' | 'capex' } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const view = render(
     <ThemeProvider theme={createAppTheme('dark')}>
@@ -55,7 +55,7 @@ function renderDialog(props: { canCreateSuppliers?: boolean; onImported?: () => 
         <BudgetFileImportDialog
           open
           onClose={() => undefined}
-          scope="opex"
+          scope={props.scope ?? 'opex'}
           canCreateSuppliers={props.canCreateSuppliers ?? true}
           onImported={props.onImported}
         />
@@ -72,6 +72,13 @@ const lastParams = () => lastCall()?.[2]?.params;
 
 describe('BudgetFileImportDialog', () => {
   beforeEach(() => post.mockReset());
+
+  it.each(['opex', 'capex'] as const)('titles the dialog for budget lines of both types when the list is on %s', async (scope) => {
+    post.mockResolvedValueOnce({ data: report() });
+    renderDialog({ scope });
+    expect(await screen.findByText('budget.importTitle')).toBeInTheDocument();
+    expect(screen.queryByText(/^(opex|capex)\.importTitle$/)).not.toBeInTheDocument();
+  });
 
   it('checks the file in the screen language and shows the notices and who changed a line', async () => {
     post.mockResolvedValueOnce({ data: report() });

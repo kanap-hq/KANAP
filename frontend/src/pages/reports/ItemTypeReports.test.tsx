@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -282,14 +282,27 @@ it('Comparison defaults to All and switches its aggregate to CAPEX', async () =>
   await waitFor(() => expect(calledUrls()).toContain(CAPEX_AGGREGATE));
 });
 
-it('Compared columns default to All and keep OPEX and CAPEX in their local selector', async () => {
+it('Compared columns default to All and switch their aggregate to CAPEX with the type tabs', async () => {
   renderReport(<BudgetColumnsCompareReport />, '/report');
   await waitFor(() => expect(calledUrls()).toContain(ALL_AGGREGATE));
-  const selector = screen.getByRole('combobox', { name: 'reports.filters.itemType' });
-  expect(selector.textContent).toBe('operations.scope.all');
-  fireEvent.mouseDown(selector);
-  const list = await screen.findByRole('listbox');
-  expect(within(list).getAllByRole('option').map((option) => option.textContent)).toEqual(['operations.scope.all', 'operations.scope.opex', 'operations.scope.capex']);
-  fireEvent.click(within(list).getByRole('option', { name: 'operations.scope.capex' }));
+  expect(screen.getAllByRole('tab').slice(0, 3).map((tab) => tab.textContent))
+    .toEqual(['operations.scope.all', 'operations.scope.opex', 'operations.scope.capex']);
+  expect(screen.getByRole('tab', { name: 'operations.scope.all' })).toHaveAttribute('aria-selected', 'true');
+  fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
   await waitFor(() => expect(calledUrls()).toContain(CAPEX_AGGREGATE));
+  expect(screen.getByRole('tab', { name: 'operations.scope.capex' })).toHaveAttribute('aria-selected', 'true');
+});
+
+it('Compared columns keep the type in the address', async () => {
+  let search = '';
+  function LocationProbe() {
+    search = useLocation().search;
+    return null;
+  }
+  renderReport(<><BudgetColumnsCompareReport /><LocationProbe /></>, '/report?scope=capex');
+  await waitFor(() => expect(calledUrls()).toContain(CAPEX_AGGREGATE));
+  expect(calledUrls()).not.toContain(ALL_AGGREGATE);
+  expect(screen.getByRole('tab', { name: 'operations.scope.capex' })).toHaveAttribute('aria-selected', 'true');
+  fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.opex' }));
+  await waitFor(() => expect(new URLSearchParams(search).get('scope')).toBe('opex'));
 });

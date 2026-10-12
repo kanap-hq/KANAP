@@ -30,7 +30,7 @@ Die Startseite zeigt eine Karte für jeden verfügbaren Bericht mit einer kurzen
 
 ### Typ der Zeilen wählen
 
-**Top-Positionen**, **Top Anstieg / Rückgang**, **Budgetvergleich**, **Konsolidierungskonten**, **Analysedimensionen**, **Personal nach Monat** und **Kosten pro VZÄ** beginnen jeweils mit den Tabs **Alle**, **OPEX** und **CAPEX**, dem ersten Steuerelement der Filterleiste. **Budgetspaltenvergleich** hat eine Auswahl **Positionstyp** mit denselben drei Möglichkeiten. Sie beginnt auf **Alle**, und ihre Wahl wird nicht in der Seitenadresse gespeichert.
+**Top-Positionen**, **Top Anstieg / Rückgang**, **Budgetvergleich**, **Budgetspaltenvergleich**, **Konsolidierungskonten**, **Analysedimensionen**, **Personal nach Monat** und **Kosten pro VZÄ** beginnen jeweils mit den Tabs **Alle**, **OPEX** und **CAPEX**, dem ersten Steuerelement der Filterleiste.
 
 - Der Bericht öffnet sich auf **Alle**: die OPEX- und CAPEX-Zeilen zusammen. **OPEX** oder **CAPEX** behält die Zeilen dieses Typs. Alle drei erfordern Lesezugriff auf Budgetpositionen (`budget:reader`). Ohne diesen Zugriff sind die Tabs deaktiviert.
 - Die Seitenadresse behält den gewählten Typ (`?scope=all`, `?scope=opex` oder `?scope=capex`). Ein gespeicherter oder geteilter Link öffnet sich daher auf demselben Typ.
@@ -41,7 +41,7 @@ Die beiden Leistungsverrechnungsberichte decken nur OPEX-Zeilen ab.
 
 ### Betrag oder VZÄ wählen
 
-Die sechs Budgetberichte haben eine Auswahl **Messgröße**. Sie steht direkt nach den Tabs für den Typ, oder an erster Stelle, wenn der Bericht keine hat. Sie bietet **Betrag** (Standard) und **VZÄ**. Die beiden Leistungsverrechnungsberichte haben keine Messgröße.
+Die sechs Budgetberichte haben eine Auswahl **Messgröße**. Sie steht direkt nach den Tabs für den Typ. Sie bietet **Betrag** (Standard) und **VZÄ**. Die beiden Leistungsverrechnungsberichte haben keine Messgröße.
 
 Mit **VZÄ** summiert ein Bericht Personen statt Geld:
 
@@ -331,7 +331,7 @@ Vergleichen Sie flexibel bis zu 10 Jahr+Spalten-Kombinationen.
 
 ### Steuerungen
 
-- **Positionstyp**: **Alle** (Standard), **OPEX** oder **CAPEX**
+- **Positionstyp**: **Alle**, **OPEX** oder **CAPEX** (siehe [Typ der Zeilen wählen](#typ-der-zeilen-wahlen))
 - **Messgröße**: **Betrag** oder **VZÄ** (siehe [Betrag oder VZÄ wählen](#betrag-oder-vza-wahlen))
 - **Auswahlen**: Jede Auswahl hat eine Jahrauswahl und eine Spaltenauswahl mit den angezeigten Budgetspalten. Der Bericht beginnt mit zwei Auswahlen: der Standardspalte des aktuellen Jahres und des nächsten Jahres. **Hinzufügen** fügt die Standardspalte des aktuellen Jahres hinzu, und das Löschsymbol entfernt eine Auswahl. Maximum von 10 Auswahlen; Minimum von 1.
 - **Jahresgruppierung** (Kontrollkästchen): Wenn aktiviert und mindestens zwei Jahre eine Kennzahl teilen, wechselt zu einem gruppierten Liniendiagramm mit einer Serie pro Kennzahl und Jahren auf der X-Achse. Wenn deaktiviert, zeigt ein flaches Liniendiagramm mit jeder Auswahl als Datenpunkt.

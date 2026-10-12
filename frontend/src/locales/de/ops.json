@@ -5,7 +5,6 @@
     "importCsv": "CSV importieren",
     "exportCsv": "CSV exportieren",
     "exportTitle": "OPEX exportieren",
-    "importTitle": "OPEX importieren",
     "columns": {
       "reference": "Ref",
       "productName": "Produktname",
@@ -200,7 +199,6 @@
     "importCsv": "CSV importieren",
     "exportCsv": "CSV exportieren",
     "exportTitle": "CAPEX exportieren",
-    "importTitle": "CAPEX importieren",
     "columns": {
       "description": "Beschreibung",
       "company": "Unternehmen",
@@ -244,7 +242,6 @@
       "capexItems": "CAPEX-Positionen"
     },
     "editor": {
-      "descriptionRequired": "Beschreibung ist erforderlich",
       "currencyMust3": "Die Währung muss aus 3 Buchstaben bestehen",
       "effectiveStartRequired": "Gültigkeitsbeginn ist erforderlich",
       "failedToCreate": "Position konnte nicht erstellt werden",
@@ -699,7 +696,6 @@
     "scope": {
       "all": "Alle",
       "label": "Positionstyp",
-      "all": "Alle",
       "opex": "OPEX",
       "capex": "CAPEX"
     },
@@ -1012,7 +1008,6 @@
       "pieChart": "Kreisdiagramm",
       "horizontalBarChart": "Horizontales Balkendiagramm",
       "company": "Unternehmen",
-      "itemType": "Positionstyp",
       "sourceYear": "Quelljahr",
       "sourceMetric": "Quellmetrik",
       "destinationYear": "Zieljahr",
@@ -1436,6 +1431,7 @@
     "opexLine": "OPEX-Zeile",
     "capexLine": "CAPEX-Zeile",
     "exportTitle": "Budgetdatei exportieren",
+    "importTitle": "Budgetzeilen importieren",
     "opex": "OPEX",
     "capex": "CAPEX",
     "totalWithCount_one": "Gesamt ({{count}} Zeile)",

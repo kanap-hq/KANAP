@@ -30,7 +30,7 @@ La page d'accueil affiche une carte par rapport disponible avec une courte descr
 
 ### Choisir le type de lignes
 
-**Top postes**, **Top hausse / baisse**, **Comparaison budgétaire**, **Comptes de consolidation**, **Dimensions analytiques**, **Effectifs par mois** et **Coût par ETP** commencent chacun par des onglets **Tous**, **OPEX** et **CAPEX**, la première commande de la barre de filtres. **Comparaison de colonnes budgétaires** a un sélecteur **Type de poste** avec les trois mêmes choix. Il démarre sur **Tous**, et son choix n'est pas conservé dans l'adresse de la page.
+**Top postes**, **Top hausse / baisse**, **Comparaison budgétaire**, **Comparaison de colonnes budgétaires**, **Comptes de consolidation**, **Dimensions analytiques**, **Effectifs par mois** et **Coût par ETP** commencent chacun par des onglets **Tous**, **OPEX** et **CAPEX**, la première commande de la barre de filtres.
 
 - Le rapport s'ouvre sur **Tous** : les lignes OPEX et CAPEX ensemble. **OPEX** ou **CAPEX** garde les lignes de ce type. Les trois demandent l'accès en lecture aux lignes budgétaires (`budget:reader`). Sans cet accès, les onglets sont désactivés.
 - L'adresse de la page conserve le type choisi (`?scope=all`, `?scope=opex` ou `?scope=capex`) : un lien enregistré en favori ou partagé s'ouvre sur le même type.
@@ -41,7 +41,7 @@ Les deux rapports de refacturation couvrent uniquement les lignes OPEX.
 
 ### Choisir le montant ou les ETP
 
-Les six rapports budgétaires ont un sélecteur **Mesure**. Il se trouve juste après les onglets de type, ou en premier quand le rapport n'en a pas. Il propose **Montant** (par défaut) et **ETP**. Les deux rapports de refacturation n'ont pas de mesure.
+Les six rapports budgétaires ont un sélecteur **Mesure**. Il se trouve juste après les onglets de type. Il propose **Montant** (par défaut) et **ETP**. Les deux rapports de refacturation n'ont pas de mesure.
 
 Avec **ETP**, un rapport additionne des personnes au lieu de montants :
 
@@ -331,7 +331,7 @@ Comparez de manière flexible jusqu'à 10 combinaisons année+colonne.
 
 ### Contrôles
 
-- **Type de poste** : **Tous** (par défaut), **OPEX** ou **CAPEX**
+- **Type de poste** : **Tous**, **OPEX** ou **CAPEX** (voir [Choisir le type de lignes](#choisir-le-type-de-lignes))
 - **Mesure** : **Montant** ou **ETP** (voir [Choisir le montant ou les ETP](#choisir-le-montant-ou-les-etp))
 - **Sélections** : Chaque sélection a un sélecteur d'année et un sélecteur de colonne avec les colonnes budgétaires affichées. Le rapport démarre avec deux sélections : la colonne par défaut de l'année en cours et celle de l'année suivante. **Ajouter** ajoute la colonne par défaut de l'année en cours, et l'icône de suppression retire une sélection. Maximum 10 sélections ; minimum 1.
 - **Regroupement par année** (case à cocher) : Lorsque activé et qu'au moins deux années partagent une métrique, bascule vers un graphique en courbe groupé avec une série par métrique et les années sur l'axe X. Lorsque désactivé, affiche un graphique en courbe plat avec chaque sélection comme point de données.

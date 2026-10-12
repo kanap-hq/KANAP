@@ -187,7 +187,7 @@ export default function BudgetFileImportDialog({
     <KanapDialog
       open={open}
       onClose={onClose}
-      title={t(scope === 'opex' ? 'opex.importTitle' : 'capex.importTitle')}
+      title={t('budget.importTitle')}
       onSave={onSave}
       saveLabel={loaded ? t(`${K}done`) : t(`${K}load`)}
       saveDisabled={!loaded && (!file || !report?.ok || nothingToLoad || busy || failure?.kind === 'stale')}

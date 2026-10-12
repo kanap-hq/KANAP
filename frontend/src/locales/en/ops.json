@@ -5,7 +5,6 @@
     "importCsv": "Import CSV",
     "exportCsv": "Export CSV",
     "exportTitle": "Export OPEX",
-    "importTitle": "Import OPEX",
     "columns": {
       "reference": "Ref",
       "productName": "Product name",
@@ -200,7 +199,6 @@
     "importCsv": "Import CSV",
     "exportCsv": "Export CSV",
     "exportTitle": "Export CAPEX",
-    "importTitle": "Import CAPEX",
     "columns": {
       "description": "Description",
       "company": "Company",
@@ -244,7 +242,6 @@
       "capexItems": "CAPEX items"
     },
     "editor": {
-      "descriptionRequired": "Description is required",
       "currencyMust3": "Currency must be 3 letters",
       "effectiveStartRequired": "Effective start is required",
       "failedToCreate": "Failed to create item",
@@ -699,7 +696,6 @@
     "scope": {
       "all": "All",
       "label": "Item type",
-      "all": "All",
       "opex": "OPEX",
       "capex": "CAPEX"
     },
@@ -1012,7 +1008,6 @@
       "pieChart": "Pie chart",
       "horizontalBarChart": "Horizontal bar chart",
       "company": "Company",
-      "itemType": "Item type",
       "sourceYear": "Source year",
       "sourceMetric": "Source metric",
       "destinationYear": "Destination year",
@@ -1436,6 +1431,7 @@
     "opexLine": "OPEX line",
     "capexLine": "CAPEX line",
     "exportTitle": "Export budget file",
+    "importTitle": "Import budget lines",
     "opex": "OPEX",
     "capex": "CAPEX",
     "totalWithCount_one": "Total ({{count}} line)",

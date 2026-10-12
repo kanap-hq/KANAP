@@ -30,7 +30,7 @@ The landing page shows a card for each available report with a short description
 
 ### Choosing the type of lines
 
-**Top items**, **Top increase / decrease**, **Budget comparison**, **Consolidation accounts**, **Analytics dimensions**, **Staffing by month** and **Cost per FTE** each start with **All**, **OPEX** and **CAPEX** tabs, the first control of the filter bar. **Budget column comparison** has an **Item type** select with the same three choices. It starts on **All** and its choice is not kept in the page address.
+**Top items**, **Top increase / decrease**, **Budget comparison**, **Budget column comparison**, **Consolidation accounts**, **Analytics dimensions**, **Staffing by month** and **Cost per FTE** each start with **All**, **OPEX** and **CAPEX** tabs, the first control of the filter bar.
 
 - The report opens on **All**: the OPEX and CAPEX lines together. **OPEX** or **CAPEX** keeps the lines of that type. All three need read access to budget lines (`budget:reader`). Without it, the tabs are disabled.
 - The page address keeps the chosen type (`?scope=all`, `?scope=opex` or `?scope=capex`), so a bookmarked or shared link opens on the same type.
@@ -41,7 +41,7 @@ The two chargeback reports cover OPEX lines only.
 
 ### Choosing amount or FTE
 
-The six budget reports have a **Measure** select. It sits right after the type tabs, or first when the report has none. It offers **Amount** (the default) and **FTE**. The two chargeback reports have no measure.
+The six budget reports have a **Measure** select. It sits right after the type tabs. It offers **Amount** (the default) and **FTE**. The two chargeback reports have no measure.
 
 With **FTE**, a report sums people instead of money:
 
@@ -331,7 +331,7 @@ Flexibly compare up to 10 year+column combinations.
 
 ### Controls
 
-- **Item type**: **All** (the default), **OPEX** or **CAPEX**
+- **Item type**: **All**, **OPEX** or **CAPEX** (see [Choosing the type of lines](#choosing-the-type-of-lines))
 - **Measure**: **Amount** or **FTE** (see [Choosing amount or FTE](#choosing-amount-or-fte))
 - **Selections**: Each selection has a year picker and a column picker with the shown budget columns. The report starts with two selections: the default column of the current year and of next year. **Add** adds the default column of the current year, and the delete icon removes a selection. Maximum of 10 selections; minimum of 1.
 - **Year grouping** (checkbox): When enabled and at least two years share a metric, switches to a grouped line chart with one series per metric and years on the X axis. When disabled, shows a flat line chart with each selection as a data point.
