@@ -17,9 +17,12 @@ import {
   isLinesResult,
   LinesAmountsPayload,
   recordPayloadRoundInputs,
+  RoundInputsContext,
   versionRoundInputs,
   writeLinesPayload,
 } from './round-inputs.util';
+import { isRestorePayload, isRestoreResult, recordRestore, RestoreAmountsPayload, writeRestorePayload } from './budget-column-restore';
+import { CopyAmountsPayload, isCopyPayload, isCopyResult, recordColumnCopy, writeCopyPayload } from './budget-line-copy';
 
 type AnnualPayload = {
   kind: 'annual';
@@ -68,16 +71,22 @@ export class SpendAmountsService {
     private readonly freeze: FreezeService,
   ) {}
 
+  /**
+   * Every write of the budget tab, the API and the AI (`annual`, `quarterly`, `monthly`, `lines`).
+   * `restore` (`budget-column-restore.ts`) and `copy` (`budget-line-copy.ts`) are the budget tab's
+   * own; the AI never sends them (its payloads are rebuilt from annual, quarterly and monthly).
+   */
   async bulkUpsert(
     versionId: string,
-    payload: AnnualPayload | QuarterlyPayload | MonthlyPayload | LinesAmountsPayload,
+    payload: AnnualPayload | QuarterlyPayload | MonthlyPayload | LinesAmountsPayload | RestoreAmountsPayload | CopyAmountsPayload,
     userId?: string | null,
     opts?: { manager?: EntityManager },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     // Lock order (`budget-locks.ts`): the line, then the version, before any month; read again under the locks.
     const tenantId = await currentTenantId(mg);
-    if (!(await lockVersionWithLine(mg, this.nature, tenantId, versionId))) throw new NotFoundException('Version not found');
+    const line = await lockVersionWithLine(mg, this.nature, tenantId, versionId);
+    if (!line) throw new NotFoundException('Version not found');
     const version = await mg.getRepository(SpendVersion).findOne({ where: { id: versionId, tenant_id: tenantId } });
     if (!version) throw new NotFoundException('Version not found');
 
@@ -87,15 +96,22 @@ export class SpendAmountsService {
     const beforeWrite = budgetBaseCheck(mg, this.nature, version, (payload as { base?: unknown } | null)?.base);
     const ctx = { manager: mg, freeze: this.freeze, scope: this.nature, version, beforeWrite };
     // Lines resolve their calendars under the tenant and replace the months of the columns they name.
-    const result = isLinesPayload(payload) ? await writeLinesPayload(ctx, payload) : await writeAmountsPayload(ctx, payload);
+    const result = isLinesPayload(payload) ? await writeLinesPayload(ctx, payload)
+      : isRestorePayload(payload) ? await writeRestorePayload(ctx, payload)
+        : isCopyPayload(payload) ? await writeCopyPayload(ctx, line.itemId, payload)
+          : await writeAmountsPayload(ctx, payload);
     const { before, after } = result;
 
     // Removing the lines writes no amount: nothing to audit here.
     if (after.length > 0) {
       // Keyed by the version: the budget tab's conflicts read who changed a column from here.
-      await this.audit.log({ table: auditTableOf(this.nature, 'spend_amounts'), recordId: version.id, action: 'update', before, after, userId }, { manager: mg });
+      const action = isRestoreResult(result) ? 'restored' : 'update';
+      await this.audit.log({ table: auditTableOf(this.nature, 'spend_amounts'), recordId: version.id, action, before, after, userId }, { manager: mg });
     }
-    await recordPayloadRoundInputs({ manager: mg, scope: this.nature, version, userId: userId ?? null, audit: this.audit }, result);
+    const rctx: RoundInputsContext = { manager: mg, scope: this.nature, version, userId: userId ?? null, audit: this.audit };
+    if (isRestoreResult(result)) await recordRestore(rctx, result.restore);
+    else if (isCopyResult(result)) await recordColumnCopy(rctx, result.copy);
+    else await recordPayloadRoundInputs(rctx, result);
 
     const round_inputs = await versionRoundInputs(mg, this.nature, version);
     // A lines write also says when a disabled calendar was kept.
@@ -103,7 +119,13 @@ export class SpendAmountsService {
     const items = await readYearAmounts(mg, this.nature, version);
     // The version's counter after this write: the tab's own save is not "changed elsewhere" (lot 3G).
     const budget_rev = await readVersionBudgetRev(mg, this.nature, version);
-    return isLinesResult(result)
+    if (isCopyResult(result)) {
+      const { prorated, fromLines, calendarIssues } = result.copy;
+      // What the copy did beyond the months: source months outside the line's dates left out, the
+      // lines followed, disabled calendars still used.
+      return { updated: after.length, round_inputs, items, budget_rev, copy: { prorated, from_lines: fromLines, calendar_issues: calendarIssues } };
+    }
+    return !isRestoreResult(result) && isLinesResult(result)
       ? { updated: after.length, round_inputs, items, budget_rev, warnings: result.lines.warnings }
       : { updated: after.length, round_inputs, items, budget_rev };
   }

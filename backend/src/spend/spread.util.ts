@@ -13,10 +13,11 @@ import { parseDecimalLiteral } from '../common/decimal';
  * −0.07 is 0 × 11 and −0.07 in December.
  *
  * A spread may be limited to a period (a window). A month is active when the
- * period covers its 15th, both bounds inclusive; the other months get zero,
- * the weights of the active months are renormalised over their own sum and the
- * cents left over go to the last active month with a weight (of the year, or
- * of the quarter).
+ * period covers its 15th, both bounds inclusive; a period of one day ("at a
+ * date", start = end) counts the month of that date (`periodMonths`). The
+ * other months get zero, the weights of the active months are renormalised
+ * over their own sum and the cents left over go to the last active month with
+ * a weight (of the year, or of the quarter).
  */
 
 /** A spread input the caller must correct (bad period, no month counts…): the services answer 400. */
@@ -71,8 +72,22 @@ export function activeMonths(year: number, start?: string | null, end?: string |
   return months;
 }
 
+/**
+ * The months (1..12) a period counts: those whose 15th it covers
+ * (`activeMonths`); a period of one day (start = end, "at a date") counts the
+ * month of that date, whatever its day. The rule of the spreads of a total
+ * and of a line bought once on one date (`costing.util.ts`). The validity of
+ * a line and the lines counted per month keep the 15th alone. Same refusals
+ * as `activeMonths`.
+ */
+export function periodMonths(year: number, start?: string | null, end?: string | null): number[] {
+  const months = activeMonths(year, start, end);
+  if (months.length > 0 || start == null || end == null || start.trim() !== end.trim()) return months;
+  return [Number(start.trim().slice(5, 7))];
+}
+
 function windowMonths(year: number, window: SpreadWindow): number[] {
-  const months = activeMonths(year, window.start, window.end);
+  const months = periodMonths(year, window.start, window.end);
   if (months.length === 0) throw new SpreadInputError(NO_ACTIVE_MONTH_MESSAGE);
   return months;
 }
