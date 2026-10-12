@@ -2,6 +2,7 @@ import React from 'react';
 import { Autocomplete, Box, CircularProgress, TextField } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
+import OptionWithHint from './OptionWithHint';
 import api from '../../api';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
@@ -109,20 +110,12 @@ const ServerSelect: React.FC<ServerSelectProps> = ({
       onInputChange={(_, v) => setInputValue(v)}
       getOptionLabel={(option) => (option.is_cluster ? `${t('selects.cluster')} ${option.name}` : option.name)}
       renderOption={(props, option) => (
-        <li {...props} key={option.id}>
-          <div>
-            <div className="kanap-autocomplete-option-primary">
-              {option.is_cluster ? `${t('selects.cluster')} ` : ''}
-              {option.name}
-            </div>
-            <div className="kanap-autocomplete-option-secondary">
-              {option.environment?.toUpperCase()} · {option.kind}
-              {option.is_cluster ? ' · cluster' : ''}
-              {' · '}
-              {option.provider}
-            </div>
-          </div>
-        </li>
+        <OptionWithHint
+          key={option.id}
+          optionProps={props}
+          label={`${option.is_cluster ? `${t('selects.cluster')} ` : ''}${option.name}`}
+          hint={[option.environment?.toUpperCase(), option.kind, option.provider].filter(Boolean).join(' · ')}
+        />
       )}
       ListboxProps={naked ? { sx: drawerAutocompleteListboxSx } : undefined}
       renderInput={(params) => (

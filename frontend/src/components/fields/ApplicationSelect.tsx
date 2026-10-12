@@ -3,6 +3,7 @@ import { Autocomplete, Box, CircularProgress, TextField } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import OptionWithHint from './OptionWithHint';
 import api from '../../api';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
@@ -95,14 +96,12 @@ const ApplicationSelect = React.forwardRef<HTMLInputElement, ApplicationSelectPr
       onChange={(_, newValue) => onChange(newValue?.id || null)}
       getOptionLabel={(option) => option.name}
       renderOption={(props, option) => (
-        <li {...props} key={option.id}>
-          <div>
-            <div style={{ fontWeight: 500 }}>{option.name}</div>
-            <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>
-              {option.lifecycle || '-'} / {option.criticality || '-'}
-            </div>
-          </div>
-        </li>
+        <OptionWithHint
+          key={option.id}
+          optionProps={props}
+          label={option.name}
+          hint={[option.lifecycle, option.criticality].filter(Boolean).join(' · ')}
+        />
       )}
       filterOptions={(options, { inputValue }) => {
         const term = inputValue.toLowerCase();
