@@ -191,12 +191,13 @@
     "selectTemplate": "Select template",
     "useTemplate": "Use template",
     "noTemplatesAvailable": "No published templates are available.",
-    "newLine": "New line",
+    "newOpexLine": "New OPEX line",
+    "newCapexLine": "New CAPEX line",
+    "newContract": "New contract",
     "newOpex": "New OPEX",
     "newCapex": "New CAPEX",
     "recentUpdates": "Recent updates",
     "noRecentUpdates": "No recent updates",
-    "quickActions": "Quick actions",
     "budgetSnapshot": "Budget",
     "opexSnapshot": "OPEX snapshot",
     "capexSnapshot": "CAPEX snapshot",
@@ -213,11 +214,13 @@
       "noBudgetNextYear": "No {{column}} for next year",
       "accountOutsideChart": "Account not in the company's chart"
     },
-    "topItemsY": "Top items ({{column}}, Y)",
-    "topIncreasesYvsYminus1": "Top increases ({{column}}, Y vs Y-1)",
+    "topItems": "Top items",
+    "columnY": "{{column}}, Y",
+    "topIncreases": "Top increases",
+    "columnYvsYminus1": "{{column}}, Y vs Y-1",
     "noIncreases": "No increases",
     "myBudget": {
-      "title": "My budget ({{column}}, Y)",
+      "title": "My budget",
       "roles": {
         "itOwner": "As IT owner",
         "businessOwner": "As business owner",
@@ -225,9 +228,10 @@
       },
       "lineCount_one": "{{count}} line",
       "lineCount_other": "{{count}} lines",
-      "none": "No budget lines in your name"
+      "none": "No budget lines in your name",
+      "myLines": "My lines"
     },
-    "byCostCenterY": "By cost center ({{column}}, Y)",
+    "byCostCenter": "By cost center",
     "noCostCenter": "No cost center",
     "settings": {
       "title": "Dashboard settings",

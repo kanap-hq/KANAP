@@ -191,12 +191,13 @@
     "selectTemplate": "Sélectionner un modèle",
     "useTemplate": "Utiliser le modèle",
     "noTemplatesAvailable": "Aucun modèle publié n'est disponible.",
-    "newLine": "Nouvelle ligne",
+    "newOpexLine": "Nouvelle ligne OPEX",
+    "newCapexLine": "Nouvelle ligne CAPEX",
+    "newContract": "Nouveau contrat",
     "newOpex": "Nouvel OPEX",
     "newCapex": "Nouveau CAPEX",
     "recentUpdates": "Mises à jour récentes",
     "noRecentUpdates": "Aucune mise à jour récente",
-    "quickActions": "Actions rapides",
     "budgetSnapshot": "Budget",
     "opexSnapshot": "Aperçu OPEX",
     "capexSnapshot": "Aperçu CAPEX",
@@ -213,11 +214,13 @@
       "noBudgetNextYear": "Sans {{column}} l'an prochain",
       "accountOutsideChart": "Compte hors du plan de la société"
     },
-    "topItemsY": "Top postes ({{column}}, A)",
-    "topIncreasesYvsYminus1": "Plus fortes hausses ({{column}}, A vs A-1)",
+    "topItems": "Top postes",
+    "columnY": "{{column}}, A",
+    "topIncreases": "Plus fortes hausses",
+    "columnYvsYminus1": "{{column}}, A vs A-1",
     "noIncreases": "Aucune hausse",
     "myBudget": {
-      "title": "Mon budget ({{column}}, A)",
+      "title": "Mon budget",
       "roles": {
         "itOwner": "Comme responsable IT",
         "businessOwner": "Comme responsable métier",
@@ -225,9 +228,10 @@
       },
       "lineCount_one": "{{count}} ligne",
       "lineCount_other": "{{count}} lignes",
-      "none": "Aucune ligne budgétaire à votre nom"
+      "none": "Aucune ligne budgétaire à votre nom",
+      "myLines": "Mes lignes"
     },
-    "byCostCenterY": "Par centre de coûts ({{column}}, A)",
+    "byCostCenter": "Par centre de coûts",
     "noCostCenter": "Sans centre de coûts",
     "settings": {
       "title": "Paramètres du tableau de bord",

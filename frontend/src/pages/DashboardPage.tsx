@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useMemo, useState } from 'react';
-import { Box, Grid, Typography, Stack, Button, Skeleton, Divider, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import { Box, Grid, Typography, Stack, Button, Divider, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import AddIcon from '@mui/icons-material/Add';
 import { getDotColor } from '../utils/statusColors';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -33,6 +34,9 @@ import { ACTIVE_TASK_STATUSES } from './tasks/task.constants';
 import { useBudgetAggregate, useBudgetAggregates } from './reports/useBudgetAggregate';
 
 type ServerListResponse<T> = { items: T[]; total: number; page: number; limit: number };
+
+/** The header actions, styled as the main dashboard's quick actions. */
+const QUICK_ACTION_SX = { height: 30, borderRadius: '5px' } as const;
 
 /** A tile row that opens what it names: neutral text, the hover background only. */
 const ROW_LINK_SX = { color: 'inherit', textDecoration: 'none', borderRadius: '5px', mx: -0.5, px: 0.5, '&:hover': { bgcolor: 'kanap.bg.hover' } } as const;
@@ -213,16 +217,47 @@ function myBudgetFilters(profile: ProfileName): Array<{ role: MyBudgetRole; filt
   ];
 }
 
-/** Per role: the Enabled lines (not ended before 1 January) in the user's name and their sum of this year's default column. */
+const MY_TOP_LINES = 3;
+
+type MyLine = { id: string; ref: string | null; path: string; name: string; value: number };
+
+/**
+ * Per role: the Enabled lines (not ended before 1 January) in the user's name and their sum of this
+ * year's default column (the total covers every line), plus the role's three largest lines on that
+ * column. A line in the top three of all roles together is in the top three of each role it holds,
+ * so the three requests give the user's top lines without a request of their own.
+ */
 function useMyBudget(scope: BudgetScope, profile: ProfileName, metric: AmountColumnKey, enabled: boolean) {
   const roles = useMemo(() => myBudgetFilters(profile), [profile]);
-  const requests = useMemo(() => (roles ? roles.map((role) => lineTotalRequest(role.filter, metric)) : null), [roles, metric]);
-  const query = useBudgetAggregates(scope, requests, { enabled });
+  // On the unified list, the type as a filter: there `item_number` is the line's BL number.
+  const requests = useMemo(() => (roles ? roles.map((role) => {
+    const request = lineTotalRequest(scope === 'all' ? role.filter : { ...role.filter, nature: keepValues([scope]) }, metric);
+    request.spec = {
+      ...request.spec,
+      groupBy: ['id', 'product_name', 'item_number'],
+      order: [{ by: 'measure', id: 'value', dir: 'DESC' }],
+      limit: MY_TOP_LINES,
+    };
+    return request;
+  }) : null), [roles, metric, scope]);
+  const query = useBudgetAggregates('all', requests, { enabled });
   const rows = useMemo(
     () => (roles && query.data ? roles.map((role, i) => ({ ...role, ...readLineTotal(query.data![i]) })) : []),
     [roles, query.data],
   );
-  return { rows, isLoading: query.isLoading, isError: query.isError, refetch: query.refetch };
+  const topLines = useMemo(() => {
+    const byId = new Map<string, MyLine>();
+    for (const result of query.data ?? []) {
+      for (const group of result.groups ?? []) {
+        const id = group.keys[0] ?? '';
+        const itemNumber = group.keys[2] != null && group.keys[2] !== '' ? Number(group.keys[2]) : null;
+        const ref = itemNumber != null && Number.isFinite(itemNumber) ? formatItemRef('budget', itemNumber) : null;
+        byId.set(id, { id, ref, path: buildItemPath('budget', ref ?? id), name: group.keys[1] || '\u2014', value: group.values.value ?? 0 });
+      }
+    }
+    return [...byId.values()].sort((a, b) => b.value - a.value).slice(0, MY_TOP_LINES);
+  }, [query.data]);
+  return { rows, topLines, isLoading: query.isLoading, isError: query.isError, refetch: query.refetch };
 }
 
 /** This year's default column by cost center, the five largest (lines without one in the ranking too). */
@@ -340,6 +375,9 @@ export default function DashboardPage() {
   const canCapex = canOpex;
   const canTasks = hasLevel('tasks', 'reader');
   const canContracts = hasLevel('contracts', 'reader');
+  // The creation rights of the budget and contract lists.
+  const canCreateLines = hasLevel('budget', 'manager');
+  const canCreateContracts = hasLevel('contracts', 'manager');
   const { data: myTasks, isLoading: tasksLoading } = useMyTasksSummary(profile?.id, canTasks);
   const { data: nextContract, isLoading: contractsLoading } = useNextContractRenewal(canContracts);
   const readableScopes = (['opex', 'capex'] as const).filter((scope) => (scope === 'opex' ? canOpex : canCapex));
@@ -380,6 +418,9 @@ export default function DashboardPage() {
   const costCentersLoading = costCenters.isLoading || (readableScopes.length > 0 && !budgetColumns.ready);
   const largestCostCenter = Math.max(0, ...costCenters.rows.map((r) => r.value));
 
+  // The tiles on this year's default column name it under their title.
+  const columnY = t('dashboard.columnY', { column: defaultColumn.label });
+
   const openTasks = myTasks?.total ?? 0;
   const taskItems = myTasks?.items || [];
 
@@ -401,7 +442,28 @@ export default function DashboardPage() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <PageHeader title={t('dashboard.overview')} />
+      <PageHeader
+        title={t('dashboard.overview')}
+        actions={(canCreateLines || canCreateContracts) ? (
+          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+            {canCreateLines && (
+              <Button variant="outlined" size="small" startIcon={<AddIcon />} sx={QUICK_ACTION_SX} onClick={() => navigate('/ops/budget/new?nature=opex')}>
+                {t('dashboard.newOpexLine')}
+              </Button>
+            )}
+            {canCreateLines && (
+              <Button variant="outlined" size="small" startIcon={<AddIcon />} sx={QUICK_ACTION_SX} onClick={() => navigate('/ops/budget/new?nature=capex')}>
+                {t('dashboard.newCapexLine')}
+              </Button>
+            )}
+            {canCreateContracts && (
+              <Button variant="outlined" size="small" startIcon={<AddIcon />} sx={QUICK_ACTION_SX} onClick={() => navigate('/ops/contracts/new/overview')}>
+                {t('dashboard.newContract')}
+              </Button>
+            )}
+          </Stack>
+        ) : undefined}
+      />
       <Grid container spacing={3}>
         {canOpex && (
           <Grid item xs={12} lg={8}>
@@ -449,12 +511,65 @@ export default function DashboardPage() {
           </Grid>
         )}
 
+        {/* Data hygiene: the same four checks for each type the user reads */}
+        {readableScopes.length > 0 && (
+          <Grid item xs={12} md={6} lg={4}>
+            <DashboardTile
+              icon="ReportProblemOutlined"
+              title={t('dashboard.dataHygiene')}
+              isLoading={hygieneLoading}
+              isError={hygieneError}
+              onRetry={() => readableScopes.forEach((scope) => { void hygieneByScope[scope].refetch(); })}
+            >
+              <Box sx={{ display: 'grid', gridTemplateColumns: `1fr repeat(${readableScopes.length}, 56px)`, columnGap: 1, rowGap: 0.5, alignItems: 'baseline', mt: 1 }}>
+                <span />
+                {readableScopes.map((scope) => (
+                  <Typography key={scope} sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary', textAlign: 'right' }}>{scopeLabel(scope)}</Typography>
+                ))}
+                {(checks ?? []).map((check) => {
+                  // Next year's check names the tenant's default column.
+                  const name = check.key === 'noBudgetNextYear'
+                    ? t('dashboard.hygiene.noBudgetNextYear', { column: defaultColumn.label })
+                    : t(`dashboard.hygiene.${check.key}`);
+                  return (
+                    <Fragment key={check.key}>
+                      <Typography variant="body2">{name}</Typography>
+                      {readableScopes.map((scope) => {
+                        const count = hygieneByScope[scope].data?.[check.key] ?? 0;
+                        const label = `${name}, ${scopeLabel(scope)}: ${count}`;
+                        // A count opens the list filtered to exactly the lines it counts; none, nothing to open.
+                        return count ? (
+                          <Typography
+                            key={scope}
+                            component={RouterLink}
+                            to={listHref(scope, check.filter)}
+                            variant="body2"
+                            aria-label={label}
+                            sx={{ textAlign: 'right', fontWeight: 500, textDecoration: 'none', color: getDotColor(check.tone, mode), borderRadius: '5px', '&:hover': { bgcolor: 'kanap.bg.hover' } }}
+                          >
+                            {count}
+                          </Typography>
+                        ) : (
+                          <Typography key={scope} variant="body2" aria-label={label} sx={{ textAlign: 'right', fontWeight: 500, color: 'text.secondary' }}>
+                            {count}
+                          </Typography>
+                        );
+                      })}
+                    </Fragment>
+                  );
+                })}
+              </Box>
+            </DashboardTile>
+          </Grid>
+        )}
+
         {/* My budget: the lines in the user's name, per role, each opening the list on that role */}
         {readableScopes.length > 0 && (
           <Grid item xs={12} md={6} lg={4}>
             <DashboardTile
               icon="VerifiedUser"
-              title={t('dashboard.myBudget.title', { column: defaultColumn.label })}
+              title={t('dashboard.myBudget.title')}
+              subtitle={columnY}
               isLoading={myBudgetLoading}
               isError={myBudget.isError}
               onRetry={myBudget.refetch}
@@ -485,6 +600,22 @@ export default function DashboardPage() {
                       </Stack>
                     );
                   })}
+                  {/* The user's three largest lines, whatever the role */}
+                  {myBudget.topLines.length > 0 && (
+                    <>
+                      <Divider sx={{ my: 0.5 }} />
+                      <Typography sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary' }}>{t('dashboard.myBudget.myLines')}</Typography>
+                      {myBudget.topLines.map((line) => (
+                        <Stack key={line.id} component={RouterLink} to={line.path} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
+                          {line.ref && (
+                            <Typography sx={{ fontFamily: 'monospace', fontSize: 11, color: 'kanap.text.secondary', whiteSpace: 'nowrap' }}>{line.ref}</Typography>
+                          )}
+                          <Typography variant="body1" noWrap title={line.name} sx={{ flex: 1, minWidth: 0 }}>{line.name}</Typography>
+                          <Typography variant="body1" sx={{ minWidth: 72, textAlign: 'right' }}>{formatThousandsK(line.value)}</Typography>
+                        </Stack>
+                      ))}
+                    </>
+                  )}
                 </Stack>
               )}
             </DashboardTile>
@@ -543,102 +674,13 @@ export default function DashboardPage() {
           </Grid>
         )}
 
-        {/* Data hygiene: the same four checks for each type the user reads */}
-        {readableScopes.length > 0 && (
-          <Grid item xs={12} md={6} lg={4}>
-            <DashboardTile
-              icon="ReportProblemOutlined"
-              title={t('dashboard.dataHygiene')}
-              isLoading={hygieneLoading}
-              isError={hygieneError}
-              onRetry={() => readableScopes.forEach((scope) => { void hygieneByScope[scope].refetch(); })}
-            >
-              <Box sx={{ display: 'grid', gridTemplateColumns: `1fr repeat(${readableScopes.length}, 56px)`, columnGap: 1, rowGap: 0.5, alignItems: 'baseline', mt: 1 }}>
-                <span />
-                {readableScopes.map((scope) => (
-                  <Typography key={scope} sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary', textAlign: 'right' }}>{scopeLabel(scope)}</Typography>
-                ))}
-                {(checks ?? []).map((check) => {
-                  // Next year's check names the tenant's default column.
-                  const name = check.key === 'noBudgetNextYear'
-                    ? t('dashboard.hygiene.noBudgetNextYear', { column: defaultColumn.label })
-                    : t(`dashboard.hygiene.${check.key}`);
-                  return (
-                    <Fragment key={check.key}>
-                      <Typography variant="body2">{name}</Typography>
-                      {readableScopes.map((scope) => {
-                        const count = hygieneByScope[scope].data?.[check.key] ?? 0;
-                        const label = `${name}, ${scopeLabel(scope)}: ${count}`;
-                        // A count opens the list filtered to exactly the lines it counts; none, nothing to open.
-                        return count ? (
-                          <Typography
-                            key={scope}
-                            component={RouterLink}
-                            to={listHref(scope, check.filter)}
-                            variant="body2"
-                            aria-label={label}
-                            sx={{ textAlign: 'right', fontWeight: 500, textDecoration: 'none', color: getDotColor(check.tone, mode), borderRadius: '5px', '&:hover': { bgcolor: 'kanap.bg.hover' } }}
-                          >
-                            {count}
-                          </Typography>
-                        ) : (
-                          <Typography key={scope} variant="body2" aria-label={label} sx={{ textAlign: 'right', fontWeight: 500, color: 'text.secondary' }}>
-                            {count}
-                          </Typography>
-                        );
-                      })}
-                    </Fragment>
-                  );
-                })}
-              </Box>
-            </DashboardTile>
-          </Grid>
-        )}
-
-        {/* Quick Actions */}
-        <Grid item xs={12} md={6} lg={4}>
-          <DashboardTile icon="Assignment" title={t('dashboard.quickActions')}>
-            <Stack direction="row" spacing={1} sx={{ mt: 1 }} useFlexGap flexWrap="wrap">
-                {hasLevel('budget', 'manager') && (
-                  <Button variant="contained" size="small" onClick={() => navigate('/ops/budget/new')}>{t('dashboard.newLine')}</Button>
-                )}
-              </Stack>
-              {readableScopes.length > 0 && (
-                <>
-                  <Divider sx={{ my: 1 }} />
-                  <Typography variant="subtitle2">{t('dashboard.recentUpdates')}</Typography>
-                  <Stack spacing={0.5} sx={{ mt: 1 }}>
-                    {recentUpdates.map((r) => (
-                      <Stack
-                        key={`${r.scope}-${r.id}`}
-                        component={RouterLink}
-                        to={buildItemPath('budget', r.ref)}
-                        direction="row"
-                        spacing={1}
-                        alignItems="center"
-                        sx={ROW_LINK_SX}
-                      >
-                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>{r.at ? new Date(r.at).toLocaleDateString(locale) : '\u2014'}</Typography>
-                        <Typography sx={{ fontFamily: 'monospace', fontSize: 11, color: 'kanap.text.tertiary' }}>{r.ref.startsWith('BL-') ? r.ref : ''}</Typography>
-                        <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
-                        <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', whiteSpace: 'nowrap' }}>{scopeLabel(r.scope)}</Typography>
-                      </Stack>
-                    ))}
-                    {recentUpdates.length === 0 && (
-                      <Typography variant="body1" color="text.secondary">{t('dashboard.noRecentUpdates')}</Typography>
-                    )}
-                  </Stack>
-                </>
-              )}
-          </DashboardTile>
-        </Grid>
-
         {/* Insights: top items and top increases, OPEX or CAPEX per tile */}
         {readableScopes.length > 0 && (
           <Grid item xs={12} md={6} lg={4}>
             <DashboardTile
               icon="Leaderboard"
-              title={t('dashboard.topItemsY', { column: defaultColumn.label })}
+              title={t('dashboard.topItems')}
+              subtitle={columnY}
               isLoading={topLoading}
               action={(
                 <Stack direction="row" alignItems="center">
@@ -666,7 +708,8 @@ export default function DashboardPage() {
           <Grid item xs={12} md={6} lg={4}>
             <DashboardTile
               icon="TrendingUp"
-              title={t('dashboard.topIncreasesYvsYminus1', { column: defaultColumn.label })}
+              title={t('dashboard.topIncreases')}
+              subtitle={t('dashboard.columnYvsYminus1', { column: defaultColumn.label })}
               isLoading={increasesLoading}
               action={(
                 <Stack direction="row" alignItems="center">
@@ -695,7 +738,8 @@ export default function DashboardPage() {
           <Grid item xs={12} md={6} lg={4}>
             <DashboardTile
               icon="Groups"
-              title={t('dashboard.byCostCenterY', { column: defaultColumn.label })}
+              title={t('dashboard.byCostCenter')}
+              subtitle={columnY}
               isLoading={costCentersLoading}
               isError={costCenters.isError}
               onRetry={costCenters.refetch}
@@ -723,6 +767,35 @@ export default function DashboardPage() {
                 ))}
                 {costCenters.rows.length === 0 && (
                   <Typography variant="body1" color="text.secondary">{t('labels.noData')}</Typography>
+                )}
+              </Stack>
+            </DashboardTile>
+          </Grid>
+        )}
+
+        {/* Recent updates: the last lines edited, both types mixed */}
+        {readableScopes.length > 0 && (
+          <Grid item xs={12} md={6} lg={4}>
+            <DashboardTile icon="Update" title={t('dashboard.recentUpdates')}>
+              <Stack spacing={0.5} sx={{ mt: 1 }}>
+                {recentUpdates.map((r) => (
+                  <Stack
+                    key={`${r.scope}-${r.id}`}
+                    component={RouterLink}
+                    to={buildItemPath('budget', r.ref)}
+                    direction="row"
+                    spacing={1}
+                    alignItems="center"
+                    sx={ROW_LINK_SX}
+                  >
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>{r.at ? new Date(r.at).toLocaleDateString(locale) : '\u2014'}</Typography>
+                    <Typography sx={{ fontFamily: 'monospace', fontSize: 11, color: 'kanap.text.tertiary' }}>{r.ref.startsWith('BL-') ? r.ref : ''}</Typography>
+                    <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
+                    <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', whiteSpace: 'nowrap' }}>{scopeLabel(r.scope)}</Typography>
+                  </Stack>
+                ))}
+                {recentUpdates.length === 0 && (
+                  <Typography variant="body1" color="text.secondary">{t('dashboard.noRecentUpdates')}</Typography>
                 )}
               </Stack>
             </DashboardTile>

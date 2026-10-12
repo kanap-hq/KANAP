@@ -21,14 +21,21 @@ vi.mock('../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 const readable: Record<string, boolean> = { budget: true };
 let budgetWriter = true;
+let contractsWriter = true;
 const PROFILE = { id: 'user-1', email: 'thomas.berger@example.com', first_name: 'Thomas', last_name: 'Berger' };
 vi.mock('../auth/AuthContext', () => ({
-  useAuth: () => ({ hasLevel: (resource: string, level: string) => (readable[resource] ?? true) && (resource !== 'budget' || level !== 'manager' || budgetWriter), profile: PROFILE }),
+  useAuth: () => ({
+    hasLevel: (resource: string, level: string) => (readable[resource] ?? true)
+      && (level !== 'manager' || (resource === 'budget' ? budgetWriter : resource === 'contracts' ? contractsWriter : true)),
+    profile: PROFILE,
+  }),
 }));
-vi.mock('../components/PageHeader', () => ({ default: () => null }));
+vi.mock('../components/PageHeader', () => ({
+  default: ({ actions }: { actions?: React.ReactNode }) => <header aria-label="page header">{actions}</header>,
+}));
 vi.mock('./workspace/tiles/DashboardTile', () => ({
-  default: ({ title, action, children }: { title: string; action?: React.ReactNode; children?: React.ReactNode }) => (
-    <section aria-label={title}>{action}{children}</section>
+  default: ({ title, subtitle, action, children }: { title: string; subtitle?: string; action?: React.ReactNode; children?: React.ReactNode }) => (
+    <section aria-label={title}>{subtitle && <p data-testid="tile-subtitle">{subtitle}</p>}{action}{children}</section>
   ),
 }));
 
@@ -74,6 +81,7 @@ describe('DashboardPage budget snapshot', () => {
     setBudgetColumns();
     readable.budget = true;
     budgetWriter = true;
+    contractsWriter = true;
     storage.clear();
     post.mockReset();
     post.mockResolvedValue({ data: fakeAggregate([], { query: {}, spec: { groupBy: [], measures: [] } }) });
@@ -232,6 +240,9 @@ function mockBudgetEndpoints() {
       { nature: 'opex', id: 'o1', item_number: 21, product_name: 'Opex grows', versions: budgetSlots(1000, 3000), owner_it_name: 'Thomas Berger', cost_center_label: 'IT-1 · Infrastructure' },
       { nature: 'opex', id: 'o2', item_number: 23, product_name: 'Opex shrinks', versions: budgetSlots(8000, 1000), owner_business_name: 'Thomas Berger', budget_holder_name: 'Thomas Berger', cost_center_label: 'IT-2 · Workplace' },
       { nature: 'opex', id: 'o3', item_number: 24, product_name: 'Opex small rise', versions: budgetSlots(1000, 1300), owner_it_name: 'Marie Fontaine' },
+      // Two more lines in his name, smaller this year: the fourth largest stays out of his top three.
+      { nature: 'opex', id: 'o4', item_number: 25, product_name: 'Opex cut', versions: budgetSlots(5000, 400), owner_it_name: 'Thomas Berger', cost_center_label: 'IT-1 · Infrastructure' },
+      { nature: 'opex', id: 'o5', item_number: 26, product_name: 'Opex trimmed', versions: budgetSlots(2000, 200), owner_business_name: 'Thomas Berger', cost_center_label: 'IT-2 · Workplace' },
       { nature: 'capex', id: 'c1', item_number: 22, product_name: 'Capex grows', description: 'Capex grows', versions: budgetSlots(0, 4000), owner_it_name: 'Marie Fontaine' },
     ].filter((row) => scope === 'all' || row.nature === scope);
     return { data: fakeAggregate(items, body) };
@@ -242,8 +253,11 @@ const aggregateCalls = (url: string) => post.mock.calls.filter(([called]) => cal
 
 const summaryCalls = (url: string) => get.mock.calls.filter(([called]) => called === url).map(([, config]) => config?.params ?? {});
 
-const TOP_ITEMS = 'dashboard.topItemsY (ops:operations.budgetColumns.budget)';
-const TOP_INCREASES = 'dashboard.topIncreasesYvsYminus1 (ops:operations.budgetColumns.budget)';
+const TOP_ITEMS = 'dashboard.topItems';
+const TOP_INCREASES = 'dashboard.topIncreases';
+const MY_BUDGET = 'dashboard.myBudget.title';
+const BY_COST_CENTER = 'dashboard.byCostCenter';
+const subtitleOf = (tile: HTMLElement) => within(tile).getByTestId('tile-subtitle').textContent;
 
 describe('DashboardPage budget tiles', () => {
   beforeEach(() => {
@@ -252,12 +266,13 @@ describe('DashboardPage budget tiles', () => {
     post.mockReset();
     readable.budget = true;
     budgetWriter = true;
+    contractsWriter = true;
     try { window.localStorage.clear(); } catch { /* storage unavailable */ }
     mockBudgetEndpoints();
   });
 
   it('defaults all four tile tabs to All and remembers each choice independently', async () => {
-    const titles = [TOP_ITEMS, TOP_INCREASES, 'dashboard.myBudget.title (ops:operations.budgetColumns.budget)', 'dashboard.byCostCenterY (ops:operations.budgetColumns.budget)'];
+    const titles = [TOP_ITEMS, TOP_INCREASES, MY_BUDGET, BY_COST_CENTER];
     const keys = ['topItems', 'topIncreases', 'myBudget', 'byCostCenter'];
     const view = renderPage();
     for (let i = 0; i < titles.length; i++) {
@@ -281,22 +296,61 @@ describe('DashboardPage budget tiles', () => {
     const top = await screen.findByRole('region', { name: TOP_ITEMS });
     expect(within(top).getByRole('tab', { name: 'operations.scope.opex' })).toHaveAttribute('aria-selected', 'true');
     expect(within(screen.getByRole('region', { name: TOP_INCREASES })).getByRole('tab', { name: 'operations.scope.capex' })).toHaveAttribute('aria-selected', 'true');
-    expect(within(screen.getByRole('region', { name: 'dashboard.myBudget.title (ops:operations.budgetColumns.budget)' })).getByRole('tab', { name: 'operations.scope.all' })).toHaveAttribute('aria-selected', 'true');
+    expect(within(screen.getByRole('region', { name: MY_BUDGET })).getByRole('tab', { name: 'operations.scope.all' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('offers one New line button opening the unified creation page', async () => {
+  it('names the tab tiles in one line and what they read on a second one', async () => {
     renderPage();
-    const tile = await screen.findByRole('region', { name: 'dashboard.quickActions' });
-    expect(within(tile).getAllByRole('button')).toHaveLength(1);
-    fireEvent.click(within(tile).getByRole('button', { name: 'dashboard.newLine' }));
-    expect(screen.getByTestId('location')).toHaveTextContent('/ops/budget/new');
+    const column = 'ops:operations.budgetColumns.budget';
+    expect(subtitleOf(await screen.findByRole('region', { name: MY_BUDGET }))).toBe(`dashboard.columnY (${column})`);
+    expect(subtitleOf(screen.getByRole('region', { name: TOP_ITEMS }))).toBe(`dashboard.columnY (${column})`);
+    expect(subtitleOf(screen.getByRole('region', { name: TOP_INCREASES }))).toBe(`dashboard.columnYvsYminus1 (${column})`);
+    expect(subtitleOf(screen.getByRole('region', { name: BY_COST_CENTER }))).toBe(`dashboard.columnY (${column})`);
+    // The other tiles keep a title alone.
+    expect(within(screen.getByRole('region', { name: 'dashboard.dataHygiene' })).queryByTestId('tile-subtitle')).not.toBeInTheDocument();
   });
 
-  it('keeps budget tiles available to a reader and hides creation', async () => {
+  it.each([
+    ['dashboard.newOpexLine', '/ops/budget/new?nature=opex'],
+    ['dashboard.newCapexLine', '/ops/budget/new?nature=capex'],
+    ['dashboard.newContract', '/ops/contracts/new/overview'],
+  ])('offers %s in the page header, opening its creation page', async (name, target) => {
+    renderPage();
+    const header = screen.getByRole('banner', { name: 'page header' });
+    expect(within(header).getAllByRole('button').map((b) => b.textContent)).toEqual(['dashboard.newOpexLine', 'dashboard.newCapexLine', 'dashboard.newContract']);
+    fireEvent.click(within(header).getByRole('button', { name }));
+    expect(screen.getByTestId('location')).toHaveTextContent(target);
+    await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
+  });
+
+  it('keeps budget tiles available to a reader and shows each creation button with its right only', async () => {
     budgetWriter = false;
     renderPage();
     await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
-    expect(screen.queryByRole('button', { name: 'dashboard.newLine' })).not.toBeInTheDocument();
+    expect(within(screen.getByRole('banner', { name: 'page header' })).getAllByRole('button').map((b) => b.textContent)).toEqual(['dashboard.newContract']);
+  });
+
+  it('shows the budget line buttons without the contract right, and no header action without either', async () => {
+    contractsWriter = false;
+    const view = renderPage();
+    await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
+    expect(within(screen.getByRole('banner', { name: 'page header' })).getAllByRole('button').map((b) => b.textContent)).toEqual(['dashboard.newOpexLine', 'dashboard.newCapexLine']);
+    view.unmount();
+    budgetWriter = false;
+    renderPage();
+    await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
+    expect(within(screen.getByRole('banner', { name: 'page header' })).queryAllByRole('button')).toHaveLength(0);
+  });
+
+  it('orders the tiles: budget and hygiene, then the user\'s tiles, then the reports, recent updates last', async () => {
+    renderPage();
+    await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
+    expect(screen.getAllByRole('region').map((tile) => tile.getAttribute('aria-label'))).toEqual([
+      'dashboard.budgetSnapshot', 'dashboard.dataHygiene',
+      MY_BUDGET, 'dashboard.myTasks', 'dashboard.nextRenewals',
+      TOP_ITEMS, TOP_INCREASES, BY_COST_CENTER,
+      'dashboard.recentUpdates',
+    ]);
   });
 
   it('switches the top items tile to CAPEX and opens the report on that type', async () => {
@@ -416,7 +470,9 @@ describe('DashboardPage budget tiles', () => {
 
   it('mixes the recent updates of both types, newest first, each row opening its line', async () => {
     renderPage();
-    const tile = await screen.findByRole('region', { name: 'dashboard.quickActions' });
+    const tile = await screen.findByRole('region', { name: 'dashboard.recentUpdates' });
+    // Recent updates only: the creation buttons live in the page header.
+    expect(within(tile).queryByRole('button')).not.toBeInTheDocument();
     const capexRow = await within(tile).findByRole('link', { name: /Capex edited/ });
     const opexRow = await within(tile).findByRole('link', { name: /Opex edited/ });
     expect(capexRow).toHaveAttribute('href', '/ops/budget/BL-2');
@@ -442,18 +498,20 @@ describe('DashboardPage budget tiles', () => {
   it('hides every budget tile and sends no budget request without the budget right', async () => {
     readable.budget = false;
     renderPage();
-    await screen.findByRole('region', { name: 'dashboard.quickActions' });
-    for (const name of ['dashboard.budgetSnapshot', 'dashboard.dataHygiene', TOP_ITEMS, TOP_INCREASES, 'dashboard.myBudget.title (ops:operations.budgetColumns.budget)', 'dashboard.byCostCenterY (ops:operations.budgetColumns.budget)']) {
+    await screen.findByRole('region', { name: 'dashboard.myTasks' });
+    for (const name of ['dashboard.budgetSnapshot', 'dashboard.dataHygiene', TOP_ITEMS, TOP_INCREASES, MY_BUDGET, BY_COST_CENTER, 'dashboard.recentUpdates']) {
       expect(screen.queryByRole('region', { name })).not.toBeInTheDocument();
     }
-    expect(screen.queryByRole('button', { name: 'dashboard.newLine' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'dashboard.newOpexLine' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'dashboard.newCapexLine' })).not.toBeInTheDocument();
     expect([...get.mock.calls, ...post.mock.calls].some(([url]) => /^\/(budget-lines|spend-items|capex-items)\//.test(url as string))).toBe(false);
   });
 
-  it('ranks the top items by the default column and names it in the title', async () => {
+  it('ranks the top items by the default column and names it in the subtitle', async () => {
     setBudgetColumns({ labels: TENANT_NAMES, enabled: ALL_SHOWN, default_column: 'forecast' });
     renderPage();
-    const tile = await screen.findByRole('region', { name: 'dashboard.topItemsY (A2)' });
+    const tile = await screen.findByRole('region', { name: TOP_ITEMS });
+    expect(subtitleOf(tile)).toBe('dashboard.columnY (A2)');
     expect(await within(tile).findByText('Opex top')).toBeInTheDocument();
     // Column 3 of Y holds the Y-1 amount of column 1 (0): 0k, not the 5k of column 1.
     expect(within(tile).getAllByText('0k')).toHaveLength(2);
@@ -461,17 +519,16 @@ describe('DashboardPage budget tiles', () => {
     expect(topRequests.map((p) => p.sort)).toEqual(['yForecast:DESC']);
   });
 
-  it('computes the top increases on the default column and names it in the title', async () => {
+  it('computes the top increases on the default column and names it in the subtitle', async () => {
     setBudgetColumns({ labels: TENANT_NAMES, enabled: ALL_SHOWN, default_column: 'forecast' });
     renderPage();
-    const tile = await screen.findByRole('region', { name: 'dashboard.topIncreasesYvsYminus1 (A2)' });
+    const tile = await screen.findByRole('region', { name: TOP_INCREASES });
+    expect(subtitleOf(tile)).toBe('dashboard.columnYvsYminus1 (A2)');
     // Column 3 runs the other way: only the line that shrinks on column 1 grows on it.
     expect(await within(tile).findByText('Opex shrinks')).toBeInTheDocument();
     expect(within(tile).queryByText('Opex grows')).not.toBeInTheDocument();
   });
 
-  const MY_BUDGET = 'dashboard.myBudget.title (ops:operations.budgetColumns.budget)';
-  const BY_COST_CENTER = 'dashboard.byCostCenterY (ops:operations.budgetColumns.budget)';
   const filtersOf = (el: Element) => JSON.parse(new URLSearchParams(el.getAttribute('href')!.split('?')[1]).get('filters')!);
 
   it("shows the user's lines per role, each row opening the list on that role and name", async () => {
@@ -486,11 +543,31 @@ describe('DashboardPage budget tiles', () => {
     expect(business).toHaveTextContent('1k');
     expect(filtersOf(within(tile).getByRole('link', { name: /roles\.budgetHolder/ })))
       .toEqual({ budget_holder_name: { filterType: 'set', values: ['Thomas Berger'] } });
-    // Each count and sum uses the link's filter, on the lines the list shows by default, this year's default column.
+    // Each count and sum uses the link's filter, on the lines the list shows by default, this year's
+    // default column; the same request ranks the role's three largest lines.
     expect(aggregateCalls('/budget-lines/summary/aggregate')).toContainEqual({
       query: { filters: { owner_it_name: { filterType: 'set', values: ['Thomas Berger'] } }, status: 'enabled' },
-      spec: { groupBy: [], measures: [{ id: 'value', fn: 'sum', field: 'yBudget' }] },
+      spec: {
+        groupBy: ['id', 'product_name', 'item_number'],
+        measures: [{ id: 'value', fn: 'sum', field: 'yBudget' }],
+        order: [{ by: 'measure', id: 'value', dir: 'DESC' }],
+        limit: 3,
+      },
     });
+  });
+
+  it("lists the user's three largest lines under the roles, each opening its line, with no request of its own", async () => {
+    renderPage();
+    const tile = await screen.findByRole('region', { name: MY_BUDGET });
+    await within(tile).findByText('dashboard.myBudget.myLines');
+    const lines = within(tile).getAllByRole('link').filter((link) => link.getAttribute('href')!.startsWith('/ops/budget/BL-'));
+    // BL-21 (IT owner, 3k), BL-23 (business owner and budget holder, once), BL-25 (IT owner, 0.4k); BL-26 (0.2k) stays out.
+    expect(lines.map((link) => link.getAttribute('href'))).toEqual(['/ops/budget/BL-21', '/ops/budget/BL-23', '/ops/budget/BL-25']);
+    expect(lines.map((link) => link.textContent)).toEqual(['BL-21Opex grows3k', 'BL-23Opex shrinks1k', 'BL-25Opex cut0k']);
+    // The three role requests only: one per role.
+    const roleRequests = aggregateCalls('/budget-lines/summary/aggregate').filter((body) => body.query.filters && body.spec.measures.length);
+    expect(roleRequests).toHaveLength(3);
+    expect(summaryCalls('/budget-lines/summary').some((p) => p.limit === 3)).toBe(false);
   });
 
   it('shows a role without lines as plain text, and one line when the user has none', async () => {
@@ -501,6 +578,13 @@ describe('DashboardPage budget tiles', () => {
     // No CAPEX line in Thomas Berger's name.
     expect(await within(tile).findByText('dashboard.myBudget.none')).toBeInTheDocument();
     expect(within(tile).queryByRole('link')).not.toBeInTheDocument();
+    expect(within(tile).queryByText('dashboard.myBudget.myLines')).not.toBeInTheDocument();
+    // A type goes as a filter of the unified list, whose numbers are the BL references.
+    expect(aggregateCalls('/budget-lines/summary/aggregate').map((body) => body.query)).toContainEqual({
+      filters: { owner_it_name: { filterType: 'set', values: ['Thomas Berger'] }, nature: { filterType: 'set', values: ['capex'] } },
+      status: 'enabled',
+    });
+    expect(aggregateCalls('/capex-items/summary/aggregate').some((body) => body.spec.measures.length > 0)).toBe(false);
   });
 
   it('ranks this year by cost center, lines without one included, each row opening the list on it', async () => {
