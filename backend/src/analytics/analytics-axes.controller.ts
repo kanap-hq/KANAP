@@ -5,7 +5,7 @@ import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
 import { Tenant, TenantRequest } from '../common/decorators';
 import { AnalyticsAxesService } from './analytics-axes.service';
 import { ANALYTICS_READERS, analyticsContext } from './analytics-categories.controller';
-import { AnalyticsAxisCreateDto, AnalyticsAxisReorderDto, AnalyticsAxisUpdateDto } from './dto/analytics.dto';
+import { AnalyticsAxisCreateDto, AnalyticsAxisReorderDto, AnalyticsAxisUpdateDto, AnalyticsRecommendedDimensionsDto } from './dto/analytics.dto';
 
 @UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('analytics-axes')
@@ -23,6 +23,19 @@ export class AnalyticsAxesController {
   @Post('reorder')
   reorder(@Body() body: AnalyticsAxisReorderDto, @Tenant() ctx: TenantRequest) {
     return this.svc.reorder(body?.axis_ids, analyticsContext(ctx));
+  }
+
+  // The recommended dimensions (administrators), before the `:id` routes.
+  @RequireLevel('analytics', 'admin')
+  @Get('recommended')
+  recommended(@Tenant() ctx: TenantRequest) {
+    return this.svc.recommended(analyticsContext(ctx));
+  }
+
+  @RequireLevel('analytics', 'admin')
+  @Post('recommended')
+  addRecommended(@Body() body: AnalyticsRecommendedDimensionsDto, @Tenant() ctx: TenantRequest) {
+    return this.svc.addRecommended(body, analyticsContext(ctx));
   }
 
   @RequireLevel('analytics', 'reader')
