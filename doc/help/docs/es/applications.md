@@ -283,8 +283,7 @@ La pestaña Relaciones vincula esta aplicación a sus registros financieros, de 
 **Componentes** (solo cuando está activado "Puede tener apps hijas"): una tabla que lista las aplicaciones hijas de esta Suite, con su ciclo de vida y criticidad. Haga clic en una fila para abrir el espacio de trabajo del hijo.
 
 **Relaciones**:
-- **Líneas OPEX**: costes recurrentes asociados a esta aplicación
-- **Líneas CAPEX**: proyectos de gasto de capital
+- **Líneas presupuestarias**: las líneas OPEX y CAPEX de esta aplicación, en una sola lista. Busque por título o por referencia (`BL-12`); cada sugerencia muestra su tipo
 - **Contratos**: contratos con proveedores
 - **Proyectos**: proyectos del portafolio vinculados a esta aplicación
 - **Tareas**: tareas vinculadas a esta aplicación. Esta lista es de solo lectura aquí -- las tareas ganan o pierden este vínculo cuando establece el campo **App / Servicio** en una tarea desde la página de Tareas.

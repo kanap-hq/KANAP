@@ -2133,10 +2133,8 @@
         }
       },
       "fields": {
-        "capexItems": "CAPEX lines",
         "linkDescription": "Link description",
         "name": "Name",
-        "opexItems": "OPEX lines",
         "url": "URL"
       },
       "messages": {
@@ -2148,9 +2146,7 @@
       "placeholders": {
         "applications": "Search applications",
         "assets": "Search assets",
-        "capexItems": "Select CAPEX lines",
         "linkDescription": "Optional",
-        "opexItems": "Select OPEX lines",
         "url": "https://example.com"
       },
       "sections": {

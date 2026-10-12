@@ -189,12 +189,12 @@ async function testAppSideReplacesUnderTenant() {
       { ok: true, added: 1, removed: 0 },
     );
     assert.deepEqual(await links(runner, 'application_capex_items', a.appId), [{ tenant_id: a.tenantId, item_id: a.capexId }]);
-    assert.deepEqual(await svc.listLinkedCapexItems(a.appId, opts), { items: [{ id: a.capexId, description: 'Links CAPEX a' }] });
+    assert.deepEqual(await svc.listLinkedCapexItems(a.appId, opts), { items: [{ id: a.capexId, description: 'Links CAPEX a', item_number: 1 + CAPEX_NUMBER_OFFSET }] });
     assert.deepEqual(await svc.bulkReplaceLinkedCapexItems(a.appId, [a.capexId], 'user', opts), { ok: true, added: 0, removed: 0 });
 
     await svc.bulkReplaceLinkedSpendItems(a.appId, [a.spendId], 'user', opts);
     assert.deepEqual(await links(runner, 'application_spend_items', a.appId), [{ tenant_id: a.tenantId, item_id: a.spendId }]);
-    assert.deepEqual(await svc.listLinkedSpendItems(a.appId, opts), { items: [{ id: a.spendId, product_name: 'Links OPEX a' }] });
+    assert.deepEqual(await svc.listLinkedSpendItems(a.appId, opts), { items: [{ id: a.spendId, product_name: 'Links OPEX a', item_number: 1 }] });
 
     assert.deepEqual(await svc.bulkReplaceLinkedContracts(a.appId, [aOther.contractId], 'user', opts), { ok: true, added: 1, removed: 0 });
     assert.deepEqual(await links(runner, 'application_contracts', a.appId), [{ tenant_id: a.tenantId, item_id: aOther.contractId }]);
