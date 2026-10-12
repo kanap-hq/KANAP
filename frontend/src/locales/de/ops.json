@@ -702,6 +702,7 @@
       "forecast": "Prognose"
     },
     "scope": {
+      "all": "Alle",
       "label": "Positionstyp",
       "opex": "OPEX",
       "capex": "CAPEX"

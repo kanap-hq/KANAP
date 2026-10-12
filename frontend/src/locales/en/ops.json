@@ -702,6 +702,7 @@
       "forecast": "Forecast"
     },
     "scope": {
+      "all": "All",
       "label": "Item type",
       "opex": "OPEX",
       "capex": "CAPEX"

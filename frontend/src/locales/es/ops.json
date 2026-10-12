@@ -702,6 +702,7 @@
       "forecast": "Previsión"
     },
     "scope": {
+      "all": "Todo",
       "label": "Tipo de partida",
       "opex": "OPEX",
       "capex": "CAPEX"

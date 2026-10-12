@@ -1,10 +1,11 @@
 import { useRef } from 'react';
 import { useQueries, useQuery, type UseQueryResult } from '@tanstack/react-query';
 import api from '../../api';
-import type { AggregateRequest, AggregateResult, BudgetScope } from './reportAggregates';
+import type { AggregateRequest, AggregateResult, ReportScope } from './reportAggregates';
 
 /** The aggregate route of each item type. */
-export const AGGREGATE_ENDPOINT: Record<BudgetScope, string> = {
+export const AGGREGATE_ENDPOINT: Record<ReportScope, string> = {
+  all: '/budget-lines/summary/aggregate',
   opex: '/spend-items/summary/aggregate',
   capex: '/capex-items/summary/aggregate',
 };
@@ -13,16 +14,17 @@ export const AGGREGATE_ENDPOINT: Record<BudgetScope, string> = {
  * Query key prefix of each type's summary data: an import, a delete or a budget operation that
  * invalidates `['spend-items-summary']` (or CAPEX's) refreshes every aggregate of that type.
  */
-export const SUMMARY_QUERY_KEY: Record<BudgetScope, string> = {
+export const SUMMARY_QUERY_KEY: Record<ReportScope, string> = {
+  all: 'budget-lines-summary',
   opex: 'spend-items-summary',
   capex: 'capex-items-summary',
 };
 
-export function aggregateQueryKey(scope: BudgetScope, request: AggregateRequest | null) {
+export function aggregateQueryKey(scope: ReportScope, request: AggregateRequest | null) {
   return [SUMMARY_QUERY_KEY[scope], 'aggregate', request] as const;
 }
 
-async function fetchAggregate(scope: BudgetScope, request: AggregateRequest, signal?: AbortSignal): Promise<AggregateResult> {
+async function fetchAggregate(scope: ReportScope, request: AggregateRequest, signal?: AbortSignal): Promise<AggregateResult> {
   const res = await api.post<AggregateResult>(AGGREGATE_ENDPOINT[scope], request, { signal });
   return res.data;
 }
@@ -47,7 +49,7 @@ function sameShape(a: AggregateRequest | null | undefined, b: AggregateRequest |
   return ids(a) === ids(b) && a.spec.groupBy.join('\u0000') === b.spec.groupBy.join('\u0000');
 }
 
-function placeholder(scope: BudgetScope, request: AggregateRequest | null, keepPrevious?: boolean) {
+function placeholder(scope: ReportScope, request: AggregateRequest | null, keepPrevious?: boolean) {
   if (!keepPrevious) return undefined;
   return (previous: AggregateResult | undefined, previousQuery: { queryKey: readonly unknown[] } | undefined) => (
     previousQuery?.queryKey[0] === SUMMARY_QUERY_KEY[scope] && sameShape(previousQuery.queryKey[2] as AggregateRequest | null, request) ? previous : undefined
@@ -58,7 +60,7 @@ function placeholder(scope: BudgetScope, request: AggregateRequest | null, keepP
  * One server aggregate of the OPEX or CAPEX lines (`reportAggregates.ts` builds the request and
  * reads the answer). A null request asks nothing (the page waits for what the request needs).
  */
-export function useBudgetAggregate(scope: BudgetScope, request: AggregateRequest | null, options: Options = {}): UseQueryResult<AggregateResult> {
+export function useBudgetAggregate(scope: ReportScope, request: AggregateRequest | null, options: Options = {}): UseQueryResult<AggregateResult> {
   return useQuery({
     queryKey: aggregateQueryKey(scope, request),
     queryFn: ({ signal }) => fetchAggregate(scope, request as AggregateRequest, signal),
@@ -69,7 +71,7 @@ export function useBudgetAggregate(scope: BudgetScope, request: AggregateRequest
 
 /** Several aggregates of one type, asked together; `data` holds every answer once all are in. */
 export function useBudgetAggregates(
-  scope: BudgetScope,
+  scope: ReportScope,
   requests: readonly AggregateRequest[] | null,
   options: Options = {},
 ): { data: AggregateResult[] | undefined; isLoading: boolean; isPlaceholderData: boolean; isError: boolean; refetch: () => void } {

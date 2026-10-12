@@ -12,6 +12,7 @@
  */
 
 export type BudgetScope = 'opex' | 'capex';
+export type ReportScope = BudgetScope | 'all';
 export type MetricKey = 'budget' | 'revision' | 'forecast' | 'follow_up' | 'landing';
 
 /** The suffix of a budget column in the list's field keys (`y2026Budget`), as `AMOUNT_COLUMNS` names it. */
@@ -32,7 +33,7 @@ export const METRIC_SUFFIX: Record<MetricKey, string> = {
 export type ReportMeasure = 'amount' | 'fte';
 
 /** The field naming a line: OPEX lines by their product name, CAPEX lines by their description. */
-export const NAME_FIELD: Record<BudgetScope, 'product_name' | 'description'> = { opex: 'product_name', capex: 'description' };
+export const NAME_FIELD: Record<ReportScope, 'product_name' | 'description'> = { all: 'product_name', opex: 'product_name', capex: 'description' };
 
 /** The most groups one answer holds (the server's limit). */
 export const MAX_GROUPS = 10_000;
@@ -1248,7 +1249,7 @@ export function readColumnsCompare(selections: ReadonlyArray<{ year: number; met
 // ----- dashboard -----
 
 /** The lines whose column grew from Y-1 to Y, largest growth first. */
-export function topIncreasesRequest(scope: BudgetScope, metric: MetricKey, limit: number): AggregateRequest {
+export function topIncreasesRequest(scope: ReportScope, metric: MetricKey, limit: number): AggregateRequest {
   const suffix = METRIC_SUFFIX[metric];
   return {
     query: {},

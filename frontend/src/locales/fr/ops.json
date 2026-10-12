@@ -702,6 +702,7 @@
       "forecast": "Prévision"
     },
     "scope": {
+      "all": "Tout",
       "label": "Type de poste",
       "opex": "OPEX",
       "capex": "CAPEX"
