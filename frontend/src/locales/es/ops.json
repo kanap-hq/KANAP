@@ -67,8 +67,6 @@
     "budget": {
       "title": "Presupuesto",
       "mode": "Modo",
-      "flat": "Anual",
-      "monthly": "Mensual",
       "total": "Total",
       "spreadPlaceholder": "p. ej. 120000",
       "profileFlat": "Uniforme",
@@ -261,8 +259,6 @@
     "budget": {
       "title": "Presupuesto",
       "mode": "Modo",
-      "flat": "Anual",
-      "monthly": "Mensual",
       "total": "Total",
       "spreadPlaceholder": "p. ej. 120000",
       "profileFlat": "Uniforme",
@@ -1280,10 +1276,7 @@
     "monthAnd": "{{first}} y {{second}}",
     "zeroedMonths_one": "{{months}} se pondrá a cero.",
     "zeroedMonths_other": "{{months}} se pondrán a cero.",
-    "changePeriod": "Cambiar el periodo",
-    "choosePeriod": "Elegir el periodo",
     "noMonthInItemDates": "Ningún mes de {{year}} está dentro de las fechas de la línea.",
-    "column": "Columna",
     "distribution": "Distribución",
     "from": "Desde",
     "to": "Hasta",
@@ -1309,10 +1302,6 @@
       "lineCount_one": "{{count}} línea",
       "lineCount_other": "{{count}} líneas",
       "fte": "{{value}} ETC"
-    },
-    "panel": {
-      "spread": "Repartir un importe",
-      "lines": "Cantidad y precio"
     },
     "lines": {
       "description": "Descripción",
@@ -1380,7 +1369,6 @@
         "dateOutsideYear": "Elija una fecha de {{year}}."
       },
       "fte": "ETC en el periodo {{fte_period}} · Media anual {{fte}}",
-      "applyToAll": "Aplicar estas líneas a todas las columnas",
       "status": {
         "manual": "Los importes se introdujeron a mano.",
         "spread": "Los importes vienen de un reparto.",
@@ -1400,20 +1388,8 @@
     },
     "listAnd": "{{first}} y {{last}}",
     "amount": "Importe",
-    "applyDistributionToAll": "Aplicar el reparto a todas las columnas",
-    "applyToAllFollow": "{{columns}} siguen el mismo periodo.",
-    "applyToAllOthers_one": "{{columns}} conserva su propio periodo.",
-    "applyToAllOthers_other": "{{columns}} conservan su propio periodo.",
-    "applyToAllFrozen": "Las columnas congeladas nunca cambian.",
     "keepLines_one": "{{columns}} conserva sus líneas.",
     "keepLines_other": "{{columns}} conservan sus líneas.",
-    "spreadLock": {
-      "fromLines_one": "Los importes vienen de {{count}} línea de Cantidad y precio.",
-      "fromLines_other": "Los importes vienen de las {{count}} líneas de Cantidad y precio.",
-      "unlock": "Repartir un importe en su lugar",
-      "unlocked": "Un reparto reemplaza los importes de las líneas. Las líneas se mantienen como referencia."
-    },
-    "totalFromLines": "Calculado a partir de sus líneas. Abra Cantidad y precio para cambiarlo.",
     "conflict": {
       "waiting": "Elija primero, arriba, si recarga esta columna o la sobrescribe.",
       "yearTotal": "{{amount}} en el año",
@@ -1422,6 +1398,65 @@
       "yearChange_one": "Otra persona modificó la columna {{columns}} mientras usted la editaba, y no ha elegido qué valores conservar. Cambiar de año de todos modos y perder sus valores de {{columns}}, o quedarse y elegir.",
       "yearChange_other": "Otra persona modificó las columnas {{columns}} mientras usted las editaba, y no ha elegido qué valores conservar. Cambiar de año de todos modos y perder sus valores en estas columnas, o quedarse y elegir.",
       "yearChangeConfirm": "Cambiar de año"
+    },
+    "notEntered": "Aún sin introducir",
+    "columns": "Columnas del presupuesto",
+    "card": {
+      "frozen": "Congelada",
+      "waiting": "Pendiente de su elección"
+    },
+    "editorTitle": "{{column}} {{year}}",
+    "modes": "Construcción de la columna",
+    "mode": {
+      "amount": "Importe",
+      "lines": "Cantidad y precio",
+      "monthly": "Por mes"
+    },
+    "annualAmount": "Importe anual",
+    "when": "Cuándo",
+    "wholeYear": "Todo el año",
+    "aPeriod": "Un periodo",
+    "storedPeriod": "Periodo guardado: {{stored}}. Al guardar se usará {{proposed}}, según las fechas de la línea.",
+    "span": {
+      "range": "de {{from}} a {{to}} ({{n}} meses)",
+      "range_vowel": "de {{from}} a {{to}} ({{n}} meses)",
+      "single": "en {{month}}"
+    },
+    "result": {
+      "spreadFlat": "{{amount}} repartidos de forma uniforme {{span}}.",
+      "spread445": "{{amount}} repartidos en 4-4-5 {{span}}.",
+      "enterFlat": "Introduzca un importe: se repartirá de forma uniforme {{span}}.",
+      "enter445": "Introduzca un importe: se repartirá en 4-4-5 {{span}}.",
+      "title": "Resultado por mes",
+      "quarter": "T{{n}}",
+      "cellHint": "Introducir por mes"
+    },
+    "monthlyHint": "Introduzca los importes en la columna {{column}} de la tabla de abajo.",
+    "reference_one": "{{count}} línea conservada como referencia.",
+    "reference_other": "{{count}} líneas conservadas como referencia.",
+    "referenceAmount_one": "{{count}} línea conservada como referencia ({{amount}}).",
+    "referenceAmount_other": "{{count}} líneas conservadas como referencia ({{amount}}).",
+    "switch": {
+      "toAmount": "¿Cambiar a un importe? El total actual ({{amount}}) pasa a ser el importe, repartido de forma uniforme.",
+      "toAmountSpan": "¿Cambiar a un importe? El total actual ({{amount}}) pasa a ser el importe, repartido de forma uniforme {{span}}.",
+      "toLines": "¿Cambiar a cantidad y precio? El total vendrá de las líneas.",
+      "toMonthly": "¿Cambiar a la introducción por mes? Los meses actuales se conservan y pasan a ser editables en la tabla.",
+      "linesStay": "Las líneas se conservan como referencia.",
+      "reuseLines_one": "La línea conservada como referencia se vuelve a usar.",
+      "reuseLines_other": "Las {{count}} líneas conservadas como referencia se vuelven a usar.",
+      "replaced": "El importe actual ({{amount}}) se sustituirá.",
+      "confirm": "Cambiar"
+    },
+    "also": {
+      "open": "Usar también para otras columnas…",
+      "label": "Misma construcción para",
+      "apply": "Aplicar",
+      "amountHint": "Toman este periodo y esta distribución, y conservan su propio total.",
+      "linesHint": "Estas líneas sustituyen sus importes."
+    },
+    "frozen": {
+      "title": "La columna {{column}} {{year}} está congelada",
+      "hint": "Solo lectura. Un administrador puede descongelarla en Administración › Congelar / Descongelar datos."
     }
   },
   "budget": {

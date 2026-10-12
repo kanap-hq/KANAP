@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Button, Checkbox, FormControlLabel, IconButton, Link, MenuItem, Switch, TextField, Tooltip, Typography } from '@mui/material';
+import { Box, Button, Checkbox, FormControlLabel, IconButton, Link, MenuItem, TextField, Tooltip, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
@@ -297,13 +297,12 @@ export type LinesPanelProps = {
   pendingRef?: React.MutableRefObject<(() => boolean) | null>;
   /** The tenant's name of a column, for "copied from". */
   columnName: (measure: AmountMeasure) => string;
-  /** "Apply these lines to all columns": offered when the group has other columns that are not frozen. */
-  applyToAll: { offered: boolean; on: boolean; hint: string; onChange: (on: boolean) => void };
   /**
-   * Writes every complete line of the column (and of the group when `applyToAll`), then reloads.
-   * `startedFrom`: the stored lines the drafts started from, the base of the write (lot 3D).
+   * Writes every complete line of the column, then reloads. `startedFrom`: the stored lines the
+   * drafts started from, the base of the write (lot 3D). The budget tab offers the same lines to
+   * other columns from its own footer.
    */
-  onSave: (lines: LinePayload[], applyToAll: boolean, startedFrom: LinePayload[]) => Promise<LinesSaveResult>;
+  onSave: (lines: LinePayload[], startedFrom: LinePayload[]) => Promise<LinesSaveResult>;
   /**
    * One row per line (`wide`), two with how often on the first (`medium`), two with how often on the
    * second (`narrow`), or `auto`: the first of these the panel has room for. Fixed for the specs,
@@ -322,7 +321,7 @@ const LAYOUT_MIN_WIDTHS = [LINES_OFTEN_FIRST_MIN_WIDTH, LINES_TABLE_MIN_WIDTH] a
  */
 export default function LinesPanel({
   year, record, period, itemStart, itemEnd, frozen, frozenHint, waiting = false, reloadSignal = 0, startLines,
-  payingCompanyCountry, pendingRef, columnName, applyToAll, onSave, layout = 'auto',
+  payingCompanyCountry, pendingRef, columnName, onSave, layout = 'auto',
 }: LinesPanelProps) {
   const { t } = useTranslation(['ops', 'common']);
   const locale = useLocale();
@@ -346,7 +345,7 @@ export default function LinesPanel({
   // A commit made while a save is on its way (quick clicks on a date's arrows): sent once that save
   // answered, from the lines it stored. Sent at once, it would start from the lines before that save
   // and be refused as someone else's change.
-  const queuedRef = React.useRef<{ force?: boolean; applyToAll?: boolean } | null>(null);
+  const queuedRef = React.useRef<{ force?: boolean } | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
   const update = (change: (prev: LineDraft[]) => LineDraft[]): LineDraft[] => {
@@ -356,7 +355,7 @@ export default function LinesPanel({
     return next;
   };
 
-  const send = (next: LineDraft[], options: { force?: boolean; applyToAll?: boolean } = {}) => {
+  const send = (next: LineDraft[], options: { force?: boolean } = {}) => {
     if (frozen) return;
     const rows = next.flatMap((d, index) => (lineProblem(year, d) ? [] : [index]));
     const lines = rows.map((index) => payloadOf(next[index]));
@@ -366,12 +365,12 @@ export default function LinesPanel({
     if (!options.force && signature === sentRef.current) return;
     if (inFlightRef.current > 0) {
       const queued = queuedRef.current;
-      queuedRef.current = { force: !!(queued?.force || options.force), applyToAll: options.applyToAll ?? queued?.applyToAll };
+      queuedRef.current = { force: !!(queued?.force || options.force) };
       return;
     }
     sentRef.current = signature;
     inFlightRef.current += 1;
-    void onSave(lines, options.applyToAll ?? applyToAll.on, startedFromRef.current).then((result) => {
+    void onSave(lines, startedFromRef.current).then((result) => {
       inFlightRef.current -= 1;
       const queued = queuedRef.current;
       queuedRef.current = null;
@@ -512,12 +511,6 @@ export default function LinesPanel({
     send(update((prev) => prev.filter((d) => d.key !== key)));
   };
   const sendLinesAgain = () => send(draftsRef.current, { force: true });
-  const toggleApplyToAll = (on: boolean) => {
-    applyToAll.onChange(on);
-    // Turned on with a complete line, the lines go to the group's columns at once. Turned on without
-    // one, or turned off, nothing is written: no line would clear the other columns' lines.
-    if (on && draftsRef.current.some((d) => !lineProblem(year, d))) send(draftsRef.current, { force: true, applyToAll: true });
-  };
 
   // Enabled calendars, plus those the stored lines use even when disabled since (marked so, once
   // the list is loaded: before that their state is unknown).
@@ -1035,20 +1028,6 @@ export default function LinesPanel({
         )}
         {frozen && <Typography sx={captionSx}>{frozenHint}</Typography>}
       </Box>
-
-      {applyToAll.offered && !reference && (
-        <Box>
-          <FormControlLabel
-            control={<Switch size="small" checked={applyToAll.on} disabled={frozen} onChange={(e) => toggleApplyToAll(e.target.checked)} />}
-            label={(
-              <Tooltip title={applyToAll.hint}>
-                <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{t('budgetTab.lines.applyToAll')}</Typography>
-              </Tooltip>
-            )}
-            sx={{ ml: 0 }}
-          />
-        </Box>
-      )}
     </>
   );
 }

@@ -67,8 +67,6 @@
     "budget": {
       "title": "Budget",
       "mode": "Mode",
-      "flat": "Annuel",
-      "monthly": "Mensuel",
       "total": "Total",
       "spreadPlaceholder": "ex. 120000",
       "profileFlat": "Linéaire",
@@ -261,8 +259,6 @@
     "budget": {
       "title": "Budget",
       "mode": "Mode",
-      "flat": "Annuel",
-      "monthly": "Mensuel",
       "total": "Total",
       "spreadPlaceholder": "ex. 120000",
       "profileFlat": "Linéaire",
@@ -1281,10 +1277,7 @@
     "monthAnd": "{{first}} et {{second}}",
     "zeroedMonths_one": "{{months}} sera mis à zéro.",
     "zeroedMonths_other": "{{months}} seront mis à zéro.",
-    "changePeriod": "Modifier la période",
-    "choosePeriod": "Choisir la période",
     "noMonthInItemDates": "Aucun mois de {{year}} n'est compris dans les dates de la ligne.",
-    "column": "Colonne",
     "distribution": "Répartition",
     "from": "Du",
     "to": "Au",
@@ -1310,10 +1303,6 @@
       "lineCount_one": "{{count}} ligne",
       "lineCount_other": "{{count}} lignes",
       "fte": "{{value}} ETP"
-    },
-    "panel": {
-      "spread": "Répartir un montant",
-      "lines": "Quantité et prix"
     },
     "lines": {
       "description": "Description",
@@ -1381,7 +1370,6 @@
         "dateOutsideYear": "Choisissez une date en {{year}}."
       },
       "fte": "ETP sur la période {{fte_period}} · Moyenne sur l'année {{fte}}",
-      "applyToAll": "Appliquer ces lignes à toutes les colonnes",
       "status": {
         "manual": "Les montants ont été saisis à la main.",
         "spread": "Les montants viennent d'une répartition.",
@@ -1401,20 +1389,8 @@
     },
     "listAnd": "{{first}} et {{last}}",
     "amount": "Montant",
-    "applyDistributionToAll": "Appliquer la répartition à toutes les colonnes",
-    "applyToAllFollow": "{{columns}} suivent la même période.",
-    "applyToAllOthers_one": "{{columns}} garde sa propre période.",
-    "applyToAllOthers_other": "{{columns}} gardent leur propre période.",
-    "applyToAllFrozen": "Les colonnes gelées ne changent jamais.",
     "keepLines_one": "{{columns}} garde ses lignes.",
     "keepLines_other": "{{columns}} gardent leurs lignes.",
-    "spreadLock": {
-      "fromLines_one": "Les montants viennent de {{count}} ligne de Quantité et prix.",
-      "fromLines_other": "Les montants viennent des {{count}} lignes de Quantité et prix.",
-      "unlock": "Répartir un montant à la place",
-      "unlocked": "Une répartition remplace les montants des lignes. Les lignes restent comme référence."
-    },
-    "totalFromLines": "Calculé à partir de ses lignes. Ouvrez Quantité et prix pour le modifier.",
     "conflict": {
       "waiting": "Choisissez d'abord, ci-dessus, de recharger cette colonne ou de l'écraser.",
       "yearTotal": "{{amount}} sur l'année",
@@ -1423,6 +1399,65 @@
       "yearChange_one": "Une autre personne a modifié la colonne {{columns}} pendant que vous la modifiiez, et vous n'avez pas choisi quelles valeurs garder. Changer d'année quand même et perdre vos valeurs de {{columns}}, ou rester et choisir.",
       "yearChange_other": "Une autre personne a modifié les colonnes {{columns}} pendant que vous les modifiiez, et vous n'avez pas choisi quelles valeurs garder. Changer d'année quand même et perdre vos valeurs dans ces colonnes, ou rester et choisir.",
       "yearChangeConfirm": "Changer d'année"
+    },
+    "notEntered": "Pas encore saisi",
+    "columns": "Colonnes du budget",
+    "card": {
+      "frozen": "Gelée",
+      "waiting": "En attente de votre choix"
+    },
+    "editorTitle": "{{column}} {{year}}",
+    "modes": "Construction de la colonne",
+    "mode": {
+      "amount": "Montant",
+      "lines": "Quantité et prix",
+      "monthly": "Par mois"
+    },
+    "annualAmount": "Montant annuel",
+    "when": "Quand",
+    "wholeYear": "Toute l'année",
+    "aPeriod": "Une période",
+    "storedPeriod": "Période enregistrée : {{stored}}. L'enregistrement utilisera {{proposed}}, selon les dates de la ligne.",
+    "span": {
+      "range": "de {{from}} à {{to}} ({{n}} mois)",
+      "range_vowel": "d'{{from}} à {{to}} ({{n}} mois)",
+      "single": "en {{month}}"
+    },
+    "result": {
+      "spreadFlat": "{{amount}} répartis linéairement {{span}}.",
+      "spread445": "{{amount}} répartis en 4-4-5 {{span}}.",
+      "enterFlat": "Saisissez un montant : il sera réparti linéairement {{span}}.",
+      "enter445": "Saisissez un montant : il sera réparti en 4-4-5 {{span}}.",
+      "title": "Résultat par mois",
+      "quarter": "T{{n}}",
+      "cellHint": "Saisir par mois"
+    },
+    "monthlyHint": "Saisissez les montants dans la colonne {{column}} du tableau ci-dessous.",
+    "reference_one": "{{count}} ligne gardée en référence.",
+    "reference_other": "{{count}} lignes gardées en référence.",
+    "referenceAmount_one": "{{count}} ligne gardée en référence ({{amount}}).",
+    "referenceAmount_other": "{{count}} lignes gardées en référence ({{amount}}).",
+    "switch": {
+      "toAmount": "Passer en saisie par montant ? Le total actuel ({{amount}}) devient le montant, réparti linéairement.",
+      "toAmountSpan": "Passer en saisie par montant ? Le total actuel ({{amount}}) devient le montant, réparti linéairement {{span}}.",
+      "toLines": "Passer en quantité et prix ? Le total viendra des lignes.",
+      "toMonthly": "Passer en saisie par mois ? Les mois actuels sont gardés et deviennent modifiables dans le tableau.",
+      "linesStay": "Les lignes restent en référence.",
+      "reuseLines_one": "La ligne gardée en référence est reprise.",
+      "reuseLines_other": "Les {{count}} lignes gardées en référence sont reprises.",
+      "replaced": "Le montant actuel ({{amount}}) sera remplacé.",
+      "confirm": "Changer"
+    },
+    "also": {
+      "open": "Utiliser aussi pour d'autres colonnes…",
+      "label": "Même construction pour",
+      "apply": "Appliquer",
+      "amountHint": "Elles prennent cette période et cette répartition, et gardent leur propre total.",
+      "linesHint": "Ces lignes remplacent leurs montants."
+    },
+    "frozen": {
+      "title": "La colonne {{column}} {{year}} est gelée",
+      "hint": "Lecture seule. Un administrateur peut la dégeler dans Administration › Geler / Dégeler les données."
     }
   },
   "budget": {

@@ -357,10 +357,52 @@ function joinRuns(t: TFunction, runs: string[]): string {
   return runs.reduce((acc, run) => (acc ? t('budgetTab.monthAnd', { first: acc, second: run }) : run), '');
 }
 
+/** "April to December", "April", "January and December". Empty when no month counts. */
+export function monthsText(t: TFunction, locale: string, months: number[]): string {
+  return joinRuns(t, monthRuns(t, locale, months));
+}
+
 /** "9 months, April to December", "1 month, April". Empty when no month counts. */
 export function periodText(t: TFunction, locale: string, months: number[]): string {
   if (months.length === 0) return '';
   return t('budgetTab.periodText', { count: months.length, months: joinRuns(t, monthRuns(t, locale, months)) });
+}
+
+/** French elides "de" before a vowel: « d'avril », « d'août », « d'octobre ». */
+const STARTS_WITH_VOWEL = /^[aeiouàâäéèêëîïôöùûü]/i;
+
+/**
+ * The months a period keeps, in words that count them: "from April to December (9 months)",
+ * « d'avril à décembre (9 mois) », "in April". The months of a period are contiguous. Empty when
+ * no month counts.
+ */
+export function monthSpanText(t: TFunction, locale: string, months: number[]): string {
+  if (months.length === 0) return '';
+  const sorted = [...months].sort((a, b) => a - b);
+  if (sorted.length === 1) return t('budgetTab.span.single', { month: monthName(locale, sorted[0]) });
+  const from = monthName(locale, sorted[0]);
+  // `n`, not `count`: the sentence has one form (a period of two months or more), the context alone varies.
+  return t('budgetTab.span.range', {
+    from,
+    to: monthName(locale, sorted[sorted.length - 1]),
+    n: sorted.length,
+    ...(STARTS_WITH_VOWEL.test(from) ? { context: 'vowel' } : {}),
+  });
+}
+
+/**
+ * What a spread gives, in one sentence that counts the months: "120 000 spread flat from April to
+ * December (9 months).", or, before an amount is typed, "Enter an amount: it will be spread flat
+ * from April to December (9 months)." `amount` is already formatted; empty when none is typed.
+ * Empty when no month counts (the period problem says why).
+ */
+export function spreadResultText(t: TFunction, locale: string, amount: string, profile: 'flat' | '4-4-5', months: number[]): string {
+  const span = monthSpanText(t, locale, months);
+  if (!span) return '';
+  const shape = profile === '4-4-5' ? '445' : 'Flat';
+  return amount
+    ? t(`budgetTab.result.spread${shape}`, { amount, span })
+    : t(`budgetTab.result.enter${shape}`, { span });
 }
 
 /** "January to March will be set to zero." Empty when every month counts. */
