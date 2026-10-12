@@ -221,8 +221,7 @@ Der Reiter Verknüpfungen verbindet dieses Asset mit anderen Datensätzen in KAN
 - **Enthalten in** / **Abhängig von**: Schreibgeschützte umgekehrte Ansichten, nur angezeigt, wenn andere Assets dieses referenzieren
 
 **Finanzen & Projekte**:
-- **OPEX-Zeilen**: Verknüpfung mit OPEX-Zeilen
-- **CAPEX-Zeilen**: Verknüpfung mit CAPEX-Zeilen
+- **Budgetzeilen**: Verknüpfung mit OPEX- und CAPEX-Zeilen in einer Liste. Suchen Sie nach Titel oder Referenz (`BL-12`); jeder Vorschlag zeigt seinen Typ
 - **Verträge**: Verknüpfung mit Vertragsdatensätzen
 - **Projekte**: Verknüpfung mit Portfolio-Projekten, die mit diesem Asset zusammenhängen
 
@@ -364,6 +363,6 @@ PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
 - **Lebenszyklus verfolgen**: Markieren Sie veraltete und außer Betrieb genommene Assets, um die Inventarzählung genau zu halten.
 - **Mit Standorten verknüpfen**: Weisen Sie Assets Standorten zu, sodass Hosting-Typ, Land und Stadt automatisch ausgefüllt werden.
 - **Anwendungen zuweisen**: Verwenden Sie den Reiter Übersicht, um Assets mit Anwendungs-Bereitstellungen zu verknüpfen. Die gleichen Zuweisungen erscheinen unter dem Reiter Bereitstellungen der Anwendung.
-- **Reiter Verknüpfungen verwenden**: Verbinden Sie Assets mit OPEX/CAPEX-Zeilen, Verträgen und Projekten für finanzielle Sichtbarkeit.
+- **Reiter Verknüpfungen verwenden**: Verbinden Sie Assets mit Budgetzeilen, Verträgen und Projekten für finanzielle Sichtbarkeit.
 - **Aufgaben kommen von der Aufgabenseite**: Um eine Aufgabe an ein Asset anzuhängen, setzen Sie das Feld Asset auf der Aufgabe selbst; sie erscheint dann unter Verknüpfungen > Aufgaben.
 - **Dokumentation anhängen**: Laden Sie Konfigurationsdateien, Architekturdiagramme oder Lieferantendokumente direkt in den Reiter Verknüpfungen hoch.
