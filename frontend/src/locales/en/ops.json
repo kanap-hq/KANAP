@@ -978,7 +978,7 @@
     },
     "shared": {
       "loadingReport": "Loading report…",
-      "capexYearAmountNote": "CAPEX lines are spread on their amount of the year, not on their depreciation.",
+      "capexYearAmountNote": "CAPEX lines count for their amount of the year, without depreciation.",
       "loadingData": "Loading data…",
       "run": "Run",
       "refreshing": "Refreshing…",

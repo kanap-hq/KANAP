@@ -979,7 +979,7 @@
     },
     "shared": {
       "loadingReport": "Chargement du rapport…",
-      "capexYearAmountNote": "Les CAPEX sont répartis sur leur montant de l'année, pas sur leur amortissement.",
+      "capexYearAmountNote": "Les CAPEX comptent pour leur montant de l'année, sans amortissement.",
       "loadingData": "Chargement des données…",
       "run": "Exécuter",
       "refreshing": "Actualisation…",

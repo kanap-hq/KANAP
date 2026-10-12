@@ -978,7 +978,7 @@
     },
     "shared": {
       "loadingReport": "Cargando informe…",
-      "capexYearAmountNote": "Las líneas CAPEX se reparten según su importe del año, no según su amortización.",
+      "capexYearAmountNote": "Las líneas CAPEX cuentan por su importe del año, sin amortización.",
       "loadingData": "Cargando datos…",
       "run": "Ejecutar",
       "refreshing": "Actualizando…",

@@ -978,7 +978,7 @@
     },
     "shared": {
       "loadingReport": "Bericht wird geladen…",
-      "capexYearAmountNote": "CAPEX-Zeilen werden nach ihrem Betrag des Jahres verteilt, nicht nach ihrer Abschreibung.",
+      "capexYearAmountNote": "CAPEX-Zeilen zählen mit ihrem Betrag des Jahres, ohne Abschreibung.",
       "loadingData": "Daten werden geladen…",
       "run": "Ausführen",
       "refreshing": "Wird aktualisiert…",
