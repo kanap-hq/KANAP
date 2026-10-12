@@ -12,13 +12,13 @@ import { useLocale } from '../i18n/useLocale';
 import DashboardTile from './workspace/tiles/DashboardTile';
 import { AmountColumnKey, amountFieldKey, YearSlot, yearSlotLabel } from '../components/finance/amountColumns';
 import { useBudgetColumns } from '../hooks/useBudgetColumns';
-import type { BudgetScope } from '../services/budgetOperations';
+import type { BudgetOperationScope as NatureScope } from '../services/budgetOperations';
 import { buildItemPath, formatItemRef } from '../utils/item-ref';
 import ItemScopeTabs from './operations/ItemScopeTabs';
 import type { BudgetSummaryRow } from './reports/useReportScope';
 import {
   type ColumnFilters,
-  type ReportScope,
+  type BudgetScope,
   costCenterTotalsRequest,
   countRequest,
   keepValues,
@@ -82,7 +82,7 @@ function useBudgetSnapshot(enabled: boolean) {
         const res = await api.get<Record<string, number>>(endpoint, { signal });
         return [scope, res.data] as const;
       }));
-      return Object.fromEntries(totals) as Record<ReportScope, Record<string, number>>;
+      return Object.fromEntries(totals) as Record<BudgetScope, Record<string, number>>;
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -166,12 +166,12 @@ function hygieneChecks(metric: AmountColumnKey): HygieneCheck[] {
 }
 
 /** The unified list opened on exactly these filters (the list restores no stored search over them). */
-function listHref(scope: ReportScope, filters: ColumnFilters): string {
+function listHref(scope: BudgetScope, filters: ColumnFilters): string {
   return `/ops/budget?${new URLSearchParams({ filters: JSON.stringify(scope === 'all' ? filters : { ...filters, nature: keepValues([scope]) }) }).toString()}`;
 }
 
 /** The hygiene counts of one type: Enabled lines (not ended before 1 January, the list's default) passing each check, no row built. */
-function useHygieneCounts(scope: BudgetScope, checks: readonly HygieneCheck[] | null, enabled: boolean) {
+function useHygieneCounts(scope: NatureScope, checks: readonly HygieneCheck[] | null, enabled: boolean) {
   // The lines the list shows by default: Enabled, not ended before 1 January of this year.
   const requests = useMemo(() => (checks ? checks.map((check) => countRequest(check.filter, 'enabled')) : null), [checks]);
   const counts = useBudgetAggregates(scope, requests, { enabled });
@@ -214,7 +214,7 @@ function myBudgetFilters(profile: ProfileName): Array<{ role: MyBudgetRole; filt
 }
 
 /** Per role: the Enabled lines (not ended before 1 January) in the user's name and their sum of this year's default column. */
-function useMyBudget(scope: ReportScope, profile: ProfileName, metric: AmountColumnKey, enabled: boolean) {
+function useMyBudget(scope: BudgetScope, profile: ProfileName, metric: AmountColumnKey, enabled: boolean) {
   const roles = useMemo(() => myBudgetFilters(profile), [profile]);
   const requests = useMemo(() => (roles ? roles.map((role) => lineTotalRequest(role.filter, metric)) : null), [roles, metric]);
   const query = useBudgetAggregates(scope, requests, { enabled });
@@ -226,14 +226,14 @@ function useMyBudget(scope: ReportScope, profile: ProfileName, metric: AmountCol
 }
 
 /** This year's default column by cost center, the five largest (lines without one in the ranking too). */
-function useCostCenterTotals(scope: ReportScope, metric: AmountColumnKey, enabled: boolean) {
+function useCostCenterTotals(scope: BudgetScope, metric: AmountColumnKey, enabled: boolean) {
   const request = useMemo(() => costCenterTotalsRequest(metric, 5), [metric]);
   const query = useBudgetAggregate(scope, request, { enabled });
   const rows = useMemo(() => readCostCenterTotals(query.data), [query.data]);
   return { rows, isLoading: enabled && query.isLoading, isError: query.isError, refetch: query.refetch };
 }
 
-type RecentUpdate = { scope: BudgetScope; id: string; ref: string; name: string; at: string | null };
+type RecentUpdate = { scope: NatureScope; id: string; ref: string; name: string; at: string | null };
 
 function useRecentUpdates(enabled: boolean) {
   return useQuery({
@@ -241,7 +241,7 @@ function useRecentUpdates(enabled: boolean) {
     enabled,
     queryFn: async (): Promise<RecentUpdate[]> => {
       const params = { limit: 5, sort: 'updated_at:DESC' };
-      const res = await api.get<ServerListResponse<BudgetSummaryRow & { nature: BudgetScope }>>('/budget-lines/summary', { params });
+      const res = await api.get<ServerListResponse<BudgetSummaryRow & { nature: NatureScope }>>('/budget-lines/summary', { params });
       return (res.data.items || []).map((row) => ({
         scope: row.nature,
         id: row.id,
@@ -263,14 +263,14 @@ function getColumnValueFromRow(row: any, year: 'y' | 'yMinus1' | 'yPlus1', colum
   return Number.isFinite(v) ? v : 0;
 }
 
-function useTopItemsCurrentYear(scope: ReportScope, enabled: boolean, column: AmountColumnKey, sort: string, limit: number = 5) {
+function useTopItemsCurrentYear(scope: BudgetScope, enabled: boolean, column: AmountColumnKey, sort: string, limit: number = 5) {
   const Y = new Date().getFullYear();
   return useQuery({
     queryKey: ['budget-lines-summary', 'dashboard', 'top-items', scope, Y, column, limit],
     enabled,
     queryFn: async () => {
       const params = { limit, sort, years: [Y - 1, Y].join(','), ...(scope === 'all' ? {} : { filters: JSON.stringify({ nature: keepValues([scope]) }) }) } as Record<string, any>;
-      const res = await api.get<ServerListResponse<BudgetSummaryRow & { nature: BudgetScope }>>('/budget-lines/summary', { params });
+      const res = await api.get<ServerListResponse<BudgetSummaryRow & { nature: NatureScope }>>('/budget-lines/summary', { params });
       const items = res.data.items || [];
       return items.map((row) => ({
         id: row.id,
@@ -285,7 +285,7 @@ function useTopItemsCurrentYear(scope: ReportScope, enabled: boolean, column: Am
 }
 
 /** Lines whose default column grew from Y-1 to Y, largest first, over every line of the type's window (one aggregate). */
-function useTopIncreases(scope: ReportScope, enabled: boolean, column: AmountColumnKey, columnReady: boolean, limit: number = 5) {
+function useTopIncreases(scope: BudgetScope, enabled: boolean, column: AmountColumnKey, columnReady: boolean, limit: number = 5) {
   const request = useMemo(() => {
     if (!columnReady) return null;
     const request = topIncreasesRequest('all', column, limit);
@@ -303,11 +303,11 @@ function useTopIncreases(scope: ReportScope, enabled: boolean, column: AmountCol
 }
 
 /** All / OPEX / CAPEX choice of a dashboard tile, remembered per tile; a type the user cannot read falls back to the default. */
-function useTileScope(tile: string): [ReportScope, (next: ReportScope) => void] {
+function useTileScope(tile: string): [BudgetScope, (next: BudgetScope) => void] {
   const { hasLevel } = useAuth();
   const fallback = 'all';
   const storageKey = `kanap.dashboard.${tile}.scope`;
-  const [stored, setStored] = useState<ReportScope | null>(() => {
+  const [stored, setStored] = useState<BudgetScope | null>(() => {
     try {
       const value = window.localStorage.getItem(storageKey);
       return value === 'all' || value === 'opex' || value === 'capex' ? value : null;
@@ -316,7 +316,7 @@ function useTileScope(tile: string): [ReportScope, (next: ReportScope) => void] 
     }
   });
   const scope = stored && hasLevel('budget', 'reader') ? stored : fallback;
-  const setScope = useCallback((next: ReportScope) => {
+  const setScope = useCallback((next: BudgetScope) => {
     setStored(next);
     try {
       window.localStorage.setItem(storageKey, next);
@@ -343,7 +343,7 @@ export default function DashboardPage() {
   const { data: myTasks, isLoading: tasksLoading } = useMyTasksSummary(profile?.id, canTasks);
   const { data: nextContract, isLoading: contractsLoading } = useNextContractRenewal(canContracts);
   const readableScopes = (['opex', 'capex'] as const).filter((scope) => (scope === 'opex' ? canOpex : canCapex));
-  const scopeLabel = (scope: BudgetScope) => t(`ops:operations.scope.${scope}`);
+  const scopeLabel = (scope: NatureScope) => t(`ops:operations.scope.${scope}`);
   const budgetColumns = useBudgetColumns();
   const defaultColumn = budgetColumns.defaultColumn;
   const snapshot = useBudgetSnapshot(canOpex);

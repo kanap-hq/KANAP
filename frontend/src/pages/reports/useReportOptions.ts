@@ -46,7 +46,7 @@ export function useAccountLabelOptions(scope: BudgetScope, wanted: boolean): Opt
   const query = useQuery({
     queryKey: [SUMMARY_QUERY_KEY[scope], 'filter-values', 'account_display'],
     queryFn: async ({ signal }) => {
-      const res = await api.get<Record<string, Array<string | null>>>(`/${scope === 'opex' ? 'spend' : 'capex'}-items/summary/filter-values`, {
+      const res = await api.get<Record<string, Array<string | null>>>(scope === 'all' ? '/budget-lines/summary/filter-values' : `/${scope === 'opex' ? 'spend' : 'capex'}-items/summary/filter-values`, {
         params: { fields: 'account_display' },
         signal,
       });
@@ -85,7 +85,7 @@ type AnalyticsCategory = { id: string; name: string | null };
 
 /** The values the lines of `scope` may choose: those for both types (null) and those for that one. */
 export function axisValueCatalogueFilters(scope: BudgetScope): string {
-  return JSON.stringify({ applies_to: { filterType: 'set', values: [null, scope] } });
+  return JSON.stringify({ applies_to: { filterType: 'set', values: scope === 'all' ? [null, 'opex', 'capex'] : [null, scope] } });
 }
 
 /**

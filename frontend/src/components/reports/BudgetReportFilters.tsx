@@ -132,7 +132,7 @@ const filterNoticeLinkSx = { fontSize: 'inherit', verticalAlign: 'baseline' } as
  */
 export function useBudgetReportFilters({ scope, years }: { scope: BudgetScope; years?: readonly number[] }): BudgetReportFilterState {
   const { t } = useTranslation('ops');
-  const analyticsAxes = useAnalyticsAxes({ scope });
+  const analyticsAxes = useAnalyticsAxes({ scope: scope === 'all' ? null : scope });
   const [params, setParams] = useSearchParams();
   const rawCostCenter = params.get(COST_CENTER_PARAM) || null;
   // The tree only for an address that names a node (its subtree and its label); the picker loads

@@ -57,10 +57,13 @@ import TopOpexReport from './TopOpexReport';
 import OpexDeltaReport from './OpexDeltaReport';
 import ConsolidationReport from './ConsolidationReport';
 import AnalyticsCategoryReport from './AnalyticsCategoryReport';
+import ComparisonReport from './ComparisonReport';
+import BudgetColumnsCompareReport from './BudgetColumnsCompareReport';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
 const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
 const OPEX_AGGREGATE = '/spend-items/summary/aggregate';
+const ALL_AGGREGATE = '/budget-lines/summary/aggregate';
 const CAPEX_AGGREGATE = '/capex-items/summary/aggregate';
 const Y = new Date().getFullYear();
 
@@ -82,7 +85,9 @@ const capexRows = [
   { id: 'c2', description: 'Capex cut', versions: { yMinus1: slot(Y - 1, 400), y: slot(Y, 100) } },
 ];
 
-function renderReport(element: React.ReactElement, path = '/report') {
+const allRows = [...opexRows, ...capexRows.map((row, i) => ({ ...row, product_name: row.description, item_number: 119 + i }))];
+
+function renderReport(element: React.ReactElement, path = '/report?scope=opex') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
@@ -101,12 +106,14 @@ beforeEach(() => {
   get.mockReset();
   get.mockImplementation(async (url: string, config?: { params?: Record<string, string> }) => {
     const fields = String(config?.params?.fields ?? '').split(',');
+    if (url === '/budget-lines/summary/filter-values') return { data: fakeFilterValues(allRows, fields) };
     if (url === '/spend-items/summary/filter-values') return { data: fakeFilterValues(opexRows, fields) };
     if (url === '/capex-items/summary/filter-values') return { data: fakeFilterValues(capexRows, fields) };
     return { data: { items: [], total: 0 } };
   });
   post.mockReset();
   post.mockImplementation(async (url: string, body: any) => {
+    if (url === ALL_AGGREGATE) return { data: fakeAggregate(allRows, body) };
     if (url === OPEX_AGGREGATE) return { data: fakeAggregate(opexRows, body) };
     if (url === CAPEX_AGGREGATE) return { data: fakeAggregate(capexRows, body) };
     throw new Error(`unexpected POST ${url}`);
@@ -189,12 +196,12 @@ describe.each([
 });
 
 describe('Report type from the address', () => {
-  it('falls back to OPEX when ?scope=capex is asked without the budget right', async () => {
+  it('falls back to All when ?scope=capex is asked without the budget right', async () => {
     readable.budget = false;
     renderReport(<TopOpexReport />, '/report?scope=capex');
     expect(await screen.findByText('Opex line')).toBeInTheDocument();
     expect(calledUrls()).not.toContain(CAPEX_AGGREGATE);
-    expect(screen.getByRole('tab', { name: 'operations.scope.opex' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'operations.scope.all' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'operations.scope.capex' })).toBeDisabled();
   });
 
@@ -202,7 +209,7 @@ describe('Report type from the address', () => {
     renderReport(<OpexDeltaReport />, '/report?scope=assets');
     await waitFor(() => expect(screen.getByTestId('grid').textContent).toContain('Opex line'));
     expect(calledUrls()).not.toContain(CAPEX_AGGREGATE);
-    expect(screen.getByRole('tab', { name: 'operations.scope.opex' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'operations.scope.all' })).toHaveAttribute('aria-selected', 'true');
   });
 });
 
@@ -232,4 +239,57 @@ describe.each([
     expect(filters.textContent).not.toContain('reports.filters.itemSelected');
     expect(filters.textContent).not.toContain('reports.filters.accountSelected');
   });
+});
+
+describe.each([
+  ['Top items', TopOpexReport],
+  ['Variation', OpexDeltaReport],
+  ['Consolidation', ConsolidationReport],
+  ['Dimensions', AnalyticsCategoryReport],
+])('%s unified scope', (_name, Report) => {
+  it('defaults to All and reads the unified server aggregate without calling either alias', async () => {
+    renderReport(<Report />, '/report');
+    await waitFor(() => expect(calledUrls()).toContain(ALL_AGGREGATE));
+    expect(screen.getAllByRole('tab').slice(0, 3).map((tab) => tab.textContent))
+      .toEqual(['operations.scope.all', 'operations.scope.opex', 'operations.scope.capex']);
+    expect(screen.getByRole('tab', { name: 'operations.scope.all' })).toHaveAttribute('aria-selected', 'true');
+    expect(calledUrls()).not.toContain(OPEX_AGGREGATE);
+    expect(calledUrls()).not.toContain(CAPEX_AGGREGATE);
+    await waitFor(() => expect(post.mock.calls.filter(([, body]) => body.spec.measures.length > 0)).toHaveLength(1));
+    await waitFor(() => expect(screen.getByTestId('chart-title').textContent).toContain('"type":"operations.scope.all"'));
+  });
+});
+
+it('All top items use native CAPEX titles and mixed account options', async () => {
+  renderReport(<TopOpexReport />, '/report?scope=all');
+  expect(await screen.findByText('Capex growth')).toBeInTheDocument();
+  expect(within(screen.getByTestId('grid')).getByText('Opex line')).toBeInTheDocument();
+  fireEvent.keyDown(screen.getByRole('combobox', { name: 'reports.filters.excludeAccounts' }), { key: 'ArrowDown' });
+  expect(await screen.findByRole('option', { name: '1 - Account' })).toBeInTheDocument();
+  expect(calledUrls()).toContain('/budget-lines/summary/filter-values');
+  expect(calledUrls().filter((url) => url.includes('/summary'))).toEqual(expect.arrayContaining([ALL_AGGREGATE]));
+  expect(calledUrls()).not.toContain(OPEX_AGGREGATE);
+  expect(calledUrls()).not.toContain(CAPEX_AGGREGATE);
+});
+
+it('Comparison defaults to All and switches its aggregate to CAPEX', async () => {
+  renderReport(<ComparisonReport />, '/report');
+  await waitFor(() => expect(calledUrls()).toContain(ALL_AGGREGATE));
+  expect(screen.getByRole('tab', { name: 'operations.scope.all' })).toHaveAttribute('aria-selected', 'true');
+  expect(calledUrls()).not.toContain(OPEX_AGGREGATE);
+  expect(calledUrls()).not.toContain(CAPEX_AGGREGATE);
+  fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
+  await waitFor(() => expect(calledUrls()).toContain(CAPEX_AGGREGATE));
+});
+
+it('Compared columns default to All and keep OPEX and CAPEX in their local selector', async () => {
+  renderReport(<BudgetColumnsCompareReport />, '/report');
+  await waitFor(() => expect(calledUrls()).toContain(ALL_AGGREGATE));
+  const selector = screen.getByRole('combobox', { name: 'reports.filters.itemType' });
+  expect(selector.textContent).toBe('operations.scope.all');
+  fireEvent.mouseDown(selector);
+  const list = await screen.findByRole('listbox');
+  expect(within(list).getAllByRole('option').map((option) => option.textContent)).toEqual(['operations.scope.all', 'operations.scope.opex', 'operations.scope.capex']);
+  fireEvent.click(within(list).getByRole('option', { name: 'operations.scope.capex' }));
+  await waitFor(() => expect(calledUrls()).toContain(CAPEX_AGGREGATE));
 });

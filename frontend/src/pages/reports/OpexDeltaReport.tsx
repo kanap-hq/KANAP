@@ -174,7 +174,7 @@ export default function OpexDeltaReport() {
       flex: 1,
       minWidth: 240,
       cellRenderer: LinkCellRenderer,
-      cellRendererParams: { newTab: true, getHref: (row: { id?: string | null }) => itemHref(scope, row.id) },
+      cellRendererParams: { newTab: true, getHref: (row: { id?: string | null; itemNumber?: number }) => itemHref(scope, row.id, row.itemNumber) },
     },
     { field: 'previous', headerName: sourceLabel, width: 200, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
     { field: 'current', headerName: destinationLabel, width: 200, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
@@ -402,7 +402,7 @@ export default function OpexDeltaReport() {
           alignItems: 'flex-start',
         }}
         >
-          <ItemScopeTabs value={scope} onChange={setScope} />
+          <ItemScopeTabs allowAll value={scope} onChange={setScope} />
           <ReportMeasureSelect value={measure} onChange={setMeasure} />
           <BudgetReportFilters filters={reportFilters} />
           <TextField

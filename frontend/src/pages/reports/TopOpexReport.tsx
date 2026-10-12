@@ -76,7 +76,7 @@ export default function TopOpexReport() {
       flex: 1,
       minWidth: 220,
       cellRenderer: LinkCellRenderer,
-      cellRendererParams: { newTab: true, getHref: (row: { id?: string | null }) => itemHref(scope, row.id) },
+      cellRendererParams: { newTab: true, getHref: (row: { id?: string | null; itemNumber?: number }) => itemHref(scope, row.id, row.itemNumber) },
     },
     { field: 'value', headerName: `${metricLabel} (${year})`, width: 160, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
     { field: 'pct_of_total', headerName: t('reports.columns.shareOfTotal'), width: 160, type: 'rightAligned', valueFormatter: (p) => (p.value != null ? `${p.value}%` : '') },
@@ -194,7 +194,7 @@ export default function TopOpexReport() {
           alignItems: 'flex-start',
         }}
         >
-          <ItemScopeTabs value={scope} onChange={setScope} />
+          <ItemScopeTabs allowAll value={scope} onChange={setScope} />
           <ReportMeasureSelect value={measure} onChange={setMeasure} />
           <BudgetReportFilters filters={reportFilters} />
           <TextField select size="small" label={t("reports.filters.year")} value={year} onChange={(e) => setYear(parseInt(e.target.value, 10))} sx={{ minWidth: 140 }}>

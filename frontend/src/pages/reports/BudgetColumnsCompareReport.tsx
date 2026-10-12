@@ -8,14 +8,14 @@ import ReportLayout from '../../components/reports/ReportLayout';
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
 import ReportDataStatus from '../../components/reports/ReportDataStatus';
 import { MetricKey, metricKeys, resolveMetric } from './reportMetrics';
-import { columnsCompareRequest, readColumnsCompare } from './reportAggregates';
+import { columnsCompareRequest, readColumnsCompare, type BudgetScope } from './reportAggregates';
 import { useBudgetAggregate } from './useBudgetAggregate';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { BudgetReportFilters, useBudgetReportFilters } from '../../components/reports/BudgetReportFilters';
 import { useTranslation } from 'react-i18next';
 import { ReportFteNotice, ReportMeasureSelect, useMeasureText, useReportMeasure } from './reportMeasure';
 
-type ItemType = 'opex' | 'capex';
+type ItemType = BudgetScope;
 
 type Selection = {
   year: number;
@@ -38,7 +38,7 @@ export default function BudgetColumnsCompareReport() {
   const now = new Date();
   const Y = now.getFullYear();
   const allowedYears = [Y - 2, Y - 1, Y, Y + 1, Y + 2];
-  const [itemType, setItemType] = useState<ItemType>('opex');
+  const [itemType, setItemType] = useState<ItemType>('all');
   const [measure, setMeasure] = useReportMeasure();
   const measureText = useMeasureText(measure);
   const formatNumber = measureText.format;
@@ -223,9 +223,10 @@ export default function BudgetColumnsCompareReport() {
             size="small"
             label={t("reports.filters.itemType")}
             value={itemType}
-            onChange={(e) => setItemType((e.target.value as ItemType) || 'opex')}
+            onChange={(e) => setItemType((e.target.value as ItemType) || 'all')}
             sx={{ minWidth: 160 }}
           >
+            <MenuItem value="all">{t('operations.scope.all')}</MenuItem>
             <MenuItem value="opex">{t('operations.scope.opex')}</MenuItem>
             <MenuItem value="capex">{t('operations.scope.capex')}</MenuItem>
           </TextField>

@@ -735,3 +735,21 @@ describe('daily rate', () => {
       .toEqual([{ year: 2026, metric: 'revision', amount: 0.5 }]);
   });
 });
+
+describe('All native report requests', () => {
+  const scope = 'all' as const;
+  it('uses native titles and numbers for Top, Variation and both FTE reports', () => {
+    const top = topItemsRequest({ scope, year: 2026, metric: 'budget', topCount: 5, excludedIds: [], excludedAccounts: [], filters: {} });
+    const delta = deltaRequests({ scope, source: { year: 2025, metric: 'budget' }, destination: { year: 2026, metric: 'budget' }, modes: ['increase'], topCount: 5, excludedIds: [], excludedAccounts: [], filters: {} });
+    const staff = staffingRequest({ scope, year: 2026, metric: 'budget', group: { kind: 'item' }, filters: {} });
+    const cost = costPerFteRequests({ scope, columns: [{ year: 2026, metric: 'budget' }], group: { kind: 'item' }, filters: {} });
+    for (const request of [top, delta[0], staff, cost[0]]) {
+      expect(request.spec.groupBy).toEqual(['id', 'product_name', 'item_number']);
+      expect(request.query.filters).not.toHaveProperty('nature');
+    }
+    expect(readTopItems(result([row(['c1', 'Capex title', '119'], { value: 100 })], row([], { value: 100 }))).processed[0])
+      .toMatchObject({ id: 'c1', name: 'Capex title', itemNumber: 119 });
+    expect(readDelta(['increase'], [result([row(['c1', 'Capex title', '119'], { prev: 50, curr: 100, delta: 50 })], row([], { delta: 50 }))]).processed[0])
+      .toMatchObject({ id: 'c1', name: 'Capex title', itemNumber: 119 });
+  });
+});

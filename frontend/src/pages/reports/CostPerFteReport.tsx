@@ -289,7 +289,7 @@ export default function CostPerFteReport() {
       subtitle={t('reports.costPerFte.subtitle', { type: scopeLabel, group: groupInSentence })}
       filters={(
         <>
-          <ItemScopeTabs value={scope} onChange={setScope} />
+          <ItemScopeTabs allowAll value={scope} onChange={setScope} />
           <BudgetReportFilters filters={reportFilters} />
           <ReportGroupFilters state={grouping} />
           <ReportFilter label={t('reports.costPerFte.show')} width={150}>

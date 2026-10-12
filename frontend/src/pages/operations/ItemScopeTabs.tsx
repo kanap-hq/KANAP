@@ -3,36 +3,31 @@ import { Tab, Tabs } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { textTabSx, textTabsSx } from '../../theme/formSx';
 import { useAuth } from '../../auth/AuthContext';
-import type { BudgetScope } from '../../services/budgetOperations';
-import type { ReportScope } from '../reports/reportAggregates';
+import type { BudgetScope, BudgetOperationScope } from '../../services/budgetOperations';
 
 type ScopeLevel = 'reader' | 'admin';
 
 /** The item type a page opens on: OPEX (one right covers both types, lot R). */
-export function useDefaultBudgetScope(): BudgetScope {
+export function useDefaultBudgetScope(): BudgetOperationScope {
   return 'opex';
 }
 
 /**
- * OPEX / CAPEX switch, optionally including All; every scope is disabled without `level` on the budget lines. Reports
- * read (`reader`), the column operations act and pass `admin`.
+ * Budget scope switch; All is opt-in for reports. Every tab needs `level` on budget lines.
+ * Reports read (`reader`); column operations pass `admin` and keep the two nature tabs.
  */
-type Props = { level?: ScopeLevel } & (
-  { allowAll: true; value: ReportScope; onChange: (next: ReportScope) => void }
-  | { allowAll?: false; value: BudgetScope; onChange: (next: BudgetScope) => void }
-);
-
-export default function ItemScopeTabs(props: Props) {
-  const { value, level = 'reader', allowAll = false } = props;
+export default function ItemScopeTabs<T extends BudgetScope>({ value, onChange, level = 'reader', allowAll = false }: {
+  value: T;
+  onChange: (next: T) => void;
+  level?: ScopeLevel;
+  allowAll?: boolean;
+}) {
   const { t } = useTranslation(['ops']);
   const { hasLevel } = useAuth();
   return (
     <Tabs
       value={value}
-      onChange={(_, next: ReportScope) => {
-        if (props.allowAll) props.onChange(next);
-        else if (next !== 'all') props.onChange(next);
-      }}
+      onChange={(_, next: T) => onChange(next)}
       aria-label={t('operations.scope.label')}
       sx={[textTabsSx, { alignSelf: 'center' }]}
     >

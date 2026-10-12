@@ -26,7 +26,7 @@ import {
   AllocationCopyOperation,
   AllocationCopyResult,
   AllocationCopyResponse,
-  BudgetScope,
+  BudgetOperationScope as BudgetScope,
   copyAllocations,
 } from '../../services/budgetOperations';
 import { useKanapDialogs } from '../../components/design';

@@ -8,7 +8,7 @@ vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 
 import api from '../../api';
 import { fakeAggregate } from '../../test/fakeBudgetAggregate';
-import { useAxisValueOptions } from './useReportOptions';
+import { useAxisValueOptions, useAccountLabelOptions } from './useReportOptions';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
 const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
@@ -49,4 +49,20 @@ describe('useAxisValueOptions', () => {
     });
     expect(result.current.options?.map((option) => option.label)).toEqual(['Mandatory', 'High', 'Medium', 'Low', 'Archived']);
   });
+});
+
+it('All catalogue includes shared, OPEX and CAPEX values', async () => {
+  get.mockResolvedValue({ data: { items: CATALOGUE } });
+  post.mockImplementation(async (_url: string, body: any) => ({ data: fakeAggregate(ROWS, body) }));
+  const { result } = renderHook(() => useAxisValueOptions('all', 'ax-prio', true), { wrapper });
+  await waitFor(() => expect(result.current.options).toBeDefined());
+  expect(get).toHaveBeenCalledWith('/analytics-categories', { params: expect.objectContaining({ filters: JSON.stringify({ applies_to: { filterType: 'set', values: [null, 'opex', 'capex'] } }) }) });
+  expect(post.mock.calls[post.mock.calls.length - 1]?.[0]).toBe('/budget-lines/summary/aggregate');
+});
+
+it('All account options come from the unified filter-values endpoint', async () => {
+  get.mockResolvedValue({ data: { account_display: ['1 - Shared', '2 - Capex'] } });
+  const { result } = renderHook(() => useAccountLabelOptions('all', true), { wrapper });
+  await waitFor(() => expect(result.current.options?.map((option) => option.name)).toEqual(['1 - Shared', '2 - Capex']));
+  expect(get.mock.calls[get.mock.calls.length - 1]?.[0]).toBe('/budget-lines/summary/filter-values');
 });

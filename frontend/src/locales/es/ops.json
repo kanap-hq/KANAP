@@ -704,6 +704,7 @@
     "scope": {
       "all": "Todo",
       "label": "Tipo de partida",
+      "all": "Todo",
       "opex": "OPEX",
       "capex": "CAPEX"
     },
@@ -959,8 +960,8 @@
           "description": "Mayores variaciones OPEX o CAPEX vs. año anterior (top N personalizable)"
         },
         "budgetTrendOpex": {
-          "title": "Tendencia presupuestaria (OPEX)",
-          "description": "Comparar métricas OPEX a lo largo de los años"
+          "title": "Comparación presupuestaria",
+          "description": "Comparar métricas presupuestarias a lo largo de los años"
         },
         "budgetTrendCapex": {
           "title": "Tendencia presupuestaria (CAPEX)",
@@ -1206,7 +1207,7 @@
       "directionToggle": "Aumento o disminución"
     },
     "budgetTrendOpex": {
-      "title": "Tendencia presupuestaria (OPEX)",
+      "title": "Comparación presupuestaria",
       "subtitle": "Comparar métricas seleccionadas en un rango de años"
     },
     "budgetTrendCapex": {
@@ -1215,7 +1216,7 @@
     },
     "budgetColumnsCompare": {
       "title": "Comparación de columnas presupuestarias",
-      "subtitle": "Comparar hasta diez columnas presupuestarias para OPEX o CAPEX",
+      "subtitle": "Comparar hasta diez columnas presupuestarias",
       "yearGroupingSubtitle": "{{type}}: agrupación por año",
       "selectionsSubtitle": "{{type}}: {{count}} selección(es)",
       "addSelection": "Agregar"

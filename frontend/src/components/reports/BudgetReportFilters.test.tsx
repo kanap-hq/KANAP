@@ -182,7 +182,7 @@ describe('parseAnalyticsParam', () => {
 
 const seen = vi.hoisted(() => ({ search: '', kept: [] as string[], navigation: '' }));
 /** The report's line type. */
-const report = vi.hoisted(() => ({ scope: 'opex' as 'opex' | 'capex' }));
+const report = vi.hoisted(() => ({ scope: 'opex' as 'opex' | 'capex' | 'all' }));
 
 /** The lines the server holds: the bar's options come from them, and the picks keep some of them. */
 const server = vi.hoisted(() => ({ rows: [] as unknown[] }));
@@ -599,4 +599,16 @@ describe('BudgetReportFilters items with FTE', () => {
     expect(new URLSearchParams(seen.search).has('fte')).toBe(false);
     expect(seen.kept).toEqual(['x', 'y', 'z']);
   });
+});
+
+
+it('All offers dimensions for both natures and keeps their picks on the unified endpoint', async () => {
+  report.scope = 'all';
+  axesState.list = [AXES[1], { ...AXES[0], applies_to: 'opex' }, { ...AXES[3], applies_to: 'capex' }];
+  const rows = [...ROWS, { id: 'cap', ...values({ 'ax-idle': ['v-project', 'Project'] }) }];
+  await renderBar('/report?analytics=ax-idle:v-project', rows);
+  expect(dimensionSelects()).toEqual(['Analytics dimension', 'Nature', 'Activity']);
+  expect(dimensionSelect('Activity').textContent).toBe('Project');
+  expect(seen.kept).toEqual(['cap']);
+  expect(post.mock.calls.every(([url]) => url === '/budget-lines/summary/aggregate')).toBe(true);
 });

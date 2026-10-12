@@ -218,7 +218,7 @@ describe('Budget column comparison report', () => {
 
   it('names the item type through the translations', () => {
     renderReport(<BudgetColumnsCompareReport />);
-    expect(combo('reports.filters.itemType').textContent).toBe('operations.scope.opex');
+    expect(combo('reports.filters.itemType').textContent).toBe('operations.scope.all');
   });
 });
 

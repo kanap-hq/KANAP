@@ -220,9 +220,9 @@ const set = (values: Array<string | null>) => ({ filterType: 'set', values });
  * The filters of every link: the report's window (no `years`, or last year as the first pair: the
  * lines still active on 1 January of last year), then the row's own.
  */
-const listed = (filters: Record<string, unknown>, scope = 'opex') => ({ disabled_at: windowFilter(Y - 1), ...filters, nature: set([scope]) });
+const listed = (filters: Record<string, unknown>, scope = 'all') => ({ disabled_at: windowFilter(Y - 1), ...filters, ...(scope === 'all' ? {} : { nature: set([scope]) }) });
 /** The same for a row that counts only the lines declaring FTE. */
-const staffed = (filters: Record<string, unknown>, scope = 'opex') => listed({ has_fte: set(['yes']), ...filters }, scope);
+const staffed = (filters: Record<string, unknown>, scope = 'all') => listed({ has_fte: set(['yes']), ...filters }, scope);
 
 /** The link of a row, in a new tab, the list filters its address carries and its Show scope. */
 async function linkOf(name: string) {
@@ -356,7 +356,7 @@ describe('Consolidation accounts report line links', () => {
     expect(it600.filters.account_id.values.slice().sort()).toEqual(['acc1', 'acc2']);
     expect(it600.filters).not.toHaveProperty('has_fte');
     const unassigned = await linkOf('reports.consolidation.unassigned');
-    expect(Object.keys(unassigned.filters).sort()).toEqual(['account_id', 'disabled_at', 'nature']);
+    expect(Object.keys(unassigned.filters).sort()).toEqual(['account_id', 'disabled_at']);
     expect(unassigned.filters.account_id.values).toHaveLength(2);
     expect(unassigned.filters.account_id.values).toEqual(expect.arrayContaining(['acc3', null]));
     view.unmount();
@@ -458,5 +458,22 @@ describe('a group link whose filters are too long for a URL', () => {
     expect(click.defaultPrevented).toBe(false);
     expect(open).not.toHaveBeenCalled();
     expect(saves()).toHaveLength(0);
+  });
+});
+
+describe.each([['Staffing', StaffingByMonthReport], ['Cost per FTE', CostPerFteReport], ['Dimensions', AnalyticsCategoryReport], ['Consolidation', ConsolidationReport]])('%s All group links', (_name, Report) => {
+  it('opens the unified list without a nature filter', async () => {
+    renderReport(<Report />, '/report?scope=all');
+    const links = await waitFor(() => {
+      const found = within(screen.getByTestId('grid')).getAllByRole('link');
+      expect(found.length).toBeGreaterThan(0);
+      return found;
+    });
+    for (const link of links) {
+      const url = new URL(link.getAttribute('href')!, 'http://localhost');
+      expect(url.pathname).toBe('/ops/budget');
+      expect(JSON.parse(url.searchParams.get('filters')!)).not.toHaveProperty('nature');
+    }
+    expect(post.mock.calls.every(([url]) => url === '/budget-lines/summary/aggregate')).toBe(true);
   });
 });

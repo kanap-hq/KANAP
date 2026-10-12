@@ -86,7 +86,7 @@ const capexRows = [
   { id: 'c1', description: 'Capex growth', versions: { yMinus1: slot(Y - 1, 50), y: slot(Y, 300) } },
 ];
 
-function renderReport(element: React.ReactElement, path = '/report') {
+function renderReport(element: React.ReactElement, path = '/report?scope=opex') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
@@ -103,6 +103,7 @@ beforeEach(() => {
   get.mockImplementation(async () => ({ data: { items: [], total: 0 } }));
   post.mockReset();
   post.mockImplementation(async (url: string, body: any) => {
+    if (url === '/budget-lines/summary/aggregate') return { data: fakeAggregate([...opexRows.map((row) => ({ ...row, item_number: row.id ? 1 : null })), ...capexRows.map((row) => ({ ...row, product_name: row.description, item_number: 119 }))], body) };
     if (url === '/spend-items/summary/aggregate') return { data: fakeAggregate(opexRows as any[], body) };
     if (url === '/capex-items/summary/aggregate') return { data: fakeAggregate(capexRows as any[], body) };
     throw new Error(`unexpected POST ${url}`);
@@ -182,5 +183,16 @@ describe('Company chargeback report item links', () => {
     expect(within(grid).getByText('Common costs').closest('a')).toBeNull();
     expect(within(grid).getByText('reports.columns.total').closest('a')).toBeNull();
     expect(within(grid).getAllByRole('link')).toHaveLength(1);
+  });
+});
+
+describe.each([['Top items', TopOpexReport], ['Variation', OpexDeltaReport]])('%s All item links', (_name, Report) => {
+  it('links both natures to their native BL references', async () => {
+    renderReport(<Report />, '/report');
+    const grid = await screen.findByTestId('grid-name');
+    await waitFor(() => expect(grid.textContent).toContain('Capex growth'));
+    expectNewTabLink(grid, 'Opex line', '/ops/budget/BL-1');
+    expectNewTabLink(grid, 'Capex growth', '/ops/budget/BL-119');
+    expect(post.mock.calls.every(([url]) => url === '/budget-lines/summary/aggregate')).toBe(true);
   });
 });
