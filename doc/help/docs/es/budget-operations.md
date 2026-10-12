@@ -38,7 +38,7 @@ El rol integrado Administrador de presupuesto ve todas las tarjetas. Miembro de 
 
 Las columnas presupuestarias son Presupuesto, Revisión, Previsión, Realizado y Aterrizaje previsto. Son los nombres estándar. Su organización puede renombrarlas, ocultar algunas y elegir una columna por defecto en [Columnas presupuestarias](#columnas-presupuestarias). Cada página a continuación muestra los nombres que eligió su organización.
 
-Mientras una de estas operaciones esté en curso, no se pueden guardar las partidas de OPEX ni de CAPEX: una edición muestra el mensaje «Hay otra operación de presupuesto en curso. Vuelva a intentarlo cuando haya terminado.» hasta que la operación termine.
+Mientras una de estas operaciones esté en curso, no se pueden guardar las líneas presupuestarias: una edición muestra el mensaje «Hay otra operación de presupuesto en curso. Vuelva a intentarlo cuando haya terminado.» hasta que la operación termine.
 
 ---
 
@@ -54,28 +54,34 @@ Bloquee columnas presupuestarias para que no puedan editarse, importarse ni modi
 
 ### Cómo funciona
 
-1. **Seleccione un año** del desplegable (rango: año actual menos uno hasta año actual más cuatro)
-2. **Seleccione alcances**: marque **OPEX**, **CAPEX** o ambos
-3. **Seleccione columnas** para cada alcance. La lista ofrece las cinco columnas. Las columnas ocultas llevan la marca **Oculta**. Todas las columnas están seleccionadas por defecto, así que congelar un año congela todas las columnas, también las ocultas. Desmarque una columna para dejarla fuera
-4. Haga clic en **Congelar datos** para bloquear, o **Descongelar datos** para desbloquear. Ambos botones siguen deshabilitados mientras un alcance seleccionado no tenga ninguna columna marcada
+La página muestra un año a la vez. Elíjalo con las pestañas de año de la parte superior, desde el año pasado hasta cuatro años después.
+
+Bajo las pestañas, una tabla tiene una fila por columna presupuestaria y una columna por tipo, **OPEX** y **CAPEX**. Las columnas ocultas también aparecen, con la marca **Oculta**. Cada celda muestra el estado de esa columna para ese tipo, **Abierto** o **Congelado**, con un candado:
+
+- Haga clic en una celda para cambiarla. Un clic congela o descongela esa columna para ese tipo
+- La acción al final de una fila actúa sobre los dos tipos a la vez. Muestra **Congelar ambas** mientras una de las dos celdas está abierta, y congela la que está abierta. Cuando ambas están congeladas, muestra **Descongelar ambas**
+- Una celda queda deshabilitada mientras se guarda su cambio. Las pestañas de año esperan a que terminen todos los cambios
+
+Sin el nivel Administrador en la administración presupuestaria, la página muestra los estados en solo lectura, con el mensaje «Necesita derechos de administrador de presupuesto para usar esta página.»
 
 ### Qué hace la congelación
 
-- Previene ediciones en columnas congeladas en los espacios de trabajo OPEX y CAPEX
+- Previene ediciones en columnas congeladas en el espacio de trabajo de las líneas de ese tipo. Los campos muestran un candado
 - Bloquea importaciones CSV a columnas congeladas
 - Bloquea operaciones de copia y restablecimiento dirigidas a columnas congeladas
+- Rechaza eliminar una línea, o cambiar su tipo, mientras tenga importes en una columna congelada de los años afectados
 - **No** afecta el acceso de lectura: los datos siguen siendo visibles
 - También se aplica a las columnas ocultas. Una columna congelada sigue congelada cuando se oculta, y las importaciones en ella se siguen rechazando
 
+### Candados en la lista
+
+Las filas de totales de [la lista de líneas presupuestarias](budget-lines.md#trabajar-con-la-lista) muestran un candado delante del total de una columna congelada. Cuando la lista contiene ambos tipos, las filas **Total OPEX** y **Total CAPEX** siguen cada una la congelación de su tipo, y la fila **Total** muestra el candado cuando la columna está congelada para ambos. Filtrada por un tipo, la fila **Total** sigue ese tipo. Pase el cursor sobre el icono para leer **Congelado**.
+
 ### Congelar la columna por defecto fija los tipos de cambio
 
-Congelar la [columna por defecto](#columnas-presupuestarias) de un año también fija los tipos de cambio de ese año para el alcance que congela. KANAP actualiza los tipos del año y luego conserva el último conjunto para cada importe OPEX o CAPEX de ese año. Los informes convierten entonces esos importes con los mismos tipos, aunque lleguen tipos más recientes. Descongelar la columna por defecto los libera.
+Congelar la [columna por defecto](#columnas-presupuestarias) de un año también fija los tipos de cambio de ese año para el tipo de línea que congela. KANAP actualiza los tipos del año y luego conserva el último conjunto para cada importe OPEX o CAPEX de ese año. Los informes convierten entonces esos importes con los mismos tipos, aunque lleguen tipos más recientes. Descongelar la columna por defecto los libera.
 
-Congelar otra columna no afecta a los tipos. Cambiar más tarde la columna por defecto no fija ni libera nada por sí solo: los tipos siguen la próxima congelación o descongelación de la nueva columna por defecto.
-
-### Estado actual
-
-Debajo de los controles, dos tarjetas muestran el estado de congelación en tiempo real de las cinco columnas en OPEX y CAPEX. Cada columna muestra **Congelado** (en rojo) o **Editable**. Las columnas ocultas llevan la marca **Oculta**.
+Congelar otra columna no afecta a los tipos. Cambiar más tarde la columna por defecto no fija ni libera nada por sí solo: los tipos siguen la próxima congelación o descongelación de la nueva columna por defecto. **Congelar ambas** solo congela la celda abierta, así que un tipo de línea cuya columna por defecto ya está congelada conserva los tipos de cambio ya fijados.
 
 ### Permisos
 
@@ -157,7 +163,7 @@ Debajo de la cuadrícula, una barra de estadísticas muestra:
 
 ### Copiar una columna construida a partir de líneas
 
-Una columna puede construirse a partir de líneas, cada una una cantidad por un precio unitario. Consulte [Cantidad y precio](opex.md#cantidad-y-precio). La copia trata una columna así de una de dos maneras.
+Una columna puede construirse a partir de líneas, cada una una cantidad por un precio unitario. Consulte [Cantidad y precio](budget-lines.md#cantidad-y-precio). La copia trata una columna así de una de dos maneras.
 
 **Los importes se calculan a partir de las líneas.** La columna sigue calculada a partir de sus líneas en el destino.
 
@@ -370,8 +376,8 @@ Por defecto, Presupuesto, Revisión, Realizado y Aterrizaje previsto están visi
 
 ### Qué cambia la configuración
 
-- **Las columnas ocultas** desaparecen de las listas, del selector de columnas, de la pestaña Presupuesto, de los selectores de los informes, de las páginas de copia y de restablecimiento y del panel. Conservan sus importes: ocultar una columna nunca borra datos, y volver a mostrarla recupera los importes. Las columnas ocultas siguen aceptando importaciones mediante el archivo de presupuesto, y las congelaciones se les siguen aplicando. La página de congelación también muestra las columnas ocultas, con la marca **Oculta**, así que congelar un año las congela junto con las demás
-- **La columna por defecto** está preseleccionada en todos los informes. Ordena las listas OPEX y CAPEX, su navegación anterior y siguiente, y los mosaicos **Top partidas** y **Mayores incrementos** del panel. Las listas la muestran para el año actual, junto a la última columna visible. También es el importe de referencia de la pestaña Asignaciones y la columna en la que se abre el panel de reparto. Congelarla para un año fija los tipos de cambio de ese año (consulte [Congelar la columna por defecto fija los tipos de cambio](#congelar-la-columna-por-defecto-fija-los-tipos-de-cambio))
+- **Las columnas ocultas** desaparecen de las listas, del selector de columnas, de la pestaña Presupuesto, de los selectores de los informes, de las páginas de copia y de restablecimiento y del panel. Conservan sus importes: ocultar una columna nunca borra datos, y volver a mostrarla recupera los importes. Las columnas ocultas siguen aceptando importaciones mediante el archivo de presupuesto, y las congelaciones se les siguen aplicando. La página de congelación también muestra las columnas ocultas, con la marca **Oculta**, para que pueda congelarlas como las demás
+- **La columna por defecto** está preseleccionada en todos los informes. Ordena la lista de líneas presupuestarias y su navegación anterior y siguiente. Los mosaicos **Top partidas**, **Mayores incrementos**, **Mi presupuesto** y **Por centro de coste** del panel la usan. La lista la muestra para el año actual, junto a la última columna visible. También es el importe de referencia de la pestaña Asignaciones y la columna en la que se abre el panel de reparto. Congelarla para un año fija los tipos de cambio de ese año (consulte [Congelar la columna por defecto fija los tipos de cambio](#congelar-la-columna-por-defecto-fija-los-tipos-de-cambio))
 - **Sigue el reparto y las líneas** decide qué columnas se mueven juntas cuando un reparto se aplica a todas las columnas, y qué columnas reciben las líneas cuando **Aplicar estas líneas a todas las columnas** está activado. Las columnas congeladas nunca cambian, diga lo que diga esta configuración
 
 ### Guardar

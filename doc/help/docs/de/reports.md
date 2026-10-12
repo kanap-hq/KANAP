@@ -19,34 +19,33 @@ Die Startseite zeigt eine Karte für jeden verfügbaren Bericht mit einer kurzen
 |---------|----------------|
 | **Globale Leistungsverrechnung** | Unternehmensebene: Zuordnungssummen, KPIs und konzerninterne Flüsse (OPEX) |
 | **Leistungsverrechnung pro Unternehmen** | Einzelunternehmen-Detailansicht mit Abteilungen, Positionen und KPIs (OPEX) |
-| **Top-Positionen** | Größte OPEX- oder CAPEX-Positionen für ein ausgewähltes Jahr (anpassbare Top-N-Anzahl) |
-| **Top Anstieg / Rückgang** | Größte OPEX- oder CAPEX-Veränderungen zwischen zwei Budgetspalten (anpassbare Top-N-Anzahl) |
-| **Budgettrend (OPEX)** | OPEX-Kennzahlen über einen Jahresbereich vergleichen |
-| **Budgettrend (CAPEX)** | CAPEX-Kennzahlen über einen Jahresbereich vergleichen |
-| **Budgetspaltenvergleich** | Bis zu 10 Jahr+Spalten-Kombinationen für OPEX oder CAPEX auswählen |
-| **Konsolidierungskonten** | OPEX- oder CAPEX-Budget gruppiert nach Konsolidierungskonto |
-| **Analysedimensionen** | OPEX- oder CAPEX-Budget gruppiert nach Analysedimension |
+| **Top-Positionen** | Größte Budgetzeilen für ein ausgewähltes Jahr (anpassbare Top-N-Anzahl) |
+| **Top Anstieg / Rückgang** | Größte Veränderungen zwischen zwei Budgetspalten (anpassbare Top-N-Anzahl) |
+| **Budgetvergleich** | Budgetkennzahlen über einen Jahresbereich vergleichen |
+| **Budgetspaltenvergleich** | Bis zu 10 Jahr+Spalten-Kombinationen auswählen |
+| **Konsolidierungskonten** | Budget gruppiert nach Konsolidierungskonto |
+| **Analysedimensionen** | Budget gruppiert nach Analysedimension |
 | **Personal nach Monat** | Monatliche VZÄ nach Kostenstelle, Position, Lieferant oder Analysedimension |
 | **Kosten pro VZÄ** | Jährliche Kosten eines VZÄ oder durchschnittlicher Tagessatz, nach Kostenstelle, Position, Lieferant oder Analysedimension, über Budgetspalten und Jahre |
 
-### OPEX oder CAPEX wählen
+### Typ der Zeilen wählen
 
-**Top-Positionen**, **Top Anstieg / Rückgang**, **Konsolidierungskonten**, **Analysedimensionen**, **Personal nach Monat** und **Kosten pro VZÄ** beginnen jeweils mit einem Umschalter **OPEX** / **CAPEX**, dem ersten Steuerelement der Filterleiste.
+**Top-Positionen**, **Top Anstieg / Rückgang**, **Budgetvergleich**, **Konsolidierungskonten**, **Analysedimensionen**, **Personal nach Monat** und **Kosten pro VZÄ** beginnen jeweils mit den Tabs **Alle**, **OPEX** und **CAPEX**, dem ersten Steuerelement der Filterleiste. **Budgetspaltenvergleich** hat eine Auswahl **Positionstyp** mit denselben drei Möglichkeiten. Sie beginnt auf **Alle**, und ihre Wahl wird nicht in der Seitenadresse gespeichert.
 
-- Der Bericht öffnet sich auf OPEX. Beide Typen erfordern Lesezugriff auf Budgetpositionen (`budget:reader`). Ohne diesen Zugriff ist der Umschalter deaktiviert.
-- Die Seitenadresse behält den gewählten Typ (`?scope=opex` oder `?scope=capex`). Ein gespeicherter oder geteilter Link öffnet sich daher auf demselben Typ.
-- Untertitel und Diagrammtitel nennen den Typ. So zeigt ein Ausdruck oder ein exportiertes PNG, welchen Typ es abdeckt.
-- Ein Wechsel des Typs leert die ausgeschlossenen Positionen, da jeder Typ seine eigenen Positionen hat.
+- Der Bericht öffnet sich auf **Alle**: die OPEX- und CAPEX-Zeilen zusammen. **OPEX** oder **CAPEX** behält die Zeilen dieses Typs. Alle drei erfordern Lesezugriff auf Budgetpositionen (`budget:reader`). Ohne diesen Zugriff sind die Tabs deaktiviert.
+- Die Seitenadresse behält den gewählten Typ (`?scope=all`, `?scope=opex` oder `?scope=capex`). Ein gespeicherter oder geteilter Link öffnet sich daher auf demselben Typ.
+- Untertitel und Diagrammtitel nennen den Typ. So zeigt ein Ausdruck oder ein exportiertes PNG, welche Zeilen es abdeckt.
+- Ein Wechsel des Typs leert die ausgeschlossenen Positionen.
 
-Die beiden Leistungsverrechnungsberichte decken nur OPEX ab.
+Die beiden Leistungsverrechnungsberichte decken nur OPEX-Zeilen ab.
 
 ### Betrag oder VZÄ wählen
 
-Die sieben Budgetberichte haben eine Auswahl **Messgröße**. Sie steht direkt nach dem Umschalter **OPEX** / **CAPEX**, oder an erster Stelle, wenn der Bericht keinen Umschalter hat. Sie bietet **Betrag** (Standard) und **VZÄ**. Die beiden Leistungsverrechnungsberichte haben keine Messgröße.
+Die sechs Budgetberichte haben eine Auswahl **Messgröße**. Sie steht direkt nach den Tabs für den Typ, oder an erster Stelle, wenn der Bericht keine hat. Sie bietet **Betrag** (Standard) und **VZÄ**. Die beiden Leistungsverrechnungsberichte haben keine Messgröße.
 
 Mit **VZÄ** summiert ein Bericht Personen statt Geld:
 
-- Jede Budgetspalte zeigt die durchschnittlichen VZÄ über das ganze Jahr, die ihre Zeilen mit Menge und Preis melden. Zeilen in Personen oder Tagen erhöhen die VZÄ. Zeilen in Stück zählen 0. Eine Spalte ohne Zeilen meldet keine VZÄ und bleibt unberücksichtigt: Es zählen nur gemeldete VZÄ. Siehe [Menge und Preis](opex.md#menge-und-preis) und [VZÄ](opex.md#vza).
+- Jede Budgetspalte zeigt die durchschnittlichen VZÄ über das ganze Jahr, die ihre Zeilen mit Menge und Preis melden. Zeilen in Personen oder Tagen erhöhen die VZÄ. Zeilen in Stück zählen 0. Eine Spalte ohne Zeilen meldet keine VZÄ und bleibt unberücksichtigt: Es zählen nur gemeldete VZÄ. Siehe [Menge und Preis](budget-lines.md#menge-und-preis) und [VZÄ](budget-lines.md#vza).
 - Ein Jahr oder eine Spalte, in der keine Position VZÄ meldet, zeigt eine leere Zelle, ohne Balken oder Punkt im Diagramm.
 - **Top-Positionen**, **Konsolidierungskonten** und **Analysedimensionen** lassen Positionen und Gruppen ohne gemeldete VZÄ weg. Anteile sind Anteile an der VZÄ-Summe.
 - **Top Anstieg / Rückgang** vergleicht die VZÄ der beiden Spalten Position für Position. Eine Position, die nur auf einer Seite VZÄ meldet, zählt auf der anderen Seite 0.
@@ -62,7 +61,7 @@ Jede Spalten- oder Kennzahlauswahl bietet die Budgetspalten an, die Ihre Organis
 
 ### Filter nach Kostenstelle, Run oder Build und Analysedimensionen
 
-Die sieben Budgetberichte (**Top-Positionen**, **Top Anstieg / Rückgang**, **Budgettrend (OPEX)**, **Budgettrend (CAPEX)**, **Budgetspaltenvergleich**, **Konsolidierungskonten** und **Analysedimensionen**), **Personal nach Monat** und **Kosten pro VZÄ** lassen sich mit diesen Filtern auf einen Teil des Budgets eingrenzen:
+Die Budgetberichte (**Top-Positionen**, **Top Anstieg / Rückgang**, **Budgetvergleich**, **Budgetspaltenvergleich**, **Konsolidierungskonten** und **Analysedimensionen**), **Personal nach Monat** und **Kosten pro VZÄ** lassen sich mit diesen Filtern auf einen Teil des Budgets eingrenzen:
 
 - **Kostenstelle**: Wählen Sie eine Kostenstelle oder eine Gruppe. Eine Gruppe umfasst alles, was darunter liegt, einschließlich deaktivierter Kostenstellen, da deren Zeilen weiterhin zur Gruppe gehören. **Alle Kostenstellen** entfernt den Filter. Siehe [Kostenstellen](cost-centers.md).
 - **Run oder Build**: **Alle**, **Run**, **Build** oder **Nicht festgelegt** für die Zeilen, die keines von beiden haben.
@@ -74,7 +73,7 @@ Wann die Filter erscheinen:
 - **Kostenstelle** erscheint, sobald Ihr Arbeitsbereich mindestens eine Kostenstelle oder Gruppe hat.
 - **Run oder Build** erscheint, sobald eine Zeile des Berichts als **Run** oder **Build** markiert ist oder die Seitenadresse den Filter bereits enthält.
 - **Positionen** erscheint, sobald eine Position des Berichts VZÄ meldet oder die Seitenadresse den Filter bereits enthält.
-- Der Filter einer Dimension erscheint, sobald eine Zeile des Berichts einen Wert in dieser Dimension hat oder die Seitenadresse ihn bereits enthält. Deaktivierte Dimensionen haben keinen Filter. Ein Bericht zeigt nur die Dimensionen, die für die Zeilen gelten, die er abdeckt: Der Wechsel zwischen **OPEX** und **CAPEX** ändert die Liste. Eine Dimension mit **Nur OPEX** hat in einem CAPEX-Bericht keinen Filter und umgekehrt. Siehe [OPEX- oder CAPEX-Dimensionen](analytics.md#opex-oder-capex-dimensionen).
+- Der Filter einer Dimension erscheint, sobald eine Zeile des Berichts einen Wert in dieser Dimension hat oder die Seitenadresse ihn bereits enthält. Deaktivierte Dimensionen haben keinen Filter. Ein Bericht zeigt nur die Dimensionen, die für die Zeilen gelten, die er abdeckt: Ein Wechsel des Typs ändert die Liste. Eine Dimension mit **Nur OPEX** hat in einem CAPEX-Bericht keinen Filter und umgekehrt. **Alle** zeigt die Dimensionen beider Typen. Siehe [OPEX- oder CAPEX-Dimensionen](analytics.md#opex-oder-capex-dimensionen).
 - Ohne all diese zeigt die Filterleiste nur die eigenen Steuerelemente des Berichts.
 
 So funktionieren sie:
@@ -89,15 +88,15 @@ So funktionieren sie:
 
 ### Die Liste aus einem Bericht öffnen
 
-In **Personal nach Monat**, **Kosten pro VZÄ**, **Analysedimensionen** und **Konsolidierungskonten** ist der Name einer Gruppe ein Link, der die OPEX- oder CAPEX-Liste in einem neuen Tab öffnet, mit den Positionen, die die Zeile zählt:
+In **Personal nach Monat**, **Kosten pro VZÄ**, **Analysedimensionen** und **Konsolidierungskonten** ist der Name einer Gruppe ein Link, der die [Liste der Budgetzeilen](budget-lines.md) in einem neuen Tab öffnet, mit den Positionen, die die Zeile zählt:
 
-- die Positionen der Gruppe, eingegrenzt durch die Filterleiste;
+- die Positionen der Gruppe, eingegrenzt durch die Filterleiste und durch den Filter **Typ**, wenn der Bericht auf **OPEX** oder **CAPEX** steht;
 - alle Status (**Anzeigen: Alle**), mit einem Filter **Ende der Gültigkeit** „leer oder nach dem 31. Dezember“ des Jahres vor dem ersten Jahr des Berichts. Ein Bericht zählt die Positionen, die am 1. Januar seines ersten Jahres noch aktiv waren, auch die seither deaktivierten;
 - in **Personal nach Monat** und **Kosten pro VZÄ** sowie mit der Messgröße **VZÄ** nur die Positionen, die VZÄ melden (der Filter **VZÄ gemeldet**).
 
 Die gefilterten Spalten erscheinen für diesen Besuch direkt nach dem Positionsnamen, damit Sie sehen, warum die Liste eingegrenzt ist. Ein Konsolidierungskonto filtert auf seine Konten, ohne eigene Spalte.
 
-Diese Liste ist eine Ansicht des Berichts. Was Sie darin ändern, bleibt in ihrer Adresse, und **OPEX** oder **CAPEX**, danach über das Menü geöffnet, zeigen Ihre eigene Sortierung, Suche und Filter.
+Diese Liste ist eine Ansicht des Berichts. Was Sie darin ändern, bleibt in ihrer Adresse, und **Budgetzeilen**, danach über das Menü geöffnet, zeigt Ihre eigene Sortierung, Suche und Filter.
 
 ---
 
@@ -193,7 +192,7 @@ Detailansicht der Leistungsverrechnungs-Zuordnungen eines einzelnen Unternehmens
 
 - Positionsname, Zuordnungsmethode, Betrag, Anteil an Gesamtsumme
 - Angeheftete Summenzeile unten
-- Der Positionsname ist ein Link, der die OPEX-Position in einem neuen Tab öffnet. Gemeinkosten und Summen bleiben einfacher Text.
+- Der Positionsname ist ein Link, der die Budgetzeile in einem neuen Tab öffnet. Gemeinkosten und Summen bleiben einfacher Text.
 
 **Konzerninterne Flüsse** (wenn aktiviert):
 
@@ -213,11 +212,11 @@ Detailansicht der Leistungsverrechnungs-Zuordnungen eines einzelnen Unternehmens
 
 ## Top-Positionen
 
-Identifizieren Sie Ihre größten OPEX- oder CAPEX-Positionen für ein bestimmtes Jahr.
+Identifizieren Sie Ihre größten Budgetzeilen für ein bestimmtes Jahr.
 
 ### Steuerungen
 
-- **Positionstyp**: OPEX oder CAPEX (siehe [OPEX oder CAPEX wählen](#opex-oder-capex-wahlen))
+- **Positionstyp**: **Alle**, **OPEX** oder **CAPEX** (siehe [Typ der Zeilen wählen](#typ-der-zeilen-wahlen))
 - **Messgröße**: **Betrag** oder **VZÄ** (siehe [Betrag oder VZÄ wählen](#betrag-oder-vza-wahlen))
 - **Jahr**: Vorheriges, aktuelles oder nächstes Jahr
 - **Kennzahl**: Jede angezeigte Budgetspalte. Beginnt mit der Standardspalte
@@ -237,7 +236,7 @@ Identifizieren Sie Ihre größten OPEX- oder CAPEX-Positionen für ein bestimmte
 - Wert für die ausgewählte Kennzahl und das Jahr
 - Anteil an Gesamtsumme (Prozentsatz)
 
-Der Positionsname ist ein Link, der die OPEX- oder CAPEX-Position in einem neuen Tab öffnet.
+Der Positionsname ist ein Link, der die Budgetzeile in einem neuen Tab öffnet.
 
 **Zusammenfassungskarten unter der Tabelle**:
 
@@ -254,11 +253,11 @@ Verwenden Sie diesen Bericht, um schnell zu erkennen, wohin der Großteil Ihres 
 
 ## Top Anstieg / Rückgang
 
-Identifizieren Sie die größten OPEX- oder CAPEX-Veränderungen zwischen zwei Budgetspalten (jede Kombination aus Jahr und Kennzahl).
+Identifizieren Sie die größten Veränderungen zwischen zwei Budgetspalten (jede Kombination aus Jahr und Kennzahl).
 
 ### Steuerungen
 
-- **Positionstyp**: OPEX oder CAPEX (siehe [OPEX oder CAPEX wählen](#opex-oder-capex-wahlen))
+- **Positionstyp**: **Alle**, **OPEX** oder **CAPEX** (siehe [Typ der Zeilen wählen](#typ-der-zeilen-wahlen))
 - **Messgröße**: **Betrag** oder **VZÄ** (siehe [Betrag oder VZÄ wählen](#betrag-oder-vza-wahlen))
 - **Quelljahr** und **Quellkennzahl**: Die Basisspalte zum Vergleich
 - **Zieljahr** und **Zielkennzahl**: Die Zielspalte zum Vergleich
@@ -285,7 +284,7 @@ Wenn **Beide** ausgewählt ist, wird die Kreisdiagramm-Option deaktiviert und de
 - Delta (absolute Änderung)
 - Prozentuale Steigerung
 
-Der Positionsname ist ein Link, der die OPEX- oder CAPEX-Position in einem neuen Tab öffnet.
+Der Positionsname ist ein Link, der die Budgetzeile in einem neuen Tab öffnet.
 
 **Zusammenfassungskarten unter der Tabelle**:
 
@@ -299,12 +298,13 @@ Verwenden Sie diesen Bericht zur Identifizierung von Kostenüberschreitungen, zu
 
 ---
 
-## Budgettrend (OPEX)
+## Budgetvergleich
 
-Vergleichen Sie OPEX-Kennzahlen über mehrere Jahre in einem einzelnen Liniendiagramm.
+Vergleichen Sie Budgetkennzahlen über mehrere Jahre in einem einzelnen Liniendiagramm. Die Adresse des früheren Berichts **Budgettrend (CAPEX)** öffnet diesen Bericht auf CAPEX.
 
 ### Steuerungen
 
+- **Positionstyp**: **Alle**, **OPEX** oder **CAPEX** (siehe [Typ der Zeilen wählen](#typ-der-zeilen-wahlen))
 - **Messgröße**: **Betrag** oder **VZÄ** (siehe [Betrag oder VZÄ wählen](#betrag-oder-vza-wahlen))
 - **Startjahr**: Beginn des Bereichs (aktuelles Jahr minus 2 bis plus 2)
 - **Endjahr**: Ende des Bereichs
@@ -325,30 +325,13 @@ Vergleichen Sie OPEX-Kennzahlen über mehrere Jahre in einem einzelnen Liniendia
 
 ---
 
-## Budgettrend (CAPEX)
-
-Identisches Layout wie der OPEX-Trendbericht, aber mit CAPEX-Budgetdaten.
-
-### Steuerungen
-
-- **Messgröße**: **Betrag** oder **VZÄ** (siehe [Betrag oder VZÄ wählen](#betrag-oder-vza-wahlen))
-- **Startjahr**, **Endjahr**, **Kennzahlen**: Gleich wie beim OPEX-Trendbericht
-- **Kostenstelle**, **Run oder Build**, **Positionen** und die Filter nach Analysedimension: Siehe [Filter nach Kostenstelle, Run oder Build und Analysedimensionen](#filter-nach-kostenstelle-run-oder-build-und-analysedimensionen)
-
-### Was Sie sehen
-
-- Liniendiagramm der CAPEX-Summen nach Kennzahl über Jahre
-- Zusammenfassungstabelle mit Jahresspalten
-
----
-
 ## Budgetspaltenvergleich
 
-Vergleichen Sie flexibel bis zu 10 Jahr+Spalten-Kombinationen für entweder OPEX oder CAPEX.
+Vergleichen Sie flexibel bis zu 10 Jahr+Spalten-Kombinationen.
 
 ### Steuerungen
 
-- **Positionstyp**: OPEX- oder CAPEX-Umschalter
+- **Positionstyp**: **Alle** (Standard), **OPEX** oder **CAPEX**
 - **Messgröße**: **Betrag** oder **VZÄ** (siehe [Betrag oder VZÄ wählen](#betrag-oder-vza-wahlen))
 - **Auswahlen**: Jede Auswahl hat eine Jahrauswahl und eine Spaltenauswahl mit den angezeigten Budgetspalten. Der Bericht beginnt mit zwei Auswahlen: der Standardspalte des aktuellen Jahres und des nächsten Jahres. **Hinzufügen** fügt die Standardspalte des aktuellen Jahres hinzu, und das Löschsymbol entfernt eine Auswahl. Maximum von 10 Auswahlen; Minimum von 1.
 - **Jahresgruppierung** (Kontrollkästchen): Wenn aktiviert und mindestens zwei Jahre eine Kennzahl teilen, wechselt zu einem gruppierten Liniendiagramm mit einer Serie pro Kennzahl und Jahren auf der X-Achse. Wenn deaktiviert, zeigt ein flaches Liniendiagramm mit jeder Auswahl als Datenpunkt.
@@ -376,11 +359,11 @@ Vergleichen Sie flexibel bis zu 10 Jahr+Spalten-Kombinationen für entweder OPEX
 
 ## Konsolidierungskonten
 
-Zeigen Sie OPEX- oder CAPEX-Budgetdaten gruppiert nach Konsolidierungskonto, wobei sich der Diagrammtyp an den Jahresbereich anpasst.
+Zeigen Sie Budgetdaten gruppiert nach Konsolidierungskonto, wobei sich der Diagrammtyp an den Jahresbereich anpasst.
 
 ### Steuerungen
 
-- **Positionstyp**: OPEX oder CAPEX (siehe [OPEX oder CAPEX wählen](#opex-oder-capex-wahlen))
+- **Positionstyp**: **Alle**, **OPEX** oder **CAPEX** (siehe [Typ der Zeilen wählen](#typ-der-zeilen-wahlen))
 - **Messgröße**: **Betrag** oder **VZÄ** (siehe [Betrag oder VZÄ wählen](#betrag-oder-vza-wahlen))
 - **Startjahr** und **Endjahr**: Vorheriges, aktuelles oder nächstes Jahr
 - **Kennzahl**: Jede angezeigte Budgetspalte. Beginnt mit der Standardspalte
@@ -407,11 +390,11 @@ Eine Zeile auf einem inzwischen deaktivierten Konsolidierungskonto zählt weiter
 
 ## Analysedimensionen
 
-Zeigen Sie OPEX- oder CAPEX-Budgetdaten gruppiert nach den Werten einer Analysedimension. Das Layout entspricht dem Bericht Konsolidierungskonten. Siehe [Analysedimensionen](analytics.md), um Dimensionen und Werte einzurichten.
+Zeigen Sie Budgetdaten gruppiert nach den Werten einer Analysedimension. Das Layout entspricht dem Bericht Konsolidierungskonten. Siehe [Analysedimensionen](analytics.md), um Dimensionen und Werte einzurichten.
 
 ### Steuerungen
 
-- **Positionstyp**: OPEX oder CAPEX (siehe [OPEX oder CAPEX wählen](#opex-oder-capex-wahlen))
+- **Positionstyp**: **Alle**, **OPEX** oder **CAPEX** (siehe [Typ der Zeilen wählen](#typ-der-zeilen-wahlen))
 - **Messgröße**: **Betrag** oder **VZÄ** (siehe [Betrag oder VZÄ wählen](#betrag-oder-vza-wahlen))
 - **Dimension**: die Dimension, nach der der Bericht gruppiert. Sie bietet die aktivierten Dimensionen an, die für die gewählte Positionsart verwendet werden, erscheint, wenn es zwei oder mehr gibt, und der Bericht öffnet mit der Standarddimension. Wechseln Sie zu einer Positionsart, die die gewählte Dimension nicht verwendet, kehrt der Bericht zur Standarddimension zurück. Die Seitenadresse speichert Ihre Wahl, sodass ein gespeicherter oder geteilter Link mit derselben Dimension öffnet
 - **Startjahr** und **Endjahr**: Vorheriges, aktuelles oder nächstes Jahr
@@ -441,11 +424,11 @@ Ein Wert öffnet die Liste seiner Positionen in einem neuen Tab („Nicht zugeor
 
 ## Personal nach Monat
 
-Sehen Sie, wie viele Personen jeder Teil des Budgets Monat für Monat plant. Der Bericht liest die monatlichen VZÄ, die die Zeilen mit Menge und Preis einer Budgetspalte melden. Siehe [Menge und Preis](opex.md#menge-und-preis) und [VZÄ](opex.md#vza).
+Sehen Sie, wie viele Personen jeder Teil des Budgets Monat für Monat plant. Der Bericht liest die monatlichen VZÄ, die die Zeilen mit Menge und Preis einer Budgetspalte melden. Siehe [Menge und Preis](budget-lines.md#menge-und-preis) und [VZÄ](budget-lines.md#vza).
 
 ### Steuerungen
 
-- **Positionstyp**: OPEX oder CAPEX (siehe [OPEX oder CAPEX wählen](#opex-oder-capex-wahlen))
+- **Positionstyp**: **Alle**, **OPEX** oder **CAPEX** (siehe [Typ der Zeilen wählen](#typ-der-zeilen-wahlen))
 - **Kostenstelle**, **Run oder Build**, **Positionen** und die Filter nach Analysedimension: Siehe [Filter nach Kostenstelle, Run oder Build und Analysedimensionen](#filter-nach-kostenstelle-run-oder-build-und-analysedimensionen)
 - **Jahr**: Vorheriges, aktuelles oder nächstes Jahr
 - **Spalte**: Jede angezeigte Budgetspalte. Beginnt mit der Standardspalte
@@ -467,7 +450,7 @@ Die Seitenadresse speichert die Gruppierung (`?group=item`, `?group=supplier` od
 
 Eine angeheftete Zeile **Gesamt** zeigt die Monatssummen, ihren Durchschnitt und ihre Spitze. Werte erscheinen mit zwei Dezimalstellen. Es zählen nur gemeldete VZÄ: Positionen ohne Zeilen mit Menge und Preis in der Spalte bleiben unberücksichtigt.
 
-Der Name einer Gruppe ist ein Link, der sich in einem neuen Tab öffnet. Eine Position öffnet ihre Seite. Eine Kostenstelle, ein Lieferant oder ein Wert öffnet die OPEX- oder CAPEX-Liste mit den Positionen der Gruppe, die VZÄ melden, im Zeitraum des Berichts und eingegrenzt durch die Filterleiste (siehe [Die Liste aus einem Bericht öffnen](#die-liste-aus-einem-bericht-offnen)). „Keine Kostenstelle“, „Kein Lieferant“ und „Kein Wert“ öffnen die Positionen ohne Angabe. Die Zeile **Gesamt** ist reiner Text. Der CSV-Export behält die Namen als reinen Text.
+Der Name einer Gruppe ist ein Link, der sich in einem neuen Tab öffnet. Eine Position öffnet ihre Seite. Eine Kostenstelle, ein Lieferant oder ein Wert öffnet die Liste der Budgetzeilen mit den Positionen der Gruppe, die VZÄ melden, im Zeitraum des Berichts und eingegrenzt durch die Filterleiste (siehe [Die Liste aus einem Bericht öffnen](#die-liste-aus-einem-bericht-offnen)). „Keine Kostenstelle“, „Kein Lieferant“ und „Kein Wert“ öffnen die Positionen ohne Angabe. Die Zeile **Gesamt** ist reiner Text. Der CSV-Export behält die Namen als reinen Text.
 
 ### Hinweise
 
@@ -486,11 +469,11 @@ Eine Zeile unter der Tabelle für jeden Fall, wenn er eintritt:
 
 ## Kosten pro VZÄ
 
-Sehen Sie, was ein VZÄ in jedem Teil des Budgets kostet und wie sich diese Kosten über Budgetspalten und Jahre entwickeln. Der Bericht teilt die Kosten der Zeilen mit Menge und Preis in Personen oder Tagen durch ihre VZÄ. Er kann auch den durchschnittlichen Tagessatz der pro Tag bepreisten Zeilen zeigen (siehe [Tagessatz](#tagessatz)). Siehe [Menge und Preis](opex.md#menge-und-preis) und [VZÄ](opex.md#vza).
+Sehen Sie, was ein VZÄ in jedem Teil des Budgets kostet und wie sich diese Kosten über Budgetspalten und Jahre entwickeln. Der Bericht teilt die Kosten der Zeilen mit Menge und Preis in Personen oder Tagen durch ihre VZÄ. Er kann auch den durchschnittlichen Tagessatz der pro Tag bepreisten Zeilen zeigen (siehe [Tagessatz](#tagessatz)). Siehe [Menge und Preis](budget-lines.md#menge-und-preis) und [VZÄ](budget-lines.md#vza).
 
 ### Steuerungen
 
-- **Positionstyp**: OPEX oder CAPEX (siehe [OPEX oder CAPEX wählen](#opex-oder-capex-wahlen))
+- **Positionstyp**: **Alle**, **OPEX** oder **CAPEX** (siehe [Typ der Zeilen wählen](#typ-der-zeilen-wahlen))
 - **Kostenstelle**, **Run oder Build**, **Positionen** und die Filter nach Analysedimension: Siehe [Filter nach Kostenstelle, Run oder Build und Analysedimensionen](#filter-nach-kostenstelle-run-oder-build-und-analysedimensionen)
 - **Gruppieren nach** und **Dimension**: dieselben Optionen wie in [Personal nach Monat](#personal-nach-monat). Die Seitenadresse speichert die Gruppierung auf dieselbe Weise
 - **Anzeige**: **Kosten pro VZÄ** (Standard) oder **Tagessatz**. Beim Wechsel bleiben Typ, Gruppierung, Paare und Filter erhalten. Die Seitenadresse speichert den Tagessatz (`?view=rate`), sodass ein gespeicherter oder geteilter Link damit öffnet

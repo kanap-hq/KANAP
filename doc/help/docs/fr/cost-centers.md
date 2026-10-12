@@ -130,7 +130,7 @@ Chaque ligne OPEX et CAPEX qui a un centre de coûts affiche le responsable budg
 - **Lu depuis le centre de coûts** : le responsable budgétaire n'est pas enregistré sur la ligne. Modifiez-le ici et chaque ligne du centre de coûts affiche aussitôt la nouvelle personne. Il ne change sur une ligne que lorsque vous changez le centre de coûts de la ligne.
 - **Affiché seulement s'il est renseigné** : une ligne sans centre de coûts, ou dont le centre de coûts n'a pas de responsable budgétaire, n'affiche rien.
 - **Un rôle distinct** : le **Responsable IT** et le **Responsable métier** d'une ligne restent tels quels, définis sur chaque ligne. Ils couvrent aussi les espaces de travail qui n'utilisent pas de centres de coûts.
-- **Dans les listes** : les listes OPEX et CAPEX ont une colonne **Responsable budgétaire**, masquée par défaut, avec un filtre par cases à cocher.
+- **Dans la liste** : la liste des lignes budgétaires a une colonne **Responsable budgétaire**, masquée par défaut, avec un filtre par cases à cocher.
 
 ### Changer le type
 
@@ -159,8 +159,8 @@ Le bouton **Supprimer** de l'en-tête supprime l'élément immédiatement (néce
 
 ## Les centres de coûts sur les lignes budgétaires
 
-- **OPEX et CAPEX** : le champ **Centre de coûts** du panneau **Propriétés** présente l'arbre. Les groupes s'affichent pour vous aider à vous repérer et ne peuvent pas être choisis. Lorsque vous créez une ligne et que la société payeuse est vide, choisir un centre de coûts la remplit avec la société du centre de coûts, et la société suit le centre de coûts jusqu'à ce que vous choisissiez vous-même une société ou un compte. Lorsque les deux sociétés diffèrent, les deux sont conservées et une indication le signale. Voir [OPEX](opex.md) et [CAPEX](capex.md).
-- **Listes** : les colonnes et filtres **Centre de coûts** et **Run ou build** des listes OPEX et CAPEX.
+- **OPEX et CAPEX** : le champ **Centre de coûts** du panneau **Propriétés** présente l'arbre. Les groupes s'affichent pour vous aider à vous repérer et ne peuvent pas être choisis. Lorsque vous créez une ligne et que la société payeuse est vide, choisir un centre de coûts la remplit avec la société du centre de coûts, et la société suit le centre de coûts jusqu'à ce que vous choisissiez vous-même une société ou un compte. Lorsque les deux sociétés diffèrent, les deux sont conservées et une indication le signale. Voir [Lignes budgétaires](budget-lines.md).
+- **Liste** : les colonnes et filtres **Centre de coûts** et **Run ou build** de la liste des lignes budgétaires.
 - **Rapports** : les rapports budgétaires peuvent être filtrés sur un centre de coûts ou un groupe. Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](reports.md#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques).
 
 ---

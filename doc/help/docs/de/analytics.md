@@ -151,7 +151,7 @@ Die Dimensionen haben eine Reihenfolge, die Sie festlegen. KANAP zeigt sie in di
 
 - in der Auswahlleiste dieser Seite
 - im Bereich **Eigenschaften** von OPEX- und CAPEX-Positionen
-- in den Spalten der OPEX- und CAPEX-Listen
+- in den Spalten der Liste der Budgetzeilen
 - in den Spalten der Budgetdatei
 - in den Berichtsfiltern und in der Dimensionsauswahl des Berichts
 - in den Dimensionen, die Plaid auflistet
@@ -240,12 +240,12 @@ Klicken Sie auf **Neuer Wert**. Das Feld **Dimension** steht zunächst auf der D
 Die Werte einer Dimension haben eine Reihenfolge, die Sie festlegen. KANAP bietet die Werte überall in dieser Reihenfolge an, wo Sie sie auswählen oder danach filtern:
 
 - die Wertefelder von OPEX- und CAPEX-Positionen (wenn Sie in ein Feld tippen, stehen die besten Treffer zuerst)
-- die Kontrollkästchen-Filter der Dimension in den OPEX- und CAPEX-Listen
+- die Kontrollkästchen-Filter der Dimension in der Liste der Budgetzeilen
 - die Dimensionsfilter der Berichte und die Liste **Werte ausschließen** des Berichts Analysedimensionen
 - der CSV-Export der Werte
 - die Werte, die Plaid auflistet
 
-Wenn Sie die OPEX- oder CAPEX-Liste nach der Spalte einer Dimension sortieren, folgt sie ebenfalls dieser Reihenfolge, dann dem Namen des Werts. Zeilen ohne Wert stehen bei aufsteigender Sortierung am Ende. Die Zeilen der Berichte behalten ihre eigene Reihenfolge, nach Betrag.
+Wenn Sie die Liste der Budgetzeilen nach der Spalte einer Dimension sortieren, folgt sie ebenfalls dieser Reihenfolge, dann dem Namen des Werts. Zeilen ohne Wert stehen bei aufsteigender Sortierung am Ende. Die Zeilen der Berichte behalten ihre eigene Reihenfolge, nach Betrag.
 
 Anfangs stehen die Werte in alphabetischer Reihenfolge. Ein neuer Wert kommt in seiner Dimension an die letzte Stelle.
 
@@ -291,7 +291,7 @@ Dimensionen und Werte haben jeweils einen Status (**Aktiviert** oder **Deaktivie
 **Eine deaktivierte Dimension**:
 
 - Wird nicht geprüft, wenn sie **Erforderlich** ist: Zeilen können ohne Wert in ihr angelegt werden. Sie behält die Einstellung für den Fall, dass Sie sie wieder aktivieren.
-- Verschwindet aus den Positionsformularen, den OPEX- und CAPEX-Listen, den Berichtsfiltern, der Dimensionsauswahl des Berichts, den OPEX- und CAPEX-CSV-Exporten und aus Plaid. Nur die Seite Analysedimensionen zeigt sie, als **Deaktiviert** markiert.
+- Verschwindet aus den Positionsformularen, der Liste der Budgetzeilen, den Berichtsfiltern, der Dimensionsauswahl des Berichts, den OPEX- und CAPEX-CSV-Exporten und aus Plaid. Nur die Seite Analysedimensionen zeigt sie, als **Deaktiviert** markiert.
 - Behält ihre Werte auf den Zeilen. Aktivieren Sie die Dimension wieder, und die Werte erscheinen wieder.
 - Nimmt keine neuen Werte auf. **Neuer Wert** ist deaktiviert, solange die Dimension ausgewählt ist, und CSV-Dateien können ihre Werte weder hinzufügen noch ändern.
 
@@ -312,7 +312,7 @@ Im Bereich **Eigenschaften** einer OPEX- oder CAPEX-Position, und wenn Sie eine 
 - Ein Wert gilt für die ganze Zeile, über alle Jahre.
 - Können die Dimensionen nicht geladen werden, ersetzt eine Zeile diese Felder: „Die Dimensionen konnten nicht geladen werden.“
 
-Die OPEX- und CAPEX-Listen haben eine Spalte pro aktivierter Dimension, die für diese Zeilenart verwendet wird, mit Kontrollkästchen-Filtern. Die Spalte einer Dimension, die für diese Zeilenart erforderlich ist, wird standardmäßig angezeigt, die anderen Spalten sind ausgeblendet. Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl. Siehe [OPEX](opex.md) und [CAPEX](capex.md).
+Die Liste der Budgetzeilen hat eine Spalte pro aktivierter Dimension, mit Kontrollkästchen-Filtern. Die Spalte einer Dimension, die für OPEX- oder CAPEX-Zeilen erforderlich ist, wird standardmäßig angezeigt, die anderen Spalten sind ausgeblendet. Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl. Siehe [Budgetzeilen](budget-lines.md).
 
 ---
 
@@ -335,7 +335,7 @@ Die sieben Budgetberichte lassen sich auch auf einen Wert einer Dimension eingre
 - Plaid kann OPEX-Zeilen nach jeder aktivierten Dimension filtern und gruppieren, die für OPEX-Zeilen verwendet wird, und CAPEX-Zeilen nach jeder aktivierten Dimension, die für CAPEX-Zeilen verwendet wird.
 - Eine Frage zur Analysekategorie verwendet die Standarddimension, unabhängig von ihrem Namen und ihrer Reihenfolge.
 - Die Suche von Plaid und die `@`-Erwähnungen im Chat finden eine OPEX- oder CAPEX-Zeile über den Namen eines Werts, den sie auf einer für ihren Typ angezeigten Dimension hat, mit oder ohne Akzente.
-- Plaid kann den Wert einer Zeile in jeder Dimension setzen, ändern oder löschen, wenn es eine OPEX- oder CAPEX-Zeile anlegt oder aktualisiert. Fragen Sie zum Beispiel: „Setze die Nature de coût von OPX-12 auf Licences et maintenance.“ Plaid findet den Wert über seinen Namen in dieser Dimension und zeigt in der Vorschau die Dimension und den Wert, vorher und nachher. Nichts ändert sich, bevor Sie zustimmen.
+- Plaid kann den Wert einer Zeile in jeder Dimension setzen, ändern oder löschen, wenn es eine OPEX- oder CAPEX-Zeile anlegt oder aktualisiert. Fragen Sie zum Beispiel: „Setze die Nature de coût von BL-12 auf Licences et maintenance.“ Plaid findet den Wert über seinen Namen in dieser Dimension und zeigt in der Vorschau die Dimension und den Wert, vorher und nachher. Nichts ändert sich, bevor Sie zustimmen.
 - Plaid befolgt dieselben Regeln wie die App: nur aktivierte Dimensionen, die für den Typ der Zeile verwendet werden, nur aktivierte Werte, die für den Typ der Zeile verwendet werden, und eine Zeile behält einen Wert, den sie bereits trägt.
 - Wenn Plaid eine Zeile anlegt, braucht sie einen Wert auf jeder erforderlichen Dimension des Zeilentyps. Bei einer CAPEX-Zeile gehören **PP&E type**, **Investment type** und **Priority** dazu.
 - Plaid weiß, welche Dimensionen erforderlich sind. Eine neue Zeile braucht in jeder von ihnen einen Wert, und Plaid kann den Wert einer erforderlichen Dimension nicht löschen. Plaid lehnt eine Anfrage ab, die gegen die Regel verstößt, und nennt den Grund, zum Beispiel „Nature is required for spend item creation.“

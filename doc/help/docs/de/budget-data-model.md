@@ -8,8 +8,8 @@ Die hier beschriebenen Dateien sind der Vertrag, auf den Sie sich stützen. Ihre
 
 | Objekt | Was es enthält | Wo Sie es verwalten |
 |---|---|---|
-| **OPEX-Position** | Laufende Kosten, von Jahr zu Jahr fortgeführt | **Budgetverwaltung > OPEX** |
-| **CAPEX-Position** | Eine Investition, von Jahr zu Jahr fortgeführt | **Budgetverwaltung > CAPEX** |
+| **OPEX-Position** | Laufende Kosten, von Jahr zu Jahr fortgeführt | **Budgetverwaltung > Budgetzeilen** |
+| **CAPEX-Position** | Eine Investition, von Jahr zu Jahr fortgeführt | **Budgetverwaltung > Budgetzeilen** |
 | **Budgetspalten** | Die fünf Betragsspalten, die jede Position für jedes Jahr hat | **Budgetverwaltung > Administration > Budgetspalten** |
 | **Zeilen unter Menge und Preis** | Die Zeilen, aus denen eine Spalte berechnet werden kann | Der Tab **Budget** einer Position |
 | **Zuordnung** | Wie die Kosten eines Jahres einer Position auf Unternehmen oder Abteilungen verteilt werden | Der Tab **Zuordnungen** einer Position |
@@ -56,14 +56,14 @@ Eine Position ist außerdem mit Projekten, Anfragen, Anwendungen, Assets, Vertr�
 
 ### OPEX- und CAPEX-Positionen
 
-Eine Position lebt über mehrere Jahre: Eine Lizenz über drei Jahre ist eine Position mit drei Budgetjahren. KANAP vergibt jeder Position beim Anlegen eine Nummer, ihre Referenz `BL-12`, in derselben Reihe für OPEX und CAPEX. Die Listen zeigen weiterhin `OPX-12` für eine OPEX-Position und `CPX-3` für eine CAPEX-Position. Die Budgetdatei bezeichnet eine Position mit ihrer Referenz `BL-12` und liest auch die Nummern `OPX` und `CPX`. In einer Datei ohne Spalte `nature` behält eine bloße Zahl ihre frühere Bedeutung (`CPX-3` in der CAPEX-Liste).
+Eine Position lebt über mehrere Jahre: Eine Lizenz über drei Jahre ist eine Position mit drei Budgetjahren. KANAP vergibt jeder Position beim Anlegen eine Nummer, ihre Referenz `BL-12`, in derselben Reihe für OPEX und CAPEX. Die Liste, der Arbeitsbereich und die Seitenadresse zeigen sie. Positionen, die vor dieser Reihe angelegt wurden, hatten zusätzlich eine Nummer `OPX-12` oder `CPX-3`: Links, Suchen und die Budgetdatei finden eine Position weiterhin darüber. In einer Datei ohne Spalte `nature` behält eine bloße Zahl ihre frühere Bedeutung (`CPX-3`, wenn die Liste auf CAPEX gefiltert ist). Siehe [Referenzen](budget-lines.md#referenzen).
 
 | Feld | Spalte der Budgetdatei | Erforderlich | Hinweise |
 |---|---|---|---|
-| Art | `nature` | Ja | `opex` oder `capex`. Eine Datei ändert die Art einer bestehenden Position nicht (siehe [Den Typ einer Position ändern](#den-typ-einer-position-andern)). Eine Datei ohne diese Spalte wird als Positionen der Liste gelesen, in der sie importiert wird |
+| Art | `nature` | Ja | `opex` oder `capex`. Eine Datei ändert die Art einer bestehenden Position nicht (siehe [Den Typ einer Position ändern](#den-typ-einer-position-andern)). Eine Datei ohne diese Spalte wird als OPEX-Positionen gelesen, oder als CAPEX-Positionen, wenn die Liste auf CAPEX gefiltert ist |
 | Nummer | `item_number` | Von KANAP vergeben | `BL-12`. Leer in der Datei: legt eine Position an |
-| Produktname (OPEX), Titel (CAPEX) | `name` | Ja | |
-| Beschreibung (OPEX) | `description` | Nein | Bei einer CAPEX-Position noch nicht gelesen oder geschrieben |
+| Titel | `name` | Ja | Die Spalte **Produktname** der Liste |
+| Beschreibung | `description` | Nein | |
 | Anlagentyp, Investitionsart, Priorität (CAPEX) | `analytics:ppe_type`, `analytics:investment_type`, `analytics:priority` | Bei einer neuen Zeile, solange die Dimension erforderlich ist | Werte der drei CAPEX-Dimensionen, gespeichert wie die Werte jeder anderen Dimension. Siehe [CAPEX-Dimensionen](analytics.md#capex-dimensionen) |
 | Zahlendes Unternehmen | `company_name` | Ja | Wird von der Kostenstelle übernommen, wenn nur die Kostenstelle angegeben ist |
 | Lieferant | `supplier_name`, `supplier_erp_id` | Nein | |
@@ -82,9 +82,9 @@ Eine Position hat keinen eigenen Status zum Laden. Sie ist aktiv bis zum Ende ih
 
 ### Den Typ einer Position ändern
 
-Eine Position wechselt in ihrem Arbeitsbereich von OPEX zu CAPEX oder zurück (**Typ ändern...** im Menü **...**, siehe [OPEX](opex.md#typ-andern) und [CAPEX](capex.md#typ-andern)). Eine Budgetdatei ändert den Typ nie. Die Änderung beginnt am 1. Januar eines Jahres:
+Eine Position wechselt in ihrem Arbeitsbereich von OPEX zu CAPEX oder zurück (**Typ ändern...** im Menü **...**, siehe [Typ ändern](budget-lines.md#typ-andern)). Eine Budgetdatei ändert den Typ nie. Die Änderung beginnt am 1. Januar eines Jahres:
 
-- **Ab dem ersten Jahr der Position** ändert die Position selbst ihren Typ. Sie behält ihre `BL`-Nummer, ihre Budgetjahre, Zuordnungen, Verknüpfungen, Anhänge und Aufgaben. Eine Position, die zu CAPEX wird, erhält eine `CPX`-Nummer, die sie behält, wenn sie wieder zu OPEX wird
+- **Ab dem ersten Jahr der Position** ändert die Position selbst ihren Typ. Sie behält ihre `BL`-Nummer, ihre Budgetjahre, Zuordnungen, Verknüpfungen, Anhänge und Aufgaben
 - **Ab einem späteren Jahr** endet die Position am 31. Dezember des Vorjahres und behält ihre früheren Budgetjahre. Eine neue Position des anderen Typs mit eigener `BL`-Nummer übernimmt die späteren Budgetjahre, die Kontakte und die Verknüpfungen zu Anwendungen, Assets, Verträgen, Projekten und Anfragen. Die neue Position verzeichnet die Position, auf die sie folgt, und jede der beiden Positionen zeigt die andere an
 
 Eine Position wird durch höchstens eine Position ersetzt. Die Änderung wird abgelehnt, solange eine eingefrorene Spalte Beträge der Position in den betroffenen Jahren enthält.
@@ -109,7 +109,7 @@ Jede Position hat für jedes Jahr dieselben fünf Spalten. Sie werden einmal fü
 
 - Ein Budgetadministrator kann eine Spalte umbenennen (bis zu 40 Zeichen), ausblenden und die Standardspalte wählen. Der Name in Dateien bleibt gleich, eine Datei funktioniert also auch nach einer Umbenennung. Siehe [Budgetspalten](budget-operations.md#budgetspalten).
 - Eine ausgeblendete Spalte behält ihre Beträge und nimmt weiterhin Importe an.
-- Spalten werden pro Jahr, pro Spalte und pro Bereich (OPEX oder CAPEX) eingefroren. Eine eingefrorene Spalte lehnt Bearbeitungen, Importe, Kopien und Zurücksetzungen ab. Siehe [Daten einfrieren / auftauen](budget-operations.md#daten-einfrieren-auftauen).
+- Spalten werden pro Jahr, pro Spalte und pro Typ (OPEX oder CAPEX) eingefroren. Eine eingefrorene Spalte lehnt Bearbeitungen, Importe, Kopien und Zurücksetzungen ab. Siehe [Daten einfrieren / auftauen](budget-operations.md#daten-einfrieren-auftauen).
 
 Eine sechste Spalte gibt es nicht. Um mehrere Budgetrunden aufzubewahren, verwenden Sie eine Spalte pro Runde, oder kopieren Sie eine Spalte in ein anderes Jahr oder eine andere Spalte mit [Budgetspalten kopieren](budget-operations.md#budgetspalten-kopieren).
 
@@ -121,7 +121,7 @@ Jede Spalte speichert außerdem ihren Zeitraum innerhalb des Jahres und die Herk
 
 ### Zeilen unter Menge und Preis
 
-Eine Spalte kann aus Zeilen berechnet werden, jede eine Menge mal ein Stückpreis. Jede Zeile hat eine Beschreibung (bis zu 200 Zeichen), eine Menge (bis zu 3 Dezimalstellen), eine Einheit (**Personen**, **Tage** oder **Stück**), einen Stückpreis (bis zu 4 Dezimalstellen), eine Häufigkeit, einen Zeitraum oder ein Datum und einen Arbeitstagekalender, wenn der Preis pro Tag gilt. Die VZÄ der Spalte ergeben sich aus den Zeilen. Siehe [Menge und Preis](opex.md#menge-und-preis).
+Eine Spalte kann aus Zeilen berechnet werden, jede eine Menge mal ein Stückpreis. Jede Zeile hat eine Beschreibung (bis zu 200 Zeichen), eine Menge (bis zu 3 Dezimalstellen), eine Einheit (**Personen**, **Tage** oder **Stück**), einen Stückpreis (bis zu 4 Dezimalstellen), eine Häufigkeit, einen Zeitraum oder ein Datum und einen Arbeitstagekalender, wenn der Preis pro Tag gilt. Die VZÄ der Spalte ergeben sich aus den Zeilen. Siehe [Menge und Preis](budget-lines.md#menge-und-preis).
 
 Diese Zeilen werden im Tab **Budget** erfasst. Keine Datei enthält sie. Eine Budgetdatei schreibt die Monatsbeträge einer Spalte, und die Zeilen bleiben als Referenz bei ihr.
 
@@ -198,13 +198,13 @@ Jede der folgenden Dateien wird auf der Seite exportiert und importiert, die das
 | Zuordnungen | Aus den Berichten zur Leistungsverrechnung | Nein | | [Berichte](reports.md) |
 | Zeilen unter Menge und Preis, Einstellungen der Budgetspalten, Einfrierungen, Währungen | Nein | Nein | | In der Oberfläche festgelegt |
 
-Die Budgetdatei liest und schreibt die Beträge jeder Spalte und jedes Jahres, als Jahressummen oder Monate, mit den Details der Position in derselben Zeile. Sie ist der Weg hinein für ein anderswo erstelltes Budget und der Weg hinaus zu einer Tabellenkalkulation oder einem BI-Werkzeug. Eine Datei enthält beide Arten von Positionen, ihre Spalte `nature` gibt die Art an. **Budgetverwaltung > OPEX** exportiert die OPEX-Positionen und **Budgetverwaltung > CAPEX** die CAPEX-Positionen. Beide Listen importieren eine Datei mit beiden Arten, mit der Administratorstufe auf Budget.
+Die Budgetdatei liest und schreibt die Beträge jeder Spalte und jedes Jahres, als Jahressummen oder Monate, mit den Details der Position in derselben Zeile. Sie ist der Weg hinein für ein anderswo erstelltes Budget und der Weg hinaus zu einer Tabellenkalkulation oder einem BI-Werkzeug. Eine Datei enthält beide Arten von Positionen, ihre Spalte `nature` gibt die Art an. **Budgetverwaltung > Budgetzeilen** exportiert die angezeigten Positionen beider Typen und importiert eine Datei mit beiden Arten, mit der Administratorstufe auf Budget.
 
 ### Ein Budget nach KANAP übernehmen
 
 1. Bilden Sie jedes Objekt Ihres bisherigen Werkzeugs auf die Tabellen oben ab, und seine Kennungen auf die Spalte **Zugeordnet über**.
 2. Laden Sie die Stammdaten in der Reihenfolge aus [Ein ganzes Budget laden](budget-file.md#ein-ganzes-budget-laden).
-3. Exportieren Sie die Budgetdatei aus einer der beiden Listen, um die Kopfzeile Ihrer Organisation zu erhalten, mit einer Spalte pro Analysedimension. Eine Liste ohne Position exportiert nur die Kopfzeile.
+3. Exportieren Sie die Budgetdatei aus der Liste, um die Kopfzeile Ihrer Organisation zu erhalten, mit einer Spalte pro Analysedimension. Eine Liste ohne Position exportiert nur die Kopfzeile.
 4. Füllen Sie eine Zeile pro Position mit ihrer `nature`, mit leerer `item_number`, mit einer Betragsspalte pro Budgetspalte und Jahr (`budget_2027`) oder pro Monat (`budget_2027_03`).
 5. Importieren Sie die Datei. Die Prüfung meldet die Fehler nach Zeile der Datei, und nichts wird geschrieben, bevor Sie laden.
 

@@ -7,7 +7,7 @@ Un calendario es de uno de estos dos tipos:
 - **Estándar**: creado a partir de un país, y de una región cuando el país las tiene. Los días laborables de cualquier año son los días de lunes a viernes de cada mes menos los festivos del país. No hay nada que escribir, y aun así puede cambiar cualquier mes de cualquier año
 - **Personalizado**: usted introduce los días laborables de cada año, por ejemplo para un convenio de jornada con sus propios días libres
 
-En la pestaña Presupuesto de una partida OPEX o CAPEX, cada línea con precio por día usa un calendario. Las líneas con precio por mes o por pieza no necesitan ninguno. Consulte [Cantidad y precio](opex.md#cantidad-y-precio).
+En la pestaña Presupuesto de una línea presupuestaria, cada línea de cantidad y precio con precio por día usa un calendario. Las líneas con precio por mes o por pieza no necesitan ninguno. Consulte [Cantidad y precio](budget-lines.md#cantidad-y-precio).
 
 ---
 

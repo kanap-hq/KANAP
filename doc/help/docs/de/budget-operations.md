@@ -38,7 +38,7 @@ Die integrierte Rolle Budget-Administrator sieht alle Karten. Budget-Mitglied un
 
 Die Budgetspalten sind Budget, Revision, Prognose, Ist-Werte und Erwarteter Endwert. Das sind die Standardnamen. Ihre Organisation kann sie umbenennen, einige ausblenden und unter [Budgetspalten](#budgetspalten) eine Standardspalte wählen. Jede der folgenden Seiten zeigt die Namen, die Ihre Organisation gewählt hat.
 
-Solange einer dieser Vorgänge läuft, können OPEX- und CAPEX-Positionen nicht gespeichert werden: Eine Änderung zeigt die Meldung „Ein anderer Budgetvorgang läuft gerade. Bitte versuchen Sie es erneut, wenn er abgeschlossen ist.“, bis der Vorgang abgeschlossen ist.
+Solange einer dieser Vorgänge läuft, können Budgetzeilen nicht gespeichert werden: Eine Änderung zeigt die Meldung „Ein anderer Budgetvorgang läuft gerade. Bitte versuchen Sie es erneut, wenn er abgeschlossen ist.“, bis der Vorgang abgeschlossen ist.
 
 ---
 
@@ -54,28 +54,34 @@ Sperren Sie Budgetspalten, sodass sie nicht bearbeitet, importiert oder auf ande
 
 ### Funktionsweise
 
-1. **Wählen Sie ein Jahr** aus dem Dropdown (Bereich: aktuelles Jahr minus eins bis aktuelles Jahr plus vier)
-2. **Wählen Sie Geltungsbereiche**: Aktivieren Sie **OPEX**, **CAPEX** oder beides
-3. **Wählen Sie Spalten** für jeden Bereich. Die Liste bietet alle fünf Spalten an. Ausgeblendete Spalten sind mit **Ausgeblendet** gekennzeichnet. Alle Spalten sind standardmäßig ausgewählt: Das Einfrieren eines Jahres friert also jede Spalte ein, auch die ausgeblendeten. Entfernen Sie das Häkchen bei einer Spalte, um sie auszulassen
-4. Klicken Sie auf **Daten einfrieren** zum Sperren oder **Daten auftauen** zum Entsperren. Beide Schaltflächen bleiben deaktiviert, solange in einem gewählten Bereich keine Spalte ausgewählt ist
+Die Seite zeigt jeweils ein Jahr. Wählen Sie es mit den Jahres-Tabs oben, vom letzten Jahr bis vier Jahre im Voraus.
+
+Unter den Tabs hat eine Tabelle eine Zeile pro Budgetspalte und eine Spalte pro Typ, **OPEX** und **CAPEX**. Ausgeblendete Spalten werden ebenfalls aufgeführt, mit **Ausgeblendet** gekennzeichnet. Jede Zelle zeigt den Zustand dieser Spalte für diesen Typ, **Offen** oder **Eingefroren**, mit einem Schloss-Symbol:
+
+- Klicken Sie auf eine Zelle, um sie umzuschalten. Ein Klick friert diese Spalte für diesen Typ ein oder taut sie auf
+- Die Aktion am Ende einer Zeile wirkt auf beide Typen zugleich. Sie lautet **Beide einfrieren**, solange eine der beiden Zellen offen ist, und friert die offene ein. Sind beide eingefroren, lautet sie **Beide auftauen**
+- Eine Zelle bleibt deaktiviert, solange ihre Änderung gespeichert wird. Die Jahres-Tabs warten, bis jede Änderung abgeschlossen ist
+
+Ohne die Administratorstufe für die Budget-Administration zeigt die Seite die Zustände schreibgeschützt an, mit der Meldung „Sie benötigen Budgetadministrator-Rechte, um diese Seite zu verwenden.“
 
 ### Was das Einfrieren bewirkt
 
-- Verhindert Bearbeitungen an eingefrorenen Spalten in OPEX- und CAPEX-Arbeitsbereichen
+- Verhindert Bearbeitungen an eingefrorenen Spalten im Arbeitsbereich der Zeilen dieses Typs. Die Felder zeigen ein Schloss-Symbol
 - Blockiert CSV-Importe in eingefrorene Spalten
 - Blockiert Kopier- und Zurücksetzungsoperationen für eingefrorene Spalten
+- Verweigert das Löschen einer Zeile oder die Änderung ihres Typs, solange sie Beträge in einer eingefrorenen Spalte der betroffenen Jahre hat
 - Beeinflusst **nicht** den Lesezugriff: Die Daten bleiben sichtbar
 - Gilt auch für ausgeblendete Spalten. Eine eingefrorene Spalte bleibt eingefroren, wenn sie ausgeblendet wird, und Importe in sie werden weiterhin abgelehnt
 
+### Schloss-Symbole in der Liste
+
+Die Summenzeilen [der Liste der Budgetzeilen](budget-lines.md#mit-der-liste-arbeiten) zeigen ein Schloss-Symbol vor der Summe einer eingefrorenen Spalte. Enthält die Liste beide Typen, folgen die Zeilen **Gesamt OPEX** und **Gesamt CAPEX** jeweils dem Einfrieren ihres Typs, und die Zeile **Gesamt** zeigt das Schloss, wenn die Spalte für beide eingefroren ist. Ist die Liste auf einen Typ gefiltert, folgt die Zeile **Gesamt** diesem Typ. Fahren Sie mit der Maus über das Symbol, um **Eingefroren** zu lesen.
+
 ### Das Einfrieren der Standardspalte schreibt die Wechselkurse fest
 
-Wenn Sie die [Standardspalte](#budgetspalten) für ein Jahr einfrieren, werden auch die Wechselkurse dieses Jahres für den eingefrorenen Bereich festgeschrieben. KANAP aktualisiert die Kurse des Jahres und behält dann den neuesten Satz für jeden OPEX- oder CAPEX-Betrag dieses Jahres. Berichte rechnen diese Beträge danach mit denselben Kursen um, auch wenn neuere Kurse eintreffen. Das Auftauen der Standardspalte gibt sie wieder frei.
+Wenn Sie die [Standardspalte](#budgetspalten) für ein Jahr einfrieren, werden auch die Wechselkurse dieses Jahres für den eingefrorenen Typ festgeschrieben. KANAP aktualisiert die Kurse des Jahres und behält dann den neuesten Satz für jeden OPEX- oder CAPEX-Betrag dieses Jahres. Berichte rechnen diese Beträge danach mit denselben Kursen um, auch wenn neuere Kurse eintreffen. Das Auftauen der Standardspalte gibt sie wieder frei.
 
-Das Einfrieren einer anderen Spalte berührt die Kurse nicht. Eine spätere Änderung der Standardspalte schreibt von sich aus nichts fest und gibt nichts frei: Die Kurse folgen dem nächsten Einfrieren oder Auftauen der neuen Standardspalte.
-
-### Aktueller Status
-
-Unterhalb der Steuerelemente zeigen zwei Karten den Echtzeit-Einfrierstatus aller fünf Spalten in OPEX und CAPEX. Jede Spalte zeigt entweder **Eingefroren** (in Rot) oder **Bearbeitbar** an. Ausgeblendete Spalten sind mit **Ausgeblendet** gekennzeichnet.
+Das Einfrieren einer anderen Spalte berührt die Kurse nicht. Eine spätere Änderung der Standardspalte schreibt von sich aus nichts fest und gibt nichts frei: Die Kurse folgen dem nächsten Einfrieren oder Auftauen der neuen Standardspalte. **Beide einfrieren** friert nur die offene Zelle ein, sodass ein Typ, dessen Standardspalte bereits eingefroren ist, die festgeschriebenen Kurse behält.
 
 ### Berechtigungen
 
@@ -157,7 +163,7 @@ Unterhalb des Grids zeigt eine Statistikleiste:
 
 ### Eine aus Zeilen aufgebaute Spalte kopieren
 
-Eine Spalte kann aus Zeilen aufgebaut sein, jede eine Menge mal ein Stückpreis. Siehe [Menge und Preis](opex.md#menge-und-preis). Die Kopie behandelt eine solche Spalte auf eine von zwei Arten.
+Eine Spalte kann aus Zeilen aufgebaut sein, jede eine Menge mal ein Stückpreis. Siehe [Menge und Preis](budget-lines.md#menge-und-preis). Die Kopie behandelt eine solche Spalte auf eine von zwei Arten.
 
 **Die Beträge werden aus den Zeilen berechnet.** Die Spalte bleibt im Ziel aus ihren Zeilen berechnet.
 
@@ -370,8 +376,8 @@ Standardmäßig sind Budget, Revision, Ist-Werte und Erwarteter Endwert angezeig
 
 ### Was die Einstellungen ändern
 
-- **Ausgeblendete Spalten** verschwinden aus den Listen, der Spaltenauswahl, dem Budget-Tab, den Auswahlfeldern der Berichte, den Seiten zum Kopieren und Zurücksetzen und der Übersicht. Sie behalten ihre Beträge: Das Ausblenden einer Spalte löscht nie Daten, und wenn Sie sie wieder anzeigen, sind die Beträge wieder da. Ausgeblendete Spalten nehmen weiterhin Importe über die Budgetdatei an, und Einfrierungen gelten weiterhin für sie. Die Seite zum Einfrieren listet ausgeblendete Spalten ebenfalls auf, mit **Ausgeblendet** gekennzeichnet. Das Einfrieren eines Jahres friert sie also mit den anderen ein
-- **Die Standardspalte** ist in jedem Bericht vorausgewählt. Nach ihr werden die OPEX- und CAPEX-Listen, ihre Navigation mit Zurück und Weiter sowie die Kacheln **Top-Positionen** und **Stärkste Zuwächse** der Übersicht sortiert. Die Listen zeigen sie für das aktuelle Jahr, neben der letzten angezeigten Spalte. Sie ist auch der Referenzbetrag des Zuordnungen-Tabs und die Spalte, mit der sich das Verteilungsfeld öffnet. Ihr Einfrieren für ein Jahr schreibt die Wechselkurse dieses Jahres fest (siehe [Das Einfrieren der Standardspalte schreibt die Wechselkurse fest](#das-einfrieren-der-standardspalte-schreibt-die-wechselkurse-fest))
+- **Ausgeblendete Spalten** verschwinden aus den Listen, der Spaltenauswahl, dem Budget-Tab, den Auswahlfeldern der Berichte, den Seiten zum Kopieren und Zurücksetzen und der Übersicht. Sie behalten ihre Beträge: Das Ausblenden einer Spalte löscht nie Daten, und wenn Sie sie wieder anzeigen, sind die Beträge wieder da. Ausgeblendete Spalten nehmen weiterhin Importe über die Budgetdatei an, und Einfrierungen gelten weiterhin für sie. Die Seite zum Einfrieren listet ausgeblendete Spalten ebenfalls auf, mit **Ausgeblendet** gekennzeichnet, sodass Sie sie wie die anderen einfrieren können
+- **Die Standardspalte** ist in jedem Bericht vorausgewählt. Nach ihr werden die Liste der Budgetzeilen und ihre Navigation mit Zurück und Weiter sortiert. Die Kacheln **Top-Positionen**, **Stärkste Zuwächse**, **Mein Budget** und **Nach Kostenstelle** der Übersicht verwenden sie. Die Liste zeigt sie für das aktuelle Jahr, neben der letzten angezeigten Spalte. Sie ist auch der Referenzbetrag des Zuordnungen-Tabs und die Spalte, mit der sich das Verteilungsfeld öffnet. Ihr Einfrieren für ein Jahr schreibt die Wechselkurse dieses Jahres fest (siehe [Das Einfrieren der Standardspalte schreibt die Wechselkurse fest](#das-einfrieren-der-standardspalte-schreibt-die-wechselkurse-fest))
 - **Folgt Verteilung und Zeilen** legt fest, welche Spalten sich gemeinsam ändern, wenn eine Verteilung auf alle Spalten angewendet wird, und welche Spalten die Zeilen übernehmen, wenn **Diese Zeilen auf alle Spalten anwenden** eingeschaltet ist. Eingefrorene Spalten ändern sich nie, unabhängig von dieser Einstellung
 
 ### Speichern

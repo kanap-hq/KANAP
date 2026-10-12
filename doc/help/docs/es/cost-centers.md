@@ -130,7 +130,7 @@ Cada línea OPEX y CAPEX con un centro de coste muestra el responsable del presu
 - **Leído del centro de coste**: el responsable del presupuesto no se almacena en la línea. Cámbielo aquí y cada línea del centro de coste muestra de inmediato a la nueva persona. Solo cambia en una línea cuando usted cambia el centro de coste de la línea.
 - **Solo se muestra si está definido**: una línea sin centro de coste, o cuyo centro de coste no tiene responsable del presupuesto, no muestra nada.
 - **Un rol distinto**: el **Responsable de TI** y el **Responsable de negocio** de una línea se mantienen tal cual, definidos en cada línea. También cubren los espacios de trabajo que no usan centros de coste.
-- **En las listas**: las listas OPEX y CAPEX tienen una columna **Responsable del presupuesto**, oculta por defecto, con un filtro de casillas.
+- **En la lista**: la lista de líneas presupuestarias tiene una columna **Responsable del presupuesto**, oculta por defecto, con un filtro de casillas.
 
 ### Cambiar el tipo
 
@@ -159,8 +159,8 @@ El botón **Eliminar** del encabezado elimina el elemento de inmediato (requiere
 
 ## Centros de coste en las líneas de presupuesto
 
-- **OPEX y CAPEX**: el campo **Centro de coste** del panel **Propiedades** muestra el árbol. Los grupos se muestran para ayudarle a orientarse y no se pueden elegir. Cuando crea una línea y la empresa pagadora está vacía, elegir un centro de coste la completa con la empresa del centro de coste, y la empresa sigue al centro de coste hasta que usted elija una empresa o una cuenta. Cuando las dos empresas difieren, se conservan ambas y una indicación lo señala. Consulte [OPEX](opex.md) y [CAPEX](capex.md).
-- **Listas**: las columnas y filtros **Centro de coste** y **Run o build** de las listas OPEX y CAPEX.
+- **OPEX y CAPEX**: el campo **Centro de coste** del panel **Propiedades** muestra el árbol. Los grupos se muestran para ayudarle a orientarse y no se pueden elegir. Cuando crea una línea y la empresa pagadora está vacía, elegir un centro de coste la completa con la empresa del centro de coste, y la empresa sigue al centro de coste hasta que usted elija una empresa o una cuenta. Cuando las dos empresas difieren, se conservan ambas y una indicación lo señala. Consulte [Líneas presupuestarias](budget-lines.md).
+- **Lista**: las columnas y filtros **Centro de coste** y **Run o build** de la lista de líneas presupuestarias.
 - **Informes**: los informes presupuestarios se pueden filtrar por un centro de coste o un grupo. Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](reports.md#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas).
 
 ---
