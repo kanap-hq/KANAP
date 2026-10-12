@@ -913,6 +913,20 @@ describe('BudgetTab modes', () => {
     expect(modeTab('Quantity and price')).toHaveAttribute('aria-selected', 'true');
   });
 
+  it('a setting that hides the active column moves the editor to the first column shown, in its own mode', async () => {
+    setupApi({ roundInputs: [linesRecord(undefined, { measure: 'committed' })] });
+    const { rerenderYear } = renderTab();
+    await waitForAmounts();
+    pick('actual');
+    expect(editor()).toHaveTextContent('Actuals 2026');
+
+    columnsSetting.current = { ...ALL_SHOWN, enabled: { ...ALL_SHOWN.enabled, planned: false, actual: false } };
+    rerenderYear(YEAR);
+    await waitFor(() => expect(activeColumn()).toBe('committed'));
+    expect(modeTab('Quantity and price')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByLabelText('Description')).toHaveValue('US Managed IT Services');
+  });
+
   it('a column that follows its lines asks before an amount replaces them; nothing is written until confirmed', async () => {
     setupApi({ roundInputs: [linesRecord(), linesRecord(undefined, { measure: 'forecast' })] });
     routePosts();
