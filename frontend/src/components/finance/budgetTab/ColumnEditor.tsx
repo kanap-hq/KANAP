@@ -3,7 +3,7 @@ import { Box, Button, Checkbox, FormControlLabel, Link, Tab, Tabs, Typography } 
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { formatAmount } from '../../../i18n/formatters';
 import LinesPanel from '../LinesPanel';
-import { followsLines, formatMoney, hasLines, joinList, periodForEdit, type RoundInput } from '../roundPeriod';
+import { activeMonths, followsLines, formatMoney, hasLines, joinList, monthSpanText, periodForEdit, periodProblem, type RoundInput } from '../roundPeriod';
 import AmountEditor from './AmountEditor';
 import { ColumnHowText } from './ColumnCards';
 import type { BudgetTabState, ColumnMode, ModeSwitch } from './useBudgetTab';
@@ -21,11 +21,18 @@ function referenceTotal(record: RoundInput): string {
 
 /** The question asked before a mode change on a column with amounts: what changes, what stays. */
 function switchMessage(tab: BudgetTabState, change: ModeSwitch): string {
-  const { t, recordFor, currentCents } = tab;
+  const { t, locale, year, recordFor, currentCents, defaultPeriod } = tab;
   const record = recordFor(change.col);
   const amount = formatAmount(currentCents(change.col) / 100);
   const keepsLines = hasLines(record) ? ` ${t('budgetTab.switch.linesStay')}` : '';
-  if (change.to === 'amount') return `${t('budgetTab.switch.toAmount', { amount })}${keepsLines}`;
+  if (change.to === 'amount') {
+    // The months the spread will cover: the column's period within the line's dates.
+    const span = defaultPeriod && !periodProblem(year, defaultPeriod.start, defaultPeriod.end)
+      ? monthSpanText(t, locale, activeMonths(year, defaultPeriod.start, defaultPeriod.end))
+      : '';
+    const question = span ? t('budgetTab.switch.toAmountSpan', { amount, span }) : t('budgetTab.switch.toAmount', { amount });
+    return `${question}${keepsLines}`;
+  }
   if (change.to === 'monthly') return `${t('budgetTab.switch.toMonthly')}${keepsLines}`;
   const reference = hasLines(record) && !followsLines(record);
   return `${t('budgetTab.switch.toLines')} ${reference

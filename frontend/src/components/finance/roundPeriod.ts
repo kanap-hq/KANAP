@@ -357,6 +357,11 @@ function joinRuns(t: TFunction, runs: string[]): string {
   return runs.reduce((acc, run) => (acc ? t('budgetTab.monthAnd', { first: acc, second: run }) : run), '');
 }
 
+/** "April to December", "April", "January and December". Empty when no month counts. */
+export function monthsText(t: TFunction, locale: string, months: number[]): string {
+  return joinRuns(t, monthRuns(t, locale, months));
+}
+
 /** "9 months, April to December", "1 month, April". Empty when no month counts. */
 export function periodText(t: TFunction, locale: string, months: number[]): string {
   if (months.length === 0) return '';

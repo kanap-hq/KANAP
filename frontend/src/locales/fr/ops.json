@@ -1416,6 +1416,7 @@
     "when": "Quand",
     "wholeYear": "Toute l'année",
     "aPeriod": "Une période",
+    "storedPeriod": "Période enregistrée : {{stored}}. L'enregistrement utilisera {{proposed}}, selon les dates de la ligne.",
     "span": {
       "range": "de {{from}} à {{to}} ({{n}} mois)",
       "range_vowel": "d'{{from}} à {{to}} ({{n}} mois)",
@@ -1437,6 +1438,7 @@
     "referenceAmount_other": "{{count}} lignes gardées en référence ({{amount}}).",
     "switch": {
       "toAmount": "Passer en saisie par montant ? Le total actuel ({{amount}}) devient le montant, réparti linéairement.",
+      "toAmountSpan": "Passer en saisie par montant ? Le total actuel ({{amount}}) devient le montant, réparti linéairement {{span}}.",
       "toLines": "Passer en quantité et prix ? Le total viendra des lignes.",
       "toMonthly": "Passer en saisie par mois ? Les mois actuels sont gardés et deviennent modifiables dans le tableau.",
       "linesStay": "Les lignes restent en référence.",

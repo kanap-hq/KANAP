@@ -6,7 +6,7 @@ import { FieldLabel } from '../../design';
 import DateEUField from '../../fields/DateEUField';
 import { drawerMenuItemSx, drawerSelectSx, selectKeepsFocus } from '../../../theme/formSx';
 import { PanelField, PanelPeriod } from '../LinesPanel';
-import { centsToDecimal, formatMoney, spreadResultText, toCents, zeroedMonthsText } from '../roundPeriod';
+import { activeMonths, centsToDecimal, formatMoney, monthsText, spreadResultText, toCents, zeroedMonthsText } from '../roundPeriod';
 import type { AmountWhen, BudgetTabState } from './useBudgetTab';
 
 const captionSx = { fontSize: 12, color: 'kanap.text.tertiary', lineHeight: 1.4 } as const;
@@ -21,7 +21,7 @@ export default function AmountEditor({ tab, i18nPrefix, disabled }: { tab: Budge
   const {
     t, locale, year, amountInputRef, spreadAmount, onSpreadAmountChange, commitSpreadAmount, commitSpread,
     spreadProfile, onSpreadProfileChange, spreadPeriod, spreadKind, onSpreadWhenChange, onSpreadDateChange,
-    spreadProblem, spreadActive, spreadBeyondItem,
+    spreadProblem, spreadActive, spreadBeyondItem, periodChange,
   } = tab;
   const amount = Number(spreadAmount || 0);
   const amountText = amount ? formatMoney(centsToDecimal(toCents(amount))) : '';
@@ -29,6 +29,9 @@ export default function AmountEditor({ tab, i18nPrefix, disabled }: { tab: Budge
   // No period at all: the line's dates leave no month of the year, and the column has none of its own.
   const noPeriod = spreadPeriod.start === '' && spreadPeriod.end === '';
   const zeroedText = spreadProblem ? '' : zeroedMonthsText(t, locale, spreadActive);
+  const monthsOf = (period: { start: string; end: string }) => monthsText(t, locale, activeMonths(year, period.start, period.end));
+  const storedText = periodChange ? monthsOf(periodChange.stored) : '';
+  const proposedText = periodChange ? monthsOf(periodChange.proposed) : '';
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
@@ -105,6 +108,11 @@ export default function AmountEditor({ tab, i18nPrefix, disabled }: { tab: Budge
           <Typography sx={{ ...captionSx, color: 'error.main' }}>{t(`budgetTab.problem.${spreadProblem}`, { year })}</Typography>
         )}
         {zeroedText && <Typography sx={{ ...captionSx, color: 'kanap.text.secondary' }}>{zeroedText}</Typography>}
+        {storedText && proposedText && (
+          <Typography data-testid="stored-period" sx={{ ...captionSx, color: 'kanap.text.secondary' }}>
+            {t('budgetTab.storedPeriod', { stored: storedText, proposed: proposedText })}
+          </Typography>
+        )}
         {spreadBeyondItem && <Typography sx={{ ...captionSx, color: 'warning.main' }}>{t('budgetTab.beyondItemDates')}</Typography>}
       </Box>
     </Box>

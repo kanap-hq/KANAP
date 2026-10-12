@@ -1415,6 +1415,7 @@
     "when": "Cuándo",
     "wholeYear": "Todo el año",
     "aPeriod": "Un periodo",
+    "storedPeriod": "Periodo guardado: {{stored}}. Al guardar se usará {{proposed}}, según las fechas de la línea.",
     "span": {
       "range": "de {{from}} a {{to}} ({{n}} meses)",
       "range_vowel": "de {{from}} a {{to}} ({{n}} meses)",
@@ -1436,6 +1437,7 @@
     "referenceAmount_other": "{{count}} líneas conservadas como referencia ({{amount}}).",
     "switch": {
       "toAmount": "¿Cambiar a un importe? El total actual ({{amount}}) pasa a ser el importe, repartido de forma uniforme.",
+      "toAmountSpan": "¿Cambiar a un importe? El total actual ({{amount}}) pasa a ser el importe, repartido de forma uniforme {{span}}.",
       "toLines": "¿Cambiar a cantidad y precio? El total vendrá de las líneas.",
       "toMonthly": "¿Cambiar a la introducción por mes? Los meses actuales se conservan y pasan a ser editables en la tabla.",
       "linesStay": "Las líneas se conservan como referencia.",

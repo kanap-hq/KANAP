@@ -1415,6 +1415,7 @@
     "when": "When",
     "wholeYear": "Whole year",
     "aPeriod": "A period",
+    "storedPeriod": "Stored period: {{stored}}. Saving will use {{proposed}}, the line's dates.",
     "span": {
       "range": "from {{from}} to {{to}} ({{n}} months)",
       "range_vowel": "from {{from}} to {{to}} ({{n}} months)",
@@ -1436,6 +1437,7 @@
     "referenceAmount_other": "{{count}} lines kept as a reference ({{amount}}).",
     "switch": {
       "toAmount": "Switch to an amount? The current total ({{amount}}) becomes the amount, spread flat.",
+      "toAmountSpan": "Switch to an amount? The current total ({{amount}}) becomes the amount, spread flat {{span}}.",
       "toLines": "Switch to quantity and price? The total will come from the lines.",
       "toMonthly": "Switch to entry by month? The current months are kept and become editable in the table.",
       "linesStay": "The lines stay as a reference.",

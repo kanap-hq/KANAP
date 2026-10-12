@@ -28,6 +28,8 @@ export type HeldBudgetChoices = {
   parkedPanel: { body: Record<string, unknown>; main: AmountMeasure; columns: AmountMeasure[] } | null;
   /** The values typed in the waiting months. */
   cells: Array<{ period: string; col: AmountMeasure; value: number }>;
+  /** How each waiting column was shown when the user picked it (by month for refused months): it comes back the same. */
+  modes: Partial<Record<AmountMeasure, 'amount' | 'lines' | 'monthly'>>;
 };
 
 export type HeldAllocationChoice = {

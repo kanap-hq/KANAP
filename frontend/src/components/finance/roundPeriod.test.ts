@@ -24,6 +24,7 @@ import {
   lineText,
   linePayloadOf,
   monthSpanText,
+  monthsText,
   linesText,
   sameLine,
   trimDecimal,
@@ -178,6 +179,11 @@ describe('texts', () => {
     expect(spreadResultText(en(), 'en', '', '4-4-5', april)).toBe('Enter an amount: it will be spread 4-4-5 from April to December (9 months).');
     expect(spreadResultText(en(), 'en', '500', 'flat', [4])).toBe('500 spread flat in April.');
     expect(monthSpanText(fr(), 'fr', [4])).toBe('en avril');
+    // The question before an amount names the same months.
+    expect(fr()('budgetTab.switch.toAmountSpan', { amount: '12 500', span: monthSpanText(fr(), 'fr', [8, 9, 10, 11, 12]) }))
+      .toBe("Passer en saisie par montant ? Le total actuel (12 500) devient le montant, réparti linéairement d'août à décembre (5 mois).");
+    expect(fr()('budgetTab.storedPeriod', { stored: monthsText(fr(), 'fr', activeMonths(2026, null, null)), proposed: monthsText(fr(), 'fr', april) }))
+      .toBe("Période enregistrée : janvier à décembre. L'enregistrement utilisera avril à décembre, selon les dates de la ligne.");
     // No month: no sentence (the period problem says why).
     expect(spreadResultText(en(), 'en', '500', 'flat', [])).toBe('');
   });

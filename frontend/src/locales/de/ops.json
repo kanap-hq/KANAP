@@ -1415,6 +1415,7 @@
     "when": "Wann",
     "wholeYear": "Ganzes Jahr",
     "aPeriod": "Ein Zeitraum",
+    "storedPeriod": "Gespeicherter Zeitraum: {{stored}}. Beim Speichern gilt {{proposed}}, nach den Daten der Zeile.",
     "span": {
       "range": "von {{from}} bis {{to}} ({{n}} Monate)",
       "range_vowel": "von {{from}} bis {{to}} ({{n}} Monate)",
@@ -1436,6 +1437,7 @@
     "referenceAmount_other": "{{count}} Zeilen als Referenz behalten ({{amount}}).",
     "switch": {
       "toAmount": "Zu einem Betrag wechseln? Die aktuelle Summe ({{amount}}) wird zum Betrag, gleichmäßig verteilt.",
+      "toAmountSpan": "Zu einem Betrag wechseln? Die aktuelle Summe ({{amount}}) wird zum Betrag, {{span}} gleichmäßig verteilt.",
       "toLines": "Zu Menge und Preis wechseln? Die Summe ergibt sich dann aus den Zeilen.",
       "toMonthly": "Zur Erfassung pro Monat wechseln? Die aktuellen Monate bleiben erhalten und werden in der Tabelle bearbeitbar.",
       "linesStay": "Die Zeilen bleiben als Referenz erhalten.",

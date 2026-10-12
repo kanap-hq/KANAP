@@ -266,6 +266,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
 
   // The mode each column shows when the user picked one (cleared with the year); else its stored mode.
   const [modeChoice, setModeChoice] = React.useState<Partial<Record<AmountCol, ColumnMode>>>({});
+  const modeChoiceRef = React.useRef(modeChoice); modeChoiceRef.current = modeChoice;
   const chooseMode = (col: AmountCol, mode: ColumnMode) => setModeChoice((prev) => (prev[col] === mode ? prev : { ...prev, [col]: mode }));
   // A mode change waiting for its confirmation in the editor.
   const [modeSwitch, setModeSwitch] = React.useState<ModeSwitch | null>(null);
@@ -462,6 +463,8 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
       setWaiting(restore ? restore.waiting.map((c) => ({ ...c, cells: c.cells ? new Set(c.cells) : null })) : []);
       parkedPanelRef.current = restore?.parkedPanel ? { ...restore.parkedPanel, columns: new Set(restore.parkedPanel.columns) } : null;
     }
+    // The waiting columns come back in the mode they were shown in.
+    if (restore?.modes && Object.keys(restore.modes).length > 0) setModeChoice((prev) => ({ ...prev, ...restore.modes }));
     const restoredCell = new Map((restore?.cells ?? []).map((c) => [`${c.period}:${c.col}`, c.value]));
     const v = snapshot.version;
     if (!v) {
@@ -592,8 +595,12 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
   }, [queryClient, id, year]);
   const markYearStaleRef = React.useRef(markYearStale); markYearStaleRef.current = markYearStale;
 
-  // The modes picked and the questions open belong to the year left.
+  // The modes picked and the questions open belong to the year left. Not on the first year shown:
+  // the choices given back (`held`) may have restored modes already.
+  const modesYearRef = React.useRef(year);
   React.useEffect(() => {
+    if (modesYearRef.current === year) return;
+    modesYearRef.current = year;
     setModeChoice({});
     setModeSwitch(null);
     setAlsoOpen(false);
@@ -822,6 +829,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
       dirtyCellsRef.current.forEach((cols, period) => cols.forEach((col) => {
         if (isCellWaiting(period, col)) cells.push({ period, col, value: Number(monthsRef.current[monthIndexOf(period)]?.[col] || 0) });
       }));
+      const waitingCols = new Set<AmountCol>([...waiting.map((c) => c.measure), ...(parked?.columns ?? [])]);
       held.current = {
         lineId: id,
         year: yearRef.current,
@@ -829,6 +837,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
         waiting: waiting.map((c) => ({ ...c, cells: c.cells ? [...c.cells] : null })),
         parkedPanel: parked ? { ...parked, columns: [...parked.columns] } : null,
         cells,
+        modes: Object.fromEntries(Object.entries(modeChoiceRef.current).filter(([col]) => waitingCols.has(col as AmountCol))),
       };
     };
     // Mount and unmount only: the refs hold the latest state.
@@ -880,6 +889,13 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
   // the line's dates.
   const defaultPeriod = periodForEdit(year, recordFor(activeCol), storedAmounts[activeCol], suggestion);
   const spreadPeriod: Period = spreadDates ?? defaultPeriod ?? { start: '', end: '' };
+  // The column's period as stored differs from the one proposed (cut to the line's dates): the
+  // editor says which one a save uses, until the user picks dates.
+  const storedPeriod = columnPeriod(year, recordFor(activeCol), storedAmounts[activeCol], suggestion);
+  const periodChange = !spreadDates && storedPeriod && defaultPeriod
+    && (storedPeriod.start !== defaultPeriod.start || storedPeriod.end !== defaultPeriod.end)
+    ? { stored: storedPeriod, proposed: defaultPeriod }
+    : null;
   const spreadKind: AmountWhen = spreadWhen ?? (isWholeYear(year, spreadPeriod) ? 'year' : 'range');
   const spreadProblem = periodProblem(year, spreadPeriod.start, spreadPeriod.end);
   const spreadActive = spreadProblem ? [] : activeMonths(year, spreadPeriod.start, spreadPeriod.end);
@@ -1011,6 +1027,11 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     // follow their lines keep them.
     const also = (next.also ?? []).filter((m) => m !== measure && !followsLines(recordFor(m)));
     committedAmountRef.current = typed;
+    // Not written: the next commit may send the same amount again, when the field still shows it.
+    // Another column or year shown meanwhile has its own committed amount: it is left alone.
+    const forgetCommitted = () => {
+      if (activeColRef.current === measure && yearRef.current === year && committedAmountRef.current === typed) committedAmountRef.current = '';
+    };
     setError(null);
     pinActive();
     writePanel(() => ({
@@ -1025,11 +1046,10 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
       },
       columns: [measure, ...also],
     })).then((outcome) => {
-      // Not written: the next commit may send the same amount again.
-      if (outcome.status !== 'saved') committedAmountRef.current = '';
+      if (outcome.status !== 'saved') forgetCommitted();
     }).catch((e) => {
       if (e instanceof UnsavedEditsError) return;
-      committedAmountRef.current = '';
+      forgetCommitted();
       setError(getApiErrorMessage(e, t, t(`${config.i18nPrefix}.budget.failedToSave`)));
     });
   };
@@ -1433,6 +1453,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     onSpreadProfileChange,
     spreadPeriod,
     defaultPeriod,
+    periodChange,
     spreadKind,
     onSpreadWhenChange,
     onSpreadDateChange,
