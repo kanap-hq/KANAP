@@ -6,30 +6,35 @@ import { FieldLabel } from '../../design';
 import DateEUField from '../../fields/DateEUField';
 import { drawerMenuItemSx, drawerSelectSx, selectKeepsFocus } from '../../../theme/formSx';
 import { PanelField, PanelPeriod } from '../LinesPanel';
-import { activeMonths, centsToDecimal, formatMoney, monthsText, spreadResultText, toCents, zeroedMonthsText } from '../roundPeriod';
+import { centsToDecimal, dateProblem, dateResultText, formatMoney, monthsText, periodMonths, spreadResultText, toCents, zeroedMonthsText } from '../roundPeriod';
 import type { AmountWhen, BudgetTabState } from './useBudgetTab';
 
 const captionSx = { fontSize: 12, color: 'kanap.text.tertiary', lineHeight: 1.4 } as const;
+const WHEN_LABEL: Record<AmountWhen, string> = { year: 'budgetTab.wholeYear', range: 'budgetTab.aPeriod', date: 'budgetTab.atADate' };
 
 /**
- * "Amount": one yearly amount, when it is consumed (the whole year or a period of it) and how it is
- * spread over the months that count (flat or 4-4-5). A sentence says what it gives, counting the
- * months. Every change saves at once: the amount on leaving the field or on Enter, the rest on
- * change. F2 adds "At a date" to "When".
+ * "Amount": one yearly amount, when it is consumed (the whole year, a period of it, or at a date
+ * whose month takes it all) and how it is spread over the months that count (flat or 4-4-5; no
+ * distribution at a date). A sentence says what it gives, counting the months. Every change saves
+ * at once: the amount on leaving the field or on Enter, the rest on change.
  */
 export default function AmountEditor({ tab, i18nPrefix, disabled }: { tab: BudgetTabState; i18nPrefix: string; disabled: boolean }) {
   const {
     t, locale, year, amountInputRef, spreadAmount, onSpreadAmountChange, commitSpreadAmount, commitSpread,
     spreadProfile, onSpreadProfileChange, spreadPeriod, spreadKind, onSpreadWhenChange, onSpreadDateChange,
-    spreadProblem, spreadActive, spreadBeyondItem, periodChange,
+    onSpreadSingleDateChange, spreadProblem, spreadActive, spreadBeyondItem, periodChange,
   } = tab;
+  const atDate = spreadKind === 'date';
   const amount = Number(spreadAmount || 0);
   const amountText = amount ? formatMoney(centsToDecimal(toCents(amount))) : '';
-  const result = spreadProblem ? '' : spreadResultText(t, locale, amountText, spreadProfile, spreadActive);
+  const result = spreadProblem ? ''
+    : atDate ? dateResultText(t, locale, amountText, spreadPeriod.start)
+      : spreadResultText(t, locale, amountText, spreadProfile, spreadActive);
   // No period at all: the line's dates leave no month of the year, and the column has none of its own.
   const noPeriod = spreadPeriod.start === '' && spreadPeriod.end === '';
-  const zeroedText = spreadProblem ? '' : zeroedMonthsText(t, locale, spreadActive);
-  const monthsOf = (period: { start: string; end: string }) => monthsText(t, locale, activeMonths(year, period.start, period.end));
+  // At a date the sentence already names the one month that takes the amount.
+  const zeroedText = spreadProblem || atDate ? '' : zeroedMonthsText(t, locale, spreadActive);
+  const monthsOf = (period: { start: string; end: string }) => monthsText(t, locale, periodMonths(year, period.start, period.end));
   const storedText = periodChange ? monthsOf(periodChange.stored) : '';
   const proposedText = periodChange ? monthsOf(periodChange.proposed) : '';
 
@@ -58,13 +63,13 @@ export default function AmountEditor({ tab, i18nPrefix, disabled }: { tab: Budge
             aria-label={t('budgetTab.when')}
             sx={{ flexWrap: 'nowrap', minHeight: 32, alignItems: 'center' }}
           >
-            {(['year', 'range'] as const).map((when) => (
+            {(['year', 'range', 'date'] as const).map((when) => (
               <FormControlLabel
                 key={when}
                 value={when}
                 disabled={disabled}
                 control={<Radio size="small" sx={{ p: '4px' }} />}
-                label={when === 'year' ? t('budgetTab.wholeYear') : t('budgetTab.aPeriod')}
+                label={t(WHEN_LABEL[when])}
                 sx={{ ml: 0, mr: 1.5, '& .MuiFormControlLabel-label': { fontSize: 13, color: 'kanap.text.primary', whiteSpace: 'nowrap' } }}
               />
             ))}
@@ -76,7 +81,13 @@ export default function AmountEditor({ tab, i18nPrefix, disabled }: { tab: Budge
             <DateEUField label={t('budgetTab.to')} valueYmd={spreadPeriod.end} onChangeYmd={(v) => onSpreadDateChange('end', v)} disabled={disabled} size="small" sx={{ width: 150 }} />
           </PanelPeriod>
         )}
-        <PanelField label={t('budgetTab.distribution')} width={120}>
+        {atDate && (
+          <PanelPeriod>
+            <DateEUField label={t('budgetTab.date')} valueYmd={spreadPeriod.start} onChangeYmd={onSpreadSingleDateChange} disabled={disabled} size="small" sx={{ width: 150 }} />
+          </PanelPeriod>
+        )}
+        {/* At a date the month of the date takes it all: nothing to spread. */}
+        {!atDate && <PanelField label={t('budgetTab.distribution')} width={120}>
           <TextField
             select size="small" variant="standard" value={spreadProfile}
             disabled={disabled}
@@ -88,7 +99,7 @@ export default function AmountEditor({ tab, i18nPrefix, disabled }: { tab: Budge
             <MenuItem value="flat" sx={drawerMenuItemSx}>{t(`${i18nPrefix}.budget.profileFlat`)}</MenuItem>
             <MenuItem value="4-4-5" sx={drawerMenuItemSx}>{t(`${i18nPrefix}.budget.profile445`)}</MenuItem>
           </TextField>
-        </PanelField>
+        </PanelField>}
       </Box>
 
       {/* What the amount gives, then only the notes that apply: a whole-year period shows none. */}
@@ -96,16 +107,22 @@ export default function AmountEditor({ tab, i18nPrefix, disabled }: { tab: Budge
         {result && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <Typography data-testid="spread-result" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{result}</Typography>
-            {/* The 15th rule, one hover away. */}
-            <Tooltip title={t('budgetTab.convention')}>
-              <InfoOutlinedIcon tabIndex={0} aria-label={t('budgetTab.convention')} sx={{ fontSize: 13, color: 'kanap.text.tertiary' }} />
-            </Tooltip>
+            {/* The 15th rule, one hover away (a date has its own month). */}
+            {!atDate && (
+              <Tooltip title={t('budgetTab.convention')}>
+                <InfoOutlinedIcon tabIndex={0} aria-label={t('budgetTab.convention')} sx={{ fontSize: 13, color: 'kanap.text.tertiary' }} />
+              </Tooltip>
+            )}
           </Box>
         )}
         {noPeriod ? (
           <Typography sx={{ ...captionSx, color: 'kanap.text.secondary' }}>{t('budgetTab.noMonthInItemDates', { year })}</Typography>
         ) : spreadProblem && (
-          <Typography sx={{ ...captionSx, color: 'error.main' }}>{t(`budgetTab.problem.${spreadProblem}`, { year })}</Typography>
+          <Typography sx={{ ...captionSx, color: 'error.main' }}>
+            {atDate && dateProblem(year, spreadPeriod.start)
+              ? t(`budgetTab.lines.problem.${dateProblem(year, spreadPeriod.start)}`, { year })
+              : t(`budgetTab.problem.${spreadProblem}`, { year })}
+          </Typography>
         )}
         {zeroedText && <Typography sx={{ ...captionSx, color: 'kanap.text.secondary' }}>{zeroedText}</Typography>}
         {storedText && proposedText && (

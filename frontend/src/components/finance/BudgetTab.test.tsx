@@ -78,10 +78,10 @@ vi.mock('../../auth/AuthContext', () => ({
 
 import api from '../../api';
 import BudgetTab, { BudgetTabHandle } from './BudgetTab';
-import type { LinePayload, RoundInput, RoundLine } from './roundPeriod';
+import { linePayloadOf, type LinePayload, type RoundInput, type RoundLine } from './roundPeriod';
 import { DEFAULT_BUDGET_COLUMNS, type BudgetColumnsSettings } from '../../services/budgetColumns';
 import { allocationsSnapshotKey } from './allocationsCache';
-import type { HeldBudgetChoices } from './heldChoices';
+import { useHeldChoices, type HeldBudgetChoices, type OpeningValues } from './heldChoices';
 
 const ALL_SHOWN: BudgetColumnsSettings = {
   ...DEFAULT_BUDGET_COLUMNS,
@@ -249,7 +249,13 @@ function renderTab(
   dates: { effectiveStart?: string; endOfValidity?: string; payingCompanyCountry?: string } = {},
   config: FinanceModuleConfig = OPEX_FINANCE_CONFIG,
   queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
-  extra: { held?: React.MutableRefObject<HeldBudgetChoices | null>; onYearChange?: (y: number) => void; availableYears?: number[]; onBudgetRev?: (year: number, rev: number | null) => void } = {},
+  extra: {
+    held?: React.MutableRefObject<HeldBudgetChoices | null>;
+    openings?: React.MutableRefObject<OpeningValues | null>;
+    onYearChange?: (y: number) => void;
+    availableYears?: number[];
+    onBudgetRev?: (year: number, rev: number | null) => void;
+  } = {},
 ) {
   const ref = React.createRef<BudgetTabHandle>();
   const ui = (y: number) => (
@@ -259,7 +265,7 @@ function renderTab(
           <KanapDialogProvider>
             <BudgetTab
               ref={ref} id="item-1" year={y} currency="EUR" onYearChange={extra.onYearChange ?? (() => undefined)} config={config}
-              held={extra.held} availableYears={extra.availableYears} onBudgetRev={extra.onBudgetRev}
+              held={extra.held} openings={extra.openings} availableYears={extra.availableYears} onBudgetRev={extra.onBudgetRev}
               effectiveStart={dates.effectiveStart} endOfValidity={dates.endOfValidity} payingCompanyCountry={dates.payingCompanyCountry}
             />
           </KanapDialogProvider>
@@ -427,7 +433,7 @@ describe('BudgetTab columns and cards', () => {
     const heads = Array.from(container.querySelectorAll('thead th')).slice(1).map((th) => th.textContent);
     expect(heads).toEqual(['Budget', 'Révision 6+6', 'Révision 9+3', 'Expected landing']);
     // The quarter and year totals follow the same columns.
-    expect(container.querySelectorAll('tfoot td')).toHaveLength(1 + 4);
+    expect(container.querySelectorAll('tfoot tr:first-child td')).toHaveLength(1 + 4);
     expect(screen.getByTestId('total-committed')).toHaveTextContent('10 800');
     // A hidden column is drawn nowhere.
     expect(screen.queryByTestId('budget-column-forecast')).toBeNull();
@@ -486,7 +492,13 @@ describe('BudgetTab columns and cards', () => {
     expect(screen.queryByTestId('budget-column-planned')).toBeNull();
     expect(editor()).toHaveTextContent('Révision 9+3 2026');
     expect(within(editor()).getByTestId('period-line-planned')).toHaveTextContent('Spread flat');
+    // Spread flat over the whole year: the table is folded, and opens on demand.
+    expect(screen.getByTestId('result-folded')).toHaveTextContent('The column is spread flat over the whole year');
+    fireEvent.click(screen.getByRole('button', { name: 'Show the detail' }));
     expect(Array.from(container.querySelectorAll('thead th')).map((th) => th.textContent)).toEqual(['opex.budget.month', 'Révision 9+3']);
+    // One column: nothing to compare with.
+    expect(screen.queryByTestId('difference-row')).toBeNull();
+    expect(screen.queryByRole('combobox', { name: 'Difference with' })).toBeNull();
     // No other column to use the amount for.
     expect(screen.queryByRole('button', { name: 'Use for other columns too…' })).toBeNull();
     typeAmount('6000');
@@ -2489,5 +2501,475 @@ describe('BudgetTab on the query cache', () => {
     await flush(first.ref);
     expect(bulkCalls()).toHaveLength(1);
     expect(first.queryClient.getQueryData(key)).toBeUndefined();
+  });
+});
+
+/* ---- Lot F2: at a date, start from, opening values, difference, folded table ---- */
+
+const lastBulk = () => bulkCalls()[bulkCalls().length - 1][1] as Record<string, any>;
+const bulkBodies = (kind: string) => bulkCalls().map(([, body]) => body as Record<string, any>).filter((body) => body?.kind === kind);
+const wholeYearFlat = (measure: RoundInput['measure']) => record({ measure, period_start: '2026-01-01', period_end: '2026-12-31' });
+const openingChanges = () => screen.queryByTestId('opening-changes');
+const restoreButton = () => screen.getByRole('button', { name: 'Back to the opening values' });
+const showDetail = () => fireEvent.click(screen.getByRole('button', { name: 'Show the detail' }));
+
+describe('BudgetTab at a date', () => {
+  it('At a date: a date field and no distribution; written at once as a period of one day, then on each date', async () => {
+    setupApi({ roundInputs: [wholeYearFlat('planned')] });
+    renderTab();
+    await waitForAmounts();
+    expect(within(editor()).getByRole('radio', { name: 'At a date' })).not.toBeChecked();
+
+    fireEvent.click(within(editor()).getByRole('radio', { name: 'At a date' }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    // The first day of the period shown, until a date is chosen; no distribution sent.
+    expect(written(lastBulk())).toEqual({ kind: 'annual', year: YEAR, totals: { planned: '12000.00' }, period_start: '2026-01-01', period_end: '2026-01-01' });
+    expect(screen.queryByRole('combobox', { name: 'Distribution' })).toBeNull();
+    expect(dateFields()).toHaveLength(1);
+
+    typeDate(dateFields()[0], '10/02/2026');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
+    expect(written(lastBulk())).toEqual({ kind: 'annual', year: YEAR, totals: { planned: '12000.00' }, period_start: '2026-02-10', period_end: '2026-02-10' });
+    expect(screen.getByTestId('spread-result')).toHaveTextContent(/^12 000 on .*10.*2026, all in February\.$/);
+    // The month of the date says it all: no zeroed months, no 15th rule.
+    expect(screen.getByTestId('spread-notes')).not.toHaveTextContent('will be set to zero');
+    expect(screen.queryByLabelText('A month counts when the period covers its 15th.')).toBeNull();
+
+    // Back to the whole year: the distribution comes back, written over the twelve months.
+    fireEvent.click(within(editor()).getByRole('radio', { name: 'Whole year' }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(3));
+    expect(written(lastBulk())).toMatchObject({ period_start: '2026-01-01', period_end: '2026-12-31', spread_profile_name: 'flat' });
+    expect(screen.getByRole('combobox', { name: 'Distribution' })).toBeInTheDocument();
+  });
+
+  it('a column stored at a date: its card says the date, its editor opens on it; a date before the line starts is said', async () => {
+    const state = setupApi({ roundInputs: [record({ period_start: '2026-02-10', period_end: '2026-02-10' })] });
+    state.items.forEach((row) => { row.planned = row.period === period(2) ? '40000' : '0'; });
+    renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    await waitForAmounts();
+
+    expect(captionLines('planned')).toEqual([expect.stringMatching(/^On .*10.*2026$/)]);
+    expect(within(editor()).getByRole('radio', { name: 'At a date' })).toBeChecked();
+    expect(dateFields()[0]).toHaveValue('10 Feb 2026');
+    expect(screen.getByTestId('spread-result')).toHaveTextContent(/^40 000 on .*, all in February\.$/);
+    // Kept as stored, never moved into the line's dates: the existing warning says it.
+    expect(screen.getByText("The period goes beyond the line's dates.")).toBeInTheDocument();
+    expect(screen.queryByTestId('stored-period')).toBeNull();
+    await settle();
+    expect(bulkCalls()).toHaveLength(0);
+  });
+});
+
+describe('BudgetTab start from another column', () => {
+  it('an empty column starts from another one with amounts, adjusted by a percentage: a copy over its base', async () => {
+    const state = setupApi({ monthValues: { forecast: '0' } });
+    routePosts(async (body) => {
+      if (body.kind === 'copy') state.items.forEach((row) => { row.forecast = '900'; });
+      return { updated: 12, copy: { prorated: true } };
+    });
+    renderTab();
+    await waitForAmounts();
+    // A column with amounts starts from nothing else.
+    expect(screen.queryByTestId('start-from')).toBeNull();
+
+    pick('forecast');
+    const start = screen.getByTestId('start-from');
+    expect(within(start).getByRole('textbox', { name: 'Adjustment in percent' })).toHaveValue('0');
+    fireEvent.mouseDown(within(start).getByRole('combobox', { name: 'Column to start from' }));
+    const options = screen.getAllByRole('option').map((o) => o.textContent);
+    expect(options).toEqual(['Budget (12 000)', 'Revision (10 800)', 'Actuals (9 600)', 'Expected landing (8 400)']);
+    fireEvent.click(screen.getByRole('option', { name: 'Revision (10 800)' }));
+    fireEvent.change(within(start).getByRole('textbox', { name: 'Adjustment in percent' }), { target: { value: '-10' } });
+    fireEvent.click(within(start).getByRole('button', { name: 'Copy' }));
+
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1]).toEqual({
+      kind: 'copy', year: YEAR, source: 'committed', measure: 'forecast', percentage: -10,
+      base: { columns: { forecast: { months: twelve('0.00'), lines: [] } } },
+    });
+    await waitFor(() => expect(card('forecast')).toHaveTextContent('10 800'));
+    expect(screen.queryByTestId('start-from')).toBeNull();
+    expect(screen.getByTestId('start-note')).toHaveTextContent("Months of the Revision column outside the line's dates were not copied.");
+  });
+
+  it('a percentage of -100 or less, or not a number, cannot be sent', async () => {
+    setupApi({ monthValues: { forecast: '0' } });
+    renderTab();
+    await waitForAmounts();
+    pick('forecast');
+    const start = screen.getByTestId('start-from');
+    const pct = within(start).getByRole('textbox', { name: 'Adjustment in percent' });
+    for (const value of ['-100', 'abc', '']) {
+      fireEvent.change(pct, { target: { value } });
+      expect(within(start).getByRole('button', { name: 'Copy' })).toBeDisabled();
+    }
+    fireEvent.change(pct, { target: { value: '2,5' } });
+    expect(within(start).getByRole('button', { name: 'Copy' })).not.toBeDisabled();
+  });
+
+  it('a copy refused by someone else\'s change waits in the banner; Overwrite sends it again over their column', async () => {
+    setupApi({ monthValues: { forecast: '0' } });
+    refuseBulk((body, call) => (call === 1 ? columnConflict('forecast', twelve('50.00'), { current_lines: [] }) : null));
+    renderTab();
+    await waitForAmounts();
+    pick('forecast');
+    fireEvent.click(within(screen.getByTestId('start-from')).getByRole('button', { name: 'Copy' }));
+
+    const banner = await screen.findByRole('region');
+    expect(card('forecast')).toHaveAttribute('data-waiting', 'true');
+    expect(screen.queryByTestId('start-from')).toBeNull();
+    fireEvent.click(within(banner).getByRole('button', { name: /editConflict\.column\.applyMine/ }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
+    expect(bulkCalls()[1][1]).toEqual({
+      kind: 'copy', year: YEAR, source: 'planned', measure: 'forecast', percentage: 0,
+      base: { columns: { forecast: { months: twelve('50.00'), lines: [] } } },
+    });
+  });
+
+  it('is offered on an empty column only: not on one with a record, not on a frozen one, not without a source', async () => {
+    setupApi({ monthValues: { forecast: '0', actual: '0' }, frozen: ['actual'], roundInputs: [record({ measure: 'forecast', period_start: '2026-01-01' })] });
+    renderTab();
+    await waitForAmounts();
+    pick('forecast');
+    expect(screen.queryByTestId('start-from')).toBeNull();
+    pick('actual');
+    expect(screen.queryByTestId('start-from')).toBeNull();
+  });
+});
+
+/** Restores answer as the server would: the column back to the months sent (its typed months forgotten). */
+function serveRestores(state: ReturnType<typeof setupApi>, refuse: (body: Record<string, any>) => unknown | null = () => null) {
+  mocked.post.mockImplementation(async (url: string, body: Record<string, any>) => {
+    if (url !== BULK) return { data: { id: 'v1', input_grain: 'annual', budget_year: YEAR } };
+    const error = refuse(body);
+    if (error) {
+      refusedBodies.add(body);
+      throw error;
+    }
+    const col = body.measure as string;
+    if (body.kind === 'annual') {
+      const [[measure, total]] = Object.entries(body.totals as Record<string, string>);
+      state.items.forEach((row) => { row[measure] = String(Number(total) / 12); });
+    }
+    if (body.kind === 'restore') {
+      // The months typed in this column are replaced by the restore.
+      mocked.post.mock.calls.forEach(([, sent]) => {
+        if (sent?.kind === 'monthly' && sent.months.some((row: Record<string, unknown>) => row[col] !== undefined)) refusedBodies.add(sent);
+      });
+      state.items.forEach((row, i) => { row[col] = body.months[i]; });
+    }
+    return { data: { updated: 12 } };
+  });
+}
+
+describe('BudgetTab back to the opening values', () => {
+  it('appears only once a column changed, says how many and since when; restores each one, with its months, record and base', async () => {
+    const openings = { current: null } as React.MutableRefObject<OpeningValues | null>;
+    const lines = linesRecord([storedLine()], { measure: 'committed' });
+    const state = setupApi({ roundInputs: [wholeYearFlat('planned'), lines] });
+    serveRestores(state);
+    const { ref } = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { openings });
+    await waitForAmounts();
+    expect(openingChanges()).toBeNull();
+    const opening = openings.current!.years.get(YEAR)!;
+    expect(opening.columns.planned.months).toEqual(Array.from({ length: 12 }, () => 100000));
+    expect(opening.columns.committed.record).toEqual(lines);
+
+    // Taken once: the reload after a write does not take it again.
+    typeAmount('24000');
+    await waitFor(() => expect(card('planned')).toHaveTextContent('24 000'));
+    expect(openings.current!.years.get(YEAR)).toBe(opening);
+    expect(openingChanges()).toHaveTextContent(/^1 column changed since \d{2}:\d{2}\D*$/);
+
+    // A month typed and not saved yet: the restore sends it first.
+    typeMonth('committed', 3, '450');
+    expect(openingChanges()).toHaveTextContent(/^2 columns changed since/);
+    fireEvent.click(restoreButton());
+    await waitFor(() => expect(screen.getByTestId('restore-notice')).toHaveTextContent('Opening values restored: Budget and Revision.'));
+
+    const kinds = bulkCalls().map(([, body]) => (body as Record<string, any>).kind);
+    expect(kinds).toEqual(['annual', 'monthly', 'restore', 'restore']);
+    const [planned, committed] = bulkBodies('restore');
+    expect(planned).toEqual({
+      kind: 'restore', year: YEAR, measure: 'planned', months: twelve('1000.00'), record: wholeYearFlat('planned'),
+      base: { columns: { planned: { months: twelve('2000.00'), lines: [] } } },
+    });
+    const typed = twelve('900.00'); typed[2] = '450.00';
+    expect(committed).toEqual({
+      kind: 'restore', year: YEAR, measure: 'committed', months: twelve('900.00'), record: lines,
+      base: { columns: { committed: { months: typed, lines: [linePayloadOf(storedLine())] } } },
+    });
+    // A normal reload: the columns are back, nothing changed any more; the opening values stay.
+    await waitFor(() => expect(openingChanges()).toBeNull());
+    expect(card('planned')).toHaveTextContent('12 000');
+    expect(openings.current!.years.get(YEAR)).toBe(opening);
+    expect(await flush(ref)).toBe(true);
+    fireEvent.click(within(screen.getByTestId('restore-notice')).getByRole('button', { name: 'common:buttons.close' }));
+    expect(screen.queryByTestId('restore-notice')).toBeNull();
+  });
+
+  it('a column frozen meanwhile (403) or changed by someone else (409) is not restored, each said; the 409 waits in the banner', async () => {
+    const state = setupApi({ roundInputs: [wholeYearFlat('planned'), wholeYearFlat('committed'), wholeYearFlat('actual')] });
+    serveRestores(state);
+    renderTab();
+    await waitForAmounts();
+    for (const col of ['planned', 'committed', 'actual']) {
+      pick(col);
+      typeAmount('24000');
+      await settle();
+    }
+    expect(openingChanges()).toHaveTextContent(/^3 columns changed/);
+    serveRestores(state, (body) => {
+      if (body.kind !== 'restore') return null;
+      if (body.measure === 'planned') return { response: { status: 403, data: { message: 'OPEX Budget for 2026 is frozen' } } };
+      if (body.measure === 'committed') return columnConflict('committed', twelve('2100.00'), { current_lines: [] });
+      return null;
+    });
+    const before = freezeLoads();
+    fireEvent.click(restoreButton());
+
+    const notice = await screen.findByTestId('restore-notice');
+    expect(notice).toHaveTextContent('Opening values restored: Actuals.');
+    expect(notice).toHaveTextContent('Budget: frozen meanwhile, not restored.');
+    expect(notice).toHaveTextContent(/Revision: changed by Marie Dupont at \d{2}:\d{2}[^,]*, not restored\. Choose above what to keep\./);
+    expect(bulkBodies('restore').map((b) => b.measure)).toEqual(['planned', 'committed', 'actual']);
+    // The freeze state is read again; the refused column waits for the user's choice, its months untouched.
+    await waitFor(() => expect(freezeLoads()).toBeGreaterThan(before));
+    const banner = screen.getByRole('region');
+    expect(card('committed')).toHaveAttribute('data-waiting', 'true');
+    expect(card('committed')).toHaveTextContent('24 000');
+
+    // Overwrite: the restore goes again over their column.
+    serveRestores(state);
+    fireEvent.click(within(banner).getByRole('button', { name: /editConflict\.column\.applyMine/ }));
+    await waitFor(() => expect(bulkBodies('restore')).toHaveLength(4));
+    expect(bulkBodies('restore')[3]).toMatchObject({
+      measure: 'committed', months: twelve('900.00'),
+      base: { columns: { committed: { months: twelve('2100.00'), lines: [] } } },
+    });
+    await waitFor(() => expect(screen.queryByRole('region')).toBeNull());
+  });
+
+  it('Reload the column on a refused restore keeps their values and writes nothing', async () => {
+    const state = setupApi({ roundInputs: [wholeYearFlat('planned')] });
+    serveRestores(state);
+    renderTab();
+    await waitForAmounts();
+    typeAmount('24000');
+    await settle();
+    serveRestores(state, (body) => (body.kind === 'restore' ? columnConflict('planned', twelve('2100.00'), { current_lines: [] }) : null));
+    fireEvent.click(restoreButton());
+    const banner = await screen.findByRole('region');
+    fireEvent.click(within(banner).getByRole('button', { name: /editConflict\.column\.keepTheirs/ }));
+    await waitFor(() => expect(screen.queryByRole('region')).toBeNull());
+    expect(card('planned')).toHaveTextContent('25 200');
+    await settle();
+    expect(bulkBodies('restore')).toHaveLength(1);
+  });
+
+  it('a refused restore waiting for its choice comes back after a tab change; Overwrite then sends it', async () => {
+    const state = setupApi({ roundInputs: [wholeYearFlat('planned')] });
+    serveRestores(state);
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const held = { current: null } as React.MutableRefObject<HeldBudgetChoices | null>;
+    const openings = { current: null } as React.MutableRefObject<OpeningValues | null>;
+    const first = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, queryClient, { held, openings });
+    await waitForAmounts();
+    typeAmount('24000');
+    await settle();
+    serveRestores(state, (body) => (body.kind === 'restore' ? columnConflict('planned', twelve('2100.00'), { current_lines: [] }) : null));
+    fireEvent.click(restoreButton());
+    await screen.findByRole('region');
+
+    first.unmount();
+    expect(held.current?.parkedRestores).toEqual([{ measure: 'planned', body: expect.objectContaining({ kind: 'restore', measure: 'planned' }) }]);
+    serveRestores(state);
+    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, queryClient, { held, openings });
+    const banner = await screen.findByRole('region');
+    expect(card('planned')).toHaveAttribute('data-waiting', 'true');
+    fireEvent.click(within(banner).getByRole('button', { name: /editConflict\.column\.applyMine/ }));
+    await waitFor(() => expect(bulkBodies('restore')).toHaveLength(2));
+    expect(bulkBodies('restore')[1]).toMatchObject({
+      measure: 'planned', months: twelve('1000.00'), base: { columns: { planned: { months: twelve('2100.00'), lines: [] } } },
+    });
+    await waitFor(() => expect(screen.queryByRole('region')).toBeNull());
+  });
+
+  it('a column waiting for a choice is not restored and says so; the others are', async () => {
+    const state = setupApi();
+    renderTab();
+    await waitForAmounts();
+    refuseBulk((body, call) => (call === 1 ? columnConflict('committed', twelve('950.00')) : null));
+    typeMonth('committed', 3, '450');
+    await screen.findByRole('region');
+    serveRestores(state);
+    pick('planned');
+    typeAmount('24000');
+    await settle();
+    expect(openingChanges()).toHaveTextContent(/^2 columns changed/);
+    fireEvent.click(restoreButton());
+    const notice = await screen.findByTestId('restore-notice');
+    expect(notice).toHaveTextContent('Opening values restored: Budget.');
+    expect(notice).toHaveTextContent('Revision: waiting for your choice, not restored.');
+    expect(bulkBodies('restore').map((b) => b.measure)).toEqual(['planned']);
+    expect(screen.getByRole('region')).toBeInTheDocument();
+  });
+
+  it('a frozen column changed since the opening is said frozen, never sent', async () => {
+    const state = setupApi();
+    serveRestores(state);
+    const { queryClient } = renderTab();
+    await waitForAmounts();
+    pick('forecast');
+    typeAmount('24000');
+    await settle();
+    // An administrator freezes the column; the tab learns it.
+    state.frozen = ['forecast'];
+    await act(async () => { await queryClient.invalidateQueries({ queryKey: ['freeze-state', YEAR] }); });
+    await waitFor(() => expect(editor()).toHaveAttribute('data-frozen', 'true'));
+    fireEvent.click(restoreButton());
+    const notice = await screen.findByTestId('restore-notice');
+    expect(notice).toHaveTextContent('No column restored.');
+    expect(notice).toHaveTextContent('Forecast: frozen meanwhile, not restored.');
+    expect(bulkBodies('restore')).toHaveLength(0);
+  });
+
+  it('the opening values survive a tab change and a year change, and are lost with the page', async () => {
+    const state = setupApi({ roundInputs: [wholeYearFlat('planned')] });
+    serveRestores(state);
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const openings = { current: null } as React.MutableRefObject<OpeningValues | null>;
+    const first = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, queryClient, { openings, availableYears: [2026, 2027] });
+    await waitForAmounts();
+    const opening = openings.current!.years.get(YEAR);
+    typeAmount('24000');
+    await settle();
+    expect(openingChanges()).not.toBeNull();
+
+    // Another tab of the line, then back: the same opening values.
+    first.unmount();
+    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, queryClient, { openings, availableYears: [2026, 2027] });
+    await waitFor(() => expect(openingChanges()).toHaveTextContent(/^1 column changed/));
+    expect(openings.current!.years.get(YEAR)).toBe(opening);
+    cleanup();
+
+    // Another year, then back.
+    const again = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, queryClient, { openings, availableYears: [2026, 2027] });
+    await waitForAmounts();
+    again.rerenderYear(2027);
+    await waitFor(() => expect(editor()).toHaveAttribute('data-ready', 'true'));
+    expect(openingChanges()).toBeNull();
+    expect(openings.current!.years.has(2027)).toBe(true);
+    again.rerenderYear(YEAR);
+    await waitFor(() => expect(openingChanges()).toHaveTextContent(/^1 column changed/));
+    expect(openings.current!.years.get(YEAR)).toBe(opening);
+    cleanup();
+
+    // A new visit of the line (the page mounts again): the year as it is now is the opening.
+    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, queryClient, { openings: { current: null }, availableYears: [2026, 2027] });
+    await waitForAmounts(3);
+    await settle();
+    expect(openingChanges()).toBeNull();
+  });
+
+  it('the item page keeps the opening values for its line, and drops them for another line', () => {
+    const seen: Array<OpeningValues | null> = [];
+    function Page({ lineId }: { lineId: string }) {
+      const held = useHeldChoices(lineId);
+      React.useEffect(() => {
+        if (!held.openings.current) held.openings.current = { lineId, years: new Map() };
+        seen.push(held.openings.current);
+      });
+      return null;
+    }
+    const view = render(<Page lineId="line-1" />);
+    const kept = seen[0];
+    view.rerender(<Page lineId="line-1" />);
+    expect(seen[1]).toBe(kept);
+    view.rerender(<Page lineId="line-2" />);
+    expect(seen[2]).not.toBe(kept);
+    expect(seen[2]!.lineId).toBe('line-2');
+  });
+});
+
+describe('BudgetTab difference with a column', () => {
+  it('a row under the total: each other column against the tenant default, in amount and percent; another column can be picked', async () => {
+    setupApi();
+    renderTab();
+    await waitForAmounts();
+    expect(screen.getByTestId('difference-row')).toHaveTextContent('Difference with Budget');
+    expect(screen.getByTestId('difference-planned')).toHaveTextContent('—');
+    expect(screen.getByTestId('difference-committed')).toHaveTextContent('-1 200 (-10%)');
+    expect(screen.getByTestId('difference-forecast')).toHaveTextContent('-4 800 (-40%)');
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Difference with' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Forecast' }));
+    expect(screen.getByTestId('difference-row')).toHaveTextContent('Difference with Forecast');
+    expect(screen.getByTestId('difference-planned')).toHaveTextContent('+4 800 (+66.7%)');
+    expect(screen.getByTestId('difference-forecast')).toHaveTextContent('—');
+    // A choice for the visit only: nothing written, nothing in the browser.
+    await settle();
+    expect(bulkCalls()).toHaveLength(0);
+  });
+
+  it("starts from the tenant's default column; against an empty column, the amount only", async () => {
+    columnsSetting.current = { ...ALL_SHOWN, default_column: 'forecast' };
+    setupApi({ monthValues: { forecast: '0' } });
+    renderTab();
+    await waitForAmounts();
+    expect(screen.getByTestId('difference-row')).toHaveTextContent('Difference with Forecast');
+    expect(screen.getByTestId('difference-planned')).toHaveTextContent(/^\+12 000$/);
+  });
+});
+
+describe('BudgetTab folded result', () => {
+  it('folded while every column is spread flat over the whole year; Show and Hide for the visit', async () => {
+    setupApi({ roundInputs: COLUMNS.map((c) => wholeYearFlat(c)) });
+    renderTab();
+    await waitForAmounts();
+    expect(screen.getByTestId('result-folded')).toHaveTextContent('All columns are spread flat over the whole year: the monthly detail adds nothing.');
+    expect(screen.queryByTestId('monthly-result')).toBeNull();
+    expect(screen.queryByRole('combobox', { name: 'Difference with' })).toBeNull();
+    showDetail();
+    expect(screen.getByTestId('monthly-result')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Difference with' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Hide the detail' }));
+    expect(screen.queryByTestId('monthly-result')).toBeNull();
+  });
+
+  it('an empty line is folded too, with its own sentence', async () => {
+    setupApi({ empty: true });
+    renderTab();
+    await waitForAmounts();
+    expect(screen.getByTestId('result-folded')).toHaveTextContent('No amount yet: the monthly detail adds nothing.');
+  });
+
+  it.each([
+    ['a period', record({ measure: 'committed', period_start: '2026-04-01' })],
+    ['a date', record({ measure: 'committed', period_start: '2026-02-10', period_end: '2026-02-10' })],
+    ['4-4-5', record({ measure: 'committed', period_start: '2026-01-01', spread_profile_name: '4-4-5' })],
+    ['lines', linesRecord([storedLine()], { measure: 'committed' })],
+    ['lines kept as a reference', record({ measure: 'committed', period_start: '2026-01-01', lines: [storedLine()], fte: '0.40' })],
+    ['months typed by hand', record({ measure: 'committed', period_start: '2026-01-01', method: 'manual' })],
+    ['amounts with no record', null],
+  ])('open as soon as a column has %s', async (_, committed) => {
+    const others = COLUMNS.filter((c) => c !== 'committed').map((c) => wholeYearFlat(c));
+    setupApi({ roundInputs: committed ? [...others, committed] : others });
+    renderTab();
+    await waitForAmounts();
+    expect(screen.queryByTestId('result-folded')).toBeNull();
+    expect(screen.getByTestId('monthly-result')).toBeInTheDocument();
+  });
+
+  it('opens by itself when a column is switched to by month, even after Hide', async () => {
+    setupApi({ roundInputs: COLUMNS.map((c) => wholeYearFlat(c)) });
+    renderTab();
+    await waitForAmounts();
+    showDetail();
+    fireEvent.click(screen.getByRole('button', { name: 'Hide the detail' }));
+    fireEvent.click(modeTab('By month'));
+    fireEvent.click(switchButton());
+    expect(screen.getByTestId('monthly-result')).toBeInTheDocument();
+    expect(monthInput('planned', 1)).not.toBeNull();
   });
 });

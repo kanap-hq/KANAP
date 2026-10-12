@@ -273,6 +273,21 @@ export function activeMonths(year: number, start: string | null | undefined, end
   return months;
 }
 
+/** A period of one day: an amount at a date, whose month takes it all. */
+export function isOneDay(start: string | null | undefined, end: string | null | undefined): boolean {
+  return isYmd(start) && start === end;
+}
+
+/**
+ * The months of a column's period: the month of the date for a period of one day (an amount at a
+ * date), else the 15th rule. The same rule as `periodMonths` in `backend/src/spend/spread.util.ts`.
+ * Lines keep `activeMonths`: their validity and their months counted one by one do not change.
+ */
+export function periodMonths(year: number, start: string | null | undefined, end: string | null | undefined): number[] {
+  if (isOneDay(start, end)) return start!.slice(0, 4) === String(year) ? [Number(start!.slice(5, 7))] : [];
+  return activeMonths(year, start, end);
+}
+
 export type PeriodProblem = 'missing' | 'invalid' | 'outsideYear' | 'startAfterEnd' | 'noMonth';
 
 export type DateProblem = 'dateMissing' | 'dateInvalid' | 'dateOutsideYear';
@@ -284,13 +299,22 @@ export function dateProblem(year: number, date: string): DateProblem | null {
   return date.slice(0, 4) === String(year) ? null : 'dateOutsideYear';
 }
 
-/** Why a period typed in the spread panel cannot be applied, or null when it can. */
+/** Why a period typed for a line cannot be applied, or null when it can (the 15th rule). */
 export function periodProblem(year: number, start: string, end: string): PeriodProblem | null {
   if (!start || !end) return 'missing';
   if (!isYmd(start) || !isYmd(end)) return 'invalid';
   if (start.slice(0, 4) !== String(year) || end.slice(0, 4) !== String(year)) return 'outsideYear';
   if (start > end) return 'startAfterEnd';
   return activeMonths(year, start, end).length === 0 ? 'noMonth' : null;
+}
+
+/**
+ * Why the period of a column's amount cannot be applied, or null when it can: as `periodProblem`,
+ * except that a period of one day (an amount at a date) is fine, its month taking the amount.
+ */
+export function columnPeriodProblem(year: number, start: string, end: string): PeriodProblem | null {
+  const problem = periodProblem(year, start, end);
+  return problem === 'noMonth' && isOneDay(start, end) ? null : problem;
 }
 
 /**
@@ -325,7 +349,8 @@ export function columnPeriod(year: number, record: RoundInput | null | undefined
  */
 export function periodForEdit(year: number, record: RoundInput | null | undefined, hasAmounts: boolean, suggestion: Period | null): Period | null {
   const period = columnPeriod(year, record, hasAmounts, suggestion);
-  if (!period || !suggestion) return period;
+  // An amount at a date keeps its date: one outside the line's dates is said, never moved.
+  if (!period || !suggestion || isOneDay(period.start, period.end)) return period;
   const start = period.start > suggestion.start ? period.start : suggestion.start;
   const end = period.end < suggestion.end ? period.end : suggestion.end;
   return start <= end ? { start, end } : suggestion;
@@ -362,6 +387,21 @@ export function monthsText(t: TFunction, locale: string, months: number[]): stri
   return joinRuns(t, monthRuns(t, locale, months));
 }
 
+const longDateFormats = new Map<string, Intl.DateTimeFormat>();
+
+/** A date in words: "10 February 2026", « 10 février 2026 », « 1er avril 2026 ». `ymd` is `YYYY-MM-DD`. */
+export function longDate(locale: string, ymd: string): string {
+  if (!isYmd(ymd)) return ymd;
+  let format = longDateFormats.get(locale);
+  if (!format) {
+    format = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+    longDateFormats.set(locale, format);
+  }
+  const text = format.format(new Date(`${ymd}T00:00:00Z`));
+  // French writes the first day of a month as an ordinal.
+  return locale.toLowerCase().startsWith('fr') && ymd.endsWith('-01') ? text.replace(/^1(?=\s)/, '1er') : text;
+}
+
 /** "9 months, April to December", "1 month, April". Empty when no month counts. */
 export function periodText(t: TFunction, locale: string, months: number[]): string {
   if (months.length === 0) return '';
@@ -388,6 +428,19 @@ export function monthSpanText(t: TFunction, locale: string, months: number[]): s
     n: sorted.length,
     ...(STARTS_WITH_VOWEL.test(from) ? { context: 'vowel' } : {}),
   });
+}
+
+/**
+ * What an amount at a date gives: "40 000 on 10 February 2026, all in February.", or, before an
+ * amount is typed, "Enter an amount: it will go in February." Empty for a date outside the year.
+ */
+export function dateResultText(t: TFunction, locale: string, amount: string, date: string): string {
+  const months = periodMonths(Number(date.slice(0, 4)), date, date);
+  if (months.length === 0) return '';
+  const month = monthName(locale, months[0]);
+  return amount
+    ? t('budgetTab.result.atDate', { amount, date: longDate(locale, date), month })
+    : t('budgetTab.result.enterDate', { month });
 }
 
 /**
@@ -492,13 +545,15 @@ function chipParts(
   nameOf: (measure: AmountMeasure) => string,
 ): string[][] {
   if (!record) return [];
-  if ((record.lines?.length ?? 0) === 0) return [[record.method === 'computed' ? t('budgetTab.chip.lines') : methodPart(t, locale, record, nameOf)]];
+  // An amount at a date: the date says it all (the card shows it), no spread to name.
+  const method = record.method === 'spread' && isOneDay(record.period_start, record.period_end) ? [] : [methodPart(t, locale, record, nameOf)];
+  if ((record.lines?.length ?? 0) === 0) return record.method === 'computed' ? [[t('budgetTab.chip.lines')]] : (method.length ? [method] : []);
   const detail = [
     t('budgetTab.chip.lineCount', { count: record.lines.length }),
     linesGiveFte(record) ? t('budgetTab.chip.fte', { value: formatFteValue(record.fte) }) : '',
   ].filter(Boolean).join(' · ');
   const lines = [t('budgetTab.chip.lines'), detail];
-  return record.method === 'computed' ? [lines] : [lines, [methodPart(t, locale, record, nameOf)]];
+  return record.method === 'computed' || method.length === 0 ? [lines] : [lines, method];
 }
 
 /** What produced the amounts of a column not computed from its lines. */

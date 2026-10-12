@@ -4,7 +4,7 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { alpha, type Theme } from '@mui/material/styles';
 import { StatusDot } from '../../design/StatusDot';
 import { formatAmount } from '../../../i18n/formatters';
-import { activeMonths, chipLines, linesText, periodText } from '../roundPeriod';
+import { chipLines, isOneDay, linesText, longDate, periodMonths, periodText } from '../roundPeriod';
 import type { AmountCol, BudgetTabState } from './useBudgetTab';
 
 /** The tint of a column waiting for the user's choice, on its card and in the result table. */
@@ -15,7 +15,7 @@ const multilineTooltip = { tooltip: { sx: { whiteSpace: 'pre-line' } } } as cons
 /**
  * How a column is built, in short lines: how its amounts were produced ("Spread flat", "Quantity
  * and price · 1 line · 0.40 FTE", "Copied from Budget 2025 +2%", "Edited by hand"), then its period
- * ("9 months, April to December"). A column with nothing yet says so; a column whose line has no
+ * ("9 months, April to December") or its date ("On 10 February 2026"). A column with nothing yet says so; a column whose line has no
  * month in the year says that. Hover lists the column's lines.
  */
 export function ColumnHowText({ tab, col, testId }: { tab: BudgetTabState; col: AmountCol; testId?: string }) {
@@ -24,7 +24,11 @@ export function ColumnHowText({ tab, col, testId }: { tab: BudgetTabState; col: 
   if (!loaded) return <Box data-testid={testId} sx={{ minHeight: '1.4em' }} />;
   const record = recordFor(col);
   const period = periodFor(col, roundInputs, storedAmounts);
-  const text = period ? periodText(t, locale, activeMonths(year, period.start, period.end)) : '';
+  // An amount at a date says its date ("On 10 February 2026"), a period its months.
+  const text = !period ? ''
+    : isOneDay(period.start, period.end) && periodMonths(year, period.start, period.end).length > 0
+      ? t('budgetTab.atDate', { date: longDate(locale, period.start) })
+      : periodText(t, locale, periodMonths(year, period.start, period.end));
   const empty = !record && currentCents(col) === 0;
   // The chip, one block per line of it, as units that wrap whole ("Quantity and price ·" then "3
   // lines · 1.00 FTE"); a unit longer than the line still wraps inside it.

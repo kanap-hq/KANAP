@@ -1252,7 +1252,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
         <WorkspaceTabBoundary resetKey={routeTab} onRetry={retryTabs}>
           <React.Suspense fallback={null}>
             {routeTab === 'budget' && !isCreate && !stale && uuid && (
-              <BudgetTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={config.finance} effectiveStart={form.effective_start} endOfValidity={isoToLocalDateInput(form.disabled_at)} payingCompanyCountry={payingCompanyCountry} held={heldChoices.budget} onBudgetRev={noteBudgetRev} ref={budgetRef} />
+              <BudgetTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={config.finance} effectiveStart={form.effective_start} endOfValidity={isoToLocalDateInput(form.disabled_at)} payingCompanyCountry={payingCompanyCountry} held={heldChoices.budget} openings={heldChoices.openings} onBudgetRev={noteBudgetRev} ref={budgetRef} />
             )}
             {routeTab === 'allocations' && !isCreate && !stale && uuid && (
               <AllocationsTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={config.finance} held={heldChoices.allocation} onBudgetRev={noteBudgetRev} knownBudgetRev={knownBudgetRev} ref={allocRef} />

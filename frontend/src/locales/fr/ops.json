@@ -1429,7 +1429,16 @@
       "enter445": "Saisissez un montant : il sera réparti en 4-4-5 {{span}}.",
       "title": "Résultat par mois",
       "quarter": "T{{n}}",
-      "cellHint": "Saisir par mois"
+      "cellHint": "Saisir par mois",
+      "atDate": "{{amount}} le {{date}}, portés sur {{month}}.",
+      "enterDate": "Saisissez un montant : il ira en {{month}}.",
+      "show": "Afficher le détail",
+      "hide": "Masquer le détail",
+      "folded_one": "La colonne est répartie linéairement sur l'année : le détail mensuel n'apprend rien de plus.",
+      "folded_other": "Toutes les colonnes sont réparties linéairement sur l'année : le détail mensuel n'apprend rien de plus.",
+      "foldedEmpty": "Aucun montant pour l'instant : le détail mensuel n'apprend rien de plus.",
+      "differenceWith": "Écart avec",
+      "differenceRow": "Écart avec {{column}}"
     },
     "monthlyHint": "Saisissez les montants dans la colonne {{column}} du tableau ci-dessous.",
     "reference_one": "{{count}} ligne gardée en référence.",
@@ -1457,6 +1466,34 @@
     "frozen": {
       "title": "La colonne {{column}} {{year}} est gelée",
       "hint": "Lecture seule. Un administrateur peut la dégeler dans Administration › Geler / Dégeler les données."
+    },
+    "atADate": "À une date",
+    "date": "Date",
+    "atDate": "Le {{date}}",
+    "start": {
+      "label": "Partir de",
+      "source": "Colonne de départ",
+      "option": "{{column}} ({{amount}})",
+      "adjusted": "ajusté de",
+      "percentage": "Ajustement en pourcentage",
+      "apply": "Reprendre",
+      "orBelow": "ou saisissez ci-dessous.",
+      "prorated": "Les mois de la colonne {{column}} hors des dates de la ligne n'ont pas été copiés."
+    },
+    "restore": {
+      "changes_one": "{{count}} colonne modifiée depuis {{time}}",
+      "changes_other": "{{count}} colonnes modifiées depuis {{time}}",
+      "action": "Revenir aux valeurs d'ouverture",
+      "done": "Valeurs d'ouverture restaurées : {{columns}}.",
+      "none": "Aucune colonne restaurée.",
+      "frozen": "{{column}} : gelée entre-temps, non restaurée.",
+      "waiting": "{{column}} : en attente de votre choix, non restaurée.",
+      "changedByAt": "{{column}} : modifiée par {{name}} à {{time}}, non restaurée. Choisissez ci-dessus quoi garder.",
+      "changedBy": "{{column}} : modifiée par {{name}}, non restaurée. Choisissez ci-dessus quoi garder.",
+      "changed": "{{column}} : modifiée par une autre personne, non restaurée. Choisissez ci-dessus quoi garder.",
+      "refused": "{{column}} : non restaurée. {{message}}",
+      "failed": "La colonne n'a pas pu être restaurée.",
+      "frozenNow": "{{column}} a été gelée entre-temps : elle n'a pas été restaurée."
     }
   },
   "budget": {

@@ -1428,7 +1428,16 @@
       "enter445": "Introduzca un importe: se repartirá en 4-4-5 {{span}}.",
       "title": "Resultado por mes",
       "quarter": "T{{n}}",
-      "cellHint": "Introducir por mes"
+      "cellHint": "Introducir por mes",
+      "atDate": "{{amount}} el {{date}}, todo en {{month}}.",
+      "enterDate": "Introduzca un importe: irá a {{month}}.",
+      "show": "Mostrar el detalle",
+      "hide": "Ocultar el detalle",
+      "folded_one": "La columna se reparte de forma lineal en todo el año: el detalle mensual no aporta nada más.",
+      "folded_other": "Todas las columnas se reparten de forma lineal en todo el año: el detalle mensual no aporta nada más.",
+      "foldedEmpty": "Todavía no hay importes: el detalle mensual no aporta nada más.",
+      "differenceWith": "Diferencia con",
+      "differenceRow": "Diferencia con {{column}}"
     },
     "monthlyHint": "Introduzca los importes en la columna {{column}} de la tabla de abajo.",
     "reference_one": "{{count}} línea conservada como referencia.",
@@ -1456,6 +1465,34 @@
     "frozen": {
       "title": "La columna {{column}} {{year}} está congelada",
       "hint": "Solo lectura. Un administrador puede descongelarla en Administración › Congelar / Descongelar datos."
+    },
+    "atADate": "En una fecha",
+    "date": "Fecha",
+    "atDate": "El {{date}}",
+    "start": {
+      "label": "Partir de",
+      "source": "Columna de partida",
+      "option": "{{column}} ({{amount}})",
+      "adjusted": "ajustado en",
+      "percentage": "Ajuste en porcentaje",
+      "apply": "Copiar",
+      "orBelow": "o introdúzcalo abajo.",
+      "prorated": "Los meses de la columna {{column}} fuera de las fechas de la línea no se copiaron."
+    },
+    "restore": {
+      "changes_one": "{{count}} columna modificada desde las {{time}}",
+      "changes_other": "{{count}} columnas modificadas desde las {{time}}",
+      "action": "Volver a los valores de apertura",
+      "done": "Valores de apertura restaurados: {{columns}}.",
+      "none": "Ninguna columna restaurada.",
+      "frozen": "{{column}}: congelada mientras tanto, no restaurada.",
+      "waiting": "{{column}}: pendiente de su elección, no restaurada.",
+      "changedByAt": "{{column}}: modificada por {{name}} a las {{time}}, no restaurada. Elija arriba qué conservar.",
+      "changedBy": "{{column}}: modificada por {{name}}, no restaurada. Elija arriba qué conservar.",
+      "changed": "{{column}}: modificada por otra persona, no restaurada. Elija arriba qué conservar.",
+      "refused": "{{column}}: no restaurada. {{message}}",
+      "failed": "No se pudo restaurar la columna.",
+      "frozenNow": "{{column}} se congeló mientras tanto: no se restauró."
     }
   },
   "budget": {
