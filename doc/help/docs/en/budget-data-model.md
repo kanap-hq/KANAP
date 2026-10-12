@@ -8,8 +8,8 @@ The files described here are the contract to rely on. Their columns are document
 
 | Object | What it holds | Where to manage it |
 |---|---|---|
-| **OPEX line** | A recurring cost, carried from year to year | **Budget management > OPEX** |
-| **CAPEX line** | An investment, carried from year to year | **Budget management > CAPEX** |
+| **OPEX line** | A recurring cost, carried from year to year | **Budget management > Budget lines** |
+| **CAPEX line** | An investment, carried from year to year | **Budget management > Budget lines** |
 | **Budget columns** | The five amount columns every line has for each year | **Budget management > Administration > Budget columns** |
 | **Quantity and price lines** | The lines a column can be calculated from | The **Budget** tab of a line |
 | **Allocation** | How a line's cost of one year is split over companies or departments | The **Allocations** tab of a line |
@@ -56,14 +56,14 @@ A line also links to projects, requests, applications, assets, contracts, contac
 
 ### OPEX and CAPEX lines
 
-A line lives across years: a three-year licence is one line with three budget years. KANAP gives each line a number when it is created, its reference `BL-12`, the same series for OPEX and CAPEX. The lists still show `OPX-12` for an OPEX line and `CPX-3` for a CAPEX line. The budget file names a line by its `BL-12` reference, and reads the `OPX` and `CPX` numbers too. In a file without a `nature` column, a bare number keeps its earlier meaning (`CPX-3` on the CAPEX list).
+A line lives across years: a three-year licence is one line with three budget years. KANAP gives each line a number when it is created, its reference `BL-12`, the same series for OPEX and CAPEX. The list, the workspace and the page address show it. Lines created before this series also had an `OPX-12` or `CPX-3` number: links, searches and the budget file still find a line by it. In a file without a `nature` column, a bare number keeps its earlier meaning (`CPX-3` when the list is filtered on CAPEX). See [References](budget-lines.md#references).
 
 | Field | Column in the budget file | Required | Notes |
 |---|---|---|---|
-| Nature | `nature` | Yes | `opex` or `capex`. A file does not change the nature of an existing line (see [Changing the type of a line](#changing-the-type-of-a-line)). A file without this column is read as lines of the list it is imported on |
+| Nature | `nature` | Yes | `opex` or `capex`. A file does not change the nature of an existing line (see [Changing the type of a line](#changing-the-type-of-a-line)). A file without this column is read as OPEX lines, or as CAPEX lines when the list is filtered on CAPEX |
 | Number | `item_number` | Set by KANAP | `BL-12`. Empty in the file creates a line |
-| Product name (OPEX), title (CAPEX) | `name` | Yes | |
-| Description (OPEX) | `description` | No | Not read or written on a CAPEX line yet |
+| Title | `name` | Yes | The **Product name** column of the list |
+| Description | `description` | No | |
 | PP&E type, investment type, priority (CAPEX) | `analytics:ppe_type`, `analytics:investment_type`, `analytics:priority` | For a new line, while the dimension is required | Values of the three CAPEX dimensions, held like the values of any other dimension. See [CAPEX dimensions](analytics.md#capex-dimensions) |
 | Paying company | `company_name` | Yes | Taken from the cost center when only the cost center is given |
 | Supplier | `supplier_name`, `supplier_erp_id` | No | |
@@ -82,9 +82,9 @@ A line has no status of its own to load. It is enabled until its end of validity
 
 ### Changing the type of a line
 
-A line changes from OPEX to CAPEX, or back, in its workspace (**Change type...** in the **...** menu, see [OPEX](opex.md#changing-the-type) and [CAPEX](capex.md#changing-the-type)). A budget file never changes it. The change starts on 1 January of a year:
+A line changes from OPEX to CAPEX, or back, in its workspace (**Change type...** in the **...** menu, see [Changing the type](budget-lines.md#changing-the-type)). A budget file never changes it. The change starts on 1 January of a year:
 
-- **From the line's first year**, the line itself changes type. It keeps its `BL` number, its budget years, allocations, links, attachments and tasks. A line that becomes CAPEX gets a `CPX` number, which it keeps if it becomes OPEX again
+- **From the line's first year**, the line itself changes type. It keeps its `BL` number, its budget years, allocations, links, attachments and tasks
 - **From a later year**, the line ends on 31 December of the year before and keeps its earlier budget years. A new line of the other type, with its own `BL` number, carries the later budget years, the contacts and the links to applications, assets, contracts, projects and requests. The new line records the line it follows, and each line shows the other
 
 A line is replaced by one line at most. The change is refused while a frozen column holds amounts of the line in the years that change.
@@ -109,7 +109,7 @@ Every line has the same five columns for each year. They are set once for the wh
 
 - A budget administrator can rename a column (up to 40 characters), hide it and choose the default column. The name in files stays the same, so a file keeps working after a rename. See [Budget columns](budget-operations.md#budget-columns).
 - A hidden column keeps its amounts and still accepts imports.
-- Columns are frozen per year, per column and per scope (OPEX or CAPEX). A frozen column refuses edits, imports, copies and resets. See [Freeze / unfreeze data](budget-operations.md#freeze-unfreeze-data).
+- Columns are frozen per year, per column and per type (OPEX or CAPEX). A frozen column refuses edits, imports, copies and resets. See [Freeze / unfreeze data](budget-operations.md#freeze-unfreeze-data).
 
 There is no sixth column. To keep several budget rounds, use one column per round, or copy a column to another year or column with [Copy budget columns](budget-operations.md#copy-budget-columns).
 
@@ -121,7 +121,7 @@ Each column also records its period inside the year and how its amounts were pro
 
 ### Quantity and price lines
 
-A column can be calculated from lines, each a quantity times a unit price. Each line has a description (up to 200 characters), a quantity (up to 3 decimals), a unit (**people**, **days** or **pieces**), a unit price (up to 4 decimals), how often it counts, a period or a date, and a working-day calendar when the price is per day. The FTE of the column is derived from the lines. See [Quantity and price](opex.md#quantity-and-price).
+A column can be calculated from lines, each a quantity times a unit price. Each line has a description (up to 200 characters), a quantity (up to 3 decimals), a unit (**people**, **days** or **pieces**), a unit price (up to 4 decimals), how often it counts, a period or a date, and a working-day calendar when the price is per day. The FTE of the column is derived from the lines. See [Quantity and price](budget-lines.md#quantity-and-price).
 
 These lines are entered in the **Budget** tab. No file carries them. A budget file writes the monthly amounts of a column, and the lines stay with it as a reference.
 
@@ -198,13 +198,13 @@ Every file below exports and imports from the page that manages the object. Impo
 | Allocations | From the chargeback reports | No | | [Reporting](reports.md) |
 | Quantity and price lines, budget column settings, freezes, currencies | No | No | | Set on the screen |
 
-The budget file reads and writes the amounts of any column and year, as yearly totals or months, with the line details in the same row. It is the way in for a budget prepared elsewhere and the way out for a spreadsheet or a BI tool. One file holds both kinds of line, its `nature` column saying which. **Budget management > OPEX** exports the OPEX lines and **Budget management > CAPEX** the CAPEX lines; either list imports a file that holds both, given the Admin level on Budget.
+The budget file reads and writes the amounts of any column and year, as yearly totals or months, with the line details in the same row. It is the way in for a budget prepared elsewhere and the way out for a spreadsheet or a BI tool. One file holds both kinds of line, its `nature` column saying which. **Budget management > Budget lines** exports the lines it shows, of both types, and imports a file that holds both, given the Admin level on Budget.
 
 ### Moving a budget into KANAP
 
 1. Map each object of your current tool to the tables above, and its identifiers to the **Matched by** column.
 2. Load the reference data in the order given in [Loading a whole budget](budget-file.md#loading-a-whole-budget).
-3. Export the budget file from either list to get the header row of your organisation, with one column per analytics dimension. A list with no line exports the header row alone.
+3. Export the budget file from the list to get the header row of your organisation, with one column per analytics dimension. A list with no line exports the header row alone.
 4. Fill one row per line with its `nature`, leaving `item_number` empty, with one amount column per budget column and year (`budget_2027`), or per month (`budget_2027_03`).
 5. Import the file. The check reports the errors by line of the file, and nothing is written until you load.
 

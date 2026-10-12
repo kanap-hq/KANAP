@@ -1,21 +1,21 @@
 # Load a budget from a spreadsheet
 
-Most teams prepare their budget in a spreadsheet: one row per line, one column per year or per month. KANAP holds the same lines in its OPEX and CAPEX lists, where they drive allocations, reports and the overview.
+Most teams prepare their budget in a spreadsheet: one row per line, one column per year or per month. KANAP holds the same lines in its budget lines list, where they drive allocations, reports and the overview.
 
 The budget file is the bridge between the two. Export the lines, change the cells you care about in Excel or LibreOffice, import the file back. KANAP compares every cell with what it holds and writes only what changed.
 
-One file holds both kinds of line. Its `nature` column says whether a row is an OPEX or a CAPEX line, and every row is checked against the rules of its own kind. The OPEX list exports its OPEX lines and the CAPEX list its CAPEX lines, in the same layout. Either list imports a file that holds both.
+One file holds both kinds of line. Its `nature` column says whether a row is an OPEX or a CAPEX line, and every row is checked against the rules of its own kind. The list exports the lines it shows, OPEX and CAPEX together. Filter the **Type** column to export one kind only.
 
 ## Where to find it
 
-- Path: **Budget Management > OPEX**, or **Budget Management > CAPEX**
+- Path: **Budget management > Budget lines**
 - Export: **Export CSV** in the list toolbar
 - Import: **Import CSV** in the same toolbar
 - Permissions: both buttons need the Admin level on Budget (`budget:admin`), which covers OPEX and CAPEX lines alike
 
 ## Export
 
-1. Click **Export CSV** in the OPEX or CAPEX list.
+1. Click **Export CSV** in the list.
 2. Choose what the file holds:
 
 | Setting | What it does |
@@ -27,7 +27,7 @@ One file holds both kinds of line. Its `nature` column says whether a row is an 
 
 3. Click the button at the bottom of the dialog. It names what the file will hold: **Export 120 filtered lines**, **Export all lines**, **Export 3,412 lines**, and so on.
 
-The file is saved as `budget.csv`, from either list, and written for the language the screen is shown in.
+The file is saved as `budget.csv` and written for the language the screen is shown in.
 
 | Language | Separator | Amounts | Dates |
 |---|---|---|---|
@@ -47,9 +47,9 @@ The detail columns are the same for both kinds of line.
 
 | Column | Holds | On a new line |
 |---|---|---|
-| `nature` | `opex` or `capex`, the kind of line | Required. A file without this column is read as lines of the list you import it on |
+| `nature` | `opex` or `capex`, the kind of line | Required. A file without this column is read as OPEX lines, or as CAPEX lines when the **Type** filter of the list keeps CAPEX only |
 | `item_number` | The line's reference: `BL-12`, or `12`. The `OPX-12` and `CPX-3` numbers of earlier files are read too | Empty: the row adds a line |
-| `name` | The product name of an OPEX line, the title of a CAPEX investment | Required |
+| `name` | The title of the line, shown in the **Product name** column of the list | Required |
 | `description` | The long description | Optional |
 | `company_name` | Paying company | Required unless the line has a cost center |
 | `supplier_name` | Supplier name | Optional |
@@ -65,8 +65,6 @@ The detail columns are the same for both kinds of line.
 | `effective_start` | The day the line starts | January 1 of the first year with an amount in the row, else of the current year |
 | `end_of_validity` | The day the line stops | No end |
 | `notes` | Free text | Optional |
-
-On a CAPEX line, `description` is not read or written yet: the export leaves it empty, and a filled cell is ignored with a warning.
 
 ### Amount columns
 
@@ -101,7 +99,7 @@ An absent column keeps every stored value of that column. A file holding only `i
 ## Adding and matching lines
 
 - `item_number` filled: that line is updated. Empty: a new line is created, of the kind its `nature` cell says.
-- `item_number` holds the line's reference, `BL-12`. In a file with a `nature` column, a bare number is the same reference, on both lists. The `OPX-12` and `CPX-3` numbers of earlier files still name their line. Naming one line twice in a file is a row error.
+- `item_number` holds the line's reference, `BL-12`. In a file with a `nature` column, a bare number is the same reference. The `OPX-12` and `CPX-3` numbers of earlier files still name their line. Naming one line twice in a file is a row error.
 - A line keeps its kind. A row that names an existing line with the other `nature` is refused, for example "BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line."
 - Each row is checked against its own kind: the dimensions and values it may hold, its account, the frozen columns and the duplicate warning. A column frozen for CAPEX refuses a change on a CAPEX line only.
 - There is no other key. A new row that looks like an existing line of its kind, or like another new row of the same kind in the file, is a warning you can ignore.
@@ -151,7 +149,7 @@ A CAPEX file exported before the PP&E type, investment type and priority became 
 
 Export a fresh file and copy your rows into it.
 
-An OPEX or CAPEX file exported before the `nature` column was added is accepted. Its rows are read as lines of the list you import it on, and its `OPX-12` and `CPX-3` numbers still name their lines: import an earlier OPEX file from the OPEX list and an earlier CAPEX file from the CAPEX list. Its `kanap_token` cells stay valid. A bare number keeps its earlier meaning in such a file: on the CAPEX list, `3` is `CPX-3`; on the OPEX list, it is the number of the OPEX line.
+An OPEX or CAPEX file exported before the `nature` column was added is accepted. Its rows are read as OPEX lines, or as CAPEX lines when the **Type** filter of the list keeps CAPEX only, and its `OPX-12` and `CPX-3` numbers still name their lines: import an earlier OPEX file with the list on OPEX or both types, and an earlier CAPEX file with the list filtered on CAPEX. Its `kanap_token` cells stay valid. A bare number keeps its earlier meaning in such a file: filtered on CAPEX, `3` is `CPX-3`; otherwise, it is the number of the OPEX line.
 
 KANAP recognises the `nature` column by its name, whatever the case. An earlier file with a column of your own named Nature must rename it before the import: KANAP would read that column as the kind of each line and refuse its values.
 
