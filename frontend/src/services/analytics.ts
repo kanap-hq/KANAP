@@ -215,3 +215,42 @@ export async function reorderAnalyticsValues(axisId: string, valueIds: string[])
   const data = res.data;
   return Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
 }
+
+/** The recommended dimensions an administrator can add (`/analytics-axes/recommended`), in display order. */
+export const RECOMMENDED_DIMENSION_CODES = ['cost_pool', 'it_tower', 'purpose', 'priority', 'recurrence'] as const;
+export type RecommendedDimensionCode = (typeof RECOMMENDED_DIMENSION_CODES)[number];
+
+/** A recommended dimension and whether the tenant already has it. `starting`: ticked by default (the others are the optional pack). */
+export type RecommendedDimensionState = {
+  code: RecommendedDimensionCode;
+  present: boolean;
+  axis_id: string | null;
+  name: string | null;
+  starting: boolean;
+};
+
+/** One dimension the call created or found. `axis_code` is `default` when the cost pool went on the default dimension. */
+export type RecommendedDimensionResult = {
+  code: RecommendedDimensionCode;
+  axis_code: string;
+  axis_id: string;
+  name: string | null;
+  values_created: number;
+};
+
+export async function getRecommendedDimensions(): Promise<RecommendedDimensionState[]> {
+  const res = await api.get<{ items: RecommendedDimensionState[] }>(`${ANALYTICS_AXES_ENDPOINT}/recommended`);
+  return Array.isArray(res.data?.items) ? res.data.items : [];
+}
+
+/** Creates the recommended dimensions of `codes` the tenant lacks, named in `language`. */
+export async function addRecommendedDimensions(
+  codes: RecommendedDimensionCode[],
+  language: string,
+): Promise<{ created: RecommendedDimensionResult[]; existing: RecommendedDimensionResult[] }> {
+  const res = await api.post<{ created: RecommendedDimensionResult[]; existing: RecommendedDimensionResult[] }>(
+    `${ANALYTICS_AXES_ENDPOINT}/recommended`,
+    { codes, language },
+  );
+  return { created: res.data?.created ?? [], existing: res.data?.existing ?? [] };
+}

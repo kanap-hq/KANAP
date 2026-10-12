@@ -740,6 +740,34 @@
       "codeRequired": "Introduzca un código.",
       "codeInvalid": "Use letras minúsculas, dígitos, - o _ (40 como máximo).",
       "dimensionRequired": "Elija una dimensión."
+    },
+    "recommended": {
+      "action": "Añadir las dimensiones recomendadas",
+      "title": "Añadir las dimensiones recomendadas",
+      "subtitle": "Dimensiones listas para usar con sus valores, para las líneas OPEX y CAPEX. Puede cambiarles el nombre, modificarlas o eliminarlas después.",
+      "dimensions": "Dimensiones",
+      "present": "Ya presente",
+      "language": "Idioma de los nombres",
+      "submit": "Añadir",
+      "names": {
+        "cost_pool": "Tipo de coste",
+        "it_tower": "Dominio TI",
+        "purpose": "Motivo",
+        "priority": "Prioridad",
+        "recurrence": "Recurrencia"
+      },
+      "hints": {
+        "cost_pool": "Lo que paga el gasto: hardware, software, personal interno y externo… Los cost pools de TBM.",
+        "it_tower": "La parte de TI a la que sirve: cómputo, almacenamiento, red, puesto de trabajo… Las IT towers de TBM.",
+        "purpose": "Por qué se gasta el dinero: sustitución, capacidad, conformidad, crecimiento…",
+        "priority": "Obligatoria, alta, media o baja.",
+        "recurrence": "Recurrente o puntual."
+      },
+      "created_one": "{{count}} dimensión añadida: {{names}}.",
+      "created_other": "{{count}} dimensiones añadidas: {{names}}.",
+      "nothingCreated": "No se ha añadido nada: estas dimensiones ya están presentes.",
+      "failed": "No se han podido añadir las dimensiones.",
+      "loadFailed": "No se han podido cargar las dimensiones recomendadas."
     }
   },
   "businessProcesses": {

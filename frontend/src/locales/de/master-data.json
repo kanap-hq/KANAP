@@ -740,6 +740,34 @@
       "codeRequired": "Geben Sie einen Code ein.",
       "codeInvalid": "Verwenden Sie Kleinbuchstaben, Ziffern, - oder _ (höchstens 40).",
       "dimensionRequired": "Wählen Sie eine Dimension."
+    },
+    "recommended": {
+      "action": "Empfohlene Dimensionen hinzufügen",
+      "title": "Empfohlene Dimensionen hinzufügen",
+      "subtitle": "Vorgefertigte Dimensionen mit ihren Werten, für OPEX- und CAPEX-Positionen. Sie können sie danach umbenennen, ändern oder löschen.",
+      "dimensions": "Dimensionen",
+      "present": "Bereits vorhanden",
+      "language": "Sprache der Namen",
+      "submit": "Hinzufügen",
+      "names": {
+        "cost_pool": "Kostenart",
+        "it_tower": "IT-Bereich",
+        "purpose": "Zweck",
+        "priority": "Priorität",
+        "recurrence": "Wiederkehr"
+      },
+      "hints": {
+        "cost_pool": "Wofür das Geld ausgegeben wird: Hardware, Software, internes und externes Personal… Die Cost Pools von TBM.",
+        "it_tower": "Der Teil der IT, dem es dient: Rechenleistung, Speicher, Netzwerk, Arbeitsplatz… Die IT Towers von TBM.",
+        "purpose": "Warum das Geld ausgegeben wird: Ersatz, Kapazität, Compliance, Wachstum…",
+        "priority": "Zwingend, hoch, mittel oder niedrig.",
+        "recurrence": "Wiederkehrend oder einmalig."
+      },
+      "created_one": "{{count}} Dimension hinzugefügt: {{names}}.",
+      "created_other": "{{count}} Dimensionen hinzugefügt: {{names}}.",
+      "nothingCreated": "Nichts hinzugefügt: Diese Dimensionen sind bereits vorhanden.",
+      "failed": "Die Dimensionen konnten nicht hinzugefügt werden.",
+      "loadFailed": "Die empfohlenen Dimensionen konnten nicht geladen werden."
     }
   },
   "businessProcesses": {
