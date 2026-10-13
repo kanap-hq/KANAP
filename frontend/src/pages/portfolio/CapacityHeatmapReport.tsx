@@ -412,8 +412,6 @@ export default function CapacityHeatmapReport() {
     <ReportLayout
       title={t('reports.capacityHeatmap.title')}
       subtitle={t('reports.capacityHeatmap.subtitle')}
-      rootTo="/portfolio/reports"
-      rootLabel={t('reports.title')}
       filters={(
         <>
           <ReportFilter label={t('reports.capacityHeatmap.filters.teams')} width={240}>

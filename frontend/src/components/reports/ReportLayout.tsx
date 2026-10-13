@@ -1,10 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { Box, Stack, Typography, IconButton, Tooltip, Breadcrumbs, Link as MLink, ThemeProvider, useTheme } from '@mui/material';
+import { Box, Stack, Typography, IconButton, Tooltip, ThemeProvider, useTheme } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import PrintIcon from '@mui/icons-material/Print';
 import ImageIcon from '@mui/icons-material/Image';
-import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { FieldLabel } from '../design';
 import { compactSelectMenuProps } from '../../theme/formSx';
@@ -144,8 +143,6 @@ export default function ReportLayout({
   subtitle,
   filters,
   actions,
-  rootTo = '/ops/reports',
-  rootLabel,
   onExportTableCsv,
   onExportChartPng,
   busy = false,
@@ -155,8 +152,6 @@ export default function ReportLayout({
   subtitle?: React.ReactNode;
   filters?: React.ReactNode;
   actions?: React.ReactNode;
-  rootTo?: string;
-  rootLabel?: string;
   onExportTableCsv?: () => void;
   onExportChartPng?: () => void;
   /**
@@ -192,12 +187,6 @@ export default function ReportLayout({
     <ThemeProvider theme={printing ? lightIslandTheme : screenTheme}>
       <Stack spacing={1.5} sx={{ width: '100%', alignSelf: 'stretch' }} className="report-print-frame">
         <Box>
-          <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 0.5, fontSize: 12 }} className="report-print-hide">
-            <MLink component={RouterLink} to={rootTo} underline="hover" color="inherit" sx={{ fontSize: 12 }}>
-              {rootLabel ?? t('reports.landing.title')}
-            </MLink>
-            <Typography sx={{ fontSize: 12, color: 'kanap.text.secondary' }}>{title}</Typography>
-          </Breadcrumbs>
           <Stack direction="row" alignItems="baseline" justifyContent="space-between" spacing={2}>
             <Typography sx={{ fontSize: 22, fontWeight: 500, lineHeight: 1.3, color: 'kanap.text.primary' }}>
               {title}

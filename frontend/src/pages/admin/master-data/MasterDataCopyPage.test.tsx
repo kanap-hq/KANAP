@@ -14,23 +14,17 @@ vi.mock('../../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => 
 vi.mock('../../../hooks/useFreezeState', () => ({ useFreezeState: () => ({ data: undefined, isLoading: false }) }));
 vi.mock('../../../services/masterDataOperations', () => ({ copyMasterData: vi.fn() }));
 vi.mock('../../../components/AgGridBox', () => ({ default: ({ children }: { children?: React.ReactNode }) => <div>{children}</div> }));
-vi.mock('../../../components/reports/ReportLayout', () => ({
-  default: ({ children, rootTo, rootLabel }: { children: React.ReactNode; rootTo?: string; rootLabel?: string }) => (
-    <div><a data-testid="breadcrumb-root" href={rootTo}>{rootLabel}</a>{children}</div>
-  ),
-}));
-
 import MasterDataCopyPage from './MasterDataCopyPage';
 
-describe('MasterDataCopyPage breadcrumb', () => {
-  it('roots at the budget administration page, with its label', () => {
-    render(
+describe('MasterDataCopyPage header', () => {
+  it('shows its title and subtitle, with no breadcrumb', () => {
+    const { container } = render(
       <ThemeProvider theme={createAppTheme('light')}>
         <MasterDataCopyPage />
       </ThemeProvider>,
     );
-    const root = screen.getByTestId('breadcrumb-root');
-    expect(root).toHaveAttribute('href', '/ops/operations');
-    expect(root).toHaveTextContent('ops:operations.title');
+    expect(container.querySelector('nav[aria-label="breadcrumb"]')).toBeNull();
+    expect(screen.getByText('admin.copy.title')).toBeTruthy();
+    expect(screen.getByText('admin.copy.subtitle')).toBeTruthy();
   });
 });

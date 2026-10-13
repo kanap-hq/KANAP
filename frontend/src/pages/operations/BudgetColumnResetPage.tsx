@@ -190,8 +190,6 @@ export default function BudgetColumnResetPage() {
 
   return (
     <ReportLayout
-      rootTo="/ops/operations"
-      rootLabel={t('operations.title')}
       title={t('operations.columnReset.title')}
       subtitle={t('operations.columnReset.subtitle')}
       filters={

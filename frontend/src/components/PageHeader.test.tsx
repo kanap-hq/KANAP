@@ -10,74 +10,43 @@ vi.mock('react-i18next', () => ({
 
 const UUID = '8c744aca-52d4-4404-8079-763c1ea9a2a7';
 
-function renderAt(path: string, breadcrumbTitle?: string) {
+function renderAt(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <PageHeader title="Antoine KANDEL" breadcrumbTitle={breadcrumbTitle} />
+      <PageHeader title="Antoine KANDEL" actions={<button type="button">Save</button>} />
     </MemoryRouter>,
   );
 }
 
-function crumbLabels() {
-  const nav = screen.getByLabelText('breadcrumb');
-  return Array.from(nav.querySelectorAll('li:not(.MuiBreadcrumbs-separator)')).map((li) => li.textContent);
-}
-
-describe('PageHeader pages the top navigation already locates', () => {
+describe('PageHeader', () => {
   it.each([
     '/settings',
     '/agents',
-    '/master-data',
-    '/ops/contracts',
+    '/agents/budget-watch',
     '/master-data/companies',
     '/it/assets',
-    '/settings/profile',
-  ])('shows no breadcrumb on %s', (path) => {
-    renderAt(path);
-    expect(screen.queryByLabelText('breadcrumb')).toBeNull();
+    `/it/assets/${UUID}`,
+    `/portfolio/contributors/${UUID}/skills`,
+    '/ops/operations/currency',
+    '/ops/operations/freeze',
+    '/ops/operations/allocation-default',
+    '/ops/operations/columns',
+    '/ops/operations/master-data-freeze',
+  ])('shows the title and the actions, with no breadcrumb, on %s', (path) => {
+    const { container } = renderAt(path);
+    expect(container.querySelector('nav[aria-label="breadcrumb"]')).toBeNull();
+    expect(screen.queryByRole('link')).toBeNull();
     expect(screen.getByText('Antoine KANDEL')).toBeTruthy();
-  });
-});
-
-describe('PageHeader breadcrumb title placement', () => {
-  it('replaces the id crumb on /:id routes', () => {
-    renderAt(`/portfolio/contributors/${UUID}`, 'Antoine KANDEL');
-    expect(crumbLabels()).toEqual(['breadcrumbs.contributors', 'Antoine KANDEL']);
+    expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy();
   });
 
-  it('replaces the id crumb and keeps the tab crumb on /:id/:tab routes', () => {
-    renderAt(`/portfolio/contributors/${UUID}/skills`, 'Antoine KANDEL');
-    expect(crumbLabels()).toEqual(['breadcrumbs.contributors', 'Antoine KANDEL', 'Skills']);
-    const entityLink = screen.getByRole('link', { name: 'Antoine KANDEL' });
-    expect(entityLink.getAttribute('href')).toBe(`/portfolio/contributors/${UUID}`);
+  it('labels administration pages next to the title', () => {
+    renderAt('/admin/users');
+    expect(screen.getByText('breadcrumbs.admin')).toBeTruthy();
   });
 
-  it('treats the self-service `me` segment as the entity crumb', () => {
-    renderAt('/portfolio/contributors/me/time-logged', 'Antoine KANDEL');
-    expect(crumbLabels()).toEqual(['breadcrumbs.contributors', 'Antoine KANDEL', 'Time Logged']);
-  });
-
-  it('falls back to the last crumb when no entity segment precedes it', () => {
-    renderAt('/ops/operations/currency', 'Currency');
-    expect(crumbLabels()).toEqual(['breadcrumbs.operations', 'Currency']);
-    expect(screen.getByRole('link', { name: 'breadcrumbs.operations' }).getAttribute('href')).toBe('/ops/operations');
-  });
-
-  it('shows no breadcrumb when the entity is the only crumb below the section', () => {
-    renderAt('/agents/budget-watch', 'Budget watch');
-    expect(screen.queryByLabelText('breadcrumb')).toBeNull();
-  });
-});
-
-describe('PageHeader IT landscape crumbs', () => {
-  it.each([
-    ['assets', 'breadcrumbs.assets'],
-    ['locations', 'breadcrumbs.locations'],
-    ['interfaces', 'breadcrumbs.interfaces'],
-    ['connections', 'breadcrumbs.connections'],
-    ['incidents', 'breadcrumbs.incidents'],
-  ])('labels /it/%s from the nav keys', (segment, key) => {
-    renderAt(`/it/${segment}/${UUID}`, 'Entity');
-    expect(crumbLabels()).toEqual([key, 'Entity']);
+  it('adds no label outside administration', () => {
+    renderAt('/ops/operations/currency');
+    expect(screen.queryByText('breadcrumbs.admin')).toBeNull();
   });
 });
