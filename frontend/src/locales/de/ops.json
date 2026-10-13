@@ -913,6 +913,8 @@
       "summary": {
         "preview_one": "{{count}} Zeile in der Vorschau.",
         "preview_other": "{{count}} Zeilen in der Vorschau.",
+        "leftOut_one": "{{count}} Zeile, die {{year}} nicht gültig ist, wird ausgelassen.",
+        "leftOut_other": "{{count}} Zeilen, die {{year}} nicht gültig sind, werden ausgelassen.",
         "done": "Kopie abgeschlossen.",
         "amounts": "Beträge: {{processed}} zu kopieren, {{skipped}} übersprungen.",
         "amountsDone": "Beträge: {{processed}} kopiert, {{skipped}} übersprungen.",
