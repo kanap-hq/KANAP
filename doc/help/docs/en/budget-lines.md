@@ -20,14 +20,14 @@ The workspace opens in creation mode, titled **New OPEX line** or **New CAPEX li
 - **Account**: The general ledger account. Only accounts from the paying company's chart of accounts appear, and only those that suit the line's type in [Chart of Accounts](chart-of-accounts.md#opex-or-capex-accounts): **OPEX and CAPEX**, or **OPEX only** for an OPEX line and **CAPEX only** for a CAPEX line. A line that already has an account for the other type keeps it and stays editable. Choosing such an account on a new line or when you change the account is refused
 - **Currency**: ISO code (e.g., USD, EUR). Defaults to your workspace currency; you can override it per line
 - **Effective start**: When this spend begins (DD/MM/YYYY)
-- **Required dimensions**: one field per dimension that is required for the line's type. A CAPEX line needs **PP&E type**, **Investment type** and **Priority** to start with. See [CAPEX dimensions](#capex-dimensions)
+- **Required dimensions**: one field per dimension that is required for the line's type. A new workspace has no required dimension. See [Recommended dimensions](#recommended-dimensions)
 
 **Optional but useful**:
 
 - **Supplier**: Who you are paying. Links to your suppliers in master data
 - **Cost center**: Who owns the spend. See [Cost centers](cost-centers.md). When the paying company is still empty, picking a cost center fills it with the cost center's company
 - **Run or build**: **Run** for spend that keeps existing services running, **Build** for spend that creates or changes them
-- **Analytics dimensions**: One field per dimension used for the line's type, named after it, for custom grouping in reports (e.g., "Licenses" on Nature). The default dimension shows as **Analytics dimension** until it is renamed. See [Analytics dimensions](analytics.md)
+- **Analytics dimensions**: One field per dimension used for the line's type, named after it, for custom grouping in reports (e.g., **Software** on **Cost pool**). The default dimension shows as **Analytics dimension** until it is renamed. See [Analytics dimensions](analytics.md)
 - **End of validity**: The date this line stops. Leave it blank if there is no end. After it, the line is disabled and later years no longer count in the budget views
 - **IT owner** / **Business owner**: Who is responsible
 - **Description** and **Notes**: Free text on the **Overview** tab, for both types
@@ -48,22 +48,25 @@ Every line has one type, shown in the **Type** column of the list and in the fir
 
 - **Accounts**: an account can be set for **OPEX and CAPEX**, **OPEX only** or **CAPEX only**. See [OPEX or CAPEX accounts](chart-of-accounts.md#opex-or-capex-accounts)
 - **Dimensions and values**: a dimension or a value can be used for one type only, and a dimension can be required for one type. The **Properties** panel shows only the dimensions used for the line's type. See [OPEX or CAPEX dimensions](analytics.md#opex-or-capex-dimensions)
-- **Chargeback**: the chargeback reports cover OPEX lines only. See [Reporting](reports.md)
+- **Chargeback**: the chargeback reports open on OPEX lines, and offer CAPEX lines or both. See [Reporting](reports.md)
 - **Freezes**: a budget column is frozen per year and per type. See [Freeze / unfreeze data](budget-operations.md#freeze-unfreeze-data)
 
 The type of a line changes with **Change type...**. See [Changing the type](#changing-the-type).
 
-### CAPEX dimensions
+### Recommended dimensions
 
-Every workspace classifies CAPEX lines on three analytics dimensions:
+A new workspace starts with four recommended dimensions, with their values, in the workspace's language:
 
-| Dimension | Values |
+| Dimension | What it says |
 |---|---|
-| **PP&E type** | Hardware, Software (Property, Plant & Equipment) |
-| **Investment type** | Replacement, Capacity, Productivity, Security, Conformity, Business growth, Other |
-| **Priority** | Mandatory, High, Medium, Low |
+| **Cost pool** | What the money pays for: hardware, software, internal and external labor, outside services, facilities and power, telecom, other. It is the default dimension |
+| **IT tower** | The part of IT the spend serves: data center, compute, storage, network, platform, output, end user, application, delivery, security and compliance, IT management |
+| **Purpose** | Why the money is spent: replacement, capacity, productivity, security, compliance, business growth, other |
+| **Priority** | Mandatory, high, medium or low |
 
-They are used for CAPEX lines and required, so a new CAPEX line needs a value on each. They work like any other dimension: their fields sit in the **Properties** panel with the other dimensions, and their columns show by default in the list. An administrator can rename them, add values, change the order of the values, disable or delete them. See [CAPEX dimensions](analytics.md#capex-dimensions) in Analytics dimensions.
+They apply to OPEX and CAPEX lines and none is required. They work like any other dimension: their fields sit in the **Properties** panel, and an administrator can rename them, add values, make one required, disable or delete them. An administrator can add them to an existing workspace. See [Recommended dimensions](analytics.md#recommended-dimensions) in Analytics dimensions.
+
+Workspaces created before the recommended dimensions keep three dimensions for CAPEX lines only, all required: **PP&E type**, **Investment type** and **Priority**. A new CAPEX line there needs a value on each.
 
 ---
 
@@ -95,7 +98,7 @@ The list (at **Budget management > Budget lines**) holds the OPEX and CAPEX line
 - **Account**: The GL account number and name
 - **Allocation**: The allocation method label for the current year (links to the **Allocations** tab)
 - **Budget Y** and **Expected landing Y**: The current-year amounts of the default column and of the last shown column (links to the **Budget** tab for this year). With the standard settings these are Budget and Expected landing. When the default column is also the last shown one, a single amount column appears. See [Budget columns](budget-operations.md#budget-columns)
-- **Required dimensions**: One column per enabled dimension that is required for either type, named after it: **PP&E type**, **Investment type** and **Priority** to start with
+- **Required dimensions**: One column per enabled dimension that is required for either type, named after it. A new workspace has none
 - **Task**: The latest task title (links to the **Overview** tab, where the Tasks panel sits)
 
 **Additional columns** (hidden by default, toggle via the column chooser):
@@ -249,7 +252,7 @@ When the line replaces another one, or was replaced from a later year after a ty
 - Each field lists the enabled values of its dimension. A disabled value stays on the lines that already have it, and cannot be picked for another line
 - A value used for the other type only is not offered, and is refused as a new choice. A line that already has it keeps it and stays editable. See [OPEX or CAPEX values](analytics.md#opex-or-capex-values)
 - The field cannot create a value: create it in [Analytics dimensions](analytics.md), or let a CSV import create it
-- A required dimension is marked with an asterisk. A new line needs a value on it: **Create** stops with "Nature is required" until you pick one. On a line that holds a value, the field cannot be cleared, only changed. A line without a value stays editable. If you change such a line, leaving it asks first: "Nature is required. Choose a value before leaving." **Stay** puts the cursor in the missing field. **Leave anyway** leaves. See [Required dimensions](analytics.md#required-dimensions)
+- A required dimension is marked with an asterisk. A new line needs a value on it: **Create** stops with "Cost pool is required" until you pick one. On a line that holds a value, the field cannot be cleared, only changed. A line without a value stays editable. If you change such a line, leaving it asks first: "Cost pool is required. Choose a value before leaving." **Stay** puts the cursor in the missing field. **Leave anyway** leaves. See [Required dimensions](analytics.md#required-dimensions)
 - If the dimensions cannot be loaded, one line replaces these fields: "Dimensions could not be loaded."
 
 **Tip**: When you create a line, an "Obsolete account" warning means the selected account does not belong to the paying company's chart of accounts. Choose a different account to resolve the warning. An existing line whose account is outside its company's chart can still be edited: the chart is checked only when the company or the account changes.
@@ -258,13 +261,13 @@ When the line replaces another one, or was replaced from a later year after a ty
 
 ### Budget
 
-The Budget tab is where you enter financial data per year. It supports multiple budget columns and two input modes, shown as tabs: **Flat** (annual totals) and **Monthly** (monthly breakdown).
+The Budget tab holds the amounts of the line, year by year and column by column. For the year you pick, choose a column, say how it is built, then read the result month by month.
 
 **Year selection**:
 
 - Use the year tabs at the top to switch between Y-2, Y-1, Y (current year), Y+1, and Y+2
-- Each year has its own version, mode, and amounts
-- Switching years saves your pending edits first
+- Each year has its own amounts
+- Switching years saves your pending edits first. If a column still waits for your choice after someone else's change, KANAP asks first: **Change the year** drops your values in that column
 
 **Budget columns**:
 
@@ -275,6 +278,9 @@ The Budget tab is where you enter financial data per year. It supports multiple 
     - **Actuals**: Actual spend, as it is recorded during the year
     - **Expected landing**: Your best estimate of the year-end figure
 - A budget administrator can rename the columns, hide some and choose the default column in **Budget management > Administration > Budget columns** (see [Budget columns](budget-operations.md#budget-columns)). A hidden column keeps its amounts
+- Each shown column has a card under the year tabs: its name, its total for the year, how its amounts were produced and its period, for example "Spread flat" and "9 months, April to December". A column with nothing in it reads "Not entered yet". Hover a card to see its quantity and price lines
+- Click a card to work on that column. The tab opens on the first shown column that is not frozen
+- With a single shown column, there are no cards: the editor shows the column directly
 
 **Period of a column**:
 
@@ -282,85 +288,121 @@ The Budget tab is where you enter financial data per year. It supports multiple 
 - A month counts when the period covers its 15th. A period that starts on April 10 includes April; one that starts on April 20 begins in May
 - A column with no amount and no period yet gets a suggestion: the line's **Effective start** and **End of validity**, limited to the year. A line that starts on April 1 suggests April to December
 - A column that already holds amounts and has no period reads as the whole year, so existing data behaves as before
+- When the stored period of a column goes beyond the line's dates, the editor says which period a save uses, for example "Stored period: January to December. Saving will use April to December, the line's dates."
 
-**Flat vs Monthly**:
+**How a column is built**:
 
-- **Flat**: Enter one total per column. The total is spread evenly over the months of the column's period, and the months outside it are set to zero. The period shows under each total before you type, for example "9 months, April to December". Only the total you edit is saved. The other columns keep their monthly amounts.
-- Click the pencil icon next to the period under a total (**Change period**) to open the spread panel on that column, with its current total. If the line's dates leave no month in the year, the total is disabled and reads "No month of 2026 is within the line's dates." Click the pencil icon next to it (**Choose the period**) to set one yourself.
-- Click the calculator icon next to the pencil (**Quantity and price**) to open the same box on the lines of that column. See [Quantity and price](#quantity-and-price).
-- A column that follows its lines (its amounts were computed from its Quantity and price lines) has a read-only total. Click the total, or press Enter on it, to open **Quantity and price** on that column. The pencil does the same. Hover the total to read "Calculated from its lines. Open Quantity and price to change it."
-- **Monthly**: Enter amounts per month (Jan-Dec) for each shown column, for example to follow a cash-out plan or the milestones of a project. Quarter subtotals and a yearly total are shown. Only the months you change are saved.
-- Both tabs show the same columns: Forecast appears in **Flat** too when it is shown.
-- Switch between modes with the **Flat** and **Monthly** tabs. Switching does not change your amounts.
-- Your choice between **Flat** and **Monthly** is kept in your browser, for you only: switching does not change what other users see when they open this line. Until you choose, a column opens in the mode its amounts were last entered in.
+The editor under the cards is titled with the column and the year, for example **Budget 2026**. Three tabs say how the column is built:
+
+- **Amount**: one annual amount, spread over the months
+- **Quantity and price**: lines, each a quantity times a unit price. See [Quantity and price](#quantity-and-price)
+- **By month**: twelve amounts typed in the table
+
+The three tabs are always offered. A column opens on the tab that matches how its amounts were produced: **Quantity and price** when they are calculated from its lines, **By month** after an edit by hand, and **Amount** for an empty, spread or copied column.
+
+On an empty column, a click on a tab switches at once. On a column with amounts, a question appears in the editor first and says what changes. Click **Switch** to go on, or **Cancel**:
+
+- To **Amount**: the current total becomes the amount, spread flat over the column's period. The lines of the column stay as a reference
+- To **By month**: the current months are kept and become editable in the table
+- To **Quantity and price**: the total comes from the lines. The current amount is replaced, or the lines kept as a reference are used again
+
+**Amount**:
+
+- **Annual amount**: the total of the column for the year
+- **When**: **Whole year**, **A period** with **From** and **To** dates, or **At a date** with a single **Date**
+- **Distribution**: **Flat** or **4-4-5**. At a date there is no distribution: the month of the date takes the whole amount
+- A sentence says what you get, for example "120,000 spread flat from April to December (9 months)." or "5,000 on 10 February 2026, all in February." Hover the info icon next to it to read the 15th rule
+- When some months of the year fall outside the period, a note says which ones will be set to zero, for example "January to March will be set to zero."
+- A warning appears when the period goes beyond the line's dates. The amount is still saved
+- While a date is missing or no month counts, a note in red says why and nothing is saved. When the line's dates leave no month in the year, the editor reads "No month of 2026 is within the line's dates." Choose **A period** to set the dates yourself
+- **Every change saves at once**: the amount when you leave the field or press Enter, the other fields as soon as you change them. There is no button to click. A blank or zero amount saves nothing
+- With **4-4-5**, the weights of the months that count are scaled up so the whole amount lands on them
+- To bring a column back to a flat spread over twelve months, choose **Whole year** and **Flat**
+- A spread over a column built from lines keeps its lines as a reference. See [Quantity and price](#quantity-and-price)
+
+**By month**:
+
+- The editor reads, for example, "Enter the amounts in the Budget column of the table below." Type each month in that column of **Monthly result**. The quarter subtotals and the total follow as you type. Only the months you change are saved
+- Use it to follow a cash-out plan or the milestones of a project, for example the whole amount in a single month
+- Click a month of another column in the table to type that column by month: it becomes the active column and the cursor goes in that month. On a column with amounts, the editor asks first. Hover a month to read "Enter by month". The months of a frozen column cannot be clicked
+
+**Start from**:
+
+- An empty column, with no amount and no line, can start from another shown column that has amounts. The editor reads "Start from", then the column with its total, "adjusted by", a percentage (0 by default) and **Copy**. Or enter the column yourself below
+- **Copy** works like [Copy budget columns](budget-operations.md#copy-budget-columns) on this line and year: the months keep their shape and the percentage applies to each one. A column calculated from its lines stays calculated, with its unit prices raised by the percentage. A frozen column can be the source
+- When the line's dates leave out some months of the source, they are not copied, and a note says so: "Months of the Budget column outside the line's dates were not copied."
+
+**Use for other columns too**:
+
+- Under the editor, **Use for other columns too…** gives other columns the same construction as the active one. It shows when the active column is an amount with a valid period, or follows its quantity and price lines, and another column can take it
+- The link lists the other shown columns under **Same construction for**, each with a checkbox. The columns set to follow in [Budget columns](budget-operations.md#budget-columns) start ticked. Click **Apply**, or **Cancel**
+- From an amount, the ticked columns take its period and distribution, and each keeps its own total. Columns that follow their lines are not offered, and a sentence names them, for example "Forecast keeps its lines."
+- From quantity and price, the ticked columns take the same lines, which replace their amounts
+- Frozen columns and columns waiting for your choice are not offered
+
+**Clear column**:
+
+- **Clear column**, on the right under the editor, sets every month of the active column to zero, for example before entering the whole amount in a single month. When the column holds amounts, you confirm first: "Clear every month of Budget for 2026? The other columns stay as they are." It counts as an edit by hand
+- To remove both the amounts and the period of a column for every line, use **Reset budget column** in Budget Administration
+
+**Monthly result**:
+
+- Under the editor, **Monthly result** shows the year month by month for every shown column, in the line's currency, with a subtotal per quarter (**Q1** to **Q4**) and a **Total** row. The active column is highlighted
+- With two columns or more, a last row gives the difference of each column with one of them, for example "+12,000 (+1.8%)". Pick that column in **Difference with** above the table. It starts on the default column
+- While every column is empty, or an amount spread flat over the whole year, a sentence replaces the table, for example "All columns are spread flat over the whole year: the monthly detail adds nothing." **Show the detail** opens the table and **Hide the detail** folds it again. Your choice holds while you stay on the line
+- The table stays open while the active column is typed by month or a column waits for your choice
+
+**Back to the opening values**:
+
+- The tab keeps the values each column of a year had when you first opened that year during your visit of the line. Switching tabs or years keeps them. Reloading the page starts again from the values of that moment
+- Once you change a column, the right of the year tabs reads, for example, "2 columns changed since 10:42", followed by **Back to the opening values**
+- Click it to put the columns you changed back to those values. There is no confirmation. Your edits under way are saved first, then each column is restored on its own
+- A note lists what happened, for example "Opening values restored: Budget and Revision." A column stays as it is when it was frozen meanwhile, when someone else changed it since (the banner above then asks what to keep), or while it waits for your choice. A column only someone else changed is never restored. Close the note with **Close**
+- If an edit under way cannot be saved, nothing is restored: "Nothing was restored: a change could not be saved first."
+- The audit trail records each restored column with the action **Restore**
 
 **Freeze behavior**:
 
-- If a year's budget columns are frozen for the line's type (via Budget Administration), the corresponding inputs become read-only and show a lock icon
-- You can still view frozen data; admins can unfreeze via **Budget management > Administration > Freeze / unfreeze data**
+- If a year's budget columns are frozen for the line's type (via Budget Administration), the card of each frozen column shows a lock icon, and so does its header in the table
+- A frozen column is read only. Its editor reads, for example, "The Budget 2026 column is frozen" and "Read only. An administrator can unfreeze it in Administration › Freeze / unfreeze data.", with its total and how it was produced
+- When some columns are frozen, a line under the chart says "Some columns are frozen and read-only."
 - Each column can be frozen independently
-
-**Spreading an amount**:
-
-- The panel box has two tabs: **Spread an amount** and **Quantity and price**. This part covers the first one
-- The spread panel is always visible in the **Monthly** tab. In the **Flat** tab it opens from the pencil icon under a total, and its close button closes it
-- Choose a **Column** among the shown columns, check the **Amount**, pick a **Distribution** (**Flat** or **4-4-5**), and set the **From** and **To** dates. The dates start from the column's current period, and the distribution from the column's own
-- The panel opens on the default column. The amount starts with the column's current total, in both tabs, and follows when you choose another column. It is empty when the column has no amount
-- **Every change saves at once**: the amount when you leave the field or press Enter, the distribution and the dates as soon as you change them. There is no button to click. A blank or zero amount saves nothing
-- **Apply the distribution to all columns** is a switch, on by default: every column that follows it gets the same distribution and period, and each keeps its own current total. Turning it on spreads those columns at once, and it stays on for your next changes. Turning it off changes nothing by itself: the next changes apply to the selected column only. By default every column follows. A budget administrator chooses which ones in [Budget columns](budget-operations.md#budget-columns). Frozen columns never change. Hover the switch to see which columns follow and which keep their own period
-- A column that does not follow the switch spreads alone: the switch does not appear when you spread it. The switch is also hidden when no other following column can change
-- Columns that follow their lines are left out of the switch: they keep the amounts of their lines, and a sentence names them, for example "Forecast keeps its lines." When every other column follows its lines, the switch does not appear
-- To bring a column back to a flat spread over twelve months, choose **Flat** and set the dates to January 1 and December 31
-- Totals typed in the **Flat** tab still apply to their own column only
-- The **From** and **To** dates show the period. When some months fall outside it, the panel says which ones will be set to zero ("January to March will be set to zero."). A whole-year period shows no line. Hover the info icon next to the panel title to see the 15th rule
-- With **4-4-5**, the weights of the months that count are scaled up so the whole amount lands on them
-- A soft warning appears when the period goes beyond the line's dates. The spread is still saved
-- While a date is missing or no month counts, the panel says why and saves nothing
-- A column that follows its lines shows its current values in the fields, greyed, under the sentence "The amounts come from the 4 lines of Quantity and price." Click **Spread an amount instead** to unlock the fields for that column. The sentence then reads "A spread replaces the amounts of the lines. The lines stay as a reference." The lock comes back when you change the column, the year or the box
-- A spread over a column built from lines keeps its lines as a reference. See [Quantity and price](#quantity-and-price)
 
 **How each column was produced**:
 
-- A short label tells you where the amounts of a column come from. In the **Monthly** tab it sits under the column header (hover it to see the period). In the **Flat** tab it sits next to the period
+- A short label on each card tells you where the amounts of the column come from, followed by its period. With a single column, it sits under the editor title
 - **Spread flat**, **Spread 4-4-5** or **Spread by quarter**: the amounts come from a spread
-- **Copied from Budget 2025 +2%**: the amounts come from **Copy budget columns** in Budget Administration, with the percentage shown when there is one
-- **Quantity and price · 3 lines · 1.00 FTE**: the amounts come from lines, with their number and, when the lines count people or days, the column's FTE. The FTE is the full-year average. Hover the label to see the lines, for example "Project manager: 1 person × 1,200 per day, 5 days per month, Feb to Jul"
-- **Edited by hand**: a month was changed in the grid or by a budget file import
+- **Copied from Budget 2025 +2%**: the amounts come from **Copy budget columns** in Budget Administration, or from **Start from**, with the percentage shown when there is one
+- **Quantity and price · 3 lines · 1.00 FTE**: the amounts come from lines, with their number and, when the lines count people or days, the column's FTE. The FTE is the full-year average. Hover the card to see the lines, for example "Project manager: 1 person × 1,200 per day, 5 days per month, Feb to Jul"
+- **Edited by hand**: a month was changed in the table or by a budget file import
+- An amount at a date shows its date instead of a period, for example "On 10 February 2026"
 - A column with no label kept the data it had before periods existed
 
 **When someone else is editing the same column**:
 
 - Two people can fill in different months or different columns of the same line at once with no conflict
 - On a monthly entry, if someone else changed one of the same months, those months wait for your choice; the column's other months save as you typed them
-- If someone else changed the column's total, its spread, or its quantity-and-price lines while you were working on them, the whole column waits: a banner offers **Reload the column** or **Overwrite**. The column's amounts, spread panel and lines stay read-only until you choose
+- If someone else changed the column's total, its spread, or its quantity and price lines while you were working on them, the whole column waits: a banner offers **Reload the column** or **Overwrite**. Its card shows an orange dot (hover it to read "Waiting for your choice") and its months are tinted. The editor stays read only until you choose, with the line "Choose first, above, whether to reload this column or overwrite it."
 - Saving reloads the year, so you always see the latest figures for every other column; the cell or column you are editing is not disturbed
-
-**Monthly tools**:
-
-- **Clear column**: the icon next to a column header sets every month of that column to zero, for example before entering the whole amount in a single month. When the column holds amounts, you confirm first. It counts as an edit by hand. To remove both the amounts and the period of a column for every line, use **Reset budget column** in Budget Administration
 
 **Multi-year trend**:
 
-- A chart below the grid shows every shown column across years, Forecast included when it is shown, and updates as you type
+- A chart below the table shows every shown column across years, Forecast included when it is shown, and updates as you type
 
 **How to use it**:
 
 1. Select the year you are planning for
-2. Choose the **Flat** or **Monthly** tab
-3. Fill in the relevant columns (Budget for initial planning, Actuals for tracking, Expected landing for the year-end figure)
-4. Your changes save automatically; a **Saving...** / **Saved** hint shows next to the year tabs
+2. Click the card of the column to fill (Budget for initial planning, Actuals for tracking, Expected landing for the year-end figure)
+3. Choose **Amount**, **Quantity and price** or **By month**, and fill it in
+4. Read the result in **Monthly result**. Your changes save automatically; a **Saving...** / **Saved** hint shows next to the year tabs
 
-**Tip**: For most lines, Flat mode is faster. Use Monthly mode when the spend varies significantly by month (e.g., seasonal licensing, one-time setup fees, phased rollouts).
+**Tip**: For most lines, one amount over the whole year or a period is enough. Use **By month** when the spend varies significantly by month (e.g., seasonal licensing, one-time setup fees, phased rollouts). To fill a new column from an existing one, use **Start from**.
 
 #### Quantity and price
 
 Build a column from lines instead of typing its amounts. Each line reads as a sentence: a quantity, a unit, a unit price, how often, when, and on which calendar. For example, one project manager 5 days per month at 1,200 a day from February to July, and 50 licences at 12 per piece per month. The months of the column are the sum of its lines. The amounts of a column have one source at a time: its lines, or a spread, a month typed by hand, or a copy. The other source stays visible as a reference and is read only, with a link to switch.
 
-**Opening the tab**:
-
-- **Flat** tab: click the calculator icon next to the period under a total. The box opens on **Quantity and price** for that column. On a column that follows its lines, the pencil and the total open it too
-- **Monthly** tab: click **Quantity and price** at the top of the panel box. Choosing a column that follows its lines, or having one as the default column, switches the box to **Quantity and price**
-- Choose the **Column** at the top of the tab. Frozen columns cannot be picked
+**Opening it**: click the card of the column, then the **Quantity and price** tab of the editor. A column calculated from its lines opens on it. The lines of a frozen column are read only.
 
 **The lines**:
 
@@ -413,14 +455,13 @@ Click **Add a line** under the table to add a line, and the cross at the end of 
 - The FTE of the lines, when a line counts people or days, for example "FTE over the period 0.24 · Full-year average 0.12". See [FTE](#fte). The total of the column shows in the column itself
 - Where the amounts come from, when they no longer come from the lines: one of the sentences in the next part
 - Notes when they apply: "The period goes beyond the line's dates.", a calendar disabled since, for example "Head office staff is disabled. The lines still use it.", and working days changed since the last save of the lines
-- **Apply these lines to all columns**: a switch for the same columns as the spread tab's switch, off by default here. Turning it on writes the lines to every column that follows at once, and it stays on: each later save writes the lines to those columns too. Turning it off changes nothing by itself
+- To give other columns the same lines, use **Use for other columns too…** under the editor. See [Budget](#budget)
 
-**When the amounts change another way**: the lines stay with the column as a reference, and the tab says where the amounts come from now, followed by a **Use the lines again** link. The lines are then read only: you cannot add, remove or edit a line, and the tab shows no amount per line, no FTE and no **Apply these lines to all columns**. The link saves the lines as they are and computes the column from them again, and the lines become editable again. To change a line kept as a reference, click **Use the lines again** first, then edit it.
+**When the amounts change another way**: the lines stay with the column as a reference, read only. Under **Amount** or **By month**, a line says how many lines are kept, for example "4 lines kept as a reference (48,000).", followed by a **Use the lines again** link. The link saves the lines as they are and computes the column from them again. Choosing the **Quantity and price** tab does the same, after a question. To change a line kept as a reference, use the lines again first, then edit it.
 
-- A month typed in the **Monthly** tab: "Amounts were entered by hand. Use the lines again."
-- A spread: "Amounts come from a spread. Use the lines again."
-- **Copy budget columns** in Budget Administration: "Amounts were copied from Budget 2025. Use the lines again." When the source amounts were not calculated from lines, the copy brings the source column's lines as a reference. A column calculated from its lines stays calculated, with its prices raised by the percentage. See [Copying a column built from lines](budget-operations.md#copying-a-column-built-from-lines)
-- A calendar's working days changed: "Working days changed since the last computation: March: 20 days, now 19." Nothing changes on the column until you click **Use the lines again**. The lines stay editable meanwhile
+- Switching the column to **Amount** or **By month**, typing a month in the table, or **Clear column**
+- **Copy budget columns** in Budget Administration, or **Start from**: when the source amounts were not calculated from lines, the copy brings the source column's lines as a reference. A column calculated from its lines stays calculated, with its prices raised by the percentage. See [Copying a column built from lines](budget-operations.md#copying-a-column-built-from-lines)
+- A calendar's working days changed: the **Quantity and price** tab reads, for example, "Working days changed since the last computation: March: 20 days, now 19.", followed by **Use the lines again**. Nothing changes on the column until you click it. The lines stay editable meanwhile
 - **Reset budget column** in Budget Administration removes the lines with the amounts. See [Reset budget column](budget-operations.md#reset-budget-column)
 - A budget file changes the months of a column and leaves its lines. See [Load a budget from a spreadsheet](budget-file.md)
 
@@ -442,7 +483,7 @@ For example, a consultant full time from February to October counts 1 FTE in eac
 
 ### Allocations
 
-The Allocations tab distributes the spend of a year across your companies and departments. The allocations of OPEX lines drive the chargeback reports and the cost-per-user KPIs.
+The Allocations tab distributes the spend of a year across your companies and departments. The allocations drive the chargeback reports and the cost-per-user KPIs, for OPEX and CAPEX lines.
 
 **Year selection**:
 
@@ -595,13 +636,13 @@ An OPEX line that turns out to be an investment becomes a CAPEX line, and a CAPE
 
 **From** sets where the change starts:
 
-- **The line's first year** (the default): the line itself changes type. It keeps its `BL` reference and its address, its budgets, allocations, links, attachments and tasks. Its **Type** changes in the list. A line that becomes CAPEX leaves the OPEX reports and the chargeback, and joins the CAPEX reports. A line that becomes OPEX does the reverse
+- **The line's first year** (the default): the line itself changes type. It keeps its `BL` reference and its address, its budgets, allocations, links, attachments and tasks. Its **Type** changes in the list. A line that becomes CAPEX leaves the OPEX reports and joins the CAPEX reports, and the chargeback counts it under CAPEX. A line that becomes OPEX does the reverse
 - **A later year**: this line ends on 31 December of the year before and keeps its earlier budgets. A new line of the other type, with its own `BL` reference, carries the budget from that year on, with the contacts and the links to applications, assets, contracts, projects and requests. Attachments, relevant websites and tasks stay on this line. The top of the **Overview** tab links the two lines: **Replaced by** on this line, **Follows** on the new one
 
 The dialog also asks for:
 
 - **Account**: an account for the new type. When the line's account is for its current type only, the line keeps it in place unless you choose another one; a new line from a later year gets it only when it suits the new type
-- **Dimensions**: the dimensions required for the new type, and the values of the line that are for its current type only. In place, you can set them now or later. From a later year, the new line needs the required ones, and values for the current type only are not copied. The [CAPEX dimensions](#capex-dimensions) do not apply to OPEX lines: a CAPEX line that becomes OPEX in place keeps their values without showing them, and shows them again if it becomes CAPEX later
+- **Dimensions**: the dimensions required for the new type, and the values of the line that are for its current type only. In place, you can set them now or later. From a later year, the new line needs the required ones, and values for the current type only are not copied. A dimension used for CAPEX lines only does not apply to OPEX lines: a CAPEX line that becomes OPEX in place keeps its value without showing it, and shows it again if it becomes CAPEX later
 - **Reason**: optional, kept in the line's audit trail
 
 The change is refused when the line has amounts in a frozen column, of OPEX or CAPEX lines, in the years that change. Unfreeze the column first, or start the change from a later year. A later year is offered when it comes after the line's first budget year, the line has a budget in that year or a later one, starts before 1 January of that year and is still valid on that day, and has not been replaced by another line already. A change always starts on 1 January.
@@ -626,7 +667,7 @@ A budget file never changes the type of a line. See [Load a budget from a spread
 
 7. **Track contacts**: Add supplier contacts with roles (Commercial, Technical, Support) so your team knows who to call for each line.
 
-8. **Leverage analytics dimensions**: Give lines a value on each dimension (for example Licenses on Nature, or the **Investment type** and **Priority** of a CAPEX line) to group spend in reports.
+8. **Leverage analytics dimensions**: Give lines a value on each dimension (for example **Software** on **Cost pool**, or the **Purpose** and **Priority** of a CAPEX line) to group spend in reports.
 
 9. **Keep company metrics up to date**: Allocations depend on company headcount, IT users, and turnover. Outdated metrics cause allocation errors.
 
@@ -648,7 +689,7 @@ Access to budget lines is controlled by the Budget resource, which covers OPEX a
 
 - `budget:reader`: View the list, open lines, see budgets and allocations (read-only), download attachments
 - `budget:member`: Create and edit lines, change their type, update budgets and allocations, upload and delete attachments, manage relations, links and contacts
-- `budget:admin`: All member rights plus CSV import and export, budget operations (copy budget columns, copy allocations, reset budget column), and bulk delete
+- `budget:admin`: All member rights plus CSV import and export, budget operations (copy budget columns, with their amounts and allocations, and reset budget column), and bulk delete
 
 Freezing budget columns needs Budget administration (`budget_ops:admin`).
 

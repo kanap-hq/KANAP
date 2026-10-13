@@ -64,13 +64,12 @@ Une ligne vit sur plusieurs années : une licence sur trois ans est une ligne av
 | Numéro | `item_number` | Attribué par KANAP | `BL-12`. Vide dans le fichier : crée une ligne |
 | Titre | `name` | Oui | La colonne **Nom du produit** de la liste |
 | Description | `description` | Non | |
-| Type d'immobilisation, type d'investissement, priorité (CAPEX) | `analytics:ppe_type`, `analytics:investment_type`, `analytics:priority` | Pour une nouvelle ligne, tant que la dimension est obligatoire | Valeurs des trois dimensions CAPEX, portées comme les valeurs de toute autre dimension. Voir [Dimensions CAPEX](analytics.md#dimensions-capex) |
 | Société payeuse | `company_name` | Oui | Reprise du centre de coûts quand seul le centre de coûts est donné |
 | Fournisseur | `supplier_name`, `supplier_erp_id` | Non | |
 | Compte | `account_number` | Oui | Dans le plan comptable de la société payeuse |
 | Centre de coûts | `cost_center_code` | Non | Un groupe est refusé |
 | Run ou build | `run_build` | Non | `run` ou `build` |
-| Valeurs analytiques | `analytics:<code>` | Pour une dimension obligatoire | Une colonne par dimension active. Une ligne ne prend de valeurs que sur les dimensions de sa nature. Une dimension obligatoire demande une valeur sur une nouvelle ligne de sa nature |
+| Valeurs analytiques | `analytics:<code>` | Pour une dimension obligatoire | Une colonne par dimension active. Une ligne ne prend de valeurs que sur les dimensions de sa nature. Une dimension obligatoire demande une valeur sur une nouvelle ligne de sa nature. Un nouvel espace de travail démarre avec les [dimensions recommandées](analytics.md#dimensions-recommandees), dont aucune n'est obligatoire |
 | Responsable IT, responsable métier | `owner_it_email`, `owner_business_email` | Non | Utilisateurs actifs |
 | Projet | `project` | Non | Un numéro de projet, par exemple `PRJ-3` |
 | Devise | `currency` | Oui | Code ISO à trois lettres |
@@ -137,7 +136,7 @@ Chaque année budgétaire d'une ligne a une méthode de ventilation :
 | Manuel par département | L'effectif des départements que vous choisissez |
 | Pourcentages manuels | Les pourcentages que vous saisissez, dont la somme fait 100 % |
 
-Les ventilations alimentent les rapports de refacturation. Aucun fichier ne les importe. [Copier les ventilations](budget-operations.md#copier-les-ventilations) les reporte d'une année sur la suivante, et les rapports de refacturation exportent leurs tableaux en CSV. Voir [Rapports](reports.md).
+Les ventilations alimentent les rapports de refacturation, pour les lignes OPEX et CAPEX. Aucun fichier ne les importe. [Copier les colonnes budgétaires](budget-operations.md#copier-les-ventilations) les reporte d'une année sur la suivante, et les rapports de refacturation exportent leurs tableaux en CSV. Voir [Rapports](reports.md).
 
 ### Liens vers d'autres objets
 

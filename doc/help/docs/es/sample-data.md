@@ -19,6 +19,7 @@ El conjunto describe Fromage & Co, una quesería ficticia:
 - **18 usuarios ficticios**, que no pueden iniciar sesión y no reciben ningún correo electrónico
 - **Aplicaciones y su panorama**: instancias, interfaces y conexiones
 - **Contratos, el presupuesto del año en curso, proyectos y tareas**
+- **Líneas presupuestarias clasificadas según las [dimensiones recomendadas](analytics.md#dimensiones-recomendadas)**: cada línea tiene un tipo de coste y un dominio TI, las líneas CAPEX y las líneas build tienen un motivo, y las líneas CAPEX una prioridad. El conjunto añade también **Recurrencia**, en el idioma del espacio de trabajo, y dos dimensiones propias, **Business domain** y **Budget reference**, cuyos nombres y valores se quedan en inglés
 
 Las fechas siguen el año en curso, de modo que el presupuesto siempre parece actualizado. La carga tarda menos de un minuto.
 
@@ -33,7 +34,7 @@ Los datos de ejemplo solo se cargan en un espacio de trabajo vacío. Un espacio 
 - configuración que usted haya añadido: un plan de cuentas propio, categorías analíticas, clasificación del portafolio, calendarios laborales adicionales, integraciones o agentes de IA
 - documentos fuera de la biblioteca de plantillas
 
-Lo que un espacio de trabajo nuevo crea por usted (su primera empresa, el plan de cuentas predeterminado y el calendario de su país) no cuenta.
+Lo que un espacio de trabajo nuevo crea por usted (su primera empresa, el plan de cuentas predeterminado, el calendario de su país y las dimensiones recomendadas) no cuenta.
 
 **Para cargar el conjunto**:
 

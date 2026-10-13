@@ -64,13 +64,12 @@ Eine Budgetzeile lebt über mehrere Jahre: Eine Lizenz über drei Jahre ist eine
 | Nummer | `item_number` | Von KANAP vergeben | `BL-12`. Leer in der Datei: legt eine Budgetzeile an |
 | Titel | `name` | Ja | Die Spalte **Produktname** der Liste |
 | Beschreibung | `description` | Nein | |
-| Anlagentyp, Investitionsart, Priorität (CAPEX) | `analytics:ppe_type`, `analytics:investment_type`, `analytics:priority` | Bei einer neuen Zeile, solange die Dimension erforderlich ist | Werte der drei CAPEX-Dimensionen, gespeichert wie die Werte jeder anderen Dimension. Siehe [CAPEX-Dimensionen](analytics.md#capex-dimensionen) |
 | Zahlendes Unternehmen | `company_name` | Ja | Wird von der Kostenstelle übernommen, wenn nur die Kostenstelle angegeben ist |
 | Lieferant | `supplier_name`, `supplier_erp_id` | Nein | |
 | Konto | `account_number` | Ja | Im Kontenplan des zahlenden Unternehmens |
 | Kostenstelle | `cost_center_code` | Nein | Eine Gruppe wird abgelehnt |
 | Run oder Build | `run_build` | Nein | `run` oder `build` |
-| Analysewerte | `analytics:<code>` | Bei einer erforderlichen Dimension | Eine Spalte pro aktiver Dimension. Eine Budgetzeile nimmt nur in den Dimensionen ihrer Art Werte an. Eine erforderliche Dimension braucht einen Wert auf einer neuen Budgetzeile ihrer Art |
+| Analysewerte | `analytics:<code>` | Bei einer erforderlichen Dimension | Eine Spalte pro aktiver Dimension. Eine Budgetzeile nimmt nur in den Dimensionen ihrer Art Werte an. Eine erforderliche Dimension braucht einen Wert auf einer neuen Budgetzeile ihrer Art. Ein neuer Arbeitsbereich beginnt mit den [empfohlenen Dimensionen](analytics.md#empfohlene-dimensionen), von denen keine erforderlich ist |
 | IT-Verantwortlicher, Fachverantwortlicher | `owner_it_email`, `owner_business_email` | Nein | Aktive Benutzer |
 | Projekt | `project` | Nein | Eine Projektnummer, zum Beispiel `PRJ-3` |
 | Währung | `currency` | Ja | ISO-Code mit drei Buchstaben |
@@ -137,7 +136,7 @@ Jedes Budgetjahr einer Budgetzeile hat eine Zuordnungsmethode:
 | Manuell nach Abteilung | Der Mitarbeiterzahl der Abteilungen, die Sie auswählen |
 | Manuelle Prozentsätze | Den Prozentsätzen, die Sie eingeben, zusammen 100 % |
 
-Zuordnungen speisen die Berichte zur Leistungsverrechnung. Keine Datei importiert sie. [Zuordnungen kopieren](budget-operations.md#zuordnungen-kopieren) überträgt sie von einem Jahr ins nächste, und die Berichte zur Leistungsverrechnung exportieren ihre Tabellen als CSV. Siehe [Berichte](reports.md).
+Zuordnungen speisen die Berichte zur Leistungsverrechnung, für OPEX- und CAPEX-Zeilen. Keine Datei importiert sie. [Budgetspalten kopieren](budget-operations.md#zuordnungen-kopieren) überträgt sie von einem Jahr ins nächste, und die Berichte zur Leistungsverrechnung exportieren ihre Tabellen als CSV. Siehe [Berichte](reports.md).
 
 ### Verknüpfungen mit anderen Objekten
 
