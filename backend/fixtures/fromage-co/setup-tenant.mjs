@@ -17,6 +17,9 @@
 // gets. Use a private value on any tenant reachable from outside the machine,
 // or pass --demo-password '' to create the users without a password.
 //
+// --contact-suppliers-only: on a tenant already loaded, only links the demo contacts
+// to their suppliers (09b-contact-suppliers.csv), then stops. --demo-password is not needed.
+//
 // --accept-included-model: on a cloud tenant that falls back on the KANAP included
 // model, confirms its provider and processing location as the tenant administrator
 // (the account of --email), in the request that turns the assistant on. Without it,
@@ -69,6 +72,7 @@ const options = {
   skipAgents: false,
   netboxTestCases: false,
   acceptIncludedModel: false,
+  contactSuppliersOnly: false,
 };
 
 /** Stops before any request, with one line per problem. */
@@ -134,6 +138,8 @@ if (serverMode) {
     else if (arg === '--accept-included-model') options.acceptIncludedModel = true;
     // Dev only: adds the deliberately duplicated asset used by the Netbox sync tests.
     else if (arg === '--netbox-test-cases') options.netboxTestCases = true;
+    // Repair of a tenant already loaded: only links the demo contacts to their suppliers.
+    else if (arg === '--contact-suppliers-only') options.contactSuppliersOnly = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
 
@@ -145,7 +151,7 @@ if (serverMode) {
   if (!options.password) {
     missingArgs.push('--password is required (tenant admin password; also used when bootstrapping the tenant).');
   }
-  if (options.demoPassword === null) {
+  if (options.demoPassword === null && !options.contactSuppliersOnly) {
     missingArgs.push(
       "--demo-password is required (password given to every imported demo user). "
       + "Pass --demo-password <value> with a private value, or --demo-password '' to create the users without a password.",
@@ -1894,6 +1900,48 @@ async function turnAssistantOn() {
   }
 }
 
+// ── Contacts ↔ suppliers ─────────────────────────────────────────────────────
+
+const CONTACT_SUPPLIER_ROLES = new Set(['commercial', 'technical', 'support', 'other']);
+
+/**
+ * Gives every demo contact its supplier and contact type (09b-contact-suppliers.csv). The contacts
+ * import has no supplier column, so this goes through PATCH /contacts/:id, which links the contact
+ * to the supplier and adds it to the supplier's contracts and budget lines: it runs once those
+ * exist. Contacts are found by first and last name (their e-mail domain changed between versions
+ * of the data set). A contact that already has a supplier is left as it is: a rerun changes
+ * nothing, and a supplier or type someone chose on a loaded tenant stays.
+ */
+async function linkContactsToSuppliers() {
+  const rows = readCsv('09b-contact-suppliers.csv');
+  const suppliers = await getAll('/suppliers?limit=1000');
+  const contacts = await getAll('/contacts?limit=1000');
+  const key = (first, last) => `${lower(first)}|${lower(last)}`;
+  let linked = 0;
+  const kept = [];
+  for (const row of rows) {
+    const name = `${normalizeValue(row.first_name)} ${normalizeValue(row.last_name)}`;
+    const role = lower(row.role);
+    if (!CONTACT_SUPPLIER_ROLES.has(role)) throw new Error(`09b-contact-suppliers.csv: '${row.role}' is no contact type (${name})`);
+    const supplierId = firstBy(suppliers, (item) => lower(item.name) === lower(row.supplier));
+    if (!supplierId) throw new Error(`09b-contact-suppliers.csv: supplier '${row.supplier}' not found (${name})`);
+    const matches = contacts.filter((item) => key(item.first_name, item.last_name) === key(row.first_name, row.last_name));
+    if (matches.length !== 1) {
+      throw new Error(`09b-contact-suppliers.csv: ${matches.length === 0 ? 'no contact' : `${matches.length} contacts`} named ${name}`);
+    }
+    const contact = await apiGet(`/contacts/${matches[0].id}`);
+    if (contact.supplier_id) {
+      if (contact.supplier_id !== supplierId || contact.supplier_role !== role) kept.push(name);
+      continue;
+    }
+    // The update requires the e-mail: the contact's own, unchanged.
+    await apiPatch(`/contacts/${contact.id}`, { email: contact.email, supplier_id: supplierId, supplier_role: role });
+    linked += 1;
+  }
+  ok(`Contacts linked to their suppliers: ${linked} updated, ${rows.length - linked} already had one`);
+  if (kept.length) info(`Kept the supplier or type already set on: ${kept.join(', ')}`);
+}
+
 // ── Orchestration ────────────────────────────────────────────────────────────
 
 async function runImports() {
@@ -1921,6 +1969,7 @@ async function runImports() {
   step('budget');
   const budgetIndex = await importBudgetItems();
   await runBudget(budgetIndex);
+  await linkContactsToSuppliers();
   step('portfolio');
   await importCsv('16-portfolio-projects.csv', '/portfolio/projects/import');
   await importCsv('17-portfolio-requests.csv', '/portfolio/requests/import');
@@ -1959,6 +2008,14 @@ async function runRelations() {
 }
 
 async function main() {
+  if (options.contactSuppliersOnly) {
+    // An existing tenant only: no trial bootstrap when the login fails.
+    await detectApiPrefix();
+    info(`Trying to authenticate as ${options.email} on ${options.baseUrl}`);
+    if (!(await tryLogin())) throw new Error(`Login failed as ${options.email}: --contact-suppliers-only needs an existing tenant`);
+    await linkContactsToSuppliers();
+    return;
+  }
   if (!serverMode) {
     await detectApiPrefix();
     await ensureTenant();

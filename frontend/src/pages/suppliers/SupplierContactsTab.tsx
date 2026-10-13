@@ -162,7 +162,6 @@ export default function SupplierContactsTab({ supplierId, canManage }: { supplie
                     label={t('suppliers.contacts.selectContact', { role: role.label })}
                     placeholder={t('suppliers.contacts.searchPlaceholder')}
                     value={null}
-                    showEmail={false}
                     onChange={(contactId) => { void attach(role.value, contactId); }}
                   />
                 </Box>

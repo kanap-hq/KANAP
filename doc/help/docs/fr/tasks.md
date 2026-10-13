@@ -370,9 +370,11 @@ Dans l'espace de travail OPEX, utilisez le panneau **Tâches** de l'onglet **Vue
 - « Négocier une remise sur volume »
 
 ### Depuis les Contrats
-Dans l'espace de travail Contrat, utilisez l'onglet **Tâches** pour :
-- « Revoir le contrat avant la date limite de renouvellement »
+Dans la **Vue d'ensemble** d'un contrat, utilisez la section **Tâches** pour :
 - « Demander des conditions mises à jour au fournisseur »
+- « Récupérer l'avenant signé »
+
+Inutile de créer vous-même les tâches de renouvellement : KANAP donne une tâche au responsable du contrat quand une décision de renouvellement est attendue. Voir [Contrats](contracts.md#decisions-de-renouvellement).
 
 ### Depuis les lignes CAPEX
 Dans l'espace de travail CAPEX, les tâches suivent les jalons du projet :

@@ -407,7 +407,7 @@ Notes:
 | `APP_URL` | Multi-tenant (cloud) only. **Not needed on-premise**: `APP_BASE_URL` is used. | *unset* |
 | `EMAIL_OVERRIDE` | Redirect all emails to this address (dev/QA only, **never in production**) | *unset* |
 
-**Client address.** With the documented setup (nginx on the same server, API port bound to `127.0.0.1`), set `RATE_LIMIT_TRUST_PROXY=true`. The proxy must send `X-Forwarded-For`; the nginx example does. Set `false` when nothing sits in front of the API. A wrong value gives every user the same address, so the 5 sign-in attempts per minute are shared by everyone.
+**Client address.** With the documented setup (nginx on the same server, API port bound to `127.0.0.1`), set `RATE_LIMIT_TRUST_PROXY=true`. The proxy must send `X-Forwarded-For`; the nginx example does. Set `false` when nothing sits in front of the API. A wrong value gives every user the same address: the 60 password sign-in requests per minute are then shared by everyone, and 5 failed attempts on one account block that account for everyone for 15 minutes.
 
 ## Optional: capacity and performance
 
@@ -583,11 +583,12 @@ By default, Docker gives its first 15 networks ranges inside `172.16.0.0/12` (`1
 
 ## Background jobs
 
-The API runs 15 scheduled jobs. The times below are the defaults, in UTC (the clock of the API container). Administrators see the jobs under **Admin → Scheduled Tasks** (see [Scheduled Tasks](../scheduled-tasks.md)), where each one can be switched off, rescheduled or run on demand.
+The API runs the scheduled jobs below. The times below are the defaults, in UTC (the clock of the API container). Administrators see the jobs under **Admin → Scheduled Tasks** (see [Scheduled Tasks](../scheduled-tasks.md)), where each one can be switched off, rescheduled or run on demand.
 
 | Job | When | What it does |
 |-----|------|--------------|
-| `check-expirations` | Daily 08:00 | Emails the owners of contracts and OPEX lines 30, 14, 7 and 1 day(s) before a cancellation deadline, an end date or the end of validity. Only users who switched these notifications on receive them, once per day. |
+| `check-expirations` | Daily 08:00 | Emails the owners of contracts and budget lines 30, 14, 7 and 1 day(s) before a contract's next cancellation deadline, the end of a contract that will not renew, or a line's end of validity. Only users who switched these notifications on receive them, once per day. |
+| `contract-renewal-tasks` | Daily 07:30 | Creates a renewal decision task for the owner of each contract whose cancellation deadline, or end for a contract without renewal, enters the decision window. One task per contract and term. See [Contracts](../contracts.md#renewal-decisions). |
 | `send-weekly-reviews` | Hourly | Sends the weekly review digest to users who opted in, at their own day and time zone. |
 | `lifecycle-status-sync` | Hourly, and once at start | Switches master data, contracts, OPEX and CAPEX lines to disabled once their end of validity has passed. |
 | `entra-directory-sync` | Daily 03:00 | Refreshes user attributes and disables accounts removed or deactivated in the directory. Works only when Entra SSO is connected and approved. See [Microsoft Entra SSO](sso-entra.md). |
