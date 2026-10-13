@@ -79,7 +79,7 @@ Die Schaltfläche **FX-Kurse erzwingen** löst manuell eine Hintergrundaktualisi
   - Kurse aktualisieren sich innerhalb weniger Sekunden
   - Die FX-Kurs-Snapshot-Tabelle aktualisiert sich automatisch
 
-**Automatische Aktualisierung**: Das System aktualisiert Kurse auch automatisch alle 30 Tage, wenn sich ein Benutzer anmeldet (für J-1, J, J+1). Die manuelle Synchronisation gibt Ihnen Kontrolle, wenn Sie sofortige Aktualisierungen benötigen.
+**Automatische Aktualisierung**: Das System aktualisiert Kurse auch automatisch alle 30 Tage, wenn sich ein Benutzer anmeldet (für J-1, J, J+1). Braucht eine Liste oder ein Bericht einen Kurs, der im Snapshot seines Jahres fehlt (eine seither verwendete Währung oder ein Jahr ohne Snapshot), holt das System dieses Jahr im Hintergrund nach, und die nächste Anzeige verwendet den neuen Kurs. Die manuelle Synchronisation gibt Ihnen Kontrolle, wenn Sie sofortige Aktualisierungen benötigen.
 
 **Tipp**: Wenn Sie eine neue Währung zu den zugelassenen Währungen hinzufügen, führen Sie sofort eine FX-Synchronisation durch, um die Kurse zu befüllen, bevor Benutzer Budgetzeilen in dieser Währung erstellen.
 
@@ -229,7 +229,7 @@ A: Nein. Die Berichtswährung ist mandantenweit. Alle Unternehmen, Berichte und 
 A: Die Datenquelle (Weltbank oder ExchangeRate-API) veröffentlicht diese Währung möglicherweise nicht. Prüfen Sie, ob der ISO-Code korrekt und allgemein veröffentlicht ist. Erwägen Sie bei Bedarf, zugelassene Währungen auf Codes mit zuverlässiger Datenabdeckung zu beschränken.
 
 **F: Wie oft werden FX-Kurse automatisch aktualisiert?**
-A: Alle 30 Tage, wenn sich ein Benutzer anmeldet, aktualisiert das System die Kurse für J-1, J und J+1. Sie können auch jederzeit eine manuelle Aktualisierung über FX-Kurse erzwingen auslösen.
+A: Alle 30 Tage, wenn sich ein Benutzer anmeldet, aktualisiert das System die Kurse für J-1, J und J+1. Ein Jahr, dem der Kurs einer verwendeten Währung fehlt, wird außerdem abgerufen, sobald eine Liste oder ein Bericht ihn braucht. Sie können auch jederzeit eine manuelle Aktualisierung über FX-Kurse erzwingen auslösen.
 
 **F: Beeinflussen FX-Kursänderungen meine gespeicherten Daten?**
 A: Nein. Wechselkurse beeinflussen nur **Umrechnung und Anzeige**. Jede OPEX- und CAPEX-Zeile speichert ihre eigene Währung und Beträge, die sich bei Kursaktualisierungen nie ändern. Nur die angezeigten umgerechneten Werte in Berichten und Listen ändern sich.
