@@ -1167,7 +1167,7 @@ of a CAPEX line is read through `/budget-lines/:ref`; `/capex-items` does not ex
   - Response: `{ count, yearly_amount, reporting_currency, fx_year, excluded: Array<{ currency, count }>, to_decide_count }`.
   - `yearly_amount`: the sum of `yearly_amount_at_signature` converted to the reporting currency with the latest rate set of `fx_year` (the current year). Contracts in a currency that set does not rate are left out and counted in `excluded`.
   - `to_decide_count`: the contracts with `term_state = to_decide` for the same request, its `term_state` filter left out (the count of the list's quick filter).
-- GET `/contracts/:id` → details including the term fields, `links` (URLs), `attachments` (metadata), and `linked_spend_items`.
+- GET `/contracts/:id` → details including the term fields, `supplier_name`, `company_name`, `owner_name` (the names the page header shows), `links` (URLs), `attachments` (metadata), and `linked_spend_items` (OPEX only, kept for older callers).
 - Term fields, computed as of today (UTC) by `backend/src/contracts/contract-terms.ts` (rule in `doc/architecture.md`, Contract Terms), tacit renewals included:
   - `term_index`: the current term, 0 for the first one; `renewed`: `term_index > 0`.
   - `current_term_end`: end of the term containing today (the first term for a future contract, the last one once ended).
@@ -1176,6 +1176,14 @@ of a CAPEX line is read through `/budget-lines/:ref`; `/capex-items` does not ex
   - `next_due_date`: `next_cancellation_deadline` for a contract that renews at the end of its current term, else its end (term end, or end of validity when earlier); `null` once ended.
   - `term_state`: `to_decide` (deadline within 90 days), `in_progress`, `renewed` (current term's deadline passed, next term not started), `ending` (no renewal at the end of the current term) or `expired`.
 - POST `/contracts` → create; PATCH `/contracts/:id` → update.
+
+### Contract relations (contract page)
+Every statement carries the contract's tenant besides RLS; a contract of another tenant is a `404`. Reads need `contracts:reader`, writes `contracts:member`. A replacement locks the contract row first (the last one wins) and writes one audit row on the link table when the set changes (`recordId` the contract, before and after the sorted ids). An id that is not a row of the tenant, or not a UUID, is a `400` and nothing is written.
+- GET `/contracts/:id/budget-lines` → `{ items: [{ id, nature, item_number, product_name, company_id, company_name }] }`: the linked budget lines of both natures (`contract_spend_items`), by reference number; `company_*` is the line's paying company.
+- POST `/contracts/:id/budget-lines/bulk-replace` with `{ budget_line_ids: string[] }` (lines of either nature) → `{ ok, added, removed }`.
+- GET `/contracts/:id/applications` and POST `/contracts/:id/applications/bulk-replace` with `{ application_ids: string[] }` (`application_contracts`).
+- GET `/contracts/:id/assets` and POST `/contracts/:id/assets/bulk-replace` with `{ asset_ids: string[] }` (`asset_contracts`).
+- GET `/contracts/:id/relation-counts` → `{ budget_lines, applications, assets, contacts, links, attachments, relations }`: the tab badges (`relations` sums the Relations tab's sets).
 
 ### Contracts ↔ OPEX links (many-to-many)
 - Contracts side: GET `/contracts/:id/spend-items` and POST `/contracts/:id/spend-items/bulk-replace` with `{ spend_item_ids: string[] }`
@@ -1187,7 +1195,7 @@ of a CAPEX line is read through `/budget-lines/:ref`; `/capex-items` does not ex
   - Permissions: `budget:reader` for list/download; `budget:member` for create/update/delete
 
 ### Contracts ↔ CAPEX links (many-to-many)
-- Contracts side: GET `/contracts/:id/capex-items` and POST `/contracts/:id/capex-items/bulk-replace` with `{ capex_item_ids: string[] }`
+- Contracts side: GET `/contracts/:id/capex-items` and POST `/contracts/:id/capex-items/bulk-replace` with `{ capex_item_ids: string[] }` (no screen calls them since the contract page uses `/contracts/:id/budget-lines`; kept until the CAPEX aliases go)
 - CAPEX side: GET `/capex-items/:id/contracts` and POST `/capex-items/:id/contracts/bulk-replace` with `{ contract_ids: string[] }`
 
 ### Contract tasks, URLs, attachments
@@ -1202,6 +1210,7 @@ Fire-and-forget email notifications to share a link to a Task, Project, or Reque
 - POST `/tasks/:id/share` — share a task **[Requires: tasks:reader]**
 - POST `/portfolio/projects/:id/share` — share a project **[Requires: portfolio_projects:reader]**
 - POST `/portfolio/requests/:id/share` — share a request **[Requires: portfolio_requests:reader]**
+- POST `/contracts/:id/share` — share a contract **[Requires: contracts:reader]**; the link opens `/ops/contracts/:id/overview`, recipients are people of the contract's tenant who can sign in, plus plain addresses; a contract of another tenant is a `404`
 
 All three endpoints accept the same body (`ShareItemDto`):
 ```json

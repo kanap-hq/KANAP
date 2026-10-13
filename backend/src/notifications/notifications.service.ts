@@ -204,7 +204,7 @@ export class NotificationsService {
       case 'task':
         return `${base}/portfolio/tasks/${id}`;
       case 'contract':
-        return `${base}/ops/contracts/${id}`;
+        return `${base}/ops/contracts/${id}/overview`;
       case 'opex':
         return `${base}/ops/budget/${id}`;
       case 'capex':
@@ -1368,7 +1368,7 @@ export class NotificationsService {
    */
   @NeverRejects()
   async notifyShare(params: {
-    itemType: 'request' | 'project' | 'task' | 'opex' | 'capex' | 'asset' | 'application' | 'location' | 'connection' | 'interface' | 'document';
+    itemType: 'request' | 'project' | 'task' | 'contract' | 'opex' | 'capex' | 'asset' | 'application' | 'location' | 'connection' | 'interface' | 'document';
     itemId: string;
     itemName: string;
     senderName: string;

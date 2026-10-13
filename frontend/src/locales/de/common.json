@@ -648,7 +648,8 @@
     "fromSupplier": "Vom Lieferanten",
     "manuallyAdded": "Manuell hinzugefügt",
     "removeContact": "Kontakt entfernen",
-    "insufficientPermission": "Unzureichende Berechtigung"
+    "insufficientPermission": "Unzureichende Berechtigung",
+    "syncFromSupplier": "Kontakte des Lieferanten übernehmen"
   },
   "export": {
     "button": "Exportieren",

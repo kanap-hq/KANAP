@@ -53,12 +53,12 @@ describe('parseTaskOrigin', () => {
     expect(parseTaskOrigin(new URLSearchParams('contractId=ct-1'))).toEqual({
       kind: 'contract',
       id: 'ct-1',
-      tab: 'tasks',
+      tab: 'overview',
     });
     expect(parseTaskOrigin(new URLSearchParams('contractId=ct-1&originTab=not-a-tab'))).toEqual({
       kind: 'contract',
       id: 'ct-1',
-      tab: 'tasks',
+      tab: 'overview',
     });
   });
 
@@ -88,8 +88,10 @@ describe('sanitizeOriginTab', () => {
     expect(sanitizeOriginTab('project', 'effort')).toBe('effort');
     expect(sanitizeOriginTab('project', 'activity')).toBe('activity');
     expect(sanitizeOriginTab('spend_item', 'relations')).toBe('relations');
-    expect(sanitizeOriginTab('contract', 'details')).toBe('details');
-    expect(sanitizeOriginTab('contract', '')).toBe('tasks');
+    expect(sanitizeOriginTab('contract', 'budget')).toBe('budget');
+    // The former Details and Tasks tabs live in the overview now.
+    expect(sanitizeOriginTab('contract', 'details')).toBe('overview');
+    expect(sanitizeOriginTab('contract', '')).toBe('overview');
     expect(sanitizeOriginTab('spend_item', 'tasks')).toBe('overview');
   });
 });
@@ -167,7 +169,7 @@ describe('buildOriginPath / buildParentPath', () => {
     expect(buildOriginPath({ kind: 'capex_item', id: 'cx-1', tab: 'nope' }, new URLSearchParams()))
       .toBe('/ops/budget/cx-1/overview');
     expect(buildOriginPath({ kind: 'contract', id: 'ct-1' }, new URLSearchParams()))
-      .toBe('/ops/contracts/ct-1/tasks');
+      .toBe('/ops/contracts/ct-1/overview');
   });
 
   it('preserves task list filters on entity origin paths and strips them on the task list', () => {
@@ -209,14 +211,14 @@ describe('buildTaskOriginSearchParams', () => {
     }).entries())).toEqual({ spendItemId: 'si-1', originTab: 'overview' });
 
     expect(Object.fromEntries(buildTaskOriginSearchParams('contract', 'ct-1', {
-      pathname: '/ops/contracts/ct-1/tasks',
+      pathname: '/ops/contracts/ct-1/overview',
       search: '',
-    }).entries())).toEqual({ contractId: 'ct-1', originTab: 'tasks' });
+    }).entries())).toEqual({ contractId: 'ct-1', originTab: 'overview' });
 
     expect(buildTaskOriginSearchParams('contract', 'ct-1', {
       pathname: '/ops/contracts/ct-1/not-a-tab',
       search: '',
-    }).get('originTab')).toBe('tasks');
+    }).get('originTab')).toBe('overview');
   });
 
   it('copies task list filters onto the task workspace URL', () => {

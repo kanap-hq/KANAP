@@ -648,7 +648,8 @@
     "fromSupplier": "Du fournisseur",
     "manuallyAdded": "Ajouté manuellement",
     "removeContact": "Retirer le contact",
-    "insufficientPermission": "Autorisation insuffisante"
+    "insufficientPermission": "Autorisation insuffisante",
+    "syncFromSupplier": "Reprendre les contacts du fournisseur"
   },
   "export": {
     "button": "Exporter",

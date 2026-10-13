@@ -10,6 +10,7 @@ import { Tenant, TenantRequest } from '../common/decorators';
 import { CONTRACT_LOOKUP_ACCESS, CONTRACT_LOOKUP_READERS, assertLookupSearch } from '../common/lookup/lookup-requirements';
 import { CONTRACT_LOOKUP, lookupReference } from '../common/lookup/reference-lookups';
 import { ContractUpsertDto } from './dto/contract.dto';
+import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { StorageService } from '../common/storage/storage.service';
 import { contentDisposition } from '../common/content-disposition';
 import { ContractContactsService } from './contract-contacts.service';
@@ -90,6 +91,13 @@ export class ContractsController {
   get(@Param('id') id: string, @Req() req: any) { return this.svc.get(id, { manager: req?.queryRunner?.manager }); }
 
   @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'reader')
+  @Post(':id/share')
+  share(@Param('id') id: string, @Body() body: ShareItemDto, @Req() req: any) {
+    return this.svc.shareContract(id, body, req.user?.sub ?? '', { manager: req?.queryRunner?.manager });
+  }
+
+  @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'member')
   @Post()
   create(@Body() body: ContractUpsertDto, @Req() req: any) { return this.svc.create(body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager }); }
@@ -123,6 +131,48 @@ export class ContractsController {
   @Post(':id/capex-items/bulk-replace')
   bulkReplaceCapex(@Param('id') id: string, @Body() body: { capex_item_ids: string[] }, @Req() req: any) {
     return this.svc.bulkReplaceLinkedCapexItems(id, body?.capex_item_ids ?? [], { manager: req?.queryRunner?.manager });
+  }
+
+  // Budget lines of both natures, applications and assets, from the contract's side (`contract-relations.ts`)
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'reader')
+  @Get(':id/relation-counts')
+  relationCounts(@Param('id') id: string, @Req() req: any) { return this.svc.relationCounts(id, { manager: req?.queryRunner?.manager }); }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'reader')
+  @Get(':id/budget-lines')
+  listBudgetLines(@Param('id') id: string, @Req() req: any) { return this.svc.listBudgetLines(id, { manager: req?.queryRunner?.manager }); }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'member')
+  @Post(':id/budget-lines/bulk-replace')
+  bulkReplaceBudgetLines(@Param('id') id: string, @Body() body: { budget_line_ids: string[] }, @Req() req: any) {
+    return this.svc.replaceRelations(id, 'budget_lines', body?.budget_line_ids ?? [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'reader')
+  @Get(':id/applications')
+  listApplications(@Param('id') id: string, @Req() req: any) { return this.svc.listApplications(id, { manager: req?.queryRunner?.manager }); }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'member')
+  @Post(':id/applications/bulk-replace')
+  bulkReplaceApplications(@Param('id') id: string, @Body() body: { application_ids: string[] }, @Req() req: any) {
+    return this.svc.replaceRelations(id, 'applications', body?.application_ids ?? [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'reader')
+  @Get(':id/assets')
+  listAssets(@Param('id') id: string, @Req() req: any) { return this.svc.listAssets(id, { manager: req?.queryRunner?.manager }); }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'member')
+  @Post(':id/assets/bulk-replace')
+  bulkReplaceAssets(@Param('id') id: string, @Body() body: { asset_ids: string[] }, @Req() req: any) {
+    return this.svc.replaceRelations(id, 'assets', body?.asset_ids ?? [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
   // Tasks for contract

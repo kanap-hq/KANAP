@@ -117,6 +117,22 @@
         "projectLevel": "Projektebene",
         "unknown": "Unbekannte Phase"
       }
+    },
+    "entityTasksSection": {
+      "title": "Aufgaben",
+      "newTask": "Neue Aufgabe",
+      "empty": "Noch keine Aufgaben.",
+      "noOpenTasks": "Keine offenen Aufgaben.",
+      "showClosed_one": "Abgeschlossene Aufgabe anzeigen ({{count}})",
+      "showClosed_other": "Abgeschlossene Aufgaben anzeigen ({{count}})",
+      "hideClosed": "Abgeschlossene Aufgaben ausblenden",
+      "columns": {
+        "ref": "Ref.",
+        "task": "Aufgabe",
+        "assignee": "Zugewiesen an",
+        "dueDate": "Fälligkeit",
+        "status": "Status"
+      }
     }
   },
   "workspace": {

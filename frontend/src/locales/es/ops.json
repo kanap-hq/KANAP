@@ -430,63 +430,139 @@
     "workspace": {
       "newContract": "Nuevo contrato",
       "contract": "Contrato",
-      "contractOf": "Contrato {{index}} de {{total}}",
-      "prev": "Ant.",
-      "next": "Sig.",
-      "failedToLoad": "No se pudo cargar el contrato."
+      "previous": "Contrato anterior",
+      "next": "Contrato siguiente"
     },
     "tabs": {
       "overview": "Vista general",
-      "details": "Detalles",
-      "relations": "Relaciones",
-      "tasks": "Tareas"
+      "budget": "Presupuesto",
+      "relations": "Relaciones"
     },
-    "overview": {
-      "contractName": "Nombre del contrato",
+    "sections": {
+      "parties": "Partes",
+      "duration": "Duración",
+      "amount": "Importe"
+    },
+    "fields": {
+      "name": "Nombre del contrato",
       "supplier": "Proveedor",
-      "contractingCompany": "Empresa contratante",
+      "company": "Empresa contratante",
       "owner": "Responsable",
-      "nameSupplierCompanyRequired": "El nombre, el proveedor y la empresa son obligatorios",
-      "failedToLoad": "No se pudo cargar el contrato",
-      "failedToSave": "No se pudo guardar"
-    },
-    "details": {
-      "startDate": "Fecha de inicio",
+      "status": "Estado",
+      "startDate": "Inicio",
       "durationMonths": "Duración (meses)",
       "noticeMonths": "Preaviso (meses)",
+      "autoRenewal": "Renovación tácita",
+      "yes": "Sí",
+      "no": "No",
       "yearlyAmount": "Importe anual",
       "currency": "Moneda",
-      "billingFrequency": "Frecuencia de facturación",
-      "autoRenewal": "Renovación automática",
-      "endDate": "Fecha de fin",
-      "cancellationDeadline": "Plazo de cancelación",
-      "currentTermEnd": "Fin del periodo en curso",
-      "nextCancellationDeadline": "Próximo plazo de cancelación",
-      "failedToLoad": "No se pudieron cargar los detalles",
-      "failedToSave": "No se pudieron guardar los detalles"
+      "billingFrequency": "Facturación",
+      "lifecycle": "Ciclo de vida",
+      "endOfValidity": "Fin de validez",
+      "endOfValidityHint": "Déjelo en blanco para mantener el contrato activo.",
+      "created": "Creado",
+      "updated": "Actualizado",
+      "notes": "Notas"
+    },
+    "billing": {
+      "annual": "Anual",
+      "quarterly": "Trimestral",
+      "monthly": "Mensual",
+      "other": "Otra"
+    },
+    "metadata": {
+      "supplierMissing": "Falta el proveedor",
+      "companyMissing": "Falta la empresa",
+      "ownerMissing": "Falta el responsable",
+      "editInProperties": "Editar en el panel de propiedades"
+    },
+    "placeholders": {
+      "name": "p. ej., Contrato de mantenimiento",
+      "durationMonths": "p. ej., 12",
+      "noticeMonths": "p. ej., 3",
+      "yearlyAmount": "p. ej., 12000",
+      "notes": "p. ej., condiciones de renovación, contacto comercial"
+    },
+    "messages": {
+      "loadFailed": "No se pudo cargar el contrato.",
+      "saveFailed": "No se pudo guardar el cambio.",
+      "createFailed": "No se pudo crear el contrato.",
+      "nameRequired": "Introduzca un nombre.",
+      "supplierRequired": "Elija un proveedor.",
+      "companyRequired": "Elija una empresa.",
+      "startRequired": "Introduzca la fecha de inicio.",
+      "durationRequired": "Introduzca una duración de al menos un mes.",
+      "currencyRequired": "Elija una moneda.",
+      "invalidMonths": "Introduzca un número entero de meses.",
+      "invalidAmount": "Introduzca un importe con dos decimales como máximo."
+    },
+    "deadlines": {
+      "title": "Vencimientos",
+      "noStart": "Introduzca una fecha de inicio para ver los periodos.",
+      "noDuration": "Introduzca una duración para ver los periodos.",
+      "cancelUntil": "Rescisión posible hasta el {{date}}",
+      "today": "hoy",
+      "inDays_one": "dentro de {{count}} día",
+      "inDays_other": "dentro de {{count}} días",
+      "noticePassed": "Preaviso vencido, renovado hasta el {{date}}",
+      "nextDeadline": "próxima fecha límite el {{date}}",
+      "endsOn": "Termina el {{date}}",
+      "withoutRenewal": "sin renovación",
+      "expiredOn": "Vencido el {{date}}",
+      "termCurrent": "Periodo {{number}} en curso",
+      "termLast": "Periodo {{number}}, el último",
+      "termUpcoming": "Periodo {{number}} aún no iniciado",
+      "fromTo": "del {{start}} al {{end}}",
+      "renewedTimes_one": "Renovado una vez desde el {{date}}",
+      "renewedTimes_other": "Renovado {{count}} veces desde el {{date}}",
+      "notice_one": "Preaviso de {{count}} mes",
+      "notice_other": "Preaviso de {{count}} meses",
+      "noNotice": "Sin preaviso"
+    },
+    "timeline": {
+      "label": "Cronología de los periodos del contrato",
+      "term": "Periodo {{number}}",
+      "termCurrent": "Periodo {{number}}, en curso",
+      "termProjected": "Periodo {{number}}, si se renueva",
+      "termNext": "Periodo {{number}}, renovado",
+      "termUpcoming": "Periodo {{number}}, próximo",
+      "today": "Hoy",
+      "deadline": "Fecha límite {{date}}",
+      "window": "Ventana de decisión"
+    },
+    "budget": {
+      "title": "Líneas presupuestarias vinculadas",
+      "empty": "Ninguna línea presupuestaria vinculada.",
+      "pickerLabel": "Vincular o quitar líneas presupuestarias",
+      "columns": {
+        "ref": "Ref.",
+        "line": "Línea presupuestaria",
+        "type": "Tipo",
+        "company": "Empresa"
+      }
     },
     "relations": {
-      "linkedOpex": "OPEX vinculados",
-      "opexItems": "Líneas OPEX",
-      "selectOpexItems": "Seleccione líneas OPEX",
-      "linkedCapex": "CAPEX vinculados",
-      "capexItems": "Líneas CAPEX",
-      "selectCapexItems": "Seleccione líneas CAPEX",
+      "applications": "Aplicaciones",
+      "assets": "Activos",
+      "selectApplications": "Seleccionar aplicaciones",
+      "selectAssets": "Seleccionar activos",
       "relevantWebsites": "Sitios web relevantes",
       "addUrl": "Agregar URL",
+      "linkName": "Nombre",
+      "linkUrl": "URL",
+      "linkNamePlaceholder": "p. ej., portal del proveedor",
+      "noWebsites": "No se han agregado sitios web",
+      "deleteWebsite": "Eliminar enlace",
+      "addLinkTitle": "Agregar enlace",
+      "editLinkTitle": "Editar enlace",
       "attachments": "Adjuntos",
-      "dragDrop": "Arrastre y suelte archivos aquí, o use el botón para seleccionar",
-      "noUploadPermission": "No tiene permiso para subir adjuntos.",
-      "selectFiles": "Seleccionar archivos",
-      "uploadingFiles": "Subiendo {{count}} archivo(s)…",
-      "failedToLoad": "No se pudieron cargar las relaciones",
-      "failedToSave": "No se pudieron guardar las relaciones"
-    },
-    "linkManager": {
-      "linkedOpexTitle": "OPEX vinculados — {{name}}",
-      "searchPlaceholder": "Buscar OPEX por nombre de producto",
-      "results": "Resultados",
-      "selected": "Seleccionados"
+      "addFiles": "Agregar archivos",
+      "noAttachments": "Sin adjuntos",
+      "noAttachmentsDrop": "Sin adjuntos. Suelte archivos aquí para adjuntarlos.",
+      "uploadingFiles_one": "Subiendo {{count}} archivo…",
+      "uploadingFiles_other": "Subiendo {{count}} archivos…",
+      "deleteAttachment": "Eliminar adjunto"
     }
   },
   "operations": {

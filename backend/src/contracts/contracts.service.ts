@@ -16,6 +16,7 @@ import * as fs from 'fs';
 import { deriveStatusFromDisabledAt, resolveLifecycleState } from '../common/status';
 import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/status-filter';
 import { ContractUpsertDto } from './dto/contract.dto';
+import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { TasksUnifiedService } from '../tasks/tasks-unified.service';
 import { StorageService } from '../common/storage/storage.service';
 import { randomUUID } from 'crypto';
@@ -36,6 +37,14 @@ import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attac
 import { contractTermFields, contractTermsSql, sqlDateLiteral, type ContractTermFields } from './contract-terms';
 import { utcDateYmd } from '../notifications/expiry-reminder-schedule';
 import { FxRateService } from '../currency/fx-rate.service';
+import {
+  contractRelationCounts,
+  listContractApplications,
+  listContractAssets,
+  listContractBudgetLines,
+  replaceContractRelations,
+  type ContractRelationSet,
+} from './contract-relations';
 
 /**
  * The session tenant as a find condition: `app_current_tenant()`, the tenant RLS checks too,
@@ -379,7 +388,28 @@ export class ContractsService {
          WHERE tenant_id = $1 AND related_object_type = 'contract' AND related_object_id = $2
          ORDER BY created_at DESC LIMIT 1`, [tenantId, id]);
     const latest_task = latestTaskRows?.[0] ?? null;
-    return { ...found, ...terms, linked_spend_items: spendItems, links, attachments, latest_task };
+    // The names the page's header shows, read with the contract (no request per picker).
+    const [names]: Array<{ supplier_name: string | null; company_name: string | null; owner_name: string | null }> = await mg.query(
+      `SELECT sup.name AS supplier_name, comp.name AS company_name,
+              NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '') AS owner_name
+         FROM contracts c
+         LEFT JOIN suppliers sup ON sup.tenant_id = c.tenant_id AND sup.id = c.supplier_id
+         LEFT JOIN companies comp ON comp.tenant_id = c.tenant_id AND comp.id = c.company_id
+         LEFT JOIN users u ON u.tenant_id = c.tenant_id AND u.id = c.owner_user_id
+        WHERE c.tenant_id = $1 AND c.id = $2`,
+      [tenantId, id],
+    );
+    return {
+      ...found,
+      ...terms,
+      supplier_name: names?.supplier_name ?? null,
+      company_name: names?.company_name ?? null,
+      owner_name: names?.owner_name ?? null,
+      linked_spend_items: spendItems,
+      links,
+      attachments,
+      latest_task,
+    };
   }
 
   private validateInput(body: {
@@ -1054,5 +1084,81 @@ export class ContractsService {
     if (toDelete.length > 0) await repo.delete({ tenant_id: tenantId, id: In(toDelete.map((e) => e.id)) });
     if (toInsert.length > 0) await repo.save(toInsert);
     return { ok: true, added: toInsert.length, removed: toDelete.length };
+  }
+
+  // Relations from the contract's side (`contract-relations.ts`): budget lines of both natures,
+  // applications, assets, and the counts of the page's tabs.
+  async listBudgetLines(contractId: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    return listContractBudgetLines(mg, await this.findContract(contractId, mg));
+  }
+
+  async listApplications(contractId: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    return listContractApplications(mg, await this.findContract(contractId, mg));
+  }
+
+  async listAssets(contractId: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    return listContractAssets(mg, await this.findContract(contractId, mg));
+  }
+
+  async replaceRelations(contractId: string, set: ContractRelationSet, ids: string[], userId?: string | null, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const contract = await this.findContract(contractId, mg);
+    return replaceContractRelations({ manager: mg, audit: this.audit }, set, contract, ids, userId ?? null);
+  }
+
+  async relationCounts(contractId: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    return contractRelationCounts(mg, await this.findContract(contractId, mg));
+  }
+
+  /**
+   * Send a link to the contract (`notifications.notifyShare`), like the other objects' "Send link":
+   * to people of the tenant who can sign in, and to plain email addresses. A contract of another
+   * tenant is not found.
+   */
+  async shareContract(contractId: string, dto: ShareItemDto, userId: string, opts?: { manager?: EntityManager }) {
+    const userIds = dto?.recipient_user_ids ?? [];
+    const rawEmails = dto?.recipient_emails ?? [];
+    if (userIds.length === 0 && rawEmails.length === 0) {
+      throw new BadRequestException('At least one recipient is required');
+    }
+    const mg = opts?.manager ?? this.repo.manager;
+    const contract = await this.findContract(contractId, mg);
+    const tenantId = contract.tenant_id;
+    const senderRows: Array<{ first_name: string | null; last_name: string | null }> = await mg.query(
+      'SELECT first_name, last_name FROM users WHERE tenant_id = $1 AND id = $2',
+      [tenantId, userId],
+    );
+    const senderName = senderRows.length > 0
+      ? `${senderRows[0].first_name || ''} ${senderRows[0].last_name || ''}`.trim() || 'Someone'
+      : 'Someone';
+    const validIds = userIds.filter((id) => isUuid(String(id)));
+    const recipients = validIds.length > 0
+      ? await mg.query(
+          `SELECT u.id AS "userId", u.email, u.first_name AS "firstName", u.last_name AS "lastName", u.locale
+             FROM users u
+             JOIN roles ro ON ro.id = u.role_id
+            WHERE u.tenant_id = $1 AND u.id = ANY($2::uuid[]) AND u.status = 'enabled'
+              AND (ro.is_system = false OR LOWER(ro.role_name) = 'administrator')`,
+          [tenantId, validIds],
+        )
+      : [];
+    if (recipients.length > 0 || rawEmails.length > 0) {
+      this.notifications.notifyShare({
+        itemType: 'contract',
+        itemId: contract.id,
+        itemName: contract.name,
+        senderName,
+        message: dto.message,
+        recipients,
+        rawEmails,
+        tenantId,
+        // No request manager: the send outlives the request (a contract link needs no lookup).
+      });
+    }
+    return { ok: true };
   }
 }

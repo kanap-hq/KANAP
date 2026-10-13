@@ -117,6 +117,22 @@
         "projectLevel": "Nivel de proyecto",
         "unknown": "Fase desconocida"
       }
+    },
+    "entityTasksSection": {
+      "title": "Tareas",
+      "newTask": "Nueva tarea",
+      "empty": "Todavía no hay tareas.",
+      "noOpenTasks": "No hay tareas abiertas.",
+      "showClosed_one": "Mostrar la tarea terminada ({{count}})",
+      "showClosed_other": "Mostrar las tareas terminadas ({{count}})",
+      "hideClosed": "Ocultar las tareas terminadas",
+      "columns": {
+        "ref": "Ref.",
+        "task": "Tarea",
+        "assignee": "Asignado a",
+        "dueDate": "Vencimiento",
+        "status": "Estado"
+      }
     }
   },
   "workspace": {
