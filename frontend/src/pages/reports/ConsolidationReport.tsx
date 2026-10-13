@@ -138,7 +138,7 @@ export default function ConsolidationReport() {
         .filter((d) => d.value != null);
       const total = chartData.reduce((acc, d) => acc + (Number(d.value) || 0), 0);
       const base = {
-        title: { text: measureText.chartTitle(t('reports.consolidation.chartTitleSingle', { type: scopeLabel, year })) },
+        title: { text: measureText.chartTitle(t('reports.consolidation.chartTitleSingle', { type: scopeLabel, context: scope, year })) },
         subtitle: { text: metricsCaption || t('reports.consolidation.shareSubtitle') },
         footnote: { text: t('reports.consolidation.totalLabel', { metric: metricsCaption, value: formatNumber(measureText.fte && chartData.length === 0 ? null : total) }) },
         data: chartData,
@@ -232,7 +232,7 @@ export default function ConsolidationReport() {
       } : {}),
     }));
     return {
-      title: { text: measureText.chartTitle(t('reports.consolidation.chartTitleRange', { type: scopeLabel, start: years[0], end: years[years.length - 1] })) },
+      title: { text: measureText.chartTitle(t('reports.consolidation.chartTitleRange', { type: scopeLabel, context: scope, start: years[0], end: years[years.length - 1] })) },
       subtitle: { text: metricsCaption || t('reports.consolidation.annualSubtitle') },
       data: chartData,
       series,
@@ -248,7 +248,7 @@ export default function ConsolidationReport() {
     <ReportLayout
       busy={busy}
       title={t("reports.consolidation.title")}
-      subtitle={t('reports.consolidation.subtitle', { type: scopeLabel })}
+      subtitle={t('reports.consolidation.subtitle', { type: scopeLabel, context: scope })}
       filters={(
         <>
           <ItemScopeTabs allowAll value={scope} onChange={setScope} />

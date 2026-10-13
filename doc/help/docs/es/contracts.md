@@ -1,197 +1,303 @@
 # Contratos
 
-Los Contratos documentan sus acuerdos con proveedores -- licencias de software, contratos de mantenimiento, suscripciones SaaS y acuerdos de servicio. Haga seguimiento de fechas clave, costes, condiciones de renovación y vincule contratos a sus líneas OPEX y CAPEX para una visibilidad completa de costes.
+Los contratos documentan sus acuerdos con proveedores: licencias de software, contratos de mantenimiento, suscripciones SaaS y contratos de servicio. KANAP fecha cada periodo de un contrato, le indica cuándo hay una decisión de renovación pendiente, compara lo que el contrato compromete con las líneas presupuestarias vinculadas y enumera las cláusulas que sus aplicaciones hacen necesarias.
 
 ## Primeros pasos
 
-Navegue a **Gestión presupuestaria > Contratos** para ver su registro de contratos. Haga clic en **Nuevo** para crear su primera entrada.
+Vaya a **Gestión presupuestaria > Contratos** para ver la lista. Haga clic en **Nuevo** para crear un contrato (`contracts:member`).
+
+La página se abre con un único formulario. Rellénelo y haga clic en **Crear**.
 
 **Campos obligatorios**:
 
-- **Nombre**: Un nombre reconocible del contrato
-- **Proveedor**: El proveedor que proporciona el servicio
-- **Empresa**: Qué empresa firmó el contrato
+- **Nombre del contrato**: un nombre fácil de reconocer
+- **Proveedor** y **Empresa contratante**: quién presta el servicio y cuál de sus empresas firmó
+- **Inicio**: el primer día del contrato
+- **Duración (meses)**: la duración de un periodo, al menos un mes
+- **Moneda**: una de las monedas de su espacio de trabajo, la predeterminada para empezar
 
-**Muy recomendados** (establézcalos en la pestaña Detalles justo después de la creación):
+**Campos opcionales**:
 
-- **Fecha de inicio**: Cuándo comienza el contrato
-- **Duración**: Duración del contrato en meses
-- **Importe anual**: El valor anual del contrato
-- **Moneda**: Moneda del contrato
-- **Auto-renovación**: Si el contrato se renueva automáticamente
-- **Período de preaviso**: Cuántos meses de preaviso se requieren para cancelar
+- **Responsable**: la persona que gestiona el contrato. El responsable recibe las tareas de decisión de renovación, así que indíquelo
+- **Renovación tácita**: **Sí** por defecto
+- **Preaviso (meses)**: vacío significa sin preaviso
+- **Importe anual**: el valor anual en la firma, con dos decimales como máximo. Vacío significa 0
+- **Facturación**: **Anual** por defecto, o **Trimestral**, **Mensual**, **Otra**
 
-**Consejo**: El sistema calcula automáticamente la fecha de fin y el plazo límite de cancelación basándose en su fecha de inicio, duración y período de preaviso.
+Una vez creado el contrato, cada cambio se guarda solo. No hay botón **Guardar**.
+
+---
+
+## Periodos y vencimientos
+
+KANAP calcula las fechas de un contrato a partir de cuatro campos: **Inicio**, **Duración (meses)**, **Preaviso (meses)** y **Renovación tácita**, más el **Fin de validez** cuando se indica. No se almacena nada: cambie un campo y todas las fechas se ajustan.
+
+- **Periodos**: un contrato transcurre en periodos de la duración elegida, contados desde la fecha de inicio. Un contrato que empieza el 1 de julio de 2024 por 12 meses va del 1 de julio al 30 de junio cada año.
+- **Fecha límite de rescisión**: el fin de un periodo menos el preaviso. Con 6 meses de preaviso, el contrato anterior puede rescindirse hasta el 30 de diciembre de cada año.
+- **Renovación tácita**: con **Sí**, los periodos se suceden hasta que un fin de validez los detiene. Con **No**, el contrato se detiene tras su primer periodo. Si tiene un fin de validez, transcurre periodo tras periodo hasta ese día, de modo que un contrato cuya renovación se desactivó conserva los periodos que ya ha cumplido.
+- **Fin de validez**: el día en que el contrato se detiene. Ningún periodo empieza después. Si cae dentro de un periodo, el contrato se detiene ese día.
+- **Meses a fin de mes**: cuando el mismo día no existe en el mes de destino, se toma el último día de ese mes. El 31 de marzo menos un mes es el 28 de febrero (el 29 en un año bisiesto).
+
+Todas las fechas son días naturales en UTC.
 
 ---
 
 ## Trabajar con la lista
 
-La cuadrícula de Contratos proporciona una visión general de todos sus acuerdos con proveedores. Cada fila es un enlace clicable que abre el espacio de trabajo del contrato, y su contexto de búsqueda y filtro se preserva al navegar de vuelta.
+Cada fila abre el contrato. Su búsqueda, sus filtros y su orden se conservan al volver, y **Anterior** / **Siguiente** en la ficha recorren el mismo conjunto.
 
-**Columnas predeterminadas**:
+**Columnas por defecto**:
 
-- **Contrato**: Nombre del contrato (haga clic para abrir el espacio de trabajo)
-- **Proveedor**: El proveedor
-- **Empresa**: La entidad contratante
-- **Inicio**: Fecha de inicio del contrato
-- **Duración (m)**: Duración en meses
-- **Auto-renovación**: Si el contrato se auto-renueva (sí/no)
-- **Preaviso (m)**: Período de preaviso en meses
-- **Fin**: Fecha de fin calculada
-- **Cancelar antes de**: Plazo límite de cancelación (fecha de fin menos período de preaviso)
-- **Importe anual**: Valor anual del contrato (formateado con separadores de espacio)
-- **Moneda**: Código de moneda
-- **Facturación**: Frecuencia de facturación (Mensual, Trimestral, Anual, Otra)
-- **OPEX vinculados**: Número de líneas OPEX vinculadas (haga clic para abrir el espacio de trabajo)
+- **Contrato**, **Proveedor**, **Empresa**
+- **Próximo vencimiento**: la próxima fecha límite de rescisión de un contrato con renovación tácita, o el fin de cualquier otro contrato. La fecha va seguida de «dentro de n días». Un contrato vencido muestra en gris el día en que terminó
+- **Situación**: vea más abajo
+- **Importe anual**: el importe en la firma, seguido de su moneda
+- **Comprometido**, **Presupuesto** y **Diferencia** del año presupuestario elegido. Vea [Columnas de presupuesto](#columnas-de-presupuesto)
+- **Conformidad**: el resumen de la pestaña [Conformidad](#conformidad): «2 ausentes · 1 por verificar» en naranja, **Completo** o **Sin expectativas**
+- **Líneas vinculadas**: el número de líneas presupuestarias vinculadas, OPEX y CAPEX juntas
 - **Estado**: **Activado** o **Desactivado**, según el fin de validez
 
-**Columnas adicionales** (mediante el selector de columnas):
+**Otras columnas** (selector de columnas): **Mon.**, **Cobertura del presupuesto**, **Inicio**, **Duración (m)**, **Renovación auto.**, **Preaviso (m)**, **Fin del periodo** (fin del periodo en curso), **Cancelar antes de** (próxima fecha límite de rescisión), **Facturación** y **Tarea** (la última tarea del contrato).
 
-- **Tarea**: Última tarea de este contrato (estado y vista previa de la descripción)
+**Orden por defecto**: por **Próximo vencimiento**, el más cercano primero. Los contratos vencidos quedan abajo en ambos sentidos.
 
-**Ordenación predeterminada**: Por plazo límite de cancelación ascendente, para que los contratos que requieren acción pronto aparezcan primero.
+### Situación
 
-**Filtrado**:
+Cada contrato tiene una situación, la primera que se aplica:
 
-- Búsqueda rápida: Busca en nombre del contrato, proveedor y empresa
-- Filtros de columna: Disponibles en cada encabezado de columna. El filtro **Estado** ofrece **Activado** y **Desactivado**. Si hace clic en **Limpiar** dentro del filtro, o desmarca ambos valores, la lista no muestra nada, sea cual sea la opción de **Mostrar**
-- **Alcance de estado**: el selector **Mostrar: Todos / Activos / Desactivados** sobre la lista. La lista muestra por defecto los contratos activados. Elija **Todos** o **Desactivados** para encontrar los contratos cuyo fin de validez ya pasó
+- **Por decidir** (naranja): hay una decisión pendiente. En un contrato con renovación tácita, su próxima fecha límite de rescisión cae dentro del plazo de decisión y su renovación no se ha confirmado para ese periodo. En un contrato sin renovación, su fin cae dentro del plazo y nadie ha confirmado que deba terminar. Vea [Decisiones de renovación](#decisiones-de-renovacion)
+- **Termina sin renovación**: el contrato está en su último periodo y se detendrá al final
+- **Renovado el** una fecha: la fecha límite de rescisión del periodo en curso ya pasó, así que el contrato continúa en el periodo siguiente, que empieza en esa fecha
+- **En curso**: el contrato sigue y todavía no hay nada pendiente
+- **Vencido**: el contrato ha terminado
 
-**Acciones**:
+### Filtros rápidos
 
-- **Nuevo**: Crear un nuevo contrato (requiere `contracts:manager`)
-- **Importar CSV**: Importación masiva de contratos (requiere `contracts:admin`)
-- **Exportar CSV**: Exportar a CSV (requiere `contracts:admin`)
+Los enlaces sobre la tabla filtran la lista con un clic. Haga clic de nuevo para quitar el filtro.
 
----
+- **Por decidir en n días (n)**: los contratos en situación **Por decidir**. El número de días es el plazo de decisión de su espacio de trabajo
+- **Sin línea presupuestaria (n)** e **Infrapresupuestados (n)**: los contratos cuya cobertura presupuestaria del año elegido está en esa situación
 
-## El espacio de trabajo de Contratos
+Un punto naranja señala un enlace cuyo contador no es cero.
 
-Haga clic en cualquier fila para abrir el espacio de trabajo. El encabezado muestra el nombre del contrato, su posición en la lista (p. ej., "Contrato 3 de 42") y controles de navegación:
+### Columnas de presupuesto
 
-- **Anterior / Siguiente**: Moverse entre contratos sin volver a la lista
-- **Restablecer**: Descartar cambios no guardados en la pestaña actual
-- **Guardar**: Persistir sus ediciones
-- **Cerrar** (icono X): Volver a la lista, preservando su contexto de búsqueda y filtro
+Con acceso de lectura a las líneas presupuestarias (`budget:reader`), la derecha de la barra de herramientas muestra **Presupuesto** con un año y una columna de presupuesto (los nombres de columna de su espacio de trabajo). La elección es solo suya. Se comparte con la pestaña **Presupuesto** de cada contrato y se conserva para su próxima visita. Empieza en el año próximo y la columna predeterminada de su espacio de trabajo.
 
-El espacio de trabajo tiene cuatro pestañas verticales: **Visión general**, **Detalles**, **Relaciones** y **Tareas**.
+- **Comprometido** (año): lo que el contrato compromete para ese año, en su moneda de reporte. Vea [Compromiso](#compromiso-y-cobertura)
+- **Presupuesto** (año): la suma de los importes de las líneas vinculadas en ese año y esa columna
+- **Diferencia**: presupuesto menos compromiso. Un déficit se muestra en naranja. **Sin línea** significa que no hay nada presupuestado en una línea vinculada, y **Contrato vencido** que queda presupuesto en un contrato terminado
+- **Cobertura del presupuesto** (oculta por defecto): una de las seis situaciones de cobertura
 
-### Visión general
+Un contrato en una moneda sin tipo de cambio para el año muestra «Sin tipo de cambio USD» en lugar de un importe. Sin el permiso de presupuesto, estas columnas, el selector y los dos filtros rápidos de presupuesto están ocultos.
 
-La pestaña Visión general captura la identidad y el estado del ciclo de vida del contrato.
+### Fila de total
 
-**Qué puede editar**:
+La fila fijada abajo dice **Total (n contratos)**. Suma los importes anuales de los contratos que muestra la lista, convertidos a su moneda de reporte con los últimos tipos del año, y las tres columnas de presupuesto. Una moneda sin tipo de cambio queda fuera de la suma y se nombra, por ejemplo «excluye 2 contratos en GBP sin tipo de cambio».
 
-- **Nombre del contrato**: El nombre visible usado en listas e informes
-- **Proveedor**: Vínculo a un proveedor de los datos maestros
-- **Empresa contratante**: Qué empresa es parte de este contrato
-- **Responsable**: La persona encargada de gestionar este contrato
-- **Notas**: Notas de texto libre
-- **Interruptor de estado**: su etiqueta muestra el estado actual (**Activado** o **Desactivado**). Si cambia el contrato a **Desactivado** sin fecha, el fin de validez se fija en hoy
-- **Fin de validez**: la fecha en que el contrato termina. Escriba una fecha en formato dd/mm/aaaa o use el botón de calendario. Déjela en blanco para que el contrato permanezca activo indefinidamente
+### Búsqueda, filtros y alcance
 
-**Cómo funciona**:
+- **Búsqueda rápida**: nombre del contrato, proveedor y empresa
+- **Filtros de columna**: en cada encabezado de columna. **Situación**, **Conformidad** y **Cobertura del presupuesto** ofrecen sus valores como casillas. El filtro **Estado** ofrece **Activado** y **Desactivado**. Si hace clic en **Limpiar** dentro del filtro, o desmarca ambos valores, la lista no muestra nada, sea cual sea la opción de **Mostrar**
+- **Mostrar: Todos / Activos / Desactivados**: el selector sobre la lista. La lista muestra por defecto los contratos activados. Elija **Todos** o **Desactivados** para encontrar los contratos cuyo fin de validez ya pasó
 
-- Al crear un nuevo contrato, solo está disponible la pestaña Visión general. Una vez que guarde, las pestañas restantes se hacen accesibles y se le lleva directamente a la pestaña Detalles para completar los términos financieros.
-- Nombre, Proveedor y Empresa son obligatorios para crear un contrato.
+### Acciones
 
----
-
-### Detalles
-
-La pestaña Detalles captura fechas, condiciones e información financiera.
-
-**Qué puede editar**:
-
-- **Fecha de inicio**: Cuándo comienza el contrato (dd/mm/aaaa)
-- **Duración (meses)**: Duración del contrato
-- **Preaviso (meses)**: Preaviso de cancelación requerido
-- **Importe anual**: El valor anual del contrato a la firma
-- **Moneda**: Código de moneda de tres letras (p. ej., EUR, USD)
-- **Frecuencia de facturación**: Mensual, Trimestral, Anual u Otra
-- **Auto-renovación**: Si el contrato se renueva automáticamente
-
-**Campos calculados** (solo lectura):
-
-- **Fecha de fin**: Fecha de inicio más duración
-- **Plazo límite de cancelación**: Fecha de fin menos período de preaviso
+- **Nuevo**: crear un contrato (`contracts:member`)
+- **Importar CSV** y **Exportar CSV**: vea [Importación y exportación CSV](#importacion-y-exportacion-csv) (`contracts:admin`)
+- **Exportar el registro**: el registro de conformidad de los contratos que muestra la lista (`contracts:admin`). Vea [Conformidad](#conformidad)
+- **Ajustes**: el plazo de decisión del espacio de trabajo (`contracts:admin`). Vea [Plazo de decisión](#plazo-de-decision)
 
 ---
+
+## La ficha del contrato
+
+### Encabezado y propiedades
+
+El encabezado muestra el nombre del contrato (haga clic para cambiarlo), **Anterior** / **Siguiente** con la posición en la lista, y una barra con **Proveedor**, **Empresa contratante**, **Responsable** y **Estado**. El responsable y el estado se cambian ahí mismo. El proveedor y la empresa abren el panel **Propiedades**.
+
+El panel **Propiedades**, a la derecha, contiene todos los campos del contrato: las partes, **Inicio**, **Duración (meses)**, **Preaviso (meses)**, **Renovación tácita**, **Importe anual**, **Moneda**, **Facturación**, luego **Ciclo de vida** (**Estado** y **Fin de validez**), **Creado** y **Actualizado**. Ábralo o ciérrelo con su botón; KANAP recuerda su elección.
+
+Cada cambio se guarda solo: listas y fechas al instante, valores escritos y notas tras una breve pausa, el nombre al salir del campo. «Guardando...» y después «Guardado» aparece en el encabezado. Dos personas que editan el mismo contrato no reciben aviso: prevalece el último cambio.
+
+**Ciclo de vida**:
+
+- Pasar el estado a **Desactivado** sin fecha fija el fin de validez en hoy. Volver a **Activado** quita el fin de validez
+- **Fin de validez**: escriba una fecha (dd/mm/aaaa) o use el calendario. Déjelo en blanco para mantener el contrato activo
+- **Renovación tácita** tiene sus propias reglas cuando el contrato ya se ha renovado o espera una decisión. Vea [Desactivar o reactivar la renovación tácita](#desactivar-o-reactivar-la-renovacion-tacita)
+
+Necesita `contracts:member` para editar. Los lectores ven la misma página con todos los campos bloqueados.
+
+**Enviar enlace**, en el encabezado, envía por correo un enlace al contrato a colegas de su espacio de trabajo.
+
+La ficha tiene cuatro pestañas: **Vista general**, **Presupuesto**, **Conformidad** y **Relaciones**. Las direcciones de las antiguas pestañas **Detalles** y **Tareas** abren la vista general.
+
+### Vista general
+
+**Vencimientos** resume la situación del contrato:
+
+- Una frase sobre lo que viene: «Rescisión posible hasta el 30 dic. 2026 · dentro de 78 días», «Preaviso vencido, renovado hasta el 30 jun. 2027», «Termina el 31 mar. 2027 sin renovación» o «Vencido el 31 dic. 2025». Cuando hay una decisión pendiente sobre el fin de un contrato sin renovación, la frase añade «decisión pendiente» con un punto naranja
+- Una línea de tiempo de los periodos: periodos pasados, el periodo en curso, hoy, la próxima fecha límite de rescisión y el plazo de decisión anterior a ella. El periodo siguiente aparece discontinuo mientras todavía puede rescindirse, y continuo una vez vencido el preaviso
+- Una línea de datos: el periodo en curso con sus fechas, cuántas veces se ha renovado el contrato y desde cuándo, y el preaviso
+
+Una vez confirmada una renovación, la frase dice «Renovación confirmada · próximo periodo del 1 jul. 2027 al 30 jun. 2028» y la línea de tiempo deja de mostrar esa fecha límite.
+
+La ficha recalcula estas fechas mientras edita el inicio, la duración, el preaviso o la renovación.
+
+**Decisión de renovación**: cuando hay una decisión pendiente, aparece un recuadro con borde naranja bajo los vencimientos. Vea [Decisiones de renovación](#decisiones-de-renovacion).
+
+**Tareas**: las tareas abiertas del contrato, con su referencia, asignado, fecha de vencimiento y estado. **Mostrar las tareas terminadas (n)** añade las terminadas. **Nueva tarea** crea una tarea vinculada al contrato. Abra una tarea para cambiarla o eliminarla.
+
+**Notas**: texto libre con formato Markdown. La barra de herramientas aparece al hacer clic en el editor.
+
+### Presupuesto
+
+La pestaña enumera las líneas presupuestarias vinculadas, OPEX y CAPEX juntas, con su referencia (`BL-12`), nombre, tipo y empresa. Use el selector bajo la tabla para vincular o quitar líneas.
+
+Con acceso de lectura a las líneas presupuestarias (`budget:reader`), la pestaña muestra también cifras:
+
+- Pestañas de año y un selector **Columna**, la misma elección que las columnas de presupuesto de la lista
+- El importe de cada línea en ese año y esa columna, con una fila **Total (n líneas)**
+- **Compromiso y cobertura**: una fila por año ofrecido, con el año elegido resaltado. Haga clic en una fila para elegir su año
+
+Los años ofrecidos son el año en curso y los dos siguientes, más el año anterior cuando el presupuesto tiene líneas para él.
+
+#### Compromiso y cobertura
+
+**Comprometido por el contrato** es el importe anual en la firma repartido sobre los meses del año que cubre un periodo. Un mes cubierto en parte cuenta según sus días. Los años siguientes suponen que la renovación continúa hasta que se detenga, y no se compromete nada después del fin de validez o del fin del contrato. El importe en la firma vale para cada periodo. El compromiso se convierte a su moneda de reporte con los tipos del año.
+
+Por ejemplo, un contrato de 350 000 al año que se renueva cada 1 de julio compromete 350 000 cada año. Si termina el 30 de junio de 2027, compromete 175 000 en 2027 y nada en 2028.
+
+**Líneas vinculadas** suma los importes de las líneas vinculadas en ese año y esa columna. **Diferencia** es la resta entre ambos. La situación es la primera que se aplica:
+
+- **Sin compromiso**: el contrato no compromete nada ese año y ninguna línea vinculada tiene importe
+- **Presupuesto aún no iniciado**: ninguna línea presupuestaria de su espacio de trabajo tiene importe en ese año y esa columna
+- **Sin línea presupuestaria**: ninguna línea vinculada tiene importe
+- **Infrapresupuestado**: las líneas vinculadas suman menos que el compromiso
+- **Presupuesto superior al contrato**: las líneas vinculadas suman más que el compromiso más un 10 %
+- **Cubierto**: cualquier otro caso
+
+### Conformidad
+
+La pestaña enumera las cláusulas que se espera que contenga un contrato, según las aplicaciones que cubre, y le permite registrar si el contrato las contiene. Le ayuda a llevar un registro. No certifica la conformidad con ninguna normativa.
+
+**Requisitos**: **Contrato de encargado del tratamiento RGPD (art. 28)**, **Ubicación de los datos**, **Cláusula de reversibilidad**, **Plan de salida**, **Derecho de auditoría y cláusulas de seguridad**.
+
+**Por qué se espera un requisito**: el contrato cubre las aplicaciones vinculadas a él, y las aplicaciones con una instancia en un activo vinculado a él o cuyo contrato de soporte es. Una aplicación cuyo fin de validez ya pasó deja de contar.
+
+- Una aplicación que contiene datos personales hace esperar el contrato de encargado del tratamiento y la ubicación de los datos
+- Una criticidad de negocio o cibernética alta hace esperar la cláusula de reversibilidad, el plan de salida y el derecho de auditoría. Alta significa los dos niveles más severos de su catálogo (solo el más severo cuando el catálogo tiene menos de tres niveles)
+- Una instancia alojada en la nube hace esperar la ubicación de los datos. La categoría del tipo de alojamiento en **Panorama IT > Configuración** decide qué cuenta como nube
+
+La columna **Esperado porque** da el primer motivo, por ejemplo «SAP S/4HANA contiene datos personales», y luego «y n más». Pase el ratón por encima para leerlos todos. Un motivo que procede de un activo lo nombra.
+
+**Registro**: elija un estado para cada requisito: **Presente**, **Ausente** o **No aplica**. Se guarda al instante. Un requisito esperado sin estado indica **Por verificar**. Escriba una **Referencia** (por ejemplo «artículo 18.3»); se guarda al salir del campo o al pulsar Intro. Pase el ratón sobre una fila para ver cuándo y quién la actualizó por última vez.
+
+**Mostrar los demás requisitos (n)** añade los requisitos que nada hace necesarios, para que también pueda registrarlos. Cuando no se espera nada, la pestaña lo dice en una línea.
+
+La insignia de la pestaña cuenta los requisitos esperados registrados como ausentes. En la lista, la columna **Conformidad** indica:
+
+- **n ausentes** (y «· n por verificar»), en naranja
+- **n por verificar**
+- **Completo**: cada requisito esperado está presente o no aplica
+- **Sin expectativas**
+
+Vincular o quitar una aplicación o un activo en **Relaciones** actualiza la pestaña al instante. Necesita `contracts:member` para registrar; los lectores ven la pestaña en solo lectura.
+
+**Exportar el registro** (lista, `contracts:admin`) descarga un CSV de los contratos que muestra la lista, con su búsqueda, sus filtros y su alcance: una línea por contrato y requisito, con si se espera, el motivo, el estado, la referencia y la última actualización. Los encabezados y las palabras siguen el idioma de su pantalla.
 
 ### Relaciones
 
-La pestaña Relaciones vincula contratos a otras entidades en su registro.
+- **Aplicaciones** y **Activos**: vincule las aplicaciones y los activos que cubre este contrato. Los selectores buscan entre las aplicaciones y los activos que usted puede ver. Estos vínculos alimentan la pestaña [Conformidad](#conformidad). Un activo cuyo contrato de soporte es este, indicado en la ficha del activo, no aparece aquí. Cuenta igualmente para la conformidad
+- **Contactos**: personas de este contrato, cada una con un rol (Comercial, Técnico, Soporte u Otro). **Agregar los contactos del proveedor** copia los contactos del proveedor con un clic
+- **Sitios web relevantes**: enlaces a documentos externos como el PDF firmado o el portal del proveedor
+- **Adjuntos**: una lista de archivos. Use **Agregar archivos** o suelte archivos sobre la sección. Haga clic en un archivo para descargarlo
 
-**Vínculos disponibles**:
-
-- **Líneas OPEX**: Costes recurrentes asociados a este contrato -- utilice la selección múltiple con búsqueda para encontrar y vincular elementos por nombre del producto
-- **Líneas CAPEX**: Líneas de gasto de capital vinculadas a este contrato -- misma interfaz de selección múltiple con búsqueda
-- **Contactos**: Personas asociadas a este contrato, cada una con un rol (Comercial, Técnico, Soporte u Otro). Los contactos heredados del proveedor se muestran con una insignia rellena; los añadidos manualmente aparecen con una insignia delineada. Haga clic en una fila de contacto para abrir su perfil.
-- **Sitios web relevantes**: Enlaces a documentos externos como PDFs de contratos o portales de proveedores. Cada enlace tiene una descripción y una URL.
-- **Adjuntos**: Suba archivos arrastrando y soltando o usando el selector de archivos. Haga clic en un chip de adjunto para descargarlo; haga clic en el icono de eliminar para borrarlo.
-
-**Consejo**: Vincular líneas OPEX y CAPEX a contratos le da una trazabilidad completa de costes -- desde líneas presupuestarias hasta acuerdos con proveedores.
+Las líneas presupuestarias se vinculan en la pestaña [Presupuesto](#presupuesto).
 
 ---
 
-### Tareas
+## Decisiones de renovación
 
-La pestaña Tareas gestiona elementos de acción para este contrato (p. ej., revisiones de renovación, negociaciones de precio, verificaciones de conformidad).
+KANAP pide al responsable que decida cada renovación antes de que ocurra, y registra la decisión.
 
-**Lista de tareas**:
+### Plazo de decisión
 
-- Muestra todas las tareas vinculadas a este contrato
-- Columnas: Título, Estado, Prioridad, Fecha de vencimiento, Acciones
-- Haga clic en el título de una tarea para abrir el espacio de trabajo completo de tareas
+Un contrato con renovación tácita espera una decisión cuando su próxima fecha límite de rescisión cae dentro del plazo de decisión. Un contrato sin renovación espera una cuando su fin cae dentro del plazo. El plazo es de 90 días por defecto. Los administradores de contratos lo cambian con **Ajustes** en la lista, de 0 a 365 días.
 
-**Filtrado**:
+El plazo determina la situación **Por decidir**, el filtro rápido, el recuadro de decisión, la línea de tiempo y las tareas de decisión.
 
-- Haga clic en el icono de filtro para mostrar u ocultar los controles de filtro
-- **Filtro de estado**: Todos, Activos (oculta completados/cancelados), o un estado específico (Abierto, En progreso, Pendiente, En pruebas, Completado, Cancelado)
-- Haga clic en el botón de limpiar para restablecer filtros
-- El filtro predeterminado muestra solo tareas activas
+### La tarea de decisión
 
-**Crear una tarea**:
+Cada día a las 07:30 UTC, KANAP crea una tarea para cada contrato que espera una decisión:
 
-- Haga clic en **Añadir tarea** para abrir el espacio de trabajo de creación de tareas
-- La tarea se vincula automáticamente a este contrato
-- Complete el título, descripción, prioridad, asignado y fecha de vencimiento en el espacio de trabajo de tareas
+- **Decidir la renovación de** el contrato, con vencimiento en la fecha límite de rescisión, para un contrato con renovación tácita
+- **Decidir si renovar o dejar terminar** el contrato, con vencimiento en su fin, para un contrato sin renovación
 
-**Eliminar una tarea**:
+La tarea se asigna al responsable del contrato, en su idioma, con el correo de asignación habitual. Hay una tarea por contrato y periodo. Una tarea eliminada no se vuelve a crear para ese periodo. Un contrato sin responsable no recibe tarea hasta que se indique uno.
 
-- Haga clic en el icono de eliminar en la columna de Acciones
-- Confirme la eliminación en el diálogo
+El recuadro de decisión y la tarea van a la par: una decisión tomada en el recuadro cierra la tarea, con la justificación como comentario.
 
-**Nota**: La pestaña Tareas solo está disponible después de que el contrato se haya guardado por primera vez. Si no tiene el permiso `contracts:manager`, los botones Añadir tarea y Eliminar están ocultos.
+### Decidir
+
+El recuadro muestra la fecha límite, los días restantes, la tarea y su asignado, y lo que ocurre sin decisión («Sin decisión, el contrato se renovará por 12 meses el 1 jul. 2027.»). Escriba una **Justificación** opcional y elija:
+
+- **Renovar**: la renovación queda confirmada para este periodo. La tarea se cierra, el contrato sale de **Por decidir** y vuelve al plazo en la fecha límite del periodo siguiente
+- **Renegociar**: el recuadro indica **Renegociación en curso** y la tarea sigue abierta hasta la decisión final. El contrato sigue **Por decidir**
+- **Rescindir**: el recuadro muestra la fecha de fin que debe confirmar. KANAP propone el primer fin que permite el preaviso («Preaviso de 6 meses: el primer fin posible es el 30 jun. 2027.»). Puede elegir otro día, a partir de hoy y del inicio del contrato. Un día anterior al propuesto muestra un aviso naranja: el proveedor tiene que aceptarlo. El recuadro enumera las consecuencias para ese día: el compromiso del año y del siguiente, las aplicaciones que pierden este contrato y los activos que pierden su contrato de soporte. **Confirmar la rescisión** desactiva la renovación tácita, fija el fin de validez en ese día y cierra la tarea. El contrato indica entonces **Termina sin renovación** y su compromiso se detiene ese día
+
+En un contrato sin renovación, el recuadro dice «Fin prevista el 31 mar. 2027 · decisión pendiente» y ofrece dos acciones:
+
+- **Renovar**: reactiva la renovación tácita y quita el fin de validez
+- **Dejar terminar**: confirma el fin. No cambia nada más
+
+Una vez decidido, el recuadro se reduce a una línea, por ejemplo «Renovación confirmada el 2 oct. 2026 por Sophie Laurent. El contrato se renueva el 1 jul. 2027.», con la tarea y la justificación. Tras una rescisión, recuerda enviar la carta de rescisión antes de la fecha límite y adjuntarla en **Relaciones**.
+
+**Anular la decisión** devuelve el contrato y la tarea a su estado anterior: antes de la fecha límite de rescisión, o antes del fin en un contrato sin renovación.
+
+Necesita `contracts:member` para decidir. Los lectores ven el recuadro sin sus acciones.
+
+### Desactivar o reactivar la renovación tácita
+
+**Renovación tácita**, en el panel **Propiedades**, sigue las mismas reglas.
+
+**No** en un contrato ya renovado, o en uno que espera una decisión de renovación, abre **Desactivar la renovación tácita**. La ventana propone una fecha de fin como una rescisión (primer fin que permite el preaviso, cualquier día a partir de hoy, aviso naranja antes del día propuesto, consecuencias para el día elegido) y dice «El contrato terminará el 30 jun. 2027, salvo renovación.». En un contrato ya renovado, añade que sus periodos anteriores se conservan. **Desactivar la renovación** fija ese fin de validez y el campo indica **No**. **Cancelar** no cambia nada.
+
+No se registra ninguna decisión. El contrato espera ahora una decisión sobre su fin: una tarea de decisión abierta pasa a ser «Decidir si renovar o dejar terminar» el contrato, con vencimiento en el nuevo fin y un comentario que explica el motivo. Sin tarea abierta, se crea una cuando el fin cae dentro del plazo.
+
+En un contrato en su primer periodo sin decisión pendiente, **No** se aplica al instante: el contrato se detiene al final de su primer periodo.
+
+**Sí** en un contrato sin renovación que tiene un fin de validez abre **Reactivar la renovación tácita**: «El contrato se renovará tácitamente y se retirará el fin del 31 mar. 2027.». **Reactivar la renovación** lo aplica, sea cual sea el origen de ese fin. Cuando había una decisión pendiente sobre el fin, esto cuenta como **Renovar** y puede anularse. Si no, la tarea abierta sobre el fin pasa a ser la tarea de decisión de renovación cuando esa decisión está pendiente, o se cierra. Sin fin de validez, **Sí** se aplica al instante.
 
 ---
 
-## Importación/exportación CSV
+## Importación y exportación CSV
 
-Mantenga su registro de contratos sincronizado con sistemas externos usando CSV.
+Mantenga su lista de contratos sincronizada con otras herramientas mediante CSV (`contracts:admin`).
 
-**Exportar**: Descarga todos los contratos con campos principales y fechas calculadas. La columna `status` contiene el estado que se deduce del fin de validez.
+**Exportar**: descarga todos los contratos con estas columnas: `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Las fechas calculadas (fin del periodo, fechas límite, situación) no se exportan.
 
 **Importar**:
 
-- Utilice **Verificación previa** para validar antes de aplicar
+- Utilice **Verificación previa** para comprobar el archivo antes de aplicarlo
 - Una fila corresponde a un contrato por su nombre y su proveedor
-- Soporta creación y actualizaciones
+- Admite creación y actualizaciones
 - El archivo no tiene columna de fin de validez. En una actualización, un `status` vacío, o igual al estado actual del contrato, conserva su fin de validez. Un estado distinto se aplica: `enabled` borra el fin de validez, y `disabled` termina el contrato hoy, salvo que su fin de validez ya haya pasado
 - Un contrato nuevo queda activado salvo que la fila indique `disabled`
+- Una fila que pone `auto_renewal` a false en un contrato ya renovado y sin fin de validez se rechaza, verificación previa incluida: borraría los periodos que el contrato ha cumplido. Desactive la renovación desde la ficha del contrato, que fija el fin
 
 **Notas**:
 
-- Utilice codificación **UTF-8** y **puntos y coma** como separadores
-- Los campos calculados (Fecha de fin, Plazo límite de cancelación) no se importan -- se calculan a partir de la Duración y el Período de preaviso
+- Use **codificación UTF-8** y **punto y coma** como separador
+- Las fechas se calculan a partir del inicio, la duración, el preaviso y la renovación; nunca se importan
 
 ---
 
 ## Consejos
 
-- **Vigile la columna Cancelar antes de**: La lista ordena por plazo límite de cancelación por defecto, así que los contratos que necesitan atención aparecen primero.
-- **Vincule a OPEX y CAPEX temprano**: Conecte contratos a líneas de coste al crearlos para un seguimiento completo de costes.
-- **Use tareas para renovaciones**: Cree una tarea 3--6 meses antes del plazo límite de cancelación para la revisión de renovación.
-- **Registre importes anuales**: Incluso si la facturación es mensual, registre el importe anual para facilitar la comparación año a año.
-- **Enlace directo desde la lista**: Puede compartir un enlace directo a cualquier contrato -- la URL del espacio de trabajo incluye el ID del contrato y preserva su contexto de lista (búsqueda, orden, filtros) para que el botón atrás le devuelva exactamente donde estaba.
+- **Indique un responsable en cada contrato**: las tareas de decisión de renovación van al responsable. Un contrato sin responsable no recibe ninguna tarea.
+- **Empiece la semana con Por decidir**: el filtro rápido enumera los contratos con decisión pendiente, y el recuadro de decisión de cada uno muestra lo que ocurre sin decisión.
+- **Vincule pronto las líneas presupuestarias**: la **Diferencia** y el filtro **Infrapresupuestados** solo sirven si el contrato está vinculado a las líneas que lo pagan.
+- **Registre el importe anual**: aunque la facturación sea mensual, el importe anual alimenta el compromiso y los totales.
+- **Vincule aplicaciones y activos**: deciden qué cláusulas se espera que contenga el contrato.
+- **Comparta un contrato**: use **Enviar enlace** o copie la dirección de la página. Abre la misma pestaña y conserva el contexto de su lista.

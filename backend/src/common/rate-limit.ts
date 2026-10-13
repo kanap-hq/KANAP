@@ -13,11 +13,22 @@ export function isRateLimitEnabled(): boolean {
 
 // TTL values are in milliseconds.
 export const RATE_LIMITS = {
-  authLogin: { limit: 5, ttl: 60_000 },
+  /**
+   * Password sign-in (`POST /auth/login`), per client address: the staff of one organisation
+   * often share one outbound address, so the budget is the one of the sign-in with Microsoft.
+   * Repeated refusals for one account are limited apart (`authLoginFailures`).
+   */
+  authLogin: { limit: 60, ttl: 60_000 },
+  /**
+   * Password sign-in attempts per account and client address (auth/login-attempt-limit.ts): five
+   * refused attempts within 15 minutes, then the pair is refused for 15 minutes. A successful
+   * sign-in clears the count of its pair, so only refused attempts add up.
+   */
+  authLoginFailures: { limit: 5, ttl: 15 * 60_000 },
   /**
    * Sign-in with Microsoft (`GET /auth/entra/callback`, `POST /auth/entra/session`): every
    * successful sign-in passes through both routes, and the staff of one organisation often share
-   * one outbound address, so this budget is wider than the password sign-in's.
+   * one outbound address, so this budget is a wide one.
    */
   ssoSignIn: { limit: 60, ttl: 60_000 },
   authRefresh: { limit: 20, ttl: 60_000 },

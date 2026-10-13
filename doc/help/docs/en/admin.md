@@ -541,12 +541,14 @@ Setup steps for the Entra app registration are in [Microsoft Entra SSO](on-premi
 
 ### Sign-in limits
 
-KANAP limits repeated sign-in requests from the same IP address:
+KANAP limits repeated sign-in requests:
 
-- **Password sign-in**: 5 attempts per minute.
-- **Microsoft sign-in**: 60 requests per minute. The limit is higher because the staff of one organization often reach KANAP from the same outbound address.
+- **Password sign-in**: 60 requests per minute from the same IP address. After 5 failed attempts on one account from the same IP address within 15 minutes, that account cannot sign in from that address for 15 minutes. The same account can still sign in from another address, and other accounts from the same address. A successful sign-in resets the count.
+- **Microsoft sign-in**: 60 requests per minute from the same IP address.
 
-Once the limit is reached, the person waits a minute and tries again. Behind a reverse proxy, KANAP counts each person's own IP address, as long as the proxy passes it on. Sign-ins and failed sign-ins appear in the [Audit Log](#audit-log). Requests stopped by the limit are not recorded.
+The limits per address are high because the staff of one organization often reach KANAP from the same outbound address. Once a limit per address is reached, the person waits a minute and tries again. Behind a reverse proxy, KANAP counts each person's own IP address, as long as the proxy passes it on.
+
+Sign-ins and failed sign-ins appear in the [Audit Log](#audit-log). When 5 failed attempts block an account from an address, one failed sign-in with the reason **Too many sign-in attempts** is recorded. The attempts refused during the 15 minutes that follow are not recorded, nor are requests stopped by a limit per address.
 
 ---
 
@@ -611,7 +613,7 @@ Control which email notifications you receive.
 | **Tasks** | Assignment (as assignee, requestor, or viewer), status changes, comments |
 | **Budget** | Expiration warnings, status changes, comments |
 
-**Expiration warnings** email the owners of a contract, an OPEX line or a CAPEX line 30, 14, 7 and 1 day(s) before its dates: a contract's cancellation deadline and end date, an OPEX or CAPEX line's end of validity. Only owners who switched on Budget notifications and **Expiration warnings** receive them. The check runs every day at 08:00 UTC. Each reminder is sent once per day to each recipient, even if the check runs again that day, for example after a restart.
+**Expiration warnings** email the owners of a contract, an OPEX line or a CAPEX line 30, 14, 7 and 1 day(s) before its dates: a contract's next cancellation deadline, a contract's end when it will not renew (the end of its term, or its end of validity when that comes first), an OPEX or CAPEX line's end of validity. A contract that renews tacitly is not warned about the end of each term. Only owners who switched on Budget notifications and **Expiration warnings** receive them. The check runs every day at 08:00 UTC. Each reminder is sent once per day to each recipient, even if the check runs again that day, for example after a restart.
 
 **Weekly Review Email**: Receive a periodic summary of your activity and upcoming items. Configure:
 - **Day of the week** (e.g., Monday)

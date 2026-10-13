@@ -370,9 +370,11 @@ Verwenden Sie im OPEX-Arbeitsbereich den Bereich **Aufgaben** im Tab **Übersich
 - „Mengenrabatt verhandeln"
 
 ### Aus Verträgen
-Verwenden Sie im Vertrags-Arbeitsbereich den Reiter **Aufgaben** für:
-- „Vertrag vor Verlängerungsdeadline überprüfen"
+Verwenden Sie in der **Übersicht** eines Vertrags den Abschnitt **Aufgaben** für:
 - „Aktualisierte Bedingungen vom Lieferanten anfordern"
+- „Unterschriebenen Nachtrag einholen"
+
+Aufgaben zur Verlängerung müssen Sie nicht selbst anlegen: KANAP gibt dem Verantwortlichen des Vertrags eine Aufgabe, wenn eine Verlängerungsentscheidung ansteht. Siehe [Verträge](contracts.md#verlangerungsentscheidungen).
 
 ### Aus CAPEX-Zeilen
 Im CAPEX-Arbeitsbereich verfolgen Aufgaben Projektmeilensteine:

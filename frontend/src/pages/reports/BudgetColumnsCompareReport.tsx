@@ -159,7 +159,7 @@ export default function BudgetColumnsCompareReport() {
     if (groupingEligible) {
       return {
         title: { text: measureText.chartTitle(t('reports.budgetColumnsCompare.title')) },
-        subtitle: { text: t('reports.budgetColumnsCompare.yearGroupingSubtitle', { type: t(`operations.scope.${itemType}`) }) },
+        subtitle: { text: t('reports.budgetColumnsCompare.yearGroupingSubtitle', { type: t(`operations.scope.${itemType}`), context: itemType }) },
         data: groupedChartData,
         axes: [
           { type: 'number', position: 'bottom' },
@@ -171,7 +171,7 @@ export default function BudgetColumnsCompareReport() {
     }
     return {
       title: { text: measureText.chartTitle(t('reports.budgetColumnsCompare.title')) },
-      subtitle: { text: t('reports.budgetColumnsCompare.selectionsSubtitle', { type: t(`operations.scope.${itemType}`), count: selections.length }) },
+      subtitle: { text: t('reports.budgetColumnsCompare.selectionsSubtitle', { type: t(`operations.scope.${itemType}`), context: itemType, count: selections.length }) },
       data: chartData,
       axes: [
         { type: 'category', position: 'bottom' },

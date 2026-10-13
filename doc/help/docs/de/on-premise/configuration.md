@@ -407,7 +407,7 @@ Hinweise:
 | `APP_URL` | Nur Multi-Tenant (Cloud). **On-Premise nicht nötig**: `APP_BASE_URL` wird verwendet. | *nicht gesetzt* |
 | `EMAIL_OVERRIDE` | Leitet alle E-Mails an diese Adresse um (nur Entwicklung/QA, **niemals in der Produktion**) | *nicht gesetzt* |
 
-**Client-Adresse.** Mit der dokumentierten Einrichtung (nginx auf demselben Server, API-Port an `127.0.0.1` gebunden) setzen Sie `RATE_LIMIT_TRUST_PROXY=true`. Der Proxy muss `X-Forwarded-For` senden; das nginx-Beispiel tut das. Setzen Sie `false`, wenn nichts vor der API steht. Ein falscher Wert gibt allen Benutzern dieselbe Adresse, und die 5 Anmeldeversuche pro Minute teilen sich alle.
+**Client-Adresse.** Mit der dokumentierten Einrichtung (nginx auf demselben Server, API-Port an `127.0.0.1` gebunden) setzen Sie `RATE_LIMIT_TRUST_PROXY=true`. Der Proxy muss `X-Forwarded-For` senden; das nginx-Beispiel tut das. Setzen Sie `false`, wenn nichts vor der API steht. Ein falscher Wert gibt allen Benutzern dieselbe Adresse: Die 60 Passwort-Anmeldeanfragen pro Minute teilen sich dann alle, und 5 Fehlversuche für ein Konto sperren dieses Konto 15 Minuten lang für alle.
 
 ## Optional: Kapazität und Leistung
 
@@ -583,11 +583,12 @@ Standardmäßig gibt Docker seinen ersten 15 Netzwerken Bereiche innerhalb von `
 
 ## Hintergrundjobs
 
-Die API führt 15 geplante Jobs aus. Die folgenden Zeiten sind die Standardwerte, in UTC (die Uhr des API-Containers). Administratoren sehen die Jobs unter **Administration → Geplante Aufgaben** (siehe [Geplante Aufgaben](../scheduled-tasks.md)), wo jeder einzelne ausgeschaltet, neu geplant oder auf Anforderung ausgeführt werden kann.
+Die API führt die folgenden geplanten Jobs aus. Die folgenden Zeiten sind die Standardwerte, in UTC (die Uhr des API-Containers). Administratoren sehen die Jobs unter **Administration → Geplante Aufgaben** (siehe [Geplante Aufgaben](../scheduled-tasks.md)), wo jeder einzelne ausgeschaltet, neu geplant oder auf Anforderung ausgeführt werden kann.
 
 | Job | Wann | Was er tut |
 |-----|------|--------------|
-| `check-expirations` | Täglich 08:00 | Schreibt den Verantwortlichen von Verträgen und OPEX-Zeilen 30, 14, 7 und 1 Tag(e) vor einer Kündigungsfrist, einem Enddatum oder dem Ende der Gültigkeit eine E-Mail. Nur Benutzer, die diese Benachrichtigungen eingeschaltet haben, erhalten sie, einmal pro Tag. |
+| `check-expirations` | Täglich 08:00 | Schreibt den Verantwortlichen von Verträgen und Budgetzeilen 30, 14, 7 und 1 Tag(e) vor dem nächsten Kündigungstermin eines Vertrags, dem Ende eines Vertrags, der sich nicht verlängert, oder dem Ende der Gültigkeit einer Zeile eine E-Mail. Nur Benutzer, die diese Benachrichtigungen eingeschaltet haben, erhalten sie, einmal pro Tag. |
+| `contract-renewal-tasks` | Täglich 07:30 | Legt für den Verantwortlichen jedes Vertrags, dessen Kündigungstermin, oder bei einem Vertrag ohne Verlängerung dessen Ende, in den Entscheidungszeitraum fällt, eine Aufgabe zur Verlängerungsentscheidung an. Eine Aufgabe pro Vertrag und Periode. Siehe [Verträge](../contracts.md#verlangerungsentscheidungen). |
 | `send-weekly-reviews` | Stündlich | Sendet den Wochenrückblick an Benutzer, die ihn abonniert haben, an ihrem eigenen Tag und in ihrer eigenen Zeitzone. |
 | `lifecycle-status-sync` | Stündlich und einmal beim Start | Setzt Stammdaten, Verträge, OPEX- und CAPEX-Zeilen auf deaktiviert, sobald ihr Gültigkeitsende überschritten ist. |
 | `entra-directory-sync` | Täglich 03:00 | Aktualisiert Benutzerattribute und deaktiviert Konten, die im Verzeichnis entfernt oder deaktiviert wurden. Funktioniert nur, wenn Entra SSO verbunden und genehmigt ist. Siehe [Microsoft Entra SSO](sso-entra.md). |

@@ -309,6 +309,7 @@
       "sso_failed": "La connexion avec Microsoft a échoué",
       "sso_not_configured": "Connexion avec Microsoft non configurée",
       "tenant_mismatch": "L'annuaire Microsoft ne correspond pas à l'espace de travail",
+      "too_many_attempts": "Trop de tentatives de connexion",
       "unknown_user": "Aucun compte avec cette adresse"
     },
     "shared": {

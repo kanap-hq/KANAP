@@ -262,6 +262,7 @@ L'onglet est organisé en quatre blocs, dans l'ordre d'une analyse d'impact mét
 **Données** :
 - La **Confidentialité des données** utilise le catalogue des classes de données de l'organisation.
 - **Contient des données personnelles** et **Résidence des données** complètent le volet données.
+- Les données personnelles, la criticité métier et cyber, et l'hébergement des instances décident aussi des clauses attendues dans les contrats liés à l'application. Voir l'onglet **Conformité** dans [Contrats](contracts.md#conformite).
 
 **Continuité et reprise** :
 - La **Vague de reprise** indique l'ordre de restauration et ne représente ni une durée ni une gravité.

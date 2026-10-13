@@ -90,6 +90,16 @@ its own: load the current dataset on a new tenant instead.
    budget demo initialises it by copying the 2026 landing. Re-running the
    runner restores the budget data, except on frozen columns: unfreeze them
    first (Budget administration → Freeze).
+   **Contact suppliers**: the contacts import has no supplier column. Once the
+   contracts and the budget lines exist, the runner gives each contact its
+   supplier and contact type (`09b-contact-suppliers.csv`, keyed by first and
+   last name) through `PATCH /contacts/:id` (with the contact's unchanged
+   e-mail, which the update requires). The API links the contact to the
+   supplier and adds it to that supplier's contracts and budget lines. A
+   contact that already has a supplier is left as it is, so a supplier or type
+   chosen by hand stays; the runner names those whose choice differs from the
+   file. A supplier or contact the file names and the tenant lacks stops the
+   runner.
 5. **Demo user passwords**: all 18 imported users get the required
    `--demo-password` so you can log in as e.g.
    `thomas.berger@fromage-co.example` during a demo. Pass `--demo-password ''`
@@ -113,7 +123,25 @@ its own: load the current dataset on a new tenant instead.
 
 Flags: `--skip-relations`, `--skip-agents`, `--org`, `--country`, `--year`,
 `--shift-years`, `--activation-token` (see below), `--netbox-test-cases`,
-`--accept-included-model` (see "AI prerequisites").
+`--accept-included-model` (see "AI prerequisites"),
+`--contact-suppliers-only` (see "Linking the contacts to their suppliers").
+
+## Linking the contacts to their suppliers
+
+Tenants loaded before `09b-contact-suppliers.csv` have their 16 demo contacts
+without a supplier. To repair one without reloading anything else:
+
+```bash
+node backend/fixtures/fromage-co/setup-tenant.mjs \
+  --base-url http://fromage.lvh.me \
+  --email <admin email> \
+  --password '<admin password>' \
+  --contact-suppliers-only
+```
+
+It logs in (it never creates a tenant), links each contact that has no
+supplier yet to its supplier with its contact type, then stops.
+`--demo-password` is not needed. A second run changes nothing.
 
 ## Analytics dimensions
 
@@ -292,7 +320,8 @@ first run.
 - `setup-tenant.mjs` — the runner (Node ≥ 20, no dependencies). It reads the
   files through `backend/scripts/lib/fixture-csv.mjs` (year shift) and calls the
   API through `backend/scripts/lib/http-client.mjs`.
-- `01-…25-*.csv` — the dataset (semicolon-separated, UTF-8).
+- `01-…25-*.csv` — the dataset (semicolon-separated, UTF-8), with
+  `09b-contact-suppliers.csv` for the supplier and type of each contact.
 - `26-…30-*.csv` — the budget dataset: cost centres, dimension values,
   calendars, costed lines and monthly rows. `14-spend-items.csv` and
   `15-capex-items.csv` are generated too. Regenerate all of them with

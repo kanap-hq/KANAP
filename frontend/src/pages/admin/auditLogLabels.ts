@@ -39,6 +39,7 @@ export const AUTH_EVENT_REASONS = [
   'invalid_state',
   'sso_failed',
   'provisioning',
+  'too_many_attempts',
 ] as const;
 
 /**
