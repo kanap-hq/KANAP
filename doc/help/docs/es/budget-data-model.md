@@ -64,13 +64,12 @@ Una línea vive varios años: una licencia de tres años es una línea con tres 
 | Número | `item_number` | Lo asigna KANAP | `BL-12`. Vacío en el archivo: crea una línea |
 | Título | `name` | Sí | La columna **Nombre del producto** de la lista |
 | Descripción | `description` | No | |
-| Tipo de activo fijo, tipo de inversión, prioridad (CAPEX) | `analytics:ppe_type`, `analytics:investment_type`, `analytics:priority` | En una línea nueva, mientras la dimensión sea obligatoria | Valores de las tres dimensiones CAPEX, guardados como los valores de cualquier otra dimensión. Consulte [Dimensiones CAPEX](analytics.md#dimensiones-capex) |
 | Empresa pagadora | `company_name` | Sí | Se toma del centro de coste cuando solo se indica el centro de coste |
 | Proveedor | `supplier_name`, `supplier_erp_id` | No | |
 | Cuenta | `account_number` | Sí | En el plan de cuentas de la empresa pagadora |
 | Centro de coste | `cost_center_code` | No | Se rechaza un grupo |
 | Run o build | `run_build` | No | `run` o `build` |
-| Valores analíticos | `analytics:<code>` | Para una dimensión obligatoria | Una columna por dimensión activa. Una línea solo toma valores en las dimensiones de su naturaleza. Una dimensión obligatoria necesita un valor en una línea nueva de su naturaleza |
+| Valores analíticos | `analytics:<code>` | Para una dimensión obligatoria | Una columna por dimensión activa. Una línea solo toma valores en las dimensiones de su naturaleza. Una dimensión obligatoria necesita un valor en una línea nueva de su naturaleza. Un espacio de trabajo nuevo empieza con las [dimensiones recomendadas](analytics.md#dimensiones-recomendadas), ninguna de ellas obligatoria |
 | Responsable de IT, responsable de negocio | `owner_it_email`, `owner_business_email` | No | Usuarios activos |
 | Proyecto | `project` | No | Un número de proyecto, por ejemplo `PRJ-3` |
 | Moneda | `currency` | Sí | Código ISO de tres letras |
@@ -137,7 +136,7 @@ Cada año presupuestario de una línea tiene un método de asignación:
 | Manual por departamento | La plantilla de los departamentos que usted elige |
 | Porcentajes manuales | Los porcentajes que usted escribe, que suman 100 % |
 
-Las asignaciones alimentan los informes de contracargo. Ningún archivo las importa. [Copiar asignaciones](budget-operations.md#copiar-asignaciones) las traslada de un año al siguiente, y los informes de contracargo exportan sus tablas en CSV. Consulte [Informes](reports.md).
+Las asignaciones alimentan los informes de contracargo, para las líneas OPEX y CAPEX. Ningún archivo las importa. [Copiar columnas presupuestarias](budget-operations.md#copiar-asignaciones) las traslada de un año al siguiente, y los informes de contracargo exportan sus tablas en CSV. Consulte [Informes](reports.md).
 
 ### Vínculos con otros objetos
 

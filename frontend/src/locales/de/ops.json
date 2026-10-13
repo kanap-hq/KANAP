@@ -1096,7 +1096,7 @@
       "nameHint": "Lassen Sie einen Namen leer, um den Standardnamen zu verwenden.",
       "helpHidden": "Ausgeblendete Spalten behalten ihre Beträge und nehmen weiterhin Importe und Einfrierungen an.",
       "helpDefault": "Die Standardspalte ist in Berichten vorausgewählt und sortiert die Listen und das Dashboard. Wird sie eingefroren, werden die Wechselkurse des Jahres festgeschrieben.",
-      "helpFollows": "Die Spalte übernimmt, was auf der Registerkarte Budget auf alle Spalten angewendet wird: Verteilung und Zeitraum eines verteilten Betrags sowie die Zeilen mit Menge und Preis. Eine Spalte, die nicht folgt, behält ihre eigenen.",
+      "helpFollows": "Auf der Registerkarte Budget unter „Auch für andere Spalten verwenden“ standardmäßig angehakt.",
       "errors": {
         "allHidden": "Mindestens eine Spalte muss angezeigt bleiben.",
         "defaultHidden": "Die Standardspalte muss angezeigt werden: Wählen Sie zuerst eine andere Standardspalte.",
@@ -1797,8 +1797,6 @@
     "changeType": "Typ ändern…",
     "typeOpex": "OPEX",
     "typeCapex": "CAPEX",
-    "line": "Budgetzeile",
-    "totalOpex": "Gesamt OPEX",
-    "totalCapex": "Gesamt CAPEX"
+    "line": "Budgetzeile"
   }
 }

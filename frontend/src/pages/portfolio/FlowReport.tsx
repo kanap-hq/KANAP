@@ -1230,8 +1230,6 @@ export default function FlowReport() {
     <ReportLayout
       title={t('reports.flow.title')}
       subtitle={t('reports.flow.subtitle')}
-      rootTo="/portfolio/reports"
-      rootLabel={t('reports.title')}
       filters={(
         <>
           <ReportFilter label={t('reports.flow.filters.tasks')} width={170}>

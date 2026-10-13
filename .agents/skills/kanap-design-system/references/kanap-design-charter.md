@@ -664,7 +664,7 @@ Reference implementations: `frontend/src/pages/CompaniesPage.tsx` (plain list),
 ### Plain list page
 
 ```
-PageHeader: breadcrumb, title ........................ [action bar]
+PageHeader: title .................................... [action bar]
 Grid toolbar: [quick filter] Show: o All o Enabled o Disabled  [extra filters]
 Choose columns   Reset columns
 Grid
@@ -679,7 +679,7 @@ When the grid shows the items of one collection picked among several (charts of 
 analytics dimensions, knowledge libraries), the actions follow what they act on:
 
 ```
-PageHeader: breadcrumb, title (no actions)
+PageHeader: title (no actions)
 ChipToggleBar: [collection] [collection] [collection] ........ [+ New] [Manage X]
 ChipToggleContextLine: <collection name> · <n> items ......... [New item] [Import] [Export] [Delete (n)]
                        optional secondary line (scope, access, description)
@@ -695,10 +695,11 @@ Grid toolbar, column chooser, grid
 - When the band is the page's own header and the top nav tab already names the page (knowledge
   base), the page has no `PageHeader`.
 
-### Breadcrumbs on list pages
+### No breadcrumb on list, report and administration pages
 
-`PageHeader` hides a breadcrumb that holds a single crumb: it links nowhere and repeats the top
-nav tab or the title. Multi-level breadcrumbs (`Master data / Charts of accounts`) stay.
+List, report and administration pages have no breadcrumb. The left navigation leads back to the
+section (Reporting, Administration), so `PageHeader` and `ReportLayout` show the title only.
+Do not add a breadcrumb by hand.
 
 ## Workspace pages (detail / edit)
 

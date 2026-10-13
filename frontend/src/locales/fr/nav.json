@@ -21,7 +21,8 @@
   },
   "userMenu": {
     "myProfile": "Mon profil",
-    "logout": "Déconnexion"
+    "logout": "Déconnexion",
+    "version": "KANAP {{version}}"
   },
   "sidebar": {
     "ops": {
@@ -110,49 +111,8 @@
     }
   },
   "breadcrumbs": {
-    "dashboard": "Tableau de bord",
-    "ops": "Gestion budgétaire",
     "admin": "Administration",
-    "it": "Cartographie SI",
-    "masterData": "Données de référence",
-    "portfolio": "Portefeuille",
-    "ai": "Plaid",
-    "opex": "OPEX",
-    "capex": "CAPEX",
-    "projects": "Projets",
     "contributors": "Contributeurs",
-    "settings": "Paramètres",
-    "teamMembers": "Membres d'équipe",
-    "companies": "Sociétés",
-    "departments": "Départements",
-    "costCenters": "Centres de coûts",
-    "workingDayCalendars": "Calendriers de jours ouvrés",
-    "suppliers": "Fournisseurs",
-    "accounts": "Comptes",
-    "coa": "Plans comptables",
-    "analytics": "Dimensions analytiques",
-    "dimensions": "Dimensions",
-    "users": "Utilisateurs",
-    "roles": "Rôles",
-    "sampleData": "Données d'exemple",
-    "scheduledTasks": "Tâches planifiées",
-    "billing": "Facturation",
-    "agentControl": "Contrôle agents",
-    "reports": "Rapports",
-    "contracts": "Contrats",
-    "applications": "Applications",
-    "assets": "Actifs",
-    "locations": "Sites",
-    "interfaces": "Interfaces",
-    "connections": "Connexions",
-    "incidents": "Incidents",
-    "interfaceMap": "Carte des interfaces",
-    "connectionMap": "Carte des connexions",
-    "tasks": "Tâches",
-    "operations": "Administration",
-    "aiModels": "Modèles IA",
-    "aiUsage": "Utilisation & coûts",
-    "netbox": "Netbox",
-    "budget": "Lignes budgétaires"
+    "settings": "Paramètres"
   }
 }

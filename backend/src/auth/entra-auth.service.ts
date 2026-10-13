@@ -69,7 +69,7 @@ export class EntraAuthService {
 
   constructor(private readonly config: ConfigService) {
     // Dedicated `ENTRA_STATE_SECRET` when configured, otherwise the derived
-    // `kanap:v1:entra-state` key. Never the shared access-token secret (constat n°2).
+    // `kanap:v1:entra-state` key. Never the shared access-token secret.
     this.stateSecret = getEntraStateSecret();
   }
 

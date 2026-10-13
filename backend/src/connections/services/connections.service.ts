@@ -5,6 +5,7 @@ import { ConnectionsCrudService } from './connections-crud.service';
 import { ConnectionsLegsService } from './connections-legs.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { ShareItemDto } from '../../notifications/dto/share-item.dto';
+import { shareRecipientsOf } from '../../notifications/share-recipients';
 
 /**
  * Options for service methods.
@@ -150,11 +151,7 @@ export class ConnectionsService {
   ) {
     const tenant = String(tenantId || '').trim();
     if (!tenant) throw new BadRequestException('Tenant context is required');
-    const userIds = dto.recipient_user_ids ?? [];
-    const rawEmails = dto.recipient_emails ?? [];
-    if (userIds.length === 0 && rawEmails.length === 0) {
-      throw new BadRequestException('At least one recipient is required');
-    }
+    const { userIds, rawEmails } = shareRecipientsOf(dto);
     const conn: any = await this.get(connectionId, tenant, opts);
     if (!conn) throw new BadRequestException('Connection not found');
     const mg = opts?.manager ?? (this.crudService as any).connRepo.manager;

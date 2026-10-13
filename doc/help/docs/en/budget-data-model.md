@@ -64,13 +64,12 @@ A line lives across years: a three-year licence is one line with three budget ye
 | Number | `item_number` | Set by KANAP | `BL-12`. Empty in the file creates a line |
 | Title | `name` | Yes | The **Product name** column of the list |
 | Description | `description` | No | |
-| PP&E type, investment type, priority (CAPEX) | `analytics:ppe_type`, `analytics:investment_type`, `analytics:priority` | For a new line, while the dimension is required | Values of the three CAPEX dimensions, held like the values of any other dimension. See [CAPEX dimensions](analytics.md#capex-dimensions) |
 | Paying company | `company_name` | Yes | Taken from the cost center when only the cost center is given |
 | Supplier | `supplier_name`, `supplier_erp_id` | No | |
 | Account | `account_number` | Yes | In the chart of accounts of the paying company |
 | Cost center | `cost_center_code` | No | A group is refused |
 | Run or build | `run_build` | No | `run` or `build` |
-| Analytics values | `analytics:<code>` | For a required dimension | One column per enabled dimension. A line takes values only on the dimensions of its nature. A required dimension needs a value on a new line of its nature |
+| Analytics values | `analytics:<code>` | For a required dimension | One column per enabled dimension. A line takes values only on the dimensions of its nature. A required dimension needs a value on a new line of its nature. A new workspace starts with the [recommended dimensions](analytics.md#recommended-dimensions), none of them required |
 | IT owner, business owner | `owner_it_email`, `owner_business_email` | No | Active users |
 | Project | `project` | No | A project number such as `PRJ-3` |
 | Currency | `currency` | Yes | Three-letter ISO code |
@@ -137,7 +136,7 @@ Each budget year of a line has one allocation method:
 | Manual by department | The headcount of the departments you pick |
 | Manual percentages | Percentages you type, adding up to 100% |
 
-Allocations drive the chargeback reports. No file imports them. [Copy allocations](budget-operations.md#copy-allocations) carries them from one year to the next, and the chargeback reports export their tables as CSV. See [Reporting](reports.md).
+Allocations drive the chargeback reports, for OPEX and CAPEX lines. No file imports them. [Copy budget columns](budget-operations.md#copying-allocations) carries them from one year to the next, and the chargeback reports export their tables as CSV. See [Reporting](reports.md).
 
 ### Links to other objects
 

@@ -93,7 +93,7 @@ Sign-in and session events are deleted after **365 days**. Data changes, role ch
 **Default columns**:
 - **Date**: When the change or event occurred
 - **Table**: Which table was affected. Sign-in and session events show **Sign-in and session**, and an export shows what was exported (for example **Suppliers**)
-- **Action**: The type of change or event (create, update, delete, disable, sign-in, export and so on)
+- **Action**: The type of change or event (create, update, delete, disable, restore, sign-in, export and so on). **Restore** marks a budget column put back to its opening values from the Budget tab of a line
 - **Source**: Who or what triggered the change (user, system, webhook)
 - **User**: Name of the user who made the change, or their email address when they have no name. Shows "System" or "Webhook" for non-user sources, and "Unknown account" for a sign-in attempt on an unknown address.
 

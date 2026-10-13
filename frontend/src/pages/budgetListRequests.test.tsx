@@ -139,7 +139,7 @@ describe('OPEX list requests per action', () => {
 
   it('open: one page and one totals request, nothing else from the grid', async () => {
     await openList();
-    await expectCounts({ rows: 1, totals: 3, values: 0 });
+    await expectCounts({ rows: 1, totals: 1, values: 0 });
     // No user list: the rows carry the owner names.
     expect(calls('/users')).toHaveLength(0);
     // The fixed year slots are enough: no `years` parameter.
@@ -167,7 +167,7 @@ describe('OPEX list requests per action', () => {
     expect(before.values).toBe(1);
     const bravo = Array.from(document.querySelectorAll('label')).find((label) => label.textContent === 'Bravo')!;
     fireEvent.click(bravo.querySelector('input')!);
-    await expectCounts({ rows: before.rows + 1, totals: before.totals + 3, values: before.values });
+    await expectCounts({ rows: before.rows + 1, totals: before.totals + 1, values: before.values });
     // The OPEX list has exclude mode: unticking one value from "All" excludes it (decision Q3).
     expect(JSON.parse(paramsOf(calls(ROWS).slice(-1)[0]).filters)).toEqual({ supplier_name: { filterType: 'set', mode: 'exclude', values: ['Bravo'] } });
   }, 30_000);
@@ -180,7 +180,7 @@ describe('OPEX list requests per action', () => {
       fireEvent.change(box, { target: { value } });
       await act(async () => { await new Promise((resolve) => setTimeout(resolve, 60)); });
     }
-    await expectCounts({ ...before, rows: before.rows + 1, totals: before.totals + 3 });
+    await expectCounts({ ...before, rows: before.rows + 1, totals: before.totals + 1 });
     expect(JSON.parse(paramsOf(calls(ROWS).slice(-1)[0]).filters)).toEqual({ product_name: { filterType: 'text', type: 'contains', filter: 'cloud' } });
   }, 30_000);
 

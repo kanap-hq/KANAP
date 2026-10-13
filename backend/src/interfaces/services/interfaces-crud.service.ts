@@ -20,6 +20,7 @@ import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.serv
 import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
 import { InterfaceMappingsService } from './interface-mappings.service';
 import { ShareItemDto } from '../../notifications/dto/share-item.dto';
+import { shareRecipientsOf } from '../../notifications/share-recipients';
 import { NotificationsService } from '../../notifications/notifications.service';
 import {
   InterfacesBaseService,
@@ -147,11 +148,7 @@ export class InterfacesCrudService extends InterfacesBaseService {
   ) {
     const tenant = String(tenantId || '').trim();
     if (!tenant) throw new BadRequestException('Tenant context is required');
-    const userIds = dto.recipient_user_ids ?? [];
-    const rawEmails = dto.recipient_emails ?? [];
-    if (userIds.length === 0 && rawEmails.length === 0) {
-      throw new BadRequestException('At least one recipient is required');
-    }
+    const { userIds, rawEmails } = shareRecipientsOf(dto);
 
     const mg = opts?.manager ?? this.repo.manager;
     const id = await this.resolveInterfaceIdentifier(interfaceId, mg);

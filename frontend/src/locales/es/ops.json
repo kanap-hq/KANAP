@@ -1096,7 +1096,7 @@
       "nameHint": "Deje un nombre vacío para usar el nombre estándar.",
       "helpHidden": "Las columnas ocultas conservan sus importes y siguen aceptando importaciones y congelaciones.",
       "helpDefault": "La columna por defecto está preseleccionada en los informes y ordena las listas y el panel. Congelarla fija los tipos de cambio del año.",
-      "helpFollows": "La columna toma lo que se aplica a todas las columnas en la pestaña Presupuesto: el reparto y el periodo de un importe repartido, y las líneas de cantidad y precio. Una columna que no sigue conserva los suyos.",
+      "helpFollows": "Marcada por defecto en «Usar también para otras columnas» de la pestaña Presupuesto.",
       "errors": {
         "allHidden": "Al menos una columna debe seguir visible.",
         "defaultHidden": "La columna por defecto debe estar visible: elija antes otra columna por defecto.",
@@ -1797,8 +1797,6 @@
     "changeType": "Cambiar el tipo…",
     "typeOpex": "OPEX",
     "typeCapex": "CAPEX",
-    "line": "Línea presupuestaria",
-    "totalOpex": "Total OPEX",
-    "totalCapex": "Total CAPEX"
+    "line": "Línea presupuestaria"
   }
 }

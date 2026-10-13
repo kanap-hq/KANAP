@@ -31,8 +31,8 @@ export type BillingInvoice = {
 };
 export type BillingSubscription = {
   plan_name?: string | null;
-  seat_limit: number | null;
-  seats_used: number;
+  seat_limit?: number | null;
+  seats_used?: number;
   subscription_type?: 'monthly' | 'annual';
   payment_mode?: 'card' | 'bank_transfer';
   next_payment_at?: string | null;

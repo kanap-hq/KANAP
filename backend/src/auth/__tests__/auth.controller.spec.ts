@@ -232,8 +232,8 @@ async function testProvisioningExchangeUsesItsOwnKeyAndRejectsTheLegacyOne() {
   // Historical contract of the external issuer: `purpose: 'provision'` signed with `JWT_SECRET`.
   // It keeps working until an operator sets the dedicated key.
   assert.equal((await exchangeWith(jwt.sign(payload, JWT_SECRET))).access_token, 'access-token');
-  // A token signed with another family's KEY is still refused: the key is not shared anymore
-  // for the families that derive (they are the ones the constat was about).
+  // A token signed with another family's KEY is still refused: the families that derive their
+  // own key do not share it with the provisioning exchange.
   await assert.rejects(
     () => exchangeWith(jwt.sign(payload, deriveSecret(JWT_SECRET, 'password-reset'))),
     /invalid or expired token/,

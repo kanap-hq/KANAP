@@ -18,6 +18,7 @@ import { attachmentMulterOptions, csvImportMulterOptions, documentImportMulterOp
 import { contentDisposition } from '../common/content-disposition';
 import { createRequestReleaseConnection } from '../common/import-connection';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
+import { ShareRateLimit } from '../notifications/share-rate-limit';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { RATE_LIMITS } from '../common/rate-limit';
 import { RateLimitGuard } from '../common/rate-limit.guard';
@@ -543,6 +544,7 @@ export class PortfolioRequestsController {
 
   // ==================== SHARE ====================
 
+  @ShareRateLimit()
   @UseGuards(PermissionGuard)
   @RequireLevel('portfolio_requests', 'reader')
   @Post(':id/share')

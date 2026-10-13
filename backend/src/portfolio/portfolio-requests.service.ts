@@ -29,6 +29,7 @@ import { ItemNumberService } from '../common/item-number.service';
 import { StorageService } from '../common/storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
+import { shareRecipientsOf } from '../notifications/share-recipients';
 import { parsePagination } from '../common/pagination';
 import {
   compileAgFilterCondition,
@@ -2888,11 +2889,7 @@ export class PortfolioRequestsService {
     userId: string,
     opts?: { manager?: EntityManager },
   ) {
-    const userIds = dto.recipient_user_ids ?? [];
-    const rawEmails = dto.recipient_emails ?? [];
-    if (userIds.length === 0 && rawEmails.length === 0) {
-      throw new BadRequestException('At least one recipient is required');
-    }
+    const { userIds, rawEmails } = shareRecipientsOf(dto);
 
     const mg = opts?.manager ?? this.repo.manager;
 

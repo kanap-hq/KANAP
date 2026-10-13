@@ -70,7 +70,7 @@ Tool-specific or private notes live in each tool's local files, never here.
   agent finds the cause, fixes it in a separate PR if needed, then queues it with `queue-stack.sh`.
 - One PR at a time per change: no bundling of validated PRs, the queue handles throughput.
 - Releases and deploys to QA and prod are separate from merging and are the maintainer's
-  decision; `main` is always releasable.
+  decision (see "Versions and releases"); `main` is always releasable.
 - One PR per coherent lot. Keep diffs focused.
 - Stacked PRs: each PR of a stack targets `main` and contains the commits of the PR below it.
   Open the whole stack as ready PRs (no drafts), then queue it in one go, bottom first:
@@ -87,6 +87,22 @@ Tool-specific or private notes live in each tool's local files, never here.
   checkout and cherry-pick in the wrong tree.
 - Never read a pass/fail status from `$?` after a pipe (`tail` and `grep` steal it). Use
   `cmd >/dev/null 2>&1; echo $?` or `${PIPESTATUS[0]}`.
+
+## Versions and releases
+
+- A version is `YY.M.N` (`26.10.1`, `26.10.2`, then `26.11.1`; no leading zero), tagged `v26.10.1`:
+  `main` when the maintainer says "publish", plus a release commit (both `package.json` at the
+  version, a new entry at the top of `CHANGELOG.md`). Fixes come from `main` only, as a new version.
+- QA and prod run versions only. `stable` is the latest published version.
+- Maintainer says "publish", merge queue empty: `node scripts/release/release.mjs prepare <version>`
+  (`--since <ref>` for the first one), write the entry from the PR notes draft, rerun with
+  `--commit`. The `Release <version>` PR it queues is the exception to "nothing is pushed before
+  the maintainer has validated on dev": its content was validated PR by PR.
+- First step of the QA deploy: `release.mjs publish <version>` (tag on the release PR's merge
+  commit, GitHub release, `stable` moved to the tag). QA, then prod, deploy that tag.
+- Only release PRs write `CHANGELOG.md`. Every other PR fills the `## Release notes` section of its
+  description, or writes `None`. Notes describe the behaviour in neutral words.
+- Both commands take `--dry-run`. Details and reruns: `doc/releasing.md`.
 
 ## Local stack
 

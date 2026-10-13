@@ -29,6 +29,11 @@ the exceptions it used and the ones no longer needed.
 
 ## Inventory and notices at a release
 
+`node scripts/release/release.mjs publish <version>` does this at every release (see
+[releasing.md](releasing.md)): it runs `generate.mjs` at the tag, without `npm ci` and without
+`--image`, and attaches the files to the GitHub release. The manual procedure below adds the
+package authors and the Alpine packages of the API image:
+
 1. Check out the release tag. To include package authors in the notices, run `npm ci` in
    `backend`, `frontend` and `marketing/web` first; without `node_modules` the notices give name,
    version and license only.

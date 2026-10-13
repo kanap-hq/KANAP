@@ -4,7 +4,7 @@ import { DataSource } from 'typeorm';
 
 /**
  * Hit counts of the HTTP rate limits (`RateLimitGuard`: login, token refresh, password reset,
- * provisioning exchange, public forms, exports and imports, saved list filters) kept in the
+ * provisioning exchange, public forms, exports and imports, saved list filters, share links) kept in the
  * database, so that several API processes (API_WORKERS > 1) share one budget per key. With one
  * process the in-memory counter of @nestjs/throttler stays in use (app.module.ts): nothing
  * changes there.

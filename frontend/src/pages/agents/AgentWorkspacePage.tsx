@@ -2816,7 +2816,6 @@ export default function AgentWorkspacePage() {
             onSave={(name) => { void persistHeaderField({ name }); }}
           />
         )}
-        breadcrumbTitle={definition.name}
         actions={<Button variant="action" onClick={() => navigate('/agents')}>{t('workspace.back')}</Button>}
       />
       <AgentInlineDescription

@@ -128,7 +128,7 @@ describe('ByAssigneeReport', () => {
   it('shows the report frame and no table while the first load is in flight', () => {
     get.mockReturnValue(new Promise(() => {}));
     renderReport();
-    // Title and breadcrumb both carry the report name.
+    // The title carries the report name.
     expect(screen.getAllByText('Attention by contributor').length).toBeGreaterThan(0);
     expect(screen.queryByRole('table')).toBeNull();
   });

@@ -7,6 +7,7 @@ import { describeTokenPurposePolicy } from './auth/access-token.util';
 import { describeSecretPolicy } from './auth/token-secret.util';
 import { PROCESS_STARTED_AT } from './common/process-start';
 import { Features } from './config/features';
+import { APP_VERSION } from './config/version';
 import { TenantsService } from './tenants/tenants.service';
 import { TenantBaselineService } from './tenants/tenant-baseline.service';
 import { createSingleTenantOnFirstStart, defaultTenantLanguage } from './tenants/single-tenant-provisioning';
@@ -32,6 +33,8 @@ import { applyHttpMiddleware, applyTenancyAndPipeline } from './http-app';
 function checkStartupEnv() {
   const report = validateStartupEnv(process.env, { singleTenant: Features.SINGLE_TENANT });
   if (!isLeadProcess()) return;
+  // eslint-disable-next-line no-console
+  console.log(`[VERSION] KANAP ${APP_VERSION}`);
   // eslint-disable-next-line no-console
   console.log(`[ENV] run mode: ${report.mode}`);
   for (const warning of report.warnings) {

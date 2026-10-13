@@ -16,6 +16,7 @@ import { ItemNumberService } from '../../common/item-number.service';
 import { PortfolioCriteriaService } from '../portfolio-criteria.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { ShareItemDto } from '../../notifications/dto/share-item.dto';
+import { shareRecipientsOf } from '../../notifications/share-recipients';
 import { PortfolioProjectsBaseService, ServiceOpts } from './portfolio-projects-base.service';
 import { computeAutoAllocations } from '../utils/allocation-utils';
 import { formatItemLabel } from '../utils/activity-labels';
@@ -1369,11 +1370,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     userId: string,
     opts?: ServiceOpts,
   ) {
-    const userIds = dto.recipient_user_ids ?? [];
-    const rawEmails = dto.recipient_emails ?? [];
-    if (userIds.length === 0 && rawEmails.length === 0) {
-      throw new BadRequestException('At least one recipient is required');
-    }
+    const { userIds, rawEmails } = shareRecipientsOf(dto);
 
     const mg = this.getManager(opts);
 

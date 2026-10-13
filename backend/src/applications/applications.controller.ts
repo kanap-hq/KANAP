@@ -19,6 +19,7 @@ import { IntegratedDocumentsService } from '../knowledge/integrated-documents.se
 import { RATE_LIMITS } from '../common/rate-limit';
 import { RateLimitGuard } from '../common/rate-limit.guard';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
+import { ShareRateLimit } from '../notifications/share-rate-limit';
 import { TasksUnifiedService } from '../tasks/tasks-unified.service';
 import {
   ParticipationAccessScope,
@@ -266,6 +267,7 @@ export class ApplicationsController {
     return this.svc.get(id, { ...(await this.readApplicationOpts(ctx)), include });
   }
 
+  @ShareRateLimit()
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'reader')
   @Post(':id/share')

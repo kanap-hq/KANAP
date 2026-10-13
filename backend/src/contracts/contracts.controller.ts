@@ -11,6 +11,7 @@ import { CONTRACT_LOOKUP_ACCESS, CONTRACT_LOOKUP_READERS, assertLookupSearch } f
 import { CONTRACT_LOOKUP, lookupReference } from '../common/lookup/reference-lookups';
 import { ContractUpsertDto } from './dto/contract.dto';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
+import { ShareRateLimit } from '../notifications/share-rate-limit';
 import { StorageService } from '../common/storage/storage.service';
 import { contentDisposition } from '../common/content-disposition';
 import { ContractContactsService } from './contract-contacts.service';
@@ -111,6 +112,7 @@ export class ContractsController {
   @Get(':id')
   get(@Param('id') id: string, @Req() req: any) { return this.svc.get(id, { manager: req?.queryRunner?.manager }); }
 
+  @ShareRateLimit()
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Post(':id/share')

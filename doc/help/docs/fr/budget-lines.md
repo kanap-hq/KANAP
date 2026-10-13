@@ -20,14 +20,14 @@ L'espace de travail s'ouvre en mode création, intitulé **Nouvelle ligne OPEX**
 - **Compte** : Le compte du grand livre. Seuls les comptes du plan comptable de la société payeuse apparaissent, et seulement ceux qui conviennent au type de la ligne dans [Plans comptables et gestion des comptes](chart-of-accounts.md#comptes-opex-ou-capex) : **OPEX et CAPEX**, ou **OPEX uniquement** pour une ligne OPEX et **CAPEX uniquement** pour une ligne CAPEX. Une ligne qui a déjà un compte réservé à l'autre type le conserve et reste modifiable. Choisir un tel compte sur une nouvelle ligne, ou en changeant le compte, est refusé
 - **Devise** : Code ISO (ex. : USD, EUR). Par défaut la devise de votre espace de travail ; modifiable par ligne
 - **Début d'effet** : Quand cette dépense commence (JJ/MM/AAAA)
-- **Dimensions obligatoires** : un champ par dimension obligatoire pour le type de la ligne. Une ligne CAPEX demande au départ **PP&E type**, **Investment type** et **Priority**. Voir [Dimensions CAPEX](#dimensions-capex)
+- **Dimensions obligatoires** : un champ par dimension obligatoire pour le type de la ligne. Un nouvel espace de travail n'a aucune dimension obligatoire. Voir [Dimensions recommandées](#dimensions-recommandees)
 
 **Optionnel mais utile** :
 
 - **Fournisseur** : À qui vous payez. Lié à vos fournisseurs dans les données de référence
 - **Centre de coûts** : Qui porte la dépense. Voir [Centres de coûts](cost-centers.md). Lorsque la société payeuse est encore vide, choisir un centre de coûts la remplit avec la société du centre de coûts
 - **Run ou build** : **Run** pour une dépense qui maintient les services existants, **Build** pour une dépense qui les crée ou les fait évoluer
-- **Dimensions analytiques** : Un champ par dimension utilisée pour le type de la ligne, à son nom, pour des regroupements personnalisés dans les rapports (ex. : « Licenses » sur Nature). La dimension par défaut s'affiche comme **Dimension analytique** tant qu'elle n'est pas renommée. Voir [Dimensions analytiques](analytics.md)
+- **Dimensions analytiques** : Un champ par dimension utilisée pour le type de la ligne, à son nom, pour des regroupements personnalisés dans les rapports (ex. : **Logiciel** sur **Nature de coût**). La dimension par défaut s'affiche comme **Dimension analytique** tant qu'elle n'est pas renommée. Voir [Dimensions analytiques](analytics.md)
 - **Fin de validité** : La date à laquelle cette ligne s'arrête. Laissez-la vide s'il n'y a pas de fin. Après cette date, la ligne est désactivée et les années suivantes ne comptent plus dans les vues budgétaires
 - **Responsable IT** / **Responsable métier** : Qui est en charge
 - **Description** et **Notes** : Texte libre dans l'onglet **Vue d'ensemble**, pour les deux types
@@ -48,22 +48,25 @@ Chaque ligne a un type, affiché dans la colonne **Type** de la liste et dans la
 
 - **Les comptes** : un compte peut être réglé sur **OPEX et CAPEX**, **OPEX uniquement** ou **CAPEX uniquement**. Voir [Comptes OPEX ou CAPEX](chart-of-accounts.md#comptes-opex-ou-capex)
 - **Les dimensions et les valeurs** : une dimension ou une valeur peut être réservée à un seul type, et une dimension peut être obligatoire pour un type. Le panneau **Propriétés** n'affiche que les dimensions utilisées pour le type de la ligne. Voir [Dimensions OPEX ou CAPEX](analytics.md#dimensions-opex-ou-capex)
-- **La refacturation** : les rapports de refacturation ne couvrent que les lignes OPEX. Voir [Rapports](reports.md)
+- **La refacturation** : les rapports de refacturation s'ouvrent sur les lignes OPEX, et proposent les lignes CAPEX ou les deux. Voir [Rapports](reports.md)
 - **Les gels** : une colonne budgétaire est gelée par année et par type. Voir [Geler / Dégeler les données](budget-operations.md#geler-degeler-les-donnees)
 
 Le type d'une ligne se change avec **Changer le type...**. Voir [Changer le type](#changer-le-type).
 
-### Dimensions CAPEX
+### Dimensions recommandées
 
-Chaque espace de travail classe les lignes CAPEX sur trois dimensions analytiques :
+Un nouvel espace de travail démarre avec quatre dimensions recommandées, avec leurs valeurs, dans la langue de l'espace de travail :
 
-| Dimension | Valeurs |
+| Dimension | Ce qu'elle dit |
 |---|---|
-| **PP&E type** | Hardware, Software (immobilisations corporelles) |
-| **Investment type** | Replacement, Capacity, Productivity, Security, Conformity, Business growth, Other |
-| **Priority** | Mandatory, High, Medium, Low |
+| **Nature de coût** | Ce que la dépense paie : matériel, logiciel, main-d'œuvre interne et externe, services externes, locaux et énergie, télécoms, autres. C'est la dimension par défaut |
+| **Domaine IT** | La partie de l'IT servie : data center, calcul, stockage, réseau, plateforme, impression, poste de travail, application, support et exploitation, sécurité et conformité, pilotage IT |
+| **Motif** | Pourquoi la dépense est engagée : remplacement, capacité, productivité, sécurité, conformité, croissance, autre |
+| **Priorité** | Obligatoire, haute, moyenne ou basse |
 
-Elles sont utilisées pour les lignes CAPEX et obligatoires : une nouvelle ligne CAPEX a besoin d'une valeur sur chacune. Elles fonctionnent comme toute autre dimension : leurs champs se trouvent dans le panneau **Propriétés** avec les autres dimensions, et leurs colonnes s'affichent par défaut dans la liste. Un administrateur peut les renommer, ajouter des valeurs, changer l'ordre des valeurs, les désactiver ou les supprimer. Voir [Dimensions CAPEX](analytics.md#dimensions-capex) dans Dimensions analytiques.
+Elles s'appliquent aux lignes OPEX et CAPEX et aucune n'est obligatoire. Elles fonctionnent comme toute autre dimension : leurs champs se trouvent dans le panneau **Propriétés**, et un administrateur peut les renommer, ajouter des valeurs, en rendre une obligatoire, les désactiver ou les supprimer. Un administrateur peut les ajouter à un espace de travail existant. Voir [Dimensions recommandées](analytics.md#dimensions-recommandees) dans Dimensions analytiques.
+
+Les espaces de travail créés avant les dimensions recommandées gardent trois dimensions réservées aux lignes CAPEX, toutes obligatoires : **PP&E type**, **Investment type** et **Priority**. Une nouvelle ligne CAPEX y a besoin d'une valeur sur chacune.
 
 ---
 
@@ -95,7 +98,7 @@ La liste (dans **Gestion budgétaire > Lignes budgétaires**) contient les ligne
 - **Compte** : Le numéro et le nom du compte comptable
 - **Ventilation** : Le libellé de la méthode de ventilation pour l'année en cours (ouvre l'onglet **Ventilations**)
 - **Budget A** et **Atterrissage prévu A** : Les montants de l'année en cours de la colonne par défaut et de la dernière colonne affichée (ouvre l'onglet **Budget** pour cette année). Avec les réglages standard, ce sont Budget et Atterrissage prévu. Quand la colonne par défaut est aussi la dernière affichée, une seule colonne de montant apparaît. Voir [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires)
-- **Dimensions obligatoires** : Une colonne par dimension activée obligatoire pour l'un ou l'autre type, à son nom : **PP&E type**, **Investment type** et **Priority** au départ
+- **Dimensions obligatoires** : Une colonne par dimension activée obligatoire pour l'un ou l'autre type, à son nom. Un nouvel espace de travail n'en a aucune
 - **Tâche** : Le titre de la dernière tâche (ouvre l'onglet **Vue d'ensemble**, où se trouve le panneau des tâches)
 
 **Colonnes supplémentaires** (masquées par défaut, activez-les via le sélecteur de colonnes) :
@@ -145,11 +148,10 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 - Le tri par défaut suit la colonne par défaut de l'année en cours, du plus grand au plus petit (**Budget A** avec les réglages standard). Les boutons **Préc.** et **Suiv.** de l'espace de travail suivent le même ordre
 - La liste mémorise votre dernier tri, votre recherche et vos filtres quand vous revenez
 
-**Lignes de totaux** :
+**Ligne de totaux** :
 
-- La ligne épinglée en bas affiche **Total (12 lignes)**, avec le nombre de lignes que contient la liste, et le total de chaque colonne de montant
-- Lorsque la liste contient les deux types (aucun filtre sur **Type**, ou les deux valeurs cochées), deux autres lignes s'affichent au-dessus : **Total OPEX** et **Total CAPEX**. Filtrée sur un type, la liste n'affiche que la ligne **Total**
-- Un cadenas devant un total signifie que la colonne est gelée pour cette année. Sur **Total OPEX** et **Total CAPEX**, il suit le gel de ce type. Sur **Total**, il s'affiche quand la colonne est gelée pour chaque type que contient la liste. Survolez-le pour lire **Gelé**. Voir [Geler / Dégeler les données](budget-operations.md#geler-degeler-les-donnees)
+- Une seule ligne **Total** est épinglée sous la liste. Elle affiche **Total (12 lignes)**, avec le nombre de lignes que contient la liste, et le total de chaque colonne de montant
+- Un cadenas devant un total signifie que la colonne est gelée pour cette année. Il suit le gel de chaque type que contient la liste. Si la liste est filtrée sur un type, le cadenas s'affiche quand ce type est gelé. Si elle contient les deux types, il s'affiche quand la colonne est gelée pour les deux. Survolez-le pour lire **Gelé**. Voir [Geler / Dégeler les données](budget-operations.md#geler-degeler-les-donnees)
 - Chaque colonne ETP affichée montre la somme des ETP des lignes. Lorsque certaines lignes n'ont pas d'ETP, leur nombre suit le total, par exemple « 3.50 · 12 inconnues ». Survolez-le pour lire la phrase complète : « Inconnu pour 12 lignes ». Lorsqu'aucune ligne n'a d'ETP, le total est vide et seul le nombre s'affiche
 - Les totaux respectent vos filtres et votre recherche actuels
 
@@ -250,7 +252,7 @@ Lorsque la ligne en remplace une autre, ou a été remplacée à partir d'une an
 - Chaque champ liste les valeurs activées de sa dimension. Une valeur désactivée reste sur les lignes qui l'ont déjà, et ne peut pas être choisie pour une autre ligne
 - Une valeur réservée à l'autre type n'est pas proposée, et son choix est refusé. Une ligne qui l'a déjà la garde et reste modifiable. Voir [Valeurs OPEX ou CAPEX](analytics.md#valeurs-opex-ou-capex)
 - Le champ ne peut pas créer de valeur : créez-la dans [Dimensions analytiques](analytics.md), ou laissez un import CSV la créer
-- Une dimension obligatoire est marquée d'un astérisque. Une nouvelle ligne doit avoir une valeur sur cette dimension : **Créer** s'arrête avec « Nature est obligatoire » tant que vous n'en avez pas choisi. Sur une ligne qui porte une valeur, le champ ne peut pas être vidé, seulement modifié. Une ligne sans valeur reste modifiable. Si vous modifiez une telle ligne, la quitter demande d'abord : « Nature est obligatoire. Choisissez une valeur avant de quitter. » **Rester** place le curseur dans le champ manquant. **Quitter quand même** quitte la ligne. Voir [Dimensions obligatoires](analytics.md#dimensions-obligatoires)
+- Une dimension obligatoire est marquée d'un astérisque. Une nouvelle ligne doit avoir une valeur sur cette dimension : **Créer** s'arrête avec « Nature de coût est obligatoire » tant que vous n'en avez pas choisi. Sur une ligne qui porte une valeur, le champ ne peut pas être vidé, seulement modifié. Une ligne sans valeur reste modifiable. Si vous modifiez une telle ligne, la quitter demande d'abord : « Nature de coût est obligatoire. Choisissez une valeur avant de quitter. » **Rester** place le curseur dans le champ manquant. **Quitter quand même** quitte la ligne. Voir [Dimensions obligatoires](analytics.md#dimensions-obligatoires)
 - Si les dimensions ne peuvent pas être chargées, une ligne remplace ces champs : « Les dimensions n'ont pas pu être chargées. »
 
 **Conseil** : Lors de la création d'une ligne, un avertissement « Compte obsolète » signifie que le compte sélectionné n'appartient pas au plan comptable de la société payeuse. Choisissez un autre compte pour résoudre l'avertissement. Une ligne existante dont le compte est hors du plan comptable de sa société reste modifiable : le plan comptable n'est vérifié que lorsque la société ou le compte change.
@@ -259,13 +261,13 @@ Lorsque la ligne en remplace une autre, ou a été remplacée à partir d'une an
 
 ### Budget
 
-L'onglet Budget est l'endroit où vous saisissez les données financières par année. Il prend en charge plusieurs colonnes budgétaires et deux modes de saisie, présentés sous forme d'onglets : **Annuel** (totaux annuels) et **Mensuel** (ventilation mensuelle).
+L'onglet Budget porte les montants de la ligne, année par année et colonne par colonne. Pour l'année choisie, choisissez une colonne, indiquez comment elle se construit, puis lisez le résultat mois par mois.
 
 **Sélection d'année** :
 
 - Utilisez les onglets d'année en haut pour basculer entre A-2, A-1, A (année en cours), A+1 et A+2
-- Chaque année a sa propre version, son mode et ses montants
-- Changer d'année enregistre d'abord vos modifications en attente
+- Chaque année a ses propres montants
+- Changer d'année enregistre d'abord vos modifications en attente. Si une colonne attend encore votre choix après la modification d'une autre personne, KANAP demande d'abord : **Changer d'année** abandonne vos valeurs dans cette colonne
 
 **Colonnes budgétaires** :
 
@@ -276,6 +278,9 @@ L'onglet Budget est l'endroit où vous saisissez les données financières par a
     - **Réalisé** : La dépense réelle, telle qu'elle est enregistrée pendant l'année
     - **Atterrissage prévu** : Votre meilleure estimation du chiffre de fin d'année
 - Un administrateur budgétaire peut renommer les colonnes, en masquer certaines et choisir la colonne par défaut dans **Gestion budgétaire > Administration > Colonnes budgétaires** (voir [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires)). Une colonne masquée garde ses montants
+- Chaque colonne affichée a une carte sous les onglets d'année : son nom, son total pour l'année, l'origine de ses montants et sa période, par exemple « Répartition linéaire » et « 9 mois, avril à décembre ». Une colonne vide indique « Pas encore saisi ». Survolez une carte pour voir ses lignes de quantité et prix
+- Cliquez sur une carte pour travailler sur cette colonne. L'onglet s'ouvre sur la première colonne affichée qui n'est pas gelée
+- Avec une seule colonne affichée, il n'y a pas de cartes : l'éditeur montre directement la colonne
 
 **Période d'une colonne** :
 
@@ -283,85 +288,121 @@ L'onglet Budget est l'endroit où vous saisissez les données financières par a
 - Un mois compte lorsque la période couvre son 15. Une période qui commence le 10 avril inclut avril ; une période qui commence le 20 avril débute en mai
 - Une colonne sans montant ni période reçoit une suggestion : le **Début d'effet** et la **Fin de validité** de la ligne, limités à l'année. Une ligne qui commence le 1er avril suggère d'avril à décembre
 - Une colonne qui porte déjà des montants sans période est lue comme couvrant toute l'année : les données existantes se comportent comme avant
+- Lorsque la période enregistrée d'une colonne dépasse les dates de la ligne, l'éditeur indique la période qu'un enregistrement utilise, par exemple « Période enregistrée : janvier à décembre. L'enregistrement utilisera avril à décembre, selon les dates de la ligne. »
 
-**Annuel ou Mensuel** :
+**Comment se construit une colonne** :
 
-- **Annuel** : Saisissez un total par colonne. Le total est réparti uniformément sur les mois de la période de la colonne, et les mois hors de cette période sont mis à zéro. La période s'affiche sous chaque total avant la saisie, par exemple « 9 mois, avril à décembre ». Seul le total que vous modifiez est enregistré. Les autres colonnes gardent leurs montants mensuels.
-- Cliquez sur l'icône crayon à côté de la période sous un total (**Modifier la période**) pour ouvrir le panneau de répartition sur cette colonne, avec son total actuel. Si les dates de la ligne ne laissent aucun mois dans l'année, le total est désactivé et indique « Aucun mois de 2026 n'est compris dans les dates de la ligne. » Cliquez sur l'icône crayon à côté (**Choisir la période**) pour la définir vous-même.
-- Cliquez sur l'icône calculatrice à côté du crayon (**Quantité et prix**) pour ouvrir le même encadré sur les lignes de cette colonne. Voir [Quantité et prix](#quantite-et-prix).
-- Une colonne qui suit ses lignes (ses montants ont été calculés à partir de ses lignes de Quantité et prix) a un total en lecture seule. Cliquez sur le total, ou appuyez sur Entrée dessus, pour ouvrir **Quantité et prix** sur cette colonne. Le crayon fait de même. Survolez le total pour lire « Calculé à partir de ses lignes. Ouvrez Quantité et prix pour le modifier. »
-- **Mensuel** : Saisissez les montants par mois (Jan-Déc) pour chaque colonne affichée, par exemple pour suivre un plan de décaissement ou les jalons d'un projet. Des sous-totaux par trimestre et un total annuel sont affichés. Seuls les mois que vous modifiez sont enregistrés.
-- Les deux onglets montrent les mêmes colonnes : Prévision apparaît aussi dans **Annuel** quand elle est affichée.
-- Passez d'un mode à l'autre avec les onglets **Annuel** et **Mensuel**. Changer de mode ne modifie pas vos montants.
-- Votre choix entre **Annuel** et **Mensuel** est conservé dans votre navigateur, pour vous seul : changer de mode ne modifie pas ce que voient les autres utilisateurs qui ouvrent cette ligne. Tant que vous n'avez pas choisi, une colonne s'ouvre dans le mode utilisé pour la dernière saisie de ses montants.
+L'éditeur sous les cartes porte le nom de la colonne et l'année, par exemple **Budget 2026**. Trois onglets indiquent comment la colonne se construit :
+
+- **Montant** : un montant annuel, réparti sur les mois
+- **Quantité et prix** : des lignes, chacune une quantité multipliée par un prix unitaire. Voir [Quantité et prix](#quantite-et-prix)
+- **Par mois** : douze montants saisis dans le tableau
+
+Les trois onglets sont toujours proposés. Une colonne s'ouvre sur l'onglet qui correspond à l'origine de ses montants : **Quantité et prix** lorsqu'ils sont calculés à partir de ses lignes, **Par mois** après une modification à la main, et **Montant** pour une colonne vide, répartie ou copiée.
+
+Sur une colonne vide, un clic sur un onglet bascule aussitôt. Sur une colonne qui porte des montants, une question s'affiche d'abord dans l'éditeur et dit ce qui change. Cliquez sur **Changer** pour continuer, ou sur **Annuler** :
+
+- Vers **Montant** : le total actuel devient le montant, réparti linéairement sur la période de la colonne. Les lignes de la colonne restent en référence
+- Vers **Par mois** : les mois actuels sont gardés et deviennent modifiables dans le tableau
+- Vers **Quantité et prix** : le total vient des lignes. Le montant actuel est remplacé, ou les lignes gardées en référence sont reprises
+
+**Montant** :
+
+- **Montant annuel** : le total de la colonne pour l'année
+- **Quand** : **Toute l'année**, **Une période** avec les dates **Du** et **Au**, ou **À une date** avec une seule **Date**
+- **Répartition** : **Linéaire** ou **4-4-5**. À une date, il n'y a pas de répartition : le mois de la date prend tout le montant
+- Une phrase dit ce que vous obtenez, par exemple « 120 000 répartis linéairement d'avril à décembre (9 mois). » ou « 5 000 le 10 février 2026, portés sur février. » Survolez l'icône d'information à côté pour lire la règle du 15
+- Lorsque des mois de l'année tombent hors de la période, une remarque indique lesquels seront mis à zéro, par exemple « Janvier à mars seront mis à zéro. »
+- Un avertissement s'affiche lorsque la période dépasse les dates de la ligne. Le montant est tout de même enregistré
+- Tant qu'une date manque ou qu'aucun mois ne compte, une remarque en rouge dit pourquoi et rien n'est enregistré. Lorsque les dates de la ligne ne laissent aucun mois dans l'année, l'éditeur indique « Aucun mois de 2026 n'est compris dans les dates de la ligne. » Choisissez **Une période** pour fixer les dates vous-même
+- **Chaque modification s'enregistre aussitôt** : le montant quand vous quittez le champ ou appuyez sur Entrée, les autres champs dès que vous les changez. Il n'y a aucun bouton à cliquer. Un montant vide ou nul n'enregistre rien
+- Avec **4-4-5**, les poids des mois qui comptent sont augmentés pour que tout le montant y soit porté
+- Pour revenir à une répartition linéaire sur douze mois, choisissez **Toute l'année** et **Linéaire**
+- Une répartition sur une colonne construite à partir de lignes garde ses lignes comme référence. Voir [Quantité et prix](#quantite-et-prix)
+
+**Par mois** :
+
+- L'éditeur indique, par exemple, « Saisissez les montants dans la colonne Budget du tableau ci-dessous. » Saisissez chaque mois dans cette colonne de **Résultat par mois**. Les sous-totaux trimestriels et le total suivent pendant la saisie. Seuls les mois que vous modifiez sont enregistrés
+- Utilisez-le pour suivre un plan de décaissement ou les jalons d'un projet, par exemple tout le montant sur un seul mois
+- Cliquez sur un mois d'une autre colonne du tableau pour saisir cette colonne par mois : elle devient la colonne active et le curseur se place dans ce mois. Sur une colonne qui porte des montants, l'éditeur demande d'abord. Survolez un mois pour lire « Saisir par mois ». Les mois d'une colonne gelée ne sont pas cliquables
+
+**Partir de** :
+
+- Une colonne vide, sans montant ni ligne, peut partir d'une autre colonne affichée qui porte des montants. L'éditeur indique « Partir de », puis la colonne avec son total, « ajusté de », un pourcentage (0 par défaut) et **Reprendre**. Vous pouvez aussi saisir la colonne vous-même en dessous
+- **Reprendre** fonctionne comme [Copier les colonnes budgétaires](budget-operations.md#copier-les-colonnes-budgetaires) sur cette ligne et cette année : les mois gardent leur forme et le pourcentage s'applique à chacun. Une colonne calculée à partir de ses lignes le reste, avec ses prix unitaires augmentés du pourcentage. Une colonne gelée peut servir de source
+- Lorsque les dates de la ligne excluent des mois de la source, ils ne sont pas copiés, et une remarque l'indique : « Les mois de la colonne Budget hors des dates de la ligne n'ont pas été copiés. »
+
+**Utiliser aussi pour d'autres colonnes** :
+
+- Sous l'éditeur, **Utiliser aussi pour d'autres colonnes…** donne à d'autres colonnes la même construction que la colonne active. Le lien s'affiche lorsque la colonne active est un montant avec une période valide, ou suit ses lignes de quantité et prix, et qu'une autre colonne peut le recevoir
+- Le lien liste les autres colonnes affichées sous **Même construction pour**, chacune avec une case. Les colonnes réglées pour suivre dans [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires) sont cochées au départ. Cliquez sur **Appliquer**, ou sur **Annuler**
+- Depuis un montant, les colonnes cochées prennent sa période et sa répartition, et chacune garde son propre total. Les colonnes qui suivent leurs lignes ne sont pas proposées, et une phrase les nomme, par exemple « Prévision garde ses lignes. »
+- Depuis quantité et prix, les colonnes cochées reçoivent les mêmes lignes, qui remplacent leurs montants
+- Les colonnes gelées et les colonnes en attente de votre choix ne sont pas proposées
+
+**Effacer la colonne** :
+
+- **Effacer la colonne**, à droite sous l'éditeur, remet à zéro tous les mois de la colonne active, par exemple avant de saisir tout le montant sur un seul mois. Lorsque la colonne contient des montants, vous confirmez d'abord : « Effacer tous les mois de la colonne Budget pour 2026 ? Les autres colonnes ne changent pas. » Cela compte comme une modification à la main
+- Pour retirer à la fois les montants et la période d'une colonne pour toutes les lignes, utilisez **Réinitialiser une colonne budgétaire** dans l'Administration budgétaire
+
+**Résultat par mois** :
+
+- Sous l'éditeur, **Résultat par mois** montre l'année mois par mois pour chaque colonne affichée, dans la devise de la ligne, avec un sous-total par trimestre (**T1** à **T4**) et une ligne **Total**. La colonne active est mise en évidence
+- Avec deux colonnes ou plus, une dernière ligne donne l'écart de chaque colonne avec l'une d'elles, par exemple « +12 000 (+1,8 %) ». Choisissez cette colonne dans **Écart avec** au-dessus du tableau. Elle part de la colonne par défaut
+- Tant que chaque colonne est vide, ou un montant réparti linéairement sur toute l'année, une phrase remplace le tableau, par exemple « Toutes les colonnes sont réparties linéairement sur l'année : le détail mensuel n'apprend rien de plus. » **Afficher le détail** ouvre le tableau et **Masquer le détail** le replie. Votre choix tient tant que vous restez sur la ligne
+- Le tableau reste ouvert pendant que la colonne active est saisie par mois ou qu'une colonne attend votre choix
+
+**Revenir aux valeurs d'ouverture** :
+
+- L'onglet garde les valeurs de chaque colonne d'une année telles qu'elles étaient à la première ouverture de cette année pendant votre visite de la ligne. Changer d'onglet ou d'année les conserve. Recharger la page repart des valeurs de ce moment
+- Dès que vous modifiez une colonne, la droite des onglets d'année indique, par exemple, « 2 colonnes modifiées depuis 10:42 », suivi de **Revenir aux valeurs d'ouverture**
+- Cliquez dessus pour ramener les colonnes que vous avez modifiées à ces valeurs. Il n'y a pas de confirmation. Vos modifications en cours sont d'abord enregistrées, puis chaque colonne est restaurée séparément
+- Une note indique le résultat, par exemple « Valeurs d'ouverture restaurées : Budget et Révision. » Une colonne reste en l'état lorsqu'elle a été gelée entre-temps, lorsqu'une autre personne l'a modifiée depuis (le bandeau au-dessus demande alors quoi garder), ou tant qu'elle attend votre choix. Une colonne modifiée seulement par une autre personne n'est jamais restaurée. Fermez la note avec **Fermer**
+- Si une modification en cours ne peut pas être enregistrée, rien n'est restauré : « Rien n'a été restauré : une modification n'a pas pu être enregistrée avant. »
+- Le journal d'audit enregistre chaque colonne restaurée avec l'action **Restaurer**
 
 **Comportement du gel** :
 
-- Si les colonnes budgétaires d'une année sont gelées pour le type de la ligne (via l'Administration budgétaire), les champs correspondants passent en lecture seule et affichent un cadenas
-- Vous pouvez toujours consulter les données gelées ; les administrateurs peuvent dégeler via **Gestion budgétaire > Administration > Geler / Dégeler les données**
+- Si les colonnes budgétaires d'une année sont gelées pour le type de la ligne (via l'Administration budgétaire), la carte de chaque colonne gelée affiche un cadenas, de même que son en-tête dans le tableau
+- Une colonne gelée est en lecture seule. Son éditeur indique, par exemple, « La colonne Budget 2026 est gelée » et « Lecture seule. Un administrateur peut la dégeler dans Administration › Geler / Dégeler les données. », avec son total et l'origine de ses montants
+- Lorsque des colonnes sont gelées, une ligne sous le graphique indique « Certaines colonnes sont gelées et en lecture seule. »
 - Chaque colonne peut être gelée indépendamment
-
-**Répartir un montant** :
-
-- L'encadré du panneau a deux onglets : **Répartir un montant** et **Quantité et prix**. Cette partie couvre le premier
-- Le panneau de répartition est toujours visible dans l'onglet **Mensuel**. Dans l'onglet **Annuel**, il s'ouvre depuis l'icône crayon sous un total, et son bouton de fermeture le ferme
-- Choisissez une **Colonne** parmi les colonnes affichées, vérifiez le **Montant**, choisissez une **Répartition** (**Linéaire** ou **4-4-5**), puis définissez les dates **Du** et **Au**. Les dates partent de la période actuelle de la colonne, et la répartition de celle de la colonne
-- Le panneau s'ouvre sur la colonne par défaut. Le montant reprend le total actuel de la colonne, dans les deux onglets, et suit lorsque vous choisissez une autre colonne. Il reste vide lorsque la colonne n'a aucun montant
-- **Chaque modification s'enregistre aussitôt** : le montant quand vous quittez le champ ou appuyez sur Entrée, la répartition et les dates dès que vous les modifiez. Il n'y a aucun bouton à cliquer. Un montant vide ou nul n'enregistre rien
-- **Appliquer la répartition à toutes les colonnes** est un interrupteur, activé par défaut : chaque colonne qui le suit reçoit la même répartition et la même période, et chacune garde son propre total actuel. L'activer répartit aussitôt ces colonnes, et il reste activé pour vos modifications suivantes. Le désactiver ne change rien en soi : les modifications suivantes s'appliquent à la seule colonne choisie. Par défaut, toutes les colonnes le suivent. Un administrateur budgétaire choisit lesquelles dans [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires). Les colonnes gelées ne changent jamais. Survolez l'interrupteur pour voir les colonnes qui suivent et celles qui gardent leur propre période
-- Une colonne qui ne suit pas l'interrupteur est répartie seule : l'interrupteur n'apparaît pas quand vous la répartissez. L'interrupteur est aussi masqué quand aucune autre colonne qui suit ne peut changer
-- Les colonnes qui suivent leurs lignes sont laissées de côté par l'interrupteur : elles gardent les montants de leurs lignes, et une phrase les nomme, par exemple « Prévision garde ses lignes. » Quand toutes les autres colonnes suivent leurs lignes, l'interrupteur n'apparaît pas
-- Pour remettre une colonne en répartition linéaire sur douze mois, choisissez **Linéaire** et réglez les dates sur le 1er janvier et le 31 décembre
-- Les totaux saisis dans l'onglet **Annuel** s'appliquent toujours à leur seule colonne
-- Les dates **Du** et **Au** affichent la période. Quand des mois tombent en dehors, le panneau indique lesquels seront mis à zéro (« Janvier à mars seront mis à zéro. »). Une période sur l'année entière n'affiche aucune ligne. Survolez l'icône d'information à côté du titre du panneau pour voir la règle du 15
-- Avec **4-4-5**, les poids des mois qui comptent sont augmentés pour que tout le montant se répartisse sur eux
-- Un avertissement non bloquant apparaît lorsque la période dépasse les dates de la ligne. La répartition est tout de même enregistrée
-- Tant qu'une date manque ou qu'aucun mois ne compte, le panneau en indique la raison et n'enregistre rien
-- Une colonne qui suit ses lignes affiche ses valeurs actuelles dans les champs, en grisé, sous la phrase « Les montants viennent des 4 lignes de Quantité et prix. » Cliquez sur **Répartir un montant à la place** pour déverrouiller les champs de cette colonne. La phrase indique alors « Une répartition remplace les montants des lignes. Les lignes restent comme référence. » Le verrou revient quand vous changez de colonne, d'année ou d'encadré
-- Une répartition sur une colonne construite à partir de lignes garde ses lignes comme référence. Voir [Quantité et prix](#quantite-et-prix)
 
 **Origine de chaque colonne** :
 
-- Un court libellé indique d'où viennent les montants d'une colonne. Dans l'onglet **Mensuel**, il se trouve sous l'en-tête de colonne (survolez-le pour voir la période). Dans l'onglet **Annuel**, il se trouve à côté de la période
+- Un court libellé sur chaque carte indique d'où viennent les montants de la colonne, suivi de sa période. Avec une seule colonne, il se trouve sous le titre de l'éditeur
 - **Répartition linéaire**, **Répartition 4-4-5** ou **Répartition par trimestre** : les montants proviennent d'une répartition
-- **Copié depuis Budget 2025 +2 %** : les montants proviennent de **Copier les colonnes budgétaires** dans l'Administration budgétaire, avec le pourcentage affiché lorsqu'il y en a un
-- **Quantité et prix · 3 lignes · 1.00 ETP** : les montants proviennent de lignes, avec leur nombre et, lorsque les lignes comptent des personnes ou des jours, l'ETP de la colonne. Cet ETP est la moyenne sur l'année. Survolez le libellé pour voir les lignes, par exemple « Chef de projet : 1 personne × 1 200 par jour, 5 jours par mois, févr. à juil. »
-- **Modifié à la main** : un mois a été modifié dans la grille ou par un import de fichier budgétaire
+- **Copié depuis Budget 2025 +2 %** : les montants proviennent de **Copier les colonnes budgétaires** dans l'Administration budgétaire, ou de **Partir de**, avec le pourcentage affiché lorsqu'il y en a un
+- **Quantité et prix · 3 lignes · 1.00 ETP** : les montants proviennent de lignes, avec leur nombre et, lorsque les lignes comptent des personnes ou des jours, l'ETP de la colonne. Cet ETP est la moyenne sur l'année. Survolez la carte pour voir les lignes, par exemple « Chef de projet : 1 personne × 1 200 par jour, 5 jours par mois, févr. à juil. »
+- **Modifié à la main** : un mois a été modifié dans le tableau ou par un import de fichier budgétaire
+- Un montant à une date affiche sa date au lieu d'une période, par exemple « Le 10 février 2026 »
 - Une colonne sans libellé a conservé les données qu'elle avait avant l'arrivée des périodes
 
 **Lorsqu'une autre personne modifie la même colonne** :
 
 - Deux personnes peuvent remplir des mois ou des colonnes différents de la même ligne en même temps, sans conflit
 - En saisie mensuelle, si une autre personne a modifié l'un des mêmes mois, ces mois attendent votre choix ; les autres mois de la colonne s'enregistrent comme vous les avez saisis
-- Si une autre personne a modifié le total de la colonne, sa répartition ou ses lignes de quantité et prix pendant que vous y travailliez, toute la colonne attend : un bandeau propose **Recharger la colonne** ou **Écraser**. Les montants, le panneau de répartition et les lignes de la colonne restent en lecture seule jusqu'à votre choix
+- Si une autre personne a modifié le total de la colonne, sa répartition ou ses lignes de quantité et prix pendant que vous y travailliez, toute la colonne attend : un bandeau propose **Recharger la colonne** ou **Écraser**. Sa carte affiche un point orange (survolez-le pour lire « En attente de votre choix ») et ses mois sont teintés. L'éditeur reste en lecture seule jusqu'à votre choix, avec la ligne « Choisissez d'abord, ci-dessus, de recharger cette colonne ou de l'écraser. »
 - Enregistrer recharge l'année : vous voyez toujours les derniers chiffres de chaque autre colonne ; la cellule ou la colonne que vous modifiez n'est pas perturbée
-
-**Outils du mode mensuel** :
-
-- **Effacer la colonne** : l'icône à côté d'un en-tête de colonne remet à zéro tous les mois de cette colonne, par exemple avant de saisir tout le montant sur un seul mois. Lorsque la colonne contient des montants, vous confirmez d'abord. Cela compte comme une modification à la main. Pour retirer à la fois les montants et la période d'une colonne pour toutes les lignes, utilisez **Réinitialiser une colonne budgétaire** dans l'Administration budgétaire
 
 **Tendance pluriannuelle** :
 
-- Un graphique sous la grille montre chaque colonne affichée sur plusieurs années, Prévision comprise quand elle est affichée, et se met à jour pendant la saisie
+- Un graphique sous le tableau montre chaque colonne affichée sur plusieurs années, Prévision comprise quand elle est affichée, et se met à jour pendant la saisie
 
 **Comment l'utiliser** :
 
-1. Sélectionnez l'année pour laquelle vous planifiez
-2. Choisissez l'onglet **Annuel** ou **Mensuel**
-3. Remplissez les colonnes pertinentes (Budget pour la planification initiale, Réalisé pour le suivi, Atterrissage prévu pour le chiffre de fin d'année)
-4. Vos modifications s'enregistrent automatiquement ; l'indication **Enregistrement...** / **Enregistré** apparaît à côté des onglets d'année
+1. Sélectionnez l'année que vous planifiez
+2. Cliquez sur la carte de la colonne à remplir (Budget pour la planification initiale, Réalisé pour le suivi, Atterrissage prévu pour le chiffre de fin d'année)
+3. Choisissez **Montant**, **Quantité et prix** ou **Par mois**, et remplissez-la
+4. Lisez le résultat dans **Résultat par mois**. Vos modifications s'enregistrent automatiquement ; une indication **Enregistrement...** / **Enregistré** s'affiche à côté des onglets d'année
 
-**Conseil** : Pour la plupart des lignes, le mode Annuel est plus rapide. Utilisez le mode Mensuel lorsque la dépense varie nettement d'un mois à l'autre (ex. : licences saisonnières, frais de mise en place ponctuels, déploiements par étapes).
+**Conseil** : Pour la plupart des lignes, un montant sur toute l'année ou sur une période suffit. Utilisez **Par mois** lorsque la dépense varie nettement d'un mois à l'autre (ex. : licences saisonnières, frais de mise en place ponctuels, déploiements par étapes). Pour remplir une nouvelle colonne à partir d'une colonne existante, utilisez **Partir de**.
 
 #### Quantité et prix
 
 Construisez une colonne à partir de lignes au lieu de saisir ses montants. Chaque ligne se lit comme une phrase : une quantité, une unité, un prix unitaire, une fréquence, une période et un calendrier. Par exemple, un chef de projet 5 jours par mois à 1 200 par jour de février à juillet, et 50 licences à 12 par pièce par mois. Les mois de la colonne sont la somme de ses lignes. Les montants d'une colonne n'ont qu'une source à la fois : ses lignes, ou une répartition, un mois saisi à la main ou une copie. L'autre source reste visible comme référence, en lecture seule, avec un lien pour basculer.
 
-**Ouvrir l'onglet** :
-
-- Onglet **Annuel** : cliquez sur l'icône calculatrice à côté de la période sous un total. L'encadré s'ouvre sur **Quantité et prix** pour cette colonne. Sur une colonne qui suit ses lignes, le crayon et le total l'ouvrent aussi
-- Onglet **Mensuel** : cliquez sur **Quantité et prix** en haut de l'encadré du panneau. Choisir une colonne qui suit ses lignes, ou en avoir une comme colonne par défaut, bascule l'encadré sur **Quantité et prix**
-- Choisissez la **Colonne** en haut de l'onglet. Les colonnes gelées ne peuvent pas être choisies
+**L'ouvrir** : cliquez sur la carte de la colonne, puis sur l'onglet **Quantité et prix** de l'éditeur. Une colonne calculée à partir de ses lignes s'ouvre sur cet onglet. Les lignes d'une colonne gelée sont en lecture seule.
 
 **Les lignes** :
 
@@ -414,14 +455,13 @@ Cliquez sur **Ajouter une ligne** sous le tableau pour ajouter une ligne, et sur
 - L'ETP des lignes, lorsqu'une ligne compte des personnes ou des jours, par exemple « ETP sur la période 0.24 · Moyenne sur l'année 0.12 ». Voir [ETP](#etp). Le total de la colonne s'affiche dans la colonne elle-même
 - D'où viennent les montants, lorsqu'ils ne viennent plus des lignes : l'une des phrases de la partie suivante
 - Des remarques lorsqu'elles s'appliquent : « La période dépasse les dates de la ligne. », un calendrier désactivé depuis, par exemple « Personnel du siège est désactivé. Les lignes l'utilisent encore. », et les jours ouvrés modifiés depuis le dernier enregistrement des lignes
-- **Appliquer ces lignes à toutes les colonnes** : un interrupteur pour les mêmes colonnes que celui de l'onglet de répartition, désactivé par défaut ici. L'activer écrit aussitôt les lignes dans chaque colonne qui suit, et il reste activé : chaque enregistrement suivant écrit aussi les lignes dans ces colonnes. Le désactiver ne change rien en soi
+- Pour donner les mêmes lignes à d'autres colonnes, utilisez **Utiliser aussi pour d'autres colonnes…** sous l'éditeur. Voir [Budget](#budget)
 
-**Lorsque les montants changent autrement** : les lignes restent sur la colonne comme référence, et l'onglet indique d'où viennent désormais les montants, suivi d'un lien **Utiliser à nouveau les lignes**. Les lignes sont alors en lecture seule : vous ne pouvez ni ajouter, ni supprimer, ni modifier une ligne, et l'onglet n'affiche ni montant par ligne, ni ETP, ni **Appliquer ces lignes à toutes les colonnes**. Le lien enregistre les lignes telles quelles et recalcule la colonne à partir d'elles, et les lignes redeviennent modifiables. Pour modifier une ligne gardée comme référence, cliquez d'abord sur **Utiliser à nouveau les lignes**, puis modifiez-la.
+**Lorsque les montants changent autrement** : les lignes restent sur la colonne comme référence, en lecture seule. Sous **Montant** ou **Par mois**, une ligne indique combien de lignes sont gardées, par exemple « 4 lignes gardées en référence (48 000). », suivie d'un lien **Utiliser à nouveau les lignes**. Le lien enregistre les lignes telles quelles et recalcule la colonne à partir d'elles. Choisir l'onglet **Quantité et prix** fait de même, après une question. Pour modifier une ligne gardée en référence, utilisez d'abord à nouveau les lignes, puis modifiez-la.
 
-- Un mois saisi dans l'onglet **Mensuel** : « Les montants ont été saisis à la main. Utiliser à nouveau les lignes. »
-- Une répartition : « Les montants viennent d'une répartition. Utiliser à nouveau les lignes. »
-- **Copier les colonnes budgétaires** dans l'Administration budgétaire : « Les montants ont été copiés depuis Budget 2025. Utiliser à nouveau les lignes. » Lorsque les montants source n'étaient pas calculés à partir de lignes, la copie reporte les lignes de la colonne source comme référence. Une colonne calculée à partir de ses lignes le reste, avec ses prix augmentés du pourcentage. Voir [Copier une colonne construite à partir de lignes](budget-operations.md#copier-une-colonne-construite-a-partir-de-lignes)
-- Les jours ouvrés d'un calendrier ont changé : « Jours ouvrés modifiés depuis le dernier calcul : mars : 20 jours, maintenant 19. » Rien ne change sur la colonne tant que vous ne cliquez pas sur **Utiliser à nouveau les lignes**. Les lignes restent modifiables entre-temps
+- Passer la colonne en **Montant** ou en **Par mois**, saisir un mois dans le tableau, ou **Effacer la colonne**
+- **Copier les colonnes budgétaires** dans l'Administration budgétaire, ou **Partir de** : lorsque les montants source n'étaient pas calculés à partir de lignes, la copie reporte les lignes de la colonne source comme référence. Une colonne calculée à partir de ses lignes le reste, avec ses prix augmentés du pourcentage. Voir [Copier une colonne construite à partir de lignes](budget-operations.md#copier-une-colonne-construite-a-partir-de-lignes)
+- Les jours ouvrés d'un calendrier ont changé : l'onglet **Quantité et prix** indique, par exemple, « Jours ouvrés modifiés depuis le dernier calcul : mars : 20 jours, maintenant 19. », suivi de **Utiliser à nouveau les lignes**. Rien ne change sur la colonne tant que vous ne cliquez pas sur **Utiliser à nouveau les lignes**. Les lignes restent modifiables entre-temps
 - **Réinitialiser une colonne budgétaire** dans l'Administration budgétaire retire les lignes avec les montants. Voir [Réinitialiser une colonne budgétaire](budget-operations.md#reinitialiser-une-colonne-budgetaire)
 - Un fichier budgétaire change les mois d'une colonne et laisse ses lignes. Voir [Charger un budget depuis un tableur](budget-file.md)
 
@@ -443,7 +483,7 @@ Par exemple, un consultant à temps plein de février à octobre compte 1 ETP da
 
 ### Ventilations
 
-L'onglet Ventilations répartit la dépense d'une année entre vos sociétés et départements. Les ventilations des lignes OPEX alimentent les rapports de refacturation et les KPI de coût par utilisateur.
+L'onglet Ventilations répartit la dépense d'une année entre vos sociétés et départements. Les ventilations alimentent les rapports de refacturation et les KPI de coût par utilisateur, pour les lignes OPEX et CAPEX.
 
 **Sélection d'année** :
 
@@ -596,13 +636,13 @@ Une ligne OPEX qui s'avère être un investissement devient une ligne CAPEX, et 
 
 **À partir de** fixe le début du changement :
 
-- **La première année de la ligne** (par défaut) : la ligne elle-même change de type. Elle garde sa référence `BL` et son adresse, ses budgets, ventilations, liens, pièces jointes et tâches. Son **Type** change dans la liste. Une ligne qui devient CAPEX quitte les rapports OPEX et la refacturation, et rejoint les rapports CAPEX. Une ligne qui devient OPEX fait l'inverse
+- **La première année de la ligne** (par défaut) : la ligne elle-même change de type. Elle garde sa référence `BL` et son adresse, ses budgets, ventilations, liens, pièces jointes et tâches. Son **Type** change dans la liste. Une ligne qui devient CAPEX quitte les rapports OPEX et rejoint les rapports CAPEX, et la refacturation la compte en CAPEX. Une ligne qui devient OPEX fait l'inverse
 - **Une année ultérieure** : cette ligne se termine le 31 décembre de l'année précédente et garde ses budgets antérieurs. Une nouvelle ligne de l'autre type, avec sa propre référence `BL`, porte le budget à partir de cette année, avec les contacts et les liens vers les applications, actifs, contrats, projets et demandes. Les pièces jointes, les sites web pertinents et les tâches restent sur cette ligne. Le haut de l'onglet **Vue d'ensemble** relie les deux lignes : **Remplacée par** sur cette ligne, **Succède à** sur la nouvelle
 
 La fenêtre demande aussi :
 
 - **Compte** : un compte pour le nouveau type. Lorsque le compte de la ligne est réservé à son type actuel, la ligne qui change elle-même de type le garde, sauf si vous en choisissez un autre ; une nouvelle ligne à partir d'une année ultérieure ne le reçoit que s'il convient au nouveau type
-- **Dimensions** : les dimensions obligatoires pour le nouveau type, et les valeurs de la ligne réservées à son type actuel. Si la ligne change elle-même de type, vous pouvez les renseigner maintenant ou plus tard. À partir d'une année ultérieure, la nouvelle ligne a besoin des dimensions obligatoires, et les valeurs réservées au type actuel ne sont pas reprises. Les [dimensions CAPEX](#dimensions-capex) ne s'appliquent pas aux lignes OPEX : une ligne CAPEX qui devient elle-même OPEX garde leurs valeurs sans les afficher, et les affiche de nouveau si elle redevient CAPEX
+- **Dimensions** : les dimensions obligatoires pour le nouveau type, et les valeurs de la ligne réservées à son type actuel. Si la ligne change elle-même de type, vous pouvez les renseigner maintenant ou plus tard. À partir d'une année ultérieure, la nouvelle ligne a besoin des dimensions obligatoires, et les valeurs réservées au type actuel ne sont pas reprises. Une dimension réservée aux lignes CAPEX ne s'applique pas aux lignes OPEX : une ligne CAPEX qui devient elle-même OPEX garde sa valeur sans l'afficher, et l'affiche de nouveau si elle redevient CAPEX
 - **Motif** : facultatif, conservé dans le journal d'audit de la ligne
 
 Le changement est refusé lorsque la ligne a des montants dans une colonne gelée, des lignes OPEX ou CAPEX, sur les années qui changent. Dégelez d'abord la colonne, ou faites commencer le changement à une année ultérieure. Une année ultérieure est proposée lorsqu'elle suit la première année budgétaire de la ligne, que la ligne a un budget cette année-là ou une année suivante, commence avant le 1er janvier de cette année et est encore valide ce jour-là, et n'est pas déjà remplacée par une autre ligne. Un changement commence toujours le 1er janvier.
@@ -627,7 +667,7 @@ Un fichier budgétaire ne change jamais le type d'une ligne. Voir [Charger un bu
 
 7. **Suivez les contacts** : Ajoutez les contacts fournisseurs avec leur rôle (Commercial, Technique, Support) pour que votre équipe sache qui appeler pour chaque ligne.
 
-8. **Exploitez les dimensions analytiques** : Donnez aux lignes une valeur sur chaque dimension (par exemple Licenses sur Nature, ou l'**Investment type** et la **Priority** d'une ligne CAPEX) pour regrouper les dépenses dans les rapports.
+8. **Exploitez les dimensions analytiques** : Donnez aux lignes une valeur sur chaque dimension (par exemple **Logiciel** sur **Nature de coût**, ou le **Motif** et la **Priorité** d'une ligne CAPEX) pour regrouper les dépenses dans les rapports.
 
 9. **Maintenez les métriques des sociétés à jour** : Les ventilations dépendent de l'effectif, des utilisateurs IT et du chiffre d'affaires des sociétés. Des métriques obsolètes causent des erreurs de ventilation.
 
@@ -635,7 +675,7 @@ Un fichier budgétaire ne change jamais le type d'une ligne. Voir [Charger un bu
 
 11. **Désactivez au lieu de supprimer** : Préservez l'historique en désactivant les lignes lorsqu'elles ne sont plus actives. Ne supprimez qu'en cas d'erreur.
 
-12. **Vérifiez les lignes de totaux** : Avant de finaliser les budgets, vérifiez les totaux épinglés dans la liste, par type et au global, pour vous assurer que vos dépenses s'additionnent comme prévu.
+12. **Vérifiez la ligne de totaux** : Avant de finaliser les budgets, vérifiez la ligne **Total** sous la liste pour vous assurer que vos dépenses s'additionnent comme prévu. Filtrez sur **Type** pour voir le total des OPEX ou des CAPEX seuls.
 
 13. **Utilisez les liens profonds** : Cliquez directement sur une colonne budgétaire dans la liste pour accéder à l'onglet Budget de cette année. Cliquez sur la colonne Tâche pour accéder aux tâches de la ligne dans l'onglet Vue d'ensemble. Vous gagnez du temps de navigation.
 
@@ -649,7 +689,7 @@ L'accès aux lignes budgétaires est contrôlé par la ressource Budget, qui cou
 
 - `budget:reader` : Consulter la liste, ouvrir les lignes, voir les budgets et ventilations (lecture seule), télécharger les pièces jointes
 - `budget:member` : Créer et modifier les lignes, changer leur type, mettre à jour les budgets et ventilations, téléverser et supprimer les pièces jointes, gérer les relations, liens et contacts
-- `budget:admin` : Tous les droits membre plus import et export CSV, opérations budgétaires (copier les colonnes budgétaires, copier les ventilations, réinitialiser une colonne budgétaire) et suppression en masse
+- `budget:admin` : Tous les droits membre plus import et export CSV, opérations budgétaires (copier les colonnes budgétaires, avec leurs montants et leurs ventilations, et réinitialiser une colonne budgétaire) et suppression en masse
 
 Le gel des colonnes budgétaires relève de l'administration budgétaire (`budget_ops:admin`).
 

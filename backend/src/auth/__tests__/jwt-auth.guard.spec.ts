@@ -1,6 +1,6 @@
 /**
- * Constat n°2 — an access token must be an access token, not merely a token this application can
- * verify. Every case below signs with the SAME key the guard uses (`JWT_SECRET`), with a valid
+ * Only access tokens are accepted as access tokens: reset, provisioning and SSO state tokens are
+ * refused, even when this application can verify them. Every case below signs with the SAME key the guard uses (`JWT_SECRET`), with a valid
  * `sub` and the expected tenant: only the purpose control can reject them.
  *
  * The last test proves that control is load-bearing: with `checkAccessTokenPurpose` neutralised,

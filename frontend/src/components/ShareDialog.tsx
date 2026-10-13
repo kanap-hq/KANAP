@@ -24,6 +24,7 @@ import { formatUserOption, USERS_LOOKUP_ENDPOINT, type UserOption } from './fiel
 import { useTranslation } from 'react-i18next';
 import { MONO_FONT_FAMILY } from '../config/ThemeContext';
 import { formatItemRef } from '../utils/item-ref';
+import { getApiErrorMessage } from '../utils/apiErrorMessage';
 
 export type ShareItemType = 'task' | 'project' | 'request' | 'contract' | 'opex' | 'capex' | 'asset' | 'application' | 'location' | 'connection' | 'interface' | 'document';
 
@@ -102,6 +103,9 @@ function buildApiEndpoint(itemType: ShareItemType, itemId: string): string {
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Limits of the share routes (backend ShareItemDto).
+const MAX_RECIPIENTS = 20;
+const MESSAGE_MAX_LENGTH = 2000;
 
 const fieldLabelSx = { fontSize: 12, color: 'kanap.text.tertiary', lineHeight: 1.3, mb: 0.5 } as const;
 
@@ -121,6 +125,7 @@ export default function ShareDialog({
   const [sending, setSending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [copied, setCopied] = React.useState(false);
+  const tooManyRecipients = recipients.length > MAX_RECIPIENTS;
 
   // Contracts have no business reference: their link names the id.
   const displayRef = itemRef || (itemNumber && itemType !== 'contract' ? formatItemRef(itemType === 'opex' || itemType === 'capex' ? 'budget' : itemType, itemNumber) : null);
@@ -150,7 +155,7 @@ export default function ShareDialog({
   }, [open]);
 
   const handleSend = async () => {
-    if (recipients.length === 0) return;
+    if (recipients.length === 0 || tooManyRecipients) return;
     setSending(true);
     setError(null);
     try {
@@ -163,7 +168,12 @@ export default function ShareDialog({
       });
       onClose();
     } catch (e: any) {
-      setError(e?.response?.data?.message || e?.message || t('messages.failedToSend'));
+      // The "Send link" budget is counted over one hour: say so rather than "a few minutes".
+      setError(
+        e?.response?.status === 429
+          ? t('errors:SHARE_RATE_LIMITED')
+          : getApiErrorMessage(e, t, t('messages.failedToSend')),
+      );
     } finally {
       setSending(false);
     }
@@ -342,6 +352,11 @@ export default function ShareDialog({
               }}
               fullWidth
             />
+            {tooManyRecipients && (
+              <Typography sx={{ fontSize: 11, color: 'warning.main', mt: 0.75 }}>
+                {t('errors:SHARE_TOO_MANY_RECIPIENTS')}
+              </Typography>
+            )}
           </Box>
 
           <Box>
@@ -362,6 +377,7 @@ export default function ShareDialog({
                 multiline
                 rows={3}
                 placeholder={t('share.addPersonalMessage')}
+                inputProps={{ maxLength: MESSAGE_MAX_LENGTH }}
                 fullWidth
                 sx={fieldResetSx}
               />
@@ -376,7 +392,7 @@ export default function ShareDialog({
         <Button
           variant="action-primary"
           onClick={handleSend}
-          disabled={sending || recipients.length === 0}
+          disabled={sending || recipients.length === 0 || tooManyRecipients}
         >
           {sending ? t('status.sending') : t('share.sendEmail')}
         </Button>

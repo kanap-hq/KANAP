@@ -92,7 +92,7 @@ export default function CurrencySettingsPage() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <PageHeader title={t(`${C}.title`)} breadcrumbTitle={t(`${C}.title`)} />
+      <PageHeader title={t(`${C}.title`)} />
       <Typography variant="body1" sx={{ color: 'text.secondary', maxWidth: 720 }}>
         {t(`${C}.subtitle`)}
       </Typography>

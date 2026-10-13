@@ -550,8 +550,9 @@ describe('WeeklyReport by person', () => {
     renderReport();
 
     await waitFor(() => expect(screen.getAllByText('Created (1)').length).toBeGreaterThan(0));
-    // Title and breadcrumb leaf.
-    expect(screen.getAllByText('Period review')).toHaveLength(2);
+    // The title only: no breadcrumb repeats it.
+    expect(screen.getAllByText('Period review')).toHaveLength(1);
+    expect(document.querySelector('nav[aria-label="breadcrumb"]')).toBeNull();
     expect(screen.queryByText('Grouping')).toBeNull();
     expect(screen.queryByText('By type')).toBeNull();
     expect(screen.queryByText('By person')).toBeNull();
@@ -585,8 +586,8 @@ describe('WeeklyReport by person', () => {
     await waitFor(() => expect(screen.getByText('Operations')).toBeTruthy());
     const call = get.mock.calls.find(([url]: any[]) => url === '/portfolio/reports/weekly');
     expect(call?.[1]?.params?.groupBy).toBe('person');
-    // Its own report: its own title, breadcrumb and subtitle, the ones of its hub card.
-    expect(screen.getAllByText('Activity by person')).toHaveLength(2);
+    // Its own report: its own title and subtitle, the ones of its hub card.
+    expect(screen.getAllByText('Activity by person')).toHaveLength(1);
     expect(
       screen.getByText('Tasks each person created, changed and closed over a period, with the days they logged.'),
     ).toBeTruthy();

@@ -17,8 +17,8 @@ Die Startseite zeigt eine Karte für jeden verfügbaren Bericht mit einer kurzen
 
 | Bericht | Was er abdeckt |
 |---------|----------------|
-| **Globale Leistungsverrechnung** | Unternehmensebene: Zuordnungssummen, KPIs und konzerninterne Flüsse (OPEX) |
-| **Leistungsverrechnung pro Unternehmen** | Einzelunternehmen-Detailansicht mit Abteilungen, Budgetzeilen und KPIs (OPEX) |
+| **Globale Leistungsverrechnung** | Unternehmensebene: Zuordnungssummen, KPIs und konzerninterne Flüsse |
+| **Leistungsverrechnung pro Unternehmen** | Einzelunternehmen-Detailansicht mit Abteilungen, Budgetzeilen und KPIs |
 | **Top-Zeilen** | Größte Budgetzeilen für ein ausgewähltes Jahr (anpassbare Top-N-Anzahl) |
 | **Top Anstieg / Rückgang** | Größte Veränderungen zwischen zwei Budgetspalten (anpassbare Top-N-Anzahl) |
 | **Budgetvergleich** | Budgetkennzahlen über einen Jahresbereich vergleichen |
@@ -37,7 +37,7 @@ Die Startseite zeigt eine Karte für jeden verfügbaren Bericht mit einer kurzen
 - Untertitel und Diagrammtitel nennen den Typ. So zeigt ein Ausdruck oder ein exportiertes PNG, welche Zeilen es abdeckt.
 - Ein Wechsel des Typs leert die ausgeschlossenen Budgetzeilen.
 
-Die beiden Leistungsverrechnungsberichte decken nur OPEX-Zeilen ab.
+Die beiden Leistungsverrechnungsberichte haben dieselben Registerkarten **Alle**, **OPEX** und **CAPEX** und öffnen sich auf **OPEX**. Siehe [Globale Leistungsverrechnung](#globale-leistungsverrechnung).
 
 ### Betrag oder VZÄ wählen
 
@@ -106,6 +106,7 @@ Zeigen Sie Kostenzuordnungen über alle Unternehmen hinweg mit Zusammenfassungs-
 
 ### Steuerungen
 
+- **Zeilentyp**: **Alle**, **OPEX** oder **CAPEX**. Der Bericht öffnet sich auf **OPEX**. Bei **Alle** oder **CAPEX** sagt ein Hinweis über den Ergebnissen „CAPEX-Zeilen zählen mit ihrem Betrag des Jahres, ohne Abschreibung.“
 - **Jahr**: Vorheriges, aktuelles oder nächstes Geschäftsjahr
 - **Spalte**: Jede angezeigte Budgetspalte. Beginnt mit der Standardspalte
 - **Unternehmens-Summen** (Kontrollkästchen): Unternehmens-Summentabelle und Balkendiagramm ein-/ausblenden
@@ -169,6 +170,7 @@ Detailansicht der Leistungsverrechnungs-Zuordnungen eines einzelnen Unternehmens
 
 ### Steuerungen
 
+- **Zeilentyp**: **Alle**, **OPEX** oder **CAPEX**, wie in der globalen Leistungsverrechnung. Der Bericht öffnet sich auf **OPEX**
 - **Unternehmen**: Welches Unternehmen analysiert werden soll
 - **Jahr**: Vorheriges, aktuelles oder nächstes Geschäftsjahr
 - **Spalte**: Jede angezeigte Budgetspalte. Beginnt mit der Standardspalte
@@ -553,7 +555,7 @@ Jede Kennzahl- oder Spaltenauswahl bietet dieselben Budgetspalten an: die, die I
 
 ### Navigation
 
-Jeder Bericht zeigt eine Breadcrumb-Navigation zurück zum **Berichte**-Hub, sodass Sie schnell zwischen Berichten wechseln können.
+Um den Bericht zu wechseln, klicken Sie im linken Bereich auf **Berichte**, um zum Hub zurückzukehren.
 
 ---
 

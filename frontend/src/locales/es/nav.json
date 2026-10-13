@@ -21,7 +21,8 @@
   },
   "userMenu": {
     "myProfile": "Mi perfil",
-    "logout": "Cerrar sesión"
+    "logout": "Cerrar sesión",
+    "version": "KANAP {{version}}"
   },
   "sidebar": {
     "ops": {
@@ -110,49 +111,8 @@
     }
   },
   "breadcrumbs": {
-    "dashboard": "Panel de control",
-    "ops": "Gestión presupuestaria",
     "admin": "Administración",
-    "it": "Panorama IT",
-    "masterData": "Datos maestros",
-    "portfolio": "Portafolio",
-    "ai": "Plaid",
-    "opex": "OPEX",
-    "capex": "CAPEX",
-    "projects": "Proyectos",
     "contributors": "Colaboradores",
-    "settings": "Configuración",
-    "teamMembers": "Miembros del equipo",
-    "companies": "Empresas",
-    "departments": "Departamentos",
-    "costCenters": "Centros de coste",
-    "workingDayCalendars": "Calendarios laborales",
-    "suppliers": "Proveedores",
-    "accounts": "Cuentas",
-    "coa": "Planes de cuentas",
-    "analytics": "Dimensiones analíticas",
-    "dimensions": "Dimensiones",
-    "users": "Usuarios",
-    "roles": "Roles",
-    "sampleData": "Datos de ejemplo",
-    "scheduledTasks": "Tareas programadas",
-    "billing": "Facturación",
-    "agentControl": "Control de agentes",
-    "reports": "Informes",
-    "contracts": "Contratos",
-    "applications": "Aplicaciones",
-    "assets": "Activos",
-    "locations": "Ubicaciones",
-    "interfaces": "Interfaces",
-    "connections": "Conexiones",
-    "incidents": "Incidentes",
-    "interfaceMap": "Mapa de interfaces",
-    "connectionMap": "Mapa de conexiones",
-    "tasks": "Tareas",
-    "operations": "Administración",
-    "aiModels": "Modelos IA",
-    "aiUsage": "Uso y costes",
-    "netbox": "Netbox",
-    "budget": "Líneas presupuestarias"
+    "settings": "Configuración"
   }
 }

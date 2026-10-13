@@ -17,8 +17,8 @@ The landing page shows a card for each available report with a short description
 
 | Report | What it covers |
 |--------|----------------|
-| **Global chargeback** | Company-level allocation totals, KPIs, and intercompany flows (OPEX) |
-| **Company chargeback** | Single-company drilldown with departments, lines, and KPIs (OPEX) |
+| **Global chargeback** | Company-level allocation totals, KPIs, and intercompany flows |
+| **Company chargeback** | Single-company drilldown with departments, lines, and KPIs |
 | **Top lines** | Largest budget lines for a selected year (custom top N) |
 | **Top increase / decrease** | Biggest changes between two budget columns (custom top N) |
 | **Budget comparison** | Compare budget metrics across a year range |
@@ -37,7 +37,7 @@ The landing page shows a card for each available report with a short description
 - The subtitle and the chart title name the type, so a printout or an exported PNG shows which lines it covers.
 - Switching the type clears the lines you excluded.
 
-The two chargeback reports cover OPEX lines only.
+The two chargeback reports have the same **All**, **OPEX** and **CAPEX** tabs, and open on **OPEX**. See [Global chargeback](#global-chargeback).
 
 ### Choosing amount or FTE
 
@@ -106,6 +106,7 @@ View cost allocations across all companies with summary KPIs and intercompany fl
 
 ### Controls
 
+- **Line type**: **All**, **OPEX** or **CAPEX**. The report opens on **OPEX**. On **All** or **CAPEX**, a note above the results says "CAPEX lines count for their amount of the year, without depreciation."
 - **Year**: Previous, current, or next fiscal year
 - **Column**: Any shown budget column. Starts on the default column
 - **Company totals** (checkbox): Show or hide the company totals table and bar chart
@@ -169,6 +170,7 @@ Drill down into a single company's chargeback allocations across departments, bu
 
 ### Controls
 
+- **Line type**: **All**, **OPEX** or **CAPEX**, as in the Global chargeback. The report opens on **OPEX**
 - **Company**: Select which company to analyze
 - **Year**: Previous, current, or next fiscal year
 - **Column**: Any shown budget column. Starts on the default column
@@ -553,7 +555,7 @@ Every metric or column selector offers the same budget columns: the ones your or
 
 ### Navigation
 
-Every report shows a breadcrumb trail back to the **Reporting** hub, so you can switch reports quickly.
+To switch reports, click **Reporting** in the left panel to return to the hub.
 
 ---
 

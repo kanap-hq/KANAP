@@ -17,8 +17,8 @@ La página principal muestra una tarjeta para cada informe disponible con una br
 
 | Informe | Qué cubre |
 |---------|-----------|
-| **Contracargo global** | Totales de asignación por empresa, KPI y flujos intercompañía (OPEX) |
-| **Contracargo por empresa** | Detalle de una empresa con departamentos, líneas y KPI (OPEX) |
+| **Contracargo global** | Totales de asignación por empresa, KPI y flujos intercompañía |
+| **Contracargo por empresa** | Detalle de una empresa con departamentos, líneas y KPI |
 | **Top líneas** | Mayores líneas presupuestarias para un año seleccionado (top N personalizable) |
 | **Top aumento / disminución** | Mayores cambios entre dos columnas presupuestarias (top N personalizable) |
 | **Comparación presupuestaria** | Comparar métricas presupuestarias en un rango de años |
@@ -37,7 +37,7 @@ La página principal muestra una tarjeta para cada informe disponible con una br
 - El subtítulo y el título del gráfico indican el tipo, de modo que una impresión o un PNG exportado muestra qué líneas cubre.
 - Cambiar de tipo borra las líneas que excluyó.
 
-Los dos informes de contracargo cubren solo las líneas OPEX.
+Los dos informes de contracargo tienen las mismas pestañas **Todo**, **OPEX** y **CAPEX**, y se abren en **OPEX**. Consulte [Contracargo global](#contracargo-global).
 
 ### Elegir importe o ETC
 
@@ -106,6 +106,7 @@ Vea las asignaciones de costes entre todas las empresas con KPI resumen y flujos
 
 ### Controles
 
+- **Tipo de línea**: **Todo**, **OPEX** o **CAPEX**. El informe se abre en **OPEX**. En **Todo** o **CAPEX**, una nota sobre los resultados indica «Las líneas CAPEX cuentan por su importe del año, sin amortización.»
 - **Año**: Ejercicio fiscal anterior, actual o siguiente
 - **Columna**: Cualquier columna presupuestaria visible. Empieza en la columna por defecto
 - **Totales por empresa** (casilla): Mostrar u ocultar la tabla de totales por empresa y el gráfico de barras
@@ -169,6 +170,7 @@ Profundice en las asignaciones de contracargo de una empresa entre departamentos
 
 ### Controles
 
+- **Tipo de línea**: **Todo**, **OPEX** o **CAPEX**, como en el contracargo global. El informe se abre en **OPEX**
 - **Empresa**: Seleccione qué empresa analizar
 - **Año**: Ejercicio fiscal anterior, actual o siguiente
 - **Columna**: Cualquier columna presupuestaria visible. Empieza en la columna por defecto
@@ -553,7 +555,7 @@ Cada selector de métrica o de columna ofrece las mismas columnas presupuestaria
 
 ### Navegación
 
-Cada informe muestra una ruta de migas de pan de vuelta al centro de **Informes**, para que pueda cambiar entre informes rápidamente.
+Para cambiar de informe, haga clic en **Informes** en el panel izquierdo para volver al centro.
 
 ---
 

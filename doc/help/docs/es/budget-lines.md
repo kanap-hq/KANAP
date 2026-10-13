@@ -20,14 +20,14 @@ El espacio de trabajo se abre en modo de creación, con el título **Nueva líne
 - **Cuenta**: La cuenta contable. Solo aparecen las cuentas del plan de cuentas de la empresa pagadora, y solo las que corresponden al tipo de la línea en [Planes de cuentas y gestión de cuentas](chart-of-accounts.md#cuentas-opex-o-capex): **OPEX y CAPEX**, o bien **Solo OPEX** para una línea OPEX y **Solo CAPEX** para una línea CAPEX. Una línea que ya tiene una cuenta del otro tipo la conserva y sigue siendo editable. Elegir una cuenta así en una línea nueva, o al cambiar la cuenta, se rechaza
 - **Moneda**: Código ISO (p. ej., USD, EUR). Por defecto la moneda de su espacio de trabajo; puede cambiarla por línea
 - **Inicio de vigencia**: Cuándo comienza este gasto (DD/MM/AAAA)
-- **Dimensiones obligatorias**: un campo por cada dimensión obligatoria para el tipo de la línea. Una línea CAPEX necesita al principio **PP&E type**, **Investment type** y **Priority**. Consulte [Dimensiones CAPEX](#dimensiones-capex)
+- **Dimensiones obligatorias**: un campo por cada dimensión obligatoria para el tipo de la línea. Un espacio de trabajo nuevo no tiene ninguna dimensión obligatoria. Consulte [Dimensiones recomendadas](#dimensiones-recomendadas)
 
 **Opcional pero útil**:
 
 - **Proveedor**: A quién paga. Vinculado a sus proveedores en datos maestros
 - **Centro de coste**: Quién es responsable del gasto. Consulte [Centros de coste](cost-centers.md). Cuando la empresa pagadora aún está vacía, elegir un centro de coste la completa con la empresa del centro de coste
 - **Run o build**: **Run** para el gasto que mantiene en funcionamiento los servicios existentes, **Build** para el gasto que los crea o los modifica
-- **Dimensiones analíticas**: Un campo por dimensión usada para el tipo de la línea, con el nombre de la dimensión, para agrupar a medida en los informes (p. ej., "Licenses" en Nature). La dimensión por defecto se muestra como **Dimensión analítica** hasta que se le da un nombre. Consulte [Dimensiones analíticas](analytics.md)
+- **Dimensiones analíticas**: Un campo por dimensión usada para el tipo de la línea, con el nombre de la dimensión, para agrupar a medida en los informes (p. ej., **Software** en **Tipo de coste**). La dimensión por defecto se muestra como **Dimensión analítica** hasta que se le da un nombre. Consulte [Dimensiones analíticas](analytics.md)
 - **Fin de validez**: La fecha en que termina esta línea. Déjela en blanco si no hay fin. Después de esa fecha, la línea queda desactivada y los años posteriores dejan de contar en las vistas presupuestarias
 - **Responsable de TI** / **Responsable de negocio**: Quién es responsable
 - **Descripción** y **Notas**: Texto libre en la pestaña **Vista general**, para ambos tipos
@@ -48,22 +48,25 @@ Cada línea tiene un tipo, visible en la columna **Tipo** de la lista y en la pr
 
 - **Cuentas**: una cuenta puede estar como **OPEX y CAPEX**, **Solo OPEX** o **Solo CAPEX**. Consulte [Cuentas OPEX o CAPEX](chart-of-accounts.md#cuentas-opex-o-capex)
 - **Dimensiones y valores**: una dimensión o un valor puede usarse solo para un tipo, y una dimensión puede ser obligatoria para un tipo. El panel **Propiedades** muestra solo las dimensiones usadas para el tipo de la línea. Consulte [Dimensiones OPEX o CAPEX](analytics.md#dimensiones-opex-o-capex)
-- **Contracargo**: los informes de contracargo cubren solo las líneas OPEX. Consulte [Informes](reports.md)
+- **Contracargo**: los informes de contracargo se abren en las líneas OPEX y ofrecen las líneas CAPEX o ambas. Consulte [Informes](reports.md)
 - **Congelaciones**: una columna presupuestaria se congela por año y por tipo. Consulte [Congelar / Descongelar datos](budget-operations.md#congelar-descongelar-datos)
 
 El tipo de una línea se cambia con **Cambiar el tipo…**. Consulte [Cambiar el tipo](#cambiar-el-tipo).
 
-### Dimensiones CAPEX
+### Dimensiones recomendadas
 
-Cada espacio de trabajo clasifica las líneas CAPEX en tres dimensiones analíticas:
+Un espacio de trabajo nuevo empieza con cuatro dimensiones recomendadas, con sus valores, en el idioma del espacio de trabajo:
 
-| Dimensión | Valores |
+| Dimensión | Qué indica |
 |---|---|
-| **PP&E type** | Hardware, Software (propiedad, planta y equipo) |
-| **Investment type** | Replacement, Capacity, Productivity, Security, Conformity, Business growth, Other |
-| **Priority** | Mandatory, High, Medium, Low |
+| **Tipo de coste** | Lo que paga el gasto: hardware, software, personal interno y externo, servicios externos, instalaciones y energía, telecomunicaciones, otros. Es la dimensión por defecto |
+| **Dominio TI** | La parte de TI a la que sirve el gasto: centro de datos, cómputo, almacenamiento, red, plataforma, impresión, puesto de trabajo, aplicación, soporte y operación, seguridad y conformidad, gestión de TI |
+| **Motivo** | Por qué se gasta el dinero: sustitución, capacidad, productividad, seguridad, conformidad, crecimiento, otro |
+| **Prioridad** | Obligatoria, alta, media o baja |
 
-Se usan para las líneas CAPEX y son obligatorias: una línea CAPEX nueva necesita un valor en cada una. Funcionan como cualquier otra dimensión: sus campos están en el panel **Propiedades** junto a las demás dimensiones, y sus columnas se muestran por defecto en la lista. Un administrador puede cambiarles el nombre, añadir valores, cambiar el orden de los valores, desactivarlas o eliminarlas. Consulte [Dimensiones CAPEX](analytics.md#dimensiones-capex) en Dimensiones analíticas.
+Se aplican a las líneas OPEX y CAPEX y ninguna es obligatoria. Funcionan como cualquier otra dimensión: sus campos están en el panel **Propiedades**, y un administrador puede renombrarlas, añadir valores, hacer obligatoria una de ellas, desactivarlas o eliminarlas. Un administrador puede añadirlas a un espacio de trabajo existente. Consulte [Dimensiones recomendadas](analytics.md#dimensiones-recomendadas) en Dimensiones analíticas.
+
+Los espacios de trabajo creados antes de las dimensiones recomendadas conservan tres dimensiones solo para líneas CAPEX, todas obligatorias: **PP&E type**, **Investment type** y **Priority**. Una línea CAPEX nueva necesita allí un valor en cada una.
 
 ---
 
@@ -95,7 +98,7 @@ La lista (en **Gestión presupuestaria > Líneas presupuestarias**) reúne las l
 - **Cuenta**: El número y nombre de cuenta contable
 - **Asignación**: La etiqueta del método de asignación del año actual (enlaza a la pestaña **Asignaciones**)
 - **Presupuesto A** y **Aterrizaje previsto A**: Los importes del año actual de la columna por defecto y de la última columna visible (enlazan a la pestaña **Presupuesto** de este año). Con la configuración estándar son Presupuesto y Aterrizaje previsto. Cuando la columna por defecto es también la última visible, aparece una sola columna de importe. Consulte [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias)
-- **Dimensiones obligatorias**: Una columna por dimensión activada que es obligatoria para alguno de los dos tipos, con el nombre de la dimensión: al principio **PP&E type**, **Investment type** y **Priority**
+- **Dimensiones obligatorias**: Una columna por dimensión activada que es obligatoria para alguno de los dos tipos, con el nombre de la dimensión. Un espacio de trabajo nuevo no tiene ninguna
 - **Tarea**: El título de la última tarea (enlaza a la pestaña **Vista general**, donde está el panel de tareas)
 
 **Columnas adicionales** (ocultas por defecto, habilítelas mediante el selector de columnas):
@@ -147,9 +150,8 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 
 **Fila de totales**:
 
-- La fila fijada en la parte inferior muestra **Total (12 líneas)**, con el número de líneas de la lista, y el total de cada columna de importe
-- Cuando la lista contiene ambos tipos (sin filtro en **Tipo**, o con ambos valores marcados), dos filas más aparecen encima: **Total OPEX** y **Total CAPEX**. Filtrada por un tipo, la lista muestra solo la fila **Total**
-- Un icono de candado delante de un total indica que la columna está congelada para ese año. En **Total OPEX** y **Total CAPEX** sigue la congelación de ese tipo. En **Total** aparece cuando la columna está congelada para todos los tipos que contiene la lista. Pase el cursor por encima para leer **Congelado**. Consulte [Congelar / Descongelar datos](budget-operations.md#congelar-descongelar-datos)
+- Una sola fila **Total** queda fijada bajo la lista. Muestra **Total (12 líneas)**, con el número de líneas de la lista, y el total de cada columna de importe
+- Un icono de candado delante de un total indica que la columna está congelada para ese año. Sigue la congelación de cada tipo que contiene la lista. Si la lista está filtrada por un tipo, el candado aparece cuando ese tipo está congelado. Si contiene ambos tipos, aparece cuando la columna está congelada para los dos. Pase el cursor por encima para leer **Congelado**. Consulte [Congelar / Descongelar datos](budget-operations.md#congelar-descongelar-datos)
 - Cada columna de ETC visible muestra la suma del ETC de las líneas. Cuando algunas líneas no tienen ETC, el recuento sigue al total, por ejemplo «3.50 · 12 desconocidas». Pase el cursor por encima para ver la frase completa: «Desconocido para 12 líneas». Cuando ninguna línea tiene ETC, el total queda vacío y solo se muestra el recuento
 - Los totales respetan sus filtros y búsqueda actuales
 
@@ -250,7 +252,7 @@ Cuando la línea sustituye a otra, o fue sustituida a partir de un año posterio
 - Cada campo lista los valores activados de su dimensión. Un valor desactivado se mantiene en las líneas que ya lo tienen y no se puede elegir para otra línea
 - Un valor usado solo para el otro tipo no se ofrece, y elegirlo como valor nuevo se rechaza. Una línea que ya lo tiene lo conserva y sigue siendo editable. Consulte [Valores OPEX o CAPEX](analytics.md#valores-opex-o-capex)
 - El campo no puede crear un valor: créelo en [Dimensiones analíticas](analytics.md) o deje que lo cree una importación CSV
-- Una dimensión obligatoria está marcada con un asterisco. Una línea nueva necesita un valor en ella: **Crear** se detiene con "El campo Nature es obligatorio" hasta que elija uno. En una línea que tiene un valor, el campo no se puede vaciar, solo cambiar. Una línea sin valor sigue siendo editable. Si modifica una línea así, al salir se le pregunta primero: "El campo Nature es obligatorio. Elija un valor antes de salir." **Quedarse** coloca el cursor en el campo que falta. **Salir de todos modos** sale de la línea. Consulte [Dimensiones obligatorias](analytics.md#dimensiones-obligatorias)
+- Una dimensión obligatoria está marcada con un asterisco. Una línea nueva necesita un valor en ella: **Crear** se detiene con "El campo Tipo de coste es obligatorio" hasta que elija uno. En una línea que tiene un valor, el campo no se puede vaciar, solo cambiar. Una línea sin valor sigue siendo editable. Si modifica una línea así, al salir se le pregunta primero: "El campo Tipo de coste es obligatorio. Elija un valor antes de salir." **Quedarse** coloca el cursor en el campo que falta. **Salir de todos modos** sale de la línea. Consulte [Dimensiones obligatorias](analytics.md#dimensiones-obligatorias)
 - Si las dimensiones no se pueden cargar, una línea sustituye a estos campos: "No se pudieron cargar las dimensiones."
 
 **Consejo**: Al crear una línea, una advertencia de "Cuenta obsoleta" significa que la cuenta seleccionada no pertenece al plan de cuentas de la empresa pagadora. Elija otra cuenta para resolver la advertencia. Una línea existente cuya cuenta está fuera del plan de su empresa se puede seguir editando: el plan solo se comprueba cuando cambia la empresa o la cuenta.
@@ -259,13 +261,13 @@ Cuando la línea sustituye a otra, o fue sustituida a partir de un año posterio
 
 ### Presupuesto
 
-La pestaña Presupuesto es donde introduce datos financieros por año. Admite varias columnas presupuestarias y dos modos de entrada, mostrados como pestañas: **Anual** (totales anuales) y **Mensual** (desglose mensual).
+La pestaña Presupuesto contiene los importes de la línea, año por año y columna por columna. Para el año elegido, elija una columna, indique cómo se construye y lea después el resultado mes a mes.
 
 **Selección de año**:
 
 - Utilice las pestañas de año en la parte superior para alternar entre A-2, A-1, A (año actual), A+1 y A+2
-- Cada año tiene su propia versión, modo e importes
-- Al cambiar de año se guardan primero sus cambios pendientes
+- Cada año tiene sus propios importes
+- Al cambiar de año se guardan primero sus cambios pendientes. Si una columna sigue pendiente de su elección tras el cambio de otra persona, KANAP pregunta primero: **Cambiar de año** descarta sus valores en esa columna
 
 **Columnas presupuestarias**:
 
@@ -276,6 +278,9 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
     - **Realizado**: El gasto real, tal como se registra durante el año
     - **Aterrizaje previsto**: Su mejor estimación de la cifra de fin de año
 - Un administrador de presupuesto puede renombrar las columnas, ocultar algunas y elegir la columna por defecto en **Gestión presupuestaria > Administración > Columnas presupuestarias** (consulte [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias)). Una columna oculta conserva sus importes
+- Cada columna visible tiene una tarjeta bajo las pestañas de año: su nombre, su total del año, el origen de sus importes y su periodo, por ejemplo «Reparto uniforme» y «9 meses, abril a diciembre». Una columna vacía indica «Aún sin introducir». Pase el cursor sobre una tarjeta para ver sus líneas de cantidad y precio
+- Haga clic en una tarjeta para trabajar en esa columna. La pestaña se abre en la primera columna visible que no está congelada
+- Con una sola columna visible no hay tarjetas: el editor muestra la columna directamente
 
 **Periodo de una columna**:
 
@@ -283,85 +288,121 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
 - Un mes cuenta cuando el periodo cubre su día 15. Un periodo que empieza el 10 de abril incluye abril; uno que empieza el 20 de abril comienza en mayo
 - Una columna sin importe y sin periodo recibe una sugerencia: el **Inicio de vigencia** y el **Fin de validez** de la línea, limitados al año. Una línea que empieza el 1 de abril sugiere de abril a diciembre
 - Una columna que ya tiene importes y no tiene periodo se lee como todo el año, de modo que los datos existentes se comportan como antes
+- Cuando el periodo guardado de una columna va más allá de las fechas de la línea, el editor indica el periodo que usa un guardado, por ejemplo «Periodo guardado: enero a diciembre. Al guardar se usará abril a diciembre, según las fechas de la línea.»
 
-**Anual o Mensual**:
+**Cómo se construye una columna**:
 
-- **Anual**: Introduzca un total por columna. El total se reparte uniformemente entre los meses del periodo de la columna, y los meses fuera de él se ponen a cero. El periodo aparece bajo cada total antes de escribir, por ejemplo «9 meses, de abril a diciembre». Solo se guarda el total que usted modifica. Las demás columnas conservan sus importes mensuales.
-- Haga clic en el icono de lápiz junto al periodo bajo un total (**Cambiar el periodo**) para abrir el panel de reparto en esa columna, con su total actual. Si las fechas de la línea no dejan ningún mes en el año, el total se deshabilita y muestra «Ningún mes de 2026 está dentro de las fechas de la línea.» Haga clic en el icono de lápiz junto a ese texto (**Elegir el periodo**) para definirlo usted mismo.
-- Haga clic en el icono de calculadora junto al lápiz (**Cantidad y precio**) para abrir el mismo cuadro en las líneas de esa columna. Consulte [Cantidad y precio](#cantidad-y-precio).
-- Una columna que sigue sus líneas (sus importes se calcularon a partir de sus líneas de Cantidad y precio) tiene un total de solo lectura. Haga clic en el total, o pulse Intro sobre él, para abrir **Cantidad y precio** en esa columna. El lápiz hace lo mismo. Pase el cursor sobre el total para leer «Calculado a partir de sus líneas. Abra Cantidad y precio para cambiarlo.»
-- **Mensual**: Introduzca importes por mes (Ene-Dic) para cada columna visible, por ejemplo para seguir un plan de desembolsos o los hitos de un proyecto. Se muestran subtotales trimestrales y un total anual. Solo se guardan los meses que usted modifica.
-- Ambas pestañas muestran las mismas columnas: Previsión también aparece en **Anual** cuando se muestra.
-- Cambie de modo con las pestañas **Anual** y **Mensual**. Cambiar de modo no modifica sus importes.
-- Su elección entre **Anual** y **Mensual** se guarda en su navegador, solo para usted: cambiar de modo no modifica lo que ven otros usuarios que abren esta línea. Hasta que elija, una columna se abre en el modo en que se introdujeron sus importes por última vez.
+El editor bajo las tarjetas lleva el nombre de la columna y el año, por ejemplo **Presupuesto 2026**. Tres pestañas indican cómo se construye la columna:
+
+- **Importe**: un importe anual, repartido entre los meses
+- **Cantidad y precio**: líneas, cada una una cantidad por un precio unitario. Consulte [Cantidad y precio](#cantidad-y-precio)
+- **Por mes**: doce importes introducidos en la tabla
+
+Las tres pestañas se ofrecen siempre. Una columna se abre en la pestaña que corresponde al origen de sus importes: **Cantidad y precio** cuando se calculan a partir de sus líneas, **Por mes** tras una edición a mano, e **Importe** para una columna vacía, repartida o copiada.
+
+En una columna vacía, un clic en una pestaña cambia de inmediato. En una columna con importes, aparece primero una pregunta en el editor que dice qué cambia. Haga clic en **Cambiar** para seguir, o en **Cancelar**:
+
+- A **Importe**: el total actual pasa a ser el importe, repartido de forma uniforme en el periodo de la columna. Las líneas de la columna se conservan como referencia
+- A **Por mes**: los meses actuales se conservan y pasan a ser editables en la tabla
+- A **Cantidad y precio**: el total viene de las líneas. El importe actual se sustituye, o las líneas conservadas como referencia se vuelven a usar
+
+**Importe**:
+
+- **Importe anual**: el total de la columna para el año
+- **Cuándo**: **Todo el año**, **Un periodo** con las fechas **Desde** y **Hasta**, o **En una fecha** con una sola **Fecha**
+- **Distribución**: **Uniforme** o **4-4-5**. En una fecha no hay distribución: el mes de la fecha recibe todo el importe
+- Una frase indica lo que obtiene, por ejemplo «120.000 repartidos de forma uniforme de abril a diciembre (9 meses).» o «5.000 el 10 de febrero de 2026, todo en febrero.» Pase el cursor sobre el icono de información junto a ella para leer la regla del día 15
+- Cuando algunos meses del año quedan fuera del periodo, una nota indica cuáles se pondrán a cero, por ejemplo «Enero a marzo se pondrán a cero.»
+- Aparece una advertencia cuando el periodo va más allá de las fechas de la línea. El importe se guarda de todos modos
+- Mientras falte una fecha o ningún mes cuente, una nota en rojo explica el motivo y no se guarda nada. Cuando las fechas de la línea no dejan ningún mes en el año, el editor indica «Ningún mes de 2026 está dentro de las fechas de la línea.» Elija **Un periodo** para fijar las fechas usted mismo
+- **Cada cambio se guarda de inmediato**: el importe al salir del campo o pulsar Intro, los demás campos en cuanto los cambia. No hay ningún botón que pulsar. Un importe vacío o cero no guarda nada
+- Con **4-4-5**, los pesos de los meses que cuentan se aumentan para que todo el importe recaiga en ellos
+- Para volver a un reparto uniforme en doce meses, elija **Todo el año** y **Uniforme**
+- Un reparto sobre una columna construida a partir de líneas conserva sus líneas como referencia. Consulte [Cantidad y precio](#cantidad-y-precio)
+
+**Por mes**:
+
+- El editor indica, por ejemplo, «Introduzca los importes en la columna Presupuesto de la tabla de abajo.» Introduzca cada mes en esa columna de **Resultado por mes**. Los subtotales trimestrales y el total se actualizan mientras escribe. Solo se guardan los meses que cambia
+- Úselo para seguir un plan de pagos o los hitos de un proyecto, por ejemplo todo el importe en un solo mes
+- Haga clic en un mes de otra columna de la tabla para introducir esa columna por mes: pasa a ser la columna activa y el cursor se sitúa en ese mes. En una columna con importes, el editor pregunta primero. Pase el cursor sobre un mes para leer «Introducir por mes». Los meses de una columna congelada no se pueden pulsar
+
+**Partir de**:
+
+- Una columna vacía, sin importe ni línea, puede partir de otra columna visible que tenga importes. El editor indica «Partir de», luego la columna con su total, «ajustado en», un porcentaje (0 por defecto) y **Copiar**. También puede introducir la columna usted mismo debajo
+- **Copiar** funciona como [Copiar columnas presupuestarias](budget-operations.md#copiar-columnas-presupuestarias) en esta línea y este año: los meses conservan su forma y el porcentaje se aplica a cada uno. Una columna calculada a partir de sus líneas sigue calculada, con sus precios unitarios aumentados en el porcentaje. Una columna congelada puede servir de origen
+- Cuando las fechas de la línea excluyen meses del origen, no se copian, y una nota lo indica: «Los meses de la columna Presupuesto fuera de las fechas de la línea no se copiaron.»
+
+**Usar también para otras columnas**:
+
+- Bajo el editor, **Usar también para otras columnas…** da a otras columnas la misma construcción que la columna activa. El enlace aparece cuando la columna activa es un importe con un periodo válido, o sigue sus líneas de cantidad y precio, y otra columna puede recibirla
+- El enlace lista las demás columnas visibles bajo **Misma construcción para**, cada una con una casilla. Las columnas configuradas para seguir en [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias) aparecen marcadas al principio. Haga clic en **Aplicar**, o en **Cancelar**
+- Desde un importe, las columnas marcadas toman su periodo y su distribución, y cada una conserva su propio total. Las columnas que siguen sus líneas no se ofrecen, y una frase las nombra, por ejemplo «Previsión conserva sus líneas.»
+- Desde cantidad y precio, las columnas marcadas reciben las mismas líneas, que sustituyen sus importes
+- Las columnas congeladas y las columnas pendientes de su elección no se ofrecen
+
+**Borrar columna**:
+
+- **Borrar columna**, a la derecha bajo el editor, pone a cero todos los meses de la columna activa, por ejemplo antes de introducir todo el importe en un solo mes. Cuando la columna tiene importes, primero confirma: «¿Borrar todos los meses de la columna Presupuesto en 2026? Las demás columnas no cambian.» Cuenta como una edición a mano
+- Para eliminar a la vez los importes y el periodo de una columna en todas las líneas, use **Restablecer columna presupuestaria** en la Administración presupuestaria
+
+**Resultado por mes**:
+
+- Bajo el editor, **Resultado por mes** muestra el año mes a mes para cada columna visible, en la moneda de la línea, con un subtotal por trimestre (**T1** a **T4**) y una fila **Total**. La columna activa aparece resaltada
+- Con dos columnas o más, una última fila da la diferencia de cada columna con una de ellas, por ejemplo «+12.000 (+1,8 %)». Elija esa columna en **Diferencia con** encima de la tabla. Parte de la columna por defecto
+- Mientras cada columna esté vacía, o sea un importe repartido de forma uniforme en todo el año, una frase sustituye la tabla, por ejemplo «Todas las columnas se reparten de forma lineal en todo el año: el detalle mensual no aporta nada más.» **Mostrar el detalle** abre la tabla y **Ocultar el detalle** la vuelve a plegar. Su elección se mantiene mientras siga en la línea
+- La tabla sigue abierta mientras la columna activa se introduce por mes o una columna está pendiente de su elección
+
+**Volver a los valores de apertura**:
+
+- La pestaña conserva los valores que tenía cada columna de un año cuando abrió ese año por primera vez durante su visita a la línea. Cambiar de pestaña o de año los conserva. Recargar la página vuelve a partir de los valores de ese momento
+- En cuanto cambia una columna, a la derecha de las pestañas de año aparece, por ejemplo, «2 columnas modificadas desde las 10:42», seguido de **Volver a los valores de apertura**
+- Haga clic en él para devolver las columnas que cambió a esos valores. No hay confirmación. Sus cambios en curso se guardan primero, y luego cada columna se restaura por separado
+- Una nota indica el resultado, por ejemplo «Valores de apertura restaurados: Presupuesto y Revisión.» Una columna queda como está cuando se congeló mientras tanto, cuando otra persona la cambió desde entonces (el aviso de arriba pregunta entonces qué conservar), o mientras esté pendiente de su elección. Una columna que solo cambió otra persona nunca se restaura. Cierre la nota con **Cerrar**
+- Si un cambio en curso no se puede guardar, no se restaura nada: «No se restauró nada: un cambio no se pudo guardar antes.»
+- El registro de auditoría anota cada columna restaurada con la acción **Restaurar**
 
 **Comportamiento de congelación**:
 
-- Si las columnas presupuestarias de un año están congeladas para el tipo de la línea (vía Administración presupuestaria), los campos correspondientes pasan a solo lectura y muestran un candado
-- Puede ver los datos congelados; los administradores pueden descongelar vía **Gestión presupuestaria > Administración > Congelar / Descongelar datos**
-- Cada columna puede congelarse independientemente
-
-**Repartir un importe**:
-
-- El cuadro del panel tiene dos pestañas: **Repartir un importe** y **Cantidad y precio**. Esta parte trata de la primera
-- El panel de reparto siempre está visible en la pestaña **Mensual**. En la pestaña **Anual** se abre desde el icono de lápiz bajo un total, y su botón de cierre lo cierra
-- Elija una **Columna** entre las columnas visibles, compruebe el **Importe**, elija una **Distribución** (**Uniforme** o **4-4-5**) y defina las fechas **Desde** y **Hasta**. Las fechas parten del periodo actual de la columna, y la distribución de la que ya tiene la columna
-- El panel se abre en la columna por defecto. El importe parte del total actual de la columna, en ambas pestañas, y se actualiza cuando elige otra columna. Queda vacío cuando la columna no tiene importe
-- **Cada cambio se guarda de inmediato**: el importe al salir del campo o al pulsar Intro, la distribución y las fechas en cuanto las cambia. No hay ningún botón que pulsar. Un importe vacío o igual a cero no guarda nada
-- **Aplicar el reparto a todas las columnas** es un interruptor, activado por defecto: cada columna que lo sigue recibe la misma distribución y el mismo periodo, y cada una conserva su propio total actual. Activarlo reparte esas columnas de inmediato, y queda activado para sus cambios siguientes. Desactivarlo no cambia nada por sí solo: los cambios siguientes se aplican solo a la columna seleccionada. Por defecto, todas las columnas lo siguen. Un administrador de presupuesto elige cuáles en [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias). Las columnas congeladas nunca cambian. Pase el cursor sobre el interruptor para ver qué columnas siguen y cuáles conservan su propio periodo
-- Una columna que no sigue el interruptor se reparte sola: el interruptor no aparece cuando la reparte. El interruptor también se oculta cuando ninguna otra columna que lo sigue puede cambiar
-- Las columnas que siguen sus líneas quedan fuera del interruptor: conservan los importes de sus líneas, y una frase las nombra, por ejemplo «Previsión conserva sus líneas.» Cuando todas las demás columnas siguen sus líneas, el interruptor no aparece
-- Para devolver una columna a un reparto uniforme en doce meses, elija **Uniforme** y defina las fechas del 1 de enero al 31 de diciembre
-- Los totales introducidos en la pestaña **Anual** siguen aplicándose solo a su propia columna
-- Las fechas **Desde** y **Hasta** muestran el periodo. Cuando algunos meses quedan fuera, el panel indica cuáles se pondrán a cero («De enero a marzo se pondrán a cero.»). Un periodo de todo el año no muestra ninguna línea. Pase el cursor sobre el icono de información junto al título del panel para ver la regla del día 15
-- Con **4-4-5**, los pesos de los meses que cuentan se amplían para que todo el importe recaiga en ellos
-- Aparece un aviso no bloqueante cuando el periodo va más allá de las fechas de la línea. El reparto se guarda de todos modos
-- Mientras falte una fecha o ningún mes cuente, el panel indica el motivo y no guarda nada
-- Una columna que sigue sus líneas muestra sus valores actuales en los campos, en gris, bajo la frase «Los importes vienen de las 4 líneas de Cantidad y precio.» Haga clic en **Repartir un importe en su lugar** para desbloquear los campos de esa columna. La frase pasa a decir «Un reparto reemplaza los importes de las líneas. Las líneas se mantienen como referencia.» El bloqueo vuelve cuando cambia de columna, de año o de cuadro
-- Un reparto sobre una columna construida a partir de líneas conserva sus líneas como referencia. Consulte [Cantidad y precio](#cantidad-y-precio)
+- Si las columnas presupuestarias de un año están congeladas para el tipo de la línea (a través de la Administración presupuestaria), la tarjeta de cada columna congelada muestra un candado, igual que su cabecera en la tabla
+- Una columna congelada es de solo lectura. Su editor indica, por ejemplo, «La columna Presupuesto 2026 está congelada» y «Solo lectura. Un administrador puede descongelarla en Administración › Congelar / Descongelar datos.», con su total y el origen de sus importes
+- Cuando hay columnas congeladas, una línea bajo el gráfico indica «Algunas columnas están congeladas y son de solo lectura.»
+- Cada columna puede congelarse de forma independiente
 
 **Cómo se produjo cada columna**:
 
-- Una etiqueta breve indica de dónde vienen los importes de una columna. En la pestaña **Mensual** aparece bajo el encabezado de la columna (pase el cursor por encima para ver el periodo). En la pestaña **Anual** aparece junto al periodo
-- **Reparto uniforme**, **Reparto 4-4-5** o **Reparto por trimestre**: los importes proceden de un reparto
-- **Copiado de Presupuesto 2025 +2 %**: los importes proceden de **Copiar columnas presupuestarias** en la Administración presupuestaria, con el porcentaje visible cuando lo hay
-- **Cantidad y precio · 3 líneas · 1.00 ETC**: los importes proceden de líneas, con su número y, cuando las líneas cuentan personas o días, el ETC de la columna. El ETC es la media anual. Pase el cursor sobre la etiqueta para ver las líneas, por ejemplo «Jefe de proyecto: 1 persona × 1.200 por día, 5 días por mes, de feb a jul»
-- **Editado a mano**: se modificó un mes en la cuadrícula o mediante la importación de un archivo de presupuesto
-- Una columna sin etiqueta conserva los datos que tenía antes de que existieran los periodos
+- Una etiqueta corta en cada tarjeta indica de dónde vienen los importes de la columna, seguida de su periodo. Con una sola columna, está bajo el título del editor
+- **Reparto uniforme**, **Reparto 4-4-5** o **Reparto por trimestre**: los importes vienen de un reparto
+- **Copiado de Presupuesto 2025 +2 %**: los importes vienen de **Copiar columnas presupuestarias** en la Administración presupuestaria, o de **Partir de**, con el porcentaje cuando lo hay
+- **Cantidad y precio · 3 líneas · 1.00 ETC**: los importes vienen de líneas, con su número y, cuando las líneas cuentan personas o días, el ETC de la columna. El ETC es la media del año. Pase el cursor sobre la tarjeta para ver las líneas, por ejemplo «Jefe de proyecto: 1 persona × 1.200 por día, 5 días al mes, feb. a jul.»
+- **Editado a mano**: un mes se cambió en la tabla o mediante la importación de un archivo de presupuesto
+- Un importe en una fecha muestra su fecha en lugar de un periodo, por ejemplo «El 10 de febrero de 2026»
+- Una columna sin etiqueta conservó los datos que tenía antes de que existieran los periodos
 
 **Cuando otra persona edita la misma columna**:
 
 - Dos personas pueden rellenar meses o columnas distintos de la misma línea a la vez, sin conflicto
 - En una entrada mensual, si otra persona cambió alguno de los mismos meses, esos meses esperan su decisión; los demás meses de la columna se guardan como usted los escribió
-- Si otra persona cambió el total de la columna, su reparto o sus líneas de Cantidad y precio mientras usted trabajaba en ellas, toda la columna espera: un aviso ofrece **Recargar la columna** o **Sobrescribir**. Los importes, el panel de reparto y las líneas de la columna quedan en solo lectura hasta que decida
+- Si otra persona cambió el total de la columna, su reparto o sus líneas de Cantidad y precio mientras usted trabajaba en ellas, toda la columna espera: un aviso ofrece **Recargar la columna** o **Sobrescribir**. Su tarjeta muestra un punto naranja (pase el cursor sobre él para leer «Pendiente de su elección») y sus meses aparecen teñidos. El editor queda en solo lectura hasta que decida, con la línea «Elija primero, arriba, si recarga esta columna o la sobrescribe.»
 - Guardar recarga el año, así que siempre ve las cifras más recientes de cualquier otra columna; la celda o columna que está editando no se ve afectada
-
-**Herramientas del modo mensual**:
-
-- **Borrar columna**: el icono junto al encabezado de una columna pone a cero todos los meses de esa columna, por ejemplo antes de introducir todo el importe en un solo mes. Cuando la columna contiene importes, primero lo confirma. Cuenta como una edición a mano. Para quitar a la vez los importes y el periodo de una columna en todas las líneas, use **Restablecer columna presupuestaria** en la Administración presupuestaria
 
 **Tendencia plurianual**:
 
-- Un gráfico bajo la cuadrícula muestra cada columna visible a lo largo de los años, incluida Previsión cuando se muestra, y se actualiza mientras escribe
+- Un gráfico bajo la tabla muestra cada columna visible a lo largo de los años, incluida Previsión cuando se muestra, y se actualiza mientras escribe
 
 **Cómo usarlo**:
 
 1. Seleccione el año que está planificando
-2. Elija la pestaña **Anual** o **Mensual**
-3. Complete las columnas relevantes (Presupuesto para la planificación inicial, Realizado para el seguimiento, Aterrizaje previsto para la cifra de cierre de año)
-4. Sus cambios se guardan automáticamente; junto a las pestañas de año aparece la indicación **Guardando...** / **Guardado**
+2. Haga clic en la tarjeta de la columna que va a rellenar (Presupuesto para la planificación inicial, Realizado para el seguimiento, Aterrizaje previsto para la cifra de fin de año)
+3. Elija **Importe**, **Cantidad y precio** o **Por mes**, y rellénela
+4. Lea el resultado en **Resultado por mes**. Sus cambios se guardan automáticamente; junto a las pestañas de año aparece la indicación **Guardando...** / **Guardado**
 
-**Consejo**: Para la mayoría de líneas, el modo Anual es más rápido. Utilice el modo Mensual cuando el gasto varíe significativamente por mes (p. ej., licencias estacionales, cuotas de configuración únicas, despliegues por fases).
+**Consejo**: Para la mayoría de las líneas basta un importe en todo el año o en un periodo. Use **Por mes** cuando el gasto varía mucho de un mes a otro (p. ej., licencias estacionales, costes de puesta en marcha puntuales, despliegues por fases). Para rellenar una columna nueva a partir de una existente, use **Partir de**.
 
 #### Cantidad y precio
 
 Construya una columna a partir de líneas en lugar de escribir sus importes. Cada línea se lee como una frase: una cantidad, una unidad, un precio unitario, una frecuencia, cuándo y con qué calendario. Por ejemplo, un jefe de proyecto 5 días por mes a 1.200 por día de febrero a julio, y 50 licencias a 12 por pieza por mes. Los meses de la columna son la suma de sus líneas. Los importes de una columna tienen una sola fuente a la vez: sus líneas, o un reparto, un mes escrito a mano o una copia. La otra fuente sigue visible como referencia, de solo lectura, con un enlace para cambiar.
 
-**Abrir la pestaña**:
-
-- Pestaña **Anual**: haga clic en el icono de calculadora junto al periodo bajo un total. El cuadro se abre en **Cantidad y precio** para esa columna. En una columna que sigue sus líneas, el lápiz y el total también lo abren
-- Pestaña **Mensual**: haga clic en **Cantidad y precio** en la parte superior del cuadro del panel. Elegir una columna que sigue sus líneas, o tener una como columna por defecto, cambia el cuadro a **Cantidad y precio**
-- Elija la **Columna** en la parte superior de la pestaña. Las columnas congeladas no se pueden elegir
+**Abrirla**: haga clic en la tarjeta de la columna y después en la pestaña **Cantidad y precio** del editor. Una columna calculada a partir de sus líneas se abre en esa pestaña. Las líneas de una columna congelada son de solo lectura.
 
 **Las líneas**:
 
@@ -414,14 +455,13 @@ Haga clic en **Añadir una línea** bajo la tabla para añadir una línea, y en 
 - El ETC de las líneas, cuando una línea cuenta personas o días, por ejemplo «ETC en el periodo 0.24 · Media anual 0.12». Consulte [ETC](#etc). El total de la columna aparece en la propia columna
 - De dónde vienen los importes, cuando ya no vienen de las líneas: una de las frases del apartado siguiente
 - Notas cuando corresponde: «El periodo va más allá de las fechas de la línea.», un calendario desactivado después, por ejemplo «Personal de la sede está desactivado. Las líneas aún lo usan.», y días laborables modificados desde el último guardado de las líneas
-- **Aplicar estas líneas a todas las columnas**: un interruptor para las mismas columnas que el interruptor de la pestaña de reparto, desactivado por defecto aquí. Activarlo escribe las líneas en cada columna que lo sigue de inmediato, y queda activado: cada guardado posterior escribe también las líneas en esas columnas. Desactivarlo no cambia nada por sí solo
+- Para dar las mismas líneas a otras columnas, use **Usar también para otras columnas…** bajo el editor. Consulte [Presupuesto](#presupuesto)
 
-**Cuando los importes cambian de otra forma**: las líneas se quedan en la columna como referencia, y la pestaña indica de dónde vienen ahora los importes, seguido de un enlace **Usar de nuevo las líneas**. Las líneas pasan entonces a solo lectura: no puede añadir, quitar ni editar una línea, y la pestaña no muestra importe por línea, ni ETC, ni **Aplicar estas líneas a todas las columnas**. El enlace guarda las líneas tal como están y vuelve a calcular la columna a partir de ellas, y las líneas vuelven a ser editables. Para cambiar una línea conservada como referencia, haga clic primero en **Usar de nuevo las líneas** y edítela después.
+**Cuando los importes cambian de otra forma**: las líneas se quedan en la columna como referencia, en solo lectura. Bajo **Importe** o **Por mes**, una línea indica cuántas líneas se conservan, por ejemplo «4 líneas conservadas como referencia (48.000).», seguida del enlace **Usar de nuevo las líneas**. El enlace guarda las líneas tal como están y vuelve a calcular la columna a partir de ellas. Elegir la pestaña **Cantidad y precio** hace lo mismo, tras una pregunta. Para cambiar una línea conservada como referencia, use primero de nuevo las líneas y luego modifíquela.
 
-- Un mes introducido en la pestaña **Mensual**: «Los importes se introdujeron a mano. Usar de nuevo las líneas.»
-- Un reparto: «Los importes vienen de un reparto. Usar de nuevo las líneas.»
-- **Copiar columnas presupuestarias** en la Administración presupuestaria: «Los importes se copiaron de Presupuesto 2025. Usar de nuevo las líneas.» Cuando los importes de origen no se calcularon a partir de líneas, la copia lleva las líneas de la columna de origen como referencia. Una columna calculada a partir de sus líneas sigue calculada, con sus precios aumentados por el porcentaje. Consulte [Copiar una columna construida a partir de líneas](budget-operations.md#copiar-una-columna-construida-a-partir-de-lineas)
-- Los días laborables de un calendario cambiaron: «Días laborables modificados desde el último cálculo: marzo: 20 días, ahora 19.» Nada cambia en la columna hasta que haga clic en **Usar de nuevo las líneas**. Las líneas siguen siendo editables mientras tanto
+- Pasar la columna a **Importe** o **Por mes**, introducir un mes en la tabla, o **Borrar columna**
+- **Copiar columnas presupuestarias** en la Administración presupuestaria, o **Partir de**: cuando los importes de origen no se calcularon a partir de líneas, la copia lleva las líneas de la columna de origen como referencia. Una columna calculada a partir de sus líneas sigue calculada, con sus precios aumentados por el porcentaje. Consulte [Copiar una columna construida a partir de líneas](budget-operations.md#copiar-una-columna-construida-a-partir-de-lineas)
+- Los días laborables de un calendario cambiaron: la pestaña **Cantidad y precio** indica, por ejemplo, «Días laborables modificados desde el último cálculo: marzo: 20 días, ahora 19.», seguido de **Usar de nuevo las líneas**. Nada cambia en la columna hasta que haga clic en **Usar de nuevo las líneas**. Las líneas siguen siendo editables mientras tanto
 - **Restablecer columna presupuestaria** en la Administración presupuestaria quita las líneas junto con los importes. Consulte [Restablecer columna presupuestaria](budget-operations.md#restablecer-columna-presupuestaria)
 - Un archivo de presupuesto cambia los meses de una columna y deja sus líneas. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md)
 
@@ -443,7 +483,7 @@ Por ejemplo, un consultor a tiempo completo de febrero a octubre cuenta 1 ETC en
 
 ### Asignaciones
 
-La pestaña Asignaciones distribuye el gasto de un año entre sus empresas y departamentos. Las asignaciones de las líneas OPEX alimentan los informes de contracargo y los KPI de coste por usuario.
+La pestaña Asignaciones distribuye el gasto de un año entre sus empresas y departamentos. Las asignaciones alimentan los informes de contracargo y los KPI de coste por usuario, para las líneas OPEX y CAPEX.
 
 **Selección de año**:
 
@@ -596,13 +636,13 @@ Una línea OPEX que resulta ser una inversión pasa a ser una línea CAPEX, y un
 
 **A partir de** fija dónde empieza el cambio:
 
-- **El primer año de la línea** (por defecto): la propia línea cambia de tipo. Conserva su referencia `BL` y su dirección, sus presupuestos, asignaciones, vínculos, adjuntos y tareas. Su **Tipo** cambia en la lista. Una línea que pasa a CAPEX sale de los informes OPEX y del contracargo, y entra en los informes CAPEX. Una línea que pasa a OPEX hace lo contrario
+- **El primer año de la línea** (por defecto): la propia línea cambia de tipo. Conserva su referencia `BL` y su dirección, sus presupuestos, asignaciones, vínculos, adjuntos y tareas. Su **Tipo** cambia en la lista. Una línea que pasa a CAPEX sale de los informes OPEX y entra en los informes CAPEX, y el contracargo la cuenta en CAPEX. Una línea que pasa a OPEX hace lo contrario
 - **Un año posterior**: esta línea termina el 31 de diciembre del año anterior y conserva sus presupuestos anteriores. Una nueva línea del otro tipo, con su propia referencia `BL`, lleva el presupuesto a partir de ese año, con los contactos y los vínculos con aplicaciones, activos, contratos, proyectos y solicitudes. Los adjuntos, los sitios web relevantes y las tareas se quedan en esta línea. La parte superior de la pestaña **Vista general** enlaza las dos líneas: **Sustituida por** en esta línea, **Sucede a** en la nueva
 
 El diálogo también pide:
 
 - **Cuenta**: una cuenta para el nuevo tipo. Cuando la cuenta de la línea es solo para su tipo actual, la línea la conserva en su sitio salvo que elija otra; una nueva línea a partir de un año posterior solo la recibe si corresponde al nuevo tipo
-- **Dimensiones**: las dimensiones obligatorias para el nuevo tipo, y los valores de la línea que son solo para su tipo actual. Si la propia línea cambia de tipo, puede completarlos ahora o más tarde. A partir de un año posterior, la nueva línea necesita las dimensiones obligatorias, y los valores solo para el tipo actual no se copian. Las [dimensiones CAPEX](#dimensiones-capex) no se aplican a las líneas OPEX: una línea CAPEX que pasa a OPEX en su sitio conserva sus valores sin mostrarlos, y los vuelve a mostrar si más adelante pasa a CAPEX
+- **Dimensiones**: las dimensiones obligatorias para el nuevo tipo, y los valores de la línea que son solo para su tipo actual. Si la propia línea cambia de tipo, puede completarlos ahora o más tarde. A partir de un año posterior, la nueva línea necesita las dimensiones obligatorias, y los valores solo para el tipo actual no se copian. Una dimensión solo para líneas CAPEX no se aplica a las líneas OPEX: una línea CAPEX que pasa a OPEX en su sitio conserva su valor sin mostrarlo, y lo vuelve a mostrar si más adelante pasa a CAPEX
 - **Motivo**: opcional, se guarda en el registro de auditoría de la línea
 
 El cambio se rechaza cuando la línea tiene importes en una columna congelada, de líneas OPEX o CAPEX, en los años que cambian. Descongele primero la columna, o haga empezar el cambio en un año posterior. Se ofrece un año posterior cuando sigue al primer año de presupuesto de la línea, la línea tiene presupuesto en ese año o en uno posterior, empieza antes del 1 de enero de ese año y sigue vigente ese día, y aún no ha sido sustituida por otra línea. Un cambio siempre empieza el 1 de enero.
@@ -627,7 +667,7 @@ Un archivo de presupuesto nunca cambia el tipo de una línea. Consulte [Cargar u
 
 7. **Registre contactos**: Añada contactos de proveedor con roles (Comercial, Técnico, Soporte) para que su equipo sepa a quién llamar para cada línea.
 
-8. **Aproveche las dimensiones analíticas**: Dé a las líneas un valor en cada dimensión (por ejemplo Licenses en Nature, o el **Investment type** y la **Priority** de una línea CAPEX) para agrupar el gasto en los informes.
+8. **Aproveche las dimensiones analíticas**: Dé a las líneas un valor en cada dimensión (por ejemplo **Software** en **Tipo de coste**, o el **Motivo** y la **Prioridad** de una línea CAPEX) para agrupar el gasto en los informes.
 
 9. **Mantenga actualizadas las métricas de empresa**: Las asignaciones dependen de la plantilla, usuarios IT y facturación de la empresa. Las métricas desactualizadas causan errores de asignación.
 
@@ -635,7 +675,7 @@ Un archivo de presupuesto nunca cambia el tipo de una línea. Consulte [Cargar u
 
 11. **Desactive, no elimine**: Preserve el historial desactivando líneas cuando ya no estén activas. Elimine solo si es un error.
 
-12. **Revise las filas de totales**: Antes de finalizar presupuestos, verifique los totales fijados en la lista, por tipo y en conjunto, para asegurar que su gasto suma como se espera.
+12. **Revise la fila de totales**: Antes de finalizar presupuestos, verifique la fila **Total** bajo la lista para asegurar que su gasto suma como se espera. Filtre por **Tipo** para ver el total de OPEX o de CAPEX por separado.
 
 13. **Use enlace directo**: Haga clic directamente en una columna de presupuesto en la lista para ir a la pestaña Presupuesto de ese año. Haga clic en la columna Tarea para ir a las tareas de la línea en la pestaña Vista general. Esto ahorra tiempo de navegación.
 
@@ -649,7 +689,7 @@ El acceso a las líneas presupuestarias se controla con el recurso Presupuesto, 
 
 - `budget:reader`: Ver la lista, abrir líneas, ver presupuestos y asignaciones (solo lectura), descargar adjuntos
 - `budget:member`: Crear y editar líneas, cambiar su tipo, actualizar presupuestos y asignaciones, subir y eliminar adjuntos, gestionar relaciones, enlaces y contactos
-- `budget:admin`: Todos los derechos de miembro más importación y exportación CSV, operaciones presupuestarias (copiar columnas presupuestarias, copiar asignaciones, restablecer columna presupuestaria) y eliminación masiva
+- `budget:admin`: Todos los derechos de miembro más importación y exportación CSV, operaciones presupuestarias (copiar columnas presupuestarias, con sus importes y asignaciones, y restablecer columna presupuestaria) y eliminación masiva
 
 Congelar columnas presupuestarias requiere la administración presupuestaria (`budget_ops:admin`).
 

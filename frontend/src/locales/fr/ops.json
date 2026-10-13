@@ -1097,7 +1097,7 @@
       "nameHint": "Laissez un nom vide pour utiliser le nom standard.",
       "helpHidden": "Les colonnes masquées gardent leurs montants et acceptent toujours les imports et les gels.",
       "helpDefault": "La colonne par défaut est présélectionnée dans les rapports et trie les listes et le tableau de bord. La geler fige les taux de change de l'année.",
-      "helpFollows": "La colonne reprend ce qui est appliqué à toutes les colonnes dans l'onglet Budget : la répartition et la période d'un montant réparti, et les lignes quantité et prix. Une colonne qui ne suit pas garde les siens.",
+      "helpFollows": "Cochée d'office dans « Utiliser aussi pour d'autres colonnes » de l'onglet Budget.",
       "errors": {
         "allHidden": "Au moins une colonne doit rester affichée.",
         "defaultHidden": "La colonne par défaut doit être affichée : choisissez d'abord une autre colonne par défaut.",
@@ -1798,8 +1798,6 @@
     "changeType": "Changer le type…",
     "typeOpex": "OPEX",
     "typeCapex": "CAPEX",
-    "line": "Ligne budgétaire",
-    "totalOpex": "Total OPEX",
-    "totalCapex": "Total CAPEX"
+    "line": "Ligne budgétaire"
   }
 }

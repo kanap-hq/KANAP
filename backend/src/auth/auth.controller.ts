@@ -6,6 +6,7 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 import { UsersService } from '../users/users.service';
 import { PermissionsService, RESOURCES } from '../permissions/permissions.service';
 import { BillingService } from '../billing/billing.service';
+import { subscriptionSummaryFor } from '../billing/subscription-summary-view';
 import * as jwt from 'jsonwebtoken';
 import { EmailService, isExampleRecipient, maskEmailAddresses } from '../email/email.service';
 import { resolveAppBaseUrl } from '../common/url';
@@ -201,7 +202,9 @@ export class AuthController {
     const isPlatform = req?.isPlatformHost === true
       && isPlatformAdmin({ email: user.email, role: { role_name: user.role?.role_name ?? null } });
 
-    const subscription = await this.billing.getSubscriptionSummary({ manager });
+    // Every user reads the subscription status (trial and freeze banners); the payment details
+    // only with a billing permission.
+    const subscription = subscriptionSummaryFor(await this.billing.getSubscriptionSummary({ manager }), permissions['billing']);
 
     // Build roles array for profile (all assigned roles)
     const roles = userRoles
@@ -249,9 +252,9 @@ export class AuthController {
     const t = body?.token;
     if (!t) throw new BadRequestException({ code: 'TOKEN_REQUIRED', message: 'token is required' });
     // Dedicated `PROVISIONING_TOKEN_SECRET` when configured, otherwise `JWT_SECRET` — the issuer
-    // lives outside this repository and cannot compute a derived key. Sharing the key is safe
-    // because `JwtAuthGuard` refuses the `provision` marker; what made it dangerous was the missing
-    // purpose control (constat n°2).
+    // lives outside this repository and cannot compute a derived key. The key can be shared
+    // because `JwtAuthGuard` accepts only the access-token purpose and refuses the `provision`
+    // marker.
     const secret = getProvisioningSecret();
     let payload: any;
     try {

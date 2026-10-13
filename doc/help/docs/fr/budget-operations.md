@@ -22,8 +22,7 @@ La page d'accueil comporte deux sections. Chaque carte renvoie à un outil dédi
 | Outil | Objectif |
 |-------|----------|
 | **Geler / Dégeler les données** | Verrouiller les colonnes budgétaires pour empêcher les modifications |
-| **Copier les colonnes budgétaires** | Copier des données entre années et colonnes avec des ajustements |
-| **Copier les ventilations** | Copier les méthodes de ventilation d'une année à l'autre |
+| **Copier les colonnes budgétaires** | Copier les montants entre années et colonnes, avec un pourcentage facultatif, et les ventilations vers une autre année |
 | **Réinitialiser une colonne budgétaire** | Effacer toutes les données d'une colonne spécifique |
 | **Geler les données de référence** | Verrouiller les indicateurs des sociétés et des départements pour une année. Voir [Geler les données de référence et copier les indicateurs annuels](master-data-operations.md) |
 | **Copier les indicateurs annuels** | Copier les indicateurs des sociétés et des départements d'une année à l'autre. Voir [Geler les données de référence et copier les indicateurs annuels](master-data-operations.md) |
@@ -31,7 +30,7 @@ La page d'accueil comporte deux sections. Chaque carte renvoie à un outil dédi
 | Cartes | Qui les voit |
 |---|---|
 | Devises, Colonnes budgétaires, Méthode de ventilation par défaut, Geler / Dégeler les données | Administration budgétaire au niveau administrateur (`budget_ops:admin`) |
-| Copier les colonnes budgétaires, Copier les ventilations, Réinitialiser une colonne budgétaire | Budget au niveau administrateur (`budget:admin`). Les onglets OPEX et CAPEX s'ouvrent tous deux avec ce niveau |
+| Copier les colonnes budgétaires, Réinitialiser une colonne budgétaire | Budget au niveau administrateur (`budget:admin`). Les onglets **Tout**, **OPEX** et **CAPEX** s'ouvrent tous avec ce niveau |
 | Geler les données de référence, Copier les indicateurs annuels | Utilisateurs ayant accès au budget qui sont administrateurs de l'administration budgétaire, des sociétés ou des départements. Les administrateurs des sociétés et des départements agissent sur leur propre périmètre |
 
 Le rôle intégré Administrateur budget voit toutes les cartes. Membre budget et Lecteur budget n'en voient aucune : **Administration** ne figure donc pas dans leur menu.
@@ -75,7 +74,7 @@ Sans le niveau Admin sur l'administration budgétaire, la page affiche les état
 
 ### Cadenas dans la liste
 
-Les lignes de totaux de [la liste des lignes budgétaires](budget-lines.md#travailler-avec-la-liste) affichent un cadenas devant le total d'une colonne gelée. Quand la liste contient les deux types, les lignes **Total OPEX** et **Total CAPEX** suivent chacune le gel de leur type, et la ligne **Total** affiche le cadenas quand la colonne est gelée pour les deux. Filtrée sur un type, la ligne **Total** suit ce type. Survolez l'icône pour lire **Gelé**.
+La ligne **Total** unique de [la liste des lignes budgétaires](budget-lines.md#travailler-avec-la-liste) affiche un cadenas devant le total d'une colonne gelée. Il suit le gel de chaque type que contient la liste. Si la liste est filtrée sur un type, le cadenas s'affiche quand ce type est gelé. Si elle contient les deux types, il s'affiche quand la colonne est gelée pour les deux. Survolez l'icône pour lire **Gelé**.
 
 ### Geler la colonne par défaut fige les taux de change
 
@@ -91,15 +90,15 @@ Geler et dégeler nécessitent `budget_ops:admin`. La carte est masquée pour le
 
 ## Copier les colonnes budgétaires
 
-Copiez les données budgétaires d'une année et colonne vers une autre, avec un ajustement en pourcentage optionnel. C'est l'outil principal pour alimenter le budget de l'année suivante à partir de l'année en cours.
+Copiez les montants d'une colonne vers une autre année ou une autre colonne, avec un pourcentage facultatif, et les ventilations d'une année vers une autre année. C'est l'outil principal pour alimenter le budget de l'année suivante à partir de l'année en cours.
 
-Le sélecteur **OPEX** / **CAPEX** en haut de la page choisit les lignes budgétaires sur lesquelles la copie s'applique. OPEX est sélectionné par défaut.
+Les onglets **Tout** / **OPEX** / **CAPEX** en haut de la page choisissent les lignes budgétaires sur lesquelles la copie s'applique. **Tout**, l'onglet par défaut, copie ensemble les lignes OPEX et CAPEX.
 
 Nécessite le niveau Admin sur Budget (`budget:admin`).
 
 ### Quand l'utiliser
 
-- Préparer le budget de l'année suivante à partir de l'année en cours
+- Préparer le budget de l'année suivante, montants et ventilations, à partir de l'année en cours
 - Créer une révision à partir du budget approuvé
 - Reporter des projections avec un facteur d'inflation
 
@@ -107,45 +106,54 @@ Nécessite le niveau Admin sur Budget (`budget:admin`).
 
 | Champ | Description |
 |-------|-------------|
-| **Année source** | Année à copier (plage : année en cours moins un à année en cours plus cinq) |
-| **Colonne source** | Toute colonne affichée, Prévision comprise quand elle est affichée. Démarre sur la colonne par défaut |
-| **Année destination** | Année vers laquelle copier (même plage) |
-| **Colonne destination** | Toute colonne affichée. Démarre sur la colonne par défaut |
-| **Augmentation en pourcentage** | Ajustement appliqué à chaque mois copié (ex. : `3` = +3 %). Pour une colonne calculée à partir de ses lignes, il augmente à la place le prix unitaire de chaque ligne. Voir [Copier une colonne construite à partir de lignes](#copier-une-colonne-construite-a-partir-de-lignes). Par défaut 0. Accepte les décimales et les valeurs négatives. Un pourcentage de -100 % ou moins est refusé. |
-| **Écraser les données existantes** | Bascule. Désactivé : les lignes budgétaires qui ont déjà une valeur dans la destination sont ignorées. Activé : toutes les valeurs destination sont remplacées. |
+| **Année source** | Année à copier (plage : année en cours moins un à année en cours plus cinq). Démarre sur l'année en cours |
+| **Année de destination** | Année vers laquelle copier (même plage). Démarre sur l'année suivante |
+| **À copier** | **Montants**, **Ventilations**, ou les deux. **Ventilations** est proposé lorsque les deux années diffèrent, et coché au départ. Survolez chaque case pour lire ce qu'elle copie |
+| **Colonne source** | Avec **Montants** : toute colonne affichée, Prévision comprise quand elle est affichée. Démarre sur la colonne par défaut |
+| **Colonne de destination** | Avec **Montants** : toute colonne affichée. Démarre sur la colonne par défaut |
+| **Augmentation en pourcentage** | Avec **Montants** : ajustement appliqué à chaque mois copié (ex. : `3` = +3 %). Pour une colonne calculée à partir de ses lignes, il augmente à la place le prix unitaire de chaque ligne. Voir [Copier une colonne construite à partir de lignes](#copier-une-colonne-construite-a-partir-de-lignes). Par défaut 0. Accepte les décimales et les valeurs négatives. Un pourcentage de -100 % ou moins est refusé |
+| **Écraser les données existantes** | Un interrupteur pour les deux parties. Désactivé : une colonne de destination qui porte déjà des montants les garde, et une ventilation saisie à la main dans l'année de destination est gardée. Activé : les deux sont remplacées |
 
-La page s'ouvre avec la colonne par défaut de l'année en cours comme source et la colonne par défaut de l'année suivante comme destination. Les colonnes masquées ne sont pas proposées.
+Les colonnes masquées ne sont pas proposées. Lorsque rien n'est coché sous **À copier**, la page indique « Choisissez quoi copier : les montants, les ventilations ou les deux. »
 
-### Processus en deux étapes : Simulation, puis Copie
+### Deux étapes : Aperçu, puis Copier
 
-1. Cliquez sur **Simulation** pour générer un aperçu sans modifier aucune donnée
-2. Examinez la grille d'aperçu, qui affiche :
-   - Nom de la **Ligne** (les lignes budgétaires marquées **Ignoré** conservent leur valeur actuelle ; les lignes budgétaires marquées **Au prorata** commencent ou se terminent pendant l'année de destination et ne reçoivent que les mois de leur période de validité)
-   - **Valeur source** (de l'année/colonne source)
-   - **Valeur destination actuelle**
-   - **Valeur d'aperçu** (ce que la destination deviendra après la copie)
-3. Lorsque vous êtes satisfait, cliquez sur **Copier les données** pour appliquer
+1. Cliquez sur **Aperçu** pour voir ce que la copie fait sur chaque ligne, sans modifier aucune donnée
+2. Relisez le tableau, une ligne par ligne budgétaire :
+   - **Ligne** : le nom de la ligne, un lien qui l'ouvre dans un nouvel onglet pour que l'aperçu reste en place. Les lignes marquées **Au prorata** commencent ou finissent pendant l'année de destination et ne reçoivent que les mois de leur validité. Les lignes marquées **Calendrier** changent de calendrier (voir plus bas)
+   - **Type de ligne** : **OPEX** ou **CAPEX**, dans l'onglet **Tout**
+   - Pour les montants : la colonne source, la colonne de destination actuelle, la colonne de destination après la copie, et le statut des montants
+   - Pour les ventilations : la ventilation source, la ventilation de destination actuelle, la ventilation après la copie, et le statut des ventilations
+3. Lorsque le résultat vous convient, cliquez sur **Copier** pour l'appliquer
 
-Le bouton **Copier les données** n'est activé qu'après une simulation réussie.
+**Copier** n'est activé qu'après un aperçu. Modifier un champ efface l'aperçu : relancez-le. Après la copie, le tableau reste affiché sous le titre **Résultat**, avec ce que chaque ligne a fait.
 
-### Statistiques récapitulatives
+Chaque partie a son propre statut sur chaque ligne :
 
-Sous la grille, une barre de statistiques affiche :
+| Statut | Signification |
+|---|---|
+| **À copier** / **Copié** | La partie est copiée, ou l'a été |
+| **Remplace Effectif** / **A remplacé Effectif** | La ventilation de l'année de destination suit une autre méthode, que la ventilation copiée remplace |
+| **Non valide en 2027** | La ligne n'est pas valide l'année de destination. Elle est exclue |
+| **Ignoré : rien en 2026** | La ligne n'a pas de budget l'année source |
+| **Ignoré : la colonne source est vide** | La colonne source n'a aucun montant |
+| **Ignoré : la destination a des montants** | La colonne de destination a déjà des montants, et **Écraser les données existantes** est désactivé |
+| **Ignoré : aucune ventilation saisie en 2026** | La ligne n'a aucune ventilation à copier l'année source |
+| **Ignoré : 2027 a une ventilation saisie à la main** | L'année de destination a une ventilation saisie à la main, et **Écraser les données existantes** est désactivé |
+| **Erreur** | Les règles de ventilation de la ligne refusent la copie, avec la raison. **Copier** reste désactivé tant qu'une ligne est en erreur |
 
-- **Total des lignes** dans le jeu de données
-- **Lignes à traiter** (non ignorées)
-- **Total source** (somme des valeurs sources)
-- **Total destination actuel**
-- **Total de l'aperçu** (affiché après la simulation)
+### Résumé
 
-### Comportement de l'écrasement
+Au-dessus du tableau, une bannière résume l'aperçu, par exemple « 136 lignes dans l'aperçu. Montants : 120 à copier, 16 ignorés. Ventilations : 130 à copier, 6 ignorées. » Après la copie, elle indique « Copie terminée. » avec les mêmes comptes.
 
-| Écraser | La destination a des données | Résultat |
-|---------|------------------------------|----------|
-| Désactivé | Oui | Ignoré |
-| Désactivé | Non (zéro) | Copié |
-| Activé | Oui | Remplacé |
-| Activé | Non (zéro) | Copié |
+Des avertissements s'affichent lorsqu'ils s'appliquent :
+
+- Les lignes dont la colonne de destination a déjà un montant, et qui seront ignorées sans **Écraser les données existantes**
+- Les lignes qui gardent une ventilation saisie à la main dans l'année de destination, sans **Écraser les données existantes**
+- Les lignes dont la méthode de ventilation change dans l'année de destination. Sans **Écraser les données existantes**, la copie ne garde que les ventilations saisies à la main : une ligne qui suit une méthode, sans répartition saisie à la main, prend la méthode de l'année source
+- Les lignes laissées en ventilation par défaut, lorsque le défaut de l'année de destination diffère de celui de l'année source. Les lignes copiées continuent de suivre le défaut de leur propre année. Configurez-le dans [Méthode de ventilation par défaut](#methode-de-ventilation-par-defaut) si la base doit rester identique
+
+Sous le tableau, les totaux indiquent le nombre de lignes, les montants à copier, le total source, le total actuel de destination et le total après la copie, et les ventilations à copier.
 
 ### Comment les montants sont copiés
 
@@ -159,7 +167,7 @@ Sous la grille, une barre de statistiques affiche :
 - Une source sans période donne une période couvrant toute l'année
 - Dans l'onglet Budget, la colonne de destination affiche « Copié depuis Budget 2026 +2 % »
 - La copie d'une colonne sur elle-même (même année et même colonne) est refusée
-- La copie se fait en tout ou rien : si une ligne échoue, rien n'est enregistré
+- La copie se fait en tout ou rien : si une ligne échoue, rien n'est enregistré, ni montants ni ventilations
 
 ### Copier une colonne construite à partir de lignes
 
@@ -178,8 +186,8 @@ Une colonne peut être construite à partir de lignes, chacune étant une quanti
 - Le pourcentage d'augmentation s'applique aux mois, comme pour toute autre colonne. Les prix unitaires des lignes ne changent pas
 - Les lignes passent à l'année de destination avec leur description, leur quantité, leur unité, leur fréquence et leur calendrier, et leurs périodes suivent la période de la colonne. Une ligne conservée seulement pour une partie de l'année de destination, à cause de la validité de la ligne budgétaire, est ramenée à cette période, et une ligne qui n'a plus aucun mois est supprimée
 - L'ETP est recalculé à partir des lignes copiées avec les calendriers de jours ouvrés de l'année de destination
-- Dans l'onglet Budget, la colonne de destination affiche « Copié depuis Budget 2026 », et son onglet **Quantité et prix** indique « Les montants ont été copiés depuis Budget 2026. Utiliser à nouveau les lignes. »
-- Les lignes copiées sont une référence en lecture seule. Cliquez sur **Utiliser à nouveau les lignes** dans l'onglet **Quantité et prix** pour calculer la colonne à partir d'elles, à leurs prix actuels. Pour planifier l'année de destination à ses propres prix, modifiez ensuite les prix unitaires : chaque modification recalcule la colonne
+- Dans l'onglet Budget, la colonne de destination affiche « Copié depuis Budget 2026 », et son éditeur indique, par exemple, « 4 lignes gardées en référence (48 000). Utiliser à nouveau les lignes. »
+- Les lignes copiées sont une référence en lecture seule. Cliquez sur **Utiliser à nouveau les lignes** pour calculer la colonne à partir d'elles, à leurs prix actuels. Pour planifier l'année de destination à ses propres prix, modifiez ensuite les prix unitaires : chaque modification recalcule la colonne
 
 Une copie depuis une colonne sans ligne laisse la destination sans ligne, et son ETP devient vide.
 
@@ -187,57 +195,21 @@ Une copie depuis une colonne sans ligne laisse la destination sans ligne, et son
 
 Une ligne au prix par jour a besoin d'un calendrier qui contient l'année de destination. Lorsque le calendrier d'une ligne n'a aucun jour ouvré pour cette année, la copie utilise à la place le calendrier standard de la société payeuse de la ligne budgétaire, celui du pays de la société. C'est le calendrier créé avec la société. Cela vaut pour une colonne construite à partir de lignes et pour une colonne dont les lignes ne sont qu'une référence. S'il n'en existe pas, la ligne budgétaire est copiée de la façon habituelle : mois multipliés par le pourcentage. Les lignes sont conservées telles quelles comme référence, et l'ETP reste celui de la colonne source.
 
-La simulation signale ces lignes budgétaires par une note **Calendrier**, avec une infobulle pour chaque ligne, et affiche un avertissement au-dessus de l'aperçu. L'aperçu signale aussi une ligne budgétaire pour laquelle il n'existe aucun calendrier de remplacement. Pour copier malgré tout, cochez **Copier quand même avec ces changements de calendrier**. La meilleure solution est d'ajouter les jours de l'année dans la page **Calendriers de jours ouvrés**, puis de relancer la simulation.
+L'aperçu signale ces lignes budgétaires par une note **Calendrier**, avec une infobulle pour chaque ligne, et affiche un avertissement au-dessus du tableau. L'aperçu signale aussi une ligne budgétaire pour laquelle il n'existe aucun calendrier de remplacement. Pour copier malgré tout, cochez **Copier quand même avec ces changements de calendrier**. La meilleure solution est d'ajouter les jours de l'année dans la page **Calendriers de jours ouvrés**, puis de relancer l'aperçu.
 
-Un calendrier désactivé reste utilisé. La simulation le signale et ne demande aucune confirmation.
+Un calendrier désactivé reste utilisé. L'aperçu le signale et ne demande aucune confirmation.
+
+### Copier les ventilations
+
+**Ventilations** copie la méthode de ventilation de chaque ligne de l'année source vers l'année de destination, avec la répartition saisie à la main (les sociétés ou départements choisis, les pourcentages saisis). Seules les lignes valides l'année de destination sont copiées, avec la même règle que pour les montants.
+
+- Une ligne laissée en ventilation par défaut reste sur le défaut : l'année de destination, elle suit le défaut de cette année
+- Sans **Écraser les données existantes**, une ligne garde la ventilation saisie à la main dans l'année de destination. Une ligne dont l'année de destination suit une méthode sans répartition saisie à la main reçoit la ventilation source, et l'aperçu indique quelle méthode elle remplace, par exemple « Remplace Effectif »
+- Avec **Écraser les données existantes**, chaque ventilation copiée remplace celle de la destination
 
 ### Protection des colonnes gelées
 
-Si la colonne destination est gelée, **Simulation** et **Copier les données** sont tous deux désactivés. Une bannière d'erreur vous invite à dégeler d'abord.
-
----
-
-## Copier les ventilations
-
-Copiez les méthodes et pourcentages de ventilation d'une année à l'autre. Cela vous évite de ressaisir les configurations de refacturation lors de la mise en place d'une nouvelle année fiscale.
-
-La bascule **OPEX** / **CAPEX** en haut choisit les lignes budgétaires copiées. Seules les lignes budgétaires valides l'année de destination sont copiées, avec la même règle que **Copier les colonnes budgétaires**. La copie se fait en bloc : si une ligne échoue, rien n'est copié.
-
-Nécessite le niveau Admin sur Budget (`budget:admin`).
-
-### Quand l'utiliser
-
-- Préparer le budget de l'année suivante avec les mêmes ventilations de coûts
-- Reporter les configurations de refacturation
-- Mettre en place une nouvelle année fiscale
-
-### Champs
-
-| Champ | Description |
-|-------|-------------|
-| **Année source** | Année à partir de laquelle copier les ventilations (plage : année en cours moins un à année en cours plus cinq) |
-| **Année destination** | Année vers laquelle copier les ventilations (même plage). Doit différer de l'année source. |
-| **Écraser les données existantes** | Bascule. Désactivé : les lignes budgétaires qui ont déjà des ventilations dans la destination sont ignorées. |
-
-### Processus en deux étapes : Simulation, puis Copie
-
-1. Cliquez sur **Simulation** pour voir un aperçu
-2. La grille d'aperçu affiche chaque ligne OPEX ou CAPEX avec :
-   - Nom de la **Ligne**
-   - **Action** : ce qui va se passer (Sera copié, Ignoré – pas d'année source, Ignoré – pas de ventilations dans la source, Ignoré – la destination contient des données, Erreur)
-   - Méthode et libellé **Source**
-   - Méthode et libellé **Destination** actuels
-   - **Résultat après copie** : ce à quoi ressemblera la destination
-3. Cliquez sur **Copier les données** pour appliquer
-
-### Validation
-
-- Les années source et destination doivent être différentes. Si elles sont identiques, une bannière d'avertissement apparaît et les deux boutons sont désactivés.
-- Changer un filtre efface l'aperçu, nécessitant une nouvelle simulation.
-
-### Résumé
-
-Après une simulation, une bannière affiche le nombre de lignes budgétaires prêtes à être copiées, ignorées et en erreur. Si des lignes budgétaires ont été ignorées parce que la destination a déjà des ventilations, un avertissement séparé suggère d'activer l'écrasement.
+Lorsque la copie comprend les montants et que la colonne de destination est gelée, **Aperçu** et **Copier** sont désactivés et une bannière d'erreur vous invite à dégeler d'abord. Dans l'onglet **Tout**, lorsque la colonne n'est gelée que pour un type, la bannière le nomme, par exemple « La colonne Budget de 2027 est gelée en CAPEX. Dégelez-la, ou copiez seulement l'autre type. » Les ventilations seules ne dépendent pas des gels.
 
 ---
 
@@ -245,7 +217,7 @@ Après une simulation, une bannière affiche le nombre de lignes budgétaires pr
 
 Effacez toutes les données d'une colonne budgétaire spécifique pour une année donnée. C'est une opération destructive : utilisez-la lorsque vous devez repartir de zéro.
 
-Le sélecteur **OPEX** / **CAPEX** en haut de la page choisit les lignes budgétaires à effacer. La réinitialisation met à zéro les douze mois de la colonne et retire sa période, ainsi que ses lignes lorsque la colonne était construite à partir de la quantité et du prix. Dans l'onglet Budget, la colonne reçoit alors une nouvelle suggestion à partir des dates de la ligne budgétaire. La réinitialisation couvre toutes les lignes budgétaires, y compris celles dont la fin de validité est passée. Elle se fait en tout ou rien : si une ligne budgétaire échoue, rien n'est effacé.
+Les onglets **Tout** / **OPEX** / **CAPEX** en haut de la page choisissent les lignes budgétaires à effacer. **Tout**, l'onglet par défaut, efface ensemble les lignes OPEX et CAPEX. La réinitialisation met à zéro les douze mois de la colonne et retire sa période, ainsi que ses lignes lorsque la colonne était construite à partir de la quantité et du prix. Dans l'onglet Budget, la colonne reçoit alors une nouvelle suggestion à partir des dates de la ligne budgétaire. La réinitialisation couvre toutes les lignes budgétaires, y compris celles dont la fin de validité est passée. Elle se fait en tout ou rien : si une ligne budgétaire échoue, rien n'est effacé.
 
 Nécessite le niveau Admin sur Budget (`budget:admin`).
 
@@ -266,7 +238,7 @@ Une colonne dont les lignes budgétaires ne portent aucun montant peut quand mê
 
 ### Aperçu
 
-Tant que vous n'avez pas choisi de colonne, une ligne remplace la grille : « Choisissez une colonne pour voir les montants qu'elle contient. » Une fois la colonne choisie, une grille montre chaque ligne OPEX ou CAPEX et sa valeur actuelle dans cette colonne. Les montants qui seront effacés apparaissent en graisse moyenne ; les valeurs vides sont atténuées. Sous la grille, trois statistiques apparaissent :
+Tant que vous n'avez pas choisi de colonne, une ligne remplace la grille : « Choisissez une colonne pour voir les montants qu'elle contient. » Une fois la colonne choisie, une grille montre chaque ligne du type choisi et sa valeur actuelle dans cette colonne. Le nom de la ligne l'ouvre dans un nouvel onglet, et dans l'onglet **Tout** une colonne **Type de ligne** indique **OPEX** ou **CAPEX**. Les montants qui seront effacés apparaissent en graisse moyenne ; les valeurs vides sont atténuées. Sous la grille, trois statistiques apparaissent :
 
 - **Total des lignes**
 - **Lignes avec un total non nul**
@@ -287,7 +259,7 @@ Vous devez cliquer sur **Effacer la colonne** dans la boîte de dialogue pour co
 
 - Le bouton **Effacer la colonne** reste disponible lorsqu'aucune ligne ne porte de montant, afin de pouvoir retirer les périodes de répartition
 - Aucune colonne n'est présélectionnée : vous choisissez toujours la colonne à effacer
-- Les colonnes gelées ne peuvent pas être réinitialisées. Dégelez-les d'abord
+- Les colonnes gelées ne peuvent pas être réinitialisées. Dégelez-les d'abord. Dans l'onglet **Tout**, lorsque la colonne n'est gelée que pour un type, le message le nomme, par exemple « La colonne Budget de 2026 est gelée en CAPEX. Dégelez-la avant d'effacer les données, ou effacez seulement l'autre type. »
 - La boîte de dialogue de confirmation nécessite un acquittement explicite
 
 ---
@@ -367,18 +339,18 @@ Une ligne par colonne, toujours dans le même ordre, de la colonne 1 à la colon
 | **Nom** | Le nom que tout le monde voit dans les listes, l'onglet Budget, les rapports, la vue d'ensemble et l'administration budgétaire. Laissez-le vide pour utiliser le nom standard, affiché en indication. 40 caractères au plus, sans caractère de contrôle ni caractère invisible. Chaque nom doit différer de ceux des autres colonnes, y compris du nom standard d'une colonne que vous n'avez pas renommée, majuscules comprises |
 | **Dans les fichiers** | La ligne sous chaque nom. Elle donne le nom technique de la colonne dans le fichier budgétaire et ses imports, par exemple `budget` pour la colonne 1. Il ne change jamais quand vous renommez une colonne. Voir [Charger un budget depuis un tableur](budget-file.md) |
 | **Affichée** | Indique si la colonne apparaît à l'écran. Au moins une colonne doit rester affichée |
-| **Suit la répartition et les lignes** | Indique si la colonne reprend ce qui est appliqué à toutes les colonnes dans l'onglet Budget : la répartition et la période d'un montant réparti (**Appliquer la répartition à toutes les colonnes**), et les lignes quantité et prix (**Appliquer ces lignes à toutes les colonnes**). Une colonne qui ne suit pas garde les siens : quand vous la répartissez ou modifiez ses lignes, elle change seule |
+| **Suit la répartition et les lignes** | Indique si la colonne est cochée au départ dans **Utiliser aussi pour d'autres colonnes…** de l'onglet Budget, qui donne à d'autres colonnes la période et la répartition d'un montant, ou les lignes de quantité et prix. Vous pouvez toujours cocher ou décocher chaque colonne à cet endroit |
 | **Par défaut** | La colonne que les rapports présélectionnent et qui trie les listes et la vue d'ensemble. La geler fige les taux de change de l'année. La colonne par défaut doit être affichée |
 
 Les en-têtes **Suit la répartition et les lignes** et **Par défaut** portent une icône d'information. Survolez-la, ou placez-y le focus du clavier, pour lire la même explication sur la page.
 
-Par défaut, Budget, Révision, Réalisé et Atterrissage prévu sont affichées et Prévision est masquée, toutes les colonnes suivent les interrupteurs de l'onglet Budget, et Budget est la colonne par défaut.
+Par défaut, Budget, Révision, Réalisé et Atterrissage prévu sont affichées et Prévision est masquée, toutes les colonnes suivent la répartition et les lignes, et Budget est la colonne par défaut.
 
 ### Ce que changent les réglages
 
 - **Les colonnes masquées** disparaissent des listes, du sélecteur de colonnes, de l'onglet Budget, des sélecteurs des rapports, des pages de copie et de réinitialisation et de la vue d'ensemble. Elles gardent leurs montants : masquer une colonne n'efface jamais de données, et l'afficher de nouveau fait revenir les montants. Les colonnes masquées acceptent toujours les imports par le fichier budgétaire, et les gels s'appliquent toujours à elles. La page de gel liste aussi les colonnes masquées, avec la mention **Masquée** : vous pouvez les geler comme les autres
-- **La colonne par défaut** est présélectionnée dans chaque rapport. Elle trie la liste des lignes budgétaires et sa navigation précédent et suivant. Les tuiles **Top lignes**, **Plus fortes hausses**, **Mon budget** et **Par centre de coûts** de la vue d'ensemble l'utilisent. La liste l'affiche pour l'année en cours, à côté de la dernière colonne affichée. C'est aussi le montant de référence de l'onglet Ventilations et la colonne sur laquelle s'ouvre le panneau de répartition. La geler pour une année fige les taux de change de cette année (voir [Geler la colonne par défaut fige les taux de change](#geler-la-colonne-par-defaut-fige-les-taux-de-change))
-- **Suit la répartition et les lignes** décide quelles colonnes bougent ensemble quand une répartition est appliquée à toutes les colonnes, et quelles colonnes reçoivent les lignes quand **Appliquer ces lignes à toutes les colonnes** est activé. Les colonnes gelées ne changent jamais, quel que soit ce réglage
+- **La colonne par défaut** est présélectionnée dans chaque rapport. Elle trie la liste des lignes budgétaires et sa navigation précédent et suivant. Les tuiles **Top lignes**, **Plus fortes hausses**, **Mon budget** et **Par centre de coûts** de la vue d'ensemble l'utilisent. La liste l'affiche pour l'année en cours, à côté de la dernière colonne affichée. C'est aussi le montant de référence de l'onglet Ventilations et la colonne de départ de la ligne **Écart avec** de l'onglet Budget. La geler pour une année fige les taux de change de cette année (voir [Geler la colonne par défaut fige les taux de change](#geler-la-colonne-par-defaut-fige-les-taux-de-change))
+- **Suit la répartition et les lignes** décide quelles colonnes sont cochées au départ lorsque vous utilisez **Utiliser aussi pour d'autres colonnes…** dans l'onglet Budget. Les colonnes gelées ne sont jamais proposées, quel que soit ce réglage
 
 ### Enregistrement
 
@@ -399,8 +371,7 @@ Voici une séquence typique utilisant ces outils, avec les noms de colonnes stan
 ### 1. Fin de l'année N
 
 1. Geler le réalisé de l'année N (protéger les données historiques)
-2. Copier le Budget N vers le Budget N+1 (avec un pourcentage d'augmentation pour l'inflation)
-3. Copier les ventilations N vers N+1
+2. Copier le Budget N vers le Budget N+1, avec les ventilations (une seule exécution de **Copier les colonnes budgétaires**, avec un pourcentage d'augmentation pour l'inflation)
 
 ### 2. Pendant la planification budgétaire (N+1)
 
@@ -421,7 +392,7 @@ Voici une séquence typique utilisant ces outils, avec les noms de colonnes stan
 
 ## Conseils
 
-- **Toujours simuler d'abord** : La copie des colonnes budgétaires et la copie des ventilations supportent toutes deux une simulation. Utilisez-la à chaque fois pour vérifier le résultat avant de valider.
+- **Toujours faire un aperçu d'abord** : **Copier les colonnes budgétaires** montre ce qu'il fait sur chaque ligne avant la copie. Vérifiez-le à chaque fois avant de valider.
 - **Geler après approbation** : Verrouiller les colonnes après approbation maintient votre piste d'audit et prévient les modifications accidentelles.
 - **Utilisez les ajustements en pourcentage** : Lors de la copie entre années, appliquez un facteur d'inflation ou de croissance pour ne pas avoir à ajuster chaque ligne manuellement.
 - **Vérifiez le statut de gel avant les opérations en masse** : Les colonnes gelées bloquent les opérations de copie et de réinitialisation. Si un bouton est grisé, vérifiez d'abord la page de gel.

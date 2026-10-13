@@ -7,6 +7,7 @@ import { AuditService } from '../../audit/audit.service';
 import { AssetsBaseService, ServiceOpts } from './assets-base.service';
 import { AssetsValidationService } from './assets-validation.service';
 import { ShareItemDto } from '../../notifications/dto/share-item.dto';
+import { shareRecipientsOf } from '../../notifications/share-recipients';
 import { NotificationsService } from '../../notifications/notifications.service';
 
 /**
@@ -88,11 +89,7 @@ export class AssetsCrudService extends AssetsBaseService {
     userId: string,
     opts?: ServiceOpts,
   ) {
-    const userIds = dto.recipient_user_ids ?? [];
-    const rawEmails = dto.recipient_emails ?? [];
-    if (userIds.length === 0 && rawEmails.length === 0) {
-      throw new BadRequestException('At least one recipient is required');
-    }
+    const { userIds, rawEmails } = shareRecipientsOf(dto);
 
     const mg = this.getManager(opts);
     const asset = await this.ensureAsset(assetId, opts?.manager, tenantId);
