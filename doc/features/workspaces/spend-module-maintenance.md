@@ -37,9 +37,11 @@ The controller keeps returning exactly the same response shapes as before. Each 
 ### Bulk budget operations
 
 * `backend/src/spend/spend-budget-operations.service.ts`
-  * `copyBudgetColumn` – copies annual totals between versions, respecting freeze state and audit logging.
-  * `copyAllocations` – duplicates allocations, infers/updates manual rules, and surfaces preview data for dry runs.
-  * `clearBudgetColumn` – wipes a single measure for all versions in a year.
+  * `copyBudget` – "Copy the budget" (`budget-copy.ts`): the amounts, the allocations or both, of one nature or both, under one tenant lock and in one transaction (`POST /budget-lines/budget-operations/copy`).
+  * `clearBudgetColumns` – "Reset a column" of one nature or both (`POST /budget-lines/budget-operations/clear-column`).
+  * `copyBudgetColumn` – copies one column of one nature to another year or column, respecting freeze state and audit logging (the routes of each nature).
+  * `copyAllocations` – copies the allocations of one nature to another year, and surfaces preview data for dry runs (the routes of each nature).
+  * `clearBudgetColumn` – wipes a single measure for all versions of one nature in a year.
   * Any new operation (e.g., “scale by factor”) should live here so `SpendItemsService` stays small.
 
 ### Allocation recipients and year-aware availability
