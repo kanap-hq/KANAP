@@ -532,7 +532,10 @@
       "renewedTimes_other": "Renewed {{count}} times since {{date}}",
       "notice_one": "{{count}} month notice",
       "notice_other": "{{count}} months notice",
-      "noNotice": "No notice"
+      "noNotice": "No notice",
+      "renewalConfirmed": "Renewal confirmed",
+      "nextTerm": "next term from {{start}} to {{end}}",
+      "decisionDue": "decision due"
     },
     "timeline": {
       "label": "Timeline of the contract terms",
@@ -707,7 +710,33 @@
         "windowHint": "A contract that renews tacitly awaits a decision this many days before its cancellation deadline. Its owner then gets a task to decide on the renewal. From 0 to 365 days.",
         "invalid": "Enter a whole number of days from 0 to 365.",
         "saveFailed": "The settings could not be saved."
-      }
+      },
+      "endTitle": "Ends on {{date}} · decision due",
+      "endWithoutDecision": "Without a decision, the contract ends on {{date}}.",
+      "letEnd": "Let it end",
+      "endConfirmedBy": "End confirmed on {{date}} by {{name}}.",
+      "endConfirmedOn": "End confirmed on {{date}}."
+    },
+    "stopRenewal": {
+      "title": "Turn off the tacit renewal",
+      "hint": "Its past terms are kept.",
+      "confirm": "Turn off the renewal",
+      "failed": "The end of the contract could not be saved.",
+      "body": "The contract will end on {{date}}, unless renewed."
+    },
+    "endChoice": {
+      "label": "End date",
+      "earliest_one": "{{count}} month notice: the earliest possible end is {{date}}.",
+      "earliest_other": "{{count}} months notice: the earliest possible end is {{date}}.",
+      "earliestNoNotice": "No notice: the earliest possible end is {{date}}.",
+      "beforeAllowed": "Before the end the notice allows: to agree with the supplier.",
+      "tooEarly": "Choose a day from {{date}}."
+    },
+    "resumeRenewal": {
+      "title": "Turn the tacit renewal back on",
+      "body": "The contract will renew tacitly and the end on {{date}} will be removed.",
+      "confirm": "Turn the renewal back on",
+      "failed": "The renewal could not be turned back on."
     }
   },
   "operations": {

@@ -312,7 +312,8 @@ const testReminderSchedule = withRunner(async (runner) => {
 
 // Tacit renewal (contracts/contract-terms.ts): a contract in its third term is warned on that
 // term's cancellation deadline, never on the term's end (it renews); once an end of validity
-// stops the renewals at that term, its end is warned too.
+// stops the renewals at that term, its end is warned too. A contract without renewal whose end of
+// validity falls in its third term (lot CR2, round 2: its terms run up to it) is warned on that day.
 const testTacitRenewal = withRunner(async (runner) => {
   const year = Number(REAL_TODAY.slice(0, 4)) + 1;
   const { tenantId, ownerId } = await seedTenant(runner, 'renewal');
@@ -320,7 +321,9 @@ const testTacitRenewal = withRunner(async (runner) => {
     // Terms of a year from 1 January two years ago: the term of `year` is its third.
     { name: 'Renews', start: `${year - 2}-01-01`, months: 12, notice: 3, renewal: true },
     { name: 'Stops at term end', start: `${year - 2}-01-01`, months: 12, notice: 3, renewal: true, disabledAt: `${year}-12-31T12:00:00.000Z` },
+    { name: 'Renewal off', start: `${year - 2}-01-01`, months: 12, notice: 3, renewal: false, disabledAt: `${year}-11-15T12:00:00.000Z` },
   ]);
+  const offId = contracts.get('Renewal off');
   const renewsId = contracts.get('Renews');
   const stopsId = contracts.get('Stops at term end');
 
@@ -329,7 +332,8 @@ const testTacitRenewal = withRunner(async (runner) => {
   const warnedOn = async (day: string) => {
     received.length = 0;
     await (svc as any).checkContractExpirationsForTenant(runner.manager, tenantId, at(day));
-    return received.map((w) => `${w.itemId === renewsId ? 'renews' : w.itemId === stopsId ? 'stops' : '?'} ${w.warningType} ${w.expirationDate} ${w.daysRemaining}`);
+    return received
+      .map((w) => `${w.itemId === renewsId ? 'renews' : w.itemId === stopsId ? 'stops' : w.itemId === offId ? 'off' : '?'} ${w.warningType} ${w.expirationDate} ${w.daysRemaining}`);
   };
 
   const deadline = `${year}-09-30`;
@@ -341,9 +345,13 @@ const testTacitRenewal = withRunner(async (runner) => {
 
   assert.deepEqual(
     deadlineWarnings.sort(),
-    REMINDER_OFFSETS.flatMap((k) => [`renews cancellation_deadline ${deadline} ${k}`, `stops cancellation_deadline ${deadline} ${k}`]).sort(),
-    'both warned on the deadline of their current term',
+    REMINDER_OFFSETS.flatMap((k) => [`renews cancellation_deadline ${deadline} ${k}`, `stops cancellation_deadline ${deadline} ${k}`, `off cancellation_deadline ${deadline} ${k}`]).sort(),
+    'warned on the deadline of their current term',
   );
+  const offEnd = `${year}-11-15`;
+  const offWarnings: string[] = [];
+  for (const k of OFFSETS) offWarnings.push(...(await warnedOn(ymdPlus(offEnd, -k))).filter((w) => w.startsWith('off ')));
+  assert.deepEqual(offWarnings, REMINDER_OFFSETS.map((k) => `off expiration ${offEnd} ${k}`), 'renewal off: warned on its end of validity, its third term kept');
   assert.deepEqual(
     endWarnings,
     REMINDER_OFFSETS.map((k) => `stops expiration ${end} ${k}`),

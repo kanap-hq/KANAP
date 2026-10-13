@@ -532,7 +532,10 @@
       "renewedTimes_other": "Reconduit {{count}} fois depuis le {{date}}",
       "notice_one": "Préavis de {{count}} mois",
       "notice_other": "Préavis de {{count}} mois",
-      "noNotice": "Sans préavis"
+      "noNotice": "Sans préavis",
+      "renewalConfirmed": "Reconduction confirmée",
+      "nextTerm": "prochain terme du {{start}} au {{end}}",
+      "decisionDue": "décision attendue"
     },
     "timeline": {
       "label": "Frise des termes du contrat",
@@ -707,7 +710,33 @@
         "windowHint": "Un contrat à reconduction tacite attend une décision ce nombre de jours avant sa date limite de résiliation. Son responsable reçoit alors une tâche pour décider du renouvellement. De 0 à 365 jours.",
         "invalid": "Saisissez un nombre entier de jours entre 0 et 365.",
         "saveFailed": "Les réglages n'ont pas pu être enregistrés."
-      }
+      },
+      "endTitle": "Fin prévue le {{date}} · décision attendue",
+      "endWithoutDecision": "Sans décision, le contrat prend fin le {{date}}.",
+      "letEnd": "Laisser finir",
+      "endConfirmedBy": "Fin confirmée le {{date}} par {{name}}.",
+      "endConfirmedOn": "Fin confirmée le {{date}}."
+    },
+    "stopRenewal": {
+      "title": "Désactiver la reconduction tacite",
+      "hint": "Ses termes passés sont conservés.",
+      "confirm": "Désactiver la reconduction",
+      "failed": "La fin du contrat n'a pas pu être enregistrée.",
+      "body": "Le contrat prendra fin le {{date}}, sauf renouvellement."
+    },
+    "endChoice": {
+      "label": "Date de fin",
+      "earliest_one": "Préavis de {{count}} mois : la première fin possible est le {{date}}.",
+      "earliest_other": "Préavis de {{count}} mois : la première fin possible est le {{date}}.",
+      "earliestNoNotice": "Sans préavis : la première fin possible est le {{date}}.",
+      "beforeAllowed": "Avant la fin permise par le préavis : à convenir avec le fournisseur.",
+      "tooEarly": "Choisissez un jour à partir du {{date}}."
+    },
+    "resumeRenewal": {
+      "title": "Réactiver la reconduction tacite",
+      "body": "Le contrat sera reconduit tacitement et la fin du {{date}} sera retirée.",
+      "confirm": "Réactiver la reconduction",
+      "failed": "La reconduction n'a pas pu être réactivée."
     }
   },
   "operations": {

@@ -532,7 +532,10 @@
       "renewedTimes_other": "{{count}}-mal verlängert seit {{date}}",
       "notice_one": "Kündigungsfrist {{count}} Monat",
       "notice_other": "Kündigungsfrist {{count}} Monate",
-      "noNotice": "Keine Kündigungsfrist"
+      "noNotice": "Keine Kündigungsfrist",
+      "renewalConfirmed": "Verlängerung bestätigt",
+      "nextTerm": "nächste Periode vom {{start}} bis {{end}}",
+      "decisionDue": "Entscheidung ausstehend"
     },
     "timeline": {
       "label": "Zeitleiste der Vertragsperioden",
@@ -707,7 +710,33 @@
         "windowHint": "Ein Vertrag mit stillschweigender Verlängerung wartet so viele Tage vor seiner Kündigungsfrist auf eine Entscheidung. Sein Verantwortlicher erhält dann eine Aufgabe, über die Verlängerung zu entscheiden. Von 0 bis 365 Tagen.",
         "invalid": "Geben Sie eine ganze Zahl von Tagen zwischen 0 und 365 ein.",
         "saveFailed": "Die Einstellungen konnten nicht gespeichert werden."
-      }
+      },
+      "endTitle": "Ende am {{date}} · Entscheidung ausstehend",
+      "endWithoutDecision": "Ohne Entscheidung endet der Vertrag am {{date}}.",
+      "letEnd": "Auslaufen lassen",
+      "endConfirmedBy": "Ende am {{date}} von {{name}} bestätigt.",
+      "endConfirmedOn": "Ende am {{date}} bestätigt."
+    },
+    "stopRenewal": {
+      "title": "Stillschweigende Verlängerung beenden",
+      "hint": "Seine bisherigen Perioden bleiben erhalten.",
+      "confirm": "Verlängerung beenden",
+      "failed": "Das Vertragsende konnte nicht gespeichert werden.",
+      "body": "Der Vertrag endet am {{date}}, sofern er nicht verlängert wird."
+    },
+    "endChoice": {
+      "label": "Enddatum",
+      "earliest_one": "Kündigungsfrist von {{count}} Monat: Das frühestmögliche Ende ist der {{date}}.",
+      "earliest_other": "Kündigungsfrist von {{count}} Monaten: Das frühestmögliche Ende ist der {{date}}.",
+      "earliestNoNotice": "Keine Kündigungsfrist: Das frühestmögliche Ende ist der {{date}}.",
+      "beforeAllowed": "Vor dem Ende, das die Kündigungsfrist erlaubt: mit dem Lieferanten zu vereinbaren.",
+      "tooEarly": "Wählen Sie einen Tag ab dem {{date}}."
+    },
+    "resumeRenewal": {
+      "title": "Stillschweigende Verlängerung wieder aktivieren",
+      "body": "Der Vertrag verlängert sich stillschweigend und das Ende am {{date}} entfällt.",
+      "confirm": "Verlängerung wieder aktivieren",
+      "failed": "Die Verlängerung konnte nicht wieder aktiviert werden."
     }
   },
   "operations": {

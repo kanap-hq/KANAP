@@ -3,10 +3,15 @@ import * as assert from 'node:assert/strict';
 import { BadRequestException } from '@nestjs/common';
 import { REQUIRE_LEVEL_KEY } from '../../auth/require-level.decorator';
 import {
+  checkEndDate,
+  proposedEndDate,
+  renewalEnd,
   renewalSourceRef,
   renewalTaskText,
   renewalTerms,
   resolveRenewalState,
+  resumeRenewalComment,
+  stopRenewalComment,
   type RenewalDecisionRecord,
   type RenewalInput,
 } from '../contract-renewal';
@@ -52,7 +57,7 @@ const only = (termEnd: string, rec: RenewalDecisionRecord) => (key: string) => (
   assert.equal(pending.kind, 'pending', 'the deadline is 79 days away, within 90');
   assert.equal(resolveRenewalState(SAP, today, 30, none).kind, 'none', 'outside a 30-day window');
   assert.equal(resolveRenewalState(SAP, '2026-12-30', 0, none).kind, 'pending', 'a window of 0 days: the deadline day only');
-  assert.equal(resolveRenewalState({ ...SAP, auto_renewal: false }, today, 90, none).kind, 'none', 'no tacit renewal: nothing to decide');
+  assert.equal(resolveRenewalState({ ...SAP, auto_renewal: false }, today, 90, none).kind, 'none', 'no tacit renewal nor end of validity: ended with its first term');
   assert.equal(resolveRenewalState({ ...SAP, disabled_at: '2027-03-01T12:00:00Z' }, today, 90, none).kind, 'none', 'the contract stops before the next term');
   assert.equal(resolveRenewalState({ ...SAP, duration_months: 0 }, today, 90, none).kind, 'none', 'no duration');
 
@@ -86,6 +91,82 @@ const only = (termEnd: string, rec: RenewalDecisionRecord) => (key: string) => (
   assert.ok(renewedLater.kind === 'decided' && !renewedLater.can_undo, 'a renewal shows until the term ends');
 }
 
+// ----- A contract without tacit renewal: a decision on its end (lot CR2, round 2) -----
+{
+  // Nearshore: 36 months from 1 April 2024, no renewal, ends on 31 March 2027.
+  const NEARSHORE: RenewalInput = { start_date: '2024-04-01', duration_months: 36, notice_period_months: 3, auto_renewal: false, disabled_at: null };
+  assert.equal(resolveRenewalState(NEARSHORE, '2026-10-13', 90, none).kind, 'none', 'its end is 169 days away');
+  const pending = resolveRenewalState(NEARSHORE, '2027-01-01', 90, none);
+  assert.ok(pending.kind === 'pending' && pending.mode === 'end', 'its end within the window: a decision on its end');
+  assert.deepEqual(pending.kind === 'pending' && pending.term, {
+    term_index: 0, term_start: '2024-04-01', term_end: '2027-03-31', deadline: '2027-03-31', renews_on: '2027-04-01', next_term_end: '2030-03-31', end_date: '2027-03-31',
+  });
+  const letEnd = record('end', '2027-03-31', { end_date: '2027-03-31' });
+  const ended = resolveRenewalState(NEARSHORE, '2027-01-01', 90, only('2027-03-31', letEnd));
+  assert.ok(ended.kind === 'decided' && ended.mode === 'end' && ended.can_undo, 'left to end: decided, undoable');
+  assert.equal(resolveRenewalState({ ...NEARSHORE, disabled_at: '2027-02-15T12:00:00.000Z' }, '2027-01-01', 90, only('2027-03-31', letEnd)).kind, 'pending', 'another end since: decided again');
+  assert.equal(resolveRenewalState(NEARSHORE, '2027-01-01', 90, only('2027-03-31', record('renew', '2027-03-31'))).kind, 'pending', 'a renewal recorded while the renewal is off: still awaited');
+  assert.equal(resolveRenewalState(NEARSHORE, '2027-04-01', 90, none).kind, 'none', 'after its end: nothing');
+  assert.equal(renewalEnd(NEARSHORE, '2027-04-01'), null);
+
+  // SAP with its renewal turned off up to 30 June 2027: its fourth term is the one that ends.
+  const sapOff: RenewalInput = { ...SAP, auto_renewal: false, disabled_at: '2027-06-30T12:00:00.000Z' };
+  assert.equal(resolveRenewalState(sapOff, '2026-10-13', 90, none).kind, 'none', 'its end 260 days away');
+  const offPending = resolveRenewalState(sapOff, '2027-04-15', 90, none);
+  assert.ok(offPending.kind === 'pending' && offPending.mode === 'end' && offPending.term.term_end === '2027-06-30' && offPending.term.term_index === 3);
+  // An end of validity inside a term: the key is that term's last day.
+  assert.equal(renewalEnd({ ...sapOff, disabled_at: '2026-11-15T12:00:00.000Z' }, '2026-10-13')?.term_end, '2027-06-30');
+
+  // A termination (renewal off, ends on the day chosen) stands on its end, undoable until its deadline.
+  const terminated = record('terminate', '2027-06-30', { deadline: '2026-12-30', end_date: '2027-06-30', previous_auto_renewal: true });
+  const t1 = resolveRenewalState(sapOff, '2026-10-13', 90, only('2027-06-30', terminated));
+  assert.ok(t1.kind === 'decided' && t1.mode === 'end' && t1.can_undo && t1.record.decision === 'terminate', 'terminated: decided, undoable');
+  const t2 = resolveRenewalState(sapOff, '2027-02-01', 90, only('2027-06-30', terminated));
+  assert.ok(t2.kind === 'decided' && !t2.can_undo, 'past the deadline: shown, not undoable');
+
+  // A renewal decided on an end: the renewal is on again, undoable until that end.
+  const fromEnd = record('renew', '2027-06-30', { end_date: '2027-06-30', previous_auto_renewal: false });
+  const r1 = resolveRenewalState(SAP, '2026-10-13', 90, only('2027-06-30', fromEnd));
+  assert.ok(r1.kind === 'decided' && r1.mode === 'renewal' && r1.can_undo, 'renewed from its end: decided, undoable');
+  const r2 = resolveRenewalState(SAP, '2027-02-01', 90, only('2027-06-30', fromEnd));
+  assert.ok(r2.kind === 'decided' && r2.can_undo, 'past the deadline: undoable until the end it was about');
+
+  assert.equal(renewalTaskText('fr', 'Nearshore', pending.kind === 'pending' ? pending.term : (null as any), 'end').title, 'Décider de renouveler ou de laisser finir Nearshore');
+  assert.match(renewalTaskText('en', 'Nearshore', pending.kind === 'pending' ? pending.term : (null as any), 'end').description, /ends on 31\/03\/2027/);
+}
+
+// ----- The end a termination proposes, and the end chosen (lot CR2, round 1) -----
+{
+  // Axians: 36-month terms from 1 January 2024, 6 months notice. The deadline of 30 June 2026 has passed.
+  const AXIANS: RenewalInput = { start_date: '2024-01-01', duration_months: 36, notice_period_months: 6, auto_renewal: true, disabled_at: null };
+  assert.equal(proposedEndDate(AXIANS, '2026-10-13'), '2029-12-31', 'Axians: the first term whose deadline is ahead');
+  assert.equal(proposedEndDate(AXIANS, '2026-06-30'), '2026-12-31', 'Axians on its deadline: the current term');
+  assert.equal(proposedEndDate(SAP, '2026-10-13'), '2027-06-30', 'SAP: the current term');
+  assert.equal(proposedEndDate({ ...SAP, duration_months: 0 }, '2026-10-13'), null, 'no duration, no proposal');
+
+  assert.deepEqual(checkEndDate('2026-11-15', SAP, '2026-10-13'), { ok: true, date: '2026-11-15' }, 'before the proposed end: allowed');
+  assert.deepEqual(checkEndDate('2026-10-13', SAP, '2026-10-13'), { ok: true, date: '2026-10-13' }, 'today: allowed');
+  assert.deepEqual(checkEndDate('2030-01-31', SAP, '2026-10-13'), { ok: true, date: '2030-01-31' }, 'after it: allowed');
+  assert.equal(checkEndDate('2026-10-12', SAP, '2026-10-13').ok, false, 'yesterday: refused');
+  assert.equal(checkEndDate('2027-02-30', SAP, '2026-10-13').ok, false, 'not a calendar day');
+  assert.equal(checkEndDate('13/10/2026', SAP, '2026-10-13').ok, false, 'not YYYY-MM-DD');
+  assert.equal(checkEndDate(20261231, SAP, '2026-10-13').ok, false, 'not a string');
+  const future: RenewalInput = { ...SAP, start_date: '2027-01-01' };
+  assert.equal(checkEndDate('2026-12-01', future, '2026-10-13').ok, false, 'before the start: refused');
+  assert.equal(checkEndDate('2027-01-01', future, '2026-10-13').ok, true, 'on the start: allowed');
+
+  // A termination on a day of its own stands while the contract ends that day.
+  const early = { ...SAP, disabled_at: '2026-11-15T12:00:00.000Z' };
+  const chosen = record('terminate', '2027-06-30', { end_date: '2026-11-15' });
+  const state = resolveRenewalState(early, '2026-10-13', 90, only('2027-06-30', chosen));
+  assert.ok(state.kind === 'decided' && state.record.end_date === '2026-11-15', 'an end chosen before the term end stands');
+  assert.equal(resolveRenewalState({ ...SAP, disabled_at: '2027-12-31T12:00:00.000Z' }, '2026-10-13', 90, only('2027-06-30', chosen)).kind, 'pending', 'another end since, after the term: voided, the decision awaited again');
+
+  assert.equal(stopRenewalComment('fr', '2027-06-30'), 'Reconduction tacite désactivée : le contrat prendra fin le 30/06/2027, sauf renouvellement.');
+  assert.equal(resumeRenewalComment('fr', '2027-06-30'), 'Reconduction tacite réactivée : la fin du 30/06/2027 est retirée.');
+  assert.match(stopRenewalComment('xx', '2027-06-30'), /^Tacit renewal turned off: the contract ends on 30\/06\/2027, unless renewed\.$/, 'English otherwise');
+}
+
 // ----- The task text -----
 {
   const term = renewalTerms(SAP, '2026-10-13')!.pending;
@@ -112,7 +193,7 @@ const only = (termEnd: string, rec: RenewalDecisionRecord) => (key: string) => (
 {
   const level = (proto: any, route: string) => Reflect.getMetadata(REQUIRE_LEVEL_KEY, proto[route]);
   assert.deepEqual(level(ContractRenewalController.prototype, 'get'), { resource: 'contracts', level: 'reader' }, 'renewal state: contract readers');
-  for (const route of ['renew', 'terminate', 'renegotiate', 'undo']) {
+  for (const route of ['renew', 'terminate', 'renegotiate', 'end', 'undo', 'stop', 'resume']) {
     assert.deepEqual(level(ContractRenewalController.prototype, route), { resource: 'contracts', level: 'member' }, `${route}: contract editors`);
   }
   assert.deepEqual(level(ContractSettingsController.prototype, 'get'), { resource: 'contracts', level: 'reader' }, 'settings read');

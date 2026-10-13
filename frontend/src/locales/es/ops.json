@@ -532,7 +532,10 @@
       "renewedTimes_other": "Renovado {{count}} veces desde el {{date}}",
       "notice_one": "Preaviso de {{count}} mes",
       "notice_other": "Preaviso de {{count}} meses",
-      "noNotice": "Sin preaviso"
+      "noNotice": "Sin preaviso",
+      "renewalConfirmed": "Renovación confirmada",
+      "nextTerm": "próximo periodo del {{start}} al {{end}}",
+      "decisionDue": "decisión pendiente"
     },
     "timeline": {
       "label": "Cronología de los periodos del contrato",
@@ -707,7 +710,33 @@
         "windowHint": "Un contrato con renovación tácita espera una decisión este número de días antes de su fecha límite de rescisión. Su responsable recibe entonces una tarea para decidir la renovación. De 0 a 365 días.",
         "invalid": "Introduzca un número entero de días entre 0 y 365.",
         "saveFailed": "No se pudieron guardar los ajustes."
-      }
+      },
+      "endTitle": "Fin prevista el {{date}} · decisión pendiente",
+      "endWithoutDecision": "Sin decisión, el contrato termina el {{date}}.",
+      "letEnd": "Dejar terminar",
+      "endConfirmedBy": "Fin confirmada el {{date}} por {{name}}.",
+      "endConfirmedOn": "Fin confirmada el {{date}}."
+    },
+    "stopRenewal": {
+      "title": "Desactivar la renovación tácita",
+      "hint": "Sus periodos anteriores se conservan.",
+      "confirm": "Desactivar la renovación",
+      "failed": "No se pudo guardar el fin del contrato.",
+      "body": "El contrato terminará el {{date}}, salvo renovación."
+    },
+    "endChoice": {
+      "label": "Fecha de fin",
+      "earliest_one": "Preaviso de {{count}} mes: el primer fin posible es el {{date}}.",
+      "earliest_other": "Preaviso de {{count}} meses: el primer fin posible es el {{date}}.",
+      "earliestNoNotice": "Sin preaviso: el primer fin posible es el {{date}}.",
+      "beforeAllowed": "Antes del fin que permite el preaviso: a acordar con el proveedor.",
+      "tooEarly": "Elija un día a partir del {{date}}."
+    },
+    "resumeRenewal": {
+      "title": "Reactivar la renovación tácita",
+      "body": "El contrato se renovará tácitamente y se retirará el fin del {{date}}.",
+      "confirm": "Reactivar la renovación",
+      "failed": "No se pudo reactivar la renovación."
     }
   },
   "operations": {

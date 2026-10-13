@@ -1,11 +1,14 @@
 /**
  * Contract terms: the one place that dates a contract's terms, in TypeScript and in SQL.
  *
- * A contract runs in successive terms of `duration_months` months from `start_date`. Without
- * tacit renewal (`auto_renewal = false`) it has only the first one. With it, term `k` covers
- * `[start + k·duration months, start + (k+1)·duration months − 1 day]`, with no limit. An end of
- * validity (`disabled_at`, read as its UTC calendar day) stops the sequence: no term starts after
- * it. A duration of 0 (or none) is a single term of no length, ending the day before the start.
+ * A contract runs in successive terms of `duration_months` months from `start_date`: term `k`
+ * covers `[start + k·duration months, start + (k+1)·duration months − 1 day]`. With tacit renewal
+ * the terms go on with no limit. An end of validity (`disabled_at`, read as its UTC calendar day)
+ * stops the sequence: no term starts after it. Without tacit renewal (`auto_renewal = false`), a
+ * contract with an end of validity runs in terms up to it, its past terms counted (lot CR2, round
+ * 2: turning off the renewal of a contract already renewed keeps its history); without one, it
+ * has only its first term. A duration of 0 (or none) is a single term of no length, ending the
+ * day before the start.
  *
  * Each term has a cancellation deadline: the term's end minus `notice_period_months` months. A
  * notice as long as the term, or longer, puts the deadline before the term's start.
@@ -31,10 +34,18 @@
  *   of its current term: its next cancellation deadline (the term end when there is none). Any
  *   other contract: its end, the current term end or the end of validity when that comes first.
  *   Null once that end has passed.
- * - `term_state`, in this order: `expired` (no next due date), `ending` (it does not renew at
- *   the end of its current term), `to_decide` (its next cancellation deadline falls within the
- *   decision window, the tenant's `decisionWindowDays` from today), `renewed` (the current term's
- *   deadline has passed: the contract goes on into the next term) or `in_progress`.
+ * - `term_state`, in this order: `expired` (no next due date); in its last term, `to_decide` for a
+ *   contract without tacit renewal whose end falls within the decision window (the tenant's
+ *   `decisionWindowDays` from today) while no decision to let it end (`end`, or a `terminate`) is
+ *   recorded for that term, `ending` otherwise; `to_decide` for a contract with tacit renewal
+ *   whose next cancellation deadline falls within the window while no renewal is confirmed for
+ *   the term of that deadline; `renewed` (the current term's deadline has passed: the contract
+ *   goes on into the next term) or `in_progress`.
+ *
+ * The decisions (lot CR2) live in the audit log (`contract-renewal.ts`): the caller gives the
+ * latest decision recorded for a term through `renewalDecision`, keyed by the term's last day
+ * (a function in TypeScript, a SQL expression builder giving the decision as text in SQL).
+ * Without it, no decision is recorded.
  *
  * `computeContractTerms` reads the rule as written. `contractTermsSql` gives the same values as
  * SQL expressions for sorting, filtering and the expiry warnings; the parity spec
@@ -44,8 +55,8 @@
  * The commitment of a year (`contractCommitmentCents`, `contractCommitmentSql`; lot CB): the
  * yearly amount at signature prorated over the months of the year its terms cover, a month
  * covered in part by the share of its days covered. The terms cover one span from the start
- * date: the first term only without renewal, every term with it (the renewal is projected with
- * no end), nothing after the end of validity. No indexation: the amount at signature holds for
+ * date: every term with renewal (projected with no end) or with an end of validity, the first
+ * term only without either, nothing after the end of validity. No indexation: the amount at signature holds for
  * every term. The API alone computes it (no frontend copy).
  */
 
@@ -67,10 +78,24 @@ export const CONTRACT_DECISION_WINDOW_DAYS = 90;
 export const CONTRACT_TERM_STATES = ['to_decide', 'in_progress', 'renewed', 'ending', 'expired'] as const;
 export type ContractTermState = (typeof CONTRACT_TERM_STATES)[number];
 
-/** Options of the values that depend on the decision window. */
-export type ContractTermsOptions = { decisionWindowDays?: number };
+/** Options of the values that depend on the decision window and on the decisions recorded. */
+export type ContractTermsOptions = {
+  decisionWindowDays?: number;
+  /** The latest decision recorded for the term ending on `termEnd` (`YYYY-MM-DD`): `renew`, `end`, `terminate`, ... or null. */
+  renewalDecision?: (termEnd: string) => string | null;
+};
 
-function decisionWindowDays(opts?: ContractTermsOptions): number {
+/** `ContractTermsOptions` for `contractTermsSql`. */
+export type ContractTermsSqlOptions = {
+  decisionWindowDays?: number;
+  /** A SQL text expression: the latest decision recorded for the term ending on the SQL date `termEnd`, or NULL. */
+  renewalDecision?: (termEnd: string) => string;
+};
+
+/** The decisions that let a contract without tacit renewal end: it is no longer to decide. */
+export const END_DECISIONS = ['end', 'terminate'] as const;
+
+function decisionWindowDays(opts?: { decisionWindowDays?: number }): number {
   const days = opts?.decisionWindowDays ?? CONTRACT_DECISION_WINDOW_DAYS;
   if (!Number.isInteger(days) || days < 0) throw new Error(`Invalid decision window: ${days}`);
   return days;
@@ -159,8 +184,10 @@ export function computeContractTerms(input: ContractTermsInput, todayYmd: string
   const start = toYmd(input.start_date);
   const duration = wholeMonths(input.duration_months);
   const notice = wholeMonths(input.notice_period_months);
-  const renews = Boolean(input.auto_renewal) && duration > 0;
+  const renewal = Boolean(input.auto_renewal);
   const validUntil = endOfValidityYmd(input.disabled_at);
+  // The terms run on with tacit renewal, or without it up to an end of validity.
+  const runs = duration > 0 && (renewal || validUntil !== null);
 
   const termStart = (k: number) => addMonthsYmd(start, k * duration);
   const termEnd = (k: number) => addDaysYmd(termStart(k + 1), -1);
@@ -173,15 +200,17 @@ export function computeContractTerms(input: ContractTermsInput, todayYmd: string
   };
 
   // The last term: the first one without renewal, the one containing the end of validity with it.
-  const lastTerm = !renews ? 0 : validUntil === null ? Infinity : termAt(validUntil);
-  const termIndex = !renews ? 0 : Math.min(termAt(todayYmd), lastTerm);
+  const lastTerm = !runs ? 0 : validUntil === null ? Infinity : termAt(validUntil);
+  const termIndex = !runs ? 0 : Math.min(termAt(todayYmd), lastTerm);
 
   let next: string | null = null;
+  let nextTerm = termIndex;
   for (let k = termIndex; k <= lastTerm; k += 1) {
     const candidate = deadline(k);
     if (validUntil !== null && candidate > validUntil) break;
     if (candidate >= todayYmd) {
       next = candidate;
+      nextTerm = k;
       break;
     }
   }
@@ -193,8 +222,10 @@ export function computeContractTerms(input: ContractTermsInput, todayYmd: string
   const nextDue = renewsAtTermEnd && next !== null ? next : contractEnd >= todayYmd ? contractEnd : null;
   let termState: ContractTermState;
   if (nextDue === null) termState = 'expired';
-  else if (!renewsAtTermEnd) termState = 'ending';
-  else if (next !== null && next <= addDaysYmd(todayYmd, windowDays)) termState = 'to_decide';
+  else if (!renewsAtTermEnd) {
+    const endDecided = (END_DECISIONS as readonly string[]).includes(opts?.renewalDecision?.(currentTermEnd) ?? '');
+    termState = !renewal && duration > 0 && contractEnd <= addDaysYmd(todayYmd, windowDays) && !endDecided ? 'to_decide' : 'ending';
+  } else if (renewal && next !== null && next <= addDaysYmd(todayYmd, windowDays) && opts?.renewalDecision?.(termEnd(nextTerm)) !== 'renew') termState = 'to_decide';
   else if (deadline(termIndex) < todayYmd) termState = 'renewed';
   else termState = 'in_progress';
   return {
@@ -284,7 +315,7 @@ export type ContractTermsSql = {
  * an ORDER BY. `alias` must be a plain identifier and `today` a trusted expression
  * (`sqlDateLiteral`, `SQL_TODAY_UTC`, a `$n::date` parameter or a column).
  */
-export function contractTermsSql(alias: string, today: string, opts?: ContractTermsOptions): ContractTermsSql {
+export function contractTermsSql(alias: string, today: string, opts?: ContractTermsSqlOptions): ContractTermsSql {
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(alias)) throw new Error(`Invalid table alias: ${alias}`);
   const windowDays = decisionWindowDays(opts);
   const a = alias;
@@ -298,6 +329,13 @@ export function contractTermsSql(alias: string, today: string, opts?: ContractTe
   };
   const termEnd = (k: string) => `(${addMonths('ct_b.s', `(${k} + 1) * ct_b.d`)} - 1)`;
   const deadline = (k: string) => addMonths(termEnd(k), '-ct_b.n');
+  // A renewal confirmed for the term of the next deadline, or a decision to let the last term end,
+  // keeps the contract out of "to decide".
+  const decision = opts?.renewalDecision;
+  const confirmed = decision ? ` AND COALESCE(${decision(termEnd('ct_x.next_k'))}, '') <> 'renew'` : '';
+  const endDecided = decision
+    ? ` AND COALESCE(${decision(termEnd('ct_i.term_index'))}, '') NOT IN (${END_DECISIONS.map((d) => `'${d}'`).join(', ')})`
+    : '';
 
   const row = `SELECT ct_i.term_index,
            ${termEnd('ct_i.term_index')} AS current_term_end,
@@ -306,31 +344,36 @@ export function contractTermsSql(alias: string, today: string, opts?: ContractTe
            (ct_i.last_term IS NULL OR ct_i.term_index < ct_i.last_term) AS renews_at_term_end,
            ct_n.next_due AS next_due_date,
            CASE WHEN ct_n.next_due IS NULL THEN 'expired'
-                WHEN NOT ct_e.renews_next THEN 'ending'
-                WHEN ct_x.next_deadline <= ct_b.today + ${windowDays} THEN 'to_decide'
+                WHEN NOT ct_e.renews_next THEN
+                  CASE WHEN NOT ct_b.auto AND ct_b.d > 0 AND ct_e.contract_end <= ct_b.today + ${windowDays}${endDecided} THEN 'to_decide'
+                       ELSE 'ending' END
+                WHEN ct_b.auto AND ct_x.next_deadline <= ct_b.today + ${windowDays}${confirmed} THEN 'to_decide'
                 WHEN ct_e.current_deadline < ct_b.today THEN 'renewed'
                 ELSE 'in_progress' END AS term_state
       FROM (SELECT ${a}.start_date AS s,
                    GREATEST(COALESCE(${a}.duration_months, 0), 0) AS d,
                    GREATEST(COALESCE(${a}.notice_period_months, 0), 0) AS n,
-                   (COALESCE(${a}.auto_renewal, false) AND COALESCE(${a}.duration_months, 0) > 0) AS renews,
+                   COALESCE(${a}.auto_renewal, false) AS auto,
+                   /* The terms run on: with tacit renewal, or without it up to an end of validity. */
+                   (COALESCE(${a}.duration_months, 0) > 0 AND (COALESCE(${a}.auto_renewal, false) OR ${a}.disabled_at IS NOT NULL)) AS runs,
                    (${a}.disabled_at AT TIME ZONE 'UTC')::date AS valid_until,
                    (${today})::date AS today) ct_b
       CROSS JOIN LATERAL (
-        SELECT CASE WHEN ct_b.renews THEN ${termAt('LEAST(ct_b.today, ct_b.valid_until)')} ELSE 0 END AS term_index,
-               CASE WHEN NOT ct_b.renews THEN 0
+        SELECT CASE WHEN ct_b.runs THEN ${termAt('LEAST(ct_b.today, ct_b.valid_until)')} ELSE 0 END AS term_index,
+               CASE WHEN NOT ct_b.runs THEN 0
                     WHEN ct_b.valid_until IS NOT NULL THEN ${termAt('ct_b.valid_until')} END AS last_term
       ) ct_i
       CROSS JOIN LATERAL (
         /* The first deadline on or after today is the one of term k0, k0 + 1 or k0 + 2, k0 being
            the first term whose end, less the notice, can reach today's month. */
-        SELECT CASE WHEN ct_b.renews
+        SELECT CASE WHEN ct_b.runs
                     THEN GREATEST(0, CEIL((${monthIndex('ct_b.today')} - ${monthIndex('ct_b.s')} + ct_b.n)::numeric / NULLIF(ct_b.d, 0))::int - 1)
                     ELSE 0 END AS k0
       ) ct_q
       CROSS JOIN LATERAL (
-        SELECT min(ct_d.deadline) AS next_deadline
-          FROM generate_series(ct_q.k0, CASE WHEN ct_b.renews THEN ct_q.k0 + 2 ELSE 0 END) AS ct_k(k)
+        /* Deadlines grow with the term: the first one is the earliest term's. */
+        SELECT min(ct_d.deadline) AS next_deadline, min(ct_k.k) AS next_k
+          FROM generate_series(ct_q.k0, CASE WHEN ct_b.runs THEN ct_q.k0 + 2 ELSE 0 END) AS ct_k(k)
           CROSS JOIN LATERAL (SELECT ${deadline('ct_k.k')} AS deadline) ct_d
          WHERE (ct_i.last_term IS NULL OR ct_k.k <= ct_i.last_term)
            AND ct_d.deadline >= ct_b.today
@@ -381,10 +424,10 @@ export type ContractCommitmentInput = ContractTermsInput & {
 export function contractCoveredSpan(input: ContractTermsInput): { start: string; end: string | null } | null {
   const start = toYmd(input.start_date);
   const duration = wholeMonths(input.duration_months);
-  const renews = Boolean(input.auto_renewal) && duration > 0;
   const validUntil = endOfValidityYmd(input.disabled_at);
-  // Without renewal, the first term; with it, every term up to the end of validity.
-  let end: string | null = renews ? null : addDaysYmd(addMonthsYmd(start, duration), -1);
+  // With renewal, or without it up to an end of validity, every term up to that end; otherwise the first term.
+  const runs = duration > 0 && (Boolean(input.auto_renewal) || validUntil !== null);
+  let end: string | null = runs ? null : addDaysYmd(addMonthsYmd(start, duration), -1);
   if (validUntil !== null && (end === null || validUntil < end)) end = validUntil;
   if (end !== null && end < start) return null;
   return { start, end };
@@ -438,11 +481,11 @@ export function contractCommitment(input: ContractCommitmentInput, year: number)
 export function contractCommitmentSql(alias: string, year: string): string {
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(alias)) throw new Error(`Invalid table alias: ${alias}`);
   const a = alias;
-  // LEAST and GREATEST skip a null: a null end (renewal with no end of validity) covers every month.
+  // LEAST and GREATEST skip a null: the terms that run on (renewal, or an end of validity) end at the end of validity, or never.
   return `(SELECT ${divRoundHalfAway('round(cm_b.amount * 100) * cm_u.units', String(YEAR_SHARE_UNITS))}
       FROM (SELECT ${a}.start_date AS s,
                    LEAST((${a}.disabled_at AT TIME ZONE 'UTC')::date,
-                         CASE WHEN COALESCE(${a}.auto_renewal, false) AND COALESCE(${a}.duration_months, 0) > 0 THEN NULL
+                         CASE WHEN COALESCE(${a}.duration_months, 0) > 0 AND (COALESCE(${a}.auto_renewal, false) OR ${a}.disabled_at IS NOT NULL) THEN NULL
                               ELSE (${a}.start_date + make_interval(months => GREATEST(COALESCE(${a}.duration_months, 0), 0)))::date - 1 END) AS e,
                    COALESCE(${a}.yearly_amount_at_signature, 0)::numeric AS amount,
                    (${year})::int AS yr) cm_b
@@ -455,4 +498,18 @@ export function contractCommitmentSql(alias: string, year: string): string {
                    (make_date(cm_b.yr, cm_k.m, 1) + interval '1 month')::date - 1 AS last
           ) cm_m
       ) cm_u)`;
+}
+
+/**
+ * Whether an edit turns off the tacit renewal of a contract already renewed and leaves it without
+ * an end of validity (lot CR2): the term rule would then give it its first term only and drop the
+ * terms it has run since. With an end of validity, its terms run up to it and are kept. `after`
+ * is the contract as the edit leaves it; it has been renewed when, renewal on, today falls after
+ * its first term. Such an edit is refused: an end of validity goes with it, in the same request or
+ * through `ContractRenewalService.stopRenewal`.
+ */
+export function turnsOffRenewalOfRenewedContract(before: ContractTermsInput, after: ContractTermsInput, todayYmd: string): boolean {
+  if (!before.auto_renewal || after.auto_renewal) return false;
+  if (endOfValidityYmd(after.disabled_at) !== null) return false;
+  return computeContractTerms({ ...after, auto_renewal: true }, todayYmd).term_index > 0;
 }
