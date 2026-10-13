@@ -43,6 +43,7 @@ vi.mock('../../components/MarkdownEditor', () => ({
 
 import api from '../../api';
 import ContractWorkspacePage from './ContractWorkspacePage';
+import { addMonthsYmd, computeContractTerms, utcTodayYmd } from './contractTerms';
 
 const mocked = api as unknown as {
   get: ReturnType<typeof vi.fn>;
@@ -205,6 +206,62 @@ describe('ContractWorkspacePage', () => {
     expect(screen.queryByText('Old task')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'portfolio:shared.entityTasksSection.showClosed:1' }));
     expect(screen.getByText('Old task')).toBeInTheDocument();
+  });
+
+  it('shows a confirmed renewal without the deadline of the term decided', async () => {
+    // SAP's terms end on 30 June, 6 months after their deadline.
+    const next = computeContractTerms(CONTRACT, utcTodayYmd())!.next_cancellation_deadline!;
+    const termEnd = addMonthsYmd(next, 6);
+    const renewal = {
+      decision_window_days: 90,
+      state: 'decided',
+      renegotiating: false,
+      term: { term_end: termEnd, deadline: next, renews_on: `${termEnd.slice(0, 4)}-07-01`, next_term_end: `${Number(termEnd.slice(0, 4)) + 1}-06-30`, days_left: 10 },
+      duration_months: 12,
+      decision: { decision: 'renew', reason: null, decided_at: '2026-10-12T10:00:00.000Z', decided_by_name: 'Ada Admin' },
+      can_undo: true,
+      task: null,
+      impact: null,
+    };
+    const base = mocked.get.getMockImplementation() as (url: string, options?: unknown) => Promise<unknown>;
+    mocked.get.mockImplementation(async (url: string, options?: unknown) => (url === '/contracts/c-1/renewal' ? { data: renewal } : base(url, options)));
+    renderAt('/ops/contracts/c-1/overview');
+    await waitFor(() => expect(screen.getByTestId('contract-deadline-state').textContent).toContain('contracts.deadlines.renewalConfirmed'));
+    expect(screen.getByTestId('contract-deadline-state').textContent).toContain('contracts.deadlines.nextTerm');
+    expect(screen.queryByText(/^contracts\.timeline\.deadline/)).toBeNull();
+    expect(screen.getByText('contracts.timeline.termNext')).toBeInTheDocument();
+  });
+
+  it('asks before turning off the renewal of a contract already renewed, then ends it with its term', async () => {
+    renderAt('/ops/contracts/c-1/overview');
+    const choose = async () => {
+      fireEvent.mouseDown(await screen.findByRole('combobox', { name: 'contracts.fields.autoRenewal' }));
+      fireEvent.click(await screen.findByRole('option', { name: 'contracts.fields.no' }));
+    };
+    await choose();
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/^contracts\.stopRenewal\.body:\d+$/)).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(mocked.patch).not.toHaveBeenCalled();
+    expect(mocked.post).not.toHaveBeenCalled();
+
+    await choose();
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'contracts.stopRenewal.confirm' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/contracts/c-1/renewal/stop'));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(mocked.patch).not.toHaveBeenCalled();
+  });
+
+  it('turns off the renewal of a contract in its first term at once', async () => {
+    const base = mocked.get.getMockImplementation() as (url: string, options?: unknown) => Promise<unknown>;
+    const firstTerm = { ...CONTRACT, start_date: `${NEXT_YEAR}-01-01` };
+    mocked.get.mockImplementation(async (url: string, options?: unknown) => (url === '/contracts/c-1' ? { data: firstTerm } : base(url, options)));
+    renderAt('/ops/contracts/c-1/overview');
+    fireEvent.mouseDown(await screen.findByRole('combobox', { name: 'contracts.fields.autoRenewal' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'contracts.fields.no' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/contracts/c-1', { auto_renewal: false }));
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('sends the former Details and Tasks addresses to the overview', async () => {

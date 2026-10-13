@@ -29,7 +29,8 @@ import { utcTodayYmd } from './contractTerms';
 import { contractSchedule } from './contractSchedule';
 import { type BillingFrequency, type ContractDetail, type ContractPatch, parseAmount, parseMonths } from './contractForm';
 import ContractDeadlines from './workspace/ContractDeadlines';
-import ContractRenewalDecision from './workspace/ContractRenewalDecision';
+import ContractRenewalDecision, { confirmedRenewalOf, renewalQueryKey, useContractRenewal } from './workspace/ContractRenewalDecision';
+import ContractStopRenewalDialog from './workspace/ContractStopRenewalDialog';
 import ContractPropertiesDrawer, { type ContractFormValues } from './workspace/ContractPropertiesDrawer';
 import ContractBudgetTab from './workspace/ContractBudgetTab';
 import ContractRelationsTab from './workspace/ContractRelationsTab';
@@ -176,6 +177,8 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
       onSaved: async (contractId) => {
         await queryClient.invalidateQueries({ queryKey: ['contracts', contractId], exact: true });
         void queryClient.invalidateQueries({ queryKey: ['contracts-ids'] });
+        // The dates and the renewal decide what the decision box shows.
+        void queryClient.invalidateQueries({ queryKey: renewalQueryKey(contractId) });
       },
       // Refused: the screen shows the stored values again.
       onRefused: (contractId) => {
@@ -230,13 +233,28 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   const [drawerOpenRequest, setDrawerOpenRequest] = React.useState(0);
   const openDrawer = () => setDrawerOpenRequest((n) => n + 1);
 
+  // A renewal decided for the term of the next deadline: the timeline no longer asks for a decision.
+  const renewalQuery = useContractRenewal(id);
+  const confirmedRenewal = React.useMemo(() => confirmedRenewalOf(renewalQuery.data), [renewalQuery.data]);
   const schedule = React.useMemo(() => (form ? contractSchedule({
     start_date: form.start_date,
     duration_months: form.duration_months,
     notice_period_months: form.notice_period_months,
     auto_renewal: form.auto_renewal,
     disabled_at: form.disabled_at,
-  }, utcTodayYmd(), data?.decision_window_days) : null), [form, data?.decision_window_days]);
+  }, utcTodayYmd(), data?.decision_window_days, confirmedRenewal) : null), [form, data?.decision_window_days, confirmedRenewal]);
+
+  // "No" in the renewal field of a contract already renewed: the term rule would drop its past
+  // terms, so a confirmation ends it with its current term instead (`ContractStopRenewalDialog`).
+  const [stopRenewalOpen, setStopRenewalOpen] = React.useState(false);
+  const renewedSoFar = form?.auto_renewal && schedule ? schedule.renewals : 0;
+  const onPropertiesPatch = (patch: ContractPatch) => {
+    if (patch.auto_renewal === false && renewedSoFar > 0) {
+      setStopRenewalOpen(true);
+      return;
+    }
+    void patchNow(patch);
+  };
 
   // A renewal decision may change the contract (a termination sets its end of validity) and its task.
   const refreshAfterDecision = React.useCallback(() => {
@@ -357,7 +375,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
             values={form}
             names={names}
             disabled={!editable}
-            onPatch={(patch) => { void patchNow(patch); }}
+            onPatch={onPropertiesPatch}
             onTyped={patchTyped}
             onCommit={flushNow}
           />
@@ -419,6 +437,21 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
           />
         )}
       </PortfolioDetailWorkspaceShell>
+      {form && schedule && (
+        <ContractStopRenewalDialog
+          open={stopRenewalOpen}
+          contractId={form.id}
+          renewals={schedule.renewals}
+          endDate={schedule.termEnd}
+          beforeStop={() => autosave.flush()}
+          onClose={() => setStopRenewalOpen(false)}
+          onStopped={(renewal) => {
+            setStopRenewalOpen(false);
+            queryClient.setQueryData(renewalQueryKey(form.id), renewal);
+            refreshAfterDecision();
+          }}
+        />
+      )}
     </Box>
   );
 }

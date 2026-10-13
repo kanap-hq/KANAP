@@ -532,7 +532,9 @@
       "renewedTimes_other": "Renewed {{count}} times since {{date}}",
       "notice_one": "{{count}} month notice",
       "notice_other": "{{count}} months notice",
-      "noNotice": "No notice"
+      "noNotice": "No notice",
+      "renewalConfirmed": "Renewal confirmed",
+      "nextTerm": "next term from {{start}} to {{end}}"
     },
     "timeline": {
       "label": "Timeline of the contract terms",
@@ -708,6 +710,14 @@
         "invalid": "Enter a whole number of days from 0 to 365.",
         "saveFailed": "The settings could not be saved."
       }
+    },
+    "stopRenewal": {
+      "title": "Turn off the tacit renewal",
+      "body_one": "This contract has already been renewed once. It will end on {{date}}.",
+      "body_other": "This contract has already been renewed {{count}} times. It will end on {{date}}.",
+      "hint": "Its past terms are kept: the end of validity is set to the last day of the current term.",
+      "confirm": "End the contract",
+      "failed": "The end of the contract could not be saved."
     }
   },
   "operations": {

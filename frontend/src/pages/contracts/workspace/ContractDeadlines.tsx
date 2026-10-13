@@ -52,6 +52,14 @@ export default function ContractDeadlines({ schedule }: { schedule: ContractSche
         </>
       );
       break;
+    case 'confirmed':
+      sentence = (
+        <>
+          <Box component="span" sx={{ fontWeight: 500 }}>{t('contracts.deadlines.renewalConfirmed')}</Box>
+          <Box component="span" sx={{ color: 'kanap.text.secondary' }}>· {t('contracts.deadlines.nextTerm', { start: date(state.nextStart), end: date(state.nextEnd) })}</Box>
+        </>
+      );
+      break;
     case 'ends':
       sentence = (
         <>

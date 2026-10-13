@@ -14,6 +14,7 @@ import { neutralLinkSx } from '../../../theme/formSx';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { formatItemRef } from '../../../utils/item-ref';
 import { getDotColor } from '../../../utils/statusColors';
+import type { ConfirmedRenewal } from '../contractSchedule';
 
 type RenewalAction = 'renew' | 'terminate' | 'renegotiate' | 'undo';
 
@@ -40,6 +41,20 @@ const NAMES_SHOWN = 5;
 
 export const renewalQueryKey = (contractId: string) => ['contract-renewal', contractId] as const;
 
+/** The renewal decision of a contract, shared by the box and the timeline of the Deadlines section. */
+export function useContractRenewal(contractId: string) {
+  return useQuery({
+    queryKey: renewalQueryKey(contractId),
+    queryFn: async () => (await api.get<ContractRenewal>(`/contracts/${contractId}/renewal`)).data,
+  });
+}
+
+/** The term a renewal stands for (decided, not undone), for the timeline; null otherwise. */
+export function confirmedRenewalOf(data: ContractRenewal | undefined): ConfirmedRenewal | null {
+  if (data?.state !== 'decided' || data.decision?.decision !== 'renew' || !data.term) return null;
+  return { term_end: data.term.term_end, renews_on: data.term.renews_on, next_term_end: data.term.next_term_end };
+}
+
 /**
  * The renewal decision box of a contract's overview (plan contracts-revamp §7): shown while a
  * decision is awaited (the cancellation deadline within the tenant's window) and, once one is
@@ -64,10 +79,7 @@ export default function ContractRenewalDecision({
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const { data } = useQuery({
-    queryKey: renewalQueryKey(contractId),
-    queryFn: async () => (await api.get<ContractRenewal>(`/contracts/${contractId}/renewal`)).data,
-  });
+  const { data } = useContractRenewal(contractId);
 
   const date = (ymd: string | null | undefined) => formatShortDate(ymd, locale, { year: 'always' });
 

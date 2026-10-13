@@ -532,7 +532,9 @@
       "renewedTimes_other": "{{count}}-mal verlängert seit {{date}}",
       "notice_one": "Kündigungsfrist {{count}} Monat",
       "notice_other": "Kündigungsfrist {{count}} Monate",
-      "noNotice": "Keine Kündigungsfrist"
+      "noNotice": "Keine Kündigungsfrist",
+      "renewalConfirmed": "Verlängerung bestätigt",
+      "nextTerm": "nächste Periode vom {{start}} bis {{end}}"
     },
     "timeline": {
       "label": "Zeitleiste der Vertragsperioden",
@@ -708,6 +710,14 @@
         "invalid": "Geben Sie eine ganze Zahl von Tagen zwischen 0 und 365 ein.",
         "saveFailed": "Die Einstellungen konnten nicht gespeichert werden."
       }
+    },
+    "stopRenewal": {
+      "title": "Stillschweigende Verlängerung beenden",
+      "body_one": "Dieser Vertrag wurde bereits einmal verlängert. Er endet am {{date}}.",
+      "body_other": "Dieser Vertrag wurde bereits {{count}}-mal verlängert. Er endet am {{date}}.",
+      "hint": "Seine bisherigen Perioden bleiben erhalten: Das Ende der Gültigkeit wird auf den letzten Tag der laufenden Periode gesetzt.",
+      "confirm": "Vertrag beenden",
+      "failed": "Das Vertragsende konnte nicht gespeichert werden."
     }
   },
   "operations": {

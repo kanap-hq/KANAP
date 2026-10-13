@@ -532,7 +532,9 @@
       "renewedTimes_other": "Reconduit {{count}} fois depuis le {{date}}",
       "notice_one": "Préavis de {{count}} mois",
       "notice_other": "Préavis de {{count}} mois",
-      "noNotice": "Sans préavis"
+      "noNotice": "Sans préavis",
+      "renewalConfirmed": "Reconduction confirmée",
+      "nextTerm": "prochain terme du {{start}} au {{end}}"
     },
     "timeline": {
       "label": "Frise des termes du contrat",
@@ -708,6 +710,14 @@
         "invalid": "Saisissez un nombre entier de jours entre 0 et 365.",
         "saveFailed": "Les réglages n'ont pas pu être enregistrés."
       }
+    },
+    "stopRenewal": {
+      "title": "Désactiver la reconduction tacite",
+      "body_one": "Ce contrat a déjà été reconduit une fois. Il prendra fin le {{date}}.",
+      "body_other": "Ce contrat a déjà été reconduit {{count}} fois. Il prendra fin le {{date}}.",
+      "hint": "Ses termes passés sont conservés : la fin de validité passe au dernier jour du terme en cours.",
+      "confirm": "Mettre fin au contrat",
+      "failed": "La fin du contrat n'a pas pu être enregistrée."
     }
   },
   "operations": {
