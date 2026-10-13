@@ -97,7 +97,7 @@ describe('BudgetColumnsSettingsPage', () => {
     await waitForSetting();
 
     const defaultHelp = "The default column is preselected in reports and sorts the lists and the dashboard. Freezing it fixes the year's exchange rates.";
-    const followsHelp = 'The column takes what is applied to all columns on the budget tab: the distribution and period of a spread, and the quantity and price lines. A column that does not follow keeps its own.';
+    const followsHelp = 'Ticked by default in "Use for other columns too" on the Budget tab.';
     expect(screen.queryByText(defaultHelp)).not.toBeInTheDocument();
     expect(screen.queryByText(followsHelp)).not.toBeInTheDocument();
 

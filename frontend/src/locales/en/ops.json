@@ -1067,7 +1067,7 @@
       "nameHint": "Leave a name empty to use the standard name.",
       "helpHidden": "Hidden columns keep their amounts and still accept imports and freezes.",
       "helpDefault": "The default column is preselected in reports and sorts the lists and the dashboard. Freezing it fixes the year's exchange rates.",
-      "helpFollows": "The column takes what is applied to all columns on the budget tab: the distribution and period of a spread, and the quantity and price lines. A column that does not follow keeps its own.",
+      "helpFollows": "Ticked by default in \"Use for other columns too\" on the Budget tab.",
       "errors": {
         "allHidden": "At least one column must stay shown.",
         "defaultHidden": "The default column must be shown: choose another default column first.",
