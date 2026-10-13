@@ -1769,8 +1769,6 @@
     "changeType": "Changer le type…",
     "typeOpex": "OPEX",
     "typeCapex": "CAPEX",
-    "line": "Ligne budgétaire",
-    "totalOpex": "Total OPEX",
-    "totalCapex": "Total CAPEX"
+    "line": "Ligne budgétaire"
   }
 }

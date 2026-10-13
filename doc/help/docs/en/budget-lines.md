@@ -147,9 +147,8 @@ A column layout you saved keeps its own choice of columns. The layout you had sa
 
 **Totals row**:
 
-- The pinned row at the bottom reads **Total (12 lines)**, with the number of lines the list holds, and shows the total of every amount column
-- When the list holds both types (no filter on **Type**, or both values ticked), two more rows sit above it: **Total OPEX** and **Total CAPEX**. Filtered on one type, the list shows the **Total** row alone
-- A lock icon before a total means the column is frozen for that year. On **Total OPEX** and **Total CAPEX** it follows the freeze of that type. On **Total** it shows when the column is frozen for every type the list holds. Hover it to read **Frozen**. See [Freeze / unfreeze data](budget-operations.md#freeze-unfreeze-data)
+- A single **Total** row is pinned under the list. It reads **Total (12 lines)**, with the number of lines the list holds, and shows the total of every amount column
+- A lock icon before a total means the column is frozen for that year. It follows the freeze of each type the list holds. When the list is filtered on one type, the lock shows when that type is frozen. When it holds both types, the lock shows when the column is frozen for both. Hover it to read **Frozen**. See [Freeze / unfreeze data](budget-operations.md#freeze-unfreeze-data)
 - Each shown FTE column shows the sum of the lines' FTE. When some lines have no FTE, the count follows the total, for example "3.50 · 12 unknown". Hover it for the full sentence: "Unknown for 12 lines". When no line has an FTE, the total is blank and only the count shows
 - Totals respect your current filters and search
 
@@ -635,7 +634,7 @@ A budget file never changes the type of a line. See [Load a budget from a spread
 
 11. **Disable, do not delete**: Preserve history by disabling lines when they are no longer active. Delete only if it is a mistake.
 
-12. **Review the totals rows**: Before finalizing budgets, check the pinned totals in the list, per type and overall, to ensure your spend adds up as expected.
+12. **Review the totals row**: Before finalizing budgets, check the **Total** row under the list to ensure your spend adds up as expected. Filter on **Type** to see the total of OPEX or CAPEX alone.
 
 13. **Use deep linking**: Click directly on a budget column in the list to jump to the Budget tab for that year. Click the Task column to jump to the line's tasks on the Overview tab. This saves navigation time.
 

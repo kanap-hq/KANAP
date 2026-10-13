@@ -154,7 +154,7 @@ async function renderPage(path = '/ops/budget') {
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(lastProps().initialState?.filter?.filterModel?.nature?.values?.length === 1 ? 1 : 3));
+  await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(1));
 }
 
 describe('BudgetListPage', () => {
@@ -212,7 +212,7 @@ describe('BudgetListPage', () => {
           </MemoryRouter>
         </QueryClientProvider>,
       );
-      await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(3));
+      await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(1));
       return view;
     };
     const stored = () => JSON.parse(window.sessionStorage.getItem('budget-list-context') ?? '{}');
@@ -309,7 +309,7 @@ describe('BudgetListPage', () => {
     // Showing another one refetches with both; the footer shows the sum and the unknown lines in a tooltip.
     let count = totalsCalls().length;
     act(() => lastProps().onColumnStateChange([{ colId: 'fte_yPlus1Budget', hide: false }, { colId: 'fte_yBudget', hide: false }]));
-    await waitFor(() => expect(totalsCalls()).toHaveLength(count + 3));
+    await waitFor(() => expect(totalsCalls()).toHaveLength(count + 1));
     expect(totalsCalls().slice(-1)[0][1].params.fte).toBe('fte_yPlus1Budget,fte_yBudget');
     await waitFor(() => expect(lastProps().pinnedBottomRowData.slice(-1)[0].fte_yBudget).toBe(12.5));
     const pinned = lastProps().pinnedBottomRowData.slice(-1)[0];
@@ -324,7 +324,7 @@ describe('BudgetListPage', () => {
 
     // Hiding them all: back to the totals without FTE.
     act(() => lastProps().onColumnStateChange([{ colId: 'fte_yPlus1Budget', hide: true }, { colId: 'fte_yBudget', hide: true }]));
-    await waitFor(() => expect(totalsCalls()).toHaveLength(count + 3));
+    await waitFor(() => expect(totalsCalls()).toHaveLength(count + 1));
     expect(totalsCalls().slice(-1)[0][1].params.fte).toBeUndefined();
     await waitFor(() => expect(lastProps().pinnedBottomRowData.slice(-1)[0].fte_yBudget).toBeUndefined());
   });
@@ -528,7 +528,7 @@ describe('BudgetListPage', () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(3));
+    await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(1));
     const ids = lastProps().columns.map((c) => c.colId ?? c.field);
     const at = ids.indexOf('analytics_activity');
     // The default dimension's column keeps its id, third in the block as the dimension is third.
@@ -594,7 +594,7 @@ describe('BudgetListPage', () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(3));
+    await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(1));
     const params = new URLSearchParams(location.search);
     expect(params.get('sort')).toBeNull();
     expect(JSON.parse(params.get('filters') ?? '{}')).toEqual(kept);
@@ -622,7 +622,7 @@ describe('BudgetListPage', () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(3));
+    await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(1));
     expect(new URLSearchParams(location.search).get('sort')).toBe(`analytics_${NATURE}:ASC`);
   });
   it('offers every shown column of every list year, filtered with number models', async () => {
@@ -720,7 +720,7 @@ describe('BudgetListPage', () => {
     const totalsCalls = () => get.mock.calls.filter(([url]) => url === '/budget-lines/summary/totals').length;
     const before = totalsCalls();
     act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', filterModel: {}, q: 'cloud', statusScope: 'enabled' }));
-    await waitFor(() => expect(totalsCalls()).toBe(before + 3));
+    await waitFor(() => expect(totalsCalls()).toBe(before + 1));
     await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(0));
     expect(header.props.title).toBe('budget.titleWithCurrency:X');
   });
@@ -905,21 +905,22 @@ describe('BudgetListPage', () => {
     expect(screen.queryByRole('button', { name: 'opex.exportCsv' })).toBeNull();
   });
 
-  it('shows three rows from totals GETs with distinct nature amounts and FTE', async () => {
-    get.mockImplementation(async (url, config) => {
+  it('shows one Total row from one totals GET, with no nature filter added, when the list holds both types', async () => {
+    get.mockImplementation(async (url) => {
       if (url === '/budget-columns') return { data: columnsSetting };
       if (url !== '/budget-lines/summary/totals') return { data: { items: [] } };
-      const nature = JSON.parse(config.params.filters || '{}').nature?.values?.[0];
-      const value = nature === 'opex' ? 100 : nature === 'capex' ? 200 : 300;
-      return { data: { yBudget: value, fte: { fte_yBudget: { total: value / 100, unknown: nature === 'opex' ? 1 : 0 } }, reportingCurrency: 'EUR' } };
+      return { data: { yBudget: 300, fte: { fte_yBudget: { total: 3, unknown: 0 } }, reportingCurrency: 'EUR' } };
     });
     await renderPage();
-    expect(lastProps().pinnedBottomRowData.map((row) => row.product_name)).toEqual(['budget.totalOpex', 'budget.totalCapex', 'shared.total']);
-    expect(lastProps().pinnedBottomRowData.map((row) => row.versions?.y.totals?.budget)).toEqual([100, 200, 300]);
-    expect(lastProps().pinnedBottomRowData.map((row) => row.fte_yBudget)).toEqual([1, 2, 3]);
-    expect(get.mock.calls.filter(([url]) => url === '/budget-lines/summary/totals')).toHaveLength(3);
-    const cell = (column('yBudget')!.cellRendererSelector!({ node: { rowPinned: 'bottom' } }).component as (p: any) => React.ReactElement)({ data: lastProps().pinnedBottomRowData[0], valueFormatted: '100' });
-    expect(cell.props).toMatchObject({ colId: 'yBudget', nature: 'opex', children: '100' });
+    expect(lastProps().pinnedBottomRowData.map((row) => row.product_name)).toEqual(['shared.total']);
+    expect(lastProps().pinnedBottomRowData[0].nature).toBeUndefined();
+    expect(lastProps().pinnedBottomRowData[0].versions?.y.totals?.budget).toBe(300);
+    expect(lastProps().pinnedBottomRowData[0].fte_yBudget).toBe(3);
+    const totals = get.mock.calls.filter(([url]) => url === '/budget-lines/summary/totals');
+    expect(totals).toHaveLength(1);
+    expect(JSON.parse(totals[0][1].params.filters || '{}').nature).toBeUndefined();
+    const cell = (column('yBudget')!.cellRendererSelector!({ node: { rowPinned: 'bottom' } }).component as (p: any) => React.ReactElement)({ data: lastProps().pinnedBottomRowData[0], valueFormatted: '300' });
+    expect(cell.props).toMatchObject({ colId: 'yBudget', nature: undefined, children: '300' });
   });
 
   it.each(['opex', 'capex'])('shows one footer row and sends one request for a single %s Type filter', async (nature) => {
@@ -929,7 +930,7 @@ describe('BudgetListPage', () => {
     expect(get.mock.calls.filter(([url]) => url === '/budget-lines/summary/totals')).toHaveLength(1);
   });
 
-  it('preserves both Type values, list filters, search, lifecycle and more than eight measures in each totals request', async () => {
+  it('preserves both Type values, list filters, search, lifecycle and more than eight measures in the totals request', async () => {
     await renderPage();
     const filters = { nature: { filterType: 'set', values: ['opex', 'capex'] }, supplier_name: { filterType: 'set', mode: 'exclude', values: ['Vendor'] } };
     const amounts = lastProps().columns.filter((col) => col.filter === 'agNumberColumnFilter' && !col.colId?.startsWith('fte_')).map((col) => col.colId!);
@@ -938,17 +939,12 @@ describe('BudgetListPage', () => {
     act(() => lastProps().onQueryStateChange({ sort: 'yBudget:ASC', q: 'cloud', statusScope: 'all', filterModel: filters }));
     await waitFor(() => {
       const calls = get.mock.calls.filter(([url, config]) => url === '/budget-lines/summary/totals' && config.params.q === 'cloud');
-      expect(calls).toHaveLength(3);
-      for (const [, config] of calls) {
-        expect(config.params).toMatchObject({ q: 'cloud', includeDisabled: '1', amounts: amounts.join(','), fte: fte.join(',') });
-        expect(JSON.parse(config.params.filters).supplier_name).toEqual(filters.supplier_name);
-      }
+      expect(calls).toHaveLength(1);
+      expect(calls[0][1].params).toMatchObject({ q: 'cloud', includeDisabled: '1', amounts: amounts.join(','), fte: fte.join(',') });
       expect(JSON.parse(calls[0][1].params.filters)).toEqual(filters);
-      expect(JSON.parse(calls[1][1].params.filters).nature).toEqual({ operator: 'AND', conditions: [filters.nature, { filterType: 'set', values: ['opex'] }] });
-      expect(JSON.parse(calls[2][1].params.filters).nature).toEqual({ operator: 'AND', conditions: [filters.nature, { filterType: 'set', values: ['capex'] }] });
     });
     expect(amounts.length + fte.length).toBeGreaterThan(8);
-    expect(lastProps().pinnedBottomRowData).toHaveLength(3);
+    expect(lastProps().pinnedBottomRowData).toHaveLength(1);
     expect((api as any).post).not.toHaveBeenCalled();
   });
 
