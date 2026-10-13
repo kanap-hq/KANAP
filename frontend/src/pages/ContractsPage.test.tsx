@@ -30,7 +30,9 @@ vi.mock('../services/budgetColumns', async (importOriginal) => {
     getBudgetColumns: async () => ({ ...actual.DEFAULT_BUDGET_COLUMNS, labels: { ...actual.DEFAULT_BUDGET_COLUMNS.labels, planned: 'Initial' } }),
   };
 });
-vi.mock('../components/PageHeader', () => ({ default: () => null }));
+vi.mock('../components/PageHeader', () => ({ default: ({ actions }: { actions?: React.ReactNode }) => <div>{actions}</div> }));
+const download = vi.hoisted(() => ({ blob: vi.fn() }));
+vi.mock('../utils/downloadBlob', () => ({ downloadBlob: download.blob, extractFilenameFromDisposition: () => null }));
 vi.mock('../components/csv/CsvExportDialog', () => ({ default: () => null }));
 vi.mock('../components/csv/CsvImportDialog', () => ({ default: () => null }));
 vi.mock('../lib/listContext', () => ({
@@ -346,6 +348,34 @@ describe('ContractsPage', () => {
     fireEvent.click(screen.getByRole('option', { name: 'Initial' }));
     await waitFor(() => expect(grid.props?.extraParams).toEqual({ budget_year: String(NEXT_YEAR + 1), budget_column: 'planned' }));
     expect(JSON.parse(store.get('kanap-contract-budget:fromage:user-1')!)).toEqual({ year: NEXT_YEAR + 1, column: 'planned' });
+  });
+
+  it('shows the compliance summary, sorted and filtered on the server', () => {
+    renderPage();
+    const compliance = column('compliance_state');
+    expect(compliance.defaultHidden).toBeFalsy();
+    expect(compliance.sortable).not.toBe(false);
+    expect(compliance.filter).toBe(CheckboxSetFilter);
+    expect(compliance.filterParams?.values).toEqual(['missing', 'to_check', 'complete', 'none'].map((value) => ({ value, label: `contracts.compliance.summary.states.${value}` })));
+    expect(compliance.valueGetter?.({ data: { compliance: { state: 'complete' } }, node: {} })).toBe('complete');
+    renderCell('compliance_state', { id: 'c-1', compliance: { expected: 5, missing: 2, to_check: 1, state: 'missing' } });
+    expect(screen.getByText(/contracts\.compliance\.summary\.missing \{"count":2\}/)).toBeInTheDocument();
+    expect(screen.getByText(/contracts\.compliance\.summary\.toCheck \{"count":1\}/)).toBeInTheDocument();
+    renderCell('compliance_state', { id: 'c-2', compliance: { expected: 0, missing: 0, to_check: 0, state: 'none' } });
+    expect(screen.getByText('contracts.compliance.summary.none')).toBeInTheDocument();
+  });
+
+  it('exports the register of the contracts the list shows, in the screen language', async () => {
+    renderPage();
+    const filters = { compliance_state: { filterType: 'set', values: ['missing'] } };
+    report(filters);
+    fireEvent.click(screen.getByRole('button', { name: 'contracts.compliance.exportRegister' }));
+    await waitFor(() => expect(api.get).toHaveBeenCalledWith('/contracts/compliance-register/export', expect.objectContaining({
+      language: 'en',
+      filters: JSON.stringify(filters),
+      budget_year: String(NEXT_YEAR),
+    })));
+    await waitFor(() => expect(download.blob).toHaveBeenCalledWith(expect.any(Blob), 'contract-compliance-register.csv'));
   });
 
   it('shows no budget figure to a user who cannot read the budget', () => {

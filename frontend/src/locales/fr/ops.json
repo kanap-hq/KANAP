@@ -411,7 +411,8 @@
       "committed": "Engagé {{year}}",
       "budgetLinked": "Budget {{year}}",
       "gap": "Écart",
-      "budgetState": "Couverture du budget"
+      "budgetState": "Couverture du budget",
+      "compliance": "Conformité"
     },
     "list": {
       "toDecide": "À décider sous {{days}} jours ({{count}})",
@@ -448,6 +449,7 @@
     "tabs": {
       "overview": "Vue d'ensemble",
       "budget": "Budget",
+      "compliance": "Conformité",
       "relations": "Relations"
     },
     "sections": {
@@ -603,6 +605,67 @@
       "uploadingFiles_one": "Envoi de {{count}} fichier…",
       "uploadingFiles_other": "Envoi de {{count}} fichiers…",
       "deleteAttachment": "Supprimer la pièce jointe"
+    },
+    "compliance": {
+      "title": "Exigences",
+      "subtitle": "attentes déduites des applications et actifs liés",
+      "hint": "Une exigence apparaît quand une application ou un actif lié la rend nécessaire.",
+      "noneExpected": "Aucune exigence attendue : aucune application ni aucun actif lié n'en rend une nécessaire.",
+      "showOthers": "Afficher les autres exigences ({{count}})",
+      "hideOthers": "Masquer les autres exigences",
+      "notExpected": "Non attendue",
+      "moreReasons_one": "et {{count}} autre",
+      "moreReasons_other": "et {{count}} autres",
+      "columns": {
+        "requirement": "Exigence",
+        "reason": "Attendue car",
+        "state": "État",
+        "reference": "Référence"
+      },
+      "requirements": {
+        "gdpr_dpa": "Accord de sous-traitance RGPD (art. 28)",
+        "data_location": "Localisation des données",
+        "reversibility": "Clause de réversibilité",
+        "exit_plan": "Plan de sortie",
+        "audit_security": "Droit d'audit et clauses de sécurité"
+      },
+      "states": {
+        "present": "Présente",
+        "absent": "Absente",
+        "not_applicable": "Sans objet",
+        "to_check": "À vérifier",
+        "unset": "Non renseignée"
+      },
+      "reasons": {
+        "personal_data": "{{app}} contient des données personnelles",
+        "business_criticality": "{{app}} : criticité métier {{level}}",
+        "cyber_criticality": "{{app}} : criticité cyber {{level}}",
+        "cloud_hosting": "{{app}} : hébergement {{level}}",
+        "viaAsset": "{{text}} (actif {{asset}})"
+      },
+      "summary": {
+        "missing_one": "{{count}} manquante",
+        "missing_other": "{{count}} manquantes",
+        "toCheck_one": "{{count}} à vérifier",
+        "toCheck_other": "{{count}} à vérifier",
+        "complete": "Complet",
+        "none": "Aucune attente",
+        "states": {
+          "missing": "Manquantes",
+          "to_check": "À vérifier",
+          "complete": "Complet",
+          "none": "Aucune attente"
+        }
+      },
+      "stateOf": "État : {{requirement}}",
+      "referenceOf": "Référence : {{requirement}}",
+      "referencePlaceholder": "Ex. : article 18.3",
+      "updatedBy": "Mis à jour le {{date}} par {{name}}",
+      "updatedOn": "Mis à jour le {{date}}",
+      "saveFailed": "La modification n'a pas pu être enregistrée.",
+      "loadFailed": "Les exigences n'ont pas pu être chargées.",
+      "exportRegister": "Exporter le registre",
+      "exportFailed": "Le registre n'a pas pu être exporté."
     }
   },
   "operations": {

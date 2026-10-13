@@ -199,6 +199,24 @@ export const CONTRACT_TERM_STATE_COLORS: Record<string, string> = {
 };
 
 /**
+ * Contract compliance (`backend/src/contracts/contract-compliance.ts`): a requirement's recorded
+ * state (`to_check`: expected, nothing recorded), and the list's summary of a contract.
+ */
+export const CONTRACT_COMPLIANCE_STATE_COLORS: Record<string, string> = {
+  present: 'success',
+  absent: 'warning',
+  not_applicable: 'default',
+  to_check: 'default',
+};
+
+export const CONTRACT_COMPLIANCE_SUMMARY_COLORS: Record<string, string> = {
+  missing: 'warning',
+  to_check: 'default',
+  complete: 'success',
+  none: 'default',
+};
+
+/**
  * Contract budget coverage (contract Budget tab, contract list): green when the linked budget lines
  * cover the commitment, orange when they fall short, exceed it by more than the tolerance or are
  * missing, grey when there is nothing to compare (no commitment, budget not started).
