@@ -5,9 +5,8 @@ import { requireJwtSecret } from '../common/env';
  * Per-family signing keys.
  *
  * Every token family (access, password reset, provisioning, SSO state) used to fall back to
- * `JWT_SECRET` when its own variable was unset — and no deployment ever set them, so a single key
- * signed and verified all four families. The only thing separating them was an unverified `purpose`
- * claim, which is exactly the confusion reported as constat n°2.
+ * `JWT_SECRET` when its own variable was unset, so a single key signed and verified all four
+ * families. Each family now has a key of its own and a verified `purpose` claim.
  *
  * Two families now derive their own key from `JWT_SECRET` through HMAC with a stable, versioned
  * label: rotating a label version rotates that family's key material without touching

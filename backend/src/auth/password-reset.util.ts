@@ -47,8 +47,8 @@ export function getPasswordResetExpirationMinutes() {
 
 export function createPasswordResetToken(user: { id: string; email: string; tenant_id?: string | null }, jti: string) {
   // Signing key: `PASSWORD_RESET_SECRET` when configured, otherwise a key derived from
-  // `JWT_SECRET` with the `kanap:v1:password-reset` label — never `JWT_SECRET` itself, which is
-  // what made a reset link usable as an access token (constat n°2).
+  // `JWT_SECRET` with the `kanap:v1:password-reset` label, never `JWT_SECRET` itself: a reset
+  // link is signed with a key of its own and is refused as an access token.
   const secret = getPasswordResetSecret();
   const payload: PasswordResetTokenPayload = {
     purpose: PASSWORD_RESET_PURPOSE,

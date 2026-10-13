@@ -16,6 +16,7 @@ import { budgetListAccess } from './budget-list/budget-list.runtime';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { EntityManager } from 'typeorm';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
+import { ShareRateLimit } from '../notifications/share-rate-limit';
 import type { BudgetColumn } from './amounts-write.util';
 import {
   CreateCapexItemInput,
@@ -248,6 +249,7 @@ export class CapexItemsController {
     );
   }
 
+  @ShareRateLimit()
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'reader')
   @Post(':id/share')

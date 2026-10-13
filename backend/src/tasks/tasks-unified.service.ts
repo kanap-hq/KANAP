@@ -11,6 +11,7 @@ import { UserTimeAggregateService } from '../portfolio/services/user-time-aggreg
 import { PortfolioProjectsService } from '../portfolio/services';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
+import { shareRecipientsOf } from '../notifications/share-recipients';
 import { TaskActivitiesService } from './task-activities.service';
 import { TaskAttachmentsService } from './task-attachments.service';
 import { detectChanges, resolveDisplayNames, TASK_TRACKED_FIELDS, FieldConfig } from '../common/change-detection';
@@ -1151,11 +1152,7 @@ export class TasksUnifiedService {
   }
 
   async share(taskId: string, dto: ShareItemDto, tenantId: string, userId: string, opts?: { manager?: EntityManager }) {
-    const userIds = dto.recipient_user_ids ?? [];
-    const rawEmails = dto.recipient_emails ?? [];
-    if (userIds.length === 0 && rawEmails.length === 0) {
-      throw new BadRequestException('At least one recipient is required');
-    }
+    const { userIds, rawEmails } = shareRecipientsOf(dto);
 
     const manager = opts?.manager ?? this.repo.manager;
 

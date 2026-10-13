@@ -12,6 +12,7 @@ import { contentDisposition } from '../common/content-disposition';
 import { StorageService } from '../common/storage/storage.service';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
+import { ShareRateLimit } from '../notifications/share-rate-limit';
 import { TasksUnifiedService } from '../tasks/tasks-unified.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
@@ -165,6 +166,7 @@ export class AssetsController {
     return this.svc.get(id, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id });
   }
 
+  @ShareRateLimit()
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'reader')
   @Post(':id/share')

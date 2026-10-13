@@ -138,3 +138,58 @@ describe('ShareDialog contracts', () => {
     await waitFor(() => expect(apiPost).toHaveBeenCalledWith('/contracts/c-1/share', expect.objectContaining({ recipient_emails: ['buyer@example.com'] })));
   });
 });
+
+describe('ShareDialog limits', () => {
+  it('sends to 20 recipients at most and shows the error the server returns', async () => {
+    const apiPost = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
+    apiPost.mockReset();
+    apiPost.mockRejectedValue({ response: { status: 429, data: { message: 'ThrottlerException: Too Many Requests' } } });
+    const client = new QueryClient();
+    render(<QueryClientProvider client={client}><ThemeProvider theme={createAppTheme('light')}>
+      <ShareDialog open onClose={() => undefined} itemType="contract" itemId="c-1" itemName="SAP Maintenance" />
+    </ThemeProvider></QueryClientProvider>);
+    const input = screen.getByPlaceholderText('share.searchUsersOrEmail') as HTMLInputElement;
+    const add = (email: string) => {
+      fireEvent.change(input, { target: { value: email } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+    };
+    for (let i = 0; i < 21; i += 1) add(`person${i}@example.com`);
+    const send = screen.getByRole('button', { name: 'share.sendEmail' });
+    expect(screen.getByText('errors:SHARE_TOO_MANY_RECIPIENTS')).toBeInTheDocument();
+    expect(send).toBeDisabled();
+
+    // Back to 20: the hint goes and the link can be sent.
+    fireEvent.click(screen.getAllByTestId('CancelIcon')[0]);
+    expect(screen.queryByText('errors:SHARE_TOO_MANY_RECIPIENTS')).not.toBeInTheDocument();
+    expect(send).toBeEnabled();
+    fireEvent.click(send);
+    await waitFor(() => expect(apiPost).toHaveBeenCalledWith('/contracts/c-1/share', expect.objectContaining({ recipient_emails: expect.any(Array) })));
+    expect(apiPost.mock.calls[0][1].recipient_emails).toHaveLength(20);
+    // A rate limit reads as a sentence, not as the server's exception name.
+    expect(await screen.findByText('errors:SHARE_RATE_LIMITED')).toBeInTheDocument();
+  });
+
+  it('names the hourly link limit when the server refuses with a rate limit', async () => {
+    const apiPost = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
+    apiPost.mockReset();
+    apiPost.mockRejectedValue({ response: { status: 429, data: { message: 'ThrottlerException: Too Many Requests' } } });
+    const client = new QueryClient();
+    render(<QueryClientProvider client={client}><ThemeProvider theme={createAppTheme('light')}>
+      <ShareDialog open onClose={() => undefined} itemType="contract" itemId="c-1" itemName="SAP Maintenance" />
+    </ThemeProvider></QueryClientProvider>);
+    const input = screen.getByPlaceholderText('share.searchUsersOrEmail') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'buyer@example.com' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.click(screen.getByRole('button', { name: 'share.sendEmail' }));
+    expect(await screen.findByText('errors:SHARE_RATE_LIMITED')).toBeInTheDocument();
+    expect(screen.queryByText('errors:rate_limited')).not.toBeInTheDocument();
+  });
+
+  it('caps the personal message at the length the server accepts', () => {
+    const client = new QueryClient();
+    render(<QueryClientProvider client={client}><ThemeProvider theme={createAppTheme('light')}>
+      <ShareDialog open onClose={() => undefined} itemType="contract" itemId="c-1" itemName="SAP Maintenance" />
+    </ThemeProvider></QueryClientProvider>);
+    expect(screen.getByPlaceholderText('share.addPersonalMessage')).toHaveAttribute('maxLength', '2000');
+  });
+});

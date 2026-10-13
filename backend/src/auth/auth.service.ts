@@ -25,9 +25,9 @@ function hashToken(token: string): string {
 }
 
 /**
- * Access-token claims. `purpose` is the explicit type marker `JwtAuthGuard` requires since the
- * constat n°2 fix (RFC 8725 §3.12): without it, any other family signed by this application —
- * a password-reset link above all — verifies as a valid access token.
+ * Access-token claims. `purpose` is the explicit type marker `JwtAuthGuard` requires (RFC 8725
+ * §3.12): reset tokens and every other family signed by this application are refused as access
+ * tokens.
  */
 export function buildAccessTokenPayload(user: { id: string; email: string; role?: any; tenant_id?: string | null }) {
   return {

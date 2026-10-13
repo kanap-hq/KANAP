@@ -17,6 +17,7 @@ import { deriveStatusFromDisabledAt, resolveLifecycleState } from '../common/sta
 import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/status-filter';
 import { ContractUpsertDto } from './dto/contract.dto';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
+import { shareRecipientsOf } from '../notifications/share-recipients';
 import { TasksUnifiedService } from '../tasks/tasks-unified.service';
 import { StorageService } from '../common/storage/storage.service';
 import { randomUUID } from 'crypto';
@@ -1372,11 +1373,7 @@ export class ContractsService {
    * tenant is not found.
    */
   async shareContract(contractId: string, dto: ShareItemDto, userId: string, opts?: { manager?: EntityManager }) {
-    const userIds = dto?.recipient_user_ids ?? [];
-    const rawEmails = dto?.recipient_emails ?? [];
-    if (userIds.length === 0 && rawEmails.length === 0) {
-      throw new BadRequestException('At least one recipient is required');
-    }
+    const { userIds, rawEmails } = shareRecipientsOf(dto);
     const mg = opts?.manager ?? this.repo.manager;
     const contract = await this.findContract(contractId, mg);
     const tenantId = contract.tenant_id;

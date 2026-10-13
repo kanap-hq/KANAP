@@ -16,6 +16,7 @@ import { User } from '../users/user.entity';
 import { ExternalContact } from '../contacts/external-contact.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
+import { shareRecipientsOf } from '../notifications/share-recipients';
 
 type HostingCategory = 'on_prem' | 'cloud';
 
@@ -522,11 +523,7 @@ export class LocationsService {
     opts?: { manager?: EntityManager },
   ) {
     const tenant = this.requireTenantId(tenantId);
-    const userIds = dto.recipient_user_ids ?? [];
-    const rawEmails = dto.recipient_emails ?? [];
-    if (userIds.length === 0 && rawEmails.length === 0) {
-      throw new BadRequestException('At least one recipient is required');
-    }
+    const { userIds, rawEmails } = shareRecipientsOf(dto);
     const mg = opts?.manager ?? this.repo.manager;
     const location = await this.loadLocationOrThrow(locationId, opts?.manager);
     const senderRows = await mg.query('SELECT first_name, last_name FROM users WHERE id = $1', [userId]);

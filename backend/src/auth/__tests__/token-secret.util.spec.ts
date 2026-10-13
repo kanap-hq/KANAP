@@ -1,8 +1,8 @@
 /**
- * Constat n°2 — key separation for the non-access families.
+ * Key separation for the non-access families.
  *
  * A family with its own key uses ONLY that key: no retry with `JWT_SECRET` after a failed
- * verification, because a fallback would keep the exact confusion the fix removes. A family
+ * verification, so each family stays verifiable with its own key alone. A family
  * without its own key derives one from `JWT_SECRET` through a distinct, versioned HMAC label.
  */
 import * as assert from 'node:assert/strict';
@@ -122,8 +122,7 @@ function testEachFamilyReadsItsOwnVariable() {
 }
 
 function testDerivedSecretsCannotVerifyAsAccessTokens() {
-  // The mirror image of the constat: a family that derives its own key is not signed with the
-  // access-token secret at all.
+  // A family that derives its own key is not signed with the access-token secret at all.
   for (const family of ['password-reset', 'entra-state'] as const) {
     const token = jwt.sign({ purpose: TOKEN_SECRET_LABEL[family], sub: 'user-1' }, deriveSecret(JWT_SECRET, family));
     assert.throws(() => jwt.verify(token, JWT_SECRET), /invalid signature/, `${family} must not verify with JWT_SECRET`);
