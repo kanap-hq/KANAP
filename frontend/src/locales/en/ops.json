@@ -401,11 +401,31 @@
       "noticeMonths": "Notice (m)",
       "end": "Term end",
       "cancelBy": "Cancel by",
+      "nextDue": "Next due date",
+      "state": "State",
       "yearlyAmount": "Yearly amount",
       "currency": "Curr",
       "billing": "Billing",
-      "linkedOpex": "Linked OPEX",
+      "linkedLines": "Linked lines",
       "task": "Task"
+    },
+    "list": {
+      "toDecide": "To decide within {{days}} days ({{count}})",
+      "dueIn_one": "in {{count}} day",
+      "dueIn_other": "in {{count}} days",
+      "dueToday": "today",
+      "total_one": "Total ({{count}} contract)",
+      "total_other": "Total ({{count}} contracts)",
+      "totalExcluded_one": "excluding {{count}} contract in {{currency}} without a rate",
+      "totalExcluded_other": "excluding {{count}} contracts in {{currency}} without a rate",
+      "states": {
+        "to_decide": "To decide",
+        "in_progress": "In progress",
+        "renewed": "Renewed",
+        "renewedOn": "Renewed on {{date}}",
+        "ending": "Ends without renewal",
+        "expired": "Expired"
+      }
     },
     "workspace": {
       "newContract": "New contract",

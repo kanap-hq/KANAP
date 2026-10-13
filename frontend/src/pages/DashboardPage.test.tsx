@@ -207,7 +207,7 @@ function mockBudgetEndpoints() {
       return { data: { items, total: 7, page: 1, limit: 5 } };
     }
     if (url === '/contracts') {
-      const items = [{ id: 'contract-1', name: 'Office suite', cancellation_deadline: `${new Date().getFullYear() + 1}-03-01` }];
+      const items = [{ id: 'contract-1', name: 'Office suite', next_due_date: `${new Date().getFullYear() + 1}-03-01` }];
       return { data: { items, total: items.length, page: 1, limit: 5 } };
     }
     const scope = url === '/budget-lines/summary' ? (params.filters ? JSON.parse(params.filters).nature.values[0] : 'all') : null;
@@ -640,8 +640,8 @@ describe('DashboardPage budget tiles', () => {
     const now = new Date();
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     expect(params.limit).toBe(5);
-    expect(params.sort).toBe('cancellation_deadline:ASC');
-    expect(JSON.parse(params.filters)).toEqual({ cancellation_deadline: { filterType: 'date', type: 'greaterThanOrEqual', dateFrom: today } });
+    expect(params.sort).toBe('next_due_date:ASC');
+    expect(JSON.parse(params.filters)).toEqual({ next_due_date: { filterType: 'date', type: 'greaterThanOrEqual', dateFrom: today } });
   });
 
   it('asks for no top items before the setting is loaded', async () => {

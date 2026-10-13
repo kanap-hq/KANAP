@@ -13,7 +13,7 @@ Routes
   - Workspace: `/ops/contracts/:id/:tab?` where `:tab` ∈ { overview, details, relations, tasks }
   - Create: `/ops/contracts/new/overview`
 - Backend endpoints
-  - Contracts IDs navigation: `GET /contracts/ids` (supports `sort`, `q`, AG Grid `filters`, derived sorts for `end_date` and `cancellation_deadline`).
+  - Contracts IDs navigation: `GET /contracts/ids` (supports `sort`, `q`, AG Grid `filters`, derived sorts for `end_date`, `cancellation_deadline` and `next_due_date`, the default).
   - Contract URLs deletion: `DELETE /contracts/:id/links/:linkId` (audit + ownership enforcement).
   - Unified tasks (object‑scoped):
     - Spend item tasks: `GET|POST|PATCH /spend-items/:id/tasks` → delegates to unified tasks

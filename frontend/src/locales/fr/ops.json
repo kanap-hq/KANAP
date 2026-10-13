@@ -401,11 +401,31 @@
       "noticeMonths": "Préavis (m)",
       "end": "Fin du terme",
       "cancelBy": "Résiliation avant",
+      "nextDue": "Prochaine échéance",
+      "state": "État",
       "yearlyAmount": "Montant annuel",
       "currency": "Dev.",
       "billing": "Facturation",
-      "linkedOpex": "OPEX liés",
+      "linkedLines": "Lignes liées",
       "task": "Tâche"
+    },
+    "list": {
+      "toDecide": "À décider sous {{days}} jours ({{count}})",
+      "dueIn_one": "dans {{count}} j",
+      "dueIn_other": "dans {{count}} j",
+      "dueToday": "aujourd'hui",
+      "total_one": "Total ({{count}} contrat)",
+      "total_other": "Total ({{count}} contrats)",
+      "totalExcluded_one": "hors {{count}} contrat en {{currency}} sans taux",
+      "totalExcluded_other": "hors {{count}} contrats en {{currency}} sans taux",
+      "states": {
+        "to_decide": "À décider",
+        "in_progress": "En cours",
+        "renewed": "Reconduit",
+        "renewedOn": "Reconduit au {{date}}",
+        "ending": "Fin sans reconduction",
+        "expired": "Échu"
+      }
     },
     "workspace": {
       "newContract": "Nouveau contrat",

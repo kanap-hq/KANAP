@@ -138,7 +138,11 @@ function localToday(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
-/** The five contracts whose cancellation deadline comes next, today included (the server filters and sorts). */
+/**
+ * The five contracts due next, today included (the server filters and sorts): a renewing contract on
+ * its next cancellation deadline, any other on its end (`next_due_date`, the contract list's order).
+ * A contract that stops before its deadline shows its end, not that deadline.
+ */
 function useNextContractRenewal(enabled: boolean) {
   const today = localToday();
   return useQuery({
@@ -146,14 +150,14 @@ function useNextContractRenewal(enabled: boolean) {
     enabled,
     queryFn: async () => {
       const filters = {
-        cancellation_deadline: { filterType: 'date', type: 'greaterThanOrEqual', dateFrom: today },
+        next_due_date: { filterType: 'date', type: 'greaterThanOrEqual', dateFrom: today },
       };
       const params: Record<string, any> = {
         limit: 5,
-        sort: 'cancellation_deadline:ASC',
+        sort: 'next_due_date:ASC',
         filters: JSON.stringify(filters),
       };
-      const res = await api.get<ServerListResponse<{ id: string; name: string; cancellation_deadline?: string }>>('/contracts', { params });
+      const res = await api.get<ServerListResponse<{ id: string; name: string; next_due_date?: string | null }>>('/contracts', { params });
       return res.data;
     },
     staleTime: 60 * 1000,
@@ -651,7 +655,7 @@ export default function DashboardPage() {
               <Stack spacing={0.5}>
                 {upcomingRenewals.map((r) => (
                   <Stack key={r.id} component={RouterLink} to={`/ops/contracts/${r.id}/overview`} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
-                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>{r.cancellation_deadline ? new Date(r.cancellation_deadline).toLocaleDateString(locale) : '\u2014'}</Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>{r.next_due_date ? new Date(r.next_due_date).toLocaleDateString(locale) : '\u2014'}</Typography>
                     <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
                   </Stack>
                 ))}

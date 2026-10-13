@@ -299,6 +299,7 @@ function contractsService(sent: any[]): ContractsService {
     storage: undefined,
     itemContacts: { syncFromSupplier: async () => undefined },
     notifications: notifier(sent),
+    fxRates: undefined,
   });
 }
 

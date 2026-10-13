@@ -186,7 +186,7 @@ async function testMalformedIdIsA400(kind: Kind) {
 function nestedControllers(kind: Kind) {
   const none = undefined as any;
   const unified = new TasksUnifiedService(none, none, none, none, none, none, none, none, none);
-  const contracts = new ContractsService(none, none, none, none, none, none, none, none, none);
+  const contracts = new ContractsService(none, none, none, none, none, none, none, none, none, none);
   return kind === 'opex'
     ? {
       versions: new SpendVersionsController(new SpendVersionsService(none, none, none, none), none, none) as any,

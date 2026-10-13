@@ -3848,6 +3848,7 @@ async function testAiQueryExecutorClosesRemainingMilestone1aGapFields() {
       {} as any,
       { syncFromSupplier: async () => undefined } as any,
       { notifyStatusChange: () => undefined } as any,
+      {} as any,
     );
 
     const queryExecutor = new AiQueryExecutor(
