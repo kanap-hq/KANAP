@@ -404,23 +404,56 @@
     "export": "Export contacts",
     "import": "Import contacts",
     "fields": {
+      "email": "Email",
       "firstName": "First name",
       "lastName": "Last name",
       "jobTitle": "Job title",
       "phone": "Phone",
       "mobile": "Mobile",
-      "countryCode": "Country code",
-      "phoneFormat": "Format: +<countrycode><number>",
+      "country": "Country",
       "supplier": "Supplier",
       "contactType": "Contact type",
-      "selectType": "Select type",
-      "selectSupplierFirst": "Select a supplier first"
+      "notes": "Notes",
+      "status": "Status",
+      "selectSupplierFirst": "Select a supplier first",
+      "dialCodeOf": "{{field}} dial code"
     },
     "roles": {
       "commercial": "Commercial",
       "technical": "Technical",
       "support": "Support",
       "other": "Other"
+    },
+    "placeholders": {
+      "email": "e.g., name@example.com",
+      "firstName": "e.g., Alex",
+      "lastName": "e.g., Martin",
+      "jobTitle": "e.g., Account manager",
+      "supplier": "e.g., Supplier A",
+      "contactType": "Choose a type",
+      "dialCode": "+33",
+      "phone": "e.g., 1 23 45 67 89",
+      "mobile": "e.g., 6 12 34 56 78",
+      "notes": "e.g., Prefers email, available on weekday mornings"
+    },
+    "metadata": {
+      "openSupplier": "Open the supplier",
+      "chooseInProperties": "Choose it in the properties",
+      "supplierMissing": "No supplier",
+      "typeMissing": "Type missing"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "messages": {
+      "emailInvalid": "Enter a valid email address.",
+      "emailTaken": "Another contact already uses this email.",
+      "phoneInvalid": "Enter a dial code and a number of 7 to 15 digits in all.",
+      "typeRequired": "Choose a contact type for this supplier.",
+      "saveFailed": "Failed to save the contact.",
+      "createFailed": "Failed to create the contact.",
+      "loadFailed": "Failed to load the contact."
     }
   },
   "coa": {
@@ -913,14 +946,6 @@
     },
     "supplier": {
       "nameRequired": "Name is required"
-    },
-    "contact": {
-      "emailRequired": "Valid email is required",
-      "invalidPhone": "Invalid phone number format",
-      "invalidMobile": "Invalid mobile number format",
-      "countryCodeLength": "Use 2-letter ISO code",
-      "selectContactType": "Select a contact type for this supplier",
-      "chooseSupplier": "Choose a supplier to set the contact type"
     },
     "account": {
       "accountNumberRequired": "Account number is required",

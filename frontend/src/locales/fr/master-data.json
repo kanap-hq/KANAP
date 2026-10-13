@@ -404,23 +404,56 @@
     "export": "Exporter les contacts",
     "import": "Importer les contacts",
     "fields": {
+      "email": "E-mail",
       "firstName": "Prénom",
       "lastName": "Nom",
       "jobTitle": "Fonction",
       "phone": "Téléphone",
       "mobile": "Mobile",
-      "countryCode": "Code pays",
-      "phoneFormat": "Format : +<countrycode><number>",
+      "country": "Pays",
       "supplier": "Fournisseur",
       "contactType": "Type de contact",
-      "selectType": "Sélectionnez un type",
-      "selectSupplierFirst": "Sélectionnez d'abord un fournisseur"
+      "notes": "Notes",
+      "status": "Statut",
+      "selectSupplierFirst": "Sélectionnez d'abord un fournisseur",
+      "dialCodeOf": "Indicatif ({{field}})"
     },
     "roles": {
       "commercial": "Commercial",
       "technical": "Technique",
       "support": "Support",
       "other": "Autre"
+    },
+    "placeholders": {
+      "email": "ex. nom@exemple.com",
+      "firstName": "ex. Alex",
+      "lastName": "ex. Martin",
+      "jobTitle": "ex. Responsable de compte",
+      "supplier": "ex. Fournisseur A",
+      "contactType": "Choisissez un type",
+      "dialCode": "+33",
+      "phone": "ex. 1 23 45 67 89",
+      "mobile": "ex. 6 12 34 56 78",
+      "notes": "ex. Préfère les e-mails, joignable en semaine le matin"
+    },
+    "metadata": {
+      "openSupplier": "Ouvrir le fournisseur",
+      "chooseInProperties": "À choisir dans les propriétés",
+      "supplierMissing": "Aucun fournisseur",
+      "typeMissing": "Type manquant"
+    },
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif"
+    },
+    "messages": {
+      "emailInvalid": "Saisissez une adresse e-mail valide.",
+      "emailTaken": "Un autre contact utilise déjà cet e-mail.",
+      "phoneInvalid": "Saisissez un indicatif et un numéro de 7 à 15 chiffres au total.",
+      "typeRequired": "Choisissez un type de contact pour ce fournisseur.",
+      "saveFailed": "Échec de l'enregistrement du contact.",
+      "createFailed": "Échec de la création du contact.",
+      "loadFailed": "Échec du chargement du contact."
     }
   },
   "coa": {
@@ -913,14 +946,6 @@
     },
     "supplier": {
       "nameRequired": "Le nom est requis"
-    },
-    "contact": {
-      "emailRequired": "Un e-mail valide est requis",
-      "invalidPhone": "Format de numéro de téléphone invalide",
-      "invalidMobile": "Format de numéro de mobile invalide",
-      "countryCodeLength": "Utilisez un code ISO à 2 lettres",
-      "selectContactType": "Sélectionnez un type de contact pour ce fournisseur",
-      "chooseSupplier": "Choisissez un fournisseur pour définir le type de contact"
     },
     "account": {
       "accountNumberRequired": "Le numéro de compte est requis",
