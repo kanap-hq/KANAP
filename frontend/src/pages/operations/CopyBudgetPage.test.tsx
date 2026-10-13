@@ -44,7 +44,7 @@ vi.mock('../../components/reports/ReportLayout', () => ({
   default: ({ filters, actions, children }: { filters?: React.ReactNode; actions?: React.ReactNode; children: React.ReactNode }) => (
     <div>{filters}{actions}{children}</div>
   ),
-  ReportFilter: ({ label, children }: { label: string; children: React.ReactNode }) => <label>{label}{children}</label>,
+  ReportFilter: ({ label, children }: { label: string; children: React.ReactNode }) => <div><span>{label}</span>{children}</div>,
   reportFilterMenuProps: {},
   reportFilterSelectSx: {},
 }));

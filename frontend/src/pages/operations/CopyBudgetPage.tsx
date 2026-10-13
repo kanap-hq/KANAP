@@ -5,6 +5,7 @@ import {
   Button,
   Checkbox,
   FormControlLabel,
+  InputAdornment,
   MenuItem,
   Paper,
   Stack,
@@ -480,6 +481,10 @@ export default function CopyBudgetPage() {
   const statLabelSx = { fontSize: 12, color: 'kanap.text.tertiary' } as const;
   const statValueSx = { fontSize: 13, fontWeight: 500, color: 'kanap.text.primary', fontVariantNumeric: 'tabular-nums' } as const;
   const checkboxLabelSx = { fontSize: 13 } as const;
+  // Ticks and the switch sit in a box as tall as a field, so they line up with the selects of the bar.
+  const controlRowSx = { display: 'flex', alignItems: 'center', gap: 2, height: 32 } as const;
+  const controlLabelSx = { ml: -0.75, mr: 0, gap: 0.5 } as const;
+  const controlSx = { p: 0.75 } as const;
 
   const yearSelect = (label: string, value: number, onChange: (next: number) => void) => (
     <ReportFilter label={label} width={120}>
@@ -531,16 +536,32 @@ export default function CopyBudgetPage() {
           <ItemScopeTabs level="admin" allowAll value={scope} onChange={setScope} disabled={isProcessing} />
           {yearSelect(t('operations.copyBudget.sourceYear'), sourceYear, (year) => pickYears(year, destinationYear))}
           {yearSelect(t('operations.copyBudget.destinationYear'), destinationYear, (year) => pickYears(sourceYear, year))}
-          <FormControlLabel
-            control={<Checkbox size="small" checked={copyAmounts} disabled={isProcessing} onChange={(e) => setCopyAmounts(e.target.checked)} />}
-            label={<Typography sx={checkboxLabelSx}>{t('operations.copyBudget.amounts')}</Typography>}
-          />
+          <ReportFilter label={t('operations.copyBudget.partsLabel')} width={0}>
+            <Box sx={controlRowSx}>
+              <Tooltip title={t('operations.copyBudget.amountsHelp')} placement="top" describeChild>
+                <FormControlLabel
+                  sx={controlLabelSx}
+                  control={<Checkbox size="small" sx={controlSx} checked={copyAmounts} disabled={isProcessing} onChange={(e) => setCopyAmounts(e.target.checked)} />}
+                  label={<Typography sx={checkboxLabelSx}>{t('operations.copyBudget.amounts')}</Typography>}
+                />
+              </Tooltip>
+              {yearsDiffer && (
+                <Tooltip title={t('operations.copyBudget.allocationsHelp')} placement="top" describeChild>
+                  <FormControlLabel
+                    sx={controlLabelSx}
+                    control={<Checkbox size="small" sx={controlSx} checked={allocationsWanted} disabled={isProcessing} onChange={(e) => setAllocationsWanted(e.target.checked)} />}
+                    label={<Typography sx={checkboxLabelSx}>{t('operations.copyBudget.allocations')}</Typography>}
+                  />
+                </Tooltip>
+              )}
+            </Box>
+          </ReportFilter>
           {copyAmounts && (
             <>
               {columnSelect(t('operations.copyBudget.sourceColumn'), sourceColumn, setSourceColumn)}
               {columnSelect(t('operations.copyBudget.destinationColumn'), destinationColumn, setDestinationColumn)}
-              <ReportFilter label={t('operations.copyBudget.percentageIncrease')} width={120}>
-                <Tooltip title={t('operations.copyBudget.roundingNote')} placement="top">
+              <ReportFilter label={t('operations.copyBudget.percentageIncrease')} width={96}>
+                <Tooltip title={t('operations.copyBudget.percentageHelp')} placement="top" describeChild>
                   <TextField
                     size="small"
                     type="number"
@@ -553,24 +574,22 @@ export default function CopyBudgetPage() {
                       setPercentageInput(Number.isFinite(parsed) && parsed !== 0 ? String(parsed) : '');
                     }}
                     inputProps={{ step: 0.1, 'aria-label': t('operations.copyBudget.percentageIncrease') }}
-                    sx={reportFilterSelectSx}
+                    InputProps={{ endAdornment: <InputAdornment position="end"><Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>%</Typography></InputAdornment> }}
+                    sx={{ ...reportFilterSelectSx, width: 96 }}
                   />
                 </Tooltip>
               </ReportFilter>
             </>
           )}
-          {yearsDiffer && (
-            <FormControlLabel
-              control={<Checkbox size="small" checked={allocationsWanted} disabled={isProcessing} onChange={(e) => setAllocationsWanted(e.target.checked)} />}
-              label={<Typography sx={checkboxLabelSx}>{t('operations.copyBudget.allocations')}</Typography>}
-            />
-          )}
-          <Tooltip title={t('operations.copyBudget.overwriteHelp')} placement="top" describeChild>
-            <FormControlLabel
-              control={<Switch size="small" checked={overwrite} disabled={isProcessing} onChange={(e) => setOverwrite(e.target.checked)} />}
-              label={<Typography sx={checkboxLabelSx}>{t('operations.copyBudget.overwrite')}</Typography>}
-            />
-          </Tooltip>
+          <Box sx={controlRowSx}>
+            <Tooltip title={t('operations.copyBudget.overwriteHelp')} placement="top" describeChild>
+              <FormControlLabel
+                sx={controlLabelSx}
+                control={<Switch size="small" checked={overwrite} disabled={isProcessing} onChange={(e) => setOverwrite(e.target.checked)} />}
+                label={<Typography sx={checkboxLabelSx}>{t('operations.copyBudget.overwrite')}</Typography>}
+              />
+            </Tooltip>
+          </Box>
         </>
       }
       actions={
