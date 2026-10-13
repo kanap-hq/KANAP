@@ -656,7 +656,8 @@
       "afterTotal": "Total after the copy",
       "loadingData": "Loading data…",
       "previewFailed": "The preview failed.",
-      "copyFailed": "The copy failed. Nothing was changed."
+      "copyFailed": "The copy failed. Nothing was changed.",
+      "copyUnknown": "The server did not confirm the copy, so its result is unknown: it is either complete or not applied at all. Run the preview again to see the current state before copying again."
     },
     "currency": {
       "title": "Currency settings",

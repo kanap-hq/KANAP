@@ -656,7 +656,8 @@
       "afterTotal": "Total après la copie",
       "loadingData": "Chargement des données…",
       "previewFailed": "L'aperçu a échoué.",
-      "copyFailed": "La copie a échoué. Rien n'a été modifié."
+      "copyFailed": "La copie a échoué. Rien n'a été modifié.",
+      "copyUnknown": "Le serveur n'a pas confirmé la copie : son résultat est inconnu. Elle est soit entièrement faite, soit pas faite du tout. Relancez l'aperçu pour voir l'état actuel avant de copier à nouveau."
     },
     "currency": {
       "title": "Paramètres de devise",

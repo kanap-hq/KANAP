@@ -656,7 +656,8 @@
       "afterTotal": "Total nach der Kopie",
       "loadingData": "Daten werden geladen…",
       "previewFailed": "Die Vorschau ist fehlgeschlagen.",
-      "copyFailed": "Das Kopieren ist fehlgeschlagen. Es wurde nichts geändert."
+      "copyFailed": "Das Kopieren ist fehlgeschlagen. Es wurde nichts geändert.",
+      "copyUnknown": "Der Server hat die Kopie nicht bestätigt, ihr Ergebnis ist daher unbekannt: Sie ist entweder vollständig ausgeführt oder gar nicht. Starten Sie die Vorschau erneut, um den aktuellen Stand zu sehen, bevor Sie erneut kopieren."
     },
     "currency": {
       "title": "Währungseinstellungen",

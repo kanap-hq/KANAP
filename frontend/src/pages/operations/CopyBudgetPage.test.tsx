@@ -112,6 +112,18 @@ const preview = (dryRun = true) => ({
   ],
 });
 
+/**
+ * The answer of the real copy: what it did, distinct from the preview so a test sees which one the page
+ * shows. Licences got 1,260 (a value the preview never had) and its allocation has no "Replaces".
+ */
+const done = () => {
+  const answer = preview(false);
+  answer.results[0].amounts.newValue = 1260;
+  answer.results[0].allocations = { ...answer.results[0].allocations, destinationMethod: null as never, destinationMethodLabel: '' };
+  answer.summary.amounts = { totalItems: 2, processed: 1, skipped: 1, errors: 0 };
+  return answer;
+};
+
 /** The copy calls (the page's lines come from the aggregate routes). */
 const operation = vi.fn();
 const copyCalls = () => operation.mock.calls.filter(([url]) => url === COPY_URL).map(([, body]) => body);
@@ -145,7 +157,7 @@ describe('CopyBudgetPage', () => {
     frozen.capex = false;
     alert.mockClear();
     operation.mockReset();
-    operation.mockImplementation(async (_url: string, body: any) => ({ data: preview(body.dryRun) }));
+    operation.mockImplementation(async (_url: string, body: any) => ({ data: body.dryRun ? preview() : done() }));
     get.mockReset();
     get.mockResolvedValue({ data: { fiscal_year: Y, mode: 'auto', method: 'headcount', source: 'standard', standard_mode: 'auto', standard_method: 'headcount' } });
     post.mockReset();
@@ -244,10 +256,92 @@ describe('CopyBudgetPage', () => {
     fireEvent.click(button('copy'));
     await waitFor(() => expect(copyCalls()).toHaveLength(2));
     expect(copyCalls()[1]).toMatchObject({ scope: 'all', dryRun: false, allocations: true, amounts: { acceptCalendarChanges: false } });
-    // The result stays on screen, line by line.
+    // The result stays on screen, line by line, as the copy answered it.
     expect(await screen.findByText('operations.copyBudget.resultTitle')).toBeInTheDocument();
-    expect(cell(screen.getByTestId('row-o-1'), 'amountsStatus')).toBe('operations.copyBudget.status.copied');
+    const result = screen.getByTestId('row-o-1');
+    expect(cell(result, 'amountsStatus')).toBe('operations.copyBudget.status.copied');
+    expect(cell(result, 'afterValue')).toBe('1 260');
+    expect(cell(result, 'allocationsStatus')).toBe('operations.copyBudget.status.copied');
+    expect(screen.getByText(/^operations\.copyBudget\.summary\.done /)).toBeInTheDocument();
     expect(button('copy')).toBeDisabled();
+  });
+
+  it('drops the preview when a parameter changes, so Copy runs only what was previewed', async () => {
+    renderPage();
+    await linesLoaded();
+    fireEvent.click(button('preview'));
+    await screen.findByText('operations.copyBudget.previewTitle');
+    await waitFor(() => expect(button('copy')).toBeEnabled());
+    expect(screen.getByTestId('row-o-1').querySelector('[data-col="amountsStatus"]')).not.toBeNull();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'operations.copyBudget.overwrite' }));
+    await waitFor(() => expect(button('copy')).toBeDisabled());
+    expect(screen.getByTestId('row-o-1').querySelector('[data-col="amountsStatus"]')).toBeNull();
+    expect(screen.getByText('operations.copyBudget.previewPrompt')).toBeInTheDocument();
+    expect(screen.queryByText(/^operations\.copyBudget\.summary\.preview /)).toBeNull();
+  });
+
+  it('turns the controls off while the copy runs', async () => {
+    let finish: (value: unknown) => void = () => undefined;
+    renderPage();
+    await linesLoaded();
+    fireEvent.click(button('preview'));
+    await waitFor(() => expect(button('copy')).toBeEnabled());
+    operation.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+    fireEvent.click(button('copy'));
+    await waitFor(() => expect(screen.getAllByRole('button', { name: 'operations.copyBudget.processing' })).toHaveLength(2));
+    for (const action of screen.getAllByRole('button', { name: 'operations.copyBudget.processing' })) expect(action).toBeDisabled();
+    for (const tab of screen.getAllByRole('tab')) expect(tab).toBeDisabled();
+    for (const name of ['sourceYear', 'destinationYear', 'sourceColumn', 'destinationColumn']) {
+      expect(screen.getByRole('combobox', { name: `operations.copyBudget.${name}` })).toHaveAttribute('aria-disabled', 'true');
+    }
+    expect(screen.getByRole('spinbutton', { name: 'operations.copyBudget.percentageIncrease' })).toBeDisabled();
+    for (const name of ['amounts', 'allocations', 'overwrite']) {
+      expect(screen.getByRole('checkbox', { name: `operations.copyBudget.${name}` })).toBeDisabled();
+    }
+    finish({ data: done() });
+    expect(await screen.findByText('operations.copyBudget.resultTitle')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'operations.copyBudget.overwrite' })).toBeEnabled();
+  });
+
+  it('says nothing was changed only when the server refused the copy', async () => {
+    renderPage();
+    await linesLoaded();
+    fireEvent.click(button('preview'));
+    await waitFor(() => expect(button('copy')).toBeEnabled());
+    operation.mockRejectedValueOnce(Object.assign(new Error('Request failed with status code 409'), {
+      isAxiosError: true,
+      response: { status: 409, data: { statusCode: 409, code: 'operation_running', message: 'Another budget operation is running.' } },
+    }));
+    fireEvent.click(button('copy'));
+    await waitFor(() => expect(alert).toHaveBeenCalledTimes(1));
+    expect(alert.mock.calls[0][0]).not.toBe('operations.copyBudget.copyUnknown');
+    // The preview stays: nothing was written.
+    expect(screen.getByText('operations.copyBudget.previewTitle')).toBeInTheDocument();
+    expect(button('copy')).toBeEnabled();
+  });
+
+  it('says the result is unknown after a timeout, and asks for a new preview', async () => {
+    renderPage();
+    await linesLoaded();
+    fireEvent.click(button('preview'));
+    await waitFor(() => expect(button('copy')).toBeEnabled());
+    const aggregatesBefore = aggregateUrls().length;
+    operation.mockRejectedValueOnce(Object.assign(new Error('timeout of 120000ms exceeded'), { isAxiosError: true, code: 'ECONNABORTED' }));
+    fireEvent.click(button('copy'));
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('operations.copyBudget.copyUnknown'));
+    expect(button('copy')).toBeDisabled();
+    expect(screen.getByText('operations.copyBudget.previewPrompt')).toBeInTheDocument();
+    // The budget is read again: the copy may have been saved.
+    await waitFor(() => expect(aggregateUrls().length).toBeGreaterThan(aggregatesBefore));
+
+    // A 5xx without the server's refusal is no better known.
+    fireEvent.click(button('preview'));
+    await waitFor(() => expect(button('copy')).toBeEnabled());
+    operation.mockRejectedValueOnce(Object.assign(new Error('Request failed with status code 524'), { isAxiosError: true, response: { status: 524, data: '' } }));
+    fireEvent.click(button('copy'));
+    await waitFor(() => expect(alert).toHaveBeenCalledTimes(2));
+    expect(alert.mock.calls[1][0]).toBe('operations.copyBudget.copyUnknown');
   });
 
   it('reads and copies the CAPEX lines alone from the CAPEX tab, without the type column', async () => {

@@ -14,11 +14,13 @@ export const SCOPE_NATURES: Record<BudgetScope, BudgetOperationScope[]> = { all:
  * Budget scope switch: All (opt-in, `allowAll`), OPEX, CAPEX. Every tab needs `level` on budget lines.
  * Reports read (`reader`); the budget operations pass `admin` and open on All.
  */
-export default function ItemScopeTabs<T extends BudgetScope>({ value, onChange, level = 'reader', allowAll = false }: {
+export default function ItemScopeTabs<T extends BudgetScope>({ value, onChange, level = 'reader', allowAll = false, disabled = false }: {
   value: T;
   onChange: (next: T) => void;
   level?: ScopeLevel;
   allowAll?: boolean;
+  /** Every tab off, e.g. while an operation runs on the chosen lines. */
+  disabled?: boolean;
 }) {
   const { t } = useTranslation(['ops']);
   const { hasLevel } = useAuth();
@@ -29,9 +31,9 @@ export default function ItemScopeTabs<T extends BudgetScope>({ value, onChange, 
       aria-label={t('operations.scope.label')}
       sx={[textTabsSx, { alignSelf: 'center' }]}
     >
-      {allowAll && <Tab value="all" label={t('operations.scope.all')} sx={textTabSx(value === 'all')} disabled={!hasLevel('budget', level)} />}
-      <Tab value="opex" label={t('operations.scope.opex')} sx={textTabSx(value === 'opex')} disabled={!hasLevel('budget', level)} />
-      <Tab value="capex" label={t('operations.scope.capex')} sx={textTabSx(value === 'capex')} disabled={!hasLevel('budget', level)} />
+      {allowAll && <Tab value="all" label={t('operations.scope.all')} sx={textTabSx(value === 'all')} disabled={disabled || !hasLevel('budget', level)} />}
+      <Tab value="opex" label={t('operations.scope.opex')} sx={textTabSx(value === 'opex')} disabled={disabled || !hasLevel('budget', level)} />
+      <Tab value="capex" label={t('operations.scope.capex')} sx={textTabSx(value === 'capex')} disabled={disabled || !hasLevel('budget', level)} />
     </Tabs>
   );
 }

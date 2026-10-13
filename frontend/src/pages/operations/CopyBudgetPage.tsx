@@ -72,6 +72,16 @@ const noteSx = { fontSize: 12, color: 'kanap.text.tertiary', flexShrink: 0 } as 
 /** A calendar change the copy needs confirmed: a replacement calendar, or none. */
 export const needsCalendarConfirmation = (issues: CalendarIssue[] | undefined) => !!issues?.some((issue) => issue.kind !== 'disabled');
 
+/**
+ * The server refused the copy with a 4xx answer: its transaction rolled back and nothing was written.
+ * Without such an answer (no answer in time, a network error, a 5xx) the copy may have been saved: its
+ * result is unknown.
+ */
+export function copyRefusedByServer(error: unknown): boolean {
+  const status = (error as { response?: { status?: unknown } } | null)?.response?.status;
+  return typeof status === 'number' && status >= 400 && status < 500;
+}
+
 /** What the copy says about a line's amounts besides its status: prorated to its dates, or a calendar change on its lines. */
 function LineNotes({ part, year }: { part?: AmountsPart; year: number }) {
   const { t } = useTranslation(['ops']);
@@ -304,6 +314,21 @@ export default function CopyBudgetPage() {
     dryRun,
   });
 
+  /** The preview's or the copy's summary: lines, then what each part does or did, then the allocation errors. */
+  const summaryText = (response: CopyBudgetResponse, isDone: boolean) => {
+    const counts = response.summary;
+    const part = (name: 'amounts' | 'allocations') => (counts[name]
+      ? t(`operations.copyBudget.summary.${name}${isDone ? 'Done' : ''}`, { processed: counts[name]!.processed, skipped: counts[name]!.skipped })
+      : null);
+    const errors = response.results.filter((line) => line.allocations?.action === 'error').length;
+    return [
+      t(isDone ? 'operations.copyBudget.summary.done' : 'operations.copyBudget.summary.preview', { count: counts.lines }),
+      part('amounts'),
+      part('allocations'),
+      errors > 0 ? t('operations.copyBudget.summary.errors', { count: errors }) : null,
+    ].filter(Boolean).join(' ');
+  };
+
   const handlePreview = async () => {
     const runKey = paramsKey;
     setIsProcessing(true);
@@ -321,18 +346,35 @@ export default function CopyBudgetPage() {
     }
   };
 
+  // The lines' Allocations tabs and every list and report of the budget read again.
+  const refreshBudget = async () => {
+    forgetAllAllocations(queryClient);
+    await Promise.all(Object.values(SUMMARY_QUERY_KEY).map((key) => queryClient.invalidateQueries({ queryKey: [key] })));
+  };
+
   const handleCopy = async () => {
+    const runKey = paramsKey;
     setIsProcessing(true);
     try {
       const response = await copyBudget(operation(false));
-      // The lines' Allocations tabs and every list and report of the budget read again.
-      forgetAllAllocations(queryClient);
-      await Promise.all(Object.values(SUMMARY_QUERY_KEY).map((key) => queryClient.invalidateQueries({ queryKey: [key] })));
-      setOutcome({ mode: 'done', response });
+      await refreshBudget();
       setAcceptCalendarChanges(false);
+      if (paramsKeyRef.current !== runKey) {
+        // The parameters changed meanwhile: the table would show this copy under other headers. Say it is done, without it.
+        await dialogs.alert(summaryText(response, true));
+        return;
+      }
+      setOutcome({ mode: 'done', response });
     } catch (error) {
       console.error('Copy failed:', error);
-      await dialogs.alert(getApiErrorMessage(error, t, t('operations.copyBudget.copyFailed')));
+      if (copyRefusedByServer(error)) {
+        await dialogs.alert(getApiErrorMessage(error, t, t('operations.copyBudget.copyFailed')));
+        return;
+      }
+      // Maybe saved: the preview is stale and the budget is read again.
+      setOutcome(null);
+      await refreshBudget();
+      await dialogs.alert(t('operations.copyBudget.copyUnknown'));
     } finally {
       setIsProcessing(false);
     }
@@ -445,6 +487,7 @@ export default function CopyBudgetPage() {
         select
         size="small"
         value={value}
+        disabled={isProcessing}
         onChange={(e) => onChange(parseInt(e.target.value, 10))}
         SelectProps={{ MenuProps: reportFilterMenuProps, SelectDisplayProps: { 'aria-label': label } as React.HTMLAttributes<HTMLDivElement> }}
         sx={reportFilterSelectSx}
@@ -461,6 +504,7 @@ export default function CopyBudgetPage() {
         select
         size="small"
         value={value}
+        disabled={isProcessing}
         onChange={(e) => onChange(e.target.value as BudgetColumn)}
         SelectProps={{ MenuProps: reportFilterMenuProps, SelectDisplayProps: { 'aria-label': label } as React.HTMLAttributes<HTMLDivElement> }}
         sx={reportFilterSelectSx}
@@ -475,12 +519,6 @@ export default function CopyBudgetPage() {
   const frozenMessage = frozenNatures.length === 1 && scope === 'all'
     ? t('operations.copyBudget.frozenNatureError', { year: destinationYear, column: columnName(destinationColumn), nature: t(`operations.scope.${frozenNatures[0]}`) })
     : t('operations.copyBudget.frozenError', { year: destinationYear, column: columnName(destinationColumn) });
-  const summary = outcome?.response.summary;
-  const partSummary = (part: 'amounts' | 'allocations') => {
-    const counts = summary?.[part];
-    if (!counts) return null;
-    return t(`operations.copyBudget.summary.${part}${done ? 'Done' : ''}`, { processed: counts.processed, skipped: counts.skipped });
-  };
 
   return (
     <ReportLayout
@@ -490,11 +528,11 @@ export default function CopyBudgetPage() {
       subtitle={t('operations.copyBudget.subtitle')}
       filters={
         <>
-          <ItemScopeTabs level="admin" allowAll value={scope} onChange={setScope} />
+          <ItemScopeTabs level="admin" allowAll value={scope} onChange={setScope} disabled={isProcessing} />
           {yearSelect(t('operations.copyBudget.sourceYear'), sourceYear, (year) => pickYears(year, destinationYear))}
           {yearSelect(t('operations.copyBudget.destinationYear'), destinationYear, (year) => pickYears(sourceYear, year))}
           <FormControlLabel
-            control={<Checkbox size="small" checked={copyAmounts} onChange={(e) => setCopyAmounts(e.target.checked)} />}
+            control={<Checkbox size="small" checked={copyAmounts} disabled={isProcessing} onChange={(e) => setCopyAmounts(e.target.checked)} />}
             label={<Typography sx={checkboxLabelSx}>{t('operations.copyBudget.amounts')}</Typography>}
           />
           {copyAmounts && (
@@ -507,6 +545,7 @@ export default function CopyBudgetPage() {
                     size="small"
                     type="number"
                     value={percentageInput}
+                    disabled={isProcessing}
                     placeholder="0"
                     onChange={(e) => setPercentageInput(e.target.value)}
                     onBlur={(e) => {
@@ -522,13 +561,13 @@ export default function CopyBudgetPage() {
           )}
           {yearsDiffer && (
             <FormControlLabel
-              control={<Checkbox size="small" checked={allocationsWanted} onChange={(e) => setAllocationsWanted(e.target.checked)} />}
+              control={<Checkbox size="small" checked={allocationsWanted} disabled={isProcessing} onChange={(e) => setAllocationsWanted(e.target.checked)} />}
               label={<Typography sx={checkboxLabelSx}>{t('operations.copyBudget.allocations')}</Typography>}
             />
           )}
-          <Tooltip title={t('operations.copyBudget.overwriteHelp')} placement="top">
+          <Tooltip title={t('operations.copyBudget.overwriteHelp')} placement="top" describeChild>
             <FormControlLabel
-              control={<Switch size="small" checked={overwrite} onChange={(e) => setOverwrite(e.target.checked)} />}
+              control={<Switch size="small" checked={overwrite} disabled={isProcessing} onChange={(e) => setOverwrite(e.target.checked)} />}
               label={<Typography sx={checkboxLabelSx}>{t('operations.copyBudget.overwrite')}</Typography>}
             />
           </Tooltip>
@@ -562,14 +601,9 @@ export default function CopyBudgetPage() {
 
         {frozenNatures.length > 0 && <Alert severity="error">{frozenMessage}</Alert>}
 
-        {summary && (
+        {outcome && (
           <Alert severity={done ? 'success' : stats.allocationErrors > 0 ? 'error' : 'info'}>
-            {[
-              t(done ? 'operations.copyBudget.summary.done' : 'operations.copyBudget.summary.preview', { count: summary.lines }),
-              partSummary('amounts'),
-              partSummary('allocations'),
-              stats.allocationErrors > 0 ? t('operations.copyBudget.summary.errors', { count: stats.allocationErrors }) : null,
-            ].filter(Boolean).join(' ')}
+            {summaryText(outcome.response, done)}
           </Alert>
         )}
 

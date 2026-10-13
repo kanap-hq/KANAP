@@ -656,7 +656,8 @@
       "afterTotal": "Total tras la copia",
       "loadingData": "Cargando datos…",
       "previewFailed": "La vista previa ha fallado.",
-      "copyFailed": "La copia ha fallado. No se ha modificado nada."
+      "copyFailed": "La copia ha fallado. No se ha modificado nada.",
+      "copyUnknown": "El servidor no ha confirmado la copia, por lo que su resultado es desconocido: se ha hecho por completo o no se ha hecho. Vuelva a ejecutar la vista previa para ver el estado actual antes de copiar de nuevo."
     },
     "currency": {
       "title": "Configuración de moneda",
