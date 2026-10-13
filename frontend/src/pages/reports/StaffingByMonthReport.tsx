@@ -130,7 +130,7 @@ export default function StaffingByMonthReport() {
       ...Object.fromEntries(areas.map((area, index) => [`s${index}`, area.months[i]])),
     }));
     return {
-      title: { text: t('reports.staffing.chartTitle', { type: scopeLabel, group: groupInSentence, column: columnLabel, year }) },
+      title: { text: t('reports.staffing.chartTitle', { type: scopeLabel, context: scope, group: groupInSentence, column: columnLabel, year }) },
       data,
       series: areas.map((area, index) => ({
         type: 'area',
@@ -160,7 +160,7 @@ export default function StaffingByMonthReport() {
     <ReportLayout
       busy={busy}
       title={t('reports.staffing.title')}
-      subtitle={t('reports.staffing.subtitle', { type: scopeLabel, group: groupInSentence })}
+      subtitle={t('reports.staffing.subtitle', { type: scopeLabel, context: scope, group: groupInSentence })}
       filters={(
         <>
           <ItemScopeTabs allowAll value={scope} onChange={setScope} />

@@ -135,6 +135,13 @@ describe('Top items report', () => {
     expect(screen.getByTestId('chart-title').textContent).toContain('"type":"operations.scope.capex"');
   });
 
+  it('on All asks the sentences written for both types', async () => {
+    renderReport(<TopOpexReport />, '/report?scope=all');
+    expect(await screen.findByText('Opex line')).toBeInTheDocument();
+    expect(screen.getByTestId('subtitle').textContent).toContain('"context":"all"');
+    expect(screen.getByTestId('chart-title').textContent).toContain('"context":"all"');
+  });
+
   it('opens on CAPEX from ?scope=capex', async () => {
     renderReport(<TopOpexReport />, '/report?scope=capex');
     expect(await screen.findByText('Capex growth')).toBeInTheDocument();

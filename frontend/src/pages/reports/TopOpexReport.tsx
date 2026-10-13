@@ -88,7 +88,7 @@ export default function TopOpexReport() {
   const chartData = useMemo(() => processed.map((r) => ({ name: r.name, value: r.value })), [processed]);
   const chartOptions = useMemo(() => {
     const base = {
-      title: { text: t('reports.topOpex.chartTitle', { count: chartData.length, type: scopeLabel, metric: metricLabel, year }) },
+      title: { text: t('reports.topOpex.chartTitle', { count: chartData.length, type: scopeLabel, context: scope, metric: metricLabel, year }) },
       subtitle: { text: t('reports.topOpex.shareSubtitle', { metric: metricLabel }) },
       footnote: { text: `${t('reports.topOpex.totalMetric', { metric: metricLabel })}: ${formatNumber(knownTotal)}` },
       data: chartData,
@@ -184,7 +184,7 @@ export default function TopOpexReport() {
     <ReportLayout
       busy={busy}
       title={t("reports.topOpex.title")}
-      subtitle={t('reports.topOpex.subtitle', { type: scopeLabel, metric: metricLabel })}
+      subtitle={t('reports.topOpex.subtitle', { type: scopeLabel, context: scope, metric: metricLabel })}
       filters={(
         <Box sx={{
           display: 'flex',

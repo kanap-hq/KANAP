@@ -215,7 +215,7 @@ export default function CostPerFteReport() {
   const gridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);
 
-  const chartTitle = t(view === 'rate' ? 'reports.costPerFte.rateChartTitle' : 'reports.costPerFte.chartTitle', { type: scopeLabel, group: groupInSentence });
+  const chartTitle = t(view === 'rate' ? 'reports.costPerFte.rateChartTitle' : 'reports.costPerFte.chartTitle', { type: scopeLabel, context: scope, group: groupInSentence });
   const chartCategories = useMemo(() => [
     { key: 'total', label: t('reports.columns.total'), cells: data.total },
     ...data.rows.slice(0, COST_PER_FTE_CHART_GROUPS).map((row) => ({ key: `group:${row.key}`, label: row.label, cells: row.cells })),
@@ -286,7 +286,7 @@ export default function CostPerFteReport() {
     <ReportLayout
       busy={busy}
       title={t('reports.costPerFte.title')}
-      subtitle={t('reports.costPerFte.subtitle', { type: scopeLabel, group: groupInSentence })}
+      subtitle={t('reports.costPerFte.subtitle', { type: scopeLabel, context: scope, group: groupInSentence })}
       filters={(
         <>
           <ItemScopeTabs allowAll value={scope} onChange={setScope} />
