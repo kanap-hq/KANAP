@@ -407,7 +407,11 @@
       "currency": "Währ.",
       "billing": "Abrechnung",
       "linkedLines": "Verknüpfte Zeilen",
-      "task": "Aufgabe"
+      "task": "Aufgabe",
+      "committed": "Verpflichtet {{year}}",
+      "budgetLinked": "Budget {{year}}",
+      "gap": "Abweichung",
+      "budgetState": "Budgetdeckung"
     },
     "list": {
       "toDecide": "Innerhalb von {{days}} Tagen zu entscheiden ({{count}})",
@@ -425,7 +429,15 @@
         "renewedOn": "Verlängert zum {{date}}",
         "ending": "Endet ohne Verlängerung",
         "expired": "Abgelaufen"
-      }
+      },
+      "noBudgetLine": "Ohne Budgetzeile ({{count}})",
+      "underBudgeted": "Unterbudgetiert ({{count}})",
+      "budgetSelector": "Budget",
+      "budgetYear": "Budgetjahr",
+      "gapNoLine": "Keine Zeile",
+      "gapExpired": "Vertrag abgelaufen",
+      "committedExcluded_one": "verpflichtet {{year}} ohne {{count}} Vertrag in {{currency}} (kein Kurs)",
+      "committedExcluded_other": "verpflichtet {{year}} ohne {{count}} Verträge in {{currency}} (kein Kurs)"
     },
     "workspace": {
       "newContract": "Neuer Vertrag",
@@ -540,6 +552,34 @@
         "line": "Budgetzeile",
         "type": "Typ",
         "company": "Unternehmen"
+      },
+      "column": "Spalte",
+      "amountHeader": "{{column}} {{year}}",
+      "total_one": "Gesamt ({{count}} Zeile)",
+      "total_other": "Gesamt ({{count}} Zeilen)",
+      "noRate": "Kein Kurs für {{currency}}",
+      "states": {
+        "covered": "Gedeckt",
+        "under": "Unterbudgetiert",
+        "over": "Budget über dem Vertrag",
+        "no_line": "Keine Budgetzeile",
+        "no_commitment": "Keine Verpflichtung",
+        "not_started": "Budget noch nicht begonnen"
+      },
+      "coverage": {
+        "title": "Verpflichtung und Deckung",
+        "subtitle": "Spalte {{column}} · {{currency}}",
+        "columns": {
+          "year": "Jahr",
+          "committed": "Durch den Vertrag verpflichtet",
+          "linked": "Verknüpfte Zeilen",
+          "gap": "Abweichung",
+          "state": "Stand"
+        },
+        "hint": "Verpflichtet: Jahresbetrag bei Unterzeichnung, anteilig nach den von einer Laufzeit abgedeckten Monaten, in {{currency}} zu den Kursen des Jahres.",
+        "hintRenewal": "Die Folgejahre setzen die Verlängerung voraus, solange sie nicht beendet wird.",
+        "hintEndOfValidity": "Nach dem Gültigkeitsende am {{date}} ist nichts verpflichtet.",
+        "hintEnds": "Nach dem Vertragsende am {{date}} ist nichts verpflichtet."
       }
     },
     "relations": {

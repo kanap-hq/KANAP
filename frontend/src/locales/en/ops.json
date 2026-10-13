@@ -407,7 +407,11 @@
       "currency": "Curr",
       "billing": "Billing",
       "linkedLines": "Linked lines",
-      "task": "Task"
+      "task": "Task",
+      "committed": "Committed {{year}}",
+      "budgetLinked": "Budget {{year}}",
+      "gap": "Gap",
+      "budgetState": "Budget coverage"
     },
     "list": {
       "toDecide": "To decide within {{days}} days ({{count}})",
@@ -425,7 +429,15 @@
         "renewedOn": "Renewed on {{date}}",
         "ending": "Ends without renewal",
         "expired": "Expired"
-      }
+      },
+      "noBudgetLine": "No budget line ({{count}})",
+      "underBudgeted": "Under-budgeted ({{count}})",
+      "budgetSelector": "Budget",
+      "budgetYear": "Budget year",
+      "gapNoLine": "No line",
+      "gapExpired": "Contract expired",
+      "committedExcluded_one": "committed {{year}} excluding {{count}} contract in {{currency}} without a rate",
+      "committedExcluded_other": "committed {{year}} excluding {{count}} contracts in {{currency}} without a rate"
     },
     "workspace": {
       "newContract": "New contract",
@@ -540,6 +552,34 @@
         "line": "Budget line",
         "type": "Type",
         "company": "Company"
+      },
+      "column": "Column",
+      "amountHeader": "{{column}} {{year}}",
+      "total_one": "Total ({{count}} line)",
+      "total_other": "Total ({{count}} lines)",
+      "noRate": "No {{currency}} rate",
+      "states": {
+        "covered": "Covered",
+        "under": "Under-budgeted",
+        "over": "Budget above the contract",
+        "no_line": "No budget line",
+        "no_commitment": "No commitment",
+        "not_started": "Budget not started yet"
+      },
+      "coverage": {
+        "title": "Commitment and coverage",
+        "subtitle": "Column {{column}} · {{currency}}",
+        "columns": {
+          "year": "Year",
+          "committed": "Committed by the contract",
+          "linked": "Linked lines",
+          "gap": "Gap",
+          "state": "State"
+        },
+        "hint": "Committed: the yearly amount at signature, prorated over the months a term covers, in {{currency}} at the year's rates.",
+        "hintRenewal": "The following years assume the renewal goes on until it is stopped.",
+        "hintEndOfValidity": "Nothing is committed after the end of validity on {{date}}.",
+        "hintEnds": "Nothing is committed after the contract ends on {{date}}."
       }
     },
     "relations": {

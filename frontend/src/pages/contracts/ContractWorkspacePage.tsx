@@ -41,7 +41,8 @@ const TAB_KEYS: TabKey[] = ['overview', 'budget', 'relations'];
 /** Tabs of the former page: their address opens the tab that now holds their content. */
 const LEGACY_TABS: Record<string, TabKey> = { details: 'overview', tasks: 'overview' };
 const LIST_PATH = '/ops/contracts';
-const LIST_CONTEXT_KEYS = ['sort', 'q', 'filters', 'scope', 'ctx'];
+// The list's budget year and column too: its order and filters may read them (prev / next).
+const LIST_CONTEXT_KEYS = ['sort', 'q', 'filters', 'scope', 'ctx', 'budget_year', 'budget_column'];
 const DRAWER_KEY = 'kanap.contracts.drawerOpen';
 
 type ContractForm = ContractFormValues & { id: string; name: string; notes: string };
@@ -131,6 +132,10 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
     q: searchParams.get('q'),
     filters: searchParams.get('filters'),
     statusScope: searchParams.get('scope'),
+    extraParams: {
+      budget_year: searchParams.get('budget_year') ?? undefined,
+      budget_column: searchParams.get('budget_column') ?? undefined,
+    },
   });
 
   React.useEffect(() => {
@@ -371,7 +376,18 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
           </Stack>
         )}
         {form && tab === 'budget' && (
-          <ContractBudgetTab key={form.id} contractId={form.id} readOnly={!editable} onChanged={refreshRelations} />
+          <ContractBudgetTab
+            key={form.id}
+            contractId={form.id}
+            readOnly={!editable}
+            onChanged={refreshRelations}
+            terms={shownData ? {
+              auto_renewal: shownData.auto_renewal,
+              disabled_at: shownData.disabled_at,
+              current_term_end: shownData.current_term_end ?? null,
+              updated_at: shownData.updated_at,
+            } : null}
+          />
         )}
         {form && tab === 'relations' && shownData && (
           <ContractRelationsTab

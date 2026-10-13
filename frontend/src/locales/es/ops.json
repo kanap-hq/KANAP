@@ -407,7 +407,11 @@
       "currency": "Mon.",
       "billing": "Facturación",
       "linkedLines": "Líneas vinculadas",
-      "task": "Tarea"
+      "task": "Tarea",
+      "committed": "Comprometido {{year}}",
+      "budgetLinked": "Presupuesto {{year}}",
+      "gap": "Diferencia",
+      "budgetState": "Cobertura del presupuesto"
     },
     "list": {
       "toDecide": "Por decidir en {{days}} días ({{count}})",
@@ -425,7 +429,15 @@
         "renewedOn": "Renovado el {{date}}",
         "ending": "Termina sin renovación",
         "expired": "Vencido"
-      }
+      },
+      "noBudgetLine": "Sin línea presupuestaria ({{count}})",
+      "underBudgeted": "Infrapresupuestados ({{count}})",
+      "budgetSelector": "Presupuesto",
+      "budgetYear": "Año del presupuesto",
+      "gapNoLine": "Sin línea",
+      "gapExpired": "Contrato vencido",
+      "committedExcluded_one": "comprometido {{year}} excluye {{count}} contrato en {{currency}} sin tipo de cambio",
+      "committedExcluded_other": "comprometido {{year}} excluye {{count}} contratos en {{currency}} sin tipo de cambio"
     },
     "workspace": {
       "newContract": "Nuevo contrato",
@@ -540,6 +552,34 @@
         "line": "Línea presupuestaria",
         "type": "Tipo",
         "company": "Empresa"
+      },
+      "column": "Columna",
+      "amountHeader": "{{column}} {{year}}",
+      "total_one": "Total ({{count}} línea)",
+      "total_other": "Total ({{count}} líneas)",
+      "noRate": "Sin tipo de cambio {{currency}}",
+      "states": {
+        "covered": "Cubierto",
+        "under": "Infrapresupuestado",
+        "over": "Presupuesto superior al contrato",
+        "no_line": "Sin línea presupuestaria",
+        "no_commitment": "Sin compromiso",
+        "not_started": "Presupuesto aún no iniciado"
+      },
+      "coverage": {
+        "title": "Compromiso y cobertura",
+        "subtitle": "Columna {{column}} · {{currency}}",
+        "columns": {
+          "year": "Año",
+          "committed": "Comprometido por el contrato",
+          "linked": "Líneas vinculadas",
+          "gap": "Diferencia",
+          "state": "Situación"
+        },
+        "hint": "Comprometido: importe anual a la firma, prorrateado según los meses cubiertos por un periodo, en {{currency}} a los tipos de cambio del año.",
+        "hintRenewal": "Los años siguientes suponen la renovación mientras no se interrumpa.",
+        "hintEndOfValidity": "Nada queda comprometido después del fin de validez del {{date}}.",
+        "hintEnds": "Nada queda comprometido después del fin del contrato el {{date}}."
       }
     },
     "relations": {
