@@ -405,11 +405,31 @@
       "noticeMonths": "Kündigungsfrist (M)",
       "end": "Laufzeitende",
       "cancelBy": "Kündigung bis",
+      "nextDue": "Nächste Frist",
+      "state": "Stand",
       "yearlyAmount": "Jahresbetrag",
       "currency": "Währ.",
       "billing": "Abrechnung",
-      "linkedOpex": "Verknüpfte OPEX",
+      "linkedLines": "Verknüpfte Zeilen",
       "task": "Aufgabe"
+    },
+    "list": {
+      "toDecide": "Innerhalb von {{days}} Tagen zu entscheiden ({{count}})",
+      "dueIn_one": "in {{count}} Tag",
+      "dueIn_other": "in {{count}} Tagen",
+      "dueToday": "heute",
+      "total_one": "Gesamt ({{count}} Vertrag)",
+      "total_other": "Gesamt ({{count}} Verträge)",
+      "totalExcluded_one": "ohne {{count}} Vertrag in {{currency}} (kein Kurs)",
+      "totalExcluded_other": "ohne {{count}} Verträge in {{currency}} (kein Kurs)",
+      "states": {
+        "to_decide": "Zu entscheiden",
+        "in_progress": "Laufend",
+        "renewed": "Verlängert",
+        "renewedOn": "Verlängert zum {{date}}",
+        "ending": "Endet ohne Verlängerung",
+        "expired": "Abgelaufen"
+      }
     },
     "workspace": {
       "newContract": "Neuer Vertrag",
