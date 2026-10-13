@@ -553,7 +553,7 @@ Every metric or column selector offers the same budget columns: the ones your or
 
 ### Navigation
 
-Every report shows a breadcrumb trail back to the **Reporting** hub, so you can switch reports quickly.
+To switch reports, click **Reporting** in the left panel to return to the hub.
 
 ---
 
