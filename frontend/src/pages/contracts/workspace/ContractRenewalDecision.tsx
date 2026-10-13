@@ -1,59 +1,22 @@
 import React from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, Button, Stack, TextField, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import { StatusDot } from '../../../components/design';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
-import { formatAmount } from '../../../i18n/formatters';
 import { useLocale } from '../../../i18n/useLocale';
 import { formatShortDate } from '../../../lib/dateFormat';
 import { neutralLinkSx } from '../../../theme/formSx';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { formatItemRef } from '../../../utils/item-ref';
 import { getDotColor } from '../../../utils/statusColors';
-import type { ConfirmedRenewal } from '../contractSchedule';
+import { renewalQueryKey, useContractRenewal, type ContractRenewal, type RenewalAction } from '../contractRenewal';
+import ContractEndChoice, { isValidEnd } from './ContractEndChoice';
 
-type RenewalAction = 'renew' | 'terminate' | 'renegotiate' | 'undo';
-
-/** `GET /contracts/:id/renewal` (`backend/src/contracts/contract-renewal.service.ts`). */
-export type ContractRenewal = {
-  decision_window_days: number;
-  state: 'none' | 'pending' | 'decided';
-  renegotiating: boolean;
-  term: { term_end: string; deadline: string; renews_on: string; next_term_end: string; days_left: number } | null;
-  duration_months: number;
-  decision: { decision: RenewalAction; reason: string | null; decided_at: string; decided_by_name: string | null } | null;
-  can_undo: boolean;
-  task: { id: string; item_number: number | null; status: string; assignee_name: string | null } | null;
-  impact: {
-    currency: string;
-    commitments: Array<{ year: number; before: number; after: number }>;
-    applications: Array<{ id: string; name: string }>;
-    assets: Array<{ id: string; name: string }>;
-  } | null;
-};
-
-/** At most this many names in a consequence line, then "and n more". */
-const NAMES_SHOWN = 5;
-
-export const renewalQueryKey = (contractId: string) => ['contract-renewal', contractId] as const;
-
-/** The renewal decision of a contract, shared by the box and the timeline of the Deadlines section. */
-export function useContractRenewal(contractId: string) {
-  return useQuery({
-    queryKey: renewalQueryKey(contractId),
-    queryFn: async () => (await api.get<ContractRenewal>(`/contracts/${contractId}/renewal`)).data,
-  });
-}
-
-/** The term a renewal stands for (decided, not undone), for the timeline; null otherwise. */
-export function confirmedRenewalOf(data: ContractRenewal | undefined): ConfirmedRenewal | null {
-  if (data?.state !== 'decided' || data.decision?.decision !== 'renew' || !data.term) return null;
-  return { term_end: data.term.term_end, renews_on: data.term.renews_on, next_term_end: data.term.next_term_end };
-}
+export { renewalQueryKey, useContractRenewal, confirmedRenewalOf, type ContractRenewal } from '../contractRenewal';
 
 /**
  * The renewal decision box of a contract's overview (plan contracts-revamp §7): shown while a
@@ -62,10 +25,13 @@ export function confirmedRenewalOf(data: ContractRenewal | undefined): Confirmed
  */
 export default function ContractRenewalDecision({
   contractId,
+  startDate,
   canDecide,
   onDecided,
 }: {
   contractId: string;
+  /** The contract's start: no end may be chosen before it. */
+  startDate?: string | null;
   canDecide: boolean;
   /** After an action: the contract, its tasks and its terms may have changed. */
   onDecided: () => void;
@@ -76,6 +42,8 @@ export default function ContractRenewalDecision({
   const queryClient = useQueryClient();
   const [reason, setReason] = React.useState('');
   const [confirmTerminate, setConfirmTerminate] = React.useState(false);
+  /** The end of a termination, the proposed one at first (lot CR2, round 1). */
+  const [endDate, setEndDate] = React.useState('');
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -88,7 +56,8 @@ export default function ContractRenewalDecision({
     setBusy(true);
     setError(null);
     try {
-      const res = await api.post<ContractRenewal>(`/contracts/${contractId}/renewal/${action}`, { reason: reason.trim() || null });
+      const body = { reason: reason.trim() || null, ...(action === 'terminate' ? { end_date: endDate } : {}) };
+      const res = await api.post<ContractRenewal>(`/contracts/${contractId}/renewal/${action}`, body);
       queryClient.setQueryData(renewalQueryKey(contractId), res.data);
       setReason('');
       setConfirmTerminate(false);
@@ -122,7 +91,7 @@ export default function ContractRenewalDecision({
       ? t(terminated ? 'contracts.renewal.terminatedBy' : 'contracts.renewal.renewedBy', { date: decidedAt, name: decision.decided_by_name })
       : t(terminated ? 'contracts.renewal.terminatedOn' : 'contracts.renewal.renewedOn', { date: decidedAt });
     const effect = terminated
-      ? t('contracts.renewal.endsOn', { date: date(term.term_end) })
+      ? t('contracts.renewal.endsOn', { date: date(decision.end_date ?? term.term_end) })
       : t('contracts.renewal.renewsOn', { date: date(term.renews_on) });
     return (
       <Box data-testid="contract-renewal-decision" sx={{ ...boxSx, borderColor: 'kanap.border.default', bgcolor: 'kanap.bg.drawer' }}>
@@ -155,11 +124,7 @@ export default function ContractRenewalDecision({
     ? t('contracts.deadlines.today')
     : t('contracts.deadlines.inDays', { count: term.days_left });
   const owner = task?.assignee_name;
-  const impact = data.impact;
-  const names = (items: Array<{ name: string }>) => {
-    const shown = items.slice(0, NAMES_SHOWN).map((item) => item.name).join(', ');
-    return items.length > NAMES_SHOWN ? t('contracts.renewal.andMore', { names: shown, count: items.length - NAMES_SHOWN }) : shown;
-  };
+  const proposed = data.proposed_end_date ?? term.term_end;
 
   return (
     <Box data-testid="contract-renewal-decision" sx={{ ...boxSx, borderColor: 'kanap.orange', bgcolor: 'kanap.bg.primary' }}>
@@ -194,30 +159,24 @@ export default function ContractRenewalDecision({
           inputProps={{ 'aria-label': t('contracts.renewal.reasonLabel'), maxLength: 2000 }}
         />
       )}
-      {canDecide && confirmTerminate && impact && (
-        <Box data-testid="contract-renewal-consequences" sx={{ borderLeft: '2px solid', borderColor: 'kanap.orange', pl: '10px', py: '2px', fontSize: 12, color: 'kanap.text.secondary', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-          <span>{t('contracts.renewal.consequenceEnd', { date: date(term.term_end) })}</span>
-          {impact.commitments.map((row) => (
-            <span key={row.year}>
-              {row.after === 0
-                ? t('contracts.renewal.consequenceNoCommitment', { year: row.year, before: formatAmount(row.before), currency: impact.currency })
-                : t('contracts.renewal.consequenceCommitment', { year: row.year, before: formatAmount(row.before), after: formatAmount(row.after), currency: impact.currency })}
-            </span>
-          ))}
-          {impact.applications.length > 0 && (
-            <span>{t('contracts.renewal.consequenceApplications', { count: impact.applications.length, names: names(impact.applications) })}</span>
-          )}
-          {impact.assets.length > 0 && (
-            <span>{t('contracts.renewal.consequenceAssets', { count: impact.assets.length, names: names(impact.assets) })}</span>
-          )}
-        </Box>
+      {canDecide && confirmTerminate && (
+        <ContractEndChoice
+          contractId={contractId}
+          startDate={startDate}
+          proposed={proposed}
+          noticeMonths={data.notice_period_months}
+          value={endDate}
+          onChange={setEndDate}
+          proposedImpact={data.impact}
+          disabled={busy}
+        />
       )}
       {error && <Alert severity="error">{error}</Alert>}
       {canDecide && (
         <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
           {confirmTerminate ? (
             <>
-              <Button variant="action-danger" disabled={busy} onClick={() => void act('terminate')}>{t('contracts.renewal.confirmTerminate')}</Button>
+              <Button variant="action-danger" disabled={busy || !isValidEnd(endDate, startDate)} onClick={() => void act('terminate')}>{t('contracts.renewal.confirmTerminate')}</Button>
               <Button variant="action" disabled={busy} onClick={() => setConfirmTerminate(false)}>{t('common:buttons.cancel')}</Button>
             </>
           ) : (
@@ -226,7 +185,7 @@ export default function ContractRenewalDecision({
               {!data.renegotiating && (
                 <Button variant="action" disabled={busy} onClick={() => void act('renegotiate')}>{t('contracts.renewal.renegotiate')}</Button>
               )}
-              <Button variant="action" disabled={busy} onClick={() => setConfirmTerminate(true)}>{t('contracts.renewal.terminate')}</Button>
+              <Button variant="action" disabled={busy} onClick={() => { setEndDate(proposed); setConfirmTerminate(true); }}>{t('contracts.renewal.terminate')}</Button>
             </>
           )}
         </Stack>

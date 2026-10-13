@@ -29,7 +29,8 @@ import { utcTodayYmd } from './contractTerms';
 import { contractSchedule } from './contractSchedule';
 import { type BillingFrequency, type ContractDetail, type ContractPatch, parseAmount, parseMonths } from './contractForm';
 import ContractDeadlines from './workspace/ContractDeadlines';
-import ContractRenewalDecision, { confirmedRenewalOf, renewalQueryKey, useContractRenewal } from './workspace/ContractRenewalDecision';
+import ContractRenewalDecision from './workspace/ContractRenewalDecision';
+import { confirmedRenewalOf, renewalQueryKey, useContractRenewal } from './contractRenewal';
 import ContractStopRenewalDialog from './workspace/ContractStopRenewalDialog';
 import ContractPropertiesDrawer, { type ContractFormValues } from './workspace/ContractPropertiesDrawer';
 import ContractBudgetTab from './workspace/ContractBudgetTab';
@@ -244,12 +245,14 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
     disabled_at: form.disabled_at,
   }, utcTodayYmd(), data?.decision_window_days, confirmedRenewal) : null), [form, data?.decision_window_days, confirmedRenewal]);
 
-  // "No" in the renewal field of a contract already renewed: the term rule would drop its past
-  // terms, so a confirmation ends it with its current term instead (`ContractStopRenewalDialog`).
+  // "No" in the renewal field of a contract already renewed (the term rule would drop its past
+  // terms) or awaiting a renewal decision (a termination): a confirmation ends it on a day chosen
+  // instead (`ContractStopRenewalDialog`).
   const [stopRenewalOpen, setStopRenewalOpen] = React.useState(false);
   const renewedSoFar = form?.auto_renewal && schedule ? schedule.renewals : 0;
+  const decisionAwaited = !!form?.auto_renewal && renewalQuery.data?.state === 'pending';
   const onPropertiesPatch = (patch: ContractPatch) => {
-    if (patch.auto_renewal === false && renewedSoFar > 0) {
+    if (patch.auto_renewal === false && (renewedSoFar > 0 || decisionAwaited)) {
       setStopRenewalOpen(true);
       return;
     }
@@ -384,7 +387,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
         {form && tab === 'overview' && (
           <Stack key={form.id} spacing={4} sx={sectionStackSx}>
             <ContractDeadlines schedule={schedule} />
-            {!stale && <ContractRenewalDecision contractId={form.id} canDecide={editable} onDecided={refreshAfterDecision} />}
+            {!stale && <ContractRenewalDecision contractId={form.id} startDate={form.start_date} canDecide={editable} onDecided={refreshAfterDecision} />}
             <EntityTasksSection entityType="contract" entityId={form.id} disabled={!canEdit} />
             <Stack spacing={1.25}>
               <RelationsSectionTitle>{t('contracts.fields.notes')}</RelationsSectionTitle>
@@ -441,8 +444,9 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
         <ContractStopRenewalDialog
           open={stopRenewalOpen}
           contractId={form.id}
-          renewals={schedule.renewals}
-          endDate={schedule.termEnd}
+          startDate={form.start_date}
+          renewals={renewedSoFar}
+          fallbackEnd={schedule.termEnd}
           beforeStop={() => autosave.flush()}
           onClose={() => setStopRenewalOpen(false)}
           onStopped={(renewal) => {

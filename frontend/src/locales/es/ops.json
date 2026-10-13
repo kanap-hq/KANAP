@@ -713,11 +713,20 @@
     },
     "stopRenewal": {
       "title": "Desactivar la renovación tácita",
-      "body_one": "Este contrato ya se ha renovado una vez. Terminará el {{date}}.",
-      "body_other": "Este contrato ya se ha renovado {{count}} veces. Terminará el {{date}}.",
-      "hint": "Sus periodos anteriores se conservan: el fin de validez pasa al último día del periodo en curso.",
+      "hint": "Sus periodos anteriores se conservan: la renovación sigue activa y el fin de validez pasa al día elegido.",
       "confirm": "Finalizar el contrato",
-      "failed": "No se pudo guardar el fin del contrato."
+      "failed": "No se pudo guardar el fin del contrato.",
+      "renewed_one": "Este contrato ya se ha renovado una vez.",
+      "renewed_other": "Este contrato ya se ha renovado {{count}} veces.",
+      "awaited": "Hay una decisión de renovación pendiente para este periodo: esto registra una rescisión y cierra la tarea de decisión."
+    },
+    "endChoice": {
+      "label": "Fecha de fin",
+      "earliest_one": "Preaviso de {{count}} mes: el primer fin posible es el {{date}}.",
+      "earliest_other": "Preaviso de {{count}} meses: el primer fin posible es el {{date}}.",
+      "earliestNoNotice": "Sin preaviso: el primer fin posible es el {{date}}.",
+      "beforeAllowed": "Antes del fin que permite el preaviso: a acordar con el proveedor.",
+      "tooEarly": "Elija un día a partir del {{date}}."
     }
   },
   "operations": {

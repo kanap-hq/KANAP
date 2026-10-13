@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
 
 // A stable `t` that shows its options, so the tests read which values each sentence receives.
@@ -25,6 +25,8 @@ const mocked = api as unknown as { get: ReturnType<typeof vi.fn>; post: ReturnTy
 const TERM = { term_end: '2027-06-30', deadline: '2026-12-30', renews_on: '2027-07-01', next_term_end: '2028-06-30', days_left: 78 };
 const PENDING: ContractRenewal = {
   decision_window_days: 90,
+  proposed_end_date: '2027-06-30',
+  notice_period_months: 6,
   state: 'pending',
   renegotiating: false,
   term: TERM,
@@ -55,7 +57,7 @@ function renderBox(state: ContractRenewal, canDecide = true, onDecided = vi.fn()
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
         <MemoryRouter>
-          <ContractRenewalDecision contractId="c-1" canDecide={canDecide} onDecided={onDecided} />
+          <ContractRenewalDecision contractId="c-1" startDate="2023-07-01" canDecide={canDecide} onDecided={onDecided} />
         </MemoryRouter>
       </ThemeProvider>
     </QueryClientProvider>,
@@ -66,6 +68,12 @@ function renderBox(state: ContractRenewal, canDecide = true, onDecided = vi.fn()
 describe('ContractRenewalDecision', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // The ends offered are checked against today: a fixed day keeps these dates ahead.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-13T10:00:00Z'));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('shows the decision awaited, its deadline, the task and what happens without a decision', async () => {
@@ -108,9 +116,44 @@ describe('ContractRenewalDecision', () => {
     expect(screen.queryByTestId('contract-renewal-consequences')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'contracts.renewal.terminate' }));
     fireEvent.click(screen.getByRole('button', { name: 'contracts.renewal.confirmTerminate' }));
-    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/contracts/c-1/renewal/terminate', { reason: null }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/contracts/c-1/renewal/terminate', { reason: null, end_date: '2027-06-30' }));
     expect(await screen.findByText(/contracts\.renewal\.terminatedBy/)).toBeInTheDocument();
     expect(screen.getByText(/contracts\.renewal\.noticeHint/)).toHaveTextContent('{"date":"30 Dec 2026"}');
+  });
+
+  it('proposes the end the notice allows, takes another day with a warning before it, and its consequences', async () => {
+    const early = { currency: 'EUR', commitments: [{ year: 2026, before: 350000, after: 300000 }], applications: [], assets: [] };
+    mocked.post.mockResolvedValue({ data: { ...decided('terminate'), decision: { ...decided('terminate').decision!, end_date: '2026-11-15' } } });
+    renderBox(PENDING);
+    mocked.get.mockImplementation(async (_url: string, options?: { params?: { end_date?: string } }) => (
+      options?.params?.end_date ? { data: { ...PENDING, impact: early } } : { data: PENDING }
+    ));
+    fireEvent.click(await screen.findByRole('button', { name: 'contracts.renewal.terminate' }));
+    expect(screen.getByText('contracts.endChoice.earliest {"count":6,"date":"30 Jun 2027"}')).toBeInTheDocument();
+    expect(screen.queryByTestId('contract-end-warning')).toBeNull();
+    const input = screen.getByPlaceholderText('labels.datePlaceholder');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '15/11/2026' } });
+    fireEvent.blur(input);
+    expect(screen.getByTestId('contract-end-warning')).toHaveTextContent('contracts.endChoice.beforeAllowed');
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/contracts/c-1/renewal', { params: { end_date: '2026-11-15' } }));
+    const consequences = await screen.findByTestId('contract-renewal-consequences');
+    expect(consequences).toHaveTextContent('contracts.renewal.consequenceEnd {"date":"15 Nov 2026"}');
+    await waitFor(() => expect(consequences).toHaveTextContent('{"year":2026,"before":"350 000","after":"300 000","currency":"EUR"}'));
+
+    // A day before today is refused on the spot.
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '01/10/2026' } });
+    fireEvent.blur(input);
+    expect(screen.getByText('contracts.endChoice.tooEarly {"date":"13 Oct 2026"}')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'contracts.renewal.confirmTerminate' })).toBeDisabled();
+
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '15/11/2026' } });
+    fireEvent.blur(input);
+    fireEvent.click(screen.getByRole('button', { name: 'contracts.renewal.confirmTerminate' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/contracts/c-1/renewal/terminate', { reason: null, end_date: '2026-11-15' }));
+    expect(await screen.findByText(/contracts\.renewal\.endsOn \{"date":"15 Nov 2026"\}/)).toBeInTheDocument();
   });
 
   it('undoes a decision while its deadline has not passed', async () => {

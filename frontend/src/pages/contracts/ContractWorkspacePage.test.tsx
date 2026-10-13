@@ -232,7 +232,7 @@ describe('ContractWorkspacePage', () => {
     expect(screen.getByText('contracts.timeline.termNext')).toBeInTheDocument();
   });
 
-  it('asks before turning off the renewal of a contract already renewed, then ends it with its term', async () => {
+  it('asks before turning off the renewal of a contract already renewed, then ends it on the day chosen', async () => {
     renderAt('/ops/contracts/c-1/overview');
     const choose = async () => {
       fireEvent.mouseDown(await screen.findByRole('combobox', { name: 'contracts.fields.autoRenewal' }));
@@ -240,7 +240,7 @@ describe('ContractWorkspacePage', () => {
     };
     await choose();
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText(/^contracts\.stopRenewal\.body:\d+$/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/^contracts\.stopRenewal\.renewed:\d+$/)).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.cancel' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(mocked.patch).not.toHaveBeenCalled();
@@ -248,7 +248,9 @@ describe('ContractWorkspacePage', () => {
 
     await choose();
     fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'contracts.stopRenewal.confirm' }));
-    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/contracts/c-1/renewal/stop'));
+    // Without a proposal from the API yet, the current term's end.
+    const termEnd = computeContractTerms(CONTRACT, utcTodayYmd())!.current_term_end;
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/contracts/c-1/renewal/stop', { end_date: termEnd }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(mocked.patch).not.toHaveBeenCalled();
   });
@@ -262,6 +264,29 @@ describe('ContractWorkspacePage', () => {
     fireEvent.click(await screen.findByRole('option', { name: 'contracts.fields.no' }));
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/contracts/c-1', { auto_renewal: false }));
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('asks first in its first term too while a renewal decision is awaited', async () => {
+    const base = mocked.get.getMockImplementation() as (url: string, options?: unknown) => Promise<unknown>;
+    const firstTerm = { ...CONTRACT, start_date: `${NEXT_YEAR}-01-01` };
+    const pending = {
+      decision_window_days: 90, proposed_end_date: `${NEXT_YEAR}-12-31`, notice_period_months: 6, state: 'pending', renegotiating: false,
+      term: { term_end: `${NEXT_YEAR}-12-31`, deadline: `${NEXT_YEAR}-06-30`, renews_on: `${NEXT_YEAR + 1}-01-01`, next_term_end: `${NEXT_YEAR + 1}-12-31`, days_left: 60 },
+      duration_months: 12, decision: null, can_undo: false, task: null, impact: null,
+    };
+    mocked.get.mockImplementation(async (url: string, options?: unknown) => (
+      url === '/contracts/c-1' ? { data: firstTerm } : url === '/contracts/c-1/renewal' ? { data: pending } : base(url, options)
+    ));
+    renderAt('/ops/contracts/c-1/overview');
+    await screen.findByTestId('contract-renewal-decision');
+    fireEvent.mouseDown(await screen.findByRole('combobox', { name: 'contracts.fields.autoRenewal' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'contracts.fields.no' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('contracts.stopRenewal.awaited')).toBeInTheDocument();
+    expect(within(dialog).queryByText(/contracts\.stopRenewal\.renewed/)).toBeNull();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'contracts.stopRenewal.confirm' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/contracts/c-1/renewal/stop', { end_date: `${NEXT_YEAR}-12-31` }));
+    expect(mocked.patch).not.toHaveBeenCalled();
   });
 
   it('sends the former Details and Tasks addresses to the overview', async () => {

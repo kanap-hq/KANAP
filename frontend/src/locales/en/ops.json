@@ -713,11 +713,20 @@
     },
     "stopRenewal": {
       "title": "Turn off the tacit renewal",
-      "body_one": "This contract has already been renewed once. It will end on {{date}}.",
-      "body_other": "This contract has already been renewed {{count}} times. It will end on {{date}}.",
-      "hint": "Its past terms are kept: the end of validity is set to the last day of the current term.",
+      "hint": "Its past terms are kept: the renewal stays on and the end of validity is set to the day chosen.",
       "confirm": "End the contract",
-      "failed": "The end of the contract could not be saved."
+      "failed": "The end of the contract could not be saved.",
+      "renewed_one": "This contract has already been renewed once.",
+      "renewed_other": "This contract has already been renewed {{count}} times.",
+      "awaited": "A renewal decision is awaited for this term: this records a termination and closes the decision task."
+    },
+    "endChoice": {
+      "label": "End date",
+      "earliest_one": "{{count}} month notice: the earliest possible end is {{date}}.",
+      "earliest_other": "{{count}} months notice: the earliest possible end is {{date}}.",
+      "earliestNoNotice": "No notice: the earliest possible end is {{date}}.",
+      "beforeAllowed": "Before the end the notice allows: to agree with the supplier.",
+      "tooEarly": "Choose a day from {{date}}."
     }
   },
   "operations": {
