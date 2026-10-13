@@ -420,7 +420,6 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
                   <ContactSelect
                     value={row.contact_id}
                     onChange={(v) => void setContactRowContact(idx, v)}
-                    showEmail={false}
                     hideLabel
                     textFieldSx={drawerFieldValueSx}
                     disabled={readOnly || saving}
