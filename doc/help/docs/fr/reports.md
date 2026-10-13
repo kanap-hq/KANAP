@@ -17,8 +17,8 @@ La page d'accueil affiche une carte par rapport disponible avec une courte descr
 
 | Rapport | Ce qu'il couvre |
 |---------|----------------|
-| **Refacturation globale** | Totaux de ventilation par société, KPI et flux intersociétés (OPEX) |
-| **Refacturation par société** | Vue détaillée d'une société avec départements, lignes budgétaires et KPI (OPEX) |
+| **Refacturation globale** | Totaux de ventilation par société, KPI et flux intersociétés |
+| **Refacturation par société** | Vue détaillée d'une société avec départements, lignes budgétaires et KPI |
 | **Top lignes** | Plus grandes lignes budgétaires pour une année sélectionnée (top N personnalisable) |
 | **Top hausse / baisse** | Plus grandes variations entre deux colonnes budgétaires (top N personnalisable) |
 | **Comparaison budgétaire** | Comparer les métriques budgétaires sur une plage d'années |
@@ -37,7 +37,7 @@ La page d'accueil affiche une carte par rapport disponible avec une courte descr
 - Le sous-titre et le titre du graphique nomment le type : une impression ou un PNG exporté indique les lignes couvertes.
 - Changer de type efface les lignes budgétaires que vous avez exclues.
 
-Les deux rapports de refacturation couvrent uniquement les lignes OPEX.
+Les deux rapports de refacturation ont les mêmes onglets **Tout**, **OPEX** et **CAPEX**, et s'ouvrent sur **OPEX**. Voir [Refacturation globale](#refacturation-globale).
 
 ### Choisir le montant ou les ETP
 
@@ -106,6 +106,7 @@ Consultez les ventilations de coûts à travers toutes les sociétés avec des K
 
 ### Contrôles
 
+- **Type de ligne** : **Tout**, **OPEX** ou **CAPEX**. Le rapport s'ouvre sur **OPEX**. Sur **Tout** ou **CAPEX**, une note au-dessus des résultats indique « Les CAPEX comptent pour leur montant de l'année, sans amortissement. »
 - **Année** : Année fiscale précédente, en cours ou suivante
 - **Colonne** : Toute colonne budgétaire affichée. Démarre sur la colonne par défaut
 - **Totaux par société** (case à cocher) : Afficher ou masquer le tableau et le graphique en barres des totaux par société
@@ -169,6 +170,7 @@ Vue détaillée des ventilations de refacturation d'une société avec départem
 
 ### Contrôles
 
+- **Type de ligne** : **Tout**, **OPEX** ou **CAPEX**, comme dans la refacturation globale. Le rapport s'ouvre sur **OPEX**
 - **Société** : Sélectionnez la société à analyser
 - **Année** : Année fiscale précédente, en cours ou suivante
 - **Colonne** : Toute colonne budgétaire affichée. Démarre sur la colonne par défaut
