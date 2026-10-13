@@ -72,10 +72,10 @@ KANAP uses MUI, but only through constrained patterns:
 
 ## List Pages
 
-- Plain list: `PageHeader` (breadcrumb, title, action bar) → grid toolbar (quick filter, "Show" scope, filters) → column chooser → grid. Reference: `frontend/src/pages/CompaniesPage.tsx`.
+- Plain list: `PageHeader` (title, action bar) → grid toolbar (quick filter, "Show" scope, filters) → column chooser → grid. Reference: `frontend/src/pages/CompaniesPage.tsx`.
 - List split by collections (charts of accounts, analytics dimensions, knowledge libraries): `PageHeader` without actions → `ChipToggleBar` band with the collection toggles and the collection actions (new, manage) → `ChipToggleContextLine` "<collection> · <n> items" with the item actions on its title row → grid toolbar → grid. Item actions never sit above the band. Reference: `frontend/src/pages/coa/CoaPage.tsx`.
 - A page whose band is its header and whose name is already the top nav tab (knowledge base) has no `PageHeader`.
-- `PageHeader` hides a single-crumb breadcrumb by itself; do not add one back by hand.
+- List, report and administration pages have no breadcrumb: the left navigation leads back to the section. `PageHeader` and `ReportLayout` show the title only.
 - Full rules: "List pages" in the charter.
 
 ## Workspace Pages
