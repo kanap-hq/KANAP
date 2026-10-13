@@ -56,8 +56,7 @@ describe('BudgetOperationsLandingPage', () => {
     ]);
     expect(hrefs(section('operations.sections.operations'))).toEqual([
       '/ops/operations/freeze',
-      '/ops/operations/copy-budget-columns',
-      '/ops/operations/copy-allocations',
+      '/ops/operations/copy-budget',
       '/ops/operations/column-reset',
       '/ops/operations/master-data-freeze',
       '/ops/operations/metrics-copy',
@@ -78,8 +77,7 @@ describe('BudgetOperationsLandingPage', () => {
 
     expect(screen.queryByRole('region', { name: 'operations.sections.settings' })).not.toBeInTheDocument();
     expect(hrefs(section('operations.sections.operations'))).toEqual([
-      '/ops/operations/copy-budget-columns',
-      '/ops/operations/copy-allocations',
+      '/ops/operations/copy-budget',
       '/ops/operations/column-reset',
     ]);
   });

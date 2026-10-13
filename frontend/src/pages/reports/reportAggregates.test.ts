@@ -20,6 +20,8 @@ import {
   keepValues,
   localAmountField,
   mergeAxisValueOptions,
+  operationLinesRequest,
+  readOperationLines,
   METRIC_SUFFIX,
   NO_ANALYTICS_VALUE,
   NO_CONSOLIDATION_LINE,
@@ -91,7 +93,8 @@ describe('top items', () => {
     });
     expect(request).toEqual({
       query: { filters: { run_build: keepValues(['run']), id: dropValues(['i1']), account_display: dropValues(['6100 - Software ']) } },
-      spec: { groupBy: ['id', 'description'], measures: [{ id: 'value', fn: 'sum', field: 'y2026Budget' }], order: [{ by: 'measure', id: 'value', dir: 'DESC' }], limit: 3 },
+      // A CAPEX line's own number is `line_number` on the CAPEX routes (their `item_number` is the CPX number).
+      spec: { groupBy: ['id', 'description', 'line_number'], measures: [{ id: 'value', fn: 'sum', field: 'y2026Budget' }], order: [{ by: 'measure', id: 'value', dir: 'DESC' }], limit: 3 },
     });
     expect(topLimit(0)).toBe(1);
     expect(topLimit(1e9)).toBe(10_000);
@@ -466,8 +469,8 @@ describe('staffing by month', () => {
     ]);
     // Every group comes back: the reader drops the ones without monthly FTE.
     expect(request.spec.having).toBeUndefined();
-    expect(staffingRequest({ ...base, scope: 'opex', group: { kind: 'item' } }).spec.groupBy).toEqual(['id', 'product_name']);
-    expect(staffingRequest({ ...base, scope: 'capex', group: { kind: 'item' } }).spec.groupBy).toEqual(['id', 'description']);
+    expect(staffingRequest({ ...base, scope: 'opex', group: { kind: 'item' } }).spec.groupBy).toEqual(['id', 'product_name', 'line_number']);
+    expect(staffingRequest({ ...base, scope: 'capex', group: { kind: 'item' } }).spec.groupBy).toEqual(['id', 'description', 'line_number']);
     expect(staffingRequest({ ...base, scope: 'opex', group: { kind: 'supplier' } }).spec.groupBy).toEqual(['supplier_id', 'supplier_name']);
     expect(staffingRequest({ ...base, scope: 'opex', group: { kind: 'axis', axisId: 'ax-1' } }).spec.groupBy).toEqual(['analytics_id_ax-1', 'analytics_ax-1']);
   });
@@ -566,7 +569,7 @@ describe('cost per FTE', () => {
       },
     ]);
     // Same group keys as the staffing report; never more than the grouped-measure cap.
-    expect(costPerFteRequests({ scope: 'capex', columns, group: { kind: 'item' }, filters })[0].spec.groupBy).toEqual(['id', 'description']);
+    expect(costPerFteRequests({ scope: 'capex', columns, group: { kind: 'item' }, filters })[0].spec.groupBy).toEqual(['id', 'description', 'line_number']);
     expect(costPerFteRequests({ scope: 'opex', columns, group: { kind: 'axis', axisId: 'ax-1' }, filters })[0].spec.groupBy).toEqual(['analytics_id_ax-1', 'analytics_ax-1']);
     expect(requests[0].spec.measures.length).toBeLessThanOrEqual(8);
     expect(costPerFteRequests({ scope: 'opex', columns: [], group: { kind: 'item' }, filters })).toEqual([]);
@@ -670,7 +673,7 @@ describe('daily rate', () => {
       },
     ]);
     // Same group keys as the cost per FTE; never more than the grouped-measure cap.
-    expect(dailyRateRequests({ scope: 'capex', columns, group: { kind: 'item' }, filters })[0].spec.groupBy).toEqual(['id', 'description']);
+    expect(dailyRateRequests({ scope: 'capex', columns, group: { kind: 'item' }, filters })[0].spec.groupBy).toEqual(['id', 'description', 'line_number']);
     expect(requests[0].spec.measures.length).toBeLessThanOrEqual(8);
     expect(dailyRateRequests({ scope: 'opex', columns: [], group: { kind: 'item' }, filters })).toEqual([]);
   });
@@ -751,5 +754,27 @@ describe('All native report requests', () => {
       .toMatchObject({ id: 'c1', name: 'Capex title', itemNumber: 119 });
     expect(readDelta(['increase'], [result([row(['c1', 'Capex title', '119'], { prev: 50, curr: 100, delta: 50 })], row([], { delta: 50 }))]).processed[0])
       .toMatchObject({ id: 'c1', name: 'Capex title', itemNumber: 119 });
+  });
+});
+
+describe('budget operations lines', () => {
+  it('groups each line on its own number, and its nature on all lines', () => {
+    const amounts = [{ id: 'current', year: 2026, metric: 'budget' as const }];
+    expect(operationLinesRequest('all', [2027, 2026], amounts).spec.groupBy).toEqual(['id', 'product_name', 'item_number', 'nature']);
+    expect(operationLinesRequest('opex', [2026], amounts).spec.groupBy).toEqual(['id', 'product_name', 'line_number']);
+    // The CAPEX routes' `item_number` is the CPX number: the BL number is `line_number`.
+    expect(operationLinesRequest('capex', [2026], amounts).spec.groupBy).toEqual(['id', 'description', 'line_number']);
+    expect(operationLinesRequest('all', [2027, 2026], amounts).query).toEqual({ years: '2026,2027' });
+  });
+
+  it('reads the number and the nature of each line', () => {
+    const answer = result([row(['a', 'Licences', '12', 'opex'], { current: 10 }), row(['b', 'Servers', null, 'capex'], {})], row([], {}, 2));
+    expect(readOperationLines(answer, 'all')).toEqual([
+      { id: 'a', name: 'Licences', itemNumber: 12, nature: 'opex', values: { current: 10 } },
+      { id: 'b', name: 'Servers', itemNumber: null, nature: 'capex', values: {} },
+    ]);
+    expect(readOperationLines(result([row(['c', 'Racks', '500003'], { current: 0 })], row([], {}, 1)), 'capex')).toEqual([
+      { id: 'c', name: 'Racks', itemNumber: 500003, nature: 'capex', values: { current: 0 } },
+    ]);
   });
 });

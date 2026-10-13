@@ -34,6 +34,16 @@ export type ReportMeasure = 'amount' | 'fte';
 /** Unified and OPEX lines use the native title; the CAPEX alias uses description. */
 export const NAME_FIELD: Record<BudgetScope, 'product_name' | 'description'> = { all: 'product_name', opex: 'product_name', capex: 'description' };
 
+/**
+ * The line's own number, its BL-n reference: `item_number` on all lines; `line_number` on the lines of
+ * one nature, since the CAPEX alias's `item_number` is the CPX number. A report groups a line on it
+ * after its id and name, so its rows link to `/ops/budget/BL-n` (`itemHref`).
+ */
+export const LINE_NUMBER_FIELD: Record<BudgetScope, 'item_number' | 'line_number'> = { all: 'item_number', opex: 'line_number', capex: 'line_number' };
+
+/** The group keys of a line: its id, its name and its own number. */
+const lineKeys = (scope: BudgetScope) => ['id', NAME_FIELD[scope], LINE_NUMBER_FIELD[scope]];
+
 /** The most groups one answer holds (the server's limit). */
 export const MAX_GROUPS = 10_000;
 
@@ -578,7 +588,7 @@ export function topItemsRequest(p: TopItemsParams): AggregateRequest {
   return {
     query: withYears({ filters: exclusions(p.filters, p.excludedIds, 'account_display', p.excludedAccounts) }, p.years),
     spec: withFteNotice({
-      groupBy: p.scope === 'all' ? ['id', NAME_FIELD.all, 'item_number'] : ['id', NAME_FIELD[p.scope]],
+      groupBy: lineKeys(p.scope),
       measures: [{ id: 'value', fn: 'sum', field: measureField(p.year, p.metric, p.measure) }],
       order: [{ by: 'measure', id: 'value', dir: 'DESC' }],
       limit: topLimit(p.topCount),
@@ -631,7 +641,7 @@ export function deltaRequests(p: DeltaParams): AggregateRequest[] {
   return p.modes.map((mode) => ({
     query: { filters },
     spec: withFteNotice({
-      groupBy: p.scope === 'all' ? ['id', NAME_FIELD.all, 'item_number'] : ['id', NAME_FIELD[p.scope]],
+      groupBy: lineKeys(p.scope),
       measures: [
         { id: 'prev', fn: 'sum', field: src },
         { id: 'curr', fn: 'sum', field: dst },
@@ -861,7 +871,7 @@ const NO_DETAIL_MEASURE = 'nodetail';
 /** The group keys of a grouping: an id, then its name. */
 export function staffingGroupKeys(scope: BudgetScope, group: StaffingGroup): string[] {
   switch (group.kind) {
-    case 'item': return scope === 'all' ? ['id', NAME_FIELD.all, 'item_number'] : ['id', NAME_FIELD[scope]];
+    case 'item': return lineKeys(scope);
     case 'supplier': return ['supplier_id', 'supplier_name'];
     case 'axis': return [analyticsIdField(group.axisId), analyticsNameField(group.axisId)];
     default: return ['cost_center_id', 'cost_center_label'];
@@ -1321,7 +1331,10 @@ export function readCostCenterTotals(result: AggregateResult | undefined): Array
 
 // ----- budget operations pages -----
 
-/** Every line of the window from the earliest year, with amounts in the lines' own currency. */
+/**
+ * Every line of the window from the earliest year, with amounts in the lines' own currency, its own
+ * number (its BL-n link) and, on all lines, its nature.
+ */
 export function operationLinesRequest(
   scope: BudgetScope,
   years: readonly number[],
@@ -1329,14 +1342,33 @@ export function operationLinesRequest(
 ): AggregateRequest {
   return {
     query: yearsQuery(Array.from(new Set(years)).sort((a, b) => a - b)),
-    spec: { groupBy: ['id', NAME_FIELD[scope]], measures: amounts.map((a) => ({ id: a.id, fn: 'sum' as const, field: localAmountField(a.year, a.metric) })) },
+    spec: {
+      groupBy: [...lineKeys(scope), ...(scope === 'all' ? ['nature'] : [])],
+      measures: amounts.map((a) => ({ id: a.id, fn: 'sum' as const, field: localAmountField(a.year, a.metric) })),
+    },
   };
 }
 
-export function readOperationLines(result: AggregateResult | undefined): Array<{ id: string; name: string; values: Record<string, number> }> {
-  return (result?.groups ?? []).map((group) => ({
-    id: textKey(group, 0),
-    name: textKey(group, 1),
-    values: Object.fromEntries(Object.entries(group.values).map(([id, value]) => [id, value ?? 0])),
-  }));
+export type OperationLine = {
+  id: string;
+  name: string;
+  /** The line's own number (BL-n), null when the answer has none. */
+  itemNumber: number | null;
+  /** The line's nature: read on all lines, the scope's on the lines of one nature. */
+  nature: 'opex' | 'capex' | null;
+  values: Record<string, number>;
+};
+
+export function readOperationLines(result: AggregateResult | undefined, scope: BudgetScope = 'all'): OperationLine[] {
+  return (result?.groups ?? []).map((group) => {
+    const number = group.keys[2] != null && group.keys[2] !== '' ? Number(group.keys[2]) : null;
+    const nature = scope === 'all' ? group.keys[3] : scope;
+    return {
+      id: textKey(group, 0),
+      name: textKey(group, 1),
+      itemNumber: number != null && Number.isFinite(number) ? number : null,
+      nature: nature === 'opex' || nature === 'capex' ? nature : null,
+      values: Object.fromEntries(Object.entries(group.values).map(([id, value]) => [id, value ?? 0])),
+    };
+  });
 }

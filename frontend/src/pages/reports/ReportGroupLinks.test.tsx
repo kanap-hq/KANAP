@@ -129,8 +129,12 @@ function line(
   fte: number,
   extra: { runBuild?: 'run' | 'build' | null; area?: [string, string]; nature?: [string, string]; account?: [string, string] } = {},
 ) {
+  // The line's own number (BL-n): `item_number` on all lines, `line_number` on the lines of one nature.
+  const number = 10 + id.charCodeAt(0) - 'a'.charCodeAt(0);
   return {
     id,
+    item_number: number,
+    line_number: number,
     product_name: `Line ${id}`,
     description: `Line ${id}`,
     cost_center_id: costCenter?.[0] ?? null,
@@ -291,9 +295,12 @@ describe('Staffing by month group links', () => {
     expect((await linkOf('CC2 · Dev')).filters).toEqual(staffed({ cost_center_label: set(['CC2 · Dev']) }));
   });
 
-  it('an item opens its page', async () => {
-    renderReport(<StaffingByMonthReport />, '/report?group=item');
-    expect((await linkOf('Line a')).href).toBe('/ops/budget/a');
+  it('an item opens its BL page, on all lines and on one nature', async () => {
+    const all = renderReport(<StaffingByMonthReport />, '/report?group=item');
+    expect((await linkOf('Line a')).href).toBe('/ops/budget/BL-10');
+    all.unmount();
+    renderReport(<StaffingByMonthReport />, '/report?group=item&scope=opex');
+    expect((await linkOf('Line a')).href).toBe('/ops/budget/BL-10');
     await expectPlainTotal();
   });
 });
@@ -310,7 +317,7 @@ describe('Cost per FTE group links', () => {
     expect((await linkOf('Hardware')).filters).toEqual(staffed({ 'analytics_ax-nat': set(['Hardware']) }));
     view.unmount();
     renderReport(<CostPerFteReport />, '/report?view=rate&group=item&scope=capex');
-    expect((await linkOf('Line b')).href).toBe('/ops/budget/b');
+    expect((await linkOf('Line b')).href).toBe('/ops/budget/BL-11');
     await expectPlainTotal();
   });
 });
