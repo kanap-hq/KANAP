@@ -79,7 +79,7 @@ El botón **Forzar sincronización de tasas FX** desencadena manualmente una act
   - Las tasas se actualizan en unos segundos
   - La tabla de Instantáneas de tasas FX se actualiza automáticamente
 
-**Actualización automática**: El sistema también actualiza las tasas automáticamente cada 30 días cuando un usuario inicia sesión (cubre A-1, A, A+1). La sincronización manual le da control cuando necesita actualizaciones inmediatas.
+**Actualización automática**: El sistema también actualiza las tasas automáticamente cada 30 días cuando un usuario inicia sesión (cubre A-1, A, A+1). Cuando una lista o un informe necesita una tasa que falta en el snapshot de su año (una moneda usada desde entonces, o un año sin snapshot), el sistema obtiene ese año en segundo plano y la siguiente visualización usa la nueva tasa. La sincronización manual le da control cuando necesita actualizaciones inmediatas.
 
 **Consejo**: Si añade una nueva moneda a Monedas permitidas, ejecute Forzar sincronización FX inmediatamente para rellenar las tasas antes de que los usuarios empiecen a crear elementos en esa moneda.
 
@@ -229,7 +229,7 @@ R: No. La moneda de reporte es de todo el espacio de trabajo. Todas las empresas
 R: La fuente de datos (Banco Mundial o ExchangeRate-API) puede no publicar esa moneda. Verifique que el código ISO sea correcto y de uso común. Si es necesario, limite las Monedas permitidas a códigos con cobertura de datos confiable.
 
 **P: ¿Con qué frecuencia se actualizan automáticamente las tasas FX?**
-R: Cada 30 días, cuando cualquier usuario inicia sesión, el sistema actualiza las tasas para A-1, A y A+1. También puede desencadenar una actualización manual en cualquier momento usando Forzar sincronización FX.
+R: Cada 30 días, cuando cualquier usuario inicia sesión, el sistema actualiza las tasas para A-1, A y A+1. Un año al que le falta la tasa de una moneda en uso también se obtiene en cuanto una lista o un informe la necesita. También puede desencadenar una actualización manual en cualquier momento usando Forzar sincronización FX.
 
 **P: ¿Los cambios de tasas FX afectan mis datos almacenados?**
 R: No. Los tipos de cambio solo afectan la **conversión y visualización**. Cada línea OPEX y CAPEX almacena su propia moneda y montos, que nunca cambian cuando las tasas se actualizan. Solo los valores convertidos mostrados en informes y listas cambian.

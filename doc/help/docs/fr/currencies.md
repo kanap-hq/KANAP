@@ -79,7 +79,7 @@ Le bouton **Forcer la synchronisation des taux** déclenche manuellement un rafr
   - Les taux se mettent à jour en quelques secondes
   - Le tableau des instantanés de taux de change se rafraîchit automatiquement
 
-**Rafraîchissement automatique** : Le système rafraîchit aussi les taux automatiquement tous les 30 jours lorsqu'un utilisateur se connecte (couvre A-1, A, A+1). La synchronisation manuelle vous donne le contrôle lorsque vous avez besoin de mises à jour immédiates.
+**Rafraîchissement automatique** : Le système rafraîchit aussi les taux automatiquement tous les 30 jours lorsqu'un utilisateur se connecte (couvre A-1, A, A+1). Quand une liste ou un rapport a besoin d'un taux absent du snapshot de son année (une devise utilisée depuis, ou une année sans snapshot), le système récupère cette année en arrière-plan et l'affichage suivant utilise le nouveau taux. La synchronisation manuelle vous donne le contrôle lorsque vous avez besoin de mises à jour immédiates.
 
 **Conseil** : Si vous ajoutez une nouvelle devise aux devises autorisées, lancez immédiatement la synchronisation des taux pour remplir les taux avant que les utilisateurs ne commencent à créer des lignes dans cette devise.
 
@@ -229,7 +229,7 @@ R : Non. La devise de reporting est au niveau du tenant. Toutes les sociétés, 
 R : La source de données (Banque Mondiale ou ExchangeRate-API) peut ne pas publier cette devise. Vérifiez que le code ISO est correct et couramment publié. Si nécessaire, limitez les devises autorisées aux codes avec une couverture de données fiable.
 
 **Q : À quelle fréquence les taux de change se rafraîchissent-ils automatiquement ?**
-R : Tous les 30 jours, lorsqu'un utilisateur se connecte, le système rafraîchit les taux pour A-1, A et A+1. Vous pouvez aussi déclencher manuellement un rafraîchissement à tout moment via Forcer la synchronisation des taux.
+R : Tous les 30 jours, lorsqu'un utilisateur se connecte, le système rafraîchit les taux pour A-1, A et A+1. Une année à laquelle manque le taux d'une devise utilisée est aussi récupérée dès qu'une liste ou un rapport en a besoin. Vous pouvez aussi déclencher manuellement un rafraîchissement à tout moment via Forcer la synchronisation des taux.
 
 **Q : Les changements de taux affectent-ils mes données stockées ?**
 R : Non. Les taux de change n'affectent que la **conversion et l'affichage**. Chaque ligne OPEX et CAPEX stocke sa propre devise et ses montants, qui ne changent jamais lors de la mise à jour des taux. Seules les valeurs converties affichées dans les rapports et les listes changent.
