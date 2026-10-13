@@ -611,7 +611,7 @@ Controle qué notificaciones por correo electrónico recibe.
 | **Tareas** | Asignación (como asignado, solicitante o visor), cambios de estado, comentarios |
 | **Presupuesto** | Alertas de vencimiento, cambios de estado, comentarios |
 
-Las **Alertas de vencimiento** envían un correo a los responsables de un contrato, de una línea OPEX o de una línea CAPEX 30, 14, 7 y 1 día(s) antes de sus fechas: el plazo de cancelación y la fecha de fin de un contrato, el fin de validez de una línea OPEX o CAPEX. Solo las reciben los responsables que activaron las notificaciones de Presupuesto y las **Alertas de vencimiento**. La comprobación se ejecuta cada día a las 08:00 UTC. Cada recordatorio se envía una sola vez al día a cada destinatario, aunque la comprobación vuelva a ejecutarse ese día, por ejemplo tras un reinicio.
+Las **Alertas de vencimiento** envían un correo a los responsables de un contrato, de una línea OPEX o de una línea CAPEX 30, 14, 7 y 1 día(s) antes de sus fechas: la próxima fecha límite de rescisión de un contrato, el fin de un contrato que no se renovará (el fin de su periodo, o su fin de validez si llega antes), el fin de validez de una línea OPEX o CAPEX. Un contrato con renovación tácita no recibe aviso del fin de cada periodo. Solo las reciben los responsables que activaron las notificaciones de Presupuesto y las **Alertas de vencimiento**. La comprobación se ejecuta cada día a las 08:00 UTC. Cada recordatorio se envía una sola vez al día a cada destinatario, aunque la comprobación vuelva a ejecutarse ese día, por ejemplo tras un reinicio.
 
 **Correo electrónico de revisión semanal**: Reciba un resumen periódico de su actividad y elementos próximos. Configure:
 - **Día de la semana** (p. ej., Lunes)

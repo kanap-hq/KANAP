@@ -61,7 +61,7 @@ Haga clic en **Ver todo** para abrir la página de Tareas.
 
 ### Próximas renovaciones
 
-Lista los próximos cinco plazos de cancelación de contratos que aún están en el futuro. Los plazos pasados se filtran automáticamente para que solo vea lo que está por venir.
+Lista los cinco contratos con el vencimiento más próximo, hoy incluido, en el orden de la columna **Próximo vencimiento** de la lista de contratos: un contrato con renovación tácita aparece con su próxima fecha límite de rescisión, cualquier otro contrato con su fin. Los contratos vencidos no aparecen.
 
 Haga clic en **Ver todo** para abrir la página de Contratos.
 

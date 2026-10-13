@@ -611,7 +611,7 @@ Contrôlez quelles notifications par e-mail vous recevez.
 | **Tâches** | Assignation (comme responsable, demandeur ou observateur), changements de statut, commentaires |
 | **Budget** | Alertes d'expiration, changements de statut, commentaires |
 
-Les **Alertes d'expiration** envoient un e-mail aux responsables d'un contrat, d'une ligne OPEX ou d'une ligne CAPEX 30, 14, 7 et 1 jour(s) avant ses dates : la date limite de résiliation et la date de fin d'un contrat, la fin de validité d'une ligne OPEX ou CAPEX. Seuls les responsables qui ont activé les notifications Budget et les **Alertes d'expiration** les reçoivent. La vérification a lieu chaque jour à 08h00 UTC. Chaque rappel est envoyé une seule fois par jour à chaque destinataire, même si la vérification s'exécute à nouveau ce jour-là, par exemple après un redémarrage.
+Les **Alertes d'expiration** envoient un e-mail aux responsables d'un contrat, d'une ligne OPEX ou d'une ligne CAPEX 30, 14, 7 et 1 jour(s) avant ses dates : la prochaine date limite de résiliation d'un contrat, la fin d'un contrat qui ne sera pas reconduit (la fin de son terme, ou sa fin de validité si elle vient avant), la fin de validité d'une ligne OPEX ou CAPEX. Un contrat à reconduction tacite n'est pas averti de la fin de chaque terme. Seuls les responsables qui ont activé les notifications Budget et les **Alertes d'expiration** les reçoivent. La vérification a lieu chaque jour à 08h00 UTC. Chaque rappel est envoyé une seule fois par jour à chaque destinataire, même si la vérification s'exécute à nouveau ce jour-là, par exemple après un redémarrage.
 
 **E-mail de revue hebdomadaire** : Recevez un résumé périodique de votre activité et des éléments à venir. Configurez :
 - **Jour de la semaine** (ex. : lundi)

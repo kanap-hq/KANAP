@@ -707,7 +707,7 @@
         "button": "Réglages",
         "title": "Réglages des contrats",
         "windowLabel": "Délai de décision avant la date limite de résiliation (jours)",
-        "windowHint": "Un contrat à reconduction tacite attend une décision ce nombre de jours avant sa date limite de résiliation. Son responsable reçoit alors une tâche pour décider du renouvellement. De 0 à 365 jours.",
+        "windowHint": "Un contrat attend une décision ce nombre de jours avant sa date limite de résiliation, ou avant sa fin s'il n'est pas reconduit tacitement. Son responsable reçoit alors une tâche pour décider. De 0 à 365 jours.",
         "invalid": "Saisissez un nombre entier de jours entre 0 et 365.",
         "saveFailed": "Les réglages n'ont pas pu être enregistrés."
       },

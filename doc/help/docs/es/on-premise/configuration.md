@@ -583,11 +583,12 @@ Por defecto, Docker asigna a sus 15 primeras redes rangos dentro de `172.16.0.0/
 
 ## Trabajos en segundo plano
 
-La API ejecuta 15 trabajos programados. Las horas siguientes son los valores predeterminados, en UTC (el reloj del contenedor de la API). Los administradores ven los trabajos en **Administración → Tareas programadas** (consulte [Tareas programadas](../scheduled-tasks.md)), donde cada uno puede desactivarse, reprogramarse o ejecutarse bajo demanda.
+La API ejecuta los trabajos programados siguientes. Las horas siguientes son los valores predeterminados, en UTC (el reloj del contenedor de la API). Los administradores ven los trabajos en **Administración → Tareas programadas** (consulte [Tareas programadas](../scheduled-tasks.md)), donde cada uno puede desactivarse, reprogramarse o ejecutarse bajo demanda.
 
 | Trabajo | Cuándo | Qué hace |
 |-----|------|--------------|
-| `check-expirations` | Diario 08:00 | Envía un correo a los responsables de contratos y líneas OPEX 30, 14, 7 y 1 día(s) antes de una fecha límite de cancelación, una fecha de fin o el fin de validez. Solo los reciben los usuarios que activaron estas notificaciones, una vez al día. |
+| `check-expirations` | Diario 08:00 | Envía un correo a los responsables de contratos y líneas presupuestarias 30, 14, 7 y 1 día(s) antes de la próxima fecha límite de rescisión de un contrato, el fin de un contrato que no se renovará o el fin de validez de una línea. Solo los reciben los usuarios que activaron estas notificaciones, una vez al día. |
+| `contract-renewal-tasks` | Diario 07:30 | Crea una tarea de decisión de renovación para el responsable de cada contrato cuya fecha límite de rescisión, o su fin en un contrato sin renovación, entra en el plazo de decisión. Una tarea por contrato y periodo. Vea [Contratos](../contracts.md#decisiones-de-renovacion). |
 | `send-weekly-reviews` | Cada hora | Envía el resumen de la revisión semanal a los usuarios que lo activaron, en su propio día y zona horaria. |
 | `lifecycle-status-sync` | Cada hora, y una vez al arrancar | Pasa a desactivados los datos maestros, contratos y líneas OPEX y CAPEX cuyo fin de validez ha pasado. |
 | `entra-directory-sync` | Diario 03:00 | Actualiza los atributos de los usuarios y desactiva las cuentas eliminadas o desactivadas en el directorio. Solo funciona cuando el SSO con Entra está conectado y aprobado. Consulte [SSO con Microsoft Entra](sso-entra.md). |
