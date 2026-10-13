@@ -12,7 +12,7 @@ function run() {
 
   // The contract's relations: read with the contracts, written by their members.
   const proto = ContractsController.prototype as any;
-  for (const route of ['relationCounts', 'listBudgetLines', 'listApplications', 'listAssets']) {
+  for (const route of ['relationCounts', 'listBudgetLines', 'listApplications', 'listAssets', 'share']) {
     assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, proto[route]), { resource: 'contracts', level: 'reader' }, route);
   }
   for (const route of ['bulkReplaceBudgetLines', 'bulkReplaceApplications', 'bulkReplaceAssets']) {

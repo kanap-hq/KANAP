@@ -16,6 +16,7 @@ import * as fs from 'fs';
 import { deriveStatusFromDisabledAt, resolveLifecycleState } from '../common/status';
 import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/status-filter';
 import { ContractUpsertDto } from './dto/contract.dto';
+import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { TasksUnifiedService } from '../tasks/tasks-unified.service';
 import { StorageService } from '../common/storage/storage.service';
 import { randomUUID } from 'crypto';
@@ -1090,5 +1091,53 @@ export class ContractsService {
   async relationCounts(contractId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     return contractRelationCounts(mg, await this.findContract(contractId, mg));
+  }
+
+  /**
+   * Send a link to the contract (`notifications.notifyShare`), like the other objects' "Send link":
+   * to people of the tenant who can sign in, and to plain email addresses. A contract of another
+   * tenant is not found.
+   */
+  async shareContract(contractId: string, dto: ShareItemDto, userId: string, opts?: { manager?: EntityManager }) {
+    const userIds = dto?.recipient_user_ids ?? [];
+    const rawEmails = dto?.recipient_emails ?? [];
+    if (userIds.length === 0 && rawEmails.length === 0) {
+      throw new BadRequestException('At least one recipient is required');
+    }
+    const mg = opts?.manager ?? this.repo.manager;
+    const contract = await this.findContract(contractId, mg);
+    const tenantId = contract.tenant_id;
+    const senderRows: Array<{ first_name: string | null; last_name: string | null }> = await mg.query(
+      'SELECT first_name, last_name FROM users WHERE tenant_id = $1 AND id = $2',
+      [tenantId, userId],
+    );
+    const senderName = senderRows.length > 0
+      ? `${senderRows[0].first_name || ''} ${senderRows[0].last_name || ''}`.trim() || 'Someone'
+      : 'Someone';
+    const validIds = userIds.filter((id) => isUuid(String(id)));
+    const recipients = validIds.length > 0
+      ? await mg.query(
+          `SELECT u.id AS "userId", u.email, u.first_name AS "firstName", u.last_name AS "lastName", u.locale
+             FROM users u
+             JOIN roles ro ON ro.id = u.role_id
+            WHERE u.tenant_id = $1 AND u.id = ANY($2::uuid[]) AND u.status = 'enabled'
+              AND (ro.is_system = false OR LOWER(ro.role_name) = 'administrator')`,
+          [tenantId, validIds],
+        )
+      : [];
+    if (recipients.length > 0 || rawEmails.length > 0) {
+      this.notifications.notifyShare({
+        itemType: 'contract',
+        itemId: contract.id,
+        itemName: contract.name,
+        senderName,
+        message: dto.message,
+        recipients,
+        rawEmails,
+        tenantId,
+        // No request manager: the send outlives the request (a contract link needs no lookup).
+      });
+    }
+    return { ok: true };
   }
 }

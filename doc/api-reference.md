@@ -1189,6 +1189,7 @@ Fire-and-forget email notifications to share a link to a Task, Project, or Reque
 - POST `/tasks/:id/share` — share a task **[Requires: tasks:reader]**
 - POST `/portfolio/projects/:id/share` — share a project **[Requires: portfolio_projects:reader]**
 - POST `/portfolio/requests/:id/share` — share a request **[Requires: portfolio_requests:reader]**
+- POST `/contracts/:id/share` — share a contract **[Requires: contracts:reader]**; the link opens `/ops/contracts/:id/overview`, recipients are people of the contract's tenant who can sign in, plus plain addresses; a contract of another tenant is a `404`
 
 All three endpoints accept the same body (`ShareItemDto`):
 ```json

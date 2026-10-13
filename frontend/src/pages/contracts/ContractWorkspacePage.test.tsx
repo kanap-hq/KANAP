@@ -141,6 +141,7 @@ describe('ContractWorkspacePage', () => {
     expect(screen.queryByRole('tab', { name: 'contracts.tabs.details' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'common:buttons.saveChanges' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'common:buttons.reset' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'share.sendLink' })).toBeInTheDocument();
     // The parties from the detail, in the header.
     expect(screen.getAllByText('SAP').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Fromage & Co SA').length).toBeGreaterThan(0);

@@ -13,6 +13,7 @@ import { sendPatchBuffer, usePatchBuffer } from '../../hooks/patchBuffer';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import { PortfolioMetadataItem, PortfolioStatusMetadata } from '../portfolio/workspace/PortfolioMetadataBar';
 import MetadataUserPicker from '../../components/workspace/MetadataUserPicker';
+import SendLinkButton from '../../components/workspace/SendLinkButton';
 import EntityTasksSection from '../../components/EntityTasksSection';
 import RelationsSectionTitle from '../portfolio/components/RelationsSectionTitle';
 import { PropertyRow } from '../../components/design';
@@ -322,6 +323,9 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
           <>
             {savingHint && (
               <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', alignSelf: 'center', mr: 0.5 }}>{savingHint}</Typography>
+            )}
+            {shownData && (
+              <SendLinkButton itemType="contract" itemId={shownData.id} itemName={shownData.name || t('contracts.workspace.contract')} />
             )}
             <IconButton aria-label={t('common:buttons.close')} title={t('common:buttons.close')} size="small" onClick={close}>
               <CloseIcon />

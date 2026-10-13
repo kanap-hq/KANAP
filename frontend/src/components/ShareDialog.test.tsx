@@ -121,3 +121,20 @@ describe('ShareDialog budget links', () => {
     expect(screen.getByText('BL-127')).toBeInTheDocument();
   });
 });
+
+describe('ShareDialog contracts', () => {
+  it('links the contract overview and sends through the contract route', async () => {
+    const apiPost = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
+    apiPost.mockResolvedValue({ data: { ok: true } });
+    const client = new QueryClient();
+    render(<QueryClientProvider client={client}><ThemeProvider theme={createAppTheme('light')}>
+      <ShareDialog open onClose={() => undefined} itemType="contract" itemId="c-1" itemName="SAP Maintenance" />
+    </ThemeProvider></QueryClientProvider>);
+    expect(screen.getByText(`${window.location.origin}/ops/contracts/c-1/overview`)).toBeInTheDocument();
+    const input = screen.getByPlaceholderText('share.searchUsersOrEmail') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'buyer@example.com' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.click(await screen.findByRole('button', { name: 'share.sendEmail' }));
+    await waitFor(() => expect(apiPost).toHaveBeenCalledWith('/contracts/c-1/share', expect.objectContaining({ recipient_emails: ['buyer@example.com'] })));
+  });
+});

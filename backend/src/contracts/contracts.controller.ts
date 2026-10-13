@@ -10,6 +10,7 @@ import { Tenant, TenantRequest } from '../common/decorators';
 import { CONTRACT_LOOKUP_ACCESS, CONTRACT_LOOKUP_READERS, assertLookupSearch } from '../common/lookup/lookup-requirements';
 import { CONTRACT_LOOKUP, lookupReference } from '../common/lookup/reference-lookups';
 import { ContractUpsertDto } from './dto/contract.dto';
+import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { StorageService } from '../common/storage/storage.service';
 import { contentDisposition } from '../common/content-disposition';
 import { ContractContactsService } from './contract-contacts.service';
@@ -80,6 +81,13 @@ export class ContractsController {
   @RequireLevel('contracts', 'reader')
   @Get(':id')
   get(@Param('id') id: string, @Req() req: any) { return this.svc.get(id, { manager: req?.queryRunner?.manager }); }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'reader')
+  @Post(':id/share')
+  share(@Param('id') id: string, @Body() body: ShareItemDto, @Req() req: any) {
+    return this.svc.shareContract(id, body, req.user?.sub ?? '', { manager: req?.queryRunner?.manager });
+  }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'member')
