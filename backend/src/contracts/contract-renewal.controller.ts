@@ -61,6 +61,14 @@ export class ContractRenewalController {
     return this.svc.act(id, 'end', body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
+  /** The renewal field's "yes" on a contract without renewal that has an end of validity: renewal on, the end removed. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'member')
+  @Post(':id/renewal/resume')
+  resume(@Param('id') id: string, @Req() req: any) {
+    return this.svc.resumeRenewal(id, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
+
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'member')
   @Post(':id/renewal/undo')

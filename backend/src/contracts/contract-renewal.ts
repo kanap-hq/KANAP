@@ -286,6 +286,14 @@ const STOP_COMMENTS: Record<string, string> = {
   es: 'Renovación tácita desactivada: el contrato terminará el {{date}}, salvo renovación.',
 };
 
+/** The comment on the decision task when the renewal is turned back on (`resumeRenewal`). */
+const RESUME_COMMENTS: Record<string, string> = {
+  en: 'Tacit renewal turned back on: the end on {{date}} is removed.',
+  fr: 'Reconduction tacite réactivée : la fin du {{date}} est retirée.',
+  de: 'Stillschweigende Verlängerung wieder aktiviert: Das Ende am {{date}} entfällt.',
+  es: 'Renovación tácita reactivada: se retira el fin del {{date}}.',
+};
+
 const DATE_LOCALES: Record<string, string> = { en: 'en-GB', fr: 'fr-FR', de: 'de-DE', es: 'es-ES' };
 
 function formatDay(ymd: string, language: string): string {
@@ -313,4 +321,10 @@ export function renewalTaskText(language: string, name: string, term: RenewalTer
 export function stopRenewalComment(language: string, endDate: string): string {
   const lang = STOP_COMMENTS[language] ? language : 'en';
   return STOP_COMMENTS[lang].replace('{{date}}', formatDay(endDate, lang));
+}
+
+/** The task comment of a renewal turned back on, `language` one of en, fr, de, es (English otherwise). */
+export function resumeRenewalComment(language: string, endDate: string): string {
+  const lang = RESUME_COMMENTS[language] ? language : 'en';
+  return RESUME_COMMENTS[lang].replace('{{date}}', formatDay(endDate, lang));
 }

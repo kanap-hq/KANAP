@@ -24,6 +24,7 @@ import {
   renewalTerms,
   renewalTaskText,
   resolveRenewalState,
+  resumeRenewalComment,
   stopRenewalComment,
   type RenewalAction,
   type RenewalDecisionRecord,
@@ -429,6 +430,68 @@ export class ContractRenewalService implements OnModuleInit {
         if (endTaskId !== openTaskId) await this.logTaskRow(mg, after, end, openTaskId, null);
       } else if (!endTaskId && end.deadline <= addDaysYmd(today, windowDays)) {
         await this.createDecisionTask(mg, after, end, 'end');
+      }
+    }
+    return this.view(mg, after, today, windowDays);
+  }
+
+  /**
+   * Turns the tacit renewal back on from the contract's properties (lot CR2, round 3): on a contract
+   * without renewal that has an end of validity (set by turning the renewal off, or by hand), the
+   * renewal goes on and the end of validity goes, in one write. While a decision is awaited on its
+   * end (`end` mode), this is that decision's "renew" (decision recorded, task closed, undoable).
+   * Otherwise one audit row (`renewal_resume.previous_end_date`), and the decision task still open
+   * on its end follows the renewal: it becomes the renewal decision's task (title, due on the
+   * cancellation deadline) when that deadline is within the window, and is closed otherwise, each
+   * time with a comment saying why. 409 when the renewal is already on, or without an end of
+   * validity (the renewal field turns it on directly there).
+   */
+  async resumeRenewal(id: string, userId: string | null, opts?: Opts): Promise<ContractRenewalView> {
+    const mg = opts?.manager ?? this.dataSource.manager;
+    const contract = await this.findContract(mg, id, true);
+    const tenantId = contract.tenant_id;
+    if (contract.auto_renewal) throw new ConflictException('The tacit renewal of this contract is already on.');
+    if (!contract.disabled_at) throw new ConflictException('This contract has no end of validity: turn its tacit renewal on instead.');
+    const windowDays = await readDecisionWindowDays(mg, tenantId);
+    const today = utcDateYmd(new Date());
+    const { state } = await this.loadState(mg, contract, today, windowDays);
+    if (state.kind === 'pending' && state.mode === 'end') return this.act(id, 'renew', {}, userId, opts);
+
+    const previousEnd = new Date(contract.disabled_at).toISOString().slice(0, 10);
+    // The end task, read before the write (its key is the term that contains the end).
+    const end = renewalEnd(contract, today);
+    const endRows = end ? await this.auditRows(mg, contract, [end.term_end]) : new Map<string, AuditRow[]>();
+    const endTaskId = end ? await this.openTask(mg, tenantId, ContractRenewalService.taskId(endRows.get(renewalSourceRef(end.term_end)))) : null;
+
+    const after = await this.writeRenewal(mg, contract, true, null);
+    await this.audit.log({
+      table: 'contracts', recordId: contract.id, action: 'update', before: contract,
+      after: { ...after, renewal_resume: { previous_end_date: previousEnd } }, userId,
+    }, { manager: mg });
+
+    if (endTaskId) {
+      const [user]: Array<{ locale: string | null }> = userId
+        ? await mg.query(`SELECT locale FROM users WHERE tenant_id = $1 AND id = $2`, [tenantId, userId])
+        : [];
+      const reason = resumeRenewalComment(resolveEmailLocale(user?.locale ?? null), previousEnd);
+      const { state: next, taskId: nextTaskId } = await this.loadState(mg, after, today, windowDays);
+      if (next.kind === 'pending' && next.mode === 'renewal' && (!nextTaskId || nextTaskId === endTaskId)) {
+        // The renewal decision is due: the task becomes its task.
+        const [assignee]: Array<{ locale: string | null }> = await mg.query(
+          `SELECT u.locale FROM tasks t JOIN users u ON u.tenant_id = t.tenant_id AND u.id = t.assignee_user_id WHERE t.tenant_id = $1 AND t.id = $2`,
+          [tenantId, endTaskId],
+        );
+        const text = renewalTaskText(resolveEmailLocale(assignee?.locale ?? user?.locale ?? null), after.name, next.term, 'renewal');
+        await this.tasks.updateForTarget(
+          { type: 'contract', id: after.id, payload: { id: endTaskId, title: text.title, due_date: next.term.deadline } as any },
+          userId ?? undefined,
+          { manager: mg, tenantId },
+        );
+        await this.updateTask(mg, endTaskId, tenantId, userId, { reason });
+        if (nextTaskId !== endTaskId) await this.logTaskRow(mg, after, next.term, endTaskId, null);
+      } else {
+        // No decision due on the renewal yet: nothing left to decide on the end.
+        await this.updateTask(mg, endTaskId, tenantId, userId, { status: 'done', reason });
       }
     }
     return this.view(mg, after, today, windowDays);

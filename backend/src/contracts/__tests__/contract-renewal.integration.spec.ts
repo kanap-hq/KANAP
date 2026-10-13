@@ -463,6 +463,87 @@ async function testEndOutsideTheWindow() {
   });
 }
 
+async function testResumeRenewal() {
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId, ownerId, ids } = await seed(runner, 'renewal-resume');
+    const { renewal, settings } = services(runner);
+    const opts = { manager: runner.manager };
+    // Second term, 12-month terms, 1 month notice: the deadline about 29 days away.
+    const start = addDaysYmd(addMonthsYmd(TODAY, -24), 60);
+    const insert = async (name: string) => (await runner.query(
+      `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, owner_user_id, start_date, duration_months, notice_period_months,
+                              auto_renewal, yearly_amount_at_signature, currency, status)
+       SELECT tenant_id, $3, company_id, supplier_id, owner_user_id, $2, 12, 1, true, 12000, 'EUR', 'enabled'
+         FROM contracts WHERE id = $1 RETURNING id`,
+      [ids.decide, start, name],
+    ))[0].id as string;
+    const row = async (id: string) => (await runner.query(`SELECT auto_renewal, disabled_at FROM contracts WHERE id = $1`, [id]))[0];
+    const taskOf = async (id: string) => (await decisionTasks(runner, id))[0];
+    const deadline = addMonthsYmd(addDaysYmd(addMonthsYmd(start, 24), -1), -1);
+
+    // 1. A decision awaited on its end: turning the renewal back on is its "renew".
+    const a = await insert('Resume in the window');
+    await renewal.runForTenant(runner.manager, tenantId);
+    const taskA = await taskOf(a);
+    const chosen = addDaysYmd(TODAY, 20);
+    await renewal.stopRenewal(a, { end_date: chosen }, ownerId, opts);
+    assert.equal((await renewal.get(a, opts)).mode, 'end');
+    const resumed = await renewal.resumeRenewal(a, ownerId, opts);
+    assert.ok(resumed.state === 'decided' && resumed.decision?.decision === 'renew' && resumed.can_undo, 'recorded as the renewal of the end');
+    assert.deepEqual(await row(a), { auto_renewal: true, disabled_at: null }, 'renewal on, the end removed');
+    assert.equal((await taskOf(a)).status, 'done', 'the task is closed');
+    assert.equal(taskA.id, (await taskOf(a)).id);
+    await renewal.act(a, 'undo', {}, ownerId, opts);
+    const undone = await row(a);
+    assert.equal(undone.auto_renewal, false, 'undone: the renewal off again');
+    assert.equal(new Date(undone.disabled_at).toISOString(), `${chosen}T12:00:00.000Z`, 'and the end back');
+
+    // 2. The end outside the window, the renewal deadline within it: the task becomes the renewal decision's again.
+    await settings.update(tenantId, { decision_window_days: 40 }, null, runner.manager);
+    const b = await insert('Resume back to the deadline');
+    await renewal.runForTenant(runner.manager, tenantId);
+    const taskB = await taskOf(b);
+    await renewal.stopRenewal(b, {}, ownerId, opts);
+    assert.equal((await renewal.get(b, opts)).state, 'none', 'the end (about 59 days) is outside 40 days');
+    assert.equal((await taskOf(b)).title, 'Decide whether to renew or let Resume back to the deadline end');
+    const before = Number((await runner.query(`SELECT count(*) AS n FROM audit_log WHERE tenant_id = $1 AND record_id = $2`, [tenantId, b]))[0].n);
+    const viewB = await renewal.resumeRenewal(b, ownerId, opts);
+    assert.ok(viewB.state === 'pending' && viewB.mode === 'renewal', 'the renewal decision is awaited again');
+    assert.deepEqual(await row(b), { auto_renewal: true, disabled_at: null });
+    assert.equal(Number((await runner.query(`SELECT count(*) AS n FROM audit_log WHERE tenant_id = $1 AND record_id = $2`, [tenantId, b]))[0].n), before + 1, 'one audit row');
+    const [resumeRow] = await runner.query(`SELECT after_json->'renewal_resume'->>'previous_end_date' AS d FROM audit_log WHERE tenant_id = $1 AND record_id = $2 AND after_json ? 'renewal_resume'`, [tenantId, b]);
+    assert.ok(resumeRow.d, 'the audit row names the end removed');
+    const backB = await taskOf(b);
+    assert.equal(backB.id, taskB.id, 'the same task');
+    assert.equal(backB.status, 'open');
+    assert.equal(backB.title, 'Decide on the renewal of Resume back to the deadline', 'the renewal decision title again');
+    assert.equal(backB.due_date, deadline, 'due on the cancellation deadline');
+    assert.equal(viewB.task?.id, taskB.id, 'the box names it');
+    // One transaction: the comments share a timestamp, so look for it among them.
+    const comments: Array<{ content: string }> = await runner.query(`SELECT content FROM portfolio_activities WHERE task_id = $1 AND type = 'comment'`, [taskB.id]);
+    assert.ok(comments.some((cm) => /^Tacit renewal turned back on: the end on \d{2}\/\d{2}\/\d{4} is removed\.$/.test(cm.content)), 'a comment saying why');
+    assert.equal((await renewal.runForTenant(runner.manager, tenantId)).created.filter((c) => c.contract_id === b).length, 0, 'the run creates no second task');
+
+    // 3. Nothing to decide on the renewal yet: the end task is closed.
+    const c = await insert('Resume far from the deadline');
+    await renewal.stopRenewal(c, { end_date: addDaysYmd(TODAY, 30) }, ownerId, opts);
+    const taskC = await taskOf(c);
+    assert.equal(taskC.title, 'Decide whether to renew or let Resume far from the deadline end', 'created: its end within 40 days');
+    await settings.update(tenantId, { decision_window_days: 10 }, null, runner.manager);
+    const viewC = await renewal.resumeRenewal(c, ownerId, opts);
+    assert.equal(viewC.state, 'none');
+    assert.equal((await taskOf(c)).status, 'done', 'the end task is closed');
+
+    // 4. An end of validity set by hand: the same.
+    await runner.query(`UPDATE contracts SET auto_renewal = false, disabled_at = $2 WHERE id = $1`, [ids.later, `${addDaysYmd(TODAY, 200)}T12:00:00.000Z`]);
+    await renewal.resumeRenewal(ids.later, ownerId, opts);
+    assert.deepEqual(await row(ids.later), { auto_renewal: true, disabled_at: null }, 'renewal on, the end removed');
+
+    await expectRefusal(runner, ConflictException, () => renewal.resumeRenewal(ids.later, ownerId, opts), 'already on');
+    await expectRefusal(runner, ConflictException, () => renewal.resumeRenewal(ids.noRenewal, ownerId, opts), 'no end of validity');
+  });
+}
+
 async function testTenantIsolation() {
   await inRolledBackTransaction(async (runner) => {
     const a = await seed(runner, 'renewal-a');
@@ -476,6 +557,7 @@ async function testTenantIsolation() {
     }
     await expectRefusal(runner, NotFoundException, () => renewal.get('not-a-uuid', opts), 'an invalid id');
     await expectRefusal(runner, NotFoundException, () => renewal.stopRenewal(a.ids.decide, {}, b.ownerId, opts), 'stop on another tenant');
+    await expectRefusal(runner, NotFoundException, () => renewal.resumeRenewal(a.ids.decide, b.ownerId, opts), 'resume on another tenant');
   });
 }
 
@@ -486,6 +568,7 @@ runSpecs('contract-renewal.integration', [
   ['a renewal decided leaves "to decide"', testConfirmedRenewalLeavesToDecide],
   ['a renewed contract keeps its renewal', testRenewedContractKeepsRenewal],
   ['an end chosen outside the window', testEndOutsideTheWindow],
+  ['the renewal turned back on', testResumeRenewal],
   ['tenant isolation', testTenantIsolation],
 ]).catch((err) => {
   console.error(err);

@@ -10,6 +10,7 @@ import {
   renewalTaskText,
   renewalTerms,
   resolveRenewalState,
+  resumeRenewalComment,
   stopRenewalComment,
   type RenewalDecisionRecord,
   type RenewalInput,
@@ -162,6 +163,7 @@ const only = (termEnd: string, rec: RenewalDecisionRecord) => (key: string) => (
   assert.equal(resolveRenewalState({ ...SAP, disabled_at: '2027-12-31T12:00:00.000Z' }, '2026-10-13', 90, only('2027-06-30', chosen)).kind, 'pending', 'another end since, after the term: voided, the decision awaited again');
 
   assert.equal(stopRenewalComment('fr', '2027-06-30'), 'Reconduction tacite désactivée : le contrat prendra fin le 30/06/2027, sauf renouvellement.');
+  assert.equal(resumeRenewalComment('fr', '2027-06-30'), 'Reconduction tacite réactivée : la fin du 30/06/2027 est retirée.');
   assert.match(stopRenewalComment('xx', '2027-06-30'), /^Tacit renewal turned off: the contract ends on 30\/06\/2027, unless renewed\.$/, 'English otherwise');
 }
 
@@ -191,7 +193,7 @@ const only = (termEnd: string, rec: RenewalDecisionRecord) => (key: string) => (
 {
   const level = (proto: any, route: string) => Reflect.getMetadata(REQUIRE_LEVEL_KEY, proto[route]);
   assert.deepEqual(level(ContractRenewalController.prototype, 'get'), { resource: 'contracts', level: 'reader' }, 'renewal state: contract readers');
-  for (const route of ['renew', 'terminate', 'renegotiate', 'end', 'undo', 'stop']) {
+  for (const route of ['renew', 'terminate', 'renegotiate', 'end', 'undo', 'stop', 'resume']) {
     assert.deepEqual(level(ContractRenewalController.prototype, route), { resource: 'contracts', level: 'member' }, `${route}: contract editors`);
   }
   assert.deepEqual(level(ContractSettingsController.prototype, 'get'), { resource: 'contracts', level: 'reader' }, 'settings read');
