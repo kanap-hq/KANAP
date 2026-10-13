@@ -126,4 +126,43 @@ describe('LoginPage', () => {
     expect(await screen.findByText('Destination page')).toBeInTheDocument();
     expect(screen.getByTestId('location')).toHaveTextContent('/');
   });
+
+  async function submitRefused(error: unknown) {
+    vi.mocked(api.post).mockRejectedValueOnce(error);
+    renderLogin('/login');
+    fireEvent.change(screen.getByLabelText('Username or email'), { target: { value: 'user@example.com' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'not the password' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    return screen.findByRole('alert');
+  }
+
+  it('shows the translated rate limit sentence on a 429, not the server text', async () => {
+    const alert = await submitRefused({
+      response: { status: 429, data: { statusCode: 429, message: 'ThrottlerException: Too Many Requests' } },
+    });
+    expect(alert).toHaveTextContent('auth:login.tooManyAttempts');
+    expect(alert).not.toHaveTextContent('ThrottlerException');
+    expect(mocks.login).not.toHaveBeenCalled();
+  });
+
+  it('translates a refusal that carries a code', async () => {
+    const alert = await submitRefused({
+      response: { status: 401, data: { code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' } },
+    });
+    expect(alert).toHaveTextContent('errors:INVALID_CREDENTIALS');
+  });
+
+  it('shows the plain failure sentence for a validation error or no answer', async () => {
+    const validation = await submitRefused({
+      response: { status: 400, data: { statusCode: 400, message: ['email must be an email'], error: 'Bad Request' } },
+    });
+    expect(validation).toHaveTextContent('auth:login.failed');
+    expect(validation).not.toHaveTextContent('email must be an email');
+  });
+
+  it('shows the plain failure sentence when the server does not answer', async () => {
+    const alert = await submitRefused({ message: 'Network Error', code: 'ERR_NETWORK' });
+    expect(alert).toHaveTextContent('auth:login.failed');
+    expect(alert).not.toHaveTextContent('Network Error');
+  });
 });

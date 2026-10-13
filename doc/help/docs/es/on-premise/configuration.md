@@ -407,7 +407,7 @@ Notas:
 | `APP_URL` | Solo multi-tenant (nube). **No se necesita on-premise**: se usa `APP_BASE_URL`. | *sin definir* |
 | `EMAIL_OVERRIDE` | Redirige todos los correos a esta dirección (solo desarrollo/QA, **nunca en producción**) | *sin definir* |
 
-**Dirección del cliente.** Con la configuración documentada (nginx en el mismo servidor, puerto de la API vinculado a `127.0.0.1`), defina `RATE_LIMIT_TRUST_PROXY=true`. El proxy debe enviar `X-Forwarded-For`; el ejemplo de nginx lo hace. Defina `false` cuando no haya nada delante de la API. Un valor incorrecto da a todos los usuarios la misma dirección, así que los 5 intentos de inicio de sesión por minuto se comparten entre todos.
+**Dirección del cliente.** Con la configuración documentada (nginx en el mismo servidor, puerto de la API vinculado a `127.0.0.1`), defina `RATE_LIMIT_TRUST_PROXY=true`. El proxy debe enviar `X-Forwarded-For`; el ejemplo de nginx lo hace. Defina `false` cuando no haya nada delante de la API. Un valor incorrecto da a todos los usuarios la misma dirección: las 60 solicitudes de inicio de sesión con contraseña por minuto se comparten entre todos, y 5 intentos fallidos en una cuenta la bloquean para todos durante 15 minutos.
 
 ## Opcional: capacidad y rendimiento
 

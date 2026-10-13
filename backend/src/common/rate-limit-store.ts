@@ -7,7 +7,8 @@ import { DataSource } from 'typeorm';
  * provisioning exchange, public forms, exports and imports, saved list filters, share links) kept in the
  * database, so that several API processes (API_WORKERS > 1) share one budget per key. With one
  * process the in-memory counter of @nestjs/throttler stays in use (app.module.ts): nothing
- * changes there.
+ * changes there. The password sign-in attempts per account and address use the same table and
+ * the same upsert (`DatabaseHitCounter` below, auth/login-attempt-limit.ts).
  *
  * One row per throttle key (already a SHA-256 of route and client, no address or user id in
  * clear) in the UNLOGGED table `rate_limit_hits`: counts need no crash safety. Each hit is one
@@ -54,11 +55,37 @@ const HIT_SQL = `
     GREATEST(0, COALESCE(EXTRACT(EPOCH FROM (blocked_until - now())) * 1000, 0))::float8 AS block_expires_in_ms`;
 
 type ThrottlerStorageRecord = Awaited<ReturnType<ThrottlerStorage['increment']>>;
+type HitRow = { hits: number; expires_in_ms: number; blocked: boolean; block_expires_in_ms: number };
+
+/** Refuses a key for a duration from now, or keeps a longer block it already has. */
+const BLOCK_SQL = `
+  INSERT INTO rate_limit_hits AS r (key, hits, window_ends_at, blocked_until)
+  VALUES ($1, 0, now(), now() + make_interval(secs => $2::double precision / 1000))
+  ON CONFLICT (key) DO UPDATE SET blocked_until = GREATEST(r.blocked_until, EXCLUDED.blocked_until)`;
+
+const PURGE_SQL = `DELETE FROM rate_limit_hits WHERE window_ends_at < now() - interval '1 hour' AND (blocked_until IS NULL OR blocked_until < now())`;
 
 const PURGE_EVERY_MS = 10 * 60_000;
 const WARN_EVERY_MS = 60_000;
 /** Longest wait for the database count before counting in memory. */
 export const RATE_LIMIT_DB_WAIT_MS = 1_500;
+
+/**
+ * The answer of `query`, or a rejection once `waitMs` has passed. A query that loses the race
+ * still runs: a hit may then count twice, never zero times.
+ */
+async function answerWithin<T>(query: Promise<T>, waitMs: number): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  query.catch(() => undefined);
+  try {
+    return await Promise.race([
+      query,
+      new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(`no answer within ${waitMs} ms`)), waitMs); }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 
 export class DatabaseThrottlerStorage implements ThrottlerStorage {
   private readonly logger = new Logger('RateLimit');
@@ -69,15 +96,8 @@ export class DatabaseThrottlerStorage implements ThrottlerStorage {
   constructor(private readonly dataSource: DataSource, private readonly waitMs = RATE_LIMIT_DB_WAIT_MS) {}
 
   async increment(key: string, ttl: number, limit: number, blockDuration: number, throttlerName: string): Promise<ThrottlerStorageRecord> {
-    let timer: NodeJS.Timeout | undefined;
     try {
-      const query = this.dataSource.query(HIT_SQL, [key, ttl, limit, blockDuration]) as Promise<Array<{ hits: number; expires_in_ms: number; blocked: boolean; block_expires_in_ms: number }>>;
-      // A query that loses the race still runs: the hit may then count twice, never zero times.
-      query.catch(() => undefined);
-      const [row] = await Promise.race([
-        query,
-        new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(`no answer within ${this.waitMs} ms`)), this.waitMs); }),
-      ]);
+      const [row] = await answerWithin(this.dataSource.query(HIT_SQL, [key, ttl, limit, blockDuration]) as Promise<HitRow[]>, this.waitMs);
       this.purgeNowAndThen();
       return {
         totalHits: Number(row.hits),
@@ -92,8 +112,6 @@ export class DatabaseThrottlerStorage implements ThrottlerStorage {
         this.logger.warn(`Rate limit counts unavailable in the database, counting in this process only: ${(error as Error)?.message ?? error}`);
       }
       return this.fallback.increment(key, ttl, limit, blockDuration, throttlerName);
-    } finally {
-      if (timer) clearTimeout(timer);
     }
   }
 
@@ -102,8 +120,135 @@ export class DatabaseThrottlerStorage implements ThrottlerStorage {
     const now = Date.now();
     if (now - this.lastPurgeAt < PURGE_EVERY_MS) return;
     this.lastPurgeAt = now;
-    this.dataSource
-      .query(`DELETE FROM rate_limit_hits WHERE window_ends_at < now() - interval '1 hour' AND (blocked_until IS NULL OR blocked_until < now())`)
-      .catch(() => undefined);
+    this.dataSource.query(PURGE_SQL).catch(() => undefined);
+  }
+}
+
+/** A limit of a `HitCounter`: `limit` hits in a window of `ttl` ms, then `blockDuration` ms refused. */
+export type HitRule = { limit: number; ttl: number; blockDuration: number };
+
+/** The hits counted in the window, whether the key is refused after this hit, and for how many more milliseconds. */
+export type HitOutcome = { hits: number; blocked: boolean; retryAfterMs: number };
+
+/**
+ * A count per key that can also be blocked or cleared, for limits that the outcome of a request
+ * changes (the password sign-in attempts of one account from one address,
+ * auth/login-attempt-limit.ts). The window is
+ * fixed, as in `rate_limit_hits`: it opens at the first hit; past the limit the key is refused
+ * for the block duration, hits are not counted while it is, and the next hit after the block
+ * opens a new window.
+ */
+export interface HitCounter {
+  hit(key: string, rule: HitRule): Promise<HitOutcome>;
+  /** Refuses the key from now on for `durationMs` (or longer, when it already is); its next hit after that opens a new window. */
+  block(key: string, durationMs: number): Promise<void>;
+  /** Forgets the key: its next hit opens a new window. */
+  clear(key: string): Promise<void>;
+}
+
+type MemoryEntry = { hits: number; windowEndsAt: number; blockedUntil: number | null };
+
+/** The counts of one process, in its memory (one API process). */
+export class MemoryHitCounter implements HitCounter {
+  private readonly entries = new Map<string, MemoryEntry>();
+  private lastPurgeAt: number;
+
+  constructor(private readonly now: () => number = Date.now) {
+    this.lastPurgeAt = now();
+  }
+
+  async hit(key: string, rule: HitRule): Promise<HitOutcome> {
+    const now = this.now();
+    this.purgeNowAndThen(now);
+    let entry = this.entries.get(key);
+    if (entry && entry.blockedUntil !== null && entry.blockedUntil > now) {
+      return { hits: entry.hits, blocked: true, retryAfterMs: entry.blockedUntil - now };
+    }
+    if (!entry || entry.blockedUntil !== null || entry.windowEndsAt <= now) {
+      entry = { hits: 0, windowEndsAt: now + rule.ttl, blockedUntil: null };
+      this.entries.set(key, entry);
+    }
+    entry.hits += 1;
+    if (entry.hits > rule.limit) entry.blockedUntil = now + rule.blockDuration;
+    const blocked = entry.blockedUntil !== null;
+    return { hits: entry.hits, blocked, retryAfterMs: blocked ? entry.blockedUntil! - now : 0 };
+  }
+
+  async block(key: string, durationMs: number): Promise<void> {
+    const now = this.now();
+    const entry = this.entries.get(key) ?? { hits: 0, windowEndsAt: now, blockedUntil: null };
+    entry.blockedUntil = Math.max(entry.blockedUntil ?? 0, now + durationMs);
+    this.entries.set(key, entry);
+  }
+
+  async clear(key: string): Promise<void> {
+    this.entries.delete(key);
+  }
+
+  /** Keys whose window and block have both passed go every 10 minutes. */
+  private purgeNowAndThen(now: number) {
+    if (now - this.lastPurgeAt < PURGE_EVERY_MS) return;
+    this.lastPurgeAt = now;
+    for (const [key, entry] of this.entries) {
+      if (entry.windowEndsAt <= now && (entry.blockedUntil === null || entry.blockedUntil <= now)) this.entries.delete(key);
+    }
+  }
+}
+
+/**
+ * The counts in `rate_limit_hits`, shared by every API process (API_WORKERS > 1), with the same
+ * upsert as `DatabaseThrottlerStorage` and the same fallback: when the database does not answer
+ * within 1.5 s, the hit is counted in this process's memory, with one warning a minute.
+ */
+export class DatabaseHitCounter implements HitCounter {
+  private readonly logger = new Logger('RateLimit');
+  private readonly fallback = new MemoryHitCounter();
+  private lastPurgeAt = Date.now();
+  private lastWarnAt = 0;
+
+  constructor(private readonly dataSource: DataSource, private readonly waitMs = RATE_LIMIT_DB_WAIT_MS) {}
+
+  async hit(key: string, rule: HitRule): Promise<HitOutcome> {
+    try {
+      const [row] = await answerWithin(this.dataSource.query(HIT_SQL, [key, rule.ttl, rule.limit, rule.blockDuration]) as Promise<HitRow[]>, this.waitMs);
+      this.purgeNowAndThen();
+      const blocked = row.blocked === true;
+      return { hits: Number(row.hits), blocked, retryAfterMs: blocked ? Number(row.block_expires_in_ms) : 0 };
+    } catch (error) {
+      this.warn(error);
+      return this.fallback.hit(key, rule);
+    }
+  }
+
+  async block(key: string, durationMs: number): Promise<void> {
+    await this.fallback.block(key, durationMs);
+    try {
+      await answerWithin(this.dataSource.query(BLOCK_SQL, [key, durationMs]), this.waitMs);
+    } catch (error) {
+      this.warn(error);
+    }
+  }
+
+  async clear(key: string): Promise<void> {
+    await this.fallback.clear(key);
+    try {
+      await answerWithin(this.dataSource.query(`DELETE FROM rate_limit_hits WHERE key = $1`, [key]), this.waitMs);
+    } catch (error) {
+      this.warn(error);
+    }
+  }
+
+  private warn(error: unknown) {
+    const now = Date.now();
+    if (now - this.lastWarnAt <= WARN_EVERY_MS) return;
+    this.lastWarnAt = now;
+    this.logger.warn(`Rate limit counts unavailable in the database, counting in this process only: ${(error as Error)?.message ?? error}`);
+  }
+
+  private purgeNowAndThen() {
+    const now = Date.now();
+    if (now - this.lastPurgeAt < PURGE_EVERY_MS) return;
+    this.lastPurgeAt = now;
+    this.dataSource.query(PURGE_SQL).catch(() => undefined);
   }
 }

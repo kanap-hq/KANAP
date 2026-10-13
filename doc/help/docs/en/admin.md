@@ -541,12 +541,14 @@ Setup steps for the Entra app registration are in [Microsoft Entra SSO](on-premi
 
 ### Sign-in limits
 
-KANAP limits repeated sign-in requests from the same IP address:
+KANAP limits repeated sign-in requests:
 
-- **Password sign-in**: 5 attempts per minute.
-- **Microsoft sign-in**: 60 requests per minute. The limit is higher because the staff of one organization often reach KANAP from the same outbound address.
+- **Password sign-in**: 60 requests per minute from the same IP address. After 5 failed attempts on one account from the same IP address within 15 minutes, that account cannot sign in from that address for 15 minutes. The same account can still sign in from another address, and other accounts from the same address. A successful sign-in resets the count.
+- **Microsoft sign-in**: 60 requests per minute from the same IP address.
 
-Once the limit is reached, the person waits a minute and tries again. Behind a reverse proxy, KANAP counts each person's own IP address, as long as the proxy passes it on. Sign-ins and failed sign-ins appear in the [Audit Log](#audit-log). Requests stopped by the limit are not recorded.
+The limits per address are high because the staff of one organization often reach KANAP from the same outbound address. Once a limit per address is reached, the person waits a minute and tries again. Behind a reverse proxy, KANAP counts each person's own IP address, as long as the proxy passes it on.
+
+Sign-ins and failed sign-ins appear in the [Audit Log](#audit-log). An attempt refused after 5 failed attempts appears as a failed sign-in with the reason **Too many sign-in attempts**. Requests stopped by a limit per address are not recorded.
 
 ---
 

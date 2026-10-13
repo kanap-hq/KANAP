@@ -2,18 +2,33 @@ import { useEffect, useState } from 'react';
 import { Alert, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import api from '../api';
 import { useAuth } from '../auth/AuthContext';
 import AuthFrame from '../components/AuthFrame';
 import { useTenant } from '../tenant/TenantContext';
 import { useFeatures } from '../config/FeaturesContext';
+import { getApiErrorMessage } from '../utils/apiErrorMessage';
 
 const marketingUrl = import.meta.env.VITE_MARKETING_URL ?? 'https://kanap.net';
 // Signing in always lands on the home page: no memory of the page the user was on.
 const postLoginPath = '/';
 
+/**
+ * The message of a refused sign-in: a rate limit has its own sentence, an answer with a code goes
+ * through the shared error messages, anything else (no answer, a validation error) is the plain
+ * failure sentence.
+ */
+function signInErrorMessage(err: any, t: TFunction): string {
+  const fallback = t('auth:login.failed');
+  if (err?.response?.status === 429) return t('auth:login.tooManyAttempts');
+  const code = err?.response?.data?.code;
+  if (typeof code === 'string' && code.trim()) return getApiErrorMessage(err, t, fallback);
+  return fallback;
+}
+
 export default function LoginPage() {
-  const { t } = useTranslation(['auth', 'common']);
+  const { t } = useTranslation(['auth', 'common', 'errors']);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +84,7 @@ export default function LoginPage() {
       login(res.data as { access_token: string; expires_in: number; refresh_expires_in?: number });
       navigate(postLoginPath, { replace: true });
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Login failed');
+      setError(signInErrorMessage(err, t));
     }
   };
 

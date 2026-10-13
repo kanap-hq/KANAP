@@ -309,6 +309,7 @@
       "sso_failed": "Sign-in with Microsoft failed",
       "sso_not_configured": "Sign-in with Microsoft not set up",
       "tenant_mismatch": "Microsoft directory does not match the workspace",
+      "too_many_attempts": "Too many sign-in attempts",
       "unknown_user": "No account with this address"
     },
     "shared": {

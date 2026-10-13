@@ -42,6 +42,11 @@ services:
     # Local dev config (untracked)
     env_file:
       - ../backend/env.dev
+    environment:
+      # The dev proxy (service nginx below, behind *.lvh.me and *.localhost) sends the browser's
+      # address in X-Forwarded-For: the sign-in limits and the audit log count that address
+      # rather than the proxy's. Overrides the value of env.dev.
+      RATE_LIMIT_TRUST_PROXY: "1"
     # Nested Windows-on-Linux dev: expose the outer Linux host gateway to the API
     # container. Override KANAP_LINUX_HOST_GATEWAY if the VM gateway changes.
     extra_hosts:

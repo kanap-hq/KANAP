@@ -541,12 +541,14 @@ Les étapes de configuration de l'enregistrement d'application Entra sont décri
 
 ### Limites de connexion
 
-KANAP limite les demandes de connexion répétées depuis la même adresse IP :
+KANAP limite les demandes de connexion répétées :
 
-- **Connexion par mot de passe** : 5 tentatives par minute.
-- **Connexion Microsoft** : 60 demandes par minute. La limite est plus haute parce que les collaborateurs d'une même organisation accèdent souvent à KANAP depuis la même adresse sortante.
+- **Connexion par mot de passe** : 60 demandes par minute depuis la même adresse IP. Après 5 échecs sur un compte depuis la même adresse IP en 15 minutes, ce compte ne peut plus se connecter depuis cette adresse pendant 15 minutes. Le même compte peut toujours se connecter depuis une autre adresse, et les autres comptes depuis la même adresse. Une connexion réussie remet le compteur à zéro.
+- **Connexion Microsoft** : 60 demandes par minute depuis la même adresse IP.
 
-Une fois la limite atteinte, la personne patiente une minute et réessaie. Derrière un reverse proxy, KANAP compte l'adresse IP de chaque personne, tant que le proxy la transmet. Les connexions et les échecs de connexion apparaissent dans le [Journal d'audit](#journal-daudit). Les demandes bloquées par la limite ne sont pas enregistrées.
+Les limites par adresse sont hautes parce que les collaborateurs d'une même organisation accèdent souvent à KANAP depuis la même adresse sortante. Une fois une limite par adresse atteinte, la personne patiente une minute et réessaie. Derrière un reverse proxy, KANAP compte l'adresse IP de chaque personne, tant que le proxy la transmet.
+
+Les connexions et les échecs de connexion apparaissent dans le [Journal d'audit](#journal-daudit). Une tentative refusée après 5 échecs apparaît comme un échec de connexion avec le motif **Trop de tentatives de connexion**. Les demandes bloquées par une limite par adresse ne sont pas enregistrées.
 
 ---
 

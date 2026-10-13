@@ -66,7 +66,7 @@ const content: SecurityContent = {
       'Workspace-Admin-Rolle getrennt von Modul-Admins',
       'SSO über Microsoft Entra ID (OIDC) in Cloud und Self-Hosting',
       'Lokale Passwort-Authentifizierung mit Argon2 + optionale Passwort-Reset-Flows',
-      'Anmeldeversuche werden pro IP-Adresse begrenzt: 5 Passwortversuche und 60 Microsoft-Anmeldeanfragen pro Minute. Hinter einem Reverse Proxy zählt das Limit die IP-Adresse jedes Benutzers',
+      'Anmeldeversuche werden pro IP-Adresse begrenzt: 60 Passwort-Anmeldeanfragen und 60 Microsoft-Anmeldeanfragen pro Minute. Nach 5 fehlgeschlagenen Passwortversuchen für ein Konto von einer IP-Adresse wartet diese Adresse 15 Minuten, bevor sie dieses Konto erneut versuchen kann. Hinter einem Reverse Proxy zählen die Limits die IP-Adresse jedes Benutzers',
       'Sitzungstokens werden nur in dem einen Signaturverfahren akzeptiert, mit dem KANAP sie ausstellt',
       'Plaid und MCP erzwingen dasselbe RBAC wie das UI, keine Privilegienerweiterung',
       'API-Tokens pro Nutzer gebunden, jederzeit widerrufbar',

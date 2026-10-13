@@ -541,12 +541,14 @@ Die Einrichtungsschritte für die Entra-App-Registrierung finden Sie unter [Micr
 
 ### Anmeldelimits
 
-KANAP begrenzt wiederholte Anmeldeanfragen von derselben IP-Adresse:
+KANAP begrenzt wiederholte Anmeldeanfragen:
 
-- **Anmeldung mit Passwort**: 5 Versuche pro Minute.
-- **Anmeldung mit Microsoft**: 60 Anfragen pro Minute. Das Limit ist höher, weil die Beschäftigten einer Organisation KANAP oft über dieselbe ausgehende Adresse erreichen.
+- **Anmeldung mit Passwort**: 60 Anfragen pro Minute von derselben IP-Adresse. Nach 5 Fehlversuchen für ein Konto von derselben IP-Adresse innerhalb von 15 Minuten kann sich dieses Konto 15 Minuten lang nicht von dieser Adresse anmelden. Dasselbe Konto kann sich weiterhin von einer anderen Adresse anmelden, andere Konten auch von derselben Adresse. Eine erfolgreiche Anmeldung setzt den Zähler zurück.
+- **Anmeldung mit Microsoft**: 60 Anfragen pro Minute von derselben IP-Adresse.
 
-Ist das Limit erreicht, wartet die Person eine Minute und versucht es erneut. Hinter einem Reverse Proxy zählt KANAP die IP-Adresse jeder Person, sofern der Proxy sie weitergibt. Anmeldungen und fehlgeschlagene Anmeldungen erscheinen im [Audit-Protokoll](#audit-protokoll). Anfragen, die das Limit stoppt, werden nicht aufgezeichnet.
+Die Limits pro Adresse sind hoch, weil die Beschäftigten einer Organisation KANAP oft über dieselbe ausgehende Adresse erreichen. Ist ein Limit pro Adresse erreicht, wartet die Person eine Minute und versucht es erneut. Hinter einem Reverse Proxy zählt KANAP die IP-Adresse jeder Person, sofern der Proxy sie weitergibt.
+
+Anmeldungen und fehlgeschlagene Anmeldungen erscheinen im [Audit-Protokoll](#audit-protokoll). Ein nach 5 Fehlversuchen abgelehnter Versuch erscheint als fehlgeschlagene Anmeldung mit dem Grund **Zu viele Anmeldeversuche**. Anfragen, die ein Limit pro Adresse stoppt, werden nicht aufgezeichnet.
 
 ---
 
