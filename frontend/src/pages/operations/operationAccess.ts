@@ -4,7 +4,7 @@ type HasLevel = (resource: string, level: Level) => boolean;
 /** Budget administration belongs to the budget module: budget line or budget administration readers. */
 const hasBudgetAccess = (hasLevel: HasLevel) => ['budget', 'budget_ops'].some((resource) => hasLevel(resource, 'reader'));
 const budgetAdmin = (hasLevel: HasLevel) => hasLevel('budget_ops', 'admin');
-/** Column copy, allocation copy and reset: the Admin level on the budget lines, both types alike. */
+/** Copy the budget and reset a column: the Admin level on the budget lines, both types alike. */
 const itemsAdmin = (hasLevel: HasLevel) => hasLevel('budget', 'admin');
 const masterDataAdmin = (hasLevel: HasLevel) =>
   hasBudgetAccess(hasLevel)
@@ -19,9 +19,7 @@ const OPERATION_ACCESS: Record<string, (hasLevel: HasLevel) => boolean> = {
   columns: budgetAdmin,
   'allocation-default': budgetAdmin,
   freeze: budgetAdmin,
-  'copy-budget-columns': itemsAdmin,
-  'column-init': itemsAdmin,
-  'copy-allocations': itemsAdmin,
+  'copy-budget': itemsAdmin,
   'column-reset': itemsAdmin,
   'master-data-freeze': masterDataAdmin,
   'metrics-copy': masterDataAdmin,

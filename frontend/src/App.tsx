@@ -45,10 +45,9 @@ const CompanyChargebackReport = React.lazy(() => import('./pages/reports/Company
 const ContractsPage = React.lazy(() => import('./pages/ContractsPage'));
 const ContractWorkspacePage = React.lazy(() => import('./pages/contracts/ContractWorkspacePage'));
 const BudgetOperationsLandingPage = React.lazy(() => import('./pages/operations/BudgetOperationsLandingPage'));
-const CopyBudgetColumnsPage = React.lazy(() => import('./pages/operations/CopyBudgetColumnsPage'));
+const CopyBudgetPage = React.lazy(() => import('./pages/operations/CopyBudgetPage'));
 const BudgetColumnResetPage = React.lazy(() => import('./pages/operations/BudgetColumnResetPage'));
 const BudgetFreezePage = React.lazy(() => import('./pages/operations/BudgetFreezePage'));
-const CopyAllocationsPage = React.lazy(() => import('./pages/operations/CopyAllocationsPage'));
 const AllocationDefaultPage = React.lazy(() => import('./pages/operations/AllocationDefaultPage'));
 const CurrencySettingsPage = React.lazy(() => import('./pages/operations/CurrencySettingsPage'));
 const BudgetColumnsSettingsPage = React.lazy(() => import('./pages/operations/BudgetColumnsSettingsPage'));
@@ -240,7 +239,7 @@ function AppRoutes() {
         <Route path="/forgot-password" element={config.features.email ? <ForgotPasswordPage /> : <Navigate to="/login" replace />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/accept-invite" element={<AcceptInvitePage />} />
-        {/* Budget settings and operations formerly under Master data: redirect before the permission check. */}
+        {/* Budget settings and operations formerly under Master data, and the two copy operations merged: redirect before the permission check. */}
         {legacyBudgetRedirectRoutes()}
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
@@ -283,9 +282,7 @@ function AppRoutes() {
           <Route path="/ops/reports/staffing" element={<StaffingByMonthReport />} />
           <Route path="/ops/reports/cost-per-fte" element={<CostPerFteReport />} />
           <Route path="/ops/operations" element={<BudgetOperationsLandingPage />} />
-          <Route path="/ops/operations/copy-budget-columns" element={<CopyBudgetColumnsPage />} />
-          <Route path="/ops/operations/column-init" element={<CopyBudgetColumnsPage />} />
-          <Route path="/ops/operations/copy-allocations" element={<CopyAllocationsPage />} />
+          <Route path="/ops/operations/copy-budget" element={<CopyBudgetPage />} />
           <Route path="/ops/operations/column-reset" element={<BudgetColumnResetPage />} />
           <Route path="/ops/operations/freeze" element={<BudgetFreezePage />} />
           <Route path="/ops/operations/allocation-default" element={<AllocationDefaultPage />} />
