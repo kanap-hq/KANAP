@@ -283,8 +283,7 @@ Der Reiter Verknüpfungen verbindet diese Anwendung mit Ihren Finanz-, Vertrags-
 **Komponenten** (nur wenn „Kann Unteranwendungen haben" aktiviert ist): eine Tabelle, die die Unteranwendungen dieser Suite mit ihrem Lebenszyklus und ihrer Kritikalität auflistet. Klicken Sie auf eine Zeile, um den Arbeitsbereich der Unteranwendung zu öffnen.
 
 **Verknüpfungen**:
-- **OPEX-Zeilen**: Laufende Kosten, die mit dieser Anwendung verbunden sind
-- **CAPEX-Zeilen**: Investitionsausgabenprojekte
+- **Budgetzeilen**: die OPEX- und CAPEX-Zeilen dieser Anwendung in einer Liste. Suchen Sie nach Titel oder Referenz (`BL-12`); jeder Vorschlag zeigt seinen Typ
 - **Verträge**: Lieferantenverträge
 - **Projekte**: Portfolio-Projekte, die mit dieser Anwendung verknüpft sind
 - **Aufgaben**: Aufgaben, die mit dieser Anwendung verknüpft sind. Diese Liste ist hier schreibgeschützt -- Aufgaben gewinnen oder verlieren diese Verknüpfung, wenn Sie das Feld **App / Dienst** auf einer Aufgabe in der Aufgabenseite festlegen.

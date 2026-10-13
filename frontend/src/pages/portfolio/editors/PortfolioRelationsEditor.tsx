@@ -24,6 +24,7 @@ import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx } from '../../../theme/formSx';
 import { RelevantWebsitesList, useKanapDialogs } from '../../../components/design';
 import RelationsSectionTitle from '../components/RelationsSectionTitle';
+import BudgetLinesRelationField, { budgetLineIdsOf, mergeLinkedBudgetLines, sameBudgetLineIds, type LinkedBudgetLine } from '../../../components/finance/BudgetLinesRelationField';
 
 export type PortfolioRelationsEditorHandle = {
   save: () => Promise<void>;
@@ -111,15 +112,8 @@ export default forwardRef<PortfolioRelationsEditorHandle, Props>(function Portfo
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const [linkedOpex, setLinkedOpex] = React.useState<Array<{ id: string; product_name: string }>>([]);
-  const [baselineOpex, setBaselineOpex] = React.useState<Array<{ id: string; product_name: string }>>([]);
-  const [opexOptions, setOpexOptions] = React.useState<Array<{ id: string; product_name: string }>>([]);
-  const [loadingOpexOptions, setLoadingOpexOptions] = React.useState(false);
-
-  const [linkedCapex, setLinkedCapex] = React.useState<Array<{ id: string; description: string }>>([]);
-  const [baselineCapex, setBaselineCapex] = React.useState<Array<{ id: string; description: string }>>([]);
-  const [capexOptions, setCapexOptions] = React.useState<Array<{ id: string; description: string }>>([]);
-  const [loadingCapexOptions, setLoadingCapexOptions] = React.useState(false);
+  const [linkedLines, setLinkedLines] = React.useState<LinkedBudgetLine[]>([]);
+  const [baselineLines, setBaselineLines] = React.useState<LinkedBudgetLine[]>([]);
 
   const [linkedApplications, setLinkedApplications] = React.useState<NamedItem[]>([]);
   const [baselineApplications, setBaselineApplications] = React.useState<NamedItem[]>([]);
@@ -143,21 +137,18 @@ export default forwardRef<PortfolioRelationsEditorHandle, Props>(function Portfo
   const linkNameInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const dirty = React.useMemo(() => (
-    !sameIdList(linkedOpex, baselineOpex)
-    || !sameIdList(linkedCapex, baselineCapex)
+    !sameBudgetLineIds(linkedLines, baselineLines)
     || !sameIdList(linkedApplications, baselineApplications)
     || !sameIdList(linkedAssets, baselineAssets)
     || JSON.stringify(links) !== JSON.stringify(baselineLinks)
   ), [
     baselineApplications,
     baselineAssets,
-    baselineCapex,
+    baselineLines,
     baselineLinks,
-    baselineOpex,
     linkedApplications,
     linkedAssets,
-    linkedCapex,
-    linkedOpex,
+    linkedLines,
     links,
   ]);
 
@@ -177,22 +168,6 @@ export default forwardRef<PortfolioRelationsEditorHandle, Props>(function Portfo
     return () => window.clearTimeout(timer);
   }, [editingLinkIndex, linkDialogOpen]);
 
-  const fetchAllPaged = React.useCallback(async (endpoint: string, sortField: string) => {
-    const all: any[] = [];
-    let page = 1;
-    const limit = 100;
-    let total = Infinity;
-    while ((page - 1) * limit < total) {
-      const res = await api.get(endpoint, { params: { page, limit, sort: `${sortField}:ASC` } });
-      const items = (res.data?.items || []) as any[];
-      total = Number(res.data?.total || items.length);
-      all.push(...items);
-      if (items.length < limit) break;
-      page += 1;
-    }
-    return all;
-  }, []);
-
   const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -205,21 +180,16 @@ export default forwardRef<PortfolioRelationsEditorHandle, Props>(function Portfo
 
       if (entityRes.status === 'fulfilled') {
         const data = entityRes.value.data || {};
-        const opexItems = (data?.opex_items || []).map((item: any) => ({ id: item.id, product_name: item.product_name }));
-        const capexItems = (data?.capex_items || []).map((item: any) => ({ id: item.id, description: item.description }));
+        const lines = mergeLinkedBudgetLines(data?.opex_items, data?.capex_items);
         const linkItems = (data?.urls || []).map((item: any) => ({ id: item.id, label: item.label, url: item.url }));
-        setLinkedOpex(opexItems);
-        setBaselineOpex(opexItems);
-        setLinkedCapex(capexItems);
-        setBaselineCapex(capexItems);
+        setLinkedLines(lines);
+        setBaselineLines(lines);
         setLinks(linkItems);
         setBaselineLinks(linkItems);
         setAttachments(data?.attachments || []);
       } else {
-        setLinkedOpex([]);
-        setBaselineOpex([]);
-        setLinkedCapex([]);
-        setBaselineCapex([]);
+        setLinkedLines([]);
+        setBaselineLines([]);
         setLinks([]);
         setBaselineLinks([]);
         setAttachments([]);
@@ -260,38 +230,6 @@ export default forwardRef<PortfolioRelationsEditorHandle, Props>(function Portfo
     void load();
   }, [load]);
 
-  const loadOpexOptions = React.useCallback(async () => {
-    setLoadingOpexOptions(true);
-    try {
-      const allSpend = await fetchAllPaged('/spend-items', 'product_name');
-      const opexMap = new Map<string, { id: string; product_name: string }>();
-      for (const item of allSpend) {
-        opexMap.set(item.id, { id: item.id, product_name: item.product_name || item.id });
-      }
-      setOpexOptions([...opexMap.values()].sort((a, b) => a.product_name.localeCompare(b.product_name)));
-    } catch {
-      setOpexOptions([]);
-    } finally {
-      setLoadingOpexOptions(false);
-    }
-  }, [fetchAllPaged]);
-
-  const loadCapexOptions = React.useCallback(async () => {
-    setLoadingCapexOptions(true);
-    try {
-      const allCapex = await fetchAllPaged('/capex-items', 'description');
-      const capexMap = new Map<string, { id: string; description: string }>();
-      for (const item of allCapex) {
-        capexMap.set(item.id, { id: item.id, description: item.description || item.id });
-      }
-      setCapexOptions([...capexMap.values()].sort((a, b) => a.description.localeCompare(b.description)));
-    } catch {
-      setCapexOptions([]);
-    } finally {
-      setLoadingCapexOptions(false);
-    }
-  }, [fetchAllPaged]);
-
   const loadNamedOptions = React.useCallback(async (
     endpoint: '/applications' | '/assets',
     query: string,
@@ -320,15 +258,14 @@ export default forwardRef<PortfolioRelationsEditorHandle, Props>(function Portfo
     setSaving(true);
     setError(null);
     try {
+      // One picker for both natures; each route replaces the links of its own nature only.
       await api.post(`${endpointBase}/opex/bulk-replace`, {
-        opex_ids: linkedOpex.map((item) => item.id),
+        opex_ids: budgetLineIdsOf(linkedLines, 'opex'),
       });
-      setBaselineOpex(linkedOpex);
-
       await api.post(`${endpointBase}/capex/bulk-replace`, {
-        capex_ids: linkedCapex.map((item) => item.id),
+        capex_ids: budgetLineIdsOf(linkedLines, 'capex'),
       });
-      setBaselineCapex(linkedCapex);
+      setBaselineLines(linkedLines);
 
       await api.post(`${endpointBase}/applications/bulk-replace`, {
         application_ids: linkedApplications.map((item) => item.id),
@@ -356,7 +293,7 @@ export default forwardRef<PortfolioRelationsEditorHandle, Props>(function Portfo
     } finally {
       setSaving(false);
     }
-  }, [endpointBase, linkedApplications, linkedAssets, linkedCapex, linkedOpex, links, onRelationsChange, readOnly, t]);
+  }, [endpointBase, linkedApplications, linkedAssets, linkedLines, links, onRelationsChange, readOnly, t]);
 
   React.useEffect(() => {
     if (!autoSave || !dirty || saving || loading || readOnly) return undefined;
@@ -441,92 +378,9 @@ export default forwardRef<PortfolioRelationsEditorHandle, Props>(function Portfo
 
         <Stack spacing={1.25}>
           <RelationsSectionTitle>{t('editors.relations.sections.budgetItems')}</RelationsSectionTitle>
-          <Autocomplete
-            multiple
-            options={opexOptions}
-            value={linkedOpex}
-            getOptionLabel={(option) => option.product_name}
-            onChange={(_, value) => setLinkedOpex(value as any)}
-            onOpen={() => {
-              if (opexOptions.length === 0 && !loadingOpexOptions) {
-                void loadOpexOptions();
-              }
-            }}
-            renderOption={(props, option) => (
-              <li {...props} key={option.id}>{option.product_name}</li>
-            )}
-            renderTags={(value, getTagProps) => value.map((option, index) => (
-              <Chip {...getTagProps({ index })} key={option.id} label={option.product_name} sx={relationTagSx} />
-            ))}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                placeholder={t('editors.relations.placeholders.opexItems')}
-                variant="standard"
-                inputProps={{
-                  ...params.inputProps,
-                  'aria-label': t('editors.relations.fields.opexItems'),
-                }}
-                InputProps={{
-                  ...params.InputProps,
-                  endAdornment: (
-                    <>
-                      {loadingOpexOptions ? <CircularProgress color="inherit" size={16} /> : null}
-                      {params.InputProps.endAdornment}
-                    </>
-                  ),
-                }}
-                sx={drawerFieldValueSx}
-              />
-            )}
-            ListboxProps={{ sx: drawerAutocompleteListboxSx }}
-            isOptionEqualToValue={(option, value) => option.id === (value as any).id}
-            filterSelectedOptions
-            disabled={readOnly}
-            sx={relationAutocompleteSx}
-          />
-
-          <Autocomplete
-            multiple
-            options={capexOptions}
-            value={linkedCapex}
-            getOptionLabel={(option) => option.description}
-            onChange={(_, value) => setLinkedCapex(value as any)}
-            onOpen={() => {
-              if (capexOptions.length === 0 && !loadingCapexOptions) {
-                void loadCapexOptions();
-              }
-            }}
-            renderOption={(props, option) => (
-              <li {...props} key={option.id}>{option.description}</li>
-            )}
-            renderTags={(value, getTagProps) => value.map((option, index) => (
-              <Chip {...getTagProps({ index })} key={option.id} label={option.description} sx={relationTagSx} />
-            ))}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                placeholder={t('editors.relations.placeholders.capexItems')}
-                variant="standard"
-                inputProps={{
-                  ...params.inputProps,
-                  'aria-label': t('editors.relations.fields.capexItems'),
-                }}
-                InputProps={{
-                  ...params.InputProps,
-                  endAdornment: (
-                    <>
-                      {loadingCapexOptions ? <CircularProgress color="inherit" size={16} /> : null}
-                      {params.InputProps.endAdornment}
-                    </>
-                  ),
-                }}
-                sx={drawerFieldValueSx}
-              />
-            )}
-            ListboxProps={{ sx: drawerAutocompleteListboxSx }}
-            isOptionEqualToValue={(option, value) => option.id === (value as any).id}
-            filterSelectedOptions
+          <BudgetLinesRelationField
+            value={linkedLines}
+            onChange={setLinkedLines}
             disabled={readOnly}
             sx={relationAutocompleteSx}
           />

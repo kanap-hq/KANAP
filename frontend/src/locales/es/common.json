@@ -479,7 +479,10 @@
     "costCentersLoadFailed": "No se pudieron cargar los centros de coste.",
     "notSet": "Sin definir",
     "moreResults": "Escriba para acotar: hay más resultados",
-    "valueUnavailable": "Valor ya no disponible"
+    "valueUnavailable": "Valor ya no disponible",
+    "budgetLines": "Líneas presupuestarias",
+    "searchBudgetLines": "Buscar líneas presupuestarias",
+    "noBudgetLinesFound": "No se encontraron líneas presupuestarias"
   },
   "documentEditor": {
     "expandDocument": "Expandir documento",

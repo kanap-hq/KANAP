@@ -479,7 +479,10 @@
     "costCentersLoadFailed": "Les centres de coûts n'ont pas pu être chargés.",
     "notSet": "Non défini",
     "moreResults": "Tapez pour affiner : d'autres résultats existent",
-    "valueUnavailable": "Valeur plus disponible"
+    "valueUnavailable": "Valeur plus disponible",
+    "budgetLines": "Lignes budgétaires",
+    "searchBudgetLines": "Rechercher des lignes budgétaires",
+    "noBudgetLinesFound": "Aucune ligne budgétaire trouvée"
   },
   "documentEditor": {
     "expandDocument": "Agrandir le document",

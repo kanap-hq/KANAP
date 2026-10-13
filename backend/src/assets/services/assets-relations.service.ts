@@ -154,8 +154,8 @@ export class AssetsRelationsService extends AssetsBaseService {
     await this.ensureAsset(assetId, opts?.manager, tenantId);
     const mg = this.getManager(opts);
 
-    const rows: Array<{ id: string; product_name: string }> = await mg.query(
-      `SELECT si.id, si.product_name
+    const rows: Array<{ id: string; product_name: string; item_number: number }> = await mg.query(
+      `SELECT si.id, si.product_name, si.item_number
        FROM asset_spend_items asi
        JOIN spend_items si ON si.id = asi.spend_item_id
        WHERE asi.asset_id = $1 AND asi.tenant_id = $2 AND si.tenant_id = $2 AND si.nature = 'opex'
@@ -231,8 +231,8 @@ export class AssetsRelationsService extends AssetsBaseService {
     const mg = this.getManager(opts);
 
     // The CAPEX lines (the same link table as the OPEX ones since lot Z1); the title as `description`.
-    const rows: Array<{ id: string; description: string }> = await mg.query(
-      `SELECT ci.id, ci.product_name AS description
+    const rows: Array<{ id: string; description: string; item_number: number }> = await mg.query(
+      `SELECT ci.id, ci.product_name AS description, ci.item_number
        FROM asset_spend_items aci
        JOIN spend_items ci ON ci.id = aci.spend_item_id
        WHERE aci.asset_id = $1 AND aci.tenant_id = $2 AND ci.tenant_id = $2 AND ci.nature = 'capex'
