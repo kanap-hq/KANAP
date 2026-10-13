@@ -26,6 +26,7 @@ import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { KanapDialog, PropertyRow, RelevantWebsitesList, useKanapDialogs } from '../../../components/design';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx } from '../../../theme/formSx';
 import IncidentRelationsSection from './IncidentRelationsSection';
+import BudgetLinesRelationField, { budgetLineIdsOf, mergeLinkedBudgetLines, sameBudgetLineIds, type LinkedBudgetLine } from '../../../components/finance/BudgetLinesRelationField';
 export type AssetRelationsPanelHandle = {
   save: () => Promise<void>;
   reset: () => void;
@@ -130,13 +131,8 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
   const [assetSearch, setAssetSearch] = React.useState('');
 
   // Financial links
-  const [linkedOpex, setLinkedOpex] = React.useState<Array<{ id: string; product_name: string }>>([]);
-  const [baselineOpex, setBaselineOpex] = React.useState<Array<{ id: string; product_name: string }>>([]);
-  const [opexOptions, setOpexOptions] = React.useState<Array<{ id: string; product_name: string }>>([]);
-
-  const [linkedCapex, setLinkedCapex] = React.useState<Array<{ id: string; description: string }>>([]);
-  const [baselineCapex, setBaselineCapex] = React.useState<Array<{ id: string; description: string }>>([]);
-  const [capexOptions, setCapexOptions] = React.useState<Array<{ id: string; description: string }>>([]);
+  const [linkedLines, setLinkedLines] = React.useState<LinkedBudgetLine[]>([]);
+  const [baselineLines, setBaselineLines] = React.useState<LinkedBudgetLine[]>([]);
 
   const [linkedContracts, setLinkedContracts] = React.useState<Array<{ id: string; name: string }>>([]);
   const [baselineContracts, setBaselineContracts] = React.useState<Array<{ id: string; name: string }>>([]);
@@ -173,13 +169,12 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
     const dependsOnIds = dependsOnAssets.map((a) => a.id).sort().join(',');
     const baselineDependsOnIds = baselineDependsOn.map((a) => a.id).sort().join(',');
     const a = containsIds !== baselineContainsIds || dependsOnIds !== baselineDependsOnIds;
-    const b = JSON.stringify(linkedOpex.map((x) => x.id)) !== JSON.stringify(baselineOpex.map((x) => x.id));
-    const c = JSON.stringify(linkedCapex.map((x) => x.id)) !== JSON.stringify(baselineCapex.map((x) => x.id));
+    const b = !sameBudgetLineIds(linkedLines, baselineLines);
     const d = JSON.stringify(linkedContracts.map((x) => x.id)) !== JSON.stringify(baselineContracts.map((x) => x.id));
     const e = JSON.stringify(linkedProjects.map((x) => x.id)) !== JSON.stringify(baselineProjects.map((x) => x.id));
     const f = JSON.stringify(urls) !== JSON.stringify(baselineUrls);
-    return a || b || c || d || e || f;
-  }, [containsAssets, baselineContains, dependsOnAssets, baselineDependsOn, linkedOpex, baselineOpex, linkedCapex, baselineCapex, linkedContracts, baselineContracts, linkedProjects, baselineProjects, urls, baselineUrls]);
+    return a || b || d || e || f;
+  }, [containsAssets, baselineContains, dependsOnAssets, baselineDependsOn, linkedLines, baselineLines, linkedContracts, baselineContracts, linkedProjects, baselineProjects, urls, baselineUrls]);
 
   React.useEffect(() => {
     onDirtyChange?.(dirty);
@@ -255,21 +250,16 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
         setDependedOnBy(dependedOnByList);
       } catch { /* ignore */ }
 
-      // OPEX items
+      // Budget lines (both natures)
       try {
-        const res = await api.get(`/assets/${assetId}/spend-items`);
-        const items = (res.data?.items || []) as Array<{ id: string; product_name: string }>;
-        setLinkedOpex(items);
-        setBaselineOpex(items);
-      } catch { setLinkedOpex([]); setBaselineOpex([]); }
-
-      // CAPEX items
-      try {
-        const res = await api.get(`/assets/${assetId}/capex-items`);
-        const items = (res.data?.items || []) as Array<{ id: string; description: string }>;
-        setLinkedCapex(items);
-        setBaselineCapex(items);
-      } catch { setLinkedCapex([]); setBaselineCapex([]); }
+        const [opexRes, capexRes] = await Promise.all([
+          api.get(`/assets/${assetId}/spend-items`),
+          api.get(`/assets/${assetId}/capex-items`),
+        ]);
+        const lines = mergeLinkedBudgetLines(opexRes.data?.items, capexRes.data?.items);
+        setLinkedLines(lines);
+        setBaselineLines(lines);
+      } catch { setLinkedLines([]); setBaselineLines([]); }
 
       // Contracts
       try {
@@ -348,27 +338,19 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
     };
     (async () => {
       try {
-        const [allSpend, allCapex, allContracts, allProjects] = await Promise.all([
-          fetchAllPaged('/spend-items', 'product_name'),
-          fetchAllPaged('/capex-items', 'description'),
+        const [allContracts, allProjects] = await Promise.all([
           fetchAllPaged('/contracts', 'name'),
           fetchAllPaged('/portfolio/projects', 'name'),
         ]);
         if (!alive) return;
         const dedupById = <T extends { id: string }>(arr: T[]) =>
           Array.from(new Map(arr.map((i) => [i.id, i])).values());
-        const opex = dedupById(allSpend.map((x: any) => ({ id: x.id, product_name: x.product_name })));
-        const capex = dedupById(allCapex.map((x: any) => ({ id: x.id, description: x.description })));
         const contracts = dedupById(allContracts.map((x: any) => ({ id: x.id, name: x.name })));
         const projects = dedupById(allProjects.map((x: any) => ({ id: x.id, name: x.name })));
-        setOpexOptions(opex.sort((a, b) => a.product_name.localeCompare(b.product_name)));
-        setCapexOptions(capex.sort((a, b) => a.description.localeCompare(b.description)));
         setContractOptions(contracts.sort((a, b) => a.name.localeCompare(b.name)));
         setProjectOptions(projects.sort((a, b) => a.name.localeCompare(b.name)));
       } catch {
         if (!alive) return;
-        setOpexOptions([]);
-        setCapexOptions([]);
         setContractOptions([]);
         setProjectOptions([]);
       }
@@ -436,8 +418,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
   const saveSignature = React.useMemo(() => JSON.stringify({
     contains: containsAssets.map((item) => item.id).sort(),
     dependsOn: dependsOnAssets.map((item) => item.id).sort(),
-    opex: linkedOpex.map((item) => item.id).sort(),
-    capex: linkedCapex.map((item) => item.id).sort(),
+    budgetLines: linkedLines.map((item) => item.id).sort(),
     contracts: linkedContracts.map((item) => item.id).sort(),
     projects: linkedProjects.map((item) => item.id).sort(),
     urls: urls.map((item) => ({
@@ -445,7 +426,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
       description: String(item.description || '').trim(),
       url: String(item.url || '').trim(),
     })),
-  }), [containsAssets, dependsOnAssets, linkedOpex, linkedCapex, linkedContracts, linkedProjects, urls]);
+  }), [containsAssets, dependsOnAssets, linkedLines, linkedContracts, linkedProjects, urls]);
 
   const syncUrls = React.useCallback(async (nextUrls: Array<{ id?: string; description?: string; url: string }>) => {
     urlsEditedRef.current = true;
@@ -519,13 +500,10 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
       setBaselineContains(containsAssets);
       setBaselineDependsOn(dependsOnAssets);
 
-      // Save OPEX
-      await api.post(`/assets/${assetId}/spend-items`, { spend_item_ids: linkedOpex.map((x) => x.id) });
-      setBaselineOpex(linkedOpex);
-
-      // Save CAPEX
-      await api.post(`/assets/${assetId}/capex-items`, { capex_item_ids: linkedCapex.map((x) => x.id) });
-      setBaselineCapex(linkedCapex);
+      // Save budget lines: each route replaces the links of its own nature only
+      await api.post(`/assets/${assetId}/spend-items`, { spend_item_ids: budgetLineIdsOf(linkedLines, 'opex') });
+      await api.post(`/assets/${assetId}/capex-items`, { capex_item_ids: budgetLineIdsOf(linkedLines, 'capex') });
+      setBaselineLines(linkedLines);
 
       // Save Contracts
       await api.post(`/assets/${assetId}/contracts`, { contract_ids: linkedContracts.map((x) => x.id) });
@@ -560,7 +538,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
     } finally {
       setSaving(false);
     }
-  }, [assetId, baselineUrls, containsAssets, dependsOnAssets, linkedCapex, linkedContracts, linkedOpex, linkedProjects, onRelationsChange, readOnly, saveSignature, t, urls]);
+  }, [assetId, baselineUrls, containsAssets, dependsOnAssets, linkedContracts, linkedLines, linkedProjects, onRelationsChange, readOnly, saveSignature, t, urls]);
 
   React.useEffect(() => {
     if (!dirty || loading || saving || readOnly) return undefined;
@@ -741,61 +719,10 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
 
       {/* Relations */}
       <SectionTitle>{t('workspace.asset.tabs.relations')}</SectionTitle>
-      <PropertyRow label={t('workspace.asset.relations.opexItems')} valueSx={relationControlSx}>
-        <Autocomplete
-          multiple
-          options={opexOptions}
-          value={linkedOpex}
-          getOptionLabel={(o) => o.product_name}
-          onChange={(_, v) => setLinkedOpex(v as any)}
-          renderOption={(props, option) => {
-            const { key, ...optionProps } = props;
-            return <li key={key} {...optionProps}>{option.product_name}</li>;
-          }}
-          renderTags={(value, getTagProps) =>
-            value.map((option, index) => <Chip {...getTagProps({ index })} key={option.id} label={option.product_name} sx={relationTagSx} />)
-          }
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              placeholder={t('workspace.asset.relations.searchOpexItems')}
-              variant="standard"
-              sx={drawerFieldValueSx}
-            />
-          )}
-          ListboxProps={{ sx: drawerAutocompleteListboxSx }}
-          isOptionEqualToValue={(opt, val) => opt.id === (val as any).id}
-          filterSelectedOptions
-          disabled={readOnly}
-          sx={relationAutocompleteSx}
-        />
-      </PropertyRow>
-
-      <PropertyRow label={t('workspace.asset.relations.capexItems')} valueSx={relationControlSx}>
-        <Autocomplete
-          multiple
-          options={capexOptions}
-          value={linkedCapex}
-          getOptionLabel={(o) => o.description}
-          onChange={(_, v) => setLinkedCapex(v as any)}
-          renderOption={(props, option) => {
-            const { key, ...optionProps } = props;
-            return <li key={key} {...optionProps}>{option.description}</li>;
-          }}
-          renderTags={(value, getTagProps) =>
-            value.map((option, index) => <Chip {...getTagProps({ index })} key={option.id} label={option.description} sx={relationTagSx} />)
-          }
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              placeholder={t('workspace.asset.relations.searchCapexItems')}
-              variant="standard"
-              sx={drawerFieldValueSx}
-            />
-          )}
-          ListboxProps={{ sx: drawerAutocompleteListboxSx }}
-          isOptionEqualToValue={(opt, val) => opt.id === (val as any).id}
-          filterSelectedOptions
+      <PropertyRow label={t('common:selects.budgetLines')} valueSx={relationControlSx}>
+        <BudgetLinesRelationField
+          value={linkedLines}
+          onChange={setLinkedLines}
           disabled={readOnly}
           sx={relationAutocompleteSx}
         />

@@ -152,7 +152,7 @@ async function testContractsReadTheEndOfValidity() {
     const active = await contract('Active contract', 'enabled', null);
     const expired = await contract('Expired contract', 'enabled', PAST);
     const closed = await contract('Closed contract', 'disabled', PAST);
-    const svc = new ContractsService(undefined as any, undefined as any, undefined as any, undefined as any, { log: async () => undefined } as any, undefined as any, undefined as any, undefined as any, undefined as any);
+    const svc = new ContractsService(undefined as any, undefined as any, undefined as any, undefined as any, { log: async () => undefined } as any, undefined as any, undefined as any, undefined as any, undefined as any, undefined as any);
     const sorted = (values: string[]) => [...values].sort();
     const cases: Array<[string, any, string[]]> = [
       ['all + disabled ticked', { ...ALL, filters: statusFilter('disabled') }, [expired, closed]],

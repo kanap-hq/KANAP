@@ -117,6 +117,22 @@
         "projectLevel": "Projektebene",
         "unknown": "Unbekannte Phase"
       }
+    },
+    "entityTasksSection": {
+      "title": "Aufgaben",
+      "newTask": "Neue Aufgabe",
+      "empty": "Noch keine Aufgaben.",
+      "noOpenTasks": "Keine offenen Aufgaben.",
+      "showClosed_one": "Abgeschlossene Aufgabe anzeigen ({{count}})",
+      "showClosed_other": "Abgeschlossene Aufgaben anzeigen ({{count}})",
+      "hideClosed": "Abgeschlossene Aufgaben ausblenden",
+      "columns": {
+        "ref": "Ref.",
+        "task": "Aufgabe",
+        "assignee": "Zugewiesen an",
+        "dueDate": "Fälligkeit",
+        "status": "Status"
+      }
     }
   },
   "workspace": {
@@ -2133,10 +2149,8 @@
         }
       },
       "fields": {
-        "capexItems": "CAPEX-Zeilen",
         "linkDescription": "Linkbeschreibung",
         "name": "Name",
-        "opexItems": "OPEX-Zeilen",
         "url": "URL"
       },
       "messages": {
@@ -2148,9 +2162,7 @@
       "placeholders": {
         "applications": "Anwendungen suchen",
         "assets": "Assets suchen",
-        "capexItems": "CAPEX-Zeilen auswählen",
         "linkDescription": "Optional",
-        "opexItems": "OPEX-Zeilen auswählen",
         "url": "https://example.com"
       },
       "sections": {

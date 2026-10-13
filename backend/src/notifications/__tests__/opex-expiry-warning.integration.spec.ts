@@ -13,7 +13,8 @@ if (!process.env.APP_BASE_URL) process.env.APP_BASE_URL = 'https://app.example.t
 // warning goes out only when the deadline is 30, 14, 7 or 1 calendar day(s)
 // away. OPEX items read the end of validity (disabled_at): the warning carries
 // its last day and the days left. Contracts warn on the cancellation deadline
-// and on the end date, each on its own schedule. The daily run covers
+// and on the end date, each on its own schedule; a contract that renews tacitly
+// at the end of its term is warned on its deadlines only. The daily run covers
 // contracts and OPEX items of every tenant, each tenant only its own. "Today"
 // is the run's injected clock, at 08:00 UTC like the scheduled task.
 
@@ -67,7 +68,7 @@ async function seedOpex(runner: QueryRunner, tenantId: string, ownerId: string, 
   }
 }
 
-type ContractSeed = { name: string; start: string; months: number; notice: number; disabledAt?: string | null };
+type ContractSeed = { name: string; start: string; months: number; notice: number; renewal?: boolean; disabledAt?: string | null };
 
 /** Contracts of one tenant; returns their ids by name. */
 async function seedContracts(runner: QueryRunner, tenantId: string, ownerId: string, contracts: ContractSeed[]) {
@@ -77,11 +78,12 @@ async function seedContracts(runner: QueryRunner, tenantId: string, ownerId: str
   );
   const [supplier] = await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Expiry supplier') RETURNING id`, [tenantId]);
   const ids = new Map<string, string>();
-  for (const { name, start, months, notice, disabledAt = null } of contracts) {
+  // Without renewal unless asked: the column defaults to true.
+  for (const { name, start, months, notice, renewal = false, disabledAt = null } of contracts) {
     const [row] = await runner.query(
-      `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date, duration_months, notice_period_months, owner_user_id, disabled_at, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
-      [tenantId, name, company.id, supplier.id, start, months, notice, ownerId, disabledAt, disabledAt ? 'disabled' : 'enabled'],
+      `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date, duration_months, notice_period_months, auto_renewal, owner_user_id, disabled_at, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
+      [tenantId, name, company.id, supplier.id, start, months, notice, renewal, ownerId, disabledAt, disabledAt && Date.parse(disabledAt) <= Date.now() ? 'disabled' : 'enabled'],
     );
     ids.set(name, row.id);
   }
@@ -308,6 +310,51 @@ const testReminderSchedule = withRunner(async (runner) => {
   );
 });
 
+// Tacit renewal (contracts/contract-terms.ts): a contract in its third term is warned on that
+// term's cancellation deadline, never on the term's end (it renews); once an end of validity
+// stops the renewals at that term, its end is warned too.
+const testTacitRenewal = withRunner(async (runner) => {
+  const year = Number(REAL_TODAY.slice(0, 4)) + 1;
+  const { tenantId, ownerId } = await seedTenant(runner, 'renewal');
+  const contracts = await seedContracts(runner, tenantId, ownerId, [
+    // Terms of a year from 1 January two years ago: the term of `year` is its third.
+    { name: 'Renews', start: `${year - 2}-01-01`, months: 12, notice: 3, renewal: true },
+    { name: 'Stops at term end', start: `${year - 2}-01-01`, months: 12, notice: 3, renewal: true, disabledAt: `${year}-12-31T12:00:00.000Z` },
+  ]);
+  const renewsId = contracts.get('Renews');
+  const stopsId = contracts.get('Stops at term end');
+
+  const { received, notifications } = recordingNotifications();
+  const svc = serviceWith(notifications);
+  const warnedOn = async (day: string) => {
+    received.length = 0;
+    await (svc as any).checkContractExpirationsForTenant(runner.manager, tenantId, at(day));
+    return received.map((w) => `${w.itemId === renewsId ? 'renews' : w.itemId === stopsId ? 'stops' : '?'} ${w.warningType} ${w.expirationDate} ${w.daysRemaining}`);
+  };
+
+  const deadline = `${year}-09-30`;
+  const end = `${year}-12-31`;
+  const deadlineWarnings: string[] = [];
+  const endWarnings: string[] = [];
+  for (const k of OFFSETS) deadlineWarnings.push(...(await warnedOn(ymdPlus(deadline, -k))));
+  for (const k of OFFSETS) endWarnings.push(...(await warnedOn(ymdPlus(end, -k))));
+
+  assert.deepEqual(
+    deadlineWarnings.sort(),
+    REMINDER_OFFSETS.flatMap((k) => [`renews cancellation_deadline ${deadline} ${k}`, `stops cancellation_deadline ${deadline} ${k}`]).sort(),
+    'both warned on the deadline of their current term',
+  );
+  assert.deepEqual(
+    endWarnings,
+    REMINDER_OFFSETS.map((k) => `stops expiration ${end} ${k}`),
+    'the term end is warned only for the contract whose renewals stop there',
+  );
+
+  // In the next term, the renewing contract is warned on that term's deadline; the other has ended.
+  const nextDeadline = `${year + 1}-09-30`;
+  assert.deepEqual(await warnedOn(ymdPlus(nextDeadline, -30)), [`renews cancellation_deadline ${nextDeadline} 30`], 'next term: its own deadline');
+});
+
 async function main() {
   await dataSource.initialize();
   const failures: string[] = [];
@@ -316,6 +363,7 @@ async function main() {
       ['opex window', testOpexWindow],
       ['daily run, two tenants', testDailyRunTwoTenants],
       ['reminder schedule', testReminderSchedule],
+      ['tacit renewal', testTacitRenewal],
     ] as const) {
       try {
         await test();

@@ -117,6 +117,22 @@
         "projectLevel": "Niveau projet",
         "unknown": "Phase inconnue"
       }
+    },
+    "entityTasksSection": {
+      "title": "Tâches",
+      "newTask": "Nouvelle tâche",
+      "empty": "Aucune tâche pour le moment.",
+      "noOpenTasks": "Aucune tâche ouverte.",
+      "showClosed_one": "Afficher la tâche terminée ({{count}})",
+      "showClosed_other": "Afficher les tâches terminées ({{count}})",
+      "hideClosed": "Masquer les tâches terminées",
+      "columns": {
+        "ref": "Réf.",
+        "task": "Tâche",
+        "assignee": "Responsable",
+        "dueDate": "Échéance",
+        "status": "Statut"
+      }
     }
   },
   "workspace": {
@@ -2133,10 +2149,8 @@
         }
       },
       "fields": {
-        "capexItems": "Lignes CAPEX",
         "linkDescription": "Description du lien",
         "name": "Nom",
-        "opexItems": "Lignes OPEX",
         "url": "URL"
       },
       "messages": {
@@ -2148,9 +2162,7 @@
       "placeholders": {
         "applications": "Rechercher des applications",
         "assets": "Rechercher des actifs",
-        "capexItems": "Sélectionner des lignes CAPEX",
         "linkDescription": "Optionnel",
-        "opexItems": "Sélectionner des lignes OPEX",
         "url": "https://example.com"
       },
       "sections": {

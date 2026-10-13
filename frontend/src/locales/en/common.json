@@ -479,7 +479,10 @@
     "costCentersLoadFailed": "Cost centers could not be loaded.",
     "notSet": "Not set",
     "moreResults": "Type to narrow down: more results",
-    "valueUnavailable": "Value no longer available"
+    "valueUnavailable": "Value no longer available",
+    "budgetLines": "Budget lines",
+    "searchBudgetLines": "Search budget lines",
+    "noBudgetLinesFound": "No budget lines found"
   },
   "documentEditor": {
     "expandDocument": "Expand document",
@@ -645,7 +648,8 @@
     "fromSupplier": "From supplier",
     "manuallyAdded": "Manually added",
     "removeContact": "Remove contact",
-    "insufficientPermission": "Insufficient permission"
+    "insufficientPermission": "Insufficient permission",
+    "syncFromSupplier": "Add the supplier's contacts"
   },
   "export": {
     "button": "Export",

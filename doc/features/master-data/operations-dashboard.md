@@ -49,7 +49,7 @@ Provide an at-a-glance, actionable home for Budget Management users with consist
 - OPEX totals: `GET /spend-items/summary/totals`
 - CAPEX totals: `GET /capex-items/summary/totals`
 - My tasks: `GET /tasks` with filters: `assignee_user_id = me`, `status notContains 'done'`, `due_date notBlank`, `sort=due_date:ASC`, `limit=5`
-- Renewals: `GET /contracts` with `cancellation_deadline notBlank`, `sort=ASC`, `limit=10` then filter client‑side to future and take 5
+- Renewals: `GET /contracts` filtered on `next_due_date` on or after today, `sort=next_due_date:ASC`, the contract list's order (`backend/src/contracts/contract-terms.ts`): a contract that renews at the end of its current term shows its next cancellation deadline, tacit renewals included; any other contract shows its end, so one that stops before its deadline shows the day it stops. Ended contracts have no next due date and leave the tile.
 - Data hygiene counts: `GET /spend-items/summary?limit=1&filters=...` using response `total` for each chip
   - `owner_it_id blank`, `owner_business_id blank`, `paying_company_id blank`, `account_warning notBlank`
 - Recent OPEX updates: `GET /spend-items/summary?sort=updated_at:DESC&limit=5`

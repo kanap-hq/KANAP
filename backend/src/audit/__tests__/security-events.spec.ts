@@ -178,6 +178,7 @@ const KNOWN_EXPORT_ROUTES = [
   'GET /chart-of-accounts/:id/accounts/export',
   'GET /companies/export',
   'GET /contacts/export',
+  'GET /contracts/compliance-register/export',
   'GET /contracts/export',
   'GET /cost-centers/export',
   'GET /departments/export',

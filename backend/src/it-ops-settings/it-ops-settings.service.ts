@@ -27,6 +27,18 @@ export const DEFAULT_INCIDENT_CATEGORIES: ItOpsEnumOption[] = [
   { code: 'other', label: 'Other' },
 ];
 
+/**
+ * Hosting types served to tenants that never customised the list. Each one is on premises or in the
+ * cloud (`category`); the contract compliance register reads that category too.
+ */
+export const DEFAULT_HOSTING_TYPES: ItOpsEnumOption[] = [
+  { code: 'on_prem', label: 'On-prem', category: 'on_prem' },
+  { code: 'colocation', label: 'Colocation', category: 'on_prem' },
+  { code: 'public_cloud', label: 'Public Cloud', category: 'cloud' },
+  { code: 'private_cloud', label: 'Private Cloud', category: 'cloud' },
+  { code: 'saas', label: 'SaaS', category: 'cloud' },
+];
+
 export type OperatingSystemOption = ItOpsEnumOption & {
   standardSupportEnd?: string; // YYYY-MM-DD
   extendedSupportEnd?: string; // YYYY-MM-DD
@@ -220,13 +232,7 @@ export class ItOpsSettingsService {
     { code: 'web', label: 'Web server', graph_tier: 'top' },
   ];
 
-  private readonly defaultHostingTypes: ItOpsEnumOption[] = [
-    { code: 'on_prem', label: 'On-prem', category: 'on_prem' },
-    { code: 'colocation', label: 'Colocation', category: 'on_prem' },
-    { code: 'public_cloud', label: 'Public Cloud', category: 'cloud' },
-    { code: 'private_cloud', label: 'Private Cloud', category: 'cloud' },
-    { code: 'saas', label: 'SaaS', category: 'cloud' },
-  ];
+  private readonly defaultHostingTypes: ItOpsEnumOption[] = DEFAULT_HOSTING_TYPES;
 
   private readonly defaultInterfaceProtocols: ItOpsEnumOption[] = [
     { code: 'http', label: 'HTTP' },

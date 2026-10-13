@@ -479,7 +479,10 @@
     "costCentersLoadFailed": "Die Kostenstellen konnten nicht geladen werden.",
     "notSet": "Nicht festgelegt",
     "moreResults": "Weiter tippen, um einzugrenzen: es gibt weitere Ergebnisse",
-    "valueUnavailable": "Wert nicht mehr verfügbar"
+    "valueUnavailable": "Wert nicht mehr verfügbar",
+    "budgetLines": "Budgetzeilen",
+    "searchBudgetLines": "Budgetzeilen suchen",
+    "noBudgetLinesFound": "Keine Budgetzeilen gefunden"
   },
   "documentEditor": {
     "expandDocument": "Dokument erweitern",
@@ -645,7 +648,8 @@
     "fromSupplier": "Vom Lieferanten",
     "manuallyAdded": "Manuell hinzugefügt",
     "removeContact": "Kontakt entfernen",
-    "insufficientPermission": "Unzureichende Berechtigung"
+    "insufficientPermission": "Unzureichende Berechtigung",
+    "syncFromSupplier": "Kontakte des Lieferanten übernehmen"
   },
   "export": {
     "button": "Exportieren",
