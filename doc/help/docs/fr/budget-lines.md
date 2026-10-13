@@ -145,11 +145,10 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 - Le tri par défaut suit la colonne par défaut de l'année en cours, du plus grand au plus petit (**Budget A** avec les réglages standard). Les boutons **Préc.** et **Suiv.** de l'espace de travail suivent le même ordre
 - La liste mémorise votre dernier tri, votre recherche et vos filtres quand vous revenez
 
-**Lignes de totaux** :
+**Ligne de totaux** :
 
-- La ligne épinglée en bas affiche **Total (12 lignes)**, avec le nombre de lignes que contient la liste, et le total de chaque colonne de montant
-- Lorsque la liste contient les deux types (aucun filtre sur **Type**, ou les deux valeurs cochées), deux autres lignes s'affichent au-dessus : **Total OPEX** et **Total CAPEX**. Filtrée sur un type, la liste n'affiche que la ligne **Total**
-- Un cadenas devant un total signifie que la colonne est gelée pour cette année. Sur **Total OPEX** et **Total CAPEX**, il suit le gel de ce type. Sur **Total**, il s'affiche quand la colonne est gelée pour chaque type que contient la liste. Survolez-le pour lire **Gelé**. Voir [Geler / Dégeler les données](budget-operations.md#geler-degeler-les-donnees)
+- Une seule ligne **Total** est épinglée sous la liste. Elle affiche **Total (12 lignes)**, avec le nombre de lignes que contient la liste, et le total de chaque colonne de montant
+- Un cadenas devant un total signifie que la colonne est gelée pour cette année. Il suit le gel de chaque type que contient la liste. Si la liste est filtrée sur un type, le cadenas s'affiche quand ce type est gelé. Si elle contient les deux types, il s'affiche quand la colonne est gelée pour les deux. Survolez-le pour lire **Gelé**. Voir [Geler / Dégeler les données](budget-operations.md#geler-degeler-les-donnees)
 - Chaque colonne ETP affichée montre la somme des ETP des lignes. Lorsque certaines lignes n'ont pas d'ETP, leur nombre suit le total, par exemple « 3.50 · 12 inconnues ». Survolez-le pour lire la phrase complète : « Inconnu pour 12 lignes ». Lorsqu'aucune ligne n'a d'ETP, le total est vide et seul le nombre s'affiche
 - Les totaux respectent vos filtres et votre recherche actuels
 
@@ -635,7 +634,7 @@ Un fichier budgétaire ne change jamais le type d'une ligne. Voir [Charger un bu
 
 11. **Désactivez au lieu de supprimer** : Préservez l'historique en désactivant les lignes lorsqu'elles ne sont plus actives. Ne supprimez qu'en cas d'erreur.
 
-12. **Vérifiez les lignes de totaux** : Avant de finaliser les budgets, vérifiez les totaux épinglés dans la liste, par type et au global, pour vous assurer que vos dépenses s'additionnent comme prévu.
+12. **Vérifiez la ligne de totaux** : Avant de finaliser les budgets, vérifiez la ligne **Total** sous la liste pour vous assurer que vos dépenses s'additionnent comme prévu. Filtrez sur **Type** pour voir le total des OPEX ou des CAPEX seuls.
 
 13. **Utilisez les liens profonds** : Cliquez directement sur une colonne budgétaire dans la liste pour accéder à l'onglet Budget de cette année. Cliquez sur la colonne Tâche pour accéder aux tâches de la ligne dans l'onglet Vue d'ensemble. Vous gagnez du temps de navigation.
 
