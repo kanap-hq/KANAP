@@ -1,197 +1,303 @@
 # Contrats
 
-Les contrats documentent vos accords fournisseurs : licences logicielles, contrats de maintenance, abonnements SaaS et accords de service. Suivez les dates clés, les coûts, les conditions de renouvellement et liez les contrats à vos lignes OPEX et CAPEX pour une visibilité complète des coûts.
+Les contrats décrivent vos accords avec les fournisseurs : licences logicielles, contrats de maintenance, abonnements SaaS et contrats de service. KANAP date chaque terme d'un contrat, vous signale quand une décision de renouvellement est attendue, compare ce que le contrat engage avec les lignes budgétaires qui lui sont liées, et liste les clauses que ses applications rendent nécessaires.
 
 ## Premiers pas
 
-Naviguez vers **Gestion budgétaire > Contrats** pour voir votre registre de contrats. Cliquez sur **Nouveau** pour créer votre première entrée.
+Rendez-vous dans **Gestion budgétaire > Contrats** pour voir la liste. Cliquez sur **Nouveau** pour créer un contrat (`contracts:member`).
+
+La page s'ouvre sur un formulaire unique. Remplissez-le, puis cliquez sur **Créer**.
 
 **Champs obligatoires** :
 
-- **Nom** : Un nom de contrat reconnaissable
-- **Fournisseur** : Le vendeur fournissant le service
-- **Société** : Quelle société a signé le contrat
+- **Nom du contrat** : un nom facile à reconnaître
+- **Fournisseur** et **Société contractante** : qui fournit le service et laquelle de vos sociétés a signé
+- **Début** : le premier jour du contrat
+- **Durée (mois)** : la durée d'un terme, au moins un mois
+- **Devise** : l'une des devises de votre espace de travail, la devise par défaut pour commencer
 
-**Fortement recommandé** (à définir dans l'onglet Détails juste après la création) :
+**Champs facultatifs** :
 
-- **Date de début** : Quand le contrat commence
-- **Durée** : Durée du contrat en mois
-- **Montant annuel** : La valeur annuelle du contrat
-- **Devise** : Devise du contrat
-- **Renouvellement automatique** : Si le contrat se renouvelle automatiquement
-- **Préavis** : Combien de mois de préavis sont nécessaires pour résilier
+- **Responsable** : la personne qui gère le contrat. Le responsable reçoit les tâches de décision de renouvellement : renseignez-le
+- **Reconduction tacite** : **Oui** par défaut
+- **Préavis (mois)** : vide signifie sans préavis
+- **Montant annuel** : la valeur annuelle à la signature, avec deux décimales au plus. Vide signifie 0
+- **Facturation** : **Annuelle** par défaut, ou **Trimestrielle**, **Mensuelle**, **Autre**
 
-**Conseil** : Le système calcule automatiquement la date de fin et la date limite de résiliation à partir de la date de début, de la durée et du préavis.
+Une fois le contrat créé, chaque modification s'enregistre d'elle-même. Il n'y a pas de bouton **Enregistrer**.
+
+---
+
+## Termes et échéances
+
+KANAP calcule les dates d'un contrat à partir de quatre champs : **Début**, **Durée (mois)**, **Préavis (mois)** et **Reconduction tacite**, plus la **Fin de validité** quand elle est renseignée. Rien n'est stocké : modifiez un champ et toutes les dates suivent.
+
+- **Termes** : un contrat court par termes de la durée choisie, comptés depuis la date de début. Un contrat qui commence le 1er juillet 2024 pour 12 mois court du 1er juillet au 30 juin chaque année.
+- **Date limite de résiliation** : la fin d'un terme moins le préavis. Avec 6 mois de préavis, le contrat ci-dessus peut être résilié jusqu'au 30 décembre chaque année.
+- **Reconduction tacite** : avec **Oui**, les termes se suivent jusqu'à ce qu'une fin de validité les arrête. Avec **Non**, le contrat s'arrête après son premier terme. S'il a une fin de validité, il court alors terme après terme jusqu'à ce jour, de sorte qu'un contrat dont la reconduction a été désactivée garde les termes déjà courus.
+- **Fin de validité** : le jour où le contrat s'arrête. Aucun terme ne commence après. Quand elle tombe au milieu d'un terme, le contrat s'arrête ce jour-là.
+- **Mois en fin de mois** : quand le même jour n'existe pas dans le mois visé, le dernier jour de ce mois est retenu. Le 31 mars moins un mois donne le 28 février (le 29 une année bissextile).
+
+Toutes les dates sont des jours calendaires en UTC.
 
 ---
 
 ## Travailler avec la liste
 
-La grille Contrats fournit une vue d'ensemble de tous vos accords fournisseurs. Chaque ligne est un lien cliquable qui ouvre l'espace de travail du contrat, et votre contexte de recherche et de filtrage est préservé lorsque vous revenez.
+Chaque ligne ouvre le contrat. Votre recherche, vos filtres et votre tri sont conservés au retour, et **Précédent** / **Suivant** sur la fiche parcourent le même ensemble.
 
 **Colonnes par défaut** :
 
-- **Contrat** : Nom du contrat (cliquez pour ouvrir l'espace de travail)
-- **Fournisseur** : Le vendeur
-- **Société** : L'entité contractante
-- **Début** : Date de début du contrat
-- **Durée (m)** : Durée en mois
-- **Renouvellement auto.** : Si le contrat se renouvelle automatiquement (oui/non)
-- **Préavis (m)** : Période de préavis en mois
-- **Fin** : Date de fin calculée
-- **Résilier avant** : Date limite de résiliation (date de fin moins préavis)
-- **Montant annuel** : Valeur annuelle du contrat (formatée avec des séparateurs d'espaces)
-- **Dev.** : Code devise
-- **Facturation** : Fréquence de facturation (Mensuelle, Trimestrielle, Annuelle, Autre)
-- **OPEX liés** : Nombre de lignes OPEX liées (cliquez pour ouvrir l'espace de travail)
-- **Statut** : **Activé** ou **Désactivé**, lu dans la fin de validité
+- **Contrat**, **Fournisseur**, **Société**
+- **Prochaine échéance** : la prochaine date limite de résiliation d'un contrat à reconduction tacite, ou la fin de tout autre contrat. La date est suivie de « dans n jours ». Un contrat échu affiche le jour de sa fin, en grisé
+- **État** : voir plus bas
+- **Montant annuel** : le montant à la signature, suivi de sa devise
+- **Engagé**, **Budget** et **Écart** pour l'année budgétaire choisie. Voir [Colonnes budgétaires](#colonnes-budgetaires)
+- **Conformité** : le résumé de l'onglet [Conformité](#conformite) : « 2 manquantes · 1 à vérifier » en orange, **Complet** ou **Aucune attente**
+- **Lignes liées** : le nombre de lignes budgétaires liées, OPEX et CAPEX ensemble
+- **Statut** : **Activé** ou **Désactivé**, déduit de la fin de validité
 
-**Colonnes supplémentaires** (via le sélecteur de colonnes) :
+**Autres colonnes** (sélecteur de colonnes) : **Dev.**, **Couverture du budget**, **Début**, **Durée (m)**, **Renouvellement auto.**, **Préavis (m)**, **Fin du terme** (fin du terme en cours), **Résiliation avant** (prochaine date limite de résiliation), **Facturation** et **Tâche** (la dernière tâche du contrat).
 
-- **Tâche** : Dernière tâche pour ce contrat (statut et aperçu de la description)
+**Tri par défaut** : par **Prochaine échéance**, la plus proche en premier. Les contrats échus restent en bas dans les deux sens.
 
-**Tri par défaut** : Par date limite de résiliation croissante, pour que les contrats nécessitant une action rapide apparaissent en premier.
+### État
 
-**Filtrage** :
+Chaque contrat a un état, le premier qui s'applique :
 
-- Recherche rapide : Recherche dans le nom du contrat, le fournisseur et la société
-- Filtres de colonnes : Disponibles sur chaque en-tête de colonne. Le filtre **Statut** propose **Activé** et **Désactivé**. Cliquer sur **Effacer** dans ce filtre, ou décocher les deux valeurs, n'affiche plus rien, quel que soit le choix de **Afficher**
-- **Périmètre par statut** : le bouton bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la liste. Par défaut, la liste affiche les contrats activés. Choisissez **Tous** ou **Désactivés** pour retrouver les contrats dont la fin de validité est passée
+- **À décider** (orange) : une décision est attendue. Pour un contrat à reconduction tacite, sa prochaine date limite de résiliation tombe dans le délai de décision et son renouvellement n'a pas été confirmé pour ce terme. Pour un contrat sans reconduction, sa fin tombe dans le délai et personne n'a confirmé qu'il devait finir. Voir [Décisions de renouvellement](#decisions-de-renouvellement)
+- **Fin sans reconduction** : le contrat est dans son dernier terme et s'arrêtera à sa fin
+- **Reconduit au** une date : la date limite de résiliation du terme en cours est passée, le contrat se poursuit donc dans le terme suivant, qui commence à cette date
+- **En cours** : le contrat court et rien n'est encore attendu
+- **Échu** : le contrat a pris fin
 
-**Actions** :
+### Filtres rapides
 
-- **Nouveau** : Créer un nouveau contrat (nécessite `contracts:manager`)
-- **Importer CSV** : Import en masse de contrats (nécessite `contracts:admin`)
-- **Exporter CSV** : Exporter en CSV (nécessite `contracts:admin`)
+Les liens au-dessus de la grille filtrent la liste en un clic. Cliquez à nouveau pour retirer le filtre.
+
+- **À décider sous n jours (n)** : les contrats à l'état **À décider**. Le nombre de jours est le délai de décision de votre espace de travail
+- **Sans ligne budgétaire (n)** et **Sous-budgétés (n)** : les contrats dont la couverture budgétaire de l'année choisie est dans cet état
+
+Un point orange signale un lien dont le compteur n'est pas nul.
+
+### Colonnes budgétaires
+
+Avec l'accès en lecture aux lignes budgétaires (`budget:reader`), la droite de la barre d'outils affiche **Budget** avec une année et une colonne budgétaire (les noms de colonnes de votre espace de travail). Ce choix vous est propre. Il est partagé avec l'onglet **Budget** de chaque contrat et conservé pour votre prochaine visite. Il commence sur l'année prochaine et la colonne par défaut de votre espace de travail.
+
+- **Engagé** (année) : ce que le contrat engage pour cette année, dans votre devise de reporting. Voir [Engagement](#engagement-et-couverture)
+- **Budget** (année) : la somme des montants des lignes liées pour cette année et cette colonne
+- **Écart** : budget moins engagement. Un manque s'affiche en orange. **Sans ligne** signifie que rien n'est budgété sur une ligne liée, et **Contrat échu** qu'il reste du budget sur un contrat terminé
+- **Couverture du budget** (masquée par défaut) : l'un des six états de couverture
+
+Un contrat dans une devise sans taux de change pour l'année affiche « Pas de taux USD » à la place d'un montant. Sans le droit budget, ces colonnes, le sélecteur et les deux filtres rapides budgétaires sont masqués.
+
+### Ligne de total
+
+La ligne épinglée en bas indique **Total (n contrats)**. Elle additionne les montants annuels des contrats affichés, convertis dans votre devise de reporting avec les derniers taux de l'année, ainsi que les trois colonnes budgétaires. Une devise sans taux reste hors de la somme et elle est nommée, par exemple « hors 2 contrats en GBP sans taux ».
+
+### Recherche, filtres et périmètre
+
+- **Recherche rapide** : nom du contrat, fournisseur et société
+- **Filtres de colonnes** : sur chaque en-tête de colonne. **État**, **Conformité** et **Couverture du budget** proposent leurs valeurs en cases à cocher. Le filtre **Statut** propose **Activé** et **Désactivé**. Cliquer sur **Effacer** dans ce filtre, ou décocher les deux valeurs, n'affiche plus rien, quel que soit le choix de **Afficher**
+- **Afficher : Tous / Activés / Désactivés** : le bouton bascule au-dessus de la liste. Par défaut, la liste affiche les contrats activés. Choisissez **Tous** ou **Désactivés** pour retrouver les contrats dont la fin de validité est passée
+
+### Actions
+
+- **Nouveau** : créer un contrat (`contracts:member`)
+- **Importer CSV** et **Exporter CSV** : voir [Import/export CSV](#importexport-csv) (`contracts:admin`)
+- **Exporter le registre** : le registre de conformité des contrats affichés par la liste (`contracts:admin`). Voir [Conformité](#conformite)
+- **Réglages** : le délai de décision de l'espace de travail (`contracts:admin`). Voir [Délai de décision](#delai-de-decision)
 
 ---
 
-## L'espace de travail Contrats
+## La fiche contrat
 
-Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. L'en-tête affiche le nom du contrat, votre position dans la liste (par ex., « Contrat 3 sur 42 ») et les contrôles de navigation :
+### En-tête et propriétés
 
-- **Préc / Suiv** : Naviguer entre les contrats sans revenir à la liste
-- **Réinitialiser** : Annuler les modifications non enregistrées de l'onglet actuel
-- **Enregistrer** : Persister vos modifications
-- **Fermer** (icône X) : Revenir à la liste en préservant votre contexte de recherche et de filtre
+L'en-tête affiche le nom du contrat (cliquez dessus pour le renommer), **Précédent** / **Suivant** avec la position dans la liste, et une barre avec **Fournisseur**, **Société contractante**, **Responsable** et **Statut**. Le responsable et le statut se modifient sur place. Le fournisseur et la société ouvrent le panneau **Propriétés**.
 
-L'espace de travail comporte quatre onglets verticaux : **Vue d'ensemble**, **Détails**, **Relations** et **Tâches**.
+Le panneau **Propriétés**, à droite, contient tous les champs du contrat : les parties, **Début**, **Durée (mois)**, **Préavis (mois)**, **Reconduction tacite**, **Montant annuel**, **Devise**, **Facturation**, puis **Cycle de vie** (**Statut** et **Fin de validité**), **Créé** et **Mis à jour**. Ouvrez-le ou fermez-le avec son bouton ; KANAP retient votre choix.
+
+Chaque modification s'enregistre d'elle-même : listes et dates aussitôt, valeurs saisies et notes après une courte pause, le nom quand vous quittez le champ. « Enregistrement... » puis « Enregistré » s'affiche dans l'en-tête. Deux personnes qui modifient le même contrat ne sont pas averties : la dernière modification l'emporte.
+
+**Cycle de vie** :
+
+- Passer le statut à **Désactivé** sans date fixe la fin de validité à aujourd'hui. Le repasser à **Activé** retire la fin de validité
+- **Fin de validité** : saisissez une date (jj/mm/aaaa) ou utilisez le calendrier. Laissez vide pour garder le contrat actif
+- **Reconduction tacite** a ses propres règles quand le contrat a déjà été reconduit ou attend une décision. Voir [Désactiver ou réactiver la reconduction tacite](#desactiver-ou-reactiver-la-reconduction-tacite)
+
+Il faut `contracts:member` pour modifier. Les lecteurs voient la même page, tous les champs verrouillés.
+
+**Envoyer le lien**, dans l'en-tête, envoie par e-mail un lien vers le contrat à des collègues de votre espace de travail.
+
+La fiche a quatre onglets : **Vue d'ensemble**, **Budget**, **Conformité** et **Relations**. Les adresses des anciens onglets **Détails** et **Tâches** ouvrent la vue d'ensemble.
 
 ### Vue d'ensemble
 
-L'onglet Vue d'ensemble capture l'identité et le statut du cycle de vie du contrat.
+**Échéances** résume où en est le contrat :
 
-**Ce que vous pouvez modifier** :
+- Une phrase sur ce qui vient : « Résiliation possible jusqu'au 30 déc. 2026 · dans 78 jours », « Préavis dépassé, reconduit jusqu'au 30 juin 2027 », « Fin le 31 mars 2027 sans reconduction » ou « Échu le 31 déc. 2025 ». Quand une décision est attendue sur la fin d'un contrat sans reconduction, la phrase ajoute « décision attendue » avec un point orange
+- Une frise des termes : termes passés, terme en cours, aujourd'hui, prochaine date limite de résiliation et délai de décision qui la précède. Le terme suivant est en pointillé tant qu'il peut encore être résilié, en trait plein une fois le préavis dépassé
+- Une ligne de faits : le terme en cours et ses dates, le nombre de reconductions et depuis quand, et le préavis
 
-- **Nom du contrat** : Le nom d'affichage utilisé dans les listes et rapports
-- **Fournisseur** : Lien vers un fournisseur des données de référence
-- **Société contractante** : Quelle société est partie au contrat
-- **Responsable** : La personne chargée de gérer ce contrat
-- **Notes** : Notes libres
-- **Interrupteur de statut** : son libellé indique l'état actuel (**Activé** ou **Désactivé**). Passer le contrat à **Désactivé** sans date fixe sa fin de validité à aujourd'hui
-- **Fin de validité** : la date à laquelle le contrat s'arrête. Saisissez une date au format jj/mm/aaaa ou utilisez le bouton calendrier. Laissez-la vide pour que le contrat reste actif indéfiniment
+Une fois un renouvellement confirmé, la phrase indique « Reconduction confirmée · prochain terme du 1er juil. 2027 au 30 juin 2028 » et la frise n'affiche plus cette date limite.
 
-**Comment ça fonctionne** :
+La fiche recalcule ces dates pendant que vous modifiez le début, la durée, le préavis ou la reconduction.
 
-- Lors de la création d'un nouveau contrat, seul l'onglet Vue d'ensemble est disponible. Une fois enregistré, les onglets restants deviennent accessibles et vous êtes dirigé directement vers l'onglet Détails pour remplir les conditions financières.
-- Nom, Fournisseur et Société sont obligatoires pour créer un contrat.
+**Décision de renouvellement** : quand une décision est attendue, un encart bordé d'orange apparaît sous les échéances. Voir [Décisions de renouvellement](#decisions-de-renouvellement).
 
----
+**Tâches** : les tâches ouvertes du contrat, avec leur référence, leur assigné, leur échéance et leur statut. **Afficher les tâches terminées (n)** ajoute les tâches terminées. **Nouvelle tâche** crée une tâche liée au contrat. Ouvrez une tâche pour la modifier ou la supprimer.
 
-### Détails
+**Notes** : texte libre avec mise en forme Markdown. La barre d'outils apparaît quand vous cliquez dans l'éditeur.
 
-L'onglet Détails capture les dates, conditions et informations financières.
+### Budget
 
-**Ce que vous pouvez modifier** :
+L'onglet liste les lignes budgétaires liées, OPEX et CAPEX ensemble, avec leur référence (`BL-12`), leur nom, leur type et leur société. Utilisez le sélecteur sous le tableau pour lier ou retirer des lignes.
 
-- **Date de début** : Quand le contrat commence (jj/mm/aaaa)
-- **Durée (mois)** : Durée du contrat
-- **Préavis (mois)** : Préavis de résiliation requis
-- **Montant annuel** : La valeur annuelle du contrat à la signature
-- **Devise** : Code devise à trois lettres (par ex., EUR, USD)
-- **Fréquence de facturation** : Mensuelle, Trimestrielle, Annuelle ou Autre
-- **Renouvellement automatique** : Si le contrat se renouvelle automatiquement
+Avec l'accès en lecture aux lignes budgétaires (`budget:reader`), l'onglet affiche aussi des chiffres :
 
-**Champs calculés** (lecture seule) :
+- Des onglets d'année et un sélecteur **Colonne**, le même choix que les colonnes budgétaires de la liste
+- Le montant de chaque ligne pour cette année et cette colonne, avec une ligne **Total (n lignes)**
+- **Engagement et couverture** : une ligne par année proposée, l'année choisie surlignée. Cliquez sur une ligne pour choisir son année
 
-- **Date de fin** : Date de début plus durée
-- **Date limite de résiliation** : Date de fin moins période de préavis
+Les années proposées sont l'année en cours et les deux suivantes, plus l'année précédente quand le budget contient des lignes pour elle.
 
----
+#### Engagement et couverture
+
+**Engagé par le contrat** est le montant annuel à la signature réparti sur les mois de l'année couverts par un terme. Un mois couvert en partie compte au prorata de ses jours. Les années suivantes supposent que la reconduction continue jusqu'à ce qu'on l'arrête, et rien n'est engagé après la fin de validité ou la fin du contrat. Le montant à la signature vaut pour chaque terme. L'engagement est converti dans votre devise de reporting avec les taux de l'année.
+
+Par exemple, un contrat de 350 000 par an reconduit chaque 1er juillet engage 350 000 chaque année. S'il prend fin le 30 juin 2027, il engage 175 000 en 2027 et rien en 2028.
+
+**Lignes liées** additionne les montants des lignes liées pour cette année et cette colonne. **Écart** est la différence. L'état est le premier qui s'applique :
+
+- **Aucun engagement** : le contrat n'engage rien cette année et aucune ligne liée n'a de montant
+- **Budget pas encore commencé** : aucune ligne budgétaire de votre espace de travail n'a de montant pour cette année et cette colonne
+- **Aucune ligne budgétée** : aucune ligne liée n'a de montant
+- **Sous-budgété** : les lignes liées portent moins que l'engagement
+- **Budget supérieur au contrat** : les lignes liées portent plus que l'engagement plus 10 %
+- **Couvert** : tous les autres cas
+
+### Conformité
+
+L'onglet liste les clauses qu'un contrat doit contenir, compte tenu des applications qu'il couvre, et vous permet de noter si le contrat les contient. Il vous aide à tenir un registre. Il ne certifie la conformité à aucune réglementation.
+
+**Exigences** : **Accord de sous-traitance RGPD (art. 28)**, **Localisation des données**, **Clause de réversibilité**, **Plan de sortie**, **Droit d'audit et clauses de sécurité**.
+
+**Pourquoi une exigence est attendue** : le contrat couvre les applications qui lui sont liées, et les applications dont une instance tourne sur un actif qui lui est lié ou dont il est le contrat de support. Une application dont la fin de validité est passée ne compte plus.
+
+- Une application qui contient des données personnelles rend attendus l'accord de sous-traitance et la localisation des données
+- Une criticité métier ou cyber élevée rend attendus la clause de réversibilité, le plan de sortie et le droit d'audit. Élevée signifie les deux niveaux les plus sévères de votre catalogue (le plus sévère seul quand le catalogue a moins de trois niveaux)
+- Une instance hébergée dans le cloud rend attendue la localisation des données. La catégorie du type d'hébergement, dans **Cartographie SI > Paramètres**, décide de ce qui compte comme cloud
+
+La colonne **Attendue car** donne la première raison, par exemple « SAP S/4HANA contient des données personnelles », puis « et n autres ». Survolez-la pour toutes les lire. Une raison qui passe par un actif le nomme.
+
+**Saisie** : choisissez un état pour chaque exigence : **Présente**, **Absente** ou **Sans objet**. Il s'enregistre aussitôt. Une exigence attendue sans état indique **À vérifier**. Saisissez une **Référence** (par exemple « article 18.3 ») ; elle s'enregistre quand vous quittez le champ ou appuyez sur Entrée. Survolez une ligne pour voir la date de la dernière mise à jour et son auteur.
+
+**Afficher les autres exigences (n)** ajoute les exigences que rien ne rend nécessaires, pour les renseigner aussi. Quand rien n'est attendu, l'onglet le dit en une ligne.
+
+La pastille de l'onglet compte les exigences attendues notées absentes. Dans la liste, la colonne **Conformité** indique :
+
+- **n manquantes** (et « · n à vérifier »), en orange
+- **n à vérifier**
+- **Complet** : chaque exigence attendue est présente ou sans objet
+- **Aucune attente**
+
+Lier ou retirer une application ou un actif dans **Relations** met l'onglet à jour aussitôt. Il faut `contracts:member` pour saisir ; les lecteurs voient l'onglet en lecture seule.
+
+**Exporter le registre** (liste, `contracts:admin`) télécharge un CSV des contrats affichés par la liste, avec sa recherche, ses filtres et son périmètre : une ligne par contrat et par exigence, avec le fait qu'elle soit attendue ou non, la raison, l'état, la référence et la dernière mise à jour. Les en-têtes et les mots suivent la langue de votre écran.
 
 ### Relations
 
-L'onglet Relations lie les contrats à d'autres entités de votre registre.
+- **Applications** et **Actifs** : liez les applications et les actifs que couvre ce contrat. Les sélecteurs cherchent parmi les applications et les actifs que vous pouvez voir. Ces liens alimentent l'onglet [Conformité](#conformite). Un actif dont le contrat de support est celui-ci, renseigné sur la fiche de l'actif, n'apparaît pas ici. Il compte quand même pour la conformité
+- **Contacts** : les personnes liées à ce contrat, chacune avec un rôle (Commercial, Technique, Support ou Autre). **Reprendre les contacts du fournisseur** copie les contacts du fournisseur en un clic
+- **Sites web pertinents** : des liens vers des documents externes, comme le PDF signé ou le portail du fournisseur
+- **Pièces jointes** : une liste de fichiers. Utilisez **Ajouter des fichiers** ou déposez des fichiers sur la section. Cliquez sur un fichier pour le télécharger
 
-**Liens disponibles** :
-
-- **Lignes OPEX** : Coûts récurrents associés à ce contrat. Utilisez la multi-sélection avec recherche pour trouver et lier des éléments par nom de produit
-- **Lignes CAPEX** : Lignes de dépenses d'investissement liées à ce contrat, avec la même multi-sélection avec recherche
-- **Contacts** : Personnes associées à ce contrat, chacune avec un rôle (Commercial, Technique, Support ou Autre). Les contacts hérités du fournisseur sont affichés avec un badge plein ; ceux ajoutés manuellement apparaissent avec un badge contour. Cliquez sur une ligne de contact pour ouvrir son profil.
-- **Sites web pertinents** : Liens vers des documents externes comme les PDF de contrats ou les portails fournisseurs. Chaque lien a une description et une URL.
-- **Pièces jointes** : Téléchargez des fichiers par glisser-déposer ou en utilisant le sélecteur de fichiers. Cliquez sur une pastille de pièce jointe pour la télécharger ; cliquez sur l'icône de suppression pour la retirer.
-
-**Conseil** : Lier des lignes OPEX et CAPEX aux contrats vous donne une traçabilité complète des coûts, des lignes budgétaires aux accords fournisseurs.
+Les lignes budgétaires se lient dans l'onglet [Budget](#budget).
 
 ---
 
-### Tâches
+## Décisions de renouvellement
 
-L'onglet Tâches gère les actions liées à ce contrat (par ex., revues de renouvellement, négociations de prix, vérifications de conformité).
+KANAP demande au responsable de décider de chaque renouvellement avant qu'il n'ait lieu, et enregistre la décision.
 
-**Liste des tâches** :
+### Délai de décision
 
-- Affiche toutes les tâches liées à ce contrat
-- Colonnes : Titre, Statut, Priorité, Date d'échéance, Actions
-- Cliquez sur un titre de tâche pour ouvrir l'espace de travail complet de la tâche
+Un contrat à reconduction tacite attend une décision quand sa prochaine date limite de résiliation tombe dans le délai de décision. Un contrat sans reconduction en attend une quand sa fin tombe dans ce délai. Le délai est de 90 jours par défaut. Les administrateurs des contrats le changent avec **Réglages** dans la liste, de 0 à 365 jours.
 
-**Filtrage** :
+Le délai pilote l'état **À décider**, le filtre rapide, l'encart de décision, la frise et les tâches de décision.
 
-- Cliquez sur l'icône de filtre pour afficher ou masquer les contrôles de filtre
-- **Filtre de statut** : Tous, Actifs (masque terminées/annulées), ou un statut spécifique (Ouverte, En cours, En attente, En test, Terminée, Annulée)
-- Cliquez sur le bouton d'effacement pour réinitialiser les filtres
-- Le filtre par défaut affiche uniquement les tâches actives
+### La tâche de décision
 
-**Créer une tâche** :
+Chaque jour à 07:30 UTC, KANAP crée une tâche pour chaque contrat qui attend une décision :
 
-- Cliquez sur **Ajouter une tâche** pour ouvrir l'espace de travail de création de tâche
-- La tâche est automatiquement liée à ce contrat
-- Remplissez le titre, la description, la priorité, l'assigné et la date d'échéance dans l'espace de travail de la tâche
+- **Décider du renouvellement de** le contrat, à échéance de la date limite de résiliation, pour un contrat à reconduction tacite
+- **Décider de renouveler ou de laisser finir** le contrat, à échéance de sa fin, pour un contrat sans reconduction
 
-**Supprimer une tâche** :
+La tâche est assignée au responsable du contrat, dans sa langue, avec l'e-mail d'assignation habituel. Il y a une tâche par contrat et par terme. Une tâche supprimée n'est pas recréée pour ce terme. Un contrat sans responsable ne reçoit pas de tâche tant qu'aucun n'est renseigné.
 
-- Cliquez sur l'icône de suppression dans la colonne Actions
-- Confirmez la suppression dans le dialogue
+L'encart de décision et la tâche restent alignés : une décision prise dans l'encart ferme la tâche, avec la justification en commentaire.
 
-**Remarque** : L'onglet Tâches n'est disponible qu'après le premier enregistrement du contrat. Si vous n'avez pas l'autorisation `contracts:manager`, les boutons Ajouter une tâche et Supprimer sont masqués.
+### Décider
+
+L'encart affiche la date limite, les jours restants, la tâche et son assigné, et ce qui se passe sans décision (« Sans décision, le contrat sera reconduit pour 12 mois le 1er juil. 2027. »). Saisissez une **Justification** facultative, puis choisissez :
+
+- **Renouveler** : le renouvellement est confirmé pour ce terme. La tâche est fermée, le contrat quitte **À décider** et revient dans le délai à la date limite du terme suivant
+- **Renégocier** : l'encart indique **Renégociation en cours** et la tâche reste ouverte jusqu'à la décision finale. Le contrat reste **À décider**
+- **Résilier** : l'encart affiche la date de fin à confirmer. KANAP propose la première fin que permet le préavis (« Préavis de 6 mois : la première fin possible est le 30 juin 2027. »). Vous pouvez choisir un autre jour, à partir d'aujourd'hui et du début du contrat. Un jour antérieur à la date proposée affiche un avertissement orange : le fournisseur doit l'accepter. L'encart liste les conséquences pour ce jour : l'engagement de l'année et de la suivante, les applications qui perdent ce contrat et les actifs qui perdent leur contrat de support. **Confirmer la résiliation** désactive la reconduction tacite, fixe la fin de validité à ce jour et ferme la tâche. Le contrat indique alors **Fin sans reconduction** et son engagement s'arrête ce jour-là
+
+Pour un contrat sans reconduction, l'encart indique « Fin prévue le 31 mars 2027 · décision attendue » et propose deux actions :
+
+- **Renouveler** : réactive la reconduction tacite et retire la fin de validité
+- **Laisser finir** : confirme la fin. Rien d'autre ne change
+
+Une fois la décision prise, l'encart se réduit à une ligne, par exemple « Renouvellement confirmé le 2 oct. 2026 par Sophie Laurent. Le contrat repart pour un terme le 1er juil. 2027. », avec la tâche et la justification. Après une résiliation, il rappelle d'envoyer la lettre de résiliation avant la date limite et de la joindre dans **Relations**.
+
+**Annuler la décision** remet le contrat et la tâche dans leur état précédent : avant la date limite de résiliation, ou avant la fin pour un contrat sans reconduction.
+
+Il faut `contracts:member` pour décider. Les lecteurs voient l'encart sans ses actions.
+
+### Désactiver ou réactiver la reconduction tacite
+
+**Reconduction tacite**, dans le panneau **Propriétés**, suit les mêmes règles.
+
+**Non** sur un contrat déjà reconduit, ou sur un contrat qui attend une décision de renouvellement, ouvre **Désactiver la reconduction tacite**. La fenêtre propose une date de fin comme une résiliation (première fin permise par le préavis, tout jour à partir d'aujourd'hui, avertissement orange avant la date proposée, conséquences pour le jour choisi) et indique « Le contrat prendra fin le 30 juin 2027, sauf renouvellement. ». Pour un contrat déjà reconduit, elle précise que ses termes passés sont conservés. **Désactiver la reconduction** fixe cette fin de validité et le champ indique **Non**. **Annuler** ne change rien.
+
+Aucune décision n'est enregistrée. Le contrat attend maintenant une décision sur sa fin : une tâche de décision ouverte devient « Décider de renouveler ou de laisser finir » le contrat, à échéance de la nouvelle fin, avec un commentaire qui explique pourquoi. Sans tâche ouverte, une tâche est créée quand la fin tombe dans le délai.
+
+Sur un contrat dans son premier terme sans décision attendue, **Non** s'applique aussitôt : le contrat s'arrête à la fin de son premier terme.
+
+**Oui** sur un contrat sans reconduction qui a une fin de validité ouvre **Réactiver la reconduction tacite** : « Le contrat sera reconduit tacitement et la fin du 31 mars 2027 sera retirée. ». **Réactiver la reconduction** l'applique, quelle que soit l'origine de cette fin. Quand une décision était attendue sur la fin, cela vaut **Renouveler** et peut être annulé. Sinon, la tâche ouverte sur la fin devient la tâche de décision de renouvellement quand cette décision est attendue, ou elle est fermée. Sans fin de validité, **Oui** s'applique aussitôt.
 
 ---
 
 ## Import/export CSV
 
-Maintenez votre registre de contrats synchronisé avec les systèmes externes via CSV.
+Gardez votre liste de contrats synchronisée avec d'autres outils grâce au CSV (`contracts:admin`).
 
-**Export** : Télécharge tous les contrats avec les champs principaux et les dates calculées. La colonne `status` contient le statut lu dans la fin de validité.
+**Export** : télécharge tous les contrats avec ces colonnes : `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Les dates calculées (fin du terme, dates limites, état) ne sont pas exportées.
 
 **Import** :
 
-- Utilisez le **Contrôle préalable** pour valider avant d'appliquer
+- Utilisez le **Contrôle préalable** pour vérifier le fichier avant de l'appliquer
 - Une ligne correspond à un contrat par son nom et son fournisseur
-- Supporte la création et les mises à jour
+- Création et mises à jour sont prises en charge
 - Le fichier n'a pas de colonne de fin de validité. Lors d'une mise à jour, un `status` vide, ou égal au statut actuel du contrat, conserve sa fin de validité. Un statut différent l'applique : `enabled` efface la fin de validité, et `disabled` termine le contrat aujourd'hui, sauf si sa fin de validité est déjà passée
 - Un nouveau contrat est activé sauf si la ligne indique `disabled`
+- Une ligne qui passe `auto_renewal` à false sur un contrat déjà reconduit et sans fin de validité est refusée, contrôle préalable compris : elle effacerait les termes que le contrat a courus. Désactivez la reconduction depuis la fiche du contrat, qui fixe la fin
 
-**Notes** :
+**Remarques** :
 
-- Utilisez l'**encodage UTF-8** et les **points-virgules** comme séparateurs
-- Les champs calculés (Date de fin, Date limite de résiliation) ne sont pas importés — ils sont calculés à partir de la Durée et de la Période de préavis
+- Utilisez l'**encodage UTF-8** et des **points-virgules** comme séparateurs
+- Les dates sont calculées à partir du début, de la durée, du préavis et de la reconduction ; elles ne sont jamais importées
 
 ---
 
-## Conseils
+## Astuces
 
-- **Surveillez la colonne Résilier avant** : La liste trie par défaut par date limite de résiliation, donc les contrats nécessitant une attention apparaissent en premier.
-- **Liez aux OPEX et CAPEX tôt** : Connectez les contrats aux lignes de coûts lors de leur création pour un suivi complet des coûts.
-- **Utilisez les tâches pour les renouvellements** : Créez une tâche 3 à 6 mois avant la date limite de résiliation pour la revue de renouvellement.
-- **Suivez les montants annuels** : Même si la facturation est mensuelle, enregistrez le montant annuel pour une comparaison plus facile d'année en année.
-- **Liens profonds depuis la liste** : Vous pouvez partager un lien direct vers n'importe quel contrat — l'URL de l'espace de travail inclut l'ID du contrat et préserve votre contexte de liste (recherche, tri, filtres) pour que le bouton retour vous ramène exactement là où vous étiez.
+- **Renseignez un responsable sur chaque contrat** : les tâches de décision de renouvellement vont au responsable. Un contrat sans responsable ne reçoit aucune tâche.
+- **Commencez la semaine par À décider** : le filtre rapide liste les contrats dont la décision est attendue, et l'encart de décision de chacun montre ce qui se passe sans décision.
+- **Liez les lignes budgétaires tôt** : l'**Écart** et le filtre **Sous-budgétés** ne servent que si le contrat est lié aux lignes qui le paient.
+- **Renseignez le montant annuel** : même avec une facturation mensuelle, le montant annuel alimente l'engagement et les totaux.
+- **Liez applications et actifs** : ils décident des clauses que le contrat doit contenir.
+- **Partagez un contrat** : utilisez **Envoyer le lien**, ou copiez l'adresse de la page. Elle ouvre le même onglet et garde le contexte de votre liste.

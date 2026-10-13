@@ -583,11 +583,12 @@ Par défaut, Docker attribue à ses 15 premiers réseaux des plages comprises da
 
 ## Tâches de fond
 
-L'API exécute 15 tâches planifiées. Les heures ci-dessous sont les valeurs par défaut, en UTC (l'horloge du conteneur API). Les administrateurs voient les tâches dans **Administration → Tâches planifiées** (voir [Tâches planifiées](../scheduled-tasks.md)), où chacune peut être désactivée, reprogrammée ou lancée à la demande.
+L'API exécute les tâches planifiées ci-dessous. Les heures ci-dessous sont les valeurs par défaut, en UTC (l'horloge du conteneur API). Les administrateurs voient les tâches dans **Administration → Tâches planifiées** (voir [Tâches planifiées](../scheduled-tasks.md)), où chacune peut être désactivée, reprogrammée ou lancée à la demande.
 
 | Tâche | Quand | Ce qu'elle fait |
 |-----|------|--------------|
-| `check-expirations` | Tous les jours à 08:00 | Envoie un e-mail aux responsables des contrats et des lignes OPEX 30, 14, 7 et 1 jour(s) avant une date limite de résiliation, une date de fin ou la fin de validité. Seuls les utilisateurs qui ont activé ces notifications les reçoivent, une fois par jour. |
+| `check-expirations` | Tous les jours à 08:00 | Envoie un e-mail aux responsables des contrats et des lignes budgétaires 30, 14, 7 et 1 jour(s) avant la prochaine date limite de résiliation d'un contrat, la fin d'un contrat qui ne sera pas reconduit ou la fin de validité d'une ligne. Seuls les utilisateurs qui ont activé ces notifications les reçoivent, une fois par jour. |
+| `contract-renewal-tasks` | Tous les jours à 07:30 | Crée une tâche de décision de renouvellement pour le responsable de chaque contrat dont la date limite de résiliation, ou la fin pour un contrat sans reconduction, entre dans le délai de décision. Une tâche par contrat et par terme. Voir [Contrats](../contracts.md#decisions-de-renouvellement). |
 | `send-weekly-reviews` | Toutes les heures | Envoie le récapitulatif de la revue hebdomadaire aux utilisateurs qui l'ont demandé, au jour et dans le fuseau horaire qu'ils ont choisis. |
 | `lifecycle-status-sync` | Toutes les heures, et une fois au démarrage | Passe à l'état désactivé les master data, contrats, lignes OPEX et CAPEX dont la fin de validité est dépassée. |
 | `entra-directory-sync` | Tous les jours à 03:00 | Actualise les attributs des utilisateurs et désactive les comptes retirés ou désactivés dans l'annuaire. Fonctionne uniquement quand le SSO Entra est connecté et approuvé. Voir [SSO Microsoft Entra](sso-entra.md). |

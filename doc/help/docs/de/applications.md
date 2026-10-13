@@ -262,6 +262,7 @@ Der Reiter ist in vier Blöcke gegliedert, in der Reihenfolge einer Business-Imp
 **Daten**:
 - **Datenvertraulichkeit** verwendet den Datenklassenkatalog der Organisation.
 - **Enthält personenbezogene Daten** und **Datenresidenz** vervollständigen das Datenbild.
+- Personenbezogene Daten, geschäftliche und Cyber-Kritikalität sowie das Hosting der Instanzen entscheiden auch, welche Klauseln die mit der Anwendung verknüpften Verträge enthalten sollten. Siehe den Reiter **Konformität** unter [Verträge](contracts.md#konformitat).
 
 **Kontinuität und Wiederanlauf**:
 - Die **Wiederherstellungswelle** bezeichnet die Reihenfolge der Wiederherstellung, keine Dauer und keinen Schweregrad.
