@@ -11,54 +11,63 @@ translationKey: analytics-dimensions-for-your-it-budget
 
 To the question "who pays for this licence?", chargeback tools answer without hesitating. But to the question "how much does cyber security cost us, all suppliers combined?", we often have no answer.
 
-Analytics dimensions bring that second reading. A lightweight, optional tag set on an item to state its nature: Infrastructure, Cloud Migration, Licences, Security. Configurable, of course.
+Analytics dimensions bring that second reading. Each dimension is one way of classifying lines, with its own values: what the money pays for, the part of IT it serves, why it is spent. A new workspace starts with four of them, all optional.
 
 ## The mechanics in KANAP
 
-### Creating dimensions
+### Dimensions and their values
 
-Head to **Master Data > Analytics dimensions**. Each dimension carries a unique name and a description. The description is mostly for your colleagues: "Hosting, cloud and virtualisation" reads better than "Infra".
+Head to **Master data > Analytics dimensions**. A bar at the top lists the dimensions; click one to see its values. A new workspace comes with four recommended dimensions, each with values and a one-sentence description:
 
-![The analytics dimensions list: name, description, status and last update](/screenshots/blog/analytics-dimensions.png)
+- **Cost pool**, the default dimension: what the money pays for (Hardware, Software, External labor, Outside services...).
+- **IT tower**: the part of IT the spend serves (Compute, Network, End user, Application, Security and compliance...).
+- **Purpose**: why the money is spent (Replacement, Capacity, Productivity, Security, Compliance, Business growth).
+- **Priority**: Mandatory, High, Medium or Low.
 
-About ten broad categories are usually enough. Past twenty, you are describing your organisation instead of analysing it. Keep the naming consistent.
+![The Analytics dimensions page: the dimension bar with Cost pool selected, and its eight values with their descriptions](/screenshots/blog/analytics-dimensions-2026-10-13.png)
 
-### Tagging an item
+Cost pools and IT towers follow the TBM (Technology Business Management) model. Rename, reorder or disable what does not fit. A workspace created earlier adds them with **Recommended dimensions**. **New** creates a dimension of your own, and **New value** adds a value to the selected one.
 
-In the properties panel of an OPEX or CAPEX item, the **Analytics category** field expects a dimension. Pick one, or leave it blank for "Unassigned". The tag then applies to the whole item, across every fiscal year.
+Five to ten broad values per dimension are usually enough. Past twenty, the dimension tries to answer too many questions: split it in two. The description is mostly for your colleagues: "Contractors and consultants billed for their time" reads better than "Ext."
 
-![The Analytics category field of an OPEX item, here AWS Cloud Hosting tagged Infrastructure](/screenshots/blog/analytics-opex-item.png)
+### Classifying a line
 
-An item carries zero or one dimension. Multi-dimensional analysis is not available this way: to cross two angles, use departments and their allocation drivers.
+In the **Properties** panel of a budget line, each dimension has its own field, for example **Cost pool** or **IT tower**. Pick a value, or leave it empty for "Unassigned". The value applies to the whole line, across every fiscal year.
+
+![The Properties panel of a budget line: Hardware on Cost pool, Compute on IT tower, Replacement on Purpose and Mandatory on Priority](/screenshots/blog/analytics-line-properties-2026-10-13.png)
+
+A line holds one value per dimension: **Software** on Cost pool and **Application** on IT tower at the same time. Each dimension answers one question, and the report crosses them.
 
 Two points to keep in mind:
 
 - **No impact on allocations**, and none on formal accounting. The paying company, the account and the allocation drivers do not move. Analytics dimensions are for reporting only.
-- **Departments and dimensions are not in the same league.** Departments are formal organisational units with precise allocation drivers. Analytics dimensions are informal, optional tags with no allocation overhead.
+- **Departments and dimensions are not in the same league.** Departments are formal organisational units with precise allocation drivers. Analytics dimensions are informal, optional classifications with no allocation overhead.
 
-To retire a dimension, disable it. The disabled date is recorded, the dimension disappears from selection lists, items already tagged keep their tag, and historical reports stay accurate. There is no delete button, and that is deliberate.
+To retire a value or a dimension, disable it: lines keep their value and past reports stay accurate. Deleting is possible, after a confirmation that counts the lines that lose their value.
 
-You can use the information gathered in the OPEX list by adding the optional "Analytics" column. It sweeps every item of a category at a glance: "Which applications does finance use?".
+In the budget lines list, each dimension has its own optional column. It sweeps every line of a value at a glance: "Which lines are External labor?".
 
 ## The Budget by analytics dimension report
 
-The report lives under **Reports > Analytics dimensions**.
+The report lives under **Reporting > Analytics dimensions**.
 
+- **Line type**: all lines, OPEX or CAPEX.
+- **Dimension**: the dimension to group on, Cost pool to start with.
 - **Single year**: pie or horizontal bar chart, your choice.
-- **Multi-year range**: a line chart, one line per dimension.
-- **Metric**: budget, actuals, expected landing or revision.
-- **Dimension exclusion**: to focus on a subset.
+- **Multi-year range**: a line chart, one line per value.
+- **Metric**: any budget column you show (budget, revision, actuals, expected landing).
+- **Exclude values**: to focus on a subset.
 - **Outputs**: summary table, CSV export of the table, PNG of the chart, full PDF.
 
-![The report for 2026: 3.2 M EUR of OPEX budget spread across fifteen analytics dimensions](/screenshots/blog/analytics-report.png)
+![The report for 2026: 12.1 M EUR of OPEX budget split across the values of Cost pool](/screenshots/blog/analytics-report-2026-10-13.png)
 
-In the 2026 fiscal year, productivity alone takes 25% of the OPEX budget. Infrastructure follows at 13%, as do professional services.
+In the 2026 fiscal year, external labor alone takes 54% of the OPEX budget. Software follows at 26%, then outside services at 11%.
 
 In the multi-year view, the report becomes a trend tool. One line takes off, another fades, and the decision is discussed on facts.
 
-![The same report from 2025 to 2027: one line per analytics dimension](/screenshots/blog/analytics-report-range.png)
+![The same report from 2025 to 2026: one line per value of Cost pool](/screenshots/blog/analytics-report-range-2026-10-13.png)
 
-"Unassigned" is a valid state. Dimensions are optional, and an item without a tag simply shows up on that line.
+"Unassigned" is a valid state. Values are optional, and a line without one simply shows up on that line of the report.
 
 <aside class="tip">
   <b>Tip</b>
@@ -67,22 +76,22 @@ In the multi-year view, the report becomes a trend tool. One line takes off, ano
 
 ## Hidden costs
 
-The pie surfaces what the item "top 10" hides. The dimension that grew too big to be honest. Two dimensions that describe almost the same thing and would be better merged. The line that starts at zero in 2025 on IoT, a trace of an item that appeared along the way. Or the HR dimension moving from 80,000 EUR to 150,000 EUR in one year, while the overall budget grows by 13%.
+The pie surfaces what the "top 10" lines hide. The value that grew too big to be honest. Two values that describe almost the same thing and would be better merged. The Capacity purpose that starts at zero in 2025, a trace of a line that appeared along the way. Or HR, on the Business domain dimension, moving from 468,500 EUR to 574,570 EUR in one year (+23%), while the OPEX budget grows by 13%.
 
-This is also where the two readings cross. Security accounts for 7% of the budget. The chargeback report says which subsidiary carries it. The CIO then holds a short, verifiable sentence in a budget review: here is what we spend, what for, and who pays.
+This is also where the two readings cross. Security and compliance, on IT tower, accounts for 8% of the OPEX budget. The chargeback report says which subsidiary carries it. The CIO then holds a short, verifiable sentence in a budget review: here is what we spend, what for, and who pays.
 
 ## What about CAPEX?
 
-The **Analytics category** field also exists on CAPEX items, with the same rule: zero or one dimension. An investment project therefore reads with the vocabulary of recurring spend, and the two envelopes stay comparable.
+Dimensions apply to OPEX and CAPEX lines alike, unless you set one to a single type. An investment project therefore reads with the vocabulary of recurring spend, and the two envelopes stay comparable.
 
 That is the point of a shared nomenclature: the question "how much does security cost?" is asked the same way about a recurring licence and about an equipment project.
 
 ## Where to start
 
-1. Create five to ten broad dimensions, each with a one-sentence description.
-2. Tag the ten heaviest items first. The report becomes useful at that step.
-3. Leave the rest as "Unassigned", then tag as you go.
+1. Review the four recommended dimensions and rename or disable the values you do not need.
+2. Classify the ten heaviest lines first. The report becomes useful at that step.
+3. Leave the rest as "Unassigned", then classify as you go.
 4. Cross the report with the chargeback reports: who pays on one side, what for on the other.
-5. Re-run the report at every budget review. Split a dimension that is too broad, merge two that are too fine.
+5. Re-run the report at every budget review. Split a value that is too broad, merge two that are too fine.
 
-Analytics dimensions complement the allocation of IT costs (see [IT cost chargeback, made easy](/blog/it-cost-chargeback-made-simple)) and give you the visibility you need to prepare, analyse and defend your budget.
+Analytics dimensions complement the allocation of IT costs (see [IT cost chargeback: who pays what, and why](/blog/it-cost-chargeback-made-simple)) and give you the visibility you need to prepare, analyse and defend your budget.

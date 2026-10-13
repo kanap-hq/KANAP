@@ -17,13 +17,13 @@ const content: FeaturesHubContent = {
       role: 'DSI / directeur IT',
       headline: 'Défendez le budget IT en comité de direction.',
       body:
-        "Votre directeur financier demande pourquoi les coûts IT ont augmenté de 12 %. Vous arrivez avec les chiffres : un rapport de refacturation par société et département, OPEX et CAPEX ventilés par application, la tendance pluriannuelle. Chaque ligne remonte à un contrat ou un projet. Pas de gymnastique Excel, pas de « je vous reviens ».",
-      outcome: 'Arrivez à la revue de budget avec des réponses, pas des questions.',
+        "Votre directeur financier demande pourquoi les coûts IT ont augmenté de 12 %. Vous arrivez avec les chiffres : un rapport de refacturation par société et département, OPEX et CAPEX côte à côte, par dimension analytique, la tendance pluriannuelle. Chaque ligne remonte à un contrat ou un projet. Pas de gymnastique Excel, pas de « je vous reviens ».",
+      outcome: 'Arrivez à la revue de budget avec les réponses.',
       modules: [
         { slug: 'budget', label: 'Budget' },
         { slug: 'it-landscape', label: 'Paysage IT' },
       ],
-      shotAlt: 'Rapport de refacturation par société et département, ventilation OPEX/CAPEX',
+      shotAlt: 'Top 10 des lignes OPEX du budget 2026, en camembert',
     },
     {
       role: "Architecte d'entreprise",

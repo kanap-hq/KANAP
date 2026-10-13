@@ -21,27 +21,29 @@ Vos lignes vivent encore dans Excel ? « Importer CSV » les charge en une fois,
 
 ## L'atterrissage prévu, la colonne qui compte
 
-Chaque poste de dépense (`OPX-12`, `OPX-47`...) porte cinq colonnes budgétaires par année : **Budget**, **Révision**, **Prévision**, **Réalisé** et **Atterrissage prévu**, sur l'année écoulée, l'année en cours et les deux suivantes. Vos tours budgétaires ont leurs propres noms, A0, A1 ou « Reforecast de juin » ? Renommez les colonnes, masquez celles qui ne vous servent pas et choisissez la colonne par défaut, celle qui trie les listes et que les rapports présélectionnent. À ce stade, l'enjeu est de savoir où et comment on finira l'année en cours. C'est le moment de sortir votre meilleure estimation de ce qu'un poste aura réellement coûté au 31 décembre !
+Chaque ligne budgétaire (`BL-12`, `BL-47`...) porte cinq colonnes budgétaires par année : **Budget**, **Révision**, **Prévision**, **Réalisé** et **Atterrissage prévu**, sur l'année écoulée, l'année en cours et les deux suivantes. Vos tours budgétaires ont leurs propres noms, A0, A1 ou « Reforecast de juin » ? Renommez les colonnes, masquez celles qui ne vous servent pas et choisissez la colonne par défaut, celle qui trie les listes et que les rapports présélectionnent. À ce stade, l'enjeu est de savoir où et comment on finira l'année en cours. C'est le moment de sortir votre meilleure estimation de ce qu'une ligne aura réellement coûté au 31 décembre !
 
 C'est aussi le socle du budget de l'année suivante : un atterrissage soigné évite de reconduire en janvier des montants qui auraient changé dans l'année en cours.
 
 ## Filtrer comme dans Excel
 
-Personne ne relit deux cents lignes d'un bloc. La liste OPEX se manipule comme une feuille de calcul : un filtre rapide en haut, des filtres à cases à cocher sur chaque colonne. Société payeuse, Compte, Centre de coûts, Ventilation, Devise, Responsable IT, Responsable métier, dimensions analytiques : vous cochez, la liste se resserre, et la ligne de totaux recalcule sur la sélection.
+Personne ne relit deux cents lignes d'un bloc. La liste des lignes budgétaires se manipule comme une feuille de calcul : un filtre rapide en haut, des filtres à cases à cocher sur chaque colonne. Type, Société payeuse, Compte, Centre de coûts, Ventilation, Devise, Responsable IT, Responsable métier, dimensions analytiques : vous cochez, la liste se resserre, et la ligne de totaux recalcule sur la sélection.
 
-![La liste OPEX filtrée, avec la ligne de totaux qui suit la sélection](/screenshots/blog/opex-list-filters-2026-10.png)
+![La liste des lignes budgétaires filtrée sur deux comptes de logiciels, avec la ligne Total qui suit la sélection : 21 lignes.](/screenshots/blog/budget-lines-filters-2026-10-13.png)
 
-La revue se découpe alors naturellement : les prestations de service un matin, les licences le lendemain, les postes d'une filiale ensuite. Les filtres sont conservés dans l'URL ; vous ouvrez une ligne, vous revenez, la sélection n'a pas bougé.
+La revue se découpe alors naturellement : les prestations de service un matin, les licences le lendemain, les lignes d'une filiale ensuite. Les filtres sont conservés dans l'URL ; vous ouvrez une ligne, vous revenez, la sélection n'a pas bougé.
 
 Ou bien, si vous êtes pressés, triez simplement par montant et traitez les 20 plus grosses lignes, qui portent en général l'essentiel du budget !
 
-## Parcourir la sélection, poste par poste
+## Parcourir la sélection, ligne par ligne
 
-Ouvrez le premier poste de la sélection, onglet **Budget**. Les flèches précédent et suivant affichent « 3 sur 42 » et suivent votre liste filtrée, dans son ordre de tri. Vous avancez ligne à ligne et ne corrigez l'atterrissage que là où la réalité a divergé : un contrat renégocié, un projet décalé, une consommation cloud plus haute que prévu.
+Ouvrez la première ligne de la sélection, onglet **Budget**. Les flèches précédent et suivant affichent « 3 sur 21 » et suivent votre liste filtrée, dans son ordre de tri. Vous avancez ligne à ligne et ne corrigez l'atterrissage que là où la réalité a divergé : un contrat renégocié, un projet décalé, une consommation cloud plus haute que prévu.
 
-![L'onglet Budget d'un poste, avec la navigation dans la sélection](/screenshots/blog/opex-budget-tab-2026-10b.png)
+![L'onglet Budget d'une ligne budgétaire : une carte par colonne, l'éditeur Montant et le résultat mensuel, avec « 3 of 21 » pour parcourir la sélection.](/screenshots/blog/budget-tab-2026-10-13.png)
 
-Pour les lignes qui méritent mieux qu'un montant annuel, l'onglet Budget propose un mode **Mensuel** et un outil « Répartir un montant », en linéaire ou en 4-4-5.
+Pour les lignes qui méritent mieux qu'un montant annuel, choisissez la carte de la colonne, puis sa construction : **Montant** (toute l'année, une période ou une date, linéaire ou 4-4-5), **Quantité et prix** ou **Par mois**.
+
+Une colonne vide peut **Partir de** une autre, ajustée d'un pourcentage. Vous changez d'avis ? **Revenir aux valeurs d'ouverture** rétablit les colonnes modifiées.
 
 > Les lignes où rien n'a bougé restent vides. L'épisode 2 les remplira toutes d'un coup.
 
@@ -49,7 +51,7 @@ Pour les lignes qui méritent mieux qu'un montant annuel, l'onglet Budget propos
 
 Pour une régie, un forfait mensuel ou des licences à l'unité, un montant annuel ne dit pas grand-chose. Dans l'onglet Budget, « Quantité et prix » décompose le montant en lignes : une quantité, une unité (personnes, jours ou pièces), un prix unitaire et une période.
 
-![Un poste de régie construit en quantité × prix : une personne à temps plein à 880 € par jour, soit 1 ETP sur l'année](/screenshots/blog/budget-item-lines-2026-10b.png)
+![Une ligne de régie construite en quantité × prix : 2 personnes à temps plein à 470 € par jour sur 218 jours ouvrés, soit 2 ETP sur l'année.](/screenshots/blog/budget-quantity-price-2026-10-13.png)
 
 Deux consultants à 650 € par jour, à temps plein de mars à décembre : KANAP calcule chaque mois avec les jours ouvrés du calendrier du pays de la société payeuse, jours fériés déduits. Si la mission s'arrête fin octobre ou si le TJM a été renégocié, vous changez la date ou le prix, et l'atterrissage se recalcule. Plus besoin de refaire la multiplication à la main.
 
@@ -59,7 +61,7 @@ Au passage, chaque ligne en personnes ou en jours déclare ses ETP (équivalents
 
 ## Pendant qu'on y est : noter ce qu'on sait déjà de 2027
 
-La colonne « Budget A+1 (2027) » est juste à côté. Profitez de la revue pour y saisir les changements déjà actés : extension de périmètre, renégociation, résiliation... Pour les fins de contrat, aucun effort de mémoire : chaque poste affiche son contrat, et chaque contrat porte sa date limite de résiliation. Les échéances 2027 se lisent dans la liste des contrats.
+L'onglet d'année 2027 est juste à côté. Profitez de la revue pour y saisir les changements déjà actés : extension de périmètre, renégociation, résiliation... Pour les fins de contrat, aucun effort de mémoire : chaque ligne affiche son contrat, et chaque contrat porte sa date limite de résiliation. Les échéances 2027 se lisent dans la liste des contrats.
 
 N'hésitez pas non plus à exploiter les notes : un petit mot (« +10 % au T3, renégociation en cours ») et vous vous remercierez dans 6 mois.
 
@@ -67,13 +69,13 @@ Ces montants saisis à la main ne risquent rien : la copie automatique de l'épi
 
 ## Astuce : les devises d'abord
 
-KANAP gère les budgets multi-devises, mais il faut y penser avant ! Dans Gestion budgétaire → Administration → **Devises**, définissez la devise de reporting, les devises par défaut OPEX et CAPEX et la liste des devises autorisées. Les taux de change se synchronisent automatiquement par exercice, et se figent quand vous gelez la colonne budgétaire par défaut. Chaque poste garde sa devise ; totaux et rapports convertissent en devise de reporting.
+KANAP gère les budgets multi-devises, mais il faut y penser avant ! Dans Gestion budgétaire → Administration → **Devises**, définissez la devise de reporting, les devises par défaut OPEX et CAPEX et la liste des devises autorisées. Les taux de change se synchronisent automatiquement par exercice, et se figent quand vous gelez la colonne budgétaire par défaut. Chaque ligne garde sa devise ; totaux et rapports convertissent en devise de reporting.
 
-![Les paramètres de devise : devise de reporting, devises autorisées et taux de change](/screenshots/blog/currency-settings-2026-10.png)
+![Les paramètres de devise : devise de reporting, devises par défaut, devises autorisées et taux de change de 2025 à 2027.](/screenshots/budget-currency-2026-10-13.png)
 
 ## Et le CAPEX ?
 
-Tout ce qui précède vaut pour les investissements : lignes `CPX`, mêmes colonnes, mêmes filtres, même navigation. La revue d'atterrissage se fait au même endroit, onglet CAPEX. L'épisode 3 montrera les deux enveloppes côte à côte.
+Tout ce qui précède vaut pour les investissements : les lignes CAPEX sont dans la même liste, avec les mêmes colonnes, filtres et navigation. Cochez CAPEX dans le filtre Type, ou revoyez les deux ensemble. L'épisode 3 montrera les deux enveloppes côte à côte.
 
 ## La suite
 
