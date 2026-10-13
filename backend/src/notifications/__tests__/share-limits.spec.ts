@@ -11,6 +11,7 @@ import { shareRecipientsOf } from '../share-recipients';
 import { shareLinkRateLimitKey } from '../share-rate-limit';
 import { RATE_LIMITS } from '../../common/rate-limit';
 import { UserRateLimitGuard } from '../../common/rate-limit.guard';
+import { PermissionGuard } from '../../auth/permission.guard';
 
 /**
  * "Send link" (every object's `POST .../:id/share`): bounded recipient lists and message, one
@@ -103,6 +104,11 @@ function testEveryShareRouteIsRateLimited() {
         routes.push(label);
         const guards: unknown[] = Reflect.getMetadata(GUARDS_METADATA, handler) ?? [];
         assert.ok(guards.includes(UserRateLimitGuard), `${label} counts per user`);
+        assert.ok(guards.includes(PermissionGuard), `${label} checks the permission`);
+        assert.ok(
+          guards.indexOf(PermissionGuard) < guards.indexOf(UserRateLimitGuard),
+          `${label} checks the permission before counting the request`,
+        );
         assert.equal(Reflect.getMetadata('THROTTLER:LIMITdefault', handler), RATE_LIMITS.shareLink.limit, `${label} limit`);
         assert.equal(Reflect.getMetadata('THROTTLER:TTLdefault', handler), RATE_LIMITS.shareLink.ttl, `${label} window`);
         assert.equal(

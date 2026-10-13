@@ -42,5 +42,6 @@
   "tenant_reset_running": "Dieser Arbeitsbereich wird bereits gelöscht. Versuchen Sie es erneut, wenn der Vorgang abgeschlossen ist.",
   "confirmation_mismatch": "Der eingegebene Name stimmt nicht mit dem Namen des Arbeitsbereichs überein.",
   "rate_limited": "Zu viele Versuche. Warten Sie einige Minuten und versuchen Sie es erneut.",
-  "SHARE_TOO_MANY_RECIPIENTS": "Ein Link kann an höchstens 20 Empfänger gesendet werden."
+  "SHARE_TOO_MANY_RECIPIENTS": "Ein Link kann an höchstens 20 Empfänger gesendet werden.",
+  "SHARE_RATE_LIMITED": "Sie haben in der letzten Stunde die Höchstzahl von 30 Links gesendet. Versuchen Sie es später erneut."
 }

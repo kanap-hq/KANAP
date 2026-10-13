@@ -42,5 +42,6 @@
   "tenant_reset_running": "Este espacio de trabajo ya se está borrando. Inténtelo de nuevo cuando haya terminado.",
   "confirmation_mismatch": "El nombre escrito no coincide con el nombre del espacio de trabajo.",
   "rate_limited": "Demasiados intentos. Espere unos minutos e inténtelo de nuevo.",
-  "SHARE_TOO_MANY_RECIPIENTS": "Un enlace se puede enviar a 20 destinatarios como máximo."
+  "SHARE_TOO_MANY_RECIPIENTS": "Un enlace se puede enviar a 20 destinatarios como máximo.",
+  "SHARE_RATE_LIMITED": "Ha enviado el máximo de 30 enlaces en la última hora. Vuelva a intentarlo más tarde."
 }

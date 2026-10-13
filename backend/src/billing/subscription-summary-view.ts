@@ -1,3 +1,4 @@
+import type { PermissionLevel } from '../permissions/permissions.service';
 import type { BillingService } from './billing.service';
 
 export type SubscriptionSummary = Awaited<ReturnType<BillingService['getSubscriptionSummary']>>;
@@ -20,10 +21,13 @@ export function subscriptionStatusView(summary: SubscriptionSummary): Subscripti
   };
 }
 
+/** The permission levels that grant billing access: any other value reads the status view. */
+const BILLING_LEVELS: readonly PermissionLevel[] = ['reader', 'contributor', 'member', 'admin'];
+
 /** The full summary with a billing permission (any level), the status view otherwise. */
 export function subscriptionSummaryFor(
   summary: SubscriptionSummary,
   billingLevel: string | null | undefined,
 ): SubscriptionSummary | SubscriptionStatusView {
-  return billingLevel ? summary : subscriptionStatusView(summary);
+  return BILLING_LEVELS.includes(billingLevel as PermissionLevel) ? summary : subscriptionStatusView(summary);
 }

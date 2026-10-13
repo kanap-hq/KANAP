@@ -6,7 +6,7 @@ import { PermissionGuard } from '../../auth/permission.guard';
 import { REQUIRE_LEVEL_KEY } from '../../auth/require-level.decorator';
 import { Features } from '../../config/features';
 import { BillingController } from '../billing.controller';
-import { subscriptionStatusView } from '../subscription-summary-view';
+import { subscriptionStatusView, subscriptionSummaryFor } from '../subscription-summary-view';
 
 /**
  * The subscription summary: every signed-in user reads its status (trial and freeze banners);
@@ -45,6 +45,19 @@ function testSubscriptionRouteNeedsBillingReader() {
   const guards: unknown[] = Reflect.getMetadata(GUARDS_METADATA, handler) ?? [];
   assert.ok(guards.includes(PermissionGuard), 'GET /billing/subscription checks the permission');
   assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, handler), { resource: 'billing', level: 'reader' });
+}
+
+function testOnlyKnownLevelsReadTheFullSummary() {
+  for (const level of ['reader', 'contributor', 'member', 'admin']) {
+    assert.deepEqual(subscriptionSummaryFor(FULL_SUMMARY, level), FULL_SUMMARY, `${level} reads the full summary`);
+  }
+  for (const level of ['none', '', 'owner', null, undefined]) {
+    assert.deepEqual(
+      Object.keys(subscriptionSummaryFor(FULL_SUMMARY, level)).sort(),
+      STATUS_KEYS,
+      `${String(level)} reads the status view`,
+    );
+  }
 }
 
 async function testSubscriptionRouteStaysOffOnPremise() {
@@ -101,6 +114,7 @@ async function testMeKeepsPaymentDetailsForBillingUsers() {
 async function run() {
   testStatusViewHoldsNoPaymentDetail();
   testSubscriptionRouteNeedsBillingReader();
+  testOnlyKnownLevelsReadTheFullSummary();
   await testSubscriptionRouteStaysOffOnPremise();
   await testMeKeepsPaymentDetailsForBillingUsers();
   console.log('subscription-summary-access.spec: all assertions passed');

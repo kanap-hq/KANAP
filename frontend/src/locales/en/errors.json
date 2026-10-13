@@ -42,5 +42,6 @@
   "tenant_reset_running": "This workspace is already being erased. Try again when it has finished.",
   "confirmation_mismatch": "The name typed does not match the name of the workspace.",
   "rate_limited": "Too many attempts. Wait a few minutes and try again.",
-  "SHARE_TOO_MANY_RECIPIENTS": "A link can be sent to 20 recipients at most."
+  "SHARE_TOO_MANY_RECIPIENTS": "A link can be sent to 20 recipients at most.",
+  "SHARE_RATE_LIMITED": "You have sent the maximum of 30 links in the last hour. Try again later."
 }

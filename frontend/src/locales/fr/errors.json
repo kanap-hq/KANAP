@@ -42,5 +42,6 @@
   "tenant_reset_running": "Cet espace de travail est déjà en cours d'effacement. Réessayez quand ce sera terminé.",
   "confirmation_mismatch": "Le nom saisi ne correspond pas au nom de l'espace de travail.",
   "rate_limited": "Trop de tentatives. Patientez quelques minutes, puis réessayez.",
-  "SHARE_TOO_MANY_RECIPIENTS": "Un lien peut être envoyé à 20 destinataires au maximum."
+  "SHARE_TOO_MANY_RECIPIENTS": "Un lien peut être envoyé à 20 destinataires au maximum.",
+  "SHARE_RATE_LIMITED": "Vous avez envoyé le maximum de 30 liens au cours de la dernière heure. Réessayez plus tard."
 }

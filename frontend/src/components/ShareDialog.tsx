@@ -168,7 +168,12 @@ export default function ShareDialog({
       });
       onClose();
     } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('messages.failedToSend')));
+      // The "Send link" budget is counted over one hour: say so rather than "a few minutes".
+      setError(
+        e?.response?.status === 429
+          ? t('errors:SHARE_RATE_LIMITED')
+          : getApiErrorMessage(e, t, t('messages.failedToSend')),
+      );
     } finally {
       setSending(false);
     }

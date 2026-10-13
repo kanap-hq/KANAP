@@ -431,7 +431,7 @@ export class DocumentExportService {
   /**
    * Le cookie de session n'est transmis qu'aux cibles de notre propre
    * infrastructure (self hosts et boucle locale) : il n'a aucune raison d'aller
-   * vers un CDN tiers autorisé, même présent dans la liste autorisée.
+   * vers un CDN tiers, même présent dans la liste autorisée.
    */
   private imageFetchHeadersFor(candidate: string, ctx: AstImageContext): Record<string, string> | undefined {
     const configured = ctx.opts?.imageFetchHeaders;
