@@ -355,7 +355,6 @@
   },
   "suppliers": {
     "title": "Fournisseurs",
-    "entity": "fournisseur",
     "newSupplier": "Nouveau fournisseur",
     "supplierFallback": "Fournisseur",
     "contactsTabHint": "L'onglet Contacts devient disponible après la création du fournisseur.",
@@ -367,26 +366,43 @@
     "export": "Exporter les fournisseurs",
     "import": "Importer les fournisseurs",
     "fields": {
-      "erpSupplierId": "ID fournisseur ERP"
+      "name": "Nom",
+      "erpSupplierId": "ID fournisseur ERP",
+      "status": "Statut",
+      "lifecycle": "Cycle de vie",
+      "notes": "Notes",
+      "contacts": "Contacts"
     },
     "contacts": {
-      "commercial": "Commercial",
-      "technical": "Technique",
-      "support": "Support",
-      "other": "Autre",
       "noContacts": "Aucun contact",
-      "add": "Ajouter",
-      "create": "Créer",
-      "attach": "Associer",
-      "selectContact": "Sélectionner le contact {{role}}",
-      "firstName": "Prénom",
-      "lastName": "Nom",
-      "jobTitle": "Fonction",
-      "mobile": "Mobile",
-      "actions": "Actions",
+      "addExisting": "Ajouter un existant",
+      "create": "Nouveau contact",
+      "selectContact": "Contact à ajouter ({{role}})",
+      "searchPlaceholder": "Rechercher un contact par nom",
       "removeLink": "Retirer le lien",
-      "insufficientPermission": "Autorisation insuffisante"
-    }
+      "saveFailed": "Échec de la mise à jour des contacts du fournisseur.",
+      "loadFailed": "Échec du chargement des contacts du fournisseur."
+    },
+    "placeholders": {
+      "name": "ex. : Acme Software",
+      "erpSupplierId": "ex. : SUP-001",
+      "notes": "ex. : conditions de paiement, changement d’interlocuteur"
+    },
+    "status": {
+      "enabled": "Activé",
+      "disabled": "Désactivé"
+    },
+    "metadata": {
+      "openContacts": "Ouvrir les contacts"
+    },
+    "messages": {
+      "nameRequired": "Saisissez un nom.",
+      "nameTaken": "Un autre fournisseur porte déjà ce nom.",
+      "saveFailed": "Échec de l'enregistrement du fournisseur.",
+      "createFailed": "Échec de la création du fournisseur."
+    },
+    "previous": "Fournisseur précédent",
+    "next": "Fournisseur suivant"
   },
   "contacts": {
     "title": "Contacts",
@@ -942,9 +958,6 @@
   "formSchemas": {
     "department": {
       "companyRequired": "La société est requise",
-      "nameRequired": "Le nom est requis"
-    },
-    "supplier": {
       "nameRequired": "Le nom est requis"
     },
     "account": {

@@ -119,13 +119,17 @@ const ContactSelect = React.forwardRef<HTMLInputElement, ContactSelectProps>(fun
       getOptionLabel={(option) => formatLabel(option as Contact, showEmail, compactOptions)}
       groupBy={groupByCompany ? (option) => (option as Contact).supplier_name || t('selects.noSupplier') : undefined}
       ListboxProps={naked ? { sx: drawerAutocompleteListboxSx } : undefined}
-      renderOption={(props, option) => (
-        <li {...props}>
-          <span className="kanap-autocomplete-option-primary">
-            {formatLabel(option as Contact, showEmail, compactOptions)}
-          </span>
-        </li>
-      )}
+      renderOption={(props, option) => {
+        // React wants the key passed on its own, not spread with the other props.
+        const { key, ...optionProps } = props as typeof props & { key: React.Key };
+        return (
+          <li key={key} {...optionProps}>
+            <span className="kanap-autocomplete-option-primary">
+              {formatLabel(option as Contact, showEmail, compactOptions)}
+            </span>
+          </li>
+        );
+      }}
       renderInput={(params) => (
         <TextField
           {...params}
@@ -136,6 +140,8 @@ const ContactSelect = React.forwardRef<HTMLInputElement, ContactSelectProps>(fun
           helperText={helperText}
           variant="standard"
           sx={textFieldSx}
+          // A hidden label still names the field for assistive technologies.
+          inputProps={naked && label ? { ...params.inputProps, 'aria-label': label } : params.inputProps}
           InputProps={{
             ...params.InputProps,
             endAdornment: (

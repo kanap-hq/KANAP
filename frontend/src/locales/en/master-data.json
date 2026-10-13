@@ -355,7 +355,6 @@
   },
   "suppliers": {
     "title": "Suppliers",
-    "entity": "supplier",
     "newSupplier": "New supplier",
     "supplierFallback": "Supplier",
     "contactsTabHint": "The contacts tab becomes available after you create the supplier.",
@@ -367,26 +366,43 @@
     "export": "Export suppliers",
     "import": "Import suppliers",
     "fields": {
-      "erpSupplierId": "ERP supplier ID"
+      "name": "Name",
+      "erpSupplierId": "ERP supplier ID",
+      "status": "Status",
+      "lifecycle": "Lifecycle",
+      "notes": "Notes",
+      "contacts": "Contacts"
     },
     "contacts": {
-      "commercial": "Commercial",
-      "technical": "Technical",
-      "support": "Support",
-      "other": "Other",
       "noContacts": "No contacts",
-      "add": "Add",
-      "create": "Create",
-      "attach": "Attach",
-      "selectContact": "Select {{role}} contact",
-      "firstName": "First name",
-      "lastName": "Last name",
-      "jobTitle": "Job title",
-      "mobile": "Mobile",
-      "actions": "Actions",
+      "addExisting": "Add existing",
+      "create": "New contact",
+      "selectContact": "Contact to add ({{role}})",
+      "searchPlaceholder": "Search contacts by name",
       "removeLink": "Remove link",
-      "insufficientPermission": "Insufficient permission"
-    }
+      "saveFailed": "Failed to update the supplier contacts.",
+      "loadFailed": "Failed to load the supplier contacts."
+    },
+    "placeholders": {
+      "name": "e.g., Acme Software",
+      "erpSupplierId": "e.g., SUP-001",
+      "notes": "e.g., Payment terms, account manager changes"
+    },
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "metadata": {
+      "openContacts": "Open the contacts"
+    },
+    "messages": {
+      "nameRequired": "Enter a name.",
+      "nameTaken": "Another supplier already has this name.",
+      "saveFailed": "Failed to save the supplier.",
+      "createFailed": "Failed to create the supplier."
+    },
+    "previous": "Previous supplier",
+    "next": "Next supplier"
   },
   "contacts": {
     "title": "Contacts",
@@ -942,9 +958,6 @@
   "formSchemas": {
     "department": {
       "companyRequired": "Company is required",
-      "nameRequired": "Name is required"
-    },
-    "supplier": {
       "nameRequired": "Name is required"
     },
     "account": {

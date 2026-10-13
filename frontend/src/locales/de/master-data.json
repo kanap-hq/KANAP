@@ -355,7 +355,6 @@
   },
   "suppliers": {
     "title": "Lieferanten",
-    "entity": "Lieferant",
     "newSupplier": "Neuer Lieferant",
     "supplierFallback": "Lieferant",
     "contactsTabHint": "Der Tab Kontakte wird nach dem Erstellen des Lieferanten verfügbar.",
@@ -367,26 +366,43 @@
     "export": "Lieferanten exportieren",
     "import": "Lieferanten importieren",
     "fields": {
-      "erpSupplierId": "ERP-Lieferanten-ID"
+      "name": "Name",
+      "erpSupplierId": "ERP-Lieferanten-ID",
+      "status": "Status",
+      "lifecycle": "Lebenszyklus",
+      "notes": "Notizen",
+      "contacts": "Kontakte"
     },
     "contacts": {
-      "commercial": "Vertrieb",
-      "technical": "Technik",
-      "support": "Support",
-      "other": "Sonstige",
       "noContacts": "Keine Kontakte",
-      "add": "Hinzufügen",
-      "create": "Erstellen",
-      "attach": "Verknüpfen",
-      "selectContact": "{{role}}-Kontakt auswählen",
-      "firstName": "Vorname",
-      "lastName": "Nachname",
-      "jobTitle": "Funktion",
-      "mobile": "Mobil",
-      "actions": "Aktionen",
+      "addExisting": "Vorhandenen hinzufügen",
+      "create": "Neuer Kontakt",
+      "selectContact": "Hinzuzufügender Kontakt ({{role}})",
+      "searchPlaceholder": "Kontakte nach Name suchen",
       "removeLink": "Verknüpfung entfernen",
-      "insufficientPermission": "Unzureichende Berechtigung"
-    }
+      "saveFailed": "Die Kontakte des Lieferanten konnten nicht aktualisiert werden.",
+      "loadFailed": "Die Kontakte des Lieferanten konnten nicht geladen werden."
+    },
+    "placeholders": {
+      "name": "z. B. Acme Software",
+      "erpSupplierId": "z. B. SUP-001",
+      "notes": "z. B. Zahlungsbedingungen, Wechsel des Ansprechpartners"
+    },
+    "status": {
+      "enabled": "Aktiviert",
+      "disabled": "Deaktiviert"
+    },
+    "metadata": {
+      "openContacts": "Kontakte öffnen"
+    },
+    "messages": {
+      "nameRequired": "Geben Sie einen Namen ein.",
+      "nameTaken": "Ein anderer Lieferant hat bereits diesen Namen.",
+      "saveFailed": "Der Lieferant konnte nicht gespeichert werden.",
+      "createFailed": "Der Lieferant konnte nicht erstellt werden."
+    },
+    "previous": "Vorheriger Lieferant",
+    "next": "Nächster Lieferant"
   },
   "contacts": {
     "title": "Kontakte",
@@ -942,9 +958,6 @@
   "formSchemas": {
     "department": {
       "companyRequired": "Unternehmen ist erforderlich",
-      "nameRequired": "Name ist erforderlich"
-    },
-    "supplier": {
       "nameRequired": "Name ist erforderlich"
     },
     "account": {
