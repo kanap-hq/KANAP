@@ -281,6 +281,7 @@ export default function CopyBudgetPage() {
     const answered = rows.filter((row) => row.answered);
     return {
       totalLines: rows.length,
+      answeredLines: answered.length,
       // Before the preview, an estimate from the totals; the preview decides month by month.
       amountsToCopy: outcome
         ? answered.filter((row) => row.amounts && !row.amounts.skipped).length
@@ -315,15 +316,20 @@ export default function CopyBudgetPage() {
     dryRun,
   });
 
-  /** The preview's or the copy's summary: lines, then what each part does or did, then the allocation errors. */
-  const summaryText = (response: CopyBudgetResponse, isDone: boolean) => {
+  /**
+   * The preview's or the copy's summary: lines, then what each part does or did, then the allocation errors.
+   * The copy answers the lines valid in the destination year; `leftOut` counts the table's other lines, so the
+   * count matches the table.
+   */
+  const summaryText = (response: CopyBudgetResponse, isDone: boolean, leftOut = 0) => {
     const counts = response.summary;
     const part = (name: 'amounts' | 'allocations') => (counts[name]
       ? t(`operations.copyBudget.summary.${name}${isDone ? 'Done' : ''}`, { processed: counts[name]!.processed, skipped: counts[name]!.skipped })
       : null);
     const errors = response.results.filter((line) => line.allocations?.action === 'error').length;
     return [
-      t(isDone ? 'operations.copyBudget.summary.done' : 'operations.copyBudget.summary.preview', { count: counts.lines }),
+      t(isDone ? 'operations.copyBudget.summary.done' : 'operations.copyBudget.summary.preview', { count: counts.lines + leftOut }),
+      leftOut > 0 ? t('operations.copyBudget.summary.leftOut', { count: leftOut, year: destinationYear }) : null,
       part('amounts'),
       part('allocations'),
       errors > 0 ? t('operations.copyBudget.summary.errors', { count: errors }) : null,
@@ -620,7 +626,7 @@ export default function CopyBudgetPage() {
 
         {outcome && (
           <Alert severity={done ? 'success' : stats.allocationErrors > 0 ? 'error' : 'info'}>
-            {summaryText(outcome.response, done)}
+            {summaryText(outcome.response, done, stats.totalLines - stats.answeredLines)}
           </Alert>
         )}
 

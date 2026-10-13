@@ -144,7 +144,7 @@ Each part has its own status on each line:
 
 ### Summary
 
-Above the table, a banner sums up the preview, for example "136 lines in the preview. Amounts: 120 to copy, 16 skipped. Allocations: 130 to copy, 6 skipped." After the copy it reads "Copy done." with the same counts.
+Above the table, a banner sums up the preview, for example "136 lines in the preview. 6 lines not valid in 2027 are left out. Amounts: 120 to copy, 10 skipped. Allocations: 124 to copy, 6 skipped." The line count matches the table. The lines not valid in the destination year are in it, and the amounts and allocations counts leave them out. After the copy it reads "Copy done." with the same counts.
 
 Warnings show when they apply:
 
