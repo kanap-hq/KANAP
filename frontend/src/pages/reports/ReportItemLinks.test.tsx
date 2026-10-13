@@ -77,13 +77,15 @@ function slot(year: number, budget: number) {
   return { year, totals: columns, reporting: { ...columns, currency: 'X', reporting_currency: 'X' } };
 }
 
+// Through the routes of one nature, `line_number` is the line's own number (BL); the CAPEX routes'
+// `item_number` is the CPX number.
 const opexRows = [
-  { id: 'o1', product_name: 'Opex line', versions: { yMinus1: slot(Y - 1, 100), y: slot(Y, 150) } },
+  { id: 'o1', item_number: 1, line_number: 1, product_name: 'Opex line', versions: { yMinus1: slot(Y - 1, 100), y: slot(Y, 150) } },
   // Not a line of the window: the table keeps the name as plain text.
   { product_name: 'No line', versions: { yMinus1: slot(Y - 1, 10), y: slot(Y, 20) } },
 ];
 const capexRows = [
-  { id: 'c1', description: 'Capex growth', versions: { yMinus1: slot(Y - 1, 50), y: slot(Y, 300) } },
+  { id: 'c1', item_number: 4, line_number: 119, description: 'Capex growth', versions: { yMinus1: slot(Y - 1, 50), y: slot(Y, 300) } },
 ];
 
 function renderReport(element: React.ReactElement, path = '/report?scope=opex') {
@@ -118,36 +120,36 @@ function expectNewTabLink(grid: HTMLElement, name: string, href: string) {
 }
 
 describe('Top items report item links', () => {
-  it('links an OPEX line to its page in a new tab, and leaves a row without a line as text', async () => {
+  it('links an OPEX line to its BL page in a new tab, and leaves a row without a line as text', async () => {
     renderReport(<TopOpexReport />);
     const grid = await screen.findByTestId('grid-name');
     await waitFor(() => expect(grid.textContent).toContain('Opex line'));
-    expectNewTabLink(grid, 'Opex line', '/ops/budget/o1');
+    expectNewTabLink(grid, 'Opex line', '/ops/budget/BL-1');
     expect(within(grid).getByText('No line').closest('a')).toBeNull();
   });
 
-  it('links a CAPEX line to the CAPEX page', async () => {
+  it('links a CAPEX line to its BL page, never by its CPX number', async () => {
     renderReport(<TopOpexReport />, '/report?scope=capex');
     const grid = await screen.findByTestId('grid-name');
     await waitFor(() => expect(grid.textContent).toContain('Capex growth'));
-    expectNewTabLink(grid, 'Capex growth', '/ops/budget/c1');
+    expectNewTabLink(grid, 'Capex growth', '/ops/budget/BL-119');
   });
 });
 
 describe('Top increase / decrease report item links', () => {
-  it('links an OPEX line to its page in a new tab, and leaves a row without a line as text', async () => {
+  it('links an OPEX line to its BL page in a new tab, and leaves a row without a line as text', async () => {
     renderReport(<OpexDeltaReport />);
     const grid = await screen.findByTestId('grid-name');
     await waitFor(() => expect(grid.textContent).toContain('Opex line'));
-    expectNewTabLink(grid, 'Opex line', '/ops/budget/o1');
+    expectNewTabLink(grid, 'Opex line', '/ops/budget/BL-1');
     expect(within(grid).getByText('No line').closest('a')).toBeNull();
   });
 
-  it('links a CAPEX line to the CAPEX page', async () => {
+  it('links a CAPEX line to its BL page, never by its CPX number', async () => {
     renderReport(<OpexDeltaReport />, '/report?scope=capex');
     const grid = await screen.findByTestId('grid-name');
     await waitFor(() => expect(grid.textContent).toContain('Capex growth'));
-    expectNewTabLink(grid, 'Capex growth', '/ops/budget/c1');
+    expectNewTabLink(grid, 'Capex growth', '/ops/budget/BL-119');
   });
 });
 

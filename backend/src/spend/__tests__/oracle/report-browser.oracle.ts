@@ -13,7 +13,7 @@
  * `AnalyticsCategoryReport.tsx`, `ComparisonReport.tsx`,
  * `CapexBudgetTrendReport.tsx`, `BudgetColumnsCompareReport.tsx`,
  * `pages/DashboardPage.tsx`, `pages/operations/BudgetColumnResetPage.tsx`,
- * `CopyBudgetColumnsPage.tsx`, `pages/reports/useOpexSummary.ts`
+ * `CopyBudgetColumnsPage.tsx` (now `CopyBudgetPage.tsx`), `pages/reports/useOpexSummary.ts`
  * (`pickYearSlot`).
  */
 
@@ -390,7 +390,7 @@ export function resetLines(rows: Row[], year: number, column: string | null) {
   });
 }
 
-/** CopyBudgetColumnsPage: every line with both amounts in its own currency. */
+/** CopyBudgetColumnsPage (now CopyBudgetPage): every line with both amounts in its own currency. */
 export function copyLines(rows: Row[], p: { sourceYear: number; sourceColumn: string; destinationYear: number; destinationColumn: string }) {
   return rows.map((r) => {
     const sourceSlot = pickYearSlot(r, p.sourceYear);

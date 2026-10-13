@@ -152,6 +152,25 @@ export async function lockBudgetLines(manager: EntityManager, scope: AmountScope
   return new Set(rows.map((row) => row.id));
 }
 
+/** The message of the 409 `retry` of an operation whose lines changed between its lock and its reads. */
+export const BUDGET_LINES_CHANGED =
+  'Another change to the budget lines was saved at the same moment, so this operation did not go through. Please try again.';
+
+/**
+ * Checks the lines an operation decides on against those its caller locked first (`budget-copy.ts`: the
+ * lines in play, in id order, before any is read again). `inScope`: the lines the operation would lock,
+ * read after that lock. A line among them that is not held entered the scope after the lock (a line
+ * created meanwhile, versions moved to a new line by a type change): locking it now would break the id
+ * order, so the operation is refused with a 409 `retry` and nothing is written.
+ */
+export function assertLinesHeld(inScope: Iterable<string>, held: ReadonlySet<string>): void {
+  for (const id of inScope) {
+    if (!held.has(id)) {
+      throw new ConflictException({ statusCode: HttpStatus.CONFLICT, error: 'Conflict', code: 'retry', message: BUDGET_LINES_CHANGED });
+    }
+  }
+}
+
 /**
  * Locks the lines of both natures in id order, in one statement (the budget file, which loads the
  * lines of both natures since lot R); returns the ids of those still there.

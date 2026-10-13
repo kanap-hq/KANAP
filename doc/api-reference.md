@@ -1680,6 +1680,21 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
 
 ## Budget Operations (budget admin)
 
+### Copy budget columns (all lines or one nature)
+- POST `/budget-lines/budget-operations/copy` (requires `budget:admin`; Budget administration › Copy budget columns)
+  - Body: `{ scope: 'all' | 'opex' | 'capex', sourceYear, destinationYear, amounts?: { sourceColumn, destinationColumn, percentageIncrease?, acceptCalendarChanges? } | null, allocations?: boolean, overwrite?: boolean, dryRun?: boolean }`
+  - Two parts, either or both: `amounts` is the column copy below (same rules: months kept, whole units with a percentage, lines recomputed, validity, calendar confirmation), `allocations: true` the allocation copy below. `all` runs both natures. One `overwrite` covers both parts: the amounts of a destination column that holds some, and a destination allocation with manual rows (an allocation on an automatic method, without manual rows, counts as empty and takes the source method either way)
+  - One tenant lock (`operation_running` 409 while another bulk operation runs; a dry run takes none) and one transaction: the lines in play, of every nature of the scope, are locked first in id order in one statement, and each part reads its lines again under that lock and locks no line of its own. A line that entered the scope after that lock (a line created meanwhile) refuses the copy with a 409 `retry` rather than be locked out of order. The amounts of every nature are decided before any is written, then written, then the allocations are copied. Any refusal or error leaves nothing written
+  - 400: no part asked (`amounts` missing, `null` or `false` and `allocations` not `true`), `allocations` within one year, a percentage of -100 or less, a column onto itself, an unknown `scope` or column, a calendar change not confirmed on a real copy. 403: the destination column of either nature is frozen (the message names the nature); the allocations have no freeze
+  - Returns `{ success, dryRun, scope, summary: { lines, amounts?: { totalItems, processed, skipped, errors }, allocations?: { totalItems, processed, skipped, errors } }, results: CopyBudgetLine[] }`, `success` false when the allocation preview lists an error. A real copy answers the entries its preview answered, line by line and part by part: a line whose destination version the amounts part creates during the copy keeps, in its allocations part, the destination as it was before the copy (`destinationMethod: null`, an empty label, no row), and a skipped line its destination amount as read, though the copy neither locks nor writes it
+  - `CopyBudgetLine`: `{ itemId, itemNumber, reference, nature, itemName, amounts?, allocations? }`, one per line valid in the destination year. `itemNumber` is the line's own number and `reference` its `BL-n` (never the CPX number). `amounts`: `{ sourceValue, currentDestinationValue, newValue, skipped, skip, prorated, fromLines, calendarIssues }`, `skip` one of `no_source` (no version in the source year), `source_empty` (nothing to copy within the line's validity), `destination_filled` (the destination holds amounts, without overwrite), or null. `allocations`: the `AllocationCopyResult` below without `itemId` and `itemName`
+  - Audit: the rows of each part as below; the column copy row of the line and the allocation copy rows also carry `budgetCopy: { scope, nature, parts }`
+
+### Reset a column (all lines or one nature)
+- POST `/budget-lines/budget-operations/clear-column` (requires `budget:admin`)
+  - Body: `{ scope: 'all' | 'opex' | 'capex', year, column }`. The clear below on each nature of the scope, under one tenant lock, the lines in play locked first in id order (a line that entered the scope after that lock: 409 `retry`); a frozen column of either nature refuses the whole reset (403 naming the nature)
+  - Returns `{ success, scope, summary: { totalItems, cleared, skipped, errors } }`, the natures added up
+
 ### Copy Budget Columns
 - POST `/spend-items/budget-operations/copy-column`
   - Body: `{ sourceYear: number, sourceColumn: BudgetColumn, destinationYear: number, destinationColumn: BudgetColumn, percentageIncrease: number, overwrite: boolean, dryRun: boolean }`
