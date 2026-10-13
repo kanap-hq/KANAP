@@ -354,7 +354,7 @@ function controllers(runner: QueryRunner) {
     { logChange: async () => undefined } as any, { cleanupOrphanedImages: async () => undefined } as any, none,
   );
   const tasks = new SpendTasksController(new SpendTasksService(unified, audit as any)) as any;
-  const contracts = new SpendItemContractsController(new ContractsService(none, none, none, none, audit as any, none, none, none, none)) as any;
+  const contracts = new SpendItemContractsController(new ContractsService(none, none, none, none, audit as any, none, none, none, none, none)) as any;
   return { svc, items, versions, tasks, contracts };
 }
 
@@ -597,7 +597,7 @@ async function testBulkReplacements() {
     const assets = new AssetsRelationsService(none, none, none, none, audit);
     assert.deepEqual((await assets.listLinkedSpendItems(w.assetId, { manager: mg, tenantId: w.tenantId })).items.map((i: any) => i.id), [w.opex.id], 'an asset lists its OPEX line only');
     await assets.bulkReplaceLinkedSpendItems(w.assetId, [], w.tenantId, w.budgetUser, { manager: mg, tenantId: w.tenantId });
-    const contracts = new ContractsService(none, none, none, none, audit, none, none, none, none);
+    const contracts = new ContractsService(none, none, none, none, audit, none, none, none, none, none);
     assert.deepEqual((await contracts.listLinkedSpendItems(w.contractId, { manager: mg })).items.map((i: any) => i.id), [w.opex.id], 'a contract lists its OPEX line only');
     await contracts.bulkReplaceLinkedSpendItems(w.contractId, [], { manager: mg });
     const projects = new PortfolioProjectsCrudService(mg.getRepository('PortfolioProject') as any, none, audit, none, none, none, none);

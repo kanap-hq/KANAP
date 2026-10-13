@@ -19,9 +19,10 @@ import { ContractContactsService } from './contract-contacts.service';
 import { ExternalContact } from '../contacts/external-contact.entity';
 import { SupplierContactLink } from '../contacts/supplier-contact.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { CurrencyModule } from '../currency/currency.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Contract, ContractSpendItem, ContractLink, ContractAttachment, ContractContactLink, ExternalContact, SupplierContactLink]), AuditModule, PermissionsModule, forwardRef(() => UsersModule), TasksModule, StorageModule, NotificationsModule],
+  imports: [TypeOrmModule.forFeature([Contract, ContractSpendItem, ContractLink, ContractAttachment, ContractContactLink, ExternalContact, SupplierContactLink]), AuditModule, PermissionsModule, forwardRef(() => UsersModule), TasksModule, StorageModule, NotificationsModule, CurrencyModule],
   providers: [ContractsService, ContractContactsService],
   controllers: [ContractsController, SpendItemContractsController, CapexItemContractsController],
   exports: [ContractsService],

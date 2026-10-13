@@ -1145,15 +1145,21 @@ of a CAPEX line is read through `/budget-lines/:ref`; `/capex-items` does not ex
 
 ## Contracts
 
-- GET `/contracts?status=enabled&page=1&limit=50&sort=cancellation_deadline:ASC&q&filters`
-  - Items include derived: the term fields below, `linked_opex_count`, and nested `supplier {id,name}`, `company {id,name}` plus `latest_task`.
-  - `sort` and `filters` on `end_date` and `cancellation_deadline` use the same values as the items (as of today, UTC). Same on GET `/contracts/ids`.
+- GET `/contracts?status=enabled&page=1&limit=50&sort=next_due_date:ASC&q&filters`
+  - Items include derived: the term fields below, `linked_lines_count` (linked budget lines, OPEX and CAPEX), and nested `supplier {id,name}`, `company {id,name}` plus `latest_task`.
+  - `sort` and `filters` on `end_date`, `cancellation_deadline`, `next_due_date` and `term_state` (set filter) use the same values as the items (as of today, UTC). Default sort: `next_due_date:ASC`; contracts without a next due date (ended) come last in both directions. Same on GET `/contracts/ids`.
+- GET `/contracts/totals?status&includeDisabled&q&filters` **[Requires: contracts:reader]**: the footer of the list for the same request.
+  - Response: `{ count, yearly_amount, reporting_currency, fx_year, excluded: Array<{ currency, count }>, to_decide_count }`.
+  - `yearly_amount`: the sum of `yearly_amount_at_signature` converted to the reporting currency with the latest rate set of `fx_year` (the current year). Contracts in a currency that set does not rate are left out and counted in `excluded`.
+  - `to_decide_count`: the contracts with `term_state = to_decide` for the same request, its `term_state` filter left out (the count of the list's quick filter).
 - GET `/contracts/:id` → details including the term fields, `links` (URLs), `attachments` (metadata), and `linked_spend_items`.
 - Term fields, computed as of today (UTC) by `backend/src/contracts/contract-terms.ts` (rule in `doc/architecture.md`, Contract Terms), tacit renewals included:
   - `term_index`: the current term, 0 for the first one; `renewed`: `term_index > 0`.
   - `current_term_end`: end of the term containing today (the first term for a future contract, the last one once ended).
   - `next_cancellation_deadline`: first cancellation deadline on or after today, or `null` (no renewal and the deadline passed, or the end of validity comes first).
   - `end_date`: same as `current_term_end`. `cancellation_deadline`: `next_cancellation_deadline`, or the last term's deadline when it is `null`.
+  - `next_due_date`: `next_cancellation_deadline` for a contract that renews at the end of its current term, else its end (term end, or end of validity when earlier); `null` once ended.
+  - `term_state`: `to_decide` (deadline within 90 days), `in_progress`, `renewed` (current term's deadline passed, next term not started), `ending` (no renewal at the end of the current term) or `expired`.
 - POST `/contracts` → create; PATCH `/contracts/:id` → update.
 
 ### Contracts ↔ OPEX links (many-to-many)
