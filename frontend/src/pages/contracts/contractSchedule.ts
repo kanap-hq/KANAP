@@ -8,8 +8,8 @@ import { addMonthsYmd, computeContractTerms, type ContractTerms, type ContractTe
 
 /**
  * Days before a cancellation deadline when the decision is due: the timeline draws this window
- * and the state turns orange inside it. A tenant setting will replace this constant (renewal
- * decision lot).
+ * and the state turns orange inside it. Each tenant sets its own window; the contract comes with
+ * it (`decision_window_days`). This default only stands in while the contract loads.
  */
 export const DECISION_WINDOW_DAYS = 90;
 
@@ -106,8 +106,9 @@ export function fraction(timeline: Pick<ScheduleTimeline, 'from' | 'to'>, ymd: s
 export function contractSchedule(
   input: ContractTermsInput,
   today: string,
-  windowDays: number = DECISION_WINDOW_DAYS,
+  windowDays: number | null | undefined = DECISION_WINDOW_DAYS,
 ): ContractSchedule | null {
+  const decisionWindow = windowDays ?? DECISION_WINDOW_DAYS;
   const terms = computeContractTerms(input, today);
   if (!terms) return null;
   const start = input.start_date;
@@ -143,7 +144,7 @@ export function contractSchedule(
     const deadline = addMonthsYmd(currentEnd, -notice);
     if (deadline >= today) {
       const days = daysBetween(today, deadline);
-      state = { kind: 'cancel', deadline, days, urgent: days <= windowDays };
+      state = { kind: 'cancel', deadline, days, urgent: days <= decisionWindow };
     } else {
       state = { kind: 'renewed', renewedUntil: termEnd(k + 1), nextDeadline: terms.next_cancellation_deadline };
     }
@@ -171,7 +172,7 @@ export function contractSchedule(
   const deadline = renewsAfter && terms.next_cancellation_deadline && terms.next_cancellation_deadline <= to
     ? terms.next_cancellation_deadline
     : null;
-  const windowStart = deadline ? addDays(deadline, -windowDays) : null;
+  const windowStart = deadline ? addDays(deadline, -decisionWindow) : null;
   const window = deadline && windowStart ? { start: windowStart < from ? from : windowStart, end: deadline } : null;
 
   const firstYear = Number(from.slice(0, 4)) + 1;

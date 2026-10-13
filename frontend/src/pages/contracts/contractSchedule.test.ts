@@ -22,6 +22,25 @@ describe('contractSchedule', () => {
     expect(fraction(timeline, timeline.to)).toBe(1);
   });
 
+  it("draws the tenant's decision window, the default while the contract loads", () => {
+    const input = { start_date: '2023-07-01', duration_months: 12, notice_period_months: 6, auto_renewal: true };
+    const short = contractSchedule(input, TODAY, 30)!;
+    expect(short.state).toEqual({ kind: 'cancel', deadline: '2026-12-30', days: 79, urgent: false });
+    expect(short.timeline!.window).toEqual({ start: '2026-11-30', end: '2026-12-30' });
+    expect(contractSchedule(input, TODAY, undefined)!.timeline!.window).toEqual({ start: '2026-10-01', end: '2026-12-30' });
+  });
+
+  it('a termination decided: the contract ends with its current term', () => {
+    // The renewal decision sets the end of validity to the last day of the term (noon UTC).
+    const schedule = contractSchedule(
+      { start_date: '2023-07-01', duration_months: 12, notice_period_months: 6, auto_renewal: true, disabled_at: '2027-06-30T12:00:00.000Z' },
+      TODAY,
+    )!;
+    expect(schedule.state).toEqual({ kind: 'ends', end: '2027-06-30', days: 261 });
+    expect(schedule.lastTerm).toBe(true);
+    expect(schedule.timeline!.window).toBeNull();
+  });
+
   it('is not urgent before the decision window', () => {
     const schedule = contractSchedule({ start_date: '2024-10-01', duration_months: 36, notice_period_months: 3, auto_renewal: true }, TODAY)!;
     expect(schedule.state).toMatchObject({ kind: 'cancel', deadline: '2027-06-30', urgent: false });
