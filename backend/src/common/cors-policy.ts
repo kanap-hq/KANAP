@@ -232,8 +232,7 @@ export function createRefusedOriginLog(
 
 /**
  * The middlewares main.ts mounts: a refused origin gets a short 403 without any
- * `Access-Control-Allow-*` header; an allowed one gets the usual CORS answer with credentials,
- * and may read `Retry-After` (the wait of a 429) when the app calls the API from another origin.
+ * `Access-Control-Allow-*` header; an allowed one gets the usual CORS answer with credentials.
  */
 export function createCorsMiddlewares(
   policy: OriginPolicy,
@@ -255,5 +254,5 @@ export function createCorsMiddlewares(
     logRefusal(origin);
     res.status(403).json({ statusCode: 403, error: 'Forbidden', message: 'Origin not allowed' });
   };
-  return [guard, cors({ origin: true, credentials: true, exposedHeaders: ['Retry-After'] })];
+  return [guard, cors({ origin: true, credentials: true })];
 }
