@@ -23,7 +23,7 @@ const DATE_IN_TEXT = /\d{4}-\d{2}-\d{2}/;
 
 test('the dataset is the one the loader expects', () => {
   assert.equal(DATASET_YEAR, 2026);
-  assert.equal(CSV_FILES.length, 29, `fixture files found in ${FIXTURE_DIR}`);
+  assert.equal(CSV_FILES.length, 30, `fixture files found in ${FIXTURE_DIR}`);
 });
 
 test('a shift of zero gives every fixture file byte for byte', () => {
