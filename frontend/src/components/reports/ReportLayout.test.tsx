@@ -25,17 +25,13 @@ function renderLayout(props: Partial<React.ComponentProps<typeof ReportLayout>> 
   );
 }
 
-describe('ReportLayout breadcrumb', () => {
-  it('defaults to the reporting hub, with its translated title', () => {
-    renderLayout();
-    const root = screen.getByRole('link', { name: 'reports.landing.title' });
-    expect(root).toHaveAttribute('href', '/ops/reports');
-    expect(screen.queryByText('Reporting')).toBeNull();
-  });
-
-  it('uses the root a page passes', () => {
-    renderLayout({ rootTo: '/ops/operations', rootLabel: 'Administration' });
-    expect(screen.getByRole('link', { name: 'Administration' })).toHaveAttribute('href', '/ops/operations');
+describe('ReportLayout header', () => {
+  it('shows the title and the subtitle, with no breadcrumb', () => {
+    const { container } = renderLayout({ subtitle: 'What the report shows' });
+    expect(container.querySelector('nav[aria-label="breadcrumb"]')).toBeNull();
+    expect(screen.queryByRole('link')).toBeNull();
+    expect(screen.getByText('Top items')).toBeTruthy();
+    expect(screen.getByText('What the report shows')).toBeTruthy();
   });
 });
 

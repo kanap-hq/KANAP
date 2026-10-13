@@ -6,6 +6,14 @@
 
 <!-- What the code does now, and why this approach. Note anything deliberately left out of scope. -->
 
+## Release notes
+
+<!-- What users and on-premise operators see. Visible changes: what users notice. On-premise: required actions, recommendations, migrations. Write None when there is nothing to say. -->
+
+### Visible changes
+
+### On-premise
+
 ## Verification
 
 <!-- Commands actually run, with their result — not what should be run. -->

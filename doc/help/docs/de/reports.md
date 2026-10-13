@@ -553,7 +553,7 @@ Jede Kennzahl- oder Spaltenauswahl bietet dieselben Budgetspalten an: die, die I
 
 ### Navigation
 
-Jeder Bericht zeigt eine Breadcrumb-Navigation zurück zum **Berichte**-Hub, sodass Sie schnell zwischen Berichten wechseln können.
+Um den Bericht zu wechseln, klicken Sie im linken Bereich auf **Berichte**, um zum Hub zurückzukehren.
 
 ---
 

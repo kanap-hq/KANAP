@@ -78,7 +78,7 @@ export default function BudgetFreezePage() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <PageHeader title={t('operations.freeze.title')} breadcrumbTitle={t('operations.freeze.title')} />
+      <PageHeader title={t('operations.freeze.title')} />
       {!canModify && <Alert severity="info">{t('operations.budgetAdminOnly')}</Alert>}
       {errorMessage && <Alert severity="error" onClose={() => setErrorMessage(null)}>{errorMessage}</Alert>}
       {error && <Alert severity="error">{t('operations.freeze.loadError')}</Alert>}

@@ -1,13 +1,12 @@
 import { Controller, Get } from '@nestjs/common';
 import { Features } from './features';
+import { APP_VERSION } from './version';
 const SUPPORTED_LOCALES = ['en', 'fr', 'de', 'es'] as const;
 
 @Controller('config')
 export class ConfigController {
   @Get('public')
   getPublicConfig() {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { version } = require('../../package.json');
     return {
       deploymentMode: Features.DEPLOYMENT_MODE,
       features: {
@@ -22,7 +21,7 @@ export class ConfigController {
         // Sample data (Administration > Sample data, home banner): cloud workspaces only.
         sampleData: !Features.SINGLE_TENANT,
       },
-      version,
+      version: APP_VERSION,
       supportedLocales: [...SUPPORTED_LOCALES],
       tenantSlug: Features.SINGLE_TENANT
         ? (process.env.DEFAULT_TENANT_SLUG || 'default').trim()

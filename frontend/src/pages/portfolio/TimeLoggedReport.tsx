@@ -407,8 +407,6 @@ export default function TimeLoggedReport() {
     <ReportLayout
       title={t('reports.timeLogged.title')}
       subtitle={t('reports.timeLogged.subtitle')}
-      rootTo="/portfolio/reports"
-      rootLabel={t('reports.title')}
       onExportTableCsv={data ? exportCsv : undefined}
       onExportChartPng={data ? exportPng : undefined}
       filters={(

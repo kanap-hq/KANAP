@@ -7,6 +7,9 @@
 
 const DOC_BASE_URL = 'https://doc.kanap.net';
 
+/** Release notes of each version, on the public repository. */
+export const RELEASES_URL = 'https://github.com/kanap-hq/KANAP/releases';
+
 /**
  * Route pattern to documentation slug mapping.
  * Patterns are matched in order - more specific patterns should come first.
@@ -131,6 +134,14 @@ export function getDocUrl(pathname: string, locale?: string): string {
     }
   }
   return `${DOC_BASE_URL}${prefix}/`;
+}
+
+/**
+ * Get the documentation URL of a page by its slug (for example `on-premise/operations`).
+ * When a supported locale is provided, the URL is prefixed with the locale path.
+ */
+export function getDocPageUrl(slug: string, locale?: string): string {
+  return `${DOC_BASE_URL}${getLocalePrefix(locale)}/${slug}/`;
 }
 
 /**

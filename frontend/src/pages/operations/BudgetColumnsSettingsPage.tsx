@@ -180,7 +180,7 @@ export default function BudgetColumnsSettingsPage() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <PageHeader title={t(`${P}.title`)} breadcrumbTitle={t(`${P}.title`)} />
+      <PageHeader title={t(`${P}.title`)} />
       <Typography variant="body1" sx={{ color: 'text.secondary', maxWidth: 720 }}>
         {t(`${P}.subtitle`)}
       </Typography>

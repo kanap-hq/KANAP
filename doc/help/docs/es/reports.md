@@ -553,7 +553,7 @@ Cada selector de métrica o de columna ofrece las mismas columnas presupuestaria
 
 ### Navegación
 
-Cada informe muestra una ruta de migas de pan de vuelta al centro de **Informes**, para que pueda cambiar entre informes rápidamente.
+Para cambiar de informe, haga clic en **Informes** en el panel izquierdo para volver al centro.
 
 ---
 

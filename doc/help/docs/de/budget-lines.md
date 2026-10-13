@@ -145,11 +145,10 @@ Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl an Spal
 - Standardmäßig wird nach der Standardspalte des aktuellen Jahres sortiert, höchster Betrag zuerst (**Budget J** mit den Standardeinstellungen). Die Schaltflächen **Zurück** und **Weiter** des Arbeitsbereichs folgen derselben Reihenfolge
 - Die Liste merkt sich Ihre letzte Sortierung, Suche und Filter bei der Rückkehr
 
-**Summenzeilen**:
+**Summenzeile**:
 
-- Die angeheftete Zeile unten lautet **Gesamt (12 Zeilen)**, mit der Anzahl der Zeilen in der Liste, und zeigt die Summe jeder Betragsspalte
-- Enthält die Liste beide Typen (kein Filter auf **Typ** oder beide Werte angehakt), stehen zwei weitere Zeilen darüber: **Gesamt OPEX** und **Gesamt CAPEX**. Ist die Liste auf einen Typ gefiltert, zeigt sie nur die Zeile **Gesamt**
-- Ein Schloss-Symbol vor einer Summe bedeutet, dass die Spalte für dieses Jahr eingefroren ist. In **Gesamt OPEX** und **Gesamt CAPEX** folgt es dem Einfrieren dieses Typs. In **Gesamt** erscheint es, wenn die Spalte für jeden Typ der Liste eingefroren ist. Fahren Sie mit der Maus darüber, um **Eingefroren** zu lesen. Siehe [Daten einfrieren / auftauen](budget-operations.md#daten-einfrieren-auftauen)
+- Unter der Liste ist eine einzige Zeile **Gesamt** angeheftet. Sie lautet **Gesamt (12 Zeilen)**, mit der Anzahl der Zeilen in der Liste, und zeigt die Summe jeder Betragsspalte
+- Ein Schloss-Symbol vor einer Summe bedeutet, dass die Spalte für dieses Jahr eingefroren ist. Es folgt dem Einfrieren jedes Typs in der Liste. Ist die Liste auf einen Typ gefiltert, erscheint das Schloss, wenn dieser Typ eingefroren ist. Enthält sie beide Typen, erscheint es, wenn die Spalte für beide eingefroren ist. Fahren Sie mit der Maus darüber, um **Eingefroren** zu lesen. Siehe [Daten einfrieren / auftauen](budget-operations.md#daten-einfrieren-auftauen)
 - Jede angezeigte VZÄ-Spalte zeigt die Summe der VZÄ der Zeilen. Haben einige Zeilen keine VZÄ, folgt die Anzahl auf die Summe, zum Beispiel „3.50 · 12 unbekannt“. Fahren Sie mit der Maus darüber, um den vollständigen Satz zu lesen: „Unbekannt für 12 Zeilen“. Hat keine Zeile VZÄ, bleibt die Summe leer, und nur die Anzahl erscheint
 - Summen berücksichtigen Ihre aktuellen Filter und Suche
 
@@ -635,7 +634,7 @@ Eine Budgetdatei ändert den Typ einer Zeile nie. Siehe [Ein Budget aus einer Ta
 
 11. **Deaktivieren statt löschen**: Bewahren Sie die Historie, indem Sie Zeilen deaktivieren, wenn sie nicht mehr aktiv sind. Löschen Sie nur bei Fehlern.
 
-12. **Summenzeilen überprüfen**: Bevor Sie Budgets finalisieren, prüfen Sie die angehefteten Summen in der Liste, pro Typ und insgesamt, um sicherzustellen, dass Ihre Ausgaben wie erwartet aufgehen.
+12. **Summenzeile überprüfen**: Bevor Sie Budgets finalisieren, prüfen Sie die Zeile **Gesamt** unter der Liste, um sicherzustellen, dass Ihre Ausgaben wie erwartet aufgehen. Filtern Sie auf **Typ**, um die Summe nur der OPEX oder nur der CAPEX zu sehen.
 
 13. **Deep Linking nutzen**: Klicken Sie direkt auf eine Budgetspalte in der Liste, um zum Budget-Tab für dieses Jahr zu springen. Klicken Sie auf die Spalte Aufgabe, um zu den Aufgaben der Zeile im Tab Übersicht zu springen. Das spart Navigationszeit.
 
