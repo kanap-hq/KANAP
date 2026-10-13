@@ -9,7 +9,7 @@ import { PROCESS_STARTED_AT } from './common/process-start';
 import { Features } from './config/features';
 import { TenantsService } from './tenants/tenants.service';
 import { TenantBaselineService } from './tenants/tenant-baseline.service';
-import { createSingleTenantOnFirstStart } from './tenants/single-tenant-provisioning';
+import { createSingleTenantOnFirstStart, defaultTenantLanguage } from './tenants/single-tenant-provisioning';
 import { ensureBootstrapAdministrator } from './tenants/bootstrap-admin';
 import { jwtSecretWarnings } from './common/startup-secrets';
 import { ScheduledTasksService } from './admin/scheduled-tasks/scheduled-tasks.service';
@@ -107,9 +107,11 @@ async function bootstrap() {
     if (Features.SINGLE_TENANT) {
       const slug = (process.env.DEFAULT_TENANT_SLUG || 'default').trim();
       const name = (process.env.DEFAULT_TENANT_NAME || 'My Organization').trim();
+      // The language of the recommended dimensions the tenant starts with (en, fr, de, es).
+      const language = defaultTenantLanguage();
 
       // 1. Create the tenant on the first start only, with the default global chart of accounts
-      if (await createSingleTenantOnFirstStart(ds, app.get(TenantsService), app.get(TenantBaselineService), { slug, name })) {
+      if (await createSingleTenantOnFirstStart(ds, app.get(TenantsService), app.get(TenantBaselineService), { slug, name, language })) {
         // eslint-disable-next-line no-console
         console.log(`[on-prem] Created tenant '${slug}'`);
       }

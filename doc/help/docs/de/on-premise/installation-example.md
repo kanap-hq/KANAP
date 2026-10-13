@@ -316,6 +316,7 @@ DEPLOYMENT_MODE=single-tenant
 # MANDANT (vor dem ersten Start setzen)
 DEFAULT_TENANT_SLUG=default
 DEFAULT_TENANT_NAME=${ORG_NAME}
+DEFAULT_TENANT_LANGUAGE=en
 
 # ADMIN-ZUGANGSDATEN (werden nur beim ersten Start gelesen)
 ADMIN_EMAIL=${ADMIN_EMAIL}

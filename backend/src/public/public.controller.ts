@@ -31,6 +31,7 @@ import {
   buildNewTenantNotificationEmail,
 } from '../notifications/notification-templates';
 import { resolveEmailLocale } from '../i18n/email-i18n';
+import { resolveSeedLanguage } from '../analytics/recommended-dimensions.seed';
 import { developmentRequestOrigin, resolveTenantAppBaseUrl } from '../common/url';
 
 /** The answer of a trial sign-up when the address of the public website is not configured. */
@@ -468,7 +469,9 @@ export class PublicController {
       tenant = await this.tenants.findBySlug(signup.slug, { manager: runner.manager });
       if (tenant) throw new BadRequestException('Tenant already exists');
 
-      tenant = await this.tenants.createTenant({ slug: signup.slug, name: signup.org_name }, { manager: runner.manager });
+      // The seeded dimensions take the language of the person who activates (their browser's).
+      const language = resolveSeedLanguage(this.resolveActivationEmailLocale(req));
+      tenant = await this.tenants.createTenant({ slug: signup.slug, name: signup.org_name, language }, { manager: runner.manager });
 
       await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenant.id]);
 

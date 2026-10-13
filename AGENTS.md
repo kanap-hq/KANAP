@@ -223,9 +223,11 @@ or subscriptions must work in both modes.
   `@NeverRejects()` and never hand them the request's entity manager, which may be released first.
 - A new NOT NULL column or numbered reference (`item_number`) breaks raw seed inserts: update
   `backend/scripts/rls-self-test.ts` and `backend/src/ai/__tests__/ai-phase1.integration.spec.ts`.
-- `seedTenantDefaults` (tenant creation, trial, reset, first start on-premise) gives every tenant
-  three required CAPEX dimensions (`ppe_type`, `investment_type`, `priority`): a CAPEX line created
-  there needs their values in `analytics_values`. Raw-SQL test tenants have none.
+- `seedTenantDefaults` (tenant creation, trial, reset, first start on-premise) gives a tenant the
+  four recommended dimensions (`analytics/recommended-dimensions.seed.ts`: the default named as the
+  cost pool, `it_tower`, `purpose`, `priority`), all optional. Tenants created before them keep
+  three required CAPEX dimensions (`ppe_type`, `investment_type`, `priority`): a spec that needs
+  them builds them with `ensureCapexDimensions`. Raw-SQL test tenants have neither.
 - nginx `add_header ... always` also stamps error responses: a 404 for a missing chunk must not
   be marked `immutable`.
 - A hook placed after an early return changes the hook count between renders. Regression tests for

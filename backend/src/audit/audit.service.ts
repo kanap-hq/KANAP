@@ -92,7 +92,8 @@ export async function writeAuditLog(manager: EntityManager, params: AuditEntry):
 export class AuditService {
   constructor(@InjectRepository(AuditLog) private readonly repo: Repository<AuditLog>) {}
 
-  async log(params: AuditEntry & { action: 'create' | 'update' | 'disable' | 'delete' }, opts?: { manager?: EntityManager }) {
+  /** `restored`: a budget column put back to the values its screen opened with (`spend/budget-column-restore.ts`). */
+  async log(params: AuditEntry & { action: 'create' | 'update' | 'disable' | 'delete' | 'restored' }, opts?: { manager?: EntityManager }) {
     await writeAuditLog(opts?.manager ?? this.repo.manager, params);
   }
 }

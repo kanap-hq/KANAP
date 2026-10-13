@@ -4,9 +4,9 @@ import { FreezeColumn, FreezeService } from '../freeze/freeze.service';
 import { CENTS_LIMIT, formatCents, toCents } from '../common/amount';
 import { budgetColumnName, DEFAULT_BUDGET_COLUMNS, readBudgetColumns } from '../budget-columns/budget-columns.util';
 import {
-  activeMonths,
   FLAT_WEIGHTS,
   NO_ACTIVE_MONTH_MESSAGE,
+  periodMonths,
   profileWeights,
   SpreadInputError,
   SpreadWindow,
@@ -475,7 +475,10 @@ export async function assertSpreadProfile(manager: EntityManager, kind: unknown,
   if (kind === 'quarterly') quarterlyDistribution(name);
 }
 
-/** Period of a spread payload: both bounds or neither (the whole year), at least one active month. */
+/**
+ * Period of a spread payload: both bounds or neither (the whole year), at least one active month. A
+ * period of one day ("at a date") counts the month of that date (`periodMonths`).
+ */
 export type PayloadPeriod = { period_start: string; period_end: string; active_months: number[] };
 
 export function parsePayloadPeriod(payload: Record<string, unknown>, year: number): PayloadPeriod {
@@ -487,7 +490,7 @@ export function parsePayloadPeriod(payload: Record<string, unknown>, year: numbe
   }
   const period_start = hasStart ? String(payload.period_start).trim() : `${year}-01-01`;
   const period_end = hasEnd ? String(payload.period_end).trim() : `${year}-12-31`;
-  const months = asBadRequest(() => activeMonths(year, period_start, period_end));
+  const months = asBadRequest(() => periodMonths(year, period_start, period_end));
   if (months.length === 0) throw new BadRequestException(NO_ACTIVE_MONTH_MESSAGE);
   return { period_start, period_end, active_months: months };
 }
@@ -541,7 +544,8 @@ function alsoMeasures(raw: unknown, totals: Partial<Record<AmountMeasure, bigint
  *   omitted quarter being zero.
  * - `monthly`: `months` rows patch only the cells they carry.
  * `period_start` / `period_end` (annual and quarterly) default to the whole
- * year. Everything is validated before the first write.
+ * year; a period of one day (start = end, "at a date") puts the whole amount
+ * in the month of that date. Everything is validated before the first write.
  */
 export async function writeAmountsPayload(ctx: AmountsWriteContext, rawPayload: unknown): Promise<AmountsPayloadResult> {
   return withColumnNames(ctx, () => writePayload(ctx, rawPayload));

@@ -60,6 +60,35 @@ describe('DeleteSelectedButton', () => {
     vi.mocked(api.delete).mockReset();
   });
 
+  it('with a force option, says what goes too, asks "Delete anyway" and sends the force key', async () => {
+    vi.mocked(api.delete).mockResolvedValue({ data: { deleted: ['a', 'b'], failed: [] } } as any);
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <DeleteSelectedButton<Row>
+          selectedRows={rows}
+          endpoint="/analytics-categories/bulk"
+          getItemId={(row) => row.id}
+          getItemName={(row) => row.name}
+          onDeleteSuccess={vi.fn()}
+          forceOption={{ message: '1 selected value is used: it is removed from 6 budget lines.', confirmLabel: 'Delete anyway', apiKey: 'force' }}
+        />
+      </ThemeProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /buttons.deleteSelected/ }));
+    expect(await screen.findByText('1 selected value is used: it is removed from 6 budget lines.')).toBeInTheDocument();
+    // In place of the generic warning, which says a referenced item is kept.
+    expect(screen.queryByText('delete.warningMessage')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'buttons.delete' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete anyway' }));
+    await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/analytics-categories/bulk', { data: { ids: ['a', 'b'], force: true } }));
+  });
+
+  it('without one, sends no force key', async () => {
+    vi.mocked(api.delete).mockResolvedValue({ data: { deleted: ['a', 'b'], failed: [] } } as any);
+    renderButton();
+    await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/spend-items/bulk', { data: { ids: ['a', 'b'] } }));
+  });
+
   it('is a disabled neutral pill with no selection', () => {
     renderIdle([]);
     const button = screen.getByRole('button', { name: 'buttons.deleteSelected (0)' });

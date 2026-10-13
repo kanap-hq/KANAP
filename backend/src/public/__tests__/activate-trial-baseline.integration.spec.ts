@@ -80,7 +80,41 @@ async function testActivationMatchesHelper() {
   }
 }
 
-runSpecs('activate-trial-baseline.integration.spec', [testActivationMatchesHelper]).catch((err) => {
+// The recommended dimensions take the language of the browser that activates (lot D).
+async function testActivationInBrowserLanguage() {
+  const svc = buildServices();
+  const controller = new PublicController(
+    svc.tenants, svc.users, svc.baseline, dataSource,
+    { send: async () => undefined } as any,
+    svc.auth, dataSource.getRepository(TrialSignup), {} as any, {} as any, {} as any,
+  );
+  const token = randomBytes(32).toString('hex');
+  const slug = `rs-actfr-${randomUUID().slice(0, 8)}`;
+  try {
+    await dataSource.query(
+      `INSERT INTO trial_signups (org_name, slug, email, country_iso, token_hash, expires_at)
+       VALUES ('Activation FR', $1, $2, 'FR', $3, now() + interval '1 hour')`,
+      [slug, `owner-${slug}@reset-spec.test`, createHash('sha256').update(token, 'utf8').digest('hex')],
+    );
+    await withActivationConfig(() => controller.activateTrial(
+      { token },
+      { protocol: 'https', headers: { host: 'kanap.example.test', 'accept-language': 'fr-FR,fr;q=0.9,en;q=0.8' } },
+    ));
+    const [tenant] = await dataSource.query(`SELECT id FROM tenants WHERE slug = $1 AND deleted_at IS NULL`, [slug]);
+    const names = await dataSource.transaction(async (manager) => {
+      await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenant.id]);
+      const rows = await manager.query(`SELECT name FROM analytics_axes WHERE tenant_id = $1 ORDER BY sort_order`, [tenant.id]);
+      return rows.map((row: { name: string }) => row.name);
+    });
+    assert.deepEqual(names, ['Nature de coût', 'Domaine IT', 'Motif', 'Priorité']);
+  } finally {
+    const created = await dataSource.query(`SELECT id FROM tenants WHERE slug = $1`, [slug]);
+    await cleanupTenants(created.map((row: { id: string }) => row.id));
+    await dataSource.query(`DELETE FROM trial_signups WHERE slug = $1`, [slug]);
+  }
+}
+
+runSpecs('activate-trial-baseline.integration.spec', [testActivationMatchesHelper, testActivationInBrowserLanguage]).catch((err) => {
   console.error(err);
   process.exit(1);
 });
