@@ -37,4 +37,9 @@ export const RATE_LIMITS = {
   listContextSave: { limit: 60, ttl: 60_000 },
   /** Sample data load, reset and banner dismissal, per user (`UserRateLimitGuard`). */
   sampleDataAction: { limit: 10, ttl: 10 * 60_000 },
+  /**
+   * "Send link" e-mails of every object, per user and one budget for all the share routes
+   * (`ShareRateLimit`, notifications/share-rate-limit.ts).
+   */
+  shareLink: { limit: 30, ttl: 60 * 60_000 },
 };

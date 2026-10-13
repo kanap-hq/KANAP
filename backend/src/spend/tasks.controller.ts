@@ -41,6 +41,7 @@ import { RATE_LIMITS } from '../common/rate-limit';
 import { RateLimitGuard } from '../common/rate-limit.guard';
 import { resolveInlineTenantSlug } from '../common/resolve-inline-tenant-slug';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
+import { ShareRateLimit } from '../notifications/share-rate-limit';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { REFRESH_TOKEN_COOKIE_NAME, parseCookieValue } from '../auth/auth-cookie.util';
 import { projectParticipantCondition, resolveBusinessContributorScope } from '../auth/business-contributor-scope';
@@ -364,6 +365,7 @@ export class TasksController {
 
   // ==================== SHARE ====================
 
+  @ShareRateLimit()
   @UseGuards(PermissionGuard)
   @RequireLevel('tasks', 'reader')
   @Post(':id/share')

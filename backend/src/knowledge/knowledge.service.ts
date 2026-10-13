@@ -38,6 +38,7 @@ import { resolveEmailLocale } from '../i18n/email-i18n';
 import type { EmailContent } from '../notifications/notification-templates';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
+import { shareRecipientsOf } from '../notifications/share-recipients';
 import { PermissionLevel, PermissionsService } from '../permissions/permissions.service';
 import { INCIDENT_REVIEW_SLOT } from './integrated-document.constants';
 import { incidentVisibilitySql } from '../incidents/incident-visibility';
@@ -3743,11 +3744,7 @@ export class KnowledgeService {
   }
 
   async share(idOrRef: string, dto: ShareItemDto, tenantId: string, userId: string, opts?: { manager?: EntityManager }) {
-    const userIds = dto.recipient_user_ids ?? [];
-    const rawEmails = dto.recipient_emails ?? [];
-    if (userIds.length === 0 && rawEmails.length === 0) {
-      throw new BadRequestException('At least one recipient is required');
-    }
+    const { userIds, rawEmails } = shareRecipientsOf(dto);
     const manager = this.getManager(opts);
     const id = await this.resolveDocumentId(idOrRef, manager);
 

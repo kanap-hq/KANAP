@@ -133,6 +133,9 @@ export class BillingController {
     return this.billing.getPlans();
   }
 
+  /** The full summary (payment method, invoices): billing readers only, like `GET /billing/profile`. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('billing', 'reader')
   @Get('subscription')
   async subscription(@Req() req: any) {
     if (!Features.STRIPE_BILLING) throwFeatureDisabled('billing');

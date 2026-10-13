@@ -17,6 +17,7 @@ import { RequireLevel } from '../auth/require-level.decorator';
 import { LocationsService } from './locations.service';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
+import { ShareRateLimit } from '../notifications/share-rate-limit';
 
 @UseGuards(JwtAuthGuard)
 @Controller('locations')
@@ -70,6 +71,7 @@ export class LocationsController {
     });
   }
 
+  @ShareRateLimit()
   @UseGuards(PermissionGuard)
   @RequireLevel('locations', 'reader')
   @Post(':id/share')

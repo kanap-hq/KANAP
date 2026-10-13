@@ -67,7 +67,7 @@ async function testBuildAuthorizationUrlEmbedsNonceInSignedState() {
     assert.equal(state.tenantId, 'tenant-1');
     assert.equal(state.redirectTo, '/admin/auth');
     assert.equal(state.nonce, urlNonce);
-    // Explicit typing of the SSO state family (constat n°2, RFC 8725 §3.12).
+    // Explicit typing of the SSO state family (RFC 8725 §3.12).
     assert.equal(state.purpose, ENTRA_STATE_PURPOSE);
   } finally {
     if (previousStateSecret === undefined) {

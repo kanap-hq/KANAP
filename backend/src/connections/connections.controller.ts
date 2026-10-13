@@ -5,6 +5,7 @@ import { RequireLevel } from '../auth/require-level.decorator';
 import { ConnectionsService } from './services';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
+import { ShareRateLimit } from '../notifications/share-rate-limit';
 
 @UseGuards(JwtAuthGuard)
 @Controller('connections')
@@ -159,6 +160,7 @@ export class ConnectionsController {
 
   // ---- Share --------------------------------------------------------------
 
+  @ShareRateLimit()
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'reader')
   @Post(':id/share')

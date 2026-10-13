@@ -32,6 +32,7 @@ import { resolveTenantAppBaseUrl } from '../common/url';
 import { StorageService } from '../common/storage/storage.service';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
+import { ShareRateLimit } from '../notifications/share-rate-limit';
 import { KnowledgeService, RelationEntityType } from './knowledge.service';
 import { InlineImageResolverService } from './inline-image-resolver.service';
 import { KnowledgeRelationsService } from './knowledge-relations.service';
@@ -200,6 +201,7 @@ export class KnowledgeController {
     return this.docs.get(idOrRef, { manager: ctx.manager, userId: ctx.userId || null });
   }
 
+  @ShareRateLimit()
   @UseGuards(PermissionGuard)
   @RequireLevel('knowledge', 'reader')
   @Post(':idOrRef/share')

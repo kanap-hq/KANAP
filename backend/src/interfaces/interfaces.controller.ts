@@ -37,6 +37,7 @@ import {
 import { IntegratedDocumentsService } from '../knowledge/integrated-documents.service';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
+import { ShareRateLimit } from '../notifications/share-rate-limit';
 import { resolveBusinessContributorScopeForUser } from '../auth/business-contributor-scope';
 
 @UseGuards(JwtAuthGuard)
@@ -106,6 +107,7 @@ export class InterfacesController {
     return this.svc.getMap(query, ctx.tenantId, { manager: ctx.manager });
   }
 
+  @ShareRateLimit()
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'reader')
   @Post(':id/share')

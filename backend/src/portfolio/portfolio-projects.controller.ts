@@ -26,6 +26,7 @@ import {
   ListProjectsQueryInput,
 } from './dto';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
+import { ShareRateLimit } from '../notifications/share-rate-limit';
 import { IntegratedDocumentsService } from '../knowledge/integrated-documents.service';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { REFRESH_TOKEN_COOKIE_NAME, parseCookieValue } from '../auth/auth-cookie.util';
@@ -513,6 +514,7 @@ export class PortfolioProjectsController {
 
   // ==================== SHARE ====================
 
+  @ShareRateLimit()
   @UseGuards(PermissionGuard)
   @RequireLevel('portfolio_projects', 'reader')
   @Post(':id/share')

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Vérification bout en bout de l'export de documents (constat n°1 de l'audit).
+ * Vérification bout en bout de l'export de documents : seules les images des
+ * cibles autorisées entrent dans le document exporté.
  *
  * Elle exerce le service compilé (`dist/`) avec le vrai Pandoc : les trois
  * syntaxes d'image par référence, le rejet attendu des cibles interdites,

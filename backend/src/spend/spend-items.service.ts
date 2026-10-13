@@ -36,6 +36,7 @@ import { fixMulterFilename } from '../common/upload';
 import { ItemNumberService } from '../common/item-number.service';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
+import { shareRecipientsOf } from '../notifications/share-recipients';
 import type { BudgetColumn } from './amounts-write.util';
 import { ItemWriteFields, resolveItemWrite } from './item-write.util';
 import { updateItemUnderLock } from './item-locked-update';
@@ -364,11 +365,7 @@ export class SpendItemsService {
 
   /** Email a link to the line to the given recipients (fire-and-forget). */
   async share(id: string, dto: ShareItemDto, tenantId: string, userId: string, opts?: { manager?: EntityManager }) {
-    const userIds = dto.recipient_user_ids ?? [];
-    const rawEmails = dto.recipient_emails ?? [];
-    if (userIds.length === 0 && rawEmails.length === 0) {
-      throw new BadRequestException('At least one recipient is required');
-    }
+    const { userIds, rawEmails } = shareRecipientsOf(dto);
     const mg = opts?.manager ?? this.repo.manager;
     const item = await mg.getRepository(SpendItem).findOne({ where: { id, tenant_id: tenantId, nature: this.nature }, select: ['id', 'product_name'] });
     if (!item) throw new NotFoundException(this.contract.notFound);

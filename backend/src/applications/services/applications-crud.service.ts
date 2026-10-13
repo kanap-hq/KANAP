@@ -24,6 +24,7 @@ import { ApplicationsBaseService, ServiceOpts } from './applications-base.servic
 import { validateUploadedFile } from '../../common/upload-validation';
 import { fixMulterFilename } from '../../common/upload';
 import { ShareItemDto } from '../../notifications/dto/share-item.dto';
+import { shareRecipientsOf } from '../../notifications/share-recipients';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { projectParticipantCondition } from '../../auth/business-contributor-scope';
 import { buildDerivedUsersByApp } from './derived-users';
@@ -121,11 +122,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     userId: string,
     opts?: ServiceOpts,
   ) {
-    const userIds = dto.recipient_user_ids ?? [];
-    const rawEmails = dto.recipient_emails ?? [];
-    if (userIds.length === 0 && rawEmails.length === 0) {
-      throw new BadRequestException('At least one recipient is required');
-    }
+    const { userIds, rawEmails } = shareRecipientsOf(dto);
 
     const mg = this.getManager(opts);
     if (opts?.accessScope) {
