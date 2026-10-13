@@ -234,7 +234,7 @@ describe('Global chargeback report', () => {
 
     renamedColumns();
     rerenderReport();
-    await waitFor(() => expect(chargebackCalls('/reports/chargeback/global')).toEqual([{ year: Y, metric: 'forecast' }]));
+    await waitFor(() => expect(chargebackCalls('/reports/chargeback/global')).toEqual([{ year: Y, metric: 'forecast', scope: 'opex' }]));
     expect(combo('reports.filters.column').textContent).toBe('A2');
     expect(await optionsOf('reports.filters.column')).toEqual(['A0', 'A1', 'A2', 'A3', 'Réel']);
   });
@@ -245,9 +245,37 @@ describe('Company chargeback report', () => {
     setBudgetColumns({ labels: TENANT_NAMES, default_column: 'actual' });
     renderReport(<CompanyChargebackReport />);
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
-    await waitFor(() => expect(chargebackCalls('/reports/chargeback/company')).toEqual([{ companyId: 'co-1', year: Y, metric: 'follow_up' }]));
+    await waitFor(() => expect(chargebackCalls('/reports/chargeback/company')).toEqual([{ companyId: 'co-1', year: Y, metric: 'follow_up', scope: 'opex' }]));
     expect(combo('reports.filters.column').textContent).toBe('A3');
     expect(await optionsOf('reports.filters.column')).toEqual(['A0', 'A1', 'A3', 'Réel']);
+  });
+});
+
+describe.each([
+  ['Global chargeback', GlobalChargebackReport, '/reports/chargeback/global', false],
+  ['Company chargeback', CompanyChargebackReport, '/reports/chargeback/company', true],
+] as const)('%s report scope', (_name, Report, url, picksCompany) => {
+  it('opens on OPEX, sends the scope chosen, and explains the CAPEX spread when CAPEX is in', async () => {
+    renderReport(<Report />);
+    if (picksCompany) fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
+    const tab = (scope: string) => screen.getByRole('tab', { name: `operations.scope.${scope}` });
+    expect(tab('opex')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['operations.scope.all', 'operations.scope.opex', 'operations.scope.capex']);
+    await waitFor(() => expect(chargebackCalls(url).map((params) => params.scope)).toEqual(['opex']));
+    expect(screen.queryByText('reports.shared.capexYearAmountNote')).toBeNull();
+
+    fireEvent.click(tab('all'));
+    await waitFor(() => expect(chargebackCalls(url).map((params) => params.scope)).toEqual(['opex', 'all']));
+    expect(tab('all')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('note').textContent).toBe('reports.shared.capexYearAmountNote');
+
+    fireEvent.click(tab('capex'));
+    await waitFor(() => expect(chargebackCalls(url).map((params) => params.scope)).toEqual(['opex', 'all', 'capex']));
+    expect(screen.getByRole('note').textContent).toBe('reports.shared.capexYearAmountNote');
+
+    fireEvent.click(tab('opex'));
+    await waitFor(() => expect(tab('opex')).toHaveAttribute('aria-selected', 'true'));
+    expect(screen.queryByText('reports.shared.capexYearAmountNote')).toBeNull();
   });
 });
 

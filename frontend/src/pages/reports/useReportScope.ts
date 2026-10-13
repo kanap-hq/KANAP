@@ -33,13 +33,14 @@ export function itemHref(scope: BudgetScope, id: string | null | undefined, item
 
 /**
  * Item type of a budget report, kept in `?scope=` so links can open a report on CAPEX.
- * A missing, unknown or unreadable type falls back to all budget lines.
+ * A missing, unknown or unreadable type falls back to the report's default: all budget lines,
+ * unless the report names another one (the chargeback reports open on OPEX).
  */
-export function useReportScope(): [BudgetScope, (next: BudgetScope) => void] {
+export function useReportScope(fallback: BudgetScope = 'all'): [BudgetScope, (next: BudgetScope) => void] {
   const { hasLevel } = useAuth();
   const [params, setParams] = useSearchParams();
   const raw = params.get('scope');
-  const scope: BudgetScope = (raw === 'all' || raw === 'opex' || raw === 'capex') && hasLevel('budget', 'reader') ? raw : 'all';
+  const scope: BudgetScope = (raw === 'all' || raw === 'opex' || raw === 'capex') && hasLevel('budget', 'reader') ? raw : fallback;
   const setScope = useCallback((next: BudgetScope) => {
     setParams((prev) => {
       const nextParams = new URLSearchParams(prev);

@@ -59,7 +59,8 @@ import { assert, captureAudit, amountsService, inRolledBackTransaction, period, 
 // - every route of the module addressed by its id, or by the id of one of its children,
 //   answers 404 to a user with the budget right (who passes the guard): since lot R one right
 //   covers both natures, so the nature predicate alone keeps the line out;
-// - the list, the summary routes, the dashboard's aggregate, the chargeback report, the OPEX
+// - the list, the summary routes, the dashboard's aggregate, the chargeback report on OPEX
+//   (its default scope; on CAPEX or "All" it counts the line), the OPEX
 //   part of the "used by N lines" counts, the expiry reminders, the freeze's FX pin and
 //   `lockBudgetYear` answer as if the line did not exist (compared with the same call once the
 //   line is deleted), and each would see it if it were OPEX (the same call with the line turned
@@ -268,6 +269,17 @@ async function assertInvisible(runner: QueryRunner, w: World, label: string, rea
   assert.notDeepEqual(asOpex, absent, `${label}: the same line of nature opex would count (the check is not vacuous)`);
 }
 
+/** A read that counts the CAPEX line: it differs once the line is deleted. */
+async function assertVisible(runner: QueryRunner, w: World, label: string, read: () => Promise<unknown>) {
+  const json = async () => JSON.parse(JSON.stringify(await read()));
+  const seeded = await json();
+  const absent = await inSavepoint(runner, async () => {
+    await runner.query(`DELETE FROM spend_items WHERE tenant_id = $1 AND id = $2`, [w.tenantId, w.foreign.id]);
+    return json();
+  });
+  assert.notDeepEqual(seeded, absent, `${label}: the CAPEX line counts`);
+}
+
 function buildGuard(): PermissionGuard {
   return new PermissionGuard(
     new Reflector(),
@@ -467,6 +479,19 @@ async function testListsAndSummaries() {
     await assertInvisible(runner, w, 'chargeback report', () => chargeback.generateGlobal(YEAR, 'budget', w.tenantId, { manager: runner.manager }));
     await assertInvisible(runner, w, 'chargeback report of the company',
       () => chargeback.generateCompany(YEAR, 'budget', w.companyId, w.tenantId, { manager: runner.manager }));
+    await assertInvisible(runner, w, 'chargeback report on OPEX',
+      () => chargeback.generateGlobal(YEAR, 'budget', w.tenantId, { manager: runner.manager, scope: 'opex' }));
+    // On CAPEX or both natures, the chargeback counts the line, as a CAPEX line.
+    for (const scope of ['capex', 'all'] as const) {
+      await assertVisible(runner, w, `chargeback report on ${scope}`,
+        () => chargeback.generateGlobal(YEAR, 'budget', w.tenantId, { manager: runner.manager, scope }));
+      const company = await chargeback.generateCompany(YEAR, 'budget', w.companyId, w.tenantId, { manager: runner.manager, scope });
+      assert.deepEqual(
+        company.items.filter((row) => row.itemId === w.foreign.id).map((row) => row.nature),
+        ['capex'],
+        `chargeback report of the company on ${scope}: the line, as CAPEX`,
+      );
+    }
 
     // The search index: an OPX entry for the OPEX line only.
     const entries: Array<{ entity_id: string }> = await runner.query(

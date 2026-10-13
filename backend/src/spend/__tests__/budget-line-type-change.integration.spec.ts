@@ -17,7 +17,7 @@ import { CapexItemsController } from '../capex-items.controller';
 import { SpendTasksController } from '../spend-tasks.controller';
 import { SpendTasksService } from '../spend-tasks.service';
 import { CapexTasksController } from '../capex-tasks.controller';
-import { ChargebackReportService } from '../chargeback-report.service';
+import { ChargebackReportService, ChargebackScope } from '../chargeback-report.service';
 import { SUMMARY_SCOPES } from '../spend-summary.builder';
 import { readBudgetLineMeta } from '../item-meta';
 import { accountNatureRefusal } from '../item-write.util';
@@ -44,8 +44,8 @@ import { itemService } from './cost-center.fixtures';
 // an allocation, analytics values, a web link, a contact, an attachment, links to an application,
 // an asset, a contract, a project and a request, a task):
 // - OPEX to CAPEX and back keeps the line's id, BL number and every child; the tasks follow, the
-//   search entry and the lists, the chargeback and the routes follow the nature; the line gets a
-//   CPX number once, keeps it back in OPEX and takes it again; the CAPEX routes find it by the
+//   search entry and the lists, the chargeback (OPEX, CAPEX, both) and the routes follow the
+//   nature; the line gets a CPX number once, keeps it back in OPEX and takes it again; the CAPEX routes find it by the
 //   reference the CAPEX screens build; one audit row under the new type's label, with the reason,
 //   names the user as the line's last writer;
 // - a frozen column of either type with an amount refuses it, a zero amount does not; an account
@@ -140,10 +140,11 @@ async function searchTypes(runner: QueryRunner, tenantId: string, id: string): P
     .map((row: { entity_type: string }) => row.entity_type);
 }
 
-async function chargebackTotal(runner: QueryRunner, tenantId: string, year: number): Promise<number> {
+/** The chargeback total of the year, on OPEX (the report's default scope) or another scope. */
+async function chargebackTotal(runner: QueryRunner, tenantId: string, year: number, scope?: ChargebackScope): Promise<number> {
   const deps = realSummaryDeps(SUMMARY_SCOPES.opex);
   const chargeback = new ChargebackReportService({ manager: runner.manager } as any, deps.allocationCalculator as any, deps.fxRates as any);
-  const report: any = await chargeback.generateGlobal(year, 'budget', tenantId, { manager: runner.manager });
+  const report: any = await chargeback.generateGlobal(year, 'budget', tenantId, { manager: runner.manager, scope });
   return (report.companies as Array<{ amount: number }>).reduce((sum, row) => sum + row.amount, 0);
 }
 
@@ -169,6 +170,8 @@ async function testRoundTrip() {
     const totals = await versionTotals(runner, tenantId, line.id);
     const before = (await storedLine(runner, tenantId, line.id))!;
     assert.equal(await chargebackTotal(runner, tenantId, 2026), 1200, 'the OPEX line is charged back');
+    assert.equal(await chargebackTotal(runner, tenantId, 2026, 'capex'), 0, 'not on CAPEX');
+    assert.equal(await chargebackTotal(runner, tenantId, 2026, 'all'), 1200, 'and on both natures');
 
     // The dialog's read: in place from the first year, nothing frozen, what to ask, what moves.
     const check = await c.opex.changeTypeCheck(`OPX-${NUMBER}`, undefined, ctx);
@@ -229,7 +232,9 @@ async function testRoundTrip() {
     assert.deepEqual((await c.capexSvc.list({ includeDisabled: 'true' }, { manager: runner.manager })).items.map((i: any) => i.id), [line.id], 'in the CAPEX list');
     const capexTasks = await c.capexTasks.list(line.id, { queryRunner: runner });
     assert.deepEqual(capexTasks.map((t: any) => t.id), [line.taskId], 'the task shows on the CAPEX line');
-    assert.equal(await chargebackTotal(runner, tenantId, 2026), 0, 'the CAPEX line leaves the chargeback');
+    assert.equal(await chargebackTotal(runner, tenantId, 2026), 0, 'the CAPEX line leaves the OPEX chargeback');
+    assert.equal(await chargebackTotal(runner, tenantId, 2026, 'capex'), 1200, 'it is charged back on CAPEX');
+    assert.equal(await chargebackTotal(runner, tenantId, 2026, 'all'), 1200, 'and stays in the chargeback of both natures');
 
     // Back to OPEX: the CPX number stays (old files and links), no number taken.
     const back = await c.capex.changeType(`CPX-${cpx}`, { row_version: changed.row_version }, ctx);

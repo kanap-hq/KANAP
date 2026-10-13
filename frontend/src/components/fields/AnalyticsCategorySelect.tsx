@@ -4,6 +4,7 @@ import type { SxProps, Theme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { useLookupPicker } from '../../hooks/useLookupPicker';
 import { FieldLabel } from '../design';
+import OptionWithHint from './OptionWithHint';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
 import { useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import { ANALYTICS_VALUES_LOOKUP_ENDPOINT, type AnalyticsValue } from '../../services/analytics';
@@ -74,21 +75,13 @@ export default function AnalyticsCategorySelect({
       }}
       getOptionLabel={(option) => picker.label(option, (o) => o.name ?? '')}
       renderOption={(props, option) => (
-        <li {...props} key={option.id}>
-          <Box>
-            <Box sx={{ fontWeight: 500 }}>{option.name}</Box>
-            {option.description && (
-              <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                {option.description}
-              </Box>
-            )}
-            {option.status === 'disabled' && (
-              <Box sx={{ fontSize: '0.75rem', color: 'warning.main' }}>
-                {t('common:statuses.disabled')}
-              </Box>
-            )}
-          </Box>
-        </li>
+        <OptionWithHint
+          key={option.id}
+          optionProps={props}
+          label={option.name}
+          hint={option.description}
+          trailing={option.status === 'disabled' ? t('common:statuses.disabled') : null}
+        />
       )}
       ListboxProps={naked ? { sx: drawerAutocompleteListboxSx } : undefined}
       renderInput={(params) => (

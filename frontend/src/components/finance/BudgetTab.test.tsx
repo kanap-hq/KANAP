@@ -67,7 +67,7 @@ vi.mock('../../hooks/useWorkingDayProfiles', async (importOriginal) => {
 });
 
 // The viewer's permissions: member of the calendars unless a test says otherwise; signed in as
-// `userId` when a test sets one (the view is each user's choice, lot 3D).
+// `userId` when a test sets one.
 const permissions = vi.hoisted(() => ({ calendarsMember: true, userId: null as string | null }));
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({
@@ -78,10 +78,10 @@ vi.mock('../../auth/AuthContext', () => ({
 
 import api from '../../api';
 import BudgetTab, { BudgetTabHandle } from './BudgetTab';
-import type { LinePayload, RoundInput, RoundLine } from './roundPeriod';
+import { linePayloadOf, type LinePayload, type RoundInput, type RoundLine } from './roundPeriod';
 import { DEFAULT_BUDGET_COLUMNS, type BudgetColumnsSettings } from '../../services/budgetColumns';
 import { allocationsSnapshotKey } from './allocationsCache';
-import type { HeldBudgetChoices } from './heldChoices';
+import { useHeldChoices, type HeldBudgetChoices, type OpeningValues } from './heldChoices';
 
 const ALL_SHOWN: BudgetColumnsSettings = {
   ...DEFAULT_BUDGET_COLUMNS,
@@ -96,6 +96,9 @@ beforeEach(() => {
   try { window.localStorage.clear(); } catch { /* none */ }
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
   vi.stubGlobal('jest', { advanceTimersByTime: (ms: number) => vi.advanceTimersByTime(ms) });
+  mocked.get.mockReset();
+  mocked.post.mockReset();
+  mocked.patch.mockReset();
 });
 afterEach(() => {
   cleanup();
@@ -121,6 +124,7 @@ if (!window.localStorage) {
 
 const YEAR = 2026;
 const BULK = '/spend-versions/v1/amounts/bulk-upsert';
+const VERSIONS = '/spend-items/item-1/versions';
 const theme = createAppTheme('light');
 const mocked = api as unknown as {
   get: ReturnType<typeof vi.fn>;
@@ -143,14 +147,14 @@ const refusedBodies = new WeakSet<object>();
 /** Served months a test changed in place (someone else's write): totals are summed again. */
 const changedByOthers = new WeakSet<object>();
 
-/** The monthly and yearly bodies posted to the bulk route so far (lines and spreads change what a test says). */
+/** The monthly bodies posted to the bulk route so far (amounts and lines change what a test says). */
 function savedAmountBodies(): Array<Record<string, any>> {
   return mocked.post.mock.calls
-    .filter(([url, body]) => String(url).endsWith('/amounts/bulk-upsert') && !refusedBodies.has(body) && (body?.kind === 'monthly' || (body?.kind === 'annual' && !body?.spread_profile_name)))
+    .filter(([url, body]) => String(url).endsWith('/amounts/bulk-upsert') && !refusedBodies.has(body) && body?.kind === 'monthly')
     .map(([, body]) => body);
 }
 
-/** The months as the server holds them after the bodies: cells as sent, a yearly total split over the twelve months. */
+/** The months as the server holds them after the bodies: cells as sent. */
 function replayWrites(initial: ServedMonth[], bodies: Array<Record<string, any>>): ServedMonth[] {
   const months: ServedMonth[] = Array.from({ length: 12 }, (_, i) => ({
     period: period(i + 1),
@@ -158,18 +162,10 @@ function replayWrites(initial: ServedMonth[], bodies: Array<Record<string, any>>
     ...(initial.find((row) => row.period === period(i + 1)) ?? {}),
   }));
   for (const body of bodies) {
-    if (body.kind === 'monthly') {
-      for (const row of body.months) {
-        const month = months.find((m) => m.period === row.period);
-        if (!month) continue;
-        for (const c of COLUMNS) if (row[c] !== undefined) month[c] = String(row[c]);
-      }
-    } else {
-      for (const [c, total] of Object.entries(body.totals ?? {})) {
-        const cents = Math.round(Number(total) * 100);
-        const each = Math.trunc(cents / 12);
-        months.forEach((m, i) => { m[c] = String((i === 11 ? cents - each * 11 : each) / 100); });
-      }
+    for (const row of body.months) {
+      const month = months.find((m) => m.period === row.period);
+      if (!month) continue;
+      for (const c of COLUMNS) if (row[c] !== undefined) month[c] = String(row[c]);
     }
   }
   return months;
@@ -187,8 +183,8 @@ function written(body: Record<string, unknown>) {
 }
 
 /** Mocked API; `state.frozen` is read on every freeze-state fetch, so a test can freeze a column midway. */
-function setupApi({ grain, frozen = [], empty = false, noVersion = false, roundInputs, monthValues = {}, budgetRev }: {
-  grain: Grain;
+function setupApi({ grain = 'annual', frozen = [], empty = false, noVersion = false, roundInputs, monthValues = {}, budgetRev }: {
+  grain?: Grain;
   /** The version's counter (lot 3G), when a test reads it. */
   budgetRev?: number;
   /** The item has no version for the year yet. */
@@ -200,7 +196,7 @@ function setupApi({ grain, frozen = [], empty = false, noVersion = false, roundI
   roundInputs?: RoundInput[];
   /** Replaces the stored value of every month for these columns. */
   monthValues?: Partial<Record<'planned' | 'committed' | 'actual' | 'expected_landing' | 'forecast', string>>;
-}) {
+} = {}) {
   const version = { id: 'v1', input_grain: grain, budget_year: YEAR, ...(budgetRev !== undefined ? { budget_rev: budgetRev } : {}) };
   const items: ServedMonth[] = empty ? [] : Array.from({ length: 12 }, (_, i) => ({
     period: period(i + 1),
@@ -213,19 +209,14 @@ function setupApi({ grain, frozen = [], empty = false, noVersion = false, roundI
   }));
   // `roundInputs` and `items`: what the server holds now (a test changes them to model someone else's write).
   const state = { frozen: [...frozen], roundInputs, items };
-  const totals = empty
-    ? { planned: 0, committed: 0, actual: 0, expected_landing: 0, forecast: 0 }
-    : { planned: 12000, committed: 10800, actual: 9600, expected_landing: 8400, forecast: 7200 };
   const slot = (col: FrozenColumn) => ({ frozen: state.frozen.includes(col), frozenAt: null, frozenBy: null });
   const scope = () => ({ budget: slot('budget'), revision: slot('revision'), forecast: slot('forecast'), actual: slot('actual'), landing: slot('landing') });
   mocked.get.mockImplementation(async (url: string) => {
-    if (url === '/spend-items/item-1/versions') return { data: noVersion ? [] : [version] };
+    if (url === VERSIONS) return { data: noVersion ? [] : [version] };
     if (url === '/spend-versions/v1/amounts') {
       const served = state.roundInputs ? { round_inputs: state.roundInputs } : {};
       // Every save reloads the year (lot 3D): the server answers what the saves sent.
-      const writes = savedAmountBodies();
-      if (writes.length === 0 && state.items === items && !changedByOthers.has(items)) return { data: { items, totals, year: YEAR, ...served } };
-      const after = replayWrites(state.items, writes);
+      const after = replayWrites(state.items, savedAmountBodies());
       return { data: { items: after, totals: totalsOf(after), year: YEAR, ...served } };
     }
     if (url === '/freeze-states') {
@@ -247,12 +238,9 @@ function setupApi({ grain, frozen = [], empty = false, noVersion = false, roundI
     }
     throw new Error(`unexpected GET ${url}`);
   });
-  mocked.post.mockResolvedValue({ data: { updated: 12 } });
-  // The version keeps the display grain the component stores on it.
-  mocked.patch.mockImplementation(async (_url: string, body: { input_grain?: Grain }) => {
-    if (body?.input_grain) version.input_grain = body.input_grain;
-    return { data: version };
-  });
+  mocked.post.mockImplementation(async (url: string) => (
+    url === VERSIONS ? { data: { id: 'v1', input_grain: 'annual', budget_year: YEAR } } : { data: { updated: 12 } }
+  ));
   return state;
 }
 
@@ -261,7 +249,13 @@ function renderTab(
   dates: { effectiveStart?: string; endOfValidity?: string; payingCompanyCountry?: string } = {},
   config: FinanceModuleConfig = OPEX_FINANCE_CONFIG,
   queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
-  extra: { held?: React.MutableRefObject<HeldBudgetChoices | null>; onYearChange?: (y: number) => void; availableYears?: number[]; onBudgetRev?: (year: number, rev: number | null) => void } = {},
+  extra: {
+    held?: React.MutableRefObject<HeldBudgetChoices | null>;
+    openings?: React.MutableRefObject<OpeningValues | null>;
+    onYearChange?: (y: number) => void;
+    availableYears?: number[];
+    onBudgetRev?: (year: number, rev: number | null) => void;
+  } = {},
 ) {
   const ref = React.createRef<BudgetTabHandle>();
   const ui = (y: number) => (
@@ -271,7 +265,7 @@ function renderTab(
           <KanapDialogProvider>
             <BudgetTab
               ref={ref} id="item-1" year={y} currency="EUR" onYearChange={extra.onYearChange ?? (() => undefined)} config={config}
-              held={extra.held} availableYears={extra.availableYears} onBudgetRev={extra.onBudgetRev}
+              held={extra.held} openings={extra.openings} availableYears={extra.availableYears} onBudgetRev={extra.onBudgetRev}
               effectiveStart={dates.effectiveStart} endOfValidity={dates.endOfValidity} payingCompanyCountry={dates.payingCompanyCountry}
             />
           </KanapDialogProvider>
@@ -285,40 +279,55 @@ function renderTab(
 
 const bulkCalls = () => mocked.post.mock.calls.filter(([url]) => url === BULK);
 const freezeLoads = () => mocked.get.mock.calls.filter(([url]) => url === '/freeze-states').length;
-
 const amountLoads = () => mocked.get.mock.calls.filter(([url]) => url === '/spend-versions/v1/amounts').length;
 
-/**
- * Wait until the amounts have been fetched `loads` times in all and the fields are editable.
- * A plain selector finds the first field (the hidden input of a select left aside): a role query
- * on a freshly drawn tab computes the styles of every element first: a tenth of a second in
- * every test, a quarter of this file's time.
- */
+const editor = () => screen.getByTestId('column-editor');
+/** Wait until the amounts have been fetched `loads` times in all and the editor shows them. */
 async function waitForAmounts(loads = 1) {
   await waitFor(() => {
     expect(amountLoads()).toBeGreaterThanOrEqual(loads);
-    expect(document.body.querySelector('input[type="text"]:not([aria-hidden="true"])')).not.toBeDisabled();
+    expect(editor()).toHaveAttribute('data-ready', 'true');
   });
 }
 
-/**
- * The inputs of the monthly grid, row by row, in the fixed order: Budget, Revision, Forecast, Actuals, Expected landing.
- * A plain selector: a role query computes the accessibility of every element of the grid, a cost
- * paid at each call (dozens per test) and the first to grow on a loaded machine.
- */
-function monthCells(container: HTMLElement) {
-  const table = container.querySelector('table');
-  if (!table) throw new Error('monthly table not rendered');
-  return Array.from(table.querySelectorAll<HTMLInputElement>('input[type="text"]'));
+const card = (measure: string) => screen.getByTestId(`budget-column-${measure}`);
+/** A click on a column's card: it becomes the active column. */
+const pick = (measure: string) => fireEvent.click(card(measure));
+const activeColumn = () => COLUMNS.find((c) => screen.queryByTestId(`budget-column-${c}`)?.getAttribute('aria-pressed') === 'true');
+const modeTab = (name: 'Amount' | 'Quantity and price' | 'By month') => within(editor()).getByRole('tab', { name });
+const switchButton = () => screen.getByRole('button', { name: 'Switch' });
+
+/** A month of a column in the result table. */
+const tableCell = (measure: string, month: number) => screen.getByTestId(`cell-${measure}-${month}`);
+/** The field of a month, when the column is typed by month and active; null otherwise. */
+const monthInput = (measure: string, month: number) => tableCell(measure, month).querySelector('input');
+/** A month as the table shows it: the field's value, else the text. */
+const cellValue = (measure: string, month: number) => monthInput(measure, month)?.value ?? tableCell(measure, month).textContent;
+/** Types a month: a click in its cell makes the column active and typed by month (confirmed when it holds amounts). */
+function typeMonth(measure: string, month: number, value: string) {
+  if (!monthInput(measure, month)) {
+    fireEvent.click(tableCell(measure, month));
+    const confirm = screen.queryByRole('button', { name: 'Switch' });
+    if (confirm) fireEvent.click(confirm);
+  }
+  const input = monthInput(measure, month);
+  if (!input) throw new Error(`${measure} is not typed by month`);
+  fireEvent.change(input, { target: { value } });
 }
-const cell = (cells: HTMLInputElement[], month: number, column: number, columns = 5) => cells[(month - 1) * columns + column];
 
 const amountField = () => screen.getByPlaceholderText('opex.budget.spreadPlaceholder');
-/** Types an amount in the spread panel and leaves the field, as a user does. */
+/** Types an amount in the amount editor and leaves the field, as a user does. */
 function typeAmount(value: string) {
   fireEvent.change(amountField(), { target: { value } });
   fireEvent.blur(amountField());
 }
+/** Types a date in a DateEUField the way a user does. */
+function typeDate(input: HTMLElement, ddmmyyyy: string) {
+  fireEvent.focus(input);
+  fireEvent.change(input, { target: { value: ddmmyyyy } });
+  fireEvent.blur(input);
+}
+const dateFields = () => within(editor()).getAllByPlaceholderText('labels.datePlaceholder');
 /** Lets queued writes and reloads run. */
 async function settle() {
   await act(async () => { await vi.advanceTimersByTimeAsync(30); });
@@ -329,374 +338,6 @@ async function flush(ref: React.RefObject<BudgetTabHandle>) {
   await act(async () => { ok = (await ref.current?.flush()) ?? true; });
   return ok;
 }
-
-describe('BudgetTab on the query cache', () => {
-  beforeEach(() => {
-    mocked.get.mockReset();
-    mocked.post.mockReset();
-    mocked.patch.mockReset();
-  });
-
-  /** The flat view's Budget total field. */
-  const budgetTotal = () => screen.getAllByRole('textbox')[0] as HTMLInputElement;
-
-  it('shows the year at once when the tab comes back, editable, then refreshes it in the background', async () => {
-    setupApi({ grain: 'annual' });
-    const first = renderTab();
-    await waitForAmounts();
-    // The field formats its value in an effect: wait for it, never read it right after the load.
-    await waitFor(() => expect(budgetTotal()).toHaveValue('12 000'));
-    const loads = amountLoads();
-    first.unmount();
-
-    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, first.queryClient);
-    // First render: the cached year, no blank grid and no disabled fields while it refreshes.
-    expect(budgetTotal()).toHaveValue('12 000');
-    expect(budgetTotal()).not.toBeDisabled();
-    await waitFor(() => expect(amountLoads()).toBe(loads + 1));
-  });
-
-  it('never shows a cached year after a save: the tab loads it again', async () => {
-    setupApi({ grain: 'annual' });
-    const first = renderTab();
-    await waitForAmounts();
-    fireEvent.change(budgetTotal(), { target: { value: '15000' } });
-    await flush(first.ref);
-    expect(bulkCalls()).toHaveLength(1);
-    first.unmount();
-
-    // The server now holds the saved total; the next load answers it, a little later.
-    let answer: () => void = () => undefined;
-    const served = mocked.get.getMockImplementation()! as (...args: any[]) => any;
-    mocked.get.mockImplementation(async (url: string, config?: unknown) => {
-      if (url === '/spend-versions/v1/amounts') {
-        await new Promise<void>((resolve) => { answer = resolve; });
-        const res = await served(url, config);
-        return { data: { ...res.data, totals: { ...res.data.totals, planned: 15000 } } };
-      }
-      return served(url, config);
-    });
-    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, first.queryClient);
-    // The pre-save year is not shown meanwhile.
-    expect(screen.queryByDisplayValue('12 000')).toBeNull();
-    await waitFor(() => expect(amountLoads()).toBeGreaterThan(1));
-    await act(async () => { answer(); });
-    await waitFor(() => expect(budgetTotal()).toHaveValue('15 000'));
-  });
-
-  it("a save forgets the line's cached Allocations year, which shows the year's totals", async () => {
-    setupApi({ grain: 'annual' });
-    const first = renderTab();
-    await waitForAmounts();
-    const key = allocationsSnapshotKey(OPEX_FINANCE_CONFIG.itemsApi, 'item-1', YEAR);
-    const otherYear = allocationsSnapshotKey(OPEX_FINANCE_CONFIG.itemsApi, 'item-1', YEAR + 1);
-    first.queryClient.setQueryData(key, { version: null, computed: [], totals: { planned: 12000 } });
-    first.queryClient.setQueryData(otherYear, { version: null, computed: [], totals: { planned: 1 } });
-    fireEvent.change(budgetTotal(), { target: { value: '15000' } });
-    await flush(first.ref);
-    expect(bulkCalls()).toHaveLength(1);
-    expect(first.queryClient.getQueryData(key)).toBeUndefined();
-    expect(first.queryClient.getQueryData(otherYear)).toBeDefined();
-  });
-
-  it("a spread from the panel forgets the line's cached Allocations year too", async () => {
-    setupApi({ grain: 'monthly' });
-    const first = renderTab();
-    await waitForAmounts();
-    const key = allocationsSnapshotKey(OPEX_FINANCE_CONFIG.itemsApi, 'item-1', YEAR);
-    first.queryClient.setQueryData(key, { version: null, computed: [], totals: { planned: 12000 } });
-    typeAmount('6000');
-    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    await settle();
-    expect(first.queryClient.getQueryData(key)).toBeUndefined();
-  });
-});
-
-describe('BudgetTab write safety', () => {
-  beforeEach(() => {
-    mocked.get.mockReset();
-    mocked.post.mockReset();
-    mocked.patch.mockReset();
-  });
-
-  it('flat mode sends only the edited total', async () => {
-    setupApi({ grain: 'annual' });
-    const { ref } = renderTab();
-    await waitForAmounts();
-
-    const [budget] = screen.getAllByRole('textbox');
-    fireEvent.change(budget, { target: { value: '15000' } });
-    await flush(ref);
-
-    expect(bulkCalls()).toHaveLength(1);
-    // The column already holds amounts and has no stored period: the whole year.
-    expect(written(bulkCalls()[0][1])).toEqual({
-      kind: 'annual', year: YEAR, totals: { planned: 15000 }, period_start: '2026-01-01', period_end: '2026-12-31',
-    });
-  });
-
-  it('monthly mode sends only the edited cell', async () => {
-    setupApi({ grain: 'monthly' });
-    const { ref, container } = renderTab();
-    await waitForAmounts();
-
-    fireEvent.change(cell(monthCells(container), 3, 1), { target: { value: '450' } });
-    await flush(ref);
-
-    expect(bulkCalls()).toHaveLength(1);
-    expect(written(bulkCalls()[0][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(3), committed: 450 }] });
-  });
-
-  it('a month typed after a year switch is written on the year shown', async () => {
-    setupApi({ grain: 'monthly' });
-    // The tab opens on the next year (no version there), then the user goes to the item's year.
-    const { ref, rerenderYear, container } = renderTab(YEAR + 1);
-    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/freeze-states', { params: { year: YEAR + 1 } }));
-    // The grid's cells keep one change handler across renders: it must write the year shown now.
-    rerenderYear(YEAR);
-    await waitForAmounts();
-
-    fireEvent.change(cell(monthCells(container), 3, 1), { target: { value: '450' } });
-    await flush(ref);
-
-    expect(bulkCalls()).toHaveLength(1);
-    expect(written(bulkCalls()[0][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(3), committed: 450 }] });
-  });
-
-  it('switching mode and reloading send no amounts, and write nothing on the shared version', async () => {
-    setupApi({ grain: 'annual' });
-    const { ref, rerenderYear, container } = renderTab();
-    await waitForAmounts();
-
-    fireEvent.click(screen.getByRole('tab', { name: 'opex.budget.monthly' }));
-    await waitFor(() => expect(container.querySelector('table')).not.toBeNull());
-    await waitForAmounts(2);
-    fireEvent.click(screen.getByRole('tab', { name: 'opex.budget.flat' }));
-    await waitFor(() => expect(container.querySelector('table')).toBeNull());
-    await waitForAmounts(3);
-    // The view is each user's choice (lot 3D): the version's input_grain is never written.
-    expect(mocked.patch).not.toHaveBeenCalled();
-
-    const loadsBefore = amountLoads();
-    rerenderYear(YEAR + 1);
-    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/freeze-states', { params: { year: YEAR + 1 } }));
-    rerenderYear(YEAR);
-    await waitForAmounts(loadsBefore + 1);
-    await flush(ref);
-
-    expect(bulkCalls()).toHaveLength(0);
-  });
-
-  it('an edit is saved once, and not again after a mode switch', async () => {
-    setupApi({ grain: 'monthly' });
-    const { ref, container } = renderTab();
-    await waitForAmounts();
-
-    fireEvent.change(cell(monthCells(container), 1, 0), { target: { value: '1500' } });
-    await flush(ref);
-    expect(bulkCalls()).toHaveLength(1);
-
-    fireEvent.click(screen.getByRole('tab', { name: 'opex.budget.flat' }));
-    // Loaded: first, after the save, after the switch.
-    await waitForAmounts(3);
-    await flush(ref);
-
-    expect(bulkCalls()).toHaveLength(1);
-    expect(mocked.patch).not.toHaveBeenCalled();
-  });
-
-  it('a failed save keeps its edits for the next one', async () => {
-    setupApi({ grain: 'monthly' });
-    mocked.post.mockRejectedValueOnce(new Error('network down'));
-    const { ref, container } = renderTab();
-    await waitForAmounts();
-
-    fireEvent.change(cell(monthCells(container), 1, 0), { target: { value: '1500' } });
-    expect(await flush(ref)).toBe(false);
-    expect(ref.current?.isDirty()).toBe(true);
-
-    fireEvent.change(cell(monthCells(container), 2, 1), { target: { value: '950' } });
-    expect(await flush(ref)).toBe(true);
-    expect(ref.current?.isDirty()).toBe(false);
-
-    expect(bulkCalls()).toHaveLength(2);
-    expect(written(bulkCalls()[1][1])).toEqual({
-      kind: 'monthly',
-      year: YEAR,
-      months: [
-        { period: period(1), planned: 1500 },
-        { period: period(2), committed: 950 },
-      ],
-    });
-  });
-
-  it('a flush retries an edit whose save failed', async () => {
-    setupApi({ grain: 'monthly' });
-    mocked.post.mockRejectedValueOnce(new Error('network down'));
-    const { ref, container } = renderTab();
-    await waitForAmounts();
-
-    fireEvent.change(cell(monthCells(container), 1, 0), { target: { value: '1500' } });
-    expect(await flush(ref)).toBe(false);
-    expect(await flush(ref)).toBe(true);
-
-    expect(bulkCalls()).toHaveLength(2);
-    expect(written(bulkCalls()[1][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(1), planned: 1500 }] });
-    expect(ref.current?.isDirty()).toBe(false);
-  });
-
-  it('a spread after a failed save keeps the edit and does not post the spread', async () => {
-    setupApi({ grain: 'monthly' });
-    mocked.post.mockRejectedValue(new Error('network down'));
-    const { ref, container } = renderTab();
-    await waitForAmounts();
-
-    fireEvent.change(cell(monthCells(container), 1, 0), { target: { value: '1500' } });
-    expect(await flush(ref)).toBe(false);
-    expect(ref.current?.isDirty()).toBe(true);
-
-    typeAmount('24000');
-    // The spread first retries the unsaved edit; it fails again, so the spread stops there.
-    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
-    await act(async () => { await vi.advanceTimersByTimeAsync(50); });
-
-    expect(bulkCalls().every(([, body]) => body.kind === 'monthly')).toBe(true);
-    expect(cell(monthCells(container), 1, 0).value).toBe('1 500');
-    expect(ref.current?.isDirty()).toBe(true);
-
-    mocked.post.mockResolvedValue({ data: { updated: 1 } });
-    expect(await flush(ref)).toBe(true);
-    expect(written(bulkCalls()[2][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(1), planned: 1500 }] });
-  });
-
-  it('a save refused by a new freeze refreshes the freeze and drops the frozen cells', async () => {
-    const state = setupApi({ grain: 'monthly' });
-    const { ref, container } = renderTab();
-    await waitForAmounts();
-    await waitFor(() => expect(freezeLoads()).toBe(1));
-
-    // Budget gets frozen by an administrator while the tab is open.
-    state.frozen = ['budget'];
-    mocked.post.mockRejectedValueOnce(Object.assign(new Error('Forbidden'), { response: { status: 403, data: { message: 'OPEX Budget for 2026 is frozen' } } }));
-    fireEvent.change(cell(monthCells(container), 1, 0), { target: { value: '1500' } });
-    expect(await flush(ref)).toBe(false);
-
-    await waitFor(() => expect(freezeLoads()).toBe(2));
-    await waitFor(() => expect(cell(monthCells(container), 1, 0)).toHaveAttribute('readonly'));
-    expect(await flush(ref)).toBe(true);
-
-    expect(bulkCalls()).toHaveLength(1);
-    expect(ref.current?.isDirty()).toBe(false);
-  });
-
-  it('clearing a column asks first, then sends that column only, for the twelve months', async () => {
-    setupApi({ grain: 'monthly' });
-    const { ref, container } = renderTab();
-    await waitForAmounts();
-
-    const clearButtons = screen.getAllByRole('button', { name: 'opex.budget.clearColumn' });
-    fireEvent.click(clearButtons[1]); // Revision
-    const dialog = await screen.findByRole('dialog');
-    // The tenant's name of the column and the year.
-    expect(dialog).toHaveTextContent('Clear every month of Revision for 2026? The other columns stay as they are.');
-    // Nothing is cleared while the question is open (the grid is hidden from the accessibility tree meanwhile).
-    expect(container.querySelector('table')!.querySelectorAll('input')[1]).toHaveValue('900');
-    fireEvent.click(within(dialog).getByRole('button', { name: 'opex.budget.clearColumn' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    await waitFor(() => expect(cell(monthCells(container), 1, 1)).toHaveValue('0'));
-    await flush(ref);
-
-    expect(bulkCalls()).toHaveLength(1);
-    expect(written(bulkCalls()[0][1])).toEqual({
-      kind: 'monthly',
-      year: YEAR,
-      months: Array.from({ length: 12 }, (_, i) => ({ period: period(i + 1), committed: 0 })),
-    });
-  });
-
-  it('on a CAPEX item the question names the column as the tenant calls it', async () => {
-    columnsSetting.current = { ...ALL_SHOWN, labels: { ...ALL_SHOWN.labels, committed: 'Run cost' } };
-    setupApi({ grain: 'monthly' });
-    // The same item, under the CAPEX routes.
-    const spendGet = mocked.get.getMockImplementation()! as (...args: any[]) => any;
-    mocked.get.mockImplementation((url: string, config?: unknown) => spendGet(
-      url.replace('/capex-items/', '/spend-items/').replace('/capex-versions/', '/spend-versions/'), config,
-    ));
-    const { ref } = renderTab(YEAR, {}, CAPEX_FINANCE_CONFIG);
-    await waitFor(() => {
-      expect(mocked.get.mock.calls.some(([url]) => url === '/capex-versions/v1/amounts')).toBe(true);
-      expect(screen.getAllByRole('textbox')[0]).not.toBeDisabled();
-    });
-
-    fireEvent.click(screen.getAllByRole('button', { name: 'capex.budget.clearColumn' })[1]);
-    const dialog = await screen.findByRole('dialog');
-    expect(dialog).toHaveTextContent('Clear every month of Run cost for 2026?');
-    fireEvent.click(within(dialog).getByRole('button', { name: 'capex.budget.clearColumn' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    await flush(ref);
-
-    const posts = mocked.post.mock.calls.filter(([url]) => url === '/capex-versions/v1/amounts/bulk-upsert');
-    expect(posts).toHaveLength(1);
-    expect(posts[0][1]).toMatchObject({ kind: 'monthly', months: Array.from({ length: 12 }, (_, i) => ({ period: period(i + 1), committed: 0 })) });
-  });
-
-  it('cancelling the question leaves the months as they are and saves nothing', async () => {
-    setupApi({ grain: 'monthly' });
-    const { ref, container } = renderTab();
-    await waitForAmounts();
-
-    fireEvent.click(screen.getAllByRole('button', { name: 'opex.budget.clearColumn' })[1]); // Revision
-    const dialog = await screen.findByRole('dialog');
-    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.cancel' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    await flush(ref);
-
-    const cells = monthCells(container);
-    for (let month = 1; month <= 12; month++) expect(cell(cells, month, 1)).toHaveValue('900');
-    expect(bulkCalls()).toHaveLength(0);
-    expect(ref.current?.isDirty()).toBe(false);
-  });
-
-  it('a column already at zero is cleared without a question', async () => {
-    setupApi({ grain: 'monthly', monthValues: { committed: '0' } });
-    const { ref } = renderTab();
-    await waitForAmounts();
-
-    fireEvent.click(screen.getAllByRole('button', { name: 'opex.budget.clearColumn' })[1]); // Revision
-    await flush(ref);
-
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(bulkCalls()).toHaveLength(1);
-    expect(written(bulkCalls()[0][1])).toEqual({
-      kind: 'monthly',
-      year: YEAR,
-      months: Array.from({ length: 12 }, (_, i) => ({ period: period(i + 1), committed: 0 })),
-    });
-  });
-
-  it('a frozen Forecast is read-only and never sent', async () => {
-    setupApi({ grain: 'monthly', frozen: ['forecast'] });
-    const { ref, container } = renderTab();
-    await waitForAmounts();
-    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/freeze-states', { params: { year: YEAR } }));
-
-    await waitFor(() => {
-      const cells = monthCells(container);
-      for (let month = 1; month <= 12; month++) {
-        expect(cell(cells, month, 2)).toHaveAttribute('readonly');
-      }
-    });
-    expect(screen.getAllByRole('button', { name: 'opex.budget.clearColumn' })).toHaveLength(4);
-
-    const cells = monthCells(container);
-    fireEvent.change(cell(cells, 1, 2), { target: { value: '5' } });
-    fireEvent.change(cell(cells, 1, 0), { target: { value: '1500' } });
-    await flush(ref);
-
-    expect(bulkCalls()).toHaveLength(1);
-    expect(written(bulkCalls()[0][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(1), planned: 1500 }] });
-  });
-});
 
 const record = (over: Partial<RoundInput>): RoundInput => ({
   measure: 'planned',
@@ -712,550 +353,10 @@ const record = (over: Partial<RoundInput>): RoundInput => ({
   ...over,
 });
 
+/** How a column is built, as its card says it: one text line each. */
 const periodLine = (measure: string) => screen.getByTestId(`period-line-${measure}`);
-// How the column was produced, then its period: one line each.
 const captionLines = (measure: string) => Array.from(periodLine(measure).children).map((line) => line.textContent);
 
-/** Wait until the amounts are loaded, without assuming the first field is editable (plain selector, see waitForAmounts). */
-async function waitForLoad() {
-  await waitFor(() => {
-    expect(amountLoads()).toBeGreaterThanOrEqual(1);
-    expect(document.body.querySelector('input[type="text"]:not([aria-hidden="true"])')).not.toBeNull();
-  });
-}
-
-describe('BudgetTab periods', () => {
-  beforeEach(() => {
-    mocked.get.mockReset();
-    mocked.post.mockReset();
-    mocked.patch.mockReset();
-  });
-
-  it('the yearly view suggests the item period for an empty column and sends it with the total', async () => {
-    setupApi({ grain: 'annual', empty: true });
-    const { ref } = renderTab(YEAR, { effectiveStart: '2026-04-01' });
-    await waitForAmounts();
-
-    expect(periodLine('planned')).toHaveTextContent('9 months, April to December');
-    fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: '12000' } });
-    await flush(ref);
-
-    expect(bulkCalls()).toHaveLength(1);
-    expect(written(bulkCalls()[0][1])).toEqual({
-      kind: 'annual', year: YEAR, totals: { planned: 12000 }, period_start: '2026-04-01', period_end: '2026-12-31',
-    });
-  });
-
-  it('a column that already holds amounts keeps the whole year', async () => {
-    setupApi({ grain: 'annual' });
-    renderTab(YEAR, { effectiveStart: '2026-04-01' });
-    await waitForAmounts();
-
-    expect(periodLine('planned')).toHaveTextContent('12 months, January to December');
-    expect(periodLine('committed')).toHaveTextContent('12 months, January to December');
-  });
-
-  it('a stored period wins, with its chip, and totals on different periods are sent apart', async () => {
-    setupApi({
-      grain: 'annual',
-      roundInputs: [
-        record({
-          method: 'copied',
-          last_calculation: { kind: 'copy', source_year: 2025, source_measure: 'planned', uplift_pct: '2', source_total: '12000.00', total: '12240.00', source_method: 'spread' },
-        }),
-        record({ measure: 'committed', method: 'manual', period_start: '2026-07-01', period_end: '2026-12-31' }),
-      ],
-    });
-    const { ref } = renderTab(YEAR, { effectiveStart: '2026-04-01' });
-    await waitForAmounts();
-
-    expect(captionLines('planned')).toEqual(['Copied from Budget 2025 +2%', '9 months, April to December']);
-    expect(captionLines('committed')).toEqual(['Edited by hand', '6 months, July to December']);
-    // No stored period on Landing: it holds amounts, so the whole year and no chip.
-    expect(periodLine('expected_landing')).toHaveTextContent(/^12 months, January to December$/);
-
-    const [budget, revision] = screen.getAllByRole('textbox');
-    fireEvent.change(budget, { target: { value: '6000' } });
-    fireEvent.change(revision, { target: { value: '3000' } });
-    await flush(ref);
-
-    expect(bulkCalls().map(([, body]) => written(body))).toEqual([
-      { kind: 'annual', year: YEAR, totals: { planned: 6000 }, period_start: '2026-04-01', period_end: '2026-12-31' },
-      { kind: 'annual', year: YEAR, totals: { committed: 3000 }, period_start: '2026-07-01', period_end: '2026-12-31' },
-    ]);
-  });
-
-  it('the total is disabled when the item dates leave no month of the year', async () => {
-    setupApi({ grain: 'annual', empty: true });
-    renderTab(YEAR, { effectiveStart: '2027-02-01' });
-    await waitForLoad();
-
-    await waitFor(() => expect(periodLine('planned')).toHaveTextContent("No month of 2026 is within the line's dates."));
-    expect(screen.getAllByRole('textbox')[0]).toBeDisabled();
-    // Every shown column, Forecast and Actuals included.
-    expect(screen.getAllByRole('button', { name: 'Choose the period' })).toHaveLength(5);
-    expect(periodLine('actual')).toHaveTextContent("No month of 2026 is within the line's dates.");
-  });
-
-  it('the save response refreshes the chip', async () => {
-    const server = setupApi({ grain: 'annual', empty: true });
-    // The server holds the record the save answers; the reload after the save reads it too.
-    mocked.post.mockImplementation(async () => {
-      server.roundInputs = [record({})];
-      return { data: { updated: 9, round_inputs: [record({})] } };
-    });
-    const { ref } = renderTab(YEAR, { effectiveStart: '2026-04-01' });
-    await waitForAmounts();
-
-    fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: '12000' } });
-    await flush(ref);
-
-    await waitFor(() => expect(captionLines('planned')).toEqual(['Spread flat', '9 months, April to December']));
-  });
-
-  it('the monthly grid shows how each column was produced', async () => {
-    setupApi({
-      grain: 'monthly',
-      roundInputs: [
-        record({ spread_profile_name: '4-4-5', last_calculation: { kind: 'annual', total: '12000.00', profile: '4-4-5', active_months: [4, 5, 6, 7, 8, 9, 10, 11, 12], weights: [] } }),
-        record({ measure: 'forecast', method: 'manual', period_start: '2026-01-01' }),
-        record({ measure: 'actual', method: 'copied', period_start: '2026-01-01', last_calculation: { kind: 'copy', source_year: 2025, source_measure: 'actual', uplift_pct: '0', source_total: '9600.00', total: '9600.00', source_method: null } }),
-      ],
-    });
-    const { container } = renderTab();
-    await waitForAmounts();
-
-    const header = container.querySelector('thead') as HTMLElement;
-    expect(within(header).getByText('Spread 4-4-5')).toBeInTheDocument();
-    expect(within(header).getByText('Edited by hand')).toBeInTheDocument();
-    // Actuals carry their label like any column.
-    expect(within(header).getByText('Copied from Actuals 2025')).toBeInTheDocument();
-  });
-
-  it('the spread panel shows the zeroed months and the item-dates hint, and the 15th rule on hover', async () => {
-    setupApi({ grain: 'monthly', empty: true });
-    renderTab(YEAR, { effectiveStart: '2026-04-01' });
-    await waitForAmounts();
-
-    // The date fields show the period: the panel only says what falls outside it.
-    expect(screen.getByTestId('spread-notes')).toHaveTextContent(/^January to March will be set to zero\.$/);
-    expect(screen.queryByText(/9 months, April to December/)).not.toBeInTheDocument();
-    expect(screen.queryByText("The period goes beyond the line's dates.")).not.toBeInTheDocument();
-
-    const rule = screen.getByLabelText('A month counts when the period covers its 15th.');
-    fireEvent.mouseOver(rule);
-    expect(await screen.findByRole('tooltip')).toHaveTextContent('A month counts when the period covers its 15th.');
-
-    const [from] = screen.getAllByPlaceholderText('labels.datePlaceholder');
-    fireEvent.focus(from);
-    fireEvent.change(from, { target: { value: '01/02/2026' } });
-    fireEvent.blur(from);
-
-    expect(await screen.findByText('January will be set to zero.')).toBeInTheDocument();
-    expect(screen.getByText("The period goes beyond the line's dates.")).toBeInTheDocument();
-
-    // An empty column: no amount, so the date changes wrote nothing.
-    expect(bulkCalls()).toHaveLength(0);
-    // A period in which no month counts writes nothing either.
-    fireEvent.focus(from);
-    fireEvent.change(from, { target: { value: '20/12/2026' } });
-    fireEvent.blur(from);
-    typeAmount('500');
-    expect(await screen.findByText('No month counts in this period.')).toBeInTheDocument();
-    await settle();
-    expect(bulkCalls()).toHaveLength(0);
-  });
-
-  it('the amount writes on leaving the field, the distribution on change, each with the period', async () => {
-    setupApi({ grain: 'monthly', empty: true });
-    renderTab(YEAR, { effectiveStart: '2026-04-01' });
-    await waitForAmounts();
-
-    typeAmount('12000');
-    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    // "Apply the distribution to all columns" is on by default: the empty columns get the same period.
-    expect(written(bulkCalls()[0][1])).toEqual({
-      kind: 'annual',
-      year: YEAR,
-      totals: { planned: '12000.00' },
-      also_measures: ['committed', 'forecast', 'actual', 'expected_landing'],
-      spread_profile_name: 'flat',
-      period_start: '2026-04-01',
-      period_end: '2026-12-31',
-    });
-    await waitFor(() => expect(amountLoads()).toBe(2));
-
-    const [, distribution] = screen.getAllByRole('combobox');
-    fireEvent.mouseDown(distribution);
-    fireEvent.click(await screen.findByRole('option', { name: 'opex.budget.profile445' }));
-    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
-    expect(bulkCalls()[1][1]).toMatchObject({ totals: { planned: '12000.00' }, spread_profile_name: '4-4-5', period_start: '2026-04-01' });
-    // Leaving the amount unchanged writes nothing more; the grid never turned read-only.
-    fireEvent.blur(amountField());
-    await settle();
-    expect(bulkCalls()).toHaveLength(2);
-    expect(mocked.patch).not.toHaveBeenCalled();
-  });
-
-  it('a blank or zero amount writes nothing', async () => {
-    setupApi({ grain: 'monthly' });
-    renderTab();
-    await waitForAmounts();
-
-    typeAmount('');
-    typeAmount('0');
-    await settle();
-    expect(bulkCalls()).toHaveLength(0);
-  });
-
-  it('Change period in the yearly view opens the panel on that column and stays in the yearly view', async () => {
-    setupApi({ grain: 'annual' });
-    renderTab(YEAR, { effectiveStart: '2026-04-01' });
-    await waitForAmounts();
-
-    fireEvent.click(within(periodLine('committed').parentElement as HTMLElement).getByRole('button', { name: 'Change period' }));
-    const amount = await screen.findByPlaceholderText('opex.budget.spreadPlaceholder');
-    expect(amount).toHaveValue('10 800');
-    // The five period lines (Forecast and Actuals included) keep the stored whole year;
-    // the panel proposes it within the item's dates (from April 1), and saves nothing yet.
-    expect(screen.getAllByText('12 months, January to December')).toHaveLength(5);
-    expect(screen.getByTestId('spread-notes')).toHaveTextContent(/^January to March will be set to zero\.$/);
-    expect(bulkCalls()).toHaveLength(0);
-
-    const [from] = screen.getAllByPlaceholderText('labels.datePlaceholder');
-    fireEvent.focus(from);
-    fireEvent.change(from, { target: { value: '01/07/2026' } });
-    fireEvent.blur(from);
-
-    // The date is written at once, with the column's total.
-    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    expect(written(bulkCalls()[0][1])).toEqual({
-      kind: 'annual',
-      year: YEAR,
-      totals: { committed: '10800.00' },
-      also_measures: ['planned', 'forecast', 'actual', 'expected_landing'],
-      spread_profile_name: 'flat',
-      period_start: '2026-07-01',
-      period_end: '2026-12-31',
-    });
-    await waitFor(() => expect(amountLoads()).toBe(2));
-    expect(mocked.patch).not.toHaveBeenCalled();
-    expect(screen.getByRole('tab', { name: 'opex.budget.flat' })).toHaveAttribute('aria-selected', 'true');
-    // The box stays open for the next change.
-    expect(amountField()).toBeInTheDocument();
-  });
-
-  it('the panel proposes the stored period cut at the end of validity, without saving it on open', async () => {
-    setupApi({ grain: 'annual', roundInputs: [record({ period_start: '2026-01-01', period_end: '2026-12-31' })] });
-    const { ref } = renderTab(YEAR, { endOfValidity: '2026-06-30' });
-    await waitForAmounts();
-
-    fireEvent.click(within(periodLine('planned').parentElement as HTMLElement).getByRole('button', { name: 'Change period' }));
-    await screen.findByPlaceholderText('opex.budget.spreadPlaceholder');
-    expect(screen.getByTestId('spread-notes')).toHaveTextContent(/^July to December will be set to zero\.$/);
-    // The column still shows its stored period, and opening the panel wrote nothing.
-    expect(captionLines('planned')).toEqual(['Spread flat', '12 months, January to December']);
-    expect(ref.current!.isDirty()).toBe(false);
-    expect(bulkCalls()).toHaveLength(0);
-    expect(mocked.patch).not.toHaveBeenCalled();
-
-    typeAmount('6000');
-    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    expect(bulkCalls()[0][1]).toMatchObject({ totals: { planned: '6000.00' }, period_start: '2026-01-01', period_end: '2026-06-30' });
-  });
-
-  it('a typed yearly total keeps the stored period, even beyond the end of validity', async () => {
-    setupApi({ grain: 'annual', roundInputs: [record({ period_start: '2026-01-01', period_end: '2026-12-31' })] });
-    const { ref } = renderTab(YEAR, { endOfValidity: '2026-06-30' });
-    await waitForAmounts();
-
-    fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: '6000' } });
-    await flush(ref);
-    expect(bulkCalls().map(([, body]) => written(body))).toEqual([
-      { kind: 'annual', year: YEAR, totals: { planned: 6000 }, period_start: '2026-01-01', period_end: '2026-12-31' },
-    ]);
-  });
-
-  it('Change period on a 4-4-5 column keeps 4-4-5', async () => {
-    setupApi({
-      grain: 'annual',
-      roundInputs: [record({ spread_profile_name: '4-4-5', last_calculation: { kind: 'annual', total: '12000.00', profile: '4-4-5', active_months: [4, 5, 6, 7, 8, 9, 10, 11, 12], weights: [] } })],
-    });
-    renderTab(YEAR, { effectiveStart: '2026-04-01' });
-    await waitForAmounts();
-
-    fireEvent.click(within(periodLine('planned').parentElement as HTMLElement).getByRole('button', { name: 'Change period' }));
-    const [from] = await screen.findAllByPlaceholderText('labels.datePlaceholder');
-    fireEvent.focus(from);
-    fireEvent.change(from, { target: { value: '01/05/2026' } });
-    fireEvent.blur(from);
-
-    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    expect(bulkCalls()[0][1]).toMatchObject({ totals: { planned: '12000.00' }, spread_profile_name: '4-4-5', period_start: '2026-05-01', period_end: '2026-12-31' });
-  });
-
-  it('a year switch closes the yearly panel and hides the period lines until the new year is loaded', async () => {
-    setupApi({ grain: 'annual', roundInputs: [record({})] });
-    const { rerenderYear } = renderTab(YEAR, { effectiveStart: '2026-04-01' });
-    await waitForAmounts();
-
-    fireEvent.click(within(periodLine('planned').parentElement as HTMLElement).getByRole('button', { name: 'Change period' }));
-    expect(await screen.findByPlaceholderText('opex.budget.spreadPlaceholder')).toHaveValue('12 000');
-
-    rerenderYear(YEAR + 1);
-    // The 2026 period is never read against 2027 (it would give "No month of 2027 ...").
-    expect(screen.queryByText(/No month of 2027/)).not.toBeInTheDocument();
-    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/freeze-states', { params: { year: YEAR + 1 } }));
-    await waitFor(() => expect(periodLine('planned')).toHaveTextContent('12 months, January to December'));
-    expect(screen.queryByPlaceholderText('opex.budget.spreadPlaceholder')).not.toBeInTheDocument();
-  });
-
-  it('the yearly box has no Spread, Reset or Cancel button, only its close control', async () => {
-    setupApi({ grain: 'annual' });
-    renderTab();
-    await waitForAmounts();
-
-    fireEvent.click(within(periodLine('planned').parentElement as HTMLElement).getByRole('button', { name: 'Change period' }));
-    await screen.findByPlaceholderText('opex.budget.spreadPlaceholder');
-    for (const name of ['Spread', 'Apply', 'Reset', 'common:buttons.cancel']) {
-      expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
-    }
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
-    expect(screen.queryByPlaceholderText('opex.budget.spreadPlaceholder')).not.toBeInTheDocument();
-    expect(bulkCalls()).toHaveLength(0);
-  });
-
-  it('the monthly box has no close control', async () => {
-    setupApi({ grain: 'monthly' });
-    renderTab();
-    await waitForAmounts();
-    expect(screen.queryByRole('button', { name: 'common:buttons.close' })).not.toBeInTheDocument();
-  });
-
-  it('Apply the distribution to all columns names the other columns, never a frozen one, and sends none of their totals', async () => {
-    setupApi({ grain: 'monthly', frozen: ['revision'], monthValues: { forecast: '333.33' } });
-    renderTab();
-    await waitForAmounts();
-
-    // No list under the switch: the rule is in its tooltip.
-    expect(screen.queryByText(/will also be spread/)).not.toBeInTheDocument();
-    fireEvent.mouseOver(screen.getByText('Apply the distribution to all columns'));
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
-      'Budget, Revision, Forecast, Actuals and Expected landing follow the same period. Frozen columns never change.',
-    );
-
-    typeAmount('24000');
-    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    // The server spreads the other columns from the totals it holds (scenario 5, lot 3D): a total the
-    // screen shows may be older than someone else's change. Only the typed column says what it started from.
-    expect(bulkCalls()[0][1]).toEqual({
-      kind: 'annual',
-      year: YEAR,
-      totals: { planned: '24000.00' },
-      also_measures: ['forecast', 'actual', 'expected_landing'],
-      spread_profile_name: 'flat',
-      period_start: '2026-01-01',
-      period_end: '2026-12-31',
-      base: { columns: { planned: { months: Array.from({ length: 12 }, () => '1000.00') } } },
-    });
-  });
-
-  it('with Apply the distribution to all columns off, only the selected column is sent; turning it off writes nothing', async () => {
-    setupApi({ grain: 'monthly' });
-    renderTab();
-    await waitForAmounts();
-
-    fireEvent.click(screen.getByLabelText('Apply the distribution to all columns'));
-    expect(screen.getByLabelText('Apply the distribution to all columns')).not.toBeChecked();
-    await settle();
-    expect(bulkCalls()).toHaveLength(0);
-    typeAmount('13000');
-    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    expect(bulkCalls()[0][1]).toMatchObject({ totals: { planned: '13000.00' } });
-    expect(Object.keys(bulkCalls()[0][1].totals)).toEqual(['planned']);
-  });
-
-  it('turning Apply the distribution to all columns on writes the spread to the group at once', async () => {
-    setupApi({ grain: 'monthly' });
-    renderTab();
-    await waitForAmounts();
-
-    fireEvent.click(screen.getByLabelText('Apply the distribution to all columns'));
-    fireEvent.click(screen.getByLabelText('Apply the distribution to all columns'));
-    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    expect(bulkCalls()[0][1].totals).toEqual({ planned: '12000.00' });
-    expect(bulkCalls()[0][1].also_measures).toEqual(['committed', 'forecast', 'actual', 'expected_landing']);
-  });
-
-  it('the monthly panel starts with the column total and follows the column select', async () => {
-    setupApi({ grain: 'monthly' });
-    renderTab();
-    await waitForAmounts();
-
-    const amount = screen.getByPlaceholderText('opex.budget.spreadPlaceholder');
-    expect(amount).toHaveValue('12 000');
-    // A whole-year period within the item's dates: the panel shows no line at all.
-    expect(screen.queryByTestId('spread-notes')).not.toBeInTheDocument();
-
-    fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
-    fireEvent.click(await screen.findByRole('option', { name: 'Revision' }));
-    expect(amount).toHaveValue('10 800');
-
-    fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
-    fireEvent.click(await screen.findByRole('option', { name: 'Actuals' }));
-    expect(amount).toHaveValue('9 600');
-  });
-
-  it('Actuals is a column like the others: its period, its label and the switch', async () => {
-    setupApi({
-      grain: 'annual',
-      roundInputs: [record({ measure: 'actual', method: 'manual', period_start: '2026-07-01' })],
-    });
-    renderTab(YEAR, { effectiveStart: '2026-04-01' });
-    await waitForAmounts();
-
-    expect(captionLines('actual')).toEqual(['Edited by hand', '6 months, July to December']);
-
-    // From Actuals, the switch spreads every column.
-    fireEvent.click(within(periodLine('actual').parentElement as HTMLElement).getByRole('button', { name: 'Change period' }));
-    expect(await screen.findByPlaceholderText('opex.budget.spreadPlaceholder')).toHaveValue('9 600');
-    expect(screen.getByLabelText('Apply the distribution to all columns')).toBeChecked();
-    // Off then on: the spread goes to every column at once.
-    fireEvent.click(screen.getByLabelText('Apply the distribution to all columns'));
-    fireEvent.click(screen.getByLabelText('Apply the distribution to all columns'));
-
-    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    expect(written(bulkCalls()[0][1])).toEqual({
-      kind: 'annual',
-      year: YEAR,
-      totals: { actual: '9600.00' },
-      also_measures: ['planned', 'committed', 'forecast', 'expected_landing'],
-      spread_profile_name: 'flat',
-      period_start: '2026-07-01',
-      period_end: '2026-12-31',
-    });
-  });
-});
-
-describe('BudgetTab columns from the setting', () => {
-  beforeEach(() => {
-    mocked.get.mockReset();
-    mocked.post.mockReset();
-    mocked.patch.mockReset();
-  });
-
-  const headerLabels = (container: HTMLElement) =>
-    Array.from((container.querySelector('thead') as HTMLElement).querySelectorAll('th')).slice(1).map((th) => th.firstElementChild?.textContent);
-
-  it('shows the shown columns only, in the fixed order, in the grid and the yearly view', async () => {
-    columnsSetting.current = DEFAULT_BUDGET_COLUMNS;
-    setupApi({ grain: 'monthly' });
-    const { container, unmount } = renderTab();
-    await waitForAmounts();
-
-    expect(headerLabels(container)).toEqual(['Budget', 'Revision', 'Actuals', 'Expected landing']);
-    expect(monthCells(container)).toHaveLength(12 * 4);
-    // The quarter and year totals follow the same columns.
-    expect(container.querySelectorAll('tfoot td')).toHaveLength(1 + 4);
-    unmount();
-
-    setupApi({ grain: 'annual' });
-    renderTab();
-    await waitForAmounts(2);
-    expect(screen.getByTestId('period-line-planned')).toBeInTheDocument();
-    expect(screen.queryByTestId('period-line-forecast')).not.toBeInTheDocument();
-  });
-
-  it('shows Forecast in the yearly view when it is shown, and saves its total', async () => {
-    setupApi({ grain: 'annual' });
-    const { ref, container } = renderTab();
-    await waitForAmounts();
-
-    expect(periodLine('forecast')).toHaveTextContent('12 months, January to December');
-    const fields = within(container).getAllByRole('textbox');
-    // Budget, Revision, Forecast: the third field.
-    await waitFor(() => expect(fields[2]).toHaveValue('7 200'));
-    fireEvent.change(fields[2], { target: { value: '5000' } });
-    await flush(ref);
-    expect(written(bulkCalls()[0][1])).toEqual({
-      kind: 'annual', year: YEAR, totals: { forecast: 5000 }, period_start: '2026-01-01', period_end: '2026-12-31',
-    });
-  });
-
-  it('names the columns with the tenant names', async () => {
-    columnsSetting.current = { ...ALL_SHOWN, labels: { planned: 'A0', committed: 'A1', forecast: 'A2', actual: 'A3', expected_landing: 'Real' } };
-    setupApi({ grain: 'monthly' });
-    const { container } = renderTab();
-    await waitForAmounts();
-
-    expect(headerLabels(container)).toEqual(['A0', 'A1', 'A2', 'A3', 'Real']);
-    fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
-    expect((await screen.findAllByRole('option')).map((o) => o.textContent)).toEqual(['A0', 'A1', 'A2', 'A3', 'Real']);
-  });
-
-  it('opens the spread panel on the default column', async () => {
-    columnsSetting.current = { ...ALL_SHOWN, default_column: 'committed' };
-    setupApi({ grain: 'monthly' });
-    renderTab();
-    await waitForAmounts();
-
-    await waitFor(() => {
-      expect(screen.getAllByRole('combobox')[0]).toHaveTextContent('Revision');
-      expect(screen.getByPlaceholderText('opex.budget.spreadPlaceholder')).toHaveValue('10 800');
-    });
-    fireEvent.click(screen.getByLabelText('Apply the distribution to all columns'));
-    typeAmount('5000');
-    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    expect(bulkCalls()[0][1].totals).toEqual({ committed: '5000.00' });
-  });
-
-  it('by default every shown column follows, and a hidden column is never spread', async () => {
-    columnsSetting.current = DEFAULT_BUDGET_COLUMNS;
-    setupApi({ grain: 'monthly' });
-    renderTab();
-    await waitForAmounts();
-
-    typeAmount('13000');
-    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    expect(bulkCalls()[0][1].totals).toEqual({ planned: '13000.00' });
-    expect(bulkCalls()[0][1].also_measures).toEqual(['committed', 'actual', 'expected_landing']);
-  });
-
-  it('a column taken out of the group keeps its own period, the tooltip says so, and it spreads alone', async () => {
-    columnsSetting.current = { ...ALL_SHOWN, group_spread: { ...ALL_SHOWN.group_spread, expected_landing: false } };
-    setupApi({ grain: 'monthly' });
-    renderTab();
-    await waitForAmounts();
-
-    fireEvent.mouseOver(screen.getByText('Apply the distribution to all columns'));
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
-      'Budget, Revision, Forecast and Actuals follow the same period. Expected landing keeps its own period. Frozen columns never change.',
-    );
-    typeAmount('13000');
-    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    expect(Object.keys(bulkCalls()[0][1].totals)).toEqual(['planned']);
-    expect(bulkCalls()[0][1].also_measures).toEqual(['committed', 'forecast', 'actual']);
-
-    // Spreading the column outside the group: no switch, that column only.
-    fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
-    fireEvent.click(await screen.findByRole('option', { name: 'Expected landing' }));
-    await waitFor(() => expect(screen.queryByText('Apply the distribution to all columns')).not.toBeInTheDocument());
-    typeAmount('9000');
-    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
-    expect(bulkCalls()[1][1].totals).toEqual({ expected_landing: '9000.00' });
-  });
-
-  it('offers no switch when every other column of the group is frozen', async () => {
-    columnsSetting.current = { ...DEFAULT_BUDGET_COLUMNS, enabled: { ...DEFAULT_BUDGET_COLUMNS.enabled, actual: false, expected_landing: false } };
-    setupApi({ grain: 'monthly', frozen: ['revision'] });
-    renderTab();
-    await waitForAmounts();
-    await waitFor(() => expect(freezeLoads()).toBeGreaterThanOrEqual(1));
-    await waitFor(() => expect(screen.queryByText('Apply the distribution to all columns')).not.toBeInTheDocument());
-  });
-});
-
-const VERSIONS = '/spend-items/item-1/versions';
 const calendar = (id: string, name: string, country: string | null) => ({
   id, code: id.toUpperCase(), name, description: null, days_by_year: {}, status: 'enabled', disabled_at: null,
   country_iso: country, region_code: null, country_name: null, region_name: null,
@@ -1304,13 +405,6 @@ const linesRecord = (lines: RoundLine[] = [storedLine()], over: Partial<RoundInp
   ...over,
 });
 
-/** Types a date in a DateEUField the way a user does. */
-function typeDate(input: HTMLElement, ddmmyyyy: string) {
-  fireEvent.focus(input);
-  fireEvent.change(input, { target: { value: ddmmyyyy } });
-  fireEvent.blur(input);
-}
-
 /** Every POST answers like bulk-upsert, except the version creation. */
 function routePosts(bulk: (body: Record<string, unknown>) => Promise<unknown> = async () => ({ updated: 12 })) {
   mocked.post.mockImplementation(async (url: string, body: Record<string, unknown>) => {
@@ -1319,44 +413,1051 @@ function routePosts(bulk: (body: Record<string, unknown>) => Promise<unknown> = 
   });
 }
 
-const openLines = () => fireEvent.click(screen.getByRole('tab', { name: 'Quantity and price' }));
 const leave = (input: HTMLElement, value: string) => {
   fireEvent.change(input, { target: { value } });
   fireEvent.blur(input);
 };
 
-describe('BudgetTab quantity and price', () => {
-  beforeEach(() => {
-    mocked.get.mockReset();
-    mocked.post.mockReset();
-    mocked.patch.mockReset();
-    calendarsState.list = [FRANCE, UNITED_STATES];
+/* ---- The structure: column, how it is built, result ---- */
+
+describe('BudgetTab columns and cards', () => {
+  it('one card per shown column, in the fixed order, under the tenant names; the same columns in the result', async () => {
+    columnsSetting.current = { ...DEFAULT_BUDGET_COLUMNS, labels: { ...DEFAULT_BUDGET_COLUMNS.labels, committed: 'Révision 6+6', actual: 'Révision 9+3' } };
+    setupApi();
+    const { container } = renderTab();
+    await waitForAmounts();
+
+    expect(COLUMNS.filter((c) => screen.queryByTestId(`budget-column-${c}`))).toEqual(['planned', 'committed', 'actual', 'expected_landing']);
+    expect(within(card('actual')).getByText('Révision 9+3')).toBeInTheDocument();
+    expect(card('planned')).toHaveTextContent('12 000');
+    const heads = Array.from(container.querySelectorAll('thead th')).slice(1).map((th) => th.textContent);
+    expect(heads).toEqual(['Budget', 'Révision 6+6', 'Révision 9+3', 'Expected landing']);
+    // The quarter and year totals follow the same columns.
+    expect(container.querySelectorAll('tfoot tr:first-child td')).toHaveLength(1 + 4);
+    expect(screen.getByTestId('total-committed')).toHaveTextContent('10 800');
+    // A hidden column is drawn nowhere.
+    expect(screen.queryByTestId('budget-column-forecast')).toBeNull();
+    expect(screen.queryByTestId('cell-forecast-1')).toBeNull();
   });
 
-  it('the panel box switches between spreading an amount and quantity and price', async () => {
-    setupApi({ grain: 'monthly' });
+  it('opens on the first column that is not frozen, whatever its name or rank, and focuses nothing', async () => {
+    setupApi({ frozen: ['budget', 'revision'] });
+    renderTab();
+    await waitForAmounts();
+    await waitFor(() => expect(activeColumn()).toBe('forecast'));
+    expect(editor()).toHaveTextContent('Forecast 2026');
+    // No focus at load (charter): the user orients first.
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it('opens on the first column when every column is frozen', async () => {
+    setupApi({ frozen: ['budget', 'revision', 'forecast', 'actual', 'landing'] });
+    renderTab();
+    await waitForAmounts();
+    await waitFor(() => expect(freezeLoads()).toBeGreaterThanOrEqual(1));
+    await waitFor(() => expect(editor()).toHaveAttribute('data-frozen', 'true'));
+    expect(activeColumn()).toBe('planned');
+    expect(within(card('planned')).getByTestId('LockOutlinedIcon')).toBeInTheDocument();
+  });
+
+  it('a click on a card makes the column active, shows its total and puts the cursor in its amount', async () => {
+    setupApi();
+    renderTab();
+    await waitForAmounts();
+    expect(amountField()).toHaveValue('12 000');
+
+    pick('committed');
+    expect(card('committed')).toHaveAttribute('aria-pressed', 'true');
+    expect(card('planned')).toHaveAttribute('aria-pressed', 'false');
+    expect(editor()).toHaveTextContent('Revision 2026');
+    expect(amountField()).toHaveValue('10 800');
+    expect(document.activeElement).toBe(amountField());
+    pick('actual');
+    expect(amountField()).toHaveValue('9 600');
+    // Picking a column writes nothing.
+    await settle();
+    expect(bulkCalls()).toHaveLength(0);
+  });
+
+  it('with one column there are no cards: the editor shows it directly, with how it is built', async () => {
+    columnsSetting.current = {
+      ...DEFAULT_BUDGET_COLUMNS,
+      labels: { ...DEFAULT_BUDGET_COLUMNS.labels, planned: 'Révision 9+3' },
+      enabled: { planned: true, committed: false, forecast: false, actual: false, expected_landing: false },
+    };
+    setupApi({ roundInputs: [record({ period_start: '2026-01-01' })] });
+    const { container } = renderTab();
+    await waitForAmounts();
+
+    expect(screen.queryByTestId('budget-column-planned')).toBeNull();
+    expect(editor()).toHaveTextContent('Révision 9+3 2026');
+    expect(within(editor()).getByTestId('period-line-planned')).toHaveTextContent('Spread flat');
+    // Spread flat over the whole year: the table is folded, and opens on demand.
+    expect(screen.getByTestId('result-folded')).toHaveTextContent('The column is spread flat over the whole year');
+    fireEvent.click(screen.getByRole('button', { name: 'Show the detail' }));
+    expect(Array.from(container.querySelectorAll('thead th')).map((th) => th.textContent)).toEqual(['opex.budget.month', 'Révision 9+3']);
+    // One column: nothing to compare with.
+    expect(screen.queryByTestId('difference-row')).toBeNull();
+    expect(screen.queryByRole('combobox', { name: 'Difference with' })).toBeNull();
+    // No other column to use the amount for.
+    expect(screen.queryByRole('button', { name: 'Use for other columns too…' })).toBeNull();
+    typeAmount('6000');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(written(bulkCalls()[0][1])).toMatchObject({ kind: 'annual', totals: { planned: '6000.00' } });
+    expect(bulkCalls()[0][1].also_measures).toBeUndefined();
+  });
+
+  it('every card says how its column is built: the four ways, a period, an empty column', async () => {
+    setupApi({
+      monthValues: { forecast: '0' },
+      roundInputs: [
+        record({ period_start: '2026-01-01' }),
+        record({ measure: 'committed', method: 'copied', period_start: '2026-01-01', last_calculation: { kind: 'copy', source_year: 2025, source_measure: 'planned', uplift_pct: '2', source_total: '1.00', total: '1.00', source_method: 'computed' } }),
+        record({ measure: 'actual', method: 'manual', period_start: '2026-07-01' }),
+        linesRecord(undefined, { measure: 'expected_landing' }),
+      ],
+    });
+    renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    await waitForAmounts();
+
+    expect(captionLines('planned')).toEqual(['Spread flat', '12 months, January to December']);
+    expect(captionLines('committed')).toEqual(['Copied from Budget 2025 +2%', '12 months, January to December']);
+    expect(captionLines('actual')).toEqual(['Edited by hand', '6 months, July to December']);
+    expect(captionLines('expected_landing')).toEqual(['Quantity and price · 1 line · 0.40 FTE', '10 months, March to December']);
+    // Forecast holds nothing yet.
+    expect(periodLine('forecast')).toHaveTextContent(/^Not entered yet$/);
+  });
+
+  it('a column computed from lines shows them in its card tooltip', async () => {
+    setupApi({ roundInputs: [linesRecord()] });
+    renderTab();
+    await waitForAmounts();
+    expect(captionLines('planned')).toEqual(['Quantity and price · 1 line · 0.40 FTE', '10 months, March to December']);
+    fireEvent.mouseOver(periodLine('planned'));
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('US Managed IT Services: 100 days × 600 per day over the period, Mar to Dec');
+  });
+
+  it('a column that keeps its lines after a spread shows the lines, then the spread, then the period', async () => {
+    setupApi({
+      roundInputs: [linesRecord(undefined, {
+        method: 'spread',
+        spread_profile_name: '4-4-5',
+        last_calculation: { kind: 'annual', total: '60000.00', profile: '4-4-5', active_months: MARCH_TO_DECEMBER, weights: [] },
+      })],
+    });
+    renderTab();
+    await waitForAmounts();
+    expect(captionLines('planned')).toEqual(['Quantity and price · 1 line · 0.40 FTE ·', 'Spread 4-4-5', '10 months, March to December']);
+  });
+
+  it('the line dates leaving no month of the year say so on the card and in the editor; a period chosen then writes', async () => {
+    setupApi({ empty: true });
+    renderTab(YEAR, { effectiveStart: '2027-02-01' });
+    await waitForAmounts();
+
+    expect(periodLine('planned')).toHaveTextContent("No month of 2026 is within the line's dates.");
+    expect(periodLine('actual')).toHaveTextContent("No month of 2026 is within the line's dates.");
+    expect(within(editor()).getByTestId('spread-notes')).toHaveTextContent("No month of 2026 is within the line's dates.");
+    typeAmount('5000');
+    await settle();
+    expect(bulkCalls()).toHaveLength(0);
+    // The whole year, chosen by the user, takes the amount.
+    fireEvent.click(screen.getByRole('radio', { name: 'Whole year' }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(written(bulkCalls()[0][1])).toMatchObject({ totals: { planned: '5000.00' }, period_start: '2026-01-01', period_end: '2026-12-31' });
+  });
+
+  it('the save response refreshes the card', async () => {
+    const server = setupApi({ empty: true });
+    routePosts(async () => {
+      // Spread over April to December, as the server stores it.
+      server.items = Array.from({ length: 9 }, (_, i) => ({ period: period(i + 4), planned: '1333.33' }));
+      server.roundInputs = [record({})];
+      return { updated: 9, round_inputs: [record({})] };
+    });
+    renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    await waitForAmounts();
+    typeAmount('12000');
+    await waitFor(() => expect(captionLines('planned')).toEqual(['Spread flat', '9 months, April to December']));
+  });
+
+  it('a year switch shows the new year once it is loaded, and forgets the modes picked', async () => {
+    setupApi({ roundInputs: [record({})] });
+    const { rerenderYear } = renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    await waitForAmounts();
+    fireEvent.click(modeTab('By month'));
+    fireEvent.click(switchButton());
+    expect(modeTab('By month')).toHaveAttribute('aria-selected', 'true');
+
+    rerenderYear(YEAR + 1);
+    // The 2026 period is never read against 2027 (it would give "No month of 2027 ...").
+    expect(screen.queryByText(/No month of 2027/)).not.toBeInTheDocument();
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/freeze-states', { params: { year: YEAR + 1 } }));
+    // No version for 2027: nothing to read, an empty year.
+    await waitForAmounts();
+    expect(editor()).toHaveTextContent('Budget 2027');
+    expect(modeTab('Amount')).toHaveAttribute('aria-selected', 'true');
+    expect(card('planned')).toHaveTextContent('0');
+  });
+});
+
+/* ---- Amount: one yearly amount, when, how it is spread ---- */
+
+describe('BudgetTab amount', () => {
+  it('writes the active column only: the amount on leaving the field, the distribution on change, each with the period', async () => {
+    setupApi({ empty: true });
+    renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    await waitForAmounts();
+
+    // The period starts from the line's dates; an empty column has no stored period to compare with.
+    expect(screen.getByTestId('spread-result')).toHaveTextContent('Enter an amount: it will be spread flat from April to December (9 months).');
+    expect(screen.queryByTestId('stored-period')).toBeNull();
+    typeAmount('12000');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(written(bulkCalls()[0][1])).toEqual({
+      kind: 'annual', year: YEAR, totals: { planned: '12000.00' }, spread_profile_name: 'flat', period_start: '2026-04-01', period_end: '2026-12-31',
+    });
+    // Only the column typed says what it started from.
+    expect(bulkCalls()[0][1].base).toEqual({ columns: { planned: { months: Array.from({ length: 12 }, () => '0.00') } } });
+    expect(screen.getByTestId('spread-result')).toHaveTextContent('12 000 spread flat from April to December (9 months).');
+    await waitFor(() => expect(amountLoads()).toBe(2));
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Distribution' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'opex.budget.profile445' }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
+    expect(bulkCalls()[1][1]).toMatchObject({ totals: { planned: '12000.00' }, spread_profile_name: '4-4-5', period_start: '2026-04-01' });
+    expect(screen.getByTestId('spread-result')).toHaveTextContent('12 000 spread 4-4-5 from April to December (9 months).');
+    // Leaving the amount unchanged writes nothing more; nothing is written on the shared version.
+    fireEvent.blur(amountField());
+    await settle();
+    expect(bulkCalls()).toHaveLength(2);
+    expect(mocked.patch).not.toHaveBeenCalled();
+  });
+
+  it('a blank or zero amount writes nothing; Enter writes the amount shown', async () => {
+    setupApi();
+    renderTab();
+    await waitForAmounts();
+    typeAmount('');
+    typeAmount('0');
+    await settle();
+    expect(bulkCalls()).toHaveLength(0);
+    fireEvent.change(amountField(), { target: { value: '12000' } });
+    fireEvent.keyDown(amountField(), { key: 'Enter' });
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1]).toMatchObject({ kind: 'annual', totals: { planned: '12000.00' }, spread_profile_name: 'flat' });
+  });
+
+  it('When: the whole year, or a period with its dates; the zeroed months, the item dates and the 15th rule', async () => {
+    setupApi({ empty: true });
+    renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    await waitForAmounts();
+
+    expect(screen.getByRole('radio', { name: 'A period' })).toBeChecked();
+    expect(screen.getByTestId('spread-notes')).toHaveTextContent('January to March will be set to zero.');
+    expect(screen.queryByText("The period goes beyond the line's dates.")).not.toBeInTheDocument();
+    const rule = screen.getByLabelText('A month counts when the period covers its 15th.');
+    fireEvent.mouseOver(rule);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('A month counts when the period covers its 15th.');
+
+    const [from] = dateFields();
+    typeDate(from, '01/02/2026');
+    expect(await screen.findByText('January will be set to zero.')).toBeInTheDocument();
+    expect(screen.getByText("The period goes beyond the line's dates.")).toBeInTheDocument();
+    // No amount yet: the date changes wrote nothing.
+    expect(bulkCalls()).toHaveLength(0);
+    // A period in which no month counts writes nothing either.
+    typeDate(dateFields()[0], '20/12/2026');
+    typeAmount('500');
+    expect(await screen.findByText('No month counts in this period.')).toBeInTheDocument();
+    await settle();
+    expect(bulkCalls()).toHaveLength(0);
+
+    // The whole year: no date fields, the twelve months, written at once with the amount typed.
+    fireEvent.click(screen.getByRole('radio', { name: 'Whole year' }));
+    expect(within(editor()).queryAllByPlaceholderText('labels.datePlaceholder')).toHaveLength(0);
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(written(bulkCalls()[0][1])).toMatchObject({ totals: { planned: '500.00' }, period_start: '2026-01-01', period_end: '2026-12-31' });
+    expect(screen.getByTestId('spread-result')).toHaveTextContent('500 spread flat from January to December (12 months).');
+    expect(screen.getByText("The period goes beyond the line's dates.")).toBeInTheDocument();
+    // A period again: From and To come back on the period shown, nothing is written.
+    fireEvent.click(screen.getByRole('radio', { name: 'A period' }));
+    expect(dateFields()).toHaveLength(2);
+    await settle();
+    expect(bulkCalls()).toHaveLength(1);
+  });
+
+  it('a column that already holds amounts keeps its stored period; a date change writes its total with the new period', async () => {
+    setupApi();
+    renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    await waitForAmounts();
+
+    expect(periodLine('committed')).toHaveTextContent('12 months, January to December');
+    pick('committed');
+    expect(amountField()).toHaveValue('10 800');
+    // The editor proposes the stored whole year within the line's dates (from April 1), and saves nothing yet.
+    expect(screen.getByTestId('spread-notes')).toHaveTextContent('January to March will be set to zero.');
+    expect(screen.getAllByText('12 months, January to December')).toHaveLength(5);
+    expect(screen.getByTestId('stored-period')).toHaveTextContent("Stored period: January to December. Saving will use April to December, the line's dates.");
+    expect(bulkCalls()).toHaveLength(0);
+
+    // Dates the user picks are the ones a save uses: no note any more.
+    typeDate(dateFields()[0], '01/07/2026');
+    expect(screen.queryByTestId('stored-period')).toBeNull();
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(written(bulkCalls()[0][1])).toEqual({
+      kind: 'annual', year: YEAR, totals: { committed: '10800.00' }, spread_profile_name: 'flat', period_start: '2026-07-01', period_end: '2026-12-31',
+    });
+  });
+
+  it('proposes the stored period cut at the end of validity, without saving it on open', async () => {
+    setupApi({ roundInputs: [record({ period_start: '2026-01-01', period_end: '2026-12-31' })] });
+    const { ref } = renderTab(YEAR, { endOfValidity: '2026-06-30' });
+    await waitForAmounts();
+
+    expect(screen.getByTestId('spread-notes')).toHaveTextContent('July to December will be set to zero.');
+    expect(screen.getByTestId('stored-period')).toHaveTextContent("Stored period: January to December. Saving will use January to June, the line's dates.");
+    // The card still shows the stored period, and opening wrote nothing.
+    expect(captionLines('planned')).toEqual(['Spread flat', '12 months, January to December']);
+    expect(ref.current!.isDirty()).toBe(false);
+    expect(ref.current!.hasPending()).toBe(false);
+    typeAmount('6000');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1]).toMatchObject({ totals: { planned: '6000.00' }, period_start: '2026-01-01', period_end: '2026-06-30' });
+  });
+
+  it('a date change on a 4-4-5 column keeps 4-4-5', async () => {
+    setupApi({
+      roundInputs: [record({ spread_profile_name: '4-4-5', last_calculation: { kind: 'annual', total: '12000.00', profile: '4-4-5', active_months: [4, 5, 6, 7, 8, 9, 10, 11, 12], weights: [] } })],
+    });
+    renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    await waitForAmounts();
+    typeDate(dateFields()[0], '01/05/2026');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1]).toMatchObject({ totals: { planned: '12000.00' }, spread_profile_name: '4-4-5', period_start: '2026-05-01', period_end: '2026-12-31' });
+  });
+
+  it('every change saves at once: no Spread, Apply, Reset or Close button', async () => {
+    setupApi();
+    renderTab();
+    await waitForAmounts();
+    for (const name of ['Spread', 'Apply', 'Reset', 'common:buttons.close']) {
+      expect(within(editor()).queryByRole('button', { name })).not.toBeInTheDocument();
+    }
+  });
+
+  it('the distribution keeps the focus after a choice made with the keyboard', async () => {
+    setupApi();
+    renderTab();
+    await waitForAmounts();
+    const distribution = screen.getByRole('combobox', { name: 'Distribution' });
+    act(() => { distribution.focus(); });
+    fireEvent.keyDown(distribution, { key: 'ArrowDown' });
+    await screen.findByRole('listbox');
+    fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'ArrowDown' });
+    fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'Enter' });
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1]).toMatchObject({ spread_profile_name: '4-4-5' });
+    await settle();
+    expect(document.activeElement).toBe(distribution);
+  });
+
+  it("a spread forgets the line's cached Allocations year, which shows the year's totals", async () => {
+    setupApi();
+    const first = renderTab();
+    await waitForAmounts();
+    const key = allocationsSnapshotKey(OPEX_FINANCE_CONFIG.itemsApi, 'item-1', YEAR);
+    const otherYear = allocationsSnapshotKey(OPEX_FINANCE_CONFIG.itemsApi, 'item-1', YEAR + 1);
+    first.queryClient.setQueryData(key, { version: null, computed: [], totals: { planned: 12000 } });
+    first.queryClient.setQueryData(otherYear, { version: null, computed: [], totals: { planned: 1 } });
+    typeAmount('6000');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    await settle();
+    expect(first.queryClient.getQueryData(key)).toBeUndefined();
+    expect(first.queryClient.getQueryData(otherYear)).toBeDefined();
+  });
+
+  it('lines kept as a reference show under the amount, with their total, and can be used again', async () => {
+    const reference = linesRecord(undefined, {
+      method: 'spread',
+      spread_profile_name: 'flat',
+      last_calculation: {
+        kind: 'annual', total: '12000.00', profile: 'flat', active_months: MARCH_TO_DECEMBER, weights: [],
+        lines_result: { total: '60000.00', fte: '0.40', fte_period: '0.48', month_amounts: [], fte_months: [], active_months: MARCH_TO_DECEMBER, lines: [] },
+      },
+    });
+    setupApi({ roundInputs: [reference] });
+    routePosts();
     renderTab();
     await waitForAmounts();
 
-    expect(screen.getByRole('tab', { name: 'Spread an amount' })).toHaveAttribute('aria-selected', 'true');
-    openLines();
-    expect(screen.queryByPlaceholderText('opex.budget.spreadPlaceholder')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add a line' })).toBeInTheDocument();
-    // No button to compute or spread: every change is saved as it is made.
-    expect(screen.queryByRole('button', { name: /compute|spread/i })).not.toBeInTheDocument();
+    expect(modeTab('Amount')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('lines-reference')).toHaveTextContent('1 line kept as a reference (60 000). Use the lines again.');
+    fireEvent.click(within(screen.getByTestId('lines-reference')).getByRole('button', { name: 'Use the lines again.' }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1]).toMatchObject({ kind: 'lines', measure: 'planned', lines: [expect.objectContaining({ quantity: '100', unit_price: '600' })] });
+    expect(modeTab('Quantity and price')).toHaveAttribute('aria-selected', 'true');
+  });
+});
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Spread an amount' }));
-    expect(amountField()).toHaveValue('12 000');
-    expect(screen.queryByRole('button', { name: 'Add a line' })).not.toBeInTheDocument();
+/* ---- Modes: how the active column is built ---- */
+
+describe('BudgetTab modes', () => {
+  it('the three modes are always offered; on an empty column a mode is taken at once, writing nothing', async () => {
+    calendarsState.list = [FRANCE, UNITED_STATES];
+    setupApi({ empty: true });
+    renderTab();
+    await waitForAmounts();
+
+    expect(modeTab('Amount')).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(modeTab('Quantity and price'));
+    expect(screen.queryByRole('button', { name: 'Switch' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Add a line' })).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('opex.budget.spreadPlaceholder')).toBeNull();
+
+    fireEvent.click(modeTab('By month'));
+    expect(editor()).toHaveTextContent('Enter the amounts in the Budget column of the table below.');
+    expect(monthInput('planned', 1)).not.toBeNull();
+    expect(monthInput('committed', 1)).toBeNull();
+
+    fireEvent.click(modeTab('Amount'));
+    expect(amountField()).toBeInTheDocument();
+    expect(document.activeElement).toBe(amountField());
+    await settle();
+    expect(bulkCalls()).toHaveLength(0);
   });
 
-  it('a complete line is written as the column lines, on the paying company calendar, and the grid reloads', async () => {
-    setupApi({ grain: 'monthly', empty: true });
+  it('on a column with amounts a mode change asks first and says what changes; Cancel changes nothing', async () => {
+    setupApi();
+    renderTab();
+    await waitForAmounts();
+
+    fireEvent.click(modeTab('By month'));
+    expect(screen.getByTestId('mode-switch')).toHaveTextContent('Switch to entry by month? The current months are kept and become editable in the table.');
+    expect(monthInput('planned', 1)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.cancel' }));
+    expect(screen.queryByTestId('mode-switch')).toBeNull();
+    expect(modeTab('Amount')).toHaveAttribute('aria-selected', 'true');
+
+    fireEvent.click(modeTab('Quantity and price'));
+    expect(screen.getByTestId('mode-switch')).toHaveTextContent('Switch to quantity and price? The total will come from the lines. The current amount (12 000) will be replaced.');
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.cancel' }));
+    await settle();
+    expect(bulkCalls()).toHaveLength(0);
+  });
+
+  it('by month, confirmed, keeps the months and makes the column editable in the table', async () => {
+    setupApi();
+    const { ref } = renderTab();
+    await waitForAmounts();
+
+    fireEvent.click(modeTab('By month'));
+    fireEvent.click(switchButton());
+    expect(modeTab('By month')).toHaveAttribute('aria-selected', 'true');
+    expect(monthInput('planned', 3)).toHaveValue('1 000');
+    // Nothing is written until a month changes.
+    await settle();
+    expect(bulkCalls()).toHaveLength(0);
+    fireEvent.change(monthInput('planned', 3)!, { target: { value: '1500' } });
+    await flush(ref);
+    expect(written(bulkCalls()[0][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(3), planned: 1500 }] });
+  });
+
+  it('back to an amount, confirmed, spreads the current total flat; the lines stay as a reference', async () => {
+    setupApi({ roundInputs: [linesRecord(undefined, { method: 'manual' })] });
+    routePosts();
+    const { ref } = renderTab();
+    await waitForAmounts();
+
+    // Edited by hand: by month. March becomes 1 500, 12 500 in all.
+    expect(modeTab('By month')).toHaveAttribute('aria-selected', 'true');
+    fireEvent.change(monthInput('planned', 3)!, { target: { value: '1500' } });
+    await flush(ref);
+    expect(bulkCalls()).toHaveLength(1);
+
+    fireEvent.click(modeTab('Amount'));
+    expect(screen.getByTestId('mode-switch')).toHaveTextContent('Switch to an amount? The current total (12 500) becomes the amount, spread flat from March to December (10 months). The lines stay as a reference.');
+    fireEvent.click(switchButton());
+    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
+    expect(written(bulkCalls()[1][1])).toEqual({
+      kind: 'annual', year: YEAR, totals: { planned: '12500.00' }, spread_profile_name: 'flat', period_start: '2026-03-01', period_end: '2026-12-31',
+    });
+    expect(modeTab('Amount')).toHaveAttribute('aria-selected', 'true');
+    expect(amountField()).toHaveValue('12 500');
+  });
+
+  it('the question before an amount names the months the spread will cover, within the line dates', async () => {
+    setupApi({ roundInputs: [record({ measure: 'actual', method: 'manual', period_start: '2026-01-01' })] });
+    renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    await waitForAmounts();
+    pick('actual');
+    expect(modeTab('By month')).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(modeTab('Amount'));
+    expect(screen.getByTestId('mode-switch')).toHaveTextContent('Switch to an amount? The current total (9 600) becomes the amount, spread flat from April to December (9 months).');
+    fireEvent.click(switchButton());
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(written(bulkCalls()[0][1])).toEqual({
+      kind: 'annual', year: YEAR, totals: { actual: '9600.00' }, spread_profile_name: 'flat', period_start: '2026-04-01', period_end: '2026-12-31',
+    });
+  });
+
+  it('quantity and price, confirmed on lines kept as a reference, uses them again', async () => {
+    setupApi({ roundInputs: [linesRecord(undefined, { method: 'manual', last_calculation: null })] });
+    routePosts();
+    renderTab();
+    await waitForAmounts();
+
+    expect(screen.getByTestId('lines-reference')).toHaveTextContent(/^1 line kept as a reference\. Use the lines again\.$/);
+    fireEvent.click(modeTab('Quantity and price'));
+    expect(screen.getByTestId('mode-switch')).toHaveTextContent('Switch to quantity and price? The total will come from the lines. The line kept as a reference is used again.');
+    fireEvent.click(switchButton());
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1]).toMatchObject({ kind: 'lines', measure: 'planned', lines: [expect.objectContaining({ quantity: '100', unit_price: '600' })] });
+    expect(modeTab('Quantity and price')).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('the mode follows each column: lines for one computed from them, its own for the others; a pick stays through reloads', async () => {
+    setupApi({ roundInputs: [linesRecord(undefined, { measure: 'committed' }), record({ measure: 'actual', method: 'manual', period_start: '2026-01-01' })] });
+    routePosts();
+    const { ref } = renderTab();
+    await waitForAmounts();
+
+    expect(modeTab('Amount')).toHaveAttribute('aria-selected', 'true');
+    pick('committed');
+    expect(modeTab('Quantity and price')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByLabelText('Description')).toHaveValue('US Managed IT Services');
+    pick('actual');
+    expect(modeTab('By month')).toHaveAttribute('aria-selected', 'true');
+
+    // Budget by month, picked by the user: kept through a save, its reload and a reload for someone else's change.
+    pick('planned');
+    fireEvent.click(modeTab('By month'));
+    fireEvent.click(switchButton());
+    const loads = amountLoads();
+    fireEvent.change(monthInput('planned', 3)!, { target: { value: '450' } });
+    await flush(ref);
+    await waitFor(() => expect(amountLoads()).toBe(loads + 1));
+    await settle();
+    expect(modeTab('By month')).toHaveAttribute('aria-selected', 'true');
+    await act(async () => { await ref.current?.reloadFromServer(); });
+    await settle();
+    expect(modeTab('By month')).toHaveAttribute('aria-selected', 'true');
+    // Back on Revision: its lines.
+    pick('committed');
+    expect(modeTab('Quantity and price')).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('a setting that hides the active column moves the editor to the first column shown, in its own mode', async () => {
+    setupApi({ roundInputs: [linesRecord(undefined, { measure: 'committed' })] });
+    const { rerenderYear } = renderTab();
+    await waitForAmounts();
+    pick('actual');
+    expect(editor()).toHaveTextContent('Actuals 2026');
+
+    columnsSetting.current = { ...ALL_SHOWN, enabled: { ...ALL_SHOWN.enabled, planned: false, actual: false } };
+    rerenderYear(YEAR);
+    await waitFor(() => expect(activeColumn()).toBe('committed'));
+    expect(modeTab('Quantity and price')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByLabelText('Description')).toHaveValue('US Managed IT Services');
+  });
+
+  it('a column that follows its lines asks before an amount replaces them; nothing is written until confirmed', async () => {
+    setupApi({ roundInputs: [linesRecord(), linesRecord(undefined, { measure: 'forecast' })] });
+    routePosts();
+    renderTab();
+    await waitForAmounts();
+
+    expect(modeTab('Quantity and price')).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(modeTab('Amount'));
+    expect(screen.getByTestId('mode-switch')).toHaveTextContent('Switch to an amount? The current total (12 000) becomes the amount, spread flat from March to December (10 months). The lines stay as a reference.');
+    expect(screen.queryByPlaceholderText('opex.budget.spreadPlaceholder')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.cancel' }));
+    await settle();
+    expect(bulkCalls()).toHaveLength(0);
+
+    fireEvent.click(modeTab('Amount'));
+    fireEvent.click(switchButton());
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(written(bulkCalls()[0][1])).toEqual({
+      kind: 'annual', year: YEAR, totals: { planned: '12000.00' }, spread_profile_name: 'flat', period_start: '2026-03-01', period_end: '2026-12-31',
+    });
+    await settle();
+    // Now an amount: a new one spreads at once, on this column only.
+    typeAmount('20000');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
+    expect(written(bulkCalls()[1][1])).toEqual({
+      kind: 'annual', year: YEAR, totals: { planned: '20000.00' }, spread_profile_name: 'flat', period_start: '2026-03-01', period_end: '2026-12-31',
+    });
+  });
+});
+
+/* ---- The result month by month ---- */
+
+describe('BudgetTab monthly result', () => {
+  it('shows every month, the quarters and the year of each column, read only', async () => {
+    setupApi({ monthValues: { forecast: '333.33' } });
+    const { container } = renderTab();
+    await waitForAmounts();
+    expect(cellValue('forecast', 1)).toBe('333.33');
+    expect(cellValue('planned', 12)).toBe('1 000');
+    expect(screen.getByTestId('total-planned')).toHaveTextContent('12 000');
+    expect(Array.from(container.querySelectorAll('tbody tr td:first-child')).map((td) => td.textContent).filter((text) => /^Q/.test(text ?? ''))).toEqual(['Q1', 'Q2', 'Q3', 'Q4']);
+    // No field in the table until a column is typed by month.
+    expect(screen.getByTestId('monthly-result').querySelectorAll('input')).toHaveLength(0);
+  });
+
+  it('a click in a month of a column with amounts makes it active, asks, then puts the cursor in that month', async () => {
+    setupApi();
+    renderTab();
+    await waitForAmounts();
+
+    fireEvent.click(tableCell('committed', 5));
+    expect(activeColumn()).toBe('committed');
+    expect(screen.getByTestId('mode-switch')).toHaveTextContent('Switch to entry by month?');
+    expect(monthInput('committed', 5)).toBeNull();
+    fireEvent.click(switchButton());
+    expect(monthInput('committed', 5)).not.toBeNull();
+    expect(document.activeElement).toBe(monthInput('committed', 5));
+    expect(modeTab('By month')).toHaveAttribute('aria-selected', 'true');
+    await settle();
+    expect(bulkCalls()).toHaveLength(0);
+  });
+
+  it('a click in a month of an empty column switches it to by month at once', async () => {
+    setupApi({ monthValues: { actual: '0' } });
+    renderTab();
+    await waitForAmounts();
+
+    fireEvent.click(tableCell('actual', 7));
+    expect(screen.queryByTestId('mode-switch')).toBeNull();
+    expect(activeColumn()).toBe('actual');
+    expect(document.activeElement).toBe(monthInput('actual', 7));
+  });
+
+  it('a click in a month of a frozen column does nothing', async () => {
+    setupApi({ frozen: ['forecast'] });
+    renderTab();
+    await waitForAmounts();
+    await waitFor(() => expect(within(card('forecast')).getByTestId('LockOutlinedIcon')).toBeInTheDocument());
+
+    fireEvent.click(tableCell('forecast', 2));
+    expect(activeColumn()).toBe('planned');
+    expect(screen.queryByTestId('mode-switch')).toBeNull();
+    expect(monthInput('forecast', 2)).toBeNull();
+  });
+
+  it('only the months changed are saved, on the year shown', async () => {
+    setupApi();
+    // The tab opens on the next year (no version there), then the user goes to the line's year.
+    const { ref, rerenderYear } = renderTab(YEAR + 1);
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/freeze-states', { params: { year: YEAR + 1 } }));
+    rerenderYear(YEAR);
+    await waitForAmounts();
+
+    typeMonth('committed', 3, '450');
+    await flush(ref);
+    expect(bulkCalls()).toHaveLength(1);
+    expect(written(bulkCalls()[0][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(3), committed: 450 }] });
+  });
+
+  it('a month saved is not sent again after a card or a year changes', async () => {
+    setupApi();
+    const { ref, rerenderYear } = renderTab();
+    await waitForAmounts();
+    typeMonth('planned', 1, '1500');
+    await flush(ref);
+    expect(bulkCalls()).toHaveLength(1);
+
+    pick('committed');
+    rerenderYear(YEAR + 1);
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/freeze-states', { params: { year: YEAR + 1 } }));
+    rerenderYear(YEAR);
+    await waitForAmounts(3);
+    await flush(ref);
+    expect(bulkCalls()).toHaveLength(1);
+    expect(mocked.patch).not.toHaveBeenCalled();
+  });
+
+  it('a failed save keeps its months for the next one; a flush retries them', async () => {
+    setupApi();
+    mocked.post.mockRejectedValueOnce(new Error('network down'));
+    const { ref } = renderTab();
+    await waitForAmounts();
+
+    typeMonth('planned', 1, '1500');
+    expect(await flush(ref)).toBe(false);
+    expect(ref.current?.isDirty()).toBe(true);
+    typeMonth('planned', 2, '950');
+    expect(await flush(ref)).toBe(true);
+    expect(ref.current?.isDirty()).toBe(false);
+    expect(bulkCalls()).toHaveLength(2);
+    expect(written(bulkCalls()[1][1])).toEqual({
+      kind: 'monthly', year: YEAR, months: [{ period: period(1), planned: 1500 }, { period: period(2), planned: 950 }],
+    });
+  });
+
+  it('a flush retries a month whose save failed', async () => {
+    setupApi();
+    mocked.post.mockRejectedValueOnce(new Error('network down'));
+    const { ref } = renderTab();
+    await waitForAmounts();
+    typeMonth('planned', 1, '1500');
+    expect(await flush(ref)).toBe(false);
+    expect(await flush(ref)).toBe(true);
+    expect(bulkCalls()).toHaveLength(2);
+    expect(written(bulkCalls()[1][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(1), planned: 1500 }] });
+    expect(ref.current?.isDirty()).toBe(false);
+  });
+
+  it('an amount after a failed save keeps the month and does not post the amount', async () => {
+    setupApi();
+    mocked.post.mockRejectedValue(new Error('network down'));
+    const { ref } = renderTab();
+    await waitForAmounts();
+
+    typeMonth('planned', 1, '1500');
+    expect(await flush(ref)).toBe(false);
+    expect(ref.current?.isDirty()).toBe(true);
+    pick('committed');
+    typeAmount('24000');
+    // The amount first retries the unsaved month; it fails again, so the amount stops there.
+    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
+    await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+    expect(bulkCalls().every(([, body]) => body.kind === 'monthly')).toBe(true);
+    expect(cellValue('planned', 1)).toBe('1 500');
+    expect(ref.current?.isDirty()).toBe(true);
+
+    mocked.post.mockResolvedValue({ data: { updated: 1 } });
+    expect(await flush(ref)).toBe(true);
+    expect(written(bulkCalls()[2][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(1), planned: 1500 }] });
+  });
+
+  it('an amount typed right after a month saves the month first, and keeps its amount in the field', async () => {
+    setupApi();
+    routePosts();
+    renderTab();
+    await waitForAmounts();
+    typeMonth('committed', 3, '1500');
+    pick('planned');
+    typeAmount('20000');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
+    expect(bulkCalls()[0][1]).toMatchObject({ kind: 'monthly' });
+    expect(bulkCalls()[1][1]).toMatchObject({ kind: 'annual', totals: { planned: '20000.00' } });
+    await settle();
+    expect(amountField()).toHaveValue('20 000');
+  });
+});
+
+/* ---- Clear column ---- */
+
+describe('BudgetTab clear column', () => {
+  it('asks first, then sends that column only, for the twelve months', async () => {
+    setupApi();
+    const { ref } = renderTab();
+    await waitForAmounts();
+    pick('committed');
+
+    fireEvent.click(within(editor()).getByRole('button', { name: 'opex.budget.clearColumn' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Clear every month of Revision for 2026? The other columns stay as they are.');
+    expect(cellValue('committed', 1)).toBe('900');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'opex.budget.clearColumn' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await waitFor(() => expect(cellValue('committed', 1)).toBe('0'));
+    await flush(ref);
+    expect(bulkCalls()).toHaveLength(1);
+    expect(written(bulkCalls()[0][1])).toEqual({
+      kind: 'monthly', year: YEAR, months: Array.from({ length: 12 }, (_, i) => ({ period: period(i + 1), committed: 0 })),
+    });
+  });
+
+  it('on a CAPEX line the question names the column as the tenant calls it', async () => {
+    columnsSetting.current = { ...ALL_SHOWN, labels: { ...ALL_SHOWN.labels, committed: 'Run cost' } };
+    setupApi();
+    // The same item, under the CAPEX routes.
+    const spendGet = mocked.get.getMockImplementation()! as (...args: any[]) => any;
+    mocked.get.mockImplementation((url: string, config?: unknown) => spendGet(
+      url.replace('/capex-items/', '/spend-items/').replace('/capex-versions/', '/spend-versions/'), config,
+    ));
+    const { ref } = renderTab(YEAR, {}, CAPEX_FINANCE_CONFIG);
+    await waitFor(() => expect(editor()).toHaveAttribute('data-ready', 'true'));
+    pick('committed');
+
+    fireEvent.click(within(editor()).getByRole('button', { name: 'capex.budget.clearColumn' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Clear every month of Run cost for 2026?');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'capex.budget.clearColumn' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await flush(ref);
+    const posts = mocked.post.mock.calls.filter(([url]) => url === '/capex-versions/v1/amounts/bulk-upsert');
+    expect(posts).toHaveLength(1);
+    expect(posts[0][1]).toMatchObject({ kind: 'monthly', months: Array.from({ length: 12 }, (_, i) => ({ period: period(i + 1), committed: 0 })) });
+  });
+
+  it('cancelling the question leaves the months as they are and saves nothing', async () => {
+    setupApi();
+    const { ref } = renderTab();
+    await waitForAmounts();
+    pick('committed');
+    fireEvent.click(within(editor()).getByRole('button', { name: 'opex.budget.clearColumn' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await flush(ref);
+    for (let month = 1; month <= 12; month++) expect(cellValue('committed', month)).toBe('900');
+    expect(bulkCalls()).toHaveLength(0);
+    expect(ref.current?.isDirty()).toBe(false);
+  });
+
+  it('a column already at zero is cleared without a question', async () => {
+    setupApi({ monthValues: { committed: '0' }, roundInputs: [record({ measure: 'committed', method: 'manual', period_start: '2026-01-01' })] });
+    const { ref } = renderTab();
+    await waitForAmounts();
+    pick('committed');
+    fireEvent.click(within(editor()).getByRole('button', { name: 'opex.budget.clearColumn' }));
+    await flush(ref);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(bulkCalls()).toHaveLength(1);
+    expect(written(bulkCalls()[0][1])).toEqual({
+      kind: 'monthly', year: YEAR, months: Array.from({ length: 12 }, (_, i) => ({ period: period(i + 1), committed: 0 })),
+    });
+  });
+});
+
+/* ---- Frozen columns ---- */
+
+describe('BudgetTab frozen columns', () => {
+  it('a frozen column is selectable and read only: no mode, no field, a sentence; nothing is ever sent (the Spread-an-amount bug)', async () => {
+    setupApi({ frozen: ['budget'], roundInputs: [record({ period_start: '2026-01-01' })] });
+    const { ref } = renderTab();
+    await waitForAmounts();
+    await waitFor(() => expect(activeColumn()).toBe('committed'));
+
+    pick('planned');
+    expect(activeColumn()).toBe('planned');
+    const ed = editor();
+    expect(ed).toHaveAttribute('data-frozen', 'true');
+    expect(ed).toHaveTextContent('The Budget 2026 column is frozen');
+    expect(ed).toHaveTextContent('Read only. An administrator can unfreeze it in Administration › Freeze / unfreeze data.');
+    expect(ed).toHaveTextContent('12 000');
+    expect(ed).toHaveTextContent('Spread flat');
+    // No field at all: no amount, no mode, no date, no distribution, no clear.
+    expect(within(ed).queryAllByRole('textbox')).toHaveLength(0);
+    expect(within(ed).queryAllByRole('tab')).toHaveLength(0);
+    expect(within(ed).queryAllByRole('radio')).toHaveLength(0);
+    expect(within(ed).queryAllByRole('combobox')).toHaveLength(0);
+    expect(within(ed).queryAllByRole('button')).toHaveLength(0);
+    expect(document.activeElement).toBe(document.body);
+    // Nor its months.
+    fireEvent.click(tableCell('planned', 3));
+    expect(monthInput('planned', 3)).toBeNull();
+    expect(screen.queryByTestId('mode-switch')).toBeNull();
+    await flush(ref);
+    await settle();
+    expect(bulkCalls()).toHaveLength(0);
+    expect(ref.current?.hasPending()).toBe(false);
+  });
+
+  it('a column frozen while its amount is typed turns read only and writes nothing', async () => {
+    const state = setupApi();
+    const { ref, queryClient } = renderTab();
+    await waitForAmounts();
+    fireEvent.change(amountField(), { target: { value: '15000' } });
+    expect(ref.current?.hasPending()).toBe(true);
+
+    state.frozen = ['budget'];
+    await act(async () => { await queryClient.invalidateQueries({ queryKey: ['freeze-state', YEAR] }); });
+    await waitFor(() => expect(editor()).toHaveAttribute('data-frozen', 'true'));
+    expect(activeColumn()).toBe('planned');
+    await settle();
+    expect(bulkCalls()).toHaveLength(0);
+    expect(ref.current?.hasPending()).toBe(false);
+  });
+
+  it('a frozen Forecast is locked on its card and in the table, never typed and never sent', async () => {
+    setupApi({ frozen: ['forecast'] });
+    const { ref } = renderTab();
+    await waitForAmounts();
+    await waitFor(() => expect(within(card('forecast')).getByTestId('LockOutlinedIcon')).toBeInTheDocument());
+    expect(within(screen.getByTestId('budget-head-forecast')).getByTestId('LockOutlinedIcon')).toBeInTheDocument();
+    expect(tableCell('forecast', 1)).not.toHaveAttribute('title');
+
+    typeMonth('planned', 1, '1500');
+    fireEvent.click(tableCell('forecast', 1));
+    await flush(ref);
+    expect(bulkCalls()).toHaveLength(1);
+    expect(written(bulkCalls()[0][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(1), planned: 1500 }] });
+    expect(screen.getByText('opex.budget.someColumnsFrozen')).toBeInTheDocument();
+  });
+
+  it('a save refused by a new freeze refreshes the freeze and drops the frozen months', async () => {
+    const state = setupApi();
+    const { ref } = renderTab();
+    await waitForAmounts();
+    await waitFor(() => expect(freezeLoads()).toBe(1));
+
+    // Budget gets frozen by an administrator while the tab is open.
+    state.frozen = ['budget'];
+    mocked.post.mockRejectedValueOnce(Object.assign(new Error('Forbidden'), { response: { status: 403, data: { message: 'OPEX Budget for 2026 is frozen' } } }));
+    typeMonth('planned', 1, '1500');
+    expect(await flush(ref)).toBe(false);
+
+    await waitFor(() => expect(freezeLoads()).toBe(2));
+    await waitFor(() => expect(editor()).toHaveAttribute('data-frozen', 'true'));
+    expect(monthInput('planned', 1)).toBeNull();
+    expect(await flush(ref)).toBe(true);
+    expect(bulkCalls()).toHaveLength(1);
+    expect(ref.current?.isDirty()).toBe(false);
+  });
+});
+
+/* ---- « Use for other columns too » ---- */
+
+describe('BudgetTab use for other columns', () => {
+  const openAlso = () => fireEvent.click(within(editor()).getByRole('button', { name: 'Use for other columns too…' }));
+  const alsoBox = (name: string) => within(editor()).getByRole('checkbox', { name });
+
+  it('an amount: the other columns, never a frozen one, the group ticked; Apply spreads them from their own totals', async () => {
+    setupApi({ frozen: ['revision'], monthValues: { forecast: '333.33' } });
+    renderTab();
+    await waitForAmounts();
+    await waitFor(() => expect(freezeLoads()).toBeGreaterThanOrEqual(1));
+
+    openAlso();
+    expect(within(editor()).getAllByRole('checkbox').map((box) => box.closest('label')?.textContent)).toEqual(['Forecast', 'Actuals', 'Expected landing']);
+    expect(alsoBox('Forecast')).toBeChecked();
+    expect(editor()).toHaveTextContent('They take this period and distribution, and keep their own total.');
+    fireEvent.click(alsoBox('Actuals'));
+    fireEvent.click(within(editor()).getByRole('button', { name: 'Apply' }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    // The server spreads the other columns from the totals it holds (scenario 5, lot 3D): only the
+    // active column says what it started from.
+    expect(bulkCalls()[0][1]).toEqual({
+      kind: 'annual',
+      year: YEAR,
+      totals: { planned: '12000.00' },
+      also_measures: ['forecast', 'expected_landing'],
+      spread_profile_name: 'flat',
+      period_start: '2026-01-01',
+      period_end: '2026-12-31',
+      base: { columns: { planned: { months: Array.from({ length: 12 }, () => '1000.00') } } },
+    });
+  });
+
+  it('by default an amount goes to the active column only; Cancel writes nothing', async () => {
+    setupApi();
+    renderTab();
+    await waitForAmounts();
+    openAlso();
+    fireEvent.click(within(editor()).getByRole('button', { name: 'common:buttons.cancel' }));
+    await settle();
+    expect(bulkCalls()).toHaveLength(0);
+    typeAmount('13000');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1].totals).toEqual({ planned: '13000.00' });
+    expect(bulkCalls()[0][1].also_measures).toBeUndefined();
+  });
+
+  it('a column out of the setting group is offered unticked; a hidden column is never offered', async () => {
+    columnsSetting.current = { ...DEFAULT_BUDGET_COLUMNS, group_spread: { ...DEFAULT_BUDGET_COLUMNS.group_spread, expected_landing: false } };
+    setupApi();
+    renderTab();
+    await waitForAmounts();
+    pick('actual');
+    openAlso();
+    expect(within(editor()).getAllByRole('checkbox').map((box) => box.closest('label')?.textContent)).toEqual(['Budget', 'Revision', 'Expected landing']);
+    expect(alsoBox('Expected landing')).not.toBeChecked();
+    expect(alsoBox('Budget')).toBeChecked();
+    fireEvent.click(within(editor()).getByRole('button', { name: 'Apply' }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(written(bulkCalls()[0][1])).toEqual({
+      kind: 'annual', year: YEAR, totals: { actual: '9600.00' }, also_measures: ['planned', 'committed'], spread_profile_name: 'flat', period_start: '2026-01-01', period_end: '2026-12-31',
+    });
+  });
+
+  it('is not offered when every other column is frozen', async () => {
+    columnsSetting.current = { ...DEFAULT_BUDGET_COLUMNS, enabled: { ...DEFAULT_BUDGET_COLUMNS.enabled, actual: false, expected_landing: false } };
+    setupApi({ frozen: ['revision'] });
+    renderTab();
+    await waitForAmounts();
+    await waitFor(() => expect(freezeLoads()).toBeGreaterThanOrEqual(1));
+    await waitFor(() => expect(within(editor()).queryByRole('button', { name: 'Use for other columns too…' })).not.toBeInTheDocument());
+    expect(within(editor()).getByRole('button', { name: 'opex.budget.clearColumn' })).toBeInTheDocument();
+  });
+
+  it('an amount leaves out the columns that follow their lines, and says so', async () => {
+    setupApi({ roundInputs: [linesRecord(undefined, { measure: 'committed' }), linesRecord(undefined, { measure: 'forecast' })] });
+    routePosts();
+    renderTab();
+    await waitForAmounts();
+    openAlso();
+    expect(within(editor()).getAllByRole('checkbox').map((box) => box.closest('label')?.textContent)).toEqual(['Actuals', 'Expected landing']);
+    expect(editor()).toHaveTextContent('Revision and Forecast keep their lines.');
+    fireEvent.click(within(editor()).getByRole('button', { name: 'Apply' }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1].also_measures).toEqual(['actual', 'expected_landing']);
+  });
+
+  it('when every other column follows its lines, an amount offers nothing', async () => {
+    columnsSetting.current = { ...DEFAULT_BUDGET_COLUMNS, enabled: { ...DEFAULT_BUDGET_COLUMNS.enabled, actual: false, expected_landing: false } };
+    setupApi({ roundInputs: [linesRecord(undefined, { measure: 'committed' })] });
+    renderTab();
+    await waitForAmounts();
+    expect(within(editor()).queryByRole('button', { name: 'Use for other columns too…' })).not.toBeInTheDocument();
+    typeAmount('5000');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1].also_measures).toBeUndefined();
+  });
+
+  it('quantity and price: the same lines to the columns ticked, never a frozen one', async () => {
+    calendarsState.list = [FRANCE, UNITED_STATES];
+    setupApi({ frozen: ['revision'], roundInputs: [linesRecord()] });
+    routePosts();
+    renderTab();
+    await waitForAmounts();
+    await waitFor(() => expect(freezeLoads()).toBeGreaterThanOrEqual(1));
+
+    openAlso();
+    expect(within(editor()).getAllByRole('checkbox', { name: /Forecast|Actuals|Expected landing|Revision/ }).map((box) => box.closest('label')?.textContent)).toEqual(['Forecast', 'Actuals', 'Expected landing']);
+    expect(editor()).toHaveTextContent('These lines replace their amounts.');
+    fireEvent.click(within(editor()).getByRole('button', { name: 'Apply' }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    const body = bulkCalls()[0][1];
+    expect(body).toMatchObject({ kind: 'lines', measure: 'planned', lines: [expect.objectContaining({ label: 'US Managed IT Services', quantity: '100' })] });
+    expect(body.also_measures).toEqual(['forecast', 'actual', 'expected_landing']);
+    // Each column the lines replace says what it started from, its lines included.
+    expect(Object.keys(body.base.columns)).toEqual(['planned', 'forecast', 'actual', 'expected_landing']);
+    // A one-shot: the next commit of the lines goes to this column only.
+    leave(screen.getByLabelText('Description'), 'Managed services');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
+    expect(bulkCalls()[1][1].also_measures).toBeUndefined();
+  });
+
+  it('quantity and price without a line offers nothing to the other columns', async () => {
+    calendarsState.list = [FRANCE, UNITED_STATES];
+    setupApi({ empty: true, roundInputs: [linesRecord([storedLine()], { measure: 'forecast' })] });
+    renderTab();
+    await waitForAmounts();
+    fireEvent.click(modeTab('Quantity and price'));
+    expect(screen.getByText('No line yet. A line is a quantity times a unit price.')).toBeInTheDocument();
+    expect(within(editor()).queryByRole('button', { name: 'Use for other columns too…' })).not.toBeInTheDocument();
+  });
+});
+
+/* ---- Quantity and price ---- */
+
+describe('BudgetTab quantity and price', () => {
+  beforeEach(() => {
+    calendarsState.list = [FRANCE, UNITED_STATES];
+  });
+
+  it('a complete line is written as the column lines, on the paying company calendar, and the year reloads', async () => {
+    setupApi({ empty: true });
     routePosts(async () => ({ updated: 12, round_inputs: [linesRecord([storedLine({ label: '', quantity_unit: 'people', quantity: '1.000', frequency: 'per_month', period_start: '2026-01-01' })])] }));
     renderTab(YEAR, { payingCompanyCountry: 'US' });
     await waitForAmounts();
 
-    openLines();
+    fireEvent.click(modeTab('Quantity and price'));
     fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Full time' }));
     leave(screen.getByLabelText('Unit price'), '600');
@@ -1372,24 +1473,21 @@ describe('BudgetTab quantity and price', () => {
       }],
     });
     await waitFor(() => expect(amountLoads()).toBe(2));
-    // The box stays as it is, the view stays monthly, nothing else was written.
-    expect(screen.getByRole('button', { name: 'Add a line' })).toBeInTheDocument();
     expect(screen.getByLabelText('Unit price')).toHaveValue('600');
+    expect(modeTab('Quantity and price')).toHaveAttribute('aria-selected', 'true');
     expect(mocked.patch).not.toHaveBeenCalled();
     expect(bulkCalls()).toHaveLength(1);
   });
 
-  it('from the yearly view the calculator opens the lines; a write creates the version, keeps the box open and the view yearly', async () => {
-    setupApi({ grain: 'annual', empty: true, noVersion: true });
+  it('on a line without a version for the year, the first write creates it; adding a line writes nothing', async () => {
+    setupApi({ empty: true, noVersion: true });
     routePosts();
     renderTab();
-    await waitFor(() => expect(periodLine('planned')).toHaveTextContent('12 months, January to December'));
+    await waitForAmounts(0);
     const versionPosts = () => mocked.post.mock.calls.filter(([url]) => url === VERSIONS);
 
-    // No company country: the first calendar by name.
-    fireEvent.click(within(periodLine('planned').parentElement as HTMLElement).getByRole('button', { name: 'Quantity and price' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Add a line' }));
-    // Adding a line writes nothing: it has no unit price and no days yet.
+    fireEvent.click(modeTab('Quantity and price'));
+    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
     expect(versionPosts()).toHaveLength(0);
     leave(screen.getByLabelText('Unit price'), '200');
     expect(versionPosts()).toHaveLength(0);
@@ -1397,38 +1495,36 @@ describe('BudgetTab quantity and price', () => {
 
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
     expect(versionPosts()).toHaveLength(1);
+    expect(versionPosts()[0][1]).toMatchObject({ budget_year: YEAR, input_grain: 'annual' });
+    // No company country: the first calendar by name.
     expect(bulkCalls()[0][1]).toMatchObject({ kind: 'lines', measure: 'planned', lines: [expect.objectContaining({ unit_price: '200', price_basis: 'per_day', days_per_month: '5', working_day_profile_id: 'cal-fr' })] });
-    expect(mocked.patch).not.toHaveBeenCalled();
-    expect(screen.getByRole('tab', { name: 'opex.budget.flat' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('button', { name: 'Add a line' })).toBeInTheDocument();
   });
 
-  it('Apply these lines to all columns sends the same lines to the group columns too, never a frozen one', async () => {
-    setupApi({ grain: 'monthly', frozen: ['revision'], roundInputs: [linesRecord()] });
-    routePosts();
+  it('opens on the stored lines with their amount and the FTE line', async () => {
+    setupApi({ roundInputs: [linesRecord()] });
     renderTab();
     await waitForAmounts();
-    await waitFor(() => expect(freezeLoads()).toBeGreaterThanOrEqual(1));
+    expect(modeTab('Quantity and price')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByLabelText('Description')).toHaveValue('US Managed IT Services');
+    expect(screen.getByLabelText('Quantity')).toHaveValue('100');
+    expect(screen.getByTestId('line-amount')).toHaveTextContent('60 000');
+    expect(screen.getByTestId('line-frequency')).toHaveTextContent('over the period');
+    expect(screen.getByTestId('lines-fte')).toHaveTextContent('FTE over the period 0.48 · Full-year average 0.40');
+    expect(screen.queryByTestId('lines-status')).not.toBeInTheDocument();
+  });
 
-    openLines();
-    // Off by default: the other columns keep their amounts.
-    const toAll = await screen.findByLabelText('Apply these lines to all columns');
-    expect(toAll).not.toBeChecked();
-    fireEvent.click(toAll);
-
-    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    const body = bulkCalls()[0][1];
-    expect(body).toMatchObject({ kind: 'lines', measure: 'planned', lines: [expect.objectContaining({ label: 'US Managed IT Services', quantity: '100' })] });
-    expect([...body.also_measures].sort()).toEqual(['actual', 'expected_landing', 'forecast']);
-
-    // It stays on for the next commits.
-    leave(screen.getByLabelText('Description'), 'Managed services');
-    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
-    expect(bulkCalls()[1][1].also_measures).toHaveLength(3);
+  it('its months are read only in the table; a click there asks to type them by month instead', async () => {
+    setupApi({ roundInputs: [linesRecord()] });
+    renderTab();
+    await waitForAmounts();
+    expect(monthInput('planned', 3)).toBeNull();
+    fireEvent.click(tableCell('planned', 3));
+    expect(screen.getByTestId('mode-switch')).toHaveTextContent('Switch to entry by month? The current months are kept and become editable in the table. The lines stay as a reference.');
   });
 
   it('writes run one after the other, and the hint says so meanwhile', async () => {
-    setupApi({ grain: 'monthly', roundInputs: [linesRecord([storedLine(), storedLine({ id: 'line-2', sort: 1, label: 'Second' })])] });
+    setupApi({ roundInputs: [linesRecord([storedLine(), storedLine({ id: 'line-2', sort: 1, label: 'Second' })])] });
     let release: () => void = () => undefined;
     let first = true;
     routePosts(() => {
@@ -1439,7 +1535,6 @@ describe('BudgetTab quantity and price', () => {
     renderTab();
     await waitForAmounts();
 
-    openLines();
     leave(screen.getAllByLabelText('Description')[0], 'First');
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
     expect(screen.getByText('common:status.saving')).toBeInTheDocument();
@@ -1456,101 +1551,70 @@ describe('BudgetTab quantity and price', () => {
   });
 
   it('a refusal from the server shows under the table and keeps the lines', async () => {
-    setupApi({ grain: 'monthly', roundInputs: [linesRecord()] });
+    setupApi({ roundInputs: [linesRecord()] });
     const refusal = 'Line 1: United States has no working days for 2026.';
     mocked.post.mockRejectedValue(Object.assign(new Error('Bad Request'), { response: { status: 400, data: { message: refusal } } }));
     renderTab();
     await waitForAmounts();
-
-    openLines();
     leave(screen.getByLabelText('Unit price'), '650');
     await waitFor(() => expect(screen.getByTestId('lines-notes')).toHaveTextContent(refusal));
     expect(screen.getByLabelText('Unit price')).toHaveValue('650');
   });
 
-  it('opens on the stored lines with their amount and the FTE line', async () => {
-    setupApi({ grain: 'monthly', roundInputs: [linesRecord()] });
+  it('a column edited by hand keeps its lines as a reference and offers to use them again', async () => {
+    setupApi({ roundInputs: [linesRecord(undefined, { method: 'manual', last_calculation: null })] });
+    routePosts();
     renderTab();
     await waitForAmounts();
-
-    openLines();
-    expect(screen.getByLabelText('Description')).toHaveValue('US Managed IT Services');
-    expect(screen.getByLabelText('Quantity')).toHaveValue('100');
-    expect(screen.getByTestId('line-amount')).toHaveTextContent('60 000');
-    expect(screen.getByTestId('line-frequency')).toHaveTextContent('over the period');
-    // No total and no sentence under the table: the column shows the amounts, the FTE line the rest.
-    expect(screen.getByTestId('lines-fte')).toHaveTextContent('FTE over the period 0.48 · Full-year average 0.40');
-    expect(screen.queryByTestId('lines-status')).not.toBeInTheDocument();
-  });
-
-  it('a column edited by hand keeps its lines and offers to use them again', async () => {
-    setupApi({ grain: 'monthly', roundInputs: [linesRecord(undefined, { method: 'manual', last_calculation: null })] });
-    routePosts();
-    const { container } = renderTab();
-    await waitForAmounts();
-
-    const header = container.querySelector('thead') as HTMLElement;
-    expect(within(header).getByText('Edited by hand')).toBeInTheDocument();
-    openLines();
-    expect(screen.getByTestId('lines-status')).toHaveTextContent('Amounts were entered by hand. Use the lines again.');
-    fireEvent.click(screen.getByRole('button', { name: 'Use the lines again.' }));
+    expect(captionLines('planned')).toEqual(['Quantity and price · 1 line · 0.40 FTE ·', 'Edited by hand', '10 months, March to December']);
+    expect(modeTab('By month')).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(within(screen.getByTestId('lines-reference')).getByRole('button', { name: 'Use the lines again.' }));
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
     expect(bulkCalls()[0][1]).toMatchObject({ kind: 'lines', lines: [expect.objectContaining({ quantity: '100', unit_price: '600' })] });
   });
 
-  it('a column computed from lines says so, with its lines in the tooltip', async () => {
-    setupApi({ grain: 'annual', roundInputs: [linesRecord()] });
-    renderTab();
-    await waitForAmounts();
-
-    expect(captionLines('planned')).toEqual(['Quantity and price · 1 line · 0.40 FTE', '10 months, March to December']);
-    fireEvent.mouseOver(periodLine('planned'));
-    expect(await screen.findByRole('tooltip')).toHaveTextContent('US Managed IT Services: 100 days × 600 per day over the period, Mar to Dec');
-  });
-
-  it('names the four ways a column is produced', async () => {
-    setupApi({
-      grain: 'monthly',
-      roundInputs: [
-        record({ period_start: '2026-01-01' }),
-        record({ measure: 'committed', method: 'copied', period_start: '2026-01-01', last_calculation: { kind: 'copy', source_year: 2025, source_measure: 'planned', uplift_pct: '0', source_total: '1.00', total: '1.00', source_method: 'computed' } }),
-        record({ measure: 'forecast', method: 'manual', period_start: '2026-01-01' }),
-        linesRecord(undefined, { measure: 'actual' }),
-      ],
-    });
-    const { container } = renderTab();
-    await waitForAmounts();
-
-    const header = container.querySelector('thead') as HTMLElement;
-    expect(within(header).getByText('Spread flat')).toBeInTheDocument();
-    expect(within(header).getByText('Copied from Budget 2025')).toBeInTheDocument();
-    expect(within(header).getByText('Edited by hand')).toBeInTheDocument();
-    expect(within(header).getByText('Quantity and price ·')).toBeInTheDocument();
-    expect(within(header).getByText('1 line · 0.40 FTE')).toBeInTheDocument();
-  });
-
   it('a date typed in a line is written at once', async () => {
-    setupApi({ grain: 'monthly', roundInputs: [linesRecord()] });
+    setupApi({ roundInputs: [linesRecord()] });
     routePosts();
     renderTab();
     await waitForAmounts();
-
-    openLines();
     const [from] = within(screen.getByTestId('lines-table')).getAllByPlaceholderText('labels.datePlaceholder');
     typeDate(from, '01/04/2026');
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
     expect(bulkCalls()[0][1].lines[0]).toMatchObject({ period_start: '2026-04-01', period_end: '2026-12-31' });
   });
+
+  it('the working-days note follows a calendar edited since the tab loaded it', async () => {
+    const US_DAYS = ['20', '19', '22', '22', '20', '21', '22', '21', '21', '21', '19', '22'];
+    const rec = linesRecord();
+    (rec.last_calculation as { lines: Array<{ day_counts: string[] | null }> }).lines[0].day_counts = US_DAYS;
+    setupApi({ roundInputs: [rec] });
+    const base = mocked.get.getMockImplementation()! as (...args: any[]) => any;
+    let days = US_DAYS;
+    let yearLoads = 0;
+    mocked.get.mockImplementation(async (url: string, config?: unknown) => {
+      if (url === '/working-day-profiles/cal-us/years/2026') {
+        yearLoads += 1;
+        return { data: { year: 2026, source: 'edited', days, standard_days: US_DAYS, holidays: [] } };
+      }
+      return base(url, config);
+    });
+    renderTab();
+    await waitForAmounts();
+    await waitFor(() => expect(yearLoads).toBe(1));
+    expect(screen.queryByTestId('lines-days-changed')).not.toBeInTheDocument();
+
+    // The calendar page changes March (22 to 21), then the user comes back to the lines.
+    days = [...US_DAYS];
+    days[2] = '21';
+    pick('committed');
+    pick('planned');
+    await waitFor(() => expect(yearLoads).toBe(2));
+    expect(await screen.findByTestId('lines-days-changed')).toHaveTextContent('March: 22 days, now 21.');
+  });
 });
 
-/**
- * The monthly grid's inputs (the lines table sits above it when the lines tab is open). A plain
- * selector, as in monthCells: a role query computes the styles of the whole grid at each call.
- */
-function gridCells(container: HTMLElement) {
-  const tables = Array.from(container.querySelectorAll('table')).filter((table) => table.getAttribute('data-testid') !== 'lines-table');
-  return Array.from(tables[tables.length - 1].querySelectorAll<HTMLInputElement>('input[type="text"]'));
-}
+/* ---- Edits while a panel write runs ---- */
 
 /** Bulk writes that answer at once, except the first one, held until `release()`. */
 function holdFirstWrite() {
@@ -1582,237 +1646,65 @@ function budgetBecomes(planned: string) {
 
 describe('BudgetTab edits while a panel write runs', () => {
   beforeEach(() => {
-    mocked.get.mockReset();
-    mocked.post.mockReset();
-    mocked.patch.mockReset();
     calendarsState.list = [FRANCE, UNITED_STATES];
   });
 
   it('a month typed while a lines write runs is kept by the reload, then saved', async () => {
-    setupApi({ grain: 'monthly', roundInputs: [linesRecord()] });
+    setupApi({ roundInputs: [linesRecord()] });
     const held = holdFirstWrite();
-    const { container, ref } = renderTab();
+    const { ref } = renderTab();
     await waitForAmounts();
-    openLines();
     leave(screen.getByLabelText('Description'), 'First');
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
     const loadsBefore = amountLoads();
 
     // March, Revision: typed while the write runs (nothing is read-only meanwhile).
-    fireEvent.change(cell(gridCells(container), 3, 1), { target: { value: '450' } });
+    typeMonth('committed', 3, '450');
     budgetBecomes('600');
     await act(async () => { held.release(); });
     await waitFor(() => expect(amountLoads()).toBe(loadsBefore + 1));
     await settle();
 
-    // The reload shows what the server holds, except the cell typed since.
-    expect(cell(gridCells(container), 3, 0)).toHaveValue('600');
-    expect(cell(gridCells(container), 3, 1)).toHaveValue('450');
-    expect(cell(gridCells(container), 4, 1)).toHaveValue('900');
+    // The reload shows what the server holds, except the month typed since.
+    expect(cellValue('planned', 3)).toBe('600');
+    expect(cellValue('committed', 3)).toBe('450');
+    expect(cellValue('committed', 4)).toBe('900');
     expect(ref.current?.isDirty()).toBe(true);
 
     await flush(ref);
     const monthly = bulkCalls().filter(([, body]) => body?.kind === 'monthly');
     expect(monthly).toHaveLength(1);
     expect(written(monthly[0][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(3), committed: 450 }] });
-    expect(cell(gridCells(container), 3, 1)).toHaveValue('450');
+    expect(cellValue('committed', 3)).toBe('450');
     expect(ref.current?.isDirty()).toBe(false);
   });
 
-  it('a yearly total typed while a lines write runs is kept by the reload, then saved', async () => {
-    setupApi({ grain: 'annual', roundInputs: [linesRecord()] });
+  it('an amount typed while a lines write runs is kept, then written after it', async () => {
+    setupApi({ roundInputs: [linesRecord()] });
     const held = holdFirstWrite();
-    const { ref } = renderTab();
+    renderTab();
     await waitForAmounts();
-    fireEvent.click(within(periodLine('planned').parentElement as HTMLElement).getByRole('button', { name: 'Quantity and price' }));
-    leave(await screen.findByLabelText('Description'), 'First');
+    leave(screen.getByLabelText('Description'), 'First');
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
     const loadsBefore = amountLoads();
 
-    // The yearly totals come first, in the fixed order: Budget, then Revision.
-    const total = (index: number) => screen.getAllByRole('textbox')[index];
-    fireEvent.change(total(1), { target: { value: '500' } });
+    pick('committed');
+    typeAmount('500');
     budgetBecomes('50');
+    await settle();
+    expect(bulkCalls()).toHaveLength(1);
     await act(async () => { held.release(); });
-    await waitFor(() => expect(amountLoads()).toBe(loadsBefore + 1));
-    await settle();
-
-    expect(total(0)).toHaveValue('600');
-    expect(total(1)).toHaveValue('500');
-
-    await flush(ref);
-    const annual = bulkCalls().filter(([, body]) => body?.kind === 'annual');
-    expect(annual).toHaveLength(1);
-    expect(annual[0][1]).toMatchObject({ kind: 'annual', year: YEAR, totals: { committed: 500 } });
-    expect(Object.keys(annual[0][1].totals)).toEqual(['committed']);
-    expect(total(1)).toHaveValue('500');
-  });
-
-  it('turning Apply these lines to all columns on in an empty lines tab writes nothing, so the other columns keep their lines', async () => {
-    setupApi({ grain: 'monthly', roundInputs: [linesRecord([storedLine()], { measure: 'forecast' })] });
-    routePosts();
-    renderTab();
-    await waitForAmounts();
-    await waitFor(() => expect(freezeLoads()).toBeGreaterThanOrEqual(1));
-
-    openLines();
-    // Budget has no line; Forecast has one.
-    expect(screen.getByText('No line yet. A line is a quantity times a unit price.')).toBeInTheDocument();
-    const toAll = await screen.findByLabelText('Apply these lines to all columns');
-    fireEvent.click(toAll);
-    expect(toAll).toBeChecked();
-    await settle();
-    expect(bulkCalls()).toHaveLength(0);
-
-    // The first complete line goes to the group's columns.
-    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Full time' }));
-    leave(screen.getByLabelText('Unit price'), '600');
-    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    expect(bulkCalls()[0][1]).toMatchObject({ kind: 'lines', measure: 'planned', lines: [expect.objectContaining({ unit_price: '600' })] });
-    expect(bulkCalls()[0][1].also_measures).toContain('forecast');
-  });
-
-  it('after a hand edit of its column the spread field shows the new total, and Enter spreads it again', async () => {
-    setupApi({ grain: 'monthly' });
-    routePosts();
-    const { container, ref } = renderTab();
-    await waitForAmounts();
-    await waitFor(() => expect(amountField()).toHaveValue('12 000'));
-
-    // March of Budget by hand: 12 500 in all.
-    fireEvent.change(cell(gridCells(container), 3, 0), { target: { value: '1500' } });
-    await flush(ref);
-    expect(bulkCalls()).toHaveLength(1);
-    expect(amountField()).toHaveValue('12 500');
-    // Another column's hand edit leaves the field as it is.
-    fireEvent.change(cell(gridCells(container), 3, 1), { target: { value: '100' } });
-    await flush(ref);
-    expect(bulkCalls()).toHaveLength(2);
-    expect(amountField()).toHaveValue('12 500');
-
-    // Leaving the field unchanged writes nothing; Enter writes the spread of the amount shown.
-    fireEvent.blur(amountField());
-    await settle();
-    expect(bulkCalls()).toHaveLength(2);
-    fireEvent.keyDown(amountField(), { key: 'Enter' });
-    await waitFor(() => expect(bulkCalls()).toHaveLength(3));
-    expect(bulkCalls()[2][1]).toMatchObject({ kind: 'annual', totals: { planned: '12500.00' }, spread_profile_name: 'flat' });
-  });
-
-  it('a spread typed right after a hand edit keeps its amount in the field', async () => {
-    setupApi({ grain: 'monthly' });
-    routePosts();
-    const { container } = renderTab();
-    await waitForAmounts();
-
-    // The spread saves the hand edit first, then spreads 20 000 over the column.
-    fireEvent.change(cell(gridCells(container), 3, 0), { target: { value: '1500' } });
-    typeAmount('20000');
+    await waitFor(() => expect(amountLoads()).toBeGreaterThanOrEqual(loadsBefore + 1));
     await waitFor(() => expect(bulkCalls()).toHaveLength(2));
-    expect(bulkCalls()[0][1]).toMatchObject({ kind: 'monthly' });
-    expect(bulkCalls()[1][1]).toMatchObject({ kind: 'annual', totals: { planned: '20000.00' } });
+    expect(written(bulkCalls()[1][1])).toMatchObject({ kind: 'annual', totals: { committed: '500.00' } });
+    expect(Object.keys(bulkCalls()[1][1].totals)).toEqual(['committed']);
     await settle();
-    expect(amountField()).toHaveValue('20 000');
-  });
-
-  it('an amount being typed in the spread field is not replaced by a grid save', async () => {
-    setupApi({ grain: 'monthly' });
-    routePosts();
-    const { container, ref } = renderTab();
-    await waitForAmounts();
-
-    fireEvent.change(amountField(), { target: { value: '9000' } });
-    fireEvent.change(cell(gridCells(container), 3, 0), { target: { value: '1500' } });
-    await flush(ref);
-    expect(bulkCalls()).toHaveLength(1);
-    expect(amountField()).toHaveValue('9 000');
-  });
-
-  it('the working-days note follows a calendar edited since the tab loaded it', async () => {
-    const US_DAYS = ['20', '19', '22', '22', '20', '21', '22', '21', '21', '21', '19', '22'];
-    const rec = linesRecord();
-    (rec.last_calculation as { lines: Array<{ day_counts: string[] | null }> }).lines[0].day_counts = US_DAYS;
-    setupApi({ grain: 'monthly', roundInputs: [rec] });
-    const base = mocked.get.getMockImplementation()! as (...args: any[]) => any;
-    let days = US_DAYS;
-    let yearLoads = 0;
-    mocked.get.mockImplementation(async (url: string, config?: unknown) => {
-      if (url === '/working-day-profiles/cal-us/years/2026') {
-        yearLoads += 1;
-        return { data: { year: 2026, source: 'edited', days, standard_days: US_DAYS, holidays: [] } };
-      }
-      return base(url, config);
-    });
-    renderTab();
-    await waitForAmounts();
-    openLines();
-    await waitFor(() => expect(yearLoads).toBe(1));
-    expect(screen.queryByTestId('lines-days-changed')).not.toBeInTheDocument();
-
-    // The calendar page changes March (22 to 21), then the user comes back to the lines.
-    days = [...US_DAYS];
-    days[2] = '21';
-    fireEvent.click(screen.getByRole('tab', { name: 'Spread an amount' }));
-    openLines();
-    await waitFor(() => expect(yearLoads).toBe(2));
-    expect(await screen.findByTestId('lines-days-changed')).toHaveTextContent('March: 22 days, now 21.');
+    expect(amountField()).toHaveValue('500');
+    expect(cellValue('planned', 1)).toBe('50');
   });
 });
 
-describe('BudgetTab yearly cells', () => {
-  beforeEach(() => {
-    mocked.get.mockReset();
-    mocked.post.mockReset();
-    mocked.patch.mockReset();
-    calendarsState.list = [FRANCE, UNITED_STATES];
-  });
-
-  const spreadKeepingLines = () => linesRecord(undefined, {
-    method: 'spread',
-    spread_profile_name: '4-4-5',
-    last_calculation: { kind: 'annual', total: '60000.00', profile: '4-4-5', active_months: MARCH_TO_DECEMBER, weights: [] },
-  });
-
-  it('the two panel buttons sit on the title row, right of the label and as wide as the field; the caption keeps its text', async () => {
-    setupApi({ grain: 'annual', frozen: ['revision'], roundInputs: [linesRecord()] });
-    renderTab();
-    await waitForAmounts();
-
-    const title = screen.getByTestId('column-title-planned');
-    expect(within(title).getByText('Budget')).toBeInTheDocument();
-    expect(within(title).getAllByRole('button').map((button) => button.getAttribute('aria-label'))).toEqual(['Change period', 'Quantity and price']);
-    expect(title).toHaveStyle({ maxWidth: '220px', minHeight: '18px' });
-    expect(within(periodLine('planned')).queryAllByRole('button')).toHaveLength(0);
-    // A frozen column keeps its lock next to the label, and no button.
-    await waitFor(() => expect(within(screen.getByTestId('column-title-committed')).queryAllByRole('button')).toHaveLength(0));
-    expect(within(screen.getByTestId('column-title-committed')).getByTestId('LockOutlinedIcon')).toBeInTheDocument();
-
-    fireEvent.click(within(title).getByRole('button', { name: 'Quantity and price' }));
-    expect(await screen.findByLabelText('Description')).toHaveValue('US Managed IT Services');
-  });
-
-  it('a column that keeps its lines after a spread shows the lines, then the spread, then the period; the tooltip lists the lines', async () => {
-    setupApi({ grain: 'annual', roundInputs: [spreadKeepingLines()] });
-    renderTab();
-    await waitForAmounts();
-
-    expect(captionLines('planned')).toEqual(['Quantity and price · 1 line · 0.40 FTE ·', 'Spread 4-4-5', '10 months, March to December']);
-    fireEvent.mouseOver(periodLine('planned'));
-    expect(await screen.findByRole('tooltip')).toHaveTextContent('US Managed IT Services: 100 days × 600 per day over the period, Mar to Dec');
-  });
-
-  it('the monthly header says the same', async () => {
-    setupApi({ grain: 'monthly', roundInputs: [spreadKeepingLines()] });
-    const { container } = renderTab();
-    await waitForAmounts();
-
-    const header = container.querySelector('thead') as HTMLElement;
-    expect(within(header).getByText('Quantity and price ·')).toBeInTheDocument();
-    expect(within(header).getByText('1 line · 0.40 FTE ·')).toBeInTheDocument();
-    expect(within(header).getByText('Spread 4-4-5')).toBeInTheDocument();
-  });
-});
+/* ---- Keyboard run through the lines ---- */
 
 /** Every field Tab stops on, in page order (nothing on the page sets a positive tabindex). */
 const tabStops = () => Array.from(document.body.querySelectorAll<HTMLElement>('input, button, select, textarea, a[href], [tabindex]'))
@@ -1857,24 +1749,20 @@ function serverKeepsLines(initial: RoundLine[]) {
 
 describe('BudgetTab keyboard run through the lines', () => {
   beforeEach(() => {
-    mocked.get.mockReset();
-    mocked.post.mockReset();
-    mocked.patch.mockReset();
     calendarsState.list = [FRANCE, UNITED_STATES];
   });
 
-  async function openYearlyLines() {
-    setupApi({ grain: 'annual' });
+  async function openLines() {
+    setupApi();
     serverKeepsLines([storedLine()]);
     renderTab(YEAR, { payingCompanyCountry: 'US' });
     await waitForAmounts();
-    fireEvent.click(within(screen.getByTestId('column-title-planned')).getByRole('button', { name: 'Quantity and price' }));
     await screen.findByLabelText('Description');
   }
   const dates = (row: number) => within(screen.getAllByTestId('line-row')[row]).getAllByPlaceholderText('labels.datePlaceholder');
 
   it('Add a line puts the focus in its Description; Tab then walks a person per day field by field, to Add a line', async () => {
-    await openYearlyLines();
+    await openLines();
     fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
     expect(document.activeElement).toBe(screen.getAllByLabelText('Description')[1]);
 
@@ -1890,7 +1778,7 @@ describe('BudgetTab keyboard run through the lines', () => {
   });
 
   it('a line typed with the keyboard: the Unit chosen, the Unit price left, From set; every save and reload keeps the focus where Tab put it', async () => {
-    await openYearlyLines();
+    await openLines();
     fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
     const row = screen.getAllByTestId('line-row')[1];
     fireEvent.change(document.activeElement as HTMLElement, { target: { value: 'Audit' } });
@@ -1935,7 +1823,7 @@ describe('BudgetTab keyboard run through the lines', () => {
   });
 
   it('a unit changed with the keyboard on a saved line is written, and the focus stays on Unit; from the last field, Tab reaches the next line', async () => {
-    await openYearlyLines();
+    await openLines();
     fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
     const unit = screen.getAllByRole('combobox', { name: 'Unit' })[0];
     act(() => { unit.focus(); });
@@ -1954,45 +1842,8 @@ describe('BudgetTab keyboard run through the lines', () => {
     expect(document.activeElement).toBe(screen.getAllByLabelText('Description')[1]);
   });
 
-  it('the spread Column and Distribution keep the focus after a choice made with the keyboard', async () => {
-    setupApi({ grain: 'monthly' });
-    renderTab();
-    await waitForAmounts();
-
-    const column = screen.getByRole('combobox', { name: 'Column' });
-    act(() => { column.focus(); });
-    await chooseWithKeyboard(1);
-    await waitFor(() => expect(column).toHaveTextContent('Revision'));
-    expect(document.activeElement).toBe(column);
-
-    const distribution = screen.getByRole('combobox', { name: 'Distribution' });
-    act(() => { distribution.focus(); });
-    await chooseWithKeyboard(1);
-    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    expect(bulkCalls()[0][1]).toMatchObject({ spread_profile_name: '4-4-5' });
-    await settle();
-    expect(document.activeElement).toBe(distribution);
-  });
-
-  it('the lines Column keeps the focus after a choice made with the keyboard, while the lines of the new column are drawn', async () => {
-    setupApi({ grain: 'monthly' });
-    serverKeepsLines([storedLine()]);
-    renderTab();
-    await waitForAmounts();
-    openLines();
-    expect(await screen.findByLabelText('Description')).toHaveValue('US Managed IT Services');
-
-    const column = screen.getByRole('combobox', { name: 'Column' });
-    act(() => { column.focus(); });
-    await chooseWithKeyboard(1);
-    await waitFor(() => expect(column).toHaveTextContent('Revision'));
-    // Revision has no lines: its own panel is drawn.
-    expect(screen.queryByLabelText('Description')).not.toBeInTheDocument();
-    expect(document.activeElement).toBe(column);
-  });
-
   it('removing a line with the mouse leaves the focus alone', async () => {
-    await openYearlyLines();
+    await openLines();
     fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
     fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
     const remove = screen.getAllByRole('button', { name: 'Remove the line' })[0];
@@ -2005,8 +1856,8 @@ describe('BudgetTab keyboard run through the lines', () => {
     expect(document.activeElement).not.toBe(screen.getByRole('button', { name: 'Add a line' }));
   });
 
-  it('removing a line puts the focus on the next line, else the previous one, else on Add a line', async () => {
-    await openYearlyLines();
+  it('removing a line puts the focus on the next line, else the previous one, else on Add a line; the column stays on its lines', async () => {
+    await openLines();
     fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
     fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
     const [, second] = screen.getAllByLabelText('Description');
@@ -2032,10 +1883,11 @@ describe('BudgetTab keyboard run through the lines', () => {
     await settle();
     expect(bulkCalls()[0][1]).toMatchObject({ kind: 'lines', lines: [] });
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Add a line' }));
+    expect(modeTab('Quantity and price')).toHaveAttribute('aria-selected', 'true');
   });
 });
 
-/* ---- Lot 3D: what each save started from, refused columns, the reload after each save, the view per user ---- */
+/* ---- Lot 3D: what each save started from, refused columns, the reload after each save ---- */
 
 const twelve = (value: string) => Array.from({ length: 12 }, () => value);
 
@@ -2076,38 +1928,32 @@ function refuseBulk(refuse: (body: Record<string, any>, call: number) => unknown
 
 describe('BudgetTab edit conflicts (lot 3D)', () => {
   beforeEach(() => {
-    mocked.get.mockReset();
-    mocked.post.mockReset();
-    mocked.patch.mockReset();
     calendarsState.list = [FRANCE, UNITED_STATES];
   });
 
-  it('a monthly save says what each cell started from; the next save starts from what it wrote', async () => {
-    setupApi({ grain: 'monthly' });
-    const { ref, container } = renderTab();
+  it('a monthly save says what each month started from; the next save starts from what it wrote', async () => {
+    setupApi();
+    const { ref } = renderTab();
     await waitForAmounts();
-
-    fireEvent.change(cell(monthCells(container), 3, 1), { target: { value: '450' } });
+    typeMonth('committed', 3, '450');
     await flush(ref);
     expect(bulkCalls()[0][1].base).toEqual({ months: [{ period: period(3), committed: '900.00' }] });
-
-    fireEvent.change(cell(monthCells(container), 3, 1), { target: { value: '460' } });
+    typeMonth('committed', 3, '460');
     await flush(ref);
     expect(bulkCalls()[1][1].base).toEqual({ months: [{ period: period(3), committed: '450.00' }] });
   });
 
-  it('a yearly total says what its column held, month by month', async () => {
-    setupApi({ grain: 'annual' });
-    const { ref } = renderTab();
+  it('an amount says what its column held, month by month', async () => {
+    setupApi();
+    renderTab();
     await waitForAmounts();
-
-    fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: '15000' } });
-    await flush(ref);
+    typeAmount('15000');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
     expect(bulkCalls()[0][1].base).toEqual({ columns: { planned: { months: twelve('1000.00') } } });
   });
 
-  it('every save reloads the year: someone else\'s change shows, a cell typed meanwhile stays', async () => {
-    const server = setupApi({ grain: 'monthly' });
+  it("every save reloads the year: someone else's change shows, a month typed meanwhile stays", async () => {
+    const server = setupApi();
     // The reload after the save is answered late: the user types meanwhile.
     const served = mocked.get.getMockImplementation()! as (...args: any[]) => any;
     let holdReload = false;
@@ -2119,47 +1965,48 @@ describe('BudgetTab edit conflicts (lot 3D)', () => {
       }
       return served(url, config);
     });
-    const { ref, container } = renderTab();
+    const { ref } = renderTab();
     await waitForAmounts();
     const loads = amountLoads();
 
     holdReload = true;
-    fireEvent.change(cell(monthCells(container), 3, 0), { target: { value: '1500' } });
+    typeMonth('planned', 3, '1500');
     await flush(ref);
     expect(bulkCalls()).toHaveLength(1);
     await waitFor(() => expect(amountLoads()).toBe(loads + 1));
-    // Meanwhile Marie changes April's Forecast, and the user types March's Revision (not sent yet).
+    // Meanwhile Marie changes April's Forecast, and the user types February's Budget (not sent yet).
     server.items[3].forecast = '650';
     changedByOthers.add(server.items);
-    fireEvent.change(cell(monthCells(container), 3, 1), { target: { value: '450' } });
+    fireEvent.change(monthInput('planned', 2)!, { target: { value: '450' } });
     await act(async () => { answer(); });
     await settle();
 
-    // The reload after the save shows Marie's change; the cell being typed keeps the user's value.
+    // The reload after the save shows Marie's change; the month being typed keeps the user's value.
     expect(bulkCalls()).toHaveLength(1);
-    expect(cell(monthCells(container), 4, 2)).toHaveValue('650');
-    expect(cell(monthCells(container), 3, 1)).toHaveValue('450');
-    expect(cell(monthCells(container), 3, 0)).toHaveValue('1 500');
+    expect(cellValue('forecast', 4)).toBe('650');
+    expect(cellValue('planned', 2)).toBe('450');
+    expect(cellValue('planned', 3)).toBe('1 500');
     expect(ref.current?.isDirty()).toBe(true);
     await flush(ref);
-    expect(written(bulkCalls()[1][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(3), committed: 450 }] });
-    expect(bulkCalls()[1][1].base).toEqual({ months: [{ period: period(3), committed: '900.00' }] });
+    expect(written(bulkCalls()[1][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(2), planned: 450 }] });
+    expect(bulkCalls()[1][1].base).toEqual({ months: [{ period: period(2), planned: '1000.00' }] });
   });
 
-  it('a refused column waits, tinted and read-only, while the other columns go on their own; Overwrite sends it again over theirs', async () => {
-    setupApi({ grain: 'monthly' });
+  it('a refused column waits, tinted and read only, while the other columns go on their own; Overwrite sends it again over theirs', async () => {
+    setupApi();
     const theirs = twelve('900.00');
     theirs[2] = '950.00';
     refuseBulk((body, call) => (call === 1 ? columnConflict('committed', theirs, { mine: theirs.map((v, i) => (i === 2 ? '450.00' : v)) }) : null));
-    const { ref, container } = renderTab();
+    const { ref } = renderTab();
     await waitForAmounts();
 
-    fireEvent.change(cell(monthCells(container), 3, 1), { target: { value: '450' } });
-    fireEvent.change(cell(monthCells(container), 3, 0), { target: { value: '1500' } });
+    typeMonth('planned', 3, '1500');
+    typeMonth('committed', 3, '450');
     expect(await flush(ref)).toBe(false);
     expect(ref.current?.isDirty()).toBe(true);
 
     // The whole request was refused; Budget went again alone.
+    expect(written(bulkCalls()[0][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(3), planned: 1500, committed: 450 }] });
     expect(bulkCalls()).toHaveLength(2);
     expect(written(bulkCalls()[1][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(3), planned: 1500 }] });
     const banner = await screen.findByRole('region');
@@ -2169,8 +2016,14 @@ describe('BudgetTab edit conflicts (lot 3D)', () => {
     expect(within(banner).getByText('Mar 450')).toBeInTheDocument();
     expect(screen.getByTestId('budget-head-committed')).toHaveAttribute('data-waiting', 'true');
     expect(screen.getByTestId('budget-head-planned')).not.toHaveAttribute('data-waiting');
-    expect(cell(monthCells(container), 3, 1)).toHaveAttribute('readonly');
-    expect(cell(monthCells(container), 3, 1)).toHaveValue('450');
+    expect(card('committed')).toHaveAttribute('data-waiting', 'true');
+    expect(within(card('committed')).getByTitle('Waiting for your choice')).toBeInTheDocument();
+    expect(tableCell('committed', 3)).toHaveAttribute('data-waiting', 'true');
+    expect(monthInput('committed', 3)).toHaveAttribute('readonly');
+    expect(monthInput('committed', 3)).toHaveValue('450');
+    // The column's modes wait too.
+    expect(modeTab('Amount')).toBeDisabled();
+    expect(editor()).toHaveTextContent('Choose first, above, whether to reload this column or overwrite it.');
 
     fireEvent.click(within(banner).getByRole('button', { name: /editConflict\.column\.applyMine/ }));
     // Overwrite queues the save behind the autosave delay: a flush sends it now.
@@ -2180,18 +2033,18 @@ describe('BudgetTab edit conflicts (lot 3D)', () => {
     expect(bulkCalls()[2][1].base).toEqual({ months: [{ period: period(3), committed: '950.00' }] });
     await waitFor(() => expect(screen.queryByRole('region')).toBeNull());
     expect(await flush(ref)).toBe(true);
-    expect(cell(monthCells(container), 3, 1)).not.toHaveAttribute('readonly');
+    expect(monthInput('committed', 3)).not.toHaveAttribute('readonly');
   });
 
-  it('Reload the column takes their values and drops the user\'s edits of that column', async () => {
-    const server = setupApi({ grain: 'monthly' });
+  it("Reload the column takes their values and drops the user's edits of that column", async () => {
+    const server = setupApi();
     const theirs = twelve('900.00');
     theirs[2] = '950.00';
     refuseBulk((body, call) => (call === 1 ? columnConflict('committed', theirs) : null));
-    const { ref, container } = renderTab();
+    const { ref } = renderTab();
     await waitForAmounts();
 
-    fireEvent.change(cell(monthCells(container), 3, 1), { target: { value: '450' } });
+    typeMonth('committed', 3, '450');
     expect(await flush(ref)).toBe(false);
     // The server holds Marie's March.
     server.items[2].committed = '950';
@@ -2199,17 +2052,17 @@ describe('BudgetTab edit conflicts (lot 3D)', () => {
     const banner = await screen.findByRole('region');
     fireEvent.click(within(banner).getByRole('button', { name: /editConflict\.column\.keepTheirs/ }));
 
-    await waitFor(() => expect(cell(monthCells(container), 3, 1)).toHaveValue('950'));
+    await waitFor(() => expect(cellValue('committed', 3)).toBe('950'));
     expect(screen.queryByRole('region')).toBeNull();
     await settle();
     expect(ref.current?.isDirty()).toBe(false);
     expect(await flush(ref)).toBe(true);
     expect(bulkCalls()).toHaveLength(1);
-    expect(cell(monthCells(container), 3, 1)).toHaveValue('950');
+    expect(cellValue('committed', 3)).toBe('950');
   });
 
-  it('a refused lines write waits read-only; Overwrite sends it again from the lines and months the server answered', async () => {
-    setupApi({ grain: 'monthly', roundInputs: [linesRecord()] });
+  it('a refused lines write waits read only; Overwrite sends it again from the lines and months the server answered', async () => {
+    setupApi({ roundInputs: [linesRecord()] });
     const theirLine = {
       label: 'Their services', quantity_unit: 'days', quantity: '100', unit_price: '650', price_basis: 'per_day', frequency: 'once',
       days_per_month: null, period_start: '2026-03-01', period_end: '2026-12-31', working_day_profile_id: 'cal-us',
@@ -2218,7 +2071,6 @@ describe('BudgetTab edit conflicts (lot 3D)', () => {
     renderTab();
     await waitForAmounts();
 
-    openLines();
     leave(screen.getByLabelText('Description'), 'My services');
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
     // What the drafts started from: the stored line and the column's months.
@@ -2237,10 +2089,11 @@ describe('BudgetTab edit conflicts (lot 3D)', () => {
     // Their column (the year and its lines) against the user's.
     expect(within(banner).getByText(/^78 000 for the year, 1 line$/)).toBeInTheDocument();
     expect(within(banner).getByText(/^72 000 for the year, 1 line$/)).toBeInTheDocument();
-    // The panel keeps the user's line, read-only, and says why.
+    // The panel keeps the user's line, read only, and says why.
     expect(screen.getByLabelText('Description')).toHaveValue('My services');
     expect(screen.getByLabelText('Description')).toBeDisabled();
     expect(screen.getByTestId('lines-notes')).toHaveTextContent('Choose first, above, whether to reload this column or overwrite it.');
+    expect(within(editor()).queryByRole('button', { name: 'Use for other columns too…' })).toBeNull();
 
     fireEvent.click(within(banner).getByRole('button', { name: /editConflict\.column\.applyMine/ }));
     await waitFor(() => expect(bulkCalls()).toHaveLength(2));
@@ -2254,40 +2107,92 @@ describe('BudgetTab edit conflicts (lot 3D)', () => {
     await waitFor(() => expect(screen.getByLabelText('Description')).not.toBeDisabled());
   });
 
-  it('the view is each user\'s choice, kept for them, never written on the shared version', async () => {
-    permissions.userId = 'u-1';
-    setupApi({ grain: 'annual' });
-    const first = renderTab();
+  it('a refused amount waits: its editor is read only and says why; Overwrite sends it again over their months', async () => {
+    setupApi();
+    refuseBulk((body, call) => (call === 1 ? columnConflict('planned', twelve('1100.00'), { periods: [] }) : null));
+    renderTab();
     await waitForAmounts();
-    expect(first.container.querySelector('table')).toBeNull();
+    expect(amountField()).not.toBeDisabled();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'opex.budget.monthly' }));
-    await waitFor(() => expect(first.container.querySelector('table')).not.toBeNull());
-    expect(window.localStorage.getItem('budget-view:u-1')).toBe('monthly');
+    typeAmount('24000');
+    const banner = await screen.findByRole('region');
+    expect(within(banner).getAllByText(/^13 200 for the year$/).length).toBeGreaterThan(0);
+    expect(amountField()).toBeDisabled();
+    expect(screen.getByRole('combobox', { name: 'Distribution' })).toHaveAttribute('aria-disabled', 'true');
+    for (const radio of screen.getAllByRole('radio')) expect(radio).toBeDisabled();
+    expect(modeTab('By month')).toBeDisabled();
+    expect(screen.queryByTestId('editor-footer')).toBeNull();
+    expect(editor()).toHaveTextContent('Choose first, above, whether to reload this column or overwrite it.');
+    expect(card('planned')).toHaveAttribute('data-waiting', 'true');
+
+    fireEvent.click(within(banner).getByRole('button', { name: /editConflict\.column\.applyMine/ }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
+    expect(bulkCalls()[1][1]).toMatchObject({
+      kind: 'annual', totals: { planned: '24000.00' }, base: { columns: { planned: { months: twelve('1100.00') } } },
+    });
+    await waitFor(() => expect(screen.queryByRole('region')).toBeNull());
+    await waitFor(() => expect(amountField()).not.toBeDisabled());
+  });
+
+  it('an amount that fails after another card was picked leaves that card alone: a blur sends nothing, nothing pending', async () => {
+    setupApi();
+    mocked.post.mockRejectedValue(new Error('network down'));
+    const { ref } = renderTab();
+    await waitForAmounts();
+
+    fireEvent.change(amountField(), { target: { value: '15000' } });
+    fireEvent.blur(amountField());
+    pick('committed');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    await settle();
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(amountField()).toHaveValue('10 800');
+    expect(ref.current?.hasPending()).toBe(false);
+    fireEvent.blur(amountField());
+    await settle();
+    expect(bulkCalls()).toHaveLength(1);
+  });
+
+  it('an amount refused (409) after another card was picked leaves that card alone; once the choice is made nothing is pending', async () => {
+    setupApi();
+    refuseBulk((body, call) => (call === 1 ? columnConflict('planned', twelve('1100.00'), { periods: [] }) : null));
+    const { ref } = renderTab();
+    await waitForAmounts();
+
+    fireEvent.change(amountField(), { target: { value: '15000' } });
+    fireEvent.blur(amountField());
+    pick('committed');
+    const banner = await screen.findByRole('region');
+    expect(amountField()).toHaveValue('10 800');
+    // Leaving Revision's amount unchanged writes nothing: it is not re-spread over a period nobody asked for.
+    fireEvent.blur(amountField());
+    await settle();
+    expect(bulkCalls()).toHaveLength(1);
+
+    fireEvent.click(within(banner).getByRole('button', { name: /editConflict\.column\.keepTheirs/ }));
+    await waitFor(() => expect(screen.queryByRole('region')).toBeNull());
+    await settle();
+    expect(ref.current?.hasPending()).toBe(false);
+    fireEvent.blur(amountField());
+    await settle();
+    expect(bulkCalls()).toHaveLength(1);
+  });
+
+  it('the tab keeps nothing in the browser and never writes the shared version', async () => {
+    permissions.userId = 'u-1';
+    setupApi();
+    const { ref } = renderTab();
+    await waitForAmounts();
+    fireEvent.click(modeTab('By month'));
+    fireEvent.click(switchButton());
+    fireEvent.change(monthInput('planned', 1)!, { target: { value: '5' } });
+    await flush(ref);
+    expect(window.localStorage.length).toBe(0);
     expect(mocked.patch).not.toHaveBeenCalled();
-    first.unmount();
-
-    // The same user opens the line again: monthly, though the version says yearly.
-    const again = renderTab();
-    await waitForAmounts(2);
-    await waitFor(() => expect(again.container.querySelector('table')).not.toBeNull());
-    again.unmount();
-
-    // Another user who never chose sees the version's own view.
-    permissions.userId = 'u-2';
-    const other = renderTab();
-    await waitForAmounts(3);
-    expect(other.container.querySelector('table')).toBeNull();
   });
 });
 
 describe('BudgetTab edit conflicts, review round (lot 3D)', () => {
-  beforeEach(() => {
-    mocked.get.mockReset();
-    mocked.post.mockReset();
-    mocked.patch.mockReset();
-  });
-
   /** Revision: March refused (Marie wrote 950 there). */
   const marchRefused = () => {
     const theirs = twelve('900.00');
@@ -2296,13 +2201,13 @@ describe('BudgetTab edit conflicts, review round (lot 3D)', () => {
   };
 
   it('Reload the column takes their value for the refused month only; a month typed in the same request is saved', async () => {
-    const server = setupApi({ grain: 'monthly' });
+    const server = setupApi();
     refuseBulk((body, call) => (call === 1 ? marchRefused() : null));
-    const { ref, container } = renderTab();
+    const { ref } = renderTab();
     await waitForAmounts();
 
-    fireEvent.change(cell(monthCells(container), 1, 1), { target: { value: '111' } });
-    fireEvent.change(cell(monthCells(container), 3, 1), { target: { value: '450' } });
+    typeMonth('committed', 1, '111');
+    typeMonth('committed', 3, '450');
     expect(await flush(ref)).toBe(false);
 
     // One request with both months was refused; January, which did not conflict, went again alone.
@@ -2314,26 +2219,26 @@ describe('BudgetTab edit conflicts, review round (lot 3D)', () => {
     expect(within(banner).getByText('Mar 950')).toBeInTheDocument();
     expect(within(banner).getByText('Mar 450')).toBeInTheDocument();
     expect(within(banner).queryByText(/Jan/)).toBeNull();
-    expect(cell(monthCells(container), 3, 1)).toHaveAttribute('readonly');
-    expect(cell(monthCells(container), 1, 1)).not.toHaveAttribute('readonly');
+    expect(monthInput('committed', 3)).toHaveAttribute('readonly');
+    expect(monthInput('committed', 1)).not.toHaveAttribute('readonly');
 
     server.items[2].committed = '950';
     changedByOthers.add(server.items);
     fireEvent.click(within(banner).getByRole('button', { name: /editConflict\.column\.keepTheirs/ }));
-    await waitFor(() => expect(cell(monthCells(container), 3, 1)).toHaveValue('950'));
+    await waitFor(() => expect(cellValue('committed', 3)).toBe('950'));
     await settle();
-    expect(cell(monthCells(container), 1, 1)).toHaveValue('111');
+    expect(cellValue('committed', 1)).toBe('111');
     expect(await flush(ref)).toBe(true);
     expect(bulkCalls()).toHaveLength(2);
   });
 
-  it('a tab change keeps the waiting choice: the tab comes back with the banner and the user\'s value', async () => {
-    setupApi({ grain: 'monthly' });
+  it("a tab change keeps the waiting choice: the tab comes back with the banner and the user's value", async () => {
+    setupApi();
     refuseBulk((body, call) => (call === 1 ? marchRefused() : null));
     const held = { current: null } as React.MutableRefObject<HeldBudgetChoices | null>;
     const first = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { held });
     await waitForAmounts();
-    fireEvent.change(cell(monthCells(first.container), 3, 1), { target: { value: '450' } });
+    typeMonth('committed', 3, '450');
     expect(await flush(first.ref)).toBe(false);
     await screen.findByRole('region');
 
@@ -2348,8 +2253,9 @@ describe('BudgetTab edit conflicts, review round (lot 3D)', () => {
     const again = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, first.queryClient, { held });
     const banner = await screen.findByRole('region');
     expect(within(banner).getByText('Mar 950')).toBeInTheDocument();
-    await waitFor(() => expect(cell(monthCells(again.container), 3, 1)).toHaveValue('450'));
-    expect(cell(monthCells(again.container), 3, 1)).toHaveAttribute('readonly');
+    await waitFor(() => expect(cellValue('committed', 3)).toBe('450'));
+    expect(tableCell('committed', 3)).toHaveAttribute('data-waiting', 'true');
+    expect(card('committed')).toHaveAttribute('data-waiting', 'true');
     expect(again.ref.current!.waitingColumns()).toEqual(['Revision']);
     expect(await flush(again.ref)).toBe(false);
 
@@ -2361,31 +2267,39 @@ describe('BudgetTab edit conflicts, review round (lot 3D)', () => {
     expect(bulkCalls()[1][1].base).toEqual({ months: [{ period: period(3), committed: '950.00' }] });
   });
 
-  it('the spread panel is read-only while its column waits for a choice', async () => {
-    setupApi({ grain: 'monthly' });
-    const theirs = twelve('1000.00');
-    theirs[2] = '1100.00';
-    refuseBulk((body, call) => (call === 1 ? columnConflict('planned', theirs, { periods: [period(3)] }) : null));
-    const { ref, container } = renderTab();
+  it('a column waiting on refused months comes back by month, read only, after a tab change', async () => {
+    setupApi();
+    refuseBulk((body, call) => (call === 1 ? marchRefused() : null));
+    const held = { current: null } as React.MutableRefObject<HeldBudgetChoices | null>;
+    const first = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { held });
     await waitForAmounts();
-    expect(amountField()).not.toBeDisabled();
-
-    fireEvent.change(cell(monthCells(container), 3, 0), { target: { value: '1500' } });
-    expect(await flush(ref)).toBe(false);
+    typeMonth('committed', 3, '450');
+    expect(await flush(first.ref)).toBe(false);
     await screen.findByRole('region');
-    expect(amountField()).toBeDisabled();
-    for (const date of screen.getAllByPlaceholderText('labels.datePlaceholder')) expect(date).toBeDisabled();
-    expect(screen.getByLabelText('Apply the distribution to all columns')).toBeDisabled();
-    expect(screen.getByTestId('spread-notes')).toHaveTextContent('Choose first, above, whether to reload this column or overwrite it.');
+    await act(async () => { await first.ref.current!.flush({ ignoreHeld: true }); });
+    first.unmount();
+    expect(held.current?.modes).toEqual({ committed: 'monthly' });
+
+    const again = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, first.queryClient, { held });
+    await screen.findByRole('region');
+    await waitFor(() => expect(editor()).toHaveAttribute('data-ready', 'true'));
+    pick('committed');
+    expect(modeTab('By month')).toHaveAttribute('aria-selected', 'true');
+    expect(modeTab('By month')).toBeDisabled();
+    expect(monthInput('committed', 3)).toHaveValue('450');
+    expect(monthInput('committed', 3)).toHaveAttribute('readonly');
+    // Only the refused month waits: the column's other months can still be typed.
+    expect(monthInput('committed', 1)).not.toHaveAttribute('readonly');
+    expect(again.ref.current!.waitingColumns()).toEqual(['Revision']);
   });
 
   it('a year change with a choice waiting asks, naming the column, and drops it only when confirmed', async () => {
-    setupApi({ grain: 'monthly' });
+    setupApi();
     refuseBulk((body, call) => (call === 1 ? marchRefused() : null));
     const onYearChange = vi.fn();
-    const { ref, container } = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { onYearChange, availableYears: [YEAR, YEAR + 1] });
+    const { ref } = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { onYearChange, availableYears: [YEAR, YEAR + 1] });
     await waitForAmounts();
-    fireEvent.change(cell(monthCells(container), 3, 1), { target: { value: '450' } });
+    typeMonth('committed', 3, '450');
     expect(await flush(ref)).toBe(false);
     await screen.findByRole('region');
 
@@ -2404,16 +2318,16 @@ describe('BudgetTab edit conflicts, review round (lot 3D)', () => {
   });
 
   it('a conflict answer the screen cannot read is an error the user sees; the edit stays, not saved', async () => {
-    setupApi({ grain: 'monthly' });
+    setupApi();
     refuseBulk((body, call) => (call === 1 ? { response: { status: 409, data: { code: 'edit_conflict', conflicts: [{ field: 'nonsense' }] } } } : null));
-    const { ref, container } = renderTab();
+    const { ref } = renderTab();
     await waitForAmounts();
-    fireEvent.change(cell(monthCells(container), 3, 1), { target: { value: '450' } });
+    typeMonth('committed', 3, '450');
     expect(await flush(ref)).toBe(false);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('errors:edit_conflict_unreadable');
     expect(screen.queryByRole('region')).toBeNull();
-    expect(cell(monthCells(container), 3, 1)).toHaveValue('450');
+    expect(cellValue('committed', 3)).toBe('450');
     expect(ref.current?.isDirty()).toBe(true);
     // The next flush sends it again.
     expect(await flush(ref)).toBe(true);
@@ -2421,22 +2335,16 @@ describe('BudgetTab edit conflicts, review round (lot 3D)', () => {
   });
 });
 
-describe('BudgetTab others\' changes (lot 3G)', () => {
-  beforeEach(() => {
-    mocked.get.mockReset();
-    mocked.post.mockReset();
-    mocked.patch.mockReset();
-  });
-
+describe("BudgetTab others' changes (lot 3G)", () => {
   it('gives the version counter it loaded and the one each of its saves left, not the reload after its own save', async () => {
-    setupApi({ grain: 'monthly', budgetRev: 7 });
+    setupApi({ budgetRev: 7 });
     mocked.post.mockResolvedValue({ data: { updated: 1, budget_rev: 8 } });
     const onBudgetRev = vi.fn();
-    const { ref, container } = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { onBudgetRev });
+    const { ref } = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { onBudgetRev });
     await waitForAmounts();
     expect(onBudgetRev.mock.calls).toEqual([[YEAR, 7]]);
 
-    fireEvent.change(cell(monthCells(container), 3, 0), { target: { value: '1500' } });
+    typeMonth('planned', 3, '1500');
     expect(ref.current?.isSaving()).toBe(true);
     await flush(ref);
     await settle();
@@ -2445,62 +2353,61 @@ describe('BudgetTab others\' changes (lot 3G)', () => {
   });
 
   it('a year without a version is given as none', async () => {
-    setupApi({ grain: 'monthly', noVersion: true });
+    setupApi({ noVersion: true });
     const onBudgetRev = vi.fn();
     renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { onBudgetRev });
     await waitFor(() => expect(onBudgetRev).toHaveBeenCalledWith(YEAR, null));
   });
 
-  it('pending: a cell typed and not saved, an amount typed in the spread panel; nothing once saved', async () => {
-    setupApi({ grain: 'monthly' });
-    const { ref, container } = renderTab();
+  it('pending: a month typed and not saved, an amount typed in the editor; nothing once saved', async () => {
+    setupApi();
+    const { ref } = renderTab();
     await waitForAmounts();
     expect(ref.current?.hasPending()).toBe(false);
-    fireEvent.change(cell(monthCells(container), 3, 0), { target: { value: '1500' } });
+    typeMonth('planned', 3, '1500');
     expect(ref.current?.hasPending()).toBe(true);
     await flush(ref);
     await settle();
+    expect(ref.current?.hasPending()).toBe(false);
+    pick('committed');
     expect(ref.current?.hasPending()).toBe(false);
     fireEvent.change(amountField(), { target: { value: '5000' } });
     expect(ref.current?.hasPending()).toBe(true);
   });
 
-  it('a reload for someone else\'s change shows it; a cell typed and not saved keeps its value and its base', async () => {
-    const server = setupApi({ grain: 'monthly' });
-    const onBudgetRev = vi.fn();
-    const { ref, container } = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { onBudgetRev });
+  it("a reload for someone else's change shows it; a month typed and not saved keeps its value and its base", async () => {
+    const server = setupApi();
+    const { ref } = renderTab();
     await waitForAmounts();
     // The user types March's Revision (not sent yet); Marie changes April's Forecast.
-    fireEvent.change(cell(monthCells(container), 3, 1), { target: { value: '450' } });
+    typeMonth('committed', 3, '450');
     server.items[3].forecast = '650';
     changedByOthers.add(server.items);
     await act(async () => { await ref.current?.reloadFromServer(); });
     await settle();
-    expect(cell(monthCells(container), 4, 2)).toHaveValue('650');
-    expect(cell(monthCells(container), 3, 1)).toHaveValue('450');
+    expect(cellValue('forecast', 4)).toBe('650');
+    expect(cellValue('committed', 3)).toBe('450');
     expect(bulkCalls()).toHaveLength(0);
-    // The typed cell still goes from what the screen showed when it was typed.
+    // The typed month still goes from what the screen showed when it was typed.
     await flush(ref);
     expect(bulkCalls()[0][1].base).toEqual({ months: [{ period: period(3), committed: '900.00' }] });
   });
 
-  it('a period and a distribution chosen before the amount are the user\'s: pending, kept by a reload, then written with the amount', async () => {
-    const server = setupApi({ grain: 'monthly', empty: true });
+  it("a period and a distribution chosen before the amount are the user's: pending, kept by a reload, then written with the amount", async () => {
+    const server = setupApi({ empty: true });
     const { ref } = renderTab(YEAR, { effectiveStart: '2026-04-01' });
     await waitForAmounts();
     expect(ref.current?.hasPending()).toBe(false);
 
-    const [, distribution] = screen.getAllByRole('combobox');
-    fireEvent.mouseDown(distribution);
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Distribution' }));
     fireEvent.click(await screen.findByRole('option', { name: 'opex.budget.profile445' }));
-    const [from] = screen.getAllByPlaceholderText('labels.datePlaceholder');
-    typeDate(from, '01/07/2026');
+    typeDate(dateFields()[0], '01/07/2026');
     await settle();
-    // No amount yet: nothing written, the choices wait in the panel.
+    // No amount yet: nothing written, the choices wait in the editor.
     expect(bulkCalls()).toHaveLength(0);
     expect(ref.current?.hasPending()).toBe(true);
 
-    // Someone else writes June's Forecast; the user reloads: the panel keeps the period and distribution chosen.
+    // Someone else writes June's Forecast; the user reloads: the editor keeps the period and distribution chosen.
     server.items.push({ period: period(6), forecast: '300' } as ServedMonth);
     changedByOthers.add(server.items);
     await act(async () => { await ref.current?.reloadFromServer(); });
@@ -2511,7 +2418,7 @@ describe('BudgetTab others\' changes (lot 3G)', () => {
   });
 
   it('a reload that fails is not shown: it rejects, so the page does not count it as seen', async () => {
-    setupApi({ grain: 'monthly' });
+    setupApi();
     const { ref } = renderTab();
     await waitForAmounts();
     const served = mocked.get.getMockImplementation()! as (...args: any[]) => any;
@@ -2524,8 +2431,8 @@ describe('BudgetTab others\' changes (lot 3G)', () => {
     expect(failure).toBeInstanceOf(Error);
   });
 
-  it('nothing typed: the spread panel follows its column\'s new total too', async () => {
-    const server = setupApi({ grain: 'monthly' });
+  it("nothing typed: the amount follows its column's new total; an amount being typed stays", async () => {
+    const server = setupApi();
     const { ref } = renderTab();
     await waitForAmounts();
     await waitFor(() => expect(amountField()).toHaveValue('12 000'));
@@ -2533,230 +2440,817 @@ describe('BudgetTab others\' changes (lot 3G)', () => {
     changedByOthers.add(server.items);
     await act(async () => { await ref.current?.reloadFromServer(); });
     await waitFor(() => expect(amountField()).toHaveValue('13 200'));
+
+    fireEvent.change(amountField(), { target: { value: '9000' } });
+    server.items.forEach((month) => { month.planned = '1200'; });
+    await act(async () => { await ref.current?.reloadFromServer(); });
+    await settle();
+    expect(amountField()).toHaveValue('9 000');
+    expect(card('planned')).toHaveTextContent('14 400');
   });
 });
 
-/* ---- Quantity and price take precedence over a spread ---- */
-
-describe('BudgetTab quantity and price take precedence over a spread', () => {
-  beforeEach(() => {
-    mocked.get.mockReset();
-    mocked.post.mockReset();
-    mocked.patch.mockReset();
-    calendarsState.list = [FRANCE, UNITED_STATES];
-  });
-
-  const panelTab = (name: 'Spread an amount' | 'Quantity and price') => screen.getByRole('tab', { name });
-  const pickColumn = async (name: string) => {
-    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Column' }));
-    fireEvent.click(await screen.findByRole('option', { name }));
-  };
-
-  it('the yearly pencil opens a column that follows its lines on Quantity and price, another on Spread an amount', async () => {
-    setupApi({ grain: 'annual', roundInputs: [linesRecord()] });
-    renderTab();
-    await waitForAmounts();
-
-    fireEvent.click(within(screen.getByTestId('column-title-planned')).getByRole('button', { name: 'Change period' }));
-    expect(await screen.findByLabelText('Description')).toHaveValue('US Managed IT Services');
-    expect(panelTab('Quantity and price')).toHaveAttribute('aria-selected', 'true');
-
-    fireEvent.click(within(screen.getByTestId('column-title-committed')).getByRole('button', { name: 'Change period' }));
-    await waitFor(() => expect(panelTab('Spread an amount')).toHaveAttribute('aria-selected', 'true'));
-    expect(amountField()).not.toBeDisabled();
-    expect(bulkCalls()).toHaveLength(0);
-  });
-
-  it('the monthly view opens on Quantity and price when its default column follows its lines', async () => {
-    setupApi({ grain: 'monthly', roundInputs: [linesRecord()] });
-    renderTab();
-    await waitForAmounts();
-
-    await waitFor(() => expect(panelTab('Quantity and price')).toHaveAttribute('aria-selected', 'true'));
-    expect(screen.getByLabelText('Description')).toHaveValue('US Managed IT Services');
-  });
-
-  it('a column picked in either tab that follows its lines takes the panel to them; a column without lines leaves the tab as it is', async () => {
-    setupApi({ grain: 'monthly', roundInputs: [linesRecord(undefined, { measure: 'committed' })] });
-    renderTab();
-    await waitForAmounts();
-    expect(panelTab('Spread an amount')).toHaveAttribute('aria-selected', 'true');
-
-    // The spread tab's picker: Revision follows its lines.
-    await pickColumn('Revision');
-    await waitFor(() => expect(panelTab('Quantity and price')).toHaveAttribute('aria-selected', 'true'));
-    expect(screen.getByLabelText('Description')).toHaveValue('US Managed IT Services');
-    // The lines tab's picker: Budget has no line, the tab stays.
-    await pickColumn('Budget');
-    await waitFor(() => expect(screen.getByText('No line yet. A line is a quantity times a unit price.')).toBeInTheDocument());
-    expect(panelTab('Quantity and price')).toHaveAttribute('aria-selected', 'true');
-    // Back on Spread an amount, Actuals has no line: the tab stays.
-    fireEvent.click(panelTab('Spread an amount'));
-    await pickColumn('Actuals');
-    expect(panelTab('Spread an amount')).toHaveAttribute('aria-selected', 'true');
-    expect(amountField()).not.toBeDisabled();
-  });
-
-  it('a default column changed by the setting while the tab is open takes the panel to its lines', async () => {
-    setupApi({ grain: 'monthly', roundInputs: [linesRecord(undefined, { measure: 'committed' })] });
-    const { rerenderYear } = renderTab();
-    await waitForAmounts();
-    expect(panelTab('Spread an amount')).toHaveAttribute('aria-selected', 'true');
-
-    columnsSetting.current = { ...ALL_SHOWN, default_column: 'committed' };
-    rerenderYear(YEAR);
-    await waitFor(() => expect(panelTab('Quantity and price')).toHaveAttribute('aria-selected', 'true'));
-    expect(screen.getByRole('combobox', { name: 'Column' })).toHaveTextContent('Revision');
-  });
-
-  it('a reload, after a save or for someone else\'s change, never switches the tab under the user', async () => {
-    setupApi({ grain: 'monthly', roundInputs: [linesRecord()] });
-    routePosts();
-    const { ref, container } = renderTab();
-    await waitForAmounts();
-    await waitFor(() => expect(panelTab('Quantity and price')).toHaveAttribute('aria-selected', 'true'));
-
-    fireEvent.click(panelTab('Spread an amount'));
-    // A grid save reloads the year.
-    const loads = amountLoads();
-    fireEvent.change(cell(gridCells(container), 3, 1), { target: { value: '450' } });
-    await flush(ref);
-    await waitFor(() => expect(amountLoads()).toBe(loads + 1));
-    await settle();
-    expect(panelTab('Spread an amount')).toHaveAttribute('aria-selected', 'true');
-    // Someone else's change.
-    await act(async () => { await ref.current?.reloadFromServer(); });
-    await settle();
-    expect(panelTab('Spread an amount')).toHaveAttribute('aria-selected', 'true');
-  });
-
-  it('Spread an amount is locked on a column that follows its lines: its fields show the column, disabled, and nothing is written', async () => {
-    setupApi({ grain: 'monthly', roundInputs: [linesRecord()] });
-    routePosts();
-    renderTab();
-    await waitForAmounts();
-    fireEvent.click(panelTab('Spread an amount'));
-
-    expect(amountField()).toHaveValue('12 000');
-    expect(amountField()).toBeDisabled();
-    expect(screen.getByRole('combobox', { name: 'Distribution' })).toHaveAttribute('aria-disabled', 'true');
-    const [from, to] = screen.getAllByPlaceholderText('labels.datePlaceholder');
-    expect(from).toBeDisabled();
-    expect(to).toBeDisabled();
-    expect(screen.getByLabelText('Apply the distribution to all columns')).toBeDisabled();
-    expect(screen.getByTestId('spread-lock')).toHaveTextContent(/^The amounts come from the 1 line of Quantity and price\. Spread an amount instead$/);
-    // The column picker stays.
-    expect(screen.getByRole('combobox', { name: 'Column' })).not.toHaveAttribute('aria-disabled');
-
-    // Whatever reaches the fields, the locked column is never spread: leaving, Enter, a date.
-    fireEvent.change(amountField(), { target: { value: '20000' } });
-    fireEvent.blur(amountField());
-    fireEvent.keyDown(amountField(), { key: 'Enter' });
-    typeDate(from, '01/07/2026');
-    await settle();
-    expect(bulkCalls()).toHaveLength(0);
-  });
-
-  it('Spread an amount instead unlocks the column, focuses the amount and spreads it; the lock comes back with the panel', async () => {
-    setupApi({ grain: 'monthly', roundInputs: [linesRecord(), linesRecord(undefined, { measure: 'forecast' })] });
-    routePosts();
-    renderTab();
-    await waitForAmounts();
-    fireEvent.click(panelTab('Spread an amount'));
-
-    fireEvent.click(screen.getByRole('button', { name: 'Spread an amount instead' }));
-    await waitFor(() => expect(amountField()).not.toBeDisabled());
-    expect(document.activeElement).toBe(amountField());
-    expect(screen.getByTestId('spread-lock')).toHaveTextContent(/^A spread replaces the amounts of the lines\. The lines stay as a reference\.$/);
-    expect(screen.getByRole('combobox', { name: 'Distribution' })).not.toHaveAttribute('aria-disabled');
-
-    // Another panel and back: locked again.
-    fireEvent.click(panelTab('Quantity and price'));
-    fireEvent.click(panelTab('Spread an amount'));
-    expect(amountField()).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: 'Spread an amount instead' }));
-    await waitFor(() => expect(amountField()).not.toBeDisabled());
-
-    typeAmount('20000');
-    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    // Forecast follows its lines too: it keeps them.
-    expect(written(bulkCalls()[0][1])).toEqual({
-      kind: 'annual',
-      year: YEAR,
-      totals: { planned: '20000.00' },
-      also_measures: ['committed', 'actual', 'expected_landing'],
-      spread_profile_name: 'flat',
-      period_start: '2026-03-01',
-      period_end: '2026-12-31',
-    });
-  });
-
-  it('Apply the distribution to all columns leaves out the columns that follow their lines, and says so', async () => {
-    setupApi({
-      grain: 'monthly',
-      roundInputs: [linesRecord(undefined, { measure: 'committed' }), linesRecord(undefined, { measure: 'forecast' })],
-    });
-    routePosts();
-    renderTab();
-    await waitForAmounts();
-
-    expect(screen.getByTestId('spread-keep-lines')).toHaveTextContent(/^Revision, Forecast keep their lines\.$/);
-    typeAmount('24000');
-    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    expect(bulkCalls()[0][1].also_measures).toEqual(['actual', 'expected_landing']);
-
-    // Off, then on: the spread goes to the same columns at once.
-    fireEvent.click(screen.getByLabelText('Apply the distribution to all columns'));
-    fireEvent.click(screen.getByLabelText('Apply the distribution to all columns'));
-    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
-    expect(bulkCalls()[1][1].also_measures).toEqual(['actual', 'expected_landing']);
-  });
-
-  it('one column that follows its lines is named alone; when every other column does, no switch is offered', async () => {
-    setupApi({ grain: 'monthly', roundInputs: [linesRecord(undefined, { measure: 'committed' })] });
+describe('BudgetTab on the query cache', () => {
+  it('shows the year at once when the tab comes back, editable, then refreshes it in the background', async () => {
+    setupApi();
     const first = renderTab();
     await waitForAmounts();
-    expect(screen.getByTestId('spread-keep-lines')).toHaveTextContent(/^Revision keeps its lines\.$/);
+    // The field formats its value in an effect: wait for it, never read it right after the load.
+    await waitFor(() => expect(amountField()).toHaveValue('12 000'));
+    const loads = amountLoads();
     first.unmount();
 
-    columnsSetting.current = { ...DEFAULT_BUDGET_COLUMNS, enabled: { ...DEFAULT_BUDGET_COLUMNS.enabled, actual: false, expected_landing: false } };
-    setupApi({ grain: 'monthly', roundInputs: [linesRecord(undefined, { measure: 'committed' })] });
-    renderTab();
-    await waitForAmounts(2);
-    expect(screen.queryByText('Apply the distribution to all columns')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('spread-keep-lines')).not.toBeInTheDocument();
-    typeAmount('5000');
-    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    expect(bulkCalls()[0][1].totals).toEqual({ planned: '5000.00' });
-    expect(bulkCalls()[0][1].also_measures).toBeUndefined();
+    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, first.queryClient);
+    // First render: the cached year, no blank editor and no disabled fields while it refreshes.
+    expect(amountField()).toHaveValue('12 000');
+    expect(amountField()).not.toBeDisabled();
+    expect(card('planned')).toHaveTextContent('12 000');
+    await waitFor(() => expect(amountLoads()).toBe(loads + 1));
   });
 
-  it('the yearly total of a column that follows its lines is read-only; a click or Enter opens its lines', async () => {
-    setupApi({ grain: 'annual', roundInputs: [linesRecord()] });
+  it('never shows a cached year after a save: the tab loads it again', async () => {
+    setupApi();
+    const first = renderTab();
+    await waitForAmounts();
+    typeMonth('planned', 1, '2000');
+    await flush(first.ref);
+    expect(bulkCalls()).toHaveLength(1);
+    await settle();
+    first.unmount();
+
+    // The server now holds the saved month; the next load answers it, a little later.
+    let answer: () => void = () => undefined;
+    const served = mocked.get.getMockImplementation()! as (...args: any[]) => any;
+    mocked.get.mockImplementation(async (url: string, config?: unknown) => {
+      if (url === '/spend-versions/v1/amounts') await new Promise<void>((resolve) => { answer = resolve; });
+      return served(url, config);
+    });
+    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, first.queryClient);
+    // The pre-save year is not shown meanwhile.
+    expect(screen.queryByText('12 000')).toBeNull();
+    await waitFor(() => expect(amountLoads()).toBeGreaterThan(2));
+    await act(async () => { answer(); });
+    await waitFor(() => expect(card('planned')).toHaveTextContent('13 000'));
+  });
+
+  it("a monthly save forgets the line's cached Allocations year, which shows the year's totals", async () => {
+    setupApi();
+    const first = renderTab();
+    await waitForAmounts();
+    const key = allocationsSnapshotKey(OPEX_FINANCE_CONFIG.itemsApi, 'item-1', YEAR);
+    first.queryClient.setQueryData(key, { version: null, computed: [], totals: { planned: 12000 } });
+    typeMonth('planned', 1, '2000');
+    await flush(first.ref);
+    expect(bulkCalls()).toHaveLength(1);
+    expect(first.queryClient.getQueryData(key)).toBeUndefined();
+  });
+});
+
+/* ---- Lot F2: at a date, start from, opening values, difference, folded table ---- */
+
+const lastBulk = () => bulkCalls()[bulkCalls().length - 1][1] as Record<string, any>;
+const bulkBodies = (kind: string) => bulkCalls().map(([, body]) => body as Record<string, any>).filter((body) => body?.kind === kind);
+const wholeYearFlat = (measure: RoundInput['measure']) => record({ measure, period_start: '2026-01-01', period_end: '2026-12-31' });
+const openingChanges = () => screen.queryByTestId('opening-changes');
+const restoreButton = () => screen.getByRole('button', { name: 'Back to the opening values' });
+const showDetail = () => fireEvent.click(screen.getByRole('button', { name: 'Show the detail' }));
+
+describe('BudgetTab at a date', () => {
+  it('At a date: a date field and no distribution; written at once as a period of one day, then on each date', async () => {
+    setupApi({ roundInputs: [wholeYearFlat('planned')] });
     renderTab();
     await waitForAmounts();
+    expect(within(editor()).getByRole('radio', { name: 'At a date' })).not.toBeChecked();
 
-    const [budget, revision] = screen.getAllByRole('textbox');
-    expect(budget).toHaveAttribute('readonly');
-    expect(revision).not.toHaveAttribute('readonly');
-    fireEvent.mouseOver(budget);
-    expect(await screen.findByRole('tooltip')).toHaveTextContent('Calculated from its lines. Open Quantity and price to change it.');
+    fireEvent.click(within(editor()).getByRole('radio', { name: 'At a date' }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    // The first day of the period shown, until a date is chosen; no distribution sent.
+    expect(written(lastBulk())).toEqual({ kind: 'annual', year: YEAR, totals: { planned: '12000.00' }, period_start: '2026-01-01', period_end: '2026-01-01' });
+    expect(screen.queryByRole('combobox', { name: 'Distribution' })).toBeNull();
+    expect(dateFields()).toHaveLength(1);
 
-    fireEvent.click(budget);
-    expect(await screen.findByLabelText('Description')).toHaveValue('US Managed IT Services');
-    expect(panelTab('Quantity and price')).toHaveAttribute('aria-selected', 'true');
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
-    await waitFor(() => expect(screen.queryByLabelText('Description')).not.toBeInTheDocument());
+    typeDate(dateFields()[0], '10/02/2026');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
+    expect(written(lastBulk())).toEqual({ kind: 'annual', year: YEAR, totals: { planned: '12000.00' }, period_start: '2026-02-10', period_end: '2026-02-10' });
+    expect(screen.getByTestId('spread-result')).toHaveTextContent(/^12 000 on .*10.*2026, all in February\.$/);
+    // The month of the date says it all: no zeroed months, no 15th rule.
+    expect(screen.getByTestId('spread-notes')).not.toHaveTextContent('will be set to zero');
+    expect(screen.queryByLabelText('A month counts when the period covers its 15th.')).toBeNull();
 
-    fireEvent.keyDown(screen.getAllByRole('textbox')[0], { key: 'Enter' });
-    expect(await screen.findByLabelText('Description')).toHaveValue('US Managed IT Services');
-    // The pencil and the calculator stay.
-    expect(within(screen.getByTestId('column-title-planned')).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Change period', 'Quantity and price']);
-    // A click on another column's total opens nothing.
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
-    fireEvent.click(screen.getAllByRole('textbox')[1]);
+    // Back to the whole year: the distribution comes back, written over the twelve months.
+    fireEvent.click(within(editor()).getByRole('radio', { name: 'Whole year' }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(3));
+    expect(written(lastBulk())).toMatchObject({ period_start: '2026-01-01', period_end: '2026-12-31', spread_profile_name: 'flat' });
+    expect(screen.getByRole('combobox', { name: 'Distribution' })).toBeInTheDocument();
+  });
+
+  it('a column stored at a date: its card says the date, its editor opens on it; a date before the line starts is said', async () => {
+    const state = setupApi({ roundInputs: [record({ period_start: '2026-02-10', period_end: '2026-02-10' })] });
+    state.items.forEach((row) => { row.planned = row.period === period(2) ? '40000' : '0'; });
+    renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    await waitForAmounts();
+
+    expect(captionLines('planned')).toEqual([expect.stringMatching(/^On .*10.*2026$/)]);
+    expect(within(editor()).getByRole('radio', { name: 'At a date' })).toBeChecked();
+    expect(dateFields()[0]).toHaveValue('10 Feb 2026');
+    expect(screen.getByTestId('spread-result')).toHaveTextContent(/^40 000 on .*, all in February\.$/);
+    // Kept as stored, never moved into the line's dates: the existing warning says it.
+    expect(screen.getByText("The period goes beyond the line's dates.")).toBeInTheDocument();
+    expect(screen.queryByTestId('stored-period')).toBeNull();
     await settle();
-    expect(screen.queryByRole('tab', { name: 'Quantity and price' })).not.toBeInTheDocument();
     expect(bulkCalls()).toHaveLength(0);
+  });
+});
+
+describe('BudgetTab start from another column', () => {
+  it('an empty column starts from another one with amounts, adjusted by a percentage: a copy over its base', async () => {
+    const state = setupApi({ monthValues: { forecast: '0' } });
+    routePosts(async (body) => {
+      if (body.kind === 'copy') state.items.forEach((row) => { row.forecast = '900'; });
+      return { updated: 12, copy: { prorated: true } };
+    });
+    renderTab();
+    await waitForAmounts();
+    // A column with amounts starts from nothing else.
+    expect(screen.queryByTestId('start-from')).toBeNull();
+
+    pick('forecast');
+    const start = screen.getByTestId('start-from');
+    expect(within(start).getByRole('textbox', { name: 'Adjustment in percent' })).toHaveValue('0');
+    fireEvent.mouseDown(within(start).getByRole('combobox', { name: 'Column to start from' }));
+    const options = screen.getAllByRole('option').map((o) => o.textContent);
+    expect(options).toEqual(['Budget (12 000)', 'Revision (10 800)', 'Actuals (9 600)', 'Expected landing (8 400)']);
+    fireEvent.click(screen.getByRole('option', { name: 'Revision (10 800)' }));
+    fireEvent.change(within(start).getByRole('textbox', { name: 'Adjustment in percent' }), { target: { value: '-10' } });
+    fireEvent.click(within(start).getByRole('button', { name: 'Copy' }));
+
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1]).toEqual({
+      kind: 'copy', year: YEAR, source: 'committed', measure: 'forecast', percentage: -10,
+      base: { columns: { forecast: { months: twelve('0.00'), lines: [] } } },
+    });
+    await waitFor(() => expect(card('forecast')).toHaveTextContent('10 800'));
+    expect(screen.queryByTestId('start-from')).toBeNull();
+    expect(screen.getByTestId('start-note')).toHaveTextContent("Months of the Revision column outside the line's dates were not copied.");
+  });
+
+  it('a percentage of -100 or less, or not a number, cannot be sent', async () => {
+    setupApi({ monthValues: { forecast: '0' } });
+    renderTab();
+    await waitForAmounts();
+    pick('forecast');
+    const start = screen.getByTestId('start-from');
+    const pct = within(start).getByRole('textbox', { name: 'Adjustment in percent' });
+    for (const value of ['-100', 'abc', '']) {
+      fireEvent.change(pct, { target: { value } });
+      expect(within(start).getByRole('button', { name: 'Copy' })).toBeDisabled();
+    }
+    fireEvent.change(pct, { target: { value: '2,5' } });
+    expect(within(start).getByRole('button', { name: 'Copy' })).not.toBeDisabled();
+  });
+
+  it('a copy refused by someone else\'s change waits in the banner; Overwrite sends it again over their column', async () => {
+    setupApi({ monthValues: { forecast: '0' } });
+    refuseBulk((body, call) => (call === 1 ? columnConflict('forecast', twelve('50.00'), { current_lines: [] }) : null));
+    renderTab();
+    await waitForAmounts();
+    pick('forecast');
+    fireEvent.click(within(screen.getByTestId('start-from')).getByRole('button', { name: 'Copy' }));
+
+    const banner = await screen.findByRole('region');
+    expect(card('forecast')).toHaveAttribute('data-waiting', 'true');
+    expect(screen.queryByTestId('start-from')).toBeNull();
+    fireEvent.click(within(banner).getByRole('button', { name: /editConflict\.column\.applyMine/ }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
+    expect(bulkCalls()[1][1]).toEqual({
+      kind: 'copy', year: YEAR, source: 'planned', measure: 'forecast', percentage: 0,
+      base: { columns: { forecast: { months: twelve('50.00'), lines: [] } } },
+    });
+  });
+
+  it('is offered on an empty column only: not on one with lines, not on a frozen one, not without a source', async () => {
+    // Forecast keeps lines with its zeros: something is entered.
+    setupApi({ monthValues: { forecast: '0', actual: '0' }, frozen: ['actual'], roundInputs: [record({ measure: 'forecast', period_start: '2026-01-01', method: 'manual', lines: [storedLine()] })] });
+    renderTab();
+    await waitForAmounts();
+    pick('forecast');
+    expect(screen.queryByTestId('start-from')).toBeNull();
+    pick('actual');
+    expect(screen.queryByTestId('start-from')).toBeNull();
+    cleanup();
+
+    // No other column holds an amount: nothing to start from.
+    setupApi({ empty: true });
+    renderTab();
+    await waitForAmounts();
+    expect(screen.queryByTestId('start-from')).toBeNull();
+  });
+});
+
+/** Restores answer as the server would: the column back to the months sent (its typed months forgotten). */
+function serveRestores(state: ReturnType<typeof setupApi>, refuse: (body: Record<string, any>) => unknown | null = () => null) {
+  mocked.post.mockImplementation(async (url: string, body: Record<string, any>) => {
+    if (url !== BULK) return { data: { id: 'v1', input_grain: 'annual', budget_year: YEAR } };
+    const error = refuse(body);
+    if (error) {
+      refusedBodies.add(body);
+      throw error;
+    }
+    const col = body.measure as string;
+    if (body.kind === 'annual') {
+      const [[measure, total]] = Object.entries(body.totals as Record<string, string>);
+      state.items.forEach((row) => { row[measure] = String(Number(total) / 12); });
+    }
+    if (body.kind === 'restore') {
+      // The months typed in this column are replaced by the restore.
+      mocked.post.mock.calls.forEach(([, sent]) => {
+        if (sent?.kind === 'monthly' && sent.months.some((row: Record<string, unknown>) => row[col] !== undefined)) refusedBodies.add(sent);
+      });
+      state.items.forEach((row, i) => { row[col] = body.months[i]; });
+    }
+    // Every write answers the year's months and records as stored after it.
+    const items = replayWrites(state.items, savedAmountBodies());
+    return { data: { updated: 12, items, ...(state.roundInputs ? { round_inputs: state.roundInputs } : {}) } };
+  });
+}
+
+describe('BudgetTab back to the opening values', () => {
+  it('appears only once a column changed, says how many and since when; restores each one, with its months, record and base', async () => {
+    const openings = { current: null } as React.MutableRefObject<OpeningValues | null>;
+    const lines = linesRecord([storedLine()], { measure: 'committed' });
+    const state = setupApi({ roundInputs: [wholeYearFlat('planned'), lines] });
+    serveRestores(state);
+    const { ref } = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { openings });
+    await waitForAmounts();
+    expect(openingChanges()).toBeNull();
+    const opening = openings.current!.years.get(YEAR)!;
+    expect(opening.columns.planned.months).toEqual(Array.from({ length: 12 }, () => 100000));
+    expect(opening.columns.committed.record).toEqual(lines);
+
+    // Taken once: the reload after a write does not take it again.
+    typeAmount('24000');
+    await waitFor(() => expect(card('planned')).toHaveTextContent('24 000'));
+    expect(openings.current!.years.get(YEAR)).toBe(opening);
+    expect(openingChanges()).toHaveTextContent(/^1 column changed since \d{2}:\d{2}\D*$/);
+
+    // A month typed and not saved yet: the restore sends it first.
+    // Not counted until it is written; the restore writes it first, then restores it too.
+    typeMonth('committed', 3, '450');
+    expect(openingChanges()).toHaveTextContent(/^1 column changed since/);
+    fireEvent.click(restoreButton());
+    await waitFor(() => expect(screen.getByTestId('restore-notice')).toHaveTextContent('Opening values restored: Budget and Revision.'));
+
+    const kinds = bulkCalls().map(([, body]) => (body as Record<string, any>).kind);
+    expect(kinds).toEqual(['annual', 'monthly', 'restore', 'restore']);
+    const [planned, committed] = bulkBodies('restore');
+    expect(planned).toEqual({
+      kind: 'restore', year: YEAR, measure: 'planned', months: twelve('1000.00'), record: wholeYearFlat('planned'),
+      base: { columns: { planned: { months: twelve('2000.00'), lines: [] } } },
+    });
+    const typed = twelve('900.00'); typed[2] = '450.00';
+    expect(committed).toEqual({
+      kind: 'restore', year: YEAR, measure: 'committed', months: twelve('900.00'), record: lines,
+      base: { columns: { committed: { months: typed, lines: [linePayloadOf(storedLine())] } } },
+    });
+    // A normal reload: the columns are back, nothing changed any more; the opening values stay.
+    await waitFor(() => expect(openingChanges()).toBeNull());
+    expect(card('planned')).toHaveTextContent('12 000');
+    expect(openings.current!.years.get(YEAR)).toBe(opening);
+    expect(await flush(ref)).toBe(true);
+    fireEvent.click(within(screen.getByTestId('restore-notice')).getByRole('button', { name: 'common:buttons.close' }));
+    expect(screen.queryByTestId('restore-notice')).toBeNull();
+  });
+
+  it('a column frozen meanwhile (403) or changed by someone else (409) is not restored, each said; the 409 waits in the banner', async () => {
+    const state = setupApi({ roundInputs: [wholeYearFlat('planned'), wholeYearFlat('committed'), wholeYearFlat('actual')] });
+    serveRestores(state);
+    renderTab();
+    await waitForAmounts();
+    for (const col of ['planned', 'committed', 'actual']) {
+      pick(col);
+      typeAmount('24000');
+      await settle();
+    }
+    expect(openingChanges()).toHaveTextContent(/^3 columns changed/);
+    serveRestores(state, (body) => {
+      if (body.kind !== 'restore') return null;
+      if (body.measure === 'planned') return { response: { status: 403, data: { message: 'OPEX Budget for 2026 is frozen' } } };
+      if (body.measure === 'committed') return columnConflict('committed', twelve('2100.00'), { current_lines: [] });
+      return null;
+    });
+    const before = freezeLoads();
+    fireEvent.click(restoreButton());
+
+    const notice = await screen.findByTestId('restore-notice');
+    expect(notice).toHaveTextContent('Opening values restored: Actuals.');
+    expect(notice).toHaveTextContent('Budget: frozen meanwhile, not restored.');
+    expect(notice).toHaveTextContent(/Revision: changed by Marie Dupont at \d{2}:\d{2}[^,]*, not restored\. Choose above what to keep\./);
+    expect(bulkBodies('restore').map((b) => b.measure)).toEqual(['planned', 'committed', 'actual']);
+    // The freeze state is read again; the refused column waits for the user's choice, its months untouched.
+    await waitFor(() => expect(freezeLoads()).toBeGreaterThan(before));
+    const banner = screen.getByRole('region');
+    expect(card('committed')).toHaveAttribute('data-waiting', 'true');
+    expect(card('committed')).toHaveTextContent('24 000');
+
+    // Overwrite: the restore goes again over their column.
+    serveRestores(state);
+    fireEvent.click(within(banner).getByRole('button', { name: /editConflict\.column\.applyMine/ }));
+    await waitFor(() => expect(bulkBodies('restore')).toHaveLength(4));
+    expect(bulkBodies('restore')[3]).toMatchObject({
+      measure: 'committed', months: twelve('900.00'),
+      base: { columns: { committed: { months: twelve('2100.00'), lines: [] } } },
+    });
+    await waitFor(() => expect(screen.queryByRole('region')).toBeNull());
+  });
+
+  it('Reload the column on a refused restore keeps their values and writes nothing', async () => {
+    const state = setupApi({ roundInputs: [wholeYearFlat('planned')] });
+    serveRestores(state);
+    renderTab();
+    await waitForAmounts();
+    typeAmount('24000');
+    await settle();
+    serveRestores(state, (body) => (body.kind === 'restore' ? columnConflict('planned', twelve('2100.00'), { current_lines: [] }) : null));
+    fireEvent.click(restoreButton());
+    const banner = await screen.findByRole('region');
+    fireEvent.click(within(banner).getByRole('button', { name: /editConflict\.column\.keepTheirs/ }));
+    await waitFor(() => expect(screen.queryByRole('region')).toBeNull());
+    expect(card('planned')).toHaveTextContent('25 200');
+    await settle();
+    expect(bulkBodies('restore')).toHaveLength(1);
+  });
+
+  it('a refused restore waiting for its choice comes back after a tab change; Overwrite then sends it', async () => {
+    const state = setupApi({ roundInputs: [wholeYearFlat('planned')] });
+    serveRestores(state);
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const held = { current: null } as React.MutableRefObject<HeldBudgetChoices | null>;
+    const openings = { current: null } as React.MutableRefObject<OpeningValues | null>;
+    const first = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, queryClient, { held, openings });
+    await waitForAmounts();
+    typeAmount('24000');
+    await settle();
+    serveRestores(state, (body) => (body.kind === 'restore' ? columnConflict('planned', twelve('2100.00'), { current_lines: [] }) : null));
+    fireEvent.click(restoreButton());
+    await screen.findByRole('region');
+
+    first.unmount();
+    expect(held.current?.parkedRestores).toEqual([{ measure: 'planned', body: expect.objectContaining({ kind: 'restore', measure: 'planned' }) }]);
+    serveRestores(state);
+    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, queryClient, { held, openings });
+    const banner = await screen.findByRole('region');
+    expect(card('planned')).toHaveAttribute('data-waiting', 'true');
+    fireEvent.click(within(banner).getByRole('button', { name: /editConflict\.column\.applyMine/ }));
+    await waitFor(() => expect(bulkBodies('restore')).toHaveLength(2));
+    expect(bulkBodies('restore')[1]).toMatchObject({
+      measure: 'planned', months: twelve('1000.00'), base: { columns: { planned: { months: twelve('2100.00'), lines: [] } } },
+    });
+    await waitFor(() => expect(screen.queryByRole('region')).toBeNull());
+  });
+
+  it("someone else's change, already reloaded, on a column this screen never wrote: never sent, said in the note", async () => {
+    const state = setupApi({ roundInputs: [wholeYearFlat('planned'), wholeYearFlat('committed'), wholeYearFlat('actual')] });
+    serveRestores(state);
+    const { ref } = renderTab();
+    await waitForAmounts();
+    typeAmount('24000');
+    await settle();
+    // Two colleagues change Revision (months only) and Actuals (months and record); the page shows it (lot 3G).
+    state.items.forEach((row) => { row.committed = '950'; row.actual = '850'; });
+    const changedAt = new Date(Date.now() + 60_000).toISOString();
+    state.roundInputs = [wholeYearFlat('planned'), wholeYearFlat('committed'), { ...wholeYearFlat('actual'), spread_profile_name: '4-4-5', updated_at: changedAt }];
+    await act(async () => { await ref.current!.reloadFromServer(); });
+    await waitFor(() => expect(card('committed')).toHaveTextContent('11 400'));
+    // Counted: the column this screen wrote only.
+    expect(openingChanges()).toHaveTextContent(/^1 column changed/);
+
+    fireEvent.click(restoreButton());
+    const notice = await screen.findByTestId('restore-notice');
+    expect(notice).toHaveTextContent('Opening values restored: Budget.');
+    expect(notice).toHaveTextContent('Revision: changed by someone else since the opening, not restored.');
+    expect(notice).toHaveTextContent(/Actuals: changed by someone else at \d{2}:\d{2}[^,]*, not restored\./);
+    expect(bulkBodies('restore').map((b) => b.measure)).toEqual(['planned']);
+    expect(screen.queryByRole('region')).toBeNull();
+    expect(card('committed')).toHaveTextContent('11 400');
+  });
+
+  it("this screen's write then someone else's, already reloaded: the base is the screen's write, and the 409 reaches the banner", async () => {
+    const state = setupApi({ roundInputs: [wholeYearFlat('planned')] });
+    serveRestores(state);
+    const { ref } = renderTab();
+    await waitForAmounts();
+    typeAmount('24000');
+    await settle();
+    state.items.forEach((row) => { row.planned = '2100'; });
+    await act(async () => { await ref.current!.reloadFromServer(); });
+    await waitFor(() => expect(card('planned')).toHaveTextContent('25 200'));
+
+    serveRestores(state, (body) => (body.kind === 'restore' ? columnConflict('planned', twelve('2100.00'), { current_lines: [] }) : null));
+    fireEvent.click(restoreButton());
+    const banner = await screen.findByRole('region');
+    expect(bulkBodies('restore')).toHaveLength(1);
+    expect(bulkBodies('restore')[0].base).toEqual({ columns: { planned: { months: twelve('2000.00'), lines: [] } } });
+    expect(await screen.findByTestId('restore-notice')).toHaveTextContent(/Budget: changed by Marie Dupont at /);
+    expect(card('planned')).toHaveAttribute('data-waiting', 'true');
+    expect(within(banner).getByRole('button', { name: /editConflict\.column\.applyMine/ })).toBeInTheDocument();
+  });
+
+  it('a column written twice goes back over its second write', async () => {
+    const state = setupApi({ roundInputs: [wholeYearFlat('planned')] });
+    serveRestores(state);
+    renderTab();
+    await waitForAmounts();
+    typeAmount('24000');
+    await settle();
+    typeAmount('36000');
+    await settle();
+    fireEvent.click(restoreButton());
+    await screen.findByTestId('restore-notice');
+    expect(bulkBodies('restore')[0]).toMatchObject({
+      measure: 'planned', months: twelve('1000.00'), base: { columns: { planned: { months: twelve('3000.00'), lines: [] } } },
+    });
+  });
+
+  it('a column waiting for a choice is not restored and says so; the others are', async () => {
+    const state = setupApi();
+    renderTab();
+    await waitForAmounts();
+    refuseBulk((body, call) => (call === 1 ? columnConflict('committed', twelve('950.00')) : null));
+    typeMonth('committed', 3, '450');
+    await screen.findByRole('region');
+    serveRestores(state);
+    pick('planned');
+    typeAmount('24000');
+    await settle();
+    // Counted: the columns this screen wrote (the refused months were never written).
+    expect(openingChanges()).toHaveTextContent(/^1 column changed/);
+    fireEvent.click(restoreButton());
+    const notice = await screen.findByTestId('restore-notice');
+    expect(notice).toHaveTextContent('Opening values restored: Budget.');
+    expect(notice).toHaveTextContent('Revision: waiting for your choice, not restored.');
+    expect(bulkBodies('restore').map((b) => b.measure)).toEqual(['planned']);
+    expect(screen.getByRole('region')).toBeInTheDocument();
+  });
+
+  it('a frozen column changed since the opening is said frozen, never sent', async () => {
+    const state = setupApi();
+    serveRestores(state);
+    const { queryClient } = renderTab();
+    await waitForAmounts();
+    pick('forecast');
+    typeAmount('24000');
+    await settle();
+    // An administrator freezes the column; the tab learns it.
+    state.frozen = ['forecast'];
+    await act(async () => { await queryClient.invalidateQueries({ queryKey: ['freeze-state', YEAR] }); });
+    await waitFor(() => expect(editor()).toHaveAttribute('data-frozen', 'true'));
+    fireEvent.click(restoreButton());
+    const notice = await screen.findByTestId('restore-notice');
+    expect(notice).toHaveTextContent('No column restored.');
+    expect(notice).toHaveTextContent('Forecast: frozen meanwhile, not restored.');
+    expect(bulkBodies('restore')).toHaveLength(0);
+  });
+
+  it('the opening values survive a tab change and a year change, and are lost with the page', async () => {
+    const state = setupApi({ roundInputs: [wholeYearFlat('planned')] });
+    serveRestores(state);
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const openings = { current: null } as React.MutableRefObject<OpeningValues | null>;
+    const first = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, queryClient, { openings, availableYears: [2026, 2027] });
+    await waitForAmounts();
+    const opening = openings.current!.years.get(YEAR);
+    typeAmount('24000');
+    await settle();
+    expect(openingChanges()).not.toBeNull();
+
+    // Another tab of the line, then back: the same opening values.
+    first.unmount();
+    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, queryClient, { openings, availableYears: [2026, 2027] });
+    await waitFor(() => expect(openingChanges()).toHaveTextContent(/^1 column changed/));
+    expect(openings.current!.years.get(YEAR)).toBe(opening);
+    cleanup();
+
+    // Another year, then back.
+    const again = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, queryClient, { openings, availableYears: [2026, 2027] });
+    await waitForAmounts();
+    again.rerenderYear(2027);
+    await waitFor(() => expect(editor()).toHaveAttribute('data-ready', 'true'));
+    expect(openingChanges()).toBeNull();
+    expect(openings.current!.years.has(2027)).toBe(true);
+    again.rerenderYear(YEAR);
+    await waitFor(() => expect(openingChanges()).toHaveTextContent(/^1 column changed/));
+    expect(openings.current!.years.get(YEAR)).toBe(opening);
+    cleanup();
+
+    // A new visit of the line (the page mounts again): the year as it is now is the opening.
+    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, queryClient, { openings: { current: null }, availableYears: [2026, 2027] });
+    await waitForAmounts(3);
+    await settle();
+    expect(openingChanges()).toBeNull();
+  });
+
+  it('the item page keeps the opening values for its line, and drops them for another line', () => {
+    const seen: Array<OpeningValues | null> = [];
+    function Page({ lineId }: { lineId: string }) {
+      const held = useHeldChoices(lineId);
+      React.useEffect(() => {
+        if (!held.openings.current) held.openings.current = { lineId, years: new Map() };
+        seen.push(held.openings.current);
+      });
+      return null;
+    }
+    const view = render(<Page lineId="line-1" />);
+    const kept = seen[0];
+    view.rerender(<Page lineId="line-1" />);
+    expect(seen[1]).toBe(kept);
+    view.rerender(<Page lineId="line-2" />);
+    expect(seen[2]).not.toBe(kept);
+    expect(seen[2]!.lineId).toBe('line-2');
+  });
+});
+
+/** The column's months as the server holds them now, as a restore's base says them. */
+function storedColumn(state: ReturnType<typeof setupApi>, col: string) {
+  return replayWrites(state.items, savedAmountBodies()).map((m) => Number(m[col] || 0).toFixed(2));
+}
+
+/** Restores the server compares with its months, as lot B does: a base that is not what it holds is refused (409). */
+function serveComparedRestores(state: ReturnType<typeof setupApi>) {
+  serveRestores(state, (body) => {
+    if (body.kind !== 'restore') return null;
+    const now = storedColumn(state, body.measure);
+    return JSON.stringify(body.base.columns[body.measure].months) === JSON.stringify(now) ? null : columnConflict(body.measure, now, { current_lines: [] });
+  });
+}
+
+describe('BudgetTab back to the opening values, what the screen wrote (fix round 2)', () => {
+  it("a monthly save takes only the months it sent: someone else's month in between is never restored over", async () => {
+    const state = setupApi({ roundInputs: [wholeYearFlat('planned')] });
+    serveComparedRestores(state);
+    const { ref } = renderTab();
+    await waitForAmounts();
+    // January saved by this screen.
+    typeMonth('planned', 1, '2000');
+    expect(await flush(ref)).toBe(true);
+    // A colleague sets June; the next save of February answers it, and the reload shows it.
+    state.items[5].planned = '5000';
+    typeMonth('planned', 2, '2000');
+    expect(await flush(ref)).toBe(true);
+    await waitFor(() => expect(cellValue('planned', 6)).toBe('5 000'));
+
+    fireEvent.click(restoreButton());
+    const banner = await screen.findByRole('region');
+    // The base: the two months this screen wrote, the opening value elsewhere (June included).
+    const base = twelve('1000.00'); base[0] = '2000.00'; base[1] = '2000.00';
+    expect(bulkBodies('restore')).toHaveLength(1);
+    expect(bulkBodies('restore')[0].base).toEqual({ columns: { planned: { months: base, lines: [] } } });
+    expect(await screen.findByTestId('restore-notice')).toHaveTextContent(/Budget: changed by Marie Dupont at /);
+    expect(card('planned')).toHaveAttribute('data-waiting', 'true');
+    expect(within(banner).getByRole('button', { name: /editConflict\.column\.applyMine/ })).toBeInTheDocument();
+    // June stays the colleague's.
+    expect(storedColumn(state, 'planned')[5]).toBe('5000.00');
+  });
+
+  it('a monthly save on a column with lines keeps the lines first read as its base', async () => {
+    const lines = record({ measure: 'committed', period_start: '2026-01-01', method: 'manual', lines: [storedLine()], fte: '0.40' });
+    const state = setupApi({ roundInputs: [lines] });
+    serveRestores(state);
+    const { ref } = renderTab();
+    await waitForAmounts();
+    typeMonth('committed', 3, '450');
+    expect(await flush(ref)).toBe(true);
+    fireEvent.click(restoreButton());
+    await screen.findByTestId('restore-notice');
+    const typed = twelve('900.00'); typed[2] = '450.00';
+    expect(bulkBodies('restore')[0].base).toEqual({ columns: { committed: { months: typed, lines: [linePayloadOf(storedLine())] } } });
+  });
+
+  it("« Use for other columns too » counts a column as written only when the server spread the total the screen knew", async () => {
+    const openings = { current: null } as React.MutableRefObject<OpeningValues | null>;
+    const state = setupApi({ roundInputs: COLUMNS.map((c) => wholeYearFlat(c)) });
+    serveRestores(state);
+    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { openings });
+    await waitForAmounts();
+    typeAmount('24000');
+    await settle();
+    // A colleague changes Revision; this screen has not reloaded it.
+    state.items.forEach((row) => { row.committed = '950'; });
+
+    fireEvent.click(within(editor()).getByRole('button', { name: 'Use for other columns too…' }));
+    for (const box of within(editor()).getAllByRole('checkbox')) {
+      const name = box.closest('label')?.textContent;
+      const wanted = name === 'Revision' || name === 'Actuals';
+      if ((box as HTMLInputElement).checked !== wanted) fireEvent.click(box);
+    }
+    fireEvent.click(within(editor()).getByRole('button', { name: 'Apply' }));
+    await waitFor(() => expect(bulkBodies('annual')).toHaveLength(2));
+    expect(bulkBodies('annual')[1].also_measures).toEqual(['committed', 'actual']);
+    await settle();
+    // The server spread each one from its stored total: Actuals' is the one the screen knew, Revision's is not.
+    const written = openings.current!.years.get(YEAR)!.written;
+    expect(written.actual?.months).toEqual(Array.from({ length: 12 }, () => 80000));
+    expect(written.committed).toBeUndefined();
+    await waitFor(() => expect(card('committed')).toHaveTextContent('11 400'));
+
+    fireEvent.click(restoreButton());
+    const notice = await screen.findByTestId('restore-notice');
+    expect(notice).toHaveTextContent('Revision: changed by someone else since the opening, not restored.');
+    expect(bulkBodies('restore').map((b) => b.measure)).toEqual(['planned']);
+    expect(storedColumn(state, 'committed')).toEqual(twelve('950.00'));
+  });
+
+  it('a restore under way is pending and saving until its reload is shown', async () => {
+    const state = setupApi({ roundInputs: [wholeYearFlat('planned')] });
+    serveRestores(state);
+    const { ref } = renderTab();
+    await waitForAmounts();
+    typeAmount('24000');
+    await settle();
+    expect(ref.current!.hasPending()).toBe(false);
+
+    // The reload after the restore is held.
+    const serve = mocked.get.getMockImplementation() as (url: string, ...rest: unknown[]) => Promise<unknown>;
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    mocked.get.mockImplementation(async (url: string, ...rest: unknown[]) => {
+      if (url === '/spend-versions/v1/amounts' && bulkBodies('restore').length > 0) await held;
+      return serve(url, ...rest);
+    });
+    fireEvent.click(restoreButton());
+    await waitFor(() => expect(bulkBodies('restore')).toHaveLength(1));
+    await settle();
+    expect(screen.queryByTestId('restore-notice')).toBeNull();
+    expect(ref.current!.hasPending()).toBe(true);
+    expect(ref.current!.isSaving()).toBe(true);
+    expect(ref.current!.isDirty()).toBe(true);
+
+    await act(async () => { release(); });
+    await screen.findByTestId('restore-notice');
+    expect(ref.current!.hasPending()).toBe(false);
+    expect(ref.current!.isSaving()).toBe(false);
+  });
+
+  it('a save that fails before the restore stops it, and the note says nothing was restored', async () => {
+    const state = setupApi({ roundInputs: [wholeYearFlat('planned')] });
+    serveRestores(state);
+    renderTab();
+    await waitForAmounts();
+    typeAmount('24000');
+    await settle();
+    typeMonth('committed', 3, '450');
+    mocked.post.mockRejectedValueOnce(new Error('network down'));
+    fireEvent.click(restoreButton());
+    const notice = await screen.findByTestId('restore-notice');
+    expect(notice).toHaveTextContent(/^Nothing was restored: a change could not be saved first\./);
+    expect(bulkBodies('restore')).toHaveLength(0);
+  });
+});
+
+describe('BudgetTab table kept open (fix round 2)', () => {
+  it('a column waiting for a choice opens the table, even after Hide, and offers no Hide meanwhile', async () => {
+    setupApi({ roundInputs: COLUMNS.map((c) => wholeYearFlat(c)) });
+    renderTab();
+    await waitForAmounts();
+    showDetail();
+    fireEvent.click(screen.getByRole('button', { name: 'Hide the detail' }));
+    expect(screen.queryByTestId('monthly-result')).toBeNull();
+
+    refuseBulk((body, call) => (call === 1 ? columnConflict('planned', twelve('1100.00'), { periods: [] }) : null));
+    typeAmount('24000');
+    const banner = await screen.findByRole('region');
+    expect(screen.getByTestId('monthly-result')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Hide the detail' })).toBeNull();
+
+    // The choice made, the user's Hide applies again.
+    fireEvent.click(within(banner).getByRole('button', { name: /editConflict\.column\.keepTheirs/ }));
+    await waitFor(() => expect(screen.queryByRole('region')).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId('monthly-result')).toBeNull());
+  });
+
+  it('typed by month: the table stays open with no Hide', async () => {
+    setupApi({ roundInputs: COLUMNS.map((c) => wholeYearFlat(c)) });
+    renderTab();
+    await waitForAmounts();
+    fireEvent.click(modeTab('By month'));
+    fireEvent.click(switchButton());
+    expect(screen.getByTestId('monthly-result')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Hide the detail' })).toBeNull();
+  });
+});
+
+describe('BudgetTab column empty with a record of zeros (fix round 2)', () => {
+  it('reads « Not entered yet », offers « Start from », folds the table, and the copy goes over its base', async () => {
+    // A copy or a seed left Revision « spread flat » over the year, at zero.
+    const state = setupApi({ monthValues: { committed: '0' }, roundInputs: COLUMNS.map((c) => wholeYearFlat(c)) });
+    routePosts(async (body) => {
+      if (body.kind === 'copy') state.items.forEach((row) => { row.committed = '1000'; });
+      return { updated: 12 };
+    });
+    renderTab();
+    await waitForAmounts();
+    expect(periodLine('committed')).toHaveTextContent(/^Not entered yet$/);
+    expect(screen.getByTestId('result-folded')).toHaveTextContent('All columns are spread flat over the whole year');
+
+    pick('committed');
+    const start = screen.getByTestId('start-from');
+    fireEvent.click(within(start).getByRole('button', { name: 'Copy' }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1]).toEqual({
+      kind: 'copy', year: YEAR, source: 'planned', measure: 'committed', percentage: 0,
+      base: { columns: { committed: { months: twelve('0.00'), lines: [] } } },
+    });
+    await waitFor(() => expect(card('committed')).toHaveTextContent('12 000'));
+    expect(screen.queryByTestId('start-from')).toBeNull();
+  });
+
+  it('months at zero with lines are entered: no « Start from », the card says the lines', async () => {
+    setupApi({ monthValues: { committed: '0' }, roundInputs: [linesRecord([storedLine()], { measure: 'committed' })] });
+    renderTab();
+    await waitForAmounts();
+    expect(periodLine('committed')).not.toHaveTextContent('Not entered yet');
+    pick('committed');
+    expect(screen.queryByTestId('start-from')).toBeNull();
+  });
+});
+
+describe('BudgetTab difference with a column', () => {
+  it('a row under the total: each other column against the tenant default, in amount and percent; another column can be picked', async () => {
+    setupApi();
+    renderTab();
+    await waitForAmounts();
+    expect(screen.getByTestId('difference-row')).toHaveTextContent('Difference with Budget');
+    expect(screen.getByTestId('difference-planned')).toHaveTextContent('—');
+    expect(screen.getByTestId('difference-committed')).toHaveTextContent('-1 200 (-10%)');
+    expect(screen.getByTestId('difference-forecast')).toHaveTextContent('-4 800 (-40%)');
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Difference with' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Forecast' }));
+    expect(screen.getByTestId('difference-row')).toHaveTextContent('Difference with Forecast');
+    expect(screen.getByTestId('difference-planned')).toHaveTextContent('+4 800 (+66.7%)');
+    expect(screen.getByTestId('difference-forecast')).toHaveTextContent('—');
+    // A choice for the visit only: nothing written, nothing in the browser.
+    await settle();
+    expect(bulkCalls()).toHaveLength(0);
+  });
+
+  it("starts from the tenant's default column; against an empty column, the amount only", async () => {
+    columnsSetting.current = { ...ALL_SHOWN, default_column: 'forecast' };
+    setupApi({ monthValues: { forecast: '0' } });
+    renderTab();
+    await waitForAmounts();
+    expect(screen.getByTestId('difference-row')).toHaveTextContent('Difference with Forecast');
+    expect(screen.getByTestId('difference-planned')).toHaveTextContent(/^\+12 000$/);
+  });
+});
+
+describe('BudgetTab folded result', () => {
+  it('folded while every column is spread flat over the whole year; Show and Hide for the visit', async () => {
+    setupApi({ roundInputs: COLUMNS.map((c) => wholeYearFlat(c)) });
+    renderTab();
+    await waitForAmounts();
+    expect(screen.getByTestId('result-folded')).toHaveTextContent('All columns are spread flat over the whole year: the monthly detail adds nothing.');
+    expect(screen.queryByTestId('monthly-result')).toBeNull();
+    expect(screen.queryByRole('combobox', { name: 'Difference with' })).toBeNull();
+    showDetail();
+    expect(screen.getByTestId('monthly-result')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Difference with' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Hide the detail' }));
+    expect(screen.queryByTestId('monthly-result')).toBeNull();
+  });
+
+  it('an empty line is folded too, with its own sentence', async () => {
+    setupApi({ empty: true });
+    renderTab();
+    await waitForAmounts();
+    expect(screen.getByTestId('result-folded')).toHaveTextContent('No amount yet: the monthly detail adds nothing.');
+  });
+
+  it.each([
+    ['a period', record({ measure: 'committed', period_start: '2026-04-01' })],
+    ['a date', record({ measure: 'committed', period_start: '2026-02-10', period_end: '2026-02-10' })],
+    ['4-4-5', record({ measure: 'committed', period_start: '2026-01-01', spread_profile_name: '4-4-5' })],
+    ['lines', linesRecord([storedLine()], { measure: 'committed' })],
+    ['lines kept as a reference', record({ measure: 'committed', period_start: '2026-01-01', lines: [storedLine()], fte: '0.40' })],
+    ['months typed by hand', record({ measure: 'committed', period_start: '2026-01-01', method: 'manual' })],
+    ['amounts with no record', null],
+  ])('open as soon as a column has %s', async (_, committed) => {
+    const others = COLUMNS.filter((c) => c !== 'committed').map((c) => wholeYearFlat(c));
+    setupApi({ roundInputs: committed ? [...others, committed] : others });
+    renderTab();
+    await waitForAmounts();
+    expect(screen.queryByTestId('result-folded')).toBeNull();
+    expect(screen.getByTestId('monthly-result')).toBeInTheDocument();
+  });
+
+  it('opens by itself when a column is switched to by month, even after Hide', async () => {
+    setupApi({ roundInputs: COLUMNS.map((c) => wholeYearFlat(c)) });
+    renderTab();
+    await waitForAmounts();
+    showDetail();
+    fireEvent.click(screen.getByRole('button', { name: 'Hide the detail' }));
+    fireEvent.click(modeTab('By month'));
+    fireEvent.click(switchButton());
+    expect(screen.getByTestId('monthly-result')).toBeInTheDocument();
+    expect(monthInput('planned', 1)).not.toBeNull();
   });
 });

@@ -67,8 +67,6 @@
     "budget": {
       "title": "Budget",
       "mode": "Modus",
-      "flat": "Jährlich",
-      "monthly": "Monatlich",
       "total": "Gesamt",
       "spreadPlaceholder": "z. B. 120000",
       "profileFlat": "Gleichmäßig",
@@ -261,8 +259,6 @@
     "budget": {
       "title": "Budget",
       "mode": "Modus",
-      "flat": "Jährlich",
-      "monthly": "Monatlich",
       "total": "Gesamt",
       "spreadPlaceholder": "z. B. 120000",
       "profileFlat": "Gleichmäßig",
@@ -890,8 +886,8 @@
       "effects": {
         "inPlace": "Die Zeile behält ihre Referenz, ihr Budget, ihre Zuordnungen, Verknüpfungen, Anhänge und Aufgaben.",
         "reports": {
-          "capex": "Sie verlässt die OPEX-Berichte und die Leistungsverrechnung und erscheint in den CAPEX-Berichten.",
-          "opex": "Sie verlässt die CAPEX-Berichte und erscheint in den OPEX-Berichten und der Leistungsverrechnung."
+          "capex": "Sie verlässt die OPEX-Berichte und erscheint in den CAPEX-Berichten. Die Leistungsverrechnung zählt sie unter CAPEX.",
+          "opex": "Sie verlässt die CAPEX-Berichte und erscheint in den OPEX-Berichten. Die Leistungsverrechnung zählt sie unter OPEX."
         },
         "dated_one": "Diese Zeile endet am {{end}} und behält ihr Budget vor {{year}}. Eine neue {{type}}-Zeile übernimmt das Budget ab {{year}} ({{count}} Jahr), mit den Kontakten und den Verknüpfungen zu Anwendungen, Assets, Verträgen, Projekten und Anfragen.",
         "dated_other": "Diese Zeile endet am {{end}} und behält ihr Budget vor {{year}}. Eine neue {{type}}-Zeile übernimmt das Budget ab {{year}} ({{count}} Jahre), mit den Kontakten und den Verknüpfungen zu Anwendungen, Assets, Verträgen, Projekten und Anfragen.",
@@ -978,6 +974,7 @@
     },
     "shared": {
       "loadingReport": "Bericht wird geladen…",
+      "capexYearAmountNote": "CAPEX-Zeilen zählen mit ihrem Betrag des Jahres, ohne Abschreibung.",
       "loadingData": "Daten werden geladen…",
       "run": "Ausführen",
       "refreshing": "Wird aktualisiert…",
@@ -1279,10 +1276,7 @@
     "monthAnd": "{{first}} und {{second}}",
     "zeroedMonths_one": "{{months}} wird auf null gesetzt.",
     "zeroedMonths_other": "{{months}} werden auf null gesetzt.",
-    "changePeriod": "Zeitraum ändern",
-    "choosePeriod": "Zeitraum wählen",
     "noMonthInItemDates": "Kein Monat von {{year}} liegt innerhalb der Daten der Zeile.",
-    "column": "Spalte",
     "distribution": "Verteilung",
     "from": "Von",
     "to": "Bis",
@@ -1308,10 +1302,6 @@
       "lineCount_one": "{{count}} Zeile",
       "lineCount_other": "{{count}} Zeilen",
       "fte": "{{value}} VZÄ"
-    },
-    "panel": {
-      "spread": "Betrag verteilen",
-      "lines": "Menge und Preis"
     },
     "lines": {
       "description": "Beschreibung",
@@ -1379,7 +1369,6 @@
         "dateOutsideYear": "Wählen Sie ein Datum im Jahr {{year}}."
       },
       "fte": "VZÄ im Zeitraum {{fte_period}} · Jahresdurchschnitt {{fte}}",
-      "applyToAll": "Diese Zeilen auf alle Spalten anwenden",
       "status": {
         "manual": "Die Beträge wurden von Hand eingegeben.",
         "spread": "Die Beträge stammen aus einer Verteilung.",
@@ -1399,20 +1388,8 @@
     },
     "listAnd": "{{first}} und {{last}}",
     "amount": "Betrag",
-    "applyDistributionToAll": "Die Verteilung auf alle Spalten anwenden",
-    "applyToAllFollow": "{{columns}} folgen demselben Zeitraum.",
-    "applyToAllOthers_one": "Für {{columns}} gilt weiterhin der eigene Zeitraum.",
-    "applyToAllOthers_other": "Für {{columns}} gilt weiterhin der eigene Zeitraum.",
-    "applyToAllFrozen": "Eingefrorene Spalten ändern sich nie.",
     "keepLines_one": "Die Spalte {{columns}} behält ihre Zeilen.",
     "keepLines_other": "Die Spalten {{columns}} behalten ihre Zeilen.",
-    "spreadLock": {
-      "fromLines_one": "Die Beträge stammen aus {{count}} Zeile von Menge und Preis.",
-      "fromLines_other": "Die Beträge stammen aus den {{count}} Zeilen von Menge und Preis.",
-      "unlock": "Stattdessen Betrag verteilen",
-      "unlocked": "Eine Verteilung ersetzt die Beträge der Zeilen. Die Zeilen bleiben als Referenz erhalten."
-    },
-    "totalFromLines": "Aus den Zeilen berechnet. Öffnen Sie Menge und Preis, um den Betrag zu ändern.",
     "conflict": {
       "waiting": "Wählen Sie zuerst oben, ob Sie diese Spalte neu laden oder überschreiben.",
       "yearTotal": "{{amount}} für das Jahr",
@@ -1421,6 +1398,105 @@
       "yearChange_one": "Eine andere Person hat die Spalte {{columns}} geändert, während Sie sie bearbeitet haben, und Sie haben noch nicht gewählt, welche Werte bleiben. Trotzdem das Jahr wechseln und Ihre Werte in {{columns}} verlieren, oder bleiben und wählen.",
       "yearChange_other": "Eine andere Person hat die Spalten {{columns}} geändert, während Sie sie bearbeitet haben, und Sie haben noch nicht gewählt, welche Werte bleiben. Trotzdem das Jahr wechseln und Ihre Werte in diesen Spalten verlieren, oder bleiben und wählen.",
       "yearChangeConfirm": "Jahr wechseln"
+    },
+    "notEntered": "Noch nicht erfasst",
+    "columns": "Budgetspalten",
+    "card": {
+      "frozen": "Eingefroren",
+      "waiting": "Wartet auf Ihre Wahl"
+    },
+    "editorTitle": "{{column}} {{year}}",
+    "modes": "Aufbau der Spalte",
+    "mode": {
+      "amount": "Betrag",
+      "lines": "Menge und Preis",
+      "monthly": "Pro Monat"
+    },
+    "annualAmount": "Jahresbetrag",
+    "when": "Wann",
+    "wholeYear": "Ganzes Jahr",
+    "aPeriod": "Ein Zeitraum",
+    "storedPeriod": "Gespeicherter Zeitraum: {{stored}}. Beim Speichern gilt {{proposed}}, nach den Daten der Zeile.",
+    "span": {
+      "range": "von {{from}} bis {{to}} ({{n}} Monate)",
+      "range_vowel": "von {{from}} bis {{to}} ({{n}} Monate)",
+      "single": "im {{month}}"
+    },
+    "result": {
+      "spreadFlat": "{{amount}} {{span}} gleichmäßig verteilt.",
+      "spread445": "{{amount}} {{span}} nach 4-4-5 verteilt.",
+      "enterFlat": "Geben Sie einen Betrag ein: Er wird {{span}} gleichmäßig verteilt.",
+      "enter445": "Geben Sie einen Betrag ein: Er wird {{span}} nach 4-4-5 verteilt.",
+      "title": "Ergebnis pro Monat",
+      "quarter": "Q{{n}}",
+      "cellHint": "Pro Monat erfassen",
+      "atDate": "{{amount}} am {{date}}, ganz im {{month}}.",
+      "enterDate": "Geben Sie einen Betrag ein: Er fällt in den {{month}}.",
+      "show": "Details anzeigen",
+      "hide": "Details ausblenden",
+      "folded_one": "Die Spalte ist linear über das ganze Jahr verteilt: Die Monatswerte zeigen nichts Neues.",
+      "folded_other": "Alle Spalten sind linear über das ganze Jahr verteilt: Die Monatswerte zeigen nichts Neues.",
+      "foldedEmpty": "Noch kein Betrag: Die Monatswerte zeigen nichts Neues.",
+      "differenceWith": "Abweichung zu",
+      "differenceRow": "Abweichung zu {{column}}"
+    },
+    "monthlyHint": "Geben Sie die Beträge in der Spalte {{column}} der Tabelle unten ein.",
+    "reference_one": "{{count}} Zeile als Referenz behalten.",
+    "reference_other": "{{count}} Zeilen als Referenz behalten.",
+    "referenceAmount_one": "{{count}} Zeile als Referenz behalten ({{amount}}).",
+    "referenceAmount_other": "{{count}} Zeilen als Referenz behalten ({{amount}}).",
+    "switch": {
+      "toAmount": "Zu einem Betrag wechseln? Die aktuelle Summe ({{amount}}) wird zum Betrag, gleichmäßig verteilt.",
+      "toAmountSpan": "Zu einem Betrag wechseln? Die aktuelle Summe ({{amount}}) wird zum Betrag, {{span}} gleichmäßig verteilt.",
+      "toLines": "Zu Menge und Preis wechseln? Die Summe ergibt sich dann aus den Zeilen.",
+      "toMonthly": "Zur Erfassung pro Monat wechseln? Die aktuellen Monate bleiben erhalten und werden in der Tabelle bearbeitbar.",
+      "linesStay": "Die Zeilen bleiben als Referenz erhalten.",
+      "reuseLines_one": "Die als Referenz behaltene Zeile wird wieder verwendet.",
+      "reuseLines_other": "Die {{count}} als Referenz behaltenen Zeilen werden wieder verwendet.",
+      "replaced": "Der aktuelle Betrag ({{amount}}) wird ersetzt.",
+      "confirm": "Wechseln"
+    },
+    "also": {
+      "open": "Auch für andere Spalten verwenden…",
+      "label": "Gleicher Aufbau für",
+      "apply": "Übernehmen",
+      "amountHint": "Sie übernehmen diesen Zeitraum und diese Verteilung und behalten ihre eigene Summe.",
+      "linesHint": "Diese Zeilen ersetzen ihre Beträge."
+    },
+    "frozen": {
+      "title": "Die Spalte {{column}} {{year}} ist eingefroren",
+      "hint": "Schreibgeschützt. Ein Administrator hebt das Einfrieren unter Administration › Daten einfrieren / auftauen auf."
+    },
+    "atADate": "An einem Datum",
+    "date": "Datum",
+    "atDate": "Am {{date}}",
+    "start": {
+      "label": "Ausgehend von",
+      "source": "Ausgangsspalte",
+      "option": "{{column}} ({{amount}})",
+      "adjusted": "angepasst um",
+      "percentage": "Anpassung in Prozent",
+      "apply": "Übernehmen",
+      "orBelow": "oder unten eingeben.",
+      "prorated": "Monate der Spalte {{column}} außerhalb der Daten der Zeile wurden nicht übernommen."
+    },
+    "restore": {
+      "changes_one": "{{count}} Spalte seit {{time}} geändert",
+      "changes_other": "{{count}} Spalten seit {{time}} geändert",
+      "action": "Zurück zu den Werten beim Öffnen",
+      "done": "Werte beim Öffnen wiederhergestellt: {{columns}}.",
+      "none": "Keine Spalte wiederhergestellt.",
+      "frozen": "{{column}}: inzwischen eingefroren, nicht wiederhergestellt.",
+      "waiting": "{{column}}: wartet auf Ihre Wahl, nicht wiederhergestellt.",
+      "changedByAt": "{{column}}: von {{name}} um {{time}} geändert, nicht wiederhergestellt. Wählen Sie oben, was gilt.",
+      "changedBy": "{{column}}: von {{name}} geändert, nicht wiederhergestellt. Wählen Sie oben, was gilt.",
+      "changed": "{{column}}: von einer anderen Person geändert, nicht wiederhergestellt. Wählen Sie oben, was gilt.",
+      "refused": "{{column}}: nicht wiederhergestellt. {{message}}",
+      "failed": "Die Spalte konnte nicht wiederhergestellt werden.",
+      "frozenNow": "{{column}} wurde inzwischen eingefroren: Sie wurde nicht wiederhergestellt.",
+      "others": "{{column}}: seit dem Öffnen von einer anderen Person geändert, nicht wiederhergestellt.",
+      "othersAt": "{{column}}: um {{time}} von einer anderen Person geändert, nicht wiederhergestellt.",
+      "notRun": "Nichts wurde wiederhergestellt: Eine Änderung konnte vorher nicht gespeichert werden."
     }
   },
   "budget": {
