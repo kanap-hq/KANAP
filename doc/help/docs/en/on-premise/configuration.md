@@ -407,7 +407,7 @@ Notes:
 | `APP_URL` | Multi-tenant (cloud) only. **Not needed on-premise**: `APP_BASE_URL` is used. | *unset* |
 | `EMAIL_OVERRIDE` | Redirect all emails to this address (dev/QA only, **never in production**) | *unset* |
 
-**Client address.** With the documented setup (nginx on the same server, API port bound to `127.0.0.1`), set `RATE_LIMIT_TRUST_PROXY=true`. The proxy must send `X-Forwarded-For`; the nginx example does. Set `false` when nothing sits in front of the API. A wrong value gives every user the same address, so the 5 sign-in attempts per minute are shared by everyone.
+**Client address.** With the documented setup (nginx on the same server, API port bound to `127.0.0.1`), set `RATE_LIMIT_TRUST_PROXY=true`. The proxy must send `X-Forwarded-For`; the nginx example does. Set `false` when nothing sits in front of the API. A wrong value gives every user the same address: the 60 password sign-in requests per minute are then shared by everyone, and 5 failed attempts on one account block that account for everyone for 15 minutes.
 
 ## Optional: capacity and performance
 

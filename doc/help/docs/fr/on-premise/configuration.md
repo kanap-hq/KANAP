@@ -407,7 +407,7 @@ Remarques :
 | `APP_URL` | Multi-tenant (cloud) uniquement. **Inutile on-premise** : c'est `APP_BASE_URL` qui est utilisé. | *non défini* |
 | `EMAIL_OVERRIDE` | Redirige tous les e-mails vers cette adresse (dev/QA uniquement, **jamais en production**) | *non défini* |
 
-**Adresse du client.** Avec la configuration documentée (nginx sur le même serveur, port de l'API lié à `127.0.0.1`), renseignez `RATE_LIMIT_TRUST_PROXY=true`. Le proxy doit envoyer `X-Forwarded-For` ; l'exemple nginx le fait. Renseignez `false` quand rien n'est placé devant l'API. Une valeur erronée donne à tous les utilisateurs la même adresse : les 5 tentatives de connexion par minute sont alors partagées par tout le monde.
+**Adresse du client.** Avec la configuration documentée (nginx sur le même serveur, port de l'API lié à `127.0.0.1`), renseignez `RATE_LIMIT_TRUST_PROXY=true`. Le proxy doit envoyer `X-Forwarded-For` ; l'exemple nginx le fait. Renseignez `false` quand rien n'est placé devant l'API. Une valeur erronée donne à tous les utilisateurs la même adresse : les 60 demandes de connexion par mot de passe par minute sont alors partagées par tout le monde, et 5 échecs sur un compte bloquent ce compte pour tout le monde pendant 15 minutes.
 
 ## Facultatif : capacité et performance
 

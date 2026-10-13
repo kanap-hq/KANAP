@@ -29,7 +29,7 @@ Pass the password through the environment of the command (or a shell variable re
 
 ## What it checks
 
-The script logs in once per run (the login endpoint allows 5 calls per minute), reuses the access
+The script logs in once per run (the login endpoint limits calls per address and refused attempts per account), reuses the access
 token and logs out at the end.
 
 | Check | Route |

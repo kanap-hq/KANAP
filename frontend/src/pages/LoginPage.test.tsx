@@ -42,17 +42,20 @@ vi.mock('../components/AuthFrame', () => ({
   default: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 
+const i18n = vi.hoisted(() => {
+  const labels: Record<string, string> = {
+    'auth:login.emailLabel': 'Username or email',
+    'auth:login.passwordLabel': 'Password',
+    'auth:login.submit': 'Sign in',
+  };
+  // A stable t: a new function on each render would loop effects.
+  const t = (key: string, options?: { count?: number }) =>
+    labels[key] ?? (options?.count !== undefined ? `${key}:${options.count}` : key);
+  return { t };
+});
+
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => {
-      const labels: Record<string, string> = {
-        'auth:login.emailLabel': 'Username or email',
-        'auth:login.passwordLabel': 'Password',
-        'auth:login.submit': 'Sign in',
-      };
-      return labels[key] ?? key;
-    },
-  }),
+  useTranslation: () => ({ t: i18n.t }),
 }));
 
 function LocationProbe() {
@@ -125,5 +128,72 @@ describe('LoginPage', () => {
 
     expect(await screen.findByText('Destination page')).toBeInTheDocument();
     expect(screen.getByTestId('location')).toHaveTextContent('/');
+  });
+
+  async function submitRefused(error: unknown) {
+    vi.mocked(api.post).mockRejectedValueOnce(error);
+    renderLogin('/login');
+    fireEvent.change(screen.getByLabelText('Username or email'), { target: { value: 'user@example.com' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'not the password' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    return screen.findByRole('alert');
+  }
+
+  it('shows the translated rate limit sentence on a 429, not the server text', async () => {
+    const alert = await submitRefused({
+      response: { status: 429, data: { statusCode: 429, message: 'ThrottlerException: Too Many Requests' } },
+    });
+    expect(alert).toHaveTextContent('auth:login.tooManyAttempts');
+    expect(alert).not.toHaveTextContent('ThrottlerException');
+    expect(mocks.login).not.toHaveBeenCalled();
+  });
+
+  it('shows the wait the server gives on a 429, in whole minutes rounded up', async () => {
+    const alert = await submitRefused({
+      response: { status: 429, headers: { 'retry-after': '841' }, data: { statusCode: 429, message: 'ThrottlerException: Too Many Requests' } },
+    });
+    expect(alert).toHaveTextContent('auth:login.tooManyAttemptsWait:15');
+    expect(alert).not.toHaveTextContent('ThrottlerException');
+  });
+
+  it('rounds a wait under a minute up to one minute', async () => {
+    const alert = await submitRefused({ response: { status: 429, headers: { 'retry-after': '12' }, data: {} } });
+    expect(alert).toHaveTextContent('auth:login.tooManyAttemptsWait:1');
+  });
+
+  it('keeps the general rate limit sentence when Retry-After is missing or unusable', async () => {
+    const alert = await submitRefused({ response: { status: 429, headers: { 'retry-after': 'soon' }, data: {} } });
+    expect(alert).toHaveTextContent('auth:login.tooManyAttempts');
+    expect(alert).not.toHaveTextContent('tooManyAttemptsWait');
+  });
+
+  it('translates a refusal that carries a code', async () => {
+    const alert = await submitRefused({
+      response: { status: 401, data: { code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' } },
+    });
+    expect(alert).toHaveTextContent('errors:INVALID_CREDENTIALS');
+  });
+
+  it('asks for a valid email address when the request check refuses the address typed', async () => {
+    const validation = await submitRefused({
+      response: { status: 400, data: { statusCode: 400, message: ['email must be an email'], error: 'Bad Request' } },
+    });
+    expect(validation).toHaveTextContent('auth:login.invalidEmail');
+    expect(validation).not.toHaveTextContent('email must be an email');
+    expect(screen.getByLabelText('Username or email')).toBeInTheDocument();
+  });
+
+  it('shows the plain failure sentence for another validation error', async () => {
+    const validation = await submitRefused({
+      response: { status: 400, data: { statusCode: 400, message: ['password must be longer than or equal to 1 characters'], error: 'Bad Request' } },
+    });
+    expect(validation).toHaveTextContent('auth:login.failed');
+    expect(validation).not.toHaveTextContent('password must be');
+  });
+
+  it('shows the plain failure sentence when the server does not answer', async () => {
+    const alert = await submitRefused({ message: 'Network Error', code: 'ERR_NETWORK' });
+    expect(alert).toHaveTextContent('auth:login.failed');
+    expect(alert).not.toHaveTextContent('Network Error');
   });
 });

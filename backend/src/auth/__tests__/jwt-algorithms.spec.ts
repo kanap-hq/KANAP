@@ -214,6 +214,7 @@ function createProvisioningController() {
     { createQueryRunner: () => runner } as any,
     {} as any,
     { recordAuthEvent: async () => undefined } as any,
+    {} as any,
   );
 }
 

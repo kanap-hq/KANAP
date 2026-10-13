@@ -309,6 +309,7 @@
       "sso_failed": "El inicio de sesión con Microsoft falló",
       "sso_not_configured": "Inicio de sesión con Microsoft no configurado",
       "tenant_mismatch": "El directorio de Microsoft no coincide con el espacio de trabajo",
+      "too_many_attempts": "Demasiados intentos de inicio de sesión",
       "unknown_user": "Ninguna cuenta con esta dirección"
     },
     "shared": {

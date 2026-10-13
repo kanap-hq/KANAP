@@ -226,7 +226,7 @@ async function readChecks() {
       body: { email, password },
       accept: [401, 403, 429],
     });
-    if (status === 429) throw new Error('rate limited (5 logins per minute): wait a minute and run again');
+    if (status === 429) throw new Error('rate limited (60 sign-in requests per minute per address, or 5 refused attempts for this account from this address in 15 minutes): wait and run again');
     if (status === 401 || status === 403) throw new Error(`login refused (${status}${errorReason(json) ? `, ${errorReason(json)}` : ''})`);
     if (typeof json?.access_token !== 'string' || !json.access_token) throw new Error('no access token in response');
     session.accessToken = json.access_token;

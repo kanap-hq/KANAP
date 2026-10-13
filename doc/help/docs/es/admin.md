@@ -541,12 +541,14 @@ Los pasos de configuración del registro de aplicación de Entra están en [SSO 
 
 ### Límites de inicio de sesión
 
-KANAP limita las solicitudes de inicio de sesión repetidas desde la misma dirección IP:
+KANAP limita las solicitudes de inicio de sesión repetidas:
 
-- **Inicio de sesión con contraseña**: 5 intentos por minuto.
-- **Inicio de sesión con Microsoft**: 60 solicitudes por minuto. El límite es más alto porque el personal de una misma organización suele acceder a KANAP desde la misma dirección de salida.
+- **Inicio de sesión con contraseña**: 60 solicitudes por minuto desde la misma dirección IP. Tras 5 intentos fallidos en una cuenta desde la misma dirección IP en 15 minutos, esa cuenta no puede iniciar sesión desde esa dirección durante 15 minutos. La misma cuenta puede seguir iniciando sesión desde otra dirección, y las demás cuentas desde la misma dirección. Un inicio de sesión correcto pone el contador a cero.
+- **Inicio de sesión con Microsoft**: 60 solicitudes por minuto desde la misma dirección IP.
 
-Cuando se alcanza el límite, la persona espera un minuto y vuelve a intentarlo. Detrás de un proxy inverso, KANAP cuenta la dirección IP de cada persona, siempre que el proxy la transmita. Los inicios de sesión y los inicios de sesión fallidos aparecen en el [Registro de auditoría](#registro-de-auditoria). Las solicitudes bloqueadas por el límite no se registran.
+Los límites por dirección son altos porque el personal de una misma organización suele acceder a KANAP desde la misma dirección de salida. Cuando se alcanza un límite por dirección, la persona espera un minuto y vuelve a intentarlo. Detrás de un proxy inverso, KANAP cuenta la dirección IP de cada persona, siempre que el proxy la transmita.
+
+Los inicios de sesión y los inicios de sesión fallidos aparecen en el [Registro de auditoría](#registro-de-auditoria). Cuando 5 intentos fallidos bloquean una cuenta desde una dirección, se registra un inicio de sesión fallido con el motivo **Demasiados intentos de inicio de sesión**. Los intentos rechazados durante los 15 minutos siguientes no se registran, como tampoco las solicitudes bloqueadas por un límite por dirección.
 
 ---
 

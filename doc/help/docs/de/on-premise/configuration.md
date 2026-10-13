@@ -407,7 +407,7 @@ Hinweise:
 | `APP_URL` | Nur Multi-Tenant (Cloud). **On-Premise nicht nötig**: `APP_BASE_URL` wird verwendet. | *nicht gesetzt* |
 | `EMAIL_OVERRIDE` | Leitet alle E-Mails an diese Adresse um (nur Entwicklung/QA, **niemals in der Produktion**) | *nicht gesetzt* |
 
-**Client-Adresse.** Mit der dokumentierten Einrichtung (nginx auf demselben Server, API-Port an `127.0.0.1` gebunden) setzen Sie `RATE_LIMIT_TRUST_PROXY=true`. Der Proxy muss `X-Forwarded-For` senden; das nginx-Beispiel tut das. Setzen Sie `false`, wenn nichts vor der API steht. Ein falscher Wert gibt allen Benutzern dieselbe Adresse, und die 5 Anmeldeversuche pro Minute teilen sich alle.
+**Client-Adresse.** Mit der dokumentierten Einrichtung (nginx auf demselben Server, API-Port an `127.0.0.1` gebunden) setzen Sie `RATE_LIMIT_TRUST_PROXY=true`. Der Proxy muss `X-Forwarded-For` senden; das nginx-Beispiel tut das. Setzen Sie `false`, wenn nichts vor der API steht. Ein falscher Wert gibt allen Benutzern dieselbe Adresse: Die 60 Passwort-Anmeldeanfragen pro Minute teilen sich dann alle, und 5 Fehlversuche für ein Konto sperren dieses Konto 15 Minuten lang für alle.
 
 ## Optional: Kapazität und Leistung
 

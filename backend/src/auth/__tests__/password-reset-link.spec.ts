@@ -33,6 +33,7 @@ async function testResetLinkOpensTheTenantAddress() {
     const controller = new AuthController(
       auth as any, users as any, {} as any, {} as any, emails as any, {} as any, {} as any, {} as any,
       { recordAuthEvent: async () => undefined } as any,
+      {} as any,
     );
 
     const result = await controller.requestPasswordReset(

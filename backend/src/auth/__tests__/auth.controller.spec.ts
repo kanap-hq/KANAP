@@ -4,6 +4,8 @@ import { AuthController } from '../auth.controller';
 import { REFRESH_TOKEN_COOKIE_NAME } from '../auth-cookie.util';
 import { PASSWORD_RESET_PURPOSE, PROVISIONING_PURPOSE } from '../access-token.util';
 import { deriveSecret } from '../token-secret.util';
+import { LoginAttemptLimit } from '../login-attempt-limit';
+import { MemoryHitCounter } from '../../common/rate-limit-store';
 
 function createTenantDataSource(manager: any = { id: 'tenant-manager-1' }) {
   const queries: Array<{ sql: string; params?: any[] }> = [];
@@ -72,6 +74,7 @@ function createController(
     dataSource ?? createTenantDataSource().dataSource,
     {} as any,
     { recordAuthEvent: async () => undefined } as any,
+    new LoginAttemptLimit(new MemoryHitCounter()),
   );
 
   return { controller, auth };

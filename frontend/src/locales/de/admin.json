@@ -309,6 +309,7 @@
       "sso_failed": "Anmeldung mit Microsoft fehlgeschlagen",
       "sso_not_configured": "Anmeldung mit Microsoft nicht eingerichtet",
       "tenant_mismatch": "Microsoft-Verzeichnis passt nicht zum Arbeitsbereich",
+      "too_many_attempts": "Zu viele Anmeldeversuche",
       "unknown_user": "Kein Konto mit dieser Adresse"
     },
     "shared": {
