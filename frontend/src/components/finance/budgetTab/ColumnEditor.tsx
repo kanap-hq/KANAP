@@ -127,14 +127,16 @@ export default function ColumnEditor({ tab, i18nPrefix, effectiveStart, endOfVal
     border: '1px solid', borderColor: 'kanap.border.default', borderRadius: '8px', bgcolor: 'kanap.bg.drawer', px: 2, py: 1.75,
   } as const;
 
-  if (isFrozen(col)) {
+  // A frozen column, or every column for a budget reader: read only, with no field.
+  const frozenCol = isFrozen(col);
+  if (frozenCol || tab.readOnly) {
     return (
-      <Box data-testid="column-editor" data-frozen="true" data-ready={loaded && !loading ? 'true' : undefined} sx={surfaceSx}>
+      <Box data-testid="column-editor" data-frozen={frozenCol ? 'true' : undefined} data-read-only={frozenCol ? undefined : 'true'} data-ready={loaded && !loading ? 'true' : undefined} sx={surfaceSx}>
         <Box sx={{ display: 'flex', gap: 1.25, alignItems: 'flex-start', color: 'kanap.text.secondary' }}>
           <LockOutlinedIcon sx={{ fontSize: 14, mt: '3px', color: 'kanap.text.tertiary' }} />
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, minWidth: 0 }}>
-            <Typography sx={{ fontSize: 14, fontWeight: 500, color: 'kanap.text.primary' }}>{t('budgetTab.frozen.title', { column: label, year })}</Typography>
-            <Typography sx={captionSx}>{t('budgetTab.frozen.hint')}</Typography>
+            <Typography sx={{ fontSize: 14, fontWeight: 500, color: 'kanap.text.primary' }}>{frozenCol ? t('budgetTab.frozen.title', { column: label, year }) : title}</Typography>
+            <Typography sx={captionSx}>{frozenCol ? t('budgetTab.frozen.hint') : t('budgetTab.readOnlyHint')}</Typography>
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'baseline', flexWrap: 'wrap' }}>
               <Typography sx={{ fontSize: 13, fontWeight: 500, fontVariantNumeric: 'tabular-nums', color: 'kanap.text.primary' }}>{formatAmount(totals[col])}</Typography>
               <ColumnHowText tab={tab} col={col} />

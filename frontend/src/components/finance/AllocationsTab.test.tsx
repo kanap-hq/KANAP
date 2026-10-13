@@ -12,7 +12,9 @@ vi.mock('react-i18next', () => {
   return { useTranslation: () => translation };
 });
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), put: vi.fn() } }));
-vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: 'me' } }) }));
+// May the user change budget lines (budget right at member level or above).
+const auth = vi.hoisted(() => ({ canEdit: true }));
+vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: 'me' }, hasLevel: () => auth.canEdit }) }));
 
 import api from '../../api';
 import AllocationsTab, { type AllocationsTabHandle } from './AllocationsTab';
@@ -76,6 +78,45 @@ function renderTab(id: string, client: QueryClient) {
 }
 
 const reads = (pattern: RegExp) => mocked.get.mock.calls.filter(([url]) => pattern.test(url)).length;
+
+describe('AllocationsTab for a budget reader', () => {
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.put.mockReset();
+    serve();
+    auth.canEdit = false;
+  });
+  afterEach(() => { auth.canEdit = true; });
+
+  it('shows the split with no control that changes it', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderTab('item-1', client);
+    expect(await screen.findByText('Alpha Industries')).toBeInTheDocument();
+    // The method and each company are read only.
+    expect(screen.getByRole('button', { name: 'Alpha Industries' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Beta Services' })).toBeDisabled();
+    const selects = screen.getAllByRole('combobox');
+    expect(selects.length).toBeGreaterThan(0);
+    for (const select of selects) expect(select).toHaveAttribute('aria-disabled', 'true');
+    // No way to add, remove or rebalance a row.
+    expect(screen.queryByRole('button', { name: 'opex.allocations.addRow' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'common:buttons.remove' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'opex.allocations.splitEqually' })).toBeNull();
+    expect(mocked.put).not.toHaveBeenCalled();
+  });
+
+  it('a split by percentage shows each percentage read only', async () => {
+    stored.method = 'manual_pct';
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderTab('item-1', client);
+    expect(await screen.findByText('Alpha Industries')).toBeInTheDocument();
+    const pcts = screen.getAllByRole('spinbutton');
+    expect(pcts).toHaveLength(2);
+    for (const pct of pcts) expect(pct).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'opex.allocations.splitEqually' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'opex.allocations.clearPins' })).toBeNull();
+  });
+});
 
 describe('AllocationsTab on the query cache', () => {
   beforeEach(() => {

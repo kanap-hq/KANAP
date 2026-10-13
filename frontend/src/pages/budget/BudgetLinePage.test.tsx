@@ -38,11 +38,11 @@ vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: 'me'
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: vi.fn() }) }));
 vi.mock('../../utils/workspaceTabCounts', () => ({ fetchBudgetRelationsCount: vi.fn(async () => 0) }));
 vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
-  default: ({ properties, actions, children, onTitleSave, onBack, onTabChange, metadata, itemReference, backLabel, nav: navigation }: {
-    itemReference?: string | null; backLabel?: string; properties?: React.ReactNode; actions?: React.ReactNode; children?: React.ReactNode; onTitleSave: (v: string) => void;
+  default: ({ properties, actions, children, onTitleSave, onBack, onTabChange, metadata, itemReference, backLabel, nav: navigation, canEditTitle }: {
+    canEditTitle?: boolean; itemReference?: string | null; backLabel?: string; properties?: React.ReactNode; actions?: React.ReactNode; children?: React.ReactNode; onTitleSave: (v: string) => void;
     onBack?: () => void; onTabChange?: (tab: string) => void; metadata?: React.ReactNode; nav?: { onNext?: () => void };
   }) => (
-    <div>
+    <div data-testid="workspace-shell" data-can-edit-title={String(!!canEditTitle)}>
       <span data-testid="line-reference">{itemReference}</span><span>{backLabel}</span>
       <button type="button" onClick={() => onTitleSave('Monitoring')}>set title</button>
       <button type="button" onClick={() => onBack?.()}>back to list</button>
@@ -65,12 +65,13 @@ vi.mock('./workspace/BudgetPropertiesDrawer', async () => {
     onAccountChange: (v: string) => void; onSupplierChange: (v: string) => void; onCostCenterChange: (v: string, node: { id: string; company_id: string | null } | null) => void;
     onRunBuildChange: (v: string) => void; analyticsValues: Record<string, string | null>;
     onAnalyticsValueChange: (axisId: string, v: string | null) => void; onDisabledAtChange?: (v: string | null) => void;
-    references?: unknown; analyticsOptions?: unknown;
+    references?: unknown; analyticsOptions?: unknown; disabled?: boolean;
   }) => {
     useCostCenterNode(props.costCenterId || null, ((props as { references?: { cost_center?: unknown } }).references?.cost_center ?? null) as never);
     return (
     <div
       data-cost-center={props.costCenterId}
+      data-disabled={String(!!props.disabled)}
       data-mode={props.mode} data-company={props.payingCompanyId} data-account={props.accountId}
       data-company-follows={String(!!props.companyFollowsCostCenter)}
       data-analytics={JSON.stringify(props.analyticsValues)}
@@ -109,18 +110,17 @@ vi.mock('./workspace/BudgetPropertiesDrawer', async () => {
 vi.mock('./workspace/BudgetMetadataBar', async () => {
   const { useCostCenterNode } = await import('../../hooks/useCostCenterTree');
   return {
-    default: ({ onStatusChange, costCenterId, costCenter }: {
-      onStatusChange: (status: string) => void; costCenterId?: string | null; costCenter?: { id: string } | null;
+    default: ({ onStatusChange, costCenterId, costCenter, disabled }: {
+      onStatusChange: (status: string) => void; costCenterId?: string | null; costCenter?: { id: string } | null; disabled?: boolean;
     }) => {
       // The budget holder's read, as the bar makes it.
       useCostCenterNode(costCenterId ?? null, (costCenter ?? null) as never);
       return (
         <>
-          <button type="button" onClick={() => onStatusChange('disabled')}>disable line</button>
-          <button type="button" onClick={() => onStatusChange('enabled')}>enable line</button>
+          <button type="button" data-disabled={String(!!disabled)} onClick={() => onStatusChange('disabled')}>disable line</button>
+          <button type="button" data-disabled={String(!!disabled)} onClick={() => onStatusChange('enabled')}>enable line</button>
         </>
-      );
-    },
+      );    },
   };
 });
 vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => null }));
@@ -591,6 +591,57 @@ describe('BudgetLinePage edit', () => {
       { run_build: 'build' },
       { run_build: null },
     ]);
+  });
+});
+
+// A budget reader (budget right at reader level): the line reads, nothing on the page writes.
+describe('BudgetLinePage for a budget reader', () => {
+  beforeEach(() => {
+    auth.canEdit = false;
+    mocked.get.mockReset();
+    mocked.patch.mockReset();
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === `/budget-lines/${ITEM_ID}`) {
+        return {
+          data: {
+            id: ITEM_ID, item_number: 7, product_name: 'Monitoring', supplier_id: 'supplier-1', description: 'Probes', notes: 'Renewal',
+            paying_company_id: 'company-1', account_id: 'account-1', currency: 'EUR', effective_start: '2026-01-01',
+          },
+        };
+      }
+      return { data: {} };
+    });
+    mocked.patch.mockResolvedValue({ data: {} });
+  });
+  afterEach(() => { auth.canEdit = true; });
+
+  it('shows every field of the overview read only and offers no title edit or change of type', async () => {
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
+    expect(await screen.findByDisplayValue('Probes')).toBeDisabled();
+    expect(screen.getByDisplayValue('Renewal')).toBeDisabled();
+    expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-disabled', 'true');
+    expect(screen.getByRole('button', { name: 'disable line' })).toHaveAttribute('data-disabled', 'true');
+    expect(screen.getByTestId('workspace-shell')).toHaveAttribute('data-can-edit-title', 'false');
+    expect(screen.queryByRole('button', { name: 'budget.changeType' })).not.toBeInTheDocument();
+  });
+
+  it('sends nothing when a control reaches the page anyway', async () => {
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
+    await screen.findByDisplayValue('Probes');
+    fireEvent.click(screen.getByRole('button', { name: 'set title' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick other company' }));
+    fireEvent.click(screen.getByRole('button', { name: 'disable line' }));
+    await new Promise((resolve) => { setTimeout(resolve, 50); });
+    expect(mocked.patch).not.toHaveBeenCalled();
+    expect(screen.queryByText('Forbidden resource')).not.toBeInTheDocument();
+  });
+
+  it('a member keeps the fields editable', async () => {
+    auth.canEdit = true;
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
+    expect(await screen.findByDisplayValue('Probes')).toBeEnabled();
+    expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-disabled', 'false');
+    expect(screen.getByTestId('workspace-shell')).toHaveAttribute('data-can-edit-title', 'true');
   });
 });
 
@@ -1940,8 +1991,9 @@ describe('BudgetLinePage required dimensions before leaving (lot D2)', () => {
   it('never asks a user who cannot edit the line', async () => {
     auth.canEdit = false;
     await openLine();
+    // Read only for them: the pick sends nothing.
     fireEvent.click(screen.getByRole('button', { name: 'pick build' }));
-    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+    expect(mocked.patch).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
     expect(await screen.findByTestId('list-page')).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

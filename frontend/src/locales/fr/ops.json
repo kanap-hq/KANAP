@@ -1797,6 +1797,7 @@
       "title": "La colonne {{column}} {{year}} est gelée",
       "hint": "Lecture seule. Un administrateur peut la dégeler dans Administration › Geler / dégeler les données."
     },
+    "readOnlyHint": "Lecture seule. Votre rôle donne un accès en lecture au budget.",
     "atADate": "À une date",
     "date": "Date",
     "atDate": "Le {{date}}",

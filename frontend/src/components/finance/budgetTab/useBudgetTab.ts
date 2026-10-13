@@ -270,8 +270,10 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
   const budgetColumns = useBudgetColumns();
   const { shown, group } = budgetColumns;
   const dialogs = useKanapDialogs();
-  const { profile } = useAuth();
+  const { profile, hasLevel } = useAuth();
   const userId = profile?.id ?? null;
+  // A budget reader reads the columns, with no field to change them.
+  const readOnly = !hasLevel('budget', 'member');
   // The counters this tab loaded or wrote (lot 3G).
   const onBudgetRevRef = React.useRef(onBudgetRev); onBudgetRevRef.current = onBudgetRev;
   const noteRev = (forYear: number, rev: number | null | undefined) => { if (rev !== undefined) onBudgetRevRef.current?.(forYear, rev); };
@@ -1807,6 +1809,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     frozen,
     isFrozen,
     anyFrozen,
+    readOnly,
     months,
     totals,
     liveTotals,

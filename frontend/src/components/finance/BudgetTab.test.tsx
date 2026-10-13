@@ -68,10 +68,11 @@ vi.mock('../../hooks/useWorkingDayProfiles', async (importOriginal) => {
 
 // The viewer's permissions: member of the calendars unless a test says otherwise; signed in as
 // `userId` when a test sets one.
-const permissions = vi.hoisted(() => ({ calendarsMember: true, userId: null as string | null }));
+const permissions = vi.hoisted(() => ({ calendarsMember: true, budgetMember: true, userId: null as string | null }));
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({
-    hasLevel: (resource: string) => resource !== 'working_day_profiles' || permissions.calendarsMember,
+    hasLevel: (resource: string) => (resource === 'working_day_profiles' ? permissions.calendarsMember
+      : resource === 'budget' ? permissions.budgetMember : true),
     profile: permissions.userId ? { id: permissions.userId } : null,
   }),
 }));
@@ -92,6 +93,7 @@ beforeEach(() => {
   calendarsState.list = [];
   calendarsState.failed = false;
   permissions.calendarsMember = true;
+  permissions.budgetMember = true;
   permissions.userId = null;
   try { window.localStorage.clear(); } catch { /* none */ }
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
@@ -1308,6 +1310,38 @@ describe('BudgetTab frozen columns', () => {
     expect(await flush(ref)).toBe(true);
     expect(bulkCalls()).toHaveLength(1);
     expect(ref.current?.isDirty()).toBe(false);
+  });
+});
+
+describe('BudgetTab for a budget reader', () => {
+  it('every column reads with no field, no mode and no month to type; nothing is ever sent', async () => {
+    permissions.budgetMember = false;
+    setupApi({ roundInputs: [record({ period_start: '2026-01-01' })] });
+    const { ref } = renderTab();
+    await waitForAmounts();
+
+    for (const col of ['planned', 'forecast'] as const) {
+      pick(col);
+      const ed = editor();
+      expect(ed).toHaveAttribute('data-read-only', 'true');
+      expect(ed).not.toHaveAttribute('data-frozen');
+      expect(ed).toHaveTextContent('Read only. Your role gives read access to the budget.');
+      expect(within(ed).queryAllByRole('textbox')).toHaveLength(0);
+      expect(within(ed).queryAllByRole('tab')).toHaveLength(0);
+      expect(within(ed).queryAllByRole('combobox')).toHaveLength(0);
+      expect(within(ed).queryAllByRole('button')).toHaveLength(0);
+      // Nor its months.
+      fireEvent.click(tableCell(col, 3));
+      expect(monthInput(col, 3)).toBeNull();
+      expect(tableCell(col, 3)).not.toHaveAttribute('title');
+    }
+    // Not a freeze: no lock on the cards, no frozen sentence.
+    expect(within(card('planned')).queryByTestId('LockOutlinedIcon')).toBeNull();
+    expect(screen.queryByText('opex.budget.someColumnsFrozen')).toBeNull();
+    await flush(ref);
+    await settle();
+    expect(bulkCalls()).toHaveLength(0);
+    expect(mocked.post).not.toHaveBeenCalled();
   });
 });
 

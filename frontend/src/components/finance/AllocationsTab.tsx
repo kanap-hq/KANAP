@@ -212,7 +212,9 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({ id, year, currency, availableYears, onYearChange, config, held, onBudgetRev, knownBudgetRev }, ref) {
   const { t } = useTranslation(['ops', 'common']);
   const { defaultColumn } = useBudgetColumns();
-  const { profile } = useAuth();
+  const { profile, hasLevel } = useAuth();
+  // A budget reader sees the split, with no control to change it.
+  const readOnly = !hasLevel('budget', 'member');
   const dialogs = useKanapDialogs();
 
   const queryClient = useQueryClient();
@@ -460,7 +462,7 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
     }
   }, [ensureVersion, keepSaved]);
 
-  const scheduleSave = React.useCallback(() => { autosave.schedule(persist); }, [autosave, persist]);
+  const scheduleSave = React.useCallback(() => { if (!readOnly) autosave.schedule(persist); }, [autosave, persist, readOnly]);
 
   // A row added and not complete yet (no company, or no department by department) is not saved.
   const hasIncompleteRow = () => (['manual_pct', 'manual_company', 'manual_department'] as Method[]).includes(methodRef.current)
@@ -701,13 +703,13 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
 
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'flex-end' }}>
         <PropertyRow label={t(`${config.i18nPrefix}.allocations.method`)} sx={{ minWidth: 200 }}>
-          <TextField select fullWidth variant="standard" value={method} onChange={(e) => onMethodChange(e.target.value as Method)} sx={drawerSelectSx}>
+          <TextField select fullWidth variant="standard" value={method} onChange={(e) => onMethodChange(e.target.value as Method)} disabled={readOnly} sx={drawerSelectSx}>
             {methodOptions.map((o) => <MenuItem key={o.value} value={o.value} sx={drawerMenuItemSx}>{o.label}</MenuItem>)}
           </TextField>
         </PropertyRow>
         {isManualCompany && (
           <PropertyRow label={t(`${config.i18nPrefix}.allocations.allocateBy`)} sx={{ minWidth: 140 }}>
-            <TextField select fullWidth variant="standard" value={driver} onChange={(e) => { setDriver(e.target.value as Driver); scheduleSave(); }} sx={drawerSelectSx}>
+            <TextField select fullWidth variant="standard" value={driver} onChange={(e) => { setDriver(e.target.value as Driver); scheduleSave(); }} disabled={readOnly} sx={drawerSelectSx}>
               <MenuItem value="headcount" sx={drawerMenuItemSx}>{t(`${config.i18nPrefix}.allocations.headcount`)}</MenuItem>
               <MenuItem value="it_users" sx={drawerMenuItemSx}>{t(`${config.i18nPrefix}.allocations.itUsers`)}</MenuItem>
               <MenuItem value="turnover" sx={drawerMenuItemSx}>{t(`${config.i18nPrefix}.allocations.turnover`)}</MenuItem>
@@ -723,7 +725,7 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
       {isAuto && (
         <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{t(`${config.i18nPrefix}.allocations.autoDistributeInfo`)}</Typography>
       )}
-      {isManualPct && (
+      {isManualPct && !readOnly && (
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button size="small" variant="action" onClick={splitEqually}>{t(`${config.i18nPrefix}.allocations.splitEqually`)}</Button>
           <Button size="small" variant="action" onClick={clearPins}>{t(`${config.i18nPrefix}.allocations.clearPins`)}</Button>
@@ -737,7 +739,7 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
             {!isManualPct && <Box component="th" sx={numHeadSx}>{t(`${config.i18nPrefix}.allocations.driverValue`)}</Box>}
             <Box component="th" sx={numHeadSx}>%</Box>
             <Box component="th" sx={numHeadSx}>{t(`${config.i18nPrefix}.allocations.amount`)}</Box>
-            {!isAuto && <Box component="th" sx={{ width: 40 }} />}
+            {!isAuto && !readOnly && <Box component="th" sx={{ width: 40 }} />}
           </Box>
         </Box>
         <Box component="tbody">
@@ -756,6 +758,7 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
                         placeholder={t(`${config.i18nPrefix}.allocations.selectCompany`)}
                         emptyLabel={t(`${config.i18nPrefix}.allocations.noCompanies`)}
                         error={!r.company_id}
+                        disabled={readOnly}
                         autoOpen={autoOpenIdx === idx}
                         onSelect={(cid) => onCompanyChange(idx, cid)}
                         onAutoOpened={() => setAutoOpenIdx(null)}
@@ -766,7 +769,7 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
                           options={deptOptionsFor(r.company_id)}
                           placeholder={t(`${config.i18nPrefix}.allocations.selectDepartment`)}
                           emptyLabel={t(`${config.i18nPrefix}.allocations.noDepartments`)}
-                          disabled={!r.company_id}
+                          disabled={readOnly || !r.company_id}
                           error={!r.department_id}
                           onSelect={(did) => onDeptChange(idx, did)}
                         />
@@ -781,6 +784,7 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
                       type="number" size="small" variant="standard" value={r.allocation_pct}
                       onChange={(e) => onPctEdit(idx, e.target.value === '' ? '' : Number(e.target.value))}
                       inputProps={{ step: 0.01 }}
+                      disabled={readOnly}
                       InputProps={{
                         endAdornment: <Box component="span" sx={{ fontSize: 13, color: 'kanap.text.tertiary', pl: 0.25 }}>%</Box>,
                       }}
@@ -789,7 +793,7 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
                   ) : `${round2(pct)}%`}
                 </Box>
                 <Box component="td" sx={numCellSx}>{formatAmount((pct / 100) * budgetTotal)}</Box>
-                {!isAuto && (
+                {!isAuto && !readOnly && (
                   <Box component="td" sx={{ textAlign: 'center' }}>
                     <IconButton
                       className="alloc-row-delete"
@@ -813,12 +817,12 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
             {!isManualPct && <Box component="td" />}
             <Box component="td" sx={{ ...numCellSx, fontWeight: 500, color: totalValid ? 'kanap.text.primary' : 'warning.main' }}>{round2(totalPct)}%</Box>
             <Box component="td" sx={{ ...numCellSx, fontWeight: 500 }}>{formatAmount((totalPct / 100) * budgetTotal)}</Box>
-            {!isAuto && <Box component="td" />}
+            {!isAuto && !readOnly && <Box component="td" />}
           </Box>
         </Box>
       </Box>
 
-      {!isAuto && (
+      {!isAuto && !readOnly && (
         <Box>
           <Button size="small" startIcon={<AddIcon />} onClick={addRow}>{t(`${config.i18nPrefix}.allocations.addRow`)}</Button>
         </Box>

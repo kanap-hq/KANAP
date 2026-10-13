@@ -450,6 +450,8 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   const dialogs = useKanapDialogs();
   const autosaveRegistry = useAutosaveRegistry();
   const { profile, hasLevel } = useAuth();
+  // A budget reader sees the line with no field, menu or tab control that writes.
+  const canEdit = hasLevel('budget', 'member');
   // Fields edited and not saved yet, each with the line it was edited on (the page
   // stays mounted from one line to the next): a field only ever goes to its own line.
   // Each also keeps the value the screen showed when its edit began (its base, lot 3C):
@@ -483,7 +485,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   const requiredLeave = useRequiredDimensionsLeave({
     scope: nature,
     lineId: isCreate ? null : idParam,
-    canEdit: hasLevel('budget', 'member'),
+    canEdit,
     axes: analyticsAxes,
     values: () => formRef.current.analytics_values,
     root: rootRef,
@@ -573,7 +575,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   // buffer as typing, sent at once: the field goes to its own line with its base, a busy
   // answer is retried, a refusal shows the stored value again, a conflict asks the user.
   const patchNow = React.useCallback(async (patch: Partial<BudgetLineForm>) => {
-    if (isCreate || !uuid || stale) return;
+    if (isCreate || !uuid || stale || !canEdit) return;
     noteLineChange();
     const base = baseFor(patch);
     setForm((prev) => mergePatch(prev, patch));
@@ -588,17 +590,17 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     if (!toSend) return;
     autosave.schedule(flushPending);
     await autosave.flush();
-  }, [isCreate, uuid, stale, noteLineChange, baseFor, patchBuffer, autosave, flushPending]);
+  }, [isCreate, uuid, stale, canEdit, noteLineChange, baseFor, patchBuffer, autosave, flushPending]);
 
   // Debounced persist — long-form notes / description while typing.
   const patchDebounced = React.useCallback((patch: Partial<BudgetLineForm>) => {
-    if (isCreate || !uuid || stale) return;
+    if (isCreate || !uuid || stale || !canEdit) return;
     noteLineChange();
     const base = baseFor(patch);
     setForm((prev) => mergePatch(prev, patch));
     // Typed in a field waiting for a choice: it stays with it, nothing is saved yet.
     if (patchBuffer.add(uuid, patch, base)) autosave.schedule(flushPending);
-  }, [isCreate, uuid, stale, noteLineChange, autosave, flushPending, patchBuffer, baseFor]);
+  }, [isCreate, uuid, stale, canEdit, noteLineChange, autosave, flushPending, patchBuffer, baseFor]);
 
   // ----- Edit conflicts (lot 3C): someone else changed a field being saved -----
   const resolveConflict = React.useCallback((field: string, choice: ConflictChoice) => {
@@ -835,7 +837,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
 
   // ----- Change type (lot M): from the "…" menu; pending edits are saved first (the dialog sends the line's row_version) -----
   const [changeTypeOpen, setChangeTypeOpen] = React.useState(false);
-  const canChangeType = !isCreate && !stale && !!uuid && hasLevel('budget', 'member');
+  const canChangeType = !isCreate && !stale && !!uuid && canEdit;
   const openChangeType = React.useCallback(async () => {
     if ((await flushOrAsk()) === 'stay') return;
     setChangeTypeOpen(true);
@@ -1043,7 +1045,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
         onCopyReference={reference ? () => { void navigator.clipboard?.writeText(reference); } : undefined}
         title={isCreate ? createForm.product_name : form.product_name}
         titleFallback={isCreate ? t(config.newTitle) : t('budget.line')}
-        canEditTitle
+        canEditTitle={isCreate || canEdit}
         onTitleSave={(value) => {
           if (isCreate) {
             updateCreateForm({ product_name: value });
@@ -1074,6 +1076,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
             ownerBizId={form.owner_business_id || null}
             costCenterId={shownCostCenterId || null}
             costCenter={matching(references.cost_center, shownCostCenterId)}
+            disabled={!canEdit}
             onStatusChange={handleStatusChange}
             onOwnerItChange={(v) => void patchNow({ owner_it_id: (v || '') as string })}
             onOwnerBizChange={(v) => void patchNow({ owner_business_id: (v || '') as string })}
@@ -1105,7 +1108,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
               />
             )}
             {isCreate && (
-              <Button variant="contained" size="small" onClick={() => void handleCreate()} disabled={createSubmitting}>
+              <Button variant="contained" size="small" onClick={() => void handleCreate()} disabled={!canEdit || createSubmitting}>
                 {t('common:buttons.create')}
               </Button>
             )}
@@ -1159,6 +1162,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
             nature={nature}
             onChangeType={canChangeType ? () => { void openChangeType(); } : undefined}
             mode="edit"
+            disabled={!canEdit}
             references={references}
             analyticsOptions={analyticsOptions}
             supplierId={form.supplier_id}
@@ -1227,6 +1231,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
                   value={form.description}
                   inputRef={descriptionInputRef}
                   onChange={(e) => patchDebounced({ description: e.target.value })}
+                  disabled={!canEdit}
                   multiline minRows={3} fullWidth variant="standard"
                   placeholder={t('opex.fields.descriptionPlaceholder', 'e.g., annual subscription for monitoring')}
                   sx={composerSx}
@@ -1238,6 +1243,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
                   value={form.notes}
                   inputRef={notesInputRef}
                   onChange={(e) => patchDebounced({ notes: e.target.value })}
+                  disabled={!canEdit}
                   multiline minRows={3} fullWidth variant="standard"
                   placeholder={t('opex.fields.notesPlaceholder', 'e.g., renewal negotiated in Q3')}
                   sx={composerSx}
