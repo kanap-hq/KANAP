@@ -37,7 +37,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Your cadence',
-        body: 'Pin the version you run, test an update, migrate on your change-window schedule. No forced updates, no surprise downtime.',
+        body: 'KANAP publishes a version about once a month. Read its release notes, test the upgrade and apply it in your change window. Pin a precise version if you need to. No forced updates, no surprise downtime.',
       },
     ],
   },
@@ -73,7 +73,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Paste the install prompt',
-        body: 'Open your agent and paste the prompt template from our docs, then fill in your hostname, admin email and (optionally) your email transport (Resend or SMTP). The agent reads the linked install pages, installs Docker, PostgreSQL 16 with the required extensions, MinIO, nginx and certbot, clones KANAP into /opt/kanap, generates strong credentials, builds the images and starts the containers. It also wires up TLS and auto-renewal. The agent asks for confirmation before running each command.',
+        body: 'Open your agent and paste the prompt template from our docs, then fill in your hostname, admin email and (optionally) your email transport (Resend or SMTP). The agent reads the linked install pages, installs Docker, PostgreSQL 16 with the required extensions, MinIO, nginx and certbot, clones KANAP into /opt/kanap on the stable branch (always the latest published version), generates strong credentials, builds the images and starts the containers. It also wires up TLS and auto-renewal. The agent asks for confirmation before running each command.',
       },
       {
         title: 'Sign in and harden',
@@ -111,7 +111,7 @@ const content: OnPremContent = {
     items: [
       {
         title: 'Updates on your schedule',
-        body: 'Pin the version you run, test an update in pre-prod, apply it in your change window. Migrations run on boot, idempotent by design.',
+        body: 'The stable branch always points to the latest published version. To upgrade, read the new changelog entries (those marked "Action required" first), then pull stable and rebuild. Pin a precise version by its tag, and roll back to the previous tag with your pre-upgrade backup. Migrations run on boot, idempotent by design.',
       },
       {
         title: 'Backups with your own tools',
@@ -152,7 +152,7 @@ const content: OnPremContent = {
 
   cta: {
     title: 'Ready to self-host?',
-    body: 'Clone the repo and bring up the stack in under ten minutes. No account required, no trial countdown, just open source.',
+    body: 'Clone the repo, check out the stable branch and bring up the stack in under ten minutes. No account required, no trial countdown, just open source.',
     primary: 'Deploy from GitHub',
     secondary: 'Talk to us',
   },

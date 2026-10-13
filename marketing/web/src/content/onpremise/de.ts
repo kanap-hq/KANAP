@@ -37,7 +37,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Ihr Takt',
-        body: 'Die betriebene Version pinnen, ein Update testen, im Change-Fenster migrieren. Keine erzwungenen Updates, keine Überraschungs-Downtime.',
+        body: 'KANAP veröffentlicht etwa einmal im Monat eine Version. Versionshinweise lesen, das Update testen und im Change-Fenster einspielen. Bei Bedarf eine bestimmte Version pinnen. Keine erzwungenen Updates, keine Überraschungs-Downtime.',
       },
     ],
   },
@@ -73,7 +73,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Den Install-Prompt einfügen',
-        body: 'Öffnen Sie Ihren Agenten und fügen Sie die Prompt-Vorlage aus der Doku ein, tragen Sie dann Hostname, Admin-E-Mail und (optional) Ihren E-Mail-Transport (Resend oder SMTP) ein. Der Agent liest die verlinkten Installationsseiten, installiert Docker, PostgreSQL 16 mit den nötigen Erweiterungen, MinIO, nginx und certbot, klont KANAP nach /opt/kanap, generiert starke Zugangsdaten, baut die Images und startet die Container. Er richtet auch TLS und automatische Erneuerung ein. Vor jedem Befehl fragt der Agent zur Bestätigung.',
+        body: 'Öffnen Sie Ihren Agenten und fügen Sie die Prompt-Vorlage aus der Doku ein, tragen Sie dann Hostname, Admin-E-Mail und (optional) Ihren E-Mail-Transport (Resend oder SMTP) ein. Der Agent liest die verlinkten Installationsseiten, installiert Docker, PostgreSQL 16 mit den nötigen Erweiterungen, MinIO, nginx und certbot, klont KANAP nach /opt/kanap auf den Branch stable (immer die neueste veröffentlichte Version), generiert starke Zugangsdaten, baut die Images und startet die Container. Er richtet auch TLS und automatische Erneuerung ein. Vor jedem Befehl fragt der Agent zur Bestätigung.',
       },
       {
         title: 'Anmelden und absichern',
@@ -111,7 +111,7 @@ const content: OnPremContent = {
     items: [
       {
         title: 'Updates nach Plan',
-        body: 'Die betriebene Version pinnen, das Update in Pre-Prod testen, im Change-Fenster anwenden. Migrations laufen beim Boot, idempotent.',
+        body: 'Der Branch stable zeigt immer auf die neueste veröffentlichte Version. Für ein Update die neuen Changelog-Einträge lesen (zuerst die mit "Action required"), dann stable pullen und neu bauen. Eine bestimmte Version über ihren Tag pinnen und mit dem Backup vor dem Update auf den vorherigen Tag zurückgehen. Migrations laufen beim Boot, idempotent.',
       },
       {
         title: 'Backups mit Ihren eigenen Werkzeugen',
@@ -152,7 +152,7 @@ const content: OnPremContent = {
 
   cta: {
     title: 'Bereit für Self-Hosting?',
-    body: 'Repo klonen und Stack in unter zehn Minuten starten. Kein Konto nötig, kein Countdown, nur Open Source.',
+    body: 'Repo klonen, den Branch stable auschecken und den Stack in unter zehn Minuten starten. Kein Konto nötig, kein Countdown, nur Open Source.',
     primary: 'Von GitHub bereitstellen',
     secondary: 'Sprechen Sie mit uns',
   },

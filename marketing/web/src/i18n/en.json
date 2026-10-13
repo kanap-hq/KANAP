@@ -71,5 +71,6 @@
   "blog.topic.glpi": "Running GLPI",
   "blog.topic.product": "Product",
   "blog.topic.portfolio": "Portfolio",
-  "blog.topic.compliance": "Compliance & continuity"
+  "blog.topic.compliance": "Compliance & continuity",
+  "blog.topic.release": "Release notes"
 }
