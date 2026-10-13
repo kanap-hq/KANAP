@@ -14,14 +14,34 @@ const marketingUrl = import.meta.env.VITE_MARKETING_URL ?? 'https://kanap.net';
 // Signing in always lands on the home page: no memory of the page the user was on.
 const postLoginPath = '/';
 
+/** Whole minutes of a 429's `Retry-After` (in seconds), rounded up; null without a usable value. */
+function retryAfterMinutes(err: any): number | null {
+  const value = String(err?.response?.headers?.['retry-after'] ?? '').trim();
+  if (!/^\d+$/.test(value) || Number(value) <= 0) return null;
+  return Math.ceil(Number(value) / 60);
+}
+
+/** A 400 from the request check that names the e-mail field: the address typed is not an e-mail. */
+function isInvalidEmail(err: any): boolean {
+  const data = err?.response?.data;
+  if (err?.response?.status !== 400 || data?.code) return false;
+  const messages = Array.isArray(data?.message) ? data.message : [data?.message];
+  return messages.some((message: unknown) => typeof message === 'string' && /\bemail\b/i.test(message));
+}
+
 /**
- * The message of a refused sign-in: a rate limit has its own sentence, an answer with a code goes
- * through the shared error messages, anything else (no answer, a validation error) is the plain
- * failure sentence.
+ * The message of a refused sign-in: a rate limit has its own sentence, with the wait the server
+ * gives when it gives one; an address that is not an e-mail has its own sentence; an answer with a
+ * code goes through the shared error messages; anything else (no answer, another validation
+ * error) is the plain failure sentence.
  */
 function signInErrorMessage(err: any, t: TFunction): string {
   const fallback = t('auth:login.failed');
-  if (err?.response?.status === 429) return t('auth:login.tooManyAttempts');
+  if (err?.response?.status === 429) {
+    const minutes = retryAfterMinutes(err);
+    return minutes === null ? t('auth:login.tooManyAttempts') : t('auth:login.tooManyAttemptsWait', { count: minutes });
+  }
+  if (isInvalidEmail(err)) return t('auth:login.invalidEmail');
   const code = err?.response?.data?.code;
   if (typeof code === 'string' && code.trim()) return getApiErrorMessage(err, t, fallback);
   return fallback;

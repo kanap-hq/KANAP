@@ -66,7 +66,7 @@ const content: SecurityContent = {
       'Rôle admin workspace distinct des admins de module',
       'SSO via Microsoft Entra ID (OIDC) en cloud et auto-hébergé',
       'Authentification locale par mot de passe avec Argon2 + flux optionnel de réinitialisation',
-      "Les tentatives de connexion sont limitées par adresse IP : 60 demandes de connexion par mot de passe et 60 demandes de connexion Microsoft par minute. Après 5 échecs de mot de passe sur un compte depuis une adresse IP, cette adresse attend 15 minutes avant de pouvoir réessayer ce compte. Derrière un reverse proxy, les limites comptent l'adresse IP de chaque utilisateur",
+      "Les tentatives de connexion sont limitées par adresse IP : 60 demandes de connexion par mot de passe et 60 demandes de connexion Microsoft par minute. Après 5 échecs de mot de passe sur un compte depuis une adresse IP en 15 minutes, cette adresse attend 15 minutes avant de pouvoir réessayer ce compte. Derrière un reverse proxy, les limites comptent l'adresse IP de chaque utilisateur",
       "Les jetons de session ne sont acceptés que dans l'unique algorithme de signature avec lequel KANAP les émet",
       "Plaid et MCP appliquent le même RBAC que l'UI, pas d'escalade de privilèges",
       'Tokens API limités aux utilisateurs individuels, révocables à tout moment',

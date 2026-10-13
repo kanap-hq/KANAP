@@ -4,9 +4,10 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../api';
 import AuthFrame from '../components/AuthFrame';
+import { getApiErrorMessage } from '../utils/apiErrorMessage';
 
 export default function AcceptInvitePage() {
-  const { t } = useTranslation(['auth', 'validation']);
+  const { t } = useTranslation(['auth', 'validation', 'errors']);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -66,8 +67,8 @@ export default function AcceptInvitePage() {
       await api.post('/auth/password-reset/complete', { token, password });
       setStatus('success');
     } catch (err: any) {
-      const message = err?.response?.data?.message || t('auth:invite.serverError');
-      setError(message);
+      // A rate limit and the answers with a code get their translated sentence.
+      setError(getApiErrorMessage(err, t, t('auth:invite.serverError')));
       setStatus('idle');
     }
   };

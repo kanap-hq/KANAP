@@ -548,7 +548,7 @@ KANAP begrenzt wiederholte Anmeldeanfragen:
 
 Die Limits pro Adresse sind hoch, weil die Beschäftigten einer Organisation KANAP oft über dieselbe ausgehende Adresse erreichen. Ist ein Limit pro Adresse erreicht, wartet die Person eine Minute und versucht es erneut. Hinter einem Reverse Proxy zählt KANAP die IP-Adresse jeder Person, sofern der Proxy sie weitergibt.
 
-Anmeldungen und fehlgeschlagene Anmeldungen erscheinen im [Audit-Protokoll](#audit-protokoll). Ein nach 5 Fehlversuchen abgelehnter Versuch erscheint als fehlgeschlagene Anmeldung mit dem Grund **Zu viele Anmeldeversuche**. Anfragen, die ein Limit pro Adresse stoppt, werden nicht aufgezeichnet.
+Anmeldungen und fehlgeschlagene Anmeldungen erscheinen im [Audit-Protokoll](#audit-protokoll). Wenn 5 Fehlversuche ein Konto von einer Adresse sperren, wird eine fehlgeschlagene Anmeldung mit dem Grund **Zu viele Anmeldeversuche** aufgezeichnet. Versuche, die in den folgenden 15 Minuten abgelehnt werden, werden nicht aufgezeichnet, ebenso wenig Anfragen, die ein Limit pro Adresse stoppt.
 
 ---
 

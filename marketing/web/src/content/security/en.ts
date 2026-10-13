@@ -65,7 +65,7 @@ const content: SecurityContent = {
       'Workspace-level admin role separate from module admins',
       'SSO via Microsoft Entra ID (OIDC) on both cloud and self-hosted',
       'Local password authentication with Argon2 + optional password reset flows',
-      'Sign-in attempts are limited per IP address: 60 password sign-in requests and 60 Microsoft sign-in requests per minute. After 5 failed password attempts on one account from one IP address, that address waits 15 minutes before it can try that account again. Behind a reverse proxy, the limits count each user\'s own IP address',
+      'Sign-in attempts are limited per IP address: 60 password sign-in requests and 60 Microsoft sign-in requests per minute. After 5 failed password attempts on one account from one IP address within 15 minutes, that address waits 15 minutes before it can try that account again. Behind a reverse proxy, the limits count each user\'s own IP address',
       'Session tokens are accepted only in the one signing algorithm KANAP issues them with',
       'Plaid and MCP enforce the same RBAC as the UI, no privilege escalation',
       'API tokens scoped to individual users, revocable at any time',

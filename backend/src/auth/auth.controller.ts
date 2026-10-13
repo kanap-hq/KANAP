@@ -132,10 +132,10 @@ export class AuthController {
   async login(@Body() body: LoginDto, @Req() req: any, @Res({ passthrough: true }) res: Response) {
     if (!body?.email || !body?.password) throw new BadRequestException({ code: 'MISSING_CREDENTIALS', message: 'email and password are required' });
     // Before the password check and without reading the account: a known and an unknown
-    // address get the same answer (login-attempt-limit.ts).
+    // account get the same answer (login-attempt-limit.ts). The attempts refused during a block
+    // are not recorded: the event is written once, when the block starts (below).
     const attempt = await this.loginAttempts.begin(req, body.email);
     if (attempt.blocked) {
-      this.recordAuthEvent(req, { action: 'login_failed', reason: 'too_many_attempts' });
       res.setHeader('Retry-After', String(attempt.retryAfterSeconds));
       throw new ThrottlerException();
     }
@@ -154,7 +154,14 @@ export class AuthController {
     } catch (error) {
       // After the rollback of the sign-in transaction: the event is written apart from it.
       this.recordRefusal(req, 'login_failed', error);
-      if (authRefusalOf(error)) await this.loginAttempts.refused(attempt);
+      if (authRefusalOf(error)) {
+        if (await this.loginAttempts.refused(attempt)) {
+          this.recordAuthEvent(req, { action: 'login_failed', reason: 'too_many_attempts' });
+        }
+      } else {
+        // Not a decision on the password (server error, database unavailable): it does not count.
+        await this.loginAttempts.withdraw(attempt);
+      }
       throw error;
     }
     await this.loginAttempts.succeeded(attempt);
