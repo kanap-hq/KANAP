@@ -8,6 +8,7 @@ budget-lines.md	frontend/src/components/finance/**/*.tsx
 budget-lines.md	frontend/src/components/finance/**/*.ts
 contracts.md	frontend/src/pages/ContractsPage.tsx
 contracts.md	frontend/src/pages/contracts/**/*.tsx
+contracts.md	frontend/src/pages/contracts/**/*.ts
 companies.md	frontend/src/pages/CompaniesPage.tsx
 companies.md	frontend/src/pages/companies/**/*.tsx
 departments.md	frontend/src/pages/DepartmentsPage.tsx
