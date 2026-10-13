@@ -19,6 +19,7 @@ The set describes Fromage & Co, a fictional cheese maker:
 - **18 fictional users**, who cannot sign in and receive no e-mail
 - **Applications and their landscape**: instances, interfaces and connections
 - **Contracts, the budget of the current year, projects and tasks**
+- **Budget lines classified on the [recommended dimensions](analytics.md#recommended-dimensions)**: every line has a cost pool and an IT tower, CAPEX lines and build lines have a purpose, and CAPEX lines have a priority. The set also adds **Recurrence**, in the workspace's language, and two dimensions of its own, **Business domain** and **Budget reference**, whose names and values stay in English
 
 Dates follow the current year, so the budget always looks up to date. Loading takes less than a minute.
 
@@ -33,7 +34,7 @@ Sample data loads into an empty workspace only. A workspace counts as empty when
 - configuration you added: a chart of accounts of your own, analytics categories, portfolio classification, extra working-day calendars, integrations or AI agents
 - documents outside the templates library
 
-What a new workspace creates for you (its first company, the default chart of accounts and the calendar for its country) does not count.
+What a new workspace creates for you (its first company, the default chart of accounts, the calendar for its country and the recommended dimensions) does not count.
 
 **To load the set**:
 

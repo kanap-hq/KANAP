@@ -5,6 +5,7 @@ operations-dashboard.md	frontend/src/pages/DashboardPage.tsx
 operations-dashboard.md	frontend/src/pages/workspace/settings/BudgetDashboardSettingsModal.tsx
 budget-lines.md	frontend/src/pages/budget/**/*.tsx
 budget-lines.md	frontend/src/components/finance/**/*.tsx
+budget-lines.md	frontend/src/components/finance/**/*.ts
 contracts.md	frontend/src/pages/ContractsPage.tsx
 contracts.md	frontend/src/pages/contracts/**/*.tsx
 companies.md	frontend/src/pages/CompaniesPage.tsx
@@ -22,8 +23,9 @@ chart-of-accounts.md	frontend/src/pages/accounts/**/*.tsx
 currencies.md	frontend/src/pages/operations/CurrencySettingsPage.tsx
 budget-operations.md	frontend/src/pages/operations/BudgetOperationsLandingPage.tsx
 budget-operations.md	frontend/src/pages/operations/BudgetFreezePage.tsx
-budget-operations.md	frontend/src/pages/operations/CopyBudgetColumnsPage.tsx
-budget-operations.md	frontend/src/pages/operations/CopyAllocationsPage.tsx
+budget-operations.md	frontend/src/pages/operations/CopyBudgetPage.tsx
+budget-operations.md	frontend/src/pages/operations/ItemScopeTabs.tsx
+budget-operations.md	frontend/src/pages/operations/OperationLineCell.tsx
 budget-operations.md	frontend/src/pages/operations/BudgetColumnResetPage.tsx
 budget-operations.md	frontend/src/pages/operations/AllocationDefaultPage.tsx
 budget-operations.md	frontend/src/pages/operations/BudgetColumnsSettingsPage.tsx
