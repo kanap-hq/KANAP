@@ -36,8 +36,8 @@ import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.se
 import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attach.util';
 import { contractTermFields, contractTermsSql, sqlDateLiteral, turnsOffRenewalOfRenewedContract, type ContractTermFields } from './contract-terms';
 import { readDecisionWindowDays } from './contract-settings.service';
-import { renewalConfirmedSql } from './contract-renewal';
-import { confirmedRenewalOf, readConfirmedRenewals } from './contract-renewal.service';
+import { renewalDecisionSql } from './contract-renewal';
+import { readRenewalDecisions, renewalDecisionOf } from './contract-renewal.service';
 import { utcDateYmd } from '../notifications/expiry-reminder-schedule';
 import { centsToNumber } from '../common/amount';
 import { FxRateService } from '../currency/fx-rate.service';
@@ -96,7 +96,7 @@ const CONTRACT_REFERENCES = {
 
 /** The refusal of an edit that turns off the renewal of a contract already renewed (`turnsOffRenewalOfRenewedContract`). */
 const RENEWED_CONTRACT_RENEWAL_OFF =
-  'This contract has already been renewed: turning off its tacit renewal would remove the terms it has run. Set an end of validity instead.';
+  'This contract has already been renewed: turning off its tacit renewal without an end of validity would remove the terms it has run. Set an end of validity in the same request.';
 
 // Never written from a body: the row's identity, tenant and timestamps.
 const NOT_WRITABLE = ['id', 'tenant_id', 'created_at', 'updated_at'] as const;
@@ -157,11 +157,11 @@ export class ContractsService {
   /**
    * The list's filter targets. The end date, the cancellation deadline, the next due date and the
    * state are those of the current term as of `today` (`contract-terms.ts`), like the values the
-   * list returns; the state with the tenant's decision window (`windowDays`) and the renewals
-   * confirmed in the audit log (`renewalConfirmedSql`).
+   * list returns; the state with the tenant's decision window (`windowDays`) and the decisions
+   * recorded in the audit log (`renewalDecisionSql`).
    */
   private contractFilterTargets(today: string, windowDays: number, withBudget = false, withCompliance = false): Record<string, FilterTargetConfig> {
-    const terms = contractTermsSql('c', sqlDateLiteral(today), { decisionWindowDays: windowDays, renewalConfirmed: renewalConfirmedSql('c') });
+    const terms = contractTermsSql('c', sqlDateLiteral(today), { decisionWindowDays: windowDays, renewalDecision: renewalDecisionSql('c') });
     // The compliance summary, when the list joins it as `cc` (its sort or its filter is asked for).
     const compliance: Record<string, FilterTargetConfig> = withCompliance
       ? { compliance_state: { expression: 'cc.state', dataType: 'string' } }
@@ -414,14 +414,14 @@ export class ContractsService {
     );
     // The page's compliance summaries, by batch of ids (`contract-compliance.ts`).
     const complianceById = await readComplianceSummaries(mg, compliance, contractIds);
-    // The renewals confirmed for the page's contracts: a contract renewed for its next deadline's term is not to decide.
-    const confirmed = await readConfirmedRenewals(mg, contractIds);
+    // The decisions recorded for the page's contracts: a contract renewed, or left to end, is not to decide.
+    const decisions = await readRenewalDecisions(mg, contractIds);
 
     const enriched: ListItem[] = items.map((i) => {
       const figures = budgetById.get(i.id);
       return {
         ...i,
-        ...contractTermFields(i, today, { decisionWindowDays: windowDays, renewalConfirmed: confirmedRenewalOf(confirmed, i.id) }),
+        ...contractTermFields(i, today, { decisionWindowDays: windowDays, renewalDecision: renewalDecisionOf(decisions, i.id) }),
         // From the end of validity, like the filter: the stored status stays enabled once the date passes.
         status: deriveStatusFromDisabledAt(i.disabled_at),
         supplier: i.supplier_id ? { id: i.supplier_id, name: sById.get(i.supplier_id)?.name ?? '' } : null,
@@ -560,8 +560,8 @@ export class ContractsService {
     if (!found) throw new NotFoundException('Contract not found');
     const tenantId = found.tenant_id;
     const windowDays = await readDecisionWindowDays(mg, tenantId);
-    const confirmed = await readConfirmedRenewals(mg, [found.id]);
-    const terms = contractTermFields(found, utcDateYmd(new Date()), { decisionWindowDays: windowDays, renewalConfirmed: confirmedRenewalOf(confirmed, found.id) });
+    const decisions = await readRenewalDecisions(mg, [found.id]);
+    const terms = contractTermFields(found, utcDateYmd(new Date()), { decisionWindowDays: windowDays, renewalDecision: renewalDecisionOf(decisions, found.id) });
     const linked = await linksRepo.find({ where: { tenant_id: tenantId, contract_id: id } });
     const spendIds = linked.map(l => l.spend_item_id);
     const spendItems = spendIds.length
@@ -699,7 +699,7 @@ export class ContractsService {
     const statusBefore = deriveStatusFromDisabledAt(before.disabled_at, now);
     existing.status = lifecycle.status;
     existing.disabled_at = lifecycle.disabled_at;
-    // A contract already renewed keeps its renewal: without it, the term rule ends it after its first term.
+    // A contract already renewed keeps its terms: without renewal nor end of validity, the term rule ends it after its first term.
     if (turnsOffRenewalOfRenewedContract(before, existing, utcDateYmd(now))) throw new BadRequestException(RENEWED_CONTRACT_RENEWAL_OFF);
 
     // Detect supplier change for contact sync

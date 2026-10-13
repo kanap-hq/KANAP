@@ -19,7 +19,11 @@ export type ContractTermCase = {
     next_cancellation_deadline: string | null;
     cancellation_deadline: string;
     renews_at_term_end: boolean;
-    /** The date the list sorts on and its state (`next_due_date`, `term_state`), with the default decision window of 90 days. */
+    /**
+     * The date the list sorts on and its state (`next_due_date`, `term_state`), with the default
+     * decision window of 90 days and no decision recorded: a contract without renewal whose end is
+     * within the window is to decide (lot CR2, round 2).
+     */
     next_due_date: string | null;
     term_state: 'to_decide' | 'in_progress' | 'renewed' | 'ending' | 'expired';
   };
@@ -44,13 +48,13 @@ export const CONTRACT_TERM_CASES: ContractTermCase[] = [
     name: 'starts on 31 January 2024 for 1 month: 31 brought back to 29 (leap year)',
     today: '2024-01-31', start: '2024-01-31', months: 1, notice: 1, renewal: false,
     expected: { term_index: 0, current_term_end: '2024-02-28', next_cancellation_deadline: null, cancellation_deadline: '2024-01-28', renews_at_term_end: false,
-      next_due_date: '2024-02-28', term_state: 'ending' },
+      next_due_date: '2024-02-28', term_state: 'to_decide' },
   },
   {
     name: 'starts on 31 March for 1 month: 31 brought back to 30',
     today: '2026-03-31', start: '2026-03-31', months: 1, notice: 0, renewal: false,
     expected: { term_index: 0, current_term_end: '2026-04-29', next_cancellation_deadline: '2026-04-29', cancellation_deadline: '2026-04-29', renews_at_term_end: false,
-      next_due_date: '2026-04-29', term_state: 'ending' },
+      next_due_date: '2026-04-29', term_state: 'to_decide' },
   },
   {
     name: 'ends on 31 May, 3 months of notice: deadline on 28 February (CheeseTrack)',
@@ -68,7 +72,7 @@ export const CONTRACT_TERM_CASES: ContractTermCase[] = [
     name: 'ends on 31 December, 3 months of notice, not renewed: deadline 30 September passed (Fromatech)',
     today: TODAY, start: '2026-01-01', months: 12, notice: 3, renewal: false,
     expected: { term_index: 0, current_term_end: '2026-12-31', next_cancellation_deadline: null, cancellation_deadline: '2026-09-30', renews_at_term_end: false,
-      next_due_date: '2026-12-31', term_state: 'ending' },
+      next_due_date: '2026-12-31', term_state: 'to_decide' },
   },
   {
     name: 'renewed, notice of the current term passed: the next term deadline',
@@ -104,7 +108,7 @@ export const CONTRACT_TERM_CASES: ContractTermCase[] = [
     name: 'notice longer than the term, not renewed: the deadline falls before the start',
     today: TODAY, start: '2026-11-01', months: 1, notice: 2, renewal: false,
     expected: { term_index: 0, current_term_end: '2026-11-30', next_cancellation_deadline: null, cancellation_deadline: '2026-09-30', renews_at_term_end: false,
-      next_due_date: '2026-11-30', term_state: 'ending' },
+      next_due_date: '2026-11-30', term_state: 'to_decide' },
   },
   {
     name: 'duration 0 with renewal on: a single term of no length',
@@ -221,13 +225,15 @@ export function contractTermSweep(): ContractTermSweepRow[] {
 }
 
 /**
- * A confirmed renewal (lot CR2): the state of a contract whose renewal is confirmed for the term
- * ending on `confirmedTermEnd` (`renewalConfirmed` of the rule), worked out by hand. Only the term
- * of the next cancellation deadline counts: a renewal confirmed for it takes the contract out of
- * "to decide", any other term leaves the state as it was. The pure spec and the parity spec check
- * them, with the default window of 90 days.
+ * The decisions recorded (lot CR2): the state of a contract given the latest decision recorded
+ * for some of its terms (`renewalDecision` of the rule, keyed by the term's last day), worked out
+ * by hand, with the default window of 90 days. With tacit renewal, a renewal confirmed for the
+ * term of the next deadline takes the contract out of "to decide", any other term or decision
+ * leaves the state as it was. Without it, the last term ending within the window is to decide
+ * until a decision to let it end (`end`, `terminate`) is recorded for that term. The pure spec
+ * and the parity spec check them.
  */
-export type ContractConfirmedRenewalCase = {
+export type ContractDecisionCase = {
   name: string;
   today: string;
   start: string;
@@ -235,7 +241,8 @@ export type ContractConfirmedRenewalCase = {
   notice: number;
   renewal: boolean;
   disabledAt?: string | null;
-  confirmedTermEnd: string | null;
+  /** The latest decision of each term, by its last day. */
+  decisions: Record<string, string>;
   expected: 'to_decide' | 'in_progress' | 'renewed' | 'ending' | 'expired';
 };
 
@@ -243,17 +250,32 @@ export type ContractConfirmedRenewalCase = {
 const SAP_TERMS = { today: '2026-10-13', start: '2023-07-01', months: 12, notice: 6, renewal: true };
 /** Quarterly terms, 1 month of notice: the current deadline (28 February) has passed, the next one (31 May) is within the window. */
 const QUARTERLY = { today: '2026-03-15', start: '2026-01-01', months: 3, notice: 1, renewal: true };
+/** Nearshore in the demo data: 36 months from 1 April 2024, no renewal, ends on 31 March 2027. */
+const NEARSHORE_TERMS = { start: '2024-04-01', months: 36, notice: 3, renewal: false };
 
-export const CONTRACT_CONFIRMED_RENEWAL_CASES: ContractConfirmedRenewalCase[] = [
-  { name: 'SAP, no decision: to decide', ...SAP_TERMS, confirmedTermEnd: null, expected: 'to_decide' },
-  { name: 'SAP, renewal confirmed for the current term: in progress', ...SAP_TERMS, confirmedTermEnd: '2027-06-30', expected: 'in_progress' },
-  { name: 'SAP, renewal confirmed for a past term only: to decide', ...SAP_TERMS, confirmedTermEnd: '2026-06-30', expected: 'to_decide' },
-  { name: 'SAP, renewal confirmed for the next term only: to decide', ...SAP_TERMS, confirmedTermEnd: '2028-06-30', expected: 'to_decide' },
-  { name: 'SAP outside the window (1 September): the confirmation changes nothing', ...SAP_TERMS, today: '2026-09-01', confirmedTermEnd: '2027-06-30', expected: 'in_progress' },
-  { name: 'SAP ending with its term: the confirmation changes nothing', ...SAP_TERMS, disabledAt: '2027-06-30T12:00:00.000Z', confirmedTermEnd: '2027-06-30', expected: 'ending' },
-  { name: 'quarterly, no decision: to decide (next term)', ...QUARTERLY, confirmedTermEnd: null, expected: 'to_decide' },
-  { name: 'quarterly, renewal confirmed for the next term: renewed', ...QUARTERLY, confirmedTermEnd: '2026-06-30', expected: 'renewed' },
-  { name: 'quarterly, renewal confirmed for the current term only: to decide', ...QUARTERLY, confirmedTermEnd: '2026-03-31', expected: 'to_decide' },
+export const CONTRACT_DECISION_CASES: ContractDecisionCase[] = [
+  { name: 'SAP, no decision: to decide', ...SAP_TERMS, decisions: {}, expected: 'to_decide' },
+  { name: 'SAP, renewal confirmed for the current term: in progress', ...SAP_TERMS, decisions: { '2027-06-30': 'renew' }, expected: 'in_progress' },
+  { name: 'SAP, a renegotiation only: to decide', ...SAP_TERMS, decisions: { '2027-06-30': 'renegotiate' }, expected: 'to_decide' },
+  { name: 'SAP, renewal undone: to decide', ...SAP_TERMS, decisions: { '2027-06-30': 'undo' }, expected: 'to_decide' },
+  { name: 'SAP, renewal confirmed for a past term only: to decide', ...SAP_TERMS, decisions: { '2026-06-30': 'renew' }, expected: 'to_decide' },
+  { name: 'SAP, renewal confirmed for the next term only: to decide', ...SAP_TERMS, decisions: { '2028-06-30': 'renew' }, expected: 'to_decide' },
+  { name: 'SAP outside the window (1 September): the confirmation changes nothing', ...SAP_TERMS, today: '2026-09-01', decisions: { '2027-06-30': 'renew' }, expected: 'in_progress' },
+  { name: 'SAP ending with its term, renewal on: ending (not a contract without renewal)', ...SAP_TERMS, disabledAt: '2027-06-30T12:00:00.000Z', decisions: {}, expected: 'ending' },
+  { name: 'SAP terminated (renewal off, ends 30 June 2027): ending', ...SAP_TERMS, renewal: false, disabledAt: '2027-06-30T12:00:00.000Z', decisions: { '2027-06-30': 'terminate' }, expected: 'ending' },
+  { name: 'SAP renewal turned off, ends 30 June 2027, nothing decided: outside the window, ending', ...SAP_TERMS, renewal: false, disabledAt: '2027-06-30T12:00:00.000Z', decisions: {}, expected: 'ending' },
+  { name: 'SAP renewal turned off, ends 15 November 2026, nothing decided: to decide', ...SAP_TERMS, renewal: false, disabledAt: '2026-11-15T12:00:00.000Z', decisions: {}, expected: 'to_decide' },
+  { name: 'SAP renewal turned off, ends 15 November 2026, let end: ending', ...SAP_TERMS, renewal: false, disabledAt: '2026-11-15T12:00:00.000Z', decisions: { '2027-06-30': 'end' }, expected: 'ending' },
+  { name: 'SAP renewal turned off, ends 15 November 2026, renewal undone: to decide', ...SAP_TERMS, renewal: false, disabledAt: '2026-11-15T12:00:00.000Z', decisions: { '2027-06-30': 'undo' }, expected: 'to_decide' },
+  { name: 'Nearshore, 31 March 2027 not within 90 days of 13 October: ending', ...NEARSHORE_TERMS, today: '2026-10-13', decisions: {}, expected: 'ending' },
+  { name: 'Nearshore on 1 January 2027: its end within the window, to decide', ...NEARSHORE_TERMS, today: '2027-01-01', decisions: {}, expected: 'to_decide' },
+  { name: 'Nearshore on 1 January 2027, let end: ending', ...NEARSHORE_TERMS, today: '2027-01-01', decisions: { '2027-03-31': 'end' }, expected: 'ending' },
+  { name: 'Nearshore on 1 January 2027, a renewal recorded for its term: still to decide (a renewal turns the renewal on)', ...NEARSHORE_TERMS, today: '2027-01-01', decisions: { '2027-03-31': 'renew' }, expected: 'to_decide' },
+  { name: 'Nearshore after its end: expired', ...NEARSHORE_TERMS, today: '2027-04-01', decisions: {}, expected: 'expired' },
+  { name: 'quarterly, no decision: to decide (next term)', ...QUARTERLY, decisions: {}, expected: 'to_decide' },
+  { name: 'quarterly, renewal confirmed for the next term: renewed', ...QUARTERLY, decisions: { '2026-06-30': 'renew' }, expected: 'renewed' },
+  { name: 'quarterly, renewal confirmed for the current term only: to decide', ...QUARTERLY, decisions: { '2026-03-31': 'renew' }, expected: 'to_decide' },
+  { name: 'quarterly, renewal off up to 30 June: runs into the next term, renewed', ...QUARTERLY, renewal: false, disabledAt: '2026-06-30T12:00:00.000Z', decisions: {}, expected: 'renewed' },
 ];
 
 /**
@@ -291,6 +313,9 @@ export const CONTRACT_COMMITMENT_CASES: ContractCommitmentCase[] = [
   { name: 'Nearshore, no renewal, ends 31 March 2027: three months of 2027', ...NEARSHORE, year: 2027, expected: 225000 },
   { name: 'Nearshore, a whole year inside the term', ...NEARSHORE, year: 2026, expected: 900000 },
   { name: 'Nearshore, nothing after its end', ...NEARSHORE, year: 2028, expected: 0 },
+  // No renewal, an end of validity in its second term (lot CR2, round 2): its terms run up to it, January to September 2027.
+  { name: 'Nearshore, no renewal, an end of validity on 30 September 2027: nine months of 2027', ...NEARSHORE, disabledAt: '2027-09-30T12:00:00.000Z', year: 2027, expected: 675000 },
+  { name: 'Nearshore, no renewal, an end of validity on 30 September 2027: nothing in 2028', ...NEARSHORE, disabledAt: '2027-09-30T12:00:00.000Z', year: 2028, expected: 0 },
   // 17/31 of March and nine whole months: (9 + 17/31) / 12 of 120 000.
   { name: 'starts on 15 March: March prorated by its days', ...FROM_THE_15TH, year: 2026, expected: 95483.87 },
   // Two whole months and 14/31 of March: (2 + 14/31) / 12 of 120 000; both years add up to the amount.

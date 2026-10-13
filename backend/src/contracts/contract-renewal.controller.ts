@@ -45,12 +45,20 @@ export class ContractRenewalController {
     return this.svc.act(id, 'renegotiate', body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
-  /** The renewal field's "no" on a contract already renewed or awaiting a decision: it ends on `end_date` (the proposed end by default). */
+  /** The renewal field's "no" on a contract already renewed or awaiting a decision: renewal off, it ends on `end_date` (the proposed end by default). */
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'member')
   @Post(':id/renewal/stop')
   stop(@Param('id') id: string, @Body() body: EndBody, @Req() req: any) {
     return this.svc.stopRenewal(id, body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
+
+  /** A contract without renewal whose end is within the window: let it end (lot CR2, round 2). */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'member')
+  @Post(':id/renewal/end')
+  end(@Param('id') id: string, @Body() body: ReasonBody, @Req() req: any) {
+    return this.svc.act(id, 'end', body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
   @UseGuards(PermissionGuard)

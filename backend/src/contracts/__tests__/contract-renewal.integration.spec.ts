@@ -111,7 +111,7 @@ async function testDailyRun() {
     const { renewal, assigned } = services(runner);
 
     const first = await renewal.runForTenant(runner.manager, tenantId);
-    assert.deepEqual(first.created.map((c) => c.contract_id), [ids.decide], 'one task, for the contract to decide that has an owner');
+    assert.deepEqual(first.created.map((c) => c.contract_id).sort(), [ids.decide, ids.noRenewal].sort(), 'one task for each contract to decide that has an owner');
     assert.deepEqual(first.withoutOwner.map((c) => c.contract_id).sort(), [ids.goneOwner, ids.noOwner].sort(), 'no owner, or a disabled one: no task');
     const [task] = await decisionTasks(runner, ids.decide);
     const term = renewalTerms({ start_date: addDaysYmd(addMonthsYmd(TODAY, -12), 60), duration_months: 12, notice_period_months: 1, auto_renewal: true }, TODAY)!.pending;
@@ -120,14 +120,19 @@ async function testDailyRun() {
     assert.equal(task.assignee_user_id, ownerId, 'assigned to the owner');
     assert.equal(task.status, 'open');
     assert.ok(Number(task.item_number) > 0, 'a task reference');
-    assert.deepEqual(assigned, [{ taskId: task.id, assigneeId: ownerId }], 'the assignment notification goes out as for a task created by hand');
+    assert.ok(assigned.some((n) => n.taskId === task.id && n.assigneeId === ownerId), 'the assignment notification goes out as for a task created by hand');
+    assert.equal(assigned.length, 2, 'one per task created');
 
     const second = await renewal.runForTenant(runner.manager, tenantId);
     assert.equal(second.created.length, 0, 'a second run creates nothing');
     assert.equal((await decisionTasks(runner, ids.decide)).length, 1, 'still one task');
     await runner.query(`DELETE FROM tasks WHERE id = $1`, [task.id]);
     assert.equal((await renewal.runForTenant(runner.manager, tenantId)).created.length, 0, 'a deleted task is not created again for that term');
-    assert.equal((await decisionTasks(runner, ids.noRenewal)).length, 0, 'no renewal, no task');
+    // No renewal (lot CR2, round 2): its end within the window asks to renew it or let it end.
+    const [endTask] = await decisionTasks(runner, ids.noRenewal);
+    assert.equal(endTask.title, 'Decide whether to renew or let No renewal end');
+    assert.equal(endTask.due_date, addDaysYmd(addMonthsYmd(addDaysYmd(addMonthsYmd(TODAY, -12), 60), 12), -1), 'due on its end');
+    assert.equal((await decisionTasks(runner, ids.noRenewal)).length, 1, 'one task');
     assert.equal((await decisionTasks(runner, ids.later)).length, 0, 'outside the window, no task');
 
     // The next term: ten days before its deadline, a new task.
@@ -169,7 +174,7 @@ async function testWindowSetting() {
     assert.equal((await renewal.runForTenant(runner.manager, tenantId)).created.length, 0, 'the run reads the window');
 
     await settings.update(tenantId, { decision_window_days: 90 }, null, runner.manager);
-    assert.equal((await contracts.totals({}, { ...opts, tenantId })).to_decide_count, 3, 'three contracts to decide with 90 days');
+    assert.equal((await contracts.totals({}, { ...opts, tenantId })).to_decide_count, 4, 'four contracts to decide with 90 days, the one ending without renewal included');
     assert.equal((await renewal.get(ids.decide, opts)).state, 'pending');
   });
 }
@@ -219,7 +224,7 @@ async function testActions() {
     const terminated = await renewal.act(id, 'terminate', { reason: 'Moving to another vendor' }, ownerId, opts);
     assert.ok(terminated.state === 'decided' && terminated.decision?.decision === 'terminate' && terminated.can_undo, 'termination decided');
     const ended = await contractRow();
-    assert.equal(ended.auto_renewal, true, 'the renewal stays on (the term rule would end it at its first term)');
+    assert.equal(ended.auto_renewal, false, 'the renewal turns off (the term rule keeps its terms up to the end of validity)');
     assert.equal(new Date(ended.disabled_at).toISOString(), `${termEnd}T12:00:00.000Z`, 'the contract ends with the term decided');
     const detail: any = await contracts.get(id, opts);
     assert.equal(detail.term_state, 'ending', 'the contract now ends without renewal');
@@ -234,7 +239,7 @@ async function testActions() {
 
     const restored = await renewal.act(id, 'undo', {}, ownerId, opts);
     assert.equal(restored.state, 'pending');
-    assert.deepEqual(await contractRow(), { auto_renewal: true, disabled_at: null }, 'the undoing puts the end of validity back');
+    assert.deepEqual(await contractRow(), { auto_renewal: true, disabled_at: null }, 'the undoing puts the renewal and the end of validity back');
     await expectRefusal(runner, ConflictException, () => renewal.act(id, 'undo', {}, ownerId, opts), 'nothing to undo');
     await expectRefusal(runner, ConflictException, () => renewal.act(ids.later, 'renew', {}, ownerId, opts), 'no decision awaited outside the window');
   });
@@ -252,24 +257,24 @@ async function testConfirmedRenewalLeavesToDecide() {
     const count = async () => (await contracts.totals({}, { ...opts, tenantId })).to_decide_count;
     const detail = async () => ((await contracts.get(id, opts)) as any).term_state;
 
-    assert.equal(await count(), 3, 'three contracts to decide');
+    assert.equal(await count(), 4, 'four contracts to decide');
     assert.ok((await filteredIds()).includes(id));
     const renewed = await renewal.act(id, 'renew', { reason: 'Keep it' }, ownerId, opts);
     const termEnd = renewed.term!.term_end;
     assert.equal(await listed(), 'in_progress', 'the list state leaves "to decide" once the renewal is decided');
     assert.ok(!(await filteredIds()).includes(id), 'the "to decide" filter leaves it out');
-    assert.equal(await count(), 2, 'the count follows');
+    assert.equal(await count(), 3, 'the count follows');
     assert.equal(await detail(), 'in_progress', 'the contract too');
     const exported = await contracts.listIds(toDecideFilter, opts);
     assert.ok(!exported.ids.includes(id), 'the ids of the filtered list too');
 
     await renewal.act(id, 'undo', {}, ownerId, opts);
     assert.equal(await listed(), 'to_decide', 'undone: to decide again');
-    assert.equal(await count(), 3);
+    assert.equal(await count(), 4);
     await renewal.act(id, 'renegotiate', { reason: 'Ask for a discount' }, ownerId, opts);
     assert.equal(await listed(), 'to_decide', 'a renegotiation keeps it to decide');
     await renewal.act(id, 'renew', {}, ownerId, opts);
-    assert.equal(await count(), 2, 'renewed after the renegotiation');
+    assert.equal(await count(), 3, 'renewed after the renegotiation');
 
     // A renewal confirmed for another term (the next one) leaves this term to decide.
     const other = ids.noOwner;
@@ -323,39 +328,62 @@ async function testRenewedContractKeepsRenewal() {
     }
     assert.deepEqual(await contractRow(), { auto_renewal: true, disabled_at: null }, 'the import wrote nothing');
 
-    // In the decision window, turning the renewal off is a termination on the end chosen (lot CR2, round 1).
+    // Turning the renewal off in the decision window (lot CR2, round 2): no decision, the task asks about the end.
     await renewal.runForTenant(runner.manager, tenantId);
     const [task] = await decisionTasks(runner, id);
+    assert.equal(task.title, 'Decide on the renewal of Renewed once');
     const currentTermEnd = addDaysYmd(addMonthsYmd(start, 24), -1);
     const pendingView = await renewal.get(id, opts);
-    assert.equal(pendingView.state, 'pending');
+    assert.ok(pendingView.state === 'pending' && pendingView.mode === 'renewal');
     assert.equal(pendingView.proposed_end_date, currentTermEnd, 'proposed: the current term end, its deadline ahead');
     assert.equal(pendingView.notice_period_months, 1);
     const chosen = addDaysYmd(TODAY, 20);
-    const before = await auditCount();
     const stopped = await renewal.stopRenewal(id, { end_date: chosen }, ownerId, opts);
-    assert.ok(stopped.state === 'decided' && stopped.decision?.decision === 'terminate' && stopped.can_undo, 'recorded as a termination');
+    assert.ok(stopped.state === 'pending' && stopped.mode === 'end', 'a decision is now awaited on its end');
     const ended = await contractRow();
-    assert.equal(ended.auto_renewal, true, 'the renewal stays on');
+    assert.equal(ended.auto_renewal, false, 'the renewal is off: the field reads No');
     assert.equal(new Date(ended.disabled_at).toISOString(), `${chosen}T12:00:00.000Z`, 'ends on the day chosen');
-    assert.equal(await auditCount(), before + 1, 'one audit row, the decision');
-    const [decision] = await runner.query(
-      `SELECT after_json->'renewal_decision' AS d FROM audit_log WHERE tenant_id = $1 AND record_id = $2 AND source_ref = $3 ORDER BY created_at DESC, id DESC LIMIT 1`,
-      [tenantId, id, `contract-renewal:${currentTermEnd}`],
-    );
-    assert.equal(decision.d.decision, 'terminate');
-    assert.equal(decision.d.end_date, chosen, 'the decision keeps the end chosen');
-    assert.equal((await runner.query(`SELECT status FROM tasks WHERE id = $1`, [task.id]))[0].status, 'done', 'the decision task is closed');
+    const decisionsLogged = await runner.query(`SELECT count(*)::int AS n FROM audit_log WHERE tenant_id = $1 AND record_id = $2 AND after_json ? 'renewal_decision'`, [tenantId, id]);
+    assert.equal(decisionsLogged[0].n, 0, 'no decision recorded');
+    const [stopRow] = await runner.query(`SELECT after_json->'renewal_stop'->>'end_date' AS end_date FROM audit_log WHERE tenant_id = $1 AND record_id = $2 AND after_json ? 'renewal_stop'`, [tenantId, id]);
+    assert.equal(stopRow.end_date, chosen, 'one audit row with the day');
+    const [adapted] = await decisionTasks(runner, id);
+    assert.equal(adapted.id, task.id, 'the same task');
+    assert.equal(adapted.status, 'open');
+    assert.equal(adapted.title, 'Decide whether to renew or let Renewed once end', 'its title asks about the end');
+    assert.equal(adapted.due_date, chosen, 'due on the end');
     const [y, m, d] = chosen.split('-');
     const [comment] = await runner.query(`SELECT content FROM portfolio_activities WHERE task_id = $1 AND type = 'comment' ORDER BY created_at DESC LIMIT 1`, [task.id]);
-    assert.equal(comment.content, `Tacit renewal turned off in the contract properties. The contract ends on ${d}/${m}/${y}.`, 'the end chosen in a comment');
+    assert.equal(comment.content, `Tacit renewal turned off: the contract ends on ${d}/${m}/${y}, unless renewed.`, 'a comment saying why');
+    assert.equal((await renewal.runForTenant(runner.manager, tenantId)).created.filter((c) => c.contract_id === id).length, 0, 'the run creates no second task');
     const detail: any = await contracts.get(id, opts);
-    assert.equal(detail.term_state, 'ending');
     assert.equal(detail.term_index, 1, 'its past term is kept');
-    await renewal.stopRenewal(id, { end_date: chosen }, ownerId, opts);
-    assert.equal(await auditCount(), before + 1, 'a second stop on the same day changes nothing');
+    assert.equal(detail.term_state, 'to_decide', 'its end within the window, nothing decided');
+    await expectRefusal(runner, ConflictException, () => renewal.stopRenewal(id, {}, ownerId, opts), 'the renewal is already off');
+    await expectRefusal(runner, ConflictException, () => renewal.act(id, 'terminate', {}, ownerId, opts), 'no termination of a contract without renewal');
+
+    // Let it end, undo; renew, undo.
+    const letEnd = await renewal.act(id, 'end', { reason: 'No longer needed' }, ownerId, opts);
+    assert.ok(letEnd.state === 'decided' && letEnd.mode === 'end' && letEnd.decision?.decision === 'end' && letEnd.can_undo, 'left to end');
+    assert.equal((await runner.query(`SELECT status FROM tasks WHERE id = $1`, [task.id]))[0].status, 'done', 'the task is closed');
+    assert.equal(new Date((await contractRow()).disabled_at).toISOString(), `${chosen}T12:00:00.000Z`, 'the end is unchanged');
+    assert.equal(((await contracts.get(id, opts)) as any).term_state, 'ending', 'no longer to decide');
     await renewal.act(id, 'undo', {}, ownerId, opts);
-    assert.deepEqual(await contractRow(), { auto_renewal: true, disabled_at: null }, 'undone like a termination');
+    assert.equal((await renewal.get(id, opts)).state, 'pending', 'undone: awaited again');
+    assert.equal((await runner.query(`SELECT status FROM tasks WHERE id = $1`, [task.id]))[0].status, 'open', 'the task opens again');
+    const renewedBack = await renewal.act(id, 'renew', {}, ownerId, opts);
+    assert.ok(renewedBack.state === 'decided' && renewedBack.decision?.decision === 'renew' && renewedBack.can_undo, 'renewed, undoable');
+    assert.deepEqual(await contractRow(), { auto_renewal: true, disabled_at: null }, 'the renewal is on, the end of validity gone');
+    await renewal.act(id, 'undo', {}, ownerId, opts);
+    const back = await contractRow();
+    assert.equal(back.auto_renewal, false, 'undone: the renewal is off again');
+    assert.equal(new Date(back.disabled_at).toISOString(), `${chosen}T12:00:00.000Z`, 'and the end is back');
+
+    // The PATCH: turning the renewal off with an end of validity in the same request keeps the terms.
+    await runner.query(`UPDATE contracts SET auto_renewal = true, disabled_at = NULL WHERE id = $1`, [id]);
+    await contracts.update(id, { auto_renewal: false, disabled_at: `${currentTermEnd}T12:00:00.000Z` } as any, ownerId, opts);
+    assert.equal(((await contracts.get(id, opts)) as any).term_index, 1, 'with an end of validity: allowed, its past term kept');
+    await runner.query(`UPDATE contracts SET auto_renewal = true, disabled_at = NULL, status = 'enabled' WHERE id = $1`, [id]);
 
     // A termination from the box takes an end of its own too; a day before today is refused.
     await expectRefusal(runner, BadRequestException, () => renewal.act(id, 'terminate', { end_date: addDaysYmd(TODAY, -1) }, ownerId, opts), 'end before today');
@@ -364,8 +392,12 @@ async function testRenewedContractKeepsRenewal() {
     const boxEnd = addDaysYmd(TODAY, 5);
     const terminated = await renewal.act(id, 'terminate', { end_date: boxEnd, reason: 'Ends early' }, ownerId, opts);
     assert.ok(terminated.state === 'decided' && terminated.decision?.decision === 'terminate', 'a termination on a day before the term end stands');
-    assert.equal(new Date((await contractRow()).disabled_at).toISOString(), `${boxEnd}T12:00:00.000Z`);
+    const terminatedRow = await contractRow();
+    assert.equal(terminatedRow.auto_renewal, false, 'a termination turns the renewal off');
+    assert.equal(new Date(terminatedRow.disabled_at).toISOString(), `${boxEnd}T12:00:00.000Z`);
+    assert.equal(((await contracts.get(id, opts)) as any).term_state, 'ending', 'terminated: no longer to decide');
     await renewal.act(id, 'undo', {}, ownerId, opts);
+    assert.deepEqual(await contractRow(), { auto_renewal: true, disabled_at: null }, 'undone: both values back');
 
     await expectRefusal(runner, ConflictException, () => renewal.stopRenewal(ids.later, {}, ownerId, opts), 'first term, no decision awaited');
     await expectRefusal(runner, ConflictException, () => renewal.stopRenewal(ids.noRenewal, {}, ownerId, opts), 'no renewal to stop');
@@ -404,15 +436,30 @@ async function testEndOutsideTheWindow() {
       `SELECT after_json->'renewal_stop'->>'end_date' AS end_date FROM audit_log WHERE tenant_id = $1 AND record_id = $2 AND after_json ? 'renewal_stop' ORDER BY created_at, id`,
       [tenantId, id],
     );
-    await renewal.stopRenewal(id, {}, ownerId, opts);
-    const disabledAt = async () => new Date((await runner.query(`SELECT disabled_at FROM contracts WHERE id = $1`, [id]))[0].disabled_at).toISOString();
-    assert.equal(await disabledAt(), `${terms.pending.term_end}T12:00:00.000Z`, 'no date: the proposed end');
-    await renewal.stopRenewal(id, { end_date: early }, ownerId, opts);
-    assert.equal(await disabledAt(), `${early}T12:00:00.000Z`, 'an earlier day: allowed');
-    assert.deepEqual((await auditRows()).map((r: any) => r.end_date), [terms.pending.term_end, early], 'one audit row each, with the day');
     await expectRefusal(runner, BadRequestException, () => renewal.stopRenewal(id, { end_date: addDaysYmd(TODAY, -1) }, ownerId, opts), 'before today');
-    assert.equal(await disabledAt(), `${early}T12:00:00.000Z`, 'unchanged');
-    assert.equal((await renewal.get(id, opts)).state, 'none', 'no decision recorded outside the window');
+    await renewal.stopRenewal(id, {}, ownerId, opts);
+    const row0 = (await runner.query(`SELECT auto_renewal, disabled_at FROM contracts WHERE id = $1`, [id]))[0];
+    assert.equal(row0.auto_renewal, false);
+    assert.equal(new Date(row0.disabled_at).toISOString(), `${terms.pending.term_end}T12:00:00.000Z`, 'no date: the proposed end');
+    assert.deepEqual((await auditRows()).map((r: any) => r.end_date), [terms.pending.term_end], 'one audit row, with the day');
+    assert.equal((await renewal.get(id, opts)).state, 'none', 'its end is outside the window: nothing awaited yet');
+    assert.equal((await decisionTasks(runner, id)).length, 0, 'no task outside the window');
+
+    // Another one ending within the window: a task is created at once, keyed as the run keys it.
+    const [row2] = await runner.query(
+      `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, owner_user_id, start_date, duration_months, notice_period_months,
+                              auto_renewal, yearly_amount_at_signature, currency, status)
+       SELECT tenant_id, 'Notice passed soon', company_id, supplier_id, owner_user_id, $2, 12, 6, true, 12000, 'EUR', 'enabled'
+         FROM contracts WHERE id = $1 RETURNING id`,
+      [ids.decide, start],
+    );
+    await renewal.stopRenewal(row2.id, { end_date: early }, ownerId, opts);
+    const [created] = await decisionTasks(runner, row2.id);
+    assert.equal(created.title, 'Decide whether to renew or let Notice passed soon end');
+    assert.equal(created.due_date, early, 'due on the end');
+    assert.equal(created.assignee_user_id, ownerId);
+    assert.equal((await renewal.runForTenant(runner.manager, tenantId)).created.filter((c) => c.contract_id === row2.id).length, 0, 'the run creates no second task');
+    assert.equal((await renewal.get(row2.id, opts)).task?.id, created.id, 'the box names it');
   });
 }
 

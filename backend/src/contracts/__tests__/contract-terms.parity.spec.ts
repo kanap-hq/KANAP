@@ -4,7 +4,7 @@ import dataSource from '../../data-source';
 import { computeContractTerms, contractCommitmentCents, contractCommitmentSql, contractTermsSql } from '../contract-terms';
 import {
   CONTRACT_COMMITMENT_CASES,
-  CONTRACT_CONFIRMED_RENEWAL_CASES,
+  CONTRACT_DECISION_CASES,
   CONTRACT_TERM_CASES,
   contractCommitmentSweep,
   contractTermSweep,
@@ -14,10 +14,10 @@ import {
 // (computeContractTerms), the list's next due date and state included: on the hand-worked cases, through both the scalar expressions the
 // list sorts and filters on and the lateral row the expiry warnings join; then on every
 // combination of the sweep. The commitment of a year (contractCommitmentSql, lot CB) gives the
-// cents of contractCommitmentCents on its cases and its own sweep. A confirmed renewal (lot CR2,
-// `renewalConfirmed`) is checked on its hand-worked cases (the term end confirmed as a column) and
-// on the whole sweep with a test on the term end's day, so both sides must ask about the same
-// term. The rows are literal values (unnest), so the spec needs no table and runs on an empty
+// cents of contractCommitmentCents on its cases and its own sweep. The decisions recorded (lot CR2,
+// `renewalDecision`) are checked on their hand-worked cases (the decisions as a JSON column) and
+// on the whole sweep with a decision drawn from the term end's day (a renewal on even days, an end
+// on other multiples of 3), so both sides must ask about the same term and read it the same way. The rows are literal values (unnest), so the spec needs no table and runs on an empty
 // database; the audit log reading (`renewalConfirmedSql`) is covered by
 // contract-renewal.integration.spec.ts.
 
@@ -34,28 +34,40 @@ type SqlRow = {
 
 type Input = {
   today: string; start: string; months: number | null; notice: number | null; renewal: boolean; disabledAt: string | null;
-  /** The term whose renewal is confirmed, for the `confirmed` modes. */
-  confirmed?: string | null;
+  /** The latest decision of each term, by its last day, for the `column` mode. */
+  decisions?: Record<string, string> | null;
 };
 
-const SOURCE = `unnest($1::int[], $2::date[], $3::int[], $4::int[], $5::bool[], $6::timestamptz[], $7::date[], $8::date[])
-  AS v(id, start_date, duration_months, notice_period_months, auto_renewal, disabled_at, today, confirmed_term_end)`;
+const SOURCE = `unnest($1::int[], $2::date[], $3::int[], $4::int[], $5::bool[], $6::timestamptz[], $7::date[], $8::jsonb[])
+  AS v(id, start_date, duration_months, notice_period_months, auto_renewal, disabled_at, today, decisions)`;
 
 /**
- * Which renewals are confirmed: none (the option left out), the term ending on the row's
- * `confirmed` day, or every term ending on an even day (the sweep).
+ * Which decisions are recorded: none (the option left out), the row's `decisions`, or one drawn
+ * from the term end's day (the sweep).
  */
 type Confirmed = 'none' | 'column' | 'even-day';
 
 function sqlOptions(mode: Confirmed) {
-  if (mode === 'column') return { renewalConfirmed: (termEnd: string) => `${termEnd} = v.confirmed_term_end` };
-  if (mode === 'even-day') return { renewalConfirmed: (termEnd: string) => `EXTRACT(DAY FROM ${termEnd})::int % 2 = 0` };
+  if (mode === 'column') return { renewalDecision: (termEnd: string) => `(v.decisions->>to_char(${termEnd}, 'YYYY-MM-DD'))` };
+  if (mode === 'even-day') {
+    return {
+      renewalDecision: (termEnd: string) =>
+        `(CASE WHEN EXTRACT(DAY FROM ${termEnd})::int % 2 = 0 THEN 'renew' WHEN EXTRACT(DAY FROM ${termEnd})::int % 3 = 0 THEN 'end' END)`,
+    };
+  }
   return undefined;
 }
 
 function tsOptions(mode: Confirmed, row: Input) {
-  if (mode === 'column') return { renewalConfirmed: (termEnd: string) => termEnd === row.confirmed };
-  if (mode === 'even-day') return { renewalConfirmed: (termEnd: string) => Number(termEnd.slice(8, 10)) % 2 === 0 };
+  if (mode === 'column') return { renewalDecision: (termEnd: string) => row.decisions?.[termEnd] ?? null };
+  if (mode === 'even-day') {
+    return {
+      renewalDecision: (termEnd: string) => {
+        const day = Number(termEnd.slice(8, 10));
+        return day % 2 === 0 ? 'renew' : day % 3 === 0 ? 'end' : null;
+      },
+    };
+  }
   return undefined;
 }
 
@@ -68,7 +80,7 @@ function params(rows: Input[]): unknown[] {
     rows.map((r) => r.renewal),
     rows.map((r) => r.disabledAt),
     rows.map((r) => r.today),
-    rows.map((r) => r.confirmed ?? null),
+    rows.map((r) => (r.decisions ? JSON.stringify(r.decisions) : null)),
   ];
 }
 
@@ -163,15 +175,15 @@ async function main() {
       });
     }
 
-    // A confirmed renewal: the hand-worked states, through both forms.
-    const confirmedCases: Input[] = CONTRACT_CONFIRMED_RENEWAL_CASES.map((c) => ({
-      today: c.today, start: c.start, months: c.months, notice: c.notice, renewal: c.renewal, disabledAt: c.disabledAt ?? null, confirmed: c.confirmedTermEnd,
+    // The decisions recorded: the hand-worked states, through both forms.
+    const confirmedCases: Input[] = CONTRACT_DECISION_CASES.map((c) => ({
+      today: c.today, start: c.start, months: c.months, notice: c.notice, renewal: c.renewal, disabledAt: c.disabledAt ?? null, decisions: c.decisions,
     }));
     for (const [label, run] of [['lateral row', viaLateral], ['scalar expressions', viaScalars]] as const) {
       const got = await run(confirmedCases, 'column');
-      CONTRACT_CONFIRMED_RENEWAL_CASES.forEach((c, i) => {
-        assert.equal(got[i].term_state, c.expected, `${label}, confirmed renewal, ${c.name}`);
-        assert.deepEqual(strip(got[i]), expectedOf(confirmedCases[i], 'column'), `${label}, confirmed renewal, ${c.name}: same as TypeScript`);
+      CONTRACT_DECISION_CASES.forEach((c, i) => {
+        assert.equal(got[i].term_state, c.expected, `${label}, decisions, ${c.name}`);
+        assert.deepEqual(strip(got[i]), expectedOf(confirmedCases[i], 'column'), `${label}, decisions, ${c.name}: same as TypeScript`);
       });
     }
 
@@ -216,7 +228,7 @@ async function main() {
     });
     assert.equal(commitmentMismatches, 0, `commitment sweep: SQL and TypeScript differ on ${commitmentMismatches} of ${commitmentRows.length} rows\n  ${firstCommitment.join('\n  ')}`);
 
-    console.log(`contract-terms.parity.spec: ok (${CONTRACT_TERM_CASES.length} cases, ${CONTRACT_CONFIRMED_RENEWAL_CASES.length} confirmed renewal cases, ${sweep.length} sweep rows twice, ${CONTRACT_COMMITMENT_CASES.length} commitment cases, ${commitmentRows.length} commitment sweep rows)`);
+    console.log(`contract-terms.parity.spec: ok (${CONTRACT_TERM_CASES.length} cases, ${CONTRACT_DECISION_CASES.length} decision cases, ${sweep.length} sweep rows twice, ${CONTRACT_COMMITMENT_CASES.length} commitment cases, ${commitmentRows.length} commitment sweep rows)`);
   } finally {
     await dataSource.destroy();
   }
