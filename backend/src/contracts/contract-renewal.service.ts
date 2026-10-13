@@ -27,7 +27,7 @@ import {
   type RenewalTerm,
 } from './contract-renewal';
 import { readDecisionWindowDays } from './contract-settings.service';
-import { contractCommitment, contractTermsSql } from './contract-terms';
+import { computeContractTerms, contractCommitment, contractTermsSql } from './contract-terms';
 
 export const CONTRACT_RENEWAL_TASK_NAME = 'contract-renewal-tasks';
 
@@ -70,6 +70,39 @@ export type TenantRenewalRun = {
 };
 
 type Opts = { manager?: EntityManager };
+
+/**
+ * The terms with a confirmed renewal of each contract of `contractIds` (session tenant), by the
+ * term's last day: the latest decision recorded for the term is a renewal. One query for the batch.
+ * `contractTermFields` takes it as `renewalConfirmed`; `renewalConfirmedSql` reads the same rows.
+ */
+export async function readConfirmedRenewals(mg: EntityManager, contractIds: string[]): Promise<Map<string, Set<string>>> {
+  const byContract = new Map<string, Set<string>>();
+  if (contractIds.length === 0) return byContract;
+  const rows: Array<{ contract_id: string; source_ref: string; decision: string | null }> = await mg.query(
+    `SELECT DISTINCT ON (record_id, source_ref) record_id::text AS contract_id, source_ref,
+            after_json->'renewal_decision'->>'decision' AS decision
+       FROM audit_log
+      WHERE tenant_id = app_current_tenant() AND table_name = 'contracts' AND record_id = ANY($1::uuid[])
+        AND source_ref LIKE 'contract-renewal:%' AND after_json ? 'renewal_decision'
+      ORDER BY record_id, source_ref, created_at DESC, id DESC`,
+    [contractIds],
+  );
+  for (const row of rows) {
+    if (row.decision !== 'renew') continue;
+    const termEnd = row.source_ref.slice('contract-renewal:'.length);
+    const set = byContract.get(row.contract_id) ?? new Set<string>();
+    set.add(termEnd);
+    byContract.set(row.contract_id, set);
+  }
+  return byContract;
+}
+
+/** `renewalConfirmed` of `contractTermFields` for one contract, from `readConfirmedRenewals`. */
+export function confirmedRenewalOf(confirmed: Map<string, Set<string>>, contractId: string): (termEnd: string) => boolean {
+  const terms = confirmed.get(contractId);
+  return (termEnd: string) => terms?.has(termEnd) ?? false;
+}
 
 /**
  * The renewal decision of a contract (plan contracts-revamp §7, rule in `contract-renewal.ts`):
@@ -273,6 +306,27 @@ export class ContractRenewalService implements OnModuleInit {
     if (taskId) {
       await this.updateTask(mg, taskId, tenantId, userId, action === 'renegotiate' ? { reason } : { status: 'done', reason });
     }
+    return this.view(mg, after, today, windowDays);
+  }
+
+  /**
+   * Ends a contract already renewed with its current term (lot CR2): turning off its tacit renewal
+   * would give it its first term only (`contract-terms.ts`), so the renewal stays on and the end of
+   * validity goes to the current term's last day, as a termination does. One audit row. A contract
+   * that already ends with or before its current term is left as it is. 409 when the renewal is off
+   * or the contract is still in its first term (the renewal field itself is the way there).
+   */
+  async stopRenewal(id: string, userId: string | null, opts?: Opts): Promise<ContractRenewalView> {
+    const mg = opts?.manager ?? this.dataSource.manager;
+    const contract = await this.findContract(mg, id, true);
+    const windowDays = await readDecisionWindowDays(mg, contract.tenant_id);
+    const today = utcDateYmd(new Date());
+    if (!contract.auto_renewal) throw new ConflictException('The tacit renewal of this contract is already off.');
+    const terms = computeContractTerms(contract, today);
+    if (terms.term_index === 0) throw new ConflictException('This contract has not been renewed yet: turn off its tacit renewal instead.');
+    if (!terms.renews_at_term_end) return this.view(mg, contract, today, windowDays);
+    const after = await this.writeEndOfValidity(mg, contract, endOfValidityFromDate(terms.current_term_end));
+    await this.audit.log({ table: 'contracts', recordId: contract.id, action: 'update', before: contract, after, userId }, { manager: mg });
     return this.view(mg, after, today, windowDays);
   }
 

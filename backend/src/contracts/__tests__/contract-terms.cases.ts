@@ -221,6 +221,42 @@ export function contractTermSweep(): ContractTermSweepRow[] {
 }
 
 /**
+ * A confirmed renewal (lot CR2): the state of a contract whose renewal is confirmed for the term
+ * ending on `confirmedTermEnd` (`renewalConfirmed` of the rule), worked out by hand. Only the term
+ * of the next cancellation deadline counts: a renewal confirmed for it takes the contract out of
+ * "to decide", any other term leaves the state as it was. The pure spec and the parity spec check
+ * them, with the default window of 90 days.
+ */
+export type ContractConfirmedRenewalCase = {
+  name: string;
+  today: string;
+  start: string;
+  months: number;
+  notice: number;
+  renewal: boolean;
+  disabledAt?: string | null;
+  confirmedTermEnd: string | null;
+  expected: 'to_decide' | 'in_progress' | 'renewed' | 'ending' | 'expired';
+};
+
+/** SAP Maintenance & Support in the demo data: fourth term from 1 July 2026, 6 months of notice, deadline 30 December 2026. */
+const SAP_TERMS = { today: '2026-10-13', start: '2023-07-01', months: 12, notice: 6, renewal: true };
+/** Quarterly terms, 1 month of notice: the current deadline (28 February) has passed, the next one (31 May) is within the window. */
+const QUARTERLY = { today: '2026-03-15', start: '2026-01-01', months: 3, notice: 1, renewal: true };
+
+export const CONTRACT_CONFIRMED_RENEWAL_CASES: ContractConfirmedRenewalCase[] = [
+  { name: 'SAP, no decision: to decide', ...SAP_TERMS, confirmedTermEnd: null, expected: 'to_decide' },
+  { name: 'SAP, renewal confirmed for the current term: in progress', ...SAP_TERMS, confirmedTermEnd: '2027-06-30', expected: 'in_progress' },
+  { name: 'SAP, renewal confirmed for a past term only: to decide', ...SAP_TERMS, confirmedTermEnd: '2026-06-30', expected: 'to_decide' },
+  { name: 'SAP, renewal confirmed for the next term only: to decide', ...SAP_TERMS, confirmedTermEnd: '2028-06-30', expected: 'to_decide' },
+  { name: 'SAP outside the window (1 September): the confirmation changes nothing', ...SAP_TERMS, today: '2026-09-01', confirmedTermEnd: '2027-06-30', expected: 'in_progress' },
+  { name: 'SAP ending with its term: the confirmation changes nothing', ...SAP_TERMS, disabledAt: '2027-06-30T12:00:00.000Z', confirmedTermEnd: '2027-06-30', expected: 'ending' },
+  { name: 'quarterly, no decision: to decide (next term)', ...QUARTERLY, confirmedTermEnd: null, expected: 'to_decide' },
+  { name: 'quarterly, renewal confirmed for the next term: renewed', ...QUARTERLY, confirmedTermEnd: '2026-06-30', expected: 'renewed' },
+  { name: 'quarterly, renewal confirmed for the current term only: to decide', ...QUARTERLY, confirmedTermEnd: '2026-03-31', expected: 'to_decide' },
+];
+
+/**
  * The commitment of a year (lot CB), each worked out by hand from the rule in
  * `contracts/contract-terms.ts`: the yearly amount prorated over the months the terms cover, a
  * month covered in part by the share of its days. The pure spec checks the TypeScript function,

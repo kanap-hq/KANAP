@@ -34,8 +34,10 @@ import {
 } from '../common/ag-grid-filtering';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
 import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attach.util';
-import { contractTermFields, contractTermsSql, sqlDateLiteral, type ContractTermFields } from './contract-terms';
+import { contractTermFields, contractTermsSql, sqlDateLiteral, turnsOffRenewalOfRenewedContract, type ContractTermFields } from './contract-terms';
 import { readDecisionWindowDays } from './contract-settings.service';
+import { renewalConfirmedSql } from './contract-renewal';
+import { confirmedRenewalOf, readConfirmedRenewals } from './contract-renewal.service';
 import { utcDateYmd } from '../notifications/expiry-reminder-schedule';
 import { centsToNumber } from '../common/amount';
 import { FxRateService } from '../currency/fx-rate.service';
@@ -91,6 +93,10 @@ const CONTRACT_REFERENCES = {
   supplier_id: { table: 'suppliers', label: 'Supplier' },
   owner_user_id: { table: 'users', label: 'Owner' },
 } as const;
+
+/** The refusal of an edit that turns off the renewal of a contract already renewed (`turnsOffRenewalOfRenewedContract`). */
+const RENEWED_CONTRACT_RENEWAL_OFF =
+  'This contract has already been renewed: turning off its tacit renewal would remove the terms it has run. Set an end of validity instead.';
 
 // Never written from a body: the row's identity, tenant and timestamps.
 const NOT_WRITABLE = ['id', 'tenant_id', 'created_at', 'updated_at'] as const;
@@ -151,10 +157,11 @@ export class ContractsService {
   /**
    * The list's filter targets. The end date, the cancellation deadline, the next due date and the
    * state are those of the current term as of `today` (`contract-terms.ts`), like the values the
-   * list returns; the state with the tenant's decision window (`windowDays`).
+   * list returns; the state with the tenant's decision window (`windowDays`) and the renewals
+   * confirmed in the audit log (`renewalConfirmedSql`).
    */
   private contractFilterTargets(today: string, windowDays: number, withBudget = false, withCompliance = false): Record<string, FilterTargetConfig> {
-    const terms = contractTermsSql('c', sqlDateLiteral(today), { decisionWindowDays: windowDays });
+    const terms = contractTermsSql('c', sqlDateLiteral(today), { decisionWindowDays: windowDays, renewalConfirmed: renewalConfirmedSql('c') });
     // The compliance summary, when the list joins it as `cc` (its sort or its filter is asked for).
     const compliance: Record<string, FilterTargetConfig> = withCompliance
       ? { compliance_state: { expression: 'cc.state', dataType: 'string' } }
@@ -407,12 +414,14 @@ export class ContractsService {
     );
     // The page's compliance summaries, by batch of ids (`contract-compliance.ts`).
     const complianceById = await readComplianceSummaries(mg, compliance, contractIds);
+    // The renewals confirmed for the page's contracts: a contract renewed for its next deadline's term is not to decide.
+    const confirmed = await readConfirmedRenewals(mg, contractIds);
 
     const enriched: ListItem[] = items.map((i) => {
       const figures = budgetById.get(i.id);
       return {
         ...i,
-        ...contractTermFields(i, today, { decisionWindowDays: windowDays }),
+        ...contractTermFields(i, today, { decisionWindowDays: windowDays, renewalConfirmed: confirmedRenewalOf(confirmed, i.id) }),
         // From the end of validity, like the filter: the stored status stays enabled once the date passes.
         status: deriveStatusFromDisabledAt(i.disabled_at),
         supplier: i.supplier_id ? { id: i.supplier_id, name: sById.get(i.supplier_id)?.name ?? '' } : null,
@@ -551,7 +560,8 @@ export class ContractsService {
     if (!found) throw new NotFoundException('Contract not found');
     const tenantId = found.tenant_id;
     const windowDays = await readDecisionWindowDays(mg, tenantId);
-    const terms = contractTermFields(found, utcDateYmd(new Date()), { decisionWindowDays: windowDays });
+    const confirmed = await readConfirmedRenewals(mg, [found.id]);
+    const terms = contractTermFields(found, utcDateYmd(new Date()), { decisionWindowDays: windowDays, renewalConfirmed: confirmedRenewalOf(confirmed, found.id) });
     const linked = await linksRepo.find({ where: { tenant_id: tenantId, contract_id: id } });
     const spendIds = linked.map(l => l.spend_item_id);
     const spendItems = spendIds.length
@@ -689,6 +699,8 @@ export class ContractsService {
     const statusBefore = deriveStatusFromDisabledAt(before.disabled_at, now);
     existing.status = lifecycle.status;
     existing.disabled_at = lifecycle.disabled_at;
+    // A contract already renewed keeps its renewal: without it, the term rule ends it after its first term.
+    if (turnsOffRenewalOfRenewedContract(before, existing, utcDateYmd(now))) throw new BadRequestException(RENEWED_CONTRACT_RENEWAL_OFF);
 
     // Detect supplier change for contact sync
     const oldSupplierId = before.supplier_id;
@@ -1117,12 +1129,18 @@ export class ContractsService {
 
     // Determine inserts/updates by composite (name + supplier)
     let inserted = 0; let updated = 0;
+    const today = utcDateYmd(new Date());
     for (const item of unique) {
       const s = sByName.get(item.supplier_name);
       if (!s) { updated += 0; continue; }
       const exists = await repo.findOne({ where: { tenant_id: sessionTenant(), name: item.name as any, supplier_id: s.id as any } });
       if (exists) updated += 1; else inserted += 1;
+      // The update would be refused (`update`): said for the row, dry run included.
+      if (exists && turnsOffRenewalOfRenewedContract(exists, { ...exists, start_date: item.start_date as any, duration_months: item.duration_months, auto_renewal: item.auto_renewal }, today)) {
+        errors.push({ row: norm.indexOf(item) + 2, message: `auto_renewal: ${RENEWED_CONTRACT_RENEWAL_OFF}` });
+      }
     }
+    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, errors };
     if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, errors: [] };
 
     // Commit

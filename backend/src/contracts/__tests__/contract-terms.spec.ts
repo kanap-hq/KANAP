@@ -9,9 +9,10 @@ import {
   contractTermFields,
   contractTermsSql,
   sqlDateLiteral,
+  turnsOffRenewalOfRenewedContract,
 } from '../contract-terms';
 import * as Front from '../../../../frontend/src/pages/contracts/contractTerms';
-import { CONTRACT_COMMITMENT_CASES, CONTRACT_TERM_CASES, contractTermSweep } from './contract-terms.cases';
+import { CONTRACT_COMMITMENT_CASES, CONTRACT_CONFIRMED_RENEWAL_CASES, CONTRACT_TERM_CASES, contractTermSweep } from './contract-terms.cases';
 
 // The contract term rule in TypeScript (contracts/contract-terms.ts): the hand-worked cases,
 // month arithmetic, and the frontend copy (frontend/src/pages/contracts/contractTerms.ts,
@@ -74,6 +75,29 @@ assert.equal(computeContractTerms(deadlineIn49Days, '2026-10-12', { decisionWind
 assert.throws(() => computeContractTerms(deadlineIn49Days, '2026-10-12', { decisionWindowDays: 1.5 }), /Invalid decision window/);
 assert.throws(() => contractTermsSql('c', 'CURRENT_DATE', { decisionWindowDays: -1 }), /Invalid decision window/);
 assert.match(contractTermsSql('c', 'CURRENT_DATE', { decisionWindowDays: 30 }).termState, /ct_b\.today \+ 30 THEN 'to_decide'/);
+
+// A confirmed renewal (lot CR2): only the term of the next deadline counts.
+for (const c of CONTRACT_CONFIRMED_RENEWAL_CASES) {
+  const input = { start_date: c.start, duration_months: c.months, notice_period_months: c.notice, auto_renewal: c.renewal, disabled_at: c.disabledAt ?? null };
+  const asked: string[] = [];
+  const terms = computeContractTerms(input, c.today, { renewalConfirmed: (termEnd) => { asked.push(termEnd); return termEnd === c.confirmedTermEnd; } });
+  assert.equal(terms.term_state, c.expected, `confirmed renewal: ${c.name}`);
+  // Without a decision, the state is the one of the rule without the option.
+  if (c.confirmedTermEnd === null) assert.equal(computeContractTerms(input, c.today).term_state, c.expected, `${c.name}: no option`);
+  assert.ok(asked.length <= 1, `${c.name}: one term asked at most`);
+}
+assert.doesNotMatch(contractTermsSql('c', 'CURRENT_DATE').termState, /ct_x\.next_k \+ 1/, 'no confirmed renewal asked: the SQL reads no decision');
+assert.match(contractTermsSql('c', 'CURRENT_DATE', { renewalConfirmed: (termEnd) => `confirmed(${termEnd})` }).termState, /AND NOT COALESCE\(confirmed\(/);
+
+// An edit that turns off the renewal of a contract already renewed (lot CR2).
+const sap = { start_date: '2023-07-01', duration_months: 12, notice_period_months: 6, auto_renewal: true };
+assert.equal(turnsOffRenewalOfRenewedContract(sap, { ...sap, auto_renewal: false }, '2026-10-13'), true, 'SAP, fourth term: refused');
+assert.equal(turnsOffRenewalOfRenewedContract(sap, { ...sap, auto_renewal: null }, '2026-10-13'), true, 'null counts as off');
+assert.equal(turnsOffRenewalOfRenewedContract(sap, { ...sap, auto_renewal: false }, '2024-01-15'), false, 'still in its first term: allowed');
+assert.equal(turnsOffRenewalOfRenewedContract(sap, { ...sap, start_date: '2026-01-01', auto_renewal: false }, '2026-10-13'), false, 'the same edit moves the start into the first term: allowed');
+assert.equal(turnsOffRenewalOfRenewedContract(sap, { ...sap, auto_renewal: false, disabled_at: '2024-05-31T12:00:00.000Z' }, '2026-10-13'), false, 'ended in its first term: allowed');
+assert.equal(turnsOffRenewalOfRenewedContract({ ...sap, auto_renewal: false }, { ...sap, auto_renewal: false }, '2026-10-13'), false, 'already off: not this edit');
+assert.equal(turnsOffRenewalOfRenewedContract(sap, sap, '2026-10-13'), false, 'renewal kept');
 
 // The SQL builder takes trusted pieces only.
 assert.equal(sqlDateLiteral('2026-10-12'), `DATE '2026-10-12'`);

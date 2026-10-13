@@ -33,6 +33,25 @@ export function renewalSourceRef(termEnd: string): string {
   return `contract-renewal:${termEnd}`;
 }
 
+/**
+ * Whether a renewal is confirmed for a term (lot CR2), as a SQL boolean for the contract row
+ * `alias` (with `tenant_id` and `id`) and the SQL date `termEnd`: the latest decision recorded for
+ * that term is a renewal. `contractTermsSql` takes it as `renewalConfirmed`, so a contract renewed
+ * for the term of its next deadline leaves "to decide". Same reading as `readConfirmedRenewals`
+ * (`contract-renewal.service.ts`); the audit rows are found through
+ * `idx_audit_log_tenant_record_created` (tenant, record).
+ */
+export function renewalConfirmedSql(alias: string): (termEnd: string) => string {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(alias)) throw new Error(`Invalid table alias: ${alias}`);
+  return (termEnd: string) => `((SELECT rd_a.after_json->'renewal_decision'->>'decision'
+      FROM audit_log rd_a
+     WHERE rd_a.tenant_id = ${alias}.tenant_id AND rd_a.record_id = ${alias}.id AND rd_a.table_name = 'contracts'
+       AND rd_a.source_ref = 'contract-renewal:' || to_char(${termEnd}, 'YYYY-MM-DD')
+       AND rd_a.after_json ? 'renewal_decision'
+     ORDER BY rd_a.created_at DESC, rd_a.id DESC
+     LIMIT 1) = 'renew')`;
+}
+
 /** A term a decision is about. */
 export type RenewalTerm = {
   term_index: number;

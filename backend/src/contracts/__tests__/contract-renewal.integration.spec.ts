@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { AuditLog } from '../../audit/audit.entity';
@@ -27,7 +27,10 @@ import { addDaysYmd, addMonthsYmd } from '../contract-terms';
 // without tacit renewal; the tenant's decision window drives the list state, its quick filter
 // count, the contract and the run; each action (renew, terminate, renegotiate, undo) writes the
 // contract, the task, its comment and the audit row; a contract of another tenant is not found.
-// Everything is seeded relative to today, on an empty database.
+// Lot CR2: a renewal decided leaves "to decide" (list state, filter, count, contract) for the term
+// decided, and comes back with its undoing; a contract already renewed keeps its renewal (an edit,
+// an import) and ends with its current term through `stopRenewal`. Everything is seeded relative
+// to today, on an empty database.
 
 const TODAY = utcDateYmd(new Date());
 
@@ -237,6 +240,107 @@ async function testActions() {
   });
 }
 
+async function testConfirmedRenewalLeavesToDecide() {
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId, ownerId, ids } = await seed(runner, 'renewal-confirmed');
+    const { renewal, contracts } = services(runner);
+    const opts = { manager: runner.manager };
+    const id = ids.decide;
+    const toDecideFilter = { filters: JSON.stringify({ term_state: { filterType: 'set', values: ['to_decide'] } }) };
+    const listed = async () => ((await contracts.list({ limit: 50 }, opts)).items as any[]).find((r) => r.id === id)?.term_state;
+    const filteredIds = async () => ((await contracts.list(toDecideFilter, opts)).items as any[]).map((r) => r.id);
+    const count = async () => (await contracts.totals({}, { ...opts, tenantId })).to_decide_count;
+    const detail = async () => ((await contracts.get(id, opts)) as any).term_state;
+
+    assert.equal(await count(), 3, 'three contracts to decide');
+    assert.ok((await filteredIds()).includes(id));
+    const renewed = await renewal.act(id, 'renew', { reason: 'Keep it' }, ownerId, opts);
+    const termEnd = renewed.term!.term_end;
+    assert.equal(await listed(), 'in_progress', 'the list state leaves "to decide" once the renewal is decided');
+    assert.ok(!(await filteredIds()).includes(id), 'the "to decide" filter leaves it out');
+    assert.equal(await count(), 2, 'the count follows');
+    assert.equal(await detail(), 'in_progress', 'the contract too');
+    const exported = await contracts.listIds(toDecideFilter, opts);
+    assert.ok(!exported.ids.includes(id), 'the ids of the filtered list too');
+
+    await renewal.act(id, 'undo', {}, ownerId, opts);
+    assert.equal(await listed(), 'to_decide', 'undone: to decide again');
+    assert.equal(await count(), 3);
+    await renewal.act(id, 'renegotiate', { reason: 'Ask for a discount' }, ownerId, opts);
+    assert.equal(await listed(), 'to_decide', 'a renegotiation keeps it to decide');
+    await renewal.act(id, 'renew', {}, ownerId, opts);
+    assert.equal(await count(), 2, 'renewed after the renegotiation');
+
+    // A renewal confirmed for another term (the next one) leaves this term to decide.
+    const other = ids.noOwner;
+    const otherTerm = (await renewal.get(other, opts)).term!;
+    await runner.query(
+      `INSERT INTO audit_log (tenant_id, table_name, record_id, action, before_json, after_json, user_id, source, source_ref)
+       VALUES ($1, 'contracts', $2, 'update', NULL, $3::jsonb, NULL, 'user', $4)`,
+      [tenantId, other, JSON.stringify({ renewal_decision: { decision: 'renew', term_end: otherTerm.next_term_end } }), `contract-renewal:${otherTerm.next_term_end}`],
+    );
+    assert.ok((await filteredIds()).includes(other), 'a renewal of the next term does not count for this one');
+    assert.ok(termEnd > TODAY);
+  });
+}
+
+async function testRenewedContractKeepsRenewal() {
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId, ownerId, ids } = await seed(runner, 'renewal-keep');
+    const { renewal, contracts } = services(runner);
+    const opts = { manager: runner.manager };
+    // Second term: 12-month terms from about two years ago.
+    const start = addDaysYmd(addMonthsYmd(TODAY, -24), 60);
+    const [row] = await runner.query(
+      `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, owner_user_id, start_date, duration_months, notice_period_months,
+                              auto_renewal, yearly_amount_at_signature, currency, status)
+       SELECT tenant_id, 'Renewed once', company_id, supplier_id, owner_user_id, $2, 12, 1, true, 12000, 'EUR', 'enabled'
+         FROM contracts WHERE id = $1 RETURNING id`,
+      [ids.decide, start],
+    );
+    const id = row.id as string;
+    const contractRow = async () => (await runner.query(`SELECT auto_renewal, disabled_at FROM contracts WHERE id = $1`, [id]))[0];
+    const auditCount = async () => Number((await runner.query(`SELECT count(*) AS n FROM audit_log WHERE tenant_id = $1 AND record_id = $2`, [tenantId, id]))[0].n);
+
+    await expectRefusal(runner, BadRequestException, () => contracts.update(id, { auto_renewal: false }, ownerId, opts), 'renewal off on a renewed contract');
+    await expectRefusal(runner, BadRequestException, () => contracts.update(id, { auto_renewal: null }, ownerId, opts), 'renewal null on a renewed contract');
+    assert.deepEqual(await contractRow(), { auto_renewal: true, disabled_at: null }, 'unchanged');
+    await contracts.update(ids.later, { auto_renewal: false }, ownerId, opts);
+    assert.equal((await runner.query(`SELECT auto_renewal FROM contracts WHERE id = $1`, [ids.later]))[0].auto_renewal, false, 'first term: the renewal turns off as before');
+    await contracts.update(id, { notes: 'Kept' }, ownerId, opts);
+
+    // The import refuses the row, dry run included, and writes nothing.
+    const csv = [
+      'name;company_name;supplier_name;start_date;duration_months;auto_renewal;notice_period_months;yearly_amount_at_signature;currency;billing_frequency;status;owner_email;notes',
+      `Renewed once;renewal-keep company;renewal-keep supplier;${start};12;no;1;12000;EUR;annual;;;`,
+    ].join('\n');
+    const file = { buffer: Buffer.from(csv, 'utf8'), originalname: 'contracts.csv' } as any;
+    for (const dryRun of [true, false]) {
+      const result: any = await contracts.importCsv({ file, dryRun, userId: ownerId }, opts);
+      assert.equal(result.ok, false, `import (dry run ${dryRun}) refused`);
+      assert.deepEqual(result.errors.map((e: any) => e.row), [2], 'on the row of the contract');
+      assert.match(result.errors[0].message, /^auto_renewal: This contract has already been renewed/);
+    }
+    assert.deepEqual(await contractRow(), { auto_renewal: true, disabled_at: null }, 'the import wrote nothing');
+
+    // Ends with its current term: the renewal stays on, one audit row.
+    const before = await auditCount();
+    await renewal.stopRenewal(id, ownerId, opts);
+    const currentTermEnd = addDaysYmd(addMonthsYmd(start, 24), -1);
+    const ended = await contractRow();
+    assert.equal(ended.auto_renewal, true, 'the renewal stays on');
+    assert.equal(new Date(ended.disabled_at).toISOString(), `${currentTermEnd}T12:00:00.000Z`, 'ends on the last day of the current term');
+    assert.equal(await auditCount(), before + 1, 'one audit row');
+    const detail: any = await contracts.get(id, opts);
+    assert.equal(detail.term_state, 'ending');
+    assert.equal(detail.term_index, 1, 'its past term is kept');
+    await renewal.stopRenewal(id, ownerId, opts);
+    assert.equal(await auditCount(), before + 1, 'a second stop changes nothing');
+    await expectRefusal(runner, ConflictException, () => renewal.stopRenewal(ids.decide, ownerId, opts), 'still in its first term');
+    await expectRefusal(runner, ConflictException, () => renewal.stopRenewal(ids.noRenewal, ownerId, opts), 'no renewal to stop');
+  });
+}
+
 async function testTenantIsolation() {
   await inRolledBackTransaction(async (runner) => {
     const a = await seed(runner, 'renewal-a');
@@ -249,6 +353,7 @@ async function testTenantIsolation() {
       await expectRefusal(runner, NotFoundException, () => renewal.act(a.ids.decide, action, {}, b.ownerId, opts), `${action} on another tenant`);
     }
     await expectRefusal(runner, NotFoundException, () => renewal.get('not-a-uuid', opts), 'an invalid id');
+    await expectRefusal(runner, NotFoundException, () => renewal.stopRenewal(a.ids.decide, b.ownerId, opts), 'stop on another tenant');
   });
 }
 
@@ -256,6 +361,8 @@ runSpecs('contract-renewal.integration', [
   ['daily run', testDailyRun],
   ['window setting', testWindowSetting],
   ['actions', testActions],
+  ['a renewal decided leaves "to decide"', testConfirmedRenewalLeavesToDecide],
+  ['a renewed contract keeps its renewal', testRenewedContractKeepsRenewal],
   ['tenant isolation', testTenantIsolation],
 ]).catch((err) => {
   console.error(err);

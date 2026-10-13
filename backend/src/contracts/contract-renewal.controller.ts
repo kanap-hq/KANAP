@@ -43,6 +43,14 @@ export class ContractRenewalController {
     return this.svc.act(id, 'renegotiate', body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
+  /** A contract already renewed ends with its current term (the renewal field's "no" on the contract page). */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'member')
+  @Post(':id/renewal/stop')
+  stop(@Param('id') id: string, @Req() req: any) {
+    return this.svc.stopRenewal(id, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
+
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'member')
   @Post(':id/renewal/undo')

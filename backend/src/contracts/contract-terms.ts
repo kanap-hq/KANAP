@@ -33,8 +33,14 @@
  *   Null once that end has passed.
  * - `term_state`, in this order: `expired` (no next due date), `ending` (it does not renew at
  *   the end of its current term), `to_decide` (its next cancellation deadline falls within the
- *   decision window, the tenant's `decisionWindowDays` from today), `renewed` (the current term's
- *   deadline has passed: the contract goes on into the next term) or `in_progress`.
+ *   decision window, the tenant's `decisionWindowDays` from today, and no renewal is confirmed
+ *   for the term of that deadline), `renewed` (the current term's deadline has passed: the
+ *   contract goes on into the next term) or `in_progress`.
+ *
+ * A confirmed renewal (lot CR2) is a renewal decision that stands for a term (`contract-renewal.ts`,
+ * read from the audit log): the caller says which terms have one through `renewalConfirmed`, a
+ * test on the term's last day (a function in TypeScript, a SQL expression builder in SQL). Without
+ * it, no renewal is confirmed.
  *
  * `computeContractTerms` reads the rule as written. `contractTermsSql` gives the same values as
  * SQL expressions for sorting, filtering and the expiry warnings; the parity spec
@@ -67,10 +73,21 @@ export const CONTRACT_DECISION_WINDOW_DAYS = 90;
 export const CONTRACT_TERM_STATES = ['to_decide', 'in_progress', 'renewed', 'ending', 'expired'] as const;
 export type ContractTermState = (typeof CONTRACT_TERM_STATES)[number];
 
-/** Options of the values that depend on the decision window. */
-export type ContractTermsOptions = { decisionWindowDays?: number };
+/** Options of the values that depend on the decision window and on the renewals confirmed. */
+export type ContractTermsOptions = {
+  decisionWindowDays?: number;
+  /** Whether a renewal is confirmed for the term ending on `termEnd` (`YYYY-MM-DD`). */
+  renewalConfirmed?: (termEnd: string) => boolean;
+};
 
-function decisionWindowDays(opts?: ContractTermsOptions): number {
+/** `ContractTermsOptions` for `contractTermsSql`. */
+export type ContractTermsSqlOptions = {
+  decisionWindowDays?: number;
+  /** A SQL boolean saying whether a renewal is confirmed for the term ending on the SQL date `termEnd`. */
+  renewalConfirmed?: (termEnd: string) => string;
+};
+
+function decisionWindowDays(opts?: { decisionWindowDays?: number }): number {
   const days = opts?.decisionWindowDays ?? CONTRACT_DECISION_WINDOW_DAYS;
   if (!Number.isInteger(days) || days < 0) throw new Error(`Invalid decision window: ${days}`);
   return days;
@@ -177,11 +194,13 @@ export function computeContractTerms(input: ContractTermsInput, todayYmd: string
   const termIndex = !renews ? 0 : Math.min(termAt(todayYmd), lastTerm);
 
   let next: string | null = null;
+  let nextTerm = termIndex;
   for (let k = termIndex; k <= lastTerm; k += 1) {
     const candidate = deadline(k);
     if (validUntil !== null && candidate > validUntil) break;
     if (candidate >= todayYmd) {
       next = candidate;
+      nextTerm = k;
       break;
     }
   }
@@ -194,7 +213,7 @@ export function computeContractTerms(input: ContractTermsInput, todayYmd: string
   let termState: ContractTermState;
   if (nextDue === null) termState = 'expired';
   else if (!renewsAtTermEnd) termState = 'ending';
-  else if (next !== null && next <= addDaysYmd(todayYmd, windowDays)) termState = 'to_decide';
+  else if (next !== null && next <= addDaysYmd(todayYmd, windowDays) && !opts?.renewalConfirmed?.(termEnd(nextTerm))) termState = 'to_decide';
   else if (deadline(termIndex) < todayYmd) termState = 'renewed';
   else termState = 'in_progress';
   return {
@@ -284,7 +303,7 @@ export type ContractTermsSql = {
  * an ORDER BY. `alias` must be a plain identifier and `today` a trusted expression
  * (`sqlDateLiteral`, `SQL_TODAY_UTC`, a `$n::date` parameter or a column).
  */
-export function contractTermsSql(alias: string, today: string, opts?: ContractTermsOptions): ContractTermsSql {
+export function contractTermsSql(alias: string, today: string, opts?: ContractTermsSqlOptions): ContractTermsSql {
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(alias)) throw new Error(`Invalid table alias: ${alias}`);
   const windowDays = decisionWindowDays(opts);
   const a = alias;
@@ -298,6 +317,8 @@ export function contractTermsSql(alias: string, today: string, opts?: ContractTe
   };
   const termEnd = (k: string) => `(${addMonths('ct_b.s', `(${k} + 1) * ct_b.d`)} - 1)`;
   const deadline = (k: string) => addMonths(termEnd(k), '-ct_b.n');
+  // A renewal confirmed for the term of the next deadline keeps the contract out of "to decide".
+  const confirmed = opts?.renewalConfirmed ? ` AND NOT COALESCE(${opts.renewalConfirmed(termEnd('ct_x.next_k'))}, false)` : '';
 
   const row = `SELECT ct_i.term_index,
            ${termEnd('ct_i.term_index')} AS current_term_end,
@@ -307,7 +328,7 @@ export function contractTermsSql(alias: string, today: string, opts?: ContractTe
            ct_n.next_due AS next_due_date,
            CASE WHEN ct_n.next_due IS NULL THEN 'expired'
                 WHEN NOT ct_e.renews_next THEN 'ending'
-                WHEN ct_x.next_deadline <= ct_b.today + ${windowDays} THEN 'to_decide'
+                WHEN ct_x.next_deadline <= ct_b.today + ${windowDays}${confirmed} THEN 'to_decide'
                 WHEN ct_e.current_deadline < ct_b.today THEN 'renewed'
                 ELSE 'in_progress' END AS term_state
       FROM (SELECT ${a}.start_date AS s,
@@ -329,7 +350,8 @@ export function contractTermsSql(alias: string, today: string, opts?: ContractTe
                     ELSE 0 END AS k0
       ) ct_q
       CROSS JOIN LATERAL (
-        SELECT min(ct_d.deadline) AS next_deadline
+        /* Deadlines grow with the term: the first one is the earliest term's. */
+        SELECT min(ct_d.deadline) AS next_deadline, min(ct_k.k) AS next_k
           FROM generate_series(ct_q.k0, CASE WHEN ct_b.renews THEN ct_q.k0 + 2 ELSE 0 END) AS ct_k(k)
           CROSS JOIN LATERAL (SELECT ${deadline('ct_k.k')} AS deadline) ct_d
          WHERE (ct_i.last_term IS NULL OR ct_k.k <= ct_i.last_term)
@@ -455,4 +477,16 @@ export function contractCommitmentSql(alias: string, year: string): string {
                    (make_date(cm_b.yr, cm_k.m, 1) + interval '1 month')::date - 1 AS last
           ) cm_m
       ) cm_u)`;
+}
+
+/**
+ * Whether an edit turns off the tacit renewal of a contract already renewed (lot CR2): the term
+ * rule would give it its first term only and drop the terms it has run since. `after` is the
+ * contract as the edit leaves it; it has been renewed when, renewal on, today falls after its
+ * first term. Such an edit is refused: the contract ends with its current term through an end of
+ * validity instead (`ContractRenewalService.stopRenewal`).
+ */
+export function turnsOffRenewalOfRenewedContract(before: ContractTermsInput, after: ContractTermsInput, todayYmd: string): boolean {
+  if (!before.auto_renewal || after.auto_renewal) return false;
+  return computeContractTerms({ ...after, auto_renewal: true }, todayYmd).term_index > 0;
 }
