@@ -731,6 +731,12 @@
       "earliestNoNotice": "Keine Kündigungsfrist: Das frühestmögliche Ende ist der {{date}}.",
       "beforeAllowed": "Vor dem Ende, das die Kündigungsfrist erlaubt: mit dem Lieferanten zu vereinbaren.",
       "tooEarly": "Wählen Sie einen Tag ab dem {{date}}."
+    },
+    "resumeRenewal": {
+      "title": "Stillschweigende Verlängerung wieder aktivieren",
+      "body": "Der Vertrag verlängert sich stillschweigend und das Ende am {{date}} entfällt.",
+      "confirm": "Verlängerung wieder aktivieren",
+      "failed": "Die Verlängerung konnte nicht wieder aktiviert werden."
     }
   },
   "operations": {

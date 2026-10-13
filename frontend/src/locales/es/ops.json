@@ -731,6 +731,12 @@
       "earliestNoNotice": "Sin preaviso: el primer fin posible es el {{date}}.",
       "beforeAllowed": "Antes del fin que permite el preaviso: a acordar con el proveedor.",
       "tooEarly": "Elija un día a partir del {{date}}."
+    },
+    "resumeRenewal": {
+      "title": "Reactivar la renovación tácita",
+      "body": "El contrato se renovará tácitamente y se retirará el fin del {{date}}.",
+      "confirm": "Reactivar la renovación",
+      "failed": "No se pudo reactivar la renovación."
     }
   },
   "operations": {

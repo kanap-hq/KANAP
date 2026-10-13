@@ -32,6 +32,7 @@ import ContractDeadlines from './workspace/ContractDeadlines';
 import ContractRenewalDecision from './workspace/ContractRenewalDecision';
 import { confirmedRenewalOf, renewalQueryKey, useContractRenewal } from './contractRenewal';
 import ContractStopRenewalDialog from './workspace/ContractStopRenewalDialog';
+import ContractResumeRenewalDialog from './workspace/ContractResumeRenewalDialog';
 import ContractPropertiesDrawer, { type ContractFormValues } from './workspace/ContractPropertiesDrawer';
 import ContractBudgetTab from './workspace/ContractBudgetTab';
 import ContractRelationsTab from './workspace/ContractRelationsTab';
@@ -253,9 +254,16 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   const [stopRenewalOpen, setStopRenewalOpen] = React.useState(false);
   const renewedSoFar = form?.auto_renewal && schedule ? schedule.renewals : 0;
   const decisionAwaited = !!form?.auto_renewal && renewalQuery.data?.state === 'pending';
+  // "Yes" on a contract without renewal that has an end of validity: a confirmation turns the
+  // renewal on and removes that end (`ContractResumeRenewalDialog`), whatever set it.
+  const [resumeRenewalOpen, setResumeRenewalOpen] = React.useState(false);
   const onPropertiesPatch = (patch: ContractPatch) => {
     if (patch.auto_renewal === false && (renewedSoFar > 0 || decisionAwaited)) {
       setStopRenewalOpen(true);
+      return;
+    }
+    if (patch.auto_renewal === true && form && !form.auto_renewal && form.disabled_at) {
+      setResumeRenewalOpen(true);
       return;
     }
     void patchNow(patch);
@@ -442,6 +450,20 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
           />
         )}
       </PortfolioDetailWorkspaceShell>
+      {form?.disabled_at && (
+        <ContractResumeRenewalDialog
+          open={resumeRenewalOpen}
+          contractId={form.id}
+          endOfValidity={form.disabled_at}
+          beforeResume={() => autosave.flush()}
+          onClose={() => setResumeRenewalOpen(false)}
+          onResumed={(renewal) => {
+            setResumeRenewalOpen(false);
+            queryClient.setQueryData(renewalQueryKey(form.id), renewal);
+            refreshAfterDecision();
+          }}
+        />
+      )}
       {form && schedule && (
         <ContractStopRenewalDialog
           open={stopRenewalOpen}

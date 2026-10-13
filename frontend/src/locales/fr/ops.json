@@ -731,6 +731,12 @@
       "earliestNoNotice": "Sans préavis : la première fin possible est le {{date}}.",
       "beforeAllowed": "Avant la fin permise par le préavis : à convenir avec le fournisseur.",
       "tooEarly": "Choisissez un jour à partir du {{date}}."
+    },
+    "resumeRenewal": {
+      "title": "Réactiver la reconduction tacite",
+      "body": "Le contrat sera reconduit tacitement et la fin du {{date}} sera retirée.",
+      "confirm": "Réactiver la reconduction",
+      "failed": "La reconduction n'a pas pu être réactivée."
     }
   },
   "operations": {

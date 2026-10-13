@@ -731,6 +731,12 @@
       "earliestNoNotice": "No notice: the earliest possible end is {{date}}.",
       "beforeAllowed": "Before the end the notice allows: to agree with the supplier.",
       "tooEarly": "Choose a day from {{date}}."
+    },
+    "resumeRenewal": {
+      "title": "Turn the tacit renewal back on",
+      "body": "The contract will renew tacitly and the end on {{date}} will be removed.",
+      "confirm": "Turn the renewal back on",
+      "failed": "The renewal could not be turned back on."
     }
   },
   "operations": {

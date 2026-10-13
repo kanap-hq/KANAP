@@ -265,6 +265,48 @@ describe('ContractWorkspacePage', () => {
     await waitFor(() => expect(screen.getByRole('combobox', { name: 'contracts.fields.autoRenewal' })).toHaveTextContent('contracts.fields.no'));
   });
 
+  it('asks before turning the renewal back on when an end of validity is set, then removes it', async () => {
+    let resumed = false;
+    const off = { ...CONTRACT, auto_renewal: false, disabled_at: `${NEXT_YEAR}-06-30T12:00:00.000Z`, status: 'enabled' };
+    const base = mocked.get.getMockImplementation() as (url: string, options?: unknown) => Promise<unknown>;
+    mocked.get.mockImplementation(async (url: string, options?: unknown) => (
+      url === '/contracts/c-1' ? { data: resumed ? { ...CONTRACT } : off } : base(url, options)
+    ));
+    mocked.post.mockImplementation(async () => { resumed = true; return { data: { state: 'none' } }; });
+    renderAt('/ops/contracts/c-1/overview');
+    const choose = async () => {
+      fireEvent.mouseDown(await screen.findByRole('combobox', { name: 'contracts.fields.autoRenewal' }));
+      fireEvent.click(await screen.findByRole('option', { name: 'contracts.fields.yes' }));
+    };
+    await choose();
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('contracts.resumeRenewal.title')).toBeInTheDocument();
+    expect(within(dialog).getByText(/^contracts\.resumeRenewal\.body:/)).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(mocked.patch).not.toHaveBeenCalled();
+    expect(mocked.post).not.toHaveBeenCalled();
+    expect(screen.getByRole('combobox', { name: 'contracts.fields.autoRenewal' })).toHaveTextContent('contracts.fields.no');
+
+    await choose();
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'contracts.resumeRenewal.confirm' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/contracts/c-1/renewal/resume'));
+    expect(mocked.patch).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'contracts.fields.autoRenewal' })).toHaveTextContent('contracts.fields.yes'));
+  });
+
+  it('turns the renewal on at once when no end of validity is set', async () => {
+    const base = mocked.get.getMockImplementation() as (url: string, options?: unknown) => Promise<unknown>;
+    mocked.get.mockImplementation(async (url: string, options?: unknown) => (
+      url === '/contracts/c-1' ? { data: { ...CONTRACT, auto_renewal: false } } : base(url, options)
+    ));
+    renderAt('/ops/contracts/c-1/overview');
+    fireEvent.mouseDown(await screen.findByRole('combobox', { name: 'contracts.fields.autoRenewal' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'contracts.fields.yes' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/contracts/c-1', { auto_renewal: true }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
   it('turns off the renewal of a contract in its first term at once', async () => {
     const base = mocked.get.getMockImplementation() as (url: string, options?: unknown) => Promise<unknown>;
     const firstTerm = { ...CONTRACT, start_date: `${NEXT_YEAR}-01-01` };
