@@ -411,7 +411,8 @@
       "committed": "Committed {{year}}",
       "budgetLinked": "Budget {{year}}",
       "gap": "Gap",
-      "budgetState": "Budget coverage"
+      "budgetState": "Budget coverage",
+      "compliance": "Compliance"
     },
     "list": {
       "toDecide": "To decide within {{days}} days ({{count}})",
@@ -448,6 +449,7 @@
     "tabs": {
       "overview": "Overview",
       "budget": "Budget",
+      "compliance": "Compliance",
       "relations": "Relations"
     },
     "sections": {
@@ -603,6 +605,67 @@
       "uploadingFiles_one": "Uploading {{count}} file…",
       "uploadingFiles_other": "Uploading {{count}} files…",
       "deleteAttachment": "Delete attachment"
+    },
+    "compliance": {
+      "title": "Requirements",
+      "subtitle": "expected from the linked applications and assets",
+      "hint": "A requirement appears when a linked application or asset makes it necessary.",
+      "noneExpected": "No requirement is expected: no linked application or asset makes one necessary.",
+      "showOthers": "Show the other requirements ({{count}})",
+      "hideOthers": "Hide the other requirements",
+      "notExpected": "Not expected",
+      "moreReasons_one": "and {{count}} more",
+      "moreReasons_other": "and {{count}} more",
+      "columns": {
+        "requirement": "Requirement",
+        "reason": "Expected because",
+        "state": "State",
+        "reference": "Reference"
+      },
+      "requirements": {
+        "gdpr_dpa": "GDPR data processing agreement (art. 28)",
+        "data_location": "Data location",
+        "reversibility": "Reversibility clause",
+        "exit_plan": "Exit plan",
+        "audit_security": "Audit rights and security clauses"
+      },
+      "states": {
+        "present": "Present",
+        "absent": "Missing",
+        "not_applicable": "Not applicable",
+        "to_check": "To check",
+        "unset": "Not recorded"
+      },
+      "reasons": {
+        "personal_data": "{{app}} holds personal data",
+        "business_criticality": "{{app}}: business criticality {{level}}",
+        "cyber_criticality": "{{app}}: cyber criticality {{level}}",
+        "cloud_hosting": "{{app}}: hosted in {{level}}",
+        "viaAsset": "{{text}} (asset {{asset}})"
+      },
+      "summary": {
+        "missing_one": "{{count}} missing",
+        "missing_other": "{{count}} missing",
+        "toCheck_one": "{{count}} to check",
+        "toCheck_other": "{{count}} to check",
+        "complete": "Complete",
+        "none": "No expectation",
+        "states": {
+          "missing": "Missing",
+          "to_check": "To check",
+          "complete": "Complete",
+          "none": "No expectation"
+        }
+      },
+      "stateOf": "State of {{requirement}}",
+      "referenceOf": "Reference of {{requirement}}",
+      "referencePlaceholder": "e.g., article 18.3",
+      "updatedBy": "Updated on {{date}} by {{name}}",
+      "updatedOn": "Updated on {{date}}",
+      "saveFailed": "The change could not be saved.",
+      "loadFailed": "The requirements could not be loaded.",
+      "exportRegister": "Export the register",
+      "exportFailed": "The register could not be exported."
     }
   },
   "operations": {

@@ -411,7 +411,8 @@
       "committed": "Comprometido {{year}}",
       "budgetLinked": "Presupuesto {{year}}",
       "gap": "Diferencia",
-      "budgetState": "Cobertura del presupuesto"
+      "budgetState": "Cobertura del presupuesto",
+      "compliance": "Conformidad"
     },
     "list": {
       "toDecide": "Por decidir en {{days}} días ({{count}})",
@@ -448,6 +449,7 @@
     "tabs": {
       "overview": "Vista general",
       "budget": "Presupuesto",
+      "compliance": "Conformidad",
       "relations": "Relaciones"
     },
     "sections": {
@@ -603,6 +605,67 @@
       "uploadingFiles_one": "Subiendo {{count}} archivo…",
       "uploadingFiles_other": "Subiendo {{count}} archivos…",
       "deleteAttachment": "Eliminar adjunto"
+    },
+    "compliance": {
+      "title": "Requisitos",
+      "subtitle": "deducidos de las aplicaciones y activos vinculados",
+      "hint": "Un requisito aparece cuando una aplicación o un activo vinculado lo hace necesario.",
+      "noneExpected": "No se espera ningún requisito: ninguna aplicación ni ningún activo vinculado lo hace necesario.",
+      "showOthers": "Mostrar los demás requisitos ({{count}})",
+      "hideOthers": "Ocultar los demás requisitos",
+      "notExpected": "No esperado",
+      "moreReasons_one": "y {{count}} más",
+      "moreReasons_other": "y {{count}} más",
+      "columns": {
+        "requirement": "Requisito",
+        "reason": "Esperado porque",
+        "state": "Estado",
+        "reference": "Referencia"
+      },
+      "requirements": {
+        "gdpr_dpa": "Contrato de encargado del tratamiento RGPD (art. 28)",
+        "data_location": "Ubicación de los datos",
+        "reversibility": "Cláusula de reversibilidad",
+        "exit_plan": "Plan de salida",
+        "audit_security": "Derecho de auditoría y cláusulas de seguridad"
+      },
+      "states": {
+        "present": "Presente",
+        "absent": "Ausente",
+        "not_applicable": "No aplica",
+        "to_check": "Por verificar",
+        "unset": "Sin registrar"
+      },
+      "reasons": {
+        "personal_data": "{{app}} contiene datos personales",
+        "business_criticality": "{{app}}: criticidad de negocio {{level}}",
+        "cyber_criticality": "{{app}}: criticidad cibernética {{level}}",
+        "cloud_hosting": "{{app}}: alojamiento {{level}}",
+        "viaAsset": "{{text}} (activo {{asset}})"
+      },
+      "summary": {
+        "missing_one": "{{count}} ausente",
+        "missing_other": "{{count}} ausentes",
+        "toCheck_one": "{{count}} por verificar",
+        "toCheck_other": "{{count}} por verificar",
+        "complete": "Completo",
+        "none": "Sin expectativas",
+        "states": {
+          "missing": "Ausentes",
+          "to_check": "Por verificar",
+          "complete": "Completo",
+          "none": "Sin expectativas"
+        }
+      },
+      "stateOf": "Estado: {{requirement}}",
+      "referenceOf": "Referencia: {{requirement}}",
+      "referencePlaceholder": "p. ej., artículo 18.3",
+      "updatedBy": "Actualizado el {{date}} por {{name}}",
+      "updatedOn": "Actualizado el {{date}}",
+      "saveFailed": "No se pudo guardar el cambio.",
+      "loadFailed": "No se pudieron cargar los requisitos.",
+      "exportRegister": "Exportar el registro",
+      "exportFailed": "No se pudo exportar el registro."
     }
   },
   "operations": {

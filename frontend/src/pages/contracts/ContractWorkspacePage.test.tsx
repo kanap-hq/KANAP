@@ -98,6 +98,17 @@ function coverage(params?: { year: number; column: string }) {
   };
 }
 
+/** `GET /contracts/c-1/compliance`: the DPA recorded absent, the data location to check, the rest not expected. */
+const REASON = { rule: 'personal_data', application: { id: 'app-1', name: 'SAP S/4HANA' }, asset: null, level: null };
+const COMPLIANCE = {
+  summary: { expected: 2, missing: 1, to_check: 1, state: 'missing' },
+  requirements: [
+    { requirement: 'gdpr_dpa', expected: true, reasons: [REASON], state: 'absent', reference: 'Annex 4', updated_at: '2026-10-12T10:00:00.000Z', updated_by: { id: 'user-1', name: 'Ada Admin' } },
+    { requirement: 'data_location', expected: true, reasons: [REASON, { ...REASON, rule: 'cloud_hosting', level: { axis: 'hostingTypes', code: 'saas', label: 'SaaS' } }], state: null, reference: null, updated_at: null, updated_by: null },
+    ...['reversibility', 'exit_plan', 'audit_security'].map((requirement) => ({ requirement, expected: false, reasons: [], state: null, reference: null, updated_at: null, updated_by: null })),
+  ],
+};
+
 function LocationProbe() {
   const location = useLocation();
   return <div data-testid="location">{`${location.pathname}${location.search}`}</div>;
@@ -153,10 +164,16 @@ describe('ContractWorkspacePage', () => {
         return { data: { labels: { planned: null, committed: 'Revised', forecast: null, actual: null, expected_landing: null }, enabled: { planned: true, committed: true, forecast: false, actual: true, expected_landing: true }, group_spread: {}, default_column: 'planned' } };
       }
       if (url === '/contracts/c-1/budget') return { data: coverage(options?.params) };
+      if (url === '/contracts/c-1/compliance') return { data: COMPLIANCE };
       if (url === '/currency/settings') return { data: { reportingCurrency: 'EUR', defaultSpendCurrency: 'EUR', defaultCapexCurrency: 'EUR', allowedCurrencies: ['EUR', 'USD'] } };
       return { data: { items: [] } };
     });
-    mocked.patch.mockImplementation(async (_url: string, body: Record<string, unknown>) => ({ data: { ...CONTRACT, ...body } }));
+    mocked.patch.mockImplementation(async (url: string, body: Record<string, unknown>) => (
+      url.includes('/compliance/')
+        // The register as the API answers it: the requirement with the body recorded.
+        ? { data: { ...COMPLIANCE, requirements: COMPLIANCE.requirements.map((item) => (url.endsWith(`/${item.requirement}`) ? { ...item, ...body } : item)) } }
+        : { data: { ...CONTRACT, ...body } }
+    ));
     mocked.post.mockImplementation(async () => ({ data: { id: 'c-new' } }));
   });
 
@@ -299,6 +316,56 @@ describe('ContractWorkspacePage', () => {
     expect(screen.getByRole('button', { name: 'contracts.relations.addFiles' })).toBeInTheDocument();
     expect(screen.getByText('Vendor portal')).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'contacts.syncFromSupplier' })).toBeInTheDocument();
+  });
+
+  it('shows the expected requirements with their reasons, the others on demand, and the missing count on the tab', async () => {
+    renderAt('/ops/contracts/c-1/compliance');
+    const tab = await screen.findByRole('tab', { name: /contracts\.tabs\.compliance/ });
+    await waitFor(() => expect(tab).toHaveTextContent('1'));
+    expect(await screen.findByText('contracts.compliance.requirements.gdpr_dpa')).toBeInTheDocument();
+    expect(screen.getByText('contracts.compliance.requirements.data_location')).toBeInTheDocument();
+    expect(screen.getByText('contracts.compliance.summary.missing:1')).toBeInTheDocument();
+    expect(screen.getByText('contracts.compliance.hint')).toBeInTheDocument();
+    // Two reasons: the first, then how many more.
+    const location = screen.getByText('contracts.compliance.requirements.data_location').closest('tr') as HTMLElement;
+    expect(location).toHaveTextContent('contracts.compliance.reasons.personal_data');
+    expect(location).toHaveTextContent('contracts.compliance.moreReasons:1');
+    // Expected with nothing recorded: to check.
+    expect(within(location).getByRole('combobox')).toHaveTextContent('contracts.compliance.states.to_check');
+    // The requirements not expected wait behind their link.
+    expect(screen.queryByText('contracts.compliance.requirements.exit_plan')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'contracts.compliance.showOthers:3' }));
+    const exit = screen.getByText('contracts.compliance.requirements.exit_plan').closest('tr') as HTMLElement;
+    expect(exit).toHaveTextContent('contracts.compliance.notExpected');
+    expect(within(exit).getByRole('combobox')).toHaveTextContent('contracts.compliance.states.unset');
+  });
+
+  it('records a state at once and a reference on blur', async () => {
+    renderAt('/ops/contracts/c-1/compliance');
+    const location = (await screen.findByText('contracts.compliance.requirements.data_location')).closest('tr') as HTMLElement;
+    fireEvent.mouseDown(within(location).getByRole('combobox'));
+    fireEvent.click(await screen.findByRole('option', { name: 'contracts.compliance.states.present' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/contracts/c-1/compliance/data_location', { state: 'present' }));
+
+    const dpa = screen.getByText('contracts.compliance.requirements.gdpr_dpa').closest('tr') as HTMLElement;
+    const reference = within(dpa).getByDisplayValue('Annex 4');
+    fireEvent.change(reference, { target: { value: 'Annex 4, art. 12' } });
+    expect(mocked.patch).toHaveBeenCalledTimes(1);
+    fireEvent.blur(reference);
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/contracts/c-1/compliance/gdpr_dpa', { reference: 'Annex 4, art. 12' }));
+    // An unchanged reference is not sent again.
+    fireEvent.blur(within(dpa).getByRole('textbox'));
+    expect(mocked.patch).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows the register read-only to a reader', async () => {
+    auth.canEdit = false;
+    renderAt('/ops/contracts/c-1/compliance');
+    const dpa = (await screen.findByText('contracts.compliance.requirements.gdpr_dpa')).closest('tr') as HTMLElement;
+    expect(dpa).toHaveTextContent('contracts.compliance.states.absent');
+    expect(dpa).toHaveTextContent('Annex 4');
+    expect(within(dpa).queryByRole('combobox')).toBeNull();
+    expect(within(dpa).queryByRole('textbox')).toBeNull();
   });
 
   it('creates a contract with the real fields only', async () => {

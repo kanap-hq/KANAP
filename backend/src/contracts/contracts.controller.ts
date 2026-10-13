@@ -17,6 +17,8 @@ import { ContractContactsService } from './contract-contacts.service';
 import { SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { canReadContractBudget } from './contract-budget';
+import { languageOf } from '../common/csv-sheet';
+import type { ComplianceItemPatch } from './contract-compliance';
 
 @UseGuards(JwtAuthGuard)
 @Controller('contracts')
@@ -66,6 +68,19 @@ export class ContractsController {
   @Get('export')
   async export(@Query('scope') scope: 'template' | 'data' = 'data', @Res() res: Response, @Req() req: any) {
     const { filename, content } = await this.svc.exportCsv(scope, { manager: req?.queryRunner?.manager });
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', contentDisposition(filename));
+    res.send(content);
+  }
+
+  // The compliance register of the contracts the list selects (CSV, contract × requirement); before ':id'.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'admin')
+  @Get('compliance-register/export')
+  async exportComplianceRegister(@Query() query: any, @Res() res: Response, @Req() req: any) {
+    const manager = req?.queryRunner?.manager;
+    const language = await languageOf(manager, req.tenant.id, req.user?.sub ?? null, query?.language);
+    const { filename, content } = await this.svc.exportComplianceRegister(query, language, { manager, budgetAccess: canReadContractBudget(req) });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);
@@ -163,6 +178,19 @@ export class ContractsController {
   @Post(':id/budget-lines/bulk-replace')
   bulkReplaceBudgetLines(@Param('id') id: string, @Body() body: { budget_line_ids: string[] }, @Req() req: any) {
     return this.svc.replaceRelations(id, 'budget_lines', body?.budget_line_ids ?? [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
+
+  // Compliance register of one contract (`contract-compliance.ts`)
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'reader')
+  @Get(':id/compliance')
+  compliance(@Param('id') id: string, @Req() req: any) { return this.svc.compliance(id, { manager: req?.queryRunner?.manager }); }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'member')
+  @Patch(':id/compliance/:requirement')
+  updateCompliance(@Param('id') id: string, @Param('requirement') requirement: string, @Body() body: ComplianceItemPatch, @Req() req: any) {
+    return this.svc.updateCompliance(id, requirement, body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
   @UseGuards(PermissionGuard)

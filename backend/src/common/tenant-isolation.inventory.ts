@@ -91,6 +91,7 @@ export const TENANT_SCOPED_TABLES = [
   'contacts',
   'contract_attachments',
   'contract_capex_items',
+  'contract_compliance_items',
   'contract_contacts',
   'contract_links',
   'contract_spend_items',

@@ -59,6 +59,20 @@ import {
   type ContractBudgetRow,
   type ContractBudgetState,
 } from './contract-budget';
+import {
+  COMPLIANCE_SORT_EXPRESSION,
+  complianceParams,
+  complianceRegisterCsv,
+  complianceSummarySql,
+  contractComplianceView,
+  loadContractComplianceInputs,
+  readComplianceSummaries,
+  updateContractComplianceItem,
+  type ComplianceItemPatch,
+  type ComplianceSummary,
+  type ContractComplianceInputs,
+} from './contract-compliance';
+import type { CsvLanguage } from '../common/csv-sheet';
 
 /**
  * The session tenant as a find condition: `app_current_tenant()`, the tenant RLS checks too,
@@ -94,6 +108,8 @@ type ListItem = Contract & ContractTermFields & {
   budget_linked?: number;
   budget_gap?: number | null;
   budget_state?: ContractBudgetState | null;
+  /** What the compliance register expects of the contract and what is missing (`contract-compliance.ts`). */
+  compliance?: ComplianceSummary;
 };
 
 /** Who reads a list: the budget figures need the right to read the budget too. */
@@ -136,8 +152,12 @@ export class ContractsService {
    * state are those of the current term as of `today` (`contract-terms.ts`), like the values the
    * list returns.
    */
-  private contractFilterTargets(today: string, withBudget = false): Record<string, FilterTargetConfig> {
+  private contractFilterTargets(today: string, withBudget = false, withCompliance = false): Record<string, FilterTargetConfig> {
     const terms = contractTermsSql('c', sqlDateLiteral(today));
+    // The compliance summary, when the list joins it as `cc` (its sort or its filter is asked for).
+    const compliance: Record<string, FilterTargetConfig> = withCompliance
+      ? { compliance_state: { expression: 'cc.state', dataType: 'string' } }
+      : {};
     const budget: Record<string, FilterTargetConfig> = withBudget
       ? {
           ...Object.fromEntries(Object.entries(BUDGET_FIELDS).map(([field, expression]) => [
@@ -149,6 +169,7 @@ export class ContractsService {
       : {};
     return {
       ...budget,
+      ...compliance,
       id: { expression: 'c.id', dataType: 'string' },
       name: { expression: 'c.name', dataType: 'string' },
       status: { expression: 'c.status', textExpression: 'CAST(c.status AS TEXT)', dataType: 'string' },
@@ -194,12 +215,14 @@ export class ContractsService {
    * validity), the column filters and the quick search. `omitFilters` leaves column filters out
    * (the count behind a quick filter ignores the filter it sets). Shared by the rows, the ids
    * and the totals, so they always cover the same contracts. With `budget`, the contracts' budget
-   * figures (`contract-budget.ts`) join as `cb`, for the filters, the sort and the totals.
+   * figures (`contract-budget.ts`) join as `cb`, for the filters, the sort and the totals. With
+   * `compliance`, the compliance summaries (`contract-compliance.ts`) join as `cc` when the request
+   * sorts or filters on them, and only then.
    */
   private listQuery(
     mg: EntityManager,
     query: any,
-    opts?: { exportAll?: boolean; omitFilters?: string[]; budget?: ContractBudgetInputs | null },
+    opts?: { exportAll?: boolean; omitFilters?: string[]; budget?: ContractBudgetInputs | null; compliance?: ContractComplianceInputs | null },
   ) {
     const repo = mg.getRepository(Contract);
     const parsed = opts?.exportAll
@@ -210,7 +233,11 @@ export class ContractsService {
     const filtersToApply = sanitizedFilters ?? filters;
     const today = utcDateYmd(new Date());
     const budget = opts?.budget ?? null;
-    const filterTargets = this.contractFilterTargets(today, budget !== null);
+    const complianceFiltered = !!filtersToApply && typeof filtersToApply === 'object'
+      && Object.prototype.hasOwnProperty.call(filtersToApply, 'compliance_state')
+      && !opts?.omitFilters?.includes('compliance_state');
+    const compliance = opts?.compliance && (parsed.sort.field === 'compliance_state' || complianceFiltered) ? opts.compliance : null;
+    const filterTargets = this.contractFilterTargets(today, budget !== null, compliance !== null);
     const nextParam = createParamNameGenerator('c');
     const compiledFilters: CompiledCondition[] = [];
     if (filtersToApply && typeof filtersToApply === 'object') {
@@ -240,6 +267,12 @@ export class ContractsService {
         .leftJoin('cb', 'cb', 'cb.contract_id = c.id')
         .setParameters(contractBudgetParams(budget));
     }
+    if (compliance) {
+      // One row per contract of the tenant, computed once.
+      qb.addCommonTableExpression(complianceSummarySql(false), 'cc', { materialized: true })
+        .leftJoin('cc', 'cc', 'cc.contract_id = c.id')
+        .setParameters(complianceParams(compliance));
+    }
     // The status is read from the end of validity (the stored one is not updated when the date passes).
     applyStatusFilter(qb, { alias: 'c', explicitStatus: status ?? statusFromAg ?? null, includeDisabled, matchNone });
     // Parenthesized, so no condition can widen the tenant predicate above.
@@ -264,8 +297,11 @@ export class ContractsService {
   private applyListSort(qb: SelectQueryBuilder<Contract>, sort: Sort, filterTargets: Record<string, FilterTargetConfig>) {
     // The budget figures sort when the list joins them (a budget year and column were given).
     const budgetSorts = filterTargets.budget_state ? BUDGET_FIELDS : {};
+    // The compliance summary sorts when the list joins it (`listQuery`).
+    const complianceSorts: Record<string, string> = filterTargets.compliance_state ? { compliance_state: COMPLIANCE_SORT_EXPRESSION } : {};
     const sortExpressions: Record<string, string> = {
       ...budgetSorts,
+      ...complianceSorts,
       name: 'c.name',
       status: 'c.status',
       company_name: 'comp.name',
@@ -286,7 +322,7 @@ export class ContractsService {
     const sortField = sortExpressions[sort.field] ? sort.field : DEFAULT_LIST_SORT.field;
     const sortExpr = sortExpressions[sortField];
     const direction = sort.field === sortField ? sort.direction : DEFAULT_LIST_SORT.direction;
-    if (TERM_SORT_FIELDS.has(sortField) || budgetSorts[sortField]) {
+    if (TERM_SORT_FIELDS.has(sortField) || budgetSorts[sortField] || complianceSorts[sortField]) {
       qb.addSelect(sortExpr, `sort_${sortField}`);
       // Without a value (no next due date, no rate for the currency): last in both directions.
       qb.orderBy(`sort_${sortField}`, direction, sortField === 'next_due_date' || budgetSorts[sortField] ? 'NULLS LAST' : undefined);
@@ -320,7 +356,8 @@ export class ContractsService {
   async list(query: any, opts?: ListReadOptions & { exportAll?: boolean }) {
     const mg = opts?.manager ?? this.repo.manager;
     const budget = await this.listBudgetInputs(mg, query, opts);
-    const { qb: qbBase, parsed, today, filterTargets } = this.listQuery(mg, query, { exportAll: opts?.exportAll, budget });
+    const compliance = await loadContractComplianceInputs(mg);
+    const { qb: qbBase, parsed, today, filterTargets } = this.listQuery(mg, query, { exportAll: opts?.exportAll, budget, compliance });
     const { page, limit, skip, sort } = parsed;
 
     const total = await qbBase.clone().getCount();
@@ -365,6 +402,8 @@ export class ContractsService {
         ? (await readContractBudgetRows(mg, { ...budget, contractIds })).map((row) => [row.contract_id, row])
         : [],
     );
+    // The page's compliance summaries, by batch of ids (`contract-compliance.ts`).
+    const complianceById = await readComplianceSummaries(mg, compliance, contractIds);
 
     const enriched: ListItem[] = items.map((i) => {
       const figures = budgetById.get(i.id);
@@ -382,6 +421,7 @@ export class ContractsService {
           description: latestById.get(i.id)!.description || undefined,
           created_at: latestById.get(i.id)!.created_at,
         } : null,
+        compliance: complianceById.get(i.id) ?? { expected: 0, missing: 0, to_check: 0, state: 'none' },
         ...(budget
           ? {
               budget_committed: figures?.committed ?? null,
@@ -413,7 +453,8 @@ export class ContractsService {
   async totals(query: any, opts?: ListReadOptions & { tenantId?: string }) {
     const mg = opts?.manager ?? this.repo.manager;
     const budget = await this.listBudgetInputs(mg, query, opts);
-    const { qb } = this.listQuery(mg, query, { exportAll: true, budget });
+    const compliance = await loadContractComplianceInputs(mg);
+    const { qb } = this.listQuery(mg, query, { exportAll: true, budget, compliance });
     const groups: Array<{ currency: string; count: string; amount: string }> = await qb
       .clone()
       .select(`UPPER(TRIM(COALESCE(c.currency, '')))`, 'currency')
@@ -423,7 +464,7 @@ export class ContractsService {
       .getRawMany();
     groups.sort((a, b) => a.currency.localeCompare(b.currency));
 
-    const { qb: stateBase, filterTargets } = this.listQuery(mg, query, { exportAll: true, omitFilters: ['term_state'], budget });
+    const { qb: stateBase, filterTargets } = this.listQuery(mg, query, { exportAll: true, omitFilters: ['term_state'], budget, compliance });
     const toDecideCount = await stateBase
       .andWhere(`${filterTargets.term_state.expression} = 'to_decide'`)
       .getCount();
@@ -453,13 +494,13 @@ export class ContractsService {
       fx_year: year,
       excluded,
       to_decide_count: toDecideCount,
-      ...(budget ? { budget: await this.budgetTotals(mg, query, budget) } : {}),
+      ...(budget ? { budget: await this.budgetTotals(mg, query, budget, compliance) } : {}),
     };
   }
 
   /** The `budget` part of the totals (see `totals`). */
-  private async budgetTotals(mg: EntityManager, query: any, budget: ContractBudgetInputs) {
-    const { qb } = this.listQuery(mg, query, { exportAll: true, budget });
+  private async budgetTotals(mg: EntityManager, query: any, budget: ContractBudgetInputs, compliance: ContractComplianceInputs) {
+    const { qb } = this.listQuery(mg, query, { exportAll: true, budget, compliance });
     const sums: { committed: string | null; linked: string | null; gap: string | null } = await qb
       .clone()
       .select('SUM(cb.committed::numeric)::text', 'committed')
@@ -474,7 +515,7 @@ export class ContractsService {
       .groupBy(`COALESCE(NULLIF(UPPER(TRIM(c.currency)), ''), 'EUR')`)
       .getRawMany();
     excluded.sort((a, b) => a.currency.localeCompare(b.currency));
-    const { qb: stateBase } = this.listQuery(mg, query, { exportAll: true, omitFilters: ['budget_state'], budget });
+    const { qb: stateBase } = this.listQuery(mg, query, { exportAll: true, omitFilters: ['budget_state'], budget, compliance });
     const counts: { no_line: string; under: string } = await stateBase
       .select(`COUNT(*) FILTER (WHERE cb.state = 'no_line')::text`, 'no_line')
       .addSelect(`COUNT(*) FILTER (WHERE cb.state = 'under')::text`, 'under')
@@ -790,7 +831,8 @@ export class ContractsService {
     const mg = opts?.manager ?? this.repo.manager;
     // The workspace walks the list in its order, a budget figure's included.
     const budget = await this.listBudgetInputs(mg, query, opts);
-    const { qb, parsed, filterTargets } = this.listQuery(mg, query, { budget });
+    const compliance = await loadContractComplianceInputs(mg);
+    const { qb, parsed, filterTargets } = this.listQuery(mg, query, { budget, compliance });
     const { skip, sort } = parsed;
     // Not the parsed limit: parsePagination defaults to a page of 20, and the prev/next
     // navigation that calls this sends no limit, so it only ever knew 20 contracts.
@@ -1270,6 +1312,43 @@ export class ContractsService {
     const mg = opts?.manager ?? this.repo.manager;
     const contract = await this.findContract(contractId, mg);
     return replaceContractRelations({ manager: mg, audit: this.audit }, set, contract, ids, userId ?? null);
+  }
+
+  /** The Compliance tab: every requirement, whether it is expected and why, and what was recorded (`contract-compliance.ts`). */
+  async compliance(contractId: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const contract = await this.findContract(contractId, mg);
+    return contractComplianceView(mg, await loadContractComplianceInputs(mg), contract);
+  }
+
+  /** Records the state and / or reference of one requirement, then answers the tab as `compliance` does. */
+  async updateCompliance(contractId: string, requirement: string, body: ComplianceItemPatch, userId?: string | null, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const contract = await this.findContract(contractId, mg);
+    await updateContractComplianceItem({ manager: mg, audit: this.audit }, contract, requirement, body, userId ?? null);
+    return contractComplianceView(mg, await loadContractComplianceInputs(mg), contract);
+  }
+
+  /**
+   * The compliance register (CSV) of the contracts a list request selects (search, filters, status
+   * scope), by name: one line per contract and requirement (`complianceRegisterCsv`).
+   */
+  async exportComplianceRegister(query: any, language: CsvLanguage, opts?: ListReadOptions) {
+    const mg = opts?.manager ?? this.repo.manager;
+    // The list's budget filters apply too, for a reader of the budget (as on the list).
+    const budget = await this.listBudgetInputs(mg, query, opts);
+    const compliance = await loadContractComplianceInputs(mg);
+    const { qb } = this.listQuery(mg, query, { exportAll: true, budget, compliance });
+    const contracts: Array<{ id: string; name: string; supplier_name: string | null; company_name: string | null }> = await qb
+      .select('c.id', 'id')
+      .addSelect('c.name', 'name')
+      .addSelect('sup.name', 'supplier_name')
+      .addSelect('comp.name', 'company_name')
+      .orderBy('c.name', 'ASC')
+      .addOrderBy('c.id', 'ASC')
+      .getRawMany();
+    const content = await complianceRegisterCsv(mg, compliance, contracts, language);
+    return { filename: 'contract-compliance-register.csv', content };
   }
 
   async relationCounts(contractId: string, opts?: { manager?: EntityManager }) {
