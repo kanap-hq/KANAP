@@ -76,11 +76,11 @@ export class ContractsController {
   // The compliance register of the contracts the list selects (CSV, contract × requirement); before ':id'.
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'admin')
-  @Get('compliance-register')
+  @Get('compliance-register/export')
   async exportComplianceRegister(@Query() query: any, @Res() res: Response, @Req() req: any) {
     const manager = req?.queryRunner?.manager;
     const language = await languageOf(manager, req.tenant.id, req.user?.sub ?? null, query?.language);
-    const { filename, content } = await this.svc.exportComplianceRegister(query, language, { manager });
+    const { filename, content } = await this.svc.exportComplianceRegister(query, language, { manager, budgetAccess: canReadContractBudget(req) });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);

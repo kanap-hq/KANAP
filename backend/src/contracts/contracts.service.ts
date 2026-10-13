@@ -236,7 +236,7 @@ export class ContractsService {
     const complianceFiltered = !!filtersToApply && typeof filtersToApply === 'object'
       && Object.prototype.hasOwnProperty.call(filtersToApply, 'compliance_state')
       && !opts?.omitFilters?.includes('compliance_state');
-    const compliance = opts?.compliance && (parsed.sort.field === 'compliance' || complianceFiltered) ? opts.compliance : null;
+    const compliance = opts?.compliance && (parsed.sort.field === 'compliance_state' || complianceFiltered) ? opts.compliance : null;
     const filterTargets = this.contractFilterTargets(today, budget !== null, compliance !== null);
     const nextParam = createParamNameGenerator('c');
     const compiledFilters: CompiledCondition[] = [];
@@ -298,7 +298,7 @@ export class ContractsService {
     // The budget figures sort when the list joins them (a budget year and column were given).
     const budgetSorts = filterTargets.budget_state ? BUDGET_FIELDS : {};
     // The compliance summary sorts when the list joins it (`listQuery`).
-    const complianceSorts: Record<string, string> = filterTargets.compliance_state ? { compliance: COMPLIANCE_SORT_EXPRESSION } : {};
+    const complianceSorts: Record<string, string> = filterTargets.compliance_state ? { compliance_state: COMPLIANCE_SORT_EXPRESSION } : {};
     const sortExpressions: Record<string, string> = {
       ...budgetSorts,
       ...complianceSorts,
@@ -1333,10 +1333,12 @@ export class ContractsService {
    * The compliance register (CSV) of the contracts a list request selects (search, filters, status
    * scope), by name: one line per contract and requirement (`complianceRegisterCsv`).
    */
-  async exportComplianceRegister(query: any, language: CsvLanguage, opts?: { manager?: EntityManager }) {
+  async exportComplianceRegister(query: any, language: CsvLanguage, opts?: ListReadOptions) {
     const mg = opts?.manager ?? this.repo.manager;
+    // The list's budget filters apply too, for a reader of the budget (as on the list).
+    const budget = await this.listBudgetInputs(mg, query, opts);
     const compliance = await loadContractComplianceInputs(mg);
-    const { qb } = this.listQuery(mg, query, { exportAll: true, compliance });
+    const { qb } = this.listQuery(mg, query, { exportAll: true, budget, compliance });
     const contracts: Array<{ id: string; name: string; supplier_name: string | null; company_name: string | null }> = await qb
       .select('c.id', 'id')
       .addSelect('c.name', 'name')

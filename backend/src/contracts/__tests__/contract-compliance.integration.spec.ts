@@ -228,9 +228,9 @@ async function testListColumn() {
 
     // Sorted on the server: none, complete, then missing (ascending), and back.
     const names = (items: any[]) => items.map((item) => item.id);
-    assert.deepEqual(names((await svc.list({ sort: 'compliance:ASC' }, opts)).items), [s.bare, s.viaAsset, s.full]);
-    assert.deepEqual(names((await svc.list({ sort: 'compliance:DESC' }, opts)).items), [s.full, s.viaAsset, s.bare]);
-    assert.deepEqual((await svc.listIds({ sort: 'compliance:DESC' }, opts)).ids, [s.full, s.viaAsset, s.bare], 'prev / next in the same order');
+    assert.deepEqual(names((await svc.list({ sort: 'compliance_state:ASC' }, opts)).items), [s.bare, s.viaAsset, s.full]);
+    assert.deepEqual(names((await svc.list({ sort: 'compliance_state:DESC' }, opts)).items), [s.full, s.viaAsset, s.bare]);
+    assert.deepEqual((await svc.listIds({ sort: 'compliance_state:DESC' }, opts)).ids, [s.full, s.viaAsset, s.bare], 'prev / next in the same order');
 
     // Filtered on the server, the totals counting the same contracts.
     const filter = (...values: string[]) => JSON.stringify({ compliance_state: { filterType: 'set', values } });

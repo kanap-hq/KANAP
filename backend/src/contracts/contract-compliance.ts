@@ -553,7 +553,7 @@ const REGISTER_COPY: Record<CsvLanguage, RegisterCopy> = {
     viaAsset: ' (actif {asset})',
   },
   de: {
-    headers: ['Vertrag', 'Lieferant', 'Gesellschaft', 'Anforderung', 'Erwartet', 'Grund', 'Status', 'Referenz', 'Aktualisiert am', 'Aktualisiert von'],
+    headers: ['Vertrag', 'Lieferant', 'Unternehmen', 'Anforderung', 'Erwartet', 'Grund', 'Status', 'Referenz', 'Aktualisiert am', 'Aktualisiert von'],
     requirements: {
       gdpr_dpa: 'Auftragsverarbeitungsvertrag nach DSGVO (Art. 28)',
       data_location: 'Speicherort der Daten',
@@ -573,7 +573,7 @@ const REGISTER_COPY: Record<CsvLanguage, RegisterCopy> = {
     viaAsset: ' (Asset {asset})',
   },
   es: {
-    headers: ['Contrato', 'Proveedor', 'Sociedad', 'Requisito', 'Esperado', 'Motivo', 'Estado', 'Referencia', 'Actualizado el', 'Actualizado por'],
+    headers: ['Contrato', 'Proveedor', 'Empresa', 'Requisito', 'Esperado', 'Motivo', 'Estado', 'Referencia', 'Actualizado el', 'Actualizado por'],
     requirements: {
       gdpr_dpa: 'Contrato de encargado del tratamiento RGPD (art. 28)',
       data_location: 'Ubicación de los datos',
