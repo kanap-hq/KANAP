@@ -5,7 +5,7 @@ import { computeContractTerms, contractTermsSql } from '../contract-terms';
 import { CONTRACT_TERM_CASES, contractTermSweep } from './contract-terms.cases';
 
 // The contract term rule in SQL (contractTermsSql) gives the TypeScript values
-// (computeContractTerms): on the hand-worked cases, through both the scalar expressions the
+// (computeContractTerms), the list's next due date and state included: on the hand-worked cases, through both the scalar expressions the
 // list sorts and filters on and the lateral row the expiry warnings join; then on every
 // combination of the sweep. The rows are literal values (unnest), so the spec needs no
 // table and runs on an empty database.
@@ -17,6 +17,8 @@ type SqlRow = {
   next_cancellation_deadline: string | null;
   cancellation_deadline: string;
   renews_at_term_end: boolean;
+  next_due_date: string | null;
+  term_state: string;
 };
 
 type Input = { today: string; start: string; months: number | null; notice: number | null; renewal: boolean; disabledAt: string | null };
@@ -43,7 +45,8 @@ async function viaLateral(rows: Input[]): Promise<SqlRow[]> {
   return dataSource.query(
     `SELECT v.id, t.term_index, ${ymd('t.current_term_end')} AS current_term_end,
             ${ymd('t.next_cancellation_deadline')} AS next_cancellation_deadline,
-            ${ymd('t.cancellation_deadline')} AS cancellation_deadline, t.renews_at_term_end
+            ${ymd('t.cancellation_deadline')} AS cancellation_deadline, t.renews_at_term_end,
+            ${ymd('t.next_due_date')} AS next_due_date, t.term_state
        FROM ${SOURCE}
        CROSS JOIN LATERAL (${terms.row}) t
       ORDER BY v.id`,
@@ -56,7 +59,8 @@ async function viaScalars(rows: Input[]): Promise<SqlRow[]> {
   return dataSource.query(
     `SELECT v.id, ${terms.termIndex} AS term_index, ${ymd(terms.currentTermEnd)} AS current_term_end,
             ${ymd(terms.nextCancellationDeadline)} AS next_cancellation_deadline,
-            ${ymd(terms.cancellationDeadline)} AS cancellation_deadline, ${terms.renewsAtTermEnd} AS renews_at_term_end
+            ${ymd(terms.cancellationDeadline)} AS cancellation_deadline, ${terms.renewsAtTermEnd} AS renews_at_term_end,
+            ${ymd(terms.nextDueDate)} AS next_due_date, ${terms.termState} AS term_state
        FROM ${SOURCE}
       ORDER BY v.id`,
     params(rows),
@@ -74,6 +78,8 @@ function expectedOf(row: Input): Omit<SqlRow, 'id'> {
     next_cancellation_deadline: t.next_cancellation_deadline,
     cancellation_deadline: t.cancellation_deadline,
     renews_at_term_end: t.renews_at_term_end,
+    next_due_date: t.next_due_date,
+    term_state: t.term_state,
   };
 }
 

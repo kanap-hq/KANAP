@@ -110,6 +110,26 @@ export const tealLinkSx = {
   },
 } as const;
 
+/**
+ * A clickable sentence that stays neutral (charter: no teal on content), underlined on hover or
+ * when active: a predefined filter with its count (chart health line, contracts to decide).
+ * Pair it with `aria-pressed`.
+ */
+export const neutralLinkSx = (active: boolean) => ({
+  background: 'none',
+  border: 'none',
+  p: 0,
+  font: 'inherit',
+  color: 'kanap.text.primary',
+  fontWeight: active ? 500 : 400,
+  cursor: 'pointer',
+  textAlign: 'left' as const,
+  textDecoration: active ? 'underline' : 'none',
+  textUnderlineOffset: '2px',
+  '&:hover': { textDecoration: 'underline' },
+  '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: '2px', borderRadius: '2px' },
+});
+
 /** Charter text tabs: no indicator, active = primary/500, inactive = tertiary/400. */
 export const textTabsSx = {
   minHeight: 'auto',

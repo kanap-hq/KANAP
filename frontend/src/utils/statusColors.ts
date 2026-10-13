@@ -184,3 +184,16 @@ export const SAMPLE_DATA_STATUS_COLORS: Record<string, string> = {
   loaded: 'success',
   failed: 'error',
 };
+
+/**
+ * Contract term states (contract list): orange while a cancellation deadline falls in the decision
+ * window, green while a term runs with no decision due, grey once the contract has rolled over,
+ * stops or has ended.
+ */
+export const CONTRACT_TERM_STATE_COLORS: Record<string, string> = {
+  to_decide: 'warning',
+  in_progress: 'success',
+  renewed: 'default',
+  ending: 'default',
+  expired: 'default',
+};

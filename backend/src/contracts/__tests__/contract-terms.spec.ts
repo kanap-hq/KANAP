@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict';
 import {
+  CONTRACT_DECISION_WINDOW_DAYS,
   addMonthsYmd,
   computeContractTerms,
   contractTermFields,
@@ -37,6 +38,8 @@ for (const c of CONTRACT_TERM_CASES) {
       next_cancellation_deadline: got.next_cancellation_deadline,
       cancellation_deadline: got.cancellation_deadline,
       renews_at_term_end: got.renews_at_term_end,
+      next_due_date: got.next_due_date,
+      term_state: got.term_state,
     },
     c.expected,
     c.name,
@@ -55,7 +58,19 @@ assert.equal(fromDates.term_index, 3);
 
 // The response fields leave the internal flag out.
 const fields = contractTermFields({ start_date: '2023-07-01', duration_months: 12, notice_period_months: 3, auto_renewal: true }, '2026-10-12');
-assert.deepEqual(Object.keys(fields).sort(), ['cancellation_deadline', 'current_term_end', 'end_date', 'next_cancellation_deadline', 'renewed', 'term_index']);
+assert.deepEqual(Object.keys(fields).sort(), [
+  'cancellation_deadline', 'current_term_end', 'end_date', 'next_cancellation_deadline', 'next_due_date', 'renewed', 'term_index', 'term_state',
+]);
+
+// The decision window: 90 days by default, narrower when given.
+assert.equal(CONTRACT_DECISION_WINDOW_DAYS, 90);
+const deadlineIn49Days = { start_date: '2025-01-01', duration_months: 12, notice_period_months: 1, auto_renewal: true };
+assert.equal(computeContractTerms(deadlineIn49Days, '2026-10-12').term_state, 'to_decide', 'deadline 30 November, 90-day window');
+assert.equal(computeContractTerms(deadlineIn49Days, '2026-10-12', { decisionWindowDays: 30 }).term_state, 'in_progress', '30-day window');
+assert.equal(computeContractTerms(deadlineIn49Days, '2026-10-12', { decisionWindowDays: 49 }).term_state, 'to_decide', 'window ending on the deadline');
+assert.throws(() => computeContractTerms(deadlineIn49Days, '2026-10-12', { decisionWindowDays: 1.5 }), /Invalid decision window/);
+assert.throws(() => contractTermsSql('c', 'CURRENT_DATE', { decisionWindowDays: -1 }), /Invalid decision window/);
+assert.match(contractTermsSql('c', 'CURRENT_DATE', { decisionWindowDays: 30 }).termState, /ct_b\.today \+ 30 THEN 'to_decide'/);
 
 // The SQL builder takes trusted pieces only.
 assert.equal(sqlDateLiteral('2026-10-12'), `DATE '2026-10-12'`);

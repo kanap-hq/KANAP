@@ -27,6 +27,14 @@
  * - `renews_at_term_end`: a next term exists after the current one (renewal on, no end of
  *   validity before that next term starts). The expiry warnings skip the term end of such a
  *   contract: it does not end there.
+ * - `next_due_date`: the next date the contract list sorts on. A contract that renews at the end
+ *   of its current term: its next cancellation deadline (the term end when there is none). Any
+ *   other contract: its end, the current term end or the end of validity when that comes first.
+ *   Null once that end has passed.
+ * - `term_state`, in this order: `expired` (no next due date), `ending` (it does not renew at
+ *   the end of its current term), `to_decide` (its next cancellation deadline falls within the
+ *   decision window, `CONTRACT_DECISION_WINDOW_DAYS` from today), `renewed` (the current term's
+ *   deadline has passed: the contract goes on into the next term) or `in_progress`.
  *
  * `computeContractTerms` reads the rule as written. `contractTermsSql` gives the same values as
  * SQL expressions for sorting, filtering and the expiry warnings; the parity spec
@@ -35,6 +43,25 @@
  */
 
 const YMD = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/**
+ * The days before a cancellation deadline during which a renewing contract awaits a decision
+ * (`term_state = 'to_decide'`). A constant until the tenant can set it.
+ */
+export const CONTRACT_DECISION_WINDOW_DAYS = 90;
+
+/** The states of a contract's terms, as the contract list shows and filters them. */
+export const CONTRACT_TERM_STATES = ['to_decide', 'in_progress', 'renewed', 'ending', 'expired'] as const;
+export type ContractTermState = (typeof CONTRACT_TERM_STATES)[number];
+
+/** Options of the values that depend on the decision window. */
+export type ContractTermsOptions = { decisionWindowDays?: number };
+
+function decisionWindowDays(opts?: ContractTermsOptions): number {
+  const days = opts?.decisionWindowDays ?? CONTRACT_DECISION_WINDOW_DAYS;
+  if (!Number.isInteger(days) || days < 0) throw new Error(`Invalid decision window: ${days}`);
+  return days;
+}
 
 export type ContractTermsInput = {
   start_date: string | Date;
@@ -52,6 +79,8 @@ export type ContractTerms = {
   end_date: string;
   cancellation_deadline: string;
   renews_at_term_end: boolean;
+  next_due_date: string | null;
+  term_state: ContractTermState;
 };
 
 /** The fields a contract response carries (the internal `renews_at_term_end` stays out). */
@@ -111,8 +140,9 @@ function wholeMonths(value: number | string | null | undefined): number {
 }
 
 /** The terms of a contract as of `todayYmd` (`YYYY-MM-DD`, a UTC calendar day). */
-export function computeContractTerms(input: ContractTermsInput, todayYmd: string): ContractTerms {
+export function computeContractTerms(input: ContractTermsInput, todayYmd: string, opts?: ContractTermsOptions): ContractTerms {
   parseYmd(todayYmd);
+  const windowDays = decisionWindowDays(opts);
   const start = toYmd(input.start_date);
   const duration = wholeMonths(input.duration_months);
   const notice = wholeMonths(input.notice_period_months);
@@ -144,6 +174,16 @@ export function computeContractTerms(input: ContractTermsInput, todayYmd: string
   }
 
   const currentTermEnd = termEnd(termIndex);
+  const renewsAtTermEnd = termIndex < lastTerm;
+  // A contract that stops: at its term end, or at its end of validity when that comes first.
+  const contractEnd = validUntil !== null && validUntil < currentTermEnd ? validUntil : currentTermEnd;
+  const nextDue = renewsAtTermEnd && next !== null ? next : contractEnd >= todayYmd ? contractEnd : null;
+  let termState: ContractTermState;
+  if (nextDue === null) termState = 'expired';
+  else if (!renewsAtTermEnd) termState = 'ending';
+  else if (next !== null && next <= addDaysYmd(todayYmd, windowDays)) termState = 'to_decide';
+  else if (deadline(termIndex) < todayYmd) termState = 'renewed';
+  else termState = 'in_progress';
   return {
     term_index: termIndex,
     renewed: termIndex > 0,
@@ -151,13 +191,15 @@ export function computeContractTerms(input: ContractTermsInput, todayYmd: string
     next_cancellation_deadline: next,
     end_date: currentTermEnd,
     cancellation_deadline: next ?? deadline(Number.isFinite(lastTerm) ? lastTerm : termIndex),
-    renews_at_term_end: termIndex < lastTerm,
+    renews_at_term_end: renewsAtTermEnd,
+    next_due_date: nextDue,
+    term_state: termState,
   };
 }
 
 /** The response fields of `computeContractTerms`. */
-export function contractTermFields(input: ContractTermsInput, todayYmd: string): ContractTermFields {
-  const { renews_at_term_end: _internal, ...fields } = computeContractTerms(input, todayYmd);
+export function contractTermFields(input: ContractTermsInput, todayYmd: string, opts?: ContractTermsOptions): ContractTermFields {
+  const { renews_at_term_end: _internal, ...fields } = computeContractTerms(input, todayYmd, opts);
   return fields;
 }
 
@@ -177,6 +219,8 @@ export type ContractTermsSql = {
   nextCancellationDeadline: string;
   cancellationDeadline: string;
   renewsAtTermEnd: string;
+  nextDueDate: string;
+  termState: string;
   /** The whole row (`term_index`, `current_term_end`, ...), for a `LEFT JOIN LATERAL (...) alias ON true`. */
   row: string;
 };
@@ -188,8 +232,9 @@ export type ContractTermsSql = {
  * an ORDER BY. `alias` must be a plain identifier and `today` a trusted expression
  * (`sqlDateLiteral`, `SQL_TODAY_UTC`, a `$n::date` parameter or a column).
  */
-export function contractTermsSql(alias: string, today: string): ContractTermsSql {
+export function contractTermsSql(alias: string, today: string, opts?: ContractTermsOptions): ContractTermsSql {
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(alias)) throw new Error(`Invalid table alias: ${alias}`);
+  const windowDays = decisionWindowDays(opts);
   const a = alias;
   const monthIndex = (day: string) => `(EXTRACT(YEAR FROM ${day})::int * 12 + EXTRACT(MONTH FROM ${day})::int)`;
   const addMonths = (day: string, months: string) => `(${day} + make_interval(months => ${months}))::date`;
@@ -206,7 +251,13 @@ export function contractTermsSql(alias: string, today: string): ContractTermsSql
            ${termEnd('ct_i.term_index')} AS current_term_end,
            ct_x.next_deadline AS next_cancellation_deadline,
            COALESCE(ct_x.next_deadline, ${deadline('COALESCE(ct_i.last_term, ct_i.term_index)')}) AS cancellation_deadline,
-           (ct_i.last_term IS NULL OR ct_i.term_index < ct_i.last_term) AS renews_at_term_end
+           (ct_i.last_term IS NULL OR ct_i.term_index < ct_i.last_term) AS renews_at_term_end,
+           ct_n.next_due AS next_due_date,
+           CASE WHEN ct_n.next_due IS NULL THEN 'expired'
+                WHEN NOT ct_e.renews_next THEN 'ending'
+                WHEN ct_x.next_deadline <= ct_b.today + ${windowDays} THEN 'to_decide'
+                WHEN ct_e.current_deadline < ct_b.today THEN 'renewed'
+                ELSE 'in_progress' END AS term_state
       FROM (SELECT ${a}.start_date AS s,
                    GREATEST(COALESCE(${a}.duration_months, 0), 0) AS d,
                    GREATEST(COALESCE(${a}.notice_period_months, 0), 0) AS n,
@@ -232,7 +283,17 @@ export function contractTermsSql(alias: string, today: string): ContractTermsSql
          WHERE (ct_i.last_term IS NULL OR ct_k.k <= ct_i.last_term)
            AND ct_d.deadline >= ct_b.today
            AND (ct_b.valid_until IS NULL OR ct_d.deadline <= ct_b.valid_until)
-      ) ct_x`;
+      ) ct_x
+      CROSS JOIN LATERAL (
+        /* LEAST skips a null end of validity. */
+        SELECT (ct_i.last_term IS NULL OR ct_i.term_index < ct_i.last_term) AS renews_next,
+               LEAST(${termEnd('ct_i.term_index')}, ct_b.valid_until) AS contract_end,
+               ${deadline('ct_i.term_index')} AS current_deadline
+      ) ct_e
+      CROSS JOIN LATERAL (
+        SELECT CASE WHEN ct_e.renews_next AND ct_x.next_deadline IS NOT NULL THEN ct_x.next_deadline
+                    WHEN ct_e.contract_end >= ct_b.today THEN ct_e.contract_end END AS next_due
+      ) ct_n`;
   const pick = (column: string) => `(SELECT ct_r.${column} FROM (${row}) ct_r)`;
   return {
     termIndex: pick('term_index'),
@@ -240,6 +301,8 @@ export function contractTermsSql(alias: string, today: string): ContractTermsSql
     nextCancellationDeadline: pick('next_cancellation_deadline'),
     cancellationDeadline: pick('cancellation_deadline'),
     renewsAtTermEnd: pick('renews_at_term_end'),
+    nextDueDate: pick('next_due_date'),
+    termState: pick('term_state'),
     row,
   };
 }

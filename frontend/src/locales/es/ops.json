@@ -405,11 +405,31 @@
       "noticeMonths": "Preaviso (m)",
       "end": "Fin del periodo",
       "cancelBy": "Cancelar antes de",
+      "nextDue": "Próximo vencimiento",
+      "state": "Situación",
       "yearlyAmount": "Importe anual",
       "currency": "Mon.",
       "billing": "Facturación",
-      "linkedOpex": "OPEX vinculados",
+      "linkedLines": "Líneas vinculadas",
       "task": "Tarea"
+    },
+    "list": {
+      "toDecide": "Por decidir en {{days}} días ({{count}})",
+      "dueIn_one": "en {{count}} día",
+      "dueIn_other": "en {{count}} días",
+      "dueToday": "hoy",
+      "total_one": "Total ({{count}} contrato)",
+      "total_other": "Total ({{count}} contratos)",
+      "totalExcluded_one": "excluye {{count}} contrato en {{currency}} sin tipo de cambio",
+      "totalExcluded_other": "excluye {{count}} contratos en {{currency}} sin tipo de cambio",
+      "states": {
+        "to_decide": "Por decidir",
+        "in_progress": "En curso",
+        "renewed": "Renovado",
+        "renewedOn": "Renovado el {{date}}",
+        "ending": "Termina sin renovación",
+        "expired": "Vencido"
+      }
     },
     "workspace": {
       "newContract": "Nuevo contrato",

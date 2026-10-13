@@ -31,6 +31,14 @@ export class ContractsController {
   @Get()
   list(@Query() query: any, @Req() req: any) { return this.svc.list(query, { manager: req?.queryRunner?.manager }); }
 
+  // The list's footer and quick filter count, for the same search, filters and status scope.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'reader')
+  @Get('totals')
+  totals(@Query() query: any, @Req() req: any) {
+    return this.svc.totals(query, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id });
+  }
+
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get('ids')

@@ -1,13 +1,13 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { linkedLineOf } from '../spend/budget-nature';
+import { BUDGET_LINE_TABLE, BUDGET_NATURES, linkedLineOf, naturesAnd } from '../spend/budget-nature';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, DeepPartial, EntityManager, In, Repository, Raw } from 'typeorm';
+import { Brackets, DeepPartial, EntityManager, In, Repository, Raw, SelectQueryBuilder } from 'typeorm';
 import { Contract } from './contract.entity';
 import { ContractSpendItem } from './contract-spend-item.entity';
 import { ContractLink } from './contract-link.entity';
 import { ContractAttachment } from './contract-attachment.entity';
 import { AuditService } from '../audit/audit.service';
-import { parseExportPagination, parsePagination } from '../common/pagination';
+import { parseExportPagination, parsePagination, type Sort } from '../common/pagination';
 import { format } from '@fast-csv/format';
 import { parseString } from '@fast-csv/parse';
 import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
@@ -36,6 +36,7 @@ import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.se
 import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attach.util';
 import { contractTermFields, contractTermsSql, sqlDateLiteral, type ContractTermFields } from './contract-terms';
 import { utcDateYmd } from '../notifications/expiry-reminder-schedule';
+import { FxRateService } from '../currency/fx-rate.service';
 import {
   contractRelationCounts,
   listContractApplications,
@@ -68,13 +69,21 @@ const NOT_WRITABLE = ['id', 'tenant_id', 'created_at', 'updated_at'] as const;
 type ListItem = Contract & ContractTermFields & {
   supplier?: { id: string; name: string } | null;
   company?: { id: string; name: string } | null;
-  linked_opex_count?: number;
+  /** Links to budget lines of both natures. */
+  linked_lines_count?: number;
   latest_task?: { id: string; status?: string; description?: string; created_at?: Date } | null;
 };
 
 /** A contract link `l` to an OPEX line (`spend/budget-nature.ts`): the OPEX side lists, counts and replaces those only. */
 const OPEX_LINK = linkedLineOf('l.tenant_id', 'l.spend_item_id', 'opex');
 const CAPEX_LINK = linkedLineOf('l.tenant_id', 'l.spend_item_id', 'capex');
+/** A contract link `l` to a budget line of either nature: the list counts both. */
+const ANY_LINE_LINK = ` AND EXISTS (SELECT 1 FROM ${BUDGET_LINE_TABLE} nl WHERE nl.tenant_id = l.tenant_id AND nl.id = l.spend_item_id${naturesAnd('nl', BUDGET_NATURES)})`;
+
+/** The list's order without a valid `sort`: the next due date first (`contract-terms.ts`). */
+const DEFAULT_LIST_SORT: Sort = { field: 'next_due_date', direction: 'ASC' };
+/** The sort fields computed from the contract terms, ordered through a selected alias. */
+const TERM_SORT_FIELDS = new Set(['end_date', 'cancellation_deadline', 'next_due_date']);
 
 @Injectable()
 export class ContractsService {
@@ -88,11 +97,13 @@ export class ContractsService {
     private readonly storage: StorageService,
     private readonly itemContacts: ContractContactsService,
     private readonly notifications: NotificationsService,
+    private readonly fxRates: FxRateService,
   ) {}
 
   /**
-   * The list's filter targets. The end date and the cancellation deadline are those of the
-   * current term as of `today` (`contract-terms.ts`), like the values the list returns.
+   * The list's filter targets. The end date, the cancellation deadline, the next due date and the
+   * state are those of the current term as of `today` (`contract-terms.ts`), like the values the
+   * list returns.
    */
   private contractFilterTargets(today: string): Record<string, FilterTargetConfig> {
     const terms = contractTermsSql('c', sqlDateLiteral(today));
@@ -106,6 +117,8 @@ export class ContractsService {
       start_date: { expression: 'c.start_date', dataType: 'string' },
       end_date: { expression: terms.currentTermEnd, dataType: 'string' },
       cancellation_deadline: { expression: terms.cancellationDeadline, dataType: 'string' },
+      next_due_date: { expression: terms.nextDueDate, dataType: 'string' },
+      term_state: { expression: terms.termState, dataType: 'string' },
       duration_months: {
         expression: 'c.duration_months',
         numericExpression: 'c.duration_months',
@@ -135,12 +148,18 @@ export class ContractsService {
     };
   }
 
-  async list(query: any, opts?: { manager?: EntityManager; exportAll?: boolean }) {
-    const mg = opts?.manager ?? this.repo.manager;
+  /**
+   * The contracts a list request selects: the tenant, the status scope (read from the end of
+   * validity), the column filters and the quick search. `omitFilters` leaves column filters out
+   * (the count behind a quick filter ignores the filter it sets). Shared by the rows, the ids
+   * and the totals, so they always cover the same contracts.
+   */
+  private listQuery(mg: EntityManager, query: any, opts?: { exportAll?: boolean; omitFilters?: string[] }) {
     const repo = mg.getRepository(Contract);
-    const { page, limit, skip, sort, status, q, filters } = opts?.exportAll
-      ? parseExportPagination(query, { field: 'created_at', direction: 'DESC' })
-      : parsePagination(query, { field: 'created_at', direction: 'DESC' });
+    const parsed = opts?.exportAll
+      ? parseExportPagination(query, DEFAULT_LIST_SORT)
+      : parsePagination(query, DEFAULT_LIST_SORT);
+    const { status, q, filters } = parsed;
     const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
     const today = utcDateYmd(new Date());
@@ -149,13 +168,13 @@ export class ContractsService {
     const compiledFilters: CompiledCondition[] = [];
     if (filtersToApply && typeof filtersToApply === 'object') {
       for (const [field, model] of Object.entries(filtersToApply)) {
+        if (opts?.omitFilters?.includes(field)) continue;
         const target = filterTargets[field];
         if (!target) continue;
         const condition = compileAgFilterCondition(model, target, nextParam);
         if (condition) compiledFilters.push(condition);
       }
     }
-
     const quickSearchConditions = q
       ? buildQuickSearchConditions(q, ['c.name', 'comp.name', 'sup.name', 'c.notes'], nextParam)
       : [];
@@ -163,13 +182,17 @@ export class ContractsService {
       String(query.includeDisabled ?? '').toLowerCase() === '1' ||
       String(query.includeDisabled ?? '').toLowerCase() === 'true';
 
-    const applyCompiledFilters = (builder: ReturnType<typeof repo.createQueryBuilder>) => {
-      // Parenthesized, so no condition can widen the tenant predicate above.
-      compiledFilters.forEach((cond) => builder.andWhere(`(${cond.sql})`, cond.params));
-    };
-    const applyQuickSearch = (builder: ReturnType<typeof repo.createQueryBuilder>) => {
-      if (quickSearchConditions.length === 0) return;
-      builder.andWhere(
+    const qb = repo
+      .createQueryBuilder('c')
+      .leftJoin('companies', 'comp', 'comp.id = c.company_id AND comp.tenant_id = c.tenant_id')
+      .leftJoin('suppliers', 'sup', 'sup.id = c.supplier_id AND sup.tenant_id = c.tenant_id')
+      .where('c.tenant_id = app_current_tenant()');
+    // The status is read from the end of validity (the stored one is not updated when the date passes).
+    applyStatusFilter(qb, { alias: 'c', explicitStatus: status ?? statusFromAg ?? null, includeDisabled, matchNone });
+    // Parenthesized, so no condition can widen the tenant predicate above.
+    compiledFilters.forEach((cond) => qb.andWhere(`(${cond.sql})`, cond.params));
+    if (quickSearchConditions.length > 0) {
+      qb.andWhere(
         new Brackets((sub) => {
           quickSearchConditions.forEach((cond, idx) => {
             if (idx === 0) sub.where(cond.sql, cond.params);
@@ -177,19 +200,15 @@ export class ContractsService {
           });
         }),
       );
-    };
+    }
+    return { qb, parsed, today, filterTargets };
+  }
 
-    const qbBase = repo
-      .createQueryBuilder('c')
-      .leftJoin('companies', 'comp', 'comp.id = c.company_id AND comp.tenant_id = c.tenant_id')
-      .leftJoin('suppliers', 'sup', 'sup.id = c.supplier_id AND sup.tenant_id = c.tenant_id')
-      .where('c.tenant_id = app_current_tenant()');
-    // The status is read from the end of validity (the stored one is not updated when the date passes).
-    applyStatusFilter(qbBase, { alias: 'c', explicitStatus: status ?? statusFromAg ?? null, includeDisabled, matchNone });
-    applyCompiledFilters(qbBase);
-    applyQuickSearch(qbBase);
-
-    const total = await qbBase.clone().getCount();
+  /**
+   * Orders a list query. The term values sort through a selected alias; the next due date puts
+   * the contracts without one (ended) last in both directions.
+   */
+  private applyListSort(qb: SelectQueryBuilder<Contract>, sort: Sort, filterTargets: Record<string, FilterTargetConfig>) {
     const sortExpressions: Record<string, string> = {
       name: 'c.name',
       status: 'c.status',
@@ -198,6 +217,7 @@ export class ContractsService {
       start_date: 'c.start_date',
       end_date: filterTargets.end_date.expression,
       cancellation_deadline: filterTargets.cancellation_deadline.expression,
+      next_due_date: filterTargets.next_due_date.expression,
       duration_months: 'c.duration_months',
       auto_renewal: 'c.auto_renewal',
       notice_period_months: 'c.notice_period_months',
@@ -207,19 +227,28 @@ export class ContractsService {
       created_at: 'c.created_at',
       updated_at: 'c.updated_at',
     };
-    const sortField = sortExpressions[sort.field] ? sort.field : 'created_at';
+    const sortField = sortExpressions[sort.field] ? sort.field : DEFAULT_LIST_SORT.field;
     const sortExpr = sortExpressions[sortField];
-    const qb = qbBase.clone();
-    if (sortField === 'end_date') {
-      qb.addSelect(sortExpr, 'sort_end_date');
-      qb.orderBy('sort_end_date', sort.direction as any);
-    } else if (sortField === 'cancellation_deadline') {
-      qb.addSelect(sortExpr, 'sort_cancellation_deadline');
-      qb.orderBy('sort_cancellation_deadline', sort.direction as any);
+    const direction = sort.field === sortField ? sort.direction : DEFAULT_LIST_SORT.direction;
+    if (TERM_SORT_FIELDS.has(sortField)) {
+      qb.addSelect(sortExpr, `sort_${sortField}`);
+      qb.orderBy(`sort_${sortField}`, direction, sortField === 'next_due_date' ? 'NULLS LAST' : undefined);
     } else {
-      qb.orderBy(sortExpr, sort.direction as any);
+      qb.orderBy(sortExpr, direction);
     }
     if (sortExpr !== 'c.created_at') qb.addOrderBy('c.created_at', 'DESC');
+    // Last, so equal rows keep one order from page to page.
+    qb.addOrderBy('c.id', 'ASC');
+  }
+
+  async list(query: any, opts?: { manager?: EntityManager; exportAll?: boolean }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const { qb: qbBase, parsed, today, filterTargets } = this.listQuery(mg, query, { exportAll: opts?.exportAll });
+    const { page, limit, skip, sort } = parsed;
+
+    const total = await qbBase.clone().getCount();
+    const qb = qbBase.clone();
+    this.applyListSort(qb, sort, filterTargets);
     qb.skip(skip).take(limit);
     const items = await qb.getMany();
 
@@ -234,10 +263,11 @@ export class ContractsService {
     const cById = new Map<string, any>(companies.map((r: any) => [r.id, r]));
 
     const contractIds = items.map(i => i.id);
+    // The budget lines of both natures (spend/budget-nature.ts).
     const counts: Array<{ contract_id: string; c: string }> = contractIds.length
       ? await mg.query(
           `SELECT l.contract_id, COUNT(*)::text as c FROM contract_spend_items l
-            WHERE l.tenant_id = app_current_tenant() AND l.contract_id = ANY($1)${OPEX_LINK}
+            WHERE l.tenant_id = app_current_tenant() AND l.contract_id = ANY($1)${ANY_LINE_LINK}
             GROUP BY l.contract_id`,
           [contractIds],
         )
@@ -260,7 +290,7 @@ export class ContractsService {
         status: deriveStatusFromDisabledAt(i.disabled_at),
         supplier: i.supplier_id ? { id: i.supplier_id, name: sById.get(i.supplier_id)?.name ?? '' } : null,
         company: i.company_id ? { id: i.company_id, name: cById.get(i.company_id)?.name ?? '' } : null,
-        linked_opex_count: countById.get(i.id) ?? 0,
+        linked_lines_count: countById.get(i.id) ?? 0,
         latest_task: latestById.get(i.id) ? {
           id: latestById.get(i.id)!.id,
           status: latestById.get(i.id)!.status,
@@ -271,6 +301,68 @@ export class ContractsService {
     });
 
     return { items: enriched, total, page, limit };
+  }
+
+  /**
+   * The footer of the list for the same request (search, filters, status scope): the number of
+   * contracts and the sum of their yearly amounts in the tenant's reporting currency, converted
+   * with the rates of this year's budget (the latest rate set of the year, as the budget's live
+   * columns). Contracts in a currency without a rate stay out of the sum and are counted by
+   * currency in `excluded`. `to_decide_count`: the contracts the "to decide" quick filter shows,
+   * the state filter itself left out.
+   */
+  async totals(query: any, opts?: { manager?: EntityManager; tenantId?: string }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const { qb } = this.listQuery(mg, query, { exportAll: true });
+    const groups: Array<{ currency: string; count: string; amount: string }> = await qb
+      .clone()
+      .select(`UPPER(TRIM(COALESCE(c.currency, '')))`, 'currency')
+      .addSelect('COUNT(*)::text', 'count')
+      .addSelect('COALESCE(SUM(c.yearly_amount_at_signature), 0)::text', 'amount')
+      .groupBy(`UPPER(TRIM(COALESCE(c.currency, '')))`)
+      .getRawMany();
+    groups.sort((a, b) => a.currency.localeCompare(b.currency));
+
+    const { qb: stateBase, filterTargets } = this.listQuery(mg, query, { exportAll: true, omitFilters: ['term_state'] });
+    const toDecideCount = await stateBase
+      .andWhere(`${filterTargets.term_state.expression} = 'to_decide'`)
+      .getCount();
+
+    const tenantId = opts?.tenantId ?? (await mg.query(`SELECT app_current_tenant() AS id`))[0]?.id;
+    const year = Number(utcDateYmd(new Date()).slice(0, 4));
+    // The year's latest rate set, the one the budget's live columns use (FxRateService). A
+    // currency it does not rate has no rate here: the FX service would count it at 1.
+    const { settings } = await this.fxRates.resolveRates(tenantId, [], { manager: mg });
+    const reportingCurrency = settings.reportingCurrency.toUpperCase();
+    const rateSet = await this.fxRates.getLatestRateSet(tenantId, year, reportingCurrency, { manager: mg });
+    const rateOf = (currency: string): number | null => {
+      if (currency === reportingCurrency) return 1;
+      const raw = rateSet?.rates?.[currency];
+      return typeof raw === 'number' && Number.isFinite(raw) && raw > 0 ? raw : null;
+    };
+
+    let count = 0;
+    let amount = 0;
+    const excluded: Array<{ currency: string; count: number }> = [];
+    for (const group of groups) {
+      const n = Number(group.count);
+      count += n;
+      const currency = group.currency || 'EUR';
+      const rate = rateOf(currency);
+      if (rate === null) {
+        excluded.push({ currency, count: n });
+        continue;
+      }
+      amount += this.fxRates.convertValue(Number(group.amount), rate);
+    }
+    return {
+      count,
+      yearly_amount: Math.round(amount * 100) / 100,
+      reporting_currency: reportingCurrency,
+      fx_year: year,
+      excluded,
+      to_decide_count: toDecideCount,
+    };
   }
 
   async get(id: string, opts?: { manager?: EntityManager }) {
@@ -566,89 +658,18 @@ export class ContractsService {
 
   async listIds(query: any, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    const repo = mg.getRepository(Contract);
-    const { skip, sort, status, q, filters } = parsePagination(query, { field: 'created_at', direction: 'DESC' });
+    const { qb, parsed, filterTargets } = this.listQuery(mg, query);
+    const { skip, sort } = parsed;
     // Not the parsed limit: parsePagination defaults to a page of 20, and the prev/next
     // navigation that calls this sends no limit, so it only ever knew 20 contracts.
     const limit = Math.min(Number(query?.limit) || 10000, 10000);
-    const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
-    const filtersToApply = sanitizedFilters ?? filters;
-    const today = utcDateYmd(new Date());
-    const filterTargets = this.contractFilterTargets(today);
-    const nextParam = createParamNameGenerator('c');
-    const compiledFilters: CompiledCondition[] = [];
-    if (filtersToApply && typeof filtersToApply === 'object') {
-      for (const [field, model] of Object.entries(filtersToApply)) {
-        const target = filterTargets[field];
-        if (!target) continue;
-        const condition = compileAgFilterCondition(model, target, nextParam);
-        if (condition) compiledFilters.push(condition);
-      }
-    }
-
-    const quickSearchConditions = q
-      ? buildQuickSearchConditions(q, ['c.name', 'comp.name', 'sup.name', 'c.notes'], nextParam)
-      : [];
-    const includeDisabled =
-      String(query.includeDisabled ?? '').toLowerCase() === '1' ||
-      String(query.includeDisabled ?? '').toLowerCase() === 'true';
-
-    const qb = repo
-      .createQueryBuilder('c')
-      .select(['c.id'])
-      .leftJoin('companies', 'comp', 'comp.id = c.company_id AND comp.tenant_id = c.tenant_id')
-      .leftJoin('suppliers', 'sup', 'sup.id = c.supplier_id AND sup.tenant_id = c.tenant_id')
-      .where('c.tenant_id = app_current_tenant()');
-    // The status is read from the end of validity (the stored one is not updated when the date passes).
-    applyStatusFilter(qb, { alias: 'c', explicitStatus: status ?? statusFromAg ?? null, includeDisabled, matchNone });
-    // Parenthesized, so no condition can widen the tenant predicate above.
-    compiledFilters.forEach((cond) => qb.andWhere(`(${cond.sql})`, cond.params));
-    if (quickSearchConditions.length > 0) {
-      qb.andWhere(
-        new Brackets((sub) => {
-          quickSearchConditions.forEach((cond, idx) => {
-            if (idx === 0) sub.where(cond.sql, cond.params);
-            else sub.orWhere(cond.sql, cond.params);
-          });
-        }),
-      );
-    }
-
-    const sortExpressions: Record<string, string> = {
-      name: 'c.name',
-      status: 'c.status',
-      company_name: 'comp.name',
-      supplier_name: 'sup.name',
-      start_date: 'c.start_date',
-      end_date: filterTargets.end_date.expression,
-      cancellation_deadline: filterTargets.cancellation_deadline.expression,
-      duration_months: 'c.duration_months',
-      auto_renewal: 'c.auto_renewal',
-      notice_period_months: 'c.notice_period_months',
-      yearly_amount_at_signature: 'c.yearly_amount_at_signature',
-      currency: 'c.currency',
-      billing_frequency: 'c.billing_frequency',
-      created_at: 'c.created_at',
-      updated_at: 'c.updated_at',
-    };
-    const sortField = sortExpressions[sort.field] ? sort.field : 'created_at';
-    const sortExpr = sortExpressions[sortField];
-    if (sortField === 'end_date') {
-      qb.addSelect(sortExpr, 'sort_end_date');
-      qb.orderBy('sort_end_date', sort.direction as any);
-    } else if (sortField === 'cancellation_deadline') {
-      qb.addSelect(sortExpr, 'sort_cancellation_deadline');
-      qb.orderBy('sort_cancellation_deadline', sort.direction as any);
-    } else {
-      qb.orderBy(sortExpr, sort.direction as any);
-    }
-    if (sortExpr !== 'c.created_at') qb.addOrderBy('c.created_at', 'DESC');
+    qb.select(['c.id']);
+    this.applyListSort(qb, sort, filterTargets);
     qb.offset(skip).limit(limit);
 
     const [rows, total] = await qb.getManyAndCount();
     return { ids: rows.map(r => (r as any).id as string), total };
   }
-
   async listFilterValues(query: any, opts?: { manager?: EntityManager }): Promise<Record<string, Array<string | null>>> {
     const rawFields = String(query?.fields || query?.field || '')
       .split(',')

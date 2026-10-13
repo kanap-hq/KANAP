@@ -14,7 +14,7 @@ Routes
   - Workspace: `/ops/contracts/:id/:tab` where `:tab` ∈ { overview, budget, relations }
   - Create: `/ops/contracts/new/overview`
 - Backend endpoints
-  - Contracts IDs navigation: `GET /contracts/ids` (supports `sort`, `q`, AG Grid `filters`, derived sorts for `end_date` and `cancellation_deadline`).
+  - Contracts IDs navigation: `GET /contracts/ids` (supports `sort`, `q`, AG Grid `filters`, derived sorts for `end_date`, `cancellation_deadline` and `next_due_date`, the default).
   - Detail: `GET /contracts/:id` with the term fields and the supplier, company and owner names; `PATCH /contracts/:id` takes any subset of the fields (autosave).
   - Relations from the contract side (`backend/src/contracts/contract-relations.ts`): `GET|POST bulk-replace /contracts/:id/budget-lines` (both natures), `/applications`, `/assets`, and `GET /contracts/:id/relation-counts` for the tab badges. See `doc/api-reference.md`, Contract relations.
   - Unified tasks (object-scoped): `GET|POST|PATCH /contracts/:id/tasks` → delegates to unified tasks.
