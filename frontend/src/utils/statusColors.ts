@@ -197,3 +197,17 @@ export const CONTRACT_TERM_STATE_COLORS: Record<string, string> = {
   ending: 'default',
   expired: 'default',
 };
+
+/**
+ * Contract budget coverage (contract Budget tab, contract list): green when the linked budget lines
+ * cover the commitment, orange when they fall short, exceed it by more than the tolerance or are
+ * missing, grey when there is nothing to compare (no commitment, budget not started).
+ */
+export const CONTRACT_BUDGET_STATE_COLORS: Record<string, string> = {
+  covered: 'success',
+  under: 'warning',
+  over: 'warning',
+  no_line: 'warning',
+  no_commitment: 'default',
+  not_started: 'default',
+};

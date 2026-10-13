@@ -5,7 +5,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { TFunction } from 'i18next';
 import PageHeader from '../components/PageHeader';
 import ServerDataGrid, { DATE_COLUMN_FILTER, EnhancedColDef, StatusScope } from '../components/ServerDataGrid';
-import { Box, Button, Stack, useTheme } from '@mui/material';
+import { Box, Button, MenuItem, Select, Stack, useTheme } from '@mui/material';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
@@ -19,8 +19,17 @@ import { formatShortDate } from '../lib/dateFormat';
 import { useLocale } from '../i18n/useLocale';
 import { statusScopeParams } from '../utils/statusScopeParams';
 import { CONTRACT_TERM_STATE_COLORS, getDotColor } from '../utils/statusColors';
-import { attentionDotSx, neutralLinkSx } from '../theme/formSx';
+import { attentionDotSx, compactSelectMenuProps, drawerMenuItemSx, drawerSelectSx, inlineControlSx, neutralLinkSx } from '../theme/formSx';
+import type { AmountMeasure } from '../components/finance/roundPeriod';
 import ForbiddenPage from './ForbiddenPage';
+import {
+  CONTRACT_BUDGET_STATES,
+  formatSignedAmount,
+  offeredBudgetYears,
+  useContractBudgetChoice,
+  type ContractBudgetState,
+} from './contracts/contractBudget';
+import ContractBudgetStateLabel from './contracts/ContractBudgetStateLabel';
 
 /** The states of a contract's terms, computed by the API (`backend/src/contracts/contract-terms.ts`). */
 const TERM_STATES = ['to_decide', 'in_progress', 'renewed', 'ending', 'expired'] as const;
@@ -52,6 +61,11 @@ type ContractRow = {
   term_state?: TermState;
   linked_lines_count?: number;
   latest_task?: { id: string; description?: string; status?: string; created_at?: string } | null;
+  /** With a budget year and column, for a reader of the budget (`backend/src/contracts/contract-budget.ts`). */
+  budget_committed?: number | null;
+  budget_linked?: number;
+  budget_gap?: number | null;
+  budget_state?: ContractBudgetState | null;
 };
 
 /** `GET /contracts/totals`: the footer and the quick filter count, for the list's current request. */
@@ -62,12 +76,28 @@ type ContractTotals = {
   fx_year: number;
   excluded: Array<{ currency: string; count: number }>;
   to_decide_count: number;
+  /** The budget figures' sums and quick filter counts, with a budget year and column. */
+  budget?: {
+    year: number;
+    column: string;
+    reporting_currency: string;
+    committed: number;
+    linked: number;
+    gap: number;
+    excluded: Array<{ currency: string; count: number }>;
+    no_line_count: number;
+    under_count: number;
+    years: number[];
+  };
 };
 
 type ListQuery = { q: string; filters: string; statusScope: StatusScope };
 
 const TOTALS_ROW_ID = '__contracts_total__';
 const TO_DECIDE_FILTER = { filterType: 'set', values: ['to_decide'] };
+/** The budget quick filters: one state of the budget coverage at a time. */
+const BUDGET_QUICK_FILTERS = ['no_line', 'under'] as const;
+type BudgetQuickFilter = (typeof BUDGET_QUICK_FILTERS)[number];
 
 function formatNumber(v: any) {
   const n = Number(v ?? 0);
@@ -157,10 +187,107 @@ function AmountCell({ data }: { data?: ContractRow }) {
   );
 }
 
+const amountSx = { width: '100%', textAlign: 'right', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' } as const;
+const warningSx = { color: 'kanap.orange' } as const;
+
+/** A budget amount of the list; a contract whose currency has no rate that year shows it in tertiary. */
+function BudgetCommittedCell({ data }: { data?: ContractRow }) {
+  const { t } = useTranslation('ops');
+  if (!data) return null;
+  if (data.budget_committed == null) {
+    return data.budget_linked === undefined ? null : (
+      <Box component="span" sx={[amountSx, tertiarySx]}>{t('contracts.budget.noRate', { currency: data.currency })}</Box>
+    );
+  }
+  return <Box component="span" sx={amountSx}>{formatNumber(data.budget_committed)}</Box>;
+}
+
+function BudgetLinkedCell({ data }: { data?: ContractRow }) {
+  if (!data || data.budget_linked === undefined) return null;
+  return <Box component="span" sx={[amountSx, data.budget_linked === 0 ? tertiarySx : {}]}>{formatNumber(data.budget_linked)}</Box>;
+}
+
+/** The gap with its sign, a shortfall in orange; "no line" or "contract expired" when that is the point. */
+function BudgetGapCell({ data }: { data?: ContractRow }) {
+  const { t } = useTranslation('ops');
+  if (!data) return null;
+  if (data.budget_state === 'no_line') return <Box component="span" sx={[amountSx, warningSx]}>{t('contracts.list.gapNoLine')}</Box>;
+  if (data.term_state === 'expired' && (data.budget_linked ?? 0) > 0) {
+    return <Box component="span" sx={[amountSx, warningSx]}>{t('contracts.list.gapExpired')}</Box>;
+  }
+  // Nothing committed and nothing budgeted: nothing to compare.
+  if (data.budget_gap == null || data.budget_state === 'no_commitment') return null;
+  return <Box component="span" sx={[amountSx, data.budget_gap < 0 ? warningSx : {}]}>{formatSignedAmount(data.budget_gap)}</Box>;
+}
+
+function BudgetStateCell({ data }: { data?: ContractRow }) {
+  return <ContractBudgetStateLabel state={data?.budget_state} />;
+}
+
+/** The budget quick filter the filter model sets (the budget state narrowed to one of them), or null. */
+export function budgetQuickFilterOf(model: any): BudgetQuickFilter | null {
+  const values = model?.budget_state?.values;
+  if (!Array.isArray(values) || values.length !== 1 || model.budget_state.mode === 'exclude') return null;
+  return (BUDGET_QUICK_FILTERS as readonly string[]).includes(values[0]) ? values[0] as BudgetQuickFilter : null;
+}
+
 /** True when the filter model narrows the state to "to decide" alone (the quick filter is on). */
 export function isToDecideOnly(model: any): boolean {
   const values = model?.term_state?.values;
   return Array.isArray(values) && values.length === 1 && values[0] === 'to_decide' && model.term_state.mode !== 'exclude';
+}
+
+/**
+ * The budget columns of a year (`budget_year`, `budget_column` on the list's requests): sorted and
+ * filtered on the server; the coverage state stays in the column chooser and carries the budget
+ * quick filters.
+ */
+function budgetColumns(t: TFunction, year: number): EnhancedColDef<ContractRow>[] {
+  const amount = (p: { value?: unknown }) => (p.value == null ? '' : formatNumber(p.value));
+  return [
+    {
+      field: 'budget_committed',
+      headerName: t('contracts.columns.committed', { year }),
+      width: 140,
+      type: 'rightAligned',
+      filter: 'agNumberColumnFilter',
+      valueFormatter: amount,
+      cellRenderer: BudgetCommittedCell,
+    },
+    {
+      field: 'budget_linked',
+      headerName: t('contracts.columns.budgetLinked', { year }),
+      width: 140,
+      type: 'rightAligned',
+      filter: 'agNumberColumnFilter',
+      valueFormatter: amount,
+      cellRenderer: BudgetLinkedCell,
+    },
+    {
+      field: 'budget_gap',
+      headerName: t('contracts.columns.gap'),
+      width: 130,
+      type: 'rightAligned',
+      filter: 'agNumberColumnFilter',
+      valueFormatter: (p) => (p.value == null ? '' : isPinned(p) ? formatSignedAmount(Number(p.value)) : String(p.value)),
+      cellRenderer: BudgetGapCell,
+    },
+    {
+      field: 'budget_state',
+      headerName: t('contracts.columns.budgetState'),
+      width: 200,
+      sortable: false,
+      defaultHidden: true,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        values: CONTRACT_BUDGET_STATES.map((value) => ({ value, label: t(`contracts.budget.states.${value}`) })),
+        searchable: false,
+      },
+      valueFormatter: (p) => (isPinned(p) || !p.value ? '' : t(`contracts.budget.states.${p.value}`)),
+      cellRenderer: BudgetStateCell,
+    },
+  ];
 }
 
 export default function ContractsPage() {
@@ -177,13 +304,21 @@ export default function ContractsPage() {
   const gridApiRef = useRef<any>(null);
   // The request the grid shows (search, filters, status scope), which the footer and the quick filter follow.
   const [listQuery, setListQuery] = useState<ListQuery | null>(null);
+  // The budget year and column of the budget columns (kept per user, shared with the contract page);
+  // only for a reader of the budget, the API ignores them otherwise.
+  const canReadBudget = hasLevel('budget', 'reader');
+  const budgetChoice = useContractBudgetChoice();
+  const budgetParams = useMemo<Record<string, string>>(
+    (): Record<string, string> => (canReadBudget ? { budget_year: String(budgetChoice.year), budget_column: budgetChoice.column } : {}),
+    [canReadBudget, budgetChoice.year, budgetChoice.column],
+  );
 
   const totals = useQuery({
-    queryKey: ['contracts-totals', listQuery, refreshKey],
+    queryKey: ['contracts-totals', listQuery, budgetParams, refreshKey],
     enabled: listQuery != null,
     placeholderData: keepPreviousData,
     queryFn: async ({ signal }) => {
-      const params: Record<string, unknown> = { ...statusScopeParams(listQuery!.statusScope) };
+      const params: Record<string, unknown> = { ...statusScopeParams(listQuery!.statusScope), ...budgetParams };
       if (listQuery!.q) params.q = listQuery!.q;
       if (listQuery!.filters) params.filters = listQuery!.filters;
       const res = await getWithListContext<ContractTotals>('/contracts/totals', params, { signal });
@@ -204,8 +339,10 @@ export default function ContractsPage() {
     if (state?.q) sp.set('q', state.q);
     if (state?.filters && Object.keys(state.filters).length > 0) sp.set('filters', JSON.stringify(state.filters));
     if (state?.statusScope) sp.set('scope', state.statusScope);
+    // The budget figures the list sorts and filters on, so prev/next follows the same order.
+    for (const [key, value] of Object.entries(budgetParams)) sp.set(key, value);
     return `/ops/contracts/${row.id}/overview?${sp.toString()}`;
-  }, [searchParams]);
+  }, [searchParams, budgetParams]);
 
   const linkCell = useCallback((params: any) => (
     <LinkCellRenderer
@@ -271,6 +408,7 @@ export default function ContractsPage() {
       cellRenderer: AmountCell,
     },
     { field: 'currency', headerName: t('contracts.columns.currency'), width: 90, defaultHidden: true, valueFormatter: (p) => (isPinned(p) ? '' : p.value ?? '') },
+    ...(canReadBudget ? budgetColumns(t, budgetChoice.year) : []),
     {
       colId: 'linked_lines_count',
       headerName: t('contracts.columns.linkedLines'),
@@ -297,24 +435,37 @@ export default function ContractsPage() {
     { colId: 'latest_task_text', headerName: t('contracts.columns.task'), flex: 1, minWidth: 200, defaultHidden: true, valueGetter: (p) => {
       const t = p.data?.latest_task; if (!t) return ''; const s = t.status || ''; const d = (t.description || '').toString(); const short = d.length > 40 ? `${d.slice(0,40)}…` : d; return s ? `${s}: ${short}` : short;
     } },
-  ], [linkCell, locale, t]);
+  ], [linkCell, locale, t, canReadBudget, budgetChoice.year]);
 
   const pinnedTotals = useMemo(() => {
     const data = totals.data;
     if (!data || totals.isError) return [];
+    const budget = data.budget;
     const label = [
       t('contracts.list.total', { count: data.count }),
       ...data.excluded.map((entry) => t('contracts.list.totalExcluded', { count: entry.count, currency: entry.currency })),
+      ...(budget?.excluded ?? []).map((entry) => t('contracts.list.committedExcluded', { count: entry.count, currency: entry.currency, year: budget!.year })),
     ].join(' · ');
     return [{
       id: TOTALS_ROW_ID,
       name: label,
       yearly_amount_at_signature: data.yearly_amount,
       currency: data.reporting_currency,
+      ...(budget ? { budget_committed: budget.committed, budget_linked: budget.linked, budget_gap: budget.gap } : {}),
     }];
   }, [totals.data, totals.isError, t]);
 
-  const toDecideActive = isToDecideOnly(safeParse(listQuery?.filters ?? ''));
+  const currentModel = safeParse(listQuery?.filters ?? '');
+  const toDecideActive = isToDecideOnly(currentModel);
+  const budgetQuick = budgetQuickFilterOf(currentModel);
+  const toggleBudgetQuick = useCallback((state: BudgetQuickFilter) => {
+    const api = gridApiRef.current;
+    if (!api?.setFilterModel) return;
+    const model = { ...(api.getFilterModel?.() ?? {}) };
+    if (budgetQuickFilterOf(model) === state) delete model.budget_state;
+    else model.budget_state = { filterType: 'set', values: [state] };
+    api.setFilterModel(model);
+  }, []);
   const toggleToDecide = useCallback(() => {
     const api = gridApiRef.current;
     if (!api?.setFilterModel) return;
@@ -340,18 +491,46 @@ export default function ContractsPage() {
   );
 
   const toDecideCount = totals.data?.to_decide_count;
-  const quickFilter = (
-    <Box sx={{ display: 'flex', alignItems: 'center', columnGap: '8px', fontSize: 13, color: 'kanap.text.secondary' }}>
-      {!!toDecideCount && <Box component="span" sx={attentionDotSx} />}
-      <Box
-        component="button"
-        type="button"
-        aria-pressed={toDecideActive}
-        onClick={toggleToDecide}
-        sx={neutralLinkSx(toDecideActive)}
-      >
-        {t('contracts.list.toDecide', { days: DECISION_WINDOW_DAYS, count: toDecideCount ?? 0 })}
+  const budgetTotals = totals.data?.budget;
+  const quickLink = (key: string, label: string, count: number | undefined, active: boolean, onClick: () => void) => (
+    <Box key={key} sx={{ display: 'flex', alignItems: 'center', columnGap: '8px' }}>
+      {!!count && <Box component="span" sx={attentionDotSx} />}
+      <Box component="button" type="button" aria-pressed={active} onClick={onClick} sx={neutralLinkSx(active)}>
+        {label}
       </Box>
+    </Box>
+  );
+  const budgetYears = offeredBudgetYears(budgetTotals?.years, budgetChoice.year);
+  const quickFilter = (
+    <Box sx={{ display: 'flex', alignItems: 'center', columnGap: 2, rowGap: 1, flexWrap: 'wrap', flex: '1 1 auto', fontSize: 13, color: 'kanap.text.secondary' }}>
+      {quickLink('to_decide', t('contracts.list.toDecide', { days: DECISION_WINDOW_DAYS, count: toDecideCount ?? 0 }), toDecideCount, toDecideActive, toggleToDecide)}
+      {canReadBudget && quickLink('no_line', t('contracts.list.noBudgetLine', { count: budgetTotals?.no_line_count ?? 0 }), budgetTotals?.no_line_count, budgetQuick === 'no_line', () => toggleBudgetQuick('no_line'))}
+      {canReadBudget && quickLink('under', t('contracts.list.underBudgeted', { count: budgetTotals?.under_count ?? 0 }), budgetTotals?.under_count, budgetQuick === 'under', () => toggleBudgetQuick('under'))}
+      {canReadBudget && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
+          {t('contracts.list.budgetSelector')}
+          <Select
+            variant="standard"
+            value={budgetChoice.year}
+            onChange={(event) => budgetChoice.setYear(Number(event.target.value))}
+            sx={[drawerSelectSx, inlineControlSx, { width: 'auto', minWidth: 56 }]}
+            MenuProps={compactSelectMenuProps}
+            inputProps={{ 'aria-label': t('contracts.list.budgetYear') }}
+          >
+            {budgetYears.map((year) => <MenuItem key={year} value={year} sx={drawerMenuItemSx}>{year}</MenuItem>)}
+          </Select>
+          <Select
+            variant="standard"
+            value={budgetChoice.column}
+            onChange={(event) => budgetChoice.setColumn(event.target.value as AmountMeasure)}
+            sx={[drawerSelectSx, inlineControlSx, { width: 'auto', minWidth: 90 }]}
+            MenuProps={compactSelectMenuProps}
+            inputProps={{ 'aria-label': t('contracts.budget.column') }}
+          >
+            {budgetChoice.columns.map((column) => <MenuItem key={column.measure} value={column.measure} sx={drawerMenuItemSx}>{column.label}</MenuItem>)}
+          </Select>
+        </Box>
+      )}
     </Box>
   );
 
@@ -369,6 +548,7 @@ export default function ContractsPage() {
         columnPreferencesKey="contracts-grid"
         // Lists active contracts by default; "All" or "Disabled" reaches those past their end of validity.
         statusScopeConfig={{ defaultScope: 'enabled' }}
+        extraParams={budgetParams}
         toolbarExtras={quickFilter}
         pinnedBottomRowData={pinnedTotals}
         onGridApiReady={(api) => { gridApiRef.current = api; }}

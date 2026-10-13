@@ -1,14 +1,15 @@
 import 'dotenv/config';
 import * as assert from 'node:assert/strict';
 import dataSource from '../../data-source';
-import { computeContractTerms, contractTermsSql } from '../contract-terms';
-import { CONTRACT_TERM_CASES, contractTermSweep } from './contract-terms.cases';
+import { computeContractTerms, contractCommitmentCents, contractCommitmentSql, contractTermsSql } from '../contract-terms';
+import { CONTRACT_COMMITMENT_CASES, CONTRACT_TERM_CASES, contractCommitmentSweep, contractTermSweep } from './contract-terms.cases';
 
 // The contract term rule in SQL (contractTermsSql) gives the TypeScript values
 // (computeContractTerms), the list's next due date and state included: on the hand-worked cases, through both the scalar expressions the
 // list sorts and filters on and the lateral row the expiry warnings join; then on every
-// combination of the sweep. The rows are literal values (unnest), so the spec needs no
-// table and runs on an empty database.
+// combination of the sweep. The commitment of a year (contractCommitmentSql, lot CB) gives the
+// cents of contractCommitmentCents on its cases and its own sweep. The rows are literal values
+// (unnest), so the spec needs no table and runs on an empty database.
 
 type SqlRow = {
   id: number;
@@ -85,6 +86,34 @@ function expectedOf(row: Input): Omit<SqlRow, 'id'> {
 
 const strip = ({ id: _id, ...rest }: SqlRow) => ({ ...rest, term_index: Number(rest.term_index) });
 
+type CommitmentInput = { start: string; months: number | null; renewal: boolean; disabledAt: string | null; amount: string; year: number };
+
+/** The commitment cents of each row, by `contractCommitmentSql` on literal contract rows. */
+async function commitmentsViaSql(rows: CommitmentInput[]): Promise<bigint[]> {
+  const got: Array<{ id: number; cents: string }> = await dataSource.query(
+    `SELECT v.id, ${contractCommitmentSql('v', 'v.yr')}::text AS cents
+       FROM unnest($1::int[], $2::date[], $3::int[], $4::bool[], $5::timestamptz[], $6::numeric[], $7::int[])
+         AS v(id, start_date, duration_months, auto_renewal, disabled_at, yearly_amount_at_signature, yr)
+      ORDER BY v.id`,
+    [
+      rows.map((_, i) => i),
+      rows.map((r) => r.start),
+      rows.map((r) => r.months),
+      rows.map((r) => r.renewal),
+      rows.map((r) => r.disabledAt),
+      rows.map((r) => r.amount),
+      rows.map((r) => r.year),
+    ],
+  );
+  assert.equal(got.length, rows.length, 'commitment: one row per input');
+  return got.map((row) => BigInt(row.cents));
+}
+
+const commitmentOf = (r: CommitmentInput) => contractCommitmentCents(
+  { start_date: r.start, duration_months: r.months, auto_renewal: r.renewal, disabled_at: r.disabledAt, yearly_amount_at_signature: r.amount },
+  r.year,
+);
+
 async function main() {
   await dataSource.initialize();
   try {
@@ -115,7 +144,28 @@ async function main() {
     });
     assert.equal(mismatches, 0, `sweep: SQL and TypeScript differ on ${mismatches} of ${sweep.length} rows\n  ${first.join('\n  ')}`);
 
-    console.log(`contract-terms.parity.spec: ok (${CONTRACT_TERM_CASES.length} cases, ${sweep.length} sweep rows)`);
+    const commitmentCases: CommitmentInput[] = CONTRACT_COMMITMENT_CASES.map((c) => ({
+      start: c.start, months: c.months, renewal: c.renewal, disabledAt: c.disabledAt ?? null, amount: String(c.amount), year: c.year,
+    }));
+    const caseCents = await commitmentsViaSql(commitmentCases);
+    CONTRACT_COMMITMENT_CASES.forEach((c, i) => {
+      assert.equal(caseCents[i], BigInt(Math.round(c.expected * 100)), `commitment SQL, ${c.name}`);
+      assert.equal(caseCents[i], commitmentOf(commitmentCases[i]), `commitment SQL, ${c.name}: same as TypeScript`);
+    });
+    const commitmentRows = contractCommitmentSweep();
+    const sweepCents = await commitmentsViaSql(commitmentRows);
+    let commitmentMismatches = 0;
+    const firstCommitment: string[] = [];
+    commitmentRows.forEach((row, i) => {
+      const ts = commitmentOf(row);
+      if (sweepCents[i] !== ts) {
+        commitmentMismatches += 1;
+        if (firstCommitment.length < 5) firstCommitment.push(`${JSON.stringify(row)}: sql ${sweepCents[i]} ts ${ts}`);
+      }
+    });
+    assert.equal(commitmentMismatches, 0, `commitment sweep: SQL and TypeScript differ on ${commitmentMismatches} of ${commitmentRows.length} rows\n  ${firstCommitment.join('\n  ')}`);
+
+    console.log(`contract-terms.parity.spec: ok (${CONTRACT_TERM_CASES.length} cases, ${sweep.length} sweep rows, ${CONTRACT_COMMITMENT_CASES.length} commitment cases, ${commitmentRows.length} commitment sweep rows)`);
   } finally {
     await dataSource.destroy();
   }

@@ -17,6 +17,7 @@ Routes
   - Contracts IDs navigation: `GET /contracts/ids` (supports `sort`, `q`, AG Grid `filters`, derived sorts for `end_date`, `cancellation_deadline` and `next_due_date`, the default).
   - Detail: `GET /contracts/:id` with the term fields and the supplier, company and owner names; `PATCH /contracts/:id` takes any subset of the fields (autosave).
   - Relations from the contract side (`backend/src/contracts/contract-relations.ts`): `GET|POST bulk-replace /contracts/:id/budget-lines` (both natures), `/applications`, `/assets`, and `GET /contracts/:id/relation-counts` for the tab badges. See `doc/api-reference.md`, Contract relations.
+  - Budget figures (`backend/src/contracts/contract-budget.ts`): `GET /contracts/:id/budget?year&column` for the Budget tab; `budget_year` and `budget_column` on `GET /contracts`, `/contracts/ids` and `/contracts/totals` for the list's budget columns. Both need the `budget` reader right too.
   - Unified tasks (object-scoped): `GET|POST|PATCH /contracts/:id/tasks` → delegates to unified tasks.
   - URLs: `GET|POST /contracts/:id/links`, `PATCH|DELETE /contracts/:id/links/:linkId`. Attachments: `GET|POST /contracts/:id/attachments`, download `GET /contracts/attachments/:attachmentId`, delete `PATCH /contracts/attachments/:attachmentId/delete`.
 
@@ -25,7 +26,9 @@ Frontend (`frontend/src/pages/contracts/`)
 - `workspace/ContractPropertiesDrawer.tsx`: supplier, contracting company, owner; start, duration, notice, tacit renewal; yearly amount (two decimals), currency (the tenant's currencies), billing; lifecycle (status, end of validity), created, updated.
 - `contractSchedule.ts` + `workspace/ContractDeadlines.tsx`: the deadline state ("Cancellation possible until…", "Notice passed, renewed until…", "Ends on… without renewal", "Ended on…"), the timeline of the terms (past terms, current term, next term dashed while it can be cancelled, today, next deadline and the decision window) and the facts line. Built on `contractTerms.ts`, the frontend copy of `backend/src/contracts/contract-terms.ts`, so the page recomputes while the dates are edited. `DECISION_WINDOW_DAYS` (90) is a constant until a tenant setting replaces it.
 - Overview: deadlines, open tasks (`components/EntityTasksSection.tsx`, completed ones on demand), notes (Markdown editor, toolbar on focus).
-- `workspace/ContractBudgetTab.tsx`: linked budget lines of both natures (reference, name, type, company) and the single `BudgetLinesRelationField` picker. No amounts or years yet.
+- `workspace/ContractBudgetTab.tsx`: linked budget lines of both natures (reference, name, type, company) and the single `BudgetLinesRelationField` picker. For a reader of the budget: year tabs and a column selector (the tenant's shown columns, by name), each line's amount in that year and column with a "Total (n lines)" row, then "Commitment and coverage": one row per year of the selector (committed by the contract, linked lines, gap, state as a dot and a text, colors `CONTRACT_BUDGET_STATE_COLORS`), the chosen year marked, a row click choosing its year, and a sentence on how the commitment is computed. The figures follow the contract's edits (their query key carries `updated_at`) and its link changes.
+- `contractBudget.ts`: the coverage types, `useContractBudgetChoice` (the year and column, kept per tenant and user in `localStorage` under `kanap-contract-budget:<tenant>:<user>`, next year and the tenant's default column until the user picks others; shared with the list) and `ContractBudgetStateLabel.tsx`.
+- The list (`pages/ContractsPage.tsx`): "Budget" year and column selectors in the grid's toolbar, columns "Committed <year>", "Budget <year>", "Gap" (sorted and filtered on the server) and "Budget coverage" (hidden by default), quick filters "No budget line (n)" and "Under-budgeted (n)" on the coverage state beside "To decide within 90 days", and the totals row summing the three amounts. Hidden to a user without the budget reader right.
 - `workspace/ContractRelationsTab.tsx`: applications and assets pickers (`components/workspace/RelationLookupPicker.tsx`, searching through the `/applications` and `/assets` lists so their access rules apply), contacts (with "Add the supplier's contacts"), relevant websites, attachments as a list with an "Add files" button and drop on the section.
 
 Unified Tasks Model
@@ -34,9 +37,10 @@ Unified Tasks Model
   - RLS: Enabled with tenant isolation policy.
 
 Navigation
-- The contracts list passes its context (sort, q, filters, scope) when opening a row. Prev/Next pulls from `GET /contracts/ids` with the same semantics as the list; every address of the page keeps that context.
+- The contracts list passes its context (sort, q, filters, scope, and the budget year and column of its budget columns) when opening a row. Prev/Next pulls from `GET /contracts/ids` with the same semantics as the list; every address of the page keeps that context.
 - A task created from the contract page returns to the contract's overview (`pages/tasks/taskWorkspaceOrigin.ts`).
 
 Testing Checklist
 - `frontend/src/pages/contracts/*.test.ts(x)`: page rendering, tabs, autosave, creation, former addresses, the schedule cases and the amount parsing.
 - `backend/src/contracts/__tests__/contract-relations.integration.spec.ts`: relations of both natures, applications, assets, refusals across tenants.
+- `backend/src/contracts/__tests__/contract-budget.integration.spec.ts` and the commitment cases of `contract-terms.spec.ts` / `contract-terms.parity.spec.ts`: commitments, budget coverage, the list's budget columns and totals, the Budget tab's figures.

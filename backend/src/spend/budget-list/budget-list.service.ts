@@ -8,7 +8,7 @@ import { assertListEngineSupport } from '../../common/list-engine/list-engine-su
 import type { ListState } from '../../common/list-engine/list-engine.types';
 import { fieldOf, filterValuesSql, idsSql, neighborsSql, pageSql, countSql, buildCore } from '../../common/list-engine/list-sql-builder';
 import { parseListRequest, ParsedListRequest, resolveLifecycleScope } from '../../common/list-engine/list-state';
-import { compareNullableText, decimal2ToFloat, jsRound, sumJsCents } from '../../common/list-engine/sql-fragments';
+import { compareNullableText, decimal2ToFloat, jsCents, jsRound, sumJsCents } from '../../common/list-engine/sql-fragments';
 import { SqlStatement } from '../../common/list-engine/sql-statement';
 import type { LifecycleScope } from '../../common/status';
 import { ANALYTICS_VALUE_ORDER_SQL, parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
@@ -591,6 +591,47 @@ export async function budgetListAggregateRequest(
     query = mergeListContextQuery(stored.state, query);
   }
   return budgetListAggregate(scope, deps, query, spec as AggregateSpec, manager);
+}
+
+/**
+ * The amount each of `ids` shows in the list for each amount key (`y2027Budget`,
+ * `y2027Revision`, …): the list engine's own field of that key, read in one
+ * statement, so the numbers are the list's (converted to the reporting
+ * currency with the list's rates, nothing after the line's end of validity).
+ * No lifecycle scope: a line the list would hide by its status still gives the
+ * amount its row would show. Cents per line and key; lines of another tenant
+ * or of no budget nature are left out, and keys that name no amount ignored.
+ * The contracts' budget columns read their lines' amounts here (lot CB).
+ */
+export async function budgetListAmountsByIds(
+  scope: SummaryReadScopeConfig,
+  deps: Pick<SummaryDeps, 'fxRates' | 'access'>,
+  manager: EntityManager,
+  ids: string[],
+  keys: string[],
+): Promise<Map<string, Record<string, bigint>>> {
+  const amountKeys = Array.from(new Set(keys.filter((key) => resolveAmountField(key) != null)));
+  const lineIds = Array.from(new Set(ids.filter(Boolean)));
+  const result = new Map<string, Record<string, bigint>>();
+  if (!amountKeys.length || !lineIds.length) return result;
+  const tenantId = await summaryTenantId(manager);
+  await assertListEngineSupport(manager);
+  const currentYear = new Date().getFullYear();
+  assertBudgetYearsWithinBounds(yearsNamedByFields(amountKeys), currentYear);
+  const rt = await loadBudgetRuntime(scope, { fxRates: new RequestFxRates(deps.fxRates) }, manager, tenantId, currentYear, budgetRuntimeNeeds(currentYear, amountKeys, false), deps.access);
+  const config = new BudgetListConfig(rt);
+  const stmt = new SqlStatement(tenantId);
+  const state: ListState = { page: 1, limit: lineIds.length, skip: 0, sort: { field: 'id', direction: 'ASC' }, filters: {}, scope: null };
+  const fields = amountKeys.map((key) => fieldOf(stmt, config, key));
+  const core = buildCore(stmt, config, state, { fields });
+  const rows = await run(manager, stmt, `${stmt.withClause()}SELECT ${config.alias}.id${fields.map((field, i) => `, ${jsCents(field.sql)}::text AS a${i}`).join('')}
+${core.from}
+${core.where}
+  AND (${config.alias}.id = ANY(${stmt.bind(lineIds, 'uuid[]')}))`);
+  for (const row of rows) {
+    result.set(row.id, Object.fromEntries(amountKeys.map((key, i) => [key, BigInt(row[`a${i}`])])));
+  }
+  return result;
 }
 
 /**

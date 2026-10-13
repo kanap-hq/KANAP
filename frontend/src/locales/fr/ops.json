@@ -407,7 +407,11 @@
       "currency": "Dev.",
       "billing": "Facturation",
       "linkedLines": "Lignes liées",
-      "task": "Tâche"
+      "task": "Tâche",
+      "committed": "Engagé {{year}}",
+      "budgetLinked": "Budget {{year}}",
+      "gap": "Écart",
+      "budgetState": "Couverture du budget"
     },
     "list": {
       "toDecide": "À décider sous {{days}} jours ({{count}})",
@@ -425,7 +429,15 @@
         "renewedOn": "Reconduit au {{date}}",
         "ending": "Fin sans reconduction",
         "expired": "Échu"
-      }
+      },
+      "noBudgetLine": "Sans ligne budgétaire ({{count}})",
+      "underBudgeted": "Sous-budgétés ({{count}})",
+      "budgetSelector": "Budget",
+      "budgetYear": "Année du budget",
+      "gapNoLine": "Sans ligne",
+      "gapExpired": "Contrat échu",
+      "committedExcluded_one": "engagé {{year}} hors {{count}} contrat en {{currency}} sans taux",
+      "committedExcluded_other": "engagé {{year}} hors {{count}} contrats en {{currency}} sans taux"
     },
     "workspace": {
       "newContract": "Nouveau contrat",
@@ -540,6 +552,34 @@
         "line": "Ligne budgétaire",
         "type": "Type",
         "company": "Société"
+      },
+      "column": "Colonne",
+      "amountHeader": "{{column}} {{year}}",
+      "total_one": "Total ({{count}} ligne)",
+      "total_other": "Total ({{count}} lignes)",
+      "noRate": "Pas de taux {{currency}}",
+      "states": {
+        "covered": "Couvert",
+        "under": "Sous-budgété",
+        "over": "Budget supérieur au contrat",
+        "no_line": "Aucune ligne budgétée",
+        "no_commitment": "Aucun engagement",
+        "not_started": "Budget pas encore commencé"
+      },
+      "coverage": {
+        "title": "Engagement et couverture",
+        "subtitle": "Colonne {{column}} · {{currency}}",
+        "columns": {
+          "year": "Année",
+          "committed": "Engagé par le contrat",
+          "linked": "Lignes liées",
+          "gap": "Écart",
+          "state": "État"
+        },
+        "hint": "Engagé : montant annuel à la signature au prorata des mois couverts par un terme, en {{currency}} aux taux de l'année.",
+        "hintRenewal": "Les années suivantes supposent la reconduction tant qu'elle n'est pas coupée.",
+        "hintEndOfValidity": "Rien n'est engagé après la fin de validité du {{date}}.",
+        "hintEnds": "Rien n'est engagé après la fin du contrat le {{date}}."
       }
     },
     "relations": {

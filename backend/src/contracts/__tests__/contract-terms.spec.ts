@@ -3,12 +3,15 @@ import {
   CONTRACT_DECISION_WINDOW_DAYS,
   addMonthsYmd,
   computeContractTerms,
+  contractCommitment,
+  contractCommitmentCents,
+  contractCommitmentSql,
   contractTermFields,
   contractTermsSql,
   sqlDateLiteral,
 } from '../contract-terms';
 import * as Front from '../../../../frontend/src/pages/contracts/contractTerms';
-import { CONTRACT_TERM_CASES, contractTermSweep } from './contract-terms.cases';
+import { CONTRACT_COMMITMENT_CASES, CONTRACT_TERM_CASES, contractTermSweep } from './contract-terms.cases';
 
 // The contract term rule in TypeScript (contracts/contract-terms.ts): the hand-worked cases,
 // month arithmetic, and the frontend copy (frontend/src/pages/contracts/contractTerms.ts,
@@ -99,4 +102,17 @@ for (const row of contractTermSweep()) {
 }
 assert.ok(compared > 40000, 'the whole sweep is compared');
 
-console.log(`contract-terms.spec: ok (${CONTRACT_TERM_CASES.length} cases, ${compared} sweep rows)`);
+// The commitment of a year (lot CB): the hand-worked cases.
+for (const c of CONTRACT_COMMITMENT_CASES) {
+  const input = { start_date: c.start, duration_months: c.months, auto_renewal: c.renewal, disabled_at: c.disabledAt ?? null, yearly_amount_at_signature: c.amount };
+  assert.equal(contractCommitment(input, c.year), c.expected, `commitment: ${c.name}`);
+}
+// A contract that starts on the 15th and does not renew commits its yearly amount over its two years, to the cent.
+const fromThe15th = { start_date: '2026-03-15', duration_months: 12, auto_renewal: false, yearly_amount_at_signature: 120000 };
+assert.equal(contractCommitmentCents(fromThe15th, 2026) + contractCommitmentCents(fromThe15th, 2027), 12_000_000n, 'the two years add up');
+// Raw query inputs: a Date at local midnight for the start, a string amount.
+assert.equal(contractCommitment({ start_date: new Date(2023, 6, 1), duration_months: 12, auto_renewal: true, yearly_amount_at_signature: '350000.00' }, 2027), 350000, 'Date and string inputs');
+assert.throws(() => contractCommitmentCents(fromThe15th, 2026.5), /Invalid year/);
+assert.throws(() => contractCommitmentSql('c; DROP', '2026'), /Invalid table alias/);
+
+console.log(`contract-terms.spec: ok (${CONTRACT_TERM_CASES.length} cases, ${compared} sweep rows, ${CONTRACT_COMMITMENT_CASES.length} commitment cases)`);

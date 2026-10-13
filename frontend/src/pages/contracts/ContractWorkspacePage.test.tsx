@@ -30,6 +30,7 @@ vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: () => auth.canEdit, profile: { id: 'user-1', first_name: 'Ada', last_name: 'Admin' } }),
 }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
+vi.mock('../../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'fromage' }) }));
 vi.mock('../../hooks/useContractNav', () => ({
   useContractNav: () => ({ ids: ['c-1', 'c-2'], index: 0, total: 2, hasPrev: false, hasNext: true, prevId: null, nextId: 'c-2' }),
 }));
@@ -74,6 +75,29 @@ const CONTRACT = {
   attachments: [{ id: 'a-1', original_filename: 'contract.pdf', size: 2048 }],
 };
 
+const NEXT_YEAR = new Date().getFullYear() + 1;
+
+/** `GET /contracts/c-1/budget`: SAP against its two lines, next year's lines not budgeted yet in the second column. */
+function coverage(params?: { year: number; column: string }) {
+  const year = Number(params?.year ?? NEXT_YEAR);
+  const column = params?.column ?? 'planned';
+  const planned = column === 'planned';
+  const amounts: Record<number, [number, number]> = { [NEXT_YEAR - 1]: [300000, 50000], [NEXT_YEAR]: [300000, 62000] };
+  const row = (y: number) => {
+    const linked = planned && amounts[y] ? amounts[y][0] + amounts[y][1] : 0;
+    const state = !planned || !amounts[y] ? (y === NEXT_YEAR + 1 ? 'not_started' : 'no_line') : linked < 350000 ? 'under' : 'over';
+    return { year: y, committed_local: 350000, committed: 350000, linked, gap: linked - 350000, state };
+  };
+  return {
+    year,
+    column,
+    reporting_currency: 'EUR',
+    currency: 'EUR',
+    lines: [{ id: 'bl-2', amount: planned ? amounts[year]?.[0] ?? 0 : 0 }, { id: 'bl-9', amount: planned ? amounts[year]?.[1] ?? 0 : 0 }],
+    years: [NEXT_YEAR - 1, NEXT_YEAR, NEXT_YEAR + 1].map(row),
+  };
+}
+
 function LocationProbe() {
   const location = useLocation();
   return <div data-testid="location">{`${location.pathname}${location.search}`}</div>;
@@ -101,7 +125,7 @@ describe('ContractWorkspacePage', () => {
     vi.clearAllMocks();
     auth.canEdit = true;
     try { window.localStorage?.clear?.(); } catch { /* no storage in this environment */ }
-    mocked.get.mockImplementation(async (url: string) => {
+    mocked.get.mockImplementation(async (url: string, options?: { params?: { year: number; column: string } }) => {
       if (url === '/contracts/c-1') return { data: CONTRACT };
       if (url === '/contracts/c-1/relation-counts') return { data: { budget_lines: 2, relations: 5 } };
       if (url === '/contracts/c-1/tasks') {
@@ -125,6 +149,10 @@ describe('ContractWorkspacePage', () => {
       if (url === '/contracts/c-1/applications') return { data: { items: [{ id: 'app-1', name: 'SAP S/4HANA' }] } };
       if (url === '/contracts/c-1/assets') return { data: { items: [{ id: 'as-1', name: 'sap-prd-db01' }] } };
       if (url === '/contracts/c-1/contacts') return { data: [] };
+      if (url === '/budget-columns') {
+        return { data: { labels: { planned: null, committed: 'Revised', forecast: null, actual: null, expected_landing: null }, enabled: { planned: true, committed: true, forecast: false, actual: true, expected_landing: true }, group_spread: {}, default_column: 'planned' } };
+      }
+      if (url === '/contracts/c-1/budget') return { data: coverage(options?.params) };
       if (url === '/currency/settings') return { data: { reportingCurrency: 'EUR', defaultSpendCurrency: 'EUR', defaultCapexCurrency: 'EUR', allowedCurrencies: ['EUR', 'USD'] } };
       return { data: { items: [] } };
     });
@@ -224,6 +252,43 @@ describe('ContractWorkspacePage', () => {
     expect(screen.getByText('S/4HANA maintenance')).toBeInTheDocument();
     expect(mocked.get).toHaveBeenCalledWith('/contracts/c-1/budget-lines', expect.anything());
     expect(mocked.get.mock.calls.some(([url]) => String(url).includes('capex-items'))).toBe(false);
+  });
+
+  it('adds the amounts of the chosen year and column, their total and the commitment of every year', async () => {
+    renderAt('/ops/contracts/c-1/budget');
+    // Next year and the default column by default.
+    expect(await screen.findByText('contracts.budget.amountHeader')).toBeInTheDocument();
+    expect(mocked.get).toHaveBeenCalledWith('/contracts/c-1/budget', expect.objectContaining({ params: { year: NEXT_YEAR, column: 'planned' } }));
+    expect(await screen.findByText('62 000')).toBeInTheDocument();
+    expect(screen.getByText('contracts.budget.total:2').closest('tr')).toHaveTextContent('362 000');
+
+    // The coverage section: one row per year, the chosen one marked, its state as a dot and a text.
+    const table = screen.getByText('contracts.budget.coverage.columns.committed').closest('table') as HTMLElement;
+    const rows = within(table).getAllByRole('row').slice(1);
+    expect(rows.map((row) => row.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false']);
+    expect(rows[1]).toHaveTextContent(`${NEXT_YEAR}350 000362 000+12 000contracts.budget.states.over`);
+    expect(rows[2]).toHaveTextContent('contracts.budget.states.not_started');
+    expect(screen.getByText(/contracts\.budget\.coverage\.hint contracts\.budget\.coverage\.hintRenewal/)).toBeInTheDocument();
+
+    // Another year from its row, another column by its name: the figures follow.
+    fireEvent.click(rows[0]);
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/contracts/c-1/budget', expect.objectContaining({ params: { year: NEXT_YEAR - 1, column: 'planned' } })));
+    await waitFor(() => expect(screen.getByText('contracts.budget.total:2').closest('tr')).toHaveTextContent('350 000'));
+    expect(screen.getByText('50 000')).toBeInTheDocument();
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'contracts.budget.column' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Revised' }));
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/contracts/c-1/budget', expect.objectContaining({ params: { year: NEXT_YEAR - 1, column: 'committed' } })));
+    expect(await screen.findByText('contracts.budget.coverage.subtitle')).toBeInTheDocument();
+    expect(await screen.findAllByText('contracts.budget.states.no_line')).toHaveLength(2);
+  });
+
+  it('shows the lines without amounts to a user who cannot read the budget', async () => {
+    auth.canEdit = false;
+    renderAt('/ops/contracts/c-1/budget');
+    expect(await screen.findByText('BL-2')).toBeInTheDocument();
+    expect(screen.queryByText(/contracts\.budget\.total/)).toBeNull();
+    expect(screen.queryByText('contracts.budget.coverage.title')).toBeNull();
+    expect(mocked.get.mock.calls.some(([url]) => url === '/contracts/c-1/budget')).toBe(false);
   });
 
   it('shows the relations aligned on the other pages, attachments as a list with a button', async () => {
