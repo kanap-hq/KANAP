@@ -5,7 +5,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { TFunction } from 'i18next';
 import PageHeader from '../components/PageHeader';
 import ServerDataGrid, { DATE_COLUMN_FILTER, EnhancedColDef, StatusScope } from '../components/ServerDataGrid';
-import { Box, Button, MenuItem, Select, Stack, useTheme } from '@mui/material';
+import { Alert, Box, Button, MenuItem, Select, Stack, useTheme } from '@mui/material';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
@@ -30,6 +30,11 @@ import {
   type ContractBudgetState,
 } from './contracts/contractBudget';
 import ContractBudgetStateLabel from './contracts/ContractBudgetStateLabel';
+import ContractComplianceSummaryLabel from './contracts/ContractComplianceSummaryLabel';
+import { COMPLIANCE_SUMMARY_STATES, type ComplianceSummary } from './contracts/contractCompliance';
+import { screenLanguage } from '../components/csv/readings';
+import { downloadBlob, extractFilenameFromDisposition } from '../utils/downloadBlob';
+import { getApiErrorMessage } from '../utils/apiErrorMessage';
 import ContractSettingsDialog from './contracts/ContractSettingsDialog';
 
 /** The states of a contract's terms, computed by the API (`backend/src/contracts/contract-terms.ts`). */
@@ -64,6 +69,8 @@ type ContractRow = {
   budget_linked?: number;
   budget_gap?: number | null;
   budget_state?: ContractBudgetState | null;
+  /** What the compliance register expects of the contract and what is missing (`backend/src/contracts/contract-compliance.ts`). */
+  compliance?: ComplianceSummary;
 };
 
 /** `GET /contracts/totals`: the footer and the quick filter count, for the list's current request. */
@@ -224,6 +231,11 @@ function BudgetStateCell({ data }: { data?: ContractRow }) {
   return <ContractBudgetStateLabel state={data?.budget_state} />;
 }
 
+function ComplianceCell({ data, node }: { data?: ContractRow; node?: { rowPinned?: unknown } | null }) {
+  if (node?.rowPinned) return null;
+  return <ContractComplianceSummaryLabel summary={data?.compliance} />;
+}
+
 /** The budget quick filter the filter model sets (the budget state narrowed to one of them), or null. */
 export function budgetQuickFilterOf(model: any): BudgetQuickFilter | null {
   const values = model?.budget_state?.values;
@@ -292,7 +304,7 @@ function budgetColumns(t: TFunction, year: number): EnhancedColDef<ContractRow>[
 
 export default function ContractsPage() {
   const { hasLevel } = useAuth();
-  const { t } = useTranslation(['ops', 'common']);
+  const { t, i18n } = useTranslation(['ops', 'common']);
   const locale = useLocale();
 
   const navigate = useNavigate();
@@ -300,6 +312,7 @@ export default function ContractsPage() {
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [registerError, setRegisterError] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any; statusScope?: StatusScope } | null>(null);
   const gridApiRef = useRef<any>(null);
@@ -411,6 +424,21 @@ export default function ContractsPage() {
     { field: 'currency', headerName: t('contracts.columns.currency'), width: 90, defaultHidden: true, valueFormatter: (p) => (isPinned(p) ? '' : p.value ?? '') },
     ...(canReadBudget ? budgetColumns(t, budgetChoice.year) : []),
     {
+      // Sorted and filtered on the server (`compliance_state`): missing, to check, complete, none.
+      colId: 'compliance_state',
+      headerName: t('contracts.columns.compliance'),
+      width: 190,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        values: COMPLIANCE_SUMMARY_STATES.map((value) => ({ value, label: t(`contracts.compliance.summary.states.${value}`) })),
+        searchable: false,
+      },
+      valueGetter: (p) => (isPinned(p) ? '' : p.data?.compliance?.state ?? ''),
+      valueFormatter: (p) => (isPinned(p) || !p.value ? '' : t(`contracts.compliance.summary.states.${p.value}`)),
+      cellRenderer: ComplianceCell,
+    },
+    {
       colId: 'linked_lines_count',
       headerName: t('contracts.columns.linkedLines'),
       width: 140,
@@ -483,11 +511,30 @@ export default function ContractsPage() {
 
   const canCreate = hasLevel('contracts','manager');
   const canAdmin = hasLevel('contracts','admin');
+  // The compliance register of the contracts the list shows (search, filters, scope), in the screen's language.
+  const exportRegister = async () => {
+    setRegisterError(null);
+    const params: Record<string, unknown> = {
+      ...statusScopeParams(listQuery?.statusScope ?? 'enabled'),
+      ...budgetParams,
+      language: screenLanguage(i18n.resolvedLanguage || i18n.language),
+    };
+    if (listQuery?.q) params.q = listQuery.q;
+    if (listQuery?.filters) params.filters = listQuery.filters;
+    try {
+      const res = await getWithListContext<Blob>('/contracts/compliance-register/export', params, { responseType: 'blob' });
+      const filename = extractFilenameFromDisposition(res.headers?.['content-disposition']) || 'contract-compliance-register.csv';
+      downloadBlob(new Blob([res.data], { type: 'text/csv;charset=utf-8' }), filename);
+    } catch (e) {
+      setRegisterError(getApiErrorMessage(e, t, t('contracts.compliance.exportFailed')));
+    }
+  };
   const actions = (
     <Stack direction="row" spacing={1}>
       {canCreate && <Button variant="action-primary" onClick={handleNew}>{t('contracts.newButton')}</Button>}
       {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('contracts.importCsv')}</Button>}
       {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('contracts.exportCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => { void exportRegister(); }}>{t('contracts.compliance.exportRegister')}</Button>}
       {canAdmin && <Button variant="action" onClick={() => setSettingsOpen(true)}>{t('contracts.renewal.settings.button')}</Button>}
     </Stack>
   );
@@ -541,6 +588,7 @@ export default function ContractsPage() {
   return (
     <>
       <PageHeader title={t("contracts.title")} actions={actions} />
+      {registerError && <Alert severity="error" sx={{ mb: 1 }} onClose={() => setRegisterError(null)}>{registerError}</Alert>}
       <ServerDataGrid<ContractRow>
         columns={columns}
         endpoint="/contracts"

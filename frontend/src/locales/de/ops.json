@@ -411,7 +411,8 @@
       "committed": "Verpflichtet {{year}}",
       "budgetLinked": "Budget {{year}}",
       "gap": "Abweichung",
-      "budgetState": "Budgetdeckung"
+      "budgetState": "Budgetdeckung",
+      "compliance": "Konformität"
     },
     "list": {
       "toDecide": "Innerhalb von {{days}} Tagen zu entscheiden ({{count}})",
@@ -448,6 +449,7 @@
     "tabs": {
       "overview": "Übersicht",
       "budget": "Budget",
+      "compliance": "Konformität",
       "relations": "Verknüpfungen"
     },
     "sections": {
@@ -603,6 +605,67 @@
       "uploadingFiles_one": "{{count}} Datei wird hochgeladen…",
       "uploadingFiles_other": "{{count}} Dateien werden hochgeladen…",
       "deleteAttachment": "Anhang löschen"
+    },
+    "compliance": {
+      "title": "Anforderungen",
+      "subtitle": "abgeleitet aus den verknüpften Anwendungen und Assets",
+      "hint": "Eine Anforderung erscheint, wenn eine verknüpfte Anwendung oder ein verknüpftes Asset sie erforderlich macht.",
+      "noneExpected": "Keine Anforderung erwartet: Keine verknüpfte Anwendung und kein verknüpftes Asset macht eine erforderlich.",
+      "showOthers": "Weitere Anforderungen anzeigen ({{count}})",
+      "hideOthers": "Weitere Anforderungen ausblenden",
+      "notExpected": "Nicht erwartet",
+      "moreReasons_one": "und {{count}} weiterer",
+      "moreReasons_other": "und {{count}} weitere",
+      "columns": {
+        "requirement": "Anforderung",
+        "reason": "Erwartet wegen",
+        "state": "Status",
+        "reference": "Referenz"
+      },
+      "requirements": {
+        "gdpr_dpa": "Auftragsverarbeitungsvertrag nach DSGVO (Art. 28)",
+        "data_location": "Speicherort der Daten",
+        "reversibility": "Reversibilitätsklausel",
+        "exit_plan": "Exit-Plan",
+        "audit_security": "Auditrecht und Sicherheitsklauseln"
+      },
+      "states": {
+        "present": "Vorhanden",
+        "absent": "Fehlt",
+        "not_applicable": "Nicht zutreffend",
+        "to_check": "Zu prüfen",
+        "unset": "Nicht erfasst"
+      },
+      "reasons": {
+        "personal_data": "{{app}} enthält personenbezogene Daten",
+        "business_criticality": "{{app}}: geschäftliche Kritikalität {{level}}",
+        "cyber_criticality": "{{app}}: Cyber-Kritikalität {{level}}",
+        "cloud_hosting": "{{app}}: Hosting {{level}}",
+        "viaAsset": "{{text}} (Asset {{asset}})"
+      },
+      "summary": {
+        "missing_one": "{{count}} fehlt",
+        "missing_other": "{{count}} fehlen",
+        "toCheck_one": "{{count}} zu prüfen",
+        "toCheck_other": "{{count}} zu prüfen",
+        "complete": "Vollständig",
+        "none": "Keine Erwartung",
+        "states": {
+          "missing": "Fehlend",
+          "to_check": "Zu prüfen",
+          "complete": "Vollständig",
+          "none": "Keine Erwartung"
+        }
+      },
+      "stateOf": "Status: {{requirement}}",
+      "referenceOf": "Referenz: {{requirement}}",
+      "referencePlaceholder": "z. B. Artikel 18.3",
+      "updatedBy": "Aktualisiert am {{date}} von {{name}}",
+      "updatedOn": "Aktualisiert am {{date}}",
+      "saveFailed": "Die Änderung konnte nicht gespeichert werden.",
+      "loadFailed": "Die Anforderungen konnten nicht geladen werden.",
+      "exportRegister": "Register exportieren",
+      "exportFailed": "Das Register konnte nicht exportiert werden."
     },
     "renewal": {
       "title": "Entscheidung über die Verlängerung ausstehend",

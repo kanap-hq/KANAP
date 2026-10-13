@@ -59,6 +59,7 @@ export const EXPORT_RESOURCE_KEYS: Readonly<Record<string, string>> = {
   companies: 'companies',
   contacts: 'contacts',
   contracts: 'contracts',
+  'contracts/compliance-register': 'contractComplianceRegister',
   'cost-centers': 'costCenters',
   departments: 'departments',
   document: 'document',

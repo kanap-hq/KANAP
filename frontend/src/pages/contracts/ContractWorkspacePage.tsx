@@ -33,12 +33,14 @@ import ContractRenewalDecision from './workspace/ContractRenewalDecision';
 import ContractPropertiesDrawer, { type ContractFormValues } from './workspace/ContractPropertiesDrawer';
 import ContractBudgetTab from './workspace/ContractBudgetTab';
 import ContractRelationsTab from './workspace/ContractRelationsTab';
+import ContractComplianceTab, { useContractCompliance } from './workspace/ContractComplianceTab';
+import { contractComplianceKey } from './contractCompliance';
 import { BillingField, CurrencyField, RenewalField, useDefaultContractCurrency } from './workspace/ContractFields';
 
 const MarkdownEditor = React.lazy(() => import('../../components/MarkdownEditor'));
 
-type TabKey = 'overview' | 'budget' | 'relations';
-const TAB_KEYS: TabKey[] = ['overview', 'budget', 'relations'];
+type TabKey = 'overview' | 'budget' | 'compliance' | 'relations';
+const TAB_KEYS: TabKey[] = ['overview', 'budget', 'compliance', 'relations'];
 /** Tabs of the former page: their address opens the tab that now holds their content. */
 const LEGACY_TABS: Record<string, TabKey> = { details: 'overview', tasks: 'overview' };
 const LIST_PATH = '/ops/contracts';
@@ -126,6 +128,8 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
     queryKey: ['contract-relation-counts', id],
     queryFn: async () => (await api.get<{ budget_lines: number; relations: number }>(`/contracts/${id}/relation-counts`)).data,
   });
+  // The Compliance tab's badge: the expected requirements recorded as absent.
+  const complianceQuery = useContractCompliance(id);
 
   const nav = useContractNav({
     id,
@@ -244,6 +248,8 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   const refreshRelations = React.useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['contract-relation-counts', id] });
     void queryClient.invalidateQueries({ queryKey: ['contracts', id], exact: true });
+    // Linked applications and assets decide what the contract is expected to hold.
+    void queryClient.invalidateQueries({ queryKey: contractComplianceKey(id) });
   }, [id, queryClient]);
 
   const notesTouchedRef = React.useRef(false);
@@ -253,6 +259,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   const tabs = [
     { key: 'overview', label: t('contracts.tabs.overview') },
     { key: 'budget', label: t('contracts.tabs.budget'), badge: counts?.budget_lines || undefined },
+    { key: 'compliance', label: t('contracts.tabs.compliance'), badge: complianceQuery.data?.summary?.missing || undefined },
     { key: 'relations', label: t('contracts.tabs.relations'), badge: counts?.relations || undefined },
   ];
 
@@ -398,6 +405,9 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
             } : null}
           />
         )}
+        {form && tab === 'compliance' && (
+          <ContractComplianceTab key={form.id} contractId={form.id} readOnly={!editable} />
+        )}
         {form && tab === 'relations' && shownData && (
           <ContractRelationsTab
             key={form.id}
@@ -510,6 +520,7 @@ function ContractCreate() {
         tabs={[
           { key: 'overview', label: t('contracts.tabs.overview') },
           { key: 'budget', label: t('contracts.tabs.budget'), disabled: true },
+          { key: 'compliance', label: t('contracts.tabs.compliance'), disabled: true },
           { key: 'relations', label: t('contracts.tabs.relations'), disabled: true },
         ]}
         onTabChange={() => undefined}
