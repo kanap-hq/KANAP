@@ -1,11 +1,11 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useState, useRef } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Autocomplete, FormControlLabel, MenuItem, Stack, Switch, TextField } from '@mui/material';
 import { Controller } from 'react-hook-form';
 import useZodForm from '../../../hooks/useZodForm';
 import { useQueryClient } from '@tanstack/react-query';
 import api from '../../../api';
-import { contactFormSchema, ContactFormValues, SUPPLIER_CONTACT_ROLE_OPTIONS } from '../../forms/ContactForm';
+import { createContactFormSchema, ContactFormValues, SUPPLIER_CONTACT_ROLE_OPTIONS } from '../../forms/ContactForm';
 import { COUNTRY_OPTIONS, CountryOption } from '../../../constants/isoOptions';
 import { DIAL_CODES } from '../../../constants/dialCodes';
 import { combineDialCode, normalizeDialCode, splitPhone, guessCountryFromDialCode } from '../../../lib/phoneUtils';
@@ -13,7 +13,8 @@ import SupplierSelect from '../../../components/fields/SupplierSelect';
 
 export type ContactOverviewEditorHandle = {
   isDirty: () => boolean;
-  save: () => Promise<void>;
+  /** Resolves true once saved, false when the form is invalid; rejects on a server error. */
+  save: () => Promise<boolean>;
   reset: () => void;
 };
 
@@ -56,7 +57,8 @@ export default forwardRef<ContactOverviewEditorHandle, { id: string; onDirtyChan
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const form = useZodForm<ContactFormValues>({ schema: contactFormSchema, defaultValues: DEFAULT_VALUES });
+  const schema = useMemo(() => createContactFormSchema(t), [t]);
+  const form = useZodForm<ContactFormValues>({ schema, defaultValues: DEFAULT_VALUES });
   const { register, formState, reset, handleSubmit, setValue, watch } = form;
   const err = formState.errors as any;
   const supplierId = watch('supplier_id');
@@ -120,7 +122,7 @@ export default forwardRef<ContactOverviewEditorHandle, { id: string; onDirtyChan
   };
 
   const onSubmit = handleSubmit(async (values) => {
-    if (readOnly) return;
+    if (readOnly) return false;
     setSaving(true);
     setServerError(null);
     try {
@@ -129,6 +131,7 @@ export default forwardRef<ContactOverviewEditorHandle, { id: string; onDirtyChan
       onDirtyChange?.(false);
       // Invalidate supplier-contact link caches so supplier pages refresh contact info immediately
       try { await queryClient.invalidateQueries({ queryKey: ['supplier-contacts'], exact: false }); } catch {}
+      return true;
     } catch (e: any) {
       const msg = e?.response?.data?.message || e?.message || t('shared.messages.failedToSave', { entity: t('contacts.entity') });
       setServerError(msg);
@@ -140,7 +143,7 @@ export default forwardRef<ContactOverviewEditorHandle, { id: string; onDirtyChan
 
   useImperativeHandle(ref, () => ({
     isDirty: () => formState.isDirty,
-    save: async () => { await onSubmit(); },
+    save: async () => (await onSubmit()) === true,
     reset: () => {
       reset(baselineRef.current, { keepDirty: false, keepTouched: false });
       refreshDialState();
