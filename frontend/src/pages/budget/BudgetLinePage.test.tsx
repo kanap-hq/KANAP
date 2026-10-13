@@ -163,8 +163,9 @@ vi.mock('../../components/finance/BudgetTab', async () => {
 });
 vi.mock('../../components/finance/AllocationsTab', () => ({ default: () => null }));
 vi.mock('./workspace/BudgetLineRelationsTab', () => ({ default: () => null }));
-vi.mock('../../components/EntityTasksPanel', () => ({ default: () => null }));
-// The change type dialog (lot M) stands in: open, it says for which line, and « confirm type change »
+vi.mock('../../components/EntityTasksPanel', () => ({
+  default: ({ disabled }: { disabled?: boolean }) => <div data-testid="tasks-panel" data-disabled={String(!!disabled)} />,
+}));// The change type dialog (lot M) stands in: open, it says for which line, and « confirm type change »
 // answers as the server does for a change in place.
 vi.mock('../../components/finance/ChangeTypeDialog', () => ({
   default: ({ open, nature, lineId, onChanged }: { open: boolean; nature: string; lineId: string; onChanged: (result: unknown) => void }) => (open ? (
@@ -623,6 +624,8 @@ describe('BudgetLinePage for a budget reader', () => {
     expect(screen.getByRole('button', { name: 'disable line' })).toHaveAttribute('data-disabled', 'true');
     expect(screen.getByTestId('workspace-shell')).toHaveAttribute('data-can-edit-title', 'false');
     expect(screen.queryByRole('button', { name: 'budget.changeType' })).not.toBeInTheDocument();
+    // Tasks follow the tasks right, held at reader level by this role too.
+    expect(screen.getByTestId('tasks-panel')).toHaveAttribute('data-disabled', 'true');
   });
 
   it('sends nothing when a control reaches the page anyway', async () => {
