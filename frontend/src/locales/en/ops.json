@@ -414,63 +414,143 @@
     "workspace": {
       "newContract": "New contract",
       "contract": "Contract",
-      "contractOf": "Contract {{index}} of {{total}}",
-      "prev": "Prev",
-      "next": "Next",
-      "failedToLoad": "Failed to load contract."
+      "previous": "Previous contract",
+      "next": "Next contract"
     },
     "tabs": {
       "overview": "Overview",
-      "details": "Details",
-      "relations": "Relations",
-      "tasks": "Tasks"
+      "budget": "Budget",
+      "relations": "Relations"
     },
-    "overview": {
-      "contractName": "Contract name",
+    "sections": {
+      "parties": "Parties",
+      "duration": "Duration",
+      "amount": "Amount"
+    },
+    "fields": {
+      "name": "Contract name",
       "supplier": "Supplier",
-      "contractingCompany": "Contracting company",
+      "company": "Contracting company",
       "owner": "Owner",
-      "nameSupplierCompanyRequired": "Name, supplier and company are required",
-      "failedToLoad": "Failed to load contract",
-      "failedToSave": "Failed to save"
-    },
-    "details": {
-      "startDate": "Start date",
+      "status": "Status",
+      "startDate": "Start",
       "durationMonths": "Duration (months)",
       "noticeMonths": "Notice (months)",
+      "autoRenewal": "Tacit renewal",
+      "yes": "Yes",
+      "no": "No",
       "yearlyAmount": "Yearly amount",
       "currency": "Currency",
-      "billingFrequency": "Billing frequency",
-      "autoRenewal": "Auto-renewal",
-      "endDate": "End date",
-      "cancellationDeadline": "Cancellation deadline",
-      "currentTermEnd": "Current term end",
-      "nextCancellationDeadline": "Next cancellation deadline",
-      "failedToLoad": "Failed to load details",
-      "failedToSave": "Failed to save details"
+      "billingFrequency": "Billing",
+      "lifecycle": "Lifecycle",
+      "endOfValidity": "End of validity",
+      "endOfValidityHint": "Leave blank to keep the contract active.",
+      "created": "Created",
+      "updated": "Updated",
+      "notes": "Notes"
+    },
+    "billing": {
+      "annual": "Annual",
+      "quarterly": "Quarterly",
+      "monthly": "Monthly",
+      "other": "Other"
+    },
+    "status": {
+      "enabled": "Active",
+      "disabled": "Disabled"
+    },
+    "metadata": {
+      "supplierMissing": "Supplier missing",
+      "companyMissing": "Company missing",
+      "ownerMissing": "Owner missing",
+      "editInProperties": "Edit in the properties panel"
+    },
+    "placeholders": {
+      "name": "e.g., Maintenance agreement",
+      "durationMonths": "e.g., 12",
+      "noticeMonths": "e.g., 3",
+      "yearlyAmount": "e.g., 12000",
+      "notes": "e.g., renewal terms, account manager"
+    },
+    "messages": {
+      "loadFailed": "The contract could not be loaded.",
+      "saveFailed": "The change could not be saved.",
+      "createFailed": "The contract could not be created.",
+      "nameRequired": "Enter a name.",
+      "supplierRequired": "Choose a supplier.",
+      "companyRequired": "Choose a company.",
+      "startRequired": "Enter the start date.",
+      "durationRequired": "Enter a duration of at least one month.",
+      "currencyRequired": "Choose a currency.",
+      "invalidMonths": "Enter a whole number of months.",
+      "invalidAmount": "Enter an amount with at most two decimals."
+    },
+    "deadlines": {
+      "title": "Deadlines",
+      "noStart": "Enter a start date to see the terms.",
+      "noDuration": "Enter a duration to see the terms.",
+      "cancelUntil": "Cancellation possible until {{date}}",
+      "today": "today",
+      "inDays_one": "in {{count}} day",
+      "inDays_other": "in {{count}} days",
+      "noticePassed": "Notice passed, renewed until {{date}}",
+      "nextDeadline": "next deadline on {{date}}",
+      "endsOn": "Ends on {{date}}",
+      "withoutRenewal": "without renewal",
+      "expiredOn": "Ended on {{date}}",
+      "termCurrent": "Term {{number}} in progress",
+      "termLast": "Term {{number}}, the last one",
+      "termUpcoming": "Term {{number}} not started",
+      "fromTo": "from {{start}} to {{end}}",
+      "renewedTimes_one": "Renewed once since {{date}}",
+      "renewedTimes_other": "Renewed {{count}} times since {{date}}",
+      "notice_one": "{{count}} month notice",
+      "notice_other": "{{count}} months notice",
+      "noNotice": "No notice"
+    },
+    "timeline": {
+      "label": "Timeline of the contract terms",
+      "term": "Term {{number}}",
+      "termCurrent": "Term {{number}}, current",
+      "termProjected": "Term {{number}}, if renewed",
+      "termNext": "Term {{number}}, renewed",
+      "termUpcoming": "Term {{number}}, upcoming",
+      "today": "Today",
+      "deadline": "Deadline {{date}}",
+      "window": "Decision window"
+    },
+    "budget": {
+      "title": "Linked budget lines",
+      "empty": "No budget line linked.",
+      "pickerLabel": "Link or remove budget lines",
+      "columns": {
+        "ref": "Ref.",
+        "line": "Budget line",
+        "type": "Type",
+        "company": "Company"
+      }
     },
     "relations": {
-      "linkedOpex": "Linked OPEX",
-      "opexItems": "OPEX lines",
-      "selectOpexItems": "Select OPEX lines",
-      "linkedCapex": "Linked CAPEX",
-      "capexItems": "CAPEX lines",
-      "selectCapexItems": "Select CAPEX lines",
+      "applications": "Applications",
+      "assets": "Assets",
+      "selectApplications": "Select applications",
+      "selectAssets": "Select assets",
       "relevantWebsites": "Relevant websites",
       "addUrl": "Add URL",
+      "linkName": "Name",
+      "linkUrl": "URL",
+      "linkNamePlaceholder": "e.g., vendor portal",
+      "noWebsites": "No websites added",
+      "deleteWebsite": "Delete link",
+      "addLinkTitle": "Add link",
+      "editLinkTitle": "Edit link",
       "attachments": "Attachments",
-      "dragDrop": "Drag & drop files here, or use the button to select",
-      "noUploadPermission": "You do not have permission to upload attachments.",
-      "selectFiles": "Select files",
-      "uploadingFiles": "Uploading {{count}} file(s)…",
-      "failedToLoad": "Failed to load relations",
-      "failedToSave": "Failed to save relations"
-    },
-    "linkManager": {
-      "linkedOpexTitle": "Linked OPEX — {{name}}",
-      "searchPlaceholder": "Search OPEX by product name",
-      "results": "Results",
-      "selected": "Selected"
+      "addFiles": "Add files",
+      "noAttachments": "No attachments",
+      "noAttachmentsDrop": "No attachments. Drop files here to attach them.",
+      "uploadingFiles_one": "Uploading {{count}} file…",
+      "uploadingFiles_other": "Uploading {{count}} files…",
+      "deleteAttachment": "Delete attachment"
     }
   },
   "operations": {

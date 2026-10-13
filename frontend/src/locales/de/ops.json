@@ -414,63 +414,143 @@
     "workspace": {
       "newContract": "Neuer Vertrag",
       "contract": "Vertrag",
-      "contractOf": "Vertrag {{index}} von {{total}}",
-      "prev": "Zurück",
-      "next": "Weiter",
-      "failedToLoad": "Vertrag konnte nicht geladen werden."
+      "previous": "Vorheriger Vertrag",
+      "next": "Nächster Vertrag"
     },
     "tabs": {
       "overview": "Übersicht",
-      "details": "Details",
-      "relations": "Verknüpfungen",
-      "tasks": "Aufgaben"
+      "budget": "Budget",
+      "relations": "Verknüpfungen"
     },
-    "overview": {
-      "contractName": "Vertragsname",
+    "sections": {
+      "parties": "Parteien",
+      "duration": "Laufzeit",
+      "amount": "Betrag"
+    },
+    "fields": {
+      "name": "Vertragsname",
       "supplier": "Lieferant",
-      "contractingCompany": "Vertragsunternehmen",
+      "company": "Vertragsunternehmen",
       "owner": "Verantwortlicher",
-      "nameSupplierCompanyRequired": "Name, Lieferant und Unternehmen sind erforderlich",
-      "failedToLoad": "Vertrag konnte nicht geladen werden",
-      "failedToSave": "Speichern fehlgeschlagen"
-    },
-    "details": {
-      "startDate": "Startdatum",
+      "status": "Status",
+      "startDate": "Beginn",
       "durationMonths": "Laufzeit (Monate)",
       "noticeMonths": "Kündigungsfrist (Monate)",
+      "autoRenewal": "Stillschweigende Verlängerung",
+      "yes": "Ja",
+      "no": "Nein",
       "yearlyAmount": "Jahresbetrag",
       "currency": "Währung",
-      "billingFrequency": "Abrechnungshäufigkeit",
-      "autoRenewal": "Automatische Verlängerung",
-      "endDate": "Enddatum",
-      "cancellationDeadline": "Kündigungsfrist",
-      "currentTermEnd": "Ende der aktuellen Laufzeit",
-      "nextCancellationDeadline": "Nächste Kündigungsfrist",
-      "failedToLoad": "Details konnten nicht geladen werden",
-      "failedToSave": "Details konnten nicht gespeichert werden"
+      "billingFrequency": "Abrechnung",
+      "lifecycle": "Lebenszyklus",
+      "endOfValidity": "Ende der Gültigkeit",
+      "endOfValidityHint": "Leer lassen, damit der Vertrag aktiv bleibt.",
+      "created": "Erstellt",
+      "updated": "Aktualisiert",
+      "notes": "Notizen"
+    },
+    "billing": {
+      "annual": "Jährlich",
+      "quarterly": "Vierteljährlich",
+      "monthly": "Monatlich",
+      "other": "Sonstige"
+    },
+    "status": {
+      "enabled": "Aktiv",
+      "disabled": "Deaktiviert"
+    },
+    "metadata": {
+      "supplierMissing": "Lieferant fehlt",
+      "companyMissing": "Unternehmen fehlt",
+      "ownerMissing": "Verantwortlicher fehlt",
+      "editInProperties": "Im Eigenschaftenbereich bearbeiten"
+    },
+    "placeholders": {
+      "name": "z. B. Wartungsvertrag",
+      "durationMonths": "z. B. 12",
+      "noticeMonths": "z. B. 3",
+      "yearlyAmount": "z. B. 12000",
+      "notes": "z. B. Verlängerungsbedingungen, Ansprechpartner im Vertrieb"
+    },
+    "messages": {
+      "loadFailed": "Der Vertrag konnte nicht geladen werden.",
+      "saveFailed": "Die Änderung konnte nicht gespeichert werden.",
+      "createFailed": "Der Vertrag konnte nicht erstellt werden.",
+      "nameRequired": "Geben Sie einen Namen ein.",
+      "supplierRequired": "Wählen Sie einen Lieferanten.",
+      "companyRequired": "Wählen Sie ein Unternehmen.",
+      "startRequired": "Geben Sie das Beginndatum ein.",
+      "durationRequired": "Geben Sie eine Laufzeit von mindestens einem Monat ein.",
+      "currencyRequired": "Wählen Sie eine Währung.",
+      "invalidMonths": "Geben Sie eine ganze Zahl von Monaten ein.",
+      "invalidAmount": "Geben Sie einen Betrag mit höchstens zwei Dezimalstellen ein."
+    },
+    "deadlines": {
+      "title": "Fristen",
+      "noStart": "Geben Sie ein Beginndatum ein, um die Laufzeiten zu sehen.",
+      "noDuration": "Geben Sie eine Laufzeit ein, um die Vertragsperioden zu sehen.",
+      "cancelUntil": "Kündigung möglich bis {{date}}",
+      "today": "heute",
+      "inDays_one": "in {{count}} Tag",
+      "inDays_other": "in {{count}} Tagen",
+      "noticePassed": "Kündigungsfrist verstrichen, verlängert bis {{date}}",
+      "nextDeadline": "nächste Frist am {{date}}",
+      "endsOn": "Endet am {{date}}",
+      "withoutRenewal": "ohne Verlängerung",
+      "expiredOn": "Abgelaufen am {{date}}",
+      "termCurrent": "Periode {{number}} läuft",
+      "termLast": "Periode {{number}}, die letzte",
+      "termUpcoming": "Periode {{number}} noch nicht begonnen",
+      "fromTo": "vom {{start}} bis {{end}}",
+      "renewedTimes_one": "Einmal verlängert seit {{date}}",
+      "renewedTimes_other": "{{count}}-mal verlängert seit {{date}}",
+      "notice_one": "Kündigungsfrist {{count}} Monat",
+      "notice_other": "Kündigungsfrist {{count}} Monate",
+      "noNotice": "Keine Kündigungsfrist"
+    },
+    "timeline": {
+      "label": "Zeitleiste der Vertragsperioden",
+      "term": "Periode {{number}}",
+      "termCurrent": "Periode {{number}}, laufend",
+      "termProjected": "Periode {{number}}, bei Verlängerung",
+      "termNext": "Periode {{number}}, verlängert",
+      "termUpcoming": "Periode {{number}}, bevorstehend",
+      "today": "Heute",
+      "deadline": "Frist {{date}}",
+      "window": "Entscheidungsfenster"
+    },
+    "budget": {
+      "title": "Verknüpfte Budgetzeilen",
+      "empty": "Keine Budgetzeile verknüpft.",
+      "pickerLabel": "Budgetzeilen verknüpfen oder entfernen",
+      "columns": {
+        "ref": "Ref.",
+        "line": "Budgetzeile",
+        "type": "Typ",
+        "company": "Unternehmen"
+      }
     },
     "relations": {
-      "linkedOpex": "Verknüpfte OPEX",
-      "opexItems": "OPEX-Zeilen",
-      "selectOpexItems": "OPEX-Zeilen auswählen",
-      "linkedCapex": "Verknüpfte CAPEX",
-      "capexItems": "CAPEX-Zeilen",
-      "selectCapexItems": "CAPEX-Zeilen auswählen",
+      "applications": "Anwendungen",
+      "assets": "Assets",
+      "selectApplications": "Anwendungen auswählen",
+      "selectAssets": "Assets auswählen",
       "relevantWebsites": "Relevante Websites",
       "addUrl": "URL hinzufügen",
+      "linkName": "Name",
+      "linkUrl": "URL",
+      "linkNamePlaceholder": "z. B. Lieferantenportal",
+      "noWebsites": "Keine Websites hinzugefügt",
+      "deleteWebsite": "Link löschen",
+      "addLinkTitle": "Link hinzufügen",
+      "editLinkTitle": "Link bearbeiten",
       "attachments": "Anhänge",
-      "dragDrop": "Dateien hierher ziehen oder über die Schaltfläche auswählen",
-      "noUploadPermission": "Sie haben keine Berechtigung zum Hochladen von Anhängen.",
-      "selectFiles": "Dateien auswählen",
-      "uploadingFiles": "{{count}} Datei(en) werden hochgeladen…",
-      "failedToLoad": "Verknüpfungen konnten nicht geladen werden",
-      "failedToSave": "Verknüpfungen konnten nicht gespeichert werden"
-    },
-    "linkManager": {
-      "linkedOpexTitle": "Verknüpfte OPEX — {{name}}",
-      "searchPlaceholder": "OPEX nach Produktname suchen",
-      "results": "Ergebnisse",
-      "selected": "Ausgewählt"
+      "addFiles": "Dateien hinzufügen",
+      "noAttachments": "Keine Anhänge",
+      "noAttachmentsDrop": "Keine Anhänge. Legen Sie Dateien hier ab, um sie anzuhängen.",
+      "uploadingFiles_one": "{{count}} Datei wird hochgeladen…",
+      "uploadingFiles_other": "{{count}} Dateien werden hochgeladen…",
+      "deleteAttachment": "Anhang löschen"
     }
   },
   "operations": {

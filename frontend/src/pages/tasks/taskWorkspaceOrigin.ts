@@ -57,7 +57,7 @@ export const PROJECT_ORIGIN_TABS = new Set([
 
 export const SPEND_ORIGIN_TABS = new Set(['overview', 'budget', 'allocations', 'relations']);
 export const CAPEX_ORIGIN_TABS = new Set(['overview', 'budget', 'allocations', 'relations']);
-export const CONTRACT_ORIGIN_TABS = new Set(['overview', 'details', 'relations', 'tasks']);
+export const CONTRACT_ORIGIN_TABS = new Set(['overview', 'budget', 'relations']);
 export const INCIDENT_ORIGIN_TABS = new Set(['overview', 'journal', 'relations', 'documents', 'attachments']);
 
 const ORIGIN_TAB_SETS: Record<RelatedKind, Set<string>> = {
@@ -72,7 +72,7 @@ const ORIGIN_TAB_DEFAULTS: Record<RelatedKind, string> = {
   project: 'tasks',
   spend_item: 'overview',
   capex_item: 'overview',
-  contract: 'tasks',
+  contract: 'overview',
   incident: 'relations',
 };
 
