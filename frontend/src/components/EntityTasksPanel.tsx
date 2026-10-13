@@ -1,5 +1,5 @@
 import React from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Box, Button, IconButton, MenuItem, Select, Stack, Table, TableBody, TableCell,
   TableHead, TableRow, Typography,
@@ -13,12 +13,10 @@ import { useTranslation } from 'react-i18next';
 import api from '../api';
 import { useLocale } from '../i18n/useLocale';
 import { TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '../pages/tasks/task.constants';
-import type { TaskStatus } from '../pages/tasks/task.constants';
 import { getApiErrorMessage } from '../utils/apiErrorMessage';
 import { getDotColor, PRIORITY_COLORS } from '../utils/statusColors';
 import { StatusDot, useKanapDialogs } from './design';
 import { useTheme } from '@mui/material/styles';
-import { buildTaskOriginSearchParams } from '../pages/tasks/taskWorkspaceOrigin';
 import {
   applyEntityTaskListFilters,
   filterEntityTasks,
@@ -26,21 +24,9 @@ import {
   type EntityTaskListFilters,
 } from '../pages/tasks/entityTaskList';
 import { drawerMenuItemSx, drawerSelectSx, inlineControlSx } from '../theme/formSx';
+import { useEntityTasks, type EntityType } from './entityTasks';
 
-type Task = {
-  id: string;
-  item_number?: number | null;
-  title: string;
-  description: string | null;
-  status: TaskStatus;
-  due_date: string | null;
-  start_date: string | null;
-  priority_level: string;
-  assignee_user_id: string | null;
-  phase_id: string | null;
-};
-
-export type EntityType = 'project' | 'spend_item' | 'capex_item' | 'contract' | 'incident';
+export type { EntityType } from './entityTasks';
 
 type Props = {
   entityType: EntityType;
@@ -61,15 +47,6 @@ const PRIORITY_LABELS: Record<string, string> = {
   optional: 'Optional',
 };
 
-// API endpoint for fetching tasks by entity type
-const ENDPOINTS: Record<EntityType, (id: string) => string> = {
-  project: (id) => `/portfolio/projects/${id}/tasks`,
-  spend_item: (id) => `/spend-items/${id}/tasks`,
-  capex_item: (id) => `/capex-items/${id}/tasks`,
-  contract: (id) => `/contracts/${id}/tasks`,
-  incident: (id) => `/incidents/${id}/tasks`,
-};
-
 export default function EntityTasksPanel({ entityType, entityId, phases = [], disabled = false, onTasksChange }: Props) {
   const navigate = useNavigate();
   const theme = useTheme();
@@ -79,17 +56,7 @@ export default function EntityTasksPanel({ entityType, entityId, phases = [], di
   const dialogs = useKanapDialogs();
   const locale = useLocale();
   const isProject = entityType === 'project';
-  const originSearchParams = React.useMemo(
-    () => buildTaskOriginSearchParams(entityType, entityId, { pathname: location.pathname, search: location.search }),
-    [entityId, entityType, location.pathname, location.search],
-  );
-  const buildTaskWorkspacePath = React.useCallback(
-    (taskId: string) => {
-      const qs = originSearchParams.toString();
-      return `/portfolio/tasks/${taskId}${qs ? `?${qs}` : ''}`;
-    },
-    [originSearchParams],
-  );
+  const { tasks, isLoading, refetch, taskPath: buildTaskWorkspacePath, createTask: handleCreateTask } = useEntityTasks(entityType, entityId);
 
   const listFilters = React.useMemo(
     () => parseEntityTaskListFilters(new URLSearchParams(location.search)),
@@ -100,23 +67,6 @@ export default function EntityTasksPanel({ entityType, entityId, phases = [], di
     const qs = sp.toString();
     navigate({ pathname: location.pathname, search: qs ? `?${qs}` : '' }, { replace: true });
   }, [location.pathname, location.search, navigate]);
-
-  const handleCreateTask = (phaseId?: string) => {
-    const params = new URLSearchParams(originSearchParams);
-    if (phaseId && isProject) {
-      params.set('phaseId', phaseId);
-    }
-    navigate(`/portfolio/tasks/new/overview?${params.toString()}`);
-  };
-
-  const { data: tasks = [], isLoading, refetch } = useQuery({
-    queryKey: [`${entityType}-tasks`, entityId],
-    queryFn: async () => {
-      const res = await api.get<Task[]>(ENDPOINTS[entityType](entityId));
-      return res.data;
-    },
-    enabled: !!entityId,
-  });
 
   const handleDelete = async (taskId: string) => {
     if (!(await dialogs.confirm({

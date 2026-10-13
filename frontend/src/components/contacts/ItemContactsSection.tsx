@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   Box,
+  Button,
   IconButton,
   MenuItem,
   Stack,
@@ -44,11 +45,15 @@ type Props = {
   itemType: 'spend-items' | 'capex-items' | 'contracts';
   itemId: string;
   canManage: boolean;
+  /** Offers to add the supplier's contacts to the item (`POST …/contacts/sync-from-supplier`). */
+  syncFromSupplier?: boolean;
+  /** Called after the item's contacts changed. */
+  onChanged?: () => void;
 };
 
 const ROLES = ['commercial', 'technical', 'support', 'other'] as const;
 
-export default function ItemContactsSection({ itemType, itemId, canManage }: Props) {
+export default function ItemContactsSection({ itemType, itemId, canManage, syncFromSupplier = false, onChanged }: Props) {
   const { t } = useTranslation('common');
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -61,6 +66,16 @@ export default function ItemContactsSection({ itemType, itemId, canManage }: Pro
     refetchOnWindowFocus: true,
   });
 
+  const { mutateAsync: syncSupplier, isPending: syncing } = useMutation({
+    mutationFn: async () => {
+      await api.post(`/${itemType}/${itemId}/contacts/sync-from-supplier`, {});
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['item-contacts', itemType, itemId] });
+      onChanged?.();
+    },
+  });
+
   // Inline add flow: pick a contact → the role select appears → picking the role saves.
   const [selectedContact, setSelectedContact] = React.useState<string | null>(null);
 
@@ -71,6 +86,7 @@ export default function ItemContactsSection({ itemType, itemId, canManage }: Pro
     onSuccess: async () => {
       setSelectedContact(null);
       await qc.invalidateQueries({ queryKey: ['item-contacts', itemType, itemId] });
+      onChanged?.();
     },
   });
 
@@ -80,6 +96,7 @@ export default function ItemContactsSection({ itemType, itemId, canManage }: Pro
     },
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['item-contacts', itemType, itemId] });
+      onChanged?.();
     },
   });
 
@@ -153,6 +170,16 @@ export default function ItemContactsSection({ itemType, itemId, canManage }: Pro
             </TableBody>
           </Table>
         </Box>
+      )}
+
+      {canManage && syncFromSupplier && (
+        <Button
+          onClick={() => { void syncSupplier(); }}
+          disabled={syncing}
+          sx={{ p: 0, minWidth: 0, fontSize: 12, alignSelf: 'flex-start' }}
+        >
+          {t('contacts.syncFromSupplier')}
+        </Button>
       )}
 
       {canManage && (

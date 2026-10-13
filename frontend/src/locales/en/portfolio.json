@@ -117,6 +117,22 @@
         "projectLevel": "Project-level",
         "unknown": "Unknown phase"
       }
+    },
+    "entityTasksSection": {
+      "title": "Tasks",
+      "newTask": "New task",
+      "empty": "No tasks yet.",
+      "noOpenTasks": "No open tasks.",
+      "showClosed_one": "Show the completed task ({{count}})",
+      "showClosed_other": "Show completed tasks ({{count}})",
+      "hideClosed": "Hide completed tasks",
+      "columns": {
+        "ref": "Ref.",
+        "task": "Task",
+        "assignee": "Assignee",
+        "dueDate": "Due date",
+        "status": "Status"
+      }
     }
   },
   "workspace": {
