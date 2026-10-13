@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Autocomplete, Box, FormHelperText, Menu, MenuItem, Select, TextField, Typography } from '@mui/material';
 import { DIAL_CODES } from '../../constants/dialCodes';
 import { combineDialCode, normalizeDialCode, splitPhone } from '../../lib/phoneUtils';
-import { drawerAutocompleteListboxSx, drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
+import { drawerAutocompleteListboxSx, drawerMenuItemSx, drawerSelectSx, selectKeepsFocus } from '../../theme/formSx';
 import { metaItemSx, taskDetailTypography } from '../tasks/theme/taskDetailTokens';
 import { CONTACT_ROLES, type ContactRole } from './contactModel';
 
@@ -141,6 +141,10 @@ export function ContactRoleSelect({
         error={!!error}
         onChange={(event) => onChange(event.target.value as ContactRole)}
         sx={drawerSelectSx}
+        // The theme closes menus without giving the focus back (#181): in a run of fields the
+        // select takes it back after a choice, so Tab goes on to the next field.
+        MenuProps={selectKeepsFocus.MenuProps}
+        SelectDisplayProps={{ 'aria-label': t('contacts.fields.contactType') } as React.HTMLAttributes<HTMLDivElement>}
         inputProps={{ 'aria-label': t('contacts.fields.contactType') }}
         renderValue={(selected) => (
           selected

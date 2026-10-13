@@ -1,5 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -27,10 +28,12 @@ vi.mock('../../auth/AuthContext', () => ({
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn() } }));
 // The supplier picker searches the API: a stub picks a supplier or clears it.
 vi.mock('../../components/fields/SupplierSelect', () => ({
-  default: (props: { value: string | null; onChange: (v: string | null) => void; disabled?: boolean }) => (
+  // One field in the tab order, as the real picker; the buttons only drive the tests.
+  default: (props: { label?: string; value: string | null; onChange: (v: string | null) => void; disabled?: boolean }) => (
     <div data-testid="supplier-select" data-value={props.value ?? ''} data-disabled={String(!!props.disabled)}>
-      <button type="button" onClick={() => props.onChange('s-2')}>pick supplier</button>
-      <button type="button" onClick={() => props.onChange(null)}>clear supplier</button>
+      <input aria-label={props.label} value={props.value ?? ''} disabled={props.disabled} readOnly />
+      <button type="button" tabIndex={-1} onClick={() => props.onChange('s-2')}>pick supplier</button>
+      <button type="button" tabIndex={-1} onClick={() => props.onChange(null)}>clear supplier</button>
     </div>
   ),
 }));
@@ -253,6 +256,22 @@ describe('ContactWorkspacePage', () => {
     ]));
   });
 
+  it('gives the focus back to the type field of the properties after a choice, and Tab goes on to the email', async () => {
+    const user = userEvent.setup();
+    renderAt('/master-data/contacts/c-1/overview');
+    const type = await screen.findByRole('combobox', { name: 'contacts.fields.contactType' });
+    type.focus();
+    await user.keyboard('{Enter}');
+    await user.click(await screen.findByRole('option', { name: 'contacts.roles.support' }));
+    await waitFor(() => expect(lastPatch()).toEqual([
+      '/contacts/c-1',
+      { email: 'alex@example.com', supplier_id: 's-1', supplier_role: 'support' },
+    ]));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('combobox', { name: 'contacts.fields.contactType' })));
+    await user.tab();
+    expect(document.activeElement).toBe(screen.getByLabelText('contacts.fields.email'));
+  });
+
   it('flags a supplier stored without a type', async () => {
     stored = { ...CONTACT, supplier_role: null };
     renderAt('/master-data/contacts/c-1/overview');
@@ -334,6 +353,42 @@ describe('ContactWorkspacePage create', () => {
     // A corrected field loses its error at once.
     fireEvent.change(screen.getByLabelText('contacts.fields.email'), { target: { value: 'sam@example.com' } });
     expect(screen.queryByText('master-data:contacts.messages.emailInvalid')).toBeNull();
+  });
+
+  it('moves through the fields with Tab, a type chosen from its menu included, up to Create', async () => {
+    const user = userEvent.setup();
+    renderAt('/master-data/contacts/new/overview');
+    fireEvent.click(screen.getByRole('button', { name: 'pick supplier' }));
+    const firstName = screen.getByLabelText('contacts.fields.firstName');
+    firstName.focus();
+    const expectNext = async (element: HTMLElement) => {
+      await user.tab();
+      expect(document.activeElement).toBe(element);
+    };
+    await expectNext(screen.getByLabelText('contacts.fields.lastName'));
+    await expectNext(screen.getByLabelText('contacts.fields.email'));
+    await expectNext(screen.getByLabelText('contacts.fields.jobTitle'));
+    await expectNext(screen.getByLabelText('contacts.fields.supplier'));
+    const type = screen.getByRole('combobox', { name: 'contacts.fields.contactType' });
+    await expectNext(type);
+    // A choice made in the menu gives the focus back to the field, so Tab goes on from there.
+    await user.keyboard('{Enter}');
+    await user.click(await screen.findByRole('option', { name: 'contacts.roles.technical' }));
+    await waitFor(() => expect(document.activeElement).toBe(type));
+    await expectNext(screen.getByLabelText('contacts.fields.dialCodeOf:contacts.fields.phone'));
+    await expectNext(screen.getByLabelText('contacts.fields.phone'));
+    await expectNext(screen.getByLabelText('contacts.fields.dialCodeOf:contacts.fields.mobile'));
+    await expectNext(screen.getByLabelText('contacts.fields.mobile'));
+    await expectNext(screen.getByLabelText('companies.fields.country'));
+    await expectNext(screen.getByLabelText('contacts.fields.notes'));
+    // Create sits in the title row, above the fields, as on every create page of the shell: after
+    // the last field the focus leaves the page (the browser's own controls), then starts again at
+    // the top of the page: back link, Create.
+    await expectNext(document.body);
+    await expectNext(within(screen.getByRole('banner')).getByRole('button', { name: 'contacts.title' }));
+    await expectNext(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await expectNext(screen.getByRole('button', { name: 'common:buttons.close' }));
+    await expectNext(firstName);
   });
 
   it('ignores a return address outside the app', async () => {
