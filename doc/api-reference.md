@@ -1177,11 +1177,12 @@ of a CAPEX line is read through `/budget-lines/:ref`; `/capex-items` does not ex
   - `next_cancellation_deadline`: first cancellation deadline on or after today, or `null` (no renewal and the deadline passed, or the end of validity comes first).
   - `end_date`: same as `current_term_end`. `cancellation_deadline`: `next_cancellation_deadline`, or the last term's deadline when it is `null`.
   - `next_due_date`: `next_cancellation_deadline` for a contract that renews at the end of its current term, else its end (term end, or end of validity when earlier); `null` once ended.
-  - `term_state`: `to_decide` (deadline within the tenant's decision window, 90 days by default), `in_progress`, `renewed` (current term's deadline passed, next term not started), `ending` (no renewal at the end of the current term) or `expired`.
-- POST `/contracts` → create; PATCH `/contracts/:id` → update.
+  - `term_state`: `to_decide` (deadline within the tenant's decision window, 90 days by default, and no renewal confirmed for its term), `in_progress`, `renewed` (current term's deadline passed, next term not started), `ending` (no renewal at the end of the current term) or `expired`.
+- POST `/contracts` → create; PATCH `/contracts/:id` → update. 400 when the update turns off `auto_renewal` on a contract already renewed (past its first term): set an end of validity, or use `POST /contracts/:id/renewal/stop`.
 - GET `/contract-settings` **[Requires: contracts:reader]** → `{ decision_window_days }`; PATCH `/contract-settings` **[Requires: contracts:admin]** with `{ decision_window_days }` (whole days, 0 to 365; 400 otherwise) → the settings. Stored in `tenants.metadata.contracts`, default 90.
 - GET `/contracts/:id/renewal` **[Requires: contracts:reader]** → `{ decision_window_days, state: 'none' | 'pending' | 'decided', renegotiating, term: { term_index, term_start, term_end, deadline, renews_on, next_term_end, days_left } | null, duration_months, decision: { decision, reason, decided_at, decided_by_name } | null, can_undo, task: { id, item_number, status, assignee_name } | null, impact: { currency, commitments: Array<{ year, before, after }>, applications: Array<{ id, name }>, assets: Array<{ id, name }> } | null }`. Rule in `doc/architecture.md`, Contract Renewal Decision.
 - POST `/contracts/:id/renewal/renew`, `/terminate`, `/renegotiate`, `/undo` **[Requires: contracts:member]** with `{ reason?: string }` → the same body as the GET, after the action. `renew` closes the decision task, `terminate` sets the end of validity to the last day of the term decided and closes the task, `renegotiate` adds the justification to the open task, `undo` (while the deadline has not passed) reopens the task and, after a termination, puts the previous end of validity back. 409 when no decision is awaited (or none to undo), 404 for a contract of another tenant.
+- POST `/contracts/:id/renewal/stop` **[Requires: contracts:member]**, no body → the same body as the GET. A contract already renewed ends with its current term: its end of validity goes to the term's last day, `auto_renewal` stays on, one audit row. No change when it already ends with or before that term. 409 when the renewal is off or the contract is still in its first term.
 
 ### Contract relations (contract page)
 Every statement carries the contract's tenant besides RLS; a contract of another tenant is a `404`. Reads need `contracts:reader`, writes `contracts:member`. A replacement locks the contract row first (the last one wins) and writes one audit row on the link table when the set changes (`recordId` the contract, before and after the sorted ids). An id that is not a row of the tenant, or not a UUID, is a `400` and nothing is written.
@@ -1496,7 +1497,7 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
   - Same body/validation semantics as OPEX tasks (title required, description optional, unified statuses)
 
 ### Contracts CSV
-- Export `GET /contracts/export?scope=template|data`; Import `POST /contracts/import?dryRun=true|false`
+- Export `GET /contracts/export?scope=template|data`; Import `POST /contracts/import?dryRun=true|false` (a row that turns off `auto_renewal` on a contract already renewed is an error of that row; nothing is written)
 - Headers: `name;company_name;supplier_name;start_date;duration_months;auto_renewal;notice_period_months;yearly_amount_at_signature;currency;billing_frequency;status;owner_email;notes`
 - Upsert key: composite `name + supplier_name`; references by name/email
 
