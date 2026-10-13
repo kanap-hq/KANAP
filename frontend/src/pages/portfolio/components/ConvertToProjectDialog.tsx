@@ -194,8 +194,8 @@ export default function ConvertToProjectDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t('common:buttons.cancel')}</Button>
-        <Button variant="contained" onClick={handleSubmit} disabled={saving || loadingEffort || !name.trim()}>
+        <Button variant="action" onClick={onClose}>{t('common:buttons.cancel')}</Button>
+        <Button variant="action-primary" onClick={handleSubmit} disabled={saving || loadingEffort || !name.trim()}>
           {saving
             ? t('portfolio:dialogs.convertToProject.actions.converting')
             : t('portfolio:dialogs.convertToProject.actions.create')}

@@ -7,7 +7,6 @@ import { AnalyticsCategoriesService } from '../../analytics/analytics-categories
 import { ApplicationsService } from '../../applications/services';
 import { AssetsService } from '../../assets/services';
 import { BusinessProcessesService } from '../../business-processes/business-processes.service';
-import { CapexItemsService } from '../../capex/capex-items.service';
 import { CompaniesService } from '../../companies/companies.service';
 import { ConnectionsService } from '../../connections/services';
 import { ContactsService } from '../../contacts/contacts.service';
@@ -25,7 +24,7 @@ import {
 import { LocationsService } from '../../locations/locations.service';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { PortfolioProjectsService } from '../../portfolio/services';
-import { SpendItemsService } from '../../spend/spend-items.service';
+import { CapexItemsService, SpendItemsService } from '../../spend/spend-items.service';
 import { TasksService } from '../../spend/tasks.service';
 import { SuppliersService } from '../../suppliers/suppliers.service';
 import { UsersService } from '../../users/users.service';
@@ -1050,12 +1049,13 @@ export class AiAggregateExecutor {
     const joins = Array.from(new Set([...(groupField.joins || []), ...(metric?.def.joins || [])])).join('\n');
     const alias = registry.aggregate.alias;
     const idColumn = registry.aggregate.idColumn ?? 'id';
+    const baseWhere = registry.aggregate.baseWhere ? ` AND ${registry.aggregate.baseWhere}` : '';
     if (fn === 'count' || !metric) {
       const rows = await context.manager.query(
         `SELECT ${groupField.expression} AS key, COUNT(*)::int AS count
          FROM ${registry.aggregate.baseTable} ${alias}
          ${joins}
-         WHERE ${alias}.tenant_id = $1
+         WHERE ${alias}.tenant_id = $1${baseWhere}
            AND ${alias}.${idColumn} = ANY($2::uuid[])
          GROUP BY ${groupField.expression}
          ORDER BY count DESC, key ASC NULLS LAST`,
@@ -1074,7 +1074,7 @@ export class AiAggregateExecutor {
       `SELECT ${groupField.expression} AS key, ${aggregateExpression} AS value
        FROM ${registry.aggregate.baseTable} ${alias}
        ${joins}
-       WHERE ${alias}.tenant_id = $1
+       WHERE ${alias}.tenant_id = $1${baseWhere}
          AND ${alias}.${idColumn} = ANY($2::uuid[])
        GROUP BY ${groupField.expression}
        ORDER BY value ${orderDirection} NULLS LAST, key ASC NULLS LAST`,

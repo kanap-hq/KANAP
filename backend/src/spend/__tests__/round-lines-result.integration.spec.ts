@@ -4,6 +4,7 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { exportBudgetFile, loadBudgetFile, withCell } from './budget-file.fixtures';
 import {
+  AUDIT_LABELS,
   amountsService,
   assert,
   budgetOperations,
@@ -302,7 +303,7 @@ async function testCopyOfReferenceLinesFallback(kind: Kind) {
       [franceId, franceId, null],
       `${kind}: the lines take it`,
     );
-    const itemAudit = audit.entries.find((e) => e.table === TABLES[kind].items && e.recordId === itemId)?.after;
+    const itemAudit = audit.entries.find((e) => e.table === AUDIT_LABELS[kind].items && e.recordId === itemId)?.after;
     assert.deepEqual([itemAudit.calendar_issues, itemAudit.from_lines], [issues, undefined], `${kind}: the audit keeps the calendar change`);
   });
 }

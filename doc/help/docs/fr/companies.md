@@ -1,6 +1,6 @@
 # Sociétés
 
-Les sociétés sont le socle de vos données de référence. Elles représentent les entités juridiques auxquelles vous imputez les dépenses IT et pour lesquelles vous établissez les refacturations. Chaque ventilation, poste de dépense et de nombreux rapports font référence à une société, il est donc important de maintenir ces données à jour.
+Les sociétés sont le socle de vos données de référence. Elles représentent les entités juridiques auxquelles vous imputez les dépenses IT et pour lesquelles vous établissez les refacturations. Chaque ventilation, ligne de dépense et de nombreux rapports font référence à une société, il est donc important de maintenir ces données à jour.
 
 Lorsque votre espace de travail est créé, il démarre avec une société portant le nom de votre organisation. Son pays est celui que vous avez sélectionné lors de l'inscription à l'essai, et elle sera automatiquement assignée au plan comptable par défaut pour ce pays lorsqu'il est disponible. Vous pouvez la renommer ou en ajouter d'autres.
 
@@ -129,7 +129,7 @@ L'onglet Détails gère les **métriques annuelles**. Utilisez les onglets d'ann
 
 ## Plan comptable
 
-Chaque société peut être liée à un **Plan comptable** (CoA), qui définit l'ensemble des comptes disponibles lors de l'enregistrement de postes OPEX ou CAPEX pour cette société.
+Chaque société peut être liée à un **Plan comptable** (CoA), qui définit l'ensemble des comptes disponibles lors de l'enregistrement de lignes OPEX ou CAPEX pour cette société.
 
 **Comment ça fonctionne** :
 
@@ -137,17 +137,17 @@ Chaque société peut être liée à un **Plan comptable** (CoA), qui définit l
 - Vous pouvez changer l'assignation du CoA dans le panneau **Propriétés** en utilisant le sélecteur **Plan comptable**. Le sélecteur affiche les CoA correspondant au pays de la société plus les CoA de portée globale.
 - Lorsque vous changez le pays de la société, le CoA suit si l'actuel appartient à un autre pays : il passe à celui par défaut du nouveau pays. Un CoA global reste en place.
 - Sur une société existante, le CoA ne peut pas être vidé. Vous pouvez seulement le remplacer par un autre.
-- Le CoA que vous sélectionnez détermine quels comptes apparaissent dans le menu déroulant des comptes lors de la création ou modification de postes de dépenses pour cette société.
+- Le CoA que vous sélectionnez détermine quels comptes apparaissent dans le menu déroulant des comptes lors de la création ou modification de lignes de dépenses pour cette société.
 
 **Ce que cela signifie pour votre flux de travail** :
 
 - **Sociétés avec un CoA** : lors de l'enregistrement d'OPEX/CAPEX, vous ne pouvez sélectionner que des comptes appartenant au plan comptable de cette société. Cela garantit la cohérence comptable.
 - **Sociétés sans CoA** (historique) : peuvent utiliser des comptes qui n'appartiennent à aucun plan comptable. Cela supporte la migration progressive vers le système de CoA.
-- **Changer de CoA** : si vous basculez une société vers un autre CoA, les postes de dépenses existants conservent leurs comptes actuels (avec un avertissement s'ils ne correspondent pas au nouveau CoA), mais les nouveaux postes utiliseront les comptes du nouveau CoA.
+- **Changer de CoA** : si vous basculez une société vers un autre CoA, les lignes de dépenses existantes conservent leurs comptes actuels (avec un avertissement s'ils ne correspondent pas au nouveau CoA), mais les nouvelles lignes utiliseront les comptes du nouveau CoA.
 
 **Configurer les plans comptables** : rendez-vous dans **Données de référence > Plans comptables** pour consulter, créer ou gérer vos ensembles de CoA. Vous pouvez créer des CoA de zéro ou les charger depuis des modèles de la plateforme (ensembles de comptes standard par pays). Chaque pays peut avoir un CoA par défaut (**Plan par défaut du pays ({pays})**), proposé lorsque vous créez une société dans ce pays. Les sociétés d'un pays sans plan par défaut utilisent le plan **Plan par défaut des autres pays**. Voir [Rôles des plans](chart-of-accounts.md#roles-des-plans).
 
-**Conseil** : Si vous voyez un avertissement « compte obsolète » lors de la modification de postes OPEX/CAPEX, cela signifie que le compte n'appartient pas au plan comptable actuel de la société. Mettez à jour le compte vers un compte du bon CoA pour résoudre cet avertissement.
+**Conseil** : Si vous voyez un avertissement « compte obsolète » lors de la modification de lignes OPEX/CAPEX, cela signifie que le compte n'appartient pas au plan comptable actuel de la société. Mettez à jour le compte vers un compte du bon CoA pour résoudre cet avertissement.
 
 ## Statut et cycle de vie
 
@@ -218,7 +218,7 @@ Les colonnes, dans cet ordre. Les colonnes de métriques suivent l'année sélec
 ## Conseils
 
 - **Désactivez plutôt que supprimer** : gardez l'historique cohérent et les rapports significatifs.
-- **Plan comptable** : assignez des CoA aux sociétés pour garantir une utilisation cohérente des comptes dans les postes OPEX/CAPEX.
+- **Plan comptable** : assignez des CoA aux sociétés pour garantir une utilisation cohérente des comptes dans les lignes OPEX/CAPEX.
 - **Chiffre d'affaires** : saisissez les valeurs en millions de la devise de base de la société (ex. : 2,5 = 2,5 millions dans cette devise).
 - **Effectif** est le driver de ventilation le plus courant ; maintenez-le à jour pour l'année en cours.
 - **Métriques gelées** : vous pouvez toujours les consulter, mais les modifications sont bloquées tant qu'un administrateur budgétaire ne dégèle pas l'année dans **Gestion budgétaire > Administration > Geler les données de référence**.

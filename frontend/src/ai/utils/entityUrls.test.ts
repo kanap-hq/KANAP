@@ -2,14 +2,20 @@ import { describe, expect, it } from 'vitest';
 import { buildEntityUrl, parseAtMentionQuery } from './entityUrls';
 
 describe('budget line mentions', () => {
-  it('narrows @OPX and @CPX to their line type and keeps the number', () => {
+  it('accepts legacy prefixes and keeps their numbered references', () => {
     expect(parseAtMentionQuery('OPX')).toEqual({ entityType: 'spend_items', entityTypes: ['spend_items'], searchTerm: '' });
-    expect(parseAtMentionQuery('opx-3')).toEqual({ entityType: 'spend_items', entityTypes: ['spend_items'], searchTerm: '3' });
-    expect(parseAtMentionQuery('CPX-12')).toEqual({ entityType: 'capex_items', entityTypes: ['capex_items'], searchTerm: '12' });
+    expect(parseAtMentionQuery('opx-3')).toEqual({ entityType: null, entityTypes: ['spend_items', 'capex_items'], searchTerm: 'OPX-3' });
+    expect(parseAtMentionQuery('CPX-12')).toEqual({ entityType: null, entityTypes: ['spend_items', 'capex_items'], searchTerm: 'CPX-12' });
+  });
+
+  it('searches both budget families with the native BL prefix', () => {
+    for (const query of ['BL', 'bl-', 'BL-12']) {
+      expect(parseAtMentionQuery(query)).toEqual({ entityType: null, entityTypes: ['spend_items', 'capex_items'], searchTerm: query === 'BL-12' ? 'BL-12' : '' });
+    }
   });
 
   it('links a mentioned line to its workspace', () => {
-    expect(buildEntityUrl('spend_items', 'abc')).toBe('/ops/opex/abc');
-    expect(buildEntityUrl('capex_items', 'abc')).toBe('/ops/capex/abc');
+    expect(buildEntityUrl('spend_items', 'abc')).toBe('/ops/budget/abc');
+    expect(buildEntityUrl('capex_items', 'abc')).toBe('/ops/budget/abc');
   });
 });

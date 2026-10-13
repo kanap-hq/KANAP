@@ -22,6 +22,11 @@ export interface FieldSql {
   joins: string[];
   /** `enum`: the sort order of the values; other values sort as blank. */
   rank?: readonly string[];
+  /**
+   * `text`: an integer that orders the values before their text, in the sorts of the list and of
+   * the aggregate's keys (a dimension value's position in its dimension, D3). Null for a blank.
+   */
+  position?: string;
   /** `multi`: a `text[]` of the line's names (null or empty when none). */
   names?: string;
   /** Text filter candidates besides the value itself (`opx-N` for the item number): positive operators need any, negative ones every. */
@@ -46,6 +51,11 @@ export interface ListConfig {
   scopeFields: readonly string[];
   /** The quick search predicate for a trimmed, non-empty needle. */
   quickSearch(stmt: SqlStatement, q: string): string;
+  /**
+   * The select expression of a column the id and neighbour statements return (`<expr> AS <column>`);
+   * absent: the main table's column of that name.
+   */
+  selectColumn?(column: string): string;
 }
 
 /** A parsed list request, common to every list endpoint. */

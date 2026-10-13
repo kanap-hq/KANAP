@@ -20,7 +20,7 @@ import { glob } from 'astro/loaders';
  * switched on later without touching posts. To add one: extend this enum,
  * then add the four `blog.topic.<key>` labels.
  */
-export const BLOG_TOPICS = ['agents', 'self-hosting', 'cost', 'glpi', 'product', 'portfolio'] as const;
+export const BLOG_TOPICS = ['agents', 'self-hosting', 'cost', 'glpi', 'product', 'portfolio', 'compliance'] as const;
 export type BlogTopic = (typeof BLOG_TOPICS)[number];
 
 const blog = defineCollection({

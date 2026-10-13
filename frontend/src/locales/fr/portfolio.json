@@ -117,6 +117,22 @@
         "projectLevel": "Niveau projet",
         "unknown": "Phase inconnue"
       }
+    },
+    "entityTasksSection": {
+      "title": "Tâches",
+      "newTask": "Nouvelle tâche",
+      "empty": "Aucune tâche pour le moment.",
+      "noOpenTasks": "Aucune tâche ouverte.",
+      "showClosed_one": "Afficher la tâche terminée ({{count}})",
+      "showClosed_other": "Afficher les tâches terminées ({{count}})",
+      "hideClosed": "Masquer les tâches terminées",
+      "columns": {
+        "ref": "Réf.",
+        "task": "Tâche",
+        "assignee": "Responsable",
+        "dueDate": "Échéance",
+        "status": "Statut"
+      }
     }
   },
   "workspace": {
@@ -1768,7 +1784,7 @@
         "businessLead": "Responsable métier",
         "businessSponsor": "Sponsor métier",
         "businessTeam": "Équipe métier",
-        "capexItems": "Postes CAPEX",
+        "capexItems": "Lignes CAPEX",
         "category": "Catégorie",
         "company": "Société",
         "createdFromRequest": "Créé à partir de la demande",
@@ -1786,7 +1802,7 @@
         "itLead": "Responsable IT",
         "itSponsor": "Sponsor IT",
         "name": "Nom",
-        "opexItems": "Postes OPEX",
+        "opexItems": "Lignes OPEX",
         "originTask": "Tâche d'origine",
         "overrideJustification": "Justification de la surcharge",
         "overrideValue": "Valeur de surcharge",
@@ -2133,10 +2149,8 @@
         }
       },
       "fields": {
-        "capexItems": "Postes CAPEX",
         "linkDescription": "Description du lien",
         "name": "Nom",
-        "opexItems": "Postes OPEX",
         "url": "URL"
       },
       "messages": {
@@ -2148,15 +2162,13 @@
       "placeholders": {
         "applications": "Rechercher des applications",
         "assets": "Rechercher des actifs",
-        "capexItems": "Sélectionner des postes CAPEX",
         "linkDescription": "Optionnel",
-        "opexItems": "Sélectionner des postes OPEX",
         "url": "https://example.com"
       },
       "sections": {
         "appsAndAssets": "Applications et actifs",
         "attachments": "Pièces jointes",
-        "budgetItems": "Postes budgétaires",
+        "budgetItems": "Lignes budgétaires",
         "externalLinks": "Sites web pertinents"
       },
       "states": {

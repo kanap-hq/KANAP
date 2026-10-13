@@ -1,13 +1,13 @@
 # Currency Settings
 
-The Currency Settings page (**Budget management > Administration > Currencies**) is where you configure how currencies are stored, displayed, and converted across your workspace. It controls the tenant-wide reporting currency, default currencies for new items, and optional restrictions on which currencies can be used.
+The Currency Settings page (**Budget management > Administration > Currencies**) is where you configure how currencies are stored, displayed, and converted across your workspace. It controls the tenant-wide reporting currency, default currencies for new lines, and optional restrictions on which currencies can be used.
 
 ## Who can see and change it
 
 Currencies are a budget setting. The page sits with the other budget settings in [Budget Administration](budget-operations.md).
 
 - **Open the page, change settings and run the FX rates sync**: Budget administration at admin level. The card is hidden from other users.
-- **Use currencies on items**: OPEX and CAPEX users pick from the allowed currencies in their item forms, without opening this page.
+- **Use currencies on items**: OPEX and CAPEX users pick from the allowed currencies in their line forms, without opening this page.
 
 The **Settings** permission of the IT landscape does not give access to currencies. It covers the IT landscape settings only.
 
@@ -21,22 +21,22 @@ The **tenant-wide currency** used for all reports, totals, and list displays. Wh
   - Totals in reports recalculate using the new base
   - **Your stored item data remains unchanged**—only display and conversion are affected
 
-**Example**: If you switch from EUR to USD, your OPEX list totals will show in USD, but each item's stored currency (EUR, GBP, etc.) stays the same.
+**Example**: If you switch from EUR to USD, your OPEX list totals will show in USD, but each line's stored currency (EUR, GBP, etc.) stays the same.
 
 **Tip**: Choose a reporting currency that matches your group's financial reporting standard (e.g., EUR for European headquarters, USD for US-based groups).
 
 ### Default OPEX Currency
-The currency that **prefills** when you create a new OPEX (spend) item. This doesn't restrict what currencies you can select—it just saves time by offering a sensible default.
+The currency that **prefills** when you create a new OPEX (spend) line. This doesn't restrict what currencies you can select. It just saves time by offering a sensible default.
 
 **Example**: If most of your recurring spend is in EUR, set this to EUR. Users can still manually select GBP, USD, or any other allowed currency.
 
 ### Default CAPEX Currency
-The currency that **prefills** when you create a new CAPEX item. Works the same as Default OPEX Currency, but for capital expenditure.
+The currency that **prefills** when you create a new CAPEX line. Works the same as Default OPEX Currency, but for capital expenditure.
 
 **Tip**: If your CAPEX is mostly procured in a different currency than daily OPEX (e.g., USD for hardware purchases), set a different default here.
 
 ### Allowed Currencies (optional)
-A **comma-separated list** of ISO codes that restricts which currencies users can select when creating or editing OPEX and CAPEX items.
+A **comma-separated list** of ISO codes that restricts which currencies users can select when creating or editing OPEX and CAPEX lines.
 
   - **Empty (default)**: Users can select any valid ISO 3-letter currency code
   - **Specified list** (e.g., `EUR, USD, GBP`): Only these currencies appear in dropdowns
@@ -79,9 +79,9 @@ The **Force FX rates sync** button manually triggers a background refresh of exc
   - Rates update within a few seconds
   - The FX Rate Snapshots table refreshes automatically
 
-**Automatic refresh**: The system also refreshes rates automatically every 30 days when a user logs in (covers Y-1, Y, Y+1). Manual sync gives you control when you need immediate updates.
+**Automatic refresh**: The system also refreshes rates automatically every 30 days when a user logs in (covers Y-1, Y, Y+1). When a list or report needs a rate that the snapshot of its year does not have (a currency first used since, or a year without a snapshot), the system fetches that year in the background and the next display uses the new rate. Manual sync gives you control when you need immediate updates.
 
-**Tip**: If you add a new currency to Allowed Currencies, run Force FX sync immediately to populate rates before users start creating items in that currency.
+**Tip**: If you add a new currency to Allowed Currencies, run Force FX sync immediately to populate rates before users start creating lines in that currency.
 
 ## FX Rate Snapshots table
 
@@ -116,7 +116,7 @@ If your reporting currency is EUR:
 ## CSV import and export
 
 ### Export
-OPEX and CAPEX exports include item data and yearly amounts in each item's **own currency**—not the reporting currency. This preserves the original data for reimport or external analysis.
+OPEX and CAPEX exports include line data and yearly amounts in each line's **own currency**, not the reporting currency. This preserves the original data for reimport or external analysis.
 
 **Example CSV row** (OPEX):
 ```
@@ -125,7 +125,7 @@ SaaS License;Acme UK;6200;GBP;10000;12000;12000;12000
 ```
 
 ### Import
-When importing OPEX or CAPEX items, the `Currency` column must contain **standard ISO 3-letter codes**.
+When importing OPEX or CAPEX lines, the `Currency` column must contain **standard ISO 3-letter codes**.
 
 **Validation**:
   - If **Allowed Currencies** are configured, imports using unlisted codes are rejected
@@ -133,7 +133,7 @@ When importing OPEX or CAPEX items, the `Currency` column must contain **standar
   - Reporting currency and default currencies are always accepted
 
 **Example**:
-If Allowed Currencies = `EUR, USD, GBP` and you import an item with `Currency=CHF`, the import fails with:
+If Allowed Currencies = `EUR, USD, GBP` and you import a line with `Currency=CHF`, the import fails with:
 ```
 Currency "CHF" is not allowed. Allowed currencies: EUR, USD, GBP
 ```
@@ -144,8 +144,8 @@ Currency "CHF" is not allowed. Allowed currencies: EUR, USD, GBP
 
 When you change settings:
   - **Reporting currency**: Affects display immediately; historical data remains intact and is converted using the rates that were active when the data was entered
-  - **Default currencies**: Only affect new items; existing items keep their currencies
-  - **Allowed currencies**: Existing items are not validated retroactively—restrictions apply only to new or edited items
+  - **Default currencies**: Only affect new lines; existing lines keep their currencies
+  - **Allowed currencies**: Existing lines are not validated retroactively. Restrictions apply only to new or edited lines
 
 ## Conversion mechanics (quick reference)
 
@@ -181,7 +181,7 @@ Your group switches from EUR-based to USD-based reporting.
   4. Verify the FX Rate Snapshots table shows USD as the base (all rates should now be relative to USD)
   5. Check OPEX and CAPEX lists—totals and yearly columns now display in USD
 
-**Result**: All reports, dashboards, and lists show USD. Your stored item data (each item's own currency) remains unchanged.
+**Result**: All reports, dashboards, and lists show USD. Your stored line data (each line's own currency) remains unchanged.
 
 ### Scenario 2: Restricting currencies for compliance
 Your finance team requires all spend to be recorded in EUR, USD, or GBP only.
@@ -192,7 +192,7 @@ Your finance team requires all spend to be recorded in EUR, USD, or GBP only.
   3. Click **Save**
   4. Run **Force FX sync** to ensure rates are available for all three currencies
 
-**Result**: Users can only select EUR, USD, or GBP when creating or editing items. Attempts to import other currencies will fail with a clear error message.
+**Result**: Users can only select EUR, USD, or GBP when creating or editing lines. Attempts to import other currencies will fail with a clear error message.
 
 ### Scenario 3: Adding a new currency mid-year
 Your company starts operations in Switzerland and needs to track CHF spend.
@@ -204,7 +204,7 @@ Your company starts operations in Switzerland and needs to track CHF spend.
   4. Click **Force FX sync** to fetch CHF rates immediately
   5. Verify CHF appears in the FX Rate Snapshots table with valid rates
 
-**Result**: Users can now select CHF for new items. The FX rates table includes CHF with current and historical rates for accurate conversions.
+**Result**: Users can now select CHF for new lines. The FX rates table includes CHF with current and historical rates for accurate conversions.
 
 ### Scenario 4: Preparing for annual budget cycles
 It's December, and you're preparing for next year's budget planning.
@@ -223,16 +223,16 @@ It's December, and you're preparing for next year's budget planning.
 A: All reports and lists immediately convert to the new currency. Historical data remains intact—only the display currency changes. Plan this change carefully to avoid confusion during active reporting periods.
 
 **Q: Can I set different reporting currencies for different companies?**
-A: No. The reporting currency is tenant-wide. All companies, reports, and totals use the same reporting currency. Individual items store their own currency, but conversions always target the tenant's reporting currency.
+A: No. The reporting currency is tenant-wide. All companies, reports, and totals use the same reporting currency. Individual lines store their own currency, but conversions always target the tenant's reporting currency.
 
 **Q: Why don't I see rates for a specific currency?**
 A: The data source (World Bank or ExchangeRate-API) may not publish that currency. Check the ISO code is correct and commonly published. If needed, limit Allowed Currencies to codes with reliable data coverage.
 
 **Q: How often do FX rates refresh automatically?**
-A: Every 30 days, when any user logs in, the system refreshes rates for Y-1, Y, and Y+1. You can also manually trigger a refresh anytime using Force FX sync.
+A: Every 30 days, when any user logs in, the system refreshes rates for Y-1, Y, and Y+1. A year that lacks the rate of a currency in use is also fetched as soon as a list or report needs it. You can also manually trigger a refresh anytime using Force FX sync.
 
 **Q: Do FX rate changes affect my stored data?**
-A: No. Exchange rates only affect **conversion and display**. Each OPEX and CAPEX item stores its own currency and amounts, which never change when rates update. Only the displayed converted values in reports and lists change.
+A: No. Exchange rates only affect **conversion and display**. Each OPEX and CAPEX line stores its own currency and amounts, which never change when rates update. Only the displayed converted values in reports and lists change.
 
 **Q: Can I import historical rates manually?**
 A: No. The system fetches rates automatically from external sources (World Bank, ExchangeRate-API). If you need custom rates, contact support or consider using a currency where you can accept the published rates.

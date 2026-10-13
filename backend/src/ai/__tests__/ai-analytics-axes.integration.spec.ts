@@ -7,7 +7,7 @@ import { AiAggregateExecutor } from '../query/ai-aggregate.executor';
 import { AiQueryExecutor } from '../query/ai-query.executor';
 import { getAiEntityRegistry, resolveAiEntityRegistry } from '../query/registries';
 import { SUMMARY_SCOPES } from '../../spend/spend-summary.builder';
-import { captureAudit, assert, inRolledBackTransaction, Kind, runSpecs, seedItem, seedTenant, setTenant, TABLES } from '../../spend/__tests__/round-inputs.fixtures';
+import { CAPEX_NUMBER_OFFSET, captureAudit, assert, inRolledBackTransaction, Kind, runSpecs, seedItem, seedTenant, setTenant, TABLES } from '../../spend/__tests__/round-inputs.fixtures';
 import { itemService } from '../../spend/__tests__/cost-center.fixtures';
 
 // Analytics dimensions in the AI layer, on OPEX and CAPEX, against the database:
@@ -23,6 +23,7 @@ import { itemService } from '../../spend/__tests__/cost-center.fixtures';
 //   predicate on every join (a stale legacy column is ignored);
 // - the `analytics_categories` entity carries its dimension (`axis`, `axis_code`)
 //   and the lines a value is for (`applies_to`, also a filter);
+// - its values come in their dimension's order by default (`sort_order`);
 // - a dimension used for one line type only is a field of that type's entity
 //   only; a value a line holds on a dimension of the other type stays out of
 //   the detail.
@@ -293,17 +294,17 @@ async function testDefaultSqlJoin(kind: Kind) {
   });
 }
 
-// A listed line and its detail carry the business reference (OPX-n, CPX-n), so
+// A listed line and its detail carry the native business reference (BL-n), so
 // the model can name the line it read.
 async function testLinesCarryTheirReference(kind: Kind) {
   await withDimensions(kind, async (runner, seed) => {
-    const prefix = kind === 'opex' ? 'OPX' : 'CPX';
+    const offset = kind === 'opex' ? 0 : CAPEX_NUMBER_OFFSET;
     const ctx = context(runner, seed.tenantId);
     const listed: any = await queryExecutor(kind).execute(ctx, { entity_type: ENTITY[kind] });
     const refs = Object.fromEntries(listed.items.map((item: any) => [item.label, item.ref]));
-    assert.deepEqual(refs, { 'Alpha line': `${prefix}-1`, 'Bravo line': `${prefix}-2`, 'Charlie line': `${prefix}-3` }, `${kind}: each listed line has its reference`);
+    assert.deepEqual(refs, { 'Alpha line': `BL-${offset + 1}`, 'Bravo line': `BL-${offset + 2}`, 'Charlie line': `BL-${offset + 3}` }, `${kind}: each listed line has its reference`);
     const detail: any = await queryExecutor(kind).executeDetail(ctx, { entity_type: ENTITY[kind], entity_id: seed.items.bravo });
-    assert.equal(detail.entity.ref, `${prefix}-2`, `${kind}: the detail has the line's reference`);
+    assert.equal(detail.entity.ref, `BL-${offset + 2}`, `${kind}: the detail has the line's reference`);
   });
 }
 
@@ -343,6 +344,33 @@ async function testCategoriesEntityCarriesDimension() {
   });
 }
 
+// Without a sort, the values come in their dimension's order (the position an admin sets, then
+// the name); `sort_order` is a sort field and `name` still sorts by name.
+async function testCategoriesFollowTheDimensionOrder() {
+  await withDimensions('opex', async (runner, seed) => {
+    const ctx = context(runner, seed.tenantId);
+    const registry = getAiEntityRegistry('analytics_categories');
+    assert.deepEqual(registry.defaultSort, { field: 'sort_order', direction: 'asc' });
+    assert.equal(registry.sortFields.sort_order, 'sort_order');
+    await runner.query(
+      `UPDATE analytics_categories SET sort_order = CASE name WHEN 'Subscriptions' THEN 1 ELSE 2 END
+        WHERE tenant_id = $1 AND name IN ('Subscriptions', 'Maintenance')`,
+      [seed.tenantId],
+    );
+    const labels = (result: any) => result.items.map((item: any) => item.label);
+    const byDefault: any = await queryExecutor('opex').execute(ctx, { entity_type: 'analytics_categories', filters: { axis: ['Nature'] } });
+    assert.deepEqual(labels(byDefault), ['Subscriptions', 'Maintenance'], 'the default sort is the dimension order');
+    assert.deepEqual(byDefault.items.map((item: any) => item.metadata.sort_order), [1, 2], 'items carry their position');
+    // Without a dimension filter: the dimensions in their order (default 0, Nature 1, Archive 2), never interleaved.
+    const everything: any = await queryExecutor('opex').execute(ctx, { entity_type: 'analytics_categories' });
+    assert.deepEqual(labels(everything), ['Licences', 'Services', 'Subscriptions', 'Maintenance', 'Old'], 'dimension by dimension');
+    const reversed: any = await queryExecutor('opex').execute(ctx, { entity_type: 'analytics_categories', filters: { axis: ['Nature'] }, sort: { field: 'sort_order', direction: 'desc' } });
+    assert.deepEqual(labels(reversed), ['Maintenance', 'Subscriptions'], 'sort_order sorts');
+    const byName: any = await queryExecutor('opex').execute(ctx, { entity_type: 'analytics_categories', filters: { axis: ['Nature'] }, sort: { field: 'name', direction: 'asc' } });
+    assert.deepEqual(labels(byName), ['Maintenance', 'Subscriptions'], 'name still sorts by name');
+  });
+}
+
 // The detail of a line asked by its business reference (OPX-1, CPX-1) loads
 // the same line, deep detail included. Lines 10 and 11 make the reference's
 // search ambiguous, so the reference itself reaches the detail (as in a tenant
@@ -351,11 +379,14 @@ async function testDetailByReference(kind: Kind) {
   await withDimensions(kind, async (runner, seed) => {
     await seedItem(runner, kind, seed.tenantId, 10, 'Delta line');
     await seedItem(runner, kind, seed.tenantId, 11, 'Echo line');
-    const ref = `${kind === 'opex' ? 'OPX' : 'CPX'}-1`;
-    const detail: any = await queryExecutor(kind).executeDetail(context(runner, seed.tenantId), { entity_type: ENTITY[kind], entity_id: ref });
-    assert.equal(detail.entity.id, seed.items.alpha, `${kind}: ${ref} is the alpha line`);
-    assert.equal(detail.data['analytics:nature'], 'Subscriptions', `${kind}: the detail by reference carries the line's values`);
-    assert.ok(detail.data.financial_summary, `${kind}: the deep detail is loaded`);
+    const native = `BL-${kind === 'opex' ? 1 : CAPEX_NUMBER_OFFSET + 1}`;
+    for (const ref of [`${kind === 'opex' ? 'OPX' : 'CPX'}-1`, native]) {
+      const detail: any = await queryExecutor(kind).executeDetail(context(runner, seed.tenantId), { entity_type: ENTITY[kind], entity_id: ref });
+      assert.equal(detail.entity.id, seed.items.alpha, `${kind}: ${ref} is the alpha line`);
+      assert.equal(detail.entity.ref, native, `${kind}: legacy input yields the native reference`);
+      assert.equal(detail.data['analytics:nature'], 'Subscriptions', `${kind}: the detail by reference carries the line's values`);
+      assert.ok(detail.data.financial_summary, `${kind}: the deep detail is loaded`);
+    }
   });
 }
 
@@ -371,6 +402,7 @@ void runSpecs('ai-analytics-axes.integration.spec', [
     [`detail by business reference (${kind})`, () => testDetailByReference(kind)],
   ]),
   ['analytics_categories carries its dimension', testCategoriesEntityCarriesDimension],
+  ['analytics_categories follow the dimension order', testCategoriesFollowTheDimensionOrder],
 ]).catch((err) => {
   console.error(err);
   process.exit(1);

@@ -10,8 +10,8 @@ import { withSavepoint } from '../common/savepoint.util';
 
 /** Tables whose foreign key can block a company delete, in plain words. */
 const COMPANY_REFERENCING_TABLES: Record<string, string> = {
-  spend_allocations: 'OPEX allocations',
-  capex_allocations: 'CAPEX allocations',
+  // The allocations of the OPEX and CAPEX lines alike (one family since lot Z1).
+  spend_allocations: 'budget allocations',
   cost_centers: 'cost centers',
 };
 

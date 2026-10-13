@@ -28,13 +28,13 @@ const columns: BudgetFileColumnChoice[] = [
   { key: 'landing', label: 'Landing', shown: false },
 ];
 
-function renderDialog(list = { sort: 'item_number:asc', q: 'cloud', filters: '', statusScope: 'enabled' }) {
+function renderDialog(list = { sort: 'item_number:asc', q: 'cloud', filters: '', statusScope: 'enabled' }, scope: 'all' | 'capex' = 'capex') {
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
       <BudgetFileExportDialog
         open
         onClose={() => undefined}
-        scope="capex"
+        scope={scope}
         columns={columns}
         columnsReady
         list={list}
@@ -47,7 +47,7 @@ function renderDialog(list = { sort: 'item_number:asc', q: 'cloud', filters: '',
 describe('BudgetFileExportDialog', () => {
   beforeEach(() => {
     get.mockReset();
-    get.mockResolvedValue({ data: new Blob(['x']), headers: { 'content-disposition': 'attachment; filename="capex.csv"' } });
+    get.mockResolvedValue({ data: new Blob(['x']), headers: { 'content-disposition': 'attachment; filename="budget.csv"' } });
     window.URL.createObjectURL = vi.fn(() => 'blob:x');
     window.URL.revokeObjectURL = vi.fn();
   });
@@ -91,8 +91,30 @@ describe('BudgetFileExportDialog', () => {
     });
   });
 
+  it('saves budget.csv, the one file name of both lists, when the answer names none', async () => {
+    get.mockResolvedValueOnce({ data: new Blob(['x']), headers: {} });
+    const saved: string[] = [];
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      saved.push(this.download);
+    });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'operations.budgetFile.exportFiltered:{"count":120}' }));
+    await waitFor(() => expect(saved).toEqual(['budget.csv']));
+    click.mockRestore();
+  });
+
   it('labels an unfiltered list with its line count', () => {
     renderDialog({ sort: '', q: '', filters: '', statusScope: 'enabled' });
     expect(screen.getByRole('button', { name: 'operations.budgetFile.exportCount:{"count":120}' })).toBeInTheDocument();
   });
+  it('exports the unified list on budget-lines with the exact nature filter', async () => {
+    const filters = JSON.stringify({ nature: { filterType: 'set', values: ['capex'] }, supplier_name: { filterType: 'set', values: ['Acme'] } });
+    renderDialog({ sort: 'product_name:ASC', q: '', filters, statusScope: 'all' }, 'all');
+    expect(screen.getByText('budget.exportTitle')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'operations.budgetFile.exportFiltered:{"count":120}' }));
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(1));
+    expect(get.mock.calls[0][0]).toBe('/budget-lines/budget-file/export');
+    expect(get.mock.calls[0][1].params).toMatchObject({ filters, sort: 'product_name:ASC', includeDisabled: '1' });
+  });
+
 });

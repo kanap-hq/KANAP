@@ -118,7 +118,7 @@ Las Tareas son la **unidad atómica de trabajo** en KANAP. Cruzan la frontera en
 
 Una **acción claramente delimitada** con una persona responsable definida, estado y fecha límite.
 
-- Puede ser **independiente** o vinculada a un **Proyecto**, **partida OPEX**, **Contrato** o **partida CAPEX**
+- Puede ser **independiente** o vinculada a un **Proyecto**, **línea OPEX**, **Contrato** o **línea CAPEX**
 - Conlleva un esfuerzo concreto
 - El impacto en usuarios o servicios está contenido y bien entendido
 - No requiere coordinación entre múltiples equipos — incluso si toma mucho tiempo, permanece llevada por una sola persona sin requerir análisis interfuncional
@@ -162,9 +162,9 @@ El resto de esta guía cubre lo esencial práctico. Para el detalle completo, co
 |----------|---------------|-------------|
 | **Independiente** | Trabajo independiente, no vinculado a nada | **Portafolio > Tareas > Nuevo** |
 | **Proyecto** | Entregable dentro de un proyecto | Espacio de trabajo del Proyecto pestaña **Tareas**, o atajo de fase en **Cronograma** |
-| **OPEX** | Acción vinculada a una partida OPEX | Espacio de trabajo OPEX, panel **Tareas** de la pestaña **Vista general** |
+| **OPEX** | Acción vinculada a una línea OPEX | Espacio de trabajo de la línea presupuestaria, panel **Tareas** de la pestaña **Vista general** |
 | **Contrato** | Acción vinculada a un contrato | Espacio de trabajo del Contrato pestaña **Tareas** |
-| **CAPEX** | Acción vinculada a una partida CAPEX | Espacio de trabajo CAPEX, panel **Tareas** de la pestaña **Vista general** |
+| **CAPEX** | Acción vinculada a una línea CAPEX | Espacio de trabajo de la línea presupuestaria, panel **Tareas** de la pestaña **Vista general** |
 
 Todas las tareas aparecen en la lista central **Portafolio > Tareas** independientemente del contexto, para que siempre tenga un lugar donde ver todo.
 
@@ -253,8 +253,7 @@ La lista de esta guía es un punto de partida. Adáptela a cómo funciona realme
 ## Adónde ir a continuación
 
 - [Tareas](../tasks.md) — referencia completa para estados, importación/exportación CSV, seguimiento de tiempo y cada funcionalidad del espacio de trabajo
-- [OPEX](../opex.md) — gestionar partidas OPEX y sus tareas
-- [CAPEX](../capex.md) — gestionar partidas CAPEX y sus tareas
+- [Líneas presupuestarias](../budget-lines.md): gestionar las líneas OPEX y CAPEX y sus tareas
 - [Contratos](../contracts.md) — gestionar contratos y sus tareas
 - [Proyectos del portafolio](../portfolio-projects.md) — ejecución de proyectos, fases, seguimiento de esfuerzo y tareas a nivel de proyecto
 - [Primeros pasos](getting-started.md) — si es nuevo en KANAP

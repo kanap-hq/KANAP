@@ -23,7 +23,8 @@ import { assert, assertClean, assertSucceeded, describe, httpStatus, progress, R
 // lines through the same update, after its own line lock, and refuses the
 // whole file when a line changed after the preflight.
 
-const TABLE: Record<Kind, string> = { opex: 'spend_items', capex: 'capex_items' };
+// The lines of both natures live in spend_items since lot Z1.
+const TABLE: Record<Kind, string> = { opex: 'spend_items', capex: 'spend_items' };
 
 async function seedSupplier(runner: QueryRunner, tenantId: string, name: string): Promise<string> {
   const [row] = await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, $2) RETURNING id`, [tenantId, name]);
@@ -172,10 +173,13 @@ async function companyVersusAccount(kind: Kind) {
   });
 }
 
-/** The line's item number, for a budget file row. */
+/** The line's item number, for a budget file row: a CAPEX line's CPX number is its `legacy_number` since lot Z1. */
 async function fileRef(race: Race, kind: Kind, itemId: string): Promise<string> {
-  const row = await race.readOne(`SELECT item_number::int AS n FROM ${TABLE[kind]} WHERE tenant_id = $1 AND id = $2`, [race.tenantId, itemId]);
-  return `${kind === 'opex' ? 'OPX' : 'CPX'}-${row.n}`;
+  const row = await race.readOne(
+    `SELECT item_number::int AS n, legacy_number FROM ${TABLE[kind]} WHERE tenant_id = $1 AND id = $2 AND nature = $3`,
+    [race.tenantId, itemId, kind],
+  );
+  return kind === 'opex' ? `OPX-${row.n}` : row.legacy_number;
 }
 
 /**

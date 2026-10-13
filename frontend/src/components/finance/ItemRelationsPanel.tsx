@@ -1,6 +1,6 @@
 import React, { forwardRef, useImperativeHandle } from 'react';
 import {
-  Alert, Autocomplete, Box, Button, Chip, CircularProgress, Dialog, DialogActions,
+  Alert, Box, Button, Chip, Dialog, DialogActions,
   DialogContent, DialogTitle, LinearProgress, Stack, TextField, Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -13,8 +13,8 @@ import { useAuth } from '../../auth/AuthContext';
 import ItemContactsSection from '../contacts/ItemContactsSection';
 import { RelevantWebsitesList, useKanapDialogs } from '../design';
 import RelationsSectionTitle from '../../pages/portfolio/components/RelationsSectionTitle';
-import { drawerAutocompleteListboxSx, drawerFieldValueSx } from '../../theme/formSx';
-import { useLookupPicker, type LookupScope } from '../../hooks/useLookupPicker';
+import type { LookupScope } from '../../hooks/useLookupPicker';
+import RelationLookupPicker from '../workspace/RelationLookupPicker';
 
 /**
  * The Relations tab of an OPEX or CAPEX line: projects, applications and
@@ -55,8 +55,8 @@ type RelationsData = {
 };
 
 const KINDS = {
-  opex: { itemsApi: '/spend-items', resource: 'opex', i18n: 'opex', contactsItemType: 'spend-items' },
-  capex: { itemsApi: '/capex-items', resource: 'capex', i18n: 'capex', contactsItemType: 'capex-items' },
+  opex: { itemsApi: '/spend-items', resource: 'budget', i18n: 'opex', contactsItemType: 'spend-items' },
+  capex: { itemsApi: '/capex-items', resource: 'budget', i18n: 'capex', contactsItemType: 'capex-items' },
 } as const;
 
 /** The picker searches: projects and applications through their lists (their access rules apply), contracts through their lookup. */
@@ -71,7 +71,6 @@ export const itemRelationsKey = (kind: ItemRelationsKind, id: string) => ['item-
 const relationTagSx = { borderRadius: '6px', height: 24, '& .MuiChip-label': { px: '8px', fontSize: 12 } } as const;
 const relationControlSx = { maxWidth: 420 } as const;
 const relationWideControlSx = { maxWidth: 640 } as const;
-const relationAutocompleteSx = [drawerFieldValueSx, { width: '100%' }, relationControlSx] as const;
 
 function sameIds(a: Named[], b: Named[]) {
   const l = a.map((x) => x.id).sort();
@@ -111,52 +110,15 @@ function RelationPicker({
   disabled: boolean;
 }) {
   const config = PICKERS[set];
-  const picker = useLookupPicker<Named>({
-    endpoint: config.endpoint,
-    scope: config.scope,
-    value: value.map((v) => v.id),
-    given: value,
-    // The search pages hold whole rows: the picker keeps id and name.
-  });
   return (
-    <Autocomplete
-      multiple
-      {...picker.autocomplete}
-      options={picker.options}
-      value={picker.selected}
-      getOptionLabel={(o) => picker.label(o, (row) => row.name ?? '')}
-      onChange={(_, v) => {
-        const next = (v as Named[]).map((o) => ({ id: o.id, name: o.name }));
-        picker.remember(next);
-        onChange(next);
-      }}
-      renderOption={(props, option) => (<li {...props} key={option.id}>{option.name}</li>)}
-      renderTags={(vals, getTagProps) => vals.map((option, index) => (
-        <Chip
-          {...getTagProps({ index })}
-          key={option.id}
-          label={picker.label(option, (row) => row.name ?? '')}
-          sx={relationTagSx}
-          onClick={() => window.open(config.href(option), '_self')}
-          clickable
-        />
-      ))}
-      renderInput={(params) => (
-        <TextField
-          {...params}
-          placeholder={placeholder}
-          variant="standard"
-          InputProps={{
-            ...params.InputProps,
-            endAdornment: (<>{picker.loading ? <CircularProgress color="inherit" size={16} /> : null}{params.InputProps.endAdornment}</>),
-          }}
-          sx={drawerFieldValueSx}
-        />
-      )}
-      ListboxProps={{ sx: drawerAutocompleteListboxSx }}
-      filterSelectedOptions
+    <RelationLookupPicker
+      endpoint={config.endpoint}
+      scope={config.scope}
+      href={config.href}
+      placeholder={placeholder}
+      value={value}
+      onChange={onChange}
       disabled={disabled}
-      sx={relationAutocompleteSx}
     />
   );
 }
@@ -428,8 +390,8 @@ export default forwardRef<RelationsPanelHandle, Props>(function ItemRelationsPan
             </Stack>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setLinkDialogOpen(false)}>{t('common:buttons.cancel')}</Button>
-            <Button type="submit" variant="contained" disabled={!String(linkDraft.url || '').trim()}>{editingLinkIndex === null ? t('common:buttons.add') : t('common:buttons.save')}</Button>
+            <Button variant="action" onClick={() => setLinkDialogOpen(false)}>{t('common:buttons.cancel')}</Button>
+            <Button type="submit" variant="action-primary" disabled={!String(linkDraft.url || '').trim()}>{editingLinkIndex === null ? t('common:buttons.add') : t('common:buttons.save')}</Button>
           </DialogActions>
         </Box>
       </Dialog>

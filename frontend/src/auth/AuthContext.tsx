@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import api, {
   bumpSessionGeneration,
@@ -17,7 +17,7 @@ import {
 } from './sessionStorage';
 import { getAccessToken, getAccessTokenExpiresAt, setAccessToken, subscribeAccessToken } from './accessTokenStore';
 import i18n, { detectBrowserLocale, LANGUAGE_OVERRIDE_STORAGE_KEY, SupportedLocale } from '../i18n';
-import { resetSharedPatchBuffers } from '../hooks/patchBuffer';
+import { clearUserClientState } from './userClientState';
 
 type PermissionLevel = 'reader' | 'contributor' | 'member' | 'manager' | 'admin';
 type Claims = {
@@ -156,12 +156,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [claims, setClaims] = useState<Claims | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [tenantAuth, setTenantAuth] = useState<TenantAuth | null>(null);
+  // The user whose state this tab holds: another user behind a new token drops it.
+  const stateUserIdRef = useRef<string | null>(null);
+
+  const clearUserState = useCallback(() => {
+    stateUserIdRef.current = null;
+    clearUserClientState(queryClient);
+  }, [queryClient]);
 
   const clearAuthState = useCallback((opts?: { clearActivity?: boolean }) => {
     bumpSessionGeneration();
-    // Edits a workspace kept for the session (an edit waiting for a choice) end with it.
-    resetSharedPatchBuffers();
-    queryClient.removeQueries({ queryKey: ['ai-capabilities'] });
+    clearUserState();
     clearLegacyTokenStorage();
     if (opts?.clearActivity) {
       clearSessionActivity();
@@ -173,7 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setClaims(null);
     setSubscription(null);
     setTenantAuth(null);
-  }, [queryClient]);
+  }, [clearUserState]);
 
   const applyAccessToken = useCallback((accessToken: string, expiresIn: number, refreshExpiresIn?: number) => {
     const expiresAt = Date.now() + expiresIn * 1000;
@@ -201,6 +206,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!token) return;
     try {
       const res = await api.get('/auth/me');
+      const userId: string | null = res.data?.profile?.id ?? null;
+      // Signed in as someone else meanwhile (another tab shares the session cookie).
+      if (userId && stateUserIdRef.current && stateUserIdRef.current !== userId) clearUserState();
+      if (userId) stateUserIdRef.current = userId;
       setProfile(res.data?.profile ?? null);
       setClaims(res.data?.claims ?? null);
       setSubscription(res.data?.subscription ?? null);
@@ -210,7 +219,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // unreachable server keeps it.
       if (e?.response?.status === 401 && !getAccessToken()) logout();
     }
-  }, [token, logout]);
+  }, [token, logout, clearUserState]);
 
   const refreshAccessTokenInternal = useCallback(async (legacyRefreshToken?: string): Promise<RefreshStatus> => {
     if (isIdleExpired()) {
@@ -245,8 +254,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     // A new session: a refresh started before it answers for the previous one.
     bumpSessionGeneration();
-    resetSharedPatchBuffers();
-    queryClient.removeQueries({ queryKey: ['ai-capabilities'] });
+    clearUserState();
     setSessionExpired(false);
     setProfile(null);
     setClaims(null);
@@ -255,7 +263,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     touchLastActivity();
     applyAccessToken(response.access_token, response.expires_in, response.refresh_expires_in);
     // refreshMe will be called by useEffect when token changes
-  }, [applyAccessToken, clearAuthState, queryClient]);
+  }, [applyAccessToken, clearAuthState, clearUserState]);
 
   const refreshAccessToken = useCallback(async (): Promise<RefreshStatus> => {
     return refreshAccessTokenInternal();

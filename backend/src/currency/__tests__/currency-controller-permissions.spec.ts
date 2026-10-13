@@ -8,7 +8,7 @@ import {
 } from '../../auth/require-level.decorator';
 import { CurrencyController } from '../currency.controller';
 
-// Currencies are a budget setting: budget, OPEX and CAPEX readers read them,
+// Currencies are a budget setting: budget administration and budget line readers read them,
 // budget administrators change them. The IT landscape `settings` resource grants nothing here.
 
 const proto = CurrencyController.prototype;
@@ -18,15 +18,14 @@ const anyOf = (handler: unknown) => Reflect.getMetadata(REQUIRE_ANY_LEVEL_KEY, h
 function run() {
   const readers: RequireAnyLevelMeta = [
     { resource: 'budget_ops', level: 'reader' },
-    { resource: 'opex', level: 'reader' },
-    { resource: 'capex', level: 'reader' },
+    { resource: 'budget', level: 'reader' },
   ];
 
   assert.equal(levelOf(CurrencyController), undefined, 'no class-level requirement');
   assert.equal(anyOf(CurrencyController), undefined, 'no class-level requirement');
 
   for (const [name, handler] of [['getSettings', proto.getSettings], ['listRates', proto.listRates]] as const) {
-    assert.deepEqual(anyOf(handler), readers, `${name}: budget_ops, opex or capex reader`);
+    assert.deepEqual(anyOf(handler), readers, `${name}: budget_ops or budget reader`);
     assert.equal(levelOf(handler), undefined, `${name}: no single-resource requirement on top`);
   }
   console.log('ok - settings and rates are read by budget, OPEX and CAPEX readers');

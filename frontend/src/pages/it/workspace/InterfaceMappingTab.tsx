@@ -2052,7 +2052,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setGroupManagerOpen(false)}>Close</Button>
+          <Button variant="action" onClick={() => setGroupManagerOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
 
@@ -2101,11 +2101,11 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setGroupEditor(createClosedGroupEditor())}>
+          <Button variant="action" onClick={() => setGroupEditor(createClosedGroupEditor())}>
             Cancel
           </Button>
           <Button
-            variant="contained"
+            variant="action-primary"
             onClick={commitGroupEditor}
             disabled={!canManage}
           >

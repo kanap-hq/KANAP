@@ -9,8 +9,8 @@ const content: HomeContent = {
 
   hero: {
     eyebrow: 'Open Source · von einem CIO für CIOs entwickelt',
-    title: 'IT-Budget, IT-Landschaft und Projekte in einem einzigen Datenbestand.',
-    lead: 'Das IT-Budget verlässt die Tabellenkalkulation und wird mit dem verknüpft, was es begründet: Anwendungen, Verträge, Projekte. Landschaft, Portfolio und Dokumentation teilen dieselben Daten, und Plaid, der integrierte KI-Agent, antwortet über alles hinweg. Open Source, kostenlos selbst zu hosten.',
+    title: 'IT-Budget, Anwendungen und Projekte in einem einzigen Datenbestand.',
+    lead: 'Eine Anwendung trägt ihr Budget, ihre Dokumentation, ihre Projekte und ihre Compliance-Daten. Fragen Sie Plaid, den integrierten KI-Agenten, zu all diesen Daten. Open Source, kostenlos selbst zu hosten.',
     primaryCta: 'Mit Beispieldaten testen',
     secondaryCta: 'Kostenlos bereitstellen',
     trialNote: 'Test der gehosteten Version · Beispieldaten in einer Minute geladen · AGPL v3, vollständiger Quellcode auf GitHub.',
@@ -18,9 +18,9 @@ const content: HomeContent = {
 
   layers: {
     eyebrow: 'IT-Budget',
-    title: 'Das IT-Budget, raus aus Excel.',
+    title: 'Ihr IT-Budget, ohne Tabellenkalkulation.',
     intro:
-      'OPEX und CAPEX über mehrere Jahre, in Spalten, die Sie selbst benennen: Budget, Revision, erwartetes Jahresergebnis. Jede Version lässt sich kopieren, vergleichen und einfrieren. Schluss mit kopierten Reitern und kaputten Formeln.',
+      'OPEX und CAPEX über mehrere Jahre, in Spalten, die Sie selbst benennen: Budget, Revision, erwartetes Jahresergebnis. Sie kopieren eine Version ins Folgejahr, vergleichen sie mit der vorherigen und frieren sie nach der Freigabe ein.',
     items: [
       {
         title: 'Hochrechnung und Budget des Folgejahres',
@@ -35,7 +35,7 @@ const content: HomeContent = {
         body: 'Erfassen Sie FTE auf den betroffenen Zeilen: KANAP leitet daraus den monatlichen Personalbestand und die Kosten pro FTE ab, als Betrag oder als Tagessatz, direkt neben den Beträgen.',
       },
     ],
-    outro: 'Und weil jede Zeile mit dem restlichen Datenbestand verknüpft ist, ist das Budget keine Liste von Beträgen mehr: Es ist die Landkarte dessen, was die IT betreibt.',
+    outro: 'Jede Zeile hängt an ihrer Anwendung, ihrem Vertrag oder ihrem Projekt: Vom Budget aus sehen Sie, was die IT betreibt und was es kostet.',
   },
 
   pillars: {
@@ -148,7 +148,7 @@ const content: HomeContent = {
     eyebrow: 'Für Unternehmen gemacht',
     title: 'Ein System, unter Ihrer Kontrolle.',
     intro:
-      'Die Module teilen dieselben Daten: Das gibt der IT echte Governance und erlaubt der KI zu helfen, ohne Ihre Umgebung zu gefährden.',
+      'Die Module teilen dieselben Daten, dieselben Berechtigungen und dasselbe Audit-Protokoll: Eine von Plaid vorbereitete Änderung wird wie jede andere protokolliert.',
     items: [
       {
         title: 'Umfassende Beziehungen',

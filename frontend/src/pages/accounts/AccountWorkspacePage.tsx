@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, Link, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { useAccountNav } from '../../hooks/useAccountNav';
@@ -24,7 +24,7 @@ import {
 } from '../../constants/accountNature';
 import LineTypeUsageSelect, { LineTypeUsageConflictNote } from '../../components/fields/LineTypeUsageSelect';
 import { oneOffListLink } from '../reports/reportListLink';
-import { openSavedListLink } from '../reports/ReportGroupLinkCell';
+import ListLinkAnchor from '../reports/ListLinkAnchor';
 import { keepValues } from '../reports/reportAggregates';
 
 const LIST_PATH = '/master-data/coa';
@@ -452,20 +452,10 @@ function NatureConflictNote({
   const conflict = accountNatureConflict(nature, lineCounts);
   if (!conflict) return null;
   const link = oneOffListLink(conflict.scope, { account_id: keepValues([accountId]) });
-  const save = link.save;
   return (
     <LineTypeUsageConflictNote testId="nature-conflict">
       {t(conflict.scope === 'capex' ? 'accounts.nature.conflictCapex' : 'accounts.nature.conflictOpex', { count: conflict.count })}{' '}
-      <Link
-        href={link.href}
-        target="_blank"
-        rel="noopener noreferrer"
-        sx={{ fontSize: 12 }}
-        // Filters too long for a URL are saved first (never the case for one account, kept for safety).
-        onClick={save ? (event) => { event.preventDefault(); void openSavedListLink({ ...link, save }); } : undefined}
-      >
-        {t('accounts.nature.showLines')}
-      </Link>
+      <ListLinkAnchor link={link}>{t('accounts.nature.showLines')}</ListLinkAnchor>
     </LineTypeUsageConflictNote>
   );
 }

@@ -139,11 +139,10 @@ export default function Layout() {
 
   const operations: NavEntry[] = [
     { to: '/ops', label: t('nav:sidebar.ops.overview'), icon: <DashboardIcon /> },
-    { to: '/ops/opex', label: t('nav:sidebar.ops.opex'), icon: <AccountBalanceWalletIcon />, resource: 'opex' },
-    { to: '/ops/capex', label: t('nav:sidebar.ops.capex'), icon: <AccountBalanceIcon />, resource: 'capex' },
+    { to: '/ops/budget', label: t('nav:sidebar.ops.budgetLines'), icon: <AccountBalanceWalletIcon />, resource: 'budget' },
     { to: '/ops/contracts', label: t('nav:sidebar.ops.contracts'), icon: <DescriptionIcon />, resource: 'contracts' },
     { to: '/ops/reports', label: t('nav:sidebar.ops.reporting'), icon: <BarChartIcon />, resource: 'reporting' },
-    { to: '/ops/operations', label: t('nav:sidebar.ops.administration'), icon: <SettingsIcon />, anyResource: ['opex', 'capex', 'budget_ops'] },
+    { to: '/ops/operations', label: t('nav:sidebar.ops.administration'), icon: <SettingsIcon />, anyResource: ['budget', 'budget_ops'] },
   ];
 
   const masterData: NavEntry[] = [
@@ -576,8 +575,9 @@ export default function Layout() {
               return next !== undefined && isNavItem(next);
             });
             // One item selected: the one whose path matches the page most closely, so a section's
-            // home (`/ops`) is not selected on every page under it (`/ops/opex`).
-            const matches = (to: string) => location.pathname === to || location.pathname.startsWith(to + '/');
+            // home (`/ops`) is not selected on every page under it (`/ops/budget`).
+            const matches = (to: string) => location.pathname === to || location.pathname.startsWith(to + '/')
+              || (to === '/ops/budget' && /^\/ops\/(opex|capex)(\/|$)/.test(location.pathname));
             const selectedTo = visible.filter(isNavItem).map((entry) => entry.to).filter(matches)
               .reduce<string | null>((best, to) => (best == null || to.length > best.length ? to : best), null);
 

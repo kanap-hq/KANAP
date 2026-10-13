@@ -281,7 +281,7 @@ describe('Cost per FTE', () => {
     expect(grid.columns[0].headerName).toBe('reports.staffing.groups.item');
 
     fireEvent.click(screen.getByRole('button', { name: 'export-csv' }));
-    expect(grid.api!.exportDataAsCsv).toHaveBeenCalledWith({ fileName: expect.stringMatching(new RegExp(`^cost-per-fte-opex-item-${Y - 1}-[a-z0-9-]+\\.csv$`)) });
+    expect(grid.api!.exportDataAsCsv).toHaveBeenCalledWith({ fileName: expect.stringMatching(new RegExp(`^cost-per-fte-all-item-${Y - 1}-[a-z0-9-]+\\.csv$`)) });
   });
 
   it('charts the cost per FTE of the total and the largest groups, one bar per pair', async () => {
@@ -398,7 +398,7 @@ describe('Daily rate', () => {
     }
 
     fireEvent.click(screen.getByRole('button', { name: 'export-csv' }));
-    expect(grid.api!.exportDataAsCsv).toHaveBeenCalledWith({ fileName: expect.stringMatching(new RegExp(`^daily-rate-opex-cost-center-${Y - 1}-[a-z0-9-]+\\.csv$`)) });
+    expect(grid.api!.exportDataAsCsv).toHaveBeenCalledWith({ fileName: expect.stringMatching(new RegExp(`^daily-rate-all-cost-center-${Y - 1}-[a-z0-9-]+\\.csv$`)) });
   });
 
   it('charts the daily rate of the total and the groups with the most days', async () => {
@@ -438,4 +438,16 @@ describe('Daily rate', () => {
     await waitFor(() => expect(gridRows()).toHaveLength(2));
     expect(screen.queryByRole('note')).toBeNull();
   });
+});
+
+
+it.each([['fte', 'staff_cost_'], ['rate', 'day_cost_']])('All %s view reads one unified aggregate per pair', async (view, prefix) => {
+  renderReport(`/report?view=${view}`);
+  await waitFor(() => expect(gridRows().length).toBeGreaterThan(0));
+  expect(screen.getByRole('tab', { name: 'operations.scope.all' })).toHaveAttribute('aria-selected', 'true');
+  const requests = post.mock.calls.filter(([, body]) => body.spec.measures[0]?.field.startsWith(prefix));
+  expect(requests).toHaveLength(pairYears().length);
+  expect(new Set(requests.map(([, body]) => body.spec.measures[0].field)).size).toBe(pairYears().length);
+  expect(requests[0][0]).toBe('/budget-lines/summary/aggregate');
+  expect(post.mock.calls.every(([url]) => url === '/budget-lines/summary/aggregate')).toBe(true);
 });

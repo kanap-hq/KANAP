@@ -1,7 +1,6 @@
 import { FxRateService } from '../../../currency/fx-rate.service';
 import { CurrencySettingsService } from '../../../currency/currency-settings.service';
 import { AllocationCalculatorService } from '../../allocation-calculator.service';
-import { CapexAllocationCalculatorService } from '../../../capex/capex-allocation-calculator.service';
 import type { SummaryDeps, SummaryScopeConfig } from '../../spend-summary.builder';
 
 /**
@@ -13,7 +12,7 @@ import type { SummaryDeps, SummaryScopeConfig } from '../../spend-summary.builde
 export function realSummaryDeps(scope: Pick<SummaryScopeConfig, 'scope'>): SummaryDeps {
   const currencySettings = new CurrencySettingsService(undefined as any, undefined as any);
   const allocationCalculator = scope.scope === 'capex'
-    ? new CapexAllocationCalculatorService(undefined as any, undefined as any, undefined as any, undefined as any)
+    ? new AllocationCalculatorService(undefined as any, undefined as any, undefined as any, undefined as any)
     : new AllocationCalculatorService(undefined as any, undefined as any, undefined as any, undefined as any);
   return {
     fxRates: new FxRateService(undefined as any, currencySettings),

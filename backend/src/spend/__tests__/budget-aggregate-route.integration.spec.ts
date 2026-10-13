@@ -18,8 +18,8 @@ import { ListContextsService } from '../../common/list-context/list-contexts.ser
 import { AGGREGATE_LIMITS } from '../../common/list-engine/list-aggregate';
 import { SpendItemsController } from '../spend-items.controller';
 import { SpendItemsService } from '../spend-items.service';
-import { CapexItemsController } from '../../capex/capex-items.controller';
-import { CapexItemsService } from '../../capex/capex-items.service';
+import { CapexItemsController } from '../capex-items.controller';
+import { CapexItemsService } from '../spend-items.service';
 import { SUMMARY_SCOPES, SummaryScopeConfig } from '../spend-summary.builder';
 import { realSummaryDeps } from './oracle/oracle-deps';
 import { seedListFixture } from './oracle/budget-list.fixture';
@@ -28,8 +28,8 @@ import { seedListFixture } from './oracle/budget-list.fixture';
 // (lot 2D, PR E): the reports' and the dashboard's server aggregates. The real
 // PermissionGuard runs against roles stored in the database, then the real
 // handler with its @Tenant() argument:
-// - the list's read level (an OPEX reader reads OPEX, not CAPEX), as the GET
-//   summary routes;
+// - the list's read level (`budget:reader` reads both lists, each its own lines), as
+//   the GET summary routes;
 // - a read: a frozen tenant keeps it (`@ReadOnlyRoute()`), while a POST that
 //   writes is still refused by the freeze;
 // - the spec limits, including the lower measure cap of a per-line spec (`id`
@@ -45,9 +45,10 @@ type Answer = { status: number; body?: any };
 
 function itemService(scope: SummaryScopeConfig): any {
   const deps = realSummaryDeps(scope);
-  const args: any[] = Array.from({ length: 12 }, () => undefined);
+  // One constructor for both natures since lot Z1: the CAPEX service is the OPEX one's subclass.
+  const args: any[] = Array.from({ length: 11 }, () => undefined);
   args[4] = deps.allocationCalculator;
-  args[scope.scope === 'opex' ? 6 : 7] = deps.fxRates;
+  args[6] = deps.fxRates;
   return scope.scope === 'opex' ? new (SpendItemsService as any)(...args) : new (CapexItemsService as any)(...args);
 }
 
@@ -122,8 +123,9 @@ async function main() {
         [tenantId, roleId, label, `${label}-${randomUUID()}@example.invalid`],
       );
     };
-    const opexReader = await identity('opex-reader', { opex: 'reader' });
-    const capexReader = await identity('capex-reader', { capex: 'reader' });
+    const budgetReader = await identity('budget-reader', { budget: 'reader' });
+    // A row still named `capex` (a database of before lot R) reads as `budget`.
+    const legacyCapexReader = await identity('legacy-capex-reader', { capex: 'reader' });
     const reportingReader = await identity('reporting-reader', { reporting: 'reader', tasks: 'reader' });
     const admin = await identity('admin', {}, 'Administrator');
 
@@ -133,8 +135,8 @@ async function main() {
     const m = runner.manager;
 
     // The routes carry the list's read level and the read-only mark.
-    for (const [route, resource] of [[opex, 'opex'], [capex, 'capex']] as const) {
-      assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, route.controller.prototype[route.handler]), { resource, level: 'reader' }, `${route.name}: read level`);
+    for (const route of [opex, capex]) {
+      assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, route.controller.prototype[route.handler]), { resource: 'budget', level: 'reader' }, `${route.name}: read level`);
       assert.equal(Reflect.getMetadata(READ_ONLY_ROUTE_KEY, route.controller.prototype[route.handler]), true, `${route.name}: read-only`);
     }
 
@@ -145,8 +147,9 @@ async function main() {
     };
     assert.ok(pageTotal.opex > 0 && pageTotal.capex > 0);
     const cases: Array<[string, string, Route, number]> = [
-      ['OPEX reader', opexReader, opex, 200], ['OPEX reader', opexReader, capex, 403],
-      ['CAPEX reader', capexReader, capex, 200], ['CAPEX reader', capexReader, opex, 403],
+      // One right for both lists (lot R); each answers the lines of its own nature (the counts below).
+      ['budget reader', budgetReader, opex, 200], ['budget reader', budgetReader, capex, 200],
+      ['leftover capex row', legacyCapexReader, opex, 200], ['leftover capex row', legacyCapexReader, capex, 200],
       ['reporting reader without budget access', reportingReader, opex, 403], ['reporting reader without budget access', reportingReader, capex, 403],
       ['administrator', admin, opex, 200], ['administrator', admin, capex, 200],
     ];
@@ -162,11 +165,11 @@ async function main() {
 
     // A frozen tenant (Stripe configured, no subscription row: frozen) keeps the read; a write is refused.
     const frozenGuard = buildGuard(true);
-    const frozenRead = await call(frozenGuard, runner, tenantId, opexReader, opex, { query: {}, spec: COUNT_ONLY });
+    const frozenRead = await call(frozenGuard, runner, tenantId, budgetReader, opex, { query: {}, spec: COUNT_ONLY });
     assert.equal(frozenRead.status, 200, `frozen tenant reads: ${JSON.stringify(frozenRead.body)}`);
     const shareRoute: Route = { ...opex, name: 'POST /spend-items/:id/share', handler: 'share' };
     await assert.rejects(
-      frozenGuard.canActivate(executionContext(shareRoute, { method: 'POST', user: { sub: opexReader }, tenant: { id: tenantId }, queryRunner: runner })),
+      frozenGuard.canActivate(executionContext(shareRoute, { method: 'POST', user: { sub: budgetReader }, tenant: { id: tenantId }, queryRunner: runner })),
       (error: any) => error instanceof HttpException && error.getStatus() === 403 && (error.getResponse() as any).error === 'SUBSCRIPTION_FROZEN',
       'a POST that writes is still frozen',
     );
@@ -191,23 +194,23 @@ async function main() {
       ['an unknown ctx', { query: { ctx: 'A'.repeat(22) }, spec: COUNT_ONLY }],
     ];
     for (const [label, body] of refused) {
-      const answer = await call(guard, runner, tenantId, opexReader, opex, body);
+      const answer = await call(guard, runner, tenantId, budgetReader, opex, body);
       assert.equal(answer.status, 400, `${label}: 400 (${JSON.stringify(answer.body)})`);
     }
     for (const groupBy of [['id'], ['item_number', 'product_name']]) {
-      const answer = await call(guard, runner, tenantId, opexReader, opex, { spec: { groupBy, measures: sums(AGGREGATE_LIMITS.groupedMeasures) } });
+      const answer = await call(guard, runner, tenantId, budgetReader, opex, { spec: { groupBy, measures: sums(AGGREGATE_LIMITS.groupedMeasures) } });
       assert.equal(answer.status, 200, `${groupBy.join(', ')} with ${AGGREGATE_LIMITS.groupedMeasures} measures`);
       assert.equal(answer.body.groups.length, pageTotal.opex, 'one group per line');
     }
-    const single = await call(guard, runner, tenantId, opexReader, opex, { spec: { groupBy: [], measures: sums(AGGREGATE_LIMITS.measures) } });
+    const single = await call(guard, runner, tenantId, budgetReader, opex, { spec: { groupBy: [], measures: sums(AGGREGATE_LIMITS.measures) } });
     assert.equal(single.status, 200, `a spec without keys keeps the cap of ${AGGREGATE_LIMITS.measures}`);
     console.log(`ok - limits: at most ${AGGREGATE_LIMITS.groupedMeasures} measures with keys, ${AGGREGATE_LIMITS.measures} without; malformed bodies refused`);
 
     // Filters as an object or as JSON, and the years of the query: the same answer.
     const filters = { currency: { filterType: 'set', values: ['EUR'] } };
     const spec = { groupBy: ['run_build'], measures: [{ id: 'b', fn: 'sum', field: `y${Y - 2}Budget` }], order: [{ by: 'key', index: 0, dir: 'ASC' }] };
-    const asObject = await call(guard, runner, tenantId, opexReader, opex, { query: { filters, years: String(Y - 2) }, spec });
-    const asJson = await call(guard, runner, tenantId, opexReader, opex, { query: { filters: JSON.stringify(filters), years: [Y - 2] }, spec });
+    const asObject = await call(guard, runner, tenantId, budgetReader, opex, { query: { filters, years: String(Y - 2) }, spec });
+    const asJson = await call(guard, runner, tenantId, budgetReader, opex, { query: { filters: JSON.stringify(filters), years: [Y - 2] }, spec });
     assert.equal(asObject.status, 200);
     assert.deepEqual(asJson.body, asObject.body, 'filters as JSON');
     const window = (await opex.svc.summary({ limit: 1, years: String(Y - 2), filters: JSON.stringify(filters) }, { manager: m })).total;
@@ -217,10 +220,10 @@ async function main() {
     // ctx: a saved list context gives its filters; an inline filter wins.
     await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
     const { id: ctx } = await new ListContextsService().save(m, tenantId, 'opex', { filters });
-    const withCtx = await call(guard, runner, tenantId, opexReader, opex, { query: { ctx, years: String(Y - 2) }, spec });
+    const withCtx = await call(guard, runner, tenantId, budgetReader, opex, { query: { ctx, years: String(Y - 2) }, spec });
     assert.equal(withCtx.status, 200, JSON.stringify(withCtx.body));
     assert.deepEqual(withCtx.body, asObject.body, 'ctx: the saved filters');
-    const inline = await call(guard, runner, tenantId, opexReader, opex, { query: { ctx, filters: {}, years: String(Y - 2) }, spec });
+    const inline = await call(guard, runner, tenantId, budgetReader, opex, { query: { ctx, filters: {}, years: String(Y - 2) }, spec });
     assert.equal(inline.body.total.count, (await opex.svc.summary({ limit: 1, years: String(Y - 2) }, { manager: m })).total, 'inline filters win over ctx');
     console.log('ok - ctx merged like the GET routes');
 
@@ -231,10 +234,10 @@ async function main() {
       `UPDATE accounts SET consolidation_account_number = 600 + (account_number % 3), consolidation_account_name = 'Consolidated ' || (account_number % 3) WHERE tenant_id = $1`,
       [tenantId],
     );
-    const accountsReader = await identity('opex-accounts-reader', { opex: 'reader', accounts: 'reader' });
+    const accountsReader = await identity('budget-accounts-reader', { budget: 'reader', accounts: 'reader' });
     const byConsolidation = { spec: { groupBy: ['account_consolidation_key', 'account_consolidation_label'], measures: [{ id: 'b', fn: 'sum', field: 'yBudget' }] } };
     const keysOf = (answer: Answer) => answer.body.groups.map((g: any) => g.keys[0]);
-    const hidden = await call(guard, runner, tenantId, opexReader, opex, byConsolidation);
+    const hidden = await call(guard, runner, tenantId, budgetReader, opex, byConsolidation);
     assert.equal(hidden.status, 200);
     assert.deepEqual(hidden.body.groups.map((g: any) => g.keys), [[null, null]], 'without accounts access: one group, no key, no label');
     assert.equal(hidden.body.groups[0].count, pageTotal.opex);
@@ -248,7 +251,7 @@ async function main() {
     const filtered = (userId: string) => call(guard, runner, tenantId, userId, summaryRoute, {
       limit: 5, sort: 'account_consolidation_label:ASC', filters: JSON.stringify({ account_consolidation_key: { filterType: 'set', values: ['c_600'] } }),
     });
-    assert.equal((await filtered(opexReader)).body.total, 0, 'without accounts access: the filter sees no value');
+    assert.equal((await filtered(budgetReader)).body.total, 0, 'without accounts access: the filter sees no value');
     assert.ok((await filtered(accountsReader)).body.total > 0, 'with accounts access: the filter keeps the lines of c_600');
     console.log('ok - consolidation lines only for a reader of the accounts page (aggregate, GET filter and sort)');
 

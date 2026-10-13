@@ -144,7 +144,27 @@
   },
   "mention": {
     "noResults": "No matches",
-    "searching": "Searching..."
+    "searching": "Searching...",
+    "entityTypes": {
+      "knowledge": "Knowledge",
+      "tasks": "Tasks",
+      "projects": "Projects",
+      "requests": "Requests",
+      "applications": "Applications",
+      "assets": "Assets",
+      "connections": "Connections",
+      "interfaces": "Interfaces",
+      "locations": "Locations",
+      "contracts": "Contracts",
+      "budgetLines": "Budget lines",
+      "incidents": "Incidents",
+      "companies": "Companies",
+      "contacts": "Contacts",
+      "departments": "Departments",
+      "suppliers": "Suppliers",
+      "businessProcesses": "Business processes",
+      "users": "Users"
+    }
   },
   "previewCard": {
     "after": "After",

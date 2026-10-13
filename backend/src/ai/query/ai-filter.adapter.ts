@@ -7,8 +7,25 @@ import {
   AiSetExcludeFilterValue,
 } from './ai-filter.types';
 
-/** Entities whose list understands a set filter in exclude mode (the OPEX and CAPEX lists, on the SQL list engine). */
-const EXCLUDE_SET_ENTITIES = new Set(['spend_items', 'capex_items']);
+/**
+ * Set columns whose list understands a set filter in exclude mode: every column of the OPEX and CAPEX
+ * lists (SQL list engine), and the application lifecycle (`{ not: ['retired'] }` is the scope of the
+ * Applications list and of the Compliance tile).
+ */
+const EXCLUDE_SET_COLUMNS: Partial<Record<string, 'all' | Set<string>>> = {
+  spend_items: 'all',
+  capex_items: 'all',
+  applications: new Set(['lifecycle']),
+};
+
+function acceptsExcludeMode(entityType: string, gridColumn: string): boolean {
+  const columns = EXCLUDE_SET_COLUMNS[entityType];
+  return columns === 'all' || (!!columns && columns.has(gridColumn));
+}
+
+function isBlankDateValue(value: AiFilterValue): boolean {
+  return Array.isArray(value) && value.length > 0 && value.every((entry) => entry === null);
+}
 
 function isExcludeSetValue(value: AiFilterValue): value is AiSetExcludeFilterValue {
   return !!value && typeof value === 'object' && !Array.isArray(value) && Array.isArray((value as any).not);
@@ -105,7 +122,7 @@ export function adaptFilters(
       // A value outside the field's declared values matches no line: leaving it out excludes the same lines.
       const values = rawValue.not.filter((value) => value === null || typeof value === 'string');
       const allowed = Array.isArray(field.values) ? new Set(field.values) : null;
-      if (EXCLUDE_SET_ENTITIES.has(registry.entityType)) {
+      if (acceptsExcludeMode(registry.entityType, field.grid)) {
         adapted = { filterType: 'set', mode: 'exclude', values: allowed ? values.filter((value) => allowed.has(value)) : values };
       }
     } else if (field.type === 'set') {
@@ -134,6 +151,8 @@ export function adaptFilters(
     } else if (field.type === 'date') {
       if (isDateFilterValue(rawValue)) {
         adapted = adaptDateFilter(rawValue);
+      } else if (field.blankable && isBlankDateValue(rawValue)) {
+        adapted = { filterType: 'date', type: 'blank' };
       }
     }
 

@@ -11,7 +11,7 @@
  * runs these very functions against the former browser computation.
  */
 
-export type BudgetScope = 'opex' | 'capex';
+export type BudgetScope = 'opex' | 'capex' | 'all';
 export type MetricKey = 'budget' | 'revision' | 'forecast' | 'follow_up' | 'landing';
 
 /** The suffix of a budget column in the list's field keys (`y2026Budget`), as `AMOUNT_COLUMNS` names it. */
@@ -31,8 +31,18 @@ export const METRIC_SUFFIX: Record<MetricKey, string> = {
  */
 export type ReportMeasure = 'amount' | 'fte';
 
-/** The field naming a line: OPEX lines by their product name, CAPEX lines by their description. */
-export const NAME_FIELD: Record<BudgetScope, 'product_name' | 'description'> = { opex: 'product_name', capex: 'description' };
+/** Unified and OPEX lines use the native title; the CAPEX alias uses description. */
+export const NAME_FIELD: Record<BudgetScope, 'product_name' | 'description'> = { all: 'product_name', opex: 'product_name', capex: 'description' };
+
+/**
+ * The line's own number, its BL-n reference: `item_number` on all lines; `line_number` on the lines of
+ * one nature, since the CAPEX alias's `item_number` is the CPX number. A report groups a line on it
+ * after its id and name, so its rows link to `/ops/budget/BL-n` (`itemHref`).
+ */
+export const LINE_NUMBER_FIELD: Record<BudgetScope, 'item_number' | 'line_number'> = { all: 'item_number', opex: 'line_number', capex: 'line_number' };
+
+/** The group keys of a line: its id, its name and its own number. */
+const lineKeys = (scope: BudgetScope) => ['id', NAME_FIELD[scope], LINE_NUMBER_FIELD[scope]];
 
 /** The most groups one answer holds (the server's limit). */
 export const MAX_GROUPS = 10_000;
@@ -310,8 +320,43 @@ export type LabelledOption = { id: string; label: string };
 /** A dimension value as the lines hold it: shown by `label`, its stored `name` as the list filters on it. */
 export type AxisValueOption = LabelledOption & { name: string };
 
-/** The values held, named (`unnamed` for a blank name), by name as `compare` orders. */
-export function readAxisValues(result: AggregateResult | undefined, unnamed: string, compare: (a: string, b: string) => number): AxisValueOption[] {
+/** A dimension's order: each value id's position in its dimension (`valueOrderRank`). */
+export type ValueOrderRank = ReadonlyMap<string, number>;
+
+/** The positions of a dimension's values, from the values listed in its order. */
+export function valueOrderRank(values: ReadonlyArray<{ id: string }>): ValueOrderRank {
+  return new Map(values.map((value, index) => [value.id, index]));
+}
+
+/**
+ * Options in the dimension's order (`rank`); the values it does not hold follow, by label as
+ * `compare` orders. Without a rank (not loaded, or unreadable), every option by label.
+ */
+export function sortByValueOrder<T extends LabelledOption>(
+  options: T[],
+  rank: ValueOrderRank | null | undefined,
+  compare: (a: string, b: string) => number,
+): T[] {
+  return options.sort((a, b) => {
+    const ra = rank?.get(a.id);
+    const rb = rank?.get(b.id);
+    if (ra != null && rb != null && ra !== rb) return ra - rb;
+    if (ra != null && rb == null) return -1;
+    if (ra == null && rb != null) return 1;
+    return compare(a.label, b.label);
+  });
+}
+
+/**
+ * The values held, named (`unnamed` for a blank name), in the dimension's order (`rank`), the
+ * values it does not rank last; by name as `compare` orders without a rank.
+ */
+export function readAxisValues(
+  result: AggregateResult | undefined,
+  unnamed: string,
+  compare: (a: string, b: string) => number,
+  rank?: ValueOrderRank | null,
+): AxisValueOption[] {
   const options: AxisValueOption[] = [];
   for (const group of result?.groups ?? []) {
     const id = group.keys[0];
@@ -319,7 +364,7 @@ export function readAxisValues(result: AggregateResult | undefined, unnamed: str
     const name = group.keys[1] ?? '';
     options.push({ id, label: name.trim() || unnamed, name });
   }
-  return options.sort((a, b) => compare(a.label, b.label));
+  return sortByValueOrder(options, rank, compare);
 }
 
 // ----- exclusion pickers -----
@@ -409,7 +454,10 @@ export function mergeAccountOptions(
   return Array.from(byId.values()).sort((a, b) => compare(a.label, b.label));
 }
 
-/** The Analytics exclusion options: the dimension's own values (the catalogue) and the ones the lines hold, by label. */
+/**
+ * The Analytics exclusion options: the dimension's own values (the catalogue, listed in the
+ * dimension's order) in that order, then the ones only the lines hold, by label.
+ */
 export function mergeAxisValueOptions(
   catalogue: ReadonlyArray<{ id: string; name: string | null }>,
   held: AggregateResult | undefined,
@@ -419,7 +467,7 @@ export function mergeAxisValueOptions(
   const byId = new Map<string, LabelledOption>();
   for (const value of catalogue) byId.set(value.id, { id: value.id, label: (value.name ?? '').trim() || unnamed });
   for (const { id, label } of readAxisValues(held, unnamed, compare)) if (!byId.has(id)) byId.set(id, { id, label });
-  return Array.from(byId.values()).sort((a, b) => compare(a.label, b.label));
+  return sortByValueOrder(Array.from(byId.values()), valueOrderRank(catalogue), compare);
 }
 
 // ----- the FTE notice: declared FTE whose column amount no longer follows its lines -----
@@ -540,7 +588,7 @@ export function topItemsRequest(p: TopItemsParams): AggregateRequest {
   return {
     query: withYears({ filters: exclusions(p.filters, p.excludedIds, 'account_display', p.excludedAccounts) }, p.years),
     spec: withFteNotice({
-      groupBy: ['id', NAME_FIELD[p.scope]],
+      groupBy: lineKeys(p.scope),
       measures: [{ id: 'value', fn: 'sum', field: measureField(p.year, p.metric, p.measure) }],
       order: [{ by: 'measure', id: 'value', dir: 'DESC' }],
       limit: topLimit(p.topCount),
@@ -548,7 +596,7 @@ export function topItemsRequest(p: TopItemsParams): AggregateRequest {
   };
 }
 
-export type TopItemRow = { id: string; name: string; value: number; pct_of_total: number };
+export type TopItemRow = { id: string; itemNumber?: number; name: string; value: number; pct_of_total: number };
 
 /**
  * The top lines, their share of the total and the top's sum. FTE: the lines without a declared FTE
@@ -563,7 +611,7 @@ export function readTopItems(result: AggregateResult | undefined, measure: Repor
   const groups = (result?.groups ?? []).filter((group) => !fte || knownValueOf(group, 'value') != null);
   const processed = groups.map((group) => {
     const value = valueOf(group, 'value');
-    return { id: textKey(group, 0), name: textKey(group, 1), value, pct_of_total: totalMetric > 0 ? Math.round((value / totalMetric) * 100) : 0 };
+    return { id: textKey(group, 0), ...(group.keys[2] != null ? { itemNumber: Number(group.keys[2]) } : {}), name: textKey(group, 1), value, pct_of_total: totalMetric > 0 ? Math.round((value / totalMetric) * 100) : 0 };
   });
   const values = processed.map((row) => row.value);
   return { processed, totalMetric: fte ? known : totalMetric, topSelectionTotal: fte ? sumDeclared(values) : sumAmounts(values) };
@@ -593,7 +641,7 @@ export function deltaRequests(p: DeltaParams): AggregateRequest[] {
   return p.modes.map((mode) => ({
     query: { filters },
     spec: withFteNotice({
-      groupBy: ['id', NAME_FIELD[p.scope]],
+      groupBy: lineKeys(p.scope),
       measures: [
         { id: 'prev', fn: 'sum', field: src },
         { id: 'curr', fn: 'sum', field: dst },
@@ -610,6 +658,7 @@ export function deltaRequests(p: DeltaParams): AggregateRequest[] {
 
 export type DeltaRow = {
   id: string;
+  itemNumber?: number;
   name: string;
   current: number;
   previous: number;
@@ -636,6 +685,7 @@ export function readDelta(modes: readonly DeltaMode[], results: ReadonlyArray<Ag
       const delta = valueOf(group, 'delta');
       processed.push({
         id: textKey(group, 0),
+        ...(group.keys[2] != null ? { itemNumber: Number(group.keys[2]) } : {}),
         name: textKey(group, 1),
         current: read(group, 'curr'),
         previous,
@@ -819,9 +869,9 @@ const DETACHED_MEASURE = 'detached';
 const NO_DETAIL_MEASURE = 'nodetail';
 
 /** The group keys of a grouping: an id, then its name. */
-export function staffingGroupKeys(scope: BudgetScope, group: StaffingGroup): [string, string] {
+export function staffingGroupKeys(scope: BudgetScope, group: StaffingGroup): string[] {
   switch (group.kind) {
-    case 'item': return ['id', NAME_FIELD[scope]];
+    case 'item': return lineKeys(scope);
     case 'supplier': return ['supplier_id', 'supplier_name'];
     case 'axis': return [analyticsIdField(group.axisId), analyticsNameField(group.axisId)];
     default: return ['cost_center_id', 'cost_center_label'];
@@ -899,7 +949,7 @@ export function readStaffing(result: AggregateResult | undefined, labels: Staffi
     const months = staffingMonths(group);
     if (months.average == null) continue;
     const id = group.keys[0];
-    rows.push({ key: id ?? '', label: id == null ? labels.none : (group.keys[1] ?? '').trim() || labels.unnamed, name: id == null ? null : group.keys[1] ?? '', ...months });
+    rows.push({ key: group.keys[2] != null ? `BL-${group.keys[2]}` : id ?? '', label: id == null ? labels.none : (group.keys[1] ?? '').trim() || labels.unnamed, name: id == null ? null : group.keys[1] ?? '', ...months });
   }
   rows.sort((a, b) => (b.average ?? 0) - (a.average ?? 0) || compare(a.label, b.label));
   const detached = staffingNotice(result?.total, DETACHED_MEASURE);
@@ -1028,7 +1078,7 @@ function readPairs<Cell extends Record<string, number | null>>(
   columns.forEach((_, index) => {
     for (const group of results?.[index]?.groups ?? []) {
       const id = group.keys[0];
-      const key = id ?? '';
+      const key = group.keys[2] != null ? `BL-${group.keys[2]}` : id ?? '';
       const entry = groups.get(key) ?? {
         label: id == null ? labels.none : (group.keys[1] ?? '').trim() || labels.unnamed,
         name: id == null ? null : group.keys[1] ?? '',
@@ -1151,7 +1201,7 @@ export function readDailyRate(
   return { ...read, monthly };
 }
 
-// ----- sums per year and column (ComparisonReport, CapexBudgetTrendReport, BudgetColumnsCompareReport) -----
+// ----- sums per year and column (ComparisonReport, BudgetColumnsCompareReport) -----
 
 const columnMeasureId = (metric: MetricKey, year: number) => `${metric}_${year}`;
 
@@ -1281,7 +1331,10 @@ export function readCostCenterTotals(result: AggregateResult | undefined): Array
 
 // ----- budget operations pages -----
 
-/** Every line of the window from the earliest year, with amounts in the lines' own currency. */
+/**
+ * Every line of the window from the earliest year, with amounts in the lines' own currency, its own
+ * number (its BL-n link) and, on all lines, its nature.
+ */
 export function operationLinesRequest(
   scope: BudgetScope,
   years: readonly number[],
@@ -1289,14 +1342,33 @@ export function operationLinesRequest(
 ): AggregateRequest {
   return {
     query: yearsQuery(Array.from(new Set(years)).sort((a, b) => a - b)),
-    spec: { groupBy: ['id', NAME_FIELD[scope]], measures: amounts.map((a) => ({ id: a.id, fn: 'sum' as const, field: localAmountField(a.year, a.metric) })) },
+    spec: {
+      groupBy: [...lineKeys(scope), ...(scope === 'all' ? ['nature'] : [])],
+      measures: amounts.map((a) => ({ id: a.id, fn: 'sum' as const, field: localAmountField(a.year, a.metric) })),
+    },
   };
 }
 
-export function readOperationLines(result: AggregateResult | undefined): Array<{ id: string; name: string; values: Record<string, number> }> {
-  return (result?.groups ?? []).map((group) => ({
-    id: textKey(group, 0),
-    name: textKey(group, 1),
-    values: Object.fromEntries(Object.entries(group.values).map(([id, value]) => [id, value ?? 0])),
-  }));
+export type OperationLine = {
+  id: string;
+  name: string;
+  /** The line's own number (BL-n), null when the answer has none. */
+  itemNumber: number | null;
+  /** The line's nature: read on all lines, the scope's on the lines of one nature. */
+  nature: 'opex' | 'capex' | null;
+  values: Record<string, number>;
+};
+
+export function readOperationLines(result: AggregateResult | undefined, scope: BudgetScope = 'all'): OperationLine[] {
+  return (result?.groups ?? []).map((group) => {
+    const number = group.keys[2] != null && group.keys[2] !== '' ? Number(group.keys[2]) : null;
+    const nature = scope === 'all' ? group.keys[3] : scope;
+    return {
+      id: textKey(group, 0),
+      name: textKey(group, 1),
+      itemNumber: number != null && Number.isFinite(number) ? number : null,
+      nature: nature === 'opex' || nature === 'capex' ? nature : null,
+      values: Object.fromEntries(Object.entries(group.values).map(([id, value]) => [id, value ?? 0])),
+    };
+  });
 }

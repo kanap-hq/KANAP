@@ -27,14 +27,15 @@ export type KanapDialogProps = {
   onSave: () => void | Promise<void>;
   saveLabel?: string;
   saveVariant?: ButtonProps['variant'];
-  saveColor?: ButtonProps['color'];
   saveDisabled?: boolean;
   saveLoading?: boolean;
-  /** Extra styles for the main action button, merged after the defaults. */
-  saveSx?: SxProps<Theme>;
+  /** The main action takes the focus when the dialog opens (its answer is the safe one). */
+  saveAutoFocus?: boolean;
   /** Defaults to the localized "Cancel"; pass one only for a non-standard label. */
   cancelLabel?: string;
   showCancel?: boolean;
+  /** Escape does not close the dialog (while it means something inside it, such as cancelling a drag). */
+  disableEscapeKeyDown?: boolean;
   sx?: SxProps<Theme>;
 };
 
@@ -63,17 +64,18 @@ export default function KanapDialog({
   secondaryActions,
   onSave,
   saveLabel = 'Save',
-  saveVariant = 'contained',
-  saveColor = 'primary',
+  saveVariant = 'action-primary',
   saveDisabled = false,
   saveLoading = false,
-  saveSx,
+  saveAutoFocus = false,
   cancelLabel,
   showCancel = true,
+  disableEscapeKeyDown = false,
   sx,
 }: KanapDialogProps) {
   const { t } = useTranslation('common');
   const resolvedCancelLabel = cancelLabel ?? t('buttons.cancel');
+  const saveButtonRef = React.useRef<HTMLButtonElement>(null);
   const handleSubmit = React.useCallback((event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (saveDisabled || saveLoading) return;
@@ -84,9 +86,15 @@ export default function KanapDialog({
     <Dialog
       open={open}
       onClose={onClose}
+      disableEscapeKeyDown={disableEscapeKeyDown}
       fullWidth
       maxWidth={false}
-      TransitionProps={onExited ? { onExited } : undefined}
+      TransitionProps={onExited || saveAutoFocus ? {
+        ...(onExited ? { onExited } : {}),
+        // The modal's focus trap takes the focus back to the dialog itself
+        // when it opens, after the button's autoFocus: focus it once shown.
+        ...(saveAutoFocus ? { onEntered: () => saveButtonRef.current?.focus() } : {}),
+      } : undefined}
       BackdropProps={{
         sx: (theme: Theme) => ({
           bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.65)' : 'rgba(15, 17, 23, 0.45)',
@@ -182,15 +190,12 @@ export default function KanapDialog({
           ) : null}
           {secondaryActions}
           <Button
+            ref={saveButtonRef}
             type="submit"
+            autoFocus={saveAutoFocus}
             variant={saveVariant}
-            color={saveColor}
             disabled={saveDisabled || saveLoading}
             startIcon={saveLoading ? <CircularProgress color="inherit" size={14} /> : undefined}
-            sx={[
-              { boxShadow: 'none', '&:hover': { boxShadow: 'none' } },
-              ...(Array.isArray(saveSx) ? saveSx : saveSx ? [saveSx] : []),
-            ]}
           >
             {saveLabel}
           </Button>

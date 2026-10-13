@@ -85,11 +85,16 @@ OPEX list, then loops: think time 2 to 5 s, then one scenario drawn from this mi
 
 `--list capex` (both modes) replays the CAPEX list on `/capex-items` instead: no `/users` request on
 open (the CAPEX page asks for none), the text filter on `description`, the sort toggling between the
-amount sort and `priority:ASC` (an enum in its business order), and no workspace. Its mix: the six
+amount sort and the priority dimension's column, `analytics_<id>:ASC` in the order of its values (the
+id of the dimension coded `priority`, read from `/analytics-axes` at list open; a dimension since lot
+C1), and no workspace. Its mix: the six
 list actions above with their weights, then `open an item (ordered ids)` (16: `/summary/ids` of the
 list state) and `next (neighbours)` (10: `/summary/neighbors?id=CPX-n` of a line of the first 50).
-In `single` mode it times the CAPEX page (default sort, grid rows, `priority` sort, item number
-sort, quick search, paying company filter), totals, filter values, ids and neighbours.
+In `single` mode it times the CAPEX page (default sort, grid rows, priority dimension sort, item
+number sort, quick search, paying company filter), totals, filter values (paying company and the
+priority dimension, `fields=analytics_<id>`), ids and neighbours. A tenant without an enabled
+dimension coded `priority` fails the CAPEX list open and sort changes (`load`) or stops the run
+(`single`), with that reason.
 
 `--list reports` (both modes) replays the budget reports and the dashboard's budget tiles (lot 2D).
 A report open sends what the page sends: the settings-like reads (budget columns, dimensions, the

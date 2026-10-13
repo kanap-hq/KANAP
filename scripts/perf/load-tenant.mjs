@@ -168,9 +168,9 @@ async function budgetRequest(method, route, { bytes, filename, snapshot } = {}) 
   return { status: res.status, data: res.data };
 }
 
-/** Line name -> item_number, for the lines that already exist in the tenant. */
+/** Line name -> the line's reference (`BL-n`, what a budget file names it by), for the lines that already exist in the tenant. */
 const numbersByName = (index, scope) => new Map(
-  [...index[scope].values()].map((item) => [scope === 'opex' ? item.product_name : item.description, String(item.item_number)]),
+  [...index[scope].values()].map((item) => [scope === 'opex' ? item.product_name : item.description, String(item.reference)]),
 );
 
 const withRate = (result, csvText) => ({

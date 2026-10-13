@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { ApplicationItemLinksTenantKeys1853690000000 as Migration } from '../../migrations/1853690000000-application-item-links-tenant-keys';
+import { BudgetLinePredecessor1854000000000 } from '../../migrations/1854000000000-budget-line-predecessor';
 
 // Migration 1853690000000 (tenant keys on the application <-> OPEX / CAPEX
 // line links), against a real database, each test in a transaction that is
@@ -94,6 +95,15 @@ async function inRolledBackTransaction(fn: (runner: QueryRunner) => Promise<void
     await runner.rollbackTransaction();
     await runner.release();
   }
+}
+
+/**
+ * down(), after the down() of the later migration whose key needs this one's `(tenant_id, id)` key of
+ * spend_items (1854000000000, a line's predecessor): migrations are undone newest first.
+ */
+async function downFromHere(runner: QueryRunner): Promise<void> {
+  await captureLogs(() => new BudgetLinePredecessor1854000000000().down(runner));
+  await migration.down(runner);
 }
 
 /** Runs `fn` and returns every line logged meanwhile (the migration's summary and detail lines). */
@@ -211,7 +221,7 @@ async function readLinks(runner: QueryRunner, w: World, table: string, ids: stri
 
 /** The old schema (down()), nullable tenant_id and RLS off on the link tables, then a damaged set of links. */
 async function seedDirtyState(runner: QueryRunner, w: World) {
-  await migration.down(runner);
+  await downFromHere(runner);
   for (const table of LINK_TABLES) {
     await runner.query(`ALTER TABLE ${table} ALTER COLUMN tenant_id DROP NOT NULL`);
     await runner.query(`ALTER TABLE ${table} DISABLE ROW LEVEL SECURITY`);
@@ -363,14 +373,14 @@ async function testNewKeysRefuseBadLinks() {
 /** down() restores the single-column keys and drops only the unique keys up() created. */
 async function testDownRestoresOldKeys() {
   await inRolledBackTransaction(async (runner) => {
-    await migration.down(runner);
+    await downFromHere(runner);
     assert.deepEqual(await keys(runner), OLD_KEYS);
 
     // A (tenant_id, id) key that existed before the migration is reused by up() and survives down().
     await runner.query(`ALTER TABLE spend_items ADD CONSTRAINT spend_items_tenant_id_id_key UNIQUE (tenant_id, id)`);
     await captureLogs(() => migration.up(runner));
     assert.ok((await keys(runner)).includes('spend_items spend_items_tenant_id_id_key UNIQUE (tenant_id, id)'), 'not marked');
-    await migration.down(runner);
+    await downFromHere(runner);
     assert.deepEqual(await keys(runner), [...OLD_KEYS, 'spend_items spend_items_tenant_id_id_key UNIQUE (tenant_id, id)']);
     await assertRlsForced(runner);
   });
@@ -383,7 +393,7 @@ async function testDownRestoresOldKeys() {
 async function testOrphanLinksAreDeleted() {
   await inRolledBackTransaction(async (runner) => {
     const w = await seedWorld(runner);
-    await migration.down(runner);
+    await downFromHere(runner);
     await runner.query(`ALTER TABLE application_capex_items DROP CONSTRAINT fk_app_capex_item`);
     await runner.query(`ALTER TABLE application_spend_items DROP CONSTRAINT fk_app_spend_app`);
     for (const table of LINK_TABLES) await runner.query(`ALTER TABLE ${table} DISABLE ROW LEVEL SECURITY`);
@@ -422,7 +432,7 @@ async function testOrphanLinksAreDeleted() {
 async function testParentWithoutTenantStops() {
   await inRolledBackTransaction(async (runner) => {
     const w = await seedWorld(runner);
-    await migration.down(runner);
+    await downFromHere(runner);
     for (const table of LINK_TABLES) await runner.query(`ALTER TABLE ${table} DISABLE ROW LEVEL SECURITY`);
     const link = await insertLink(runner, 'application_capex_items', w.tenantA, w.appA1, w.capexA1, '2026-01-01T00:00:00Z');
     // The line's search-index trigger and RLS would refuse a row without tenant.

@@ -1,6 +1,6 @@
 # Planes de cuentas y gestión de cuentas
 
-Los Planes de cuentas (CoA) organizan su estructura contable agrupando cuentas en conjuntos nombrados. Cada empresa puede vincularse a un CoA, que determina qué cuentas están disponibles al registrar partidas OPEX o CAPEX.
+Los Planes de cuentas (CoA) organizan su estructura contable agrupando cuentas en conjuntos nombrados. Cada empresa puede vincularse a un CoA, que determina qué cuentas están disponibles al registrar líneas OPEX o CAPEX.
 
 ## ¿Por qué usar Planes de cuentas?
 
@@ -22,14 +22,14 @@ Plan de cuentas (FR-2024)
   -> asignado a
 Empresa (Acme Francia)
   -> utilizado al registrar
-Partidas OPEX/CAPEX -> Selección de cuenta (filtrada a cuentas de FR-2024 únicamente)
+Líneas OPEX/CAPEX -> Selección de cuenta (filtrada a cuentas de FR-2024 únicamente)
 ```
 
 **Puntos clave**:
   - Un CoA puede asignarse a múltiples empresas
   - Cada empresa tiene un CoA
   - Las cuentas pertenecen a un CoA
-  - Cuando crea/edita partidas de gasto, el desplegable de cuentas se filtra por el CoA de la empresa
+  - Cuando crea/edita líneas de gasto, el desplegable de cuentas se filtra por el CoA de la empresa
   - Cada cuenta indica si sirve para líneas OPEX, líneas CAPEX o ambas. Consulte [Cuentas OPEX o CAPEX](#cuentas-opex-o-capex)
 
 ## Dónde encontrarlo
@@ -281,7 +281,7 @@ Cada fila tiene un menú **⋯** que solo ofrece las acciones aplicables a ese p
 - **Hacer plan predeterminado del país** / **Dejar de ser plan predeterminado del país** (`accounts:manager`): para planes de un solo país.
 - **Hacer predeterminado para otros países** / **Dejar de ser predeterminado para otros países** (`accounts:manager`): para planes de todos los países. Al hacerlo predeterminado, también se asigna a las empresas que no tienen plan de cuentas.
 - **Hacer plan de consolidación** / **Dejar de ser plan de consolidación** (`accounts:manager`): para cualquier plan. Consulte [Cambiar el plan de consolidación](#cambiar-el-plan-de-consolidacion).
-- **Eliminar** (`accounts:admin`): Elimina el plan junto con sus cuentas. Si el plan tiene cuentas, una confirmación indica cuántas se eliminan. Si es el plan de consolidación, la confirmación advierte de que el reporting de grupo ya no tendrá un plan de referencia. La eliminación se rechaza mientras haya empresas que usen el plan o partidas OPEX/CAPEX que usen sus cuentas, y el cuadro muestra el motivo.
+- **Eliminar** (`accounts:admin`): Elimina el plan junto con sus cuentas. Si el plan tiene cuentas, una confirmación indica cuántas se eliminan. Si es el plan de consolidación, la confirmación advierte de que el reporting de grupo ya no tendrá un plan de referencia. La eliminación se rechaza mientras haya empresas que usen el plan o líneas OPEX/CAPEX que usen sus cuentas, y el cuadro muestra el motivo.
 
 Los roles cambian en cuanto elige una acción. La tabla se actualiza al instante.
 
@@ -404,13 +404,13 @@ Las **cuentas legado** son cuentas sin un `coa_id` (creadas antes de que se intr
   1. Cree o cargue Planes de cuentas para sus empresas
   2. Asigne CoA a las empresas (en la pestaña Visión general de la empresa)
   3. Asigne `coa_id` a sus cuentas legado (vía importación CSV con `coa_code` o edición masiva)
-  4. Actualice las partidas OPEX/CAPEX existentes que muestren advertencias de "cuenta obsoleta"
+  4. Actualice las líneas OPEX/CAPEX existentes que muestren advertencias de "cuenta obsoleta"
 
 **Consejo**: No tiene que migrar todo a la vez. Las empresas sin CoA continúan trabajando con cuentas legado, permitiendo una adopción gradual.
 
 ## Advertencias de cuenta obsoleta
 
-Al editar partidas OPEX o CAPEX, puede ver:
+Al editar líneas OPEX o CAPEX, puede ver:
 
 ```
 Cuenta obsoleta detectada. La cuenta seleccionada no pertenece al
@@ -418,16 +418,16 @@ Plan de cuentas de la empresa. Por favor actualice la cuenta.
 ```
 
 **Por qué sucede esto**:
-  - La cuenta de la partida pertenece al CoA "A"
-  - La empresa de la partida pertenece al CoA "B"
+  - La cuenta de la línea pertenece al CoA "A"
+  - La empresa de la línea pertenece al CoA "B"
   - Se detectó un desajuste
 
 **Escenarios comunes**:
-  - Migró una empresa a un nuevo CoA pero no ha actualizado las partidas de gasto antiguas
+  - Migró una empresa a un nuevo CoA pero no ha actualizado las líneas de gasto antiguas
   - Una cuenta fue reasignada manualmente a un CoA diferente
   - Está viendo datos históricos de antes de la migración de CoA
 
-**Cómo solucionarlo**: Edite la partida y seleccione una cuenta del Plan de cuentas actual de la empresa. La advertencia desaparecerá una vez que la cuenta coincida con el CoA de la empresa.
+**Cómo solucionarlo**: Edite la línea y seleccione una cuenta del Plan de cuentas actual de la empresa. La advertencia desaparecerá una vez que la cuenta coincida con el CoA de la empresa.
 
 ## Estado y ciclo de vida
 
@@ -452,7 +452,7 @@ Cuando un espacio de trabajo es eliminado por un administrador de la plataforma,
 
 La eliminación es inmediata e irreversible. El registro del espacio de trabajo permanece por auditabilidad, y su slug se borra para reutilización.
 
-**Consejo**: Prefiera deshabilitar en lugar de eliminar. La eliminación solo está permitida si ninguna partida OPEX/CAPEX referencia la cuenta.
+**Consejo**: Prefiera deshabilitar en lugar de eliminar. La eliminación solo está permitida si ninguna línea OPEX/CAPEX referencia la cuenta.
 
 ## Importación/exportación CSV
 
@@ -532,7 +532,7 @@ Tiene 50 cuentas y 5 empresas, todo configurado antes de que existieran los Plan
   3. Añada una columna `coa_code` (p. ej., `US-GAAP`) a todas las filas
   4. Importe el CSV actualizado (las cuentas ahora pertenecen al CoA)
   5. Asigne el CoA a sus empresas
-  6. Edite cualquier partida OPEX/CAPEX que muestre advertencias de "cuenta obsoleta"
+  6. Edite cualquier línea OPEX/CAPEX que muestre advertencias de "cuenta obsoleta"
 
 ### Escenario 3: Cambiar una empresa a un nuevo CoA
 
@@ -542,8 +542,8 @@ Su filial del Reino Unido cambia de UK GAAP a IFRS.
   1. Cree un nuevo CoA: `UK-IFRS` (o cargue desde plantilla)
   2. En la pestaña Visión general de la empresa, cambie Plan de cuentas a `UK-IFRS`
   3. En adelante, los usuarios solo pueden seleccionar cuentas de `UK-IFRS`
-  4. Las partidas OPEX/CAPEX existentes conservan sus cuentas antiguas pero muestran advertencias
-  5. Actualice las partidas según sea necesario (o deje los datos históricos como están si los informes lo permiten)
+  4. Las líneas OPEX/CAPEX existentes conservan sus cuentas antiguas pero muestran advertencias
+  5. Actualice las líneas según sea necesario (o deje los datos históricos como están si los informes lo permiten)
 
 ### Escenario 4: Configurar consolidación de grupo (multi-país)
 
@@ -576,10 +576,10 @@ Su grupo tiene filiales en Francia, Reino Unido y Alemania. Cada país usa su es
 R: No. Cada cuenta pertenece a exactamente un CoA (o a ninguno para cuentas legado). Si necesita la misma estructura de cuentas en múltiples CoA, cargue la plantilla en cada uno o use exportación/importación CSV con diferentes valores de `coa_code`.
 
 **P: ¿Qué pasa si elimino un Plan de cuentas?**
-R: La eliminación se bloquea si alguna empresa lo referencia o alguna partida OPEX/CAPEX usa sus cuentas. Reasigne empresas y actualice partidas primero, luego puede eliminar el CoA. Eliminar un CoA también elimina todas las cuentas dentro de él que no estén referenciadas en otra parte.
+R: La eliminación se bloquea si alguna empresa lo referencia o alguna línea OPEX/CAPEX usa sus cuentas. Reasigne empresas y actualice líneas primero, luego puede eliminar el CoA. Eliminar un CoA también elimina todas las cuentas dentro de él que no estén referenciadas en otra parte.
 
 **P: ¿Puedo cambiar números de cuenta?**
-R: Sí, en el espacio de trabajo de la cuenta. Cambiar el número de cuenta actualiza todas las referencias en partidas OPEX/CAPEX automáticamente (el UUID de la cuenta permanece igual internamente).
+R: Sí, en el espacio de trabajo de la cuenta. Cambiar el número de cuenta actualiza todas las referencias en líneas OPEX/CAPEX automáticamente (el UUID de la cuenta permanece igual internamente).
 
 **P: ¿Cómo veo qué empresas usan un CoA específico?**
 R: Abra **Gestionar planes** en la página de Planes de cuentas y consulte la columna **Empresas** de la fila del CoA. También puede filtrar la página de Empresas por CoA.
@@ -600,7 +600,7 @@ R: No, son opcionales. Si solo opera en un país o no necesita consolidación a 
 R: Sí, ese es precisamente el objetivo. Muchas cuentas locales de diferentes CoA pueden mapearse a la misma cuenta de consolidación. Así es como se agregan costes de diferentes países en una sola categoría consolidada.
 
 **P: ¿Qué pasa si cambio un mapeo de consolidación?**
-R: Las partidas OPEX/CAPEX existentes no almacenan datos de consolidación directamente -- referencian la cuenta, que tiene el mapeo de consolidación. Cuando cambia un mapeo, todas las partidas históricas y futuras que usen esa cuenta se reportarán bajo la nueva cuenta de consolidación. Actualice los mapeos con cuidado si necesita preservar categorías de informes históricos.
+R: Las líneas OPEX/CAPEX existentes no almacenan datos de consolidación directamente -- referencian la cuenta, que tiene el mapeo de consolidación. Cuando cambia un mapeo, todas las líneas históricas y futuras que usen esa cuenta se reportarán bajo la nueva cuenta de consolidación. Actualice los mapeos con cuidado si necesita preservar categorías de informes históricos.
 
 **P: ¿Tiene que ser el plan de consolidación el predeterminado para otros países?**
 R: No. Los dos roles son independientes. En la configuración habitual, un mismo plan IFRS tiene ambos, y puede dárselos a planes distintos en cualquier momento en **Gestionar planes**.

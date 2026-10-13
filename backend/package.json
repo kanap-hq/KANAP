@@ -31,7 +31,6 @@
     "glpi:import-preview-backfill": "ts-node ./scripts/glpi-import-preview-backfill.ts",
     "glpi:triage-discriminator-backfill": "ts-node ./scripts/glpi-triage-discriminator-backfill.ts",
     "glpi:triage-rename-readiness": "ts-node ./scripts/glpi-triage-rename-readiness.ts",
-    "preflight:end-date-merge": "ts-node ./scripts/preflight-end-date-merge.ts",
     "glpi:targeting-status-backfill": "ts-node ./scripts/glpi-targeting-status-backfill.ts",
     "test:ai:integration": "ts-node src/ai/__tests__/ai-phase0.integration.spec.ts && ts-node src/ai/__tests__/ai-phase1.integration.spec.ts && ts-node src/ai/__tests__/ai-write-capabilities.integration.spec.ts && ts-node src/knowledge/__tests__/knowledge-search.spec.ts && ts-node src/ai/__tests__/search-index-sync.spec.ts && ts-node src/ai/__tests__/ai-agent-delete.integration.spec.ts",
     "test:ai:capabilities": "ts-node src/ai/__tests__/ai-write-capabilities.integration.spec.ts",

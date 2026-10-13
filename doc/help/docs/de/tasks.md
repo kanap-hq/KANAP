@@ -31,7 +31,7 @@ Wenn Sie auf **Neu** klicken, öffnet sich der vollständige Aufgaben-Arbeitsber
 
 **Tipp**: Sie können Bilder direkt in die Beschreibung einfügen. Sie werden automatisch in den Speicher hochgeladen, wenn Sie die Aufgabe erstellen.
 
-**Hinweis**: Aufgaben können auch innerhalb anderer Arbeitsbereiche erstellt werden (OPEX-Positionen, Verträge, CAPEX-Positionen, Portfolio-Projekte), in denen die Beziehung vorab ausgewählt ist.
+**Hinweis**: Aufgaben können auch innerhalb anderer Arbeitsbereiche erstellt werden (OPEX-Zeilen, Verträge, CAPEX-Zeilen, Portfolio-Projekte), in denen die Beziehung vorab ausgewählt ist.
 
 **Pflichtfelder**:
   - **Titel**: Eine kurze Beschreibung dessen, was getan werden muss
@@ -364,7 +364,7 @@ Verwenden Sie im Projekt-Arbeitsbereich den Reiter **Aufgaben**, um Projektergeb
 
 **Tipp**: Klicken Sie im Reiter Zeitleiste auf die Schaltfläche **[+]** neben einer Phase, um eine Aufgabe zu erstellen, die mit dieser Phase vorab verknüpft ist.
 
-### Aus OPEX-Positionen
+### Aus OPEX-Zeilen
 Verwenden Sie im OPEX-Arbeitsbereich den Bereich **Aufgaben** im Tab **Übersicht**, um Aufgaben zu erstellen wie:
 - „Lieferantenpreise für 2026 überprüfen"
 - „Mengenrabatt verhandeln"
@@ -374,7 +374,7 @@ Verwenden Sie im Vertrags-Arbeitsbereich den Reiter **Aufgaben** für:
 - „Vertrag vor Verlängerungsdeadline überprüfen"
 - „Aktualisierte Bedingungen vom Lieferanten anfordern"
 
-### Aus CAPEX-Positionen
+### Aus CAPEX-Zeilen
 Im CAPEX-Arbeitsbereich verfolgen Aufgaben Projektmeilensteine:
 - „Anforderungserfassung abschließen"
 - „Budget-Genehmigung einholen"
@@ -385,7 +385,7 @@ Diese Aufgaben werden automatisch mit der übergeordneten Entität verknüpft un
 
 ## Eigenständige Aufgaben
 
-Eigenständige Aufgaben sind unabhängige Arbeitsobjekte, die nicht mit einem bestimmten Projekt, Vertrag oder Budgetposten verknüpft sind. Sie sind nützlich für:
+Eigenständige Aufgaben sind unabhängige Arbeitsobjekte, die nicht mit einem bestimmten Projekt, Vertrag oder Budgetzeilen verknüpft sind. Sie sind nützlich für:
 - Allgemeine IT-Betriebsarbeit
 - Ad-hoc-Anfragen
 - Übergreifende Initiativen

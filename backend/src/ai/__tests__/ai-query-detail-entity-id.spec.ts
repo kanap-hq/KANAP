@@ -122,6 +122,17 @@ async function testIncidentReferences() {
   assert.deepEqual(searches, ['printer on fire']);
 }
 
+async function testNativeBudgetReferences() {
+  const { executor } = createExecutor();
+  const map = executor as any;
+  const registry = { fields: {} };
+  const opex = map.mapSpendItem({ id: 'opex', item_number: 12, reference: 'BL-12', product_name: 'License' }, registry);
+  const capex = map.mapCapexItem({ id: 'capex', item_number: 3, reference: 'BL-103', description: 'Server' }, registry);
+  assert.equal(opex.ref, 'BL-12');
+  assert.equal(capex.ref, 'BL-103', 'CAPEX alias item_number is its CPX number, reference is native');
+  assert.equal(map.mapSpendItem({ id: 'opex', item_number: 12 }, registry).ref, 'BL-12');
+}
+
 async function run() {
   await testUnmatchedTextThrowsNotFoundBeforeTheService();
   await testAmbiguousTextThrowsNotFound();
@@ -129,6 +140,7 @@ async function run() {
   await testUuidsPassThroughWithoutSearch();
   await testDocumentsKeepTheRawReference();
   await testIncidentReferences();
+  await testNativeBudgetReferences();
   console.log('ai-query-detail-entity-id spec passed');
 }
 

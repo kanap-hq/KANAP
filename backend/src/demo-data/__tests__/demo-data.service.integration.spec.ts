@@ -9,6 +9,8 @@ import { PassThrough } from 'node:stream';
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
 import dataSource from '../../data-source';
+import { ensureCapexDimensions } from '../../analytics/capex-dimensions.seed';
+import { ensureRecommendedDimensions } from '../../analytics/recommended-dimensions.seed';
 import { accessTokenVerifyKey } from '../../auth/jwt-key';
 import { waitForBackgroundWork } from '../../common/background-work';
 import { TENANT_SCOPED_TABLES } from '../../common/tenant-isolation.inventory';
@@ -550,9 +552,13 @@ async function testRefusals() {
         `DELETE FROM accounts WHERE tenant_id = $1 AND account_number = 987654`],
       [['working_day_profiles'], `INSERT INTO working_day_profiles (tenant_id, code, name, days_by_year) VALUES ($1, 'SITE', 'Site calendar', '{}'::jsonb)`,
         `DELETE FROM working_day_profiles WHERE tenant_id = $1 AND code = 'SITE'`],
+      // A dimension value of the administrator's own (the seeded values of the CAPEX dimensions do not count).
       [['analytics_categories'], `INSERT INTO analytics_categories (tenant_id, axis_id, name)
                                   SELECT $1, id, 'Own value' FROM analytics_axes WHERE tenant_id = $1 AND is_default`,
-        `DELETE FROM analytics_categories WHERE tenant_id = $1`],
+        `DELETE FROM analytics_categories WHERE tenant_id = $1 AND name = 'Own value'`],
+      [['analytics_categories'], `INSERT INTO analytics_categories (tenant_id, axis_id, name)
+                                  SELECT $1, id, 'Critical' FROM analytics_axes WHERE tenant_id = $1 AND code = 'priority'`,
+        `DELETE FROM analytics_categories WHERE tenant_id = $1 AND name = 'Critical'`],
       [['portfolio_sources'], `INSERT INTO portfolio_sources (tenant_id, name) VALUES ($1, 'Own source')`,
         `DELETE FROM portfolio_sources WHERE tenant_id = $1`],
       [['portfolio_categories', 'portfolio_streams'], `WITH c AS (INSERT INTO portfolio_categories (tenant_id, name) VALUES ($1, 'Own category') RETURNING id)
@@ -565,6 +571,28 @@ async function testRefusals() {
                                   VALUES ($1, 'triage', 'Triage', 'helpdesk', 'draft', 'production', 'A0', 'human')`,
         `DELETE FROM ai_agent_definitions WHERE tenant_id = $1`],
     ];
+    // Every workspace starts with the 30 values of the four recommended dimensions (lot D): they leave it loadable.
+    const [seeded] = await inTenant(t.tenantId, (m) => m.query(`SELECT count(*)::int AS n FROM analytics_categories WHERE tenant_id = $1`, [t.tenantId]));
+    assert.equal(seeded.n, 30, 'the values of the recommended dimensions');
+    assert.deepEqual(await inTenant(t.tenantId, (m) => findTenantContent(m, t.tenantId)), [], 'the seeded values: still loadable');
+    // An older workspace also holds the 13 values of the three CAPEX dimensions (lot C1), and an
+    // administrator may have added the optional pack in French: still loadable.
+    await inTenant(t.tenantId, async (m) => {
+      await ensureCapexDimensions(m, t.tenantId);
+      await ensureRecommendedDimensions(m, t.tenantId, 'fr', ['recurrence']);
+    });
+    assert.deepEqual(await inTenant(t.tenantId, (m) => findTenantContent(m, t.tenantId)), [], 'the CAPEX values and the pack: still loadable');
+    await inTenant(t.tenantId, async (m) => {
+      await m.query(
+        `DELETE FROM analytics_categories c USING analytics_axes a
+          WHERE c.tenant_id = $1 AND a.id = c.axis_id AND a.code IN ('ppe_type', 'investment_type', 'recurrence')`,
+        [t.tenantId],
+      );
+      await m.query(`DELETE FROM analytics_axes WHERE tenant_id = $1 AND code IN ('ppe_type', 'investment_type', 'recurrence')`, [t.tenantId]);
+    });
+    // The recommended priority has the CAPEX priority's English values already: nothing was added to it.
+    const [after] = await inTenant(t.tenantId, (m) => m.query(`SELECT count(*)::int AS n FROM analytics_categories WHERE tenant_id = $1`, [t.tenantId]));
+    assert.equal(after.n, 30, 'back to the recommended values');
     for (const [tables, insert, remove] of cases) {
       await inTenant(t.tenantId, (m) => m.query(insert, [t.tenantId]));
       const error = await refusal(() => h.service.load(params));

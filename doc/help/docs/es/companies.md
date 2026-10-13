@@ -1,6 +1,6 @@
 # Empresas
 
-Las Empresas son la base de sus datos maestros. Representan las entidades legales a las que asigna el gasto IT y para las que reporta contracargos. Cada asignación, partida de coste y muchos informes hacen referencia a una empresa, por lo que mantener estos datos actualizados es importante.
+Las Empresas son la base de sus datos maestros. Representan las entidades legales a las que asigna el gasto IT y para las que reporta contracargos. Cada asignación, línea de coste y muchos informes hacen referencia a una empresa, por lo que mantener estos datos actualizados es importante.
 
 Cuando se crea su espacio de trabajo, comienza con una empresa nombrada según su organización. Su país es el que seleccionó durante el registro de prueba, y se asignará automáticamente al plan de cuentas predeterminado para ese país cuando esté disponible. Puede renombrarla o añadir más.
 
@@ -129,7 +129,7 @@ La pestaña Detalles gestiona las **métricas anuales**. Use las pestañas de a�
 
 ## Plan de cuentas
 
-Cada empresa puede vincularse a un **Plan de cuentas** (CoA), que define el conjunto de cuentas disponibles al registrar partidas OPEX o CAPEX para esa empresa.
+Cada empresa puede vincularse a un **Plan de cuentas** (CoA), que define el conjunto de cuentas disponibles al registrar líneas OPEX o CAPEX para esa empresa.
 
 **Cómo funciona**:
 
@@ -137,17 +137,17 @@ Cada empresa puede vincularse a un **Plan de cuentas** (CoA), que define el conj
 - Puede cambiar la asignación de CoA en el panel **Propiedades** usando el selector de **Plan de cuentas**. El selector muestra los CoA que coinciden con el país de la empresa más cualquier CoA de alcance global.
 - Cuando cambia el país de la empresa, el CoA lo sigue si el actual pertenece a otro país: pasa al predeterminado del nuevo país. Un CoA global se mantiene.
 - En una empresa existente, el CoA no se puede vaciar. Solo puede sustituirlo por otro.
-- El CoA que seleccione determina qué cuentas aparecen en el desplegable de cuentas al crear o editar partidas de gasto para esta empresa.
+- El CoA que seleccione determina qué cuentas aparecen en el desplegable de cuentas al crear o editar líneas de gasto para esta empresa.
 
 **Qué significa para su flujo de trabajo**:
 
 - **Empresas con un CoA**: al registrar OPEX/CAPEX, solo puede seleccionar cuentas que pertenezcan al plan de cuentas de esa empresa. Esto garantiza la consistencia contable.
 - **Empresas sin CoA** (legado): pueden usar cuentas que no pertenecen a ningún plan de cuentas. Esto soporta la migración gradual al sistema CoA.
-- **Cambio de CoA**: si cambia una empresa a un CoA diferente, las partidas de gasto existentes conservan sus cuentas actuales (con una advertencia si no coinciden con el nuevo CoA), pero los nuevos elementos usarán cuentas del nuevo CoA.
+- **Cambio de CoA**: si cambia una empresa a un CoA diferente, las líneas de gasto existentes conservan sus cuentas actuales (con una advertencia si no coinciden con el nuevo CoA), pero los nuevos elementos usarán cuentas del nuevo CoA.
 
 **Configurar planes de cuentas**: vaya a **Datos maestros > Planes de cuentas** para ver, crear o gestionar sus conjuntos de CoA. Puede crear CoA desde cero o cargarlos desde plantillas de la plataforma (conjuntos de cuentas estándar por país). Cada país puede tener un CoA predeterminado (**Plan predeterminado del país ({country})**), que se propone al crear una empresa en ese país. Las empresas de un país sin predeterminado usan el plan **Predeterminado para otros países**. Consulte [Roles de los planes](chart-of-accounts.md#roles-de-los-planes).
 
-**Consejo**: si ve una advertencia de "cuenta obsoleta" al editar partidas OPEX/CAPEX, significa que la cuenta no pertenece al plan de cuentas actual de la empresa. Actualice la cuenta a una del CoA correcto para resolver esto.
+**Consejo**: si ve una advertencia de "cuenta obsoleta" al editar líneas OPEX/CAPEX, significa que la cuenta no pertenece al plan de cuentas actual de la empresa. Actualice la cuenta a una del CoA correcto para resolver esto.
 
 ## Estado y ciclo de vida
 
@@ -218,7 +218,7 @@ Las columnas, en este orden. Las columnas de métricas siguen el año selecciona
 ## Consejos
 
 - **Desactive en lugar de eliminar**: mantenga el historial consistente y los informes significativos.
-- **Plan de cuentas**: asigne CoA a las empresas para garantizar un uso consistente de cuentas en las partidas OPEX/CAPEX.
+- **Plan de cuentas**: asigne CoA a las empresas para garantizar un uso consistente de cuentas en las líneas OPEX/CAPEX.
 - **Facturación**: introduzca valores en millones de la moneda base de la empresa (p. ej., 2,5 = 2,5 millones en esa moneda).
 - **Plantilla** es el factor de asignación más común; manténgalo actualizado para el año en curso.
 - **Métricas congeladas**: aún puede revisarlas, pero las ediciones están bloqueadas hasta que un administrador de presupuesto descongele el año en **Gestión presupuestaria > Administración > Congelar datos maestros**.

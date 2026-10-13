@@ -19,12 +19,16 @@ import {
   ftePresenceRequest,
   keepValues,
   localAmountField,
+  mergeAxisValueOptions,
+  operationLinesRequest,
+  readOperationLines,
   METRIC_SUFFIX,
   NO_ANALYTICS_VALUE,
   NO_CONSOLIDATION_LINE,
   NO_LINE,
   readAccountIdOptions,
   readAnalytics,
+  readAxisValues,
   readColumnsCompare,
   readConsolidation,
   readConsolidationAccounts,
@@ -39,6 +43,8 @@ import {
   readTopItems,
   readTrend,
   reportFilterModels,
+  sortByValueOrder,
+  valueOrderRank,
   staffCostField,
   staffFteField,
   staffingChartSeries,
@@ -87,7 +93,8 @@ describe('top items', () => {
     });
     expect(request).toEqual({
       query: { filters: { run_build: keepValues(['run']), id: dropValues(['i1']), account_display: dropValues(['6100 - Software ']) } },
-      spec: { groupBy: ['id', 'description'], measures: [{ id: 'value', fn: 'sum', field: 'y2026Budget' }], order: [{ by: 'measure', id: 'value', dir: 'DESC' }], limit: 3 },
+      // A CAPEX line's own number is `line_number` on the CAPEX routes (their `item_number` is the CPX number).
+      spec: { groupBy: ['id', 'description', 'line_number'], measures: [{ id: 'value', fn: 'sum', field: 'y2026Budget' }], order: [{ by: 'measure', id: 'value', dir: 'DESC' }], limit: 3 },
     });
     expect(topLimit(0)).toBe(1);
     expect(topLimit(1e9)).toBe(10_000);
@@ -247,6 +254,47 @@ describe('pickers', () => {
       row([null, null, null], {}),
     ], row([], {})), 'Unnamed', compare);
     expect(options).toEqual([{ id: 'a2', label: '[200]' }, { id: 'a1', label: '[6100] Software' }]);
+  });
+});
+
+describe('dimension value order', () => {
+  // The dimension's order: Mandatory, High, Medium, Low.
+  const ORDER = [{ id: 'v-mand' }, { id: 'v-high' }, { id: 'v-med' }, { id: 'v-low' }];
+  const held = result([
+    row(['v-low', 'Low'], {}),
+    row(['v-high', 'High'], {}),
+    row(['v-gone', 'Archived'], {}),
+    row(['v-mand', 'Mandatory'], {}),
+    row([null, null], {}),
+  ], row([], {}));
+
+  it('reads the values the lines hold in the dimension order, the ones it does not rank last by name', () => {
+    expect(readAxisValues(held, 'Unnamed', compare, valueOrderRank(ORDER)).map((o) => o.label)).toEqual(['Mandatory', 'High', 'Low', 'Archived']);
+    // Without the order (not read yet, or unreadable): by name.
+    expect(readAxisValues(held, 'Unnamed', compare).map((o) => o.label)).toEqual(['Archived', 'High', 'Low', 'Mandatory']);
+    expect(readAxisValues(held, 'Unnamed', compare, null).map((o) => o.label)).toEqual(['Archived', 'High', 'Low', 'Mandatory']);
+  });
+
+  it('sorts unranked options by label after the ranked ones', () => {
+    const options = [{ id: 'x', label: 'Zeta' }, { id: 'v-low', label: 'Low' }, { id: 'y', label: 'Alpha' }, { id: 'v-mand', label: 'Mandatory' }];
+    expect(sortByValueOrder(options, valueOrderRank(ORDER), compare).map((o) => o.id)).toEqual(['v-mand', 'v-low', 'y', 'x']);
+  });
+
+  it('lists the exclusion options in the catalogue order, then the values only the lines hold, by name', () => {
+    // The catalogue comes in the dimension's order (`sort=sort_order:ASC`); Archived is a disabled value a line holds.
+    const catalogue = [
+      { id: 'v-mand', name: 'Mandatory' },
+      { id: 'v-high', name: 'High' },
+      { id: 'v-med', name: 'Medium' },
+      { id: 'v-low', name: 'Low' },
+    ];
+    expect(mergeAxisValueOptions(catalogue, held, 'Unnamed', compare)).toEqual([
+      { id: 'v-mand', label: 'Mandatory' },
+      { id: 'v-high', label: 'High' },
+      { id: 'v-med', label: 'Medium' },
+      { id: 'v-low', label: 'Low' },
+      { id: 'v-gone', label: 'Archived' },
+    ]);
   });
 });
 
@@ -421,8 +469,8 @@ describe('staffing by month', () => {
     ]);
     // Every group comes back: the reader drops the ones without monthly FTE.
     expect(request.spec.having).toBeUndefined();
-    expect(staffingRequest({ ...base, scope: 'opex', group: { kind: 'item' } }).spec.groupBy).toEqual(['id', 'product_name']);
-    expect(staffingRequest({ ...base, scope: 'capex', group: { kind: 'item' } }).spec.groupBy).toEqual(['id', 'description']);
+    expect(staffingRequest({ ...base, scope: 'opex', group: { kind: 'item' } }).spec.groupBy).toEqual(['id', 'product_name', 'line_number']);
+    expect(staffingRequest({ ...base, scope: 'capex', group: { kind: 'item' } }).spec.groupBy).toEqual(['id', 'description', 'line_number']);
     expect(staffingRequest({ ...base, scope: 'opex', group: { kind: 'supplier' } }).spec.groupBy).toEqual(['supplier_id', 'supplier_name']);
     expect(staffingRequest({ ...base, scope: 'opex', group: { kind: 'axis', axisId: 'ax-1' } }).spec.groupBy).toEqual(['analytics_id_ax-1', 'analytics_ax-1']);
   });
@@ -521,7 +569,7 @@ describe('cost per FTE', () => {
       },
     ]);
     // Same group keys as the staffing report; never more than the grouped-measure cap.
-    expect(costPerFteRequests({ scope: 'capex', columns, group: { kind: 'item' }, filters })[0].spec.groupBy).toEqual(['id', 'description']);
+    expect(costPerFteRequests({ scope: 'capex', columns, group: { kind: 'item' }, filters })[0].spec.groupBy).toEqual(['id', 'description', 'line_number']);
     expect(costPerFteRequests({ scope: 'opex', columns, group: { kind: 'axis', axisId: 'ax-1' }, filters })[0].spec.groupBy).toEqual(['analytics_id_ax-1', 'analytics_ax-1']);
     expect(requests[0].spec.measures.length).toBeLessThanOrEqual(8);
     expect(costPerFteRequests({ scope: 'opex', columns: [], group: { kind: 'item' }, filters })).toEqual([]);
@@ -625,7 +673,7 @@ describe('daily rate', () => {
       },
     ]);
     // Same group keys as the cost per FTE; never more than the grouped-measure cap.
-    expect(dailyRateRequests({ scope: 'capex', columns, group: { kind: 'item' }, filters })[0].spec.groupBy).toEqual(['id', 'description']);
+    expect(dailyRateRequests({ scope: 'capex', columns, group: { kind: 'item' }, filters })[0].spec.groupBy).toEqual(['id', 'description', 'line_number']);
     expect(requests[0].spec.measures.length).toBeLessThanOrEqual(8);
     expect(dailyRateRequests({ scope: 'opex', columns: [], group: { kind: 'item' }, filters })).toEqual([]);
   });
@@ -688,5 +736,45 @@ describe('daily rate', () => {
     expect(readDailyRate(columns.slice(0, 2), [answer(6000.49, 6000), answer(6000.3, 6000.1)], labels, compare).monthly).toEqual([]);
     expect(readDailyRate(columns.slice(0, 2), [answer(6000.49, 6000), answer(6000.6, 6000.1)], labels, compare).monthly)
       .toEqual([{ year: 2026, metric: 'revision', amount: 0.5 }]);
+  });
+});
+
+describe('All native report requests', () => {
+  const scope = 'all' as const;
+  it('uses native titles and numbers for Top, Variation and both FTE reports', () => {
+    const top = topItemsRequest({ scope, year: 2026, metric: 'budget', topCount: 5, excludedIds: [], excludedAccounts: [], filters: {} });
+    const delta = deltaRequests({ scope, source: { year: 2025, metric: 'budget' }, destination: { year: 2026, metric: 'budget' }, modes: ['increase'], topCount: 5, excludedIds: [], excludedAccounts: [], filters: {} });
+    const staff = staffingRequest({ scope, year: 2026, metric: 'budget', group: { kind: 'item' }, filters: {} });
+    const cost = costPerFteRequests({ scope, columns: [{ year: 2026, metric: 'budget' }], group: { kind: 'item' }, filters: {} });
+    for (const request of [top, delta[0], staff, cost[0]]) {
+      expect(request.spec.groupBy).toEqual(['id', 'product_name', 'item_number']);
+      expect(request.query.filters).not.toHaveProperty('nature');
+    }
+    expect(readTopItems(result([row(['c1', 'Capex title', '119'], { value: 100 })], row([], { value: 100 }))).processed[0])
+      .toMatchObject({ id: 'c1', name: 'Capex title', itemNumber: 119 });
+    expect(readDelta(['increase'], [result([row(['c1', 'Capex title', '119'], { prev: 50, curr: 100, delta: 50 })], row([], { delta: 50 }))]).processed[0])
+      .toMatchObject({ id: 'c1', name: 'Capex title', itemNumber: 119 });
+  });
+});
+
+describe('budget operations lines', () => {
+  it('groups each line on its own number, and its nature on all lines', () => {
+    const amounts = [{ id: 'current', year: 2026, metric: 'budget' as const }];
+    expect(operationLinesRequest('all', [2027, 2026], amounts).spec.groupBy).toEqual(['id', 'product_name', 'item_number', 'nature']);
+    expect(operationLinesRequest('opex', [2026], amounts).spec.groupBy).toEqual(['id', 'product_name', 'line_number']);
+    // The CAPEX routes' `item_number` is the CPX number: the BL number is `line_number`.
+    expect(operationLinesRequest('capex', [2026], amounts).spec.groupBy).toEqual(['id', 'description', 'line_number']);
+    expect(operationLinesRequest('all', [2027, 2026], amounts).query).toEqual({ years: '2026,2027' });
+  });
+
+  it('reads the number and the nature of each line', () => {
+    const answer = result([row(['a', 'Licences', '12', 'opex'], { current: 10 }), row(['b', 'Servers', null, 'capex'], {})], row([], {}, 2));
+    expect(readOperationLines(answer, 'all')).toEqual([
+      { id: 'a', name: 'Licences', itemNumber: 12, nature: 'opex', values: { current: 10 } },
+      { id: 'b', name: 'Servers', itemNumber: null, nature: 'capex', values: {} },
+    ]);
+    expect(readOperationLines(result([row(['c', 'Racks', '500003'], { current: 0 })], row([], {}, 1)), 'capex')).toEqual([
+      { id: 'c', name: 'Racks', itemNumber: 500003, nature: 'capex', values: { current: 0 } },
+    ]);
   });
 });

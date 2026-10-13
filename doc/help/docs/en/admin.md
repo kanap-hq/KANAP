@@ -301,12 +301,13 @@ Resources are organized into groups for easier management:
 **Budget & Finance**
 | Resource | What it controls |
 |----------|------------------|
-| `opex` | Operating Expenses |
-| `capex` | Capital Expenses |
+| `budget` | Budget lines, OPEX and CAPEX |
 | `budget_ops` | Budget Administration tools, including the currency settings |
 | `contracts` | Vendor contracts |
 | `analytics` | Analytics dimensions |
 | `reporting` | Reports access |
+
+The Budget resource covers OPEX and CAPEX lines alike. A role that once had separate OPEX and CAPEX levels keeps the higher of the two on Budget.
 
 **Portfolio Management**
 | Resource | What it controls |
@@ -610,7 +611,7 @@ Control which email notifications you receive.
 | **Tasks** | Assignment (as assignee, requestor, or viewer), status changes, comments |
 | **Budget** | Expiration warnings, status changes, comments |
 
-**Expiration warnings** email the owners of a contract, an OPEX item or a CAPEX item 30, 14, 7 and 1 day(s) before its dates: a contract's cancellation deadline and end date, an OPEX or CAPEX item's end of validity. Only owners who switched on Budget notifications and **Expiration warnings** receive them. The check runs every day at 08:00 UTC. Each reminder is sent once per day to each recipient, even if the check runs again that day, for example after a restart.
+**Expiration warnings** email the owners of a contract, an OPEX line or a CAPEX line 30, 14, 7 and 1 day(s) before its dates: a contract's cancellation deadline and end date, an OPEX or CAPEX line's end of validity. Only owners who switched on Budget notifications and **Expiration warnings** receive them. The check runs every day at 08:00 UTC. Each reminder is sent once per day to each recipient, even if the check runs again that day, for example after a restart.
 
 **Weekly Review Email**: Receive a periodic summary of your activity and upcoming items. Configure:
 - **Day of the week** (e.g., Monday)

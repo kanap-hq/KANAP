@@ -94,7 +94,7 @@ Muestra hasta 5 elementos.
 
 ### Vistos recientemente
 
-Muestra elementos que ha abierto recientemente en toda la aplicación — proyectos, solicitudes, aplicaciones, activos, interfaces, conexiones, contratos, tareas, partidas OPEX y CAPEX, y documentos de la Base de conocimiento. Cada entrada muestra el nombre del elemento, su tipo y cuándo lo vio por última vez.
+Muestra elementos que ha abierto recientemente en toda la aplicación: proyectos, solicitudes, aplicaciones, activos, interfaces, conexiones, contratos, tareas, líneas OPEX y CAPEX, y documentos de la Base de conocimiento. Cada entrada muestra el nombre del elemento, su tipo y cuándo lo vio por última vez.
 
 Los elementos vistos recientemente se almacenan localmente en su navegador y están limitados al espacio de trabajo y usuario actual. Haga clic en **Limpiar** para restablecer la lista. Los elementos a los que ya no tiene permiso de acceso se filtran automáticamente.
 

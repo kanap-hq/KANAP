@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -79,9 +79,39 @@ describe('AnalyticsCategorySelect', () => {
     act(() => { input.focus(); });
     fireEvent.mouseDown(input);
     const options = await screen.findAllByRole('option');
-    expect(options.map((o) => o.textContent)).toEqual(['Hardware' + 'Servers and laptops', 'Licenses']);
+    // The visible line of each option: the name only.
+    expect(options.map((o) => o.firstChild?.textContent)).toEqual(['Hardware', 'Licenses']);
     fireEvent.click(screen.getByText('Licenses'));
     expect(onChange).toHaveBeenCalledWith('v-lic');
+  });
+
+  it("lists one line per value, the description in a delayed tooltip and in the option's accessible description", async () => {
+    renderSelect();
+    const input = await screen.findByRole('combobox');
+    act(() => { input.focus(); });
+    fireEvent.mouseDown(input);
+    const hardware = await screen.findByRole('option', { name: 'Hardware' });
+    expect(screen.getByText('Servers and laptops')).not.toBeVisible();
+    expect(hardware).toHaveAccessibleDescription('Servers and laptops');
+    expect(hardware).not.toHaveAttribute('title');
+    expect(screen.getByRole('option', { name: 'Licenses' })).not.toHaveAttribute('aria-describedby');
+
+    fireEvent.mouseOver(hardware);
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    expect(await screen.findByRole('tooltip', {}, { timeout: 2000 })).toHaveTextContent('Servers and laptops');
+  });
+
+  it('marks a disabled value on the same line as its name', async () => {
+    apiGet.mockImplementation(async () => ({
+      data: { items: [{ id: 'v-old', axis_id: 'ax-nature', name: 'Old licenses', description: null, status: 'disabled' }], has_more: false },
+    }));
+    renderSelect();
+    const input = await screen.findByRole('combobox');
+    act(() => { input.focus(); });
+    fireEvent.mouseDown(input);
+    const option = await screen.findByRole('option');
+    expect(option).toHaveTextContent('Old licensescommon:statuses.disabled');
+    expect(option.querySelectorAll('div')).toHaveLength(0);
   });
 
   it('keeps a disabled current value shown, read by id', async () => {
@@ -125,6 +155,25 @@ describe('AnalyticsCategorySelect', () => {
     unmount();
     renderSelect({ axisId: 'ax-default' });
     expect(await screen.findByLabelText('master-data:analytics.analyticsCategoryFallback')).toBeInTheDocument();
+  });
+
+  it('can be made not clearable: no clear button, and neither Escape nor an emptied text removes the value', async () => {
+    const held = { value: 'v-lic', selectedOption: { id: 'v-lic', name: 'Licenses' } };
+    const first = renderSelect({ ...held });
+    let input = screen.getByRole('combobox');
+    expect(screen.getByTitle('Clear')).toBeInTheDocument();
+    act(() => { input.focus(); });
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(first.onChange).toHaveBeenCalledWith(null);
+    cleanup();
+
+    const second = renderSelect({ ...held, disableClearable: true });
+    input = screen.getByRole('combobox');
+    expect(screen.queryByTitle('Clear')).toBeNull();
+    act(() => { input.focus(); });
+    fireEvent.keyDown(input, { key: 'Escape' });
+    fireEvent.change(input, { target: { value: '' } });
+    expect(second.onChange).not.toHaveBeenCalled();
   });
 
   it('uses the label it is given, also as the name of a field whose label is hidden', async () => {

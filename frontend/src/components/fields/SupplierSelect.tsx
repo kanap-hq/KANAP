@@ -4,6 +4,8 @@ import { Autocomplete, Box, TextField, CircularProgress } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import { useLookupPicker } from '../../hooks/useLookupPicker';
 import { FieldLabel } from '../design';
+import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
+import OptionWithHint from './OptionWithHint';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
 
 export type SupplierOption = {
@@ -75,23 +77,27 @@ const SupplierSelect = React.forwardRef<HTMLInputElement, SupplierSelectProps>(f
         onChange(newValue?.id || null);
       }}
       getOptionLabel={(option) => picker.label(option, (o) => o.name ?? '')}
-      renderOption={(props, option) => (
-        <li {...props} key={option.id}>
-          <div>
-            <div className="kanap-autocomplete-option-primary">
-              {option.name}
-            </div>
-            {option.erp_supplier_id && (
-              <div className="kanap-autocomplete-option-secondary">
-                ERP ID: {option.erp_supplier_id}
-              </div>
-            )}
-            {option.status && option.status.toLowerCase() === 'disabled' && (
-              <div className="kanap-autocomplete-option-secondary">(disabled)</div>
-            )}
-          </div>
-        </li>
-      )}
+      renderOption={(props, option) => {
+        const disabledSupplier = option.status?.toLowerCase() === 'disabled';
+        return (
+          <OptionWithHint
+            key={option.id}
+            optionProps={props}
+            label={option.name}
+            trailing={option.erp_supplier_id || disabledSupplier ? (
+              <>
+                {option.erp_supplier_id ? (
+                  <Box component="span" sx={{ fontFamily: MONO_FONT_FAMILY, fontVariantNumeric: 'tabular-nums' }}>
+                    {option.erp_supplier_id}
+                  </Box>
+                ) : null}
+                {option.erp_supplier_id && disabledSupplier ? ' · ' : null}
+                {disabledSupplier ? t('common:statuses.disabled') : null}
+              </>
+            ) : null}
+          />
+        );
+      }}
       ListboxProps={naked ? { sx: drawerAutocompleteListboxSx } : undefined}
       renderInput={(params) => (
         <TextField

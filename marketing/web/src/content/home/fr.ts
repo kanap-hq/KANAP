@@ -9,8 +9,8 @@ const content: HomeContent = {
 
   hero: {
     eyebrow: 'Open source · conçue par un DSI, pour les DSI',
-    title: 'Le budget, le SI et les projets de la DSI, dans un seul référentiel.',
-    lead: "Le budget IT sort d'Excel et se relie à ce qui le justifie : applications, contrats, projets. Cartographie, portefeuille et documentation partagent les mêmes données, et Plaid, l'agent IA intégré, répond sur l'ensemble. Open source, gratuit en auto-hébergement.",
+    title: 'Budget IT, applications et projets dans un référentiel unique.',
+    lead: "Une application porte son budget, sa documentation, ses projets et ses données de conformité. Interrogez Plaid, l'agent IA intégré, sur l'ensemble. Logiciel libre, gratuit en auto-hébergement.",
     primaryCta: "Essayer avec des données d'exemple",
     secondaryCta: 'Déployer gratuitement',
     trialNote: 'Essai de la version hébergée · données d’exemple chargées en une minute · AGPL v3, code source complet sur GitHub.',
@@ -18,9 +18,9 @@ const content: HomeContent = {
 
   layers: {
     eyebrow: 'Le budget IT',
-    title: "Le budget de la DSI, sorti d'Excel.",
+    title: 'Votre budget IT, sans tableur.',
     intro:
-      "OPEX et CAPEX sur plusieurs années, dans des colonnes que vous nommez : budget, révision, atterrissage. Chaque version se copie, se compare et se gèle. Fini les onglets recopiés et les formules cassées.",
+      "OPEX et CAPEX sur plusieurs années, dans des colonnes que vous nommez : budget, révision, atterrissage. Vous copiez une version vers l'année suivante, vous la comparez à la précédente, vous la gelez une fois validée.",
     items: [
       {
         title: 'Atterrissage et budget N+1',
@@ -35,7 +35,7 @@ const content: HomeContent = {
         body: "Déclarez les ETP sur les lignes concernées : KANAP en tire les effectifs par mois et le coût par ETP, en montant comme en taux journalier, à côté des montants.",
       },
     ],
-    outro: "Et parce que chaque ligne est reliée au reste du référentiel, le budget n'est plus une liste de montants : c'est la carte de ce que la DSI fait tourner.",
+    outro: 'Chaque ligne est rattachée à son application, son contrat ou son projet : depuis le budget, on retrouve ce que la DSI fait tourner, et ce que chaque chose coûte.',
   },
 
   pillars: {
@@ -148,7 +148,7 @@ const content: HomeContent = {
     eyebrow: "Pensé pour l'entreprise",
     title: 'Un seul système, sous votre contrôle.',
     intro:
-      "Les modules partagent les mêmes données : c'est ce qui donne à la DSI une vraie gouvernance, et ce qui permet à l'IA d'aider sans mettre votre environnement en danger.",
+      "Les modules partagent les mêmes données, les mêmes droits et le même journal d'audit : une modification préparée par Plaid y est tracée comme les autres.",
     items: [
       {
         title: 'Relations riches',

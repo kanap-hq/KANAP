@@ -1,6 +1,6 @@
 # Unternehmen
 
-Unternehmen bilden das Fundament Ihrer Stammdaten. Sie repräsentieren die juristischen Einheiten, denen Sie IT-Ausgaben zuordnen und für die Sie Leistungsverrechnungen erstellen. Jede Zuordnung, jede Kostenposition und viele Berichte referenzieren ein Unternehmen, daher ist es wichtig, diese Daten korrekt zu halten.
+Unternehmen bilden das Fundament Ihrer Stammdaten. Sie repräsentieren die juristischen Einheiten, denen Sie IT-Ausgaben zuordnen und für die Sie Leistungsverrechnungen erstellen. Jede Zuordnung, jede Budgetzeile und viele Berichte referenzieren ein Unternehmen, daher ist es wichtig, diese Daten korrekt zu halten.
 
 Wenn Ihr Arbeitsbereich erstellt wird, beginnt er mit einem Unternehmen, das nach Ihrer Organisation benannt ist. Sein Land ist dasjenige, das Sie bei der Testanmeldung ausgewählt haben, und es wird automatisch dem Standard-Kontenplan für dieses Land zugewiesen, sobald einer verfügbar ist. Sie können es umbenennen oder weitere hinzufügen.
 
@@ -129,7 +129,7 @@ Der Details-Tab verwaltet die **Jahreskennzahlen**. Wechseln Sie mit den Jahres-
 
 ## Kontenplan
 
-Jedes Unternehmen kann mit einem **Kontenplan** (CoA) verknüpft werden, der den Satz von Konten definiert, die beim Erfassen von OPEX- oder CAPEX-Positionen für dieses Unternehmen verfügbar sind.
+Jedes Unternehmen kann mit einem **Kontenplan** (CoA) verknüpft werden, der den Satz von Konten definiert, die beim Erfassen von OPEX- oder CAPEX-Zeilen für dieses Unternehmen verfügbar sind.
 
 **Funktionsweise**:
 
@@ -137,17 +137,17 @@ Jedes Unternehmen kann mit einem **Kontenplan** (CoA) verknüpft werden, der den
 - Sie können die Kontenplan-Zuordnung im Bereich **Eigenschaften** über den **Kontenplan**-Selektor ändern. Der Selektor zeigt Kontenpläne, die zum Land des Unternehmens passen, plus alle global gültigen Kontenpläne.
 - Wenn Sie das Land des Unternehmens ändern, folgt der Kontenplan, sofern der aktuelle zu einem anderen Land gehört: Er wechselt zum Standard des neuen Landes. Ein globaler Kontenplan bleibt bestehen.
 - Bei einem bestehenden Unternehmen kann der Kontenplan nicht geleert werden. Sie können ihn nur durch einen anderen ersetzen.
-- Der von Ihnen ausgewählte Kontenplan bestimmt, welche Konten im Konto-Dropdown beim Erstellen oder Bearbeiten von Ausgabenpositionen für dieses Unternehmen erscheinen.
+- Der von Ihnen ausgewählte Kontenplan bestimmt, welche Konten im Konto-Dropdown beim Erstellen oder Bearbeiten von Ausgabenzeilen für dieses Unternehmen erscheinen.
 
 **Was dies für Ihren Workflow bedeutet**:
 
 - **Unternehmen mit Kontenplan**: Beim Erfassen von OPEX/CAPEX können Sie nur Konten auswählen, die zum Kontenplan dieses Unternehmens gehören. Dies gewährleistet buchhalterische Konsistenz.
 - **Unternehmen ohne Kontenplan** (Legacy): Können Konten verwenden, die keinem Kontenplan zugehören. Dies unterstützt die schrittweise Migration zum Kontenplan-System.
-- **Kontenplan wechseln**: Wenn Sie ein Unternehmen einem anderen Kontenplan zuweisen, behalten bestehende Ausgabenpositionen ihre aktuellen Konten (mit einer Warnung, falls sie nicht zum neuen Kontenplan passen), aber neue Positionen verwenden Konten aus dem neuen Kontenplan.
+- **Kontenplan wechseln**: Wenn Sie ein Unternehmen einem anderen Kontenplan zuweisen, behalten bestehende Ausgabenzeilen ihre aktuellen Konten (mit einer Warnung, falls sie nicht zum neuen Kontenplan passen), aber neue Budgetzeilen verwenden Konten aus dem neuen Kontenplan.
 
 **Kontenpläne einrichten**: Gehen Sie zu **Stammdaten > Kontenpläne**, um Ihre Kontenplan-Sets anzuzeigen, zu erstellen oder zu verwalten. Sie können Kontenpläne von Grund auf erstellen oder aus Plattform-Vorlagen laden (länderspezifische Standard-Kontensets). Jedes Land kann einen Standard-Kontenplan haben (**Länderstandard ({country})**), der vorgeschlagen wird, wenn Sie ein Unternehmen in diesem Land anlegen. Unternehmen in einem Land ohne Standard verwenden den Kontenplan **Standard für andere Länder**. Siehe [Rollen der Kontenpläne](chart-of-accounts.md#rollen-der-kontenplane).
 
-**Tipp**: Wenn Sie beim Bearbeiten von OPEX/CAPEX-Positionen eine Warnung „Veraltetes Konto" sehen, bedeutet dies, dass das Konto nicht zum aktuellen Kontenplan des Unternehmens gehört. Aktualisieren Sie das Konto auf eines aus dem richtigen Kontenplan, um dies zu beheben.
+**Tipp**: Wenn Sie beim Bearbeiten von OPEX/CAPEX-Zeilen eine Warnung „Veraltetes Konto" sehen, bedeutet dies, dass das Konto nicht zum aktuellen Kontenplan des Unternehmens gehört. Aktualisieren Sie das Konto auf eines aus dem richtigen Kontenplan, um dies zu beheben.
 
 ## Status und Lebenszyklus
 
@@ -218,7 +218,7 @@ Die Spalten in dieser Reihenfolge. Die Kennzahlenspalten folgen dem in der Symbo
 ## Tipps
 
 - **Deaktivieren statt löschen**: Bewahren Sie konsistente Historie und aussagekräftige Berichte.
-- **Kontenplan**: Weisen Sie Unternehmen Kontenpläne zu, um eine konsistente Kontenverwendung bei OPEX/CAPEX-Positionen sicherzustellen.
+- **Kontenplan**: Weisen Sie Unternehmen Kontenpläne zu, um eine konsistente Kontenverwendung bei OPEX/CAPEX-Zeilen sicherzustellen.
 - **Umsatz**: Geben Sie Werte in Millionen der Basiswährung des Unternehmens ein (z. B. 2,5 = 2,5 Millionen in dieser Währung).
 - **Mitarbeiterzahl** ist der häufigste Zuordnungstreiber; halten Sie ihn für das aktuelle Jahr aktuell.
 - **Eingefrorene Kennzahlen**: Sie können sie weiterhin einsehen, aber Bearbeitungen sind gesperrt, bis ein Budgetadministrator das Jahr unter **Budgetverwaltung > Administration > Stammdaten einfrieren** freigibt.

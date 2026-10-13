@@ -27,11 +27,10 @@
   "sidebar": {
     "ops": {
       "overview": "Übersicht",
-      "opex": "OPEX",
-      "capex": "CAPEX",
       "contracts": "Verträge",
       "reporting": "Berichte",
-      "administration": "Administration"
+      "administration": "Administration",
+      "budgetLines": "Budgetzeilen"
     },
     "masterData": {
       "home": "Stammdaten-Startseite",
@@ -154,6 +153,7 @@
     "operations": "Administration",
     "aiModels": "KI-Modelle",
     "aiUsage": "Nutzung & Kosten",
-    "netbox": "Netbox"
+    "netbox": "Netbox",
+    "budget": "Budgetzeilen"
   }
 }

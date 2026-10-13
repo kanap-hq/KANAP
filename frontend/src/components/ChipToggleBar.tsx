@@ -16,6 +16,9 @@ export type ChipToggleItem = {
   highlighted?: boolean;
 };
 
+/** A toggle's height on one line (16px text, 4px padding, 1px border, top and bottom). */
+const TOGGLE_HEIGHT = 26;
+
 type Props = {
   items: ChipToggleItem[];
   selectedId?: string | null;
@@ -27,7 +30,11 @@ type Props = {
   sx?: SxProps<Theme>;
 };
 
-/** A grey band of square toggles (the selected one filled), scrolling sideways, with actions on the right. */
+/**
+ * A grey band of square toggles (the selected one filled), each showing its full name, wrapping onto
+ * as many rows as needed, with the actions on the right of the first row (on their own row when the
+ * band is too narrow for both).
+ */
 export default function ChipToggleBar({ items, selectedId, onSelect, ariaLabel, actions, sx }: Props) {
   return (
     <Paper
@@ -41,18 +48,18 @@ export default function ChipToggleBar({ items, selectedId, onSelect, ariaLabel, 
         ...(Array.isArray(sx) ? sx : [sx]),
       ]}
     >
-      <Stack direction="row" spacing={1} alignItems="center" sx={{ width: '100%' }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', columnGap: 1, rowGap: 0.5, width: '100%' }}>
         <Box
           role="group"
           aria-label={ariaLabel}
           sx={{
             display: 'flex',
+            flexWrap: 'wrap',
             gap: 1,
-            overflowX: 'auto',
-            overflowY: 'hidden',
             py: 0.5,
-            flex: 1,
-            minWidth: 0,
+            // Takes what the actions leave; below about two toggles wide, the actions move to a row of their own.
+            flex: '1 1 0%',
+            minWidth: 'min(100%, 240px)',
           }}
         >
           {items.map((item) => {
@@ -72,6 +79,8 @@ export default function ChipToggleBar({ items, selectedId, onSelect, ariaLabel, 
                 sx={{
                   display: 'inline-flex',
                   alignItems: 'center',
+                  // On a very narrow band, a mark after the name (CAPEX only) goes under it, not into it.
+                  flexWrap: 'wrap',
                   px: 1.5,
                   py: 0.5,
                   borderRadius: 1,
@@ -80,13 +89,16 @@ export default function ChipToggleBar({ items, selectedId, onSelect, ariaLabel, 
                   borderColor: isSelected || item.highlighted ? 'primary.main' : 'divider',
                   bgcolor: isSelected ? 'primary.main' : item.highlighted ? 'action.hover' : 'transparent',
                   color: isSelected ? 'primary.contrastText' : 'text.primary',
+                  minHeight: TOGGLE_HEIGHT,
                   fontSize: '0.8125rem',
+                  lineHeight: '16px',
                   fontWeight: 500,
                   cursor: 'pointer',
-                  maxWidth: 260,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
+                  // The full name, always: a name wider than the band wraps inside its toggle.
+                  flexShrink: 0,
+                  maxWidth: '100%',
+                  textAlign: 'left',
+                  overflowWrap: 'break-word',
                   fontFamily: 'inherit',
                   '&:hover': { borderColor: 'primary.main' },
                 }}
@@ -99,11 +111,24 @@ export default function ChipToggleBar({ items, selectedId, onSelect, ariaLabel, 
         </Box>
 
         {actions && (
-          <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
+          <Box
+            data-testid="chip-toggle-bar-actions"
+            sx={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              gap: 1,
+              // As tall as the first row of toggles (toggle and the group's padding), so the actions centre on it.
+              minHeight: TOGGLE_HEIGHT + 8,
+              ml: 'auto',
+              flexShrink: 0,
+              maxWidth: '100%',
+            }}
+          >
             {actions}
-          </Stack>
+          </Box>
         )}
-      </Stack>
+      </Box>
     </Paper>
   );
 }

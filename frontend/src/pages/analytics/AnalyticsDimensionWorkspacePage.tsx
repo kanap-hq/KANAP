@@ -1,12 +1,12 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Stack, Switch, TextField, Typography } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
-import { PropertyGroup, PropertyRow } from '../../components/design';
+import { KanapDialog, PropertyGroup, PropertyRow } from '../../components/design';
 import StatusLifecycleField from '../../components/fields/StatusLifecycleField';
 import { ANALYTICS_AXES_QUERY_KEY, useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import { useAnalyticsDimensionNav } from '../../hooks/useAnalyticsNav';
@@ -14,6 +14,7 @@ import {
   createAnalyticsAxis,
   deleteAnalyticsAxis,
   getAnalyticsAxis,
+  isAnalyticsActive,
   updateAnalyticsAxis,
   type AnalyticsAxisDetail,
   type AnalyticsAxisPatch,
@@ -27,15 +28,21 @@ import {
   ANALYTICS_LIST_PATH,
   DIMENSION_CODE_PATTERN,
   analyticsRefusalField,
-  dimensionDeleteBlock,
-  dimensionUsageLine,
+  deleteConfirmation,
   proposeDimensionCode,
+  requiredMissingLine,
+  requiredUnusableLine,
+  usedLineCount,
   type AnalyticsField,
 } from './analyticsFields';
+import AnalyticsLinesUsage from './AnalyticsLinesUsage';
 import AnalyticsDescriptionField from './AnalyticsDescriptionField';
 import { useFieldDraft } from '../../hooks/useFieldDraft';
 import LineTypeUsageSelect, { LineTypeUsageConflictNote } from '../../components/fields/LineTypeUsageSelect';
 import { lineTypeUsageConflict, parseLineTypeUsage, type LineType } from '../../constants/lineTypeUsage';
+import { axisListColumn, oneOffListLink } from '../reports/reportListLink';
+import { dropValues, keepValues } from '../reports/reportAggregates';
+import ListLinkAnchor from '../reports/ListLinkAnchor';
 
 type FieldErrors = Partial<Record<AnalyticsField, string>>;
 /** `title` is the click-to-edit name in the header: its refusals show above the workspace. */
@@ -61,11 +68,14 @@ export default function AnalyticsDimensionWorkspacePage() {
     queryKey: detailKey,
     queryFn: () => getAnalyticsAxis(id),
     enabled: !isCreate && !!id,
+    // The admin fills the lines without a value in the list tab: coming back shows the new count.
+    refetchOnWindowFocus: true,
   });
 
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [pageError, setPageError] = React.useState<string | null>(null);
   const [deleting, setDeleting] = React.useState(false);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
   // Autosave never blocks the fields: writes queue one after the other, so a response never
   // overwrites a newer one, and results for a record the user has left are dropped.
   const chainRef = React.useRef<Promise<unknown>>(Promise.resolve());
@@ -98,7 +108,11 @@ export default function AnalyticsDimensionWorkspacePage() {
       const run = async (): Promise<boolean> => {
         try {
           const saved = await updateAnalyticsAxis(recordId, body);
-          queryClient.setQueryData([...ANALYTICS_AXIS_DETAIL_KEY, recordId], saved);
+          // The response is the full detail, the lines without a value included.
+          queryClient.setQueryData<AnalyticsAxisDetail>(
+            [...ANALYTICS_AXIS_DETAIL_KEY, recordId],
+            (prev) => (prev ? { ...prev, ...saved } : saved),
+          );
           void queryClient.invalidateQueries({ queryKey: ANALYTICS_AXES_QUERY_KEY, exact: true });
           return true;
         } catch (e) {
@@ -120,20 +134,28 @@ export default function AnalyticsDimensionWorkspacePage() {
     [canEdit, data?.id, queryClient, t],
   );
 
-  const handleDelete = async () => {
+  /** `force`: the values go too, and the lines lose their value on it (the confirmation said so). */
+  const handleDelete = async (force: boolean) => {
     if (!data || !canDelete) return;
     const recordId = data.id;
     setDeleting(true);
     setPageError(null);
     try {
-      await deleteAnalyticsAxis(recordId);
+      await (force ? deleteAnalyticsAxis(recordId, { force: true }) : deleteAnalyticsAxis(recordId));
+      setConfirmOpen(false);
       queryClient.removeQueries({ queryKey: [...ANALYTICS_AXIS_DETAIL_KEY, recordId] });
       void queryClient.invalidateQueries({ queryKey: ANALYTICS_AXES_QUERY_KEY, exact: true });
+      // The values and the lines' values on it are gone too.
+      void queryClient.invalidateQueries({ queryKey: ['analytics-categories'] });
+      void queryClient.invalidateQueries({ queryKey: ['analytics-ids'] });
       // The user may have moved to another dimension meanwhile: the result is not theirs to see.
       if (currentIdRef.current === recordId) navigate(ANALYTICS_LIST_PATH);
     } catch (e) {
+      setConfirmOpen(false);
       if (currentIdRef.current === recordId) {
         setPageError(getApiErrorMessage(e, t, t('analytics.messages.dimensionDeleteFailed')));
+        // Its counts may be stale (a value added elsewhere): the next Delete asks with the new ones.
+        void queryClient.invalidateQueries({ queryKey: [...ANALYTICS_AXIS_DETAIL_KEY, recordId] });
       }
     } finally {
       setDeleting(false);
@@ -146,9 +168,14 @@ export default function AnalyticsDimensionWorkspacePage() {
 
   const isDefault = !!data?.is_default;
   const disabled = !canEdit;
-  const usage = data ? dimensionUsageLine(t, data.value_count ?? 0, data.opex_count ?? 0, data.capex_count ?? 0) : null;
-  // The server refuses this delete anyway; the page already knows, so it says why up front.
-  const deleteBlock = data ? dimensionDeleteBlock(t, data.value_count ?? 0) : null;
+  const valueCount = data?.value_count ?? 0;
+  // Without values it goes at once; with values the dialog says what goes with it (from the detail's counts).
+  const confirmation = data ? deleteConfirmation(t, {
+    kind: 'dimension',
+    name: axes.label(data),
+    valueCount,
+    lineCount: usedLineCount(data.opex_count, data.capex_count),
+  }) : null;
 
   // The default dimension is never deleted: no button, its reason sits under the lifecycle.
   const actions = canDelete && data && !isDefault ? (
@@ -156,8 +183,8 @@ export default function AnalyticsDimensionWorkspacePage() {
       variant="action-danger"
       startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}
       size="small"
-      onClick={() => void handleDelete()}
-      disabled={deleting || !!deleteBlock}
+      onClick={() => (confirmation ? setConfirmOpen(true) : void handleDelete(false))}
+      disabled={deleting}
     >
       {t('common:buttons.delete')}
     </Button>
@@ -204,8 +231,8 @@ export default function AnalyticsDimensionWorkspacePage() {
             errors={errors}
             onNameCommit={(name) => void patch({ name }, 'name')}
             onCodeCommit={(code) => void patch({ code }, 'code')}
-            onOrderCommit={(sortOrder) => void patch({ sort_order: sortOrder }, 'sort_order')}
             onAppliesToChange={(appliesTo) => void patch({ applies_to: appliesTo }, 'applies_to')}
+            onRequiredChange={(required) => void patch({ required }, 'required')}
             onDisabledAtChange={(disabledAt) => {
               if (disabledAt === data.disabled_at) return;
               void patch({ status: deriveStatusFromDisabledAt(disabledAt), disabled_at: disabledAt }, 'disabled_at');
@@ -218,13 +245,22 @@ export default function AnalyticsDimensionWorkspacePage() {
           <Stack spacing={2.5} sx={{ maxWidth: 900 }}>
             <Box>
               <Typography data-testid="analytics-dimension-usage" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
-                {usage}
+                {valueCount > 0 ? (
+                  <>
+                    {t('analytics.usage.values', { count: valueCount })}
+                    {' · '}
+                    {/*
+                      Every line with a value on this dimension: the list's column, blank left out. The list has
+                      no column for a disabled dimension and would drop the filter: plain text then.
+                    */}
+                    <AnalyticsLinesUsage
+                      kind="dimension"
+                      lineCount={usedLineCount(data.opex_count, data.capex_count)}
+                      filters={isAnalyticsActive(data) ? { [axisListColumn(data)]: dropValues([null]) } : null}
+                    />
+                  </>
+                ) : t('analytics.usage.noValues')}
               </Typography>
-              {canDelete && !isDefault && deleteBlock && (
-                <Typography data-testid="analytics-dimension-delete-block" sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>
-                  {deleteBlock}
-                </Typography>
-              )}
             </Box>
             <AnalyticsDescriptionField
               key={data.id}
@@ -237,6 +273,21 @@ export default function AnalyticsDimensionWorkspacePage() {
           </Stack>
         )}
       </PortfolioDetailWorkspaceShell>
+      {confirmation && (
+        <KanapDialog
+          open={confirmOpen}
+          title={confirmation.title}
+          onClose={() => { if (!deleting) setConfirmOpen(false); }}
+          onSave={() => handleDelete(true)}
+          saveLabel={confirmation.confirmLabel}
+          saveVariant="action-danger"
+          saveLoading={deleting}
+        >
+          <Typography data-testid="analytics-delete-confirmation" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+            {confirmation.body}
+          </Typography>
+        </KanapDialog>
+      )}
     </Box>
   );
 }
@@ -248,8 +299,8 @@ function DimensionProperties({
   errors,
   onNameCommit,
   onCodeCommit,
-  onOrderCommit,
   onAppliesToChange,
+  onRequiredChange,
   onDisabledAtChange,
   onFieldError,
 }: {
@@ -259,8 +310,8 @@ function DimensionProperties({
   errors: FieldErrors;
   onNameCommit: (name: string | null) => void;
   onCodeCommit: (code: string) => void;
-  onOrderCommit: (sortOrder: number) => void;
   onAppliesToChange: (appliesTo: LineType | null) => void;
+  onRequiredChange: (required: boolean) => void;
   onDisabledAtChange: (disabledAt: string | null) => void;
   /** Shows (or clears, with undefined) a refusal found before any request. */
   onFieldError: (field: AnalyticsField, message: string | undefined) => void;
@@ -269,10 +320,8 @@ function DimensionProperties({
   // A refused value stays in its field so it can be corrected; a stored change replaces it.
   const nameDraft = useFieldDraft(axis.name ?? '');
   const codeDraft = useFieldDraft(axis.code);
-  const orderDraft = useFieldDraft(String(axis.sort_order ?? 0));
   const name = nameDraft.draft;
   const code = codeDraft.draft;
-  const order = orderDraft.draft;
 
   const commitName = () => {
     nameDraft.onBlur();
@@ -301,22 +350,6 @@ function DimensionProperties({
       return;
     }
     onCodeCommit(trimmed);
-  };
-
-  const commitOrder = () => {
-    orderDraft.onBlur();
-    onFieldError('sort_order', undefined);
-    const trimmed = order.trim();
-    if (!trimmed) {
-      orderDraft.setDraft(String(axis.sort_order ?? 0));
-      return;
-    }
-    const parsed = Number(trimmed);
-    if (!Number.isInteger(parsed)) {
-      onFieldError('sort_order', t('analytics.messages.orderInvalid'));
-      return;
-    }
-    if (parsed !== axis.sort_order) onOrderCommit(parsed);
   };
 
   const blurOnEnter = (event: React.KeyboardEvent) => {
@@ -370,21 +403,6 @@ function DimensionProperties({
             inputProps={{ 'aria-label': t('analytics.fields.code'), autoComplete: 'off', spellCheck: false }}
           />
         </PropertyRow>
-        <PropertyRow label={t('analytics.fields.order')} helperText={t('analytics.hints.order')}>
-          <TextField
-            value={order}
-            onChange={(event) => orderDraft.setDraft(event.target.value)}
-            onFocus={orderDraft.onFocus}
-            onBlur={commitOrder}
-            onKeyDown={blurOnEnter}
-            variant="standard"
-            sx={drawerFieldValueSx}
-            disabled={disabled}
-            error={!!errors.sort_order}
-            helperText={errors.sort_order}
-            inputProps={{ 'aria-label': t('analytics.fields.order'), inputMode: 'numeric', autoComplete: 'off' }}
-          />
-        </PropertyRow>
         <PropertyRow
           label={t('shared.lineTypeUsage.label')}
           helperText={axis.is_default ? t('analytics.hints.appliesToDefault') : undefined}
@@ -404,6 +422,17 @@ function DimensionProperties({
               {t(`analytics.appliesToConflict.${appliesToConflict.scope}`, { count: appliesToConflict.count })}
             </LineTypeUsageConflictNote>
           )}
+        </PropertyRow>
+        <PropertyRow label={t('analytics.fields.required')}>
+          <RequiredSwitch
+            checked={!!axis.required}
+            disabled={disabled}
+            error={errors.required}
+            onChange={(next) => {
+              if (next !== !!axis.required) onRequiredChange(next);
+            }}
+          />
+          {axis.required && <RequiredNotes axis={axis} />}
         </PropertyRow>
       </PropertyGroup>
 
@@ -433,16 +462,89 @@ function DimensionProperties({
   );
 }
 
+function RequiredSwitch({
+  checked,
+  disabled,
+  error,
+  onChange,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  error?: string;
+  onChange: (next: boolean) => void;
+}) {
+  const { t } = useTranslation(['master-data']);
+  return (
+    <Box>
+      <Switch
+        size="small"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+        inputProps={{ 'aria-label': t('analytics.fields.required') }}
+      />
+      {error && (
+        <Typography role="alert" sx={{ mt: '3px', fontSize: 12, lineHeight: 1.35, color: 'error.main' }}>{error}</Typography>
+      )}
+    </Box>
+  );
+}
+
+/**
+ * Under a required dimension's switch. Disabled: one hint, nothing is checked. Enabled: the lines
+ * that have no value yet (they stay editable), each type with a link opening them in its list in a
+ * new tab (every status, a one-off view), and a warning when a type it applies to has no enabled
+ * value to choose, so no new line of that type can be created.
+ */
+function RequiredNotes({ axis }: { axis: AnalyticsAxisDetail }) {
+  const { t } = useTranslation(['master-data']);
+  if (!isAnalyticsActive(axis)) {
+    return (
+      <Typography data-testid="analytics-dimension-required-disabled" sx={{ mt: '6px', fontSize: 12, lineHeight: 1.35, color: 'kanap.text.tertiary' }}>
+        {t('analytics.required.disabledHint')}
+      </Typography>
+    );
+  }
+  const opexMissing = axis.opex_missing ?? 0;
+  const capexMissing = axis.capex_missing ?? 0;
+  const missing = requiredMissingLine(t, opexMissing, capexMissing);
+  const unusable = requiredUnusableLine(t, axis.unusable_for);
+  const scopes = ([['opex', opexMissing], ['capex', capexMissing]] as const)
+    .filter(([, count]) => count > 0)
+    .map(([scope]) => scope);
+  const column = axisListColumn(axis);
+  return (
+    <>
+      {missing && (
+        <LineTypeUsageConflictNote testId="analytics-dimension-required-missing">
+          {missing}{' '}
+          {scopes.map((scope, index) => (
+            <React.Fragment key={scope}>
+              {index > 0 && ' · '}
+              <ListLinkAnchor link={oneOffListLink(scope, { [column]: keepValues([null]) })}>
+                {scopes.length > 1 ? t(`analytics.required.showLines.${scope}`) : t('analytics.showLines')}
+              </ListLinkAnchor>
+            </React.Fragment>
+          ))}
+        </LineTypeUsageConflictNote>
+      )}
+      {unusable && (
+        <LineTypeUsageConflictNote testId="analytics-dimension-required-unusable">{unusable}</LineTypeUsageConflictNote>
+      )}
+    </>
+  );
+}
+
 type CreateForm = {
   name: string;
   code: string;
   description: string;
-  order: string;
   /** Null: OPEX and CAPEX lines. */
   appliesTo: LineType | null;
+  required: boolean;
 };
 
-const EMPTY_FORM: CreateForm = { name: '', code: '', description: '', order: '', appliesTo: null };
+const EMPTY_FORM: CreateForm = { name: '', code: '', description: '', appliesTo: null, required: false };
 
 function DimensionCreate({
   canCreate,
@@ -455,21 +557,13 @@ function DimensionCreate({
 }) {
   const { t } = useTranslation(['master-data', 'common']);
   const queryClient = useQueryClient();
-  const axes = useAnalyticsAxes();
   const [form, setForm] = React.useState<CreateForm>(EMPTY_FORM);
   // The code follows the name until the user types one.
   const [codeTouched, setCodeTouched] = React.useState(false);
-  const [orderTouched, setOrderTouched] = React.useState(false);
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
 
-  // A new dimension goes last unless the user picks another place.
-  const proposedOrder = React.useMemo(
-    () => (axes.axes.length > 0 ? Math.max(...axes.axes.map((axis) => axis.sort_order ?? 0)) + 1 : 0),
-    [axes.axes],
-  );
-  const order = orderTouched ? form.order : (axes.ready ? String(proposedOrder) : '');
   const code = codeTouched ? form.code : proposeDimensionCode(form.name);
 
   const update = (next: Partial<CreateForm>) => setForm((prev) => ({ ...prev, ...next }));
@@ -478,12 +572,10 @@ function DimensionCreate({
     if (!canCreate || submitting) return;
     const name = form.name.trim();
     const trimmedCode = code.trim();
-    const trimmedOrder = order.trim();
     const nextErrors: FieldErrors = {};
     if (!name) nextErrors.name = t('analytics.messages.nameRequired');
     if (!trimmedCode) nextErrors.code = t('analytics.messages.codeRequired');
     else if (!DIMENSION_CODE_PATTERN.test(trimmedCode)) nextErrors.code = t('analytics.messages.codeInvalid');
-    if (trimmedOrder && !Number.isInteger(Number(trimmedOrder))) nextErrors.sort_order = t('analytics.messages.orderInvalid');
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
     setSubmitting(true);
@@ -493,15 +585,15 @@ function DimensionCreate({
         code: trimmedCode,
         name,
         description: form.description.trim() || null,
-        ...(trimmedOrder ? { sort_order: Number(trimmedOrder) } : {}),
         applies_to: form.appliesTo,
+        required: form.required,
       });
       void queryClient.invalidateQueries({ queryKey: ANALYTICS_AXES_QUERY_KEY, exact: true });
       onCreated(saved.id);
     } catch (e) {
       const message = getApiErrorMessage(e, t, t('analytics.messages.dimensionCreateFailed'));
       const field = analyticsRefusalField(e);
-      if (field === 'name' || field === 'code' || field === 'description' || field === 'sort_order' || field === 'applies_to') {
+      if (field === 'name' || field === 'code' || field === 'description' || field === 'applies_to' || field === 'required') {
         setErrors({ [field]: message });
       } else {
         setServerError(message);
@@ -557,26 +649,19 @@ function DimensionCreate({
               inputProps={{ 'aria-label': t('analytics.fields.code'), autoComplete: 'off', spellCheck: false }}
             />
           </PropertyRow>
-          <PropertyRow label={t('analytics.fields.order')} helperText={t('analytics.hints.order')} valueSx={{ maxWidth: 520 }}>
-            <TextField
-              value={order}
-              onChange={(e) => {
-                setOrderTouched(true);
-                update({ order: e.target.value });
-              }}
-              variant="standard"
-              sx={drawerFieldValueSx}
-              error={!!errors.sort_order}
-              helperText={errors.sort_order}
-              inputProps={{ 'aria-label': t('analytics.fields.order'), inputMode: 'numeric', autoComplete: 'off' }}
-            />
-          </PropertyRow>
           <PropertyRow label={t('shared.lineTypeUsage.label')} valueSx={{ maxWidth: 520 }}>
             <LineTypeUsageSelect
               value={form.appliesTo}
               label={t('shared.lineTypeUsage.label')}
               error={errors.applies_to}
               onChange={(next) => update({ appliesTo: next })}
+            />
+          </PropertyRow>
+          <PropertyRow label={t('analytics.fields.required')} valueSx={{ maxWidth: 520 }}>
+            <RequiredSwitch
+              checked={form.required}
+              error={errors.required}
+              onChange={(next) => update({ required: next })}
             />
           </PropertyRow>
           <PropertyRow label={t('analytics.fields.description')} valueSx={{ maxWidth: 520 }}>

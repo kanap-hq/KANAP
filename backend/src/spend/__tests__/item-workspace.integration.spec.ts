@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { countItemRelations, loadItemReferences } from '../item-workspace.util';
+import { CAPEX_NUMBER_OFFSET } from './round-inputs.fixtures';
 
 // What the OPEX and CAPEX workspaces read besides the line (item-workspace.util.ts):
 // the labels of the line's references (one statement, the pickers' option
@@ -40,10 +41,11 @@ async function seed(runner: QueryRunner, tenantId: string) {
      VALUES ($1, 'Workspace line', 'EUR', '2026-01-01', 990001, $2, $3, $4, $5, $6) RETURNING id`,
     [tenantId, supplier, company, account, owner, nameless],
   );
+  // A CAPEX line lives in spend_items since lot Z1: its own BL number, its CPX number kept as legacy_number.
   const capex = await one(
-    `INSERT INTO capex_items (tenant_id, description, ppe_type, investment_type, priority, currency, effective_start, item_number, supplier_id)
-     VALUES ($1, 'Workspace capex', 'software', 'other', 'medium', 'EUR', '2026-01-01', 990001, $2) RETURNING id`,
-    [tenantId, supplier],
+    `INSERT INTO spend_items (tenant_id, nature, product_name, ppe_type, investment_type, priority, currency, effective_start, item_number, legacy_number, supplier_id)
+     VALUES ($1, 'capex', 'Workspace capex', 'software', 'other', 'medium', 'EUR', '2026-01-01', $2, 'CPX-990001', $3) RETURNING id`,
+    [tenantId, 990001 + CAPEX_NUMBER_OFFSET, supplier],
   );
   const group = await one(`INSERT INTO cost_centers (tenant_id, code, kind, name) VALUES ($1, 'IWS-G', 'group', 'Group W') RETURNING id`, [tenantId]);
   const costCenter = await one(
@@ -136,9 +138,10 @@ async function testRelationCounts() {
       { contracts: 1, applications: 1, projects: 1, links: 2, attachments: 1, total: 6 },
     );
 
-    await runner.query(`INSERT INTO contract_capex_items (tenant_id, contract_id, capex_item_id) VALUES ($1, $2, $3)`, [tenantId, contract, ids.capex]);
-    await runner.query(`INSERT INTO portfolio_project_capex (tenant_id, project_id, capex_id) VALUES ($1, $2, $3)`, [tenantId, project, ids.capex]);
-    await runner.query(`INSERT INTO capex_links (tenant_id, capex_item_id, url) VALUES ($1, $2, 'https://c.invalid')`, [tenantId, ids.capex]);
+    // The CAPEX line's relations share the OPEX link tables since lot Z1.
+    await runner.query(`INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES ($1, $2, $3)`, [tenantId, contract, ids.capex]);
+    await runner.query(`INSERT INTO portfolio_project_opex (tenant_id, project_id, opex_id) VALUES ($1, $2, $3)`, [tenantId, project, ids.capex]);
+    await runner.query(`INSERT INTO spend_links (tenant_id, spend_item_id, url) VALUES ($1, $2, 'https://c.invalid')`, [tenantId, ids.capex]);
     assert.deepEqual(
       await countItemRelations(runner.manager, 'capex', { id: ids.capex, tenant_id: tenantId }),
       { contracts: 1, applications: 0, projects: 1, links: 1, attachments: 0, total: 3 },
@@ -153,7 +156,7 @@ async function testRelationCounts() {
     await runner.rollbackTransaction();
     await runner.release();
   }
-  console.log('ok - relation counts: one statement per line, OPEX and CAPEX tables');
+  console.log('ok - relation counts: one statement per line, OPEX and CAPEX lines');
 }
 
 async function main() {

@@ -199,7 +199,7 @@ export default function CsvExportDialogV2({
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t('buttons.close')}</Button>
+        <Button variant="action" onClick={onClose}>{t('buttons.close')}</Button>
       </DialogActions>
     </Dialog>
   );

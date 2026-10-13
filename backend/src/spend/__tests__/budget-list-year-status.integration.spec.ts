@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { QueryRunner } from 'typeorm';
 import { SpendItemsService } from '../spend-items.service';
-import { CapexItemsService } from '../../capex/capex-items.service';
+import { CapexItemsService } from '../spend-items.service';
 import {
   assert,
   inRolledBackTransaction,
@@ -35,17 +35,12 @@ const identityFx = {
 };
 const noAllocations = { computeForVersions: async () => new Map() };
 
+// One constructor for both natures since lot Z1: the CAPEX service is the OPEX one's subclass.
 function itemService(kind: Kind): any {
-  if (kind === 'opex') {
-    const args: any[] = Array.from({ length: 11 }, () => undefined);
-    args[4] = noAllocations;
-    args[6] = identityFx;
-    return new (SpendItemsService as any)(...args);
-  }
-  const args: any[] = Array.from({ length: 12 }, () => undefined);
+  const args: any[] = Array.from({ length: 11 }, () => undefined);
   args[4] = noAllocations;
-  args[7] = identityFx;
-  return new (CapexItemsService as any)(...args);
+  args[6] = identityFx;
+  return kind === 'opex' ? new (SpendItemsService as any)(...args) : new (CapexItemsService as any)(...args);
 }
 
 type LineKey = 'lastYear' | 'lastInstant' | 'yearStart' | 'earlier' | 'later' | 'nextYear' | 'blank';

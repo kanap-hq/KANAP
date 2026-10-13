@@ -15,9 +15,8 @@ import { RolePermission } from '../../permissions/role-permission.entity';
 import { UserPageRole } from '../../permissions/user-page-role.entity';
 import { UsersService } from '../../users/users.service';
 import { User } from '../../users/user.entity';
-import { CapexAllocationCalculatorService } from '../../capex/capex-allocation-calculator.service';
-import { CapexAllocationsService } from '../../capex/capex-allocations.service';
-import { CapexItemsController } from '../../capex/capex-items.controller';
+import { CapexAllocationsService } from '../spend-allocations.service';
+import { CapexItemsController } from '../capex-items.controller';
 import { BudgetChangedAt1853840000000 } from '../../migrations/1853840000000-budget-changed-at';
 import { AllocationCalculatorService } from '../allocation-calculator.service';
 import { SpendAllocationsService } from '../spend-allocations.service';
@@ -74,7 +73,7 @@ async function seedPerson(runner: QueryRunner, tenantId: string, first: string, 
 function allocations(kind: Kind): any {
   return kind === 'opex'
     ? new SpendAllocationsService(undefined as any, undefined as any, new AllocationCalculatorService(undefined as any, undefined as any, undefined as any, undefined as any), realAudit() as any)
-    : new CapexAllocationsService(undefined as any, undefined as any, new CapexAllocationCalculatorService(undefined as any, undefined as any, undefined as any, undefined as any), realAudit() as any);
+    : new CapexAllocationsService(undefined as any, undefined as any, new AllocationCalculatorService(undefined as any, undefined as any, undefined as any, undefined as any), realAudit() as any);
 }
 
 const meta = (tenantId: string, kind: Kind, itemId: string, asTenant = tenantId) => seed(asTenant, (runner) => readBudgetLineMeta(runner.manager, kind, tenantId, itemId));
@@ -391,15 +390,14 @@ async function call(guard: PermissionGuard, runner: QueryRunner, tenantId: strin
 
 async function permissions(tenantId: string, lines: Record<Kind, Setup>) {
   const people = await seed(tenantId, async (runner) => ({
-    opexReader: await seedPerson(runner, tenantId, 'Olivia', 'Reader', { opex: 'reader' }),
-    capexReader: await seedPerson(runner, tenantId, 'Carl', 'Reader', { capex: 'reader' }),
+    budgetReader: await seedPerson(runner, tenantId, 'Olivia', 'Reader', { budget: 'reader' }),
     outsider: await seedPerson(runner, tenantId, 'Paul', 'Outsider', { tasks: 'reader' }),
     admin: await seedPerson(runner, tenantId, 'Ada', 'Admin', 'Administrator'),
   }));
   const opex: Route = { name: 'GET /spend-items/:id/meta', controller: SpendItemsController, svc: itemService('opex') };
   const capex: Route = { name: 'GET /capex-items/:id/meta', controller: CapexItemsController, svc: itemService('capex') };
-  for (const [route, resource] of [[opex, 'opex'], [capex, 'capex']] as const) {
-    assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, route.controller.prototype.meta), { resource, level: 'reader' }, `${route.name}: the detail's read level`);
+  for (const route of [opex, capex]) {
+    assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, route.controller.prototype.meta), { resource: 'budget', level: 'reader' }, `${route.name}: the detail's read level`);
   }
   const guard = buildGuard();
   const runner = dataSource.createQueryRunner();
@@ -408,8 +406,9 @@ async function permissions(tenantId: string, lines: Record<Kind, Setup>) {
   try {
     await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
     const cases: Array<[string, string, Route, Kind, number]> = [
-      ['OPEX reader', people.opexReader, opex, 'opex', 200], ['OPEX reader', people.opexReader, capex, 'capex', 403],
-      ['CAPEX reader', people.capexReader, capex, 'capex', 200], ['CAPEX reader', people.capexReader, opex, 'opex', 403],
+      // One right for both natures (lot R): a list reads its own lines; a line of the other nature is not found.
+      ['budget reader', people.budgetReader, opex, 'opex', 200], ['budget reader', people.budgetReader, capex, 'capex', 200],
+      ['budget reader, other nature', people.budgetReader, opex, 'capex', 404], ['budget reader, other nature', people.budgetReader, capex, 'opex', 404],
       ['no budget access', people.outsider, opex, 'opex', 403], ['no budget access', people.outsider, capex, 'capex', 403],
       ['administrator', people.admin, opex, 'opex', 200], ['administrator', people.admin, capex, 'capex', 200],
     ];
@@ -423,10 +422,10 @@ async function permissions(tenantId: string, lines: Record<Kind, Setup>) {
     }
     // A reference works like on the detail route; an unknown line is a 404.
     const [{ item_number }] = await runner.query(`SELECT item_number FROM spend_items WHERE id = $1`, [lines.opex.itemId]);
-    const byRef = await call(guard, runner, tenantId, people.opexReader, opex, `OPX-${item_number}`);
+    const byRef = await call(guard, runner, tenantId, people.budgetReader, opex, `OPX-${item_number}`);
     assert.equal(byRef.status, 200);
     assert.equal(byRef.body.id, lines.opex.itemId);
-    assert.equal((await call(guard, runner, tenantId, people.opexReader, opex, randomUUID())).status, 404);
+    assert.equal((await call(guard, runner, tenantId, people.budgetReader, opex, randomUUID())).status, 404);
   } finally {
     await runner.rollbackTransaction();
     await runner.release();

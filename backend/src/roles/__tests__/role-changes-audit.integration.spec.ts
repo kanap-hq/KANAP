@@ -51,10 +51,12 @@ async function testRoleChangesAreLogged() {
     const controller = controllerFor(runner);
 
     const created = await controller.createRole({ role_name: 'Budget reviewer', role_description: 'Reads budgets' }, req);
-    await controller.setRolePermissions(created.id, { permissions: { opex: 'reader', capex: 'reader' } }, req);
-    await controller.setRolePermissions(created.id, { permissions: { opex: 'admin', capex: null } }, req);
+    // The names of before lot R (`opex`, `capex`) are written as `budget`.
+    await controller.setRolePermissions(created.id, { permissions: { opex: 'reader', capex: 'reader', contracts: 'reader' } }, req);
+    // A null on `capex` does not remove the level `opex` gives `budget` in the same call; `contracts` goes.
+    await controller.setRolePermissions(created.id, { permissions: { opex: 'admin', capex: null, contracts: null } }, req);
     // Saving the same permissions again changes nothing: no row.
-    await controller.setRolePermissions(created.id, { permissions: { opex: 'admin' } }, req);
+    await controller.setRolePermissions(created.id, { permissions: { budget: 'admin' } }, req);
     await controller.updateRole(created.id, { role_name: 'Budget owner', role_description: 'Owns budgets' }, req);
 
     const rows = await roleRows(runner, created.id);
@@ -62,12 +64,12 @@ async function testRoleChangesAreLogged() {
     for (const row of rows) assert.equal(row.user_id, actorId, 'the person who made the change');
     assert.deepEqual(rows[0].before_json, null);
     assert.deepEqual(rows[0].after_json, { role_name: 'Budget reviewer', role_description: 'Reads budgets' });
-    // First permission change: from nothing to reader on both (tasks follows the operations rights).
+    // First permission change: from nothing to reader (tasks follows the operations rights).
     assert.deepEqual(rows[1].before_json.permissions, {});
-    assert.deepEqual(rows[1].after_json.permissions, { opex: 'reader', capex: 'reader', tasks: 'reader' });
+    assert.deepEqual(rows[1].after_json.permissions, { budget: 'reader', contracts: 'reader', tasks: 'reader' });
     // Second: before and after, the removed right gone.
-    assert.deepEqual(rows[2].before_json.permissions, { opex: 'reader', capex: 'reader', tasks: 'reader' });
-    assert.deepEqual(rows[2].after_json.permissions, { opex: 'admin', tasks: 'reader' });
+    assert.deepEqual(rows[2].before_json.permissions, { budget: 'reader', contracts: 'reader', tasks: 'reader' });
+    assert.deepEqual(rows[2].after_json.permissions, { budget: 'admin', tasks: 'reader' });
     assert.deepEqual(rows[3].before_json, { role_name: 'Budget reviewer', role_description: 'Reads budgets' });
     assert.deepEqual(rows[3].after_json, { role_name: 'Budget owner', role_description: 'Owns budgets' });
 
@@ -79,7 +81,7 @@ async function testRoleChangesAreLogged() {
     assert.deepEqual(copyRow.after_json, {
       role_name: 'Budget owner copy',
       role_description: 'Owns budgets',
-      permissions: { opex: 'admin', tasks: 'reader' },
+      permissions: { budget: 'admin', tasks: 'reader' },
       duplicated_from: { id: created.id, role_name: 'Budget owner' },
     });
 
@@ -89,7 +91,7 @@ async function testRoleChangesAreLogged() {
     assert.equal(copyRows.length, 2);
     assert.equal(copyRows[1].action, 'delete');
     assert.equal(copyRows[1].user_id, actorId);
-    assert.deepEqual(copyRows[1].before_json, { role_name: 'Budget owner copy', role_description: 'Owns budgets', permissions: { opex: 'admin', tasks: 'reader' } });
+    assert.deepEqual(copyRows[1].before_json, { role_name: 'Budget owner copy', role_description: 'Owns budgets', permissions: { budget: 'admin', tasks: 'reader' } });
     assert.equal(copyRows[1].after_json, null);
 
     // Another tenant does not see these rows.
@@ -107,7 +109,7 @@ async function testRefusedChangesWriteNothing() {
     const controller = controllerFor(runner);
     const system = await new RolesService(runner.manager.getRepository(Role), runner.manager.getRepository(RolePermission))
       .createRole({ role_name: 'Administrator', role_description: 'All rights' }, { manager: runner.manager });
-    await assert.rejects(() => controller.setRolePermissions(system.id, { permissions: { opex: 'reader' } }, req), /cannot be modified/);
+    await assert.rejects(() => controller.setRolePermissions(system.id, { permissions: { budget: 'reader' } }, req), /cannot be modified/);
     await assert.rejects(() => controller.deleteRole(system.id, req), /Cannot delete system role/);
     assert.equal((await roleRows(runner, system.id)).length, 0);
   });

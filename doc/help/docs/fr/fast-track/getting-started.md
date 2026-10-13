@@ -183,7 +183,7 @@ Le minimum nécessaire :
 
 ### Liez les tâches à des projets, contrats ou budgets
 
-Lors de la création d'une tâche, vous pouvez la lier à un **Projet**, un **poste OPEX**, un **Contrat** ou un **poste CAPEX**. Cela fait apparaître la tâche à la fois dans la liste des tâches et dans l'espace de travail parent.
+Lors de la création d'une tâche, vous pouvez la lier à un **Projet**, une **ligne OPEX**, un **Contrat** ou une **ligne CAPEX**. Cela fait apparaître la tâche à la fois dans la liste des tâches et dans l'espace de travail parent.
 
 !!! tip "Conseil : Créez depuis le contexte"
     La manière la plus rapide de créer une tâche liée est depuis l'espace de travail parent. Ouvrez un projet > onglet Tâches > Nouveau. Le lien est pré-rempli.

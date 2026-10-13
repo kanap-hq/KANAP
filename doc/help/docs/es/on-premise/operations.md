@@ -406,7 +406,7 @@ Empiece por el registro de la API: `docker compose -f infra/compose.onprem.yml l
 | Advertencia `[SECURITY]` en cada arranque | `ADMIN_PASSWORD`, `JWT_SECRET` | Cambie la contraseña del administrador en la aplicación, o consulte [Restablecimiento de contraseña](#restablecimiento-de-contrasena). Use un `JWT_SECRET` de 32 caracteres o más |
 | La migración falló | Versión de PostgreSQL | Debe ser 16+, con las extensiones disponibles |
 | 502 del proxy inverso | `docker compose -f infra/compose.onprem.yml ps` | Compruebe que el contenedor api funciona en el puerto 8080 |
-| 413 del proxy inverso en una subida | `client_max_body_size` | Defina `client_max_body_size 50m;` en el archivo de nginx |
+| 413 del proxy inverso en una subida | `client_max_body_size` | Defina `client_max_body_size 80m;` en el archivo de nginx |
 | Un correo de restablecimiento no llega, y el registro de la API tiene una línea `ERROR` con `unable to verify the first certificate` o `self-signed certificate` y el código `ESOCKET` | El certificado del relay de correo | La API no confía en la autoridad que firmó el certificado del relay. Entréguele el archivo de la autoridad (consulte [Certificados de una autoridad interna](configuration.md#opcional-certificados-de-una-autoridad-interna)). Instalar la autoridad en el propio servidor no cambia nada en el contenedor |
 | No se puede iniciar sesión | La contraseña | `.env` solo crea el administrador en el primer arranque. Cambie la contraseña en la aplicación, o use [Restablecimiento de contraseña](#restablecimiento-de-contrasena) |
 

@@ -77,10 +77,19 @@ export function sortKey(field: FieldSql): string {
   }
 }
 
-/** `ORDER BY` of the list: the sort key, then the tie-break (newest first). */
+/**
+ * The sort keys of a field, in order: its sort key, after its position when it has one (a
+ * dimension value: its place in the dimension, then its name; a blank has neither).
+ */
+export function sortKeys(field: FieldSql): string[] {
+  return field.position ? [`(${field.position})`, sortKey(field)] : [sortKey(field)];
+}
+
+/** `ORDER BY` of the list: the sort keys, then the tie-break (newest first). */
 export function orderBy(stmt: SqlStatement, config: ListConfig, state: ListState): string {
   const field = fieldOf(stmt, config, state.sort.field);
-  return `ORDER BY ${sortKey(field)} ${state.sort.direction === 'ASC' ? 'ASC' : 'DESC'}, ${config.tieBreak.join(', ')}`;
+  const direction = state.sort.direction === 'ASC' ? 'ASC' : 'DESC';
+  return `ORDER BY ${sortKeys(field).map((key) => `${key} ${direction}`).join(', ')}, ${config.tieBreak.join(', ')}`;
 }
 
 /** One page of ids with the count of the whole list (`count(*) OVER ()`). */
@@ -105,10 +114,15 @@ ${core.where}`;
 /** Every id of the list, in order, with `columns` of the main table. */
 export function idsSql(stmt: SqlStatement, config: ListConfig, state: ListState, columns: string[]): string {
   const core = buildCore(stmt, config, state, { withSort: true });
-  return `${stmt.withClause()}SELECT ${columns.map((c) => `${config.alias}.${c}`).join(', ')}
+  return `${stmt.withClause()}SELECT ${columns.map((c) => selectColumn(config, c)).join(', ')}
 ${core.from}
 ${core.where}
 ${orderBy(stmt, config, state)}`;
+}
+
+/** A column the id statements return: the config's expression, else the main table's column. */
+function selectColumn(config: ListConfig, column: string): string {
+  return config.selectColumn ? config.selectColumn(column) : `${config.alias}.${column}`;
 }
 
 /** The position of one id in the list and its neighbours. */
@@ -116,7 +130,7 @@ export function neighborsSql(stmt: SqlStatement, config: ListConfig, state: List
   const core = buildCore(stmt, config, state, { withSort: true });
   const order = orderBy(stmt, config, state).replace(/^ORDER BY /, '');
   const me = stmt.bind(id, 'uuid');
-  const cols = columns.map((c) => `${config.alias}.${c}`).join(', ');
+  const cols = columns.map((c) => selectColumn(config, c)).join(', ');
   return `${stmt.withClause([['ordered', `SELECT ${cols}, row_number() OVER (ORDER BY ${order}) AS n, count(*) OVER () AS total
 ${core.from}
 ${core.where}`]])}SELECT o.*, (SELECT n FROM ordered WHERE id = ${me}) AS me

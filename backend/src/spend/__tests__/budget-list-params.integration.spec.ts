@@ -10,8 +10,8 @@ import * as engine from '../budget-list/budget-list.service';
 import { realSummaryDeps } from './oracle/oracle-deps';
 import { seedListFixture } from './oracle/budget-list.fixture';
 import { SpendItemsController } from '../spend-items.controller';
-import { CapexItemsController } from '../../capex/capex-items.controller';
-import { CapexItemsService } from '../../capex/capex-items.service';
+import { CapexItemsController } from '../capex-items.controller';
+import { CapexItemsService } from '../spend-items.service';
 import { ListContextsService } from '../../common/list-context/list-contexts.service';
 import { applyListContext } from '../../common/list-context/list-context.interceptor';
 
@@ -179,7 +179,10 @@ async function run() {
     // ----- CAPEX neighbours (the service on the list engine since PR C, the fixture's CAPEX lines) -----
     const capex = SUMMARY_SCOPES.capex;
     const capexDeps = realSummaryDeps(capex);
-    const capexService = { summaryDeps: () => capexDeps, repo: { manager: m } } as any;
+    // The CAPEX service is the OPEX one's subclass since lot Z1: its list scope comes from its nature, through the prototype.
+    const capexService = Object.assign(Object.create(CapexItemsService.prototype), {
+      nature: 'capex', summaryDeps: () => capexDeps, repo: { manager: m },
+    });
     const neighbors = (id: string) => CapexItemsService.prototype.summaryNeighbors.call(capexService, all, id, { manager: m });
     const listed = await engine.budgetListIds(capex, capexDeps, all, m);
     assert.ok(listed.total > 2, 'the fixture has CAPEX lines');

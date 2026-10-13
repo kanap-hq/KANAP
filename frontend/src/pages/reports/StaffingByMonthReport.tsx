@@ -163,7 +163,7 @@ export default function StaffingByMonthReport() {
       subtitle={t('reports.staffing.subtitle', { type: scopeLabel, group: groupInSentence })}
       filters={(
         <>
-          <ItemScopeTabs value={scope} onChange={setScope} />
+          <ItemScopeTabs allowAll value={scope} onChange={setScope} />
           <BudgetReportFilters filters={reportFilters} />
           <ReportFilter label={t('reports.filters.year')} width={100}>
             <TextField

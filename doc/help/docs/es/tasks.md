@@ -31,7 +31,7 @@ Al hacer clic en **Nuevo**, se abre el espacio de trabajo completo de la tarea. 
 
 **Consejo**: Puede pegar imágenes directamente en la descripción. Se suben automáticamente al almacenamiento cuando crea la tarea.
 
-**Nota**: Las tareas también pueden crearse desde otros espacios de trabajo (partidas OPEX, Contratos, partidas CAPEX, Proyectos del portafolio) donde la relación viene preseleccionada.
+**Nota**: Las tareas también pueden crearse desde otros espacios de trabajo (líneas OPEX, Contratos, líneas CAPEX, Proyectos del portafolio) donde la relación viene preseleccionada.
 
 **Campos obligatorios**:
   - **Título**: Una descripción corta de lo que necesita hacerse
@@ -364,7 +364,7 @@ En el espacio de trabajo del Proyecto, use la pestaña **Tareas** para gestionar
 
 **Consejo**: En la pestaña Cronograma, haga clic en el botón **[+]** junto a una fase para crear una tarea pre-vinculada a esa fase.
 
-### Desde partidas OPEX
+### Desde líneas OPEX
 En el espacio de trabajo OPEX, use el panel **Tareas** de la pestaña **Vista general** para crear tareas como:
 - "Revisar precios del proveedor para 2026"
 - "Negociar descuento por volumen"
@@ -374,7 +374,7 @@ En el espacio de trabajo del Contrato, use la pestaña **Tareas** para:
 - "Revisar contrato antes de la fecha límite de renovación"
 - "Solicitar condiciones actualizadas al proveedor"
 
-### Desde partidas CAPEX
+### Desde líneas CAPEX
 En el espacio de trabajo CAPEX, las tareas rastrean hitos del proyecto:
 - "Completar la recopilación de requisitos"
 - "Obtener aprobación presupuestaria"
@@ -385,7 +385,7 @@ Estas tareas se vinculan automáticamente a la entidad padre y aparecen tanto en
 
 ## Tareas independientes
 
-Las tareas independientes son elementos de trabajo que no están vinculados a ningún proyecto, contrato o partida presupuestaria específica. Son útiles para:
+Las tareas independientes son elementos de trabajo que no están vinculados a ningún proyecto, contrato o línea presupuestaria específica. Son útiles para:
 - Trabajo general de operaciones IT
 - Solicitudes ad-hoc
 - Iniciativas transversales

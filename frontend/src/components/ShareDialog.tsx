@@ -25,7 +25,7 @@ import { useTranslation } from 'react-i18next';
 import { MONO_FONT_FAMILY } from '../config/ThemeContext';
 import { formatItemRef } from '../utils/item-ref';
 
-export type ShareItemType = 'task' | 'project' | 'request' | 'opex' | 'capex' | 'asset' | 'application' | 'location' | 'connection' | 'interface' | 'document';
+export type ShareItemType = 'task' | 'project' | 'request' | 'contract' | 'opex' | 'capex' | 'asset' | 'application' | 'location' | 'connection' | 'interface' | 'document';
 
 /** A person as the user lookup returns it (the email only for a person without a name). */
 type User = UserOption;
@@ -51,10 +51,12 @@ function buildItemPath(itemType: ShareItemType, itemId: string): string {
       return `/portfolio/projects/${itemId}`;
     case 'request':
       return `/portfolio/requests/${itemId}`;
+    case 'contract':
+      return `/ops/contracts/${itemId}/overview`;
     case 'opex':
-      return `/ops/opex/${itemId}`;
+      return `/ops/budget/${itemId}`;
     case 'capex':
-      return `/ops/capex/${itemId}`;
+      return `/ops/budget/${itemId}`;
     case 'asset':
       return `/it/assets/${itemId}/overview`;
     case 'application':
@@ -78,6 +80,8 @@ function buildApiEndpoint(itemType: ShareItemType, itemId: string): string {
       return `/portfolio/projects/${itemId}/share`;
     case 'request':
       return `/portfolio/requests/${itemId}/share`;
+    case 'contract':
+      return `/contracts/${itemId}/share`;
     case 'opex':
       return `/spend-items/${itemId}/share`;
     case 'capex':
@@ -118,7 +122,8 @@ export default function ShareDialog({
   const [error, setError] = React.useState<string | null>(null);
   const [copied, setCopied] = React.useState(false);
 
-  const displayRef = itemRef || (itemNumber ? formatItemRef(itemType, itemNumber) : null);
+  // Contracts have no business reference: their link names the id.
+  const displayRef = itemRef || (itemNumber && itemType !== 'contract' ? formatItemRef(itemType === 'opex' || itemType === 'capex' ? 'budget' : itemType, itemNumber) : null);
   const refOrId = displayRef || itemId;
   const itemUrl = `${window.location.origin}${buildItemPath(itemType, refOrId)}`;
 
@@ -365,11 +370,11 @@ export default function ShareDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={sending}>
+        <Button variant="action" onClick={onClose} disabled={sending}>
           {t('buttons.close')}
         </Button>
         <Button
-          variant="contained"
+          variant="action-primary"
           onClick={handleSend}
           disabled={sending || recipients.length === 0}
         >

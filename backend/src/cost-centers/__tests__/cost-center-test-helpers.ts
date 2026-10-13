@@ -60,7 +60,7 @@ export async function seedUser(
 
 let itemNumber = 900_000;
 
-/** One OPEX or CAPEX line, written directly (the item services are another implementer's). */
+/** One OPEX or CAPEX line, written directly (the item services are another implementer's). Both natures live in spend_items. */
 export async function seedLine(
   runner: QueryRunner | EntityManager,
   kind: 'opex' | 'capex',
@@ -77,8 +77,8 @@ export async function seedLine(
     return row.id;
   }
   const [row] = await runner.query(
-    `INSERT INTO capex_items (tenant_id, description, ppe_type, investment_type, priority, currency, effective_start, item_number, cost_center_id)
-     VALUES ($1, 'Cost center test line', 'hardware', 'replacement', 'medium', 'EUR', '2026-01-01', $2, $3) RETURNING id`,
+    `INSERT INTO spend_items (tenant_id, nature, product_name, ppe_type, investment_type, priority, currency, effective_start, item_number, legacy_number, cost_center_id)
+     VALUES ($1, 'capex', 'Cost center test line', 'hardware', 'replacement', 'medium', 'EUR', '2026-01-01', $2::int, 'CPX-' || $2::int, $3) RETURNING id`,
     [tenantId, itemNumber, costCenterId],
   );
   return row.id;
@@ -178,7 +178,7 @@ export async function backendPid(runner: QueryRunner): Promise<number> {
 export async function deleteTenant(tenantId: string) {
   await dataSource.transaction(async (manager) => {
     await setCurrentTenant(manager, tenantId);
-    for (const table of ['spend_items', 'capex_items', 'cost_centers', 'audit_log', 'companies', 'users', 'roles']) {
+    for (const table of ['spend_items', 'cost_centers', 'audit_log', 'companies', 'users', 'roles']) {
       await manager.query(`DELETE FROM ${table} WHERE tenant_id = $1`, [tenantId]);
     }
   });

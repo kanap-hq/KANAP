@@ -42,8 +42,7 @@ function context(ctx: TenantRequest): WorkingDayProfileContext {
 // The budget tab's compute panel lists the calendars without access to the page.
 const CALENDAR_READERS = [
   { resource: 'working_day_profiles', level: 'reader' as const },
-  { resource: 'opex', level: 'reader' as const },
-  { resource: 'capex', level: 'reader' as const },
+  { resource: 'budget', level: 'reader' as const },
 ];
 
 @UseGuards(JwtAuthGuard, PermissionGuard)

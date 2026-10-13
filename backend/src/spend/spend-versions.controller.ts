@@ -23,7 +23,7 @@ export class SpendVersionsController {
 
   @Get('spend-items/:id/versions')
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'reader')
+  @RequireLevel('budget', 'reader')
   async listForItem(@Param('id') idOrRef: string, @Req() req: any) {
     const manager = req?.queryRunner?.manager as EntityManager;
     const itemId = await this.resolveItemId(idOrRef, manager);
@@ -32,7 +32,7 @@ export class SpendVersionsController {
 
   @Post('spend-items/:id/versions')
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'member')
+  @RequireLevel('budget', 'member')
   async createForItem(@Param('id') idOrRef: string, @Body() body: any, @Req() req: any) {
     const manager = req?.queryRunner?.manager as EntityManager;
     const itemId = await this.resolveItemId(idOrRef, manager);
@@ -41,7 +41,7 @@ export class SpendVersionsController {
 
   @Patch('spend-items/:id/versions')
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'member')
+  @RequireLevel('budget', 'member')
   async updateForItem(@Param('id') idOrRef: string, @Body() body: any, @Req() req: any) {
     const manager = req?.queryRunner?.manager as EntityManager;
     const itemId = await this.resolveItemId(idOrRef, manager);
@@ -50,14 +50,14 @@ export class SpendVersionsController {
 
   @Post('spend-versions/:id/amounts/bulk-upsert')
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'member')
+  @RequireLevel('budget', 'member')
   upsertAmounts(@Param('id') versionId: string, @Body() body: any, @Req() req: any) {
     return this.amounts.bulkUpsert(versionId, body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
   @Post('spend-versions/:id/allocations/bulk-upsert')
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'member')
+  @RequireLevel('budget', 'member')
   upsertAllocations(@Param('id') versionId: string, @Body() body: any, @Req() req: any) {
     const items = Array.isArray(body) ? body : body.items;
     return this.allocations.bulkUpsert(versionId, items, req.user?.sub ?? null, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id });
@@ -70,21 +70,21 @@ export class SpendVersionsController {
    */
   @Put('spend-versions/:id/allocations')
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'member')
+  @RequireLevel('budget', 'member')
   putAllocations(@Param('id') versionId: string, @Body() body: any, @Req() req: any) {
     return this.allocations.put(versionId, body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id });
   }
 
   @Get('spend-versions/:id/allocations')
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'reader')
+  @RequireLevel('budget', 'reader')
   listAllocations(@Param('id') versionId: string, @Req() req: any) {
     return this.allocations.listForVersion(versionId, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id });
   }
 
   @Get('spend-versions/:id/amounts')
   @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'reader')
+  @RequireLevel('budget', 'reader')
   listAmounts(@Param('id') versionId: string, @Query('year') year?: string, @Req() req?: any) {
     const y = year ? parseInt(String(year), 10) : undefined;
     return this.amounts.listByYear(versionId, y as any, { manager: req?.queryRunner?.manager });

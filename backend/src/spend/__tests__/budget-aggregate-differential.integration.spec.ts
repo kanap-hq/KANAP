@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { SpendItemsService } from '../spend-items.service';
-import { CapexItemsService } from '../../capex/capex-items.service';
+import { CapexItemsService } from '../spend-items.service';
 import { AiAggregateExecutor } from '../../ai/query/ai-aggregate.executor';
 import { adaptFilters } from '../../ai/query/ai-filter.adapter';
 import type { AiEntityFilterRegistry } from '../../ai/query/ai-filter.types';
@@ -14,7 +14,7 @@ import type { AggregateMeasureSpec, AggregateOrderSpec, AggregateSpec } from '..
 import { FIXED_SLOTS, resolveAmountField, resolveFteField, SUMMARY_COLUMNS, SUMMARY_SCOPES, SummaryScopeConfig } from '../spend-summary.builder';
 import * as engine from '../budget-list/budget-list.service';
 import { aggregateBudgetSummaryByIds } from './oracle/ai-aggregate.oracle';
-import { oracleTextCompare, SORT_ORDERS } from './oracle/budget-summary.oracle';
+import { loadValuePositions, oracleTextCompare, SORT_ORDERS, ValuePositions } from './oracle/budget-summary.oracle';
 import { realSummaryDeps } from './oracle/oracle-deps';
 import { prng, seedListFixture } from './oracle/budget-list.fixture';
 import { getSummaryFieldValue, summaryFieldValues } from './oracle/summary-field-value.oracle';
@@ -110,9 +110,10 @@ function failed(label: string, e: Settled, o: Settled): boolean {
 // ----- services -----
 
 function itemServiceWith(scope: SummaryScopeConfig, deps: ReturnType<typeof realSummaryDeps>): any {
-  const args: any[] = Array.from({ length: 12 }, () => undefined);
+  // One constructor for both natures since lot Z1: the CAPEX service is the OPEX one's subclass.
+  const args: any[] = Array.from({ length: 11 }, () => undefined);
   args[4] = deps.allocationCalculator;
-  args[scope.scope === 'opex' ? 6 : 7] = deps.fxRates;
+  args[6] = deps.fxRates;
   return scope.scope === 'opex' ? new (SpendItemsService as any)(...args) : new (CapexItemsService as any)(...args);
 }
 
@@ -223,9 +224,20 @@ function compareKeyText(a: string | null, b: string | null, field: string, dir: 
   return compareNullable(a, b, dir, first, (x, y) => (INT_FIELDS.has(field) ? Number(x) - Number(y) : oracleTextCompare(x, y)));
 }
 
-/** An explicit key order: a ranked enum in its rank (the oracle's own lists; a value outside is blank), else the text. */
+/** The positions of the dimension values of the tenant being compared (set by `runScope`). */
+let valuePositions: ValuePositions | null = null;
+
+/**
+ * An explicit key order: a ranked enum in its rank (the oracle's own lists; a value outside is
+ * blank), a dimension value by its position in the dimension then its text, else the text.
+ */
 function compareKeyOrder(a: string | null, b: string | null, field: string, dir: 'ASC' | 'DESC', first: boolean): number {
   const rank = Object.prototype.hasOwnProperty.call(SORT_ORDERS, field) ? SORT_ORDERS[field] : null;
+  if (!rank && valuePositions?.applies(field) && a != null && b != null) {
+    const pa = valuePositions.of(field, a);
+    const pb = valuePositions.of(field, b);
+    if (pa != null && pb != null && pa !== pb) return dir === 'ASC' ? pa - pb : pb - pa;
+  }
   if (!rank) return compareKeyText(a, b, field, dir, first);
   const ra = a == null || !rank.includes(a) ? null : rank.indexOf(a);
   const rb = b == null || !rank.includes(b) ? null : rank.indexOf(b);
@@ -461,7 +473,7 @@ function buildCases(r: ReturnType<typeof prng>, scope: SummaryScopeConfig, regis
     cases.push({ id: `spec/${k}`, kind: 'spec', query, spec });
   }
   // Deterministic order cases (no draw from the random stream):
-  // - a ranked enum (status, run or build, the CAPEX enums) ordered by its key follows its rank;
+  // - a ranked enum (status, run or build) ordered by its key follows its rank;
   // - with a measure equal on every group (0), the final tie-break decides: the key's text, never the rank;
   // - a measure order without `nulls` puts groups without a value (FTE of unknown lines) last, in both directions.
   const ranked = ['status', 'run_build', ...scope.extraFields];
@@ -574,6 +586,7 @@ async function runScope(scope: SummaryScopeConfig, runner: QueryRunner, tenantId
   Object.assign(stats, { groups: 0, empty: 0, oneGroup: 0, several: 0, invalidFilter: 0 });
   await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
   const m = runner.manager;
+  valuePositions = await loadValuePositions(m, tenantId);
   const deps = realSummaryDeps(scope);
   const svc = itemServiceWith(scope, deps);
   const context = { tenantId, userId: null, isPlatformHost: false, surface: 'chat', authMethod: 'jwt', manager: m };

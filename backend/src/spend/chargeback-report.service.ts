@@ -12,6 +12,7 @@ import { AllocationCalculatorService, AllocationComputation } from './allocation
 import { FxRateService, FxLookupKey, FxResolvedRate } from '../currency/fx-rate.service';
 import { BUDGET_COLUMN_MEASURE, BudgetColumn } from './amounts-write.util';
 import { DEFAULT_BUDGET_COLUMNS, readBudgetColumns } from '../budget-columns/budget-columns.util';
+import { BudgetNature, naturesAnd } from './budget-nature';
 
 /** A chargeback runs on one budget column, named by its API name. */
 export type ChargebackMetricKey = BudgetColumn;
@@ -27,6 +28,29 @@ function isMetric(value: unknown): value is ChargebackMetricKey {
 function invalidMetric(value: unknown): BadRequestException {
   return new BadRequestException(`Unknown column '${String(value)}'. Use ${Object.keys(METRIC_COLUMN_MAP).join(', ')}.`);
 }
+
+/**
+ * The budget lines a chargeback spreads: OPEX (the default, the report of before), CAPEX, or both.
+ * A CAPEX line is spread on its amount of the year in the column, not on its depreciation.
+ */
+export type ChargebackScope = 'opex' | 'capex' | 'all';
+
+/** The natures each scope reads, named explicitly (`budget-nature.ts`). */
+export const CHARGEBACK_SCOPE_NATURES: Readonly<Record<ChargebackScope, readonly BudgetNature[]>> = {
+  opex: ['opex'],
+  capex: ['capex'],
+  all: ['opex', 'capex'],
+};
+
+/** The scope a request names; none given is OPEX, anything else than the three values a 400. */
+export function resolveChargebackScope(raw: unknown): ChargebackScope {
+  if (raw === undefined || raw === null || raw === '') return 'opex';
+  if (typeof raw === 'string' && Object.prototype.hasOwnProperty.call(CHARGEBACK_SCOPE_NATURES, raw)) return raw as ChargebackScope;
+  throw new BadRequestException(`Unknown scope '${String(raw)}'. Use ${Object.keys(CHARGEBACK_SCOPE_NATURES).join(', ')}.`);
+}
+
+/** The options of a report: the request's manager, and the lines it spreads (OPEX when none is given). */
+export type ChargebackReportOptions = { manager?: EntityManager; scope?: ChargebackScope };
 
 const ALLOCATION_METHOD_LABELS: Record<ResolvedAllocationMethod, string> = {
   headcount: 'Headcount',
@@ -45,6 +69,7 @@ function toCurrency(n: number): number {
 type ChargebackComputationContext = {
   year: number;
   metric: ChargebackMetricKey;
+  scope: ChargebackScope;
   totalRaw: number;
   total: number;
   companyTotalsRaw: Map<string, number>;
@@ -80,6 +105,10 @@ export type CompanyChargebackDepartmentRow = {
 export type CompanyChargebackItemRow = {
   versionId: string;
   itemId: string | null;
+  /** The line's number, its BL-n reference; null when the line is not read. */
+  itemNumber: number | null;
+  /** The line's nature, null when the line is not read. */
+  nature: BudgetNature | null;
   itemName: string;
   allocationMethod: ResolvedAllocationMethod;
   allocationMethodLabel: string;
@@ -91,6 +120,7 @@ export type CompanyChargebackItemRow = {
 export type CompanyChargebackReportResponse = {
   year: number;
   metric: ChargebackMetricKey;
+  scope: ChargebackScope;
   total: number;
   totalRaw: number;
   company: {
@@ -172,7 +202,7 @@ export class ChargebackReportService {
     year: number,
     metric: ChargebackMetricKey,
     tenantId: string,
-    opts?: { manager?: EntityManager },
+    opts?: ChargebackReportOptions,
   ) {
     const ctx = await this.computeBase(year, metric, tenantId, opts);
 
@@ -302,6 +332,7 @@ export class ChargebackReportService {
     return {
       year: ctx.year,
       metric: ctx.metric,
+      scope: ctx.scope,
       total: toCurrency(ctx.total),
       totalRaw: toCurrency(ctx.totalRaw),
       detailed,
@@ -318,7 +349,7 @@ export class ChargebackReportService {
     metric: ChargebackMetricKey,
     companyId: string,
     tenantId: string,
-    opts?: { manager?: EntityManager },
+    opts?: ChargebackReportOptions,
   ): Promise<CompanyChargebackReportResponse> {
     if (!companyId) {
       throw new BadRequestException('companyId is required');
@@ -423,6 +454,8 @@ export class ChargebackReportService {
       items.push({
         versionId,
         itemId: item?.id ?? null,
+        itemNumber: item?.item_number != null ? Number(item.item_number) : null,
+        nature: item?.nature ?? null,
         itemName: item?.product_name ?? 'Unknown item',
         allocationMethod: method,
         allocationMethodLabel: ALLOCATION_METHOD_LABELS[method] ?? method,
@@ -507,6 +540,7 @@ export class ChargebackReportService {
     return {
       year: ctx.year,
       metric: ctx.metric,
+      scope: ctx.scope,
       total: companySummary.total,
       totalRaw,
       company: companySummary,
@@ -529,12 +563,14 @@ export class ChargebackReportService {
     year: number,
     metric: ChargebackMetricKey,
     tenantId: string,
-    opts?: { manager?: EntityManager },
+    opts?: ChargebackReportOptions,
   ): Promise<ChargebackComputationContext> {
     const yr = Number.isFinite(year) ? Math.trunc(year) : new Date().getFullYear();
     if (!isMetric(metric)) throw invalidMetric(metric);
     if (!tenantId) throw new InternalServerErrorException('A chargeback report needs a tenant.');
     const metricColumn = METRIC_COLUMN_MAP[metric];
+    const scope = resolveChargebackScope(opts?.scope);
+    const natures = CHARGEBACK_SCOPE_NATURES[scope];
 
     const manager = opts?.manager ?? this.versionsRepo.manager;
     const versionRepo = manager.getRepository(SpendVersion);
@@ -542,13 +578,14 @@ export class ChargebackReportService {
     // Year-aware disabled filtering: include items throughout their disabled_at fiscal year.
     // If an item is disabled on 2025-06-30 and the report year is 2025, include it.
     // Exclude it for years strictly greater than disabled year. Fiscal year = calendar year.
+    // The lines of the scope's natures, named explicitly (`budget-nature.ts`): OPEX by default.
     const periodStart = new Date(`${String(yr).padStart(4, '0')}-01-01T00:00:00.000Z`);
     const versions = await versionRepo
       .createQueryBuilder('v')
       .innerJoin(
         SpendItem,
         'item',
-        `item.id = v.spend_item_id AND item.tenant_id = v.tenant_id AND (item.disabled_at IS NULL OR item.disabled_at >= :period_start)`,
+        `item.id = v.spend_item_id AND item.tenant_id = v.tenant_id${naturesAnd('item', natures)} AND (item.disabled_at IS NULL OR item.disabled_at >= :period_start)`,
       )
       .where('v.tenant_id = :tenantId', { tenantId })
       .andWhere('v.budget_year = :year', { year: yr })
@@ -560,6 +597,7 @@ export class ChargebackReportService {
       return {
         year: yr,
         metric,
+        scope,
         totalRaw: 0,
         total: 0,
         companyTotalsRaw: new Map(),
@@ -591,7 +629,7 @@ export class ChargebackReportService {
     const itemIds = Array.from(new Set(fullVersions.map((v) => v.spend_item_id)));
     const itemRepo = manager.getRepository(SpendItem);
     const itemEntities = itemIds.length > 0
-      ? await itemRepo.find({ where: { tenant_id: tenantId, id: In(itemIds) as any } as any })
+      ? await itemRepo.find({ where: { tenant_id: tenantId, nature: In([...natures]) as any, id: In(itemIds) as any } as any })
       : [];
     const itemById = new Map(itemEntities.map((item) => [item.id, item] as const));
 
@@ -798,6 +836,7 @@ export class ChargebackReportService {
     return {
       year: yr,
       metric,
+      scope,
       totalRaw,
       total,
       companyTotalsRaw,

@@ -516,7 +516,7 @@ type AnalyticsAxes = {
 ### useWorkingDayProfiles
 The tenant's working-day calendars (storage word: working-day profiles), for the budget tab's compute panel and the Working-day calendars page (`/master-data/working-day-calendars`, resource `working_day_profiles`, nav Master data → Finance). A calendar holds, per year, the working days of each month; a price per day multiplies them.
 
-**Location:** `frontend/src/hooks/useWorkingDayProfiles.ts` (service `services/workingDayProfiles.ts`, `GET /working-day-profiles?limit=1000&includeDisabled=true&sort=name:ASC`, readable with `working_day_profiles`, `opex` or `capex` reader; query key `['working-day-profiles']`, 5 min `staleTime`; the calendars page and workspace invalidate it after every write).
+**Location:** `frontend/src/hooks/useWorkingDayProfiles.ts` (service `services/workingDayProfiles.ts`, `GET /working-day-profiles?limit=1000&includeDisabled=true&sort=name:ASC`, readable with `working_day_profiles` or `budget` reader; query key `['working-day-profiles']`, 5 min `staleTime`; the calendars page and workspace invalidate it after every write).
 
 ```typescript
 type WorkingDayProfiles = {

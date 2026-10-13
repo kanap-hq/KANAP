@@ -5,6 +5,8 @@ import { SupplierContactLink, SupplierContactRole } from '../contacts/supplier-c
 import { ExternalContact } from '../contacts/external-contact.entity';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { Supplier } from './supplier.entity';
+import { assertScopeNatures, auditTableOf, natureAnd, type BudgetNature } from '../spend/budget-nature';
+import { presentChild } from '../spend/budget-line-presentation';
 
 /** The request's tenant and user; every statement filters on the tenant, every change is audited for the user. */
 export type SupplierContactsContext = {
@@ -15,12 +17,16 @@ export type SupplierContactsContext = {
 };
 
 // The item link tables a supplier contact propagates to, with the item table and its key.
-// Table names come only from here, never from a caller.
-const ITEM_LINKS = [
-  { links: 'spend_item_contacts', items: 'spend_items', itemColumn: 'spend_item_id' },
-  { links: 'capex_item_contacts', items: 'capex_items', itemColumn: 'capex_item_id' },
-  { links: 'contract_contacts', items: 'contracts', itemColumn: 'contract_id' },
-] as const;
+// Table names come only from here, never from a caller. `nature`: the lines of `spend_items`
+// this entry covers (`spend/budget-nature.ts`): the OPEX and CAPEX lines share
+// `spend_item_contacts` since lot Z1, each entry its own nature, so no link is written twice.
+// `audit`: the label of the entry's audit rows (a CAPEX line's contacts keep `capex_item_contacts`).
+const ITEM_LINKS: ReadonlyArray<{ links: string; items: string; itemColumn: string; nature?: BudgetNature; audit: string }> = [
+  { links: 'spend_item_contacts', items: 'spend_items', itemColumn: 'spend_item_id', nature: 'opex', audit: auditTableOf('opex', 'spend_item_contacts') },
+  { links: 'spend_item_contacts', items: 'spend_items', itemColumn: 'spend_item_id', nature: 'capex', audit: auditTableOf('capex', 'spend_item_contacts') },
+  { links: 'contract_contacts', items: 'contracts', itemColumn: 'contract_id', audit: 'contract_contacts' },
+];
+assertScopeNatures('supplier-contacts ITEM_LINKS', ITEM_LINKS, (t) => t.items);
 
 /** Rows of an INSERT … RETURNING (rows) or a DELETE … RETURNING (TypeORM answers [rows, count]). */
 function returnedRows<T>(result: unknown): T[] {
@@ -145,12 +151,12 @@ export class SupplierContactsService {
         `INSERT INTO ${t.links} (tenant_id, ${t.itemColumn}, contact_id, role, origin)
          SELECT $1::uuid, i.id, $3::uuid, $4::supplier_contact_role, 'supplier'
            FROM ${t.items} i
-          WHERE i.tenant_id = $1 AND i.supplier_id = $2
+          WHERE i.tenant_id = $1 AND i.supplier_id = $2${natureAnd('i', t.nature)}
          ON CONFLICT (tenant_id, ${t.itemColumn}, contact_id, role) DO NOTHING
          RETURNING *`,
         [ctx.tenantId, supplierId, contactId, role],
       ));
-      for (const row of added) await this.log(ctx, t.links, 'create', row.id, null, row);
+      for (const row of added) await this.log(ctx, t.audit, 'create', row.id, null, t.nature ? presentChild(t.nature, row) : row);
     }
   }
 
@@ -165,11 +171,11 @@ export class SupplierContactsService {
       const removed = returnedRows<{ id: string }>(await mg.query(
         `DELETE FROM ${t.links} l
           WHERE l.tenant_id = $1 AND l.contact_id = $2 AND l.role = $3::supplier_contact_role AND l.origin = 'supplier'
-            AND l.${t.itemColumn} IN (SELECT i.id FROM ${t.items} i WHERE i.tenant_id = $1 AND i.supplier_id = $4)
+            AND l.${t.itemColumn} IN (SELECT i.id FROM ${t.items} i WHERE i.tenant_id = $1 AND i.supplier_id = $4${natureAnd('i', t.nature)})
          RETURNING l.*`,
         [ctx.tenantId, contactId, role, supplierId],
       ));
-      for (const row of removed) await this.log(ctx, t.links, 'delete', row.id, row, null);
+      for (const row of removed) await this.log(ctx, t.audit, 'delete', row.id, t.nature ? presentChild(t.nature, row) : row, null);
     }
   }
 }

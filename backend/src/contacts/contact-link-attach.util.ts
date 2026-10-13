@@ -1,11 +1,11 @@
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, Logger } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { withSavepoint } from '../common/savepoint.util';
 import { SupplierContactRole } from './supplier-contact.entity';
 
 /**
- * Manual attach of a contact to an OPEX line, a CAPEX line or a contract,
- * idempotent (plan planning/perf-scale, lot 3A, Annexe A #14).
+ * Manual attach of a contact to a budget line (OPEX or CAPEX: one table since
+ * lot Z1) or a contract, idempotent (plan planning/perf-scale, lot 3A, Annexe A #14).
  *
  * Each link table is unique on (tenant_id, owner, contact_id, role). The
  * insert is `ON CONFLICT DO NOTHING` on that key, then the link of the key is
@@ -15,7 +15,6 @@ import { SupplierContactRole } from './supplier-contact.entity';
  */
 const TABLES = {
   spend_item_contacts: 'spend_item_id',
-  capex_item_contacts: 'capex_item_id',
   contract_contacts: 'contract_id',
 } as const;
 
@@ -50,17 +49,21 @@ export async function attachManualContactLink(
 /** Only when another request removes the link between two statements of the attach. */
 export const LINK_REMOVED = 'The contact was removed from this record meanwhile. Please try again.';
 
+const syncLogger = new Logger('SupplierContactSync');
+
 /**
  * The supplier contact sync that follows a supplier change inside a line or
  * contract update. It runs under its own savepoint and never fails the update
  * (a lock wait that gives up, a link changed meanwhile): the update is kept,
- * the failure logged, and the contacts stay as they were until the next sync.
+ * the failure logged through the Nest logger with the record (`owner` names its
+ * type and id) and the error, and the contacts stay as they were until the next
+ * sync.
  */
 export async function syncSupplierContactsWithinUpdate(manager: EntityManager, owner: string, sync: () => Promise<void>): Promise<void> {
   try {
     await withSavepoint(manager, sync);
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.warn(`[contacts] supplier contacts of ${owner} not synced, the update is kept: ${(error as Error)?.message ?? error}`);
+    const name = (error as Error)?.constructor?.name ?? 'Error';
+    syncLogger.warn(`Supplier contacts of ${owner} not synced, the update is kept: ${name}: ${(error as Error)?.message ?? error}`);
   }
 }

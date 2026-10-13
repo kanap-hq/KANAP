@@ -125,7 +125,7 @@ docker compose -f infra/compose.onprem.yml logs -f api
 3. Route all other requests to the web container (port 8081 on `127.0.0.1`)
 4. Set `X-Forwarded-Proto: https` and preserve `Host`. KANAP builds every link it sends from `APP_BASE_URL`. The example also sends `X-Forwarded-Host`, with the same value as `Host`. When the site uses a non-standard port, add the exact address with its port to `CORS_ORIGINS`.
 5. Send `X-Forwarded-For` with the client address (the example does) and set `RATE_LIMIT_TRUST_PROXY=true`. KANAP uses that address for its sign-in limits. The API port must stay bound to `127.0.0.1`, as `compose.onprem.yml` does. With nothing in front of the API, set `RATE_LIMIT_TRUST_PROXY=false`.
-6. Accept bodies of 50 MB (`client_max_body_size 50m`): budget files go up to 48 MB and attachments up to 20 MB.
+6. Accept bodies of 80 MB (`client_max_body_size 80m`): loading a budget file sends up to 72 MB (the file, up to 48 MB, and the result of its check), and attachments go up to 20 MB.
 
 Since containers bind to `127.0.0.1`, nginx runs on the same host and proxies to `localhost`.
 
@@ -145,8 +145,8 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers off;
 
-    # Upload limit: budget files up to 48 MB, attachments up to 20 MB
-    client_max_body_size 50m;
+    # Upload limit: budget file loads up to 72 MB, attachments up to 20 MB
+    client_max_body_size 80m;
 
     # Canonicalize /api → /api/
     location = /api { return 301 /api/; }

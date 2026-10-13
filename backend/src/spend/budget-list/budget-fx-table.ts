@@ -1,9 +1,10 @@
 import type { EntityManager } from 'typeorm';
 import type { FxLookupKey, FxRateService, FxResolvedRate } from '../../currency/fx-rate.service';
 import type { CurrencySettings } from '../../currency/currency-settings.service';
-import type { SummaryScopeConfig } from '../spend-summary.builder';
+import type { SummaryReadScopeConfig } from '../spend-summary.builder';
 import type { SqlStatement } from '../../common/list-engine/sql-statement';
 import { jsTrim, jsUpper } from '../../common/list-engine/sql-fragments';
+import { natureAnd } from '../budget-nature';
 
 type FxRates = Pick<FxRateService, 'resolveRates' | 'convertValue'>;
 
@@ -114,14 +115,17 @@ export class RequestFxRates implements FxRates {
 }
 
 export async function buildFxTable(
-  config: SummaryScopeConfig,
+  config: SummaryReadScopeConfig,
   fxRates: FxRates,
   manager: EntityManager,
   tenantId: string,
   years: number[],
 ): Promise<FxTable> {
   const [currencyRows, setRows] = await Promise.all([
-    manager.query(`SELECT DISTINCT ${fxKeyCurrency('i')} AS raw, ${lineCurrencySql('i')} AS cur FROM ${config.itemTable} i WHERE i.tenant_id = $1`, [tenantId]),
+    manager.query(
+      `SELECT DISTINCT ${fxKeyCurrency('i')} AS raw, ${lineCurrencySql('i')} AS cur FROM ${config.itemTable} i WHERE i.tenant_id = $1${natureAnd('i', config.nature)}`,
+      [tenantId],
+    ),
     manager.query(`SELECT s.id FROM currency_rate_sets s WHERE s.tenant_id = $1`, [tenantId]),
   ]);
   const currencies: Array<{ raw: string; cur: string }> = currencyRows;

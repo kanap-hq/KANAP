@@ -31,7 +31,7 @@ When you click **New**, the full task workspace opens. To create a task:
 
 **Tip**: You can paste images directly into the description. They are uploaded to storage automatically when you create the task.
 
-**Note**: Tasks can also be created from within other workspaces (OPEX items, Contracts, CAPEX items, Portfolio Projects) where the relation is pre-selected.
+**Note**: Tasks can also be created from within other workspaces (OPEX lines, Contracts, CAPEX lines, Portfolio Projects) where the relation is pre-selected.
 
 **Required fields**:
   - **Title**: A short description of what needs to be done
@@ -364,7 +364,7 @@ In the Project workspace, use the **Tasks** tab to manage project deliverables:
 
 **Tip**: In the Timeline tab, click the **[+]** button next to a phase to create a task pre-linked to that phase.
 
-### From OPEX items
+### From OPEX lines
 In the OPEX workspace, use the **Tasks** panel on the **Overview** tab to create tasks like:
 - "Review vendor pricing for 2026"
 - "Negotiate volume discount"
@@ -374,7 +374,7 @@ In the Contract workspace, use the **Tasks** tab for:
 - "Review contract before renewal deadline"
 - "Request updated terms from vendor"
 
-### From CAPEX items
+### From CAPEX lines
 In the CAPEX workspace, tasks track project milestones:
 - "Complete requirements gathering"
 - "Obtain budget approval"
@@ -385,7 +385,7 @@ These tasks automatically link to the parent entity and appear in both the task 
 
 ## Standalone tasks
 
-Standalone tasks are independent work items not linked to any specific project, contract, or budget item. They are useful for:
+Standalone tasks are independent work items not linked to any specific project, contract, or budget line. They are useful for:
 - General IT operations work
 - Ad-hoc requests
 - Cross-cutting initiatives

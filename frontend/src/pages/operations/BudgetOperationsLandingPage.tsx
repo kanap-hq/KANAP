@@ -39,8 +39,7 @@ export default function BudgetOperationsLandingPage() {
       title: t('operations.sections.operations'),
       cards: [
         { title: t('operations.cards.freezeTitle'), description: t('operations.cards.freezeDesc'), to: '/ops/operations/freeze' },
-        { title: t('operations.cards.copyBudgetTitle'), description: t('operations.cards.copyBudgetDesc'), to: '/ops/operations/copy-budget-columns' },
-        { title: t('operations.cards.copyAllocTitle'), description: t('operations.cards.copyAllocDesc'), to: '/ops/operations/copy-allocations' },
+        { title: t('operations.cards.copyBudgetTitle'), description: t('operations.cards.copyBudgetDesc'), to: '/ops/operations/copy-budget' },
         { title: t('operations.cards.resetColumnTitle'), description: t('operations.cards.resetColumnDesc'), to: '/ops/operations/column-reset' },
         { title: t('operations.cards.masterDataFreezeTitle'), description: t('operations.cards.masterDataFreezeDesc'), to: '/ops/operations/master-data-freeze' },
         { title: t('operations.cards.metricsCopyTitle'), description: t('operations.cards.metricsCopyDesc'), to: '/ops/operations/metrics-copy' },

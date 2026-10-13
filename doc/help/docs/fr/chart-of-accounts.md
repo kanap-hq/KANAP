@@ -1,6 +1,6 @@
 # Plans comptables et gestion des comptes
 
-Les plans comptables (CoA) organisent votre structure comptable en regroupant les comptes en ensembles nommés. Chaque société peut être liée à un CoA, qui détermine les comptes disponibles lors de l'enregistrement de postes OPEX ou CAPEX.
+Les plans comptables (CoA) organisent votre structure comptable en regroupant les comptes en ensembles nommés. Chaque société peut être liée à un CoA, qui détermine les comptes disponibles lors de l'enregistrement de lignes OPEX ou CAPEX.
 
 ## Pourquoi utiliser les plans comptables ?
 
@@ -22,14 +22,14 @@ Plan comptable (FR-2024)
   -> assigné à
 Société (Acme France)
   -> utilisé lors de l'enregistrement
-Postes OPEX/CAPEX -> Sélection de compte (filtré aux comptes FR-2024 uniquement)
+Lignes OPEX/CAPEX -> Sélection de compte (filtré aux comptes FR-2024 uniquement)
 ```
 
 **Points clés** :
   - Un CoA peut être assigné à plusieurs sociétés
   - Chaque société a un CoA
   - Un compte appartient à un CoA
-  - Lorsque vous créez ou modifiez des postes de dépenses, le menu déroulant des comptes est filtré par le CoA de la société
+  - Lorsque vous créez ou modifiez des lignes de dépenses, le menu déroulant des comptes est filtré par le CoA de la société
   - Chaque compte indique s'il sert aux lignes OPEX, aux lignes CAPEX ou aux deux. Voir [Comptes OPEX ou CAPEX](#comptes-opex-ou-capex)
 
 ## Où trouver cette page
@@ -281,7 +281,7 @@ Chaque ligne a un menu **⋯** qui ne propose que les actions applicables à ce 
 - **Définir comme plan par défaut du pays** / **Ne plus utiliser comme plan par défaut du pays** (`accounts:manager`) : pour les plans d'un seul pays.
 - **Définir par défaut pour les autres pays** / **Ne plus utiliser par défaut pour les autres pays** (`accounts:manager`) : pour les plans de tous les pays. En le définissant par défaut, vous l'attribuez aussi aux sociétés qui n'ont pas de plan comptable.
 - **Définir comme plan de consolidation** / **Ne plus utiliser comme plan de consolidation** (`accounts:manager`) : pour n'importe quel plan. Voir [Modifier le plan de consolidation](#modifier-le-plan-de-consolidation).
-- **Supprimer** (`accounts:admin`) : Supprime le plan avec ses comptes. Si le plan contient des comptes, une confirmation indique combien sont supprimés. S'il s'agit du plan de consolidation, la confirmation précise que le reporting de groupe n'aura plus de plan de référence. La suppression est refusée tant que des sociétés utilisent le plan ou que des postes OPEX/CAPEX utilisent ses comptes, et la fenêtre en indique la raison.
+- **Supprimer** (`accounts:admin`) : Supprime le plan avec ses comptes. Si le plan contient des comptes, une confirmation indique combien sont supprimés. S'il s'agit du plan de consolidation, la confirmation précise que le reporting de groupe n'aura plus de plan de référence. La suppression est refusée tant que des sociétés utilisent le plan ou que des lignes OPEX/CAPEX utilisent ses comptes, et la fenêtre en indique la raison.
 
 Les rôles changent dès que vous choisissez une action. Le tableau se met à jour immédiatement.
 
@@ -404,13 +404,13 @@ Les **comptes historiques** sont des comptes sans `coa_id` (créés avant l'intr
   1. Créez ou chargez des plans comptables pour vos sociétés
   2. Assignez les CoA aux sociétés (dans l'onglet Vue d'ensemble de la société)
   3. Assignez un `coa_id` à vos comptes historiques (via import CSV avec `coa_code` ou modification en masse)
-  4. Mettez à jour les postes OPEX/CAPEX existants qui affichent un avertissement « compte obsolète »
+  4. Mettez à jour les lignes OPEX/CAPEX existantes qui affichent un avertissement « compte obsolète »
 
 **Conseil** : Vous n'avez pas à tout migrer en une fois. Les sociétés sans CoA continuent de fonctionner avec les comptes historiques, ce qui permet une adoption progressive.
 
 ## Avertissements de compte obsolète
 
-Lors de la modification de postes OPEX ou CAPEX, vous pouvez voir :
+Lors de la modification de lignes OPEX ou CAPEX, vous pouvez voir :
 
 ```
 Compte obsolète détecté. Le compte sélectionné n'appartient pas au
@@ -418,16 +418,16 @@ plan comptable de la société. Veuillez mettre à jour le compte.
 ```
 
 **Pourquoi cela se produit** :
-  - Le compte du poste appartient au CoA « A »
-  - La société du poste appartient au CoA « B »
+  - Le compte de la ligne appartient au CoA « A »
+  - La société de la ligne appartient au CoA « B »
   - Une incohérence est détectée
 
 **Cas fréquents** :
-  - Vous avez migré une société vers un nouveau CoA sans encore mettre à jour ses anciens postes de dépenses
+  - Vous avez migré une société vers un nouveau CoA sans encore mettre à jour ses anciennes lignes de dépenses
   - Un compte a été réassigné manuellement à un autre CoA
   - Vous consultez des données historiques antérieures à la migration du CoA
 
-**Comment corriger** : Modifiez le poste et sélectionnez un compte du plan comptable actuel de la société. L'avertissement disparaît dès que le compte correspond au CoA de la société.
+**Comment corriger** : Modifiez la ligne et sélectionnez un compte du plan comptable actuel de la société. L'avertissement disparaît dès que le compte correspond au CoA de la société.
 
 ## Statut et cycle de vie
 
@@ -438,8 +438,8 @@ Les comptes suivent la même gestion du cycle de vie que les autres données de 
   - Passer le compte à **Désactivé** sans date fixe sa fin de validité à aujourd'hui
   - Une fois la fin de validité passée, le statut passe à **Désactivé** de lui-même dans l'heure
   - Après la fin de validité :
-      - Le compte n'apparaît plus dans les menus déroulants de sélection pour les nouveaux postes
-      - Les données historiques restent intactes ; les postes existants conservent leur compte
+      - Le compte n'apparaît plus dans les menus déroulants de sélection pour les nouvelles lignes
+      - Les données historiques restent intactes ; les lignes existantes conservent leur compte
       - Les rapports des années où le compte était actif l'incluent toujours
   - La grille des comptes affiche par défaut les comptes **Activés** uniquement. Utilisez le bouton bascule **Afficher : Tous / Activés / Désactivés** pour choisir **Tous** et inclure les comptes désactivés.
 
@@ -452,7 +452,7 @@ Lorsqu'un espace de travail (tenant) est supprimé par un administrateur de la p
 
 La suppression est immédiate et irréversible. L'enregistrement du tenant est conservé pour l'audit, et son identifiant (slug) est libéré pour être réutilisé.
 
-**Conseil** : Préférez la désactivation à la suppression. La suppression n'est possible que si aucun poste OPEX/CAPEX ne référence le compte.
+**Conseil** : Préférez la désactivation à la suppression. La suppression n'est possible que si aucune ligne OPEX/CAPEX ne référence le compte.
 
 ## Import/export CSV
 
@@ -532,7 +532,7 @@ Vous avez 50 comptes et 5 sociétés, tous configurés avant l'arrivée des plan
   3. Ajoutez une colonne `coa_code` (ex. : `US-GAAP`) à toutes les lignes
   4. Importez le CSV mis à jour (les comptes appartiennent désormais au CoA)
   5. Assignez le CoA à vos sociétés
-  6. Modifiez les postes OPEX/CAPEX qui affichent un avertissement « compte obsolète »
+  6. Modifiez les lignes OPEX/CAPEX qui affichent un avertissement « compte obsolète »
 
 ### Scénario 3 : Changement de CoA d'une société
 
@@ -542,8 +542,8 @@ Votre filiale britannique passe du UK GAAP à l'IFRS.
   1. Créez un nouveau CoA : `UK-IFRS` (ou chargez-le depuis un modèle)
   2. Dans l'onglet Vue d'ensemble de la société, remplacez le plan comptable par `UK-IFRS`
   3. Désormais, les utilisateurs ne peuvent sélectionner que des comptes de `UK-IFRS`
-  4. Les postes OPEX/CAPEX existants conservent leurs anciens comptes mais affichent des avertissements
-  5. Mettez à jour les postes selon les besoins (ou laissez les données historiques en l'état si le reporting le permet)
+  4. Les lignes OPEX/CAPEX existantes conservent leurs anciens comptes mais affichent des avertissements
+  5. Mettez à jour les lignes selon les besoins (ou laissez les données historiques en l'état si le reporting le permet)
 
 ### Scénario 4 : Mettre en place la consolidation de groupe (multi-pays)
 
@@ -576,10 +576,10 @@ Votre groupe a des filiales en France, au Royaume-Uni et en Allemagne. Chaque pa
 R : Non. Chaque compte appartient à un seul CoA (ou à aucun pour les comptes historiques). Si vous avez besoin de la même structure de comptes dans plusieurs CoA, chargez le modèle dans chacun d'eux ou utilisez l'export/import CSV avec des valeurs de `coa_code` différentes.
 
 **Q : Que se passe-t-il si je supprime un plan comptable ?**
-R : La suppression est bloquée si des sociétés le référencent ou si des postes OPEX/CAPEX utilisent ses comptes. Réassignez d'abord les sociétés et mettez à jour les postes, puis supprimez le CoA. La suppression d'un CoA supprime aussi tous ses comptes qui ne sont pas référencés ailleurs.
+R : La suppression est bloquée si des sociétés le référencent ou si des lignes OPEX/CAPEX utilisent ses comptes. Réassignez d'abord les sociétés et mettez à jour les lignes, puis supprimez le CoA. La suppression d'un CoA supprime aussi tous ses comptes qui ne sont pas référencés ailleurs.
 
 **Q : Puis-je modifier les numéros de compte ?**
-R : Oui, dans l'espace de travail du compte. Changer le numéro de compte met automatiquement à jour toutes les références dans les postes OPEX/CAPEX (l'UUID du compte reste le même en interne).
+R : Oui, dans l'espace de travail du compte. Changer le numéro de compte met automatiquement à jour toutes les références dans les lignes OPEX/CAPEX (l'UUID du compte reste le même en interne).
 
 **Q : Comment voir quelles sociétés utilisent un CoA donné ?**
 R : Ouvrez **Gérer les plans** sur la page Plans comptables et consultez la colonne **Sociétés** de la ligne du CoA. Vous pouvez aussi filtrer la page Sociétés par CoA.
@@ -600,7 +600,7 @@ R : Non, elles sont facultatives. Si vous n'opérez que dans un pays ou n'avez p
 R : Oui, c'est justement le principe. De nombreux comptes locaux de différents CoA peuvent être associés au même compte de consolidation. C'est ainsi que vous regroupez les coûts de plusieurs pays dans une même catégorie consolidée.
 
 **Q : Que se passe-t-il si je modifie une correspondance de consolidation ?**
-R : Les postes OPEX/CAPEX ne stockent pas directement de données de consolidation : ils référencent le compte, qui porte la correspondance. Lorsque vous modifiez une correspondance, tous les postes passés et futurs qui utilisent ce compte sont rapportés sous le nouveau compte de consolidation. Modifiez les correspondances avec prudence si vous devez conserver les catégories de reporting historiques.
+R : Les lignes OPEX/CAPEX ne stockent pas directement de données de consolidation : elles référencent le compte, qui porte la correspondance. Lorsque vous modifiez une correspondance, toutes les lignes passées et futures qui utilisent ce compte sont rapportées sous le nouveau compte de consolidation. Modifiez les correspondances avec prudence si vous devez conserver les catégories de reporting historiques.
 
 **Q : Le plan de consolidation doit-il être le plan par défaut des autres pays ?**
 R : Non. Les deux rôles sont indépendants. Dans la configuration habituelle, un même plan IFRS porte les deux, et vous pouvez les donner à des plans différents à tout moment dans **Gérer les plans**.

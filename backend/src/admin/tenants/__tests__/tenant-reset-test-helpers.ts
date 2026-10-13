@@ -35,6 +35,7 @@ import { purgeTenantTables } from '../tenant-data-purge';
 import { TENANT_PURGE_ATTACHMENT_TABLES, TENANT_PURGE_TABLES } from '../tenant-purge.inventory';
 import { TenantResetService } from '../tenant-reset.service';
 import { TenantStatsService } from '../tenant-stats.service';
+import { SeedLanguage } from '../../../analytics/recommended-dimensions.seed';
 
 // Shared by the tenant reset and tenant purge specs (not a spec itself: the runner only picks up
 // *.spec.ts files). The services under test open their own connections, so the tenants are
@@ -172,7 +173,7 @@ export type ActivatedTenant = {
  */
 export async function createActivatedTenant(
   svc: Services,
-  opts: { tag: string; orgName: string; countryIso?: string; signup?: boolean },
+  opts: { tag: string; orgName: string; countryIso?: string; signup?: boolean; language?: SeedLanguage },
 ): Promise<ActivatedTenant> {
   const slug = `rs-${opts.tag}-${randomUUID().slice(0, 8)}`;
   const ownerEmail = `owner-${randomUUID().slice(0, 8)}@reset-spec.test`;
@@ -185,7 +186,7 @@ export async function createActivatedTenant(
     );
   }
   const created = await dataSource.transaction(async (manager) => {
-    const tenant = await svc.tenants.createTenant({ slug, name: opts.orgName }, { manager });
+    const tenant = await svc.tenants.createTenant({ slug, name: opts.orgName, language: opts.language }, { manager });
     await setCurrentTenant(manager, tenant.id);
     const owner = await svc.users.createUser({
       email: ownerEmail,
@@ -446,7 +447,7 @@ function normalizeRow(row: Record<string, unknown>): string {
 
 /**
  * The starting state of a tenant without ids or timestamps: roles and permissions, analytics
- * dimension, task and employment types, document libraries, folders, types and templates with
+ * dimensions and their values, task and employment types, document libraries, folders, types and templates with
  * their numbers, charts of accounts and accounts, companies, calendars, item sequences.
  */
 export async function baselineSnapshot(tenantId: string): Promise<Record<string, string[]>> {
@@ -454,6 +455,8 @@ export async function baselineSnapshot(tenantId: string): Promise<Record<string,
     roles: `SELECT * FROM roles WHERE tenant_id = $1`,
     role_permissions: `SELECT r.role_name, rp.resource, rp.level FROM role_permissions rp JOIN roles r ON r.id = rp.role_id WHERE rp.tenant_id = $1`,
     analytics_axes: `SELECT * FROM analytics_axes WHERE tenant_id = $1`,
+    analytics_categories: `SELECT c.*, a.code AS axis_code FROM analytics_categories c
+                JOIN analytics_axes a ON a.id = c.axis_id AND a.tenant_id = c.tenant_id WHERE c.tenant_id = $1`,
     portfolio_task_types: `SELECT * FROM portfolio_task_types WHERE tenant_id = $1`,
     portfolio_employment_types: `SELECT * FROM portfolio_employment_types WHERE tenant_id = $1`,
     document_libraries: `SELECT * FROM document_libraries WHERE tenant_id = $1`,

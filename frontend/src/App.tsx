@@ -8,8 +8,10 @@ const LoginPage = React.lazy(() => import('./pages/LoginPage'));
 const ForgotPasswordPage = React.lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = React.lazy(() => import('./pages/ResetPasswordPage'));
 const AcceptInvitePage = React.lazy(() => import('./pages/AcceptInvitePage'));
-const OpexListPage = React.lazy(() => import('./pages/OpexListPage'));
-const SpendItemPage = React.lazy(() => import('./pages/opex/SpendItemPage'));
+const BudgetListPage = React.lazy(() => import('./pages/budget/BudgetListPage'));
+const BudgetListRedirect = React.lazy(() => import('./pages/budget/listRedirect'));
+const BudgetLineRoute = React.lazy(() => import('./pages/budget/BudgetLineRoute'));
+import LegacyBudgetLineRedirect from './pages/budget/LegacyBudgetLineRedirect';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import { legacyBudgetRedirectRoutes } from './legacyBudgetRedirects';
@@ -25,9 +27,7 @@ const SuppliersPage = React.lazy(() => import('./pages/SuppliersPage'));
 const SupplierWorkspacePage = React.lazy(() => import('./pages/suppliers/SupplierWorkspacePage'));
 const AccountWorkspacePage = React.lazy(() => import('./pages/accounts/AccountWorkspacePage'));
 const UsersPage = React.lazy(() => import('./pages/UsersPage'));
-const CapexPage = React.lazy(() => import('./pages/CapexPage'));
 const ProjectsPage = React.lazy(() => import('./pages/ProjectsPage'));
-const CapexItemPage = React.lazy(() => import('./pages/capex/CapexItemPage'));
 const AnalyticsCategoriesPage = React.lazy(() => import('./pages/AnalyticsCategoriesPage'));
 const AnalyticsWorkspacePage = React.lazy(() => import('./pages/analytics/AnalyticsWorkspacePage'));
 const AnalyticsDimensionWorkspacePage = React.lazy(() => import('./pages/analytics/AnalyticsDimensionWorkspacePage'));
@@ -35,7 +35,6 @@ const ReportsLandingPage = React.lazy(() => import('./pages/reports/ReportsLandi
 const TopOpexReport = React.lazy(() => import('./pages/reports/TopOpexReport'));
 const OpexDeltaReport = React.lazy(() => import('./pages/reports/OpexDeltaReport'));
 const ComparisonReport = React.lazy(() => import('./pages/reports/ComparisonReport'));
-const CapexBudgetTrendReport = React.lazy(() => import('./pages/reports/CapexBudgetTrendReport'));
 const BudgetColumnsCompareReport = React.lazy(() => import('./pages/reports/BudgetColumnsCompareReport'));
 const ConsolidationReport = React.lazy(() => import('./pages/reports/ConsolidationReport'));
 const AnalyticsCategoryReport = React.lazy(() => import('./pages/reports/AnalyticsCategoryReport'));
@@ -46,10 +45,9 @@ const CompanyChargebackReport = React.lazy(() => import('./pages/reports/Company
 const ContractsPage = React.lazy(() => import('./pages/ContractsPage'));
 const ContractWorkspacePage = React.lazy(() => import('./pages/contracts/ContractWorkspacePage'));
 const BudgetOperationsLandingPage = React.lazy(() => import('./pages/operations/BudgetOperationsLandingPage'));
-const CopyBudgetColumnsPage = React.lazy(() => import('./pages/operations/CopyBudgetColumnsPage'));
+const CopyBudgetPage = React.lazy(() => import('./pages/operations/CopyBudgetPage'));
 const BudgetColumnResetPage = React.lazy(() => import('./pages/operations/BudgetColumnResetPage'));
 const BudgetFreezePage = React.lazy(() => import('./pages/operations/BudgetFreezePage'));
-const CopyAllocationsPage = React.lazy(() => import('./pages/operations/CopyAllocationsPage'));
 const AllocationDefaultPage = React.lazy(() => import('./pages/operations/AllocationDefaultPage'));
 const CurrencySettingsPage = React.lazy(() => import('./pages/operations/CurrencySettingsPage'));
 const BudgetColumnsSettingsPage = React.lazy(() => import('./pages/operations/BudgetColumnsSettingsPage'));
@@ -58,7 +56,6 @@ const TaskWorkspacePage = React.lazy(() => import('./pages/tasks/TaskWorkspacePa
 const ContactsPage = React.lazy(() => import('./pages/ContactsPage'));
 const ContactWorkspacePage = React.lazy(() => import('./pages/contacts/ContactWorkspacePage'));
 const BillingCenter = React.lazy(() => import('./pages/admin/BillingCenter'));
-const AdminLanding = React.lazy(() => import('./pages/admin/AdminLanding'));
 const RolesPage = React.lazy(() => import('./pages/admin/RolesPage'));
 const AuditLogsPage = React.lazy(() => import('./pages/admin/AuditLogsPage'));
 const AdminTenantsPage = React.lazy(() => import('./pages/admin/AdminTenantsPage'));
@@ -242,18 +239,22 @@ function AppRoutes() {
         <Route path="/forgot-password" element={config.features.email ? <ForgotPasswordPage /> : <Navigate to="/login" replace />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/accept-invite" element={<AcceptInvitePage />} />
-        {/* Budget settings and operations formerly under Master data: redirect before the permission check. */}
+        {/* Budget settings and operations formerly under Master data, and the two copy operations merged: redirect before the permission check. */}
         {legacyBudgetRedirectRoutes()}
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
           <Route path="/" element={<HomeRoute />} />
           <Route path="/ops" element={<DashboardPage />} />
-          <Route path="/ops/opex" element={<OpexListPage />} />
-          <Route path="/ops/opex/:id" element={<SpendItemPage />} />
-          <Route path="/ops/opex/:id/:tab" element={<SpendItemPage />} />
-          <Route path="/ops/capex" element={<CapexPage />} />
-          <Route path="/ops/capex/:id" element={<CapexItemPage />} />
-          <Route path="/ops/capex/:id/:tab" element={<CapexItemPage />} />
+          <Route path="/ops/budget" element={<BudgetListPage />} />
+          <Route path="/ops/budget/new" element={<BudgetLineRoute />} />
+          <Route path="/ops/budget/:ref" element={<BudgetLineRoute />} />
+          <Route path="/ops/budget/:ref/:tab" element={<BudgetLineRoute />} />
+          <Route path="/ops/opex" element={<BudgetListRedirect nature="opex" />} />
+          <Route path="/ops/opex/:id" element={<LegacyBudgetLineRedirect nature="opex" />} />
+          <Route path="/ops/opex/:id/:tab" element={<LegacyBudgetLineRedirect nature="opex" />} />
+          <Route path="/ops/capex" element={<BudgetListRedirect nature="capex" />} />
+          <Route path="/ops/capex/:id" element={<LegacyBudgetLineRedirect nature="capex" />} />
+          <Route path="/ops/capex/:id/:tab" element={<LegacyBudgetLineRedirect nature="capex" />} />
           <Route path="/ops/contracts" element={<ContractsPage />} />
           <Route path="/ops/contracts/:id" element={<ContractWorkspacePage />} />
           <Route path="/ops/contracts/:id/:tab" element={<ContractWorkspacePage />} />
@@ -274,16 +275,14 @@ function AppRoutes() {
           <Route path="/ops/reports/top-opex" element={<TopOpexReport />} />
           <Route path="/ops/reports/opex-delta" element={<OpexDeltaReport />} />
           <Route path="/ops/reports/comparison" element={<ComparisonReport />} />
-          <Route path="/ops/reports/capex/trend" element={<CapexBudgetTrendReport />} />
+          <Route path="/ops/reports/capex/trend" element={<Navigate to="/ops/reports/comparison?scope=capex" replace />} />
           <Route path="/ops/reports/budget-columns-compare" element={<BudgetColumnsCompareReport />} />
           <Route path="/ops/reports/consolidation" element={<ConsolidationReport />} />
           <Route path="/ops/reports/analytics" element={<AnalyticsCategoryReport />} />
           <Route path="/ops/reports/staffing" element={<StaffingByMonthReport />} />
           <Route path="/ops/reports/cost-per-fte" element={<CostPerFteReport />} />
           <Route path="/ops/operations" element={<BudgetOperationsLandingPage />} />
-          <Route path="/ops/operations/copy-budget-columns" element={<CopyBudgetColumnsPage />} />
-          <Route path="/ops/operations/column-init" element={<CopyBudgetColumnsPage />} />
-          <Route path="/ops/operations/copy-allocations" element={<CopyAllocationsPage />} />
+          <Route path="/ops/operations/copy-budget" element={<CopyBudgetPage />} />
           <Route path="/ops/operations/column-reset" element={<BudgetColumnResetPage />} />
           <Route path="/ops/operations/freeze" element={<BudgetFreezePage />} />
           <Route path="/ops/operations/allocation-default" element={<AllocationDefaultPage />} />

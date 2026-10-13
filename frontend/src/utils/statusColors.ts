@@ -184,3 +184,48 @@ export const SAMPLE_DATA_STATUS_COLORS: Record<string, string> = {
   loaded: 'success',
   failed: 'error',
 };
+
+/**
+ * Contract term states (contract list): orange while a cancellation deadline falls in the decision
+ * window, green while a term runs with no decision due, grey once the contract has rolled over,
+ * stops or has ended.
+ */
+export const CONTRACT_TERM_STATE_COLORS: Record<string, string> = {
+  to_decide: 'warning',
+  in_progress: 'success',
+  renewed: 'default',
+  ending: 'default',
+  expired: 'default',
+};
+
+/**
+ * Contract compliance (`backend/src/contracts/contract-compliance.ts`): a requirement's recorded
+ * state (`to_check`: expected, nothing recorded), and the list's summary of a contract.
+ */
+export const CONTRACT_COMPLIANCE_STATE_COLORS: Record<string, string> = {
+  present: 'success',
+  absent: 'warning',
+  not_applicable: 'default',
+  to_check: 'default',
+};
+
+export const CONTRACT_COMPLIANCE_SUMMARY_COLORS: Record<string, string> = {
+  missing: 'warning',
+  to_check: 'default',
+  complete: 'success',
+  none: 'default',
+};
+
+/**
+ * Contract budget coverage (contract Budget tab, contract list): green when the linked budget lines
+ * cover the commitment, orange when they fall short, exceed it by more than the tolerance or are
+ * missing, grey when there is nothing to compare (no commitment, budget not started).
+ */
+export const CONTRACT_BUDGET_STATE_COLORS: Record<string, string> = {
+  covered: 'success',
+  under: 'warning',
+  over: 'warning',
+  no_line: 'warning',
+  no_commitment: 'default',
+  not_started: 'default',
+};

@@ -130,7 +130,7 @@ Jede OPEX- und CAPEX-Zeile mit einer Kostenstelle zeigt den Budgetverantwortlich
 - **Aus der Kostenstelle gelesen**: Der Budgetverantwortliche wird nicht auf der Zeile gespeichert. Ändern Sie ihn hier, und jede Zeile der Kostenstelle zeigt sofort die neue Person. Auf einer Zeile ändert er sich nur, wenn Sie die Kostenstelle der Zeile ändern.
 - **Nur angezeigt, wenn gesetzt**: Eine Zeile ohne Kostenstelle, oder deren Kostenstelle keinen Budgetverantwortlichen hat, zeigt nichts an.
 - **Eine eigene Rolle**: **IT-Verantwortlicher** und **Fachverantwortlicher** einer Zeile bleiben unverändert und werden auf jeder Zeile gesetzt. Sie decken auch Arbeitsbereiche ab, die keine Kostenstellen verwenden.
-- **In den Listen**: Die OPEX- und CAPEX-Listen haben eine Spalte **Budgetverantwortlicher**, standardmäßig ausgeblendet, mit einem Kontrollkästchen-Filter.
+- **In der Liste**: Die Liste der Budgetzeilen hat eine Spalte **Budgetverantwortlicher**, standardmäßig ausgeblendet, mit einem Kontrollkästchen-Filter.
 
 ### Den Typ ändern
 
@@ -159,8 +159,8 @@ Die Schaltfläche **Löschen** in der Kopfzeile löscht das Element sofort (erfo
 
 ## Kostenstellen auf Budgetzeilen
 
-- **OPEX und CAPEX**: Das Feld **Kostenstelle** im Bereich **Eigenschaften** zeigt den Baum. Gruppen werden zur Orientierung angezeigt und können nicht gewählt werden. Wenn Sie eine Zeile erstellen und das zahlende Unternehmen leer ist, füllt die Wahl einer Kostenstelle es mit dem Unternehmen der Kostenstelle, und das Unternehmen folgt der Kostenstelle, bis Sie selbst ein Unternehmen oder ein Konto wählen. Wenn sich die beiden Unternehmen unterscheiden, bleiben beide erhalten und ein Hinweis weist darauf hin. Siehe [OPEX](opex.md) und [CAPEX](capex.md).
-- **Listen**: die Spalten und Filter **Kostenstelle** und **Run oder Build** der OPEX- und CAPEX-Listen.
+- **OPEX und CAPEX**: Das Feld **Kostenstelle** im Bereich **Eigenschaften** zeigt den Baum. Gruppen werden zur Orientierung angezeigt und können nicht gewählt werden. Wenn Sie eine Zeile erstellen und das zahlende Unternehmen leer ist, füllt die Wahl einer Kostenstelle es mit dem Unternehmen der Kostenstelle, und das Unternehmen folgt der Kostenstelle, bis Sie selbst ein Unternehmen oder ein Konto wählen. Wenn sich die beiden Unternehmen unterscheiden, bleiben beide erhalten und ein Hinweis weist darauf hin. Siehe [Budgetzeilen](budget-lines.md).
+- **Liste**: die Spalten und Filter **Kostenstelle** und **Run oder Build** der Liste der Budgetzeilen.
 - **Berichte**: Die Budgetberichte können auf eine Kostenstelle oder eine Gruppe gefiltert werden. Siehe [Filter nach Kostenstelle, Run oder Build und Analysedimensionen](reports.md#filter-nach-kostenstelle-run-oder-build-und-analysedimensionen).
 
 ---
@@ -224,7 +224,7 @@ Laden oder aktualisieren Sie den gesamten Baum aus einer Datei.
 | `cost_centers:member` | Kostenstellen und Gruppen erstellen und bearbeiten |
 | `cost_centers:admin` | Alles oben Genannte, dazu CSV-Import und -Export sowie Löschen |
 
-Jede Rolle beginnt mit der Stufe, die sie für Abteilungen hat, mit Ausnahme der integrierten Rolle Budget-Administrator, die admin erhält. Budget-Administrator und Stammdaten-Administrator sind also Administratoren, Budget-Mitglied und Stammdaten-Mitglied sind Mitglieder, und die Leserollen können lesen. Wer OPEX, CAPEX oder Reporting lesen kann, kann eine Kostenstelle auf einer Zeile oder in einem Berichtsfilter wählen, ohne Zugriff auf diese Seite zu haben.
+Jede Rolle beginnt mit der Stufe, die sie für Abteilungen hat, mit Ausnahme der integrierten Rolle Budget-Administrator, die admin erhält. Budget-Administrator und Stammdaten-Administrator sind also Administratoren, Budget-Mitglied und Stammdaten-Mitglied sind Mitglieder, und die Leserollen können lesen. Wer Budgetzeilen (Budget) oder Berichte lesen kann, kann eine Kostenstelle auf einer Zeile oder in einem Berichtsfilter wählen, ohne Zugriff auf diese Seite zu haben.
 
 ---
 

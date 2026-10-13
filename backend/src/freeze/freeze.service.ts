@@ -6,7 +6,6 @@ import { FxIngestionService } from '../currency/fx-ingestion.service';
 import { FxRateService } from '../currency/fx-rate.service';
 import { CurrencySettingsService } from '../currency/currency-settings.service';
 import { SpendVersion } from '../spend/spend-version.entity';
-import { CapexVersion } from '../capex/capex-version.entity';
 import { AmountMeasure, AMOUNT_MEASURES, MEASURE_FREEZE_COLUMN } from '../spend/amounts-write.util';
 import { budgetColumnName, readBudgetColumns } from '../budget-columns/budget-columns.util';
 import { lockBudgetYear, lockTenantBudgetOperations } from '../spend/budget-locks';
@@ -106,24 +105,34 @@ export class FreezeService {
     if (!rateSet) return;
 
     await this.lockYearForFx(scope, year, tenantId, manager);
-    const repo = manager.getRepository(scope === 'opex' ? SpendVersion : CapexVersion);
+    const repo = manager.getRepository(SpendVersion);
     await repo.createQueryBuilder()
       .update()
       .set({
         fx_rate_set_id: rateSet.id,
         reporting_currency: settings.reportingCurrency,
       })
-      .where('tenant_id = :tenantId AND budget_year = :year', { tenantId, year })
+      .where(`tenant_id = :tenantId AND budget_year = :year${this.yearVersionsNature(scope)}`, { tenantId, year })
       .execute();
+  }
+
+  /**
+   * The versions of the year a freeze of `scope` pins or unpins: those of the scope's lines only.
+   * `spend_versions` holds the versions of both natures (lot Z1) and has no nature: its line's
+   * (`spend/budget-nature.ts`), as `lockBudgetYear` locks them.
+   */
+  private yearVersionsNature(scope: 'opex' | 'capex'): string {
+    if (scope !== 'opex' && scope !== 'capex') throw new Error(`Unknown budget line nature: ${String(scope)}`);
+    return ` AND spend_item_id IN (SELECT i.id FROM spend_items i WHERE i.tenant_id = :tenantId AND i.nature = '${scope}')`;
   }
 
   private async detachFxRates(scope: 'opex' | 'capex', year: number, tenantId: string, manager: EntityManager) {
     await this.lockYearForFx(scope, year, tenantId, manager);
-    const repo = manager.getRepository(scope === 'opex' ? SpendVersion : CapexVersion);
+    const repo = manager.getRepository(SpendVersion);
     await repo.createQueryBuilder()
       .update()
       .set({ fx_rate_set_id: null })
-      .where('tenant_id = :tenantId AND budget_year = :year', { tenantId, year })
+      .where(`tenant_id = :tenantId AND budget_year = :year${this.yearVersionsNature(scope)}`, { tenantId, year })
       .execute();
   }
 

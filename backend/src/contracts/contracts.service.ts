@@ -1,12 +1,13 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BUDGET_LINE_TABLE, BUDGET_NATURES, linkedLineOf, naturesAnd } from '../spend/budget-nature';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, DeepPartial, EntityManager, In, Repository, Raw } from 'typeorm';
+import { Brackets, DeepPartial, EntityManager, In, Repository, Raw, SelectQueryBuilder } from 'typeorm';
 import { Contract } from './contract.entity';
 import { ContractSpendItem } from './contract-spend-item.entity';
 import { ContractLink } from './contract-link.entity';
 import { ContractAttachment } from './contract-attachment.entity';
 import { AuditService } from '../audit/audit.service';
-import { parseExportPagination, parsePagination } from '../common/pagination';
+import { parseExportPagination, parsePagination, type Sort } from '../common/pagination';
 import { format } from '@fast-csv/format';
 import { parseString } from '@fast-csv/parse';
 import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
@@ -15,8 +16,8 @@ import * as fs from 'fs';
 import { deriveStatusFromDisabledAt, resolveLifecycleState } from '../common/status';
 import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/status-filter';
 import { ContractUpsertDto } from './dto/contract.dto';
+import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { TasksUnifiedService } from '../tasks/tasks-unified.service';
-import { ContractCapexItem } from './contract-capex-item.entity';
 import { StorageService } from '../common/storage/storage.service';
 import { randomUUID } from 'crypto';
 import { validate as isUuid } from 'uuid';
@@ -33,6 +34,46 @@ import {
 } from '../common/ag-grid-filtering';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
 import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attach.util';
+import { contractTermFields, contractTermsSql, sqlDateLiteral, type ContractTermFields } from './contract-terms';
+import { readDecisionWindowDays } from './contract-settings.service';
+import { utcDateYmd } from '../notifications/expiry-reminder-schedule';
+import { centsToNumber } from '../common/amount';
+import { FxRateService } from '../currency/fx-rate.service';
+import {
+  contractRelationCounts,
+  listContractApplications,
+  listContractAssets,
+  listContractBudgetLines,
+  replaceContractRelations,
+  type ContractRelationSet,
+} from './contract-relations';
+import {
+  contractBudgetCurrentYear,
+  contractBudgetParams,
+  contractBudgetSql,
+  contractBudgetYears,
+  contractFxRates,
+  loadContractBudgetInputs,
+  parseContractBudgetSelection,
+  readContractBudgetRows,
+  type ContractBudgetInputs,
+  type ContractBudgetRow,
+  type ContractBudgetState,
+} from './contract-budget';
+import {
+  COMPLIANCE_SORT_EXPRESSION,
+  complianceParams,
+  complianceRegisterCsv,
+  complianceSummarySql,
+  contractComplianceView,
+  loadContractComplianceInputs,
+  readComplianceSummaries,
+  updateContractComplianceItem,
+  type ComplianceItemPatch,
+  type ComplianceSummary,
+  type ContractComplianceInputs,
+} from './contract-compliance';
+import type { CsvLanguage } from '../common/csv-sheet';
 
 /**
  * The session tenant as a find condition: `app_current_tenant()`, the tenant RLS checks too,
@@ -54,13 +95,42 @@ const CONTRACT_REFERENCES = {
 // Never written from a body: the row's identity, tenant and timestamps.
 const NOT_WRITABLE = ['id', 'tenant_id', 'created_at', 'updated_at'] as const;
 
-type ListItem = Contract & {
+type ListItem = Contract & ContractTermFields & {
   supplier?: { id: string; name: string } | null;
   company?: { id: string; name: string } | null;
-  end_date?: string;
-  cancellation_deadline?: string;
-  linked_opex_count?: number;
+  /** Links to budget lines of both natures. */
+  linked_lines_count?: number;
   latest_task?: { id: string; status?: string; description?: string; created_at?: Date } | null;
+  /**
+   * With a budget year and column (`budget_year`, `budget_column`) and the right to read the
+   * budget: the contract against its budget lines (`contract-budget.ts`), in the reporting currency.
+   */
+  budget_committed?: number | null;
+  budget_linked?: number;
+  budget_gap?: number | null;
+  budget_state?: ContractBudgetState | null;
+  /** What the compliance register expects of the contract and what is missing (`contract-compliance.ts`). */
+  compliance?: ComplianceSummary;
+};
+
+/** Who reads a list: the budget figures need the right to read the budget too. */
+type ListReadOptions = { manager?: EntityManager; budgetAccess?: boolean };
+
+/** A contract link `l` to an OPEX line (`spend/budget-nature.ts`): the OPEX side lists, counts and replaces those only. */
+const OPEX_LINK = linkedLineOf('l.tenant_id', 'l.spend_item_id', 'opex');
+const CAPEX_LINK = linkedLineOf('l.tenant_id', 'l.spend_item_id', 'capex');
+/** A contract link `l` to a budget line of either nature: the list counts both. */
+const ANY_LINE_LINK = ` AND EXISTS (SELECT 1 FROM ${BUDGET_LINE_TABLE} nl WHERE nl.tenant_id = l.tenant_id AND nl.id = l.spend_item_id${naturesAnd('nl', BUDGET_NATURES)})`;
+
+/** The list's order without a valid `sort`: the next due date first (`contract-terms.ts`). */
+const DEFAULT_LIST_SORT: Sort = { field: 'next_due_date', direction: 'ASC' };
+/** The sort fields computed from the contract terms, ordered through a selected alias. */
+const TERM_SORT_FIELDS = new Set(['end_date', 'cancellation_deadline', 'next_due_date']);
+/** The budget figures of the list (`contract-budget.ts`, joined as `cb`), in units of the reporting currency. */
+const BUDGET_FIELDS: Record<string, string> = {
+  budget_committed: '(cb.committed::numeric / 100)',
+  budget_linked: '(cb.linked / 100)',
+  budget_gap: '(cb.gap / 100)',
 };
 
 @Injectable()
@@ -75,28 +145,32 @@ export class ContractsService {
     private readonly storage: StorageService,
     private readonly itemContacts: ContractContactsService,
     private readonly notifications: NotificationsService,
+    private readonly fxRates: FxRateService,
   ) {}
 
-  private computeEndDate(start: string, durationMonths: number): string {
-    const d = new Date(start + 'T00:00:00Z');
-    const end = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + (durationMonths || 0), d.getUTCDate()));
-    end.setUTCDate(end.getUTCDate() - 1); // minus 1 day
-    return end.toISOString().slice(0, 10);
-    }
-
-  private addMonthsIso(dateIso: string, delta: number): string {
-    const d = new Date(dateIso + 'T00:00:00Z');
-    const out = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + delta, d.getUTCDate()));
-    return out.toISOString().slice(0, 10);
-  }
-
-  private computeCancellationDeadline(endDateIso: string, noticeMonths: number): string {
-    const raw = this.addMonthsIso(endDateIso, -noticeMonths);
-    return raw;
-  }
-
-  private contractFilterTargets(): Record<string, FilterTargetConfig> {
+  /**
+   * The list's filter targets. The end date, the cancellation deadline, the next due date and the
+   * state are those of the current term as of `today` (`contract-terms.ts`), like the values the
+   * list returns; the state with the tenant's decision window (`windowDays`).
+   */
+  private contractFilterTargets(today: string, windowDays: number, withBudget = false, withCompliance = false): Record<string, FilterTargetConfig> {
+    const terms = contractTermsSql('c', sqlDateLiteral(today), { decisionWindowDays: windowDays });
+    // The compliance summary, when the list joins it as `cc` (its sort or its filter is asked for).
+    const compliance: Record<string, FilterTargetConfig> = withCompliance
+      ? { compliance_state: { expression: 'cc.state', dataType: 'string' } }
+      : {};
+    const budget: Record<string, FilterTargetConfig> = withBudget
+      ? {
+          ...Object.fromEntries(Object.entries(BUDGET_FIELDS).map(([field, expression]) => [
+            field,
+            { expression, numericExpression: expression, textExpression: `CAST(${expression} AS TEXT)`, dataType: 'number' as const },
+          ])),
+          budget_state: { expression: 'cb.state', dataType: 'string' },
+        }
+      : {};
     return {
+      ...budget,
+      ...compliance,
       id: { expression: 'c.id', dataType: 'string' },
       name: { expression: 'c.name', dataType: 'string' },
       status: { expression: 'c.status', textExpression: 'CAST(c.status AS TEXT)', dataType: 'string' },
@@ -104,14 +178,10 @@ export class ContractsService {
       supplier_id: { expression: 'c.supplier_id', dataType: 'string' },
       owner_user_id: { expression: 'c.owner_user_id', dataType: 'string' },
       start_date: { expression: 'c.start_date', dataType: 'string' },
-      end_date: {
-        expression: `(c.start_date + COALESCE(c.duration_months, 0) * INTERVAL '1 month' - INTERVAL '1 day')::date`,
-        dataType: 'string',
-      },
-      cancellation_deadline: {
-        expression: `(c.start_date + (COALESCE(c.duration_months, 0) - COALESCE(c.notice_period_months, 0)) * INTERVAL '1 month')::date`,
-        dataType: 'string',
-      },
+      end_date: { expression: terms.currentTermEnd, dataType: 'string' },
+      cancellation_deadline: { expression: terms.cancellationDeadline, dataType: 'string' },
+      next_due_date: { expression: terms.nextDueDate, dataType: 'string' },
+      term_state: { expression: terms.termState, dataType: 'string' },
       duration_months: {
         expression: 'c.duration_months',
         numericExpression: 'c.duration_months',
@@ -141,26 +211,46 @@ export class ContractsService {
     };
   }
 
-  async list(query: any, opts?: { manager?: EntityManager; exportAll?: boolean }) {
-    const mg = opts?.manager ?? this.repo.manager;
+  /**
+   * The contracts a list request selects: the tenant, the status scope (read from the end of
+   * validity), the column filters and the quick search. `omitFilters` leaves column filters out
+   * (the count behind a quick filter ignores the filter it sets). Shared by the rows, the ids
+   * and the totals, so they always cover the same contracts. With `budget`, the contracts' budget
+   * figures (`contract-budget.ts`) join as `cb`, for the filters, the sort and the totals. With
+   * `compliance`, the compliance summaries (`contract-compliance.ts`) join as `cc` when the request
+   * sorts or filters on them, and only then. `windowDays`: the tenant's decision window
+   * (`readDecisionWindowDays`), for the state.
+   */
+  private listQuery(
+    mg: EntityManager,
+    query: any,
+    opts: { windowDays: number; exportAll?: boolean; omitFilters?: string[]; budget?: ContractBudgetInputs | null; compliance?: ContractComplianceInputs | null },
+  ) {
     const repo = mg.getRepository(Contract);
-    const { page, limit, skip, sort, status, q, filters } = opts?.exportAll
-      ? parseExportPagination(query, { field: 'created_at', direction: 'DESC' })
-      : parsePagination(query, { field: 'created_at', direction: 'DESC' });
+    const parsed = opts.exportAll
+      ? parseExportPagination(query, DEFAULT_LIST_SORT)
+      : parsePagination(query, DEFAULT_LIST_SORT);
+    const { status, q, filters } = parsed;
     const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
-    const filterTargets = this.contractFilterTargets();
+    const today = utcDateYmd(new Date());
+    const budget = opts.budget ?? null;
+    const complianceFiltered = !!filtersToApply && typeof filtersToApply === 'object'
+      && Object.prototype.hasOwnProperty.call(filtersToApply, 'compliance_state')
+      && !opts?.omitFilters?.includes('compliance_state');
+    const compliance = opts?.compliance && (parsed.sort.field === 'compliance_state' || complianceFiltered) ? opts.compliance : null;
+    const filterTargets = this.contractFilterTargets(today, opts.windowDays, budget !== null, compliance !== null);
     const nextParam = createParamNameGenerator('c');
     const compiledFilters: CompiledCondition[] = [];
     if (filtersToApply && typeof filtersToApply === 'object') {
       for (const [field, model] of Object.entries(filtersToApply)) {
+        if (opts?.omitFilters?.includes(field)) continue;
         const target = filterTargets[field];
         if (!target) continue;
         const condition = compileAgFilterCondition(model, target, nextParam);
         if (condition) compiledFilters.push(condition);
       }
     }
-
     const quickSearchConditions = q
       ? buildQuickSearchConditions(q, ['c.name', 'comp.name', 'sup.name', 'c.notes'], nextParam)
       : [];
@@ -168,13 +258,29 @@ export class ContractsService {
       String(query.includeDisabled ?? '').toLowerCase() === '1' ||
       String(query.includeDisabled ?? '').toLowerCase() === 'true';
 
-    const applyCompiledFilters = (builder: ReturnType<typeof repo.createQueryBuilder>) => {
-      // Parenthesized, so no condition can widen the tenant predicate above.
-      compiledFilters.forEach((cond) => builder.andWhere(`(${cond.sql})`, cond.params));
-    };
-    const applyQuickSearch = (builder: ReturnType<typeof repo.createQueryBuilder>) => {
-      if (quickSearchConditions.length === 0) return;
-      builder.andWhere(
+    const qb = repo
+      .createQueryBuilder('c')
+      .leftJoin('companies', 'comp', 'comp.id = c.company_id AND comp.tenant_id = c.tenant_id')
+      .leftJoin('suppliers', 'sup', 'sup.id = c.supplier_id AND sup.tenant_id = c.tenant_id')
+      .where('c.tenant_id = app_current_tenant()');
+    if (budget) {
+      // One row per contract of the tenant for the one year asked for, computed once.
+      qb.addCommonTableExpression(contractBudgetSql({ contractIds: null }), 'cb', { materialized: true })
+        .leftJoin('cb', 'cb', 'cb.contract_id = c.id')
+        .setParameters(contractBudgetParams(budget));
+    }
+    if (compliance) {
+      // One row per contract of the tenant, computed once.
+      qb.addCommonTableExpression(complianceSummarySql(false), 'cc', { materialized: true })
+        .leftJoin('cc', 'cc', 'cc.contract_id = c.id')
+        .setParameters(complianceParams(compliance));
+    }
+    // The status is read from the end of validity (the stored one is not updated when the date passes).
+    applyStatusFilter(qb, { alias: 'c', explicitStatus: status ?? statusFromAg ?? null, includeDisabled, matchNone });
+    // Parenthesized, so no condition can widen the tenant predicate above.
+    compiledFilters.forEach((cond) => qb.andWhere(`(${cond.sql})`, cond.params));
+    if (quickSearchConditions.length > 0) {
+      qb.andWhere(
         new Brackets((sub) => {
           quickSearchConditions.forEach((cond, idx) => {
             if (idx === 0) sub.where(cond.sql, cond.params);
@@ -182,27 +288,30 @@ export class ContractsService {
           });
         }),
       );
-    };
+    }
+    return { qb, parsed, today, filterTargets };
+  }
 
-    const qbBase = repo
-      .createQueryBuilder('c')
-      .leftJoin('companies', 'comp', 'comp.id = c.company_id AND comp.tenant_id = c.tenant_id')
-      .leftJoin('suppliers', 'sup', 'sup.id = c.supplier_id AND sup.tenant_id = c.tenant_id')
-      .where('c.tenant_id = app_current_tenant()');
-    // The status is read from the end of validity (the stored one is not updated when the date passes).
-    applyStatusFilter(qbBase, { alias: 'c', explicitStatus: status ?? statusFromAg ?? null, includeDisabled, matchNone });
-    applyCompiledFilters(qbBase);
-    applyQuickSearch(qbBase);
-
-    const total = await qbBase.clone().getCount();
+  /**
+   * Orders a list query. The term values sort through a selected alias; the next due date puts
+   * the contracts without one (ended) last in both directions.
+   */
+  private applyListSort(qb: SelectQueryBuilder<Contract>, sort: Sort, filterTargets: Record<string, FilterTargetConfig>) {
+    // The budget figures sort when the list joins them (a budget year and column were given).
+    const budgetSorts = filterTargets.budget_state ? BUDGET_FIELDS : {};
+    // The compliance summary sorts when the list joins it (`listQuery`).
+    const complianceSorts: Record<string, string> = filterTargets.compliance_state ? { compliance_state: COMPLIANCE_SORT_EXPRESSION } : {};
     const sortExpressions: Record<string, string> = {
+      ...budgetSorts,
+      ...complianceSorts,
       name: 'c.name',
       status: 'c.status',
       company_name: 'comp.name',
       supplier_name: 'sup.name',
       start_date: 'c.start_date',
-      end_date: `(c.start_date + COALESCE(c.duration_months, 0) * INTERVAL '1 month' - INTERVAL '1 day')::date`,
-      cancellation_deadline: `(c.start_date + (COALESCE(c.duration_months, 0) - COALESCE(c.notice_period_months, 0)) * INTERVAL '1 month')::date`,
+      end_date: filterTargets.end_date.expression,
+      cancellation_deadline: filterTargets.cancellation_deadline.expression,
+      next_due_date: filterTargets.next_due_date.expression,
       duration_months: 'c.duration_months',
       auto_renewal: 'c.auto_renewal',
       notice_period_months: 'c.notice_period_months',
@@ -212,19 +321,51 @@ export class ContractsService {
       created_at: 'c.created_at',
       updated_at: 'c.updated_at',
     };
-    const sortField = sortExpressions[sort.field] ? sort.field : 'created_at';
+    const sortField = sortExpressions[sort.field] ? sort.field : DEFAULT_LIST_SORT.field;
     const sortExpr = sortExpressions[sortField];
-    const qb = qbBase.clone();
-    if (sortField === 'end_date') {
-      qb.addSelect(sortExpr, 'sort_end_date');
-      qb.orderBy('sort_end_date', sort.direction as any);
-    } else if (sortField === 'cancellation_deadline') {
-      qb.addSelect(sortExpr, 'sort_cancellation_deadline');
-      qb.orderBy('sort_cancellation_deadline', sort.direction as any);
+    const direction = sort.field === sortField ? sort.direction : DEFAULT_LIST_SORT.direction;
+    if (TERM_SORT_FIELDS.has(sortField) || budgetSorts[sortField] || complianceSorts[sortField]) {
+      qb.addSelect(sortExpr, `sort_${sortField}`);
+      // Without a value (no next due date, no rate for the currency): last in both directions.
+      qb.orderBy(`sort_${sortField}`, direction, sortField === 'next_due_date' || budgetSorts[sortField] ? 'NULLS LAST' : undefined);
     } else {
-      qb.orderBy(sortExpr, sort.direction as any);
+      qb.orderBy(sortExpr, direction);
     }
     if (sortExpr !== 'c.created_at') qb.addOrderBy('c.created_at', 'DESC');
+    // Last, so equal rows keep one order from page to page.
+    qb.addOrderBy('c.id', 'ASC');
+  }
+
+  /**
+   * The budget figures a list request asks for: its `budget_year` and `budget_column`, when the
+   * caller may read the budget (otherwise they are ignored). Their inputs cover every contract of
+   * the tenant, so the list can sort and filter on them.
+   */
+  private async listBudgetInputs(mg: EntityManager, query: any, opts?: ListReadOptions): Promise<ContractBudgetInputs | null> {
+    if (!opts?.budgetAccess) return null;
+    const selection = parseContractBudgetSelection(query, contractBudgetCurrentYear());
+    if (!selection) return null;
+    const tenantId = await this.sessionTenantId(mg);
+    return loadContractBudgetInputs({ fxRates: this.fxRates }, mg, tenantId, [selection.year], selection.column);
+  }
+
+  private async sessionTenantId(mg: EntityManager): Promise<string> {
+    const [row] = await mg.query(`SELECT app_current_tenant() AS id`);
+    if (!row?.id) throw new BadRequestException('Tenant context is required');
+    return row.id as string;
+  }
+
+  async list(query: any, opts?: ListReadOptions & { exportAll?: boolean }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const budget = await this.listBudgetInputs(mg, query, opts);
+    const compliance = await loadContractComplianceInputs(mg);
+    const windowDays = await readDecisionWindowDays(mg);
+    const { qb: qbBase, parsed, today, filterTargets } = this.listQuery(mg, query, { windowDays, exportAll: opts?.exportAll, budget, compliance });
+    const { page, limit, skip, sort } = parsed;
+
+    const total = await qbBase.clone().getCount();
+    const qb = qbBase.clone();
+    this.applyListSort(qb, sort, filterTargets);
     qb.skip(skip).take(limit);
     const items = await qb.getMany();
 
@@ -239,8 +380,14 @@ export class ContractsService {
     const cById = new Map<string, any>(companies.map((r: any) => [r.id, r]));
 
     const contractIds = items.map(i => i.id);
+    // The budget lines of both natures (spend/budget-nature.ts).
     const counts: Array<{ contract_id: string; c: string }> = contractIds.length
-      ? await mg.query(`SELECT contract_id, COUNT(*)::text as c FROM contract_spend_items WHERE tenant_id = app_current_tenant() AND contract_id = ANY($1) GROUP BY contract_id`, [contractIds])
+      ? await mg.query(
+          `SELECT l.contract_id, COUNT(*)::text as c FROM contract_spend_items l
+            WHERE l.tenant_id = app_current_tenant() AND l.contract_id = ANY($1)${ANY_LINE_LINK}
+            GROUP BY l.contract_id`,
+          [contractIds],
+        )
       : [];
     const countById = new Map<string, number>(counts.map((r) => [r.contract_id, Number(r.c)]));
 
@@ -252,28 +399,146 @@ export class ContractsService {
       : [];
     const latestById = new Map(latestTasks.map(t => [t.related_object_id, t]));
 
+    // The page's budget figures, from the same statement the list sorted and filtered on.
+    const budgetById = new Map<string, ContractBudgetRow>(
+      budget && contractIds.length
+        ? (await readContractBudgetRows(mg, { ...budget, contractIds })).map((row) => [row.contract_id, row])
+        : [],
+    );
+    // The page's compliance summaries, by batch of ids (`contract-compliance.ts`).
+    const complianceById = await readComplianceSummaries(mg, compliance, contractIds);
+
     const enriched: ListItem[] = items.map((i) => {
-      const end = this.computeEndDate(i.start_date, i.duration_months || 0);
-      const cancel = this.computeCancellationDeadline(end, i.notice_period_months || 0);
+      const figures = budgetById.get(i.id);
       return {
         ...i,
+        ...contractTermFields(i, today, { decisionWindowDays: windowDays }),
         // From the end of validity, like the filter: the stored status stays enabled once the date passes.
         status: deriveStatusFromDisabledAt(i.disabled_at),
         supplier: i.supplier_id ? { id: i.supplier_id, name: sById.get(i.supplier_id)?.name ?? '' } : null,
         company: i.company_id ? { id: i.company_id, name: cById.get(i.company_id)?.name ?? '' } : null,
-        end_date: end,
-        cancellation_deadline: cancel,
-        linked_opex_count: countById.get(i.id) ?? 0,
+        linked_lines_count: countById.get(i.id) ?? 0,
         latest_task: latestById.get(i.id) ? {
           id: latestById.get(i.id)!.id,
           status: latestById.get(i.id)!.status,
           description: latestById.get(i.id)!.description || undefined,
           created_at: latestById.get(i.id)!.created_at,
         } : null,
+        compliance: complianceById.get(i.id) ?? { expected: 0, missing: 0, to_check: 0, state: 'none' },
+        ...(budget
+          ? {
+              budget_committed: figures?.committed ?? null,
+              budget_linked: figures?.linked ?? 0,
+              budget_gap: figures?.gap ?? null,
+              budget_state: figures?.state ?? null,
+            }
+          : {}),
       };
     });
 
     return { items: enriched, total, page, limit };
+  }
+
+  /**
+   * The footer of the list for the same request (search, filters, status scope): the number of
+   * contracts and the sum of their yearly amounts in the tenant's reporting currency, converted
+   * with the rates of this year's budget (the latest rate set of the year, as the budget's live
+   * columns: `contractFxRates`). Contracts in a currency without a rate stay out of the sum and are
+   * counted by currency in `excluded`. `to_decide_count`: the contracts the "to decide" quick filter
+   * shows, the state filter itself left out; `decision_window_days`: the tenant's window it uses.
+   *
+   * With a budget year and column (`budget_year`, `budget_column`) and the right to read the
+   * budget, `budget` sums the list's budget figures (`contract-budget.ts`): committed (contracts
+   * whose currency has no rate that year left out and counted in `excluded`), linked, gap (over
+   * the contracts with a committed amount), the counts of the "no budget line" and "under-budgeted"
+   * quick filters (the budget state filter left out), and the years the selector offers.
+   */
+  async totals(query: any, opts?: ListReadOptions & { tenantId?: string }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const budget = await this.listBudgetInputs(mg, query, opts);
+    const compliance = await loadContractComplianceInputs(mg);
+    const windowDays = await readDecisionWindowDays(mg, opts?.tenantId);
+    const { qb } = this.listQuery(mg, query, { windowDays, exportAll: true, budget, compliance });
+    const groups: Array<{ currency: string; count: string; amount: string }> = await qb
+      .clone()
+      .select(`UPPER(TRIM(COALESCE(c.currency, '')))`, 'currency')
+      .addSelect('COUNT(*)::text', 'count')
+      .addSelect('COALESCE(SUM(c.yearly_amount_at_signature), 0)::text', 'amount')
+      .groupBy(`UPPER(TRIM(COALESCE(c.currency, '')))`)
+      .getRawMany();
+    groups.sort((a, b) => a.currency.localeCompare(b.currency));
+
+    const { qb: stateBase, filterTargets } = this.listQuery(mg, query, { windowDays, exportAll: true, omitFilters: ['term_state'], budget, compliance });
+    const toDecideCount = await stateBase
+      .andWhere(`${filterTargets.term_state.expression} = 'to_decide'`)
+      .getCount();
+
+    const tenantId = opts?.tenantId ?? (await this.sessionTenantId(mg));
+    const year = Number(utcDateYmd(new Date()).slice(0, 4));
+    const fx = await contractFxRates(this.fxRates, mg, tenantId, [year]);
+
+    let count = 0;
+    let amount = 0;
+    const excluded: Array<{ currency: string; count: number }> = [];
+    for (const group of groups) {
+      const n = Number(group.count);
+      count += n;
+      const currency = group.currency || 'EUR';
+      const rate = fx.rateOf(year, currency);
+      if (rate === null) {
+        excluded.push({ currency, count: n });
+        continue;
+      }
+      amount += this.fxRates.convertValue(Number(group.amount), rate);
+    }
+    return {
+      count,
+      yearly_amount: Math.round(amount * 100) / 100,
+      reporting_currency: fx.reportingCurrency,
+      fx_year: year,
+      excluded,
+      to_decide_count: toDecideCount,
+      decision_window_days: windowDays,
+      ...(budget ? { budget: await this.budgetTotals(mg, query, budget, compliance, windowDays) } : {}),
+    };
+  }
+
+  /** The `budget` part of the totals (see `totals`). */
+  private async budgetTotals(mg: EntityManager, query: any, budget: ContractBudgetInputs, compliance: ContractComplianceInputs, windowDays: number) {
+    const { qb } = this.listQuery(mg, query, { windowDays, exportAll: true, budget, compliance });
+    const sums: { committed: string | null; linked: string | null; gap: string | null } = await qb
+      .clone()
+      .select('SUM(cb.committed::numeric)::text', 'committed')
+      .addSelect('SUM(cb.linked)::text', 'linked')
+      .addSelect('SUM(cb.gap)::text', 'gap')
+      .getRawOne() ?? { committed: null, linked: null, gap: null };
+    const excluded: Array<{ currency: string; count: string }> = await qb
+      .clone()
+      .select(`COALESCE(NULLIF(UPPER(TRIM(c.currency)), ''), 'EUR')`, 'currency')
+      .addSelect('COUNT(*)::text', 'count')
+      .andWhere('cb.committed IS NULL')
+      .groupBy(`COALESCE(NULLIF(UPPER(TRIM(c.currency)), ''), 'EUR')`)
+      .getRawMany();
+    excluded.sort((a, b) => a.currency.localeCompare(b.currency));
+    const { qb: stateBase } = this.listQuery(mg, query, { windowDays, exportAll: true, omitFilters: ['budget_state'], budget, compliance });
+    const counts: { no_line: string; under: string } = await stateBase
+      .select(`COUNT(*) FILTER (WHERE cb.state = 'no_line')::text`, 'no_line')
+      .addSelect(`COUNT(*) FILTER (WHERE cb.state = 'under')::text`, 'under')
+      .getRawOne() ?? { no_line: '0', under: '0' };
+    const units = (cents: string | null) => (cents == null ? 0 : Math.round(Number(cents)) / 100);
+    const [year] = budget.years;
+    return {
+      year,
+      column: budget.column,
+      reporting_currency: budget.reportingCurrency,
+      committed: units(sums.committed),
+      linked: units(sums.linked),
+      gap: units(sums.gap),
+      excluded: excluded.map((entry) => ({ currency: entry.currency, count: Number(entry.count) })),
+      no_line_count: Number(counts.no_line),
+      under_count: Number(counts.under),
+      years: await contractBudgetYears(mg, budget.tenantId, contractBudgetCurrentYear(), year),
+    };
   }
 
   async get(id: string, opts?: { manager?: EntityManager }) {
@@ -285,12 +550,12 @@ export class ContractsService {
     const found = await repo.findOne({ where: { id, tenant_id: sessionTenant() } });
     if (!found) throw new NotFoundException('Contract not found');
     const tenantId = found.tenant_id;
-    const end = this.computeEndDate(found.start_date, found.duration_months || 0);
-    const cancel = this.computeCancellationDeadline(end, found.notice_period_months || 0);
+    const windowDays = await readDecisionWindowDays(mg, tenantId);
+    const terms = contractTermFields(found, utcDateYmd(new Date()), { decisionWindowDays: windowDays });
     const linked = await linksRepo.find({ where: { tenant_id: tenantId, contract_id: id } });
     const spendIds = linked.map(l => l.spend_item_id);
     const spendItems = spendIds.length
-      ? await mg.query(`SELECT id, product_name FROM spend_items WHERE tenant_id = $1 AND id = ANY($2)`, [tenantId, spendIds])
+      ? await mg.query(`SELECT id, product_name FROM spend_items WHERE tenant_id = $1 AND id = ANY($2) AND nature = 'opex'`, [tenantId, spendIds])
       : [];
     const links = await urlsRepo.find({ where: { tenant_id: tenantId, contract_id: id } });
     const attachments = await attachRepo.find({ where: { tenant_id: tenantId, contract_id: id } });
@@ -300,7 +565,30 @@ export class ContractsService {
          WHERE tenant_id = $1 AND related_object_type = 'contract' AND related_object_id = $2
          ORDER BY created_at DESC LIMIT 1`, [tenantId, id]);
     const latest_task = latestTaskRows?.[0] ?? null;
-    return { ...found, end_date: end, cancellation_deadline: cancel, linked_spend_items: spendItems, links, attachments, latest_task };
+    // The names the page's header shows, read with the contract (no request per picker).
+    const [names]: Array<{ supplier_name: string | null; company_name: string | null; owner_name: string | null }> = await mg.query(
+      `SELECT sup.name AS supplier_name, comp.name AS company_name,
+              NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '') AS owner_name
+         FROM contracts c
+         LEFT JOIN suppliers sup ON sup.tenant_id = c.tenant_id AND sup.id = c.supplier_id
+         LEFT JOIN companies comp ON comp.tenant_id = c.tenant_id AND comp.id = c.company_id
+         LEFT JOIN users u ON u.tenant_id = c.tenant_id AND u.id = c.owner_user_id
+        WHERE c.tenant_id = $1 AND c.id = $2`,
+      [tenantId, id],
+    );
+    return {
+      ...found,
+      ...terms,
+      // The tenant's decision window: the page draws it on the timeline (`contract-settings.service.ts`).
+      decision_window_days: windowDays,
+      supplier_name: names?.supplier_name ?? null,
+      company_name: names?.company_name ?? null,
+      owner_name: names?.owner_name ?? null,
+      linked_spend_items: spendItems,
+      links,
+      attachments,
+      latest_task,
+    };
   }
 
   private validateInput(body: {
@@ -444,19 +732,21 @@ export class ContractsService {
     return found;
   }
 
-  /** Refuses any id that is not a row of `table` in the tenant. */
+  /**
+   * Refuses any id that is not a row of `target` in the tenant: `opex` / `capex`, a line of
+   * `spend_items` of that nature (`spend/budget-nature.ts`), or a contract.
+   */
   private async assertIdsInTenant(
     mg: EntityManager,
-    table: 'spend_items' | 'capex_items' | 'contracts',
+    target: 'opex' | 'capex' | 'contracts',
     tenantId: string,
     ids: string[],
     message: string,
   ) {
     if (ids.length === 0) return;
-    const rows: Array<{ id: string }> = await mg.query(
-      `SELECT id FROM ${table} WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
-      [tenantId, ids],
-    );
+    const rows: Array<{ id: string }> = target === 'contracts'
+      ? await mg.query(`SELECT id FROM contracts WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [tenantId, ids])
+      : await mg.query(`SELECT id FROM spend_items WHERE tenant_id = $1 AND id = ANY($2::uuid[]) AND nature = $3`, [tenantId, ids, target]);
     if (rows.length !== ids.length) throw new BadRequestException(message);
   }
 
@@ -467,7 +757,7 @@ export class ContractsService {
     const rows = await linksRepo.find({ where: { tenant_id: sessionTenant(), contract_id: contractId } });
     const ids = rows.map(r => r.spend_item_id);
     const items = ids.length
-      ? await mg.query(`SELECT id, product_name FROM spend_items WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [ids])
+      ? await mg.query(`SELECT id, product_name FROM spend_items WHERE tenant_id = app_current_tenant() AND id = ANY($1) AND nature = 'opex'`, [ids])
       : [];
     return { items };
   }
@@ -478,8 +768,12 @@ export class ContractsService {
     const contract = await this.findContract(contractId, mg);
     const tenantId = contract.tenant_id;
     const uniqueIds = Array.from(new Set((spendItemIds || []).filter(Boolean)));
-    await this.assertIdsInTenant(mg, 'spend_items', tenantId, uniqueIds, 'One or more spend items not found.');
-    const existing = await repo.find({ where: { tenant_id: tenantId, contract_id: contract.id } });
+    await this.assertIdsInTenant(mg, 'opex', tenantId, uniqueIds, 'One or more spend items not found.');
+    // The contract's links to OPEX lines only: a link to a line of another nature is kept as it is.
+    const existing: Array<{ id: string; spend_item_id: string }> = await mg.query(
+      `SELECT l.id, l.spend_item_id FROM contract_spend_items l WHERE l.tenant_id = $1 AND l.contract_id = $2${OPEX_LINK}`,
+      [tenantId, contract.id],
+    );
     const toDelete = existing.filter(e => !uniqueIds.includes(e.spend_item_id));
     const existingSet = new Set(existing.map(e => e.spend_item_id));
     const toInsert = uniqueIds.filter(id => !existingSet.has(id)).map(id => repo.create({ tenant_id: tenantId, contract_id: contract.id, spend_item_id: id }));
@@ -541,90 +835,24 @@ export class ContractsService {
     return { ok: true };
   }
 
-  async listIds(query: any, opts?: { manager?: EntityManager }) {
+  async listIds(query: any, opts?: ListReadOptions) {
     const mg = opts?.manager ?? this.repo.manager;
-    const repo = mg.getRepository(Contract);
-    const { skip, sort, status, q, filters } = parsePagination(query, { field: 'created_at', direction: 'DESC' });
+    // The workspace walks the list in its order, a budget figure's included.
+    const budget = await this.listBudgetInputs(mg, query, opts);
+    const compliance = await loadContractComplianceInputs(mg);
+    const windowDays = await readDecisionWindowDays(mg);
+    const { qb, parsed, filterTargets } = this.listQuery(mg, query, { windowDays, budget, compliance });
+    const { skip, sort } = parsed;
     // Not the parsed limit: parsePagination defaults to a page of 20, and the prev/next
     // navigation that calls this sends no limit, so it only ever knew 20 contracts.
     const limit = Math.min(Number(query?.limit) || 10000, 10000);
-    const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
-    const filtersToApply = sanitizedFilters ?? filters;
-    const filterTargets = this.contractFilterTargets();
-    const nextParam = createParamNameGenerator('c');
-    const compiledFilters: CompiledCondition[] = [];
-    if (filtersToApply && typeof filtersToApply === 'object') {
-      for (const [field, model] of Object.entries(filtersToApply)) {
-        const target = filterTargets[field];
-        if (!target) continue;
-        const condition = compileAgFilterCondition(model, target, nextParam);
-        if (condition) compiledFilters.push(condition);
-      }
-    }
-
-    const quickSearchConditions = q
-      ? buildQuickSearchConditions(q, ['c.name', 'comp.name', 'sup.name', 'c.notes'], nextParam)
-      : [];
-    const includeDisabled =
-      String(query.includeDisabled ?? '').toLowerCase() === '1' ||
-      String(query.includeDisabled ?? '').toLowerCase() === 'true';
-
-    const qb = repo
-      .createQueryBuilder('c')
-      .select(['c.id'])
-      .leftJoin('companies', 'comp', 'comp.id = c.company_id AND comp.tenant_id = c.tenant_id')
-      .leftJoin('suppliers', 'sup', 'sup.id = c.supplier_id AND sup.tenant_id = c.tenant_id')
-      .where('c.tenant_id = app_current_tenant()');
-    // The status is read from the end of validity (the stored one is not updated when the date passes).
-    applyStatusFilter(qb, { alias: 'c', explicitStatus: status ?? statusFromAg ?? null, includeDisabled, matchNone });
-    // Parenthesized, so no condition can widen the tenant predicate above.
-    compiledFilters.forEach((cond) => qb.andWhere(`(${cond.sql})`, cond.params));
-    if (quickSearchConditions.length > 0) {
-      qb.andWhere(
-        new Brackets((sub) => {
-          quickSearchConditions.forEach((cond, idx) => {
-            if (idx === 0) sub.where(cond.sql, cond.params);
-            else sub.orWhere(cond.sql, cond.params);
-          });
-        }),
-      );
-    }
-
-    const sortExpressions: Record<string, string> = {
-      name: 'c.name',
-      status: 'c.status',
-      company_name: 'comp.name',
-      supplier_name: 'sup.name',
-      start_date: 'c.start_date',
-      end_date: `(c.start_date + COALESCE(c.duration_months, 0) * INTERVAL '1 month' - INTERVAL '1 day')::date`,
-      cancellation_deadline: `(c.start_date + (COALESCE(c.duration_months, 0) - COALESCE(c.notice_period_months, 0)) * INTERVAL '1 month')::date`,
-      duration_months: 'c.duration_months',
-      auto_renewal: 'c.auto_renewal',
-      notice_period_months: 'c.notice_period_months',
-      yearly_amount_at_signature: 'c.yearly_amount_at_signature',
-      currency: 'c.currency',
-      billing_frequency: 'c.billing_frequency',
-      created_at: 'c.created_at',
-      updated_at: 'c.updated_at',
-    };
-    const sortField = sortExpressions[sort.field] ? sort.field : 'created_at';
-    const sortExpr = sortExpressions[sortField];
-    if (sortField === 'end_date') {
-      qb.addSelect(sortExpr, 'sort_end_date');
-      qb.orderBy('sort_end_date', sort.direction as any);
-    } else if (sortField === 'cancellation_deadline') {
-      qb.addSelect(sortExpr, 'sort_cancellation_deadline');
-      qb.orderBy('sort_cancellation_deadline', sort.direction as any);
-    } else {
-      qb.orderBy(sortExpr, sort.direction as any);
-    }
-    if (sortExpr !== 'c.created_at') qb.addOrderBy('c.created_at', 'DESC');
+    qb.select(['c.id']);
+    this.applyListSort(qb, sort, filterTargets);
     qb.offset(skip).limit(limit);
 
     const [rows, total] = await qb.getManyAndCount();
     return { ids: rows.map(r => (r as any).id as string), total };
   }
-
   async listFilterValues(query: any, opts?: { manager?: EntityManager }): Promise<Record<string, Array<string | null>>> {
     const rawFields = String(query?.fields || query?.field || '')
       .split(',')
@@ -936,6 +1164,12 @@ export class ContractsService {
     const mg = opts?.manager ?? this.repo.manager;
     const linksRepo = mg.getRepository(ContractSpendItem);
     const contractRepo = mg.getRepository(Contract);
+    // The contracts of an OPEX line only (`spend/budget-nature.ts`): none for a line of another nature.
+    const [line] = await mg.query(
+      `SELECT 1 FROM spend_items WHERE tenant_id = app_current_tenant() AND id = $1 AND nature = 'opex'`,
+      [spendItemId],
+    );
+    if (!line) return { items: [] };
     const rows = await linksRepo.find({ where: { tenant_id: sessionTenant(), spend_item_id: spendItemId } });
     const ids = rows.map(r => r.contract_id);
     const items = ids.length ? await contractRepo.findBy({ tenant_id: sessionTenant(), id: In(ids) }) : [];
@@ -947,7 +1181,7 @@ export class ContractsService {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(ContractSpendItem);
     const [spend]: Array<{ id: string; tenant_id: string }> = await mg.query(
-      `SELECT id, tenant_id FROM spend_items WHERE tenant_id = app_current_tenant() AND id = $1`,
+      `SELECT id, tenant_id FROM spend_items WHERE tenant_id = app_current_tenant() AND id = $1 AND nature = 'opex'`,
       [spendItemId],
     );
     if (!spend) throw new NotFoundException('Spend item not found.');
@@ -963,13 +1197,18 @@ export class ContractsService {
     return { ok: true, added: toInsert.length, removed: toDelete.length };
   }
 
-  // Symmetric linking from CAPEX side
+  // Symmetric linking from CAPEX side: the CAPEX lines share `contract_spend_items` since lot Z1.
   async listContractsForCapexItem(capexItemId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    // Use dedicated repo for CAPEX join
-    const capexLinksRepo = mg.getRepository(ContractCapexItem);
+    const linksRepo = mg.getRepository(ContractSpendItem);
     const contractRepo = mg.getRepository(Contract);
-    const rows = await capexLinksRepo.find({ where: { tenant_id: sessionTenant(), capex_item_id: capexItemId } });
+    // The contracts of a CAPEX line only (`spend/budget-nature.ts`): none for a line of another nature.
+    const [line] = await mg.query(
+      `SELECT 1 FROM spend_items WHERE tenant_id = app_current_tenant() AND id = $1 AND nature = 'capex'`,
+      [capexItemId],
+    );
+    if (!line) return { items: [] };
+    const rows = await linksRepo.find({ where: { tenant_id: sessionTenant(), spend_item_id: capexItemId } });
     const ids = rows.map((r) => r.contract_id);
     const items = ids.length ? await contractRepo.findBy({ tenant_id: sessionTenant(), id: In(ids) }) : [];
     return { items: items.map((i) => ({ id: i.id, name: i.name })) };
@@ -977,50 +1216,201 @@ export class ContractsService {
 
   async bulkReplaceContractsForCapexItem(capexItemId: string, contractIds: string[], opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    const capexLinksRepo = mg.getRepository(ContractCapexItem);
+    const linksRepo = mg.getRepository(ContractSpendItem);
     const [capex]: Array<{ id: string; tenant_id: string }> = await mg.query(
-      `SELECT id, tenant_id FROM capex_items WHERE tenant_id = app_current_tenant() AND id = $1`,
+      `SELECT id, tenant_id FROM spend_items WHERE tenant_id = app_current_tenant() AND id = $1 AND nature = 'capex'`,
       [capexItemId],
     );
     if (!capex) throw new NotFoundException('CAPEX item not found.');
     const tenantId = capex.tenant_id;
     const uniqueIds = Array.from(new Set((contractIds || []).filter(Boolean)));
     await this.assertIdsInTenant(mg, 'contracts', tenantId, uniqueIds, 'One or more contracts not found.');
-    const existing = await capexLinksRepo.find({ where: { tenant_id: tenantId, capex_item_id: capex.id } });
+    const existing = await linksRepo.find({ where: { tenant_id: tenantId, spend_item_id: capex.id } });
     const toDelete = existing.filter((e) => !uniqueIds.includes(e.contract_id));
     const existingSet = new Set(existing.map((e) => e.contract_id));
     const toInsert = uniqueIds
       .filter((id) => !existingSet.has(id))
-      .map((id) => capexLinksRepo.create({ tenant_id: tenantId, contract_id: id, capex_item_id: capex.id }));
-    if (toDelete.length > 0) await capexLinksRepo.delete({ tenant_id: tenantId, id: In(toDelete.map((e) => e.id)) });
-    if (toInsert.length > 0) await capexLinksRepo.save(toInsert);
+      .map((id) => linksRepo.create({ tenant_id: tenantId, contract_id: id, spend_item_id: capex.id }));
+    if (toDelete.length > 0) await linksRepo.delete({ tenant_id: tenantId, id: In(toDelete.map((e) => e.id)) });
+    if (toInsert.length > 0) await linksRepo.save(toInsert);
     return { ok: true, added: toInsert.length, removed: toDelete.length };
   }
 
-  // Inverse links from Contract side
+  // Inverse links from Contract side: the contract's CAPEX lines, their title as `description`.
   async listLinkedCapexItems(contractId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    const repo = mg.getRepository(ContractCapexItem);
-    const capexRepo = mg.getRepository((await import('../capex/capex-item.entity')).CapexItem);
-    const rows = await repo.find({ where: { tenant_id: sessionTenant(), contract_id: contractId } });
-    const ids = rows.map((r) => r.capex_item_id);
-    const items = ids.length ? await capexRepo.findBy({ tenant_id: sessionTenant(), id: In(ids) }) : [];
-    return { items: items.map((i: any) => ({ id: i.id, description: i.description })) };
+    const items: Array<{ id: string; description: string }> = await mg.query(
+      `SELECT i.id, i.product_name AS description
+         FROM contract_spend_items l
+         JOIN spend_items i ON i.tenant_id = l.tenant_id AND i.id = l.spend_item_id AND i.nature = 'capex'
+        WHERE l.tenant_id = app_current_tenant() AND l.contract_id = $1`,
+      [contractId],
+    );
+    return { items };
   }
 
   async bulkReplaceLinkedCapexItems(contractId: string, capexItemIds: string[], opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    const repo = mg.getRepository(ContractCapexItem);
+    const repo = mg.getRepository(ContractSpendItem);
     const contract = await this.findContract(contractId, mg);
     const tenantId = contract.tenant_id;
     const uniqueIds = Array.from(new Set((capexItemIds || []).filter(Boolean)));
-    await this.assertIdsInTenant(mg, 'capex_items', tenantId, uniqueIds, 'One or more CAPEX items not found.');
-    const existing = await repo.find({ where: { tenant_id: tenantId, contract_id: contract.id } });
-    const toDelete = existing.filter((e) => !uniqueIds.includes(e.capex_item_id));
-    const existingSet = new Set(existing.map((e) => e.capex_item_id));
-    const toInsert = uniqueIds.filter((id) => !existingSet.has(id)).map((id) => repo.create({ tenant_id: tenantId, contract_id: contract.id, capex_item_id: id }));
+    await this.assertIdsInTenant(mg, 'capex', tenantId, uniqueIds, 'One or more CAPEX items not found.');
+    // The contract's links to CAPEX lines only: a link to an OPEX line is kept as it is.
+    const existing: Array<{ id: string; spend_item_id: string }> = await mg.query(
+      `SELECT l.id, l.spend_item_id FROM contract_spend_items l WHERE l.tenant_id = $1 AND l.contract_id = $2${CAPEX_LINK}`,
+      [tenantId, contract.id],
+    );
+    const toDelete = existing.filter((e) => !uniqueIds.includes(e.spend_item_id));
+    const existingSet = new Set(existing.map((e) => e.spend_item_id));
+    const toInsert = uniqueIds.filter((id) => !existingSet.has(id)).map((id) => repo.create({ tenant_id: tenantId, contract_id: contract.id, spend_item_id: id }));
     if (toDelete.length > 0) await repo.delete({ tenant_id: tenantId, id: In(toDelete.map((e) => e.id)) });
     if (toInsert.length > 0) await repo.save(toInsert);
     return { ok: true, added: toInsert.length, removed: toDelete.length };
+  }
+
+  // Relations from the contract's side (`contract-relations.ts`): budget lines of both natures,
+  // applications, assets, and the counts of the page's tabs.
+  async listBudgetLines(contractId: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    return listContractBudgetLines(mg, await this.findContract(contractId, mg));
+  }
+
+  /**
+   * The Budget tab's figures for a year and column (`year`, `column`): the amount of each linked
+   * budget line in that year and column, as the budget list shows it, and for each year the
+   * selector offers, the commitment, the linked lines' sum, the gap and the state
+   * (`contract-budget.ts`). Amounts in the reporting currency; the commitment also in the
+   * contract's currency. Needs the right to read the budget.
+   */
+  async budgetCoverage(contractId: string, query: any, opts?: ListReadOptions) {
+    const mg = opts?.manager ?? this.repo.manager;
+    if (!opts?.budgetAccess) throw new ForbiddenException('Reading the budget figures of a contract needs access to the budget.');
+    const contract = await this.findContract(contractId, mg);
+    const currentYear = contractBudgetCurrentYear();
+    const selection = parseContractBudgetSelection(query, currentYear, { year: 'year', column: 'column' });
+    if (!selection) throw new BadRequestException('year and column are required.');
+    const years = await contractBudgetYears(mg, contract.tenant_id, currentYear, selection.year);
+    const inputs = await loadContractBudgetInputs({ fxRates: this.fxRates }, mg, contract.tenant_id, years, selection.column, [contract.id]);
+    const rows = await readContractBudgetRows(mg, inputs);
+    const { items } = await listContractBudgetLines(mg, contract);
+    return {
+      year: selection.year,
+      column: selection.column,
+      reporting_currency: inputs.reportingCurrency,
+      currency: String(contract.currency || 'EUR').trim().toUpperCase() || 'EUR',
+      lines: items.map((line) => {
+        const cents = inputs.lineAmounts.get(line.id)?.get(selection.year) ?? 0n;
+        return { id: line.id, amount: centsToNumber(cents) };
+      }),
+      years: rows.map(({ contract_id: _contract, ...row }) => row),
+    };
+  }
+
+  async listApplications(contractId: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    return listContractApplications(mg, await this.findContract(contractId, mg));
+  }
+
+  async listAssets(contractId: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    return listContractAssets(mg, await this.findContract(contractId, mg));
+  }
+
+  async replaceRelations(contractId: string, set: ContractRelationSet, ids: string[], userId?: string | null, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const contract = await this.findContract(contractId, mg);
+    return replaceContractRelations({ manager: mg, audit: this.audit }, set, contract, ids, userId ?? null);
+  }
+
+  /** The Compliance tab: every requirement, whether it is expected and why, and what was recorded (`contract-compliance.ts`). */
+  async compliance(contractId: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const contract = await this.findContract(contractId, mg);
+    return contractComplianceView(mg, await loadContractComplianceInputs(mg), contract);
+  }
+
+  /** Records the state and / or reference of one requirement, then answers the tab as `compliance` does. */
+  async updateCompliance(contractId: string, requirement: string, body: ComplianceItemPatch, userId?: string | null, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const contract = await this.findContract(contractId, mg);
+    await updateContractComplianceItem({ manager: mg, audit: this.audit }, contract, requirement, body, userId ?? null);
+    return contractComplianceView(mg, await loadContractComplianceInputs(mg), contract);
+  }
+
+  /**
+   * The compliance register (CSV) of the contracts a list request selects (search, filters, status
+   * scope), by name: one line per contract and requirement (`complianceRegisterCsv`).
+   */
+  async exportComplianceRegister(query: any, language: CsvLanguage, opts?: ListReadOptions) {
+    const mg = opts?.manager ?? this.repo.manager;
+    // The list's budget filters apply too, for a reader of the budget (as on the list).
+    const budget = await this.listBudgetInputs(mg, query, opts);
+    const compliance = await loadContractComplianceInputs(mg);
+    const windowDays = await readDecisionWindowDays(mg);
+    const { qb } = this.listQuery(mg, query, { windowDays, exportAll: true, budget, compliance });
+    const contracts: Array<{ id: string; name: string; supplier_name: string | null; company_name: string | null }> = await qb
+      .select('c.id', 'id')
+      .addSelect('c.name', 'name')
+      .addSelect('sup.name', 'supplier_name')
+      .addSelect('comp.name', 'company_name')
+      .orderBy('c.name', 'ASC')
+      .addOrderBy('c.id', 'ASC')
+      .getRawMany();
+    const content = await complianceRegisterCsv(mg, compliance, contracts, language);
+    return { filename: 'contract-compliance-register.csv', content };
+  }
+
+  async relationCounts(contractId: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    return contractRelationCounts(mg, await this.findContract(contractId, mg));
+  }
+
+  /**
+   * Send a link to the contract (`notifications.notifyShare`), like the other objects' "Send link":
+   * to people of the tenant who can sign in, and to plain email addresses. A contract of another
+   * tenant is not found.
+   */
+  async shareContract(contractId: string, dto: ShareItemDto, userId: string, opts?: { manager?: EntityManager }) {
+    const userIds = dto?.recipient_user_ids ?? [];
+    const rawEmails = dto?.recipient_emails ?? [];
+    if (userIds.length === 0 && rawEmails.length === 0) {
+      throw new BadRequestException('At least one recipient is required');
+    }
+    const mg = opts?.manager ?? this.repo.manager;
+    const contract = await this.findContract(contractId, mg);
+    const tenantId = contract.tenant_id;
+    const senderRows: Array<{ first_name: string | null; last_name: string | null }> = await mg.query(
+      'SELECT first_name, last_name FROM users WHERE tenant_id = $1 AND id = $2',
+      [tenantId, userId],
+    );
+    const senderName = senderRows.length > 0
+      ? `${senderRows[0].first_name || ''} ${senderRows[0].last_name || ''}`.trim() || 'Someone'
+      : 'Someone';
+    const validIds = userIds.filter((id) => isUuid(String(id)));
+    const recipients = validIds.length > 0
+      ? await mg.query(
+          `SELECT u.id AS "userId", u.email, u.first_name AS "firstName", u.last_name AS "lastName", u.locale
+             FROM users u
+             JOIN roles ro ON ro.id = u.role_id
+            WHERE u.tenant_id = $1 AND u.id = ANY($2::uuid[]) AND u.status = 'enabled'
+              AND (ro.is_system = false OR LOWER(ro.role_name) = 'administrator')`,
+          [tenantId, validIds],
+        )
+      : [];
+    if (recipients.length > 0 || rawEmails.length > 0) {
+      this.notifications.notifyShare({
+        itemType: 'contract',
+        itemId: contract.id,
+        itemName: contract.name,
+        senderName,
+        message: dto.message,
+        recipients,
+        rawEmails,
+        tenantId,
+        // No request manager: the send outlives the request (a contract link needs no lookup).
+      });
+    }
+    return { ok: true };
   }
 }

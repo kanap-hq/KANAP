@@ -77,8 +77,9 @@ Die Eingabe von `@` öffnet die **Erwähnungsauswahl** über dem Eingabefeld. Da
   - `@T-5` — Aufgabe mit der Referenz T-5
   - `@DOC` — aktuelle Wissensdokumente
   - `@APP backup` — Anwendungen, die zu „backup“ passen
-  - `@PRJ`, `@REQ`, `@INC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@CPX`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
-- **Klartext**: alles andere (`@payroll`, `@server-2`) startet eine typübergreifende Suche, sortiert nach Relevanz.
+  - `@BL-12`: die Budgetzeile mit der Referenz BL-12. `@BL` allein listet Budgetzeilen beider Typen auf, `@OPX` oder `@CPX` grenzt sie auf OPEX- oder CAPEX-Zeilen ein. Die früheren Nummern funktionieren weiterhin: `@OPX-12` oder `@CPX-3` findet seine Zeile
+  - `@PRJ`, `@REQ`, `@INC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
+- **Klartext**: alles andere (`@payroll`, `@server-2`) startet eine typübergreifende Suche, sortiert nach Relevanz. Sie findet auch Budgetzeilen über die Namen ihrer Analysewerte.
 
 Verwenden Sie die Pfeiltasten, um durch die Vorschläge zu navigieren, **Eingabe** oder **Tab** zum Bestätigen und **Escape**, um die Auswahl zu schließen. Die Ergebnisse sind nach Entitätstyp gruppiert (Wissen, Aufgaben, Projekte, Anwendungen, Assets, Verträge usw.), sodass Sie auf einen Blick erkennen, welche Art von Datensatz Sie einfügen.
 
@@ -108,6 +109,8 @@ Wenn der Stream endet, springt der Fokus zurück zum Eingabefeld, sodass Sie die
 ### Tool-Aufrufe
 
 Plaid verwendet eine kleine Auswahl interner Tools, um Fragen zu beantworten: `Search all`, `Search knowledge`, `Get document`, `Get entity context` und einige weitere. Jeder Tool-Aufruf erscheint als kompakte Zeile unter der Nachricht („Alles durchsuchen verwendet · 8 Ergebnisse“). In der Regel müssen Sie die Tool-Details nicht lesen, aber sie sind vorhanden, falls Sie genau sehen möchten, auf welchen Datensätzen die Antwort beruht.
+
+`Search all` findet Budgetzeilen über die Namen ihrer Analysewerte und teilt Plaid mit, welche Werte jede Zeile hat. Plaid nennt eine Budgetzeile mit ihrer Referenz `BL-12`, und seine Links öffnen die Zeile.
 
 ## Artefakte und Vorschauen
 

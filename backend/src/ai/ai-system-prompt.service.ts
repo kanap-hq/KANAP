@@ -71,6 +71,7 @@ function compactDomainVocabulary(mode: AiContextProfile['promptMode']): string {
     '- Documents: docs, articles, pages, knowledge base entries.',
     '- Spend items: budget lines, expenses, recurring costs, subscriptions, OpEx.',
     '- Capex items: investments, capital expenditure, CapEx, purchases.',
+    '- Budget lines of both families are cited as BL-n. Accept OPX-n and CPX-n as legacy input references; search for them to resolve the native BL-n reference.',
     '- Applications/assets/projects/requests/contracts/suppliers/users/companies/departments/locations/incidents are standard KANAP families. Company/department year-backed metrics use headcount_year, it_users_year, turnover_year, and metrics_frozen; pass `year` on query_entities or get_entity_detail when the user names a year.',
     '- "me/my/mine" means the current user scope. "my team" means the current user team scope.',
   ];
@@ -108,6 +109,7 @@ function toolUsageGuidelines(mode: AiContextProfile['promptMode']): string {
     '- `q` on query_entities and aggregate_entities is literal text quick-search only; put real filters in filters/scope.',
     '- Use describe_entity_filters/get_filter_values only when filter names or exact allowed values are uncertain.',
     '- Application classifications: read get_application_classification_catalog for complete tenant codes, labels, definitions, severity ranks and recovery order. get_filter_values returns observed values, not the catalog. Use maximum catalog rank (including deprecated historical levels for reads, active levels only for new assignments); return zero when no accessible application has that level, without falling back to the observed maximum. Use exact query filters, combined criteria and aggregate_entities counts, and paginate before claiming a complete list. Link applications to their /compliance tab.',
+    '- Application reads include retired applications; the Applications list and the Compliance tile leave them out: add lifecycle {"not":["retired"]} to match them. last_dr_test is the last recovery test date. Tile attention points, on active catalog levels only: top business rank with last_dr_test [null] or on or before the same date last year (count [null] plus before the day after that date; they never overlap); top business rank with recovery_wave [null]; top data class rank with the lowest cyber rank.',
     '- Business criticality is chosen directly among the tenant levels of get_application_classification_catalog (code or exact label). The maximum tolerable downtime (MTD/DMIA) is an attribute of a level, never a field of an application: when a user mentions a downtime, pick the level whose definition covers it and never invent a downtime field. Cyber is a manual consequence assessment; confidentiality and recovery wave are independent. An unspecified classification stays null. If criticality is ambiguous between business and cyber, reuse an explicit conversational axis or ask which axis. Never fabricate justification or review.',
     '- Application create/update previews accept criticality, cyber_criticality, data_class, recovery_wave, rto_minutes (whole minutes; one day is 1440), rpo_minutes and classification_justification, including explicit null to clear one field. Use tenant codes. A preview shows whether an existing human review becomes stale. Catalog changes and human review are not AI write capabilities.',
 
@@ -266,7 +268,8 @@ export class AiSystemPromptService {
       (analyticsDimensions
         ? '\n`analytics_dimensions` lists the analytics dimensions an OPEX or CAPEX line can hold a value on, with the line types each is `used_for`. ' +
           'To set a line\'s value on a dimension, put its `key` in the `fields` of `create_business_record` or `update_business_record` with the value\'s name (null clears it); ' +
-          'a value missing from the dimension must be created first (`create_master_data_record`, analytics_categories with `dimension`) or asked for.'
+          'a value missing from the dimension must be created first (`create_master_data_record`, analytics_categories with `dimension`) or asked for. ' +
+          'A `required` dimension must be given a value when creating a line.'
         : ''),
     );
 

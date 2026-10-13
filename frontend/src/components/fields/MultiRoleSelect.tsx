@@ -3,6 +3,7 @@ import { Autocomplete, Box, CircularProgress, TextField, Chip } from '@mui/mater
 import type { SxProps, Theme } from '@mui/material/styles';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import OptionWithHint from './OptionWithHint';
 import api from '../../api';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
@@ -97,18 +98,14 @@ export default function MultiRoleSelect({
           );
         })
       }
-      renderOption={(props, option) => {
-        const { key, ...rest } = props;
-        return (
-          <li key={key} {...rest}>
-            <div>
-              <strong>{option.role_name}</strong>
-              <br />
-              <small style={{ color: 'gray' }}>{option.role_description}</small>
-            </div>
-          </li>
-        );
-      }}
+      renderOption={(props, option) => (
+        <OptionWithHint
+          key={option.id}
+          optionProps={props}
+          label={option.role_name}
+          hint={option.role_description}
+        />
+      )}
     />
   );
 

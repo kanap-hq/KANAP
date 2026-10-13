@@ -83,8 +83,8 @@ function TemplateDialog({ open, onClose, onSaved, initial }: { open: boolean; on
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>{t('common:buttons.cancel')}</Button>
-        <Button onClick={save} variant="contained" disabled={saving}>{t('common:buttons.save')}</Button>
+        <Button variant="action" onClick={onClose} disabled={saving}>{t('common:buttons.cancel')}</Button>
+        <Button onClick={save} variant="action-primary" disabled={saving}>{t('common:buttons.save')}</Button>
       </DialogActions>
     </Dialog>
   );

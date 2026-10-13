@@ -5,7 +5,6 @@ import { ensureDefaultAnalyticsAxis } from '../../analytics/analytics-axes.util'
 import { assert, inRolledBackTransaction, Kind, runSpecs, seedTenant, setTenant } from './round-inputs.fixtures';
 import {
   disableCostCenter,
-  ITEM_TABLE,
   itemService,
   lineBody,
   refusal,
@@ -32,6 +31,9 @@ import {
 // @database-spec: runSpecs opens the data-source, so run-ci-tests.js runs this file in its serial database lane.
 
 const KINDS: Kind[] = ['opex', 'capex'];
+
+/** The lines of both natures, since lot Z1; each read names its nature. */
+const LINES = 'spend_items';
 
 type Refs = {
   tenantId: string;
@@ -98,12 +100,12 @@ function foreignFields(kind: Kind, a: Refs): Array<[string, string, string]> {
 }
 
 async function count(runner: QueryRunner, kind: Kind, tenantId: string): Promise<number> {
-  const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM ${ITEM_TABLE[kind]} WHERE tenant_id = $1`, [tenantId]);
+  const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM ${LINES} WHERE tenant_id = $1 AND nature = $2`, [tenantId, kind]);
   return n;
 }
 
 async function readLine(runner: QueryRunner, kind: Kind, id: string) {
-  const [row] = await runner.query(`SELECT * FROM ${ITEM_TABLE[kind]} WHERE id = $1`, [id]);
+  const [row] = await runner.query(`SELECT * FROM ${LINES} WHERE id = $1 AND nature = $2`, [id, kind]);
   return row;
 }
 
@@ -254,7 +256,7 @@ async function testChartOfAccountsOnResultingLine(kind: Kind) {
 
     // A line already mismatched (older data) takes unrelated edits, and a body that
     // repeats its stored company and account; moving it to yet another chart is still refused.
-    await runner.query(`UPDATE ${ITEM_TABLE[kind]} SET account_id = $2 WHERE id = $1`, [line.id, b.accountId]);
+    await runner.query(`UPDATE ${LINES} SET account_id = $2 WHERE id = $1`, [line.id, b.accountId]);
     await svc.update(line.id, { notes: 'unrelated edit' }, undefined, opts);
     await svc.update(line.id, { paying_company_id: other.companyId, account_id: b.accountId, notes: 'same pair' }, undefined, opts);
     assert.equal((await readLine(runner, kind, line.id)).notes, 'same pair', `${kind}: a mismatched line takes unrelated edits`);
@@ -319,7 +321,7 @@ async function testAccountNature(kind: Kind) {
 
     // A line that already has an account of the other type (older data) keeps it through
     // unrelated edits, a body repeating it and a company-only change within the same chart.
-    await runner.query(`UPDATE ${ITEM_TABLE[kind]} SET account_id = $2 WHERE id = $1`, [line.id, other]);
+    await runner.query(`UPDATE ${LINES} SET account_id = $2 WHERE id = $1`, [line.id, other]);
     await svc.update(line.id, { notes: 'unrelated edit' }, undefined, opts);
     await svc.update(line.id, { account_id: other, notes: 'same account' }, undefined, opts);
     const [sameChart] = await runner.query(

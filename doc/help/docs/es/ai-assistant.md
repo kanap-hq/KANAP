@@ -77,8 +77,9 @@ Escribir `@` abre el **selector de menciones** encima del cuadro de redacción. 
   - `@T-5` — tarea con la referencia T-5
   - `@DOC` — documentos de la base de conocimiento recientes
   - `@APP backup` — aplicaciones que coinciden con "backup"
-  - `@PRJ`, `@REQ`, `@INC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@CPX`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
-- **Texto simple**: cualquier otra cosa (`@payroll`, `@server-2`) ejecuta una búsqueda entre tipos ordenada por relevancia.
+  - `@BL-12`: la línea presupuestaria con la referencia BL-12. `@BL` solo lista líneas presupuestarias de ambos tipos, y `@OPX` o `@CPX` las limita a las líneas OPEX o CAPEX. Los antiguos números siguen funcionando: `@OPX-12` o `@CPX-3` encuentra su línea
+  - `@PRJ`, `@REQ`, `@INC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
+- **Texto simple**: cualquier otra cosa (`@payroll`, `@server-2`) ejecuta una búsqueda entre tipos ordenada por relevancia. También encuentra las líneas presupuestarias por el nombre de sus valores analíticos.
 
 Use las teclas de flecha para desplazarse por las sugerencias, **Intro** o **Tab** para confirmar y **Escape** para cerrar el selector. Los resultados se agrupan por tipo de entidad (Conocimiento, Tareas, Proyectos, Aplicaciones, Activos, Contratos, etc.) para que pueda distinguir de un vistazo qué tipo de registro va a insertar.
 
@@ -108,6 +109,8 @@ Cuando termina la generación, el foco vuelve al cuadro de redacción para que p
 ### Llamadas a herramientas
 
 Plaid usa un pequeño conjunto de herramientas internas para responder preguntas: `Search all`, `Search knowledge`, `Get document`, `Get entity context` y algunas otras. Cada llamada a herramienta aparece como una línea compacta debajo del mensaje ("ha usado Buscar todo · 8 resultados"). Normalmente no necesita leer los detalles de las herramientas, pero están ahí si quiere ver exactamente en qué registros se basó la respuesta.
+
+`Search all` encuentra las líneas presupuestarias por el nombre de sus valores analíticos e indica a Plaid qué valores tiene cada línea. Plaid nombra una línea presupuestaria por su referencia `BL-12`, y sus enlaces abren la línea.
 
 ## Artefactos y vistas previas
 

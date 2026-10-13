@@ -6,8 +6,9 @@ import { EntityManager, QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { SpendAmountsService } from '../spend-amounts.service';
 import { SpendBudgetOperationsService } from '../spend-budget-operations.service';
-import { CapexAmountsService } from '../../capex/capex-amounts.service';
+import { CapexAmountsService } from '../spend-amounts.service';
 import { FreezeService } from '../../freeze/freeze.service';
+import { CAPEX_NUMBER_OFFSET } from './round-inputs.fixtures';
 
 // Write safety of the amounts services against a real database, on OPEX and
 // CAPEX: a write names its target measures and never touches the others.
@@ -24,7 +25,7 @@ const noFreeze = { assertNotFrozen: async () => undefined };
 function service(kind: Kind, freeze: unknown = noFreeze): { bulkUpsert: (...args: any[]) => Promise<any> } {
   return kind === 'opex'
     ? new SpendAmountsService(undefined as any, undefined as any, undefined as any, noAudit as any, freeze as any)
-    : new CapexAmountsService(undefined as any, undefined as any, noAudit as any, freeze as any);
+    : new CapexAmountsService(undefined as any, undefined as any, undefined as any, noAudit as any, freeze as any);
 }
 
 /** The real freeze service: its FX collaborators are only used when freezing, never by the checks. */
@@ -76,17 +77,17 @@ async function seedVersion(runner: QueryRunner, kind: Kind, tenantId: string, { 
     );
   } else {
     await runner.query(
-      `INSERT INTO capex_items (id, tenant_id, description, ppe_type, investment_type, priority, currency, effective_start, item_number)
-       VALUES ($1, $2, 'Write safety line', 'hardware', 'replacement', 'medium', 'EUR', '${year}-01-01', 1)`,
+      `INSERT INTO spend_items (id, tenant_id, nature, product_name, ppe_type, investment_type, priority, currency, effective_start, item_number, legacy_number)
+       VALUES ($1, $2, 'capex', 'Write safety line', 'hardware', 'replacement', 'medium', 'EUR', '${year}-01-01', ${CAPEX_NUMBER_OFFSET + 1}, 'CPX-1')`,
       [itemId, tenantId],
     );
     await runner.query(
-      `INSERT INTO capex_versions (id, tenant_id, capex_item_id, version_name, input_grain, as_of_date, budget_year, allocation_method)
+      `INSERT INTO spend_versions (id, tenant_id, spend_item_id, version_name, input_grain, as_of_date, budget_year, allocation_method)
        VALUES ($1, $2, $3, 'Y${year}', 'monthly', '${year}-01-01', ${year}, 'default')`,
       [versionId, tenantId, itemId],
     );
   }
-  const table = kind === 'opex' ? 'spend_amounts' : 'capex_amounts';
+  const table = 'spend_amounts';
   for (let month = 1; months && month <= 12; month++) {
     await runner.query(
       `INSERT INTO ${table} (tenant_id, version_id, period, planned, forecast, committed, actual, expected_landing)
@@ -98,7 +99,7 @@ async function seedVersion(runner: QueryRunner, kind: Kind, tenantId: string, { 
 }
 
 async function readMonths(runner: QueryRunner, kind: Kind, versionId: string) {
-  const table = kind === 'opex' ? 'spend_amounts' : 'capex_amounts';
+  const table = 'spend_amounts';
   const rows = await runner.query(
     `SELECT to_char(period, 'YYYY-MM-DD') AS period, planned, forecast, committed, actual, expected_landing
      FROM ${table} WHERE version_id = $1 ORDER BY period`,
@@ -350,9 +351,8 @@ async function seedCommitted(kind: Kind, { months = true } = {}) {
 }
 
 async function deleteSeed(kind: Kind, tenantId: string) {
-  const [items, versions, amounts] = kind === 'opex'
-    ? ['spend_items', 'spend_versions', 'spend_amounts']
-    : ['capex_items', 'capex_versions', 'capex_amounts'];
+  // The lines of both natures are in the spend_* tables since lot Z1.
+  const [items, versions, amounts] = ['spend_items', 'spend_versions', 'spend_amounts'];
   await dataSource.transaction(async (manager) => {
     await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
     await manager.query(`DELETE FROM ${amounts} WHERE tenant_id = $1`, [tenantId]);
@@ -406,7 +406,7 @@ async function testConcurrentPatchesOnDifferentMeasures(kind: Kind) {
 
     const rows = await dataSource.transaction(async (manager) => {
       await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
-      const table = kind === 'opex' ? 'spend_amounts' : 'capex_amounts';
+      const table = 'spend_amounts';
       return manager.query(
         `SELECT to_char(period, 'YYYY-MM-DD') AS period, planned, forecast, committed, actual, expected_landing
          FROM ${table} WHERE version_id = $1 ORDER BY period`,
@@ -526,7 +526,7 @@ async function testConcurrentPatchesCreatingMonths(kind: Kind) {
 
     const rows = await dataSource.transaction(async (manager) => {
       await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
-      const table = kind === 'opex' ? 'spend_amounts' : 'capex_amounts';
+      const table = 'spend_amounts';
       return manager.query(
         `SELECT to_char(period, 'YYYY-MM-DD') AS period, planned, forecast, committed, actual, expected_landing
          FROM ${table} WHERE version_id = $1 ORDER BY period`,

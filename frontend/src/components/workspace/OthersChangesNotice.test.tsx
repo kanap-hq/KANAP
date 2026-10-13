@@ -36,7 +36,7 @@ describe('othersChangeMessage', () => {
 
   it('the user\'s own change from another window says so', () => {
     expect(othersChangeMessage({ by: { id: 'me', name: 'Moi' }, at }, t as never, 'fr', new Date(today), 'me'))
-      .toBe('Vous avez modifié ce poste ailleurs à 14:02');
+      .toBe('Vous avez modifié cette ligne ailleurs à 14:02');
   });
 
   it('a user without a name is "a user", never an e-mail', () => {
@@ -57,7 +57,7 @@ describe('othersChangeMessage', () => {
     try {
       expect(othersChangeMessage({ by: MARIE, at }, t as never, 'en-GB', new Date(today))).toBe('Changed by Marie Dupont at 14:02');
       expect(othersChangeMessage({ by: { id: 'me', name: 'Me' }, at }, t as never, 'en-GB', new Date(today), 'me'))
-        .toBe('You changed this item elsewhere at 14:02');
+        .toBe('You changed this line elsewhere at 14:02');
       expect(othersChangeMessage({ by: { id: 'u-9', name: null }, at }, t as never, 'en-GB', new Date(today))).toBe('Changed by a user at 14:02');
     } finally {
       void instance.changeLanguage('fr');
@@ -92,7 +92,7 @@ describe('OthersChangesNotice', () => {
 
   it('a line deleted elsewhere says so, in place of anything else', () => {
     renderNotice({ gone: true, outdated: { by: MARIE, at }, notice: { by: MARIE, at } });
-    expect(screen.getByTestId('others-changes-gone')).toHaveTextContent('Ce poste a été supprimé');
+    expect(screen.getByTestId('others-changes-gone')).toHaveTextContent('Cette ligne a été supprimée');
     expect(screen.queryByRole('button')).toBeNull();
     expect(screen.queryByTestId('others-changes-notice')).toBeNull();
   });

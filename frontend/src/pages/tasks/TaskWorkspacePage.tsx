@@ -31,6 +31,8 @@ import { taskDetailTokens, type PriorityLevel } from './theme/taskDetailTokens';
 import { RelatedObjectType } from '../../components/fields/RelatedObjectSelect';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { useDoneRequiresTime } from './hooks/useDoneRequiresTime';
+import { budgetLineLabel, type BudgetLineLabel } from '../../components/finance/budgetLineLabel';
+import { budgetLineDetailQuery } from '../../hooks/budgetItemDetailQuery';
 import { formatItemRef } from '../../utils/item-ref';
 import { buildInlineImageUrl, resolveInlineImageTenantSlug } from '../../utils/inlineImageUrls';
 import ConvertToRequestDialog from './components/ConvertToRequestDialog';
@@ -120,13 +122,10 @@ async function fetchRelatedObjectName(kind: RelatedKind, id: string): Promise<st
       const res = await api.get<{ name?: string | null }>(`/portfolio/projects/${id}`);
       return res.data?.name?.trim() || null;
     }
-    case 'spend_item': {
-      const res = await api.get<{ product_name?: string | null }>(`/spend-items/${id}`);
-      return res.data?.product_name?.trim() || null;
-    }
+    case 'spend_item':
     case 'capex_item': {
-      const res = await api.get<{ description?: string | null }>(`/capex-items/${id}`);
-      return res.data?.description?.trim() || null;
+      const res = await api.get<BudgetLineLabel>(`/budget-lines/${id}`);
+      return budgetLineLabel(res.data);
     }
     case 'contract': {
       const res = await api.get<{ name?: string | null }>(`/contracts/${id}`);
@@ -436,6 +435,17 @@ export default function TaskWorkspacePage() {
       : null
   ), [description, form, task, title]);
 
+  const linkedTask = liveTask || task;
+  const linkedBudgetId = linkedTask && ['spend_item', 'capex_item'].includes(linkedTask.related_object_type ?? '')
+    ? linkedTask.related_object_id : null;
+  const { data: linkedBudgetLine } = useQuery({
+    ...budgetLineDetailQuery(linkedBudgetId ?? ''),
+    enabled: !isCreate && !!linkedBudgetId,
+  });
+  const displayedTask = React.useMemo(() => linkedTask && linkedBudgetLine && linkedBudgetId === linkedBudgetLine.id
+    ? { ...linkedTask, related_object_name: budgetLineLabel(linkedBudgetLine) }
+    : linkedTask, [linkedTask, linkedBudgetLine, linkedBudgetId]);
+
   // Attachments
   const attachmentTaskId = !isCreate && task ? task.id : null;
   const { data: attachments = [], refetch: refetchAttachments } = useQuery({
@@ -456,13 +466,13 @@ export default function TaskWorkspacePage() {
   }, [liveTask]);
 
   const breadcrumbParent = React.useMemo<TaskParent>(() => {
-    const source = liveTask || task;
+    const source = displayedTask;
     const type = relatedKindFromType(source?.related_object_type ?? null);
     const relatedId = source?.related_object_id;
     const relatedName = (source?.related_object_name ?? '').trim();
     if (!type || !relatedId || !relatedName) return null;
     return { type, id: relatedId, name: relatedName };
-  }, [liveTask, task]);
+  }, [displayedTask]);
   const originMatchesRelated = originMatchesParent(origin, breadcrumbParent);
   const { data: fetchedOriginName = null } = useQuery({
     queryKey: ['task-origin-name', origin.kind, origin.kind === 'tasks' ? '' : origin.id],
@@ -728,12 +738,12 @@ export default function TaskWorkspacePage() {
         .then((res) => enrichName('project', res.data.name))
         .catch(() => {});
     } else if (createSpendItemId) {
-      api.get<{ id: string; product_name: string }>(`/spend-items/${createSpendItemId}`)
-        .then((res) => enrichName('spend_item', res.data.product_name))
+      api.get<BudgetLineLabel>(`/budget-lines/${createSpendItemId}`)
+        .then((res) => enrichName('spend_item', budgetLineLabel(res.data)))
         .catch(() => {});
     } else if (createCapexItemId) {
-      api.get<{ id: string; description: string }>(`/capex-items/${createCapexItemId}`)
-        .then((res) => enrichName('capex_item', res.data.description))
+      api.get<BudgetLineLabel>(`/budget-lines/${createCapexItemId}`)
+        .then((res) => enrichName('capex_item', budgetLineLabel(res.data)))
         .catch(() => {});
     } else if (createContractId) {
       api.get<{ id: string; name: string }>(`/contracts/${createContractId}`)
@@ -1746,7 +1756,7 @@ export default function TaskWorkspacePage() {
     );
   }
 
-  const effectiveTask = liveTask || task;
+  const effectiveTask = displayedTask || task;
   const isProjectTask = effectiveTask.related_object_type === 'project';
   const hasConvertedRequest = Boolean(task.converted_request_id);
   const canConvertToRequest = canManageCurrentTask && canCreateRequest;

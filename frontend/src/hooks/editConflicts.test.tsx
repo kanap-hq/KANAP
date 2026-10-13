@@ -315,7 +315,7 @@ describe('patch buffer conflicts', () => {
   });
 });
 
-/** The page's wiring (SpendItemPage, CapexItemPage) on the real helpers, with a fake server per item. */
+/** The page's wiring (BudgetLinePage) on the real helpers, with a fake server per item. */
 function usePage(itemId: string, calls: Array<[string, Patch, Patch]>, answer: (id: string, patch: Patch, base: Patch) => unknown) {
   const buffer = usePatchBuffer<Patch>();
   const registry = React.useMemo(() => createAutosaveRegistry(), []);

@@ -25,6 +25,8 @@ import {
 // Setting A's value on B's line through the item API is covered by the item
 // write-gate spec (spend/__tests__/item-analytics.integration.spec.ts).
 
+// capex_item_analytics_values is dormant since lot Z1 (the values of both natures are in
+// spend_item_analytics_values) but keeps its rows until lot Z2 drops it: row level security still guards it.
 const TABLES = ['analytics_axes', 'analytics_categories', 'capex_item_analytics_values', 'spend_item_analytics_values'];
 
 async function testTablesAreTenantIsolated() {
@@ -52,12 +54,12 @@ async function testTablesAreTenantIsolated() {
   }
   const keys = await dataSource.query(
     `SELECT conname, pg_get_constraintdef(oid) AS def FROM pg_constraint
-      WHERE conname IN ('analytics_categories_axis_fk', 'spend_item_analytics_values_category_fk', 'capex_item_analytics_values_category_fk')
+      WHERE conname IN ('analytics_categories_axis_fk', 'spend_item_analytics_values_category_fk')
       ORDER BY conname`,
   );
+  // The key of the dormant capex_item_analytics_values: dropped by lot Z1 (the table goes with lot Z2).
   assert.deepEqual(keys.map((key: any) => [key.conname, key.def]), [
     ['analytics_categories_axis_fk', 'FOREIGN KEY (tenant_id, axis_id) REFERENCES analytics_axes(tenant_id, id) ON DELETE RESTRICT'],
-    ['capex_item_analytics_values_category_fk', 'FOREIGN KEY (tenant_id, category_id, axis_id) REFERENCES analytics_categories(tenant_id, id, axis_id) ON DELETE RESTRICT'],
     ['spend_item_analytics_values_category_fk', 'FOREIGN KEY (tenant_id, category_id, axis_id) REFERENCES analytics_categories(tenant_id, id, axis_id) ON DELETE RESTRICT'],
   ]);
 }
@@ -75,6 +77,17 @@ async function testOtherTenantIsInvisible() {
     const capexA = await seedLine(runner, 'capex', tenantA);
     await linkValue(runner, 'opex', tenantA, lineA, natureA.id, valueA.id);
     await linkValue(runner, 'capex', tenantA, capexA, defaultA, defaultValueA.id);
+    // A dormant row of A in capex_item_analytics_values (kept until lot Z2), under its dormant line.
+    await setCurrentTenant(runner, tenantA);
+    const [dormant] = await runner.query(
+      `INSERT INTO capex_items (tenant_id, description, ppe_type, investment_type, priority, currency, effective_start, item_number)
+       VALUES ($1, 'Dormant A', 'hardware', 'replacement', 'medium', 'EUR', '2024-01-01', 1) RETURNING id`,
+      [tenantA],
+    );
+    await runner.query(
+      `INSERT INTO capex_item_analytics_values (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4)`,
+      [tenantA, dormant.id, defaultA, defaultValueA.id],
+    );
 
     const tenantB = await seedTenant(runner, 'iso-b');
     const b = services(runner.manager);
@@ -126,7 +139,8 @@ async function testOtherTenantIsInvisible() {
     ));
     await expectRefused(runner, /spend_item_analytics_values_category_fk/, () =>
       linkValue(runner, 'opex', tenantB, lineB, natureA.id, valueA.id));
-    await expectRefused(runner, /capex_item_analytics_values_category_fk/, () =>
+    // A CAPEX line's value (one table for both natures since lot Z1): the same key refuses A's value.
+    await expectRefused(runner, /spend_item_analytics_values_category_fk/, () =>
       linkValue(runner, 'capex', tenantB, capexB, defaultA, defaultValueA.id));
     // B's own value, named on another of B's dimensions, is refused too.
     await expectRefused(runner, /spend_item_analytics_values_category_fk/, () =>
@@ -134,7 +148,8 @@ async function testOtherTenantIsInvisible() {
     // B's own value on its own dimension is accepted.
     await linkValue(runner, 'opex', tenantB, lineB, natureB.id, valueB.id);
 
-    // B's session neither sees nor changes A's line values.
+    // B's session neither sees nor changes A's line values (both natures in one table since lot Z1),
+    // nor A's dormant rows.
     for (const table of ['spend_item_analytics_values', 'capex_item_analytics_values']) {
       const [seen] = await runner.query(`SELECT count(*)::int AS n FROM ${table} WHERE tenant_id = $1`, [tenantA]);
       assert.equal(seen.n, 0, `${table}: B reads none of A's rows`);
@@ -151,16 +166,19 @@ async function testOtherTenantIsInvisible() {
     const axesA = await a.axes.list(ctxA);
     assert.deepEqual(axesA.items.map((axis) => [axis.code, axis.name]), [['default', null], ['nature', 'Nature A']]);
     const linksA = await runner.query(
-      `SELECT 'opex' AS kind, item_id, category_id FROM spend_item_analytics_values WHERE tenant_id = $1
-       UNION ALL
-       SELECT 'capex', item_id, category_id FROM capex_item_analytics_values WHERE tenant_id = $1
-       ORDER BY 1 DESC`,
+      `SELECT s.nature AS kind, v.item_id, v.category_id
+         FROM spend_item_analytics_values v
+         JOIN spend_items s ON s.tenant_id = v.tenant_id AND s.id = v.item_id
+        WHERE v.tenant_id = $1
+        ORDER BY 1 DESC`,
       [tenantA],
     );
     assert.deepEqual(linksA.map((row: any) => [row.kind, row.item_id, row.category_id]), [
       ['opex', lineA, valueA.id],
       ['capex', capexA, defaultValueA.id],
     ]);
+    const dormantA = await runner.query(`SELECT item_id, category_id FROM capex_item_analytics_values WHERE tenant_id = $1`, [tenantA]);
+    assert.deepEqual(dormantA, [{ item_id: dormant.id, category_id: defaultValueA.id }], "A's dormant row is still there");
   });
 }
 

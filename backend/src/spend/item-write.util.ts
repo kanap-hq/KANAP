@@ -11,7 +11,8 @@ import { ItemAnalyticsChange, resolveItemAnalyticsChanges } from './item-analyti
  * Item bodies reach the services unvalidated, and foreign key checks bypass
  * row level security: without this gate any column could be sent and another
  * tenant's supplier, category or user could be attached to a line. So:
- * - only the writable columns of the type are kept, anything else is dropped;
+ * - only the writable fields of the nature are kept, anything else is dropped;
+ *   each is returned under its column (a CAPEX `description` is `product_name`);
  * - every id supplied is resolved in the current tenant with an explicit
  *   `tenant_id` predicate (unknown or other tenant: "<Field> not found.");
  * - a new cost center is read `FOR SHARE` (a concurrent conversion into a
@@ -34,20 +35,51 @@ export type ItemWriteScope = 'opex' | 'capex';
 export const RUN_BUILD_VALUES = ['run', 'build'] as const;
 export type RunBuild = (typeof RUN_BUILD_VALUES)[number];
 
+/** The fields a body of each nature writes, by their API names. */
 const WRITABLE_COLUMNS: Record<ItemWriteScope, readonly string[]> = {
   opex: [
     'product_name', 'description', 'supplier_id', 'paying_company_id', 'account_id', 'currency', 'effective_start',
     'owner_it_id', 'owner_business_id', 'project_id', 'contract_id', 'cost_center_id', 'run_build', 'notes',
   ],
+  // The PP&E type, investment type and priority of a CAPEX line are dimension values since lot C1
+  // (`analytics_values`): a body that still names them is not written.
   capex: [
-    'description', 'ppe_type', 'investment_type', 'priority', 'supplier_id', 'paying_company_id', 'account_id', 'currency',
+    'description', 'supplier_id', 'paying_company_id', 'account_id', 'currency',
     'effective_start', 'owner_it_id', 'owner_business_id', 'project_id', 'cost_center_id', 'run_build', 'notes',
   ],
 };
 
-/** The columns a line update writes as given (after the id and enum checks below). */
-export function itemWritableColumns(scope: ItemWriteScope): readonly string[] {
-  return WRITABLE_COLUMNS[scope];
+/**
+ * The column of `spend_items` an API field writes, when it is not the field's own name: a CAPEX
+ * line's title, `description` in the CAPEX API, is the line's `product_name` (lot Z1, G.1); a
+ * CAPEX line has no OPEX description there.
+ */
+const FIELD_COLUMNS: Record<ItemWriteScope, Readonly<Record<string, string>>> = {
+  opex: {},
+  capex: { description: 'product_name' },
+};
+
+/**
+ * How a body names its fields: `api`, the names of the nature's routes (the CAPEX alias's
+ * `description` is the title); `columns`, the columns of `spend_items` (`product_name` the title,
+ * `description` the description), what the budget file writes since lot C1b: those of an OPEX
+ * line. CAPEX keeps the contract column read-only.
+ */
+export type ItemWriteFields = 'api' | 'columns';
+
+const COLUMN_WRITABLE: Record<ItemWriteScope, readonly string[]> = {
+  opex: WRITABLE_COLUMNS.opex,
+  capex: WRITABLE_COLUMNS.opex.filter((column) => column !== 'contract_id'),
+};
+
+/** The fields a line update writes as given (after the id checks below), by their API names. */
+export function itemWritableColumns(scope: ItemWriteScope, fields: ItemWriteFields = 'api'): readonly string[] {
+  return fields === 'columns' ? COLUMN_WRITABLE[scope] : WRITABLE_COLUMNS[scope];
+}
+
+/** The column of `spend_items` that a field of the nature writes. */
+export function itemFieldColumn(scope: ItemWriteScope, field: string, fields: ItemWriteFields = 'api'): string {
+  return fields === 'columns' ? field : FIELD_COLUMNS[scope][field] ?? field;
 }
 
 /** Lifecycle inputs, resolved by the caller (`resolveLifecycleState`), never written as given. */
@@ -124,6 +156,7 @@ export async function resolveItemWrite(
   scope: ItemWriteScope,
   body: unknown,
   existing: ExistingItem | null,
+  fields: ItemWriteFields = 'api',
 ): Promise<ItemWrite> {
   const tenantId = await currentTenantId(manager);
   // The line was read under RLS; a mismatch would mean a caller passed a row of another tenant.
@@ -131,12 +164,13 @@ export async function resolveItemWrite(
   const input: Record<string, unknown> = body && typeof body === 'object' && !Array.isArray(body) ? (body as Record<string, unknown>) : {};
   const supplied = (key: string) => Object.prototype.hasOwnProperty.call(input, key) && input[key] !== undefined;
 
+  // Keyed by column (`itemFieldColumn`): a CAPEX title of the API lands in `product_name`.
   const values: Record<string, unknown> = {};
-  for (const column of WRITABLE_COLUMNS[scope]) {
-    if (supplied(column)) values[column] = input[column];
+  for (const field of itemWritableColumns(scope, fields)) {
+    if (supplied(field)) values[itemFieldColumn(scope, field, fields)] = input[field];
   }
-  // CAPEX legacy alias of the paying company.
-  if (scope === 'capex' && input.company_id != null && input.paying_company_id == null) {
+  // CAPEX legacy alias of the paying company (the CAPEX API's names only).
+  if (fields === 'api' && scope === 'capex' && input.company_id != null && input.paying_company_id == null) {
     values.paying_company_id = input.company_id;
   }
   const lifecycle: ItemWrite['lifecycle'] = {};

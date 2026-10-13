@@ -27,6 +27,13 @@ export class AnalyticsCategory {
   @Column('text', { nullable: true })
   applies_to!: AxisAppliesTo | null;
 
+  /**
+   * The value's position in its dimension: the values read `sort_order, name (ICU order), id`
+   * everywhere they are offered. Set on create (last) and by the reorder, never by a PATCH.
+   */
+  @Column('integer', { default: 0 })
+  sort_order!: number;
+
   @Column({
     type: 'enum',
     enum: StatusState,

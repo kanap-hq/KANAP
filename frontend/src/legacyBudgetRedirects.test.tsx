@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, within } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -33,14 +33,21 @@ vi.mock('./pages/PendingAccessPage', () => ({ default: () => null }));
 import ProtectedRoute from './components/ProtectedRoute';
 import BudgetOperationsLandingPage from './pages/operations/BudgetOperationsLandingPage';
 import { createAppTheme } from './config/ThemeContext';
-import { LEGACY_BUDGET_REDIRECTS, legacyBudgetRedirectRoutes } from './legacyBudgetRedirects';
+import { LEGACY_BUDGET_REDIRECTS, MERGED_OPERATION_REDIRECTS, legacyBudgetRedirectRoutes } from './legacyBudgetRedirects';
 
 const NEW_ROUTES = [
   '/ops/operations/currency',
   '/ops/operations/master-data-freeze',
   '/ops/operations/metrics-copy',
   '/ops/operations/freeze',
+  '/ops/operations/copy-budget',
 ];
+
+/** A page stub that shows its path and query, so a redirect's parameters can be read. */
+function PageStub({ route }: { route: string }) {
+  const { search } = useLocation();
+  return <div>{`page ${route}${search}`}</div>;
+}
 
 /** The same layout as App: redirects first, then the protected pages. */
 function renderAt(path: string) {
@@ -52,7 +59,7 @@ function renderAt(path: string) {
           <Route element={<ProtectedRoute />}>
             <Route path="/ops/operations" element={<BudgetOperationsLandingPage />} />
             {NEW_ROUTES.map((route) => (
-              <Route key={route} path={route} element={<div>page {route}</div>} />
+              <Route key={route} path={route} element={<PageStub route={route} />} />
             ))}
           </Route>
           <Route path="/403" element={<div>forbidden</div>} />
@@ -64,7 +71,7 @@ function renderAt(path: string) {
 
 describe('legacy budget redirects', () => {
   beforeEach(() => {
-    auth.grants = { opex: 'admin', capex: 'admin', budget_ops: 'admin' };
+    auth.grants = { budget: 'admin', budget_ops: 'admin' };
   });
 
   it('sends /master-data/operations to the administration landing', () => {
@@ -79,6 +86,29 @@ describe('legacy budget redirects', () => {
   ])('sends %s to %s', (from, to) => {
     renderAt(from);
     expect(screen.getByText(`page ${to}`)).toBeInTheDocument();
+  });
+
+  it.each([
+    ['/ops/operations/copy-budget-columns', '/ops/operations/copy-budget'],
+    ['/ops/operations/column-init', '/ops/operations/copy-budget'],
+    ['/ops/operations/copy-allocations', '/ops/operations/copy-budget?amounts=0'],
+  ])('sends the former copy page %s to %s', (from, to) => {
+    renderAt(from);
+    expect(screen.getByText(`page ${to}`)).toBeInTheDocument();
+  });
+
+  it('keeps the merged copy closed to a budget member after the redirect', () => {
+    auth.grants = BUDGET_MEMBER;
+    renderAt('/ops/operations/copy-allocations');
+    expect(screen.getByText('forbidden')).toBeInTheDocument();
+  });
+
+  it('lists the two former copy pages', () => {
+    expect(MERGED_OPERATION_REDIRECTS.map((r) => r.from)).toEqual([
+      '/ops/operations/copy-budget-columns',
+      '/ops/operations/column-init',
+      '/ops/operations/copy-allocations',
+    ]);
   });
 
   it('covers every old path', () => {
@@ -96,7 +126,7 @@ const tileHrefs = () => screen.getAllByRole('region')
   .flatMap((region) => within(region).getAllByRole('link'))
   .map((link) => link.getAttribute('href'));
 
-const BUDGET_MEMBER = { opex: 'member', capex: 'member', budget_ops: 'reader', companies: 'reader', departments: 'member' };
+const BUDGET_MEMBER = { budget: 'member', budget_ops: 'reader', companies: 'reader', departments: 'member' };
 
 describe('budget administration access', () => {
   it.each(['/ops/operations', '/ops/operations/'])('opens %s to a budget administrator', (path) => {
@@ -137,8 +167,8 @@ describe('budget administration access', () => {
     expect(screen.getByText('page /ops/operations/master-data-freeze')).toBeInTheDocument();
   });
 
-  it('keeps the budget settings closed to an OPEX administrator', () => {
-    auth.grants = { opex: 'admin', budget_ops: 'reader' };
+  it('keeps the budget settings closed to a budget lines administrator', () => {
+    auth.grants = { budget: 'admin', budget_ops: 'reader' };
     renderAt('/ops/operations/currency');
     expect(screen.getByText('forbidden')).toBeInTheDocument();
   });

@@ -3,25 +3,10 @@ import api from '../api';
 /** A column in the copy and clear API (summary key vocabulary). */
 export type BudgetColumn = 'budget' | 'revision' | 'forecast' | 'follow_up' | 'landing';
 
-/** Which items a column operation runs on. */
-export type BudgetScope = 'opex' | 'capex';
-
-const OPERATIONS_BASE: Record<BudgetScope, string> = {
-  opex: '/spend-items/budget-operations',
-  capex: '/capex-items/budget-operations',
-};
-
-export type BudgetColumnOperation = {
-  sourceYear: number;
-  sourceColumn: BudgetColumn;
-  destinationYear: number;
-  destinationColumn: BudgetColumn;
-  percentageIncrease: number;
-  overwrite: boolean;
-  dryRun: boolean;
-  /** Confirms a copy whose lines change calendar or cannot be recalculated (see `CalendarIssue`). */
-  acceptCalendarChanges?: boolean;
-};
+/** Which budget lines a read or a budget operation targets: all of them, or one nature. */
+export type BudgetScope = 'opex' | 'capex' | 'all';
+/** One nature. */
+export type BudgetOperationScope = Exclude<BudgetScope, 'all'>;
 
 /**
  * What the copy does with the calendar of one line priced per day:
@@ -39,48 +24,48 @@ export type CalendarIssue = {
   fallback?: string;
 };
 
-export type BudgetOperationResult = {
-  itemId: string;
-  itemName: string;
-  sourceValue: number;
-  currentDestinationValue: number;
-  newValue: number;
-  /** The server skips this item (source all zero, or destination not empty without overwrite), month by month. */
-  skipped: boolean;
-  /** The item is valid for part of the destination year: the months outside its validity are not copied. */
-  prorated?: boolean;
-  /** The source column follows its quantity and price lines: the copy raises their unit prices and recalculates the months. */
-  fromLines?: boolean;
-  calendarIssues?: CalendarIssue[];
-};
-
-export type BudgetOperationResponse = {
-  success: boolean;
-  dryRun: boolean;
-  summary: {
-    totalItems: number;
-    processed: number;
-    skipped: number;
-    errors: number;
-  };
-  results: BudgetOperationResult[];
-};
-
-export const copyBudgetColumn = async (scope: BudgetScope, operation: BudgetColumnOperation): Promise<BudgetOperationResponse> => {
-  const response = await api.post<BudgetOperationResponse>(`${OPERATIONS_BASE[scope]}/copy-column`, operation);
-  return response.data;
-};
-
-export type AllocationCopyOperation = {
+/** "Copy budget columns" (`POST /budget-lines/budget-operations/copy`): the amounts, the allocations or both. */
+export type CopyBudgetOperation = {
+  scope: BudgetScope;
   sourceYear: number;
   destinationYear: number;
+  amounts?: {
+    sourceColumn: BudgetColumn;
+    destinationColumn: BudgetColumn;
+    percentageIncrease: number;
+    /** Confirms a copy whose lines change calendar or cannot be recalculated (see `CalendarIssue`). */
+    acceptCalendarChanges?: boolean;
+  } | null;
+  /** Allocations go to another year only. */
+  allocations?: boolean;
   overwrite: boolean;
   dryRun: boolean;
 };
 
-export type AllocationCopyResult = {
-  itemId: string;
-  itemName: string;
+/**
+ * Why the amounts of a line are skipped: no version in the source year, nothing to copy within the
+ * line's dates, or a destination column that holds amounts (without overwrite).
+ */
+export type AmountsSkip = 'no_source' | 'source_empty' | 'destination_filled';
+
+/** The amounts part of a line: the column's totals in the line's own currency. */
+export type AmountsPart = {
+  sourceValue: number;
+  currentDestinationValue: number;
+  newValue: number;
+  skipped: boolean;
+  skip: AmountsSkip | null;
+  /** The line is valid for part of the destination year: the months outside its validity are not copied. */
+  prorated: boolean;
+  /** The source column follows its quantity and price lines: the copy raises their unit prices and recalculates the months. */
+  fromLines: boolean;
+  calendarIssues: CalendarIssue[];
+};
+
+export type AllocationAction = 'copy' | 'skip_missing_source_version' | 'skip_no_source_allocations' | 'skip_destination_has_data' | 'error';
+
+/** The allocations part of a line: the method of each side and what the copy leaves. */
+export type AllocationsPart = {
   sourceMethod: string | null;
   sourceMethodLabel: string;
   destinationMethod: string | null;
@@ -89,24 +74,33 @@ export type AllocationCopyResult = {
   resultMethodLabel: string;
   sourceAllocationsCount: number;
   destinationAllocationsCount: number;
-  action: 'copy' | 'skip_missing_source_version' | 'skip_no_source_allocations' | 'skip_destination_has_data' | 'error';
+  action: AllocationAction;
   message?: string;
 };
 
-export type AllocationCopyResponse = {
-  success: boolean;
-  dryRun: boolean;
-  summary: {
-    totalItems: number;
-    processed: number;
-    skipped: number;
-    errors: number;
-  };
-  results: AllocationCopyResult[];
+/** One line of a copy, with its BL number and nature, and each part asked. */
+export type CopyBudgetLine = {
+  itemId: string;
+  itemNumber: number;
+  reference: string | null;
+  nature: BudgetOperationScope;
+  itemName: string;
+  amounts?: AmountsPart;
+  allocations?: AllocationsPart;
 };
 
-export const copyAllocations = async (scope: BudgetScope, operation: AllocationCopyOperation): Promise<AllocationCopyResponse> => {
-  const response = await api.post<AllocationCopyResponse>(`${OPERATIONS_BASE[scope]}/copy-allocations`, operation);
+export type CopyPartSummary = { totalItems: number; processed: number; skipped: number; errors: number };
+
+export type CopyBudgetResponse = {
+  success: boolean;
+  dryRun: boolean;
+  scope: BudgetScope;
+  summary: { lines: number; amounts?: CopyPartSummary; allocations?: CopyPartSummary };
+  results: CopyBudgetLine[];
+};
+
+export const copyBudget = async (operation: CopyBudgetOperation): Promise<CopyBudgetResponse> => {
+  const response = await api.post<CopyBudgetResponse>('/budget-lines/budget-operations/copy', operation);
   return response.data;
 };
 
@@ -125,7 +119,8 @@ export type ClearColumnResponse = {
   };
 };
 
+/** "Reset a column" (`POST /budget-lines/budget-operations/clear-column`), on all lines or one nature. */
 export const clearBudgetColumn = async (scope: BudgetScope, operation: ClearColumnOperation): Promise<ClearColumnResponse> => {
-  const response = await api.post<ClearColumnResponse>(`${OPERATIONS_BASE[scope]}/clear-column`, operation);
+  const response = await api.post<ClearColumnResponse>('/budget-lines/budget-operations/clear-column', { scope, ...operation });
   return response.data;
 };

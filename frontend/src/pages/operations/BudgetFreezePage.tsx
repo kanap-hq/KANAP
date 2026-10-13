@@ -1,288 +1,149 @@
 import React from 'react';
 import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Checkbox,
-  CircularProgress,
-  FormControl,
-  FormControlLabel,
-  FormGroup,
-  InputLabel,
-  MenuItem,
-  Select,
-  SelectChangeEvent,
-  Stack,
-  TextField,
-  Typography,
+  Alert, Box, Button, Stack,
+  Table, TableBody, TableCell, TableHead, TableRow, Typography,
 } from '@mui/material';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined';
 import PageHeader from '../../components/PageHeader';
+import { PropertyRow } from '../../components/design/PropertyRow';
+import YearTabs from '../../components/navigation/YearTabs';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
-import { FreezeColumn, FreezeScope, freezeTargets, FreezeTarget, unfreezeTargets, FreezeStateResponse } from '../../services/freeze';
+import { FreezeColumn, freezeTargets, FreezeTarget, unfreezeTargets } from '../../services/freeze';
 import { useFreezeState } from '../../hooks/useFreezeState';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
+import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 
-const YEAR_RANGE = 6;
+const NATURES = ['opex', 'capex'] as const;
+type Nature = (typeof NATURES)[number];
+type Change = { freeze: boolean; targets: FreezeTarget[] };
 
-function useYearOptions() {
-  const currentYear = new Date().getFullYear();
-  return React.useMemo(() => Array.from({ length: YEAR_RANGE }, (_, i) => currentYear - 1 + i), [currentYear]);
-}
+const cellKey = (nature: Nature, col: FreezeColumn) => `${nature}:${col}`;
 
-/** The user's column choice per scope; null means every listed column (the default). */
-type ScopedColumns = {
-  opex: FreezeColumn[] | null;
-  capex: FreezeColumn[] | null;
+// One budget column of one nature: a compact toggle, frozen drawn stronger than open.
+const cellSx = (frozen: boolean) => ({
+  height: 26, minWidth: 92, px: 1, gap: 0.5, justifyContent: 'flex-start',
+  borderRadius: '5px', border: '1px solid', fontSize: 12, fontWeight: frozen ? 500 : 400,
+  textTransform: 'none', boxShadow: 'none', whiteSpace: 'nowrap',
+  color: frozen ? 'kanap.text.primary' : 'kanap.text.tertiary',
+  borderColor: frozen ? 'kanap.border.strong' : 'kanap.border.default',
+  backgroundColor: frozen ? 'kanap.pill.hoverBg' : 'transparent',
+  '&:hover': { backgroundColor: 'kanap.pill.hoverBg', borderColor: 'kanap.border.strong', boxShadow: 'none' },
+  '&.Mui-disabled': { color: frozen ? 'kanap.text.secondary' : 'kanap.text.tertiary', opacity: 0.6 },
+  '& .MuiSvgIcon-root': { fontSize: 14 },
+});
+
+const rowActionSx = {
+  height: 24, minWidth: 0, px: 0.75, borderRadius: '5px', fontSize: 12, fontWeight: 400,
+  textTransform: 'none', color: 'kanap.text.secondary', whiteSpace: 'nowrap',
+  '&:hover': { backgroundColor: 'kanap.bg.hover' },
 };
 
 export default function BudgetFreezePage() {
   const { t } = useTranslation(['ops']);
   const budgetColumns = useBudgetColumns();
-  const years = useYearOptions();
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 6 }, (_, i) => currentYear - 1 + i);
   const { hasLevel } = useAuth();
   const canModify = hasLevel('budget_ops', 'admin');
-  const [year, setYear] = React.useState<number>(years[1] ?? years[0] ?? new Date().getFullYear());
-  const [selectedScopes, setSelectedScopes] = React.useState<FreezeScope[]>([]);
-  const [pickedColumns, setColumnsByScope] = React.useState<ScopedColumns>({ opex: null, capex: null });
+  const [year, setYear] = React.useState(currentYear);
+  const [pending, setPending] = React.useState<ReadonlySet<string>>(new Set());
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const queryClient = useQueryClient();
+  const { data, error } = useFreezeState(year);
 
-  const { data, isLoading, isFetching, error } = useFreezeState(year);
-
-  // Every column of each scope, hidden ones marked, all preselected: freezing a year freezes
-  // hidden columns too, since they still accept imports and API writes.
-  const allColumns = React.useMemo(() => budgetColumns.all.map((c) => c.freezeKey), [budgetColumns.all]);
-  const columnsByScope = React.useMemo(() => ({
-    opex: pickedColumns.opex ?? allColumns,
-    capex: pickedColumns.capex ?? allColumns,
-  }), [allColumns, pickedColumns]);
-  const noColumnChosen = selectedScopes.some((scope) => (scope === 'opex' || scope === 'capex') && columnsByScope[scope].length === 0);
-
-  const freezeMutation = useMutation({
-    mutationFn: async (targets: FreezeTarget[]) => freezeTargets(year, targets),
-    onSuccess: (res: FreezeStateResponse) => {
-      queryClient.setQueryData(['freeze-state', year], res);
-      setFeedback({ type: 'success', message: t('operations.freeze.frozenSuccess') });
-    },
-    onError: (err: any) => {
-      setFeedback({ type: 'error', message: err?.response?.data?.message || err?.message || t('operations.freeze.freezeError') });
-    }
+  const mutation = useMutation({
+    mutationFn: ({ freeze, targets }: Change) => (freeze ? freezeTargets : unfreezeTargets)(year, targets),
+    onSuccess: (res) => queryClient.setQueryData(['freeze-state', res.year], res),
+    onError: (err, { freeze }) => setErrorMessage(
+      getApiErrorMessage(err, t, t(freeze ? 'operations.freeze.freezeError' : 'operations.freeze.unfreezeError')),
+    ),
   });
 
-  const unfreezeMutation = useMutation({
-    mutationFn: async (targets: FreezeTarget[]) => unfreezeTargets(year, targets),
-    onSuccess: (res: FreezeStateResponse) => {
-      queryClient.setQueryData(['freeze-state', year], res);
-      setFeedback({ type: 'success', message: t('operations.freeze.unfrozenSuccess') });
-    },
-    onError: (err: any) => {
-      setFeedback({ type: 'error', message: err?.response?.data?.message || err?.message || t('operations.freeze.unfreezeError') });
-    }
-  });
-
-  const [feedback, setFeedback] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null);
-
-  const toggleScope = (scope: FreezeScope) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFeedback(null);
-    setSelectedScopes((prev) => {
-      if (event.target.checked) {
-        return prev.includes(scope) ? prev : [...prev, scope];
-      }
-      return prev.filter((s) => s !== scope);
+  const keysOf = (targets: FreezeTarget[]) =>
+    targets.flatMap(({ scope, columns }) => (columns ?? []).map((col) => cellKey(scope as Nature, col)));
+  const change = (freeze: boolean, natures: readonly Nature[], col: FreezeColumn) => {
+    const targets = natures.map((scope) => ({ scope, columns: [col] }));
+    const keys = keysOf(targets);
+    setErrorMessage(null);
+    setPending((prev) => new Set([...prev, ...keys]));
+    mutation.mutate({ freeze, targets }, {
+      onSettled: () => setPending((prev) => new Set([...prev].filter((key) => !keys.includes(key)))),
     });
   };
-
-  const handleColumnsChange = (scope: 'opex' | 'capex') => (event: SelectChangeEvent<FreezeColumn[]>) => {
-    const value = event.target.value as FreezeColumn[];
-    setFeedback(null);
-    setColumnsByScope((prev) => ({ ...prev, [scope]: value }));
-  };
-
-  const buildTargets = (): FreezeTarget[] => {
-    const targets: FreezeTarget[] = [];
-    for (const scope of selectedScopes) {
-      if (scope === 'opex' || scope === 'capex') {
-        targets.push({ scope, columns: columnsByScope[scope] });
-      }
-    }
-    return targets;
-  };
-
-  const handleFreeze = async () => {
-    const targets = buildTargets();
-    if (targets.length === 0) return;
-    await freezeMutation.mutateAsync(targets);
-  };
-
-  const handleUnfreeze = async () => {
-    const targets = buildTargets();
-    if (targets.length === 0) return;
-    await unfreezeMutation.mutateAsync(targets);
-  };
-
-  const columnLabel = (col: FreezeColumn) => budgetColumns.label(col);
-  const isHidden = (col: FreezeColumn) => !budgetColumns.get(col).enabled;
-
-  const summary = data?.summary;
-  const scopeSummary = summary?.scopes;
-  const loading = isLoading || isFetching || freezeMutation.isPending || unfreezeMutation.isPending;
-
-  const renderScopeStatus = () => {
-    if (!scopeSummary) return null;
-    const columnStatus = (col: FreezeColumn, info: { frozen: boolean; frozenAt: string | null; frozenBy: string | null } | undefined) => (
-      <Box key={col} sx={{ display: 'flex', justifyContent: 'space-between', py: 0.5 }}>
-        <Typography variant="body2">
-          {columnLabel(col)}
-          {isHidden(col) && (
-            <Typography component="span" sx={{ ml: 1, fontSize: 12, color: 'kanap.text.tertiary' }}>{t('operations.freeze.hidden')}</Typography>
-          )}
-        </Typography>
-        <Typography variant="body2" color={info?.frozen ? 'error.main' : 'text.secondary'}>
-          {info?.frozen ? t('operations.freeze.frozen') : t('operations.freeze.editable')}
-        </Typography>
-      </Box>
-    );
-
-    return (
-      <Stack spacing={2}>
-        <Card variant="outlined">
-          <CardContent>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('operations.freeze.opexColumns')}</Typography>
-            {budgetColumns.all.map((c) => columnStatus(c.freezeKey, scopeSummary.opex[c.freezeKey]))}
-          </CardContent>
-        </Card>
-        <Card variant="outlined">
-          <CardContent>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('operations.freeze.capexColumns')}</Typography>
-            {budgetColumns.all.map((c) => columnStatus(c.freezeKey, scopeSummary.capex[c.freezeKey]))}
-          </CardContent>
-        </Card>
-      </Stack>
-    );
-  };
+  const isFrozen = (nature: Nature, col: FreezeColumn) => !!data?.summary.scopes[nature]?.[col]?.frozen;
+  const editable = canModify && budgetColumns.ready && !!data;
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <PageHeader title={t('operations.freeze.title')} breadcrumbTitle={t('operations.freeze.title')} />
-      {!canModify && (
-        <Alert severity="info" sx={{ maxWidth: 600 }}>
-          {t('operations.budgetAdminOnly')}
-        </Alert>
-      )}
-      {feedback && (
-        <Alert severity={feedback.type} onClose={() => setFeedback(null)}>{feedback.message}</Alert>
-      )}
-      {error && (
-        <Alert severity="error">{t('operations.freeze.loadError')}</Alert>
-      )}
-      <Card variant="outlined">
-        <CardContent>
-          <Stack spacing={3}>
-            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'stretch', md: 'center' }}>
-              <TextField
-                select
-                size="small"
-                label={t('operations.freeze.year')}
-                value={year}
-                onChange={(e) => { setYear(Number(e.target.value)); setFeedback(null); }}
-                sx={{ width: 160 }}
-              >
-                {years.map((y) => (
-                  <MenuItem key={y} value={y}>{y}</MenuItem>
-                ))}
-              </TextField>
-              <FormGroup row>
-                <FormControlLabel
-                  control={<Checkbox checked={selectedScopes.includes('opex')} onChange={toggleScope('opex')} disabled={!canModify} />}
-                  label="OPEX"
-                />
-                <FormControlLabel
-                  control={<Checkbox checked={selectedScopes.includes('capex')} onChange={toggleScope('capex')} disabled={!canModify} />}
-                  label="CAPEX"
-                />
-              </FormGroup>
-            </Stack>
-
-            {(selectedScopes.includes('opex') || selectedScopes.includes('capex')) && (
-              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                {selectedScopes.includes('opex') && (
-                  <FormControl size="small" sx={{ minWidth: 220 }} disabled={!canModify}>
-                    <InputLabel id="opex-columns-label">{t('operations.freeze.opexColumns')}</InputLabel>
-                    <Select
-                      labelId="opex-columns-label"
-                      multiple
-                      value={columnsByScope.opex}
-                      label={t('operations.freeze.opexColumns')}
-                      onChange={handleColumnsChange('opex')}
-                      renderValue={(selected) => selected.map(columnLabel).join(', ')}
+      {!canModify && <Alert severity="info">{t('operations.budgetAdminOnly')}</Alert>}
+      {errorMessage && <Alert severity="error" onClose={() => setErrorMessage(null)}>{errorMessage}</Alert>}
+      {error && <Alert severity="error">{t('operations.freeze.loadError')}</Alert>}
+      {/* The year tabs sit centred over the matrix, which keeps its width. */}
+      <Box sx={{ maxWidth: 640, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <YearTabs currentYear={year} availableYears={years} disabled={pending.size > 0}
+          onYearChange={(y) => { setYear(y); setErrorMessage(null); }} />
+        <Box sx={{ overflowX: 'auto' }}>
+          <Table size="small" aria-label={t('operations.freeze.title')} sx={{
+            maxWidth: 640,
+            '& th': { fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', borderColor: 'kanap.border.default' },
+            '& tbody th': { fontSize: 13, fontWeight: 400, color: 'kanap.text.primary', borderColor: 'kanap.border.soft' },
+            '& td': { fontSize: 13, fontWeight: 400, color: 'kanap.text.primary', borderColor: 'kanap.border.soft' },
+          }}>
+            <TableHead><TableRow>
+              <TableCell>{t('operations.freeze.column')}</TableCell>
+              {NATURES.map((nature) => <TableCell key={nature}>{t(`budget.${nature}`)}</TableCell>)}
+              {canModify && <TableCell />}
+            </TableRow></TableHead>
+            <TableBody>
+              {budgetColumns.all.map(({ freezeKey: col, label, enabled }) => {
+                const allFrozen = NATURES.every((nature) => isFrozen(nature, col));
+                const rowPending = NATURES.some((nature) => pending.has(cellKey(nature, col)));
+                return <TableRow key={col}>
+                  <TableCell component="th" scope="row">
+                    {label}
+                    {!enabled && <Typography component="span" sx={{ ml: 1, fontSize: 12, color: 'kanap.text.tertiary' }}>{t('operations.freeze.hidden')}</Typography>}
+                  </TableCell>
+                  {NATURES.map((nature) => {
+                    const frozen = isFrozen(nature, col);
+                    const stateLabel = frozen ? t('operations.freeze.frozen') : t('operations.freeze.open');
+                    const icon = frozen ? <LockOutlinedIcon /> : <LockOpenOutlinedIcon />;
+                    const cellLabel = t('operations.freeze.cell', { column: label, nature: t(`budget.${nature}`) });
+                    return <TableCell key={nature}>
+                      {!data ? null : canModify ? (
+                        <Button
+                          size="small" aria-label={cellLabel} aria-pressed={frozen} sx={cellSx(frozen)}
+                          startIcon={icon} disabled={!editable || pending.has(cellKey(nature, col))}
+                          onClick={() => change(!frozen, [nature], col)}
+                        >
+                          {stateLabel}
+                        </Button>
+                      ) : (
+                        <Stack direction="row" alignItems="center" spacing={0.5} aria-label={`${cellLabel}: ${stateLabel}`}
+                          sx={{ fontSize: 12, fontWeight: frozen ? 500 : 400, color: frozen ? 'kanap.text.primary' : 'kanap.text.tertiary', '& .MuiSvgIcon-root': { fontSize: 14 } }}>
+                          {icon}<span>{stateLabel}</span>
+                        </Stack>
+                      )}
+                    </TableCell>;
+                  })}
+                  {canModify && <TableCell>
+                    {data && <Button
+                      variant="text" size="small" sx={rowActionSx} disabled={!editable || rowPending}
+                      // Only the natures to change: freezing a frozen Budget again would pin the latest FX rates.
+                      onClick={() => change(!allFrozen, NATURES.filter((nature) => isFrozen(nature, col) === allFrozen), col)}
                     >
-                      {budgetColumns.all.map(({ freezeKey: col }) => (
-                        <MenuItem key={col} value={col}>
-                          <Checkbox checked={columnsByScope.opex.includes(col)} />
-                          <Typography sx={{ ml: 1 }}>{columnLabel(col)}</Typography>
-                          {isHidden(col) && <Typography sx={{ ml: 1, fontSize: 12, color: 'kanap.text.tertiary' }}>{t('operations.freeze.hidden')}</Typography>}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                )}
-                {selectedScopes.includes('capex') && (
-                  <FormControl size="small" sx={{ minWidth: 220 }} disabled={!canModify}>
-                    <InputLabel id="capex-columns-label">{t('operations.freeze.capexColumns')}</InputLabel>
-                    <Select
-                      labelId="capex-columns-label"
-                      multiple
-                      value={columnsByScope.capex}
-                      label={t('operations.freeze.capexColumns')}
-                      onChange={handleColumnsChange('capex')}
-                      renderValue={(selected) => selected.map(columnLabel).join(', ')}
-                    >
-                      {budgetColumns.all.map(({ freezeKey: col }) => (
-                        <MenuItem key={col} value={col}>
-                          <Checkbox checked={columnsByScope.capex.includes(col)} />
-                          <Typography sx={{ ml: 1 }}>{columnLabel(col)}</Typography>
-                          {isHidden(col) && <Typography sx={{ ml: 1, fontSize: 12, color: 'kanap.text.tertiary' }}>{t('operations.freeze.hidden')}</Typography>}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                )}
-              </Stack>
-            )}
-
-            <Stack direction="row" spacing={2}>
-              <Button
-                variant="contained"
-                onClick={handleFreeze}
-                disabled={!canModify || selectedScopes.length === 0 || noColumnChosen || loading}
-                startIcon={freezeMutation.isPending ? <CircularProgress size={16} /> : undefined}
-              >
-                {freezeMutation.isPending ? t('operations.freeze.freezing') : t('operations.freeze.freezeData')}
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={handleUnfreeze}
-                disabled={!canModify || selectedScopes.length === 0 || noColumnChosen || loading}
-                startIcon={unfreezeMutation.isPending ? <CircularProgress size={16} /> : undefined}
-              >
-                {unfreezeMutation.isPending ? t('operations.freeze.unfreezing') : t('operations.freeze.unfreezeData')}
-              </Button>
-            </Stack>
-
-            {loading && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CircularProgress size={18} />
-                <Typography variant="body2">{t('operations.freeze.updating')}</Typography>
-              </Box>
-            )}
-          </Stack>
-        </CardContent>
-      </Card>
-
-      {renderScopeStatus()}
+                      {allFrozen ? t('operations.freeze.unfreezeBoth') : t('operations.freeze.freezeBoth')}
+                    </Button>}
+                  </TableCell>}
+                </TableRow>;
+              })}
+            </TableBody>
+          </Table>
+        </Box>
+      </Box>
     </Box>
   );
 }

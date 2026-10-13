@@ -26,13 +26,15 @@ Escriba el valor exactamente. Un valor mal escrito (`single_tenant`) arranca KAN
 | --------------------- | -------- | ----------------- | --------------------------------------------------------------- |
 | `DEFAULT_TENANT_SLUG` | No       | `default`         | Identificador interno del espacio de trabajo (apto para URL, en minúsculas) |
 | `DEFAULT_TENANT_NAME` | No       | `My Organization` | El nombre de su organización: el texto alternativo del logotipo y el nombre que usa el asistente de IA |
+| `DEFAULT_TENANT_LANGUAGE` | No | `en` | El idioma de las dimensiones analíticas con las que empieza el espacio de trabajo: `en`, `fr`, `de` o `es` |
 
 En el primer arranque, KANAP crea un espacio de trabajo con estos valores. Los valores predeterminados sirven para la mayoría de los despliegues. Una instalación nueva recibe también el plan de cuentas IFRS predeterminado, definido como su plan predeterminado y de consolidación (actualizar una instalación existente no lo añade).
 
-Defina ambos antes del primer arranque:
+Defínalos antes del primer arranque:
 
 - Cambiar `DEFAULT_TENANT_SLUG` más tarde hace que KANAP cree un segundo espacio de trabajo vacío y sirva ese. El primer espacio de trabajo permanece en la base de datos, fuera de alcance.
 - Cambiar `DEFAULT_TENANT_NAME` más tarde no tiene ningún efecto, y la aplicación no tiene ninguna página para cambiar el nombre de la organización. Defina el nombre antes del primer arranque.
+- Cambiar `DEFAULT_TENANT_LANGUAGE` más tarde no tiene ningún efecto: las dimensiones conservan sus nombres. Puede cambiarles el nombre en **Datos maestros > Dimensiones analíticas**.
 
 Para dar a KANAP la imagen de su organización, añada su logotipo y sus colores en **Administración → Personalización**.
 
@@ -448,6 +450,7 @@ DEPLOYMENT_MODE=single-tenant
 # ESPACIO DE TRABAJO (opcional - se muestran los valores predeterminados; definir antes del primer arranque)
 DEFAULT_TENANT_SLUG=default
 DEFAULT_TENANT_NAME=My Organization
+DEFAULT_TENANT_LANGUAGE=en
 
 # CREDENCIALES DE ADMINISTRADOR (obligatorio - leídas solo en el primer arranque)
 # Sustituya la contraseña de ejemplo por un valor propio de 12 caracteres o más.
@@ -584,9 +587,9 @@ La API ejecuta 15 trabajos programados. Las horas siguientes son los valores pre
 
 | Trabajo | Cuándo | Qué hace |
 |-----|------|--------------|
-| `check-expirations` | Diario 08:00 | Envía un correo a los responsables de contratos y partidas OPEX 30, 14, 7 y 1 día(s) antes de una fecha límite de cancelación, una fecha de fin o el fin de validez. Solo los reciben los usuarios que activaron estas notificaciones, una vez al día. |
+| `check-expirations` | Diario 08:00 | Envía un correo a los responsables de contratos y líneas OPEX 30, 14, 7 y 1 día(s) antes de una fecha límite de cancelación, una fecha de fin o el fin de validez. Solo los reciben los usuarios que activaron estas notificaciones, una vez al día. |
 | `send-weekly-reviews` | Cada hora | Envía el resumen de la revisión semanal a los usuarios que lo activaron, en su propio día y zona horaria. |
-| `lifecycle-status-sync` | Cada hora, y una vez al arrancar | Pasa a desactivados los datos maestros, contratos y partidas OPEX y CAPEX cuyo fin de validez ha pasado. |
+| `lifecycle-status-sync` | Cada hora, y una vez al arrancar | Pasa a desactivados los datos maestros, contratos y líneas OPEX y CAPEX cuyo fin de validez ha pasado. |
 | `entra-directory-sync` | Diario 03:00 | Actualiza los atributos de los usuarios y desactiva las cuentas eliminadas o desactivadas en el directorio. Solo funciona cuando el SSO con Entra está conectado y aprobado. Consulte [SSO con Microsoft Entra](sso-entra.md). |
 | `attachment-orphan-cleanup` | Diario 03:00 | Elimina los registros de adjuntos de imágenes insertadas que ya no usa ningún texto. |
 | `storage-ghost-cleanup` | Domingo 04:00 | Elimina los archivos almacenados que no tienen registro de adjunto y tienen más de 7 días. |

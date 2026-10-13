@@ -1,6 +1,7 @@
-import { ArrayMaxSize, IsArray, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 import { StatusLifecycleDto } from '../../common/dto/status-lifecycle.dto';
 import { AXIS_APPLIES_TO, AxisAppliesTo } from '../analytics-axis.entity';
+import { RECOMMENDED_DIMENSION_KEYS, RecommendedDimensionKey, SEED_LANGUAGES, SeedLanguage } from '../recommended-dimensions.seed';
 
 // Shapes only: trimming, lengths, code format, the default-dimension rules and
 // tenant checks are the services'. `is_default` is not declared, so the global
@@ -28,6 +29,11 @@ export class AnalyticsAxisCreateDto extends StatusLifecycleDto {
   @IsOptional()
   @IsIn(AXIS_APPLIES_TO)
   applies_to?: AxisAppliesTo | null;
+
+  /** A new line must hold a value on it; absent leaves it unchanged. */
+  @IsOptional()
+  @IsBoolean()
+  required?: boolean;
 }
 
 export class AnalyticsAxisUpdateDto extends StatusLifecycleDto {
@@ -53,6 +59,19 @@ export class AnalyticsAxisUpdateDto extends StatusLifecycleDto {
   @IsOptional()
   @IsIn(AXIS_APPLIES_TO)
   applies_to?: AxisAppliesTo | null;
+
+  /** A new line must hold a value on it; absent leaves it unchanged. */
+  @IsOptional()
+  @IsBoolean()
+  required?: boolean;
+}
+
+/** The order of the dimensions; the service checks the ids (they must be the tenant's dimensions). */
+export class AnalyticsAxisReorderDto {
+  @IsArray()
+  @ArrayMaxSize(1000)
+  @IsString({ each: true })
+  axis_ids!: string[];
 }
 
 export class AnalyticsCategoryCreateDto extends StatusLifecycleDto {
@@ -92,9 +111,37 @@ export class AnalyticsCategoryUpdateDto extends StatusLifecycleDto {
   applies_to?: AxisAppliesTo | null;
 }
 
+/** The order of a dimension's values; the service checks the ids (they must be values of `axis_id`). */
+export class AnalyticsCategoryReorderDto {
+  @IsString()
+  axis_id!: string;
+
+  @IsArray()
+  @ArrayMaxSize(10000)
+  @IsString({ each: true })
+  value_ids!: string[];
+}
+
 export class AnalyticsCategoryBulkDeleteDto {
   @IsArray()
   @ArrayMaxSize(1000)
   @IsUUID(undefined, { each: true })
   ids!: string[];
+
+  /** Deletes the values in use too: the lines lose them. */
+  @IsOptional()
+  @IsBoolean()
+  force?: boolean;
+}
+
+/** The recommended dimensions to add (`recommended-dimensions.seed.ts`) and the language of their names. */
+export class AnalyticsRecommendedDimensionsDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(RECOMMENDED_DIMENSION_KEYS.length)
+  @IsIn(RECOMMENDED_DIMENSION_KEYS, { each: true })
+  codes!: RecommendedDimensionKey[];
+
+  @IsIn(SEED_LANGUAGES)
+  language!: SeedLanguage;
 }

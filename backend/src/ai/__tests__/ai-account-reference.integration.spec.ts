@@ -52,7 +52,7 @@ function context(runner: QueryRunner, tenantId: string): AiExecutionContextWithM
 function createFields(kind: Kind, account: string) {
   const base = kind === 'opex'
     ? { product_name: 'AI line', paying_company: COMPANY, currency: 'EUR', effective_start: '2026-01-01' }
-    : { description: 'AI line', ppe_type: 'hardware', investment_type: 'replacement', priority: 'medium', paying_company: COMPANY, currency: 'EUR', effective_start: '2026-01-01' };
+    : { description: 'AI line', paying_company: COMPANY, currency: 'EUR', effective_start: '2026-01-01' };
   return { ...base, account };
 }
 

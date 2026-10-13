@@ -188,10 +188,12 @@ export class NotificationsService {
     const base = this.buildTenantBaseUrl(slug);
 
     // For supported types, try to resolve item ref for friendlier URLs
-    let ref: string | null = null;
-    if (manager) {
-      ref = await this.resolveItemRef(itemType, itemId, manager);
-    }
+    const ref = manager
+      ? await this.resolveItemRef(itemType, itemId, tenantId, manager)
+      : (itemType === 'opex' || itemType === 'capex')
+        ? await withTenant(this.dataSource, tenantId, (lookupManager) =>
+          this.resolveItemRef(itemType, itemId, tenantId, lookupManager))
+        : null;
     const id = ref ?? itemId;
 
     switch (itemType) {
@@ -202,11 +204,11 @@ export class NotificationsService {
       case 'task':
         return `${base}/portfolio/tasks/${id}`;
       case 'contract':
-        return `${base}/ops/contracts/${id}`;
+        return `${base}/ops/contracts/${id}/overview`;
       case 'opex':
-        return `${base}/ops/opex/${id}`;
+        return `${base}/ops/budget/${id}`;
       case 'capex':
-        return `${base}/ops/capex/${id}`;
+        return `${base}/ops/budget/${id}`;
       case 'asset':
         return `${base}/it/assets/${id}/overview`;
       case 'application':
@@ -224,13 +226,15 @@ export class NotificationsService {
     }
   }
 
-  private async resolveItemRef(itemType: ItemType, itemId: string, manager: import('typeorm').EntityManager): Promise<string | null> {
-    const tableMap: Record<string, { table: string; expression: string }> = {
+  private async resolveItemRef(itemType: ItemType, itemId: string, tenantId: string, manager: import('typeorm').EntityManager): Promise<string | null> {
+    const tableMap: Record<string, { table: string; expression: string; where?: string }> = {
       task: { table: 'tasks', expression: `'T-' || item_number::text` },
       request: { table: 'portfolio_requests', expression: `'REQ-' || item_number::text` },
       project: { table: 'portfolio_projects', expression: `'PRJ-' || item_number::text` },
-      opex: { table: 'spend_items', expression: `'OPX-' || item_number::text` },
-      capex: { table: 'capex_items', expression: `'CPX-' || item_number::text` },
+      // The BL reference of a line of the requested nature (`spend/budget-nature.ts`).
+      opex: { table: 'spend_items', expression: `'BL-' || item_number::text`, where: ` AND nature = 'opex'` },
+      // CAPEX lines carry the same native BL numbering.
+      capex: { table: 'spend_items', expression: `'BL-' || item_number::text`, where: ` AND nature = 'capex'` },
       asset: { table: 'assets', expression: 'asset_reference' },
       application: { table: 'applications', expression: 'sequential_id' },
       location: { table: 'locations', expression: 'location_reference' },
@@ -242,8 +246,8 @@ export class NotificationsService {
     if (!config) return null;
     try {
       const rows = await manager.query(
-        `SELECT ${config.expression} AS item_ref FROM ${config.table} WHERE id = $1 LIMIT 1`,
-        [itemId],
+        `SELECT ${config.expression} AS item_ref FROM ${config.table} WHERE tenant_id = $2 AND id = $1${config.where ?? ''} LIMIT 1`,
+        [itemId, tenantId],
       );
       if (rows.length > 0 && rows[0].item_ref) {
         return String(rows[0].item_ref);
@@ -1364,7 +1368,7 @@ export class NotificationsService {
    */
   @NeverRejects()
   async notifyShare(params: {
-    itemType: 'request' | 'project' | 'task' | 'opex' | 'capex' | 'asset' | 'application' | 'location' | 'connection' | 'interface' | 'document';
+    itemType: 'request' | 'project' | 'task' | 'contract' | 'opex' | 'capex' | 'asset' | 'application' | 'location' | 'connection' | 'interface' | 'document';
     itemId: string;
     itemName: string;
     senderName: string;

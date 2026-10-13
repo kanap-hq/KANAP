@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { NestFactory } from '@nestjs/core';
 import { DataSource, QueryRunner } from 'typeorm';
 import { ensureDefaultAnalyticsAxis } from '../../analytics/analytics-axes.util';
+import { ensureCapexDimensions } from '../../analytics/capex-dimensions.seed';
 
 process.env.AI_CHAT_ENABLED = 'true';
 process.env.AI_SETTINGS_ENABLED = 'true';
@@ -55,8 +56,7 @@ const WRITE_RESOURCES = [
   'applications',
   'infrastructure',
   'contracts',
-  'opex',
-  'capex',
+  'budget',
   'portfolio_projects',
   'portfolio_requests',
   'tasks',
@@ -354,6 +354,24 @@ async function seedGraph(runner: QueryRunner): Promise<SeededTenant> {
      VALUES ($1, $2, $3, $4, 'Seeded spend item', $5, 'EUR', DATE '2026-01-01', 'enabled', 'Original spend note', (SELECT COALESCE(MAX(item_number), 0) + 1 FROM spend_items WHERE tenant_id = $2), now(), now())`,
     [spendItemId, tenantId, companyId, `PLAID Capability Spend ${tag}`, supplierId],
   );
+  // Lot Z1: a CAPEX line is a spend line of nature 'capex', its BL number in item_number
+  // (one numbering across both natures) and its CPX number in legacy_number.
+  await runner.query(
+    `INSERT INTO spend_items (
+       id, tenant_id, nature, paying_company_id, supplier_id, product_name, ppe_type,
+       investment_type, priority, currency, effective_start, status, notes,
+       item_number, legacy_number, created_at, updated_at
+     )
+     VALUES (
+       $1, $2, 'capex', $3, $4, $5, 'hardware', 'capacity', 'medium', 'EUR',
+       DATE '2026-01-01', 'enabled', 'Original capex note',
+       (SELECT COALESCE(MAX(item_number), 0) + 1 FROM spend_items WHERE tenant_id = $2),
+       'CPX-' || (SELECT COALESCE(MAX(substring(legacy_number FROM '^CPX-([0-9]+)$')::int), 0) + 1
+                  FROM spend_items WHERE tenant_id = $2 AND nature = 'capex'),
+       now(), now()
+     )`,
+    [capexItemId, tenantId, companyId, supplierId, `PLAID Capability CAPEX ${tag}`],
+  );
   await runner.query(
     `INSERT INTO item_sequences (tenant_id, entity_type, next_val)
      SELECT $1, 'spend', COALESCE(MAX(item_number), 0) + 1
@@ -364,23 +382,10 @@ async function seedGraph(runner: QueryRunner): Promise<SeededTenant> {
     [tenantId],
   );
   await runner.query(
-    `INSERT INTO capex_items (
-       id, tenant_id, paying_company_id, supplier_id, description, ppe_type,
-       investment_type, priority, currency, effective_start, status, notes,
-       item_number, created_at, updated_at
-     )
-     VALUES (
-       $1, $2, $3, $4, $5, 'hardware', 'capacity', 'medium', 'EUR',
-       DATE '2026-01-01', 'enabled', 'Original capex note',
-       (SELECT COALESCE(MAX(item_number), 0) + 1 FROM capex_items WHERE tenant_id = $2), now(), now()
-     )`,
-    [capexItemId, tenantId, companyId, supplierId, `PLAID Capability CAPEX ${tag}`],
-  );
-  await runner.query(
     `INSERT INTO item_sequences (tenant_id, entity_type, next_val)
-     SELECT $1, 'capex', COALESCE(MAX(item_number), 0) + 1
-     FROM capex_items
-     WHERE tenant_id = $1
+     SELECT $1, 'capex', COALESCE(MAX(substring(legacy_number FROM '^CPX-([0-9]+)$')::int), 0) + 1
+     FROM spend_items
+     WHERE tenant_id = $1 AND nature = 'capex'
      ON CONFLICT (tenant_id, entity_type)
      DO UPDATE SET next_val = GREATEST(item_sequences.next_val, EXCLUDED.next_val)`,
     [tenantId],
@@ -646,7 +651,7 @@ async function testRelationWritesAndSupplierPropagationUndo(harness: Harness) {
 
     for (const [table, itemColumn, itemId] of [
       ['spend_item_contacts', 'spend_item_id', seed.spendItemId],
-      ['capex_item_contacts', 'capex_item_id', seed.capexItemId],
+      ['spend_item_contacts', 'spend_item_id', seed.capexItemId], // the CAPEX line's contacts (lot Z1)
       ['contract_contacts', 'contract_id', seed.contractId],
     ] as const) {
       const rows = await runner.query(
@@ -923,15 +928,12 @@ async function testBusinessTaskFinancialWritesAndRbac(harness: Harness) {
         entity_type: 'capex_items',
         fields: {
           description: `Forbidden CAPEX ${seed.tag}`,
-          ppe_type: 'hardware',
-          investment_type: 'capacity',
-          priority: 'medium',
           paying_company_id: seed.companyId,
           currency: 'EUR',
           effective_start: '2026-01-01',
         },
       }),
-      /capex:member|permission|available/i,
+      /budget:member|permission|available/i,
     );
   });
 }
@@ -983,9 +985,9 @@ async function testCapexOwnersAnalyticsAndApplications(harness: Harness) {
     await approvePreview(harness, ctx, preview);
     const [capexRow] = await runner.query(
       `SELECT ci.owner_it_id, ci.owner_business_id, v.category_id AS analytics_category_id
-         FROM capex_items ci
-         LEFT JOIN capex_item_analytics_values v ON v.tenant_id = ci.tenant_id AND v.item_id = ci.id AND v.axis_id = $3
-        WHERE ci.tenant_id = $1 AND ci.id = $2`,
+         FROM spend_items ci
+         LEFT JOIN spend_item_analytics_values v ON v.tenant_id = ci.tenant_id AND v.item_id = ci.id AND v.axis_id = $3
+        WHERE ci.tenant_id = $1 AND ci.id = $2 AND ci.nature = 'capex'`,
       [seed.tenantId, seed.capexItemId, axisId],
     );
     assert.deepEqual(
@@ -1003,7 +1005,7 @@ async function testCapexOwnersAnalyticsAndApplications(harness: Harness) {
     });
     await approvePreview(harness, relationCtx, relationPreview);
     const linkRows = () => runner.query(
-      `SELECT application_id FROM application_capex_items WHERE tenant_id = $1 AND capex_item_id = $2`,
+      `SELECT application_id FROM application_spend_items WHERE tenant_id = $1 AND spend_item_id = $2`,
       [seed.tenantId, seed.capexItemId],
     );
     assert.deepEqual((await linkRows()).map((row: any) => row.application_id), [seed.applicationId], 'the CAPEX item is linked to the application');
@@ -1054,7 +1056,7 @@ async function testItemAnalyticsCategoryThroughTheLinks(harness: Harness) {
 
     for (const [entityType, itemId, itemTable, linkTable] of [
       ['spend_items', seed.spendItemId, 'spend_items', 'spend_item_analytics_values'],
-      ['capex_items', seed.capexItemId, 'capex_items', 'capex_item_analytics_values'],
+      ['capex_items', seed.capexItemId, 'spend_items', 'spend_item_analytics_values'], // a CAPEX line's storage since lot Z1
     ] as const) {
       await runner.query(
         `INSERT INTO ${linkTable} (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4)`,
@@ -1149,11 +1151,11 @@ async function testItemAnalyticsDimensions(harness: Harness) {
         createFields: { product_name: `Dimensions ${seed.tag}`, paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01' },
       },
       {
-        entityType: 'capex_items', itemId: seed.capexItemId, linkTable: 'capex_item_analytics_values', labelPlural: 'CAPEX items',
+        entityType: 'capex_items', itemId: seed.capexItemId, linkTable: 'spend_item_analytics_values', labelPlural: 'CAPEX items',
         lineType: 'CAPEX', otherType: 'OPEX', ownAxis: assetClass, ownCode: 'asset-class', ownValue: servers, ownName: 'Servers',
         otherCode: 'recurrence', otherName: 'Recurrence', otherValueName: 'Monthly',
         createFields: {
-          description: `Dimensions ${seed.tag}`, ppe_type: 'hardware', investment_type: 'capacity', priority: 'medium',
+          description: `Dimensions ${seed.tag}`,
           paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01',
         },
       },
@@ -1202,8 +1204,9 @@ async function testItemAnalyticsDimensions(harness: Harness) {
       const createdId = (await approvePreview(harness, ctx, created)).target.entity_id;
       assert.deepEqual(await links(createdId), { [nature]: licences, [site]: paris, [line.ownAxis]: line.ownValue }, `${entityType}: created with its values`);
       const [{ count }] = await runner.query(
-        `SELECT count(*)::int AS count FROM ${entityType} WHERE tenant_id = $1 AND ${entityType === 'spend_items' ? 'product_name' : 'description'} = $2`,
-        [seed.tenantId, `Dimensions ${seed.tag}`],
+        // Both natures in spend_items since lot Z1, the CAPEX title in product_name.
+        `SELECT count(*)::int AS count FROM spend_items WHERE tenant_id = $1 AND nature = $3 AND product_name = $2`,
+        [seed.tenantId, `Dimensions ${seed.tag}`, entityType === 'spend_items' ? 'opex' : 'capex'],
       );
       assert.equal(count, 1, `${entityType}: one line created`);
 
@@ -1330,6 +1333,123 @@ async function testItemAnalyticsDimensions(harness: Harness) {
   });
 }
 
+/**
+ * Lot C1a: the PP&E type, investment type and priority of a CAPEX line are the values of the
+ * dimensions every tenant starts with. A create without them is refused naming the first one; the
+ * former field keys are no longer writable; the values pass under `analytics:<code>`.
+ */
+async function testCapexCriteriaAreDimensions(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    await ensureCapexDimensions(runner.manager, seed.tenantId);
+    const ctx = context(seed, runner, 'capex-criteria');
+    const fields = { description: `Criteria ${seed.tag}`, paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01' };
+    const create = (extra: Record<string, unknown>) =>
+      harness.tools.execute(ctx, 'create_business_record', { entity_type: 'capex_items', fields: { ...fields, ...extra } });
+
+    await expectRejects(() => create({}), /^PP&E type is required for CAPEX item creation\.$/);
+    await expectRejects(() => create({ ppe_type: 'hardware' }), /^"?ppe_type"? is not writable for CAPEX items\./);
+    await expectRejects(
+      () => create({ 'analytics:ppe_type': 'Hardware', 'analytics:investment_type': 'Capacity' }),
+      /^Priority is required for CAPEX item creation\.$/,
+    );
+    const created = await executeToolPreview(harness, ctx, 'create_business_record', {
+      entity_type: 'capex_items',
+      fields: { ...fields, 'analytics:ppe_type': 'Hardware', 'analytics:investment_type': 'Capacity', 'analytics:priority': 'High' },
+    });
+    const createdId = (await approvePreview(harness, ctx, created)).target.entity_id;
+    const values = await runner.query(
+      `SELECT a.code, c.name FROM spend_item_analytics_values v
+         JOIN analytics_axes a ON a.id = v.axis_id AND a.tenant_id = v.tenant_id
+         JOIN analytics_categories c ON c.id = v.category_id AND c.tenant_id = v.tenant_id
+        WHERE v.tenant_id = $1 AND v.item_id = $2 ORDER BY a.sort_order`,
+      [seed.tenantId, createdId],
+    );
+    assert.deepEqual(values.map((row: any) => `${row.code}=${row.name}`), ['ppe_type=Hardware', 'investment_type=Capacity', 'priority=High']);
+  });
+}
+
+/**
+ * Lot D2: a required dimension. The create preview is refused without a value on it (in the style
+ * of the other create-time fields) and passes with one; an update preview clearing a held value is
+ * refused with the write gate's message. A disabled required dimension and one of the other line
+ * type are not checked.
+ */
+async function testItemRequiredDimensions(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const defaultAxisId = await ensureDefaultAnalyticsAxis(runner.manager, seed.tenantId);
+    await runner.query(`UPDATE analytics_axes SET name = NULL WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, defaultAxisId]);
+    const axis = async (code: string, name: string, extra: { applies_to?: string; disabled?: boolean } = {}): Promise<string> => {
+      const [row] = await runner.query(
+        `INSERT INTO analytics_axes (tenant_id, code, name, sort_order, applies_to, status, required)
+         VALUES ($1, $2, $3, 1, $4, $5, true) RETURNING id`,
+        [seed.tenantId, code, name, extra.applies_to ?? null, extra.disabled ? 'disabled' : 'enabled'],
+      );
+      return row.id;
+    };
+    const menu = await axis('menu', 'Menu');
+    await axis('gone', 'Gone', { disabled: true });
+    const [{ id: fromage }] = await runner.query(
+      `INSERT INTO analytics_categories (tenant_id, axis_id, name) VALUES ($1, $2, 'Fromage') RETURNING id`,
+      [seed.tenantId, menu],
+    );
+    const ctx = context(seed, runner, 'item-required-dimensions');
+
+    for (const line of [
+      {
+        entityType: 'spend_items', itemId: seed.spendItemId, linkTable: 'spend_item_analytics_values', label: 'spend item', other: 'capex',
+        createFields: { product_name: `Required ${seed.tag}`, paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01' },
+      },
+      {
+        entityType: 'capex_items', itemId: seed.capexItemId, linkTable: 'spend_item_analytics_values', label: 'CAPEX item', other: 'opex',
+        createFields: {
+          description: `Required ${seed.tag}`,
+          paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01',
+        },
+      },
+    ]) {
+      const { entityType, itemId, linkTable } = line;
+      // Required, but for the other line type only: never checked here.
+      const otherCode = `recipe-${line.other}`;
+      const otherAxis = await axis(otherCode, `Recipe ${line.other}`, { applies_to: line.other });
+      const create = (fields: Record<string, unknown>) =>
+        harness.tools.execute(ctx, 'create_business_record', { entity_type: entityType, fields });
+
+      await expectRejects(() => create(line.createFields), new RegExp(`^Menu is required for ${line.label} creation\\.$`));
+      await expectRejects(() => create({ ...line.createFields, 'analytics:menu': null }), new RegExp(`^Menu is required for ${line.label} creation\\.$`));
+      const created = await executeToolPreview(harness, ctx, 'create_business_record', {
+        entity_type: entityType, fields: { ...line.createFields, 'analytics:menu': 'Fromage' },
+      });
+      const createdId = (await approvePreview(harness, ctx, created)).target.entity_id;
+      const [link] = await runner.query(
+        `SELECT category_id FROM ${linkTable} WHERE tenant_id = $1 AND item_id = $2 AND axis_id = $3`,
+        [seed.tenantId, createdId, menu],
+      );
+      assert.equal(link?.category_id, fromage, `${entityType}: created with the required value`);
+
+      // The default dimension required: its label is the default one while it has no name.
+      await runner.query(`UPDATE analytics_axes SET required = true WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, defaultAxisId]);
+      await expectRejects(
+        () => create({ ...line.createFields, 'analytics:menu': 'Fromage' }),
+        new RegExp(`^Analytics dimension is required for ${line.label} creation\\.$`),
+      );
+      await runner.query(`UPDATE analytics_axes SET required = false WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, defaultAxisId]);
+
+      // Update: clearing a held value is refused with the gate's message.
+      await runner.query(
+        `INSERT INTO ${linkTable} (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4)
+         ON CONFLICT (tenant_id, item_id, axis_id) DO UPDATE SET category_id = EXCLUDED.category_id`,
+        [seed.tenantId, itemId, menu, fromage],
+      );
+      await expectRejects(
+        () => harness.tools.execute(ctx, 'update_business_record', { entity_type: entityType, ref: itemId, fields: { 'analytics:menu': null } }),
+        /^The Menu dimension is required\. Choose a value\.$/,
+      );
+      // The next line type is the one this dimension is for.
+      await runner.query(`UPDATE analytics_axes SET required = false WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, otherAxis]);
+    }
+  });
+}
+
 /** Lot A: a value created by the AI lands in a named dimension; its dimension cannot change afterwards. */
 async function testAnalyticsValueInANamedDimension(harness: Harness) {
   await withSeededTransaction(harness, async (runner, seed) => {
@@ -1430,7 +1550,11 @@ async function createHarness(): Promise<Harness> {
 async function testBudgetLinesByBusinessReference(harness: Harness) {
   await withSeededTransaction(harness, async (runner, seed) => {
     const [spend] = await runner.query(`SELECT item_number FROM spend_items WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.spendItemId]);
-    const [capex] = await runner.query(`SELECT item_number FROM capex_items WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.capexItemId]);
+    // A CAPEX line's CPX number is its legacy number since lot Z1.
+    const [capex] = await runner.query(
+      `SELECT substring(legacy_number FROM '^CPX-([0-9]+)$')::int AS item_number FROM spend_items WHERE tenant_id = $1 AND id = $2 AND nature = 'capex'`,
+      [seed.tenantId, seed.capexItemId],
+    );
     const cases = [
       { entityType: 'spend_items', itemId: seed.spendItemId, ref: `OPX-${spend.item_number}`, otherRef: `CPX-${capex.item_number}`, labelPlural: 'spend items' },
       { entityType: 'capex_items', itemId: seed.capexItemId, ref: `cpx-${capex.item_number}`, otherRef: `OPX-${spend.item_number}`, labelPlural: 'CAPEX items' },
@@ -1444,7 +1568,7 @@ async function testBudgetLinesByBusinessReference(harness: Harness) {
       });
       assert.equal(preview.target.entity_id, itemId, `${ref} targets the seeded line`);
       await approvePreview(harness, ctx, preview);
-      const [row] = await runner.query(`SELECT notes FROM ${entityType} WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, itemId]);
+      const [row] = await runner.query(`SELECT notes FROM spend_items WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, itemId]);
       assert.equal(row.notes, `Notes by reference ${seed.tag}`, `${ref} updates the line`);
 
       await expectRejects(
@@ -1469,6 +1593,8 @@ async function run() {
     await testCapexOwnersAnalyticsAndApplications(harness);
     await testItemAnalyticsCategoryThroughTheLinks(harness);
     await testItemAnalyticsDimensions(harness);
+    await testItemRequiredDimensions(harness);
+    await testCapexCriteriaAreDimensions(harness);
     await testAnalyticsValueInANamedDimension(harness);
     await testBudgetLinesByBusinessReference(harness);
   } finally {

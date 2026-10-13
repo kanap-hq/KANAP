@@ -1,4 +1,5 @@
 import { EntityManager } from 'typeorm';
+import { ICU_COLLATION } from '../common/list-engine/sql-fragments';
 import { isActiveAt } from '../common/status';
 import { AxisAppliesTo } from './analytics-axis.entity';
 
@@ -18,6 +19,8 @@ export interface AnalyticsAxisInfo {
   is_default: boolean;
   /** The budget lines it applies to: OPEX only, CAPEX only, or both (null). */
   applies_to: AxisAppliesTo | null;
+  /** The setting; it applies only while the dimension is enabled, to the types it applies to (`axisRequiredFor`). */
+  required: boolean;
   /** The effective state: disabled once the end of validity has passed. */
   status: 'enabled' | 'disabled';
   disabled_at: string | null;
@@ -28,9 +31,10 @@ export interface AnalyticsAxisInfo {
 export const ANALYTICS_FIELD_PREFIX = 'analytics_';
 /** CSV header and AI key prefix; the key is `analytics:<axis code>`. */
 export const ANALYTICS_CSV_PREFIX = 'analytics:';
+/** The values of the lines of each nature: one table since lot Z1 (a line's id says whose values they are). */
 export const ANALYTICS_LINK_TABLES = {
   opex: 'spend_item_analytics_values',
-  capex: 'capex_item_analytics_values',
+  capex: 'spend_item_analytics_values',
 } as const;
 
 /** The code the default dimension gets when it is created (it can be renamed later). */
@@ -42,6 +46,13 @@ export function analyticsFieldKey(axisId: string): string {
   return `${ANALYTICS_FIELD_PREFIX}${axisId}`;
 }
 
+/**
+ * The order of a dimension's values everywhere they are offered (`c` is `analytics_categories`):
+ * the manual position, then the name in ICU order (the pickers' and the list engine's text order,
+ * whatever the database's own collation), then the id.
+ */
+export const ANALYTICS_VALUE_ORDER_SQL = `c.sort_order ASC, c.name COLLATE ${ICU_COLLATION} ASC, c.id ASC`;
+
 /** The axis id when the field is `analytics_<uuid>`, else null. */
 export function parseAnalyticsFieldKey(field: string): string | null {
   if (typeof field !== 'string' || !field.startsWith(ANALYTICS_FIELD_PREFIX)) return null;
@@ -52,6 +63,17 @@ export function parseAnalyticsFieldKey(field: string): string | null {
 /** Whether the dimension applies to the lines of `scope` (null: OPEX and CAPEX lines). */
 export function axisAppliesTo(axis: { applies_to?: string | null }, scope: 'opex' | 'capex'): boolean {
   return axis.applies_to == null || axis.applies_to === scope;
+}
+
+/**
+ * Whether a line of `scope` must hold a value on the dimension: required, enabled (effective
+ * status) and applying to that type. A disabled dimension keeps its setting, ignored.
+ */
+export function axisRequiredFor(
+  axis: { required?: boolean; status: string; applies_to?: string | null },
+  scope: 'opex' | 'capex',
+): boolean {
+  return axis.required === true && axis.status === 'enabled' && axisAppliesTo(axis, scope);
 }
 
 /** Enabled and not past its end of validity. */
@@ -76,11 +98,12 @@ export async function loadAnalyticsAxes(manager: EntityManager, tenantId: string
     name: string | null;
     is_default: boolean;
     applies_to: string | null;
+    required: boolean;
     status: string;
     disabled_at: Date | string | null;
     sort_order: number | string;
   }> = await manager.query(
-    `SELECT id, code, name, is_default, applies_to, status, disabled_at, sort_order
+    `SELECT id, code, name, is_default, applies_to, required, status, disabled_at, sort_order
        FROM analytics_axes
       WHERE tenant_id = $1
       ORDER BY sort_order ASC, lower(coalesce(name, '')) ASC, code ASC, id ASC`,
@@ -93,6 +116,7 @@ export async function loadAnalyticsAxes(manager: EntityManager, tenantId: string
     name: row.name ?? null,
     is_default: row.is_default === true,
     applies_to: row.applies_to === 'opex' || row.applies_to === 'capex' ? row.applies_to : null,
+    required: row.required === true,
     status: isAxisActive(row, now) ? 'enabled' : 'disabled',
     disabled_at: toIso(row.disabled_at),
     sort_order: Number(row.sort_order ?? 0),

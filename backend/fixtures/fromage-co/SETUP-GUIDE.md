@@ -41,9 +41,16 @@ would keep them; each company keeps a few local names (French, Dutch and
 Italian budget lines, the French projects and requests, the local charts of
 accounts). Tenants loaded before this
 change hold French names for the cost centres, the dimensions and the budget
-lines. The runner renames the default dimension, but re-running it on such a
-tenant would add the English departments, dimension values and budget lines
-next to the French ones: load the current dataset on a new tenant instead.
+lines. Re-running the runner on such a tenant would add the English
+departments, dimension values and budget lines next to the French ones: load
+the current dataset on a new tenant instead.
+
+The budget lines use the recommended analytics dimensions every new tenant
+starts with, in the tenant's seed language (see "Analytics dimensions" below).
+Tenants loaded before this change have a `Domain` default dimension, a
+`Cost type` dimension and the CAPEX dimensions PP&E type and investment type.
+The runner leaves them as they are and puts the cost pool on a dimension of
+its own: load the current dataset on a new tenant instead.
 
 ## What the runner does
 
@@ -53,8 +60,8 @@ next to the French ones: load the current dataset on a new tenant instead.
 2. **Settings**: currencies (EUR/USD), IT Ops server kinds, operating systems,
    DNS domains, connection entities.
 3. **Portfolio classification** (sources, categories, streams) and the
-   **Domain** dimension: the default analytics dimension, named `Domain`,
-   holds the domain each line serves (ERP, E-commerce, Workplace…).
+   **analytics dimensions**: the recommended ones the tenant lacks, then the
+   data set's own two (see "Analytics dimensions" below).
 4. **CSV imports** (01, 03→19 and 26→30): companies, charts of accounts, suppliers,
    departments, contacts, users, cost centres, analytics dimension values,
    working-day calendars, business processes, applications, contracts,
@@ -79,11 +86,7 @@ next to the French ones: load the current dataset on a new tenant instead.
    the quantity × price lines of the external staffing items (`30-costed-lines.csv`,
    keyed by item name, resolved to versions) and imports the monthly amounts
    (`29-budget-rows.csv`: 2026 actuals January to August for every item, a
-   forecast on some). Three more analytics dimensions are created first (Cost
-   type, Budget reference, Recurrence). What a line pays for is on Cost type,
-   so Domain holds no expense kinds; on a tenant built by an earlier
-   version, the runner removes the old Domain values Professional Services,
-   Managed Services, Training and General once no line uses them. 2027 is left empty on purpose: the
+   forecast on some). 2027 is left empty on purpose: the
    budget demo initialises it by copying the 2026 landing. Re-running the
    runner restores the budget data, except on frozen columns: unfreeze them
    first (Budget administration → Freeze).
@@ -111,6 +114,57 @@ next to the French ones: load the current dataset on a new tenant instead.
 Flags: `--skip-relations`, `--skip-agents`, `--org`, `--country`, `--year`,
 `--shift-years`, `--activation-token` (see below), `--netbox-test-cases`,
 `--accept-included-model` (see "AI prerequisites").
+
+## Analytics dimensions
+
+Every OPEX and CAPEX line is classified like a tenant on the recommended
+model:
+
+| Dimension | Code | Lines | Values |
+|---|---|---|---|
+| Cost pool | `default` | All | The 8 TBM cost pools: what the money pays for |
+| IT tower | `it_tower` | All | The 11 TBM towers: the part of IT it serves |
+| Business domain | `business_domain` | All | ERP, CRM, E-commerce, Retail, Supply chain, Traceability, HR, Data and analytics, Shared IT |
+| Purpose | `purpose` | CAPEX, and OPEX project lines (`build`) | Replacement, Business growth, Security… |
+| Priority | `priority` | CAPEX | Mandatory, High |
+| Recurrence | `recurrence` | All | Recurring, One-off |
+| Budget reference | `reference` | The lines of one program or order | REF-SAP-S4, REF-ECOM-CDC, REF-DATA, REF-SECU-ZT |
+
+Cost pool, IT tower, purpose and priority are the tenant's own: the seed
+creates them with the tenant, in its seed language. Recurrence is the optional
+pack of the recommended dimensions: the runner adds it, and any recommended
+dimension the tenant lacks, through `POST /analytics-axes/recommended` in the
+tenant's seed language. The default dimension becomes the cost pool only while
+it has neither a name nor a value.
+
+The budget files name the values of these dimensions in English, as an
+English tenant's seed does. Before the import, the runner reads
+`GET /analytics-axes/recommended`, which gives the tenant's value for each
+English name, and writes that one: a French tenant gets "Matériel" for
+"Hardware", and the import creates no English value next to it. A value that
+is not in the seed stops the runner. On a tenant whose administrator renamed a
+seeded value, the import creates the English one.
+
+A tenant created before the recommended dimensions has an unnamed default
+dimension and three required CAPEX dimensions (PP&E type, investment type,
+priority). Its empty default dimension becomes the cost pool, and its
+investment type stands for the purpose, on CAPEX lines only.
+The files carry no PP&E type: on such a tenant the runner fills it from the
+cost pool, Hardware for hardware and Software for the rest.
+
+Business domain and budget reference are the data set's own dimensions, in
+English: the runner creates them and `27-analytics-values.csv` holds their
+values. The business domain says which part of the business a line serves,
+the IT tower which part of IT: an SAP developer is Application and ERP, the
+group WAN is Network and Shared IT.
+
+The cost pool and the IT tower of each line come from the generator
+(`tools/generate-budget.mjs`): a cost pool per kind of expense (licences and
+SaaS are Software, staff augmentation and competence centres External labor,
+managed services and cloud hosting Outside services, telecom Telecom,
+hardware Hardware, consulting External labor, training and travel Other), an
+IT tower and a business domain per domain, and the exceptions a line's name,
+supplier or account calls for (`CLASSIFY_LINE`).
 
 ## Dates and years
 

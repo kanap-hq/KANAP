@@ -1,29 +1,57 @@
 # Vista general de la gestión presupuestaria
 
-La vista general de la gestión presupuestaria le ofrece una vista de alto nivel de dónde se encuentra su gasto IT en este momento: resúmenes de OPEX y CAPEX, próximos plazos, indicadores de calidad de datos y los elementos que más merecen su atención, todo en un solo lugar.
+La vista general de la gestión presupuestaria le ofrece una vista de alto nivel de dónde se encuentra su gasto IT en este momento: el presupuesto por tipo y por año, sus propias líneas presupuestarias, los próximos plazos, indicadores de calidad de datos y las líneas que más merecen su atención, todo en un solo lugar.
 
 ## Dónde encontrarlo
 
 - Ruta: **Gestión presupuestaria > Vista general** (`/ops`)
 - La página que ve después de iniciar sesión es su [panel de control](my-dashboard.md) personal. Abra esta vista general desde el espacio **Gestión presupuestaria**.
 
+## Acciones de la cabecera
+
+La cabecera contiene botones de acceso directo:
+
+- **Nueva línea OPEX** y **Nueva línea CAPEX** abren una nueva línea presupuestaria de ese tipo. Se muestran cuando su rol tiene al menos el nivel Miembro en Presupuesto (`budget:member`)
+- **Nuevo contrato** abre un nuevo contrato. Se muestra cuando su rol puede crear contratos
+- **Personalizar**, a la derecha, abre la configuración de esta vista general. Consulte [Personalizar la vista general](#personalizar-la-vista-general)
+
 ## Diseño
 
-La vista general está construida a partir de mosaicos dispuestos en una cuadrícula adaptable: tres columnas en pantalla ancha, dos en tableta y una sola columna en móvil. Cada mosaico tiene un icono, un título y generalmente un botón **Ver** que le lleva directamente a la página completa detrás de los datos.
+La vista general está construida a partir de mosaicos dispuestos en una cuadrícula adaptable: tres columnas en pantalla ancha, dos en tableta y una sola columna en móvil. El mosaico **Presupuesto** es más ancho: dos columnas en pantalla ancha y todo el ancho en tableta. Cada mosaico tiene un icono, un título y generalmente un botón que le lleva a la página completa detrás de los datos.
+
+Varios mosaicos tienen las pestañas **Todo**, **OPEX** y **CAPEX** en su encabezado para elegir el tipo de líneas que cubren. Cada mosaico recuerda su elección en su navegador.
 
 ## Mosaicos
 
-### Resumen OPEX
+Los mosaicos siguientes aparecen en su orden por defecto.
 
-Una tabla compacta que cubre tres ejercicios fiscales: año anterior (A-1), año actual (A) y año siguiente (A+1). Aparecen hasta cinco columnas de valores: las columnas presupuestarias que muestra su organización, con sus nombres (**Presupuesto**, **Revisión**, **Realizado** y **Aterrizaje previsto** con la configuración estándar, más **Previsión** cuando se muestra). Una columna se muestra cuando contiene un importe para al menos uno de los tres años. Las columnas ocultas nunca aparecen. Los mosaicos OPEX y CAPEX muestran las mismas columnas. Todos los importes se redondean al millar más cercano y se muestran con el sufijo "k" (por ejemplo, `7 846k`).
+### Presupuesto
 
-Haga clic en **Ver** para abrir la lista OPEX.
+Una tabla que cubre tres ejercicios fiscales: el año anterior (A-1), el año actual (A) y el año siguiente (A+1). Cada año tiene tres filas: **OPEX**, **CAPEX** y **Total**. Las columnas de valores son las columnas presupuestarias que muestra su organización, con sus nombres (**Presupuesto**, **Revisión**, **Realizado** y **Aterrizaje previsto** con la configuración estándar, más **Previsión** cuando se muestra). Puede conservar menos en [Personalizar](#personalizar-la-vista-general). Una columna se muestra cuando contiene un importe para al menos una fila. Las columnas ocultas nunca aparecen. Todos los importes se redondean al millar más cercano y se muestran con el sufijo "k" (por ejemplo, `7 846k`).
 
-### Resumen CAPEX
+Haga clic en un importe para abrir la [lista de líneas presupuestarias](budget-lines.md) en ese tipo. Un importe **Total** abre la lista con ambos tipos. Haga clic en **Ver** para abrir la lista.
 
-Mismo diseño y formato que el Resumen OPEX, pero extraído de sus datos de inversión de capital.
+### Calidad de datos
 
-Haga clic en **Ver** para abrir la lista CAPEX.
+Controles que le ayudan a detectar líneas incompletas de un vistazo. El mosaico muestra una columna de recuentos por tipo: **OPEX** y **CAPEX** una junto a la otra. Los recuentos cubren las líneas que la lista muestra por defecto (**Mostrar: Activos**).
+
+- **Sin responsable IT**: líneas sin responsable IT
+- **Sin responsable de negocio**: líneas sin responsable de negocio
+- **Sin empresa pagadora**: líneas sin empresa pagadora
+- **Sin centro de coste**: líneas sin centro de coste
+- **Sin Presupuesto para el próximo año**: líneas cuya columna por defecto es cero o está vacía para el próximo año. El control nombra su columna por defecto
+- **Cuenta fuera del plan de la empresa**: líneas cuya cuenta no pertenece al plan de cuentas de la empresa pagadora
+
+Un recuento se vuelve naranja (rojo para el control del plan de cuentas) cuando es superior a cero. Haga clic en un recuento para abrir la lista exactamente en las líneas que cuenta.
+
+### Mi presupuesto
+
+Las líneas a su nombre, en la columna por defecto del año actual (el subtítulo la nombra, por ejemplo **Presupuesto, A**). Use las pestañas **Todo** / **OPEX** / **CAPEX** para elegir el tipo.
+
+- **Como responsable IT**, **Como responsable de negocio** y **Como responsable del presupuesto**: cuántas líneas tiene en cada rol, y su total. Haga clic en una fila para abrir la lista en esas líneas
+- **Mis líneas**: sus tres líneas más grandes, sea cual sea el rol, con su referencia. Haga clic en una para abrirla
+
+El mosaico indica «No hay líneas de presupuesto a su nombre» cuando no tiene ninguna línea.
 
 ### Mis tareas
 
@@ -37,40 +65,40 @@ Lista los próximos cinco plazos de cancelación de contratos que aún están en
 
 Haga clic en **Ver todo** para abrir la página de Contratos.
 
-### Calidad de datos
+### Top líneas
 
-Cuatro controles que le ayudan a detectar registros incompletos de un vistazo. El mosaico muestra una columna de recuentos por cada tipo de partida que usted puede consultar: **OPEX** y **CAPEX** uno junto al otro.
+Las cinco líneas más grandes para el año actual, clasificadas por la columna por defecto. El subtítulo nombra la columna, por ejemplo **Presupuesto, A**. Los importes se redondean a miles con sufijo "k".
 
-- **Sin responsable IT**: partidas sin responsable IT
-- **Sin responsable de negocio**: partidas sin responsable de negocio
-- **Sin empresa pagadora**: partidas sin empresa pagadora
-- **Cuenta fuera del plan de la empresa**: partidas cuya cuenta no pertenece al plan de cuentas de la empresa pagadora
+Use las pestañas **Todo** / **OPEX** / **CAPEX** para elegir el tipo. Haga clic en **Abrir** para ver el informe completo Top líneas sobre el mismo tipo.
 
-Un recuento se vuelve naranja (rojo para el control del plan de cuentas) cuando es superior a cero. Haga clic en un recuento para abrir la lista de ese tipo.
+### Mayores incrementos
 
-### Acciones rápidas
+Las cinco líneas con el mayor incremento en la columna por defecto comparado con el año anterior. El subtítulo nombra la columna, por ejemplo **Presupuesto, A vs A-1**. Las líneas cuyo importe se mantuvo o bajó no aparecen.
 
-Botones de acceso directo para crear una nueva partida OPEX o CAPEX directamente desde la vista general. Estos botones solo son visibles si su rol le otorga al menos permisos de `opex:manager` o `capex:manager`.
+Use las pestañas **Todo** / **OPEX** / **CAPEX** para elegir el tipo. Haga clic en **Abrir** para ver el informe completo Top aumento / disminución sobre el mismo tipo.
 
-Debajo de los botones, una sección de **Actualizaciones recientes** lista las cinco partidas modificadas más recientemente, OPEX y CAPEX juntas. Cada fila muestra la fecha de la última modificación, el nombre de la partida y su tipo. Haga clic en una fila para abrir la partida.
+### Por centro de coste
 
-### Top partidas (A)
+Los cinco centros de coste con el mayor total en la columna por defecto del año actual, con una barra para cada uno. Las líneas sin centro de coste cuentan juntas como **Sin centro de coste**. Use las pestañas **Todo** / **OPEX** / **CAPEX** para elegir el tipo. Haga clic en una fila para abrir la lista en las líneas de ese centro de coste.
 
-Las cinco partidas más grandes para el año actual, clasificadas por la columna por defecto. El título indica la columna, por ejemplo **Top partidas (Presupuesto, A)**. Los importes se redondean a miles con sufijo "k".
+### Actualizaciones recientes
 
-Use las pestañas **OPEX** / **CAPEX** del encabezado del mosaico para elegir el tipo de partida. El mosaico recuerda su elección. Haga clic en **Abrir** para ver el informe completo Top partidas sobre el mismo tipo.
+Las cinco líneas presupuestarias modificadas más recientemente, OPEX y CAPEX juntas. Cada fila muestra la fecha de la última modificación, la referencia de la línea, su nombre y su tipo. Haga clic en una fila para abrir la línea.
 
-### Mayores incrementos (A vs A-1)
+Sin acceso de lectura a las líneas presupuestarias (`budget:reader`), los mosaicos de presupuesto se ocultan. **Mis tareas** requiere acceso de lectura a las tareas, y **Próximas renovaciones** acceso de lectura a los contratos.
 
-Las cinco partidas con el mayor incremento en la columna por defecto comparado con el año anterior, calculado sobre todas las partidas del tipo. El título indica la columna, por ejemplo **Mayores incrementos (Presupuesto, A vs A-1)**. Las partidas cuyo importe se mantuvo o bajó no aparecen. Los importes se redondean a miles con sufijo "k".
+## Personalizar la vista general
 
-Use las pestañas **OPEX** / **CAPEX** del encabezado del mosaico para elegir el tipo de partida. El mosaico recuerda su elección. Haga clic en **Abrir** para ver el informe completo Top aumento / disminución sobre el mismo tipo.
+Haga clic en **Personalizar** para abrir **Configuración del panel de control del presupuesto**. Sus elecciones solo se aplican a su propia vista general.
 
-Un tipo que usted no puede consultar aparece desactivado en las pestañas y no tiene columna en **Calidad de datos**. Si no puede consultar ni OPEX ni CAPEX, estos mosaicos se ocultan.
+- **Mostrar u ocultar un mosaico**: márquelo o desmárquelo. El diálogo lista los mosaicos que su rol puede ver
+- **Cambiar el orden**: arrastre un mosaico por su asa a la derecha
+- **Columnas de importes del mosaico Presupuesto**: **Columnas del espacio de trabajo**, marcada por defecto, sigue las columnas que muestra su espacio de trabajo. Desmárquela para elegir usted mismo las columnas. Conserve al menos una: si no, el diálogo indica «Seleccione al menos una columna de importes.»
+- **Guardar** aplica sus elecciones. **Restablecer valores predeterminados** vuelve a mostrar todos los mosaicos, en el orden por defecto, con las columnas de la organización
 
 ## Consejos
 
-- **Qué columna usan los mosaicos**: Un administrador de presupuesto elige la columna por defecto y los nombres de las columnas en [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias). Los mosaicos de top y los informes que abren siguen esa elección.
-- **Números redondeados**: Cada importe de la vista general se redondea a miles para una vista compacta. Abra la lista OPEX o CAPEX, o los informes, cuando necesite cifras exactas.
-- **Botones ausentes**: Si no ve los botones **Nuevo OPEX** o **Nuevo CAPEX**, su rol actual no incluye el permiso de gestor requerido. Solicite a su administrador que verifique su acceso.
+- **Qué columna usan los mosaicos**: Un administrador de presupuesto elige la columna por defecto y los nombres de las columnas en [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias). Los mosaicos y los informes que abren siguen esa elección.
+- **Números redondeados**: Cada importe de la vista general se redondea a miles para una vista compacta. Abra la lista de líneas presupuestarias, o los informes, cuando necesite cifras exactas.
+- **Botones ausentes**: Si no ve los botones **Nueva línea OPEX** o **Nueva línea CAPEX**, su rol actual no tiene el nivel Miembro en Presupuesto. Solicite a su administrador que verifique su acceso.
 - **Mosaicos vacíos**: Un mosaico que muestra "Sin datos" simplemente significa que no hay registros de ese tipo todavía. Una vez que usted o su equipo empiecen a introducir datos, el mosaico se llenará automáticamente.

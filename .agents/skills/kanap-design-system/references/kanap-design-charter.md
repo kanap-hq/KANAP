@@ -289,6 +289,13 @@ The form controls of a filter bar keep their field style. The home dashboard qui
 their outlined look with icons, at the pill height (30px) and radius (5px). Write the variant at each call site; never restyle buttons through a selector on the
 header.
 
+**Dialog footers** use the same three pills, all the same size: `action-primary` for the main
+action of the dialog (Save, Create, Continue), `action` for Cancel, Close, Back and every other
+action, `action-danger` when the main action is destructive (Delete, Replace all, Reject).
+`KanapDialog` renders Cancel as `action` and its main action as `action-primary` by default; pass
+`saveVariant="action-danger"` for a destructive one, or `saveVariant="action"` when the only button
+closes a read-only dialog.
+
 **`variant="action-primary"`**: the one key action of the bar (New X, Add X, or Invite when it is
 the only main action). At most one per bar.
 - Same dimensions as `action`
@@ -315,15 +322,15 @@ Disable (n), Move (n), Manage X, Edit, a "new" chip in a band, Send link, Conver
 **Icons on pills**: 14px (`sx={{ fontSize: '14px !important' }}` on the icon). Keep `+` on "new"
 actions and the trash on delete; import and export carry no icon.
 
-**`variant="contained"`**: primary CTAs in dialogs, create forms and empty states (Submit, Save,
+**`variant="contained"`**: primary CTAs in create forms, composers and empty states (Submit, Save,
 "Create your first chart of accounts"):
 - Background `kanap.teal`, color `kanap.tealForeground`
 - Border-radius: 6px, no shadow (flat)
 - Height: 36px (medium), 32px (small)
 - `textTransform: 'none'`
 
-`contained` and `outlined` stay in dialog footers, forms, composers and empty states; they do not
-appear in page-level action bars.
+`contained` and `outlined` stay in create forms, composers and empty states; they do not appear in
+page-level action bars or dialog footers.
 
 **General rules**: no uppercase, no shadow on any variant. The theme's default button radius is 6px.
 
@@ -731,6 +738,7 @@ WorkspacePage (full height, flex column)
   - **ID prefix** (`T-49`): monospace 14px, `kanap.text.secondary`, vertical-align 1px, mr 14px, click-to-copy. Always a business display reference (`T-4`, `PRJ-3`, `AST-5`), never a raw or truncated UUID. Add/backfill a reference field if one does not exist yet.
   - **Title**: 22px weight 500, click-to-edit pattern (span -> input on click, save on blur, cancel on Escape)
   - **Actions**: pill buttons on the right, gap 8px, mt 7px. Use `variant="action"` and `variant="action-danger"` (`action-primary` for a single key action). Close button at the end.
+  - **Rare actions** (changing the type of a budget line): a "..." pill at the end of the actions, before the close button (`components/workspace/WorkspaceMoreMenu.tsx`: `variant="action"`, icon only, aria-label "More actions"), opening a flat `Menu` of `drawerMenuItemSx` items anchored under it. Render it only when it holds an action the user may take; each item opens its own `KanapDialog`.
 - **Metadata bar**: flex, gap 22px, flex-wrap, font-size 12px
   - Status chip: colored dot (8px) + label, click -> Menu with all statuses
   - Score chip: colored dot + monospace value, read-only with Tooltip

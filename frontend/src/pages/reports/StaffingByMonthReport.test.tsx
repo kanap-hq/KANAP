@@ -91,7 +91,7 @@ const everyColumn = <T,>(value: T) => Object.fromEntries(AMOUNT_COLUMNS.map((col
 const flat = (value: number) => Array.from({ length: 12 }, () => value);
 
 function axis(id: string, patch: Partial<AnalyticsAxis>): AnalyticsAxis {
-  return { id, code: id, name: null, description: null, sort_order: 0, is_default: false, applies_to: null, status: 'enabled', disabled_at: null, ...patch };
+  return { id, code: id, name: null, description: null, sort_order: 0, is_default: false, applies_to: null, required: false, status: 'enabled', disabled_at: null, ...patch };
 }
 const DEFAULT_AXIS = axis('ax-def', { is_default: true });
 const NATURE = axis('ax-nat', { name: 'Nature', sort_order: 1 });
@@ -308,7 +308,7 @@ describe('Staffing by month', () => {
     expect(groupOf(lastRequest())).toEqual(['supplier_id', 'supplier_name']);
 
     await pick('reports.staffing.groupBy', 'reports.staffing.groups.item');
-    await waitFor(() => expect(groupOf(lastRequest())).toEqual(['id', 'product_name']));
+    await waitFor(() => expect(groupOf(lastRequest())).toEqual(['id', 'product_name', 'item_number']));
     expect(screen.getByTestId('location').textContent).toBe('?group=item');
     await waitFor(() => expect(gridRows().map((row) => row.group)).toEqual(['Line a', 'Line b', 'Line c', 'Line d', 'Line f']));
 
@@ -369,4 +369,14 @@ describe('Staffing by month', () => {
     await waitFor(() => expect(gridRows()).toHaveLength(3));
     expect(screen.queryByRole('note')).toBeNull();
   });
+});
+
+it('defaults to All and requests monthly FTE once from the unified endpoint', async () => {
+  renderReport('/report');
+  await waitFor(() => expect(gridRows()).toHaveLength(3));
+  expect(screen.getByRole('tab', { name: 'operations.scope.all' })).toHaveAttribute('aria-selected', 'true');
+  const requests = post.mock.calls.filter(([, body]) => body.spec.measures.some((m: { field: string }) => m.field.startsWith('fte_month_')));
+  expect(requests).toHaveLength(1);
+  expect(requests[0][0]).toBe('/budget-lines/summary/aggregate');
+  expect(post.mock.calls.every(([url]) => url === '/budget-lines/summary/aggregate')).toBe(true);
 });

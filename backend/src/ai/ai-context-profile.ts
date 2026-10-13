@@ -261,6 +261,10 @@ const URL_ENTITY_TYPES: Array<{ pattern: RegExp; entityType: AiQueryEntityType }
   { pattern: /\/it\/locations\//i, entityType: 'locations' },
   { pattern: /\/ops\/contracts\//i, entityType: 'contracts' },
   { pattern: /\/ops\/capex\//i, entityType: 'capex_items' },
+  { pattern: /\/ops\/opex\//i, entityType: 'spend_items' },
+  // The neutral path alone carries no nature. Both financial families are eligible.
+  { pattern: /\/ops\/budget\/[^/?#]+/i, entityType: 'spend_items' },
+  { pattern: /\/ops\/budget\/[^/?#]+/i, entityType: 'capex_items' },
   { pattern: /\/master-data\/companies\//i, entityType: 'companies' },
   { pattern: /\/master-data\/contacts\//i, entityType: 'contacts' },
   { pattern: /\/master-data\/departments\//i, entityType: 'departments' },
@@ -608,4 +612,15 @@ function orderToolsForProfile<TTool extends { name: string }>(
       const rightRank = preferredOrder.get(right.name) ?? Number.MAX_SAFE_INTEGER;
       return leftRank - rightRank;
     });
+}
+
+/** Legacy paths keep their numbering; the neutral path resolves the stored nature. */
+export function budgetLineRefFromUrl(url: string): string | null {
+  const match = url.match(/^\/ops\/(budget|opex|capex)\/([^/?#]+)/i);
+  if (!match || match[2] === 'new') return null;
+  let ref: string;
+  try { ref = decodeURIComponent(match[2]).replace(/^(bl|opx|cpx)-/i, (prefix) => prefix.toUpperCase()); }
+  catch { return null; }
+  return /^\d+$/.test(ref) && match[1] !== 'budget'
+    ? `${match[1] === 'capex' ? 'CPX' : 'OPX'}-${ref}` : ref;
 }

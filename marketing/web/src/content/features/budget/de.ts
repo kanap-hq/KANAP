@@ -8,7 +8,7 @@ const content: FeatureContent = {
   },
   header: {
     eyebrow: 'IT-Budget',
-    title: 'Das IT-Budget, raus aus Excel und mit Ihrer ganzen IT-Landschaft verknüpft.',
+    title: 'Das IT-Budget, von der Hochrechnung bis zum Folgejahr, mit Ihren Anwendungen verknüpft.',
     lead: 'OPEX und CAPEX über mehrere Jahre, Hochrechnung und Budget des Folgejahres, Verrechnung an Gesellschaften und Abteilungen, Personal und Kosten pro FTE. Jede Zeile ist mit ihren Anwendungen, Verträgen und Projekten verknüpft: Sie wissen, wofür Sie zahlen, und warum.',
   },
   sections: [
@@ -16,13 +16,13 @@ const content: FeatureContent = {
       title: 'Von der Hochrechnung zum Budget des Folgejahres',
       body: 'Die Standardspalten (Budget, Revision, Ist, erwartetes Jahresergebnis) lassen sich umbenennen und ausblenden, von J-2 bis J+2, mit jährlicher oder monatlicher Erfassung. Festigen Sie die Hochrechnung Zeile für Zeile, kopieren Sie sie in das Budget des Folgejahres und frieren Sie die genehmigte Version ein.',
       bullets: [
-        'OPEX und CAPEX in eigenen Listen',
+        'OPEX und CAPEX in einer Liste, nach Typ filterbar',
         'Spalten für Budget, Revision, Ist und Hochrechnung, umbenennbar',
         'Beträge als Menge × Preis oder nach Monaten verteilt',
         'Spalten kopieren, zuerst als Probelauf',
         'Versionen einfrieren: Die genehmigte Version bleibt unverändert',
       ],
-      shotAlt: 'OPEX-Budgetraster mit Spalten pro Jahr',
+      shotAlt: 'Liste der Budgetzeilen mit den Beträgen 2026 und der Summenzeile',
     },
     {
       title: 'Eine Verrechnung, die jeder versteht',
@@ -34,7 +34,7 @@ const content: FeatureContent = {
         'Von Hand eingegebene Prozentsätze',
         'Eine Methode pro Jahr und pro Zeile',
       ],
-      shotAlt: 'Verteilungseditor einer Budgetzeile',
+      shotAlt: 'Eine Budgetzeile, nach Mitarbeiterzahl auf vier Gesellschaften verteilt',
     },
     {
       title: 'Mehrere Gesellschaften, mehrere Währungen, Konsolidierung',
@@ -46,28 +46,30 @@ const content: FeatureContent = {
         'Länderkontenpläne und Konsolidierungsplan',
         'Kostenstellen und Budgetverantwortliche',
       ],
-      shotAlt: 'Währungseinstellungen mit Wechselkursen',
+      shotAlt: 'Währungseinstellungen: Berichtswährung, zulässige Währungen und Wechselkurse',
     },
     {
       title: 'Ein Bericht für jede Frage',
       body: 'Gesamt- und gesellschaftsbezogene Verrechnung, Trends, größte Steigerungen und Rückgänge, Vergleich zweier Versionen, Analysedimensionen, Konsolidierungskonten, monatlicher Personalbestand und Kosten pro FTE. Jede Berichtszeile öffnet die passende gefilterte Liste, und Plaid beantwortet dieselben Fragen in natürlicher Sprache.',
       bullets: [
         'Gesamt- und gesellschaftsbezogene Verrechnung',
-        'Spaltenvergleich und Trends für OPEX und CAPEX',
+        'Budgetvergleich über mehrere Jahre, für alle Zeilen, OPEX oder CAPEX',
         'Analysedimensionen und Konsolidierungskonten',
         'Monatlicher Personalbestand, Kosten pro FTE und Tagessatz',
         'CSV-Export und Diagramme als Bild',
       ],
-      shotAlt: 'Verrechnungsbericht nach Gesellschaft',
+      shotAlt: 'Die 10 größten OPEX-Zeilen des Budgets 2026 als Kreisdiagramm',
     },
   ],
   more: {
     title: 'Außerdem',
     items: [
-      { title: 'Mit Anwendungen und Projekten verknüpft', body: 'Jede Ausgabe führt zu ihren Anwendungen, Projekten und Lieferanten. Der Datensatz einer Anwendung zeigt, was sie kostet.' },
+      { title: 'Mit Anwendungen und Projekten verknüpft', body: 'Jede Budgetzeile führt zu ihren Anwendungen, Projekten und Lieferanten. Der Datensatz einer Anwendung zeigt, was sie kostet.' },
       { title: 'Verträge und Fristen', body: 'Jahresbetrag, automatische Verlängerung, Kündigungsfrist und berechneter Kündigungstermin, mit den Budgetzeilen verknüpft.' },
       { title: 'Hin und zurück mit der Tabellenkalkulation', body: 'Exportieren Sie die Zeilen, bearbeiten Sie sie in Excel oder LibreOffice und importieren Sie die Datei zurück: KANAP schreibt nur die geänderten Zellen.' },
       { title: 'Beispieldaten', body: 'Ein Test füllt sich in einer Minute mit dem Budget von Fromage & Co, vier fiktiven Gesellschaften, damit Sie alles sehen, bevor Sie Ihr eigenes erfassen.' },
+      { title: 'Personal und Kosten pro FTE', body: 'Eine Zeile für externe Kräfte in Personen oder Tagen gibt ihre FTE an. Die Berichte zeigen daraus den Personalbestand Monat für Monat und die Kosten pro FTE oder den Tagessatz, nach Lieferant oder Kostenstelle.' },
+      { title: 'Eigene Analyseachsen', body: 'Legen Sie so viele Analysedimensionen an, wie Ihre Fragen verlangen (Bereich, Kostenart, Programm), jede mit eigenen Werten, für OPEX, CAPEX oder beides. Die Budgetberichte lassen sich danach filtern, mehrere gruppieren nach Dimension.' },
     ],
   },
   crossLinks: {
@@ -81,7 +83,7 @@ const content: FeatureContent = {
     ],
   },
   cta: {
-    title: 'Sehen Sie Ihr IT-Budget in einem einzigen Datenbestand.',
+    title: 'Testen Sie KANAP mit einem vollständigen IT-Budget.',
     body: 'Testen Sie die gehostete Version mit Beispieldaten oder stellen Sie KANAP kostenlos auf Ihren eigenen Servern bereit.',
     primary: 'Kostenlos bereitstellen',
     secondary: 'Mit Beispieldaten testen',

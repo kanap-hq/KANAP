@@ -16,10 +16,10 @@ import ReportLayout, { ReportFilter, reportFilterMenuProps, reportFilterSelectSx
 import { useTranslation } from 'react-i18next';
 import AgGridBox from '../../components/AgGridBox';
 import { operationLinesRequest, readOperationLines } from '../reports/reportAggregates';
-import { useBudgetAggregate } from '../reports/useBudgetAggregate';
+import { SUMMARY_QUERY_KEY, useBudgetAggregate } from '../reports/useBudgetAggregate';
 import { useQueryClient } from '@tanstack/react-query';
 import { forgetAllAllocations } from '../../components/finance/allocationsCache';
-import { clearBudgetColumn, BudgetColumn, BudgetScope } from '../../services/budgetOperations';
+import { clearBudgetColumn, BudgetColumn, BudgetOperationScope, BudgetScope } from '../../services/budgetOperations';
 import { useFreezeState } from '../../hooks/useFreezeState';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { selectPlaceholderSx } from '../../theme/formSx';
@@ -27,12 +27,15 @@ import { useLocale } from '../../i18n/useLocale';
 import { useKanapDialogs } from '../../components/design';
 import { drawerMenuItemSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
-import ItemScopeTabs, { useDefaultBudgetScope } from './ItemScopeTabs';
+import ItemScopeTabs, { SCOPE_NATURES } from './ItemScopeTabs';
+import OperationLineCell from './OperationLineCell';
 import { formatOperationAmount } from './operationAmount';
 import { operationSummary } from './operationSummary';
 
 type ProcessedRow = {
   id: string;
+  itemNumber: number | null;
+  nature: BudgetOperationScope | null;
   product_name: string;
   currentValue: number;
 };
@@ -54,7 +57,7 @@ export default function BudgetColumnResetPage() {
   // Generate years from Y-1 to Y+5
   const years = Array.from({ length: 7 }, (_, i) => Y - 1 + i);
 
-  const [scope, setScope] = useState<BudgetScope>(useDefaultBudgetScope('admin'));
+  const [scope, setScope] = useState<BudgetScope>('all');
   const [year, setYear] = useState<number>(Y);
   const [pickedColumn, setColumn] = useState<BudgetColumn | null>(null);
   // A column hidden since it was picked is no longer offered.
@@ -63,7 +66,11 @@ export default function BudgetColumnResetPage() {
   const [clearResult, setClearResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   const { data: freezeData, isLoading: freezeLoading } = useFreezeState(year);
-  const columnFrozen = column ? freezeData?.summary?.scopes[scope][budgetColumns.get(column).freezeKey]?.frozen ?? false : false;
+  // The natures of the scope whose column is frozen: any refuses the whole reset.
+  const frozenNatures = column
+    ? SCOPE_NATURES[scope].filter((nature) => freezeData?.summary?.scopes[nature][budgetColumns.get(column).freezeKey]?.frozen)
+    : [];
+  const columnFrozen = frozenNatures.length > 0;
 
   // Every line of the window from the selected year, with the column's amount in the line's own
   // currency (what the clear removes), from one server aggregate.
@@ -75,12 +82,14 @@ export default function BudgetColumnResetPage() {
 
   const processedData = useMemo<ProcessedRow[]>(() => {
     if (!lines) return [];
-    return readOperationLines(lines).map((line) => ({
+    return readOperationLines(lines, scope).map((line) => ({
       id: line.id,
+      itemNumber: line.itemNumber,
+      nature: line.nature,
       product_name: line.name,
       currentValue: line.values.current ?? 0,
     }));
-  }, [lines]);
+  }, [lines, scope]);
 
   const stats = useMemo(() => {
     const totalItems = processedData.length;
@@ -102,7 +111,16 @@ export default function BudgetColumnResetPage() {
       headerName: t('operations.columnReset.product'),
       flex: 1,
       minWidth: 220,
+      // The line's page opens in a new tab: the preview stays.
+      cellRenderer: OperationLineCell,
     },
+    ...(scope === 'all' ? [{
+      field: 'nature',
+      headerName: t('operations.scope.label'),
+      width: 110,
+      valueFormatter: (p: { value?: string | null }) => (p.value ? t(`operations.scope.${p.value}`) : ''),
+      cellStyle: { color: theme.palette.kanap.text.secondary },
+    } as ColDef] : []),
     {
       field: 'currentValue',
       headerName: column ? t('operations.columnReset.currentHeader', { column: columnLabel, year }) : String(year),
@@ -114,7 +132,7 @@ export default function BudgetColumnResetPage() {
         ? { color: 'inherit', fontWeight: 500 }
         : { color: theme.palette.kanap.text.tertiary, fontWeight: 400 }),
     },
-  ], [column, columnLabel, year, locale, theme, t]);
+  ], [column, columnLabel, year, locale, theme, t, scope]);
 
   const gridApiRef = useRef<any>(null);
 
@@ -156,8 +174,8 @@ export default function BudgetColumnResetPage() {
         message: operationSummary(t, 'operations.columnReset.clearDone', result.summary.cleared, result.summary.skipped, result.summary.errors),
       });
 
-      // Invalidate and refetch the summary data to show updated values
-      await queryClient.invalidateQueries({ queryKey: [scope === 'opex' ? 'spend-items-summary' : 'capex-items-summary'] });
+      // Every list and report of the budget reads again.
+      await Promise.all(Object.values(SUMMARY_QUERY_KEY).map((key) => queryClient.invalidateQueries({ queryKey: [key] })));
     } catch (error) {
       console.error('Clear operation failed:', error);
       setClearResult({ ok: false, message: getApiErrorMessage(error, t, t('operations.columnReset.clearFailed')) });
@@ -178,7 +196,7 @@ export default function BudgetColumnResetPage() {
       subtitle={t('operations.columnReset.subtitle')}
       filters={
         <>
-          <ItemScopeTabs level="admin" value={scope} onChange={(next) => { setScope(next); setClearResult(null); }} />
+          <ItemScopeTabs level="admin" allowAll value={scope} onChange={(next) => { setScope(next); setClearResult(null); }} />
           <ReportFilter label={t('operations.columnReset.year')} width={120}>
             <TextField
               select
@@ -231,7 +249,9 @@ export default function BudgetColumnResetPage() {
       <Stack direction="column" spacing={2} alignItems="stretch">
         {columnFrozen && (
           <Alert severity="error">
-            {t('operations.columnReset.columnFrozenError', { year, column: columnLabel })}
+            {frozenNatures.length === 1 && scope === 'all'
+              ? t('operations.columnReset.columnFrozenNatureError', { year, column: columnLabel, nature: t(`operations.scope.${frozenNatures[0]}`) })
+              : t('operations.columnReset.columnFrozenError', { year, column: columnLabel })}
           </Alert>
         )}
 

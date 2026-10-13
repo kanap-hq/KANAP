@@ -375,9 +375,9 @@ async function testBudgetLineRefMatchesAndIsReturned() {
     const spendItemId = randomUUID();
     await runner.query(
       `INSERT INTO spend_items (
-         id, tenant_id, product_name, description, currency, effective_start, status, item_number, created_at, updated_at
+         id, tenant_id, product_name, description, currency, effective_start, status, item_number, legacy_number, created_at, updated_at
        )
-       VALUES ($1, $2, 'Licence supervision', 'Renouvellement annuel', 'EUR', DATE '2026-01-01', 'enabled', 4205, now(), now())`,
+       VALUES ($1, $2, 'Licence supervision', 'Renouvellement annuel', 'EUR', DATE '2026-01-01', 'enabled', 4205, 'OPX-4205', now(), now())`,
       [spendItemId, tenantId],
     );
 
@@ -391,15 +391,16 @@ async function testBudgetLineRefMatchesAndIsReturned() {
     });
     assert.equal(search.items[0]?.id, spendItemId);
     // The result names the line by its reference, so the model can quote it.
-    assert.equal(search.items[0]?.ref, 'OPX-4205');
+    assert.equal(search.items[0]?.ref, 'BL-4205');
     assert.equal((search.items[0] as any)?.metadata?.supplier ?? null, null);
 
     const capexItemId = randomUUID();
+    // A CAPEX line is a spend line of nature 'capex' since lot Z1: its own BL number, its CPX number kept.
     await runner.query(
-      `INSERT INTO capex_items (
-         id, tenant_id, description, ppe_type, investment_type, priority, currency, effective_start, item_number
+      `INSERT INTO spend_items (
+         id, tenant_id, nature, product_name, ppe_type, investment_type, priority, currency, effective_start, item_number, legacy_number
        )
-       VALUES ($1, $2, 'Storage refresh', 'hardware', 'replacement', 'medium', 'EUR', DATE '2026-01-01', 4206)`,
+       VALUES ($1, $2, 'capex', 'Storage refresh', 'hardware', 'replacement', 'medium', 'EUR', DATE '2026-01-01', 504206, 'CPX-4206')`,
       [capexItemId, tenantId],
     );
     const capexSearch = await service.searchAll(context as any, {
@@ -408,7 +409,7 @@ async function testBudgetLineRefMatchesAndIsReturned() {
       limit: 10,
     });
     assert.equal(capexSearch.items[0]?.id, capexItemId);
-    assert.equal(capexSearch.items[0]?.ref, 'CPX-4206');
+    assert.equal(capexSearch.items[0]?.ref, 'BL-504206');
   } finally {
     await runner.rollbackTransaction();
     await runner.release();

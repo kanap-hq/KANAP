@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { getAnalyticsAxes, isAnalyticsActive, type AnalyticsAxis } from '../services/analytics';
+import { analyticsFieldKey, getAnalyticsAxes, isAnalyticsActive, type AnalyticsAxis } from '../services/analytics';
 import { usageAllowsLineType, type LineType } from '../constants/lineTypeUsage';
 
 export const ANALYTICS_AXES_QUERY_KEY = ['analytics-axes'] as const;
@@ -31,6 +31,17 @@ export type AnalyticsAxes = {
  */
 export function axisAppliesTo(axis: Pick<AnalyticsAxis, 'applies_to'>, scope: LineType): boolean {
   return usageAllowsLineType(axis.applies_to, scope);
+}
+
+/**
+ * Lines of `scope` must hold a value on the dimension: it is required, enabled now and applies to
+ * them. The server's rule; a disabled dimension keeps its setting, ignored.
+ */
+export function axisRequiredFor(
+  axis: Pick<AnalyticsAxis, 'required' | 'applies_to' | 'status' | 'disabled_at'>,
+  scope: LineType,
+): boolean {
+  return !!axis.required && isAnalyticsActive(axis) && axisAppliesTo(axis, scope);
 }
 
 /**
@@ -84,6 +95,30 @@ export function buildAnalyticsAxes(
     defaultAxis: axes.find((axis) => axis.is_default) ?? null,
     label: (axis) => analyticsAxisLabel(axis, t),
   };
+}
+
+/** The OPEX / CAPEX list column of the default dimension, kept for saved layouts, links and AI filters. */
+export const DEFAULT_ANALYTICS_LIST_COLUMN = 'analytics_category_name';
+
+/**
+ * The dimension columns of the OPEX and CAPEX lists: one per enabled dimension, in dimension order.
+ * The default dimension keeps `analytics_category_name` wherever it stands, the others are
+ * `analytics_<id>`. Without the default among them (dimensions not loaded), its column comes first.
+ * `required`: the dimension is required for the lines of `scope` (`axisRequiredFor`); the lists show
+ * those columns by default (lot C1, decision 3). Without a scope, required dimensions of either
+ * nature are shown (the unified budget list).
+ */
+export function analyticsListColumns(
+  axes: Pick<AnalyticsAxes, 'enabled' | 'label'>,
+  defaultLabel: string,
+  scope?: LineType,
+): Array<{ field: string; label: string; required: boolean }> {
+  const required = (axis: AnalyticsAxis) => scope ? axisRequiredFor(axis, scope) : !!axis.required && isAnalyticsActive(axis);
+  const columns = axes.enabled.map((axis) => (axis.is_default
+    ? { field: DEFAULT_ANALYTICS_LIST_COLUMN, label: defaultLabel, required: required(axis) }
+    : { field: analyticsFieldKey(axis.id), label: axes.label(axis), required: required(axis) }));
+  if (!axes.enabled.some((axis) => axis.is_default)) columns.unshift({ field: DEFAULT_ANALYTICS_LIST_COLUMN, label: defaultLabel, required: false });
+  return columns;
 }
 
 const EMPTY: AnalyticsAxis[] = [];

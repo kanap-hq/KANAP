@@ -406,7 +406,7 @@ Beginnen Sie mit dem API-Protokoll: `docker compose -f infra/compose.onprem.yml 
 | `[SECURITY]`-Warnung bei jedem Start | `ADMIN_PASSWORD`, `JWT_SECRET` | Ändern Sie das Passwort des Administrators in der Anwendung, oder siehe [Passwort zurücksetzen](#passwort-zurucksetzen). Verwenden Sie ein `JWT_SECRET` mit mindestens 32 Zeichen |
 | Migration fehlgeschlagen | PostgreSQL-Version | Muss 16+ sein, Erweiterungen verfügbar |
 | 502 vom Reverse Proxy | `docker compose -f infra/compose.onprem.yml ps` | Stellen Sie sicher, dass der api-Container auf Port 8080 läuft |
-| 413 vom Reverse Proxy bei einem Upload | `client_max_body_size` | Setzen Sie `client_max_body_size 50m;` in der nginx-Datei |
+| 413 vom Reverse Proxy bei einem Upload | `client_max_body_size` | Setzen Sie `client_max_body_size 80m;` in der nginx-Datei |
 | Eine E-Mail zum Zurücksetzen kommt nicht an, und das API-Protokoll enthält eine `ERROR`-Zeile mit `unable to verify the first certificate` oder `self-signed certificate` und dem Code `ESOCKET` | Das Zertifikat des Mail-Relays | Die API vertraut der Zertifizierungsstelle nicht, die das Zertifikat des Relays signiert hat. Geben Sie ihr die Datei der Zertifizierungsstelle (siehe [Zertifikate einer internen Zertifizierungsstelle](configuration.md#optional-zertifikate-einer-internen-zertifizierungsstelle)). Die Zertifizierungsstelle auf dem Server selbst zu installieren, ändert am Container nichts |
 | Anmeldung nicht möglich | Das Passwort | `.env` legt den Administrator nur beim ersten Start an. Ändern Sie das Passwort in der Anwendung oder verwenden Sie [Passwort zurücksetzen](#passwort-zurucksetzen) |
 

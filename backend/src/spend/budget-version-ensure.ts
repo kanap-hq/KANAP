@@ -1,6 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
-import { CapexVersion } from '../capex/capex-version.entity';
 import { AmountScope } from './amounts-write.util';
 import { lockBudgetLine, lockBudgetVersions } from './budget-locks';
 import { SpendVersion } from './spend-version.entity';
@@ -21,7 +20,7 @@ import { SpendVersion } from './spend-version.entity';
  * Returns null when the name is already taken by another year of the item:
  * the caller decides how to refuse.
  */
-export type BudgetVersionEntity = SpendVersion | CapexVersion;
+export type BudgetVersionEntity = SpendVersion;
 
 export type EnsureBudgetVersionParams = {
   tenantId: string;
@@ -40,27 +39,13 @@ export type EnsureBudgetVersionParams = {
 
 export type EnsuredBudgetVersion<V extends BudgetVersionEntity = BudgetVersionEntity> = { version: V; created: boolean };
 
-// Table and column names come only from here: never from the caller.
+// Table and column names come only from here: never from the caller. One family of versions for both
+// natures (lot Z1): the caller locked the line for its nature before it asks for a version of it.
 const SCOPES = {
   opex: { versions: 'spend_versions', itemFk: 'spend_item_id', entity: SpendVersion },
-  capex: { versions: 'capex_versions', itemFk: 'capex_item_id', entity: CapexVersion },
+  capex: { versions: 'spend_versions', itemFk: 'spend_item_id', entity: SpendVersion },
 } as const;
 
-export async function ensureBudgetVersion(
-  manager: EntityManager,
-  scope: 'opex',
-  params: EnsureBudgetVersionParams,
-): Promise<EnsuredBudgetVersion<SpendVersion> | null>;
-export async function ensureBudgetVersion(
-  manager: EntityManager,
-  scope: 'capex',
-  params: EnsureBudgetVersionParams,
-): Promise<EnsuredBudgetVersion<CapexVersion> | null>;
-export async function ensureBudgetVersion(
-  manager: EntityManager,
-  scope: AmountScope,
-  params: EnsureBudgetVersionParams,
-): Promise<EnsuredBudgetVersion | null>;
 export async function ensureBudgetVersion(
   manager: EntityManager,
   scope: AmountScope,

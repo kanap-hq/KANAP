@@ -183,7 +183,7 @@ Lo mínimo que necesita:
 
 ### Vincule tareas a proyectos, contratos o presupuestos
 
-Al crear una tarea, puede vincularla a un **Proyecto**, **partida OPEX**, **Contrato** o **partida CAPEX**. Esto hace que la tarea aparezca tanto en la lista de Tareas como en el espacio de trabajo padre.
+Al crear una tarea, puede vincularla a un **Proyecto**, **línea OPEX**, **Contrato** o **línea CAPEX**. Esto hace que la tarea aparezca tanto en la lista de Tareas como en el espacio de trabajo padre.
 
 !!! tip "Consejo"
     La forma más rápida de crear una tarea vinculada es desde dentro del espacio de trabajo padre. Abra un proyecto > pestaña Tareas > Nuevo. El vínculo viene rellenado.

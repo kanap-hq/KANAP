@@ -64,7 +64,7 @@ function fakeDataSource(store: GuardStore) {
 }
 
 function createService(store: GuardStore = new Set()) {
-  const sent: Array<{ to: string }> = [];
+  const sent: Array<{ to: string; html: string }> = [];
   // Stored preferences per user; a user absent from the map gets the defaults (all off),
   // as NotificationPreferencesService.getForUser does when no row exists.
   const stored = new Map<string, NotificationPreferencesData>();
@@ -96,6 +96,14 @@ async function warn(
     warningType: itemType === 'contract' ? 'cancellation_deadline' : 'expiration',
     recipients,
     tenantId: TENANT,
+    manager: { query: async (sql: string, params: unknown[]) => {
+      if (itemType === 'contract') return [];
+      assert.ok(sql.includes("'BL-' || item_number::text"));
+      assert.ok(sql.includes(`nature = '${itemType}'`));
+      assert.ok(sql.includes('tenant_id = $2'));
+      assert.deepEqual(params, [ITEM, TENANT]);
+      return [{ item_ref: 'BL-127' }];
+    } } as any,
   });
   // sendNotification is fire-and-forget; let it run.
   await new Promise((resolve) => setImmediate(resolve));
@@ -130,6 +138,7 @@ async function casesFor(itemType: 'contract' | 'opex' | 'capex') {
     await warn(svc, itemType, [ALICE]);
     assert.equal(sent.length, 1, label('opted in → exactly one email'));
     assert.equal(sent[0].to, ALICE.email);
+    if (itemType !== 'contract') assert.ok(sent[0].html.includes('/ops/budget/BL-127'), label('email links the native BL reference'));
 
     await warn(svc, itemType, [ALICE]);
     assert.equal(sent.length, 1, label('same item and warning again right after → deduped'));

@@ -3550,18 +3550,17 @@ export default function RoadmapGenerator({ onApplied }: Props) {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={closePinDialog} disabled={loading}>
+          <Button variant="action" onClick={closePinDialog} disabled={loading}>
             Cancel
           </Button>
-          <Button
-            color="inherit"
+          <Button variant="action"
             onClick={() => { void handleClearPinDialog(); }}
             disabled={loading || !(pinDialogProjectId && projectOverrideById.get(pinDialogProjectId)?.constraint)}
           >
             Clear
           </Button>
           <Button
-            variant="contained"
+            variant="action-primary"
             onClick={() => { void handleSavePinDialog(); }}
             disabled={loading || !pinDialogProjectId || !pinDialogWeek}
           >

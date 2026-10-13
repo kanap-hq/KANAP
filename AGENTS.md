@@ -62,6 +62,9 @@ Tool-specific or private notes live in each tool's local files, never here.
 - A failed check or a conflict with `main` drops that PR from the queue, along with the queued
   PRs that contain it. Fix, merge `origin/main` into the branch, push, and queue it again with
   the script.
+- A failed queue run shows up on the PR as a failing `merge queue` check and a comment naming the
+  failed jobs (`.github/workflows/queue-failure.yml`). That check is not required: the next push
+  clears it.
 - Minor and patch Dependabot PRs enter the queue by themselves, through the `kanap-queue` app
   (`.github/workflows/dependabot-queue.yml`). One that fails leaves the queue and stays open: an
   agent finds the cause, fixes it in a separate PR if needed, then queues it with `queue-stack.sh`.
@@ -126,8 +129,8 @@ Tool-specific or private notes live in each tool's local files, never here.
   (`src/common/__tests__/backend-root.ts`), not `__dirname`: the compiled tree holds no `.ts`
   file and no fixture.
 - CI runs the backend and frontend suites in the cloud jobs, and builds both sides in on-premise
-  mode. Every job runs in the merge queue, and only there (see "Workflow with the maintainer"). A
-  failing spec drops the PR from the queue.
+  mode. These jobs run in the merge queue only (see "Workflow with the maintainer"); on a PR only
+  the stack order warning runs. A failing spec drops the PR from the queue.
 - The frontend check runs as a `frontend build` job and three `frontend tests (i/3)` shards in
   parallel (`vitest run --shard`, split by file); the `frontend (cloud)` job only gathers their
   results. To rerun one shard locally: `npm test -- --shard=2/3` in `frontend/`.
@@ -176,6 +179,9 @@ Every query must be scoped by `tenant_id`. This is critical for tenant isolation
 - Migrations run with **no** `app.current_tenant`. `FORCE ROW LEVEL SECURITY` also applies to the
   table owner, so a backfill must disable RLS around itself or it silently touches 0 rows
   (precedent: `1824000000000-audit-log-viewer-metadata-indexes.ts`).
+- A migration that writes a budget line's analytics values (`*_item_analytics_values`) fires
+  triggers that read the lines and write `search_index` (`1853940000000`): run it per tenant with
+  `app.current_tenant` set. Updates of the values or dimensions themselves do not fire them.
 - A new tenant-scoped table is registered in `backend/src/common/tenant-isolation.inventory.ts`
   and `backend/src/admin/tenants/tenant-purge.inventory.ts` (CI fails otherwise), with a policy
   named `<table>_tenant_isolation` (USING and WITH CHECK). The tenant reset purges it automatically;
@@ -210,11 +216,18 @@ or subscriptions must work in both modes.
 - `queryRunner.query()` / `manager.query()` return `[rows, rowCount]` for an `UPDATE` or `DELETE`, even
   with `RETURNING`: `.length` is always 2. Count with `WITH changed AS (UPDATE ... RETURNING 1) SELECT count(*)`.
 - The JWT payload carries the user id in `sub`: use `req.user.sub`, not `req.user.id`.
+- `spend_*` holds the budget lines of both natures (`spend_items.nature`, `opex` or `capex`): every query on
+  them names the nature (`backend/src/spend/budget-nature.ts`). No code reads or writes the dormant `capex_*` tables.
 - Nest matches routes in declaration order: declare `@Get('export')` before `@Get(':id')`.
 - Fire-and-forget notifications must never reject (an unhandled rejection exits Node). Mark them
   `@NeverRejects()` and never hand them the request's entity manager, which may be released first.
 - A new NOT NULL column or numbered reference (`item_number`) breaks raw seed inserts: update
   `backend/scripts/rls-self-test.ts` and `backend/src/ai/__tests__/ai-phase1.integration.spec.ts`.
+- `seedTenantDefaults` (tenant creation, trial, reset, first start on-premise) gives a tenant the
+  four recommended dimensions (`analytics/recommended-dimensions.seed.ts`: the default named as the
+  cost pool, `it_tower`, `purpose`, `priority`), all optional. Tenants created before them keep
+  three required CAPEX dimensions (`ppe_type`, `investment_type`, `priority`): a spec that needs
+  them builds them with `ensureCapexDimensions`. Raw-SQL test tenants have neither.
 - nginx `add_header ... always` also stamps error responses: a 404 for a missing chunk must not
   be marked `immutable`.
 - A hook placed after an early return changes the hook count between renders. Regression tests for

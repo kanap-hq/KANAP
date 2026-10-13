@@ -118,7 +118,7 @@ Les tâches sont l'**unité atomique de travail** dans KANAP. Elles traversent l
 
 Une **action clairement périmètrée** avec un responsable défini, un statut et une échéance.
 
-- Peut être **autonome** ou liée à un **Projet**, un **poste OPEX**, un **Contrat** ou un **poste CAPEX**
+- Peut être **autonome** ou liée à un **Projet**, une **ligne OPEX**, un **Contrat** ou une **ligne CAPEX**
 - Porte un effort concret
 - L'impact sur les utilisateurs ou les services est contenu et bien compris
 - Ne nécessite pas de coordination entre plusieurs équipes -- même si elle prend longtemps, elle reste portée par une seule personne sans nécessiter d'analyse transversale
@@ -162,9 +162,9 @@ Le reste de ce guide couvre l'essentiel pratique. Pour tous les détails, consul
 |----------|---------------------|----------|
 | **Autonome** | Travail indépendant, non lié à quoi que ce soit | **Portefeuille > Tâches > Nouveau** |
 | **Projet** | Livrable au sein d'un projet | Espace de travail Projet onglet **Tâches**, ou raccourci phase **Chronologie** |
-| **OPEX** | Action liée à un poste OPEX | Espace de travail OPEX, panneau **Tâches** de l'onglet **Vue d'ensemble** |
+| **OPEX** | Action liée à une ligne OPEX | Espace de travail de la ligne budgétaire, panneau **Tâches** de l'onglet **Vue d'ensemble** |
 | **Contrat** | Action liée à un contrat | Espace de travail Contrat onglet **Tâches** |
-| **CAPEX** | Action liée à un poste CAPEX | Espace de travail CAPEX, panneau **Tâches** de l'onglet **Vue d'ensemble** |
+| **CAPEX** | Action liée à une ligne CAPEX | Espace de travail de la ligne budgétaire, panneau **Tâches** de l'onglet **Vue d'ensemble** |
 
 Toutes les tâches apparaissent dans la liste centrale **Portefeuille > Tâches** quel que soit le contexte, vous avez donc toujours un endroit unique pour tout voir.
 
@@ -253,8 +253,7 @@ La liste de ce guide est un point de départ. Adaptez-la à la façon dont votre
 ## Pour aller plus loin
 
 - [Tâches](../tasks.md) -- référence complète pour les statuts, import/export CSV, suivi du temps et chaque fonctionnalité de l'espace de travail
-- [OPEX](../opex.md) -- gestion des postes OPEX et de leurs tâches
-- [CAPEX](../capex.md) -- gestion des postes CAPEX et de leurs tâches
+- [Lignes budgétaires](../budget-lines.md) : gestion des lignes OPEX et CAPEX et de leurs tâches
 - [Contrats](../contracts.md) -- gestion des contrats et de leurs tâches
 - [Projets du portefeuille](../portfolio-projects.md) -- livraison de projet, phases, suivi de charge et tâches au niveau projet
 - [Premiers pas](getting-started.md) -- si vous êtes nouveau dans KANAP

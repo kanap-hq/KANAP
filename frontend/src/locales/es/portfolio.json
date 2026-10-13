@@ -117,6 +117,22 @@
         "projectLevel": "Nivel de proyecto",
         "unknown": "Fase desconocida"
       }
+    },
+    "entityTasksSection": {
+      "title": "Tareas",
+      "newTask": "Nueva tarea",
+      "empty": "Todavía no hay tareas.",
+      "noOpenTasks": "No hay tareas abiertas.",
+      "showClosed_one": "Mostrar la tarea terminada ({{count}})",
+      "showClosed_other": "Mostrar las tareas terminadas ({{count}})",
+      "hideClosed": "Ocultar las tareas terminadas",
+      "columns": {
+        "ref": "Ref.",
+        "task": "Tarea",
+        "assignee": "Asignado a",
+        "dueDate": "Vencimiento",
+        "status": "Estado"
+      }
     }
   },
   "workspace": {
@@ -1768,7 +1784,7 @@
         "businessLead": "Responsable de negocio",
         "businessSponsor": "Patrocinador de negocio",
         "businessTeam": "Equipo de negocio",
-        "capexItems": "Partidas CAPEX",
+        "capexItems": "Líneas CAPEX",
         "category": "Categoría",
         "company": "Empresa",
         "createdFromRequest": "Creado a partir de solicitud",
@@ -1786,7 +1802,7 @@
         "itLead": "Responsable IT",
         "itSponsor": "Patrocinador IT",
         "name": "Nombre",
-        "opexItems": "Partidas OPEX",
+        "opexItems": "Líneas OPEX",
         "originTask": "Tarea de origen",
         "overrideJustification": "Justificación de la sobrescritura",
         "overrideValue": "Valor de sobrescritura",
@@ -2133,10 +2149,8 @@
         }
       },
       "fields": {
-        "capexItems": "Partidas CAPEX",
         "linkDescription": "Descripción del enlace",
         "name": "Nombre",
-        "opexItems": "Partidas OPEX",
         "url": "URL"
       },
       "messages": {
@@ -2148,15 +2162,13 @@
       "placeholders": {
         "applications": "Buscar aplicaciones",
         "assets": "Buscar activos",
-        "capexItems": "Seleccionar partidas CAPEX",
         "linkDescription": "Opcional",
-        "opexItems": "Seleccionar partidas OPEX",
         "url": "https://example.com"
       },
       "sections": {
         "appsAndAssets": "Aplicaciones y activos",
         "attachments": "Adjuntos",
-        "budgetItems": "Partidas presupuestarias",
+        "budgetItems": "Líneas presupuestarias",
         "externalLinks": "Sitios web relevantes"
       },
       "states": {

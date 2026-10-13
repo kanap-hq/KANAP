@@ -1,6 +1,6 @@
 # Fournisseurs
 
-Les fournisseurs (également appelés vendeurs) représentent les entreprises auprès desquelles vous achetez des logiciels, des services et du support. Liez les fournisseurs aux applications, contrats et postes OPEX pour suivre les relations fournisseurs et les dépenses dans votre portefeuille IT.
+Les fournisseurs (également appelés vendeurs) représentent les entreprises auprès desquelles vous achetez des logiciels, des services et du support. Liez les fournisseurs aux applications, contrats et lignes OPEX pour suivre les relations fournisseurs et les dépenses dans votre portefeuille IT.
 
 ## Premiers pas
 

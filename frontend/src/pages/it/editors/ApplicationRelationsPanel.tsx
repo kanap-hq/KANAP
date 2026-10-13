@@ -12,6 +12,7 @@ import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { KanapDialog, PropertyRow, RelevantWebsitesList, useKanapDialogs } from '../../../components/design';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx } from '../../../theme/formSx';
 import IncidentRelationsSection from './IncidentRelationsSection';
+import BudgetLinesRelationField, { budgetLineIdsOf, mergeLinkedBudgetLines, sameBudgetLineIds, type LinkedBudgetLine } from '../../../components/finance/BudgetLinesRelationField';
 export type ApplicationRelationsPanelHandle = {
   save: () => Promise<void>;
   reset: () => void;
@@ -50,13 +51,8 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const [linkedOpex, setLinkedOpex] = React.useState<Array<{ id: string; product_name: string }>>([]);
-  const [baselineOpex, setBaselineOpex] = React.useState<Array<{ id: string; product_name: string }>>([]);
-  const [opexOptions, setOpexOptions] = React.useState<Array<{ id: string; product_name: string }>>([]);
-
-  const [linkedCapex, setLinkedCapex] = React.useState<Array<{ id: string; description: string }>>([]);
-  const [baselineCapex, setBaselineCapex] = React.useState<Array<{ id: string; description: string }>>([]);
-  const [capexOptions, setCapexOptions] = React.useState<Array<{ id: string; description: string }>>([]);
+  const [linkedLines, setLinkedLines] = React.useState<LinkedBudgetLine[]>([]);
+  const [baselineLines, setBaselineLines] = React.useState<LinkedBudgetLine[]>([]);
 
   const [linkedContracts, setLinkedContracts] = React.useState<Array<{ id: string; name: string }>>([]);
   const [baselineContracts, setBaselineContracts] = React.useState<Array<{ id: string; name: string }>>([]);
@@ -87,13 +83,12 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
   const [components, setComponents] = React.useState<Array<{ id: string; name: string; lifecycle: string; criticality: string }>>([]);
 
   const dirty = React.useMemo(() => {
-    const a = JSON.stringify(linkedOpex.map(x => x.id)) !== JSON.stringify(baselineOpex.map(x => x.id));
-    const b = JSON.stringify(linkedCapex.map(x => x.id)) !== JSON.stringify(baselineCapex.map(x => x.id));
+    const a = !sameBudgetLineIds(linkedLines, baselineLines);
     const c = JSON.stringify(linkedContracts.map(x => x.id)) !== JSON.stringify(baselineContracts.map(x => x.id));
     const d = JSON.stringify(linkedProjects.map(x => x.id)) !== JSON.stringify(baselineProjects.map(x => x.id));
     const e = JSON.stringify(urls) !== JSON.stringify(baselineUrls);
-    return a || b || c || d || e;
-  }, [linkedOpex, baselineOpex, linkedCapex, baselineCapex, linkedContracts, baselineContracts, linkedProjects, baselineProjects, urls, baselineUrls]);
+    return a || c || d || e;
+  }, [linkedLines, baselineLines, linkedContracts, baselineContracts, linkedProjects, baselineProjects, urls, baselineUrls]);
   React.useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
 
   React.useEffect(() => {
@@ -113,15 +108,13 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
     try {
       // Linked relations
       try {
-        const res = await api.get(`/applications/${id}/spend-items`);
-        const items = (res.data?.items || []) as Array<{ id: string; product_name: string }>;
-        setLinkedOpex(items); setBaselineOpex(items);
-      } catch { setLinkedOpex([]); setBaselineOpex([]); }
-      try {
-        const res = await api.get(`/applications/${id}/capex-items`);
-        const items = (res.data?.items || []) as Array<{ id: string; description: string }>;
-        setLinkedCapex(items); setBaselineCapex(items);
-      } catch { setLinkedCapex([]); setBaselineCapex([]); }
+        const [opexRes, capexRes] = await Promise.all([
+          api.get(`/applications/${id}/spend-items`),
+          api.get(`/applications/${id}/capex-items`),
+        ]);
+        const lines = mergeLinkedBudgetLines(opexRes.data?.items, capexRes.data?.items);
+        setLinkedLines(lines); setBaselineLines(lines);
+      } catch { setLinkedLines([]); setBaselineLines([]); }
       try {
         const res = await api.get(`/applications/${id}/contracts`);
         const items = (res.data?.items || []) as Array<{ id: string; name: string }>;
@@ -198,25 +191,19 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
     };
     (async () => {
       try {
-        const [allSpend, allCapex, allContracts, allProjects] = await Promise.all([
-          fetchAllPaged('/spend-items', 'product_name'),
-          fetchAllPaged('/capex-items', 'description'),
+        const [allContracts, allProjects] = await Promise.all([
           fetchAllPaged('/contracts', 'name'),
           fetchAllPaged('/portfolio/projects', 'name'),
         ]);
         if (!alive) return;
         const dedupById = <T extends { id: string }>(arr: T[]) => Array.from(new Map(arr.map(i => [i.id, i])).values());
-        const opex = dedupById(allSpend.map((x: any) => ({ id: x.id, product_name: x.product_name })));
-        const capex = dedupById(allCapex.map((x: any) => ({ id: x.id, description: x.description })));
         const contracts = dedupById(allContracts.map((x: any) => ({ id: x.id, name: x.name })));
         const projects = dedupById(allProjects.map((x: any) => ({ id: x.id, name: x.name })));
-        setOpexOptions(opex.sort((a, b) => a.product_name.localeCompare(b.product_name)));
-        setCapexOptions(capex.sort((a, b) => a.description.localeCompare(b.description)));
         setContractOptions(contracts.sort((a, b) => a.name.localeCompare(b.name)));
         setProjectOptions(projects.sort((a, b) => a.name.localeCompare(b.name)));
       } catch {
         if (!alive) return;
-        setOpexOptions([]); setCapexOptions([]); setContractOptions([]); setProjectOptions([]);
+        setContractOptions([]); setProjectOptions([]);
       }
     })();
     return () => { alive = false; };
@@ -254,14 +241,18 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
     return () => { alive = false; window.clearTimeout(timer); };
   }, [readOnly, taskSearch]);
 
+  // One picker for both natures; each route replaces the links of its own nature only.
+  const saveBudgetLines = React.useCallback(async (lines: LinkedBudgetLine[]) => {
+    await api.post(`/applications/${id}/spend-items/bulk-replace`, { spend_item_ids: budgetLineIdsOf(lines, 'opex') });
+    await api.post(`/applications/${id}/capex-items/bulk-replace`, { capex_item_ids: budgetLineIdsOf(lines, 'capex') });
+  }, [id]);
+
   const save = async () => {
     if (readOnly) return;
     setSaving(true); setError(null);
     try {
-      await api.post(`/applications/${id}/spend-items/bulk-replace`, { spend_item_ids: linkedOpex.map(x => x.id) });
-      setBaselineOpex(linkedOpex);
-      await api.post(`/applications/${id}/capex-items/bulk-replace`, { capex_item_ids: linkedCapex.map(x => x.id) });
-      setBaselineCapex(linkedCapex);
+      await saveBudgetLines(linkedLines);
+      setBaselineLines(linkedLines);
       await api.post(`/applications/${id}/contracts/bulk-replace`, { contract_ids: linkedContracts.map(x => x.id) });
       setBaselineContracts(linkedContracts);
       // Save projects
@@ -304,37 +295,21 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
     return [prefix, title].filter(Boolean).join(' ') || task.id;
   }, []);
 
-  const replaceOpexRelations = React.useCallback(async (next: Array<{ id: string; product_name: string }>) => {
-    setLinkedOpex(next);
+  const replaceBudgetLineRelations = React.useCallback(async (next: LinkedBudgetLine[]) => {
+    setLinkedLines(next);
     if (readOnly) return;
     setSaving(true);
     setError(null);
     try {
-      await api.post(`/applications/${id}/spend-items/bulk-replace`, { spend_item_ids: next.map((item) => item.id) });
-      setBaselineOpex(next);
+      await saveBudgetLines(next);
+      setBaselineLines(next);
       onRelationsChange?.();
     } catch (e: any) {
       setError(getApiErrorMessage(e, t, t('messages.saveRelationsFailed')));
     } finally {
       setSaving(false);
     }
-  }, [id, onRelationsChange, readOnly, t]);
-
-  const replaceCapexRelations = React.useCallback(async (next: Array<{ id: string; description: string }>) => {
-    setLinkedCapex(next);
-    if (readOnly) return;
-    setSaving(true);
-    setError(null);
-    try {
-      await api.post(`/applications/${id}/capex-items/bulk-replace`, { capex_item_ids: next.map((item) => item.id) });
-      setBaselineCapex(next);
-      onRelationsChange?.();
-    } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('messages.saveRelationsFailed')));
-    } finally {
-      setSaving(false);
-    }
-  }, [id, onRelationsChange, readOnly, t]);
+  }, [id, onRelationsChange, readOnly, saveBudgetLines, t]);
 
   const replaceContractRelations = React.useCallback(async (next: Array<{ id: string; name: string }>) => {
     setLinkedContracts(next);
@@ -491,66 +466,11 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
 
       <SectionTitle>{t('workspace.application.tabs.relations')}</SectionTitle>
 
-      <PropertyRow label={t('pages.applications.columns.opexItems')} valueSx={relationControlSx}>
-        <Autocomplete
-          multiple
-          options={opexOptions}
-          value={linkedOpex}
-          getOptionLabel={(o) => o.product_name}
-          onChange={(_, v) => { void replaceOpexRelations(v); }}
-          renderOption={(props, option) => (
-            <li {...props} key={option.id}>{option.product_name}</li>
-          )}
-          renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip {...getTagProps({ index })} key={option.id} label={option.product_name} sx={relationTagSx} />
-            ))
-          }
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              placeholder={t('workspace.application.relations.selectOpexItems')}
-              variant="standard"
-              sx={drawerFieldValueSx}
-            />
-          )}
-          ListboxProps={{ sx: drawerAutocompleteListboxSx }}
-          isOptionEqualToValue={(opt, val) => opt.id === val.id}
-          filterSelectedOptions
+      <PropertyRow label={t('common:selects.budgetLines')} valueSx={relationControlSx}>
+        <BudgetLinesRelationField
+          value={linkedLines}
+          onChange={(next) => { void replaceBudgetLineRelations(next); }}
           disabled={readOnly}
-          fullWidth
-          sx={relationAutocompleteSx}
-        />
-      </PropertyRow>
-
-      <PropertyRow label={t('pages.applications.columns.capexItems')} valueSx={relationControlSx}>
-        <Autocomplete
-          multiple
-          options={capexOptions}
-          value={linkedCapex}
-          getOptionLabel={(o) => o.description}
-          onChange={(_, v) => { void replaceCapexRelations(v); }}
-          renderOption={(props, option) => (
-            <li {...props} key={option.id}>{option.description}</li>
-          )}
-          renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip {...getTagProps({ index })} key={option.id} label={option.description} sx={relationTagSx} />
-            ))
-          }
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              placeholder={t('workspace.application.relations.selectCapexItems')}
-              variant="standard"
-              sx={drawerFieldValueSx}
-            />
-          )}
-          ListboxProps={{ sx: drawerAutocompleteListboxSx }}
-          isOptionEqualToValue={(opt, val) => opt.id === val.id}
-          filterSelectedOptions
-          disabled={readOnly}
-          fullWidth
           sx={relationAutocompleteSx}
         />
       </PropertyRow>

@@ -21,6 +21,7 @@ import {
 } from '../spend-summary.builder';
 import { fxKeyCurrency, fxSetKeySql, fxTableSql } from './budget-fx-table';
 import type { BudgetListRuntime, RuntimeNeeds } from './budget-list.runtime';
+import { lineNumberSql, natureAnd } from '../budget-nature';
 
 /**
  * The OPEX and CAPEX lists as a list-engine config, built from the scope
@@ -59,7 +60,6 @@ const ITEM_COLUMNS: Record<string, FieldSql['kind']> = {
 };
 
 const OPEX_ONLY_COLUMNS: Record<string, FieldSql['kind']> = { product_name: 'text', contract_id: 'uuid' };
-const CAPEX_ONLY_COLUMNS: Record<string, FieldSql['kind']> = { ppe_type: 'enum', investment_type: 'enum', priority: 'enum' };
 
 /** The separator of the entries the quick search reads as one text (U+001F), and its SQL literal. */
 const SEP_CHAR = '\u001f';
@@ -74,15 +74,32 @@ export class BudgetListConfig implements ListConfig {
 
   constructor(private readonly rt: BudgetListRuntime) {
     this.from = `${rt.scope.itemTable} i`;
-    this.columns = { ...ITEM_COLUMNS, ...(rt.scope.scope === 'opex' ? OPEX_ONLY_COLUMNS : CAPEX_ONLY_COLUMNS) };
+    this.columns = { ...(rt.scope.scope === 'capex' ? { line_description: 'text' as const } : {}), ...(rt.scope.allNatures ? { nature: 'enum' as const } : {}), ...ITEM_COLUMNS, ...(rt.scope.scope !== 'capex' ? OPEX_ONLY_COLUMNS : {}) };
   }
 
   private get scope() {
     return this.rt.scope;
   }
 
+  /**
+   * The SQL of an item column field: the column the scope reads for it (`fieldColumns`: the CAPEX
+   * title is `product_name`), the number the nature shows for `item_number` (a CAPEX line's CPX
+   * number, `lineNumberSql`).
+   */
+  private columnSql(key: string): string {
+    if (key === 'line_description' && this.scope.scope === 'capex') return 'i.description';
+    if (key === 'item_number') return lineNumberSql('i', this.scope.nature);
+    return `i.${this.scope.fieldColumns[key] ?? key}`;
+  }
+
+  /** The id statements return the number the nature shows (`budgetListIds`, neighbours). */
+  selectColumn(column: string): string {
+    return column === 'item_number' ? `${this.columnSql(column)} AS item_number` : `i.${column}`;
+  }
+
+  /** The tenant, and the nature of the scope's lines: every statement of the list carries both. */
   tenantWhere(stmt: SqlStatement): string {
-    return `i.tenant_id = ${stmt.tenant}`;
+    return `i.tenant_id = ${stmt.tenant}${natureAnd('i', this.scope.nature)}`;
   }
 
   /**
@@ -186,7 +203,7 @@ export class BudgetListConfig implements ListConfig {
           SELECT av.${s.versionItemFk} AS item_id, av.budget_year AS yr,
             ${converted}
           FROM ${s.versionTable} av
-          JOIN ${s.itemTable} ai ON ai.tenant_id = ${t} AND ai.id = av.${s.versionItemFk}
+          JOIN ${s.itemTable} ai ON ai.tenant_id = ${t} AND ai.id = av.${s.versionItemFk}${natureAnd('ai', s.nature)}
           JOIN ${s.totalsTable} at ON at.tenant_id = ${t} AND at.version_id = av.id
           LEFT JOIN ${fxTableSql(stmt, fx)} ON fx.yr = av.budget_year AND fx.cur = ${fxKeyCurrency('ai')} AND fx.set_key = ${fxSetKeySql(stmt, fx, 'av.fx_rate_set_id')}
           WHERE av.tenant_id = ${t} AND av.budget_year = ANY(${stmt.bind(years, 'int[]')})
@@ -433,7 +450,7 @@ export class BudgetListConfig implements ListConfig {
       FROM (
         SELECT pl.${s.projectLink.itemColumn} AS item_id, pl.project_id FROM ${s.projectLink.table} pl WHERE pl.tenant_id = ${stmt.tenant}
         UNION
-        SELECT i2.id, i2.project_id FROM ${s.itemTable} i2 WHERE i2.tenant_id = ${stmt.tenant} AND i2.project_id IS NOT NULL
+        SELECT i2.id, i2.project_id FROM ${s.itemTable} i2 WHERE i2.tenant_id = ${stmt.tenant}${natureAnd('i2', s.nature)} AND i2.project_id IS NOT NULL
       ) l
       JOIN portfolio_projects p ON p.id = l.project_id AND p.tenant_id = ${stmt.tenant}
       LEFT JOIN portfolio_streams st ON st.id = p.stream_id AND st.tenant_id = p.tenant_id
@@ -449,7 +466,7 @@ export class BudgetListConfig implements ListConfig {
   private latestTask(stmt: SqlStatement): string {
     stmt.cte('ltask', () => `SELECT DISTINCT ON (t.related_object_id) t.related_object_id AS item_id, t.title
       FROM tasks t
-      WHERE t.tenant_id = ${stmt.tenant} AND t.related_object_type = ${stmt.bind(this.scope.taskObjectType, 'text')}
+      WHERE t.tenant_id = ${stmt.tenant} AND t.related_object_type = ANY(${stmt.bind(this.scope.taskObjectTypes ?? [this.scope.taskObjectType], 'text[]')})
         AND t.status = ANY(${stmt.bind(ACTIVE_TASK_STATUSES, 'text[]')})
       ORDER BY t.related_object_id, t.created_at DESC, t.id DESC`);
     return this.join(stmt, 'ltask', `LEFT JOIN ltask ON ltask.item_id = i.id`);
@@ -464,7 +481,8 @@ export class BudgetListConfig implements ListConfig {
     const link = this.axisLink(stmt, index);
     const category = `axc${index}`;
     this.join(stmt, category, `LEFT JOIN analytics_categories ${category} ON ${category}.tenant_id = ${stmt.tenant} AND ${category}.id = ${link}.category_id`, [link]);
-    return { kind: 'text', sql: `${category}.name`, joins: [category] };
+    // Sorted in the dimension's order (D3; lot C1, decision 2): the value's position, then its name.
+    return { kind: 'text', sql: `${category}.name`, joins: [category], position: `${category}.sort_order` };
   }
 
   /** The line's link on the tenant's dimension of that index (one row at most: the link's primary key). */
@@ -521,7 +539,7 @@ export class BudgetListConfig implements ListConfig {
     stmt.cte('cons_labels', () => `SELECT k.key, min(k.label COLLATE "und-x-icu") AS label
       FROM (SELECT ${consolidationKeySql('ca')} AS key, ${consolidationLabelSql('ca')} AS label FROM accounts ca
         WHERE ca.tenant_id = ${stmt.tenant}
-          AND EXISTS (SELECT 1 FROM ${s.itemTable} li WHERE li.tenant_id = ${stmt.tenant} AND li.account_id = ca.id)) k
+          AND EXISTS (SELECT 1 FROM ${s.itemTable} li WHERE li.tenant_id = ${stmt.tenant}${natureAnd('li', s.nature)} AND li.account_id = ca.id)) k
       WHERE k.key IS NOT NULL
       GROUP BY k.key`);
     this.join(stmt, 'consl', `LEFT JOIN cons_labels consl ON consl.key = ${consolidationKeySql(acc)}`, [acc]);
@@ -577,7 +595,7 @@ export class BudgetListConfig implements ListConfig {
     // Own keys only: a request key such as `constructor` or `__proto__` names no column.
     if (Object.prototype.hasOwnProperty.call(this.columns, key)) {
       const kind = this.columns[key];
-      const column = `i.${key}`;
+      const column = this.columnSql(key);
       switch (kind) {
         case 'uuid':
         case 'enum':
@@ -601,6 +619,10 @@ export class BudgetListConfig implements ListConfig {
     }
 
     switch (key) {
+      // The line's own number, its BL-n reference, in every scope: the CAPEX alias's `item_number` is
+      // the CPX number (`lineNumberSql`). The reports link the lines of one nature with it.
+      case 'line_number':
+        return { kind: 'int', sql: 'i.item_number', joins: [] };
       case 'supplier_name': {
         const sup = this.supplier(stmt);
         return { kind: 'text', sql: `${sup}.name`, joins: [sup] };
@@ -651,7 +673,7 @@ export class BudgetListConfig implements ListConfig {
         const index = link.slice(2);
         return key === 'analytics_category_id'
           ? { kind: 'uuid', sql: `${link}.category_id::text`, joins: [link] }
-          : { kind: 'text', sql: `axc${index}.name`, joins: [`axc${index}`] };
+          : { kind: 'text', sql: `axc${index}.name`, joins: [`axc${index}`], position: `axc${index}.sort_order` };
       }
       case 'cost_center_code':
       case 'cost_center_name':
@@ -750,10 +772,11 @@ export class BudgetListConfig implements ListConfig {
       WHERE v.tenant_id = ${t} AND v.budget_year = ${Y} AND ${match(this.allocationLabelSql('v', Y))}`);
 
     const own = Array.from(new Set([
-      'i.item_number::text',
-      `${sqlLiteral(`${s.refPrefix}-`)} || i.item_number::text`,
+      `${this.columnSql('item_number')}::text`,
+      `${sqlLiteral(`${s.refPrefix}-`)} || ${this.columnSql('item_number')}::text`,
       `i.${s.nameField}`,
       'i.description',
+      ...(s.allNatures ? ['i.legacy_number'] : []),
       'i.notes',
       'i.currency::text',
       ...s.extraFields.map((field) => `i.${field}::text`),

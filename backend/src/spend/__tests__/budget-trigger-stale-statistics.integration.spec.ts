@@ -3,7 +3,8 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { BudgetFreshnessCounters1853740000000 } from '../../migrations/1853740000000-budget-freshness-counters';
 import { BudgetTriggerPlans1853850000000 } from '../../migrations/1853850000000-budget-trigger-plans';
-import { assert, inRolledBackTransaction, Kind, repeat, runSpecs, seedLine, seedTenant } from './round-inputs.fixtures';
+import { assert, CAPEX_NUMBER_OFFSET, inRolledBackTransaction, Kind, runSpecs, seedTenant } from './round-inputs.fixtures';
+import { seedDormantCapexItem, seedDormantCapexVersion } from './dormant-capex.fixtures';
 
 // The budget statement triggers with stale statistics (plan planning/perf-scale, item 4C bis;
 // migration 1853850000000), against the database: a tenant with 25,000 versions, the planner
@@ -20,6 +21,9 @@ import { assert, inRolledBackTransaction, Kind, repeat, runSpecs, seedLine, seed
 // while an amounts trigger did not fire; down() puts the previous bodies back.
 // Each test runs in a transaction rolled back at the end; the tables' statistics are taken
 // again afterwards (ANALYZE), whatever the outcome.
+// Since lot Z1 the CAPEX lines are in the spend_* tables (nature 'capex'): the CAPEX statements
+// write there. The capex_* tables are dormant (dropped by lot Z2) but keep their triggers, which
+// the migration still repairs: its rerun test seeds its CAPEX line in capex_items.
 // @database-spec: run-ci-tests.js runs this file in its serial database lane.
 
 const PREVIOUS = process.env.STALE_STATS_PREVIOUS_FUNCTIONS === '1';
@@ -49,8 +53,8 @@ const T = {
     rounds: 'spend_round_inputs', lines: 'spend_round_input_lines', totals: 'spend_version_totals',
   },
   capex: {
-    items: 'capex_items', itemFk: 'capex_item_id', versions: 'capex_versions', amounts: 'capex_amounts',
-    rounds: 'capex_round_inputs', lines: 'capex_round_input_lines', totals: 'capex_version_totals',
+    items: 'spend_items', itemFk: 'spend_item_id', versions: 'spend_versions', amounts: 'spend_amounts',
+    rounds: 'spend_round_inputs', lines: 'spend_round_input_lines', totals: 'spend_version_totals',
   },
 } as const;
 
@@ -85,8 +89,9 @@ async function seedVersions(runner: QueryRunner, kind: Kind, tenantId: string) {
     );
   } else {
     await runner.query(
-      `INSERT INTO capex_items (tenant_id, description, ppe_type, investment_type, priority, currency, effective_start, item_number)
-       SELECT $1, 'Stale statistics line ' || g, 'hardware', 'replacement', 'medium', 'EUR', '2020-01-01', g FROM generate_series(1, $2::int) g`,
+      `INSERT INTO spend_items (tenant_id, nature, product_name, ppe_type, investment_type, priority, currency, effective_start, item_number, legacy_number)
+       SELECT $1, 'capex', 'Stale statistics line ' || g, 'hardware', 'replacement', 'medium', 'EUR', '2020-01-01', g + ${CAPEX_NUMBER_OFFSET}, 'CPX-' || g
+         FROM generate_series(1, $2::int) g`,
       [tenantId, ITEMS],
     );
   }
@@ -369,9 +374,14 @@ async function testMigrationRerunAndDown() {
     assert.equal(before.size, FUNCTIONS.length * 3, 'three statement triggers per function');
     const rls = await rlsState(runner);
 
-    // A CAPEX line whose months change while its update trigger is off: its totals drift.
+    // A CAPEX line whose months change while its update trigger is off: its totals drift. The line
+    // is in the dormant capex_* tables, which the migration still repairs.
     const tenantId = await seedTenant(runner, 'stale-stats-rerun');
-    const { versionId } = await seedLine(runner, 'capex', tenantId, FIRST_YEAR, { planned: repeat('10', 12) });
+    const versionId = await seedDormantCapexVersion(runner, tenantId, await seedDormantCapexItem(runner, tenantId), FIRST_YEAR);
+    await runner.query(
+      `INSERT INTO capex_amounts (tenant_id, version_id, period, planned) SELECT $1, $2, make_date($3, m, 1), $4::numeric FROM generate_series(1, 12) m`,
+      [tenantId, versionId, FIRST_YEAR, '10'],
+    );
     await runner.query('ALTER TABLE capex_amounts DISABLE TRIGGER capex_amounts_version_totals_update');
     await runner.query(`UPDATE capex_amounts SET planned = planned + 5 WHERE version_id = $1`, [versionId]);
     const planned = async () => (await runner.query(`SELECT planned::text AS planned FROM capex_version_totals WHERE version_id = $1`, [versionId]))[0]?.planned;

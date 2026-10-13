@@ -18,7 +18,7 @@ import CreateCoADialog from './CreateCoADialog';
 import ManageCoAsDialog from './ManageCoAsDialog';
 import { CoaListItem, useCoaList } from './useCoaList';
 import { coaCoverage, coaRoleLabels, useCountryName } from './coaRoles';
-import { tealLinkSx } from '../../theme/formSx';
+import { neutralLinkSx, tealLinkSx } from '../../theme/formSx';
 import { statusColumnProps } from '../../components/grid/statusColumn';
 import { lineTypeUsageColumnProps } from '../../components/grid/lineTypeUsageColumn';
 import type { AccountNature } from '../../constants/accountNature';
@@ -55,22 +55,6 @@ const attentionDotSx = {
   bgcolor: 'kanap.orange',
   flexShrink: 0,
 } as const;
-
-/** A clickable sentence that stays neutral (charter: no teal on content), underlined on hover or when active. */
-const neutralLinkSx = (active: boolean) => ({
-  background: 'none',
-  border: 'none',
-  p: 0,
-  font: 'inherit',
-  color: 'kanap.text.primary',
-  fontWeight: active ? 500 : 400,
-  cursor: 'pointer',
-  textAlign: 'left' as const,
-  textDecoration: active ? 'underline' : 'none',
-  textUnderlineOffset: '2px',
-  '&:hover': { textDecoration: 'underline' },
-  '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: '2px', borderRadius: '2px' },
-});
 
 function pickFallbackCoaId(coas: CoaListItem[]): string | undefined {
   return (

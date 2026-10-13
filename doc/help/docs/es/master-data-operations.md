@@ -9,7 +9,7 @@ Los indicadores anuales son la plantilla, los usuarios IT y la facturación de l
 - Espacio de trabajo: **Gestión presupuestaria**
 - Ruta: **Gestión presupuestaria > Administración**, sección **Operaciones**, tarjetas **Congelar datos maestros** y **Copiar indicadores anuales**
 - Permisos:
-  - Acceso al presupuesto (acceso de lector a OPEX, CAPEX o la administración presupuestaria), más uno de los permisos `companies:admin`, `departments:admin` o `budget_ops:admin`
+  - Acceso al presupuesto (acceso de lector a Presupuesto o a la administración presupuestaria), más uno de los permisos `companies:admin`, `departments:admin` o `budget_ops:admin`
   - Las tarjetas se ocultan a los demás usuarios
 
 Los datos maestros no tienen una entrada de Administración propia.
@@ -36,7 +36,7 @@ La página muestra una tarjeta de estado para cada alcance:
 La congelación bloquea las métricas anuales en la pestaña **Detalles** de Empresas (plantilla, usuarios IT, facturación) o Departamentos (plantilla). No afecta:
 
 - La pestaña Visión general (nombre, descripción y otros campos generales)
-- Partidas OPEX o CAPEX
+- Líneas OPEX o CAPEX
 
 ### Permisos
 
@@ -155,8 +155,8 @@ Congeló 2025 pero detectó un error en la plantilla de una empresa.
 **¿Qué pasa si intento editar un año congelado?**
 La pestaña Detalles de Empresas o Departamentos se vuelve de solo lectura para ese año. Verá un mensaje indicando que los datos están congelados. Descongele para hacer cambios.
 
-**¿La congelación afecta a las partidas OPEX o CAPEX?**
-No. La congelación solo bloquea las métricas anuales (plantilla, usuarios IT, facturación) en Empresas y Departamentos. Las partidas OPEX y CAPEX no se ven afectadas.
+**¿La congelación afecta a las líneas OPEX o CAPEX?**
+No. La congelación solo bloquea las métricas anuales (plantilla, usuarios IT, facturación) en Empresas y Departamentos. Las líneas OPEX y CAPEX no se ven afectadas.
 
 **¿Puedo copiar datos a un año congelado?**
 No. La herramienta de Copia mostrará un error y deshabilitará los botones de acción. Descongele primero el año de destino.

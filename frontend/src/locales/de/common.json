@@ -30,7 +30,8 @@
     "selectAll": "Alle auswählen",
     "browse": "Durchsuchen",
     "loadMore": "Mehr laden",
-    "done": "Fertig"
+    "done": "Fertig",
+    "moreActions": "Weitere Aktionen"
   },
   "status": {
     "loading": "Wird geladen...",
@@ -98,6 +99,7 @@
     "clearSearch": "Suche löschen"
   },
   "labels": {
+    "positionOf": "{{index}} von {{total}}",
     "show": "Anzeigen",
     "all": "Alle",
     "enabled": "Aktiv",
@@ -189,11 +191,14 @@
     "selectTemplate": "Vorlage auswählen",
     "useTemplate": "Vorlage verwenden",
     "noTemplatesAvailable": "Keine veröffentlichten Vorlagen verfügbar.",
+    "newOpexLine": "Neue OPEX-Zeile",
+    "newCapexLine": "Neue CAPEX-Zeile",
+    "newContract": "Neuer Vertrag",
     "newOpex": "Neuer OPEX",
     "newCapex": "Neuer CAPEX",
     "recentUpdates": "Aktuelle Änderungen",
     "noRecentUpdates": "Keine aktuellen Änderungen",
-    "quickActions": "Schnellaktionen",
+    "budgetSnapshot": "Budget",
     "opexSnapshot": "OPEX-Überblick",
     "capexSnapshot": "CAPEX-Überblick",
     "myTasks": "Meine Aufgaben",
@@ -209,11 +214,13 @@
       "noBudgetNextYear": "Ohne {{column}} im nächsten Jahr",
       "accountOutsideChart": "Konto nicht im Kontenplan des Unternehmens"
     },
-    "topItemsY": "Top-Positionen ({{column}}, J)",
-    "topIncreasesYvsYminus1": "Stärkste Zuwächse ({{column}}, J vs J-1)",
+    "topItems": "Top-Zeilen",
+    "columnY": "{{column}}, J",
+    "topIncreases": "Stärkste Zuwächse",
+    "columnYvsYminus1": "{{column}}, J vs J-1",
     "noIncreases": "Keine Zuwächse",
     "myBudget": {
-      "title": "Mein Budget ({{column}}, J)",
+      "title": "Mein Budget",
       "roles": {
         "itOwner": "Als IT-Verantwortlicher",
         "businessOwner": "Als Fachbereichsverantwortlicher",
@@ -221,9 +228,10 @@
       },
       "lineCount_one": "{{count}} Zeile",
       "lineCount_other": "{{count}} Zeilen",
-      "none": "Keine Budgetzeilen auf Ihren Namen"
+      "none": "Keine Budgetzeilen auf Ihren Namen",
+      "myLines": "Meine Zeilen"
     },
-    "byCostCenterY": "Nach Kostenstelle ({{column}}, J)",
+    "byCostCenter": "Nach Kostenstelle",
     "noCostCenter": "Ohne Kostenstelle",
     "settings": {
       "title": "Dashboard-Einstellungen",
@@ -350,8 +358,8 @@
         "connection": "Verbindung",
         "contract": "Vertrag",
         "task": "Aufgabe",
-        "opexItem": "OPEX-Posten",
-        "capexItem": "CAPEX-Posten",
+        "opexItem": "OPEX-Zeile",
+        "capexItem": "CAPEX-Zeile",
         "incident": "Vorfall",
         "location": "Standort",
         "document": "Dokument"
@@ -373,7 +381,15 @@
       "netboxErrors_one": "{{count}} Fehler",
       "netboxErrors_other": "{{count}} Fehler"
     },
-    "welcome": "Willkommen"
+    "welcome": "Willkommen",
+    "budgetSettings": {
+      "customize": "Anpassen",
+      "title": "Einstellungen des Budget-Dashboards",
+      "columns": "Betragsspalten",
+      "tenantColumns": "Spalten des Mandanten",
+      "atLeastOne": "Wählen Sie mindestens eine Betragsspalte.",
+      "saveFailed": "Die Dashboard-Einstellungen konnten nicht gespeichert werden."
+    }
   },
   "csv": {
     "exportTitle": "CSV exportieren",
@@ -463,7 +479,10 @@
     "costCentersLoadFailed": "Die Kostenstellen konnten nicht geladen werden.",
     "notSet": "Nicht festgelegt",
     "moreResults": "Weiter tippen, um einzugrenzen: es gibt weitere Ergebnisse",
-    "valueUnavailable": "Wert nicht mehr verfügbar"
+    "valueUnavailable": "Wert nicht mehr verfügbar",
+    "budgetLines": "Budgetzeilen",
+    "searchBudgetLines": "Budgetzeilen suchen",
+    "noBudgetLinesFound": "Keine Budgetzeilen gefunden"
   },
   "documentEditor": {
     "expandDocument": "Dokument erweitern",
@@ -629,7 +648,8 @@
     "fromSupplier": "Vom Lieferanten",
     "manuallyAdded": "Manuell hinzugefügt",
     "removeContact": "Kontakt entfernen",
-    "insufficientPermission": "Unzureichende Berechtigung"
+    "insufficientPermission": "Unzureichende Berechtigung",
+    "syncFromSupplier": "Kontakte des Lieferanten übernehmen"
   },
   "export": {
     "button": "Exportieren",
@@ -751,13 +771,13 @@
     "changedAt": "Anderswo geändert um {{time}}",
     "changedOn": "Anderswo geändert am {{date}} um {{time}}",
     "changed": "Anderswo geändert",
-    "changedByYouAt": "Sie haben diese Position um {{time}} anderswo geändert",
-    "changedByYouOn": "Sie haben diese Position am {{date}} um {{time}} anderswo geändert",
-    "changedByYou": "Sie haben diese Position anderswo geändert",
+    "changedByYouAt": "Sie haben diese Zeile um {{time}} anderswo geändert",
+    "changedByYouOn": "Sie haben diese Zeile am {{date}} um {{time}} anderswo geändert",
+    "changedByYou": "Sie haben diese Zeile anderswo geändert",
     "aUser": "einem Benutzer",
     "badge": "Anderswo geändert",
     "reload": "Neu laden",
     "reloadHint": "Neu laden zeigt diese Änderungen. Was Sie gerade bearbeiten, bleibt auf dem Bildschirm.",
-    "deleted": "Diese Position wurde gelöscht"
+    "deleted": "Diese Zeile wurde gelöscht"
   }
 }

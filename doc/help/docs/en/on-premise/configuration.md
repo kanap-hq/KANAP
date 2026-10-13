@@ -26,13 +26,15 @@ Write the value exactly. A misspelled value (`single_tenant`) starts KANAP in cl
 | --------------------- | -------- | ----------------- | --------------------------------------------------------------- |
 | `DEFAULT_TENANT_SLUG` | No       | `default`         | Internal identifier for the tenant (URL-safe, lowercase)        |
 | `DEFAULT_TENANT_NAME` | No       | `My Organization` | Your organization's name: the text alternative of the logo, and the name the AI assistant uses |
+| `DEFAULT_TENANT_LANGUAGE` | No | `en` | The language of the analytics dimensions the workspace starts with: `en`, `fr`, `de` or `es` |
 
 On first boot, KANAP creates a tenant using these values. The defaults work for most deployments. A new installation also receives the default IFRS chart of accounts, set as its default and consolidation chart (upgrading an existing installation does not add it).
 
-Set both before the first start:
+Set them before the first start:
 
 - Changing `DEFAULT_TENANT_SLUG` later makes KANAP create a second, empty workspace and serve that one. The first workspace stays in the database, out of reach.
 - Changing `DEFAULT_TENANT_NAME` later has no effect, and the application has no page to rename the organization. Set the name before the first start.
+- Changing `DEFAULT_TENANT_LANGUAGE` later has no effect: the dimensions keep their names. You can rename them in **Master data > Analytics dimensions**.
 
 To give KANAP the look of your organization, add your logo and colors in **Admin → Branding**.
 
@@ -448,6 +450,7 @@ DEPLOYMENT_MODE=single-tenant
 # TENANT CONFIGURATION (optional - defaults shown; set before the first start)
 DEFAULT_TENANT_SLUG=default
 DEFAULT_TENANT_NAME=My Organization
+DEFAULT_TENANT_LANGUAGE=en
 
 # ADMIN CREDENTIALS (required - read at the first start only)
 # Replace the example password with a value of your own, 12 characters or more.
@@ -584,9 +587,9 @@ The API runs 15 scheduled jobs. The times below are the defaults, in UTC (the cl
 
 | Job | When | What it does |
 |-----|------|--------------|
-| `check-expirations` | Daily 08:00 | Emails the owners of contracts and OPEX items 30, 14, 7 and 1 day(s) before a cancellation deadline, an end date or the end of validity. Only users who switched these notifications on receive them, once per day. |
+| `check-expirations` | Daily 08:00 | Emails the owners of contracts and OPEX lines 30, 14, 7 and 1 day(s) before a cancellation deadline, an end date or the end of validity. Only users who switched these notifications on receive them, once per day. |
 | `send-weekly-reviews` | Hourly | Sends the weekly review digest to users who opted in, at their own day and time zone. |
-| `lifecycle-status-sync` | Hourly, and once at start | Switches master data, contracts, OPEX and CAPEX items to disabled once their end of validity has passed. |
+| `lifecycle-status-sync` | Hourly, and once at start | Switches master data, contracts, OPEX and CAPEX lines to disabled once their end of validity has passed. |
 | `entra-directory-sync` | Daily 03:00 | Refreshes user attributes and disables accounts removed or deactivated in the directory. Works only when Entra SSO is connected and approved. See [Microsoft Entra SSO](sso-entra.md). |
 | `attachment-orphan-cleanup` | Daily 03:00 | Removes the attachment records of inline images that no text uses any more. |
 | `storage-ghost-cleanup` | Sunday 04:00 | Removes stored files that have no attachment record and are older than 7 days. |

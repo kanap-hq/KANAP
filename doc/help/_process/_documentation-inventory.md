@@ -1,6 +1,6 @@
 # User Manual Documentation Inventory
 
-_Generated: 2026-10-08_
+_Generated: 2026-10-12_
 
 This document tracks documentation coverage for the KANAP user manual.
 
@@ -9,16 +9,16 @@ This document tracks documentation coverage for the KANAP user manual.
 | Category | Total Pages | Documented | Gap |
 |----------|-------------|------------|-----|
 | Home | 1 | 1 | 0 |
-| Budget Management | 9 | 9 | 0 |
+| Budget Management | 8 | 8 | 0 |
 | IT Landscape | 9 | 9 | 0 |
 | Knowledge | 1 | 1 | 0 |
 | Master Data | 8 | 8 | 0 |
 | Admin & Settings | 16 | 16 | 0 |
 | Plaid | 1 | 1 | 0 |
 | AI Agents | 5 | 5 | 0 |
-| Reports | 10 | 10 | 0 |
+| Reports | 9 | 9 | 0 |
 | Portfolio | 10 | 10 | 0 |
-| **TOTAL** | **70** | **70** | **0** |
+| **TOTAL** | **68** | **68** | **0** |
 
 _Note: Supplemental Fast Track guides are excluded from these route-based counts. All tenant-facing routes have a manual. The classic product (through the 2026-05-10 sweep) is available in en/fr/de/es; the AI Agents section (added 2026-07-05) is also available in en/fr/de/es. The two AI model registry pages (added 2026-08-10) are available in en/fr/de/es._
 
@@ -28,6 +28,7 @@ _Note: Supplemental Fast Track guides are excluded from these route-based counts
 
 | Date | Doc File | Changes |
 |------|----------|---------|
+| 2026-10-12 | `budget-lines.md` (en/fr/de/es) | Unified budget. New `budget-lines.md` replaces the former OPEX and CAPEX pages: one list at **Budget management > Budget lines** (`/ops/budget`) with the **Type** column and its filter, `BL-n` references (former `OPX-n` and `CPX-n` still found), **Total (N lines)** with **Total OPEX** and **Total CAPEX** rows and lock icons, the **Type** row of the Properties panel, description and notes on every line, **Change type...** in place or from a later year. Updated `budget-operations.md` (freeze page: year tabs, one cell per column and type, **Freeze both** / **Unfreeze both**, lock icons in the list), `reports.md` (**All** tab by default, **Budget comparison** replaces Budget trend (OPEX), Budget trend (CAPEX) removed, its address opens the comparison on CAPEX), `operations-dashboard.md` (Budget tile, header actions, My budget, By cost center, Recent updates, **Customize**), `ai-assistant.md` (`@BL` mentions), `budget-data-model.md`, `budget-file.md`, and the links of `analytics.md`, `cost-centers.md`, `working-day-calendars.md`, `index.md`, `fast-track/task-types.md`. mkdocs nav **Budget lines** with fr/de/es labels, `docUrls.ts` maps `/ops/budget*` to `budget-lines`, `doc-update-map.tsv` maps `pages/budget/**` and `components/finance/**`. |
 | 2026-10-08 | _Included model confirmation (6 pages, en/fr/de/es)_ | Documented the confirmation of the KANAP included model by a workspace administrator (hosted service only). `ai-settings`: new section **Confirming the KANAP included model** (status line in the Provider card, **Confirm**, the **Confirm and turn on** window opened by **Enable chat**, **Withdraw**, when a new confirmation is asked, MCP not affected, nothing to confirm with own models or on-premise), the **Provider ready** chip hidden while only the confirmation is missing, the **Enable chat** and **Enable MCP** notes. `ai-assistant`: the notice shown while Plaid waits. `ai-models`: the third step of the resolution chain and the included-model row now mention the confirmation. `agents-overview`: the banner shown when agents wait for it. `agents-workspace`: the **AI model** setting and the pause of agents on the included model. Corrected two gaps from the A2 review: `admin` (the Contributor level is offered on most resources; portfolio projects, incidents and AI agents use it) and the autonomy text in `agents-overview` and `agents-workspace` (a bad hour holds the next automatic action; acceptance below half turns the type back to ask first). fr/de/es synced. No new route, so no mkdocs nav or `docUrls.ts` change. |
 | 2026-10-08 | `sample-data.md` (en/fr/de/es) | New page for **Admin** → **Sample data** (`/admin/sample-data`, cloud workspaces, Administrator role): what the Fromage & Co set contains, when a workspace counts as empty, loading and failure recovery, the home banner (**Load**, **Hide**), and **Erase everything and start over** (what is erased, kept and reset to defaults, the typed workspace name, the e-mail to Administrators, writes refused while it runs, allowed on frozen workspaces). Aligned with the review fixes (banner only before the first load and never after an erase, one-line load refusal, failed erase shown on the page, real nav labels). `admin.md` and `my-dashboard.md` (four languages) get a short **Sample data** section and permission line (`admin.md`) and a note on the home line (`my-dashboard.md`). Wired mkdocs nav (+fr/de/es labels), `index.md`, `doc-update-map.tsv`; `docUrls.ts` already maps the route. |
 | 2026-10-07 | `chart-of-accounts.md` (en/fr/de/es) | Consolidation chart. Chart roles in words (**Country default**, **Default for other countries**, **Consolidation chart**) replace the star and circle-plus badges. Rewrote the **Manage charts** dialog (table, row menu, confirmations) and the create dialog. New consolidation health line with its grid filter and marker. The account workspace now has the shared workspace layout with autosave and a **Consolidation account** picker. New sections: chart roles, change the consolidation chart, CSV behaviour for consolidation names. Account numbers are whole numbers. Small updates in `companies.md`, `budget-file.md`, `budget-data-model.md` and `reports.md` (default chart wording, link to the consolidation chart). |
@@ -65,8 +66,8 @@ _Note: Supplemental Fast Track guides are excluded from these route-based counts
 | 2026-02-10 | `tasks.md` | Added "Sending a link" section (Send link feature) |
 | 2026-02-10 | `portfolio-projects.md` | Added "Sending a link" section (Send link feature) |
 | 2026-02-10 | `portfolio-requests.md` | Added "Sending a link" section (Send link feature) |
-| 2026-02-10 | `opex.md` | Rewrote Tasks tab for new EntityTasksPanel (list view with links to task workspace) |
-| 2026-02-10 | `capex.md` | Rewrote Tasks tab for new EntityTasksPanel |
+| 2026-02-10 | OPEX page (now in `budget-lines.md`) | Rewrote Tasks tab for new EntityTasksPanel (list view with links to task workspace) |
+| 2026-02-10 | CAPEX page (now in `budget-lines.md`) | Rewrote Tasks tab for new EntityTasksPanel |
 | 2026-02-10 | `contracts.md` | Rewrote Tasks tab for new EntityTasksPanel |
 | 2026-02-10 | `operations-dashboard.md` | Updated for dashboard redesign: 3-column layout, View buttons, structured tile sections |
 | 2026-02-10 | `tasks.md` | Fixed OPEX terminology, added default task type auto-selection |
@@ -124,8 +125,7 @@ _Note: `/my/dashboard` redirects to `/`. `/my/tasks` and `/ops/tasks` redirect t
 | Route | Component | Status | Doc File |
 |-------|-----------|--------|----------|
 | `/ops` | DashboardPage (Overview) | **DOCUMENTED** | `operations-dashboard.md` |
-| `/ops/opex` | OpexListPage + SpendItemPage | **DOCUMENTED** | `opex.md` |
-| `/ops/capex` | CapexPage + CapexItemPage | **DOCUMENTED** | `capex.md` |
+| `/ops/budget` | BudgetListPage + BudgetLinePage (`/ops/budget/:ref`) | **DOCUMENTED** | `budget-lines.md` |
 | `/ops/contracts` | ContractsPage + ContractWorkspacePage | **DOCUMENTED** | `contracts.md` |
 | `/ops/operations` | BudgetOperationsLandingPage (Administration) | **DOCUMENTED** | `budget-operations.md` |
 | `/ops/operations/freeze` | BudgetFreezePage | **DOCUMENTED** | (in budget-operations) |
@@ -133,6 +133,8 @@ _Note: `/my/dashboard` redirects to `/`. `/my/tasks` and `/ops/tasks` redirect t
 | `/ops/operations/copy-allocations` | CopyAllocationsPage | **DOCUMENTED** | (in budget-operations) |
 | `/ops/operations/column-reset` | BudgetColumnResetPage | **DOCUMENTED** | (in budget-operations) |
 | `/ops/operations/columns` | BudgetColumnsSettingsPage | **DOCUMENTED** | (in budget-operations) |
+
+_Note: `/ops/opex`, `/ops/capex` and their line addresses (`/ops/opex/:id`, `/ops/capex/:id`) redirect to `/ops/budget`, with the **Type** filter set or the line resolved by its former number._
 | `/ops/operations/allocation-default` | AllocationDefaultPage | **DOCUMENTED** | (in budget-operations) |
 | `/ops/operations/currency` | CurrencySettingsPage | **DOCUMENTED** | `currencies.md` |
 | `/ops/operations/master-data-freeze` | MasterDataFreezePage | **DOCUMENTED** | `master-data-operations.md` |
@@ -246,12 +248,13 @@ _Note: `/admin/agent-control` and `/admin/agent-control/*` redirect to `/agents`
 | `/ops/reports/top-opex` | TopOpexReport | **DOCUMENTED** | `reports.md` |
 | `/ops/reports/opex-delta` | OpexDeltaReport | **DOCUMENTED** | `reports.md` |
 | `/ops/reports/comparison` | ComparisonReport | **DOCUMENTED** | `reports.md` |
-| `/ops/reports/capex/trend` | CapexBudgetTrendReport | **DOCUMENTED** | `reports.md` |
 | `/ops/reports/budget-columns-compare` | BudgetColumnsCompareReport | **DOCUMENTED** | `reports.md` |
 | `/ops/reports/consolidation` | ConsolidationReport | **DOCUMENTED** | `reports.md` |
 | `/ops/reports/analytics` | AnalyticsCategoryReport | **DOCUMENTED** | `reports.md` |
 | `/ops/reports/chargeback/global` | GlobalChargebackReport | **DOCUMENTED** | `reports.md` |
 | `/ops/reports/chargeback/company` | CompanyChargebackReport | **DOCUMENTED** | `reports.md` |
+
+_Note: `/ops/reports/capex/trend` (the former Budget trend (CAPEX) report) redirects to `/ops/reports/comparison?scope=capex`._
 
 ### Portfolio
 

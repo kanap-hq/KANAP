@@ -1,7 +1,8 @@
 import { EntityManager } from 'typeorm';
 import { EditBase, EditConflict, EditedField, assertNoEditConflicts, hasBase, sameFieldValue } from '../common/edit-conflicts';
 import { ItemAnalyticsChange, ItemAnalyticsValue } from './item-analytics.util';
-import { ItemWriteScope, itemWritableColumns } from './item-write.util';
+import { ItemWriteFields, ItemWriteScope, itemFieldColumn, itemWritableColumns } from './item-write.util';
+import { auditTableOf } from './budget-nature';
 
 /**
  * The edit conflicts of an OPEX or CAPEX line update (plan planning/perf-scale,
@@ -24,7 +25,8 @@ import { ItemWriteScope, itemWritableColumns } from './item-write.util';
  * line imported or written by the AI may store it in small letters.
  */
 
-const TABLES: Record<ItemWriteScope, string> = { opex: 'spend_items', capex: 'capex_items' };
+/** The audit label of a line of each nature (`auditTableOf`): the history the conflicts read. */
+const TABLES: Record<ItemWriteScope, string> = { opex: auditTableOf('opex', 'spend_items'), capex: auditTableOf('capex', 'spend_items') };
 
 export const ANALYTICS_FIELD_PREFIX = 'analytics_values.';
 
@@ -49,18 +51,21 @@ export function itemEditedFields(
     disabledAt: Date | null;
     analytics: ItemAnalyticsChange[];
   },
+  fieldsMode: ItemWriteFields = 'api',
 ): EditedField[] {
   const supplied = (key: string) => Object.prototype.hasOwnProperty.call(changes, key) && changes[key] !== undefined;
   const fields: EditedField[] = [];
-  for (const column of itemWritableColumns(scope)) {
-    if (!supplied(column) || !(column in resolved.values) || !hasBase(base, column)) continue;
+  // Use the caller's field names: alias description is the title; native description is its own column.
+  for (const field of itemWritableColumns(scope, fieldsMode)) {
+    const column = itemFieldColumn(scope, field, fieldsMode);
+    if (!supplied(field) || !(column in resolved.values) || !hasBase(base, field)) continue;
     fields.push({
-      field: column,
-      base: base[column],
+      field,
+      base: base[field],
       current: resolved.before[column] ?? null,
       mine: resolved.values[column],
-      auditPath: [column],
-      ...(CASE_INSENSITIVE_COLUMNS.has(column) ? { same: sameCode } : {}),
+      auditPath: [field],
+      ...(CASE_INSENSITIVE_COLUMNS.has(field) ? { same: sameCode } : {}),
     });
   }
   if (hasBase(base, 'disabled_at') && LIFECYCLE_INPUTS.some(supplied)) {
@@ -158,9 +163,10 @@ export async function assertNoItemEditConflicts(
   base: EditBase | null,
   changes: Record<string, unknown>,
   resolved: Parameters<typeof itemEditedFields>[3],
+  fieldsMode: ItemWriteFields = 'api',
 ): Promise<void> {
   if (!base) return;
-  const fields = itemEditedFields(scope, base, changes, resolved);
+  const fields = itemEditedFields(scope, base, changes, resolved, fieldsMode);
   if (fields.length === 0) return;
   await assertNoEditConflicts(manager, {
     tenantId,

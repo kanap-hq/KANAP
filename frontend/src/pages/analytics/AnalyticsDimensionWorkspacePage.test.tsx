@@ -1,7 +1,7 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, focusManager } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
@@ -16,7 +16,11 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
       if (key === 'master-data:analytics.analyticsCategoryFallback' || key === 'analytics.analyticsCategoryFallback') return 'Analytics dimension';
-      return opts && 'code' in opts ? `${key}:${opts.code}` : key;
+      if (opts && 'code' in opts) return `${key}:${opts.code}`;
+      // A delete confirmation shows what it carries: the name, the counts, the nested phrases.
+      if (key.startsWith('analytics.forceDelete.') && opts) return `${key}:${Object.values(opts).join('|')}`;
+      // The usage line's count shows after its key, so a test sees the number of lines.
+      return key.startsWith('analytics.usage.') && opts && 'count' in opts ? `${key}:${opts.count}` : key;
     },
     i18n: { language: 'en', resolvedLanguage: 'en' },
   }),
@@ -69,6 +73,7 @@ const DEFAULT: AnalyticsAxisDetail = {
   sort_order: 0,
   is_default: true,
   applies_to: null,
+  required: false,
   status: 'enabled',
   disabled_at: null,
   value_count: 15,
@@ -87,6 +92,14 @@ const NATURE: AnalyticsAxisDetail = {
   capex_count: 2,
 };
 
+const requiredSwitch = () => screen.getByRole('checkbox', { name: 'analytics.fields.required' });
+/** The path and the filters an href carries inline. */
+const linkTarget = (href: string | null) => {
+  const [path, search] = String(href).split('?');
+  const params = new URLSearchParams(search);
+  return { path, filters: JSON.parse(params.get('filters') ?? 'null'), statusScope: params.get('statusScope'), from: params.get('from') };
+};
+
 const usageSelect = () => screen.getByRole('combobox', { name: 'shared.lineTypeUsage.label' });
 
 async function pickUsage(label: string) {
@@ -94,8 +107,7 @@ async function pickUsage(label: string) {
   fireEvent.click(within(await screen.findByRole('listbox')).getByRole('option', { name: label }));
 }
 
-function renderAt(path: string) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function renderAt(path: string, queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
@@ -115,14 +127,16 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     vi.clearAllMocks();
     levels.value = 'admin';
     axesState.list = [DEFAULT, NATURE];
-    mocked.getAnalyticsAxis.mockImplementation(async (id: string) => (id === 'ax-default' ? DEFAULT : NATURE));
-    mocked.updateAnalyticsAxis.mockImplementation(async (id: string, patch: Partial<AnalyticsAxisDetail>) => ({
-      ...(id === 'ax-default' ? DEFAULT : NATURE),
-      ...patch,
-    }));
+    // The server keeps what it saved: a read after a save returns it.
+    const stored: Record<string, AnalyticsAxisDetail> = { 'ax-default': DEFAULT, 'ax-nature': NATURE };
+    mocked.getAnalyticsAxis.mockImplementation(async (id: string) => stored[id]);
+    mocked.updateAnalyticsAxis.mockImplementation(async (id: string, patch: Partial<AnalyticsAxisDetail>) => {
+      stored[id] = { ...stored[id], ...patch };
+      return stored[id];
+    });
   });
 
-  it('saves name, code, order and description when each field loses focus, with no save button', async () => {
+  it('saves name, code and description when each field loses focus, with no save button', async () => {
     renderAt('/master-data/analytics/dimensions/ax-nature/overview');
     const code = await screen.findByLabelText('analytics.fields.code');
     expect(screen.queryByRole('button', { name: /save/i })).toBeNull();
@@ -130,11 +144,6 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     expect(mocked.updateAnalyticsAxis).not.toHaveBeenCalled();
     fireEvent.blur(code);
     await waitFor(() => expect(mocked.updateAnalyticsAxis).toHaveBeenCalledWith('ax-nature', { code: 'kind' }));
-
-    const order = screen.getByLabelText('analytics.fields.order');
-    fireEvent.change(order, { target: { value: '3' } });
-    fireEvent.blur(order);
-    await waitFor(() => expect(mocked.updateAnalyticsAxis).toHaveBeenCalledWith('ax-nature', { sort_order: 3 }));
 
     const name = screen.getByLabelText('analytics.fields.name');
     fireEvent.change(name, { target: { value: ' Kind of cost ' } });
@@ -147,18 +156,21 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     await waitFor(() => expect(mocked.updateAnalyticsAxis).toHaveBeenCalledWith('ax-nature', { description: 'What the money buys' }));
   });
 
-  it('refuses a malformed code or order under its field without saving', async () => {
+  it('refuses a malformed code under its field without saving', async () => {
     renderAt('/master-data/analytics/dimensions/ax-nature/overview');
     const code = await screen.findByLabelText('analytics.fields.code');
     fireEvent.change(code, { target: { value: 'Kind of cost' } });
     fireEvent.blur(code);
     const message = await screen.findByText('analytics.messages.codeInvalid');
     expect(code.closest('.MuiFormControl-root')).toContainElement(message);
-    const order = screen.getByLabelText('analytics.fields.order');
-    fireEvent.change(order, { target: { value: '1.5' } });
-    fireEvent.blur(order);
-    expect(await screen.findByText('analytics.messages.orderInvalid')).toBeInTheDocument();
     expect(mocked.updateAnalyticsAxis).not.toHaveBeenCalled();
+  });
+
+  it('shows no Order field: the dimensions are reordered from the chip bar', async () => {
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    await screen.findByLabelText('analytics.fields.code');
+    expect(screen.queryByLabelText('analytics.fields.order')).toBeNull();
+    expect(screen.queryByText('analytics.fields.order')).toBeNull();
   });
 
   it('keeps a name on the other dimensions: clearing it restores the stored one', async () => {
@@ -188,7 +200,12 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     expect(within(drawer).getByRole('checkbox', { name: 'statuses.enabled' })).toBeDisabled();
     expect(within(drawer).getByTestId('analytics-dimension-locked')).toHaveTextContent('analytics.hints.defaultLocked');
     expect(screen.getAllByText('analytics.hints.defaultLocked')).toHaveLength(1);
-    expect(screen.getByTestId('analytics-dimension-usage')).toHaveTextContent('analytics.usage.dimensionOne');
+    // 27 OPEX lines and no CAPEX line: one link, on the default dimension's list column.
+    const usage = screen.getByTestId('analytics-dimension-usage');
+    expect(usage).toHaveTextContent('analytics.usage.values:15 · analytics.usage.dimensionLines:27');
+    expect(linkTarget(within(usage).getByRole('link').getAttribute('href')).filters).toEqual({
+      analytics_category_name: { filterType: 'set', mode: 'exclude', values: [null] },
+    });
     expect(screen.queryByTestId('analytics-dimension-delete-block')).toBeNull();
     expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
   });
@@ -244,21 +261,98 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
-  it('disables Delete while the dimension has values, and deletes an empty one', async () => {
-    const { unmount } = renderAt('/master-data/analytics/dimensions/ax-nature/overview');
-    expect(await screen.findByTestId('analytics-dimension-delete-block')).toHaveTextContent('analytics.deleteBlocked.dimensionHasValues');
-    expect(screen.getByRole('button', { name: 'common:buttons.delete' })).toBeDisabled();
-    expect(within(screen.getByRole('complementary')).getByRole('checkbox', { name: 'statuses.enabled' })).toBeEnabled();
-    unmount();
+  it('counts the lines of both natures once and links to exactly those lines', async () => {
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    const usage = await screen.findByTestId('analytics-dimension-usage');
+    // 2 OPEX and 2 CAPEX lines: 4 lines, never split by nature.
+    expect(usage).toHaveTextContent('analytics.usage.values:3 · analytics.usage.dimensionLines:4');
+    expect(usage).not.toHaveTextContent('analytics.usage.opex');
+    const link = within(usage).getByRole('link', { name: 'analytics.usage.dimensionLines:4' });
+    expect(link).toHaveAttribute('target', '_blank');
+    // Both natures (no nature filter), every status, the lines with any value of the dimension.
+    expect(linkTarget(link.getAttribute('href'))).toEqual({
+      path: '/ops/budget',
+      filters: { 'analytics_ax-nature': { filterType: 'set', mode: 'exclude', values: [null] } },
+      statusScope: 'all',
+      from: 'report',
+    });
+  });
 
+  it('gives no link for a disabled dimension: the list has no column to filter on', async () => {
+    mocked.getAnalyticsAxis.mockResolvedValue({ ...NATURE, status: 'disabled', disabled_at: '2026-01-01T00:00:00.000Z' });
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    const usage = await screen.findByTestId('analytics-dimension-usage');
+    expect(usage).toHaveTextContent('analytics.usage.values:3 · analytics.usage.dimensionLines:4');
+    expect(within(usage).queryByRole('link')).toBeNull();
+  });
+
+  it('says a dimension with values and no line is not used yet, without a link', async () => {
+    mocked.getAnalyticsAxis.mockResolvedValue({ ...NATURE, opex_count: 0, capex_count: 0 });
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    const usage = await screen.findByTestId('analytics-dimension-usage');
+    expect(usage).toHaveTextContent('analytics.usage.values:3 · analytics.usage.dimensionUnused');
+    expect(within(usage).queryByRole('link')).toBeNull();
+  });
+
+  it('deletes a dimension without values at once, with no dialog', async () => {
     mocked.getAnalyticsAxis.mockResolvedValue({ ...NATURE, value_count: 0, opex_count: 0, capex_count: 0 });
     mocked.deleteAnalyticsAxis.mockResolvedValue(undefined);
     renderAt('/master-data/analytics/dimensions/ax-nature/overview');
     expect(await screen.findByTestId('analytics-dimension-usage')).toHaveTextContent('analytics.usage.noValues');
-    expect(screen.queryByTestId('analytics-dimension-delete-block')).toBeNull();
+    expect(screen.queryByText(/deleteBlocked/)).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
     await waitFor(() => expect(mocked.deleteAnalyticsAxis).toHaveBeenCalledWith('ax-nature'));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics'));
+  });
+
+  it('asks before deleting a dimension whose values no line uses: its values go too', async () => {
+    mocked.getAnalyticsAxis.mockResolvedValue({ ...NATURE, opex_count: 0, capex_count: 0 });
+    mocked.deleteAnalyticsAxis.mockResolvedValue(undefined);
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    await screen.findByTestId('analytics-dimension-usage');
+    // The sentence that blocked Delete is gone: the button works.
+    expect(screen.queryByText(/deleteBlocked/)).toBeNull();
+    expect(within(screen.getByRole('complementary')).getByRole('checkbox', { name: 'statuses.enabled' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('analytics.forceDelete.title:Nature')).toBeInTheDocument();
+    expect(within(dialog).getByTestId('analytics-delete-confirmation')).toHaveTextContent('analytics.forceDelete.dimensionValues:3');
+    expect(mocked.deleteAnalyticsAxis).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.delete' }));
+    await waitFor(() => expect(mocked.deleteAnalyticsAxis).toHaveBeenCalledWith('ax-nature', { force: true }));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics'));
+  });
+
+  it('asks "Delete anyway" before deleting a dimension used by lines, with the exact counts', async () => {
+    mocked.deleteAnalyticsAxis.mockResolvedValue(undefined);
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    await screen.findByTestId('analytics-dimension-usage');
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    const dialog = await screen.findByRole('dialog');
+    // 3 values; 2 OPEX and 2 CAPEX lines: 4 distinct budget lines.
+    expect(within(dialog).getByTestId('analytics-delete-confirmation')).toHaveTextContent(
+      'analytics.forceDelete.dimensionUsed:analytics.forceDelete.dimensionUsedValues:3|analytics.forceDelete.budgetLines:4',
+    );
+    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(mocked.deleteAnalyticsAxis).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'analytics.forceDelete.confirmAnyway' }));
+    await waitFor(() => expect(mocked.deleteAnalyticsAxis).toHaveBeenCalledWith('ax-nature', { force: true }));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics'));
+  });
+
+  it('shows the refusal and closes the dialog when the forced delete fails', async () => {
+    mocked.deleteAnalyticsAxis.mockRejectedValue({ response: { status: 409, data: { message: 'This dimension cannot be deleted.' } } });
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    await screen.findByTestId('analytics-dimension-usage');
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'analytics.forceDelete.confirmAnyway' }));
+    expect(await screen.findByText('This dimension cannot be deleted.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(navigateMock).not.toHaveBeenCalled();
   });
 
   it('offers no Delete to members, and no editing to readers', async () => {
@@ -282,20 +376,20 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     expect(navigateMock).toHaveBeenLastCalledWith('/master-data/analytics?axis=ax-nature');
   });
 
-  it('creates with an explicit button, the code proposed from the name and the dimension placed last', async () => {
+  it('creates with an explicit button and the code proposed from the name, with no position (the server places it last)', async () => {
     mocked.createAnalyticsAxis.mockResolvedValue({ ...NATURE, id: 'ax-new' });
     renderAt('/master-data/analytics/dimensions/new/overview');
     expect(screen.queryByRole('complementary')).toBeNull();
     fireEvent.change(screen.getByLabelText('analytics.fields.name'), { target: { value: 'Nature de coût' } });
     expect(screen.getByLabelText('analytics.fields.code')).toHaveValue('nature-de-cout');
-    expect(screen.getByLabelText('analytics.fields.order')).toHaveValue('2');
+    expect(screen.queryByLabelText('analytics.fields.order')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.createAnalyticsAxis).toHaveBeenCalledWith({
       code: 'nature-de-cout',
       name: 'Nature de coût',
       description: null,
-      sort_order: 2,
       applies_to: null,
+      required: false,
     }));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics/dimensions/ax-new/overview'));
   });
@@ -362,6 +456,130 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     expect(usageSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both');
     expect(usageSelect()).toHaveAttribute('aria-disabled', 'true');
     expect(within(drawer).getByText('analytics.hints.appliesToDefault')).toBeInTheDocument();
+  });
+
+  it('saves Required at once, and shows the lines without a value from the response, with a link per type', async () => {
+    mocked.updateAnalyticsAxis.mockResolvedValueOnce({ ...NATURE, required: true, opex_missing: 117, capex_missing: 15, unusable_for: [] });
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    await screen.findByLabelText('analytics.fields.code');
+    expect(requiredSwitch()).not.toBeChecked();
+    expect(screen.queryByTestId('analytics-dimension-required-missing')).toBeNull();
+
+    fireEvent.click(requiredSwitch());
+    await waitFor(() => expect(mocked.updateAnalyticsAxis).toHaveBeenCalledWith('ax-nature', { required: true }));
+    // The response carries the counts: no second read.
+    const note = await screen.findByTestId('analytics-dimension-required-missing');
+    expect(mocked.getAnalyticsAxis).toHaveBeenCalledTimes(1);
+    expect(requiredSwitch()).toBeChecked();
+    expect(note).toHaveTextContent('analytics.required.missing.both');
+    const opex = within(note).getByRole('link', { name: 'analytics.required.showLines.opex' });
+    const capex = within(note).getByRole('link', { name: 'analytics.required.showLines.capex' });
+    expect(opex).toHaveAttribute('target', '_blank');
+    expect(linkTarget(opex.getAttribute('href'))).toEqual({
+      path: '/ops/budget',
+      filters: { 'analytics_ax-nature': { filterType: 'set', values: [null] }, nature: { filterType: 'set', values: ['opex'] } },
+      statusScope: 'all',
+      from: 'report',
+    });
+    expect(linkTarget(capex.getAttribute('href')).path).toBe('/ops/budget');
+    expect(screen.queryByTestId('analytics-dimension-required-unusable')).toBeNull();
+    expect(screen.queryByTestId('analytics-dimension-required-disabled')).toBeNull();
+
+    fireEvent.click(requiredSwitch());
+    await waitFor(() => expect(mocked.updateAnalyticsAxis).toHaveBeenLastCalledWith('ax-nature', { required: false }));
+  });
+
+  it('reads the lines without a value again when the window regains focus, unlike the app default', async () => {
+    mocked.getAnalyticsAxis
+      .mockResolvedValueOnce({ ...NATURE, required: true, opex_missing: 4, capex_missing: 0, unusable_for: [] })
+      .mockResolvedValue({ ...NATURE, required: true, opex_missing: 1, capex_missing: 0, unusable_for: [] });
+    // The app's client never refetches on focus by default (lib/queryClient.tsx).
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } } });
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview', queryClient);
+    await screen.findByTestId('analytics-dimension-required-missing');
+    expect(mocked.getAnalyticsAxis).toHaveBeenCalledTimes(1);
+    try {
+      act(() => { focusManager.setFocused(false); });
+      act(() => { focusManager.setFocused(true); });
+      await waitFor(() => expect(mocked.getAnalyticsAxis).toHaveBeenCalledTimes(2));
+    } finally {
+      focusManager.setFocused(undefined);
+    }
+  });
+
+  it('names a single type with one link, on the default dimension list column', async () => {
+    mocked.getAnalyticsAxis.mockResolvedValue({ ...DEFAULT, required: true, opex_missing: 3, capex_missing: 0, unusable_for: [] });
+    renderAt('/master-data/analytics/dimensions/ax-default/overview');
+    const note = await screen.findByTestId('analytics-dimension-required-missing');
+    expect(note).toHaveTextContent('analytics.required.missing.opex');
+    const links = within(note).getAllByRole('link');
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveTextContent('analytics.showLines');
+    expect(linkTarget(links[0].getAttribute('href'))).toMatchObject({
+      path: '/ops/budget',
+      filters: { analytics_category_name: { filterType: 'set', values: [null] }, nature: { filterType: 'set', values: ['opex'] } },
+    });
+  });
+
+  it('says nothing more while every line has a value, or when the dimension is not required', async () => {
+    mocked.getAnalyticsAxis.mockResolvedValue({ ...NATURE, required: true, opex_missing: 0, capex_missing: 0, unusable_for: [] });
+    const { unmount } = renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    await screen.findByLabelText('analytics.fields.code');
+    expect(requiredSwitch()).toBeChecked();
+    expect(screen.queryByTestId('analytics-dimension-required-missing')).toBeNull();
+    unmount();
+
+    mocked.getAnalyticsAxis.mockResolvedValue({ ...NATURE, required: false, opex_missing: 4, capex_missing: 2, unusable_for: ['capex'] });
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    await screen.findByLabelText('analytics.fields.code');
+    expect(screen.queryByTestId('analytics-dimension-required-missing')).toBeNull();
+    expect(screen.queryByTestId('analytics-dimension-required-unusable')).toBeNull();
+  });
+
+  it('only hints that a disabled required dimension is not checked', async () => {
+    mocked.getAnalyticsAxis.mockResolvedValue({
+      ...NATURE, required: true, status: 'disabled', disabled_at: '2020-01-01T00:00:00.000Z',
+      opex_missing: 4, capex_missing: 2, unusable_for: ['opex', 'capex'],
+    });
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    expect(await screen.findByTestId('analytics-dimension-required-disabled')).toHaveTextContent('analytics.required.disabledHint');
+    expect(screen.queryByTestId('analytics-dimension-required-missing')).toBeNull();
+    expect(screen.queryByTestId('analytics-dimension-required-unusable')).toBeNull();
+  });
+
+  it('warns when a type the dimension applies to has no enabled value to choose', async () => {
+    mocked.getAnalyticsAxis.mockResolvedValue({ ...NATURE, required: true, opex_missing: 0, capex_missing: 0, unusable_for: ['capex'] });
+    const { unmount } = renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    expect(await screen.findByTestId('analytics-dimension-required-unusable')).toHaveTextContent('analytics.required.unusable.capex');
+    unmount();
+
+    mocked.getAnalyticsAxis.mockResolvedValue({ ...NATURE, required: true, opex_missing: 0, capex_missing: 0, unusable_for: ['opex', 'capex'] });
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    expect(await screen.findByTestId('analytics-dimension-required-unusable')).toHaveTextContent('analytics.required.unusable.both');
+  });
+
+  it('shows a refusal of Required under the switch', async () => {
+    mocked.updateAnalyticsAxis.mockRejectedValueOnce({
+      response: { status: 400, data: { message: 'Required refused.', field: 'required' } },
+    });
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    await screen.findByLabelText('analytics.fields.code');
+    fireEvent.click(requiredSwitch());
+    expect(await screen.findByRole('alert')).toHaveTextContent('Required refused.');
+    expect(requiredSwitch()).not.toBeChecked();
+  });
+
+  it('creates a required dimension', async () => {
+    mocked.createAnalyticsAxis.mockResolvedValue({ ...NATURE, id: 'ax-new', required: true });
+    renderAt('/master-data/analytics/dimensions/new/overview');
+    fireEvent.change(screen.getByLabelText('analytics.fields.name'), { target: { value: 'Investment type' } });
+    expect(requiredSwitch()).not.toBeChecked();
+    fireEvent.click(requiredSwitch());
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(mocked.createAnalyticsAxis).toHaveBeenCalledWith(expect.objectContaining({
+      code: 'investment-type',
+      required: true,
+    })));
   });
 
   it('keeps a code the user typed, and places a create refusal under its field', async () => {
