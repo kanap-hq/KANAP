@@ -251,6 +251,7 @@ jobs:
       - name: Check the licenses of the production dependencies
         run: |
           node --test scripts/sbom/__tests__/*.test.mjs
+          node --test scripts/release/__tests__/*.test.mjs
           node scripts/sbom/check-licenses.mjs
       - name: Build backend (onprem)
         working-directory: backend
