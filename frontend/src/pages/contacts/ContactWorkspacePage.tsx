@@ -53,19 +53,21 @@ export default function ContactWorkspacePage() {
     }
   }, [returnTo, searchParams, navigate, qc]);
 
-  const handleSave = async () => {
+  // True once the editor saved. An invalid form shows its field errors and a server error shows in
+  // the editor's alert: either way the page stays open with its changes.
+  const handleSave = async (): Promise<boolean> => {
+    if (routeTab !== 'overview') return false;
     try {
-      if (routeTab === 'overview') {
-        if (isCreate) {
-          await overviewCreateRef.current?.save();
-          navigateAfterSave();
-        } else {
-          await overviewRef.current?.save();
-          navigateAfterSave();
-        }
-      }
-      setDirty(false);
-    } catch {}
+      const saved = isCreate
+        ? await overviewCreateRef.current?.save()
+        : await overviewRef.current?.save();
+      if (!saved) return false;
+    } catch {
+      return false;
+    }
+    navigateAfterSave();
+    setDirty(false);
+    return true;
   };
 
   const handleReset = () => {
@@ -80,7 +82,7 @@ export default function ContactWorkspacePage() {
     if (dirty) {
       const proceed = await dialogs.confirm(t('shared.workspace.unsavedSwitchTab'));
       if (proceed) {
-        void handleSave().then(() => navigate(`/master-data/contacts/${id}/${nextValue}?${searchParams.toString()}`));
+        void handleSave().then((saved) => saved && navigate(`/master-data/contacts/${id}/${nextValue}?${searchParams.toString()}`));
         return;
       } else {
         handleReset();

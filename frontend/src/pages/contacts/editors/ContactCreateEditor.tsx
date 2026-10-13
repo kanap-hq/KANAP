@@ -5,7 +5,7 @@ import { Controller } from 'react-hook-form';
 import { useSearchParams } from 'react-router-dom';
 import useZodForm from '../../../hooks/useZodForm';
 import api from '../../../api';
-import { contactFormSchema, ContactFormValues, SUPPLIER_CONTACT_ROLE_OPTIONS } from '../../forms/ContactForm';
+import { createContactFormSchema, ContactFormValues, SUPPLIER_CONTACT_ROLE_OPTIONS } from '../../forms/ContactForm';
 import { COUNTRY_OPTIONS, CountryOption } from '../../../constants/isoOptions';
 import { DIAL_CODES } from '../../../constants/dialCodes';
 import { combineDialCode, guessCountryFromDialCode, normalizeDialCode, splitPhone } from '../../../lib/phoneUtils';
@@ -13,7 +13,8 @@ import SupplierSelect from '../../../components/fields/SupplierSelect';
 
 export type ContactCreateEditorHandle = {
   isDirty: () => boolean;
-  save: () => Promise<string | null>; // returns new id
+  /** Resolves true once created, false when the form is invalid; rejects on a server error. */
+  save: () => Promise<boolean>;
   reset: () => void;
 };
 
@@ -52,7 +53,8 @@ export default forwardRef<ContactCreateEditorHandle, { onDirtyChange?: (dirty: b
 
   const [serverError, setServerError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const form = useZodForm<ContactFormValues>({ schema: contactFormSchema, defaultValues: initialValues });
+  const schema = useMemo(() => createContactFormSchema(t), [t]);
+  const form = useZodForm<ContactFormValues>({ schema, defaultValues: initialValues });
   const { register, formState, reset, handleSubmit, watch, setValue } = form;
   const err = formState.errors as any;
   const supplierId = watch('supplier_id');
@@ -95,8 +97,8 @@ export default forwardRef<ContactCreateEditorHandle, { onDirtyChange?: (dirty: b
     setSaving(true);
     setServerError(null);
     try {
-      const res = await api.post('/contacts', values);
-      return res.data?.id as string;
+      await api.post('/contacts', values);
+      return true;
     } catch (e: any) {
       const msg = e?.response?.data?.message || e?.message || t('shared.messages.failedToCreate', { entity: t('contacts.entity') });
       setServerError(msg);
@@ -108,8 +110,7 @@ export default forwardRef<ContactCreateEditorHandle, { onDirtyChange?: (dirty: b
 
   useImperativeHandle(ref, () => ({
     isDirty: () => formState.isDirty,
-    // handleSubmit returns a Promise<void>; cast here to align with caller expectation
-    save: async () => (await onSubmit()) as any,
+    save: async () => (await onSubmit()) === true,
     reset: () => {
       reset(DEFAULT_VALUES, { keepDirty: false, keepTouched: false });
       refreshDialState();
