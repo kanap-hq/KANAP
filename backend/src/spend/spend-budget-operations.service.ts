@@ -11,6 +11,7 @@ import { FreezeService } from '../freeze/freeze.service';
 import { BudgetColumn } from './amounts-write.util';
 import { clearBudgetColumn, copyBudgetColumn, CopyColumnOperation } from './budget-column-operations';
 import { copyAllocations, CopyAllocationsOperation } from './budget-allocation-operations';
+import { BudgetOperationScope, clearBudgetColumns, copyBudget, CopyBudgetOperation } from './budget-copy';
 import type { BudgetNature } from './budget-nature';
 
 @Injectable()
@@ -35,6 +36,18 @@ export class SpendBudgetOperationsService {
   async copyAllocations(operation: CopyAllocationsOperation, userId: string | null, opts?: { manager?: EntityManager; nature?: BudgetNature }) {
     const manager = opts?.manager ?? this.spendItems.manager;
     return copyAllocations({ manager, audit: this.audit, calculator: this.allocationCalculator }, opts?.nature ?? 'opex', operation, userId);
+  }
+
+  /** "Copy the budget": the amounts, the allocations or both, of one nature or both (all or nothing); see `budget-copy.ts`. */
+  async copyBudget(operation: CopyBudgetOperation, userId: string | null, opts?: { manager?: EntityManager }) {
+    const manager = opts?.manager ?? this.spendItems.manager;
+    return copyBudget({ manager, audit: this.audit, freeze: this.freeze, calculator: this.allocationCalculator }, operation, userId);
+  }
+
+  /** Clear one budget column of a year of the lines of one nature or both (all or nothing); see `budget-copy.ts`. */
+  async clearBudgetColumns(operation: { scope: BudgetOperationScope; year: number; column: BudgetColumn }, userId: string | null, opts?: { manager?: EntityManager }) {
+    const manager = opts?.manager ?? this.spendItems.manager;
+    return clearBudgetColumns({ manager, audit: this.audit, freeze: this.freeze }, operation, userId);
   }
 
   /** Clear one budget column of a year of the lines of `nature` (all or nothing); see `budget-column-operations.ts`. */

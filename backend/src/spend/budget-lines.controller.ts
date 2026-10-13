@@ -13,11 +13,18 @@ import { exportListQuery } from './budget-file/export-file';
 import { budgetListAccess } from './budget-list/budget-list.runtime';
 import { ListSpendQueryInput } from './dto';
 import { BudgetLinesService } from './budget-lines.service';
+import { SpendBudgetOperationsService } from './spend-budget-operations.service';
+import type { BudgetOperationScope, CopyBudgetOperation } from './budget-copy';
+import type { BudgetColumn } from './amounts-write.util';
 
 @UseGuards(JwtAuthGuard)
 @Controller('budget-lines')
 export class BudgetLinesController {
-  constructor(private readonly svc: BudgetLinesService, private readonly budgetFile: BudgetFileService) {}
+  constructor(
+    private readonly svc: BudgetLinesService,
+    private readonly budgetFile: BudgetFileService,
+    private readonly budgetOps: SpendBudgetOperationsService,
+  ) {}
 
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'reader')
@@ -124,6 +131,30 @@ export class BudgetLinesController {
     @Tenant() ctx: TenantRequest,
   ) {
     return this.svc.bulkDelete(body.ids, ctx.userId || null, { manager: ctx.manager as EntityManager });
+  }
+
+  /**
+   * "Copy the budget" of Budget administration: the amounts of a column, the allocations, or both, of
+   * all lines (`scope: 'all'`) or of one nature, under one tenant lock (`budget-copy.ts`).
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @Post('budget-operations/copy')
+  copyBudget(@Body() body: CopyBudgetOperation, @Tenant() ctx: TenantRequest) {
+    return this.budgetOps.copyBudget(body, ctx.userId || null, { manager: ctx.manager as EntityManager });
+  }
+
+  /** "Reset a column" of Budget administration, on all lines or one nature (`budget-copy.ts`). */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @Post('budget-operations/clear-column')
+  clearBudgetColumn(
+    @Body() body: { scope: BudgetOperationScope; year: number; column: BudgetColumn },
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.budgetOps.clearBudgetColumns(body, ctx.userId || null, { manager: ctx.manager as EntityManager });
   }
 
   @UseGuards(PermissionGuard)

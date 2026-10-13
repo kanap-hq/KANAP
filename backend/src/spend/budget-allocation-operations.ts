@@ -57,9 +57,13 @@ export type CopyAllocationsOperation = {
   dryRun?: boolean;
 };
 
-type AllocationAction = 'copy' | 'skip_missing_source_version' | 'skip_no_source_allocations' | 'skip_destination_has_data' | 'error';
+/** An allocation copy's parameters, checked (`allocationCopyParams`). */
+export type AllocationCopyParams = { sourceYear: number; destinationYear: number; overwrite: boolean; dryRun: boolean };
 
-type AllocationPreview = {
+export type AllocationAction = 'copy' | 'skip_missing_source_version' | 'skip_no_source_allocations' | 'skip_destination_has_data' | 'error';
+
+/** One line's allocation copy, the contract of the routes of each nature. */
+export type AllocationPreview = {
   itemId: string;
   itemName: string;
   sourceMethod: string | null;
@@ -74,10 +78,14 @@ type AllocationPreview = {
   message?: string;
 };
 
-function emptyPreview(itemId: string, itemName: string, action: AllocationAction, message: string): AllocationPreview {
+/** One line's allocation copy with the line's own number (its BL-n reference): decided (a dry run) or done. */
+export type AllocationCopyLine = AllocationPreview & { itemNumber: number };
+
+function emptyPreview(item: { id: string; name: string; item_number: number }, action: AllocationAction, message: string): AllocationCopyLine {
   return {
-    itemId,
-    itemName,
+    itemId: item.id,
+    itemName: item.name,
+    itemNumber: Number(item.item_number),
     sourceMethod: null,
     sourceMethodLabel: '',
     destinationMethod: null,
@@ -124,34 +132,47 @@ async function sourceShares(
   return counts;
 }
 
-/**
- * Copy the allocations of `sourceYear` to `destinationYear` for every item
- * valid in the destination year (see `validityInYear`), reading the newest
- * version of each item and year (the one the budget tab shows). A missing
- * destination version is created with the source's grain, method and notes.
- */
-export async function copyAllocations(
-  deps: AllocationOperationDeps,
-  scope: AmountScope,
-  operation: CopyAllocationsOperation,
-  userId: string | null,
-) {
-  const mg = deps.manager;
-  const t = SCOPES[scope];
+/** Checks an allocation copy's body: two years, which must differ. */
+export function allocationCopyParams(operation: CopyAllocationsOperation): AllocationCopyParams {
   const sourceYear = Number(operation?.sourceYear);
   const destinationYear = Number(operation?.destinationYear);
-  const overwrite = Boolean(operation?.overwrite);
-  const dryRun = Boolean(operation?.dryRun);
   if (!Number.isInteger(sourceYear) || !Number.isInteger(destinationYear)) {
     throw new BadRequestException('sourceYear and destinationYear are required integer values');
   }
   if (sourceYear === destinationYear) {
     throw new BadRequestException('Source year and destination year must be different');
   }
+  return { sourceYear, destinationYear, overwrite: Boolean(operation?.overwrite), dryRun: Boolean(operation?.dryRun) };
+}
 
-  const tenantId = await currentTenantId(mg);
-  // One bulk budget operation at a time per tenant: a second one gets a 409 (`budget-locks.ts`).
-  if (!dryRun) await lockTenantBudgetOperations(mg, tenantId);
+/** One nature's allocation copy, decided (a dry run) or done (`runAllocationCopy`). */
+export type AllocationCopyRun = {
+  /** The lines valid in the destination year. */
+  totalItems: number;
+  /** Every line valid in the destination year, in the order read (a real copy leaves out a line deleted meanwhile). */
+  lines: AllocationCopyLine[];
+  processed: number;
+  skipped: number;
+  errors: number;
+};
+
+/**
+ * Copy the allocations of `sourceYear` to `destinationYear` for every item
+ * valid in the destination year (see `validityInYear`), reading the newest
+ * version of each item and year (the one the budget tab shows). A missing
+ * destination version is created with the source's grain, method and notes.
+ * The caller holds the tenant's budget operations lock for a real copy.
+ */
+export async function runAllocationCopy(
+  deps: AllocationOperationDeps,
+  scope: AmountScope,
+  params: AllocationCopyParams,
+  tenantId: string,
+  userId: string | null,
+): Promise<AllocationCopyRun> {
+  const mg = deps.manager;
+  const t = SCOPES[scope];
+  const { sourceYear, destinationYear, overwrite, dryRun } = params;
   let items = await loadItemsValidIn(mg, scope, tenantId, destinationYear);
   let picked = await loadVersions(mg, scope, tenantId, items.map((i) => i.id), [sourceYear, destinationYear]);
   if (!dryRun) {
@@ -185,7 +206,7 @@ export async function copyAllocations(
   const sources = items.map((item) => version(item.id, sourceYear)).filter((v): v is AllocationVersion => !!v);
   const shares = await sourceShares(deps, tenantId, sources);
 
-  const results: AllocationPreview[] = [];
+  const lines: AllocationCopyLine[] = [];
   const recompute: AllocationVersion[] = [];
   let processed = 0;
   let skipped = 0;
@@ -194,7 +215,7 @@ export async function copyAllocations(
   for (const item of items) {
     const sourceVersion = version(item.id, sourceYear);
     if (!sourceVersion) {
-      if (dryRun) results.push(emptyPreview(item.id, item.name, 'skip_missing_source_version', `No allocation data for ${sourceYear}`));
+      lines.push(emptyPreview(item, 'skip_missing_source_version', `No allocation data for ${sourceYear}`));
       skipped++;
       continue;
     }
@@ -202,7 +223,7 @@ export async function copyAllocations(
     if (shareCount instanceof BadRequestException) {
       if (!dryRun) throw shareCount;
       errors++;
-      results.push(emptyPreview(item.id, item.name, 'error', shareCount.message));
+      lines.push(emptyPreview(item, 'error', shareCount.message));
       continue;
     }
 
@@ -218,25 +239,27 @@ export async function copyAllocations(
     else if (!overwrite && destinationManual.length > 0) action = 'skip_destination_has_data';
     const resultMethod = action === 'copy' ? sourceMethod : destinationMethod;
 
+    const line: AllocationCopyLine = {
+      itemId: item.id,
+      itemName: item.name,
+      itemNumber: Number(item.item_number),
+      sourceMethod,
+      sourceMethodLabel: formatAllocationMethodLabel(sourceMethod),
+      destinationMethod,
+      destinationMethodLabel: formatAllocationMethodLabel(destinationMethod),
+      resultMethod,
+      resultMethodLabel: formatAllocationMethodLabel(resultMethod),
+      sourceAllocationsCount: shareCount,
+      destinationAllocationsCount: destinationManual.length,
+      action,
+      message: action === 'skip_destination_has_data'
+        ? 'Destination already has allocations'
+        : action === 'skip_no_source_allocations'
+          ? 'No allocations in source year'
+          : undefined,
+    };
+    lines.push(line);
     if (dryRun) {
-      results.push({
-        itemId: item.id,
-        itemName: item.name,
-        sourceMethod,
-        sourceMethodLabel: formatAllocationMethodLabel(sourceMethod),
-        destinationMethod,
-        destinationMethodLabel: formatAllocationMethodLabel(destinationMethod),
-        resultMethod,
-        resultMethodLabel: formatAllocationMethodLabel(resultMethod),
-        sourceAllocationsCount: shareCount,
-        destinationAllocationsCount: destinationManual.length,
-        action,
-        message: action === 'skip_destination_has_data'
-          ? 'Destination already has allocations'
-          : action === 'skip_no_source_allocations'
-            ? 'No allocations in source year'
-            : undefined,
-      });
       if (action === 'copy') processed++;
       else skipped++;
       continue;
@@ -278,13 +301,18 @@ export async function copyAllocations(
     // transaction's own row.
     const locked = await lockAllocationVersion(mg, scope, tenantId, destinationVersion.id);
     if (!locked) {
-      // The line was deleted meanwhile.
+      // The line was deleted meanwhile: it is no longer listed.
+      lines.pop();
       skipped++;
       continue;
     }
     const lockedManual = await countManualAllocations(mg, scope, tenantId, destinationVersion.id);
     if (!overwrite && lockedManual > 0) {
       // A manual split was saved meanwhile: kept, as for a destination that had one from the start.
+      Object.assign(line, {
+        action: 'skip_destination_has_data', resultMethod: locked.allocation_method, resultMethodLabel: formatAllocationMethodLabel(locked.allocation_method),
+        destinationAllocationsCount: lockedManual, message: 'Destination already has allocations',
+      });
       skipped++;
       continue;
     }
@@ -347,11 +375,31 @@ export async function copyAllocations(
   // Automatic methods: the destination rules must accept them; a refusal fails the whole copy.
   if (recompute.length > 0) await deps.calculator.computeForVersions(recompute, { manager: mg, tenantId });
 
+  return { totalItems: items.length, lines, processed, skipped, errors };
+}
+
+/**
+ * Copy the allocations of one nature (`runAllocationCopy`), the contract of
+ * the routes of each nature: a dry run lists every line, a real copy none.
+ * "Copy the budget" (`budget-copy.ts`) runs the same copy for one or both
+ * natures under one lock.
+ */
+export async function copyAllocations(
+  deps: AllocationOperationDeps,
+  scope: AmountScope,
+  operation: CopyAllocationsOperation,
+  userId: string | null,
+) {
+  const params = allocationCopyParams(operation);
+  const tenantId = await currentTenantId(deps.manager);
+  // One bulk budget operation at a time per tenant: a second one gets a 409 (`budget-locks.ts`).
+  if (!params.dryRun) await lockTenantBudgetOperations(deps.manager, tenantId);
+  const run = await runAllocationCopy(deps, scope, params, tenantId, userId);
   return {
-    success: errors === 0,
-    dryRun,
-    summary: { totalItems: items.length, processed, skipped, errors },
-    results: dryRun ? results : [],
+    success: run.errors === 0,
+    dryRun: params.dryRun,
+    summary: { totalItems: run.totalItems, processed: run.processed, skipped: run.skipped, errors: run.errors },
+    results: params.dryRun ? run.lines.map(({ itemNumber: _itemNumber, ...line }) => line as AllocationPreview) : [],
   };
 }
 

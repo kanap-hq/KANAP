@@ -19,6 +19,7 @@ import { StripeConfigService } from '../../billing/stripe/stripe.config';
 import { BudgetLinesController } from '../budget-lines.controller';
 import { BudgetLinesService } from '../budget-lines.service';
 import { BudgetFileService } from '../budget-file/budget-file.service';
+import { SpendBudgetOperationsService } from '../spend-budget-operations.service';
 import { budgetFileService, exportBudgetFile, loadBudgetFile, preflightBudgetFile } from './budget-file.fixtures';
 import { assert, inRolledBackTransaction, runSpecs, freezeColumn, setTenant } from './round-inputs.fixtures';
 import { seedBudgetLines, deps, YEAR } from './budget-lines.fixtures';
@@ -44,6 +45,7 @@ runSpecs('budget-lines-native.integration.spec', [['native HTTP contract, confli
     process.env.JWT_SECRET = 'native-budget-test-signing-key';
     @Module({ controllers: [BudgetLinesController], providers: [
       { provide: BudgetLinesService, useValue: service }, { provide: BudgetFileService, useValue: budgetFileService() },
+      { provide: SpendBudgetOperationsService, useValue: {} },
       { provide: UsersService, useValue: new (UsersService as any)(dataSource.getRepository(User)) },
       { provide: PermissionsService, useValue: new PermissionsService(dataSource.getRepository(UserPageRole), dataSource.getRepository(RolePermission)) },
       { provide: DataSource, useValue: dataSource }, { provide: StripeConfigService, useValue: { isConfigured: () => false } },

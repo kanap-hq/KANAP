@@ -18,14 +18,16 @@ import dataSource from '../../data-source';
 import { BudgetLinesController } from '../budget-lines.controller';
 import { BudgetLinesService } from '../budget-lines.service';
 import { BudgetFileService } from '../budget-file/budget-file.service';
+import { AllocationCalculatorService } from '../allocation-calculator.service';
+import { SpendBudgetOperationsService } from '../spend-budget-operations.service';
 import { budgetFileService } from './budget-file.fixtures';
-import { assert, inRolledBackTransaction, runSpecs, seedLine, freezeColumn } from './round-inputs.fixtures';
+import { assert, captureAudit, inRolledBackTransaction, realFreeze, runSpecs, seedLine, freezeColumn } from './round-inputs.fixtures';
 import { budgetService, seedBudgetLines, YEAR } from './budget-lines.fixtures';
 import { seedListFixture } from './oracle/budget-list.fixture';
 
 // Real HTTP routing, JWT authentication, @Tenant(), PermissionGuard and database services.
 // The request manager is the rolled-back fixture runner; billing configuration is a test double.
-runSpecs('budget-lines-routes.integration.spec', [['nine HTTP routes, permissions, isolation, mixed deletion and export', async () => {
+runSpecs('budget-lines-routes.integration.spec', [['eleven HTTP routes, permissions, isolation, mixed deletion and export', async () => {
   await inRolledBackTransaction(async (runner) => {
     const world = await seedBudgetLines(runner);
     const { tenantId, lines, foreign } = world;
@@ -43,8 +45,11 @@ runSpecs('budget-lines-routes.integration.spec', [['nine HTTP routes, permission
     const oldSecret = process.env.JWT_SECRET;
     process.env.JWT_SECRET = 'budget-lines-test-signing-key';
     const file = budgetFileService();
+    const calculator = new AllocationCalculatorService(undefined as any, undefined as any, undefined as any, undefined as any);
+    const budgetOps = new SpendBudgetOperationsService(undefined as any, undefined as any, undefined as any, undefined as any, captureAudit() as any, realFreeze(), calculator);
     @Module({ controllers: [BudgetLinesController], providers: [
       { provide: BudgetLinesService, useValue: budgetService(runner) }, { provide: BudgetFileService, useValue: file },
+      { provide: SpendBudgetOperationsService, useValue: budgetOps },
       { provide: UsersService, useValue: usersService }, { provide: PermissionsService, useValue: permissions },
       { provide: DataSource, useValue: dataSource }, { provide: StripeConfigService, useValue: { isConfigured: () => false } },
       Reflector, PermissionGuard, JwtAuthGuard,
@@ -67,17 +72,25 @@ runSpecs('budget-lines-routes.integration.spec', [['nine HTTP routes, permission
         [`summary/neighbors?id=BL-${lines[1].number}`, 'summaryNeighbors', 'GET'],
         ['summary/aggregate', 'summaryAggregate', 'POST'], [`resolve/BL-${lines[1].number}`, 'resolve', 'GET'],
         ['bulk', 'bulkDelete', 'DELETE'], ['budget-file/export?language=en', 'exportBudgetFile', 'GET'],
+        ['budget-operations/copy', 'copyBudget', 'POST'], ['budget-operations/clear-column', 'clearBudgetColumn', 'POST'],
       ];
+      // "Copy the budget" (a dry run of both parts, both natures) and "Reset a column" (a year without amounts).
+      const bodies: Record<string, unknown> = {
+        copyBudget: { scope: 'all', sourceYear: YEAR, destinationYear: YEAR + 1, amounts: { sourceColumn: 'budget', destinationColumn: 'budget' }, allocations: true, dryRun: true },
+        clearBudgetColumn: { scope: 'all', year: YEAR + 40, column: 'forecast' },
+      };
+      const adminRoutes = new Set(['bulkDelete', 'exportBudgetFile', 'copyBudget', 'clearBudgetColumn']);
       for (const [path, handler, method] of routes) {
-        const required = handler === 'bulkDelete' || handler === 'exportBudgetFile' ? 'admin' : 'reader';
+        const required = adminRoutes.has(handler) ? 'admin' : 'reader';
         assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, (BudgetLinesController.prototype as any)[handler]), { resource: 'budget', level: required });
-        const body = method === 'POST' ? aggregate : method === 'DELETE' ? { ids: [] } : undefined;
+        const body = bodies[handler] ?? (method === 'POST' ? aggregate : method === 'DELETE' ? { ids: [] } : undefined);
         assert.equal((await request(path, users.none, method, body)).status, 403, `${path}: no budget right`);
         if (required === 'admin') {
           for (const user of [users.reader, users.member]) assert.equal((await request(path, user, method, body)).status, 403, `${path}: lower level`);
         }
         const response = await request(path, required === 'admin' ? users.admin : users.reader, method, body);
-        assert.equal(response.status, 200, `${path}: ${response.text}`);
+        // The budget operations answer 201, as the operation routes of each nature do (Nest's POST default).
+        assert.equal(response.status, bodies[handler] ? 201 : 200, `${path}: ${response.text}`);
         assert.ok(!response.text.includes(foreign.itemId) && !response.text.includes('BL-508801'), `${path}: no foreign line`);
       }
       assert.equal(Reflect.getMetadata(READ_ONLY_ROUTE_KEY, BudgetLinesController.prototype.summaryAggregate), true);
@@ -96,7 +109,7 @@ runSpecs('budget-lines-routes.integration.spec', [['nine HTTP routes, permission
       assert.ok(exported.text.includes('opex') && exported.text.includes('capex'));
       const selected = await request(`budget-file/export?language=en&filters=${encodeURIComponent(JSON.stringify({ nature: { filterType: 'set', values: ['capex'] } }))}`, users.admin);
       assert.ok(selected.text.includes('BL-7102') && !selected.text.includes('BL-7101'));
-      console.log('ok - nine HTTP routes, rights, isolation and filtered mixed budget.csv');
+      console.log('ok - eleven HTTP routes, rights, isolation and filtered mixed budget.csv');
 
       // Same mixed ids passed to each legacy export still select that route's nature only.
       const caller = { manager: runner.manager, tenantId, userId: null };
@@ -129,7 +142,7 @@ runSpecs('budget-lines-routes.integration.spec', [['nine HTTP routes, permission
       // Account access is passed by the neutral controller just as on existing lists.
       const fixture = await seedListFixture(runner, 20261003);
       // Read consolidation through the controller under the newly seeded fixture tenant.
-      const controller = new BudgetLinesController(budgetService(runner), file);
+      const controller = new BudgetLinesController(budgetService(runner), file, budgetOps);
       const query = { includeDisabled: 'true', spec: undefined };
       await runner.query(`UPDATE accounts SET consolidation_account_number = 600, consolidation_account_name = 'Consolidation' WHERE tenant_id = $1`, [fixture.tenantId]);
       const spec = { groupBy: ['account_consolidation_key'], measures: [] };
