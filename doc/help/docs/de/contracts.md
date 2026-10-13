@@ -136,8 +136,8 @@ Die Seite hat vier Reiter: **Übersicht**, **Budget**, **Konformität** und **Ve
 
 **Fristen** fasst zusammen, wo der Vertrag steht:
 
-- Ein Satz zum nächsten Schritt: „Kündigung möglich bis 30. Dez. 2026 · in 78 Tagen“, „Kündigungsfrist verstrichen, verlängert bis 30. Juni 2027“, „Endet am 31. März 2027 ohne Verlängerung“ oder „Abgelaufen am 31. Dez. 2025“. Steht eine Entscheidung über das Ende eines Vertrags ohne Verlängerung an, ergänzt der Satz „Entscheidung ausstehend“ mit einem orangefarbenen Punkt
-- Eine Zeitleiste der Perioden: vergangene Perioden, die laufende Periode, heute, der nächste Kündigungstermin und der Entscheidungszeitraum davor. Die nächste Periode ist gestrichelt, solange sie noch gekündigt werden kann, und durchgezogen, sobald die Kündigungsfrist verstrichen ist
+- Ein Satz zum nächsten Schritt: „Kündigung möglich bis 30. Dez. 2026 · in 78 Tagen“, „Kündigungstermin verstrichen, verlängert bis 30. Juni 2027“, „Endet am 31. März 2027 ohne Verlängerung“ oder „Abgelaufen am 31. Dez. 2025“. Steht eine Entscheidung über das Ende eines Vertrags ohne Verlängerung an, ergänzt der Satz „Entscheidung ausstehend“ mit einem orangefarbenen Punkt
+- Eine Zeitleiste der Perioden: vergangene Perioden, die laufende Periode, heute, der nächste Kündigungstermin und der Entscheidungszeitraum davor. Die nächste Periode ist gestrichelt, solange sie noch gekündigt werden kann, und durchgezogen, sobald der Kündigungstermin verstrichen ist
 - Eine Zeile mit Fakten: die laufende Periode mit ihren Daten, wie oft der Vertrag seit wann verlängert wurde, und die Kündigungsfrist
 
 Ist eine Verlängerung bestätigt, lautet der Satz „Verlängerung bestätigt · nächste Periode vom 1. Juli 2027 bis 30. Juni 2028“, und die Zeitleiste zeigt diesen Kündigungstermin nicht mehr.
