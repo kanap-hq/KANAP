@@ -219,3 +219,86 @@ export function contractTermSweep(): ContractTermSweepRow[] {
   }
   return rows;
 }
+
+/**
+ * The commitment of a year (lot CB), each worked out by hand from the rule in
+ * `contracts/contract-terms.ts`: the yearly amount prorated over the months the terms cover, a
+ * month covered in part by the share of its days. The pure spec checks the TypeScript function,
+ * the parity spec the SQL expression too.
+ */
+export type ContractCommitmentCase = {
+  name: string;
+  start: string;
+  months: number | null;
+  renewal: boolean;
+  disabledAt?: string | null;
+  amount: number | string;
+  year: number;
+  /** In the contract's currency. */
+  expected: number;
+};
+
+const SAP = { start: '2023-07-01', months: 12, renewal: true, amount: 350000 };
+const SAP_ENDED = { ...SAP, disabledAt: '2027-06-30T12:00:00.000Z' };
+const NEARSHORE = { start: '2024-04-01', months: 36, renewal: false, amount: 900000 };
+const FROM_THE_15TH = { start: '2026-03-15', months: 12, renewal: false, amount: 120000 };
+
+export const CONTRACT_COMMITMENT_CASES: ContractCommitmentCase[] = [
+  { name: 'SAP, renewed every July: a whole year', ...SAP, year: 2026, expected: 350000 },
+  { name: 'SAP, renewal projected: the next year too', ...SAP, year: 2027, expected: 350000 },
+  { name: 'SAP, renewal projected two years ahead', ...SAP, year: 2028, expected: 350000 },
+  { name: 'SAP, first year from 1 July: six months', ...SAP, year: 2023, expected: 175000 },
+  { name: 'SAP, before its start: nothing', ...SAP, year: 2022, expected: 0 },
+  { name: 'SAP ended on 30 June 2027: 2026 unchanged', ...SAP_ENDED, year: 2026, expected: 350000 },
+  { name: 'SAP ended on 30 June 2027: six months of 2027', ...SAP_ENDED, year: 2027, expected: 175000 },
+  { name: 'SAP ended on 30 June 2027: nothing in 2028', ...SAP_ENDED, year: 2028, expected: 0 },
+  { name: 'Nearshore, no renewal, ends 31 March 2027: three months of 2027', ...NEARSHORE, year: 2027, expected: 225000 },
+  { name: 'Nearshore, a whole year inside the term', ...NEARSHORE, year: 2026, expected: 900000 },
+  { name: 'Nearshore, nothing after its end', ...NEARSHORE, year: 2028, expected: 0 },
+  // 17/31 of March and nine whole months: (9 + 17/31) / 12 of 120 000.
+  { name: 'starts on 15 March: March prorated by its days', ...FROM_THE_15TH, year: 2026, expected: 95483.87 },
+  // Two whole months and 14/31 of March: (2 + 14/31) / 12 of 120 000; both years add up to the amount.
+  { name: 'starts on 15 March, no renewal: ends on 14 March of the next year', ...FROM_THE_15TH, year: 2027, expected: 24516.13 },
+  // 15/29 of February 2024 and 14/31 of March: 0.9688 months of 12 000.
+  { name: 'one month from 15 February of a leap year', start: '2024-02-15', months: 1, renewal: false, amount: 12000, year: 2024, expected: 968.85 },
+  // Ten whole months and 15/30 of November: 10.5 months of 120 000.
+  { name: 'end of validity on 15 November: half of November', start: '2025-01-01', months: 12, renewal: true, disabledAt: '2026-11-15T12:00:00.000Z', amount: 120000, year: 2026, expected: 105000 },
+  { name: 'end of validity before the start: nothing', start: '2026-05-10', months: 12, renewal: true, disabledAt: '2026-01-01T12:00:00.000Z', amount: 1000, year: 2026, expected: 0 },
+  { name: 'duration 0 with renewal on: no term to cover', start: '2026-05-10', months: 0, renewal: true, amount: 1000, year: 2026, expected: 0 },
+  { name: 'no duration: no term to cover', start: '2026-05-10', months: null, renewal: false, amount: 1000, year: 2026, expected: 0 },
+  { name: 'future contract: nothing before its start', start: '2027-03-15', months: 12, renewal: true, amount: 1000, year: 2026, expected: 0 },
+  // A half cent rounds away from zero: 6 cents over one month of twelve.
+  { name: 'half a cent rounds up', start: '2026-01-01', months: 1, renewal: false, amount: 0.06, year: 2026, expected: 0.01 },
+  { name: 'half a cent rounds away from zero below zero', start: '2026-01-01', months: 1, renewal: false, amount: '-0.06', year: 2026, expected: -0.01 },
+];
+
+export type ContractCommitmentSweepRow = {
+  start: string;
+  months: number;
+  renewal: boolean;
+  disabledAt: string | null;
+  amount: string;
+  year: number;
+};
+
+/** Every combination of starts, durations, renewal, ends of validity, amounts and years. */
+export function contractCommitmentSweep(): ContractCommitmentSweepRow[] {
+  const starts = ['2024-01-31', '2024-02-29', '2023-03-31', '2024-01-01', '2023-08-30', '2025-12-31', '2024-05-15', '2023-11-30'];
+  const months = [0, 1, 2, 3, 5, 11, 12, 13, 24, 36];
+  const ends = [null, '2025-02-28T12:00:00.000Z', '2026-01-31T12:00:00.000Z', '2026-12-31T12:00:00.000Z', '2023-06-15T12:00:00.000Z', '2024-02-29T23:30:00.000Z'];
+  const amounts = ['350000', '1234.56', '0.01', '99999999.99', '-777.77'];
+  const years = [2023, 2024, 2025, 2026, 2027, 2028];
+  const rows: ContractCommitmentSweepRow[] = [];
+  for (const start of starts) {
+    for (const m of months) {
+      for (const renewal of [true, false]) {
+        for (const disabledAt of ends) {
+          for (const amount of amounts) {
+            for (const year of years) rows.push({ start, months: m, renewal, disabledAt, amount, year });
+          }
+        }
+      }
+    }
+  }
+  return rows;
+}

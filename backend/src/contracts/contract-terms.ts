@@ -40,7 +40,18 @@
  * SQL expressions for sorting, filtering and the expiry warnings; the parity spec
  * (`__tests__/contract-terms.parity.spec.ts`) checks both on the same cases. The frontend has a
  * copy in `frontend/src/pages/contracts/contractTerms.ts`.
+ *
+ * The commitment of a year (`contractCommitmentCents`, `contractCommitmentSql`; lot CB): the
+ * yearly amount at signature prorated over the months of the year its terms cover, a month
+ * covered in part by the share of its days covered. The terms cover one span from the start
+ * date: the first term only without renewal, every term with it (the renewal is projected with
+ * no end), nothing after the end of validity. No indexation: the amount at signature holds for
+ * every term. The API alone computes it (no frontend copy).
  */
+
+import { centsToNumber, toCents } from '../common/amount';
+import { divRoundHalfAway as divRoundHalfAwayBig } from '../common/decimal';
+import { divRoundHalfAway } from '../common/list-engine/sql-fragments';
 
 const YMD = /^(\d{4})-(\d{2})-(\d{2})$/;
 
@@ -305,4 +316,102 @@ export function contractTermsSql(alias: string, today: string, opts?: ContractTe
     termState: pick('term_state'),
     row,
   };
+}
+
+/**
+ * The least common multiple of the month lengths (28, 29, 30 and 31 days): a day of any month is
+ * a whole number of these units of a month (13 485 of February, 12 180 of a 31-day month), so the
+ * covered share of a year is an exact integer.
+ */
+export const MONTH_SHARE_UNITS = 377580;
+
+/** The units of a year: twelve whole months. */
+const YEAR_SHARE_UNITS = 12 * MONTH_SHARE_UNITS;
+
+export type ContractCommitmentInput = ContractTermsInput & {
+  yearly_amount_at_signature?: number | string | null;
+};
+
+/**
+ * The days a contract's terms cover, `[start, end]`, `end` null when the renewal goes on with no
+ * end of validity. Null when they cover no day (a duration of 0, an end of validity before the
+ * start).
+ */
+export function contractCoveredSpan(input: ContractTermsInput): { start: string; end: string | null } | null {
+  const start = toYmd(input.start_date);
+  const duration = wholeMonths(input.duration_months);
+  const renews = Boolean(input.auto_renewal) && duration > 0;
+  const validUntil = endOfValidityYmd(input.disabled_at);
+  // Without renewal, the first term; with it, every term up to the end of validity.
+  let end: string | null = renews ? null : addDaysYmd(addMonthsYmd(start, duration), -1);
+  if (validUntil !== null && (end === null || validUntil < end)) end = validUntil;
+  if (end !== null && end < start) return null;
+  return { start, end };
+}
+
+const dayNumber = (ymd: string) => {
+  const [y, m, d] = parseYmd(ymd);
+  return Date.UTC(y, m - 1, d) / 86_400_000;
+};
+
+/** The units of `year` the terms cover: each month's covered days times the units of one of its days. */
+function coveredUnits(span: { start: string; end: string | null }, year: number): bigint {
+  let units = 0n;
+  for (let month = 1; month <= 12; month += 1) {
+    const days = daysInMonth(year, month);
+    const first = formatYmd(year, month, 1);
+    const last = formatYmd(year, month, days);
+    const from = span.start > first ? span.start : first;
+    const to = span.end !== null && span.end < last ? span.end : last;
+    const covered = dayNumber(to) - dayNumber(from) + 1;
+    if (covered > 0) units += BigInt(covered * (MONTH_SHARE_UNITS / days));
+  }
+  return units;
+}
+
+/**
+ * The commitment of `year` in cents of the contract's currency: the yearly amount's cents times
+ * the covered units over a year's units, rounded half away from zero once.
+ */
+export function contractCommitmentCents(input: ContractCommitmentInput, year: number): bigint {
+  if (!Number.isInteger(year)) throw new Error(`Invalid year: ${year}`);
+  const span = contractCoveredSpan(input);
+  if (span === null) return 0n;
+  const units = coveredUnits(span, year);
+  if (units === 0n) return 0n;
+  return divRoundHalfAwayBig(toCents(input.yearly_amount_at_signature ?? 0) * units, BigInt(YEAR_SHARE_UNITS));
+}
+
+/** The commitment of `year` in the contract's currency (2 decimals). */
+export function contractCommitment(input: ContractCommitmentInput, year: number): number {
+  return centsToNumber(contractCommitmentCents(input, year));
+}
+
+/**
+ * `contractCommitmentCents` in SQL, for the contract row `alias` (any row with `start_date`,
+ * `duration_months`, `auto_renewal`, `disabled_at` and `yearly_amount_at_signature`) and the
+ * integer SQL expression `year`: a scalar subquery giving the cents as an integer `numeric`.
+ * `alias` must be a plain identifier and `year` a trusted expression (a column, a bound
+ * parameter).
+ */
+export function contractCommitmentSql(alias: string, year: string): string {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(alias)) throw new Error(`Invalid table alias: ${alias}`);
+  const a = alias;
+  // LEAST and GREATEST skip a null: a null end (renewal with no end of validity) covers every month.
+  return `(SELECT ${divRoundHalfAway('round(cm_b.amount * 100) * cm_u.units', String(YEAR_SHARE_UNITS))}
+      FROM (SELECT ${a}.start_date AS s,
+                   LEAST((${a}.disabled_at AT TIME ZONE 'UTC')::date,
+                         CASE WHEN COALESCE(${a}.auto_renewal, false) AND COALESCE(${a}.duration_months, 0) > 0 THEN NULL
+                              ELSE (${a}.start_date + make_interval(months => GREATEST(COALESCE(${a}.duration_months, 0), 0)))::date - 1 END) AS e,
+                   COALESCE(${a}.yearly_amount_at_signature, 0)::numeric AS amount,
+                   (${year})::int AS yr) cm_b
+      CROSS JOIN LATERAL (
+        SELECT COALESCE(sum(GREATEST(0, LEAST(cm_b.e, cm_m.last) - GREATEST(cm_b.s, cm_m.first) + 1)
+                            * (${MONTH_SHARE_UNITS} / extract(day FROM cm_m.last)::int)), 0)::numeric AS units
+          FROM generate_series(1, 12) AS cm_k(m)
+          CROSS JOIN LATERAL (
+            SELECT make_date(cm_b.yr, cm_k.m, 1) AS first,
+                   (make_date(cm_b.yr, cm_k.m, 1) + interval '1 month')::date - 1 AS last
+          ) cm_m
+      ) cm_u)`;
 }
