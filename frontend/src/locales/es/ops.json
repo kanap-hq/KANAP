@@ -666,6 +666,48 @@
       "loadFailed": "No se pudieron cargar los requisitos.",
       "exportRegister": "Exportar el registro",
       "exportFailed": "No se pudo exportar el registro."
+    },
+    "renewal": {
+      "title": "Decisión de renovación pendiente",
+      "renegotiating": "Renegociación en curso",
+      "dueBefore": "Antes del {{date}}",
+      "task": "tarea",
+      "taskFor": "para {{name}}",
+      "withoutDecision_one": "Sin decisión, el contrato se renovará por {{count}} mes el {{date}}.",
+      "withoutDecision_other": "Sin decisión, el contrato se renovará por {{count}} meses el {{date}}.",
+      "renegotiatingHint": "La tarea sigue abierta hasta la decisión final.",
+      "reasonLabel": "Justificación",
+      "reasonPlaceholder": "p. ej., subida del 4 % anunciada, comparar con otras ofertas",
+      "renew": "Renovar",
+      "renegotiate": "Renegociar",
+      "terminate": "Rescindir",
+      "confirmTerminate": "Confirmar la rescisión",
+      "consequenceEnd": "El contrato terminará el {{date}} y no se renovará.",
+      "consequenceCommitment": "El compromiso de {{year}} pasará de {{before}} a {{after}} {{currency}}.",
+      "consequenceNoCommitment": "{{year}} ya no tendrá compromiso ({{before}} {{currency}} hoy).",
+      "consequenceApplications_one": "{{count}} aplicación pierde este contrato: {{names}}.",
+      "consequenceApplications_other": "{{count}} aplicaciones pierden este contrato: {{names}}.",
+      "consequenceAssets_one": "{{count}} activo pierde su contrato de soporte: {{names}}.",
+      "consequenceAssets_other": "{{count}} activos pierden su contrato de soporte: {{names}}.",
+      "andMore": "{{names}} y {{count}} más",
+      "renewedBy": "Renovación confirmada el {{date}} por {{name}}.",
+      "renewedOn": "Renovación confirmada el {{date}}.",
+      "renewsOn": "El contrato se renueva el {{date}}.",
+      "terminatedBy": "Rescisión decidida el {{date}} por {{name}}.",
+      "terminatedOn": "Rescisión decidida el {{date}}.",
+      "endsOn": "El contrato termina el {{date}}.",
+      "reasonShown": "Justificación: {{reason}}",
+      "noticeHint": "Envíe la carta de rescisión antes del {{date}} y adjúntela en Relaciones.",
+      "undo": "Anular la decisión",
+      "failed": "No se pudo guardar la decisión.",
+      "settings": {
+        "button": "Ajustes",
+        "title": "Ajustes de contratos",
+        "windowLabel": "Plazo de decisión antes de la fecha límite de rescisión (días)",
+        "windowHint": "Un contrato con renovación tácita espera una decisión este número de días antes de su fecha límite de rescisión. Su responsable recibe entonces una tarea para decidir la renovación. De 0 a 365 días.",
+        "invalid": "Introduzca un número entero de días entre 0 y 365.",
+        "saveFailed": "No se pudieron guardar los ajustes."
+      }
     }
   },
   "operations": {
@@ -1726,8 +1768,6 @@
     "changeType": "Cambiar el tipo…",
     "typeOpex": "OPEX",
     "typeCapex": "CAPEX",
-    "line": "Línea presupuestaria",
-    "totalOpex": "Total OPEX",
-    "totalCapex": "Total CAPEX"
+    "line": "Línea presupuestaria"
   }
 }

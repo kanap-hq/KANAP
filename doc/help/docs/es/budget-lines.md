@@ -150,9 +150,8 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 
 **Fila de totales**:
 
-- La fila fijada en la parte inferior muestra **Total (12 líneas)**, con el número de líneas de la lista, y el total de cada columna de importe
-- Cuando la lista contiene ambos tipos (sin filtro en **Tipo**, o con ambos valores marcados), dos filas más aparecen encima: **Total OPEX** y **Total CAPEX**. Filtrada por un tipo, la lista muestra solo la fila **Total**
-- Un icono de candado delante de un total indica que la columna está congelada para ese año. En **Total OPEX** y **Total CAPEX** sigue la congelación de ese tipo. En **Total** aparece cuando la columna está congelada para todos los tipos que contiene la lista. Pase el cursor por encima para leer **Congelado**. Consulte [Congelar / Descongelar datos](budget-operations.md#congelar-descongelar-datos)
+- Una sola fila **Total** queda fijada bajo la lista. Muestra **Total (12 líneas)**, con el número de líneas de la lista, y el total de cada columna de importe
+- Un icono de candado delante de un total indica que la columna está congelada para ese año. Sigue la congelación de cada tipo que contiene la lista. Si la lista está filtrada por un tipo, el candado aparece cuando ese tipo está congelado. Si contiene ambos tipos, aparece cuando la columna está congelada para los dos. Pase el cursor por encima para leer **Congelado**. Consulte [Congelar / Descongelar datos](budget-operations.md#congelar-descongelar-datos)
 - Cada columna de ETC visible muestra la suma del ETC de las líneas. Cuando algunas líneas no tienen ETC, el recuento sigue al total, por ejemplo «3.50 · 12 desconocidas». Pase el cursor por encima para ver la frase completa: «Desconocido para 12 líneas». Cuando ninguna línea tiene ETC, el total queda vacío y solo se muestra el recuento
 - Los totales respetan sus filtros y búsqueda actuales
 
@@ -676,7 +675,7 @@ Un archivo de presupuesto nunca cambia el tipo de una línea. Consulte [Cargar u
 
 11. **Desactive, no elimine**: Preserve el historial desactivando líneas cuando ya no estén activas. Elimine solo si es un error.
 
-12. **Revise las filas de totales**: Antes de finalizar presupuestos, verifique los totales fijados en la lista, por tipo y en conjunto, para asegurar que su gasto suma como se espera.
+12. **Revise la fila de totales**: Antes de finalizar presupuestos, verifique la fila **Total** bajo la lista para asegurar que su gasto suma como se espera. Filtre por **Tipo** para ver el total de OPEX o de CAPEX por separado.
 
 13. **Use enlace directo**: Haga clic directamente en una columna de presupuesto en la lista para ir a la pestaña Presupuesto de ese año. Haga clic en la columna Tarea para ir a las tareas de la línea en la pestaña Vista general. Esto ahorra tiempo de navegación.
 

@@ -555,7 +555,7 @@ Chaque sélecteur de métrique ou de colonne propose les mêmes colonnes budgét
 
 ### Navigation
 
-Chaque rapport affiche un fil d'Ariane vers le hub **Rapports**, vous permettant de changer de rapport rapidement.
+Pour changer de rapport, cliquez sur **Rapports** dans le panneau de gauche pour revenir au hub.
 
 ---
 

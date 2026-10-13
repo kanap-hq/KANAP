@@ -237,8 +237,6 @@ export default function ByAssigneeReport() {
     <ReportLayout
       title={t('reports.byAssignee.title')}
       subtitle={t('reports.byAssignee.subtitle')}
-      rootTo="/portfolio/reports"
-      rootLabel={t('reports.title')}
       filters={(
         <>
           <ReportFilter label={t('reports.byAssignee.staleLabel')} width={180}>

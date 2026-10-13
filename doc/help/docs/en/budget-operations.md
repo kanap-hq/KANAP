@@ -74,7 +74,7 @@ Without the Admin level on Budget administration, the page shows the states read
 
 ### Lock icons in the list
 
-The totals rows of [the budget lines list](budget-lines.md#working-with-the-list) show a lock icon before the total of a frozen column. When the list holds both types, the **Total OPEX** and **Total CAPEX** rows each follow the freeze of their type, and the **Total** row shows the lock when the column is frozen for both. Filtered on one type, the **Total** row follows that type. Hover the icon to read **Frozen**.
+The single **Total** row of [the budget lines list](budget-lines.md#working-with-the-list) shows a lock icon before the total of a frozen column. It follows the freeze of each type the list holds. When the list is filtered on one type, the lock shows when that type is frozen. When it holds both types, the lock shows when the column is frozen for both. Hover the icon to read **Frozen**.
 
 ### Freezing the default column fixes the exchange rates
 

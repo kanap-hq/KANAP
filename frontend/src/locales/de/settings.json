@@ -3,7 +3,8 @@
   "tabs": {
     "profile": "Profil",
     "notifications": "Benachrichtigungen",
-    "appearance": "Darstellung"
+    "appearance": "Darstellung",
+    "about": "Über"
   },
   "profile": {
     "sections": {
@@ -83,5 +84,13 @@
       "friday": "Freitag",
       "saturday": "Samstag"
     }
+  },
+  "about": {
+    "title": "Über KANAP",
+    "version": "Version {{version}}",
+    "deploymentCloud": "Bereitstellung: Cloud",
+    "deploymentOnPremise": "Bereitstellung: On-Premise",
+    "releaseNotes": "Versionshinweise",
+    "upgradeGuide": "Upgrade-Anleitung"
   }
 }

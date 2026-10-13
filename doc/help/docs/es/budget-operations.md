@@ -74,7 +74,7 @@ Sin el nivel Administrador en la administración presupuestaria, la página mues
 
 ### Candados en la lista
 
-Las filas de totales de [la lista de líneas presupuestarias](budget-lines.md#trabajar-con-la-lista) muestran un candado delante del total de una columna congelada. Cuando la lista contiene ambos tipos, las filas **Total OPEX** y **Total CAPEX** siguen cada una la congelación de su tipo, y la fila **Total** muestra el candado cuando la columna está congelada para ambos. Filtrada por un tipo, la fila **Total** sigue ese tipo. Pase el cursor sobre el icono para leer **Congelado**.
+La fila **Total** única de [la lista de líneas presupuestarias](budget-lines.md#trabajar-con-la-lista) muestra un candado delante del total de una columna congelada. Sigue la congelación de cada tipo que contiene la lista. Si la lista está filtrada por un tipo, el candado aparece cuando ese tipo está congelado. Si contiene ambos tipos, aparece cuando la columna está congelada para los dos. Pase el cursor sobre el icono para leer **Congelado**.
 
 ### Congelar la columna por defecto fija los tipos de cambio
 

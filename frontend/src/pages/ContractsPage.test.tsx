@@ -72,6 +72,8 @@ const TOTALS = {
   fx_year: 2026,
   excluded: [{ currency: 'GBP', count: 1 }],
   to_decide_count: 4,
+  // The tenant's window comes with the totals (not the default of 90 days).
+  decision_window_days: 45,
   budget: {
     year: NEXT_YEAR,
     column: 'planned',
@@ -233,7 +235,7 @@ describe('ContractsPage', () => {
     expect(column('auto_renewal').valueFormatter?.({ value: undefined, data: row, node: { rowPinned: 'bottom' } })).toBe('');
   });
 
-  it('toggles the "to decide" quick filter on the state column, with the count from the server', async () => {
+  it('toggles the "to decide" quick filter on the state column, with the count and the window from the server', async () => {
     renderPage();
     const setFilterModel = vi.fn();
     let model: Record<string, unknown> = { name: { filterType: 'text', type: 'contains', filter: 'a' } };
@@ -241,7 +243,7 @@ describe('ContractsPage', () => {
       grid.props?.onGridApiReady({ getFilterModel: () => model, setFilterModel });
     });
     report(model);
-    const toggle = await screen.findByRole('button', { name: /contracts\.list\.toDecide \{"days":90,"count":4\}/ });
+    const toggle = await screen.findByRole('button', { name: /contracts\.list\.toDecide \{"days":45,"count":4\}/ });
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
     fireEvent.click(toggle);
     expect(setFilterModel).toHaveBeenLastCalledWith({ ...model, term_state: { filterType: 'set', values: ['to_decide'] } });

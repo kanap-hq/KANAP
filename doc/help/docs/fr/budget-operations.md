@@ -74,7 +74,7 @@ Sans le niveau Admin sur l'administration budgétaire, la page affiche les état
 
 ### Cadenas dans la liste
 
-Les lignes de totaux de [la liste des lignes budgétaires](budget-lines.md#travailler-avec-la-liste) affichent un cadenas devant le total d'une colonne gelée. Quand la liste contient les deux types, les lignes **Total OPEX** et **Total CAPEX** suivent chacune le gel de leur type, et la ligne **Total** affiche le cadenas quand la colonne est gelée pour les deux. Filtrée sur un type, la ligne **Total** suit ce type. Survolez l'icône pour lire **Gelé**.
+La ligne **Total** unique de [la liste des lignes budgétaires](budget-lines.md#travailler-avec-la-liste) affiche un cadenas devant le total d'une colonne gelée. Il suit le gel de chaque type que contient la liste. Si la liste est filtrée sur un type, le cadenas s'affiche quand ce type est gelé. Si elle contient les deux types, il s'affiche quand la colonne est gelée pour les deux. Survolez l'icône pour lire **Gelé**.
 
 ### Geler la colonne par défaut fige les taux de change
 

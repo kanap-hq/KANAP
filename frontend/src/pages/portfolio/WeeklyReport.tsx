@@ -1327,8 +1327,6 @@ export default function WeeklyReport() {
     <ReportLayout
       title={byPersonView ? t('reports.cards.byPerson.title') : t('reports.weekly.title')}
       subtitle={byPersonView ? t('reports.cards.byPerson.description') : t('reports.weekly.subtitle')}
-      rootTo="/portfolio/reports"
-      rootLabel={t('reports.title')}
       filters={(
         <>
           <DateEUField

@@ -35,6 +35,7 @@ import {
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
 import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attach.util';
 import { contractTermFields, contractTermsSql, sqlDateLiteral, type ContractTermFields } from './contract-terms';
+import { readDecisionWindowDays } from './contract-settings.service';
 import { utcDateYmd } from '../notifications/expiry-reminder-schedule';
 import { centsToNumber } from '../common/amount';
 import { FxRateService } from '../currency/fx-rate.service';
@@ -150,10 +151,10 @@ export class ContractsService {
   /**
    * The list's filter targets. The end date, the cancellation deadline, the next due date and the
    * state are those of the current term as of `today` (`contract-terms.ts`), like the values the
-   * list returns.
+   * list returns; the state with the tenant's decision window (`windowDays`).
    */
-  private contractFilterTargets(today: string, withBudget = false, withCompliance = false): Record<string, FilterTargetConfig> {
-    const terms = contractTermsSql('c', sqlDateLiteral(today));
+  private contractFilterTargets(today: string, windowDays: number, withBudget = false, withCompliance = false): Record<string, FilterTargetConfig> {
+    const terms = contractTermsSql('c', sqlDateLiteral(today), { decisionWindowDays: windowDays });
     // The compliance summary, when the list joins it as `cc` (its sort or its filter is asked for).
     const compliance: Record<string, FilterTargetConfig> = withCompliance
       ? { compliance_state: { expression: 'cc.state', dataType: 'string' } }
@@ -217,27 +218,28 @@ export class ContractsService {
    * and the totals, so they always cover the same contracts. With `budget`, the contracts' budget
    * figures (`contract-budget.ts`) join as `cb`, for the filters, the sort and the totals. With
    * `compliance`, the compliance summaries (`contract-compliance.ts`) join as `cc` when the request
-   * sorts or filters on them, and only then.
+   * sorts or filters on them, and only then. `windowDays`: the tenant's decision window
+   * (`readDecisionWindowDays`), for the state.
    */
   private listQuery(
     mg: EntityManager,
     query: any,
-    opts?: { exportAll?: boolean; omitFilters?: string[]; budget?: ContractBudgetInputs | null; compliance?: ContractComplianceInputs | null },
+    opts: { windowDays: number; exportAll?: boolean; omitFilters?: string[]; budget?: ContractBudgetInputs | null; compliance?: ContractComplianceInputs | null },
   ) {
     const repo = mg.getRepository(Contract);
-    const parsed = opts?.exportAll
+    const parsed = opts.exportAll
       ? parseExportPagination(query, DEFAULT_LIST_SORT)
       : parsePagination(query, DEFAULT_LIST_SORT);
     const { status, q, filters } = parsed;
     const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
     const today = utcDateYmd(new Date());
-    const budget = opts?.budget ?? null;
+    const budget = opts.budget ?? null;
     const complianceFiltered = !!filtersToApply && typeof filtersToApply === 'object'
       && Object.prototype.hasOwnProperty.call(filtersToApply, 'compliance_state')
       && !opts?.omitFilters?.includes('compliance_state');
     const compliance = opts?.compliance && (parsed.sort.field === 'compliance_state' || complianceFiltered) ? opts.compliance : null;
-    const filterTargets = this.contractFilterTargets(today, budget !== null, compliance !== null);
+    const filterTargets = this.contractFilterTargets(today, opts.windowDays, budget !== null, compliance !== null);
     const nextParam = createParamNameGenerator('c');
     const compiledFilters: CompiledCondition[] = [];
     if (filtersToApply && typeof filtersToApply === 'object') {
@@ -357,7 +359,8 @@ export class ContractsService {
     const mg = opts?.manager ?? this.repo.manager;
     const budget = await this.listBudgetInputs(mg, query, opts);
     const compliance = await loadContractComplianceInputs(mg);
-    const { qb: qbBase, parsed, today, filterTargets } = this.listQuery(mg, query, { exportAll: opts?.exportAll, budget, compliance });
+    const windowDays = await readDecisionWindowDays(mg);
+    const { qb: qbBase, parsed, today, filterTargets } = this.listQuery(mg, query, { windowDays, exportAll: opts?.exportAll, budget, compliance });
     const { page, limit, skip, sort } = parsed;
 
     const total = await qbBase.clone().getCount();
@@ -409,7 +412,7 @@ export class ContractsService {
       const figures = budgetById.get(i.id);
       return {
         ...i,
-        ...contractTermFields(i, today),
+        ...contractTermFields(i, today, { decisionWindowDays: windowDays }),
         // From the end of validity, like the filter: the stored status stays enabled once the date passes.
         status: deriveStatusFromDisabledAt(i.disabled_at),
         supplier: i.supplier_id ? { id: i.supplier_id, name: sById.get(i.supplier_id)?.name ?? '' } : null,
@@ -442,7 +445,7 @@ export class ContractsService {
    * with the rates of this year's budget (the latest rate set of the year, as the budget's live
    * columns: `contractFxRates`). Contracts in a currency without a rate stay out of the sum and are
    * counted by currency in `excluded`. `to_decide_count`: the contracts the "to decide" quick filter
-   * shows, the state filter itself left out.
+   * shows, the state filter itself left out; `decision_window_days`: the tenant's window it uses.
    *
    * With a budget year and column (`budget_year`, `budget_column`) and the right to read the
    * budget, `budget` sums the list's budget figures (`contract-budget.ts`): committed (contracts
@@ -454,7 +457,8 @@ export class ContractsService {
     const mg = opts?.manager ?? this.repo.manager;
     const budget = await this.listBudgetInputs(mg, query, opts);
     const compliance = await loadContractComplianceInputs(mg);
-    const { qb } = this.listQuery(mg, query, { exportAll: true, budget, compliance });
+    const windowDays = await readDecisionWindowDays(mg, opts?.tenantId);
+    const { qb } = this.listQuery(mg, query, { windowDays, exportAll: true, budget, compliance });
     const groups: Array<{ currency: string; count: string; amount: string }> = await qb
       .clone()
       .select(`UPPER(TRIM(COALESCE(c.currency, '')))`, 'currency')
@@ -464,7 +468,7 @@ export class ContractsService {
       .getRawMany();
     groups.sort((a, b) => a.currency.localeCompare(b.currency));
 
-    const { qb: stateBase, filterTargets } = this.listQuery(mg, query, { exportAll: true, omitFilters: ['term_state'], budget, compliance });
+    const { qb: stateBase, filterTargets } = this.listQuery(mg, query, { windowDays, exportAll: true, omitFilters: ['term_state'], budget, compliance });
     const toDecideCount = await stateBase
       .andWhere(`${filterTargets.term_state.expression} = 'to_decide'`)
       .getCount();
@@ -494,13 +498,14 @@ export class ContractsService {
       fx_year: year,
       excluded,
       to_decide_count: toDecideCount,
-      ...(budget ? { budget: await this.budgetTotals(mg, query, budget, compliance) } : {}),
+      decision_window_days: windowDays,
+      ...(budget ? { budget: await this.budgetTotals(mg, query, budget, compliance, windowDays) } : {}),
     };
   }
 
   /** The `budget` part of the totals (see `totals`). */
-  private async budgetTotals(mg: EntityManager, query: any, budget: ContractBudgetInputs, compliance: ContractComplianceInputs) {
-    const { qb } = this.listQuery(mg, query, { exportAll: true, budget, compliance });
+  private async budgetTotals(mg: EntityManager, query: any, budget: ContractBudgetInputs, compliance: ContractComplianceInputs, windowDays: number) {
+    const { qb } = this.listQuery(mg, query, { windowDays, exportAll: true, budget, compliance });
     const sums: { committed: string | null; linked: string | null; gap: string | null } = await qb
       .clone()
       .select('SUM(cb.committed::numeric)::text', 'committed')
@@ -515,7 +520,7 @@ export class ContractsService {
       .groupBy(`COALESCE(NULLIF(UPPER(TRIM(c.currency)), ''), 'EUR')`)
       .getRawMany();
     excluded.sort((a, b) => a.currency.localeCompare(b.currency));
-    const { qb: stateBase } = this.listQuery(mg, query, { exportAll: true, omitFilters: ['budget_state'], budget, compliance });
+    const { qb: stateBase } = this.listQuery(mg, query, { windowDays, exportAll: true, omitFilters: ['budget_state'], budget, compliance });
     const counts: { no_line: string; under: string } = await stateBase
       .select(`COUNT(*) FILTER (WHERE cb.state = 'no_line')::text`, 'no_line')
       .addSelect(`COUNT(*) FILTER (WHERE cb.state = 'under')::text`, 'under')
@@ -545,7 +550,8 @@ export class ContractsService {
     const found = await repo.findOne({ where: { id, tenant_id: sessionTenant() } });
     if (!found) throw new NotFoundException('Contract not found');
     const tenantId = found.tenant_id;
-    const terms = contractTermFields(found, utcDateYmd(new Date()));
+    const windowDays = await readDecisionWindowDays(mg, tenantId);
+    const terms = contractTermFields(found, utcDateYmd(new Date()), { decisionWindowDays: windowDays });
     const linked = await linksRepo.find({ where: { tenant_id: tenantId, contract_id: id } });
     const spendIds = linked.map(l => l.spend_item_id);
     const spendItems = spendIds.length
@@ -573,6 +579,8 @@ export class ContractsService {
     return {
       ...found,
       ...terms,
+      // The tenant's decision window: the page draws it on the timeline (`contract-settings.service.ts`).
+      decision_window_days: windowDays,
       supplier_name: names?.supplier_name ?? null,
       company_name: names?.company_name ?? null,
       owner_name: names?.owner_name ?? null,
@@ -832,7 +840,8 @@ export class ContractsService {
     // The workspace walks the list in its order, a budget figure's included.
     const budget = await this.listBudgetInputs(mg, query, opts);
     const compliance = await loadContractComplianceInputs(mg);
-    const { qb, parsed, filterTargets } = this.listQuery(mg, query, { budget, compliance });
+    const windowDays = await readDecisionWindowDays(mg);
+    const { qb, parsed, filterTargets } = this.listQuery(mg, query, { windowDays, budget, compliance });
     const { skip, sort } = parsed;
     // Not the parsed limit: parsePagination defaults to a page of 20, and the prev/next
     // navigation that calls this sends no limit, so it only ever knew 20 contracts.
@@ -1338,7 +1347,8 @@ export class ContractsService {
     // The list's budget filters apply too, for a reader of the budget (as on the list).
     const budget = await this.listBudgetInputs(mg, query, opts);
     const compliance = await loadContractComplianceInputs(mg);
-    const { qb } = this.listQuery(mg, query, { exportAll: true, budget, compliance });
+    const windowDays = await readDecisionWindowDays(mg);
+    const { qb } = this.listQuery(mg, query, { windowDays, exportAll: true, budget, compliance });
     const contracts: Array<{ id: string; name: string; supplier_name: string | null; company_name: string | null }> = await qb
       .select('c.id', 'id')
       .addSelect('c.name', 'name')

@@ -192,10 +192,7 @@ export default function AllocationDefaultPage() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <PageHeader
-        title={t('operations.allocationDefault.title')}
-        breadcrumbTitle={t('operations.allocationDefault.title')}
-      />
+      <PageHeader title={t('operations.allocationDefault.title')} />
       <Typography variant="body1" sx={{ color: 'text.secondary' }}>
         {t('operations.allocationDefault.subtitle')}
       </Typography>

@@ -29,6 +29,7 @@ import { utcTodayYmd } from './contractTerms';
 import { contractSchedule } from './contractSchedule';
 import { type BillingFrequency, type ContractDetail, type ContractPatch, parseAmount, parseMonths } from './contractForm';
 import ContractDeadlines from './workspace/ContractDeadlines';
+import ContractRenewalDecision from './workspace/ContractRenewalDecision';
 import ContractPropertiesDrawer, { type ContractFormValues } from './workspace/ContractPropertiesDrawer';
 import ContractBudgetTab from './workspace/ContractBudgetTab';
 import ContractRelationsTab from './workspace/ContractRelationsTab';
@@ -235,7 +236,14 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
     notice_period_months: form.notice_period_months,
     auto_renewal: form.auto_renewal,
     disabled_at: form.disabled_at,
-  }, utcTodayYmd()) : null), [form]);
+  }, utcTodayYmd(), data?.decision_window_days) : null), [form, data?.decision_window_days]);
+
+  // A renewal decision may change the contract (a termination sets its end of validity) and its task.
+  const refreshAfterDecision = React.useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ['contracts', id], exact: true });
+    void queryClient.invalidateQueries({ queryKey: ['contract-tasks', id] });
+    void queryClient.invalidateQueries({ queryKey: ['contracts-ids'] });
+  }, [id, queryClient]);
 
   const refreshRelations = React.useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['contract-relation-counts', id] });
@@ -358,6 +366,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
         {form && tab === 'overview' && (
           <Stack key={form.id} spacing={4} sx={sectionStackSx}>
             <ContractDeadlines schedule={schedule} />
+            {!stale && <ContractRenewalDecision contractId={form.id} canDecide={editable} onDecided={refreshAfterDecision} />}
             <EntityTasksSection entityType="contract" entityId={form.id} disabled={!canEdit} />
             <Stack spacing={1.25}>
               <RelationsSectionTitle>{t('contracts.fields.notes')}</RelationsSectionTitle>

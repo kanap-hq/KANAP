@@ -25,6 +25,8 @@ export type ContractDetail = {
   term_index?: number;
   current_term_end?: string;
   next_cancellation_deadline?: string | null;
+  /** The tenant's decision window in days (`backend/src/contracts/contract-settings.service.ts`). */
+  decision_window_days?: number;
   links?: Array<{ id: string; description: string | null; url: string }>;
   attachments?: ContractAttachment[];
 };

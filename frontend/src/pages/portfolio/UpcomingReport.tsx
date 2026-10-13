@@ -590,8 +590,6 @@ export default function UpcomingReport() {
     <ReportLayout
       title={t('reports.upcoming.title')}
       subtitle={t('reports.upcoming.subtitle')}
-      rootTo="/portfolio/reports"
-      rootLabel={t('reports.title')}
       filters={(
         <>
           <ProjectFilter options={projectTeamValues?.projects ?? []} value={projectIds} onChange={setProjectIds} />

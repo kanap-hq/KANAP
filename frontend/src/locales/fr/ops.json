@@ -666,6 +666,48 @@
       "loadFailed": "Les exigences n'ont pas pu être chargées.",
       "exportRegister": "Exporter le registre",
       "exportFailed": "Le registre n'a pas pu être exporté."
+    },
+    "renewal": {
+      "title": "Décision de renouvellement attendue",
+      "renegotiating": "Renégociation en cours",
+      "dueBefore": "Avant le {{date}}",
+      "task": "tâche",
+      "taskFor": "pour {{name}}",
+      "withoutDecision_one": "Sans décision, le contrat sera reconduit pour {{count}} mois le {{date}}.",
+      "withoutDecision_other": "Sans décision, le contrat sera reconduit pour {{count}} mois le {{date}}.",
+      "renegotiatingHint": "La tâche reste ouverte jusqu'à la décision finale.",
+      "reasonLabel": "Justification",
+      "reasonPlaceholder": "Ex. : hausse de 4 % annoncée, comparer avec d'autres offres",
+      "renew": "Renouveler",
+      "renegotiate": "Renégocier",
+      "terminate": "Résilier",
+      "confirmTerminate": "Confirmer la résiliation",
+      "consequenceEnd": "Le contrat finira le {{date}} et ne sera pas reconduit.",
+      "consequenceCommitment": "L'engagement {{year}} passera de {{before}} à {{after}} {{currency}}.",
+      "consequenceNoCommitment": "{{year}} n'aura plus d'engagement ({{before}} {{currency}} aujourd'hui).",
+      "consequenceApplications_one": "{{count}} application perdra ce contrat : {{names}}.",
+      "consequenceApplications_other": "{{count}} applications perdront ce contrat : {{names}}.",
+      "consequenceAssets_one": "{{count}} actif perdra son contrat de support : {{names}}.",
+      "consequenceAssets_other": "{{count}} actifs perdront leur contrat de support : {{names}}.",
+      "andMore": "{{names}} et {{count}} autres",
+      "renewedBy": "Renouvellement confirmé le {{date}} par {{name}}.",
+      "renewedOn": "Renouvellement confirmé le {{date}}.",
+      "renewsOn": "Le contrat repart pour un terme le {{date}}.",
+      "terminatedBy": "Résiliation décidée le {{date}} par {{name}}.",
+      "terminatedOn": "Résiliation décidée le {{date}}.",
+      "endsOn": "Le contrat finit le {{date}}.",
+      "reasonShown": "Justification : {{reason}}",
+      "noticeHint": "Pensez à envoyer la lettre de résiliation avant le {{date}} et à la joindre dans Relations.",
+      "undo": "Annuler la décision",
+      "failed": "La décision n'a pas pu être enregistrée.",
+      "settings": {
+        "button": "Réglages",
+        "title": "Réglages des contrats",
+        "windowLabel": "Délai de décision avant la date limite de résiliation (jours)",
+        "windowHint": "Un contrat à reconduction tacite attend une décision ce nombre de jours avant sa date limite de résiliation. Son responsable reçoit alors une tâche pour décider du renouvellement. De 0 à 365 jours.",
+        "invalid": "Saisissez un nombre entier de jours entre 0 et 365.",
+        "saveFailed": "Les réglages n'ont pas pu être enregistrés."
+      }
     }
   },
   "operations": {
@@ -1727,8 +1769,6 @@
     "changeType": "Changer le type…",
     "typeOpex": "OPEX",
     "typeCapex": "CAPEX",
-    "line": "Ligne budgétaire",
-    "totalOpex": "Total OPEX",
-    "totalCapex": "Total CAPEX"
+    "line": "Ligne budgétaire"
   }
 }

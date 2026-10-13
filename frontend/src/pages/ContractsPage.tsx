@@ -35,13 +35,11 @@ import { COMPLIANCE_SUMMARY_STATES, type ComplianceSummary } from './contracts/c
 import { screenLanguage } from '../components/csv/readings';
 import { downloadBlob, extractFilenameFromDisposition } from '../utils/downloadBlob';
 import { getApiErrorMessage } from '../utils/apiErrorMessage';
+import ContractSettingsDialog from './contracts/ContractSettingsDialog';
 
 /** The states of a contract's terms, computed by the API (`backend/src/contracts/contract-terms.ts`). */
 const TERM_STATES = ['to_decide', 'in_progress', 'renewed', 'ending', 'expired'] as const;
 type TermState = (typeof TERM_STATES)[number];
-
-/** The decision window of the "to decide" state (`CONTRACT_DECISION_WINDOW_DAYS` on the API). */
-const DECISION_WINDOW_DAYS = 90;
 
 type ContractRow = {
   id: string;
@@ -83,6 +81,8 @@ type ContractTotals = {
   fx_year: number;
   excluded: Array<{ currency: string; count: number }>;
   to_decide_count: number;
+  /** The tenant's decision window of the "to decide" state, in days (`backend/src/contracts/contract-settings.service.ts`). */
+  decision_window_days: number;
   /** The budget figures' sums and quick filter counts, with a budget year and column. */
   budget?: {
     year: number;
@@ -313,6 +313,7 @@ export default function ContractsPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [registerError, setRegisterError] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any; statusScope?: StatusScope } | null>(null);
   const gridApiRef = useRef<any>(null);
   // The request the grid shows (search, filters, status scope), which the footer and the quick filter follow.
@@ -534,10 +535,13 @@ export default function ContractsPage() {
       {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('contracts.importCsv')}</Button>}
       {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('contracts.exportCsv')}</Button>}
       {canAdmin && <Button variant="action" onClick={() => { void exportRegister(); }}>{t('contracts.compliance.exportRegister')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setSettingsOpen(true)}>{t('contracts.renewal.settings.button')}</Button>}
     </Stack>
   );
 
   const toDecideCount = totals.data?.to_decide_count;
+  // The window comes with the totals: the link waits for them rather than show another number.
+  const decisionWindowDays = totals.data?.decision_window_days;
   const budgetTotals = totals.data?.budget;
   const quickLink = (key: string, label: string, count: number | undefined, active: boolean, onClick: () => void) => (
     <Box key={key} sx={{ display: 'flex', alignItems: 'center', columnGap: '8px' }}>
@@ -550,7 +554,7 @@ export default function ContractsPage() {
   const budgetYears = offeredBudgetYears(budgetTotals?.years, budgetChoice.year);
   const quickFilter = (
     <Box sx={{ display: 'flex', alignItems: 'center', columnGap: 2, rowGap: 1, flexWrap: 'wrap', flex: '1 1 auto', fontSize: 13, color: 'kanap.text.secondary' }}>
-      {quickLink('to_decide', t('contracts.list.toDecide', { days: DECISION_WINDOW_DAYS, count: toDecideCount ?? 0 }), toDecideCount, toDecideActive, toggleToDecide)}
+      {decisionWindowDays !== undefined && quickLink('to_decide', t('contracts.list.toDecide', { days: decisionWindowDays, count: toDecideCount ?? 0 }), toDecideCount, toDecideActive, toggleToDecide)}
       {canReadBudget && quickLink('no_line', t('contracts.list.noBudgetLine', { count: budgetTotals?.no_line_count ?? 0 }), budgetTotals?.no_line_count, budgetQuick === 'no_line', () => toggleBudgetQuick('no_line'))}
       {canReadBudget && quickLink('under', t('contracts.list.underBudgeted', { count: budgetTotals?.under_count ?? 0 }), budgetTotals?.under_count, budgetQuick === 'under', () => toggleBudgetQuick('under'))}
       {canReadBudget && (
@@ -610,6 +614,7 @@ export default function ContractsPage() {
       />
 
       <CsvExportDialog open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/contracts" title={t("contracts.exportTitle")} />
+      <ContractSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} onSaved={() => setRefreshKey(k => k + 1)} />
       <CsvImportDialog open={importOpen} onClose={() => setImportOpen(false)} endpoint="/contracts" title={t("contracts.importTitle")} onImported={() => setRefreshKey(k => k + 1)} />
     </>
   );

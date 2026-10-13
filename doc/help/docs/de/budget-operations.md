@@ -74,7 +74,7 @@ Ohne die Administratorstufe für die Budget-Administration zeigt die Seite die Z
 
 ### Schloss-Symbole in der Liste
 
-Die Summenzeilen [der Liste der Budgetzeilen](budget-lines.md#mit-der-liste-arbeiten) zeigen ein Schloss-Symbol vor der Summe einer eingefrorenen Spalte. Enthält die Liste beide Typen, folgen die Zeilen **Gesamt OPEX** und **Gesamt CAPEX** jeweils dem Einfrieren ihres Typs, und die Zeile **Gesamt** zeigt das Schloss, wenn die Spalte für beide eingefroren ist. Ist die Liste auf einen Typ gefiltert, folgt die Zeile **Gesamt** diesem Typ. Fahren Sie mit der Maus über das Symbol, um **Eingefroren** zu lesen.
+Die einzige Zeile **Gesamt** [der Liste der Budgetzeilen](budget-lines.md#mit-der-liste-arbeiten) zeigt ein Schloss-Symbol vor der Summe einer eingefrorenen Spalte. Es folgt dem Einfrieren jedes Typs in der Liste. Ist die Liste auf einen Typ gefiltert, erscheint das Schloss, wenn dieser Typ eingefroren ist. Enthält sie beide Typen, erscheint es, wenn die Spalte für beide eingefroren ist. Fahren Sie mit der Maus über das Symbol, um **Eingefroren** zu lesen.
 
 ### Das Einfrieren der Standardspalte schreibt die Wechselkurse fest
 
