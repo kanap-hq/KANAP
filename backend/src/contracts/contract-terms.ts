@@ -33,7 +33,7 @@
  *   Null once that end has passed.
  * - `term_state`, in this order: `expired` (no next due date), `ending` (it does not renew at
  *   the end of its current term), `to_decide` (its next cancellation deadline falls within the
- *   decision window, `CONTRACT_DECISION_WINDOW_DAYS` from today), `renewed` (the current term's
+ *   decision window, the tenant's `decisionWindowDays` from today), `renewed` (the current term's
  *   deadline has passed: the contract goes on into the next term) or `in_progress`.
  *
  * `computeContractTerms` reads the rule as written. `contractTermsSql` gives the same values as
@@ -56,8 +56,10 @@ import { divRoundHalfAway } from '../common/list-engine/sql-fragments';
 const YMD = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /**
- * The days before a cancellation deadline during which a renewing contract awaits a decision
- * (`term_state = 'to_decide'`). A constant until the tenant can set it.
+ * The default number of days before a cancellation deadline during which a renewing contract
+ * awaits a decision (`term_state = 'to_decide'`). Each tenant sets its own window
+ * (`contract-settings.service.ts`, `readDecisionWindowDays`); the callers pass it as
+ * `decisionWindowDays`.
  */
 export const CONTRACT_DECISION_WINDOW_DAYS = 90;
 
@@ -205,6 +207,45 @@ export function computeContractTerms(input: ContractTermsInput, todayYmd: string
     renews_at_term_end: renewsAtTermEnd,
     next_due_date: nextDue,
     term_state: termState,
+  };
+}
+
+/** The dates of a contract's terms, renewal or not: see `contractTermCalendar`. */
+export type ContractTermCalendar = {
+  /** First day of term `k` (0 for the first one). */
+  termStart: (k: number) => string;
+  /** Last day of term `k`. */
+  termEnd: (k: number) => string;
+  /** Cancellation deadline of term `k`: its end minus the notice. */
+  deadline: (k: number) => string;
+  /** The term that contains `day` (0 before the start). */
+  termAt: (day: string) => number;
+  /** The end of validity as a UTC calendar day, or null. */
+  validUntil: string | null;
+};
+
+/**
+ * The calendar of a contract's terms as if it renewed with no end (the dates of the rule above,
+ * whatever `auto_renewal` and the end of validity say): the renewal decision (`contract-renewal.ts`)
+ * reads the term a decision is about from it. Null without a duration.
+ */
+export function contractTermCalendar(input: ContractTermsInput): ContractTermCalendar | null {
+  const start = toYmd(input.start_date);
+  const duration = wholeMonths(input.duration_months);
+  if (duration === 0) return null;
+  const notice = wholeMonths(input.notice_period_months);
+  const termStart = (k: number) => addMonthsYmd(start, k * duration);
+  const termEnd = (k: number) => addDaysYmd(termStart(k + 1), -1);
+  return {
+    termStart,
+    termEnd,
+    deadline: (k: number) => addMonthsYmd(termEnd(k), -notice),
+    termAt: (day: string) => {
+      let k = 0;
+      while (termStart(k + 1) <= day) k += 1;
+      return k;
+    },
+    validUntil: endOfValidityYmd(input.disabled_at),
   };
 }
 

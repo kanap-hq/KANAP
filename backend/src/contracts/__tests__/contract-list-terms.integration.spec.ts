@@ -164,6 +164,8 @@ async function testTotals() {
         fx_year: YEAR,
         excluded: [{ currency: 'GBP', count: 1 }],
         to_decide_count: 1,
+        // The tenant's window (the default: no setting stored).
+        decision_window_days: 90,
       },
       'default scope',
     );

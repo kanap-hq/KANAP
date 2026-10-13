@@ -20,11 +20,17 @@ import { ExternalContact } from '../contacts/external-contact.entity';
 import { SupplierContactLink } from '../contacts/supplier-contact.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { CurrencyModule } from '../currency/currency.module';
+import { ScheduledTasksModule } from '../admin/scheduled-tasks/scheduled-tasks.module';
+import { Tenant } from '../tenants/tenant.entity';
+import { ContractSettingsService } from './contract-settings.service';
+import { ContractSettingsController } from './contract-settings.controller';
+import { ContractRenewalService } from './contract-renewal.service';
+import { ContractRenewalController } from './contract-renewal.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Contract, ContractSpendItem, ContractLink, ContractAttachment, ContractContactLink, ExternalContact, SupplierContactLink]), AuditModule, PermissionsModule, forwardRef(() => UsersModule), TasksModule, StorageModule, NotificationsModule, CurrencyModule],
-  providers: [ContractsService, ContractContactsService],
-  controllers: [ContractsController, SpendItemContractsController, CapexItemContractsController],
+  imports: [TypeOrmModule.forFeature([Contract, ContractSpendItem, ContractLink, ContractAttachment, ContractContactLink, ExternalContact, SupplierContactLink, Tenant]), AuditModule, PermissionsModule, forwardRef(() => UsersModule), TasksModule, StorageModule, NotificationsModule, CurrencyModule, ScheduledTasksModule],
+  providers: [ContractsService, ContractContactsService, ContractSettingsService, ContractRenewalService],
+  controllers: [ContractsController, ContractRenewalController, ContractSettingsController, SpendItemContractsController, CapexItemContractsController],
   exports: [ContractsService],
 })
 export class ContractsModule {}
