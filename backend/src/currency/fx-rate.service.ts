@@ -22,6 +22,9 @@ export interface FxLookupKey {
   sourceCurrency: string;
 }
 
+/** Told the years in which a currency in use has no rate (see `FxRateService.onMissingRates`). */
+export type MissingRatesListener = (tenantId: string, years: number[]) => void;
+
 function makeKey(rateSetId: string | null, fiscalYear: number, sourceCurrency: string): string {
   return `${rateSetId || 'live'}:${fiscalYear}:${sourceCurrency.toUpperCase()}`;
 }
@@ -29,12 +32,22 @@ function makeKey(rateSetId: string | null, fiscalYear: number, sourceCurrency: s
 @Injectable()
 export class FxRateService {
   private readonly logger = new Logger(FxRateService.name);
+  private missingRatesListener: MissingRatesListener | null = null;
 
   constructor(
     @InjectRepository(CurrencyRateSet)
     private readonly rateSets: Repository<CurrencyRateSet>,
     private readonly currencySettings: CurrencySettingsService,
   ) {}
+
+  /**
+   * The FX ingestion listens here: `resolveRates` tells it the years whose
+   * rates lack a currency in use (no set for the year, or a set captured
+   * before the currency was used), and it fetches them in the background.
+   */
+  onMissingRates(listener: MissingRatesListener | null) {
+    this.missingRatesListener = listener;
+  }
 
   private repo(manager?: EntityManager) {
     return manager ? manager.getRepository(CurrencyRateSet) : this.rateSets;
@@ -82,7 +95,10 @@ export class FxRateService {
 
   /**
    * Resolves each lookup to a rate (its snapshot set, else the latest live set
-   * of its year, else 1) and warns for each distinct key whose rate is missing.
+   * of its year, else 1 with the source `missing`, also when the year's set
+   * exists but does not rate the currency) and warns for each distinct key
+   * whose rate is missing. Those years go to the missing-rates listener, which
+   * fetches them: the next read finds the rate.
    * `quiet`: no warning, for a caller resolving speculative keys that no
    * version may use (the list engine's rate table).
    */
@@ -117,6 +133,7 @@ export class FxRateService {
     const snapshotById = new Map(snapshots.map((entry) => [entry.id, entry]));
 
     const result = new Map<string, FxResolvedRate>();
+    const missingYears = new Set<number>();
     // The latest live set depends on the year only: read it once per year, not once per currency and rate set.
     const latestByYear = new Map<number, Promise<CurrencyRateSet | null>>();
     const latestLiveSet = (fiscalYear: number) => {
@@ -159,7 +176,10 @@ export class FxRateService {
         : upperSource === settings.reportingCurrency.toUpperCase()
           ? { rate: 1, source: 'identity' as FxRateSource }
           : this.resolveRateFromSet(rateSet, upperSource);
-      rateSource = rateSet ? 'live' : resolved.source;
+      // A rate found in the live set is `live`; the reporting currency stays `identity`, and a
+      // currency the set does not rate stays `missing` (counted at 1, which the caller must know).
+      rateSource = resolved.source === 'snapshot' ? 'live' : resolved.source;
+      if (resolved.source === 'missing') missingYears.add(item.fiscalYear);
       if (!opts?.quiet && resolved.source === 'missing' && upperSource !== settings.reportingCurrency.toUpperCase()) {
         this.logger.warn(
           `Missing FX rate for ${upperSource}->${settings.reportingCurrency} ${item.fiscalYear} (tenant ${tenantId})`,
@@ -175,6 +195,13 @@ export class FxRateService {
       });
     }
 
+    if (missingYears.size && this.missingRatesListener) {
+      try {
+        this.missingRatesListener(tenantId, Array.from(missingYears).sort((a, b) => a - b));
+      } catch (err) {
+        this.logger.warn(`Missing FX rates listener failed: ${err instanceof Error ? err.message : err}`);
+      }
+    }
     return { map: result, settings };
   }
 

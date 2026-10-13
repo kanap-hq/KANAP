@@ -79,7 +79,7 @@ The **Force FX rates sync** button manually triggers a background refresh of exc
   - Rates update within a few seconds
   - The FX Rate Snapshots table refreshes automatically
 
-**Automatic refresh**: The system also refreshes rates automatically every 30 days when a user logs in (covers Y-1, Y, Y+1). Manual sync gives you control when you need immediate updates.
+**Automatic refresh**: The system also refreshes rates automatically every 30 days when a user logs in (covers Y-1, Y, Y+1). When a list or report needs a rate that the snapshot of its year does not have (a currency first used since, or a year without a snapshot), the system fetches that year in the background and the next display uses the new rate. Manual sync gives you control when you need immediate updates.
 
 **Tip**: If you add a new currency to Allowed Currencies, run Force FX sync immediately to populate rates before users start creating lines in that currency.
 
@@ -229,7 +229,7 @@ A: No. The reporting currency is tenant-wide. All companies, reports, and totals
 A: The data source (World Bank or ExchangeRate-API) may not publish that currency. Check the ISO code is correct and commonly published. If needed, limit Allowed Currencies to codes with reliable data coverage.
 
 **Q: How often do FX rates refresh automatically?**
-A: Every 30 days, when any user logs in, the system refreshes rates for Y-1, Y, and Y+1. You can also manually trigger a refresh anytime using Force FX sync.
+A: Every 30 days, when any user logs in, the system refreshes rates for Y-1, Y, and Y+1. A year that lacks the rate of a currency in use is also fetched as soon as a list or report needs it. You can also manually trigger a refresh anytime using Force FX sync.
 
 **Q: Do FX rate changes affect my stored data?**
 A: No. Exchange rates only affect **conversion and display**. Each OPEX and CAPEX line stores its own currency and amounts, which never change when rates update. Only the displayed converted values in reports and lists change.
