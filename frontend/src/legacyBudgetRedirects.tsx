@@ -13,7 +13,7 @@ export const LEGACY_BUDGET_REDIRECTS: ReadonlyArray<{ from: string; to: string }
 ];
 
 /**
- * The two copy operations of Budget administration, now one "Copy the budget" (lot OPS). The old
+ * The two copy operations of Budget administration, now one "Copy budget columns" (lot OPS). The old
  * allocation copy opens it with the amounts unticked.
  */
 export const MERGED_OPERATION_REDIRECTS: ReadonlyArray<{ from: string; to: string }> = [

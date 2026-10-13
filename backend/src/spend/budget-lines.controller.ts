@@ -134,7 +134,7 @@ export class BudgetLinesController {
   }
 
   /**
-   * "Copy the budget" of Budget administration: the amounts of a column, the allocations, or both, of
+   * "Copy budget columns" of Budget administration: the amounts of a column, the allocations, or both, of
    * all lines (`scope: 'all'`) or of one nature, under one tenant lock (`budget-copy.ts`).
    */
   @UseGuards(PermissionGuard)

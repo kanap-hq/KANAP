@@ -164,7 +164,7 @@ export type AllocationCopyRun = {
  * The caller holds the tenant's budget operations lock for a real copy.
  *
  * `heldLines`: the caller locked the lines in play already, in id order
- * ("Copy the budget", `budget-copy.ts`); the reads here come after that lock,
+ * ("Copy budget columns", `budget-copy.ts`); the reads here come after that lock,
  * and a line with a source version outside that set refuses the copy (409
  * `retry`, `assertLinesHeld`) rather than be locked out of order.
  */
@@ -393,7 +393,7 @@ export async function runAllocationCopy(
 /**
  * Copy the allocations of one nature (`runAllocationCopy`), the contract of
  * the routes of each nature: a dry run lists every line, a real copy none.
- * "Copy the budget" (`budget-copy.ts`) runs the same copy for one or both
+ * "Copy budget columns" (`budget-copy.ts`) runs the same copy for one or both
  * natures under one lock.
  */
 export async function copyAllocations(

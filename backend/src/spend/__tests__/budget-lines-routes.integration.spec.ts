@@ -74,7 +74,7 @@ runSpecs('budget-lines-routes.integration.spec', [['eleven HTTP routes, permissi
         ['bulk', 'bulkDelete', 'DELETE'], ['budget-file/export?language=en', 'exportBudgetFile', 'GET'],
         ['budget-operations/copy', 'copyBudget', 'POST'], ['budget-operations/clear-column', 'clearBudgetColumn', 'POST'],
       ];
-      // "Copy the budget" (a dry run of both parts, both natures) and "Reset a column" (a year without amounts).
+      // "Copy budget columns" (a dry run of both parts, both natures) and "Reset a column" (a year without amounts).
       const bodies: Record<string, unknown> = {
         copyBudget: { scope: 'all', sourceYear: YEAR, destinationYear: YEAR + 1, amounts: { sourceColumn: 'budget', destinationColumn: 'budget' }, allocations: true, dryRun: true },
         clearBudgetColumn: { scope: 'all', year: YEAR + 40, column: 'forecast' },

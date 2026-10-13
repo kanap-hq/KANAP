@@ -27,7 +27,7 @@ import { lockBudgetLines, lockBudgetLinesOfBothNatures, lockTenantBudgetOperatio
 import { BUDGET_NATURES, budgetLineReference, type BudgetNature } from './budget-nature';
 
 /**
- * "Copy the budget" and "Reset a column" of Budget administration, on the lines
+ * "Copy budget columns" and "Reset a column" of Budget administration, on the lines
  * of one nature or of both (plan planning/budget-tab-redesign, lot OPS).
  *
  * The copy has two parts, either or both: the amounts (one column of a year to

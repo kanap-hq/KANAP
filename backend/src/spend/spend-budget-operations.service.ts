@@ -38,7 +38,7 @@ export class SpendBudgetOperationsService {
     return copyAllocations({ manager, audit: this.audit, calculator: this.allocationCalculator }, opts?.nature ?? 'opex', operation, userId);
   }
 
-  /** "Copy the budget": the amounts, the allocations or both, of one nature or both (all or nothing); see `budget-copy.ts`. */
+  /** "Copy budget columns": the amounts, the allocations or both, of one nature or both (all or nothing); see `budget-copy.ts`. */
   async copyBudget(operation: CopyBudgetOperation, userId: string | null, opts?: { manager?: EntityManager }) {
     const manager = opts?.manager ?? this.spendItems.manager;
     return copyBudget({ manager, audit: this.audit, freeze: this.freeze, calculator: this.allocationCalculator }, operation, userId);

@@ -24,7 +24,7 @@ export type CalendarIssue = {
   fallback?: string;
 };
 
-/** "Copy the budget" (`POST /budget-lines/budget-operations/copy`): the amounts, the allocations or both. */
+/** "Copy budget columns" (`POST /budget-lines/budget-operations/copy`): the amounts, the allocations or both. */
 export type CopyBudgetOperation = {
   scope: BudgetScope;
   sourceYear: number;

@@ -1643,8 +1643,8 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
 
 ## Budget Operations (budget admin)
 
-### Copy the budget (all lines or one nature)
-- POST `/budget-lines/budget-operations/copy` (requires `budget:admin`; Budget administration › Copy the budget)
+### Copy budget columns (all lines or one nature)
+- POST `/budget-lines/budget-operations/copy` (requires `budget:admin`; Budget administration › Copy budget columns)
   - Body: `{ scope: 'all' | 'opex' | 'capex', sourceYear, destinationYear, amounts?: { sourceColumn, destinationColumn, percentageIncrease?, acceptCalendarChanges? } | null, allocations?: boolean, overwrite?: boolean, dryRun?: boolean }`
   - Two parts, either or both: `amounts` is the column copy below (same rules: months kept, whole units with a percentage, lines recomputed, validity, calendar confirmation), `allocations: true` the allocation copy below. `all` runs both natures. One `overwrite` covers both parts: the amounts of a destination column that holds some, and a destination allocation with manual rows (an allocation on an automatic method, without manual rows, counts as empty and takes the source method either way)
   - One tenant lock (`operation_running` 409 while another bulk operation runs; a dry run takes none) and one transaction: the lines in play, of every nature of the scope, are locked first in id order in one statement, and each part reads its lines again under that lock and locks no line of its own. A line that entered the scope after that lock (a line created meanwhile) refuses the copy with a 409 `retry` rather than be locked out of order. The amounts of every nature are decided before any is written, then written, then the allocations are copied. Any refusal or error leaves nothing written

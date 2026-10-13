@@ -37,7 +37,7 @@ The controller keeps returning exactly the same response shapes as before. Each 
 ### Bulk budget operations
 
 * `backend/src/spend/spend-budget-operations.service.ts`
-  * `copyBudget` – "Copy the budget" (`budget-copy.ts`): the amounts, the allocations or both, of one nature or both, under one tenant lock and in one transaction (`POST /budget-lines/budget-operations/copy`).
+  * `copyBudget` – "Copy budget columns" (`budget-copy.ts`): the amounts, the allocations or both, of one nature or both, under one tenant lock and in one transaction (`POST /budget-lines/budget-operations/copy`).
   * `clearBudgetColumns` – "Reset a column" of one nature or both (`POST /budget-lines/budget-operations/clear-column`).
   * `copyBudgetColumn` – copies one column of one nature to another year or column, respecting freeze state and audit logging (the routes of each nature).
   * `copyAllocations` – copies the allocations of one nature to another year, and surfaces preview data for dry runs (the routes of each nature).

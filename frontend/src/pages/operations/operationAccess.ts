@@ -4,7 +4,7 @@ type HasLevel = (resource: string, level: Level) => boolean;
 /** Budget administration belongs to the budget module: budget line or budget administration readers. */
 const hasBudgetAccess = (hasLevel: HasLevel) => ['budget', 'budget_ops'].some((resource) => hasLevel(resource, 'reader'));
 const budgetAdmin = (hasLevel: HasLevel) => hasLevel('budget_ops', 'admin');
-/** Copy the budget and reset a column: the Admin level on the budget lines, both types alike. */
+/** Copy budget columns and reset a column: the Admin level on the budget lines, both types alike. */
 const itemsAdmin = (hasLevel: HasLevel) => hasLevel('budget', 'admin');
 const masterDataAdmin = (hasLevel: HasLevel) =>
   hasBudgetAccess(hasLevel)

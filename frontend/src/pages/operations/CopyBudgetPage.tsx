@@ -120,7 +120,7 @@ function LineNotes({ part, year }: { part?: AmountsPart; year: number }) {
 }
 
 /**
- * "Copy the budget" of Budget administration: the amounts of a column (to another year or column, with a
+ * "Copy budget columns" of Budget administration: the amounts of a column (to another year or column, with a
  * percentage), the allocations (to another year), or both, for all lines, OPEX or CAPEX. One preview
  * shows both parts line by line, then one copy writes them (`POST /budget-lines/budget-operations/copy`).
  */

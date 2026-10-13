@@ -31,7 +31,7 @@ import {
   underSavepoint,
 } from './round-inputs.fixtures';
 
-// "Copy the budget" and "Reset a column" of Budget administration (plan
+// "Copy budget columns" and "Reset a column" of Budget administration (plan
 // planning/budget-tab-redesign, lot OPS): one operation copies the amounts of a
 // column, the allocations, or both, of all lines or of one nature, under one
 // tenant lock and in one transaction. Its result is the result of the two

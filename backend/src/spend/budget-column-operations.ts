@@ -752,7 +752,7 @@ export type ColumnCopyRun = {
  * operations lock for a real copy.
  *
  * `heldLines`: the caller locked the lines in play already, in id order
- * ("Copy the budget", `budget-copy.ts`); every read here comes after that lock
+ * ("Copy budget columns", `budget-copy.ts`); every read here comes after that lock
  * and decides, and a line with a source version outside that set refuses the
  * copy (409 `retry`, `assertLinesHeld`) rather than be locked out of order.
  */
