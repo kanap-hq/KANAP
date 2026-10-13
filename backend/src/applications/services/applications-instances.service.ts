@@ -14,8 +14,8 @@ type LinkedItemKind = 'spend' | 'capex' | 'contract' | 'project';
 
 /** Row shape of each list: the item's own label column, as the workspace relations panel reads it. */
 type LinkedItemRow = {
-  spend: { id: string; product_name: string };
-  capex: { id: string; description: string };
+  spend: { id: string; product_name: string; item_number: number };
+  capex: { id: string; description: string; item_number: number };
   contract: { id: string; name: string };
 };
 
@@ -132,7 +132,7 @@ export class ApplicationsInstancesService extends ApplicationsBaseService {
     const mg = this.getManager(opts);
     const app = await this.ensureApp(appId, mg, opts?.accessScope);
     return mg.query(
-      `SELECT i.id, i.${t.label}${t.labelAs ? ` AS ${t.labelAs}` : ''}
+      `SELECT i.id, i.${t.label}${t.labelAs ? ` AS ${t.labelAs}` : ''}${t.nature ? ', i.item_number' : ''}
        FROM ${t.links} l
        JOIN ${t.items} i ON i.id = l.${t.itemFk} AND i.tenant_id = l.tenant_id${natureAnd('i', t.nature)}
        WHERE l.tenant_id = $1 AND l.application_id = $2`,

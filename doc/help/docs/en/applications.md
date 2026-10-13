@@ -283,8 +283,7 @@ The Relations tab links this application to your financial, contract, project an
 **Components** (only when "Can have child apps" is enabled): a table listing the child applications of this Suite, with their lifecycle and criticality. Click a row to open the child workspace.
 
 **Relations**:
-- **OPEX lines**: recurring costs associated with this application
-- **CAPEX lines**: capital expenditure projects
+- **Budget lines**: the OPEX and CAPEX lines of this application, in one list. Search by title or reference (`BL-12`); each suggestion shows its type
 - **Contracts**: vendor contracts
 - **Projects**: portfolio projects linked to this application
 - **Tasks**: tasks linked to this application. This list is read-only here -- tasks gain or lose this link when you set the **App / Service** field on a task in the Tasks page.

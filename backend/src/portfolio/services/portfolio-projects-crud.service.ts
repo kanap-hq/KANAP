@@ -289,7 +289,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     // Load CAPEX items
     if (include.has('capex') || include.has('financials')) {
       result.capex_items = await mg.query(
-        `SELECT c.id, c.product_name AS description, c.currency, c.status,
+        `SELECT c.id, c.product_name AS description, c.item_number, c.currency, c.status,
                 sup.name as supplier_name
          FROM portfolio_project_opex pc
          JOIN spend_items c ON c.id = pc.opex_id AND c.nature = 'capex'
@@ -302,7 +302,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     // Load OPEX items
     if (include.has('opex') || include.has('financials')) {
       result.opex_items = await mg.query(
-        `SELECT s.id, s.product_name, s.description, s.currency, s.status,
+        `SELECT s.id, s.product_name, s.item_number, s.description, s.currency, s.status,
                 sup.name as supplier_name
          FROM portfolio_project_opex po
          JOIN spend_items s ON s.id = po.opex_id AND s.nature = 'opex'

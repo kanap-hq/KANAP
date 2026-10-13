@@ -1089,7 +1089,7 @@ export class PortfolioRequestsService {
     // Load CAPEX items
     if (include.has('financials') || include.has('capex')) {
       result.capex_items = await mg.query(
-        `SELECT c.id, c.product_name AS description, c.currency, c.status,
+        `SELECT c.id, c.product_name AS description, c.item_number, c.currency, c.status,
                 sup.name as supplier_name
          FROM portfolio_request_opex rc
          JOIN spend_items c ON c.id = rc.opex_id AND c.nature = 'capex'
@@ -1102,7 +1102,7 @@ export class PortfolioRequestsService {
     // Load OPEX items
     if (include.has('financials') || include.has('opex')) {
       result.opex_items = await mg.query(
-        `SELECT s.id, s.product_name, s.description, s.currency, s.status,
+        `SELECT s.id, s.product_name, s.item_number, s.description, s.currency, s.status,
                 sup.name as supplier_name
          FROM portfolio_request_opex ro
          JOIN spend_items s ON s.id = ro.opex_id AND s.nature = 'opex'

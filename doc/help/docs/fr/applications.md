@@ -283,8 +283,7 @@ L'onglet Relations lie cette application à vos enregistrements financiers, cont
 **Composants** (uniquement lorsque « Peut avoir des apps enfants » est activé) : un tableau listant les applications enfants de cette Suite, avec leur cycle de vie et criticité. Cliquez sur une ligne pour ouvrir l'espace de travail enfant.
 
 **Relations** :
-- **Lignes OPEX** : coûts récurrents associés à cette application
-- **Lignes CAPEX** : projets de dépenses d'investissement
+- **Lignes budgétaires** : les lignes OPEX et CAPEX de cette application, dans une seule liste. Recherchez par titre ou par référence (`BL-12`) ; chaque suggestion affiche son type
 - **Contrats** : contrats fournisseurs
 - **Projets** : projets du portefeuille liés à cette application
 - **Tâches** : tâches liées à cette application. Cette liste est en lecture seule ici -- les tâches gagnent ou perdent ce lien lorsque vous définissez le champ **App / Service** sur une tâche dans la page Tâches.
