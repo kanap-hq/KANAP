@@ -1105,7 +1105,6 @@ function OperationsTab({
                 contact_id: contact?.id || null,
                 role: contact?.job_title || '',
               })}
-              compactOptions
               groupByCompany={false}
               hideLabel
               textFieldSx={drawerFieldValueSx}
