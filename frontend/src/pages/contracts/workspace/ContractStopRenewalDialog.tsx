@@ -3,16 +3,18 @@ import { Alert, Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import { KanapDialog } from '../../../components/design';
+import { useLocale } from '../../../i18n/useLocale';
+import { formatShortDate } from '../../../lib/dateFormat';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { useContractRenewal, type ContractRenewal } from '../contractRenewal';
 import ContractEndChoice, { isValidEnd } from './ContractEndChoice';
 
 /**
  * Turning off the tacit renewal of a contract already renewed, or awaiting a renewal decision
- * (lot CR2). The term rule would give it its first term only, so the contract keeps its renewal
- * and ends on the day chosen (the proposed end by default, `ContractEndChoice`):
- * `POST /contracts/:id/renewal/stop` sets its end of validity, and records a termination when a
- * decision is awaited. Cancel changes nothing.
+ * (lot CR2, round 2). Without an end of validity the term rule would give it its first term
+ * only, so the renewal goes off with an end on the day chosen (the proposed end by default,
+ * `ContractEndChoice`): `POST /contracts/:id/renewal/stop`. It is no termination: no decision is
+ * recorded, the contract then awaits one on its end. Cancel changes nothing.
  */
 export default function ContractStopRenewalDialog({
   open,
@@ -37,6 +39,7 @@ export default function ContractStopRenewalDialog({
   onStopped: (renewal: ContractRenewal) => void;
 }) {
   const { t } = useTranslation(['ops', 'common']);
+  const locale = useLocale();
   const { data } = useContractRenewal(contractId);
   const proposed = data?.proposed_end_date ?? fallbackEnd;
   const [endDate, setEndDate] = React.useState(proposed);
@@ -76,17 +79,13 @@ export default function ContractStopRenewalDialog({
       onClose={() => { if (!busy) onClose(); }}
       onSave={confirm}
       saveLabel={t('contracts.stopRenewal.confirm')}
-      saveVariant="action-danger"
       saveLoading={busy}
       saveDisabled={!isValidEnd(endDate, startDate)}
     >
       <Stack spacing={1.5}>
-        {renewals > 0 && (
-          <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{t('contracts.stopRenewal.renewed', { count: renewals })}</Typography>
-        )}
-        {data?.state === 'pending' && (
-          <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{t('contracts.stopRenewal.awaited')}</Typography>
-        )}
+        <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>
+          {t('contracts.stopRenewal.body', { date: formatShortDate(isValidEnd(endDate, startDate) ? endDate : proposed, locale, { year: 'always' }) })}
+        </Typography>
         <ContractEndChoice
           contractId={contractId}
           startDate={startDate}
@@ -94,8 +93,9 @@ export default function ContractStopRenewalDialog({
           noticeMonths={data?.notice_period_months ?? 0}
           value={endDate}
           onChange={setEndDate}
-          proposedImpact={data?.state === 'pending' && data.proposed_end_date === proposed ? data.impact : undefined}
+          proposedImpact={data?.state === 'pending' && data.mode !== 'end' && data.proposed_end_date === proposed ? data.impact : undefined}
           disabled={busy}
+          showEndLine={false}
         />
         {renewals > 0 && (
           <Typography sx={{ fontSize: 12, color: 'kanap.text.secondary' }}>{t('contracts.stopRenewal.hint')}</Typography>

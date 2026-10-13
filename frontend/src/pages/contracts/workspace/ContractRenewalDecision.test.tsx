@@ -156,6 +156,24 @@ describe('ContractRenewalDecision', () => {
     expect(await screen.findByText(/contracts\.renewal\.endsOn \{"date":"15 Nov 2026"\}/)).toBeInTheDocument();
   });
 
+  it('asks to renew or let end a contract without renewal whose end is near', async () => {
+    const END_TERM = { ...TERM, term_end: '2027-03-31', deadline: '2027-03-31', end_date: '2027-03-31', renews_on: '2027-04-01', next_term_end: '2030-03-31' };
+    const endPending: ContractRenewal = { ...PENDING, mode: 'end', term: END_TERM, impact: null };
+    mocked.post.mockResolvedValue({
+      data: { ...endPending, state: 'decided', can_undo: true, decision: { decision: 'end', reason: null, decided_at: '2026-10-13T09:00:00.000Z', decided_by_name: 'Thomas Berger', end_date: '2027-03-31' } },
+    });
+    renderBox(endPending);
+    expect(await screen.findByText('contracts.renewal.endTitle {"date":"31 Mar 2027"}')).toBeInTheDocument();
+    expect(screen.getByText('contracts.renewal.endWithoutDecision {"date":"31 Mar 2027"}')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'contracts.renewal.terminate' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'contracts.renewal.renegotiate' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'contracts.renewal.renew' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'contracts.renewal.letEnd' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/contracts/c-1/renewal/end', { reason: null }));
+    expect(await screen.findByText(/contracts\.renewal\.endConfirmedBy/)).toBeInTheDocument();
+    expect(screen.getByText(/contracts\.renewal\.endsOn \{"date":"31 Mar 2027"\}/)).toBeInTheDocument();
+  });
+
   it('undoes a decision while its deadline has not passed', async () => {
     mocked.post.mockResolvedValue({ data: PENDING });
     renderBox(decided('terminate'));

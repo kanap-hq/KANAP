@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../../api';
 import type { ConfirmedRenewal } from './contractSchedule';
 
-export type RenewalAction = 'renew' | 'terminate' | 'renegotiate' | 'undo';
+export type RenewalAction = 'renew' | 'terminate' | 'renegotiate' | 'end' | 'undo';
 
 /** `GET /contracts/:id/renewal` (`backend/src/contracts/contract-renewal.service.ts`). */
 export type ContractRenewal = {
@@ -11,8 +11,11 @@ export type ContractRenewal = {
   proposed_end_date: string | null;
   notice_period_months: number;
   state: 'none' | 'pending' | 'decided';
+  /** `renewal`: renew, terminate or renegotiate (renewal on); `end`: renew or let it end (renewal off, lot CR2 round 2). */
+  mode?: 'renewal' | 'end' | null;
   renegotiating: boolean;
-  term: { term_end: string; deadline: string; renews_on: string; next_term_end: string; days_left: number } | null;
+  /** `deadline`: the cancellation deadline, or the end itself in `end` mode (`end_date`). */
+  term: { term_end: string; deadline: string; renews_on: string; next_term_end: string; days_left: number; end_date?: string } | null;
   duration_months: number;
   /** `end_date`: the end a termination chose (null: the term's last day). */
   decision: { decision: RenewalAction; reason: string | null; decided_at: string; decided_by_name: string | null; end_date?: string | null } | null;

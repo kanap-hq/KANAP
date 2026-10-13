@@ -534,7 +534,8 @@
       "notice_other": "{{count}} months notice",
       "noNotice": "No notice",
       "renewalConfirmed": "Renewal confirmed",
-      "nextTerm": "next term from {{start}} to {{end}}"
+      "nextTerm": "next term from {{start}} to {{end}}",
+      "decisionDue": "decision due"
     },
     "timeline": {
       "label": "Timeline of the contract terms",
@@ -709,16 +710,19 @@
         "windowHint": "A contract that renews tacitly awaits a decision this many days before its cancellation deadline. Its owner then gets a task to decide on the renewal. From 0 to 365 days.",
         "invalid": "Enter a whole number of days from 0 to 365.",
         "saveFailed": "The settings could not be saved."
-      }
+      },
+      "endTitle": "Ends on {{date}} · decision due",
+      "endWithoutDecision": "Without a decision, the contract ends on {{date}}.",
+      "letEnd": "Let it end",
+      "endConfirmedBy": "End confirmed on {{date}} by {{name}}.",
+      "endConfirmedOn": "End confirmed on {{date}}."
     },
     "stopRenewal": {
       "title": "Turn off the tacit renewal",
-      "hint": "Its past terms are kept: the renewal stays on and the end of validity is set to the day chosen.",
-      "confirm": "End the contract",
+      "hint": "Its past terms are kept.",
+      "confirm": "Turn off the renewal",
       "failed": "The end of the contract could not be saved.",
-      "renewed_one": "This contract has already been renewed once.",
-      "renewed_other": "This contract has already been renewed {{count}} times.",
-      "awaited": "A renewal decision is awaited for this term: this records a termination and closes the decision task."
+      "body": "The contract will end on {{date}}, unless renewed."
     },
     "endChoice": {
       "label": "End date",

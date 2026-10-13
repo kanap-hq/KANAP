@@ -86,17 +86,25 @@ export default function ContractRenewalDecision({
   if (data.state === 'decided' && data.decision) {
     const { decision } = data;
     const terminated = decision.decision === 'terminate';
+    // Left to end: a contract without renewal whose end was confirmed (lot CR2, round 2).
+    const leftToEnd = decision.decision === 'end';
+    const ends = terminated || leftToEnd;
     const decidedAt = date(decision.decided_at.slice(0, 10));
+    const [byKey, onKey] = terminated
+      ? ['contracts.renewal.terminatedBy', 'contracts.renewal.terminatedOn']
+      : leftToEnd
+        ? ['contracts.renewal.endConfirmedBy', 'contracts.renewal.endConfirmedOn']
+        : ['contracts.renewal.renewedBy', 'contracts.renewal.renewedOn'];
     const who = decision.decided_by_name
-      ? t(terminated ? 'contracts.renewal.terminatedBy' : 'contracts.renewal.renewedBy', { date: decidedAt, name: decision.decided_by_name })
-      : t(terminated ? 'contracts.renewal.terminatedOn' : 'contracts.renewal.renewedOn', { date: decidedAt });
-    const effect = terminated
-      ? t('contracts.renewal.endsOn', { date: date(decision.end_date ?? term.term_end) })
+      ? t(byKey, { date: decidedAt, name: decision.decided_by_name })
+      : t(onKey, { date: decidedAt });
+    const effect = ends
+      ? t('contracts.renewal.endsOn', { date: date(decision.end_date ?? term.end_date ?? term.term_end) })
       : t('contracts.renewal.renewsOn', { date: date(term.renews_on) });
     return (
       <Box data-testid="contract-renewal-decision" sx={{ ...boxSx, borderColor: 'kanap.border.default', bgcolor: 'kanap.bg.drawer' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', fontSize: 13, color: 'kanap.text.primary' }}>
-          <StatusDot size={8} color={getDotColor(terminated ? 'default' : 'success', theme.palette.mode)} />
+          <StatusDot size={8} color={getDotColor(ends ? 'default' : 'success', theme.palette.mode)} />
           <span>{who} {effect}</span>
           {taskLink && <Box component="span" sx={{ color: 'kanap.text.secondary' }}>· {t('contracts.renewal.task')} {taskLink}</Box>}
         </Box>
@@ -125,15 +133,20 @@ export default function ContractRenewalDecision({
     : t('contracts.deadlines.inDays', { count: term.days_left });
   const owner = task?.assignee_name;
   const proposed = data.proposed_end_date ?? term.term_end;
+  // A contract without renewal whose end is within the window: renew it or let it end.
+  const endMode = data.mode === 'end';
+  const endDay = term.end_date ?? term.deadline;
 
   return (
     <Box data-testid="contract-renewal-decision" sx={{ ...boxSx, borderColor: 'kanap.orange', bgcolor: 'kanap.bg.primary' }}>
       <Box sx={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', columnGap: '10px', rowGap: '2px' }}>
         <Typography component="h3" sx={{ fontSize: 13, fontWeight: 500, color: 'kanap.text.primary', m: 0 }}>
-          {data.renegotiating ? t('contracts.renewal.renegotiating') : t('contracts.renewal.title')}
+          {endMode
+            ? t('contracts.renewal.endTitle', { date: date(endDay) })
+            : data.renegotiating ? t('contracts.renewal.renegotiating') : t('contracts.renewal.title')}
         </Typography>
         <Box component="span" sx={{ fontSize: 12, color: 'kanap.text.secondary' }}>
-          {t('contracts.renewal.dueBefore', { date: date(term.deadline) })} · {inDays}
+          {endMode ? inDays : <>{t('contracts.renewal.dueBefore', { date: date(term.deadline) })} · {inDays}</>}
           {taskLink && (
             <>
               {' · '}{t('contracts.renewal.task')} {taskLink}{owner ? ` ${t('contracts.renewal.taskFor', { name: owner })}` : ''}
@@ -142,9 +155,11 @@ export default function ContractRenewalDecision({
         </Box>
       </Box>
       <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary', maxWidth: '72ch' }}>
-        {data.renegotiating
-          ? t('contracts.renewal.renegotiatingHint')
-          : t('contracts.renewal.withoutDecision', { count: data.duration_months, date: date(term.renews_on) })}
+        {endMode
+          ? t('contracts.renewal.endWithoutDecision', { date: date(endDay) })
+          : data.renegotiating
+            ? t('contracts.renewal.renegotiatingHint')
+            : t('contracts.renewal.withoutDecision', { count: data.duration_months, date: date(term.renews_on) })}
       </Typography>
       {canDecide && (
         <TextField
@@ -174,7 +189,12 @@ export default function ContractRenewalDecision({
       {error && <Alert severity="error">{error}</Alert>}
       {canDecide && (
         <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
-          {confirmTerminate ? (
+          {endMode ? (
+            <>
+              <Button variant="action" disabled={busy} onClick={() => void act('renew')}>{t('contracts.renewal.renew')}</Button>
+              <Button variant="action" disabled={busy} onClick={() => void act('end')}>{t('contracts.renewal.letEnd')}</Button>
+            </>
+          ) : confirmTerminate ? (
             <>
               <Button variant="action-danger" disabled={busy || !isValidEnd(endDate, startDate)} onClick={() => void act('terminate')}>{t('contracts.renewal.confirmTerminate')}</Button>
               <Button variant="action" disabled={busy} onClick={() => setConfirmTerminate(false)}>{t('common:buttons.cancel')}</Button>

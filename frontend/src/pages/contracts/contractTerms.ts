@@ -3,7 +3,8 @@
  *
  * Copy of the rule in `backend/src/contracts/contract-terms.ts` (`computeContractTerms`), which
  * the API applies everywhere else: successive terms of `duration_months` months from the start
- * date, only the first one without tacit renewal, none starting after the end of validity; the
+ * date, only the first one without tacit renewal nor end of validity, none starting after the
+ * end of validity (a contract without renewal runs in terms up to its end of validity); the
  * cancellation deadline of a term is its end minus the notice. Adding or removing months keeps
  * the day of the month, brought back to the month's last day when it does not exist
  * (PostgreSQL's `date + interval 'N months'`). Change both together: `contractTerms.test.ts`
@@ -75,8 +76,9 @@ export function computeContractTerms(input: ContractTermsInput, todayYmd: string
   const start = input.start_date;
   const duration = wholeMonths(input.duration_months);
   const notice = wholeMonths(input.notice_period_months);
-  const renews = Boolean(input.auto_renewal) && duration > 0;
   const validUntil = endOfValidityYmd(input.disabled_at);
+  // The terms run on with tacit renewal, or without it up to an end of validity (the API's rule).
+  const runs = duration > 0 && (Boolean(input.auto_renewal) || validUntil !== null);
 
   const termStart = (k: number) => addMonthsYmd(start, k * duration);
   const termEnd = (k: number) => addDaysYmd(termStart(k + 1), -1);
@@ -87,8 +89,8 @@ export function computeContractTerms(input: ContractTermsInput, todayYmd: string
     return k;
   };
 
-  const lastTerm = !renews ? 0 : validUntil === null ? Infinity : termAt(validUntil);
-  const termIndex = !renews ? 0 : Math.min(termAt(todayYmd), lastTerm);
+  const lastTerm = !runs ? 0 : validUntil === null ? Infinity : termAt(validUntil);
+  const termIndex = !runs ? 0 : Math.min(termAt(todayYmd), lastTerm);
 
   let next: string | null = null;
   for (let k = termIndex; k <= lastTerm; k += 1) {

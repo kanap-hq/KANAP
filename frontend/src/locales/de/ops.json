@@ -534,7 +534,8 @@
       "notice_other": "Kündigungsfrist {{count}} Monate",
       "noNotice": "Keine Kündigungsfrist",
       "renewalConfirmed": "Verlängerung bestätigt",
-      "nextTerm": "nächste Periode vom {{start}} bis {{end}}"
+      "nextTerm": "nächste Periode vom {{start}} bis {{end}}",
+      "decisionDue": "Entscheidung ausstehend"
     },
     "timeline": {
       "label": "Zeitleiste der Vertragsperioden",
@@ -709,16 +710,19 @@
         "windowHint": "Ein Vertrag mit stillschweigender Verlängerung wartet so viele Tage vor seiner Kündigungsfrist auf eine Entscheidung. Sein Verantwortlicher erhält dann eine Aufgabe, über die Verlängerung zu entscheiden. Von 0 bis 365 Tagen.",
         "invalid": "Geben Sie eine ganze Zahl von Tagen zwischen 0 und 365 ein.",
         "saveFailed": "Die Einstellungen konnten nicht gespeichert werden."
-      }
+      },
+      "endTitle": "Ende am {{date}} · Entscheidung ausstehend",
+      "endWithoutDecision": "Ohne Entscheidung endet der Vertrag am {{date}}.",
+      "letEnd": "Auslaufen lassen",
+      "endConfirmedBy": "Ende am {{date}} von {{name}} bestätigt.",
+      "endConfirmedOn": "Ende am {{date}} bestätigt."
     },
     "stopRenewal": {
       "title": "Stillschweigende Verlängerung beenden",
-      "hint": "Seine bisherigen Perioden bleiben erhalten: Die Verlängerung bleibt aktiv, das Ende der Gültigkeit wird auf den gewählten Tag gesetzt.",
-      "confirm": "Vertrag beenden",
+      "hint": "Seine bisherigen Perioden bleiben erhalten.",
+      "confirm": "Verlängerung beenden",
       "failed": "Das Vertragsende konnte nicht gespeichert werden.",
-      "renewed_one": "Dieser Vertrag wurde bereits einmal verlängert.",
-      "renewed_other": "Dieser Vertrag wurde bereits {{count}}-mal verlängert.",
-      "awaited": "Für diese Periode steht eine Verlängerungsentscheidung aus: Dies erfasst eine Kündigung und schließt die Entscheidungsaufgabe."
+      "body": "Der Vertrag endet am {{date}}, sofern er nicht verlängert wird."
     },
     "endChoice": {
       "label": "Enddatum",

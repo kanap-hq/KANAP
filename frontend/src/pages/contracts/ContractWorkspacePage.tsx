@@ -237,17 +237,19 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   // A renewal decided for the term of the next deadline: the timeline no longer asks for a decision.
   const renewalQuery = useContractRenewal(id);
   const confirmedRenewal = React.useMemo(() => confirmedRenewalOf(renewalQuery.data), [renewalQuery.data]);
+  // A decision awaited on the end of a contract without renewal: the sentence says so.
+  const endDecisionDue = renewalQuery.data?.state === 'pending' && renewalQuery.data.mode === 'end';
   const schedule = React.useMemo(() => (form ? contractSchedule({
     start_date: form.start_date,
     duration_months: form.duration_months,
     notice_period_months: form.notice_period_months,
     auto_renewal: form.auto_renewal,
     disabled_at: form.disabled_at,
-  }, utcTodayYmd(), data?.decision_window_days, confirmedRenewal) : null), [form, data?.decision_window_days, confirmedRenewal]);
+  }, utcTodayYmd(), data?.decision_window_days, confirmedRenewal, endDecisionDue) : null), [form, data?.decision_window_days, confirmedRenewal, endDecisionDue]);
 
-  // "No" in the renewal field of a contract already renewed (the term rule would drop its past
-  // terms) or awaiting a renewal decision (a termination): a confirmation ends it on a day chosen
-  // instead (`ContractStopRenewalDialog`).
+  // "No" in the renewal field of a contract already renewed (without an end of validity the term
+  // rule would drop its past terms) or awaiting a renewal decision: a confirmation turns the
+  // renewal off with an end on a day chosen (`ContractStopRenewalDialog`).
   const [stopRenewalOpen, setStopRenewalOpen] = React.useState(false);
   const renewedSoFar = form?.auto_renewal && schedule ? schedule.renewals : 0;
   const decisionAwaited = !!form?.auto_renewal && renewalQuery.data?.state === 'pending';

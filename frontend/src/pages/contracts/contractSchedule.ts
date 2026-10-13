@@ -47,8 +47,8 @@ export type DeadlineState =
   | { kind: 'renewed'; renewedUntil: string; nextDeadline: string | null }
   /** Renewing, its renewal confirmed for the term of the next deadline: the term after it runs. */
   | { kind: 'confirmed'; nextStart: string; nextEnd: string }
-  /** No renewal after the current term: the contract ends with it. */
-  | { kind: 'ends'; end: string; days: number }
+  /** No renewal after the current term: the contract ends with it. `decisionDue`: renewal off, its end within the window, nothing decided. */
+  | { kind: 'ends'; end: string; days: number; decisionDue?: boolean }
   /** The last term is over. */
   | { kind: 'expired'; end: string }
   /** No term to show (no duration). */
@@ -120,6 +120,8 @@ export function contractSchedule(
   today: string,
   windowDays: number | null | undefined = DECISION_WINDOW_DAYS,
   confirmed: ConfirmedRenewal | null = null,
+  /** A decision is awaited on the end of a contract without renewal (`GET /contracts/:id/renewal`, `end` mode). */
+  endDecisionDue = false,
 ): ContractSchedule | null {
   const decisionWindow = windowDays ?? DECISION_WINDOW_DAYS;
   const terms = computeContractTerms(input, today);
@@ -146,7 +148,8 @@ export function contractSchedule(
     return { ...base, state: { kind: 'none' }, lastTerm: true, timeline: null };
   }
 
-  const renewsAfter = Boolean(input.auto_renewal) && (validUntil === null || termStart(k + 1) <= validUntil);
+  // A next term starts: with renewal, or without it up to an end of validity after that term starts (the term rule).
+  const renewsAfter = (Boolean(input.auto_renewal) || validUntil !== null) && (validUntil === null || termStart(k + 1) <= validUntil);
   const currentEnd = termEnd(k);
   // The renewal is confirmed for the term of the next deadline (the dates may have changed since).
   const confirmedNow = renewsAfter && confirmed !== null && terms.next_cancellation_deadline !== null
@@ -155,9 +158,11 @@ export function contractSchedule(
   if (confirmedNow && confirmed) {
     state = { kind: 'confirmed', nextStart: confirmed.renews_on, nextEnd: confirmed.next_term_end };
   } else if (!renewsAfter) {
-    state = currentEnd < today
-      ? { kind: 'expired', end: currentEnd }
-      : { kind: 'ends', end: currentEnd, days: daysBetween(today, currentEnd) };
+    // The contract ends with its term, or on its end of validity when that comes first.
+    const end = validUntil !== null && validUntil < currentEnd ? validUntil : currentEnd;
+    state = end < today
+      ? { kind: 'expired', end }
+      : { kind: 'ends', end, days: daysBetween(today, end), ...(endDecisionDue && !input.auto_renewal ? { decisionDue: true } : {}) };
   } else {
     const deadline = addMonthsYmd(currentEnd, -notice);
     if (deadline >= today) {

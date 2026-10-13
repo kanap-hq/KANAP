@@ -40,6 +40,7 @@ export default function ContractEndChoice({
   onChange,
   proposedImpact,
   disabled,
+  showEndLine = true,
 }: {
   contractId: string;
   startDate: string | null | undefined;
@@ -51,6 +52,8 @@ export default function ContractEndChoice({
   /** The consequences of ending on the proposed day, when already known. */
   proposedImpact?: ContractRenewal['impact'];
   disabled?: boolean;
+  /** The consequences open on "The contract will end on …" (a caller saying it already leaves it out). */
+  showEndLine?: boolean;
 }) {
   const { t } = useTranslation(['ops', 'common']);
   const locale = useLocale();
@@ -95,9 +98,9 @@ export default function ContractEndChoice({
           {t('contracts.endChoice.beforeAllowed')}
         </Typography>
       )}
-      {valid && (
+      {valid && (showEndLine || !!(impact && (impact.commitments.length || impact.applications.length || impact.assets.length))) && (
         <Box data-testid="contract-renewal-consequences" sx={{ borderLeft: '2px solid', borderColor: 'kanap.orange', pl: '10px', py: '2px', fontSize: 12, color: 'kanap.text.secondary', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-          <span>{t('contracts.renewal.consequenceEnd', { date: date(value) })}</span>
+          {showEndLine && <span>{t('contracts.renewal.consequenceEnd', { date: date(value) })}</span>}
           {impact?.commitments.map((row) => (
             <span key={row.year}>
               {row.after === 0
