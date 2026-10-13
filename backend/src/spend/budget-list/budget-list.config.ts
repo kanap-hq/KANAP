@@ -619,6 +619,10 @@ export class BudgetListConfig implements ListConfig {
     }
 
     switch (key) {
+      // The line's own number, its BL-n reference, in every scope: the CAPEX alias's `item_number` is
+      // the CPX number (`lineNumberSql`). The reports link the lines of one nature with it.
+      case 'line_number':
+        return { kind: 'int', sql: 'i.item_number', joins: [] };
       case 'supplier_name': {
         const sup = this.supplier(stmt);
         return { kind: 'text', sql: `${sup}.name`, joins: [sup] };
