@@ -455,10 +455,6 @@
       "monthly": "Monthly",
       "other": "Other"
     },
-    "status": {
-      "enabled": "Active",
-      "disabled": "Disabled"
-    },
     "metadata": {
       "supplierMissing": "Supplier missing",
       "companyMissing": "Company missing",

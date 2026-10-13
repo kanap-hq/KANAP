@@ -249,8 +249,8 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
 
   const statusEnabled = form?.status !== STATUS_DISABLED;
   const statusOptions = [
-    { value: STATUS_ENABLED, label: t('contracts.status.enabled'), color: getDotColor('success', theme.palette.mode) },
-    { value: STATUS_DISABLED, label: t('contracts.status.disabled'), color: getDotColor('default', theme.palette.mode) },
+    { value: STATUS_ENABLED, label: t('opex.status.enabled'), color: getDotColor('success', theme.palette.mode) },
+    { value: STATUS_DISABLED, label: t('opex.status.disabled'), color: getDotColor('default', theme.palette.mode) },
   ];
   const shownData = form && data && form.id === data.id ? data : null;
   const names = {
@@ -310,7 +310,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
             <PortfolioMetadataItem label={t('contracts.fields.status')}>
               <PortfolioStatusMetadata
                 value={form.status}
-                label={statusEnabled ? t('contracts.status.enabled') : t('contracts.status.disabled')}
+                label={statusEnabled ? t('opex.status.enabled') : t('opex.status.disabled')}
                 color={statusEnabled ? statusOptions[0].color : statusOptions[1].color}
                 options={statusOptions}
                 onChange={(value) => handleStatusChange(value as StatusValue)}

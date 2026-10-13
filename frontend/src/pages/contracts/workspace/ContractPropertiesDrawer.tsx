@@ -187,8 +187,8 @@ export default function ContractPropertiesDrawer({ values, names, disabled, onPa
               onPatch({ status: deriveStatusFromDisabledAt(disabledAt), disabled_at: disabledAt });
             }}
             disabled={disabled}
-            statusLabel={t('contracts.status.enabled')}
-            statusOffLabel={t('contracts.status.disabled')}
+            statusLabel={t('opex.status.enabled')}
+            statusOffLabel={t('opex.status.disabled')}
             disabledAtLabel={t('contracts.fields.endOfValidity')}
             disabledAtHelperText={t('contracts.fields.endOfValidityHint')}
           />

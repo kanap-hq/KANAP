@@ -455,10 +455,6 @@
       "monthly": "Mensual",
       "other": "Otra"
     },
-    "status": {
-      "enabled": "Activo",
-      "disabled": "Desactivado"
-    },
     "metadata": {
       "supplierMissing": "Falta el proveedor",
       "companyMissing": "Falta la empresa",

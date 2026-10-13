@@ -455,10 +455,6 @@
       "monthly": "Mensuelle",
       "other": "Autre"
     },
-    "status": {
-      "enabled": "Actif",
-      "disabled": "Désactivé"
-    },
     "metadata": {
       "supplierMissing": "Fournisseur manquant",
       "companyMissing": "Société manquante",

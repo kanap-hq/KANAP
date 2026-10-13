@@ -142,6 +142,8 @@ describe('ContractWorkspacePage', () => {
     expect(screen.queryByRole('button', { name: 'common:buttons.saveChanges' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'common:buttons.reset' })).toBeNull();
     expect(screen.getByRole('button', { name: 'share.sendLink' })).toBeInTheDocument();
+    // The status reads as on the budget lines.
+    expect(screen.getAllByText('opex.status.enabled').length).toBeGreaterThan(0);
     // The parties from the detail, in the header.
     expect(screen.getAllByText('SAP').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Fromage & Co SA').length).toBeGreaterThan(0);
