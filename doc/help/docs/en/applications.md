@@ -260,6 +260,7 @@ The tab is organized in four blocks, in the order of a business impact analysis.
 **Data**:
 - **Data confidentiality** uses the organization's data-class catalog.
 - **Contains personal data** and **Data residency** complete the data picture.
+- Personal data, business and cyber criticality, and the hosting of the instances also decide which clauses the contracts linked to the application are expected to hold. See the **Compliance** tab in [Contracts](contracts.md#compliance).
 
 **Continuity and recovery**:
 - **Recovery wave** identifies the order in which the application is restored. It does not imply a duration or severity.
