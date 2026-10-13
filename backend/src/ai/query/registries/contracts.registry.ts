@@ -1,4 +1,8 @@
 import { AiEntityFilterRegistry } from '../ai-filter.types';
+import { contractTermsSql, SQL_TODAY_UTC } from '../../../contracts/contract-terms';
+
+// The current term as of today (`contracts/contract-terms.ts`), like the contract list.
+const TERMS = contractTermsSql('c', SQL_TODAY_UTC);
 
 export const contractsRegistry: AiEntityFilterRegistry = {
   entityType: 'contracts',
@@ -65,7 +69,7 @@ export const contractsRegistry: AiEntityFilterRegistry = {
       ai: 'end_date',
       grid: 'end_date',
       type: 'date',
-      description: 'Derived contract end date.',
+      description: 'End of the current term (tacit renewals included).',
       sortable: true,
       groupable: false,
       aggregable: true,
@@ -74,7 +78,7 @@ export const contractsRegistry: AiEntityFilterRegistry = {
       ai: 'cancellation_deadline',
       grid: 'cancellation_deadline',
       type: 'date',
-      description: 'Derived contract cancellation deadline.',
+      description: 'Next cancellation deadline (tacit renewals included); the last one once the contract has ended.',
       sortable: true,
       groupable: false,
       aggregable: true,
@@ -171,11 +175,11 @@ export const contractsRegistry: AiEntityFilterRegistry = {
     },
     metricFields: {
       end_date: {
-        expression: `(c.start_date + COALESCE(c.duration_months, 0) * INTERVAL '1 month' - INTERVAL '1 day')::date`,
+        expression: TERMS.currentTermEnd,
         type: 'date',
       },
       cancellation_deadline: {
-        expression: `(c.start_date + (COALESCE(c.duration_months, 0) - COALESCE(c.notice_period_months, 0)) * INTERVAL '1 month')::date`,
+        expression: TERMS.cancellationDeadline,
         type: 'date',
       },
       yearly_amount_at_signature: {

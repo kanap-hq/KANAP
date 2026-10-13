@@ -18,6 +18,7 @@ import { ScheduledTasksService } from '../admin/scheduled-tasks/scheduled-tasks.
 import { resolveEmailLocale } from '../i18n/email-i18n';
 import { calendarDaysUntil, isExpiryReminderDay, utcDateYmd } from './expiry-reminder-schedule';
 import { assertScopeNatures, natureAnd, type BudgetNature } from '../spend/budget-nature';
+import { contractTermsSql } from '../contracts/contract-terms';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -176,37 +177,32 @@ export class ScheduledNotificationsService implements OnModuleInit {
   }
 
   private async checkContractExpirationsForTenant(mg: any, tenantId: string, now: Date = new Date()): Promise<number> {
-    // Candidates: contracts whose end date or cancellation deadline falls within 30 days.
-    // End date = start_date + duration_months - 1 day; deadline = end date - notice period.
-    // Both dates come back as YYYY-MM-DD text, free of any time zone conversion.
+    // Candidates: contracts whose next cancellation deadline, or the end of a term after which
+    // they do not renew, falls within 30 days. Terms and deadlines come from contract-terms.ts:
+    // a contract that renews tacitly at the end of its current term (renewal on, no end of
+    // validity before the next term) is warned on its cancellation deadline only.
+    // Dates come back as YYYY-MM-DD text, free of any time zone conversion.
     const contracts = await mg.query(`
       SELECT
         c.id,
         c.name,
         c.tenant_id,
         c.owner_user_id,
-        c.start_date,
-        c.duration_months,
-        c.notice_period_months,
-        to_char(c.start_date + (c.duration_months || ' months')::interval - '1 day'::interval, 'YYYY-MM-DD') as end_date,
-        to_char((c.start_date + (c.duration_months || ' months')::interval - '1 day'::interval) - (c.notice_period_months || ' months')::interval, 'YYYY-MM-DD') as cancellation_deadline,
+        to_char(t.next_cancellation_deadline, 'YYYY-MM-DD') AS cancellation_deadline,
+        CASE WHEN t.renews_at_term_end THEN NULL ELSE to_char(t.current_term_end, 'YYYY-MM-DD') END AS end_date,
         u.id as owner_id,
         u.email as owner_email,
         u.locale as owner_locale
       FROM contracts c
+      CROSS JOIN LATERAL (${contractTermsSql('c', '$2::date').row}) t
       LEFT JOIN users u ON u.id = c.owner_user_id AND u.tenant_id = c.tenant_id AND u.status = 'enabled'
       WHERE c.tenant_id = $1
         -- Active as the contract lists define it: no end of validity, or a future one.
         AND (c.disabled_at IS NULL OR c.disabled_at > now())
         AND c.owner_user_id IS NOT NULL
         AND (
-          -- End date within 30 days
-          (c.start_date + (c.duration_months || ' months')::interval - '1 day'::interval)::date
-            BETWEEN $2::date AND $2::date + 30
-          OR
-          -- Cancellation deadline within 30 days
-          ((c.start_date + (c.duration_months || ' months')::interval - '1 day'::interval) - (c.notice_period_months || ' months')::interval)::date
-            BETWEEN $2::date AND $2::date + 30
+          t.next_cancellation_deadline BETWEEN $2::date AND $2::date + 30
+          OR (NOT t.renews_at_term_end AND t.current_term_end BETWEEN $2::date AND $2::date + 30)
         )
     `, [tenantId, utcDateYmd(now)]);
 

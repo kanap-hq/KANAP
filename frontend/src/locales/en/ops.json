@@ -399,7 +399,7 @@
       "durationMonths": "Duration (m)",
       "autoRenewal": "Auto-renewal",
       "noticeMonths": "Notice (m)",
-      "end": "End",
+      "end": "Term end",
       "cancelBy": "Cancel by",
       "yearlyAmount": "Yearly amount",
       "currency": "Curr",
@@ -440,6 +440,8 @@
       "autoRenewal": "Auto-renewal",
       "endDate": "End date",
       "cancellationDeadline": "Cancellation deadline",
+      "currentTermEnd": "Current term end",
+      "nextCancellationDeadline": "Next cancellation deadline",
       "failedToLoad": "Failed to load details",
       "failedToSave": "Failed to save details"
     },
