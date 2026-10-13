@@ -22,8 +22,7 @@ La página principal tiene dos secciones. Cada tarjeta enlaza a una herramienta 
 | Herramienta | Propósito |
 |-------------|-----------|
 | **Congelar / Descongelar datos** | Bloquear columnas presupuestarias para prevenir cambios |
-| **Copiar columnas presupuestarias** | Copiar datos entre años y columnas con ajustes |
-| **Copiar asignaciones** | Copiar métodos de asignación de un año a otro |
+| **Copiar columnas presupuestarias** | Copiar importes entre años y columnas, con un porcentaje opcional, y asignaciones a otro año |
 | **Restablecer columna presupuestaria** | Borrar todos los datos de una columna específica |
 | **Congelar datos maestros** | Bloquear los indicadores de empresas y departamentos para un año. Consulte [Congelar datos maestros y copiar indicadores anuales](master-data-operations.md) |
 | **Copiar indicadores anuales** | Copiar los indicadores de empresas y departamentos de un año a otro. Consulte [Congelar datos maestros y copiar indicadores anuales](master-data-operations.md) |
@@ -31,7 +30,7 @@ La página principal tiene dos secciones. Cada tarjeta enlaza a una herramienta 
 | Tarjetas | Quién las ve |
 |---|---|
 | Monedas, Columnas presupuestarias, Método de asignación por defecto, Congelar / Descongelar datos | Administración presupuestaria con nivel de administrador (`budget_ops:admin`) |
-| Copiar columnas presupuestarias, Copiar asignaciones, Restablecer columna presupuestaria | Presupuesto con nivel de administrador (`budget:admin`). Las pestañas OPEX y CAPEX se abren ambas con este nivel |
+| Copiar columnas presupuestarias, Restablecer columna presupuestaria | Presupuesto con nivel de administrador (`budget:admin`). Las pestañas **Todo**, **OPEX** y **CAPEX** se abren todas con este nivel |
 | Congelar datos maestros, Copiar indicadores anuales | Usuarios con acceso al presupuesto que son administradores de la administración presupuestaria, de empresas o de departamentos. Los administradores de empresas y departamentos actúan sobre su propio alcance |
 
 El rol integrado Administrador de presupuesto ve todas las tarjetas. Miembro de presupuesto y Lector de presupuesto no ven ninguna, así que **Administración** no aparece en su menú.
@@ -91,15 +90,15 @@ Congelar y descongelar requieren `budget_ops:admin`. La tarjeta se oculta a los 
 
 ## Copiar columnas presupuestarias
 
-Copie datos presupuestarios de un año y columna a otro, con un ajuste porcentual opcional. Esta es la herramienta principal para inicializar el presupuesto del próximo año a partir del actual.
+Copie los importes de una columna a otro año u otra columna, con un porcentaje opcional, y las asignaciones de un año a otro año. Es la herramienta principal para preparar el presupuesto del año siguiente a partir del año actual.
 
-El selector **OPEX** / **CAPEX** de la parte superior elige las líneas sobre las que se aplica la copia. OPEX está seleccionado por defecto.
+Las pestañas **Todo** / **OPEX** / **CAPEX** de la parte superior eligen las líneas sobre las que se aplica la copia. **Todo**, la pestaña por defecto, copia juntas las líneas OPEX y CAPEX.
 
-Requiere el nivel Administrador en Presupuesto (`budget:admin`).
+Requiere el nivel Admin en Presupuesto (`budget:admin`).
 
 ### Cuándo usarla
 
-- Preparar el presupuesto del próximo año a partir del actual
+- Preparar el presupuesto del año siguiente, importes y asignaciones, a partir del año actual
 - Crear una revisión a partir del presupuesto aprobado
 - Trasladar proyecciones con un factor de inflación
 
@@ -107,45 +106,54 @@ Requiere el nivel Administrador en Presupuesto (`budget:admin`).
 
 | Campo | Descripción |
 |-------|-------------|
-| **Año de origen** | Año del que copiar (rango: año actual menos uno hasta año actual más cinco) |
-| **Columna de origen** | Cualquier columna visible, incluida Previsión cuando se muestra. Empieza en la columna por defecto |
-| **Año de destino** | Año al que copiar (mismo rango) |
-| **Columna de destino** | Cualquier columna visible. Empieza en la columna por defecto |
-| **Incremento porcentual** | Ajuste aplicado a cada mes copiado (p. ej., `3` = +3%). En una columna calculada a partir de sus líneas, aumenta en cambio el precio unitario de cada línea. Consulte [Copiar una columna construida a partir de líneas](#copiar-una-columna-construida-a-partir-de-lineas). Predeterminado: 0. Acepta decimales y valores negativos. Un porcentaje de -100% o menos se rechaza. |
-| **Sobrescribir datos existentes** | Conmutador. Cuando está desactivado, los elementos que ya tienen un valor en el destino se omiten. Cuando está activado, todos los valores de destino se reemplazan. |
+| **Año de origen** | Año del que se copia (rango: año actual menos uno hasta año actual más cinco). Empieza en el año actual |
+| **Año de destino** | Año al que se copia (mismo rango). Empieza en el año siguiente |
+| **Qué copiar** | **Importes**, **Asignaciones**, o ambos. **Asignaciones** se ofrece cuando los dos años son distintos, y aparece marcada al principio. Pase el cursor sobre cada casilla para leer qué copia |
+| **Columna de origen** | Con **Importes**: cualquier columna visible, incluida Previsión cuando se muestra. Empieza en la columna por defecto |
+| **Columna de destino** | Con **Importes**: cualquier columna visible. Empieza en la columna por defecto |
+| **Incremento porcentual** | Con **Importes**: ajuste aplicado a cada mes copiado (p. ej., `3` = +3 %). En una columna calculada a partir de sus líneas, aumenta en su lugar el precio unitario de cada línea. Consulte [Copiar una columna construida a partir de líneas](#copiar-una-columna-construida-a-partir-de-lineas). Por defecto 0. Admite decimales y valores negativos. Un porcentaje de -100 % o menos se rechaza |
+| **Sobrescribir datos existentes** | Un interruptor para las dos partes. Desactivado: una columna de destino que ya tiene importes los conserva, y una asignación introducida a mano en el año de destino se conserva. Activado: ambas se reemplazan |
 
-La página se abre con la columna por defecto del año actual como origen y la columna por defecto del año siguiente como destino. Las columnas ocultas no se ofrecen.
+Las columnas ocultas no se ofrecen. Si no hay nada marcado en **Qué copiar**, la página indica «Elija qué copiar: los importes, las asignaciones o ambos.»
 
-### Proceso en dos pasos: Simulación, luego Copiar
+### Dos pasos: Vista previa, luego Copiar
 
-1. Haga clic en **Simulación** para generar una vista previa sin cambiar ningún dato
-2. Revise la cuadrícula de vista previa, que muestra:
-   - Nombre de la **Línea** (las líneas marcadas como **Omitida** conservan su valor actual; las marcadas como **Prorrateada** empiezan o terminan durante el año de destino y solo reciben los meses dentro de su periodo de validez)
-   - **Valor de origen** (del año/columna de origen)
-   - **Valor actual de destino**
-   - **Valor de vista previa** (lo que será el destino después de la copia)
-3. Cuando esté satisfecho, haga clic en **Copiar datos** para aplicar
+1. Haga clic en **Vista previa** para ver qué hace la copia en cada línea, sin cambiar ningún dato
+2. Revise la tabla, una fila por línea presupuestaria:
+   - **Línea**: el nombre de la línea, un enlace que la abre en una pestaña nueva para que la vista previa siga en su sitio. Las líneas marcadas **Prorrateada** empiezan o terminan durante el año de destino y solo reciben los meses de su vigencia. Las líneas marcadas **Calendario** cambian de calendario (vea más abajo)
+   - **Tipo de línea**: **OPEX** o **CAPEX**, en la pestaña **Todo**
+   - Para los importes: la columna de origen, la columna de destino actual, la columna de destino tras la copia y el estado de los importes
+   - Para las asignaciones: la asignación de origen, la asignación de destino actual, la asignación tras la copia y el estado de las asignaciones
+3. Cuando el resultado le convenza, haga clic en **Copiar** para aplicarlo
 
-El botón **Copiar datos** solo se habilita después de una simulación exitosa.
+**Copiar** solo se activa tras una vista previa. Cambiar cualquier campo descarta la vista previa: vuelva a ejecutarla. Tras la copia, la tabla sigue en pantalla bajo el título **Resultado**, con lo que hizo cada línea.
 
-### Estadísticas resumen
+Cada parte tiene su propio estado en cada línea:
 
-Debajo de la cuadrícula, una barra de estadísticas muestra:
+| Estado | Significado |
+|---|---|
+| **Por copiar** / **Copiada** | La parte se copia, o se copió |
+| **Sustituye a Plantilla** / **Sustituyó a Plantilla** | La asignación del año de destino sigue otro método, que la asignación copiada sustituye |
+| **No válida en 2027** | La línea no es válida en el año de destino. Se excluye |
+| **Omitida: nada en 2026** | La línea no tiene presupuesto en el año de origen |
+| **Omitida: la columna de origen está vacía** | La columna de origen no tiene importes |
+| **Omitida: el destino tiene importes** | La columna de destino ya tiene importes, y **Sobrescribir datos existentes** está desactivado |
+| **Omitida: ninguna asignación introducida en 2026** | La línea no tiene ninguna asignación que copiar en el año de origen |
+| **Omitida: 2027 tiene una asignación introducida a mano** | El año de destino tiene una asignación introducida a mano, y **Sobrescribir datos existentes** está desactivado |
+| **Error** | Las reglas de asignación de la línea rechazan la copia, con el motivo. **Copiar** sigue desactivado mientras una línea tenga un error |
 
-- **Total de elementos** en el conjunto de datos
-- **Elementos a procesar** (no omitidos)
-- **Total de origen** (suma de valores de origen)
-- **Total actual de destino**
-- **Total de vista previa** (mostrado después de la simulación)
+### Resumen
 
-### Comportamiento de sobrescritura
+Encima de la tabla, un aviso resume la vista previa, por ejemplo «136 líneas en la vista previa. Importes: 120 por copiar, 16 omitidos. Asignaciones: 130 por copiar, 6 omitidas.» Tras la copia indica «Copia terminada.» con los mismos recuentos.
 
-| Sobrescribir | El destino tiene datos | Resultado |
-|--------------|------------------------|-----------|
-| Desactivado | Sí | Omitido |
-| Desactivado | No (cero) | Copiado |
-| Activado | Sí | Reemplazado |
-| Activado | No (cero) | Copiado |
+Aparecen advertencias cuando corresponden:
+
+- Las líneas cuya columna de destino ya tiene un importe, y que se omitirán sin **Sobrescribir datos existentes**
+- Las líneas que conservan una asignación introducida a mano en el año de destino, sin **Sobrescribir datos existentes**
+- Las líneas cuyo método de asignación cambia en el año de destino. Sin **Sobrescribir datos existentes**, la copia solo conserva las asignaciones introducidas a mano: una línea que sigue un método, sin reparto introducido a mano, toma el método del año de origen
+- Las líneas que siguen con la asignación por defecto, cuando el valor por defecto del año de destino difiere del año de origen. Las líneas copiadas siguen usando el valor por defecto de su propio año. Configúrelo en [Método de asignación por defecto](#metodo-de-asignacion-por-defecto) si la base debe mantenerse igual
+
+Bajo la tabla, los totales indican el número de líneas, los importes por copiar, el total de origen, el total actual de destino y el total tras la copia, y las asignaciones por copiar.
 
 ### Cómo se copian los importes
 
@@ -159,7 +167,7 @@ Debajo de la cuadrícula, una barra de estadísticas muestra:
 - Un origen sin periodo da un periodo de todo el año
 - En la pestaña Presupuesto, la columna de destino muestra «Copiado de Presupuesto 2026 +2 %»
 - Copiar una columna sobre sí misma (mismo año y misma columna) se rechaza
-- La copia es de todo o nada: si una línea falla, no se guarda nada
+- La copia es de todo o nada: si una línea falla, no se guarda nada, ni importes ni asignaciones
 
 ### Copiar una columna construida a partir de líneas
 
@@ -178,8 +186,8 @@ Una columna puede construirse a partir de líneas, cada una una cantidad por un 
 - El porcentaje de incremento se aplica a los meses, como en cualquier otra columna. Los precios unitarios de las líneas no cambian
 - Las líneas pasan al año de destino con su descripción, cantidad, unidad, frecuencia y calendario, y sus periodos se desplazan igual que el periodo de la columna. Una línea que se conserva solo para una parte del año de destino, por la vigencia de la línea, se ajusta a ese periodo, y una línea que se queda sin ningún mes se elimina
 - El ETC se recalcula a partir de las líneas copiadas con los calendarios laborales del año de destino
-- En la pestaña Presupuesto, la columna de destino muestra «Copiado de Presupuesto 2026», y su pestaña **Cantidad y precio** indica «Los importes se copiaron de Presupuesto 2026. Usar de nuevo las líneas.»
-- Las líneas copiadas son una referencia de solo lectura. Haga clic en **Usar de nuevo las líneas** en la pestaña **Cantidad y precio** para calcular la columna a partir de ellas, con sus precios actuales. Para planificar el año de destino con sus propios precios, cambie después los precios unitarios: cada cambio vuelve a calcular la columna
+- En la pestaña Presupuesto, la columna de destino muestra «Copiado de Presupuesto 2026», y su editor indica, por ejemplo, «4 líneas conservadas como referencia (48.000). Usar de nuevo las líneas.»
+- Las líneas copiadas son una referencia de solo lectura. Haga clic en **Usar de nuevo las líneas** para calcular la columna a partir de ellas, con sus precios actuales. Para planificar el año de destino con sus propios precios, cambie después los precios unitarios: cada cambio vuelve a calcular la columna
 
 Una copia desde una columna sin líneas deja el destino sin líneas, y su ETC queda vacío.
 
@@ -187,57 +195,21 @@ Una copia desde una columna sin líneas deja el destino sin líneas, y su ETC qu
 
 Una línea con precio por día necesita un calendario que contenga el año de destino. Cuando el calendario de una línea no tiene días laborables para ese año, la copia usa en su lugar el calendario estándar del país de la empresa pagadora de la línea. Es el calendario creado con la empresa. Esto vale para una columna construida a partir de líneas y para una columna cuyas líneas son solo una referencia. Si no existe ninguno, la línea se copia de la forma habitual: meses por el porcentaje. Las líneas se conservan sin cambios como referencia, y el ETC sigue siendo el de la columna de origen.
 
-La simulación señala estas líneas con una nota **Calendario**, con una información emergente por línea, y muestra una advertencia sobre la vista previa. La vista previa señala también una línea para la que no existe ningún calendario de sustitución. Para copiar de todos modos, marque **Copiar de todos modos con estos cambios de calendario**. Lo mejor es añadir los días del año en la página **Calendarios laborales** y volver a ejecutar la simulación.
+La vista previa señala estas líneas con una nota **Calendario**, con una información emergente por línea, y muestra una advertencia sobre la tabla. La vista previa señala también una línea para la que no existe ningún calendario de sustitución. Para copiar de todos modos, marque **Copiar de todos modos con estos cambios de calendario**. Lo mejor es añadir los días del año en la página **Calendarios laborales** y volver a ejecutar la vista previa.
 
-Un calendario desactivado se sigue usando. La simulación lo anota y no pide confirmación.
+Un calendario desactivado se sigue usando. La vista previa lo anota y no pide confirmación.
+
+### Copiar asignaciones
+
+**Asignaciones** copia el método de asignación de cada línea del año de origen al año de destino, con el reparto introducido a mano (las empresas o departamentos elegidos, los porcentajes introducidos). Solo se copian las líneas válidas en el año de destino, con la misma regla que los importes.
+
+- Una línea que sigue con la asignación por defecto se queda en el valor por defecto: en el año de destino sigue el valor por defecto de ese año
+- Sin **Sobrescribir datos existentes**, una línea conserva la asignación introducida a mano en el año de destino. Una línea cuyo año de destino sigue un método sin reparto introducido a mano recibe la asignación de origen, y la vista previa indica qué método sustituye, por ejemplo «Sustituye a Plantilla»
+- Con **Sobrescribir datos existentes**, cada asignación copiada sustituye a la del destino
 
 ### Protección de columnas congeladas
 
-Si la columna de destino está congelada, tanto **Simulación** como **Copiar datos** están deshabilitados. Un banner de error le indica que descongele primero.
-
----
-
-## Copiar asignaciones
-
-Copie métodos y porcentajes de asignación de un año a otro. Esto le ahorra tener que volver a introducir las configuraciones de contracargo al configurar un nuevo ejercicio fiscal.
-
-El conmutador **OPEX** / **CAPEX** de la parte superior elige qué líneas se copian. Solo se copian las líneas válidas en el año de destino, con la misma regla que **Copiar columnas presupuestarias**. La copia es de todo o nada: si una línea falla, no se copia nada.
-
-Requiere el nivel Administrador en Presupuesto (`budget:admin`).
-
-### Cuándo usarla
-
-- Preparar el presupuesto del próximo año con las mismas asignaciones de costes
-- Trasladar las configuraciones de contracargo
-- Configurar un nuevo ejercicio fiscal
-
-### Campos
-
-| Campo | Descripción |
-|-------|-------------|
-| **Año de origen** | Año del que copiar asignaciones (rango: año actual menos uno hasta año actual más cinco) |
-| **Año de destino** | Año al que copiar asignaciones (mismo rango). Debe ser diferente del año de origen. |
-| **Sobrescribir datos existentes** | Conmutador. Cuando está desactivado, los elementos que ya tienen asignaciones en el destino se omiten. |
-
-### Proceso en dos pasos: Simulación, luego Copiar
-
-1. Haga clic en **Simulación** para ver una vista previa
-2. La cuadrícula de vista previa muestra cada línea OPEX o CAPEX con:
-   - Nombre de la **Línea**
-   - **Acción**: qué sucederá (Se copiará, Omitida – sin año de origen, Omitida – sin asignaciones en el origen, Omitida – el destino tiene datos, Error)
-   - Método y etiqueta del **Origen**
-   - Método y etiqueta del **Destino** actual
-   - **Resultado tras la copia**: cómo quedará el destino
-3. Haga clic en **Copiar datos** para aplicar
-
-### Validación
-
-- Los años de origen y destino deben ser diferentes. Si coinciden, aparece un banner de advertencia y ambos botones se deshabilitan.
-- Cambiar cualquier filtro borra la vista previa, requiriendo una nueva simulación.
-
-### Resumen
-
-Después de una simulación, un banner muestra el conteo de elementos listos para copiar, omitidos y con errores. Si se omitieron elementos porque el destino ya tiene asignaciones, aparece una advertencia separada sugiriendo activar la sobrescritura.
+Cuando la copia incluye los importes y la columna de destino está congelada, **Vista previa** y **Copiar** quedan desactivados y un aviso de error le pide que la descongele primero. En la pestaña **Todo**, cuando la columna solo está congelada para un tipo, el aviso lo nombra, por ejemplo «La columna Presupuesto de 2027 está congelada en CAPEX. Descongélela, o copie solo el otro tipo.» Las asignaciones solas no dependen de las congelaciones.
 
 ---
 
@@ -245,7 +217,7 @@ Después de una simulación, un banner muestra el conteo de elementos listos par
 
 Borre todos los datos de una columna presupuestaria específica para un año determinado. Esta es una operación destructiva: utilícela cuando necesite comenzar de cero.
 
-El selector **OPEX** / **CAPEX** de la parte superior elige las líneas que se borran. El restablecimiento pone a cero los doce meses de la columna y quita su periodo, así como sus líneas cuando la columna se construyó a partir de cantidad y precio. En la pestaña Presupuesto, la columna recibe entonces una nueva sugerencia a partir de las fechas de la línea. El restablecimiento abarca todas las líneas, incluidas aquellas cuyo fin de validez ya ha pasado. Es de todo o nada: si una línea falla, no se borra nada.
+Las pestañas **Todo** / **OPEX** / **CAPEX** de la parte superior eligen las líneas que se borran. **Todo**, la pestaña por defecto, borra juntas las líneas OPEX y CAPEX. El restablecimiento pone a cero los doce meses de la columna y quita su periodo, así como sus líneas cuando la columna se construyó a partir de cantidad y precio. En la pestaña Presupuesto, la columna recibe entonces una nueva sugerencia a partir de las fechas de la línea. El restablecimiento abarca todas las líneas, incluidas aquellas cuyo fin de validez ya ha pasado. Es de todo o nada: si una línea falla, no se borra nada.
 
 Requiere el nivel Administrador en Presupuesto (`budget:admin`).
 
@@ -266,7 +238,7 @@ Una columna cuyas líneas no tienen ningún importe también puede restablecerse
 
 ### Vista previa
 
-Antes de elegir una columna, una línea sustituye a la cuadrícula: «Elija una columna para ver los importes que contiene.» Una vez elegida la columna, una cuadrícula muestra cada línea OPEX o CAPEX y su valor actual en esa columna. Los importes que se borrarán aparecen en peso medio; los valores vacíos aparecen atenuados. Debajo de la cuadrícula aparecen tres estadísticas:
+Antes de elegir una columna, una línea sustituye a la cuadrícula: «Elija una columna para ver los importes que contiene.» Una vez elegida la columna, una cuadrícula muestra cada línea del tipo elegido y su valor actual en esa columna. El nombre de la línea la abre en una pestaña nueva, y en la pestaña **Todo** una columna **Tipo de línea** indica **OPEX** o **CAPEX**. Los importes que se borrarán aparecen en peso medio; los valores vacíos aparecen atenuados. Debajo de la cuadrícula aparecen tres estadísticas:
 
 - **Total de elementos**
 - **Líneas con un total distinto de cero**
@@ -287,7 +259,7 @@ Debe hacer clic en **Borrar columna** en el diálogo para proceder, o **Cancelar
 
 - El botón **Borrar columna** sigue disponible cuando ninguna línea tiene importe, para poder quitar igualmente los periodos de reparto
 - No hay ninguna columna preseleccionada, así que siempre elige usted la columna que se borra
-- Las columnas congeladas no pueden restablecerse. Descongélelas primero
+- Las columnas congeladas no pueden restablecerse. Descongélelas primero. En la pestaña **Todo**, cuando la columna solo está congelada para un tipo, el mensaje lo nombra, por ejemplo «La columna Presupuesto de 2026 está congelada en CAPEX. Descongélela antes de borrar los datos, o borre solo el otro tipo.»
 - El diálogo de confirmación requiere reconocimiento explícito
 
 ---
@@ -367,18 +339,18 @@ Una fila por columna, siempre en el mismo orden, de la columna 1 a la columna 5.
 | **Nombre** | El nombre que todos ven en las listas, la pestaña Presupuesto, los informes, el panel y la Administración presupuestaria. Déjelo vacío para usar el nombre estándar, que aparece como marcador. Como máximo 40 caracteres, sin caracteres de control ni invisibles. Cada nombre debe ser distinto de los nombres de las demás columnas, incluido el nombre estándar de una columna que no ha renombrado, sin importar las mayúsculas |
 | **En los archivos** | La línea bajo cada nombre. Indica el nombre técnico de la columna en el archivo de presupuesto y sus importaciones, por ejemplo `budget` para la columna 1. Nunca cambia cuando renombra una columna. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md) |
 | **Visible** | Si la columna aparece en pantalla. Al menos una columna debe seguir visible |
-| **Sigue el reparto y las líneas** | Si la columna toma lo que se aplica a todas las columnas en la pestaña Presupuesto: la distribución y el periodo de un reparto (**Aplicar el reparto a todas las columnas**), y las líneas de cantidad y precio (**Aplicar estas líneas a todas las columnas**). Una columna que no los sigue conserva los suyos: cuando la reparte o edita sus líneas, cambia sola |
+| **Sigue el reparto y las líneas** | Si la columna aparece marcada al principio en **Usar también para otras columnas…** de la pestaña Presupuesto, que da a otras columnas el periodo y la distribución de un importe, o las líneas de cantidad y precio. Allí puede seguir marcando o desmarcando cada columna |
 | **Por defecto** | La columna que preseleccionan los informes y que ordena las listas y el panel. Congelarla fija los tipos de cambio del año. La columna por defecto debe estar visible |
 
 Los encabezados **Sigue el reparto y las líneas** y **Por defecto** llevan un icono de información. Pase el ratón por encima, o lleve el foco del teclado hasta él, para leer la misma explicación en la página.
 
-Por defecto, Presupuesto, Revisión, Realizado y Aterrizaje previsto están visibles y Previsión está oculta, todas las columnas siguen los interruptores de la pestaña Presupuesto y Presupuesto es la columna por defecto.
+Por defecto, Presupuesto, Revisión, Realizado y Aterrizaje previsto están visibles y Previsión está oculta, todas las columnas siguen el reparto y las líneas, y Presupuesto es la columna por defecto.
 
 ### Qué cambia la configuración
 
 - **Las columnas ocultas** desaparecen de las listas, del selector de columnas, de la pestaña Presupuesto, de los selectores de los informes, de las páginas de copia y de restablecimiento y del panel. Conservan sus importes: ocultar una columna nunca borra datos, y volver a mostrarla recupera los importes. Las columnas ocultas siguen aceptando importaciones mediante el archivo de presupuesto, y las congelaciones se les siguen aplicando. La página de congelación también muestra las columnas ocultas, con la marca **Oculta**, para que pueda congelarlas como las demás
-- **La columna por defecto** está preseleccionada en todos los informes. Ordena la lista de líneas presupuestarias y su navegación anterior y siguiente. Los mosaicos **Top líneas**, **Mayores incrementos**, **Mi presupuesto** y **Por centro de coste** del panel la usan. La lista la muestra para el año actual, junto a la última columna visible. También es el importe de referencia de la pestaña Asignaciones y la columna en la que se abre el panel de reparto. Congelarla para un año fija los tipos de cambio de ese año (consulte [Congelar la columna por defecto fija los tipos de cambio](#congelar-la-columna-por-defecto-fija-los-tipos-de-cambio))
-- **Sigue el reparto y las líneas** decide qué columnas se mueven juntas cuando un reparto se aplica a todas las columnas, y qué columnas reciben las líneas cuando **Aplicar estas líneas a todas las columnas** está activado. Las columnas congeladas nunca cambian, diga lo que diga esta configuración
+- **La columna por defecto** está preseleccionada en todos los informes. Ordena la lista de líneas presupuestarias y su navegación anterior y siguiente. Los mosaicos **Top líneas**, **Mayores incrementos**, **Mi presupuesto** y **Por centro de coste** del panel la usan. La lista la muestra para el año actual, junto a la última columna visible. También es el importe de referencia de la pestaña Asignaciones y la columna de partida de la fila **Diferencia con** de la pestaña Presupuesto. Congelarla para un año fija los tipos de cambio de ese año (consulte [Congelar la columna por defecto fija los tipos de cambio](#congelar-la-columna-por-defecto-fija-los-tipos-de-cambio))
+- **Sigue el reparto y las líneas** decide qué columnas aparecen marcadas al principio cuando usa **Usar también para otras columnas…** en la pestaña Presupuesto. Las columnas congeladas nunca se ofrecen, diga lo que diga esta configuración
 
 ### Guardar
 
@@ -399,8 +371,7 @@ A continuación se muestra una secuencia típica usando estas herramientas, con 
 ### 1. Fin del año N
 
 1. Congelar el realizado del Año N (proteger datos históricos)
-2. Copiar Presupuesto N a Presupuesto N+1 (con un porcentaje de aumento por inflación)
-3. Copiar asignaciones de N a N+1
+2. Copiar Presupuesto N a Presupuesto N+1, con las asignaciones (una sola ejecución de **Copiar columnas presupuestarias**, con un porcentaje de aumento por inflación)
 
 ### 2. Durante la planificación presupuestaria (N+1)
 
@@ -421,7 +392,7 @@ A continuación se muestra una secuencia típica usando estas herramientas, con 
 
 ## Consejos
 
-- **Siempre haga una simulación primero**: Copiar columnas presupuestarias y Copiar asignaciones admiten simulación. Úsela cada vez para verificar el resultado antes de confirmar.
+- **Siempre revise la vista previa primero**: **Copiar columnas presupuestarias** muestra lo que hace en cada línea antes de copiar. Revísela cada vez antes de confirmar.
 - **Congele después de la aprobación**: Bloquear columnas después de la aprobación mantiene su registro de auditoría y previene ediciones accidentales.
 - **Use ajustes porcentuales**: Al copiar entre años, aplique un factor de inflación o crecimiento para no tener que ajustar cada línea manualmente.
 - **Verifique el estado de congelación antes de operaciones masivas**: Las columnas congeladas bloquean las operaciones de copia y restablecimiento. Si un botón está en gris, verifique primero la página de congelación.
