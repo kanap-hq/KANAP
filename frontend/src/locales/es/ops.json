@@ -707,7 +707,7 @@
         "button": "Ajustes",
         "title": "Ajustes de contratos",
         "windowLabel": "Plazo de decisión antes de la fecha límite de rescisión (días)",
-        "windowHint": "Un contrato con renovación tácita espera una decisión este número de días antes de su fecha límite de rescisión. Su responsable recibe entonces una tarea para decidir la renovación. De 0 a 365 días.",
+        "windowHint": "Un contrato espera una decisión este número de días antes de su fecha límite de rescisión, o antes de su fin si no se renueva tácitamente. Su responsable recibe entonces una tarea para decidir. De 0 a 365 días.",
         "invalid": "Introduzca un número entero de días entre 0 y 365.",
         "saveFailed": "No se pudieron guardar los ajustes."
       },

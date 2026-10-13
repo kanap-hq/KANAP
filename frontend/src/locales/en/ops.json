@@ -707,7 +707,7 @@
         "button": "Settings",
         "title": "Contract settings",
         "windowLabel": "Decision window before the cancellation deadline (days)",
-        "windowHint": "A contract that renews tacitly awaits a decision this many days before its cancellation deadline. Its owner then gets a task to decide on the renewal. From 0 to 365 days.",
+        "windowHint": "A contract awaits a decision this many days before its cancellation deadline, or before its end when it does not renew tacitly. Its owner then gets a task to decide. From 0 to 365 days.",
         "invalid": "Enter a whole number of days from 0 to 365.",
         "saveFailed": "The settings could not be saved."
       },
