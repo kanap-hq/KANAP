@@ -96,6 +96,65 @@ async function testOlderTenantWithEmptyDefault() {
   });
 }
 
+// GET also gives the tenant's seed language and, for each recommended dimension it has, the
+// tenant's value of each seed value, matched by name in any language: a caller that names the
+// values in English (the sample data loader) finds "Matériel" for "Hardware".
+async function testValuesAndLanguage() {
+  await withRollback(async (runner) => {
+    const tenantId = await seedTenant(runner, 'rec-values-fr');
+    const { axes } = services(runner.manager);
+    const ctx = context(runner.manager, tenantId);
+    assert.equal((await axes.recommended(ctx)).language, 'en', 'no language stored: English');
+    await runner.query(`UPDATE tenants SET metadata = metadata || '{"language":"fr"}'::jsonb WHERE id = $1`, [tenantId]);
+    await ensureDefaultAnalyticsAxis(runner.manager, tenantId);
+    await axes.addRecommended({ codes: ['cost_pool', 'it_tower'], language: 'fr' }, ctx);
+    // The administrator renamed one value; an English duplicate came later, after the French one.
+    await runner.query(
+      `UPDATE analytics_categories c SET name = 'Réseaux et télécoms' FROM analytics_axes a
+        WHERE a.id = c.axis_id AND a.tenant_id = $1 AND a.is_default AND c.name = 'Télécoms'`,
+      [tenantId],
+    );
+    await runner.query(
+      `INSERT INTO analytics_categories (tenant_id, axis_id, name, sort_order)
+       SELECT $1, id, 'Hardware', 99 FROM analytics_axes WHERE tenant_id = $1 AND is_default`,
+      [tenantId],
+    );
+
+    const state = await axes.recommended(ctx);
+    assert.equal(state.language, 'fr', 'the seed language stored on the tenant');
+    const byCode = new Map(state.items.map((item) => [item.code, item]));
+    const costPool = byCode.get('cost_pool')!;
+    assert.equal(costPool.axis_code, 'default', 'the cost pool is on the default dimension');
+    assert.deepEqual(costPool.values.map((value) => [value.key, value.english_name, value.name]), [
+      ['hardware', 'Hardware', 'Matériel'],
+      ['software', 'Software', 'Logiciel'],
+      ['internal_labor', 'Internal labor', "Main-d'œuvre interne"],
+      ['external_labor', 'External labor', "Main-d'œuvre externe"],
+      ['outside_services', 'Outside services', 'Services externes'],
+      ['facilities_power', 'Facilities and power', 'Locaux et énergie'],
+      ['telecom', 'Telecom', null],
+      ['other', 'Other', 'Autres'],
+    ], 'the French values by key; the first by position when two match; none for the renamed one');
+    assert.equal(byCode.get('it_tower')!.axis_code, 'it_tower');
+    assert.deepEqual(byCode.get('it_tower')!.values.slice(0, 2).map((value) => value.name), ['Data center', 'Calcul']);
+    assert.deepEqual(byCode.get('recurrence')!.values, [], 'a dimension the tenant lacks has no value');
+    assert.equal(byCode.get('recurrence')!.axis_code, null);
+  });
+
+  await withRollback(async (runner) => {
+    // An older tenant: its investment type stands for the purpose; "Conformity" is no purpose value.
+    const tenantId = await seedTenant(runner, 'rec-values-older');
+    await ensureCapexDimensions(runner.manager, tenantId);
+    const { items } = await services(runner.manager).axes.recommended(context(runner.manager, tenantId));
+    const purpose = items.find((item) => item.code === 'purpose')!;
+    assert.equal(purpose.axis_code, 'investment_type');
+    assert.deepEqual(purpose.values.map((value) => [value.key, value.name]), [
+      ['replacement', 'Replacement'], ['capacity', 'Capacity'], ['productivity', 'Productivity'], ['security', 'Security'],
+      ['compliance', null], ['business_growth', 'Business growth'], ['other', 'Other'],
+    ]);
+  });
+}
+
 async function testNamedDefault() {
   await withRollback(async (runner) => {
     const tenantId = await seedTenant(runner, 'rec-named');
@@ -207,6 +266,7 @@ void dataSource;
 
 runSpecs('analytics-recommended-dimensions.integration.spec', [
   testOlderTenantWithEmptyDefault,
+  testValuesAndLanguage,
   testNamedDefault,
   testRefusals,
   testPermissions,

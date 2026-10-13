@@ -493,6 +493,65 @@ export async function findRecommendedDimensions(
   return result;
 }
 
+/** One value of a recommended dimension and the tenant's value that stands for it. */
+export interface RecommendedValueMatch {
+  key: string;
+  /** The value's name in the English table: the name a file written for an English tenant carries. */
+  english_name: string;
+  /** The tenant's value of that key (matched by name in any of the four languages), or null. */
+  name: string | null;
+}
+
+/**
+ * The seed key of each value name, per recommended dimension, over the four languages, lower
+ * case. A name stands for one key only in a dimension (a spec checks it): "Data center" is the
+ * same value in English and French.
+ */
+export function recommendedValueKeysByName(key: RecommendedDimensionKey): Map<string, string> {
+  const byName = new Map<string, string>();
+  for (const language of SEED_LANGUAGES) {
+    const seed = recommendedDimensionTable(language).find((item) => item.key === key);
+    for (const value of seed?.values ?? []) byName.set(value.name.toLowerCase(), value.key);
+  }
+  return byName;
+}
+
+/**
+ * For each dimension of `found` (`findRecommendedDimensions`), its seed values in the table's
+ * order and the tenant's value that stands for each one: the value of that dimension whose name
+ * is the seed name of the key in one of the four languages (case-insensitive; the first by
+ * position when two match). Lets a caller that names values in English (a file, the sample data
+ * loader) find a French tenant's "Matériel" for "Hardware". No value for a dimension the tenant
+ * lacks.
+ */
+export async function findRecommendedValues(
+  manager: EntityManager,
+  tenantId: string,
+  found: ReadonlyArray<{ key: RecommendedDimensionKey; axis: { id: string } | null }>,
+): Promise<Map<RecommendedDimensionKey, RecommendedValueMatch[]>> {
+  const axisIds = found.flatMap((item) => (item.axis ? [item.axis.id] : []));
+  const rows: Array<{ axis_id: string; name: string }> = axisIds.length === 0 ? [] : await manager.query(
+    `SELECT axis_id::text AS axis_id, name FROM analytics_categories
+      WHERE tenant_id = $1 AND axis_id = ANY($2::uuid[])
+      ORDER BY sort_order, lower(name), id`,
+    [tenantId, axisIds],
+  );
+  const result = new Map<RecommendedDimensionKey, RecommendedValueMatch[]>();
+  for (const { key, axis } of found) {
+    if (!axis) continue;
+    const keysByName = recommendedValueKeysByName(key);
+    const tenantName = new Map<string, string>();
+    for (const row of rows) {
+      if (row.axis_id !== axis.id) continue;
+      const valueKey = keysByName.get(row.name.trim().toLowerCase());
+      if (valueKey && !tenantName.has(valueKey)) tenantName.set(valueKey, row.name);
+    }
+    const english = recommendedDimensionTable('en').find((item) => item.key === key)!;
+    result.set(key, english.values.map((value) => ({ key: value.key, english_name: value.name, name: tenantName.get(value.key) ?? null })));
+  }
+  return result;
+}
+
 async function freeName(query: Query, tenantId: string, name: string, ownId: string | null): Promise<string> {
   for (let attempt = 0; ; attempt += 1) {
     const candidate = recommendedDimensionNameCandidate(name, attempt);
