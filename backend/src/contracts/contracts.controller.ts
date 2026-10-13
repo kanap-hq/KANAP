@@ -16,6 +16,7 @@ import { contentDisposition } from '../common/content-disposition';
 import { ContractContactsService } from './contract-contacts.service';
 import { SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
+import { canReadContractBudget } from './contract-budget';
 
 @UseGuards(JwtAuthGuard)
 @Controller('contracts')
@@ -29,20 +30,25 @@ export class ContractsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get()
-  list(@Query() query: any, @Req() req: any) { return this.svc.list(query, { manager: req?.queryRunner?.manager }); }
+  list(@Query() query: any, @Req() req: any) {
+    // `budget_year` and `budget_column` add the budget figures for a reader of the budget (contract-budget.ts).
+    return this.svc.list(query, { manager: req?.queryRunner?.manager, budgetAccess: canReadContractBudget(req) });
+  }
 
-  // The list's footer and quick filter count, for the same search, filters and status scope.
+  // The list's footer and quick filter counts, for the same search, filters and status scope.
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get('totals')
   totals(@Query() query: any, @Req() req: any) {
-    return this.svc.totals(query, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id });
+    return this.svc.totals(query, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id, budgetAccess: canReadContractBudget(req) });
   }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get('ids')
-  listIds(@Query() query: any, @Req() req: any) { return this.svc.listIds(query, { manager: req?.queryRunner?.manager }); }
+  listIds(@Query() query: any, @Req() req: any) {
+    return this.svc.listIds(query, { manager: req?.queryRunner?.manager, budgetAccess: canReadContractBudget(req) });
+  }
 
   // Picker search (`q`) and hydration of chosen values (`ids`); see common/lookup.
   @UseGuards(PermissionGuard)
@@ -143,6 +149,14 @@ export class ContractsController {
   @RequireLevel('contracts', 'reader')
   @Get(':id/budget-lines')
   listBudgetLines(@Param('id') id: string, @Req() req: any) { return this.svc.listBudgetLines(id, { manager: req?.queryRunner?.manager }); }
+
+  // The Budget tab's figures for a year and column; also needs the right to read the budget.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'reader')
+  @Get(':id/budget')
+  budgetCoverage(@Param('id') id: string, @Query() query: any, @Req() req: any) {
+    return this.svc.budgetCoverage(id, query, { manager: req?.queryRunner?.manager, budgetAccess: canReadContractBudget(req) });
+  }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'member')
