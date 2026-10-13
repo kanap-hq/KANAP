@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, NotFoundException, OnModuleInit, Optional } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, OnModuleInit, Optional } from '@nestjs/common';
 import { DataSource, EntityManager, Raw } from 'typeorm';
 import { validate as isUuid } from 'uuid';
 import { AuditService } from '../audit/audit.service';
@@ -16,11 +16,14 @@ import type { TaskStatus } from '../tasks/task.entity';
 import { Contract } from './contract.entity';
 import { listContractApplications } from './contract-relations';
 import {
+  checkEndDate,
   daysBetween,
+  proposedEndDate,
   renewalSourceRef,
   renewalTerms,
   renewalTaskText,
   resolveRenewalState,
+  stopRenewalComment,
   type RenewalAction,
   type RenewalDecisionRecord,
   type RenewalState,
@@ -49,14 +52,18 @@ export type TerminationImpact = {
 /** `GET /contracts/:id/renewal`: what the renewal decision box shows. */
 export type ContractRenewalView = {
   decision_window_days: number;
+  /** The end a termination proposes (`proposedEndDate`), null without a duration. */
+  proposed_end_date: string | null;
+  notice_period_months: number;
   state: 'none' | 'pending' | 'decided';
   renegotiating: boolean;
   term: (RenewalTerm & { days_left: number }) | null;
   duration_months: number;
-  decision: { decision: RenewalAction; reason: string | null; decided_at: string; decided_by_name: string | null } | null;
+  /** `end_date`: the end chosen by a termination (null on older rows: the term's last day). */
+  decision: { decision: RenewalAction; reason: string | null; decided_at: string; decided_by_name: string | null; end_date: string | null } | null;
   can_undo: boolean;
   task: { id: string; item_number: number | null; status: string; assignee_name: string | null } | null;
-  /** While a decision is awaited: what a termination changes. */
+  /** What a termination changes: while a decision is awaited (ending on the proposed date), or for the `end_date` asked. */
   impact: TerminationImpact | null;
 };
 
@@ -173,6 +180,7 @@ export class ContractRenewalService implements OnModuleInit {
       deadline: d.deadline,
       task_id: d.task_id ?? null,
       previous_disabled_at: d.previous_disabled_at ?? null,
+      end_date: d.end_date ?? null,
       decided_at: new Date(row.created_at).toISOString(),
       user_id: row.user_id,
     };
@@ -193,9 +201,10 @@ export class ContractRenewalService implements OnModuleInit {
     return { state, taskId };
   }
 
-  private async terminationImpact(mg: EntityManager, contract: Contract, term: RenewalTerm): Promise<TerminationImpact> {
-    const ended = { ...contract, disabled_at: endOfValidityFromDate(term.term_end) };
-    const firstYear = Number(term.term_end.slice(0, 4));
+  /** What ending the contract on `endDate` changes. */
+  private async terminationImpact(mg: EntityManager, contract: Contract, endDate: string): Promise<TerminationImpact> {
+    const ended = { ...contract, disabled_at: endOfValidityFromDate(endDate) };
+    const firstYear = Number(endDate.slice(0, 4));
     const commitments = [firstYear, firstYear + 1]
       .map((year) => ({ year, before: contractCommitment(contract, year), after: contractCommitment(ended, year) }))
       .filter((row) => row.before !== row.after);
@@ -211,10 +220,12 @@ export class ContractRenewalService implements OnModuleInit {
     return { currency: (contract.currency || 'EUR').toUpperCase(), commitments, applications, assets };
   }
 
-  private async view(mg: EntityManager, contract: Contract, today: string, windowDays: number): Promise<ContractRenewalView> {
+  private async view(mg: EntityManager, contract: Contract, today: string, windowDays: number, impactEndDate?: string): Promise<ContractRenewalView> {
     const { state, taskId } = await this.loadState(mg, contract, today, windowDays);
     const base: ContractRenewalView = {
       decision_window_days: windowDays,
+      proposed_end_date: proposedEndDate(contract, today),
+      notice_period_months: Math.max(0, Math.trunc(Number(contract.notice_period_months ?? 0)) || 0),
       state: state.kind,
       renegotiating: false,
       term: null,
@@ -222,7 +233,7 @@ export class ContractRenewalService implements OnModuleInit {
       decision: null,
       can_undo: false,
       task: null,
-      impact: null,
+      impact: impactEndDate ? await this.terminationImpact(mg, contract, impactEndDate) : null,
     };
     if (state.kind === 'none') return base;
     const [task] = taskId
@@ -246,20 +257,40 @@ export class ContractRenewalService implements OnModuleInit {
       renegotiating: state.kind === 'pending' && state.renegotiating,
       term: { ...state.term, days_left: daysBetween(today, state.term.deadline) },
       decision: record
-        ? { decision: record.decision, reason: record.reason, decided_at: record.decided_at, decided_by_name: author?.name ?? null }
+        ? { decision: record.decision, reason: record.reason, decided_at: record.decided_at, decided_by_name: author?.name ?? null, end_date: record.end_date ?? null }
         : null,
       can_undo: state.kind === 'decided' && state.can_undo,
       task: task ? { id: task.id, item_number: task.item_number == null ? null : Number(task.item_number), status: task.status, assignee_name: task.assignee_name } : null,
-      impact: state.kind === 'pending' ? await this.terminationImpact(mg, contract, state.term) : null,
+      impact: impactEndDate
+        ? base.impact
+        : state.kind === 'pending' ? await this.terminationImpact(mg, contract, state.term.term_end) : null,
     };
   }
 
-  /** The renewal state of a contract of the session tenant. */
-  async get(id: string, opts?: Opts): Promise<ContractRenewalView> {
+  /**
+   * The renewal state of a contract of the session tenant. With `endDate` (`?end_date=`), `impact`
+   * says what ending the contract on that day changes, whatever the state (the date checked as
+   * for an action, 400 otherwise).
+   */
+  async get(id: string, opts?: Opts & { endDate?: unknown }): Promise<ContractRenewalView> {
     const mg = opts?.manager ?? this.dataSource.manager;
     const contract = await this.findContract(mg, id);
     const windowDays = await readDecisionWindowDays(mg, contract.tenant_id);
-    return this.view(mg, contract, utcDateYmd(new Date()), windowDays);
+    const today = utcDateYmd(new Date());
+    const asked = opts?.endDate == null || opts.endDate === '' ? undefined : ContractRenewalService.endDateOf(opts.endDate, contract, today);
+    return this.view(mg, contract, today, windowDays, asked);
+  }
+
+  /** The end of a termination: the one asked (checked, 400 otherwise) or the proposed one. */
+  private static endDateOf(raw: unknown, contract: Contract, today: string): string {
+    if (raw == null || raw === '') {
+      const proposed = proposedEndDate(contract, today);
+      if (!proposed) throw new BadRequestException('end_date is required for a contract without a duration.');
+      return proposed;
+    }
+    const check = checkEndDate(raw, contract, today);
+    if (!check.ok) throw new BadRequestException(check.message);
+    return check.date;
   }
 
   // ----- Actions -----
@@ -269,7 +300,7 @@ export class ContractRenewalService implements OnModuleInit {
    * `renegotiate` need a decision awaited (409 otherwise); `undo` needs a renewal or termination
    * whose deadline has not passed.
    */
-  async act(id: string, action: RenewalAction, body: { reason?: unknown } | null | undefined, userId: string | null, opts?: Opts): Promise<ContractRenewalView> {
+  async act(id: string, action: RenewalAction, body: { reason?: unknown; end_date?: unknown } | null | undefined, userId: string | null, opts?: Opts): Promise<ContractRenewalView> {
     const mg = opts?.manager ?? this.dataSource.manager;
     const contract = await this.findContract(mg, id, true);
     const tenantId = contract.tenant_id;
@@ -291,42 +322,77 @@ export class ContractRenewalService implements OnModuleInit {
 
     if (state.kind !== 'pending') throw new ConflictException('No renewal decision is awaited for this contract.');
     const term = state.term;
-    let after: Contract = contract;
-    let previous: string | null | undefined;
     if (action === 'terminate') {
-      previous = contract.disabled_at ? new Date(contract.disabled_at).toISOString() : null;
-      after = await this.writeEndOfValidity(mg, contract, endOfValidityFromDate(term.term_end));
+      const endDate = ContractRenewalService.endDateOf(body?.end_date, contract, today);
+      const after = await this.terminate(mg, contract, term, taskId, endDate, reason, userId);
+      return this.view(mg, after, today, windowDays);
     }
-    await this.logDecision(mg, contract, after, term, {
-      decision: action,
-      reason,
-      task_id: taskId,
-      ...(action === 'terminate' ? { previous_disabled_at: previous } : {}),
-    }, userId);
+    await this.logDecision(mg, contract, contract, term, { decision: action, reason, task_id: taskId }, userId);
     if (taskId) {
       await this.updateTask(mg, taskId, tenantId, userId, action === 'renegotiate' ? { reason } : { status: 'done', reason });
     }
-    return this.view(mg, after, today, windowDays);
+    return this.view(mg, contract, today, windowDays);
   }
 
   /**
-   * Ends a contract already renewed with its current term (lot CR2): turning off its tacit renewal
-   * would give it its first term only (`contract-terms.ts`), so the renewal stays on and the end of
-   * validity goes to the current term's last day, as a termination does. One audit row. A contract
-   * that already ends with or before its current term is left as it is. 409 when the renewal is off
-   * or the contract is still in its first term (the renewal field itself is the way there).
+   * A termination of the term awaiting a decision: the end of validity on `endDate`, the
+   * decision row (with the end chosen and the previous end of validity), the task done with
+   * `reason` as its comment.
    */
-  async stopRenewal(id: string, userId: string | null, opts?: Opts): Promise<ContractRenewalView> {
+  private async terminate(
+    mg: EntityManager,
+    contract: Contract,
+    term: RenewalTerm,
+    taskId: string | null,
+    endDate: string,
+    reason: string | null,
+    userId: string | null,
+  ): Promise<Contract> {
+    const previous = contract.disabled_at ? new Date(contract.disabled_at).toISOString() : null;
+    const after = await this.writeEndOfValidity(mg, contract, endOfValidityFromDate(endDate));
+    await this.logDecision(mg, contract, after, term, {
+      decision: 'terminate', reason, task_id: taskId, previous_disabled_at: previous, end_date: endDate,
+    }, userId);
+    if (taskId) await this.updateTask(mg, taskId, contract.tenant_id, userId, { status: 'done', reason });
+    return after;
+  }
+
+  /**
+   * Turns off the renewal of a contract from its properties (lot CR2): turning off `auto_renewal`
+   * would give it its first term only (`contract-terms.ts`), so the renewal stays on and the end of
+   * validity goes to `end_date` (`YYYY-MM-DD`, today or later, not before the start; by default the
+   * proposed end, `proposedEndDate`). While a decision is awaited for the term, this is a
+   * termination: the decision row, the task done with a comment naming the end. Otherwise one
+   * audit row (`renewal_stop.end_date`), nothing when the contract already ends on that day. 409
+   * when the renewal is off, or when the contract is in its first term with no decision awaited
+   * (the renewal field turns it off directly there).
+   */
+  async stopRenewal(id: string, body: { end_date?: unknown } | null | undefined, userId: string | null, opts?: Opts): Promise<ContractRenewalView> {
     const mg = opts?.manager ?? this.dataSource.manager;
     const contract = await this.findContract(mg, id, true);
     const windowDays = await readDecisionWindowDays(mg, contract.tenant_id);
     const today = utcDateYmd(new Date());
     if (!contract.auto_renewal) throw new ConflictException('The tacit renewal of this contract is already off.');
-    const terms = computeContractTerms(contract, today);
-    if (terms.term_index === 0) throw new ConflictException('This contract has not been renewed yet: turn off its tacit renewal instead.');
-    if (!terms.renews_at_term_end) return this.view(mg, contract, today, windowDays);
-    const after = await this.writeEndOfValidity(mg, contract, endOfValidityFromDate(terms.current_term_end));
-    await this.audit.log({ table: 'contracts', recordId: contract.id, action: 'update', before: contract, after, userId }, { manager: mg });
+    const { state, taskId } = await this.loadState(mg, contract, today, windowDays);
+    if (state.kind !== 'pending' && computeContractTerms(contract, today).term_index === 0) {
+      throw new ConflictException('This contract has not been renewed yet: turn off its tacit renewal instead.');
+    }
+    const endDate = ContractRenewalService.endDateOf(body?.end_date, contract, today);
+    if (state.kind === 'pending') {
+      const [user]: Array<{ locale: string | null }> = userId
+        ? await mg.query(`SELECT locale FROM users WHERE tenant_id = $1 AND id = $2`, [contract.tenant_id, userId])
+        : [];
+      const reason = stopRenewalComment(resolveEmailLocale(user?.locale ?? null), endDate);
+      const after = await this.terminate(mg, contract, state.term, taskId, endDate, reason, userId);
+      return this.view(mg, after, today, windowDays);
+    }
+    const current = contract.disabled_at ? new Date(contract.disabled_at).toISOString().slice(0, 10) : null;
+    if (current === endDate) return this.view(mg, contract, today, windowDays);
+    const after = await this.writeEndOfValidity(mg, contract, endOfValidityFromDate(endDate));
+    await this.audit.log({
+      table: 'contracts', recordId: contract.id, action: 'update', before: contract,
+      after: { ...after, renewal_stop: { end_date: endDate } }, userId,
+    }, { manager: mg });
     return this.view(mg, after, today, windowDays);
   }
 
@@ -346,7 +412,7 @@ export class ContractRenewalService implements OnModuleInit {
     before: Contract,
     after: Contract,
     term: RenewalTerm,
-    decision: { decision: RenewalAction; reason: string | null; task_id: string | null; previous_disabled_at?: string | null },
+    decision: { decision: RenewalAction; reason: string | null; task_id: string | null; previous_disabled_at?: string | null; end_date?: string },
     userId: string | null,
   ) {
     await this.audit.log({

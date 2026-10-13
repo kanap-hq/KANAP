@@ -17,10 +17,12 @@
  *
  * Termination: the term rule gives a contract without tacit renewal its first term only, so
  * `auto_renewal = false` would end a contract in its fourth term at the end of its first one. A
- * termination therefore keeps the renewal and sets the end of validity to the last day of the term
- * decided (`disabled_at`, noon UTC of that day as for a date typed in the UI): the contract ends
- * with its current term, its commitments and the budget check follow, it is warned on its end. The
- * undoing puts the previous end of validity back while the deadline has not passed.
+ * termination therefore keeps the renewal and sets the end of validity (`disabled_at`, noon UTC of
+ * that day as for a date typed in the UI) to the day chosen (lot CR2, round 1): by default the
+ * proposed end (`proposedEndDate`, the last day of the term decided), any day from today and from
+ * the contract's start otherwise (`checkEndDate`); the decision keeps it as `end_date`. Its
+ * commitments and the budget check follow, it is warned on its end. The undoing puts the previous
+ * end of validity back while the deadline has not passed.
  */
 import { addDaysYmd, contractTermCalendar, type ContractTermsInput } from './contract-terms';
 
@@ -72,6 +74,8 @@ export type RenewalDecisionRecord = {
   task_id: string | null;
   /** On a termination: the end of validity before it, put back by its undoing. */
   previous_disabled_at?: string | null;
+  /** On a termination: the end chosen (`YYYY-MM-DD`); none on older rows, which ended with the term. */
+  end_date?: string | null;
   decided_at: string;
   user_id: string | null;
 };
@@ -115,6 +119,33 @@ function endOfValidityYmd(value: Date | string | null | undefined): string | nul
   return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
 }
 
+/**
+ * The end a termination proposes (lot CR2, round 1): the last day of the first term whose
+ * cancellation deadline has not passed, today included (the pending term). Null without a
+ * duration. Axians, deadline of 30 June 2026 passed: 31 December 2029; SAP: 30 June 2027.
+ */
+export function proposedEndDate(input: RenewalInput, today: string): string | null {
+  return renewalTerms(input, today)?.pending.term_end ?? null;
+}
+
+const YMD = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * An end chosen for a termination: a calendar day (`YYYY-MM-DD`), today or later, not before the
+ * contract starts. Earlier than `proposedEndDate` is allowed (to agree with the supplier).
+ */
+export function checkEndDate(value: unknown, input: RenewalInput, today: string): { ok: true; date: string } | { ok: false; message: string } {
+  if (typeof value !== 'string' || !YMD.test(value) || addDaysYmd(value, 0) !== value) {
+    return { ok: false, message: 'end_date must be a calendar date (YYYY-MM-DD).' };
+  }
+  if (value < today) return { ok: false, message: 'end_date cannot be before today.' };
+  const start = input.start_date instanceof Date
+    ? addDaysYmd(`${input.start_date.getFullYear()}-${String(input.start_date.getMonth() + 1).padStart(2, '0')}-${String(input.start_date.getDate()).padStart(2, '0')}`, 0)
+    : String(input.start_date).slice(0, 10);
+  if (value < start) return { ok: false, message: 'end_date cannot be before the start of the contract.' };
+  return { ok: true, date: value };
+}
+
 /** Whole days from `from` to `to`. */
 export function daysBetween(from: string, to: string): number {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
@@ -139,8 +170,8 @@ export function resolveRenewalState(
   const stands = (t: RenewalTerm, record: RenewalDecisionRecord | null): boolean => {
     if (!record) return false;
     if (record.decision === 'renew') return renewsAfter(t);
-    // A termination stands while the contract still ends on the last day of that term.
-    if (record.decision === 'terminate') return renewal && validUntil === t.term_end;
+    // A termination stands while the contract still ends on the day chosen (the term's last day by default).
+    if (record.decision === 'terminate') return renewal && validUntil === (record.end_date ?? t.term_end);
     return false;
   };
 
@@ -173,6 +204,14 @@ const TASK_DESCRIPTIONS: Record<string, string> = {
   es: 'La fecha límite de rescisión es el {{deadline}}. Sin decisión, el contrato se renueva el {{renewsOn}}. Decida en la ficha del contrato: renovar, rescindir o renegociar.',
 };
 
+/** The comment on the decision task when the renewal is turned off from the contract's properties. */
+const STOP_COMMENTS: Record<string, string> = {
+  en: 'Tacit renewal turned off in the contract properties. The contract ends on {{date}}.',
+  fr: 'Reconduction tacite coupée dans les propriétés du contrat. Le contrat prend fin le {{date}}.',
+  de: 'Stillschweigende Verlängerung in den Vertragseigenschaften beendet. Der Vertrag endet am {{date}}.',
+  es: 'Renovación tácita desactivada en las propiedades del contrato. El contrato termina el {{date}}.',
+};
+
 const DATE_LOCALES: Record<string, string> = { en: 'en-GB', fr: 'fr-FR', de: 'de-DE', es: 'es-ES' };
 
 function formatDay(ymd: string, language: string): string {
@@ -188,4 +227,10 @@ export function renewalTaskText(language: string, name: string, term: RenewalTer
       .replace('{{deadline}}', formatDay(term.deadline, lang))
       .replace('{{renewsOn}}', formatDay(term.renews_on, lang)),
   };
+}
+
+/** The task comment of a renewal turned off in the window, `language` one of en, fr, de, es (English otherwise). */
+export function stopRenewalComment(language: string, endDate: string): string {
+  const lang = STOP_COMMENTS[language] ? language : 'en';
+  return STOP_COMMENTS[lang].replace('{{date}}', formatDay(endDate, lang));
 }

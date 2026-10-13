@@ -3,10 +3,13 @@ import * as assert from 'node:assert/strict';
 import { BadRequestException } from '@nestjs/common';
 import { REQUIRE_LEVEL_KEY } from '../../auth/require-level.decorator';
 import {
+  checkEndDate,
+  proposedEndDate,
   renewalSourceRef,
   renewalTaskText,
   renewalTerms,
   resolveRenewalState,
+  stopRenewalComment,
   type RenewalDecisionRecord,
   type RenewalInput,
 } from '../contract-renewal';
@@ -86,6 +89,37 @@ const only = (termEnd: string, rec: RenewalDecisionRecord) => (key: string) => (
   assert.ok(renewedLater.kind === 'decided' && !renewedLater.can_undo, 'a renewal shows until the term ends');
 }
 
+// ----- The end a termination proposes, and the end chosen (lot CR2, round 1) -----
+{
+  // Axians: 36-month terms from 1 January 2024, 6 months notice. The deadline of 30 June 2026 has passed.
+  const AXIANS: RenewalInput = { start_date: '2024-01-01', duration_months: 36, notice_period_months: 6, auto_renewal: true, disabled_at: null };
+  assert.equal(proposedEndDate(AXIANS, '2026-10-13'), '2029-12-31', 'Axians: the first term whose deadline is ahead');
+  assert.equal(proposedEndDate(AXIANS, '2026-06-30'), '2026-12-31', 'Axians on its deadline: the current term');
+  assert.equal(proposedEndDate(SAP, '2026-10-13'), '2027-06-30', 'SAP: the current term');
+  assert.equal(proposedEndDate({ ...SAP, duration_months: 0 }, '2026-10-13'), null, 'no duration, no proposal');
+
+  assert.deepEqual(checkEndDate('2026-11-15', SAP, '2026-10-13'), { ok: true, date: '2026-11-15' }, 'before the proposed end: allowed');
+  assert.deepEqual(checkEndDate('2026-10-13', SAP, '2026-10-13'), { ok: true, date: '2026-10-13' }, 'today: allowed');
+  assert.deepEqual(checkEndDate('2030-01-31', SAP, '2026-10-13'), { ok: true, date: '2030-01-31' }, 'after it: allowed');
+  assert.equal(checkEndDate('2026-10-12', SAP, '2026-10-13').ok, false, 'yesterday: refused');
+  assert.equal(checkEndDate('2027-02-30', SAP, '2026-10-13').ok, false, 'not a calendar day');
+  assert.equal(checkEndDate('13/10/2026', SAP, '2026-10-13').ok, false, 'not YYYY-MM-DD');
+  assert.equal(checkEndDate(20261231, SAP, '2026-10-13').ok, false, 'not a string');
+  const future: RenewalInput = { ...SAP, start_date: '2027-01-01' };
+  assert.equal(checkEndDate('2026-12-01', future, '2026-10-13').ok, false, 'before the start: refused');
+  assert.equal(checkEndDate('2027-01-01', future, '2026-10-13').ok, true, 'on the start: allowed');
+
+  // A termination on a day of its own stands while the contract ends that day.
+  const early = { ...SAP, disabled_at: '2026-11-15T12:00:00.000Z' };
+  const chosen = record('terminate', '2027-06-30', { end_date: '2026-11-15' });
+  const state = resolveRenewalState(early, '2026-10-13', 90, only('2027-06-30', chosen));
+  assert.ok(state.kind === 'decided' && state.record.end_date === '2026-11-15', 'an end chosen before the term end stands');
+  assert.equal(resolveRenewalState({ ...SAP, disabled_at: '2027-12-31T12:00:00.000Z' }, '2026-10-13', 90, only('2027-06-30', chosen)).kind, 'pending', 'another end since, after the term: voided, the decision awaited again');
+
+  assert.equal(stopRenewalComment('fr', '2027-06-30'), 'Reconduction tacite coupée dans les propriétés du contrat. Le contrat prend fin le 30/06/2027.');
+  assert.match(stopRenewalComment('xx', '2027-06-30'), /^Tacit renewal turned off.*30\/06\/2027\.$/, 'English otherwise');
+}
+
 // ----- The task text -----
 {
   const term = renewalTerms(SAP, '2026-10-13')!.pending;
@@ -112,7 +146,7 @@ const only = (termEnd: string, rec: RenewalDecisionRecord) => (key: string) => (
 {
   const level = (proto: any, route: string) => Reflect.getMetadata(REQUIRE_LEVEL_KEY, proto[route]);
   assert.deepEqual(level(ContractRenewalController.prototype, 'get'), { resource: 'contracts', level: 'reader' }, 'renewal state: contract readers');
-  for (const route of ['renew', 'terminate', 'renegotiate', 'undo']) {
+  for (const route of ['renew', 'terminate', 'renegotiate', 'undo', 'stop']) {
     assert.deepEqual(level(ContractRenewalController.prototype, route), { resource: 'contracts', level: 'member' }, `${route}: contract editors`);
   }
   assert.deepEqual(level(ContractSettingsController.prototype, 'get'), { resource: 'contracts', level: 'reader' }, 'settings read');
