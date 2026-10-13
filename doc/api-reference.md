@@ -1148,13 +1148,21 @@ of a CAPEX line is read through `/budget-lines/:ref`; `/capex-items` does not ex
 - GET `/contracts?status=enabled&page=1&limit=50&sort=cancellation_deadline:ASC&q&filters`
   - Items include derived: the term fields below, `linked_opex_count`, and nested `supplier {id,name}`, `company {id,name}` plus `latest_task`.
   - `sort` and `filters` on `end_date` and `cancellation_deadline` use the same values as the items (as of today, UTC). Same on GET `/contracts/ids`.
-- GET `/contracts/:id` → details including the term fields, `links` (URLs), `attachments` (metadata), and `linked_spend_items`.
+- GET `/contracts/:id` → details including the term fields, `supplier_name`, `company_name`, `owner_name` (the names the page header shows), `links` (URLs), `attachments` (metadata), and `linked_spend_items` (OPEX only, kept for older callers).
 - Term fields, computed as of today (UTC) by `backend/src/contracts/contract-terms.ts` (rule in `doc/architecture.md`, Contract Terms), tacit renewals included:
   - `term_index`: the current term, 0 for the first one; `renewed`: `term_index > 0`.
   - `current_term_end`: end of the term containing today (the first term for a future contract, the last one once ended).
   - `next_cancellation_deadline`: first cancellation deadline on or after today, or `null` (no renewal and the deadline passed, or the end of validity comes first).
   - `end_date`: same as `current_term_end`. `cancellation_deadline`: `next_cancellation_deadline`, or the last term's deadline when it is `null`.
 - POST `/contracts` → create; PATCH `/contracts/:id` → update.
+
+### Contract relations (contract page)
+Every statement carries the contract's tenant besides RLS; a contract of another tenant is a `404`. Reads need `contracts:reader`, writes `contracts:member`. A replacement locks the contract row first (the last one wins) and writes one audit row on the link table when the set changes (`recordId` the contract, before and after the sorted ids). An id that is not a row of the tenant, or not a UUID, is a `400` and nothing is written.
+- GET `/contracts/:id/budget-lines` → `{ items: [{ id, nature, item_number, product_name, company_id, company_name }] }`: the linked budget lines of both natures (`contract_spend_items`), by reference number; `company_*` is the line's paying company.
+- POST `/contracts/:id/budget-lines/bulk-replace` with `{ budget_line_ids: string[] }` (lines of either nature) → `{ ok, added, removed }`.
+- GET `/contracts/:id/applications` and POST `/contracts/:id/applications/bulk-replace` with `{ application_ids: string[] }` (`application_contracts`).
+- GET `/contracts/:id/assets` and POST `/contracts/:id/assets/bulk-replace` with `{ asset_ids: string[] }` (`asset_contracts`).
+- GET `/contracts/:id/relation-counts` → `{ budget_lines, applications, assets, contacts, links, attachments, relations }`: the tab badges (`relations` sums the Relations tab's sets).
 
 ### Contracts ↔ OPEX links (many-to-many)
 - Contracts side: GET `/contracts/:id/spend-items` and POST `/contracts/:id/spend-items/bulk-replace` with `{ spend_item_ids: string[] }`
@@ -1166,7 +1174,7 @@ of a CAPEX line is read through `/budget-lines/:ref`; `/capex-items` does not ex
   - Permissions: `budget:reader` for list/download; `budget:member` for create/update/delete
 
 ### Contracts ↔ CAPEX links (many-to-many)
-- Contracts side: GET `/contracts/:id/capex-items` and POST `/contracts/:id/capex-items/bulk-replace` with `{ capex_item_ids: string[] }`
+- Contracts side: GET `/contracts/:id/capex-items` and POST `/contracts/:id/capex-items/bulk-replace` with `{ capex_item_ids: string[] }` (no screen calls them since the contract page uses `/contracts/:id/budget-lines`; kept until the CAPEX aliases go)
 - CAPEX side: GET `/capex-items/:id/contracts` and POST `/capex-items/:id/contracts/bulk-replace` with `{ contract_ids: string[] }`
 
 ### Contract tasks, URLs, attachments
